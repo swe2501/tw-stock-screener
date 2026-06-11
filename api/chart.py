@@ -13,7 +13,11 @@ YF_HEADERS = {
 
 RANGE_DAYS = {"1mo": 35, "3mo": 95, "6mo": 185, "1y": 370}
 YF_HOSTS = ["query1.finance.yahoo.com", "query2.finance.yahoo.com"]
-TWSE_HEADERS = {"User-Agent": "Mozilla/5.0", "Accept": "application/json"}
+TWSE_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    "Accept": "application/json, text/plain, */*",
+    "Referer": "https://www.twse.com.tw/",
+}
 
 
 def fetch_chart(code, range_str="3mo"):
@@ -71,6 +75,8 @@ def fetch_chart(code, range_str="3mo"):
                 req = urllib.request.Request(url, headers=TWSE_HEADERS)
                 with urllib.request.urlopen(req, timeout=8) as resp:
                     d = json.loads(resp.read())
+                if d.get("stat") != "OK":
+                    continue
                 rows = d.get("data") or []
                 if rows:
                     return rows
