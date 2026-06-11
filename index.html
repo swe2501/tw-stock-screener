@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>台灣上市股票篩選器</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #22263a;
+      --border: #2e3350;
+      --accent: #4f8ef7;
+      --accent-hover: #6fa3ff;
+      --green: #26c281;
+      --red: #e74c3c;
+      --yellow: #f39c12;
+      --text: #e2e8f0;
+      --text-muted: #8892a8;
+      --radius: 10px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      padding: 24px 16px 60px;
+    }
+
+    header {
+      max-width: 1200px;
+      margin: 0 auto 28px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    header h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    header span {
+      background: var(--accent);
+      color: #fff;
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 20px;
+      letter-spacing: 0.04em;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+    }
+
+    .form-wrap {
+      max-width: 1200px;
+      margin: 0 auto 24px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      align-items: end;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
+    .label-hint {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      font-weight: 400;
+      text-transform: none;
+      letter-spacing: 0;
+      margin-top: 2px;
+    }
+
+    input[type="date"],
+    input[type="number"] {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      color: var(--text);
+      font-size: 0.95rem;
+      padding: 10px 13px;
+      width: 100%;
+      transition: border-color 0.15s;
+      outline: none;
+    }
+
+    input[type="date"]:focus,
+    input[type="number"]:focus {
+      border-color: var(--accent);
+    }
+
+    .checkboxes {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .checkbox-row input[type="checkbox"] {
+      width: 17px;
+      height: 17px;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    .checkbox-row .cb-label {
+      font-size: 0.9rem;
+      color: var(--text);
+    }
+
+    .checkbox-row .cb-hint {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .btn-submit {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 28px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-submit:hover { background: var(--accent-hover); }
+    .btn-submit:active { transform: scale(0.98); }
+    .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .results-wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .results-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .results-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .results-meta {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+    }
+
+    .results-meta strong {
+      color: var(--accent);
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+
+    thead tr {
+      background: var(--surface2);
+    }
+
+    th {
+      padding: 11px 14px;
+      text-align: left;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      user-select: none;
+      transition: color 0.15s;
+    }
+
+    th:hover { color: var(--text); }
+    th.sorted { color: var(--accent); }
+
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    tbody tr:last-child td { border-bottom: none; }
+
+    tbody tr:hover {
+      background: var(--surface2);
+    }
+
+    .code-cell a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 700;
+      font-family: 'Courier New', monospace;
+    }
+
+    .code-cell a:hover { color: var(--accent-hover); text-decoration: underline; }
+
+    .name-cell {
+      color: var(--text);
+      max-width: 120px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .positive { color: var(--red); font-weight: 600; }
+    .negative { color: var(--green); font-weight: 600; }
+    .neutral { color: var(--text-muted); }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+
+    .badge-red { background: rgba(231, 76, 60, 0.2); color: var(--red); }
+    .badge-green { background: rgba(38, 194, 129, 0.2); color: var(--green); }
+    .badge-yellow { background: rgba(243, 156, 18, 0.15); color: var(--yellow); }
+
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2.5px solid rgba(255,255,255,0.25);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-muted);
+    }
+
+    .empty-state .icon {
+      font-size: 2.5rem;
+      margin-bottom: 12px;
+    }
+
+    .empty-state p { font-size: 0.9rem; }
+
+    .alert {
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .alert-error { background: rgba(231, 76, 60, 0.12); border: 1px solid rgba(231, 76, 60, 0.3); color: #f08080; }
+    .alert-info  { background: rgba(79, 142, 247, 0.1); border: 1px solid rgba(79, 142, 247, 0.25); color: #7fb3ff; }
+
+    .sort-arrow {
+      display: inline-block;
+      margin-left: 4px;
+      opacity: 0.4;
+      font-size: 0.7rem;
+    }
+
+    th.sorted .sort-arrow { opacity: 1; }
+
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 20px 0;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>台灣上市股票篩選器</h1>
+    <span>TWSE</span>
+  </header>
+
+  <div class="form-wrap">
+    <div class="card">
+      <div class="form-grid">
+        <!-- 日期 -->
+        <div class="field">
+          <label>篩選日期</label>
+          <div class="label-hint">空白 = 最新交易日；可輸入歷史日期</div>
+          <input type="date" id="date" />
+        </div>
+
+        <!-- 長紅棒 -->
+        <div class="field">
+          <label>長紅棒幅度 (%)</label>
+          <div class="label-hint">(收 - 開) / 開 × 100 ≥ 此值</div>
+          <input type="number" id="red_candle_pct" min="0" max="20" step="0.1" placeholder="例：3（代表 3%）" />
+        </div>
+
+        <!-- 放量倍數 -->
+        <div class="field">
+          <label>放量倍數</label>
+          <div class="label-hint">昨日 max(5日均量, 10日均量) × 倍數</div>
+          <input type="number" id="volume_multiplier" min="0" step="0.1" placeholder="例：1.5（代表 1.5 倍）" />
+        </div>
+
+        <!-- 複選框 -->
+        <div class="field">
+          <label>額外條件</label>
+          <div class="label-hint">&nbsp;</div>
+          <div class="checkboxes">
+            <label class="checkbox-row">
+              <input type="checkbox" id="limit_up" />
+              <div>
+                <div class="cb-label">漲停板</div>
+                <div class="cb-hint">當日收盤達漲停價（+10%）</div>
+              </div>
+            </label>
+            <label class="checkbox-row">
+              <input type="checkbox" id="gap_up" />
+              <div>
+                <div class="cb-label">跳空向上</div>
+                <div class="cb-hint">當日開盤 &gt; 前日最高</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- 按鈕 -->
+        <div class="field">
+          <label>&nbsp;</label>
+          <div class="label-hint">&nbsp;</div>
+          <button class="btn-submit" id="submitBtn" onclick="doScreen()">
+            開始篩選
+          </button>
+        </div>
+      </div>
+      <div id="dataDateDisplay" style="margin-top:12px;font-size:0.78rem;color:var(--text-muted);"></div>
+    </div>
+  </div>
+
+  <div class="results-wrap">
+    <div id="statusArea"></div>
+    <div id="resultsArea"></div>
+  </div>
+
+  <script>
+    let sortKey = 'candle_pct';
+    let sortDir = -1;
+    let lastResults = [];
+    let hasVolFilter = false;
+
+    function showStatus(html) {
+      document.getElementById('statusArea').innerHTML = html;
+    }
+
+    function doScreen() {
+      const dateVal = document.getElementById('date').value;
+      const redPct = parseFloat(document.getElementById('red_candle_pct').value) || 0;
+      const volMult = parseFloat(document.getElementById('volume_multiplier').value) || 0;
+      const limitUp = document.getElementById('limit_up').checked;
+      const gapUp = document.getElementById('gap_up').checked;
+      hasVolFilter = volMult > 0;
+
+      const btn = document.getElementById('submitBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<div class="spinner"></div> 資料載入中...';
+      document.getElementById('resultsArea').innerHTML = '';
+      document.getElementById('dataDateDisplay').textContent = '';
+
+      const isHistorical = dateVal && dateVal.length > 0;
+      let hint = isHistorical
+        ? `正在透過 Yahoo Finance 取得 ${dateVal} 歷史資料，請稍候（約 10–20 秒）...`
+        : '正在向台灣證交所取得最新交易日資料...';
+      showStatus(`<div class="alert alert-info">&#8987; ${hint}</div>`);
+
+      const body = {
+        date: dateVal ? dateVal.replace(/-/g, '') : '',
+        red_candle_pct: redPct,
+        volume_multiplier: volMult,
+        limit_up: limitUp,
+        gap_up: gapUp,
+      };
+
+      fetch('/api/screen', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+        .then(r => r.json())
+        .then(data => {
+          btn.disabled = false;
+          btn.innerHTML = '開始篩選';
+
+          if (data.error) {
+            showStatus(`<div class="alert alert-error">&#9888; ${data.error}</div>`);
+            document.getElementById('resultsArea').innerHTML = '';
+            return;
+          }
+
+          lastResults = data.results || [];
+          renderResults(data);
+        })
+        .catch(err => {
+          btn.disabled = false;
+          btn.innerHTML = '開始篩選';
+          showStatus(`<div class="alert alert-error">&#9888; 連線錯誤：${err.message}</div>`);
+        });
+    }
+
+    function renderResults(data) {
+      const results = data.results || [];
+
+      // Show actual data date returned from API
+      if (data.date) {
+        const dateInput = document.getElementById('date').value;
+        const isHist = dateInput && dateInput.length > 0;
+        document.getElementById('dataDateDisplay').textContent =
+          isHist ? `資料來源：Yahoo Finance（${data.date}）` : `資料來源：證交所最新（${data.date}）`;
+      }
+
+      showStatus(`
+        <div class="results-header">
+          <div class="results-title">篩選結果 — ${data.date}</div>
+          <div class="results-meta">
+            符合條件 <strong>${data.count}</strong> 檔 ／ 全市場上市 ${data.total} 檔
+          </div>
+        </div>
+      `);
+
+      if (results.length === 0) {
+        document.getElementById('resultsArea').innerHTML = `
+          <div class="card">
+            <div class="empty-state">
+              <div class="icon">&#128269;</div>
+              <p>沒有符合條件的個股</p>
+            </div>
+          </div>`;
+        return;
+      }
+
+      renderTable(results);
+    }
+
+    function renderTable(results) {
+      const sorted = [...results].sort((a, b) => {
+        const av = a[sortKey] ?? -Infinity;
+        const bv = b[sortKey] ?? -Infinity;
+        return (av - bv) * sortDir;
+      });
+
+      const volCols = hasVolFilter ? `
+        <th onclick="setSort('ma5_vol')" class="${sortKey==='ma5_vol'?'sorted':''}">5日均量(張)<span class="sort-arrow">${sortKey==='ma5_vol'?(sortDir>0?'▲':'▼'):'↕'}</span></th>
+        <th onclick="setSort('ma10_vol')" class="${sortKey==='ma10_vol'?'sorted':''}">10日均量(張)<span class="sort-arrow">${sortKey==='ma10_vol'?(sortDir>0?'▲':'▼'):'↕'}</span></th>
+        <th onclick="setSort('vol_ratio')" class="${sortKey==='vol_ratio'?'sorted':''}">放量倍數<span class="sort-arrow">${sortKey==='vol_ratio'?(sortDir>0?'▲':'▼'):'↕'}</span></th>
+      ` : '';
+
+      const rows = sorted.map(s => {
+        const changeCls = (s.change_pct ?? 0) > 0 ? 'positive' : (s.change_pct ?? 0) < 0 ? 'negative' : 'neutral';
+        const candleCls = s.candle_pct > 0 ? 'positive' : s.candle_pct < 0 ? 'negative' : 'neutral';
+        const changeStr = s.change_pct != null
+          ? (s.change_pct > 0 ? `+${s.change_pct}%` : `${s.change_pct}%`)
+          : '–';
+        const candleStr = s.candle_pct > 0
+          ? `+${s.candle_pct}%`
+          : `${s.candle_pct}%`;
+
+        const volCells = hasVolFilter ? `
+          <td class="neutral">${s.ma5_vol != null ? Number(s.ma5_vol).toLocaleString() : '–'}</td>
+          <td class="neutral">${s.ma10_vol != null ? Number(s.ma10_vol).toLocaleString() : '–'}</td>
+          <td>${s.vol_ratio != null ? `<span class="badge badge-yellow">${s.vol_ratio}x</span>` : '–'}</td>
+        ` : '';
+
+        return `
+          <tr>
+            <td class="code-cell"><a href="https://www.twse.com.tw/zh/trading/historical/stock-day.html?stockNo=${s.code}" target="_blank">${s.code}</a></td>
+            <td class="name-cell">${s.name}</td>
+            <td class="neutral">${s.open}</td>
+            <td class="neutral">${s.high}</td>
+            <td class="neutral">${s.low}</td>
+            <td class="${changeCls}">${s.close}</td>
+            <td class="${changeCls}">${changeStr}</td>
+            <td class="${candleCls}">${candleStr}</td>
+            <td class="neutral">${Number(s.volume_lots).toLocaleString()} 張</td>
+            ${volCells}
+          </tr>`;
+      }).join('');
+
+      document.getElementById('resultsArea').innerHTML = `
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th onclick="setSort('code')" class="${sortKey==='code'?'sorted':''}">代號<span class="sort-arrow">${sortKey==='code'?(sortDir>0?'▲':'▼'):'↕'}</span></th>
+                <th>名稱</th>
+                <th onclick="setSort('open')" class="${sortKey==='open'?'sorted':''}">開盤<span class="sort-arrow">${sortKey==='open'?(sortDir>0?'▲':'▼'):'↕'}</span></th>
+                <th onclick="setSort('high')" class="${sortKey==='high'?'sorted':''}">最高<span class="sort-arrow">${sortKey==='high'?(sortDir>0?'▲':'▼'):'↕'}</span></th>
+                <th onclick="setSort('low')" class="${sortKey==='low'?'sorted':''}">最低<span class="sort-arrow">${sortKey==='low'?(sortDir>0?'▲':'▼'):'↕'}</span></th>
+                <th onclick="setSort('close')" class="${sortKey==='close'?'sorted':''}">收盤<span class="sort-arrow">${sortKey==='close'?(sortDir>0?'▲':'▼'):'↕'}</span></th>
+                <th onclick="setSort('change_pct')" class="${sortKey==='change_pct'?'sorted':''}">漲跌幅<span class="sort-arrow">${sortKey==='change_pct'?(sortDir>0?'▲':'▼'):'↕'}</span></th>
+                <th onclick="setSort('candle_pct')" class="${sortKey==='candle_pct'?'sorted':''}">紅棒幅度<span class="sort-arrow">${sortKey==='candle_pct'?(sortDir>0?'▲':'▼'):'↕'}</span></th>
+                <th onclick="setSort('volume_lots')" class="${sortKey==='volume_lots'?'sorted':''}">成交量<span class="sort-arrow">${sortKey==='volume_lots'?(sortDir>0?'▲':'▼'):'↕'}</span></th>
+                ${volCols}
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>`;
+    }
+
+    function setSort(key) {
+      if (sortKey === key) {
+        sortDir *= -1;
+      } else {
+        sortKey = key;
+        sortDir = -1;
+      }
+      if (lastResults.length > 0) renderTable(lastResults);
+    }
+
+    // Allow pressing Enter to submit
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !document.getElementById('submitBtn').disabled) doScreen();
+    });
+  </script>
+</body>
+</html>
