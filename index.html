@@ -385,7 +385,7 @@
     .chart-range-btns {
       display: flex;
       gap: 6px;
-      margin-bottom: 12px;
+      margin-bottom: 0;
     }
 
     .range-btn {
@@ -402,23 +402,85 @@
     .range-btn:hover { color: var(--text); border-color: var(--accent); }
     .range-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
 
-    #chartContainer {
+    #chartWrapper {
+      position: relative;
       width: 100%;
-      height: 420px;
       border-radius: 8px;
       overflow: hidden;
       background: #131722;
+    }
+
+    #chartContainer {
+      width: 100%;
+      height: 400px;
+    }
+
+    #fibCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+      z-index: 11;
+    }
+
+    #chartOverlay {
+      position: absolute;
+      inset: 0;
+      cursor: crosshair;
+      z-index: 10;
+      display: none;
+    }
+
+    #volLabel {
+      position: absolute;
+      bottom: 28px;
+      left: 8px;
+      font-size: 10px;
+      color: rgba(200,209,217,0.45);
+      pointer-events: none;
+      z-index: 5;
+      font-family: monospace;
+      font-weight: bold;
+      letter-spacing: 0.05em;
     }
 
     #chartLoading {
       display: flex;
       align-items: center;
       justify-content: center;
-      height: 420px;
+      height: 400px;
       color: var(--text-muted);
       font-size: 0.9rem;
       gap: 10px;
     }
+
+    .chart-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .chart-tool-btns {
+      display: flex;
+      gap: 6px;
+    }
+
+    .tool-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .tool-btn:hover { color: var(--text); border-color: var(--accent); }
+    .tool-btn.active { background: rgba(243,156,18,0.2); border-color: var(--yellow); color: var(--yellow); }
 
     tbody tr { cursor: pointer; }
   </style>
@@ -504,14 +566,25 @@
         <button class="modal-close" onclick="closeChart()">&#10005;</button>
       </div>
       <div class="modal-body">
-        <div class="chart-range-btns">
-          <button class="range-btn" onclick="loadChart('1mo')">1月</button>
-          <button class="range-btn active" onclick="loadChart('3mo')">3月</button>
-          <button class="range-btn" onclick="loadChart('6mo')">6月</button>
-          <button class="range-btn" onclick="loadChart('1y')">1年</button>
+        <div class="chart-toolbar">
+          <div class="chart-range-btns">
+            <button class="range-btn" onclick="loadChart('1mo')">1月</button>
+            <button class="range-btn active" onclick="loadChart('3mo')">3月</button>
+            <button class="range-btn" onclick="loadChart('6mo')">6月</button>
+            <button class="range-btn" onclick="loadChart('1y')">1年</button>
+          </div>
+          <div class="chart-tool-btns">
+            <button class="tool-btn" id="fibBtn" onclick="toggleFibMode()">📐 斐波那契</button>
+            <button class="tool-btn" onclick="clearFib()">✕ 清除</button>
+          </div>
         </div>
         <div id="chartLoading"><div class="spinner"></div> 載入中...</div>
-        <div id="chartContainer" style="display:none"></div>
+        <div id="chartWrapper" style="display:none">
+          <div id="chartContainer"></div>
+          <canvas id="fibCanvas"></canvas>
+          <div id="chartOverlay"></div>
+          <div id="volLabel">VOL</div>
+        </div>
       </div>
     </div>
   </div>
@@ -700,6 +773,11 @@
     let currentCode = '';
     let currentName = '';
     let chartInstance = null;
+    let candleSeriesRef = null;
+    let fibMode = false;
+    let fibLines = [];
+    let fibDragStart = null;
+    let fibSetupDone = false;
 
     function openChart(code, name) {
       currentCode = code;
@@ -707,13 +785,22 @@
       document.getElementById('modalTitle').textContent = `${code}　${name}`;
       document.getElementById('chartModal').classList.add('open');
       document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.range-btn')[1].classList.add('active'); // 3mo default
+      document.querySelectorAll('.range-btn')[1].classList.add('active');
+      if (!fibSetupDone) { setupFibOverlay(); fibSetupDone = true; }
       loadChart('3mo');
     }
 
     function closeChart() {
       document.getElementById('chartModal').classList.remove('open');
       if (chartInstance) { chartInstance.remove(); chartInstance = null; }
+      candleSeriesRef = null;
+      fibLines = [];
+      fibMode = false;
+      fibDragStart = null;
+      const btn = document.getElementById('fibBtn');
+      if (btn) btn.classList.remove('active');
+      const ov = document.getElementById('chartOverlay');
+      if (ov) ov.style.display = 'none';
     }
 
     function closeChartIfBg(e) {
@@ -721,15 +808,24 @@
     }
 
     function loadChart(range) {
-      // Update active range button
       const labels = {'1mo':'1月','3mo':'3月','6mo':'6月','1y':'1年'};
       document.querySelectorAll('.range-btn').forEach(b => {
         b.classList.toggle('active', b.textContent === (labels[range] || range));
       });
 
       document.getElementById('chartLoading').style.display = 'flex';
-      document.getElementById('chartContainer').style.display = 'none';
+      document.getElementById('chartWrapper').style.display = 'none';
+
       if (chartInstance) { chartInstance.remove(); chartInstance = null; }
+      candleSeriesRef = null;
+      fibLines = [];
+      fibMode = false;
+      fibDragStart = null;
+      const btn = document.getElementById('fibBtn');
+      if (btn) btn.classList.remove('active');
+      const ov = document.getElementById('chartOverlay');
+      if (ov) ov.style.display = 'none';
+      clearFibCanvas();
 
       fetch(`/api/chart?code=${currentCode}&range=${range}`)
         .then(r => r.json())
@@ -751,11 +847,12 @@
       const el = document.getElementById('chartContainer');
       el.innerHTML = '';
       document.getElementById('chartLoading').style.display = 'none';
-      el.style.display = 'block';
+      const wrapper = document.getElementById('chartWrapper');
+      wrapper.style.display = 'block';
 
       chartInstance = LightweightCharts.createChart(el, {
         width: el.clientWidth,
-        height: 420,
+        height: 400,
         layout: { background: { color: '#131722' }, textColor: '#c9d1d9' },
         grid: { vertLines: { color: '#2e3350' }, horzLines: { color: '#2e3350' } },
         crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
@@ -763,7 +860,7 @@
         timeScale: { borderColor: '#2e3350', timeVisible: true },
       });
 
-      const candleSeries = chartInstance.addCandlestickSeries({
+      candleSeriesRef = chartInstance.addCandlestickSeries({
         upColor: '#e74c3c',
         downColor: '#26c281',
         borderUpColor: '#e74c3c',
@@ -771,27 +868,152 @@
         wickUpColor: '#e74c3c',
         wickDownColor: '#26c281',
       });
-      candleSeries.setData(candles);
+      candleSeriesRef.setData(candles);
 
       const volSeries = chartInstance.addHistogramSeries({
         priceFormat: { type: 'volume' },
         priceScaleId: 'vol',
       });
       chartInstance.priceScale('vol').applyOptions({
-        scaleMargins: { top: 0.8, bottom: 0 },
+        scaleMargins: { top: 0.75, bottom: 0 },
       });
       volSeries.setData(candles.map(c => ({
         time: c.time,
         value: c.volume,
-        color: c.close >= c.open ? 'rgba(231,76,60,0.4)' : 'rgba(38,194,129,0.4)',
+        color: c.close >= c.open ? 'rgba(231,76,60,0.45)' : 'rgba(38,194,129,0.45)',
       })));
 
       chartInstance.timeScale().fitContent();
+      resizeFibCanvas();
 
-      // Resize when window changes
       new ResizeObserver(() => {
         if (chartInstance) chartInstance.applyOptions({ width: el.clientWidth });
+        resizeFibCanvas();
       }).observe(el);
+    }
+
+    // ── Fibonacci Retracement ──────────────────────────────
+    function resizeFibCanvas() {
+      const canvas = document.getElementById('fibCanvas');
+      const wrapper = document.getElementById('chartWrapper');
+      if (!canvas || !wrapper) return;
+      canvas.width = wrapper.clientWidth;
+      canvas.height = wrapper.clientHeight;
+    }
+
+    function clearFibCanvas() {
+      const canvas = document.getElementById('fibCanvas');
+      if (!canvas) return;
+      canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function setupFibOverlay() {
+      const overlay = document.getElementById('chartOverlay');
+      const canvas  = document.getElementById('fibCanvas');
+
+      function getY(clientY) {
+        return clientY - overlay.getBoundingClientRect().top;
+      }
+
+      function drawBand(y0, y1) {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const minY = Math.min(y0, y1), h = Math.abs(y1 - y0);
+        ctx.fillStyle = 'rgba(243,156,18,0.08)';
+        ctx.fillRect(0, minY, canvas.width, h);
+        ctx.strokeStyle = 'rgba(243,156,18,0.55)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 3]);
+        ctx.strokeRect(0, minY, canvas.width, h);
+        ctx.setLineDash([]);
+      }
+
+      function finishFib(endY) {
+        if (!fibDragStart || !candleSeriesRef) { fibDragStart = null; return; }
+        const p2 = candleSeriesRef.coordinateToPrice(endY);
+        if (p2 == null) { fibDragStart = null; return; }
+        const high = Math.max(fibDragStart.price, p2);
+        const low  = Math.min(fibDragStart.price, p2);
+        if (high !== low) drawFibLines(high, low);
+        clearFibCanvas();
+        fibDragStart = null;
+        fibMode = false;
+        document.getElementById('fibBtn').classList.remove('active');
+        overlay.style.display = 'none';
+      }
+
+      overlay.addEventListener('mousedown', e => {
+        if (!candleSeriesRef) return;
+        const y = getY(e.clientY);
+        const price = candleSeriesRef.coordinateToPrice(y);
+        if (price == null) return;
+        fibDragStart = { y, price };
+      });
+      overlay.addEventListener('mousemove', e => {
+        if (!fibDragStart) return;
+        drawBand(fibDragStart.y, getY(e.clientY));
+      });
+      overlay.addEventListener('mouseup', e => { finishFib(getY(e.clientY)); });
+
+      overlay.addEventListener('touchstart', e => {
+        if (!candleSeriesRef) return;
+        e.preventDefault();
+        const y = getY(e.touches[0].clientY);
+        const price = candleSeriesRef.coordinateToPrice(y);
+        if (price == null) return;
+        fibDragStart = { y, price };
+      }, { passive: false });
+      overlay.addEventListener('touchmove', e => {
+        if (!fibDragStart) return;
+        e.preventDefault();
+        drawBand(fibDragStart.y, getY(e.touches[0].clientY));
+      }, { passive: false });
+      overlay.addEventListener('touchend', e => {
+        e.preventDefault();
+        finishFib(getY(e.changedTouches[0].clientY));
+      }, { passive: false });
+    }
+
+    function toggleFibMode() {
+      if (!chartInstance) return;
+      fibMode = !fibMode;
+      document.getElementById('fibBtn').classList.toggle('active', fibMode);
+      document.getElementById('chartOverlay').style.display = fibMode ? 'block' : 'none';
+      if (!fibMode) { fibDragStart = null; clearFibCanvas(); }
+    }
+
+    function clearFib() {
+      fibLines.forEach(pl => {
+        try { if (candleSeriesRef) candleSeriesRef.removePriceLine(pl); } catch(e) {}
+      });
+      fibLines = [];
+      fibDragStart = null;
+      clearFibCanvas();
+    }
+
+    function drawFibLines(high, low) {
+      if (!candleSeriesRef) return;
+      clearFib();
+      const range = high - low;
+      const levels = [
+        { ratio: 0,     label: '0%',    color: '#e74c3c' },
+        { ratio: 0.236, label: '23.6%', color: '#f39c12' },
+        { ratio: 0.382, label: '38.2%', color: '#2ecc71' },
+        { ratio: 0.5,   label: '50%',   color: '#4f8ef7' },
+        { ratio: 0.618, label: '61.8%', color: '#9b59b6' },
+        { ratio: 1,     label: '100%',  color: '#e74c3c' },
+      ];
+      levels.forEach(({ ratio, label, color }) => {
+        const price = parseFloat((high - range * ratio).toFixed(2));
+        fibLines.push(candleSeriesRef.createPriceLine({
+          price,
+          color,
+          lineWidth: 1,
+          lineStyle: LightweightCharts.LineStyle.Dashed,
+          axisLabelVisible: true,
+          title: `Fib ${label}  ${price}`,
+        }));
+      });
     }
   </script>
 </body>
