@@ -22,15 +22,18 @@ def fetch_chart(code, range_str="3mo"):
     period1 = now - days * 86400
     period2 = now + 86400  # tomorrow — ensures today's bar is never cut off
 
-    # Try both hosts; keep whichever returns data with the most recent last candle
+    # Try range= and period1/period2 on both hosts; pick the freshest last candle
+    attempts = []
+    for host in YF_HOSTS:
+        attempts.append(f"https://{host}/v8/finance/chart/{code}.TW?interval=1d&range={range_str}")
+        attempts.append(f"https://{host}/v8/finance/chart/{code}.TW?interval=1d&period1={period1}&period2={period2}")
+
     best_result = None
     best_last_ts = 0
-    for host in YF_HOSTS:
-        url = (f"https://{host}/v8/finance/chart/{code}.TW"
-               f"?interval=1d&period1={period1}&period2={period2}")
+    for url in attempts:
         try:
             req = urllib.request.Request(url, headers=YF_HEADERS)
-            with urllib.request.urlopen(req, timeout=12) as r:
+            with urllib.request.urlopen(req, timeout=10) as r:
                 d = json.loads(r.read())
             result = d.get("chart", {}).get("result") or []
             if not result:
@@ -40,6 +43,8 @@ def fetch_chart(code, range_str="3mo"):
             if last_ts > best_last_ts:
                 best_last_ts = last_ts
                 best_result = result[0]
+            if best_last_ts >= now:  # already at today or later — stop early
+                break
         except Exception:
             continue
 
