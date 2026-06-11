@@ -1,5 +1,6 @@
 from http.server import BaseHTTPRequestHandler
 import json
+import time
 import urllib.request
 import urllib.parse
 from datetime import datetime, timezone, timedelta
@@ -10,10 +11,16 @@ YF_HEADERS = {
     "Accept": "application/json",
 }
 
+RANGE_DAYS = {"1mo": 35, "3mo": 95, "6mo": 185, "1y": 370}
+
 
 def fetch_chart(code, range_str="3mo"):
+    days = RANGE_DAYS.get(range_str, 95)
+    now = int(time.time())
+    period1 = now - days * 86400
+    period2 = now + 86400  # tomorrow — ensures today's bar is included
     url = (f"https://query1.finance.yahoo.com/v8/finance/chart/{code}.TW"
-           f"?interval=1d&range={range_str}")
+           f"?interval=1d&period1={period1}&period2={period2}")
     req = urllib.request.Request(url, headers=YF_HEADERS)
     with urllib.request.urlopen(req, timeout=15) as r:
         d = json.loads(r.read())
