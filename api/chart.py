@@ -12,8 +12,8 @@ YF_HEADERS = {
 }
 
 RANGE_DAYS = {"1mo": 35, "3mo": 95, "6mo": 185, "1y": 370}
-# Try both query hosts; query2 is sometimes fresher for TW data from non-TW servers
 YF_HOSTS = ["query1.finance.yahoo.com", "query2.finance.yahoo.com"]
+TWSE_HEADERS = {"User-Agent": "Mozilla/5.0", "Accept": "application/json"}
 
 
 def fetch_chart(code, range_str="3mo"):
@@ -52,6 +52,32 @@ def fetch_chart(code, range_str="3mo"):
         return None
 
     meta = best_result.get("meta", {})
+
+    # ── TWSE supplement ────────────────────────────────────────────────────────
+    # Yahoo Finance CDN from non-TW servers often lags 1 trading day.
+    # Fetch TWSE STOCK_DAY for the current month and append any candles newer
+    # than the last Yahoo Finance candle.
+    def _twse_recent(code_str):
+        now_dt = datetime.now(tz=timezone(timedelta(hours=8)))
+        for delta in (0, -1):  # try current month then previous
+            m = now_dt.month + delta
+            y = now_dt.year
+            if m < 1:
+                m = 12; y -= 1
+            yyyymm01 = f"{y}{m:02d}01"
+            url = (f"https://www.twse.com.tw/exchangeReport/STOCK_DAY"
+                   f"?response=json&date={yyyymm01}&stockNo={code_str}")
+            try:
+                req = urllib.request.Request(url, headers=TWSE_HEADERS)
+                with urllib.request.urlopen(req, timeout=8) as resp:
+                    d = json.loads(resp.read())
+                rows = d.get("data") or []
+                if rows:
+                    return rows
+            except Exception:
+                continue
+        return []
+
     timestamps = best_result.get("timestamp") or []
     q = (best_result.get("indicators", {}).get("quote") or [{}])[0]
     opens   = q.get("open")   or []
@@ -78,6 +104,26 @@ def fetch_chart(code, range_str="3mo"):
             "close":  round(float(c), 2),
             "volume": int(v) if v else 0,
         })
+
+    # Supplement with TWSE data for any trading days newer than Yahoo Finance
+    last_yf = candles[-1]["time"] if candles else "0000-00-00"
+    for row in _twse_recent(code):
+        try:
+            parts = row[0].split("/")  # e.g. "115/06/11"
+            twse_date = f"{int(parts[0])+1911}-{parts[1]}-{parts[2]}"
+            if twse_date <= last_yf:
+                continue
+            candles.append({
+                "time":   twse_date,
+                "open":   round(float(row[3].replace(",", "")), 2),
+                "high":   round(float(row[4].replace(",", "")), 2),
+                "low":    round(float(row[5].replace(",", "")), 2),
+                "close":  round(float(row[6].replace(",", "")), 2),
+                "volume": int(row[1].replace(",", "")),
+            })
+        except Exception:
+            continue
+    candles.sort(key=lambda x: x["time"])
 
     return {
         "code": code,
