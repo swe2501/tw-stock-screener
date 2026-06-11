@@ -135,7 +135,6 @@ def fetch_chart(code, range_str="3mo"):
         "name": meta.get("longName") or meta.get("shortName") or code,
         "currency": meta.get("currency", "TWD"),
         "data": candles,
-        "_twse": twse_candle,
     }
 
 
