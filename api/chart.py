@@ -12,27 +12,43 @@ YF_HEADERS = {
 }
 
 RANGE_DAYS = {"1mo": 35, "3mo": 95, "6mo": 185, "1y": 370}
+# Try both query hosts; query2 is sometimes fresher for TW data from non-TW servers
+YF_HOSTS = ["query1.finance.yahoo.com", "query2.finance.yahoo.com"]
 
 
 def fetch_chart(code, range_str="3mo"):
     days = RANGE_DAYS.get(range_str, 95)
     now = int(time.time())
     period1 = now - days * 86400
-    period2 = now + 86400  # tomorrow — ensures today's bar is included
-    url = (f"https://query2.finance.yahoo.com/v8/finance/chart/{code}.TW"
-           f"?interval=1d&period1={period1}&period2={period2}")
-    req = urllib.request.Request(url, headers=YF_HEADERS)
-    with urllib.request.urlopen(req, timeout=15) as r:
-        d = json.loads(r.read())
+    period2 = now + 86400  # tomorrow — ensures today's bar is never cut off
 
-    result = d.get("chart", {}).get("result") or []
-    if not result:
+    # Try both hosts; keep whichever returns data with the most recent last candle
+    best_result = None
+    best_last_ts = 0
+    for host in YF_HOSTS:
+        url = (f"https://{host}/v8/finance/chart/{code}.TW"
+               f"?interval=1d&period1={period1}&period2={period2}")
+        try:
+            req = urllib.request.Request(url, headers=YF_HEADERS)
+            with urllib.request.urlopen(req, timeout=12) as r:
+                d = json.loads(r.read())
+            result = d.get("chart", {}).get("result") or []
+            if not result:
+                continue
+            ts = result[0].get("timestamp") or []
+            last_ts = max(ts) if ts else 0
+            if last_ts > best_last_ts:
+                best_last_ts = last_ts
+                best_result = result[0]
+        except Exception:
+            continue
+
+    if not best_result:
         return None
 
-    r0 = result[0]
-    meta = r0.get("meta", {})
-    timestamps = r0.get("timestamp") or []
-    q = (r0.get("indicators", {}).get("quote") or [{}])[0]
+    meta = best_result.get("meta", {})
+    timestamps = best_result.get("timestamp") or []
+    q = (best_result.get("indicators", {}).get("quote") or [{}])[0]
     opens   = q.get("open")   or []
     highs   = q.get("high")   or []
     lows    = q.get("low")    or []
