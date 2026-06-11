@@ -59,37 +59,41 @@ def fetch_chart(code, range_str="3mo"):
 
     # ── TWSE supplement ────────────────────────────────────────────────────────
     # Yahoo Finance CDN from non-TW servers often lags 1 trading day.
-    # Use STOCK_DAY_ALL (same as screener) to get the latest TWSE candle and
-    # append it if it is newer than what Yahoo Finance returned.
+    # Use TWSE STOCK_DAY (same endpoint as screener's fetch_stock_month) to get
+    # the most recent completed candle and append it if newer than Yahoo Finance.
     def _twse_latest_candle(code_str):
-        url = "https://www.twse.com.tw/exchangeReport/STOCK_DAY_ALL?response=json"
-        try:
-            req = urllib.request.Request(url, headers=TWSE_HEADERS)
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                d = json.loads(resp.read())
-            if d.get("stat") != "OK":
-                return None
-            roc_date = d.get("date", "")           # e.g. "1150611"
-            if len(roc_date) != 7:
-                return None
-            greg_year = int(roc_date[:3]) + 1911    # 115 → 2026
-            twse_date = f"{greg_year}-{roc_date[3:5]}-{roc_date[5:7]}"
-            for row in (d.get("data") or []):
-                if row[0].strip() != code_str:
+        now_dt = datetime.now(tz=timezone(timedelta(hours=8)))
+        for delta in (0, -1):  # try current month then previous as fallback
+            m = now_dt.month + delta
+            y = now_dt.year
+            if m < 1:
+                m, y = 12, y - 1
+            yyyymm01 = f"{y}{m:02d}01"
+            url = (f"https://www.twse.com.tw/exchangeReport/STOCK_DAY"
+                   f"?response=json&date={yyyymm01}&stockNo={code_str}")
+            try:
+                req = urllib.request.Request(url, headers=TWSE_HEADERS)
+                with urllib.request.urlopen(req, timeout=10) as resp:
+                    d = json.loads(resp.read())
+                if d.get("stat") != "OK":
                     continue
-                try:
-                    return {
-                        "time":   twse_date,
-                        "open":   round(float(row[4].replace(",", "")), 2),
-                        "high":   round(float(row[5].replace(",", "")), 2),
-                        "low":    round(float(row[6].replace(",", "")), 2),
-                        "close":  round(float(row[7].replace(",", "")), 2),
-                        "volume": int(row[2].replace(",", "")),
-                    }
-                except Exception:
-                    return None
-        except Exception:
-            return None
+                rows = d.get("data") or []
+                if not rows:
+                    continue
+                # rows are ascending by date; take the last (most recent)
+                row = rows[-1]
+                parts = row[0].split("/")  # e.g. "115/06/11"
+                twse_date = f"{int(parts[0])+1911}-{parts[1]}-{parts[2]}"
+                return {
+                    "time":   twse_date,
+                    "open":   round(float(row[3].replace(",", "")), 2),
+                    "high":   round(float(row[4].replace(",", "")), 2),
+                    "low":    round(float(row[5].replace(",", "")), 2),
+                    "close":  round(float(row[6].replace(",", "")), 2),
+                    "volume": int(row[1].replace(",", "")),
+                }
+            except Exception:
+                continue
         return None
 
     timestamps = best_result.get("timestamp") or []
