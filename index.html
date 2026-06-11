@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>台灣上市股票篩選器</title>
+  <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -321,6 +322,105 @@
       background: var(--border);
       margin: 20px 0;
     }
+
+    /* ── Chart Modal ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .modal-overlay.open { display: flex; }
+
+    .modal-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      width: 100%;
+      max-width: 860px;
+      overflow: hidden;
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .modal-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .modal-subtitle {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.4rem;
+      cursor: pointer;
+      line-height: 1;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transition: color 0.15s, background 0.15s;
+    }
+    .modal-close:hover { color: #fff; background: var(--surface2); }
+
+    .modal-body {
+      padding: 16px 20px 20px;
+    }
+
+    .chart-range-btns {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .range-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .range-btn:hover { color: var(--text); border-color: var(--accent); }
+    .range-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+    #chartContainer {
+      width: 100%;
+      height: 420px;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #131722;
+    }
+
+    #chartLoading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 420px;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      gap: 10px;
+    }
+
+    tbody tr { cursor: pointer; }
   </style>
 </head>
 <body>
@@ -391,6 +491,29 @@
   <div class="results-wrap">
     <div id="statusArea"></div>
     <div id="resultsArea"></div>
+  </div>
+
+  <!-- K線圖 Modal -->
+  <div class="modal-overlay" id="chartModal" onclick="closeChartIfBg(event)">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title" id="modalTitle">—</div>
+          <div class="modal-subtitle" id="modalSubtitle">日K線</div>
+        </div>
+        <button class="modal-close" onclick="closeChart()">&#10005;</button>
+      </div>
+      <div class="modal-body">
+        <div class="chart-range-btns">
+          <button class="range-btn" onclick="loadChart('1mo')">1月</button>
+          <button class="range-btn active" onclick="loadChart('3mo')">3月</button>
+          <button class="range-btn" onclick="loadChart('6mo')">6月</button>
+          <button class="range-btn" onclick="loadChart('1y')">1年</button>
+        </div>
+        <div id="chartLoading"><div class="spinner"></div> 載入中...</div>
+        <div id="chartContainer" style="display:none"></div>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -521,8 +644,8 @@
         ` : '';
 
         return `
-          <tr>
-            <td class="code-cell"><a href="https://www.twse.com.tw/zh/trading/historical/stock-day.html?stockNo=${s.code}" target="_blank">${s.code}</a></td>
+          <tr onclick="openChart('${s.code}','${s.name.replace(/'/g,"\\'")}')">
+            <td class="code-cell"><a href="https://www.twse.com.tw/zh/trading/historical/stock-day.html?stockNo=${s.code}" target="_blank" onclick="event.stopPropagation()">${s.code}</a></td>
             <td class="name-cell">${s.name}</td>
             <td class="neutral">${s.open}</td>
             <td class="neutral">${s.high}</td>
@@ -570,7 +693,106 @@
     // Allow pressing Enter to submit
     document.addEventListener('keydown', e => {
       if (e.key === 'Enter' && !document.getElementById('submitBtn').disabled) doScreen();
+      if (e.key === 'Escape') closeChart();
     });
+
+    // ── K線圖 ──────────────────────────────────────────────
+    let currentCode = '';
+    let currentName = '';
+    let chartInstance = null;
+
+    function openChart(code, name) {
+      currentCode = code;
+      currentName = name;
+      document.getElementById('modalTitle').textContent = `${code}　${name}`;
+      document.getElementById('chartModal').classList.add('open');
+      document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.range-btn')[1].classList.add('active'); // 3mo default
+      loadChart('3mo');
+    }
+
+    function closeChart() {
+      document.getElementById('chartModal').classList.remove('open');
+      if (chartInstance) { chartInstance.remove(); chartInstance = null; }
+    }
+
+    function closeChartIfBg(e) {
+      if (e.target === document.getElementById('chartModal')) closeChart();
+    }
+
+    function loadChart(range) {
+      // Update active range button
+      const labels = {'1mo':'1月','3mo':'3月','6mo':'6月','1y':'1年'};
+      document.querySelectorAll('.range-btn').forEach(b => {
+        b.classList.toggle('active', b.textContent === (labels[range] || range));
+      });
+
+      document.getElementById('chartLoading').style.display = 'flex';
+      document.getElementById('chartContainer').style.display = 'none';
+      if (chartInstance) { chartInstance.remove(); chartInstance = null; }
+
+      fetch(`/api/chart?code=${currentCode}&range=${range}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.error || !data.data || data.data.length === 0) {
+            document.getElementById('chartLoading').innerHTML = '⚠ 無法取得圖表資料';
+            return;
+          }
+          document.getElementById('modalSubtitle').textContent =
+            `日K線 ・ ${data.data[0].time} ～ ${data.data[data.data.length-1].time}`;
+          renderTVChart(data.data);
+        })
+        .catch(() => {
+          document.getElementById('chartLoading').innerHTML = '⚠ 載入失敗，請重試';
+        });
+    }
+
+    function renderTVChart(candles) {
+      const el = document.getElementById('chartContainer');
+      el.innerHTML = '';
+      document.getElementById('chartLoading').style.display = 'none';
+      el.style.display = 'block';
+
+      chartInstance = LightweightCharts.createChart(el, {
+        width: el.clientWidth,
+        height: 420,
+        layout: { background: { color: '#131722' }, textColor: '#c9d1d9' },
+        grid: { vertLines: { color: '#2e3350' }, horzLines: { color: '#2e3350' } },
+        crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+        rightPriceScale: { borderColor: '#2e3350' },
+        timeScale: { borderColor: '#2e3350', timeVisible: true },
+      });
+
+      const candleSeries = chartInstance.addCandlestickSeries({
+        upColor: '#e74c3c',
+        downColor: '#26c281',
+        borderUpColor: '#e74c3c',
+        borderDownColor: '#26c281',
+        wickUpColor: '#e74c3c',
+        wickDownColor: '#26c281',
+      });
+      candleSeries.setData(candles);
+
+      const volSeries = chartInstance.addHistogramSeries({
+        priceFormat: { type: 'volume' },
+        priceScaleId: 'vol',
+      });
+      chartInstance.priceScale('vol').applyOptions({
+        scaleMargins: { top: 0.8, bottom: 0 },
+      });
+      volSeries.setData(candles.map(c => ({
+        time: c.time,
+        value: c.volume,
+        color: c.close >= c.open ? 'rgba(231,76,60,0.4)' : 'rgba(38,194,129,0.4)',
+      })));
+
+      chartInstance.timeScale().fitContent();
+
+      // Resize when window changes
+      new ResizeObserver(() => {
+        if (chartInstance) chartInstance.applyOptions({ width: el.clientWidth });
+      }).observe(el);
+    }
   </script>
 </body>
 </html>
