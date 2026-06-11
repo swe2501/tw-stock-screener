@@ -19,7 +19,7 @@ def fetch_chart(code, range_str="3mo"):
     now = int(time.time())
     period1 = now - days * 86400
     period2 = now + 86400  # tomorrow — ensures today's bar is included
-    url = (f"https://query1.finance.yahoo.com/v8/finance/chart/{code}.TW"
+    url = (f"https://query2.finance.yahoo.com/v8/finance/chart/{code}.TW"
            f"?interval=1d&period1={period1}&period2={period2}")
     req = urllib.request.Request(url, headers=YF_HEADERS)
     with urllib.request.urlopen(req, timeout=15) as r:
@@ -63,7 +63,6 @@ def fetch_chart(code, range_str="3mo"):
         "name": meta.get("longName") or meta.get("shortName") or code,
         "currency": meta.get("currency", "TWD"),
         "data": candles,
-        "_p2": period2,
     }
 
 
