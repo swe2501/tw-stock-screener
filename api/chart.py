@@ -19,6 +19,112 @@ TWSE_HEADERS = {
 RANGE_DAYS = {"1mo": 35, "3mo": 95, "6mo": 185, "1y": 370, "3y": 1100}
 YF_HOSTS = ["query1.finance.yahoo.com", "query2.finance.yahoo.com"]
 
+TAIFEX_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    "Accept": "text/html,application/xhtml+xml,*/*;q=0.8",
+    "Accept-Language": "zh-TW,zh;q=0.9",
+    "Content-Type": "application/x-www-form-urlencoded",
+    "Referer": "https://www.taifex.com.tw/cht/3/futDailyMarketReport",
+    "Origin": "https://www.taifex.com.tw",
+}
+
+
+def fetch_taifex_tx(range_str="3y"):
+    """Fetch TX (台指期) daily OHLCV from TAIFEX, near-month contract."""
+    tz_offset = timedelta(hours=8)
+    days = RANGE_DAYS.get(range_str, 1100)
+    now_dt = datetime.now(tz=timezone(tz_offset))
+    start_dt = now_dt - timedelta(days=days)
+
+    begin_date = start_dt.strftime("%Y/%m/%d")
+    end_date = now_dt.strftime("%Y/%m/%d")
+
+    post_data = urllib.parse.urlencode({
+        "queryType": "2",
+        "marketCode": "0",
+        "commodity_id": "TX",
+        "period": "",
+        "beginDate": begin_date,
+        "endDate": end_date,
+    }).encode()
+
+    url = "https://www.taifex.com.tw/cht/3/futDailyMarketReport_download"
+    try:
+        req = urllib.request.Request(url, data=post_data, headers=TAIFEX_HEADERS)
+        with urllib.request.urlopen(req, timeout=8) as r:
+            raw = r.read()
+    except Exception:
+        return None
+
+    # Detect encoding (TAIFEX may use Big5 or UTF-8 with BOM)
+    for enc in ("utf-8-sig", "utf-8", "big5"):
+        try:
+            content = raw.decode(enc)
+            break
+        except Exception:
+            content = None
+    if not content:
+        return None
+
+    # Group rows by date, keep the row with highest volume (= near-month contract)
+    by_date = {}
+    for line in content.split("\n"):
+        cols = [c.strip().strip('"') for c in line.split(",")]
+        if len(cols) < 9:
+            continue
+        date_raw = cols[0].strip()
+        if not date_raw or not date_raw[0].isdigit():
+            continue
+
+        sep = "/" if "/" in date_raw else ("." if "." in date_raw else None)
+        if not sep:
+            continue
+        dp = date_raw.split(sep)
+        if len(dp) != 3:
+            continue
+        try:
+            yr = int(dp[0])
+            if yr < 200:
+                yr += 1911  # ROC → Gregorian
+            iso_date = f"{yr}-{dp[1].zfill(2)}-{dp[2].zfill(2)}"
+        except Exception:
+            continue
+
+        def _f(s):
+            try:
+                return float(s.replace(",", "").replace(" ", ""))
+            except Exception:
+                return None
+
+        # Typical column order: date, product, expiry, open, high, low, close, Δ, Δ%, vol, ...
+        o = _f(cols[3]) if len(cols) > 3 else None
+        h = _f(cols[4]) if len(cols) > 4 else None
+        l = _f(cols[5]) if len(cols) > 5 else None
+        c = _f(cols[6]) if len(cols) > 6 else None
+        v = _f(cols[9]) if len(cols) > 9 else None
+
+        if None in (o, h, l, c) or o == 0:
+            continue
+        vol = int(v) if v else 0
+
+        existing = by_date.get(iso_date)
+        if existing is None or vol > existing["volume"]:
+            by_date[iso_date] = {
+                "time": iso_date, "open": o, "high": h,
+                "low": l, "close": c, "volume": vol,
+            }
+
+    if not by_date:
+        return None
+
+    candles = sorted(by_date.values(), key=lambda x: x["time"])
+    return {
+        "code": "TX=F",
+        "name": "台指期貨 (TX)",
+        "currency": "TWD",
+        "data": candles,
+    }
+
 
 def _yf_symbol(code):
     """Return Yahoo Finance symbol. Indices (^) and futures (=F) are used as-is."""
@@ -28,6 +134,11 @@ def _yf_symbol(code):
 
 
 def fetch_chart(code, range_str="3mo", interval="1d"):
+    # TX=F → use TAIFEX (Yahoo Finance doesn't carry Taiwan futures)
+    if code == "TX=F":
+        result = fetch_taifex_tx(range_str)
+        if result:
+            return result
     yf_sym = _yf_symbol(code)
     is_daily = interval == "1d"
     is_tw_stock = yf_sym.endswith(".TW")

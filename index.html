@@ -647,10 +647,10 @@
     <span class="index-row-label">指數快覽</span>
     <button class="idx-btn" onclick="openIndexChart('^TWII','大盤 加權指數')">大盤</button>
     <button class="idx-btn" onclick="openIndexChart('TX=F','台指期貨')">台指期</button>
-    <button class="idx-btn" onclick="openIndexChart('^N225','日經 225')">日經225</button>
-    <button class="idx-btn" onclick="openIndexChart('^KS11','韓國 KOSPI')">KOSPI</button>
-    <button class="idx-btn" onclick="openIndexChart('NQ=F','那斯達克 NQ 期貨')">NQ</button>
-    <button class="idx-btn" onclick="openIndexChart('YM=F','道瓊 YM 期貨')">YM</button>
+    <button class="idx-btn" onclick="openIndexChart('^N225','日經225')">日經225</button>
+    <button class="idx-btn" onclick="openIndexChart('^KS11','韓國綜合指數')">韓指</button>
+    <button class="idx-btn" onclick="openIndexChart('NQ=F','那斯達克 NQ 期貨')">那指</button>
+    <button class="idx-btn" onclick="openIndexChart('YM=F','道瓊 YM 期貨')">道指</button>
   </div>
 
   <div class="results-wrap">
@@ -671,10 +671,7 @@
       <div class="modal-body">
         <div class="chart-toolbar">
           <div class="chart-toolbar-left">
-            <div style="display:flex;gap:4px">
-              <button class="range-btn active" id="intDayBtn" onclick="switchInterval('1d')">日K</button>
-              <button class="range-btn" id="int5mBtn" onclick="switchInterval('5m')">5分K</button>
-            </div>
+            <span class="range-btn active" style="cursor:default">日K</span>
             <div class="toolbar-sep"></div>
             <button class="tool-btn" onclick="openMarketChart()">大盤K</button>
             <button class="tool-btn" id="backBtn" style="display:none" onclick="goBackToStock()">← 返回</button>
@@ -892,7 +889,6 @@
     // ── K線圖 state ─────────────────────────────────────────
     let currentCode = '';
     let currentName = '';
-    let currentInterval = '1d';
     let prevCode = '';
     let prevName = '';
     let chartInstance = null;
@@ -910,17 +906,13 @@
     let trendLines = [];   // [{time1, price1, time2, price2}, ...]
     let trendStart = null; // first click anchor {time, price}
 
-    const MAX_RANGE = { '1d': '3y', '5m': '1mo' };
-
     // ── Open / close ──────────────────────────────────────
     function openChart(code, name) {
       prevCode = ''; prevName = '';
       currentCode = code; currentName = name;
-      currentInterval = '1d';
       document.getElementById('modalTitle').textContent = `${code}　${name}`;
       document.getElementById('backBtn').style.display = 'none';
       document.getElementById('chartModal').classList.add('open');
-      _setIntervalUI('1d');
       if (!fibSetupDone) { setupFibOverlay(); fibSetupDone = true; }
       loadChart();
     }
@@ -928,11 +920,9 @@
     function openIndexChart(sym, name) {
       prevCode = ''; prevName = '';
       currentCode = sym; currentName = name;
-      currentInterval = '1d';
       document.getElementById('modalTitle').textContent = name;
       document.getElementById('backBtn').style.display = 'none';
       document.getElementById('chartModal').classList.add('open');
-      _setIntervalUI('1d');
       if (!fibSetupDone) { setupFibOverlay(); fibSetupDone = true; }
       loadChart();
     }
@@ -943,10 +933,8 @@
         prevName = document.getElementById('modalTitle').textContent;
       }
       currentCode = '^TWII';
-      currentInterval = '1d';
       document.getElementById('modalTitle').textContent = '大盤 加權指數';
       document.getElementById('backBtn').style.display = prevCode ? 'inline-block' : 'none';
-      _setIntervalUI('1d');
       loadChart();
     }
 
@@ -986,30 +974,14 @@
       candleSeriesRef = null;
     }
 
-    // ── Interval switching ────────────────────────────────
-    function switchInterval(iv) {
-      currentInterval = iv;
-      _setIntervalUI(iv);
-      loadChart();
-    }
-
-    function _setIntervalUI(iv) {
-      document.getElementById('intDayBtn').classList.toggle('active', iv === '1d');
-      document.getElementById('int5mBtn').classList.toggle('active', iv === '5m');
-      const vis = iv === '1d' ? '' : 'none';
-      document.getElementById('fibBtn').style.display = vis;
-      document.getElementById('trendBtn').style.display = vis;
-    }
-
     // ── Load chart data ────────────────────────────────────
     function loadChart() {
-      const range = MAX_RANGE[currentInterval] || '3y';
       document.getElementById('chartLoading').style.display = 'flex';
       document.getElementById('chartWrapper').style.display = 'none';
       _destroyCharts();
       _resetDrawingState();
 
-      const url = `/api/chart?code=${encodeURIComponent(currentCode)}&range=${range}&interval=${currentInterval}`;
+      const url = `/api/chart?code=${encodeURIComponent(currentCode)}&range=3y&interval=1d`;
       fetch(url)
         .then(r => r.json())
         .then(data => {
@@ -1019,11 +991,8 @@
           }
           const first = data.data[0].time;
           const last  = data.data[data.data.length - 1].time;
-          const ivLabel = currentInterval === '5m' ? '5分K' : '日K';
-          const fmt = t => typeof t === 'number'
-            ? new Date(t * 1000).toLocaleDateString('zh-TW') : t;
           document.getElementById('modalSubtitle').textContent =
-            `${ivLabel} ・ ${fmt(first)} ～ ${fmt(last)}`;
+            `日K ・ ${first} ～ ${last}`;
           renderTVChart(data.data);
         })
         .catch(() => {
@@ -1087,6 +1056,15 @@
       });
     }
 
+    function calcSMA(closes, period) {
+      return closes.map((_, i) => {
+        if (i < period - 1) return null;
+        let s = 0;
+        for (let j = i - period + 1; j <= i; j++) s += closes[j];
+        return s / period;
+      });
+    }
+
     // ── Render all chart panels ───────────────────────────
     function renderTVChart(candles) {
       document.getElementById('chartLoading').style.display = 'none';
@@ -1139,6 +1117,18 @@
       chartInstance.timeScale().subscribeVisibleTimeRangeChange(() => {
         if (trendLines.length > 0 || trendStart) redrawCanvas();
       });
+
+      // Clamp scroll so user cannot scroll left past the oldest bar
+      const dataFrom = candles[0].time;
+      let scrollClamping = false;
+      chartInstance.timeScale().subscribeVisibleTimeRangeChange(range => {
+        if (scrollClamping || !range) return;
+        if (range.from < dataFrom) {
+          scrollClamping = true;
+          try { chartInstance.timeScale().setVisibleRange({ from: dataFrom, to: range.to }); } catch(_) {}
+          scrollClamping = false;
+        }
+      });
     }
 
     function _chartOpts(height, showTime) {
@@ -1149,7 +1139,7 @@
         crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
         rightPriceScale: { borderColor: '#2e3350', minimumWidth: 65 },
         timeScale: { borderColor: '#2e3350', timeVisible: true, visible: showTime,
-                     secondsVisible: false, rightOffset: 5 },
+                     secondsVisible: false, rightOffset: 5, minBarSpacing: 3 },
         handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true },
         handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: true },
       };
@@ -1168,6 +1158,27 @@
         wickUpColor: '#e74c3c', wickDownColor: '#26c281',
       });
       candleSeriesRef.setData(candles);
+
+      // MA 5/10/20/60/120/240 均線
+      const closes = candles.map(c => c.close);
+      const MA_COLORS = [
+        { period: 5,   color: '#f1c40f' },  // 黃
+        { period: 10,  color: '#e67e22' },  // 橘
+        { period: 20,  color: '#2ecc71' },  // 綠
+        { period: 60,  color: '#3498db' },  // 藍
+        { period: 120, color: '#9b59b6' },  // 紫
+        { period: 240, color: '#e74c3c' },  // 紅
+      ];
+      MA_COLORS.forEach(({ period, color }) => {
+        const sma = calcSMA(closes, period);
+        const s = chartInstance.addLineSeries({
+          color, lineWidth: 1,
+          crosshairMarkerVisible: false,
+          lastValueVisible: false,
+          priceLineVisible: false,
+        });
+        s.setData(candles.map((c, i) => sma[i] !== null ? { time: c.time, value: sma[i] } : null).filter(Boolean));
+      });
     }
 
     function _renderVOLChart(candles) {
