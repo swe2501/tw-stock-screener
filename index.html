@@ -699,7 +699,7 @@
           </div>
           <div id="rsiPanel">
             <div id="rsiContainer"></div>
-            <div id="rsiLabel"><span style="color:#f39c12">─RSI(5)</span><span style="color:#4f8ef7"> ─RSI(10)</span><span style="color:#9b59b6"> ─RSI(14)</span></div>
+            <div id="rsiLabel"><span style="color:#f39c12">─RSI(5)</span><span style="color:#4f8ef7"> ─RSI(10)</span></div>
           </div>
         </div>
       </div>
@@ -1249,7 +1249,6 @@
       const times  = candles.map(c => c.time);
       const rsi5  = calcRSI(closes, 5);
       const rsi10 = calcRSI(closes, 10);
-      const rsi14 = calcRSI(closes, 14);
 
       const opts = _chartOpts(90, true);
       opts.width = el.clientWidth;
@@ -1257,14 +1256,12 @@
       rsiInstance = LightweightCharts.createChart(el, opts);
 
       const autoScale = () => ({ priceRange: { minValue: 0, maxValue: 100 } });
-      const r14 = rsiInstance.addLineSeries({ color: '#9b59b6', lineWidth: 1, priceScaleId: 'right', autoscaleInfoProvider: autoScale });
       const r10 = rsiInstance.addLineSeries({ color: '#4f8ef7', lineWidth: 1, priceScaleId: 'right', autoscaleInfoProvider: autoScale });
       const r5  = rsiInstance.addLineSeries({ color: '#f39c12', lineWidth: 1, priceScaleId: 'right', autoscaleInfoProvider: autoScale });
-      r14.setData(times.map((t, i) => rsi14[i] !== null ? { time: t, value: rsi14[i] } : null).filter(Boolean));
       r10.setData(times.map((t, i) => rsi10[i] !== null ? { time: t, value: rsi10[i] } : null).filter(Boolean));
       r5.setData(times.map((t, i)  => rsi5[i]  !== null ? { time: t, value: rsi5[i]  } : null).filter(Boolean));
       [{ p: 70, c: 'rgba(231,76,60,0.4)' }, { p: 50, c: 'rgba(200,209,217,0.2)' }, { p: 30, c: 'rgba(38,194,129,0.4)' }]
-        .forEach(({ p, c }) => r14.createPriceLine({
+        .forEach(({ p, c }) => r10.createPriceLine({
           price: p, color: c, lineWidth: 1,
           lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: '',
         }));
