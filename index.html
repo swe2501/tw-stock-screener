@@ -1085,17 +1085,15 @@
       _renderMACDChart(candles);
       _renderRSIChart(candles);
 
-      // fitContent on all panels, then align MACD/RSI to main chart's logical range
+      // fitContent on main chart only, then sync MACD/RSI by TIME range (not logical index)
       chartInstance.timeScale().fitContent();
-      macdInstance.timeScale().fitContent();
-      rsiInstance.timeScale().fitContent();
-      const mainRange = chartInstance.timeScale().getVisibleLogicalRange();
-      if (mainRange) {
-        macdInstance.timeScale().setVisibleLogicalRange(mainRange);
-        rsiInstance.timeScale().setVisibleLogicalRange(mainRange);
+      const mainTimeRange = chartInstance.timeScale().getVisibleRange();
+      if (mainTimeRange) {
+        macdInstance.timeScale().setVisibleRange(mainTimeRange);
+        rsiInstance.timeScale().setVisibleRange(mainTimeRange);
       }
 
-      // Ongoing pan/zoom sync
+      // Ongoing pan/zoom sync by time range
       _syncTimeRanges([chartInstance, macdInstance, rsiInstance]);
 
       resizeFibCanvas();
@@ -1235,10 +1233,12 @@
     function _syncTimeRanges(charts) {
       let syncing = false;
       charts.forEach(src => {
-        src.timeScale().subscribeVisibleLogicalRangeChange(range => {
+        src.timeScale().subscribeVisibleTimeRangeChange(range => {
           if (syncing || !range) return;
           syncing = true;
-          charts.forEach(tgt => { if (tgt !== src) tgt.timeScale().setVisibleLogicalRange(range); });
+          charts.forEach(tgt => {
+            if (tgt !== src) try { tgt.timeScale().setVisibleRange(range); } catch(e) {}
+          });
           syncing = false;
         });
       });
