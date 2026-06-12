@@ -1085,13 +1085,32 @@
       _renderMACDChart(candles);
       _renderRSIChart(candles);
 
-      // fitContent on main chart only, then sync MACD/RSI by TIME range (not logical index)
+      // Fit main chart, sync MACD/RSI to same TIME range
       chartInstance.timeScale().fitContent();
       const mainTimeRange = chartInstance.timeScale().getVisibleRange();
       if (mainTimeRange) {
         macdInstance.timeScale().setVisibleRange(mainTimeRange);
         rsiInstance.timeScale().setVisibleRange(mainTimeRange);
       }
+
+      // After browser renders, equalize right price scale widths across all panels.
+      // Different label widths ("36.00" vs "-0.42" vs "60.68") cause different chart-area
+      // widths → same time range → different pixel x-positions → visual misalignment.
+      setTimeout(() => {
+        if (!chartInstance || !macdInstance || !rsiInstance) return;
+        try {
+          const charts = [chartInstance, macdInstance, rsiInstance];
+          const maxW = Math.max(...charts.map(c => c.priceScale('right').width() || 0));
+          if (maxW > 0) {
+            charts.forEach(c => c.priceScale('right').applyOptions({ minimumWidth: maxW }));
+            // Re-apply time range after layout shift
+            const r = chartInstance.timeScale().getVisibleRange();
+            if (r) [macdInstance, rsiInstance].forEach(c => {
+              try { c.timeScale().setVisibleRange(r); } catch (_) {}
+            });
+          }
+        } catch (_) {}
+      }, 0);
 
       // Ongoing pan/zoom sync by time range
       _syncTimeRanges([chartInstance, macdInstance, rsiInstance]);
@@ -1141,11 +1160,15 @@
       });
       candleSeriesRef.setData(candles);
 
-      // Volume histogram
+      // Volume histogram (lastValueVisible:false → don't widen main chart's right scale)
       const volSeries = chartInstance.addHistogramSeries({
         priceFormat: { type: 'volume' }, priceScaleId: 'vol',
+        lastValueVisible: false,
       });
-      chartInstance.priceScale('vol').applyOptions({ scaleMargins: { top: 0.75, bottom: 0 } });
+      chartInstance.priceScale('vol').applyOptions({
+        scaleMargins: { top: 0.75, bottom: 0 },
+        visible: false,
+      });
       volSeries.setData(candles.map(c => ({
         time: c.time, value: c.volume,
         color: c.close >= c.open ? 'rgba(231,76,60,0.4)' : 'rgba(38,194,129,0.4)',
