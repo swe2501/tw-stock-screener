@@ -664,13 +664,6 @@
       <div class="modal-body">
         <div class="chart-toolbar">
           <div class="chart-toolbar-left">
-            <div class="chart-range-btns" id="rangeBtns">
-              <button class="range-btn" onclick="loadChart('1mo')">1月</button>
-              <button class="range-btn active" onclick="loadChart('3mo')">3月</button>
-              <button class="range-btn" onclick="loadChart('6mo')">6月</button>
-              <button class="range-btn" onclick="loadChart('1y')">1年</button>
-            </div>
-            <div class="toolbar-sep"></div>
             <div style="display:flex;gap:4px">
               <button class="range-btn active" id="intDayBtn" onclick="switchInterval('1d')">日K</button>
               <button class="range-btn" id="int5mBtn" onclick="switchInterval('5m')">5分K</button>
@@ -690,15 +683,15 @@
             <div id="chartContainer"></div>
             <canvas id="fibCanvas"></canvas>
             <div id="chartOverlay"></div>
-            <div id="volLabel">VOL</div>
+            <div id="volLabel">VOL<span style="color:#f39c12"> ─MA5</span><span style="color:#e74c3c"> ─MA10</span></div>
           </div>
           <div id="macdPanel">
             <div id="macdContainer"></div>
-            <div id="macdLabel">MACD(12,26,9)</div>
+            <div id="macdLabel"><span style="color:#e74c3c">▬</span>MACD &nbsp;<span style="color:#f39c12">▬</span>Signal &nbsp;<span style="color:rgba(200,209,217,0.5)">▬</span>Hist</div>
           </div>
           <div id="rsiPanel">
             <div id="rsiContainer"></div>
-            <div id="rsiLabel">RSI(14)</div>
+            <div id="rsiLabel"><span style="color:#f39c12">─RSI(5)</span><span style="color:#4f8ef7"> ─RSI(10)</span><span style="color:#9b59b6"> ─RSI(14)</span></div>
           </div>
         </div>
       </div>
@@ -889,7 +882,6 @@
     let currentCode = '';
     let currentName = '';
     let currentInterval = '1d';
-    let currentRange = '3mo';
     let prevCode = '';
     let prevName = '';
     let chartInstance = null;
@@ -901,10 +893,8 @@
     let fibDragStart = null;
     let fibSetupDone = false;
 
-    const RANGE_OPTS = {
-      '1d': [{ l:'1月', v:'1mo' }, { l:'3月', v:'3mo' }, { l:'6月', v:'6mo' }, { l:'1年', v:'1y' }],
-      '5m': [{ l:'今日', v:'1d' }, { l:'5日', v:'5d' }],
-    };
+    // Max range per interval (no range buttons — load all at once, user scrolls)
+    const MAX_RANGE = { '1d': '3y', '5m': '1mo' };
 
     // ── Open / close ──────────────────────────────────────
     function openChart(code, name) {
@@ -912,13 +902,12 @@
       currentCode = code;
       currentName = name;
       currentInterval = '1d';
-      currentRange = '3mo';
       document.getElementById('modalTitle').textContent = `${code}　${name}`;
       document.getElementById('backBtn').style.display = 'none';
       document.getElementById('chartModal').classList.add('open');
       _setIntervalUI('1d');
       if (!fibSetupDone) { setupFibOverlay(); fibSetupDone = true; }
-      loadChart('3mo');
+      loadChart();
     }
 
     function openIndexChart(sym, name) {
@@ -926,13 +915,12 @@
       currentCode = sym;
       currentName = name;
       currentInterval = '1d';
-      currentRange = '3mo';
       document.getElementById('modalTitle').textContent = name;
       document.getElementById('backBtn').style.display = 'none';
       document.getElementById('chartModal').classList.add('open');
       _setIntervalUI('1d');
       if (!fibSetupDone) { setupFibOverlay(); fibSetupDone = true; }
-      loadChart('3mo');
+      loadChart();
     }
 
     function openMarketChart() {
@@ -941,13 +929,11 @@
         prevName = document.getElementById('modalTitle').textContent;
       }
       currentCode = '^TWII';
-      currentName = '大盤 加權指數';
       currentInterval = '1d';
-      currentRange = '3mo';
       document.getElementById('modalTitle').textContent = '大盤 加權指數';
       document.getElementById('backBtn').style.display = prevCode ? 'inline-block' : 'none';
       _setIntervalUI('1d');
-      loadChart('3mo');
+      loadChart();
     }
 
     function goBackToStock() {
@@ -956,8 +942,7 @@
       document.getElementById('modalTitle').textContent = prevName;
       document.getElementById('backBtn').style.display = 'none';
       prevCode = ''; prevName = '';
-      _setIntervalUI(currentInterval);
-      loadChart(currentRange);
+      loadChart();
     }
 
     function closeChart() {
@@ -981,34 +966,22 @@
       candleSeriesRef = null;
     }
 
-    // ── Interval & range switching ─────────────────────────
+    // ── Interval switching ────────────────────────────────
     function switchInterval(iv) {
       currentInterval = iv;
       _setIntervalUI(iv);
-      const defaultRange = iv === '5m' ? '1d' : '3mo';
-      currentRange = defaultRange;
-      loadChart(defaultRange);
+      loadChart();
     }
 
     function _setIntervalUI(iv) {
       document.getElementById('intDayBtn').classList.toggle('active', iv === '1d');
       document.getElementById('int5mBtn').classList.toggle('active', iv === '5m');
-      // Fib only meaningful on daily
       document.getElementById('fibBtn').style.display = iv === '1d' ? '' : 'none';
-      _rebuildRangeBtns(iv, iv === '5m' ? '1d' : currentRange);
-    }
-
-    function _rebuildRangeBtns(iv, activeV) {
-      const container = document.getElementById('rangeBtns');
-      container.innerHTML = RANGE_OPTS[iv].map(o =>
-        `<button class="range-btn${o.v === activeV ? ' active' : ''}" onclick="loadChart('${o.v}')">${o.l}</button>`
-      ).join('');
     }
 
     // ── Load chart data ────────────────────────────────────
-    function loadChart(range) {
-      currentRange = range;
-      _rebuildRangeBtns(currentInterval, range);
+    function loadChart() {
+      const range = MAX_RANGE[currentInterval] || '3y';
 
       document.getElementById('chartLoading').style.display = 'flex';
       document.getElementById('chartWrapper').style.display = 'none';
@@ -1032,10 +1005,11 @@
           const first = data.data[0].time;
           const last  = data.data[data.data.length - 1].time;
           const ivLabel = currentInterval === '5m' ? '5分K' : '日K';
-          const timeRange = typeof first === 'number'
-            ? new Date(last * 1000).toLocaleDateString('zh-TW')
-            : `${first} ～ ${last}`;
-          document.getElementById('modalSubtitle').textContent = `${ivLabel} ・ ${timeRange}`;
+          const fmt = t => typeof t === 'number'
+            ? new Date(t * 1000).toLocaleDateString('zh-TW')
+            : t;
+          document.getElementById('modalSubtitle').textContent =
+            `${ivLabel} ・ ${fmt(first)} ～ ${fmt(last)}`;
           renderTVChart(data.data);
         })
         .catch(() => {
@@ -1063,7 +1037,6 @@
       const macdLine = closes.map((_, i) =>
         ema12[i] !== null && ema26[i] !== null ? ema12[i] - ema26[i] : null
       );
-      // Signal = EMA9 of macdLine (computed on valid values only, then re-aligned)
       const validVals = [], validIdx = [];
       macdLine.forEach((v, i) => { if (v !== null) { validVals.push(v); validIdx.push(i); } });
       const sigVals = calcEMA(validVals, 9);
@@ -1094,6 +1067,15 @@
       return res;
     }
 
+    function calcVolMA(volumes, period) {
+      return volumes.map((_, i) => {
+        if (i < period - 1) return null;
+        let s = 0;
+        for (let j = i - period + 1; j <= i; j++) s += volumes[j];
+        return s / period;
+      });
+    }
+
     // ── Render all chart panels ───────────────────────────
     function renderTVChart(candles) {
       document.getElementById('chartLoading').style.display = 'none';
@@ -1103,8 +1085,18 @@
       _renderMACDChart(candles);
       _renderRSIChart(candles);
 
-      // Sync time scales across all three panels
-      _syncTimeRanges([chartInstance, macdInstance, rsiInstance].filter(Boolean));
+      // fitContent on all panels, then align MACD/RSI to main chart's logical range
+      chartInstance.timeScale().fitContent();
+      macdInstance.timeScale().fitContent();
+      rsiInstance.timeScale().fitContent();
+      const mainRange = chartInstance.timeScale().getVisibleLogicalRange();
+      if (mainRange) {
+        macdInstance.timeScale().setVisibleLogicalRange(mainRange);
+        rsiInstance.timeScale().setVisibleLogicalRange(mainRange);
+      }
+
+      // Ongoing pan/zoom sync
+      _syncTimeRanges([chartInstance, macdInstance, rsiInstance]);
 
       resizeFibCanvas();
 
@@ -1124,10 +1116,16 @@
         layout: { background: { color: '#131722' }, textColor: '#c9d1d9' },
         grid: { vertLines: { color: '#2e3350' }, horzLines: { color: '#2e3350' } },
         crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
-        rightPriceScale: { borderColor: '#2e3350' },
-        timeScale: { borderColor: '#2e3350', timeVisible: true, visible: showTime, secondsVisible: false },
-        handleScroll: true,
-        handleScale: true,
+        rightPriceScale: { borderColor: '#2e3350', minimumWidth: 65 },
+        timeScale: {
+          borderColor: '#2e3350',
+          timeVisible: true,
+          visible: showTime,
+          secondsVisible: false,
+          rightOffset: 5,
+        },
+        handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true },
+        handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: true },
       };
     }
 
@@ -1145,6 +1143,7 @@
       });
       candleSeriesRef.setData(candles);
 
+      // Volume histogram
       const volSeries = chartInstance.addHistogramSeries({
         priceFormat: { type: 'volume' }, priceScaleId: 'vol',
       });
@@ -1154,7 +1153,20 @@
         color: c.close >= c.open ? 'rgba(231,76,60,0.4)' : 'rgba(38,194,129,0.4)',
       })));
 
-      chartInstance.timeScale().fitContent();
+      // VOL MA5 / MA10
+      const vols = candles.map(c => c.volume);
+      const vma5  = calcVolMA(vols, 5);
+      const vma10 = calcVolMA(vols, 10);
+      const vma5s = chartInstance.addLineSeries({
+        color: '#f39c12', lineWidth: 1, priceScaleId: 'vol',
+        crosshairMarkerVisible: false, lastValueVisible: false,
+      });
+      const vma10s = chartInstance.addLineSeries({
+        color: '#e74c3c', lineWidth: 1, priceScaleId: 'vol',
+        crosshairMarkerVisible: false, lastValueVisible: false,
+      });
+      vma5s.setData(candles.map((c, i) => vma5[i]  !== null ? { time: c.time, value: vma5[i]  } : null).filter(Boolean));
+      vma10s.setData(candles.map((c, i) => vma10[i] !== null ? { time: c.time, value: vma10[i] } : null).filter(Boolean));
     }
 
     function _renderMACDChart(candles) {
@@ -1169,8 +1181,7 @@
       opts.rightPriceScale.scaleMargins = { top: 0.1, bottom: 0.1 };
       macdInstance = LightweightCharts.createChart(el, opts);
 
-      // Histogram
-      const histSeries = macdInstance.addHistogramSeries({ priceScaleId: 'right', lineWidth: 1 });
+      const histSeries = macdInstance.addHistogramSeries({ priceScaleId: 'right' });
       histSeries.setData(
         times.map((t, i) => hist[i] !== null ? {
           time: t, value: hist[i],
@@ -1178,21 +1189,16 @@
         } : null).filter(Boolean)
       );
 
-      // MACD line
-      const macdSeries = macdInstance.addLineSeries({ color: '#4f8ef7', lineWidth: 1, priceScaleId: 'right' });
+      const macdSeries = macdInstance.addLineSeries({ color: '#e74c3c', lineWidth: 1, priceScaleId: 'right' });
       macdSeries.setData(times.map((t, i) => macd[i] !== null ? { time: t, value: macd[i] } : null).filter(Boolean));
 
-      // Signal line
       const sigSeries = macdInstance.addLineSeries({ color: '#f39c12', lineWidth: 1, priceScaleId: 'right' });
       sigSeries.setData(times.map((t, i) => signal[i] !== null ? { time: t, value: signal[i] } : null).filter(Boolean));
 
-      // Zero reference
       macdSeries.createPriceLine({
         price: 0, color: 'rgba(200,209,217,0.25)', lineWidth: 1,
         lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: false,
       });
-
-      macdInstance.timeScale().fitContent();
     }
 
     function _renderRSIChart(candles) {
@@ -1200,27 +1206,30 @@
       el.innerHTML = '';
       const closes = candles.map(c => c.close);
       const times  = candles.map(c => c.time);
-      const rsi = calcRSI(closes);
+      const rsi5  = calcRSI(closes, 5);
+      const rsi10 = calcRSI(closes, 10);
+      const rsi14 = calcRSI(closes, 14);
 
       const opts = _chartOpts(90, true);
       opts.width = el.clientWidth;
       opts.rightPriceScale.scaleMargins = { top: 0.05, bottom: 0.05 };
       rsiInstance = LightweightCharts.createChart(el, opts);
 
-      const rsiSeries = rsiInstance.addLineSeries({
-        color: '#9b59b6', lineWidth: 1, priceScaleId: 'right',
-        autoscaleInfoProvider: () => ({ priceRange: { minValue: 0, maxValue: 100 } }),
-      });
-      rsiSeries.setData(times.map((t, i) => rsi[i] !== null ? { time: t, value: rsi[i] } : null).filter(Boolean));
+      const autoScale = () => ({ priceRange: { minValue: 0, maxValue: 100 } });
 
-      // Reference lines
+      const r14 = rsiInstance.addLineSeries({ color: '#9b59b6', lineWidth: 1, priceScaleId: 'right', autoscaleInfoProvider: autoScale });
+      const r10 = rsiInstance.addLineSeries({ color: '#4f8ef7', lineWidth: 1, priceScaleId: 'right', autoscaleInfoProvider: autoScale });
+      const r5  = rsiInstance.addLineSeries({ color: '#f39c12', lineWidth: 1, priceScaleId: 'right', autoscaleInfoProvider: autoScale });
+
+      r14.setData(times.map((t, i) => rsi14[i] !== null ? { time: t, value: rsi14[i] } : null).filter(Boolean));
+      r10.setData(times.map((t, i) => rsi10[i] !== null ? { time: t, value: rsi10[i] } : null).filter(Boolean));
+      r5.setData(times.map((t, i)  => rsi5[i]  !== null ? { time: t, value: rsi5[i]  } : null).filter(Boolean));
+
       [{ p: 70, c: 'rgba(231,76,60,0.4)' }, { p: 50, c: 'rgba(200,209,217,0.2)' }, { p: 30, c: 'rgba(38,194,129,0.4)' }]
-        .forEach(({ p, c }) => rsiSeries.createPriceLine({
+        .forEach(({ p, c }) => r14.createPriceLine({
           price: p, color: c, lineWidth: 1,
           lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: '',
         }));
-
-      rsiInstance.timeScale().fitContent();
     }
 
     function _syncTimeRanges(charts) {
