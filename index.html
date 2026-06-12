@@ -456,7 +456,7 @@
     }
     #chartContainer {
       width: 100%;
-      height: 270px;
+      height: 220px;
     }
     #fibCanvas {
       position: absolute;
@@ -471,17 +471,24 @@
       z-index: 10;
       display: none;
     }
+
+    /* VOL panel (separate from candles) */
+    #volPanel {
+      position: relative;
+      width: 100%;
+      border-top: 1px solid var(--border);
+    }
+    #volContainer { width: 100%; height: 70px; }
     #volLabel {
       position: absolute;
-      bottom: 26px;
-      left: 8px;
-      font-size: 10px;
-      color: rgba(200,209,217,0.4);
+      top: 4px; left: 8px;
+      font-size: 9px;
+      color: rgba(200,209,217,0.45);
       pointer-events: none;
       z-index: 5;
       font-family: monospace;
       font-weight: bold;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.04em;
     }
 
     /* MACD panel */
@@ -526,7 +533,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      height: 460px;
+      height: 500px;
       color: var(--text-muted);
       font-size: 0.9rem;
       gap: 10px;
@@ -674,7 +681,8 @@
           </div>
           <div class="chart-tool-btns">
             <button class="tool-btn" id="fibBtn" onclick="toggleFibMode()">📐 斐波那契</button>
-            <button class="tool-btn" onclick="clearFib()">✕ 清除</button>
+            <button class="tool-btn" id="trendBtn" onclick="toggleTrendLine()">📏 趨勢線</button>
+            <button class="tool-btn" onclick="clearAllDrawings()">✕ 清除</button>
           </div>
         </div>
         <div id="chartLoading"><div class="spinner"></div> 載入中...</div>
@@ -683,6 +691,9 @@
             <div id="chartContainer"></div>
             <canvas id="fibCanvas"></canvas>
             <div id="chartOverlay"></div>
+          </div>
+          <div id="volPanel">
+            <div id="volContainer"></div>
             <div id="volLabel">VOL<span style="color:#f39c12"> ─MA5</span><span style="color:#e74c3c"> ─MA10</span></div>
           </div>
           <div id="macdPanel">
@@ -885,22 +896,26 @@
     let prevCode = '';
     let prevName = '';
     let chartInstance = null;
-    let macdInstance = null;
-    let rsiInstance = null;
+    let volInstance   = null;
+    let macdInstance  = null;
+    let rsiInstance   = null;
     let candleSeriesRef = null;
+    // Fibonacci
     let fibMode = false;
     let fibLines = [];
     let fibDragStart = null;
     let fibSetupDone = false;
+    // Trend lines
+    let trendLineMode = false;
+    let trendLines = [];   // [{time1, price1, time2, price2}, ...]
+    let trendStart = null; // first click anchor {time, price}
 
-    // Max range per interval (no range buttons — load all at once, user scrolls)
     const MAX_RANGE = { '1d': '3y', '5m': '1mo' };
 
     // ── Open / close ──────────────────────────────────────
     function openChart(code, name) {
       prevCode = ''; prevName = '';
-      currentCode = code;
-      currentName = name;
+      currentCode = code; currentName = name;
       currentInterval = '1d';
       document.getElementById('modalTitle').textContent = `${code}　${name}`;
       document.getElementById('backBtn').style.display = 'none';
@@ -912,8 +927,7 @@
 
     function openIndexChart(sym, name) {
       prevCode = ''; prevName = '';
-      currentCode = sym;
-      currentName = name;
+      currentCode = sym; currentName = name;
       currentInterval = '1d';
       document.getElementById('modalTitle').textContent = name;
       document.getElementById('backBtn').style.display = 'none';
@@ -948,19 +962,25 @@
     function closeChart() {
       document.getElementById('chartModal').classList.remove('open');
       _destroyCharts();
-      fibLines = [];
-      fibMode = false;
-      fibDragStart = null;
-      document.getElementById('fibBtn').classList.remove('active');
-      document.getElementById('chartOverlay').style.display = 'none';
+      _resetDrawingState();
     }
 
     function closeChartIfBg(e) {
       if (e.target === document.getElementById('chartModal')) closeChart();
     }
 
+    function _resetDrawingState() {
+      fibLines = []; fibMode = false; fibDragStart = null;
+      trendLines = []; trendLineMode = false; trendStart = null;
+      document.getElementById('fibBtn').classList.remove('active');
+      document.getElementById('trendBtn').classList.remove('active');
+      document.getElementById('chartOverlay').style.display = 'none';
+      _clearCanvas();
+    }
+
     function _destroyCharts() {
       if (chartInstance) { chartInstance.remove(); chartInstance = null; }
+      if (volInstance)   { volInstance.remove();   volInstance = null; }
       if (macdInstance)  { macdInstance.remove();  macdInstance = null; }
       if (rsiInstance)   { rsiInstance.remove();   rsiInstance = null; }
       candleSeriesRef = null;
@@ -976,23 +996,18 @@
     function _setIntervalUI(iv) {
       document.getElementById('intDayBtn').classList.toggle('active', iv === '1d');
       document.getElementById('int5mBtn').classList.toggle('active', iv === '5m');
-      document.getElementById('fibBtn').style.display = iv === '1d' ? '' : 'none';
+      const vis = iv === '1d' ? '' : 'none';
+      document.getElementById('fibBtn').style.display = vis;
+      document.getElementById('trendBtn').style.display = vis;
     }
 
     // ── Load chart data ────────────────────────────────────
     function loadChart() {
       const range = MAX_RANGE[currentInterval] || '3y';
-
       document.getElementById('chartLoading').style.display = 'flex';
       document.getElementById('chartWrapper').style.display = 'none';
-
       _destroyCharts();
-      fibLines = [];
-      fibMode = false;
-      fibDragStart = null;
-      document.getElementById('fibBtn').classList.remove('active');
-      document.getElementById('chartOverlay').style.display = 'none';
-      clearFibCanvas();
+      _resetDrawingState();
 
       const url = `/api/chart?code=${encodeURIComponent(currentCode)}&range=${range}&interval=${currentInterval}`;
       fetch(url)
@@ -1006,8 +1021,7 @@
           const last  = data.data[data.data.length - 1].time;
           const ivLabel = currentInterval === '5m' ? '5分K' : '日K';
           const fmt = t => typeof t === 'number'
-            ? new Date(t * 1000).toLocaleDateString('zh-TW')
-            : t;
+            ? new Date(t * 1000).toLocaleDateString('zh-TW') : t;
           document.getElementById('modalSubtitle').textContent =
             `${ivLabel} ・ ${fmt(first)} ～ ${fmt(last)}`;
           renderTVChart(data.data);
@@ -1025,9 +1039,8 @@
       let sum = 0;
       for (let i = 0; i < period; i++) sum += values[i];
       res[period - 1] = sum / period;
-      for (let i = period; i < values.length; i++) {
+      for (let i = period; i < values.length; i++)
         res[i] = values[i] * k + res[i - 1] * (1 - k);
-      }
       return res;
     }
 
@@ -1035,16 +1048,14 @@
       const ema12 = calcEMA(closes, 12);
       const ema26 = calcEMA(closes, 26);
       const macdLine = closes.map((_, i) =>
-        ema12[i] !== null && ema26[i] !== null ? ema12[i] - ema26[i] : null
-      );
+        ema12[i] !== null && ema26[i] !== null ? ema12[i] - ema26[i] : null);
       const validVals = [], validIdx = [];
       macdLine.forEach((v, i) => { if (v !== null) { validVals.push(v); validIdx.push(i); } });
       const sigVals = calcEMA(validVals, 9);
       const sigLine = new Array(closes.length).fill(null);
       sigVals.forEach((v, i) => { sigLine[validIdx[i]] = v; });
       const hist = closes.map((_, i) =>
-        macdLine[i] !== null && sigLine[i] !== null ? macdLine[i] - sigLine[i] : null
-      );
+        macdLine[i] !== null && sigLine[i] !== null ? macdLine[i] - sigLine[i] : null);
       return { macd: macdLine, signal: sigLine, hist };
     }
 
@@ -1082,65 +1093,63 @@
       document.getElementById('chartWrapper').style.display = 'block';
 
       _renderMainChart(candles);
+      _renderVOLChart(candles);
       _renderMACDChart(candles);
       _renderRSIChart(candles);
 
-      // Fit main chart, sync MACD/RSI to same TIME range
+      // Fit main, sync all other panels to same TIME range
       chartInstance.timeScale().fitContent();
       const mainTimeRange = chartInstance.timeScale().getVisibleRange();
       if (mainTimeRange) {
-        macdInstance.timeScale().setVisibleRange(mainTimeRange);
-        rsiInstance.timeScale().setVisibleRange(mainTimeRange);
+        [volInstance, macdInstance, rsiInstance].forEach(c => {
+          try { c.timeScale().setVisibleRange(mainTimeRange); } catch (_) {}
+        });
       }
 
-      // After browser renders, equalize right price scale widths across all panels.
-      // Different label widths ("36.00" vs "-0.42" vs "60.68") cause different chart-area
-      // widths → same time range → different pixel x-positions → visual misalignment.
+      // Equalize right price scale widths across all 4 panels after layout settles
       setTimeout(() => {
-        if (!chartInstance || !macdInstance || !rsiInstance) return;
+        const all = [chartInstance, volInstance, macdInstance, rsiInstance].filter(Boolean);
         try {
-          const charts = [chartInstance, macdInstance, rsiInstance];
-          const maxW = Math.max(...charts.map(c => c.priceScale('right').width() || 0));
+          const maxW = Math.max(...all.map(c => c.priceScale('right').width() || 0));
           if (maxW > 0) {
-            charts.forEach(c => c.priceScale('right').applyOptions({ minimumWidth: maxW }));
-            // Re-apply time range after layout shift
+            all.forEach(c => c.priceScale('right').applyOptions({ minimumWidth: maxW }));
             const r = chartInstance.timeScale().getVisibleRange();
-            if (r) [macdInstance, rsiInstance].forEach(c => {
+            if (r) [volInstance, macdInstance, rsiInstance].forEach(c => {
               try { c.timeScale().setVisibleRange(r); } catch (_) {}
             });
           }
         } catch (_) {}
       }, 0);
 
-      // Ongoing pan/zoom sync by time range
-      _syncTimeRanges([chartInstance, macdInstance, rsiInstance]);
-
+      _syncTimeRanges([chartInstance, volInstance, macdInstance, rsiInstance].filter(Boolean));
       resizeFibCanvas();
 
+      // Resize observer
       const mainEl = document.getElementById('chartContainer');
       new ResizeObserver(() => {
         if (chartInstance) chartInstance.applyOptions({ width: mainEl.clientWidth });
+        if (volInstance)   volInstance.applyOptions({ width: document.getElementById('volContainer').clientWidth });
         if (macdInstance)  macdInstance.applyOptions({ width: document.getElementById('macdContainer').clientWidth });
         if (rsiInstance)   rsiInstance.applyOptions({ width: document.getElementById('rsiContainer').clientWidth });
         resizeFibCanvas();
+        if (trendLines.length > 0) redrawCanvas();
       }).observe(mainEl);
+
+      // Redraw trend lines when chart is panned / zoomed
+      chartInstance.timeScale().subscribeVisibleTimeRangeChange(() => {
+        if (trendLines.length > 0 || trendStart) redrawCanvas();
+      });
     }
 
     function _chartOpts(height, showTime) {
       return {
-        width: 0,
-        height,
+        width: 0, height,
         layout: { background: { color: '#131722' }, textColor: '#c9d1d9' },
         grid: { vertLines: { color: '#2e3350' }, horzLines: { color: '#2e3350' } },
         crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
         rightPriceScale: { borderColor: '#2e3350', minimumWidth: 65 },
-        timeScale: {
-          borderColor: '#2e3350',
-          timeVisible: true,
-          visible: showTime,
-          secondsVisible: false,
-          rightOffset: 5,
-        },
+        timeScale: { borderColor: '#2e3350', timeVisible: true, visible: showTime,
+                     secondsVisible: false, rightOffset: 5 },
         handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true },
         handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: true },
       };
@@ -1149,7 +1158,7 @@
     function _renderMainChart(candles) {
       const el = document.getElementById('chartContainer');
       el.innerHTML = '';
-      const opts = _chartOpts(270, false);
+      const opts = _chartOpts(220, false);
       opts.width = el.clientWidth;
       chartInstance = LightweightCharts.createChart(el, opts);
 
@@ -1159,31 +1168,34 @@
         wickUpColor: '#e74c3c', wickDownColor: '#26c281',
       });
       candleSeriesRef.setData(candles);
+    }
 
-      // Volume histogram (lastValueVisible:false → don't widen main chart's right scale)
-      const volSeries = chartInstance.addHistogramSeries({
-        priceFormat: { type: 'volume' }, priceScaleId: 'vol',
+    function _renderVOLChart(candles) {
+      const el = document.getElementById('volContainer');
+      el.innerHTML = '';
+      const opts = _chartOpts(70, false);
+      opts.width = el.clientWidth;
+      opts.rightPriceScale.scaleMargins = { top: 0.1, bottom: 0.05 };
+      volInstance = LightweightCharts.createChart(el, opts);
+
+      const volSeries = volInstance.addHistogramSeries({
+        priceFormat: { type: 'volume' }, priceScaleId: 'right',
         lastValueVisible: false,
-      });
-      chartInstance.priceScale('vol').applyOptions({
-        scaleMargins: { top: 0.75, bottom: 0 },
-        visible: false,
       });
       volSeries.setData(candles.map(c => ({
         time: c.time, value: c.volume,
         color: c.close >= c.open ? 'rgba(231,76,60,0.4)' : 'rgba(38,194,129,0.4)',
       })));
 
-      // VOL MA5 / MA10
       const vols = candles.map(c => c.volume);
       const vma5  = calcVolMA(vols, 5);
       const vma10 = calcVolMA(vols, 10);
-      const vma5s = chartInstance.addLineSeries({
-        color: '#f39c12', lineWidth: 1, priceScaleId: 'vol',
+      const vma5s = volInstance.addLineSeries({
+        color: '#f39c12', lineWidth: 1,
         crosshairMarkerVisible: false, lastValueVisible: false,
       });
-      const vma10s = chartInstance.addLineSeries({
-        color: '#e74c3c', lineWidth: 1, priceScaleId: 'vol',
+      const vma10s = volInstance.addLineSeries({
+        color: '#e74c3c', lineWidth: 1,
         crosshairMarkerVisible: false, lastValueVisible: false,
       });
       vma5s.setData(candles.map((c, i) => vma5[i]  !== null ? { time: c.time, value: vma5[i]  } : null).filter(Boolean));
@@ -1209,13 +1221,10 @@
           color: hist[i] >= 0 ? 'rgba(231,76,60,0.65)' : 'rgba(38,194,129,0.65)',
         } : null).filter(Boolean)
       );
-
       const macdSeries = macdInstance.addLineSeries({ color: '#e74c3c', lineWidth: 1, priceScaleId: 'right' });
       macdSeries.setData(times.map((t, i) => macd[i] !== null ? { time: t, value: macd[i] } : null).filter(Boolean));
-
       const sigSeries = macdInstance.addLineSeries({ color: '#f39c12', lineWidth: 1, priceScaleId: 'right' });
       sigSeries.setData(times.map((t, i) => signal[i] !== null ? { time: t, value: signal[i] } : null).filter(Boolean));
-
       macdSeries.createPriceLine({
         price: 0, color: 'rgba(200,209,217,0.25)', lineWidth: 1,
         lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: false,
@@ -1237,15 +1246,12 @@
       rsiInstance = LightweightCharts.createChart(el, opts);
 
       const autoScale = () => ({ priceRange: { minValue: 0, maxValue: 100 } });
-
       const r14 = rsiInstance.addLineSeries({ color: '#9b59b6', lineWidth: 1, priceScaleId: 'right', autoscaleInfoProvider: autoScale });
       const r10 = rsiInstance.addLineSeries({ color: '#4f8ef7', lineWidth: 1, priceScaleId: 'right', autoscaleInfoProvider: autoScale });
       const r5  = rsiInstance.addLineSeries({ color: '#f39c12', lineWidth: 1, priceScaleId: 'right', autoscaleInfoProvider: autoScale });
-
       r14.setData(times.map((t, i) => rsi14[i] !== null ? { time: t, value: rsi14[i] } : null).filter(Boolean));
       r10.setData(times.map((t, i) => rsi10[i] !== null ? { time: t, value: rsi10[i] } : null).filter(Boolean));
       r5.setData(times.map((t, i)  => rsi5[i]  !== null ? { time: t, value: rsi5[i]  } : null).filter(Boolean));
-
       [{ p: 70, c: 'rgba(231,76,60,0.4)' }, { p: 50, c: 'rgba(200,209,217,0.2)' }, { p: 30, c: 'rgba(38,194,129,0.4)' }]
         .forEach(({ p, c }) => r14.createPriceLine({
           price: p, color: c, lineWidth: 1,
@@ -1267,7 +1273,7 @@
       });
     }
 
-    // ── Fibonacci Retracement ──────────────────────────────
+    // ── Drawing: canvas utilities ─────────────────────────
     function resizeFibCanvas() {
       const canvas = document.getElementById('fibCanvas');
       const panel  = document.getElementById('mainChartPanel');
@@ -1276,21 +1282,58 @@
       canvas.height = panel.clientHeight;
     }
 
-    function clearFibCanvas() {
+    function _clearCanvas() {
       const canvas = document.getElementById('fibCanvas');
       if (!canvas) return;
       canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
     }
 
+    // Redraws completed trend lines on the canvas (clears first)
+    function redrawCanvas() {
+      const canvas = document.getElementById('fibCanvas');
+      if (!canvas || !chartInstance || !candleSeriesRef) return;
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      _drawTrendLinesOnCtx(ctx);
+    }
+
+    function _drawTrendLinesOnCtx(ctx) {
+      trendLines.forEach(line => {
+        const x1 = chartInstance.timeScale().timeToCoordinate(line.time1);
+        const y1 = candleSeriesRef.priceToCoordinate(line.price1);
+        const x2 = chartInstance.timeScale().timeToCoordinate(line.time2);
+        const y2 = candleSeriesRef.priceToCoordinate(line.price2);
+        if (x1 == null || y1 == null || x2 == null || y2 == null) return;
+        ctx.strokeStyle = '#f39c12'; ctx.lineWidth = 1.5; ctx.setLineDash([]);
+        ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+        ctx.fillStyle = '#f39c12';
+        [{ x: x1, y: y1 }, { x: x2, y: y2 }].forEach(p => {
+          ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI * 2); ctx.fill();
+        });
+      });
+      // Anchor dot for in-progress trend line (first click placed)
+      if (trendStart) {
+        const ax = chartInstance.timeScale().timeToCoordinate(trendStart.time);
+        const ay = candleSeriesRef.priceToCoordinate(trendStart.price);
+        if (ax != null && ay != null) {
+          ctx.fillStyle = '#f39c12';
+          ctx.beginPath(); ctx.arc(ax, ay, 5, 0, Math.PI * 2); ctx.fill();
+        }
+      }
+    }
+
+    // ── Fibonacci + Trend line overlay ────────────────────
     function setupFibOverlay() {
       const overlay = document.getElementById('chartOverlay');
       const canvas  = document.getElementById('fibCanvas');
 
       function getY(clientY) { return clientY - overlay.getBoundingClientRect().top; }
+      function getX(clientX) { return clientX - overlay.getBoundingClientRect().left; }
 
       function drawBand(y0, y1) {
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        _drawTrendLinesOnCtx(ctx);  // keep trend lines behind fib rubber band
         const minY = Math.min(y0, y1), h = Math.abs(y1 - y0);
         ctx.fillStyle = 'rgba(243,156,18,0.08)';
         ctx.fillRect(0, minY, canvas.width, h);
@@ -1307,56 +1350,109 @@
         const high = Math.max(fibDragStart.price, p2);
         const low  = Math.min(fibDragStart.price, p2);
         if (high !== low) drawFibLines(high, low);
-        clearFibCanvas();
+        redrawCanvas();
         fibDragStart = null; fibMode = false;
         document.getElementById('fibBtn').classList.remove('active');
-        overlay.style.display = 'none';
+        overlay.style.display = trendLineMode ? 'block' : 'none';
+      }
+
+      function handleTrendClick(clientX, clientY) {
+        if (!chartInstance || !candleSeriesRef) return;
+        const time  = chartInstance.timeScale().coordinateToTime(getX(clientX));
+        const price = candleSeriesRef.coordinateToPrice(getY(clientY));
+        if (time == null || price == null) return;
+        if (!trendStart) {
+          trendStart = { time, price };
+          redrawCanvas();
+        } else {
+          trendLines.push({ time1: trendStart.time, price1: trendStart.price, time2: time, price2: price });
+          trendStart = null;
+          redrawCanvas();
+        }
       }
 
       overlay.addEventListener('mousedown', e => {
-        if (!candleSeriesRef) return;
+        if (!candleSeriesRef || !fibMode) return;
         const y = getY(e.clientY);
         const price = candleSeriesRef.coordinateToPrice(y);
-        if (price == null) return;
-        fibDragStart = { y, price };
+        if (price != null) fibDragStart = { y, price };
       });
-      overlay.addEventListener('mousemove', e => { if (fibDragStart) drawBand(fibDragStart.y, getY(e.clientY)); });
-      overlay.addEventListener('mouseup', e => { finishFib(getY(e.clientY)); });
+      overlay.addEventListener('mousemove', e => {
+        if (fibMode && fibDragStart) {
+          drawBand(fibDragStart.y, getY(e.clientY));
+        } else if (trendLineMode && trendStart) {
+          // Preview dashed line from anchor to cursor
+          const ctx = canvas.getContext('2d');
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          _drawTrendLinesOnCtx(ctx);
+          const ax = chartInstance.timeScale().timeToCoordinate(trendStart.time);
+          const ay = candleSeriesRef.priceToCoordinate(trendStart.price);
+          if (ax != null && ay != null) {
+            ctx.strokeStyle = 'rgba(243,156,18,0.75)';
+            ctx.lineWidth = 1.5; ctx.setLineDash([5, 3]);
+            ctx.beginPath(); ctx.moveTo(ax, ay);
+            ctx.lineTo(getX(e.clientX), getY(e.clientY)); ctx.stroke();
+            ctx.setLineDash([]);
+          }
+        }
+      });
+      overlay.addEventListener('mouseup', e => { if (fibMode) finishFib(getY(e.clientY)); });
+      overlay.addEventListener('click', e => { if (trendLineMode) handleTrendClick(e.clientX, e.clientY); });
 
       overlay.addEventListener('touchstart', e => {
         if (!candleSeriesRef) return; e.preventDefault();
-        const y = getY(e.touches[0].clientY);
-        const price = candleSeriesRef.coordinateToPrice(y);
-        if (price == null) return;
-        fibDragStart = { y, price };
+        if (fibMode) {
+          const y = getY(e.touches[0].clientY);
+          const price = candleSeriesRef.coordinateToPrice(y);
+          if (price != null) fibDragStart = { y, price };
+        } else if (trendLineMode) {
+          handleTrendClick(e.touches[0].clientX, e.touches[0].clientY);
+        }
       }, { passive: false });
       overlay.addEventListener('touchmove', e => {
         if (!fibDragStart) return; e.preventDefault();
         drawBand(fibDragStart.y, getY(e.touches[0].clientY));
       }, { passive: false });
       overlay.addEventListener('touchend', e => {
-        e.preventDefault(); finishFib(getY(e.changedTouches[0].clientY));
+        e.preventDefault();
+        if (fibMode) finishFib(getY(e.changedTouches[0].clientY));
       }, { passive: false });
     }
 
     function toggleFibMode() {
       if (!chartInstance) return;
+      trendLineMode = false; trendStart = null;
+      document.getElementById('trendBtn').classList.remove('active');
       fibMode = !fibMode;
       document.getElementById('fibBtn').classList.toggle('active', fibMode);
       document.getElementById('chartOverlay').style.display = fibMode ? 'block' : 'none';
-      if (!fibMode) { fibDragStart = null; clearFibCanvas(); }
+      if (!fibMode) { fibDragStart = null; redrawCanvas(); }
     }
 
-    function clearFib() {
+    function toggleTrendLine() {
+      if (!chartInstance) return;
+      fibMode = false; fibDragStart = null;
+      document.getElementById('fibBtn').classList.remove('active');
+      trendLineMode = !trendLineMode;
+      trendStart = null;
+      document.getElementById('trendBtn').classList.toggle('active', trendLineMode);
+      document.getElementById('chartOverlay').style.display = trendLineMode ? 'block' : 'none';
+      if (!trendLineMode) redrawCanvas();
+    }
+
+    function clearAllDrawings() {
       fibLines.forEach(pl => {
         try { if (candleSeriesRef) candleSeriesRef.removePriceLine(pl); } catch(e) {}
       });
-      fibLines = []; fibDragStart = null; clearFibCanvas();
+      fibLines = []; fibDragStart = null;
+      trendLines = []; trendStart = null;
+      _clearCanvas();
     }
 
     function drawFibLines(high, low) {
       if (!candleSeriesRef) return;
-      clearFib();
+      fibLines.forEach(pl => { try { candleSeriesRef.removePriceLine(pl); } catch(e) {} });
+      fibLines = [];
       const range = high - low;
       [
         { ratio: 0,     label: '0%',    color: '#e74c3c' },
