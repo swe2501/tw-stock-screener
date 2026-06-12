@@ -323,6 +323,34 @@
       margin: 20px 0;
     }
 
+    /* ── Index Quick-Access Row ── */
+    .index-row {
+      max-width: 1200px;
+      margin: 0 auto 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .index-row-label {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .idx-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 5px 13px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .idx-btn:hover { color: var(--text); border-color: var(--accent); background: var(--surface2); }
+
     /* ── Chart Modal ── */
     .modal-overlay {
       display: none;
@@ -341,7 +369,10 @@
       border: 1px solid var(--border);
       border-radius: 14px;
       width: 100%;
-      max-width: 860px;
+      max-width: 880px;
+      max-height: 96vh;
+      display: flex;
+      flex-direction: column;
       overflow: hidden;
     }
 
@@ -349,8 +380,9 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 16px 20px;
+      padding: 14px 20px;
       border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
     }
 
     .modal-title {
@@ -379,13 +411,14 @@
     .modal-close:hover { color: #fff; background: var(--surface2); }
 
     .modal-body {
-      padding: 16px 20px 20px;
+      padding: 14px 20px 18px;
+      overflow-y: auto;
+      flex: 1;
     }
 
     .chart-range-btns {
       display: flex;
-      gap: 6px;
-      margin-bottom: 0;
+      gap: 5px;
     }
 
     .range-btn {
@@ -394,7 +427,7 @@
       color: var(--text-muted);
       font-size: 0.75rem;
       font-weight: 600;
-      padding: 4px 12px;
+      padding: 4px 11px;
       border-radius: 6px;
       cursor: pointer;
       transition: all 0.15s;
@@ -402,27 +435,35 @@
     .range-btn:hover { color: var(--text); border-color: var(--accent); }
     .range-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
 
+    .toolbar-sep {
+      width: 1px;
+      background: var(--border);
+      align-self: stretch;
+      margin: 0 3px;
+    }
+
     #chartWrapper {
-      position: relative;
       width: 100%;
       border-radius: 8px;
       overflow: hidden;
       background: #131722;
     }
 
+    /* Main candle panel */
+    #mainChartPanel {
+      position: relative;
+      width: 100%;
+    }
     #chartContainer {
       width: 100%;
-      height: 400px;
+      height: 270px;
     }
-
     #fibCanvas {
       position: absolute;
-      top: 0;
-      left: 0;
+      top: 0; left: 0;
       pointer-events: none;
       z-index: 11;
     }
-
     #chartOverlay {
       position: absolute;
       inset: 0;
@@ -430,13 +471,12 @@
       z-index: 10;
       display: none;
     }
-
     #volLabel {
       position: absolute;
-      bottom: 28px;
+      bottom: 26px;
       left: 8px;
       font-size: 10px;
-      color: rgba(200,209,217,0.45);
+      color: rgba(200,209,217,0.4);
       pointer-events: none;
       z-index: 5;
       font-family: monospace;
@@ -444,11 +484,49 @@
       letter-spacing: 0.05em;
     }
 
+    /* MACD panel */
+    #macdPanel {
+      position: relative;
+      width: 100%;
+      border-top: 1px solid var(--border);
+    }
+    #macdContainer { width: 100%; height: 100px; }
+    #macdLabel {
+      position: absolute;
+      top: 4px; left: 8px;
+      font-size: 9px;
+      color: rgba(200,209,217,0.45);
+      pointer-events: none;
+      z-index: 5;
+      font-family: monospace;
+      font-weight: bold;
+      letter-spacing: 0.04em;
+    }
+
+    /* RSI panel */
+    #rsiPanel {
+      position: relative;
+      width: 100%;
+      border-top: 1px solid var(--border);
+    }
+    #rsiContainer { width: 100%; height: 90px; }
+    #rsiLabel {
+      position: absolute;
+      top: 4px; left: 8px;
+      font-size: 9px;
+      color: rgba(200,209,217,0.45);
+      pointer-events: none;
+      z-index: 5;
+      font-family: monospace;
+      font-weight: bold;
+      letter-spacing: 0.04em;
+    }
+
     #chartLoading {
       display: flex;
       align-items: center;
       justify-content: center;
-      height: 400px;
+      height: 460px;
       color: var(--text-muted);
       font-size: 0.9rem;
       gap: 10px;
@@ -458,9 +536,16 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
       flex-wrap: wrap;
       gap: 8px;
+    }
+
+    .chart-toolbar-left {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-wrap: wrap;
     }
 
     .chart-tool-btns {
@@ -474,7 +559,7 @@
       color: var(--text-muted);
       font-size: 0.75rem;
       font-weight: 600;
-      padding: 4px 12px;
+      padding: 4px 11px;
       border-radius: 6px;
       cursor: pointer;
       transition: all 0.15s;
@@ -550,6 +635,17 @@
     </div>
   </div>
 
+  <!-- 指數快覽 -->
+  <div class="index-row">
+    <span class="index-row-label">指數快覽</span>
+    <button class="idx-btn" onclick="openIndexChart('^TWII','大盤 加權指數')">大盤</button>
+    <button class="idx-btn" onclick="openIndexChart('TX=F','台指期貨')">台指期</button>
+    <button class="idx-btn" onclick="openIndexChart('^N225','日經 225')">日經225</button>
+    <button class="idx-btn" onclick="openIndexChart('^KS11','韓國 KOSPI')">KOSPI</button>
+    <button class="idx-btn" onclick="openIndexChart('NQ=F','那斯達克 NQ 期貨')">NQ</button>
+    <button class="idx-btn" onclick="openIndexChart('YM=F','道瓊 YM 期貨')">YM</button>
+  </div>
+
   <div class="results-wrap">
     <div id="statusArea"></div>
     <div id="resultsArea"></div>
@@ -567,11 +663,21 @@
       </div>
       <div class="modal-body">
         <div class="chart-toolbar">
-          <div class="chart-range-btns">
-            <button class="range-btn" onclick="loadChart('1mo')">1月</button>
-            <button class="range-btn active" onclick="loadChart('3mo')">3月</button>
-            <button class="range-btn" onclick="loadChart('6mo')">6月</button>
-            <button class="range-btn" onclick="loadChart('1y')">1年</button>
+          <div class="chart-toolbar-left">
+            <div class="chart-range-btns" id="rangeBtns">
+              <button class="range-btn" onclick="loadChart('1mo')">1月</button>
+              <button class="range-btn active" onclick="loadChart('3mo')">3月</button>
+              <button class="range-btn" onclick="loadChart('6mo')">6月</button>
+              <button class="range-btn" onclick="loadChart('1y')">1年</button>
+            </div>
+            <div class="toolbar-sep"></div>
+            <div style="display:flex;gap:4px">
+              <button class="range-btn active" id="intDayBtn" onclick="switchInterval('1d')">日K</button>
+              <button class="range-btn" id="int5mBtn" onclick="switchInterval('5m')">5分K</button>
+            </div>
+            <div class="toolbar-sep"></div>
+            <button class="tool-btn" onclick="openMarketChart()">大盤K</button>
+            <button class="tool-btn" id="backBtn" style="display:none" onclick="goBackToStock()">← 返回</button>
           </div>
           <div class="chart-tool-btns">
             <button class="tool-btn" id="fibBtn" onclick="toggleFibMode()">📐 斐波那契</button>
@@ -580,10 +686,20 @@
         </div>
         <div id="chartLoading"><div class="spinner"></div> 載入中...</div>
         <div id="chartWrapper" style="display:none">
-          <div id="chartContainer"></div>
-          <canvas id="fibCanvas"></canvas>
-          <div id="chartOverlay"></div>
-          <div id="volLabel">VOL</div>
+          <div id="mainChartPanel">
+            <div id="chartContainer"></div>
+            <canvas id="fibCanvas"></canvas>
+            <div id="chartOverlay"></div>
+            <div id="volLabel">VOL</div>
+          </div>
+          <div id="macdPanel">
+            <div id="macdContainer"></div>
+            <div id="macdLabel">MACD(12,26,9)</div>
+          </div>
+          <div id="rsiPanel">
+            <div id="rsiContainer"></div>
+            <div id="rsiLabel">RSI(14)</div>
+          </div>
         </div>
       </div>
     </div>
@@ -769,73 +885,157 @@
       if (e.key === 'Escape') closeChart();
     });
 
-    // ── K線圖 ──────────────────────────────────────────────
+    // ── K線圖 state ─────────────────────────────────────────
     let currentCode = '';
     let currentName = '';
+    let currentInterval = '1d';
+    let currentRange = '3mo';
+    let prevCode = '';
+    let prevName = '';
     let chartInstance = null;
+    let macdInstance = null;
+    let rsiInstance = null;
     let candleSeriesRef = null;
     let fibMode = false;
     let fibLines = [];
     let fibDragStart = null;
     let fibSetupDone = false;
 
+    const RANGE_OPTS = {
+      '1d': [{ l:'1月', v:'1mo' }, { l:'3月', v:'3mo' }, { l:'6月', v:'6mo' }, { l:'1年', v:'1y' }],
+      '5m': [{ l:'今日', v:'1d' }, { l:'5日', v:'5d' }],
+    };
+
+    // ── Open / close ──────────────────────────────────────
     function openChart(code, name) {
+      prevCode = ''; prevName = '';
       currentCode = code;
       currentName = name;
+      currentInterval = '1d';
+      currentRange = '3mo';
       document.getElementById('modalTitle').textContent = `${code}　${name}`;
+      document.getElementById('backBtn').style.display = 'none';
       document.getElementById('chartModal').classList.add('open');
-      document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.range-btn')[1].classList.add('active');
+      _setIntervalUI('1d');
       if (!fibSetupDone) { setupFibOverlay(); fibSetupDone = true; }
       loadChart('3mo');
     }
 
+    function openIndexChart(sym, name) {
+      prevCode = ''; prevName = '';
+      currentCode = sym;
+      currentName = name;
+      currentInterval = '1d';
+      currentRange = '3mo';
+      document.getElementById('modalTitle').textContent = name;
+      document.getElementById('backBtn').style.display = 'none';
+      document.getElementById('chartModal').classList.add('open');
+      _setIntervalUI('1d');
+      if (!fibSetupDone) { setupFibOverlay(); fibSetupDone = true; }
+      loadChart('3mo');
+    }
+
+    function openMarketChart() {
+      if (currentCode && !currentCode.startsWith('^') && currentCode !== '') {
+        prevCode = currentCode;
+        prevName = document.getElementById('modalTitle').textContent;
+      }
+      currentCode = '^TWII';
+      currentName = '大盤 加權指數';
+      currentInterval = '1d';
+      currentRange = '3mo';
+      document.getElementById('modalTitle').textContent = '大盤 加權指數';
+      document.getElementById('backBtn').style.display = prevCode ? 'inline-block' : 'none';
+      _setIntervalUI('1d');
+      loadChart('3mo');
+    }
+
+    function goBackToStock() {
+      if (!prevCode) return;
+      currentCode = prevCode;
+      document.getElementById('modalTitle').textContent = prevName;
+      document.getElementById('backBtn').style.display = 'none';
+      prevCode = ''; prevName = '';
+      _setIntervalUI(currentInterval);
+      loadChart(currentRange);
+    }
+
     function closeChart() {
       document.getElementById('chartModal').classList.remove('open');
-      if (chartInstance) { chartInstance.remove(); chartInstance = null; }
-      candleSeriesRef = null;
+      _destroyCharts();
       fibLines = [];
       fibMode = false;
       fibDragStart = null;
-      const btn = document.getElementById('fibBtn');
-      if (btn) btn.classList.remove('active');
-      const ov = document.getElementById('chartOverlay');
-      if (ov) ov.style.display = 'none';
+      document.getElementById('fibBtn').classList.remove('active');
+      document.getElementById('chartOverlay').style.display = 'none';
     }
 
     function closeChartIfBg(e) {
       if (e.target === document.getElementById('chartModal')) closeChart();
     }
 
+    function _destroyCharts() {
+      if (chartInstance) { chartInstance.remove(); chartInstance = null; }
+      if (macdInstance)  { macdInstance.remove();  macdInstance = null; }
+      if (rsiInstance)   { rsiInstance.remove();   rsiInstance = null; }
+      candleSeriesRef = null;
+    }
+
+    // ── Interval & range switching ─────────────────────────
+    function switchInterval(iv) {
+      currentInterval = iv;
+      _setIntervalUI(iv);
+      const defaultRange = iv === '5m' ? '1d' : '3mo';
+      currentRange = defaultRange;
+      loadChart(defaultRange);
+    }
+
+    function _setIntervalUI(iv) {
+      document.getElementById('intDayBtn').classList.toggle('active', iv === '1d');
+      document.getElementById('int5mBtn').classList.toggle('active', iv === '5m');
+      // Fib only meaningful on daily
+      document.getElementById('fibBtn').style.display = iv === '1d' ? '' : 'none';
+      _rebuildRangeBtns(iv, iv === '5m' ? '1d' : currentRange);
+    }
+
+    function _rebuildRangeBtns(iv, activeV) {
+      const container = document.getElementById('rangeBtns');
+      container.innerHTML = RANGE_OPTS[iv].map(o =>
+        `<button class="range-btn${o.v === activeV ? ' active' : ''}" onclick="loadChart('${o.v}')">${o.l}</button>`
+      ).join('');
+    }
+
+    // ── Load chart data ────────────────────────────────────
     function loadChart(range) {
-      const labels = {'1mo':'1月','3mo':'3月','6mo':'6月','1y':'1年'};
-      document.querySelectorAll('.range-btn').forEach(b => {
-        b.classList.toggle('active', b.textContent === (labels[range] || range));
-      });
+      currentRange = range;
+      _rebuildRangeBtns(currentInterval, range);
 
       document.getElementById('chartLoading').style.display = 'flex';
       document.getElementById('chartWrapper').style.display = 'none';
 
-      if (chartInstance) { chartInstance.remove(); chartInstance = null; }
-      candleSeriesRef = null;
+      _destroyCharts();
       fibLines = [];
       fibMode = false;
       fibDragStart = null;
-      const btn = document.getElementById('fibBtn');
-      if (btn) btn.classList.remove('active');
-      const ov = document.getElementById('chartOverlay');
-      if (ov) ov.style.display = 'none';
+      document.getElementById('fibBtn').classList.remove('active');
+      document.getElementById('chartOverlay').style.display = 'none';
       clearFibCanvas();
 
-      fetch(`/api/chart?code=${currentCode}&range=${range}`)
+      const url = `/api/chart?code=${encodeURIComponent(currentCode)}&range=${range}&interval=${currentInterval}`;
+      fetch(url)
         .then(r => r.json())
         .then(data => {
           if (data.error || !data.data || data.data.length === 0) {
             document.getElementById('chartLoading').innerHTML = '⚠ 無法取得圖表資料';
             return;
           }
-          document.getElementById('modalSubtitle').textContent =
-            `日K線 ・ ${data.data[0].time} ～ ${data.data[data.data.length-1].time}`;
+          const first = data.data[0].time;
+          const last  = data.data[data.data.length - 1].time;
+          const ivLabel = currentInterval === '5m' ? '5分K' : '日K';
+          const timeRange = typeof first === 'number'
+            ? new Date(last * 1000).toLocaleDateString('zh-TW')
+            : `${first} ～ ${last}`;
+          document.getElementById('modalSubtitle').textContent = `${ivLabel} ・ ${timeRange}`;
           renderTVChart(data.data);
         })
         .catch(() => {
@@ -843,62 +1043,205 @@
         });
     }
 
-    function renderTVChart(candles) {
-      const el = document.getElementById('chartContainer');
-      el.innerHTML = '';
-      document.getElementById('chartLoading').style.display = 'none';
-      const wrapper = document.getElementById('chartWrapper');
-      wrapper.style.display = 'block';
+    // ── Technical indicator calculations ──────────────────
+    function calcEMA(values, period) {
+      const res = new Array(values.length).fill(null);
+      if (values.length < period) return res;
+      const k = 2 / (period + 1);
+      let sum = 0;
+      for (let i = 0; i < period; i++) sum += values[i];
+      res[period - 1] = sum / period;
+      for (let i = period; i < values.length; i++) {
+        res[i] = values[i] * k + res[i - 1] * (1 - k);
+      }
+      return res;
+    }
 
-      chartInstance = LightweightCharts.createChart(el, {
-        width: el.clientWidth,
-        height: 400,
+    function calcMACD(closes) {
+      const ema12 = calcEMA(closes, 12);
+      const ema26 = calcEMA(closes, 26);
+      const macdLine = closes.map((_, i) =>
+        ema12[i] !== null && ema26[i] !== null ? ema12[i] - ema26[i] : null
+      );
+      // Signal = EMA9 of macdLine (computed on valid values only, then re-aligned)
+      const validVals = [], validIdx = [];
+      macdLine.forEach((v, i) => { if (v !== null) { validVals.push(v); validIdx.push(i); } });
+      const sigVals = calcEMA(validVals, 9);
+      const sigLine = new Array(closes.length).fill(null);
+      sigVals.forEach((v, i) => { sigLine[validIdx[i]] = v; });
+      const hist = closes.map((_, i) =>
+        macdLine[i] !== null && sigLine[i] !== null ? macdLine[i] - sigLine[i] : null
+      );
+      return { macd: macdLine, signal: sigLine, hist };
+    }
+
+    function calcRSI(closes, period = 14) {
+      const res = new Array(closes.length).fill(null);
+      if (closes.length < period + 1) return res;
+      let avgG = 0, avgL = 0;
+      for (let i = 1; i <= period; i++) {
+        const d = closes[i] - closes[i - 1];
+        if (d > 0) avgG += d; else avgL -= d;
+      }
+      avgG /= period; avgL /= period;
+      res[period] = 100 - 100 / (1 + (avgL > 0 ? avgG / avgL : Infinity));
+      for (let i = period + 1; i < closes.length; i++) {
+        const d = closes[i] - closes[i - 1];
+        avgG = (avgG * (period - 1) + Math.max(d, 0)) / period;
+        avgL = (avgL * (period - 1) + Math.max(-d, 0)) / period;
+        res[i] = 100 - 100 / (1 + (avgL > 0 ? avgG / avgL : Infinity));
+      }
+      return res;
+    }
+
+    // ── Render all chart panels ───────────────────────────
+    function renderTVChart(candles) {
+      document.getElementById('chartLoading').style.display = 'none';
+      document.getElementById('chartWrapper').style.display = 'block';
+
+      _renderMainChart(candles);
+      _renderMACDChart(candles);
+      _renderRSIChart(candles);
+
+      // Sync time scales across all three panels
+      _syncTimeRanges([chartInstance, macdInstance, rsiInstance].filter(Boolean));
+
+      resizeFibCanvas();
+
+      const mainEl = document.getElementById('chartContainer');
+      new ResizeObserver(() => {
+        if (chartInstance) chartInstance.applyOptions({ width: mainEl.clientWidth });
+        if (macdInstance)  macdInstance.applyOptions({ width: document.getElementById('macdContainer').clientWidth });
+        if (rsiInstance)   rsiInstance.applyOptions({ width: document.getElementById('rsiContainer').clientWidth });
+        resizeFibCanvas();
+      }).observe(mainEl);
+    }
+
+    function _chartOpts(height, showTime) {
+      return {
+        width: 0,
+        height,
         layout: { background: { color: '#131722' }, textColor: '#c9d1d9' },
         grid: { vertLines: { color: '#2e3350' }, horzLines: { color: '#2e3350' } },
         crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
         rightPriceScale: { borderColor: '#2e3350' },
-        timeScale: { borderColor: '#2e3350', timeVisible: true },
-      });
+        timeScale: { borderColor: '#2e3350', timeVisible: true, visible: showTime, secondsVisible: false },
+        handleScroll: true,
+        handleScale: true,
+      };
+    }
+
+    function _renderMainChart(candles) {
+      const el = document.getElementById('chartContainer');
+      el.innerHTML = '';
+      const opts = _chartOpts(270, false);
+      opts.width = el.clientWidth;
+      chartInstance = LightweightCharts.createChart(el, opts);
 
       candleSeriesRef = chartInstance.addCandlestickSeries({
-        upColor: '#e74c3c',
-        downColor: '#26c281',
-        borderUpColor: '#e74c3c',
-        borderDownColor: '#26c281',
-        wickUpColor: '#e74c3c',
-        wickDownColor: '#26c281',
+        upColor: '#e74c3c', downColor: '#26c281',
+        borderUpColor: '#e74c3c', borderDownColor: '#26c281',
+        wickUpColor: '#e74c3c', wickDownColor: '#26c281',
       });
       candleSeriesRef.setData(candles);
 
       const volSeries = chartInstance.addHistogramSeries({
-        priceFormat: { type: 'volume' },
-        priceScaleId: 'vol',
+        priceFormat: { type: 'volume' }, priceScaleId: 'vol',
       });
-      chartInstance.priceScale('vol').applyOptions({
-        scaleMargins: { top: 0.75, bottom: 0 },
-      });
+      chartInstance.priceScale('vol').applyOptions({ scaleMargins: { top: 0.75, bottom: 0 } });
       volSeries.setData(candles.map(c => ({
-        time: c.time,
-        value: c.volume,
-        color: c.close >= c.open ? 'rgba(231,76,60,0.45)' : 'rgba(38,194,129,0.45)',
+        time: c.time, value: c.volume,
+        color: c.close >= c.open ? 'rgba(231,76,60,0.4)' : 'rgba(38,194,129,0.4)',
       })));
 
       chartInstance.timeScale().fitContent();
-      resizeFibCanvas();
+    }
 
-      new ResizeObserver(() => {
-        if (chartInstance) chartInstance.applyOptions({ width: el.clientWidth });
-        resizeFibCanvas();
-      }).observe(el);
+    function _renderMACDChart(candles) {
+      const el = document.getElementById('macdContainer');
+      el.innerHTML = '';
+      const closes = candles.map(c => c.close);
+      const times  = candles.map(c => c.time);
+      const { macd, signal, hist } = calcMACD(closes);
+
+      const opts = _chartOpts(100, false);
+      opts.width = el.clientWidth;
+      opts.rightPriceScale.scaleMargins = { top: 0.1, bottom: 0.1 };
+      macdInstance = LightweightCharts.createChart(el, opts);
+
+      // Histogram
+      const histSeries = macdInstance.addHistogramSeries({ priceScaleId: 'right', lineWidth: 1 });
+      histSeries.setData(
+        times.map((t, i) => hist[i] !== null ? {
+          time: t, value: hist[i],
+          color: hist[i] >= 0 ? 'rgba(231,76,60,0.65)' : 'rgba(38,194,129,0.65)',
+        } : null).filter(Boolean)
+      );
+
+      // MACD line
+      const macdSeries = macdInstance.addLineSeries({ color: '#4f8ef7', lineWidth: 1, priceScaleId: 'right' });
+      macdSeries.setData(times.map((t, i) => macd[i] !== null ? { time: t, value: macd[i] } : null).filter(Boolean));
+
+      // Signal line
+      const sigSeries = macdInstance.addLineSeries({ color: '#f39c12', lineWidth: 1, priceScaleId: 'right' });
+      sigSeries.setData(times.map((t, i) => signal[i] !== null ? { time: t, value: signal[i] } : null).filter(Boolean));
+
+      // Zero reference
+      macdSeries.createPriceLine({
+        price: 0, color: 'rgba(200,209,217,0.25)', lineWidth: 1,
+        lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: false,
+      });
+
+      macdInstance.timeScale().fitContent();
+    }
+
+    function _renderRSIChart(candles) {
+      const el = document.getElementById('rsiContainer');
+      el.innerHTML = '';
+      const closes = candles.map(c => c.close);
+      const times  = candles.map(c => c.time);
+      const rsi = calcRSI(closes);
+
+      const opts = _chartOpts(90, true);
+      opts.width = el.clientWidth;
+      opts.rightPriceScale.scaleMargins = { top: 0.05, bottom: 0.05 };
+      rsiInstance = LightweightCharts.createChart(el, opts);
+
+      const rsiSeries = rsiInstance.addLineSeries({
+        color: '#9b59b6', lineWidth: 1, priceScaleId: 'right',
+        autoscaleInfoProvider: () => ({ priceRange: { minValue: 0, maxValue: 100 } }),
+      });
+      rsiSeries.setData(times.map((t, i) => rsi[i] !== null ? { time: t, value: rsi[i] } : null).filter(Boolean));
+
+      // Reference lines
+      [{ p: 70, c: 'rgba(231,76,60,0.4)' }, { p: 50, c: 'rgba(200,209,217,0.2)' }, { p: 30, c: 'rgba(38,194,129,0.4)' }]
+        .forEach(({ p, c }) => rsiSeries.createPriceLine({
+          price: p, color: c, lineWidth: 1,
+          lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: '',
+        }));
+
+      rsiInstance.timeScale().fitContent();
+    }
+
+    function _syncTimeRanges(charts) {
+      let syncing = false;
+      charts.forEach(src => {
+        src.timeScale().subscribeVisibleLogicalRangeChange(range => {
+          if (syncing || !range) return;
+          syncing = true;
+          charts.forEach(tgt => { if (tgt !== src) tgt.timeScale().setVisibleLogicalRange(range); });
+          syncing = false;
+        });
+      });
     }
 
     // ── Fibonacci Retracement ──────────────────────────────
     function resizeFibCanvas() {
       const canvas = document.getElementById('fibCanvas');
-      const wrapper = document.getElementById('chartWrapper');
-      if (!canvas || !wrapper) return;
-      canvas.width = wrapper.clientWidth;
-      canvas.height = wrapper.clientHeight;
+      const panel  = document.getElementById('mainChartPanel');
+      if (!canvas || !panel) return;
+      canvas.width  = panel.clientWidth;
+      canvas.height = panel.clientHeight;
     }
 
     function clearFibCanvas() {
@@ -911,9 +1254,7 @@
       const overlay = document.getElementById('chartOverlay');
       const canvas  = document.getElementById('fibCanvas');
 
-      function getY(clientY) {
-        return clientY - overlay.getBoundingClientRect().top;
-      }
+      function getY(clientY) { return clientY - overlay.getBoundingClientRect().top; }
 
       function drawBand(y0, y1) {
         const ctx = canvas.getContext('2d');
@@ -922,8 +1263,7 @@
         ctx.fillStyle = 'rgba(243,156,18,0.08)';
         ctx.fillRect(0, minY, canvas.width, h);
         ctx.strokeStyle = 'rgba(243,156,18,0.55)';
-        ctx.lineWidth = 1;
-        ctx.setLineDash([4, 3]);
+        ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
         ctx.strokeRect(0, minY, canvas.width, h);
         ctx.setLineDash([]);
       }
@@ -936,8 +1276,7 @@
         const low  = Math.min(fibDragStart.price, p2);
         if (high !== low) drawFibLines(high, low);
         clearFibCanvas();
-        fibDragStart = null;
-        fibMode = false;
+        fibDragStart = null; fibMode = false;
         document.getElementById('fibBtn').classList.remove('active');
         overlay.style.display = 'none';
       }
@@ -949,28 +1288,22 @@
         if (price == null) return;
         fibDragStart = { y, price };
       });
-      overlay.addEventListener('mousemove', e => {
-        if (!fibDragStart) return;
-        drawBand(fibDragStart.y, getY(e.clientY));
-      });
+      overlay.addEventListener('mousemove', e => { if (fibDragStart) drawBand(fibDragStart.y, getY(e.clientY)); });
       overlay.addEventListener('mouseup', e => { finishFib(getY(e.clientY)); });
 
       overlay.addEventListener('touchstart', e => {
-        if (!candleSeriesRef) return;
-        e.preventDefault();
+        if (!candleSeriesRef) return; e.preventDefault();
         const y = getY(e.touches[0].clientY);
         const price = candleSeriesRef.coordinateToPrice(y);
         if (price == null) return;
         fibDragStart = { y, price };
       }, { passive: false });
       overlay.addEventListener('touchmove', e => {
-        if (!fibDragStart) return;
-        e.preventDefault();
+        if (!fibDragStart) return; e.preventDefault();
         drawBand(fibDragStart.y, getY(e.touches[0].clientY));
       }, { passive: false });
       overlay.addEventListener('touchend', e => {
-        e.preventDefault();
-        finishFib(getY(e.changedTouches[0].clientY));
+        e.preventDefault(); finishFib(getY(e.changedTouches[0].clientY));
       }, { passive: false });
     }
 
@@ -986,29 +1319,24 @@
       fibLines.forEach(pl => {
         try { if (candleSeriesRef) candleSeriesRef.removePriceLine(pl); } catch(e) {}
       });
-      fibLines = [];
-      fibDragStart = null;
-      clearFibCanvas();
+      fibLines = []; fibDragStart = null; clearFibCanvas();
     }
 
     function drawFibLines(high, low) {
       if (!candleSeriesRef) return;
       clearFib();
       const range = high - low;
-      const levels = [
+      [
         { ratio: 0,     label: '0%',    color: '#e74c3c' },
         { ratio: 0.236, label: '23.6%', color: '#f39c12' },
         { ratio: 0.382, label: '38.2%', color: '#2ecc71' },
         { ratio: 0.5,   label: '50%',   color: '#4f8ef7' },
         { ratio: 0.618, label: '61.8%', color: '#9b59b6' },
         { ratio: 1,     label: '100%',  color: '#e74c3c' },
-      ];
-      levels.forEach(({ ratio, label, color }) => {
+      ].forEach(({ ratio, label, color }) => {
         const price = parseFloat((high - range * ratio).toFixed(2));
         fibLines.push(candleSeriesRef.createPriceLine({
-          price,
-          color,
-          lineWidth: 1,
+          price, color, lineWidth: 1,
           lineStyle: LightweightCharts.LineStyle.Dashed,
           axisLabelVisible: true,
           title: `Fib ${label}  ${price}`,
