@@ -1139,17 +1139,6 @@
         if (trendLines.length > 0 || trendStart) redrawCanvas();
       });
 
-      // Clamp scroll so user cannot scroll left past the oldest bar
-      const dataFrom = candles[0].time;
-      let scrollClamping = false;
-      chartInstance.timeScale().subscribeVisibleTimeRangeChange(range => {
-        if (scrollClamping || !range) return;
-        if (range.from < dataFrom) {
-          scrollClamping = true;
-          try { chartInstance.timeScale().setVisibleRange({ from: dataFrom, to: range.to }); } catch(_) {}
-          scrollClamping = false;
-        }
-      });
     }
 
     function _chartOpts(height, showTime) {
@@ -1160,7 +1149,7 @@
         crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
         rightPriceScale: { borderColor: '#2e3350', minimumWidth: 65 },
         timeScale: { borderColor: '#2e3350', timeVisible: true, visible: showTime,
-                     secondsVisible: false, rightOffset: 5, minBarSpacing: 3 },
+                     secondsVisible: false, rightOffset: 5 },
         handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true },
         handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: true },
       };
