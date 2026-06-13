@@ -953,7 +953,8 @@
       }
       currentCode = sym; currentName = name;
       document.getElementById('modalTitle').textContent = name;
-      document.getElementById('marketBtn').style.display = 'none';
+      // Only hide 大盤K button when already viewing 大盤 itself
+      document.getElementById('marketBtn').style.display = (sym === '^TWII') ? 'none' : 'inline-block';
       document.getElementById('backBtn').style.display = prevCode ? 'inline-block' : 'none';
       document.getElementById('chartModal').classList.add('open');
       if (!fibSetupDone) { setupFibOverlay(); fibSetupDone = true; }
@@ -964,9 +965,8 @@
       if (_isStock(currentCode)) {
         prevCode = currentCode;
         prevName = document.getElementById('modalTitle').textContent;
-      } else {
-        prevCode = ''; prevName = '';
       }
+      // Don't clear prevCode when jumping from one index to 大盤 — preserve the stock reference
       currentCode = '^TWII';
       document.getElementById('modalTitle').textContent = '大盤 加權指數';
       document.getElementById('marketBtn').style.display = 'none';

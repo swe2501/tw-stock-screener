@@ -4,6 +4,8 @@ import time
 import urllib.request
 import urllib.parse
 import http.cookiejar
+import zipfile
+import io
 from datetime import datetime, timezone, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -117,33 +119,89 @@ def _fetch_taifex_chunk(cookie_str, start_dt, end_dt):
         return {}
 
 
-def fetch_tx(range_str="3y"):
-    """Fetch TX 台指期:
-    - Last 32 days: real TX near-month prices from TAIFEX (IP-limited to ~30 days from non-TW servers)
-    - Historical: ^TWII from Yahoo Finance as proxy (correlation >0.999)
-    Both fetched in parallel; TX prices overwrite TWII for recent dates.
-    Session cached 5 min so warm reloads skip the slow TAIFEX GET (~2s instead of ~5s)."""
-    tz_offset = timedelta(hours=8)
-    now_dt = datetime.now(tz=timezone(tz_offset))
-    recent_start = now_dt - timedelta(days=32)
+def _parse_tx_from_zip(zip_bytes):
+    """Decode TAIFEX annual ZIP and extract TX 一般 rows."""
+    if not zip_bytes or len(zip_bytes) < 100:
+        return {}
+    try:
+        with zipfile.ZipFile(io.BytesIO(zip_bytes)) as zf:
+            names = zf.namelist()
+            if not names:
+                return {}
+            with zf.open(names[0]) as f:
+                raw = f.read()
+        for enc in ("ms950", "big5", "utf-8-sig", "utf-8"):
+            try:
+                return _parse_taifex_chunk(raw.decode(enc))
+            except Exception:
+                pass
+    except Exception:
+        pass
+    return {}
 
-    def _get_twii():
-        result = fetch_chart("^TWII", range_str, "1d")
-        if result and result.get("data"):
-            return {c["time"]: c for c in result["data"]}
+
+def _fetch_annual_zip(year):
+    """Download TAIFEX annual futures ZIP for given year; return TX by_date dict."""
+    post_data = urllib.parse.urlencode({
+        "down_type": "2", "his_year": str(year),
+    }).encode()
+    req = urllib.request.Request(
+        "https://www.taifex.com.tw/cht/3/futDataDown",
+        data=post_data,
+        headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Referer": "https://www.taifex.com.tw/cht/3/dlFutDailyMarketView",
+            "Origin": "https://www.taifex.com.tw",
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Cookie": _taifex_cookie_str(),
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            return _parse_tx_from_zip(r.read())
+    except Exception:
         return {}
 
-    def _get_recent_tx():
-        try:
-            cookie_str = _taifex_cookie_str()
-            return _fetch_taifex_chunk(cookie_str, recent_start, now_dt)
-        except Exception:
-            return {}
 
-    with ThreadPoolExecutor(max_workers=2) as pool:
-        f_twii = pool.submit(_get_twii)
-        f_tx = pool.submit(_get_recent_tx)
-        by_date = {**f_twii.result(), **f_tx.result()}  # TX prices overwrite TWII for recent dates
+def fetch_tx(range_str="3y"):
+    """Real TX 近月期貨 data:
+    1. Annual ZIPs (down_type=2) for past complete years — correct TX prices.
+       TAIFEX serves ZIPs sequentially (~8-9s each); 3y = ~25s first load.
+       Vercel CDN caches the response for 1h so subsequent requests are instant.
+    2. ^TWII proxy via Yahoo for current-year gap (Jan–~35 days ago).
+       TAIFEX down_type=1 is IP-restricted to last ~35 days from non-TW servers.
+       TWII ≈ TX within 0.5% — gap only affects chart shape, not recent price accuracy.
+    3. TAIFEX monthly chunk for last 35 days — correct TX prices."""
+    days = RANGE_DAYS.get(range_str, 1100)
+    tz_offset = timedelta(hours=8)
+    now_dt = datetime.now(tz=timezone(tz_offset))
+    start_dt = now_dt - timedelta(days=days)
+    current_year = now_dt.year
+    taifex_cutoff = now_dt - timedelta(days=35)  # monthly chunk works within this window
+
+    by_date = {}
+
+    # 1. Annual ZIPs for past complete years (sequential due to TAIFEX rate-limit)
+    for year in range(start_dt.year, current_year):
+        by_date.update(_fetch_annual_zip(year))
+
+    # 2. TWII proxy for current-year gap (Jan 1 → taifex_cutoff)
+    gap_start = max(datetime(current_year, 1, 1, tzinfo=now_dt.tzinfo), start_dt)
+    gap_end = taifex_cutoff - timedelta(days=1)
+    if gap_start < gap_end:
+        twii = fetch_chart("^TWII", range_str, "1d")
+        if twii and twii.get("data"):
+            gs, ge = gap_start.strftime("%Y-%m-%d"), gap_end.strftime("%Y-%m-%d")
+            for c in twii["data"]:
+                if gs <= c["time"] <= ge:
+                    by_date.setdefault(c["time"], c)  # don't overwrite real TX
+
+    # 3. Real TX for last 35 days
+    try:
+        cookie_str = _taifex_cookie_str()
+        by_date.update(_fetch_taifex_chunk(cookie_str, taifex_cutoff, now_dt))
+    except Exception:
+        pass
 
     if not by_date:
         return None
@@ -299,11 +357,11 @@ def fetch_chart(code, range_str="3mo", interval="1d"):
 class handler(BaseHTTPRequestHandler):
     def log_message(self, format, *args): pass
 
-    def _json(self, code, data):
+    def _json(self, code, data, cache="no-store"):
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Cache-Control", "no-store")
+        self.send_header("Cache-Control", cache)
         self.end_headers()
         self.wfile.write(json.dumps(data, ensure_ascii=False).encode())
 
@@ -329,6 +387,9 @@ class handler(BaseHTTPRequestHandler):
             if not result:
                 self._json(404, {"error": f"no data for {code}"})
                 return
-            self._json(200, result)
+            # TX=F: CDN-cache for 1h so the slow first load is amortised across all users
+            cache = ("public, s-maxage=3600, stale-while-revalidate=86400"
+                     if code == "TX=F" else "no-store")
+            self._json(200, result, cache=cache)
         except Exception as e:
             self._json(500, {"error": str(e)})
