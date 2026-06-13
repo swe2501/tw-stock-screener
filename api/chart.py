@@ -4,6 +4,8 @@ import time
 import urllib.request
 import urllib.parse
 import http.cookiejar
+import zipfile
+import io
 from datetime import datetime, timezone, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -108,32 +110,86 @@ def _fetch_taifex_chunk(cookie_str, start_dt, end_dt):
         return {}
 
 
+def _parse_tx_from_zip(zip_bytes):
+    """Decode annual ZIP and reuse _parse_taifex_chunk for TX rows."""
+    if not zip_bytes or len(zip_bytes) < 100:
+        return {}
+    try:
+        with zipfile.ZipFile(io.BytesIO(zip_bytes)) as zf:
+            names = zf.namelist()
+            if not names:
+                return {}
+            with zf.open(names[0]) as f:
+                raw = f.read()
+        for enc in ("ms950", "big5", "utf-8-sig", "utf-8"):
+            try:
+                content = raw.decode(enc)
+                return _parse_taifex_chunk(content)
+            except Exception:
+                pass
+    except Exception:
+        pass
+    return {}
+
+
+def _fetch_annual_zip(cookie_str, year):
+    """Download TAIFEX annual ZIP for given year and extract TX rows."""
+    post_data = urllib.parse.urlencode({
+        "down_type": "2", "his_year": str(year),
+    }).encode()
+    req = urllib.request.Request(
+        "https://www.taifex.com.tw/cht/3/futDataDown",
+        data=post_data,
+        headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Referer": "https://www.taifex.com.tw/cht/3/dlFutDailyMarketView",
+            "Origin": "https://www.taifex.com.tw",
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Cookie": cookie_str,
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as r:
+            zip_bytes = r.read()
+        return _parse_tx_from_zip(zip_bytes)
+    except Exception:
+        return {}
+
+
 def fetch_tx(range_str="3y"):
-    """Fetch TX 台指期 from TAIFEX futDataDown in parallel 89-day chunks."""
+    """Fetch TX 台指期: annual ZIPs for past complete years + 88-day chunks for current year.
+    For 3y this means 3 ZIPs + 2 chunks = 5 parallel requests (1 round) vs 13 before."""
     days = RANGE_DAYS.get(range_str, 1100)
     tz_offset = timedelta(hours=8)
     now_dt = datetime.now(tz=timezone(tz_offset))
     start_dt = now_dt - timedelta(days=days)
-
-    # Build list of ≤88-day chunks (server limit ~89 calendar days)
-    chunk_days = 88
-    chunks = []
-    cur = start_dt
-    while cur < now_dt:
-        chunk_end = min(cur + timedelta(days=chunk_days), now_dt)
-        chunks.append((cur, chunk_end))
-        cur = chunk_end + timedelta(days=1)
+    current_year = now_dt.year
 
     try:
         cookie_str = _taifex_cookie_str()
     except Exception:
         return None
 
+    # One ZIP per complete past year (e.g., 2023, 2024, 2025 for range=3y)
+    annual_years = list(range(start_dt.year, current_year))
+
+    # 88-day monthly chunks for current year only
+    cur_year_start = now_dt.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+    cur = max(cur_year_start, start_dt)
+    chunk_days = 88
+    cur_chunks = []
+    while cur < now_dt:
+        chunk_end = min(cur + timedelta(days=chunk_days), now_dt)
+        cur_chunks.append((cur, chunk_end))
+        cur = chunk_end + timedelta(days=1)
+
     by_date = {}
-    # 6 workers → 2-3 rounds for 13 chunks, ~3-4s total on Vercel
     with ThreadPoolExecutor(max_workers=6) as pool:
-        futures = {pool.submit(_fetch_taifex_chunk, cookie_str, s, e): (s, e)
-                   for s, e in chunks}
+        futures = {}
+        for year in annual_years:
+            futures[pool.submit(_fetch_annual_zip, cookie_str, year)] = year
+        for s, e in cur_chunks:
+            futures[pool.submit(_fetch_taifex_chunk, cookie_str, s, e)] = (s, e)
         for fut in as_completed(futures):
             try:
                 by_date.update(fut.result())
