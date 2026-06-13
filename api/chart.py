@@ -3,6 +3,7 @@ import json
 import time
 import urllib.request
 import urllib.parse
+import http.cookiejar
 from datetime import datetime, timezone, timedelta
 
 
@@ -104,40 +105,51 @@ def fetch_tx(range_str="3y"):
     base_hdrs = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
                  "Accept": "*/*"}
 
-    # ── Strategy 1: TAIFEX download (try GET & POST, TX and TXF) ──────────────
-    taifex_attempts = [
-        # GET variants
-        (f"https://www.taifex.com.tw/cht/3/futDailyMarketReport_download"
-         f"?queryType=2&marketCode=0&commodity_id=TX&period=&beginDate={d1}&endDate={d2}", None),
-        (f"https://www.taifex.com.tw/cht/3/futDailyMarketReport_download"
-         f"?queryType=2&marketCode=0&commodity_id=TXF&period=&beginDate={d1}&endDate={d2}", None),
-        # POST variants (slash-date format)
-        ("https://www.taifex.com.tw/cht/3/futDailyMarketReport_download",
-         urllib.parse.urlencode({"queryType": "2", "marketCode": "0", "commodity_id": "TX",
-                                 "period": "", "beginDate": d1s, "endDate": d2s}).encode()),
-        ("https://www.taifex.com.tw/cht/3/futDailyMarketReport_download",
-         urllib.parse.urlencode({"queryType": "1", "marketCode": "0", "commodity_id": "TX",
-                                 "period": "", "beginDate": d1s, "endDate": d2s}).encode()),
-    ]
-    taifex_hdrs = {**base_hdrs, "Referer": "https://www.taifex.com.tw/cht/3/futDailyMarketReport",
-                   "Origin": "https://www.taifex.com.tw"}
-    for url, post_data in taifex_attempts:
-        try:
-            req = urllib.request.Request(url, data=post_data, headers=taifex_hdrs)
-            with urllib.request.urlopen(req, timeout=8) as r:
-                raw = r.read()
-            content = None
-            for enc in ("utf-8-sig", "utf-8", "big5"):
+    # ── Strategy 1: TAIFEX (session-cookie + POST download) ───────────────────
+    taifex_hdrs = {
+        **base_hdrs,
+        "Accept": "text/html,application/xhtml+xml,*/*;q=0.8",
+        "Accept-Language": "zh-TW,zh;q=0.9",
+        "Referer": "https://www.taifex.com.tw/cht/3/futDailyMarketReport",
+        "Origin": "https://www.taifex.com.tw",
+    }
+    for commodity_id in ("TX", "TXF"):
+        for qtype in ("2", "1"):
+            for begin, end in [(d1s, d2s), (d1, d2)]:
                 try:
-                    content = raw.decode(enc); break
+                    # Step 1: grab session cookie from main page
+                    jar = http.cookiejar.CookieJar()
+                    opener = urllib.request.build_opener(
+                        urllib.request.HTTPCookieProcessor(jar))
+                    opener.addheaders = list(taifex_hdrs.items())
+                    opener.open(
+                        "https://www.taifex.com.tw/cht/3/futDailyMarketReport",
+                        timeout=4)
+                    # Step 2: POST download with session cookie
+                    post_data = urllib.parse.urlencode({
+                        "queryType": qtype, "marketCode": "0",
+                        "commodity_id": commodity_id, "period": "",
+                        "beginDate": begin, "endDate": end,
+                    }).encode()
+                    dl_url = ("https://www.taifex.com.tw/cht/3/"
+                              "futDailyMarketReport_download")
+                    req = urllib.request.Request(
+                        dl_url, data=post_data, headers=taifex_hdrs)
+                    with opener.open(req, timeout=7) as r:
+                        raw = r.read()
+                    content = None
+                    for enc in ("utf-8-sig", "utf-8", "big5"):
+                        try:
+                            content = raw.decode(enc); break
+                        except Exception:
+                            pass
+                    if content:
+                        candles = _parse_taifex_csv(content)
+                        if candles:
+                            return {"code": "TX=F", "name": "台指期貨 (TX)",
+                                    "currency": "TWD", "data": candles}
                 except Exception:
-                    pass
-            if content:
-                candles = _parse_taifex_csv(content)
-                if candles:
-                    return {"code": "TX=F", "name": "台指期貨 (TX)", "currency": "TWD", "data": candles}
-        except Exception:
-            continue
+                    continue
 
     # ── Strategy 2: Stooq ────────────────────────────────────────────────────
     for sym in ["txf.tw", "tx.tw", "txf"]:
