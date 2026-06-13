@@ -115,8 +115,8 @@ def fetch_tx(range_str="3y"):
     now_dt = datetime.now(tz=timezone(tz_offset))
     start_dt = now_dt - timedelta(days=days)
 
-    # Build list of ≤85-day chunks (conservative margin below 89-day limit)
-    chunk_days = 85
+    # Build list of ≤88-day chunks (server limit ~89 calendar days)
+    chunk_days = 88
     chunks = []
     cur = start_dt
     while cur < now_dt:
@@ -130,8 +130,8 @@ def fetch_tx(range_str="3y"):
         return None
 
     by_date = {}
-    # 4 workers → parallel downloads, stays well under 10s Vercel limit
-    with ThreadPoolExecutor(max_workers=4) as pool:
+    # 6 workers → 2-3 rounds for 13 chunks, ~3-4s total on Vercel
+    with ThreadPoolExecutor(max_workers=6) as pool:
         futures = {pool.submit(_fetch_taifex_chunk, cookie_str, s, e): (s, e)
                    for s, e in chunks}
         for fut in as_completed(futures):

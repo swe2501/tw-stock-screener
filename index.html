@@ -686,7 +686,7 @@
           <div class="chart-toolbar-left">
             <span class="range-btn active" style="cursor:default">日K</span>
             <div class="toolbar-sep"></div>
-            <button class="tool-btn" onclick="openMarketChart()">大盤K</button>
+            <button class="tool-btn" id="marketBtn" onclick="openMarketChart()">大盤K</button>
             <button class="tool-btn" id="backBtn" style="display:none" onclick="goBackToStock()">← 返回</button>
           </div>
           <div class="chart-tool-btns">
@@ -928,10 +928,15 @@
     let trendStart = null; // first click anchor {time, price}
 
     // ── Open / close ──────────────────────────────────────
+    function _isStock(code) {
+      return code && !code.startsWith('^') && !code.includes('=');
+    }
+
     function openChart(code, name) {
       prevCode = ''; prevName = '';
       currentCode = code; currentName = name;
       document.getElementById('modalTitle').textContent = `${code}　${name}`;
+      document.getElementById('marketBtn').style.display = 'inline-block';
       document.getElementById('backBtn').style.display = 'none';
       document.getElementById('chartModal').classList.add('open');
       if (!fibSetupDone) { setupFibOverlay(); fibSetupDone = true; }
@@ -939,22 +944,32 @@
     }
 
     function openIndexChart(sym, name) {
-      prevCode = ''; prevName = '';
+      // Save stock context so back button can return to it
+      if (_isStock(currentCode)) {
+        prevCode = currentCode;
+        prevName = document.getElementById('modalTitle').textContent;
+      } else {
+        prevCode = ''; prevName = '';
+      }
       currentCode = sym; currentName = name;
       document.getElementById('modalTitle').textContent = name;
-      document.getElementById('backBtn').style.display = 'none';
+      document.getElementById('marketBtn').style.display = 'none';
+      document.getElementById('backBtn').style.display = prevCode ? 'inline-block' : 'none';
       document.getElementById('chartModal').classList.add('open');
       if (!fibSetupDone) { setupFibOverlay(); fibSetupDone = true; }
       loadChart();
     }
 
     function openMarketChart() {
-      if (currentCode && !currentCode.startsWith('^') && currentCode !== '') {
+      if (_isStock(currentCode)) {
         prevCode = currentCode;
         prevName = document.getElementById('modalTitle').textContent;
+      } else {
+        prevCode = ''; prevName = '';
       }
       currentCode = '^TWII';
       document.getElementById('modalTitle').textContent = '大盤 加權指數';
+      document.getElementById('marketBtn').style.display = 'none';
       document.getElementById('backBtn').style.display = prevCode ? 'inline-block' : 'none';
       loadChart();
     }
@@ -963,6 +978,7 @@
       if (!prevCode) return;
       currentCode = prevCode;
       document.getElementById('modalTitle').textContent = prevName;
+      document.getElementById('marketBtn').style.display = 'inline-block';
       document.getElementById('backBtn').style.display = 'none';
       prevCode = ''; prevName = '';
       loadChart();
