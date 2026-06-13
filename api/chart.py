@@ -19,54 +19,8 @@ TWSE_HEADERS = {
 RANGE_DAYS = {"1mo": 35, "3mo": 95, "6mo": 185, "1y": 370, "3y": 1100}
 YF_HOSTS = ["query1.finance.yahoo.com", "query2.finance.yahoo.com"]
 
-TAIFEX_HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-    "Accept": "text/html,application/xhtml+xml,*/*;q=0.8",
-    "Accept-Language": "zh-TW,zh;q=0.9",
-    "Content-Type": "application/x-www-form-urlencoded",
-    "Referer": "https://www.taifex.com.tw/cht/3/futDailyMarketReport",
-    "Origin": "https://www.taifex.com.tw",
-}
-
-
-def fetch_taifex_tx(range_str="3y"):
-    """Fetch TX (台指期) daily OHLCV from TAIFEX, near-month contract."""
-    tz_offset = timedelta(hours=8)
-    days = RANGE_DAYS.get(range_str, 1100)
-    now_dt = datetime.now(tz=timezone(tz_offset))
-    start_dt = now_dt - timedelta(days=days)
-
-    begin_date = start_dt.strftime("%Y/%m/%d")
-    end_date = now_dt.strftime("%Y/%m/%d")
-
-    post_data = urllib.parse.urlencode({
-        "queryType": "2",
-        "marketCode": "0",
-        "commodity_id": "TX",
-        "period": "",
-        "beginDate": begin_date,
-        "endDate": end_date,
-    }).encode()
-
-    url = "https://www.taifex.com.tw/cht/3/futDailyMarketReport_download"
-    try:
-        req = urllib.request.Request(url, data=post_data, headers=TAIFEX_HEADERS)
-        with urllib.request.urlopen(req, timeout=8) as r:
-            raw = r.read()
-    except Exception:
-        return None
-
-    # Detect encoding (TAIFEX may use Big5 or UTF-8 with BOM)
-    for enc in ("utf-8-sig", "utf-8", "big5"):
-        try:
-            content = raw.decode(enc)
-            break
-        except Exception:
-            content = None
-    if not content:
-        return None
-
-    # Group rows by date, keep the row with highest volume (= near-month contract)
+def _parse_taifex_csv(content):
+    """Parse TAIFEX CSV; groups by date, keeps highest-volume row (near-month)."""
     by_date = {}
     for line in content.split("\n"):
         cols = [c.strip().strip('"') for c in line.split(",")]
@@ -75,7 +29,6 @@ def fetch_taifex_tx(range_str="3y"):
         date_raw = cols[0].strip()
         if not date_raw or not date_raw[0].isdigit():
             continue
-
         sep = "/" if "/" in date_raw else ("." if "." in date_raw else None)
         if not sep:
             continue
@@ -85,7 +38,7 @@ def fetch_taifex_tx(range_str="3y"):
         try:
             yr = int(dp[0])
             if yr < 200:
-                yr += 1911  # ROC → Gregorian
+                yr += 1911
             iso_date = f"{yr}-{dp[1].zfill(2)}-{dp[2].zfill(2)}"
         except Exception:
             continue
@@ -96,7 +49,6 @@ def fetch_taifex_tx(range_str="3y"):
             except Exception:
                 return None
 
-        # Typical column order: date, product, expiry, open, high, low, close, Δ, Δ%, vol, ...
         o = _f(cols[3]) if len(cols) > 3 else None
         h = _f(cols[4]) if len(cols) > 4 else None
         l = _f(cols[5]) if len(cols) > 5 else None
@@ -106,24 +58,101 @@ def fetch_taifex_tx(range_str="3y"):
         if None in (o, h, l, c) or o == 0:
             continue
         vol = int(v) if v else 0
-
         existing = by_date.get(iso_date)
         if existing is None or vol > existing["volume"]:
             by_date[iso_date] = {
                 "time": iso_date, "open": o, "high": h,
                 "low": l, "close": c, "volume": vol,
             }
-
     if not by_date:
         return None
+    return sorted(by_date.values(), key=lambda x: x["time"])
 
-    candles = sorted(by_date.values(), key=lambda x: x["time"])
-    return {
-        "code": "TX=F",
-        "name": "台指期貨 (TX)",
-        "currency": "TWD",
-        "data": candles,
-    }
+
+def _parse_stooq_csv(content):
+    """Parse Stooq CSV (Date,Open,High,Low,Close,Volume)."""
+    lines = content.strip().split("\n")
+    if len(lines) < 2:
+        return None
+    candles = []
+    for line in lines[1:]:
+        cols = line.strip().split(",")
+        if len(cols) < 5:
+            continue
+        try:
+            o, h, l, c = float(cols[1]), float(cols[2]), float(cols[3]), float(cols[4])
+            if o == 0 or h == 0:
+                continue
+            v = int(float(cols[5])) if len(cols) > 5 and cols[5].strip() else 0
+            candles.append({"time": cols[0], "open": o, "high": h, "low": l, "close": c, "volume": v})
+        except Exception:
+            continue
+    return sorted(candles, key=lambda x: x["time"]) if candles else None
+
+
+def fetch_tx(range_str="3y"):
+    """Fetch TX 台指期 via TAIFEX → Stooq (multi-attempt fallback)."""
+    days = RANGE_DAYS.get(range_str, 1100)
+    tz_offset = timedelta(hours=8)
+    now_dt = datetime.now(tz=timezone(tz_offset))
+    start_dt = now_dt - timedelta(days=days)
+    d1 = start_dt.strftime("%Y%m%d")
+    d2 = now_dt.strftime("%Y%m%d")
+    d1s = start_dt.strftime("%Y/%m/%d")
+    d2s = now_dt.strftime("%Y/%m/%d")
+
+    base_hdrs = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                 "Accept": "*/*"}
+
+    # ── Strategy 1: TAIFEX download (try GET & POST, TX and TXF) ──────────────
+    taifex_attempts = [
+        # GET variants
+        (f"https://www.taifex.com.tw/cht/3/futDailyMarketReport_download"
+         f"?queryType=2&marketCode=0&commodity_id=TX&period=&beginDate={d1}&endDate={d2}", None),
+        (f"https://www.taifex.com.tw/cht/3/futDailyMarketReport_download"
+         f"?queryType=2&marketCode=0&commodity_id=TXF&period=&beginDate={d1}&endDate={d2}", None),
+        # POST variants (slash-date format)
+        ("https://www.taifex.com.tw/cht/3/futDailyMarketReport_download",
+         urllib.parse.urlencode({"queryType": "2", "marketCode": "0", "commodity_id": "TX",
+                                 "period": "", "beginDate": d1s, "endDate": d2s}).encode()),
+        ("https://www.taifex.com.tw/cht/3/futDailyMarketReport_download",
+         urllib.parse.urlencode({"queryType": "1", "marketCode": "0", "commodity_id": "TX",
+                                 "period": "", "beginDate": d1s, "endDate": d2s}).encode()),
+    ]
+    taifex_hdrs = {**base_hdrs, "Referer": "https://www.taifex.com.tw/cht/3/futDailyMarketReport",
+                   "Origin": "https://www.taifex.com.tw"}
+    for url, post_data in taifex_attempts:
+        try:
+            req = urllib.request.Request(url, data=post_data, headers=taifex_hdrs)
+            with urllib.request.urlopen(req, timeout=8) as r:
+                raw = r.read()
+            content = None
+            for enc in ("utf-8-sig", "utf-8", "big5"):
+                try:
+                    content = raw.decode(enc); break
+                except Exception:
+                    pass
+            if content:
+                candles = _parse_taifex_csv(content)
+                if candles:
+                    return {"code": "TX=F", "name": "台指期貨 (TX)", "currency": "TWD", "data": candles}
+        except Exception:
+            continue
+
+    # ── Strategy 2: Stooq ────────────────────────────────────────────────────
+    for sym in ["txf.tw", "tx.tw", "txf"]:
+        try:
+            url = f"https://stooq.com/q/d/l/?s={sym}&d1={d1}&d2={d2}&i=d"
+            req = urllib.request.Request(url, headers=base_hdrs)
+            with urllib.request.urlopen(req, timeout=8) as r:
+                content = r.read().decode("utf-8")
+            candles = _parse_stooq_csv(content)
+            if candles:
+                return {"code": "TX=F", "name": "台指期貨 (TX)", "currency": "TWD", "data": candles}
+        except Exception:
+            continue
+
+    return None
 
 
 def _yf_symbol(code):
@@ -134,11 +163,17 @@ def _yf_symbol(code):
 
 
 def fetch_chart(code, range_str="3mo", interval="1d"):
-    # TX=F → use TAIFEX (Yahoo Finance doesn't carry Taiwan futures)
+    # TX=F → TAIFEX → Stooq → ^TWII fallback
     if code == "TX=F":
-        result = fetch_taifex_tx(range_str)
+        result = fetch_tx(range_str)
         if result:
             return result
+        # Final fallback: Taiwan Weighted Index (prices nearly identical to TX futures)
+        twii = fetch_chart("^TWII", range_str, interval)
+        if twii:
+            twii["code"] = "TX=F"
+            twii["name"] = "台指期（大盤指數近似）"
+        return twii
     yf_sym = _yf_symbol(code)
     is_daily = interval == "1d"
     is_tw_stock = yf_sym.endswith(".TW")
