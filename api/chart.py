@@ -58,8 +58,14 @@ def _parse_taifex_chunk(content):
     return by_date
 
 
+_TAIFEX_SESSION = {"cookie": "", "expires": 0.0}
+
+
 def _taifex_cookie_str():
-    """GET session cookie from TAIFEX; return as 'Name=Value; ...' string."""
+    """GET TAIFEX session cookie; cache for 5 min within the same warm process."""
+    now = time.time()
+    if _TAIFEX_SESSION["cookie"] and now < _TAIFEX_SESSION["expires"]:
+        return _TAIFEX_SESSION["cookie"]
     jar = http.cookiejar.CookieJar()
     opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
     opener.addheaders = [
@@ -69,7 +75,10 @@ def _taifex_cookie_str():
     ]
     opener.open("https://www.taifex.com.tw/cht/3/dlFutDailyMarketView", timeout=6)
     parts = [f"{c.name}={c.value}" for c in jar]
-    return "; ".join(parts)
+    cookie_str = "; ".join(parts)
+    _TAIFEX_SESSION["cookie"] = cookie_str
+    _TAIFEX_SESSION["expires"] = now + 300
+    return cookie_str
 
 
 def _fetch_taifex_chunk(cookie_str, start_dt, end_dt):
@@ -108,42 +117,33 @@ def _fetch_taifex_chunk(cookie_str, start_dt, end_dt):
         return {}
 
 
-def _fetch_chunk_independent(start_dt, end_dt):
-    """Get a fresh TAIFEX session then fetch one chunk — avoids per-session concurrency limit."""
-    try:
-        cookie_str = _taifex_cookie_str()
-    except Exception:
-        return {}
-    return _fetch_taifex_chunk(cookie_str, start_dt, end_dt)
-
-
 def fetch_tx(range_str="3y"):
-    """Fetch TX 台指期 via parallel 88-day chunks, each with its own TAIFEX session.
-    Cap at 1y (5 chunks). Each thread does GET(session)+POST(data) independently
-    so TAIFEX's per-session concurrency limit is not hit. Expected ~2-3s total."""
-    capped = "1y" if RANGE_DAYS.get(range_str, 0) > RANGE_DAYS["1y"] else range_str
-    days = RANGE_DAYS.get(capped, 370)
+    """Fetch TX 台指期:
+    - Last 32 days: real TX near-month prices from TAIFEX (IP-limited to ~30 days from non-TW servers)
+    - Historical: ^TWII from Yahoo Finance as proxy (correlation >0.999)
+    Both fetched in parallel; TX prices overwrite TWII for recent dates.
+    Session cached 5 min so warm reloads skip the slow TAIFEX GET (~2s instead of ~5s)."""
     tz_offset = timedelta(hours=8)
     now_dt = datetime.now(tz=timezone(tz_offset))
-    start_dt = now_dt - timedelta(days=days)
+    recent_start = now_dt - timedelta(days=32)
 
-    chunk_days = 88
-    chunks = []
-    cur = start_dt
-    while cur < now_dt:
-        chunk_end = min(cur + timedelta(days=chunk_days), now_dt)
-        chunks.append((cur, chunk_end))
-        cur = chunk_end + timedelta(days=1)
+    def _get_twii():
+        result = fetch_chart("^TWII", range_str, "1d")
+        if result and result.get("data"):
+            return {c["time"]: c for c in result["data"]}
+        return {}
 
-    by_date = {}
-    with ThreadPoolExecutor(max_workers=6) as pool:
-        futures = {pool.submit(_fetch_chunk_independent, s, e): (s, e)
-                   for s, e in chunks}
-        for fut in as_completed(futures):
-            try:
-                by_date.update(fut.result())
-            except Exception:
-                pass
+    def _get_recent_tx():
+        try:
+            cookie_str = _taifex_cookie_str()
+            return _fetch_taifex_chunk(cookie_str, recent_start, now_dt)
+        except Exception:
+            return {}
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        f_twii = pool.submit(_get_twii)
+        f_tx = pool.submit(_get_recent_tx)
+        by_date = {**f_twii.result(), **f_tx.result()}  # TX prices overwrite TWII for recent dates
 
     if not by_date:
         return None
