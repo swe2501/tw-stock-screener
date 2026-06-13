@@ -108,10 +108,19 @@ def _fetch_taifex_chunk(cookie_str, start_dt, end_dt):
         return {}
 
 
+def _fetch_chunk_independent(start_dt, end_dt):
+    """Get a fresh TAIFEX session then fetch one chunk — avoids per-session concurrency limit."""
+    try:
+        cookie_str = _taifex_cookie_str()
+    except Exception:
+        return {}
+    return _fetch_taifex_chunk(cookie_str, start_dt, end_dt)
+
+
 def fetch_tx(range_str="3y"):
-    """Fetch TX 台指期 via parallel 88-day chunks from TAIFEX.
-    Cap at 1y: 5 chunks fit in 1 worker round (~2-3s total).
-    Annual ZIPs were tried but TAIFEX serves them at ~400KB/s (~25s each) — too slow."""
+    """Fetch TX 台指期 via parallel 88-day chunks, each with its own TAIFEX session.
+    Cap at 1y (5 chunks). Each thread does GET(session)+POST(data) independently
+    so TAIFEX's per-session concurrency limit is not hit. Expected ~2-3s total."""
     capped = "1y" if RANGE_DAYS.get(range_str, 0) > RANGE_DAYS["1y"] else range_str
     days = RANGE_DAYS.get(capped, 370)
     tz_offset = timedelta(hours=8)
@@ -126,14 +135,9 @@ def fetch_tx(range_str="3y"):
         chunks.append((cur, chunk_end))
         cur = chunk_end + timedelta(days=1)
 
-    try:
-        cookie_str = _taifex_cookie_str()
-    except Exception:
-        return None
-
     by_date = {}
     with ThreadPoolExecutor(max_workers=6) as pool:
-        futures = {pool.submit(_fetch_taifex_chunk, cookie_str, s, e): (s, e)
+        futures = {pool.submit(_fetch_chunk_independent, s, e): (s, e)
                    for s, e in chunks}
         for fut in as_completed(futures):
             try:
