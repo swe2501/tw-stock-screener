@@ -5,6 +5,7 @@ import urllib.request
 import urllib.parse
 import http.cookiejar
 from datetime import datetime, timezone, timedelta
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 YF_HEADERS = {
@@ -20,151 +21,129 @@ TWSE_HEADERS = {
 RANGE_DAYS = {"1mo": 35, "3mo": 95, "6mo": 185, "1y": 370, "3y": 1100}
 YF_HOSTS = ["query1.finance.yahoo.com", "query2.finance.yahoo.com"]
 
-def _parse_taifex_csv(content):
-    """Parse TAIFEX CSV; groups by date, keeps highest-volume row (near-month)."""
+def _parse_taifex_chunk(content):
+    """Parse TAIFEX monthly-download CSV (TX only, 一般 session).
+    Keeps highest-volume row per date (= near-month contract)."""
     by_date = {}
-    for line in content.split("\n"):
-        cols = [c.strip().strip('"') for c in line.split(",")]
-        if len(cols) < 9:
-            continue
-        date_raw = cols[0].strip()
-        if not date_raw or not date_raw[0].isdigit():
-            continue
-        sep = "/" if "/" in date_raw else ("." if "." in date_raw else None)
-        if not sep:
-            continue
-        dp = date_raw.split(sep)
-        if len(dp) != 3:
-            continue
+
+    def _f(s):
         try:
-            yr = int(dp[0])
-            if yr < 200:
-                yr += 1911
-            iso_date = f"{yr}-{dp[1].zfill(2)}-{dp[2].zfill(2)}"
+            return float(s.replace(",", "").replace(" ", ""))
         except Exception:
+            return None
+
+    for line in content.split("\n"):
+        if not line or not line[0].isdigit():
             continue
-
-        def _f(s):
-            try:
-                return float(s.replace(",", "").replace(" ", ""))
-            except Exception:
-                return None
-
-        o = _f(cols[3]) if len(cols) > 3 else None
-        h = _f(cols[4]) if len(cols) > 4 else None
-        l = _f(cols[5]) if len(cols) > 5 else None
-        c = _f(cols[6]) if len(cols) > 6 else None
-        v = _f(cols[9]) if len(cols) > 9 else None
-
+        cols = line.split(",")
+        if len(cols) < 18:
+            continue
+        if cols[1].strip() != "TX" or cols[17].strip() != "一般":
+            continue
+        date_raw = cols[0].strip()          # "2025/01/02"
+        iso_date = date_raw.replace("/", "-")
+        o, h, l, c = _f(cols[3]), _f(cols[4]), _f(cols[5]), _f(cols[6])
         if None in (o, h, l, c) or o == 0:
             continue
-        vol = int(v) if v else 0
+        try:
+            vol = int(cols[9].replace(",", "").strip() or "0")
+        except Exception:
+            vol = 0
         existing = by_date.get(iso_date)
         if existing is None or vol > existing["volume"]:
             by_date[iso_date] = {
                 "time": iso_date, "open": o, "high": h,
                 "low": l, "close": c, "volume": vol,
             }
-    if not by_date:
-        return None
-    return sorted(by_date.values(), key=lambda x: x["time"])
+    return by_date
 
 
-def _parse_stooq_csv(content):
-    """Parse Stooq CSV (Date,Open,High,Low,Close,Volume)."""
-    lines = content.strip().split("\n")
-    if len(lines) < 2:
-        return None
-    candles = []
-    for line in lines[1:]:
-        cols = line.strip().split(",")
-        if len(cols) < 5:
-            continue
-        try:
-            o, h, l, c = float(cols[1]), float(cols[2]), float(cols[3]), float(cols[4])
-            if o == 0 or h == 0:
-                continue
-            v = int(float(cols[5])) if len(cols) > 5 and cols[5].strip() else 0
-            candles.append({"time": cols[0], "open": o, "high": h, "low": l, "close": c, "volume": v})
-        except Exception:
-            continue
-    return sorted(candles, key=lambda x: x["time"]) if candles else None
+def _taifex_cookie_str():
+    """GET session cookie from TAIFEX; return as 'Name=Value; ...' string."""
+    jar = http.cookiejar.CookieJar()
+    opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
+    opener.addheaders = [
+        ("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"),
+        ("Accept", "text/html,application/xhtml+xml,*/*;q=0.9"),
+        ("Accept-Language", "zh-TW,zh;q=0.9"),
+    ]
+    opener.open("https://www.taifex.com.tw/cht/3/dlFutDailyMarketView", timeout=6)
+    parts = [f"{c.name}={c.value}" for c in jar]
+    return "; ".join(parts)
+
+
+def _fetch_taifex_chunk(cookie_str, start_dt, end_dt):
+    """POST one ≤85-day chunk for TX futures. Returns parsed by_date dict or {}."""
+    begin = start_dt.strftime("%Y/%m/%d")
+    end   = end_dt.strftime("%Y/%m/%d")
+    post_data = urllib.parse.urlencode({
+        "down_type": "1", "commodity_id": "TX", "commodity_id2": "",
+        "queryStartDate": begin, "queryEndDate": end,
+    }).encode()
+    req = urllib.request.Request(
+        "https://www.taifex.com.tw/cht/3/futDataDown",
+        data=post_data,
+        headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Referer": "https://www.taifex.com.tw/cht/3/dlFutDailyMarketView",
+            "Origin": "https://www.taifex.com.tw",
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Cookie": cookie_str,
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=8) as r:
+            raw = r.read()
+        content = None
+        for enc in ("utf-8-sig", "utf-8", "ms950", "big5"):
+            try:
+                content = raw.decode(enc)
+                break
+            except Exception:
+                pass
+        if not content or "alert" in content[:500]:
+            return {}
+        return _parse_taifex_chunk(content)
+    except Exception:
+        return {}
 
 
 def fetch_tx(range_str="3y"):
-    """Fetch TX 台指期 via TAIFEX → Stooq (multi-attempt fallback)."""
+    """Fetch TX 台指期 from TAIFEX futDataDown in parallel 89-day chunks."""
     days = RANGE_DAYS.get(range_str, 1100)
     tz_offset = timedelta(hours=8)
     now_dt = datetime.now(tz=timezone(tz_offset))
     start_dt = now_dt - timedelta(days=days)
-    d1 = start_dt.strftime("%Y%m%d")
-    d2 = now_dt.strftime("%Y%m%d")
-    d1s = start_dt.strftime("%Y/%m/%d")
-    d2s = now_dt.strftime("%Y/%m/%d")
 
-    base_hdrs = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-                 "Accept": "*/*"}
+    # Build list of ≤85-day chunks (conservative margin below 89-day limit)
+    chunk_days = 85
+    chunks = []
+    cur = start_dt
+    while cur < now_dt:
+        chunk_end = min(cur + timedelta(days=chunk_days), now_dt)
+        chunks.append((cur, chunk_end))
+        cur = chunk_end + timedelta(days=1)
 
-    # ── Strategy 1: TAIFEX (session-cookie + POST download) ───────────────────
-    taifex_hdrs = {
-        **base_hdrs,
-        "Accept": "text/html,application/xhtml+xml,*/*;q=0.8",
-        "Accept-Language": "zh-TW,zh;q=0.9",
-        "Referer": "https://www.taifex.com.tw/cht/3/futDailyMarketReport",
-        "Origin": "https://www.taifex.com.tw",
-    }
-    for commodity_id in ("TX", "TXF"):
-        for qtype in ("2", "1"):
-            for begin, end in [(d1s, d2s), (d1, d2)]:
-                try:
-                    # Step 1: grab session cookie from main page
-                    jar = http.cookiejar.CookieJar()
-                    opener = urllib.request.build_opener(
-                        urllib.request.HTTPCookieProcessor(jar))
-                    opener.addheaders = list(taifex_hdrs.items())
-                    opener.open(
-                        "https://www.taifex.com.tw/cht/3/futDailyMarketReport",
-                        timeout=4)
-                    # Step 2: POST download with session cookie
-                    post_data = urllib.parse.urlencode({
-                        "queryType": qtype, "marketCode": "0",
-                        "commodity_id": commodity_id, "period": "",
-                        "beginDate": begin, "endDate": end,
-                    }).encode()
-                    dl_url = ("https://www.taifex.com.tw/cht/3/"
-                              "futDailyMarketReport_download")
-                    req = urllib.request.Request(
-                        dl_url, data=post_data, headers=taifex_hdrs)
-                    with opener.open(req, timeout=7) as r:
-                        raw = r.read()
-                    content = None
-                    for enc in ("utf-8-sig", "utf-8", "big5"):
-                        try:
-                            content = raw.decode(enc); break
-                        except Exception:
-                            pass
-                    if content:
-                        candles = _parse_taifex_csv(content)
-                        if candles:
-                            return {"code": "TX=F", "name": "台指期貨 (TX)",
-                                    "currency": "TWD", "data": candles}
-                except Exception:
-                    continue
+    try:
+        cookie_str = _taifex_cookie_str()
+    except Exception:
+        return None
 
-    # ── Strategy 2: Stooq ────────────────────────────────────────────────────
-    for sym in ["txf.tw", "tx.tw", "txf"]:
-        try:
-            url = f"https://stooq.com/q/d/l/?s={sym}&d1={d1}&d2={d2}&i=d"
-            req = urllib.request.Request(url, headers=base_hdrs)
-            with urllib.request.urlopen(req, timeout=8) as r:
-                content = r.read().decode("utf-8")
-            candles = _parse_stooq_csv(content)
-            if candles:
-                return {"code": "TX=F", "name": "台指期貨 (TX)", "currency": "TWD", "data": candles}
-        except Exception:
-            continue
+    by_date = {}
+    # 4 workers → parallel downloads, stays well under 10s Vercel limit
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        futures = {pool.submit(_fetch_taifex_chunk, cookie_str, s, e): (s, e)
+                   for s, e in chunks}
+        for fut in as_completed(futures):
+            try:
+                by_date.update(fut.result())
+            except Exception:
+                pass
 
-    return None
+    if not by_date:
+        return None
+    candles = sorted(by_date.values(), key=lambda x: x["time"])
+    return {"code": "TX=F", "name": "台指期貨 (TX)", "currency": "TWD", "data": candles}
 
 
 def _yf_symbol(code):
