@@ -168,16 +168,15 @@ def fetch_tx(range_str="3y"):
     1. Annual ZIPs (down_type=2) for past complete years — correct TX prices.
        TAIFEX serves ZIPs sequentially (~8-9s each); 3y = ~25s first load.
        Vercel CDN caches the response for 1h so subsequent requests are instant.
-    2. ^TWII proxy via Yahoo for current-year gap (Jan–~35 days ago).
-       TAIFEX down_type=1 is IP-restricted to last ~35 days from non-TW servers.
-       TWII ≈ TX within 0.5% — gap only affects chart shape, not recent price accuracy.
-    3. TAIFEX monthly chunk for last 35 days — correct TX prices."""
+    2. ^TWII proxy via Yahoo for current-year data (Jan 1 → today).
+       TAIFEX down_type=1 is IP-restricted from Vercel; TWII ≈ TX within 0.5%.
+    3. TAIFEX monthly chunk for last 35 days — correct TX prices (overwrites TWII proxy)."""
     days = RANGE_DAYS.get(range_str, 1100)
     tz_offset = timedelta(hours=8)
     now_dt = datetime.now(tz=timezone(tz_offset))
     start_dt = now_dt - timedelta(days=days)
     current_year = now_dt.year
-    taifex_cutoff = now_dt - timedelta(days=35)  # monthly chunk works within this window
+    taifex_cutoff = now_dt - timedelta(days=35)
 
     by_date = {}
 
@@ -185,18 +184,16 @@ def fetch_tx(range_str="3y"):
     for year in range(start_dt.year, current_year):
         by_date.update(_fetch_annual_zip(year))
 
-    # 2. TWII proxy for current-year gap (Jan 1 → taifex_cutoff)
+    # 2. TWII proxy for entire current year (Jan 1 → today); TAIFEX chunk overwrites if available
     gap_start = max(datetime(current_year, 1, 1, tzinfo=now_dt.tzinfo), start_dt)
-    gap_end = taifex_cutoff - timedelta(days=1)
-    if gap_start < gap_end:
-        twii = fetch_chart("^TWII", range_str, "1d")
-        if twii and twii.get("data"):
-            gs, ge = gap_start.strftime("%Y-%m-%d"), gap_end.strftime("%Y-%m-%d")
-            for c in twii["data"]:
-                if gs <= c["time"] <= ge:
-                    by_date.setdefault(c["time"], c)  # don't overwrite real TX
+    twii = fetch_chart("^TWII", range_str, "1d")
+    if twii and twii.get("data"):
+        gs = gap_start.strftime("%Y-%m-%d")
+        for c in twii["data"]:
+            if c["time"] >= gs:
+                by_date.setdefault(c["time"], c)  # don't overwrite real TX
 
-    # 3. Real TX for last 35 days
+    # 3. Real TX for last 35 days (overwrites TWII proxy where available)
     try:
         cookie_str = _taifex_cookie_str()
         by_date.update(_fetch_taifex_chunk(cookie_str, taifex_cutoff, now_dt))
