@@ -1169,16 +1169,21 @@
         if (trendLines.length > 0 || trendStart) redrawCanvas();
       });
 
-      // Prevent zooming out beyond the loaded dataset (3 years)
+      // Prevent zooming out beyond the loaded dataset (3 years) on ALL panels
       const _maxBars = candles.length;
       let _lockingZoom = false;
-      chartInstance.timeScale().subscribeVisibleLogicalRangeChange(range => {
-        if (_lockingZoom || !range) return;
-        if (range.to - range.from > _maxBars + 5) {
-          _lockingZoom = true;
-          chartInstance.timeScale().setVisibleLogicalRange({ from: -2, to: _maxBars + 2 });
-          _lockingZoom = false;
-        }
+      const _allCharts = [chartInstance, volInstance, macdInstance, rsiInstance].filter(Boolean);
+      _allCharts.forEach(c => {
+        c.timeScale().subscribeVisibleLogicalRangeChange(range => {
+          if (_lockingZoom || !range) return;
+          if (range.to - range.from > _maxBars + 5) {
+            _lockingZoom = true;
+            _allCharts.forEach(cc => {
+              try { cc.timeScale().setVisibleLogicalRange({ from: -2, to: _maxBars + 2 }); } catch (_) {}
+            });
+            _lockingZoom = false;
+          }
+        });
       });
 
     }
