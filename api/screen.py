@@ -177,6 +177,10 @@ def fetch_yf_chart(code, date_str):
         for i in range(target_idx)
         if safe(volumes, i) and safe(volumes, i) > 0
     ]
+    all_closes = [
+        safe(closes, i) for i in range(target_idx + 1)
+        if safe(closes, i) is not None
+    ]
 
     return {
         "open": o, "high": h, "low": l, "close": c,
@@ -184,6 +188,7 @@ def fetch_yf_chart(code, date_str):
         "prev_close": safe(closes, target_idx - 1) if target_idx > 0 else None,
         "prev_high":  safe(highs,  target_idx - 1) if target_idx > 0 else None,
         "prev_vols":  prev_vols,
+        "all_closes": all_closes,
     }
 
 
@@ -205,6 +210,35 @@ def fetch_all_stocks_historical(code_name_map, date_str):
                 all_data[code] = {**result, "code": code, "name": name}
 
     return all_data
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# MACD helpers
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _ema(values, period):
+    if len(values) < period:
+        return []
+    result = [sum(values[:period]) / period]
+    k = 2 / (period + 1)
+    for v in values[period:]:
+        result.append(result[-1] * (1 - k) + v * k)
+    return result
+
+def is_macd_golden_cross(closes):
+    """True if MACD(12,26,9) crossed above Signal on the last bar."""
+    if len(closes) < 35:
+        return False
+    e12 = _ema(closes, 12)
+    e26 = _ema(closes, 26)
+    # align: e26 is shorter by 14 positions
+    macd = [a - b for a, b in zip(e12[len(e12) - len(e26):], e26)]
+    sig = _ema(macd, 9)
+    if len(sig) < 2:
+        return False
+    offset = len(macd) - len(sig)
+    return (macd[offset + len(sig) - 2] <= sig[-2] and
+            macd[offset + len(sig) - 1] >  sig[-1])
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -236,11 +270,12 @@ def _prev_month(yyyymm):
 # ─────────────────────────────────────────────────────────────────────────────
 
 def screen(params):
-    requested_date = params.get("date", "").replace("-", "")  # YYYYMMDD or ""
-    red_pct        = float(params.get("red_candle_pct") or 0)
-    vol_mult       = float(params.get("volume_multiplier") or 0)
-    check_limit_up = bool(params.get("limit_up", False))
-    check_gap_up   = bool(params.get("gap_up", False))
+    requested_date   = params.get("date", "").replace("-", "")  # YYYYMMDD or ""
+    red_pct          = float(params.get("red_candle_pct") or 0)
+    vol_mult         = float(params.get("volume_multiplier") or 0)
+    check_limit_up   = bool(params.get("limit_up", False))
+    check_gap_up     = bool(params.get("gap_up", False))
+    check_macd_gold  = bool(params.get("macd_golden", False))
 
     # ── Step 1: Always fetch latest TWSE data (for stock list + latest date) ──
     latest_stocks, latest_date = fetch_all_stocks_latest()
@@ -296,7 +331,7 @@ def screen(params):
         return {"date": display_date, "total": len(all_stocks), "count": 0, "results": []}
 
     # ── Step 3: Per-stock monthly data for gap_up & volume MA ────────────────
-    need_monthly = (check_gap_up or vol_mult > 0) and not is_historical
+    need_monthly = (check_gap_up or vol_mult > 0 or check_macd_gold) and not is_historical
 
     monthly = {}
     if need_monthly:
@@ -332,6 +367,16 @@ def screen(params):
         # 跳空向上
         if check_gap_up:
             if not prev_high or o <= prev_high:
+                continue
+
+        # MACD黃金交叉
+        if check_macd_gold:
+            if is_historical:
+                closes_for_macd = s.get("all_closes", [])
+            else:
+                rows = monthly.get(code, [])
+                closes_for_macd = [r["close"] for r in rows if r["date"] <= actual_date and r.get("close")]
+            if not is_macd_golden_cross(closes_for_macd):
                 continue
 
         # 放量
