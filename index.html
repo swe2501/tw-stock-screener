@@ -1246,25 +1246,43 @@
       opts.rightPriceScale.scaleMargins = { top: 0.1, bottom: 0.05 };
       volInstance = LightweightCharts.createChart(el, opts);
 
+      const vols = candles.map(c => c.volume);
+      const vma5  = calcVolMA(vols, 5);
+      const vma10 = calcVolMA(vols, 10);
+
+      // Y 軸只參考可視範圍內的量，避免歷史高峰壓縮近期柱子
+      function _visibleVolMax() {
+        const range = volInstance.timeScale().getVisibleLogicalRange();
+        const from = range ? Math.max(0, Math.floor(range.from)) : Math.max(0, vols.length - 60);
+        const to   = range ? Math.min(vols.length - 1, Math.ceil(range.to)) : vols.length - 1;
+        const vals = [
+          ...vols.slice(from, to + 1),
+          ...vma5.slice(from, to + 1).filter(v => v !== null),
+          ...vma10.slice(from, to + 1).filter(v => v !== null),
+        ].filter(v => v > 0);
+        return vals.length > 0 ? Math.max(...vals) : 1;
+      }
+      const _autoScale = () => ({ priceRange: { minValue: 0, maxValue: _visibleVolMax() * 1.1 } });
+
       const volSeries = volInstance.addHistogramSeries({
         priceFormat: { type: 'volume' }, priceScaleId: 'right',
         lastValueVisible: false,
+        autoscaleInfoProvider: _autoScale,
       });
       volSeries.setData(candles.map(c => ({
         time: c.time, value: c.volume,
         color: c.close >= c.open ? 'rgba(231,76,60,0.4)' : 'rgba(38,194,129,0.4)',
       })));
 
-      const vols = candles.map(c => c.volume);
-      const vma5  = calcVolMA(vols, 5);
-      const vma10 = calcVolMA(vols, 10);
       const vma5s = volInstance.addLineSeries({
         color: '#f39c12', lineWidth: 1,
         crosshairMarkerVisible: false, lastValueVisible: false,
+        autoscaleInfoProvider: _autoScale,
       });
       const vma10s = volInstance.addLineSeries({
         color: '#e74c3c', lineWidth: 1,
         crosshairMarkerVisible: false, lastValueVisible: false,
+        autoscaleInfoProvider: _autoScale,
       });
       vma5s.setData(candles.map((c, i) => vma5[i]  !== null ? { time: c.time, value: vma5[i]  } : null).filter(Boolean));
       vma10s.setData(candles.map((c, i) => vma10[i] !== null ? { time: c.time, value: vma10[i] } : null).filter(Boolean));
