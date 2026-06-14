@@ -273,7 +273,9 @@ def _prev_month(yyyymm):
 def screen(params):
     requested_date   = params.get("date", "").replace("-", "")  # YYYYMMDD or ""
     red_pct          = float(params.get("red_candle_pct") or 0)
+    black_pct        = float(params.get("black_candle_pct") or 0)
     vol_mult         = float(params.get("volume_multiplier") or 0)
+    shrink_mult      = float(params.get("shrink_multiplier") or 0)
     check_limit_up   = bool(params.get("limit_up", False))
     check_gap_up     = bool(params.get("gap_up", False))
     check_gap_down   = bool(params.get("gap_down", False))
@@ -333,7 +335,7 @@ def screen(params):
         return {"date": display_date, "total": len(all_stocks), "count": 0, "results": []}
 
     # ── Step 3: Per-stock monthly data for gap_up & volume MA ────────────────
-    need_monthly = (check_gap_up or check_gap_down or vol_mult > 0 or check_macd_gold) and not is_historical
+    need_monthly = (check_gap_up or check_gap_down or vol_mult > 0 or shrink_mult > 0 or check_macd_gold) and not is_historical
 
     monthly = {}
     if need_monthly:
@@ -388,9 +390,14 @@ def screen(params):
             if not is_macd_golden_cross(closes_for_macd):
                 continue
 
-        # 放量
+        # 長黑棒幅度
+        if black_pct > 0:
+            if o <= 0 or (o - c) / o * 100 < black_pct:
+                continue
+
+        # 放量 / 縮量（共用 MA 計算）
         ma5 = ma10 = vol_ratio = None
-        if vol_mult > 0:
+        if vol_mult > 0 or shrink_mult > 0:
             if len(prev_vols) >= 5:
                 ma5 = sum(prev_vols[-5:]) / 5
             if len(prev_vols) >= 10:
@@ -401,7 +408,10 @@ def screen(params):
 
             max_ma = max(x for x in [ma5, ma10] if x is not None)
             vol_ratio = v / max_ma if max_ma > 0 else 0
-            if v < max_ma * vol_mult:
+
+            if vol_mult > 0 and v < max_ma * vol_mult:
+                continue
+            if shrink_mult > 0 and v > max_ma * shrink_mult:
                 continue
 
         pc = s.get("prev_close")
