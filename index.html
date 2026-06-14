@@ -684,7 +684,8 @@
       <div class="modal-body">
         <div class="chart-toolbar">
           <div class="chart-toolbar-left">
-            <span class="range-btn active" style="cursor:default">日K</span>
+            <button class="tool-btn" id="dailyBtn" onclick="loadDailyChart()" style="background:#2962ff;color:#fff">日K</button>
+            <button class="tool-btn" id="intradayBtn" style="display:none" onclick="loadIntradayChart()">昨日走勢</button>
             <div class="toolbar-sep"></div>
             <button class="tool-btn" id="marketBtn" onclick="openMarketChart()">大盤K</button>
             <button class="tool-btn" id="backBtn" style="display:none" onclick="goBackToStock()">← 返回</button>
@@ -932,20 +933,25 @@
       return code && !code.startsWith('^') && !code.includes('=');
     }
 
+    function _setToolbarForCode(sym) {
+      document.getElementById('marketBtn').style.display   = (sym === '^TWII') ? 'none' : 'inline-block';
+      document.getElementById('intradayBtn').style.display = (sym === 'TX=F')  ? 'inline-block' : 'none';
+    }
+
     function openChart(code, name) {
       prevCode = ''; prevName = '';
       currentCode = code; currentName = name;
       document.getElementById('modalTitle').textContent = `${code}　${name}`;
-      document.getElementById('marketBtn').style.display = 'inline-block';
+      _setToolbarForCode(code);
       document.getElementById('backBtn').style.display = 'none';
       document.getElementById('chartModal').classList.add('open');
       if (!fibSetupDone) { setupFibOverlay(); fibSetupDone = true; }
-      loadChart();
+      loadDailyChart();
     }
 
     function openIndexChart(sym, name) {
-      // Save stock context so back button can return to it
-      if (_isStock(currentCode)) {
+      // Save current non-TWII context so back button can return to it
+      if (currentCode && currentCode !== '^TWII') {
         prevCode = currentCode;
         prevName = document.getElementById('modalTitle').textContent;
       } else {
@@ -953,35 +959,34 @@
       }
       currentCode = sym; currentName = name;
       document.getElementById('modalTitle').textContent = name;
-      // Only hide 大盤K button when already viewing 大盤 itself
-      document.getElementById('marketBtn').style.display = (sym === '^TWII') ? 'none' : 'inline-block';
+      _setToolbarForCode(sym);
       document.getElementById('backBtn').style.display = prevCode ? 'inline-block' : 'none';
       document.getElementById('chartModal').classList.add('open');
       if (!fibSetupDone) { setupFibOverlay(); fibSetupDone = true; }
-      loadChart();
+      loadDailyChart();
     }
 
     function openMarketChart() {
-      if (_isStock(currentCode)) {
+      // Save any non-TWII chart so back button returns to it
+      if (currentCode && currentCode !== '^TWII') {
         prevCode = currentCode;
         prevName = document.getElementById('modalTitle').textContent;
       }
-      // Don't clear prevCode when jumping from one index to 大盤 — preserve the stock reference
       currentCode = '^TWII';
       document.getElementById('modalTitle').textContent = '大盤 加權指數';
-      document.getElementById('marketBtn').style.display = 'none';
+      _setToolbarForCode('^TWII');
       document.getElementById('backBtn').style.display = prevCode ? 'inline-block' : 'none';
-      loadChart();
+      loadDailyChart();
     }
 
     function goBackToStock() {
       if (!prevCode) return;
       currentCode = prevCode;
       document.getElementById('modalTitle').textContent = prevName;
-      document.getElementById('marketBtn').style.display = 'inline-block';
+      _setToolbarForCode(currentCode);
       document.getElementById('backBtn').style.display = 'none';
       prevCode = ''; prevName = '';
-      loadChart();
+      loadDailyChart();
     }
 
     function closeChart() {
@@ -1012,12 +1017,26 @@
     }
 
     // ── Load chart data ────────────────────────────────────
-    function loadChart() {
+    function _chartLoading(msg) {
       document.getElementById('chartLoading').style.display = 'flex';
+      document.getElementById('chartLoading').innerHTML = `<div class="spinner"></div> ${msg || '載入中...'}`;
       document.getElementById('chartWrapper').style.display = 'none';
       _destroyCharts();
       _resetDrawingState();
+    }
 
+    function _setDailyBtnActive(active) {
+      document.getElementById('dailyBtn').style.background = active ? '#2962ff' : '';
+      document.getElementById('dailyBtn').style.color = active ? '#fff' : '';
+      if (document.getElementById('intradayBtn').style.display !== 'none') {
+        document.getElementById('intradayBtn').style.background = active ? '' : '#2962ff';
+        document.getElementById('intradayBtn').style.color = active ? '' : '#fff';
+      }
+    }
+
+    function loadDailyChart() {
+      _chartLoading();
+      _setDailyBtnActive(true);
       const url = `/api/chart?code=${encodeURIComponent(currentCode)}&range=3y&interval=1d`;
       fetch(url)
         .then(r => r.json())
@@ -1028,9 +1047,46 @@
           }
           const first = data.data[0].time;
           const last  = data.data[data.data.length - 1].time;
-          document.getElementById('modalSubtitle').textContent =
-            `日K ・ ${first} ～ ${last}`;
+          document.getElementById('modalSubtitle').textContent = `日K ・ ${first} ～ ${last}`;
           renderTVChart(data.data);
+        })
+        .catch(() => {
+          document.getElementById('chartLoading').innerHTML = '⚠ 載入失敗，請重試';
+        });
+    }
+
+    function loadIntradayChart() {
+      _chartLoading('載入昨日走勢...');
+      _setDailyBtnActive(false);
+      const url = `/api/chart?code=${encodeURIComponent(currentCode)}&range=5d&interval=5m`;
+      fetch(url)
+        .then(r => r.json())
+        .then(data => {
+          if (data.error || !data.data || data.data.length === 0) {
+            document.getElementById('chartLoading').innerHTML = '⚠ 無法取得走勢資料';
+            return;
+          }
+          // In Taiwan time (UTC+8), find the most recent completed trading date
+          const toDate8 = ts => new Date((ts + 8 * 3600) * 1000).toISOString().slice(0, 10);
+          const now8 = new Date(Date.now() + 8 * 3600000);
+          const todayStr = now8.toISOString().slice(0, 10);
+          // Find latest date that is not today
+          const lastDate = data.data.reduce((max, c) => {
+            const d = toDate8(c.time);
+            return (d > max && d < todayStr) ? d : max;
+          }, '');
+          const candles = (lastDate
+            ? data.data.filter(c => toDate8(c.time) === lastDate)
+            : data.data
+          );
+          if (candles.length === 0) {
+            document.getElementById('chartLoading').innerHTML = '⚠ 無昨日走勢資料';
+            return;
+          }
+          const fmt = ts => new Date((ts + 8 * 3600) * 1000).toISOString().replace('T',' ').slice(0,16);
+          document.getElementById('modalSubtitle').textContent =
+            `昨日走勢（日盤）・ ${fmt(candles[0].time)} ～ ${fmt(candles[candles.length-1].time)}`;
+          renderTVChart(candles);
         })
         .catch(() => {
           document.getElementById('chartLoading').innerHTML = '⚠ 載入失敗，請重試';

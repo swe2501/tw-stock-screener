@@ -24,9 +24,10 @@ RANGE_DAYS = {"1mo": 35, "3mo": 95, "6mo": 185, "1y": 370, "3y": 1100}
 YF_HOSTS = ["query1.finance.yahoo.com", "query2.finance.yahoo.com"]
 
 def _parse_taifex_chunk(content):
-    """Parse TAIFEX monthly-download CSV (TX only, 一般 session).
-    Keeps highest-volume row per date (= near-month contract)."""
-    by_date = {}
+    """Parse TAIFEX CSV (TX only) → 台指近全 daily candles.
+    Keeps highest-volume row per (date, session) = near-month contract.
+    Combines 一般 + 夜盤 into a single candle: 一般 open, merged H/L, 夜盤 close, sum volume."""
+    by_session = {}  # (date, session) → near-month row
 
     def _f(s):
         try:
@@ -40,10 +41,12 @@ def _parse_taifex_chunk(content):
         cols = line.split(",")
         if len(cols) < 18:
             continue
-        if cols[1].strip() != "TX" or cols[17].strip() != "一般":
+        if cols[1].strip() != "TX":
             continue
-        date_raw = cols[0].strip()          # "2025/01/02"
-        iso_date = date_raw.replace("/", "-")
+        session = cols[17].strip()
+        if session not in ("一般", "夜盤"):
+            continue
+        iso_date = cols[0].strip().replace("/", "-")
         o, h, l, c = _f(cols[3]), _f(cols[4]), _f(cols[5]), _f(cols[6])
         if None in (o, h, l, c) or o == 0:
             continue
@@ -51,13 +54,30 @@ def _parse_taifex_chunk(content):
             vol = int(cols[9].replace(",", "").strip() or "0")
         except Exception:
             vol = 0
-        existing = by_date.get(iso_date)
-        if existing is None or vol > existing["volume"]:
-            by_date[iso_date] = {
-                "time": iso_date, "open": o, "high": h,
-                "low": l, "close": c, "volume": vol,
-            }
-    return by_date
+        key = (iso_date, session)
+        existing = by_session.get(key)
+        if existing is None or vol > existing["vol"]:
+            by_session[key] = {"time": iso_date, "o": o, "h": h, "l": l, "c": c, "vol": vol, "session": session}
+
+    # Merge sessions per date: 一般 open + max H / min L + 夜盤 close (or 一般 if no 夜盤)
+    by_date = {}
+    for (date, session), r in by_session.items():
+        if date not in by_date:
+            by_date[date] = {"time": date, "open": None, "high": r["h"], "low": r["l"], "close": None, "volume": 0}
+        d = by_date[date]
+        d["high"] = max(d["high"], r["h"])
+        d["low"]  = min(d["low"],  r["l"])
+        d["volume"] += r["vol"]
+        if session == "一般":
+            if d["open"] is None:
+                d["open"] = r["o"]
+            if d["close"] is None:
+                d["close"] = r["c"]   # fallback if no 夜盤
+        elif session == "夜盤":
+            d["close"] = r["c"]       # 夜盤 close = final price of the full trading day
+
+    return {date: row for date, row in by_date.items()
+            if row["open"] is not None and row["close"] is not None}
 
 
 _TAIFEX_SESSION = {"cookie": "", "expires": 0.0}
@@ -214,17 +234,17 @@ def _yf_symbol(code):
 
 
 def fetch_chart(code, range_str="3mo", interval="1d"):
-    # TX=F → TAIFEX → Stooq → ^TWII fallback
-    if code == "TX=F":
+    # TX=F daily → TAIFEX annual ZIPs + TWII proxy
+    if code == "TX=F" and interval == "1d":
         result = fetch_tx(range_str)
         if result:
             return result
-        # Final fallback: Taiwan Weighted Index (prices nearly identical to TX futures)
         twii = fetch_chart("^TWII", range_str, interval)
         if twii:
             twii["code"] = "TX=F"
             twii["name"] = "台指期（大盤指數近似）"
         return twii
+    # TX=F intraday → Yahoo Finance TX=F directly (falls through to YF code below)
     yf_sym = _yf_symbol(code)
     is_daily = interval == "1d"
     is_tw_stock = yf_sym.endswith(".TW")
@@ -381,12 +401,20 @@ class handler(BaseHTTPRequestHandler):
 
         try:
             result = fetch_chart(code, range_str, interval)
+            # TX=F intraday: Yahoo Finance has no TX=F 5m data → fall back to ^TWII
+            if not result and code == "TX=F" and interval != "1d":
+                result = fetch_chart("^TWII", range_str, interval)
+                if result:
+                    result["code"] = "TX=F"
+                    result["name"] = "台指期貨走勢（大盤近似）"
             if not result:
                 self._json(404, {"error": f"no data for {code}"})
                 return
-            # TX=F: CDN-cache for 1h so the slow first load is amortised across all users
-            cache = ("public, s-maxage=3600, stale-while-revalidate=86400"
-                     if code == "TX=F" else "no-store")
+            # TX=F daily: CDN-cache 1h so the slow ZIP first-load is amortised
+            if code == "TX=F" and interval == "1d":
+                cache = "public, s-maxage=3600, stale-while-revalidate=86400"
+            else:
+                cache = "no-store"
             self._json(200, result, cache=cache)
         except Exception as e:
             self._json(500, {"error": str(e)})
