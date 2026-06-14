@@ -552,6 +552,30 @@
       gap: 10px;
     }
 
+    #nightBar {
+      display: none;
+      background: #1a2332;
+      border: 1px solid #2d3f55;
+      border-radius: 6px;
+      padding: 8px 14px;
+      margin-bottom: 8px;
+      font-size: 0.82rem;
+      gap: 6px 18px;
+      flex-wrap: wrap;
+      align-items: center;
+      color: var(--text-main);
+    }
+    #nightBar .nb-label {
+      color: #7b9bb5;
+      font-weight: 600;
+      font-size: 0.78rem;
+      white-space: nowrap;
+    }
+    #nightBar .nb-val { font-family: monospace; font-size: 0.88rem; }
+    #nightBar .nb-up   { color: #ef5350; }
+    #nightBar .nb-down { color: #26a69a; }
+    #nightBar .nb-flat { color: #aaa; }
+
     .chart-toolbar {
       display: flex;
       justify-content: space-between;
@@ -697,6 +721,7 @@
           </div>
         </div>
         <div id="chartLoading"><div class="spinner"></div> 載入中...</div>
+        <div id="nightBar"></div>
         <div id="chartWrapper" style="display:none">
           <div id="mainChartPanel">
             <div id="chartContainer"></div>
@@ -1021,6 +1046,7 @@
       document.getElementById('chartLoading').style.display = 'flex';
       document.getElementById('chartLoading').innerHTML = `<div class="spinner"></div> ${msg || '載入中...'}`;
       document.getElementById('chartWrapper').style.display = 'none';
+      document.getElementById('nightBar').style.display = 'none';
       _destroyCharts();
       _resetDrawingState();
     }
@@ -1055,13 +1081,45 @@
         });
     }
 
+    function _renderNightBar(sessions) {
+      const bar = document.getElementById('nightBar');
+      if (!sessions || sessions.length === 0) { bar.style.display = 'none'; return; }
+      // Find the most recent 夜盤 entry
+      const nights = sessions.filter(s => s.session === '夜盤');
+      if (nights.length === 0) { bar.style.display = 'none'; return; }
+      const night = nights[nights.length - 1];
+      // Find matching 一般 for same date (to calc day-close → night-close change)
+      const days = sessions.filter(s => s.session === '一般' && s.date === night.date);
+      const dayRow = days.length > 0 ? days[0] : null;
+      const chg = dayRow ? night.close - dayRow.close : null;
+      const chgPct = (dayRow && dayRow.close) ? chg / dayRow.close * 100 : null;
+      const cls = chg === null ? 'nb-flat' : chg > 0 ? 'nb-up' : chg < 0 ? 'nb-down' : 'nb-flat';
+      const arrow = chg === null ? '' : chg > 0 ? '▲' : chg < 0 ? '▼' : '─';
+      const chgStr = chg !== null
+        ? `<span class="${cls}">${arrow}${Math.abs(chg).toFixed(0)} (${chgPct >= 0 ? '+' : ''}${chgPct.toFixed(2)}%)</span>`
+        : '';
+      const fmt3 = n => n.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+      bar.innerHTML = `
+        <span class="nb-label">夜盤 ${night.date}</span>
+        <span>開 <span class="nb-val">${fmt3(night.open)}</span></span>
+        <span>高 <span class="nb-val nb-up">${fmt3(night.high)}</span></span>
+        <span>低 <span class="nb-val nb-down">${fmt3(night.low)}</span></span>
+        <span>收 <span class="nb-val">${fmt3(night.close)}</span></span>
+        <span>量 <span class="nb-val">${fmt3(night.volume)}口</span></span>
+        ${chgStr ? `<span>較日盤收盤 ${chgStr}</span>` : ''}
+      `;
+      bar.style.display = 'flex';
+    }
+
     function loadIntradayChart() {
       _chartLoading('載入昨日走勢...');
       _setDailyBtnActive(false);
-      const url = `/api/chart?code=${encodeURIComponent(currentCode)}&range=5d&interval=5m`;
-      fetch(url)
-        .then(r => r.json())
-        .then(data => {
+      document.getElementById('nightBar').style.display = 'none';
+      const chartUrl = `/api/chart?code=${encodeURIComponent(currentCode)}&range=5d&interval=5m`;
+      const sessUrl  = `/api/sessions?code=${encodeURIComponent(currentCode)}&days=10`;
+      // Load day-session 5m chart and night-session OHLC summary in parallel
+      Promise.all([fetch(chartUrl).then(r => r.json()), fetch(sessUrl).then(r => r.json()).catch(() => ({data: []}))])
+        .then(([data, sess]) => {
           if (data.error || !data.data || data.data.length === 0) {
             document.getElementById('chartLoading').innerHTML = '⚠ 無法取得走勢資料';
             return;
@@ -1086,6 +1144,7 @@
           const fmt = ts => new Date((ts + 8 * 3600) * 1000).toISOString().replace('T',' ').slice(0,16);
           document.getElementById('modalSubtitle').textContent =
             `昨日走勢（日盤）・ ${fmt(candles[0].time)} ～ ${fmt(candles[candles.length-1].time)}`;
+          _renderNightBar(sess.data || []);
           renderTVChart(candles);
         })
         .catch(() => {

@@ -44,8 +44,10 @@ def _parse_taifex_chunk(content):
         if cols[1].strip() != "TX":
             continue
         session = cols[17].strip()
-        if session not in ("一般", "夜盤"):
+        if session not in ("一般", "夜盤", "盤後"):
             continue
+        if session == "盤後":
+            session = "夜盤"
         iso_date = cols[0].strip().replace("/", "-")
         o, h, l, c = _f(cols[3]), _f(cols[4]), _f(cols[5]), _f(cols[6])
         if None in (o, h, l, c) or o == 0:
