@@ -211,7 +211,9 @@ def fetch_tx(range_str="3y"):
         gs = gap_start.strftime("%Y-%m-%d")
         for c in twii["data"]:
             if c["time"] >= gs:
-                by_date.setdefault(c["time"], c)  # don't overwrite real TX
+                # Zero out TWII volume — it's TWSE share volume, not TX futures contracts
+                proxy = {**c, "volume": 0}
+                by_date.setdefault(c["time"], proxy)  # don't overwrite real TX
 
     # 3. Real TX for last 35 days (overwrites TWII proxy where available)
     try:
