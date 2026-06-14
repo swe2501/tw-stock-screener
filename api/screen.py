@@ -187,6 +187,7 @@ def fetch_yf_chart(code, date_str):
         "volume": int(v) if v else 0,
         "prev_close": safe(closes, target_idx - 1) if target_idx > 0 else None,
         "prev_high":  safe(highs,  target_idx - 1) if target_idx > 0 else None,
+        "prev_low":   safe(lows,   target_idx - 1) if target_idx > 0 else None,
         "prev_vols":  prev_vols,
         "all_closes": all_closes,
     }
@@ -275,6 +276,7 @@ def screen(params):
     vol_mult         = float(params.get("volume_multiplier") or 0)
     check_limit_up   = bool(params.get("limit_up", False))
     check_gap_up     = bool(params.get("gap_up", False))
+    check_gap_down   = bool(params.get("gap_down", False))
     check_macd_gold  = bool(params.get("macd_golden", False))
 
     # ── Step 1: Always fetch latest TWSE data (for stock list + latest date) ──
@@ -331,7 +333,7 @@ def screen(params):
         return {"date": display_date, "total": len(all_stocks), "count": 0, "results": []}
 
     # ── Step 3: Per-stock monthly data for gap_up & volume MA ────────────────
-    need_monthly = (check_gap_up or vol_mult > 0 or check_macd_gold) and not is_historical
+    need_monthly = (check_gap_up or check_gap_down or vol_mult > 0 or check_macd_gold) and not is_historical
 
     monthly = {}
     if need_monthly:
@@ -357,16 +359,23 @@ def screen(params):
         # For historical path, prev data comes from Yahoo Finance directly
         if is_historical:
             prev_high  = s.get("prev_high")
+            prev_low   = s.get("prev_low")
             prev_vols  = s.get("prev_vols", [])
         else:
             rows = monthly.get(code, [])
             prev_rows  = [r for r in rows if r["date"] < actual_date]
             prev_high  = prev_rows[-1].get("high") if prev_rows else None
+            prev_low   = prev_rows[-1].get("low")  if prev_rows else None
             prev_vols  = [r["volume"] for r in prev_rows if r["volume"] > 0]
 
         # 跳空向上
         if check_gap_up:
             if not prev_high or o <= prev_high:
+                continue
+
+        # 跳空向下
+        if check_gap_down:
+            if not prev_low or o >= prev_low:
                 continue
 
         # MACD黃金交叉

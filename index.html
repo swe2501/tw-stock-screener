@@ -646,6 +646,13 @@
                 <div class="cb-hint">當日開盤 &gt; 前日最高</div>
               </div>
             </label>
+            <label class="checkbox-row">
+              <input type="checkbox" id="gap_down" />
+              <div>
+                <div class="cb-label">跳空向下</div>
+                <div class="cb-hint">當日開盤 &lt; 前日最低</div>
+              </div>
+            </label>
           </div>
         </div>
 
@@ -748,7 +755,8 @@
       const redPct = parseFloat(document.getElementById('red_candle_pct').value) || 0;
       const volMult = parseFloat(document.getElementById('volume_multiplier').value) || 0;
       const limitUp = document.getElementById('limit_up').checked;
-      const gapUp = document.getElementById('gap_up').checked;
+      const gapUp   = document.getElementById('gap_up').checked;
+      const gapDown = document.getElementById('gap_down').checked;
       const macdGolden = document.getElementById('macd_golden').checked;
       hasVolFilter = volMult > 0;
 
@@ -769,7 +777,8 @@
         red_candle_pct: redPct,
         volume_multiplier: volMult,
         limit_up: limitUp,
-        gap_up: gapUp,
+        gap_up:   gapUp,
+        gap_down: gapDown,
         macd_golden: macdGolden,
       };
 
