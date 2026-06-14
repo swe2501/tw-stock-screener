@@ -975,17 +975,11 @@
     }
 
     function openIndexChart(sym, name) {
-      // Save current non-TWII context so back button can return to it
-      if (currentCode && currentCode !== '^TWII') {
-        prevCode = currentCode;
-        prevName = document.getElementById('modalTitle').textContent;
-      } else {
-        prevCode = ''; prevName = '';
-      }
+      prevCode = ''; prevName = '';
       currentCode = sym; currentName = name;
       document.getElementById('modalTitle').textContent = name;
       _setToolbarForCode(sym);
-      document.getElementById('backBtn').style.display = prevCode ? 'inline-block' : 'none';
+      document.getElementById('backBtn').style.display = 'none';
       document.getElementById('chartModal').classList.add('open');
       if (!fibSetupDone) { setupFibOverlay(); fibSetupDone = true; }
       loadDailyChart();
