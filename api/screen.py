@@ -365,7 +365,9 @@ def screen(params):
             prev_vols  = s.get("prev_vols", [])
         else:
             rows = monthly.get(code, [])
-            prev_rows  = [r for r in rows if r["date"] < actual_date]
+            # 只看 actual_date 前 7 天內的資料，避免月份資料缺失時誤用上個月的舊數據
+            cutoff = (datetime.strptime(actual_date, "%Y%m%d") - timedelta(days=7)).strftime("%Y%m%d")
+            prev_rows  = [r for r in rows if cutoff <= r["date"] < actual_date]
             prev_high  = prev_rows[-1].get("high") if prev_rows else None
             prev_low   = prev_rows[-1].get("low")  if prev_rows else None
             prev_vols  = [r["volume"] for r in prev_rows if r["volume"] > 0]
