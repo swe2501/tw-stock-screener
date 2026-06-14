@@ -272,6 +272,7 @@ def _prev_month(yyyymm):
 
 def screen(params):
     requested_date   = params.get("date", "").replace("-", "")  # YYYYMMDD or ""
+    min_price        = float(params.get("min_price") or 0)
     red_pct          = float(params.get("red_candle_pct") or 0)
     black_pct        = float(params.get("black_candle_pct") or 0)
     vol_mult         = float(params.get("volume_multiplier") or 0)
@@ -316,6 +317,10 @@ def screen(params):
             continue
         o, c = s["open"], s["close"]
         if o <= 0 or c <= 0:
+            continue
+
+        # 最低股價
+        if min_price > 0 and c < min_price:
             continue
 
         # 長紅棒

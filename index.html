@@ -606,6 +606,13 @@
           <input type="date" id="date" />
         </div>
 
+        <!-- 最低股價 -->
+        <div class="field">
+          <label>最低股價</label>
+          <div class="label-hint">收盤價 ≥ 此值</div>
+          <input type="number" id="min_price" min="0" step="1" placeholder="例：10" />
+        </div>
+
         <!-- 長紅棒 -->
         <div class="field">
           <label>長紅棒幅度 (%)</label>
@@ -766,6 +773,7 @@
 
     function doScreen() {
       const dateVal = document.getElementById('date').value;
+      const minPrice  = parseFloat(document.getElementById('min_price').value) || 0;
       const redPct    = parseFloat(document.getElementById('red_candle_pct').value) || 0;
       const blackPct  = parseFloat(document.getElementById('black_candle_pct').value) || 0;
       const volMult   = parseFloat(document.getElementById('volume_multiplier').value) || 0;
@@ -790,6 +798,7 @@
 
       const body = {
         date: dateVal ? dateVal.replace(/-/g, '') : '',
+        min_price: minPrice,
         red_candle_pct: redPct,
         black_candle_pct: blackPct,
         volume_multiplier: volMult,
