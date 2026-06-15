@@ -651,17 +651,9 @@
                  oninput="if(this.value){document.getElementById('volume_multiplier').value=''}" />
         </div>
 
-        <!-- 按鈕 -->
-        <div class="field">
-          <label>&nbsp;</label>
-          <div class="label-hint">&nbsp;</div>
-          <button class="btn-submit" id="submitBtn" onclick="doScreen()">
-            開始篩選
-          </button>
-        </div>
       </div>
 
-      <!-- 複選框獨立一行 -->
+      <!-- 複選框獨立一行 + 按鈕靠右 -->
       <div class="checkbox-grid">
         <label class="checkbox-row">
           <input type="checkbox" id="limit_up" />
@@ -707,6 +699,9 @@
             <div class="cb-hint">長紅棒 3%＋放量 1.5倍＋MA5↑MA10 或 MA5↑MA20 或 MA10↑MA20（任一）</div>
           </div>
         </label>
+        <button class="btn-submit" id="submitBtn" onclick="doScreen()" style="margin-left:auto;align-self:flex-end;">
+          開始篩選
+        </button>
       </div>
       <div id="dataDateDisplay" style="margin-top:12px;font-size:0.78rem;color:var(--text-muted);"></div>
     </div>
