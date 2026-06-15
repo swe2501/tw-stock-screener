@@ -625,7 +625,8 @@
         <div class="field">
           <label>放量倍數</label>
           <div class="label-hint">昨日 max(5日均量, 10日均量) × 倍數</div>
-          <input type="number" id="volume_multiplier" min="0" step="0.1" placeholder="例：1.5（代表 1.5 倍）" />
+          <input type="number" id="volume_multiplier" min="0" step="0.1" placeholder="例：1.5（代表 1.5 倍）"
+                 oninput="if(this.value){document.getElementById('shrink_multiplier').value=''}" />
         </div>
 
         <!-- 長黑棒 -->
@@ -640,7 +641,8 @@
         <div class="field">
           <label>縮量倍數</label>
           <div class="label-hint">昨日 max(5日均量, 10日均量) × 倍數</div>
-          <input type="number" id="shrink_multiplier" min="0" step="0.1" placeholder="例：0.5（代表 0.5 倍）" />
+          <input type="number" id="shrink_multiplier" min="0" step="0.1" placeholder="例：0.5（代表 0.5 倍）"
+                 oninput="if(this.value){document.getElementById('volume_multiplier').value=''}" />
         </div>
 
         <!-- 複選框 -->
