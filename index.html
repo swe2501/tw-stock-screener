@@ -1212,6 +1212,7 @@
       });
 
       // Zoom lock: max = full dataset, min = 20 bars visible
+      // requestAnimationFrame 延遲解鎖，避免 setVisibleLogicalRange 觸發的新事件導致畫面跳動
       const _maxBars = candles.length;
       const _minBars = 20;
       let _lockingZoom = false;
@@ -1220,17 +1221,21 @@
         c.timeScale().subscribeVisibleLogicalRangeChange(range => {
           if (_lockingZoom || !range) return;
           const span = range.to - range.from;
-          if (span > _maxBars + 5 || span < _minBars) {
-            _lockingZoom = true;
-            const clampedSpan = span > _maxBars + 5 ? _maxBars : _minBars;
-            const mid = (range.from + range.to) / 2;
-            const newFrom = mid - clampedSpan / 2;
-            const newTo   = mid + clampedSpan / 2;
-            _allCharts.forEach(cc => {
-              try { cc.timeScale().setVisibleLogicalRange({ from: newFrom, to: newTo }); } catch (_) {}
-            });
-            _lockingZoom = false;
+          let newFrom, newTo;
+          if (span > _maxBars + 5) {
+            newFrom = -2;
+            newTo   = _maxBars + 2;
+          } else if (span < _minBars) {
+            newTo   = range.to;
+            newFrom = range.to - _minBars;
+          } else {
+            return;
           }
+          _lockingZoom = true;
+          _allCharts.forEach(cc => {
+            try { cc.timeScale().setVisibleLogicalRange({ from: newFrom, to: newTo }); } catch (_) {}
+          });
+          requestAnimationFrame(() => { _lockingZoom = false; });
         });
       });
 
