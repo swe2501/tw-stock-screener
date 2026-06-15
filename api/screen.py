@@ -326,7 +326,7 @@ def screen(params):
         # 長紅棒
         if red_pct > 0:
             if c <= o: continue
-            if (c - o) / o * 100 < red_pct: continue
+            if (c - o) / c * 100 < red_pct: continue
 
         # 漲停板
         if check_limit_up:
