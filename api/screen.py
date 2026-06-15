@@ -84,29 +84,50 @@ def fetch_all_stocks_latest():
     return stocks, actual_date
 
 
+_monthly_cache: dict = {}   # key: "{code}_{yyyymm}" -> (timestamp, rows)
+_CACHE_TTL = 300            # 5 分鐘 TTL，盤中月資料不會變
+
 def fetch_stock_month(code, yyyymm):
-    """Monthly OHLCV rows (sorted asc) for a single stock from TWSE."""
+    """Monthly OHLCV rows (sorted asc) for a single stock from TWSE.
+    結果 cache 5 分鐘；403/empty 時最多 retry 2 次（處理 rate limit）。
+    """
+    key = f"{code}_{yyyymm}"
+    now = time.time()
+    if key in _monthly_cache:
+        ts, rows = _monthly_cache[key]
+        if now - ts < _CACHE_TTL:
+            return rows
+
     url = f"https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date={yyyymm}01&stockNo={code}"
-    try:
-        data = _get_json(url)
-        if not data or data.get("stat") != "OK" or not data.get("data"):
-            return []
-        rows = []
-        for row in data["data"]:
-            try:
-                rows.append({
-                    "date": _parse_roc_date(row[0]),
-                    "volume": _pf(row[1]) or 0,
-                    "open": _pf(row[3]),
-                    "high": _pf(row[4]),
-                    "low": _pf(row[5]),
-                    "close": _pf(row[6]),
-                })
-            except Exception:
-                continue
-        return sorted(rows, key=lambda x: x["date"])
-    except Exception:
-        return []
+    rows = []
+    for attempt in range(3):
+        try:
+            data = _get_json(url)
+            if not data or data.get("stat") != "OK" or not data.get("data"):
+                if attempt < 2:
+                    time.sleep(0.3 * (attempt + 1))
+                    continue
+                break
+            for row in data["data"]:
+                try:
+                    rows.append({
+                        "date": _parse_roc_date(row[0]),
+                        "volume": _pf(row[1]) or 0,
+                        "open": _pf(row[3]),
+                        "high": _pf(row[4]),
+                        "low": _pf(row[5]),
+                        "close": _pf(row[6]),
+                    })
+                except Exception:
+                    continue
+            rows = sorted(rows, key=lambda x: x["date"])
+            break
+        except Exception:
+            if attempt < 2:
+                time.sleep(0.3 * (attempt + 1))
+
+    _monthly_cache[key] = (time.time(), rows)
+    return rows
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -355,15 +376,16 @@ def screen(params):
         prev_yyyymm = _prev_month(yyyymm)
 
         def fetch_both(code):
-            cur  = fetch_stock_month(code, yyyymm)
-            prev = fetch_stock_month(code, prev_yyyymm)
+            cur = fetch_stock_month(code, yyyymm)
+            # 當月已有 20 筆以上時不需要抓上個月（MA10/MA20/gap 都夠用）
+            prev = [] if len(cur) >= 20 else fetch_stock_month(code, prev_yyyymm)
             combined = sorted(prev + cur, key=lambda x: x["date"])
             # TWSE STOCK_DAY 回傳空資料時（rate limit 或其他原因），fallback 到 YF
             yf_fallback = fetch_yf_chart(code, actual_date) if not combined else None
             return code, combined, yf_fallback
 
         monthly_yf = {}
-        with ThreadPoolExecutor(max_workers=5) as ex:
+        with ThreadPoolExecutor(max_workers=10) as ex:
             futures = [ex.submit(fetch_both, c) for c in candidates]
             for f in as_completed(futures):
                 code, rows, yf_fallback = f.result()
