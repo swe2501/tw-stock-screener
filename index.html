@@ -115,10 +115,13 @@
       border-color: var(--accent);
     }
 
-    .checkboxes {
+    .checkbox-grid {
       display: flex;
-      flex-direction: column;
-      gap: 10px;
+      flex-wrap: wrap;
+      gap: 16px 32px;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
     }
 
     .checkbox-row {
@@ -648,58 +651,6 @@
                  oninput="if(this.value){document.getElementById('volume_multiplier').value=''}" />
         </div>
 
-        <!-- 複選框 -->
-        <div class="field">
-          <label>額外條件</label>
-          <div class="label-hint">&nbsp;</div>
-          <div class="checkboxes">
-            <label class="checkbox-row">
-              <input type="checkbox" id="limit_up" />
-              <div>
-                <div class="cb-label">漲停板</div>
-                <div class="cb-hint">當日收盤達漲停價（+10%）</div>
-              </div>
-            </label>
-            <label class="checkbox-row">
-              <input type="checkbox" id="macd_golden" />
-              <div>
-                <div class="cb-label">MACD 黃金交叉</div>
-                <div class="cb-hint">昨日 MACD &lt; Signal，今日 MACD &gt; Signal</div>
-              </div>
-            </label>
-            <label class="checkbox-row">
-              <input type="checkbox" id="gap_up" />
-              <div>
-                <div class="cb-label">跳空向上</div>
-                <div class="cb-hint">當日最低 &gt; 前日最高</div>
-              </div>
-            </label>
-            <label class="checkbox-row">
-              <input type="checkbox" id="gap_down" />
-              <div>
-                <div class="cb-label">跳空向下</div>
-                <div class="cb-hint">當日最高 &lt; 前日最低</div>
-              </div>
-            </label>
-            <label class="checkbox-row">
-              <input type="checkbox" id="zhenming1"
-                     onchange="if(this.checked)document.getElementById('zhenming2').checked=false" />
-              <div>
-                <div class="cb-label">真名一式</div>
-                <div class="cb-hint">長紅棒 3%＋放量 1.5倍＋收盤站上 MA5＞MA10＞MA20</div>
-              </div>
-            </label>
-            <label class="checkbox-row">
-              <input type="checkbox" id="zhenming2"
-                     onchange="if(this.checked)document.getElementById('zhenming1').checked=false" />
-              <div>
-                <div class="cb-label">真名二式</div>
-                <div class="cb-hint">長紅棒 3%＋放量 1.5倍＋MA5↑MA10 或 MA5↑MA20 或 MA10↑MA20（任一）</div>
-              </div>
-            </label>
-          </div>
-        </div>
-
         <!-- 按鈕 -->
         <div class="field">
           <label>&nbsp;</label>
@@ -708,6 +659,54 @@
             開始篩選
           </button>
         </div>
+      </div>
+
+      <!-- 複選框獨立一行 -->
+      <div class="checkbox-grid">
+        <label class="checkbox-row">
+          <input type="checkbox" id="limit_up" />
+          <div>
+            <div class="cb-label">漲停板</div>
+            <div class="cb-hint">當日收盤達漲停價（+10%）</div>
+          </div>
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="macd_golden" />
+          <div>
+            <div class="cb-label">MACD 黃金交叉</div>
+            <div class="cb-hint">昨日 MACD &lt; Signal，今日 MACD &gt; Signal</div>
+          </div>
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="gap_up" />
+          <div>
+            <div class="cb-label">跳空向上</div>
+            <div class="cb-hint">當日最低 &gt; 前日最高</div>
+          </div>
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="gap_down" />
+          <div>
+            <div class="cb-label">跳空向下</div>
+            <div class="cb-hint">當日最高 &lt; 前日最低</div>
+          </div>
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="zhenming1"
+                 onchange="if(this.checked)document.getElementById('zhenming2').checked=false" />
+          <div>
+            <div class="cb-label">真名一式</div>
+            <div class="cb-hint">長紅棒 3%＋放量 1.5倍＋收盤站上 MA5＞MA10＞MA20</div>
+          </div>
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="zhenming2"
+                 onchange="if(this.checked)document.getElementById('zhenming1').checked=false" />
+          <div>
+            <div class="cb-label">真名二式</div>
+            <div class="cb-hint">長紅棒 3%＋放量 1.5倍＋MA5↑MA10 或 MA5↑MA20 或 MA10↑MA20（任一）</div>
+          </div>
+        </label>
       </div>
       <div id="dataDateDisplay" style="margin-top:12px;font-size:0.78rem;color:var(--text-muted);"></div>
     </div>
