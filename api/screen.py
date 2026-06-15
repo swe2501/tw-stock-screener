@@ -370,12 +370,15 @@ def screen(params):
             prev_vols  = s.get("prev_vols", [])
         else:
             rows = monthly.get(code, [])
-            # 只看 actual_date 前 7 天內的資料，避免月份資料缺失時誤用上個月的舊數據
-            cutoff = (datetime.strptime(actual_date, "%Y%m%d") - timedelta(days=7)).strftime("%Y%m%d")
-            prev_rows  = [r for r in rows if cutoff <= r["date"] < actual_date]
-            prev_high  = prev_rows[-1].get("high") if prev_rows else None
-            prev_low   = prev_rows[-1].get("low")  if prev_rows else None
-            prev_vols  = [r["volume"] for r in prev_rows if r["volume"] > 0]
+            # 跳空篩選：只看前 7 天，避免月份缺失時誤用上個月的舊最高/最低
+            gap_cutoff = (datetime.strptime(actual_date, "%Y%m%d") - timedelta(days=7)).strftime("%Y%m%d")
+            gap_rows  = [r for r in rows if gap_cutoff <= r["date"] < actual_date]
+            prev_high = gap_rows[-1].get("high") if gap_rows else None
+            prev_low  = gap_rows[-1].get("low")  if gap_rows else None
+            # 量能 MA：需要 10 個交易日，擴大到 30 天避免只有 5 筆導致 MA10 算不出來
+            vol_cutoff = (datetime.strptime(actual_date, "%Y%m%d") - timedelta(days=30)).strftime("%Y%m%d")
+            vol_rows  = [r for r in rows if vol_cutoff <= r["date"] < actual_date]
+            prev_vols = [r["volume"] for r in vol_rows if r["volume"] > 0]
 
         # 跳空向上：今日最低 > 前日最高（兩根K棒之間有可見缺口）
         if check_gap_up:
