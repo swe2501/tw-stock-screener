@@ -381,13 +381,15 @@ def screen(params):
             prev_vols = [r["volume"] for r in vol_rows if r["volume"] > 0]
 
         # 跳空向上：今日最低 > 前日最高（兩根K棒之間有可見缺口）
+        # prev_high 找不到時放行，讓使用者自行肉眼確認
         if check_gap_up:
-            if not prev_high or l <= prev_high:
+            if prev_high is not None and l <= prev_high:
                 continue
 
         # 跳空向下：今日最高 < 前日最低（兩根K棒之間有可見缺口）
+        # prev_low 找不到時放行，讓使用者自行肉眼確認
         if check_gap_down:
-            if not prev_low or h >= prev_low:
+            if prev_low is not None and h >= prev_low:
                 continue
 
         # MACD黃金交叉
