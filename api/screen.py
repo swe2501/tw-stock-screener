@@ -351,12 +351,12 @@ def screen(params):
             cur  = fetch_stock_month(code, yyyymm)
             prev = fetch_stock_month(code, prev_yyyymm)
             combined = sorted(prev + cur, key=lambda x: x["date"])
-            # 上櫃股票(6xxx/7xxx/8xxx/9xxx)TWSE STOCK_DAY 會回傳 403/308，改走 YF
+            # TWSE STOCK_DAY 回傳空資料時（rate limit 或其他原因），fallback 到 YF
             yf_fallback = fetch_yf_chart(code, actual_date) if not combined else None
             return code, combined, yf_fallback
 
         monthly_yf = {}
-        with ThreadPoolExecutor(max_workers=20) as ex:
+        with ThreadPoolExecutor(max_workers=5) as ex:
             futures = [ex.submit(fetch_both, c) for c in candidates]
             for f in as_completed(futures):
                 code, rows, yf_fallback = f.result()
