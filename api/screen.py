@@ -350,13 +350,20 @@ def screen(params):
         def fetch_both(code):
             cur  = fetch_stock_month(code, yyyymm)
             prev = fetch_stock_month(code, prev_yyyymm)
-            return code, sorted(prev + cur, key=lambda x: x["date"])
+            combined = sorted(prev + cur, key=lambda x: x["date"])
+            # 上櫃股票(6xxx/7xxx/8xxx/9xxx)TWSE STOCK_DAY 會回傳 403/308，改走 YF
+            yf_fallback = fetch_yf_chart(code, actual_date) if not combined else None
+            return code, combined, yf_fallback
 
+        monthly_yf = {}
         with ThreadPoolExecutor(max_workers=20) as ex:
             futures = [ex.submit(fetch_both, c) for c in candidates]
             for f in as_completed(futures):
-                code, rows = f.result()
-                if rows: monthly[code] = rows
+                code, rows, yf_fallback = f.result()
+                if rows:
+                    monthly[code] = rows
+                elif yf_fallback:
+                    monthly_yf[code] = yf_fallback
 
     # ── Step 4: Apply gap_up and volume MA filters ────────────────────────────
     results = []
@@ -379,6 +386,12 @@ def screen(params):
             vol_cutoff = (datetime.strptime(actual_date, "%Y%m%d") - timedelta(days=30)).strftime("%Y%m%d")
             vol_rows  = [r for r in rows if vol_cutoff <= r["date"] < actual_date]
             prev_vols = [r["volume"] for r in vol_rows if r["volume"] > 0]
+            # 上櫃/OTC 股票 TWSE STOCK_DAY 抓不到，改用預先抓好的 YF 資料補齊
+            if (prev_high is None or prev_low is None or not prev_vols) and code in monthly_yf:
+                yf = monthly_yf[code]
+                if prev_high is None: prev_high = yf.get("prev_high")
+                if prev_low  is None: prev_low  = yf.get("prev_low")
+                if not prev_vols:     prev_vols = yf.get("prev_vols", [])
 
         # 跳空向上：今日最低 > 前日最高（兩根K棒之間有可見缺口）
         # prev_high 找不到時放行，讓使用者自行肉眼確認
