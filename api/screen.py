@@ -259,6 +259,10 @@ def calc_limit_up(prev_close):
     tick = get_tick_size(raw)
     return round(math.floor(raw / tick) * tick, 10)
 
+def _ma(closes, n):
+    return sum(closes[-n:]) / n if len(closes) >= n else None
+
+
 def _prev_month(yyyymm):
     y, m = int(yyyymm[:4]), int(yyyymm[4:])
     m -= 1
@@ -281,6 +285,8 @@ def screen(params):
     check_gap_up     = bool(params.get("gap_up", False))
     check_gap_down   = bool(params.get("gap_down", False))
     check_macd_gold  = bool(params.get("macd_golden", False))
+    check_zhenming1  = bool(params.get("zhenming1", False))
+    check_zhenming2  = bool(params.get("zhenming2", False))
 
     # ── Step 1: Always fetch latest TWSE data (for stock list + latest date) ──
     latest_stocks, latest_date = fetch_all_stocks_latest()
@@ -340,7 +346,8 @@ def screen(params):
         return {"date": display_date, "total": len(all_stocks), "count": 0, "results": []}
 
     # ── Step 3: Per-stock monthly data for gap_up & volume MA ────────────────
-    need_monthly = (check_gap_up or check_gap_down or vol_mult > 0 or shrink_mult > 0 or check_macd_gold) and not is_historical
+    need_monthly = (check_gap_up or check_gap_down or vol_mult > 0 or shrink_mult > 0
+                    or check_macd_gold or check_zhenming1 or check_zhenming2) and not is_historical
 
     monthly = {}
     if need_monthly:
@@ -371,6 +378,7 @@ def screen(params):
         o, c, h, l, v = s["open"], s["close"], s["high"], s["low"], s["volume"]
 
         # For historical path, prev data comes from Yahoo Finance directly
+        rows = []
         if is_historical:
             prev_high  = s.get("prev_high")
             prev_low   = s.get("prev_low")
@@ -438,6 +446,51 @@ def screen(params):
                 continue
             if shrink_mult > 0 and v > max_ma * shrink_mult:
                 continue
+
+        # 真名一式 / 真名二式
+        if check_zhenming1 or check_zhenming2:
+            # 長紅棒 3%（兩者共用）
+            if c <= o or (c - o) / c * 100 < 3:
+                continue
+            # 放量 1.5x（兩者共用）
+            zm_ma5v  = sum(prev_vols[-5:])  / 5  if len(prev_vols) >= 5  else None
+            zm_ma10v = sum(prev_vols[-10:]) / 10 if len(prev_vols) >= 10 else None
+            zm_max_ma = max(x for x in [zm_ma5v, zm_ma10v] if x is not None) if any(x is not None for x in [zm_ma5v, zm_ma10v]) else None
+            if not zm_max_ma or v < zm_max_ma * 1.5:
+                continue
+            # 計算收盤均線：月資料(不含今日) + 今日收盤
+            if is_historical:
+                all_cls = s.get("all_closes", [])
+                prev_cls = all_cls[:-1]
+            else:
+                sorted_rows = sorted([r for r in rows if r.get("close") and r["date"] < actual_date], key=lambda x: x["date"])
+                prev_cls = [r["close"] for r in sorted_rows]
+                all_cls  = prev_cls + [c]
+
+            t_ma5  = _ma(all_cls, 5)
+            t_ma10 = _ma(all_cls, 10)
+            t_ma20 = _ma(all_cls, 20)
+
+            if check_zhenming1:
+                # 收盤站上 MA5 > MA10 > MA20 且三線順序排列
+                if not all([t_ma5, t_ma10, t_ma20]):
+                    continue
+                if not (c > t_ma5 > t_ma10 > t_ma20):
+                    continue
+
+            if check_zhenming2:
+                # 三條均線同日黃金交叉：MA5 上穿 MA10、MA5 上穿 MA20、MA10 上穿 MA20
+                y_ma5  = _ma(prev_cls, 5)
+                y_ma10 = _ma(prev_cls, 10)
+                y_ma20 = _ma(prev_cls, 20)
+                if not all([t_ma5, t_ma10, t_ma20, y_ma5, y_ma10, y_ma20]):
+                    continue
+                if not (t_ma5 > t_ma10 and y_ma5 <= y_ma10):
+                    continue
+                if not (t_ma5 > t_ma20 and y_ma5 <= y_ma20):
+                    continue
+                if not (t_ma10 > t_ma20 and y_ma10 <= y_ma20):
+                    continue
 
         pc = s.get("prev_close")
         change_pct = round((c - pc) / pc * 100, 2) if pc and pc > 0 else None

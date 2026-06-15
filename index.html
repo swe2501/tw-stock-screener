@@ -678,6 +678,22 @@
                 <div class="cb-hint">當日最高 &lt; 前日最低</div>
               </div>
             </label>
+            <label class="checkbox-row">
+              <input type="checkbox" id="zhenming1"
+                     onchange="if(this.checked)document.getElementById('zhenming2').checked=false" />
+              <div>
+                <div class="cb-label">真名一式</div>
+                <div class="cb-hint">長紅棒 3%＋放量 1.5倍＋收盤站上 MA5＞MA10＞MA20</div>
+              </div>
+            </label>
+            <label class="checkbox-row">
+              <input type="checkbox" id="zhenming2"
+                     onchange="if(this.checked)document.getElementById('zhenming1').checked=false" />
+              <div>
+                <div class="cb-label">真名二式</div>
+                <div class="cb-hint">長紅棒 3%＋放量 1.5倍＋MA5/MA10/MA20 三線同日黃金交叉</div>
+              </div>
+            </label>
           </div>
         </div>
 
@@ -787,6 +803,8 @@
       const gapUp   = document.getElementById('gap_up').checked;
       const gapDown = document.getElementById('gap_down').checked;
       const macdGolden = document.getElementById('macd_golden').checked;
+      const zhenming1 = document.getElementById('zhenming1').checked;
+      const zhenming2 = document.getElementById('zhenming2').checked;
       hasVolFilter    = volMult > 0 || shrinkMult > 0;
       hasShrinkFilter = shrinkMult > 0 && volMult === 0;
 
@@ -813,6 +831,8 @@
         gap_up:   gapUp,
         gap_down: gapDown,
         macd_golden: macdGolden,
+        zhenming1: zhenming1,
+        zhenming2: zhenming2,
       };
 
       fetch('/api/screen', {
