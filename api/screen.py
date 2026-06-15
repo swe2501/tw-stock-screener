@@ -479,17 +479,16 @@ def screen(params):
                     continue
 
             if check_zhenming2:
-                # 三條均線同日黃金交叉：MA5 上穿 MA10、MA5 上穿 MA20、MA10 上穿 MA20
+                # 任一均線黃金交叉：MA5 上穿 MA10、MA5 上穿 MA20、MA10 上穿 MA20（OR）
                 y_ma5  = _ma(prev_cls, 5)
                 y_ma10 = _ma(prev_cls, 10)
                 y_ma20 = _ma(prev_cls, 20)
                 if not all([t_ma5, t_ma10, t_ma20, y_ma5, y_ma10, y_ma20]):
                     continue
-                if not (t_ma5 > t_ma10 and y_ma5 <= y_ma10):
-                    continue
-                if not (t_ma5 > t_ma20 and y_ma5 <= y_ma20):
-                    continue
-                if not (t_ma10 > t_ma20 and y_ma10 <= y_ma20):
+                cross_5_10  = t_ma5  > t_ma10 and y_ma5  <= y_ma10
+                cross_5_20  = t_ma5  > t_ma20 and y_ma5  <= y_ma20
+                cross_10_20 = t_ma10 > t_ma20 and y_ma10 <= y_ma20
+                if not (cross_5_10 or cross_5_20 or cross_10_20):
                     continue
 
         pc = s.get("prev_close")
