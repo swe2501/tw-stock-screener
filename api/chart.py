@@ -255,7 +255,7 @@ def _yf_symbol(code):
     return f"{code}.TW"
 
 
-def fetch_chart(code, range_str="3mo", interval="1d"):
+def fetch_chart(code, range_str="3mo", interval="1d", adj=False):
     # TX=F daily → TAIFEX annual ZIPs + TWII proxy
     if code == "TX=F" and interval == "1d":
         result = fetch_tx(range_str)
@@ -319,6 +319,12 @@ def fetch_chart(code, range_str="3mo", interval="1d"):
     closes  = q.get("close")  or []
     volumes = q.get("volume") or []
 
+    # Adjusted close for 還原日 mode
+    adjcloses = []
+    if adj and is_daily:
+        adjcloses = ((best_result.get("indicators", {}).get("adjclose") or [{}])[0]
+                     .get("adjclose") or [])
+
     tz_offset = timedelta(hours=8)
     candles = []
     for i, ts in enumerate(timestamps):
@@ -329,6 +335,9 @@ def fetch_chart(code, range_str="3mo", interval="1d"):
         v = volumes[i] if i < len(volumes) else None
         if None in (o, h, l, c):
             continue
+        if adj and adjcloses and i < len(adjcloses) and adjcloses[i] and c:
+            ratio = adjcloses[i] / c
+            o, h, l, c = o * ratio, h * ratio, l * ratio, adjcloses[i]
         if is_daily:
             dt = datetime.fromtimestamp(ts, tz=timezone(tz_offset))
             t_val = dt.strftime("%Y-%m-%d")
@@ -445,13 +454,14 @@ class handler(BaseHTTPRequestHandler):
         code = (params.get("code") or [""])[0].strip()
         range_str = (params.get("range") or ["3mo"])[0].strip()
         interval = (params.get("interval") or ["1d"])[0].strip()
+        adj = (params.get("adj") or ["0"])[0].strip() == "1"
 
         if not code:
             self._json(400, {"error": "missing code parameter"})
             return
 
         try:
-            result = fetch_chart(code, range_str, interval)
+            result = fetch_chart(code, range_str, interval, adj=adj)
             # TX=F intraday: Yahoo Finance has no TX=F 5m data → fall back to ^TWII
             if not result and code == "TX=F" and interval != "1d":
                 result = fetch_chart("^TWII", range_str, interval)

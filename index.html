@@ -106,8 +106,11 @@
       font-size: 0.95rem;
       padding: 10px 13px;
       width: 100%;
+      height: 42px;
       transition: border-color 0.15s;
       outline: none;
+      appearance: none;
+      -webkit-appearance: none;
     }
 
     input[type="date"]:focus,
@@ -776,6 +779,7 @@
         <div class="chart-toolbar">
           <div class="chart-toolbar-left">
             <button class="tool-btn" id="dailyBtn" onclick="loadDailyChart()" style="background:#2962ff;color:#fff">日K</button>
+            <button class="tool-btn" id="adjDailyBtn" onclick="loadAdjDailyChart()">還原日K</button>
             <div class="toolbar-sep"></div>
             <button class="tool-btn" id="marketBtn" onclick="openMarketChart()">大盤K</button>
             <button class="tool-btn" id="backBtn" style="display:none" onclick="goBackToStock()">← 返回</button>
@@ -1189,15 +1193,16 @@
       _resetDrawingState();
     }
 
-    function _setDailyBtnActive(active) {
-      document.getElementById('dailyBtn').style.background = active ? '#2962ff' : '';
-      document.getElementById('dailyBtn').style.color = active ? '#fff' : '';
+    function _setDailyBtnActive(btn) {
+      ['dailyBtn', 'adjDailyBtn'].forEach(id => {
+        document.getElementById(id).style.background = '';
+        document.getElementById(id).style.color = '';
+      });
+      if (btn) { btn.style.background = '#2962ff'; btn.style.color = '#fff'; }
     }
 
-    function loadDailyChart() {
+    function _loadChartUrl(url, subtitle) {
       _chartLoading();
-      _setDailyBtnActive(true);
-      const url = `/api/chart?code=${encodeURIComponent(currentCode)}&range=3y&interval=1d`;
       fetch(url)
         .then(r => r.json())
         .then(data => {
@@ -1207,7 +1212,7 @@
           }
           const first = data.data[0].time;
           const last  = data.data[data.data.length - 1].time;
-          document.getElementById('modalSubtitle').textContent = `日K ・ ${first} ～ ${last}`;
+          document.getElementById('modalSubtitle').textContent = `${subtitle} ・ ${first} ～ ${last}`;
           if (data.name && data.name !== currentCode) {
             currentName = data.name;
             document.getElementById('modalTitle').textContent = `${currentCode}　${data.name}`;
@@ -1217,6 +1222,16 @@
         .catch(() => {
           document.getElementById('chartLoading').innerHTML = '⚠ 載入失敗，請重試';
         });
+    }
+
+    function loadDailyChart() {
+      _setDailyBtnActive(document.getElementById('dailyBtn'));
+      _loadChartUrl(`/api/chart?code=${encodeURIComponent(currentCode)}&range=3y&interval=1d`, '日K');
+    }
+
+    function loadAdjDailyChart() {
+      _setDailyBtnActive(document.getElementById('adjDailyBtn'));
+      _loadChartUrl(`/api/chart?code=${encodeURIComponent(currentCode)}&range=3y&interval=1d&adj=1`, '還原日K');
     }
 
     // ── Technical indicator calculations ──────────────────
