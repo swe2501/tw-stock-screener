@@ -214,6 +214,54 @@ def fetch_yf_chart(code, date_str):
     }
 
 
+def fetch_all_stocks_mi_index(code_name_map, date_str):
+    """Fetch all stocks' OHLCV for a specific date via TWSE MI_INDEX.
+    單次 API call，比 YF 逐支抓快很多；只要 TWSE 有資料就優先走這裡。
+    Returns same-format dict as fetch_all_stocks_historical, or {} on failure.
+    """
+    url = f"https://www.twse.com.tw/exchangeReport/MI_INDEX?response=json&date={date_str}&type=ALLBUT0999"
+    try:
+        data = _get_json(url)
+        if not data or data.get("stat") != "OK":
+            return {}
+        stocks = {}
+        # data9 = 一般股票, data8 = ETF / 其他掛牌
+        for key in ("data9", "data8"):
+            for row in data.get(key, []):
+                try:
+                    code = str(row[0]).strip()
+                    if not code or not code[0].isdigit():
+                        continue
+                    o = _pf(row[4]);  h = _pf(row[5])
+                    l = _pf(row[6]);  c = _pf(row[7])
+                    v = _pf(row[2])
+                    if not all([o, c, h, l, v]) or c <= 0:
+                        continue
+                    # row[8]=漲跌符號(▲/▼), row[9]=漲跌價差 → 算前日收盤
+                    prev_close = None
+                    try:
+                        sign = str(row[8]).strip()
+                        diff = _pf(row[9])
+                        if diff is not None:
+                            prev_close = round(c + diff if ("▼" in sign or sign == "-") else c - diff, 4)
+                    except Exception:
+                        pass
+                    stocks[code] = {
+                        "code": code,
+                        "name": code_name_map.get(code, str(row[1]).strip()),
+                        "open": o, "high": h, "low": l, "close": c,
+                        "volume": int(v),
+                        "prev_close": prev_close,
+                        "prev_high": None, "prev_low": None,
+                        "prev_vols": [], "all_closes": [],
+                    }
+                except Exception:
+                    continue
+        return stocks
+    except Exception:
+        return {}
+
+
 def fetch_all_stocks_historical(code_name_map, date_str):
     """
     Fetch all stocks' OHLCV for a specific historical date via Yahoo Finance v8 chart.
@@ -319,9 +367,12 @@ def screen(params):
                       and requested_date != latest_date)
 
     if use_historical:
-        # ── Historical path: Yahoo Finance ────────────────────────────────────
+        # ── Historical path: 先試 TWSE MI_INDEX（快），失敗再走 YF（慢）────────
         code_name_map = {code: s["name"] for code, s in latest_stocks.items()}
-        hist_stocks = fetch_all_stocks_historical(code_name_map, requested_date)
+        hist_stocks = fetch_all_stocks_mi_index(code_name_map, requested_date)
+        used_mi_index = bool(hist_stocks)
+        if not hist_stocks:
+            hist_stocks = fetch_all_stocks_historical(code_name_map, requested_date)
 
         if not hist_stocks:
             return {"error": f"{requested_date[:4]}/{requested_date[4:6]}/{requested_date[6:]} 查無資料（可能為非交易日）", "results": []}
@@ -329,7 +380,8 @@ def screen(params):
         actual_date   = requested_date
         display_date  = f"{actual_date[:4]}/{actual_date[4:6]}/{actual_date[6:]}"
         all_stocks    = hist_stocks
-        is_historical = True
+        # MI_INDEX 成功時視同最新路徑，可再抓月資料做量能/跳空篩選
+        is_historical = not used_mi_index
     else:
         # ── Latest path: TWSE ────────────────────────────────────────────────
         actual_date   = latest_date

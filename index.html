@@ -813,7 +813,7 @@
 
       const isHistorical = dateVal && dateVal.length > 0;
       let hint = isHistorical
-        ? `正在透過 Yahoo Finance 取得 ${dateVal} 歷史資料，請稍候（約 10–20 秒）...`
+        ? `正在取得 ${dateVal} 資料，請稍候...`
         : '正在向台灣證交所取得最新交易日資料...';
       showStatus(`<div class="alert alert-info">&#8987; ${hint}</div>`);
 
