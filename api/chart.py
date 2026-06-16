@@ -471,9 +471,10 @@ class handler(BaseHTTPRequestHandler):
             if not result:
                 self._json(404, {"error": f"no data for {code}"})
                 return
-            # TX=F daily: CDN-cache 1h so the slow ZIP first-load is amortised
-            if code == "TX=F" and interval == "1d":
-                cache = "public, s-maxage=3600, stale-while-revalidate=86400"
+            # 指數/期貨日K：CDN 快取 4h（一天只更新一次）
+            INDEX_CODES = {"^TWII", "^N225", "^KS11", "^IXIC", "^DJI", "TX=F"}
+            if code in INDEX_CODES and interval == "1d":
+                cache = "public, s-maxage=14400, stale-while-revalidate=86400"
             else:
                 cache = "no-store"
             self._json(200, result, cache=cache)
