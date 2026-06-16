@@ -456,19 +456,20 @@
       flex-shrink: 0;
     }
 
+    .modal-title-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
     .modal-title {
       font-size: 1rem;
       font-weight: 700;
       color: #fff;
     }
-
     .modal-subtitle {
       font-size: 0.78rem;
       color: var(--text-muted);
       margin-top: 2px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
     }
     #industryTag {
       font-size: 0.72rem;
@@ -873,8 +874,11 @@
     <div class="modal-box">
       <div class="modal-header">
         <div>
-          <div class="modal-title" id="modalTitle">—</div>
-          <div class="modal-subtitle" id="modalSubtitle">日K線<span id="industryTag"></span></div>
+          <div class="modal-title-row">
+            <div class="modal-title" id="modalTitle">—</div>
+            <span id="industryTag"></span>
+          </div>
+          <div class="modal-subtitle" id="modalSubtitle">日K線</div>
         </div>
         <button class="modal-close" onclick="closeChart()">&#10005;</button>
       </div>
@@ -1419,7 +1423,7 @@
           const first = data.data[0].time;
           const last  = data.data[data.data.length - 1].time;
           const subtitleEl = document.getElementById('modalSubtitle');
-          subtitleEl.childNodes[0].textContent = `${subtitle} ・ ${first} ～ ${last}`;
+          subtitleEl.textContent = `${subtitle} ・ ${first} ～ ${last}`;
           const industryTag = document.getElementById('industryTag');
           if (data.industry) {
             industryTag.textContent = data.industry;
