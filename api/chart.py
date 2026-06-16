@@ -230,6 +230,24 @@ def fetch_tx(range_str="3y"):
     return {"code": "TX=F", "name": "台指期貨 (TX)", "currency": "TWD", "data": candles}
 
 
+def _fetch_tw_name(code):
+    """Try TWSE MIS real-time API for Chinese stock name. Returns None on failure."""
+    if not code.isdigit():
+        return None
+    for market in ("tse", "otc"):
+        try:
+            url = f"https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch={market}_{code}.tw&json=1"
+            req = urllib.request.Request(url, headers=TWSE_HEADERS)
+            with urllib.request.urlopen(req, timeout=5) as r:
+                d = json.loads(r.read())
+            arr = d.get("msgArray") or []
+            if arr and arr[0].get("n"):
+                return arr[0]["n"]
+        except Exception:
+            continue
+    return None
+
+
 def _yf_symbol(code):
     """Return Yahoo Finance symbol. Indices (^) and futures (=F) are used as-is."""
     if code.startswith("^") or "=" in code:
@@ -393,9 +411,11 @@ def fetch_chart(code, range_str="3mo", interval="1d"):
             except Exception:
                 pass
 
+    tw_name = _fetch_tw_name(code)
+    yf_name = meta.get("longName") or meta.get("shortName") or code
     return {
         "code": code,
-        "name": meta.get("longName") or meta.get("shortName") or code,
+        "name": tw_name or yf_name,
         "currency": meta.get("currency", ""),
         "data": candles,
         "events": events,
