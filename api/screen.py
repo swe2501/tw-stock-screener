@@ -456,76 +456,44 @@ def screen(params):
                 prev_mi_gap = tmp
                 break
 
-    # ── Step 3b: 量能/MACD/真名 → 仍需逐支月資料 ────────────────────────────
+    # ── Step 3b: 量能/MACD/真名/跳空 → 用 YF 逐支抓（30 workers，~11s for 1300 stocks）
     need_gap_monthly = (check_gap_up or check_gap_down) and not prev_mi_gap
     need_monthly = (vol_mult > 0 or shrink_mult > 0 or check_macd_gold
                     or check_zhenming1 or check_zhenming2
                     or need_gap_monthly) and not is_historical
 
-    monthly = {}
     monthly_yf = {}
     if need_monthly:
-        yyyymm = actual_date[:6]
-        prev_yyyymm = _prev_month(yyyymm)
+        def fetch_yf_only(code):
+            return code, fetch_yf_chart(code, actual_date)
 
-        gap_only = need_gap_monthly and not (vol_mult > 0 or shrink_mult > 0
-                                              or check_macd_gold or check_zhenming1 or check_zhenming2)
-
-        def fetch_both(code):
-            # 純跳空篩選：跳過限流嚴格的 STOCK_DAY，直接用 YF 拿 prev_high/prev_low
-            if gap_only:
-                yf = fetch_yf_chart(code, actual_date)
-                return code, [], yf
-            cur = fetch_stock_month(code, yyyymm)
-            # 當月已有 20 筆以上時不需要抓上個月（MA10/MA20 都夠用）
-            prev = [] if len(cur) >= 20 else fetch_stock_month(code, prev_yyyymm)
-            combined = sorted(prev + cur, key=lambda x: x["date"])
-            # TWSE STOCK_DAY 回傳空資料時（rate limit 或其他原因），fallback 到 YF
-            yf_fallback = fetch_yf_chart(code, actual_date) if not combined else None
-            return code, combined, yf_fallback
-
-        workers = 30 if gap_only else 10
-        with ThreadPoolExecutor(max_workers=workers) as ex:
-            futures = [ex.submit(fetch_both, c) for c in candidates]
+        with ThreadPoolExecutor(max_workers=30) as ex:
+            futures = [ex.submit(fetch_yf_only, c) for c in candidates]
             for f in as_completed(futures):
-                code, rows, yf_fallback = f.result()
-                if rows:
-                    monthly[code] = rows
-                elif yf_fallback:
-                    monthly_yf[code] = yf_fallback
+                code, yf = f.result()
+                if yf:
+                    monthly_yf[code] = yf
 
     # ── Step 4: Apply gap_up and volume MA filters ────────────────────────────
     results = []
     for code, s in candidates.items():
         o, c, h, l, v = s["open"], s["close"], s["high"], s["low"], s["volume"]
 
-        # For historical path, prev data comes from Yahoo Finance directly
-        rows = []
+        # prev_high/prev_low/prev_vols: historical path from YF in all_stocks,
+        # non-historical path from monthly_yf (also YF, fetched above with 30 workers)
         if is_historical:
             prev_high  = s.get("prev_high")
             prev_low   = s.get("prev_low")
             prev_vols  = s.get("prev_vols", [])
         else:
-            rows = monthly.get(code, [])
-            # 跳空：優先用一次性 bulk 抓的前日 MI_INDEX，沒有才 fallback 到 STOCK_DAY
+            yf_data = monthly_yf.get(code) or {}
             if code in prev_mi_gap:
                 prev_high = prev_mi_gap[code].get("high")
                 prev_low  = prev_mi_gap[code].get("low")
             else:
-                gap_cutoff = (datetime.strptime(actual_date, "%Y%m%d") - timedelta(days=7)).strftime("%Y%m%d")
-                gap_rows  = [r for r in rows if gap_cutoff <= r["date"] < actual_date]
-                prev_high = gap_rows[-1].get("high") if gap_rows else None
-                prev_low  = gap_rows[-1].get("low")  if gap_rows else None
-            # 量能 MA：需要 10 個交易日，擴大到 30 天避免只有 5 筆導致 MA10 算不出來
-            vol_cutoff = (datetime.strptime(actual_date, "%Y%m%d") - timedelta(days=30)).strftime("%Y%m%d")
-            vol_rows  = [r for r in rows if vol_cutoff <= r["date"] < actual_date]
-            prev_vols = [r["volume"] for r in vol_rows if r["volume"] > 0]
-            # 上櫃/OTC 股票 TWSE STOCK_DAY 抓不到，改用預先抓好的 YF 資料補齊
-            if (prev_high is None or prev_low is None or not prev_vols) and code in monthly_yf:
-                yf = monthly_yf[code]
-                if prev_high is None: prev_high = yf.get("prev_high")
-                if prev_low  is None: prev_low  = yf.get("prev_low")
-                if not prev_vols:     prev_vols = yf.get("prev_vols", [])
+                prev_high = yf_data.get("prev_high")
+                prev_low  = yf_data.get("prev_low")
+            prev_vols = yf_data.get("prev_vols", [])
 
         # 跳空向上：今日最低 > 前日最高（兩根K棒之間有可見缺口）
         # prev_high 找不到時放行，讓使用者自行肉眼確認
@@ -544,8 +512,7 @@ def screen(params):
             if is_historical:
                 closes_for_macd = s.get("all_closes", [])
             else:
-                rows = monthly.get(code, [])
-                closes_for_macd = [r["close"] for r in rows if r["date"] <= actual_date and r.get("close")]
+                closes_for_macd = (monthly_yf.get(code) or {}).get("all_closes", [])
             if not is_macd_golden_cross(closes_for_macd):
                 continue
 
@@ -589,9 +556,8 @@ def screen(params):
                 all_cls = s.get("all_closes", [])
                 prev_cls = all_cls[:-1]
             else:
-                sorted_rows = sorted([r for r in rows if r.get("close") and r["date"] < actual_date], key=lambda x: x["date"])
-                prev_cls = [r["close"] for r in sorted_rows]
-                all_cls  = prev_cls + [c]
+                all_cls  = (monthly_yf.get(code) or {}).get("all_closes", [])
+                prev_cls = all_cls[:-1]
 
             t_ma5  = _ma(all_cls, 5)
             t_ma10 = _ma(all_cls, 10)
