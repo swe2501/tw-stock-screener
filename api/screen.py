@@ -418,11 +418,22 @@ def screen(params):
     if not candidates:
         return {"date": display_date, "total": len(all_stocks), "count": 0, "results": []}
 
-    # ── Step 3: Per-stock monthly data for gap_up & volume MA ────────────────
-    need_monthly = (check_gap_up or check_gap_down or vol_mult > 0 or shrink_mult > 0
-                    or check_macd_gold or check_zhenming1 or check_zhenming2) and not is_historical
+    # ── Step 3a: 跳空篩選 → 一次抓前一日 MI_INDEX，取代逐支 STOCK_DAY ────────
+    prev_mi_gap: dict = {}
+    if (check_gap_up or check_gap_down) and not is_historical:
+        for delta in range(1, 6):   # 往前找最近一個交易日（跳過假日）
+            prev_dt = (datetime.strptime(actual_date, "%Y%m%d") - timedelta(days=delta)).strftime("%Y%m%d")
+            tmp = fetch_all_stocks_mi_index({}, prev_dt)
+            if tmp:
+                prev_mi_gap = tmp
+                break
+
+    # ── Step 3b: 量能/MACD/真名 → 仍需逐支月資料 ────────────────────────────
+    need_monthly = (vol_mult > 0 or shrink_mult > 0 or check_macd_gold
+                    or check_zhenming1 or check_zhenming2) and not is_historical
 
     monthly = {}
+    monthly_yf = {}
     if need_monthly:
         yyyymm = actual_date[:6]
         prev_yyyymm = _prev_month(yyyymm)
@@ -436,7 +447,6 @@ def screen(params):
             yf_fallback = fetch_yf_chart(code, actual_date) if not combined else None
             return code, combined, yf_fallback
 
-        monthly_yf = {}
         with ThreadPoolExecutor(max_workers=10) as ex:
             futures = [ex.submit(fetch_both, c) for c in candidates]
             for f in as_completed(futures):
@@ -459,11 +469,15 @@ def screen(params):
             prev_vols  = s.get("prev_vols", [])
         else:
             rows = monthly.get(code, [])
-            # 跳空篩選：只看前 7 天，避免月份缺失時誤用上個月的舊最高/最低
-            gap_cutoff = (datetime.strptime(actual_date, "%Y%m%d") - timedelta(days=7)).strftime("%Y%m%d")
-            gap_rows  = [r for r in rows if gap_cutoff <= r["date"] < actual_date]
-            prev_high = gap_rows[-1].get("high") if gap_rows else None
-            prev_low  = gap_rows[-1].get("low")  if gap_rows else None
+            # 跳空：優先用一次性 bulk 抓的前日 MI_INDEX，沒有才 fallback 到 STOCK_DAY
+            if code in prev_mi_gap:
+                prev_high = prev_mi_gap[code].get("high")
+                prev_low  = prev_mi_gap[code].get("low")
+            else:
+                gap_cutoff = (datetime.strptime(actual_date, "%Y%m%d") - timedelta(days=7)).strftime("%Y%m%d")
+                gap_rows  = [r for r in rows if gap_cutoff <= r["date"] < actual_date]
+                prev_high = gap_rows[-1].get("high") if gap_rows else None
+                prev_low  = gap_rows[-1].get("low")  if gap_rows else None
             # 量能 MA：需要 10 個交易日，擴大到 30 天避免只有 5 筆導致 MA10 算不出來
             vol_cutoff = (datetime.strptime(actual_date, "%Y%m%d") - timedelta(days=30)).strftime("%Y%m%d")
             vol_rows  = [r for r in rows if vol_cutoff <= r["date"] < actual_date]
