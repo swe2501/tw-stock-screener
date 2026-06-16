@@ -498,10 +498,15 @@
       line-height: 1;
     }
 
+    .sub-panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 6px;
+      height: 20px;
+      flex-shrink: 0;
+    }
     .panel-toggle {
-      position: absolute;
-      top: 3px; right: 6px;
-      z-index: 10;
       background: rgba(255,255,255,0.07);
       border: 1px solid rgba(255,255,255,0.15);
       border-radius: 4px;
@@ -511,8 +516,16 @@
       padding: 2px 5px;
       cursor: pointer;
       user-select: none;
+      flex-shrink: 0;
     }
     .panel-toggle:hover { background: rgba(255,255,255,0.15); color: #fff; }
+    .ma-toggle {
+      cursor: pointer;
+      opacity: 1;
+      transition: opacity 0.15s;
+      user-select: none;
+    }
+    .ma-toggle.hidden { opacity: 0.25; text-decoration: line-through; }
 
     /* VOL panel (separate from candles) */
     #volPanel {
@@ -521,16 +534,16 @@
       border-top: 1px solid var(--border);
     }
     #volContainer { width: 100%; height: 70px; }
-    #volLabel {
-      position: absolute;
-      top: 4px; left: 8px;
+    #volLabel, #macdLabel, #rsiLabel {
       font-size: 9px;
-      color: rgba(200,209,217,0.45);
-      pointer-events: none;
-      z-index: 5;
+      color: rgba(200,209,217,0.55);
       font-family: monospace;
       font-weight: bold;
       letter-spacing: 0.04em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
     }
 
     /* MACD panel */
@@ -540,17 +553,6 @@
       border-top: 1px solid var(--border);
     }
     #macdContainer { width: 100%; height: 100px; }
-    #macdLabel {
-      position: absolute;
-      top: 4px; left: 8px;
-      font-size: 9px;
-      color: rgba(200,209,217,0.45);
-      pointer-events: none;
-      z-index: 5;
-      font-family: monospace;
-      font-weight: bold;
-      letter-spacing: 0.04em;
-    }
 
     /* RSI panel */
     #rsiPanel {
@@ -559,17 +561,6 @@
       border-top: 1px solid var(--border);
     }
     #rsiContainer { width: 100%; height: 90px; }
-    #rsiLabel {
-      position: absolute;
-      top: 4px; left: 8px;
-      font-size: 9px;
-      color: rgba(200,209,217,0.45);
-      pointer-events: none;
-      z-index: 5;
-      font-family: monospace;
-      font-weight: bold;
-      letter-spacing: 0.04em;
-    }
 
     #chartLoading {
       display: flex;
@@ -785,28 +776,45 @@
             <canvas id="fibCanvas"></canvas>
             <div id="chartOverlay"></div>
             <div id="maLabel">
-              <span style="color:#FFE600">MA5</span>
-              <span style="color:#FF8C00">MA10</span>
-              <span style="color:#00E676">MA20</span>
-              <span style="color:#29B6F6">MA60</span>
-              <span style="color:#CE93D8">MA120</span>
-              <span style="color:#FF5252">MA240</span>
+              <span class="ma-toggle" onclick="toggleSeriesViz('ma5')"   style="color:#FFE600">MA5</span>
+              <span class="ma-toggle" onclick="toggleSeriesViz('ma10')"  style="color:#FF8C00">MA10</span>
+              <span class="ma-toggle" onclick="toggleSeriesViz('ma20')"  style="color:#00E676">MA20</span>
+              <span class="ma-toggle" onclick="toggleSeriesViz('ma60')"  style="color:#29B6F6">MA60</span>
+              <span class="ma-toggle" onclick="toggleSeriesViz('ma120')" style="color:#CE93D8">MA120</span>
+              <span class="ma-toggle" onclick="toggleSeriesViz('ma240')" style="color:#FF5252">MA240</span>
             </div>
           </div>
           <div id="volPanel">
+            <div class="sub-panel-header">
+              <div id="volLabel">
+                VOL
+                <span class="ma-toggle" onclick="toggleSeriesViz('volMa5')" style="color:#f39c12">─MA5</span>
+                <span class="ma-toggle" onclick="toggleSeriesViz('volMa10')" style="color:#e74c3c">─MA10</span>
+              </div>
+              <button class="panel-toggle" onclick="toggleChartPanel('volContainer', this)">▲</button>
+            </div>
             <div id="volContainer"></div>
-            <div id="volLabel">VOL<span style="color:#f39c12"> ─MA5</span><span style="color:#e74c3c"> ─MA10</span></div>
-            <button class="panel-toggle" onclick="toggleChartPanel('volPanel', 'volContainer', this)">▲</button>
           </div>
           <div id="macdPanel">
+            <div class="sub-panel-header">
+              <div id="macdLabel">
+                <span class="ma-toggle" onclick="toggleSeriesViz('macdHist')" style="color:rgba(200,209,217,0.55)">▬Hist</span>
+                <span class="ma-toggle" onclick="toggleSeriesViz('macdLine')" style="color:#e74c3c">─MACD</span>
+                <span class="ma-toggle" onclick="toggleSeriesViz('macdSig')" style="color:#f39c12">─Signal</span>
+              </div>
+              <button class="panel-toggle" onclick="toggleChartPanel('macdContainer', this)">▲</button>
+            </div>
             <div id="macdContainer"></div>
-            <div id="macdLabel"><span style="color:#e74c3c">▬</span>MACD &nbsp;<span style="color:#f39c12">▬</span>Signal &nbsp;<span style="color:rgba(200,209,217,0.5)">▬</span>Hist</div>
-            <button class="panel-toggle" onclick="toggleChartPanel('macdPanel', 'macdContainer', this)">▲</button>
           </div>
           <div id="rsiPanel">
+            <div class="sub-panel-header">
+              <div id="rsiLabel">
+                <span class="ma-toggle" onclick="toggleSeriesViz('rsi5')" style="color:#f39c12">─RSI(5)</span>
+                <span class="ma-toggle" onclick="toggleSeriesViz('rsi10')" style="color:#4f8ef7">─RSI(10)</span>
+              </div>
+              <button class="panel-toggle" onclick="toggleChartPanel('rsiContainer', this)">▲</button>
+            </div>
             <div id="rsiContainer"></div>
-            <div id="rsiLabel"><span style="color:#f39c12">─RSI(5)</span><span style="color:#4f8ef7"> ─RSI(10)</span></div>
-            <button class="panel-toggle" onclick="toggleChartPanel('rsiPanel', 'rsiContainer', this)">▲</button>
           </div>
         </div>
       </div>
@@ -1107,12 +1115,39 @@
       _clearCanvas();
     }
 
+    const seriesMap = {}; // key → lightweight-charts series ref
+
     function _destroyCharts() {
       if (chartInstance) { chartInstance.remove(); chartInstance = null; }
       if (volInstance)   { volInstance.remove();   volInstance = null; }
       if (macdInstance)  { macdInstance.remove();  macdInstance = null; }
       if (rsiInstance)   { rsiInstance.remove();   rsiInstance = null; }
       candleSeriesRef = null;
+      Object.keys(seriesMap).forEach(k => delete seriesMap[k]);
+      // Reset all ma-toggle labels to visible
+      document.querySelectorAll('.ma-toggle').forEach(el => el.classList.remove('hidden'));
+    }
+
+    function toggleSeriesViz(key) {
+      const s = seriesMap[key];
+      if (!s) return;
+      const span = document.querySelector(`.ma-toggle[onclick="toggleSeriesViz('${key}')"]`);
+      let visible;
+      try { visible = s.options().visible; } catch(_) { visible = true; }
+      visible = visible === false ? true : false;
+      s.applyOptions({ visible });
+      if (span) span.classList.toggle('hidden', !visible);
+    }
+
+    function toggleChartPanel(containerId, btn) {
+      const container = document.getElementById(containerId);
+      const isOpen = container.style.display !== 'none';
+      container.style.display = isOpen ? 'none' : '';
+      btn.textContent = isOpen ? '▼' : '▲';
+      if (!isOpen) {
+        const inst = { volContainer: volInstance, macdContainer: macdInstance, rsiContainer: rsiInstance }[containerId];
+        if (inst) setTimeout(() => inst.applyOptions({ width: container.clientWidth }), 0);
+      }
     }
 
     // ── Load chart data ────────────────────────────────────
@@ -1362,6 +1397,7 @@
           priceLineVisible: false,
         });
         s.setData(candles.map((c, i) => sma[i] !== null ? { time: c.time, value: sma[i] } : null).filter(Boolean));
+        seriesMap[`ma${period}`] = s;
       });
     }
 
@@ -1413,6 +1449,8 @@
       });
       vma5s.setData(candles.map((c, i) => vma5[i]  !== null ? { time: c.time, value: vma5[i]  } : null).filter(Boolean));
       vma10s.setData(candles.map((c, i) => vma10[i] !== null ? { time: c.time, value: vma10[i] } : null).filter(Boolean));
+      seriesMap['volMa5']  = vma5s;
+      seriesMap['volMa10'] = vma10s;
     }
 
     function _renderMACDChart(candles) {
@@ -1442,6 +1480,9 @@
         price: 0, color: 'rgba(200,209,217,0.25)', lineWidth: 1,
         lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: false,
       });
+      seriesMap['macdLine'] = macdSeries;
+      seriesMap['macdSig']  = sigSeries;
+      seriesMap['macdHist'] = histSeries;
     }
 
     function _renderRSIChart(candles) {
@@ -1462,23 +1503,13 @@
       const r5  = rsiInstance.addLineSeries({ color: '#f39c12', lineWidth: 1, priceScaleId: 'right', autoscaleInfoProvider: autoScale });
       r10.setData(times.map((t, i) => rsi10[i] !== null ? { time: t, value: rsi10[i] } : null).filter(Boolean));
       r5.setData(times.map((t, i)  => rsi5[i]  !== null ? { time: t, value: rsi5[i]  } : null).filter(Boolean));
+      seriesMap['rsi5']  = r5;
+      seriesMap['rsi10'] = r10;
       [{ p: 70, c: 'rgba(231,76,60,0.4)' }, { p: 50, c: 'rgba(200,209,217,0.2)' }, { p: 30, c: 'rgba(38,194,129,0.4)' }]
         .forEach(({ p, c }) => r10.createPriceLine({
           price: p, color: c, lineWidth: 1,
           lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: '',
         }));
-    }
-
-    function toggleChartPanel(panelId, containerId, btn) {
-      const container = document.getElementById(containerId);
-      const isOpen = container.style.display !== 'none';
-      container.style.display = isOpen ? 'none' : '';
-      btn.textContent = isOpen ? '▼' : '▲';
-      // After expanding, restore chart width so it doesn't stay 0px
-      if (!isOpen) {
-        const inst = { volContainer: volInstance, macdContainer: macdInstance, rsiContainer: rsiInstance }[containerId];
-        if (inst) setTimeout(() => inst.applyOptions({ width: container.clientWidth }), 0);
-      }
     }
 
     function _syncTimeRanges(charts) {
