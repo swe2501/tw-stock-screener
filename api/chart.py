@@ -280,7 +280,9 @@ def _fetch_tw_industry(code):
         if fields and rows:
             for i, f in enumerate(fields):
                 if "產業" in str(f):
-                    return str(rows[0][i]).strip()
+                    val = str(rows[0][i]).strip()
+                    # val may be a numeric code ("26") or already Chinese ("光電業")
+                    return _TW_INDUSTRY_CODES.get(val.zfill(2), val) or ""
     except Exception:
         pass
     # Fallback: TWSE OpenAPI full list (TSE)
