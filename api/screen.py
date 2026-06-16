@@ -476,6 +476,19 @@ def screen(params):
                 if yf:
                     monthly_yf[code] = yf
 
+    # ── Step 3c: 補抓 prev_mi_gap 未涵蓋的個股（停牌復牌/API差異），避免 prev_low=None 放行 ──
+    if (check_gap_up or check_gap_down) and prev_mi_gap and not is_historical:
+        missing = [c for c in candidates if c not in prev_mi_gap and c not in monthly_yf]
+        if missing:
+            def fetch_yf_miss(code):
+                return code, fetch_yf_chart(code, actual_date)
+            with ThreadPoolExecutor(max_workers=30) as ex:
+                futs = [ex.submit(fetch_yf_miss, c) for c in missing]
+                for f in as_completed(futs):
+                    code, yf = f.result()
+                    if yf:
+                        monthly_yf[code] = yf
+
     # ── Step 4: Apply gap_up and volume MA filters ────────────────────────────
     results = []
     for code, s in candidates.items():
