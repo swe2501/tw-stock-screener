@@ -1046,6 +1046,7 @@
     // Fibonacci
     let fibMode = false;
     let fibLines = [];
+    let fibLevels = []; // { price, label, color } for canvas label redraw
     let fibDragStart = null;
     let fibSetupDone = false;
     // Trend lines
@@ -1312,9 +1313,9 @@
         if (trendLines.length > 0) redrawCanvas();
       }).observe(mainEl);
 
-      // Redraw trend lines when chart is panned / zoomed
+      // Redraw trend lines / fib labels when chart is panned / zoomed
       chartInstance.timeScale().subscribeVisibleTimeRangeChange(() => {
-        if (trendLines.length > 0 || trendStart) redrawCanvas();
+        if (trendLines.length > 0 || trendStart || fibLevels.length > 0) redrawCanvas();
       });
 
       // Zoom lock: max = full dataset, min = 20 bars visible
@@ -1555,13 +1556,28 @@
       canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
     }
 
-    // Redraws completed trend lines on the canvas (clears first)
+    // Redraws completed trend lines + fib labels on the canvas (clears first)
     function redrawCanvas() {
       const canvas = document.getElementById('fibCanvas');
       if (!canvas || !chartInstance || !candleSeriesRef) return;
       const ctx = canvas.getContext('2d');
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       _drawTrendLinesOnCtx(ctx);
+      _drawFibLabelsOnCtx(ctx);
+    }
+
+    function _drawFibLabelsOnCtx(ctx) {
+      if (!fibLevels.length || !candleSeriesRef) return;
+      ctx.font = 'bold 11px monospace';
+      fibLevels.forEach(({ price, label, color }) => {
+        const y = candleSeriesRef.priceToCoordinate(price);
+        if (y == null) return;
+        const w = ctx.measureText(label).width;
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        ctx.fillRect(3, y - 13, w + 6, 16);
+        ctx.fillStyle = color;
+        ctx.fillText(label, 6, y - 1);
+      });
     }
 
     function _drawTrendLinesOnCtx(ctx) {
@@ -1822,7 +1838,7 @@
       fibLines.forEach(pl => {
         try { if (candleSeriesRef) candleSeriesRef.removePriceLine(pl); } catch(e) {}
       });
-      fibLines = []; fibDragStart = null;
+      fibLines = []; fibLevels = []; fibDragStart = null;
       trendLines = []; trendStart = null;
       _clearCanvas();
     }
@@ -1830,7 +1846,7 @@
     function drawFibLines(high, low) {
       if (!candleSeriesRef) return;
       fibLines.forEach(pl => { try { candleSeriesRef.removePriceLine(pl); } catch(e) {} });
-      fibLines = [];
+      fibLines = []; fibLevels = [];
       const range = high - low;
       [
         { ratio: 0,     label: '0%',    color: '#e74c3c' },
@@ -1845,9 +1861,11 @@
           price, color, lineWidth: 1,
           lineStyle: LightweightCharts.LineStyle.Dashed,
           axisLabelVisible: false,
-          title: label,
+          title: '',
         }));
+        fibLevels.push({ price, label, color });
       });
+      redrawCanvas();
     }
   </script>
 </body>
