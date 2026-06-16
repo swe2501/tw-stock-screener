@@ -296,7 +296,8 @@ def _fetch_tw_industry(code):
         for item in items:
             c = (item.get("公司代號") or "").strip()
             if c == code:
-                return (item.get("產業別") or "").strip()
+                val = (item.get("產業別") or "").strip()
+                return _TW_INDUSTRY_CODES.get(val.zfill(2), val) or ""
     except Exception:
         pass
     return ""
