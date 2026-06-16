@@ -381,6 +381,8 @@ def screen(params):
     check_limit_up   = bool(params.get("limit_up", False))
     check_gap_up     = bool(params.get("gap_up", False))
     check_gap_down   = bool(params.get("gap_down", False))
+    gap_down_min     = float(params.get("gap_down_min") or 0)
+    gap_up_min       = float(params.get("gap_up_min") or 0)
     check_macd_gold  = bool(params.get("macd_golden", False))
     check_zhenming1  = bool(params.get("zhenming1", False))
     check_zhenming2  = bool(params.get("zhenming2", False))
@@ -500,12 +502,18 @@ def screen(params):
         if check_gap_up:
             if prev_high is not None and round(l, 4) <= round(prev_high, 4):
                 continue
+            if gap_up_min > 0 and prev_high is not None:
+                if round(l - prev_high, 4) < round(gap_up_min, 4):
+                    continue
 
         # 跳空向下：今日最高 < 前日最低（兩根K棒之間有可見缺口）
         # prev_low 找不到時放行，讓使用者自行肉眼確認
         if check_gap_down:
             if prev_low is not None and round(h, 4) >= round(prev_low, 4):
                 continue
+            if gap_down_min > 0 and prev_low is not None:
+                if round(prev_low - h, 4) < round(gap_down_min, 4):
+                    continue
 
         # MACD黃金交叉
         if check_macd_gold:
