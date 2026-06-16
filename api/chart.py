@@ -248,9 +248,9 @@ _TW_INDUSTRY_CODES = {
 
 
 def _fetch_tw_name(code):
-    """Try TWSE MIS real-time API. Returns (name, industry) or (None, None)."""
+    """Try TWSE MIS real-time API for Chinese stock name. Returns name or None."""
     if not code.isdigit():
-        return None, None
+        return None
     for market in ("tse", "otc"):
         try:
             url = f"https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch={market}_{code}.tw&json=1"
@@ -259,14 +259,45 @@ def _fetch_tw_name(code):
                 d = json.loads(r.read())
             arr = d.get("msgArray") or []
             if arr and arr[0].get("n"):
-                item = arr[0]
-                name = item["n"]
-                t_key = str(item.get("t") or "").strip().zfill(2)
-                industry = _TW_INDUSTRY_CODES.get(t_key, "")
-                return name, industry
+                return arr[0]["n"]
         except Exception:
             continue
-    return None, None
+    return None
+
+
+def _fetch_tw_industry(code):
+    """Return Chinese industry name for a TW stock. Tries TWSE searchByDate API."""
+    if not code.isdigit():
+        return ""
+    # Try TWSE listed company info (搜尋 TSE 公司基本資料, includes 產業別)
+    try:
+        url = f"https://www.twse.com.tw/rwd/zh/company/searchByDate?stkNo={code}&response=json"
+        req = urllib.request.Request(url, headers=TWSE_HEADERS)
+        with urllib.request.urlopen(req, timeout=6) as r:
+            d = json.loads(r.read())
+        fields = d.get("fields") or []
+        rows = d.get("data") or []
+        if fields and rows:
+            for i, f in enumerate(fields):
+                if "產業" in str(f):
+                    return str(rows[0][i]).strip()
+    except Exception:
+        pass
+    # Fallback: TWSE OpenAPI full list (TSE)
+    try:
+        url = "https://openapi.twse.com.tw/v1/opendata/t187ap03_L"
+        req = urllib.request.Request(
+            url, headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json",
+                          "Referer": "https://www.twse.com.tw/"})
+        with urllib.request.urlopen(req, timeout=10) as r:
+            items = json.loads(r.read())
+        for item in items:
+            c = (item.get("公司代號") or "").strip()
+            if c == code:
+                return (item.get("產業別") or "").strip()
+    except Exception:
+        pass
+    return ""
 
 
 def _yf_symbol(code):
@@ -441,12 +472,19 @@ def fetch_chart(code, range_str="3mo", interval="1d", adj=False):
             except Exception:
                 pass
 
-    tw_name, tw_industry = _fetch_tw_name(code)
     yf_name = meta.get("longName") or meta.get("shortName") or code
+    if code.isdigit():
+        with ThreadPoolExecutor(max_workers=2) as ex:
+            f_name = ex.submit(_fetch_tw_name, code)
+            f_ind  = ex.submit(_fetch_tw_industry, code)
+            tw_name     = f_name.result()
+            tw_industry = f_ind.result()
+    else:
+        tw_name, tw_industry = None, ""
     return {
         "code": code,
         "name": tw_name or yf_name,
-        "industry": tw_industry or "",
+        "industry": tw_industry,
         "currency": meta.get("currency", ""),
         "data": candles,
         "events": events,
