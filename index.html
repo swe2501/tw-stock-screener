@@ -503,6 +503,11 @@
       font-weight: bold;
       letter-spacing: 0.04em;
       display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    #maLabel .label-row {
+      display: flex;
       gap: 8px;
     }
 
@@ -803,12 +808,17 @@
             <div id="chartOverlay"></div>
             <div id="zoomHint">← 按住滑鼠左鍵拖曳選取範圍放大 →</div>
             <div id="maLabel">
-              <span class="ma-toggle" onclick="toggleSeriesViz('ma5')"   style="color:#FFE600">MA5</span>
-              <span class="ma-toggle" onclick="toggleSeriesViz('ma10')"  style="color:#FF8C00">MA10</span>
-              <span class="ma-toggle" onclick="toggleSeriesViz('ma20')"  style="color:#00E676">MA20</span>
-              <span class="ma-toggle" onclick="toggleSeriesViz('ma60')"  style="color:#29B6F6">MA60</span>
-              <span class="ma-toggle" onclick="toggleSeriesViz('ma120')" style="color:#CE93D8">MA120</span>
-              <span class="ma-toggle" onclick="toggleSeriesViz('ma240')" style="color:#FF5252">MA240</span>
+              <div class="label-row">
+                <span class="ma-toggle" onclick="toggleSeriesViz('ma5')"   style="color:#FFE600">MA5</span>
+                <span class="ma-toggle" onclick="toggleSeriesViz('ma10')"  style="color:#FF8C00">MA10</span>
+                <span class="ma-toggle" onclick="toggleSeriesViz('ma20')"  style="color:#00E676">MA20</span>
+                <span class="ma-toggle" onclick="toggleSeriesViz('ma60')"  style="color:#29B6F6">MA60</span>
+                <span class="ma-toggle" onclick="toggleSeriesViz('ma120')" style="color:#CE93D8">MA120</span>
+                <span class="ma-toggle" onclick="toggleSeriesViz('ma240')" style="color:#FF5252">MA240</span>
+              </div>
+              <div class="label-row">
+                <span class="ma-toggle" onclick="toggleBBand(this)" style="color:#00BCD4">BBAND(20,2)</span>
+              </div>
             </div>
           </div>
           <div id="volPanel">
@@ -1090,6 +1100,17 @@
       loadDailyChart();
     }
 
+    function toggleBBand(span) {
+      const keys = ['bbUpper', 'bbMid', 'bbLower'];
+      const first = seriesMap[keys[0]];
+      if (!first) return;
+      let visible;
+      try { visible = first.options().visible; } catch(_) { visible = true; }
+      visible = visible === false;
+      keys.forEach(k => { if (seriesMap[k]) seriesMap[k].applyOptions({ visible }); });
+      span.classList.toggle('hidden', !visible);
+    }
+
     function searchStock() {
       const code = document.getElementById('stockSearchInput').value.trim();
       if (!code) return;
@@ -1299,6 +1320,17 @@
       });
     }
 
+    function calcBBand(closes, period = 20, mult = 2) {
+      const mid = calcSMA(closes, period);
+      return closes.map((_, i) => {
+        if (mid[i] === null) return null;
+        let variance = 0;
+        for (let j = i - period + 1; j <= i; j++) variance += (closes[j] - mid[i]) ** 2;
+        const std = Math.sqrt(variance / period);
+        return { upper: mid[i] + mult * std, mid: mid[i], lower: mid[i] - mult * std };
+      });
+    }
+
     // ── Render all chart panels ───────────────────────────
     function renderTVChart(candles, events) {
       document.getElementById('chartLoading').style.display = 'none';
@@ -1448,6 +1480,19 @@
         s.setData(candles.map((c, i) => sma[i] !== null ? { time: c.time, value: sma[i] } : null).filter(Boolean));
         seriesMap[`ma${period}`] = s;
       });
+
+      // Bollinger Bands (20, 2) — hidden by default
+      const bbData = calcBBand(closes);
+      const bbOpts = { lineWidth: 1, crosshairMarkerVisible: false, lastValueVisible: false, priceLineVisible: false, visible: false };
+      const bbUpper = chartInstance.addLineSeries({ ...bbOpts, color: '#00BCD4', lineStyle: LightweightCharts.LineStyle.Dashed });
+      const bbMid   = chartInstance.addLineSeries({ ...bbOpts, color: '#00BCD4' });
+      const bbLower = chartInstance.addLineSeries({ ...bbOpts, color: '#00BCD4', lineStyle: LightweightCharts.LineStyle.Dashed });
+      bbUpper.setData(candles.map((c, i) => bbData[i] ? { time: c.time, value: bbData[i].upper } : null).filter(Boolean));
+      bbMid.setData(  candles.map((c, i) => bbData[i] ? { time: c.time, value: bbData[i].mid   } : null).filter(Boolean));
+      bbLower.setData(candles.map((c, i) => bbData[i] ? { time: c.time, value: bbData[i].lower } : null).filter(Boolean));
+      seriesMap['bbUpper'] = bbUpper;
+      seriesMap['bbMid']   = bbMid;
+      seriesMap['bbLower'] = bbLower;
     }
 
     function _renderVOLChart(candles) {
