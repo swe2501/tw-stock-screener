@@ -429,8 +429,10 @@ def screen(params):
                 break
 
     # ── Step 3b: 量能/MACD/真名 → 仍需逐支月資料 ────────────────────────────
+    need_gap_monthly = (check_gap_up or check_gap_down) and not prev_mi_gap
     need_monthly = (vol_mult > 0 or shrink_mult > 0 or check_macd_gold
-                    or check_zhenming1 or check_zhenming2) and not is_historical
+                    or check_zhenming1 or check_zhenming2
+                    or need_gap_monthly) and not is_historical
 
     monthly = {}
     monthly_yf = {}
@@ -438,16 +440,24 @@ def screen(params):
         yyyymm = actual_date[:6]
         prev_yyyymm = _prev_month(yyyymm)
 
+        gap_only = need_gap_monthly and not (vol_mult > 0 or shrink_mult > 0
+                                              or check_macd_gold or check_zhenming1 or check_zhenming2)
+
         def fetch_both(code):
+            # 純跳空篩選：跳過限流嚴格的 STOCK_DAY，直接用 YF 拿 prev_high/prev_low
+            if gap_only:
+                yf = fetch_yf_chart(code, actual_date)
+                return code, [], yf
             cur = fetch_stock_month(code, yyyymm)
-            # 當月已有 20 筆以上時不需要抓上個月（MA10/MA20/gap 都夠用）
+            # 當月已有 20 筆以上時不需要抓上個月（MA10/MA20 都夠用）
             prev = [] if len(cur) >= 20 else fetch_stock_month(code, prev_yyyymm)
             combined = sorted(prev + cur, key=lambda x: x["date"])
             # TWSE STOCK_DAY 回傳空資料時（rate limit 或其他原因），fallback 到 YF
             yf_fallback = fetch_yf_chart(code, actual_date) if not combined else None
             return code, combined, yf_fallback
 
-        with ThreadPoolExecutor(max_workers=10) as ex:
+        workers = 30 if gap_only else 10
+        with ThreadPoolExecutor(max_workers=workers) as ex:
             futures = [ex.submit(fetch_both, c) for c in candidates]
             for f in as_completed(futures):
                 code, rows, yf_fallback = f.result()
