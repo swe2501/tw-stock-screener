@@ -530,13 +530,13 @@ def screen(params):
         # 跳空向上：今日最低 > 前日最高（兩根K棒之間有可見缺口）
         # prev_high 找不到時放行，讓使用者自行肉眼確認
         if check_gap_up:
-            if prev_high is not None and l <= prev_high:
+            if prev_high is not None and round(l, 4) <= round(prev_high, 4):
                 continue
 
         # 跳空向下：今日最高 < 前日最低（兩根K棒之間有可見缺口）
         # prev_low 找不到時放行，讓使用者自行肉眼確認
         if check_gap_down:
-            if prev_low is not None and h >= prev_low:
+            if prev_low is not None and round(h, 4) >= round(prev_low, 4):
                 continue
 
         # MACD黃金交叉
