@@ -258,8 +258,8 @@ def fetch_chart(code, range_str="3mo", interval="1d"):
         now = int(time.time())
         period1 = now - days * 86400
         period2 = now + 86400
-        url_params = f"interval=1d&period1={period1}&period2={period2}"
-        url_params_alt = f"interval=1d&range={range_str}"
+        url_params = f"interval=1d&period1={period1}&period2={period2}&events=div%2Csplits"
+        url_params_alt = f"interval=1d&range={range_str}&events=div%2Csplits"
     else:
         url_params = f"interval={interval}&range={range_str}"
         url_params_alt = None
@@ -367,11 +367,38 @@ def fetch_chart(code, range_str="3mo", interval="1d"):
             candles.append(twse_candle)
             candles.sort(key=lambda x: x["time"])
 
+    # Parse dividend and split events from YF response
+    events = []
+    if is_daily and best_result:
+        raw_events = best_result.get("events") or {}
+        tz_offset = timedelta(hours=8)
+        for ts_str, div in (raw_events.get("dividends") or {}).items():
+            try:
+                dt = datetime.fromtimestamp(int(ts_str), tz=timezone(tz_offset))
+                events.append({
+                    "date": dt.strftime("%Y-%m-%d"),
+                    "type": "div",
+                    "amount": round(float(div.get("amount", 0)), 4),
+                })
+            except Exception:
+                pass
+        for ts_str, sp in (raw_events.get("splits") or {}).items():
+            try:
+                dt = datetime.fromtimestamp(int(ts_str), tz=timezone(tz_offset))
+                events.append({
+                    "date": dt.strftime("%Y-%m-%d"),
+                    "type": "split",
+                    "ratio": f"{sp.get('numerator',0)}/{sp.get('denominator',1)}",
+                })
+            except Exception:
+                pass
+
     return {
         "code": code,
         "name": meta.get("longName") or meta.get("shortName") or code,
         "currency": meta.get("currency", ""),
         "data": candles,
+        "events": events,
     }
 
 

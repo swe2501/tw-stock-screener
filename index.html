@@ -1103,7 +1103,7 @@
           const first = data.data[0].time;
           const last  = data.data[data.data.length - 1].time;
           document.getElementById('modalSubtitle').textContent = `日K ・ ${first} ～ ${last}`;
-          renderTVChart(data.data);
+          renderTVChart(data.data, data.events || []);
         })
         .catch(() => {
           document.getElementById('chartLoading').innerHTML = '⚠ 載入失敗，請重試';
@@ -1176,11 +1176,11 @@
     }
 
     // ── Render all chart panels ───────────────────────────
-    function renderTVChart(candles) {
+    function renderTVChart(candles, events) {
       document.getElementById('chartLoading').style.display = 'none';
       document.getElementById('chartWrapper').style.display = 'block';
 
-      _renderMainChart(candles);
+      _renderMainChart(candles, events || []);
       _renderVOLChart(candles);
       _renderMACDChart(candles);
       _renderRSIChart(candles);
@@ -1272,7 +1272,7 @@
       };
     }
 
-    function _renderMainChart(candles) {
+    function _renderMainChart(candles, events) {
       const el = document.getElementById('chartContainer');
       el.innerHTML = '';
       const opts = _chartOpts(220, false);
@@ -1285,6 +1285,23 @@
         wickUpColor: '#e74c3c', wickDownColor: '#26c281',
       });
       candleSeriesRef.setData(candles);
+
+      // Ex-dividend / split markers
+      if (events && events.length > 0) {
+        const candleDates = new Set(candles.map(c => c.time));
+        const markers = events
+          .filter(e => candleDates.has(e.date))
+          .map(e => ({
+            time: e.date,
+            position: 'belowBar',
+            color: e.type === 'split' ? '#9b59b6' : '#f39c12',
+            shape: 'arrowUp',
+            text: e.type === 'split' ? `股分 ${e.ratio}` : `息 ${e.amount}`,
+            size: 1,
+          }))
+          .sort((a, b) => a.time < b.time ? -1 : 1);
+        if (markers.length > 0) candleSeriesRef.setMarkers(markers);
+      }
 
       // MA 5/10/20/60/120/240 均線
       const closes = candles.map(c => c.close);
