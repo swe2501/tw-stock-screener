@@ -248,6 +248,44 @@ def _fetch_tw_name(code):
     return None
 
 
+# Module-level cache: code → industry (Chinese). Populated once per warm container.
+_TW_INDUSTRY_MAP: dict = {}
+_TW_INDUSTRY_LOADED = False
+
+def _ensure_tw_industry_map():
+    global _TW_INDUSTRY_MAP, _TW_INDUSTRY_LOADED
+    if _TW_INDUSTRY_LOADED:
+        return
+    _TW_INDUSTRY_LOADED = True
+    sources = [
+        ("https://openapi.twse.com.tw/v1/opendata/t187ap03_L",
+         "公司代號", "產業別"),
+        ("https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap03_O",
+         "SecuritiesCompanyCode", "IndustryCategory"),
+    ]
+    for url, code_key, ind_key in sources:
+        try:
+            req = urllib.request.Request(
+                url, headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"})
+            with urllib.request.urlopen(req, timeout=8) as r:
+                items = json.loads(r.read())
+            for item in items:
+                c = (item.get(code_key) or "").strip()
+                ind = (item.get(ind_key) or "").strip()
+                if c and ind:
+                    _TW_INDUSTRY_MAP[c] = ind
+        except Exception:
+            pass
+
+
+def _fetch_tw_industry(code):
+    """Return Chinese industry name for a TW stock code, or None."""
+    if not code.isdigit():
+        return None
+    _ensure_tw_industry_map()
+    return _TW_INDUSTRY_MAP.get(code)
+
+
 def _yf_symbol(code):
     """Return Yahoo Finance symbol. Indices (^) and futures (=F) are used as-is."""
     if code.startswith("^") or "=" in code:
@@ -422,9 +460,11 @@ def fetch_chart(code, range_str="3mo", interval="1d", adj=False):
 
     tw_name = _fetch_tw_name(code)
     yf_name = meta.get("longName") or meta.get("shortName") or code
+    tw_industry = _fetch_tw_industry(code)
     return {
         "code": code,
         "name": tw_name or yf_name,
+        "industry": tw_industry or "",
         "currency": meta.get("currency", ""),
         "data": candles,
         "events": events,

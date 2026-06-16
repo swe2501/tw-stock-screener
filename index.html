@@ -466,6 +466,18 @@
       font-size: 0.78rem;
       color: var(--text-muted);
       margin-top: 2px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    #industryTag {
+      font-size: 0.72rem;
+      padding: 1px 7px;
+      border-radius: 10px;
+      background: rgba(79,142,247,0.18);
+      color: #7ab4ff;
+      border: 1px solid rgba(79,142,247,0.35);
+      display: none;
     }
 
     .modal-close {
@@ -862,7 +874,7 @@
       <div class="modal-header">
         <div>
           <div class="modal-title" id="modalTitle">—</div>
-          <div class="modal-subtitle" id="modalSubtitle">日K線</div>
+          <div class="modal-subtitle" id="modalSubtitle">日K線<span id="industryTag"></span></div>
         </div>
         <button class="modal-close" onclick="closeChart()">&#10005;</button>
       </div>
@@ -1179,6 +1191,7 @@
       prevCode = ''; prevName = '';
       currentCode = code; currentName = name;
       document.getElementById('modalTitle').textContent = `${code}　${name}`;
+      document.getElementById('industryTag').style.display = 'none';
       _setToolbarForCode(code);
       document.getElementById('backBtn').style.display = 'none';
       document.getElementById('chartModal').classList.add('open');
@@ -1292,6 +1305,7 @@
       prevCode = ''; prevName = '';
       currentCode = sym; currentName = name;
       document.getElementById('modalTitle').textContent = name;
+      document.getElementById('industryTag').style.display = 'none';
       _setToolbarForCode(sym);
       document.getElementById('backBtn').style.display = 'none';
       document.getElementById('chartModal').classList.add('open');
@@ -1404,7 +1418,15 @@
           }
           const first = data.data[0].time;
           const last  = data.data[data.data.length - 1].time;
-          document.getElementById('modalSubtitle').textContent = `${subtitle} ・ ${first} ～ ${last}`;
+          const subtitleEl = document.getElementById('modalSubtitle');
+          subtitleEl.childNodes[0].textContent = `${subtitle} ・ ${first} ～ ${last}`;
+          const industryTag = document.getElementById('industryTag');
+          if (data.industry) {
+            industryTag.textContent = data.industry;
+            industryTag.style.display = '';
+          } else {
+            industryTag.style.display = 'none';
+          }
           if (data.name && data.name !== currentCode) {
             currentName = data.name;
             document.getElementById('modalTitle').textContent = `${currentCode}　${data.name}`;
