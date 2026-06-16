@@ -477,6 +477,19 @@
       z-index: 10;
       display: none;
     }
+    #zoomHint {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      text-align: center;
+      font-size: 11px;
+      color: rgba(255,255,255,0.7);
+      background: rgba(41,98,255,0.35);
+      padding: 3px 0;
+      pointer-events: none;
+      z-index: 12;
+      display: none;
+      letter-spacing: 0.03em;
+    }
 
     #maLabel {
       position: absolute;
@@ -763,7 +776,8 @@
             <button class="tool-btn zoom-step-btn" onclick="zoomChart(0.75)" title="放大">＋</button>
             <button class="tool-btn zoom-step-btn" onclick="zoomChart(1.33)" title="縮小">－</button>
             <div class="toolbar-sep"></div>
-            <button class="tool-btn" id="zoomRubberBtn" onclick="toggleZoomMode()">🔍 框選</button>
+            <button class="tool-btn" id="zoomRubberBtn" onclick="toggleZoomMode()">🔍 框選放大</button>
+            <button class="tool-btn" onclick="resetZoom()" title="恢復全覽">↺ 還原</button>
             <button class="tool-btn" id="fibBtn" onclick="toggleFibMode()">📐 斐波那契</button>
             <button class="tool-btn" id="trendBtn" onclick="toggleTrendLine()">📏 趨勢線</button>
             <button class="tool-btn" onclick="clearAllDrawings()">✕ 清除</button>
@@ -775,6 +789,7 @@
             <div id="chartContainer"></div>
             <canvas id="fibCanvas"></canvas>
             <div id="chartOverlay"></div>
+            <div id="zoomHint">← 按住滑鼠左鍵拖曳選取範圍放大 →</div>
             <div id="maLabel">
               <span class="ma-toggle" onclick="toggleSeriesViz('ma5')"   style="color:#FFE600">MA5</span>
               <span class="ma-toggle" onclick="toggleSeriesViz('ma10')"  style="color:#FF8C00">MA10</span>
@@ -1676,7 +1691,7 @@
           const x2 = getX(e.clientX);
           const x1 = zoomDragStart.x;
           zoomDragStart = null;
-          if (Math.abs(x2 - x1) > 8 && chartInstance) {
+          if (Math.abs(x2 - x1) > 5 && chartInstance) {
             const range = chartInstance.timeScale().getVisibleLogicalRange();
             if (range) {
               const W = overlay.clientWidth;
@@ -1687,6 +1702,8 @@
             }
           }
           redrawCanvas();
+          // 成功框選後自動退出框選模式
+          _deactivateAllModes();
         } else if (fibMode) {
           finishFib(getY(e.clientY));
         } else if (trendLineMode && trendStart) {
@@ -1755,6 +1772,7 @@
       document.getElementById('trendBtn').classList.remove('active');
       document.getElementById('zoomRubberBtn').classList.remove('active');
       document.getElementById('chartOverlay').style.display = 'none';
+      document.getElementById('zoomHint').style.display = 'none';
     }
 
     function toggleFibMode() {
@@ -1784,6 +1802,11 @@
       zoomMode = next;
       document.getElementById('zoomRubberBtn').classList.toggle('active', zoomMode);
       document.getElementById('chartOverlay').style.display = zoomMode ? 'block' : 'none';
+      document.getElementById('zoomHint').style.display = zoomMode ? 'block' : 'none';
+    }
+
+    function resetZoom() {
+      if (chartInstance) chartInstance.timeScale().fitContent();
     }
 
     function zoomChart(factor) {
