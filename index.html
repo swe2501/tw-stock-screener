@@ -38,6 +38,67 @@
       align-items: center;
       gap: 12px;
     }
+    #authArea {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    #authArea button {
+      font-size: 13px;
+      padding: 5px 12px;
+      border-radius: 6px;
+      border: 1px solid rgba(255,255,255,0.25);
+      background: rgba(255,255,255,0.08);
+      color: #fff;
+      cursor: pointer;
+    }
+    #authArea button:hover { background: rgba(255,255,255,0.15); }
+    #authUserEmail { font-size: 13px; color: rgba(255,255,255,0.7); }
+
+    /* Auth modal */
+    #authModal {
+      display: none;
+      position: fixed; inset: 0; z-index: 200;
+      background: rgba(0,0,0,0.55);
+      align-items: center; justify-content: center;
+    }
+    #authModal.open { display: flex; }
+    .auth-box {
+      background: #1a2035;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 14px;
+      padding: 28px 24px;
+      width: 340px;
+      max-width: 95vw;
+    }
+    .auth-tabs { display: flex; gap: 4px; margin-bottom: 20px; }
+    .auth-tab {
+      flex: 1; padding: 7px; font-size: 14px; text-align: center;
+      border-radius: 7px; border: 1px solid rgba(255,255,255,0.12);
+      background: transparent; color: rgba(255,255,255,0.5); cursor: pointer;
+    }
+    .auth-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .auth-box h2 { font-size: 16px; font-weight: 600; color: #fff; margin-bottom: 18px; }
+    .auth-field { margin-bottom: 14px; }
+    .auth-field label { display: block; font-size: 12px; color: rgba(255,255,255,0.5); margin-bottom: 5px; }
+    .auth-field input {
+      width: 100%; padding: 9px 12px; font-size: 14px;
+      background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 7px; color: #fff; outline: none;
+    }
+    .auth-field input:focus { border-color: var(--accent); }
+    .auth-submit {
+      width: 100%; padding: 10px; font-size: 14px; font-weight: 600;
+      background: var(--accent); color: #fff; border: none;
+      border-radius: 7px; cursor: pointer; margin-top: 4px;
+    }
+    .auth-submit:hover { background: var(--accent-hover); }
+    .auth-error { font-size: 12px; color: #e74c3c; margin-top: 10px; text-align: center; min-height: 18px; }
+    .auth-close {
+      float: right; background: none; border: none; color: rgba(255,255,255,0.4);
+      font-size: 18px; cursor: pointer; margin-top: -4px;
+    }
 
     header h1 {
       font-size: 1.5rem;
@@ -636,7 +697,29 @@
   <header>
     <h1>台灣上市股票篩選器</h1>
     <span>TWSE</span>
+    <div id="authArea">
+      <div id="authUserEmail" style="display:none"></div>
+      <button id="alertMgrBtn" style="display:none" onclick="openAlertMgr()">🔔 我的警示</button>
+      <button id="logoutBtn"   style="display:none" onclick="doLogout()">登出</button>
+      <button id="loginBtn"    onclick="openAuthModal('login')">登入</button>
+    </div>
   </header>
+
+  <!-- Auth modal -->
+  <div id="authModal">
+    <div class="auth-box">
+      <button class="auth-close" onclick="closeAuthModal()">✕</button>
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tabLogin"    onclick="switchAuthTab('login')">登入</button>
+        <button class="auth-tab"        id="tabRegister" onclick="switchAuthTab('register')">註冊</button>
+      </div>
+      <h2 id="authTitle">歡迎回來</h2>
+      <div class="auth-field"><label>Email</label><input type="email" id="authEmail" placeholder="your@email.com"></div>
+      <div class="auth-field"><label>密碼</label><input type="password" id="authPassword" placeholder="至少 6 個字元"></div>
+      <button class="auth-submit" id="authSubmit" onclick="doAuth()">登入</button>
+      <div class="auth-error" id="authError"></div>
+    </div>
+  </div>
 
   <div class="form-wrap">
     <div class="card">
@@ -1112,6 +1195,91 @@
       keys.forEach(k => { if (seriesMap[k]) seriesMap[k].applyOptions({ visible }); });
       span.classList.toggle('hidden', !visible);
     }
+
+    // ── Auth ──────────────────────────────────────────────
+    let _authToken = localStorage.getItem('sb_token') || null;
+    let _authUser  = JSON.parse(localStorage.getItem('sb_user') || 'null');
+    let _authTab   = 'login';
+
+    function _applyAuthState() {
+      const loggedIn = !!_authToken;
+      document.getElementById('loginBtn').style.display    = loggedIn ? 'none' : '';
+      document.getElementById('logoutBtn').style.display   = loggedIn ? ''     : 'none';
+      document.getElementById('alertMgrBtn').style.display = loggedIn ? ''     : 'none';
+      const emailEl = document.getElementById('authUserEmail');
+      emailEl.style.display = loggedIn ? '' : 'none';
+      if (loggedIn && _authUser) emailEl.textContent = _authUser.email;
+    }
+
+    function openAuthModal(tab) {
+      switchAuthTab(tab || 'login');
+      document.getElementById('authError').textContent = '';
+      document.getElementById('authEmail').value = '';
+      document.getElementById('authPassword').value = '';
+      document.getElementById('authModal').classList.add('open');
+    }
+    function closeAuthModal() {
+      document.getElementById('authModal').classList.remove('open');
+    }
+    function switchAuthTab(tab) {
+      _authTab = tab;
+      document.getElementById('tabLogin').classList.toggle('active', tab === 'login');
+      document.getElementById('tabRegister').classList.toggle('active', tab === 'register');
+      document.getElementById('authTitle').textContent = tab === 'login' ? '歡迎回來' : '建立帳號';
+      document.getElementById('authSubmit').textContent = tab === 'login' ? '登入' : '註冊';
+      document.getElementById('authError').textContent = '';
+    }
+    async function doAuth() {
+      const email    = document.getElementById('authEmail').value.trim();
+      const password = document.getElementById('authPassword').value;
+      const errEl    = document.getElementById('authError');
+      const btn      = document.getElementById('authSubmit');
+      if (!email || !password) { errEl.textContent = '請填寫 email 和密碼'; return; }
+      btn.disabled = true; btn.textContent = '處理中...';
+      try {
+        const r = await fetch('/api/auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: _authTab, email, password }),
+        });
+        const d = await r.json();
+        if (!r.ok) { errEl.textContent = d.error || '發生錯誤'; return; }
+        _authToken = d.access_token;
+        _authUser  = d.user;
+        localStorage.setItem('sb_token', _authToken);
+        localStorage.setItem('sb_user',  JSON.stringify(_authUser));
+        _applyAuthState();
+        closeAuthModal();
+      } catch(e) {
+        errEl.textContent = '網路錯誤，請重試';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = _authTab === 'login' ? '登入' : '註冊';
+      }
+    }
+    async function doLogout() {
+      try {
+        await fetch('/api/auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_authToken}` },
+          body: JSON.stringify({ action: 'logout', email: '', password: '' }),
+        });
+      } catch(_) {}
+      _authToken = null; _authUser = null;
+      localStorage.removeItem('sb_token');
+      localStorage.removeItem('sb_user');
+      _applyAuthState();
+    }
+    function openAlertMgr() { alert('警示管理（開發中）'); }
+
+    document.getElementById('authPassword').addEventListener('keydown', e => {
+      if (e.key === 'Enter') doAuth();
+    });
+    document.getElementById('authModal').addEventListener('click', e => {
+      if (e.target === document.getElementById('authModal')) closeAuthModal();
+    });
+
+    _applyAuthState();
 
     function searchStock() {
       const code = document.getElementById('stockSearchInput').value.trim();
