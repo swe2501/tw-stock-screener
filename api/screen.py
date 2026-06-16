@@ -497,21 +497,19 @@ def screen(params):
                 prev_low  = yf_data.get("prev_low")
             prev_vols = yf_data.get("prev_vols", [])
 
-        # 跳空向上：今日最低 > 前日最高（兩根K棒之間有可見缺口）
-        # prev_high 找不到時放行，讓使用者自行肉眼確認
+        # 跳空向上：今日最低 > 前日最高
         if check_gap_up:
-            if prev_high is not None and round(l, 4) <= round(prev_high, 4):
+            if prev_high is None or round(l, 4) <= round(prev_high, 4):
                 continue
-            if gap_up_min > 0 and prev_high is not None:
+            if gap_up_min > 0:
                 if round(l - prev_high, 4) < round(gap_up_min, 4):
                     continue
 
-        # 跳空向下：今日最高 < 前日最低（兩根K棒之間有可見缺口）
-        # prev_low 找不到時放行，讓使用者自行肉眼確認
+        # 跳空向下：今日最高 < 前日最低
         if check_gap_down:
-            if prev_low is not None and round(h, 4) >= round(prev_low, 4):
+            if prev_low is None or round(h, 4) >= round(prev_low, 4):
                 continue
-            if gap_down_min > 0 and prev_low is not None:
+            if gap_down_min > 0:
                 if round(prev_low - h, 4) < round(gap_down_min, 4):
                     continue
 
