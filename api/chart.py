@@ -295,11 +295,12 @@ def fetch_chart(code, range_str="3mo", interval="1d"):
     meta = best_result.get("meta", {})
     timestamps = best_result.get("timestamp") or []
     q = (best_result.get("indicators", {}).get("quote") or [{}])[0]
-    opens   = q.get("open")   or []
-    highs   = q.get("high")   or []
-    lows    = q.get("low")    or []
-    closes  = q.get("close")  or []
-    volumes = q.get("volume") or []
+    opens      = q.get("open")   or []
+    highs      = q.get("high")   or []
+    lows       = q.get("low")    or []
+    closes     = q.get("close")  or []
+    volumes    = q.get("volume") or []
+    adjcloses  = ((best_result.get("indicators", {}).get("adjclose") or [{}])[0].get("adjclose") or [])
 
     tz_offset = timedelta(hours=8)
     candles = []
@@ -311,6 +312,11 @@ def fetch_chart(code, range_str="3mo", interval="1d"):
         v = volumes[i] if i < len(volumes) else None
         if None in (o, h, l, c):
             continue
+        # Apply dividend/split adjustment ratio so chart matches 還原日 view
+        ac = adjcloses[i] if i < len(adjcloses) else None
+        if ac and c and abs(c) > 1e-9:
+            r = ac / c
+            o, h, l, c = o * r, h * r, l * r, c * r
         if is_daily:
             dt = datetime.fromtimestamp(ts, tz=timezone(tz_offset))
             t_val = dt.strftime("%Y-%m-%d")
