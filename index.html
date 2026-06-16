@@ -491,6 +491,13 @@
       gap: 8px;
     }
 
+    .zoom-step-btn {
+      font-size: 16px;
+      font-weight: bold;
+      padding: 2px 10px;
+      line-height: 1;
+    }
+
     .panel-toggle {
       position: absolute;
       top: 3px; right: 6px;
@@ -762,6 +769,10 @@
             <button class="tool-btn" id="backBtn" style="display:none" onclick="goBackToStock()">← 返回</button>
           </div>
           <div class="chart-tool-btns">
+            <button class="tool-btn zoom-step-btn" onclick="zoomChart(0.75)" title="放大">＋</button>
+            <button class="tool-btn zoom-step-btn" onclick="zoomChart(1.33)" title="縮小">－</button>
+            <div class="toolbar-sep"></div>
+            <button class="tool-btn" id="zoomRubberBtn" onclick="toggleZoomMode()">🔍 框選</button>
             <button class="tool-btn" id="fibBtn" onclick="toggleFibMode()">📐 斐波那契</button>
             <button class="tool-btn" id="trendBtn" onclick="toggleTrendLine()">📏 趨勢線</button>
             <button class="tool-btn" onclick="clearAllDrawings()">✕ 清除</button>
@@ -1019,6 +1030,9 @@
     let trendLineMode = false;
     let trendLines = [];   // [{time1, price1, time2, price2}, ...]
     let trendStart = null; // first click anchor {time, price}
+    // Rubber-band zoom
+    let zoomMode = false;
+    let zoomDragStart = null; // { x } pixel
 
     // ── Open / close ──────────────────────────────────────
     function _isStock(code) {
@@ -1579,9 +1593,24 @@
         }
       }
 
+      function drawZoomRect(x1, x2) {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        _drawTrendLinesOnCtx(ctx);
+        const minX = Math.min(x1, x2), w = Math.abs(x2 - x1);
+        ctx.fillStyle = 'rgba(41,98,255,0.08)';
+        ctx.fillRect(minX, 0, w, canvas.height);
+        ctx.strokeStyle = 'rgba(41,98,255,0.7)';
+        ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
+        ctx.strokeRect(minX, 0, w, canvas.height);
+        ctx.setLineDash([]);
+      }
+
       overlay.addEventListener('mousedown', e => {
         if (!candleSeriesRef) return;
-        if (fibMode) {
+        if (zoomMode) {
+          zoomDragStart = { x: getX(e.clientX) };
+        } else if (fibMode) {
           const y = getY(e.clientY);
           const price = candleSeriesRef.coordinateToPrice(y);
           if (price != null) fibDragStart = { y, price };
@@ -1592,10 +1621,11 @@
         }
       });
       overlay.addEventListener('mousemove', e => {
-        if (fibMode && fibDragStart) {
+        if (zoomMode && zoomDragStart) {
+          drawZoomRect(zoomDragStart.x, getX(e.clientX));
+        } else if (fibMode && fibDragStart) {
           drawBand(fibDragStart.y, getY(e.clientY));
         } else if (trendLineMode && trendStart) {
-          // Preview dashed line while dragging
           const ctx = canvas.getContext('2d');
           ctx.clearRect(0, 0, canvas.width, canvas.height);
           _drawTrendLinesOnCtx(ctx);
@@ -1611,7 +1641,22 @@
         }
       });
       overlay.addEventListener('mouseup', e => {
-        if (fibMode) {
+        if (zoomMode && zoomDragStart) {
+          const x2 = getX(e.clientX);
+          const x1 = zoomDragStart.x;
+          zoomDragStart = null;
+          if (Math.abs(x2 - x1) > 8 && chartInstance) {
+            const range = chartInstance.timeScale().getVisibleLogicalRange();
+            if (range) {
+              const W = overlay.clientWidth;
+              const span = range.to - range.from;
+              const newFrom = range.from + span * Math.min(x1, x2) / W;
+              const newTo   = range.from + span * Math.max(x1, x2) / W;
+              chartInstance.timeScale().setVisibleLogicalRange({ from: newFrom, to: newTo });
+            }
+          }
+          redrawCanvas();
+        } else if (fibMode) {
           finishFib(getY(e.clientY));
         } else if (trendLineMode && trendStart) {
           const time  = chartInstance.timeScale().coordinateToTime(getX(e.clientX));
@@ -1671,25 +1716,53 @@
       }, { passive: false });
     }
 
+    function _deactivateAllModes() {
+      fibMode = false; fibDragStart = null;
+      trendLineMode = false; trendStart = null;
+      zoomMode = false; zoomDragStart = null;
+      document.getElementById('fibBtn').classList.remove('active');
+      document.getElementById('trendBtn').classList.remove('active');
+      document.getElementById('zoomRubberBtn').classList.remove('active');
+      document.getElementById('chartOverlay').style.display = 'none';
+    }
+
     function toggleFibMode() {
       if (!chartInstance) return;
-      trendLineMode = false; trendStart = null;
-      document.getElementById('trendBtn').classList.remove('active');
-      fibMode = !fibMode;
+      const next = !fibMode;
+      _deactivateAllModes();
+      fibMode = next;
       document.getElementById('fibBtn').classList.toggle('active', fibMode);
       document.getElementById('chartOverlay').style.display = fibMode ? 'block' : 'none';
-      if (!fibMode) { fibDragStart = null; redrawCanvas(); }
+      if (!fibMode) redrawCanvas();
     }
 
     function toggleTrendLine() {
       if (!chartInstance) return;
-      fibMode = false; fibDragStart = null;
-      document.getElementById('fibBtn').classList.remove('active');
-      trendLineMode = !trendLineMode;
-      trendStart = null;
+      const next = !trendLineMode;
+      _deactivateAllModes();
+      trendLineMode = next;
       document.getElementById('trendBtn').classList.toggle('active', trendLineMode);
       document.getElementById('chartOverlay').style.display = trendLineMode ? 'block' : 'none';
       if (!trendLineMode) redrawCanvas();
+    }
+
+    function toggleZoomMode() {
+      if (!chartInstance) return;
+      const next = !zoomMode;
+      _deactivateAllModes();
+      zoomMode = next;
+      document.getElementById('zoomRubberBtn').classList.toggle('active', zoomMode);
+      document.getElementById('chartOverlay').style.display = zoomMode ? 'block' : 'none';
+    }
+
+    function zoomChart(factor) {
+      if (!chartInstance) return;
+      const ts = chartInstance.timeScale();
+      const range = ts.getVisibleLogicalRange();
+      if (!range) return;
+      const center = (range.from + range.to) / 2;
+      const newSpan = (range.to - range.from) * factor;
+      ts.setVisibleLogicalRange({ from: center - newSpan / 2, to: center + newSpan / 2 });
     }
 
     function clearAllDrawings() {
