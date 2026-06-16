@@ -174,9 +174,6 @@ def fetch_yf_chart(code, date_str):
             target_idx = i
             break
 
-    if target_idx is None:
-        return None
-
     def safe(lst, idx):
         try:
             v = lst[idx]
@@ -184,14 +181,45 @@ def fetch_yf_chart(code, date_str):
         except (IndexError, TypeError, ValueError):
             return None
 
+    # 確認 target_idx 是否有有效 OHLC
+    target_has_ohlc = (target_idx is not None
+                       and safe(opens, target_idx) and safe(closes, target_idx))
+
+    if not target_has_ohlc:
+        # 目標日 YF 尚未更新（OHLC 為 None）或不存在
+        # 往 target_idx 前（若有 target_idx）或整個列表中找最後一筆 date < target 的有效資料
+        search_end = (target_idx - 1) if target_idx is not None else len(timestamps) - 1
+        prev_valid_idx = None
+        for i in range(search_end, -1, -1):
+            if safe(opens, i) and safe(closes, i):
+                prev_valid_idx = i
+                break
+        if prev_valid_idx is None:
+            return None
+        prev_dt = datetime.fromtimestamp(timestamps[prev_valid_idx], tz=timezone(timedelta(hours=8)))
+        target_dt = datetime.strptime(date_str, "%Y%m%d").replace(tzinfo=timezone(timedelta(hours=8)))
+        days_gap = (target_dt - prev_dt).days
+        if 0 < days_gap <= 7:
+            prev_vols = [
+                safe(volumes, i)
+                for i in range(prev_valid_idx + 1)
+                if safe(volumes, i) and safe(volumes, i) > 0
+            ]
+            return {
+                "open": None, "high": None, "low": None, "close": None, "volume": 0,
+                "prev_close": safe(closes, prev_valid_idx),
+                "prev_high":  safe(highs,  prev_valid_idx),
+                "prev_low":   safe(lows,   prev_valid_idx),
+                "prev_vols":  prev_vols,
+                "all_closes": [],
+            }
+        return None
+
     o = safe(opens,   target_idx)
     h = safe(highs,   target_idx)
     l = safe(lows,    target_idx)
     c = safe(closes,  target_idx)
     v = safe(volumes, target_idx)
-
-    if not all([o, c]):
-        return None
 
     prev_vols = [
         safe(volumes, i)
