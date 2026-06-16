@@ -230,10 +230,27 @@ def fetch_tx(range_str="3y"):
     return {"code": "TX=F", "name": "台指期貨 (TX)", "currency": "TWD", "data": candles}
 
 
+_TW_INDUSTRY_CODES = {
+    "01": "水泥工業", "02": "食品工業", "03": "塑膠工業",
+    "04": "紡織纖維", "05": "電機機械", "06": "電器電纜",
+    "07": "化學工業", "08": "玻璃陶瓷", "09": "造紙工業",
+    "10": "鋼鐵工業", "11": "橡膠工業", "12": "汽車工業",
+    "13": "電子工業", "14": "建材營建業", "15": "航運業",
+    "16": "觀光餐旅", "17": "金融保險業", "18": "貿易百貨業",
+    "20": "其他業", "21": "化學生技醫療業", "22": "生技醫療業",
+    "23": "油電燃氣業", "24": "半導體業", "25": "電腦及週邊設備業",
+    "26": "光電業", "27": "通信網路業", "28": "電子零組件業",
+    "29": "電子通路業", "30": "資訊服務業", "31": "其他電子業",
+    "32": "文化創意業", "33": "農業科技業", "34": "電子商務業",
+    "35": "綠能環保業", "36": "數位雲端業", "37": "運動休閒業",
+    "38": "居家生活業",
+}
+
+
 def _fetch_tw_name(code):
-    """Try TWSE MIS real-time API for Chinese stock name. Returns None on failure."""
+    """Try TWSE MIS real-time API. Returns (name, industry) or (None, None)."""
     if not code.isdigit():
-        return None
+        return None, None
     for market in ("tse", "otc"):
         try:
             url = f"https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch={market}_{code}.tw&json=1"
@@ -242,48 +259,14 @@ def _fetch_tw_name(code):
                 d = json.loads(r.read())
             arr = d.get("msgArray") or []
             if arr and arr[0].get("n"):
-                return arr[0]["n"]
+                item = arr[0]
+                name = item["n"]
+                t_key = str(item.get("t") or "").strip().zfill(2)
+                industry = _TW_INDUSTRY_CODES.get(t_key, "")
+                return name, industry
         except Exception:
             continue
-    return None
-
-
-# Module-level cache: code → industry (Chinese). Populated once per warm container.
-_TW_INDUSTRY_MAP: dict = {}
-_TW_INDUSTRY_LOADED = False
-
-def _ensure_tw_industry_map():
-    global _TW_INDUSTRY_MAP, _TW_INDUSTRY_LOADED
-    if _TW_INDUSTRY_LOADED:
-        return
-    _TW_INDUSTRY_LOADED = True
-    sources = [
-        ("https://openapi.twse.com.tw/v1/opendata/t187ap03_L",
-         "公司代號", "產業別"),
-        ("https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap03_O",
-         "SecuritiesCompanyCode", "IndustryCategory"),
-    ]
-    for url, code_key, ind_key in sources:
-        try:
-            req = urllib.request.Request(
-                url, headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"})
-            with urllib.request.urlopen(req, timeout=8) as r:
-                items = json.loads(r.read())
-            for item in items:
-                c = (item.get(code_key) or "").strip()
-                ind = (item.get(ind_key) or "").strip()
-                if c and ind:
-                    _TW_INDUSTRY_MAP[c] = ind
-        except Exception:
-            pass
-
-
-def _fetch_tw_industry(code):
-    """Return Chinese industry name for a TW stock code, or None."""
-    if not code.isdigit():
-        return None
-    _ensure_tw_industry_map()
-    return _TW_INDUSTRY_MAP.get(code)
+    return None, None
 
 
 def _yf_symbol(code):
@@ -458,9 +441,8 @@ def fetch_chart(code, range_str="3mo", interval="1d", adj=False):
             except Exception:
                 pass
 
-    tw_name = _fetch_tw_name(code)
+    tw_name, tw_industry = _fetch_tw_name(code)
     yf_name = meta.get("longName") or meta.get("shortName") or code
-    tw_industry = _fetch_tw_industry(code)
     return {
         "code": code,
         "name": tw_name or yf_name,
