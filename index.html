@@ -738,6 +738,15 @@
     </div>
   </div>
 
+  <!-- 個股搜尋 -->
+  <div class="index-row">
+    <span class="index-row-label">個股搜尋</span>
+    <input id="stockSearchInput" type="text" placeholder="輸入股票代號" inputmode="numeric"
+      style="width:120px;padding:4px 8px;font-size:14px;border:1px solid var(--border);border-radius:6px;background:var(--input-bg);color:var(--text);"
+      onkeydown="if(event.key==='Enter') searchStock()" />
+    <button class="idx-btn" onclick="searchStock()">查詢</button>
+  </div>
+
   <!-- 指數快覽 -->
   <div class="index-row">
     <span class="index-row-label">指數快覽</span>
@@ -1077,6 +1086,12 @@
       loadDailyChart();
     }
 
+    function searchStock() {
+      const code = document.getElementById('stockSearchInput').value.trim();
+      if (!code) return;
+      openChart(code, code);
+    }
+
     function openIndexChart(sym, name) {
       prevCode = ''; prevName = '';
       currentCode = sym; currentName = name;
@@ -1193,6 +1208,10 @@
           const first = data.data[0].time;
           const last  = data.data[data.data.length - 1].time;
           document.getElementById('modalSubtitle').textContent = `日K ・ ${first} ～ ${last}`;
+          if (data.name && data.name !== currentCode) {
+            currentName = data.name;
+            document.getElementById('modalTitle').textContent = `${currentCode}　${data.name}`;
+          }
           renderTVChart(data.data, data.events || []);
         })
         .catch(() => {
