@@ -69,9 +69,6 @@ def fetch_all_stocks_latest():
             except (ValueError, TypeError):
                 change_val = None
 
-            # 除息/除權偵測：row[8] 原始值含非數字字元（X、除等）即為除權息日
-            orig_change = str(row[8]) if len(row) > 8 else ""
-            ex_div = any(c not in "0123456789.,+- " for c in orig_change)
             stocks[code] = {
                 "code": code,
                 "name": row[1].strip(),
@@ -81,7 +78,6 @@ def fetch_all_stocks_latest():
                 "low": _pf(row[6]),
                 "close": close_p,
                 "prev_close": round(close_p - change_val, 4) if (close_p and change_val is not None) else None,
-                "ex_div": ex_div,
             }
         except Exception:
             continue
@@ -264,9 +260,46 @@ def _fetch_exdiv_codes(date_str):
     return codes
 
 
+def _parse_mi_index_rows(rows, code_name_map, col_o, col_h, col_l, col_c, col_v, col_sign, col_diff):
+    """Parse stock rows from MI_INDEX into a dict. Supports old and new column layouts."""
+    stocks = {}
+    for row in rows:
+        try:
+            code = str(row[0]).strip()
+            if not code or not code[0].isdigit():
+                continue
+            o = _pf(row[col_o]); h = _pf(row[col_h])
+            l = _pf(row[col_l]); c = _pf(row[col_c])
+            v = _pf(row[col_v])
+            if not all([o, c, h, l, v]) or c <= 0:
+                continue
+            prev_close = None
+            try:
+                sign = str(row[col_sign]).strip()
+                diff = _pf(row[col_diff])
+                if diff is not None:
+                    # 新格式：color:green = 下跌；舊格式：▼ or "-" = 下跌
+                    is_down = ("color:green" in sign.lower() or "▼" in sign or sign == "-")
+                    prev_close = round(c + diff if is_down else c - diff, 4)
+            except Exception:
+                pass
+            stocks[code] = {
+                "code": code,
+                "name": code_name_map.get(code, str(row[1]).strip()),
+                "open": o, "high": h, "low": l, "close": c,
+                "volume": int(v),
+                "prev_close": prev_close,
+                "prev_high": None, "prev_low": None,
+                "prev_vols": [], "all_closes": [],
+            }
+        except Exception:
+            continue
+    return stocks
+
+
 def fetch_all_stocks_mi_index(code_name_map, date_str):
     """Fetch all stocks' OHLCV for a specific date via TWSE MI_INDEX.
-    單次 API call，比 YF 逐支抓快很多；只要 TWSE 有資料就優先走這裡。
+    支援舊格式(data9/data8)和新格式(tables陣列)。
     Returns same-format dict as fetch_all_stocks_historical, or {} on failure.
     """
     url = f"https://www.twse.com.tw/exchangeReport/MI_INDEX?response=json&date={date_str}&type=ALLBUT0999"
@@ -274,42 +307,39 @@ def fetch_all_stocks_mi_index(code_name_map, date_str):
         data = _get_json(url)
         if not data or data.get("stat") != "OK":
             return {}
-        stocks = {}
-        # data9 = 一般股票, data8 = ETF / 其他掛牌
-        for key in ("data9", "data8"):
-            for row in data.get(key, []):
-                try:
-                    code = str(row[0]).strip()
-                    if not code or not code[0].isdigit():
-                        continue
-                    o = _pf(row[4]);  h = _pf(row[5])
-                    l = _pf(row[6]);  c = _pf(row[7])
-                    v = _pf(row[2])
-                    if not all([o, c, h, l, v]) or c <= 0:
-                        continue
-                    # row[8]=漲跌符號(▲/▼), row[9]=漲跌價差 → 算前日收盤
-                    prev_close = None
-                    try:
-                        sign = str(row[8]).strip()
-                        diff = _pf(row[9])
-                        if diff is not None:
-                            prev_close = round(c + diff if ("▼" in sign or sign == "-") else c - diff, 4)
-                    except Exception:
-                        pass
-                    # 除息/除權：row[8]=漲跌符號含 X，或 row[9]=漲跌值含"除"
-                    ex_div = ("X" in str(row[8]).upper() or "除" in str(row[9]))
-                    stocks[code] = {
-                        "code": code,
-                        "name": code_name_map.get(code, str(row[1]).strip()),
-                        "open": o, "high": h, "low": l, "close": c,
-                        "volume": int(v),
-                        "prev_close": prev_close,
-                        "prev_high": None, "prev_low": None,
-                        "prev_vols": [], "all_closes": [],
-                        "ex_div": ex_div,
-                    }
-                except Exception:
+
+        # ── 新格式：tables 陣列（2025 年後 TWSE API 改版）──────────────────────
+        # tables[N] 中找個股交易表（data 筆數最多、含股票代號的那張）
+        # 新欄位順序：[0]code [1]name [2]volume [3]txn [4]turnover
+        #             [5]open [6]high [7]low [8]close [9]sign_html [10]diff
+        if data.get("tables"):
+            stock_rows = []
+            for t in data.get("tables", []):
+                if not isinstance(t, dict):
                     continue
+                rows = t.get("data", [])
+                # 個股交易表有 1000+ 筆，且第一欄是股票代號（純數字或含字母）
+                if len(rows) > 100 and rows and isinstance(rows[0], list) and str(rows[0][0]).strip()[:1].isalnum():
+                    stock_rows = rows
+                    break
+            if stock_rows:
+                return _parse_mi_index_rows(
+                    stock_rows, code_name_map,
+                    col_o=5, col_h=6, col_l=7, col_c=8,
+                    col_v=2, col_sign=9, col_diff=10
+                )
+
+        # ── 舊格式：data9 / data8 ────────────────────────────────────────────────
+        # 舊欄位順序：[0]code [1]name [2]volume [4]open [5]high [6]low [7]close [8]sign [9]diff
+        stocks = {}
+        for key in ("data9", "data8"):
+            rows = data.get(key, [])
+            if rows:
+                stocks.update(_parse_mi_index_rows(
+                    rows, code_name_map,
+                    col_o=4, col_h=5, col_l=6, col_c=7,
+                    col_v=2, col_sign=8, col_diff=9
+                ))
         return stocks
     except Exception:
         return {}
@@ -487,8 +517,7 @@ def screen(params):
             if tmp:
                 prev_mi_gap = tmp
                 break
-        # 從當日 all_stocks 的 ex_div 旗標判斷除權息（STOCK_DAY_ALL/MI_INDEX 原始欄位偵測）
-        exdiv_codes = {code for code, s in all_stocks.items() if s.get("ex_div", False)}
+        exdiv_codes = _fetch_exdiv_codes(actual_date)
 
     # ── Step 3b: 量能/MACD/真名/跳空 → 用 YF 逐支抓（30 workers，~11s for 1300 stocks）
     need_gap_monthly = (check_gap_up or check_gap_down) and not prev_mi_gap
