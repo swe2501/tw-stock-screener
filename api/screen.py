@@ -69,6 +69,9 @@ def fetch_all_stocks_latest():
             except (ValueError, TypeError):
                 change_val = None
 
+            # 除息/除權偵測：row[8] 原始值含非數字字元（X、除等）即為除權息日
+            orig_change = str(row[8]) if len(row) > 8 else ""
+            ex_div = any(c not in "0123456789.,+- " for c in orig_change)
             stocks[code] = {
                 "code": code,
                 "name": row[1].strip(),
@@ -78,6 +81,7 @@ def fetch_all_stocks_latest():
                 "low": _pf(row[6]),
                 "close": close_p,
                 "prev_close": round(close_p - change_val, 4) if (close_p and change_val is not None) else None,
+                "ex_div": ex_div,
             }
         except Exception:
             continue
@@ -292,6 +296,8 @@ def fetch_all_stocks_mi_index(code_name_map, date_str):
                             prev_close = round(c + diff if ("▼" in sign or sign == "-") else c - diff, 4)
                     except Exception:
                         pass
+                    # 除息/除權：row[8]=漲跌符號含 X，或 row[9]=漲跌值含"除"
+                    ex_div = ("X" in str(row[8]).upper() or "除" in str(row[9]))
                     stocks[code] = {
                         "code": code,
                         "name": code_name_map.get(code, str(row[1]).strip()),
@@ -300,6 +306,7 @@ def fetch_all_stocks_mi_index(code_name_map, date_str):
                         "prev_close": prev_close,
                         "prev_high": None, "prev_low": None,
                         "prev_vols": [], "all_closes": [],
+                        "ex_div": ex_div,
                     }
                 except Exception:
                     continue
@@ -470,22 +477,18 @@ def screen(params):
     prev_mi_gap: dict = {}
     exdiv_codes: set = set()
     if (check_gap_up or check_gap_down) and not is_historical:
-        # 同時抓前日 MI_INDEX 和當日除權除息清單（並行）
-        with ThreadPoolExecutor(max_workers=2) as ex:
-            def _find_prev_mi():
-                for delta in range(1, 8):
-                    prev_dt_obj = datetime.strptime(actual_date, "%Y%m%d") - timedelta(days=delta)
-                    if prev_dt_obj.weekday() >= 5:   # 跳過週六(5)、週日(6)
-                        continue
-                    prev_dt = prev_dt_obj.strftime("%Y%m%d")
-                    tmp = fetch_all_stocks_mi_index({}, prev_dt)
-                    if tmp:
-                        return tmp
-                return {}
-            f_mi   = ex.submit(_find_prev_mi)
-            f_exdiv = ex.submit(_fetch_exdiv_codes, actual_date)
-            prev_mi_gap  = f_mi.result()
-            exdiv_codes  = f_exdiv.result()
+        # 前一交易日 MI_INDEX（明確跳過週六日）
+        for delta in range(1, 8):
+            prev_dt_obj = datetime.strptime(actual_date, "%Y%m%d") - timedelta(days=delta)
+            if prev_dt_obj.weekday() >= 5:   # 跳過週六(5)、週日(6)
+                continue
+            prev_dt = prev_dt_obj.strftime("%Y%m%d")
+            tmp = fetch_all_stocks_mi_index({}, prev_dt)
+            if tmp:
+                prev_mi_gap = tmp
+                break
+        # 從當日 all_stocks 的 ex_div 旗標判斷除權息（STOCK_DAY_ALL/MI_INDEX 原始欄位偵測）
+        exdiv_codes = {code for code, s in all_stocks.items() if s.get("ex_div", False)}
 
     # ── Step 3b: 量能/MACD/真名/跳空 → 用 YF 逐支抓（30 workers，~11s for 1300 stocks）
     need_gap_monthly = (check_gap_up or check_gap_down) and not prev_mi_gap
