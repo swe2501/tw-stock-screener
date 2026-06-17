@@ -303,6 +303,63 @@ def _fetch_tw_industry(code):
     return ""
 
 
+def _fetch_twse_month(code, yyyymm):
+    """Fetch one month of OHLCV candles from TWSE STOCK_DAY. Returns list or []."""
+    url = (f"https://www.twse.com.tw/exchangeReport/STOCK_DAY"
+           f"?response=json&date={yyyymm}01&stockNo={code}")
+    try:
+        req = urllib.request.Request(url, headers=TWSE_HEADERS)
+        with urllib.request.urlopen(req, timeout=10) as r:
+            d = json.loads(r.read())
+        if d.get("stat") != "OK" or not d.get("data"):
+            return []
+        candles = []
+        for row in d["data"]:
+            try:
+                parts = row[0].split("/")
+                date_str = f"{int(parts[0])+1911}-{parts[1]}-{parts[2]}"
+                candles.append({
+                    "time":   date_str,
+                    "open":   round(float(row[3].replace(",", "")), 2),
+                    "high":   round(float(row[4].replace(",", "")), 2),
+                    "low":    round(float(row[5].replace(",", "")), 2),
+                    "close":  round(float(row[6].replace(",", "")), 2),
+                    "volume": int(row[1].replace(",", "")),
+                })
+            except Exception:
+                continue
+        return candles
+    except Exception:
+        return []
+
+
+def fetch_twse_chart(code, range_str="3mo"):
+    """Build daily chart from TWSE STOCK_DAY (months fetched in parallel).
+    Faster than YF for TW stocks. Returns sorted candle list or []."""
+    tz_offset = timedelta(hours=8)
+    now_dt = datetime.now(tz=timezone(tz_offset))
+    months_needed = {"1mo": 2, "3mo": 4, "6mo": 7, "1y": 13}.get(range_str, 4)
+    cutoff_dt = now_dt - timedelta(days=RANGE_DAYS.get(range_str, 95))
+    cutoff = cutoff_dt.strftime("%Y-%m-%d")
+
+    yyyymm_list = []
+    for i in range(months_needed):
+        m = now_dt.month - i
+        y = now_dt.year
+        while m <= 0:
+            m += 12
+            y -= 1
+        yyyymm_list.append(f"{y}{m:02d}")
+
+    all_candles = []
+    with ThreadPoolExecutor(max_workers=min(months_needed, 6)) as ex:
+        for rows in ex.map(_fetch_twse_month, [code] * months_needed, yyyymm_list):
+            all_candles.extend(rows)
+
+    all_candles.sort(key=lambda x: x["time"])
+    return [c for c in all_candles if c["time"] >= cutoff]
+
+
 def _yf_symbol(code):
     """Return Yahoo Finance symbol. Indices (^) and futures (=F) are used as-is."""
     if code.startswith("^") or "=" in code:
@@ -395,22 +452,45 @@ def fetch_chart(code, range_str="3mo", interval="1d", adj=False):
         if url_params_alt:
             attempts.append(f"https://{host}/v8/finance/chart/{encoded_sym}?{url_params_alt}")
 
-    # ── 所有外部請求並行發出：YF (x4) + TWSE 補充 + 公司名稱 + 產業別 ──────────
+    # ── 台股日K (range ≤ 1y)：TWSE 主路徑，與 name/industry 並行，完全不等 YF ──
+    use_twse_primary = (is_daily and is_tw_stock and not adj
+                        and range_str in ("1mo", "3mo", "6mo", "1y"))
+    if use_twse_primary:
+        with ThreadPoolExecutor(max_workers=3) as ex:
+            f_candles = ex.submit(fetch_twse_chart, code, range_str)
+            f_name    = ex.submit(_fetch_tw_name, code)
+            f_ind     = ex.submit(_fetch_tw_industry, code)
+            candles     = f_candles.result() or []
+            tw_name     = f_name.result()
+            tw_industry = f_ind.result() or ""
+
+        if candles:
+            return {
+                "code": code,
+                "name": tw_name or code,
+                "industry": tw_industry,
+                "currency": "TWD",
+                "data": candles,
+                "events": [],
+            }
+        # TWSE 失敗時 fallback 到 YF（保底）
+
+    # ── 其他情況（3y、還原日、外國股、指數）走 YF ────────────────────────────
     tasks = {}
     with ThreadPoolExecutor(max_workers=8) as ex:
         for url in attempts:
             tasks[ex.submit(_try_yf_url, url)] = ("yf", url)
         if is_daily and is_tw_stock:
             tasks[ex.submit(_twse_latest_candle, code)] = ("twse", None)
-        if code.isdigit():
+        if code.isdigit() and not use_twse_primary:
             tasks[ex.submit(_fetch_tw_name, code)]     = ("name", None)
             tasks[ex.submit(_fetch_tw_industry, code)] = ("ind",  None)
 
         best_result = None
         best_last_ts = 0
         twse_candle = None
-        tw_name = None
-        tw_industry = ""
+        tw_name = tw_name if use_twse_primary else None
+        tw_industry = tw_industry if use_twse_primary else ""
 
         for f in as_completed(tasks):
             kind, _ = tasks[f]
@@ -474,13 +554,11 @@ def fetch_chart(code, range_str="3mo", interval="1d", adj=False):
             "volume": int(v) if v else 0,
         })
 
-    # TWSE 最新一根 K（補 YF 延遲）
     last_yf = candles[-1]["time"] if candles else "0000-00-00"
     if twse_candle and twse_candle["time"] > last_yf:
         candles.append(twse_candle)
         candles.sort(key=lambda x: x["time"])
 
-    # Dividend / split events
     events = []
     if is_daily:
         raw_events = best_result.get("events") or {}
