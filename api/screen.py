@@ -473,8 +473,11 @@ def screen(params):
         # 同時抓前日 MI_INDEX 和當日除權除息清單（並行）
         with ThreadPoolExecutor(max_workers=2) as ex:
             def _find_prev_mi():
-                for delta in range(1, 6):
-                    prev_dt = (datetime.strptime(actual_date, "%Y%m%d") - timedelta(days=delta)).strftime("%Y%m%d")
+                for delta in range(1, 8):
+                    prev_dt_obj = datetime.strptime(actual_date, "%Y%m%d") - timedelta(days=delta)
+                    if prev_dt_obj.weekday() >= 5:   # 跳過週六(5)、週日(6)
+                        continue
+                    prev_dt = prev_dt_obj.strftime("%Y%m%d")
                     tmp = fetch_all_stocks_mi_index({}, prev_dt)
                     if tmp:
                         return tmp
