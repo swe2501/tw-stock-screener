@@ -452,17 +452,44 @@ def fetch_chart(code, range_str="3mo", interval="1d", adj=False):
         if url_params_alt:
             attempts.append(f"https://{host}/v8/finance/chart/{encoded_sym}?{url_params_alt}")
 
-    # ── 台股日K (range ≤ 1y)：TWSE 主路徑，與 name/industry 並行，完全不等 YF ──
+    # ── 台股日K (range ≤ 1y)：TWSE 主路徑，YF 並行只取 events（不阻塞）────────
     use_twse_primary = (is_daily and is_tw_stock and not adj
                         and range_str in ("1mo", "3mo", "6mo", "1y"))
     if use_twse_primary:
-        with ThreadPoolExecutor(max_workers=3) as ex:
-            f_candles = ex.submit(fetch_twse_chart, code, range_str)
-            f_name    = ex.submit(_fetch_tw_name, code)
-            f_ind     = ex.submit(_fetch_tw_industry, code)
-            candles     = f_candles.result() or []
-            tw_name     = f_name.result()
-            tw_industry = f_ind.result() or ""
+        ex = ThreadPoolExecutor(max_workers=4)
+        f_candles = ex.submit(fetch_twse_chart, code, range_str)
+        f_yf_ev   = ex.submit(_try_yf_url, attempts[0])   # 只取 events，不用 price
+        f_name    = ex.submit(_fetch_tw_name, code)
+        f_ind     = ex.submit(_fetch_tw_industry, code)
+
+        candles     = f_candles.result() or []
+        tw_name     = f_name.result()
+        tw_industry = f_ind.result() or ""
+
+        # TWSE 完成後最多再等 0.5s 拿 YF events；超時直接給空
+        events = []
+        try:
+            _, yf_r0 = f_yf_ev.result(timeout=0.5)
+            if yf_r0:
+                tz_offset = timedelta(hours=8)
+                raw_ev = yf_r0.get("events") or {}
+                for ts_str, div in (raw_ev.get("dividends") or {}).items():
+                    try:
+                        dt = datetime.fromtimestamp(int(ts_str), tz=timezone(tz_offset))
+                        events.append({"date": dt.strftime("%Y-%m-%d"), "type": "div",
+                                       "amount": round(float(div.get("amount", 0)), 4)})
+                    except Exception:
+                        pass
+                for ts_str, sp in (raw_ev.get("splits") or {}).items():
+                    try:
+                        dt = datetime.fromtimestamp(int(ts_str), tz=timezone(tz_offset))
+                        events.append({"date": dt.strftime("%Y-%m-%d"), "type": "split",
+                                       "ratio": f"{sp.get('numerator',0)}/{sp.get('denominator',1)}"})
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+        ex.shutdown(wait=False)  # 不阻塞等 YF；YF 仍在跑的話讓它背景結束
 
         if candles:
             return {
@@ -471,7 +498,7 @@ def fetch_chart(code, range_str="3mo", interval="1d", adj=False):
                 "industry": tw_industry,
                 "currency": "TWD",
                 "data": candles,
-                "events": [],
+                "events": events,
             }
         # TWSE 失敗時 fallback 到 YF（保底）
 
