@@ -310,6 +310,57 @@ def _yf_symbol(code):
     return f"{code}.TW"
 
 
+def _twse_latest_candle(code_str):
+    """Fetch the most recent TWSE STOCK_DAY candle for a TW stock."""
+    tz_offset = timedelta(hours=8)
+    now_dt = datetime.now(tz=timezone(tz_offset))
+    for delta in (0, -1):
+        m = now_dt.month + delta
+        y = now_dt.year
+        if m < 1:
+            m, y = 12, y - 1
+        url = (f"https://www.twse.com.tw/exchangeReport/STOCK_DAY"
+               f"?response=json&date={y}{m:02d}01&stockNo={code_str}")
+        try:
+            req = urllib.request.Request(url, headers=TWSE_HEADERS)
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                d = json.loads(resp.read())
+            if d.get("stat") != "OK":
+                continue
+            rows = d.get("data") or []
+            if not rows:
+                continue
+            row = rows[-1]
+            parts = row[0].split("/")
+            twse_date = f"{int(parts[0])+1911}-{parts[1]}-{parts[2]}"
+            return {
+                "time":   twse_date,
+                "open":   round(float(row[3].replace(",", "")), 2),
+                "high":   round(float(row[4].replace(",", "")), 2),
+                "low":    round(float(row[5].replace(",", "")), 2),
+                "close":  round(float(row[6].replace(",", "")), 2),
+                "volume": int(row[1].replace(",", "")),
+            }
+        except Exception:
+            continue
+    return None
+
+
+def _try_yf_url(url):
+    """Single YF chart request. Returns (last_ts, result0) or (0, None)."""
+    try:
+        req = urllib.request.Request(url, headers=YF_HEADERS)
+        with urllib.request.urlopen(req, timeout=10) as r:
+            d = json.loads(r.read())
+        result = d.get("chart", {}).get("result") or []
+        if not result:
+            return 0, None
+        ts = result[0].get("timestamp") or []
+        return (max(ts) if ts else 0), result[0]
+    except Exception:
+        return 0, None
+
+
 def fetch_chart(code, range_str="3mo", interval="1d", adj=False):
     # TX=F daily → TAIFEX annual ZIPs + TWII proxy
     if code == "TX=F" and interval == "1d":
@@ -344,23 +395,40 @@ def fetch_chart(code, range_str="3mo", interval="1d", adj=False):
         if url_params_alt:
             attempts.append(f"https://{host}/v8/finance/chart/{encoded_sym}?{url_params_alt}")
 
-    best_result = None
-    best_last_ts = 0
-    for url in attempts:
-        try:
-            req = urllib.request.Request(url, headers=YF_HEADERS)
-            with urllib.request.urlopen(req, timeout=10) as r:
-                d = json.loads(r.read())
-            result = d.get("chart", {}).get("result") or []
-            if not result:
+    # ── 所有外部請求並行發出：YF (x4) + TWSE 補充 + 公司名稱 + 產業別 ──────────
+    tasks = {}
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        for url in attempts:
+            tasks[ex.submit(_try_yf_url, url)] = ("yf", url)
+        if is_daily and is_tw_stock:
+            tasks[ex.submit(_twse_latest_candle, code)] = ("twse", None)
+        if code.isdigit():
+            tasks[ex.submit(_fetch_tw_name, code)]     = ("name", None)
+            tasks[ex.submit(_fetch_tw_industry, code)] = ("ind",  None)
+
+        best_result = None
+        best_last_ts = 0
+        twse_candle = None
+        tw_name = None
+        tw_industry = ""
+
+        for f in as_completed(tasks):
+            kind, _ = tasks[f]
+            try:
+                val = f.result()
+            except Exception:
                 continue
-            ts = result[0].get("timestamp") or []
-            last_ts = max(ts) if ts else 0
-            if last_ts > best_last_ts:
-                best_last_ts = last_ts
-                best_result = result[0]
-        except Exception:
-            continue
+            if kind == "yf":
+                last_ts, r0 = val
+                if last_ts > best_last_ts:
+                    best_last_ts = last_ts
+                    best_result = r0
+            elif kind == "twse":
+                twse_candle = val
+            elif kind == "name":
+                tw_name = val
+            elif kind == "ind":
+                tw_industry = val or ""
 
     if not best_result:
         return None
@@ -374,7 +442,6 @@ def fetch_chart(code, range_str="3mo", interval="1d", adj=False):
     closes  = q.get("close")  or []
     volumes = q.get("volume") or []
 
-    # Adjusted close for 還原日 mode
     adjcloses = []
     if adj and is_daily:
         adjcloses = ((best_result.get("indicators", {}).get("adjclose") or [{}])[0]
@@ -407,83 +474,32 @@ def fetch_chart(code, range_str="3mo", interval="1d", adj=False):
             "volume": int(v) if v else 0,
         })
 
-    # TWSE supplement: only for daily TW stocks (Yahoo Finance CDN may lag)
-    if is_daily and is_tw_stock:
-        def _twse_latest_candle(code_str):
-            now_dt = datetime.now(tz=timezone(tz_offset))
-            for delta in (0, -1):
-                m = now_dt.month + delta
-                y = now_dt.year
-                if m < 1:
-                    m, y = 12, y - 1
-                yyyymm01 = f"{y}{m:02d}01"
-                url = (f"https://www.twse.com.tw/exchangeReport/STOCK_DAY"
-                       f"?response=json&date={yyyymm01}&stockNo={code_str}")
-                try:
-                    req = urllib.request.Request(url, headers=TWSE_HEADERS)
-                    with urllib.request.urlopen(req, timeout=10) as resp:
-                        d = json.loads(resp.read())
-                    if d.get("stat") != "OK":
-                        continue
-                    rows = d.get("data") or []
-                    if not rows:
-                        continue
-                    row = rows[-1]
-                    parts = row[0].split("/")
-                    twse_date = f"{int(parts[0])+1911}-{parts[1]}-{parts[2]}"
-                    return {
-                        "time":   twse_date,
-                        "open":   round(float(row[3].replace(",", "")), 2),
-                        "high":   round(float(row[4].replace(",", "")), 2),
-                        "low":    round(float(row[5].replace(",", "")), 2),
-                        "close":  round(float(row[6].replace(",", "")), 2),
-                        "volume": int(row[1].replace(",", "")),
-                    }
-                except Exception:
-                    continue
-            return None
+    # TWSE 最新一根 K（補 YF 延遲）
+    last_yf = candles[-1]["time"] if candles else "0000-00-00"
+    if twse_candle and twse_candle["time"] > last_yf:
+        candles.append(twse_candle)
+        candles.sort(key=lambda x: x["time"])
 
-        last_yf = candles[-1]["time"] if candles else "0000-00-00"
-        twse_candle = _twse_latest_candle(code)
-        if twse_candle and twse_candle["time"] > last_yf:
-            candles.append(twse_candle)
-            candles.sort(key=lambda x: x["time"])
-
-    # Parse dividend and split events from YF response
+    # Dividend / split events
     events = []
-    if is_daily and best_result:
+    if is_daily:
         raw_events = best_result.get("events") or {}
-        tz_offset = timedelta(hours=8)
         for ts_str, div in (raw_events.get("dividends") or {}).items():
             try:
                 dt = datetime.fromtimestamp(int(ts_str), tz=timezone(tz_offset))
-                events.append({
-                    "date": dt.strftime("%Y-%m-%d"),
-                    "type": "div",
-                    "amount": round(float(div.get("amount", 0)), 4),
-                })
+                events.append({"date": dt.strftime("%Y-%m-%d"), "type": "div",
+                               "amount": round(float(div.get("amount", 0)), 4)})
             except Exception:
                 pass
         for ts_str, sp in (raw_events.get("splits") or {}).items():
             try:
                 dt = datetime.fromtimestamp(int(ts_str), tz=timezone(tz_offset))
-                events.append({
-                    "date": dt.strftime("%Y-%m-%d"),
-                    "type": "split",
-                    "ratio": f"{sp.get('numerator',0)}/{sp.get('denominator',1)}",
-                })
+                events.append({"date": dt.strftime("%Y-%m-%d"), "type": "split",
+                               "ratio": f"{sp.get('numerator',0)}/{sp.get('denominator',1)}"})
             except Exception:
                 pass
 
     yf_name = meta.get("longName") or meta.get("shortName") or code
-    if code.isdigit():
-        with ThreadPoolExecutor(max_workers=2) as ex:
-            f_name = ex.submit(_fetch_tw_name, code)
-            f_ind  = ex.submit(_fetch_tw_industry, code)
-            tw_name     = f_name.result()
-            tw_industry = f_ind.result()
-    else:
-        tw_name, tw_industry = None, ""
     return {
         "code": code,
         "name": tw_name or yf_name,
