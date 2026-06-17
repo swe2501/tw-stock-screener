@@ -505,6 +505,7 @@ def screen(params):
 
     # ── Step 3a: 跳空篩選 → 一次抓前一日 MI_INDEX，取代逐支 STOCK_DAY ────────
     prev_mi_gap: dict = {}
+    prev_dt_for_gap: str = ""
     exdiv_codes: set = set()
     if (check_gap_up or check_gap_down) and not is_historical:
         # 前一交易日 MI_INDEX（明確跳過週六日）
@@ -516,6 +517,7 @@ def screen(params):
             tmp = fetch_all_stocks_mi_index({}, prev_dt)
             if tmp:
                 prev_mi_gap = tmp
+                prev_dt_for_gap = prev_dt
                 break
         exdiv_codes = _fetch_exdiv_codes(actual_date)
 
@@ -537,18 +539,25 @@ def screen(params):
                 if yf:
                     monthly_yf[code] = yf
 
-    # ── Step 3c: 補抓 prev_mi_gap 未涵蓋的個股（停牌復牌/API差異），避免 prev_low=None 放行 ──
+    # ── Step 3c: 補抓 prev_mi_gap 未涵蓋的個股 → TWSE STOCK_DAY（不依賴 YF）──
     if (check_gap_up or check_gap_down) and prev_mi_gap and not is_historical:
         missing = [c for c in candidates if c not in prev_mi_gap and c not in monthly_yf]
-        if missing:
-            def fetch_yf_miss(code):
-                return code, fetch_yf_chart(code, actual_date)
+        if missing and prev_dt_for_gap:
+            yyyymm = prev_dt_for_gap[:6]
+
+            def fetch_twse_prev(code):
+                rows = fetch_stock_month(code, yyyymm)
+                for row in reversed(rows):
+                    if row["date"] == prev_dt_for_gap:
+                        return code, {"prev_high": row["high"], "prev_low": row["low"]}
+                return code, None
+
             with ThreadPoolExecutor(max_workers=30) as ex:
-                futs = [ex.submit(fetch_yf_miss, c) for c in missing]
+                futs = [ex.submit(fetch_twse_prev, c) for c in missing]
                 for f in as_completed(futs):
-                    code, yf = f.result()
-                    if yf:
-                        monthly_yf[code] = yf
+                    code, twse_prev = f.result()
+                    if twse_prev:
+                        monthly_yf[code] = twse_prev
 
     # ── Step 4: Apply gap_up and volume MA filters ────────────────────────────
     results = []
