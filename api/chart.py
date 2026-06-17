@@ -258,7 +258,6 @@ def _fetch_tw_name(code):
         return None
     if code in _NAME_CACHE:
         return _NAME_CACHE[code]
-    # tse 和 otc 並行，取先回來的那個
     def _try(market):
         try:
             url = f"https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch={market}_{code}.tw&json=1"
@@ -269,9 +268,16 @@ def _fetch_tw_name(code):
             return arr[0]["n"] if arr and arr[0].get("n") else None
         except Exception:
             return None
-    with ThreadPoolExecutor(max_workers=2) as ex:
-        results = list(ex.map(_try, ("tse", "otc")))
-    name = results[0] or results[1]
+    # tse 和 otc 並行，取最先成功的那個，不等另一個
+    ex = ThreadPoolExecutor(max_workers=2)
+    futures = {ex.submit(_try, m) for m in ("tse", "otc")}
+    name = None
+    for f in as_completed(futures):
+        result = f.result()
+        if result:
+            name = result
+            break
+    ex.shutdown(wait=False)
     if name:
         _NAME_CACHE[code] = name
     return name
@@ -463,13 +469,14 @@ def fetch_chart(code, range_str="3mo", interval="1d", adj=False):
         f_ind     = ex.submit(_fetch_tw_industry, code)
 
         candles = f_candles.result() or []
-        # name/industry 最多再等 1.5s；超時直接用空值，不阻塞 candles
+        # name/industry 與 candles 並行，TWSE candles 完成後最多再等 4s
+        # （兩者已在 candles 跑的同時同步執行，實際等待遠低於 4s）
         try:
-            tw_name = f_name.result(timeout=1.5)
+            tw_name = f_name.result(timeout=4.0)
         except Exception:
             tw_name = None
         try:
-            tw_industry = f_ind.result(timeout=1.5) or ""
+            tw_industry = f_ind.result(timeout=4.0) or ""
         except Exception:
             tw_industry = ""
 
