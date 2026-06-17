@@ -242,6 +242,24 @@ def fetch_yf_chart(code, date_str):
     }
 
 
+def _fetch_exdiv_codes(date_str):
+    """Return set of stock codes going ex-dividend/ex-right on date_str (YYYYMMDD).
+    Prevents gap-down false positives caused by ex-dividend price adjustment."""
+    codes = set()
+    # TWSE 除權除息資料
+    url = f"https://www.twse.com.tw/rwd/zh/exRight/TWS1B?startDate={date_str}&endDate={date_str}&response=json"
+    try:
+        data = _get_json(url)
+        if data and data.get("stat") == "OK":
+            for row in (data.get("data") or []):
+                c = str(row[0]).strip()
+                if c and c[0].isdigit():
+                    codes.add(c)
+    except Exception:
+        pass
+    return codes
+
+
 def fetch_all_stocks_mi_index(code_name_map, date_str):
     """Fetch all stocks' OHLCV for a specific date via TWSE MI_INDEX.
     單次 API call，比 YF 逐支抓快很多；只要 TWSE 有資料就優先走這裡。
@@ -450,13 +468,21 @@ def screen(params):
 
     # ── Step 3a: 跳空篩選 → 一次抓前一日 MI_INDEX，取代逐支 STOCK_DAY ────────
     prev_mi_gap: dict = {}
+    exdiv_codes: set = set()
     if (check_gap_up or check_gap_down) and not is_historical:
-        for delta in range(1, 6):   # 往前找最近一個交易日（跳過假日）
-            prev_dt = (datetime.strptime(actual_date, "%Y%m%d") - timedelta(days=delta)).strftime("%Y%m%d")
-            tmp = fetch_all_stocks_mi_index({}, prev_dt)
-            if tmp:
-                prev_mi_gap = tmp
-                break
+        # 同時抓前日 MI_INDEX 和當日除權除息清單（並行）
+        with ThreadPoolExecutor(max_workers=2) as ex:
+            def _find_prev_mi():
+                for delta in range(1, 6):
+                    prev_dt = (datetime.strptime(actual_date, "%Y%m%d") - timedelta(days=delta)).strftime("%Y%m%d")
+                    tmp = fetch_all_stocks_mi_index({}, prev_dt)
+                    if tmp:
+                        return tmp
+                return {}
+            f_mi   = ex.submit(_find_prev_mi)
+            f_exdiv = ex.submit(_fetch_exdiv_codes, actual_date)
+            prev_mi_gap  = f_mi.result()
+            exdiv_codes  = f_exdiv.result()
 
     # ── Step 3b: 量能/MACD/真名/跳空 → 用 YF 逐支抓（30 workers，~11s for 1300 stocks）
     need_gap_monthly = (check_gap_up or check_gap_down) and not prev_mi_gap
@@ -518,8 +544,10 @@ def screen(params):
                 if round(l - prev_high, 4) < round(gap_up_min, 4):
                     continue
 
-        # 跳空向下：今日最高 < 前日最低
+        # 跳空向下：今日最高 < 前日最低（排除除權除息造成的假跳空）
         if check_gap_down:
+            if code in exdiv_codes:
+                continue
             if prev_low is None or round(h, 4) >= round(prev_low, 4):
                 continue
             if gap_down_min > 0:
