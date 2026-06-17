@@ -508,8 +508,8 @@ def screen(params):
     prev_dt_for_gap: str = ""
     exdiv_codes: set = set()
     if (check_gap_up or check_gap_down) and not is_historical:
-        # 前一交易日 MI_INDEX（明確跳過週六日）
-        for delta in range(1, 8):
+        # 前一交易日 MI_INDEX（明確跳過週六日，最多往回找 20 天涵蓋農曆新年連假）
+        for delta in range(1, 20):
             prev_dt_obj = datetime.strptime(actual_date, "%Y%m%d") - timedelta(days=delta)
             if prev_dt_obj.weekday() >= 5:   # 跳過週六(5)、週日(6)
                 continue
