@@ -477,7 +477,7 @@ _IND_CACHE:  dict = {}
 
 def _fetch_tw_name(code):
     """Try TWSE MIS real-time API for Chinese stock name. Returns name or None."""
-    if not code.isdigit():
+    if not code or not code[0].isdigit():   # 排除 ^TWII、TX=F 等，允許含字母的 ETF (00633L)
         return None
     if code in _NAME_CACHE:
         return _NAME_CACHE[code]
@@ -508,7 +508,7 @@ def _fetch_tw_name(code):
 
 def _fetch_tw_industry(code):
     """Return Chinese industry name for a TW listed stock (static lookup, no API)."""
-    if not code.isdigit():
+    if not code or not code[0].isdigit():
         return ""
     if code in _IND_CACHE:
         return _IND_CACHE[code]
@@ -733,7 +733,7 @@ def fetch_chart(code, range_str="3mo", interval="1d", adj=False):
             tasks[ex.submit(_try_yf_url, url)] = ("yf", url)
         if is_daily and is_tw_stock:
             tasks[ex.submit(_twse_latest_candle, code)] = ("twse", None)
-        if code.isdigit() and not use_twse_primary:
+        if is_tw_stock and not use_twse_primary:
             tasks[ex.submit(_fetch_tw_name, code)]     = ("name", None)
             tasks[ex.submit(_fetch_tw_industry, code)] = ("ind",  None)
 
