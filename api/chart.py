@@ -20,7 +20,7 @@ TWSE_HEADERS = {
     "Referer": "https://www.twse.com.tw/",
 }
 
-RANGE_DAYS = {"1mo": 35, "3mo": 95, "6mo": 185, "1y": 370, "3y": 1100}
+RANGE_DAYS = {"1mo": 35, "3mo": 95, "6mo": 185, "1y": 370, "2y": 730, "3y": 1100}
 YF_HOSTS = ["query1.finance.yahoo.com", "query2.finance.yahoo.com"]
 
 def _parse_taifex_chunk(content):
