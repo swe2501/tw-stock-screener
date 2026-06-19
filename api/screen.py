@@ -422,32 +422,27 @@ def _prev_month(yyyymm):
     return f"{y}{m:02d}"
 
 
-def fetch_yf_history_years(code, years):
-    """Fetch daily OHLCV for N years from Yahoo Finance. Returns list of {open, close, volume} or []."""
-    url = (f"https://query1.finance.yahoo.com/v8/finance/chart/{code}.TW"
-           f"?interval=1d&range={int(years)}y")
-    try:
-        data = _get_json(url, headers=YF_HEADERS)
-        result = data.get("chart", {}).get("result") or []
-        if not result:
-            return []
-        r0 = result[0]
-        quotes = (r0.get("indicators", {}).get("quote") or [{}])[0]
-        opens   = quotes.get("open")   or []
-        closes  = quotes.get("close")  or []
-        volumes = quotes.get("volume") or []
-        rows = []
-        for i in range(len(opens)):
-            try:
-                o = opens[i]; c = closes[i]; v = volumes[i]
-                if o is None or c is None or v is None or float(v) <= 0:
-                    continue
-                rows.append({"open": float(o), "close": float(c), "volume": float(v)})
-            except (IndexError, TypeError, ValueError):
-                continue
-        return rows
-    except Exception:
-        return []
+def fetch_twse_history_years(code, years):
+    """Fetch N years of daily OHLCV from TWSE STOCK_DAY (monthly, cached).
+    Returns [{open, close, volume}, ...] sorted ascending. Uses existing fetch_stock_month cache."""
+    now = datetime.now()
+    yyyymm = now.strftime("%Y%m")
+    months_needed = years * 12 + 2  # +2 buffer for partial current month
+
+    all_rows = []
+    for _ in range(months_needed):
+        for row in fetch_stock_month(code, yyyymm):
+            if row.get("open") and row.get("close") and row.get("volume"):
+                all_rows.append(row)
+        yyyymm = _prev_month(yyyymm)
+
+    seen = set()
+    result = []
+    for row in sorted(all_rows, key=lambda r: r["date"]):
+        if row["date"] not in seen:
+            seen.add(row["date"])
+            result.append({"open": row["open"], "close": row["close"], "volume": row["volume"]})
+    return result
 
 
 def has_vol_black_event(rows, mult):
@@ -742,14 +737,15 @@ def screen(params):
 
         results.append(item)
 
-    # ── Step 5: 無放量黑棒篩選（需逐支抓多年歷史，僅在有候選股時執行）──────────
+    # ── Step 5: 無放量黑棒篩選（TWSE STOCK_DAY 逐月，有 5 分鐘 cache）─────────
     if no_black_years > 0 and no_black_mult > 0 and results:
         def _check_no_black(code):
-            rows = fetch_yf_history_years(code, no_black_years)
+            rows = fetch_twse_history_years(code, no_black_years)
             return code, has_vol_black_event(rows, no_black_mult)
 
         clean = set()
-        with ThreadPoolExecutor(max_workers=30) as ex:
+        # 10 workers：每支股票需串行抓 N*12 個月，不宜對 TWSE 過度並發
+        with ThreadPoolExecutor(max_workers=10) as ex:
             futs = {ex.submit(_check_no_black, item["code"]): item["code"] for item in results}
             for f in as_completed(futs):
                 code, had_event = f.result()
