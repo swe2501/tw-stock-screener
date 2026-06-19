@@ -422,6 +422,54 @@ def _prev_month(yyyymm):
     return f"{y}{m:02d}"
 
 
+def fetch_yf_history_years(code, years):
+    """Fetch daily OHLCV for N years from Yahoo Finance. Returns list of {open, close, volume} or []."""
+    url = (f"https://query1.finance.yahoo.com/v8/finance/chart/{code}.TW"
+           f"?interval=1d&range={int(years)}y")
+    try:
+        data = _get_json(url, headers=YF_HEADERS)
+        result = data.get("chart", {}).get("result") or []
+        if not result:
+            return []
+        r0 = result[0]
+        quotes = (r0.get("indicators", {}).get("quote") or [{}])[0]
+        opens   = quotes.get("open")   or []
+        closes  = quotes.get("close")  or []
+        volumes = quotes.get("volume") or []
+        rows = []
+        for i in range(len(opens)):
+            try:
+                o = opens[i]; c = closes[i]; v = volumes[i]
+                if o is None or c is None or v is None or float(v) <= 0:
+                    continue
+                rows.append({"open": float(o), "close": float(c), "volume": float(v)})
+            except (IndexError, TypeError, ValueError):
+                continue
+        return rows
+    except Exception:
+        return []
+
+
+def has_vol_black_event(rows, mult):
+    """Return True if any day in rows is a 放量黑棒: close < open AND volume >= mult * max(MA5, MA10).
+    Uses preceding-day volumes only (rolling window), skips first 5 bars (no baseline yet)."""
+    if not rows or mult <= 0:
+        return False
+    vols = [r["volume"] for r in rows]
+    for i, row in enumerate(rows):
+        if row["close"] >= row["open"]:
+            continue
+        prev = [vols[j] for j in range(max(0, i - 10), i) if vols[j] > 0]
+        if len(prev) < 5:
+            continue
+        ma5  = sum(prev[-5:]) / 5
+        ma10 = sum(prev) / len(prev) if len(prev) >= 10 else None
+        max_ma = max(x for x in [ma5, ma10] if x is not None)
+        if row["volume"] >= max_ma * mult:
+            return True
+    return False
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Main screener
 # ─────────────────────────────────────────────────────────────────────────────
@@ -441,6 +489,8 @@ def screen(params):
     check_macd_gold  = bool(params.get("macd_golden", False))
     check_zhenming1  = bool(params.get("zhenming1", False))
     check_zhenming2  = bool(params.get("zhenming2", False))
+    no_black_years   = min(int(params.get("no_black_years") or 0), 10)  # cap at 10y
+    no_black_mult    = float(params.get("no_black_mult") or 0)
 
     # ── Step 1: Always fetch latest TWSE data (for stock list + latest date) ──
     latest_stocks, latest_date = fetch_all_stocks_latest()
@@ -691,6 +741,21 @@ def screen(params):
         if vol_ratio is not None: item["vol_ratio"] = round(vol_ratio, 2)
 
         results.append(item)
+
+    # ── Step 5: 無放量黑棒篩選（需逐支抓多年歷史，僅在有候選股時執行）──────────
+    if no_black_years > 0 and no_black_mult > 0 and results:
+        def _check_no_black(code):
+            rows = fetch_yf_history_years(code, no_black_years)
+            return code, has_vol_black_event(rows, no_black_mult)
+
+        clean = set()
+        with ThreadPoolExecutor(max_workers=30) as ex:
+            futs = {ex.submit(_check_no_black, item["code"]): item["code"] for item in results}
+            for f in as_completed(futs):
+                code, had_event = f.result()
+                if not had_event:
+                    clean.add(code)
+        results = [item for item in results if item["code"] in clean]
 
     results.sort(key=lambda x: x.get("candle_pct", 0), reverse=True)
 

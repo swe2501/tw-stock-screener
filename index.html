@@ -796,6 +796,20 @@
         </div>
 
         <div class="field">
+          <label>無放量黑棒篩選</label>
+          <div class="label-hint">排除過去 N 年曾出現 M 倍以上放量黑棒的股票</div>
+          <div style="display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap;">
+            <span style="font-size:13px;color:var(--text-muted);">過去</span>
+            <input type="number" id="no_black_years" min="1" max="10" step="1" placeholder="年"
+              style="width:50px;padding:4px 6px;font-size:13px;border:1px solid var(--border);border-radius:4px;background:var(--input-bg);color:var(--text);" />
+            <span style="font-size:13px;color:var(--text-muted);">年，無</span>
+            <input type="number" id="no_black_mult" min="0.5" step="0.1" placeholder="倍"
+              style="width:55px;padding:4px 6px;font-size:13px;border:1px solid var(--border);border-radius:4px;background:var(--input-bg);color:var(--text);" />
+            <span style="font-size:13px;color:var(--text-muted);">倍放量黑棒</span>
+          </div>
+        </div>
+
+        <div class="field">
           <label>產業別</label>
           <div class="label-hint">篩選特定產業（對結果即時過濾）</div>
           <select id="industry_filter" class="form-select" onchange="filterAndRender()">
@@ -1040,6 +1054,8 @@
       const macdGolden = document.getElementById('macd_golden').checked;
       const zhenming1 = document.getElementById('zhenming1').checked;
       const zhenming2 = document.getElementById('zhenming2').checked;
+      const noBlackYears = parseInt(document.getElementById('no_black_years').value) || 0;
+      const noBlackMult  = parseFloat(document.getElementById('no_black_mult').value) || 0;
       hasVolFilter    = volMult > 0 || shrinkMult > 0;
       hasShrinkFilter = shrinkMult > 0 && volMult === 0;
 
@@ -1053,6 +1069,8 @@
       let hint = isHistorical
         ? `正在取得 ${dateVal} 資料，請稍候...`
         : '正在向台灣證交所取得最新交易日資料...';
+      if (noBlackYears > 0 && noBlackMult > 0)
+        hint += `（含 ${noBlackYears} 年無放量黑棒篩選，需額外 10～30 秒）`;
       showStatus(`<div class="alert alert-info">&#8987; ${hint}</div>`);
 
       const body = {
@@ -1069,6 +1087,8 @@
         macd_golden: macdGolden,
         zhenming1: zhenming1,
         zhenming2: zhenming2,
+        no_black_years: noBlackYears,
+        no_black_mult:  noBlackMult,
       };
 
       fetch('/api/screen', {
