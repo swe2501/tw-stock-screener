@@ -461,7 +461,8 @@ def _batch_check_no_black(result_items, years, mult):
     for code in codes:
         rows_by_date = stock_rows[code]
         if not rows_by_date:
-            continue  # 取不到資料 → 保守處理：排除
+            clean.add(code)  # 取不到資料 → 無法證明有放量黑棒 → 放行
+            continue
         ohlcv = [
             {"open": r["open"], "close": r["close"], "volume": r["volume"]}
             for r in sorted(rows_by_date.values(), key=lambda r: r["date"])
