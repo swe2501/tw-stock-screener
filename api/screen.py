@@ -458,10 +458,12 @@ def _batch_check_no_black(result_items, years, mult):
 
     # 逐支判斷
     clean = set()
+    no_data = set()  # 取不到資料、無法驗證的 codes
     for code in codes:
         rows_by_date = stock_rows[code]
         if not rows_by_date:
-            clean.add(code)  # 取不到資料 → 無法證明有放量黑棒 → 放行
+            clean.add(code)    # 無法證明有放量黑棒 → 放行
+            no_data.add(code)  # 標記為資料缺失
             continue
         ohlcv = [
             {"open": r["open"], "close": r["close"], "volume": r["volume"]}
@@ -469,7 +471,7 @@ def _batch_check_no_black(result_items, years, mult):
         ]
         if not has_vol_black_event(ohlcv, mult):
             clean.add(code)
-    return clean
+    return clean, no_data
 
 
 def has_vol_black_event(rows, mult):
@@ -766,8 +768,12 @@ def screen(params):
 
     # ── Step 5: 無放量黑棒篩選（TWSE STOCK_DAY，(code×month) 打平並行）────────
     if no_black_years > 0 and no_black_mult > 0 and results:
-        clean = _batch_check_no_black(results, no_black_years, no_black_mult)
+        clean, no_data = _batch_check_no_black(results, no_black_years, no_black_mult)
         results = [item for item in results if item["code"] in clean]
+        # 標記拿不到歷史資料、無法驗證的股票
+        for item in results:
+            if item["code"] in no_data:
+                item.setdefault("data_missing", []).append("no_black")
 
     results.sort(key=lambda x: x.get("candle_pct", 0), reverse=True)
 

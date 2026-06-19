@@ -330,6 +330,10 @@
     }
 
     .code-cell a:hover { color: var(--accent-hover); text-decoration: underline; }
+    .data-missing-badge {
+      margin-left: 4px; font-size: 11px; color: #f39c12;
+      cursor: default; vertical-align: middle;
+    }
 
     .name-cell {
       color: var(--text);
@@ -1203,7 +1207,12 @@
 
         return `
           <tr onclick="openChart('${s.code}','${s.name.replace(/'/g,"\\'")}')">
-            <td class="code-cell"><a href="https://www.twse.com.tw/zh/trading/historical/stock-day.html?stockNo=${s.code}" target="_blank" onclick="event.stopPropagation()">${s.code}</a></td>
+            <td class="code-cell">
+              <a href="https://www.twse.com.tw/zh/trading/historical/stock-day.html?stockNo=${s.code}" target="_blank" onclick="event.stopPropagation()">${s.code}</a>${
+                (s.data_missing && s.data_missing.length)
+                  ? `<span class="data-missing-badge" title="部分篩選條件無歷史資料（${s.data_missing.map(k=>({'no_black':'無放量黑棒篩選'}[k]||k)).join('、')}），已放行">⚠</span>`
+                  : ''
+              }</td>
             <td class="name-cell">${s.name}</td>
             <td class="neutral">${s.open}</td>
             <td class="neutral">${s.high}</td>
