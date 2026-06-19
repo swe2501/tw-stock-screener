@@ -1657,10 +1657,10 @@
         if (trendLines.length > 0 || trendStart || fibLevels.length > 0) redrawCanvas();
       });
 
-      // Zoom lock: min = 20 bars, max = full dataset
-      // fixRightEdge / fixLeftEdge（在 _chartOpts 設定）已防止邊界彈性跳動
-      const _maxBars = candles.length;
-      const _minBars = 20;
+      // Zoom / scroll lock
+      const _maxBars  = candles.length;
+      const _minBars  = 20;
+      const _rightMax = candles.length - 1 + 5; // last bar index + rightOffset buffer
       let _lockingZoom = false;
       const _allCharts = [chartInstance, volInstance, macdInstance, rsiInstance].filter(Boolean);
       _allCharts.forEach(c => {
@@ -1672,6 +1672,8 @@
             newFrom = -2; newTo = _maxBars + 2;
           } else if (span < _minBars) {
             newTo = range.to; newFrom = range.to - _minBars;
+          } else if (range.to > _rightMax + 0.5) {
+            newTo = _rightMax; newFrom = _rightMax - span;
           } else {
             return;
           }
