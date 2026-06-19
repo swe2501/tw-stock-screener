@@ -422,30 +422,53 @@ def _prev_month(yyyymm):
     return f"{y}{m:02d}"
 
 
-def fetch_finmind_history_years(code, years):
-    """Fetch N years of daily OHLCV from FinMind TaiwanStockPrice API.
-    One request per stock → no TWSE rate-limit concern. Returns [{open, close, volume},...] asc."""
-    start_date = (datetime.now() - timedelta(days=years * 365 + 30)).strftime("%Y-%m-%d")
-    url = (f"https://api.finmind.tw/api/latest"
-           f"?dataset=TaiwanStockPrice&data_id={code}&start_date={start_date}")
-    try:
-        data = _get_json(url, headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"})
-        if not data or data.get("status") != 200:
-            return []
-        rows = []
-        for item in data.get("data", []):
-            try:
-                o = float(item["open"])
-                c = float(item["close"])
-                v = float(item["Trading_Volume"])
-                if o <= 0 or c <= 0 or v <= 0:
-                    continue
-                rows.append({"open": o, "close": c, "volume": v})
-            except (KeyError, TypeError, ValueError):
-                continue
-        return rows  # FinMind 回傳資料已按日期升序排列
-    except Exception:
-        return []
+def _batch_check_no_black(result_items, years, mult):
+    """
+    將所有候選股票 × N 年所有月份打平成 (code, yyyymm) pairs，
+    用 20 workers 並行抓 TWSE STOCK_DAY，
+    比每支股票串行抓 N*12 個月快很多。
+    回傳「無放量黑棒」的 code set。
+    """
+    codes = [item["code"] for item in result_items]
+    now = datetime.now()
+
+    # 產生需要的月份清單
+    months = []
+    yyyymm = now.strftime("%Y%m")
+    for _ in range(years * 12 + 2):
+        months.append(yyyymm)
+        yyyymm = _prev_month(yyyymm)
+
+    # 打平成 (code, month) pairs
+    pairs = [(code, m) for code in codes for m in months]
+
+    # 並行抓取
+    stock_rows: dict = {code: {} for code in codes}  # code -> {date: row}
+
+    def _fetch_pair(pair):
+        return pair[0], fetch_stock_month(pair[0], pair[1])
+
+    with ThreadPoolExecutor(max_workers=20) as ex:
+        futs = [ex.submit(_fetch_pair, p) for p in pairs]
+        for f in as_completed(futs):
+            code, rows = f.result()
+            for row in rows:
+                if row.get("open") and row.get("close") and row.get("volume"):
+                    stock_rows[code][row["date"]] = row  # 用 date 去重
+
+    # 逐支判斷
+    clean = set()
+    for code in codes:
+        rows_by_date = stock_rows[code]
+        if not rows_by_date:
+            continue  # 取不到資料 → 保守處理：排除
+        ohlcv = [
+            {"open": r["open"], "close": r["close"], "volume": r["volume"]}
+            for r in sorted(rows_by_date.values(), key=lambda r: r["date"])
+        ]
+        if not has_vol_black_event(ohlcv, mult):
+            clean.add(code)
+    return clean
 
 
 def has_vol_black_event(rows, mult):
@@ -740,19 +763,9 @@ def screen(params):
 
         results.append(item)
 
-    # ── Step 5: 無放量黑棒篩選（FinMind 一支一個 request，不會打爆 TWSE）──────
+    # ── Step 5: 無放量黑棒篩選（TWSE STOCK_DAY，(code×month) 打平並行）────────
     if no_black_years > 0 and no_black_mult > 0 and results:
-        def _check_no_black(code):
-            rows = fetch_finmind_history_years(code, no_black_years)
-            return code, has_vol_black_event(rows, no_black_mult)
-
-        clean = set()
-        with ThreadPoolExecutor(max_workers=20) as ex:
-            futs = {ex.submit(_check_no_black, item["code"]): item["code"] for item in results}
-            for f in as_completed(futs):
-                code, had_event = f.result()
-                if not had_event:
-                    clean.add(code)
+        clean = _batch_check_no_black(results, no_black_years, no_black_mult)
         results = [item for item in results if item["code"] in clean]
 
     results.sort(key=lambda x: x.get("candle_pct", 0), reverse=True)
