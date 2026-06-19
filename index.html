@@ -1657,26 +1657,39 @@
         if (trendLines.length > 0 || trendStart || fibLevels.length > 0) redrawCanvas();
       });
 
-      // Zoom lock: max = full dataset, min = 20 bars visible
-      // requestAnimationFrame 延遲解鎖，避免 setVisibleLogicalRange 觸發的新事件導致畫面跳動
-      const _maxBars = candles.length;
-      const _minBars = 20;
+      // Zoom/scroll lock: clamp range so chart doesn't jump at edges
+      const _maxBars   = candles.length;
+      const _minBars   = 20;
+      const _leftLimit = -2;
+      const _rightLimit = _maxBars + 5;  // 最多在資料末端右側留 5 根空白
       let _lockingZoom = false;
       const _allCharts = [chartInstance, volInstance, macdInstance, rsiInstance].filter(Boolean);
       _allCharts.forEach(c => {
         c.timeScale().subscribeVisibleLogicalRangeChange(range => {
           if (_lockingZoom || !range) return;
           const span = range.to - range.from;
-          let newFrom, newTo;
+          let newFrom = range.from;
+          let newTo   = range.to;
+          let needFix = false;
+
+          // 縮放太大（看全部資料以上）
           if (span > _maxBars + 5) {
-            newFrom = -2;
-            newTo   = _maxBars + 2;
+            newFrom = _leftLimit; newTo = _maxBars + 2; needFix = true;
+          // 縮放太小（< 20 根）
           } else if (span < _minBars) {
-            newTo   = range.to;
-            newFrom = range.to - _minBars;
-          } else {
-            return;
+            newTo   = Math.min(range.to, _rightLimit);
+            newFrom = newTo - _minBars; needFix = true;
+          // 右側滾超出限制 → 彈回，防止畫面亂跳
+          } else if (range.to > _rightLimit) {
+            newTo   = _rightLimit;
+            newFrom = _rightLimit - span; needFix = true;
+          // 左側滾超出限制
+          } else if (range.from < _leftLimit) {
+            newFrom = _leftLimit;
+            newTo   = _leftLimit + span; needFix = true;
           }
+
+          if (!needFix) return;
           _lockingZoom = true;
           _allCharts.forEach(cc => {
             try { cc.timeScale().setVisibleLogicalRange({ from: newFrom, to: newTo }); } catch (_) {}
