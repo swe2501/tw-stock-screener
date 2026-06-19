@@ -422,27 +422,30 @@ def _prev_month(yyyymm):
     return f"{y}{m:02d}"
 
 
-def fetch_twse_history_years(code, years):
-    """Fetch N years of daily OHLCV from TWSE STOCK_DAY (monthly, cached).
-    Returns [{open, close, volume}, ...] sorted ascending. Uses existing fetch_stock_month cache."""
-    now = datetime.now()
-    yyyymm = now.strftime("%Y%m")
-    months_needed = years * 12 + 2  # +2 buffer for partial current month
-
-    all_rows = []
-    for _ in range(months_needed):
-        for row in fetch_stock_month(code, yyyymm):
-            if row.get("open") and row.get("close") and row.get("volume"):
-                all_rows.append(row)
-        yyyymm = _prev_month(yyyymm)
-
-    seen = set()
-    result = []
-    for row in sorted(all_rows, key=lambda r: r["date"]):
-        if row["date"] not in seen:
-            seen.add(row["date"])
-            result.append({"open": row["open"], "close": row["close"], "volume": row["volume"]})
-    return result
+def fetch_finmind_history_years(code, years):
+    """Fetch N years of daily OHLCV from FinMind TaiwanStockPrice API.
+    One request per stock → no TWSE rate-limit concern. Returns [{open, close, volume},...] asc."""
+    start_date = (datetime.now() - timedelta(days=years * 365 + 30)).strftime("%Y-%m-%d")
+    url = (f"https://api.finmind.tw/api/latest"
+           f"?dataset=TaiwanStockPrice&data_id={code}&start_date={start_date}")
+    try:
+        data = _get_json(url, headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"})
+        if not data or data.get("status") != 200:
+            return []
+        rows = []
+        for item in data.get("data", []):
+            try:
+                o = float(item["open"])
+                c = float(item["close"])
+                v = float(item["Trading_Volume"])
+                if o <= 0 or c <= 0 or v <= 0:
+                    continue
+                rows.append({"open": o, "close": c, "volume": v})
+            except (KeyError, TypeError, ValueError):
+                continue
+        return rows  # FinMind 回傳資料已按日期升序排列
+    except Exception:
+        return []
 
 
 def has_vol_black_event(rows, mult):
@@ -737,15 +740,14 @@ def screen(params):
 
         results.append(item)
 
-    # ── Step 5: 無放量黑棒篩選（TWSE STOCK_DAY 逐月，有 5 分鐘 cache）─────────
+    # ── Step 5: 無放量黑棒篩選（FinMind 一支一個 request，不會打爆 TWSE）──────
     if no_black_years > 0 and no_black_mult > 0 and results:
         def _check_no_black(code):
-            rows = fetch_twse_history_years(code, no_black_years)
+            rows = fetch_finmind_history_years(code, no_black_years)
             return code, has_vol_black_event(rows, no_black_mult)
 
         clean = set()
-        # 10 workers：每支股票需串行抓 N*12 個月，不宜對 TWSE 過度並發
-        with ThreadPoolExecutor(max_workers=10) as ex:
+        with ThreadPoolExecutor(max_workers=20) as ex:
             futs = {ex.submit(_check_no_black, item["code"]): item["code"] for item in results}
             for f in as_completed(futs):
                 code, had_event = f.result()
