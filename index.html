@@ -1693,8 +1693,7 @@
         crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
         rightPriceScale: { borderColor: '#2e3350', minimumWidth: 65 },
         timeScale: { borderColor: '#2e3350', timeVisible: true, visible: showTime,
-                     secondsVisible: false, rightOffset: 5,
-                     fixRightEdge: true },
+                     secondsVisible: false, rightOffset: 5 },
         handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true },
         handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: true },
       };
@@ -1887,7 +1886,7 @@
           charts.forEach(tgt => {
             if (tgt !== src) try { tgt.timeScale().setVisibleRange(range); } catch(e) {}
           });
-          syncing = false;
+          requestAnimationFrame(() => { syncing = false; });
         });
       });
     }
@@ -2085,7 +2084,9 @@
 
       overlay.addEventListener('touchstart', e => {
         if (!candleSeriesRef) return; e.preventDefault();
-        if (fibMode) {
+        if (zoomMode) {
+          zoomDragStart = { x: getX(e.touches[0].clientX) };
+        } else if (fibMode) {
           const y = getY(e.touches[0].clientY);
           const price = candleSeriesRef.coordinateToPrice(y);
           if (price != null) fibDragStart = { y, price };
@@ -2097,7 +2098,9 @@
       }, { passive: false });
       overlay.addEventListener('touchmove', e => {
         e.preventDefault();
-        if (fibMode && fibDragStart) {
+        if (zoomMode && zoomDragStart) {
+          drawZoomRect(zoomDragStart.x, getX(e.touches[0].clientX));
+        } else if (fibMode && fibDragStart) {
           drawBand(fibDragStart.y, getY(e.touches[0].clientY));
         } else if (trendLineMode && trendStart) {
           const ctx = canvas.getContext('2d');
@@ -2116,7 +2119,23 @@
       }, { passive: false });
       overlay.addEventListener('touchend', e => {
         e.preventDefault();
-        if (fibMode) {
+        if (zoomMode && zoomDragStart) {
+          const x2 = getX(e.changedTouches[0].clientX);
+          const x1 = zoomDragStart.x;
+          zoomDragStart = null;
+          if (Math.abs(x2 - x1) > 5 && chartInstance) {
+            const range = chartInstance.timeScale().getVisibleLogicalRange();
+            if (range) {
+              const W = overlay.clientWidth;
+              const span = range.to - range.from;
+              const newFrom = range.from + span * Math.min(x1, x2) / W;
+              const newTo   = range.from + span * Math.max(x1, x2) / W;
+              chartInstance.timeScale().setVisibleLogicalRange({ from: newFrom, to: newTo });
+            }
+          }
+          redrawCanvas();
+          _deactivateAllModes();
+        } else if (fibMode) {
           finishFib(getY(e.changedTouches[0].clientY));
         } else if (trendLineMode && trendStart) {
           const time  = chartInstance.timeScale().coordinateToTime(getX(e.changedTouches[0].clientX));
