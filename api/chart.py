@@ -213,8 +213,9 @@ def fetch_tx(range_str="3y"):
         gs = gap_start.strftime("%Y-%m-%d")
         for c in twii["data"]:
             if c["time"] >= gs:
-                # Scale TWII volume (~7M shares) down to TX futures contract scale (~130K)
-                proxy = {**c, "volume": int(c.get("volume", 0) // 54)}
+                # Scale TWII volume down to TX futures contract scale (~130K)
+                # volume now in 張, multiply ×1000 back to shares before ÷54
+                proxy = {**c, "volume": int(c.get("volume", 0) * 1000 // 54)}
                 by_date.setdefault(c["time"], proxy)  # don't overwrite real TX
 
     # 3. Real TX for last 35 days (overwrites TWII proxy where available)
@@ -540,7 +541,7 @@ def _fetch_twse_month(code, yyyymm):
                     "high":   round(float(row[4].replace(",", "")), 2),
                     "low":    round(float(row[5].replace(",", "")), 2),
                     "close":  round(float(row[6].replace(",", "")), 2),
-                    "volume": int(row[1].replace(",", "")),
+                    "volume": round(int(row[1].replace(",", "")) / 1000),
                 })
             except Exception:
                 continue
@@ -612,7 +613,7 @@ def _twse_latest_candle(code_str):
                 "high":   round(float(row[4].replace(",", "")), 2),
                 "low":    round(float(row[5].replace(",", "")), 2),
                 "close":  round(float(row[6].replace(",", "")), 2),
-                "volume": int(row[1].replace(",", "")),
+                "volume": round(int(row[1].replace(",", "")) / 1000),
             }
         except Exception:
             continue
@@ -802,7 +803,7 @@ def fetch_chart(code, range_str="3mo", interval="1d", adj=False):
             "high":   round(float(h), 4),
             "low":    round(float(l), 4),
             "close":  round(float(c), 4),
-            "volume": int(v) if v else 0,
+            "volume": round(int(v) / 1000) if v else 0,
         })
 
     last_yf = candles[-1]["time"] if candles else "0000-00-00"
