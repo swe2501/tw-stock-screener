@@ -802,7 +802,7 @@
 
         <div class="field" style="grid-column:1/-1;">
           <label>無放量黑棒篩選</label>
-          <div class="label-hint">排除過去 N 年中，超過設定倍數的放量黑棒根數 > 容忍根數的股票</div>
+          <div class="label-hint">放量黑棒出現次數 ≤ 容忍根數才通過；容忍 0 根即一根都不容許</div>
           <div style="display:flex;align-items:center;gap:8px;margin-top:2px;flex-wrap:wrap;">
             <span style="font-size:0.85rem;color:var(--text-muted);white-space:nowrap;">過去</span>
             <input type="number" id="no_black_years" min="1" max="10" step="1" placeholder="例：3"
