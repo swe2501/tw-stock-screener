@@ -476,6 +476,8 @@ def _batch_check_no_black(result_items, years, mult):
                     })
 
     # ── Step 3: 逐股判斷有無放量黑棒 ────────────────────────────────────────
+    # 如果實際資料天數 < 期望天數的 25%，視為資料不足（e.g. 近期上市、轉上市）
+    min_days = len(trading_dates) * 0.25
     clean = set()
     no_data = set()
     for code in codes:
@@ -484,6 +486,9 @@ def _batch_check_no_black(result_items, years, mult):
             clean.add(code)    # 無法證明有放量黑棒 → 放行
             no_data.add(code)  # 標記為資料缺失
             continue
+        if len(rows) < min_days:
+            # 資料不足（上市未滿 N 年），無法完整驗證 → 放行但標記
+            no_data.add(code)
         ohlcv = [{"open": r["open"], "close": r["close"], "volume": r["volume"]} for r in rows]
         if not has_vol_black_event(ohlcv, mult):
             clean.add(code)
