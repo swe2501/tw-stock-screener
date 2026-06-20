@@ -426,72 +426,62 @@ def _prev_month(yyyymm):
     return f"{y}{m:02d}"
 
 
+def _fetch_yf_history(code, years):
+    """用 Yahoo Finance 抓個股 N 年每日 OHLCV（與 K 線圖同資料源，含上市前 OTC 期間）。
+    回傳 sorted list of {open, close, volume}，失敗回傳 []。"""
+    range_str = f"{min(years, 10)}y"
+    url = (f"https://query1.finance.yahoo.com/v8/finance/chart/{code}.TW"
+           f"?interval=1d&range={range_str}")
+    try:
+        data = _get_json(url, headers=YF_HEADERS)
+        r0 = (data.get("chart", {}).get("result") or [None])[0]
+        if not r0:
+            return []
+        timestamps = r0.get("timestamp") or []
+        q = (r0.get("indicators", {}).get("quote") or [{}])[0]
+        opens   = q.get("open")   or []
+        closes  = q.get("close")  or []
+        volumes = q.get("volume") or []
+        rows = []
+        for i, ts in enumerate(timestamps):
+            try:
+                o = opens[i];  c = closes[i];  v = volumes[i]
+                if o and c and v and float(o) > 0 and float(c) > 0 and int(v) > 0:
+                    rows.append({"open": float(o), "close": float(c), "volume": int(v)})
+            except (IndexError, TypeError, ValueError):
+                continue
+        return rows  # 已按時間升序（YF 預設）
+    except Exception:
+        return []
+
+
 def _batch_check_no_black(result_items, years, mult):
     """
-    用 MI_INDEX（每次 API = 當日全部股票）取代逐股拉月資料。
-    請求數 = 月份數(取交易日) + 交易日數，與候選股票數量無關。
-    N=2年 ≈ 500 次 MI_INDEX / 20 workers ≈ 15-25s。
+    用 Yahoo Finance 抓各股 N 年歷史 OHLCV，與 K 線圖同資料源（含上市前 OTC 期間）。
+    O(候選股數) 次 request / 20 workers，比 MI_INDEX 方式快且資料更完整。
     """
-    codes = set(item["code"] for item in result_items)
-    now = datetime.now()
+    codes = [item["code"] for item in result_items]
+    expected_days = years * 250   # N 年預期交易日數
+    min_days = expected_days * 0.25  # 低於此視為資料不足
 
-    # ── Step 1: 用 2330 月資料推導出過去 N 年所有交易日 ───────────────────────
-    months = []
-    yyyymm = now.strftime("%Y%m")
-    for _ in range(years * 12 + 2):
-        months.append(yyyymm)
-        yyyymm = _prev_month(yyyymm)
+    def _check_one(code):
+        rows = _fetch_yf_history(code, years)
+        if not rows:
+            return code, True, True   # clean（放行）, no_data
+        insufficient = len(rows) < min_days
+        has_event = has_vol_black_event(rows, mult)
+        return code, not has_event, insufficient
 
-    trading_dates = []
-
-    def _get_month_dates(m):
-        rows = fetch_stock_month("2330", m)
-        return [r["date"] for r in rows]
-
-    with ThreadPoolExecutor(max_workers=20) as ex:
-        futs = [ex.submit(_get_month_dates, m) for m in months]
-        for f in as_completed(futs):
-            trading_dates.extend(f.result())
-
-    trading_dates = sorted(set(trading_dates))
-
-    # ── Step 2: 每個交易日抓 MI_INDEX（一次拿當日全部股票 OHLCV）─────────────
-    stock_daily: dict = {code: [] for code in codes}
-
-    def _fetch_mi_filtered(date_str):
-        day_data = fetch_all_stocks_mi_index({}, date_str)
-        return date_str, {code: day_data[code] for code in codes if code in day_data}
-
-    with ThreadPoolExecutor(max_workers=20) as ex:
-        futs = [ex.submit(_fetch_mi_filtered, d) for d in trading_dates]
-        for f in as_completed(futs):
-            date_str, filtered = f.result()
-            for code, row in filtered.items():
-                if row.get("open") and row.get("close") and row.get("volume"):
-                    stock_daily[code].append({
-                        "date": date_str,
-                        "open": row["open"],
-                        "close": row["close"],
-                        "volume": row["volume"],
-                    })
-
-    # ── Step 3: 逐股判斷有無放量黑棒 ────────────────────────────────────────
-    # 如果實際資料天數 < 期望天數的 25%，視為資料不足（e.g. 近期上市、轉上市）
-    min_days = len(trading_dates) * 0.25
     clean = set()
     no_data = set()
-    for code in codes:
-        rows = sorted(stock_daily[code], key=lambda r: r["date"])
-        if not rows:
-            clean.add(code)    # 無法證明有放量黑棒 → 放行
-            no_data.add(code)  # 標記為資料缺失
-            continue
-        if len(rows) < min_days:
-            # 資料不足（上市未滿 N 年），無法完整驗證 → 放行但標記
-            no_data.add(code)
-        ohlcv = [{"open": r["open"], "close": r["close"], "volume": r["volume"]} for r in rows]
-        if not has_vol_black_event(ohlcv, mult):
-            clean.add(code)
+    with ThreadPoolExecutor(max_workers=20) as ex:
+        futs = [ex.submit(_check_one, c) for c in codes]
+        for f in as_completed(futs):
+            code, is_clean, is_insufficient = f.result()
+            if is_clean:
+                clean.add(code)
+            if is_insufficient:
+                no_data.add(code)
 
     return clean, no_data
 
