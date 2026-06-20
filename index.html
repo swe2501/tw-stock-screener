@@ -802,12 +802,12 @@
 
         <div class="field" style="grid-column:1/-1;">
           <label>無放量黑棒篩選</label>
-          <div class="label-hint">放量黑棒出現次數 ≤ 容忍根數才通過；容忍 0 根即一根都不容許</div>
+          <div class="label-hint">放量黑棒出現次數 ≤ 容忍根數才通過；容忍 0 根即一根都不容許（例：24 = 過去 2 年）</div>
           <div style="display:flex;align-items:center;gap:8px;margin-top:2px;flex-wrap:wrap;">
             <span style="font-size:0.85rem;color:var(--text-muted);white-space:nowrap;">過去</span>
-            <input type="number" id="no_black_years" min="1" max="10" step="1" placeholder="例：3"
+            <input type="number" id="no_black_years" min="1" max="120" step="1" placeholder="例：24"
               style="width:80px;height:42px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:0.95rem;padding:10px 13px;outline:none;appearance:none;-webkit-appearance:none;flex-shrink:0;" />
-            <span style="font-size:0.85rem;color:var(--text-muted);white-space:nowrap;">年，</span>
+            <span style="font-size:0.85rem;color:var(--text-muted);white-space:nowrap;">月，</span>
             <input type="number" id="no_black_mult" min="0.5" step="0.1" placeholder="例：1.5"
               style="width:80px;height:42px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:0.95rem;padding:10px 13px;outline:none;appearance:none;-webkit-appearance:none;flex-shrink:0;" />
             <span style="font-size:0.85rem;color:var(--text-muted);white-space:nowrap;">倍放量黑棒</span>
@@ -1065,7 +1065,7 @@
       const macdGolden = document.getElementById('macd_golden').checked;
       const zhenming1 = document.getElementById('zhenming1').checked;
       const zhenming2 = document.getElementById('zhenming2').checked;
-      const noBlackYears = parseInt(document.getElementById('no_black_years').value) || 0;
+      const noBlackMonths = parseInt(document.getElementById('no_black_years').value) || 0;
       const noBlackMult  = parseFloat(document.getElementById('no_black_mult').value) || 0;
       const noBlackTol   = parseInt(document.getElementById('no_black_tolerance').value) || 0;
       hasVolFilter    = volMult > 0 || shrinkMult > 0;
@@ -1099,7 +1099,7 @@
         macd_golden: macdGolden,
         zhenming1: zhenming1,
         zhenming2: zhenming2,
-        no_black_years:      noBlackYears,
+        no_black_months:     noBlackMonths,
         no_black_mult:       noBlackMult,
         no_black_tolerance:  noBlackTol,
       };

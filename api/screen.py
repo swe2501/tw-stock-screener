@@ -426,10 +426,17 @@ def _prev_month(yyyymm):
     return f"{y}{m:02d}"
 
 
-def _fetch_yf_history(code, years):
-    """用 Yahoo Finance 抓個股 N 年每日 OHLCV（與 K 線圖同資料源，含上市前 OTC 期間）。
+def _fetch_yf_history(code, months):
+    """用 Yahoo Finance 抓個股 N 個月每日 OHLCV（與 K 線圖同資料源，含上市前 OTC 期間）。
     回傳 sorted list of {open, close, volume}，失敗回傳 []。"""
-    range_str = f"{min(years, 10)}y"
+    # YF 支援的 range：1mo/3mo/6mo/1y/2y/5y/10y
+    if months <= 1:    range_str = "1mo"
+    elif months <= 3:  range_str = "3mo"
+    elif months <= 6:  range_str = "6mo"
+    elif months <= 12: range_str = "1y"
+    elif months <= 24: range_str = "2y"
+    elif months <= 60: range_str = "5y"
+    else:              range_str = "10y"
     url = (f"https://query1.finance.yahoo.com/v8/finance/chart/{code}.TW"
            f"?interval=1d&range={range_str}")
     try:
@@ -450,22 +457,26 @@ def _fetch_yf_history(code, years):
                     rows.append({"open": float(o), "close": float(c), "volume": int(v)})
             except (IndexError, TypeError, ValueError):
                 continue
+        # 裁切到精確月數（約 21 個交易日 / 月），保留最後 N 個月
+        target_days = int(months * 21)
+        if len(rows) > target_days:
+            rows = rows[-target_days:]
         return rows  # 已按時間升序（YF 預設）
     except Exception:
         return []
 
 
-def _batch_check_no_black(result_items, years, mult, tolerance=0):
+def _batch_check_no_black(result_items, months, mult, tolerance=0):
     """
-    用 Yahoo Finance 抓各股 N 年歷史 OHLCV，與 K 線圖同資料源（含上市前 OTC 期間）。
+    用 Yahoo Finance 抓各股 N 個月歷史 OHLCV，與 K 線圖同資料源（含上市前 OTC 期間）。
     tolerance: 允許的放量黑棒根數上限（0=完全不允許，2=最多容忍 2 根）。
     """
     codes = [item["code"] for item in result_items]
-    expected_days = years * 250
+    expected_days = int(months * 21)
     min_days = expected_days * 0.25
 
     def _check_one(code):
-        rows = _fetch_yf_history(code, years)
+        rows = _fetch_yf_history(code, months)
         if not rows:
             return code, True, True   # clean（放行）, no_data
         insufficient = len(rows) < min_days
@@ -529,7 +540,8 @@ def screen(params):
     check_macd_gold  = bool(params.get("macd_golden", False))
     check_zhenming1  = bool(params.get("zhenming1", False))
     check_zhenming2  = bool(params.get("zhenming2", False))
-    no_black_years   = min(int(params.get("no_black_years") or 0), 10)
+    no_black_months  = min(int(params.get("no_black_months") or 0), 120)
+    no_black_years   = no_black_months / 12  # 轉換為年（可為小數）傳給 YF API
     no_black_mult    = float(params.get("no_black_mult") or 0)
     no_black_tol     = max(0, int(params.get("no_black_tolerance") or 0))
 
@@ -783,9 +795,9 @@ def screen(params):
 
         results.append(item)
 
-    # ── Step 5: 無放量黑棒篩選（MI_INDEX 每日全市場，請求數與候選數無關）───────
-    if no_black_years > 0 and no_black_mult > 0 and results:
-        clean, no_data = _batch_check_no_black(results, no_black_years, no_black_mult, no_black_tol)
+    # ── Step 5: 無放量黑棒篩選（Yahoo Finance 每日 OHLCV，與 K 線同源）─────────
+    if no_black_months > 0 and no_black_mult > 0 and results:
+        clean, no_data = _batch_check_no_black(results, no_black_months, no_black_mult, no_black_tol)
         results = [item for item in results if item["code"] in clean]
         for item in results:
             if item["code"] in no_data:
