@@ -305,10 +305,14 @@ def fetch_all_stocks_mi_index(code_name_map, date_str):
     url = f"https://www.twse.com.tw/exchangeReport/MI_INDEX?response=json&date={date_str}&type=ALLBUT0999"
     try:
         data = _get_json(url)
-        if not data or data.get("stat") != "OK":
+        if not data:
+            return {}
+        # 舊格式有 stat 欄位，明確失敗時才 return {}
+        # 新格式（2025+ tables 陣列）沒有 stat 欄位，不能用 stat != "OK" 擋掉
+        if data.get("stat") and data.get("stat") != "OK":
             return {}
 
-        # ── 新格式：tables 陣列（2025 年後 TWSE API 改版）──────────────────────
+        # ── 新格式：tables 陣列（stat 欄位不存在）──────────────────────────────
         # tables[N] 中找個股交易表（data 筆數最多、含股票代號的那張）
         # 新欄位順序：[0]code [1]name [2]volume [3]txn [4]turnover
         #             [5]open [6]high [7]low [8]close [9]sign_html [10]diff
