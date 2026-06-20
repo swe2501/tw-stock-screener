@@ -554,8 +554,11 @@ def screen(params):
     no_black_mult    = float(params.get("no_black_mult") or 0)
     no_black_tol     = max(0, int(params.get("no_black_tolerance") or 0))
 
+    import sys
+    _t0 = time.time()
     # ── Step 1: Always fetch latest TWSE data (for stock list + latest date) ──
     latest_stocks, latest_date = fetch_all_stocks_latest()
+    print(f"[TIMING] step1_twse: {time.time()-_t0:.2f}s  stocks={len(latest_stocks)}", file=sys.stderr)
     if not latest_stocks:
         return {"error": "無法取得證交所資料，請稍後再試", "results": []}
 
@@ -805,8 +808,11 @@ def screen(params):
         results.append(item)
 
     # ── Step 5: 無放量黑棒篩選（Yahoo Finance 每日 OHLCV，與 K 線同源）─────────
+    print(f"[TIMING] before_step5: {time.time()-_t0:.2f}s  candidates_for_noBlack={len(results)}", file=sys.stderr)
     if no_black_months > 0 and no_black_mult > 0 and results:
+        _t5 = time.time()
         clean, no_data = _batch_check_no_black(results, no_black_months, no_black_mult, no_black_tol)
+        print(f"[TIMING] step5_noBlack: {time.time()-_t5:.2f}s  total={time.time()-_t0:.2f}s", file=sys.stderr)
         results = [item for item in results if item["code"] in clean]
         for item in results:
             if item["code"] in no_data:
