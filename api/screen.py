@@ -17,9 +17,9 @@ YF_HEADERS = {
 }
 
 
-def _get_json(url, headers=TWSE_HEADERS):
+def _get_json(url, headers=TWSE_HEADERS, timeout=20):
     req = urllib.request.Request(url, headers=headers)
-    with urllib.request.urlopen(req, timeout=20) as resp:
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
         data = json.loads(resp.read())
         return data
 
@@ -152,7 +152,7 @@ def fetch_yf_chart(code, date_str):
     url = (f"https://query1.finance.yahoo.com/v8/finance/chart/{code}.TW"
            f"?interval=1d&range=3mo")
     try:
-        data = _get_json(url, headers=YF_HEADERS)
+        data = _get_json(url, headers=YF_HEADERS, timeout=8)
         result = data.get("chart", {}).get("result") or []
         if not result:
             return None
@@ -440,7 +440,7 @@ def _fetch_yf_history(code, months):
     url = (f"https://query1.finance.yahoo.com/v8/finance/chart/{code}.TW"
            f"?interval=1d&range={range_str}")
     try:
-        data = _get_json(url, headers=YF_HEADERS)
+        data = _get_json(url, headers=YF_HEADERS, timeout=8)
         r0 = (data.get("chart", {}).get("result") or [None])[0]
         if not r0:
             return []
@@ -470,10 +470,12 @@ def _batch_check_no_black(result_items, months, mult, tolerance=0):
     """
     用 Yahoo Finance 抓各股 N 個月歷史 OHLCV，與 K 線圖同資料源（含上市前 OTC 期間）。
     tolerance: 允許的放量黑棒根數上限（0=完全不允許，2=最多容忍 2 根）。
+    timeout=8s per stock；失敗時保守放行（⚠ badge）。
     """
     codes = [item["code"] for item in result_items]
     expected_days = int(months * 21)
     min_days = expected_days * 0.25
+    workers = min(len(codes), 50)
 
     def _check_one(code):
         rows = _fetch_yf_history(code, months)
@@ -485,7 +487,7 @@ def _batch_check_no_black(result_items, months, mult, tolerance=0):
 
     clean = set()
     no_data = set()
-    with ThreadPoolExecutor(max_workers=20) as ex:
+    with ThreadPoolExecutor(max_workers=workers) as ex:
         futs = [ex.submit(_check_one, c) for c in codes]
         for f in as_completed(futs):
             code, is_clean, is_insufficient = f.result()
@@ -635,7 +637,7 @@ def screen(params):
         def fetch_yf_only(code):
             return code, fetch_yf_chart(code, actual_date)
 
-        with ThreadPoolExecutor(max_workers=30) as ex:
+        with ThreadPoolExecutor(max_workers=min(len(candidates), 50)) as ex:
             futures = [ex.submit(fetch_yf_only, c) for c in candidates]
             for f in as_completed(futures):
                 code, yf = f.result()
