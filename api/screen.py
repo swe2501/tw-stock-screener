@@ -455,22 +455,22 @@ def _fetch_yf_history(code, years):
         return []
 
 
-def _batch_check_no_black(result_items, years, mult):
+def _batch_check_no_black(result_items, years, mult, tolerance=0):
     """
     用 Yahoo Finance 抓各股 N 年歷史 OHLCV，與 K 線圖同資料源（含上市前 OTC 期間）。
-    O(候選股數) 次 request / 20 workers，比 MI_INDEX 方式快且資料更完整。
+    tolerance: 允許的放量黑棒根數上限（0=完全不允許，2=最多容忍 2 根）。
     """
     codes = [item["code"] for item in result_items]
-    expected_days = years * 250   # N 年預期交易日數
-    min_days = expected_days * 0.25  # 低於此視為資料不足
+    expected_days = years * 250
+    min_days = expected_days * 0.25
 
     def _check_one(code):
         rows = _fetch_yf_history(code, years)
         if not rows:
             return code, True, True   # clean（放行）, no_data
         insufficient = len(rows) < min_days
-        has_event = has_vol_black_event(rows, mult)
-        return code, not has_event, insufficient
+        count = count_vol_black_events(rows, mult)
+        return code, count <= tolerance, insufficient
 
     clean = set()
     no_data = set()
@@ -486,11 +486,11 @@ def _batch_check_no_black(result_items, years, mult):
     return clean, no_data
 
 
-def has_vol_black_event(rows, mult):
-    """Return True if any day in rows is a 放量黑棒: close < open AND volume >= mult * max(MA5, MA10).
-    Uses preceding-day volumes only (rolling window), skips first 5 bars (no baseline yet)."""
+def count_vol_black_events(rows, mult):
+    """計算 rows 中放量黑棒的根數：close < open 且 volume >= mult × max(MA5, MA10)。"""
     if not rows or mult <= 0:
-        return False
+        return 0
+    count = 0
     vols = [r["volume"] for r in rows]
     for i, row in enumerate(rows):
         if row["close"] >= row["open"]:
@@ -502,8 +502,12 @@ def has_vol_black_event(rows, mult):
         ma10 = sum(prev) / len(prev) if len(prev) >= 10 else None
         max_ma = max(x for x in [ma5, ma10] if x is not None)
         if row["volume"] >= max_ma * mult:
-            return True
-    return False
+            count += 1
+    return count
+
+
+def has_vol_black_event(rows, mult):
+    return count_vol_black_events(rows, mult) > 0
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -525,8 +529,9 @@ def screen(params):
     check_macd_gold  = bool(params.get("macd_golden", False))
     check_zhenming1  = bool(params.get("zhenming1", False))
     check_zhenming2  = bool(params.get("zhenming2", False))
-    no_black_years   = min(int(params.get("no_black_years") or 0), 10)  # cap at 10y
+    no_black_years   = min(int(params.get("no_black_years") or 0), 10)
     no_black_mult    = float(params.get("no_black_mult") or 0)
+    no_black_tol     = max(0, int(params.get("no_black_tolerance") or 0))
 
     # ── Step 1: Always fetch latest TWSE data (for stock list + latest date) ──
     latest_stocks, latest_date = fetch_all_stocks_latest()
@@ -780,7 +785,7 @@ def screen(params):
 
     # ── Step 5: 無放量黑棒篩選（MI_INDEX 每日全市場，請求數與候選數無關）───────
     if no_black_years > 0 and no_black_mult > 0 and results:
-        clean, no_data = _batch_check_no_black(results, no_black_years, no_black_mult)
+        clean, no_data = _batch_check_no_black(results, no_black_years, no_black_mult, no_black_tol)
         results = [item for item in results if item["code"] in clean]
         for item in results:
             if item["code"] in no_data:
