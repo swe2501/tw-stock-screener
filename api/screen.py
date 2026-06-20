@@ -426,6 +426,55 @@ def _prev_month(yyyymm):
     return f"{y}{m:02d}"
 
 
+def _build_mi_index_history(months):
+    """
+    批次拉取過去 N 個月的 MI_INDEX（每日全市場），建成 code->rows 字典。
+    比逐支打 YF 少 10x 請求數（126 次 vs 1700 次，以 6 個月為例）。
+    rows 按日期升序，含 15 天 MA 暖身 buffer（不計入違規計數）。
+    """
+    buffer = 15
+    target_days = int(months * 21)
+    scan_count = target_days + buffer + 20  # 多掃幾天保留足夠交易日
+
+    today = datetime.now(timezone(timedelta(hours=8)))
+    candidate_dates = []
+    d = today
+    while len(candidate_dates) < scan_count:
+        if d.weekday() < 5:
+            candidate_dates.append(d.strftime("%Y%m%d"))
+        d -= timedelta(days=1)
+
+    def _fetch_mi(date_str):
+        return date_str, fetch_all_stocks_mi_index({}, date_str)
+
+    day_results = []
+    with ThreadPoolExecutor(max_workers=15) as ex:
+        futs = [ex.submit(_fetch_mi, dt) for dt in candidate_dates]
+        for f in as_completed(futs):
+            date_str, data = f.result()
+            if data:
+                day_results.append((date_str, data))
+
+    day_results.sort(key=lambda x: x[0])
+    day_results = day_results[-(target_days + buffer):]  # 保留最近 N+buffer 天
+
+    stock_history = {}
+    for _, day_data in day_results:
+        for code, s in day_data.items():
+            try:
+                o = float(s.get("open") or 0)
+                c = float(s.get("close") or 0)
+                v = int(s.get("volume") or 0)
+                if o > 0 and c > 0 and v > 0:
+                    stock_history.setdefault(code, []).append(
+                        {"open": o, "close": c, "volume": v}
+                    )
+            except (TypeError, ValueError):
+                continue
+
+    return stock_history, target_days
+
+
 def _fetch_yf_history(code, months):
     """用 Yahoo Finance 抓個股 N 個月每日 OHLCV（與 K 線圖同資料源，含上市前 OTC 期間）。
     回傳 sorted list of {open, close, volume}，失敗回傳 []。"""
@@ -468,13 +517,33 @@ def _fetch_yf_history(code, months):
 
 def _batch_check_no_black(result_items, months, mult, tolerance=0):
     """
-    用 Yahoo Finance 抓各股 N 個月歷史 OHLCV，與 K 線圖同資料源（含上市前 OTC 期間）。
-    tolerance: 允許的放量黑棒根數上限（0=完全不允許，2=最多容忍 2 根）。
-    timeout=8s per stock；失敗時保守放行（⚠ badge）。
+    智慧雙策略：
+    - 候選多（>150）且月數短（≤12）→ MI_INDEX 批次日期（請求數 = 天數，不隨股票數增加）
+    - 候選少（≤150）或月數長（>12）→ YF 逐支拉取（單支更快）
     """
     codes = [item["code"] for item in result_items]
-    expected_days = int(months * 21)
-    min_days = expected_days * 0.25
+    target_days = int(months * 21)
+    min_days = int(target_days * 0.25)
+
+    if len(codes) > 150 and months <= 12:
+        # ── MI_INDEX 批次策略 ──────────────────────────────────────────────────
+        stock_history, _ = _build_mi_index_history(months)
+        clean = set()
+        no_data = set()
+        for code in codes:
+            rows = stock_history.get(code, [])
+            if not rows:
+                clean.add(code); no_data.add(code); continue
+            count_from = max(0, len(rows) - target_days)
+            insufficient = (len(rows) - count_from) < min_days
+            count = count_vol_black_events(rows, mult, count_from=count_from)
+            if count <= tolerance:
+                clean.add(code)
+            if insufficient:
+                no_data.add(code)
+        return clean, no_data
+
+    # ── YF 逐支策略 ────────────────────────────────────────────────────────────
     workers = min(len(codes), 50)
 
     def _check_one(code):
@@ -499,8 +568,9 @@ def _batch_check_no_black(result_items, months, mult, tolerance=0):
     return clean, no_data
 
 
-def count_vol_black_events(rows, mult):
-    """計算 rows 中放量黑棒的根數：close < open 且 volume >= mult × max(MA5, MA10)。"""
+def count_vol_black_events(rows, mult, count_from=0):
+    """計算 rows[count_from:] 中放量黑棒的根數。
+    count_from 之前的列僅用於 MA 暖身，不計入違規。"""
     if not rows or mult <= 0:
         return 0
     count = 0
@@ -514,7 +584,7 @@ def count_vol_black_events(rows, mult):
         ma5  = sum(prev[-5:]) / 5
         ma10 = sum(prev) / len(prev) if len(prev) >= 10 else None
         max_ma = max(x for x in [ma5, ma10] if x is not None)
-        if row["volume"] >= max_ma * mult:
+        if row["volume"] >= max_ma * mult and i >= count_from:
             count += 1
     return count
 
