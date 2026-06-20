@@ -391,8 +391,9 @@
       gap: 10px;
     }
 
-    .alert-error { background: rgba(231, 76, 60, 0.12); border: 1px solid rgba(231, 76, 60, 0.3); color: #f08080; }
-    .alert-info  { background: rgba(79, 142, 247, 0.1); border: 1px solid rgba(79, 142, 247, 0.25); color: #7fb3ff; }
+    .alert-error   { background: rgba(231, 76, 60, 0.12); border: 1px solid rgba(231, 76, 60, 0.3); color: #f08080; }
+    .alert-warning { background: rgba(243, 156, 18, 0.12); border: 1px solid rgba(243, 156, 18, 0.35); color: #f5c842; }
+    .alert-info    { background: rgba(79, 142, 247, 0.1); border: 1px solid rgba(79, 142, 247, 0.25); color: #7fb3ff; }
 
     .sort-arrow {
       display: inline-block;
@@ -799,10 +800,10 @@
                  oninput="if(this.value){document.getElementById('volume_multiplier').value=''}" />
         </div>
 
-        <div class="field">
+        <div class="field" style="grid-column:1/-1;">
           <label>無放量黑棒篩選</label>
           <div class="label-hint">排除過去 N 年曾出現 M 倍以上放量黑棒的股票</div>
-          <div style="display:flex;align-items:center;gap:8px;margin-top:2px;flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:8px;margin-top:2px;">
             <span style="font-size:0.85rem;color:var(--text-muted);white-space:nowrap;">過去</span>
             <input type="number" id="no_black_years" min="1" max="10" step="1" placeholder="例：3"
               style="width:90px;height:42px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:0.95rem;padding:10px 13px;outline:none;appearance:none;-webkit-appearance:none;flex-shrink:0;" />
@@ -1153,6 +1154,9 @@
           isHist ? `資料來源：Yahoo Finance（${data.date}）` : `資料來源：證交所最新（${data.date}）`;
       }
 
+      const noBlackWarning = data.no_black_skipped_count
+        ? `<div class="alert alert-warning">&#9888; 無放量黑棒篩選因候選股票過多（${data.no_black_skipped_count} 支，上限 80 支）已略過，請先用其他條件縮小範圍再套用此篩選</div>`
+        : '';
       showStatus(`
         <div class="results-header">
           <div class="results-title">篩選結果 — ${data.date}</div>
@@ -1160,6 +1164,7 @@
             符合條件 <strong>${data.count}</strong> 檔 ／ 全市場上市 ${data.total} 檔
           </div>
         </div>
+        ${noBlackWarning}
       `);
 
       if (results.length === 0) {

@@ -767,22 +767,29 @@ def screen(params):
         results.append(item)
 
     # ── Step 5: 無放量黑棒篩選（TWSE STOCK_DAY，(code×month) 打平並行）────────
+    _no_black_skipped = 0
+    _MAX_NO_BLACK = 80  # 超過此數量跳過，避免 Vercel 60s timeout
     if no_black_years > 0 and no_black_mult > 0 and results:
-        clean, no_data = _batch_check_no_black(results, no_black_years, no_black_mult)
-        results = [item for item in results if item["code"] in clean]
-        # 標記拿不到歷史資料、無法驗證的股票
-        for item in results:
-            if item["code"] in no_data:
-                item.setdefault("data_missing", []).append("no_black")
+        if len(results) > _MAX_NO_BLACK:
+            _no_black_skipped = len(results)  # 候選太多，略過此篩選
+        else:
+            clean, no_data = _batch_check_no_black(results, no_black_years, no_black_mult)
+            results = [item for item in results if item["code"] in clean]
+            for item in results:
+                if item["code"] in no_data:
+                    item.setdefault("data_missing", []).append("no_black")
 
     results.sort(key=lambda x: x.get("candle_pct", 0), reverse=True)
 
-    return {
+    resp = {
         "date": display_date,
         "total": len(all_stocks),
         "count": len(results),
         "results": results,
     }
+    if _no_black_skipped:
+        resp["no_black_skipped_count"] = _no_black_skipped
+    return resp
 
 
 # ─────────────────────────────────────────────────────────────────────────────
