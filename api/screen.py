@@ -424,53 +424,66 @@ def _prev_month(yyyymm):
 
 def _batch_check_no_black(result_items, years, mult):
     """
-    將所有候選股票 × N 年所有月份打平成 (code, yyyymm) pairs，
-    用 20 workers 並行抓 TWSE STOCK_DAY，
-    比每支股票串行抓 N*12 個月快很多。
-    回傳「無放量黑棒」的 code set。
+    用 MI_INDEX（每次 API = 當日全部股票）取代逐股拉月資料。
+    請求數 = 月份數(取交易日) + 交易日數，與候選股票數量無關。
+    N=2年 ≈ 500 次 MI_INDEX / 20 workers ≈ 15-25s。
     """
-    codes = [item["code"] for item in result_items]
+    codes = set(item["code"] for item in result_items)
     now = datetime.now()
 
-    # 產生需要的月份清單
+    # ── Step 1: 用 2330 月資料推導出過去 N 年所有交易日 ───────────────────────
     months = []
     yyyymm = now.strftime("%Y%m")
     for _ in range(years * 12 + 2):
         months.append(yyyymm)
         yyyymm = _prev_month(yyyymm)
 
-    # 打平成 (code, month) pairs
-    pairs = [(code, m) for code in codes for m in months]
+    trading_dates = []
 
-    # 並行抓取
-    stock_rows: dict = {code: {} for code in codes}  # code -> {date: row}
-
-    def _fetch_pair(pair):
-        return pair[0], fetch_stock_month(pair[0], pair[1])
+    def _get_month_dates(m):
+        rows = fetch_stock_month("2330", m)
+        return [r["date"] for r in rows]
 
     with ThreadPoolExecutor(max_workers=20) as ex:
-        futs = [ex.submit(_fetch_pair, p) for p in pairs]
+        futs = [ex.submit(_get_month_dates, m) for m in months]
         for f in as_completed(futs):
-            code, rows = f.result()
-            for row in rows:
-                if row.get("open") and row.get("close") and row.get("volume"):
-                    stock_rows[code][row["date"]] = row  # 用 date 去重
+            trading_dates.extend(f.result())
 
-    # 逐支判斷
+    trading_dates = sorted(set(trading_dates))
+
+    # ── Step 2: 每個交易日抓 MI_INDEX（一次拿當日全部股票 OHLCV）─────────────
+    stock_daily: dict = {code: [] for code in codes}
+
+    def _fetch_mi_filtered(date_str):
+        day_data = fetch_all_stocks_mi_index({}, date_str)
+        return date_str, {code: day_data[code] for code in codes if code in day_data}
+
+    with ThreadPoolExecutor(max_workers=20) as ex:
+        futs = [ex.submit(_fetch_mi_filtered, d) for d in trading_dates]
+        for f in as_completed(futs):
+            date_str, filtered = f.result()
+            for code, row in filtered.items():
+                if row.get("open") and row.get("close") and row.get("volume"):
+                    stock_daily[code].append({
+                        "date": date_str,
+                        "open": row["open"],
+                        "close": row["close"],
+                        "volume": row["volume"],
+                    })
+
+    # ── Step 3: 逐股判斷有無放量黑棒 ────────────────────────────────────────
     clean = set()
-    no_data = set()  # 取不到資料、無法驗證的 codes
+    no_data = set()
     for code in codes:
-        rows_by_date = stock_rows[code]
-        if not rows_by_date:
+        rows = sorted(stock_daily[code], key=lambda r: r["date"])
+        if not rows:
             clean.add(code)    # 無法證明有放量黑棒 → 放行
             no_data.add(code)  # 標記為資料缺失
             continue
-        ohlcv = [
-            {"open": r["open"], "close": r["close"], "volume": r["volume"]}
-            for r in sorted(rows_by_date.values(), key=lambda r: r["date"])
-        ]
+        ohlcv = [{"open": r["open"], "close": r["close"], "volume": r["volume"]} for r in rows]
         if not has_vol_black_event(ohlcv, mult):
             clean.add(code)
+
     return clean, no_data
 
 
@@ -766,30 +779,22 @@ def screen(params):
 
         results.append(item)
 
-    # ── Step 5: 無放量黑棒篩選（TWSE STOCK_DAY，(code×month) 打平並行）────────
-    _no_black_skipped = 0
-    _MAX_NO_BLACK = 80  # 超過此數量跳過，避免 Vercel 60s timeout
+    # ── Step 5: 無放量黑棒篩選（MI_INDEX 每日全市場，請求數與候選數無關）───────
     if no_black_years > 0 and no_black_mult > 0 and results:
-        if len(results) > _MAX_NO_BLACK:
-            _no_black_skipped = len(results)  # 候選太多，略過此篩選
-        else:
-            clean, no_data = _batch_check_no_black(results, no_black_years, no_black_mult)
-            results = [item for item in results if item["code"] in clean]
-            for item in results:
-                if item["code"] in no_data:
-                    item.setdefault("data_missing", []).append("no_black")
+        clean, no_data = _batch_check_no_black(results, no_black_years, no_black_mult)
+        results = [item for item in results if item["code"] in clean]
+        for item in results:
+            if item["code"] in no_data:
+                item.setdefault("data_missing", []).append("no_black")
 
     results.sort(key=lambda x: x.get("candle_pct", 0), reverse=True)
 
-    resp = {
+    return {
         "date": display_date,
         "total": len(all_stocks),
         "count": len(results),
         "results": results,
     }
-    if _no_black_skipped:
-        resp["no_black_skipped_count"] = _no_black_skipped
-    return resp
 
 
 # ─────────────────────────────────────────────────────────────────────────────

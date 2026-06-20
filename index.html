@@ -1154,9 +1154,6 @@
           isHist ? `資料來源：Yahoo Finance（${data.date}）` : `資料來源：證交所最新（${data.date}）`;
       }
 
-      const noBlackWarning = data.no_black_skipped_count
-        ? `<div class="alert alert-warning">&#9888; 無放量黑棒篩選因候選股票過多（${data.no_black_skipped_count} 支，上限 80 支）已略過，請先用其他條件縮小範圍再套用此篩選</div>`
-        : '';
       showStatus(`
         <div class="results-header">
           <div class="results-title">篩選結果 — ${data.date}</div>
@@ -1164,7 +1161,6 @@
             符合條件 <strong>${data.count}</strong> 檔 ／ 全市場上市 ${data.total} 檔
           </div>
         </div>
-        ${noBlackWarning}
       `);
 
       if (results.length === 0) {
