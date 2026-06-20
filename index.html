@@ -1081,8 +1081,8 @@
       let hint = isHistorical
         ? `正在取得 ${dateVal} 資料，請稍候...`
         : '正在向台灣證交所取得最新交易日資料...';
-      if (noBlackYears > 0 && noBlackMult > 0)
-        hint += `（含 ${noBlackYears} 年無放量黑棒篩選，需額外 10～30 秒）`;
+      if (noBlackMonths > 0 && noBlackMult > 0)
+        hint += `（含 ${noBlackMonths} 個月無放量黑棒篩選，需額外數秒）`;
       showStatus(`<div class="alert alert-info">&#8987; ${hint}</div>`);
 
       const body = {
