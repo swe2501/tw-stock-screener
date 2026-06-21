@@ -980,8 +980,8 @@
       <div class="modal-body">
         <div class="chart-toolbar">
           <div class="chart-toolbar-left">
-            <button class="tool-btn" id="dailyBtn" onclick="loadDailyChart()">日K</button>
-            <button class="tool-btn" id="adjDailyBtn" onclick="loadAdjDailyChart()" style="background:#2962ff;color:#fff">還原日K</button>
+            <button class="tool-btn" id="dailyBtn" onclick="loadDailyChart()" style="background:#2962ff;color:#fff">日K</button>
+            <button class="tool-btn" id="adjDailyBtn" onclick="loadAdjDailyChart()">還原日K</button>
             <div class="toolbar-sep"></div>
             <button class="tool-btn" id="marketBtn" onclick="openMarketChart()">大盤K</button>
             <button class="tool-btn" id="backBtn" style="display:none" onclick="goBackToStock()">← 返回</button>
@@ -1333,7 +1333,7 @@
       document.getElementById('backBtn').style.display = 'none';
       document.getElementById('chartModal').classList.add('open');
       if (!fibSetupDone) { setupFibOverlay(); fibSetupDone = true; }
-      loadAdjDailyChart();
+      loadDailyChart();
     }
 
     function toggleBBand(span) {
