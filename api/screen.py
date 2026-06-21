@@ -255,16 +255,23 @@ def fetch_yf_chart(code, date_str):
     r_prev = adj_ratio(target_idx - 1) if target_idx > 0 else 1.0
     r_cur  = adj_ratio(target_idx)
 
+    # D_prev_prev (two days back) — needed for earn_gap_down feature
+    pp_l = safe(lows,  target_idx - 2) if target_idx > 1 else None
+    r_pp = adj_ratio(target_idx - 2)   if target_idx > 1 else 1.0
+
     return {
         "open": o, "high": h, "low": l, "close": c,
         "volume": int(v) if v else 0,
-        "prev_close":    safe(closes, target_idx - 1) if target_idx > 0 else None,
-        "prev_high":     ph,
-        "prev_low":      pl,
-        "adj_prev_high": ph * r_prev if ph else None,
-        "adj_prev_low":  pl * r_prev if pl else None,
-        "adj_high":      h  * r_cur  if h  else None,
-        "adj_low":       l  * r_cur  if l  else None,
+        "prev_open":        safe(opens,  target_idx - 1) if target_idx > 0 else None,
+        "prev_close":       safe(closes, target_idx - 1) if target_idx > 0 else None,
+        "prev_high":        ph,
+        "prev_low":         pl,
+        "adj_prev_high":    ph * r_prev if ph else None,
+        "adj_prev_low":     pl * r_prev if pl else None,
+        "adj_high":         h  * r_cur  if h  else None,
+        "adj_low":          l  * r_cur  if l  else None,
+        "prev_prev_low":    pp_l,
+        "prev_prev_adj_low": pp_l * r_pp if pp_l else None,
         "prev_vols":  prev_vols,
         "all_closes": all_closes,
     }
@@ -574,7 +581,8 @@ def screen(params):
     check_gap_down   = bool(params.get("gap_down", False))
     gap_down_min     = float(params.get("gap_down_min") or 0)
     gap_up_min       = float(params.get("gap_up_min") or 0)
-    check_macd_gold  = bool(params.get("macd_golden", False))
+    check_macd_gold     = bool(params.get("macd_golden", False))
+    check_earn_gap_down = bool(params.get("earn_gap_down", False))
     check_zhenming1  = bool(params.get("zhenming1", False))
     check_zhenming2  = bool(params.get("zhenming2", False))
     no_black_months  = min(int(params.get("no_black_months") or 0), 120)
@@ -668,6 +676,7 @@ def screen(params):
     # ── Step 3b: 量能/MACD/真名/跳空 → 用 YF 逐支抓（30 workers，~11s for 1300 stocks）
     need_gap_monthly = (check_gap_up or check_gap_down) and not prev_mi_gap
     need_monthly = (vol_mult > 0 or shrink_mult > 0 or check_macd_gold
+                    or check_earn_gap_down
                     or check_zhenming1 or check_zhenming2
                     or need_gap_monthly) and not is_historical
 
@@ -753,6 +762,38 @@ def screen(params):
             if gap_down_min > 0:
                 if round(_eff_prev_low - _eff_h, 4) < round(gap_down_min, 4):
                     continue
+
+        # 賺向下跳空價差（選定日期D，篩選D_prev跳空向下 + D當天突破 + 跳空≥1 + D_prev縮量）
+        if check_earn_gap_down:
+            yf_ref = s if is_historical else (monthly_yf.get(code) or {})
+            prev_o       = yf_ref.get("prev_open")
+            prev_c       = yf_ref.get("prev_close")
+            eff_prev_h   = yf_ref.get("adj_prev_high") or yf_ref.get("prev_high")
+            eff_pp_l     = yf_ref.get("prev_prev_adj_low") or yf_ref.get("prev_prev_low")
+            pvols        = yf_ref.get("prev_vols") or []
+
+            if not all([prev_o, prev_c, eff_prev_h, eff_pp_l, h]):
+                continue
+            # 條件1: D_prev向下跳空（D_prev最高 < D_prev_prev最低）
+            if eff_prev_h >= eff_pp_l:
+                continue
+            # 條件3: 跳空價差 ≥ 1元
+            if eff_pp_l - eff_prev_h < 1.0:
+                continue
+            # 條件2: D最高 > 回補目標（紅K→收盤價，黑K→開盤價）
+            recovery = prev_c if prev_c > prev_o else prev_o
+            if h <= recovery:
+                continue
+            # 條件4: D_prev縮量（volume < MA10 of prior days）
+            if len(pvols) < 2:
+                continue
+            prev_vol    = pvols[-1]   # D_prev 的量
+            prior_vols  = pvols[:-1]  # D_prev 之前的量
+            if len(prior_vols) < 5:
+                continue
+            ma10_vol = sum(prior_vols[-10:]) / min(len(prior_vols[-10:]), 10)
+            if prev_vol >= ma10_vol:
+                continue
 
         # MACD黃金交叉
         if check_macd_gold:

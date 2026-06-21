@@ -917,6 +917,13 @@
           </div>
         </label>
         <label class="checkbox-row">
+          <input type="checkbox" id="earn_gap_down" />
+          <div>
+            <div class="cb-label">賺向下跳空價差</div>
+            <div class="cb-hint">前日跳空向下 + 今日突破 + 價差≥1元 + 前日縮量</div>
+          </div>
+        </label>
+        <label class="checkbox-row">
           <input type="checkbox" id="zhenming1"
                  onchange="if(this.checked)document.getElementById('zhenming2').checked=false" />
           <div>
@@ -1081,6 +1088,7 @@
       const gapUp   = document.getElementById('gap_up').checked;
       const gapDown = document.getElementById('gap_down').checked;
       const gapDownMin = parseFloat(document.getElementById('gap_down_min').value) || 0;
+      const earnGapDown = document.getElementById('earn_gap_down').checked;
       const macdGolden = document.getElementById('macd_golden').checked;
       const zhenming1 = document.getElementById('zhenming1').checked;
       const zhenming2 = document.getElementById('zhenming2').checked;
@@ -1115,6 +1123,7 @@
         gap_up:   gapUp,
         gap_down: gapDown,
         gap_down_min: gapDownMin,
+        earn_gap_down: earnGapDown,
         macd_golden: macdGolden,
         zhenming1: zhenming1,
         zhenming2: zhenming2,
