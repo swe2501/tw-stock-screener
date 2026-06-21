@@ -1755,29 +1755,41 @@
         if (trendLines.length > 0 || trendStart || fibLevels.length > 0) redrawCanvas();
       });
 
-      // Zoom / scroll lock + cross-panel sync (all via logical range)
+      // Zoom / scroll lock + cross-panel sync
+      // Sub-charts (MACD/RSI) have fewer bars due to warmup, so logical-index sync
+      // misaligns them. We sync sub-charts by TIME range; zoom limits use logical range
+      // only on the main chart.
       const _maxBars  = candles.length;
       const _minBars  = 20;
       const _rightMax = candles.length - 1 + 5;
       let _lockingZoom = false;
       const _allCharts = [chartInstance, volInstance, macdInstance, rsiInstance].filter(Boolean);
-      _allCharts.forEach(c => {
+      const _subCharts = [volInstance, macdInstance, rsiInstance].filter(Boolean);
+
+      chartInstance.timeScale().subscribeVisibleLogicalRangeChange(range => {
+        if (_lockingZoom || !range) return;
+        const span = range.to - range.from;
+        let clamp = false, newFrom, newTo;
+        if (span > _maxBars + 5) { newFrom = -2; newTo = _maxBars + 2; clamp = true; }
+        else if (span < _minBars) { newTo = range.to; newFrom = range.to - _minBars; clamp = true; }
+        else if (range.to > _rightMax + 0.5) { newTo = _rightMax; newFrom = _rightMax - span; clamp = true; }
+        _lockingZoom = true;
+        if (clamp) {
+          _allCharts.forEach(cc => { try { cc.timeScale().setVisibleLogicalRange({ from: newFrom, to: newTo }); } catch (_) {} });
+        } else {
+          const tr = chartInstance.timeScale().getVisibleRange();
+          if (tr) _subCharts.forEach(c => { try { c.timeScale().setVisibleRange(tr); } catch (_) {} });
+        }
+        requestAnimationFrame(() => { _lockingZoom = false; });
+      });
+
+      _subCharts.forEach(c => {
         c.timeScale().subscribeVisibleLogicalRangeChange(range => {
           if (_lockingZoom || !range) return;
-          const span = range.to - range.from;
-          let newFrom = range.from, newTo = range.to, clamp = false;
-          if (span > _maxBars + 5) {
-            newFrom = -2; newTo = _maxBars + 2; clamp = true;
-          } else if (span < _minBars) {
-            newTo = range.to; newFrom = range.to - _minBars; clamp = true;
-          } else if (range.to > _rightMax + 0.5) {
-            newTo = _rightMax; newFrom = _rightMax - span; clamp = true;
-          }
+          const tr = c.timeScale().getVisibleRange();
+          if (!tr) return;
           _lockingZoom = true;
-          _allCharts.forEach(cc => {
-            if (clamp || cc !== c)
-              try { cc.timeScale().setVisibleLogicalRange({ from: newFrom, to: newTo }); } catch (_) {}
-          });
+          _allCharts.forEach(cc => { if (cc !== c) try { cc.timeScale().setVisibleRange(tr); } catch (_) {} });
           requestAnimationFrame(() => { _lockingZoom = false; });
         });
       });
