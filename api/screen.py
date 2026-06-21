@@ -784,15 +784,12 @@ def screen(params):
             recovery = prev_c if prev_c > prev_o else prev_o
             if h <= recovery:
                 continue
-            # 條件4: D_prev縮量（volume < MA10 of prior days）
-            if len(pvols) < 2:
+            # 條件4: D_prev縮量（當日量 < MA5含當日，與券商顯示邏輯一致）
+            if len(pvols) < 5:
                 continue
-            prev_vol    = pvols[-1]   # D_prev 的量
-            prior_vols  = pvols[:-1]  # D_prev 之前的量
-            if len(prior_vols) < 5:
-                continue
-            ma10_vol = sum(prior_vols[-10:]) / min(len(prior_vols[-10:]), 10)
-            if prev_vol >= ma10_vol:
+            prev_vol   = pvols[-1]             # D_prev 的量
+            ma5_incl   = sum(pvols[-5:]) / 5   # MA5 含 D_prev 本身
+            if prev_vol >= ma5_incl:
                 continue
 
         # MACD黃金交叉
