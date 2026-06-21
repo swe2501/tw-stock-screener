@@ -911,7 +911,7 @@
             <div class="cb-hint">當日最高 &lt; 前日最低</div>
             <div style="margin-top:6px;display:flex;align-items:center;gap:6px;">
               <span style="font-size:12px;color:var(--text-muted);">最小幅度</span>
-              <input type="number" id="gap_down_min" min="0" step="0.5" placeholder="元" style="width:70px;padding:3px 6px;font-size:13px;border:1px solid var(--border);border-radius:4px;background:var(--input-bg);color:var(--text);" />
+              <input type="number" id="gap_down_min" min="0" step="0.5" placeholder="元" style="width:70px;padding:3px 6px;font-size:13px;border:1px solid var(--border);border-radius:4px;background:var(--input-bg);color:var(--text);" oninput="if(this.value) document.getElementById('gap_down').checked=true;" />
               <span style="font-size:12px;color:var(--text-muted);">元</span>
             </div>
           </div>
