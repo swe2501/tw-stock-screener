@@ -639,13 +639,41 @@ def fetch_chart(code, range_str="3mo", interval="1d", adj=False, raw=False):
     # raw=True → 真正未調整原始日K，直接走 TWSE STOCK_DAY（僅台股日K）
     yf_sym_check = code if (code.startswith("^") or "=" in code) else f"{code}.TW"
     if raw and interval == "1d" and yf_sym_check.endswith(".TW"):
-        candles = fetch_twse_chart(code, range_str)
+        yf_ev_url = (f"https://query1.finance.yahoo.com/v8/finance/chart/{code}.TW"
+                     f"?interval=1d&range={range_str}&events=div%2Csplits")
+        with ThreadPoolExecutor(max_workers=4) as _ex:
+            _fc = _ex.submit(fetch_twse_chart, code, range_str)
+            _fe = _ex.submit(_try_yf_url, yf_ev_url)
+            _fn = _ex.submit(_fetch_tw_name, code)
+            _fi = _ex.submit(_fetch_tw_industry, code)
+            candles = _fc.result() or []
+            try: tw_name = _fn.result(timeout=4.0)
+            except Exception: tw_name = None
+            try: tw_industry = _fi.result(timeout=4.0) or ""
+            except Exception: tw_industry = ""
+            events = []
+            try:
+                _, yf_r0 = _fe.result(timeout=2.0)
+                if yf_r0:
+                    tz_off = timedelta(hours=8)
+                    raw_ev = yf_r0.get("events") or {}
+                    for ts_str, div in (raw_ev.get("dividends") or {}).items():
+                        try:
+                            dt = datetime.fromtimestamp(int(ts_str), tz=timezone(tz_off))
+                            events.append({"date": dt.strftime("%Y-%m-%d"), "type": "div",
+                                           "amount": round(float(div.get("amount", 0)), 4)})
+                        except Exception: pass
+                    for ts_str, sp in (raw_ev.get("splits") or {}).items():
+                        try:
+                            dt = datetime.fromtimestamp(int(ts_str), tz=timezone(tz_off))
+                            events.append({"date": dt.strftime("%Y-%m-%d"), "type": "split",
+                                           "ratio": f"{sp.get('numerator',0)}/{sp.get('denominator',1)}"})
+                        except Exception: pass
+            except Exception: pass
         if candles:
-            tw_name = _fetch_tw_name(code) or code
-            tw_industry = _fetch_tw_industry(code) or ""
             return {
-                "code": code, "name": tw_name, "industry": tw_industry,
-                "currency": "TWD", "data": candles, "events": [],
+                "code": code, "name": tw_name or code, "industry": tw_industry,
+                "currency": "TWD", "data": candles, "events": events,
             }
         # TWSE 無資料（OTC/創新板等）→ 回落到正常路徑（YF raw quote）
     # TX=F daily → TAIFEX annual ZIPs + TWII proxy
