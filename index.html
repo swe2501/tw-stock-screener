@@ -1007,6 +1007,7 @@
             <div id="zoomHint">← 按住滑鼠左鍵拖曳選取範圍放大 →</div>
             <div id="maLabel">
               <div class="label-row">
+                <span class="ma-toggle" id="maAllToggle" onclick="toggleAllMA()" style="color:#fff;border:1px solid rgba(255,255,255,0.3);border-radius:3px;padding:0 4px;margin-right:4px;">均線</span>
                 <span class="ma-toggle" onclick="toggleSeriesViz('ma5')"   style="color:#FFE600">MA5</span>
                 <span class="ma-toggle" onclick="toggleSeriesViz('ma10')"  style="color:#FF8C00">MA10</span>
                 <span class="ma-toggle" onclick="toggleSeriesViz('ma20')"  style="color:#00E676">MA20</span>
@@ -1502,6 +1503,25 @@
       Object.keys(seriesMap).forEach(k => delete seriesMap[k]);
       // Reset all ma-toggle labels to visible
       document.querySelectorAll('.ma-toggle').forEach(el => el.classList.remove('hidden'));
+    }
+
+    function toggleAllMA() {
+      const keys = ['ma5','ma10','ma20','ma60','ma120','ma240'];
+      const anyVisible = keys.some(k => {
+        const s = seriesMap[k];
+        if (!s) return false;
+        try { return s.options().visible !== false; } catch(_) { return true; }
+      });
+      const makeVisible = !anyVisible;
+      keys.forEach(k => {
+        const s = seriesMap[k];
+        if (!s) return;
+        s.applyOptions({ visible: makeVisible });
+        const span = document.querySelector(`.ma-toggle[onclick="toggleSeriesViz('${k}')"]`);
+        if (span) span.classList.toggle('hidden', !makeVisible);
+      });
+      const btn = document.getElementById('maAllToggle');
+      if (btn) btn.classList.toggle('hidden', !makeVisible);
     }
 
     function toggleSeriesViz(key) {
