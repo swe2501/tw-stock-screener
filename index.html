@@ -1806,6 +1806,7 @@
     }
 
     function _renderMainChart(candles, events) {
+      if (chartInstance) { try { chartInstance.remove(); } catch(_) {} chartInstance = null; }
       const el = document.getElementById('chartContainer');
       el.innerHTML = '';
       const opts = _chartOpts(220, false);
@@ -1873,6 +1874,7 @@
     }
 
     function _renderVOLChart(candles) {
+      if (volInstance) { try { volInstance.remove(); } catch(_) {} volInstance = null; }
       const el = document.getElementById('volContainer');
       el.innerHTML = '';
       const opts = _chartOpts(70, false);
@@ -1925,6 +1927,7 @@
     }
 
     function _renderMACDChart(candles) {
+      if (macdInstance) { try { macdInstance.remove(); } catch(_) {} macdInstance = null; }
       const el = document.getElementById('macdContainer');
       el.innerHTML = '';
       const closes = candles.map(c => c.close);
@@ -1965,6 +1968,7 @@
     }
 
     function _renderRSIChart(candles) {
+      if (rsiInstance) { try { rsiInstance.remove(); } catch(_) {} rsiInstance = null; }
       const el = document.getElementById('rsiContainer');
       el.innerHTML = '';
       const closes = candles.map(c => c.close);
