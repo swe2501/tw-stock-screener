@@ -1927,14 +1927,13 @@
       opts.rightPriceScale.scaleMargins = { top: 0.1, bottom: 0.1 };
       macdInstance = LightweightCharts.createChart(el, opts);
 
-      // Anchor series: full K-line timestamps on a hidden scale so logical indices
-      // align with the main chart (MACD has 26 warmup bars fewer without this)
+      // Anchor series: full K-line timestamps as an invisible overlay so that logical
+      // indices align with the main chart (MACD warmup would otherwise shift bar 0)
       const macdAnchor = macdInstance.addLineSeries({
-        color: 'rgba(0,0,0,0)', lineWidth: 1, priceScaleId: '_anc',
+        color: 'rgba(0,0,0,0)', lineWidth: 1, priceScaleId: '',
         lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false,
       });
       macdAnchor.setData(times.map(t => ({ time: t, value: 0 })));
-      macdInstance.priceScale('_anc').applyOptions({ visible: false });
 
       const histSeries = macdInstance.addHistogramSeries({ priceScaleId: 'right' });
       histSeries.setData(
@@ -1969,13 +1968,13 @@
       opts.rightPriceScale.scaleMargins = { top: 0.05, bottom: 0.05 };
       rsiInstance = LightweightCharts.createChart(el, opts);
 
-      // Anchor series: full K-line timestamps so logical indices align with main chart
+      // Anchor series: full K-line timestamps as an invisible overlay so that logical
+      // indices align with the main chart (RSI warmup would otherwise shift bar 0)
       const rsiAnchor = rsiInstance.addLineSeries({
-        color: 'rgba(0,0,0,0)', lineWidth: 1, priceScaleId: '_anc',
+        color: 'rgba(0,0,0,0)', lineWidth: 1, priceScaleId: '',
         lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false,
       });
       rsiAnchor.setData(times.map(t => ({ time: t, value: 0 })));
-      rsiInstance.priceScale('_anc').applyOptions({ visible: false });
 
       const autoScale = () => ({ priceRange: { minValue: 0, maxValue: 100 } });
       const r10 = rsiInstance.addLineSeries({ color: '#4f8ef7', lineWidth: 1, priceScaleId: 'right', autoscaleInfoProvider: autoScale });
