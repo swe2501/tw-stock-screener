@@ -346,6 +346,11 @@ def fetch_all_stocks_mi_index(code_name_map, date_str):
         # 新格式（2025+ tables 陣列）沒有 stat 欄位，不能用 stat != "OK" 擋掉
         if data.get("stat") and data.get("stat") != "OK":
             return {}
+        # TWSE MI_INDEX 有時對特定日期回傳錯誤日期的資料（e.g. 查 06/16 卻給 06/12）
+        # 若回傳日期與請求日期不符，放棄此路徑改走 YF historical
+        resp_date = str(data.get("date") or "")
+        if resp_date and resp_date != date_str:
+            return {}
 
         # ── 新格式：tables 陣列（stat 欄位不存在）──────────────────────────────
         # tables[N] 中找個股交易表（data 筆數最多、含股票代號的那張）
