@@ -571,6 +571,23 @@
       z-index: 10;
       display: none;
     }
+    #ohlcTooltip {
+      position: absolute;
+      top: 4px; left: 50%;
+      transform: translateX(-50%);
+      background: rgba(19,23,34,0.85);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 6px;
+      padding: 3px 10px;
+      font-size: 12px;
+      font-family: monospace;
+      color: #c9d1d9;
+      pointer-events: none;
+      z-index: 8;
+      white-space: nowrap;
+      display: none;
+      letter-spacing: 0.03em;
+    }
     #zoomHint {
       position: absolute;
       top: 0; left: 0; right: 0;
@@ -984,6 +1001,7 @@
         <div id="chartWrapper" style="display:none">
           <div id="mainChartPanel">
             <div id="chartContainer"></div>
+            <div id="ohlcTooltip"></div>
             <canvas id="fibCanvas"></canvas>
             <div id="chartOverlay"></div>
             <div id="zoomHint">← 按住滑鼠左鍵拖曳選取範圍放大 →</div>
@@ -1677,6 +1695,30 @@
       }, 0);
 
       _syncTimeRanges([chartInstance, volInstance, macdInstance, rsiInstance].filter(Boolean));
+
+      // ── OHLC Tooltip on crosshair move ───────────────────
+      const _ohlcTip = document.getElementById('ohlcTooltip');
+      const _candleMap = {};
+      candles.forEach(c => { _candleMap[c.time] = c; });
+      chartInstance.subscribeCrosshairMove(param => {
+        if (!param || !param.time || !param.seriesData) {
+          _ohlcTip.style.display = 'none';
+          return;
+        }
+        const c = _candleMap[param.time];
+        if (!c) { _ohlcTip.style.display = 'none'; return; }
+        const date = c.time.replace(/-/g, '/');
+        const color = c.close >= c.open ? '#e74c3c' : '#26c281';
+        const fmt = v => Number(v).toFixed(2);
+        _ohlcTip.innerHTML =
+          `<span style="color:#aaa">${date}</span>` +
+          `　開 <span style="color:${color}">${fmt(c.open)}</span>` +
+          `　高 <span style="color:${color}">${fmt(c.high)}</span>` +
+          `　低 <span style="color:${color}">${fmt(c.low)}</span>` +
+          `　收 <span style="color:${color}">${fmt(c.close)}</span>`;
+        _ohlcTip.style.display = 'block';
+      });
+
       resizeFibCanvas();
 
       // Resize observer
