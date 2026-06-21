@@ -1714,8 +1714,6 @@
         } catch (_) {}
       }, 0);
 
-      _syncTimeRanges([chartInstance, volInstance, macdInstance, rsiInstance].filter(Boolean));
-
       // ── OHLC Tooltip on crosshair move ───────────────────
       const _ohlcTip = document.getElementById('ohlcTooltip');
       const _candleMap = {};
@@ -1757,29 +1755,28 @@
         if (trendLines.length > 0 || trendStart || fibLevels.length > 0) redrawCanvas();
       });
 
-      // Zoom / scroll lock
+      // Zoom / scroll lock + cross-panel sync (all via logical range)
       const _maxBars  = candles.length;
       const _minBars  = 20;
-      const _rightMax = candles.length - 1 + 5; // last bar index + rightOffset buffer
+      const _rightMax = candles.length - 1 + 5;
       let _lockingZoom = false;
       const _allCharts = [chartInstance, volInstance, macdInstance, rsiInstance].filter(Boolean);
       _allCharts.forEach(c => {
         c.timeScale().subscribeVisibleLogicalRangeChange(range => {
           if (_lockingZoom || !range) return;
           const span = range.to - range.from;
-          let newFrom, newTo;
+          let newFrom = range.from, newTo = range.to, clamp = false;
           if (span > _maxBars + 5) {
-            newFrom = -2; newTo = _maxBars + 2;
+            newFrom = -2; newTo = _maxBars + 2; clamp = true;
           } else if (span < _minBars) {
-            newTo = range.to; newFrom = range.to - _minBars;
+            newTo = range.to; newFrom = range.to - _minBars; clamp = true;
           } else if (range.to > _rightMax + 0.5) {
-            newTo = _rightMax; newFrom = _rightMax - span;
-          } else {
-            return;
+            newTo = _rightMax; newFrom = _rightMax - span; clamp = true;
           }
           _lockingZoom = true;
           _allCharts.forEach(cc => {
-            try { cc.timeScale().setVisibleLogicalRange({ from: newFrom, to: newTo }); } catch (_) {}
+            if (clamp || cc !== c)
+              try { cc.timeScale().setVisibleLogicalRange({ from: newFrom, to: newTo }); } catch (_) {}
           });
           requestAnimationFrame(() => { _lockingZoom = false; });
         });
