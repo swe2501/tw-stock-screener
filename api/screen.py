@@ -784,18 +784,20 @@ def screen(params):
             recovery = prev_c if prev_c > prev_o else prev_o
             if h <= recovery:
                 continue
-            # 條件4: D_prev縮量（當日量 < MA5含當日，與券商顯示邏輯一致）
+            # 條件4: D_prev縮量（量 < 1.2 × MAX(MA5, MA10)，含當日，與券商顯示邏輯一致）
             # D_prev 量優先用 MI_INDEX（TWSE 官方張數），其次 YF
             if len(pvols) < 5:
                 continue
             mi_prev_vol = prev_mi_gap.get(code, {}).get("volume") if not is_historical else None
             prev_vol  = mi_prev_vol if mi_prev_vol else pvols[-1]
-            # MA5 用 YF 歷史量（含D_prev slot），但替換最後一筆為準確值
-            ma5_window = list(pvols[-5:])
+            # MA 窗口替換最後一筆為準確值
+            window = list(pvols[-10:]) if len(pvols) >= 10 else list(pvols[-5:])
             if mi_prev_vol:
-                ma5_window[-1] = mi_prev_vol
-            ma5_incl = sum(ma5_window) / 5
-            if prev_vol >= ma5_incl:
+                window[-1] = mi_prev_vol
+            ma5  = sum(window[-5:]) / 5
+            ma10 = sum(window) / len(window)
+            ref_vol = max(ma5, ma10)
+            if prev_vol >= 1.2 * ref_vol:
                 continue
 
         # MACD黃金交叉
