@@ -147,7 +147,8 @@ def fetch_yf_chart(code, date_str):
     """
     Fetch full OHLCV for a single stock via Yahoo Finance v8 chart API.
     Returns dict with open/high/low/close/volume/prev_close/prev_high/prev_vols, or None.
-    v7 spark only returns close; v8 chart returns full OHLCV.
+    Also returns adj_prev_high/adj_prev_low/adj_high/adj_low using adjclose ratio
+    so callers can detect genuine gap-downs excluding ex-dividend price drops.
     """
     url = (f"https://query1.finance.yahoo.com/v8/finance/chart/{code}.TW"
            f"?interval=1d&range=3mo")
@@ -164,6 +165,8 @@ def fetch_yf_chart(code, date_str):
         lows    = quotes.get("low")    or []
         closes  = quotes.get("close")  or []
         volumes = quotes.get("volume") or []
+        adjcloses = ((r0.get("indicators", {}).get("adjclose") or [{}])[0]
+                     .get("adjclose") or [])
     except Exception:
         return None
 
@@ -180,6 +183,16 @@ def fetch_yf_chart(code, date_str):
             return float(v) if v is not None else None
         except (IndexError, TypeError, ValueError):
             return None
+
+    def adj_ratio(idx):
+        try:
+            ac = adjcloses[idx]
+            rc = closes[idx]
+            if ac and rc:
+                return float(ac) / float(rc)
+        except (IndexError, TypeError, ValueError):
+            pass
+        return 1.0
 
     # 確認 target_idx 是否有有效 OHLC
     target_has_ohlc = (target_idx is not None
@@ -205,11 +218,17 @@ def fetch_yf_chart(code, date_str):
                 for i in range(prev_valid_idx + 1)
                 if safe(volumes, i) and safe(volumes, i) > 0
             ]
+            ph = safe(highs, prev_valid_idx)
+            pl = safe(lows,  prev_valid_idx)
+            r  = adj_ratio(prev_valid_idx)
             return {
                 "open": None, "high": None, "low": None, "close": None, "volume": 0,
-                "prev_close": safe(closes, prev_valid_idx),
-                "prev_high":  safe(highs,  prev_valid_idx),
-                "prev_low":   safe(lows,   prev_valid_idx),
+                "prev_close":    safe(closes, prev_valid_idx),
+                "prev_high":     ph,
+                "prev_low":      pl,
+                "adj_prev_high": ph * r if ph else None,
+                "adj_prev_low":  pl * r if pl else None,
+                "adj_high": None, "adj_low": None,
                 "prev_vols":  prev_vols,
                 "all_closes": [],
             }
@@ -231,12 +250,21 @@ def fetch_yf_chart(code, date_str):
         if safe(closes, i) is not None
     ]
 
+    ph = safe(highs, target_idx - 1) if target_idx > 0 else None
+    pl = safe(lows,  target_idx - 1) if target_idx > 0 else None
+    r_prev = adj_ratio(target_idx - 1) if target_idx > 0 else 1.0
+    r_cur  = adj_ratio(target_idx)
+
     return {
         "open": o, "high": h, "low": l, "close": c,
         "volume": int(v) if v else 0,
-        "prev_close": safe(closes, target_idx - 1) if target_idx > 0 else None,
-        "prev_high":  safe(highs,  target_idx - 1) if target_idx > 0 else None,
-        "prev_low":   safe(lows,   target_idx - 1) if target_idx > 0 else None,
+        "prev_close":    safe(closes, target_idx - 1) if target_idx > 0 else None,
+        "prev_high":     ph,
+        "prev_low":      pl,
+        "adj_prev_high": ph * r_prev if ph else None,
+        "adj_prev_low":  pl * r_prev if pl else None,
+        "adj_high":      h  * r_cur  if h  else None,
+        "adj_low":       l  * r_cur  if l  else None,
         "prev_vols":  prev_vols,
         "all_closes": all_closes,
     }
@@ -686,6 +714,11 @@ def screen(params):
             prev_high  = s.get("prev_high")
             prev_low   = s.get("prev_low")
             prev_vols  = s.get("prev_vols", [])
+            # Historical path always uses YF adj prices to exclude ex-div false gaps
+            _eff_h         = s.get("adj_high")  or h
+            _eff_l         = s.get("adj_low")   or l
+            _eff_prev_high = s.get("adj_prev_high") or prev_high
+            _eff_prev_low  = s.get("adj_prev_low")  or prev_low
         else:
             yf_data = monthly_yf.get(code) or {}
             if code in prev_mi_gap:
@@ -695,23 +728,30 @@ def screen(params):
                 prev_high = yf_data.get("prev_high")
                 prev_low  = yf_data.get("prev_low")
             prev_vols = yf_data.get("prev_vols", [])
+            # For ex-div stocks: fetch YF adjusted prices to verify genuine gap
+            if (check_gap_up or check_gap_down) and code in exdiv_codes:
+                _yf_adj = fetch_yf_chart(code, actual_date)
+                _eff_h         = (_yf_adj or {}).get("adj_high")  or h
+                _eff_l         = (_yf_adj or {}).get("adj_low")   or l
+                _eff_prev_high = (_yf_adj or {}).get("adj_prev_high") or prev_high
+                _eff_prev_low  = (_yf_adj or {}).get("adj_prev_low")  or prev_low
+            else:
+                _eff_h, _eff_l, _eff_prev_high, _eff_prev_low = h, l, prev_high, prev_low
 
-        # 跳空向上：今日最低 > 前日最高
+        # 跳空向上：今日最低 > 前日最高（用還原日K價格排除除息假跳空）
         if check_gap_up:
-            if prev_high is None or round(l, 4) <= round(prev_high, 4):
+            if _eff_prev_high is None or round(_eff_l, 4) <= round(_eff_prev_high, 4):
                 continue
             if gap_up_min > 0:
-                if round(l - prev_high, 4) < round(gap_up_min, 4):
+                if round(_eff_l - _eff_prev_high, 4) < round(gap_up_min, 4):
                     continue
 
-        # 跳空向下：今日最高 < 前日最低（排除除權除息造成的假跳空）
+        # 跳空向下：今日最高 < 前日最低（用還原日K價格排除除息假跳空）
         if check_gap_down:
-            if code in exdiv_codes:
-                continue
-            if prev_low is None or round(h, 4) >= round(prev_low, 4):
+            if _eff_prev_low is None or round(_eff_h, 4) >= round(_eff_prev_low, 4):
                 continue
             if gap_down_min > 0:
-                if round(prev_low - h, 4) < round(gap_down_min, 4):
+                if round(_eff_prev_low - _eff_h, 4) < round(gap_down_min, 4):
                     continue
 
         # MACD黃金交叉
