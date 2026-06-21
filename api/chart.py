@@ -555,7 +555,7 @@ def fetch_twse_chart(code, range_str="3mo"):
     Faster than YF for TW stocks. Returns sorted candle list or []."""
     tz_offset = timedelta(hours=8)
     now_dt = datetime.now(tz=timezone(tz_offset))
-    months_needed = {"1mo": 2, "3mo": 4, "6mo": 7, "1y": 13}.get(range_str, 4)
+    months_needed = {"1mo": 2, "3mo": 4, "6mo": 7, "1y": 13, "2y": 25, "3y": 37}.get(range_str, 4)
     cutoff_dt = now_dt - timedelta(days=RANGE_DAYS.get(range_str, 95))
     cutoff = cutoff_dt.strftime("%Y-%m-%d")
 
@@ -569,7 +569,7 @@ def fetch_twse_chart(code, range_str="3mo"):
         yyyymm_list.append(f"{y}{m:02d}")
 
     all_candles = []
-    with ThreadPoolExecutor(max_workers=min(months_needed, 6)) as ex:
+    with ThreadPoolExecutor(max_workers=min(months_needed, 12)) as ex:
         for rows in ex.map(_fetch_twse_month, [code] * months_needed, yyyymm_list):
             all_candles.extend(rows)
 
@@ -635,7 +635,19 @@ def _try_yf_url(url):
         return 0, None
 
 
-def fetch_chart(code, range_str="3mo", interval="1d", adj=False):
+def fetch_chart(code, range_str="3mo", interval="1d", adj=False, raw=False):
+    # raw=True → 真正未調整原始日K，直接走 TWSE STOCK_DAY（僅台股日K）
+    yf_sym_check = code if (code.startswith("^") or "=" in code) else f"{code}.TW"
+    if raw and interval == "1d" and yf_sym_check.endswith(".TW"):
+        candles = fetch_twse_chart(code, range_str)
+        if candles:
+            tw_name = _fetch_tw_name(code) or code
+            tw_industry = _fetch_tw_industry(code) or ""
+            return {
+                "code": code, "name": tw_name, "industry": tw_industry,
+                "currency": "TWD", "data": candles, "events": [],
+            }
+        # TWSE 無資料（OTC/創新板等）→ 回落到正常路徑（YF raw quote）
     # TX=F daily → TAIFEX annual ZIPs + TWII proxy
     if code == "TX=F" and interval == "1d":
         result = fetch_tx(range_str)
@@ -864,13 +876,14 @@ class handler(BaseHTTPRequestHandler):
         range_str = (params.get("range") or ["3mo"])[0].strip()
         interval = (params.get("interval") or ["1d"])[0].strip()
         adj = (params.get("adj") or ["0"])[0].strip() == "1"
+        raw = (params.get("raw") or ["0"])[0].strip() == "1"
 
         if not code:
             self._json(400, {"error": "missing code parameter"})
             return
 
         try:
-            result = fetch_chart(code, range_str, interval, adj=adj)
+            result = fetch_chart(code, range_str, interval, adj=adj, raw=raw)
             # TX=F intraday: Yahoo Finance has no TX=F 5m data → fall back to ^TWII
             if not result and code == "TX=F" and interval != "1d":
                 result = fetch_chart("^TWII", range_str, interval)
