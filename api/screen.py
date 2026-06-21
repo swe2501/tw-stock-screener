@@ -622,6 +622,8 @@ def screen(params):
     prev_mi_gap: dict = {}
     prev_dt_for_gap: str = ""
     exdiv_codes: set = set()
+    if (check_gap_up or check_gap_down):
+        exdiv_codes = _fetch_exdiv_codes(actual_date)
     if (check_gap_up or check_gap_down) and not is_historical:
         # 前一交易日 MI_INDEX（明確跳過週六日，最多往回找 20 天涵蓋農曆新年連假）
         for delta in range(1, 20):
@@ -634,7 +636,6 @@ def screen(params):
                 prev_mi_gap = tmp
                 prev_dt_for_gap = prev_dt
                 break
-        exdiv_codes = _fetch_exdiv_codes(actual_date)
 
     # ── Step 3b: 量能/MACD/真名/跳空 → 用 YF 逐支抓（30 workers，~11s for 1300 stocks）
     need_gap_monthly = (check_gap_up or check_gap_down) and not prev_mi_gap
