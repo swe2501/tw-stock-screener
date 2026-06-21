@@ -577,6 +577,13 @@ def fetch_twse_chart(code, range_str="3mo"):
         for rows in ex.map(_fetch_twse_month, [code] * months_needed, yyyymm_list):
             all_candles.extend(rows)
 
+    # 如果當月完全沒抓到（rate limit），等 0.5s 補抓一次
+    current_ym = yyyymm_list[0]
+    cur_prefix = f"{current_ym[:4]}-{current_ym[4:]}"
+    if not any(c["time"].startswith(cur_prefix) for c in all_candles):
+        time.sleep(0.5)
+        all_candles.extend(_fetch_twse_month(code, current_ym))
+
     all_candles.sort(key=lambda x: x["time"])
     return [c for c in all_candles if c["time"] >= cutoff]
 
