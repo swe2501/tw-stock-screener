@@ -524,30 +524,34 @@ def _fetch_twse_month(code, yyyymm):
     """Fetch one month of OHLCV candles from TWSE STOCK_DAY. Returns list or []."""
     url = (f"https://www.twse.com.tw/exchangeReport/STOCK_DAY"
            f"?response=json&date={yyyymm}01&stockNo={code}")
-    try:
-        req = urllib.request.Request(url, headers=TWSE_HEADERS)
-        with urllib.request.urlopen(req, timeout=10) as r:
-            d = json.loads(r.read())
-        if d.get("stat") != "OK" or not d.get("data"):
-            return []
-        candles = []
-        for row in d["data"]:
-            try:
-                parts = row[0].split("/")
-                date_str = f"{int(parts[0])+1911}-{parts[1]}-{parts[2]}"
-                candles.append({
-                    "time":   date_str,
-                    "open":   round(float(row[3].replace(",", "")), 2),
-                    "high":   round(float(row[4].replace(",", "")), 2),
-                    "low":    round(float(row[5].replace(",", "")), 2),
-                    "close":  round(float(row[6].replace(",", "")), 2),
-                    "volume": round(int(row[1].replace(",", "")) / 1000),
-                })
-            except Exception:
-                continue
-        return candles
-    except Exception:
-        return []
+    for attempt in range(3):
+        try:
+            if attempt:
+                time.sleep(attempt * 0.5)
+            req = urllib.request.Request(url, headers=TWSE_HEADERS)
+            with urllib.request.urlopen(req, timeout=10) as r:
+                d = json.loads(r.read())
+            if d.get("stat") != "OK" or not d.get("data"):
+                return []
+            candles = []
+            for row in d["data"]:
+                try:
+                    parts = row[0].split("/")
+                    date_str = f"{int(parts[0])+1911}-{parts[1]}-{parts[2]}"
+                    candles.append({
+                        "time":   date_str,
+                        "open":   round(float(row[3].replace(",", "")), 2),
+                        "high":   round(float(row[4].replace(",", "")), 2),
+                        "low":    round(float(row[5].replace(",", "")), 2),
+                        "close":  round(float(row[6].replace(",", "")), 2),
+                        "volume": round(int(row[1].replace(",", "")) / 1000),
+                    })
+                except Exception:
+                    continue
+            return candles
+        except Exception:
+            continue
+    return []
 
 
 def fetch_twse_chart(code, range_str="3mo"):
@@ -569,7 +573,7 @@ def fetch_twse_chart(code, range_str="3mo"):
         yyyymm_list.append(f"{y}{m:02d}")
 
     all_candles = []
-    with ThreadPoolExecutor(max_workers=min(months_needed, 12)) as ex:
+    with ThreadPoolExecutor(max_workers=min(months_needed, 8)) as ex:
         for rows in ex.map(_fetch_twse_month, [code] * months_needed, yyyymm_list):
             all_candles.extend(rows)
 
