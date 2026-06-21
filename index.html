@@ -1817,17 +1817,30 @@
 
       // Ex-dividend / split markers
       if (events && events.length > 0) {
-        const candleDates = new Set(candles.map(c => c.time));
+        const sortedDates = candles.map(c => c.time).sort();
+        const candleDates = new Set(sortedDates);
+        // If event date not in trading days, snap to nearest prior trading day
+        function snapToTradingDay(date) {
+          if (candleDates.has(date)) return date;
+          for (let i = sortedDates.length - 1; i >= 0; i--) {
+            if (sortedDates[i] <= date) return sortedDates[i];
+          }
+          return null;
+        }
         const markers = events
-          .filter(e => candleDates.has(e.date))
-          .map(e => ({
-            time: e.date,
-            position: 'belowBar',
-            color: e.type === 'split' ? '#9b59b6' : '#f39c12',
-            shape: 'arrowUp',
-            text: e.type === 'split' ? `股分 ${e.ratio}` : `息 ${e.amount}`,
-            size: 1,
-          }))
+          .map(e => {
+            const snapped = snapToTradingDay(e.date);
+            if (!snapped) return null;
+            return {
+              time: snapped,
+              position: 'belowBar',
+              color: e.type === 'split' ? '#9b59b6' : '#f39c12',
+              shape: 'arrowUp',
+              text: e.type === 'split' ? `股分 ${e.ratio}` : `息 ${e.amount}`,
+              size: 1,
+            };
+          })
+          .filter(Boolean)
           .sort((a, b) => a.time < b.time ? -1 : 1);
         if (markers.length > 0) candleSeriesRef.setMarkers(markers);
       }
