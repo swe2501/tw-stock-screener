@@ -660,7 +660,7 @@ def screen(params):
     exdiv_codes: set = set()
     if (check_gap_up or check_gap_down):
         exdiv_codes = _fetch_exdiv_codes(actual_date)
-    if (check_gap_up or check_gap_down) and not is_historical:
+    if (check_gap_up or check_gap_down or check_earn_gap_down) and not is_historical:
         # 前一交易日 MI_INDEX（明確跳過週六日，最多往回找 20 天涵蓋農曆新年連假）
         for delta in range(1, 20):
             prev_dt_obj = datetime.strptime(actual_date, "%Y%m%d") - timedelta(days=delta)
@@ -674,7 +674,7 @@ def screen(params):
                 break
 
     # ── Step 3b: 量能/MACD/真名/跳空 → 用 YF 逐支抓（30 workers，~11s for 1300 stocks）
-    need_gap_monthly = (check_gap_up or check_gap_down) and not prev_mi_gap
+    need_gap_monthly = (check_gap_up or check_gap_down or check_earn_gap_down) and not prev_mi_gap
     need_monthly = (vol_mult > 0 or shrink_mult > 0 or check_macd_gold
                     or check_earn_gap_down
                     or check_zhenming1 or check_zhenming2
@@ -785,10 +785,16 @@ def screen(params):
             if h <= recovery:
                 continue
             # 條件4: D_prev縮量（當日量 < MA5含當日，與券商顯示邏輯一致）
+            # D_prev 量優先用 MI_INDEX（TWSE 官方張數），其次 YF
             if len(pvols) < 5:
                 continue
-            prev_vol   = pvols[-1]             # D_prev 的量
-            ma5_incl   = sum(pvols[-5:]) / 5   # MA5 含 D_prev 本身
+            mi_prev_vol = prev_mi_gap.get(code, {}).get("volume") if not is_historical else None
+            prev_vol  = mi_prev_vol if mi_prev_vol else pvols[-1]
+            # MA5 用 YF 歷史量（含D_prev slot），但替換最後一筆為準確值
+            ma5_window = list(pvols[-5:])
+            if mi_prev_vol:
+                ma5_window[-1] = mi_prev_vol
+            ma5_incl = sum(ma5_window) / 5
             if prev_vol >= ma5_incl:
                 continue
 
