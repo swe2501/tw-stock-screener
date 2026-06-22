@@ -659,27 +659,32 @@ def screen(params):
     if not candidates:
         return {"date": display_date, "total": len(all_stocks), "count": 0, "results": []}
 
-    # ── Step 3a: 跳空篩選 → 一次抓前一日 MI_INDEX，取代逐支 STOCK_DAY ────────
+    # ── Step 3a: 跳空篩選 → 只試「前一個非週末日曆日」MI_INDEX（天條：跳空只跟前一交易日比）
     prev_mi_gap: dict = {}
     prev_dt_for_gap: str = ""
     exdiv_codes: set = set()
     if (check_gap_up or check_gap_down):
         exdiv_codes = _fetch_exdiv_codes(actual_date)
     if (check_gap_up or check_gap_down or check_earn_gap_down) and not is_historical:
-        # 前一交易日 MI_INDEX（明確跳過週六日，最多往回找 20 天涵蓋農曆新年連假）
-        for delta in range(1, 20):
+        # 只找「前一個非週末日曆日」——不因 MI_INDEX 失敗而往前多抓
+        # 假日（非週末）由 YF per-stock fallback 處理，不在這裡跳過
+        expected_prev_dt = None
+        for delta in range(1, 8):
             prev_dt_obj = datetime.strptime(actual_date, "%Y%m%d") - timedelta(days=delta)
-            if prev_dt_obj.weekday() >= 5:   # 跳過週六(5)、週日(6)
-                continue
-            prev_dt = prev_dt_obj.strftime("%Y%m%d")
-            tmp = fetch_all_stocks_mi_index({}, prev_dt)
+            if prev_dt_obj.weekday() < 5:   # 第一個非週六日的日曆日
+                expected_prev_dt = prev_dt_obj.strftime("%Y%m%d")
+                break
+        if expected_prev_dt:
+            tmp = fetch_all_stocks_mi_index({}, expected_prev_dt)
             if tmp:
                 prev_mi_gap = tmp
-                prev_dt_for_gap = prev_dt
-                break
+                prev_dt_for_gap = expected_prev_dt
+            # MI_INDEX 失敗（rate limit / 假日）→ prev_mi_gap 維持 {}
+            # 每支股票將 fallback 到 monthly_yf 的 per-stock prev_low（YF 自動定位前一交易日）
 
-    # ── Step 3b: 量能/MACD/真名/跳空 → 用 YF 逐支抓（30 workers，~11s for 1300 stocks）
-    need_gap_monthly = (check_gap_up or check_gap_down or check_earn_gap_down) and not prev_mi_gap
+    # ── Step 3b: 量能/MACD/真名/跳空 → 用 YF 逐支抓
+    # 跳空有啟用時一定要抓 YF（不管 prev_mi_gap 是否成功），確保 per-stock fallback 有資料
+    need_gap_monthly = (check_gap_up or check_gap_down or check_earn_gap_down)
     need_monthly = (vol_mult > 0 or shrink_mult > 0 or check_macd_gold
                     or check_earn_gap_down
                     or check_zhenming1 or check_zhenming2
@@ -718,6 +723,7 @@ def screen(params):
                         monthly_yf[code] = twse_prev
 
     # ── Step 4: Apply gap_up and volume MA filters ────────────────────────────
+    _gap_unverified: set = set()  # 前一日資料缺失、放行但標記需手動排查
     results = []
     for code, s in candidates.items():
         o, c, h, l, v = s["open"], s["close"], s["high"], s["low"], s["volume"]
@@ -754,18 +760,24 @@ def screen(params):
 
         # 跳空向上：今日最低 > 前日最高（用還原日K價格排除除息假跳空）
         if check_gap_up:
-            if _eff_prev_high is None or round(_eff_l, 4) <= round(_eff_prev_high, 4):
-                continue
-            if gap_up_min > 0:
-                if round(_eff_l - _eff_prev_high, 4) < round(gap_up_min, 4):
+            if _eff_prev_high is None:
+                # 前一日資料缺失，無法確認跳空 → 放行並標記
+                _gap_unverified.add(code)
+            else:
+                if round(_eff_l, 4) <= round(_eff_prev_high, 4):
+                    continue
+                if gap_up_min > 0 and round(_eff_l - _eff_prev_high, 4) < round(gap_up_min, 4):
                     continue
 
         # 跳空向下：今日最高 < 前日最低（用還原日K價格排除除息假跳空）
         if check_gap_down:
-            if _eff_prev_low is None or round(_eff_h, 4) >= round(_eff_prev_low, 4):
-                continue
-            if gap_down_min > 0:
-                if round(_eff_prev_low - _eff_h, 4) < round(gap_down_min, 4):
+            if _eff_prev_low is None:
+                # 前一日資料缺失，無法確認跳空 → 放行並標記
+                _gap_unverified.add(code)
+            else:
+                if round(_eff_h, 4) >= round(_eff_prev_low, 4):
+                    continue
+                if gap_down_min > 0 and round(_eff_prev_low - _eff_h, 4) < round(gap_down_min, 4):
                     continue
 
         # 賺向下跳空價差（選定日期D，篩選D_prev跳空向下 + D當天突破 + 跳空≥1 + D_prev縮量）
@@ -896,6 +908,8 @@ def screen(params):
         if ma5  is not None: item["ma5_vol"]  = round(ma5  / 1000, 0)
         if ma10 is not None: item["ma10_vol"] = round(ma10 / 1000, 0)
         if vol_ratio is not None: item["vol_ratio"] = round(vol_ratio, 2)
+        if code in _gap_unverified:
+            item.setdefault("data_missing", []).append("gap_unverified")
 
         results.append(item)
 

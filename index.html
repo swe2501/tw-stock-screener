@@ -1341,7 +1341,7 @@
             <td class="code-cell">
               <a href="https://www.twse.com.tw/zh/trading/historical/stock-day.html?stockNo=${s.code}" target="_blank" onclick="event.stopPropagation()">${s.code}</a>${
                 (s.data_missing && s.data_missing.length)
-                  ? `<span class="data-missing-badge" title="部分篩選條件無歷史資料（${s.data_missing.map(k=>({'no_black':'無放量黑棒篩選'}[k]||k)).join('、')}），已放行">⚠</span>`
+                  ? `<span class="data-missing-badge" title="部分篩選條件無法確認（${s.data_missing.map(k=>({'no_black':'無放量黑棒篩選','gap_unverified':'跳空前日資料缺失，請手動排查'}[k]||k)).join('、')}），已放行">⚠</span>`
                   : ''
               }</td>
             <td class="name-cell">${s.name}</td>
