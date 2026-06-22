@@ -1795,6 +1795,8 @@
 
     // ── Render all chart panels ───────────────────────────
     function renderTVChart(candles, events) {
+      // 若 modal 已關閉（fetch 延遲），不渲染
+      if (!document.getElementById('chartModal').classList.contains('open')) return;
       document.getElementById('chartLoading').style.display = 'none';
       document.getElementById('chartWrapper').style.display = 'block';
 
@@ -1910,9 +1912,11 @@
     }
 
     function _validCandles(candles) {
-      return candles.filter(c =>
-        c && c.open != null && c.high != null && c.low != null && c.close != null &&
-        !isNaN(c.open) && !isNaN(c.high) && !isNaN(c.low) && !isNaN(c.close)
+      return (candles || []).filter(c =>
+        c && c.time &&
+        c.open != null && c.high != null && c.low != null && c.close != null &&
+        !isNaN(c.open) && !isNaN(c.high) && !isNaN(c.low) && !isNaN(c.close) &&
+        c.open > 0 && c.close > 0
       );
     }
 
@@ -1922,7 +1926,8 @@
       const el = document.getElementById('chartContainer');
       el.innerHTML = '';
       const opts = _chartOpts(220, false);
-      opts.width = el.clientWidth;
+      opts.width = el.clientWidth || el.offsetWidth || 600;
+      if (opts.width === 0) return; // 容器不可見，放棄渲染
       chartInstance = LightweightCharts.createChart(el, opts);
 
       candleSeriesRef = chartInstance.addCandlestickSeries({
