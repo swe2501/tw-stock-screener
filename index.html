@@ -86,9 +86,17 @@
     .auth-field input {
       width: 100%; padding: 9px 12px; font-size: 14px;
       background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.15);
-      border-radius: 7px; color: #fff; outline: none;
+      border-radius: 7px; color: #fff; outline: none; box-sizing: border-box;
     }
     .auth-field input:focus { border-color: var(--accent); }
+    .pw-wrap { position: relative; }
+    .pw-wrap input { padding-right: 38px; }
+    .pw-eye {
+      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; cursor: pointer; padding: 0; line-height: 1;
+      color: rgba(255,255,255,0.35); font-size: 16px; user-select: none;
+    }
+    .pw-eye:hover { color: rgba(255,255,255,0.7); }
     .auth-submit {
       width: 100%; padding: 10px; font-size: 14px; font-weight: 600;
       background: var(--accent); color: #fff; border: none;
@@ -842,7 +850,7 @@
       </div>
       <h2 id="authTitle">歡迎回來</h2>
       <div class="auth-field"><label>Email</label><input type="email" id="authEmail" placeholder="your@email.com"></div>
-      <div class="auth-field"><label>密碼</label><input type="password" id="authPassword" placeholder="至少 6 個字元"></div>
+      <div class="auth-field"><label>密碼</label><div class="pw-wrap"><input type="password" id="authPassword" placeholder="至少 6 個字元"><button class="pw-eye" type="button" onclick="togglePwEye()" id="pwEyeBtn">👁</button></div></div>
       <button class="auth-submit" id="authSubmit" onclick="doAuth()">登入</button>
       <div class="auth-error" id="authError"></div>
     </div>
@@ -1456,6 +1464,13 @@
       const emailEl = document.getElementById('authUserEmail');
       emailEl.style.display = loggedIn ? '' : 'none';
       if (loggedIn && _authUser) emailEl.textContent = _authUser.email;
+    }
+
+    function togglePwEye() {
+      const inp = document.getElementById('authPassword');
+      const btn = document.getElementById('pwEyeBtn');
+      if (inp.type === 'password') { inp.type = 'text'; btn.textContent = '🙈'; }
+      else { inp.type = 'password'; btn.textContent = '👁'; }
     }
 
     function openAuthModal(tab) {
