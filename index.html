@@ -358,6 +358,85 @@
     .badge-green { background: rgba(38, 194, 129, 0.2); color: var(--green); }
     .badge-yellow { background: rgba(243, 156, 18, 0.15); color: var(--yellow); }
 
+    /* ── Watchlist ────────────────────────────────────── */
+    .watch-btn {
+      background: none; border: none; cursor: pointer;
+      font-size: 15px; padding: 2px 5px; line-height: 1;
+      color: rgba(255,255,255,0.25); transition: color 0.15s;
+    }
+    .watch-btn:hover { color: #f39c12; }
+    .watch-btn.active { color: #f39c12; }
+    .watch-panel {
+      position: fixed; inset: 0; z-index: 1100;
+      background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center;
+    }
+    .watch-panel.hidden { display: none; }
+    .watch-panel-inner {
+      background: var(--surface); border-radius: 12px;
+      width: min(900px, 96vw); max-height: 85vh;
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    .watch-panel-hdr {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px; border-bottom: 1px solid var(--border);
+    }
+    .watch-panel-hdr h2 { font-size: 16px; font-weight: 600; margin: 0; }
+    .watch-panel-body { overflow-y: auto; padding: 16px; }
+    .watch-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .watch-table th {
+      text-align: left; padding: 7px 10px; font-size: 11px; font-weight: 600;
+      color: var(--text-muted); border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .watch-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    .watch-table tr:last-child td { border-bottom: none; }
+    .watch-table tr:hover td { background: rgba(255,255,255,0.03); }
+    .watch-code-btn {
+      background: none; border: none; cursor: pointer;
+      color: var(--accent); font-size: 13px; font-weight: 600; padding: 0;
+      text-decoration: underline; text-underline-offset: 2px;
+    }
+    .watch-note-cell { max-width: 180px; }
+    .watch-note-text {
+      color: var(--text-muted); font-size: 12px; white-space: pre-wrap;
+      word-break: break-all; cursor: pointer;
+    }
+    .watch-note-text:empty::before { content: '點此新增備註'; opacity: 0.35; }
+    .watch-del-btn {
+      background: none; border: none; cursor: pointer;
+      color: rgba(255,255,255,0.2); font-size: 14px; padding: 2px 4px;
+      transition: color 0.15s;
+    }
+    .watch-del-btn:hover { color: #e74c3c; }
+    /* Add-to-watch modal */
+    .watch-add-modal {
+      position: fixed; inset: 0; z-index: 1200;
+      background: rgba(0,0,0,0.65); display: flex; align-items: center; justify-content: center;
+    }
+    .watch-add-modal.hidden { display: none; }
+    .watch-add-inner {
+      background: var(--surface); border-radius: 12px;
+      width: min(420px, 92vw); padding: 24px;
+    }
+    .watch-add-inner h3 { margin: 0 0 16px; font-size: 15px; }
+    .watch-add-inner textarea {
+      width: 100%; box-sizing: border-box;
+      background: var(--bg); border: 1px solid var(--border); border-radius: 7px;
+      color: var(--text); font-size: 13px; padding: 10px; resize: vertical;
+      min-height: 80px; outline: none;
+    }
+    .watch-add-inner textarea:focus { border-color: var(--accent); }
+    .watch-add-actions { display: flex; gap: 10px; margin-top: 14px; justify-content: flex-end; }
+    .watch-add-actions button {
+      padding: 7px 18px; border-radius: 7px; border: none; cursor: pointer; font-size: 13px;
+    }
+    .btn-save-watch { background: var(--accent); color: #fff; }
+    .btn-cancel-watch { background: var(--border); color: var(--text); }
+    /* price color */
+    .price-up { color: #e74c3c; }
+    .price-dn { color: #26c281; }
+    .price-neu { color: var(--text); }
+
     .spinner {
       width: 18px;
       height: 18px;
@@ -746,6 +825,7 @@
     <span>TWSE</span>
     <div id="authArea">
       <div id="authUserEmail" style="display:none"></div>
+      <button id="watchlistBtn" style="display:none" onclick="openWatchlist()">⭐ 觀察清單</button>
       <button id="alertMgrBtn" style="display:none" onclick="openAlertMgr()">🔔 我的警示</button>
       <button id="logoutBtn"   style="display:none" onclick="doLogout()">登出</button>
       <button id="loginBtn"    onclick="openAuthModal('login')">登入</button>
@@ -1242,8 +1322,14 @@
           <td>${s.vol_ratio != null ? `<span class="badge badge-yellow">${s.vol_ratio}x</span>` : '–'}</td>
         ` : '';
 
+        const isWatched = _watchCodes.has(s.code);
         return `
           <tr onclick="openChart('${s.code}','${s.name.replace(/'/g,"\\'")}')">
+            <td onclick="event.stopPropagation()" style="padding:0 4px;width:28px">
+              <button class="watch-btn${isWatched?' active':''}" data-code="${s.code}"
+                title="${isWatched?'已列入觀察（點擊移除）':'列入觀察'}"
+                onclick="toggleWatch(event,'${s.code}','${s.name.replace(/'/g,"\\'")}','${(s.industry||'').replace(/'/g,"\\'")}',${s.close})">⭐</button>
+            </td>
             <td class="code-cell">
               <a href="https://www.twse.com.tw/zh/trading/historical/stock-day.html?stockNo=${s.code}" target="_blank" onclick="event.stopPropagation()">${s.code}</a>${
                 (s.data_missing && s.data_missing.length)
@@ -1363,9 +1449,10 @@
 
     function _applyAuthState() {
       const loggedIn = !!_authToken;
-      document.getElementById('loginBtn').style.display    = loggedIn ? 'none' : '';
-      document.getElementById('logoutBtn').style.display   = loggedIn ? ''     : 'none';
-      document.getElementById('alertMgrBtn').style.display = loggedIn ? ''     : 'none';
+      document.getElementById('loginBtn').style.display      = loggedIn ? 'none' : '';
+      document.getElementById('logoutBtn').style.display     = loggedIn ? ''     : 'none';
+      document.getElementById('alertMgrBtn').style.display   = loggedIn ? ''     : 'none';
+      document.getElementById('watchlistBtn').style.display  = loggedIn ? ''     : 'none';
       const emailEl = document.getElementById('authUserEmail');
       emailEl.style.display = loggedIn ? '' : 'none';
       if (loggedIn && _authUser) emailEl.textContent = _authUser.email;
@@ -1409,6 +1496,7 @@
         localStorage.setItem('sb_token', _authToken);
         localStorage.setItem('sb_user',  JSON.stringify(_authUser));
         _applyAuthState();
+        _loadWatchCodes();
         closeAuthModal();
       } catch(e) {
         errEl.textContent = '網路錯誤，請重試';
@@ -1440,6 +1528,7 @@
     });
 
     _applyAuthState();
+    if (_authToken) _loadWatchCodes();
 
     function searchStock() {
       const code = document.getElementById('stockSearchInput').value.trim();
@@ -2363,6 +2452,201 @@
       });
       redrawCanvas();
     }
+
+    // ══════════════════════════════════════════════════════
+    // ★ 觀察清單
+    // ══════════════════════════════════════════════════════
+    let _watchData = [];        // 從 API 載入的清單
+    let _watchCodes = new Set();// 快速查詢是否已在清單
+    let _watchAddTarget = null; // { code, name, industry, price }
+
+    // ── 初始化：登入後靜默載入 codes ──────────────────────
+    async function _loadWatchCodes() {
+      if (!_authToken) return;
+      try {
+        const r = await fetch('/api/watchlist', {
+          headers: { Authorization: `Bearer ${_authToken}` }
+        });
+        if (!r.ok) return;
+        const data = await r.json();
+        _watchData = Array.isArray(data) ? data : [];
+        _watchCodes = new Set(_watchData.map(w => w.code));
+        _refreshWatchBtns();
+      } catch (_) {}
+    }
+
+    function _refreshWatchBtns() {
+      document.querySelectorAll('.watch-btn[data-code]').forEach(btn => {
+        const code = btn.dataset.code;
+        btn.classList.toggle('active', _watchCodes.has(code));
+        btn.title = _watchCodes.has(code) ? '已列入觀察（點擊移除）' : '列入觀察';
+      });
+    }
+
+    // ── 點擊篩選結果列的 ⭐ 按鈕 ─────────────────────────
+    function toggleWatch(event, code, name, industry, price) {
+      event.stopPropagation();
+      if (!_authToken) { openAuthModal('login'); return; }
+      if (_watchCodes.has(code)) {
+        _removeWatch(code);
+      } else {
+        _watchAddTarget = { code, name, industry, price };
+        document.getElementById('watchAddTitle').textContent = `列入觀察：${code} ${name}`;
+        document.getElementById('watchNoteInput').value = '';
+        document.getElementById('watchAddModal').classList.remove('hidden');
+        setTimeout(() => document.getElementById('watchNoteInput').focus(), 50);
+      }
+    }
+
+    async function _removeWatch(code) {
+      try {
+        await fetch(`/api/watchlist?code=${encodeURIComponent(code)}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${_authToken}` }
+        });
+        _watchData = _watchData.filter(w => w.code !== code);
+        _watchCodes.delete(code);
+        _refreshWatchBtns();
+        if (!document.getElementById('watchlistPanel').classList.contains('hidden'))
+          _renderWatchTable();
+      } catch (_) {}
+    }
+
+    async function saveWatch() {
+      const note = document.getElementById('watchNoteInput').value.trim();
+      const { code, name, industry, price } = _watchAddTarget;
+      document.getElementById('watchAddModal').classList.add('hidden');
+      try {
+        const r = await fetch('/api/watchlist', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${_authToken}` },
+          body: JSON.stringify({ code, name, industry, price_at_add: price, note })
+        });
+        if (r.ok) {
+          const arr = await r.json();
+          const item = Array.isArray(arr) ? arr[0] : arr;
+          _watchData.unshift(item);
+          _watchCodes.add(code);
+          _refreshWatchBtns();
+          if (!document.getElementById('watchlistPanel').classList.contains('hidden'))
+            _renderWatchTable();
+        }
+      } catch (_) {}
+    }
+
+    // ── 開啟觀察清單面板 ──────────────────────────────────
+    async function openWatchlist() {
+      document.getElementById('watchlistPanel').classList.remove('hidden');
+      document.getElementById('watchlistPanel').querySelector('.watch-panel-body').innerHTML =
+        '<div style="text-align:center;padding:32px;color:var(--text-muted)">載入中…</div>';
+      await _loadWatchCodes();
+      // 抓現在市價
+      if (_watchData.length) {
+        const codes = _watchData.map(w => w.code).join(',');
+        try {
+          const r = await fetch(`/api/prices?codes=${encodeURIComponent(codes)}`);
+          const prices = await r.json();
+          _watchData.forEach(w => { w._cur = prices[w.code] ?? null; });
+        } catch (_) {}
+      }
+      _renderWatchTable();
+    }
+
+    function closeWatchlist() {
+      document.getElementById('watchlistPanel').classList.add('hidden');
+    }
+
+    function _renderWatchTable() {
+      const body = document.getElementById('watchlistPanel').querySelector('.watch-panel-body');
+      if (!_watchData.length) {
+        body.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted)">觀察清單是空的</div>';
+        return;
+      }
+      const rows = _watchData.map(w => {
+        const cur  = w._cur ?? null;
+        const diff = cur !== null && w.price_at_add ? cur - w.price_at_add : null;
+        const cls  = diff === null ? 'price-neu' : diff > 0 ? 'price-up' : diff < 0 ? 'price-dn' : 'price-neu';
+        const curTxt = cur !== null ? `<span class="${cls}">${cur.toFixed(2)}</span>` : '–';
+        const diffTxt = diff !== null
+          ? `<span class="${cls}">${diff > 0 ? '+' : ''}${diff.toFixed(2)}</span>`
+          : '–';
+        const dateStr = w.added_at ? w.added_at.slice(0, 10) : '';
+        return `<tr>
+          <td><button class="watch-code-btn" onclick="closeWatchlist();openChart('${w.code}','${(w.name||'').replace(/'/g,"\\'")}')">
+            ${w.code}</button></td>
+          <td>${w.name || '–'}</td>
+          <td style="color:var(--text-muted);font-size:12px">${w.industry || '–'}</td>
+          <td class="price-neu">${w.price_at_add != null ? Number(w.price_at_add).toFixed(2) : '–'}</td>
+          <td>${curTxt}</td>
+          <td>${diffTxt}</td>
+          <td class="watch-note-cell">
+            <div class="watch-note-text" data-id="${w.id}"
+                 onclick="_editNote(this, ${w.id})">${w.note || ''}</div>
+          </td>
+          <td style="color:var(--text-muted);font-size:12px;white-space:nowrap">${dateStr}</td>
+          <td><button class="watch-del-btn" onclick="_removeWatch('${w.code}')" title="移除">✕</button></td>
+        </tr>`;
+      }).join('');
+      body.innerHTML = `
+        <table class="watch-table">
+          <thead><tr>
+            <th>代號</th><th>公司</th><th>產業</th>
+            <th>加入時股價</th><th>現在市價</th><th>損益</th>
+            <th>備註</th><th>加入日期</th><th></th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>`;
+    }
+
+    // ── 備註行內編輯 ──────────────────────────────────────
+    function _editNote(el, id) {
+      if (el.querySelector('input')) return;
+      const cur = el.textContent;
+      el.innerHTML = `<input type="text" value="${cur.replace(/"/g,'&quot;')}"
+        style="width:100%;background:var(--bg);border:1px solid var(--accent);border-radius:4px;
+               color:var(--text);padding:3px 6px;font-size:12px;outline:none"
+        onblur="_saveNote(this,${id})" onkeydown="if(event.key==='Enter')this.blur()">`;
+      el.querySelector('input').focus();
+    }
+
+    async function _saveNote(input, id) {
+      const note = input.value.trim();
+      const el = input.parentElement;
+      el.textContent = note;
+      const item = _watchData.find(w => w.id === id);
+      if (item) item.note = note;
+      try {
+        await fetch('/api/watchlist', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${_authToken}` },
+          body: JSON.stringify({ id, note })
+        });
+      } catch (_) {}
+    }
   </script>
+
+  <!-- ★ 觀察清單面板 -->
+  <div id="watchlistPanel" class="watch-panel hidden">
+    <div class="watch-panel-inner">
+      <div class="watch-panel-hdr">
+        <h2>⭐ 我的觀察清單</h2>
+        <button onclick="closeWatchlist()" style="background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer">✕</button>
+      </div>
+      <div class="watch-panel-body"></div>
+    </div>
+  </div>
+
+  <!-- ★ 列入觀察 — 填備註 modal -->
+  <div id="watchAddModal" class="watch-add-modal hidden" onclick="if(event.target===this)this.classList.add('hidden')">
+    <div class="watch-add-inner">
+      <h3 id="watchAddTitle">列入觀察</h3>
+      <label style="font-size:12px;color:var(--text-muted)">備註（為什麼要觀察這檔？）</label>
+      <textarea id="watchNoteInput" placeholder="例：突破頸線，等待回測支撐…"></textarea>
+      <div class="watch-add-actions">
+        <button class="btn-cancel-watch" onclick="document.getElementById('watchAddModal').classList.add('hidden')">取消</button>
+        <button class="btn-save-watch" onclick="saveWatch()">儲存</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
