@@ -1608,10 +1608,10 @@
     const seriesMap = {}; // key → lightweight-charts series ref
 
     function _destroyCharts() {
-      if (chartInstance) { chartInstance.remove(); chartInstance = null; }
-      if (volInstance)   { volInstance.remove();   volInstance = null; }
-      if (macdInstance)  { macdInstance.remove();  macdInstance = null; }
-      if (rsiInstance)   { rsiInstance.remove();   rsiInstance = null; }
+      if (chartInstance) { try { chartInstance.remove(); } catch(_){} chartInstance = null; }
+      if (volInstance)   { try { volInstance.remove();   } catch(_){} volInstance   = null; }
+      if (macdInstance)  { try { macdInstance.remove();  } catch(_){} macdInstance  = null; }
+      if (rsiInstance)   { try { rsiInstance.remove();   } catch(_){} rsiInstance   = null; }
       candleSeriesRef = null;
       Object.keys(seriesMap).forEach(k => delete seriesMap[k]);
       // Reset all ma-toggle labels to visible
@@ -1909,7 +1909,15 @@
       };
     }
 
+    function _validCandles(candles) {
+      return candles.filter(c =>
+        c && c.open != null && c.high != null && c.low != null && c.close != null &&
+        !isNaN(c.open) && !isNaN(c.high) && !isNaN(c.low) && !isNaN(c.close)
+      );
+    }
+
     function _renderMainChart(candles, events) {
+      candles = _validCandles(candles);
       if (chartInstance) { try { chartInstance.remove(); } catch(_) {} chartInstance = null; }
       const el = document.getElementById('chartContainer');
       el.innerHTML = '';
@@ -1978,6 +1986,7 @@
     }
 
     function _renderVOLChart(candles) {
+      candles = _validCandles(candles);
       if (volInstance) { try { volInstance.remove(); } catch(_) {} volInstance = null; }
       const el = document.getElementById('volContainer');
       el.innerHTML = '';
@@ -2031,6 +2040,7 @@
     }
 
     function _renderMACDChart(candles) {
+      candles = _validCandles(candles);
       if (macdInstance) { try { macdInstance.remove(); } catch(_) {} macdInstance = null; }
       const el = document.getElementById('macdContainer');
       el.innerHTML = '';
@@ -2072,6 +2082,7 @@
     }
 
     function _renderRSIChart(candles) {
+      candles = _validCandles(candles);
       if (rsiInstance) { try { rsiInstance.remove(); } catch(_) {} rsiInstance = null; }
       const el = document.getElementById('rsiContainer');
       el.innerHTML = '';
