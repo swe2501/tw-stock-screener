@@ -16,6 +16,28 @@ YF_HEADERS = {
     "Accept": "application/json",
 }
 
+# ── 產業別快取（TTL 24h，幾乎不變） ──────────────────────────────────────────
+_industry_cache: dict = {}
+_industry_cache_ts: float = 0.0
+
+def _get_industry_map() -> dict:
+    global _industry_cache, _industry_cache_ts
+    if _industry_cache and time.time() - _industry_cache_ts < 86400:
+        return _industry_cache
+    try:
+        url = "https://openapi.twse.com.tw/v1/opendata/t187ap03_L"
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"})
+        with urllib.request.urlopen(req, timeout=10) as r:
+            data = json.loads(r.read())
+        m = {str(row.get("公司代號", "")).strip(): str(row.get("產業別", "")).strip()
+             for row in data if row.get("公司代號")}
+        if m:
+            _industry_cache = m
+            _industry_cache_ts = time.time()
+    except Exception:
+        pass
+    return _industry_cache
+
 
 def _get_json(url, headers=TWSE_HEADERS, timeout=20):
     req = urllib.request.Request(url, headers=headers)
@@ -597,6 +619,7 @@ def screen(params):
 
     import sys
     _t0 = time.time()
+    _industry_map = _get_industry_map()
     # ── Step 1: Always fetch latest TWSE data (for stock list + latest date) ──
     latest_stocks, latest_date = fetch_all_stocks_latest()
     print(f"[TIMING] step1_twse: {time.time()-_t0:.2f}s  stocks={len(latest_stocks)}", file=sys.stderr)
@@ -899,6 +922,7 @@ def screen(params):
         item = {
             "code": code,
             "name": s["name"],
+            "industry": _industry_map.get(code, ""),
             "open": round(o, 2), "high": round(h, 2),
             "low": round(l, 2),  "close": round(c, 2),
             "volume_lots": round(v / 1000, 1),

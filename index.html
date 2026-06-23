@@ -366,6 +366,15 @@
     .badge-green { background: rgba(38, 194, 129, 0.2); color: var(--green); }
     .badge-yellow { background: rgba(243, 156, 18, 0.15); color: var(--yellow); }
 
+    /* ── Toast ────────────────────────────────────────── */
+    #toast {
+      position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+      background: #27ae60; color: #fff; padding: 10px 22px; border-radius: 8px;
+      font-size: 14px; z-index: 9999; opacity: 0; pointer-events: none;
+      transition: opacity 0.25s;
+    }
+    #toast.show { opacity: 1; }
+    #toast.error { background: #e74c3c; }
     /* ── Watchlist ────────────────────────────────────── */
     .watch-btn {
       background: none; border: none; cursor: pointer;
@@ -2491,6 +2500,16 @@
     let _watchCodes = new Set();// 快速查詢是否已在清單
     let _watchAddTarget = null; // { code, name, industry, price }
 
+    let _toastTimer = null;
+    function showToast(msg, isError = false) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.classList.toggle('error', isError);
+      el.classList.add('show');
+      clearTimeout(_toastTimer);
+      _toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+    }
+
     // ── 初始化：登入後靜默載入 codes ──────────────────────
     async function _loadWatchCodes() {
       if (!_authToken) return;
@@ -2561,13 +2580,14 @@
           _refreshWatchBtns();
           if (!document.getElementById('watchlistPanel').classList.contains('hidden'))
             _renderWatchTable();
+          showToast(`✅ ${code} ${name} 已加入觀察清單`);
         } else {
           let errMsg = `儲存失敗 (HTTP ${r.status})`;
           try { const e = await r.json(); errMsg += '：' + (e.message || e.error || JSON.stringify(e)); } catch(_) {}
-          alert(errMsg);
+          showToast(errMsg, true);
         }
       } catch (e) {
-        alert('儲存失敗：' + e.message);
+        showToast('儲存失敗：' + e.message, true);
       }
     }
 
@@ -2672,6 +2692,8 @@
       <div class="watch-panel-body"></div>
     </div>
   </div>
+
+  <div id="toast"></div>
 
   <!-- ★ 列入觀察 — 填備註 modal -->
   <div id="watchAddModal" class="watch-add-modal hidden" onclick="if(event.target===this)this.classList.add('hidden')">
