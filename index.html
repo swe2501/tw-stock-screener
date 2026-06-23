@@ -2561,8 +2561,14 @@
           _refreshWatchBtns();
           if (!document.getElementById('watchlistPanel').classList.contains('hidden'))
             _renderWatchTable();
+        } else {
+          let errMsg = `儲存失敗 (HTTP ${r.status})`;
+          try { const e = await r.json(); errMsg += '：' + (e.message || e.error || JSON.stringify(e)); } catch(_) {}
+          alert(errMsg);
         }
-      } catch (_) {}
+      } catch (e) {
+        alert('儲存失敗：' + e.message);
+      }
     }
 
     // ── 開啟觀察清單面板 ──────────────────────────────────
