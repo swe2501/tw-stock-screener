@@ -1002,7 +1002,7 @@
           </div>
         </label>
         <label class="checkbox-row">
-          <input type="checkbox" id="gap_down" />
+          <input type="checkbox" id="gap_down" onchange="if(!this.checked) document.getElementById('gap_down_min').value=''" />
           <div>
             <div class="cb-label">跳空向下</div>
             <div class="cb-hint">當日最高 &lt; 前日最低</div>
