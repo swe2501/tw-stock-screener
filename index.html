@@ -2564,13 +2564,19 @@
 
     async function saveWatch() {
       const note = document.getElementById('watchNoteInput').value.trim();
-      const { code, name, industry, price } = _watchAddTarget;
+      const { code, name, industry } = _watchAddTarget;
       document.getElementById('watchAddModal').classList.add('hidden');
+      // 即時抓最新市價作為加入時股價，避免用篩選日期的舊收盤價
+      let price_at_add = _watchAddTarget.price;
+      try {
+        const pr = await fetch(`/api/prices?codes=${encodeURIComponent(code)}`);
+        if (pr.ok) { const pm = await pr.json(); if (pm[code] != null) price_at_add = pm[code]; }
+      } catch(_) {}
       try {
         const r = await fetch('/api/watchlist', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${_authToken}` },
-          body: JSON.stringify({ code, name, industry, price_at_add: price, note })
+          body: JSON.stringify({ code, name, industry, price_at_add, note })
         });
         if (r.ok) {
           const arr = await r.json();
