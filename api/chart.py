@@ -573,16 +573,22 @@ def fetch_twse_chart(code, range_str="3mo"):
         yyyymm_list.append(f"{y}{m:02d}")
 
     all_candles = []
-    with ThreadPoolExecutor(max_workers=min(months_needed, 8)) as ex:
+    # 降至 4 workers，減少對 TWSE 的並發衝擊，避免 rate limit 吃掉最新月份
+    with ThreadPoolExecutor(max_workers=min(months_needed, 4)) as ex:
         for rows in ex.map(_fetch_twse_month, [code] * months_needed, yyyymm_list):
             all_candles.extend(rows)
 
-    # 如果當月完全沒抓到（rate limit），等 0.5s 補抓一次
-    current_ym = yyyymm_list[0]
-    cur_prefix = f"{current_ym[:4]}-{current_ym[4:]}"
-    if not any(c["time"].startswith(cur_prefix) for c in all_candles):
-        time.sleep(0.5)
-        all_candles.extend(_fetch_twse_month(code, current_ym))
+    # 補抓最近 2 個月（當月 + 前一個月），各最多重試 2 次，確保不因 rate limit 缺資料
+    for ym in yyyymm_list[:2]:
+        prefix = f"{ym[:4]}-{ym[4:]}"
+        for attempt in range(2):
+            if any(c["time"].startswith(prefix) for c in all_candles):
+                break
+            time.sleep(0.4 * (attempt + 1))
+            extra = _fetch_twse_month(code, ym)
+            if extra:
+                all_candles.extend(extra)
+                break
 
     all_candles.sort(key=lambda x: x["time"])
     return [c for c in all_candles if c["time"] >= cutoff]
