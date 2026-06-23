@@ -17,6 +17,19 @@ YF_HEADERS = {
 }
 
 # ── 產業別快取（TTL 24h，幾乎不變） ──────────────────────────────────────────
+_INDUSTRY_CODE_MAP = {
+    "01":"水泥工業","02":"食品工業","03":"塑膠工業","04":"紡織纖維",
+    "05":"電機機械","06":"電器電纜","07":"化學生技醫療","08":"玻璃陶瓷",
+    "09":"造紙工業","10":"鋼鐵工業","11":"橡膠工業","12":"汽車工業",
+    "13":"電子工業","14":"建材營造","15":"航運業","16":"觀光餐旅",
+    "17":"金融保險","18":"貿易百貨","19":"綜合","20":"其他",
+    "21":"化學工業","22":"生技醫療業","23":"油電燃氣業","24":"半導體業",
+    "25":"電腦及週邊設備業","26":"光電業","27":"通信網路業","28":"電子零組件業",
+    "29":"電子通路業","30":"資訊服務業","31":"其他電子業","32":"文化創意業",
+    "33":"農業科技業","34":"電子商務業","35":"綠能環保","36":"數位雲端",
+    "37":"運動休閒","38":"居家生活","39":"金融業",
+}
+
 _industry_cache: dict = {}
 _industry_cache_ts: float = 0.0
 
@@ -29,8 +42,13 @@ def _get_industry_map() -> dict:
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"})
         with urllib.request.urlopen(req, timeout=10) as r:
             data = json.loads(r.read())
-        m = {str(row.get("公司代號", "")).strip(): str(row.get("產業別", "")).strip()
-             for row in data if row.get("公司代號")}
+        m = {}
+        for row in data:
+            code = str(row.get("公司代號", "")).strip()
+            ind  = str(row.get("產業別", "")).strip()
+            if code:
+                # 若是數字代碼就轉成中文，否則直接用
+                m[code] = _INDUSTRY_CODE_MAP.get(ind, ind)
         if m:
             _industry_cache = m
             _industry_cache_ts = time.time()
