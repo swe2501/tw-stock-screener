@@ -44,6 +44,21 @@ class handler(BaseHTTPRequestHandler):
         length = int(self.headers.get("Content-Length", 0))
         body = json.loads(self.rfile.read(length) or b"{}")
         action = body.get("action", "")
+
+        # Token refresh — 不需要 email/password
+        if action == "refresh":
+            rt = body.get("refresh_token", "")
+            if not rt:
+                return self._json(400, {"error": "refresh_token required"})
+            status, data = _sb("/token?grant_type=refresh_token", {"refresh_token": rt})
+            if status == 200 and data.get("access_token"):
+                return self._json(200, {
+                    "access_token":  data["access_token"],
+                    "refresh_token": data.get("refresh_token", rt),
+                    "user": {"id": data["user"]["id"], "email": data["user"]["email"]},
+                })
+            return self._json(401, {"error": "session expired, please login again"})
+
         email = body.get("email", "").strip().lower()
         password = body.get("password", "")
 
@@ -54,7 +69,8 @@ class handler(BaseHTTPRequestHandler):
             status, data = _sb("/signup", {"email": email, "password": password})
             if status in (200, 201) and data.get("access_token"):
                 return self._json(200, {
-                    "access_token": data["access_token"],
+                    "access_token":  data["access_token"],
+                    "refresh_token": data.get("refresh_token", ""),
                     "user": {"id": data["user"]["id"], "email": data["user"]["email"]},
                 })
             err = (data.get("msg") or data.get("error_description") or data.get("error") or "registration failed")
@@ -64,7 +80,8 @@ class handler(BaseHTTPRequestHandler):
             status, data = _sb("/token?grant_type=password", {"email": email, "password": password})
             if status == 200 and data.get("access_token"):
                 return self._json(200, {
-                    "access_token": data["access_token"],
+                    "access_token":  data["access_token"],
+                    "refresh_token": data.get("refresh_token", ""),
                     "user": {"id": data["user"]["id"], "email": data["user"]["email"]},
                 })
             err = (data.get("error_description") or data.get("msg") or "invalid email or password")

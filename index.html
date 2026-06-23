@@ -1460,9 +1460,59 @@
     }
 
     // ── Auth ──────────────────────────────────────────────
-    let _authToken = localStorage.getItem('sb_token') || null;
-    let _authUser  = JSON.parse(localStorage.getItem('sb_user') || 'null');
-    let _authTab   = 'login';
+    let _authToken   = localStorage.getItem('sb_token')   || null;
+    let _authRefresh = localStorage.getItem('sb_refresh')  || null;
+    let _authUser    = JSON.parse(localStorage.getItem('sb_user') || 'null');
+    let _authTab     = 'login';
+    let _refreshing  = null; // 防止並發多次 refresh
+
+    async function _tryRefreshToken() {
+      if (!_authRefresh) return false;
+      if (_refreshing) return _refreshing;
+      _refreshing = (async () => {
+        try {
+          const r = await fetch('/api/auth', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'refresh', refresh_token: _authRefresh }),
+          });
+          if (!r.ok) { _forceLogout(); return false; }
+          const d = await r.json();
+          _authToken   = d.access_token;
+          _authRefresh = d.refresh_token || _authRefresh;
+          _authUser    = d.user;
+          localStorage.setItem('sb_token',   _authToken);
+          localStorage.setItem('sb_refresh', _authRefresh);
+          localStorage.setItem('sb_user',    JSON.stringify(_authUser));
+          return true;
+        } catch(_) { return false; }
+        finally { _refreshing = null; }
+      })();
+      return _refreshing;
+    }
+
+    // 帶自動 refresh 的 fetch 包裝，401 JWT expired 時自動重試
+    async function _authFetch(url, opts = {}) {
+      opts.headers = { ...(opts.headers || {}), Authorization: `Bearer ${_authToken}` };
+      let r = await fetch(url, opts);
+      if (r.status === 401) {
+        const refreshed = await _tryRefreshToken();
+        if (refreshed) {
+          opts.headers['Authorization'] = `Bearer ${_authToken}`;
+          r = await fetch(url, opts);
+        }
+      }
+      return r;
+    }
+
+    function _forceLogout() {
+      _authToken = null; _authRefresh = null; _authUser = null;
+      localStorage.removeItem('sb_token');
+      localStorage.removeItem('sb_refresh');
+      localStorage.removeItem('sb_user');
+      _applyAuthState();
+      showToast('登入已過期，請重新登入', true);
+    }
 
     function _applyAuthState() {
       const loggedIn = !!_authToken;
@@ -1515,9 +1565,11 @@
         });
         const d = await r.json();
         if (!r.ok) { errEl.textContent = d.error || '發生錯誤'; return; }
-        _authToken = d.access_token;
-        _authUser  = d.user;
-        localStorage.setItem('sb_token', _authToken);
+        _authToken   = d.access_token;
+        _authRefresh = d.refresh_token || null;
+        _authUser    = d.user;
+        localStorage.setItem('sb_token',   _authToken);
+        if (_authRefresh) localStorage.setItem('sb_refresh', _authRefresh);
         localStorage.setItem('sb_user',  JSON.stringify(_authUser));
         _applyAuthState();
         _loadWatchCodes();
@@ -1537,8 +1589,9 @@
           body: JSON.stringify({ action: 'logout', email: '', password: '' }),
         });
       } catch(_) {}
-      _authToken = null; _authUser = null;
+      _authToken = null; _authRefresh = null; _authUser = null;
       localStorage.removeItem('sb_token');
+      localStorage.removeItem('sb_refresh');
       localStorage.removeItem('sb_user');
       _applyAuthState();
     }
@@ -2514,9 +2567,7 @@
     async function _loadWatchCodes() {
       if (!_authToken) return;
       try {
-        const r = await fetch('/api/watchlist', {
-          headers: { Authorization: `Bearer ${_authToken}` }
-        });
+        const r = await _authFetch('/api/watchlist');
         if (!r.ok) return;
         const data = await r.json();
         _watchData = Array.isArray(data) ? data : [];
@@ -2550,10 +2601,7 @@
 
     async function _removeWatch(code) {
       try {
-        await fetch(`/api/watchlist?code=${encodeURIComponent(code)}`, {
-          method: 'DELETE',
-          headers: { Authorization: `Bearer ${_authToken}` }
-        });
+        await _authFetch(`/api/watchlist?code=${encodeURIComponent(code)}`, { method: 'DELETE' });
         _watchData = _watchData.filter(w => w.code !== code);
         _watchCodes.delete(code);
         _refreshWatchBtns();
@@ -2573,9 +2621,9 @@
         if (pr.ok) { const pm = await pr.json(); if (pm[code] != null) price_at_add = pm[code]; }
       } catch(_) {}
       try {
-        const r = await fetch('/api/watchlist', {
+        const r = await _authFetch('/api/watchlist', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${_authToken}` },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ code, name, industry, price_at_add, note })
         });
         if (r.ok) {
@@ -2679,9 +2727,9 @@
       const item = _watchData.find(w => w.id === id);
       if (item) item.note = note;
       try {
-        await fetch('/api/watchlist', {
+        await _authFetch('/api/watchlist', {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${_authToken}` },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id, note })
         });
       } catch (_) {}
