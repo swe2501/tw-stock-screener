@@ -1424,8 +1424,13 @@
         const isWatched = _watchCodes.has(s.code);
         return `
           <tr onclick="openChart('${s.code}','${s.name.replace(/'/g,"\\'")}','${(s.industry||'').replace(/'/g,"\\'")}',${s.close})">
+            <td style="text-align:center;padding:0 4px">
+              <span class="watch-star-col" data-code="${s.code}"
+                style="font-size:16px;cursor:default;${isWatched ? 'color:#f1c40f' : 'color:rgba(255,255,255,0.2)'}"
+                title="${isWatched ? '已列入觀察' : '尚未列入觀察'}">
+                ${isWatched ? '★' : '☆'}</span>
+            </td>
             <td class="code-cell">
-              ${isWatched ? '<span class="watch-star-indicator" title="已列入觀察">★</span>' : ''}
               <a href="https://www.twse.com.tw/zh/trading/historical/stock-day.html?stockNo=${s.code}" target="_blank" onclick="event.stopPropagation()">${s.code}</a>${
                 (s.data_missing && s.data_missing.length)
                   ? `<span class="data-missing-badge" title="部分篩選條件無法確認（${s.data_missing.map(k=>({'no_black':'無放量黑棒篩選','gap_unverified':'跳空前日資料缺失，請手動排查'}[k]||k)).join('、')}），已放行">⚠</span>`
@@ -1448,6 +1453,7 @@
           <table>
             <thead>
               <tr>
+                <th style="text-align:center;width:52px">列入觀察</th>
                 <th onclick="setSort('code')" class="${sortKey==='code'?'sorted':''}">代號<span class="sort-arrow">${sortKey==='code'?(sortDir>0?'▲':'▼'):'↕'}</span></th>
                 <th>名稱</th>
                 <th onclick="setSort('open')" class="${sortKey==='open'?'sorted':''}">開盤<span class="sort-arrow">${sortKey==='open'?(sortDir>0?'▲':'▼'):'↕'}</span></th>
@@ -2701,6 +2707,12 @@
         const code = btn.dataset.code;
         btn.classList.toggle('active', _watchCodes.has(code));
         btn.title = _watchCodes.has(code) ? '已列入觀察（點擊移除）' : '列入觀察';
+      });
+      document.querySelectorAll('.watch-star-col[data-code]').forEach(span => {
+        const watched = _watchCodes.has(span.dataset.code);
+        span.textContent = watched ? '★' : '☆';
+        span.style.color = watched ? '#f1c40f' : 'rgba(255,255,255,0.2)';
+        span.title = watched ? '已列入觀察' : '尚未列入觀察';
       });
       _updateChartWatchBtn();
     }
