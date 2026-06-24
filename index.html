@@ -400,6 +400,20 @@
     }
     .watch-panel-hdr h2 { font-size: 16px; font-weight: 600; margin: 0; }
     .watch-panel-body { overflow-y: auto; padding: 16px; }
+    /* ── 警示面板 ── */
+    .alert-panel { position:fixed;inset:0;z-index:1100;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center; }
+    .alert-panel.hidden { display:none; }
+    .alert-panel-inner { background:var(--surface);border-radius:12px;width:min(480px,96vw);max-height:85vh;display:flex;flex-direction:column;overflow:hidden; }
+    .alert-panel-hdr { display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border); }
+    .alert-panel-hdr h2 { font-size:16px;font-weight:600;margin:0; }
+    .alert-panel-body { padding:20px;overflow-y:auto; }
+    .alert-field { margin-bottom:16px; }
+    .alert-field label { display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px; }
+    .alert-field input { width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px 10px;font-size:14px; }
+    .alert-field input:focus { outline:none;border-color:#f1c40f; }
+    .alert-run-btn { width:100%;padding:10px;border-radius:7px;border:none;background:#f1c40f;color:#111;font-weight:700;font-size:14px;cursor:pointer;margin-top:4px;transition:opacity .15s; }
+    .alert-run-btn:disabled { opacity:.5;cursor:default; }
+    .alert-status-box { margin-top:14px;padding:12px 14px;border-radius:7px;background:rgba(255,255,255,.05);border:1px solid var(--border);font-size:13px;line-height:1.7;display:none; }
     .watch-table { width: 100%; border-collapse: collapse; font-size: 13px; }
     .watch-table th {
       text-align: left; padding: 7px 10px; font-size: 11px; font-weight: 600;
@@ -1693,7 +1707,47 @@
       localStorage.removeItem('sb_user');
       _applyAuthState();
     }
-    function openAlertMgr() { alert('警示管理（開發中）'); }
+    function openAlertMgr() {
+      const panel = document.getElementById('alertPanel');
+      panel.classList.remove('hidden');
+      // pre-fill email from logged-in user
+      const emailEl = document.getElementById('alertEmail');
+      if (_authUser && _authUser.email && !emailEl.value) emailEl.value = _authUser.email;
+    }
+    function closeAlertPanel() {
+      document.getElementById('alertPanel').classList.add('hidden');
+    }
+    async function runAlertNow() {
+      const btn = document.getElementById('alertRunBtn');
+      const box = document.getElementById('alertStatusBox');
+      const email = document.getElementById('alertEmail').value.trim();
+      const minCandle = parseFloat(document.getElementById('alertMinCandle').value) || 2;
+      if (!email) { box.style.display='block'; box.innerHTML='<span style="color:#e74c3c">請填寫收件信箱</span>'; return; }
+      btn.disabled = true;
+      btn.textContent = '⏳ 掃描中…';
+      box.style.display = 'block';
+      box.innerHTML = '正在抓取今日股價並掃描觀察清單…';
+      try {
+        const token = (await _supabase.auth.getSession()).data.session?.access_token;
+        const res = await fetch('/api/alert', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ email, min_candle_pct: minCandle }),
+        });
+        const d = await res.json();
+        if (!res.ok || d.error) {
+          box.innerHTML = `<span style="color:#e74c3c">❌ 錯誤：${d.error || res.status}</span>`;
+        } else if (!d.sent) {
+          box.innerHTML = `<span style="color:#aaa">ℹ️ ${d.message || '今日無符合條件的股票'}</span>`;
+        } else {
+          box.innerHTML = `<span style="color:#2ecc71">✅ 已寄出！共 ${d.matches} 檔符合條件：${d.stocks.join('、')}</span>`;
+        }
+      } catch(e) {
+        box.innerHTML = `<span style="color:#e74c3c">❌ 連線失敗：${e.message}</span>`;
+      }
+      btn.disabled = false;
+      btn.textContent = '▶ 立即測試（掃描並寄信）';
+    }
 
     document.getElementById('authPassword').addEventListener('keydown', e => {
       if (e.key === 'Enter') doAuth();
@@ -2976,6 +3030,48 @@
   </div>
 
   <div id="toast"></div>
+
+  <!-- 🔔 警示設定面板 -->
+  <div id="alertPanel" class="alert-panel hidden" onclick="if(event.target===this)closeAlertPanel()">
+    <div class="alert-panel-inner">
+      <div class="alert-panel-hdr">
+        <h2>🔔 警示設定</h2>
+        <button onclick="closeAlertPanel()" style="background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer">✕</button>
+      </div>
+      <div class="alert-panel-body">
+        <p style="font-size:13px;color:var(--text-muted);margin:0 0 18px;line-height:1.6">
+          每個交易日 <strong style="color:var(--text)">17:00</strong> 自動掃描觀察清單，<br>
+          若有股票當日出現紅棒（幅度≥設定值），寄信通知。
+        </p>
+
+        <div class="alert-field">
+          <label>收件信箱</label>
+          <input type="email" id="alertEmail" placeholder="your@email.com">
+        </div>
+        <div class="alert-field">
+          <label>觸發條件：最小紅棒幅度（%）</label>
+          <input type="number" id="alertMinCandle" min="0.5" max="10" step="0.5" value="2">
+        </div>
+
+        <div style="border-top:1px solid var(--border);margin:18px 0 16px"></div>
+
+        <button class="alert-run-btn" id="alertRunBtn" onclick="runAlertNow()">
+          ▶ 立即測試（掃描並寄信）
+        </button>
+        <div class="alert-status-box" id="alertStatusBox"></div>
+
+        <div style="margin-top:20px;padding:12px 14px;border-radius:7px;background:rgba(241,196,15,.07);border:1px solid rgba(241,196,15,.2)">
+          <p style="font-size:12px;color:#aaa;margin:0;line-height:1.7">
+            <strong style="color:#f1c40f">使用前請先設定 Vercel 環境變數：</strong><br>
+            <code style="font-size:11px;color:#ddd">RESEND_API_KEY</code> — 從 resend.com 取得<br>
+            <code style="font-size:11px;color:#ddd">SUPABASE_SERVICE_KEY</code> — Supabase 後台 service_role<br>
+            <code style="font-size:11px;color:#ddd">ALERT_EMAIL</code> — 預設收件人（可在此覆寫）<br>
+            <code style="font-size:11px;color:#ddd">CRON_SECRET</code> — 自訂亂數字串，保護 cron 端點
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- ★ 列入觀察 — 填備註 modal -->
   <div id="watchAddModal" class="watch-add-modal hidden" onclick="if(event.target===this)this.classList.add('hidden')">
