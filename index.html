@@ -1636,8 +1636,7 @@
       emailEl.style.display = loggedIn ? '' : 'none';
       if (loggedIn && _authUser) emailEl.textContent = _authUser.email;
       if (!loggedIn) {
-        _watchData = []; _watchCodes = new Set();
-        _refreshWatchBtns();
+        try { _watchData = []; _watchCodes = new Set(); _refreshWatchBtns(); } catch(_) {}
         const np = document.getElementById('chartNotePanel');
         if (np) np.style.display = 'none';
       } else {
