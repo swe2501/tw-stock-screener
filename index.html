@@ -1478,7 +1478,11 @@
         if (t.tagName === 'TEXTAREA' || t.tagName === 'INPUT' || t.isContentEditable) return;
         if (!document.getElementById('submitBtn').disabled) doScreen();
       }
-      if (e.key === 'Escape') closeChart();
+      if (e.key === 'Escape') {
+        const wp = document.getElementById('watchlistPanel');
+        if (wp && !wp.classList.contains('hidden')) { closeWatchlist(); return; }
+        closeChart();
+      }
     });
 
     // ── K線圖 state ─────────────────────────────────────────
