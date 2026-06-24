@@ -658,12 +658,25 @@ def fetch_chart(code, range_str="3mo", interval="1d", adj=False, raw=False):
     if raw and interval == "1d" and yf_sym_check.endswith(".TW"):
         yf_ev_url = (f"https://query1.finance.yahoo.com/v8/finance/chart/{code}.TW"
                      f"?interval=1d&range={range_str}&events=div%2Csplits")
+
+        # 2y/3y：TWSE 全程抓 37/25 個月容易 rate-limit 缺近月
+        # → 改用 YF 抓舊資料底圖，只讓 TWSE 負責最近 3 個月（3 次 API 即可）
+        twse_range = "3mo" if range_str in ("2y", "3y") else range_str
+
         with ThreadPoolExecutor(max_workers=4) as _ex:
-            _fc = _ex.submit(fetch_twse_chart, code, range_str)
+            _fc = _ex.submit(fetch_twse_chart, code, twse_range)
             _fe = _ex.submit(_try_yf_url, yf_ev_url)
             _fn = _ex.submit(_fetch_tw_name, code)
             _fi = _ex.submit(_fetch_tw_industry, code)
-            candles = _fc.result() or []
+
+            # 長區間底圖：額外用 YF 抓全段原始報價
+            _fy = None
+            if range_str in ("2y", "3y"):
+                yf_base_url = (f"https://query1.finance.yahoo.com/v8/finance/chart/{code}.TW"
+                               f"?interval=1d&range={range_str}")
+                _fy = _ex.submit(_try_yf_url, yf_base_url)
+
+            twse_candles = _fc.result() or []
             try: tw_name = _fn.result(timeout=4.0)
             except Exception: tw_name = None
             try: tw_industry = _fi.result(timeout=4.0) or ""
@@ -687,6 +700,45 @@ def fetch_chart(code, range_str="3mo", interval="1d", adj=False, raw=False):
                                            "ratio": f"{sp.get('numerator',0)}/{sp.get('denominator',1)}"})
                         except Exception: pass
             except Exception: pass
+
+            # 2y/3y：合併 YF 底圖 + TWSE 近 3 月（TWSE 優先覆蓋）
+            if range_str in ("2y", "3y") and _fy is not None:
+                try:
+                    _, yf_base_r0 = _fy.result(timeout=5.0)
+                except Exception:
+                    yf_base_r0 = None
+                yf_candles = []
+                if yf_base_r0:
+                    tz_off = timedelta(hours=8)
+                    ts_list = yf_base_r0.get("timestamp") or []
+                    q0 = (yf_base_r0.get("indicators", {}).get("quote") or [{}])[0]
+                    opens0  = q0.get("open")   or []
+                    highs0  = q0.get("high")   or []
+                    lows0   = q0.get("low")    or []
+                    closes0 = q0.get("close")  or []
+                    vols0   = q0.get("volume") or []
+                    for i, ts in enumerate(ts_list):
+                        o = opens0[i]  if i < len(opens0)  else None
+                        h = highs0[i]  if i < len(highs0)  else None
+                        l = lows0[i]   if i < len(lows0)   else None
+                        c = closes0[i] if i < len(closes0) else None
+                        v = vols0[i]   if i < len(vols0)   else None
+                        if None in (o, h, l, c): continue
+                        dt = datetime.fromtimestamp(ts, tz=timezone(tz_off))
+                        yf_candles.append({
+                            "time":   dt.strftime("%Y-%m-%d"),
+                            "open":   round(float(o), 4), "high": round(float(h), 4),
+                            "low":    round(float(l), 4), "close": round(float(c), 4),
+                            "volume": round(int(v) / 1000) if v else 0,
+                        })
+                # 以 TWSE 近月資料覆蓋 YF（TWSE 是未調整真實價格）
+                twse_dates = {c["time"] for c in twse_candles}
+                merged = [c for c in yf_candles if c["time"] not in twse_dates] + twse_candles
+                merged.sort(key=lambda x: x["time"])
+                candles = merged
+            else:
+                candles = twse_candles
+
         if candles:
             return {
                 "code": code, "name": tw_name or code, "industry": tw_industry,
