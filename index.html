@@ -1636,6 +1636,7 @@
       if (loggedIn && _authUser) emailEl.textContent = _authUser.email;
       if (!loggedIn) {
         try { _watchData = []; _watchCodes = new Set(); _refreshWatchBtns(); } catch(_) {}
+        document.getElementById('resultsArea').innerHTML = '';
         const np = document.getElementById('chartNotePanel');
         if (np) np.style.display = 'none';
       } else {
