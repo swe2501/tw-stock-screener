@@ -1246,8 +1246,7 @@
         <!-- ★ 觀察備註側欄 -->
         <div class="chart-note-panel" id="chartNotePanel">
           <label>觀察原因 / 備註</label>
-          <textarea id="chartNoteInput" placeholder="為什麼列入觀察？例：突破頸線、MACD 黃金交叉…&#10;&#10;Enter 儲存，Shift+Enter 換行"
-            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();saveWatchFromChart();}"></textarea>
+          <textarea id="chartNoteInput" placeholder="為什麼列入觀察？例：突破頸線、MACD 黃金交叉…"></textarea>
           <div class="chart-watch-status" id="chartWatchStatus">★ 已列入觀察清單</div>
           <button class="btn-save-chart-watch" id="chartSaveWatchBtn" onclick="saveWatchFromChart()">⭐ 儲存到觀察清單</button>
           <button class="btn-remove-chart-watch" id="chartRemoveWatchBtn" onclick="removeWatchFromChart()" style="display:none">✕ 移除觀察清單</button>
