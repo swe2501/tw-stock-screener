@@ -1867,12 +1867,17 @@
       _renderMACDChart(candles);
       _renderRSIChart(candles);
 
-      // Fit main, sync all other panels to same TIME range
-      chartInstance.timeScale().fitContent();
-      const mainTimeRange = chartInstance.timeScale().getVisibleRange();
-      if (mainTimeRange) {
+      // 預設顯示最近 5 個月（約 105 根日K）；Y 軸隨可視範圍自動縮放
+      const _totalBars  = candles.length;
+      const _barsToShow = Math.min(105, _totalBars);
+      chartInstance.timeScale().setVisibleLogicalRange({
+        from: _totalBars - _barsToShow,
+        to:   _totalBars - 1 + 3,   // 右側留 3 根空白
+      });
+      const mainLogicalRange = chartInstance.timeScale().getVisibleLogicalRange();
+      if (mainLogicalRange) {
         [volInstance, macdInstance, rsiInstance].forEach(c => {
-          try { c.timeScale().setVisibleRange(mainTimeRange); } catch (_) {}
+          try { c.timeScale().setVisibleLogicalRange(mainLogicalRange); } catch (_) {}
         });
       }
 
@@ -1883,9 +1888,9 @@
           const maxW = Math.max(...all.map(c => c.priceScale('right').width() || 0));
           if (maxW > 0) {
             all.forEach(c => c.priceScale('right').applyOptions({ minimumWidth: maxW }));
-            const r = chartInstance.timeScale().getVisibleRange();
+            const r = chartInstance.timeScale().getVisibleLogicalRange();
             if (r) [volInstance, macdInstance, rsiInstance].forEach(c => {
-              try { c.timeScale().setVisibleRange(r); } catch (_) {}
+              try { c.timeScale().setVisibleLogicalRange(r); } catch (_) {}
             });
           }
         } catch (_) {}
@@ -1965,7 +1970,7 @@
         layout: { background: { color: '#131722' }, textColor: '#c9d1d9' },
         grid: { vertLines: { color: '#2e3350' }, horzLines: { color: '#2e3350' } },
         crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
-        rightPriceScale: { borderColor: '#2e3350', minimumWidth: 65 },
+        rightPriceScale: { borderColor: '#2e3350', minimumWidth: 65, autoScale: true },
         timeScale: { borderColor: '#2e3350', timeVisible: true, visible: showTime,
                      secondsVisible: false, rightOffset: 5 },
         handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true },
