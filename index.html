@@ -1079,7 +1079,13 @@
           </div>
           <div class="modal-subtitle" id="modalSubtitle">日K線</div>
         </div>
-        <button class="modal-close" onclick="closeChart()">&#10005;</button>
+        <div style="display:flex;align-items:center;gap:8px">
+          <button id="chartWatchBtn" onclick="toggleWatchFromChart()"
+            style="background:none;border:1px solid var(--border);border-radius:6px;
+                   color:var(--text-muted);padding:4px 10px;font-size:13px;cursor:pointer;
+                   white-space:nowrap;transition:all 0.15s">⭐ 列入觀察</button>
+          <button class="modal-close" onclick="closeChart()">&#10005;</button>
+        </div>
       </div>
       <div class="modal-body">
         <div class="chart-toolbar">
@@ -1339,14 +1345,8 @@
           <td>${s.vol_ratio != null ? `<span class="badge badge-yellow">${s.vol_ratio}x</span>` : '–'}</td>
         ` : '';
 
-        const isWatched = _watchCodes.has(s.code);
         return `
-          <tr onclick="openChart('${s.code}','${s.name.replace(/'/g,"\\'")}')">
-            <td onclick="event.stopPropagation()" style="padding:0 4px;width:28px">
-              <button class="watch-btn${isWatched?' active':''}" data-code="${s.code}"
-                title="${isWatched?'已列入觀察（點擊移除）':'列入觀察'}"
-                onclick="toggleWatch(event,'${s.code}','${s.name.replace(/'/g,"\\'")}','${(s.industry||'').replace(/'/g,"\\'")}',${s.close})">⭐</button>
-            </td>
+          <tr onclick="openChart('${s.code}','${s.name.replace(/'/g,"\\'")}','${(s.industry||'').replace(/'/g,"\\'")}',${s.close})">
             <td class="code-cell">
               <a href="https://www.twse.com.tw/zh/trading/historical/stock-day.html?stockNo=${s.code}" target="_blank" onclick="event.stopPropagation()">${s.code}</a>${
                 (s.data_missing && s.data_missing.length)
@@ -1410,6 +1410,8 @@
     // ── K線圖 state ─────────────────────────────────────────
     let currentCode = '';
     let currentName = '';
+    let currentIndustry = '';
+    let currentPrice = 0;
     let prevCode = '';
     let prevName = '';
     let chartInstance = null;
@@ -1440,9 +1442,11 @@
       document.getElementById('marketBtn').style.display = (sym === '^TWII') ? 'none' : 'inline-block';
     }
 
-    function openChart(code, name) {
+    function openChart(code, name, industry = '', price = 0) {
       prevCode = ''; prevName = '';
       currentCode = code; currentName = name;
+      currentIndustry = industry; currentPrice = price;
+      _updateChartWatchBtn();
       document.getElementById('modalTitle').textContent = `${code}　${name}`;
       document.getElementById('industryTag').style.display = 'none';
       _setToolbarForCode(code);
@@ -2592,6 +2596,30 @@
         btn.classList.toggle('active', _watchCodes.has(code));
         btn.title = _watchCodes.has(code) ? '已列入觀察（點擊移除）' : '列入觀察';
       });
+      _updateChartWatchBtn();
+    }
+
+    // ── K線圖內的列入觀察按鈕 ────────────────────────────
+    function _updateChartWatchBtn() {
+      const btn = document.getElementById('chartWatchBtn');
+      if (!btn) return;
+      const watched = _watchCodes.has(currentCode);
+      btn.textContent = watched ? '★ 已列入觀察' : '⭐ 列入觀察';
+      btn.style.color     = watched ? '#f1c40f' : '';
+      btn.style.borderColor = watched ? '#f1c40f' : '';
+    }
+
+    function toggleWatchFromChart() {
+      if (!_authToken) { openAuthModal('login'); return; }
+      if (_watchCodes.has(currentCode)) {
+        _removeWatch(currentCode);
+      } else {
+        _watchAddTarget = { code: currentCode, name: currentName, industry: currentIndustry, price: currentPrice };
+        document.getElementById('watchAddTitle').textContent = `列入觀察：${currentCode} ${currentName}`;
+        document.getElementById('watchNoteInput').value = '';
+        document.getElementById('watchAddModal').classList.remove('hidden');
+        setTimeout(() => document.getElementById('watchNoteInput').focus(), 50);
+      }
     }
 
     // ── 點擊篩選結果列的 ⭐ 按鈕 ─────────────────────────
