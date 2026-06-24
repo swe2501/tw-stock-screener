@@ -1737,7 +1737,7 @@
       box.style.display = 'block';
       box.innerHTML = '正在抓取今日股價並掃描觀察清單…';
       try {
-        const token = (await _supabase.auth.getSession()).data.session?.access_token;
+        const token = _authToken;
         const res = await fetch('/api/alert', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
