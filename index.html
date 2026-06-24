@@ -1435,15 +1435,15 @@
           <td>${s.vol_ratio != null ? `<span class="badge badge-yellow">${s.vol_ratio}x</span>` : '–'}</td>
         ` : '';
 
-        const isWatched = _watchCodes.has(s.code);
+        const isWatched = !!_authToken && _watchCodes.has(s.code);
         return `
           <tr onclick="openChart('${s.code}','${s.name.replace(/'/g,"\\'")}','${(s.industry||'').replace(/'/g,"\\'")}',${s.close})">
-            <td style="text-align:center;padding:0 4px">
+            ${_authToken ? `<td style="text-align:center;padding:0 4px">
               <span class="watch-star-col" data-code="${s.code}"
                 style="font-size:16px;cursor:default;${isWatched ? 'color:#f1c40f' : 'color:rgba(255,255,255,0.2)'}"
                 title="${isWatched ? '已列入觀察' : '尚未列入觀察'}">
                 ${isWatched ? '★' : '☆'}</span>
-            </td>
+            </td>` : ''}
             <td class="code-cell">
               <a href="https://www.twse.com.tw/zh/trading/historical/stock-day.html?stockNo=${s.code}" target="_blank" onclick="event.stopPropagation()">${s.code}</a>${
                 (s.data_missing && s.data_missing.length)
@@ -1467,7 +1467,7 @@
           <table>
             <thead>
               <tr>
-                <th style="text-align:center;width:52px">列入觀察</th>
+                ${_authToken ? '<th style="text-align:center;width:52px">列入觀察</th>' : ''}
                 <th onclick="setSort('code')" class="${sortKey==='code'?'sorted':''}">代號<span class="sort-arrow">${sortKey==='code'?(sortDir>0?'▲':'▼'):'↕'}</span></th>
                 <th>名稱</th>
                 <th onclick="setSort('open')" class="${sortKey==='open'?'sorted':''}">開盤<span class="sort-arrow">${sortKey==='open'?(sortDir>0?'▲':'▼'):'↕'}</span></th>
@@ -1635,6 +1635,15 @@
       const emailEl = document.getElementById('authUserEmail');
       emailEl.style.display = loggedIn ? '' : 'none';
       if (loggedIn && _authUser) emailEl.textContent = _authUser.email;
+      if (!loggedIn) {
+        _watchData = []; _watchCodes = new Set();
+        _refreshWatchBtns();
+        const np = document.getElementById('chartNotePanel');
+        if (np) np.style.display = 'none';
+      } else {
+        const np = document.getElementById('chartNotePanel');
+        if (np) np.style.display = '';
+      }
     }
 
     function togglePwEye() {
