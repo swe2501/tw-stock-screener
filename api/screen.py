@@ -637,9 +637,13 @@ def screen(params):
 
     import sys
     _t0 = time.time()
-    _industry_map = _get_industry_map()
-    # ── Step 1: Always fetch latest TWSE data (for stock list + latest date) ──
-    latest_stocks, latest_date = fetch_all_stocks_latest()
+    # ── Step 1: 並行抓 TWSE 股票清單 + 產業別（互不依賴）──────────────────────
+    with ThreadPoolExecutor(max_workers=2) as _init_ex:
+        _f_ind  = _init_ex.submit(_get_industry_map)
+        _f_stk  = _init_ex.submit(fetch_all_stocks_latest)
+        try:    _industry_map = _f_ind.result(timeout=8)
+        except Exception: _industry_map = {}
+        latest_stocks, latest_date = _f_stk.result()
     print(f"[TIMING] step1_twse: {time.time()-_t0:.2f}s  stocks={len(latest_stocks)}", file=sys.stderr)
     if not latest_stocks:
         return {"error": "無法取得證交所資料，請稍後再試", "results": []}
