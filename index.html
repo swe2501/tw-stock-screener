@@ -1137,6 +1137,7 @@
           <div class="modal-title-row">
             <div class="modal-title" id="modalTitle">—</div>
             <span id="industryTag"></span>
+            <span id="chartPriceTag"></span>
           </div>
           <div class="modal-subtitle" id="modalSubtitle">日K線</div>
         </div>
@@ -1528,6 +1529,7 @@
       _populateChartNote();
       document.getElementById('modalTitle').textContent = `${code}　${name}`;
       document.getElementById('industryTag').style.display = 'none';
+      const _pt = document.getElementById('chartPriceTag'); if (_pt) _pt.innerHTML = '';
       _setToolbarForCode(code);
       document.getElementById('backBtn').style.display = 'none';
       document.getElementById('chartModal').classList.add('open');
@@ -1942,6 +1944,27 @@
       });
     }
 
+    // ── 更新 title 收盤價標籤（漲停紅底、跌停綠底）───────
+    function _updatePriceTag(candles) {
+      const tag = document.getElementById('chartPriceTag');
+      if (!tag) return;
+      if (!candles || candles.length < 2) { tag.innerHTML = ''; return; }
+      const last = candles[candles.length - 1];
+      const prev = candles[candles.length - 2];
+      if (!last?.close || !prev?.close) { tag.innerHTML = ''; return; }
+      const chgPct = (last.close - prev.close) / prev.close * 100;
+      const isLimitUp   = chgPct >=  9.5;
+      const isLimitDown = chgPct <= -9.5;
+      const bgColor  = isLimitUp ? '#e74c3c' : isLimitDown ? '#26c281' : 'transparent';
+      const txtColor = (isLimitUp || isLimitDown) ? '#fff'
+                     : chgPct > 0 ? '#e74c3c' : chgPct < 0 ? '#26c281' : '#aaa';
+      const border   = (!isLimitUp && !isLimitDown)
+                     ? `1px solid ${chgPct >= 0 ? '#e74c3c55' : '#26c28155'}` : 'none';
+      tag.innerHTML = `<span style="background:${bgColor};color:${txtColor};border:${border};
+        padding:2px 8px;border-radius:5px;font-size:14px;font-weight:700;margin-left:4px">
+        ${last.close.toFixed(2)}</span>`;
+    }
+
     // ── Render all chart panels ───────────────────────────
     function renderTVChart(candles, events) {
       // 若 modal 已關閉（fetch 延遲），不渲染
@@ -1949,6 +1972,7 @@
       document.getElementById('chartLoading').style.display = 'none';
       document.getElementById('chartWrapper').style.display = 'block';
 
+      _updatePriceTag(candles);
       _renderMainChart(candles, events || []);
       _renderVOLChart(candles);
       _renderMACDChart(candles);
