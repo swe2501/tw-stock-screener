@@ -552,7 +552,7 @@
       border: 1px solid var(--border);
       border-radius: 14px;
       width: 100%;
-      max-width: 880px;
+      max-width: 1080px;
       max-height: 96vh;
       display: flex;
       flex-direction: column;
@@ -607,9 +607,70 @@
     .modal-close:hover { color: #fff; background: var(--surface2); }
 
     .modal-body {
-      padding: 14px 20px 18px;
-      overflow-y: auto;
+      display: flex;
       flex: 1;
+      overflow: hidden;
+    }
+    .chart-content {
+      flex: 1;
+      min-width: 0;
+      padding: 14px 16px 18px;
+      overflow-y: auto;
+    }
+    .chart-note-panel {
+      width: 210px;
+      flex-shrink: 0;
+      border-left: 1px solid var(--border);
+      padding: 14px 14px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow-y: auto;
+    }
+    .chart-note-panel label {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    .chart-note-panel textarea {
+      flex: 1;
+      min-height: 120px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      color: var(--text);
+      font-size: 12px;
+      padding: 8px 10px;
+      resize: none;
+      outline: none;
+      line-height: 1.5;
+    }
+    .chart-note-panel textarea:focus { border-color: var(--accent); }
+    .btn-save-chart-watch {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 7px;
+      padding: 8px 0;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-save-chart-watch:hover { background: var(--accent-hover); }
+    .btn-remove-chart-watch {
+      background: none;
+      color: #e74c3c;
+      border: 1px solid #e74c3c44;
+      border-radius: 7px;
+      padding: 6px 0;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .chart-watch-status {
+      font-size: 11px;
+      color: #f1c40f;
+      text-align: center;
+      display: none;
     }
 
     .chart-range-btns {
@@ -1088,6 +1149,7 @@
         </div>
       </div>
       <div class="modal-body">
+        <div class="chart-content">
         <div class="chart-toolbar">
           <div class="chart-toolbar-left">
             <button class="tool-btn" id="dailyBtn" onclick="loadDailyChart()" style="background:#2962ff;color:#fff">日K</button>
@@ -1163,6 +1225,18 @@
             <div id="rsiContainer"></div>
           </div>
         </div>
+        </div><!-- /chart-content -->
+
+        <!-- ★ 觀察備註側欄 -->
+        <div class="chart-note-panel" id="chartNotePanel">
+          <label>觀察原因 / 備註</label>
+          <textarea id="chartNoteInput" placeholder="為什麼列入觀察？例：突破頸線、MACD 黃金交叉…&#10;&#10;Enter 儲存，Shift+Enter 換行"
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();saveWatchFromChart();}"></textarea>
+          <div class="chart-watch-status" id="chartWatchStatus">★ 已列入觀察清單</div>
+          <button class="btn-save-chart-watch" id="chartSaveWatchBtn" onclick="saveWatchFromChart()">⭐ 儲存到觀察清單</button>
+          <button class="btn-remove-chart-watch" id="chartRemoveWatchBtn" onclick="removeWatchFromChart()" style="display:none">✕ 移除觀察清單</button>
+        </div>
+
       </div>
     </div>
   </div>
@@ -1447,6 +1521,7 @@
       currentCode = code; currentName = name;
       currentIndustry = industry; currentPrice = price;
       _updateChartWatchBtn();
+      _populateChartNote();
       document.getElementById('modalTitle').textContent = `${code}　${name}`;
       document.getElementById('industryTag').style.display = 'none';
       _setToolbarForCode(code);
@@ -2599,27 +2674,91 @@
       _updateChartWatchBtn();
     }
 
-    // ── K線圖內的列入觀察按鈕 ────────────────────────────
+    // ── K線圖側欄：狀態同步 ──────────────────────────────
     function _updateChartWatchBtn() {
-      const btn = document.getElementById('chartWatchBtn');
-      if (!btn) return;
+      if (!currentCode) return;
       const watched = _watchCodes.has(currentCode);
-      btn.textContent = watched ? '★ 已列入觀察' : '⭐ 列入觀察';
-      btn.style.color     = watched ? '#f1c40f' : '';
-      btn.style.borderColor = watched ? '#f1c40f' : '';
+      const headerBtn = document.getElementById('chartWatchBtn');
+      if (headerBtn) {
+        headerBtn.textContent   = watched ? '★ 已列入觀察' : '⭐ 列入觀察';
+        headerBtn.style.color        = watched ? '#f1c40f' : '';
+        headerBtn.style.borderColor  = watched ? '#f1c40f' : '';
+      }
+      const statusEl = document.getElementById('chartWatchStatus');
+      const saveBtn  = document.getElementById('chartSaveWatchBtn');
+      const rmBtn    = document.getElementById('chartRemoveWatchBtn');
+      if (statusEl) statusEl.style.display = watched ? 'block' : 'none';
+      if (saveBtn)  saveBtn.style.display  = watched ? 'none'  : '';
+      if (rmBtn)    rmBtn.style.display    = watched ? ''      : 'none';
+    }
+
+    function _populateChartNote() {
+      const ta = document.getElementById('chartNoteInput');
+      if (!ta) return;
+      const existing = _watchData.find(w => w.code === currentCode);
+      ta.value = existing ? (existing.note || '') : '';
     }
 
     function toggleWatchFromChart() {
+      document.getElementById('chartNoteInput')?.focus();
+    }
+
+    async function saveWatchFromChart() {
       if (!_authToken) { openAuthModal('login'); return; }
-      if (_watchCodes.has(currentCode)) {
-        _removeWatch(currentCode);
-      } else {
-        _watchAddTarget = { code: currentCode, name: currentName, industry: currentIndustry, price: currentPrice };
-        document.getElementById('watchAddTitle').textContent = `列入觀察：${currentCode} ${currentName}`;
-        document.getElementById('watchNoteInput').value = '';
-        document.getElementById('watchAddModal').classList.remove('hidden');
-        setTimeout(() => document.getElementById('watchNoteInput').focus(), 50);
+      const note = (document.getElementById('chartNoteInput')?.value || '').trim();
+      const code = currentCode; const name = currentName;
+      const industry = currentIndustry;
+
+      // 若已在清單，只更新備註
+      if (_watchCodes.has(code)) {
+        const item = _watchData.find(w => w.code === code);
+        if (item) {
+          item.note = note;
+          try {
+            await _authFetch('/api/watchlist', {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id: item.id, note })
+            });
+            showToast('備註已更新');
+            if (!document.getElementById('watchlistPanel').classList.contains('hidden'))
+              _renderWatchTable();
+          } catch(_) {}
+        }
+        return;
       }
+
+      // 新增
+      let price_at_add = currentPrice;
+      try {
+        const pr = await fetch(`/api/prices?codes=${encodeURIComponent(code)}`);
+        if (pr.ok) { const pm = await pr.json(); if (pm[code] != null) price_at_add = pm[code]; }
+      } catch(_) {}
+      try {
+        const r = await _authFetch('/api/watchlist', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code, name, industry, price_at_add, note })
+        });
+        if (r.ok) {
+          const arr = await r.json();
+          const item = Array.isArray(arr) ? arr[0] : arr;
+          _watchData.unshift(item);
+          _watchCodes.add(code);
+          _refreshWatchBtns();
+          if (!document.getElementById('watchlistPanel').classList.contains('hidden'))
+            _renderWatchTable();
+          showToast(`${code} ${name} 已加入觀察清單`);
+        } else {
+          showToast('儲存失敗，請稍後再試', true);
+        }
+      } catch(_) { showToast('網路錯誤', true); }
+    }
+
+    async function removeWatchFromChart() {
+      await _removeWatch(currentCode);
+      document.getElementById('chartNoteInput').value = '';
+      showToast('已移除觀察清單');
     }
 
     // ── 點擊篩選結果列的 ⭐ 按鈕 ─────────────────────────
