@@ -1995,6 +1995,7 @@
       const opts = _chartOpts(220, false);
       opts.width = el.clientWidth || el.offsetWidth || 600;
       if (opts.width === 0) return; // 容器不可見，放棄渲染
+      opts.rightPriceScale.scaleMargins = { top: 0.04, bottom: 0.02 };
       chartInstance = LightweightCharts.createChart(el, opts);
 
       candleSeriesRef = chartInstance.addCandlestickSeries({
