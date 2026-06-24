@@ -3003,20 +3003,23 @@
       if (el.querySelector('textarea')) return;
       const cur = el.textContent.trim();
       el.innerHTML = `
-        <textarea id="noteTA_${id}"
-          style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--accent);
-                 border-radius:4px;color:var(--text);padding:3px 6px;font-size:12px;outline:none;
-                 resize:none;overflow:hidden;min-height:32px;"
-          onblur="_saveNote(this,${id})"
-          oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"
-          >${cur.replace(/</g,'&lt;')}</textarea>
-        <button
-          onmousedown="event.preventDefault()"
-          onclick="document.getElementById('noteTA_${id}').blur()"
-          style="margin-top:5px;padding:3px 14px;border-radius:4px;border:none;
-                 background:var(--accent);color:#111;font-size:11px;font-weight:700;cursor:pointer">
-          儲存
-        </button>`;
+        <div style="display:flex;align-items:flex-start;gap:6px">
+          <textarea id="noteTA_${id}"
+            style="flex:1;box-sizing:border-box;background:var(--bg);border:1px solid var(--accent);
+                   border-radius:4px;color:var(--text);padding:3px 6px;font-size:12px;outline:none;
+                   resize:none;overflow:hidden;min-height:32px;"
+            onblur="_saveNote(this,${id})"
+            oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"
+            >${cur.replace(/</g,'&lt;')}</textarea>
+          <button
+            onmousedown="event.preventDefault()"
+            onclick="document.getElementById('noteTA_${id}').blur()"
+            style="flex-shrink:0;width:44px;height:28px;border-radius:5px;border:none;
+                   background:var(--accent);color:#111;font-size:11px;font-weight:700;
+                   cursor:pointer;display:flex;align-items:center;justify-content:center">
+            儲存
+          </button>
+        </div>`;
       const ta = el.querySelector('textarea');
       ta.style.height = 'auto';
       ta.style.height = ta.scrollHeight + 'px';
