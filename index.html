@@ -1729,7 +1729,6 @@
       const btn = document.getElementById('alertRunBtn');
       const box = document.getElementById('alertStatusBox');
       const email = document.getElementById('alertEmail').value.trim();
-      const minCandle = parseFloat(document.getElementById('alertMinCandle').value) || 2;
       if (!email) { box.style.display='block'; box.innerHTML='<span style="color:#e74c3c">請填寫收件信箱</span>'; return; }
       btn.disabled = true;
       btn.textContent = '⏳ 掃描中…';
@@ -1740,7 +1739,7 @@
         const res = await fetch('/api/alert', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ email, min_candle_pct: minCandle }),
+          body: JSON.stringify({ email }),
         });
         const d = await res.json();
         if (!res.ok || d.error) {
@@ -2965,6 +2964,8 @@
           ? `<span class="${cls}">${diff > 0 ? '+' : ''}${diff.toFixed(2)}</span>`
           : '–';
         const dateStr = w.added_at ? w.added_at.slice(0, 10) : '';
+        const tp = w.target_price;
+        const tpTxt = tp ? Number(tp).toFixed(2) : '<span style="color:#444;font-size:11px">點擊設定</span>';
         return `<tr>
           <td><button class="watch-code-btn" onclick="openChart('${w.code}','${(w.name||'').replace(/'/g,"\\'")}')">
             ${w.code}</button></td>
@@ -2973,6 +2974,11 @@
           <td class="price-neu">${w.price_at_add != null ? Number(w.price_at_add).toFixed(2) : '–'}</td>
           <td>${curTxt}</td>
           <td>${diffTxt}</td>
+          <td>
+            <div class="watch-note-text" data-id="${w.id}" data-val="${tp || ''}"
+                 onclick="_editTargetPrice(this,${w.id})"
+                 style="cursor:pointer;min-width:60px">${tpTxt}</div>
+          </td>
           <td class="watch-note-cell">
             <div class="watch-note-text" data-id="${w.id}"
                  onclick="_editNote(this, ${w.id})">${w.note || ''}</div>
@@ -2986,7 +2992,7 @@
           <thead><tr>
             <th>代號</th><th>公司</th><th>產業</th>
             <th>加入時股價</th><th>現在市價</th><th>損益</th>
-            <th>備註</th><th>加入日期</th><th></th>
+            <th>🔔 目標價</th><th>備註</th><th>加入日期</th><th></th>
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>`;
@@ -3032,6 +3038,38 @@
         });
       } catch (_) {}
     }
+
+    function _editTargetPrice(el, id) {
+      if (el.querySelector('input')) return;
+      const cur = el.dataset.val || '';
+      el.innerHTML = `
+        <input type="number" id="tpInput_${id}" value="${cur}" step="0.5" min="0"
+          style="width:72px;background:var(--bg);border:1px solid var(--accent);border-radius:4px;
+                 color:var(--text);padding:3px 6px;font-size:12px;outline:none;"
+          onblur="_saveTargetPrice(this,${id})"
+          onkeydown="if(event.key==='Enter')this.blur();">`;
+      const inp = el.querySelector('input');
+      inp.focus(); inp.select();
+    }
+
+    async function _saveTargetPrice(input, id) {
+      const val = parseFloat(input.value);
+      const target = (!isNaN(val) && val > 0) ? val : null;
+      const el = input.parentElement;
+      el.dataset.val = target || '';
+      el.innerHTML = target
+        ? target.toFixed(2)
+        : '<span style="color:#444;font-size:11px">點擊設定</span>';
+      const item = _watchData.find(w => w.id === id);
+      if (item) item.target_price = target;
+      try {
+        await _authFetch('/api/watchlist', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, target_price: target }),
+        });
+      } catch (_) {}
+    }
   </script>
 
   <!-- ★ 觀察清單面板 -->
@@ -3057,16 +3095,13 @@
       <div class="alert-panel-body">
         <p style="font-size:13px;color:var(--text-muted);margin:0 0 18px;line-height:1.6">
           每個交易日 <strong style="color:var(--text)">17:00</strong> 自動掃描觀察清單，<br>
-          若有股票當日出現紅棒（幅度≥設定值），寄信通知。
+          若有股票收盤價 ≥ 目標價，寄信通知。<br>
+          <span style="font-size:11px;color:#666">目標價在觀察清單的「🔔 目標價」欄設定。</span>
         </p>
 
         <div class="alert-field">
           <label>收件信箱</label>
           <input type="email" id="alertEmail" placeholder="your@email.com">
-        </div>
-        <div class="alert-field">
-          <label>觸發條件：最小紅棒幅度（%）</label>
-          <input type="number" id="alertMinCandle" min="0.5" max="10" step="0.5" value="2">
         </div>
 
         <div style="border-top:1px solid var(--border);margin:18px 0 16px"></div>

@@ -112,7 +112,7 @@ def _fetch_all_stocks():
 # ── Supabase ───────────────────────────────────────────────────
 
 def _sb_get_watchlist(token):
-    url = f"{SUPABASE_URL}/rest/v1/watchlist?select=code,name,note&order=added_at.desc"
+    url = f"{SUPABASE_URL}/rest/v1/watchlist?select=code,name,note,target_price&order=added_at.desc"
     headers = {
         "apikey": SUPABASE_ANON_KEY,
         "Authorization": f"Bearer {token}",
@@ -144,29 +144,27 @@ def _send_alert_email(matches, date_str, to_email):
     rows_html = ""
     for m in matches:
         chg = m["change_pct"]
-        can = m["candle_pct"]
-        chg_color = "#e74c3c" if chg >= 0 else "#26c281"
-        can_color  = "#e74c3c" if can >= 0 else "#26c281"
+        chg_color  = "#e74c3c" if chg >= 0 else "#26c281"
         note_html  = f'<span style="color:#aaa;font-size:12px">{m.get("note","")}</span>' if m.get("note") else ""
+        tp         = m.get("target_price") or 0
         rows_html += f"""
         <tr style="border-bottom:1px solid #2a2a4a">
           <td style="padding:10px 14px;font-weight:700;color:#f1c40f">{m['code']}</td>
           <td style="padding:10px 14px">{m['name']}{_limit_badge(chg)}</td>
           <td style="padding:10px 14px;text-align:right;font-weight:600">{m['close']}</td>
           <td style="padding:10px 14px;text-align:right;color:{chg_color};font-weight:600">{'+' if chg>=0 else ''}{chg}%</td>
-          <td style="padding:10px 14px;text-align:right;color:{can_color};font-weight:600">{'+' if can>=0 else ''}{can}%</td>
-          <td style="padding:10px 14px;text-align:right;color:#aaa">{m['volume_lots']:,}</td>
+          <td style="padding:10px 14px;text-align:right;color:#f1c40f;font-weight:700">{tp:.2f}</td>
           <td style="padding:10px 14px">{note_html}</td>
         </tr>"""
 
     html = f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8"></head>
 <body style="margin:0;padding:20px;background:#111;font-family:'Segoe UI',Arial,sans-serif">
-  <div style="max-width:680px;margin:0 auto">
+  <div style="max-width:640px;margin:0 auto">
     <div style="background:#1a1a2e;border-radius:10px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.5)">
       <div style="background:linear-gradient(135deg,#1a1a3e,#2a1a4e);padding:20px 24px;border-bottom:1px solid #2a2a4a">
-        <h2 style="margin:0;color:#f1c40f;font-size:20px">⭐ 觀察清單警示</h2>
-        <p style="margin:4px 0 0;color:#aaa;font-size:14px">{date_str} &nbsp;·&nbsp; {len(matches)} 檔符合篩選條件</p>
+        <h2 style="margin:0;color:#f1c40f;font-size:20px">🔔 到價警示</h2>
+        <p style="margin:4px 0 0;color:#aaa;font-size:14px">{date_str} &nbsp;·&nbsp; {len(matches)} 檔達到目標價</p>
       </div>
       <div style="padding:0">
         <table style="width:100%;border-collapse:collapse">
@@ -176,8 +174,7 @@ def _send_alert_email(matches, date_str, to_email):
               <th style="padding:8px 14px;text-align:left">名稱</th>
               <th style="padding:8px 14px;text-align:right">收盤</th>
               <th style="padding:8px 14px;text-align:right">漲跌幅</th>
-              <th style="padding:8px 14px;text-align:right">紅棒幅</th>
-              <th style="padding:8px 14px;text-align:right">量(張)</th>
+              <th style="padding:8px 14px;text-align:right">目標價</th>
               <th style="padding:8px 14px;text-align:left">備註</th>
             </tr>
           </thead>
@@ -194,7 +191,7 @@ def _send_alert_email(matches, date_str, to_email):
     payload = json.dumps({
         "from": "台股警示 <onboarding@resend.dev>",
         "to": [to_email],
-        "subject": f"⭐【台股警示】{date_str} 觀察清單有 {len(matches)} 檔符合條件",
+        "subject": f"🔔【到價警示】{date_str} 有 {len(matches)} 檔達到目標價",
         "html": html,
     }).encode("utf-8")
 
@@ -219,14 +216,18 @@ def _send_alert_email(matches, date_str, to_email):
 
 # ── Core logic ─────────────────────────────────────────────────
 
-def _run_alert(token, min_candle_pct, to_email):
+def _run_alert(token, to_email):
     date_str = datetime.now(TW_TZ).strftime("%Y/%m/%d")
 
     watchlist = _sb_get_watchlist(token)
     if not watchlist:
         return {"ok": True, "sent": False, "message": "觀察清單是空的", "date": date_str}
 
-    watch_map = {w["code"]: w for w in watchlist}
+    # 只處理有設定目標價的股票
+    watch_map = {w["code"]: w for w in watchlist if w.get("target_price")}
+    if not watch_map:
+        return {"ok": True, "sent": False, "message": "觀察清單中沒有股票設定目標價", "date": date_str}
+
     all_stocks = _fetch_all_stocks()
 
     if not all_stocks:
@@ -235,15 +236,16 @@ def _run_alert(token, min_candle_pct, to_email):
     matches = []
     for code, info in watch_map.items():
         s = all_stocks.get(code)
-        if s and s["close"] > s["open"] and s["candle_pct"] >= min_candle_pct:
-            matches.append({**s, "note": info.get("note", "")})
+        tp = float(info["target_price"])
+        if s and s["close"] >= tp:
+            matches.append({**s, "note": info.get("note", ""), "target_price": tp})
 
-    matches.sort(key=lambda x: x["candle_pct"], reverse=True)
+    matches.sort(key=lambda x: x["close"] - x["target_price"], reverse=True)
 
     if not matches:
         return {
             "ok": True, "sent": False,
-            "message": f"今日觀察清單 {len(watch_map)} 檔皆未符合條件（紅棒≥{min_candle_pct}%）",
+            "message": f"今日觀察清單 {len(watch_map)} 檔（有設目標價）皆未達到目標價",
             "checked": len(watch_map), "date": date_str,
         }
 
@@ -306,11 +308,10 @@ class handler(BaseHTTPRequestHandler):
         except Exception:
             pass
 
-        min_candle_pct = float(body.get("min_candle_pct", os.environ.get("ALERT_MIN_CANDLE_PCT", "2.0")))
         to_email = body.get("email", ALERT_EMAIL)
 
         try:
-            result = _run_alert(token, min_candle_pct, to_email)
+            result = _run_alert(token, to_email)
             self._json(200, result)
         except Exception:
             self._json(500, {"error": traceback.format_exc()})
