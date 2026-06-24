@@ -59,11 +59,17 @@ def _get_industry_map() -> dict:
 
 def _get_json(url, headers=TWSE_HEADERS, timeout=20):
     req = urllib.request.Request(url, headers=headers)
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        raw = resp.read()
-        if not raw or not raw.strip():
-            return None
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            raw = resp.read()
+    except Exception:
+        return None
+    if not raw or not raw.strip():
+        return None
+    try:
         return json.loads(raw)
+    except (json.JSONDecodeError, ValueError):
+        return None
 
 
 def _parse_roc_date(roc_str):
@@ -86,15 +92,10 @@ def _pf(s):
 # TWSE latest day (fast path)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def fetch_all_stocks_latest():
-    """Returns (stocks_dict, YYYYMMDD_str) for the most recent trading day."""
-    data = _get_json("https://www.twse.com.tw/exchangeReport/STOCK_DAY_ALL?response=json")
-    if not data or not data.get("data"):
-        return {}, ""
-
+def _parse_stocks_legacy(data):
+    """Parse old TWSE STOCK_DAY_ALL format → (stocks_dict, date_str)."""
     roc_date = data.get("date", "")
     actual_date = _parse_roc_date(roc_date) if "/" in roc_date else roc_date
-
     stocks = {}
     for row in data.get("data", []):
         try:
@@ -110,20 +111,62 @@ def fetch_all_stocks_latest():
                 change_val = float(change_raw)
             except (ValueError, TypeError):
                 change_val = None
-
             stocks[code] = {
-                "code": code,
-                "name": row[1].strip(),
+                "code": code, "name": row[1].strip(),
                 "volume": _pf(row[2]) or 0,
-                "open": _pf(row[4]),
-                "high": _pf(row[5]),
-                "low": _pf(row[6]),
-                "close": close_p,
+                "open": _pf(row[4]), "high": _pf(row[5]),
+                "low": _pf(row[6]), "close": close_p,
                 "prev_close": round(close_p - change_val, 4) if (close_p and change_val is not None) else None,
             }
         except Exception:
             continue
     return stocks, actual_date
+
+
+def _parse_stocks_openapi(rows):
+    """Parse TWSE OpenAPI STOCK_DAY_ALL format → (stocks_dict, date_str)."""
+    today = datetime.now(timezone(timedelta(hours=8))).strftime("%Y%m%d")
+    stocks = {}
+    for row in rows:
+        try:
+            code = str(row.get("Code", row.get("證券代號", ""))).strip()
+            if not code or not code[0].isdigit():
+                continue
+            close_p  = _pf(row.get("ClosingPrice",  row.get("收盤價", "")))
+            open_p   = _pf(row.get("OpeningPrice",  row.get("開盤價", "")))
+            high_p   = _pf(row.get("HighestPrice",  row.get("最高價", "")))
+            low_p    = _pf(row.get("LowestPrice",   row.get("最低價", "")))
+            vol      = _pf(row.get("TradeVolume",   row.get("成交股數", ""))) or 0
+            chg      = _pf(row.get("Change",        row.get("漲跌價差", "")))
+            prev_c   = round(close_p - chg, 4) if (close_p and chg is not None) else None
+            name     = str(row.get("Name", row.get("證券名稱", ""))).strip()
+            stocks[code] = {
+                "code": code, "name": name,
+                "volume": vol, "open": open_p, "high": high_p,
+                "low": low_p, "close": close_p, "prev_close": prev_c,
+            }
+        except Exception:
+            continue
+    return stocks, today
+
+
+def fetch_all_stocks_latest():
+    """Returns (stocks_dict, YYYYMMDD_str) for the most recent trading day."""
+    # Primary: legacy TWSE endpoint
+    data = _get_json("https://www.twse.com.tw/exchangeReport/STOCK_DAY_ALL?response=json")
+    if data and data.get("data"):
+        return _parse_stocks_legacy(data)
+
+    # Fallback: TWSE OpenAPI (more stable, no anti-bot)
+    rows = _get_json(
+        "https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL",
+        headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"},
+        timeout=20,
+    )
+    if rows and isinstance(rows, list):
+        return _parse_stocks_openapi(rows)
+
+    return {}, ""
 
 
 _monthly_cache: dict = {}   # key: "{code}_{yyyymm}" -> (timestamp, rows)
