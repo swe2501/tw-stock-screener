@@ -2721,13 +2721,21 @@
 
     // ── 備註行內編輯 ──────────────────────────────────────
     function _editNote(el, id) {
-      if (el.querySelector('input')) return;
+      if (el.querySelector('textarea')) return;
       const cur = el.textContent;
-      el.innerHTML = `<input type="text" value="${cur.replace(/"/g,'&quot;')}"
-        style="width:100%;background:var(--bg);border:1px solid var(--accent);border-radius:4px;
-               color:var(--text);padding:3px 6px;font-size:12px;outline:none"
-        onblur="_saveNote(this,${id})" onkeydown="if(event.key==='Enter')this.blur()">`;
-      el.querySelector('input').focus();
+      el.innerHTML = `<textarea
+        style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--accent);
+               border-radius:4px;color:var(--text);padding:3px 6px;font-size:12px;outline:none;
+               resize:none;overflow:hidden;min-height:24px;"
+        onblur="_saveNote(this,${id})"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();this.blur();}"
+        oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"
+        >${cur.replace(/</g,'&lt;')}</textarea>`;
+      const ta = el.querySelector('textarea');
+      ta.style.height = 'auto';
+      ta.style.height = ta.scrollHeight + 'px';
+      ta.focus();
+      ta.setSelectionRange(ta.value.length, ta.value.length);
     }
 
     async function _saveNote(input, id) {
