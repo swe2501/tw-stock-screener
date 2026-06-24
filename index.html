@@ -383,6 +383,7 @@
     }
     .watch-btn:hover { color: #f39c12; }
     .watch-btn.active { color: #f39c12; }
+    .watch-star-indicator { color: #f1c40f; font-size: 12px; margin-right: 3px; vertical-align: middle; }
     .watch-panel {
       position: fixed; inset: 0; z-index: 1100;
       background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center;
@@ -1420,9 +1421,11 @@
           <td>${s.vol_ratio != null ? `<span class="badge badge-yellow">${s.vol_ratio}x</span>` : '–'}</td>
         ` : '';
 
+        const isWatched = _watchCodes.has(s.code);
         return `
           <tr onclick="openChart('${s.code}','${s.name.replace(/'/g,"\\'")}','${(s.industry||'').replace(/'/g,"\\'")}',${s.close})">
             <td class="code-cell">
+              ${isWatched ? '<span class="watch-star-indicator" title="已列入觀察">★</span>' : ''}
               <a href="https://www.twse.com.tw/zh/trading/historical/stock-day.html?stockNo=${s.code}" target="_blank" onclick="event.stopPropagation()">${s.code}</a>${
                 (s.data_missing && s.data_missing.length)
                   ? `<span class="data-missing-badge" title="部分篩選條件無法確認（${s.data_missing.map(k=>({'no_black':'無放量黑棒篩選','gap_unverified':'跳空前日資料缺失，請手動排查'}[k]||k)).join('、')}），已放行">⚠</span>`
