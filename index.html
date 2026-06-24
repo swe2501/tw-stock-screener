@@ -1114,10 +1114,10 @@
                 <span class="ma-toggle" id="maAllToggle" onclick="toggleAllMA()" style="color:#fff;border:1px solid rgba(255,255,255,0.3);border-radius:3px;padding:0 4px;margin-right:4px;">均線</span>
                 <span class="ma-toggle" onclick="toggleSeriesViz('ma5')"   style="color:#FFE600">MA5</span>
                 <span class="ma-toggle" onclick="toggleSeriesViz('ma10')"  style="color:#FF8C00">MA10</span>
-                <span class="ma-toggle" onclick="toggleSeriesViz('ma20')"  style="color:#00E676">MA20</span>
-                <span class="ma-toggle" onclick="toggleSeriesViz('ma60')"  style="color:#29B6F6">MA60</span>
-                <span class="ma-toggle" onclick="toggleSeriesViz('ma120')" style="color:#CE93D8">MA120</span>
-                <span class="ma-toggle" onclick="toggleSeriesViz('ma240')" style="color:#FF5252">MA240</span>
+                <span class="ma-toggle" onclick="toggleSeriesViz('ma20')"  style="color:#2196F3">MA20</span>
+                <span class="ma-toggle" onclick="toggleSeriesViz('ma60')"  style="color:#FF4081">MA60</span>
+                <span class="ma-toggle" onclick="toggleSeriesViz('ma120')" style="color:#AB47BC">MA120</span>
+                <span class="ma-toggle" onclick="toggleSeriesViz('ma240')" style="color:#4CAF50">MA240</span>
               </div>
               <div class="label-row">
                 <span class="ma-toggle" onclick="toggleBBand(this)" style="color:#00BCD4">BBAND(20,2)</span>
@@ -2027,10 +2027,10 @@
       const MA_COLORS = [
         { period: 5,   color: '#FFE600' },  // 亮黃
         { period: 10,  color: '#FF8C00' },  // 亮橘
-        { period: 20,  color: '#00E676' },  // 亮綠
-        { period: 60,  color: '#29B6F6' },  // 亮藍
-        { period: 120, color: '#CE93D8' },  // 亮紫
-        { period: 240, color: '#FF5252' },  // 亮紅
+        { period: 20,  color: '#2196F3' },  // 藍
+        { period: 60,  color: '#FF4081' },  // 桃紅
+        { period: 120, color: '#AB47BC' },  // 紫
+        { period: 240, color: '#4CAF50' },  // 綠
       ];
       MA_COLORS.forEach(({ period, color }) => {
         const sma = calcSMA(closes, period);
