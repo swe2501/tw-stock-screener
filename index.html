@@ -540,7 +540,7 @@
       position: fixed;
       inset: 0;
       background: rgba(0,0,0,0.7);
-      z-index: 1000;
+      z-index: 1150;
       align-items: center;
       justify-content: center;
       padding: 16px;
@@ -2683,7 +2683,7 @@
           : '–';
         const dateStr = w.added_at ? w.added_at.slice(0, 10) : '';
         return `<tr>
-          <td><button class="watch-code-btn" onclick="closeWatchlist();openChart('${w.code}','${(w.name||'').replace(/'/g,"\\'")}')">
+          <td><button class="watch-code-btn" onclick="openChart('${w.code}','${(w.name||'').replace(/'/g,"\\'")}')">
             ${w.code}</button></td>
           <td>${w.name || '–'}</td>
           <td style="color:var(--text-muted);font-size:12px">${w.industry || '–'}</td>
