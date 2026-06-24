@@ -1160,10 +1160,10 @@
           <div class="modal-subtitle" id="modalSubtitle">日K線</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px">
-          <button id="chartWatchBtn" onclick="toggleWatchFromChart()"
+          <button id="chartWatchBtn" onclick="toggleWatchFromChart()" title="列入觀察"
             style="background:none;border:1px solid var(--border);border-radius:6px;
-                   color:var(--text-muted);padding:4px 10px;font-size:13px;cursor:pointer;
-                   white-space:nowrap;transition:all 0.15s">⭐ 列入觀察</button>
+                   color:var(--text-muted);padding:4px 8px;font-size:16px;cursor:pointer;
+                   transition:all 0.15s">⭐</button>
           <button class="modal-close" onclick="closeChart()">&#10005;</button>
         </div>
       </div>
@@ -2797,7 +2797,8 @@
       const watched = _watchCodes.has(currentCode);
       const headerBtn = document.getElementById('chartWatchBtn');
       if (headerBtn) {
-        headerBtn.textContent   = watched ? '★ 已列入觀察' : '⭐ 列入觀察';
+        headerBtn.textContent   = watched ? '★' : '⭐';
+        headerBtn.title         = watched ? '已列入觀察' : '列入觀察';
         headerBtn.style.color        = watched ? '#f1c40f' : '';
         headerBtn.style.borderColor  = watched ? '#f1c40f' : '';
       }
