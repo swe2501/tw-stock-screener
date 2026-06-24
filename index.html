@@ -1397,9 +1397,13 @@
       if (lastResults.length > 0) filterAndRender();
     }
 
-    // Allow pressing Enter to submit
+    // Allow pressing Enter to submit (skip when focused on input/textarea)
     document.addEventListener('keydown', e => {
-      if (e.key === 'Enter' && !document.getElementById('submitBtn').disabled) doScreen();
+      if (e.key === 'Enter') {
+        const t = e.target;
+        if (t.tagName === 'TEXTAREA' || t.tagName === 'INPUT' || t.isContentEditable) return;
+        if (!document.getElementById('submitBtn').disabled) doScreen();
+      }
       if (e.key === 'Escape') closeChart();
     });
 
@@ -2760,7 +2764,8 @@
     <div class="watch-add-inner">
       <h3 id="watchAddTitle">列入觀察</h3>
       <label style="font-size:12px;color:var(--text-muted)">備註（為什麼要觀察這檔？）</label>
-      <textarea id="watchNoteInput" placeholder="例：突破頸線，等待回測支撐…"></textarea>
+      <textarea id="watchNoteInput" placeholder="例：突破頸線，等待回測支撐… (Enter 儲存，Shift+Enter 換行)"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();saveWatch();}"></textarea>
       <div class="watch-add-actions">
         <button class="btn-cancel-watch" onclick="document.getElementById('watchAddModal').classList.add('hidden')">取消</button>
         <button class="btn-save-watch" onclick="saveWatch()">儲存</button>
