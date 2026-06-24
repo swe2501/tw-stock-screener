@@ -40,7 +40,7 @@ def _get_industry_map() -> dict:
     try:
         url = "https://openapi.twse.com.tw/v1/opendata/t187ap03_L"
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"})
-        with urllib.request.urlopen(req, timeout=10) as r:
+        with urllib.request.urlopen(req, timeout=3) as r:
             data = json.loads(r.read())
         m = {}
         for row in data:
@@ -60,8 +60,10 @@ def _get_industry_map() -> dict:
 def _get_json(url, headers=TWSE_HEADERS, timeout=20):
     req = urllib.request.Request(url, headers=headers)
     with urllib.request.urlopen(req, timeout=timeout) as resp:
-        data = json.loads(resp.read())
-        return data
+        raw = resp.read()
+        if not raw or not raw.strip():
+            return None
+        return json.loads(raw)
 
 
 def _parse_roc_date(roc_str):
@@ -637,13 +639,10 @@ def screen(params):
 
     import sys
     _t0 = time.time()
-    # ── Step 1: 並行抓 TWSE 股票清單 + 產業別（互不依賴）──────────────────────
-    with ThreadPoolExecutor(max_workers=2) as _init_ex:
-        _f_ind  = _init_ex.submit(_get_industry_map)
-        _f_stk  = _init_ex.submit(fetch_all_stocks_latest)
-        try:    _industry_map = _f_ind.result(timeout=8)
-        except Exception: _industry_map = {}
-        latest_stocks, latest_date = _f_stk.result()
+    # ── Step 1: 先抓產業別（快取後幾乎零延遲），再抓 TWSE 股票清單 ──────────
+    try:    _industry_map = _get_industry_map()
+    except Exception: _industry_map = {}
+    latest_stocks, latest_date = fetch_all_stocks_latest()
     print(f"[TIMING] step1_twse: {time.time()-_t0:.2f}s  stocks={len(latest_stocks)}", file=sys.stderr)
     if not latest_stocks:
         return {"error": "無法取得證交所資料，請稍後再試", "results": []}
