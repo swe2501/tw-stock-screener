@@ -125,7 +125,17 @@ def _parse_stocks_legacy(data):
 
 def _parse_stocks_openapi(rows):
     """Parse TWSE OpenAPI STOCK_DAY_ALL format → (stocks_dict, date_str)."""
-    today = datetime.now(timezone(timedelta(hours=8))).strftime("%Y%m%d")
+    # 從第一筆資料取真實交易日期（避免硬用 today 造成資料日期錯誤）
+    actual_date = ""
+    if rows:
+        raw_d = str(rows[0].get("Date", rows[0].get("日期", ""))).strip().replace("/", "")
+        if len(raw_d) == 7 and raw_d.isdigit():          # ROC 民國 YYYMMDD
+            actual_date = str(int(raw_d[:3]) + 1911) + raw_d[3:]
+        elif len(raw_d) == 8 and raw_d.isdigit():        # 西元 YYYYMMDD
+            actual_date = raw_d
+    if not actual_date:
+        actual_date = datetime.now(timezone(timedelta(hours=8))).strftime("%Y%m%d")
+
     stocks = {}
     for row in rows:
         try:
@@ -147,7 +157,7 @@ def _parse_stocks_openapi(rows):
             }
         except Exception:
             continue
-    return stocks, today
+    return stocks, actual_date
 
 
 def fetch_all_stocks_latest():
