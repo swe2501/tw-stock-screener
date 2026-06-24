@@ -414,6 +414,9 @@
     .alert-run-btn { width:100%;padding:10px;border-radius:7px;border:none;background:#f1c40f;color:#111;font-weight:700;font-size:14px;cursor:pointer;margin-top:4px;transition:opacity .15s; }
     .alert-run-btn:disabled { opacity:.5;cursor:default; }
     .alert-status-box { margin-top:14px;padding:12px 14px;border-radius:7px;background:rgba(255,255,255,.05);border:1px solid var(--border);font-size:13px;line-height:1.7;display:none; }
+    .chart-target-row { display:flex;align-items:center;gap:5px;margin:10px 0 2px;flex-wrap:wrap;font-size:12px;color:var(--text-muted); }
+    .chart-target-row input[type=number] { width:72px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:4px 6px;font-size:12px;outline:none; }
+    .chart-target-row input[type=number]:focus { border-color:var(--accent); }
     .watch-table { width: 100%; border-collapse: collapse; font-size: 13px; }
     .watch-table th {
       text-align: left; padding: 7px 10px; font-size: 11px; font-weight: 600;
@@ -1247,6 +1250,11 @@
         <div class="chart-note-panel" id="chartNotePanel">
           <label>觀察原因 / 備註</label>
           <textarea id="chartNoteInput" placeholder="為什麼列入觀察？例：突破頸線、MACD 黃金交叉…"></textarea>
+          <div class="chart-target-row">
+            <span>我要這支到</span>
+            <input type="number" id="chartTargetPriceInput" step="0.5" min="0" placeholder="目標價">
+            <span id="chartTargetDaysLabel">元且維持 3 天以上通知我</span>
+          </div>
           <div class="chart-watch-status" id="chartWatchStatus">★ 已列入觀察清單</div>
           <button class="btn-save-chart-watch" id="chartSaveWatchBtn" onclick="saveWatchFromChart()">⭐ 儲存到觀察清單</button>
           <button class="btn-remove-chart-watch" id="chartRemoveWatchBtn" onclick="removeWatchFromChart()" style="display:none">✕ 移除觀察清單</button>
@@ -1718,9 +1726,11 @@
     function openAlertMgr() {
       const panel = document.getElementById('alertPanel');
       panel.classList.remove('hidden');
-      // pre-fill email from logged-in user
+      // pre-fill email & streak days from saved state
       const emailEl = document.getElementById('alertEmail');
       if (_authUser && _authUser.email && !emailEl.value) emailEl.value = _authUser.email;
+      const savedDays = parseInt(localStorage.getItem('alertStreakDays')) || 3;
+      document.getElementById('alertStreakDays').value = savedDays;
     }
     function closeAlertPanel() {
       document.getElementById('alertPanel').classList.add('hidden');
@@ -1729,6 +1739,8 @@
       const btn = document.getElementById('alertRunBtn');
       const box = document.getElementById('alertStatusBox');
       const email = document.getElementById('alertEmail').value.trim();
+      const streak_days = parseInt(document.getElementById('alertStreakDays').value) || 3;
+      localStorage.setItem('alertStreakDays', streak_days);
       if (!email) { box.style.display='block'; box.innerHTML='<span style="color:#e74c3c">請填寫收件信箱</span>'; return; }
       btn.disabled = true;
       btn.textContent = '⏳ 掃描中…';
@@ -1739,7 +1751,7 @@
         const res = await fetch('/api/alert', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ email }),
+          body: JSON.stringify({ email, streak_days }),
         });
         const d = await res.json();
         if (!res.ok || d.error) {
@@ -2802,6 +2814,17 @@
       if (!ta) return;
       const existing = _watchData.find(w => w.code === currentCode);
       ta.value = existing ? (existing.note || '') : '';
+      const tpInput = document.getElementById('chartTargetPriceInput');
+      if (tpInput) tpInput.value = existing?.target_price ? Number(existing.target_price).toFixed(2) : '';
+      _syncStreakLabel();
+    }
+
+    function _syncStreakLabel() {
+      const days = parseInt(localStorage.getItem('alertStreakDays')) || 3;
+      const lbl = document.getElementById('chartTargetDaysLabel');
+      if (lbl) lbl.textContent = `元且維持 ${days} 天以上通知我`;
+      const inp = document.getElementById('alertStreakDays');
+      if (inp && inp.value !== String(days)) inp.value = days;
     }
 
     function toggleWatchFromChart() {
@@ -2811,21 +2834,23 @@
     async function saveWatchFromChart() {
       if (!_authToken) { openAuthModal('login'); return; }
       const note = (document.getElementById('chartNoteInput')?.value || '').trim();
+      const tpRaw = parseFloat(document.getElementById('chartTargetPriceInput')?.value);
+      const target_price = (!isNaN(tpRaw) && tpRaw > 0) ? tpRaw : null;
       const code = currentCode; const name = currentName;
       const industry = currentIndustry;
 
-      // 若已在清單，只更新備註
+      // 若已在清單，更新備註 + 目標價
       if (_watchCodes.has(code)) {
         const item = _watchData.find(w => w.code === code);
         if (item) {
-          item.note = note;
+          item.note = note; item.target_price = target_price;
           try {
             await _authFetch('/api/watchlist', {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ id: item.id, note })
+              body: JSON.stringify({ id: item.id, note, target_price })
             });
-            showToast('備註已更新');
+            showToast('備註與目標價已更新');
             if (!document.getElementById('watchlistPanel').classList.contains('hidden'))
               _renderWatchTable();
           } catch(_) {}
@@ -2843,7 +2868,7 @@
         const r = await _authFetch('/api/watchlist', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code, name, industry, price_at_add, note })
+          body: JSON.stringify({ code, name, industry, price_at_add, note, target_price })
         });
         if (r.ok) {
           const arr = await r.json();
@@ -3098,13 +3123,18 @@
       <div class="alert-panel-body">
         <p style="font-size:13px;color:var(--text-muted);margin:0 0 18px;line-height:1.6">
           每個交易日 <strong style="color:var(--text)">17:00</strong> 自動掃描觀察清單，<br>
-          若有股票收盤價 ≥ 目標價，寄信通知。<br>
-          <span style="font-size:11px;color:#666">目標價在觀察清單的「🔔 目標價」欄設定。</span>
+          若有股票收盤價連續 N 天 ≥ 目標價，寄信通知。<br>
+          <span style="font-size:11px;color:#666">目標價可在 K 線圖側欄或觀察清單「🔔 目標價」欄設定。</span>
         </p>
 
         <div class="alert-field">
           <label>收件信箱</label>
           <input type="email" id="alertEmail" placeholder="your@email.com">
+        </div>
+        <div class="alert-field">
+          <label>連續天數門檻（收盤 ≥ 目標價需滿幾天才通知）</label>
+          <input type="number" id="alertStreakDays" min="1" max="30" step="1" value="3"
+            onchange="localStorage.setItem('alertStreakDays',this.value);_syncStreakLabel()">
         </div>
 
         <div style="border-top:1px solid var(--border);margin:18px 0 16px"></div>

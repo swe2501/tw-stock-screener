@@ -112,7 +112,7 @@ def _fetch_all_stocks():
 # ── Supabase ───────────────────────────────────────────────────
 
 def _sb_get_watchlist(token):
-    url = f"{SUPABASE_URL}/rest/v1/watchlist?select=code,name,note,target_price&order=added_at.desc"
+    url = f"{SUPABASE_URL}/rest/v1/watchlist?select=id,code,name,note,target_price,price_streak,streak_date&order=added_at.desc"
     headers = {
         "apikey": SUPABASE_ANON_KEY,
         "Authorization": f"Bearer {token}",
@@ -127,6 +127,23 @@ def _sb_get_watchlist(token):
         return []
 
 
+def _sb_update_streak(token, item_id, price_streak, streak_date):
+    url = f"{SUPABASE_URL}/rest/v1/watchlist?id=eq.{item_id}"
+    payload = json.dumps({"price_streak": price_streak, "streak_date": streak_date}).encode()
+    headers = {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal",
+    }
+    req = urllib.request.Request(url, data=payload, headers=headers, method="PATCH")
+    try:
+        with urllib.request.urlopen(req, timeout=10):
+            pass
+    except Exception:
+        pass
+
+
 # ── Email via Resend ───────────────────────────────────────────
 
 def _limit_badge(chg_pct):
@@ -137,7 +154,7 @@ def _limit_badge(chg_pct):
     return ""
 
 
-def _send_alert_email(matches, date_str, to_email):
+def _send_alert_email(matches, date_str, to_email, streak_days=3):
     if not RESEND_API_KEY:
         return False, "RESEND_API_KEY not configured"
 
@@ -154,6 +171,7 @@ def _send_alert_email(matches, date_str, to_email):
           <td style="padding:10px 14px;text-align:right;font-weight:600">{m['close']}</td>
           <td style="padding:10px 14px;text-align:right;color:{chg_color};font-weight:600">{'+' if chg>=0 else ''}{chg}%</td>
           <td style="padding:10px 14px;text-align:right;color:#f1c40f;font-weight:700">{tp:.2f}</td>
+          <td style="padding:10px 14px;text-align:right;color:#aaa">{m.get('price_streak',0)} 天</td>
           <td style="padding:10px 14px">{note_html}</td>
         </tr>"""
 
@@ -164,7 +182,7 @@ def _send_alert_email(matches, date_str, to_email):
     <div style="background:#1a1a2e;border-radius:10px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.5)">
       <div style="background:linear-gradient(135deg,#1a1a3e,#2a1a4e);padding:20px 24px;border-bottom:1px solid #2a2a4a">
         <h2 style="margin:0;color:#f1c40f;font-size:20px">🔔 到價警示</h2>
-        <p style="margin:4px 0 0;color:#aaa;font-size:14px">{date_str} &nbsp;·&nbsp; {len(matches)} 檔達到目標價</p>
+        <p style="margin:4px 0 0;color:#aaa;font-size:14px">{date_str} &nbsp;·&nbsp; {len(matches)} 檔已連續達標 ≥{streak_days} 天</p>
       </div>
       <div style="padding:0">
         <table style="width:100%;border-collapse:collapse">
@@ -175,6 +193,7 @@ def _send_alert_email(matches, date_str, to_email):
               <th style="padding:8px 14px;text-align:right">收盤</th>
               <th style="padding:8px 14px;text-align:right">漲跌幅</th>
               <th style="padding:8px 14px;text-align:right">目標價</th>
+              <th style="padding:8px 14px;text-align:right">連續天數</th>
               <th style="padding:8px 14px;text-align:left">備註</th>
             </tr>
           </thead>
@@ -216,7 +235,8 @@ def _send_alert_email(matches, date_str, to_email):
 
 # ── Core logic ─────────────────────────────────────────────────
 
-def _run_alert(token, to_email):
+def _run_alert(token, to_email, streak_days=3):
+    today = datetime.now(TW_TZ).strftime("%Y-%m-%d")
     date_str = datetime.now(TW_TZ).strftime("%Y/%m/%d")
 
     watchlist = _sb_get_watchlist(token)
@@ -224,32 +244,53 @@ def _run_alert(token, to_email):
         return {"ok": True, "sent": False, "message": "觀察清單是空的", "date": date_str}
 
     # 只處理有設定目標價的股票
-    watch_map = {w["code"]: w for w in watchlist if w.get("target_price")}
-    if not watch_map:
+    targets = [w for w in watchlist if w.get("target_price")]
+    if not targets:
         return {"ok": True, "sent": False, "message": "觀察清單中沒有股票設定目標價", "date": date_str}
 
     all_stocks = _fetch_all_stocks()
-
     if not all_stocks:
         return {"ok": False, "sent": False, "message": "無法取得今日股價資料", "date": date_str}
 
     matches = []
-    for code, info in watch_map.items():
+    for info in targets:
+        code = info["code"]
         s = all_stocks.get(code)
+        if not s:
+            continue
         tp = float(info["target_price"])
-        if s and s["close"] >= tp:
-            matches.append({**s, "note": info.get("note", ""), "target_price": tp})
+        prev_streak = int(info.get("price_streak") or 0)
+        prev_date   = str(info.get("streak_date") or "")
 
-    matches.sort(key=lambda x: x["close"] - x["target_price"], reverse=True)
+        if s["close"] >= tp:
+            # 累積 streak（避免同一天重複計算）
+            new_streak = prev_streak + 1 if prev_date != today else prev_streak
+        else:
+            new_streak = 0
+
+        # 更新 Supabase（只在 streak 有變動時）
+        if new_streak != prev_streak or prev_date != today:
+            _sb_update_streak(token, info["id"], new_streak, today)
+
+        # 達到門檻才加入通知清單
+        if new_streak >= streak_days:
+            matches.append({
+                **s,
+                "note": info.get("note", ""),
+                "target_price": tp,
+                "price_streak": new_streak,
+            })
+
+    matches.sort(key=lambda x: x["price_streak"], reverse=True)
 
     if not matches:
         return {
             "ok": True, "sent": False,
-            "message": f"今日觀察清單 {len(watch_map)} 檔（有設目標價）皆未達到目標價",
-            "checked": len(watch_map), "date": date_str,
+            "message": f"目前無股票連續達標 {streak_days} 天（有目標價的股票共 {len(targets)} 檔）",
+            "checked": len(targets), "date": date_str,
         }
 
-    sent, result = _send_alert_email(matches, date_str, to_email)
+    sent, result = _send_alert_email(matches, date_str, to_email, streak_days)
     return {
         "ok": sent, "sent": sent,
         "matches": len(matches),
@@ -308,10 +349,11 @@ class handler(BaseHTTPRequestHandler):
         except Exception:
             pass
 
-        to_email = body.get("email", ALERT_EMAIL)
+        to_email    = body.get("email", ALERT_EMAIL)
+        streak_days = int(body.get("streak_days", os.environ.get("ALERT_STREAK_DAYS", "3")))
 
         try:
-            result = _run_alert(token, to_email)
+            result = _run_alert(token, to_email, streak_days)
             self._json(200, result)
         except Exception:
             self._json(500, {"error": traceback.format_exc()})
