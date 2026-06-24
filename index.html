@@ -2761,6 +2761,7 @@
         _watchData = Array.isArray(data) ? data : [];
         _watchCodes = new Set(_watchData.map(w => w.code));
         _refreshWatchBtns();
+        try { filterAndRender(); } catch(_) {}
       } catch (_) {}
     }
 
