@@ -2691,9 +2691,9 @@
       const statusEl = document.getElementById('chartWatchStatus');
       const saveBtn  = document.getElementById('chartSaveWatchBtn');
       const rmBtn    = document.getElementById('chartRemoveWatchBtn');
-      if (statusEl) statusEl.style.display = watched ? 'block' : 'none';
-      if (saveBtn)  saveBtn.style.display  = watched ? 'none'  : '';
-      if (rmBtn)    rmBtn.style.display    = watched ? ''      : 'none';
+      if (statusEl) statusEl.style.display = 'none'; // 由 header 按鈕顯示狀態，這裡不重複
+      if (saveBtn)  saveBtn.textContent = watched ? '💾 儲存備註' : '⭐ 儲存到觀察清單';
+      if (rmBtn)    rmBtn.style.display = watched ? '' : 'none';
     }
 
     function _populateChartNote() {
