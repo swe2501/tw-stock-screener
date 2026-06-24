@@ -1006,9 +1006,10 @@ class handler(BaseHTTPRequestHandler):
         self._send_json(200, {"status": "ok"})
 
     def do_POST(self):
+        import traceback
         try:
             length = int(self.headers.get("Content-Length", 0))
             body = json.loads(self.rfile.read(length))
             self._send_json(200, screen(body))
         except Exception as e:
-            self._send_json(500, {"error": str(e), "results": []})
+            self._send_json(500, {"error": str(e), "traceback": traceback.format_exc(), "results": []})
