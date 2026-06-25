@@ -1762,8 +1762,6 @@
       const panel = document.getElementById('alertPanel');
       panel.classList.remove('hidden');
       // pre-fill email & streak days from saved state
-      const emailEl = document.getElementById('alertEmail');
-      if (_authUser && _authUser.email && !emailEl.value) emailEl.value = _authUser.email;
       const savedDays = parseInt(localStorage.getItem('alertStreakDays')) || 3;
       document.getElementById('alertStreakDays').value = savedDays;
     }
@@ -1772,10 +1770,10 @@
     }
     async function sendTestEmail() {
       const subject = document.getElementById('alertTestSubject').value.trim();
-      const email   = document.getElementById('alertEmail').value.trim();
+      const email   = _authUser && _authUser.email;
       const statusEl = document.getElementById('alertTestStatus');
       if (!subject) { statusEl.style.display='block'; statusEl.innerHTML='<span style="color:#e74c3c">請填寫主旨</span>'; return; }
-      if (!email)   { statusEl.style.display='block'; statusEl.innerHTML='<span style="color:#e74c3c">請填寫收件信箱</span>'; return; }
+      if (!email)   { statusEl.style.display='block'; statusEl.innerHTML='<span style="color:#e74c3c">請先登入</span>'; return; }
       statusEl.style.display = 'block';
       statusEl.innerHTML = '⏳ 寄送中…';
       try {
@@ -1798,10 +1796,10 @@
     async function runAlertNow() {
       const btn = document.getElementById('alertRunBtn');
       const box = document.getElementById('alertStatusBox');
-      const email = document.getElementById('alertEmail').value.trim();
+      const email = _authUser && _authUser.email;
       const streak_days = parseInt(document.getElementById('alertStreakDays').value) || 3;
       localStorage.setItem('alertStreakDays', streak_days);
-      if (!email) { box.style.display='block'; box.innerHTML='<span style="color:#e74c3c">請填寫收件信箱</span>'; return; }
+      if (!email) { box.style.display='block'; box.innerHTML='<span style="color:#e74c3c">請先登入</span>'; return; }
       btn.disabled = true;
       btn.textContent = '⏳ 掃描中…';
       box.style.display = 'block';
@@ -3187,10 +3185,6 @@
           <span style="font-size:11px;color:#666">目標價可在 K 線圖側欄或觀察清單「🔔 目標價」欄設定。</span>
         </p>
 
-        <div class="alert-field">
-          <label>收件信箱</label>
-          <input type="email" id="alertEmail" placeholder="your@email.com">
-        </div>
         <div class="alert-field">
           <label>連續天數門檻（收盤 ≥ 目標價需滿幾天才通知）</label>
           <input type="number" id="alertStreakDays" min="1" max="30" step="1" value="3"
