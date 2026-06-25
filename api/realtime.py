@@ -157,24 +157,14 @@ class handler(BaseHTTPRequestHandler):
             return self._json(400, {"error": "code required"})
         code = code.strip()
 
-        # 主：TWSE MIS（最即時）
-        result = _fetch_mis(code)
+        # 主：Yahoo Finance（TWSE MIS 從 Vercel IP 經常被擋）
+        result = _fetch_yf(code)
 
-        # 若 MIS 完全失敗 → fallback Yahoo Finance
+        # fallback：若 YF 也失敗才試 TWSE MIS
         if not result:
-            result = _fetch_yf(code)
+            result = _fetch_mis(code)
 
         if not result:
             return self._json(200, {"error": "no_data", "is_trading": False})
-
-        # MIS 取到但 open/high/low 缺 → 補 YF
-        if result["source"] == "twse_mis":
-            if any(result.get(k) is None for k in ("open", "high", "low")):
-                yf = _fetch_yf(code)
-                if yf:
-                    for k in ("open", "high", "low"):
-                        if result.get(k) is None and yf.get(k):
-                            result[k] = yf[k]
-                    result["source"] = "twse_mis+yf"
 
         self._json(200, result)
