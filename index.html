@@ -1888,18 +1888,28 @@
     }
 
     // ── 即時 K 棒 ─────────────────────────────────────────────
+    const RT_INTERVAL_MS = 5000;   // 盤中每 5 秒更新
+    let _rtFetching = false;        // 防止 overlap
+
     function _stopRealtimeUpdates() {
       if (_realtimeTimer) { clearInterval(_realtimeTimer); _realtimeTimer = null; }
     }
 
+    function _isTradingHours() {
+      const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));
+      const hm  = now.getHours() * 60 + now.getMinutes();
+      return hm >= 9 * 60 && hm <= 13 * 60 + 35;
+    }
+
     async function _fetchAndApplyRealtime() {
-      if (!currentCode || !candleSeriesRef) return;
+      if (!currentCode || !candleSeriesRef || _rtFetching) return;
+      _rtFetching = true;
       try {
         const r = await fetch(`/api/realtime?code=${encodeURIComponent(currentCode)}`);
         const d = await r.json();
-        if (d.error || !d.close) return;
-        _applyRealtimeCandle(d);
+        if (!d.error && d.close) _applyRealtimeCandle(d);
       } catch (_) {}
+      finally { _rtFetching = false; }
     }
 
     function _applyRealtimeCandle(d) {
@@ -1907,28 +1917,35 @@
       const c = d.close;
       const bar = {
         time:  d.time,
-        open:  (d.open  != null && d.open  > 0) ? d.open  : c,
+        open:  (d.open  != null && d.open  > 0) ? d.open        : c,
         high:  (d.high  != null && d.high  > 0) ? Math.max(d.high, c) : c,
         low:   (d.low   != null && d.low   > 0) ? Math.min(d.low,  c) : c,
         close: c,
       };
       try { candleSeriesRef.update(bar); } catch (_) {}
-      if (volSeriesRef && d.volume != null) {
+      if (volSeriesRef && d.volume != null && d.volume > 0) {
         try {
           volSeriesRef.update({
             time: d.time, value: d.volume,
-            color: d.close >= (d.open || d.close) ? 'rgba(231,76,60,0.4)' : 'rgba(38,194,129,0.4)',
+            color: c >= bar.open ? 'rgba(231,76,60,0.4)' : 'rgba(38,194,129,0.4)',
           });
         } catch (_) {}
       }
-      // 更新 title 即時價格標籤
+      // title 即時價格標籤 + 時間
       const tag = document.getElementById('chartPriceTag');
       if (tag) {
-        const chg = d.change_pct || 0;
-        const isUp = chg >= 9.5, isDn = chg <= -9.5;
-        const bg = isUp ? '#e74c3c' : isDn ? '#26c281' : '#2c2c3e';
-        const dot = d.is_trading ? '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#2ecc71;margin-right:5px;animation:rtBlink 1s infinite"></span>' : '';
-        tag.innerHTML = `<span style="background:${bg};color:#fff;padding:3px 10px;border-radius:6px;font-size:14px;font-weight:700">${dot}${d.close.toFixed(2)}</span>`;
+        const chg   = d.change_pct || 0;
+        const isUp  = chg >= 9.5, isDn = chg <= -9.5;
+        const bg    = isUp ? '#e74c3c' : isDn ? '#26c281' : (chg >= 0 ? '#c0392b' : '#27ae60');
+        const sign  = chg >= 0 ? '+' : '';
+        const dot   = d.is_trading
+          ? '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#2ecc71;margin-right:6px;flex-shrink:0;animation:rtBlink 1.2s infinite"></span>'
+          : '';
+        const ts    = d.hms ? `<span style="font-size:10px;color:#aaa;margin-left:8px">${d.hms}</span>` : '';
+        tag.innerHTML =
+          `<span style="display:inline-flex;align-items:center;background:${bg};color:#fff;`+
+          `padding:3px 10px;border-radius:6px;font-size:14px;font-weight:700">`+
+          `${dot}${c.toFixed(2)}&nbsp;<span style="font-size:11px;opacity:.85">${sign}${chg.toFixed(2)}%</span></span>${ts}`;
       }
     }
 
@@ -1936,11 +1953,8 @@
       _stopRealtimeUpdates();
       if (!currentCode) return;
       await _fetchAndApplyRealtime();
-      // 判斷是否盤中（台灣時間 09:00–13:35）
-      const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));
-      const hm = now.getHours() * 60 + now.getMinutes();
-      if (hm >= 9 * 60 && hm <= 13 * 60 + 35) {
-        _realtimeTimer = setInterval(_fetchAndApplyRealtime, 30000);
+      if (_isTradingHours()) {
+        _realtimeTimer = setInterval(_fetchAndApplyRealtime, RT_INTERVAL_MS);
       }
     }
 
