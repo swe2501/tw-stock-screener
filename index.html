@@ -1358,6 +1358,11 @@
             <input type="number" id="chartRtPriceInput" step="0.5" min="0" placeholder="目標價">
             <span style="color:#666;font-size:10px">元時通知</span>
           </div>
+          <div class="chart-target-row" style="margin-top:4px">
+            <span>📊 到量</span>
+            <input type="number" id="chartVolTargetInput" step="100" min="0" placeholder="張數">
+            <span style="color:#666;font-size:10px">張時通知</span>
+          </div>
           <div class="chart-watch-status" id="chartWatchStatus">★ 已列入觀察清單</div>
           <button class="btn-save-chart-watch" id="chartSaveWatchBtn" onclick="saveWatchFromChart()">⭐ 儲存到觀察清單</button>
           <button class="btn-remove-chart-watch" id="chartRemoveWatchBtn" onclick="removeWatchFromChart()" style="display:none">✕ 移除觀察清單</button>
@@ -2024,6 +2029,54 @@
       if (_isTradingHours()) {
         _screenerRtTimer = setInterval(_fetchScreenerRealtime, 10000);
       }
+    }
+
+    // ── 觀察清單到量警示輪詢 ──────────────────────────────────
+    let _volAlertTimer = null;
+
+    function _startVolAlertPoller() {
+      if (_volAlertTimer) clearInterval(_volAlertTimer);
+      if (!_authToken || !_isTradingHours()) return;
+      _checkWatchlistVols();
+      _volAlertTimer = setInterval(_checkWatchlistVols, 60000);
+    }
+
+    function _stopVolAlertPoller() {
+      if (_volAlertTimer) { clearInterval(_volAlertTimer); _volAlertTimer = null; }
+    }
+
+    async function _checkWatchlistVols() {
+      if (!_authToken || !_isTradingHours()) return;
+      const targets = _watchData.filter(w => w.vol_target && parseFloat(w.vol_target) > 0);
+      if (!targets.length) return;
+      const today = new Date().toLocaleDateString('zh-TW', { timeZone: 'Asia/Taipei' });
+      try {
+        const codes = targets.map(w => w.code).join(',');
+        const r = await fetch(`${CF_WORKER}/?codes=${codes}&_=${Date.now()}`, { cache: 'no-store' });
+        const j = await r.json();
+        const arr = Array.isArray(j?.msgArray) ? j.msgArray : [];
+        for (const item of arr) {
+          const code = String(item.c || '').trim();
+          const w = targets.find(t => t.code === code);
+          if (!w) continue;
+          const vol = parseFloat(item.v) || 0;
+          if (vol <= 0) continue;
+          const volTarget = parseFloat(w.vol_target);
+          if (vol < volTarget) continue;
+          const notifKey = `vol_notified_${code}_${today}`;
+          if (localStorage.getItem(notifKey)) continue;
+          localStorage.setItem(notifKey, '1');
+          const email = _authUser?.email;
+          if (!email) continue;
+          try {
+            await _authFetch('/api/vol_notify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ code, name: w.name || code, vol: Math.round(vol), vol_target: volTarget, email }),
+            });
+          } catch (_) { localStorage.removeItem(notifKey); }
+        }
+      } catch (_) { /* CF Worker 暫時失敗 */ }
     }
 
     async function _fetchMISDirect(code) {
@@ -3089,6 +3142,7 @@
         _watchCodes = new Set(_watchData.map(w => w.code));
         _refreshWatchBtns();
         try { filterAndRender(); } catch(_) {}
+        _startVolAlertPoller();
       } catch (_) {}
     }
 
@@ -3134,6 +3188,8 @@
       const rpInput = document.getElementById('chartRtPriceInput');
       if (cpInput) cpInput.value = existing?.target_price    ? Number(existing.target_price).toFixed(2)    : '';
       if (rpInput) rpInput.value = existing?.rt_target_price ? Number(existing.rt_target_price).toFixed(2) : '';
+      const vtInput = document.getElementById('chartVolTargetInput');
+      if (vtInput) vtInput.value = existing?.vol_target ? Number(existing.vol_target) : '';
       _syncStreakLabel();
     }
 
@@ -3154,8 +3210,10 @@
       const note = (document.getElementById('chartNoteInput')?.value || '').trim();
       const tpRaw  = parseFloat(document.getElementById('chartClosePriceInput')?.value);
       const rtRaw  = parseFloat(document.getElementById('chartRtPriceInput')?.value);
+      const vtRaw  = parseFloat(document.getElementById('chartVolTargetInput')?.value);
       const target_price    = (!isNaN(tpRaw) && tpRaw > 0) ? tpRaw : null;
       const rt_target_price = (!isNaN(rtRaw) && rtRaw > 0) ? rtRaw : null;
+      const vol_target      = (!isNaN(vtRaw) && vtRaw > 0) ? Math.round(vtRaw) : null;
       const code = currentCode; const name = currentName;
       const industry = currentIndustry;
 
@@ -3163,12 +3221,12 @@
       if (_watchCodes.has(code)) {
         const item = _watchData.find(w => w.code === code);
         if (item) {
-          item.note = note; item.target_price = target_price; item.rt_target_price = rt_target_price;
+          item.note = note; item.target_price = target_price; item.rt_target_price = rt_target_price; item.vol_target = vol_target;
           try {
             await _authFetch('/api/watchlist', {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ id: item.id, note, target_price, rt_target_price })
+              body: JSON.stringify({ id: item.id, note, target_price, rt_target_price, vol_target })
             });
             showToast('備註與目標價已更新');
             if (!document.getElementById('watchlistPanel').classList.contains('hidden'))
@@ -3188,7 +3246,7 @@
         const r = await _authFetch('/api/watchlist', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code, name, industry, price_at_add, note, target_price, rt_target_price })
+          body: JSON.stringify({ code, name, industry, price_at_add, note, target_price, rt_target_price, vol_target })
         });
         if (r.ok) {
           const arr = await r.json();
@@ -3311,9 +3369,11 @@
         const dateStr = w.added_at ? w.added_at.slice(0, 10) : '';
         const tp  = w.target_price;
         const rtp = w.rt_target_price;
-        const mkCell = (val, field) => {
+        const mkCell = (val, field, fmt) => {
           const id = w.id;
-          const txt = val ? Number(val).toFixed(2) : `<span style="color:#555;font-size:11px">–</span>`;
+          const txt = val != null && val !== ''
+            ? (fmt === 'int' ? Number(val).toLocaleString() : Number(val).toFixed(2))
+            : `<span style="color:#555;font-size:11px">–</span>`;
           return `<span data-id="${id}" data-field="${field}"
             onclick="_editTarget(this,${id},'${field}')"
             style="cursor:pointer;display:inline-block;min-width:46px;text-align:right">${txt}</span>`;
@@ -3328,6 +3388,7 @@
           <td>${diffTxt}</td>
           <td>${mkCell(tp,  'target_price')}</td>
           <td>${mkCell(rtp, 'rt_target_price')}</td>
+          <td>${mkCell(w.vol_target, 'vol_target', 'int')}</td>
           <td class="watch-note-cell">
             <div class="watch-note-text" data-id="${w.id}"
                  onclick="_editNote(this, ${w.id})">${w.note || ''}</div>
@@ -3341,7 +3402,7 @@
           <thead><tr>
             <th>代號</th><th>公司</th><th class="watch-col-industry">產業</th>
             <th class="watch-col-addprice">加入時股價</th><th>現在市價</th><th>損益</th>
-            <th>📅 收盤</th><th>⚡ 即時</th><th>備註</th><th class="watch-col-date">加入日期</th><th></th>
+            <th>📅 收盤</th><th>⚡ 即時</th><th>📊 到量</th><th>備註</th><th class="watch-col-date">加入日期</th><th></th>
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>`;

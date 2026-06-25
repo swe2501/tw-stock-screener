@@ -151,7 +151,7 @@ def _fetch_all_stocks():
 # ── Supabase ───────────────────────────────────────────────────
 
 def _sb_get_watchlist(token):
-    url = f"{SUPABASE_URL}/rest/v1/watchlist?select=id,code,name,note,target_price,rt_target_price,alert_type,price_streak,streak_date&order=added_at.desc"
+    url = f"{SUPABASE_URL}/rest/v1/watchlist?select=id,code,name,note,target_price,rt_target_price,vol_target,alert_type,price_streak,streak_date&order=added_at.desc"
     headers = {
         "apikey": SUPABASE_ANON_KEY,
         "Authorization": f"Bearer {token}",
