@@ -1988,7 +1988,7 @@
       const dot = d.is_trading
         ? '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#2ecc71;margin-right:6px;flex-shrink:0;animation:rtBlink 1.2s infinite"></span>'
         : '';
-      _renderPriceTag(c, d.change_pct || 0, dot, d.hms || '');
+      _renderPriceTag(c, d.change_pct || 0, dot, d.hms || '', d.source || '');
     }
 
     async function _startRealtimeUpdates() {
@@ -2203,7 +2203,7 @@
     }
 
     // ── 價格標籤渲染（共用）───────────────────────────────
-    function _renderPriceTag(price, chgPct, dot, hms) {
+    function _renderPriceTag(price, chgPct, dot, hms, source) {
       const tag = document.getElementById('chartPriceTag');
       if (!tag) return;
       const isLimitUp   = chgPct >=  9.5;
@@ -2213,11 +2213,16 @@
                  : chgPct > 0 ? '#e74c3c' : chgPct < 0 ? '#26c281' : '#aaa';
       const sign = chgPct >= 0 ? '+' : '';
       const ts   = hms ? `<span style="font-size:10px;color:#aaa;margin-left:6px">${hms}</span>` : '';
+      const srcBadge = source === 'twse_mis_browser'
+        ? `<span style="font-size:9px;background:#1abc9c;color:#fff;padding:1px 5px;border-radius:4px;margin-left:6px;font-weight:600">TWSE</span>`
+        : source === 'yahoo'
+        ? `<span style="font-size:9px;background:#e67e22;color:#fff;padding:1px 5px;border-radius:4px;margin-left:6px;font-weight:600">YF</span>`
+        : '';
       tag.innerHTML =
         `<span style="display:inline-flex;align-items:center;gap:6px;background:${bg};color:#fff;`+
         `padding:3px 10px;border-radius:6px;font-size:14px;font-weight:700">`+
         `${dot||''}${price.toFixed(2)}<span style="font-size:11px;color:${clr};opacity:.95">`+
-        `${sign}${chgPct.toFixed(2)}%</span></span>${ts}`;
+        `${sign}${chgPct.toFixed(2)}%</span></span>${ts}${srcBadge}`;
     }
 
     function _updatePriceTag(candles) {
