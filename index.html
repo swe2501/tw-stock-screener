@@ -1974,7 +1974,7 @@
         open:       parseFloat(item.o) > 0 ? parseFloat(item.o) : null,
         high:       parseFloat(item.h) > 0 ? parseFloat(item.h) : null,
         low:        parseFloat(item.l) > 0 ? parseFloat(item.l) : null,
-        volume:     parseFloat(item.v) > 0 ? Math.round(parseFloat(item.v) * 1000) : 0,
+        volume:     parseFloat(item.v) > 0 ? Math.round(parseFloat(item.v)) : 0,
         prev_close: prev,
         change_pct: prev > 0 ? Math.round((close - prev) / prev * 10000) / 100 : 0,
         time:       `${nowTW.getFullYear()}-${String(nowTW.getMonth()+1).padStart(2,'0')}-${String(nowTW.getDate()).padStart(2,'0')}`,

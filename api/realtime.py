@@ -58,7 +58,7 @@ def _fetch_mis(code):
             prev = _parse_num(item, "y") or 0.0
             v_str = str(item.get("v", "0")).strip()
             try:
-                volume = int(float(v_str) * 1000) if v_str not in ("-", "") else 0
+                volume = int(float(v_str)) if v_str not in ("-", "") else 0  # v 已是千股＝張，不需×1000
             except (ValueError, TypeError):
                 volume = 0
             now_tw = datetime.now(TW_TZ)
@@ -115,7 +115,7 @@ def _fetch_yf(code):
                 "open":       _last(quote.get("open")),
                 "high":       _last(quote.get("high")),
                 "low":        _last(quote.get("low")),
-                "volume":     int(_last(quote.get("volume")) or 0),
+                "volume":     round(int(_last(quote.get("volume")) or 0) / 1000),  # YF 是股，÷1000 轉張
                 "prev_close": prev,
                 "change_pct": round((close - prev) / prev * 100, 2) if prev > 0 else 0,
                 "time":       now_tw.strftime("%Y-%m-%d"),
