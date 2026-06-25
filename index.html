@@ -920,6 +920,7 @@
     tbody tr { cursor: pointer; }
     @keyframes rtBlink { 0%,100%{opacity:1} 50%{opacity:.2} }
 
+    /* ── K-line chart modal: mobile full-screen ── */
     @media (max-width: 700px) {
       .modal-overlay {
         padding: 0;
@@ -954,6 +955,55 @@
         flex: none;
       }
     }
+
+    /* ── Mobile global UX (≤640px) ── */
+    @media (max-width: 640px) {
+      /* Body: tighter padding + iOS safe area */
+      body { padding: 12px 10px max(56px, env(safe-area-inset-bottom, 56px)); }
+
+      /* Header: compact single row */
+      header { flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+      header h1 { font-size: 0.9rem; white-space: nowrap; }
+      header > span { display: none; }         /* hide TWSE badge */
+      #authUserEmail { display: none !important; }
+      #authArea { gap: 5px; flex-wrap: nowrap; }
+      #authArea button { font-size: 12px; padding: 5px 9px; }
+      .btn-label { display: none; }            /* icon-only watchlist/alert buttons */
+
+      /* Card */
+      .card { padding: 14px 12px; }
+
+      /* Prevent iOS auto-zoom on input focus */
+      input[type="date"],
+      input[type="number"],
+      select.form-select { font-size: 16px; }
+
+      /* Screener table: hide secondary columns */
+      .col-open, .col-high, .col-low, .col-rt,
+      .col-volume, .col-vol5, .col-vol10 { display: none; }
+
+      /* Table touch targets */
+      td { padding: 12px 10px; }
+      th { padding: 9px 10px; }
+      .name-cell { max-width: 80px; }
+
+      /* Chart toolbar buttons: smaller on mobile */
+      .range-btn { padding: 3px 8px; font-size: 0.7rem; }
+      .tool-btn  { padding: 3px 8px; font-size: 0.7rem; }
+
+      /* Index quick-access row: smaller gap */
+      .index-row { gap: 6px; margin-bottom: 10px; }
+      .idx-btn { font-size: 0.7rem; padding: 4px 10px; }
+
+      /* Results header: stack if needed */
+      .results-header { flex-wrap: wrap; gap: 6px; }
+      .results-title { font-size: 0.9rem; }
+      .results-meta  { font-size: 0.75rem; }
+
+      /* Watchlist panel: full-screen on mobile */
+      .watch-panel-inner { width: 100%; max-height: 100dvh; border-radius: 0; height: 100dvh; }
+      .watch-panel { align-items: stretch; }
+    }
   </style>
 </head>
 <body>
@@ -962,8 +1012,8 @@
     <span>TWSE</span>
     <div id="authArea">
       <div id="authUserEmail" style="display:none"></div>
-      <button id="watchlistBtn" style="display:none" onclick="openWatchlist()">⭐ 觀察清單</button>
-      <button id="alertMgrBtn" style="display:none" onclick="openAlertMgr()">🔔 我的警示</button>
+      <button id="watchlistBtn" style="display:none" onclick="openWatchlist()">⭐ <span class="btn-label">觀察清單</span></button>
+      <button id="alertMgrBtn" style="display:none" onclick="openAlertMgr()">🔔 <span class="btn-label">我的警示</span></button>
       <button id="logoutBtn"   style="display:none" onclick="doLogout()">登出</button>
       <button id="loginBtn"    onclick="openAuthModal('login')">登入</button>
     </div>
@@ -1462,9 +1512,9 @@
       });
 
       const volCols = hasVolFilter ? `
-        <th onclick="setSort('ma5_vol')" class="${sortKey==='ma5_vol'?'sorted':''}">5日均量(張)<span class="sort-arrow">${sortKey==='ma5_vol'?(sortDir>0?'▲':'▼'):'↕'}</span></th>
-        <th onclick="setSort('ma10_vol')" class="${sortKey==='ma10_vol'?'sorted':''}">10日均量(張)<span class="sort-arrow">${sortKey==='ma10_vol'?(sortDir>0?'▲':'▼'):'↕'}</span></th>
-        <th onclick="setSort('vol_ratio')" class="${sortKey==='vol_ratio'?'sorted':''}">${hasShrinkFilter?'縮量倍數':'放量倍數'}<span class="sort-arrow">${sortKey==='vol_ratio'?(sortDir>0?'▲':'▼'):'↕'}</span></th>
+        <th class="col-vol5 ${sortKey==='ma5_vol'?'sorted':''}" onclick="setSort('ma5_vol')">5日均量(張)<span class="sort-arrow">${sortKey==='ma5_vol'?(sortDir>0?'▲':'▼'):'↕'}</span></th>
+        <th class="col-vol10 ${sortKey==='ma10_vol'?'sorted':''}" onclick="setSort('ma10_vol')">10日均量(張)<span class="sort-arrow">${sortKey==='ma10_vol'?(sortDir>0?'▲':'▼'):'↕'}</span></th>
+        <th class="${sortKey==='vol_ratio'?'sorted':''}" onclick="setSort('vol_ratio')">${hasShrinkFilter?'縮量倍數':'放量倍數'}<span class="sort-arrow">${sortKey==='vol_ratio'?(sortDir>0?'▲':'▼'):'↕'}</span></th>
       ` : '';
 
       const rows = sorted.map(s => {
@@ -1478,8 +1528,8 @@
           : `${s.candle_pct}%`;
 
         const volCells = hasVolFilter ? `
-          <td class="neutral">${s.ma5_vol != null ? Number(s.ma5_vol).toLocaleString() : '–'}</td>
-          <td class="neutral">${s.ma10_vol != null ? Number(s.ma10_vol).toLocaleString() : '–'}</td>
+          <td class="neutral col-vol5">${s.ma5_vol != null ? Number(s.ma5_vol).toLocaleString() : '–'}</td>
+          <td class="neutral col-vol10">${s.ma10_vol != null ? Number(s.ma10_vol).toLocaleString() : '–'}</td>
           <td>${s.vol_ratio != null ? `<span class="badge badge-yellow">${s.vol_ratio}x</span>` : '–'}</td>
         ` : '';
 
@@ -1499,14 +1549,14 @@
                   : ''
               }</td>
             <td class="name-cell">${s.name}</td>
-            <td class="neutral">${s.open}</td>
-            <td class="neutral">${s.high}</td>
-            <td class="neutral">${s.low}</td>
+            <td class="neutral col-open">${s.open}</td>
+            <td class="neutral col-high">${s.high}</td>
+            <td class="neutral col-low">${s.low}</td>
             <td class="${changeCls}">${s.close}</td>
-            <td id="rt-${s.code}" onclick="event.stopPropagation()" style="min-width:90px;text-align:right">–</td>
+            <td id="rt-${s.code}" class="col-rt" onclick="event.stopPropagation()" style="min-width:90px;text-align:right">–</td>
             <td class="${changeCls}">${changeStr}</td>
             <td class="${candleCls}">${candleStr}</td>
-            <td class="neutral">${Number(s.volume_lots).toLocaleString()} 張</td>
+            <td class="neutral col-volume">${Number(s.volume_lots).toLocaleString()} 張</td>
             ${volCells}
           </tr>`;
       }).join('');
@@ -1521,14 +1571,14 @@
                 ${_authToken ? '<th style="text-align:center;width:52px">列入觀察</th>' : ''}
                 <th onclick="setSort('code')" class="${sortKey==='code'?'sorted':''}">代號<span class="sort-arrow">${sortKey==='code'?(sortDir>0?'▲':'▼'):'↕'}</span></th>
                 <th>名稱</th>
-                <th onclick="setSort('open')" class="${sortKey==='open'?'sorted':''}">開盤<span class="sort-arrow">${sortKey==='open'?(sortDir>0?'▲':'▼'):'↕'}</span></th>
-                <th onclick="setSort('high')" class="${sortKey==='high'?'sorted':''}">最高<span class="sort-arrow">${sortKey==='high'?(sortDir>0?'▲':'▼'):'↕'}</span></th>
-                <th onclick="setSort('low')" class="${sortKey==='low'?'sorted':''}">最低<span class="sort-arrow">${sortKey==='low'?(sortDir>0?'▲':'▼'):'↕'}</span></th>
-                <th onclick="setSort('close')" class="${sortKey==='close'?'sorted':''}">收盤<span class="sort-arrow">${sortKey==='close'?(sortDir>0?'▲':'▼'):'↕'}</span></th>
-                <th style="min-width:90px">即時價</th>
-                <th onclick="setSort('change_pct')" class="${sortKey==='change_pct'?'sorted':''}">漲跌幅<span class="sort-arrow">${sortKey==='change_pct'?(sortDir>0?'▲':'▼'):'↕'}</span></th>
-                <th onclick="setSort('candle_pct')" class="${sortKey==='candle_pct'?'sorted':''}">紅棒幅度<span class="sort-arrow">${sortKey==='candle_pct'?(sortDir>0?'▲':'▼'):'↕'}</span></th>
-                <th onclick="setSort('volume_lots')" class="${sortKey==='volume_lots'?'sorted':''}">成交量<span class="sort-arrow">${sortKey==='volume_lots'?(sortDir>0?'▲':'▼'):'↕'}</span></th>
+                <th class="col-open ${sortKey==='open'?'sorted':''}" onclick="setSort('open')">開盤<span class="sort-arrow">${sortKey==='open'?(sortDir>0?'▲':'▼'):'↕'}</span></th>
+                <th class="col-high ${sortKey==='high'?'sorted':''}" onclick="setSort('high')">最高<span class="sort-arrow">${sortKey==='high'?(sortDir>0?'▲':'▼'):'↕'}</span></th>
+                <th class="col-low ${sortKey==='low'?'sorted':''}" onclick="setSort('low')">最低<span class="sort-arrow">${sortKey==='low'?(sortDir>0?'▲':'▼'):'↕'}</span></th>
+                <th class="${sortKey==='close'?'sorted':''}" onclick="setSort('close')">收盤<span class="sort-arrow">${sortKey==='close'?(sortDir>0?'▲':'▼'):'↕'}</span></th>
+                <th class="col-rt" style="min-width:90px">即時價</th>
+                <th class="${sortKey==='change_pct'?'sorted':''}" onclick="setSort('change_pct')">漲跌幅<span class="sort-arrow">${sortKey==='change_pct'?(sortDir>0?'▲':'▼'):'↕'}</span></th>
+                <th class="${sortKey==='candle_pct'?'sorted':''}" onclick="setSort('candle_pct')">紅棒幅度<span class="sort-arrow">${sortKey==='candle_pct'?(sortDir>0?'▲':'▼'):'↕'}</span></th>
+                <th class="col-volume ${sortKey==='volume_lots'?'sorted':''}" onclick="setSort('volume_lots')">成交量<span class="sort-arrow">${sortKey==='volume_lots'?(sortDir>0?'▲':'▼'):'↕'}</span></th>
                 ${volCols}
               </tr>
             </thead>
