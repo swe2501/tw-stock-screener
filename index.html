@@ -1976,7 +1976,7 @@
     function _isTradingHours() {
       const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));
       const hm  = now.getHours() * 60 + now.getMinutes();
-      return hm >= 9 * 60 && hm <= 13 * 60 + 35;
+      return hm >= 9 * 60 && hm < 13 * 60 + 30; // 13:30 收盤，嚴格小於
     }
 
     // 透過 Cloudflare Worker proxy 呼叫 TWSE MIS（Worker IP 不被 TWSE 封鎖）
@@ -2161,7 +2161,7 @@
         } catch (_) {}
       }
       // title 即時價格標籤
-      const dot = d.is_trading
+      const dot = (d.is_trading && _isTradingHours())
         ? '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#2ecc71;margin-right:6px;flex-shrink:0;animation:rtBlink 1.2s infinite"></span>'
         : '';
       _renderPriceTag(c, d.change_pct || 0, dot, d.hms || '', d.source || '');
