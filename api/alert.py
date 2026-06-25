@@ -176,7 +176,12 @@ def _send_test_email(to_email, subject):
     req = urllib.request.Request(
         "https://api.resend.com/emails",
         data=payload,
-        headers={"Authorization": f"Bearer {RESEND_API_KEY}", "Content-Type": "application/json"},
+        headers={
+            "Authorization": f"Bearer {RESEND_API_KEY}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "User-Agent": "tw-stock-screener/1.0",
+        },
         method="POST",
     )
     try:
@@ -184,7 +189,13 @@ def _send_test_email(to_email, subject):
             result = json.loads(resp.read())
         return True, result.get("id", "sent")
     except urllib.error.HTTPError as e:
-        return False, e.read().decode("utf-8", errors="replace")
+        raw = e.read().decode("utf-8", errors="replace")
+        try:
+            err_json = json.loads(raw)
+            msg = err_json.get("message") or err_json.get("name") or raw
+        except Exception:
+            msg = raw[:300]
+        return False, f"HTTP {e.code}: {msg}"
     except Exception as ex:
         return False, str(ex)
 
@@ -255,6 +266,8 @@ def _send_alert_email(matches, date_str, to_email, streak_days=3):
         headers={
             "Authorization": f"Bearer {RESEND_API_KEY}",
             "Content-Type": "application/json",
+            "Accept": "application/json",
+            "User-Agent": "tw-stock-screener/1.0",
         },
         method="POST",
     )
@@ -263,7 +276,13 @@ def _send_alert_email(matches, date_str, to_email, streak_days=3):
             result = json.loads(resp.read())
         return True, result.get("id", "sent")
     except urllib.error.HTTPError as e:
-        return False, e.read().decode("utf-8", errors="replace")
+        raw = e.read().decode("utf-8", errors="replace")
+        try:
+            err_json = json.loads(raw)
+            msg = err_json.get("message") or err_json.get("name") or raw
+        except Exception:
+            msg = raw[:300]
+        return False, f"HTTP {e.code}: {msg}"
     except Exception as ex:
         return False, str(ex)
 
