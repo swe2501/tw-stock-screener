@@ -1350,19 +1350,25 @@
           <label>觀察原因 / 備註</label>
           <textarea id="chartNoteInput" placeholder="為什麼列入觀察？例：突破頸線、MACD 黃金交叉…"></textarea>
           <div class="chart-target-row">
-            <span>📅 收盤到價</span>
-            <input type="number" id="chartClosePriceInput" step="0.5" min="0" placeholder="目標價">
-            <span id="chartTargetDaysLabel" style="white-space:nowrap">元 <span style="color:#666;font-size:10px">(維持N天通知)</span></span>
+            <span style="white-space:nowrap;flex-shrink:0">📅 收盤到價</span>
+            <span style="display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap">
+              <input type="number" id="chartClosePriceInput" step="0.5" min="0" placeholder="目標價">
+              <span id="chartTargetDaysLabel" style="white-space:nowrap">元且維持 3 天以上通知我</span>
+            </span>
           </div>
           <div class="chart-target-row" style="margin-top:4px">
-            <span>⚡ 即時到價</span>
-            <input type="number" id="chartRtPriceInput" step="0.5" min="0" placeholder="目標價">
-            <span style="color:#666;font-size:10px">元時通知</span>
+            <span style="white-space:nowrap;flex-shrink:0">⚡ 即時到價</span>
+            <span style="display:inline-flex;align-items:center;gap:4px">
+              <input type="number" id="chartRtPriceInput" step="0.5" min="0" placeholder="目標價">
+              <span style="white-space:nowrap;color:#666;font-size:10px">元時通知</span>
+            </span>
           </div>
           <div class="chart-target-row" style="margin-top:4px">
-            <span>📊 到量</span>
-            <input type="number" id="chartVolTargetInput" step="100" min="0" placeholder="張數">
-            <span style="color:#666;font-size:10px">張時通知</span>
+            <span style="white-space:nowrap;flex-shrink:0">📊 到量</span>
+            <span style="display:inline-flex;align-items:center;gap:4px">
+              <input type="number" id="chartVolTargetInput" step="100" min="0" placeholder="張數">
+              <span style="white-space:nowrap;color:#666;font-size:10px">張時通知</span>
+            </span>
           </div>
           <div class="chart-watch-status" id="chartWatchStatus">★ 已列入觀察清單</div>
           <button class="btn-save-chart-watch" id="chartSaveWatchBtn" onclick="saveWatchFromChart()">⭐ 儲存到觀察清單</button>
