@@ -1940,22 +1940,11 @@
           });
         } catch (_) {}
       }
-      // title 即時價格標籤 + 時間
-      const tag = document.getElementById('chartPriceTag');
-      if (tag) {
-        const chg   = d.change_pct || 0;
-        const isUp  = chg >= 9.5, isDn = chg <= -9.5;
-        const bg    = isUp ? '#e74c3c' : isDn ? '#26c281' : '#2c2c3e';
-        const sign  = chg >= 0 ? '+' : '';
-        const dot   = d.is_trading
-          ? '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#2ecc71;margin-right:6px;flex-shrink:0;animation:rtBlink 1.2s infinite"></span>'
-          : '';
-        const ts    = d.hms ? `<span style="font-size:10px;color:#aaa;margin-left:8px">${d.hms}</span>` : '';
-        tag.innerHTML =
-          `<span style="display:inline-flex;align-items:center;background:${bg};color:#fff;`+
-          `padding:3px 10px;border-radius:6px;font-size:14px;font-weight:700">`+
-          `${dot}${c.toFixed(2)}&nbsp;<span style="font-size:11px;opacity:.85">${sign}${chg.toFixed(2)}%</span></span>${ts}`;
-      }
+      // title 即時價格標籤
+      const dot = d.is_trading
+        ? '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#2ecc71;margin-right:6px;flex-shrink:0;animation:rtBlink 1.2s infinite"></span>'
+        : '';
+      _renderPriceTag(c, d.change_pct || 0, dot, d.hms || '');
     }
 
     async function _startRealtimeUpdates() {
@@ -2169,23 +2158,35 @@
       });
     }
 
-    // ── 更新 title 收盤價標籤（漲停紅底、跌停綠底）───────
-    function _updatePriceTag(candles) {
+    // ── 價格標籤渲染（共用）───────────────────────────────
+    function _renderPriceTag(price, chgPct, dot, hms) {
       const tag = document.getElementById('chartPriceTag');
       if (!tag) return;
-      if (!candles || candles.length < 2) { tag.innerHTML = ''; return; }
-      const last = candles[candles.length - 1];
-      const prev = candles[candles.length - 2];
-      if (!last?.close || !prev?.close) { tag.innerHTML = ''; return; }
-      const chgPct = (last.close - prev.close) / prev.close * 100;
       const isLimitUp   = chgPct >=  9.5;
       const isLimitDown = chgPct <= -9.5;
-      const bg  = isLimitUp ? '#e74c3c' : isLimitDown ? '#26c281' : '#2c2c3e';
+      const bg   = isLimitUp ? '#e74c3c' : isLimitDown ? '#26c281' : '#2c2c3e';
+      const clr  = isLimitUp || isLimitDown ? '#fff'
+                 : chgPct > 0 ? '#e74c3c' : chgPct < 0 ? '#26c281' : '#aaa';
       const sign = chgPct >= 0 ? '+' : '';
+      const ts   = hms ? `<span style="font-size:10px;color:#aaa;margin-left:6px">${hms}</span>` : '';
       tag.innerHTML =
         `<span style="display:inline-flex;align-items:center;gap:6px;background:${bg};color:#fff;`+
         `padding:3px 10px;border-radius:6px;font-size:14px;font-weight:700">`+
-        `${last.close.toFixed(2)}<span style="font-size:11px;opacity:.85">${sign}${chgPct.toFixed(2)}%</span></span>`;
+        `${dot||''}${price.toFixed(2)}<span style="font-size:11px;color:${clr};opacity:.95">`+
+        `${sign}${chgPct.toFixed(2)}%</span></span>${ts}`;
+    }
+
+    function _updatePriceTag(candles) {
+      if (!candles || candles.length < 2) {
+        const tag = document.getElementById('chartPriceTag');
+        if (tag) tag.innerHTML = '';
+        return;
+      }
+      const last = candles[candles.length - 1];
+      const prev = candles[candles.length - 2];
+      if (!last?.close || !prev?.close) return;
+      const chgPct = (last.close - prev.close) / prev.close * 100;
+      _renderPriceTag(last.close, chgPct, '', '');
     }
 
     // ── Render all chart panels ───────────────────────────
