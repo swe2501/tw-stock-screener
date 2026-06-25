@@ -3243,8 +3243,16 @@
           ? `<span class="${cls}">${diff > 0 ? '+' : ''}${diff.toFixed(2)}</span>`
           : '–';
         const dateStr = w.added_at ? w.added_at.slice(0, 10) : '';
-        const tp = w.target_price;
-        const tpTxt = tp ? Number(tp).toFixed(2) : '<span style="color:#444;font-size:11px">點擊設定</span>';
+        const tp    = w.target_price;
+        const atype = w.alert_type || 'close';
+        const atBadge = tp
+          ? (atype === 'realtime'
+            ? `<span style="font-size:9px;background:#9b59b6;color:#fff;padding:1px 4px;border-radius:3px;margin-left:4px;vertical-align:middle">⚡即時</span>`
+            : `<span style="font-size:9px;background:#2c3e50;color:#888;padding:1px 4px;border-radius:3px;margin-left:4px;vertical-align:middle">📅收盤</span>`)
+          : '';
+        const tpTxt = tp
+          ? `${Number(tp).toFixed(2)}${atBadge}`
+          : '<span style="color:#444;font-size:11px">點擊設定</span>';
         return `<tr>
           <td><button class="watch-code-btn" onclick="openChart('${w.code}','${(w.name||'').replace(/'/g,"\\'")}')">
             ${w.code}</button></td>
@@ -3254,9 +3262,9 @@
           <td>${curTxt}</td>
           <td>${diffTxt}</td>
           <td>
-            <div class="watch-note-text" data-id="${w.id}" data-val="${tp || ''}"
+            <div class="watch-note-text" data-id="${w.id}" data-val="${tp || ''}" data-alert-type="${atype}"
                  onclick="_editTargetPrice(this,${w.id})"
-                 style="cursor:pointer;min-width:60px">${tpTxt}</div>
+                 style="cursor:pointer;min-width:80px">${tpTxt}</div>
           </td>
           <td class="watch-note-cell">
             <div class="watch-note-text" data-id="${w.id}"
@@ -3321,34 +3329,76 @@
       } catch (_) {}
     }
 
+    let _pendingAlertType = 'close';
+
     function _editTargetPrice(el, id) {
       if (el.querySelector('input')) return;
       const cur = el.dataset.val || '';
+      _pendingAlertType = el.dataset.alertType || 'close';
       el.innerHTML = `
-        <input type="number" id="tpInput_${id}" value="${cur}" step="0.5" min="0"
-          style="width:72px;background:var(--bg);border:1px solid var(--accent);border-radius:4px;
-                 color:var(--text);padding:3px 6px;font-size:12px;outline:none;"
-          onblur="_saveTargetPrice(this,${id})"
-          onkeydown="if(event.key==='Enter')this.blur();">`;
-      const inp = el.querySelector('input');
-      inp.focus(); inp.select();
+        <div style="display:flex;flex-direction:column;gap:4px;min-width:130px">
+          <input type="number" id="tpInput_${id}" value="${cur}" step="0.5" min="0"
+            style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--accent);
+                   border-radius:4px;color:var(--text);padding:3px 6px;font-size:12px;outline:none;"
+            onblur="_saveTargetPrice(this,${id})"
+            onkeydown="if(event.key==='Enter')this.blur()">
+          <div style="display:flex;gap:4px">
+            <button id="atClose_${id}" onmousedown="event.preventDefault()"
+              onclick="_pickAlertType(${id},'close')"
+              style="flex:1;padding:2px 4px;font-size:10px;border-radius:4px;cursor:pointer;border:1px solid;transition:.15s">
+              📅 收盤</button>
+            <button id="atRt_${id}" onmousedown="event.preventDefault()"
+              onclick="_pickAlertType(${id},'realtime')"
+              style="flex:1;padding:2px 4px;font-size:10px;border-radius:4px;cursor:pointer;border:1px solid;transition:.15s">
+              ⚡ 即時</button>
+          </div>
+        </div>`;
+      _updateAlertTypeBtns(id);
+      el.querySelector('input').focus();
+      el.querySelector('input').select();
+    }
+
+    function _pickAlertType(id, type) {
+      _pendingAlertType = type;
+      _updateAlertTypeBtns(id);
+    }
+
+    function _updateAlertTypeBtns(id) {
+      const cb = document.getElementById(`atClose_${id}`);
+      const rb = document.getElementById(`atRt_${id}`);
+      if (!cb || !rb) return;
+      const isClose = _pendingAlertType === 'close';
+      cb.style.cssText += isClose
+        ? ';background:var(--accent);color:#111;border-color:var(--accent);font-weight:700'
+        : ';background:transparent;color:#666;border-color:#444;font-weight:400';
+      rb.style.cssText += !isClose
+        ? ';background:#9b59b6;color:#fff;border-color:#9b59b6;font-weight:700'
+        : ';background:transparent;color:#666;border-color:#444;font-weight:400';
     }
 
     async function _saveTargetPrice(input, id) {
-      const val = parseFloat(input.value);
+      const val    = parseFloat(input.value);
       const target = (!isNaN(val) && val > 0) ? val : null;
-      const el = input.parentElement;
-      el.dataset.val = target || '';
+      const atype  = _pendingAlertType || 'close';
+      const el     = input.closest('[data-id]');
+      if (!el) return;
+      el.dataset.val       = target || '';
+      el.dataset.alertType = atype;
+      const atBadge = target
+        ? (atype === 'realtime'
+          ? `<span style="font-size:9px;background:#9b59b6;color:#fff;padding:1px 4px;border-radius:3px;margin-left:4px;vertical-align:middle">⚡即時</span>`
+          : `<span style="font-size:9px;background:#2c3e50;color:#888;padding:1px 4px;border-radius:3px;margin-left:4px;vertical-align:middle">📅收盤</span>`)
+        : '';
       el.innerHTML = target
-        ? target.toFixed(2)
+        ? `${target.toFixed(2)}${atBadge}`
         : '<span style="color:#444;font-size:11px">點擊設定</span>';
       const item = _watchData.find(w => w.id === id);
-      if (item) item.target_price = target;
+      if (item) { item.target_price = target; item.alert_type = atype; }
       try {
         await _authFetch('/api/watchlist', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id, target_price: target }),
+          body: JSON.stringify({ id, target_price: target, alert_type: atype }),
         });
       } catch (_) {}
     }

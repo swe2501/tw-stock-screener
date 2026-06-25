@@ -151,7 +151,7 @@ def _fetch_all_stocks():
 # ── Supabase ───────────────────────────────────────────────────
 
 def _sb_get_watchlist(token):
-    url = f"{SUPABASE_URL}/rest/v1/watchlist?select=id,code,name,note,target_price,price_streak,streak_date&order=added_at.desc"
+    url = f"{SUPABASE_URL}/rest/v1/watchlist?select=id,code,name,note,target_price,alert_type,price_streak,streak_date&order=added_at.desc"
     headers = {
         "apikey": SUPABASE_ANON_KEY,
         "Authorization": f"Bearer {token}",
@@ -336,8 +336,8 @@ def _run_alert(token, to_email, streak_days=3):
     if not watchlist:
         return {"ok": True, "sent": False, "message": "觀察清單是空的", "date": date_str}
 
-    # 只處理有設定目標價的股票
-    targets = [w for w in watchlist if w.get("target_price")]
+    # 只處理有目標價且 alert_type = 'close'（收盤警示）的股票
+    targets = [w for w in watchlist if w.get("target_price") and w.get("alert_type", "close") == "close"]
     if not targets:
         return {"ok": True, "sent": False, "message": "觀察清單中沒有股票設定目標價", "date": date_str}
 
