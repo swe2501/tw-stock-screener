@@ -2171,10 +2171,10 @@
       _stopRealtimeUpdates();
       _rtOpen = null; _rtHigh = null; _rtLow = null; // 每次開新圖重置
       if (!currentCode) return;
+      // 非交易時間不拉即時：歷史資料已有正確收盤價，強插即時會產生重複 K 棒
+      if (!_isTradingHours()) return;
       await _fetchAndApplyRealtime();
-      if (_isTradingHours()) {
-        _realtimeTimer = setInterval(_fetchAndApplyRealtime, RT_INTERVAL_MS);
-      }
+      _realtimeTimer = setInterval(_fetchAndApplyRealtime, RT_INTERVAL_MS);
     }
 
     function closeChartIfBg(e) {
