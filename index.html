@@ -1498,12 +1498,15 @@
             <td class="neutral">${s.high}</td>
             <td class="neutral">${s.low}</td>
             <td class="${changeCls}">${s.close}</td>
+            <td id="rt-${s.code}" onclick="event.stopPropagation()" style="min-width:90px;text-align:right">–</td>
             <td class="${changeCls}">${changeStr}</td>
             <td class="${candleCls}">${candleStr}</td>
             <td class="neutral">${Number(s.volume_lots).toLocaleString()} 張</td>
             ${volCells}
           </tr>`;
       }).join('');
+
+      _startScreenerRealtime(sorted.map(s => s.code));
 
       document.getElementById('resultsArea').innerHTML = `
         <div class="table-wrap">
@@ -1517,6 +1520,7 @@
                 <th onclick="setSort('high')" class="${sortKey==='high'?'sorted':''}">最高<span class="sort-arrow">${sortKey==='high'?(sortDir>0?'▲':'▼'):'↕'}</span></th>
                 <th onclick="setSort('low')" class="${sortKey==='low'?'sorted':''}">最低<span class="sort-arrow">${sortKey==='low'?(sortDir>0?'▲':'▼'):'↕'}</span></th>
                 <th onclick="setSort('close')" class="${sortKey==='close'?'sorted':''}">收盤<span class="sort-arrow">${sortKey==='close'?(sortDir>0?'▲':'▼'):'↕'}</span></th>
+                <th style="min-width:90px">即時價</th>
                 <th onclick="setSort('change_pct')" class="${sortKey==='change_pct'?'sorted':''}">漲跌幅<span class="sort-arrow">${sortKey==='change_pct'?(sortDir>0?'▲':'▼'):'↕'}</span></th>
                 <th onclick="setSort('candle_pct')" class="${sortKey==='candle_pct'?'sorted':''}">紅棒幅度<span class="sort-arrow">${sortKey==='candle_pct'?(sortDir>0?'▲':'▼'):'↕'}</span></th>
                 <th onclick="setSort('volume_lots')" class="${sortKey==='volume_lots'?'sorted':''}">成交量<span class="sort-arrow">${sortKey==='volume_lots'?(sortDir>0?'▲':'▼'):'↕'}</span></th>
@@ -1904,6 +1908,52 @@
 
     // 透過 Cloudflare Worker proxy 呼叫 TWSE MIS（Worker IP 不被 TWSE 封鎖）
     const CF_WORKER = 'https://billowing-mouse-5309.swe250165.workers.dev';
+
+    // ── 篩選結果表格即時價輪詢 ────────────────────────────
+    let _screenerRtTimer = null;
+    let _screenerCodes   = [];
+
+    function _stopScreenerRealtime() {
+      if (_screenerRtTimer) { clearInterval(_screenerRtTimer); _screenerRtTimer = null; }
+    }
+
+    async function _fetchScreenerRealtime() {
+      if (!_screenerCodes.length) return;
+      try {
+        const r = await fetch(
+          `${CF_WORKER}/?codes=${_screenerCodes.join(',')}&_=${Date.now()}`,
+          { cache: 'no-store' }
+        );
+        const json = await r.json();
+        const arr  = json?.msgArray;
+        if (!arr) return;
+        for (const item of arr) {
+          const code = String(item.c || '').trim();
+          const cell = document.getElementById(`rt-${code}`);
+          if (!cell) continue;
+          const z = parseFloat(item.z);
+          if (!z || z <= 0 || isNaN(z)) continue;
+          const y   = parseFloat(item.y) || 0;
+          const chg = y > 0 ? (z - y) / y * 100 : 0;
+          const clr = chg > 0 ? '#e74c3c' : chg < 0 ? '#26c281' : '#ccc';
+          const sign = chg >= 0 ? '+' : '';
+          cell.innerHTML =
+            `<span style="color:${clr};font-weight:600">${z.toFixed(2)}</span>` +
+            `<span style="font-size:10px;color:${clr};margin-left:3px">${sign}${chg.toFixed(1)}%</span>`;
+        }
+      } catch (e) { /* CF Worker 暫時失敗，靜默等下次 */ }
+    }
+
+    function _startScreenerRealtime(codes) {
+      _stopScreenerRealtime();
+      _screenerCodes = codes || [];
+      if (!_screenerCodes.length) return;
+      _fetchScreenerRealtime();
+      if (_isTradingHours()) {
+        _screenerRtTimer = setInterval(_fetchScreenerRealtime, 10000);
+      }
+    }
+
     async function _fetchMISDirect(code) {
       const url = `${CF_WORKER}/?code=${encodeURIComponent(code)}&_=${Date.now()}`;
       const r = await fetch(url, { cache: 'no-store' });
