@@ -1931,15 +1931,20 @@
           const code = String(item.c || '').trim();
           const cell = document.getElementById(`rt-${code}`);
           if (!cell) continue;
-          const z = parseFloat(item.z);
-          if (!z || z <= 0 || isNaN(z)) continue;
-          const y   = parseFloat(item.y) || 0;
-          const chg = y > 0 ? (z - y) / y * 100 : 0;
-          const clr = chg > 0 ? '#e74c3c' : chg < 0 ? '#26c281' : '#ccc';
+          const y    = parseFloat(item.y) || 0;
+          let z = parseFloat(item.z);
+          const isLive = z > 0 && !isNaN(z);
+          // z 沒有時用 oz（當日一般收盤）或 y（昨收）補
+          if (!isLive) z = parseFloat(item.oz) || parseFloat(item.y) || 0;
+          if (!z || z <= 0) continue;
+          const chg  = y > 0 ? (z - y) / y * 100 : 0;
+          const clr  = isLive ? (chg > 0 ? '#e74c3c' : chg < 0 ? '#26c281' : '#ccc') : '#777';
           const sign = chg >= 0 ? '+' : '';
           cell.innerHTML =
             `<span style="color:${clr};font-weight:600">${z.toFixed(2)}</span>` +
-            `<span style="font-size:10px;color:${clr};margin-left:3px">${sign}${chg.toFixed(1)}%</span>`;
+            (isLive
+              ? `<span style="font-size:10px;color:${clr};margin-left:3px">${sign}${chg.toFixed(1)}%</span>`
+              : `<span style="font-size:9px;color:#555;margin-left:3px">收</span>`);
         }
       } catch (e) { /* CF Worker 暫時失敗，靜默等下次 */ }
     }
