@@ -9,25 +9,23 @@ MIS_HEADERS = {
     "Referer": "https://mis.twse.com.tw/stock/index.jsp",
     "Accept": "application/json, text/plain, */*",
 }
-
 YF_HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "Accept": "application/json",
 }
 
 
-def _http_json(url, headers=None, timeout=12):
+def _http_json(url, headers=None, timeout=10):
     req = urllib.request.Request(url, headers=headers or {})
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             raw = resp.read()
         return json.loads(raw) if raw and raw.strip() else None
-    except Exception:
+    except Exception as e:
         return None
 
 
 def _parse_num(item, key):
-    """Return float > 0 or None."""
     v = str(item.get(key, "-")).strip()
     if v in ("-", "", "0"):
         return None
@@ -38,13 +36,14 @@ def _parse_num(item, key):
         return None
 
 
+# ── TWSE MIS ───────────────────────────────────────────────────
 def _fetch_mis(code):
     ts  = int(datetime.now(TW_TZ).timestamp() * 1000)
     url = (
         "https://mis.twse.com.tw/stock/api/getStockInfo.jsp"
         f"?ex_ch=tse_{code}.tw%7Cotc_{code}.tw&_={ts}"
     )
-    data = _http_json(url, headers=MIS_HEADERS)
+    data = _http_json(url, headers=MIS_HEADERS, timeout=8)
     if not data or "msgArray" not in data:
         return None
 
@@ -83,18 +82,19 @@ def _fetch_mis(code):
     return None
 
 
-def _fetch_yf_ohlc(code):
-    """Fetch today's open/high/low from Yahoo Finance as supplemental data."""
+# ── Yahoo Finance fallback ──────────────────────────────────────
+def _fetch_yf(code):
     for suffix in (".TW", ".TWO"):
         url = (
-            f"https://query1.finance.yahoo.com/v8/finance/chart/{urllib.parse.quote(code + suffix)}"
-            "?interval=1d&range=1d&includePrePost=false"
+            f"https://query1.finance.yahoo.com/v8/finance/chart/"
+            f"{urllib.parse.quote(code + suffix)}?interval=1d&range=1d&includePrePost=false"
         )
-        data = _http_json(url, headers=YF_HEADERS)
+        data = _http_json(url, headers=YF_HEADERS, timeout=10)
         if not data:
             continue
         try:
             result = data["chart"]["result"][0]
+            meta   = result["meta"]
             quote  = result["indicators"]["quote"][0]
 
             def _last(lst):
@@ -103,14 +103,29 @@ def _fetch_yf_ohlc(code):
                         return float(v)
                 return None
 
-            o = _last(quote.get("open"))
-            h = _last(quote.get("high"))
-            l = _last(quote.get("low"))
-            if any(v is not None for v in (o, h, l)):
-                return {"open": o, "high": h, "low": l}
-        except (KeyError, IndexError, TypeError):
+            close = float(meta.get("regularMarketPrice") or 0)
+            if close <= 0:
+                continue
+            prev  = float(meta.get("chartPreviousClose") or meta.get("previousClose") or 0)
+            now_tw = datetime.now(TW_TZ)
+            return {
+                "code":       code,
+                "name":       meta.get("shortName", ""),
+                "close":      close,
+                "open":       _last(quote.get("open")),
+                "high":       _last(quote.get("high")),
+                "low":        _last(quote.get("low")),
+                "volume":     int(_last(quote.get("volume")) or 0),
+                "prev_close": prev,
+                "change_pct": round((close - prev) / prev * 100, 2) if prev > 0 else 0,
+                "time":       now_tw.strftime("%Y-%m-%d"),
+                "hms":        now_tw.strftime("%H:%M:%S"),
+                "is_trading": meta.get("marketState", "") in ("REGULAR", "PRE", "POST"),
+                "source":     "yahoo",
+            }
+        except (KeyError, IndexError, TypeError, ValueError):
             continue
-    return {}
+    return None
 
 
 class handler(BaseHTTPRequestHandler):
@@ -126,6 +141,7 @@ class handler(BaseHTTPRequestHandler):
         self.send_response(code)
         self._cors()
         self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(body)
 
@@ -141,18 +157,24 @@ class handler(BaseHTTPRequestHandler):
             return self._json(400, {"error": "code required"})
         code = code.strip()
 
+        # 主：TWSE MIS（最即時）
         result = _fetch_mis(code)
+
+        # 若 MIS 完全失敗 → fallback Yahoo Finance
+        if not result:
+            result = _fetch_yf(code)
+
         if not result:
             return self._json(200, {"error": "no_data", "is_trading": False})
 
-        # 若 MIS 缺少 open/high/low，補抓 Yahoo Finance
-        needs_yf = any(result.get(k) is None for k in ("open", "high", "low"))
-        if needs_yf:
-            yf = _fetch_yf_ohlc(code)
-            for k in ("open", "high", "low"):
-                if result.get(k) is None and yf.get(k):
-                    result[k] = yf[k]
-            if yf:
-                result["source"] = "twse_mis+yf"
+        # MIS 取到但 open/high/low 缺 → 補 YF
+        if result["source"] == "twse_mis":
+            if any(result.get(k) is None for k in ("open", "high", "low")):
+                yf = _fetch_yf(code)
+                if yf:
+                    for k in ("open", "high", "low"):
+                        if result.get(k) is None and yf.get(k):
+                            result[k] = yf[k]
+                    result["source"] = "twse_mis+yf"
 
         self._json(200, result)

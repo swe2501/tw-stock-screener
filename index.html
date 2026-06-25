@@ -1906,10 +1906,11 @@
       if (!currentCode || !candleSeriesRef || _rtFetching) return;
       _rtFetching = true;
       try {
-        const r = await fetch(`/api/realtime?code=${encodeURIComponent(currentCode)}`);
+        const r = await fetch(`/api/realtime?code=${encodeURIComponent(currentCode)}`, { cache: 'no-store' });
         const d = await r.json();
+        console.log('[RT]', currentCode, d.close, d.hms, d.source, d.error || '');
         if (!d.error && d.close) _applyRealtimeCandle(d);
-      } catch (_) {}
+      } catch (e) { console.warn('[RT] fetch failed', e); }
       finally { _rtFetching = false; }
     }
 
