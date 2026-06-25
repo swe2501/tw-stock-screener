@@ -49,20 +49,40 @@
       font-size: 13px;
       padding: 5px 12px;
       border-radius: 6px;
-      border: 1px solid rgba(255,255,255,0.15);
-      background: rgba(255,255,255,0.08);
-      color: rgba(255,255,255,0.85);
+      border: 1px solid rgba(255,255,255,0.15) !important;
+      background: rgba(255,255,255,0.08) !important;
+      color: rgba(255,255,255,0.85) !important;
       cursor: pointer;
-      -webkit-tap-highlight-color: transparent;
-      -webkit-appearance: none;
-      appearance: none;
-      outline: none;
+      -webkit-tap-highlight-color: transparent !important;
+      -webkit-appearance: none !important;
+      appearance: none !important;
+      outline: none !important;
+      box-shadow: none !important;
+      -webkit-box-shadow: none !important;
+      user-select: none;
+      -webkit-user-select: none;
       transition: background .15s, border-color .15s;
     }
-    #authArea button:hover { background: rgba(255,255,255,0.14); border-color: rgba(255,255,255,0.3); color: #fff; }
+    #authArea button:hover {
+      background: rgba(255,255,255,0.14) !important;
+      border-color: rgba(255,255,255,0.3) !important;
+      color: #fff !important;
+      box-shadow: none !important;
+    }
     #authArea button:focus,
-    #authArea button:focus-visible { outline: none; background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); }
-    #authArea button:active { background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.3); }
+    #authArea button:focus-visible,
+    #authArea button:focus-within {
+      outline: none !important;
+      background: rgba(255,255,255,0.08) !important;
+      border-color: rgba(255,255,255,0.15) !important;
+      box-shadow: none !important;
+      -webkit-box-shadow: none !important;
+    }
+    #authArea button:active {
+      background: rgba(255,255,255,0.18) !important;
+      border-color: rgba(255,255,255,0.3) !important;
+      box-shadow: none !important;
+    }
     #authUserEmail { font-size: 13px; color: rgba(255,255,255,0.7); }
 
     /* Auth modal */
