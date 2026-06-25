@@ -154,6 +154,41 @@ def _limit_badge(chg_pct):
     return ""
 
 
+def _send_test_email(to_email, subject):
+    if not RESEND_API_KEY:
+        return False, "RESEND_API_KEY not configured"
+    date_str = datetime.now(TW_TZ).strftime("%Y/%m/%d %H:%M")
+    html = f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:20px;background:#111;font-family:'Segoe UI',Arial,sans-serif">
+  <div style="max-width:480px;margin:0 auto;background:#1a1a2e;border-radius:10px;padding:24px;color:#ddd">
+    <h2 style="margin:0 0 12px;color:#f1c40f;font-size:18px">📨 測試信件</h2>
+    <p style="margin:0 0 8px">這是一封來自台股篩選系統的測試信件。</p>
+    <p style="margin:0;color:#aaa;font-size:12px">發送時間：{date_str} (台灣時間)</p>
+  </div>
+</body></html>"""
+    payload = json.dumps({
+        "from": "台股警示 <onboarding@resend.dev>",
+        "to": [to_email],
+        "subject": subject,
+        "html": html,
+    }).encode("utf-8")
+    req = urllib.request.Request(
+        "https://api.resend.com/emails",
+        data=payload,
+        headers={"Authorization": f"Bearer {RESEND_API_KEY}", "Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            result = json.loads(resp.read())
+        return True, result.get("id", "sent")
+    except urllib.error.HTTPError as e:
+        return False, e.read().decode("utf-8", errors="replace")
+    except Exception as ex:
+        return False, str(ex)
+
+
 def _send_alert_email(matches, date_str, to_email, streak_days=3):
     if not RESEND_API_KEY:
         return False, "RESEND_API_KEY not configured"
@@ -351,6 +386,16 @@ class handler(BaseHTTPRequestHandler):
 
         to_email    = body.get("email", ALERT_EMAIL)
         streak_days = int(body.get("streak_days", os.environ.get("ALERT_STREAK_DAYS", "3")))
+
+        # 測試寄信模式
+        if body.get("test"):
+            subject = body.get("subject", "台股警示系統 — 測試信件")
+            try:
+                sent, result = _send_test_email(to_email, subject)
+                self._json(200, {"sent": sent, "result": result})
+            except Exception:
+                self._json(500, {"error": traceback.format_exc()})
+            return
 
         try:
             result = _run_alert(token, to_email, streak_days)

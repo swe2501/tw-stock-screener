@@ -1735,6 +1735,31 @@
     function closeAlertPanel() {
       document.getElementById('alertPanel').classList.add('hidden');
     }
+    async function sendTestEmail() {
+      const subject = document.getElementById('alertTestSubject').value.trim();
+      const email   = document.getElementById('alertEmail').value.trim();
+      const statusEl = document.getElementById('alertTestStatus');
+      if (!subject) { statusEl.style.display='block'; statusEl.innerHTML='<span style="color:#e74c3c">請填寫主旨</span>'; return; }
+      if (!email)   { statusEl.style.display='block'; statusEl.innerHTML='<span style="color:#e74c3c">請填寫收件信箱</span>'; return; }
+      statusEl.style.display = 'block';
+      statusEl.innerHTML = '⏳ 寄送中…';
+      try {
+        const res = await fetch('/api/alert', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_authToken}` },
+          body: JSON.stringify({ test: true, subject, email }),
+        });
+        const d = await res.json();
+        if (d.sent) {
+          statusEl.innerHTML = `<span style="color:#2ecc71">✅ 測試信已寄出至 ${email}</span>`;
+        } else {
+          statusEl.innerHTML = `<span style="color:#e74c3c">❌ 寄送失敗：${d.error || d.result || '未知錯誤'}</span>`;
+        }
+      } catch(e) {
+        statusEl.innerHTML = `<span style="color:#e74c3c">❌ 連線失敗：${e.message}</span>`;
+      }
+    }
+
     async function runAlertNow() {
       const btn = document.getElementById('alertRunBtn');
       const box = document.getElementById('alertStatusBox');
@@ -3139,8 +3164,29 @@
 
         <div style="border-top:1px solid var(--border);margin:18px 0 16px"></div>
 
+        <!-- 測試寄信 -->
+        <div style="margin-bottom:14px">
+          <label style="display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px">測試信件主旨</label>
+          <div style="display:flex;gap:8px">
+            <input type="text" id="alertTestSubject" placeholder="填寫主旨後點擊傳送"
+              style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:6px;
+                     color:var(--text);padding:8px 10px;font-size:13px;outline:none;"
+              onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
+            <button onclick="sendTestEmail()"
+              style="flex-shrink:0;padding:8px 14px;border-radius:6px;border:1px solid var(--border);
+                     background:none;color:var(--text-muted);font-size:13px;cursor:pointer;white-space:nowrap;
+                     transition:all .15s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--text)'"
+              onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">
+              📨 傳送測試信
+            </button>
+          </div>
+          <div id="alertTestStatus" style="margin-top:8px;font-size:12px;display:none"></div>
+        </div>
+
+        <div style="border-top:1px solid var(--border);margin:0 0 16px"></div>
+
         <button class="alert-run-btn" id="alertRunBtn" onclick="runAlertNow()">
-          ▶ 立即測試（掃描並寄信）
+          ▶ 立即執行到價掃描並寄信
         </button>
         <div class="alert-status-box" id="alertStatusBox"></div>
 
