@@ -913,6 +913,7 @@
     .tool-btn.active { background: rgba(243,156,18,0.2); border-color: var(--yellow); color: var(--yellow); }
 
     tbody tr { cursor: pointer; }
+    @keyframes rtBlink { 0%,100%{opacity:1} 50%{opacity:.2} }
 
     @media (max-width: 700px) {
       .modal-overlay {
@@ -1563,6 +1564,8 @@
     let macdInstance  = null;
     let rsiInstance   = null;
     let candleSeriesRef = null;
+    let volSeriesRef    = null;
+    let _realtimeTimer  = null;
     // Fibonacci
     let fibMode = false;
     let fibLines = [];
@@ -1878,9 +1881,60 @@
     }
 
     function closeChart() {
+      _stopRealtimeUpdates();
       document.getElementById('chartModal').classList.remove('open');
       _destroyCharts();
       _resetDrawingState();
+    }
+
+    // ── 即時 K 棒 ─────────────────────────────────────────────
+    function _stopRealtimeUpdates() {
+      if (_realtimeTimer) { clearInterval(_realtimeTimer); _realtimeTimer = null; }
+    }
+
+    async function _fetchAndApplyRealtime() {
+      if (!currentCode || !candleSeriesRef) return;
+      try {
+        const r = await fetch(`/api/realtime?code=${encodeURIComponent(currentCode)}`);
+        const d = await r.json();
+        if (d.error || !d.close) return;
+        _applyRealtimeCandle(d);
+      } catch (_) {}
+    }
+
+    function _applyRealtimeCandle(d) {
+      if (!candleSeriesRef) return;
+      const bar = { time: d.time, open: d.open || d.close, high: d.high || d.close, low: d.low || d.close, close: d.close };
+      try { candleSeriesRef.update(bar); } catch (_) {}
+      if (volSeriesRef && d.volume != null) {
+        try {
+          volSeriesRef.update({
+            time: d.time, value: d.volume,
+            color: d.close >= (d.open || d.close) ? 'rgba(231,76,60,0.4)' : 'rgba(38,194,129,0.4)',
+          });
+        } catch (_) {}
+      }
+      // 更新 title 即時價格標籤
+      const tag = document.getElementById('chartPriceTag');
+      if (tag) {
+        const chg = d.change_pct || 0;
+        const isUp = chg >= 9.5, isDn = chg <= -9.5;
+        const bg = isUp ? '#e74c3c' : isDn ? '#26c281' : '#2c2c3e';
+        const dot = d.is_trading ? '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#2ecc71;margin-right:5px;animation:rtBlink 1s infinite"></span>' : '';
+        tag.innerHTML = `<span style="background:${bg};color:#fff;padding:3px 10px;border-radius:6px;font-size:14px;font-weight:700">${dot}${d.close.toFixed(2)}</span>`;
+      }
+    }
+
+    async function _startRealtimeUpdates() {
+      _stopRealtimeUpdates();
+      if (!currentCode) return;
+      await _fetchAndApplyRealtime();
+      // 判斷是否盤中（台灣時間 09:00–13:35）
+      const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));
+      const hm = now.getHours() * 60 + now.getMinutes();
+      if (hm >= 9 * 60 && hm <= 13 * 60 + 35) {
+        _realtimeTimer = setInterval(_fetchAndApplyRealtime, 30000);
+      }
     }
 
     function closeChartIfBg(e) {
@@ -2117,6 +2171,7 @@
       _renderVOLChart(candles);
       _renderMACDChart(candles);
       _renderRSIChart(candles);
+      _startRealtimeUpdates();
 
       // 預設顯示最近 5 個月（約 105 根日K）；Y 軸隨可視範圍自動縮放
       const _totalBars  = candles.length;
@@ -2337,6 +2392,7 @@
       }
       const _autoScale = () => ({ priceRange: { minValue: 0, maxValue: _visibleVolMax() * 1.1 } });
 
+      volSeriesRef = null;
       const volSeries = volInstance.addHistogramSeries({
         priceFormat: { type: 'volume' }, priceScaleId: 'right',
         lastValueVisible: false,
@@ -2346,6 +2402,7 @@
         time: c.time, value: c.volume,
         color: c.close >= c.open ? 'rgba(231,76,60,0.4)' : 'rgba(38,194,129,0.4)',
       })));
+      volSeriesRef = volSeries;
 
       const vma5s = volInstance.addLineSeries({
         color: '#f39c12', lineWidth: 1,
