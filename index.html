@@ -1902,14 +1902,58 @@
       return hm >= 9 * 60 && hm <= 13 * 60 + 35;
     }
 
+    // 直接從瀏覽器呼叫 TWSE MIS（台灣 IP 不被擋，CORS 若允許就能拿到即時資料）
+    async function _fetchMISDirect(code) {
+      const ts  = Date.now();
+      const url = `https://mis.twse.com.tw/stock/api/getStockInfo.jsp?json=1&delay=0` +
+                  `&ex_ch=tse_${code}.tw%7Cotc_${code}.tw&_=${ts}`;
+      const r = await fetch(url, { cache: 'no-store' });
+      const json = await r.json();
+      const arr  = json?.msgArray;
+      if (!arr || !arr.length) return null;
+      const item = arr.find(x => {
+        const z = String(x.z || '-').trim();
+        return z !== '-' && z !== '' && parseFloat(z) > 0;
+      });
+      if (!item) return null;
+      const close = parseFloat(item.z);
+      const prev  = parseFloat(item.y) || 0;
+      const nowTW = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));
+      const hms   = item.t || `${nowTW.getHours()}:${String(nowTW.getMinutes()).padStart(2,'0')}:${String(nowTW.getSeconds()).padStart(2,'0')}`;
+      return {
+        close,
+        open:       parseFloat(item.o) > 0 ? parseFloat(item.o) : null,
+        high:       parseFloat(item.h) > 0 ? parseFloat(item.h) : null,
+        low:        parseFloat(item.l) > 0 ? parseFloat(item.l) : null,
+        volume:     parseFloat(item.v) > 0 ? Math.round(parseFloat(item.v) * 1000) : 0,
+        prev_close: prev,
+        change_pct: prev > 0 ? Math.round((close - prev) / prev * 10000) / 100 : 0,
+        time:       `${nowTW.getFullYear()}-${String(nowTW.getMonth()+1).padStart(2,'0')}-${String(nowTW.getDate()).padStart(2,'0')}`,
+        hms,
+        is_trading: true,
+        source:     'twse_mis_browser',
+      };
+    }
+
     async function _fetchAndApplyRealtime() {
       if (!currentCode || !candleSeriesRef || _rtFetching) return;
       _rtFetching = true;
       try {
-        const r = await fetch(`/api/realtime?code=${encodeURIComponent(currentCode)}`, { cache: 'no-store' });
-        const d = await r.json();
-        console.log('[RT]', currentCode, d.close, d.hms, d.source, d.error || '');
-        if (!d.error && d.close) _applyRealtimeCandle(d);
+        let d = null;
+        // 優先：直接從瀏覽器呼叫 TWSE MIS（台灣 IP，無延遲）
+        try {
+          d = await _fetchMISDirect(currentCode);
+          if (d) console.log('[RT]', currentCode, d.close, d.hms, d.source);
+        } catch (corsErr) {
+          console.log('[RT] MIS browser blocked (CORS), falling back to server');
+        }
+        // Fallback：走 Vercel server → Yahoo Finance
+        if (!d) {
+          const r = await fetch(`/api/realtime?code=${encodeURIComponent(currentCode)}`, { cache: 'no-store' });
+          d = await r.json();
+          if (d) console.log('[RT]', currentCode, d.close, d.hms, d.source, d.error || '');
+        }
+        if (d && !d.error && d.close) _applyRealtimeCandle(d);
       } catch (e) { console.warn('[RT] fetch failed', e); }
       finally { _rtFetching = false; }
     }
