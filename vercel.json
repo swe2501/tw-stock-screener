@@ -23,7 +23,7 @@
   "crons": [
     {
       "path": "/api/alert",
-      "schedule": "0 9 * * 1-5"
+      "schedule": "35 5 * * 1-5"
     }
   ]
 }

@@ -93,6 +93,45 @@ def _parse_legacy(data):
     return stocks
 
 
+def _fetch_realtime_prices(codes):
+    """TWSE MIS 即時報價，只抓觀察清單的股票（同時試上市/上櫃）。"""
+    if not codes:
+        return {}
+    ex_ch = "|".join(f"tse_{c}.tw|otc_{c}.tw" for c in codes)
+    ts = int(datetime.now(TW_TZ).timestamp() * 1000)
+    url = f"https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch={ex_ch}&_={ts}"
+    data = _http_json(url, headers={
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Referer": "https://mis.twse.com.tw/stock/index.jsp",
+        "Accept": "application/json, text/plain, */*",
+    })
+    if not data or "msgArray" not in data:
+        return {}
+    stocks = {}
+    for item in data["msgArray"]:
+        code = str(item.get("c", "")).strip()
+        z = str(item.get("z", "-")).strip()   # 最新成交價
+        y = str(item.get("y", "0")).strip()   # 昨收
+        if not code or z in ("-", ""):
+            continue
+        try:
+            close = float(z)
+            prev  = float(y) if y and y not in ("-", "") else 0
+            if close <= 0:
+                continue
+            chg_pct = round((close - prev) / prev * 100, 2) if prev > 0 else 0
+            stocks[code] = {
+                "code": code,
+                "name": str(item.get("n", "")).strip(),
+                "close": close,
+                "change_pct": chg_pct,
+                "realtime": True,
+            }
+        except (ValueError, ZeroDivisionError):
+            continue
+    return stocks
+
+
 def _fetch_all_stocks():
     rows = _http_json(
         "https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL",
@@ -302,7 +341,13 @@ def _run_alert(token, to_email, streak_days=3):
     if not targets:
         return {"ok": True, "sent": False, "message": "觀察清單中沒有股票設定目標價", "date": date_str}
 
-    all_stocks = _fetch_all_stocks()
+    # 優先用即時報價，失敗才 fallback 到日收盤資料
+    codes = [w["code"] for w in targets]
+    all_stocks = _fetch_realtime_prices(codes)
+    source = "realtime"
+    if not all_stocks:
+        all_stocks = _fetch_all_stocks()
+        source = "daily"
     if not all_stocks:
         return {"ok": False, "sent": False, "message": "無法取得今日股價資料", "date": date_str}
 
@@ -341,7 +386,7 @@ def _run_alert(token, to_email, streak_days=3):
         return {
             "ok": True, "sent": False,
             "message": f"目前無股票連續達標 {streak_days} 天（有目標價的股票共 {len(targets)} 檔）",
-            "checked": len(targets), "date": date_str,
+            "checked": len(targets), "date": date_str, "source": source,
         }
 
     sent, result = _send_alert_email(matches, date_str, to_email, streak_days)
@@ -352,6 +397,7 @@ def _run_alert(token, to_email, streak_days=3):
         "email": to_email,
         "result": result,
         "date": date_str,
+        "source": source,
     }
 
 
