@@ -431,12 +431,17 @@
       color: var(--accent); font-size: 13px; font-weight: 600; padding: 0;
       text-decoration: underline; text-underline-offset: 2px;
     }
-    .watch-note-cell { max-width: 180px; }
+    .watch-panel-body { overflow-x: auto; }
+    .watch-note-cell { min-width: 140px; max-width: 220px; }
     .watch-note-text {
       color: var(--text-muted); font-size: 12px; white-space: pre-wrap;
       word-break: break-all; cursor: pointer;
     }
     .watch-note-text:empty::before { content: '點此新增備註'; opacity: 0.35; }
+    @media (max-width: 600px) {
+      .watch-col-industry, .watch-col-addprice, .watch-col-date { display: none; }
+      .watch-note-cell { min-width: 120px; }
+    }
     .watch-del-btn {
       background: none; border: none; cursor: pointer;
       color: rgba(255,255,255,0.2); font-size: 14px; padding: 2px 4px;
@@ -3244,8 +3249,8 @@
           <td><button class="watch-code-btn" onclick="openChart('${w.code}','${(w.name||'').replace(/'/g,"\\'")}')">
             ${w.code}</button></td>
           <td>${w.name || '–'}</td>
-          <td style="color:var(--text-muted);font-size:12px">${w.industry || '–'}</td>
-          <td class="price-neu">${w.price_at_add != null ? Number(w.price_at_add).toFixed(2) : '–'}</td>
+          <td class="watch-col-industry" style="color:var(--text-muted);font-size:12px">${w.industry || '–'}</td>
+          <td class="watch-col-addprice price-neu">${w.price_at_add != null ? Number(w.price_at_add).toFixed(2) : '–'}</td>
           <td>${curTxt}</td>
           <td>${diffTxt}</td>
           <td>
@@ -3257,16 +3262,16 @@
             <div class="watch-note-text" data-id="${w.id}"
                  onclick="_editNote(this, ${w.id})">${w.note || ''}</div>
           </td>
-          <td style="color:var(--text-muted);font-size:12px;white-space:nowrap">${dateStr}</td>
+          <td class="watch-col-date" style="color:var(--text-muted);font-size:12px;white-space:nowrap">${dateStr}</td>
           <td><button class="watch-del-btn" onclick="_removeWatch('${w.code}')" title="移除">✕</button></td>
         </tr>`;
       }).join('');
       body.innerHTML = `
         <table class="watch-table">
           <thead><tr>
-            <th>代號</th><th>公司</th><th>產業</th>
-            <th>加入時股價</th><th>現在市價</th><th>損益</th>
-            <th>🔔 目標價</th><th>備註</th><th>加入日期</th><th></th>
+            <th>代號</th><th>公司</th><th class="watch-col-industry">產業</th>
+            <th class="watch-col-addprice">加入時股價</th><th>現在市價</th><th>損益</th>
+            <th>🔔 目標價</th><th>備註</th><th class="watch-col-date">加入日期</th><th></th>
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>`;
