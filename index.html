@@ -1566,6 +1566,7 @@
     let candleSeriesRef = null;
     let volSeriesRef    = null;
     let _realtimeTimer  = null;
+    let _rtOpen = null, _rtHigh = null, _rtLow = null; // running tracking
     // Fibonacci
     let fibMode = false;
     let fibLines = [];
@@ -1915,11 +1916,19 @@
     function _applyRealtimeCandle(d) {
       if (!candleSeriesRef) return;
       const c = d.close;
+
+      // running 追蹤：MIS 給了就用，沒給就自己累積
+      if (_rtOpen === null) _rtOpen = (d.open != null && d.open > 0) ? d.open : c;
+      if (d.high != null && d.high > 0) _rtHigh = (_rtHigh === null) ? Math.max(d.high, c) : Math.max(_rtHigh, d.high, c);
+      else _rtHigh = (_rtHigh === null) ? c : Math.max(_rtHigh, c);
+      if (d.low  != null && d.low  > 0) _rtLow  = (_rtLow  === null) ? Math.min(d.low,  c) : Math.min(_rtLow,  d.low,  c);
+      else _rtLow  = (_rtLow  === null) ? c : Math.min(_rtLow,  c);
+
       const bar = {
         time:  d.time,
-        open:  (d.open  != null && d.open  > 0) ? d.open        : c,
-        high:  (d.high  != null && d.high  > 0) ? Math.max(d.high, c) : c,
-        low:   (d.low   != null && d.low   > 0) ? Math.min(d.low,  c) : c,
+        open:  _rtOpen,
+        high:  _rtHigh,
+        low:   _rtLow,
         close: c,
       };
       try { candleSeriesRef.update(bar); } catch (_) {}
@@ -1951,6 +1960,7 @@
 
     async function _startRealtimeUpdates() {
       _stopRealtimeUpdates();
+      _rtOpen = null; _rtHigh = null; _rtLow = null; // 每次開新圖重置
       if (!currentCode) return;
       await _fetchAndApplyRealtime();
       if (_isTradingHours()) {
