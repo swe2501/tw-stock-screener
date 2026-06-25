@@ -1,5 +1,5 @@
 from http.server import BaseHTTPRequestHandler
-import json, os, urllib.request, urllib.error, urllib.parse
+import json, urllib.request, urllib.parse
 from datetime import datetime, timezone, timedelta
 
 TW_TZ = timezone(timedelta(hours=8))
@@ -8,6 +8,11 @@ MIS_HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "Referer": "https://mis.twse.com.tw/stock/index.jsp",
     "Accept": "application/json, text/plain, */*",
+}
+
+YF_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept": "application/json",
 }
 
 
@@ -22,7 +27,7 @@ def _http_json(url, headers=None, timeout=12):
 
 
 def _parse_num(item, key):
-    """Parse a MIS field: return float if > 0, else None."""
+    """Return float > 0 or None."""
     v = str(item.get(key, "-")).strip()
     if v in ("-", "", "0"):
         return None
@@ -35,14 +40,13 @@ def _parse_num(item, key):
 
 def _fetch_mis(code):
     ts  = int(datetime.now(TW_TZ).timestamp() * 1000)
-    # 同時查上市(tse)和上櫃(otc)，TWSE MIS 兩個都支援
     url = (
         "https://mis.twse.com.tw/stock/api/getStockInfo.jsp"
         f"?ex_ch=tse_{code}.tw%7Cotc_{code}.tw&_={ts}"
     )
     data = _http_json(url, headers=MIS_HEADERS)
     if not data or "msgArray" not in data:
-        return None, "mis_no_data"
+        return None
 
     for item in data["msgArray"]:
         z_str = str(item.get("z", "-")).strip()
@@ -52,40 +56,61 @@ def _fetch_mis(code):
             close = float(z_str)
             if close <= 0:
                 continue
-
-            open_  = _parse_num(item, "o")   # 開盤價（可能 None）
-            high   = _parse_num(item, "h")   # 今日最高（可能 None）
-            low    = _parse_num(item, "l")   # 今日最低（可能 None）
-            prev   = _parse_num(item, "y") or 0.0
-
-            v_str  = str(item.get("v", "0")).strip()
+            prev = _parse_num(item, "y") or 0.0
+            v_str = str(item.get("v", "0")).strip()
             try:
                 volume = int(float(v_str) * 1000) if v_str not in ("-", "") else 0
             except (ValueError, TypeError):
                 volume = 0
-
-            chg_pct = round((close - prev) / prev * 100, 2) if prev > 0 else 0
-            now_tw  = datetime.now(TW_TZ)
-
+            now_tw = datetime.now(TW_TZ)
             return {
                 "code":       str(item.get("c", code)).strip(),
                 "name":       str(item.get("n", "")).strip(),
                 "close":      close,
-                "open":       open_,    # None 表示 MIS 沒給，前端自補
-                "high":       high,     # None 表示 MIS 沒給，前端自補
-                "low":        low,      # None 表示 MIS 沒給，前端自補
+                "open":       _parse_num(item, "o"),
+                "high":       _parse_num(item, "h"),
+                "low":        _parse_num(item, "l"),
                 "volume":     volume,
                 "prev_close": prev,
-                "change_pct": chg_pct,
+                "change_pct": round((close - prev) / prev * 100, 2) if prev > 0 else 0,
                 "time":       now_tw.strftime("%Y-%m-%d"),
                 "hms":        now_tw.strftime("%H:%M:%S"),
                 "is_trading": True,
                 "source":     "twse_mis",
-            }, None
+            }
         except (ValueError, ZeroDivisionError):
             continue
+    return None
 
-    return None, "mis_no_price"
+
+def _fetch_yf_ohlc(code):
+    """Fetch today's open/high/low from Yahoo Finance as supplemental data."""
+    for suffix in (".TW", ".TWO"):
+        url = (
+            f"https://query1.finance.yahoo.com/v8/finance/chart/{urllib.parse.quote(code + suffix)}"
+            "?interval=1d&range=1d&includePrePost=false"
+        )
+        data = _http_json(url, headers=YF_HEADERS)
+        if not data:
+            continue
+        try:
+            result = data["chart"]["result"][0]
+            quote  = result["indicators"]["quote"][0]
+
+            def _last(lst):
+                for v in reversed(lst or []):
+                    if v is not None and v > 0:
+                        return float(v)
+                return None
+
+            o = _last(quote.get("open"))
+            h = _last(quote.get("high"))
+            l = _last(quote.get("low"))
+            if any(v is not None for v in (o, h, l)):
+                return {"open": o, "high": h, "low": l}
+        except (KeyError, IndexError, TypeError):
+            continue
+    return {}
 
 
 class handler(BaseHTTPRequestHandler):
@@ -114,8 +139,20 @@ class handler(BaseHTTPRequestHandler):
         code = (qs.get("code") or [None])[0]
         if not code:
             return self._json(400, {"error": "code required"})
-        data, err = _fetch_mis(code.strip())
-        if data:
-            self._json(200, data)
-        else:
-            self._json(200, {"error": err, "is_trading": False})
+        code = code.strip()
+
+        result = _fetch_mis(code)
+        if not result:
+            return self._json(200, {"error": "no_data", "is_trading": False})
+
+        # 若 MIS 缺少 open/high/low，補抓 Yahoo Finance
+        needs_yf = any(result.get(k) is None for k in ("open", "high", "low"))
+        if needs_yf:
+            yf = _fetch_yf_ohlc(code)
+            for k in ("open", "high", "low"):
+                if result.get(k) is None and yf.get(k):
+                    result[k] = yf[k]
+            if yf:
+                result["source"] = "twse_mis+yf"
+
+        self._json(200, result)
