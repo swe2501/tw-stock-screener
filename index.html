@@ -915,13 +915,24 @@
     tbody tr { cursor: pointer; }
 
     @media (max-width: 700px) {
+      .modal-overlay {
+        padding: 0;
+        align-items: stretch;
+      }
+      .modal-box {
+        border-radius: 0;
+        max-height: 100dvh;
+        height: 100dvh;
+      }
       .modal-body {
         flex-direction: column;
         overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        flex: 1;
       }
       .chart-content {
         overflow-y: visible;
-        min-height: 340px;
+        flex-shrink: 0;
       }
       .chart-note-panel {
         width: 100%;
@@ -929,6 +940,8 @@
         border-top: 1px solid var(--border);
         flex-direction: column;
         overflow-y: visible;
+        flex-shrink: 0;
+        padding-bottom: 24px;
       }
       .chart-note-panel textarea {
         min-height: 70px;
