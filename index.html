@@ -1904,7 +1904,14 @@
 
     function _applyRealtimeCandle(d) {
       if (!candleSeriesRef) return;
-      const bar = { time: d.time, open: d.open || d.close, high: d.high || d.close, low: d.low || d.close, close: d.close };
+      const c = d.close;
+      const bar = {
+        time:  d.time,
+        open:  (d.open  != null && d.open  > 0) ? d.open  : c,
+        high:  (d.high  != null && d.high  > 0) ? Math.max(d.high, c) : c,
+        low:   (d.low   != null && d.low   > 0) ? Math.min(d.low,  c) : c,
+        close: c,
+      };
       try { candleSeriesRef.update(bar); } catch (_) {}
       if (volSeriesRef && d.volume != null) {
         try {
