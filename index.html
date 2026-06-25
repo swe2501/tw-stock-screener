@@ -49,19 +49,20 @@
       font-size: 13px;
       padding: 5px 12px;
       border-radius: 6px;
-      border: none;
-      background: none;
-      color: rgba(255,255,255,0.75);
+      border: 1px solid rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.08);
+      color: rgba(255,255,255,0.85);
       cursor: pointer;
       -webkit-tap-highlight-color: transparent;
       -webkit-appearance: none;
       appearance: none;
       outline: none;
+      transition: background .15s, border-color .15s;
     }
-    #authArea button:hover,
+    #authArea button:hover { background: rgba(255,255,255,0.14); border-color: rgba(255,255,255,0.3); color: #fff; }
     #authArea button:focus,
-    #authArea button:focus-visible,
-    #authArea button:active { background: none; outline: none; color: #fff; }
+    #authArea button:focus-visible { outline: none; }
+    #authArea button:active { background: rgba(255,255,255,0.18); }
     #authUserEmail { font-size: 13px; color: rgba(255,255,255,0.7); }
 
     /* Auth modal */
