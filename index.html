@@ -1349,9 +1349,14 @@
           <label>觀察原因 / 備註</label>
           <textarea id="chartNoteInput" placeholder="為什麼列入觀察？例：突破頸線、MACD 黃金交叉…"></textarea>
           <div class="chart-target-row">
-            <span>我要這支到</span>
-            <input type="number" id="chartTargetPriceInput" step="0.5" min="0" placeholder="目標價">
-            <span id="chartTargetDaysLabel">元且維持 3 天以上通知我</span>
+            <span>📅 收盤到價</span>
+            <input type="number" id="chartClosePriceInput" step="0.5" min="0" placeholder="目標價">
+            <span id="chartTargetDaysLabel" style="white-space:nowrap">元 <span style="color:#666;font-size:10px">(維持N天通知)</span></span>
+          </div>
+          <div class="chart-target-row" style="margin-top:4px">
+            <span>⚡ 即時到價</span>
+            <input type="number" id="chartRtPriceInput" step="0.5" min="0" placeholder="目標價">
+            <span style="color:#666;font-size:10px">元時通知</span>
           </div>
           <div class="chart-watch-status" id="chartWatchStatus">★ 已列入觀察清單</div>
           <button class="btn-save-chart-watch" id="chartSaveWatchBtn" onclick="saveWatchFromChart()">⭐ 儲存到觀察清單</button>
@@ -3125,8 +3130,10 @@
       if (!ta) return;
       const existing = _watchData.find(w => w.code === currentCode);
       ta.value = existing ? (existing.note || '') : '';
-      const tpInput = document.getElementById('chartTargetPriceInput');
-      if (tpInput) tpInput.value = existing?.target_price ? Number(existing.target_price).toFixed(2) : '';
+      const cpInput = document.getElementById('chartClosePriceInput');
+      const rpInput = document.getElementById('chartRtPriceInput');
+      if (cpInput) cpInput.value = existing?.target_price    ? Number(existing.target_price).toFixed(2)    : '';
+      if (rpInput) rpInput.value = existing?.rt_target_price ? Number(existing.rt_target_price).toFixed(2) : '';
       _syncStreakLabel();
     }
 
@@ -3145,8 +3152,10 @@
     async function saveWatchFromChart() {
       if (!_authToken) { openAuthModal('login'); return; }
       const note = (document.getElementById('chartNoteInput')?.value || '').trim();
-      const tpRaw = parseFloat(document.getElementById('chartTargetPriceInput')?.value);
-      const target_price = (!isNaN(tpRaw) && tpRaw > 0) ? tpRaw : null;
+      const tpRaw  = parseFloat(document.getElementById('chartClosePriceInput')?.value);
+      const rtRaw  = parseFloat(document.getElementById('chartRtPriceInput')?.value);
+      const target_price    = (!isNaN(tpRaw) && tpRaw > 0) ? tpRaw : null;
+      const rt_target_price = (!isNaN(rtRaw) && rtRaw > 0) ? rtRaw : null;
       const code = currentCode; const name = currentName;
       const industry = currentIndustry;
 
@@ -3154,12 +3163,12 @@
       if (_watchCodes.has(code)) {
         const item = _watchData.find(w => w.code === code);
         if (item) {
-          item.note = note; item.target_price = target_price;
+          item.note = note; item.target_price = target_price; item.rt_target_price = rt_target_price;
           try {
             await _authFetch('/api/watchlist', {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ id: item.id, note, target_price })
+              body: JSON.stringify({ id: item.id, note, target_price, rt_target_price })
             });
             showToast('備註與目標價已更新');
             if (!document.getElementById('watchlistPanel').classList.contains('hidden'))
@@ -3179,7 +3188,7 @@
         const r = await _authFetch('/api/watchlist', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code, name, industry, price_at_add, note, target_price })
+          body: JSON.stringify({ code, name, industry, price_at_add, note, target_price, rt_target_price })
         });
         if (r.ok) {
           const arr = await r.json();
@@ -3300,20 +3309,15 @@
           ? `<span class="${cls}">${diff > 0 ? '+' : ''}${diff.toFixed(2)}</span>`
           : '–';
         const dateStr = w.added_at ? w.added_at.slice(0, 10) : '';
-        const tp    = w.target_price;
-        const atype = w.alert_type || 'close';
-        const atBtn = `<button
-          onclick="event.stopPropagation();_toggleAlertTypeDirect(${w.id},'${atype}')"
-          title="點擊切換警示類型"
-          style="font-size:9px;padding:2px 5px;border-radius:3px;border:none;cursor:pointer;
-                 margin-left:5px;vertical-align:middle;
-                 ${atype==='realtime'?'background:#9b59b6;color:#fff':'background:#2a2f45;color:#aaa'}">
-          ${atype==='realtime'?'⚡即時':'📅收盤'}</button>`;
-        const tpTxt = tp
-          ? `<span style="cursor:pointer" onclick="_editTargetPrice(this,${w.id})"
-               data-id="${w.id}" data-val="${tp}" data-alert-type="${atype}">${Number(tp).toFixed(2)}</span>${atBtn}`
-          : `<span style="color:#555;font-size:11px;cursor:pointer" onclick="_editTargetPrice(this,${w.id})"
-               data-id="${w.id}" data-val="" data-alert-type="${atype}">點設定</span>${atBtn}`;
+        const tp  = w.target_price;
+        const rtp = w.rt_target_price;
+        const mkCell = (val, field) => {
+          const id = w.id;
+          const txt = val ? Number(val).toFixed(2) : `<span style="color:#555;font-size:11px">–</span>`;
+          return `<span data-id="${id}" data-field="${field}"
+            onclick="_editTarget(this,${id},'${field}')"
+            style="cursor:pointer;display:inline-block;min-width:46px;text-align:right">${txt}</span>`;
+        };
         return `<tr>
           <td><button class="watch-code-btn" onclick="openChart('${w.code}','${(w.name||'').replace(/'/g,"\\'")}')">
             ${w.code}</button></td>
@@ -3322,7 +3326,8 @@
           <td class="watch-col-addprice price-neu">${w.price_at_add != null ? Number(w.price_at_add).toFixed(2) : '–'}</td>
           <td>${curTxt}</td>
           <td>${diffTxt}</td>
-          <td style="white-space:nowrap">${tpTxt}</td>
+          <td>${mkCell(tp,  'target_price')}</td>
+          <td>${mkCell(rtp, 'rt_target_price')}</td>
           <td class="watch-note-cell">
             <div class="watch-note-text" data-id="${w.id}"
                  onclick="_editNote(this, ${w.id})">${w.note || ''}</div>
@@ -3336,7 +3341,7 @@
           <thead><tr>
             <th>代號</th><th>公司</th><th class="watch-col-industry">產業</th>
             <th class="watch-col-addprice">加入時股價</th><th>現在市價</th><th>損益</th>
-            <th>🔔 目標價</th><th>備註</th><th class="watch-col-date">加入日期</th><th></th>
+            <th>📅 收盤</th><th>⚡ 即時</th><th>備註</th><th class="watch-col-date">加入日期</th><th></th>
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>`;
@@ -3386,42 +3391,29 @@
       } catch (_) {}
     }
 
-    function _editTargetPrice(el, id) {
+    function _editTarget(el, id, field) {
       if (el.tagName === 'INPUT') return;
-      const cur = el.dataset.val || '';
-      el.outerHTML = `<input type="number" id="tpInline_${id}" value="${cur}" step="0.5" min="0"
-        style="width:60px;background:var(--bg);border:1px solid var(--accent);border-radius:4px;
+      const cur = el.textContent.trim().replace('–', '');
+      const uid = `tp_${id}_${field}`;
+      el.outerHTML = `<input type="number" id="${uid}" value="${cur}" step="0.5" min="0"
+        style="width:58px;background:var(--bg);border:1px solid var(--accent);border-radius:4px;
                color:var(--text);padding:3px 6px;font-size:12px;outline:none;"
-        onblur="_saveTargetPrice(this,${id})"
+        onblur="_saveTarget(this,${id},'${field}')"
         onkeydown="if(event.key==='Enter')this.blur()">`;
-      const inp = document.getElementById(`tpInline_${id}`);
+      const inp = document.getElementById(uid);
       if (inp) { inp.focus(); inp.select(); }
     }
 
-    async function _saveTargetPrice(input, id) {
+    async function _saveTarget(input, id, field) {
       const val    = parseFloat(input.value);
       const target = (!isNaN(val) && val > 0) ? val : null;
       const item   = _watchData.find(w => w.id === id);
-      if (item) item.target_price = target;
+      if (item) item[field] = target;
       try {
         await _authFetch('/api/watchlist', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id, target_price: target }),
-        });
-      } catch (_) {}
-      _renderWatchTable();
-    }
-
-    async function _toggleAlertTypeDirect(id, currentType) {
-      const newType = currentType === 'close' ? 'realtime' : 'close';
-      const item = _watchData.find(w => w.id === id);
-      if (item) item.alert_type = newType;
-      try {
-        await _authFetch('/api/watchlist', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id, alert_type: newType }),
+          body: JSON.stringify({ id, [field]: target }),
         });
       } catch (_) {}
       _renderWatchTable();
