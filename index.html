@@ -913,6 +913,28 @@
     .tool-btn.active { background: rgba(243,156,18,0.2); border-color: var(--yellow); color: var(--yellow); }
 
     tbody tr { cursor: pointer; }
+
+    @media (max-width: 700px) {
+      .modal-body {
+        flex-direction: column;
+        overflow-y: auto;
+      }
+      .chart-content {
+        overflow-y: visible;
+        min-height: 340px;
+      }
+      .chart-note-panel {
+        width: 100%;
+        border-left: none;
+        border-top: 1px solid var(--border);
+        flex-direction: column;
+        overflow-y: visible;
+      }
+      .chart-note-panel textarea {
+        min-height: 70px;
+        flex: none;
+      }
+    }
   </style>
 </head>
 <body>
