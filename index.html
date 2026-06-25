@@ -2180,14 +2180,12 @@
       const chgPct = (last.close - prev.close) / prev.close * 100;
       const isLimitUp   = chgPct >=  9.5;
       const isLimitDown = chgPct <= -9.5;
-      const bgColor  = isLimitUp ? '#e74c3c' : isLimitDown ? '#26c281' : 'transparent';
-      const txtColor = (isLimitUp || isLimitDown) ? '#fff'
-                     : chgPct > 0 ? '#e74c3c' : chgPct < 0 ? '#26c281' : '#aaa';
-      const border   = (!isLimitUp && !isLimitDown)
-                     ? `1px solid ${chgPct >= 0 ? '#e74c3c55' : '#26c28155'}` : 'none';
-      tag.innerHTML = `<span style="background:${bgColor};color:${txtColor};border:${border};
-        padding:2px 8px;border-radius:5px;font-size:14px;font-weight:700;margin-left:4px">
-        ${last.close.toFixed(2)}</span>`;
+      const bg  = isLimitUp ? '#e74c3c' : isLimitDown ? '#26c281' : '#2c2c3e';
+      const sign = chgPct >= 0 ? '+' : '';
+      tag.innerHTML =
+        `<span style="display:inline-flex;align-items:center;gap:6px;background:${bg};color:#fff;`+
+        `padding:3px 10px;border-radius:6px;font-size:14px;font-weight:700">`+
+        `${last.close.toFixed(2)}<span style="font-size:11px;opacity:.85">${sign}${chgPct.toFixed(2)}%</span></span>`;
     }
 
     // ── Render all chart panels ───────────────────────────
