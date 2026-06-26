@@ -2004,86 +2004,49 @@
     let _unifiedRtTimer = null;
     let _unifiedFetching = false;
     let _screenerCodes   = [];
-    const _screenerZCache = {};
-
     function _stopScreenerRealtime() {
       if (_unifiedRtTimer) { clearInterval(_unifiedRtTimer); _unifiedRtTimer = null; }
     }
 
-    // 從 TWSE MIS item 取得最佳成交價：z(即時) → pz(前次) → cache → null
-    function _bestZ(item, cacheKey) {
-      const z = parseFloat(item.z);
-      if (z > 0) { _screenerZCache[cacheKey] = z; _lastMisZ = z; return { price: z, live: true }; }
-      const pz = parseFloat(item.pz);
-      if (pz > 0) { _screenerZCache[cacheKey] = pz; return { price: pz, live: false }; }
-      const cached = _screenerZCache[cacheKey];
-      if (cached > 0) return { price: cached, live: false };
-      return null;
-    }
-
-    function _misItemToCandle(item) {
-      if (!item || (!parseFloat(item.o) && !parseFloat(item.h))) return null;
-      const best = _bestZ(item, String(item.c || '').trim());
-      if (!best) return null;
-      const close = best.price;
-      const prev  = parseFloat(item.y) || 0;
-      const nowTW = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));
-      const hms   = item.t || `${nowTW.getHours()}:${String(nowTW.getMinutes()).padStart(2,'0')}:${String(nowTW.getSeconds()).padStart(2,'0')}`;
-      return {
-        close, hms, is_trading: true, source: 'twse_mis_browser',
-        open:       parseFloat(item.o) > 0 ? parseFloat(item.o) : null,
-        high:       parseFloat(item.h) > 0 ? parseFloat(item.h) : null,
-        low:        parseFloat(item.l) > 0 ? parseFloat(item.l) : null,
-        volume:     parseFloat(item.v) > 0 ? Math.round(parseFloat(item.v)) : 0,
-        prev_close: prev,
-        change_pct: prev > 0 ? Math.round((close - prev) / prev * 10000) / 100 : 0,
-        time: `${nowTW.getFullYear()}-${String(nowTW.getMonth()+1).padStart(2,'0')}-${String(nowTW.getDate()).padStart(2,'0')}`,
-      };
-    }
-
-    function _applyScreenerItems(arr) {
-      for (const item of arr) {
-        const code = String(item.c || '').trim();
-        const y    = parseFloat(item.y) || 0;
-        const best = _bestZ(item, code);
-        const isLive = best?.live ?? false;
-        const z = best?.price ?? 0;
-
-        // 更新篩選器表格儲存格
-        const cell = document.getElementById(`rt-${code}`);
-        if (cell && z > 0) {
-          const chg  = y > 0 ? (z - y) / y * 100 : 0;
-          const clr  = isLive ? (chg > 0 ? '#e74c3c' : chg < 0 ? '#26c281' : '#ccc') : '#888';
-          const sign = chg >= 0 ? '+' : '';
-          cell.innerHTML =
-            `<span style="color:${clr};font-weight:600">${z.toFixed(2)}</span>` +
-            (isLive
-              ? `<span style="font-size:10px;color:${clr};margin-left:3px">${sign}${chg.toFixed(1)}%</span>`
-              : `<span style="font-size:9px;color:#666;margin-left:3px">↺</span>`);
-        }
-
-        // 同時更新 K 線圖（若此代號正好是當前開著的圖）
-        if (code === currentCode && candleSeriesRef && !_rtFetching) {
-          const d = _misItemToCandle(item);
-          if (d) { console.log('[RT]', code, d.close, d.hms, d.source); _applyRealtimeCandle(d); }
-        }
-      }
-    }
 
     async function _unifiedRtPoll() {
       if (_unifiedFetching) return;
       const allCodes = [...new Set([..._screenerCodes, currentCode || ''].filter(Boolean))];
       if (!allCodes.length) return;
       _unifiedFetching = true;
-      let cfOk = false;
       try {
-        const r = await fetch(`${CF_WORKER}/?codes=${allCodes.join(',')}&_=${Date.now()}`, { cache: 'no-store' });
+        // 直接走 Vercel batch endpoint（Yahoo Finance 平行查詢），穩定不受 TWSE 限流影響
+        const r = await fetch(`/api/realtime_batch?codes=${allCodes.join(',')}&_=${Date.now()}`, { cache: 'no-store' });
         const json = await r.json();
-        if (json?.msgArray) { _applyScreenerItems(json.msgArray); cfOk = true; }
+        if (json?.results) _applyBatchResults(json.results);
       } catch (_) {}
       finally { _unifiedFetching = false; }
-      // CF Worker 失敗 → K 線圖改走 Yahoo Finance
-      if (!cfOk && currentCode && candleSeriesRef) _fetchAndApplyRealtime();
+    }
+
+    function _applyBatchResults(results) {
+      for (const [code, d] of Object.entries(results)) {
+        // 更新篩選器儲存格
+        const cell = document.getElementById(`rt-${code}`);
+        if (cell && d.close > 0) {
+          const isLive = d.is_trading;
+          const chg  = d.change_pct || 0;
+          const clr  = chg > 0 ? '#e74c3c' : chg < 0 ? '#26c281' : '#ccc';
+          const sign = chg >= 0 ? '+' : '';
+          cell.innerHTML =
+            `<span style="color:${clr};font-weight:600">${d.close.toFixed(2)}</span>` +
+            (isLive
+              ? `<span style="font-size:10px;color:${clr};margin-left:3px">${sign}${chg.toFixed(1)}%</span>`
+              : `<span style="font-size:9px;color:#666;margin-left:3px">↺</span>`);
+        }
+        // 同時更新 K 線圖
+        if (code === currentCode && candleSeriesRef && d.close > 0) {
+          const now = d.time || new Date().toISOString().slice(0, 10);
+          // 補齊 _lastMisZ 快取讓 candle 邏輯一致
+          _lastMisZ = d.close;
+          console.log('[RT]', code, d.close, d.hms, d.source);
+          _applyRealtimeCandle({ ...d, time: now });
+        }
+      }
     }
 
     function _startUnifiedRt() {
@@ -2091,8 +2054,7 @@
       const hasWork = _screenerCodes.length > 0 || !!currentCode;
       if (!hasWork || !_isTradingHours()) return;
       _unifiedRtPoll();
-      // 3 秒（非 5 的倍數）打破與 TWSE MIS 5 秒快照的相位鎖定
-      _unifiedRtTimer = setInterval(_unifiedRtPoll, 3000);
+      _unifiedRtTimer = setInterval(_unifiedRtPoll, 5000);
     }
 
     function _startScreenerRealtime(codes) {
