@@ -2091,7 +2091,8 @@
       const hasWork = _screenerCodes.length > 0 || !!currentCode;
       if (!hasWork || !_isTradingHours()) return;
       _unifiedRtPoll();
-      _unifiedRtTimer = setInterval(_unifiedRtPoll, 5000);
+      // 3 秒（非 5 的倍數）打破與 TWSE MIS 5 秒快照的相位鎖定
+      _unifiedRtTimer = setInterval(_unifiedRtPoll, 3000);
     }
 
     function _startScreenerRealtime(codes) {
