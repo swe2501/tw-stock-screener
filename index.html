@@ -2101,7 +2101,7 @@
     }
 
     async function _fetchMISDirect(code) {
-      const url = `${CF_WORKER}/?code=${encodeURIComponent(code)}&_=${Date.now()}`;
+      const url = `${CF_WORKER}/?codes=${encodeURIComponent(code)}&_=${Date.now()}`;
       const r = await fetch(url, { cache: 'no-store' });
       const json = await r.json();
       const arr  = json?.msgArray;
