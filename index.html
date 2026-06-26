@@ -1599,8 +1599,6 @@
           </tr>`;
       }).join('');
 
-      _startScreenerRealtime(sorted.map(s => s.code));
-
       document.getElementById('resultsArea').innerHTML = `
         <div class="table-wrap">
           <table>
@@ -1623,6 +1621,7 @@
             <tbody>${rows}</tbody>
           </table>
         </div>`;
+      _startScreenerRealtime(sorted.map(s => s.code));  // DOM 寫完才啟動，poll 才找得到 cells
     }
 
     function setSort(key) {
@@ -2052,9 +2051,11 @@
     function _startUnifiedRt() {
       if (_unifiedRtTimer) { clearInterval(_unifiedRtTimer); _unifiedRtTimer = null; }
       const hasWork = _screenerCodes.length > 0 || !!currentCode;
-      if (!hasWork || !_isTradingHours()) return;
-      _unifiedRtPoll();
-      _unifiedRtTimer = setInterval(_unifiedRtPoll, 5000);
+      if (!hasWork) return;
+      _unifiedRtPoll();                                   // 開盤/收盤都先抓一次
+      if (_isTradingHours()) {
+        _unifiedRtTimer = setInterval(_unifiedRtPoll, 5000);  // 只在交易時段持續跳動
+      }
     }
 
     function _startScreenerRealtime(codes) {
