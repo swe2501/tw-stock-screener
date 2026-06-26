@@ -1664,6 +1664,7 @@
     let volSeriesRef    = null;
     let _realtimeTimer  = null;
     let _rtOpen = null, _rtHigh = null, _rtLow = null; // running tracking
+    let _lastMisZ = null; // 上一次 TWSE MIS 有效的 z（成交價）快取
     // Fibonacci
     let fibMode = false;
     let fibLines = [];
@@ -2107,14 +2108,20 @@
       const arr  = json?.msgArray;
       if (!arr || !arr.length) return null;
 
-      // 優先找有 z（即時成交價）的 item
-      let item = arr.find(x => parseFloat(x.z) > 0);
-      // z 為 "-" 時（漲停鎖死／盤中暫無成交），改用 pz → h 作為參考價
-      if (!item) item = arr.find(x => parseFloat(x.pz) > 0 || parseFloat(x.h) > 0);
+      // 找有效 item（有開盤價即代表今日有交易）
+      const item = arr.find(x => parseFloat(x.o) > 0 || parseFloat(x.h) > 0);
       if (!item) return null;
 
       const zVal = parseFloat(item.z);
-      const close = zVal > 0 ? zVal : (parseFloat(item.pz) > 0 ? parseFloat(item.pz) : parseFloat(item.h));
+      let close;
+      if (zVal > 0) {
+        close = zVal;
+        _lastMisZ = zVal; // 快取最新有效成交價
+      } else if (_lastMisZ !== null) {
+        close = _lastMisZ; // 兩次成交之間用上一筆成交價（最真實）
+      } else {
+        return null; // 尚無任何成交紀錄，不畫 K 棒
+      }
       const prev  = parseFloat(item.y) || 0;
       const nowTW = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));
       const hms   = item.t || `${nowTW.getHours()}:${String(nowTW.getMinutes()).padStart(2,'0')}:${String(nowTW.getSeconds()).padStart(2,'0')}`;
@@ -2192,7 +2199,7 @@
 
     async function _startRealtimeUpdates() {
       _stopRealtimeUpdates();
-      _rtOpen = null; _rtHigh = null; _rtLow = null; // 每次開新圖重置
+      _rtOpen = null; _rtHigh = null; _rtLow = null; _lastMisZ = null; // 每次開新圖重置
       if (!currentCode) return;
       // 非交易時間不拉即時：歷史資料已有正確收盤價，強插即時會產生重複 K 棒
       if (!_isTradingHours()) return;
