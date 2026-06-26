@@ -1040,10 +1040,10 @@
     <span>TWSE</span>
     <div id="authArea">
       <div id="authUserEmail" style="display:none"></div>
-      <button id="watchlistBtn" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="openWatchlist()">⭐ <span class="btn-label">觀察清單</span></button>
-      <button id="alertMgrBtn" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="openAlertMgr()">🔔 <span class="btn-label">我的警示</span></button>
-      <button id="logoutBtn"   style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="doLogout()">登出</button>
-      <button id="loginBtn"    onmousedown="this.blur()" ontouchend="this.blur()" onclick="openAuthModal('login')">登入</button>
+      <button id="watchlistBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="openWatchlist()">⭐ <span class="btn-label">觀察清單</span></button>
+      <button id="alertMgrBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="openAlertMgr()">🔔 <span class="btn-label">我的警示</span></button>
+      <button id="logoutBtn"   tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="doLogout()">登出</button>
+      <button id="loginBtn"    tabindex="-1" onmousedown="this.blur()" ontouchend="this.blur()" onclick="openAuthModal('login')">登入</button>
     </div>
   </header>
 
