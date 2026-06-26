@@ -1985,7 +1985,8 @@
     }
 
     // ── 即時 K 棒 ─────────────────────────────────────────────
-    let _rtFetching = false; // 防止 Yahoo fallback overlap
+    let _rtFetching = false;
+    let _realtimeTimer = null;   // K 線圖專用計時器（呼叫 /api/realtime，TWSE MIS 優先）
 
     function _isTradingHours() {
       const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));
@@ -2027,26 +2028,26 @@
 
     function _applyBatchResults(results) {
       for (const [code, d] of Object.entries(results)) {
-        // 更新篩選器儲存格
+        // 更新篩選器儲存格（K 線由獨立計時器負責，不在這裡更新）
         const cell = document.getElementById(`rt-${code}`);
         if (cell && d.close > 0) {
-          const isLive = _isTradingHours();   // 用本地交易時段判斷，不依賴 YF marketState
+          const isLive = _isTradingHours();
           const chg  = d.change_pct || 0;
           const clr  = chg > 0 ? '#e74c3c' : chg < 0 ? '#26c281' : '#ccc';
           const sign = chg >= 0 ? '+' : '';
+          const prevPrice = parseFloat(cell.dataset.rtPrice || 0);
+          const changed = prevPrice > 0 && Math.abs(prevPrice - d.close) >= 0.01;
+          cell.dataset.rtPrice = d.close;
           cell.innerHTML =
             `<span style="color:${clr};font-weight:600">${d.close.toFixed(2)}</span>` +
             (isLive
               ? `<span style="font-size:10px;color:${clr};margin-left:3px">${sign}${chg.toFixed(1)}%</span>`
               : `<span style="font-size:9px;color:#666;margin-left:3px">↺</span>`);
-        }
-        // 同時更新 K 線圖
-        if (code === currentCode && candleSeriesRef && d.close > 0) {
-          const now = d.time || new Date().toISOString().slice(0, 10);
-          // 補齊 _lastMisZ 快取讓 candle 邏輯一致
-          _lastMisZ = d.close;
-          console.log('[RT]', code, d.close, d.hms, d.source);
-          _applyRealtimeCandle({ ...d, time: now });
+          // 價格真正變動時短暫閃爍
+          if (changed) {
+            cell.style.background = chg >= 0 ? 'rgba(231,76,60,0.22)' : 'rgba(38,194,129,0.22)';
+            setTimeout(() => { cell.style.background = ''; }, 600);
+          }
         }
       }
     }
@@ -2118,11 +2119,14 @@
       if (!currentCode || !candleSeriesRef || _rtFetching) return;
       _rtFetching = true;
       try {
-        const r = await fetch(`/api/realtime?code=${encodeURIComponent(currentCode)}`, { cache: 'no-store' });
+        const r = await fetch(`/api/realtime?code=${encodeURIComponent(currentCode)}&_=${Date.now()}`, { cache: 'no-store' });
         const d = await r.json();
-        if (d) console.log('[RT yahoo]', currentCode, d.close, d.hms, d.source, d.error || '');
-        if (d && !d.error && d.close) _applyRealtimeCandle(d);
-      } catch (e) { console.warn('[RT yahoo] fetch failed', e); }
+        if (d && !d.error && d.close) {
+          console.log('[RT kline]', currentCode, d.close, d.hms, d.source);
+          _lastMisZ = d.close;
+          _applyRealtimeCandle(d);
+        }
+      } catch (e) { console.warn('[RT kline] failed', e.message); }
       finally { _rtFetching = false; }
     }
 
@@ -2161,7 +2165,8 @@
     }
 
     function _stopRealtimeUpdates() {
-      // 僅在沒有篩選器時才停掉統一計時器；有篩選器時繼續跑
+      if (_realtimeTimer) { clearInterval(_realtimeTimer); _realtimeTimer = null; }
+      // 篩選器計時器只在沒有篩選結果時才停
       if (!_screenerCodes.length) {
         if (_unifiedRtTimer) { clearInterval(_unifiedRtTimer); _unifiedRtTimer = null; }
       }
@@ -2169,8 +2174,11 @@
 
     function _startRealtimeUpdates() {
       _rtOpen = null; _rtHigh = null; _rtLow = null; _lastMisZ = null;
+      if (_realtimeTimer) { clearInterval(_realtimeTimer); _realtimeTimer = null; }
       if (!currentCode || !_isTradingHours()) return;
-      _startUnifiedRt(); // 加入 currentCode 後重啟統一輪詢
+      // K 線獨立計時器：呼叫 /api/realtime（TWSE MIS 優先，YF fallback）
+      _fetchAndApplyRealtime();
+      _realtimeTimer = setInterval(_fetchAndApplyRealtime, 5000);
     }
 
     function closeChartIfBg(e) {

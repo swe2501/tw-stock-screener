@@ -157,12 +157,12 @@ class handler(BaseHTTPRequestHandler):
             return self._json(400, {"error": "code required"})
         code = code.strip()
 
-        # 主：Yahoo Finance（TWSE MIS 從 Vercel IP 經常被擋）
-        result = _fetch_yf(code)
+        # 主：TWSE MIS（即時成交，每筆成交更新）
+        result = _fetch_mis(code)
 
-        # fallback：若 YF 也失敗才試 TWSE MIS
+        # fallback：TWSE MIS 無資料（非交易時段或 z='-'）才用 Yahoo Finance
         if not result:
-            result = _fetch_mis(code)
+            result = _fetch_yf(code)
 
         if not result:
             return self._json(200, {"error": "no_data", "is_trading": False})
