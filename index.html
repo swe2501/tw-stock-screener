@@ -2006,43 +2006,58 @@
     // ── 篩選結果表格即時價輪詢 ────────────────────────────
     let _screenerRtTimer = null;
     let _screenerCodes   = [];
+    let _screenerFetching = false;
     const _screenerZCache = {}; // 各股上一次有效 z（成交價）快取
+    const SCREENER_BATCH  = 20; // 每次批次最多查幾支，避免 MIS 返回太多 z:"-"
 
     function _stopScreenerRealtime() {
       if (_screenerRtTimer) { clearInterval(_screenerRtTimer); _screenerRtTimer = null; }
     }
 
+    function _applyScreenerItems(arr) {
+      for (const item of arr) {
+        const code = String(item.c || '').trim();
+        const cell = document.getElementById(`rt-${code}`);
+        if (!cell) continue;
+        const y    = parseFloat(item.y) || 0;
+        const zRaw = parseFloat(item.z);
+        const isLive = zRaw > 0 && !isNaN(zRaw);
+        if (isLive) _screenerZCache[code] = zRaw;
+        const z = isLive ? zRaw : (_screenerZCache[code] || 0);
+        if (!z || z <= 0) continue;
+        const chg  = y > 0 ? (z - y) / y * 100 : 0;
+        const clr  = isLive ? (chg > 0 ? '#e74c3c' : chg < 0 ? '#26c281' : '#ccc') : '#888';
+        const sign = chg >= 0 ? '+' : '';
+        cell.innerHTML =
+          `<span style="color:${clr};font-weight:600">${z.toFixed(2)}</span>` +
+          (isLive
+            ? `<span style="font-size:10px;color:${clr};margin-left:3px">${sign}${chg.toFixed(1)}%</span>`
+            : `<span style="font-size:9px;color:#666;margin-left:3px">↺</span>`);
+      }
+    }
+
     async function _fetchScreenerRealtime() {
-      if (!_screenerCodes.length) return;
+      if (!_screenerCodes.length || _screenerFetching) return;
+      _screenerFetching = true;
       try {
-        const r = await fetch(
-          `${CF_WORKER}/?codes=${_screenerCodes.join(',')}&_=${Date.now()}`,
-          { cache: 'no-store' }
-        );
-        const json = await r.json();
-        const arr  = json?.msgArray;
-        if (!arr) return;
-        for (const item of arr) {
-          const code = String(item.c || '').trim();
-          const cell = document.getElementById(`rt-${code}`);
-          if (!cell) continue;
-          const y    = parseFloat(item.y) || 0;
-          const zRaw = parseFloat(item.z);
-          const isLive = zRaw > 0 && !isNaN(zRaw);
-          if (isLive) _screenerZCache[code] = zRaw; // 更新快取
-          // z 為 "-" 時：優先用快取（上一筆即時成交），才用昨收
-          const z = isLive ? zRaw : (_screenerZCache[code] || 0);
-          if (!z || z <= 0) continue;
-          const chg  = y > 0 ? (z - y) / y * 100 : 0;
-          const clr  = isLive ? (chg > 0 ? '#e74c3c' : chg < 0 ? '#26c281' : '#ccc') : '#888';
-          const sign = chg >= 0 ? '+' : '';
-          cell.innerHTML =
-            `<span style="color:${clr};font-weight:600">${z.toFixed(2)}</span>` +
-            (isLive
-              ? `<span style="font-size:10px;color:${clr};margin-left:3px">${sign}${chg.toFixed(1)}%</span>`
-              : `<span style="font-size:9px;color:#666;margin-left:3px">↺</span>`);
+        // 分批平行請求，每批 SCREENER_BATCH 支
+        const batches = [];
+        for (let i = 0; i < _screenerCodes.length; i += SCREENER_BATCH) {
+          batches.push(_screenerCodes.slice(i, i + SCREENER_BATCH));
         }
-      } catch (e) { /* CF Worker 暫時失敗，靜默等下次 */ }
+        await Promise.all(batches.map(async batch => {
+          try {
+            const r = await fetch(
+              `${CF_WORKER}/?codes=${batch.join(',')}&_=${Date.now()}`,
+              { cache: 'no-store' }
+            );
+            const json = await r.json();
+            if (json?.msgArray) _applyScreenerItems(json.msgArray);
+          } catch (_) { /* 單批失敗不影響其他批 */ }
+        }));
+      } finally {
+        _screenerFetching = false;
+      }
     }
 
     function _startScreenerRealtime(codes) {
@@ -2051,7 +2066,7 @@
       if (!_screenerCodes.length) return;
       _fetchScreenerRealtime();
       if (_isTradingHours()) {
-        _screenerRtTimer = setInterval(_fetchScreenerRealtime, 10000);
+        _screenerRtTimer = setInterval(_fetchScreenerRealtime, 5000); // 每 5 秒，對齊 MIS 刷新率
       }
     }
 
