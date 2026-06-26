@@ -2014,11 +2014,14 @@
       if (!allCodes.length) return;
       _unifiedFetching = true;
       try {
-        // 直接走 Vercel batch endpoint（Yahoo Finance 平行查詢），穩定不受 TWSE 限流影響
         const r = await fetch(`/api/realtime_batch?codes=${allCodes.join(',')}&_=${Date.now()}`, { cache: 'no-store' });
+        const ct = r.headers.get('content-type') || '';
+        if (!ct.includes('json')) { console.warn('[RT batch] 回傳非 JSON:', ct, r.status); return; }
         const json = await r.json();
+        const cnt = json?.results ? Object.keys(json.results).length : 0;
+        console.log(`[RT batch] ${new Date().toLocaleTimeString('zh-TW')} codes=${allCodes.length} got=${cnt}`);
         if (json?.results) _applyBatchResults(json.results);
-      } catch (_) {}
+      } catch (e) { console.warn('[RT batch] error:', e.message); }
       finally { _unifiedFetching = false; }
     }
 
@@ -2027,7 +2030,7 @@
         // 更新篩選器儲存格
         const cell = document.getElementById(`rt-${code}`);
         if (cell && d.close > 0) {
-          const isLive = d.is_trading;
+          const isLive = _isTradingHours();   // 用本地交易時段判斷，不依賴 YF marketState
           const chg  = d.change_pct || 0;
           const clr  = chg > 0 ? '#e74c3c' : chg < 0 ? '#26c281' : '#ccc';
           const sign = chg >= 0 ? '+' : '';
