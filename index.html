@@ -2106,12 +2106,15 @@
       const json = await r.json();
       const arr  = json?.msgArray;
       if (!arr || !arr.length) return null;
-      const item = arr.find(x => {
-        const z = String(x.z || '-').trim();
-        return z !== '-' && z !== '' && parseFloat(z) > 0;
-      });
+
+      // 優先找有 z（即時成交價）的 item
+      let item = arr.find(x => parseFloat(x.z) > 0);
+      // z 為 "-" 時（漲停鎖死／盤中暫無成交），改用 pz → h 作為參考價
+      if (!item) item = arr.find(x => parseFloat(x.pz) > 0 || parseFloat(x.h) > 0);
       if (!item) return null;
-      const close = parseFloat(item.z);
+
+      const zVal = parseFloat(item.z);
+      const close = zVal > 0 ? zVal : (parseFloat(item.pz) > 0 ? parseFloat(item.pz) : parseFloat(item.h));
       const prev  = parseFloat(item.y) || 0;
       const nowTW = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));
       const hms   = item.t || `${nowTW.getHours()}:${String(nowTW.getMinutes()).padStart(2,'0')}:${String(nowTW.getSeconds()).padStart(2,'0')}`;
