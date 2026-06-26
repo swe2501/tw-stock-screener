@@ -1662,7 +1662,6 @@
     let rsiInstance   = null;
     let candleSeriesRef = null;
     let volSeriesRef    = null;
-    let _realtimeTimer  = null;
     let _rtOpen = null, _rtHigh = null, _rtLow = null; // running tracking
     let _lastMisZ = null; // 上一次 TWSE MIS 有效的 z（成交價）快取
     // Fibonacci
@@ -1987,12 +1986,7 @@
     }
 
     // ── 即時 K 棒 ─────────────────────────────────────────────
-    const RT_INTERVAL_MS = 5000;   // 盤中每 5 秒更新
-    let _rtFetching = false;        // 防止 overlap
-
-    function _stopRealtimeUpdates() {
-      if (_realtimeTimer) { clearInterval(_realtimeTimer); _realtimeTimer = null; }
-    }
+    let _rtFetching = false; // 防止 Yahoo fallback overlap
 
     function _isTradingHours() {
       const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));
@@ -2004,70 +1998,97 @@
     const CF_WORKER = 'https://billowing-mouse-5309.swe250165.workers.dev';
 
     // ── 篩選結果表格即時價輪詢 ────────────────────────────
-    let _screenerRtTimer = null;
+    // ── Unified RT Poller ────────────────────────────────────────
+    // 每 5 秒只打 1 次 CF Worker，包含篩選器所有代號 + 當前 K 線代號
+    // 避免同時多批請求被 TWSE MIS 限流
+    let _unifiedRtTimer = null;
+    let _unifiedFetching = false;
     let _screenerCodes   = [];
-    let _screenerFetching = false;
-    const _screenerZCache = {}; // 各股上一次有效 z（成交價）快取
-    const SCREENER_BATCH  = 20; // 每次批次最多查幾支，避免 MIS 返回太多 z:"-"
+    const _screenerZCache = {};
 
     function _stopScreenerRealtime() {
-      if (_screenerRtTimer) { clearInterval(_screenerRtTimer); _screenerRtTimer = null; }
+      if (_unifiedRtTimer) { clearInterval(_unifiedRtTimer); _unifiedRtTimer = null; }
+    }
+
+    function _misItemToCandle(item) {
+      if (!item || (!parseFloat(item.o) && !parseFloat(item.h))) return null;
+      const zVal = parseFloat(item.z);
+      let close;
+      if (zVal > 0) { close = zVal; _lastMisZ = zVal; }
+      else if (_lastMisZ !== null) { close = _lastMisZ; }
+      else return null;
+      const prev  = parseFloat(item.y) || 0;
+      const nowTW = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));
+      const hms   = item.t || `${nowTW.getHours()}:${String(nowTW.getMinutes()).padStart(2,'0')}:${String(nowTW.getSeconds()).padStart(2,'0')}`;
+      return {
+        close, hms, is_trading: true, source: 'twse_mis_browser',
+        open:       parseFloat(item.o) > 0 ? parseFloat(item.o) : null,
+        high:       parseFloat(item.h) > 0 ? parseFloat(item.h) : null,
+        low:        parseFloat(item.l) > 0 ? parseFloat(item.l) : null,
+        volume:     parseFloat(item.v) > 0 ? Math.round(parseFloat(item.v)) : 0,
+        prev_close: prev,
+        change_pct: prev > 0 ? Math.round((close - prev) / prev * 10000) / 100 : 0,
+        time: `${nowTW.getFullYear()}-${String(nowTW.getMonth()+1).padStart(2,'0')}-${String(nowTW.getDate()).padStart(2,'0')}`,
+      };
     }
 
     function _applyScreenerItems(arr) {
       for (const item of arr) {
         const code = String(item.c || '').trim();
-        const cell = document.getElementById(`rt-${code}`);
-        if (!cell) continue;
         const y    = parseFloat(item.y) || 0;
         const zRaw = parseFloat(item.z);
-        const isLive = zRaw > 0 && !isNaN(zRaw);
+        const isLive = zRaw > 0;
         if (isLive) _screenerZCache[code] = zRaw;
         const z = isLive ? zRaw : (_screenerZCache[code] || 0);
-        if (!z || z <= 0) continue;
-        const chg  = y > 0 ? (z - y) / y * 100 : 0;
-        const clr  = isLive ? (chg > 0 ? '#e74c3c' : chg < 0 ? '#26c281' : '#ccc') : '#888';
-        const sign = chg >= 0 ? '+' : '';
-        cell.innerHTML =
-          `<span style="color:${clr};font-weight:600">${z.toFixed(2)}</span>` +
-          (isLive
-            ? `<span style="font-size:10px;color:${clr};margin-left:3px">${sign}${chg.toFixed(1)}%</span>`
-            : `<span style="font-size:9px;color:#666;margin-left:3px">↺</span>`);
+
+        // 更新篩選器表格儲存格
+        const cell = document.getElementById(`rt-${code}`);
+        if (cell && z > 0) {
+          const chg  = y > 0 ? (z - y) / y * 100 : 0;
+          const clr  = isLive ? (chg > 0 ? '#e74c3c' : chg < 0 ? '#26c281' : '#ccc') : '#888';
+          const sign = chg >= 0 ? '+' : '';
+          cell.innerHTML =
+            `<span style="color:${clr};font-weight:600">${z.toFixed(2)}</span>` +
+            (isLive
+              ? `<span style="font-size:10px;color:${clr};margin-left:3px">${sign}${chg.toFixed(1)}%</span>`
+              : `<span style="font-size:9px;color:#666;margin-left:3px">↺</span>`);
+        }
+
+        // 同時更新 K 線圖（若此代號正好是當前開著的圖）
+        if (code === currentCode && candleSeriesRef && !_rtFetching) {
+          const d = _misItemToCandle(item);
+          if (d) { console.log('[RT]', code, d.close, d.hms, d.source); _applyRealtimeCandle(d); }
+        }
       }
     }
 
-    async function _fetchScreenerRealtime() {
-      if (!_screenerCodes.length || _screenerFetching) return;
-      _screenerFetching = true;
+    async function _unifiedRtPoll() {
+      if (_unifiedFetching) return;
+      const allCodes = [...new Set([..._screenerCodes, currentCode || ''].filter(Boolean))];
+      if (!allCodes.length) return;
+      _unifiedFetching = true;
+      let cfOk = false;
       try {
-        // 分批平行請求，每批 SCREENER_BATCH 支
-        const batches = [];
-        for (let i = 0; i < _screenerCodes.length; i += SCREENER_BATCH) {
-          batches.push(_screenerCodes.slice(i, i + SCREENER_BATCH));
-        }
-        await Promise.all(batches.map(async batch => {
-          try {
-            const r = await fetch(
-              `${CF_WORKER}/?codes=${batch.join(',')}&_=${Date.now()}`,
-              { cache: 'no-store' }
-            );
-            const json = await r.json();
-            if (json?.msgArray) _applyScreenerItems(json.msgArray);
-          } catch (_) { /* 單批失敗不影響其他批 */ }
-        }));
-      } finally {
-        _screenerFetching = false;
-      }
+        const r = await fetch(`${CF_WORKER}/?codes=${allCodes.join(',')}&_=${Date.now()}`, { cache: 'no-store' });
+        const json = await r.json();
+        if (json?.msgArray) { _applyScreenerItems(json.msgArray); cfOk = true; }
+      } catch (_) {}
+      finally { _unifiedFetching = false; }
+      // CF Worker 失敗 → K 線圖改走 Yahoo Finance
+      if (!cfOk && currentCode && candleSeriesRef) _fetchAndApplyRealtime();
+    }
+
+    function _startUnifiedRt() {
+      if (_unifiedRtTimer) { clearInterval(_unifiedRtTimer); _unifiedRtTimer = null; }
+      const hasWork = _screenerCodes.length > 0 || !!currentCode;
+      if (!hasWork || !_isTradingHours()) return;
+      _unifiedRtPoll();
+      _unifiedRtTimer = setInterval(_unifiedRtPoll, 5000);
     }
 
     function _startScreenerRealtime(codes) {
-      _stopScreenerRealtime();
       _screenerCodes = codes || [];
-      if (!_screenerCodes.length) return;
-      _fetchScreenerRealtime();
-      if (_isTradingHours()) {
-        _screenerRtTimer = setInterval(_fetchScreenerRealtime, 5000); // 每 5 秒，對齊 MIS 刷新率
-      }
+      _startUnifiedRt();
     }
 
     // ── 觀察清單到量警示輪詢 ──────────────────────────────────
@@ -2118,65 +2139,15 @@
       } catch (_) { /* CF Worker 暫時失敗 */ }
     }
 
-    async function _fetchMISDirect(code) {
-      const url = `${CF_WORKER}/?codes=${encodeURIComponent(code)}&_=${Date.now()}`;
-      const r = await fetch(url, { cache: 'no-store' });
-      const json = await r.json();
-      const arr  = json?.msgArray;
-      if (!arr || !arr.length) return null;
-
-      // 找有效 item（有開盤價即代表今日有交易）
-      const item = arr.find(x => parseFloat(x.o) > 0 || parseFloat(x.h) > 0);
-      if (!item) return null;
-
-      const zVal = parseFloat(item.z);
-      let close;
-      if (zVal > 0) {
-        close = zVal;
-        _lastMisZ = zVal; // 快取最新有效成交價
-      } else if (_lastMisZ !== null) {
-        close = _lastMisZ; // 兩次成交之間用上一筆成交價（最真實）
-      } else {
-        return null; // 尚無任何成交紀錄，不畫 K 棒
-      }
-      const prev  = parseFloat(item.y) || 0;
-      const nowTW = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));
-      const hms   = item.t || `${nowTW.getHours()}:${String(nowTW.getMinutes()).padStart(2,'0')}:${String(nowTW.getSeconds()).padStart(2,'0')}`;
-      return {
-        close,
-        open:       parseFloat(item.o) > 0 ? parseFloat(item.o) : null,
-        high:       parseFloat(item.h) > 0 ? parseFloat(item.h) : null,
-        low:        parseFloat(item.l) > 0 ? parseFloat(item.l) : null,
-        volume:     parseFloat(item.v) > 0 ? Math.round(parseFloat(item.v)) : 0,
-        prev_close: prev,
-        change_pct: prev > 0 ? Math.round((close - prev) / prev * 10000) / 100 : 0,
-        time:       `${nowTW.getFullYear()}-${String(nowTW.getMonth()+1).padStart(2,'0')}-${String(nowTW.getDate()).padStart(2,'0')}`,
-        hms,
-        is_trading: true,
-        source:     'twse_mis_browser',
-      };
-    }
-
     async function _fetchAndApplyRealtime() {
       if (!currentCode || !candleSeriesRef || _rtFetching) return;
       _rtFetching = true;
       try {
-        let d = null;
-        // 優先：Cloudflare Worker → TWSE MIS（5 秒即時，無延遲）
-        try {
-          d = await _fetchMISDirect(currentCode);
-          if (d) console.log('[RT]', currentCode, d.close, d.hms, d.source);
-        } catch (e) {
-          console.log('[RT] CF Worker failed, falling back to server:', e.message);
-        }
-        // Fallback：走 Vercel server → Yahoo Finance
-        if (!d) {
-          const r = await fetch(`/api/realtime?code=${encodeURIComponent(currentCode)}`, { cache: 'no-store' });
-          d = await r.json();
-          if (d) console.log('[RT]', currentCode, d.close, d.hms, d.source, d.error || '');
-        }
+        const r = await fetch(`/api/realtime?code=${encodeURIComponent(currentCode)}`, { cache: 'no-store' });
+        const d = await r.json();
+        if (d) console.log('[RT yahoo]', currentCode, d.close, d.hms, d.source, d.error || '');
         if (d && !d.error && d.close) _applyRealtimeCandle(d);
-      } catch (e) { console.warn('[RT] fetch failed', e); }
+      } catch (e) { console.warn('[RT yahoo] fetch failed', e); }
       finally { _rtFetching = false; }
     }
 
@@ -2214,14 +2185,17 @@
       _renderPriceTag(c, d.change_pct || 0, dot, d.hms || '', d.source || '');
     }
 
-    async function _startRealtimeUpdates() {
-      _stopRealtimeUpdates();
-      _rtOpen = null; _rtHigh = null; _rtLow = null; _lastMisZ = null; // 每次開新圖重置
-      if (!currentCode) return;
-      // 非交易時間不拉即時：歷史資料已有正確收盤價，強插即時會產生重複 K 棒
-      if (!_isTradingHours()) return;
-      await _fetchAndApplyRealtime();
-      _realtimeTimer = setInterval(_fetchAndApplyRealtime, RT_INTERVAL_MS);
+    function _stopRealtimeUpdates() {
+      // 僅在沒有篩選器時才停掉統一計時器；有篩選器時繼續跑
+      if (!_screenerCodes.length) {
+        if (_unifiedRtTimer) { clearInterval(_unifiedRtTimer); _unifiedRtTimer = null; }
+      }
+    }
+
+    function _startRealtimeUpdates() {
+      _rtOpen = null; _rtHigh = null; _rtLow = null; _lastMisZ = null;
+      if (!currentCode || !_isTradingHours()) return;
+      _startUnifiedRt(); // 加入 currentCode 後重啟統一輪詢
     }
 
     function closeChartIfBg(e) {
