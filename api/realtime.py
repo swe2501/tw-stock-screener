@@ -48,11 +48,13 @@ def _fetch_mis(code):
         return None
 
     for item in data["msgArray"]:
-        z_str = str(item.get("z", "-")).strip()
-        if z_str in ("-", "", "0"):
+        z_str  = str(item.get("z",  "-")).strip()
+        pz_str = str(item.get("pz", "-")).strip()  # 前次成交價，z='-' 時的備援
+        price_str = z_str if z_str not in ("-", "", "0") else pz_str
+        if price_str in ("-", "", "0"):
             continue
         try:
-            close = float(z_str)
+            close = float(price_str)
             if close <= 0:
                 continue
             prev = _parse_num(item, "y") or 0.0
