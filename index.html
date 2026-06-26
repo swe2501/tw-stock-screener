@@ -2006,6 +2006,7 @@
     // ── 篩選結果表格即時價輪詢 ────────────────────────────
     let _screenerRtTimer = null;
     let _screenerCodes   = [];
+    const _screenerZCache = {}; // 各股上一次有效 z（成交價）快取
 
     function _stopScreenerRealtime() {
       if (_screenerRtTimer) { clearInterval(_screenerRtTimer); _screenerRtTimer = null; }
@@ -2026,19 +2027,20 @@
           const cell = document.getElementById(`rt-${code}`);
           if (!cell) continue;
           const y    = parseFloat(item.y) || 0;
-          let z = parseFloat(item.z);
-          const isLive = z > 0 && !isNaN(z);
-          // z 沒有時用 oz（當日一般收盤）或 y（昨收）補
-          if (!isLive) z = parseFloat(item.oz) || parseFloat(item.y) || 0;
+          const zRaw = parseFloat(item.z);
+          const isLive = zRaw > 0 && !isNaN(zRaw);
+          if (isLive) _screenerZCache[code] = zRaw; // 更新快取
+          // z 為 "-" 時：優先用快取（上一筆即時成交），才用昨收
+          const z = isLive ? zRaw : (_screenerZCache[code] || 0);
           if (!z || z <= 0) continue;
           const chg  = y > 0 ? (z - y) / y * 100 : 0;
-          const clr  = isLive ? (chg > 0 ? '#e74c3c' : chg < 0 ? '#26c281' : '#ccc') : '#777';
+          const clr  = isLive ? (chg > 0 ? '#e74c3c' : chg < 0 ? '#26c281' : '#ccc') : '#888';
           const sign = chg >= 0 ? '+' : '';
           cell.innerHTML =
             `<span style="color:${clr};font-weight:600">${z.toFixed(2)}</span>` +
             (isLive
               ? `<span style="font-size:10px;color:${clr};margin-left:3px">${sign}${chg.toFixed(1)}%</span>`
-              : `<span style="font-size:9px;color:#555;margin-left:3px">收</span>`);
+              : `<span style="font-size:9px;color:#666;margin-left:3px">↺</span>`);
         }
       } catch (e) { /* CF Worker 暫時失敗，靜默等下次 */ }
     }
