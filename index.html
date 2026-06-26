@@ -2010,13 +2010,22 @@
       if (_unifiedRtTimer) { clearInterval(_unifiedRtTimer); _unifiedRtTimer = null; }
     }
 
+    // 從 TWSE MIS item 取得最佳成交價：z(即時) → pz(前次) → cache → null
+    function _bestZ(item, cacheKey) {
+      const z = parseFloat(item.z);
+      if (z > 0) { _screenerZCache[cacheKey] = z; _lastMisZ = z; return { price: z, live: true }; }
+      const pz = parseFloat(item.pz);
+      if (pz > 0) { _screenerZCache[cacheKey] = pz; return { price: pz, live: false }; }
+      const cached = _screenerZCache[cacheKey];
+      if (cached > 0) return { price: cached, live: false };
+      return null;
+    }
+
     function _misItemToCandle(item) {
       if (!item || (!parseFloat(item.o) && !parseFloat(item.h))) return null;
-      const zVal = parseFloat(item.z);
-      let close;
-      if (zVal > 0) { close = zVal; _lastMisZ = zVal; }
-      else if (_lastMisZ !== null) { close = _lastMisZ; }
-      else return null;
+      const best = _bestZ(item, String(item.c || '').trim());
+      if (!best) return null;
+      const close = best.price;
       const prev  = parseFloat(item.y) || 0;
       const nowTW = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));
       const hms   = item.t || `${nowTW.getHours()}:${String(nowTW.getMinutes()).padStart(2,'0')}:${String(nowTW.getSeconds()).padStart(2,'0')}`;
@@ -2036,10 +2045,9 @@
       for (const item of arr) {
         const code = String(item.c || '').trim();
         const y    = parseFloat(item.y) || 0;
-        const zRaw = parseFloat(item.z);
-        const isLive = zRaw > 0;
-        if (isLive) _screenerZCache[code] = zRaw;
-        const z = isLive ? zRaw : (_screenerZCache[code] || 0);
+        const best = _bestZ(item, code);
+        const isLive = best?.live ?? false;
+        const z = best?.price ?? 0;
 
         // 更新篩選器表格儲存格
         const cell = document.getElementById(`rt-${code}`);
