@@ -179,8 +179,8 @@ class handler(BaseHTTPRequestHandler):
             dt = datetime.strptime(date_to,   "%Y-%m-%d").date()
         except ValueError:
             return self._json(400, {"error": "date format must be YYYY-MM-DD"})
-        if (dt - df).days > 366:
-            return self._json(400, {"error": "date range exceeds 1 year"})
+        if (dt - df).days > 32:
+            return self._json(400, {"error": "chunk_too_large", "hint": "split into ≤30-day chunks"})
 
         # 1. 算出平日清單
         all_days = list(_weekdays(date_from, date_to))
