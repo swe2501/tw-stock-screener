@@ -1368,9 +1368,15 @@
         <div id="brokerPanel" style="padding:12px 16px 16px;border-top:1px solid var(--border)">
           <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px">
             <span style="font-size:13px;font-weight:600;color:var(--text)">分點買賣</span>
-            <input type="date" id="brokerDateFrom" style="background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:3px 6px;font-size:12px">
+            <div style="display:flex;align-items:center">
+              <input type="date" id="brokerDateFrom" style="background:var(--bg);border:1px solid var(--border);border-radius:4px 0 0 4px;color:var(--text);padding:3px 6px;font-size:12px;color-scheme:dark">
+              <button onclick="document.getElementById('brokerDateFrom').showPicker()" style="padding:2px 6px;border:1px solid var(--border);border-left:none;border-radius:0 4px 4px 0;background:var(--surface);color:var(--text);cursor:pointer;font-size:13px;line-height:1.6">📅</button>
+            </div>
             <span style="font-size:12px;color:var(--text-muted)">至</span>
-            <input type="date" id="brokerDateTo"   style="background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:3px 6px;font-size:12px">
+            <div style="display:flex;align-items:center">
+              <input type="date" id="brokerDateTo" style="background:var(--bg);border:1px solid var(--border);border-radius:4px 0 0 4px;color:var(--text);padding:3px 6px;font-size:12px;color-scheme:dark">
+              <button onclick="document.getElementById('brokerDateTo').showPicker()" style="padding:2px 6px;border:1px solid var(--border);border-left:none;border-radius:0 4px 4px 0;background:var(--surface);color:var(--text);cursor:pointer;font-size:13px;line-height:1.6">📅</button>
+            </div>
             <button onclick="loadBrokerData()" style="padding:3px 12px;border-radius:4px;border:none;background:#f1c40f;color:#111;font-size:12px;font-weight:600;cursor:pointer">查詢</button>
           </div>
           <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px">
