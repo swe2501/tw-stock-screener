@@ -1363,6 +1363,40 @@
             <div id="rsiContainer"></div>
           </div>
         </div>
+
+        <!-- ★ 分點資料面板 -->
+        <div id="brokerPanel" style="padding:12px 16px 16px;border-top:1px solid var(--border)">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px">
+            <span style="font-size:13px;font-weight:600;color:var(--text)">分點買賣</span>
+            <input type="date" id="brokerDateFrom" style="background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:3px 6px;font-size:12px">
+            <span style="font-size:12px;color:var(--text-muted)">至</span>
+            <input type="date" id="brokerDateTo"   style="background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:3px 6px;font-size:12px">
+            <button onclick="loadBrokerData()" style="padding:3px 12px;border-radius:4px;border:none;background:#f1c40f;color:#111;font-size:12px;font-weight:600;cursor:pointer">查詢</button>
+          </div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px">
+            <span style="font-size:11px;color:var(--text-muted);align-self:center">快速：</span>
+            <button onclick="_brokerQuick(5)"   style="padding:2px 8px;border-radius:3px;border:1px solid var(--border);background:transparent;color:var(--text-muted);font-size:11px;cursor:pointer">1週</button>
+            <button onclick="_brokerQuick(22)"  style="padding:2px 8px;border-radius:3px;border:1px solid var(--border);background:transparent;color:var(--text-muted);font-size:11px;cursor:pointer">1月</button>
+            <button onclick="_brokerQuick(65)"  style="padding:2px 8px;border-radius:3px;border:1px solid var(--border);background:transparent;color:var(--text-muted);font-size:11px;cursor:pointer">3月</button>
+            <button onclick="_brokerQuick(130)" style="padding:2px 8px;border-radius:3px;border:1px solid var(--border);background:transparent;color:var(--text-muted);font-size:11px;cursor:pointer">半年</button>
+            <button onclick="_brokerQuick(250)" style="padding:2px 8px;border-radius:3px;border:1px solid var(--border);background:transparent;color:var(--text-muted);font-size:11px;cursor:pointer">1年</button>
+            <span id="brokerStatus" style="font-size:11px;color:var(--text-muted);margin-left:4px"></span>
+          </div>
+          <div id="brokerTableWrap" style="max-height:240px;overflow-y:auto">
+            <table id="brokerTable" style="width:100%;border-collapse:collapse;font-size:12px;display:none">
+              <thead>
+                <tr style="position:sticky;top:0;background:var(--surface);z-index:1">
+                  <th style="text-align:left;padding:4px 6px;color:var(--text-muted);font-weight:500;border-bottom:1px solid var(--border)">券商分點</th>
+                  <th style="text-align:right;padding:4px 6px;color:#e74c3c;font-weight:500;border-bottom:1px solid var(--border)">買進(張)</th>
+                  <th style="text-align:right;padding:4px 6px;color:#26c281;font-weight:500;border-bottom:1px solid var(--border)">賣出(張)</th>
+                  <th style="text-align:right;padding:4px 6px;color:var(--text);font-weight:500;border-bottom:1px solid var(--border)">買賣超(張)</th>
+                </tr>
+              </thead>
+              <tbody id="brokerTbody"></tbody>
+            </table>
+            <div id="brokerEmpty" style="display:none;font-size:12px;color:var(--text-muted);padding:8px 0">查無資料（非交易日或尚未收盤）</div>
+          </div>
+        </div>
         </div><!-- /chart-content -->
 
         <!-- ★ 觀察備註側欄 -->
@@ -1699,6 +1733,7 @@
       document.getElementById('backBtn').style.display = 'none';
       document.getElementById('chartModal').classList.add('open');
       if (!fibSetupDone) { setupFibOverlay(); fibSetupDone = true; }
+      _initBrokerDates();
       loadDailyChart();
     }
 
@@ -2169,6 +2204,63 @@
       // 篩選器計時器只在沒有篩選結果時才停
       if (!_screenerCodes.length) {
         if (_unifiedRtTimer) { clearInterval(_unifiedRtTimer); _unifiedRtTimer = null; }
+      }
+    }
+
+    // ── 分點資料 ──────────────────────────────────────────────────
+    function _initBrokerDates() {
+      const now  = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));
+      const to   = now.toISOString().slice(0, 10);
+      const from = new Date(now - 7 * 86400000).toISOString().slice(0, 10);
+      document.getElementById('brokerDateFrom').value = from;
+      document.getElementById('brokerDateTo').value   = to;
+    }
+
+    function _brokerQuick(days) {
+      const now  = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));
+      const to   = now.toISOString().slice(0, 10);
+      const from = new Date(now - days * 86400000).toISOString().slice(0, 10);
+      document.getElementById('brokerDateFrom').value = from;
+      document.getElementById('brokerDateTo').value   = to;
+      loadBrokerData();
+    }
+
+    async function loadBrokerData() {
+      if (!currentCode) return;
+      const from = document.getElementById('brokerDateFrom').value;
+      const to   = document.getElementById('brokerDateTo').value;
+      if (!from || !to) return;
+      const status  = document.getElementById('brokerStatus');
+      const table   = document.getElementById('brokerTable');
+      const tbody   = document.getElementById('brokerTbody');
+      const empty   = document.getElementById('brokerEmpty');
+      status.textContent = '載入中…';
+      table.style.display = 'none';
+      empty.style.display = 'none';
+      tbody.innerHTML = '';
+      try {
+        const r = await fetch(
+          `/api/broker?code=${encodeURIComponent(currentCode)}&date_from=${from}&date_to=${to}&_=${Date.now()}`,
+          { cache: 'no-store' }
+        );
+        const d = await r.json();
+        if (d.error) { status.textContent = '錯誤：' + d.error; return; }
+        const brokers = d.brokers || [];
+        status.textContent = `共 ${brokers.length} 個分點 (${from} ~ ${to})`;
+        if (!brokers.length) { empty.style.display = ''; return; }
+        tbody.innerHTML = brokers.map(b => {
+          const netClr = b.net > 0 ? '#e74c3c' : b.net < 0 ? '#26c281' : '#aaa';
+          const netStr = b.net > 0 ? `+${b.net.toLocaleString()}` : b.net.toLocaleString();
+          return `<tr style="border-bottom:1px solid rgba(255,255,255,.05)">
+            <td style="padding:4px 6px;color:var(--text)">${b.broker_name}</td>
+            <td style="padding:4px 6px;text-align:right;color:#e74c3c">${b.buy_vol.toLocaleString()}</td>
+            <td style="padding:4px 6px;text-align:right;color:#26c281">${b.sell_vol.toLocaleString()}</td>
+            <td style="padding:4px 6px;text-align:right;font-weight:600;color:${netClr}">${netStr}</td>
+          </tr>`;
+        }).join('');
+        table.style.display = '';
+      } catch (e) {
+        status.textContent = '載入失敗：' + e.message;
       }
     }
 
