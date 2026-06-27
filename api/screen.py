@@ -925,7 +925,7 @@ def screen(params):
 
         # 長黑棒幅度
         if black_pct > 0:
-            if o <= 0 or (o - c) / o * 100 < black_pct:
+            if c <= 0 or (o - c) / c * 100 < black_pct:
                 continue
 
         # 放量 / 縮量（共用 MA 計算）
@@ -1000,7 +1000,7 @@ def screen(params):
             "open": round(o, 2), "high": round(h, 2),
             "low": round(l, 2),  "close": round(c, 2),
             "volume_lots": round(v / 1000, 1),
-            "candle_pct": round((c - o) / o * 100, 2),
+            "candle_pct": round((c - o) / c * 100, 2),  # 紅棒=(收-開)/收, 黑棒=(開-收)/收取負值
             "change_pct": change_pct,
         }
         if ma5  is not None: item["ma5_vol"]  = round(ma5  / 1000, 0)
@@ -1022,7 +1022,7 @@ def screen(params):
             if item["code"] in no_data:
                 item.setdefault("data_missing", []).append("no_black")
 
-    results.sort(key=lambda x: x.get("candle_pct", 0), reverse=True)
+    results.sort(key=lambda x: abs(x.get("candle_pct", 0)), reverse=True)  # 紅棒/黑棒都以幅度大小排序
 
     return {
         "date": display_date,
