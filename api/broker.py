@@ -206,6 +206,26 @@ class handler(BaseHTTPRequestHandler):
         code      = (qs.get("code")      or [""])[0].strip()
         date_from = (qs.get("date_from") or [""])[0].strip()
         date_to   = (qs.get("date_to")   or [""])[0].strip()
+        probe     = (qs.get("probe")     or [""])[0].strip()
+
+        # ── probe mode: 直接回傳 TWSE 原始內容，用於 debug ──
+        if probe and code:
+            date_str = probe  # 格式 YYYYMMDD
+            tse_url  = (f"https://www.twse.com.tw/exchangeReport/BROKERLIMITED"
+                        f"?response=json&date={date_str}&stockNo={code}")
+            otc_url  = (f"https://www.tpex.org.tw/web/stock/aftertrading/broker_trading/"
+                        f"brokerBS_result.php?l=zh-tw&d={datetime.strptime(date_str,'%Y%m%d').strftime('%Y/%m/%d').replace(str(int(date_str[:4])), str(int(date_str[:4])-1911), 1)}&stkno={code}&s=0,asc")
+            results = {}
+            for label, url, hdrs in [("tse_json", tse_url, TWSE_HEADERS),
+                                      ("otc_json", otc_url, OTC_HEADERS)]:
+                try:
+                    req = urllib.request.Request(url, headers=hdrs)
+                    with urllib.request.urlopen(req, timeout=10) as r:
+                        raw = r.read()
+                    results[label] = {"status": r.status, "preview": raw[:600].decode("utf-8","replace"), "url": url}
+                except Exception as e:
+                    results[label] = {"error": str(e), "url": url}
+            return self._json(200, results)
 
         if not (code and date_from and date_to):
             return self._json(400, {"error": "code, date_from, date_to required"})
