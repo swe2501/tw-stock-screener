@@ -214,17 +214,20 @@ class handler(BaseHTTPRequestHandler):
             d = datetime.strptime(date_str, "%Y%m%d")
             tw_year  = d.year - 1911
             d_slash  = f"{tw_year}/{d.month:02d}/{d.day:02d}"
+            sd = d.strftime('%Y-%m-%d')
             candidates = [
-                # TWSE OpenAPI 官方平台
-                ("twse_openapi_BROKERLIMITED", f"https://openapi.twse.com.tw/v1/exchangeReport/BROKERLIMITED?date={date_str}&stockNo={code}", TWSE_HEADERS),
-                ("twse_openapi_brokerSearch",  f"https://openapi.twse.com.tw/v1/brokerSearch/brokerSearch?date={date_str}&stockNo={code}", TWSE_HEADERS),
-                ("twse_openapi_MI_BROKER",     f"https://openapi.twse.com.tw/v1/exchangeReport/MI_BROKER?date={date_str}&stockNo={code}", TWSE_HEADERS),
-                ("twse_openapi_list",          f"https://openapi.twse.com.tw/v1/", TWSE_HEADERS),
-                # FinMind 台灣金融開放資料
-                ("finmind_broker",  f"https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockBrokerData&data_id={code}&start_date={d.strftime('%Y-%m-%d')}&end_date={d.strftime('%Y-%m-%d')}", {}),
-                ("finmind_holding", f"https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockHolderThousand&data_id={code}&start_date={d.strftime('%Y-%m-%d')}&end_date={d.strftime('%Y-%m-%d')}", {}),
-                # OTC OpenAPI
-                ("otc_openapi_v2",  f"https://www.tpex.org.tw/openapi/v2/tpex_aftertrading_daily_brokerbuysell?date={d_slash}&stockNo={code}", OTC_HEADERS),
+                # FinMind - 試不同 dataset 名稱
+                ("fm_info",            f"https://api.finmindtrade.com/api/v4/info", {}),
+                ("fm_BrokerBuySell",   f"https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockBrokerBuySell&data_id={code}&start_date={sd}&end_date={sd}", {}),
+                ("fm_TradingVolume",   f"https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockBrokerTradingVolume&data_id={code}&start_date={sd}&end_date={sd}", {}),
+                # TWSE TWT 系列（分點相關）
+                ("twse_TWT44U",  f"https://www.twse.com.tw/rwd/zh/fund/TWT44U?response=json&date={date_str}&stockNo={code}", TWSE_HEADERS),
+                ("twse_TWT43U",  f"https://www.twse.com.tw/rwd/zh/fund/TWT43U?response=json&date={date_str}&stockNo={code}", TWSE_HEADERS),
+                ("twse_TWT84U",  f"https://www.twse.com.tw/rwd/zh/fund/TWT84U?response=json&date={date_str}&stockNo={code}", TWSE_HEADERS),
+                ("twse_T86",     f"https://www.twse.com.tw/rwd/zh/fund/T86?response=json&date={date_str}&selectType=ALL", TWSE_HEADERS),
+                # TWSE 分點新路徑猜測
+                ("twse_BKDAYC",  f"https://www.twse.com.tw/rwd/zh/brokerSearch/BKDAYC?response=json&date={date_str}&stockNo={code}", TWSE_HEADERS),
+                ("twse_BKDBKS2", f"https://www.twse.com.tw/rwd/zh/brokerSearch/BKDBKS?response=json&date={date_str}&stockNo={code}", TWSE_HEADERS),
             ]
             results = {}
             for label, url, hdrs in candidates:
