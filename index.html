@@ -1747,6 +1747,13 @@
       document.getElementById('chartModal').classList.add('open');
       if (!fibSetupDone) { setupFibOverlay(); fibSetupDone = true; }
       _initBrokerDates();
+      // 切換股票時清空上次的券商資料
+      if (_brokerAbort) { _brokerAbort.abort(); _brokerAbort = null; }
+      document.getElementById('brokerTbody').innerHTML = '';
+      document.getElementById('brokerTable').style.display  = 'none';
+      document.getElementById('brokerEmpty').style.display  = 'none';
+      document.getElementById('brokerStatus').textContent   = '';
+      document.getElementById('brokerProgress').style.display = 'none';
       loadDailyChart();
     }
 
