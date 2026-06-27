@@ -208,21 +208,28 @@ class handler(BaseHTTPRequestHandler):
         date_to   = (qs.get("date_to")   or [""])[0].strip()
         probe     = (qs.get("probe")     or [""])[0].strip()
 
-        # ── probe mode: 直接回傳 TWSE 原始內容，用於 debug ──
+        # ── probe mode: 試多個 URL，回傳各自結果 ──
         if probe and code:
             date_str = probe  # 格式 YYYYMMDD
-            tse_url  = (f"https://www.twse.com.tw/exchangeReport/BROKERLIMITED"
-                        f"?response=json&date={date_str}&stockNo={code}")
-            otc_url  = (f"https://www.tpex.org.tw/web/stock/aftertrading/broker_trading/"
-                        f"brokerBS_result.php?l=zh-tw&d={datetime.strptime(date_str,'%Y%m%d').strftime('%Y/%m/%d').replace(str(int(date_str[:4])), str(int(date_str[:4])-1911), 1)}&stkno={code}&s=0,asc")
+            d = datetime.strptime(date_str, "%Y%m%d")
+            tw_year  = d.year - 1911
+            d_slash  = f"{tw_year}/{d.month:02d}/{d.day:02d}"
+            candidates = [
+                ("tse_rwd_json",    f"https://www.twse.com.tw/rwd/zh/trading/BROKERLIMITED?response=json&date={date_str}&stockNo={code}", TWSE_HEADERS),
+                ("tse_rwd_noarg",   f"https://www.twse.com.tw/rwd/zh/trading/BROKERLIMITED?date={date_str}&stockNo={code}", TWSE_HEADERS),
+                ("tse_fund_TWT38U", f"https://www.twse.com.tw/rwd/zh/fund/TWT38U?response=json&date={date_str}&stockNo={code}", TWSE_HEADERS),
+                ("tse_old_json",    f"https://www.twse.com.tw/exchangeReport/BROKERLIMITED?response=json&date={date_str}&stockNo={code}", TWSE_HEADERS),
+                ("otc_brokerBS",    f"https://www.tpex.org.tw/web/stock/aftertrading/broker_trading/brokerBS.php?l=zh-tw&d={d_slash}&stkno={code}&s=0,asc&o=json", OTC_HEADERS),
+                ("otc_result",      f"https://www.tpex.org.tw/web/stock/aftertrading/broker_trading/brokerBS_result.php?l=zh-tw&d={d_slash}&stkno={code}&s=0,asc", OTC_HEADERS),
+            ]
             results = {}
-            for label, url, hdrs in [("tse_json", tse_url, TWSE_HEADERS),
-                                      ("otc_json", otc_url, OTC_HEADERS)]:
+            for label, url, hdrs in candidates:
                 try:
                     req = urllib.request.Request(url, headers=hdrs)
                     with urllib.request.urlopen(req, timeout=10) as r:
-                        raw = r.read()
-                    results[label] = {"status": r.status, "preview": raw[:600].decode("utf-8","replace"), "url": url}
+                        status = r.status
+                        raw    = r.read()
+                    results[label] = {"status": status, "len": len(raw), "preview": raw[:300].decode("utf-8","replace"), "url": url}
                 except Exception as e:
                     results[label] = {"error": str(e), "url": url}
             return self._json(200, results)
