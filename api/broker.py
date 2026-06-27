@@ -215,17 +215,16 @@ class handler(BaseHTTPRequestHandler):
             tw_year  = d.year - 1911
             d_slash  = f"{tw_year}/{d.month:02d}/{d.day:02d}"
             candidates = [
-                # TSE 分點候選
-                ("tse_STOCK_BROKER",  f"https://www.twse.com.tw/rwd/zh/trading/STOCK_BROKER?response=json&date={date_str}&stockNo={code}", TWSE_HEADERS),
-                ("tse_brokerSearch",  f"https://www.twse.com.tw/rwd/zh/brokerSearch/brokerSearch?response=json&date={date_str}&stockNo={code}", TWSE_HEADERS),
-                ("tse_BRKLST",        f"https://www.twse.com.tw/rwd/zh/trading/BRKLST?response=json&date={date_str}&stockNo={code}", TWSE_HEADERS),
-                ("tse_BROKER",        f"https://www.twse.com.tw/rwd/zh/brokerSearch/BROKER?response=json&date={date_str}&stockNo={code}", TWSE_HEADERS),
-                ("tse_brkSearch",     f"https://www.twse.com.tw/rwd/zh/brokerSearch/brkSearch?response=json&date={date_str}&stockNo={code}", TWSE_HEADERS),
-                ("tse_STOCK_DAY_BROKER", f"https://www.twse.com.tw/rwd/zh/trading/STOCK_DAY_BROKER?response=json&date={date_str}&stockNo={code}", TWSE_HEADERS),
-                # OTC 分點候選
-                ("otc_openapi",       f"https://www.tpex.org.tw/openapi/v1/tpex_aftertrading_daily_brokerbuysell?date={d_slash}&stockCode={code}", OTC_HEADERS),
-                ("otc_brokerBS_json", f"https://www.tpex.org.tw/web/stock/aftertrading/broker_trading/brokerBS.php?l=zh-tw&d={d_slash}&stkno={code}&o=json", OTC_HEADERS),
-                ("otc_rwd",           f"https://www.tpex.org.tw/rwd/zh/afterTrading/BKDBKS?response=json&date={d_slash}&stockNo={code}", OTC_HEADERS),
+                # TWSE OpenAPI 官方平台
+                ("twse_openapi_BROKERLIMITED", f"https://openapi.twse.com.tw/v1/exchangeReport/BROKERLIMITED?date={date_str}&stockNo={code}", TWSE_HEADERS),
+                ("twse_openapi_brokerSearch",  f"https://openapi.twse.com.tw/v1/brokerSearch/brokerSearch?date={date_str}&stockNo={code}", TWSE_HEADERS),
+                ("twse_openapi_MI_BROKER",     f"https://openapi.twse.com.tw/v1/exchangeReport/MI_BROKER?date={date_str}&stockNo={code}", TWSE_HEADERS),
+                ("twse_openapi_list",          f"https://openapi.twse.com.tw/v1/", TWSE_HEADERS),
+                # FinMind 台灣金融開放資料
+                ("finmind_broker",  f"https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockBrokerData&data_id={code}&start_date={d.strftime('%Y-%m-%d')}&end_date={d.strftime('%Y-%m-%d')}", {}),
+                ("finmind_holding", f"https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockHolderThousand&data_id={code}&start_date={d.strftime('%Y-%m-%d')}&end_date={d.strftime('%Y-%m-%d')}", {}),
+                # OTC OpenAPI
+                ("otc_openapi_v2",  f"https://www.tpex.org.tw/openapi/v2/tpex_aftertrading_daily_brokerbuysell?date={d_slash}&stockNo={code}", OTC_HEADERS),
             ]
             results = {}
             for label, url, hdrs in candidates:
