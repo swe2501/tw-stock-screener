@@ -125,14 +125,20 @@ async def fetch_day(page, day_slash) -> dict | None:
 
     page.on("response", on_response)
     try:
-        await page.evaluate(
-            """([b, e]) => {
-                window.querySetting.beginDate = b;
-                window.querySetting.endDate = e;
-                return getData();
-            }""",
-            [day_slash, day_slash],
-        )
+        try:
+            await page.evaluate(
+                """([b, e]) => {
+                    window.querySetting.beginDate = b;
+                    window.querySetting.endDate = e;
+                    return getData();
+                }""",
+                [day_slash, day_slash],
+            )
+        except Exception:
+            # 頁面自己的 calculationTrend() 在當日無分點淨買賣資料時，
+            # 對空陣列呼叫 reduce() 沒給初始值會拋錯。實際 API 回應通常
+            # 已經被下面的 response listener 攔截到了，忽略這個頁面內部錯誤即可。
+            pass
         resp = await asyncio.wait_for(fut, timeout=20)
         data = await resp.json()
         return data
@@ -154,7 +160,11 @@ async def scrape_code(page, code: str, days_slash: list[str]):
 
     for day_slash in days_slash:
         day_dash = day_slash.replace("/", "-")
-        data = await fetch_day(page, day_slash)
+        try:
+            data = await fetch_day(page, day_slash)
+        except Exception as e:
+            print(f"  {day_dash}: 例外 {e}")
+            data = None
         if data is None:
             print(f"  {day_dash}: 逾時或無回應")
         else:
