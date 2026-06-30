@@ -1401,7 +1401,9 @@
                 <tr style="position:sticky;top:0;background:var(--surface);z-index:1">
                   <th style="text-align:left;padding:4px 6px;color:var(--text-muted);font-weight:500;border-bottom:1px solid var(--border)">券商分點</th>
                   <th style="text-align:right;padding:4px 6px;color:#e74c3c;font-weight:500;border-bottom:1px solid var(--border)">買進(張)</th>
+                  <th style="text-align:right;padding:4px 6px;color:var(--text-muted);font-weight:500;border-bottom:1px solid var(--border)">買均價</th>
                   <th style="text-align:right;padding:4px 6px;color:#26c281;font-weight:500;border-bottom:1px solid var(--border)">賣出(張)</th>
+                  <th style="text-align:right;padding:4px 6px;color:var(--text-muted);font-weight:500;border-bottom:1px solid var(--border)">賣均價</th>
                   <th style="text-align:right;padding:4px 6px;color:var(--text);font-weight:500;border-bottom:1px solid var(--border)">買賣超(張)</th>
                 </tr>
               </thead>
@@ -2270,17 +2272,26 @@
       const tbody  = document.getElementById('brokerTbody');
       const empty  = document.getElementById('brokerEmpty');
       const brokers = Object.values(acc)
-        .map(b => ({ ...b, net: b.buy_vol - b.sell_vol }))
+        .map(b => ({
+          ...b,
+          net: b.buy_vol - b.sell_vol,
+          buy_avg_price:  b.buy_vol  && b.buy_amt  ? b.buy_amt  / b.buy_vol  : null,
+          sell_avg_price: b.sell_vol && b.sell_amt ? b.sell_amt / b.sell_vol : null,
+        }))
         .sort((a, b) => b.net - a.net);
       status.textContent = `共 ${brokers.length} 個分點 (${from} ~ ${to})`;
       if (!brokers.length) { table.style.display = 'none'; empty.style.display = ''; return; }
       tbody.innerHTML = brokers.map(b => {
         const netClr = b.net > 0 ? '#e74c3c' : b.net < 0 ? '#26c281' : '#aaa';
         const netStr = b.net > 0 ? `+${b.net.toLocaleString()}` : b.net.toLocaleString();
+        const buyAvgStr  = b.buy_avg_price  ? b.buy_avg_price.toFixed(2)  : '—';
+        const sellAvgStr = b.sell_avg_price ? b.sell_avg_price.toFixed(2) : '—';
         return `<tr style="border-bottom:1px solid rgba(255,255,255,.05)">
           <td style="padding:4px 6px;color:var(--text)">${b.broker_name}</td>
           <td style="padding:4px 6px;text-align:right;color:#e74c3c">${b.buy_vol.toLocaleString()}</td>
+          <td style="padding:4px 6px;text-align:right;color:var(--text-muted)">${buyAvgStr}</td>
           <td style="padding:4px 6px;text-align:right;color:#26c281">${b.sell_vol.toLocaleString()}</td>
+          <td style="padding:4px 6px;text-align:right;color:var(--text-muted)">${sellAvgStr}</td>
           <td style="padding:4px 6px;text-align:right;font-weight:600;color:${netClr}">${netStr}</td>
         </tr>`;
       }).join('');
@@ -2344,9 +2355,11 @@
           if (d.error) { status.textContent = '錯誤：' + d.error; progWrap.style.display = 'none'; return; }
 
           for (const b of (d.brokers || [])) {
-            if (!acc[b.broker_name]) acc[b.broker_name] = { broker_name: b.broker_name, buy_vol: 0, sell_vol: 0 };
+            if (!acc[b.broker_name]) acc[b.broker_name] = { broker_name: b.broker_name, buy_vol: 0, sell_vol: 0, buy_amt: 0, sell_amt: 0 };
             acc[b.broker_name].buy_vol  += b.buy_vol;
             acc[b.broker_name].sell_vol += b.sell_vol;
+            if (b.buy_avg_price)  acc[b.broker_name].buy_amt  += b.buy_vol  * b.buy_avg_price;
+            if (b.sell_avg_price) acc[b.broker_name].sell_amt += b.sell_vol * b.sell_avg_price;
           }
 
           // 多段：每批抓完就即時更新表格

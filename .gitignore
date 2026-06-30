@@ -1,3 +1,5 @@
 .vercel
 *.json
 !vercel.json
+.wantgoo_profile/
+.env.local

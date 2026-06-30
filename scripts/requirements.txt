@@ -1,0 +1,2 @@
+# 僅供本機執行 scripts/wantgoo_scraper.py 使用，不會部署到 Vercel
+playwright

@@ -104,17 +104,43 @@ def _sb(path, method="GET", body=None, params=None):
         return e.code, json.loads(raw) if raw else {}
 
 
+def _sb_all(path, params):
+    """Supabase 後端對單次請求有 row cap（預設 1000），用 offset 分頁抓出全部資料。"""
+    all_rows = []
+    page = 1000
+    offset = 0
+    while True:
+        page_params = list(params) + [("limit", str(page)), ("offset", str(offset))]
+        status, rows = _sb(path, params=page_params)
+        if status != 200 or not isinstance(rows, list):
+            break
+        all_rows.extend(rows)
+        if len(rows) < page:
+            break
+        offset += page
+    return all_rows
+
+
 def _cached_dates(code, date_from, date_to):
     """Return set of YYYYMMDD strings already in Supabase."""
-    status, rows = _sb("/broker_daily", params=[
+    rows = _sb_all("/broker_daily", [
         ("select",     "trade_date"),
         ("code",       f"eq.{code}"),
         ("trade_date", f"gte.{date_from}"),
         ("trade_date", f"lte.{date_to}"),
     ])
-    if status != 200 or not isinstance(rows, list):
-        return set()
     return {r["trade_date"].replace("-", "") for r in rows}
+
+
+def _wantgoo_dates(code, date_from, date_to):
+    """Return set of YYYY-MM-DD strings already covered by Wantgoo（本機 Playwright 爬蟲匯入）。"""
+    rows = _sb_all("/wantgoo_daily", [
+        ("select",     "trade_date"),
+        ("code",       f"eq.{code}"),
+        ("trade_date", f"gte.{date_from}"),
+        ("trade_date", f"lte.{date_to}"),
+    ])
+    return {r["trade_date"] for r in rows}
 
 
 def _save_rows(code, date_str, rows):
@@ -185,11 +211,13 @@ class handler(BaseHTTPRequestHandler):
         # 1. 算出平日清單
         all_days = list(_weekdays(date_from, date_to))
 
-        # 2. 已快取的日期
-        cached = _cached_dates(code, date_from, date_to)
+        # 2. Wantgoo（本機 Playwright 爬蟲）已覆蓋的日期，含均價，優先採用
+        wantgoo_dates = _wantgoo_dates(code, date_from, date_to)
+        wantgoo_compact = {d.replace("-", "") for d in wantgoo_dates}
 
-        # 3. 逐日抓缺少的，加入 1.5 秒間隔避免 rate limit
-        missing = [d for d in all_days if d not in cached]
+        # 3. HiStock 已快取的日期；Wantgoo 已覆蓋的日期不需要再用 HiStock 補
+        cached = _cached_dates(code, date_from, date_to)
+        missing = [d for d in all_days if d not in cached and d not in wantgoo_compact]
         fetched_count = 0
         for day_str in missing:
             rows = _fetch_histock(code, day_str)
@@ -200,32 +228,57 @@ class handler(BaseHTTPRequestHandler):
             if missing.index(day_str) < len(missing) - 1:
                 time.sleep(1.5)
 
-        # 4. 從 Supabase 拉彙整結果
-        status, rows = _sb("/broker_daily", params=[
+        # 4. 從 Supabase 拉彙整結果：HiStock（排除 Wantgoo 已覆蓋日期）+ Wantgoo（含均價）
+        hist_params = [
             ("select",     "trade_date,broker_name,buy_vol,sell_vol"),
             ("code",       f"eq.{code}"),
             ("trade_date", f"gte.{date_from}"),
             ("trade_date", f"lte.{date_to}"),
-            ("order",      "trade_date.asc"),
-            ("limit",      "50000"),
+        ]
+        if wantgoo_dates:
+            hist_params.append(("trade_date", f"not.in.({','.join(sorted(wantgoo_dates))})"))
+        hist_rows = _sb_all("/broker_daily", hist_params)
+
+        wantgoo_rows = _sb_all("/wantgoo_daily", [
+            ("select",     "broker_name,buy_vol,sell_vol,buy_avg_price,sell_avg_price"),
+            ("code",       f"eq.{code}"),
+            ("trade_date", f"gte.{date_from}"),
+            ("trade_date", f"lte.{date_to}"),
         ])
-        if status != 200:
-            return self._json(500, {"error": "db error", "detail": rows})
 
-        rows = rows or []
         agg = {}
-        for r in rows:
-            n = r["broker_name"]
-            if n not in agg:
-                agg[n] = {"broker_name": n, "buy_vol": 0, "sell_vol": 0}
-            agg[n]["buy_vol"]  += r["buy_vol"]
-            agg[n]["sell_vol"] += r["sell_vol"]
+        def _entry(name):
+            if name not in agg:
+                agg[name] = {"broker_name": name, "buy_vol": 0, "sell_vol": 0,
+                             "buy_amt": 0.0, "sell_amt": 0.0}
+            return agg[name]
 
-        result = sorted(agg.values(),
-                        key=lambda x: x["buy_vol"] - x["sell_vol"],
-                        reverse=True)
-        for r in result:
-            r["net"] = r["buy_vol"] - r["sell_vol"]
+        for r in (hist_rows or []):
+            e = _entry(r["broker_name"])
+            e["buy_vol"]  += r["buy_vol"]
+            e["sell_vol"] += r["sell_vol"]
+
+        for r in (wantgoo_rows or []):
+            e = _entry(r["broker_name"])
+            bv, sv = r["buy_vol"], r["sell_vol"]
+            e["buy_vol"]  += bv
+            e["sell_vol"] += sv
+            if r.get("buy_avg_price"):
+                e["buy_amt"]  += bv * r["buy_avg_price"]
+            if r.get("sell_avg_price"):
+                e["sell_amt"] += sv * r["sell_avg_price"]
+
+        result = []
+        for e in agg.values():
+            result.append({
+                "broker_name":    e["broker_name"],
+                "buy_vol":        e["buy_vol"],
+                "sell_vol":       e["sell_vol"],
+                "net":            e["buy_vol"] - e["sell_vol"],
+                "buy_avg_price":  round(e["buy_amt"]  / e["buy_vol"],  2) if e["buy_vol"]  and e["buy_amt"]  else None,
+                "sell_avg_price": round(e["sell_amt"] / e["sell_vol"], 2) if e["sell_vol"] and e["sell_amt"] else None,
+            })
+        result.sort(key=lambda x: x["net"], reverse=True)
 
         self._json(200, {
             "code":          code,
@@ -233,5 +286,6 @@ class handler(BaseHTTPRequestHandler):
             "date_to":       date_to,
             "days_checked":  len(all_days),
             "days_fetched":  fetched_count,
+            "wantgoo_days":  len(wantgoo_dates),
             "brokers":       result,
         })
