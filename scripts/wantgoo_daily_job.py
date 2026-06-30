@@ -3,8 +3,12 @@ Wantgoo 券商分點「每日增量」排程腳本（給 Windows 工作排程器
 
 讀取 scripts/watchlist.txt 裡的股票代碼，對每一支：
   - 查 Supabase wantgoo_daily 目前抓到的最新日期
-  - 沒抓過的新股票：回補最近 90 天（避免單次跑太久，之後每天繼續往前補）
-  - 已有資料的股票：只抓「最新日期之後 ~ 今天」的新增交易日
+  - 沒抓過的新股票：回補最近 365 天（每次最多抓 90 天，分幾天排程跑完，
+    避免單次執行時間過長或觸發風控）
+  - 已有資料的股票：只抓「最新日期之後 ~ 今天」的新增交易日（過去的買賣量
+    不會變，不需要重抓）
+
+每次執行也會清掉超過 1 年（RETENTION_DAYS）的舊資料，讓資料庫只保留最近一年。
 
 需要瀏覽器有畫面才能正確產生防爬簽章，所以工作排程器的工作必須設定成
 「只在使用者登入時執行」（互動工作階段），不能用「不論使用者是否登入都執行」。
@@ -25,8 +29,9 @@ ROOT = Path(__file__).resolve().parent.parent
 WATCHLIST_FILE = Path(__file__).resolve().parent / "watchlist.txt"
 LOG_FILE = Path(__file__).resolve().parent / "daily_job.log"
 
-BACKFILL_DAYS = 90       # 新股票第一次最多回補幾天
+BACKFILL_DAYS = 365      # 新股票總共要回補的天數（分幾次排程跑完）
 MAX_DAYS_PER_RUN = 90    # 單一股票單次最多抓幾天，避免排程跑太久
+RETENTION_DAYS = 365     # 資料庫只保留最近幾天，超過的自動清除
 
 
 def _log(msg: str):
@@ -60,6 +65,18 @@ def _latest_date(code: str) -> str | None:
     return None
 
 
+def _cleanup_old_data():
+    """刪除超過 RETENTION_DAYS 的舊資料，讓資料庫只保留最近一年。"""
+    cutoff = (date.today() - timedelta(days=RETENTION_DAYS)).isoformat()
+    status, resp = ws._sb("/wantgoo_daily", method="DELETE", params=[
+        ("trade_date", f"lt.{cutoff}"),
+    ])
+    if status in (200, 204):
+        _log(f"已清除 {cutoff} 之前的舊資料")
+    else:
+        _log(f"清除舊資料失敗 ({status}): {resp}")
+
+
 def _plan_range(code: str) -> tuple[str, str] | None:
     today = date.today()
     last = _latest_date(code)
@@ -78,6 +95,8 @@ async def main():
     if not ws.SUPABASE_URL or not ws.SUPABASE_ANON_KEY:
         _log("錯誤：未設定 SUPABASE_URL / SUPABASE_ANON_KEY，中止")
         sys.exit(1)
+
+    _cleanup_old_data()
 
     codes = _load_watchlist()
     if not codes:
