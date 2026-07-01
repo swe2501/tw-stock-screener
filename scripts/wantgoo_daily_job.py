@@ -1,20 +1,21 @@
 """
-Wantgoo 券商分點「每日增量」排程腳本（給 Windows 工作排程器呼叫，非互動執行）。
+Wantgoo 券商分點排程腳本。
 
-讀取 scripts/watchlist.txt 裡的股票代碼，對每一支：
-  - 查 Supabase wantgoo_daily 目前抓到的最新日期
-  - 沒抓過的新股票：回補最近 365 天（每次最多抓 90 天，分幾天排程跑完，
-    避免單次執行時間過長或觸發風控）
-  - 已有資料的股票：只抓「最新日期之後 ~ 今天」的新增交易日（過去的買賣量
-    不會變，不需要重抓）
+兩種模式（--mode 參數）：
 
-每次執行也會清掉超過 1 年（RETENTION_DAYS）的舊資料，讓資料庫只保留最近一年。
+  daily   （預設，每日 15:00 排程）
+          只抓「今天」的資料。
+          股票必須已有歷史資料才會處理（尚未回補的跳過）。
+          ~1080 支上市股 × ~2.5 秒 ≈ 45 分鐘。
 
-需要瀏覽器有畫面才能正確產生防爬簽章，所以工作排程器的工作必須設定成
-「只在使用者登入時執行」（互動工作階段），不能用「不論使用者是否登入都執行」。
+  backfill（手動執行，補充歷史）
+          對已回補不足 1 年的股票，每次補最多 MAX_DAYS_PER_RUN（90）天。
+          可重複執行，每次接著上次最新/最舊日期繼續，直到補滿 1 年為止。
 
-執行紀錄會同時印到 stdout 與 scripts/daily_job.log。
+股票清單：優先讀 scripts/all_stocks.txt（由 gen_all_stocks.py 產生），
+          若不存在則 fallback 到 scripts/watchlist.txt。
 """
+import argparse
 import asyncio
 import sys
 from datetime import date, timedelta
@@ -25,13 +26,14 @@ from playwright.async_api import async_playwright
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import wantgoo_scraper as ws  # noqa: E402
 
-ROOT = Path(__file__).resolve().parent.parent
-WATCHLIST_FILE = Path(__file__).resolve().parent / "watchlist.txt"
-LOG_FILE = Path(__file__).resolve().parent / "daily_job.log"
+ROOT            = Path(__file__).resolve().parent.parent
+ALL_STOCKS_FILE = Path(__file__).resolve().parent / "all_stocks.txt"
+WATCHLIST_FILE  = Path(__file__).resolve().parent / "watchlist.txt"
+LOG_FILE        = Path(__file__).resolve().parent / "daily_job.log"
 
-BACKFILL_DAYS = 365      # 新股票總共要回補的天數（分幾次排程跑完）
-MAX_DAYS_PER_RUN = 90    # 單一股票單次最多抓幾天，避免排程跑太久
-RETENTION_DAYS = 365     # 資料庫只保留最近幾天，超過的自動清除
+BACKFILL_DAYS    = 365   # 回補目標：最近幾天的歷史
+MAX_DAYS_PER_RUN = 90    # 回補每批次最多抓幾天
+RETENTION_DAYS   = 365   # 超過幾天的舊資料自動清除
 
 
 def _log(msg: str):
@@ -41,19 +43,20 @@ def _log(msg: str):
         f.write(line + "\n")
 
 
-def _load_watchlist() -> list[str]:
-    if not WATCHLIST_FILE.exists():
+def _load_codes() -> list[str]:
+    src = ALL_STOCKS_FILE if ALL_STOCKS_FILE.exists() else WATCHLIST_FILE
+    if not src.exists():
         return []
     codes = []
-    for line in WATCHLIST_FILE.read_text(encoding="utf-8").splitlines():
+    for line in src.read_text(encoding="utf-8").splitlines():
         line = line.strip()
         if line and not line.startswith("#"):
             codes.append(line)
+    _log(f"股票清單來源：{src.name}，共 {len(codes)} 支")
     return codes
 
 
 def _latest_date(code: str) -> str | None:
-    """查這支股票在 wantgoo_daily 裡最新的 trade_date（YYYY-MM-DD），沒有則回傳 None。"""
     status, rows = ws._sb("/wantgoo_daily", params=[
         ("select", "trade_date"),
         ("code", f"eq.{code}"),
@@ -65,8 +68,19 @@ def _latest_date(code: str) -> str | None:
     return None
 
 
+def _earliest_date(code: str) -> str | None:
+    status, rows = ws._sb("/wantgoo_daily", params=[
+        ("select", "trade_date"),
+        ("code", f"eq.{code}"),
+        ("order", "trade_date.asc"),
+        ("limit", "1"),
+    ])
+    if status == 200 and rows:
+        return rows[0]["trade_date"]
+    return None
+
+
 def _cleanup_old_data():
-    """刪除超過 RETENTION_DAYS 的舊資料，讓資料庫只保留最近一年。"""
     cutoff = (date.today() - timedelta(days=RETENTION_DAYS)).isoformat()
     status, resp = ws._sb("/wantgoo_daily", method="DELETE", params=[
         ("trade_date", f"lt.{cutoff}"),
@@ -77,33 +91,63 @@ def _cleanup_old_data():
         _log(f"清除舊資料失敗 ({status}): {resp}")
 
 
-def _plan_range(code: str) -> tuple[str, str] | None:
+def _plan_daily(code: str) -> tuple[str, str] | None:
+    """
+    每日模式：只補從「DB 最新日期 +1」到今天。
+    若該股票完全沒有資料（尚未回補），回傳 None 跳過。
+    """
     today = date.today()
     last = _latest_date(code)
     if last is None:
-        start = today - timedelta(days=BACKFILL_DAYS)
-    else:
-        last_d = date.fromisoformat(last)
-        start = last_d + timedelta(days=1)
+        return None  # 尚未回補，daily 不處理
+    start = date.fromisoformat(last) + timedelta(days=1)
     if start > today:
         return None  # 已是最新
-    end = min(today, start + timedelta(days=MAX_DAYS_PER_RUN))
+    return start.isoformat(), today.isoformat()
+
+
+def _plan_backfill(code: str) -> tuple[str, str] | None:
+    """
+    回補模式：填補「1 年前 → DB 最舊日期 -1」的歷史缺口，每次最多 MAX_DAYS_PER_RUN 天。
+    若最舊日期已在 1 年前（含 5 天容差），視為完成，回傳 None。
+    """
+    today = date.today()
+    target_start = today - timedelta(days=BACKFILL_DAYS)
+
+    earliest = _earliest_date(code)
+    if earliest is None:
+        # 完全沒資料：從 1 年前開始抓
+        start = target_start
+        end = min(today, start + timedelta(days=MAX_DAYS_PER_RUN - 1))
+    else:
+        earliest_d = date.fromisoformat(earliest)
+        if earliest_d <= target_start + timedelta(days=5):
+            return None  # 已有完整 1 年資料
+        # 需要往更早的方向補：target_start ~ earliest-1，每次抓最後 90 天（倒序填）
+        end = earliest_d - timedelta(days=1)
+        start = max(target_start, end - timedelta(days=MAX_DAYS_PER_RUN - 1))
+        if start > end:
+            return None
+
     return start.isoformat(), end.isoformat()
 
 
-async def main():
+async def _run(mode: str):
     if not ws.SUPABASE_URL or not ws.SUPABASE_ANON_KEY:
         _log("錯誤：未設定 SUPABASE_URL / SUPABASE_ANON_KEY，中止")
         sys.exit(1)
 
     _cleanup_old_data()
 
-    codes = _load_watchlist()
+    codes = _load_codes()
     if not codes:
-        _log("watchlist.txt 是空的，沒有股票要抓，結束")
+        _log("找不到股票清單，結束")
         return
 
-    _log(f"開始每日增量抓取，股票清單：{codes}")
+    plan_fn      = _plan_daily if mode == "daily" else _plan_backfill
+    throttle_ms  = 500 if mode == "daily" else 600
+
+    _log(f"開始執行，模式：{mode}")
     ws.PROFILE_DIR.mkdir(exist_ok=True)
 
     async with async_playwright() as p:
@@ -122,24 +166,41 @@ async def main():
 
         await page.goto("https://www.wantgoo.com/", wait_until="domcontentloaded", timeout=30000)
         if not await ws.is_logged_in(page):
-            _log("尚未登入 Wantgoo 會員帳號（session 可能過期），請手動執行 wantgoo_scraper.py 重新登入一次。中止本次排程。")
+            _log("尚未登入 Wantgoo，請先執行 wantgoo_scraper.py 重新登入。中止。")
             await context.close()
             return
 
-        for code in codes:
-            rng = _plan_range(code)
+        skipped = processed = 0
+        for i, code in enumerate(codes, 1):
+            rng = plan_fn(code)
             if rng is None:
-                _log(f"[{code}] 已是最新，略過")
+                skipped += 1
                 continue
             date_from, date_to = rng
             days_slash = ws._weekdays(date_from, date_to)
-            _log(f"[{code}] 補抓 {date_from} ~ {date_to}（{len(days_slash)} 個交易日）")
-            await ws.scrape_code(page, code, days_slash)
+            if not days_slash:
+                skipped += 1
+                continue
+            _log(f"[{i}/{len(codes)}] {code} {date_from}~{date_to}（{len(days_slash)} 交易日）")
+            await ws.scrape_code(page, code, days_slash, throttle_ms=throttle_ms)
+            processed += 1
 
         await context.close()
 
-    _log("本次排程完成。\n")
+    _log(f"本次完成。處理 {processed} 支，略過 {skipped} 支。\n")
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--mode",
+        choices=["daily", "backfill"],
+        default="daily",
+        help="daily=只抓今天（排程用）  backfill=補歷史（手動執行）",
+    )
+    args = parser.parse_args()
+    asyncio.run(_run(args.mode))
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

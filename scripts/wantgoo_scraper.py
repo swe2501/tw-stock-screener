@@ -148,14 +148,21 @@ async def fetch_day(page, day_slash) -> dict | None:
         page.remove_listener("response", on_response)
 
 
-async def scrape_code(page, code: str, days_slash: list[str]):
+async def scrape_code(page, code: str, days_slash: list[str], throttle_ms: int = 800):
     url = f"https://www.wantgoo.com/stock/{code}/major-investors/branch-buysell"
     print(f"[{code}] 開啟頁面 {url}")
-    await page.goto(url, wait_until="networkidle", timeout=30000)
-    await page.wait_for_timeout(1500)
+    await page.goto(url, wait_until="load", timeout=30000)
+    # 等待 Wantgoo 頁面的查詢函式初始化（比 networkidle+固定等待 更快）
+    try:
+        await page.wait_for_function(
+            "() => typeof window.querySetting !== 'undefined' && typeof window.getData === 'function'",
+            timeout=10000,
+        )
+    except Exception:
+        await page.wait_for_timeout(1500)  # fallback
 
     if not await is_logged_in(page):
-        print(f"  ⚠ 尚未登入會員帳號，{code} 略過（請先完成登入流程）")
+        print(f"  [{code}] 尚未登入會員帳號，略過")
         return
 
     for day_slash in days_slash:
@@ -171,7 +178,7 @@ async def scrape_code(page, code: str, days_slash: list[str]):
             rows = data.get("data") or []
             _save_wantgoo_rows(code, day_dash, rows)
             print(f"  {day_dash}: {len(rows)} 筆分點資料")
-        await page.wait_for_timeout(800)  # 控速避免觸發風控
+        await page.wait_for_timeout(throttle_ms)  # 控速避免觸發風控
 
 
 async def main():
