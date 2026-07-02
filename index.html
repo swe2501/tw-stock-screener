@@ -1047,6 +1047,21 @@
     </div>
   </header>
 
+  <!-- 閒置自動登出提示 modal -->
+  <div id="idleLogoutModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center">
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:32px 28px;max-width:340px;width:90%;text-align:center">
+      <div style="font-size:2rem;margin-bottom:12px">⏱️</div>
+      <h3 style="margin:0 0 8px;color:var(--text-primary);font-size:1.1rem">閒置超過 1 小時</h3>
+      <p style="margin:0 0 24px;color:var(--text-muted);font-size:.9rem">為保障帳號安全，您已自動登出。</p>
+      <div style="display:flex;gap:10px;justify-content:center">
+        <button onclick="document.getElementById('idleLogoutModal').classList.add('hidden');openAuthModal('login')"
+          style="padding:8px 20px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.95rem">重新登入</button>
+        <button onclick="document.getElementById('idleLogoutModal').classList.add('hidden')"
+          style="padding:8px 20px;background:transparent;color:var(--text-muted);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:.95rem">關閉</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Auth modal -->
   <div id="authModal">
     <div class="auth-box">
@@ -1825,6 +1840,27 @@
       showToast('登入已過期，請重新登入', true);
     }
 
+    // ── 閒置自動登出（1 小時無操作）────────────────────────
+    let _idleTimer = null;
+    const IDLE_MS = 60 * 60 * 1000; // 1 小時
+
+    function _resetIdleTimer() {
+      if (!_authToken) return;
+      clearTimeout(_idleTimer);
+      _idleTimer = setTimeout(() => {
+        _authToken = null; _authRefresh = null; _authUser = null;
+        localStorage.removeItem('sb_token');
+        localStorage.removeItem('sb_refresh');
+        localStorage.removeItem('sb_user');
+        _applyAuthState();
+        document.getElementById('idleLogoutModal').classList.remove('hidden');
+      }, IDLE_MS);
+    }
+
+    ['click','mousemove','keydown','scroll','touchstart'].forEach(e =>
+      document.addEventListener(e, _resetIdleTimer, { passive: true })
+    );
+
     function _applyAuthState() {
       const loggedIn = !!_authToken;
       document.getElementById('loginBtn').style.display      = loggedIn ? 'none' : '';
@@ -1839,9 +1875,11 @@
         document.getElementById('resultsArea').innerHTML = '';
         const np = document.getElementById('chartNotePanel');
         if (np) np.style.display = 'none';
+        clearTimeout(_idleTimer); _idleTimer = null;  // 登出時清除閒置計時器
       } else {
         const np = document.getElementById('chartNotePanel');
         if (np) np.style.display = '';
+        _resetIdleTimer();  // 登入時啟動閒置計時器
       }
     }
 
