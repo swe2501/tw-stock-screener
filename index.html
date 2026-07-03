@@ -1047,6 +1047,17 @@
     </div>
   </header>
 
+  <!-- 除權息臨近警示 modal -->
+  <div id="divAlertModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;align-items:center;justify-content:center">
+    <div style="background:var(--bg-card);border:1px solid #e6a23c;border-radius:12px;padding:32px 28px;max-width:360px;width:90%;text-align:center">
+      <div style="font-size:2rem;margin-bottom:12px">📢</div>
+      <h3 id="divAlertTitle" style="margin:0 0 8px;color:#e6a23c;font-size:1.1rem">即將除權息</h3>
+      <p id="divAlertBody" style="margin:0 0 24px;color:var(--text-primary);font-size:.95rem;line-height:1.6"></p>
+      <button onclick="document.getElementById('divAlertModal').style.display='none'"
+        style="padding:8px 24px;background:#e6a23c;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.95rem">知道了</button>
+    </div>
+  </div>
+
   <!-- 閒置自動登出提示 modal -->
   <div id="idleLogoutModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;align-items:center;justify-content:center">
     <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:32px 28px;max-width:340px;width:90%;text-align:center">
@@ -1290,6 +1301,7 @@
             <div class="modal-title" id="modalTitle">—</div>
             <span id="industryTag"></span>
             <span id="chartPriceTag"></span>
+            <span id="divTag"></span>
           </div>
           <div class="modal-subtitle" id="modalSubtitle">日K線</div>
         </div>
@@ -1759,6 +1771,7 @@
       document.getElementById('modalTitle').textContent = `${code}　${name}`;
       document.getElementById('industryTag').style.display = 'none';
       const _pt = document.getElementById('chartPriceTag'); if (_pt) _pt.innerHTML = '';
+      _loadDividendInfo(code);
       _setToolbarForCode(code);
       document.getElementById('backBtn').style.display = 'none';
       document.getElementById('chartModal').classList.add('open');
@@ -1772,6 +1785,50 @@
       document.getElementById('brokerStatus').textContent   = '';
       document.getElementById('brokerProgress').style.display = 'none';
       loadDailyChart();
+    }
+
+    // ── 除權息資訊 ─────────────────────────────────────────
+    const _divCache = {};        // code -> events[]（本頁存活期間快取）
+    const _divAlerted = new Set(); // 每檔股票每次瀏覽只跳一次警示
+
+    async function _loadDividendInfo(code) {
+      const tag = document.getElementById('divTag');
+      if (tag) tag.innerHTML = '';
+      if (!_isStock(code)) return;
+      try {
+        if (!(code in _divCache)) {
+          const r = await fetch(`/api/dividend?code=${encodeURIComponent(code)}`);
+          if (!r.ok) return;
+          _divCache[code] = (await r.json()).events || [];
+        }
+        if (currentCode !== code) return; // 使用者已切換到別檔
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        // 找出最近一筆「今天以後（含今天）」的除權息事件
+        const ev = _divCache[code].find(e => new Date(e.ex_date + 'T00:00:00') >= today);
+        if (!ev) return;
+
+        const kindTxt = ev.kind === '權' ? '除權' : ev.kind === '權息' ? '除權息' : '除息';
+        const parts = [];
+        if (ev.cash_dividend) parts.push(`現金股利 ${ev.cash_dividend} 元`);
+        if (ev.stock_ratio)   parts.push(`配股率 ${ev.stock_ratio}`);
+        const detail = parts.length ? `（${parts.join('，')}）` : '';
+
+        if (tag) {
+          tag.innerHTML = `<span style="display:inline-block;padding:2px 8px;border:1px solid #e6a23c;
+            border-radius:4px;color:#e6a23c;font-size:12px;white-space:nowrap">${kindTxt} ${ev.ex_date}</span>`;
+        }
+
+        const days = Math.round((new Date(ev.ex_date + 'T00:00:00') - today) / 86400000);
+        const alertKey = `${code}|${ev.ex_date}`;
+        if (days <= 5 && !_divAlerted.has(alertKey)) {
+          _divAlerted.add(alertKey);
+          document.getElementById('divAlertTitle').textContent =
+            days === 0 ? `今天${kindTxt}！` : `${days} 天後${kindTxt}`;
+          document.getElementById('divAlertBody').innerHTML =
+            `<b>${code} ${currentName || ''}</b> 將於 <b>${ev.ex_date}</b> ${kindTxt}${detail}`;
+          document.getElementById('divAlertModal').style.display = 'flex';
+        }
+      } catch (_) { /* 除權息資訊非必要，失敗時靜默 */ }
     }
 
     function toggleBBand(span) {
@@ -2042,6 +2099,7 @@
       currentCode = sym; currentName = name;
       document.getElementById('modalTitle').textContent = name;
       document.getElementById('industryTag').style.display = 'none';
+      _loadDividendInfo(sym);
       _setToolbarForCode(sym);
       document.getElementById('backBtn').style.display = 'none';
       document.getElementById('chartModal').classList.add('open');
@@ -2057,6 +2115,7 @@
       }
       currentCode = '^TWII';
       document.getElementById('modalTitle').textContent = '大盤 加權指數';
+      _loadDividendInfo('^TWII');
       _setToolbarForCode('^TWII');
       document.getElementById('backBtn').style.display = prevCode ? 'inline-block' : 'none';
       loadDailyChart();
@@ -2066,6 +2125,7 @@
       if (!prevCode) return;
       currentCode = prevCode;
       document.getElementById('modalTitle').textContent = prevName;
+      _loadDividendInfo(currentCode);
       _setToolbarForCode(currentCode);
       document.getElementById('backBtn').style.display = 'none';
       prevCode = ''; prevName = '';
