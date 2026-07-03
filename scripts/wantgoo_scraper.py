@@ -47,7 +47,7 @@ SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
 SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "")
 
 
-def _sb(path, method="GET", body=None, params=None):
+def _sb(path, method="GET", body=None, params=None, retries=3):
     url = f"{SUPABASE_URL}/rest/v1{path}"
     if params:
         url += "?" + urllib.parse.urlencode(params)
@@ -58,14 +58,23 @@ def _sb(path, method="GET", body=None, params=None):
         "Authorization": f"Bearer {SUPABASE_ANON_KEY}",
         "Prefer": "return=minimal,resolution=merge-duplicates" if method == "POST" else "return=minimal",
     }
-    req = urllib.request.Request(url, data=data, headers=headers, method=method)
-    try:
-        with urllib.request.urlopen(req, timeout=15) as r:
-            raw = r.read()
-            return r.status, json.loads(raw) if raw else []
-    except urllib.error.HTTPError as e:
-        raw = e.read()
-        return e.code, json.loads(raw) if raw else {}
+    for attempt in range(retries):
+        req = urllib.request.Request(url, data=data, headers=headers, method=method)
+        try:
+            with urllib.request.urlopen(req, timeout=30) as r:
+                raw = r.read()
+                return r.status, json.loads(raw) if raw else []
+        except urllib.error.HTTPError as e:
+            raw = e.read()
+            return e.code, json.loads(raw) if raw else {}
+        except (urllib.error.URLError, TimeoutError, OSError) as e:
+            # 網路暫時性錯誤（逾時、斷線）：等一下重試，不讓整批中斷
+            if attempt < retries - 1:
+                print(f"  [retry {attempt+1}/{retries-1}] Supabase 連線失敗（{e}），5 秒後重試")
+                time.sleep(5)
+            else:
+                print(f"  [error] Supabase 連線失敗，重試 {retries-1} 次後放棄：{e}")
+                return 0, {}
 
 
 def _save_wantgoo_rows(code, date_str, rows):
