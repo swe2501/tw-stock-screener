@@ -1048,15 +1048,15 @@
   </header>
 
   <!-- 閒置自動登出提示 modal -->
-  <div id="idleLogoutModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center">
+  <div id="idleLogoutModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;align-items:center;justify-content:center">
     <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:32px 28px;max-width:340px;width:90%;text-align:center">
       <div style="font-size:2rem;margin-bottom:12px">⏱️</div>
       <h3 style="margin:0 0 8px;color:var(--text-primary);font-size:1.1rem">閒置超過 1 小時</h3>
       <p style="margin:0 0 24px;color:var(--text-muted);font-size:.9rem">為保障帳號安全，您已自動登出。</p>
       <div style="display:flex;gap:10px;justify-content:center">
-        <button onclick="document.getElementById('idleLogoutModal').classList.add('hidden');openAuthModal('login')"
+        <button onclick="document.getElementById('idleLogoutModal').style.display='none';openAuthModal('login')"
           style="padding:8px 20px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.95rem">重新登入</button>
-        <button onclick="document.getElementById('idleLogoutModal').classList.add('hidden')"
+        <button onclick="document.getElementById('idleLogoutModal').style.display='none'"
           style="padding:8px 20px;background:transparent;color:var(--text-muted);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:.95rem">關閉</button>
       </div>
     </div>
@@ -1853,7 +1853,7 @@
         localStorage.removeItem('sb_refresh');
         localStorage.removeItem('sb_user');
         _applyAuthState();
-        document.getElementById('idleLogoutModal').classList.remove('hidden');
+        document.getElementById('idleLogoutModal').style.display = 'flex';
       }, IDLE_MS);
     }
 
