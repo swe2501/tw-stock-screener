@@ -31,9 +31,9 @@ ALL_STOCKS_FILE = Path(__file__).resolve().parent / "all_stocks.txt"
 WATCHLIST_FILE  = Path(__file__).resolve().parent / "watchlist.txt"
 LOG_FILE        = Path(__file__).resolve().parent / "daily_job.log"
 
-BACKFILL_DAYS    = 365   # 回補目標：最近幾天的歷史
+BACKFILL_DAYS    = 180   # 回補目標：最近幾天的歷史
 MAX_DAYS_PER_RUN = 90    # 回補每批次最多抓幾天
-RETENTION_DAYS   = 365   # 超過幾天的舊資料自動清除
+RETENTION_DAYS   = 180   # 超過幾天的舊資料自動清除
 
 
 def _log(msg: str):

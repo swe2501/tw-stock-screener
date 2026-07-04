@@ -81,6 +81,9 @@ def _sb(path, method="GET", body=None, params=None, retries=3):
                 return 0, {}
 
 
+TOP_N_BROKERS = 15  # 每天每股只保留買超前 N + 賣超前 N 名券商（控制 DB 容量）
+
+
 def _save_wantgoo_rows(code, date_str, rows):
     """rows: list of {agentId, agentName, buyQuantities, sellQuantities, buyPriceAvg, sellPriceAvg}"""
     if not rows:
@@ -103,6 +106,10 @@ def _save_wantgoo_rows(code, date_str, rows):
         })
     if not records:
         return
+    # 只保留淨買超前 N + 淨賣超前 N（頭部主力分點），其餘捨棄
+    if len(records) > TOP_N_BROKERS * 2:
+        records.sort(key=lambda r: r["buy_vol"] - r["sell_vol"], reverse=True)
+        records = records[:TOP_N_BROKERS] + records[-TOP_N_BROKERS:]
     status, resp = _sb("/wantgoo_daily", method="POST", body=records,
                        params=[("on_conflict", "code,trade_date,broker_id")])
     if status not in (200, 201):
