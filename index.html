@@ -1789,7 +1789,6 @@
 
     // ── 除權息資訊 ─────────────────────────────────────────
     const _divCache = {};        // code -> events[]（本頁存活期間快取）
-    const _divAlerted = new Set(); // 每檔股票每次瀏覽只跳一次警示
 
     async function _loadDividendInfo(code) {
       const tag = document.getElementById('divTag');
@@ -1819,9 +1818,7 @@
         }
 
         const days = Math.round((new Date(ev.ex_date + 'T00:00:00') - today) / 86400000);
-        const alertKey = `${code}|${ev.ex_date}`;
-        if (days <= 5 && !_divAlerted.has(alertKey)) {
-          _divAlerted.add(alertKey);
+        if (days <= 5) {
           document.getElementById('divAlertTitle').textContent =
             days === 0 ? `今天${kindTxt}！` : `${days} 天後${kindTxt}`;
           document.getElementById('divAlertBody').innerHTML =
