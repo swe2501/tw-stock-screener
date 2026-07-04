@@ -26,6 +26,10 @@ from pathlib import Path
 
 from playwright.async_api import async_playwright
 
+# Windows 主控台預設 cp950，遇到印不出的字元以 ? 取代，不讓整個排程崩潰
+if sys.stdout and hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(errors="replace")
+
 ROOT = Path(__file__).resolve().parent.parent
 PROFILE_DIR = ROOT / ".wantgoo_profile"
 ENV_FILE = ROOT / ".env.local"
@@ -102,7 +106,7 @@ def _save_wantgoo_rows(code, date_str, rows):
     status, resp = _sb("/wantgoo_daily", method="POST", body=records,
                        params=[("on_conflict", "code,trade_date,broker_id")])
     if status not in (200, 201):
-        print(f"  ⚠ Supabase 寫入失敗 ({status}): {resp}")
+        print(f"  [warn] Supabase 寫入失敗 ({status}): {resp}")
 
 
 def _weekdays(date_from, date_to):
