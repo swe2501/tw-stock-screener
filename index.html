@@ -1927,12 +1927,8 @@
       if (!loggedIn) {
         try { _watchData = []; _watchCodes = new Set(); _refreshWatchBtns(); } catch(_) {}
         document.getElementById('resultsArea').innerHTML = '';
-        const np = document.getElementById('chartNotePanel');
-        if (np) np.style.display = 'none';
         clearTimeout(_idleTimer); _idleTimer = null;  // 登出時清除閒置計時器
       } else {
-        const np = document.getElementById('chartNotePanel');
-        if (np) np.style.display = '';
         _resetIdleTimer();  // 登入時啟動閒置計時器
       }
     }
