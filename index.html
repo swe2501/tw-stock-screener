@@ -1618,6 +1618,28 @@
       filterAndRender();
     }
 
+    // ── 已看過標記（localStorage，當天有效） ──────────────
+    const VIEWED_KEY = 'viewed_codes_v1';
+    function _viewedMap() {
+      try { return JSON.parse(localStorage.getItem(VIEWED_KEY) || '{}'); } catch (_) { return {}; }
+    }
+    function _todayStr() {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+    function _isViewed(code) { return _viewedMap()[code] === _todayStr(); }
+    function _markViewed(code) {
+      if (!code || !_isStock(code)) return;
+      const m = _viewedMap(), today = _todayStr();
+      for (const k in m) if (m[k] !== today) delete m[k];  // 清掉舊日紀錄
+      m[code] = today;
+      localStorage.setItem(VIEWED_KEY, JSON.stringify(m));
+      document.querySelectorAll(`[data-viewed-code="${CSS.escape(code)}"]`).forEach(el => {
+        el.textContent = '✓';
+        el.style.color = '#4caf50';
+      });
+    }
+
     function renderTable(results) {
       const sorted = [...results].sort((a, b) => {
         const av = a[sortKey] ?? -Infinity;
@@ -1650,6 +1672,8 @@
         const isWatched = !!_authToken && _watchCodes.has(s.code);
         return `
           <tr onclick="openChart('${s.code}','${s.name.replace(/'/g,"\\'")}','${(s.industry||'').replace(/'/g,"\\'")}',${s.close})">
+            <td data-viewed-code="${s.code}"
+              style="text-align:center;width:44px;font-size:14px;${_isViewed(s.code) ? 'color:#4caf50' : 'color:rgba(255,255,255,0.15)'}">${_isViewed(s.code) ? '✓' : '–'}</td>
             ${_authToken ? `<td style="text-align:center;padding:0 4px">
               <span class="watch-star-col" data-code="${s.code}"
                 style="font-size:16px;cursor:default;${isWatched ? 'color:#f1c40f' : 'color:rgba(255,255,255,0.2)'}"
@@ -1680,6 +1704,7 @@
           <table>
             <thead>
               <tr>
+                <th style="text-align:center;width:44px">已看過</th>
                 ${_authToken ? '<th style="text-align:center;width:52px">列入觀察</th>' : ''}
                 <th onclick="setSort('code')" class="${sortKey==='code'?'sorted':''}">代號<span class="sort-arrow">${sortKey==='code'?(sortDir>0?'▲':'▼'):'↕'}</span></th>
                 <th>名稱</th>
@@ -1766,6 +1791,7 @@
       prevCode = ''; prevName = '';
       currentCode = code; currentName = name;
       currentIndustry = industry; currentPrice = price;
+      _markViewed(code);
       _updateChartWatchBtn();
       _populateChartNote();
       document.getElementById('modalTitle').textContent = `${code}　${name}`;
@@ -1927,8 +1953,12 @@
       if (!loggedIn) {
         try { _watchData = []; _watchCodes = new Set(); _refreshWatchBtns(); } catch(_) {}
         document.getElementById('resultsArea').innerHTML = '';
+        const np = document.getElementById('chartNotePanel');
+        if (np) np.style.display = 'none';
         clearTimeout(_idleTimer); _idleTimer = null;  // 登出時清除閒置計時器
       } else {
+        const np = document.getElementById('chartNotePanel');
+        if (np) np.style.display = '';
         _resetIdleTimer();  // 登入時啟動閒置計時器
       }
     }
