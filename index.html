@@ -623,7 +623,10 @@
       display: flex;
       align-items: center;
       gap: 8px;
+      flex-wrap: wrap;       /* 標籤太多時換行，不把右側按鈕擠出畫面 */
+      min-width: 0;
     }
+    .modal-header > div:first-child { flex: 1; min-width: 0; }
     .modal-title {
       font-size: 1rem;
       font-weight: 700;
@@ -1305,7 +1308,7 @@
           </div>
           <div class="modal-subtitle" id="modalSubtitle">日K線</div>
         </div>
-        <div style="display:flex;align-items:center;gap:8px">
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
           <button id="chartWatchBtn" onclick="toggleWatchFromChart()"
             style="background:none;border:1px solid var(--border);border-radius:6px;
                    color:var(--text-muted);padding:4px 10px;font-size:13px;cursor:pointer;
