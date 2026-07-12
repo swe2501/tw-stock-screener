@@ -16,6 +16,7 @@ import argparse
 import asyncio
 import json
 import os
+import sqlite3
 import sys
 import time
 import urllib.error
@@ -81,7 +82,53 @@ def _sb(path, method="GET", body=None, params=None, retries=3):
                 return 0, {}
 
 
-TOP_N_BROKERS = 15  # 每天每股只保留買超前 N + 賣超前 N 名券商（控制 DB 容量）
+TOP_N_BROKERS = 15  # Supabase 每天每股只保留買超前 N + 賣超前 N 名券商（控制雲端容量）
+
+# ── 本機 SQLite：存「全量」分點資料（雲端只存前 15 名） ──────────
+LOCAL_DB_PATH = Path(os.environ.get("WANTGOO_LOCAL_DB", r"D:\stock_data\wantgoo_full.db"))
+_local_conn = None
+
+
+def _local_db():
+    global _local_conn
+    if _local_conn is None:
+        LOCAL_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+        _local_conn = sqlite3.connect(str(LOCAL_DB_PATH))
+        _local_conn.execute("""
+            create table if not exists wantgoo_daily (
+                code           text not null,
+                trade_date     text not null,
+                broker_id      text not null,
+                broker_name    text,
+                buy_vol        integer not null default 0,
+                sell_vol       integer not null default 0,
+                buy_avg_price  real,
+                sell_avg_price real,
+                primary key (code, trade_date, broker_id)
+            )
+        """)
+        _local_conn.execute(
+            "create index if not exists idx_wantgoo_broker on wantgoo_daily (broker_id, trade_date)"
+        )
+        _local_conn.commit()
+    return _local_conn
+
+
+def _save_local_rows(records):
+    """全量寫入本機 SQLite（records 為 _save_wantgoo_rows 組好的 dict 清單）。"""
+    try:
+        conn = _local_db()
+        conn.executemany(
+            """insert or replace into wantgoo_daily
+               (code, trade_date, broker_id, broker_name,
+                buy_vol, sell_vol, buy_avg_price, sell_avg_price)
+               values (:code, :trade_date, :broker_id, :broker_name,
+                       :buy_vol, :sell_vol, :buy_avg_price, :sell_avg_price)""",
+            records,
+        )
+        conn.commit()
+    except Exception as e:
+        print(f"  [warn] 本機 SQLite 寫入失敗：{e}")
 
 
 def _save_wantgoo_rows(code, date_str, rows):
@@ -106,7 +153,9 @@ def _save_wantgoo_rows(code, date_str, rows):
         })
     if not records:
         return
-    # 只保留淨買超前 N + 淨賣超前 N（頭部主力分點），其餘捨棄
+    # 1) 全量（~200 家分點）寫進本機 D 槽 SQLite，供深度分析（勝率、配對還原）
+    _save_local_rows(records)
+    # 2) 雲端只保留淨買超前 N + 淨賣超前 N（頭部主力分點），控制 Supabase 容量與 IO
     if len(records) > TOP_N_BROKERS * 2:
         records.sort(key=lambda r: r["buy_vol"] - r["sell_vol"], reverse=True)
         records = records[:TOP_N_BROKERS] + records[-TOP_N_BROKERS:]
