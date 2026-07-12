@@ -31,9 +31,8 @@ ALL_STOCKS_FILE = Path(__file__).resolve().parent / "all_stocks.txt"
 WATCHLIST_FILE  = Path(__file__).resolve().parent / "watchlist.txt"
 LOG_FILE        = Path(__file__).resolve().parent / "daily_job.log"
 
-BACKFILL_DAYS    = 180   # 回補目標：最近幾天的歷史
+BACKFILL_DAYS    = 365   # 回補目標：最近幾天的歷史（本機 SQLite 空間充足，存滿一年）
 MAX_DAYS_PER_RUN = 90    # 回補每批次最多抓幾天
-RETENTION_DAYS   = 180   # 超過幾天的舊資料自動清除
 
 
 def _log(msg: str):
@@ -57,38 +56,17 @@ def _load_codes() -> list[str]:
 
 
 def _latest_date(code: str) -> str | None:
-    status, rows = ws._sb("/wantgoo_daily", params=[
-        ("select", "trade_date"),
-        ("code", f"eq.{code}"),
-        ("order", "trade_date.desc"),
-        ("limit", "1"),
-    ])
-    if status == 200 and rows:
-        return rows[0]["trade_date"]
-    return None
+    row = ws._local_db().execute(
+        "select max(trade_date) from wantgoo_daily where code = ?", (code,)
+    ).fetchone()
+    return row[0] if row and row[0] else None
 
 
 def _earliest_date(code: str) -> str | None:
-    status, rows = ws._sb("/wantgoo_daily", params=[
-        ("select", "trade_date"),
-        ("code", f"eq.{code}"),
-        ("order", "trade_date.asc"),
-        ("limit", "1"),
-    ])
-    if status == 200 and rows:
-        return rows[0]["trade_date"]
-    return None
-
-
-def _cleanup_old_data():
-    cutoff = (date.today() - timedelta(days=RETENTION_DAYS)).isoformat()
-    status, resp = ws._sb("/wantgoo_daily", method="DELETE", params=[
-        ("trade_date", f"lt.{cutoff}"),
-    ])
-    if status in (200, 204):
-        _log(f"已清除 {cutoff} 之前的舊資料")
-    else:
-        _log(f"清除舊資料失敗 ({status}): {resp}")
+    row = ws._local_db().execute(
+        "select min(trade_date) from wantgoo_daily where code = ?", (code,)
+    ).fetchone()
+    return row[0] if row and row[0] else None
 
 
 def _plan_daily(code: str) -> tuple[str, str] | None:
@@ -133,12 +111,6 @@ def _plan_backfill(code: str) -> tuple[str, str] | None:
 
 
 async def _run(mode: str):
-    if not ws.SUPABASE_URL or not ws.SUPABASE_ANON_KEY:
-        _log("錯誤：未設定 SUPABASE_URL / SUPABASE_ANON_KEY，中止")
-        sys.exit(1)
-
-    _cleanup_old_data()
-
     codes = _load_codes()
     if not codes:
         _log("找不到股票清單，結束")

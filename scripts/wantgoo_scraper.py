@@ -153,16 +153,8 @@ def _save_wantgoo_rows(code, date_str, rows):
         })
     if not records:
         return
-    # 1) 全量（~200 家分點）寫進本機 D 槽 SQLite，供深度分析（勝率、配對還原）
+    # 全量（~200 家分點）只寫本機 D 槽 SQLite（2026-07 起不再上傳 Supabase）
     _save_local_rows(records)
-    # 2) 雲端只保留淨買超前 N + 淨賣超前 N（頭部主力分點），控制 Supabase 容量與 IO
-    if len(records) > TOP_N_BROKERS * 2:
-        records.sort(key=lambda r: r["buy_vol"] - r["sell_vol"], reverse=True)
-        records = records[:TOP_N_BROKERS] + records[-TOP_N_BROKERS:]
-    status, resp = _sb("/wantgoo_daily", method="POST", body=records,
-                       params=[("on_conflict", "code,trade_date,broker_id")])
-    if status not in (200, 201):
-        print(f"  [warn] Supabase 寫入失敗 ({status}): {resp}")
 
 
 def _weekdays(date_from, date_to):
