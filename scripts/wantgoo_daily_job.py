@@ -154,8 +154,13 @@ async def _run(mode: str):
                 skipped += 1
                 continue
             _log(f"[{i}/{len(codes)}] {code} {date_from}~{date_to}（{len(days_slash)} 交易日）")
-            await ws.scrape_code(page, code, days_slash, throttle_ms=throttle_ms)
-            processed += 1
+            try:
+                await ws.scrape_code(page, code, days_slash, throttle_ms=throttle_ms)
+                processed += 1
+            except Exception as e:
+                # 單一股票失敗（網路瞬斷、頁面異常）不中斷整批，30 秒後跳下一支
+                _log(f"  [warn] {code} 失敗，跳過：{e}")
+                await asyncio.sleep(30)
 
         await context.close()
 
