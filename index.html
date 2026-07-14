@@ -1552,7 +1552,8 @@
       }
 
       // 記住本次篩選日期與是否勾漲停板（點進 K 線圖時自動標記用）
-      _lastScreenDate = data.date || null;
+      // API 回傳格式為 2026/07/14，統一轉成 K 棒使用的 2026-07-14
+      _lastScreenDate = data.date ? String(data.date).replace(/\//g, '-') : null;
       _lastScreenLimitUp = !!document.getElementById('limit_up')?.checked;
 
       showStatus(`
@@ -1783,6 +1784,7 @@
     function _refreshChartMarkers() {
       if (!candleSeriesRef) return;
       const user = (_userMarkerStore()[currentCode] || [])
+        .map(m => ({ ...m, date: String(m.date).replace(/\//g, '-') }))  // 相容舊格式
         .filter(m => _lastCandleTimes && _lastCandleTimes.has(m.date))
         .map(m => ({
           time: m.date,
