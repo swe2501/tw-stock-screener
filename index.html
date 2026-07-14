@@ -1335,20 +1335,8 @@
             <button class="tool-btn" id="fibBtn" onclick="toggleFibMode()">📐 斐波那契</button>
             <button class="tool-btn" id="trendBtn" onclick="toggleTrendLine()">📏 趨勢線</button>
             <button class="tool-btn" onclick="clearAllDrawings()">✕ 清除</button>
+            <button class="tool-btn" onclick="clearChartMarkers()" title="清除本股的日期標記箭頭">📍 清標記</button>
           </div>
-        </div>
-        <!-- 📍 K 線日期標記列 -->
-        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px;font-size:12px">
-          <span style="color:var(--text-muted)">📍 日期標記</span>
-          <div style="display:flex;align-items:center">
-            <input type="date" id="markDateInput" style="background:var(--bg);border:1px solid var(--border);border-radius:4px 0 0 4px;color:var(--text);padding:3px 6px;font-size:12px;color-scheme:dark">
-            <button onclick="document.getElementById('markDateInput').showPicker()" style="padding:2px 6px;border:1px solid var(--border);border-left:none;border-radius:0 4px 4px 0;background:var(--surface);color:var(--text);cursor:pointer;font-size:13px;line-height:1.6">📅</button>
-          </div>
-          <label style="display:flex;align-items:center;gap:3px;color:var(--text);cursor:pointer">
-            <input type="checkbox" id="markLimitUp" style="accent-color:#ff1744">漲停板
-          </label>
-          <button onclick="addChartMarker()" style="padding:3px 12px;border-radius:4px;border:none;background:#ff1744;color:#fff;font-size:12px;font-weight:600;cursor:pointer">標記</button>
-          <button onclick="clearChartMarkers()" style="padding:3px 10px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text-muted);font-size:12px;cursor:pointer">清除本股標記</button>
         </div>
         <div id="chartLoading"><div class="spinner"></div> 載入中...</div>
         <div id="chartWrapper" style="display:none">
@@ -1563,6 +1551,10 @@
           isHist ? `資料來源：Yahoo Finance（${data.date}）` : `資料來源：證交所最新（${data.date}）`;
       }
 
+      // 記住本次篩選日期與是否勾漲停板（點進 K 線圖時自動標記用）
+      _lastScreenDate = data.date || null;
+      _lastScreenLimitUp = !!document.getElementById('limit_up')?.checked;
+
       showStatus(`
         <div class="results-header">
           <div class="results-title">篩選結果 — ${data.date}</div>
@@ -1639,7 +1631,7 @@
 
         const isWatched = !!_authToken && _watchCodes.has(s.code);
         return `
-          <tr onclick="openChart('${s.code}','${s.name.replace(/'/g,"\\'")}','${(s.industry||'').replace(/'/g,"\\'")}',${s.close})">
+          <tr onclick="openChart('${s.code}','${s.name.replace(/'/g,"\\'")}','${(s.industry||'').replace(/'/g,"\\'")}',${s.close},true)">
             <td data-viewed-code="${s.code}"
               style="text-align:center;width:44px;font-size:14px;${_isViewed(s.code) ? 'color:#4caf50' : 'color:rgba(255,255,255,0.15)'}">${_isViewed(s.code) ? '✓' : '–'}</td>
             ${_authToken ? `<td style="text-align:center;padding:0 4px">
@@ -1755,11 +1747,15 @@
       document.getElementById('marketBtn').style.display = (sym === '^TWII') ? 'none' : 'inline-block';
     }
 
-    function openChart(code, name, industry = '', price = 0) {
+    function openChart(code, name, industry = '', price = 0, fromScreen = false) {
       prevCode = ''; prevName = '';
       currentCode = code; currentName = name;
       currentIndustry = industry; currentPrice = price;
       _markViewed(code);
+      // 從篩選結果點進來：自動在「篩選日期」那根 K 棒加標記
+      if (fromScreen && _lastScreenDate) {
+        _addChartMarker(code, _lastScreenDate, _lastScreenLimitUp ? '漲停' : '📍');
+      }
       _updateChartWatchBtn();
       _populateChartNote();
       document.getElementById('modalTitle').textContent = `${code}　${name}`;
@@ -1777,6 +1773,8 @@
     const MARKER_KEY = 'chart_markers_v1';
     let _lastDivMarkers = [];      // 本次圖表的除權息標記
     let _lastCandleTimes = null;   // 本次圖表的所有 K 棒日期
+    let _lastScreenDate = null;    // 最近一次篩選的資料日期
+    let _lastScreenLimitUp = false; // 最近一次篩選是否勾了漲停板
 
     function _userMarkerStore() {
       try { return JSON.parse(localStorage.getItem(MARKER_KEY) || '{}'); } catch (_) { return {}; }
@@ -1798,21 +1796,17 @@
       try { candleSeriesRef.setMarkers(all); } catch (_) {}
     }
 
-    function addChartMarker() {
-      const d = document.getElementById('markDateInput').value;
-      if (!d) { showToast('請先選擇日期', true); return; }
-      if (!_isStock(currentCode)) { showToast('大盤圖不支援標記', true); return; }
-      const label = document.getElementById('markLimitUp').checked ? '漲停' : '📍';
+    function _addChartMarker(code, date, label) {
+      if (!_isStock(code) || !date) return;
       const store = _userMarkerStore();
-      const arr = store[currentCode] || (store[currentCode] = []);
-      if (!arr.some(m => m.date === d)) arr.push({ date: d, label });
-      localStorage.setItem(MARKER_KEY, JSON.stringify(store));
-      if (_lastCandleTimes && !_lastCandleTimes.has(d)) {
-        showToast(`${d} 不在圖上（非交易日？），已保存標記`, true);
+      const arr = store[code] || (store[code] = []);
+      const existing = arr.find(m => m.date === date);
+      if (existing) {
+        if (label === '漲停') existing.label = '漲停';  // 升級標籤，不重複新增
       } else {
-        showToast(`已標記 ${d}${label === '漲停' ? '（漲停板）' : ''}`);
+        arr.push({ date, label });
       }
-      _refreshChartMarkers();
+      localStorage.setItem(MARKER_KEY, JSON.stringify(store));
     }
 
     function clearChartMarkers() {
