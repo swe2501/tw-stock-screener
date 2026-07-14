@@ -1337,6 +1337,19 @@
             <button class="tool-btn" onclick="clearAllDrawings()">✕ 清除</button>
           </div>
         </div>
+        <!-- 📍 K 線日期標記列 -->
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px;font-size:12px">
+          <span style="color:var(--text-muted)">📍 日期標記</span>
+          <div style="display:flex;align-items:center">
+            <input type="date" id="markDateInput" style="background:var(--bg);border:1px solid var(--border);border-radius:4px 0 0 4px;color:var(--text);padding:3px 6px;font-size:12px;color-scheme:dark">
+            <button onclick="document.getElementById('markDateInput').showPicker()" style="padding:2px 6px;border:1px solid var(--border);border-left:none;border-radius:0 4px 4px 0;background:var(--surface);color:var(--text);cursor:pointer;font-size:13px;line-height:1.6">📅</button>
+          </div>
+          <label style="display:flex;align-items:center;gap:3px;color:var(--text);cursor:pointer">
+            <input type="checkbox" id="markLimitUp" style="accent-color:#ff1744">漲停板
+          </label>
+          <button onclick="addChartMarker()" style="padding:3px 12px;border-radius:4px;border:none;background:#ff1744;color:#fff;font-size:12px;font-weight:600;cursor:pointer">標記</button>
+          <button onclick="clearChartMarkers()" style="padding:3px 10px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text-muted);font-size:12px;cursor:pointer">清除本股標記</button>
+        </div>
         <div id="chartLoading"><div class="spinner"></div> 載入中...</div>
         <div id="chartWrapper" style="display:none">
           <div id="mainChartPanel">
@@ -1758,6 +1771,57 @@
       document.getElementById('chartModal').classList.add('open');
       if (!fibSetupDone) { setupFibOverlay(); fibSetupDone = true; }
       loadDailyChart();
+    }
+
+    // ── K 線日期標記（使用者自訂，localStorage 永久保存） ──────
+    const MARKER_KEY = 'chart_markers_v1';
+    let _lastDivMarkers = [];      // 本次圖表的除權息標記
+    let _lastCandleTimes = null;   // 本次圖表的所有 K 棒日期
+
+    function _userMarkerStore() {
+      try { return JSON.parse(localStorage.getItem(MARKER_KEY) || '{}'); } catch (_) { return {}; }
+    }
+
+    function _refreshChartMarkers() {
+      if (!candleSeriesRef) return;
+      const user = (_userMarkerStore()[currentCode] || [])
+        .filter(m => _lastCandleTimes && _lastCandleTimes.has(m.date))
+        .map(m => ({
+          time: m.date,
+          position: 'aboveBar',
+          color: '#ff1744',
+          shape: 'arrowDown',
+          text: m.label,
+          size: 1,
+        }));
+      const all = [..._lastDivMarkers, ...user].sort((a, b) => a.time < b.time ? -1 : 1);
+      try { candleSeriesRef.setMarkers(all); } catch (_) {}
+    }
+
+    function addChartMarker() {
+      const d = document.getElementById('markDateInput').value;
+      if (!d) { showToast('請先選擇日期', true); return; }
+      if (!_isStock(currentCode)) { showToast('大盤圖不支援標記', true); return; }
+      const label = document.getElementById('markLimitUp').checked ? '漲停' : '📍';
+      const store = _userMarkerStore();
+      const arr = store[currentCode] || (store[currentCode] = []);
+      if (!arr.some(m => m.date === d)) arr.push({ date: d, label });
+      localStorage.setItem(MARKER_KEY, JSON.stringify(store));
+      if (_lastCandleTimes && !_lastCandleTimes.has(d)) {
+        showToast(`${d} 不在圖上（非交易日？），已保存標記`, true);
+      } else {
+        showToast(`已標記 ${d}${label === '漲停' ? '（漲停板）' : ''}`);
+      }
+      _refreshChartMarkers();
+    }
+
+    function clearChartMarkers() {
+      const store = _userMarkerStore();
+      if (!store[currentCode]) { showToast('本股沒有標記'); return; }
+      delete store[currentCode];
+      localStorage.setItem(MARKER_KEY, JSON.stringify(store));
+      showToast(`已清除 ${currentCode} 的所有標記`);
+      _refreshChartMarkers();
     }
 
     // ── 除權息資訊 ─────────────────────────────────────────
@@ -2695,22 +2759,19 @@
       });
       candleSeriesRef.setData(candles);
 
-      // Ex-dividend / split markers
-      if (events && events.length > 0) {
-        const candleDates = new Set(candles.map(c => c.time));
-        const markers = events
-          .filter(e => candleDates.has(e.date))
-          .map(e => ({
-            time: e.date,
-            position: 'belowBar',
-            color: e.type === 'split' ? '#9b59b6' : '#f39c12',
-            shape: 'arrowUp',
-            text: e.type === 'split' ? `股分 ${e.ratio}` : `息 ${e.amount}`,
-            size: 1,
-          }))
-          .sort((a, b) => a.time < b.time ? -1 : 1);
-        if (markers.length > 0) candleSeriesRef.setMarkers(markers);
-      }
+      // Ex-dividend / split markers＋使用者自訂日期標記（合併後一次 setMarkers）
+      _lastCandleTimes = new Set(candles.map(c => c.time));
+      _lastDivMarkers = (events || [])
+        .filter(e => _lastCandleTimes.has(e.date))
+        .map(e => ({
+          time: e.date,
+          position: 'belowBar',
+          color: e.type === 'split' ? '#9b59b6' : '#f39c12',
+          shape: 'arrowUp',
+          text: e.type === 'split' ? `股分 ${e.ratio}` : `息 ${e.amount}`,
+          size: 1,
+        }));
+      _refreshChartMarkers();
 
       // MA 5/10/20/60/120/240 均線
       const closes = candles.map(c => c.close);
