@@ -64,15 +64,17 @@ def trading_days_between(prices, code, d1, d2):
     return max(bisect_right(dates, d2) - bisect_right(dates, d1), 0)
 
 
-def analyze(conn, prices, codes=None, min_lots=300, min_events=5):
+def analyze(conn, prices, codes=None, min_lots=300, min_events=5, hold_days=(5, 20)):
     """
     單次掃描 wantgoo_daily（依 broker_id, code, trade_date 排序）同時計算：
       事件法統計 + FIFO 配對統計，彙整到 broker 層級。
+    hold_days：事件法觀察的交易日窗口，可多組（如 3,10,60）。
     """
     stat = defaultdict(lambda: {
         "name": "", "events": 0,
-        "win5": 0, "n5": 0, "ret5": 0.0,
-        "win20": 0, "n20": 0, "ret20": 0.0,
+        "win": {n: 0 for n in hold_days},
+        "cnt": {n: 0 for n in hold_days},
+        "ret": {n: 0.0 for n in hold_days},
         "closed": 0, "closed_win": 0, "pnl_ret": 0.0, "hold_sum": 0.0,
     })
 
@@ -121,13 +123,13 @@ def analyze(conn, prices, codes=None, min_lots=300, min_events=5):
             entry = bavg or (prices.get(code) and prices[code][1].get(d))
             if entry:
                 s["events"] += 1
-                for n, wk, nk, rk in ((5, "win5", "n5", "ret5"), (20, "win20", "n20", "ret20")):
+                for n in hold_days:
                     c_after = close_after(prices, code, d, n)
                     if c_after:
-                        s[nk] += 1
-                        s[rk] += (c_after - entry) / entry
+                        s["cnt"][n] += 1
+                        s["ret"][n] += (c_after - entry) / entry
                         if c_after > entry:
-                            s[wk] += 1
+                            s["win"][n] += 1
 
         # ── FIFO 配對 ──
         if net > 0:
@@ -143,19 +145,24 @@ def analyze(conn, prices, codes=None, min_lots=300, min_events=5):
         avg_hold = s["hold_sum"] / s["closed"] if s["closed"] else None
         kind = ("隔日沖" if avg_hold is not None and avg_hold <= DAYTRADE_MAX_HOLD
                 else "波段" if avg_hold is not None else "收籌碼/未平倉")
-        rows.append({
+        row = {
             "broker_id": bid, "broker_name": s["name"], "type": kind,
             "events": s["events"],
-            "win5":  round(s["win5"] / s["n5"] * 100, 1) if s["n5"] else None,
-            "ret5":  round(s["ret5"] / s["n5"] * 100, 2) if s["n5"] else None,
-            "win20": round(s["win20"] / s["n20"] * 100, 1) if s["n20"] else None,
-            "ret20": round(s["ret20"] / s["n20"] * 100, 2) if s["n20"] else None,
+        }
+        for n in hold_days:
+            cnt = s["cnt"][n]
+            row[f"win{n}"] = round(s["win"][n] / cnt * 100, 1) if cnt else None
+            row[f"ret{n}"] = round(s["ret"][n] / cnt * 100, 2) if cnt else None
+        row.update({
             "closed_trades": s["closed"],
             "closed_win":  round(s["closed_win"] / s["closed"] * 100, 1) if s["closed"] else None,
             "avg_ret":     round(s["pnl_ret"] / s["closed"] * 100, 2) if s["closed"] else None,
             "avg_hold":    round(avg_hold, 1) if avg_hold is not None else None,
         })
-    rows.sort(key=lambda r: (r["win20"] or 0), reverse=True)
+        rows.append(row)
+    # 用最長窗口的勝率排序
+    sort_key = f"win{max(hold_days)}"
+    rows.sort(key=lambda r: (r[sort_key] or 0), reverse=True)
     return rows
 
 
@@ -165,24 +172,27 @@ def main():
     ap.add_argument("--min-lots", type=int, default=300, help="事件門檻：單日淨買超張數")
     ap.add_argument("--min-events", type=int, default=5, help="至少幾次事件才列入排行")
     ap.add_argument("--top", type=int, default=30, help="顯示前幾名")
+    ap.add_argument("--days", default="5,20", help="事件法觀察天數，逗號分隔（例：3,10,60）")
     args = ap.parse_args()
 
+    hold_days = sorted({int(x) for x in args.days.split(",") if x.strip()})
     codes = [c.strip() for c in args.codes.split(",")] if args.codes else None
     conn = sqlite3.connect(str(DB_PATH))
     print("載入收盤價...")
     prices = load_prices(conn, codes)
     print(f"  {len(prices)} 支股票有價格資料")
-    print(f"分析分點（事件門檻 淨買超≥{args.min_lots}張，最少{args.min_events}次）...")
-    rows = analyze(conn, prices, codes, args.min_lots, args.min_events)
+    print(f"分析分點（事件門檻 淨買超≥{args.min_lots}張，最少{args.min_events}次，窗口 {hold_days} 日）...")
+    rows = analyze(conn, prices, codes, args.min_lots, args.min_events, hold_days)
     print(f"  符合條件分點：{len(rows)} 個\n")
 
-    hdr = f"{'分點':<20}{'屬性':<8}{'事件':>5}{'5日勝率':>8}{'5日均報':>8}{'20日勝率':>9}{'20日均報':>9}{'平倉筆':>7}{'平倉勝率':>9}{'均持有':>7}"
+    day_hdr = "".join(f"{str(n)+'日勝率':>9}{str(n)+'日均報':>9}" for n in hold_days)
+    hdr = f"{'分點':<20}{'屬性':<8}{'事件':>5}{day_hdr}{'平倉筆':>7}{'平倉勝率':>9}{'均持有':>7}"
     print(hdr)
     print("-" * len(hdr))
     for r in rows[:args.top]:
+        day_cells = "".join(f"{str(r[f'win{n}']) + '%':>9}{str(r[f'ret{n}']) + '%':>9}" for n in hold_days)
         print(f"{(r['broker_name'] or r['broker_id'])[:18]:<20}{r['type']:<8}{r['events']:>5}"
-              f"{str(r['win5']) + '%':>8}{str(r['ret5']) + '%':>8}"
-              f"{str(r['win20']) + '%':>9}{str(r['ret20']) + '%':>9}"
+              f"{day_cells}"
               f"{r['closed_trades']:>7}{str(r['closed_win']) + '%':>9}{str(r['avg_hold']):>7}")
 
     with open(OUT_CSV, "w", newline="", encoding="utf-8-sig") as f:
