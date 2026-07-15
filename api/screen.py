@@ -809,7 +809,8 @@ def screen(params):
                 rows = fetch_stock_month(code, yyyymm)
                 for row in reversed(rows):
                     if row["date"] == prev_dt_for_gap:
-                        return code, {"prev_high": row["high"], "prev_low": row["low"]}
+                        return code, {"prev_high": row["high"], "prev_low": row["low"],
+                                      "prev_close": row["close"]}
                 return code, None
 
             with ThreadPoolExecutor(max_workers=30) as ex:
@@ -830,6 +831,7 @@ def screen(params):
         if is_historical:
             prev_high  = s.get("prev_high")
             prev_low   = s.get("prev_low")
+            prev_close_gap = s.get("prev_close")
             prev_vols  = s.get("prev_vols", [])
             # Historical path always uses YF adj prices to exclude ex-div false gaps
             _eff_h         = s.get("adj_high")  or h
@@ -841,9 +843,11 @@ def screen(params):
             if code in prev_mi_gap:
                 prev_high = prev_mi_gap[code].get("high")
                 prev_low  = prev_mi_gap[code].get("low")
+                prev_close_gap = prev_mi_gap[code].get("close") or yf_data.get("prev_close")
             else:
                 prev_high = yf_data.get("prev_high")
                 prev_low  = yf_data.get("prev_low")
+                prev_close_gap = yf_data.get("prev_close")
             prev_vols = yf_data.get("prev_vols", [])
             # For ex-div stocks: fetch YF adjusted prices to verify genuine gap
             if (check_gap_up or check_gap_down) and code in exdiv_codes:
@@ -855,15 +859,15 @@ def screen(params):
             else:
                 _eff_h, _eff_l, _eff_prev_high, _eff_prev_low = h, l, prev_high, prev_low
 
-        # 跳空向上：今日最低 > 前日最高（用還原日K價格排除除息假跳空）
+        # 跳空向上（2026-07 改定義）：今日開盤 > 前日收盤（開高即入選，不要求缺口整天不回補）
         if check_gap_up:
-            if _eff_prev_high is None:
-                # 前一日資料缺失，無法確認跳空 → 放行並標記
+            if prev_close_gap is None:
+                # 前一日資料缺失，無法確認 → 放行並標記
                 _gap_unverified.add(code)
             else:
-                if round(_eff_l, 4) <= round(_eff_prev_high, 4):
+                if round(o, 4) <= round(prev_close_gap, 4):
                     continue
-                if gap_up_min > 0 and round(_eff_l - _eff_prev_high, 4) < round(gap_up_min, 4):
+                if gap_up_min > 0 and round(o - prev_close_gap, 4) < round(gap_up_min, 4):
                     continue
 
         # 跳空向下：今日最高 < 前日最低（用還原日K價格排除除息假跳空）
