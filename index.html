@@ -1770,21 +1770,19 @@
       loadDailyChart();
     }
 
-    // ── K 線日期標記（使用者自訂，localStorage 永久保存） ──────
-    const MARKER_KEY = 'chart_markers_v1';
+    // ── K 線日期標記（暫時性：關閉 K 圖即全部清除） ──────
+    let _userMarkers = {};         // code -> [{date,label}]，僅存在記憶體
     let _lastDivMarkers = [];      // 本次圖表的除權息標記
     let _lastCandleTimes = null;   // 本次圖表的所有 K 棒日期
     let _lastScreenDate = null;    // 最近一次篩選的資料日期
     let _lastScreenLimitUp = false; // 最近一次篩選是否勾了漲停板
 
-    function _userMarkerStore() {
-      try { return JSON.parse(localStorage.getItem(MARKER_KEY) || '{}'); } catch (_) { return {}; }
-    }
+    // 清除舊版本留在 localStorage 的永久標記（已改為暫時性設計）
+    try { localStorage.removeItem('chart_markers_v1'); } catch (_) {}
 
     function _refreshChartMarkers() {
       if (!candleSeriesRef) return;
-      const user = (_userMarkerStore()[currentCode] || [])
-        .map(m => ({ ...m, date: String(m.date).replace(/\//g, '-') }))  // 相容舊格式
+      const user = (_userMarkers[currentCode] || [])
         .filter(m => _lastCandleTimes && _lastCandleTimes.has(m.date))
         .map(m => ({
           time: m.date,
@@ -1800,23 +1798,20 @@
 
     function _addChartMarker(code, date, label) {
       if (!_isStock(code) || !date) return;
-      const store = _userMarkerStore();
-      const arr = store[code] || (store[code] = []);
+      date = String(date).replace(/\//g, '-');
+      const arr = _userMarkers[code] || (_userMarkers[code] = []);
       const existing = arr.find(m => m.date === date);
       if (existing) {
         if (label === '漲停') existing.label = '漲停';  // 升級標籤，不重複新增
       } else {
         arr.push({ date, label });
       }
-      localStorage.setItem(MARKER_KEY, JSON.stringify(store));
     }
 
     function clearChartMarkers() {
-      const store = _userMarkerStore();
-      if (!store[currentCode]) { showToast('本股沒有標記'); return; }
-      delete store[currentCode];
-      localStorage.setItem(MARKER_KEY, JSON.stringify(store));
-      showToast(`已清除 ${currentCode} 的所有標記`);
+      if (!_userMarkers[currentCode]) { showToast('本股沒有標記'); return; }
+      delete _userMarkers[currentCode];
+      showToast(`已清除 ${currentCode} 的標記`);
       _refreshChartMarkers();
     }
 
@@ -2163,6 +2158,7 @@
     }
 
     function closeChart() {
+      _userMarkers = {};  // 關閉 K 圖時清掉所有日期標記（暫時性設計）
       _stopRealtimeUpdates();
       document.getElementById('chartModal').classList.remove('open');
       _destroyCharts();
