@@ -904,19 +904,21 @@ def screen(params):
                 if gap_down_min > 0 and round(_eff_prev_low - _eff_h, 4) < round(gap_down_min, 4):
                     continue
 
-        # 陽吞噬/陰吞噬：當日K棒連影線完整包住前一日K棒
-        # 陽吞：今紅K + 昨黑K + 今高≥昨高 + 今低≤昨低
-        # 陰吞：今黑K + 昨紅K + 今高≥昨高 + 今低≤昨低
+        # 陽吞噬/陰吞噬：當日K棒「實體」完整吃掉前一日整根K棒（含影線）
+        # 陽吞：今紅K + 昨黑K + 今收≥昨高 + 今開≤昨低
+        # 陰吞：今黑K + 昨紅K + 今開≥昨高 + 今收≤昨低
         if check_engulf_bull or check_engulf_bear:
             if any(v is None for v in (prev_open_gap, prev_close_gap, prev_high, prev_low)):
                 _gap_unverified.add(code)  # 前一日資料缺失 → 放行並標記
             else:
-                _cover = (round(h, 4) >= round(prev_high, 4)
-                          and round(l, 4) <= round(prev_low, 4))
                 _bull_ok = (check_engulf_bull and c > o
-                            and prev_close_gap < prev_open_gap and _cover)
+                            and prev_close_gap < prev_open_gap
+                            and round(c, 4) >= round(prev_high, 4)
+                            and round(o, 4) <= round(prev_low, 4))
                 _bear_ok = (check_engulf_bear and c < o
-                            and prev_close_gap > prev_open_gap and _cover)
+                            and prev_close_gap > prev_open_gap
+                            and round(o, 4) >= round(prev_high, 4)
+                            and round(c, 4) <= round(prev_low, 4))
                 if not (_bull_ok or _bear_ok):
                     continue
 
