@@ -1236,19 +1236,31 @@
           </div>
         </label>
         <label class="checkbox-row">
-          <input type="checkbox" id="engulf_bull"
-                 onchange="if(this.checked)document.getElementById('engulf_bear').checked=false" />
+          <input type="checkbox" id="engulf_bull" onchange="_exclPattern(this)" />
           <div>
             <div class="cb-label">陽吞噬</div>
             <div class="cb-hint">當日紅K實體吃掉前一日黑K整根（含影線）：收≥昨高且開≤昨低</div>
           </div>
         </label>
         <label class="checkbox-row">
-          <input type="checkbox" id="engulf_bear"
-                 onchange="if(this.checked)document.getElementById('engulf_bull').checked=false" />
+          <input type="checkbox" id="engulf_bear" onchange="_exclPattern(this)" />
           <div>
             <div class="cb-label">陰吞噬</div>
             <div class="cb-hint">當日黑K實體吃掉前一日紅K整根（含影線）：開≥昨高且收≤昨低</div>
+          </div>
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="harami_bull" onchange="_exclPattern(this)" />
+          <div>
+            <div class="cb-label">多頭母子孕育線</div>
+            <div class="cb-hint">當日紅K實體藏在前一日黑K實體內（當日影線不計）</div>
+          </div>
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="harami_bear" onchange="_exclPattern(this)" />
+          <div>
+            <div class="cb-label">空頭母子孕育線</div>
+            <div class="cb-hint">當日黑K實體藏在前一日紅K實體內（當日影線不計）</div>
           </div>
         </label>
         <label class="checkbox-row">
@@ -1461,6 +1473,14 @@
       document.getElementById('statusArea').innerHTML = html;
     }
 
+    // 四個 K 棒形態互斥（吞噬/母子邏輯上不可能同時成立）
+    function _exclPattern(el) {
+      if (!el.checked) return;
+      ['engulf_bull', 'engulf_bear', 'harami_bull', 'harami_bear'].forEach(id => {
+        if (id !== el.id) document.getElementById(id).checked = false;
+      });
+    }
+
     function doScreen() {
       const dateVal = document.getElementById('date').value;
       const minPrice  = parseFloat(document.getElementById('min_price').value) || 0;
@@ -1472,6 +1492,8 @@
       const doji    = document.getElementById('doji').checked;
       const engulfBull = document.getElementById('engulf_bull').checked;
       const engulfBear = document.getElementById('engulf_bear').checked;
+      const haramiBull = document.getElementById('harami_bull').checked;
+      const haramiBear = document.getElementById('harami_bear').checked;
       const gapUp   = document.getElementById('gap_up').checked;
       const gapDown = document.getElementById('gap_down').checked;
       const gapDownMin = parseFloat(document.getElementById('gap_down_min').value) || 0;
@@ -1510,6 +1532,8 @@
         doji:     doji,
         engulf_bull: engulfBull,
         engulf_bear: engulfBear,
+        harami_bull: haramiBull,
+        harami_bear: haramiBear,
         gap_up:   gapUp,
         gap_down: gapDown,
         gap_down_min: gapDownMin,

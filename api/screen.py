@@ -681,6 +681,8 @@ def screen(params):
     doji_range_min   = float(params.get("doji_range_min") or 1.0)  # 十字線最小振幅 %
     check_engulf_bull = bool(params.get("engulf_bull", False))  # 陽吞噬
     check_engulf_bear = bool(params.get("engulf_bear", False))  # 陰吞噬
+    check_harami_bull = bool(params.get("harami_bull", False))  # 多頭母子孕育線
+    check_harami_bear = bool(params.get("harami_bear", False))  # 空頭母子孕育線
     check_gap_up     = bool(params.get("gap_up", False))
     check_gap_down   = bool(params.get("gap_down", False))
     gap_down_min     = float(params.get("gap_down_min") or 0)
@@ -760,11 +762,11 @@ def screen(params):
             if abs(c - o) > 1e-9: continue
             if (s["high"] - s["low"]) / o * 100 < doji_range_min: continue
 
-        # 陽吞噬（快篩部分）：當日必須是紅K；陰吞噬：當日必須是黑K
+        # 吞噬/母子（快篩部分）：多頭形態當日必須紅K；空頭形態當日必須黑K
         # （與前一日的包覆判斷需要前日 OHLC，在 Step 4 進行）
-        if check_engulf_bull and not check_engulf_bear and c <= o:
+        if (check_engulf_bull or check_harami_bull) and not (check_engulf_bear or check_harami_bear) and c <= o:
             continue
-        if check_engulf_bear and not check_engulf_bull and c >= o:
+        if (check_engulf_bear or check_harami_bear) and not (check_engulf_bull or check_harami_bull) and c >= o:
             continue
 
         candidates[code] = s
@@ -778,7 +780,8 @@ def screen(params):
     exdiv_codes: set = set()
     if (check_gap_up or check_gap_down):
         exdiv_codes = _fetch_exdiv_codes(actual_date)
-    need_engulf = check_engulf_bull or check_engulf_bear
+    need_engulf = (check_engulf_bull or check_engulf_bear
+                   or check_harami_bull or check_harami_bear)  # 需要前一日 OHLC 的形態
     if (check_gap_up or check_gap_down or check_earn_gap_down or need_engulf) and not is_historical:
         # 只找「前一個非週末日曆日」——不因 MI_INDEX 失敗而往前多抓
         # 假日（非週末）由 YF per-stock fallback 處理，不在這裡跳過
@@ -920,6 +923,24 @@ def screen(params):
                             and round(o, 4) >= round(prev_high, 4)
                             and round(c, 4) <= round(prev_low, 4))
                 if not (_bull_ok or _bear_ok):
+                    continue
+
+        # 母子孕育線：當日K棒「實體」藏在前一日反向K棒「實體」內（當日影線不考慮）
+        # 多頭：昨黑K + 今紅K，今開≥昨收 且 今收≤昨開
+        # 空頭：昨紅K + 今黑K，今收≥昨開 且 今開≤昨收
+        if check_harami_bull or check_harami_bear:
+            if prev_open_gap is None or prev_close_gap is None:
+                _gap_unverified.add(code)  # 前一日資料缺失 → 放行並標記
+            else:
+                _hbull_ok = (check_harami_bull and c > o
+                             and prev_close_gap < prev_open_gap
+                             and round(o, 4) >= round(prev_close_gap, 4)
+                             and round(c, 4) <= round(prev_open_gap, 4))
+                _hbear_ok = (check_harami_bear and c < o
+                             and prev_close_gap > prev_open_gap
+                             and round(c, 4) >= round(prev_open_gap, 4)
+                             and round(o, 4) <= round(prev_close_gap, 4))
+                if not (_hbull_ok or _hbear_ok):
                     continue
 
         # 賺向下跳空價差（選定日期D，篩選D_prev跳空向下 + D當天突破 + 跳空≥1 + D_prev縮量）
