@@ -677,6 +677,8 @@ def screen(params):
     vol_mult         = float(params.get("volume_multiplier") or 0)
     shrink_mult      = float(params.get("shrink_multiplier") or 0)
     check_limit_up   = bool(params.get("limit_up", False))
+    check_doji       = bool(params.get("doji", False))
+    doji_range_min   = float(params.get("doji_range_min") or 1.0)  # 十字線最小振幅 %
     check_gap_up     = bool(params.get("gap_up", False))
     check_gap_down   = bool(params.get("gap_down", False))
     gap_down_min     = float(params.get("gap_down_min") or 0)
@@ -750,6 +752,11 @@ def screen(params):
             pc = s.get("prev_close")
             if not pc or pc <= 0: continue
             if c < calc_limit_up(pc) * 0.999: continue
+
+        # 十字線：開盤 = 收盤（零誤差），且當日振幅 ≥ doji_range_min%（排除一字線/冷門股）
+        if check_doji:
+            if abs(c - o) > 1e-9: continue
+            if (s["high"] - s["low"]) / o * 100 < doji_range_min: continue
 
         candidates[code] = s
 

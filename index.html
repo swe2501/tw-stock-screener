@@ -1229,6 +1229,13 @@
           </div>
         </label>
         <label class="checkbox-row">
+          <input type="checkbox" id="doji" />
+          <div>
+            <div class="cb-label">十字線</div>
+            <div class="cb-hint">開盤 = 收盤（零誤差），且當日振幅 ≥ 1%</div>
+          </div>
+        </label>
+        <label class="checkbox-row">
           <input type="checkbox" id="gap_down" onchange="if(!this.checked) document.getElementById('gap_down_min').value=''" />
           <div>
             <div class="cb-label">跳空向下</div>
@@ -1446,6 +1453,7 @@
       const volMult   = parseFloat(document.getElementById('volume_multiplier').value) || 0;
       const shrinkMult = parseFloat(document.getElementById('shrink_multiplier').value) || 0;
       const limitUp = document.getElementById('limit_up').checked;
+      const doji    = document.getElementById('doji').checked;
       const gapUp   = document.getElementById('gap_up').checked;
       const gapDown = document.getElementById('gap_down').checked;
       const gapDownMin = parseFloat(document.getElementById('gap_down_min').value) || 0;
@@ -1481,6 +1489,7 @@
         volume_multiplier: volMult,
         shrink_multiplier: shrinkMult,
         limit_up: limitUp,
+        doji:     doji,
         gap_up:   gapUp,
         gap_down: gapDown,
         gap_down_min: gapDownMin,
