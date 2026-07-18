@@ -679,6 +679,8 @@ def screen(params):
     check_limit_up   = bool(params.get("limit_up", False))
     check_doji       = bool(params.get("doji", False))
     doji_range_min   = float(params.get("doji_range_min") or 1.0)  # 十字線最小振幅 %
+    check_engulf_bull = bool(params.get("engulf_bull", False))  # 陽吞噬
+    check_engulf_bear = bool(params.get("engulf_bear", False))  # 陰吞噬
     check_gap_up     = bool(params.get("gap_up", False))
     check_gap_down   = bool(params.get("gap_down", False))
     gap_down_min     = float(params.get("gap_down_min") or 0)
@@ -758,6 +760,13 @@ def screen(params):
             if abs(c - o) > 1e-9: continue
             if (s["high"] - s["low"]) / o * 100 < doji_range_min: continue
 
+        # 陽吞噬（快篩部分）：當日必須是紅K；陰吞噬：當日必須是黑K
+        # （與前一日的包覆判斷需要前日 OHLC，在 Step 4 進行）
+        if check_engulf_bull and not check_engulf_bear and c <= o:
+            continue
+        if check_engulf_bear and not check_engulf_bull and c >= o:
+            continue
+
         candidates[code] = s
 
     if not candidates:
@@ -769,7 +778,8 @@ def screen(params):
     exdiv_codes: set = set()
     if (check_gap_up or check_gap_down):
         exdiv_codes = _fetch_exdiv_codes(actual_date)
-    if (check_gap_up or check_gap_down or check_earn_gap_down) and not is_historical:
+    need_engulf = check_engulf_bull or check_engulf_bear
+    if (check_gap_up or check_gap_down or check_earn_gap_down or need_engulf) and not is_historical:
         # 只找「前一個非週末日曆日」——不因 MI_INDEX 失敗而往前多抓
         # 假日（非週末）由 YF per-stock fallback 處理，不在這裡跳過
         expected_prev_dt = None
@@ -788,7 +798,7 @@ def screen(params):
 
     # ── Step 3b: 量能/MACD/真名/跳空 → 用 YF 逐支抓
     # 跳空有啟用時一定要抓 YF（不管 prev_mi_gap 是否成功），確保 per-stock fallback 有資料
-    need_gap_monthly = (check_gap_up or check_gap_down or check_earn_gap_down)
+    need_gap_monthly = (check_gap_up or check_gap_down or check_earn_gap_down or need_engulf)
     need_monthly = (vol_mult > 0 or shrink_mult > 0 or check_macd_gold
                     or check_earn_gap_down
                     or check_zhenming1 or check_zhenming2
@@ -807,7 +817,7 @@ def screen(params):
                     monthly_yf[code] = yf
 
     # ── Step 3c: 補抓 prev_mi_gap 未涵蓋的個股 → TWSE STOCK_DAY（不依賴 YF）──
-    if (check_gap_up or check_gap_down) and prev_mi_gap and not is_historical:
+    if (check_gap_up or check_gap_down or need_engulf) and prev_mi_gap and not is_historical:
         missing = [c for c in candidates if c not in prev_mi_gap and c not in monthly_yf]
         if missing and prev_dt_for_gap:
             yyyymm = prev_dt_for_gap[:6]
@@ -892,6 +902,22 @@ def screen(params):
                 if round(_eff_h, 4) >= round(_eff_prev_low, 4):
                     continue
                 if gap_down_min > 0 and round(_eff_prev_low - _eff_h, 4) < round(gap_down_min, 4):
+                    continue
+
+        # 陽吞噬/陰吞噬：當日K棒連影線完整包住前一日K棒
+        # 陽吞：今紅K + 昨黑K + 今高≥昨高 + 今低≤昨低
+        # 陰吞：今黑K + 昨紅K + 今高≥昨高 + 今低≤昨低
+        if check_engulf_bull or check_engulf_bear:
+            if any(v is None for v in (prev_open_gap, prev_close_gap, prev_high, prev_low)):
+                _gap_unverified.add(code)  # 前一日資料缺失 → 放行並標記
+            else:
+                _cover = (round(h, 4) >= round(prev_high, 4)
+                          and round(l, 4) <= round(prev_low, 4))
+                _bull_ok = (check_engulf_bull and c > o
+                            and prev_close_gap < prev_open_gap and _cover)
+                _bear_ok = (check_engulf_bear and c < o
+                            and prev_close_gap > prev_open_gap and _cover)
+                if not (_bull_ok or _bear_ok):
                     continue
 
         # 賺向下跳空價差（選定日期D，篩選D_prev跳空向下 + D當天突破 + 跳空≥1 + D_prev縮量）

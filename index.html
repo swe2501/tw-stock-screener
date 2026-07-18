@@ -1236,6 +1236,20 @@
           </div>
         </label>
         <label class="checkbox-row">
+          <input type="checkbox" id="engulf_bull" />
+          <div>
+            <div class="cb-label">陽吞噬</div>
+            <div class="cb-hint">當日紅K，連影線完整包住前一日黑K</div>
+          </div>
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="engulf_bear" />
+          <div>
+            <div class="cb-label">陰吞噬</div>
+            <div class="cb-hint">當日黑K，連影線完整包住前一日紅K</div>
+          </div>
+        </label>
+        <label class="checkbox-row">
           <input type="checkbox" id="gap_down" onchange="if(!this.checked) document.getElementById('gap_down_min').value=''" />
           <div>
             <div class="cb-label">跳空向下</div>
@@ -1454,6 +1468,8 @@
       const shrinkMult = parseFloat(document.getElementById('shrink_multiplier').value) || 0;
       const limitUp = document.getElementById('limit_up').checked;
       const doji    = document.getElementById('doji').checked;
+      const engulfBull = document.getElementById('engulf_bull').checked;
+      const engulfBear = document.getElementById('engulf_bear').checked;
       const gapUp   = document.getElementById('gap_up').checked;
       const gapDown = document.getElementById('gap_down').checked;
       const gapDownMin = parseFloat(document.getElementById('gap_down_min').value) || 0;
@@ -1490,6 +1506,8 @@
         shrink_multiplier: shrinkMult,
         limit_up: limitUp,
         doji:     doji,
+        engulf_bull: engulfBull,
+        engulf_bear: engulfBear,
         gap_up:   gapUp,
         gap_down: gapDown,
         gap_down_min: gapDownMin,
