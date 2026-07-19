@@ -1939,13 +1939,20 @@
         `${d}${_sigIdx === 0 ? '（最新）' : ''}`;
       const rows = _sigRows.filter(x => x.signal_date === d);
 
-      const section = (method, title) => {
-        const rs = rows.filter(x => x.method === method);
+      // ⭐ 雙榜交集：同一分點+同一股票同時出現在張數表與金額表
+      const _amtMap = new Map(rows.filter(x => x.method === 'amount')
+        .map(x => [`${x.broker_id}|${x.code}`, x]));
+      const overlap = rows.filter(x => x.method === 'lots'
+        && _amtMap.has(`${x.broker_id}|${x.code}`))
+        .map(x => ({ ...x, rank_amt: _amtMap.get(`${x.broker_id}|${x.code}`).rank }));
+
+      const section = (method, title, rsOverride) => {
+        const rs = rsOverride || rows.filter(x => x.method === method);
         if (!rs.length) return `<h4 style="margin:14px 0 6px;color:var(--text)">${title}</h4><div>當日無買超訊號</div>`;
         const tr = rs.map(x => `
           <tr onclick="_sigOpenChart('${x.code}')"
               style="cursor:pointer;border-bottom:1px solid var(--border)">
-            <td style="padding:4px 8px;text-align:center">${x.rank}</td>
+            <td style="padding:4px 8px;text-align:center">${x.rank_amt != null ? `${x.rank}／${x.rank_amt}` : x.rank}</td>
             <td style="padding:4px 8px">${x.broker_name}</td>
             <td style="padding:4px 8px;color:#4da3ff">${x.code}</td>
             <td style="padding:4px 8px;text-align:right">${Number(x.net_lots).toLocaleString()}</td>
@@ -1964,7 +1971,8 @@
             </tr></thead><tbody>${tr}</tbody>
           </table></div>`;
       };
-      el.innerHTML = section('lots', '📊 張數制排行榜前 20 分點')
+      el.innerHTML = section(null, '⭐ 雙榜交集（分點與買超同時符合兩榜，訊號最強）', overlap)
+                   + section('lots', '📊 張數制排行榜前 20 分點')
                    + section('amount', '💰 金額制排行榜前 20 分點');
     }
 
