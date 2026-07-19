@@ -1894,6 +1894,14 @@
     let _sigDates = [];       // 可用日期（新→舊）
     let _sigIdx = 0;          // 目前顯示第幾個日期
 
+    let _sigReturn = false;  // 從主力訊號開的 K 圖，關閉後要回到訊號視窗
+
+    function _sigOpenChart(code) {
+      document.getElementById('brokerSigModal').style.display = 'none';
+      _sigReturn = true;
+      openChart(code, code);
+    }
+
     async function openBrokerSignals() {
       document.getElementById('brokerSigModal').style.display = 'flex';
       if (_sigRows) { _renderSignals(); return; }
@@ -1935,7 +1943,7 @@
         const rs = rows.filter(x => x.method === method);
         if (!rs.length) return `<h4 style="margin:14px 0 6px;color:var(--text)">${title}</h4><div>當日無買超訊號</div>`;
         const tr = rs.map(x => `
-          <tr onclick="document.getElementById('brokerSigModal').style.display='none';openChart('${x.code}','${x.code}')"
+          <tr onclick="_sigOpenChart('${x.code}')"
               style="cursor:pointer;border-bottom:1px solid var(--border)">
             <td style="padding:4px 8px;text-align:center">${x.rank}</td>
             <td style="padding:4px 8px">${x.broker_name}</td>
@@ -2311,6 +2319,11 @@
       document.getElementById('chartModal').classList.remove('open');
       _destroyCharts();
       _resetDrawingState();
+      // 從主力訊號面板點進來的 → 關閉 K 圖後回到訊號視窗
+      if (_sigReturn) {
+        _sigReturn = false;
+        document.getElementById('brokerSigModal').style.display = 'flex';
+      }
     }
 
     // ── 即時 K 棒 ─────────────────────────────────────────────
