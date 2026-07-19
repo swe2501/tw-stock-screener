@@ -64,11 +64,13 @@ def trading_days_between(prices, code, d1, d2):
     return max(bisect_right(dates, d2) - bisect_right(dates, d1), 0)
 
 
-def analyze(conn, prices, codes=None, min_lots=300, min_events=5, hold_days=(5, 20)):
+def analyze(conn, prices, codes=None, min_lots=300, min_events=5, hold_days=(5, 20),
+            min_amount_wan=0):
     """
     單次掃描 wantgoo_daily（依 broker_id, code, trade_date 排序）同時計算：
       事件法統計 + FIFO 配對統計，彙整到 broker 層級。
     hold_days：事件法觀察的交易日窗口，可多組（如 3,10,60）。
+    事件門檻擇一：min_amount_wan > 0 時用金額制（淨買超金額 ≥ 此值萬元），否則用張數制。
     """
     stat = defaultdict(lambda: {
         "name": "", "events": 0,
@@ -118,9 +120,16 @@ def analyze(conn, prices, codes=None, min_lots=300, min_events=5, hold_days=(5, 
             s["name"] = bname
         net = (buy or 0) - (sell or 0)
 
-        # ── 事件法：單日淨買超 ≥ min_lots ──
-        if net >= min_lots:
-            entry = bavg or (prices.get(code) and prices[code][1].get(d))
+        # ── 事件法：張數制（淨買超 ≥ min_lots 張）或金額制（淨買超金額 ≥ min_amount 萬元）──
+        entry_ref = bavg or (prices.get(code) and prices[code][1].get(d))
+        if min_amount_wan > 0:
+            # 金額 = 張數 × 1000 股 × 價格；門檻單位為萬元
+            is_event = (net > 0 and entry_ref
+                        and net * 1000 * entry_ref >= min_amount_wan * 10000)
+        else:
+            is_event = net >= min_lots
+        if is_event:
+            entry = entry_ref
             if entry:
                 s["events"] += 1
                 for n in hold_days:
@@ -169,7 +178,9 @@ def analyze(conn, prices, codes=None, min_lots=300, min_events=5, hold_days=(5, 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--codes", help="限定股票代碼（逗號分隔），預設全市場")
-    ap.add_argument("--min-lots", type=int, default=300, help="事件門檻：單日淨買超張數")
+    ap.add_argument("--min-lots", type=int, default=300, help="事件門檻（張數制）：單日淨買超張數")
+    ap.add_argument("--min-amount", type=int, default=0,
+                    help="事件門檻（金額制，萬元）：單日淨買超金額，例 3000=3000萬。指定後取代張數制")
     ap.add_argument("--min-events", type=int, default=5, help="至少幾次事件才列入排行")
     ap.add_argument("--top", type=int, default=30, help="顯示前幾名")
     ap.add_argument("--days", default="5,20", help="事件法觀察天數，逗號分隔（例：3,10,60）")
@@ -181,8 +192,11 @@ def main():
     print("載入收盤價...")
     prices = load_prices(conn, codes)
     print(f"  {len(prices)} 支股票有價格資料")
-    print(f"分析分點（事件門檻 淨買超≥{args.min_lots}張，最少{args.min_events}次，窗口 {hold_days} 日）...")
-    rows = analyze(conn, prices, codes, args.min_lots, args.min_events, hold_days)
+    th_desc = (f"淨買超金額≥{args.min_amount}萬元" if args.min_amount > 0
+               else f"淨買超≥{args.min_lots}張")
+    print(f"分析分點（事件門檻 {th_desc}，最少{args.min_events}次，窗口 {hold_days} 日）...")
+    rows = analyze(conn, prices, codes, args.min_lots, args.min_events, hold_days,
+                   min_amount_wan=args.min_amount)
     print(f"  符合條件分點：{len(rows)} 個\n")
 
     day_hdr = "".join(f"{str(n)+'日勝率':>9}{str(n)+'日均報':>9}" for n in hold_days)
@@ -195,11 +209,19 @@ def main():
               f"{day_cells}"
               f"{r['closed_trades']:>7}{str(r['closed_win']) + '%':>9}{str(r['avg_hold']):>7}")
 
-    with open(OUT_CSV, "w", newline="", encoding="utf-8-sig") as f:
+    out = OUT_CSV
+    try:
+        f = open(out, "w", newline="", encoding="utf-8-sig")
+    except PermissionError:
+        # 原檔被 Excel 開啟鎖住 → 改存帶時間戳的檔名
+        from datetime import datetime as _dt
+        out = OUT_CSV.with_name(f"broker_rank_{_dt.now():%Y%m%d_%H%M%S}.csv")
+        f = open(out, "w", newline="", encoding="utf-8-sig")
+    with f:
         w = csv.DictWriter(f, fieldnames=list(rows[0].keys()) if rows else [])
         w.writeheader()
         w.writerows(rows)
-    print(f"\n完整結果已存 {OUT_CSV}")
+    print(f"\n完整結果已存 {out}")
 
 
 if __name__ == "__main__":
