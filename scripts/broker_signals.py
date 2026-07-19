@@ -29,6 +29,8 @@ TOP_N       = 20    # 每種方法追蹤前幾名
 MIN_LOTS_TH = 300   # 張數制事件門檻
 MIN_AMT_TH  = 3000  # 金額制事件門檻（萬元）
 MIN_EVENTS  = 10
+RANK_CACHE  = Path(r"D:\stock_data\broker_rankings.json")  # 排行榜快取
+RANK_TTL_DAYS = 7   # 快取超過幾天自動重算（排行榜每週更新一次即可）
 # 當日買超顯示門檻（按榜單分流：張數榜只看張數、金額榜只看金額）
 SHOW_MIN_LOTS = 50    # lots 榜：買超 ≥ 50 張
 SHOW_MIN_WAN  = 500   # amount 榜：買超金額 ≥ 500 萬
@@ -111,7 +113,34 @@ def collect_signals(conn, prices, sig_date, method, top_rows):
     return records
 
 
+def get_rankings(conn, prices, force=False):
+    """排行榜每週重算一次，其餘日子讀快取（重算要掃兩遍全量資料，30~60 分鐘）。"""
+    if not force and RANK_CACHE.exists():
+        try:
+            data = json.loads(RANK_CACHE.read_text(encoding="utf-8"))
+            age_days = (time.time() - data.get("computed_ts", 0)) / 86400
+            if age_days < RANK_TTL_DAYS:
+                print(f"使用排行榜快取（{data.get('computed_at')} 計算，{age_days:.1f} 天前）")
+                return data["lots"], data["amount"]
+        except Exception:
+            pass  # 快取壞掉就重算
+    print(f"重算排行榜（張數制 ≥{MIN_LOTS_TH} 張）...")
+    top_lots = ba.analyze(conn, prices, min_lots=MIN_LOTS_TH, min_events=MIN_EVENTS)[:TOP_N]
+    print(f"重算排行榜（金額制 ≥{MIN_AMT_TH} 萬）...")
+    top_amt = ba.analyze(conn, prices, min_events=MIN_EVENTS,
+                         min_amount_wan=MIN_AMT_TH)[:TOP_N]
+    from datetime import datetime as _dt
+    RANK_CACHE.write_text(json.dumps({
+        "computed_ts": time.time(),
+        "computed_at": f"{_dt.now():%Y-%m-%d %H:%M}",
+        "lots": top_lots, "amount": top_amt,
+    }, ensure_ascii=False), encoding="utf-8")
+    print(f"排行榜已存快取 {RANK_CACHE}")
+    return top_lots, top_amt
+
+
 def main():
+    force = "--recompute" in sys.argv  # 手動強制重算排行榜
     env = _load_env()
     conn = sqlite3.connect(str(ba.DB_PATH))
 
@@ -121,11 +150,7 @@ def main():
     print("載入收盤價...")
     prices = ba.load_prices(conn)
 
-    print(f"重算排行榜（張數制 ≥{MIN_LOTS_TH} 張）...")
-    top_lots = ba.analyze(conn, prices, min_lots=MIN_LOTS_TH, min_events=MIN_EVENTS)[:TOP_N]
-    print(f"重算排行榜（金額制 ≥{MIN_AMT_TH} 萬）...")
-    top_amt = ba.analyze(conn, prices, min_events=MIN_EVENTS,
-                         min_amount_wan=MIN_AMT_TH)[:TOP_N]
+    top_lots, top_amt = get_rankings(conn, prices, force=force)
 
     records = (collect_signals(conn, prices, sig_date, "lots", top_lots)
                + collect_signals(conn, prices, sig_date, "amount", top_amt))
