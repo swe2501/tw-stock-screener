@@ -29,9 +29,9 @@ TOP_N       = 20    # 每種方法追蹤前幾名
 MIN_LOTS_TH = 300   # 張數制事件門檻
 MIN_AMT_TH  = 3000  # 金額制事件門檻（萬元）
 MIN_EVENTS  = 10
-# 當日買超顯示門檻（太小的雜訊不上傳）
-SHOW_MIN_LOTS = 50
-SHOW_MIN_WAN  = 500
+# 當日買超顯示門檻（按榜單分流：張數榜只看張數、金額榜只看金額）
+SHOW_MIN_LOTS = 50    # lots 榜：買超 ≥ 50 張
+SHOW_MIN_WAN  = 500   # amount 榜：買超金額 ≥ 500 萬
 
 
 def _load_env():
@@ -87,8 +87,13 @@ def collect_signals(conn, prices, sig_date, method, top_rows):
             continue
         price = bavg or (prices.get(code) and prices[code][1].get(sig_date))
         amt_wan = round(net * 1000 * price / 10000, 1) if price else None
-        if net < SHOW_MIN_LOTS and (amt_wan or 0) < SHOW_MIN_WAN:
-            continue
+        # 門檻按榜單分流：與該排行榜自身的邏輯一致
+        if method == "lots":
+            if net < SHOW_MIN_LOTS:
+                continue
+        else:  # amount
+            if (amt_wan or 0) < SHOW_MIN_WAN:
+                continue
         rank, r = id_rank[bid]
         records.append({
             "signal_date": sig_date,
