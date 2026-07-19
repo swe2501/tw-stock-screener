@@ -1893,6 +1893,9 @@
     let _sigRows = null;      // 全部訊號列
     let _sigDates = [];       // 可用日期（新→舊）
     let _sigIdx = 0;          // 目前顯示第幾個日期
+    let _sigTab = 'overlap';  // 目前分頁：overlap / lots / amount
+
+    function _sigSetTab(tab) { _sigTab = tab; _renderSignals(); }
 
     let _sigReturn = false;  // 從主力訊號開的 K 圖，關閉後要回到訊號視窗
 
@@ -1946,9 +1949,9 @@
         && _amtMap.has(`${x.broker_id}|${x.code}`))
         .map(x => ({ ...x, rank_amt: _amtMap.get(`${x.broker_id}|${x.code}`).rank }));
 
-      const section = (method, title, rsOverride) => {
+      const section = (method, rsOverride) => {
         const rs = rsOverride || rows.filter(x => x.method === method);
-        if (!rs.length) return `<h4 style="margin:14px 0 6px;color:var(--text)">${title}</h4><div>當日無買超訊號</div>`;
+        if (!rs.length) return `<div style="padding:16px 0">當日無買超訊號</div>`;
         const tr = rs.map(x => `
           <tr onclick="_sigOpenChart('${x.code}')"
               style="cursor:pointer;border-bottom:1px solid var(--border)">
@@ -1961,7 +1964,6 @@
             <td style="padding:4px 8px;text-align:right;color:#e6a23c">${x.win20 ?? '–'}%</td>
           </tr>`).join('');
         return `
-          <h4 style="margin:14px 0 6px;color:var(--text)">${title}</h4>
           <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px">
             <thead><tr style="color:var(--text-muted);border-bottom:1px solid var(--border)">
               <th style="padding:4px 8px">榜上排名</th><th style="padding:4px 8px;text-align:left">分點</th>
@@ -1971,9 +1973,27 @@
             </tr></thead><tbody>${tr}</tbody>
           </table></div>`;
       };
-      el.innerHTML = section(null, '⭐ 雙榜交集（分點與買超同時符合兩榜，訊號最強）', overlap)
-                   + section('lots', '📊 張數制排行榜前 20 分點')
-                   + section('amount', '💰 金額制排行榜前 20 分點');
+      const tabBtn = (id, label, count) => {
+        const active = _sigTab === id;
+        return `<button onclick="_sigSetTab('${id}')" style="padding:5px 14px;border-radius:6px 6px 0 0;
+          border:1px solid var(--border);border-bottom:${active ? 'none' : '1px solid var(--border)'};
+          background:${active ? 'var(--bg-card)' : 'transparent'};
+          color:${active ? 'var(--text-primary)' : 'var(--text-muted)'};
+          font-weight:${active ? '700' : '400'};cursor:pointer;font-size:13px">${label}（${count}）</button>`;
+      };
+      const lotsRows = rows.filter(x => x.method === 'lots');
+      const amtRows  = rows.filter(x => x.method === 'amount');
+      el.innerHTML = `
+        <div style="display:flex;gap:4px;margin-bottom:0">
+          ${tabBtn('overlap', '⭐ 雙榜交集', overlap.length)}
+          ${tabBtn('lots', '📊 張數制', lotsRows.length)}
+          ${tabBtn('amount', '💰 金額制', amtRows.length)}
+        </div>
+        <div style="border:1px solid var(--border);border-top:none;padding:4px 8px 8px">
+          ${_sigTab === 'overlap' ? section(null, overlap)
+            : _sigTab === 'lots' ? section('lots')
+            : section('amount')}
+        </div>`;
     }
 
     // ── 除權息資訊 ─────────────────────────────────────────
