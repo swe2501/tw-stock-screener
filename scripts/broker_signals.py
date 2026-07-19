@@ -55,7 +55,8 @@ def _sb(env, path, method="GET", body=None, params=None, retries=3):
         "Content-Type": "application/json",
         "apikey": env["SUPABASE_ANON_KEY"],
         "Authorization": f"Bearer {env['SUPABASE_ANON_KEY']}",
-        "Prefer": "return=minimal",  # 純 insert（先 DELETE 再寫入，不用 upsert，避免需要 update 權限）
+        # insert + 重複忽略（ON CONFLICT DO NOTHING，不需 update 權限；防手動執行與排程打架）
+        "Prefer": "return=minimal,resolution=ignore-duplicates" if method == "POST" else "return=minimal",
     }
     for attempt in range(retries):
         req = urllib.request.Request(url, data=data, headers=headers, method=method)
@@ -164,7 +165,8 @@ def main():
                     params=[("signal_date", f"eq.{sig_date}")])
     if status not in (200, 204):
         print(f"[warn] 刪除舊資料失敗 ({status})")
-    status, resp = _sb(env, "/broker_signals", method="POST", body=records)
+    status, resp = _sb(env, "/broker_signals", method="POST", body=records,
+                       params=[("on_conflict", "signal_date,method,broker_id,code")])
     if status in (200, 201):
         print(f"已上傳 {len(records)} 筆到 Supabase broker_signals")
     else:
