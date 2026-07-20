@@ -47,14 +47,17 @@ def _load_env():
 
 
 def _sb(env, path, method="GET", body=None, params=None, retries=3):
+    # broker_signals 表僅擁有者可讀（RLS），帶條件的 DELETE 需要列可見性，
+    # 匿名金鑰做不到 → 必須用 service_role 金鑰（只存在本機 .env.local）
+    key = env.get("SUPABASE_SERVICE_KEY") or env["SUPABASE_ANON_KEY"]
     url = f"{env['SUPABASE_URL']}/rest/v1{path}"
     if params:
         url += "?" + urllib.parse.urlencode(params)
     data = json.dumps(body).encode() if body else None
     headers = {
         "Content-Type": "application/json",
-        "apikey": env["SUPABASE_ANON_KEY"],
-        "Authorization": f"Bearer {env['SUPABASE_ANON_KEY']}",
+        "apikey": key,
+        "Authorization": f"Bearer {key}",
         # 純 insert：RLS 只開 insert/delete 給匿名端，任何 on_conflict 模式都需要
         # select/update 權限（會被擋）。先 DELETE 當日資料再寫入即可保證不重複。
         "Prefer": "return=minimal",
@@ -144,6 +147,9 @@ def get_rankings(conn, prices, force=False):
 def main():
     force = "--recompute" in sys.argv  # 手動強制重算排行榜
     env = _load_env()
+    if not env.get("SUPABASE_SERVICE_KEY"):
+        print("[error] .env.local 缺少 SUPABASE_SERVICE_KEY（上傳訊號需要），中止")
+        sys.exit(1)
     conn = sqlite3.connect(str(ba.DB_PATH))
 
     sig_date = conn.execute("select max(trade_date) from wantgoo_daily").fetchone()[0]
