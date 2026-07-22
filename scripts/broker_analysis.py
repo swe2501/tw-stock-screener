@@ -65,12 +65,14 @@ def trading_days_between(prices, code, d1, d2):
 
 
 def analyze(conn, prices, codes=None, min_lots=300, min_events=5, hold_days=(5, 20),
-            min_amount_wan=0):
+            min_amount_wan=0, max_lots=0, max_amount_wan=0, date_from=None):
     """
     單次掃描 wantgoo_daily（依 broker_id, code, trade_date 排序）同時計算：
       事件法統計 + FIFO 配對統計，彙整到 broker 層級。
     hold_days：事件法觀察的交易日窗口，可多組（如 3,10,60）。
     事件門檻擇一：min_amount_wan > 0 時用金額制（淨買超金額 ≥ 此值萬元），否則用張數制。
+    max_lots / max_amount_wan：上限（>0 時啟用），用於「小單區間」如 50~300 張。
+    date_from：只統計此日期(含)之後的交易日（YYYY-MM-DD），用於 90 日窗口回測。
     """
     stat = defaultdict(lambda: {
         "name": "", "events": 0,
@@ -82,11 +84,17 @@ def analyze(conn, prices, codes=None, min_lots=300, min_events=5, hold_days=(5, 
 
     q = ("select broker_id, broker_name, code, trade_date, buy_vol, sell_vol, "
          "buy_avg_price, sell_avg_price from wantgoo_daily")
-    args = ()
+    conds, args = [], []
     if codes:
-        q += f" where code in ({','.join('?' * len(codes))})"
-        args = tuple(codes)
+        conds.append(f"code in ({','.join('?' * len(codes))})")
+        args.extend(codes)
+    if date_from:
+        conds.append("trade_date >= ?")
+        args.append(date_from)
+    if conds:
+        q += " where " + " and ".join(conds)
     q += " order by broker_id, code, trade_date"
+    args = tuple(args)
 
     cur_key = None
     fifo = []  # [(qty, price, date), ...]
@@ -121,13 +129,16 @@ def analyze(conn, prices, codes=None, min_lots=300, min_events=5, hold_days=(5, 
         net = (buy or 0) - (sell or 0)
 
         # ── 事件法：張數制（淨買超 ≥ min_lots 張）或金額制（淨買超金額 ≥ min_amount 萬元）──
+        # 可加上限（小單區間）：max_lots / max_amount_wan
         entry_ref = bavg or (prices.get(code) and prices[code][1].get(d))
         if min_amount_wan > 0:
             # 金額 = 張數 × 1000 股 × 價格；門檻單位為萬元
-            is_event = (net > 0 and entry_ref
-                        and net * 1000 * entry_ref >= min_amount_wan * 10000)
+            amt = net * 1000 * entry_ref if (net > 0 and entry_ref) else 0
+            is_event = (amt >= min_amount_wan * 10000
+                        and (max_amount_wan <= 0 or amt < max_amount_wan * 10000))
         else:
-            is_event = net >= min_lots
+            is_event = (net >= min_lots
+                        and (max_lots <= 0 or net < max_lots))
         if is_event:
             entry = entry_ref
             if entry:
