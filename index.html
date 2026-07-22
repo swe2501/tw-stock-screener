@@ -1893,7 +1893,8 @@
     let _sigRows = null;      // 全部訊號列
     let _sigDates = [];       // 可用日期（新→舊）
     let _sigIdx = 0;          // 目前顯示第幾個日期
-    let _sigTab = 'overlap';  // 目前分頁：overlap / lots / amount
+    let _sigTab = 'overlap';  // 目前分頁：overlap / lots / amount / stats
+    let _sigStats = [];       // 實測勝率統計
 
     function _sigSetTab(tab) { _sigTab = tab; _renderSignals(); }
 
@@ -1917,6 +1918,14 @@
         _sigRows = await r.json();
         _sigDates = [...new Set(_sigRows.map(x => x.signal_date))];
         _sigIdx = 0;
+        // 實測勝率統計（另一張表，讀不到不影響主功能）
+        try {
+          const r2 = await fetch(`${SIG_SB_URL}/rest/v1/signal_stats`
+            + `?select=*&order=win20_pct.desc.nullslast,win8_pct.desc.nullslast`, {
+            headers: { apikey: SIG_SB_ANON, Authorization: `Bearer ${_authToken}` },
+          });
+          _sigStats = r2.ok ? await r2.json() : [];
+        } catch (_) { _sigStats = []; }
         _renderSignals();
       } catch (e) {
         document.getElementById('sigContent').textContent = '載入失敗：' + e.message;
@@ -1962,6 +1971,7 @@
             <td style="padding:4px 8px;text-align:right">${x.net_amount_wan != null ? Number(x.net_amount_wan).toLocaleString() : '–'}</td>
             <td style="padding:4px 8px;text-align:right">${x.buy_avg_price ?? '–'}</td>
             <td style="padding:4px 8px;text-align:right;color:#e6a23c">${x.win20 ?? '–'}%</td>
+            <td style="padding:4px 8px;text-align:right">${x.year_events ?? '–'}</td>
           </tr>`).join('');
         return `
           <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px">
@@ -1970,6 +1980,7 @@
               <th style="padding:4px 8px;text-align:left">股票</th><th style="padding:4px 8px;text-align:right">買超(張)</th>
               <th style="padding:4px 8px;text-align:right">金額(萬)</th><th style="padding:4px 8px;text-align:right">買進均價</th>
               <th style="padding:4px 8px;text-align:right">分點20日勝率</th>
+              <th style="padding:4px 8px;text-align:right" title="該分點過去一年出重手總次數">往年事件</th>
             </tr></thead><tbody>${tr}</tbody>
           </table></div>`;
       };
@@ -1984,16 +1995,47 @@
       const lotsRows = rows.filter(x => x.method === 'lots');
       const amtRows  = rows.filter(x => x.method === 'amount');
       el.innerHTML = `
-        <div style="display:flex;gap:4px;margin-bottom:0">
+        <div style="display:flex;gap:4px;margin-bottom:0;flex-wrap:wrap">
           ${tabBtn('overlap', '⭐ 雙榜交集', overlap.length)}
           ${tabBtn('lots', '📊 張數制', lotsRows.length)}
           ${tabBtn('amount', '💰 金額制', amtRows.length)}
+          ${tabBtn('stats', '📈 實測勝率', _sigStats.length)}
         </div>
         <div style="border:1px solid var(--border);border-top:none;padding:4px 8px 8px">
           ${_sigTab === 'overlap' ? section(null, overlap)
             : _sigTab === 'lots' ? section('lots')
-            : section('amount')}
+            : _sigTab === 'amount' ? section('amount')
+            : _statsSection()}
         </div>`;
+    }
+
+    function _statsSection() {
+      if (!_sigStats.length) return `<div style="padding:16px 0">尚無實測統計（訊號要滿 8 個交易日後才有第一批數字）</div>`;
+      const tr = _sigStats.map(x => `
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:4px 8px">${x.broker_name || x.broker_id}</td>
+          <td style="padding:4px 8px;text-align:center">${x.method === 'lots' ? '張數' : '金額'}</td>
+          <td style="padding:4px 8px;text-align:right">${x.signals_total}</td>
+          <td style="padding:4px 8px;text-align:right">${x.n8}</td>
+          <td style="padding:4px 8px;text-align:right;color:#e6a23c">${x.win8_pct != null ? x.win8_pct + '%' : '–'}</td>
+          <td style="padding:4px 8px;text-align:right">${x.avg_ret8 != null ? x.avg_ret8 + '%' : '–'}</td>
+          <td style="padding:4px 8px;text-align:right">${x.n20}</td>
+          <td style="padding:4px 8px;text-align:right;color:#e6a23c">${x.win20_pct != null ? x.win20_pct + '%' : '–'}</td>
+          <td style="padding:4px 8px;text-align:right">${x.avg_ret20 != null ? x.avg_ret20 + '%' : '–'}</td>
+        </tr>`).join('');
+      return `
+        <div style="font-size:11px;color:var(--text-muted);padding:6px 0 2px">
+          每天上榜訊號的「事後追蹤」：買進均價 vs 8／20 個交易日後收盤價（自 2026-07-17 起累積）</div>
+        <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px">
+          <thead><tr style="color:var(--text-muted);border-bottom:1px solid var(--border)">
+            <th style="padding:4px 8px;text-align:left">分點</th><th style="padding:4px 8px">榜別</th>
+            <th style="padding:4px 8px;text-align:right">總訊號</th>
+            <th style="padding:4px 8px;text-align:right">8日樣本</th><th style="padding:4px 8px;text-align:right">8日勝率</th>
+            <th style="padding:4px 8px;text-align:right">8日均報</th>
+            <th style="padding:4px 8px;text-align:right">20日樣本</th><th style="padding:4px 8px;text-align:right">20日勝率</th>
+            <th style="padding:4px 8px;text-align:right">20日均報</th>
+          </tr></thead><tbody>${tr}</tbody>
+        </table></div>`;
     }
 
     // ── 除權息資訊 ─────────────────────────────────────────

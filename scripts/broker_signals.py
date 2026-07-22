@@ -31,9 +31,9 @@ MIN_AMT_TH  = 3000  # 金額制事件門檻（萬元）
 MIN_EVENTS  = 10
 RANK_CACHE  = Path(r"D:\stock_data\broker_rankings.json")  # 排行榜快取
 RANK_TTL_DAYS = 7   # 快取超過幾天自動重算（排行榜每週更新一次即可）
-# 當日買超顯示門檻（按榜單分流：張數榜只看張數、金額榜只看金額）
-SHOW_MIN_LOTS = 50    # lots 榜：買超 ≥ 50 張
-SHOW_MIN_WAN  = 500   # amount 榜：買超金額 ≥ 500 萬
+# 當日買超顯示門檻（2026-07-21 起與排行榜「事件」口徑一致：只顯示重手）
+SHOW_MIN_LOTS = 300    # lots 榜：單日淨買超 ≥ 300 張
+SHOW_MIN_WAN  = 3000   # amount 榜：單日淨買超金額 ≥ 3000 萬
 
 
 def _load_env():
@@ -113,6 +113,7 @@ def collect_signals(conn, prices, sig_date, method, top_rows):
             "net_amount_wan": amt_wan,
             "buy_avg_price": round(price, 2) if price else None,
             "win20": r.get("win20"),
+            "year_events": r.get("events"),  # 該分點過去一年出重手總次數
         })
     records.sort(key=lambda x: (x["rank"], -(x["net_amount_wan"] or 0)))
     return records
@@ -144,13 +145,139 @@ def get_rankings(conn, prices, force=False):
     return top_lots, top_amt
 
 
+def _local_signal_table(conn):
+    """本機訊號留存表（實測勝率評分用）。"""
+    conn.execute("""
+        create table if not exists broker_signals_local (
+            signal_date    text not null,
+            method         text not null,
+            rank           integer,
+            broker_id      text not null,
+            broker_name    text,
+            code           text not null,
+            net_lots       integer,
+            net_amount_wan real,
+            buy_avg_price  real,
+            ret8           real,   -- 8 個交易日後報酬 %（期滿才填）
+            ret20          real,   -- 20 個交易日後報酬 %
+            primary key (signal_date, method, broker_id, code)
+        )
+    """)
+    conn.commit()
+
+
+def save_signals_local(conn, records):
+    _local_signal_table(conn)
+    conn.executemany("""
+        insert or replace into broker_signals_local
+        (signal_date, method, rank, broker_id, broker_name, code,
+         net_lots, net_amount_wan, buy_avg_price, ret8, ret20)
+        values (:signal_date, :method, :rank, :broker_id, :broker_name, :code,
+                :net_lots, :net_amount_wan, :buy_avg_price,
+                coalesce((select ret8  from broker_signals_local
+                          where signal_date=:signal_date and method=:method
+                            and broker_id=:broker_id and code=:code), null),
+                coalesce((select ret20 from broker_signals_local
+                          where signal_date=:signal_date and method=:method
+                            and broker_id=:broker_id and code=:code), null))
+    """, records)
+    conn.commit()
+
+
+def evaluate_signals(conn, prices):
+    """對觀察期已滿的訊號計算 8/20 日報酬（用收盤價 vs 買進均價）。"""
+    _local_signal_table(conn)
+    updated = 0
+    rows = conn.execute("""
+        select rowid, code, signal_date, buy_avg_price, ret8, ret20
+        from broker_signals_local
+        where (ret8 is null or ret20 is null) and buy_avg_price is not null
+    """).fetchall()
+    for rowid, code, d, entry, ret8, ret20 in rows:
+        sets = {}
+        if ret8 is None:
+            c8 = ba.close_after(prices, code, d, 8)
+            if c8:
+                sets["ret8"] = round((c8 - entry) / entry * 100, 2)
+        if ret20 is None:
+            c20 = ba.close_after(prices, code, d, 20)
+            if c20:
+                sets["ret20"] = round((c20 - entry) / entry * 100, 2)
+        if sets:
+            conn.execute(
+                f"update broker_signals_local set {', '.join(k + '=?' for k in sets)} where rowid=?",
+                (*sets.values(), rowid))
+            updated += 1
+    conn.commit()
+    print(f"實測評分：更新 {updated} 筆（8/20 日觀察期滿的訊號）")
+
+
+def upload_signal_stats(conn, env):
+    """彙總每個分點的實測勝率，整表覆蓋上傳 signal_stats。"""
+    rows = conn.execute("""
+        select broker_id, max(broker_name), method, count(*),
+               count(ret8),  avg(case when ret8  > 0 then 100.0 else 0 end),  avg(ret8),
+               count(ret20), avg(case when ret20 > 0 then 100.0 else 0 end), avg(ret20)
+        from broker_signals_local
+        group by broker_id, method
+    """).fetchall()
+    stats = []
+    for bid, bname, method, total, n8, win8, avg8, n20, win20, avg20 in rows:
+        # avg(case...) 是全樣本的比例，改為只對已評分樣本計算
+        w8 = conn.execute("""select avg(case when ret8 > 0 then 100.0 else 0 end)
+                             from broker_signals_local
+                             where broker_id=? and method=? and ret8 is not null""",
+                          (bid, method)).fetchone()[0]
+        w20 = conn.execute("""select avg(case when ret20 > 0 then 100.0 else 0 end)
+                              from broker_signals_local
+                              where broker_id=? and method=? and ret20 is not null""",
+                           (bid, method)).fetchone()[0]
+        stats.append({
+            "broker_id": bid, "broker_name": bname, "method": method,
+            "signals_total": total,
+            "n8": n8,  "win8_pct":  round(w8, 1)  if w8  is not None else None,
+            "avg_ret8":  round(avg8, 2)  if avg8  is not None else None,
+            "n20": n20, "win20_pct": round(w20, 1) if w20 is not None else None,
+            "avg_ret20": round(avg20, 2) if avg20 is not None else None,
+        })
+    if not stats:
+        return
+    _sb(env, "/signal_stats", method="DELETE", params=[("broker_id", "neq.__none__")])
+    status, resp = _sb(env, "/signal_stats", method="POST", body=stats)
+    if status in (200, 201):
+        print(f"實測統計已上傳 {len(stats)} 個分點")
+    else:
+        print(f"[warn] 實測統計上傳失敗 ({status}): {resp}")
+
+
+def backfill_signals(conn, prices, top_lots, top_amt, days):
+    """用目前名單回填過去 N 個交易日的訊號到本機表（供實測勝率立即有樣本）。
+    注意：回填部分含後見之明成分（名單由涵蓋該期間的資料選出），
+    正式的純實測樣本從每日排程啟用日起累積。"""
+    dates = [r[0] for r in conn.execute(
+        "select distinct trade_date from wantgoo_daily order by trade_date desc limit ?",
+        (days,))]
+    total = 0
+    for d in sorted(dates):
+        recs = (collect_signals(conn, prices, d, "lots", top_lots)
+                + collect_signals(conn, prices, d, "amount", top_amt))
+        if recs:
+            save_signals_local(conn, recs)
+            total += len(recs)
+    print(f"回填 {len(dates)} 個交易日、{total} 筆訊號到本機表")
+
+
 def main():
     force = "--recompute" in sys.argv  # 手動強制重算排行榜
+    backfill_days = 0
+    if "--backfill-days" in sys.argv:
+        backfill_days = int(sys.argv[sys.argv.index("--backfill-days") + 1])
     env = _load_env()
     if not env.get("SUPABASE_SERVICE_KEY"):
         print("[error] .env.local 缺少 SUPABASE_SERVICE_KEY（上傳訊號需要），中止")
         sys.exit(1)
     conn = sqlite3.connect(str(ba.DB_PATH))
+    conn.execute("pragma busy_timeout = 60000")  # 與爬蟲併行時等待鎖，不直接失敗
 
     sig_date = conn.execute("select max(trade_date) from wantgoo_daily").fetchone()[0]
     print(f"訊號日期：{sig_date}")
@@ -159,6 +286,13 @@ def main():
     prices = ba.load_prices(conn)
 
     top_lots, top_amt = get_rankings(conn, prices, force=force)
+
+    if backfill_days > 0:
+        backfill_signals(conn, prices, top_lots, top_amt, backfill_days)
+        evaluate_signals(conn, prices)
+        upload_signal_stats(conn, env)
+        print("回填完成")
+        return
 
     records = (collect_signals(conn, prices, sig_date, "lots", top_lots)
                + collect_signals(conn, prices, sig_date, "amount", top_amt))
@@ -177,6 +311,11 @@ def main():
         print(f"已上傳 {len(records)} 筆到 Supabase broker_signals")
     else:
         print(f"[error] 上傳失敗 ({status}): {resp}")
+
+    # 實測勝率：本機留存 → 評分期滿訊號 → 彙總上傳
+    save_signals_local(conn, records)
+    evaluate_signals(conn, prices)
+    upload_signal_stats(conn, env)
 
 
 if __name__ == "__main__":
