@@ -79,8 +79,13 @@ def _sb(env, path, method="GET", body=None, params=None, retries=3):
                 return 0, {}
 
 
-def collect_signals(conn, prices, sig_date, method, top_rows):
-    """top_rows: analyze() 排行榜前 N 名 → 撈當日買超，回傳 records。"""
+def collect_signals(conn, prices, sig_date, method, top_rows,
+                    min_lots=None, min_wan=None):
+    """top_rows: analyze() 排行榜前 N 名 → 撈當日買超，回傳 records。
+    門檻可覆寫：預設用 SHOW_MIN_LOTS/SHOW_MIN_WAN（每日網站顯示=重手）；
+    本機統計留存時傳入較低門檻（50/500）以同時涵蓋大單與小單。"""
+    lot_th = SHOW_MIN_LOTS if min_lots is None else min_lots
+    wan_th = SHOW_MIN_WAN if min_wan is None else min_wan
     id_rank = {r["broker_id"]: (i + 1, r) for i, r in enumerate(top_rows)}
     if not id_rank:
         return []
@@ -96,10 +101,10 @@ def collect_signals(conn, prices, sig_date, method, top_rows):
         amt_wan = round(net * 1000 * price / 10000, 1) if price else None
         # 門檻按榜單分流：與該排行榜自身的邏輯一致
         if method == "lots":
-            if net < SHOW_MIN_LOTS:
+            if net < lot_th:
                 continue
         else:  # amount
-            if (amt_wan or 0) < SHOW_MIN_WAN:
+            if (amt_wan or 0) < wan_th:
                 continue
         rank, r = id_rank[bid]
         records.append({
@@ -213,39 +218,49 @@ def evaluate_signals(conn, prices):
 
 
 def upload_signal_stats(conn, env):
-    """彙總每個分點的實測勝率，整表覆蓋上傳 signal_stats。"""
-    rows = conn.execute("""
-        select broker_id, max(broker_name), method, count(*),
-               count(ret8),  avg(case when ret8  > 0 then 100.0 else 0 end),  avg(ret8),
-               count(ret20), avg(case when ret20 > 0 then 100.0 else 0 end), avg(ret20)
-        from broker_signals_local
-        group by broker_id, method
-    """).fetchall()
+    """彙總每個分點的實測勝率，分「大單/小單」兩層，整表覆蓋上傳 signal_stats。
+    大單：lots≥300 張 或 amount≥3000 萬；小單：50~300 張 或 500~3000 萬。"""
+    # 每個 method 的大/小單 net 判斷式
+    tier_cond = {
+        ("lots", "large"):   "net_lots >= 300",
+        ("lots", "small"):   "net_lots >= 50  and net_lots < 300",
+        ("amount", "large"): "net_amount_wan >= 3000",
+        ("amount", "small"): "net_amount_wan >= 500 and net_amount_wan < 3000",
+    }
     stats = []
-    for bid, bname, method, total, n8, win8, avg8, n20, win20, avg20 in rows:
-        # avg(case...) 是全樣本的比例，改為只對已評分樣本計算
-        w8 = conn.execute("""select avg(case when ret8 > 0 then 100.0 else 0 end)
-                             from broker_signals_local
-                             where broker_id=? and method=? and ret8 is not null""",
-                          (bid, method)).fetchone()[0]
-        w20 = conn.execute("""select avg(case when ret20 > 0 then 100.0 else 0 end)
-                              from broker_signals_local
-                              where broker_id=? and method=? and ret20 is not null""",
-                           (bid, method)).fetchone()[0]
-        stats.append({
-            "broker_id": bid, "broker_name": bname, "method": method,
-            "signals_total": total,
-            "n8": n8,  "win8_pct":  round(w8, 1)  if w8  is not None else None,
-            "avg_ret8":  round(avg8, 2)  if avg8  is not None else None,
-            "n20": n20, "win20_pct": round(w20, 1) if w20 is not None else None,
-            "avg_ret20": round(avg20, 2) if avg20 is not None else None,
-        })
+    for method in ("lots", "amount"):
+        brokers = [r[0] for r in conn.execute(
+            "select distinct broker_id from broker_signals_local where method=?", (method,))]
+        for bid in brokers:
+            bname = conn.execute(
+                "select max(broker_name) from broker_signals_local where broker_id=? and method=?",
+                (bid, method)).fetchone()[0]
+            for tier in ("large", "small"):
+                cond = tier_cond[(method, tier)]
+                row = conn.execute(f"""
+                    select count(*),
+                           count(ret8),  avg(case when ret8  > 0 then 100.0 else 0 end),  avg(ret8),
+                           count(ret20), avg(case when ret20 > 0 then 100.0 else 0 end), avg(ret20)
+                    from broker_signals_local
+                    where broker_id=? and method=? and {cond}
+                """, (bid, method)).fetchone()
+                total, n8, win8, avg8, n20, win20, avg20 = row
+                if not total:
+                    continue
+                stats.append({
+                    "broker_id": bid, "broker_name": bname, "method": method, "tier": tier,
+                    "signals_total": total,
+                    "n8": n8,  "win8_pct":  round(win8, 1)  if n8  else None,
+                    "avg_ret8":  round(avg8, 2)  if avg8  is not None else None,
+                    "n20": n20, "win20_pct": round(win20, 1) if n20 else None,
+                    "avg_ret20": round(avg20, 2) if avg20 is not None else None,
+                })
     if not stats:
         return
     _sb(env, "/signal_stats", method="DELETE", params=[("broker_id", "neq.__none__")])
     status, resp = _sb(env, "/signal_stats", method="POST", body=stats)
     if status in (200, 201):
-        print(f"實測統計已上傳 {len(stats)} 個分點")
+        print(f"實測統計已上傳 {len(stats)} 列（分點 × 大小單）")
     else:
         print(f"[warn] 實測統計上傳失敗 ({status}): {resp}")
 
@@ -259,12 +274,13 @@ def backfill_signals(conn, prices, top_lots, top_amt, days):
         (days,))]
     total = 0
     for d in sorted(dates):
-        recs = (collect_signals(conn, prices, d, "lots", top_lots)
-                + collect_signals(conn, prices, d, "amount", top_amt))
+        # 本機留存用低門檻（50 張/500 萬），涵蓋大單與小單，供兩層統計
+        recs = (collect_signals(conn, prices, d, "lots", top_lots, min_lots=50)
+                + collect_signals(conn, prices, d, "amount", top_amt, min_wan=500))
         if recs:
             save_signals_local(conn, recs)
             total += len(recs)
-    print(f"回填 {len(dates)} 個交易日、{total} 筆訊號到本機表")
+    print(f"回填 {len(dates)} 個交易日、{total} 筆訊號到本機表（含大小單）")
 
 
 def reupload_date(conn, prices, env, top_lots, top_amt, d):
@@ -334,8 +350,10 @@ def main():
     else:
         print(f"[error] 上傳失敗 ({status}): {resp}")
 
-    # 實測勝率：本機留存 → 評分期滿訊號 → 彙總上傳
-    save_signals_local(conn, records)
+    # 實測勝率：本機另存低門檻（50/500）版本，涵蓋大小單供兩層統計
+    local_recs = (collect_signals(conn, prices, sig_date, "lots", top_lots, min_lots=50)
+                  + collect_signals(conn, prices, sig_date, "amount", top_amt, min_wan=500))
+    save_signals_local(conn, local_recs)
     evaluate_signals(conn, prices)
     upload_signal_stats(conn, env)
 

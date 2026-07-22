@@ -2015,6 +2015,7 @@
         <tr style="border-bottom:1px solid var(--border)">
           <td style="padding:4px 8px">${x.broker_name || x.broker_id}</td>
           <td style="padding:4px 8px;text-align:center">${x.method === 'lots' ? '張數' : '金額'}</td>
+          <td style="padding:4px 8px;text-align:center;color:${x.tier === 'large' ? '#ff6b6b' : 'var(--text-muted)'}">${x.tier === 'large' ? '大單' : '小單'}</td>
           <td style="padding:4px 8px;text-align:right">${x.signals_total}</td>
           <td style="padding:4px 8px;text-align:right">${x.n8}</td>
           <td style="padding:4px 8px;text-align:right;color:#e6a23c">${x.win8_pct != null ? x.win8_pct + '%' : '–'}</td>
@@ -2025,11 +2026,12 @@
         </tr>`).join('');
       return `
         <div style="font-size:11px;color:var(--text-muted);padding:6px 0 2px">
-          每天上榜訊號的「事後追蹤」：買進均價 vs 8／20 個交易日後收盤價（自 2026-07-17 起累積）</div>
+          每天上榜訊號的「事後追蹤」：買進均價 vs 8／20 交易日後收盤價。
+          大單=≥300張／≥3000萬，小單=50~300張／500~3000萬（自 2026-07-17 起累積）</div>
         <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px">
           <thead><tr style="color:var(--text-muted);border-bottom:1px solid var(--border)">
             <th style="padding:4px 8px;text-align:left">分點</th><th style="padding:4px 8px">榜別</th>
-            <th style="padding:4px 8px;text-align:right">總訊號</th>
+            <th style="padding:4px 8px">單別</th><th style="padding:4px 8px;text-align:right">總訊號</th>
             <th style="padding:4px 8px;text-align:right">8日樣本</th><th style="padding:4px 8px;text-align:right">8日勝率</th>
             <th style="padding:4px 8px;text-align:right">8日均報</th>
             <th style="padding:4px 8px;text-align:right">20日樣本</th><th style="padding:4px 8px;text-align:right">20日勝率</th>
