@@ -267,11 +267,26 @@ def backfill_signals(conn, prices, top_lots, top_amt, days):
     print(f"回填 {len(dates)} 個交易日、{total} 筆訊號到本機表")
 
 
+def reupload_date(conn, prices, env, top_lots, top_amt, d):
+    """用目前門檻重算指定日期的訊號並覆蓋上傳網站（改門檻後修正歷史用）。"""
+    recs = (collect_signals(conn, prices, d, "lots", top_lots)
+            + collect_signals(conn, prices, d, "amount", top_amt))
+    _sb(env, "/broker_signals", method="DELETE", params=[("signal_date", f"eq.{d}")])
+    if recs:
+        status, resp = _sb(env, "/broker_signals", method="POST", body=recs)
+        print(f"  {d}: 重傳 {len(recs)} 筆（{status}）")
+    else:
+        print(f"  {d}: 0 筆（已清空）")
+
+
 def main():
     force = "--recompute" in sys.argv  # 手動強制重算排行榜
     backfill_days = 0
     if "--backfill-days" in sys.argv:
         backfill_days = int(sys.argv[sys.argv.index("--backfill-days") + 1])
+    reup_dates = []
+    if "--reupload" in sys.argv:  # --reupload 2026-07-17,2026-07-20
+        reup_dates = sys.argv[sys.argv.index("--reupload") + 1].split(",")
     env = _load_env()
     if not env.get("SUPABASE_SERVICE_KEY"):
         print("[error] .env.local 缺少 SUPABASE_SERVICE_KEY（上傳訊號需要），中止")
@@ -292,6 +307,13 @@ def main():
         evaluate_signals(conn, prices)
         upload_signal_stats(conn, env)
         print("回填完成")
+        return
+
+    if reup_dates:
+        print(f"用目前門檻重傳 {len(reup_dates)} 個日期到網站...")
+        for d in reup_dates:
+            reupload_date(conn, prices, env, top_lots, top_amt, d.strip())
+        print("重傳完成")
         return
 
     records = (collect_signals(conn, prices, sig_date, "lots", top_lots)
