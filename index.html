@@ -1995,7 +1995,7 @@
       if (!rows.length) return `<div style="padding:16px 0">此條件下沒有重疊的分點</div>`;
       const cell = (r, w, e) => {
         const warn = (e != null && e < 10) ? ' ⚠️' : '';
-        return `<td style="padding:5px 10px;text-align:center;color:#888">#${r}</td>
+        return `<td style="padding:5px 10px;text-align:left;color:#888">${r}</td>
           <td style="padding:5px 10px;text-align:right;color:#e6a23c;font-weight:600">${w ?? '–'}%</td>
           <td style="padding:5px 6px;text-align:right;color:var(--text-muted)">${e ?? '–'}${warn}</td>`;
       };
@@ -2015,9 +2015,9 @@
             <th colspan="3" style="padding:2px 10px;text-align:center;color:#ff9f43">${labB}</th>
           </tr>
           <tr style="color:var(--text-muted);font-size:11px;border-bottom:1px solid var(--border)">
-            <th style="padding:2px 10px">名次</th><th style="padding:2px 10px;text-align:right">20日勝率</th><th style="padding:2px 6px;text-align:right">事件</th>
+            <th style="padding:2px 10px;text-align:left">名次</th><th style="padding:2px 10px;text-align:right">20日勝率</th><th style="padding:2px 6px;text-align:right">事件</th>
             <th></th>
-            <th style="padding:2px 10px">名次</th><th style="padding:2px 10px;text-align:right">20日勝率</th><th style="padding:2px 6px;text-align:right">事件</th>
+            <th style="padding:2px 10px;text-align:left">名次</th><th style="padding:2px 10px;text-align:right">20日勝率</th><th style="padding:2px 6px;text-align:right">事件</th>
           </tr>
         </thead><tbody>${tr}</tbody></table></div>`;
     }
