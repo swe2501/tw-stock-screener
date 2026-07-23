@@ -1,10 +1,51 @@
 from http.server import BaseHTTPRequestHandler
 import json
+import os
 import urllib.request
+import urllib.parse
 import math
 import time
 from datetime import datetime, timezone, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
+# ── 篩選結果暫存（非同步任務：伺服器算完存起來，前端切回來再領）──
+SUPABASE_URL     = os.environ.get("SUPABASE_URL", "")
+SUPABASE_KEY     = os.environ.get("SUPABASE_SERVICE_KEY") or os.environ.get("SUPABASE_ANON_KEY", "")
+
+
+def _cache_sb(path, method="GET", body=None, params=None):
+    if not (SUPABASE_URL and SUPABASE_KEY):
+        return 0, None
+    url = f"{SUPABASE_URL}/rest/v1{path}"
+    if params:
+        url += "?" + urllib.parse.urlencode(params)
+    data = json.dumps(body).encode() if body is not None else None
+    req = urllib.request.Request(url, data=data, method=method, headers={
+        "Content-Type": "application/json", "apikey": SUPABASE_KEY,
+        "Authorization": f"Bearer {SUPABASE_KEY}", "Prefer": "return=minimal",
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=10) as r:
+            raw = r.read()
+            return r.status, (json.loads(raw) if raw else None)
+    except Exception:
+        return 0, None
+
+
+def _cache_save(job_id, result):
+    """存篩選結果並順手清除 15 分鐘前的舊暫存。"""
+    cutoff = (datetime.now(timezone.utc) - timedelta(minutes=15)).isoformat()
+    _cache_sb("/screen_cache", "DELETE", params=[("created_at", f"lt.{cutoff}")])
+    _cache_sb("/screen_cache", "DELETE", params=[("job_id", f"eq.{job_id}")])
+    _cache_sb("/screen_cache", "POST", body={"job_id": job_id, "result": result})
+
+
+def _cache_get(job_id):
+    st, rows = _cache_sb("/screen_cache", "GET",
+                         params=[("job_id", f"eq.{job_id}"), ("select", "result")])
+    if st == 200 and rows:
+        return rows[0]["result"]
+    return None
 
 TWSE_HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
@@ -1121,6 +1162,14 @@ class handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
+        # 領取非同步篩選結果：?job_id=xxx → 有結果回結果，沒好回 {pending:true}
+        qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+        job_id = (qs.get("job_id") or [""])[0].strip()
+        if job_id:
+            cached = _cache_get(job_id)
+            if cached is not None:
+                return self._send_json(200, cached)
+            return self._send_json(200, {"pending": True})
         self._send_json(200, {"status": "ok"})
 
     def do_POST(self):
@@ -1128,6 +1177,12 @@ class handler(BaseHTTPRequestHandler):
         try:
             length = int(self.headers.get("Content-Length", 0))
             body = json.loads(self.rfile.read(length))
-            self._send_json(200, screen(body))
+            job_id = body.pop("job_id", None)
+            result = screen(body)
+            # 先存暫存（即使前端因切背景斷線，結果也已保留可供領取），再回傳
+            if job_id:
+                try: _cache_save(job_id, result)
+                except Exception: pass
+            self._send_json(200, result)
         except Exception as e:
             self._send_json(500, {"error": str(e), "traceback": traceback.format_exc(), "results": []})

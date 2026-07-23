@@ -1580,6 +1580,13 @@
         no_black_tolerance:  noBlackTol,
       };
 
+      // 非同步任務：帶 job_id 送出，伺服器算完會存暫存；即使手機切背景斷線，
+      // 切回來也能用 job_id 把結果領回（背景繼續搜、回來看結果）
+      const jobId = (crypto.randomUUID ? crypto.randomUUID()
+        : Date.now() + '-' + Math.random().toString(36).slice(2));
+      body.job_id = jobId;
+      _screenJob = { id: jobId, active: true };
+
       fetch('/api/screen', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1587,42 +1594,66 @@
       })
         .then(r => r.json())
         .then(data => {
+          if (!_screenJob || _screenJob.id !== jobId) return; // 已被新篩選取代
+          _screenJob = null;
           btn.disabled = false;
           btn.innerHTML = '開始篩選';
-
           if (data.error) {
             showStatus(`<div class="alert alert-error">&#9888; ${data.error}</div>`);
             document.getElementById('resultsArea').innerHTML = '';
             return;
           }
-
           lastResults = data.results || [];
           renderResults(data);
         })
         .catch(err => {
-          btn.disabled = false;
-          btn.innerHTML = '開始篩選';
-          // 手機切到背景會被系統中斷請求（Load failed / TypeError）→ 不報硬錯，
-          // 提供重試按鈕，並在切回前景時自動重試一次
+          // 連線被系統中斷（多半是手機切背景）→ 不報錯，改成輪詢領取伺服器算好的結果
           const isNet = (err instanceof TypeError) ||
             /load failed|networkerror|failed to fetch|network request failed/i.test(err.message || '');
-          if (isNet) {
-            showStatus(`<div class="alert alert-error">&#9888; 連線中斷（可能是切換畫面所致）
-              <button onclick="doScreen()" style="margin-left:8px;padding:2px 12px;border-radius:5px;
-                border:none;background:var(--accent);color:#fff;cursor:pointer">重試</button></div>`);
-            if (document.visibilityState === 'hidden') {
-              const onVis = () => {
-                if (document.visibilityState === 'visible') {
-                  document.removeEventListener('visibilitychange', onVis);
-                  doScreen();
-                }
-              };
-              document.addEventListener('visibilitychange', onVis);
-            }
+          if (isNet && _screenJob && _screenJob.id === jobId) {
+            showStatus(`<div class="alert alert-info">&#8987; 篩選進行中（可切換其他畫面，完成後回來即可看到結果）…</div>`);
+            _pollScreenResult(jobId, 0);
           } else {
+            _screenJob = null;
+            btn.disabled = false;
+            btn.innerHTML = '開始篩選';
             showStatus(`<div class="alert alert-error">&#9888; 連線錯誤：${err.message}</div>`);
           }
         });
+    }
+
+    // 輪詢伺服器暫存的篩選結果（背景任務完成後領取）
+    let _screenJob = null;
+    async function _pollScreenResult(jobId, tries) {
+      if (!_screenJob || _screenJob.id !== jobId) return;   // 已被新篩選取代
+      if (document.visibilityState === 'hidden') {           // 背景時先不輪詢，回前景再繼續
+        const onVis = () => {
+          if (document.visibilityState === 'visible') {
+            document.removeEventListener('visibilitychange', onVis);
+            _pollScreenResult(jobId, tries);
+          }
+        };
+        document.addEventListener('visibilitychange', onVis);
+        return;
+      }
+      try {
+        const r = await fetch(`/api/screen?job_id=${encodeURIComponent(jobId)}&_=${Date.now()}`, { cache: 'no-store' });
+        const data = await r.json();
+        if (!_screenJob || _screenJob.id !== jobId) return;
+        if (!data.pending) {                                  // 結果到手
+          _screenJob = null;
+          const btn = document.getElementById('submitBtn');
+          btn.disabled = false; btn.innerHTML = '開始篩選';
+          if (data.error) { showStatus(`<div class="alert alert-error">&#9888; ${data.error}</div>`); return; }
+          lastResults = data.results || [];
+          renderResults(data);
+          return;
+        }
+      } catch (_) { /* 忽略，繼續輪詢 */ }
+      if (tries >= 20) {                                      // 約 60 秒還沒好 → 可能伺服器也被中斷，重送一次
+        _screenJob = null; doScreen(); return;
+      }
+      setTimeout(() => _pollScreenResult(jobId, tries + 1), 3000);
     }
 
     function filterAndRender() {
