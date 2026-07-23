@@ -1602,7 +1602,26 @@
         .catch(err => {
           btn.disabled = false;
           btn.innerHTML = '開始篩選';
-          showStatus(`<div class="alert alert-error">&#9888; 連線錯誤：${err.message}</div>`);
+          // 手機切到背景會被系統中斷請求（Load failed / TypeError）→ 不報硬錯，
+          // 提供重試按鈕，並在切回前景時自動重試一次
+          const isNet = (err instanceof TypeError) ||
+            /load failed|networkerror|failed to fetch|network request failed/i.test(err.message || '');
+          if (isNet) {
+            showStatus(`<div class="alert alert-error">&#9888; 連線中斷（可能是切換畫面所致）
+              <button onclick="doScreen()" style="margin-left:8px;padding:2px 12px;border-radius:5px;
+                border:none;background:var(--accent);color:#fff;cursor:pointer">重試</button></div>`);
+            if (document.visibilityState === 'hidden') {
+              const onVis = () => {
+                if (document.visibilityState === 'visible') {
+                  document.removeEventListener('visibilitychange', onVis);
+                  doScreen();
+                }
+              };
+              document.addEventListener('visibilitychange', onVis);
+            }
+          } else {
+            showStatus(`<div class="alert alert-error">&#9888; 連線錯誤：${err.message}</div>`);
+          }
         });
     }
 
