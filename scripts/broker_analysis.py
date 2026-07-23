@@ -173,6 +173,7 @@ def analyze(conn, prices, codes=None, min_lots=300, min_events=5, hold_days=(5, 
             cnt = s["cnt"][n]
             row[f"win{n}"] = round(s["win"][n] / cnt * 100, 1) if cnt else None
             row[f"ret{n}"] = round(s["ret"][n] / cnt * 100, 2) if cnt else None
+            row[f"n{n}"] = cnt   # 已滿 n 日、實際納入勝率計算的筆數（分母）
         row.update({
             "closed_trades": s["closed"],
             "closed_win":  round(s["closed_win"] / s["closed"] * 100, 1) if s["closed"] else None,

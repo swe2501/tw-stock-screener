@@ -48,6 +48,7 @@ def _rank(conn, prices, **kw):
         out.append({
             "rank": i, "broker_id": r["broker_id"], "broker_name": r["broker_name"],
             "win8": r.get("win8"), "win20": r.get("win20"), "events": r["events"],
+            "n8": r.get("n8"), "n20": r.get("n20"),  # 已滿 8/20 日、實際算勝率的筆數
         })
     return out
 

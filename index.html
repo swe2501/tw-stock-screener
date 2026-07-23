@@ -1962,24 +1962,33 @@
       return _rkView(vA).filter(x => bMap.has(x.broker_id))
         .map(x => ({ ...x, rank_b: bMap.get(x.broker_id).rank,
                      win20_b: bMap.get(x.broker_id).win20, win8_b: bMap.get(x.broker_id).win8,
-                     events_b: bMap.get(x.broker_id).events }));
+                     events_b: bMap.get(x.broker_id).events, n20_b: bMap.get(x.broker_id).n20 }));
     }
-    // 高勝率重疊：兩榜都在、且兩榜 20 日勝率都 ≥ 門檻
-    function _rkHiOverlap(vA, vB) {
-      return _rkIntersect(vA, vB).filter(x =>
-        (x.win20 || 0) >= RK_OVERLAP_WIN20 && (x.win20_b || 0) >= RK_OVERLAP_WIN20);
+    // Group3 大↔小重疊（丙案）：大單榜 20 日勝率 ≥ 門檻，且該分點也在小單榜（名次不限）
+    // vLarge = 大單榜, vSmall = 小單榜
+    function _rkHiOverlap(vLarge, vSmall) {
+      return _rkIntersect(vLarge, vSmall).filter(x => (x.win20 || 0) >= RK_OVERLAP_WIN20);
     }
 
+    // 勝率＋分母：例「88.9%」下方小字「9筆」= 實際納入計算的已到期筆數
+    function _rkWinCell(pct, n) {
+      if (pct == null) return `<td style="padding:4px 8px;text-align:right">–</td>`;
+      return `<td style="padding:4px 8px;text-align:right;color:#e6a23c">${pct}%`
+        + `<span style="color:var(--text-muted);font-size:10px"> /${n ?? '?'}筆</span></td>`;
+    }
     function _rkTableSimple(rows) {
       if (!rows.length) return `<div style="padding:16px 0">此條件下沒有符合的分點</div>`;
       const tr = rows.map(x => {
         const warn = (x.events != null && x.events < 10) ? '<span title="事件次數過少，勝率參考性低">⚠️</span> ' : '';
+        const unres = (x.events != null && x.n20 != null) ? x.events - x.n20 : 0;
+        const unresTxt = unres > 0
+          ? `<span style="color:#e6a23c;font-size:10px" title="這些事件還沒滿20交易日，未納入20日勝率"> (${unres}未滿20日)</span>` : '';
         return `<tr onclick="_rkOpenChart()" style="border-bottom:1px solid var(--border)">
           <td style="padding:4px 8px;text-align:center">${x.rank}</td>
           <td style="padding:4px 8px">${x.broker_name || x.broker_id}</td>
-          <td style="padding:4px 8px;text-align:right">${x.win8 != null ? x.win8 + '%' : '–'}</td>
-          <td style="padding:4px 8px;text-align:right;color:#e6a23c">${x.win20 != null ? x.win20 + '%' : '–'}</td>
-          <td style="padding:4px 8px;text-align:right">${warn}${x.events ?? '–'}</td>
+          ${_rkWinCell(x.win8, x.n8)}
+          ${_rkWinCell(x.win20, x.n20)}
+          <td style="padding:4px 8px;text-align:right">${warn}${x.events ?? '–'}${unresTxt}</td>
         </tr>`;
       }).join('');
       return `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">
@@ -1993,18 +2002,21 @@
     // 交集/重疊表：兩榜各自名次 / 20日勝率 / 事件次數，中間分隔線區隔兩榜
     function _rkTableOverlap(rows, labA, labB) {
       if (!rows.length) return `<div style="padding:16px 0">此條件下沒有重疊的分點</div>`;
-      const cell = (r, w, e) => {
+      const cell = (r, w, e, n20) => {
         const warn = (e != null && e < 10) ? '⚠️ ' : '';
+        const unres = (e != null && n20 != null) ? e - n20 : 0;
+        const wtxt = w != null ? `${w}%<span style="color:var(--text-muted);font-size:10px"> /${n20 ?? '?'}筆</span>` : '–';
+        const etxt = `${warn}${e ?? '–'}` + (unres > 0 ? `<span style="color:#e6a23c;font-size:10px">(${unres}未滿)</span>` : '');
         return `<td style="padding:5px 10px;text-align:left;color:#888">${r}</td>
-          <td style="padding:5px 10px;text-align:left;color:#e6a23c;font-weight:600">${w ?? '–'}%</td>
-          <td style="padding:5px 6px;text-align:left;color:var(--text-muted)">${warn}${e ?? '–'}</td>`;
+          <td style="padding:5px 10px;text-align:left;color:#e6a23c;font-weight:600">${wtxt}</td>
+          <td style="padding:5px 6px;text-align:left;color:var(--text-muted)">${etxt}</td>`;
       };
       const tr = rows.map((x, i) => `
         <tr style="border-bottom:1px solid var(--border);background:${i % 2 ? 'transparent' : 'rgba(255,255,255,.02)'}">
           <td style="padding:5px 10px;font-weight:600;color:var(--text-primary)">${x.broker_name || x.broker_id}</td>
-          ${cell(x.rank, x.win20, x.events)}
+          ${cell(x.rank, x.win20, x.events, x.n20)}
           <td style="border-left:1px solid var(--border)"></td>
-          ${cell(x.rank_b, x.win20_b, x.events_b)}
+          ${cell(x.rank_b, x.win20_b, x.events_b, x.n20_b)}
         </tr>`).join('');
       return `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">
         <thead>
@@ -2065,7 +2077,32 @@
           background:${on ? 'var(--bg-card)' : 'transparent'};color:${on ? 'var(--text-primary)' : 'var(--text-muted)'};
           font-weight:${on ? '700' : '400'};cursor:pointer;font-size:12.5px">${label}</button>`;
       }).join('');
-      document.getElementById('rankContent').innerHTML = _rkContent();
+      document.getElementById('rankContent').innerHTML =
+        `<div style="font-size:11px;color:var(--text-muted);line-height:1.5;
+           background:rgba(255,255,255,.03);border-left:2px solid var(--accent);
+           padding:6px 10px;margin:8px 0 10px;border-radius:0 4px 4px 0">📋 ${_rkRuleText()}</div>`
+        + _rkContent();
+    }
+
+    // 每個 group/tab 的篩選規則說明（寫在畫面上，避免忘記）
+    function _rkRuleText() {
+      const g = _rkGroup, t = _rkTab;
+      const base = {
+        large: '大單＝單日淨買超 ≥300 張 或 ≥3000 萬',
+        small: '小單＝單日淨買超 50~300 張 或 500~3000 萬',
+        year: '一整年資料，取該分點所有事件、以 20 日勝率排序前 20；事件 <10 次標 ⚠️（樣本少、僅參考）。'
+          + '勝率的「/N筆」＝實際已滿該天數、納入計算的筆數；事件數旁「(x未滿)」＝還沒滿20交易日、尚未計入勝率的筆數',
+        d90:  '近 90 個交易日資料，同上取前 20',
+      };
+      if (g === 'g1') return `【大單·年回測】${base.large}。${base.year}。`
+        + (t === 2 ? '本頁：同時進「大單張數榜」與「大單金額榜」的分點。' : '');
+      if (g === 'g2') return `【小單·年回測】${base.small}。${base.year}。`
+        + (t === 2 ? '本頁：同時進「小單張數榜」與「小單金額榜」的分點。' : '');
+      if (g === 'g3') return `【大↔小重疊】篩選規則：該分點在「大單榜」20日勝率 ≥${RK_OVERLAP_WIN20}%，`
+        + `且同一分點也出現在「小單榜」（小單名次不限）。`
+        + (t === 0 ? '本頁比張數榜。' : t === 1 ? '本頁比金額榜。' : '本頁：同時符合張數與金額兩頁的分點。');
+      return `【小單·90日】${base.small}。${base.d90}。`
+        + (t === 2 ? `本頁：同時進「小單張數90日榜」與「小單金額90日榜」、且張數榜20日勝率 ≥${RK_OVERLAP_WIN20}% 的分點。` : '');
     }
 
     function _rkOpenChart() { /* 榜單列暫不開圖（分點非單一股票） */ }
