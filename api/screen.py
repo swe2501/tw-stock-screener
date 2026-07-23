@@ -9,8 +9,10 @@ from datetime import datetime, timezone, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # ── 篩選結果暫存（非同步任務：伺服器算完存起來，前端切回來再領）──
+# 用 anon key：screen_cache 的 RLS 已開放 anon 全操作，且 anon key 必為當前專案（不受
+# service key 是否過期影響）
 SUPABASE_URL     = os.environ.get("SUPABASE_URL", "")
-SUPABASE_KEY     = os.environ.get("SUPABASE_SERVICE_KEY") or os.environ.get("SUPABASE_ANON_KEY", "")
+SUPABASE_KEY     = os.environ.get("SUPABASE_ANON_KEY", "")
 
 
 def _cache_sb(path, method="GET", body=None, params=None):
