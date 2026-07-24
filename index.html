@@ -1982,6 +1982,7 @@
       g2: { label: '小單·年回測', tabs: ['張數榜', '金額榜', '張數∩金額'] },
       g3: { label: `大↔小重疊(20日≥${RK_OVERLAP_WIN20}%)`, tabs: ['張數', '金額', '交集'] },
       g4: { label: '小單·90日', tabs: ['張數榜', '金額榜', '張數∩金額'] },
+      g5: { label: `長短皆穩小單(20日≥${RK_OVERLAP_WIN20}%)`, tabs: ['張數', '金額', '交集'] },
     };
 
     async function openBrokerRankings() {
@@ -2018,6 +2019,11 @@
     // vLarge = 大單榜, vSmall = 小單榜
     function _rkHiOverlap(vLarge, vSmall) {
       return _rkIntersect(vLarge, vSmall).filter(x => (x.win20 || 0) >= RK_OVERLAP_WIN20);
+    }
+    // 兩榜都要 ≥ 門檻（Group5：長期＋近期小單都穩）
+    function _rkHiOverlapBoth(vA, vB) {
+      return _rkIntersect(vA, vB).filter(x =>
+        (x.win20 || 0) >= RK_OVERLAP_WIN20 && (x.win20_b || 0) >= RK_OVERLAP_WIN20);
     }
 
     // 勝率＋分母：例「88.9%」下方小字「9筆」= 實際納入計算的已到期筆數
@@ -2104,10 +2110,17 @@
         const rows = _rkHiOverlap('year_large_amount', 'year_small_amount').filter(x => a.has(x.broker_id));
         return _rkTableOverlap(rows, '大單', '小單');
       }
-      // g4
-      if (t === 0) return _rkTableSimple(_rkView('d90_small_lots'));
-      if (t === 1) return _rkTableSimple(_rkView('d90_small_amount'));
-      return _rkTableOverlap(_rkHiOverlap('d90_small_lots', 'd90_small_amount'), '張數', '金額');
+      if (g === 'g4') {
+        if (t === 0) return _rkTableSimple(_rkView('d90_small_lots'));
+        if (t === 1) return _rkTableSimple(_rkView('d90_small_amount'));
+        return _rkTableOverlap(_rkHiOverlap('d90_small_lots', 'd90_small_amount'), '張數', '金額');
+      }
+      // g5：長短皆穩小單 = 小單年回測 ∩ 小單90日，兩榜 20 日勝率都 ≥ 門檻
+      if (t === 0) return _rkTableOverlap(_rkHiOverlapBoth('year_small_lots', 'd90_small_lots'), '年回測', '90日');
+      if (t === 1) return _rkTableOverlap(_rkHiOverlapBoth('year_small_amount', 'd90_small_amount'), '年回測', '90日');
+      const a = new Set(_rkHiOverlapBoth('year_small_lots', 'd90_small_lots').map(x => x.broker_id));
+      const rows = _rkHiOverlapBoth('year_small_amount', 'd90_small_amount').filter(x => a.has(x.broker_id));
+      return _rkTableOverlap(rows, '年回測', '90日');
     }
 
     function _renderRank() {
@@ -2151,8 +2164,11 @@
       if (g === 'g3') return `【大↔小重疊】篩選規則：該分點在「大單榜」20日勝率 ≥${RK_OVERLAP_WIN20}%，`
         + `且同一分點須在「小單前20榜」內（名次不限，第1~20名皆可）。`
         + (t === 0 ? '本頁比張數榜。' : t === 1 ? '本頁比金額榜。' : '本頁：同時符合張數與金額兩頁的分點。');
-      return `【小單·90日】${base.small}。${base.d90}。`
+      if (g === 'g4') return `【小單·90日】${base.small}。${base.d90}。`
         + (t === 2 ? `本頁：同時進「小單張數90日榜」與「小單金額90日榜」、且張數榜20日勝率 ≥${RK_OVERLAP_WIN20}% 的分點。` : '');
+      return `【長短皆穩小單】篩選規則：同一小單分點在「年回測榜」與「90日榜」20日勝率都 ≥${RK_OVERLAP_WIN20}%`
+        + `（長期穩＋近期也穩）。`
+        + (t === 0 ? '本頁比張數。' : t === 1 ? '本頁比金額。' : '本頁：同時符合張數與金額兩頁的分點。');
     }
 
     function _rkOpenChart() { /* 榜單列暫不開圖（分點非單一股票） */ }
