@@ -26,11 +26,11 @@ ROOT = Path(__file__).resolve().parent.parent
 ENV_FILE = ROOT / ".env.local"
 
 TOP_N       = 20    # 每種方法追蹤前幾名
-MIN_LOTS_TH = 300   # 張數制事件門檻
+MIN_LOTS_TH = 300   # 張數制事件門檻（fallback 本機重算時用）
 MIN_AMT_TH  = 3000  # 金額制事件門檻（萬元）
 MIN_EVENTS  = 10
-RANK_CACHE  = Path(r"D:\stock_data\broker_rankings.json")  # 排行榜快取
-RANK_TTL_DAYS = 7   # 快取超過幾天自動重算（排行榜每週更新一次即可）
+# 名次來源已改為 Supabase broker_rankings 表（broker_rankings.py 每週六產生），
+# 本檔不再自行維護排行榜快取。
 # 當日買超顯示門檻（2026-07-21 起與排行榜「事件」口徑一致：只顯示重手）
 SHOW_MIN_LOTS = 300    # lots 榜：單日淨買超 ≥ 300 張
 SHOW_MIN_WAN  = 3000   # amount 榜：單日淨買超金額 ≥ 3000 萬
@@ -124,7 +124,7 @@ def collect_signals(conn, prices, sig_date, method, top_rows,
     return records
 
 
-def get_rankings(conn, prices, force=False):
+def get_rankings(conn, prices):
     """名單單一真相來源：直接讀 Supabase broker_rankings 表（由 broker_rankings.py 每週產生）
     的 year_large_lots / year_large_amount，確保「主力訊號」與「分點回測」名次完全一致。
     讀不到時（表為空）才 fallback 本機重算。"""
@@ -298,7 +298,6 @@ def reupload_date(conn, prices, env, top_lots, top_amt, d):
 
 
 def main():
-    force = "--recompute" in sys.argv  # 手動強制重算排行榜
     backfill_days = 0
     if "--backfill-days" in sys.argv:
         backfill_days = int(sys.argv[sys.argv.index("--backfill-days") + 1])
@@ -318,7 +317,7 @@ def main():
     print("載入收盤價...")
     prices = ba.load_prices(conn)
 
-    top_lots, top_amt = get_rankings(conn, prices, force=force)
+    top_lots, top_amt = get_rankings(conn, prices)
 
     if backfill_days > 0:
         backfill_signals(conn, prices, top_lots, top_amt, backfill_days)
