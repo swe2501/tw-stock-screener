@@ -125,29 +125,31 @@ def collect_signals(conn, prices, sig_date, method, top_rows,
 
 
 def get_rankings(conn, prices, force=False):
-    """排行榜每週重算一次，其餘日子讀快取（重算要掃兩遍全量資料，30~60 分鐘）。"""
-    if not force and RANK_CACHE.exists():
-        try:
-            data = json.loads(RANK_CACHE.read_text(encoding="utf-8"))
-            age_days = (time.time() - data.get("computed_ts", 0)) / 86400
-            if age_days < RANK_TTL_DAYS:
-                print(f"使用排行榜快取（{data.get('computed_at')} 計算，{age_days:.1f} 天前）")
-                return data["lots"], data["amount"]
-        except Exception:
-            pass  # 快取壞掉就重算
-    print(f"重算排行榜（張數制 ≥{MIN_LOTS_TH} 張）...")
+    """名單單一真相來源：直接讀 Supabase broker_rankings 表（由 broker_rankings.py 每週產生）
+    的 year_large_lots / year_large_amount，確保「主力訊號」與「分點回測」名次完全一致。
+    讀不到時（表為空）才 fallback 本機重算。"""
+    env = _load_env()
+    lots = _fetch_ranking_view(env, "year_large_lots")
+    amt  = _fetch_ranking_view(env, "year_large_amount")
+    if lots and amt:
+        print(f"名單來源：Supabase broker_rankings（張數 {len(lots)}、金額 {len(amt)} 名）")
+        return lots, amt
+    # fallback：表為空時本機重算（不寫回，避免又出現第二份來源）
+    print("[warn] broker_rankings 表為空，改本機重算名單")
     top_lots = ba.analyze(conn, prices, min_lots=MIN_LOTS_TH, min_events=MIN_EVENTS)[:TOP_N]
-    print(f"重算排行榜（金額制 ≥{MIN_AMT_TH} 萬）...")
-    top_amt = ba.analyze(conn, prices, min_events=MIN_EVENTS,
-                         min_amount_wan=MIN_AMT_TH)[:TOP_N]
-    from datetime import datetime as _dt
-    RANK_CACHE.write_text(json.dumps({
-        "computed_ts": time.time(),
-        "computed_at": f"{_dt.now():%Y-%m-%d %H:%M}",
-        "lots": top_lots, "amount": top_amt,
-    }, ensure_ascii=False), encoding="utf-8")
-    print(f"排行榜已存快取 {RANK_CACHE}")
+    top_amt = ba.analyze(conn, prices, min_events=MIN_EVENTS, min_amount_wan=MIN_AMT_TH)[:TOP_N]
     return top_lots, top_amt
+
+
+def _fetch_ranking_view(env, view):
+    """從 broker_rankings 表讀某個 view 的前 20 名，轉成 collect_signals 需要的格式。"""
+    status, rows = _sb(env, "/broker_rankings", params=[
+        ("select", "rank,broker_id,broker_name,win20,events"),
+        ("view", f"eq.{view}"), ("order", "rank.asc")])
+    if status != 200 or not rows:
+        return []
+    return [{"broker_id": r["broker_id"], "broker_name": r["broker_name"],
+             "win20": r["win20"], "events": r["events"]} for r in rows]
 
 
 def _local_signal_table(conn):
