@@ -87,6 +87,25 @@ def main():
     else:
         print(f"[error] 上傳失敗 ({status}): {resp}")
 
+    append_history_snapshot(env, all_records)
+
+
+def append_history_snapshot(env, all_records):
+    """把本次名次存一份快照到 broker_rankings_history（供日後查『長期霸榜』分點）。
+    同一天重跑先刪當日再寫，確保一天一筆。"""
+    from datetime import date
+    today = date.today().isoformat()
+    snap = [{"snapshot_date": today, "view": r["view"], "rank": r["rank"],
+             "broker_id": r["broker_id"], "broker_name": r["broker_name"],
+             "win20": r["win20"], "events": r["events"]} for r in all_records]
+    bs._sb(env, "/broker_rankings_history", method="DELETE",
+           params=[("snapshot_date", f"eq.{today}")])
+    status, resp = bs._sb(env, "/broker_rankings_history", method="POST", body=snap)
+    if status in (200, 201):
+        print(f"已存快照 {today}（{len(snap)} 列）到 broker_rankings_history")
+    else:
+        print(f"[warn] 快照存檔失敗 ({status}): {resp}")
+
 
 if __name__ == "__main__":
     main()
