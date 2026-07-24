@@ -2260,35 +2260,42 @@
         </div>`;
     }
 
-    function _statsSection() {
-      if (!_sigStats.length) return `<div style="padding:16px 0">尚無實測統計（訊號要滿 8 個交易日後才有第一批數字）</div>`;
-      const tr = _sigStats.map(x => `
+    function _statsPoolTable(pool, title) {
+      const rows = _sigStats.filter(x => x.pool === pool)
+        .sort((a, b) => (b.win20_pct ?? -1) - (a.win20_pct ?? -1));
+      if (!rows.length) return `<h4 style="margin:12px 0 4px;color:var(--text)">${title}</h4>
+        <div style="padding:8px 0;color:var(--text-muted);font-size:12px">尚無資料（純實測從 7/17 起累積）</div>`;
+      const wcell = (pct, n, tot) => {
+        const unfilled = (tot != null && n != null) ? tot - n : 0;
+        if (pct == null) return `<td style="padding:4px 8px;text-align:right;color:var(--text-muted);font-size:11px">累積中${unfilled > 0 ? ` (${unfilled}未滿)` : ''}</td>`;
+        return `<td style="padding:4px 8px;text-align:right;color:#e6a23c">${pct}%<span style="color:var(--text-muted);font-size:10px"> /${n}筆</span>${unfilled > 0 ? `<span style="color:var(--text-muted);font-size:10px"> +${unfilled}未滿</span>` : ''}</td>`;
+      };
+      const tr = rows.map(x => `
         <tr style="border-bottom:1px solid var(--border)">
           <td style="padding:4px 8px">${x.broker_name || x.broker_id}</td>
           <td style="padding:4px 8px;text-align:center">${x.method === 'lots' ? '張數' : '金額'}</td>
-          <td style="padding:4px 8px;text-align:center;color:${x.tier === 'large' ? '#ff6b6b' : 'var(--text-muted)'}">${x.tier === 'large' ? '大單' : '小單'}</td>
           <td style="padding:4px 8px;text-align:right">${x.signals_total}</td>
-          <td style="padding:4px 8px;text-align:right">${x.n8}</td>
-          <td style="padding:4px 8px;text-align:right;color:#e6a23c">${x.win8_pct != null ? x.win8_pct + '%' : '–'}</td>
-          <td style="padding:4px 8px;text-align:right">${x.avg_ret8 != null ? x.avg_ret8 + '%' : '–'}</td>
-          <td style="padding:4px 8px;text-align:right">${x.n20}</td>
-          <td style="padding:4px 8px;text-align:right;color:#e6a23c">${x.win20_pct != null ? x.win20_pct + '%' : '–'}</td>
-          <td style="padding:4px 8px;text-align:right">${x.avg_ret20 != null ? x.avg_ret20 + '%' : '–'}</td>
+          ${wcell(x.win8_pct, x.n8, x.signals_total)}
+          ${wcell(x.win20_pct, x.n20, x.signals_total)}
         </tr>`).join('');
-      return `
-        <div style="font-size:11px;color:var(--text-muted);padding:6px 0 2px">
-          每天上榜訊號的「事後追蹤」：買進均價 vs 8／20 交易日後收盤價。
-          大單=≥300張／≥3000萬，小單=50~300張／500~3000萬（自 2026-07-17 起累積）</div>
+      return `<h4 style="margin:12px 0 4px;color:var(--text)">${title}</h4>
         <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px">
           <thead><tr style="color:var(--text-muted);border-bottom:1px solid var(--border)">
             <th style="padding:4px 8px;text-align:left">分點</th><th style="padding:4px 8px">榜別</th>
-            <th style="padding:4px 8px">單別</th><th style="padding:4px 8px;text-align:right">總訊號</th>
-            <th style="padding:4px 8px;text-align:right">8日樣本</th><th style="padding:4px 8px;text-align:right">8日勝率</th>
-            <th style="padding:4px 8px;text-align:right">8日均報</th>
-            <th style="padding:4px 8px;text-align:right">20日樣本</th><th style="padding:4px 8px;text-align:right">20日勝率</th>
-            <th style="padding:4px 8px;text-align:right">20日均報</th>
-          </tr></thead><tbody>${tr}</tbody>
-        </table></div>`;
+            <th style="padding:4px 8px;text-align:right">總訊號</th>
+            <th style="padding:4px 8px;text-align:right">8日勝率</th>
+            <th style="padding:4px 8px;text-align:right">20日勝率</th>
+          </tr></thead><tbody>${tr}</tbody></table></div>`;
+    }
+
+    function _statsSection() {
+      return `
+        <div style="font-size:11px;color:var(--text-muted);padding:6px 0 4px">
+          📋 純實測：自 2026-07-17 起，每天記錄大單前20／小單前20分點的實際上榜買超，
+          追蹤買進均價 vs 8／20 交易日後收盤價。「/N筆」=已滿天數納入計算的筆數，「未滿」=還沒到期、尚未計勝率。
+          大單=≥300張／≥3000萬，小單=50~300張／500~3000萬。</div>
+        ${_statsPoolTable('large', '🔴 大單前20分點')}
+        ${_statsPoolTable('small', '🔵 小單前20分點')}`;
     }
 
     // ── 除權息資訊 ─────────────────────────────────────────
