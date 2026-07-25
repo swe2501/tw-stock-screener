@@ -1122,7 +1122,26 @@
       <div class="auth-field"><label>Email</label><input type="email" id="authEmail" placeholder="your@email.com"></div>
       <div class="auth-field"><label>密碼</label><div class="pw-wrap"><input type="password" id="authPassword" placeholder="至少 6 個字元"><button class="pw-eye" type="button" onclick="togglePwEye()" id="pwEyeBtn">👁</button></div></div>
       <button class="auth-submit" id="authSubmit" onclick="doAuth()">登入</button>
+      <div id="authForgotRow" style="text-align:right;margin-top:8px">
+        <a href="javascript:void(0)" onclick="sendPasswordReset()"
+           style="color:var(--text-muted);font-size:12px;text-decoration:underline;cursor:pointer">忘記密碼？</a>
+      </div>
       <div class="auth-error" id="authError"></div>
+    </div>
+  </div>
+
+  <!-- 設定新密碼 modal（點重設信連結回來時顯示） -->
+  <div id="resetPwModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9998;align-items:center;justify-content:center">
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:28px 26px;max-width:340px;width:90%">
+      <h3 style="margin:0 0 4px;color:var(--text-primary);font-size:1.1rem">設定新密碼</h3>
+      <p style="margin:0 0 16px;color:var(--text-muted);font-size:.85rem">請輸入新密碼（至少 6 個字元）</p>
+      <div class="pw-wrap" style="margin-bottom:12px">
+        <input type="password" id="newPwInput" placeholder="新密碼"
+          style="width:100%;padding:9px 11px;background:var(--bg);border:1px solid var(--border);border-radius:7px;color:var(--text)">
+      </div>
+      <div id="resetPwError" style="color:#e74c3c;font-size:12px;min-height:16px;margin-bottom:8px"></div>
+      <button onclick="submitNewPassword()" id="resetPwBtn"
+        style="width:100%;padding:9px 0;background:var(--accent);color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:.95rem">更新密碼並登入</button>
     </div>
   </div>
 
@@ -2492,6 +2511,73 @@
       document.getElementById('authTitle').textContent = tab === 'login' ? '歡迎回來' : '建立帳號';
       document.getElementById('authSubmit').textContent = tab === 'login' ? '登入' : '註冊';
       document.getElementById('authError').textContent = '';
+      const fr = document.getElementById('authForgotRow');
+      if (fr) fr.style.display = tab === 'login' ? '' : 'none';
+    }
+
+    // 寄送密碼重設信（走 Supabase recover，Resend 寄出）
+    async function sendPasswordReset() {
+      const email = document.getElementById('authEmail').value.trim();
+      const errEl = document.getElementById('authError');
+      if (!email) { errEl.style.color = '#e74c3c'; errEl.textContent = '請先在上方輸入你的 Email'; return; }
+      errEl.style.color = 'var(--text-muted)'; errEl.textContent = '寄送中...';
+      try {
+        const r = await fetch(`${SIG_SB_URL}/auth/v1/recover`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', apikey: SIG_SB_ANON },
+          body: JSON.stringify({ email, redirect_to: window.location.origin }),
+        });
+        if (r.ok) {
+          errEl.style.color = '#26c281';
+          errEl.textContent = '重設信已寄出，請到信箱點連結（含垃圾郵件夾）';
+        } else {
+          errEl.style.color = '#e74c3c';
+          errEl.textContent = '寄送失敗，請稍後再試';
+        }
+      } catch (_) { errEl.style.color = '#e74c3c'; errEl.textContent = '網路錯誤，請稍後再試'; }
+    }
+
+    // 頁面載入時：若網址帶 recovery token（點重設信回來），顯示設定新密碼
+    let _recoveryToken = null;
+    (function _checkRecovery() {
+      const h = window.location.hash || '';
+      if (h.includes('type=recovery') && h.includes('access_token=')) {
+        const p = new URLSearchParams(h.slice(1));
+        _recoveryToken = p.get('access_token');
+        if (_recoveryToken) {
+          history.replaceState(null, '', window.location.pathname);  // 清掉網址上的 token
+          setTimeout(() => { document.getElementById('resetPwModal').style.display = 'flex'; }, 200);
+        }
+      }
+    })();
+
+    async function submitNewPassword() {
+      const pw = document.getElementById('newPwInput').value;
+      const errEl = document.getElementById('resetPwError');
+      const btn = document.getElementById('resetPwBtn');
+      if (!pw || pw.length < 6) { errEl.textContent = '密碼至少 6 個字元'; return; }
+      btn.disabled = true; btn.textContent = '更新中...';
+      try {
+        const r = await fetch(`${SIG_SB_URL}/auth/v1/user`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', apikey: SIG_SB_ANON,
+                     Authorization: `Bearer ${_recoveryToken}` },
+          body: JSON.stringify({ password: pw }),
+        });
+        const d = await r.json();
+        if (!r.ok) { errEl.textContent = d.msg || d.error_description || '更新失敗，連結可能已過期'; btn.disabled = false; btn.textContent = '更新密碼並登入'; return; }
+        // 更新成功，用 recovery token 當作已登入狀態
+        _authToken = _recoveryToken;
+        _authUser = d;
+        localStorage.setItem('sb_token', _authToken);
+        localStorage.setItem('sb_user', JSON.stringify(_authUser));
+        document.getElementById('resetPwModal').style.display = 'none';
+        _applyAuthState();
+        showToast('密碼已更新，已為你登入');
+      } catch (_) {
+        errEl.textContent = '網路錯誤，請稍後再試';
+        btn.disabled = false; btn.textContent = '更新密碼並登入';
+      }
     }
     async function doAuth() {
       const email    = document.getElementById('authEmail').value.trim();
