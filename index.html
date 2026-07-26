@@ -2092,8 +2092,10 @@
     }
 
     // 交集/重疊表：兩榜各自名次 / 20日勝率 / 事件次數，中間分隔線區隔兩榜
-    function _rkTableOverlap(rows, labA, labB) {
+    // viewA：左側榜的 view 名稱，點分點時用它撈明細（可省略＝不可點）
+    function _rkTableOverlap(rows, labA, labB, viewA) {
       if (!rows.length) return `<div style="padding:16px 0">此條件下沒有重疊的分點</div>`;
+      const isLots = (viewA || '').includes('lots');
       const cell = (r, w, e, n20) => {
         const warn = (e != null && e < 10) ? '⚠️ ' : '';
         const unres = (e != null && n20 != null) ? e - n20 : 0;
@@ -2103,13 +2105,20 @@
           <td style="padding:5px 10px;text-align:left;color:#e6a23c;font-weight:600">${wtxt}</td>
           <td style="padding:5px 6px;text-align:left;color:var(--text-muted)">${etxt}</td>`;
       };
-      const tr = rows.map((x, i) => `
-        <tr style="border-bottom:1px solid var(--border);background:${i % 2 ? 'transparent' : 'rgba(255,255,255,.02)'}">
-          <td style="padding:5px 10px;font-weight:600;color:var(--text-primary)">${x.broker_name || x.broker_id}</td>
+      const tr = rows.map((x, i) => {
+        const clickable = viewA
+          ? `onclick="_rkShowTrades('${viewA}','${x.broker_id}','${(x.broker_name||'').replace(/'/g,'')}',${isLots})" style="cursor:pointer" title="點擊看該分點出手明細"` : '';
+        const nameCell = viewA
+          ? `<td style="padding:5px 10px;font-weight:600;color:#4da3ff">${x.broker_name || x.broker_id} ›</td>`
+          : `<td style="padding:5px 10px;font-weight:600;color:var(--text-primary)">${x.broker_name || x.broker_id}</td>`;
+        return `
+        <tr ${clickable} style="border-bottom:1px solid var(--border);background:${i % 2 ? 'transparent' : 'rgba(255,255,255,.02)'}">
+          ${nameCell}
           ${cell(x.rank, x.win20, x.events, x.n20)}
           <td style="border-left:1px solid var(--border)"></td>
           ${cell(x.rank_b, x.win20_b, x.events_b, x.n20_b)}
-        </tr>`).join('');
+        </tr>`;
+      }).join('');
       return `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">
         <thead>
           <tr style="color:var(--text-muted)">
@@ -2131,32 +2140,32 @@
       if (g === 'g1') {
         if (t === 0) return _rkTableSimple(_rkView('year_large_lots'), 'year_large_lots');
         if (t === 1) return _rkTableSimple(_rkView('year_large_amount'), 'year_large_amount');
-        return _rkTableOverlap(_rkIntersect('year_large_lots', 'year_large_amount'), '張數', '金額');
+        return _rkTableOverlap(_rkIntersect('year_large_lots', 'year_large_amount'), '張數', '金額', 'year_large_lots');
       }
       if (g === 'g2') {
         if (t === 0) return _rkTableSimple(_rkView('year_small_lots'), 'year_small_lots');
         if (t === 1) return _rkTableSimple(_rkView('year_small_amount'), 'year_small_amount');
-        return _rkTableOverlap(_rkIntersect('year_small_lots', 'year_small_amount'), '張數', '金額');
+        return _rkTableOverlap(_rkIntersect('year_small_lots', 'year_small_amount'), '張數', '金額', 'year_small_lots');
       }
       if (g === 'g3') {
-        if (t === 0) return _rkTableOverlap(_rkHiOverlap('year_large_lots', 'year_small_lots'), '大單', '小單');
-        if (t === 1) return _rkTableOverlap(_rkHiOverlap('year_large_amount', 'year_small_amount'), '大單', '小單');
+        if (t === 0) return _rkTableOverlap(_rkHiOverlap('year_large_lots', 'year_small_lots'), '大單', '小單', 'year_large_lots');
+        if (t === 1) return _rkTableOverlap(_rkHiOverlap('year_large_amount', 'year_small_amount'), '大單', '小單', 'year_large_amount');
         // 交集：同時符合上面張數與金額兩 tab 的分點
         const a = new Set(_rkHiOverlap('year_large_lots', 'year_small_lots').map(x => x.broker_id));
         const rows = _rkHiOverlap('year_large_amount', 'year_small_amount').filter(x => a.has(x.broker_id));
-        return _rkTableOverlap(rows, '大單', '小單');
+        return _rkTableOverlap(rows, '大單', '小單', 'year_large_amount');
       }
       if (g === 'g4') {
         if (t === 0) return _rkTableSimple(_rkView('d90_small_lots'), 'd90_small_lots');
         if (t === 1) return _rkTableSimple(_rkView('d90_small_amount'), 'd90_small_amount');
-        return _rkTableOverlap(_rkHiOverlap('d90_small_lots', 'd90_small_amount'), '張數', '金額');
+        return _rkTableOverlap(_rkHiOverlap('d90_small_lots', 'd90_small_amount'), '張數', '金額', 'd90_small_lots');
       }
       // g5：長短皆穩小單 = 小單年回測 ∩ 小單90日，兩榜 20 日勝率都 ≥ 門檻
-      if (t === 0) return _rkTableOverlap(_rkHiOverlapBoth('year_small_lots', 'd90_small_lots'), '年回測', '90日');
-      if (t === 1) return _rkTableOverlap(_rkHiOverlapBoth('year_small_amount', 'd90_small_amount'), '年回測', '90日');
+      if (t === 0) return _rkTableOverlap(_rkHiOverlapBoth('year_small_lots', 'd90_small_lots'), '年回測', '90日', 'year_small_lots');
+      if (t === 1) return _rkTableOverlap(_rkHiOverlapBoth('year_small_amount', 'd90_small_amount'), '年回測', '90日', 'year_small_amount');
       const a = new Set(_rkHiOverlapBoth('year_small_lots', 'd90_small_lots').map(x => x.broker_id));
       const rows = _rkHiOverlapBoth('year_small_amount', 'd90_small_amount').filter(x => a.has(x.broker_id));
-      return _rkTableOverlap(rows, '年回測', '90日');
+      return _rkTableOverlap(rows, '年回測', '90日', 'year_small_lots');
     }
 
     function _renderRank() {
