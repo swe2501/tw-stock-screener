@@ -31,7 +31,7 @@ ALL_STOCKS_FILE = Path(__file__).resolve().parent / "all_stocks.txt"
 WATCHLIST_FILE  = Path(__file__).resolve().parent / "watchlist.txt"
 LOG_FILE        = Path(__file__).resolve().parent / "daily_job.log"
 
-BACKFILL_DAYS    = 365   # 回補目標：最近幾天的歷史（本機 SQLite 空間充足，存滿一年）
+BACKFILL_DAYS    = 440   # 回補目標：往回天數。Wantgoo 只保留約 14 個月，440 天可補到源頭極限(~2025-05)
 MAX_DAYS_PER_RUN = 90    # 回補每批次最多抓幾天
 
 
