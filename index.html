@@ -2534,8 +2534,9 @@
       document.getElementById('logoutBtn').style.display     = loggedIn ? ''     : 'none';
       document.getElementById('alertMgrBtn').style.display   = loggedIn ? ''     : 'none';
       document.getElementById('watchlistBtn').style.display  = loggedIn ? ''     : 'none';
-      // 主力訊號／分點回測：僅擁有者帳號可見（資料端另有 RLS 保護）
-      const _owner = loggedIn && _authUser?.email === 'swe250165@gmail.com';
+      // 主力訊號／分點回測：僅授權帳號可見（資料端另有 RLS 保護；加人改此陣列＋DB allowed_viewers）
+      const VIEWER_EMAILS = ['swe250165@gmail.com', 'qa5518556130@gmail.com'];
+      const _owner = loggedIn && VIEWER_EMAILS.includes(_authUser?.email);
       document.getElementById('brokerSigBtn').style.display = _owner ? '' : 'none';
       document.getElementById('brokerRankBtn').style.display = _owner ? '' : 'none';
       const emailEl = document.getElementById('authUserEmail');
