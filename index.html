@@ -1919,7 +1919,7 @@
       document.getElementById('marketBtn').style.display = (sym === '^TWII') ? 'none' : 'inline-block';
     }
 
-    function openChart(code, name, industry = '', price = 0, fromScreen = false) {
+    function openChart(code, name, industry = '', price = 0, fromScreen = false, markDate = null, markLabel = '📍') {
       prevCode = ''; prevName = '';
       currentCode = code; currentName = name;
       currentIndustry = industry; currentPrice = price;
@@ -1927,6 +1927,10 @@
       // 從篩選結果點進來：自動在「篩選日期」那根 K 棒加標記
       if (fromScreen && _lastScreenDate) {
         _addChartMarker(code, _lastScreenDate, _lastScreenLimitUp ? '漲停' : '📍');
+      }
+      // 指定日期標記（例：從分點明細點某筆買超，標在那天）
+      if (markDate) {
+        _addChartMarker(code, markDate, markLabel);
       }
       _updateChartWatchBtn();
       _populateChartNote();
@@ -2238,7 +2242,7 @@
         const rows = r.ok ? await r.json() : [];
         if (!rows.length) { body.innerHTML = '<div style="padding:12px 0;color:var(--text-muted)">此期間查無符合門檻的出手</div>'; return; }
         const tr = rows.map(x => `
-          <tr onclick="openChart('${x.code}','${x.code} ${(x.name||'').replace(/'/g,'')}')"
+          <tr onclick="openChart('${x.code}','${x.code} ${(x.name||'').replace(/'/g,'')}','',0,false,'${x.trade_date}','${brokerName} 買')"
               style="border-bottom:1px solid var(--border);cursor:pointer">
             <td style="padding:4px 8px;white-space:nowrap">${x.trade_date}</td>
             <td style="padding:4px 8px;color:#4da3ff">${x.code} ${x.name || ''}</td>
