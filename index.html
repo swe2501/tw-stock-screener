@@ -591,7 +591,7 @@
       position: fixed;
       inset: 0;
       background: rgba(0,0,0,0.7);
-      z-index: 1150;
+      z-index: 9995;   /* 高於主力訊號/分點回測面板(9990~9992)，K圖永遠在最上層 */
       align-items: center;
       justify-content: center;
       padding: 16px;
@@ -2229,7 +2229,7 @@
         const rows = r.ok ? await r.json() : [];
         if (!rows.length) { body.innerHTML = '<div style="padding:12px 0;color:var(--text-muted)">此期間查無符合門檻的出手</div>'; return; }
         const tr = rows.map(x => `
-          <tr onclick="document.getElementById('rkTradesModal').style.display='none';openChart('${x.code}','${x.code} ${(x.name||'').replace(/'/g,'')}')"
+          <tr onclick="openChart('${x.code}','${x.code} ${(x.name||'').replace(/'/g,'')}')"
               style="border-bottom:1px solid var(--border);cursor:pointer">
             <td style="padding:4px 8px;white-space:nowrap">${x.trade_date}</td>
             <td style="padding:4px 8px;color:#4da3ff">${x.code} ${x.name || ''}</td>
