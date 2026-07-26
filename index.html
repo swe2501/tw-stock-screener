@@ -1117,7 +1117,7 @@
       <h3 style="margin:0 0 8px;color:var(--text-primary);font-size:1.1rem">閒置超過 1 小時</h3>
       <p style="margin:0 0 24px;color:var(--text-muted);font-size:.9rem">為保障帳號安全，您已自動登出。</p>
       <div style="display:flex;gap:10px;justify-content:center">
-        <button onclick="document.getElementById('idleLogoutModal').style.display='none';openAuthModal('login')"
+        <button onclick="_closeAllPanels();document.getElementById('idleLogoutModal').style.display='none';openAuthModal('login')"
           style="padding:8px 20px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.95rem">重新登入</button>
         <button onclick="document.getElementById('idleLogoutModal').style.display='none'"
           style="padding:8px 20px;background:transparent;color:var(--text-muted);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:.95rem">關閉</button>
@@ -2571,6 +2571,17 @@
     }
     function closeAuthModal() {
       document.getElementById('authModal').classList.remove('open');
+    }
+    // 關閉所有開啟的面板/視窗（閒置登出重新登入時用）
+    function _closeAllPanels() {
+      ['brokerSigModal', 'brokerRankModal', 'rkTradesModal', 'divAlertModal', 'resetPwModal']
+        .forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+      ['chartModal', 'watchlistPanel', 'alertPanel', 'watchAddModal']
+        .forEach(id => { const el = document.getElementById(id); if (el) el.classList.remove('open'); });
+      const wp = document.getElementById('watchlistPanel'); if (wp) wp.classList.add('hidden');
+      const ap = document.getElementById('alertPanel'); if (ap) ap.classList.add('hidden');
+      const wa = document.getElementById('watchAddModal'); if (wa) wa.classList.add('hidden');
+      try { _stopRealtimeUpdates(); } catch (_) {}
     }
     function switchAuthTab(tab) {
       _authTab = tab;
