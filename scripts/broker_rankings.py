@@ -53,6 +53,80 @@ def _rank(conn, prices, **kw):
     return out
 
 
+# 各 view 的明細窗口與門檻（供 broker_trades 逐筆明細用）
+TRADE_DETAIL_DAYS = 365   # year 系列明細抓一年；d90 系列改抓 90 天
+TRADE_CAP = 120           # 每個分點最多存幾筆（小單很多，設上限避免爆量）
+_NAME_CACHE = {}
+
+
+def _stock_names():
+    """TWSE 股票代號→簡稱對照（快取）。"""
+    if _NAME_CACHE:
+        return _NAME_CACHE
+    import json as _json, ssl as _ssl, urllib.request as _u
+    ctx = _ssl.create_default_context(); ctx.check_hostname = False; ctx.verify_mode = _ssl.CERT_NONE
+    try:
+        req = _u.Request("https://openapi.twse.com.tw/v1/opendata/t187ap03_L",
+                         headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"})
+        for row in _json.loads(_u.urlopen(req, context=ctx, timeout=30).read()):
+            _NAME_CACHE[str(row.get("公司代號", "")).strip()] = str(row.get("公司簡稱", "")).strip()
+    except Exception as e:
+        print(f"[warn] 股名抓取失敗：{e}")
+    return _NAME_CACHE
+
+
+def upload_broker_trades(conn, env, views, d90):
+    """把 6 個榜前 20 名分點的逐筆買超明細算好上傳 broker_trades（供網站點分點展開）。
+    直接讀 Supabase 現有排名決定名單，不用重算排行榜。"""
+    from datetime import date, timedelta
+    names = _stock_names()
+    today = conn.execute("select max(trade_date) from wantgoo_daily").fetchone()[0]
+    year_cut = (date.fromisoformat(today) - timedelta(days=TRADE_DETAIL_DAYS)).isoformat()
+    # 每個 view 的門檻
+    thresh = {
+        "year_large_lots":   ("lots", 300, 0,    year_cut),
+        "year_large_amount": ("amt",  3000, 0,   year_cut),
+        "year_small_lots":   ("lots", 50, 300,   year_cut),
+        "year_small_amount": ("amt",  500, 3000, year_cut),
+        "d90_small_lots":    ("lots", 50, 300,   d90),
+        "d90_small_amount":  ("amt",  500, 3000, d90),
+    }
+    prices = ba.load_prices(conn)
+    all_rows = []
+    for view, (kind, lo, hi, cut) in thresh.items():
+        st, ranked = bs._sb(env, "/broker_rankings",
+                            params=[("select", "broker_id"), ("view", f"eq.{view}"), ("order", "rank.asc")])
+        if st != 200:
+            continue
+        for r in ranked:
+            bid = r["broker_id"]
+            recs = conn.execute("""select code, trade_date, buy_vol, sell_vol, buy_avg_price
+                from wantgoo_daily where broker_id=? and trade_date>=? order by trade_date desc""",
+                (bid, cut)).fetchall()
+            picked = []
+            for code, d, buy, sell, bavg in recs:
+                net = (buy or 0) - (sell or 0)
+                if net <= 0:
+                    continue
+                price = bavg or (prices.get(code) and prices[code][1].get(d))
+                amt = round(net * 1000 * price / 10000, 1) if price else None
+                v = net if kind == "lots" else (amt or 0)
+                if v < lo or (hi > 0 and v >= hi):
+                    continue
+                picked.append({"view": view, "broker_id": bid, "trade_date": d,
+                               "code": code, "name": names.get(code, ""),
+                               "net_lots": int(net), "net_amount_wan": amt})
+                if len(picked) >= TRADE_CAP:
+                    break
+            all_rows.extend(picked)
+    bs._sb(env, "/broker_trades", method="DELETE", params=[("view", "neq.__none__")])
+    status, resp = bs._sb(env, "/broker_trades", method="POST", body=all_rows)
+    if status in (200, 201):
+        print(f"已上傳 {len(all_rows)} 筆明細到 broker_trades")
+    else:
+        print(f"[error] broker_trades 上傳失敗 ({status}): {resp}")
+
+
 def main():
     env = bs._load_env()
     if not env.get("SUPABASE_SERVICE_KEY"):
@@ -73,6 +147,11 @@ def main():
         "d90_small_amount":  dict(min_amount_wan=500, max_amount_wan=3000, date_from=d90),
     }
 
+    # --trades-only：跳過重算排行榜，只更新明細（讀現有名單，快）
+    if "--trades-only" in sys.argv:
+        upload_broker_trades(conn, env, views, d90)
+        return
+
     all_records = []
     for view, kw in views.items():
         print(f"計算 {view} ...")
@@ -88,6 +167,7 @@ def main():
         print(f"[error] 上傳失敗 ({status}): {resp}")
 
     append_history_snapshot(env, all_records)
+    upload_broker_trades(conn, env, views, d90)
 
 
 def append_history_snapshot(env, all_records):

@@ -1084,6 +1084,21 @@
     </div>
   </div>
 
+  <!-- 分點出手明細 modal -->
+  <div id="rkTradesModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9992;align-items:flex-start;justify-content:center;overflow-y:auto;padding:5vh 12px">
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px 22px;max-width:520px;width:100%">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px">
+        <div>
+          <h3 id="rkTradesTitle" style="margin:0;font-size:1.05rem;color:var(--text-primary)">分點出手明細</h3>
+          <div id="rkTradesSub" style="font-size:11px;color:var(--text-muted);margin-top:2px"></div>
+        </div>
+        <button onclick="document.getElementById('rkTradesModal').style.display='none'"
+          style="background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer">&#10005;</button>
+      </div>
+      <div id="rkTradesBody" style="margin-top:10px;font-size:12.5px;color:var(--text)">載入中...</div>
+    </div>
+  </div>
+
   <!-- 除權息臨近警示 modal -->
   <div id="divAlertModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;align-items:center;justify-content:center">
     <div style="background:var(--bg-card);border:1px solid #e6a23c;border-radius:12px;padding:32px 28px;max-width:360px;width:90%;text-align:center">
@@ -2051,16 +2066,18 @@
       return `<td style="padding:4px 8px;text-align:right;color:#e6a23c">${pct}%`
         + `<span style="color:var(--text-muted);font-size:10px"> /${n ?? '?'}筆</span></td>`;
     }
-    function _rkTableSimple(rows) {
+    function _rkTableSimple(rows, view) {
       if (!rows.length) return `<div style="padding:16px 0">此條件下沒有符合的分點</div>`;
+      const isLots = (view || '').includes('lots');
       const tr = rows.map(x => {
         const warn = (x.events != null && x.events < 10) ? '<span title="事件次數過少，勝率參考性低">⚠️</span> ' : '';
         const unres = (x.events != null && x.n20 != null) ? x.events - x.n20 : 0;
         const unresTxt = unres > 0
           ? `<span style="color:#e6a23c;font-size:10px" title="這些事件還沒滿20交易日，未納入20日勝率"> (${unres}未滿20日)</span>` : '';
-        return `<tr onclick="_rkOpenChart()" style="border-bottom:1px solid var(--border)">
+        return `<tr onclick="_rkShowTrades('${view}','${x.broker_id}','${(x.broker_name||'').replace(/'/g,'')}',${isLots})"
+            style="border-bottom:1px solid var(--border);cursor:pointer" title="點擊看該分點出手明細">
           <td style="padding:4px 8px;text-align:center">${x.rank}</td>
-          <td style="padding:4px 8px">${x.broker_name || x.broker_id}</td>
+          <td style="padding:4px 8px;color:#4da3ff">${x.broker_name || x.broker_id} ›</td>
           ${_rkWinCell(x.win8, x.n8)}
           ${_rkWinCell(x.win20, x.n20)}
           <td style="padding:4px 8px;text-align:right">${warn}${x.events ?? '–'}${unresTxt}</td>
@@ -2112,13 +2129,13 @@
     function _rkContent() {
       const g = _rkGroup, t = _rkTab;
       if (g === 'g1') {
-        if (t === 0) return _rkTableSimple(_rkView('year_large_lots'));
-        if (t === 1) return _rkTableSimple(_rkView('year_large_amount'));
+        if (t === 0) return _rkTableSimple(_rkView('year_large_lots'), 'year_large_lots');
+        if (t === 1) return _rkTableSimple(_rkView('year_large_amount'), 'year_large_amount');
         return _rkTableOverlap(_rkIntersect('year_large_lots', 'year_large_amount'), '張數', '金額');
       }
       if (g === 'g2') {
-        if (t === 0) return _rkTableSimple(_rkView('year_small_lots'));
-        if (t === 1) return _rkTableSimple(_rkView('year_small_amount'));
+        if (t === 0) return _rkTableSimple(_rkView('year_small_lots'), 'year_small_lots');
+        if (t === 1) return _rkTableSimple(_rkView('year_small_amount'), 'year_small_amount');
         return _rkTableOverlap(_rkIntersect('year_small_lots', 'year_small_amount'), '張數', '金額');
       }
       if (g === 'g3') {
@@ -2130,8 +2147,8 @@
         return _rkTableOverlap(rows, '大單', '小單');
       }
       if (g === 'g4') {
-        if (t === 0) return _rkTableSimple(_rkView('d90_small_lots'));
-        if (t === 1) return _rkTableSimple(_rkView('d90_small_amount'));
+        if (t === 0) return _rkTableSimple(_rkView('d90_small_lots'), 'd90_small_lots');
+        if (t === 1) return _rkTableSimple(_rkView('d90_small_amount'), 'd90_small_amount');
         return _rkTableOverlap(_rkHiOverlap('d90_small_lots', 'd90_small_amount'), '張數', '金額');
       }
       // g5：長短皆穩小單 = 小單年回測 ∩ 小單90日，兩榜 20 日勝率都 ≥ 門檻
@@ -2191,6 +2208,43 @@
     }
 
     function _rkOpenChart() { /* 榜單列暫不開圖（分點非單一股票） */ }
+
+    // 點分點 → 展開該分點在該榜門檻下的出手明細
+    async function _rkShowTrades(view, brokerId, brokerName, isLots) {
+      const modal = document.getElementById('rkTradesModal');
+      const body = document.getElementById('rkTradesBody');
+      document.getElementById('rkTradesTitle').textContent = `${brokerName} 的出手明細`;
+      const win = view.startsWith('d90') ? '近90交易日' : '近一年';
+      const size = view.includes('large') ? '大單(≥300張/≥3000萬)' : '小單(50~300張/500~3000萬)';
+      document.getElementById('rkTradesSub').textContent = `${win}・${size}・${isLots ? '張數榜' : '金額榜'}`;
+      body.innerHTML = '載入中...';
+      modal.style.display = 'flex';
+      try {
+        const r = await fetch(`${SIG_SB_URL}/rest/v1/broker_trades`
+          + `?select=trade_date,code,name,net_lots,net_amount_wan`
+          + `&view=eq.${view}&broker_id=eq.${encodeURIComponent(brokerId)}`
+          + `&order=trade_date.desc&limit=200`, {
+          headers: { apikey: SIG_SB_ANON, Authorization: `Bearer ${_authToken}` },
+        });
+        const rows = r.ok ? await r.json() : [];
+        if (!rows.length) { body.innerHTML = '<div style="padding:12px 0;color:var(--text-muted)">此期間查無符合門檻的出手</div>'; return; }
+        const tr = rows.map(x => `
+          <tr onclick="document.getElementById('rkTradesModal').style.display='none';openChart('${x.code}','${x.code} ${(x.name||'').replace(/'/g,'')}')"
+              style="border-bottom:1px solid var(--border);cursor:pointer">
+            <td style="padding:4px 8px;white-space:nowrap">${x.trade_date}</td>
+            <td style="padding:4px 8px;color:#4da3ff">${x.code} ${x.name || ''}</td>
+            <td style="padding:4px 8px;text-align:right">${isLots
+              ? Number(x.net_lots).toLocaleString() + ' 張'
+              : (x.net_amount_wan != null ? Number(x.net_amount_wan).toLocaleString() + ' 萬' : '–')}</td>
+          </tr>`).join('');
+        body.innerHTML = `<div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">共 ${rows.length} 筆，點列可開該股 K 線圖</div>
+          <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px">
+            <thead><tr style="color:var(--text-muted);border-bottom:1px solid var(--border)">
+              <th style="padding:4px 8px;text-align:left">日期</th><th style="padding:4px 8px;text-align:left">股票</th>
+              <th style="padding:4px 8px;text-align:right">${isLots ? '買超張數' : '買超金額'}</th>
+            </tr></thead><tbody>${tr}</tbody></table></div>`;
+      } catch (e) { body.innerHTML = '載入失敗：' + e.message; }
+    }
 
     async function openBrokerSignals() {
       document.getElementById('brokerSigModal').style.display = 'flex';
