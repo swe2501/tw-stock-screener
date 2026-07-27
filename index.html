@@ -2275,14 +2275,14 @@
         <td style="padding:4px 8px;text-align:right">${x.days}天</td>
         <td style="padding:4px 8px;text-align:right">${Number(x.cum_lots).toLocaleString()}張</td>
         <td style="padding:4px 8px;text-align:right">${x.cum_amount_wan != null ? Number(x.cum_amount_wan).toLocaleString() + '萬' : '–'}</td>
-        <td style="padding:4px 8px;text-align:right;color:#e6a23c">${x.vol_ratio != null ? x.vol_ratio + '%' : '–'}</td>
+        ${floatOnly ? `<td style="padding:4px 8px;text-align:right;color:#e6a23c">${x.vol_ratio != null ? x.vol_ratio + '%' : '–'}</td>` : ''}
       </tr>`).join('');
       return `<div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">共 ${rows.length} 筆，點列開該股K線（標在起始日）</div>
         <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px">
         <thead><tr style="color:var(--text-muted);border-bottom:1px solid var(--border)">
           <th style="padding:4px 8px;text-align:left">分點</th><th style="padding:4px 8px;text-align:left">股票</th>
           <th style="padding:4px 8px;text-align:left">連買區間</th><th style="padding:4px 8px;text-align:right">天數</th>
-          <th style="padding:4px 8px;text-align:right">累積買超</th><th style="padding:4px 8px;text-align:right">累積金額</th><th style="padding:4px 8px;text-align:right">占成交量</th>
+          <th style="padding:4px 8px;text-align:right">累積買超</th><th style="padding:4px 8px;text-align:right">累積金額</th>${floatOnly ? '<th style="padding:4px 8px;text-align:right">占成交量</th>' : ''}
         </tr></thead><tbody>${tr}</tbody></table></div>`;
     }
 
