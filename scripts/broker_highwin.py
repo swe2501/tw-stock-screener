@@ -28,6 +28,7 @@ LARGE_WAN  = 3000  # 或 淨買超金額 ≥ 此萬元（張數/金額擇一達�
 MIN_STREAK = 3     # 連續買超天數門檻
 STREAK_MIN_LOTS = 100   # 連買區段累積買超 ≥ 此張數
 STREAK_MIN_WAN  = 1000  # 或 累積金額 ≥ 此萬元（擇一達標才列入，濾掉冷門股雜訊）
+LIQUID_DAY_LOTS = 3000  # 個股流動性門檻：近一年須「曾有單日成交量 ≥ 此張數」才列入連買篩選
 
 
 def _names():
@@ -77,6 +78,12 @@ def main():
         "select distinct trade_date from wantgoo_daily where trade_date>=? order by trade_date", (year_cut,))]
     idx_of = {d: i for i, d in enumerate(all_dates)}
 
+    # 流動性股票集合：近一年「曾有單日成交量 ≥LIQUID_DAY_LOTS 張」（volume 單位為股，×1000=張）
+    liquid = {x[0] for x in conn.execute(
+        "select code from stock_daily where trade_date>=? group by code having max(volume)>=?",
+        (year_cut, LIQUID_DAY_LOTS * 1000))}
+    print(f"  流動性股票（近一年曾單日≥{LIQUID_DAY_LOTS}張）：{len(liquid)} 檔")
+
     # ── Tab2/3：連續買超區段＋流通比 ──
     streaks = []
     for hw in highwin:
@@ -91,6 +98,8 @@ def main():
                 price = bavg or (prices.get(code) and prices[code][1].get(d))
                 per_stock.setdefault(code, []).append((d, net, price))
         for code, days in per_stock.items():
+            if code not in liquid:   # 冷門股（整年沒有一天量達門檻）直接跳過
+                continue
             # 找連續交易日 run（依全市場交易日序列相鄰）
             run = []
             for rec in days:
