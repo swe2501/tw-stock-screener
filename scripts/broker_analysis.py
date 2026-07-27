@@ -65,7 +65,8 @@ def trading_days_between(prices, code, d1, d2):
 
 
 def analyze(conn, prices, codes=None, min_lots=300, min_events=5, hold_days=(5, 20),
-            min_amount_wan=0, max_lots=0, max_amount_wan=0, date_from=None):
+            min_amount_wan=0, max_lots=0, max_amount_wan=0, date_from=None,
+            or_amount_wan=0):
     """
     單次掃描 wantgoo_daily（依 broker_id, code, trade_date 排序）同時計算：
       事件法統計 + FIFO 配對統計，彙整到 broker 層級。
@@ -130,10 +131,13 @@ def analyze(conn, prices, codes=None, min_lots=300, min_events=5, hold_days=(5, 
 
         # ── 事件法：張數制（淨買超 ≥ min_lots 張）或金額制（淨買超金額 ≥ min_amount 萬元）──
         # 可加上限（小單區間）：max_lots / max_amount_wan
+        # or_amount_wan > 0：大單聯集定義，net≥min_lots 張 或 金額≥or_amount_wan 萬 擇一即算
         entry_ref = bavg or (prices.get(code) and prices[code][1].get(d))
-        if min_amount_wan > 0:
+        amt = net * 1000 * entry_ref if (net > 0 and entry_ref) else 0
+        if or_amount_wan > 0:
+            is_event = (net >= min_lots) or (amt >= or_amount_wan * 10000)
+        elif min_amount_wan > 0:
             # 金額 = 張數 × 1000 股 × 價格；門檻單位為萬元
-            amt = net * 1000 * entry_ref if (net > 0 and entry_ref) else 0
             is_event = (amt >= min_amount_wan * 10000
                         and (max_amount_wan <= 0 or amt < max_amount_wan * 10000))
         else:

@@ -24,7 +24,10 @@ if sys.stdout and hasattr(sys.stdout, "reconfigure"):
 MIN_EVENTS = 15    # 大單交易次數門檻
 WIN_TH = 70        # 5/10/20 日勝率至少一項 ≥ 此值
 LARGE_LOTS = 300   # 大單 = 單日淨買超 ≥ 此張數
+LARGE_WAN  = 3000  # 或 淨買超金額 ≥ 此萬元（張數/金額擇一達標即算大單）
 MIN_STREAK = 3     # 連續買超天數門檻
+STREAK_MIN_LOTS = 100   # 連買區段累積買超 ≥ 此張數
+STREAK_MIN_WAN  = 1000  # 或 累積金額 ≥ 此萬元（擇一達標才列入，濾掉冷門股雜訊）
 
 
 def _names():
@@ -54,9 +57,9 @@ def main():
     year_cut = (date.fromisoformat(today) - timedelta(days=365)).isoformat()
 
     # ── Tab1：高勝率分點（一次全量掃描，算 5/10/20 日勝率＋期望值）──
-    print("計算高勝率分點（大單≥300張、≥15次、5/10/20日）...")
-    rows = ba.analyze(conn, prices, min_lots=LARGE_LOTS, min_events=MIN_EVENTS,
-                      hold_days=(5, 10, 20))
+    print("計算高勝率分點（大單≥300張 或 ≥3000萬、≥15次、5/10/20日）...")
+    rows = ba.analyze(conn, prices, min_lots=LARGE_LOTS, or_amount_wan=LARGE_WAN,
+                      min_events=MIN_EVENTS, hold_days=(5, 10, 20))
     highwin = []
     for r in rows:
         w5, w10, w20 = r.get("win5") or 0, r.get("win10") or 0, r.get("win20") or 0
@@ -80,24 +83,26 @@ def main():
         bid, bname = hw["broker_id"], hw["broker_name"]
         # 該分點近一年每檔每日淨買超
         per_stock = {}
-        for code, d, buy, sell in conn.execute(
-                "select code, trade_date, buy_vol, sell_vol from wantgoo_daily "
+        for code, d, buy, sell, bavg in conn.execute(
+                "select code, trade_date, buy_vol, sell_vol, buy_avg_price from wantgoo_daily "
                 "where broker_id=? and trade_date>=? order by code, trade_date", (bid, year_cut)):
             net = (buy or 0) - (sell or 0)
             if net > 0:
-                per_stock.setdefault(code, []).append((d, net))
+                price = bavg or (prices.get(code) and prices[code][1].get(d))
+                per_stock.setdefault(code, []).append((d, net, price))
         for code, days in per_stock.items():
             # 找連續交易日 run（依全市場交易日序列相鄰）
             run = []
-            for d, net in days:
+            for rec in days:
+                d = rec[0]
                 if run and idx_of.get(d, -99) == idx_of.get(run[-1][0], -1) + 1:
-                    run.append((d, net))
+                    run.append(rec)
                 else:
                     if len(run) >= MIN_STREAK:
-                        _emit(streaks, conn, prices, names, bid, bname, code, run)
-                    run = [(d, net)]
+                        _emit(streaks, conn, names, bid, bname, code, run)
+                    run = [rec]
             if len(run) >= MIN_STREAK:
-                _emit(streaks, conn, prices, names, bid, bname, code, run)
+                _emit(streaks, conn, names, bid, bname, code, run)
     print(f"  連續買超區段：{len(streaks)} 筆")
 
     # ── 上傳 ──
@@ -108,9 +113,13 @@ def main():
     print(f"上傳 highwin={st1}（{len(highwin)}）, streaks={st2}（{len(streaks)}）")
 
 
-def _emit(streaks, conn, prices, names, bid, bname, code, run):
+def _emit(streaks, conn, names, bid, bname, code, run):
     start, end = run[0][0], run[-1][0]
-    cum = sum(n for _, n in run)
+    cum = sum(r[1] for r in run)
+    cum_wan = round(sum(r[1] * 1000 * (r[2] or 0) for r in run) / 10000, 1)
+    # 門檻：累積買超 ≥100 張 或 ≥1000 萬，否則視為雜訊不列入
+    if cum < STREAK_MIN_LOTS and cum_wan < STREAK_MIN_WAN:
+        return
     # 同期總成交量（張）＝ stock_daily.volume/1000 加總
     vol = conn.execute(
         "select sum(volume) from stock_daily where code=? and trade_date between ? and ?",
@@ -120,7 +129,8 @@ def _emit(streaks, conn, prices, names, bid, bname, code, run):
     streaks.append({
         "broker_id": bid, "broker_name": bname, "code": code, "name": names.get(code, ""),
         "start_date": start, "end_date": end, "days": len(run),
-        "cum_lots": int(cum), "total_vol_lots": total_lots, "vol_ratio": ratio,
+        "cum_lots": int(cum), "cum_amount_wan": cum_wan,
+        "total_vol_lots": total_lots, "vol_ratio": ratio,
     })
 
 

@@ -2233,9 +2233,9 @@
 
     function _floatRuleText() {
       const t = _rkTab;
-      if (t === 0) return '【高勝率分點】近一年大單(≥300張)交易 ≥15 次、期望值(20日均報)>0，且 5／10／20 日勝率至少一項 ≥70%。';
-      if (t === 1) return '【連續買超】從高勝率分點中，找出在同一檔股票「連續 ≥3 個交易日淨買超」的區段。';
-      return `【流通比】連續買超區段的累積買超張數 占同期總成交量 ≥${FLOAT_VOL_TH}% 的區段（自由流通股條件待資料補上）。`;
+      if (t === 0) return '【高勝率分點】近一年大單(≥300張 或 ≥3000萬)交易 ≥15 次、期望值(20日均報)>0，且 5／10／20 日勝率至少一項 ≥70%。';
+      if (t === 1) return '【連續買超】從高勝率分點中，找出在同一檔股票「連續 ≥3 個交易日淨買超」、且該區段累積買超 ≥100張 或 ≥1000萬 的區段。';
+      return `【流通比】連續買超區段的累積買超 占同期總成交量 ≥${FLOAT_VOL_TH}% 的區段（自由流通股條件待資料補上）。`;
     }
 
     function _floatContent() {
@@ -2274,6 +2274,7 @@
         <td style="padding:4px 8px;white-space:nowrap;font-size:11px">${x.start_date}~${x.end_date}</td>
         <td style="padding:4px 8px;text-align:right">${x.days}天</td>
         <td style="padding:4px 8px;text-align:right">${Number(x.cum_lots).toLocaleString()}張</td>
+        <td style="padding:4px 8px;text-align:right">${x.cum_amount_wan != null ? Number(x.cum_amount_wan).toLocaleString() + '萬' : '–'}</td>
         <td style="padding:4px 8px;text-align:right;color:#e6a23c">${x.vol_ratio != null ? x.vol_ratio + '%' : '–'}</td>
       </tr>`).join('');
       return `<div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">共 ${rows.length} 筆，點列開該股K線（標在起始日）</div>
@@ -2281,7 +2282,7 @@
         <thead><tr style="color:var(--text-muted);border-bottom:1px solid var(--border)">
           <th style="padding:4px 8px;text-align:left">分點</th><th style="padding:4px 8px;text-align:left">股票</th>
           <th style="padding:4px 8px;text-align:left">連買區間</th><th style="padding:4px 8px;text-align:right">天數</th>
-          <th style="padding:4px 8px;text-align:right">累積買超</th><th style="padding:4px 8px;text-align:right">占成交量</th>
+          <th style="padding:4px 8px;text-align:right">累積買超</th><th style="padding:4px 8px;text-align:right">累積金額</th><th style="padding:4px 8px;text-align:right">占成交量</th>
         </tr></thead><tbody>${tr}</tbody></table></div>`;
     }
 
