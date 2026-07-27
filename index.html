@@ -1078,6 +1078,7 @@
         <button onclick="document.getElementById('brokerRankModal').style.display='none'"
           style="background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer">&#10005;</button>
       </div>
+      <div id="rankSuperBar" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"></div>
       <div id="rankGroupBar" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"></div>
       <div id="rankTabBar" style="display:flex;gap:4px;flex-wrap:wrap"></div>
       <div id="rankContent" style="border:1px solid var(--border);border-top:none;padding:6px 8px 10px;font-size:12.5px;color:var(--text-muted)">載入中...</div>
@@ -2011,10 +2012,15 @@
 
     // ── 📊 分點回測榜（讀 broker_rankings，RLS 限擁有者） ──
     const RK_OVERLAP_WIN20 = 65;   // 重疊 tab 門檻：20 日勝率 ≥ 此值
+    const FLOAT_VOL_TH = 15;       // 流通比：占同期總成交量 ≥ 此 %
     let _rankData = null;          // { view: [rows] }
+    let _highwinData = null;       // 高勝率分點
+    let _streaksData = null;       // 連續買超區段
+    let _rkSuper = 'win';          // win=勝率篩選 / float=高勝流通比篩選
     let _rkGroup = 'g1';
     let _rkTab = 0;
 
+    const RK_SUPERS = { win: '勝率篩選', float: '高勝流通比篩選' };
     const RK_GROUPS = {
       g1: { label: '大單·年回測', tabs: ['張數榜', '金額榜', '張數∩金額'] },
       g2: { label: '小單·年回測', tabs: ['張數榜', '金額榜', '張數∩金額'] },
@@ -2022,6 +2028,7 @@
       g4: { label: '小單·90日', tabs: ['張數榜', '金額榜', '張數∩金額'] },
       g5: { label: `長短皆穩小單(20日≥${RK_OVERLAP_WIN20}%)`, tabs: ['張數', '金額', '交集'] },
     };
+    const FLOAT_TABS = ['高勝率分點', '連續買超', '流通比'];
 
     async function openBrokerRankings() {
       document.getElementById('brokerRankModal').style.display = 'flex';
@@ -2034,12 +2041,22 @@
         const rows = await r.json();
         _rankData = {};
         for (const x of rows) (_rankData[x.view] = _rankData[x.view] || []).push(x);
+        // 高勝流通比篩選的資料（另兩張表，失敗不影響勝率篩選）
+        try {
+          const rh = await fetch(`${SIG_SB_URL}/rest/v1/broker_highwin?select=*&order=win20.desc.nullslast`, {
+            headers: { apikey: SIG_SB_ANON, Authorization: `Bearer ${_authToken}` } });
+          _highwinData = rh.ok ? await rh.json() : [];
+          const rs = await fetch(`${SIG_SB_URL}/rest/v1/broker_streaks?select=*&order=vol_ratio.desc.nullslast&limit=1000`, {
+            headers: { apikey: SIG_SB_ANON, Authorization: `Bearer ${_authToken}` } });
+          _streaksData = rs.ok ? await rs.json() : [];
+        } catch (_) { _highwinData = _highwinData || []; _streaksData = _streaksData || []; }
         _renderRank();
       } catch (e) {
         document.getElementById('rankContent').textContent = '載入失敗：' + e.message;
       }
     }
 
+    function _rkSetSuper(s) { _rkSuper = s; _rkGroup = 'g1'; _rkTab = 0; _renderRank(); }
     function _rkSetGroup(g) { _rkGroup = g; _rkTab = 0; _renderRank(); }
     function _rkSetTab(i) { _rkTab = i; _renderRank(); }
 
@@ -2174,14 +2191,30 @@
 
     function _renderRank() {
       if (!_rankData) return;
-      document.getElementById('rankGroupBar').innerHTML = Object.entries(RK_GROUPS).map(([id, g]) => {
-        const on = _rkGroup === id;
-        return `<button onclick="_rkSetGroup('${id}')" style="padding:5px 12px;border-radius:6px;
-          border:1px solid ${on ? 'var(--accent)' : 'var(--border)'};
-          background:${on ? 'var(--accent)' : 'transparent'};color:${on ? '#fff' : 'var(--text-muted)'};
-          font-weight:${on ? '700' : '400'};cursor:pointer;font-size:12.5px">${g.label}</button>`;
+      // 超級 group 列（勝率篩選 / 高勝流通比篩選）
+      document.getElementById('rankSuperBar').innerHTML = Object.entries(RK_SUPERS).map(([id, label]) => {
+        const on = _rkSuper === id;
+        return `<button onclick="_rkSetSuper('${id}')" style="padding:6px 16px;border-radius:8px;
+          border:2px solid ${on ? 'var(--accent)' : 'var(--border)'};
+          background:${on ? 'var(--accent)' : 'transparent'};color:${on ? '#fff' : 'var(--text)'};
+          font-weight:700;cursor:pointer;font-size:13px">${label}</button>`;
       }).join('');
-      const tabs = RK_GROUPS[_rkGroup].tabs;
+
+      const groupBar = document.getElementById('rankGroupBar');
+      if (_rkSuper === 'win') {
+        groupBar.style.display = 'flex';
+        groupBar.innerHTML = Object.entries(RK_GROUPS).map(([id, g]) => {
+          const on = _rkGroup === id;
+          return `<button onclick="_rkSetGroup('${id}')" style="padding:5px 12px;border-radius:6px;
+            border:1px solid ${on ? 'var(--accent)' : 'var(--border)'};
+            background:${on ? 'var(--accent)' : 'transparent'};color:${on ? '#fff' : 'var(--text-muted)'};
+            font-weight:${on ? '700' : '400'};cursor:pointer;font-size:12.5px">${g.label}</button>`;
+        }).join('');
+      } else {
+        groupBar.style.display = 'none';  // 高勝流通比篩選只有一層 tab
+      }
+
+      const tabs = _rkSuper === 'win' ? RK_GROUPS[_rkGroup].tabs : FLOAT_TABS;
       document.getElementById('rankTabBar').innerHTML = tabs.map((label, i) => {
         const on = _rkTab === i;
         return `<button onclick="_rkSetTab(${i})" style="padding:4px 12px;border-radius:6px 6px 0 0;
@@ -2189,11 +2222,67 @@
           background:${on ? 'var(--bg-card)' : 'transparent'};color:${on ? 'var(--text-primary)' : 'var(--text-muted)'};
           font-weight:${on ? '700' : '400'};cursor:pointer;font-size:12.5px">${label}</button>`;
       }).join('');
+
+      const rule = _rkSuper === 'win' ? _rkRuleText() : _floatRuleText();
       document.getElementById('rankContent').innerHTML =
         `<div style="font-size:11px;color:var(--text-muted);line-height:1.5;
            background:rgba(255,255,255,.03);border-left:2px solid var(--accent);
-           padding:6px 10px;margin:8px 0 10px;border-radius:0 4px 4px 0">📋 ${_rkRuleText()}</div>`
-        + _rkContent();
+           padding:6px 10px;margin:8px 0 10px;border-radius:0 4px 4px 0">📋 ${rule}</div>`
+        + (_rkSuper === 'win' ? _rkContent() : _floatContent());
+    }
+
+    function _floatRuleText() {
+      const t = _rkTab;
+      if (t === 0) return '【高勝率分點】近一年大單(≥300張)交易 ≥15 次、期望值(20日均報)>0，且 5／10／20 日勝率至少一項 ≥70%。';
+      if (t === 1) return '【連續買超】從高勝率分點中，找出在同一檔股票「連續 ≥3 個交易日淨買超」的區段。';
+      return `【流通比】連續買超區段的累積買超張數 占同期總成交量 ≥${FLOAT_VOL_TH}% 的區段（自由流通股條件待資料補上）。`;
+    }
+
+    function _floatContent() {
+      if (!_highwinData) return '載入中...';
+      if (_rkTab === 0) return _floatHighwinTable();
+      if (_rkTab === 1) return _floatStreaksTable(false);
+      return _floatStreaksTable(true);
+    }
+
+    function _floatHighwinTable() {
+      const rows = _highwinData || [];
+      if (!rows.length) return '<div style="padding:16px 0">尚無資料（等待計算，或無符合條件的分點）</div>';
+      const wc = v => v != null ? `<td style="padding:4px 8px;text-align:right;color:${v>=70?'#e6a23c':'var(--text)'}">${v}%</td>` : '<td style="padding:4px 8px;text-align:right">–</td>';
+      const tr = rows.map(x => `<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:4px 8px">${x.broker_name || x.broker_id}</td>
+        <td style="padding:4px 8px;text-align:right">${x.events}</td>
+        ${wc(x.win5)}${wc(x.win10)}${wc(x.win20)}
+        <td style="padding:4px 8px;text-align:right">${x.avg_ret != null ? '+' + x.avg_ret + '%' : '–'}</td>
+      </tr>`).join('');
+      return `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px">
+        <thead><tr style="color:var(--text-muted);border-bottom:1px solid var(--border)">
+          <th style="padding:4px 8px;text-align:left">分點</th><th style="padding:4px 8px;text-align:right">大單次數</th>
+          <th style="padding:4px 8px;text-align:right">5日勝率</th><th style="padding:4px 8px;text-align:right">10日勝率</th>
+          <th style="padding:4px 8px;text-align:right">20日勝率</th><th style="padding:4px 8px;text-align:right">期望值</th>
+        </tr></thead><tbody>${tr}</tbody></table></div>`;
+    }
+
+    function _floatStreaksTable(floatOnly) {
+      let rows = _streaksData || [];
+      if (floatOnly) rows = rows.filter(x => (x.vol_ratio || 0) >= FLOAT_VOL_TH);
+      if (!rows.length) return `<div style="padding:16px 0">${floatOnly ? '目前沒有占成交量 ≥' + FLOAT_VOL_TH + '% 的區段' : '尚無連續買超區段'}</div>`;
+      const tr = rows.map(x => `<tr onclick="openChart('${x.code}','${x.code} ${(x.name||'').replace(/'/g,'')}','',0,false,'${x.start_date}','${(x.broker_name||'').replace(/'/g,'')} 連買')"
+          style="border-bottom:1px solid var(--border);cursor:pointer">
+        <td style="padding:4px 8px">${x.broker_name || x.broker_id}</td>
+        <td style="padding:4px 8px;color:#4da3ff">${x.code} ${x.name || ''}</td>
+        <td style="padding:4px 8px;white-space:nowrap;font-size:11px">${x.start_date}~${x.end_date}</td>
+        <td style="padding:4px 8px;text-align:right">${x.days}天</td>
+        <td style="padding:4px 8px;text-align:right">${Number(x.cum_lots).toLocaleString()}張</td>
+        <td style="padding:4px 8px;text-align:right;color:#e6a23c">${x.vol_ratio != null ? x.vol_ratio + '%' : '–'}</td>
+      </tr>`).join('');
+      return `<div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">共 ${rows.length} 筆，點列開該股K線（標在起始日）</div>
+        <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px">
+        <thead><tr style="color:var(--text-muted);border-bottom:1px solid var(--border)">
+          <th style="padding:4px 8px;text-align:left">分點</th><th style="padding:4px 8px;text-align:left">股票</th>
+          <th style="padding:4px 8px;text-align:left">連買區間</th><th style="padding:4px 8px;text-align:right">天數</th>
+          <th style="padding:4px 8px;text-align:right">累積買超</th><th style="padding:4px 8px;text-align:right">占成交量</th>
+        </tr></thead><tbody>${tr}</tbody></table></div>`;
     }
 
     // 每個 group/tab 的篩選規則說明（寫在畫面上，避免忘記）
