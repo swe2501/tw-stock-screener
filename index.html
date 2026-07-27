@@ -2267,7 +2267,13 @@
       let rows = _streaksData || [];
       if (floatOnly) rows = rows.filter(x => (x.vol_ratio || 0) >= FLOAT_VOL_TH);
       if (!rows.length) return `<div style="padding:16px 0">${floatOnly ? '目前沒有占成交量 ≥' + FLOAT_VOL_TH + '% 的區段' : '尚無連續買超區段'}</div>`;
-      const tr = rows.map(x => `<tr onclick="openChart('${x.code}','${x.code} ${(x.name||'').replace(/'/g,'')}','',0,false,'${x.start_date}','${(x.broker_name||'').replace(/'/g,'')} 連買')"
+      // 流通比 tab：附該分點的 5/10/20 日勝率（由高勝率分點資料以 broker_id 對照）
+      const hwMap = {};
+      (_highwinData || []).forEach(h => { hwMap[h.broker_id] = h; });
+      const win = (v) => v != null ? v + '%' : '–';
+      const tr = rows.map(x => {
+        const h = hwMap[x.broker_id] || {};
+        return `<tr onclick="openChart('${x.code}','${x.code} ${(x.name||'').replace(/'/g,'')}','',0,false,'${x.start_date}','${(x.broker_name||'').replace(/'/g,'')} 連買')"
           style="border-bottom:1px solid var(--border);cursor:pointer">
         <td style="padding:4px 8px">${x.broker_name || x.broker_id}</td>
         <td style="padding:4px 8px;color:#4da3ff">${x.code} ${x.name || ''}</td>
@@ -2275,14 +2281,17 @@
         <td style="padding:4px 8px;text-align:right">${x.days}天</td>
         <td style="padding:4px 8px;text-align:right">${Number(x.cum_lots).toLocaleString()}張</td>
         <td style="padding:4px 8px;text-align:right">${x.cum_amount_wan != null ? Number(x.cum_amount_wan).toLocaleString() + '萬' : '–'}</td>
-        ${floatOnly ? `<td style="padding:4px 8px;text-align:right;color:#e6a23c">${x.vol_ratio != null ? x.vol_ratio + '%' : '–'}</td>` : ''}
-      </tr>`).join('');
-      return `<div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">共 ${rows.length} 筆，點列開該股K線（標在起始日）</div>
+        ${floatOnly ? `<td style="padding:4px 8px;text-align:right;color:#e6a23c">${x.vol_ratio != null ? x.vol_ratio + '%' : '–'}</td>
+        <td style="padding:4px 8px;text-align:right">${win(h.win5)}</td>
+        <td style="padding:4px 8px;text-align:right">${win(h.win10)}</td>
+        <td style="padding:4px 8px;text-align:right;color:#67c23a">${win(h.win20)}</td>` : ''}
+      </tr>`; }).join('');
+      return `<div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">共 ${rows.length} 筆，點列開該股K線（標在起始日）${floatOnly ? '。5/10/20日＝該分點大單事件的波段勝率' : ''}</div>
         <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px">
         <thead><tr style="color:var(--text-muted);border-bottom:1px solid var(--border)">
           <th style="padding:4px 8px;text-align:left">分點</th><th style="padding:4px 8px;text-align:left">股票</th>
           <th style="padding:4px 8px;text-align:left">連買區間</th><th style="padding:4px 8px;text-align:right">天數</th>
-          <th style="padding:4px 8px;text-align:right">累積買超</th><th style="padding:4px 8px;text-align:right">累積金額</th>${floatOnly ? '<th style="padding:4px 8px;text-align:right">占成交量</th>' : ''}
+          <th style="padding:4px 8px;text-align:right">累積買超</th><th style="padding:4px 8px;text-align:right">累積金額</th>${floatOnly ? '<th style="padding:4px 8px;text-align:right">占成交量</th><th style="padding:4px 8px;text-align:right">5日</th><th style="padding:4px 8px;text-align:right">10日</th><th style="padding:4px 8px;text-align:right">20日</th>' : ''}
         </tr></thead><tbody>${tr}</tbody></table></div>`;
     }
 
