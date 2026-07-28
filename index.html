@@ -2004,10 +2004,11 @@
 
     let _sigReturn = false;  // 從主力訊號開的 K 圖，關閉後要回到訊號視窗
 
-    function _sigOpenChart(code) {
+    function _sigOpenChart(code, label) {
       document.getElementById('brokerSigModal').style.display = 'none';
       _sigReturn = true;
-      openChart(code, code);
+      const d = _sigDates[_sigIdx] || null;   // 當前顯示日期＝該分點買超日，標在 K 線上
+      openChart(code, code, '', 0, false, d, label || '主力買點');
     }
 
     // ── 📊 分點回測榜（讀 broker_rankings，RLS 限擁有者） ──
@@ -2414,7 +2415,7 @@
         const rs = rsOverride || rows.filter(x => x.method === method);
         if (!rs.length) return `<div style="padding:16px 0">當日無買超訊號</div>`;
         const tr = rs.map(x => `
-          <tr onclick="_sigOpenChart('${x.code}')"
+          <tr onclick="_sigOpenChart('${x.code}','${(x.broker_name||'').replace(/'/g,'')} 買')"
               style="cursor:pointer;border-bottom:1px solid var(--border)">
             <td style="padding:4px 8px;text-align:center">${x.rank_amt != null ? `${x.rank}／${x.rank_amt}` : x.rank}</td>
             <td style="padding:4px 8px">${x.broker_name}</td>
