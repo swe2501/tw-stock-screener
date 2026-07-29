@@ -57,10 +57,10 @@ def main():
     today = conn.execute("select max(trade_date) from wantgoo_daily").fetchone()[0]
     year_cut = (date.fromisoformat(today) - timedelta(days=365)).isoformat()
 
-    # ── Tab1：高勝率分點（一次全量掃描，算 5/10/20 日勝率＋期望值）──
+    # ── Tab1：高勝率分點（SQL 濾事件 + Python 算勝率，結果同 analyze 但快很多）──
     print("計算高勝率分點（大單≥300張 或 ≥3000萬、≥15次、5/10/20日）...")
-    rows = ba.analyze(conn, prices, min_lots=LARGE_LOTS, or_amount_wan=LARGE_WAN,
-                      min_events=MIN_EVENTS, hold_days=(5, 10, 20))
+    rows = ba.analyze_events_sql(conn, prices, min_lots=LARGE_LOTS, or_amount_wan=LARGE_WAN,
+                                 min_events=MIN_EVENTS, hold_days=(5, 10, 20))
     highwin = []
     for r in rows:
         w5, w10, w20 = r.get("win5") or 0, r.get("win10") or 0, r.get("win20") or 0

@@ -191,6 +191,69 @@ def analyze(conn, prices, codes=None, min_lots=300, min_events=5, hold_days=(5, 
     return rows
 
 
+def analyze_events_sql(conn, prices, min_lots=300, or_amount_wan=0, min_events=5,
+                       hold_days=(5, 10, 20), date_from=None, codes=None):
+    """事件法「快速版」：只算大單買超事件的 N 日勝率／期望值，不做 FIFO 配對。
+
+    與 analyze() 的事件統計等價，但把「找事件」這步交給 SQL 的 WHERE 在 C 層完成，
+    Python 只需對濾出的幾萬筆事件算勝率 → 免掉全表 7 千萬列的 Python 逐列掃與排序。
+    供 broker_highwin 快速重算；analyze() 維持原樣供週排行／每日訊號使用。
+
+    事件定義與 analyze() 一致：淨買超>0、買均價存在，且
+      or_amount_wan>0：淨買超 ≥min_lots 張 或 金額 ≥or_amount_wan 萬（擇一）
+      否則：淨買超 ≥min_lots 張
+    進場價 entry＝買均價（buy_avg_price）；勝率用 close_after 查 N 交易日後收盤（與 analyze 同一函式）。
+    """
+    conds = ["(buy_vol - sell_vol) > 0", "buy_avg_price > 0"]
+    args = []
+    if date_from:
+        conds.append("trade_date >= ?"); args.append(date_from)
+    if codes:
+        conds.append(f"code in ({','.join('?' * len(codes))})"); args.extend(codes)
+    if or_amount_wan > 0:
+        conds.append("((buy_vol - sell_vol) >= ? "
+                     "or (buy_vol - sell_vol) * 1000.0 * buy_avg_price >= ?)")
+        args.extend([min_lots, or_amount_wan * 10000])
+    else:
+        conds.append("(buy_vol - sell_vol) >= ?"); args.append(min_lots)
+    q = ("select broker_id, broker_name, code, trade_date, buy_avg_price, (buy_vol - sell_vol) "
+         "from wantgoo_daily where " + " and ".join(conds))
+
+    stat = defaultdict(lambda: {
+        "name": "", "last": "", "events": 0,
+        "win": {n: 0 for n in hold_days},
+        "cnt": {n: 0 for n in hold_days},
+        "ret": {n: 0.0 for n in hold_days},
+    })
+    for bid, bname, code, d, entry, net in conn.execute(q, tuple(args)):
+        s = stat[bid]
+        s["events"] += 1
+        if bname and d >= s["last"]:          # 取最近日期的分點名
+            s["name"] = bname; s["last"] = d
+        for n in hold_days:
+            c_after = close_after(prices, code, d, n)
+            if c_after:
+                s["cnt"][n] += 1
+                s["ret"][n] += (c_after - entry) / entry
+                if c_after > entry:
+                    s["win"][n] += 1
+
+    rows = []
+    for bid, s in stat.items():
+        if s["events"] < min_events:
+            continue
+        row = {"broker_id": bid, "broker_name": s["name"], "events": s["events"]}
+        for n in hold_days:
+            cnt = s["cnt"][n]
+            row[f"win{n}"] = round(s["win"][n] / cnt * 100, 1) if cnt else None
+            row[f"ret{n}"] = round(s["ret"][n] / cnt * 100, 2) if cnt else None
+            row[f"n{n}"] = cnt
+        rows.append(row)
+    sort_key = f"win{max(hold_days)}"
+    rows.sort(key=lambda r: (r[sort_key] or 0), reverse=True)
+    return rows
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--codes", help="限定股票代碼（逗號分隔），預設全市場")
