@@ -7,6 +7,7 @@
   python scripts/fetch_prices.py --code 2330
 """
 import argparse
+import csv
 import json
 import sqlite3
 import ssl
@@ -23,8 +24,9 @@ DB_PATH = Path(r"D:\stock_data\wantgoo_full.db")
 ALL_STOCKS_FILE = Path(__file__).resolve().parent / "all_stocks.txt"
 YF_HEADERS = {"User-Agent": "Mozilla/5.0", "Accept": "application/json"}
 TW_TZ = timezone(timedelta(hours=8))
-# TWSE 官方「當日全上市股」收盤（一次請求拿全市場，收盤後定案，供每日更新用）
-TWSE_ALL_URL = "https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL"
+# TWSE 主站「當日全上市股」收盤（一次請求拿全市場，收盤後「同日」更新，供每日更新用）
+# 註：openapi.twse.com.tw 鏡像會延遲約一個交易日，故改用主站 rwd 端點（回傳 CSV）。
+TWSE_ALL_URL = "https://www.twse.com.tw/rwd/zh/afterTrading/STOCK_DAY_ALL?response=json"
 
 
 def _db():
@@ -88,30 +90,36 @@ def _roc_to_iso(s):
 
 
 def fetch_twse_all(universe=None):
-    """TWSE 官方『當日全上市股』收盤，回傳 ([(code,date,o,h,l,c,v), ...], 略過數)。
-    只保留 universe（追蹤清單）內的股票；當日無成交（無收盤）者略過。"""
-    # TWSE openapi 憑證缺 Subject Key Identifier，過不了 Python 預設驗證；
+    """TWSE 主站『當日全上市股』收盤，回傳 ([(code,date,o,h,l,c,v), ...], 略過數)。
+    只保留 universe（追蹤清單）內的股票；當日無成交（無收盤）者略過。
+    回傳為 CSV，欄位：日期,證券代號,證券名稱,成交股數,成交金額,開盤價,最高價,最低價,收盤價,漲跌價差,成交筆數。"""
+    # TWSE 憑證缺 Subject Key Identifier，過不了 Python 預設驗證；
     # 公開資料端點、無需登入，比照 broker_highwin 以不驗證憑證的 context 存取。
     ctx = ssl.create_default_context()
     ctx.check_hostname = False
     ctx.verify_mode = ssl.CERT_NONE
     req = urllib.request.Request(TWSE_ALL_URL, headers=YF_HEADERS)
     with urllib.request.urlopen(req, timeout=30, context=ctx) as r:
-        data = json.loads(r.read().decode("utf-8"))
+        text = r.read().decode("utf-8", "replace")
     out, skipped = [], 0
-    for row in data:
-        code = str(row.get("Code", "")).strip()
+    for row in csv.reader(text.splitlines()):
+        if len(row) < 9:
+            continue
+        rd = row[0].strip()
+        if len(rd) != 7 or not rd.isdigit():   # 跳過標頭與附註列（首欄非民國日期）
+            continue
+        code = row[1].strip()
         if universe and code not in universe:
             continue
-        d = _roc_to_iso(row.get("Date"))
-        c = _num(row.get("ClosingPrice"))
-        if not d or c is None:            # 無收盤（當日無成交）→ 跳過
+        d = _roc_to_iso(rd)
+        c = _num(row[8])                       # 收盤價
+        if not d or c is None:                 # 當日無成交（無收盤）→ 跳過
             skipped += 1
             continue
-        o = _num(row.get("OpeningPrice")) or c
-        h = _num(row.get("HighestPrice")) or c
-        low = _num(row.get("LowestPrice")) or c
-        v = _num(row.get("TradeVolume"))
+        o = _num(row[5]) or c                  # 開盤價
+        h = _num(row[6]) or c                  # 最高價
+        low = _num(row[7]) or c                # 最低價
+        v = _num(row[3])                       # 成交股數
         out.append((code, d, o, h, low, c, int(v) if v is not None else 0))
     return out, skipped
 
