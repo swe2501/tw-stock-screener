@@ -164,8 +164,8 @@ def get_rankings(conn, prices):
         return lots, amt
     # fallback：表為空時本機重算（不寫回，避免又出現第二份來源）
     print("[warn] broker_rankings 表為空，改本機重算名單")
-    top_lots = ba.analyze(conn, prices, min_lots=MIN_LOTS_TH, min_events=MIN_EVENTS)[:TOP_N]
-    top_amt = ba.analyze(conn, prices, min_events=MIN_EVENTS, min_amount_wan=MIN_AMT_TH)[:TOP_N]
+    top_lots = ba.analyze_events_sql(conn, prices, min_lots=MIN_LOTS_TH, min_events=MIN_EVENTS)[:TOP_N]
+    top_amt = ba.analyze_events_sql(conn, prices, min_events=MIN_EVENTS, min_amount_wan=MIN_AMT_TH)[:TOP_N]
     return top_lots, top_amt
 
 

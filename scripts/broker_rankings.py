@@ -41,7 +41,8 @@ def _d90_from(conn):
 
 
 def _rank(conn, prices, **kw):
-    rows = ba.analyze(conn, prices, min_events=MIN_EVENTS, hold_days=HOLD_DAYS, **kw)
+    # SQL 聚合版：只需事件勝率（win8/win20/events），不用 FIFO → 六個榜各省一次全表重掃
+    rows = ba.analyze_events_sql(conn, prices, min_events=MIN_EVENTS, hold_days=HOLD_DAYS, **kw)
     rows.sort(key=lambda r: (r.get("win20") or 0, r.get("win8") or 0), reverse=True)
     out = []
     for i, r in enumerate(rows[:TOP_N], 1):

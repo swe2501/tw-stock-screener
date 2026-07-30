@@ -191,31 +191,40 @@ def analyze(conn, prices, codes=None, min_lots=300, min_events=5, hold_days=(5, 
     return rows
 
 
-def analyze_events_sql(conn, prices, min_lots=300, or_amount_wan=0, min_events=5,
-                       hold_days=(5, 10, 20), date_from=None, codes=None):
-    """事件法「快速版」：只算大單買超事件的 N 日勝率／期望值，不做 FIFO 配對。
+def analyze_events_sql(conn, prices, min_lots=300, min_events=5, hold_days=(5, 10, 20),
+                       min_amount_wan=0, max_lots=0, max_amount_wan=0,
+                       or_amount_wan=0, date_from=None, codes=None):
+    """事件法「快速版」：只算買超事件的 N 日勝率／期望值，不做 FIFO 配對。
 
     與 analyze() 的事件統計等價，但把「找事件」這步交給 SQL 的 WHERE 在 C 層完成，
     Python 只需對濾出的幾萬筆事件算勝率 → 免掉全表 7 千萬列的 Python 逐列掃與排序。
-    供 broker_highwin 快速重算；analyze() 維持原樣供週排行／每日訊號使用。
+    供 broker_highwin／broker_rankings 快速重算；analyze() 維持原樣（含 FIFO）。
 
-    事件定義與 analyze() 一致：淨買超>0、買均價存在，且
-      or_amount_wan>0：淨買超 ≥min_lots 張 或 金額 ≥or_amount_wan 萬（擇一）
-      否則：淨買超 ≥min_lots 張
-    進場價 entry＝買均價（buy_avg_price）；勝率用 close_after 查 N 交易日後收盤（與 analyze 同一函式）。
+    事件門檻與 analyze() 三種模式一致（entry＝buy_avg_price，amt＝net×1000×entry）：
+      or_amount_wan>0：net ≥min_lots 張 或 amt ≥or_amount_wan 萬（擇一，大單聯集）
+      min_amount_wan>0：amt ≥min_amount_wan 萬（可加 max_amount_wan 上限）→ 金額制
+      否則：net ≥min_lots 張（可加 max_lots 上限）→ 張數制
+    勝率用 close_after 查 N 交易日後收盤（與 analyze 同一函式）。
     """
-    conds = ["(buy_vol - sell_vol) > 0", "buy_avg_price > 0"]
+    net_sql = "(buy_vol - sell_vol)"
+    amt_sql = "(buy_vol - sell_vol) * 1000.0 * buy_avg_price"
+    conds = [f"{net_sql} > 0", "buy_avg_price > 0"]
     args = []
     if date_from:
         conds.append("trade_date >= ?"); args.append(date_from)
     if codes:
         conds.append(f"code in ({','.join('?' * len(codes))})"); args.extend(codes)
     if or_amount_wan > 0:
-        conds.append("((buy_vol - sell_vol) >= ? "
-                     "or (buy_vol - sell_vol) * 1000.0 * buy_avg_price >= ?)")
+        conds.append(f"({net_sql} >= ? or {amt_sql} >= ?)")
         args.extend([min_lots, or_amount_wan * 10000])
+    elif min_amount_wan > 0:
+        conds.append(f"{amt_sql} >= ?"); args.append(min_amount_wan * 10000)
+        if max_amount_wan > 0:
+            conds.append(f"{amt_sql} < ?"); args.append(max_amount_wan * 10000)
     else:
-        conds.append("(buy_vol - sell_vol) >= ?"); args.append(min_lots)
+        conds.append(f"{net_sql} >= ?"); args.append(min_lots)
+        if max_lots > 0:
+            conds.append(f"{net_sql} < ?"); args.append(max_lots)
     q = ("select broker_id, broker_name, code, trade_date, buy_avg_price, (buy_vol - sell_vol) "
          "from wantgoo_daily where " + " and ".join(conds))
 
