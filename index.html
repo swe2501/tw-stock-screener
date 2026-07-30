@@ -1035,12 +1035,24 @@
       .watch-panel-inner { width: 100%; max-height: 100dvh; border-radius: 0; height: 100dvh; }
       .watch-panel { align-items: stretch; }
     }
+    /* 大盤融資維持率徽章（公開資料，所有人可見） */
+    .margin-ratio {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 10px; border-radius: 14px; font-size: 13px; font-weight: 700;
+      text-decoration: none; white-space: nowrap; line-height: 1.4;
+      border: 1px solid var(--border, #333); cursor: help;
+    }
+    .margin-ratio .mr-label { font-weight: 500; opacity: .8; font-size: 12px; }
+    .margin-ratio.mr-green { color:#3fb950; border-color:#2ea04366; background:#2ea04322; }
+    .margin-ratio.mr-amber { color:#e6a23c; border-color:#e6a23c66; background:#e6a23c22; }
+    .margin-ratio.mr-red   { color:#f85149; border-color:#f8514966; background:#f8514922; }
   </style>
 </head>
 <body>
   <header>
     <h1>台灣上市股票篩選器</h1>
     <span>TWSE</span>
+    <a id="marginRatioBox" class="margin-ratio" href="https://www.wantgoo.com/stock/margin-trading/market-price/taiex" target="_blank" rel="noopener" style="display:none"></a>
     <div id="authArea">
       <div id="authUserEmail" style="display:none"></div>
       <button id="brokerSigBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="openBrokerSignals()">🎯 <span class="btn-label">主力訊號</span></button>
@@ -1994,6 +2006,28 @@
     // ── 🎯 主力訊號（直連 Supabase REST，RLS 限擁有者讀取） ──
     const SIG_SB_URL  = 'https://bruqrbvbjxntgoljxsne.supabase.co';
     const SIG_SB_ANON = 'sb_publishable_KgYlaR-mqtx4uVre6kPD2A_qO6tdT1y';
+
+    // ── 大盤融資維持率徽章（公開讀 market_margin，免登入）──
+    async function loadMarginRatio() {
+      try {
+        const r = await fetch(`${SIG_SB_URL}/rest/v1/market_margin?select=*&order=trade_date.desc&limit=1`,
+          { headers: { apikey: SIG_SB_ANON, Authorization: `Bearer ${SIG_SB_ANON}` } });
+        if (!r.ok) return;
+        const rows = await r.json();
+        if (!rows.length) return;
+        const m = rows[0], ratio = Number(m.maintenance_ratio);
+        const box = document.getElementById('marginRatioBox');
+        if (!box || !isFinite(ratio)) return;
+        // 維持率越低＝融資戶越接近斷頭：<145 紅、145~160 橙、≥160 綠
+        box.className = 'margin-ratio ' + (ratio >= 160 ? 'mr-green' : ratio >= 145 ? 'mr-amber' : 'mr-red');
+        box.innerHTML = `<span class="mr-label">融資維持率</span> ${ratio.toFixed(2)}%`;
+        box.title = `大盤融資維持率 ${ratio.toFixed(2)}%（${m.trade_date}）\n`
+          + `融資餘額 ${Number(m.margin_balance).toLocaleString()} 億\n`
+          + `＝融資擔保品現值 ÷ 融資餘額，越低代表融資戶越接近斷頭。\n資料來源：玩股網（點擊開啟）`;
+        box.style.display = 'inline-flex';
+      } catch (e) { /* 靜默 */ }
+    }
+    window.addEventListener('DOMContentLoaded', loadMarginRatio);
     let _sigRows = null;      // 全部訊號列
     let _sigDates = [];       // 可用日期（新→舊）
     let _sigIdx = 0;          // 目前顯示第幾個日期
