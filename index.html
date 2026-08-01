@@ -2084,7 +2084,16 @@
           _highwinData = rh.ok ? await rh.json() : [];
           const rs = await fetch(`${SIG_SB_URL}/rest/v1/broker_streaks?select=*&order=vol_ratio.desc.nullslast&limit=1000`, {
             headers: { apikey: SIG_SB_ANON, Authorization: `Bearer ${_authToken}` } });
-          _streaksData = rs.ok ? await rs.json() : [];
+          let streaks = rs.ok ? await rs.json() : [];
+          // Supabase 單次上限 1000 且按 vol_ratio 排序 → 低 vol_ratio 但「占自由流通 1~3%」的區段
+          // （如小流通股被吃貨）會落在 1000 外，另補抓一次 server 端過濾的結果並合併去重
+          const rf = await fetch(`${SIG_SB_URL}/rest/v1/broker_streaks?select=*&float_ratio=gte.${FLOAT_FF_MIN}&float_ratio=lte.${FLOAT_FF_MAX}&limit=1000`, {
+            headers: { apikey: SIG_SB_ANON, Authorization: `Bearer ${_authToken}` } });
+          if (rf.ok) {
+            const seen = new Set(streaks.map(s => s.id));
+            for (const s of await rf.json()) if (!seen.has(s.id)) streaks.push(s);
+          }
+          _streaksData = streaks;
         } catch (_) { _highwinData = _highwinData || []; _streaksData = _streaksData || []; }
         _renderRank();
       } catch (e) {
