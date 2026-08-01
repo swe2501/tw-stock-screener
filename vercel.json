@@ -8,20 +8,12 @@
     {
       "src": "index.html",
       "use": "@vercel/static"
-    },
-    {
-      "src": "logo.png",
-      "use": "@vercel/static"
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
       "dest": "/api/$1.py"
-    },
-    {
-      "src": "/logo.png",
-      "dest": "/logo.png"
     },
     {
       "src": "/(.*)",
