@@ -2048,6 +2048,7 @@
     // ── 📊 分點回測榜（讀 broker_rankings，RLS 限擁有者） ──
     const RK_OVERLAP_WIN20 = 65;   // 重疊 tab 門檻：20 日勝率 ≥ 此值
     const FLOAT_VOL_TH = 15;       // 流通比：占同期總成交量 ≥ 此 %
+    const FLOAT_FF_MIN = 1, FLOAT_FF_MAX = 3;  // 或：占自由流通股 此 %～此 %
     let _rankData = null;          // { view: [rows] }
     let _highwinData = null;       // 高勝率分點
     let _streaksData = null;       // 連續買超區段
@@ -2270,7 +2271,7 @@
       const t = _rkTab;
       if (t === 0) return '【高勝率分點】近一年大單(≥300張 或 ≥3000萬)交易 ≥15 次、期望值(20日均報)>0，且 5／10／20 日勝率至少一項 ≥70%。';
       if (t === 1) return '【連續買超】從高勝率分點中，找出在同一檔股票「連續 ≥3 個交易日淨買超」、且該區段累積買超 ≥100張 或 ≥1000萬 的區段。';
-      return `【流通比】連續買超區段的累積買超 占同期總成交量 ≥${FLOAT_VOL_TH}% 的區段（自由流通股條件待資料補上）。`;
+      return `【流通比】連續買超區段：占同期總成交量 ≥${FLOAT_VOL_TH}% 或 占自由流通股 ${FLOAT_FF_MIN}~${FLOAT_FF_MAX}% 的區段（兩者擇一）。自由流通＝已發行普通股−庫藏−董監經理法代持股；未知者不列占自由流通。`;
     }
 
     function _floatContent() {
@@ -2300,8 +2301,10 @@
 
     function _floatStreaksTable(floatOnly) {
       let rows = _streaksData || [];
-      if (floatOnly) rows = rows.filter(x => (x.vol_ratio || 0) >= FLOAT_VOL_TH);
-      if (!rows.length) return `<div style="padding:16px 0">${floatOnly ? '目前沒有占成交量 ≥' + FLOAT_VOL_TH + '% 的區段' : '尚無連續買超區段'}</div>`;
+      if (floatOnly) rows = rows.filter(x =>
+        (x.vol_ratio || 0) >= FLOAT_VOL_TH
+        || (x.float_ratio != null && x.float_ratio >= FLOAT_FF_MIN && x.float_ratio <= FLOAT_FF_MAX));
+      if (!rows.length) return `<div style="padding:16px 0">${floatOnly ? `目前沒有占成交量 ≥${FLOAT_VOL_TH}% 或占自由流通 ${FLOAT_FF_MIN}~${FLOAT_FF_MAX}% 的區段` : '尚無連續買超區段'}</div>`;
       // 流通比 tab：附該分點的 5/10/20 日勝率（由高勝率分點資料以 broker_id 對照）
       const hwMap = {};
       (_highwinData || []).forEach(h => { hwMap[h.broker_id] = h; });
@@ -2317,6 +2320,7 @@
         <td style="padding:4px 8px;text-align:right">${Number(x.cum_lots).toLocaleString()}張</td>
         <td style="padding:4px 8px;text-align:right">${x.cum_amount_wan != null ? Number(x.cum_amount_wan).toLocaleString() + '萬' : '–'}</td>
         ${floatOnly ? `<td style="padding:4px 8px;text-align:right;color:#e6a23c">${x.vol_ratio != null ? x.vol_ratio + '%' : '–'}</td>
+        <td style="padding:4px 8px;text-align:right;color:${(x.float_ratio!=null&&x.float_ratio>=FLOAT_FF_MIN&&x.float_ratio<=FLOAT_FF_MAX)?'#67c23a':'var(--text-muted)'}">${x.float_ratio != null ? x.float_ratio + '%' : '–'}</td>
         <td style="padding:4px 8px;text-align:right">${win(h.win5)}</td>
         <td style="padding:4px 8px;text-align:right">${win(h.win10)}</td>
         <td style="padding:4px 8px;text-align:right;color:#67c23a">${win(h.win20)}</td>` : ''}
@@ -2326,7 +2330,7 @@
         <thead><tr style="color:var(--text-muted);border-bottom:1px solid var(--border)">
           <th style="padding:4px 8px;text-align:left">分點</th><th style="padding:4px 8px;text-align:left">股票</th>
           <th style="padding:4px 8px;text-align:left">連買區間</th><th style="padding:4px 8px;text-align:right">天數</th>
-          <th style="padding:4px 8px;text-align:right">累積買超</th><th style="padding:4px 8px;text-align:right">累積金額</th>${floatOnly ? '<th style="padding:4px 8px;text-align:right">占成交量</th><th style="padding:4px 8px;text-align:right">5日</th><th style="padding:4px 8px;text-align:right">10日</th><th style="padding:4px 8px;text-align:right">20日</th>' : ''}
+          <th style="padding:4px 8px;text-align:right">累積買超</th><th style="padding:4px 8px;text-align:right">累積金額</th>${floatOnly ? '<th style="padding:4px 8px;text-align:right">占成交量</th><th style="padding:4px 8px;text-align:right">占自由流通</th><th style="padding:4px 8px;text-align:right">5日</th><th style="padding:4px 8px;text-align:right">10日</th><th style="padding:4px 8px;text-align:right">20日</th>' : ''}
         </tr></thead><tbody>${tr}</tbody></table></div>`;
     }
 

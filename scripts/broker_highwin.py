@@ -84,6 +84,14 @@ def main():
         (year_cut, LIQUID_DAY_LOTS * 1000))}
     print(f"  流動性股票（近一年曾單日≥{LIQUID_DAY_LOTS}張）：{len(liquid)} 檔")
 
+    # 自由流通張數（free_float 股→張）；只取已知者(free_float 非空＝high/medium)，供「占自由流通比」用
+    try:
+        ff_lots = {c: ff / 1000 for c, ff in conn.execute(
+            "select code, free_float from stock_free_float where free_float is not null")}
+    except sqlite3.OperationalError:
+        ff_lots = {}            # 尚未跑過 free_float.py
+    print(f"  自由流通已知：{len(ff_lots)} 檔")
+
     # ── Tab2/3：連續買超區段＋流通比 ──
     streaks = []
     for hw in highwin:
@@ -108,10 +116,10 @@ def main():
                     run.append(rec)
                 else:
                     if len(run) >= MIN_STREAK:
-                        _emit(streaks, conn, names, bid, bname, code, run)
+                        _emit(streaks, conn, names, ff_lots, bid, bname, code, run)
                     run = [rec]
             if len(run) >= MIN_STREAK:
-                _emit(streaks, conn, names, bid, bname, code, run)
+                _emit(streaks, conn, names, ff_lots, bid, bname, code, run)
     print(f"  連續買超區段：{len(streaks)} 筆")
 
     # ── 上傳 ──
@@ -122,7 +130,7 @@ def main():
     print(f"上傳 highwin={st1}（{len(highwin)}）, streaks={st2}（{len(streaks)}）")
 
 
-def _emit(streaks, conn, names, bid, bname, code, run):
+def _emit(streaks, conn, names, ff_lots, bid, bname, code, run):
     start, end = run[0][0], run[-1][0]
     cum = sum(r[1] for r in run)
     cum_wan = round(sum(r[1] * 1000 * (r[2] or 0) for r in run) / 10000, 1)
@@ -135,11 +143,14 @@ def _emit(streaks, conn, names, bid, bname, code, run):
         (code, start, end)).fetchone()[0]
     total_lots = round((vol or 0) / 1000, 1) if vol else None
     ratio = round(cum / total_lots * 100, 1) if total_lots else None
+    # 占自由流通比 = 累積買超張數 ÷ 自由流通張數（free_float 未知→None，不估）
+    fl = ff_lots.get(code)
+    float_ratio = round(cum / fl * 100, 2) if fl else None
     streaks.append({
         "broker_id": bid, "broker_name": bname, "code": code, "name": names.get(code, ""),
         "start_date": start, "end_date": end, "days": len(run),
         "cum_lots": int(cum), "cum_amount_wan": cum_wan,
-        "total_vol_lots": total_lots, "vol_ratio": ratio,
+        "total_vol_lots": total_lots, "vol_ratio": ratio, "float_ratio": float_ratio,
     })
 
 
