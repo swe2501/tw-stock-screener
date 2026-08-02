@@ -1058,9 +1058,14 @@
     .mm-tab { padding: 5px 14px; border-radius: 8px; border: 1px solid var(--border, #2a3040);
       background: transparent; color: var(--text, #e6e6e6); cursor: pointer; font-size: 13px; font-family: inherit; }
     .mm-tab.active { background: #2d6cdf; border-color: #2d6cdf; color: #fff; font-weight: 600; }
-    .mm-current { font-size: 13px; color: var(--text-muted, #8b95a5); margin-bottom: 8px; }
+    .mm-current { font-size: 13px; color: var(--text-muted, #8b95a5); margin-bottom: 6px; }
     .mm-current b { font-size: 20px; }
-    .mm-chart { width: 100%; height: 300px; }
+    .mm-tip { font-size: 12px; color: var(--text, #e6e6e6); background: rgba(255,255,255,.05);
+      border-radius: 6px; padding: 5px 10px; margin-bottom: 6px; min-height: 18px; white-space: nowrap; overflow-x: auto; }
+    .mm-panels { width: 100%; }
+    .mm-panel { position: relative; margin-bottom: 2px; }
+    .mm-plabel { position: absolute; top: 3px; left: 8px; z-index: 2; font-size: 11px;
+      color: var(--text-muted, #8b95a5); pointer-events: none; }
     .mm-foot { font-size: 11px; color: var(--text-muted, #8b95a5); margin-top: 8px; }
     .margin-ratio .mr-label { font-weight: 500; opacity: .8; font-size: 12px; }
     .margin-ratio.mr-green { color:#3fb950; border-color:#2ea04366; background:#2ea04322; }
@@ -1097,7 +1102,8 @@
         <button id="mmTabEx"  class="mm-tab" type="button" onclick="mmSetTab(true)">扣除 ETF</button>
       </div>
       <div id="mmCurrent" class="mm-current"></div>
-      <div id="mmChart" class="mm-chart"></div>
+      <div id="mmTip" class="mm-tip">移動滑鼠到圖上看每日數值</div>
+      <div id="mmPanels" class="mm-panels"></div>
       <div class="mm-foot">維持率＝融資擔保品現值 ÷ 融資餘額，越低代表融資戶越接近斷頭。資料來源：玩股網</div>
     </div>
   </div>
@@ -2068,27 +2074,30 @@
     }
     window.addEventListener('DOMContentLoaded', loadMarginRatio);
 
-    // ── 融資維持率彈窗（含/扣ETF tab + 歷史線圖）──
-    let _mmData = null, _mmTab = false, _mmChart = null;
+    // ── 融資維持率彈窗（含/扣ETF tab + 大盤K/維持率/融資/融券 多面板同步 + hover 數值）──
+    let _mmData = null, _mmTab = false, _mmCharts = [];
     async function openMarginModal() {
       document.getElementById('marginModal').style.display = 'flex';
       if (!_mmData) {
         try {
-          // Supabase 單次上限 1000；兩變體各抓最近 1000 天(desc)再反轉成時間序
           const hdr = { apikey: SIG_SB_ANON, Authorization: `Bearer ${SIG_SB_ANON}` };
-          const q = ex => fetch(`${SIG_SB_URL}/rest/v1/margin_maintenance?select=*&exclude_etf=eq.${ex}&order=trade_date.desc&limit=1000`, { headers: hdr });
-          const [ri, re] = await Promise.all([q('false'), q('true')]);
-          const inc = ri.ok ? (await ri.json()).reverse() : [];
-          const exc = re.ok ? (await re.json()).reverse() : [];
-          _mmData = { false: inc, true: exc };
-        } catch (e) { _mmData = { false: [], true: [] }; }
+          const q = u => fetch(`${SIG_SB_URL}/rest/v1/${u}`, { headers: hdr });
+          const [ri, re, rk] = await Promise.all([
+            q('margin_maintenance?select=*&exclude_etf=eq.false&order=trade_date.desc&limit=1000'),
+            q('margin_maintenance?select=*&exclude_etf=eq.true&order=trade_date.desc&limit=1000'),
+            q('taiex_daily?select=*&order=trade_date.desc&limit=1000'),
+          ]);
+          _mmData = {
+            false: ri.ok ? (await ri.json()).reverse() : [],
+            true:  re.ok ? (await re.json()).reverse() : [],
+            taiex: rk.ok ? (await rk.json()).reverse() : [],
+          };
+        } catch (e) { _mmData = { false: [], true: [], taiex: [] }; }
       }
       mmSetTab(_mmTab);
     }
-    function closeMarginModal() {
-      document.getElementById('marginModal').style.display = 'none';
-      if (_mmChart) { _mmChart.remove(); _mmChart = null; }
-    }
+    function _mmDestroy() { _mmCharts.forEach(c => { try { c.remove(); } catch (_) {} }); _mmCharts = []; }
+    function closeMarginModal() { document.getElementById('marginModal').style.display = 'none'; _mmDestroy(); }
     function mmSetTab(ex) {
       _mmTab = ex;
       document.getElementById('mmTabInc').classList.toggle('active', !ex);
@@ -2100,28 +2109,71 @@
           + ` ｜ 融資餘額 ${Number(cur.margin_balance).toLocaleString()} 億`
           + (cur.short_balance != null ? ` ｜ 融券餘額 ${Number(cur.short_balance).toLocaleString()} 張` : '')
         : '無資料';
-      _mmRenderChart(data);
+      _mmBuildPanels(data, (_mmData && _mmData.taiex) || []);
     }
-    function _mmRenderChart(data) {
-      const el = document.getElementById('mmChart');
-      if (_mmChart) { _mmChart.remove(); _mmChart = null; }
-      el.innerHTML = '';
-      if (!data.length || typeof LightweightCharts === 'undefined') return;
-      _mmChart = LightweightCharts.createChart(el, {
-        width: el.clientWidth || 680, height: 300,
-        layout: { background: { color: 'transparent' }, textColor: '#8b95a5' },
-        grid: { vertLines: { color: 'rgba(255,255,255,.05)' }, horzLines: { color: 'rgba(255,255,255,.05)' } },
-        rightPriceScale: { borderColor: 'rgba(255,255,255,.1)' },
-        timeScale: { borderColor: 'rgba(255,255,255,.1)', timeVisible: false },
-        crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+    function _mmBuildPanels(mdata, taiex) {
+      _mmDestroy();
+      const host = document.getElementById('mmPanels');
+      host.innerHTML = '';
+      if (typeof LightweightCharts === 'undefined' || !mdata.length) return;
+      const W = host.clientWidth || 700;
+      const panels = [
+        { key: 'k',     h: 190, label: '加權指數' },
+        { key: 'ratio', h: 110, label: '融資維持率(%)', color: '#4da3ff', fmt: v => v.toFixed(1) + '%' },
+        { key: 'fin',   h: 100, label: '融資餘額(億)',  color: '#f85149', fmt: v => v.toFixed(0) },
+        { key: 'short', h: 100, label: '融券餘額(張)',  color: '#3fb950', fmt: v => (v / 1000).toFixed(0) + 'k' },
+      ];
+      const field = { ratio: 'maintenance_ratio', fin: 'margin_balance', short: 'short_balance' };
+      const charts = [];
+      panels.forEach(p => {
+        const wrap = document.createElement('div'); wrap.className = 'mm-panel';
+        const lbl = document.createElement('div'); lbl.className = 'mm-plabel'; lbl.textContent = p.label; wrap.appendChild(lbl);
+        const el = document.createElement('div'); el.style.height = p.h + 'px'; wrap.appendChild(el); host.appendChild(wrap);
+        const ch = LightweightCharts.createChart(el, {
+          width: W, height: p.h,
+          layout: { background: { color: 'transparent' }, textColor: '#8b95a5', fontSize: 10 },
+          grid: { vertLines: { color: 'rgba(255,255,255,.04)' }, horzLines: { color: 'rgba(255,255,255,.04)' } },
+          rightPriceScale: { borderColor: 'rgba(255,255,255,.1)', minimumWidth: 64 },
+          timeScale: { borderColor: 'rgba(255,255,255,.1)', visible: p.key === 'short', timeVisible: false },
+          crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+          handleScale: { axisPressedMouseMove: false },
+        });
+        if (p.key === 'k') {
+          const s = ch.addCandlestickSeries({ upColor: '#ef5350', downColor: '#26a69a', wickUpColor: '#ef5350', wickDownColor: '#26a69a', borderVisible: false });
+          s.setData(taiex.map(x => ({ time: x.trade_date, open: +x.open, high: +x.high, low: +x.low, close: +x.close })));
+        } else {
+          const s = ch.addLineSeries({ color: p.color, lineWidth: 2, priceFormat: { type: 'custom', minMove: 0.01, formatter: p.fmt } });
+          const f = field[p.key];
+          s.setData(mdata.filter(x => x[f] != null).map(x => ({ time: x.trade_date, value: +x[f] })));
+        }
+        ch.timeScale().fitContent();
+        charts.push(ch);
       });
-      const s = _mmChart.addLineSeries({
-        color: '#4da3ff', lineWidth: 2,
-        priceFormat: { type: 'custom', minMove: 0.01, formatter: v => v.toFixed(1) + '%' },
+      _mmCharts = charts;
+      // 同步時間軸縮放/平移
+      let syncing = false;
+      charts.forEach(src => {
+        src.timeScale().subscribeVisibleLogicalRangeChange(r => {
+          if (syncing || !r) return; syncing = true;
+          charts.forEach(t => { if (t !== src) try { t.timeScale().setVisibleLogicalRange(r); } catch (_) {} });
+          syncing = false;
+        });
       });
-      s.setData(data.filter(x => x.maintenance_ratio != null)
-        .map(x => ({ time: x.trade_date, value: Number(x.maintenance_ratio) })));
-      _mmChart.timeScale().fitContent();
+      // hover：任一面板移動 → 顯示該日全部數值
+      const tip = document.getElementById('mmTip');
+      const mmap = Object.fromEntries(mdata.map(x => [x.trade_date, x]));
+      const kmap = Object.fromEntries(taiex.map(x => [x.trade_date, x]));
+      charts.forEach(src => {
+        src.subscribeCrosshairMove(param => {
+          const d = param.time;
+          if (!d) { tip.textContent = '移動滑鼠到圖上看每日數值'; return; }
+          const m = mmap[d] || {}, k = kmap[d] || {};
+          tip.innerHTML = `<b>${d}</b>　指數 ${k.close != null ? (+k.close).toFixed(0) : '–'}`
+            + `　維持率 <b style="color:${_mmColor(m.maintenance_ratio)}">${m.maintenance_ratio != null ? m.maintenance_ratio + '%' : '–'}</b>`
+            + `　融資 ${m.margin_balance != null ? (+m.margin_balance).toLocaleString() + '億' : '–'}`
+            + `　融券 ${m.short_balance != null ? (+m.short_balance).toLocaleString() + '張' : '–'}`;
+        });
+      });
     }
     let _sigRows = null;      // 全部訊號列
     let _sigDates = [];       // 可用日期（新→舊）

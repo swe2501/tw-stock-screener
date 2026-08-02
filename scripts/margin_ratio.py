@@ -13,6 +13,7 @@
 import json
 import ssl
 import sys
+import time
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
@@ -34,8 +35,35 @@ SRC = {
 
 
 def _get(url):
-    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"})
+    time.sleep(1.5)  # wantgoo 連續呼叫易被限流 → 每次呼叫間隔
+    req = urllib.request.Request(url, headers={
+        "User-Agent": "Mozilla/5.0", "Accept": "application/json",
+        "Referer": "https://www.wantgoo.com/stock/margin-trading/market-price/taiex"})
     return json.loads(urllib.request.urlopen(req, timeout=45, context=_CTX).read())
+
+
+def _taiex(latest_date):
+    """大盤 TAIEX 日 K（OHLC）：Wantgoo investrue 端點。before 需為『存在的隔日邊界』，
+    以融資最新日+1 為起點就近試（未來/假日會 400），回傳 [(date,o,h,l,c,v), ...]。
+    只試少數幾個邊界，避免大量呼叫被限流。"""
+    from datetime import date as _date, timedelta
+    tw = timezone(timedelta(hours=8))          # before 邊界需為「台灣午夜」時間戳（非 UTC）
+    if latest_date:
+        y, m, d = (int(x) for x in latest_date.split("-"))
+        base = _date(y, m, d)
+    else:
+        base = datetime.now(tw).date()          # 首次無提示 → 用今天(台灣)
+    for off in (1, 2, 3, 0, -1, 4):        # 最新日+1 最可能命中
+        dt = base + timedelta(days=off)
+        before = int(datetime(dt.year, dt.month, dt.day, tzinfo=tw).timestamp() * 1000)
+        u = f"https://www.wantgoo.com/investrue/0000/historical-daily-candlesticks?before={before}&top=1250"
+        try:
+            data = _get(u)
+            return [(_iso(r["time"]), r["open"], r["high"], r["low"], r["close"], int(r.get("volume") or 0))
+                    for r in data]
+        except urllib.error.HTTPError:
+            continue
+    return []
 
 
 def _iso(ms):
@@ -64,6 +92,30 @@ def main():
     if not env.get("SUPABASE_SERVICE_KEY"):
         print("[error] 缺 SUPABASE_SERVICE_KEY，中止"); sys.exit(1)
 
+    # ── 先抓 TAIEX（排最前，避免被前面 margin 呼叫累積觸發限流）──
+    # before 邊界用 Supabase 既有最新日推算（免額外打 wantgoo）；首次無資料則用今天
+    latest_hint = None
+    try:
+        _, prev = bs._sb(env, "/margin_maintenance",
+                         params=[("select", "trade_date"), ("order", "trade_date.desc"), ("limit", "1")])
+        if isinstance(prev, list) and prev:
+            latest_hint = prev[0]["trade_date"]
+    except Exception:
+        pass
+    candles = _taiex(latest_hint)
+    if candles:
+        trows = [{"trade_date": d, "open": o, "high": h, "low": lo, "close": c, "volume": v}
+                 for d, o, h, lo, c, v in candles]
+        print(f"TAIEX K：{len(trows)} 天，最新 {max(t['trade_date'] for t in trows)}")
+        bs._sb(env, "/taiex_daily", method="DELETE", params=[("trade_date", "neq.1900-01-01")])
+        stk = None
+        for i in range(0, len(trows), 500):
+            stk, _ = bs._sb(env, "/taiex_daily", method="POST", body=trows[i:i + 500])
+        print(f"上傳 taiex_daily={stk}（共 {len(trows)} 列）")
+    else:
+        print("[warn] TAIEX K 抓取失敗，略過（保留既有資料）")
+
+    # ── 再抓融資維持率兩變體 ──
     allrows = []
     for ex in (False, True):
         rows = _variant(ex)
@@ -72,7 +124,6 @@ def main():
               f"維持率 {latest['maintenance_ratio']}%、融資餘額 {latest['margin_balance']} 億")
         allrows += rows
 
-    # 全表重寫（含/扣ETF 兩變體的完整歷史）
     bs._sb(env, "/margin_maintenance", method="DELETE", params=[("trade_date", "neq.1900-01-01")])
     st = None
     for i in range(0, len(allrows), 500):
