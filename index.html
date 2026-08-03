@@ -1067,6 +1067,13 @@
     .mm-plabel { position: absolute; top: 3px; left: 8px; z-index: 2; font-size: 11px;
       color: var(--text-muted, #8b95a5); pointer-events: none; }
     .mm-foot { font-size: 11px; color: var(--text-muted, #8b95a5); margin-top: 8px; }
+    @media (max-width: 600px) {
+      .mm-overlay { align-items: stretch; justify-content: stretch; }
+      .mm-box { width: 100vw; max-width: 100vw; height: 100dvh; max-height: 100dvh;
+        border-radius: 0; border: none; padding: 10px 12px calc(env(safe-area-inset-bottom) + 16px); }
+      .mm-current { font-size: 12px; }
+      .mm-current b { font-size: 17px; }
+    }
     .margin-ratio .mr-label { font-weight: 500; opacity: .8; font-size: 12px; }
     .margin-ratio.mr-green { color:#3fb950; border-color:#2ea04366; background:#2ea04322; }
     .margin-ratio.mr-amber { color:#e6a23c; border-color:#e6a23c66; background:#e6a23c22; }
@@ -2117,11 +2124,13 @@
       host.innerHTML = '';
       if (typeof LightweightCharts === 'undefined' || !mdata.length) return;
       const W = host.clientWidth || 700;
+      const mobile = window.innerWidth < 600;
+      const hK = mobile ? 150 : 190, hS = mobile ? 78 : 105;
       const panels = [
-        { key: 'k',     h: 190, label: '加權指數' },
-        { key: 'ratio', h: 110, label: '融資維持率(%)', color: '#4da3ff', fmt: v => v.toFixed(1) + '%' },
-        { key: 'fin',   h: 100, label: '融資餘額(億)',  color: '#f85149', fmt: v => v.toFixed(0) },
-        { key: 'short', h: 100, label: '融券餘額(張)',  color: '#3fb950', fmt: v => (v / 1000).toFixed(0) + 'k' },
+        { key: 'k',     h: hK, label: '加權指數' },
+        { key: 'ratio', h: hS, label: '融資維持率(%)', color: '#4da3ff', fmt: v => v.toFixed(1) + '%' },
+        { key: 'fin',   h: hS, label: '融資餘額(億)',  color: '#f85149', fmt: v => v.toFixed(0) },
+        { key: 'short', h: hS, label: '融券餘額(張)',  color: '#3fb950', fmt: v => (v / 1000).toFixed(0) + 'k' },
       ];
       const field = { ratio: 'maintenance_ratio', fin: 'margin_balance', short: 'short_balance' };
       const charts = [];
@@ -2133,10 +2142,15 @@
           width: W, height: p.h,
           layout: { background: { color: 'transparent' }, textColor: '#8b95a5', fontSize: 10 },
           grid: { vertLines: { color: 'rgba(255,255,255,.04)' }, horzLines: { color: 'rgba(255,255,255,.04)' } },
-          rightPriceScale: { borderColor: 'rgba(255,255,255,.1)', minimumWidth: 64 },
+          // 固定價格軸寬度 → 四面板 plot 區左右對齊
+          rightPriceScale: { borderColor: 'rgba(255,255,255,.1)', minimumWidth: 68 },
           timeScale: { borderColor: 'rgba(255,255,255,.1)', visible: p.key === 'short', timeVisible: false },
           crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
           handleScale: { axisPressedMouseMove: false },
+          // 觸控：關閉手指拖曳平移 → 觸控即顯示十字準星(帶出當日數值)，行動裝置才點得出來
+          handleScroll: { horzTouchDrag: false, vertTouchDrag: false },
+          ...(LightweightCharts.TrackingModeExitMode
+            ? { trackingMode: { exitMode: LightweightCharts.TrackingModeExitMode.OnNextTap } } : {}),
         });
         if (p.key === 'k') {
           const s = ch.addCandlestickSeries({ upColor: '#ef5350', downColor: '#26a69a', wickUpColor: '#ef5350', wickDownColor: '#26a69a', borderVisible: false });
