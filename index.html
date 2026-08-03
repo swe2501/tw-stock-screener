@@ -2126,17 +2126,13 @@
       const W = host.clientWidth || 700;
       const mobile = window.innerWidth < 600;
       const hK = mobile ? 150 : 190, hS = mobile ? 80 : 105;
-      const PSW = 76;   // 固定價格軸寬 → 四面板 plot 區左右對齊
-      const panels = [
-        { key: 'k',     h: hK,      label: '加權指數' },
-        { key: 'ratio', h: hS,      label: '融資維持率(%)', color: '#4da3ff', fmt: v => v.toFixed(1) + '%' },
-        { key: 'fin',   h: hS,      label: '融資餘額(億)',  color: '#f85149', fmt: v => v.toFixed(0) },
-        { key: 'short', h: hS + 26, label: '融券餘額(張)',  color: '#3fb950', fmt: v => (v / 1000).toFixed(0) + 'k' },  // 底部多留日期軸空間
-      ];
       const field = { ratio: 'maintenance_ratio', fin: 'margin_balance', short: 'short_balance' };
       const tip = document.getElementById('mmTip');
       const mmap = Object.fromEntries(mdata.map(x => [x.trade_date, x]));
       const kmap = Object.fromEntries(taiex.map(x => [x.trade_date, x]));
+      // 共同日期軸（交集，升冪）→ 四面板等長 → 可用「索引」同步，橫移/縮放行為比照主K圖
+      const dates = mdata.map(x => x.trade_date).filter(d => kmap[d]);
+      if (!dates.length) return;
       const showTip = d => {
         if (!d) { tip.textContent = '移動滑鼠或觸控圖上看每日數值'; return; }
         const m = mmap[d] || {}, k = kmap[d] || {};
@@ -2147,6 +2143,12 @@
       };
       const toDate = t => t == null ? null : (typeof t === 'string' ? t
         : (t && t.year ? `${t.year}-${String(t.month).padStart(2, '0')}-${String(t.day).padStart(2, '0')}` : null));
+      const panels = [
+        { key: 'k',     h: hK,      label: '加權指數' },
+        { key: 'ratio', h: hS,      label: '融資維持率(%)', color: '#4da3ff', fmt: v => v.toFixed(1) + '%' },
+        { key: 'fin',   h: hS,      label: '融資餘額(億)',  color: '#f85149', fmt: v => v.toFixed(0) },
+        { key: 'short', h: hS + 26, label: '融券餘額(張)',  color: '#3fb950', fmt: v => (v / 1000).toFixed(0) + 'k' },
+      ];
       const charts = [];
       panels.forEach(p => {
         const wrap = document.createElement('div'); wrap.className = 'mm-panel';
@@ -2156,22 +2158,21 @@
           width: W, height: p.h,
           layout: { background: { color: 'transparent' }, textColor: '#8b95a5', fontSize: 10 },
           grid: { vertLines: { color: 'rgba(255,255,255,.04)' }, horzLines: { color: 'rgba(255,255,255,.04)' } },
-          rightPriceScale: { borderColor: 'rgba(255,255,255,.1)', minimumWidth: PSW },
-          timeScale: { borderColor: 'rgba(255,255,255,.1)', visible: p.key === 'short', timeVisible: false },
+          rightPriceScale: { borderColor: 'rgba(255,255,255,.1)', autoScale: true },
+          timeScale: { borderColor: 'rgba(255,255,255,.1)', visible: p.key === 'short', timeVisible: false, rightOffset: 3 },
           crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
-          handleScale: { axisPressedMouseMove: false },
-          // 水平可平移(手指拖曳/滑鼠拖曳/滾輪)；垂直觸控拖曳關閉→留給彈窗上下捲
-          handleScroll: { horzTouchDrag: true, vertTouchDrag: false, mouseWheel: true, pressedMouseMove: true },
+          // 橫移/縮放比照主K圖：滑鼠拖曳/滾輪/pinch；垂直觸控拖曳關閉→留給彈窗上下捲
+          handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
+          handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: false },
         });
         if (p.key === 'k') {
           const s = ch.addCandlestickSeries({ upColor: '#ef5350', downColor: '#26a69a', wickUpColor: '#ef5350', wickDownColor: '#26a69a', borderVisible: false, priceFormat: { type: 'price', precision: 0, minMove: 1 } });
-          s.setData(taiex.map(x => ({ time: x.trade_date, open: +x.open, high: +x.high, low: +x.low, close: +x.close })));
+          s.setData(dates.map(d => { const c = kmap[d]; return { time: d, open: +c.open, high: +c.high, low: +c.low, close: +c.close }; }));
         } else {
           const s = ch.addLineSeries({ color: p.color, lineWidth: 2, priceFormat: { type: 'custom', minMove: 0.01, formatter: p.fmt } });
           const f = field[p.key];
-          s.setData(mdata.filter(x => x[f] != null).map(x => ({ time: x.trade_date, value: +x[f] })));
+          s.setData(dates.map(d => { const v = mmap[d] && mmap[d][f]; return v != null ? { time: d, value: +v } : { time: d }; }));
         }
-        ch.timeScale().fitContent();
         // 純依 x 座標換算日期 → 同一欄不論滑鼠/手指高度都顯示當日值（不必貼著線）
         const at = clientX => showTip(toDate(ch.timeScale().coordinateToTime(clientX - el.getBoundingClientRect().left)));
         el.addEventListener('pointermove', ev => at(ev.clientX));
@@ -2180,21 +2181,25 @@
         charts.push(ch);
       });
       _mmCharts = charts;
-      // 用「日期」同步(各面板資料筆數不同,索引會錯位)
+      // 初始顯示最近 105 根 + 右側留 3 空白（比照主K圖）
+      const n = dates.length, show = Math.min(105, n);
+      charts.forEach(c => { try { c.timeScale().setVisibleLogicalRange({ from: n - show, to: n - 1 + 3 }); } catch (_) {} });
+      // 索引同步（等長才行）
       let syncing = false;
       charts.forEach(src => {
-        src.timeScale().subscribeVisibleTimeRangeChange(r => {
+        src.timeScale().subscribeVisibleLogicalRangeChange(r => {
           if (syncing || !r) return; syncing = true;
-          charts.forEach(t => { if (t !== src) try { t.timeScale().setVisibleRange(r); } catch (_) {} });
+          charts.forEach(t => { if (t !== src) try { t.timeScale().setVisibleLogicalRange(r); } catch (_) {} });
           syncing = false;
         });
       });
-      // 預設顯示最近約半年,可往左拖看更早
-      const dts = mdata.map(x => x.trade_date);
-      if (dts.length > 1) {
-        const from = dts[Math.max(0, dts.length - 130)], to = dts[dts.length - 1];
-        charts.forEach(c => { try { c.timeScale().setVisibleRange({ from, to }); } catch (_) {} });
-      }
+      // 版面就緒後以最大寬統一價格軸 → 四面板 plot 區對齊
+      setTimeout(() => {
+        try {
+          const maxW = Math.max(...charts.map(c => c.priceScale('right').width() || 0));
+          if (maxW > 0) charts.forEach(c => c.priceScale('right').applyOptions({ minimumWidth: maxW }));
+        } catch (_) {}
+      }, 0);
     }
     let _sigRows = null;      // 全部訊號列
     let _sigDates = [];       // 可用日期（新→舊）
