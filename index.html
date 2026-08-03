@@ -2125,14 +2125,28 @@
       if (typeof LightweightCharts === 'undefined' || !mdata.length) return;
       const W = host.clientWidth || 700;
       const mobile = window.innerWidth < 600;
-      const hK = mobile ? 150 : 190, hS = mobile ? 78 : 105;
+      const hK = mobile ? 150 : 190, hS = mobile ? 80 : 105;
+      const PSW = 76;   // 固定價格軸寬 → 四面板 plot 區左右對齊
       const panels = [
-        { key: 'k',     h: hK, label: '加權指數' },
-        { key: 'ratio', h: hS, label: '融資維持率(%)', color: '#4da3ff', fmt: v => v.toFixed(1) + '%' },
-        { key: 'fin',   h: hS, label: '融資餘額(億)',  color: '#f85149', fmt: v => v.toFixed(0) },
-        { key: 'short', h: hS, label: '融券餘額(張)',  color: '#3fb950', fmt: v => (v / 1000).toFixed(0) + 'k' },
+        { key: 'k',     h: hK,      label: '加權指數' },
+        { key: 'ratio', h: hS,      label: '融資維持率(%)', color: '#4da3ff', fmt: v => v.toFixed(1) + '%' },
+        { key: 'fin',   h: hS,      label: '融資餘額(億)',  color: '#f85149', fmt: v => v.toFixed(0) },
+        { key: 'short', h: hS + 26, label: '融券餘額(張)',  color: '#3fb950', fmt: v => (v / 1000).toFixed(0) + 'k' },  // 底部多留日期軸空間
       ];
       const field = { ratio: 'maintenance_ratio', fin: 'margin_balance', short: 'short_balance' };
+      const tip = document.getElementById('mmTip');
+      const mmap = Object.fromEntries(mdata.map(x => [x.trade_date, x]));
+      const kmap = Object.fromEntries(taiex.map(x => [x.trade_date, x]));
+      const showTip = d => {
+        if (!d) { tip.textContent = '移動滑鼠或觸控圖上看每日數值'; return; }
+        const m = mmap[d] || {}, k = kmap[d] || {};
+        tip.innerHTML = `<b>${d}</b>　指數 ${k.close != null ? (+k.close).toFixed(0) : '–'}`
+          + `　維持率 <b style="color:${_mmColor(m.maintenance_ratio)}">${m.maintenance_ratio != null ? m.maintenance_ratio + '%' : '–'}</b>`
+          + `　融資 ${m.margin_balance != null ? (+m.margin_balance).toLocaleString() + '億' : '–'}`
+          + `　融券 ${m.short_balance != null ? (+m.short_balance).toLocaleString() + '張' : '–'}`;
+      };
+      const toDate = t => t == null ? null : (typeof t === 'string' ? t
+        : (t && t.year ? `${t.year}-${String(t.month).padStart(2, '0')}-${String(t.day).padStart(2, '0')}` : null));
       const charts = [];
       panels.forEach(p => {
         const wrap = document.createElement('div'); wrap.className = 'mm-panel';
@@ -2142,18 +2156,14 @@
           width: W, height: p.h,
           layout: { background: { color: 'transparent' }, textColor: '#8b95a5', fontSize: 10 },
           grid: { vertLines: { color: 'rgba(255,255,255,.04)' }, horzLines: { color: 'rgba(255,255,255,.04)' } },
-          // 固定價格軸寬度 → 四面板 plot 區左右對齊
-          rightPriceScale: { borderColor: 'rgba(255,255,255,.1)', minimumWidth: 68 },
-          timeScale: { borderColor: 'rgba(255,255,255,.1)', visible: p.key === 'short', timeVisible: false },
+          rightPriceScale: { borderColor: 'rgba(255,255,255,.1)', minimumWidth: PSW },
+          timeScale: { borderColor: 'rgba(255,255,255,.1)', visible: p.key === 'short', timeVisible: false, fixLeftEdge: true, fixRightEdge: true },
           crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
           handleScale: { axisPressedMouseMove: false },
-          // 觸控：關閉手指拖曳平移 → 觸控即顯示十字準星(帶出當日數值)，行動裝置才點得出來
-          handleScroll: { horzTouchDrag: false, vertTouchDrag: false },
-          ...(LightweightCharts.TrackingModeExitMode
-            ? { trackingMode: { exitMode: LightweightCharts.TrackingModeExitMode.OnNextTap } } : {}),
+          handleScroll: false,   // 固定範圍(fitContent 顯示全部) → 觸控直接觸發下方自訂 hover
         });
         if (p.key === 'k') {
-          const s = ch.addCandlestickSeries({ upColor: '#ef5350', downColor: '#26a69a', wickUpColor: '#ef5350', wickDownColor: '#26a69a', borderVisible: false });
+          const s = ch.addCandlestickSeries({ upColor: '#ef5350', downColor: '#26a69a', wickUpColor: '#ef5350', wickDownColor: '#26a69a', borderVisible: false, priceFormat: { type: 'price', precision: 0, minMove: 1 } });
           s.setData(taiex.map(x => ({ time: x.trade_date, open: +x.open, high: +x.high, low: +x.low, close: +x.close })));
         } else {
           const s = ch.addLineSeries({ color: p.color, lineWidth: 2, priceFormat: { type: 'custom', minMove: 0.01, formatter: p.fmt } });
@@ -2161,31 +2171,24 @@
           s.setData(mdata.filter(x => x[f] != null).map(x => ({ time: x.trade_date, value: +x[f] })));
         }
         ch.timeScale().fitContent();
+        ch.subscribeCrosshairMove(param => showTip(toDate(param.time)));
+        // 觸控：依手指 x 座標換算日期 → 顯示當日數值（行動裝置沒有 hover）
+        const onTouch = ev => {
+          const t = (ev.touches && ev.touches[0]) || ev;
+          const x = t.clientX - el.getBoundingClientRect().left;
+          showTip(toDate(ch.timeScale().coordinateToTime(x)));
+        };
+        el.addEventListener('touchstart', onTouch, { passive: true });
+        el.addEventListener('touchmove', onTouch, { passive: true });
         charts.push(ch);
       });
       _mmCharts = charts;
-      // 同步時間軸縮放/平移
       let syncing = false;
       charts.forEach(src => {
         src.timeScale().subscribeVisibleLogicalRangeChange(r => {
           if (syncing || !r) return; syncing = true;
           charts.forEach(t => { if (t !== src) try { t.timeScale().setVisibleLogicalRange(r); } catch (_) {} });
           syncing = false;
-        });
-      });
-      // hover：任一面板移動 → 顯示該日全部數值
-      const tip = document.getElementById('mmTip');
-      const mmap = Object.fromEntries(mdata.map(x => [x.trade_date, x]));
-      const kmap = Object.fromEntries(taiex.map(x => [x.trade_date, x]));
-      charts.forEach(src => {
-        src.subscribeCrosshairMove(param => {
-          const d = param.time;
-          if (!d) { tip.textContent = '移動滑鼠到圖上看每日數值'; return; }
-          const m = mmap[d] || {}, k = kmap[d] || {};
-          tip.innerHTML = `<b>${d}</b>　指數 ${k.close != null ? (+k.close).toFixed(0) : '–'}`
-            + `　維持率 <b style="color:${_mmColor(m.maintenance_ratio)}">${m.maintenance_ratio != null ? m.maintenance_ratio + '%' : '–'}</b>`
-            + `　融資 ${m.margin_balance != null ? (+m.margin_balance).toLocaleString() + '億' : '–'}`
-            + `　融券 ${m.short_balance != null ? (+m.short_balance).toLocaleString() + '張' : '–'}`;
         });
       });
     }
