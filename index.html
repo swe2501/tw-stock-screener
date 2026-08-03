@@ -2160,7 +2160,8 @@
           timeScale: { borderColor: 'rgba(255,255,255,.1)', visible: p.key === 'short', timeVisible: false, fixLeftEdge: true, fixRightEdge: true },
           crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
           handleScale: { axisPressedMouseMove: false },
-          handleScroll: false,   // 固定範圍(fitContent 顯示全部) → 觸控直接觸發下方自訂 hover
+          // 水平可平移(手指拖曳/滑鼠拖曳/滾輪)；垂直觸控拖曳關閉→留給彈窗上下捲
+          handleScroll: { horzTouchDrag: true, vertTouchDrag: false, mouseWheel: true, pressedMouseMove: true },
         });
         if (p.key === 'k') {
           const s = ch.addCandlestickSeries({ upColor: '#ef5350', downColor: '#26a69a', wickUpColor: '#ef5350', wickDownColor: '#26a69a', borderVisible: false, priceFormat: { type: 'price', precision: 0, minMove: 1 } });
