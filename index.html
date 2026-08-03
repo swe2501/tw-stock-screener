@@ -2157,7 +2157,7 @@
           layout: { background: { color: 'transparent' }, textColor: '#8b95a5', fontSize: 10 },
           grid: { vertLines: { color: 'rgba(255,255,255,.04)' }, horzLines: { color: 'rgba(255,255,255,.04)' } },
           rightPriceScale: { borderColor: 'rgba(255,255,255,.1)', minimumWidth: PSW },
-          timeScale: { borderColor: 'rgba(255,255,255,.1)', visible: p.key === 'short', timeVisible: false, fixLeftEdge: true, fixRightEdge: true },
+          timeScale: { borderColor: 'rgba(255,255,255,.1)', visible: p.key === 'short', timeVisible: false },
           crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
           handleScale: { axisPressedMouseMove: false },
           // 水平可平移(手指拖曳/滑鼠拖曳/滾輪)；垂直觸控拖曳關閉→留給彈窗上下捲
@@ -2172,26 +2172,29 @@
           s.setData(mdata.filter(x => x[f] != null).map(x => ({ time: x.trade_date, value: +x[f] })));
         }
         ch.timeScale().fitContent();
-        ch.subscribeCrosshairMove(param => showTip(toDate(param.time)));
-        // 觸控：依手指 x 座標換算日期 → 顯示當日數值（行動裝置沒有 hover）
-        const onTouch = ev => {
-          const t = (ev.touches && ev.touches[0]) || ev;
-          const x = t.clientX - el.getBoundingClientRect().left;
-          showTip(toDate(ch.timeScale().coordinateToTime(x)));
-        };
-        el.addEventListener('touchstart', onTouch, { passive: true });
-        el.addEventListener('touchmove', onTouch, { passive: true });
+        // 純依 x 座標換算日期 → 同一欄不論滑鼠/手指高度都顯示當日值（不必貼著線）
+        const at = clientX => showTip(toDate(ch.timeScale().coordinateToTime(clientX - el.getBoundingClientRect().left)));
+        el.addEventListener('pointermove', ev => at(ev.clientX));
+        el.addEventListener('touchstart', ev => { const t = ev.touches[0]; if (t) at(t.clientX); }, { passive: true });
+        el.addEventListener('touchmove', ev => { const t = ev.touches[0]; if (t) at(t.clientX); }, { passive: true });
         charts.push(ch);
       });
       _mmCharts = charts;
+      // 用「日期」同步(各面板資料筆數不同,索引會錯位)
       let syncing = false;
       charts.forEach(src => {
-        src.timeScale().subscribeVisibleLogicalRangeChange(r => {
+        src.timeScale().subscribeVisibleTimeRangeChange(r => {
           if (syncing || !r) return; syncing = true;
-          charts.forEach(t => { if (t !== src) try { t.timeScale().setVisibleLogicalRange(r); } catch (_) {} });
+          charts.forEach(t => { if (t !== src) try { t.timeScale().setVisibleRange(r); } catch (_) {} });
           syncing = false;
         });
       });
+      // 預設顯示最近約半年,可往左拖看更早
+      const dts = mdata.map(x => x.trade_date);
+      if (dts.length > 1) {
+        const from = dts[Math.max(0, dts.length - 130)], to = dts[dts.length - 1];
+        charts.forEach(c => { try { c.timeScale().setVisibleRange({ from, to }); } catch (_) {} });
+      }
     }
     let _sigRows = null;      // 全部訊號列
     let _sigDates = [];       // 可用日期（新→舊）
