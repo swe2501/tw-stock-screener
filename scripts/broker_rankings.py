@@ -82,13 +82,14 @@ def upload_broker_trades(conn, env, views, d90):
     from datetime import date, timedelta
     names = _stock_names()
     today = conn.execute("select max(trade_date) from wantgoo_daily").fetchone()[0]
-    year_cut = (date.fromisoformat(today) - timedelta(days=TRADE_DETAIL_DAYS)).isoformat()
+    # 年回測系列：明細顯示「全部歷史」，與排行榜事件數同口徑（排行榜 analyze 未帶 date_from）
+    all_cut = conn.execute("select min(trade_date) from wantgoo_daily").fetchone()[0] or "1900-01-01"
     # 每個 view 的門檻
     thresh = {
-        "year_large_lots":   ("lots", 300, 0,    year_cut),
-        "year_large_amount": ("amt",  3000, 0,   year_cut),
-        "year_small_lots":   ("lots", 50, 300,   year_cut),
-        "year_small_amount": ("amt",  500, 3000, year_cut),
+        "year_large_lots":   ("lots", 300, 0,    all_cut),
+        "year_large_amount": ("amt",  3000, 0,   all_cut),
+        "year_small_lots":   ("lots", 50, 300,   all_cut),
+        "year_small_amount": ("amt",  500, 3000, all_cut),
         "d90_small_lots":    ("lots", 50, 300,   d90),
         "d90_small_amount":  ("amt",  500, 3000, d90),
     }
