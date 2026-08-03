@@ -183,14 +183,18 @@ def main():
     ap.add_argument("--start", required=True)
     ap.add_argument("--end", required=True)
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--force", action="store_true", help="重抓已存在的日期")
     ap.add_argument("--validate", help="驗證某股票代號")
     args = ap.parse_args()
 
     conn = _db()
     dates = _dates(args.start, args.end)
+    done = {r[0] for r in conn.execute("select distinct trade_date from institutional_trades")}
     print(f"日期範圍 {args.start}~{args.end}（{len(dates)} 個平日）{'[dry-run]' if args.dry_run else ''}")
-    ok_i = ok_m = 0
+    ok_i = ok_m = skip = 0
     for d in dates:
+        if not args.force and d in done:      # 斷點續傳：已抓過跳過
+            skip += 1; continue
         try:
             is_td, ni = fetch_institutional(conn, d, args.dry_run)
             if is_td is False:
@@ -200,7 +204,7 @@ def main():
             ok_i += 1 if ni else 0; ok_m += 1 if nm else 0
         except urllib.error.HTTPError as e:
             print(f"  {d}: HTTP {e.code} → 停止此來源批次"); break
-    print(f"完成：三大法人 {ok_i} 日、融資融券 {ok_m} 日")
+    print(f"完成：新抓三大法人 {ok_i} 日、融資融券 {ok_m} 日；斷點跳過 {skip} 日")
 
     if args.validate:
         s = args.validate
