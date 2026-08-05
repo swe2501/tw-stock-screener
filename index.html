@@ -2733,6 +2733,9 @@
       detail.className = '_st-detail';
       detail.innerHTML = `<td colspan="7" style="padding:6px 12px;background:rgba(255,255,255,.02)">載入賣超事件中...</td>`;
       trMain.after(detail);
+      // 追蹤起點（buy_from）＋是否被資料邊界截斷
+      const w = (_stWatchList || []).find(x => x.broker_id === brokerId && x.code === code) || {};
+      const startInfo = `<div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">追蹤起點（該分點首個淨買日）：<b>${w.buy_from_date || '—'}</b>${w.start_clipped ? ' <span style="color:#e6a23c" title="該分點在資料一開始就在買此檔，真正建倉日可能更早、抓不到">⚠ 起點貼資料邊界，更早無法回溯（可能被截）</span>' : ''}</div>`;
       try {
         const r = await fetch(`${SIG_SB_URL}/rest/v1/broker_sell_alerts`
           + `?select=trade_date,sell_broker_name,is_anchor,net_sell_lots,net_sell_amount_wan`
@@ -2740,7 +2743,7 @@
           + `&order=trade_date.desc&limit=200`, {
           headers: { apikey: SIG_SB_ANON, Authorization: `Bearer ${_authToken}` } });
         const evs = r.ok ? await r.json() : [];
-        if (!evs.length) { detail.firstChild.innerHTML = '（此檔目前尚無符合門檻的賣超事件，或尚未經排程計算）'; return; }
+        if (!evs.length) { detail.firstChild.innerHTML = startInfo + '（此檔目前尚無符合門檻的賣超事件，或尚未經排程計算）'; return; }
         evs.sort((a, b) => (a.trade_date < b.trade_date ? 1 : -1));   // 日期新→舊，本尊與其他分點同表
         const rowsH = evs.map(e => {
           const who = e.is_anchor ? '<span style="color:#e74c3c;font-weight:700">🔻本尊</span>' : (e.sell_broker_name || '');
@@ -2750,7 +2753,7 @@
             <td style="padding:3px 10px;text-align:right">${Number(e.net_sell_lots).toLocaleString()} 張</td>
             <td style="padding:3px 10px;text-align:right;color:var(--text-muted)">${amt}</td></tr>`;
         }).join('');
-        detail.firstChild.innerHTML = `<div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">賣超事件（最多 200 筆，本尊紅字標「🔻本尊」）</div>
+        detail.firstChild.innerHTML = startInfo + `<div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">賣超事件（最多 200 筆，本尊紅字標「🔻本尊」）</div>
           <table style="width:100%;border-collapse:collapse;font-size:11.5px">
             <thead><tr style="color:var(--text-muted)"><th style="padding:2px 10px;text-align:left">日期</th><th style="padding:2px 10px;text-align:left">賣超分點</th><th style="padding:2px 10px;text-align:right">張數</th><th style="padding:2px 10px;text-align:right">金額</th></tr></thead>
             <tbody>${rowsH}</tbody></table>`;

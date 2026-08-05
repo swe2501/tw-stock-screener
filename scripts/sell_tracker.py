@@ -84,6 +84,7 @@ def _anchor_stats(conn, broker_id, code):
     buys = [(d, (b or 0) - (s or 0)) for d, b, s, _ in rows if (b or 0) - (s or 0) > 0]
     if not buys:
         return None
+    first_row = rows[0][0]          # 該分點對此檔在資料中的首筆日（判斷起點是否被資料邊界截斷）
     buy_from = buys[0][0]
     win = [(d, (b or 0) - (s or 0), sap) for d, b, s, sap in rows if d >= buy_from]
     cum = peak = 0
@@ -98,8 +99,8 @@ def _anchor_stats(conn, broker_id, code):
     if cur <= 0:
         giveback = 100.0
     sells = [d for d, net, _ in win if net < 0]
-    return {"buy_from": buy_from, "total_buy": total_buy, "peak": peak, "cur": cur,
-            "giveback": giveback, "median_buy": median_buy,
+    return {"buy_from": buy_from, "first_row": first_row, "total_buy": total_buy,
+            "peak": peak, "cur": cur, "giveback": giveback, "median_buy": median_buy,
             "last_sell": max(sells) if sells else None, "win": win}
 
 
@@ -159,6 +160,7 @@ def main():
     conn = sqlite3.connect(str(ba.DB_PATH))
     conn.execute("pragma busy_timeout=60000")
     latest_date = conn.execute("select max(trade_date) from wantgoo_daily").fetchone()[0]
+    data_floor = conn.execute("select min(trade_date) from wantgoo_daily").fetchone()[0]  # 資料最早日
 
     watched_pairs = {(w["broker_id"], w["code"]) for w in watch}
     all_events = []
@@ -176,6 +178,9 @@ def main():
             tier, giveback = "churn", None
         else:
             tier, giveback = _tier(stt["giveback"], stt["cur"]), stt["giveback"]
+        # 起點是否被資料邊界截斷：該分點對此檔的首筆日落在資料最早日的 10 天內
+        start_clipped = (datetime.fromisoformat(stt["first_row"])
+                         - datetime.fromisoformat(data_floor)).days <= 10
         a_ev_all = _anchor_sell_events(stt, bid, bname, code)
         anchor_ct = len(a_ev_all)
         last_anchor = max((e["trade_date"] for e in a_ev_all), default=None)
@@ -193,6 +198,7 @@ def main():
                       "peak_lots": stt["peak"], "cur_lots": stt["cur"],
                       "giveback_pct": giveback, "tier": tier,
                       "anchor_sell_ct": anchor_ct, "last_anchor_sell": last_anchor,
+                      "start_clipped": start_clipped,
                       "last_sell_date": stt["last_sell"], "updated_at": now})
 
     # 清掉已取消追蹤(broker,code) 的舊警示
