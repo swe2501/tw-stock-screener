@@ -1090,6 +1090,7 @@
       <div id="authUserEmail" style="display:none"></div>
       <button id="brokerSigBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="openBrokerSignals()">🎯 <span class="btn-label">主力訊號</span></button>
       <button id="brokerRankBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="openBrokerRankings()">📊 <span class="btn-label">分點回測</span></button>
+      <button id="sellTrackBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="openSellTrack()">🔻 <span class="btn-label">出場追蹤</span></button>
       <button id="watchlistBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="openWatchlist()">⭐ <span class="btn-label">觀察清單</span></button>
       <button id="alertMgrBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="openAlertMgr()">🔔 <span class="btn-label">我的警示</span></button>
       <button id="logoutBtn"   tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="doLogout()">登出</button>
@@ -1160,6 +1161,21 @@
           style="background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer">&#10005;</button>
       </div>
       <div id="rkTradesBody" style="margin-top:10px;font-size:12.5px;color:var(--text)">載入中...</div>
+    </div>
+  </div>
+
+  <!-- 🔻 出場追蹤 modal（僅授權帳號） -->
+  <div id="sellTrackModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9992;align-items:flex-start;justify-content:center;overflow-y:auto;padding:4vh 12px">
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px 22px;max-width:820px;width:100%">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px">
+        <div>
+          <h3 style="margin:0;font-size:1.05rem;color:var(--text-primary)">🔻 出場追蹤</h3>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">追蹤大戶何時出脫你勾選的股票（每日 19:00 更新）</div>
+        </div>
+        <button onclick="document.getElementById('sellTrackModal').style.display='none'"
+          style="background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer">&#10005;</button>
+      </div>
+      <div id="sellTrackBody" style="margin-top:10px;font-size:12.5px;color:var(--text)">載入中...</div>
     </div>
   </div>
 
@@ -2561,22 +2577,186 @@
         });
         const rows = r.ok ? await r.json() : [];
         if (!rows.length) { body.innerHTML = '<div style="padding:12px 0;color:var(--text-muted)">此期間查無符合門檻的出手</div>'; return; }
-        const tr = rows.map(x => `
+        await _ensureWatchSet();
+        const bn = brokerName.replace(/'/g, '');
+        const seen = new Set();                       // 每檔只放一個 checkbox（明細逐日、同檔會重複）
+        const tr = rows.map(x => {
+          let cb = '';
+          if (!seen.has(x.code)) {
+            seen.add(x.code);
+            const checked = _stWatchSet.has(brokerId + '|' + x.code) ? 'checked' : '';
+            const nm = (x.name || '').replace(/'/g, '');
+            cb = `<input type="checkbox" ${checked} onclick="event.stopPropagation()" onchange="_stToggle(this,'${brokerId}','${bn}','${x.code}','${nm}')" title="追蹤此檔出場訊號" style="cursor:pointer">`;
+          }
+          return `
           <tr onclick="openChart('${x.code}','${x.code} ${(x.name||'').replace(/'/g,'')}','',0,false,'${x.trade_date}','${brokerName} 買')"
               style="border-bottom:1px solid var(--border);cursor:pointer">
+            <td style="padding:4px 6px;text-align:center;width:26px">${cb}</td>
             <td style="padding:4px 8px;white-space:nowrap">${x.trade_date}</td>
             <td style="padding:4px 8px;color:#4da3ff">${x.code} ${x.name || ''}</td>
             <td style="padding:4px 8px;text-align:right">${isLots
               ? Number(x.net_lots).toLocaleString() + ' 張'
               : (x.net_amount_wan != null ? Number(x.net_amount_wan).toLocaleString() + ' 萬' : '–')}</td>
-          </tr>`).join('');
-        body.innerHTML = `<div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">共 ${rows.length} 筆，點列可開該股 K 線圖</div>
+          </tr>`;
+        }).join('');
+        body.innerHTML = `<div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">共 ${rows.length} 筆・勾選 ☑ 追蹤該檔出場（盯大戶何時賣），點列開 K 線圖</div>
           <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px">
             <thead><tr style="color:var(--text-muted);border-bottom:1px solid var(--border)">
+              <th style="padding:4px 6px;text-align:center" title="勾選追蹤出場">追</th>
               <th style="padding:4px 8px;text-align:left">日期</th><th style="padding:4px 8px;text-align:left">股票</th>
               <th style="padding:4px 8px;text-align:right">${isLots ? '買超張數' : '買超金額'}</th>
             </tr></thead><tbody>${tr}</tbody></table></div>`;
       } catch (e) { body.innerHTML = '載入失敗：' + e.message; }
+    }
+
+    // ── 🔻 出場追蹤 ──
+    let _stWatchSet = null;    // Set("brokerId|code")：目前追蹤中
+    let _stWatchList = null;   // 完整清單（含累積回吐統計）
+
+    async function _ensureWatchSet(force) {
+      if (_stWatchSet && _stWatchList && !force) return;
+      try {
+        const r = await _authFetch('/api/broker_watch');
+        _stWatchList = r.ok ? await r.json() : (_stWatchList || []);
+      } catch (_) { _stWatchList = _stWatchList || []; }
+      _stWatchSet = new Set((_stWatchList || []).map(w => w.broker_id + '|' + w.code));
+    }
+
+    async function _stToggle(cb, brokerId, brokerName, code, stockName) {
+      const key = brokerId + '|' + code;
+      cb.disabled = true;
+      try {
+        if (cb.checked) {
+          const r = await _authFetch('/api/broker_watch', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ broker_id: brokerId, broker_name: brokerName, code, stock_name: stockName }),
+          });
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          if (_stWatchSet) _stWatchSet.add(key);
+          _stFlash(`已追蹤 ${code} ${stockName}，今晚 19:00 起更新出場狀態`);
+        } else {
+          const r = await _authFetch(`/api/broker_watch?broker_id=${encodeURIComponent(brokerId)}&code=${encodeURIComponent(code)}`, { method: 'DELETE' });
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          if (_stWatchSet) _stWatchSet.delete(key);
+          _stFlash(`已取消追蹤 ${code}`);
+        }
+        _stWatchList = null;   // 下次開面板重抓最新統計
+      } catch (e) {
+        cb.checked = !cb.checked;   // 還原勾選狀態
+        _stFlash('操作失敗：' + e.message, true);
+      } finally { cb.disabled = false; }
+    }
+
+    function _stFlash(msg, err) {
+      let t = document.getElementById('_stFlash');
+      if (!t) {
+        t = document.createElement('div'); t.id = '_stFlash';
+        t.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:10001;padding:9px 16px;border-radius:8px;font-size:13px;color:#fff;box-shadow:0 4px 16px rgba(0,0,0,.4);transition:opacity .3s;max-width:90vw;text-align:center';
+        document.body.appendChild(t);
+      }
+      t.style.background = err ? '#c0392b' : '#2a7d4f';
+      t.textContent = msg; t.style.opacity = '1';
+      clearTimeout(t._tmr); t._tmr = setTimeout(() => { t.style.opacity = '0'; }, 2800);
+    }
+
+    const _ST_TIER = { none: ['持有中', '#888'], warn25: ['🟡 減碼', '#e6a23c'], half50: ['🟠 過半', '#ff9f43'], exit90: ['🔴 出清', '#e74c3c'] };
+
+    function _stRuleHtml() {
+      return `<details style="margin:2px 0 12px;border:1px solid var(--border);border-radius:8px;padding:8px 12px;background:rgba(255,255,255,.02)">
+        <summary style="cursor:pointer;color:var(--text-muted);font-size:12px">📋 追蹤規則說明（點開）</summary>
+        <div style="font-size:11.5px;color:var(--text-muted);line-height:1.75;margin-top:8px">
+          <b>用途：</b>盯你勾選的股票，看原本買進的大戶（本尊）何時出脫、或其他分點是否大量賣超。每日 19:00 更新。<br>
+          <b>回吐% ＝（峰值淨持倉 − 目前淨持倉）÷ 峰值淨持倉</b>（以「曾經最高持倉」為分母，賣一半又買回不會誤判）：<br>
+          &nbsp;&nbsp;🟡 <b>減碼</b>：回吐 ≥ 25% → 進面板<br>
+          &nbsp;&nbsp;🟠 <b>過半</b>：回吐 ≥ 50% → 面板＋Email<br>
+          &nbsp;&nbsp;🔴 <b>出清</b>：回吐 ≥ 90% 或 淨持倉 ≤ 0 → 面板＋Email<br>
+          <b>賣超事件：</b><br>
+          &nbsp;&nbsp;・<b>本尊</b>：單日淨賣超 ≥ 中位數買超日×1/3 <u>或</u> ≥ 峰值持倉×20%（符合其一即記）<br>
+          &nbsp;&nbsp;・<b>其他分點</b>：單日淨賣超 ≥ 300 張 <u>或</u> ≥ 3000 萬（大單門檻）<br>
+          <b>回溯：</b>從該分點對此檔「最早買超日」起算至今。<br>
+          <b>Email：</b>排程算完後由 Vercel 端就「最新交易日」的新賣超事件寄一封摘要（不寄歷史、避免洗信）。
+        </div>
+      </details>`;
+    }
+
+    async function openSellTrack() {
+      const modal = document.getElementById('sellTrackModal');
+      document.getElementById('sellTrackBody').innerHTML = '載入中...';
+      modal.style.display = 'flex';
+      await _ensureWatchSet(true);
+      _renderSellTrack();
+    }
+
+    function _renderSellTrack() {
+      const body = document.getElementById('sellTrackBody');
+      const rows = _stWatchList || [];
+      if (!rows.length) {
+        body.innerHTML = _stRuleHtml() + '<div style="padding:16px 0;color:var(--text-muted)">還沒有追蹤任何股票。到「📊 分點回測 → 點分點看出手明細」，勾選 ☑ 要盯的股票即可。</div>';
+        return;
+      }
+      const tr = rows.map(w => {
+        const [tlabel, tcolor] = _ST_TIER[w.tier] || _ST_TIER.none;
+        const gvTxt = w.giveback_pct != null ? `${w.giveback_pct}%` : '—';
+        const upd = w.updated_at ? '' : '<span style="color:#e6a23c;font-size:10px" title="尚未經排程計算，今晚 19:00 更新"> (待更新)</span>';
+        return `<tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:5px 8px;color:#4da3ff;cursor:pointer" onclick="_stExpand('${w.broker_id}','${w.code}',this)" title="展開賣超事件">${w.code} ${w.stock_name || ''} ›</td>
+          <td style="padding:5px 8px;color:var(--text-muted);font-size:11px">${w.broker_name || w.broker_id}</td>
+          <td style="padding:5px 8px;text-align:right;color:${tcolor};font-weight:700">${gvTxt}${upd}</td>
+          <td style="padding:5px 8px;text-align:center;color:${tcolor}">${tlabel}</td>
+          <td style="padding:5px 8px;text-align:right;color:var(--text-muted);font-size:11px">${w.peak_lots ?? '—'}→${w.cur_lots ?? '—'}</td>
+          <td style="padding:5px 8px;text-align:center;font-size:11px">${w.last_sell_date || '—'}</td>
+          <td style="padding:5px 6px;text-align:center"><span onclick="_stRemove('${w.broker_id}','${w.code}')" title="取消追蹤" style="cursor:pointer;color:#c0392b">✕</span></td>
+        </tr>`;
+      }).join('');
+      body.innerHTML = _stRuleHtml()
+        + `<div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">共 ${rows.length} 檔，依回吐% 高→低排序。點股票展開賣超事件。</div>
+        <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px">
+          <thead><tr style="color:var(--text-muted);border-bottom:1px solid var(--border)">
+            <th style="padding:4px 8px;text-align:left">股票</th><th style="padding:4px 8px;text-align:left">追蹤分點</th>
+            <th style="padding:4px 8px;text-align:right">回吐%</th><th style="padding:4px 8px;text-align:center">狀態</th>
+            <th style="padding:4px 8px;text-align:right">峰值→目前</th><th style="padding:4px 8px;text-align:center">最近賣超</th><th></th>
+          </tr></thead><tbody>${tr}</tbody></table></div>`;
+    }
+
+    async function _stExpand(brokerId, code, el) {
+      const trMain = el.closest('tr');
+      const nx = trMain.nextElementSibling;
+      if (nx && nx.classList.contains('_st-detail')) { nx.remove(); return; }
+      const detail = document.createElement('tr');
+      detail.className = '_st-detail';
+      detail.innerHTML = `<td colspan="7" style="padding:6px 12px;background:rgba(255,255,255,.02)">載入賣超事件中...</td>`;
+      trMain.after(detail);
+      try {
+        const r = await fetch(`${SIG_SB_URL}/rest/v1/broker_sell_alerts`
+          + `?select=trade_date,sell_broker_name,is_anchor,net_sell_lots,net_sell_amount_wan`
+          + `&broker_id=eq.${encodeURIComponent(brokerId)}&code=eq.${encodeURIComponent(code)}`
+          + `&order=trade_date.desc&limit=200`, {
+          headers: { apikey: SIG_SB_ANON, Authorization: `Bearer ${_authToken}` } });
+        const evs = r.ok ? await r.json() : [];
+        if (!evs.length) { detail.firstChild.innerHTML = '（此檔目前尚無符合門檻的賣超事件，或尚未經排程計算）'; return; }
+        const rowsH = evs.map(e => {
+          const who = e.is_anchor ? '<span style="color:#e74c3c;font-weight:700">本尊</span>' : (e.sell_broker_name || '');
+          const amt = e.net_sell_amount_wan != null ? Number(e.net_sell_amount_wan).toLocaleString() + ' 萬' : '–';
+          return `<tr><td style="padding:3px 10px;white-space:nowrap">${e.trade_date}</td><td style="padding:3px 10px">${who}</td>
+            <td style="padding:3px 10px;text-align:right">${Number(e.net_sell_lots).toLocaleString()} 張</td>
+            <td style="padding:3px 10px;text-align:right;color:var(--text-muted)">${amt}</td></tr>`;
+        }).join('');
+        detail.firstChild.innerHTML = `<div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">賣超事件（最多 200 筆，本尊紅字）</div>
+          <table style="width:100%;border-collapse:collapse;font-size:11.5px">
+            <thead><tr style="color:var(--text-muted)"><th style="padding:2px 10px;text-align:left">日期</th><th style="padding:2px 10px;text-align:left">賣超分點</th><th style="padding:2px 10px;text-align:right">張數</th><th style="padding:2px 10px;text-align:right">金額</th></tr></thead>
+            <tbody>${rowsH}</tbody></table>`;
+      } catch (e) { detail.firstChild.innerHTML = '載入失敗：' + e.message; }
+    }
+
+    async function _stRemove(brokerId, code) {
+      try {
+        const r = await _authFetch(`/api/broker_watch?broker_id=${encodeURIComponent(brokerId)}&code=${encodeURIComponent(code)}`, { method: 'DELETE' });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        if (_stWatchSet) _stWatchSet.delete(brokerId + '|' + code);
+        await _ensureWatchSet(true);
+        _renderSellTrack();
+        _stFlash('已取消追蹤 ' + code);
+      } catch (e) { _stFlash('取消失敗：' + e.message, true); }
     }
 
     async function openBrokerSignals() {
@@ -2859,6 +3039,7 @@
       const _owner = loggedIn && VIEWER_EMAILS.includes(_authUser?.email);
       document.getElementById('brokerSigBtn').style.display = _owner ? '' : 'none';
       document.getElementById('brokerRankBtn').style.display = _owner ? '' : 'none';
+      document.getElementById('sellTrackBtn').style.display = _owner ? '' : 'none';
       const emailEl = document.getElementById('authUserEmail');
       emailEl.style.display = loggedIn ? '' : 'none';
       if (loggedIn && _authUser) emailEl.textContent = _authUser.email;
@@ -2894,7 +3075,7 @@
     }
     // 關閉所有開啟的面板/視窗（閒置登出重新登入時用）
     function _closeAllPanels() {
-      ['brokerSigModal', 'brokerRankModal', 'rkTradesModal', 'divAlertModal', 'resetPwModal']
+      ['brokerSigModal', 'brokerRankModal', 'rkTradesModal', 'sellTrackModal', 'divAlertModal', 'resetPwModal']
         .forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
       ['chartModal', 'watchlistPanel', 'alertPanel', 'watchAddModal']
         .forEach(id => { const el = document.getElementById(id); if (el) el.classList.remove('open'); });

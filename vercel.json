@@ -24,6 +24,10 @@
     {
       "path": "/api/alert",
       "schedule": "35 5 * * 1-5"
+    },
+    {
+      "path": "/api/sell_alert",
+      "schedule": "0 13 * * 1-5"
     }
   ]
 }
