@@ -65,7 +65,8 @@ class handler(BaseHTTPRequestHandler):
             return self._json(401, {"error": "unauthorized"})
         status, data = _sb("/broker_watchlist", token=token, params={
             "select": ("id,broker_id,broker_name,code,stock_name,buy_from_date,"
-                       "total_buy_lots,peak_lots,cur_lots,giveback_pct,tier,last_sell_date,updated_at,added_at"),
+                       "total_buy_lots,peak_lots,cur_lots,giveback_pct,tier,anchor_sell_ct,"
+                       "last_anchor_sell,last_sell_date,updated_at,added_at"),
             "order": "giveback_pct.desc.nullslast,added_at.desc"})
         self._json(status, data)
 

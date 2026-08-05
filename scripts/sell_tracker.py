@@ -119,7 +119,7 @@ def _anchor_sell_events(st, broker_id, broker_name, code):
                     "sell_broker_id": broker_id, "sell_broker_name": broker_name,
                     "is_anchor": True, "net_sell_lots": int(nsell), "net_sell_amount_wan": amt})
     out.sort(key=lambda x: x["net_sell_lots"], reverse=True)
-    return out[:ANCHOR_CAP]
+    return out          # 全部回傳；上限由呼叫端裁切（計數要用完整數量）
 
 
 def _other_sell_events(conn, broker_id, code, buy_from):
@@ -170,20 +170,29 @@ def main():
         if not stt:
             print(f"  {bid} {code}：查無買超紀錄，略過")
             continue
-        tier = _tier(stt["giveback"], stt["cur"])
-        a_ev = _anchor_sell_events(stt, bid, bname, code)
+        # 當沖型判斷：峰值淨持倉 ≪ 總買量(<10%) → 沒真的建倉，回吐% 不適用
+        is_churn = stt["total_buy"] > 0 and stt["peak"] < stt["total_buy"] * 0.10
+        if is_churn:
+            tier, giveback = "churn", None
+        else:
+            tier, giveback = _tier(stt["giveback"], stt["cur"]), stt["giveback"]
+        a_ev_all = _anchor_sell_events(stt, bid, bname, code)
+        anchor_ct = len(a_ev_all)
+        last_anchor = max((e["trade_date"] for e in a_ev_all), default=None)
+        a_ev = a_ev_all[:ANCHOR_CAP]
         o_ev = _other_sell_events(conn, bid, code, stt["buy_from"])
         all_events.extend(a_ev); all_events.extend(o_ev)
         print(f"  {bid} {bname} {code} {w.get('stock_name') or ''}："
               f"買進日起 {stt['buy_from']}｜累積買 {stt['total_buy']} 張｜峰值 {stt['peak']}｜"
-              f"目前 {stt['cur']}｜回吐 {stt['giveback']}%｜{tier}｜"
-              f"本尊賣事件 {len(a_ev)}、他人大單賣 {len(o_ev)}")
+              f"目前 {stt['cur']}｜回吐 {giveback}%｜{tier}｜"
+              f"本尊賣事件 {anchor_ct}(最近 {last_anchor})、他人大單賣 {len(o_ev)}")
         if not dry:
             _sb(env, "/broker_watchlist", method="PATCH",
                 params={"id": f"eq.{w['id']}"},
                 body={"buy_from_date": stt["buy_from"], "total_buy_lots": stt["total_buy"],
                       "peak_lots": stt["peak"], "cur_lots": stt["cur"],
-                      "giveback_pct": stt["giveback"], "tier": tier,
+                      "giveback_pct": giveback, "tier": tier,
+                      "anchor_sell_ct": anchor_ct, "last_anchor_sell": last_anchor,
                       "last_sell_date": stt["last_sell"], "updated_at": now})
 
     # 清掉已取消追蹤(broker,code) 的舊警示

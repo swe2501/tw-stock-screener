@@ -2659,7 +2659,7 @@
       clearTimeout(t._tmr); t._tmr = setTimeout(() => { t.style.opacity = '0'; }, 2800);
     }
 
-    const _ST_TIER = { none: ['持有中', '#888'], warn25: ['🟡 減碼', '#e6a23c'], half50: ['🟠 過半', '#ff9f43'], exit90: ['🔴 出清', '#e74c3c'] };
+    const _ST_TIER = { none: ['持有中', '#888'], warn25: ['🟡 減碼', '#e6a23c'], half50: ['🟠 過半', '#ff9f43'], exit90: ['🔴 出清', '#e74c3c'], churn: ['🔵 當沖型', '#5aa9e6'] };
 
     function _stRuleHtml() {
       return `<details style="margin:2px 0 12px;border:1px solid var(--border);border-radius:8px;padding:8px 12px;background:rgba(255,255,255,.02)">
@@ -2670,6 +2670,7 @@
           &nbsp;&nbsp;🟡 <b>減碼</b>：回吐 ≥ 25% → 進面板<br>
           &nbsp;&nbsp;🟠 <b>過半</b>：回吐 ≥ 50% → 面板＋Email<br>
           &nbsp;&nbsp;🔴 <b>出清</b>：回吐 ≥ 90% 或 淨持倉 ≤ 0 → 面板＋Email<br>
+          &nbsp;&nbsp;🔵 <b>當沖型</b>：峰值淨持倉 < 總買量的 10%（邊買邊賣、沒真的建倉）→ 回吐%不適用、顯示「—」<br>
           <b>賣超事件：</b><br>
           &nbsp;&nbsp;・<b>本尊</b>：單日淨賣超 ≥ 中位數買超日×1/3 <u>或</u> ≥ 峰值持倉×20%（符合其一即記）<br>
           &nbsp;&nbsp;・<b>其他分點</b>：單日淨賣超 ≥ 300 張 <u>或</u> ≥ 3000 萬（大單門檻）<br>
@@ -2696,10 +2697,15 @@
       }
       const tr = rows.map(w => {
         const [tlabel, tcolor] = _ST_TIER[w.tier] || _ST_TIER.none;
-        const gvTxt = w.giveback_pct != null ? `${w.giveback_pct}%` : '—';
+        const isChurn = w.tier === 'churn';
+        const gvTxt = isChurn ? '<span title="當沖型分點，回吐%不適用">—</span>'
+                              : (w.giveback_pct != null ? `${w.giveback_pct}%` : '—');
         const upd = w.updated_at ? '' : '<span style="color:#e6a23c;font-size:10px" title="尚未經排程計算，今晚 19:00 更新"> (待更新)</span>';
+        // 本尊賣超標記（輔訊號）：本尊自己在賣才是最直接的出場訊號
+        const anchorMark = (w.anchor_sell_ct > 0)
+          ? `<div style="font-size:10px;color:#e74c3c" title="本尊自己的賣超事件次數">🔻本尊賣超 ${w.anchor_sell_ct} 次${w.last_anchor_sell ? `・最近 ${w.last_anchor_sell}` : ''}</div>` : '';
         return `<tr style="border-bottom:1px solid var(--border)">
-          <td style="padding:5px 8px;color:#4da3ff;cursor:pointer" onclick="_stExpand('${w.broker_id}','${w.code}',this)" title="展開賣超事件">${w.code} ${w.stock_name || ''} ›</td>
+          <td style="padding:5px 8px;color:#4da3ff;cursor:pointer" onclick="_stExpand('${w.broker_id}','${w.code}',this)" title="展開賣超事件">${w.code} ${w.stock_name || ''} ›${anchorMark}</td>
           <td style="padding:5px 8px;color:var(--text-muted);font-size:11px">${w.broker_name || w.broker_id}</td>
           <td style="padding:5px 8px;text-align:right;color:${tcolor};font-weight:700">${gvTxt}${upd}</td>
           <td style="padding:5px 8px;text-align:center;color:${tcolor}">${tlabel}</td>
@@ -2734,17 +2740,23 @@
           headers: { apikey: SIG_SB_ANON, Authorization: `Bearer ${_authToken}` } });
         const evs = r.ok ? await r.json() : [];
         if (!evs.length) { detail.firstChild.innerHTML = '（此檔目前尚無符合門檻的賣超事件，或尚未經排程計算）'; return; }
-        const rowsH = evs.map(e => {
-          const who = e.is_anchor ? '<span style="color:#e74c3c;font-weight:700">本尊</span>' : (e.sell_broker_name || '');
+        const evRow = e => {
           const amt = e.net_sell_amount_wan != null ? Number(e.net_sell_amount_wan).toLocaleString() + ' 萬' : '–';
-          return `<tr><td style="padding:3px 10px;white-space:nowrap">${e.trade_date}</td><td style="padding:3px 10px">${who}</td>
+          return `<tr><td style="padding:3px 10px;white-space:nowrap">${e.trade_date}</td>
+            <td style="padding:3px 10px">${e.sell_broker_name || ''}</td>
             <td style="padding:3px 10px;text-align:right">${Number(e.net_sell_lots).toLocaleString()} 張</td>
             <td style="padding:3px 10px;text-align:right;color:var(--text-muted)">${amt}</td></tr>`;
-        }).join('');
-        detail.firstChild.innerHTML = `<div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">賣超事件（最多 200 筆，本尊紅字）</div>
+        };
+        const section = (title, list, color) => list.length ? `
+          <div style="font-size:11px;color:${color};font-weight:700;margin:6px 0 2px">${title}（${list.length} 筆）</div>
           <table style="width:100%;border-collapse:collapse;font-size:11.5px">
             <thead><tr style="color:var(--text-muted)"><th style="padding:2px 10px;text-align:left">日期</th><th style="padding:2px 10px;text-align:left">賣超分點</th><th style="padding:2px 10px;text-align:right">張數</th><th style="padding:2px 10px;text-align:right">金額</th></tr></thead>
-            <tbody>${rowsH}</tbody></table>`;
+            <tbody>${list.map(evRow).join('')}</tbody></table>` : '';
+        const anchor = evs.filter(e => e.is_anchor), others = evs.filter(e => !e.is_anchor);
+        detail.firstChild.innerHTML =
+          `<div style="font-size:11px;color:var(--text-muted);margin-bottom:2px">賣超事件（各最多 200 筆）</div>`
+          + section('🔻 本尊（該分點自己賣）', anchor, '#e74c3c')
+          + section('其他分點（大單賣超）', others, '#ff9f43');
       } catch (e) { detail.firstChild.innerHTML = '載入失敗：' + e.message; }
     }
 
