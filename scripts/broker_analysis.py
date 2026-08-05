@@ -193,7 +193,7 @@ def analyze(conn, prices, codes=None, min_lots=300, min_events=5, hold_days=(5, 
 
 def analyze_events_sql(conn, prices, min_lots=300, min_events=5, hold_days=(5, 10, 20),
                        min_amount_wan=0, max_lots=0, max_amount_wan=0,
-                       or_amount_wan=0, date_from=None, codes=None):
+                       or_amount_wan=0, date_from=None, codes=None, broker_ids=None):
     """事件法「快速版」：只算買超事件的 N 日勝率／期望值，不做 FIFO 配對。
 
     與 analyze() 的事件統計等價，但把「找事件」這步交給 SQL 的 WHERE 在 C 層完成，
@@ -214,6 +214,8 @@ def analyze_events_sql(conn, prices, min_lots=300, min_events=5, hold_days=(5, 1
         conds.append("trade_date >= ?"); args.append(date_from)
     if codes:
         conds.append(f"code in ({','.join('?' * len(codes))})"); args.extend(codes)
+    if broker_ids:
+        conds.append(f"broker_id in ({','.join('?' * len(broker_ids))})"); args.extend(broker_ids)
     if or_amount_wan > 0:
         conds.append(f"({net_sql} >= ? or {amt_sql} >= ?)")
         args.extend([min_lots, or_amount_wan * 10000])
@@ -237,7 +239,7 @@ def analyze_events_sql(conn, prices, min_lots=300, min_events=5, hold_days=(5, 1
     for bid, bname, code, d, entry, net in conn.execute(q, tuple(args)):
         s = stat[bid]
         s["events"] += 1
-        if bname and d >= s["last"]:          # 取最近日期的分點名
+        if bname and (s["last"] == "" or d < s["last"]):   # 取最早(原始)的分點名，改名分點沿用原名
             s["name"] = bname; s["last"] = d
         for n in hold_days:
             c_after = close_after(prices, code, d, n)

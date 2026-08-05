@@ -129,6 +129,46 @@ def upload_broker_trades(conn, env, views, d90):
         print(f"[error] broker_trades 上傳失敗 ({status}): {resp}")
 
 
+def daily_refresh(conn, prices, env, views, d90):
+    """每日 19:00：不重算名次（那是週排程的事），只刷新『已上榜分點』的
+    events／勝率／n8／n20，保留週排程決定的 rank，再重算明細。
+    → 名次週更、筆數與勝率日更，解決週間累積筆數/勝率漂移。
+    走 broker_id 索引，只掃已上榜的 ~120 分點，數十秒等級。
+    安全：任一榜讀不到現有名單就整批中止，不動資料庫（避免把週排程結果洗掉）。"""
+    all_records = []
+    for view, kw in views.items():
+        st, ranked = bs._sb(env, "/broker_rankings",
+                            params=[("select", "broker_id,rank,broker_name"),
+                                    ("view", f"eq.{view}"), ("order", "rank.asc")])
+        if st != 200 or not ranked:
+            print(f"[abort] 每日刷新：{view} 讀不到現有名單（{st}），整批中止、不動資料庫")
+            return
+        rank_of = {r["broker_id"]: r["rank"] for r in ranked}
+        name_of = {r["broker_id"]: r.get("broker_name") for r in ranked}
+        bids = list(rank_of.keys())
+        stat = {r["broker_id"]: r for r in
+                ba.analyze_events_sql(conn, prices, min_events=0, hold_days=HOLD_DAYS,
+                                      broker_ids=bids, **kw)}
+        for bid in bids:
+            r = stat.get(bid)
+            if not r:      # d90 窗口滑動後該分點已無事件 → 保留名次、數字歸零，等下次週排程換人
+                all_records.append({"view": view, "rank": rank_of[bid], "broker_id": bid,
+                                    "broker_name": name_of[bid] or bid, "win8": None,
+                                    "win20": None, "events": 0, "n8": 0, "n20": 0})
+                continue
+            all_records.append({"view": view, "rank": rank_of[bid], "broker_id": bid,
+                                "broker_name": r["broker_name"] or name_of[bid],
+                                "win8": r.get("win8"), "win20": r.get("win20"),
+                                "events": r["events"], "n8": r.get("n8"), "n20": r.get("n20")})
+    bs._sb(env, "/broker_rankings", method="DELETE", params=[("view", "neq.__none__")])
+    status, resp = bs._sb(env, "/broker_rankings", method="POST", body=all_records)
+    if status in (200, 201):
+        print(f"每日刷新：更新 {len(all_records)} 列 broker_rankings（保留週排程名次）")
+    else:
+        print(f"[error] 每日刷新上傳失敗 ({status}): {resp}"); return
+    upload_broker_trades(conn, env, views, d90)
+
+
 def main():
     env = bs._load_env()
     if not env.get("SUPABASE_SERVICE_KEY"):
@@ -152,6 +192,11 @@ def main():
     # --trades-only：跳過重算排行榜，只更新明細（讀現有名單，快）
     if "--trades-only" in sys.argv:
         upload_broker_trades(conn, env, views, d90)
+        return
+
+    # --daily-refresh：每日 19:00 用，不重算名次，只刷新已上榜分點的筆數/勝率 + 明細
+    if "--daily-refresh" in sys.argv:
+        daily_refresh(conn, prices, env, views, d90)
         return
 
     all_records = []

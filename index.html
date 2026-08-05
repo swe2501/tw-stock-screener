@@ -2302,14 +2302,14 @@
     // 勝率＋分母：例「88.9%」下方小字「9筆」= 實際納入計算的已到期筆數
     function _rkWinCell(pct, n) {
       if (pct == null) return `<td style="padding:4px 8px;text-align:right">–</td>`;
-      return `<td style="padding:4px 8px;text-align:right;color:#e6a23c">${pct}%`
+      const warn = (n != null && n < 10) ? '<span title="實際計算筆數不足10筆，勝率參考性低">⚠️</span> ' : '';
+      return `<td style="padding:4px 8px;text-align:right;color:#e6a23c">${warn}${pct}%`
         + `<span style="color:var(--text-muted);font-size:10px"> /${n ?? '?'}筆</span></td>`;
     }
     function _rkTableSimple(rows, view) {
       if (!rows.length) return `<div style="padding:16px 0">此條件下沒有符合的分點</div>`;
       const isLots = (view || '').includes('lots');
       const tr = rows.map(x => {
-        const warn = (x.events != null && x.events < 10) ? '<span title="事件次數過少，勝率參考性低">⚠️</span> ' : '';
         const unres = (x.events != null && x.n20 != null) ? x.events - x.n20 : 0;
         const unresTxt = unres > 0
           ? `<span style="color:#e6a23c;font-size:10px" title="這些事件還沒滿20交易日，未納入20日勝率"> (${unres}未滿20日)</span>` : '';
@@ -2319,7 +2319,7 @@
           <td style="padding:4px 8px;color:#4da3ff">${x.broker_name || x.broker_id} ›</td>
           ${_rkWinCell(x.win8, x.n8)}
           ${_rkWinCell(x.win20, x.n20)}
-          <td style="padding:4px 8px;text-align:right">${warn}${x.events ?? '–'}${unresTxt}</td>
+          <td style="padding:4px 8px;text-align:right">${x.events ?? '–'}${unresTxt}</td>
         </tr>`;
       }).join('');
       return `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">
@@ -2336,10 +2336,10 @@
       if (!rows.length) return `<div style="padding:16px 0">此條件下沒有重疊的分點</div>`;
       const isLots = (viewA || '').includes('lots');
       const cell = (r, w, e, n20) => {
-        const warn = (e != null && e < 10) ? '⚠️ ' : '';
+        const warn = (n20 != null && n20 < 10) ? '⚠️ ' : '';
         const unres = (e != null && n20 != null) ? e - n20 : 0;
-        const wtxt = w != null ? `${w}%<span style="color:var(--text-muted);font-size:10px"> /${n20 ?? '?'}筆</span>` : '–';
-        const etxt = `${warn}${e ?? '–'}` + (unres > 0 ? `<span style="color:#e6a23c;font-size:10px">(${unres}未滿)</span>` : '');
+        const wtxt = w != null ? `${warn}${w}%<span style="color:var(--text-muted);font-size:10px"> /${n20 ?? '?'}筆</span>` : '–';
+        const etxt = `${e ?? '–'}` + (unres > 0 ? `<span style="color:#e6a23c;font-size:10px">(${unres}未滿)</span>` : '');
         return `<td style="padding:5px 10px;text-align:left;color:#888">${r}</td>
           <td style="padding:5px 10px;text-align:left;color:#e6a23c;font-weight:600">${wtxt}</td>
           <td style="padding:5px 6px;text-align:left;color:var(--text-muted)">${etxt}</td>`;
@@ -2522,8 +2522,8 @@
       const base = {
         large: '大單＝單日淨買超 ≥300 張 或 ≥3000 萬',
         small: '小單＝單日淨買超 50~300 張 或 500~3000 萬',
-        year: '一整年資料，取該分點所有事件、以 20 日勝率排序前 20；事件 <10 次標 ⚠️（樣本少、僅參考）。'
-          + '勝率的「/N筆」＝實際已滿該天數、納入計算的筆數；事件數旁「(x未滿)」＝還沒滿20交易日、尚未計入勝率的筆數',
+        year: '一整年資料，取該分點所有事件、以 20 日勝率排序前 20。'
+          + '勝率的「/N筆」＝實際已滿該天數、納入計算的筆數；該筆數 <10 時勝率標 ⚠️（樣本少、僅參考，8日、20日各自判斷）；事件數旁「(x未滿)」＝還沒滿20交易日、尚未計入勝率的筆數',
         d90:  '近 90 個交易日資料，全市場小單獨立依 20 日勝率取前 20（與年回測小單榜分開計算，成員可能不同）',
       };
       if (g === 'g1') return `【大單·年回測】${base.large}。${base.year}。`
