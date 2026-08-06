@@ -69,12 +69,19 @@ def _earliest_date(code: str) -> str | None:
     return row[0] if row and row[0] else None
 
 
+_AS_OF: date | None = None   # --as-of 覆寫「今天」：只抓到此日（補資料時避免誤抓盤中未收盤日）
+
+
+def _today() -> date:
+    return _AS_OF or date.today()
+
+
 def _plan_daily(code: str) -> tuple[str, str] | None:
     """
-    每日模式：只補從「DB 最新日期 +1」到今天。
+    每日模式：只補從「DB 最新日期 +1」到今天（或 --as-of 指定日）。
     若該股票完全沒有資料（尚未回補），回傳 None 跳過。
     """
-    today = date.today()
+    today = _today()
     last = _latest_date(code)
     if last is None:
         return None  # 尚未回補，daily 不處理
@@ -89,7 +96,7 @@ def _plan_backfill(code: str) -> tuple[str, str] | None:
     回補模式：填補「1 年前 → DB 最舊日期 -1」的歷史缺口，每次最多 MAX_DAYS_PER_RUN 天。
     若最舊日期已在 1 年前（含 5 天容差），視為完成，回傳 None。
     """
-    today = date.today()
+    today = _today()
     target_start = today - timedelta(days=BACKFILL_DAYS)
 
     earliest = _earliest_date(code)
@@ -142,6 +149,7 @@ async def _run(mode: str):
             await context.close()
             return
 
+        PER_STOCK_TIMEOUT = 120   # 單支股票整體逾時（秒）：卡在開頁/瀏覽器 wedge/DB 都會被中斷，避免整批無限卡死
         skipped = processed = 0
         for i, code in enumerate(codes, 1):
             rng = plan_fn(code)
@@ -155,12 +163,28 @@ async def _run(mode: str):
                 continue
             _log(f"[{i}/{len(codes)}] {code} {date_from}~{date_to}（{len(days_slash)} 交易日）")
             try:
-                await ws.scrape_code(page, code, days_slash, throttle_ms=throttle_ms)
+                # 整支包逾時：playwright 自帶的逾時在瀏覽器被 wedge 時可能失效，外層再保一層硬逾時
+                await asyncio.wait_for(
+                    ws.scrape_code(page, code, days_slash, throttle_ms=throttle_ms),
+                    timeout=PER_STOCK_TIMEOUT,
+                )
                 processed += 1
             except Exception as e:
-                # 單一股票失敗（網路瞬斷、頁面異常）不中斷整批，30 秒後跳下一支
-                _log(f"  [warn] {code} 失敗，跳過：{e}")
-                await asyncio.sleep(30)
+                # 逾時或例外：跳過該股，並重建分頁以復原可能卡死的 tab（避免後續連鎖卡住）
+                _log(f"  [warn] {code} 逾時/失敗，跳過並重建分頁：{type(e).__name__} {e}")
+                try:
+                    try:
+                        await asyncio.wait_for(page.close(), timeout=15)
+                    except Exception:
+                        pass
+                    page = await asyncio.wait_for(context.new_page(), timeout=30)
+                    await asyncio.wait_for(
+                        page.goto("https://www.wantgoo.com/", wait_until="domcontentloaded", timeout=30000),
+                        timeout=35,
+                    )
+                except Exception as e2:
+                    _log(f"  [warn] 分頁重建失敗（後續可能連鎖失敗）：{e2}")
+                await asyncio.sleep(2)
 
         await context.close()
 
@@ -175,7 +199,15 @@ def main():
         default="daily",
         help="daily=只抓今天（排程用）  backfill=補歷史（手動執行）",
     )
+    parser.add_argument(
+        "--as-of",
+        help="覆寫『今天』為此日期（YYYY-MM-DD）：只抓到此日，補資料時避免誤抓盤中未收盤日",
+    )
     args = parser.parse_args()
+    if args.as_of:
+        global _AS_OF
+        _AS_OF = date.fromisoformat(args.as_of)
+        _log(f"[--as-of] 以 {_AS_OF} 為『今天』，只抓到此日")
     asyncio.run(_run(args.mode))
 
 
