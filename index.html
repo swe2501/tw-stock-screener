@@ -2788,6 +2788,20 @@
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         _sigRows = await r.json();
         _sigDates = [...new Set(_sigRows.map(x => x.signal_date))];
+        // 讓日期軸一定含「最新交易日」：某天 0 筆訊號時 broker_signals 沒有該日 row，
+        // 否則日期軸會停在上一個有訊號的日子、選不到最新交易日。用 broker_trades 的最新日補上。
+        try {
+          const rt = await fetch(`${SIG_SB_URL}/rest/v1/broker_trades`
+            + `?select=trade_date&order=trade_date.desc&limit=1`, {
+            headers: { apikey: SIG_SB_ANON, Authorization: `Bearer ${_authToken}` },
+          });
+          const tj = rt.ok ? await rt.json() : [];
+          const latestTrade = tj[0] && tj[0].trade_date;
+          if (latestTrade && !_sigDates.includes(latestTrade)) {
+            _sigDates.push(latestTrade);
+            _sigDates.sort().reverse();   // 保持新→舊
+          }
+        } catch (_) {}
         _sigIdx = 0;
         // 實測勝率統計（另一張表，讀不到不影響主功能）
         try {
