@@ -577,6 +577,23 @@ class handler(BaseHTTPRequestHandler):
                 self._json(500, {"error": traceback.format_exc()})
             return
 
+        # ⚠️ 排程健康警示：本機 job_health.py 偵測到問題時，用 service key 推訊息來寄信
+        if body.get("kind") == "health" or "kind=health" in self.path:
+            auth = self.headers.get("Authorization", "").replace("Bearer ", "").strip()
+            if not (is_cron or (SUPABASE_SERVICE_KEY and auth == SUPABASE_SERVICE_KEY)):
+                return self._json(403, {"error": "forbidden"})
+            try:
+                subject = body.get("subject", "⚠️ 台股排程健康警示")
+                msg = str(body.get("message", "")).replace("<", "&lt;").replace(">", "&gt;")
+                html = (f"<div style='font-family:Segoe UI,Arial;background:#111;color:#ddd;padding:20px'>"
+                        f"<h2 style='color:#e6a23c'>⚠️ 排程健康警示</h2>"
+                        f"<pre style='white-space:pre-wrap;font-size:14px;color:#ddd'>{msg}</pre></div>")
+                sent, result = _sa_send(html, subject, to_email)
+                self._json(200, {"sent": sent, "result": result})
+            except Exception:
+                self._json(500, {"error": traceback.format_exc()})
+            return
+
         # 測試寄信模式
         if body.get("test"):
             subject = body.get("subject", "台股警示系統 — 測試信件")
