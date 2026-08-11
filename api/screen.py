@@ -433,6 +433,44 @@ def _fetch_exdiv_codes(date_str):
     return codes
 
 
+# ── price_window（Supabase）取代 YF 逐股歷史（真名/MACD/放量用）──────────────
+# 資料由本機每日 upload_price_window.py 上傳(TWSE 官方、不落後),逐股讀 ≤60 列不撞 1000 上限。
+# 注意:adj_*(還原)此版暫等於原始價 → 只給「不用還原」的真名/MACD/放量用;跳空仍走 YF。
+def fetch_pw_one(code, date_str, s):
+    tgt = f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:]}"
+    st, rows = _cache_sb("/price_window", "GET", params=[
+        ("select", "trade_date,open,high,low,close,volume"),
+        ("code", f"eq.{code}"), ("trade_date", f"lte.{tgt}"),
+        ("order", "trade_date.asc"), ("limit", "1000")])
+    rows = rows or []
+    # 目標日不在窗內(今天尚未上傳)→ 用 s(STOCK_DAY_ALL/MI_INDEX 的當日)縫上
+    if s and (not rows or rows[-1]["trade_date"] < tgt):
+        rows = rows + [{"trade_date": tgt, "open": s.get("open"), "high": s.get("high"),
+                        "low": s.get("low"), "close": s.get("close"), "volume": s.get("volume")}]
+    if not rows or rows[-1]["trade_date"] != tgt or rows[-1].get("close") is None:
+        return None
+    n = len(rows)
+
+    def g(i, k):
+        return rows[i][k] if 0 <= i < n else None
+    ti = n - 1
+    o, h, l, c = g(ti, "open"), g(ti, "high"), g(ti, "low"), g(ti, "close")
+    v = g(ti, "volume") or 0
+    ph, pl = g(ti - 1, "high"), g(ti - 1, "low")
+    pp_l = g(ti - 2, "low")
+    prev_vols = [r["volume"] for r in rows[:-1] if r.get("volume")]
+    all_closes = [r["close"] for r in rows if r.get("close") is not None]
+    return {
+        "open": o, "high": h, "low": l, "close": c, "volume": int(v) if v else 0,
+        "prev_open": g(ti - 1, "open"), "prev_close": g(ti - 1, "close"),
+        "prev_high": ph, "prev_low": pl,
+        "adj_prev_high": ph, "adj_prev_low": pl,   # 還原暫=原始價(真名/MACD/放量不用還原)
+        "adj_high": h, "adj_low": l,
+        "prev_prev_low": pp_l, "prev_prev_adj_low": pp_l,
+        "prev_vols": prev_vols, "all_closes": all_closes,
+    }
+
+
 def _parse_mi_index_rows(rows, code_name_map, col_o, col_h, col_l, col_c, col_v, col_sign, col_diff):
     """Parse stock rows from MI_INDEX into a dict. Supports old and new column layouts."""
     stocks = {}
@@ -845,10 +883,8 @@ def screen(params):
     # ── Step 3b: 量能/MACD/真名/跳空 → 用 YF 逐支抓
     # 跳空有啟用時一定要抓 YF（不管 prev_mi_gap 是否成功），確保 per-stock fallback 有資料
     need_gap_monthly = (check_gap_up or check_gap_down or check_earn_gap_down or need_engulf)
-    need_monthly = (vol_mult > 0 or shrink_mult > 0 or check_macd_gold
-                    or check_earn_gap_down
-                    or check_zhenming1 or check_zhenming2
-                    or need_gap_monthly) and not is_historical
+    # 只有「跳空族」(需高低價+還原)還走 YF;真名/MACD/放量改讀 price_window(下方 pw_data)
+    need_monthly = need_gap_monthly and not is_historical
 
     monthly_yf = {}
     if need_monthly:
@@ -861,6 +897,21 @@ def screen(params):
                 code, yf = f.result()
                 if yf:
                     monthly_yf[code] = yf
+
+    # ── price_window 逐股讀（真名/MACD/放量;涵蓋歷史日 → 修正「回搜近期日期漏股」如 3443/8-11）──
+    need_pw = (vol_mult > 0 or shrink_mult > 0 or check_macd_gold
+               or check_zhenming1 or check_zhenming2)
+    pw_data = {}
+    if need_pw:
+        def fetch_pw_only(code):
+            return code, fetch_pw_one(code, actual_date, candidates.get(code))
+
+        with ThreadPoolExecutor(max_workers=min(len(candidates), 50)) as ex:
+            pfuts = [ex.submit(fetch_pw_only, c) for c in candidates]
+            for f in as_completed(pfuts):
+                code, pw = f.result()
+                if pw:
+                    pw_data[code] = pw
 
     # ── Step 3c: 補抓 prev_mi_gap 未涵蓋的個股 → TWSE STOCK_DAY（不依賴 YF）──
     if (check_gap_up or check_gap_down or need_engulf) and prev_mi_gap and not is_historical:
@@ -896,7 +947,7 @@ def screen(params):
             prev_low   = s.get("prev_low")
             prev_close_gap = s.get("prev_close")
             prev_open_gap  = s.get("prev_open")
-            prev_vols  = s.get("prev_vols", [])
+            prev_vols  = (pw_data.get(code) or {}).get("prev_vols") or s.get("prev_vols", [])
             # Historical path always uses YF adj prices to exclude ex-div false gaps
             _eff_h         = s.get("adj_high")  or h
             _eff_l         = s.get("adj_low")   or l
@@ -914,7 +965,7 @@ def screen(params):
                 prev_low  = yf_data.get("prev_low")
                 prev_close_gap = yf_data.get("prev_close")
                 prev_open_gap  = yf_data.get("prev_open")
-            prev_vols = yf_data.get("prev_vols", [])
+            prev_vols = (pw_data.get(code) or {}).get("prev_vols") or yf_data.get("prev_vols", [])
             # For ex-div stocks: fetch YF adjusted prices to verify genuine gap
             if (check_gap_up or check_gap_down) and code in exdiv_codes:
                 _yf_adj = fetch_yf_chart(code, actual_date)
@@ -1025,10 +1076,9 @@ def screen(params):
 
         # MACD黃金交叉
         if check_macd_gold:
-            if is_historical:
-                closes_for_macd = s.get("all_closes", [])
-            else:
-                closes_for_macd = (monthly_yf.get(code) or {}).get("all_closes", [])
+            closes_for_macd = ((pw_data.get(code) or {}).get("all_closes")
+                               or (s.get("all_closes") if is_historical
+                                   else (monthly_yf.get(code) or {}).get("all_closes")) or [])
             if not is_macd_golden_cross(closes_for_macd):
                 continue
 
@@ -1067,13 +1117,11 @@ def screen(params):
             zm_max_ma = max(x for x in [zm_ma5v, zm_ma10v] if x is not None) if any(x is not None for x in [zm_ma5v, zm_ma10v]) else None
             if not zm_max_ma or v < zm_max_ma * 1.5:
                 continue
-            # 計算收盤均線：月資料(不含今日) + 今日收盤
-            if is_historical:
-                all_cls = s.get("all_closes", [])
-                prev_cls = all_cls[:-1]
-            else:
-                all_cls  = (monthly_yf.get(code) or {}).get("all_closes", [])
-                prev_cls = all_cls[:-1]
+            # 計算收盤均線：優先用 price_window(TWSE、不落後),否則退回舊來源
+            all_cls = ((pw_data.get(code) or {}).get("all_closes")
+                       or (s.get("all_closes") if is_historical
+                           else (monthly_yf.get(code) or {}).get("all_closes")) or [])
+            prev_cls = all_cls[:-1]
 
             t_ma5  = _ma(all_cls, 5)
             t_ma10 = _ma(all_cls, 10)
