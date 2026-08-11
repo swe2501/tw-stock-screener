@@ -40,9 +40,10 @@ def main():
         print("stock_daily 無資料,中止"); return
     lo, hi = min(dates), max(dates)
     rows = conn.execute(
-        "select code, trade_date, close, volume from stock_daily where trade_date>=? and close is not null",
-        (lo,)).fetchall()
-    recs = [{"code": c, "trade_date": d, "close": cl, "volume": v} for c, d, cl, v in rows]
+        "select code, trade_date, open, high, low, close, volume from stock_daily "
+        "where trade_date>=? and close is not null", (lo,)).fetchall()
+    recs = [{"code": c, "trade_date": d, "open": o, "high": h, "low": lw, "close": cl, "volume": v}
+            for c, d, o, h, lw, cl, v in rows]
 
     # 整張換掉(近 N 天滾動,舊的自動退場)
     bs._sb(env, "/price_window", method="DELETE", params=[("code", "neq.__none__")])
