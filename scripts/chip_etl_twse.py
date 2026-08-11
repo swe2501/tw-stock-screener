@@ -180,14 +180,24 @@ def _dates(start, end):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--start", required=True)
-    ap.add_argument("--end", required=True)
+    ap.add_argument("--start")
+    ap.add_argument("--end")
+    ap.add_argument("--daily", action="store_true", help="自動抓『DB 最新日+1 ~ 今天』(每日排程用)")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--force", action="store_true", help="重抓已存在的日期")
     ap.add_argument("--validate", help="驗證某股票代號")
     args = ap.parse_args()
 
     conn = _db()
+    if args.daily:
+        last = conn.execute("select max(trade_date) from institutional_trades where market='twse'").fetchone()[0]
+        start = (date.fromisoformat(last) + timedelta(days=1)).isoformat() if last else (date.today() - timedelta(days=7)).isoformat()
+        end = date.today().isoformat()
+        if start > end:
+            print(f"[daily] 已是最新（DB 最新 {last}），無需回補"); return
+        args.start, args.end = start, end
+    elif not (args.start and args.end):
+        ap.error("需 --start/--end 或 --daily")
     dates = _dates(args.start, args.end)
     done = {r[0] for r in conn.execute("select distinct trade_date from institutional_trades")}
     print(f"日期範圍 {args.start}~{args.end}（{len(dates)} 個平日）{'[dry-run]' if args.dry_run else ''}")
