@@ -1366,22 +1366,20 @@
           <div style="flex:1;">
             <div class="cb-label" style="margin-bottom:6px;">MACD 分組（擇一）</div>
             <div style="display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--text);">
+              <div style="color:#e74c3c;font-weight:600;">多</div>
               <label style="display:flex;gap:6px;align-items:center;cursor:pointer;">
-                <input type="radio" name="macd_mode" value="" checked onchange="_macdModeChange()" />不使用</label>
-              <div style="color:#e74c3c;font-weight:600;margin-top:2px;">多</div>
+                <input type="checkbox" class="macd-cb" data-mode="long1" onchange="_macdExcl(this)" />0軸上黃金交叉（DIF 上穿 DEA 且 DIF&gt;0）</label>
               <label style="display:flex;gap:6px;align-items:center;cursor:pointer;">
-                <input type="radio" name="macd_mode" value="long1" onchange="_macdModeChange()" />0軸上黃金交叉（DIF 上穿 DEA 且 DIF&gt;0）</label>
+                <input type="checkbox" class="macd-cb" data-mode="long2" onchange="_macdExcl(this)" />兩線由下上穿 0 軸（近 5 根內）</label>
               <label style="display:flex;gap:6px;align-items:center;cursor:pointer;">
-                <input type="radio" name="macd_mode" value="long2" onchange="_macdModeChange()" />兩線由下上穿 0 軸（近 5 根內）</label>
-              <label style="display:flex;gap:6px;align-items:center;cursor:pointer;">
-                <input type="radio" name="macd_mode" value="long3" onchange="_macdModeChange()" />區間內 0 軸下黃金交叉 ≥2 次</label>
+                <input type="checkbox" class="macd-cb" data-mode="long3" onchange="_macdExcl(this)" />區間內 0 軸下黃金交叉 ≥2 次</label>
               <div style="color:#2ecc71;font-weight:600;margin-top:2px;">空</div>
               <label style="display:flex;gap:6px;align-items:center;cursor:pointer;">
-                <input type="radio" name="macd_mode" value="short1" onchange="_macdModeChange()" />0軸下死亡交叉（DIF 下穿 DEA 且 DIF&lt;0）</label>
+                <input type="checkbox" class="macd-cb" data-mode="short1" onchange="_macdExcl(this)" />0軸下死亡交叉（DIF 下穿 DEA 且 DIF&lt;0）</label>
               <label style="display:flex;gap:6px;align-items:center;cursor:pointer;">
-                <input type="radio" name="macd_mode" value="short2" onchange="_macdModeChange()" />兩線由上下穿 0 軸（近 5 根內）</label>
+                <input type="checkbox" class="macd-cb" data-mode="short2" onchange="_macdExcl(this)" />兩線由上下穿 0 軸（近 5 根內）</label>
               <label style="display:flex;gap:6px;align-items:center;cursor:pointer;">
-                <input type="radio" name="macd_mode" value="short3" onchange="_macdModeChange()" />區間內 0 軸上死亡交叉 ≥2 次</label>
+                <input type="checkbox" class="macd-cb" data-mode="short3" onchange="_macdExcl(this)" />區間內 0 軸上死亡交叉 ≥2 次</label>
             </div>
             <div id="macdRangeBox" style="display:none;margin-top:8px;align-items:center;gap:6px;font-size:12px;color:var(--text-muted);">
               <span>起</span>
@@ -1659,8 +1657,16 @@
       });
     }
 
+    function _macdExcl(el) {
+      if (el.checked) {
+        document.querySelectorAll('.macd-cb').forEach(cb => { if (cb !== el) cb.checked = false; });
+      }
+      _macdModeChange();
+    }
+
     function _macdModeChange() {
-      const mode = (document.querySelector('input[name="macd_mode"]:checked') || {}).value || '';
+      const el = document.querySelector('.macd-cb:checked');
+      const mode = el ? el.dataset.mode : '';
       const box = document.getElementById('macdRangeBox');
       box.style.display = (mode === 'long3' || mode === 'short3') ? 'flex' : 'none';
     }
@@ -1683,7 +1689,8 @@
       const gapDownMin = parseFloat(document.getElementById('gap_down_min').value) || 0;
       const earnGapDown = document.getElementById('earn_gap_down').checked;
       const hangingMan = document.getElementById('hanging_man').checked;
-      const macdMode = (document.querySelector('input[name="macd_mode"]:checked') || {}).value || '';
+      const _macdEl = document.querySelector('.macd-cb:checked');
+      const macdMode = _macdEl ? _macdEl.dataset.mode : '';
       const macdStart = document.getElementById('macd_start').value;
       const macdEnd   = document.getElementById('macd_end').value;
       const zhenming1 = document.getElementById('zhenming1').checked;
