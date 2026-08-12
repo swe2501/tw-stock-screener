@@ -1855,6 +1855,9 @@
       // API 回傳格式為 2026/07/14，統一轉成 K 棒使用的 2026-07-14
       _lastScreenDate = data.date ? String(data.date).replace(/\//g, '-') : null;
       _lastScreenLimitUp = !!document.getElementById('limit_up')?.checked;
+      // MACD 多3/空3：記住起訖，點進 K 圖時標示區間兩端
+      _lastMacdRange = ((macdMode === 'long3' || macdMode === 'short3') && macdStart && macdEnd)
+        ? { start: macdStart, end: macdEnd } : null;
 
       showStatus(`
         <div class="results-header">
@@ -2053,8 +2056,11 @@
       currentCode = code; currentName = name;
       currentIndustry = industry; currentPrice = price;
       _markViewed(code);
-      // 從篩選結果點進來：自動在「篩選日期」那根 K 棒加標記
-      if (fromScreen && _lastScreenDate) {
+      // 從篩選結果點進來：MACD 多3/空3 標示區間兩端「起/訖」，其餘標「篩選日期」那根
+      if (fromScreen && _lastMacdRange) {
+        _addChartMarker(code, _lastMacdRange.start, '起');
+        _addChartMarker(code, _lastMacdRange.end, '訖');
+      } else if (fromScreen && _lastScreenDate) {
         _addChartMarker(code, _lastScreenDate, _lastScreenLimitUp ? '漲停' : '📍');
       }
       // 指定日期標記（例：從分點明細點某筆買超，標在那天）
@@ -2080,6 +2086,7 @@
     let _lastCandleTimes = null;   // 本次圖表的所有 K 棒日期
     let _lastScreenDate = null;    // 最近一次篩選的資料日期
     let _lastScreenLimitUp = false; // 最近一次篩選是否勾了漲停板
+    let _lastMacdRange = null;     // 最近一次 MACD 多3/空3 的起訖 {start,end}
 
     // 清除舊版本留在 localStorage 的永久標記（已改為暫時性設計）
     try { localStorage.removeItem('chart_markers_v1'); } catch (_) {}

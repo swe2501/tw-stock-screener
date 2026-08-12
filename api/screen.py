@@ -615,6 +615,9 @@ def is_macd_golden_cross(closes):
             macd[offset + len(sig) - 1] >  sig[-1])
 
 
+MACD_CROSS_BAND = 0.001   # 多3/空3 數交叉的遲滯帶：柱狀體需超過 收盤×此比例(0.1%)才算一次
+
+
 def macd_lines(closes):
     """回傳 (dif, dea, base)：dif/dea 等長，dif[k]/dea[k] 對應 closes[base+k]。
     dif=EMA12−EMA26（快線）、dea=EMA9(dif)（慢線）。不足 35 根 → None。"""
@@ -667,15 +670,23 @@ def _macd_group_pass(mode, closes, dates, r_start, r_end):
     if mode in ("long3", "short3"):
         if not (r_start and r_end and dates and len(dates) >= base + n):
             return False
+        # 遲滯帶去雜訊：柱狀體(DIF−DEA)要超過 收盤×MACD_CROSS_BAND 才算一次交叉，
+        # 兩線黏在一起的擦邊交叉(肉眼看是一條線)不計，避免灌水成 ≥2 次。
         cnt = 0
-        for k in range(1, n):
-            d = dates[base + k]
-            if d < r_start or d > r_end:
-                continue
-            if mode == "long3" and gcross(k) and dif[k] < 0:      # 0軸下黃金交叉
-                cnt += 1
-            elif mode == "short3" and dcross(k) and dif[k] > 0:   # 0軸上死亡交叉
-                cnt += 1
+        state = 0                                    # +1=已在多方(上一次確認黃金)、-1=空方
+        for k in range(n):
+            hist = dif[k] - dea[k]
+            delta = abs(closes[base + k]) * MACD_CROSS_BAND
+            if hist > delta and state != 1:
+                state = 1
+                d = dates[base + k]
+                if r_start <= d <= r_end and mode == "long3" and dif[k] < 0:
+                    cnt += 1                          # 0軸下黃金交叉
+            elif hist < -delta and state != -1:
+                state = -1
+                d = dates[base + k]
+                if r_start <= d <= r_end and mode == "short3" and dif[k] > 0:
+                    cnt += 1                          # 0軸上死亡交叉
         return cnt >= 2
     return False
 
