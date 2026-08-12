@@ -460,6 +460,7 @@ def fetch_pw_one(code, date_str, s):
     pp_l = g(ti - 2, "low")
     prev_vols = [r["volume"] for r in rows[:-1] if r.get("volume")]
     all_closes = [r["close"] for r in rows if r.get("close") is not None]
+    all_dates = [r["trade_date"] for r in rows if r.get("close") is not None]
     return {
         "open": o, "high": h, "low": l, "close": c, "volume": int(v) if v else 0,
         "prev_open": g(ti - 1, "open"), "prev_close": g(ti - 1, "close"),
@@ -467,7 +468,7 @@ def fetch_pw_one(code, date_str, s):
         "adj_prev_high": ph, "adj_prev_low": pl,   # 還原暫=原始價(真名/MACD/放量不用還原)
         "adj_high": h, "adj_low": l,
         "prev_prev_low": pp_l, "prev_prev_adj_low": pp_l,
-        "prev_vols": prev_vols, "all_closes": all_closes,
+        "prev_vols": prev_vols, "all_closes": all_closes, "all_dates": all_dates,
     }
 
 
@@ -612,6 +613,71 @@ def is_macd_golden_cross(closes):
     offset = len(macd) - len(sig)
     return (macd[offset + len(sig) - 2] <= sig[-2] and
             macd[offset + len(sig) - 1] >  sig[-1])
+
+
+def macd_lines(closes):
+    """回傳 (dif, dea, base)：dif/dea 等長，dif[k]/dea[k] 對應 closes[base+k]。
+    dif=EMA12−EMA26（快線）、dea=EMA9(dif)（慢線）。不足 35 根 → None。"""
+    if len(closes) < 35:
+        return None
+    e12 = _ema(closes, 12)                       # len = N-11，對應 closes[11:]
+    e26 = _ema(closes, 26)                        # len = N-25，對應 closes[25:]
+    dif = [a - b for a, b in zip(e12[len(e12) - len(e26):], e26)]  # 對應 closes[25:]
+    dea = _ema(dif, 9)                            # 對應 dif[8:] → closes[33:]
+    off = len(dif) - len(dea)
+    dif = dif[off:]                               # 與 dea 對齊 → 皆對應 closes[33:]
+    base = len(closes) - len(dea)                 # =33（含足夠 warmup 時）
+    return dif, dea, base
+
+
+def _macd_group_pass(mode, closes, dates, r_start, r_end):
+    """MACD 分組單選判定。mode∈{long1,long2,long3,short1,short2,short3}。
+    long1/short1：最後一根黃金/死亡交叉且在 0 軸上/下。
+    long2/short2：近 5 根內 DIF 與 DEA 皆由下上穿(多)/由上下穿(空)0 軸。
+    long3/short3：日期區間 [r_start,r_end] 內，0軸下黃金交叉/0軸上死亡交叉 ≥2 次。"""
+    ml = macd_lines(closes)
+    if not ml:
+        return False
+    dif, dea, base = ml
+    n = len(dif)
+    if n < 2:
+        return False
+
+    def gcross(k):   # k 位黃金交叉（DIF 上穿 DEA）
+        return dif[k - 1] <= dea[k - 1] and dif[k] > dea[k]
+
+    def dcross(k):   # k 位死亡交叉（DIF 下穿 DEA）
+        return dif[k - 1] >= dea[k - 1] and dif[k] < dea[k]
+
+    if mode == "long1":
+        k = n - 1
+        return gcross(k) and dif[k] > 0
+    if mode == "short1":
+        k = n - 1
+        return dcross(k) and dif[k] < 0
+    if mode in ("long2", "short2"):
+        win = range(max(1, n - 5), n)            # 近 5 根
+        if mode == "long2":
+            dif_up = any(dif[k - 1] <= 0 < dif[k] for k in win)
+            dea_up = any(dea[k - 1] <= 0 < dea[k] for k in win)
+            return dif_up and dea_up
+        dif_dn = any(dif[k - 1] >= 0 > dif[k] for k in win)
+        dea_dn = any(dea[k - 1] >= 0 > dea[k] for k in win)
+        return dif_dn and dea_dn
+    if mode in ("long3", "short3"):
+        if not (r_start and r_end and dates and len(dates) >= base + n):
+            return False
+        cnt = 0
+        for k in range(1, n):
+            d = dates[base + k]
+            if d < r_start or d > r_end:
+                continue
+            if mode == "long3" and gcross(k) and dif[k] < 0:      # 0軸下黃金交叉
+                cnt += 1
+            elif mode == "short3" and dcross(k) and dif[k] > 0:   # 0軸上死亡交叉
+                cnt += 1
+        return cnt >= 2
+    return False
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -760,6 +826,7 @@ def screen(params):
     check_limit_up   = bool(params.get("limit_up", False))
     check_doji       = bool(params.get("doji", False))
     doji_range_min   = float(params.get("doji_range_min") or 1.0)  # 十字線最小振幅 %
+    check_hanging    = bool(params.get("hanging_man", False))  # 吊人線：收=開=高、低<收
     check_engulf_bull = bool(params.get("engulf_bull", False))  # 陽吞噬
     check_engulf_bear = bool(params.get("engulf_bear", False))  # 陰吞噬
     check_harami_bull = bool(params.get("harami_bull", False))  # 多頭母子孕育線
@@ -768,7 +835,16 @@ def screen(params):
     check_gap_down   = bool(params.get("gap_down", False))
     gap_down_min     = float(params.get("gap_down_min") or 0)
     gap_up_min       = float(params.get("gap_up_min") or 0)
-    check_macd_gold     = bool(params.get("macd_golden", False))
+    # MACD 分組（單選）：long1/long2/long3/short1/short2/short3 或 ""
+    macd_mode        = str(params.get("macd_mode") or "").strip()
+    macd_start       = (params.get("macd_start") or "").replace("-", "")   # long3/short3 用
+    macd_end         = (params.get("macd_end") or "").replace("-", "")
+    macd_start_iso   = f"{macd_start[:4]}-{macd_start[4:6]}-{macd_start[6:]}" if len(macd_start) == 8 else ""
+    macd_end_iso     = f"{macd_end[:4]}-{macd_end[4:6]}-{macd_end[6:]}" if len(macd_end) == 8 else ""
+    is_macd_range    = macd_mode in ("long3", "short3")
+    # 區間模式：以「訖日」當快照基準日（撈當日全市場清單，再逐股數區間內交叉）
+    if is_macd_range and len(macd_end) == 8:
+        requested_date = macd_end
     check_earn_gap_down = bool(params.get("earn_gap_down", False))
     check_zhenming1  = bool(params.get("zhenming1", False))
     check_zhenming2  = bool(params.get("zhenming2", False))
@@ -843,6 +919,11 @@ def screen(params):
             if abs(c - o) > 1e-9: continue
             if (s["high"] - s["low"]) / o * 100 < doji_range_min: continue
 
+        # 吊人線：收盤=開盤=最高（無上影），且最低<收盤（有下影）
+        if check_hanging:
+            if abs(c - o) > 1e-9 or abs(s["high"] - c) > 1e-9: continue
+            if s["low"] >= c: continue
+
         # 吞噬/母子（快篩部分）：多頭形態當日必須紅K；空頭形態當日必須黑K
         # （與前一日的包覆判斷需要前日 OHLC，在 Step 4 進行）
         if (check_engulf_bull or check_harami_bull) and not (check_engulf_bear or check_harami_bear) and c <= o:
@@ -899,7 +980,7 @@ def screen(params):
                     monthly_yf[code] = yf
 
     # ── price_window 逐股讀（真名/MACD/放量;涵蓋歷史日 → 修正「回搜近期日期漏股」如 3443/8-11）──
-    need_pw = (vol_mult > 0 or shrink_mult > 0 or check_macd_gold
+    need_pw = (vol_mult > 0 or shrink_mult > 0 or bool(macd_mode)
                or check_zhenming1 or check_zhenming2)
     pw_data = {}
     if need_pw:
@@ -1074,12 +1155,15 @@ def screen(params):
             if prev_vol >= 1.2 * ref_vol:
                 continue
 
-        # MACD黃金交叉
-        if check_macd_gold:
-            closes_for_macd = ((pw_data.get(code) or {}).get("all_closes")
+        # MACD 分組（單選）
+        if macd_mode:
+            _pw = pw_data.get(code) or {}
+            closes_for_macd = (_pw.get("all_closes")
                                or (s.get("all_closes") if is_historical
                                    else (monthly_yf.get(code) or {}).get("all_closes")) or [])
-            if not is_macd_golden_cross(closes_for_macd):
+            dates_for_macd = _pw.get("all_dates") or []
+            if not _macd_group_pass(macd_mode, closes_for_macd, dates_for_macd,
+                                    macd_start_iso, macd_end_iso):
                 continue
 
         # 長黑棒幅度
