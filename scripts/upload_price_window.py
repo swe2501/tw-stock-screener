@@ -5,8 +5,9 @@ upload_price_window.py — 把本機 stock_daily 的「近 N 個交易日」價�
 形狀,若在 Vercel 對 TWSE 一檔一檔抓會被擋。改由本機(每天用 STOCK_DAY_ALL 一次全市場抓、慢慢累積、
 從不被擋)把近 N 天上傳,篩選器只讀 Supabase(0 個 TWSE 請求)。
 
-每日排程跑(fetch_prices 之後);量約 1080 檔 × 60 天 ≈ 6.5 萬列 ≈ ~3MB,免費版無感。
-用法：python scripts/upload_price_window.py [--days 60]
+每日排程跑(fetch_prices 之後);量約 1080 檔 × 250 天 ≈ 27 萬列 ≈ ~15MB,免費版(500MB)無感。
+(250 根 = 給 MACD 足夠 EMA 暖身,柱狀體與 K 圖一致,不再有 0 軸附近的假交叉。)
+用法：python scripts/upload_price_window.py [--days 250]
 """
 import argparse
 import sys
@@ -25,7 +26,7 @@ CHUNK = 5000
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--days", type=int, default=60, help="上傳近幾個交易日(預設 60)")
+    ap.add_argument("--days", type=int, default=250, help="上傳近幾個交易日(預設 250)")
     args = ap.parse_args()
 
     env = bs._load_env()
