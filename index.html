@@ -1674,6 +1674,14 @@
       box.style.display = (mode === 'long3' || mode === 'short3') ? 'flex' : 'none';
     }
 
+    // 點日期輸入框任一處即跳出日期選擇（所有 date 欄位：主條件、MACD 起訖…）
+    document.addEventListener('click', function (e) {
+      const t = e.target;
+      if (t && t.tagName === 'INPUT' && t.type === 'date' && typeof t.showPicker === 'function') {
+        try { t.showPicker(); } catch (_) { /* 已開啟或不支援時忽略 */ }
+      }
+    });
+
     function doScreen() {
       const dateVal = document.getElementById('date').value;
       const minPrice  = parseFloat(document.getElementById('min_price').value) || 0;
