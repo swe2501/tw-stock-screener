@@ -1855,9 +1855,13 @@
       // API 回傳格式為 2026/07/14，統一轉成 K 棒使用的 2026-07-14
       _lastScreenDate = data.date ? String(data.date).replace(/\//g, '-') : null;
       _lastScreenLimitUp = !!document.getElementById('limit_up')?.checked;
-      // MACD 多3/空3：記住起訖，點進 K 圖時標示區間兩端
-      _lastMacdRange = ((macdMode === 'long3' || macdMode === 'short3') && macdStart && macdEnd)
-        ? { start: macdStart, end: macdEnd } : null;
+      // MACD 多3/空3：記住起訖，點進 K 圖時標示區間兩端（直接讀 DOM，本函式非 doScreen 作用域）
+      const _mEl = document.querySelector('.macd-cb:checked');
+      const _mMode = _mEl ? _mEl.dataset.mode : '';
+      const _mStart = document.getElementById('macd_start').value;
+      const _mEnd = document.getElementById('macd_end').value;
+      _lastMacdRange = ((_mMode === 'long3' || _mMode === 'short3') && _mStart && _mEnd)
+        ? { start: _mStart, end: _mEnd } : null;
 
       showStatus(`
         <div class="results-header">
