@@ -1221,16 +1221,23 @@ def screen(params):
                     continue
 
             if check_zhenming2:
-                # 任一均線黃金交叉：MA5 上穿 MA10、MA5 上穿 MA20、MA10 上穿 MA20（OR）
-                y_ma5  = _ma(prev_cls, 5)
-                y_ma10 = _ma(prev_cls, 10)
-                y_ma20 = _ma(prev_cls, 20)
-                if not all([t_ma5, t_ma10, t_ma20, y_ma5, y_ma10, y_ma20]):
-                    continue
-                cross_5_10  = t_ma5  > t_ma10 and y_ma5  <= y_ma10
-                cross_5_20  = t_ma5  > t_ma20 and y_ma5  <= y_ma20
-                cross_10_20 = t_ma10 > t_ma20 and y_ma10 <= y_ma20
-                if not (cross_5_10 or cross_5_20 or cross_10_20):
+                # 任一「較短均線當日新上穿較長均線」即可（5/10/20/60 全部配對）：
+                # 昨日 短≤長、今日 短>長。某均線資料不足(如未滿 60 日)則略過含它的配對。
+                periods = [5, 10, 20, 60]
+                t_ma = {p: _ma(all_cls, p)  for p in periods}
+                y_ma = {p: _ma(prev_cls, p) for p in periods}
+                crossed = False
+                for a in range(len(periods)):
+                    for b in range(a + 1, len(periods)):
+                        sp, lp = periods[a], periods[b]        # sp 短 < lp 長
+                        if None in (t_ma[sp], t_ma[lp], y_ma[sp], y_ma[lp]):
+                            continue
+                        if t_ma[sp] > t_ma[lp] and y_ma[sp] <= y_ma[lp]:
+                            crossed = True
+                            break
+                    if crossed:
+                        break
+                if not crossed:
                     continue
 
         pc = s.get("prev_close")
