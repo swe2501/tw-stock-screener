@@ -2610,7 +2610,7 @@
       const hdr = { apikey: SIG_SB_ANON, Authorization: `Bearer ${_authToken}` };
       try {
         // 勝率前20：broker_trades 逐日大單/小單明細（只留達大單門檻者）
-        const rt = await fetch(`${SIG_SB_URL}/rest/v1/broker_trades?select=view,broker_id,broker_name,trade_date,net_lots,net_amount_wan`
+        const rt = await fetch(`${SIG_SB_URL}/rest/v1/broker_trades?select=view,broker_id,trade_date,net_lots,net_amount_wan`
           + `&code=eq.${encodeURIComponent(code)}&trade_date=gte.${s}&trade_date=lte.${e}&order=trade_date.desc&limit=1000`, { headers: hdr });
         let trades = rt.ok ? await rt.json() : [];
         trades = trades.filter(x => (x.net_lots || 0) >= REV_BIG_LOTS || (x.net_amount_wan || 0) >= REV_BIG_WAN);
@@ -2628,11 +2628,14 @@
     }
 
     function _revResultRender(code, trades, streaks) {
+      // broker_trades 只有 broker_id，名字由 broker_rankings（_rankData）對照
+      const nameMap = {};
+      Object.values(_rankData || {}).forEach(rows => rows.forEach(r => { if (r.broker_id) nameMap[r.broker_id] = r.broker_name; }));
       // 勝率前20：同分點同日去重，合併榜別
       const byBD = {};
       trades.forEach(x => {
         const k = x.broker_id + '|' + x.trade_date;
-        if (!byBD[k]) byBD[k] = { name: x.broker_name || x.broker_id, date: x.trade_date, lots: x.net_lots, wan: x.net_amount_wan, views: new Set() };
+        if (!byBD[k]) byBD[k] = { name: nameMap[x.broker_id] || x.broker_id, date: x.trade_date, lots: x.net_lots, wan: x.net_amount_wan, views: new Set() };
         byBD[k].views.add(REV_VIEW_LABEL[x.view] || x.view);
       });
       const winRows = Object.values(byBD).sort((a, b) => a.date < b.date ? 1 : -1);
