@@ -2066,7 +2066,7 @@
       document.getElementById('marketBtn').style.display = (sym === '^TWII') ? 'none' : 'inline-block';
     }
 
-    function openChart(code, name, industry = '', price = 0, fromScreen = false, markDate = null, markLabel = '📍') {
+    function openChart(code, name, industry = '', price = 0, fromScreen = false, markDate = null, markLabel = '📍', markDate2 = null, markLabel2 = null) {
       prevCode = ''; prevName = '';
       currentCode = code; currentName = name;
       currentIndustry = industry; currentPrice = price;
@@ -2081,6 +2081,10 @@
       // 指定日期標記（例：從分點明細點某筆買超，標在那天）
       if (markDate) {
         _addChartMarker(code, markDate, markLabel);
+      }
+      // 第二個標記（例：連續買超區間的迄日）
+      if (markDate2 && markDate2 !== markDate) {
+        _addChartMarker(code, markDate2, markLabel2);
       }
       _updateChartWatchBtn();
       _populateChartNote();
@@ -2615,7 +2619,8 @@
       const win = (v) => v != null ? v + '%' : '–';
       const tr = rows.map(x => {
         const h = hwMap[x.broker_id] || {};
-        return `<tr onclick="openChart('${x.code}','${x.code} ${(x.name||'').replace(/'/g,'')}','',0,false,'${x.start_date}','${(x.broker_name||'').replace(/'/g,'')} 連買')"
+        const _bn = (x.broker_name||'').replace(/'/g,'');
+        return `<tr onclick="openChart('${x.code}','${x.code} ${(x.name||'').replace(/'/g,'')}','',0,false,'${x.start_date}','${_bn} 連買起','${x.end_date}','連買迄')"
           style="border-bottom:1px solid var(--border);cursor:pointer">
         <td style="padding:4px 8px">${x.broker_name || x.broker_id}</td>
         <td style="padding:4px 8px;color:#4da3ff">${x.code} ${x.name || ''}</td>
