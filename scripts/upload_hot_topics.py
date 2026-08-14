@@ -4,13 +4,12 @@ upload_hot_topics.py — 把 codex 產出的 hot_topics.json 驗證後上傳 Sup
 codex 只負責產 JSON；驗證、接地、去重、滾動窗都在這裡（codex 端越單純越不出錯）：
   1. 每筆必須有 topic 與非空 source_urls（沒來源 → 丟，防幻覺）。
   2. codes 逐一對 tw_listed_codes.json；不在清單的代號剔除、名稱以官方為準；沒有任何合法代號的話題丟掉。
-  3. 滾動 48 小時：先刪 captured_at 超過 48h 的舊列，再上傳本批（captured_at 由 DB 預設 now()）。
+  3. 每次覆蓋：先清空整表，再上傳本批（每小時跑，只留「當前熱門話題」最新快照，避免重複累積）。
 
 用法：python scripts/upload_hot_topics.py [hot_topics.json]
 """
 import json
 import sys
-from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -22,7 +21,6 @@ if sys.stdout and hasattr(sys.stdout, "reconfigure"):
 HERE = Path(__file__).resolve().parent
 CODES = json.loads((HERE / "tw_listed_codes.json").read_text(encoding="utf-8")) \
     if (HERE / "tw_listed_codes.json").exists() else {}
-ROLL_HOURS = 48
 
 
 def _clean_record(r):
@@ -75,8 +73,7 @@ def main():
     if not good:
         print("本批無有效話題，未更動資料庫"); return
 
-    cutoff = (datetime.now(timezone.utc) - timedelta(hours=ROLL_HOURS)).isoformat()
-    bs._sb(env, "/hot_topics", method="DELETE", params=[("captured_at", f"lt.{cutoff}")])
+    bs._sb(env, "/hot_topics", method="DELETE", params=[("id", "gte.0")])  # 清空整表，只留最新快照
     st, resp = bs._sb(env, "/hot_topics", method="POST", body=good)
     if st in (200, 201):
         print(f"已上傳 {len(good)} 則話題（丟棄 {len(dropped)}）到 hot_topics")
