@@ -1519,6 +1519,7 @@
             <span id="industryTag"></span>
             <span id="chartPriceTag"></span>
             <span id="divTag"></span>
+            <span id="catalystTag"></span>
           </div>
           <div class="modal-subtitle" id="modalSubtitle">日K線</div>
         </div>
@@ -2092,6 +2093,7 @@
       document.getElementById('industryTag').style.display = 'none';
       const _pt = document.getElementById('chartPriceTag'); if (_pt) _pt.innerHTML = '';
       _loadDividendInfo(code);
+      _loadCatalystInfo(code);
       _setToolbarForCode(code);
       document.getElementById('backBtn').style.display = 'none';
       document.getElementById('chartModal').classList.add('open');
@@ -2102,6 +2104,7 @@
     // ── K 線日期標記（暫時性：關閉 K 圖即全部清除） ──────
     let _userMarkers = {};         // code -> [{date,label}]，僅存在記憶體
     let _lastDivMarkers = [];      // 本次圖表的除權息標記
+    let _catalystEvents = [];      // 本次個股的催化事件（法說會等），refresh 時依 K 棒日期過濾
     let _lastCandleTimes = null;   // 本次圖表的所有 K 棒日期
     let _lastScreenDate = null;    // 最近一次篩選的資料日期
     let _lastScreenLimitUp = false; // 最近一次篩選是否勾了漲停板
@@ -2122,7 +2125,17 @@
           text: m.label,
           size: 1,
         }));
-      const all = [..._lastDivMarkers, ...user].sort((a, b) => a.time < b.time ? -1 : 1);
+      const catalyst = _catalystEvents
+        .filter(e => _lastCandleTimes && _lastCandleTimes.has(e.start_date))
+        .map(e => ({
+          time: e.start_date,
+          position: 'belowBar',
+          color: '#4da3ff',
+          shape: 'arrowUp',
+          text: e.event_type,
+          size: 1,
+        }));
+      const all = [..._lastDivMarkers, ...catalyst, ...user].sort((a, b) => a.time < b.time ? -1 : 1);
       try { candleSeriesRef.setMarkers(all); } catch (_) {}
     }
 
@@ -3203,6 +3216,34 @@
           document.getElementById('divAlertModal').style.display = 'flex';
         }
       } catch (_) { /* 除權息資訊非必要，失敗時靜默 */ }
+    }
+
+    // ── 催化事件（法說會等）：徽章顯示即將到來、圖上標記過去發生 ──
+    const _catalystCache = {};
+    async function _loadCatalystInfo(code) {
+      const tag = document.getElementById('catalystTag');
+      if (tag) tag.innerHTML = '';
+      _catalystEvents = [];
+      if (!_isStock(code)) return;
+      try {
+        if (!(code in _catalystCache)) {
+          const r = await fetch(`${SIG_SB_URL}/rest/v1/catalyst_events`
+            + `?select=event_type,start_date,end_date,title,note&code=eq.${encodeURIComponent(code)}&order=start_date.asc`,
+            { headers: { apikey: SIG_SB_ANON, Authorization: `Bearer ${SIG_SB_ANON}` } });
+          _catalystCache[code] = r.ok ? await r.json() : [];
+        }
+        if (currentCode !== code) return;   // 使用者已切換到別檔
+        _catalystEvents = _catalystCache[code];
+        const todayISO = new Date().toISOString().slice(0, 10);
+        const up = _catalystEvents.find(e => e.start_date >= todayISO);
+        if (up && tag) {
+          const days = Math.round((new Date(up.start_date + 'T00:00:00') - new Date(todayISO + 'T00:00:00')) / 86400000);
+          const when = days === 0 ? '（今天）' : `（${days} 天後）`;
+          tag.innerHTML = `<span title="${(up.title || '').replace(/"/g, '')}" style="display:inline-block;padding:2px 8px;
+            border:1px solid #4da3ff;border-radius:4px;color:#4da3ff;font-size:12px;white-space:nowrap">📣 ${up.event_type} ${up.start_date}${when}</span>`;
+        }
+        _refreshChartMarkers();
+      } catch (_) { /* 催化資訊非必要，失敗時靜默 */ }
     }
 
     function toggleBBand(span) {
