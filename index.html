@@ -2321,8 +2321,10 @@
     let _rkTab = 0;
     let _streakBrokerFilter = null; // 點高勝率分點列後：連續買超/流通比只顯示該分點 {id,name}
     let _streakCodeFilter = '';     // 連續買超/流通比：股票代號搜尋字串
+    let _revStart = '', _revEnd = '', _revCode = '', _revResultHTML = '';  // 個股反查：暫存輸入與結果
 
-    const RK_SUPERS = { win: '勝率篩選', float: '高勝流通比篩選' };
+    const RK_SUPERS = { win: '勝率篩選', float: '高勝流通比篩選', rev: '個股反查' };
+    const REV_BIG_LOTS = 300, REV_BIG_WAN = 3000;  // 反查「大單」門檻：單日淨買超 ≥300張 或 ≥3000萬
     const RK_GROUPS = {
       g1: { label: '大單·年回測', tabs: ['張數榜', '金額榜', '張數∩金額'] },
       g2: { label: '小單·年回測', tabs: ['張數榜', '金額榜', '張數∩金額'] },
@@ -2532,6 +2534,12 @@
       }).join('');
 
       const groupBar = document.getElementById('rankGroupBar');
+      if (_rkSuper === 'rev') {
+        groupBar.style.display = 'none';
+        document.getElementById('rankTabBar').innerHTML = '';
+        document.getElementById('rankContent').innerHTML = _revLookupHTML();
+        return;
+      }
       if (_rkSuper === 'win') {
         groupBar.style.display = 'flex';
         groupBar.innerHTML = Object.entries(RK_GROUPS).map(([id, g]) => {
@@ -2560,6 +2568,116 @@
            background:rgba(255,255,255,.03);border-left:2px solid var(--accent);
            padding:6px 10px;margin:8px 0 10px;border-radius:0 4px 4px 0">📋 ${rule}</div>`
         + (_rkSuper === 'win' ? _rkContent() : _floatContent());
+    }
+
+    // ── 個股反查：某股在區間內是否被 勝率前20 / 高勝流通前20 分點大單買超 ──
+    const REV_VIEW_LABEL = {
+      year_large_lots: '大單·張', year_large_amount: '大單·額',
+      year_small_lots: '小單·張', year_small_amount: '小單·額',
+      d90_small_lots: '90日小·張', d90_small_amount: '90日小·額',
+    };
+    function _revDaysAgoISO(n) {
+      const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10);
+    }
+    const _revInputCss = 'padding:5px 8px;font-size:13px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);color:var(--text)';
+    function _revLookupHTML() {
+      const s = _revStart || _revDaysAgoISO(30);
+      const e = _revEnd || new Date().toISOString().slice(0, 10);
+      return `<div style="font-size:11px;color:var(--text-muted);line-height:1.5;background:rgba(255,255,255,.03);
+          border-left:2px solid var(--accent);padding:6px 10px;margin:8px 0 10px;border-radius:0 4px 4px 0">📋 輸入股票代號與日期區間，查該股在區間內是否被「勝率篩選前20」或「高勝流通前20」分點大單買超（單日淨買超 ≥${REV_BIG_LOTS} 張 或 ≥${REV_BIG_WAN} 萬）。勝率前20＝逐日大單買超；高勝流通前20＝連續買超區段（與區間重疊者）。</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
+          <input id="revCode" type="text" inputmode="numeric" placeholder="股票代號 例 2377" value="${_revCode}" style="${_revInputCss};width:130px"
+            onkeydown="if(event.key==='Enter')_runRevLookup()" />
+          <span style="color:var(--text-muted);font-size:12px">起</span>
+          <input id="revStart" type="date" value="${s}" style="${_revInputCss};cursor:pointer" />
+          <span style="color:var(--text-muted);font-size:12px">訖</span>
+          <input id="revEnd" type="date" value="${e}" style="${_revInputCss};cursor:pointer" />
+          <button onclick="_runRevLookup()" style="padding:6px 16px;border-radius:6px;border:none;background:var(--accent);color:#fff;font-weight:700;cursor:pointer;font-size:13px">查詢</button>
+        </div>
+        <div id="revResultBox">${_revResultHTML || ''}</div>`;
+    }
+
+    async function _runRevLookup() {
+      const code = (document.getElementById('revCode').value || '').trim();
+      const s = document.getElementById('revStart').value;
+      const e = document.getElementById('revEnd').value;
+      _revCode = code; _revStart = s; _revEnd = e;
+      const box = document.getElementById('revResultBox');
+      if (!code) { box.innerHTML = '<div style="padding:10px 0;color:#f85149">請輸入股票代號</div>'; return; }
+      if (!s || !e) { box.innerHTML = '<div style="padding:10px 0;color:#f85149">請設定起訖日期</div>'; return; }
+      if (s > e) { box.innerHTML = '<div style="padding:10px 0;color:#f85149">起日不可晚於訖日</div>'; return; }
+      box.innerHTML = '<div style="padding:10px 0;color:var(--text-muted)">查詢中…</div>';
+      const hdr = { apikey: SIG_SB_ANON, Authorization: `Bearer ${_authToken}` };
+      try {
+        // 勝率前20：broker_trades 逐日大單/小單明細（只留達大單門檻者）
+        const rt = await fetch(`${SIG_SB_URL}/rest/v1/broker_trades?select=view,broker_id,broker_name,trade_date,net_lots,net_amount_wan`
+          + `&code=eq.${encodeURIComponent(code)}&trade_date=gte.${s}&trade_date=lte.${e}&order=trade_date.desc&limit=1000`, { headers: hdr });
+        let trades = rt.ok ? await rt.json() : [];
+        trades = trades.filter(x => (x.net_lots || 0) >= REV_BIG_LOTS || (x.net_amount_wan || 0) >= REV_BIG_WAN);
+        // 高勝流通前20：broker_highwin 前20 broker_id，broker_streaks 區段與區間重疊
+        const hwTop = new Set((_highwinData || []).slice(0, 20).map(h => h.broker_id));
+        const rs = await fetch(`${SIG_SB_URL}/rest/v1/broker_streaks?select=broker_id,broker_name,start_date,end_date,days,cum_lots,cum_amount_wan`
+          + `&code=eq.${encodeURIComponent(code)}&order=start_date.desc&limit=1000`, { headers: hdr });
+        let streaks = rs.ok ? await rs.json() : [];
+        streaks = streaks.filter(x => hwTop.has(x.broker_id) && x.start_date <= e && x.end_date >= s);
+        _revResultHTML = _revResultRender(code, trades, streaks);
+        box.innerHTML = _revResultHTML;
+      } catch (err) {
+        box.innerHTML = '<div style="padding:10px 0;color:#f85149">查詢失敗：' + err.message + '</div>';
+      }
+    }
+
+    function _revResultRender(code, trades, streaks) {
+      // 勝率前20：同分點同日去重，合併榜別
+      const byBD = {};
+      trades.forEach(x => {
+        const k = x.broker_id + '|' + x.trade_date;
+        if (!byBD[k]) byBD[k] = { name: x.broker_name || x.broker_id, date: x.trade_date, lots: x.net_lots, wan: x.net_amount_wan, views: new Set() };
+        byBD[k].views.add(REV_VIEW_LABEL[x.view] || x.view);
+      });
+      const winRows = Object.values(byBD).sort((a, b) => a.date < b.date ? 1 : -1);
+      const winBrokers = new Set(winRows.map(r => r.name));
+
+      const hit = winRows.length > 0 || streaks.length > 0;
+      const summary = `<div style="font-size:13px;font-weight:700;margin:4px 0 10px;color:${hit ? '#67c23a' : '#f85149'}">
+        ${hit ? `✅ ${code} 在此區間曾被前20分點大單買超（勝率前20：${winBrokers.size} 家分點 / ${winRows.length} 筆；高勝流通前20連買：${streaks.length} 段）`
+              : `❌ ${code} 在此區間內未被前20分點大單買超`}</div>`;
+
+      let html = summary;
+      if (winRows.length) {
+        const tr = winRows.map(r => `<tr onclick="openChart('${code}','${code}','',0,false,'${r.date}','${r.name.replace(/'/g, '')} 大單買')"
+          style="border-bottom:1px solid var(--border);cursor:pointer">
+          <td style="padding:4px 8px">${r.name}</td>
+          <td style="padding:4px 8px;white-space:nowrap;font-size:11px">${r.date}</td>
+          <td style="padding:4px 8px;text-align:right">${Number(r.lots).toLocaleString()}張</td>
+          <td style="padding:4px 8px;text-align:right">${r.wan != null ? Number(r.wan).toLocaleString() + '萬' : '–'}</td>
+          <td style="padding:4px 8px;font-size:11px;color:var(--text-muted)">${[...r.views].join('、')}</td>
+        </tr>`).join('');
+        html += `<div style="font-size:12px;font-weight:700;margin:8px 0 4px">🏆 勝率篩選前20 · 逐日大單買超</div>
+          <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px">
+          <thead><tr style="color:var(--text-muted);border-bottom:1px solid var(--border)">
+            <th style="padding:4px 8px;text-align:left">分點</th><th style="padding:4px 8px;text-align:left">日期</th>
+            <th style="padding:4px 8px;text-align:right">淨買超</th><th style="padding:4px 8px;text-align:right">淨金額</th>
+            <th style="padding:4px 8px;text-align:left">榜別</th></tr></thead><tbody>${tr}</tbody></table></div>`;
+      }
+      if (streaks.length) {
+        const tr = streaks.map(x => `<tr onclick="openChart('${code}','${code}','',0,false,'${x.start_date}','${(x.broker_name || '').replace(/'/g, '')} 連買起','${x.end_date}','連買迄')"
+          style="border-bottom:1px solid var(--border);cursor:pointer">
+          <td style="padding:4px 8px">${x.broker_name || x.broker_id}</td>
+          <td style="padding:4px 8px;white-space:nowrap;font-size:11px">${x.start_date}~${x.end_date}</td>
+          <td style="padding:4px 8px;text-align:right">${x.days}天</td>
+          <td style="padding:4px 8px;text-align:right">${Number(x.cum_lots).toLocaleString()}張</td>
+          <td style="padding:4px 8px;text-align:right">${x.cum_amount_wan != null ? Number(x.cum_amount_wan).toLocaleString() + '萬' : '–'}</td>
+        </tr>`).join('');
+        html += `<div style="font-size:12px;font-weight:700;margin:12px 0 4px">💧 高勝流通前20 · 連續買超區段（與區間重疊）</div>
+          <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px">
+          <thead><tr style="color:var(--text-muted);border-bottom:1px solid var(--border)">
+            <th style="padding:4px 8px;text-align:left">分點</th><th style="padding:4px 8px;text-align:left">連買區間</th>
+            <th style="padding:4px 8px;text-align:right">天數</th><th style="padding:4px 8px;text-align:right">累積買超</th>
+            <th style="padding:4px 8px;text-align:right">累積金額</th></tr></thead><tbody>${tr}</tbody></table></div>`;
+      }
+      html += `<div style="font-size:11px;color:var(--text-muted);margin-top:8px">點列開該股 K 線（標在該日／區間起迄）。</div>`;
+      return html;
     }
 
     function _floatRuleText() {
