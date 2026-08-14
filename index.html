@@ -2315,6 +2315,8 @@
     let _rkSuper = 'win';          // win=勝率篩選 / float=高勝流通比篩選
     let _rkGroup = 'g1';
     let _rkTab = 0;
+    let _streakBrokerFilter = null; // 點高勝率分點列後：連續買超/流通比只顯示該分點 {id,name}
+    let _streakCodeFilter = '';     // 連續買超/流通比：股票代號搜尋字串
 
     const RK_SUPERS = { win: '勝率篩選', float: '高勝流通比篩選' };
     const RK_GROUPS = {
@@ -2361,9 +2363,29 @@
       }
     }
 
-    function _rkSetSuper(s) { _rkSuper = s; _rkGroup = 'g1'; _rkTab = 0; _renderRank(); }
+    function _rkSetSuper(s) { _rkSuper = s; _rkGroup = 'g1'; _rkTab = 0; _streakBrokerFilter = null; _streakCodeFilter = ''; _renderRank(); }
     function _rkSetGroup(g) { _rkGroup = g; _rkTab = 0; _renderRank(); }
     function _rkSetTab(i) { _rkTab = i; _renderRank(); }
+
+    // 點高勝率分點列 → 切到「連續買超」只看該分點
+    // 直接補抓該分點的全部連買區段（列表原本上限 1000 依 vol_ratio，可能漏掉低比例的），確保看得到全部
+    async function _streakByBroker(id, name) {
+      _streakBrokerFilter = { id, name };
+      _streakCodeFilter = '';
+      _rkTab = 1;
+      _streaksData = _streaksData || [];
+      _renderRank();
+      try {
+        const r = await fetch(`${SIG_SB_URL}/rest/v1/broker_streaks?select=*&broker_id=eq.${encodeURIComponent(id)}&order=start_date.desc&limit=1000`, {
+          headers: { apikey: SIG_SB_ANON, Authorization: `Bearer ${_authToken}` } });
+        if (r.ok) {
+          const seen = new Set(_streaksData.map(s => s.id));
+          for (const s of await r.json()) if (!seen.has(s.id)) _streaksData.push(s);
+          if (_streakBrokerFilter && _streakBrokerFilter.id === id) _renderRank();
+        }
+      } catch (_) { /* 補抓失敗就用已載入的 */ }
+    }
+    function _clearStreakBroker() { _streakBrokerFilter = null; _renderRank(); }
 
     function _rkView(v) { return (_rankData && _rankData[v]) || []; }
 
@@ -2554,13 +2576,14 @@
       const rows = _highwinData || [];
       if (!rows.length) return '<div style="padding:16px 0">尚無資料（等待計算，或無符合條件的分點）</div>';
       const wc = v => v != null ? `<td style="padding:4px 8px;text-align:right;color:${v>=70?'#e6a23c':'var(--text)'}">${v}%</td>` : '<td style="padding:4px 8px;text-align:right">–</td>';
-      const tr = rows.map(x => `<tr style="border-bottom:1px solid var(--border)">
-        <td style="padding:4px 8px">${x.broker_name || x.broker_id}</td>
+      const tr = rows.map(x => `<tr onclick="_streakByBroker('${String(x.broker_id||'').replace(/'/g,'')}','${String(x.broker_name||x.broker_id||'').replace(/'/g,'')}')" style="border-bottom:1px solid var(--border);cursor:pointer">
+        <td style="padding:4px 8px;color:#4da3ff">${x.broker_name || x.broker_id}</td>
         <td style="padding:4px 8px;text-align:right">${x.events}</td>
         ${wc(x.win5)}${wc(x.win10)}${wc(x.win20)}
         <td style="padding:4px 8px;text-align:right">${x.avg_ret != null ? '+' + x.avg_ret + '%' : '–'}</td>
       </tr>`).join('');
-      return `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px">
+      return `<div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">點分點列 → 看該分點的連續買超個股</div>
+        <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px">
         <thead><tr style="color:var(--text-muted);border-bottom:1px solid var(--border)">
           <th style="padding:4px 8px;text-align:left">分點</th><th style="padding:4px 8px;text-align:right">大單次數</th>
           <th style="padding:4px 8px;text-align:right">5日勝率</th><th style="padding:4px 8px;text-align:right">10日勝率</th>
@@ -2569,11 +2592,23 @@
     }
 
     function _floatStreaksTable(floatOnly) {
+      const bf = _streakBrokerFilter;
+      const chip = bf ? `<span style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:12px;background:rgba(77,163,255,.15);border:1px solid #4da3ff;font-size:12px;color:#4da3ff">分點：${bf.name}<span onclick="_clearStreakBroker()" style="cursor:pointer;color:#f85149;font-weight:700">✕</span></span>` : '';
+      const search = `<input id="streakCodeInput" type="text" inputmode="numeric" placeholder="輸入股票代號篩選" value="${_streakCodeFilter}"
+        oninput="_streakCodeFilter=this.value.trim(); document.getElementById('streakTableBox').innerHTML=_streakTableInner(${floatOnly});"
+        style="padding:4px 8px;font-size:12.5px;border:1px solid var(--border);border-radius:4px;background:var(--input-bg,var(--surface2));color:var(--text);width:150px" />`;
+      const bar = `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">${chip}${search}</div>`;
+      return bar + `<div id="streakTableBox">${_streakTableInner(floatOnly)}</div>`;
+    }
+
+    function _streakTableInner(floatOnly) {
       let rows = _streaksData || [];
+      if (_streakBrokerFilter) rows = rows.filter(x => x.broker_id === _streakBrokerFilter.id);
       if (floatOnly) rows = rows.filter(x =>
         (x.vol_ratio || 0) >= FLOAT_VOL_TH
         || (x.float_ratio != null && x.float_ratio >= FLOAT_FF_MIN && x.float_ratio <= FLOAT_FF_MAX));
-      if (!rows.length) return `<div style="padding:16px 0">${floatOnly ? `目前沒有占成交量 ≥${FLOAT_VOL_TH}% 或占自由流通 ${FLOAT_FF_MIN}~${FLOAT_FF_MAX}% 的區段` : '尚無連續買超區段'}</div>`;
+      if (_streakCodeFilter) rows = rows.filter(x => String(x.code || '').includes(_streakCodeFilter));
+      if (!rows.length) return `<div style="padding:16px 0">${_streakCodeFilter ? `查無代號含「${_streakCodeFilter}」的區段` : floatOnly ? `目前沒有占成交量 ≥${FLOAT_VOL_TH}% 或占自由流通 ${FLOAT_FF_MIN}~${FLOAT_FF_MAX}% 的區段` : '尚無連續買超區段'}</div>`;
       // 流通比 tab：附該分點的 5/10/20 日勝率（由高勝率分點資料以 broker_id 對照）
       const hwMap = {};
       (_highwinData || []).forEach(h => { hwMap[h.broker_id] = h; });
