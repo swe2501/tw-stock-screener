@@ -2437,8 +2437,10 @@
           const rs = await fetch(`${SIG_SB_URL}/rest/v1/stock_strength?select=*&code=in.(${codes.join(',')})`, { headers: hdr });
           if (rs.ok) (await rs.json()).forEach(s => strMap[s.code] = s);
           // 主力進場日（top-20 broker_trades，與 K 圖標記同源，可對照）
+          // broker_trades 是 RLS 僅擁有者可讀 → 必須用 _authToken，不能用 anon
           const bt = await fetch(`${SIG_SB_URL}/rest/v1/broker_trades?select=code,trade_date`
-            + `&code=in.(${codes.join(',')})&or=(net_lots.gte.300,net_amount_wan.gte.3000)&order=trade_date.desc&limit=1000`, { headers: hdr });
+            + `&code=in.(${codes.join(',')})&or=(net_lots.gte.300,net_amount_wan.gte.3000)&order=trade_date.desc&limit=1000`,
+            { headers: { apikey: SIG_SB_ANON, Authorization: `Bearer ${_authToken}` } });
           if (bt.ok) {
             (await bt.json()).forEach(t => (entriesMap[t.code] = entriesMap[t.code] || []).push(t.trade_date));
             Object.keys(entriesMap).forEach(k => { entriesMap[k] = [...new Set(entriesMap[k])].sort().reverse(); });
