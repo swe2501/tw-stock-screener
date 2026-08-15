@@ -2144,7 +2144,7 @@
     let _catalystEvents = [];      // 本次個股的催化事件（法說會等），refresh 時依 K 棒日期過濾
     let _brokerEntriesRaw = [];    // 本次個股的主力進場：[{date, broker}]，refresh 時依勾選+K棒日期過濾
     let _brokerChecked = null;     // Set(已勾選要顯示的分點名)
-    let _brokerNameMap = null;     // broker_id → 分點名（快取）
+    let _brokerMeta = null;        // broker_id → {name, cat:大單前20/小單前20}（快取）
     let _lastCandleTimes = null;   // 本次圖表的所有 K 棒日期
     let _lastScreenDate = null;    // 最近一次篩選的資料日期
     let _lastScreenLimitUp = false; // 最近一次篩選是否勾了漲停板
@@ -3402,15 +3402,25 @@
     }
 
     // ── 主力進場標記：分點大單買超(≥300張)的日子，標在 K 棒下方＋分點名 ──
-    async function _ensureBrokerNames() {
-      if (_brokerNameMap) return _brokerNameMap;
-      _brokerNameMap = {};
+    async function _ensureBrokerMeta() {
+      if (_brokerMeta) return _brokerMeta;
+      _brokerMeta = {};
       try {
-        const r = await fetch(`${SIG_SB_URL}/rest/v1/broker_rankings?select=broker_id,broker_name`,
+        const r = await fetch(`${SIG_SB_URL}/rest/v1/broker_rankings?select=broker_id,broker_name,view`,
           { headers: { apikey: SIG_SB_ANON, Authorization: `Bearer ${_authToken}` } });
-        if (r.ok) (await r.json()).forEach(x => { if (x.broker_id) _brokerNameMap[x.broker_id] = x.broker_name; });
+        if (r.ok) {
+          const byId = {};
+          (await r.json()).forEach(x => {
+            if (!x.broker_id) return;
+            const m = byId[x.broker_id] = byId[x.broker_id] || { name: x.broker_name, large: false };
+            if (String(x.view || '').includes('large')) m.large = true;   // 有進大單榜就歸大單
+          });
+          Object.entries(byId).forEach(([id, m]) => {
+            _brokerMeta[id] = { name: m.name, cat: m.large ? '大單前20' : '小單前20' };
+          });
+        }
       } catch (_) { /* 無妨 */ }
-      return _brokerNameMap;
+      return _brokerMeta;
     }
     async function _loadBrokerEntries(code) {
       _brokerEntriesRaw = []; _brokerChecked = null;
@@ -3418,35 +3428,41 @@
       if (panel) { panel.style.display = 'none'; panel.innerHTML = ''; }
       if (!_isStock(code) || !_authToken) return;
       try {
-        const nm = await _ensureBrokerNames();
+        const meta = await _ensureBrokerMeta();
         const r = await fetch(`${SIG_SB_URL}/rest/v1/broker_trades`
           + `?select=broker_id,trade_date&code=eq.${encodeURIComponent(code)}`
           + `&or=(net_lots.gte.300,net_amount_wan.gte.3000)&order=trade_date`,
           { headers: { apikey: SIG_SB_ANON, Authorization: `Bearer ${_authToken}` } });
         if (!r.ok || currentCode !== code) return;
         for (const t of await r.json()) {
-          _brokerEntriesRaw.push({ date: t.trade_date, broker: nm[t.broker_id] || t.broker_id });
+          const m = meta[t.broker_id] || { name: t.broker_id, cat: '其他' };
+          _brokerEntriesRaw.push({ date: t.trade_date, broker: m.name, cat: m.cat });
         }
-        const brokers = [...new Set(_brokerEntriesRaw.map(e => e.broker))].sort();
-        _brokerChecked = new Set(brokers);            // 預設全勾
-        _renderBrokerFilter(brokers);
+        const distinct = [...new Map(_brokerEntriesRaw.map(e => [e.broker, e.cat]))].map(([name, cat]) => ({ name, cat }));
+        _brokerChecked = new Set(distinct.map(d => d.name));   // 預設全勾
+        _renderBrokerFilter(distinct);
         _refreshChartMarkers();
       } catch (_) { /* 主力標記非必要，失敗時靜默 */ }
     }
 
-    function _renderBrokerFilter(brokers) {
+    function _renderBrokerFilter(list) {
       const panel = document.getElementById('brokerFilterPanel');
       if (!panel) return;
-      if (!brokers.length) { panel.style.display = 'none'; panel.innerHTML = ''; return; }
-      const cbs = brokers.map(b => {
+      if (!list.length) { panel.style.display = 'none'; panel.innerHTML = ''; return; }
+      const groups = {};
+      list.forEach(d => (groups[d.cat] = groups[d.cat] || []).push(d.name));
+      const cb = b => {
         const bb = b.replace(/'/g, "\\'");
         return `<label style="display:inline-flex;align-items:center;gap:3px;margin:2px 10px 2px 0;cursor:pointer;white-space:nowrap">
           <input type="checkbox" checked onchange="_toggleBroker('${bb}',this.checked)">${b}</label>`;
-      }).join('');
-      panel.innerHTML = `<div style="margin-bottom:4px"><b style="color:#c678dd">主力分點（前20榜，${brokers.length}）</b>
+      };
+      const sections = ['大單前20', '小單前20', '其他'].filter(c => groups[c]).map(cat =>
+        `<div style="margin-top:5px"><span style="color:#c678dd;font-weight:600">${cat}（${groups[cat].length}）</span>
+          <div style="display:flex;flex-wrap:wrap;margin-top:2px">${groups[cat].sort().map(cb).join('')}</div></div>`).join('');
+      panel.innerHTML = `<div><b style="color:#c678dd">主力分點</b>（${list.length}）
         　<a onclick="_setAllBrokers(true)" style="color:#4da3ff;cursor:pointer">全勾</a>
         　<a onclick="_setAllBrokers(false)" style="color:#4da3ff;cursor:pointer">全部取消</a></div>
-        <div style="display:flex;flex-wrap:wrap;max-height:80px;overflow-y:auto">${cbs}</div>`;
+        <div style="max-height:110px;overflow-y:auto">${sections}</div>`;
       panel.style.display = 'block';
     }
     function _toggleBroker(b, on) {
