@@ -3919,6 +3919,13 @@
       if (!candleSeriesRef) return;
       const c = d.close;
 
+      // 非交易時段（假日/盤後）又是「新的一天」→ 不要在最後一根之後長出幽靈K棒，只更新價格標籤
+      const _isNewBar = _lastCandleTimes && !_lastCandleTimes.has(d.time);
+      if (_isNewBar && !d.is_trading) {
+        _renderPriceTag(c, d.change_pct || 0, '', d.hms || '', d.source || '');
+        return;
+      }
+
       // running 追蹤：MIS 給了就用，沒給就自己累積
       if (_rtOpen === null) _rtOpen = (d.open != null && d.open > 0) ? d.open : c;
       if (d.high != null && d.high > 0) _rtHigh = (_rtHigh === null) ? Math.max(d.high, c) : Math.max(_rtHigh, d.high, c);
