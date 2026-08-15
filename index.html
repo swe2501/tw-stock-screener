@@ -21,6 +21,8 @@
       --yellow: #f39c12;
       --text: #e2e8f0;
       --text-muted: #8892a8;
+      --text-primary: #f0f4fc;
+      --bg-card: #171a24;   /* modal 卡片：不透明，避免主頁文字透上來 */
       --radius: 10px;
     }
 
@@ -1161,7 +1163,12 @@
         <button onclick="document.getElementById('hotTopicsModal').style.display='none'"
           style="background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer">&#10005;</button>
       </div>
-      <div style="font-size:11px;color:var(--text-muted);line-height:1.5;background:rgba(255,255,255,.03);border-left:2px solid #ff7a3c;padding:6px 10px;margin-bottom:10px;border-radius:0 4px 4px 0">📋 AI（Codex）盤中每小時搜出的話題族群，個股依「強度」排序（強度＝相對強度＋均線多頭＋近波段高；主力＝近5日大單買超天數）。點個股開 K 線。</div>
+      <div style="font-size:11px;color:var(--text-muted);line-height:1.6;background:rgba(255,255,255,.03);border-left:2px solid #ff7a3c;padding:8px 10px;margin-bottom:10px;border-radius:0 4px 4px 0">
+        📋 AI（Codex）盤中每小時搜出的話題族群。<b style="color:#ff7a3c">🔥數字＝話題熱度</b>（Codex 依新聞量／新鮮度／是否牽涉大廠評 0~100，非門檻，由高到低列出，跟個股強度是兩回事）。<br>
+        個股依「<b style="color:var(--text)">強度</b>」由高到低排：<br>
+        　<b>強度</b> ＝ 0.6×相對強度(RS) ＋ 0.2×均線多頭(收＞MA20＞MA60 給100，否則0) ＋ 0.2×近波段高比×100<br>
+        　<b>RS</b>＝該股「0.6×20日＋0.4×60日報酬」在全市場的百分位(0~100)。<br>
+        　<b>20日</b>＝近20個交易日的報酬率（區間漲跌幅，<b>不是</b>平均）。<b>主力</b>＝近5日內「單日大單買超≥300張」的天數。點個股開 K 線。</div>
       <div id="hotTopicsBody" style="font-size:12.5px;color:var(--text)">載入中...</div>
     </div>
   </div>
@@ -2108,6 +2115,7 @@
       const _pt = document.getElementById('chartPriceTag'); if (_pt) _pt.innerHTML = '';
       _loadDividendInfo(code);
       _loadCatalystInfo(code);
+      _loadBrokerEntries(code);
       _setToolbarForCode(code);
       document.getElementById('backBtn').style.display = 'none';
       document.getElementById('chartModal').classList.add('open');
@@ -2119,6 +2127,8 @@
     let _userMarkers = {};         // code -> [{date,label}]，僅存在記憶體
     let _lastDivMarkers = [];      // 本次圖表的除權息標記
     let _catalystEvents = [];      // 本次個股的催化事件（法說會等），refresh 時依 K 棒日期過濾
+    let _brokerEntries = [];       // 本次個股的主力進場（分點大單買超日），refresh 時依 K 棒日期過濾
+    let _brokerNameMap = null;     // broker_id → 分點名（快取）
     let _lastCandleTimes = null;   // 本次圖表的所有 K 棒日期
     let _lastScreenDate = null;    // 最近一次篩選的資料日期
     let _lastScreenLimitUp = false; // 最近一次篩選是否勾了漲停板
@@ -2149,7 +2159,17 @@
           text: e.event_type,
           size: 1,
         }));
-      const all = [..._lastDivMarkers, ...catalyst, ...user].sort((a, b) => a.time < b.time ? -1 : 1);
+      const broker = _brokerEntries
+        .filter(e => _lastCandleTimes && _lastCandleTimes.has(e.date))
+        .map(e => ({
+          time: e.date,
+          position: 'belowBar',
+          color: '#c678dd',
+          shape: 'arrowUp',
+          text: e.label,
+          size: 1,
+        }));
+      const all = [..._lastDivMarkers, ...catalyst, ...broker, ...user].sort((a, b) => a.time < b.time ? -1 : 1);
       try { candleSeriesRef.setMarkers(all); } catch (_) {}
     }
 
@@ -2430,7 +2450,7 @@
         const col = s.strength >= 70 ? '#67c23a' : s.strength >= 40 ? '#e6a23c' : 'var(--text-muted)';
         const bb = s.bigbuy_5d ? `<span style="color:#f85149">主力${s.bigbuy_5d}天</span>` : '';
         const ret = s.ret20 != null ? (s.ret20 >= 0 ? '+' : '') + s.ret20 + '%' : '–';
-        return `<tr onclick="document.getElementById('hotTopicsModal').style.display='none';openChart('${c.code}','${c.code} ${_htEsc(c.name).replace(/'/g,'')}','',0,false)" style="border-bottom:1px solid var(--border);cursor:pointer">
+        return `<tr onclick="openChart('${c.code}','${c.code} ${_htEsc(c.name).replace(/'/g,'')}','',0,false)" style="border-bottom:1px solid var(--border);cursor:pointer">
           <td style="padding:3px 8px;color:#4da3ff">${c.code} ${_htEsc(c.name)}</td>
           <td style="padding:3px 8px;text-align:right;font-weight:700;color:${col}">${strg}</td>
           <td style="padding:3px 8px;text-align:right">${ret}</td>
@@ -2448,7 +2468,7 @@
         ${t.summary ? `<div style="font-size:11.5px;color:var(--text-muted);margin:5px 0">${_htEsc(t.summary)}</div>` : ''}
         <table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:4px">
           <thead><tr style="color:var(--text-muted)"><th style="padding:3px 8px;text-align:left">個股（依強度排序）</th>
-            <th style="padding:3px 8px;text-align:right">強度</th><th style="padding:3px 8px;text-align:right">20日</th><th style="padding:3px 8px;text-align:left">籌碼</th></tr></thead>
+            <th style="padding:3px 8px;text-align:right">強度</th><th style="padding:3px 8px;text-align:right">20日漲跌</th><th style="padding:3px 8px;text-align:left">主力</th></tr></thead>
           <tbody>${rows}</tbody></table>
         ${srcs ? `<div style="margin-top:5px">${srcs}</div>` : ''}
       </div>`;
@@ -3316,6 +3336,38 @@
         }
         _refreshChartMarkers();
       } catch (_) { /* 催化資訊非必要，失敗時靜默 */ }
+    }
+
+    // ── 主力進場標記：分點大單買超(≥300張)的日子，標在 K 棒下方＋分點名 ──
+    async function _ensureBrokerNames() {
+      if (_brokerNameMap) return _brokerNameMap;
+      _brokerNameMap = {};
+      try {
+        const r = await fetch(`${SIG_SB_URL}/rest/v1/broker_rankings?select=broker_id,broker_name`,
+          { headers: { apikey: SIG_SB_ANON, Authorization: `Bearer ${_authToken}` } });
+        if (r.ok) (await r.json()).forEach(x => { if (x.broker_id) _brokerNameMap[x.broker_id] = x.broker_name; });
+      } catch (_) { /* 無妨 */ }
+      return _brokerNameMap;
+    }
+    async function _loadBrokerEntries(code) {
+      _brokerEntries = [];
+      if (!_isStock(code) || !_authToken) return;
+      try {
+        const nm = await _ensureBrokerNames();
+        const r = await fetch(`${SIG_SB_URL}/rest/v1/broker_trades`
+          + `?select=broker_id,trade_date,net_lots&code=eq.${encodeURIComponent(code)}&net_lots=gte.300&order=trade_date`,
+          { headers: { apikey: SIG_SB_ANON, Authorization: `Bearer ${_authToken}` } });
+        if (!r.ok || currentCode !== code) return;
+        const byDate = {};
+        for (const t of await r.json()) {
+          (byDate[t.trade_date] = byDate[t.trade_date] || []).push({ name: nm[t.broker_id] || t.broker_id, lots: t.net_lots });
+        }
+        _brokerEntries = Object.entries(byDate).map(([date, arr]) => {
+          arr.sort((a, b) => b.lots - a.lots);
+          return { date, label: arr[0].name + (arr.length > 1 ? `+${arr.length - 1}` : '') };
+        });
+        _refreshChartMarkers();
+      } catch (_) { /* 主力標記非必要，失敗時靜默 */ }
     }
 
     function toggleBBand(span) {
