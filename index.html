@@ -3355,7 +3355,8 @@
       try {
         const nm = await _ensureBrokerNames();
         const r = await fetch(`${SIG_SB_URL}/rest/v1/broker_trades`
-          + `?select=broker_id,trade_date,net_lots&code=eq.${encodeURIComponent(code)}&net_lots=gte.300&order=trade_date`,
+          + `?select=broker_id,trade_date,net_lots&code=eq.${encodeURIComponent(code)}`
+          + `&or=(net_lots.gte.300,net_amount_wan.gte.3000)&order=trade_date`,
           { headers: { apikey: SIG_SB_ANON, Authorization: `Bearer ${_authToken}` } });
         if (!r.ok || currentCode !== code) return;
         const byDate = {};

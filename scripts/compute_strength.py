@@ -21,6 +21,7 @@ if sys.stdout and hasattr(sys.stdout, "reconfigure"):
 
 WANTGOO_DB = r"D:\stock_data\wantgoo_full.db"
 BIGBUY_LOTS = 300      # 單日單分點淨買超 ≥ 此張數 = 大單
+BIGBUY_AMT = 30000     # 或 淨買超張×均價 ≥ 此（=3000萬；net張×均價元 ≥ 3萬 → 3000萬）
 BIGBUY_DAYS = 5        # 近幾個交易日
 
 
@@ -85,8 +86,9 @@ def main():
             ph = ",".join("?" * len(wdates))
             for code, d in wg.execute(
                     f"select code, count(distinct trade_date) from wantgoo_daily "
-                    f"where trade_date in ({ph}) and (buy_vol - sell_vol) >= ? group by code",
-                    (*wdates, BIGBUY_LOTS)):
+                    f"where trade_date in ({ph}) and ((buy_vol - sell_vol) >= ? "
+                    f"or (buy_vol - sell_vol) * coalesce(buy_avg_price, 0) >= ?) group by code",
+                    (*wdates, BIGBUY_LOTS, BIGBUY_AMT)):
                 bigbuy[code] = d
         wg.close()
     except Exception as e:
