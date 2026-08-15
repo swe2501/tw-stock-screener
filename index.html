@@ -1176,6 +1176,17 @@
     </div>
   </div>
 
+  <!-- 強度算法 popup（點分數彈出） -->
+  <div id="strengthPopup" onclick="if(event.target===this)this.style.display='none'" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:10000;align-items:center;justify-content:center;padding:20px">
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:16px 18px;max-width:380px;width:100%">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <b id="strengthPopupTitle" style="font-size:14px;color:var(--text-primary)"></b>
+        <button onclick="document.getElementById('strengthPopup').style.display='none'" style="background:none;border:none;color:var(--text-muted);font-size:18px;cursor:pointer">&#10005;</button>
+      </div>
+      <div id="strengthPopupBody" style="font-size:12.5px;color:var(--text);line-height:1.6"></div>
+    </div>
+  </div>
+
   <!-- 分點出手明細 modal -->
   <div id="rkTradesModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9992;align-items:flex-start;justify-content:center;overflow-y:auto;padding:5vh 12px">
     <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px 22px;max-width:520px;width:100%">
@@ -2449,8 +2460,30 @@
             Object.keys(entriesMap).forEach(k => { entriesMap[k] = [...new Set(entriesMap[k])].sort().reverse(); });
           }
         }
+        _htStrMap = strMap;
         body.innerHTML = topics.map(t => _hotTopicCard(t, strMap, entriesMap)).join('');
       } catch (e) { body.innerHTML = '<div style="padding:16px 0;color:#f85149">載入失敗：' + e.message + '</div>'; }
+    }
+
+    // 點強度分數 → 彈出該檔的詳細計算
+    let _htStrMap = {};
+    function _showStrengthCalc(code) {
+      const s = _htStrMap[code];
+      if (!s) return;
+      const nh = s.near_high != null ? s.near_high : 0;
+      const maScore = s.above_ma ? 100 : 0;
+      const c1 = (0.6 * (s.rs || 0)).toFixed(1), c2 = (0.2 * maScore).toFixed(0), c3 = (0.2 * nh * 100).toFixed(1);
+      document.getElementById('strengthPopupTitle').textContent = `${code} 強度 ${s.strength}`;
+      document.getElementById('strengthPopupBody').innerHTML = `
+        <div style="background:rgba(255,255,255,.05);padding:9px 11px;border-radius:6px;font-family:monospace;font-size:12px;line-height:1.7">
+          強度 = 0.6×RS + 0.2×均線多頭 + 0.2×近高比×100<br>
+          　　 = 0.6×${s.rs} + 0.2×${maScore} + 0.2×${(nh * 100).toFixed(1)}<br>
+          　　 = ${c1} + ${c2} + ${c3} = <b style="color:#67c23a">${s.strength}</b></div>
+        <div style="margin-top:11px"><b style="color:#4da3ff">RS ${s.rs}</b>（相對強度）：該檔「0.6×20日＋0.4×60日報酬」在全市場約 1080 檔的百分位，即贏過約 <b>${s.rs}%</b> 的股票。<br>
+          <span style="color:var(--text-muted)">· 近20日報酬 ${s.ret20 >= 0 ? '+' : ''}${s.ret20}%</span></div>
+        <div style="margin-top:9px"><b style="color:#4da3ff">均線多頭</b>：收盤 &gt; MA20 &gt; MA60 → ${s.above_ma ? '<span style="color:#67c23a">成立，得 100</span>' : '<span style="color:var(--text-muted)">不成立，得 0</span>'}</div>
+        <div style="margin-top:9px"><b style="color:#4da3ff">近波段高比</b>：收盤 ÷ 近60日最高 ＝ <b>${nh}</b>（×100＝${(nh * 100).toFixed(1)}）。越接近 1 越貼近波段高。</div>`;
+      document.getElementById('strengthPopup').style.display = 'flex';
     }
 
     function _hotTopicCard(t, strMap, entriesMap) {
@@ -2474,8 +2507,8 @@
         const ret = s.ret20 != null ? (s.ret20 >= 0 ? '+' : '') + s.ret20 + '%' : '–';
         return `<tr onclick="openChart('${c.code}','${c.code} ${_htEsc(c.name).replace(/'/g,'')}','',0,false)" style="border-bottom:1px solid var(--border);cursor:pointer">
           <td style="padding:3px 8px;color:#4da3ff">${c.code} ${_htEsc(c.name)}</td>
-          <td style="padding:3px 8px;text-align:right">
-            <div style="font-weight:700;color:${col}">${strg}</div>
+          <td onclick="event.stopPropagation();_showStrengthCalc('${c.code}')" title="點看算法" style="padding:3px 8px;text-align:right;cursor:pointer">
+            <div style="font-weight:700;color:${col};text-decoration:underline dotted;text-underline-offset:2px">${strg}</div>
             <div style="font-size:10px;color:var(--text-muted);white-space:nowrap">${brk}</div></td>
           <td style="padding:3px 8px;text-align:right">${ret}</td>
           <td style="padding:3px 8px;font-size:11px">${force}</td></tr>`;
