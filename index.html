@@ -3520,10 +3520,11 @@
       if (!_isStock(code)) return;
       try {
         const hdr = { apikey: SIG_SB_ANON, Authorization: `Bearer ${SIG_SB_ANON}` };
-        const [rs, rt, rc] = await Promise.all([
+        const [rs, rt, rc, re] = await Promise.all([
           fetch(`${SIG_SB_URL}/rest/v1/stock_strength?select=strength&code=eq.${encodeURIComponent(code)}`, { headers: hdr }),
           fetch(`${SIG_SB_URL}/rest/v1/hot_topics?select=heat,sector,codes`, { headers: hdr }),
           fetch(`${SIG_SB_URL}/rest/v1/catalyst_events?select=start_date&event_type=eq.${encodeURIComponent('法說會')}&code=eq.${encodeURIComponent(code)}`, { headers: hdr }),
+          fetch(`${SIG_SB_URL}/rest/v1/catalyst_events?select=sector,start_date,end_date,title&event_type=eq.${encodeURIComponent('展覽')}`, { headers: hdr }),
         ]);
         if (currentCode !== code) return;
         const strength = rs.ok ? (((await rs.json())[0] || {}).strength || 0) : 0;
@@ -3531,37 +3532,50 @@
         if (rt.ok) (await rt.json()).forEach(t => {
           if ((t.codes || []).some(c => c.code === code) && (t.heat || 0) > topicHeat) { topicHeat = t.heat || 0; topicSector = t.sector || ''; }
         });
+        const today = new Date(); today.setHours(0, 0, 0, 0);
         let lawScore = 0, lawDate = null, lawDays = null;
-        if (rc.ok) {
-          const today = new Date(); today.setHours(0, 0, 0, 0);
-          (await rc.json()).forEach(e => {
-            const days = Math.round((new Date(e.start_date + 'T00:00:00') - today) / 86400000);
-            let sc = 0;
-            if (days >= 0 && days <= 3) sc = 100; else if (days > 3 && days <= 7) sc = 80;
-            else if (days > 7 && days <= 14) sc = 50; else if (days < 0 && days >= -3) sc = 60;
-            if (sc > lawScore) { lawScore = sc; lawDate = e.start_date; lawDays = days; }
-          });
-        }
-        const greed = Math.round(0.40 * strength + 0.35 * topicHeat + 0.25 * lawScore);
-        _greedData = { code, greed, strength, topicHeat, topicSector, lawScore, lawDate, lawDays };
+        if (rc.ok) (await rc.json()).forEach(e => {
+          const days = Math.round((new Date(e.start_date + 'T00:00:00') - today) / 86400000);
+          let sc = 0;
+          if (days >= 0 && days <= 3) sc = 100; else if (days > 3 && days <= 7) sc = 80;
+          else if (days > 7 && days <= 14) sc = 50; else if (days < 0 && days >= -3) sc = 60;
+          if (sc > lawScore) { lawScore = sc; lawDate = e.start_date; lawDays = days; }
+        });
+        let exhScore = 0, exhInfo = null;
+        if (re.ok && topicSector) (await re.json()).forEach(x => {
+          const sec = x.sector || '';
+          if (!(sec && (topicSector.includes(sec) || sec.includes(topicSector)))) return;   // 族群對得上
+          const s = new Date(x.start_date + 'T00:00:00'), en = new Date((x.end_date || x.start_date) + 'T00:00:00');
+          const dOpen = Math.round((s - today) / 86400000), dEnd = Math.round((en - today) / 86400000);
+          let sc = 0;
+          if (today >= s && today <= en) sc = 100;              // 展中
+          else if (dOpen >= 1 && dOpen <= 7) sc = 90;           // 展前一週（布局熱）
+          else if (dOpen > 7 && dOpen <= 30) sc = 60;           // 布局期
+          else if (dEnd < 0 && dEnd >= -5) sc = 40;             // 展後衰減
+          if (sc > exhScore) { exhScore = sc; exhInfo = `${sec}展 ${x.start_date}~${x.end_date || x.start_date}`; }
+        });
+        const greed = Math.round(0.35 * strength + 0.30 * topicHeat + 0.20 * lawScore + 0.15 * exhScore);
+        _greedData = { code, greed, strength, topicHeat, topicSector, lawScore, lawDate, lawDays, exhScore, exhInfo };
         if (el) { el.innerHTML = _greedGaugeSVG(greed, 120); el.style.display = 'block'; }
       } catch (_) { /* 貪婪指標非必要，失敗靜默 */ }
     }
     function _showGreedCalc() {
       const d = _greedData; if (!d) return;
-      const c1 = (0.40 * d.strength).toFixed(1), c2 = (0.35 * d.topicHeat).toFixed(1), c3 = (0.25 * d.lawScore).toFixed(1);
+      const c1 = (0.35 * d.strength).toFixed(1), c2 = (0.30 * d.topicHeat).toFixed(1),
+        c3 = (0.20 * d.lawScore).toFixed(1), c4 = (0.15 * (d.exhScore || 0)).toFixed(1);
       const lawTxt = d.lawDate ? `${d.lawDate}（${d.lawDays >= 0 ? d.lawDays + '天後' : Math.abs(d.lawDays) + '天前'}）→ ${d.lawScore}分` : '近期無 → 0分';
+      const exhTxt = d.exhInfo ? `${d.exhInfo} → ${d.exhScore}分` : '無對應展覽 → 0分';
       document.getElementById('greedPopupTitle').textContent = `${d.code} 貪婪指標 ${d.greed}（${_greedZone(d.greed)}）`;
       document.getElementById('greedPopupBody').innerHTML = `
         <div style="background:rgba(255,255,255,.05);padding:9px 11px;border-radius:6px;font-family:monospace;font-size:12px;line-height:1.7">
-          貪婪 = 0.40×強度 + 0.35×話題熱度 + 0.25×法說會<br>
-          　　 = 0.40×${d.strength} + 0.35×${d.topicHeat} + 0.25×${d.lawScore}<br>
-          　　 = ${c1} + ${c2} + ${c3} = <b style="color:#c678dd">${d.greed}</b></div>
-        <div style="margin-top:11px"><b style="color:#4da3ff">強度 ${d.strength}</b>（權重40%）：個股技術籌碼強度（RS＋均線＋近波段高）。點 K 圖上的強度或話題頁分數可看細算。</div>
-        <div style="margin-top:9px"><b style="color:#4da3ff">話題熱度 ${d.topicHeat}</b>（權重35%）：${d.topicSector ? '所屬最熱話題「' + d.topicSector + '」的熱度' : '不在任何話題 → 0'}（一檔在多話題取最高）。</div>
-        <div style="margin-top:9px"><b style="color:#4da3ff">法說會催化 ${d.lawScore}</b>（權重25%）：${lawTxt}。<br>
-          <span style="color:var(--text-muted)">評分：≤3天=100、≤7天=80、≤14天=50、剛開完±3天=60、否則0</span></div>
-        <div style="margin-top:11px;font-size:11px;color:var(--text-muted)">區間：極度恐懼0–25・恐懼25–45・中立45–55・貪婪55–75・極度貪婪75–100。展覽鄰近（第4項）待展覽行事曆建立後併入。</div>`;
+          貪婪 = 0.35×強度 + 0.30×話題 + 0.20×法說 + 0.15×展覽<br>
+          　　 = 0.35×${d.strength} + 0.30×${d.topicHeat} + 0.20×${d.lawScore} + 0.15×${d.exhScore || 0}<br>
+          　　 = ${c1} + ${c2} + ${c3} + ${c4} = <b style="color:#c678dd">${d.greed}</b></div>
+        <div style="margin-top:11px"><b style="color:#4da3ff">強度 ${d.strength}</b>（35%）：個股技術籌碼強度（RS＋均線＋近波段高）。</div>
+        <div style="margin-top:9px"><b style="color:#4da3ff">話題熱度 ${d.topicHeat}</b>（30%）：${d.topicSector ? '所屬最熱話題「' + d.topicSector + '」的熱度' : '不在任何話題 → 0'}（多話題取最高）。</div>
+        <div style="margin-top:9px"><b style="color:#4da3ff">法說會催化 ${d.lawScore}</b>（20%）：${lawTxt}。<span style="color:var(--text-muted)">（≤3天100/≤7天80/≤14天50/剛開完±3天60）</span></div>
+        <div style="margin-top:9px"><b style="color:#4da3ff">展覽鄰近 ${d.exhScore || 0}</b>（15%）：${exhTxt}。<span style="color:var(--text-muted)">（展中100/展前一週90/展前30天內60/展後5天40）</span></div>
+        <div style="margin-top:11px;font-size:11px;color:var(--text-muted)">區間：極度恐懼0–25・恐懼25–45・中立45–55・貪婪55–75・極度貪婪75–100。</div>`;
       document.getElementById('greedPopup').style.display = 'flex';
     }
 
