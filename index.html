@@ -1187,6 +1187,17 @@
     </div>
   </div>
 
+  <!-- 貪婪指標算法 popup -->
+  <div id="greedPopup" onclick="if(event.target===this)this.style.display='none'" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:10001;align-items:center;justify-content:center;padding:20px">
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:16px 18px;max-width:400px;width:100%">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <b id="greedPopupTitle" style="font-size:14px;color:var(--text-primary)"></b>
+        <button onclick="document.getElementById('greedPopup').style.display='none'" style="background:none;border:none;color:var(--text-muted);font-size:18px;cursor:pointer">&#10005;</button>
+      </div>
+      <div id="greedPopupBody" style="font-size:12.5px;color:var(--text);line-height:1.6"></div>
+    </div>
+  </div>
+
   <!-- 分點出手明細 modal -->
   <div id="rkTradesModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9992;align-items:flex-start;justify-content:center;overflow-y:auto;padding:5vh 12px">
     <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px 22px;max-width:520px;width:100%">
@@ -1557,6 +1568,7 @@
             <span id="catalystTag"></span>
           </div>
           <div class="modal-subtitle" id="modalSubtitle">日K線</div>
+          <div id="greedGauge" onclick="_showGreedCalc()" title="貪婪指標·點看算法" style="display:none;margin-top:4px;cursor:pointer"></div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
           <button id="chartWatchBtn" onclick="toggleWatchFromChart()"
@@ -2131,6 +2143,7 @@
       _loadDividendInfo(code);
       _loadCatalystInfo(code);
       _loadBrokerEntries(code);
+      _loadGreed(code);
       _setToolbarForCode(code);
       document.getElementById('backBtn').style.display = 'none';
       document.getElementById('chartModal').classList.add('open');
@@ -3477,6 +3490,81 @@
       _refreshChartMarkers();
     }
 
+    // ── 貪婪指標（P3）＝ 0.40×強度 + 0.35×話題熱度(取最高) + 0.25×法說會催化 ──
+    let _greedData = null;
+    function _greedZone(v) {
+      return v < 25 ? '極度恐懼' : v < 45 ? '恐懼' : v <= 55 ? '中立' : v <= 75 ? '貪婪' : '極度貪婪';
+    }
+    function _greedGaugeSVG(val, w) {
+      const cx = w / 2, cy = w * 0.52, R = w * 0.46;
+      const pt = (v, r) => { const t = Math.PI * (1 - v / 100); return [cx + r * Math.cos(t), cy - r * Math.sin(t)]; };
+      const zones = [[0, 25, '#E24B4A'], [25, 45, '#F0997B'], [45, 55, '#B4B2A9'], [55, 75, '#5DCAA5'], [75, 100, '#1D9E75']];
+      let s = '';
+      zones.forEach(z => {
+        const p = pt(z[0], R), q = pt(z[1], R);
+        s += `<path d="M${cx} ${cy} L${p[0].toFixed(1)} ${p[1].toFixed(1)} A${R} ${R} 0 0 0 ${q[0].toFixed(1)} ${q[1].toFixed(1)} Z" fill="${z[2]}"/>`;
+      });
+      const tip = pt(val, R * 0.9);
+      s += `<line x1="${cx}" y1="${cy}" x2="${tip[0].toFixed(1)}" y2="${tip[1].toFixed(1)}" stroke="#f0f4fc" stroke-width="2.5" stroke-linecap="round"/>`;
+      s += `<circle cx="${cx}" cy="${cy}" r="4" fill="#f0f4fc"/>`;
+      return `<div style="display:flex;align-items:center;gap:8px">
+        <svg viewBox="0 0 ${w} ${(cy + 4).toFixed(0)}" width="${w}" style="overflow:visible">${s}</svg>
+        <div style="line-height:1.15"><span style="font-size:18px;font-weight:700;color:var(--text)">${val}</span>
+          <span style="font-size:11px;color:var(--text-muted)"> 貪婪指標</span><br>
+          <span style="font-size:11px;color:#c678dd">${_greedZone(val)}・點看算法</span></div></div>`;
+    }
+    async function _loadGreed(code) {
+      const el = document.getElementById('greedGauge');
+      if (el) { el.style.display = 'none'; el.innerHTML = ''; }
+      _greedData = null;
+      if (!_isStock(code)) return;
+      try {
+        const hdr = { apikey: SIG_SB_ANON, Authorization: `Bearer ${SIG_SB_ANON}` };
+        const [rs, rt, rc] = await Promise.all([
+          fetch(`${SIG_SB_URL}/rest/v1/stock_strength?select=strength&code=eq.${encodeURIComponent(code)}`, { headers: hdr }),
+          fetch(`${SIG_SB_URL}/rest/v1/hot_topics?select=heat,sector,codes`, { headers: hdr }),
+          fetch(`${SIG_SB_URL}/rest/v1/catalyst_events?select=start_date&event_type=eq.${encodeURIComponent('法說會')}&code=eq.${encodeURIComponent(code)}`, { headers: hdr }),
+        ]);
+        if (currentCode !== code) return;
+        const strength = rs.ok ? (((await rs.json())[0] || {}).strength || 0) : 0;
+        let topicHeat = 0, topicSector = '';
+        if (rt.ok) (await rt.json()).forEach(t => {
+          if ((t.codes || []).some(c => c.code === code) && (t.heat || 0) > topicHeat) { topicHeat = t.heat || 0; topicSector = t.sector || ''; }
+        });
+        let lawScore = 0, lawDate = null, lawDays = null;
+        if (rc.ok) {
+          const today = new Date(); today.setHours(0, 0, 0, 0);
+          (await rc.json()).forEach(e => {
+            const days = Math.round((new Date(e.start_date + 'T00:00:00') - today) / 86400000);
+            let sc = 0;
+            if (days >= 0 && days <= 3) sc = 100; else if (days > 3 && days <= 7) sc = 80;
+            else if (days > 7 && days <= 14) sc = 50; else if (days < 0 && days >= -3) sc = 60;
+            if (sc > lawScore) { lawScore = sc; lawDate = e.start_date; lawDays = days; }
+          });
+        }
+        const greed = Math.round(0.40 * strength + 0.35 * topicHeat + 0.25 * lawScore);
+        _greedData = { code, greed, strength, topicHeat, topicSector, lawScore, lawDate, lawDays };
+        if (el) { el.innerHTML = _greedGaugeSVG(greed, 120); el.style.display = 'block'; }
+      } catch (_) { /* 貪婪指標非必要，失敗靜默 */ }
+    }
+    function _showGreedCalc() {
+      const d = _greedData; if (!d) return;
+      const c1 = (0.40 * d.strength).toFixed(1), c2 = (0.35 * d.topicHeat).toFixed(1), c3 = (0.25 * d.lawScore).toFixed(1);
+      const lawTxt = d.lawDate ? `${d.lawDate}（${d.lawDays >= 0 ? d.lawDays + '天後' : Math.abs(d.lawDays) + '天前'}）→ ${d.lawScore}分` : '近期無 → 0分';
+      document.getElementById('greedPopupTitle').textContent = `${d.code} 貪婪指標 ${d.greed}（${_greedZone(d.greed)}）`;
+      document.getElementById('greedPopupBody').innerHTML = `
+        <div style="background:rgba(255,255,255,.05);padding:9px 11px;border-radius:6px;font-family:monospace;font-size:12px;line-height:1.7">
+          貪婪 = 0.40×強度 + 0.35×話題熱度 + 0.25×法說會<br>
+          　　 = 0.40×${d.strength} + 0.35×${d.topicHeat} + 0.25×${d.lawScore}<br>
+          　　 = ${c1} + ${c2} + ${c3} = <b style="color:#c678dd">${d.greed}</b></div>
+        <div style="margin-top:11px"><b style="color:#4da3ff">強度 ${d.strength}</b>（權重40%）：個股技術籌碼強度（RS＋均線＋近波段高）。點 K 圖上的強度或話題頁分數可看細算。</div>
+        <div style="margin-top:9px"><b style="color:#4da3ff">話題熱度 ${d.topicHeat}</b>（權重35%）：${d.topicSector ? '所屬最熱話題「' + d.topicSector + '」的熱度' : '不在任何話題 → 0'}（一檔在多話題取最高）。</div>
+        <div style="margin-top:9px"><b style="color:#4da3ff">法說會催化 ${d.lawScore}</b>（權重25%）：${lawTxt}。<br>
+          <span style="color:var(--text-muted)">評分：≤3天=100、≤7天=80、≤14天=50、剛開完±3天=60、否則0</span></div>
+        <div style="margin-top:11px;font-size:11px;color:var(--text-muted)">區間：極度恐懼0–25・恐懼25–45・中立45–55・貪婪55–75・極度貪婪75–100。展覽鄰近（第4項）待展覽行事曆建立後併入。</div>`;
+      document.getElementById('greedPopup').style.display = 'flex';
+    }
+
     function toggleBBand(span) {
       const keys = ['bbUpper', 'bbMid', 'bbLower'];
       const first = seriesMap[keys[0]];
@@ -3612,7 +3700,7 @@
     }
     // 關閉所有開啟的面板/視窗（閒置登出重新登入時用）
     function _closeAllPanels() {
-      ['brokerSigModal', 'brokerRankModal', 'rkTradesModal', 'sellTrackModal', 'divAlertModal', 'resetPwModal', 'hotTopicsModal', 'strengthPopup']
+      ['brokerSigModal', 'brokerRankModal', 'rkTradesModal', 'sellTrackModal', 'divAlertModal', 'resetPwModal', 'hotTopicsModal', 'strengthPopup', 'greedPopup']
         .forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
       ['chartModal', 'watchlistPanel', 'alertPanel', 'watchAddModal']
         .forEach(id => { const el = document.getElementById(id); if (el) el.classList.remove('open'); });
