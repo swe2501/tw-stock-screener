@@ -1237,7 +1237,7 @@
       <div style="display:flex;gap:10px;justify-content:center">
         <button onclick="_closeAllPanels();document.getElementById('idleLogoutModal').style.display='none';openAuthModal('login')"
           style="padding:8px 20px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.95rem">重新登入</button>
-        <button onclick="document.getElementById('idleLogoutModal').style.display='none'"
+        <button onclick="_closeAllPanels();document.getElementById('idleLogoutModal').style.display='none'"
           style="padding:8px 20px;background:transparent;color:var(--text-muted);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:.95rem">關閉</button>
       </div>
     </div>
@@ -1588,6 +1588,7 @@
             <button class="tool-btn" onclick="clearChartMarkers()" title="清除本股的日期標記箭頭">📍 清標記</button>
           </div>
         </div>
+        <div id="brokerFilterPanel" style="display:none;padding:6px 8px;border-top:1px solid var(--border);font-size:12px;color:var(--text)"></div>
         <div id="chartLoading"><div class="spinner"></div> 載入中...</div>
         <div id="chartWrapper" style="display:none">
           <div id="mainChartPanel">
@@ -2141,7 +2142,8 @@
     let _userMarkers = {};         // code -> [{date,label}]，僅存在記憶體
     let _lastDivMarkers = [];      // 本次圖表的除權息標記
     let _catalystEvents = [];      // 本次個股的催化事件（法說會等），refresh 時依 K 棒日期過濾
-    let _brokerEntries = [];       // 本次個股的主力進場（分點大單買超日），refresh 時依 K 棒日期過濾
+    let _brokerEntriesRaw = [];    // 本次個股的主力進場：[{date, broker}]，refresh 時依勾選+K棒日期過濾
+    let _brokerChecked = null;     // Set(已勾選要顯示的分點名)
     let _brokerNameMap = null;     // broker_id → 分點名（快取）
     let _lastCandleTimes = null;   // 本次圖表的所有 K 棒日期
     let _lastScreenDate = null;    // 最近一次篩選的資料日期
@@ -2173,16 +2175,20 @@
           text: e.event_type,
           size: 1,
         }));
-      const broker = _brokerEntries
-        .filter(e => _lastCandleTimes && _lastCandleTimes.has(e.date))
-        .map(e => ({
-          time: e.date,
-          position: 'belowBar',
-          color: '#c678dd',
-          shape: 'arrowUp',
-          text: e.label,
-          size: 1,
-        }));
+      const bmap = {};
+      (_brokerEntriesRaw || []).forEach(e => {
+        if (_brokerChecked && !_brokerChecked.has(e.broker)) return;   // 未勾選不顯示
+        if (!_lastCandleTimes || !_lastCandleTimes.has(e.date)) return;
+        (bmap[e.date] = bmap[e.date] || []).push(e.broker);
+      });
+      const broker = Object.entries(bmap).map(([date, arr]) => ({
+        time: date,
+        position: 'belowBar',
+        color: '#c678dd',
+        shape: 'arrowUp',
+        text: arr[0] + (arr.length > 1 ? `+${arr.length - 1}` : ''),
+        size: 1,
+      }));
       const all = [..._lastDivMarkers, ...catalyst, ...broker, ...user].sort((a, b) => a.time < b.time ? -1 : 1);
       try { candleSeriesRef.setMarkers(all); } catch (_) {}
     }
@@ -3407,25 +3413,52 @@
       return _brokerNameMap;
     }
     async function _loadBrokerEntries(code) {
-      _brokerEntries = [];
+      _brokerEntriesRaw = []; _brokerChecked = null;
+      const panel = document.getElementById('brokerFilterPanel');
+      if (panel) { panel.style.display = 'none'; panel.innerHTML = ''; }
       if (!_isStock(code) || !_authToken) return;
       try {
         const nm = await _ensureBrokerNames();
         const r = await fetch(`${SIG_SB_URL}/rest/v1/broker_trades`
-          + `?select=broker_id,trade_date,net_lots&code=eq.${encodeURIComponent(code)}`
+          + `?select=broker_id,trade_date&code=eq.${encodeURIComponent(code)}`
           + `&or=(net_lots.gte.300,net_amount_wan.gte.3000)&order=trade_date`,
           { headers: { apikey: SIG_SB_ANON, Authorization: `Bearer ${_authToken}` } });
         if (!r.ok || currentCode !== code) return;
-        const byDate = {};
         for (const t of await r.json()) {
-          (byDate[t.trade_date] = byDate[t.trade_date] || []).push({ name: nm[t.broker_id] || t.broker_id, lots: t.net_lots });
+          _brokerEntriesRaw.push({ date: t.trade_date, broker: nm[t.broker_id] || t.broker_id });
         }
-        _brokerEntries = Object.entries(byDate).map(([date, arr]) => {
-          arr.sort((a, b) => b.lots - a.lots);
-          return { date, label: arr[0].name + (arr.length > 1 ? `+${arr.length - 1}` : '') };
-        });
+        const brokers = [...new Set(_brokerEntriesRaw.map(e => e.broker))].sort();
+        _brokerChecked = new Set(brokers);            // 預設全勾
+        _renderBrokerFilter(brokers);
         _refreshChartMarkers();
       } catch (_) { /* 主力標記非必要，失敗時靜默 */ }
+    }
+
+    function _renderBrokerFilter(brokers) {
+      const panel = document.getElementById('brokerFilterPanel');
+      if (!panel) return;
+      if (!brokers.length) { panel.style.display = 'none'; panel.innerHTML = ''; return; }
+      const cbs = brokers.map(b => {
+        const bb = b.replace(/'/g, "\\'");
+        return `<label style="display:inline-flex;align-items:center;gap:3px;margin:2px 10px 2px 0;cursor:pointer;white-space:nowrap">
+          <input type="checkbox" checked onchange="_toggleBroker('${bb}',this.checked)">${b}</label>`;
+      }).join('');
+      panel.innerHTML = `<div style="margin-bottom:4px"><b style="color:#c678dd">主力分點（前20榜，${brokers.length}）</b>
+        　<a onclick="_setAllBrokers(true)" style="color:#4da3ff;cursor:pointer">全勾</a>
+        　<a onclick="_setAllBrokers(false)" style="color:#4da3ff;cursor:pointer">全部取消</a></div>
+        <div style="display:flex;flex-wrap:wrap;max-height:80px;overflow-y:auto">${cbs}</div>`;
+      panel.style.display = 'block';
+    }
+    function _toggleBroker(b, on) {
+      if (!_brokerChecked) return;
+      if (on) _brokerChecked.add(b); else _brokerChecked.delete(b);
+      _refreshChartMarkers();
+    }
+    function _setAllBrokers(on) {
+      if (!_brokerChecked) return;
+      _brokerChecked = on ? new Set(_brokerEntriesRaw.map(e => e.broker)) : new Set();
+      document.querySelectorAll('#brokerFilterPanel input[type=checkbox]').forEach(cb => { cb.checked = on; });
+      _refreshChartMarkers();
     }
 
     function toggleBBand(span) {
@@ -3563,7 +3596,7 @@
     }
     // 關閉所有開啟的面板/視窗（閒置登出重新登入時用）
     function _closeAllPanels() {
-      ['brokerSigModal', 'brokerRankModal', 'rkTradesModal', 'sellTrackModal', 'divAlertModal', 'resetPwModal']
+      ['brokerSigModal', 'brokerRankModal', 'rkTradesModal', 'sellTrackModal', 'divAlertModal', 'resetPwModal', 'hotTopicsModal', 'strengthPopup']
         .forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
       ['chartModal', 'watchlistPanel', 'alertPanel', 'watchAddModal']
         .forEach(id => { const el = document.getElementById(id); if (el) el.classList.remove('open'); });
