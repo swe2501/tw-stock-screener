@@ -1168,7 +1168,7 @@
         個股依「<b style="color:var(--text)">強度</b>」由高到低排：<br>
         　<b>強度</b> ＝ 0.6×相對強度(RS) ＋ 0.2×均線多頭(收＞MA20＞MA60 給100，否則0) ＋ 0.2×近波段高比×100<br>
         　<b>RS</b>＝該股「0.6×20日＋0.4×60日報酬」在全市場的百分位(0~100)。<br>
-        　<b>20日</b>＝近20個交易日的報酬率（區間漲跌幅，<b>不是</b>平均）。<b>主力</b>＝近5日內「單日大單買超≥300張」的天數。點個股開 K 線。</div>
+        　<b>20日</b>＝近20個交易日的報酬率（區間漲跌幅，<b>不是</b>平均）。<b style="color:#c678dd">主力進場日</b>＝勝率排行榜<b>前20分點</b>的大單買超日（單日≥300張 或 ≥3000萬），與 K 圖紫色箭頭<b>同源可對照</b>。點個股開 K 線。</div>
       <div id="hotTopicsBody" style="font-size:12.5px;color:var(--text)">載入中...</div>
     </div>
   </div>
@@ -2432,29 +2432,40 @@
         document.getElementById('hotTopicsTime').textContent =
           topics[0].captured_at ? '· 更新 ' + String(topics[0].captured_at).slice(5, 16).replace('T', ' ') : '';
         const codes = [...new Set(topics.flatMap(t => (t.codes || []).map(c => c.code)))];
-        const strMap = {};
+        const strMap = {}, entriesMap = {};
         if (codes.length) {
           const rs = await fetch(`${SIG_SB_URL}/rest/v1/stock_strength?select=*&code=in.(${codes.join(',')})`, { headers: hdr });
           if (rs.ok) (await rs.json()).forEach(s => strMap[s.code] = s);
+          // 主力進場日（top-20 broker_trades，與 K 圖標記同源，可對照）
+          const bt = await fetch(`${SIG_SB_URL}/rest/v1/broker_trades?select=code,trade_date`
+            + `&code=in.(${codes.join(',')})&or=(net_lots.gte.300,net_amount_wan.gte.3000)&order=trade_date.desc&limit=1000`, { headers: hdr });
+          if (bt.ok) {
+            (await bt.json()).forEach(t => (entriesMap[t.code] = entriesMap[t.code] || []).push(t.trade_date));
+            Object.keys(entriesMap).forEach(k => { entriesMap[k] = [...new Set(entriesMap[k])].sort().reverse(); });
+          }
         }
-        body.innerHTML = topics.map(t => _hotTopicCard(t, strMap)).join('');
+        body.innerHTML = topics.map(t => _hotTopicCard(t, strMap, entriesMap)).join('');
       } catch (e) { body.innerHTML = '<div style="padding:16px 0;color:#f85149">載入失敗：' + e.message + '</div>'; }
     }
 
-    function _hotTopicCard(t, strMap) {
+    function _hotTopicCard(t, strMap, entriesMap) {
+      entriesMap = entriesMap || {};
       const codes = (t.codes || []).slice().sort((a, b) =>
         ((strMap[b.code] || {}).strength || 0) - ((strMap[a.code] || {}).strength || 0));
       const rows = codes.map(c => {
         const s = strMap[c.code] || {};
         const strg = s.strength != null ? s.strength : '–';
         const col = s.strength >= 70 ? '#67c23a' : s.strength >= 40 ? '#e6a23c' : 'var(--text-muted)';
-        const bb = s.bigbuy_5d ? `<span style="color:#f85149">主力${s.bigbuy_5d}天</span>` : '';
+        const ents = entriesMap[c.code] || [];
+        const entStr = ents.length
+          ? `<span style="color:#c678dd">${ents.slice(0, 3).map(d => d.slice(5).replace('-', '/')).join('、')}${ents.length > 3 ? '…' : ''}</span>`
+          : '–';
         const ret = s.ret20 != null ? (s.ret20 >= 0 ? '+' : '') + s.ret20 + '%' : '–';
         return `<tr onclick="openChart('${c.code}','${c.code} ${_htEsc(c.name).replace(/'/g,'')}','',0,false)" style="border-bottom:1px solid var(--border);cursor:pointer">
           <td style="padding:3px 8px;color:#4da3ff">${c.code} ${_htEsc(c.name)}</td>
           <td style="padding:3px 8px;text-align:right;font-weight:700;color:${col}">${strg}</td>
           <td style="padding:3px 8px;text-align:right">${ret}</td>
-          <td style="padding:3px 8px">${bb}</td></tr>`;
+          <td style="padding:3px 8px;font-size:11px">${entStr}</td></tr>`;
       }).join('');
       const srcs = (t.source_urls || []).filter(u => /^https?:\/\//.test(u)).map((u, i) =>
         `<a href="${_htEsc(u)}" target="_blank" rel="noopener" style="color:#4da3ff;font-size:11px;margin-right:8px">來源${i + 1}</a>`).join('');
@@ -2468,7 +2479,7 @@
         ${t.summary ? `<div style="font-size:11.5px;color:var(--text-muted);margin:5px 0">${_htEsc(t.summary)}</div>` : ''}
         <table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:4px">
           <thead><tr style="color:var(--text-muted)"><th style="padding:3px 8px;text-align:left">個股（依強度排序）</th>
-            <th style="padding:3px 8px;text-align:right">強度</th><th style="padding:3px 8px;text-align:right">20日漲跌</th><th style="padding:3px 8px;text-align:left">主力</th></tr></thead>
+            <th style="padding:3px 8px;text-align:right">強度</th><th style="padding:3px 8px;text-align:right">20日漲跌</th><th style="padding:3px 8px;text-align:left">主力進場日</th></tr></thead>
           <tbody>${rows}</tbody></table>
         ${srcs ? `<div style="margin-top:5px">${srcs}</div>` : ''}
       </div>`;
