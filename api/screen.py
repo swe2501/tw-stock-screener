@@ -1223,7 +1223,7 @@ def screen(params):
             if check_zhenming2:
                 # 任一「較短均線當日新上穿較長均線」即可（5/10/20/60 全部配對）：
                 # 昨日 短≤長、今日 短>長。某均線資料不足(如未滿 60 日)則略過含它的配對。
-                periods = [5, 10, 20, 60]
+                periods = [5, 10, 20, 60, 120, 240]
                 t_ma = {p: _ma(all_cls, p)  for p in periods}
                 y_ma = {p: _ma(prev_cls, p) for p in periods}
                 crossed = False
