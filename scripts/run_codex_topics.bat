@@ -1,0 +1,3 @@
+@echo off
+echo ==== %DATE% %TIME% codex hot_topics run ==== >> "C:\Users\User\Desktop\AI_stock\scripts\codex_topics.log"
+"C:\Users\User\AppData\Roaming\npm\codex.cmd" exec -C "C:\Users\User\Desktop\AI_stock" --skip-git-repo-check --dangerously-bypass-approvals-and-sandbox "Web-search recent (last 3-5 days) Taiwan stock market hot-topic sectors and follow scripts/codex_hot_topics.md exactly: produce scripts/hot_topics.json, then run 'python scripts/gen_listed_codes.py' and 'python scripts/upload_hot_topics.py' to upload. Only modify hot_topics.json. Do NOT run any git command or touch other files (see AGENTS.md)." >> "C:\Users\User\Desktop\AI_stock\scripts\codex_topics.log" 2>&1
