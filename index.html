@@ -1099,6 +1099,7 @@
       <button id="watchlistBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="openWatchlist()">⭐ <span class="btn-label">觀察清單</span></button>
       <button id="alertMgrBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="openAlertMgr()">🔔 <span class="btn-label">我的警示</span></button>
       <button id="hotTopicsBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="openHotTopics()">🔥 <span class="btn-label">話題</span></button>
+      <button id="backtestBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="openBacktest()">📈 <span class="btn-label">回測勝率</span></button>
       <button id="logoutBtn"   tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="doLogout()">登出</button>
       <button id="loginBtn"    tabindex="-1" onmousedown="this.blur()" ontouchend="this.blur()" onclick="openAuthModal('login')">登入</button>
     </div>
@@ -1195,6 +1196,50 @@
         <button onclick="document.getElementById('greedPopup').style.display='none'" style="background:none;border:none;color:var(--text-muted);font-size:18px;cursor:pointer">&#10005;</button>
       </div>
       <div id="greedPopupBody" style="font-size:12.5px;color:var(--text);line-height:1.6"></div>
+    </div>
+  </div>
+
+  <!-- 📈 回測勝率 modal（僅本人） -->
+  <div id="backtestModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9990;align-items:flex-start;justify-content:center;overflow-y:auto;padding:4vh 12px">
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px 22px;max-width:860px;width:100%">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <h3 style="margin:0;font-size:1.05rem;color:var(--text-primary)">📈 回測勝率</h3>
+        <button onclick="document.getElementById('backtestModal').style.display='none'" style="background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer">&#10005;</button>
+      </div>
+      <div id="btTabBar" style="display:flex;gap:4px;flex-wrap:wrap"></div>
+      <div id="backtestBody" style="border:1px solid var(--border);border-top:none;padding:8px;font-size:12.5px;color:var(--text)">載入中...</div>
+    </div>
+  </div>
+
+  <!-- 加入回測 表單 popup -->
+  <div id="btAddPopup" onclick="if(event.target===this)this.style.display='none'" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:10001;align-items:center;justify-content:center;padding:20px">
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:18px 20px;max-width:340px;width:100%">
+      <b id="btAddTitle" style="font-size:14px;color:var(--text-primary)"></b>
+      <div style="margin-top:12px;display:flex;flex-direction:column;gap:10px;font-size:13px">
+        <label>買進日<input id="btAddDate" type="date" style="width:100%;margin-top:3px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);color:var(--text)"></label>
+        <label>買進均價<input id="btAddPrice" type="number" step="0.01" style="width:100%;margin-top:3px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);color:var(--text)"></label>
+        <label>股數（<span id="btAddLots" style="color:var(--text-muted)"></span>）<input id="btAddShares" type="number" step="1000" oninput="document.getElementById('btAddLots').textContent=((this.value||0)/1000).toFixed(2)+'張'" style="width:100%;margin-top:3px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);color:var(--text)"></label>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+        <button onclick="document.getElementById('btAddPopup').style.display='none'" style="padding:6px 14px;background:transparent;color:var(--text-muted);border:1px solid var(--border);border-radius:6px;cursor:pointer">取消</button>
+        <button onclick="_btAddConfirm()" style="padding:6px 16px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700">加入</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 賣出確認 popup -->
+  <div id="btSellPopup" onclick="if(event.target===this){this.style.display='none';_btRender()}" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:10001;align-items:center;justify-content:center;padding:20px">
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:18px 20px;max-width:340px;width:100%">
+      <b style="font-size:14px;color:var(--text-primary)">確認賣出</b>
+      <div id="btSellInfo" style="margin-top:10px;font-size:13px;color:var(--text)"></div>
+      <div style="margin-top:12px;display:flex;flex-direction:column;gap:10px;font-size:13px">
+        <label>賣出日<input id="btSellDate" type="date" style="width:100%;margin-top:3px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);color:var(--text)"></label>
+        <label>賣出價<input id="btSellPrice" type="number" step="0.01" style="width:100%;margin-top:3px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);color:var(--text)"></label>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+        <button onclick="document.getElementById('btSellPopup').style.display='none';_btRender()" style="padding:6px 14px;background:transparent;color:var(--text-muted);border:1px solid var(--border);border-radius:6px;cursor:pointer">否</button>
+        <button onclick="_btSellConfirm()" style="padding:6px 16px;background:#e74c3c;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700">是，賣出</button>
+      </div>
     </div>
   </div>
 
@@ -2008,6 +2053,7 @@
                 title="${isWatched ? '已列入觀察' : '尚未列入觀察'}">
                 ${isWatched ? '★' : '☆'}</span>
             </td>` : ''}
+            ${_authToken ? `<td onclick="event.stopPropagation();_btAddPrompt('${s.code}','${s.name.replace(/'/g,"\\'")}',${s.close})" title="加入回測勝率" style="text-align:center;padding:0 4px;cursor:pointer;font-size:15px">📈</td>` : ''}
             <td class="code-cell">
               <a href="https://www.twse.com.tw/zh/trading/historical/stock-day.html?stockNo=${s.code}" target="_blank" onclick="event.stopPropagation()">${s.code}</a>${
                 (s.data_missing && s.data_missing.length)
@@ -2034,6 +2080,7 @@
               <tr>
                 <th style="text-align:center;width:44px">已看過</th>
                 ${_authToken ? '<th style="text-align:center;width:52px">列入觀察</th>' : ''}
+                ${_authToken ? '<th style="text-align:center;width:44px">回測</th>' : ''}
                 <th onclick="setSort('code')" class="${sortKey==='code'?'sorted':''}">代號<span class="sort-arrow">${sortKey==='code'?(sortDir>0?'▲':'▼'):'↕'}</span></th>
                 <th>名稱</th>
                 <th class="col-open ${sortKey==='open'?'sorted':''}" onclick="setSort('open')">開盤<span class="sort-arrow">${sortKey==='open'?(sortDir>0?'▲':'▼'):'↕'}</span></th>
@@ -3579,6 +3626,195 @@
       document.getElementById('greedPopup').style.display = 'flex';
     }
 
+    // ── 📈 回測勝率 ──
+    let _btPositions = [], _btPrices = {}, _btTab = 0, _btAddCtx = null, _btSellId = null;
+    function _btHdr() { return { apikey: SIG_SB_ANON, Authorization: `Bearer ${_authToken}` }; }
+    function _btToday() { return new Date().toISOString().slice(0, 10); }
+
+    async function openBacktest() {
+      if (!_authToken) return;
+      document.getElementById('backtestModal').style.display = 'flex';
+      await _btLoad();
+    }
+    async function _btLoad() {
+      const body = document.getElementById('backtestBody');
+      body.innerHTML = '<div style="padding:16px 0;color:var(--text-muted)">載入中…</div>';
+      try {
+        const r = await fetch(`${SIG_SB_URL}/rest/v1/backtest_positions?select=*&order=buy_date.desc`, { headers: _btHdr() });
+        _btPositions = r.ok ? await r.json() : [];
+        await _btLoadPrices();
+        _btRender();
+      } catch (e) { body.innerHTML = '<div style="padding:16px 0;color:#f85149">載入失敗：' + e.message + '</div>'; }
+    }
+    async function _btLoadPrices() {
+      _btPrices = {};
+      const codes = [...new Set(_btPositions.map(p => p.code))];
+      if (!codes.length) return;
+      await Promise.all(codes.map(async code => {
+        try {
+          const r = await fetch(`${SIG_SB_URL}/rest/v1/price_window?select=trade_date,close&code=eq.${code}&order=trade_date.asc&limit=1000`, { headers: _btHdr() });
+          if (r.ok) { const rows = await r.json(); _btPrices[code] = { dates: rows.map(x => x.trade_date), closes: rows.map(x => x.close), current: rows.length ? rows[rows.length - 1].close : null }; }
+        } catch (_) { }
+      }));
+      try {
+        const rt = await fetch(`/api/realtime_batch?codes=${codes.join(',')}&_=${Date.now()}`, { cache: 'no-store' });
+        if (rt.ok) { const j = await rt.json(); if (j && j.results) for (const [c, d] of Object.entries(j.results)) if (_btPrices[c] && d.close > 0) _btPrices[c].current = d.close; }
+      } catch (_) { }
+    }
+    function _btReturnAt(code, buyDate, buyPrice, nDays) {
+      const p = _btPrices[code]; if (!p || !p.dates.length) return null;
+      let i = p.dates.indexOf(buyDate);
+      if (i < 0) { i = p.dates.findIndex(d => d >= buyDate); if (i < 0) return null; }
+      const target = i + nDays;
+      if (target >= p.dates.length) return null;   // 未滿 N 交易日
+      return (p.closes[target] - buyPrice) / buyPrice * 100;
+    }
+    function _btCurRet(pos) { const cur = (_btPrices[pos.code] || {}).current; return cur == null ? null : (cur - pos.buy_price) / pos.buy_price * 100; }
+    function _btSellRet(pos) { return pos.sell_price == null ? null : (pos.sell_price - pos.buy_price) / pos.buy_price * 100; }
+    function _btRetHtml(r) { return r == null ? '<span style="color:var(--text-muted)">–</span>' : `<span style="color:${r >= 0 ? '#e74c3c' : '#26c281'};font-weight:700">${r >= 0 ? '+' : ''}${r.toFixed(2)}%</span>`; }
+
+    function _btRender() {
+      const tabs = ['持有中', '已賣出', '勝率'];
+      document.getElementById('btTabBar').innerHTML = tabs.map((t, i) =>
+        `<button onclick="_btTab=${i};_btRender()" style="padding:5px 14px;border-radius:6px 6px 0 0;border:1px solid var(--border);border-bottom:${_btTab === i ? 'none' : '1px solid var(--border)'};background:${_btTab === i ? 'var(--bg-card)' : 'transparent'};color:${_btTab === i ? 'var(--text-primary)' : 'var(--text-muted)'};font-weight:${_btTab === i ? '700' : '400'};cursor:pointer;font-size:13px">${t}</button>`).join('');
+      const body = document.getElementById('backtestBody');
+      body.innerHTML = _btTab === 0 ? _btHoldingTable() : _btTab === 1 ? _btSoldTable() : _btWinrateTable();
+    }
+    const _btInput = 'padding:3px 5px;border:1px solid var(--border);border-radius:4px;background:var(--surface2);color:var(--text);font-size:12px';
+    function _btHoldingTable() {
+      const rows = _btPositions.filter(p => !p.sold);
+      if (!rows.length) return '<div style="padding:16px 0;color:var(--text-muted)">尚無持有中。在篩選結果每列點 📈 加入。</div>';
+      const tr = rows.map(p => {
+        const cur = (_btPrices[p.code] || {}).current;
+        return `<tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:4px 6px;color:#4da3ff">${p.code} ${p.name || ''}</td>
+          <td style="padding:4px 6px;text-align:right"><input type="number" step="1000" value="${p.shares}" onchange="_btEdit(${p.id},'shares',this.value)" style="${_btInput};width:64px">
+            <div style="font-size:10px;color:var(--text-muted)">${(p.shares / 1000).toFixed(2)}張</div></td>
+          <td style="padding:4px 6px"><input type="date" value="${p.buy_date}" onchange="_btEdit(${p.id},'buy_date',this.value)" style="${_btInput}"></td>
+          <td style="padding:4px 6px;text-align:right"><input type="number" step="0.01" value="${p.buy_price}" onchange="_btEdit(${p.id},'buy_price',this.value)" style="${_btInput};width:64px"></td>
+          <td style="padding:4px 6px;text-align:right">${cur != null ? cur : '–'}</td>
+          <td style="padding:4px 6px;text-align:right">${_btRetHtml(_btCurRet(p))}</td>
+          <td style="padding:4px 6px;text-align:center"><input type="checkbox" onclick="_btSellPrompt(${p.id})" title="賣出"></td>
+        </tr>`;
+      }).join('');
+      return `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="color:var(--text-muted);border-bottom:1px solid var(--border)">
+          <th style="padding:4px 6px;text-align:left">個股</th><th style="padding:4px 6px;text-align:right">股數</th>
+          <th style="padding:4px 6px;text-align:left">買進日</th><th style="padding:4px 6px;text-align:right">買進均價</th>
+          <th style="padding:4px 6px;text-align:right">現價</th><th style="padding:4px 6px;text-align:right">現在報酬</th>
+          <th style="padding:4px 6px;text-align:center">賣出</th></tr></thead><tbody>${tr}</tbody></table></div>`;
+    }
+    function _btSoldTable() {
+      const rows = _btPositions.filter(p => p.sold);
+      if (!rows.length) return '<div style="padding:16px 0;color:var(--text-muted)">尚無已賣出。</div>';
+      const tr = rows.map(p => `<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:4px 6px;color:#4da3ff">${p.code} ${p.name || ''}</td>
+        <td style="padding:4px 6px;white-space:nowrap;font-size:11px">${p.buy_date}～${p.sell_date}</td>
+        <td style="padding:4px 6px;text-align:right">${p.buy_price}→${p.sell_price}</td>
+        <td style="padding:4px 6px;text-align:right">${_btRetHtml(_btSellRet(p))}</td>
+        <td style="padding:4px 6px;text-align:center"><a onclick="_btUnsell(${p.id})" style="color:#4da3ff;cursor:pointer;font-size:11px">還原</a>　<a onclick="_btDelete(${p.id})" style="color:#f85149;cursor:pointer;font-size:11px">刪除</a></td>
+      </tr>`).join('');
+      return `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="color:var(--text-muted);border-bottom:1px solid var(--border)">
+          <th style="padding:4px 6px;text-align:left">個股</th><th style="padding:4px 6px;text-align:left">買進～賣出</th>
+          <th style="padding:4px 6px;text-align:right">買→賣價</th><th style="padding:4px 6px;text-align:right">賣出報酬</th>
+          <th style="padding:4px 6px;text-align:center">操作</th></tr></thead><tbody>${tr}</tbody></table></div>`;
+    }
+    function _btWinrateTable() {
+      const all = _btPositions;
+      if (!all.length) return '<div style="padding:16px 0;color:var(--text-muted)">尚無資料。</div>';
+      let w5 = 0, n5 = 0, w20 = 0, n20 = 0;
+      all.forEach(p => {
+        const r5 = _btReturnAt(p.code, p.buy_date, p.buy_price, 5); if (r5 != null) { n5++; if (r5 > 0) w5++; }
+        const r20 = _btReturnAt(p.code, p.buy_date, p.buy_price, 20); if (r20 != null) { n20++; if (r20 > 0) w20++; }
+      });
+      const sold = all.filter(p => p.sold);
+      let ws = 0, ns = 0; sold.forEach(p => { const r = _btSellRet(p); if (r != null) { ns++; if (r > 0) ws++; } });
+      let wt = 0, nt = 0; all.forEach(p => { const r = p.sold ? _btSellRet(p) : _btCurRet(p); if (r != null) { nt++; if (r > 0) wt++; } });
+      const pct = (w, n) => n ? Math.round(w / n * 100) : null;
+      const row = (label, w, n, extra) => `<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:6px 8px">${label}</td>
+        <td style="padding:6px 8px;text-align:right;font-weight:700;font-size:15px;color:${pct(w, n) == null ? 'var(--text-muted)' : pct(w, n) >= 50 ? '#e74c3c' : '#26c281'}">${pct(w, n) == null ? '–' : pct(w, n) + '%'}</td>
+        <td style="padding:6px 8px;text-align:right;color:var(--text-muted);font-size:11px">${w}/${n} 勝${extra || ''}</td></tr>`;
+      return `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">
+        <tbody>
+          ${row('5日勝率', w5, n5, all.length - n5 ? `（${all.length - n5} 檔未滿5日）` : '')}
+          ${row('20日勝率', w20, n20, all.length - n20 ? `（${all.length - n20} 檔未滿20日）` : '')}
+          ${row('實際賣出勝率', ws, ns, '')}
+          ${row('總勝率（含未賣出）', wt, nt, '')}
+        </tbody></table></div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:8px">5日/20日＝買進後第N交易日收盤 vs 買進均價（未滿N日不計）。總勝率＝已賣的用賣出報酬、未賣的用現在報酬。</div>`;
+    }
+
+    function _btAddPrompt(code, name, close) {
+      if (!_authToken) { showToast('請先登入'); return; }
+      _btAddCtx = { code, name };
+      document.getElementById('btAddTitle').textContent = `加入回測：${code} ${name || ''}`;
+      document.getElementById('btAddDate').value = (_lastScreenDate || _btToday());
+      document.getElementById('btAddPrice').value = close || '';
+      document.getElementById('btAddShares').value = 1000;
+      document.getElementById('btAddLots').textContent = '1.00張';
+      document.getElementById('btAddPopup').style.display = 'flex';
+    }
+    async function _btAddConfirm() {
+      const c = _btAddCtx; if (!c) return;
+      const rec = {
+        code: c.code, name: c.name,
+        buy_date: document.getElementById('btAddDate').value,
+        buy_price: parseFloat(document.getElementById('btAddPrice').value),
+        shares: parseInt(document.getElementById('btAddShares').value),
+      };
+      if (!rec.buy_date || !(rec.buy_price > 0) || !(rec.shares > 0)) { showToast('請填買進日/價/股數'); return; }
+      try {
+        const r = await fetch(`${SIG_SB_URL}/rest/v1/backtest_positions`, { method: 'POST', headers: { ..._btHdr(), 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify(rec) });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        document.getElementById('btAddPopup').style.display = 'none';
+        showToast(`已加入回測：${c.code}`);
+        if (document.getElementById('backtestModal').style.display === 'flex') await _btLoad();
+      } catch (e) { showToast('加入失敗：' + e.message); }
+    }
+    async function _btEdit(id, field, value) {
+      const body = {}; body[field] = (field === 'buy_date') ? value : Number(value);
+      try {
+        await fetch(`${SIG_SB_URL}/rest/v1/backtest_positions?id=eq.${id}`, { method: 'PATCH', headers: { ..._btHdr(), 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify(body) });
+        const p = _btPositions.find(x => x.id === id); if (p) p[field] = body[field];
+        await _btLoadPrices(); _btRender();
+      } catch (_) { showToast('更新失敗'); }
+    }
+    function _btSellPrompt(id) {
+      const p = _btPositions.find(x => x.id === id); if (!p) return;
+      _btSellId = id;
+      const cur = (_btPrices[p.code] || {}).current;
+      document.getElementById('btSellInfo').innerHTML = `<b>${p.code} ${p.name || ''}</b>（買進 ${p.buy_price}，${(p.shares / 1000).toFixed(2)}張）確定賣出？`;
+      document.getElementById('btSellDate').value = _btToday();
+      document.getElementById('btSellPrice').value = (cur != null ? cur : p.buy_price);
+      document.getElementById('btSellPopup').style.display = 'flex';
+    }
+    async function _btSellConfirm() {
+      const id = _btSellId; if (id == null) return;
+      const body = { sold: true, sell_date: document.getElementById('btSellDate').value, sell_price: parseFloat(document.getElementById('btSellPrice').value) };
+      if (!body.sell_date || !(body.sell_price > 0)) { showToast('請填賣出日/價'); return; }
+      try {
+        await fetch(`${SIG_SB_URL}/rest/v1/backtest_positions?id=eq.${id}`, { method: 'PATCH', headers: { ..._btHdr(), 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify(body) });
+        document.getElementById('btSellPopup').style.display = 'none';
+        const p = _btPositions.find(x => x.id === id); if (p) Object.assign(p, body);
+        _btRender();
+      } catch (e) { showToast('賣出失敗：' + e.message); }
+    }
+    async function _btUnsell(id) {
+      try {
+        await fetch(`${SIG_SB_URL}/rest/v1/backtest_positions?id=eq.${id}`, { method: 'PATCH', headers: { ..._btHdr(), 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify({ sold: false, sell_date: null, sell_price: null }) });
+        const p = _btPositions.find(x => x.id === id); if (p) { p.sold = false; p.sell_date = null; p.sell_price = null; }
+        _btRender();
+      } catch (_) { showToast('還原失敗'); }
+    }
+    async function _btDelete(id) {
+      try {
+        await fetch(`${SIG_SB_URL}/rest/v1/backtest_positions?id=eq.${id}`, { method: 'DELETE', headers: { ..._btHdr(), Prefer: 'return=minimal' } });
+        _btPositions = _btPositions.filter(x => x.id !== id); _btRender();
+      } catch (_) { showToast('刪除失敗'); }
+    }
+
     function toggleBBand(span) {
       const keys = ['bbUpper', 'bbMid', 'bbLower'];
       const first = seriesMap[keys[0]];
@@ -3672,6 +3908,7 @@
       document.getElementById('logoutBtn').style.display     = loggedIn ? ''     : 'none';
       document.getElementById('alertMgrBtn').style.display   = loggedIn ? ''     : 'none';
       document.getElementById('watchlistBtn').style.display  = loggedIn ? ''     : 'none';
+      document.getElementById('backtestBtn').style.display   = loggedIn ? ''     : 'none';
       // 主力訊號／分點回測：僅授權帳號可見（資料端另有 RLS 保護；加人改此陣列＋DB allowed_viewers）
       const VIEWER_EMAILS = ['swe250165@gmail.com', 'qa5518556130@gmail.com'];
       const _owner = loggedIn && VIEWER_EMAILS.includes(_authUser?.email);
@@ -3714,7 +3951,7 @@
     }
     // 關閉所有開啟的面板/視窗（閒置登出重新登入時用）
     function _closeAllPanels() {
-      ['brokerSigModal', 'brokerRankModal', 'rkTradesModal', 'sellTrackModal', 'divAlertModal', 'resetPwModal', 'hotTopicsModal', 'strengthPopup', 'greedPopup']
+      ['brokerSigModal', 'brokerRankModal', 'rkTradesModal', 'sellTrackModal', 'divAlertModal', 'resetPwModal', 'hotTopicsModal', 'strengthPopup', 'greedPopup', 'backtestModal', 'btAddPopup', 'btSellPopup']
         .forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
       ['chartModal', 'watchlistPanel', 'alertPanel', 'watchAddModal']
         .forEach(id => { const el = document.getElementById(id); if (el) el.classList.remove('open'); });
