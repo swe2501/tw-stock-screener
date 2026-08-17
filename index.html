@@ -404,7 +404,7 @@
     #toast {
       position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
       background: #27ae60; color: #fff; padding: 10px 22px; border-radius: 8px;
-      font-size: 14px; z-index: 9999; opacity: 0; pointer-events: none;
+      font-size: 14px; z-index: 10050; opacity: 0; pointer-events: none;
       transition: opacity 0.25s;
     }
     #toast.show { opacity: 1; }
@@ -3774,7 +3774,7 @@
         const r = await fetch(`${SIG_SB_URL}/rest/v1/backtest_positions`, { method: 'POST', headers: { ..._btHdr(), 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify(rec) });
         if (!r.ok) throw new Error('HTTP ' + r.status);
         document.getElementById('btAddPopup').style.display = 'none';
-        showToast(`已加入回測：${c.code}`);
+        showToast(`✓ 已加入回測：${c.code} ${c.name || ''}`);
         if (document.getElementById('backtestModal').style.display === 'flex') await _btLoad();
       } catch (e) { showToast('加入失敗：' + e.message); }
     }
