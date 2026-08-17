@@ -87,6 +87,13 @@
       box-shadow: none !important;
     }
     #authUserEmail { font-size: 13px; color: rgba(255,255,255,0.7); }
+    #funcMenu {
+      display: none; position: absolute; right: 0; top: calc(100% + 6px);
+      flex-direction: column; gap: 4px; min-width: 165px; padding: 6px;
+      background: #171a24; border: 1px solid var(--border); border-radius: 10px; z-index: 9998;
+    }
+    #funcMenu button { width: 100% !important; text-align: left !important; }
+    #funcMenu .btn-label { display: inline !important; }
 
     /* Auth modal */
     #authModal {
@@ -1093,13 +1100,18 @@
     <button id="marginRatioBox" class="margin-ratio" type="button" onclick="openMarginModal()" style="display:none"></button>
     <div id="authArea">
       <div id="authUserEmail" style="display:none"></div>
-      <button id="brokerSigBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="openBrokerSignals()">🎯 <span class="btn-label">主力訊號</span></button>
-      <button id="brokerRankBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="openBrokerRankings()">📊 <span class="btn-label">分點回測</span></button>
-      <button id="sellTrackBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="openSellTrack()">🔻 <span class="btn-label">出場追蹤</span></button>
-      <button id="watchlistBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="openWatchlist()">⭐ <span class="btn-label">觀察清單</span></button>
-      <button id="alertMgrBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="openAlertMgr()">🔔 <span class="btn-label">我的警示</span></button>
-      <button id="hotTopicsBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="openHotTopics()">🔥 <span class="btn-label">話題</span></button>
-      <button id="backtestBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="openBacktest()">📈 <span class="btn-label">回測勝率</span></button>
+      <div id="funcDropdown" style="position:relative;display:none">
+        <button id="funcMenuBtn" tabindex="-1" onmousedown="this.blur()" ontouchend="this.blur()" onclick="_toggleFuncMenu(event)">☰ <span class="btn-label">功能</span></button>
+        <div id="funcMenu" onclick="_closeFuncMenu()">
+          <button id="brokerSigBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="openBrokerSignals()">🎯 <span class="btn-label">主力訊號</span></button>
+          <button id="brokerRankBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="openBrokerRankings()">📊 <span class="btn-label">分點回測</span></button>
+          <button id="sellTrackBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="openSellTrack()">🔻 <span class="btn-label">出場追蹤</span></button>
+          <button id="watchlistBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="openWatchlist()">⭐ <span class="btn-label">觀察清單</span></button>
+          <button id="alertMgrBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="openAlertMgr()">🔔 <span class="btn-label">我的警示</span></button>
+          <button id="hotTopicsBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="openHotTopics()">🔥 <span class="btn-label">話題</span></button>
+          <button id="backtestBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="openBacktest()">📈 <span class="btn-label">回測勝率</span></button>
+        </div>
+      </div>
       <button id="logoutBtn"   tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="doLogout()">登出</button>
       <button id="loginBtn"    tabindex="-1" onmousedown="this.blur()" ontouchend="this.blur()" onclick="openAuthModal('login')">登入</button>
     </div>
@@ -1779,6 +1791,10 @@
         try { t.showPicker(); } catch (_) { /* 已開啟或不支援時忽略 */ }
       }
     });
+
+    function _toggleFuncMenu(e) { if (e) e.stopPropagation(); const m = document.getElementById('funcMenu'); m.style.display = m.style.display === 'flex' ? 'none' : 'flex'; }
+    function _closeFuncMenu() { const m = document.getElementById('funcMenu'); if (m) m.style.display = 'none'; }
+    document.addEventListener('click', function (e) { const d = document.getElementById('funcDropdown'); if (d && d.style.display !== 'none' && !d.contains(e.target)) _closeFuncMenu(); });
 
     function doScreen() {
       const dateVal = document.getElementById('date').value;
@@ -3914,6 +3930,7 @@
       document.getElementById('alertMgrBtn').style.display   = loggedIn ? ''     : 'none';
       document.getElementById('watchlistBtn').style.display  = loggedIn ? ''     : 'none';
       document.getElementById('backtestBtn').style.display   = loggedIn ? ''     : 'none';
+      document.getElementById('funcDropdown').style.display  = loggedIn ? ''     : 'none';
       // 主力訊號／分點回測：僅授權帳號可見（資料端另有 RLS 保護；加人改此陣列＋DB allowed_viewers）
       const VIEWER_EMAILS = ['swe250165@gmail.com', 'qa5518556130@gmail.com'];
       const _owner = loggedIn && VIEWER_EMAILS.includes(_authUser?.email);
