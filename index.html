@@ -1620,6 +1620,10 @@
             style="background:none;border:1px solid var(--border);border-radius:6px;
                    color:var(--text-muted);padding:4px 10px;font-size:13px;cursor:pointer;
                    white-space:nowrap;transition:all 0.15s">⭐ 列入觀察</button>
+          <button id="chartBacktestBtn" onclick="_btAddPrompt(currentCode, currentName, currentPrice, _btToday())"
+            style="background:none;border:1px solid var(--border);border-radius:6px;
+                   color:var(--text-muted);padding:4px 10px;font-size:13px;cursor:pointer;
+                   white-space:nowrap;transition:all 0.15s">📈 加入回測</button>
           <button class="modal-close" onclick="closeChart()">&#10005;</button>
         </div>
       </div>
@@ -3746,11 +3750,12 @@
         <div style="font-size:11px;color:var(--text-muted);margin-top:8px">5日/20日＝買進後第N交易日收盤 vs 買進均價（未滿N日不計）。總勝率＝已賣的用賣出報酬、未賣的用現在報酬。</div>`;
     }
 
-    function _btAddPrompt(code, name, close) {
+    function _btAddPrompt(code, name, close, buyDate) {
       if (!_authToken) { showToast('請先登入'); return; }
+      if (!_isStock(code)) { showToast('僅個股可加入回測'); return; }
       _btAddCtx = { code, name };
       document.getElementById('btAddTitle').textContent = `加入回測：${code} ${name || ''}`;
-      document.getElementById('btAddDate').value = (_lastScreenDate || _btToday());
+      document.getElementById('btAddDate').value = buyDate || (_lastScreenDate || _btToday());
       document.getElementById('btAddPrice').value = close || '';
       document.getElementById('btAddShares').value = 1000;
       document.getElementById('btAddLots').textContent = '1.00張';
