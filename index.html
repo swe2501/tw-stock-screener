@@ -1625,7 +1625,6 @@
             <span id="catalystTag"></span>
           </div>
           <div class="modal-subtitle" id="modalSubtitle">日K線</div>
-          <div id="greedGauge" onclick="_showGreedCalc()" title="貪婪指標·點看算法" style="display:none;margin-top:4px;cursor:pointer"></div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
           <button id="chartWatchBtn" onclick="toggleWatchFromChart()"
@@ -1639,6 +1638,7 @@
           <button class="modal-close" onclick="closeChart()">&#10005;</button>
         </div>
       </div>
+      <div id="greedGauge" onclick="_showGreedCalc()" title="貪婪指標·點看算法" style="display:none;cursor:pointer;padding:6px 20px;border-bottom:1px solid var(--border);overflow-x:auto"></div>
       <div class="modal-body">
         <div class="chart-content">
         <div class="chart-toolbar">
@@ -3574,9 +3574,9 @@
       const tip = pt(val, R * 0.9);
       s += `<line x1="${cx}" y1="${cy}" x2="${tip[0].toFixed(1)}" y2="${tip[1].toFixed(1)}" stroke="#f0f4fc" stroke-width="2.5" stroke-linecap="round"/>`;
       s += `<circle cx="${cx}" cy="${cy}" r="4" fill="#f0f4fc"/>`;
-      return `<div style="display:flex;align-items:center;gap:8px">
-        <svg viewBox="0 0 ${w} ${(cy + 4).toFixed(0)}" width="${w}" style="overflow:visible">${s}</svg>
-        <div style="line-height:1.15"><span style="font-size:18px;font-weight:700;color:var(--text)">${val}</span>
+      return `<div style="display:inline-flex;align-items:center;gap:8px;white-space:nowrap">
+        <svg viewBox="0 0 ${w} ${(cy + 4).toFixed(0)}" width="${w}" style="overflow:visible;flex-shrink:0">${s}</svg>
+        <div style="line-height:1.15;white-space:nowrap"><span style="font-size:18px;font-weight:700;color:var(--text)">${val}</span>
           <span style="font-size:11px;color:var(--text-muted)"> 貪婪指標</span><br>
           <span style="font-size:11px;color:#c678dd">${_greedZone(val)}・點看算法</span></div></div>`;
     }
