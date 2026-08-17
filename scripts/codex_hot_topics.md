@@ -20,7 +20,9 @@
 3. 對每個族群，列出相關**上市**個股：**只能用 `scripts/tw_listed_codes.json` 裡的代號**，名稱以該檔為準。
    不確定代號就不要放，**絕不自己編 ticker**。
 4. 給每則話題一個 **heat（0~100）**：新聞量 × 新鮮度 × 是否牽涉大廠/強催化。
-5. 產出 `scripts/hot_topics.json`（見下方 schema），再執行：`python scripts/upload_hot_topics.py`
+5. 產出 `scripts/hot_topics.json`（見下方 schema），然後**依序**執行：
+   - `python scripts/gen_listed_codes.py`（重生上市代號清單 tw_listed_codes.json；雲端環境本來沒有此檔，一定要先跑）
+   - `python scripts/upload_hot_topics.py`（上傳；需環境有 SUPABASE_URL / SUPABASE_SERVICE_KEY）
 
 ## 防幻覺鐵則（很重要）
 - **每則話題必須附至少一個真實新聞 `source_urls`**（可點開的連結）。**沒有來源的話題直接不要放。**

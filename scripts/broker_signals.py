@@ -8,6 +8,7 @@
   python scripts/broker_signals.py
 """
 import json
+import os
 import sqlite3
 import sys
 import time
@@ -38,11 +39,17 @@ SHOW_MIN_WAN  = 3000   # amount 榜：單日淨買超金額 ≥ 3000 萬
 
 def _load_env():
     env = {}
-    for line in ENV_FILE.read_text(encoding="utf-8").splitlines():
-        line = line.strip()
-        if line and not line.startswith("#") and "=" in line:
-            k, v = line.split("=", 1)
-            env[k.strip()] = v.strip().strip('"').strip("'")
+    try:
+        for line in ENV_FILE.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, v = line.split("=", 1)
+                env[k.strip()] = v.strip().strip('"').strip("'")
+    except FileNotFoundError:
+        pass  # 雲端（如 Codex 排程）無 .env.local → 改讀環境變數
+    for k in ("SUPABASE_URL", "SUPABASE_ANON_KEY", "SUPABASE_SERVICE_KEY", "CHIP_SECRET"):
+        if not env.get(k) and os.environ.get(k):
+            env[k] = os.environ[k]
     return env
 
 
