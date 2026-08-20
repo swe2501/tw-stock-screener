@@ -1,13 +1,14 @@
 name: daily-cloud-jobs
 
-# 把 3 支「純網路抓取 → 上傳 Supabase」的每日排程搬到 GitHub 伺服器，
+# 把 2 支「純網路抓取 → 上傳 Supabase」的每日排程搬到 GitHub 伺服器，
 # 讓本機電腦沒開時這些資料照樣每天更新。
 #   - catalyst_lawshow.py    法說會行事曆 → catalyst_events
 #   - upload_exdiv_factor.py 除權息還原因子 → exdiv_factor
-#   - margin_ratio.py        大盤融資維持率 → margin_maintenance
-# 這 3 支只用 Python 標準庫，不需 pip 安裝；密鑰由 repo Secrets 提供。
+# 這 2 支只用 Python 標準庫，不需 pip 安裝；密鑰由 repo Secrets 提供。
 #
-# 註：排程(schedule)只會從「預設分支(prod)」觸發，此檔必須在 prod 上才會定時跑。
+# 註1：排程(schedule)只會從「預設分支(prod)」觸發，此檔必須在 prod 上才會定時跑。
+# 註2：margin_ratio.py（大盤融資維持率）留在「本機」每日排程 —— 其資料源 wantgoo
+#      會以 HTTP 403 封鎖 GitHub 雲端 IP，無法從雲端抓，故不搬上來。
 
 on:
   schedule:
@@ -36,7 +37,3 @@ jobs:
       - name: 除權息還原因子（upload_exdiv_factor）
         if: ${{ !cancelled() }}      # 前一步失敗也照跑，彼此獨立
         run: python scripts/upload_exdiv_factor.py
-
-      - name: 大盤融資維持率（margin_ratio）
-        if: ${{ !cancelled() }}
-        run: python scripts/margin_ratio.py
