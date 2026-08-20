@@ -3980,6 +3980,7 @@
       const wp = document.getElementById('watchlistPanel'); if (wp) wp.classList.add('hidden');
       const ap = document.getElementById('alertPanel'); if (ap) ap.classList.add('hidden');
       const wa = document.getElementById('watchAddModal'); if (wa) wa.classList.add('hidden');
+      try { closeMarginModal(); } catch (_) {}   // 融資維持率彈窗（display:flex + 內含圖表，需一併關閉並清圖）
       try { _stopRealtimeUpdates(); } catch (_) {}
     }
     function switchAuthTab(tab) {
