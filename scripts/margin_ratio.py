@@ -15,7 +15,7 @@ import ssl
 import sys
 import time
 import urllib.request
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -66,8 +66,11 @@ def _taiex(latest_date):
     return []
 
 
+_TW = timezone(timedelta(hours=8))          # wantgoo 時間戳為「台北午夜」(UTC+8)，用 UTC 取 date 會早一天
+
+
 def _iso(ms):
-    return datetime.fromtimestamp(ms / 1000, timezone.utc).date().isoformat()
+    return datetime.fromtimestamp(ms / 1000, _TW).date().isoformat()
 
 
 def _variant(exclude_etf):
