@@ -10,6 +10,7 @@
 
 用法：python scripts/margin_ratio.py
 """
+import asyncio
 import json
 import ssl
 import sys
@@ -90,6 +91,79 @@ def _variant(exclude_etf):
     return rows
 
 
+# 「歷史」JSON 端點慢一個交易日；「即時」端點(無 historical 前綴)有當日值但需登入 session。
+# 沿用 wantgoo_scraper 的持久 profile（已登入）用 Playwright 開頁，於頁面 context 內 fetch 即可過。
+_CUR_EPS = {
+    False: {"fin": "/stock/0000A/margin-trading/lending-balance",
+            "short": "/stock/0000/margin-trading/borrowing-balance"},
+    True:  {"fin": "/stock/-ETFA/margin-trading/lending-balance",
+            "short": "/stock/-ETF/margin-trading/borrowing-balance"},
+}
+
+
+async def _fetch_current_via_browser():
+    from playwright.async_api import async_playwright
+    import wantgoo_scraper as ws          # 沿用已登入的持久 profile
+    js = ("u => fetch(u, {headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'}})"
+          ".then(r => r.ok ? r.json() : Promise.reject('HTTP ' + r.status))")
+    result = {}
+    async with async_playwright() as p:
+        ctx = await p.chromium.launch_persistent_context(
+            str(ws.PROFILE_DIR), headless=False, channel="chrome",
+            viewport={"width": 1280, "height": 900},
+            args=["--disable-blink-features=AutomationControlled"],
+            ignore_default_args=["--enable-automation", "--no-sandbox"],
+        )
+        try:
+            await ctx.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined});")
+            page = ctx.pages[0] if ctx.pages else await ctx.new_page()
+            await page.goto("https://www.wantgoo.com/", wait_until="domcontentloaded", timeout=30000)
+            await page.goto("https://www.wantgoo.com/stock/margin-trading/market-price/taiex",
+                            wait_until="networkidle", timeout=45000)
+            await page.wait_for_timeout(2500)   # 等頁面建立 session（過早打即時端點會 HTTP 400）
+
+            async def _ev(u):
+                for _ in range(3):
+                    try:
+                        return await page.evaluate(js, u)
+                    except Exception:
+                        await page.wait_for_timeout(1500)
+                return None                      # 扣ETF 端點常 400（需先 prime 分頁）→ 失敗略過，不拖垮含ETF
+
+            for ex, eps in _CUR_EPS.items():
+                result[ex] = {"fin": await _ev(eps["fin"]), "short": await _ev(eps["short"])}
+        finally:
+            await ctx.close()
+    return result
+
+
+def _merge_current(allrows):
+    """把即時端點的『當日』併入 allrows（若比歷史最新日更新）。失敗則保留歷史（慢一天），不中斷。"""
+    try:
+        cur = asyncio.run(_fetch_current_via_browser())
+    except Exception as e:
+        print(f"  [warn] 當日即時補抓失敗，保留歷史（慢一天）：{type(e).__name__} {e}")
+        return
+    for ex in (False, True):
+        c = cur.get(ex) or {}
+        fin, short = c.get("fin") or {}, c.get("short") or {}
+        ms = fin.get("date")
+        if ms is None:
+            continue
+        d = _iso(ms)
+        hist_max = max((r["trade_date"] for r in allrows if r["exclude_etf"] == ex), default="")
+        if d <= hist_max:
+            continue                       # 歷史已追上，不重複
+        mr, lb = fin.get("marginRatio"), fin.get("lendingBalance")
+        allrows.append({
+            "trade_date": d, "exclude_etf": ex,
+            "maintenance_ratio": round(mr * 100, 2) if mr else None,
+            "margin_balance": round(lb / 100000, 2) if lb else None,
+            "short_balance": short.get("borrowingBalance"),
+        })
+        print(f"  補當日 {'扣ETF' if ex else '含ETF'} {d} 維持率 {round(mr * 100, 2) if mr else '–'}%")
+
+
 def main():
     env = bs._load_env()
     if not env.get("SUPABASE_SERVICE_KEY"):
@@ -126,6 +200,8 @@ def main():
         print(f"{'扣除ETF' if ex else '含ETF'}：{len(rows)} 天，最新 {latest['trade_date']} "
               f"維持率 {latest['maintenance_ratio']}%、融資餘額 {latest['margin_balance']} 億")
         allrows += rows
+
+    _merge_current(allrows)   # 補當日（歷史端點慢一個交易日）
 
     bs._sb(env, "/margin_maintenance", method="DELETE", params=[("trade_date", "neq.1900-01-01")])
     st = None
