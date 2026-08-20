@@ -93,10 +93,14 @@ def _variant(exclude_etf):
 
 # 「歷史」JSON 端點慢一個交易日；「即時」端點(無 historical 前綴)有當日值但需登入 session。
 # 沿用 wantgoo_scraper 的持久 profile（已登入）用 Playwright 開頁，於頁面 context 內 fetch 即可過。
+# 關鍵：即時端點要先導到「對應的專頁」prime——含ETF 用 market-price、扣ETF 用 exclude-etf，
+#       否則跨頁抓另一變體會被 wantgoo 擋（HTTP 400）。
 _CUR_EPS = {
-    False: {"fin": "/stock/0000A/margin-trading/lending-balance",
+    False: {"page": "https://www.wantgoo.com/stock/margin-trading/market-price/taiex",
+            "fin": "/stock/0000A/margin-trading/lending-balance",
             "short": "/stock/0000/margin-trading/borrowing-balance"},
-    True:  {"fin": "/stock/-ETFA/margin-trading/lending-balance",
+    True:  {"page": "https://www.wantgoo.com/stock/margin-trading/exclude-etf/taiex",
+            "fin": "/stock/-ETFA/margin-trading/lending-balance",
             "short": "/stock/-ETF/margin-trading/borrowing-balance"},
 }
 
@@ -118,9 +122,6 @@ async def _fetch_current_via_browser():
             await ctx.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined});")
             page = ctx.pages[0] if ctx.pages else await ctx.new_page()
             await page.goto("https://www.wantgoo.com/", wait_until="domcontentloaded", timeout=30000)
-            await page.goto("https://www.wantgoo.com/stock/margin-trading/market-price/taiex",
-                            wait_until="networkidle", timeout=45000)
-            await page.wait_for_timeout(2500)   # 等頁面建立 session（過早打即時端點會 HTTP 400）
 
             async def _ev(u):
                 for _ in range(3):
@@ -128,10 +129,15 @@ async def _fetch_current_via_browser():
                         return await page.evaluate(js, u)
                     except Exception:
                         await page.wait_for_timeout(1500)
-                return None                      # 扣ETF 端點常 400（需先 prime 分頁）→ 失敗略過，不拖垮含ETF
+                return None
 
             for ex, eps in _CUR_EPS.items():
-                result[ex] = {"fin": await _ev(eps["fin"]), "short": await _ev(eps["short"])}
+                try:
+                    await page.goto(eps["page"], wait_until="networkidle", timeout=45000)
+                    await page.wait_for_timeout(2000)   # 等頁面建立 session（過早打即時端點會 HTTP 400）
+                    result[ex] = {"fin": await _ev(eps["fin"]), "short": await _ev(eps["short"])}
+                except Exception:
+                    result[ex] = {"fin": None, "short": None}   # 該變體失敗略過，不拖垮另一個
         finally:
             await ctx.close()
     return result
