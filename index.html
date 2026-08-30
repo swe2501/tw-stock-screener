@@ -4932,7 +4932,7 @@
     var _boxLastCandles = [];
     var _boxSeriesRefs = [];
     var _boxMarkers = [];
-    const _BOX_DEF = { lookback:60, maxHeightPct:0.10, formVolSpikes:2, reqU:3, reqL:3, spacing:2, atrPeriod:14,
+    const _BOX_DEF = { lookback:60, maxHeightPct:0.10, formVolSpikes:2, breakoutRecency:3, reqU:3, reqL:3, spacing:2, atrPeriod:14,
       tolMode:'atr_capped', atrMult:0.25, tolCap:0.01, fixedPct:0.01,
       brkPct:0.03, volShort:5, volLong:10, volMult:1.3, consec:3 };
 
@@ -4972,6 +4972,7 @@
       let ups=[...new Set(highs.filter(h=>h>=mid))].filter(U=>_boxTouch(highs,U,_boxTol(U,atr,cfg),sp).length>=cfg.reqU).sort((a,b)=>b-a);
       let los=[...new Set(lows.filter(l=>l<=mid))].filter(L=>_boxTouch(lows,L,_boxTol(L,atr,cfg),sp).length>=cfg.reqL).sort((a,b)=>a-b);
       if(!ups.length||!los.length) return null;
+      const vv = cs.map(c=>c.volume||0);
       let best=null;
       for(const U of ups){ const utol=_boxTol(U,atr,cfg);
         for(const L of los){ if(U<=L) continue; const ltol=_boxTol(L,atr,cfg);
@@ -4981,19 +4982,21 @@
           const ut=_boxDedup(ur,sp), lt=_boxDedup(lr,sp);
           if(ut.length<cfg.reqU||lt.length<cfg.reqL) continue;
           const a=_boxAlt(ut,lt,cfg.reqU,cfg.reqL);
-          if(a.ok){ best={U,utol,ut,L,ltol,lt,est:a.establish}; break; } }
-        if(best) break; }
+          if(!a.ok) continue;
+          // 箱高上限 + 形成期量縮:只有完全合格的箱才參與競選最近
+          if(L<=0 || (U-L)/L > cfg.maxHeightPct) continue;
+          const eI2 = start + a.establish;
+          let spk=0, bad=false;
+          for(let i=start;i<=eI2;i++){
+            const thr = Math.max(_boxSMA(vv,i,cfg.volShort)||0,_boxSMA(vv,i,cfg.volLong)||0)*cfg.volMult;
+            if(thr>0 && (cs[i].volume||0)>thr){ if(++spk > cfg.formVolSpikes){ bad=true; break; } }
+          }
+          if(bad) continue;
+          // 取 establish 最大(最近成形);同 establish 取上緣較高
+          if(best===null || a.establish>best.est || (a.establish===best.est && U>best.U))
+            best={U,utol,ut,L,ltol,lt,est:a.establish}; } }
       if(!best) return null;
       const eI = start + best.est;
-      // 箱高上限
-      if(best.L<=0 || (best.U-best.L)/best.L > cfg.maxHeightPct) return null;
-      // 形成期量縮:start~establish 每根量 ≤ max(5日,10日均量)×量倍
-      const vv = cs.map(c=>c.volume||0);
-      let _spk=0;
-      for(let i=start;i<=eI;i++){
-        const thr = Math.max(_boxSMA(vv,i,cfg.volShort)||0,_boxSMA(vv,i,cfg.volLong)||0)*cfg.volMult;
-        if(thr>0 && (cs[i].volume||0)>thr){ if(++_spk > cfg.formVolSpikes) return null; }
-      }
       return { start, establishI:eI,
         upperCenter:best.U, lowerCenter:best.L, upperTol:best.utol, lowerTol:best.ltol,
         upperOuter:best.U+best.utol, lowerOuter:best.L-best.ltol, atr,
@@ -5016,6 +5019,8 @@
         if(c>b.upperOuter) pending='up'; else if(c<b.lowerOuter) pending='down';
         else { if(pending==='up') status='FALSE_UP_PENDING'; else if(pending==='down') status='FALSE_DOWN_PENDING'; }
       }
+      // 突破過期(距評估日 > breakoutRecency 根)→ 非當前箱
+      if(bi!==null && (cs.length-1 - bi) > cfg.breakoutRecency) return null;
       const out=(status==='FALSE_UP_PENDING'||status==='FALSE_DOWN_PENDING')?'FORMING':status;
       return { status:out, box:b, breakoutI:bi, breakoutDir:bdir, breakoutReason:brsn };
     }

@@ -17,6 +17,7 @@ DEFAULTS = {
     "lookback_bars": 60,               # ≈ 3 個月交易日(形成區間)
     "max_height_pct": 0.10,            # 箱高上限:(上緣-下緣)/下緣 ≤ 10%(緊密箱)
     "formation_vol_max_spikes": 2,     # 形成期允許最多幾根量 > max(5,10)×量倍(容忍雜訊)
+    "breakout_recency_bars": 3,        # 突破須發生在評估日近幾根內才報(否則過期=非當前箱)
     "required_upper_touches": 3,
     "required_lower_touches": 3,
     "min_touch_spacing_bars": 2,
@@ -136,10 +137,12 @@ def detect_box(bars, end_i, cfg):
                         if len(_touch_indices(lows, L, tolerance(L, atr_value, cfg), spacing)) >= req_l})
     if not up_levels or not lo_levels:
         return None
-    # 搜尋能構成合法交替箱型的配對；取最外側(上緣最高、下緣最低)。
+    # 搜尋能構成合法交替箱型的配對；取「最近成形」者(第6觸碰=establish 最靠近評估日),
+    # 而非最外側舊箱 → 抓當前有效箱。
     # 觸碰採「不跨箱」規則:一根只有 high 碰上緣且 low 沒碰下緣才算上緣觸碰(反之亦然)，
     # 跨滿整箱的 bar 兩邊都不算 → 排除過窄假箱;突破群聚也因無法與對邊交替而被排除。
     best = None
+    vols = [b.volume for b in bars]
     for upper_center in up_levels:
         upper_tol = tolerance(upper_center, atr_value, cfg)
         for lower_center in lo_levels:
@@ -159,31 +162,32 @@ def detect_box(bars, end_i, cfg):
             if len(upper_touch) < req_u or len(lower_touch) < req_l:
                 continue
             ok, establish_win, _seq = _alternating_ok(upper_touch, lower_touch, req_u, req_l)
-            if ok:
+            if not ok:
+                continue
+            # 箱高上限 + 形成期量縮:只有「完全合格」的箱才參與競選最近，
+            # 避免挑到最近但不合格的箱而漏掉合格箱。
+            if lower_center <= 0 or (upper_center - lower_center) / lower_center > cfg["max_height_pct"]:
+                continue
+            establish_i = start + establish_win
+            spikes = 0
+            bad = False
+            for i in range(start, establish_i + 1):
+                thr = max(sma_at(vols, i, cfg["volume_short_ma"]) or 0,
+                          sma_at(vols, i, cfg["volume_long_ma"]) or 0) * cfg["volume_multiplier"]
+                if thr > 0 and (bars[i].volume or 0) > thr:
+                    spikes += 1
+                    if spikes > cfg["formation_vol_max_spikes"]:
+                        bad = True
+                        break
+            if bad:
+                continue
+            # 取 establish 最大(最近成形);同 establish 取上緣較高
+            if best is None or establish_win > best[6] or (establish_win == best[6] and upper_center > best[0]):
                 best = (upper_center, upper_tol, upper_touch,
                         lower_center, lower_tol, lower_touch, establish_win)
-                break
-        if best:
-            break
     if not best:
         return None
     upper_center, upper_tol, upper_touch, lower_center, lower_tol, lower_touch, establish_win = best
-
-    # 箱高上限:上下寬 ≤ max_height_pct(只認緊密箱)
-    if lower_center <= 0 or (upper_center - lower_center) / lower_center > cfg["max_height_pct"]:
-        return None
-    # 形成期量縮:視窗起點~箱型成立(第6觸碰)之間，量 > max(5日,10日均量)×量倍 的根數
-    #            超過 formation_vol_max_spikes 根才作廢(容忍少數雜訊爆量)。
-    establish_i = start + establish_win
-    vols = [b.volume for b in bars]
-    spikes = 0
-    for i in range(start, establish_i + 1):
-        thr = max(sma_at(vols, i, cfg["volume_short_ma"]) or 0,
-                  sma_at(vols, i, cfg["volume_long_ma"]) or 0) * cfg["volume_multiplier"]
-        if thr > 0 and (bars[i].volume or 0) > thr:
-            spikes += 1
-            if spikes > cfg["formation_vol_max_spikes"]:
-                return None
     return {
         "window_start_i": start,
         "establish_i": start + establish_win,       # 換回「全域索引」
@@ -283,6 +287,9 @@ def evaluate(bars, end_i, cfg=None):
             elif pending == "down":
                 status = "FALSE_DOWN_PENDING"
 
+    # 突破過期(距評估日 > breakout_recency_bars 根)→ 非當前箱,不報
+    if breakout_i is not None and (end_i - breakout_i) > cfg["breakout_recency_bars"]:
+        return None
     # PENDING 為內部中間態(非規格輸出列舉)→ 對外視為仍在 FORMING
     out_status = "FORMING" if status in ("FALSE_UP_PENDING", "FALSE_DOWN_PENDING") else status
     result = {

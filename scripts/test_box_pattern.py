@@ -126,5 +126,14 @@ b=base_box(); b[16].volume=5000; b[20].volume=5000; b[24].volume=5000   # 3 根 
 r=evaluate(b, 29)
 check("12b 形成期3根爆量→非箱型(None)", r is None, r["status"] if r else "None")
 
+# 13. 突破過期(距評估日 >3 根)→ 非當前箱(None);3 根內仍算
+b=base_box(); add(b,105,101,105,3000)
+for _ in range(4): add(b,97,93,95,1000)      # 突破在30、評估在34 → 距4>3
+check("13a 突破過期(距4)→None", evaluate(b, len(b)-1) is None)
+b=base_box(); add(b,105,101,105,3000)
+for _ in range(3): add(b,97,93,95,1000)      # 距3 ≤3 → 仍 CONFIRMED_UP
+r=evaluate(b, len(b)-1)
+check("13b 突破距3根內→CONFIRMED_UP", r and r["status"]=="CONFIRMED_UP", r["status"] if r else "None")
+
 print(f"\n== 結果: {_PASS} passed, {_FAIL} failed ==")
 sys.exit(1 if _FAIL else 0)
