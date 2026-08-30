@@ -1678,6 +1678,7 @@
           <span id="boxStatusBadge" style="font-weight:600"></span>
           <span style="opacity:.4">·</span>
           <label>回看<input id="boxLookback" type="number" value="60" min="20" onchange="_boxRedraw()" style="width:52px;margin:0 2px;background:#1e2230;color:#c9d1d9;border:1px solid #2e3350;border-radius:3px;padding:1px 3px">根</label>
+          <label>箱高≤<input id="boxMaxHeight" type="number" step="1" value="10" min="1" onchange="_boxRedraw()" style="width:46px;margin:0 2px;background:#1e2230;color:#c9d1d9;border:1px solid #2e3350;border-radius:3px;padding:1px 3px">%</label>
           <label>觸碰<input id="boxTouch" type="number" value="3" min="2" onchange="_boxRedraw()" style="width:40px;margin:0 2px;background:#1e2230;color:#c9d1d9;border:1px solid #2e3350;border-radius:3px;padding:1px 3px">次</label>
           <label>容忍<select id="boxTolMode" onchange="_boxRedraw()" style="margin:0 2px;background:#1e2230;color:#c9d1d9;border:1px solid #2e3350;border-radius:3px;padding:1px 3px"><option value="atr_capped">ATR</option><option value="percent">百分比</option></select></label>
           <label>ATR×<input id="boxAtrMult" type="number" step="0.05" value="0.25" onchange="_boxRedraw()" style="width:52px;margin:0 2px;background:#1e2230;color:#c9d1d9;border:1px solid #2e3350;border-radius:3px;padding:1px 3px"></label>
@@ -4931,7 +4932,7 @@
     var _boxLastCandles = [];
     var _boxSeriesRefs = [];
     var _boxMarkers = [];
-    const _BOX_DEF = { lookback:60, reqU:3, reqL:3, spacing:2, atrPeriod:14,
+    const _BOX_DEF = { lookback:60, maxHeightPct:0.10, formVolSpikes:2, reqU:3, reqL:3, spacing:2, atrPeriod:14,
       tolMode:'atr_capped', atrMult:0.25, tolCap:0.01, fixedPct:0.01,
       brkPct:0.03, volShort:5, volLong:10, volMult:1.3, consec:3 };
 
@@ -4940,7 +4941,8 @@
         const v = parseFloat(el.value); return isNaN(v) ? def : v; };
       const mode = (document.getElementById('boxTolMode') || {}).value || _BOX_DEF.tolMode;
       return { ..._BOX_DEF,
-        lookback:g('boxLookback',60), reqU:g('boxTouch',3), reqL:g('boxTouch',3),
+        lookback:g('boxLookback',60), maxHeightPct:g('boxMaxHeight',10)/100,
+        reqU:g('boxTouch',3), reqL:g('boxTouch',3),
         tolMode:mode, atrMult:g('boxAtrMult',0.25), tolCap:g('boxTolCap',0.01),
         brkPct:g('boxBrkPct',0.03), volMult:g('boxVolMult',1.3), consec:g('boxConsec',3) };
     }
@@ -4982,7 +4984,17 @@
           if(a.ok){ best={U,utol,ut,L,ltol,lt,est:a.establish}; break; } }
         if(best) break; }
       if(!best) return null;
-      return { start, establishI:start+best.est,
+      const eI = start + best.est;
+      // 箱高上限
+      if(best.L<=0 || (best.U-best.L)/best.L > cfg.maxHeightPct) return null;
+      // 形成期量縮:start~establish 每根量 ≤ max(5日,10日均量)×量倍
+      const vv = cs.map(c=>c.volume||0);
+      let _spk=0;
+      for(let i=start;i<=eI;i++){
+        const thr = Math.max(_boxSMA(vv,i,cfg.volShort)||0,_boxSMA(vv,i,cfg.volLong)||0)*cfg.volMult;
+        if(thr>0 && (cs[i].volume||0)>thr){ if(++_spk > cfg.formVolSpikes) return null; }
+      }
+      return { start, establishI:eI,
         upperCenter:best.U, lowerCenter:best.L, upperTol:best.utol, lowerTol:best.ltol,
         upperOuter:best.U+best.utol, lowerOuter:best.L-best.ltol, atr,
         upperTouch:best.ut.map(i=>start+i), lowerTouch:best.lt.map(i=>start+i) };
@@ -5059,7 +5071,7 @@
     function _boxRedraw() { _drawBox(); }
     function _boxResetParams() {
       const set=(id,v)=>{ const el=document.getElementById(id); if(el) el.value=v; };
-      set('boxLookback',60); set('boxTouch',3); set('boxAtrMult',0.25); set('boxTolCap',0.01);
+      set('boxLookback',60); set('boxMaxHeight',10); set('boxTouch',3); set('boxAtrMult',0.25); set('boxTolCap',0.01);
       set('boxBrkPct',0.03); set('boxVolMult',1.3); set('boxConsec',3);
       const m=document.getElementById('boxTolMode'); if(m) m.value='atr_capped';
       _drawBox();

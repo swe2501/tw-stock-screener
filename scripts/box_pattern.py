@@ -14,7 +14,9 @@ box_pattern.py — 箱型(矩形整理)型態偵測(規則型、可解釋、無�
 from dataclasses import dataclass, field
 
 DEFAULTS = {
-    "lookback_bars": 60,
+    "lookback_bars": 60,               # ≈ 3 個月交易日(形成區間)
+    "max_height_pct": 0.10,            # 箱高上限:(上緣-下緣)/下緣 ≤ 10%(緊密箱)
+    "formation_vol_max_spikes": 2,     # 形成期允許最多幾根量 > max(5,10)×量倍(容忍雜訊)
     "required_upper_touches": 3,
     "required_lower_touches": 3,
     "min_touch_spacing_bars": 2,
@@ -166,6 +168,22 @@ def detect_box(bars, end_i, cfg):
     if not best:
         return None
     upper_center, upper_tol, upper_touch, lower_center, lower_tol, lower_touch, establish_win = best
+
+    # 箱高上限:上下寬 ≤ max_height_pct(只認緊密箱)
+    if lower_center <= 0 or (upper_center - lower_center) / lower_center > cfg["max_height_pct"]:
+        return None
+    # 形成期量縮:視窗起點~箱型成立(第6觸碰)之間，量 > max(5日,10日均量)×量倍 的根數
+    #            超過 formation_vol_max_spikes 根才作廢(容忍少數雜訊爆量)。
+    establish_i = start + establish_win
+    vols = [b.volume for b in bars]
+    spikes = 0
+    for i in range(start, establish_i + 1):
+        thr = max(sma_at(vols, i, cfg["volume_short_ma"]) or 0,
+                  sma_at(vols, i, cfg["volume_long_ma"]) or 0) * cfg["volume_multiplier"]
+        if thr > 0 and (bars[i].volume or 0) > thr:
+            spikes += 1
+            if spikes > cfg["formation_vol_max_spikes"]:
+                return None
     return {
         "window_start_i": start,
         "establish_i": start + establish_win,       # 換回「全域索引」
