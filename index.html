@@ -1417,15 +1417,14 @@
 
         <div class="field">
           <label>箱型狀態</label>
-          <div class="label-hint">依箱型型態即時過濾結果（每日盤後更新；細部參數請到個股 K 圖調整）</div>
-          <select id="box_filter" class="form-select" onchange="onBoxFilterChange()">
-            <option value="">不限</option>
-            <option value="CONFIRMED_UP">向上突破</option>
-            <option value="CONFIRMED_DOWN">向下跌破</option>
-            <option value="FORMING">形成中</option>
-            <option value="FALSE_UP_THEN_DOWN">假突破→真跌破</option>
-            <option value="FALSE_DOWN_THEN_UP">假跌破→真突破</option>
-          </select>
+          <div class="label-hint">勾選要保留的箱型型態（可複選；對結果即時過濾，每日盤後更新。細部參數請到個股 K 圖調整）</div>
+          <div id="box_filter" style="display:flex;flex-wrap:wrap;gap:6px 14px;padding-top:2px">
+            <label style="display:inline-flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="checkbox" class="box-cb" value="CONFIRMED_UP" onchange="onBoxFilterChange()">向上突破</label>
+            <label style="display:inline-flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="checkbox" class="box-cb" value="CONFIRMED_DOWN" onchange="onBoxFilterChange()">向下跌破</label>
+            <label style="display:inline-flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="checkbox" class="box-cb" value="FORMING" onchange="onBoxFilterChange()">形成中</label>
+            <label style="display:inline-flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="checkbox" class="box-cb" value="FALSE_UP_THEN_DOWN" onchange="onBoxFilterChange()">假突破→真跌破</label>
+            <label style="display:inline-flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="checkbox" class="box-cb" value="FALSE_DOWN_THEN_UP" onchange="onBoxFilterChange()">假跌破→真突破</label>
+          </div>
         </div>
 
         <div class="field">
@@ -1988,12 +1987,12 @@
     function filterAndRender() {
       if (!lastResults.length) return;
       const ind = document.getElementById('industry_filter').value;
-      const boxSel = (document.getElementById('box_filter') || {}).value || '';
+      const boxSel = Array.from(document.querySelectorAll('.box-cb:checked')).map(c => c.value);
       let filtered = ind ? lastResults.filter(s => (TW_STOCK_IND[s.code] || '') === ind) : lastResults;
-      if (boxSel) filtered = filtered.filter(s => (_boxStatusMap || {})[s.code] === boxSel);
+      if (boxSel.length) filtered = filtered.filter(s => boxSel.includes((_boxStatusMap || {})[s.code]));
       const countEl = document.querySelector('.results-meta strong');
       if (countEl) {
-        const note = [ind ? '產業' : '', boxSel ? '箱型' : ''].filter(Boolean).join('＋');
+        const note = [ind ? '產業' : '', boxSel.length ? '箱型' : ''].filter(Boolean).join('＋');
         countEl.textContent = note ? `${filtered.length}（${note}過濾）` : String(lastResults.length);
       }
       if (filtered.length === 0) {
