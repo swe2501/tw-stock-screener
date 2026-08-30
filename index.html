@@ -1416,6 +1416,19 @@
         </div>
 
         <div class="field">
+          <label>箱型狀態</label>
+          <div class="label-hint">依箱型型態即時過濾結果（每日盤後更新；細部參數請到個股 K 圖調整）</div>
+          <select id="box_filter" class="form-select" onchange="onBoxFilterChange()">
+            <option value="">不限</option>
+            <option value="CONFIRMED_UP">向上突破</option>
+            <option value="CONFIRMED_DOWN">向下跌破</option>
+            <option value="FORMING">形成中</option>
+            <option value="FALSE_UP_THEN_DOWN">假突破→真跌破</option>
+            <option value="FALSE_DOWN_THEN_UP">假跌破→真突破</option>
+          </select>
+        </div>
+
+        <div class="field">
           <label>產業別</label>
           <div class="label-hint">篩選特定產業（對結果即時過濾）</div>
           <select id="industry_filter" class="form-select" onchange="filterAndRender()">
@@ -1662,6 +1675,19 @@
           </div>
         </div>
         <div id="brokerFilterPanel" style="display:none;padding:6px 8px;border-top:1px solid var(--border);font-size:12px;color:var(--text)"></div>
+        <div id="boxPanel" style="display:none;padding:6px 10px;border-top:1px solid var(--border);font-size:12px;color:var(--text);gap:10px;flex-wrap:wrap;align-items:center">
+          <span id="boxStatusBadge" style="font-weight:600"></span>
+          <span style="opacity:.4">·</span>
+          <label>回看<input id="boxLookback" type="number" value="60" min="20" onchange="_boxRedraw()" style="width:52px;margin:0 2px;background:#1e2230;color:#c9d1d9;border:1px solid #2e3350;border-radius:3px;padding:1px 3px">根</label>
+          <label>觸碰<input id="boxTouch" type="number" value="3" min="2" onchange="_boxRedraw()" style="width:40px;margin:0 2px;background:#1e2230;color:#c9d1d9;border:1px solid #2e3350;border-radius:3px;padding:1px 3px">次</label>
+          <label>容忍<select id="boxTolMode" onchange="_boxRedraw()" style="margin:0 2px;background:#1e2230;color:#c9d1d9;border:1px solid #2e3350;border-radius:3px;padding:1px 3px"><option value="atr_capped">ATR</option><option value="percent">百分比</option></select></label>
+          <label>ATR×<input id="boxAtrMult" type="number" step="0.05" value="0.25" onchange="_boxRedraw()" style="width:52px;margin:0 2px;background:#1e2230;color:#c9d1d9;border:1px solid #2e3350;border-radius:3px;padding:1px 3px"></label>
+          <label>上限%<input id="boxTolCap" type="number" step="0.005" value="0.01" onchange="_boxRedraw()" style="width:60px;margin:0 2px;background:#1e2230;color:#c9d1d9;border:1px solid #2e3350;border-radius:3px;padding:1px 3px"></label>
+          <label>突破%<input id="boxBrkPct" type="number" step="0.01" value="0.03" onchange="_boxRedraw()" style="width:60px;margin:0 2px;background:#1e2230;color:#c9d1d9;border:1px solid #2e3350;border-radius:3px;padding:1px 3px"></label>
+          <label>量倍<input id="boxVolMult" type="number" step="0.1" value="1.3" onchange="_boxRedraw()" style="width:48px;margin:0 2px;background:#1e2230;color:#c9d1d9;border:1px solid #2e3350;border-radius:3px;padding:1px 3px"></label>
+          <label>連續<input id="boxConsec" type="number" value="3" min="1" onchange="_boxRedraw()" style="width:40px;margin:0 2px;background:#1e2230;color:#c9d1d9;border:1px solid #2e3350;border-radius:3px;padding:1px 3px">根</label>
+          <button onclick="_boxResetParams()" style="cursor:pointer;background:#2e3350;color:#c9d1d9;border:1px solid #3a4060;border-radius:4px;padding:2px 8px">預設</button>
+        </div>
         <div id="chartLoading"><div class="spinner"></div> 載入中...</div>
         <div id="chartWrapper" style="display:none">
           <div id="mainChartPanel">
@@ -1682,6 +1708,7 @@
               </div>
               <div class="label-row">
                 <span class="ma-toggle" onclick="toggleBBand(this)" style="color:#00BCD4">BBAND(20,2)</span>
+                <span class="ma-toggle" id="boxToggle" onclick="toggleBox(this)" style="color:#FFC107;opacity:0.5">📦 箱型</span>
               </div>
             </div>
           </div>
@@ -1944,20 +1971,37 @@
       setTimeout(() => _pollScreenResult(jobId, tries + 1), 3000);
     }
 
+    // 箱型狀態(A):讀 box_patterns(anon)做結果後過濾;細部參數版在個股 K 圖(B)
+    let _boxStatusMap = null;
+    async function _ensureBoxMap() {
+      if (_boxStatusMap) return _boxStatusMap;
+      _boxStatusMap = {};
+      try {
+        const r = await fetch(`${SIG_SB_URL}/rest/v1/box_patterns?select=code,status`,
+          { headers: { apikey: SIG_SB_ANON, Authorization: 'Bearer ' + SIG_SB_ANON } });
+        if (r.ok) (await r.json()).forEach(x => { _boxStatusMap[x.code] = x.status; });
+      } catch (_) {}
+      return _boxStatusMap;
+    }
+    async function onBoxFilterChange() { await _ensureBoxMap(); filterAndRender(); }
+
     function filterAndRender() {
       if (!lastResults.length) return;
       const ind = document.getElementById('industry_filter').value;
-      const filtered = ind ? lastResults.filter(s => (TW_STOCK_IND[s.code] || '') === ind) : lastResults;
+      const boxSel = (document.getElementById('box_filter') || {}).value || '';
+      let filtered = ind ? lastResults.filter(s => (TW_STOCK_IND[s.code] || '') === ind) : lastResults;
+      if (boxSel) filtered = filtered.filter(s => (_boxStatusMap || {})[s.code] === boxSel);
       const countEl = document.querySelector('.results-meta strong');
       if (countEl) {
-        countEl.textContent = ind ? `${filtered.length} (產業過濾)` : String(lastResults.length);
+        const note = [ind ? '產業' : '', boxSel ? '箱型' : ''].filter(Boolean).join('＋');
+        countEl.textContent = note ? `${filtered.length}（${note}過濾）` : String(lastResults.length);
       }
       if (filtered.length === 0) {
         document.getElementById('resultsArea').innerHTML = `
           <div class="card">
             <div class="empty-state">
               <div class="icon">&#128269;</div>
-              <p>該產業在此次結果中沒有符合條件的個股</p>
+              <p>此次結果中沒有符合過濾條件的個股</p>
             </div>
           </div>`;
         return;
@@ -2269,7 +2313,7 @@
         text: arr[0] + (arr.length > 1 ? `+${arr.length - 1}` : ''),
         size: 1,
       }));
-      const all = [..._lastDivMarkers, ...catalyst, ...broker, ...user].sort((a, b) => a.time < b.time ? -1 : 1);
+      const all = [..._lastDivMarkers, ...catalyst, ...broker, ...user, ...(_boxMarkers || [])].sort((a, b) => a.time < b.time ? -1 : 1);
       try { candleSeriesRef.setMarkers(all); } catch (_) {}
     }
 
@@ -4688,6 +4732,8 @@
 
       _updatePriceTag(candles);
       _renderMainChart(candles, events || []);
+      _boxLastCandles = _validCandles(candles);
+      if (_boxEnabled) { try { _drawBox(); } catch (_) {} }
       _renderVOLChart(candles);
       _renderMACDChart(candles);
       _renderRSIChart(candles);
@@ -4879,6 +4925,152 @@
       seriesMap['bbUpper'] = bbUpper;
       seriesMap['bbMid']   = bbMid;
       seriesMap['bbLower'] = bbLower;
+    }
+
+    // ── 📦 箱型型態偵測(前端即時版,對應 scripts/box_pattern.py;參數可調)────────────
+    var _boxEnabled = false;
+    var _boxLastCandles = [];
+    var _boxSeriesRefs = [];
+    var _boxMarkers = [];
+    const _BOX_DEF = { lookback:60, reqU:3, reqL:3, spacing:2, atrPeriod:14,
+      tolMode:'atr_capped', atrMult:0.25, tolCap:0.01, fixedPct:0.01,
+      brkPct:0.03, volShort:5, volLong:10, volMult:1.3, consec:3 };
+
+    function _boxParams() {
+      const g = (id, def) => { const el = document.getElementById(id); if (!el) return def;
+        const v = parseFloat(el.value); return isNaN(v) ? def : v; };
+      const mode = (document.getElementById('boxTolMode') || {}).value || _BOX_DEF.tolMode;
+      return { ..._BOX_DEF,
+        lookback:g('boxLookback',60), reqU:g('boxTouch',3), reqL:g('boxTouch',3),
+        tolMode:mode, atrMult:g('boxAtrMult',0.25), tolCap:g('boxTolCap',0.01),
+        brkPct:g('boxBrkPct',0.03), volMult:g('boxVolMult',1.3), consec:g('boxConsec',3) };
+    }
+    function _boxTR(h,l,pc){ return Math.max(h-l, Math.abs(h-pc), Math.abs(l-pc)); }
+    function _boxATR(cs,i,p){ let t=[]; for(let k=Math.max(1,i-p+1);k<=i;k++) t.push(_boxTR(cs[k].high,cs[k].low,cs[k-1].close));
+      return t.length? t.reduce((a,b)=>a+b,0)/t.length : null; }
+    function _boxSMA(v,i,p){ if(i<0) return null; let lo=Math.max(0,i-p+1),s=v.slice(lo,i+1);
+      return s.length? s.reduce((a,b)=>a+b,0)/s.length : null; }
+    function _boxTol(edge,atr,cfg){ return cfg.tolMode==='percent' ? edge*cfg.fixedPct
+      : Math.min((atr||0)*cfg.atrMult, edge*cfg.tolCap); }
+    function _boxDedup(idx,sp){ let o=[]; for(const i of idx) if(!o.length||i-o[o.length-1]>=sp+1) o.push(i); return o; }
+    function _boxTouch(pr,lv,tol,sp){ let r=[]; for(let i=0;i<pr.length;i++) if(lv-tol<=pr[i]&&pr[i]<=lv+tol) r.push(i); return _boxDedup(r,sp); }
+    function _boxAlt(up,lo,nU,nL){
+      let tg=up.map(i=>[i,'U']).concat(lo.map(i=>[i,'L'])).sort((a,b)=> a[0]-b[0] || (a[1]<b[1]?-1:1));
+      let seq=[],seen=new Set();
+      for(const [i,s] of tg){ if(seen.has(i)) continue; if(!seq.length||seq[seq.length-1][1]!==s){ seq.push([i,s]); seen.add(i);} }
+      let u=seq.filter(x=>x[1]==='U').length, l=seq.filter(x=>x[1]==='L').length;
+      return (u>=nU&&l>=nL) ? {ok:true, establish:seq[nU+nL-1][0]} : {ok:false};
+    }
+    function _boxDetect(cs,cfg){
+      const n=cs.length, start=Math.max(0,n-cfg.lookback);
+      const win=cs.slice(start); if(win.length<cfg.reqU+cfg.reqL) return null;
+      const highs=win.map(c=>c.high), lows=win.map(c=>c.low);
+      const atr=_boxATR(cs,n-1,cfg.atrPeriod);
+      const rHi=Math.max(...highs), rLo=Math.min(...lows); if(rHi<=rLo) return null;
+      const mid=(rHi+rLo)/2, sp=cfg.spacing;
+      let ups=[...new Set(highs.filter(h=>h>=mid))].filter(U=>_boxTouch(highs,U,_boxTol(U,atr,cfg),sp).length>=cfg.reqU).sort((a,b)=>b-a);
+      let los=[...new Set(lows.filter(l=>l<=mid))].filter(L=>_boxTouch(lows,L,_boxTol(L,atr,cfg),sp).length>=cfg.reqL).sort((a,b)=>a-b);
+      if(!ups.length||!los.length) return null;
+      let best=null;
+      for(const U of ups){ const utol=_boxTol(U,atr,cfg);
+        for(const L of los){ if(U<=L) continue; const ltol=_boxTol(L,atr,cfg);
+          let ur=[],lr=[];
+          for(let i=0;i<win.length;i++){ const inU=U-utol<=highs[i]&&highs[i]<=U+utol, inL=L-ltol<=lows[i]&&lows[i]<=L+ltol;
+            if(inU&&!inL) ur.push(i); else if(inL&&!inU) lr.push(i); }
+          const ut=_boxDedup(ur,sp), lt=_boxDedup(lr,sp);
+          if(ut.length<cfg.reqU||lt.length<cfg.reqL) continue;
+          const a=_boxAlt(ut,lt,cfg.reqU,cfg.reqL);
+          if(a.ok){ best={U,utol,ut,L,ltol,lt,est:a.establish}; break; } }
+        if(best) break; }
+      if(!best) return null;
+      return { start, establishI:start+best.est,
+        upperCenter:best.U, lowerCenter:best.L, upperTol:best.utol, lowerTol:best.ltol,
+        upperOuter:best.U+best.utol, lowerOuter:best.L-best.ltol, atr,
+        upperTouch:best.ut.map(i=>start+i), lowerTouch:best.lt.map(i=>start+i) };
+    }
+    function _boxVolThr(cs,i,cfg){ const v=cs.map(c=>c.volume||0); return Math.max(_boxSMA(v,i,cfg.volShort)||0,_boxSMA(v,i,cfg.volLong)||0)*cfg.volMult; }
+    function _boxSingle(cs,i,b,cfg){ const c=cs[i].close, vt=_boxVolThr(cs,i,cfg);
+      if(c>=b.upperOuter*(1+cfg.brkPct)&&(cs[i].volume||0)>=vt) return 'up';
+      if(c<=b.lowerOuter*(1-cfg.brkPct)&&(cs[i].volume||0)>=vt) return 'down'; return null; }
+    function _boxConsec(cs,i,b,cfg){ const nn=cfg.consec; if(i-nn+1<0) return null; const s=cs.slice(i-nn+1,i+1);
+      if(s.every(x=>x.close>b.upperOuter)) return 'up'; if(s.every(x=>x.close<b.lowerOuter)) return 'down'; return null; }
+    function _boxEval(cs,cfg){
+      const b=_boxDetect(cs,cfg); if(!b) return null;
+      let status='FORMING', bi=null,bdir=null,brsn=null,pending=null;
+      for(let i=b.establishI+1;i<cs.length;i++){
+        const sb=_boxSingle(cs,i,b,cfg), cb=_boxConsec(cs,i,b,cfg), eff=sb||cb, reason=sb?'price_volume':(cb?'consecutive_closes':null);
+        if(eff==='up'){ status=pending==='down'?'FALSE_DOWN_THEN_UP':'CONFIRMED_UP'; bi=i;bdir='up';brsn=reason; break; }
+        if(eff==='down'){ status=pending==='up'?'FALSE_UP_THEN_DOWN':'CONFIRMED_DOWN'; bi=i;bdir='down';brsn=reason; break; }
+        const c=cs[i].close;
+        if(c>b.upperOuter) pending='up'; else if(c<b.lowerOuter) pending='down';
+        else { if(pending==='up') status='FALSE_UP_PENDING'; else if(pending==='down') status='FALSE_DOWN_PENDING'; }
+      }
+      const out=(status==='FALSE_UP_PENDING'||status==='FALSE_DOWN_PENDING')?'FORMING':status;
+      return { status:out, box:b, breakoutI:bi, breakoutDir:bdir, breakoutReason:brsn };
+    }
+
+    const _BOX_LABEL = { FORMING:'形成中', CONFIRMED_UP:'向上突破', CONFIRMED_DOWN:'向下跌破',
+      FALSE_UP_THEN_DOWN:'假突破→真跌破', FALSE_DOWN_THEN_UP:'假跌破→真突破' };
+    const _BOX_COLOR = { FORMING:'#9aa0b0', CONFIRMED_UP:'#e74c3c', CONFIRMED_DOWN:'#26c281',
+      FALSE_UP_THEN_DOWN:'#f39c12', FALSE_DOWN_THEN_UP:'#f39c12' };
+
+    function _boxClear() {
+      _boxSeriesRefs.forEach(s => { try { chartInstance.removeSeries(s); } catch(_){} });
+      _boxSeriesRefs = []; _boxMarkers = [];
+      try { _refreshChartMarkers(); } catch(_){}
+    }
+    function _boxLine(color, dashed) {
+      return chartInstance.addLineSeries({ color, lineWidth: dashed?1:2,
+        lineStyle: dashed?LightweightCharts.LineStyle.Dashed:LightweightCharts.LineStyle.Solid,
+        crosshairMarkerVisible:false, lastValueVisible:false, priceLineVisible:false });
+    }
+    function _drawBox() {
+      if (!chartInstance || !candleSeriesRef) return;
+      _boxClear();
+      const badge = document.getElementById('boxStatusBadge');
+      if (!_boxEnabled) { if (badge) badge.textContent=''; return; }
+      const cs = _boxLastCandles;
+      const r = (cs && cs.length) ? _boxEval(cs, _boxParams()) : null;
+      if (!r) { if (badge){ badge.textContent='📦 此區間無合格箱型'; badge.style.color='#9aa0b0'; } return; }
+      const b = r.box, col = '#FFC107';
+      const seg = (level, dashed) => {
+        const s = _boxLine(dashed?'#FF9800':col, dashed);
+        s.setData(cs.slice(b.start).map(c => ({ time:c.time, value:level })));
+        _boxSeriesRefs.push(s);
+      };
+      seg(b.upperCenter,false); seg(b.lowerCenter,false);
+      seg(b.upperOuter,true);   seg(b.lowerOuter,true);
+      // 觸碰點 markers(合併進 _refreshChartMarkers)
+      _boxMarkers = [];
+      b.upperTouch.forEach(i => cs[i] && _boxMarkers.push({ time:cs[i].time, position:'aboveBar', color:col, shape:'circle', text:'', size:0 }));
+      b.lowerTouch.forEach(i => cs[i] && _boxMarkers.push({ time:cs[i].time, position:'belowBar', color:col, shape:'circle', text:'', size:0 }));
+      if (r.breakoutI!=null && cs[r.breakoutI]) _boxMarkers.push({
+        time:cs[r.breakoutI].time, position:r.breakoutDir==='up'?'belowBar':'aboveBar',
+        color:_BOX_COLOR[r.status], shape:r.breakoutDir==='up'?'arrowUp':'arrowDown', text:'突破', size:2 });
+      try { _refreshChartMarkers(); } catch(_){}
+      if (badge) {
+        const rsn = r.breakoutReason==='price_volume'?'價+量':(r.breakoutReason==='consecutive_closes'?'連續收破':'');
+        badge.innerHTML = `📦 <b style="color:${_BOX_COLOR[r.status]}">${_BOX_LABEL[r.status]||r.status}</b>`
+          + `　箱 ${b.lowerCenter.toFixed(2)}~${b.upperCenter.toFixed(2)}`
+          + `（外緣 ${b.lowerOuter.toFixed(2)}~${b.upperOuter.toFixed(2)}）`
+          + (rsn?`　<span style="color:${_BOX_COLOR[r.status]}">${rsn}</span>`:'');
+        badge.style.color = 'var(--text)';
+      }
+    }
+    function _boxRedraw() { _drawBox(); }
+    function _boxResetParams() {
+      const set=(id,v)=>{ const el=document.getElementById(id); if(el) el.value=v; };
+      set('boxLookback',60); set('boxTouch',3); set('boxAtrMult',0.25); set('boxTolCap',0.01);
+      set('boxBrkPct',0.03); set('boxVolMult',1.3); set('boxConsec',3);
+      const m=document.getElementById('boxTolMode'); if(m) m.value='atr_capped';
+      _drawBox();
+    }
+    function toggleBox(el) {
+      _boxEnabled = !_boxEnabled;
+      const panel = document.getElementById('boxPanel');
+      if (panel) panel.style.display = _boxEnabled ? 'flex' : 'none';
+      if (el) el.style.opacity = _boxEnabled ? '1' : '0.5';
+      _drawBox();
     }
 
     function _renderVOLChart(candles) {
