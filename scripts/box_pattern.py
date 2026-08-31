@@ -205,8 +205,11 @@ def detect_box(bars, end_i, cfg):
     a0, a1 = min(all_t), max(all_t)
     a_lows = [lows[i] for i in range(a0, a1 + 1)]
     a_highs = [highs[i] for i in range(a0, a1 + 1)]
-    lower_outer = min(lower_center - lower_tol, _pctile(a_lows, cfg["edge_low_pctile"]))
-    upper_outer = max(upper_center + upper_tol, _pctile(a_highs, cfg["edge_high_pctile"]))
+    lower_outer = _pctile(a_lows, cfg["edge_low_pctile"])
+    upper_outer = _pctile(a_highs, cfg["edge_high_pctile"])
+    # 箱高改用「實際價格區間(外緣 P5~P95)」≤ max_height_pct → 排除觸碰在中段、實際振幅太大的假箱(V型)
+    if lower_outer is None or lower_outer <= 0 or (upper_outer - lower_outer) / lower_outer > cfg["max_height_pct"]:
+        return None
     # 保險:盤整區插破外緣的根數比例 > max_pierce_frac → 不算乾淨箱
     span = a1 - a0 + 1
     pierce = sum(1 for i in range(a0, a1 + 1) if lows[i] < lower_outer or highs[i] > upper_outer)

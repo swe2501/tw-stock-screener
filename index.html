@@ -5011,8 +5011,10 @@
       const a0 = Math.min(...allT), a1 = Math.max(...allT);
       const aLows=[], aHighs=[];
       for(let i=a0;i<=a1;i++){ aLows.push(lows[i]); aHighs.push(highs[i]); }
-      const loOut = Math.min(best.L-best.ltol, _boxPctile(aLows, cfg.edgeLowPctile));
-      const upOut = Math.max(best.U+best.utol, _boxPctile(aHighs, cfg.edgeHighPctile));
+      const loOut = _boxPctile(aLows, cfg.edgeLowPctile);
+      const upOut = _boxPctile(aHighs, cfg.edgeHighPctile);
+      // 箱高改用「實際價格區間(外緣 P5~P95)」≤ maxHeightPct → 排除觸碰在中段、振幅太大的假箱
+      if(loOut===null || loOut<=0 || (upOut-loOut)/loOut > cfg.maxHeightPct) return null;
       let pierce=0; for(let i=a0;i<=a1;i++){ if(lows[i]<loOut||highs[i]>upOut) pierce++; }
       const span=a1-a0+1;
       if(span>0 && pierce/span > cfg.maxPierceFrac) return null;   // 保險:插破太多不算箱
