@@ -4733,7 +4733,10 @@
 
       _updatePriceTag(candles);
       _renderMainChart(candles, events || []);
-      _boxLastCandles = _validCandles(candles);
+      // 箱型偵測排除「今日尚未收盤的即時棒」→ 用最後已收盤棒評估,與篩選器(每日收盤快照)對齊
+      let _bc = _validCandles(candles);
+      if (_bc.length && _bc[_bc.length - 1].time === _todayStr()) _bc = _bc.slice(0, -1);
+      _boxLastCandles = _bc;
       if (_boxEnabled) { try { _drawBox(); } catch (_) {} }
       _renderVOLChart(candles);
       _renderMACDChart(candles);
