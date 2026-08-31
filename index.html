@@ -1677,6 +1677,7 @@
         <div id="boxPanel" style="display:none;padding:6px 10px;border-top:1px solid var(--border);font-size:12px;color:var(--text);gap:10px;flex-wrap:wrap;align-items:center">
           <span id="boxStatusBadge" style="font-weight:600"></span>
           <span style="opacity:.4">·</span>
+          <label style="display:inline-flex;align-items:center;gap:3px;cursor:pointer"><input type="checkbox" id="boxRectChk" checked onchange="_boxRectToggle()">顯示方框</label>
           <label>回看<input id="boxLookback" type="number" value="60" min="20" onchange="_boxRedraw()" style="width:52px;margin:0 2px;background:#1e2230;color:#c9d1d9;border:1px solid #2e3350;border-radius:3px;padding:1px 3px">根</label>
           <label>箱高≤<input id="boxMaxHeight" type="number" step="1" value="10" min="1" onchange="_boxRedraw()" style="width:46px;margin:0 2px;background:#1e2230;color:#c9d1d9;border:1px solid #2e3350;border-radius:3px;padding:1px 3px">%</label>
           <label>觸碰<input id="boxTouch" type="number" value="3" min="2" onchange="_boxRedraw()" style="width:40px;margin:0 2px;background:#1e2230;color:#c9d1d9;border:1px solid #2e3350;border-radius:3px;padding:1px 3px">次</label>
@@ -4801,12 +4802,12 @@
         if (macdInstance)  macdInstance.applyOptions({ width: document.getElementById('macdContainer').clientWidth });
         if (rsiInstance)   rsiInstance.applyOptions({ width: document.getElementById('rsiContainer').clientWidth });
         resizeFibCanvas();
-        if (trendLines.length > 0) redrawCanvas();
+        if (trendLines.length > 0 || (_boxEnabled && _boxRectShow && _boxRect)) redrawCanvas();
       }).observe(mainEl);
 
       // Redraw trend lines / fib labels when chart is panned / zoomed
       chartInstance.timeScale().subscribeVisibleTimeRangeChange(() => {
-        if (trendLines.length > 0 || trendStart || fibLevels.length > 0) redrawCanvas();
+        if (trendLines.length > 0 || trendStart || fibLevels.length > 0 || (_boxEnabled && _boxRectShow && _boxRect)) redrawCanvas();
       });
 
       // Zoom / scroll lock + cross-panel sync via logical range.
@@ -4932,6 +4933,8 @@
     var _boxLastCandles = [];
     var _boxSeriesRefs = [];
     var _boxMarkers = [];
+    var _boxRect = null;          // 箱型方框範圍 {t1,t2,top,bottom,color}(畫在 fibCanvas 上)
+    var _boxRectShow = true;      // 是否顯示方框(K圖 checkbox)
     const _BOX_DEF = { lookback:60, maxHeightPct:0.10, formVolSpikes:2, breakoutRecency:3, reqU:3, reqL:3, spacing:2, atrPeriod:14,
       tolMode:'atr_capped', atrMult:0.25, tolCap:0.01, fixedPct:0.01,
       brkPct:0.03, volShort:5, volLong:10, volMult:1.3, consec:3 };
@@ -5032,7 +5035,7 @@
 
     function _boxClear() {
       _boxSeriesRefs.forEach(s => { try { chartInstance.removeSeries(s); } catch(_){} });
-      _boxSeriesRefs = []; _boxMarkers = [];
+      _boxSeriesRefs = []; _boxMarkers = []; _boxRect = null;
       try { _refreshChartMarkers(); } catch(_){}
     }
     function _boxLine(color, dashed) {
@@ -5044,10 +5047,10 @@
       if (!chartInstance || !candleSeriesRef) return;
       _boxClear();
       const badge = document.getElementById('boxStatusBadge');
-      if (!_boxEnabled) { if (badge) badge.textContent=''; return; }
+      if (!_boxEnabled) { if (badge) badge.textContent=''; try { redrawCanvas(); } catch(_){} return; }
       const cs = _boxLastCandles;
       const r = (cs && cs.length) ? _boxEval(cs, _boxParams()) : null;
-      if (!r) { if (badge){ badge.textContent='📦 此區間無合格箱型'; badge.style.color='#9aa0b0'; } return; }
+      if (!r) { if (badge){ badge.textContent='📦 此區間無合格箱型'; badge.style.color='#9aa0b0'; } try { redrawCanvas(); } catch(_){} return; }
       const b = r.box, col = '#FFC107';
       const seg = (level, dashed) => {
         const s = _boxLine(dashed?'#FF9800':col, dashed);
@@ -5072,8 +5075,22 @@
           + (rsn?`　<span style="color:${_BOX_COLOR[r.status]}">${rsn}</span>`:'');
         badge.style.color = 'var(--text)';
       }
+      // 方框範圍:最早觸碰 ~ 突破日(或最新),上下用外緣
+      const allT = b.upperTouch.concat(b.lowerTouch);
+      const t1i = Math.min.apply(null, allT);
+      _boxRect = {
+        t1: cs[t1i].time,
+        t2: (r.breakoutI!=null && cs[r.breakoutI]) ? cs[r.breakoutI].time : cs[cs.length-1].time,
+        top: b.upperOuter, bottom: b.lowerOuter, color: _BOX_COLOR[r.status] || '#FFC107',
+      };
+      try { redrawCanvas(); } catch(_){}
     }
     function _boxRedraw() { _drawBox(); }
+    function _boxRectToggle() {
+      const el = document.getElementById('boxRectChk');
+      _boxRectShow = el ? el.checked : true;
+      try { redrawCanvas(); } catch(_){}
+    }
     function _boxResetParams() {
       const set=(id,v)=>{ const el=document.getElementById(id); if(el) el.value=v; };
       set('boxLookback',60); set('boxMaxHeight',10); set('boxTouch',3); set('boxAtrMult',0.25); set('boxTolCap',0.01);
@@ -5259,8 +5276,31 @@
       if (!canvas || !chartInstance || !candleSeriesRef) return;
       const ctx = canvas.getContext('2d');
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      _drawBoxRectOnCtx(ctx);
       _drawTrendLinesOnCtx(ctx);
       _drawFibLabelsOnCtx(ctx);
+    }
+
+    function _drawBoxRectOnCtx(ctx) {
+      if (!_boxEnabled || !_boxRectShow || !_boxRect || !chartInstance || !candleSeriesRef) return;
+      const ts = chartInstance.timeScale();
+      let x1 = ts.timeToCoordinate(_boxRect.t1);
+      let x2 = ts.timeToCoordinate(_boxRect.t2);
+      const yTop = candleSeriesRef.priceToCoordinate(_boxRect.top);
+      const yBot = candleSeriesRef.priceToCoordinate(_boxRect.bottom);
+      if (yTop == null || yBot == null) return;
+      const W = ctx.canvas.width;
+      if (x1 == null) x1 = 0;          // 端點捲出可視範圍 → 夾到畫布邊界
+      if (x2 == null) x2 = W;
+      const x = Math.min(x1, x2), w = Math.max(2, Math.abs(x2 - x1));
+      const y = Math.min(yTop, yBot), h = Math.max(2, Math.abs(yBot - yTop));
+      ctx.save();
+      ctx.fillStyle = 'rgba(255,193,7,0.10)';
+      ctx.fillRect(x, y, w, h);
+      ctx.strokeStyle = _boxRect.color || '#FFC107';
+      ctx.lineWidth = 1.5; ctx.setLineDash([5, 3]);
+      ctx.strokeRect(x, y, w, h);
+      ctx.restore();
     }
 
     function _drawFibLabelsOnCtx(ctx) {
