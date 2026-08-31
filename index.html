@@ -4939,7 +4939,7 @@
     var _boxRect = null;          // 箱型方框範圍 {t1,t2,top,bottom,color}(畫在 fibCanvas 上)
     var _boxRectShow = true;      // 是否顯示方框(K圖 checkbox)
     const _BOX_DEF = { lookback:60, maxHeightPct:0.10, formVolSpikes:2, breakoutRecency:3,
-      edgeLowPctile:5, edgeHighPctile:95, maxPierceFrac:0.15, reqU:3, reqL:3, spacing:2, atrPeriod:14,
+      edgeLowPctile:5, edgeHighPctile:95, edgeNearPct:0.03, maxPierceFrac:0.15, reqU:3, reqL:3, spacing:2, atrPeriod:14,
       tolMode:'atr_capped', atrMult:0.25, tolCap:0.01, fixedPct:0.01,
       brkPct:0.03, volShort:5, volLong:10, volMult:1.3, consec:3 };
 
@@ -5013,8 +5013,10 @@
       for(let i=a0;i<=a1;i++){ aLows.push(lows[i]); aHighs.push(highs[i]); }
       const loOut = _boxPctile(aLows, cfg.edgeLowPctile);
       const upOut = _boxPctile(aHighs, cfg.edgeHighPctile);
-      // 箱高改用「實際價格區間(外緣 P5~P95)」≤ maxHeightPct → 排除觸碰在中段、振幅太大的假箱
+      // 箱高(實際區間 外緣)≤ maxHeightPct → 排除振幅太大(2421型)
       if(loOut===null || loOut<=0 || (upOut-loOut)/loOut > cfg.maxHeightPct) return null;
+      // 觸碰須靠近箱邊界(距外緣 ≤ edgeNearPct)→ 排除支撐/壓力設在中段的假箱(1805型)
+      if((best.L-loOut)/loOut > cfg.edgeNearPct || (upOut-best.U)/best.U > cfg.edgeNearPct) return null;
       let pierce=0; for(let i=a0;i<=a1;i++){ if(lows[i]<loOut||highs[i]>upOut) pierce++; }
       const span=a1-a0+1;
       if(span>0 && pierce/span > cfg.maxPierceFrac) return null;   // 保險:插破太多不算箱
@@ -5075,8 +5077,7 @@
         s.setData(cs.slice(b.start).map(c => ({ time:c.time, value:level })));
         _boxSeriesRefs.push(s);
       };
-      seg(b.upperCenter,false); seg(b.lowerCenter,false);
-      seg(b.upperOuter,true);   seg(b.lowerOuter,true);
+      seg(b.upperOuter,false);  seg(b.lowerOuter,false);   // 只畫箱邊界(外緣),不再畫中段觸碰線
       // 觸碰點 markers(合併進 _refreshChartMarkers)
       _boxMarkers = [];
       b.upperTouch.forEach(i => cs[i] && _boxMarkers.push({ time:cs[i].time, position:'aboveBar', color:col, shape:'circle', text:'', size:0 }));
@@ -5088,8 +5089,7 @@
       if (badge) {
         const rsn = r.breakoutReason==='price_volume'?'價+量':(r.breakoutReason==='consecutive_closes'?'連續收破':'');
         badge.innerHTML = `📦 <b style="color:${_BOX_COLOR[r.status]}">${_BOX_LABEL[r.status]||r.status}</b>`
-          + `　箱 ${b.lowerCenter.toFixed(2)}~${b.upperCenter.toFixed(2)}`
-          + `（外緣 ${b.lowerOuter.toFixed(2)}~${b.upperOuter.toFixed(2)}）`
+          + `　箱 ${b.lowerOuter.toFixed(2)}~${b.upperOuter.toFixed(2)}`
           + (rsn?`　<span style="color:${_BOX_COLOR[r.status]}">${rsn}</span>`:'');
         badge.style.color = 'var(--text)';
       }

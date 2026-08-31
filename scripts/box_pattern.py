@@ -18,9 +18,10 @@ DEFAULTS = {
     "max_height_pct": 0.10,            # 箱高上限:(上緣-下緣)/下緣 ≤ 10%(緊密箱)
     "formation_vol_max_spikes": 2,     # 形成期允許最多幾根量 > max(5,10)×量倍(容忍雜訊)
     "breakout_recency_bars": 3,        # 突破須發生在評估日近幾根內才報(否則過期=非當前箱)
-    "edge_low_pctile": 5,              # 下外緣取盤整區低點的第5百分位(讓箱框住約9成K棒)
-    "edge_high_pctile": 95,            # 上外緣取高點第95百分位
-    "max_pierce_frac": 0.15,           # 保險:盤整區插破外緣的根數比例 >此則不算箱
+    "edge_low_pctile": 5,              # 下外緣=盤整區低點第5百分位(框住約9成K棒)
+    "edge_high_pctile": 95,            # 上外緣=高點第95百分位
+    "edge_near_pct": 0.03,             # 觸碰價位須靠近外緣(距外緣 ≤此%)→ 排除觸碰在中段的假箱
+    "max_pierce_frac": 0.15,           # 保險:插破外緣的根數比例 >此則不算箱
     "required_upper_touches": 3,
     "required_lower_touches": 3,
     "min_touch_spacing_bars": 2,
@@ -200,17 +201,23 @@ def detect_box(bars, end_i, cfg):
     if not best:
         return None
     upper_center, upper_tol, upper_touch, lower_center, lower_tol, lower_touch, establish_win = best
-    # 外邊界:盤整區(首觸碰~末觸碰)高低點的 P95/P5,並至少含中心±容忍 → 讓箱框住約9成K棒
+    # 外緣=盤整區(首~末觸碰)低點P5/高點P95 → 框住約9成K棒
     all_t = upper_touch + lower_touch
     a0, a1 = min(all_t), max(all_t)
     a_lows = [lows[i] for i in range(a0, a1 + 1)]
     a_highs = [highs[i] for i in range(a0, a1 + 1)]
     lower_outer = _pctile(a_lows, cfg["edge_low_pctile"])
     upper_outer = _pctile(a_highs, cfg["edge_high_pctile"])
-    # 箱高改用「實際價格區間(外緣 P5~P95)」≤ max_height_pct → 排除觸碰在中段、實際振幅太大的假箱(V型)
-    if lower_outer is None or lower_outer <= 0 or (upper_outer - lower_outer) / lower_outer > cfg["max_height_pct"]:
+    if lower_outer is None or lower_outer <= 0:
         return None
-    # 保險:盤整區插破外緣的根數比例 > max_pierce_frac → 不算乾淨箱
+    # 箱高(實際區間 外緣)≤ max_height_pct → 排除振幅太大(2421 型)
+    if (upper_outer - lower_outer) / lower_outer > cfg["max_height_pct"]:
+        return None
+    # 觸碰須靠近箱邊界(不是中段):觸碰價位距外緣 ≤ edge_near_pct → 排除支撐/壓力設在中段的假箱(1805 型)
+    if (lower_center - lower_outer) / lower_outer > cfg["edge_near_pct"] \
+       or (upper_outer - upper_center) / upper_center > cfg["edge_near_pct"]:
+        return None
+    # 保險:插破外緣的根數比例 ≤ max_pierce_frac
     span = a1 - a0 + 1
     pierce = sum(1 for i in range(a0, a1 + 1) if lows[i] < lower_outer or highs[i] > upper_outer)
     if span > 0 and pierce / span > cfg["max_pierce_frac"]:
