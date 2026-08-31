@@ -4733,11 +4733,17 @@
 
       _updatePriceTag(candles);
       _renderMainChart(candles, events || []);
-      // 箱型偵測排除「今日尚未收盤的即時棒」→ 用最後已收盤棒評估,與篩選器(每日收盤快照)對齊
-      let _bc = _validCandles(candles);
-      if (_bc.length && _bc[_bc.length - 1].time === _todayStr()) _bc = _bc.slice(0, -1);
-      _boxLastCandles = _bc;
-      if (_boxEnabled) { try { _drawBox(); } catch (_) {} }
+      // 箱型偵測改用「證交所資料(price_window)」——與篩選器/box_patterns 同源,避免 K圖(YF)與篩選器不一致;
+      // 並排除今日尚未收盤的即時棒。抓不到(未登入/非個股)則退回圖表資料。
+      _boxLastCandles = [];
+      const _boxCode = currentCode;
+      (async () => {
+        const tw = await _boxFetchTWSE(_boxCode);
+        if (_boxCode !== currentCode) return;   // 期間換股 → 放棄
+        // 用最後一根評估,與 box_patterns(後端 compute_box)同基準 → 篩選器/K圖一致
+        _boxLastCandles = tw && tw.length ? tw : _validCandles(candles);
+        if (_boxEnabled) { try { _drawBox(); } catch (_) {} }
+      })();
       _renderVOLChart(candles);
       _renderMACDChart(candles);
       _renderRSIChart(candles);
@@ -4938,6 +4944,21 @@
     var _boxMarkers = [];
     var _boxRect = null;          // 箱型方框範圍 {t1,t2,top,bottom,color}(畫在 fibCanvas 上)
     var _boxRectShow = true;      // 是否顯示方框(K圖 checkbox)
+    var _boxTwseCache = {};       // 每檔證交所 OHLCV 快取(箱型用,與篩選器/box_patterns 同源)
+    async function _boxFetchTWSE(code) {
+      if (_boxTwseCache[code]) return _boxTwseCache[code];
+      if (!_isStock(code)) return null;
+      try {
+        const r = await fetch(`${SIG_SB_URL}/rest/v1/price_window?select=trade_date,open,high,low,close,volume&code=eq.${encodeURIComponent(code)}&order=trade_date.asc&limit=1000`,
+          { headers: { apikey: SIG_SB_ANON, Authorization: `Bearer ${SIG_SB_ANON}` } });
+        if (!r.ok) return null;
+        const rows = await r.json();
+        const cs = rows.map(x => ({ time: x.trade_date, open: +x.open, high: +x.high, low: +x.low, close: +x.close, volume: +x.volume || 0 }))
+                       .filter(c => c.open > 0 && c.close > 0);
+        _boxTwseCache[code] = cs;
+        return cs;
+      } catch (_) { return null; }
+    }
     const _BOX_DEF = { lookback:60, maxHeightPct:0.10, formVolSpikes:2, breakoutRecency:3,
       edgeLowPctile:5, edgeHighPctile:95, edgeNearPct:0.03, maxPierceFrac:0.15, reqU:3, reqL:3, spacing:2, atrPeriod:14,
       tolMode:'atr_capped', atrMult:0.25, tolCap:0.01, fixedPct:0.01,
