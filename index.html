@@ -4938,7 +4938,8 @@
     var _boxMarkers = [];
     var _boxRect = null;          // 箱型方框範圍 {t1,t2,top,bottom,color}(畫在 fibCanvas 上)
     var _boxRectShow = true;      // 是否顯示方框(K圖 checkbox)
-    const _BOX_DEF = { lookback:60, maxHeightPct:0.10, formVolSpikes:2, breakoutRecency:3, reqU:3, reqL:3, spacing:2, atrPeriod:14,
+    const _BOX_DEF = { lookback:60, maxHeightPct:0.10, formVolSpikes:2, breakoutRecency:3,
+      edgeLowPctile:5, edgeHighPctile:95, maxPierceFrac:0.15, reqU:3, reqL:3, spacing:2, atrPeriod:14,
       tolMode:'atr_capped', atrMult:0.25, tolCap:0.01, fixedPct:0.01,
       brkPct:0.03, volShort:5, volLong:10, volMult:1.3, consec:3 };
 
@@ -4957,6 +4958,8 @@
       return t.length? t.reduce((a,b)=>a+b,0)/t.length : null; }
     function _boxSMA(v,i,p){ if(i<0) return null; let lo=Math.max(0,i-p+1),s=v.slice(lo,i+1);
       return s.length? s.reduce((a,b)=>a+b,0)/s.length : null; }
+    function _boxPctile(vals,p){ if(!vals.length) return null; const s=vals.slice().sort((a,b)=>a-b);
+      const idx=Math.round(p/100*(s.length-1)); return s[Math.max(0,Math.min(s.length-1,idx))]; }
     function _boxTol(edge,atr,cfg){ return cfg.tolMode==='percent' ? edge*cfg.fixedPct
       : Math.min((atr||0)*cfg.atrMult, edge*cfg.tolCap); }
     function _boxDedup(idx,sp){ let o=[]; for(const i of idx) if(!o.length||i-o[o.length-1]>=sp+1) o.push(i); return o; }
@@ -5003,9 +5006,19 @@
             best={U,utol,ut,L,ltol,lt,est:a.establish}; } }
       if(!best) return null;
       const eI = start + best.est;
+      // 外邊界:盤整區(首觸碰~末觸碰)高低點的 P95/P5,至少含中心±容忍 → 框住約9成K棒
+      const allT = best.ut.concat(best.lt);
+      const a0 = Math.min(...allT), a1 = Math.max(...allT);
+      const aLows=[], aHighs=[];
+      for(let i=a0;i<=a1;i++){ aLows.push(lows[i]); aHighs.push(highs[i]); }
+      const loOut = Math.min(best.L-best.ltol, _boxPctile(aLows, cfg.edgeLowPctile));
+      const upOut = Math.max(best.U+best.utol, _boxPctile(aHighs, cfg.edgeHighPctile));
+      let pierce=0; for(let i=a0;i<=a1;i++){ if(lows[i]<loOut||highs[i]>upOut) pierce++; }
+      const span=a1-a0+1;
+      if(span>0 && pierce/span > cfg.maxPierceFrac) return null;   // 保險:插破太多不算箱
       return { start, establishI:eI,
         upperCenter:best.U, lowerCenter:best.L, upperTol:best.utol, lowerTol:best.ltol,
-        upperOuter:best.U+best.utol, lowerOuter:best.L-best.ltol, atr,
+        upperOuter:upOut, lowerOuter:loOut, atr,
         upperTouch:best.ut.map(i=>start+i), lowerTouch:best.lt.map(i=>start+i) };
     }
     function _boxVolThr(cs,i,cfg){ const v=cs.map(c=>c.volume||0); return Math.max(_boxSMA(v,i,cfg.volShort)||0,_boxSMA(v,i,cfg.volLong)||0)*cfg.volMult; }
