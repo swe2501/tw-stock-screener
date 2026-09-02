@@ -3602,7 +3602,7 @@
       _refreshChartMarkers();
     }
 
-    // ── 貪婪指標（P3）＝ 0.40×強度 + 0.35×話題熱度(取最高) + 0.25×法說會催化 ──
+    // ── 貪婪指標＝ 0.70×基礎四維分(greed_base) + 0.30×催化(取最強:話題/法說/展覽) ──
     let _greedData = null;
     function _greedZone(v) {
       return v < 25 ? '極度恐懼' : v < 45 ? '恐懼' : v <= 55 ? '中立' : v <= 75 ? '貪婪' : '極度貪婪';
@@ -3632,14 +3632,15 @@
       if (!_isStock(code)) return;
       try {
         const hdr = { apikey: SIG_SB_ANON, Authorization: `Bearer ${SIG_SB_ANON}` };
-        const [rs, rt, rc, re] = await Promise.all([
-          fetch(`${SIG_SB_URL}/rest/v1/stock_strength?select=strength&code=eq.${encodeURIComponent(code)}`, { headers: hdr }),
+        const [rb, rt, rc, re] = await Promise.all([
+          fetch(`${SIG_SB_URL}/rest/v1/greed_base?select=base,price_score,momentum_score,volume_score,chip_score,exhaust,data_date&code=eq.${encodeURIComponent(code)}`, { headers: hdr }),
           fetch(`${SIG_SB_URL}/rest/v1/hot_topics?select=heat,sector,codes`, { headers: hdr }),
           fetch(`${SIG_SB_URL}/rest/v1/catalyst_events?select=start_date&event_type=eq.${encodeURIComponent('法說會')}&code=eq.${encodeURIComponent(code)}`, { headers: hdr }),
           fetch(`${SIG_SB_URL}/rest/v1/catalyst_events?select=sector,start_date,end_date,title&event_type=eq.${encodeURIComponent('展覽')}`, { headers: hdr }),
         ]);
         if (currentCode !== code) return;
-        const strength = rs.ok ? (((await rs.json())[0] || {}).strength || 0) : 0;
+        const b = rb.ok ? ((await rb.json())[0] || {}) : {};
+        const base = b.base || 0;
         let topicHeat = 0, topicSector = '';
         if (rt.ok) (await rt.json()).forEach(t => {
           if ((t.codes || []).some(c => c.code === code) && (t.heat || 0) > topicHeat) { topicHeat = t.heat || 0; topicSector = t.sector || ''; }
@@ -3666,28 +3667,83 @@
           else if (dEnd < 0 && dEnd >= -5) sc = 40;             // 展後衰減
           if (sc > exhScore) { exhScore = sc; exhInfo = `${sec}展 ${x.start_date}~${x.end_date || x.start_date}`; }
         });
-        const greed = Math.round(0.35 * strength + 0.30 * topicHeat + 0.20 * lawScore + 0.15 * exhScore);
-        _greedData = { code, greed, strength, topicHeat, topicSector, lawScore, lawDate, lawDays, exhScore, exhInfo };
-        if (el) { el.innerHTML = _greedGaugeSVG(greed, 120); el.style.display = 'block'; }
+        // 催化取最強者;最終 = 0.70×基礎 + 0.30×催化
+        const catalyst = Math.max(topicHeat, lawScore, exhScore);
+        const catSrc = catalyst === 0 ? '' : (catalyst === topicHeat ? '話題' : catalyst === lawScore ? '法說' : '展覽');
+        const greed = Math.round(0.70 * base + 0.30 * catalyst);
+        _greedData = {
+          code, greed, base, exhaust: !!b.exhaust,
+          priceS: b.price_score, momS: b.momentum_score, volS: b.volume_score, chipS: b.chip_score, dataDate: b.data_date,
+          topicHeat, topicSector, lawScore, lawDate, lawDays, exhScore, exhInfo, catalyst, catSrc,
+        };
+        if (el) { el.innerHTML = _greedGaugeSVG(greed, 120) + (b.exhaust ? '<span title="利多出盡：基礎≥80且爆量且(長黑或高檔)" style="margin-left:6px;font-size:11px;color:#E24B4A;font-weight:700">⚠️利多出盡</span>' : ''); el.style.display = 'block'; }
       } catch (_) { /* 貪婪指標非必要，失敗靜默 */ }
+    }
+    // 完整計分規則 + 本次改動（供合夥人複查，寫在網站上）
+    function _greedMethodologyHTML() {
+      const row = (name, pairs) => `<tr><td style="padding:2px 8px 2px 0;white-space:nowrap;color:var(--text)">${name}</td><td style="padding:2px 0;color:var(--text-muted);font-family:monospace">${pairs}</td></tr>`;
+      return `<details style="margin-top:12px;border-top:1px solid var(--border);padding-top:9px">
+        <summary style="cursor:pointer;font-size:12px;color:#c678dd;font-weight:600">＋ 完整計分規則與本次改動（合夥人複查）</summary>
+        <div style="margin-top:9px;font-size:11.5px;line-height:1.55">
+          <b style="color:#4da3ff">最終公式</b>：貪婪 = 0.70×基礎 + 0.30×催化(取話題/法說/展覽最強者)，四捨五入 0~100。<br>
+          <b style="color:#4da3ff">基礎(四維)</b> = 0.30×價格延伸 + 0.25×動能 + 0.25×量能 + 0.20×籌碼；每維 = 該維各指標「分段線性內插分」的<b>平均</b>（缺值維度自動重歸一化權重）。
+          <div style="margin-top:8px;color:var(--text)"><b>各指標錨點（x→分，中間線性內插）</b></div>
+          <table style="border-collapse:collapse;font-size:11px;margin-top:3px">
+            ${row('BIAS20 %', '-10→0, -5→30, -3→40, 8→60, 15→80, 25→100')}
+            ${row('布林 %b', '0→0, 0.2→30, 0.3→40, 0.8→60, 1.0→80, 1.2→100')}
+            ${row('RSI(5)', '10→0, 30→39, 45→40, 70→60, 85→80, 95→100')}
+            ${row('RS(超額報酬,近20日個股−大盤%)', '-10→0, -5→30, 0→50, 5→70, 10→85, 20→100')}
+            ${row('量比(量/20日均量)', '0.3→0, 0.5→30, 0.8→40, 1.7→59, 1.8→60, 3→80, 5→100')}
+            ${row('當沖率 %(只加貪婪;OTC缺則略)', '0→40, 35→55, 60→80, 80→100')}
+            ${row('主力集中度 %(前15大淨買/總量)', '-30→0, 0→40, 30→60, 50→80, 70→100')}
+            ${row('融資單週增幅 %', '-10→30, 0→45, 10→60, 20→80, 40→100')}
+          </table>
+          <div style="margin-top:8px;color:var(--text)"><b>催化(取最強者)</b></div>
+          <div style="color:var(--text-muted)">
+            ・話題：hot_topics 熱度分（所屬最熱話題）<br>
+            ・法說：≤3天100 / 4~7天80 / 8~14天50 / 剛開完0~3天前60<br>
+            ・展覽：展中100 / 展前1~7天90 / 展前8~30天60 / 展後5天內40（需族群對得上）
+          </div>
+          <div style="margin-top:8px;color:var(--text)"><b>利多出盡⚠️</b></div>
+          <div style="color:var(--text-muted)">基礎≥80 且 當日爆量(量>max(5日,10日均量)×1.3) 且(長黑：收<開−5% 或 高檔：收>近60日最低×1.3)。</div>
+          <div style="margin-top:8px;color:var(--text)"><b>資料源</b></div>
+          <div style="color:var(--text-muted)">stock_daily(價量,證交所)、day_trade(當沖)、wantgoo_daily(集中度)、margin_short(融資)、taiex_daily(大盤,算RS)。每日夜間排程重算(greed_base 快照)。</div>
+          <div style="margin-top:9px;padding-top:7px;border-top:1px dashed var(--border);color:#E8A33D"><b>本次改動（vs 舊版）</b></div>
+          <div style="color:var(--text-muted)">
+            ① 公式：舊 0.35強度+0.30話題+0.20法說+0.15展覽 → <b>新 0.70基礎(四維)+0.30催化(取最強)</b>。<br>
+            ② 基礎：舊只用單一「強度」 → <b>新四維八指標</b>(價/動/量/籌，分段線性內插+維度取平均)。<br>
+            ③ RS：改為 <b>vs大盤超額報酬</b>(近20日 個股−大盤)。<br>
+            ④ 新增 <b>利多出盡⚠️</b> 旗標。
+          </div>
+        </div>
+      </details>`;
     }
     function _showGreedCalc() {
       const d = _greedData; if (!d) return;
-      const c1 = (0.35 * d.strength).toFixed(1), c2 = (0.30 * d.topicHeat).toFixed(1),
-        c3 = (0.20 * d.lawScore).toFixed(1), c4 = (0.15 * (d.exhScore || 0)).toFixed(1);
+      const cB = (0.70 * d.base).toFixed(1), cC = (0.30 * d.catalyst).toFixed(1);
       const lawTxt = d.lawDate ? `${d.lawDate}（${d.lawDays >= 0 ? d.lawDays + '天後' : Math.abs(d.lawDays) + '天前'}）→ ${d.lawScore}分` : '近期無 → 0分';
       const exhTxt = d.exhInfo ? `${d.exhInfo} → ${d.exhScore}分` : '無對應展覽 → 0分';
-      document.getElementById('greedPopupTitle').textContent = `${d.code} 貪婪指標 ${d.greed}（${_greedZone(d.greed)}）`;
+      const dim = (v) => v == null ? '—' : v;
+      document.getElementById('greedPopupTitle').textContent = `${d.code} 貪婪指標 ${d.greed}（${_greedZone(d.greed)}）${d.exhaust ? ' ⚠️利多出盡' : ''}`;
       document.getElementById('greedPopupBody').innerHTML = `
         <div style="background:rgba(255,255,255,.05);padding:9px 11px;border-radius:6px;font-family:monospace;font-size:12px;line-height:1.7">
-          貪婪 = 0.35×強度 + 0.30×話題 + 0.20×法說 + 0.15×展覽<br>
-          　　 = 0.35×${d.strength} + 0.30×${d.topicHeat} + 0.20×${d.lawScore} + 0.15×${d.exhScore || 0}<br>
-          　　 = ${c1} + ${c2} + ${c3} + ${c4} = <b style="color:#c678dd">${d.greed}</b></div>
-        <div style="margin-top:11px"><b style="color:#4da3ff">強度 ${d.strength}</b>（35%）：個股技術籌碼強度（RS＋均線＋近波段高）。</div>
-        <div style="margin-top:9px"><b style="color:#4da3ff">話題熱度 ${d.topicHeat}</b>（30%）：${d.topicSector ? '所屬最熱話題「' + d.topicSector + '」的熱度' : '不在任何話題 → 0'}（多話題取最高）。</div>
-        <div style="margin-top:9px"><b style="color:#4da3ff">法說會催化 ${d.lawScore}</b>（20%）：${lawTxt}。<span style="color:var(--text-muted)">（≤3天100/≤7天80/≤14天50/剛開完±3天60）</span></div>
-        <div style="margin-top:9px"><b style="color:#4da3ff">展覽鄰近 ${d.exhScore || 0}</b>（15%）：${exhTxt}。<span style="color:var(--text-muted)">（展中100/展前一週90/展前30天內60/展後5天40）</span></div>
-        <div style="margin-top:11px;font-size:11px;color:var(--text-muted)">區間：極度恐懼0–25・恐懼25–45・中立45–55・貪婪55–75・極度貪婪75–100。</div>`;
+          貪婪 = 0.70×基礎 + 0.30×催化(取最強)<br>
+          　　 = 0.70×${d.base} + 0.30×${d.catalyst}${d.catSrc ? '(' + d.catSrc + ')' : ''}<br>
+          　　 = ${cB} + ${cC} = <b style="color:#c678dd">${d.greed}</b></div>
+        <div style="margin-top:11px"><b style="color:#4da3ff">基礎分 ${d.base}</b>（70%，四維情緒/擁擠度${d.dataDate ? '・' + d.dataDate : ''}）：</div>
+        <div style="margin-top:5px;font-family:monospace;font-size:11.5px;color:var(--text);line-height:1.6">
+          價格延伸 30% = <b>${dim(d.priceS)}</b>（BIAS＋布林%b）<br>
+          動能強弱 25% = <b>${dim(d.momS)}</b>（RSI5＋RS vs大盤）<br>
+          量能投機 25% = <b>${dim(d.volS)}</b>（量比＋當沖率）<br>
+          籌碼擁擠 20% = <b>${dim(d.chipS)}</b>（前15大集中度＋融資增幅）</div>
+        <div style="margin-top:11px"><b style="color:#c678dd">催化 ${d.catalyst}</b>（30%，取三者最強${d.catSrc ? '：' + d.catSrc : ''}）：</div>
+        <div style="margin-top:5px;font-size:11.5px;line-height:1.6">
+          ・話題熱度 ${d.topicHeat}：${d.topicSector ? '所屬最熱話題「' + d.topicSector + '」' : '不在任何話題 → 0'}<br>
+          ・法說會 ${d.lawScore}：${lawTxt}<br>
+          ・展覽 ${d.exhScore || 0}：${exhTxt}</div>
+        ${d.exhaust ? '<div style="margin-top:11px;color:#E24B4A;font-size:11.5px">⚠️ <b>利多出盡</b>：基礎≥80 且 當日爆量(量>max(5,10日均量)×1.3) 且(長黑收<開-5% 或 收>近60日低×1.3)——追高風險偏高。</div>' : ''}
+        <div style="margin-top:11px;font-size:11px;color:var(--text-muted)">區間：極度恐懼0–25・恐懼25–45・中立45–55・貪婪55–75・極度貪婪75–100。</div>
+        ${_greedMethodologyHTML()}`;
       document.getElementById('greedPopup').style.display = 'flex';
     }
 
