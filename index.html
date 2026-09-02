@@ -3608,17 +3608,21 @@
       return v < 25 ? '極度恐懼' : v < 45 ? '恐懼' : v <= 55 ? '中立' : v <= 75 ? '貪婪' : '極度貪婪';
     }
     function _greedGaugeSVG(val, w) {
-      const cx = w / 2, cy = w * 0.52, R = w * 0.46;
+      const cx = w / 2, cy = w * 0.52, R = w * 0.38, ringW = w * 0.14;
       const pt = (v, r) => { const t = Math.PI * (1 - v / 100); return [cx + r * Math.cos(t), cy - r * Math.sin(t)]; };
       const zones = [[0, 25, '#E24B4A'], [25, 45, '#F0997B'], [45, 55, '#B4B2A9'], [55, 75, '#5DCAA5'], [75, 100, '#1D9E75']];
       let s = '';
-      zones.forEach(z => {
-        const p = pt(z[0], R), q = pt(z[1], R);
-        s += `<path d="M${cx} ${cy} L${p[0].toFixed(1)} ${p[1].toFixed(1)} A${R} ${R} 0 0 0 ${q[0].toFixed(1)} ${q[1].toFixed(1)} Z" fill="${z[2]}"/>`;
+      zones.forEach((z, i) => {
+        // 每段略微內縮，形成乾淨分隔；粗線圓弧讓內外邊緣保持同心、等厚。
+        const gap = 0.8;
+        const start = z[0] + (i ? gap : 0);
+        const end = z[1] - (i < zones.length - 1 ? gap : 0);
+        const p = pt(start, R), q = pt(end, R);
+        s += `<path d="M${p[0].toFixed(1)} ${p[1].toFixed(1)} A${R} ${R} 0 0 1 ${q[0].toFixed(1)} ${q[1].toFixed(1)}" fill="none" stroke="${z[2]}" stroke-width="${ringW.toFixed(1)}" stroke-linecap="butt"/>`;
       });
-      const tip = pt(val, R * 0.9);
+      const tip = pt(val, R + ringW * 0.18);
       s += `<line x1="${cx}" y1="${cy}" x2="${tip[0].toFixed(1)}" y2="${tip[1].toFixed(1)}" stroke="#f0f4fc" stroke-width="2.5" stroke-linecap="round"/>`;
-      s += `<circle cx="${cx}" cy="${cy}" r="4" fill="#f0f4fc"/>`;
+      s += `<circle cx="${cx}" cy="${cy}" r="4.5" fill="#f0f4fc" stroke="rgba(15,18,28,.65)" stroke-width="1.5"/>`;
       return `<div style="display:inline-flex;align-items:center;gap:8px;white-space:nowrap">
         <svg viewBox="0 0 ${w} ${(cy + 4).toFixed(0)}" width="${w}" style="overflow:visible;flex-shrink:0">${s}</svg>
         <div style="line-height:1.15;white-space:nowrap"><span style="font-size:18px;font-weight:700;color:var(--text)">${val}</span>
