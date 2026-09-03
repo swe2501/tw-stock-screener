@@ -1416,6 +1416,18 @@
         </div>
 
         <div class="field">
+          <label>箱型狀態</label>
+          <div class="label-hint">勾選要保留的箱型型態（可複選；對結果即時過濾，每日盤後更新。細部參數請到個股 K 圖調整）</div>
+          <div id="box_filter" style="display:flex;flex-wrap:wrap;gap:6px 14px;padding-top:2px">
+            <label style="display:inline-flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="checkbox" class="box-cb" value="CONFIRMED_UP" onchange="onBoxFilterChange()">向上突破</label>
+            <label style="display:inline-flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="checkbox" class="box-cb" value="CONFIRMED_DOWN" onchange="onBoxFilterChange()">向下跌破</label>
+            <label style="display:inline-flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="checkbox" class="box-cb" value="FORMING" onchange="onBoxFilterChange()">形成中</label>
+            <label style="display:inline-flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="checkbox" class="box-cb" value="FALSE_UP_THEN_DOWN" onchange="onBoxFilterChange()">假突破→真跌破</label>
+            <label style="display:inline-flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="checkbox" class="box-cb" value="FALSE_DOWN_THEN_UP" onchange="onBoxFilterChange()">假跌破→真突破</label>
+          </div>
+        </div>
+
+        <div class="field">
           <label>產業別</label>
           <div class="label-hint">篩選特定產業（對結果即時過濾）</div>
           <select id="industry_filter" class="form-select" onchange="filterAndRender()">
@@ -1662,6 +1674,21 @@
           </div>
         </div>
         <div id="brokerFilterPanel" style="display:none;padding:6px 8px;border-top:1px solid var(--border);font-size:12px;color:var(--text)"></div>
+        <div id="boxPanel" style="display:none;padding:6px 10px;border-top:1px solid var(--border);font-size:12px;color:var(--text);gap:10px;flex-wrap:wrap;align-items:center">
+          <span id="boxStatusBadge" style="font-weight:600"></span>
+          <span style="opacity:.4">·</span>
+          <label style="display:inline-flex;align-items:center;gap:3px;cursor:pointer"><input type="checkbox" id="boxRectChk" checked onchange="_boxRectToggle()">顯示方框</label>
+          <label>回看<input id="boxLookback" type="number" value="60" min="20" onchange="_boxRedraw()" style="width:52px;margin:0 2px;background:#1e2230;color:#c9d1d9;border:1px solid #2e3350;border-radius:3px;padding:1px 3px">根</label>
+          <label>箱高≤<input id="boxMaxHeight" type="number" step="1" value="10" min="1" onchange="_boxRedraw()" style="width:46px;margin:0 2px;background:#1e2230;color:#c9d1d9;border:1px solid #2e3350;border-radius:3px;padding:1px 3px">%</label>
+          <label>觸碰<input id="boxTouch" type="number" value="3" min="2" onchange="_boxRedraw()" style="width:40px;margin:0 2px;background:#1e2230;color:#c9d1d9;border:1px solid #2e3350;border-radius:3px;padding:1px 3px">次</label>
+          <label>容忍<select id="boxTolMode" onchange="_boxRedraw()" style="margin:0 2px;background:#1e2230;color:#c9d1d9;border:1px solid #2e3350;border-radius:3px;padding:1px 3px"><option value="atr_capped">ATR</option><option value="percent">百分比</option></select></label>
+          <label>ATR×<input id="boxAtrMult" type="number" step="0.05" value="0.25" onchange="_boxRedraw()" style="width:52px;margin:0 2px;background:#1e2230;color:#c9d1d9;border:1px solid #2e3350;border-radius:3px;padding:1px 3px"></label>
+          <label>上限%<input id="boxTolCap" type="number" step="0.005" value="0.01" onchange="_boxRedraw()" style="width:60px;margin:0 2px;background:#1e2230;color:#c9d1d9;border:1px solid #2e3350;border-radius:3px;padding:1px 3px"></label>
+          <label>突破%<input id="boxBrkPct" type="number" step="0.01" value="0.03" onchange="_boxRedraw()" style="width:60px;margin:0 2px;background:#1e2230;color:#c9d1d9;border:1px solid #2e3350;border-radius:3px;padding:1px 3px"></label>
+          <label>量倍<input id="boxVolMult" type="number" step="0.1" value="1.3" onchange="_boxRedraw()" style="width:48px;margin:0 2px;background:#1e2230;color:#c9d1d9;border:1px solid #2e3350;border-radius:3px;padding:1px 3px"></label>
+          <label>連續<input id="boxConsec" type="number" value="3" min="1" onchange="_boxRedraw()" style="width:40px;margin:0 2px;background:#1e2230;color:#c9d1d9;border:1px solid #2e3350;border-radius:3px;padding:1px 3px">根</label>
+          <button onclick="_boxResetParams()" style="cursor:pointer;background:#2e3350;color:#c9d1d9;border:1px solid #3a4060;border-radius:4px;padding:2px 8px">預設</button>
+        </div>
         <div id="chartLoading"><div class="spinner"></div> 載入中...</div>
         <div id="chartWrapper" style="display:none">
           <div id="mainChartPanel">
@@ -1682,6 +1709,7 @@
               </div>
               <div class="label-row">
                 <span class="ma-toggle" onclick="toggleBBand(this)" style="color:#00BCD4">BBAND(20,2)</span>
+                <span class="ma-toggle" id="boxToggle" onclick="toggleBox(this)" style="color:#FFC107;opacity:0.5">📦 箱型</span>
               </div>
             </div>
           </div>
@@ -1944,20 +1972,37 @@
       setTimeout(() => _pollScreenResult(jobId, tries + 1), 3000);
     }
 
+    // 箱型狀態(A):讀 box_patterns(anon)做結果後過濾;細部參數版在個股 K 圖(B)
+    let _boxStatusMap = null;
+    async function _ensureBoxMap() {
+      if (_boxStatusMap) return _boxStatusMap;
+      _boxStatusMap = {};
+      try {
+        const r = await fetch(`${SIG_SB_URL}/rest/v1/box_patterns?select=code,status`,
+          { headers: { apikey: SIG_SB_ANON, Authorization: 'Bearer ' + SIG_SB_ANON } });
+        if (r.ok) (await r.json()).forEach(x => { _boxStatusMap[x.code] = x.status; });
+      } catch (_) {}
+      return _boxStatusMap;
+    }
+    async function onBoxFilterChange() { await _ensureBoxMap(); filterAndRender(); }
+
     function filterAndRender() {
       if (!lastResults.length) return;
       const ind = document.getElementById('industry_filter').value;
-      const filtered = ind ? lastResults.filter(s => (TW_STOCK_IND[s.code] || '') === ind) : lastResults;
+      const boxSel = Array.from(document.querySelectorAll('.box-cb:checked')).map(c => c.value);
+      let filtered = ind ? lastResults.filter(s => (TW_STOCK_IND[s.code] || '') === ind) : lastResults;
+      if (boxSel.length) filtered = filtered.filter(s => boxSel.includes((_boxStatusMap || {})[s.code]));
       const countEl = document.querySelector('.results-meta strong');
       if (countEl) {
-        countEl.textContent = ind ? `${filtered.length} (產業過濾)` : String(lastResults.length);
+        const note = [ind ? '產業' : '', boxSel.length ? '箱型' : ''].filter(Boolean).join('＋');
+        countEl.textContent = note ? `${filtered.length}（${note}過濾）` : String(lastResults.length);
       }
       if (filtered.length === 0) {
         document.getElementById('resultsArea').innerHTML = `
           <div class="card">
             <div class="empty-state">
               <div class="icon">&#128269;</div>
-              <p>該產業在此次結果中沒有符合條件的個股</p>
+              <p>此次結果中沒有符合過濾條件的個股</p>
             </div>
           </div>`;
         return;
@@ -2269,7 +2314,7 @@
         text: arr[0] + (arr.length > 1 ? `+${arr.length - 1}` : ''),
         size: 1,
       }));
-      const all = [..._lastDivMarkers, ...catalyst, ...broker, ...user].sort((a, b) => a.time < b.time ? -1 : 1);
+      const all = [..._lastDivMarkers, ...catalyst, ...broker, ...user, ...(_boxMarkers || [])].sort((a, b) => a.time < b.time ? -1 : 1);
       try { candleSeriesRef.setMarkers(all); } catch (_) {}
     }
 
@@ -3557,23 +3602,27 @@
       _refreshChartMarkers();
     }
 
-    // ── 貪婪指標（P3）＝ 0.40×強度 + 0.35×話題熱度(取最高) + 0.25×法說會催化 ──
+    // ── 貪婪指標＝ 0.70×基礎四維分(greed_base) + 0.30×催化(取最強:話題/法說/展覽) ──
     let _greedData = null;
     function _greedZone(v) {
       return v < 25 ? '極度恐懼' : v < 45 ? '恐懼' : v <= 55 ? '中立' : v <= 75 ? '貪婪' : '極度貪婪';
     }
     function _greedGaugeSVG(val, w) {
-      const cx = w / 2, cy = w * 0.52, R = w * 0.46;
+      const cx = w / 2, cy = w * 0.52, R = w * 0.38, ringW = w * 0.14;
       const pt = (v, r) => { const t = Math.PI * (1 - v / 100); return [cx + r * Math.cos(t), cy - r * Math.sin(t)]; };
       const zones = [[0, 25, '#E24B4A'], [25, 45, '#F0997B'], [45, 55, '#B4B2A9'], [55, 75, '#5DCAA5'], [75, 100, '#1D9E75']];
       let s = '';
-      zones.forEach(z => {
-        const p = pt(z[0], R), q = pt(z[1], R);
-        s += `<path d="M${cx} ${cy} L${p[0].toFixed(1)} ${p[1].toFixed(1)} A${R} ${R} 0 0 0 ${q[0].toFixed(1)} ${q[1].toFixed(1)} Z" fill="${z[2]}"/>`;
+      zones.forEach((z, i) => {
+        // 每段略微內縮，形成乾淨分隔；粗線圓弧讓內外邊緣保持同心、等厚。
+        const gap = 0.8;
+        const start = z[0] + (i ? gap : 0);
+        const end = z[1] - (i < zones.length - 1 ? gap : 0);
+        const p = pt(start, R), q = pt(end, R);
+        s += `<path d="M${p[0].toFixed(1)} ${p[1].toFixed(1)} A${R} ${R} 0 0 1 ${q[0].toFixed(1)} ${q[1].toFixed(1)}" fill="none" stroke="${z[2]}" stroke-width="${ringW.toFixed(1)}" stroke-linecap="butt"/>`;
       });
-      const tip = pt(val, R * 0.9);
+      const tip = pt(val, R + ringW * 0.18);
       s += `<line x1="${cx}" y1="${cy}" x2="${tip[0].toFixed(1)}" y2="${tip[1].toFixed(1)}" stroke="#f0f4fc" stroke-width="2.5" stroke-linecap="round"/>`;
-      s += `<circle cx="${cx}" cy="${cy}" r="4" fill="#f0f4fc"/>`;
+      s += `<circle cx="${cx}" cy="${cy}" r="4.5" fill="#f0f4fc" stroke="rgba(15,18,28,.65)" stroke-width="1.5"/>`;
       return `<div style="display:inline-flex;align-items:center;gap:8px;white-space:nowrap">
         <svg viewBox="0 0 ${w} ${(cy + 4).toFixed(0)}" width="${w}" style="overflow:visible;flex-shrink:0">${s}</svg>
         <div style="line-height:1.15;white-space:nowrap"><span style="font-size:18px;font-weight:700;color:var(--text)">${val}</span>
@@ -3587,14 +3636,15 @@
       if (!_isStock(code)) return;
       try {
         const hdr = { apikey: SIG_SB_ANON, Authorization: `Bearer ${SIG_SB_ANON}` };
-        const [rs, rt, rc, re] = await Promise.all([
-          fetch(`${SIG_SB_URL}/rest/v1/stock_strength?select=strength&code=eq.${encodeURIComponent(code)}`, { headers: hdr }),
+        const [rb, rt, rc, re] = await Promise.all([
+          fetch(`${SIG_SB_URL}/rest/v1/greed_base?select=base,price_score,momentum_score,volume_score,chip_score,exhaust,data_date&code=eq.${encodeURIComponent(code)}`, { headers: hdr }),
           fetch(`${SIG_SB_URL}/rest/v1/hot_topics?select=heat,sector,codes`, { headers: hdr }),
           fetch(`${SIG_SB_URL}/rest/v1/catalyst_events?select=start_date&event_type=eq.${encodeURIComponent('法說會')}&code=eq.${encodeURIComponent(code)}`, { headers: hdr }),
           fetch(`${SIG_SB_URL}/rest/v1/catalyst_events?select=sector,start_date,end_date,title&event_type=eq.${encodeURIComponent('展覽')}`, { headers: hdr }),
         ]);
         if (currentCode !== code) return;
-        const strength = rs.ok ? (((await rs.json())[0] || {}).strength || 0) : 0;
+        const b = rb.ok ? ((await rb.json())[0] || {}) : {};
+        const base = b.base || 0;
         let topicHeat = 0, topicSector = '';
         if (rt.ok) (await rt.json()).forEach(t => {
           if ((t.codes || []).some(c => c.code === code) && (t.heat || 0) > topicHeat) { topicHeat = t.heat || 0; topicSector = t.sector || ''; }
@@ -3621,28 +3671,83 @@
           else if (dEnd < 0 && dEnd >= -5) sc = 40;             // 展後衰減
           if (sc > exhScore) { exhScore = sc; exhInfo = `${sec}展 ${x.start_date}~${x.end_date || x.start_date}`; }
         });
-        const greed = Math.round(0.35 * strength + 0.30 * topicHeat + 0.20 * lawScore + 0.15 * exhScore);
-        _greedData = { code, greed, strength, topicHeat, topicSector, lawScore, lawDate, lawDays, exhScore, exhInfo };
-        if (el) { el.innerHTML = _greedGaugeSVG(greed, 120); el.style.display = 'block'; }
+        // 催化取最強者;最終 = 0.70×基礎 + 0.30×催化
+        const catalyst = Math.max(topicHeat, lawScore, exhScore);
+        const catSrc = catalyst === 0 ? '' : (catalyst === topicHeat ? '話題' : catalyst === lawScore ? '法說' : '展覽');
+        const greed = Math.round(0.70 * base + 0.30 * catalyst);
+        _greedData = {
+          code, greed, base, exhaust: !!b.exhaust,
+          priceS: b.price_score, momS: b.momentum_score, volS: b.volume_score, chipS: b.chip_score, dataDate: b.data_date,
+          topicHeat, topicSector, lawScore, lawDate, lawDays, exhScore, exhInfo, catalyst, catSrc,
+        };
+        if (el) { el.innerHTML = _greedGaugeSVG(greed, 120) + (b.exhaust ? '<span title="利多出盡：基礎≥80且爆量且(長黑或高檔)" style="margin-left:6px;font-size:11px;color:#E24B4A;font-weight:700">⚠️利多出盡</span>' : ''); el.style.display = 'block'; }
       } catch (_) { /* 貪婪指標非必要，失敗靜默 */ }
+    }
+    // 完整計分規則 + 本次改動（供合夥人複查，寫在網站上）
+    function _greedMethodologyHTML() {
+      const row = (name, pairs) => `<tr><td style="padding:2px 8px 2px 0;white-space:nowrap;color:var(--text)">${name}</td><td style="padding:2px 0;color:var(--text-muted);font-family:monospace">${pairs}</td></tr>`;
+      return `<details style="margin-top:12px;border-top:1px solid var(--border);padding-top:9px">
+        <summary style="cursor:pointer;font-size:12px;color:#c678dd;font-weight:600">＋ 完整計分規則與本次改動（合夥人複查）</summary>
+        <div style="margin-top:9px;font-size:11.5px;line-height:1.55">
+          <b style="color:#4da3ff">最終公式</b>：貪婪 = 0.70×基礎 + 0.30×催化(取話題/法說/展覽最強者)，四捨五入 0~100。<br>
+          <b style="color:#4da3ff">基礎(四維)</b> = 0.30×價格延伸 + 0.25×動能 + 0.25×量能 + 0.20×籌碼；每維 = 該維各指標「分段線性內插分」的<b>平均</b>（缺值維度自動重歸一化權重）。
+          <div style="margin-top:8px;color:var(--text)"><b>各指標錨點（x→分，中間線性內插）</b></div>
+          <table style="border-collapse:collapse;font-size:11px;margin-top:3px">
+            ${row('BIAS20 %', '-10→0, -5→30, -3→40, 8→60, 15→80, 25→100')}
+            ${row('布林 %b', '0→0, 0.2→30, 0.3→40, 0.8→60, 1.0→80, 1.2→100')}
+            ${row('RSI(5)', '10→0, 30→39, 45→40, 70→60, 85→80, 95→100')}
+            ${row('RS(超額報酬,近20日個股−大盤%)', '-10→0, -5→30, 0→50, 5→70, 10→85, 20→100')}
+            ${row('量比(量/20日均量)', '0.3→0, 0.5→30, 0.8→40, 1.7→59, 1.8→60, 3→80, 5→100')}
+            ${row('當沖率 %(只加貪婪;OTC缺則略)', '0→40, 35→55, 60→80, 80→100')}
+            ${row('主力集中度 %(前15大淨買/總量)', '-30→0, 0→40, 30→60, 50→80, 70→100')}
+            ${row('融資單週增幅 %', '-10→30, 0→45, 10→60, 20→80, 40→100')}
+          </table>
+          <div style="margin-top:8px;color:var(--text)"><b>催化(取最強者)</b></div>
+          <div style="color:var(--text-muted)">
+            ・話題：hot_topics 熱度分（所屬最熱話題）<br>
+            ・法說：≤3天100 / 4~7天80 / 8~14天50 / 剛開完0~3天前60<br>
+            ・展覽：展中100 / 展前1~7天90 / 展前8~30天60 / 展後5天內40（需族群對得上）
+          </div>
+          <div style="margin-top:8px;color:var(--text)"><b>利多出盡⚠️</b></div>
+          <div style="color:var(--text-muted)">基礎≥80 且 當日爆量(量>max(5日,10日均量)×1.3) 且(長黑：收<開−5% 或 高檔：收>近60日最低×1.3)。</div>
+          <div style="margin-top:8px;color:var(--text)"><b>資料源</b></div>
+          <div style="color:var(--text-muted)">stock_daily(價量,證交所)、day_trade(當沖)、wantgoo_daily(集中度)、margin_short(融資)、taiex_daily(大盤,算RS)。每日夜間排程重算(greed_base 快照)。</div>
+          <div style="margin-top:9px;padding-top:7px;border-top:1px dashed var(--border);color:#E8A33D"><b>本次改動（vs 舊版）</b></div>
+          <div style="color:var(--text-muted)">
+            ① 公式：舊 0.35強度+0.30話題+0.20法說+0.15展覽 → <b>新 0.70基礎(四維)+0.30催化(取最強)</b>。<br>
+            ② 基礎：舊只用單一「強度」 → <b>新四維八指標</b>(價/動/量/籌，分段線性內插+維度取平均)。<br>
+            ③ RS：改為 <b>vs大盤超額報酬</b>(近20日 個股−大盤)。<br>
+            ④ 新增 <b>利多出盡⚠️</b> 旗標。
+          </div>
+        </div>
+      </details>`;
     }
     function _showGreedCalc() {
       const d = _greedData; if (!d) return;
-      const c1 = (0.35 * d.strength).toFixed(1), c2 = (0.30 * d.topicHeat).toFixed(1),
-        c3 = (0.20 * d.lawScore).toFixed(1), c4 = (0.15 * (d.exhScore || 0)).toFixed(1);
+      const cB = (0.70 * d.base).toFixed(1), cC = (0.30 * d.catalyst).toFixed(1);
       const lawTxt = d.lawDate ? `${d.lawDate}（${d.lawDays >= 0 ? d.lawDays + '天後' : Math.abs(d.lawDays) + '天前'}）→ ${d.lawScore}分` : '近期無 → 0分';
       const exhTxt = d.exhInfo ? `${d.exhInfo} → ${d.exhScore}分` : '無對應展覽 → 0分';
-      document.getElementById('greedPopupTitle').textContent = `${d.code} 貪婪指標 ${d.greed}（${_greedZone(d.greed)}）`;
+      const dim = (v) => v == null ? '—' : v;
+      document.getElementById('greedPopupTitle').textContent = `${d.code} 貪婪指標 ${d.greed}（${_greedZone(d.greed)}）${d.exhaust ? ' ⚠️利多出盡' : ''}`;
       document.getElementById('greedPopupBody').innerHTML = `
         <div style="background:rgba(255,255,255,.05);padding:9px 11px;border-radius:6px;font-family:monospace;font-size:12px;line-height:1.7">
-          貪婪 = 0.35×強度 + 0.30×話題 + 0.20×法說 + 0.15×展覽<br>
-          　　 = 0.35×${d.strength} + 0.30×${d.topicHeat} + 0.20×${d.lawScore} + 0.15×${d.exhScore || 0}<br>
-          　　 = ${c1} + ${c2} + ${c3} + ${c4} = <b style="color:#c678dd">${d.greed}</b></div>
-        <div style="margin-top:11px"><b style="color:#4da3ff">強度 ${d.strength}</b>（35%）：個股技術籌碼強度（RS＋均線＋近波段高）。</div>
-        <div style="margin-top:9px"><b style="color:#4da3ff">話題熱度 ${d.topicHeat}</b>（30%）：${d.topicSector ? '所屬最熱話題「' + d.topicSector + '」的熱度' : '不在任何話題 → 0'}（多話題取最高）。</div>
-        <div style="margin-top:9px"><b style="color:#4da3ff">法說會催化 ${d.lawScore}</b>（20%）：${lawTxt}。<span style="color:var(--text-muted)">（≤3天100/≤7天80/≤14天50/剛開完±3天60）</span></div>
-        <div style="margin-top:9px"><b style="color:#4da3ff">展覽鄰近 ${d.exhScore || 0}</b>（15%）：${exhTxt}。<span style="color:var(--text-muted)">（展中100/展前一週90/展前30天內60/展後5天40）</span></div>
-        <div style="margin-top:11px;font-size:11px;color:var(--text-muted)">區間：極度恐懼0–25・恐懼25–45・中立45–55・貪婪55–75・極度貪婪75–100。</div>`;
+          貪婪 = 0.70×基礎 + 0.30×催化(取最強)<br>
+          　　 = 0.70×${d.base} + 0.30×${d.catalyst}${d.catSrc ? '(' + d.catSrc + ')' : ''}<br>
+          　　 = ${cB} + ${cC} = <b style="color:#c678dd">${d.greed}</b></div>
+        <div style="margin-top:11px"><b style="color:#4da3ff">基礎分 ${d.base}</b>（70%，四維情緒/擁擠度${d.dataDate ? '・' + d.dataDate : ''}）：</div>
+        <div style="margin-top:5px;font-family:monospace;font-size:11.5px;color:var(--text);line-height:1.6">
+          價格延伸 30% = <b>${dim(d.priceS)}</b>（BIAS＋布林%b）<br>
+          動能強弱 25% = <b>${dim(d.momS)}</b>（RSI5＋RS vs大盤）<br>
+          量能投機 25% = <b>${dim(d.volS)}</b>（量比＋當沖率）<br>
+          籌碼擁擠 20% = <b>${dim(d.chipS)}</b>（前15大集中度＋融資增幅）</div>
+        <div style="margin-top:11px"><b style="color:#c678dd">催化 ${d.catalyst}</b>（30%，取三者最強${d.catSrc ? '：' + d.catSrc : ''}）：</div>
+        <div style="margin-top:5px;font-size:11.5px;line-height:1.6">
+          ・話題熱度 ${d.topicHeat}：${d.topicSector ? '所屬最熱話題「' + d.topicSector + '」' : '不在任何話題 → 0'}<br>
+          ・法說會 ${d.lawScore}：${lawTxt}<br>
+          ・展覽 ${d.exhScore || 0}：${exhTxt}</div>
+        ${d.exhaust ? '<div style="margin-top:11px;color:#E24B4A;font-size:11.5px">⚠️ <b>利多出盡</b>：基礎≥80 且 當日爆量(量>max(5,10日均量)×1.3) 且(長黑收<開-5% 或 收>近60日低×1.3)——追高風險偏高。</div>' : ''}
+        <div style="margin-top:11px;font-size:11px;color:var(--text-muted)">區間：極度恐懼0–25・恐懼25–45・中立45–55・貪婪55–75・極度貪婪75–100。</div>
+        ${_greedMethodologyHTML()}`;
       document.getElementById('greedPopup').style.display = 'flex';
     }
 
@@ -4688,6 +4793,17 @@
 
       _updatePriceTag(candles);
       _renderMainChart(candles, events || []);
+      // 箱型偵測改用「證交所資料(price_window)」——與篩選器/box_patterns 同源,避免 K圖(YF)與篩選器不一致;
+      // 並排除今日尚未收盤的即時棒。抓不到(未登入/非個股)則退回圖表資料。
+      _boxLastCandles = [];
+      const _boxCode = currentCode;
+      (async () => {
+        const tw = await _boxFetchTWSE(_boxCode);
+        if (_boxCode !== currentCode) return;   // 期間換股 → 放棄
+        // 用最後一根評估,與 box_patterns(後端 compute_box)同基準 → 篩選器/K圖一致
+        _boxLastCandles = tw && tw.length ? tw : _validCandles(candles);
+        if (_boxEnabled) { try { _drawBox(); } catch (_) {} }
+      })();
       _renderVOLChart(candles);
       _renderMACDChart(candles);
       _renderRSIChart(candles);
@@ -4755,12 +4871,12 @@
         if (macdInstance)  macdInstance.applyOptions({ width: document.getElementById('macdContainer').clientWidth });
         if (rsiInstance)   rsiInstance.applyOptions({ width: document.getElementById('rsiContainer').clientWidth });
         resizeFibCanvas();
-        if (trendLines.length > 0) redrawCanvas();
+        if (trendLines.length > 0 || (_boxEnabled && _boxRectShow && _boxRect)) redrawCanvas();
       }).observe(mainEl);
 
       // Redraw trend lines / fib labels when chart is panned / zoomed
       chartInstance.timeScale().subscribeVisibleTimeRangeChange(() => {
-        if (trendLines.length > 0 || trendStart || fibLevels.length > 0) redrawCanvas();
+        if (trendLines.length > 0 || trendStart || fibLevels.length > 0 || (_boxEnabled && _boxRectShow && _boxRect)) redrawCanvas();
       });
 
       // Zoom / scroll lock + cross-panel sync via logical range.
@@ -4879,6 +4995,214 @@
       seriesMap['bbUpper'] = bbUpper;
       seriesMap['bbMid']   = bbMid;
       seriesMap['bbLower'] = bbLower;
+    }
+
+    // ── 📦 箱型型態偵測(前端即時版,對應 scripts/box_pattern.py;參數可調)────────────
+    var _boxEnabled = false;
+    var _boxLastCandles = [];
+    var _boxSeriesRefs = [];
+    var _boxMarkers = [];
+    var _boxRect = null;          // 箱型方框範圍 {t1,t2,top,bottom,color}(畫在 fibCanvas 上)
+    var _boxRectShow = true;      // 是否顯示方框(K圖 checkbox)
+    var _boxTwseCache = {};       // 每檔證交所 OHLCV 快取(箱型用,與篩選器/box_patterns 同源)
+    async function _boxFetchTWSE(code) {
+      if (_boxTwseCache[code]) return _boxTwseCache[code];
+      if (!_isStock(code)) return null;
+      try {
+        const r = await fetch(`${SIG_SB_URL}/rest/v1/price_window?select=trade_date,open,high,low,close,volume&code=eq.${encodeURIComponent(code)}&order=trade_date.asc&limit=1000`,
+          { headers: { apikey: SIG_SB_ANON, Authorization: `Bearer ${SIG_SB_ANON}` } });
+        if (!r.ok) return null;
+        const rows = await r.json();
+        const cs = rows.map(x => ({ time: x.trade_date, open: +x.open, high: +x.high, low: +x.low, close: +x.close, volume: +x.volume || 0 }))
+                       .filter(c => c.open > 0 && c.close > 0);
+        _boxTwseCache[code] = cs;
+        return cs;
+      } catch (_) { return null; }
+    }
+    const _BOX_DEF = { lookback:60, maxHeightPct:0.10, formVolSpikes:2, breakoutRecency:3,
+      edgeLowPctile:5, edgeHighPctile:95, edgeNearPct:0.03, maxPierceFrac:0.15, reqU:3, reqL:3, spacing:2, atrPeriod:14,
+      tolMode:'atr_capped', atrMult:0.25, tolCap:0.01, fixedPct:0.01,
+      brkPct:0.03, volShort:5, volLong:10, volMult:1.3, consec:3 };
+
+    function _boxParams() {
+      const g = (id, def) => { const el = document.getElementById(id); if (!el) return def;
+        const v = parseFloat(el.value); return isNaN(v) ? def : v; };
+      const mode = (document.getElementById('boxTolMode') || {}).value || _BOX_DEF.tolMode;
+      return { ..._BOX_DEF,
+        lookback:g('boxLookback',60), maxHeightPct:g('boxMaxHeight',10)/100,
+        reqU:g('boxTouch',3), reqL:g('boxTouch',3),
+        tolMode:mode, atrMult:g('boxAtrMult',0.25), tolCap:g('boxTolCap',0.01),
+        brkPct:g('boxBrkPct',0.03), volMult:g('boxVolMult',1.3), consec:g('boxConsec',3) };
+    }
+    function _boxTR(h,l,pc){ return Math.max(h-l, Math.abs(h-pc), Math.abs(l-pc)); }
+    function _boxATR(cs,i,p){ let t=[]; for(let k=Math.max(1,i-p+1);k<=i;k++) t.push(_boxTR(cs[k].high,cs[k].low,cs[k-1].close));
+      return t.length? t.reduce((a,b)=>a+b,0)/t.length : null; }
+    function _boxSMA(v,i,p){ if(i<0) return null; let lo=Math.max(0,i-p+1),s=v.slice(lo,i+1);
+      return s.length? s.reduce((a,b)=>a+b,0)/s.length : null; }
+    function _boxPctile(vals,p){ if(!vals.length) return null; const s=vals.slice().sort((a,b)=>a-b);
+      const idx=Math.round(p/100*(s.length-1)); return s[Math.max(0,Math.min(s.length-1,idx))]; }
+    function _boxTol(edge,atr,cfg){ return cfg.tolMode==='percent' ? edge*cfg.fixedPct
+      : Math.min((atr||0)*cfg.atrMult, edge*cfg.tolCap); }
+    function _boxDedup(idx,sp){ let o=[]; for(const i of idx) if(!o.length||i-o[o.length-1]>=sp+1) o.push(i); return o; }
+    function _boxTouch(pr,lv,tol,sp){ let r=[]; for(let i=0;i<pr.length;i++) if(lv-tol<=pr[i]&&pr[i]<=lv+tol) r.push(i); return _boxDedup(r,sp); }
+    function _boxAlt(up,lo,nU,nL){
+      let tg=up.map(i=>[i,'U']).concat(lo.map(i=>[i,'L'])).sort((a,b)=> a[0]-b[0] || (a[1]<b[1]?-1:1));
+      let seq=[],seen=new Set();
+      for(const [i,s] of tg){ if(seen.has(i)) continue; if(!seq.length||seq[seq.length-1][1]!==s){ seq.push([i,s]); seen.add(i);} }
+      let u=seq.filter(x=>x[1]==='U').length, l=seq.filter(x=>x[1]==='L').length;
+      return (u>=nU&&l>=nL) ? {ok:true, establish:seq[nU+nL-1][0]} : {ok:false};
+    }
+    function _boxDetect(cs,cfg){
+      const n=cs.length, start=Math.max(0,n-cfg.lookback);
+      const win=cs.slice(start); if(win.length<cfg.reqU+cfg.reqL) return null;
+      const highs=win.map(c=>c.high), lows=win.map(c=>c.low);
+      const atr=_boxATR(cs,n-1,cfg.atrPeriod);
+      const rHi=Math.max(...highs), rLo=Math.min(...lows); if(rHi<=rLo) return null;
+      const mid=(rHi+rLo)/2, sp=cfg.spacing;
+      let ups=[...new Set(highs.filter(h=>h>=mid))].filter(U=>_boxTouch(highs,U,_boxTol(U,atr,cfg),sp).length>=cfg.reqU).sort((a,b)=>b-a);
+      let los=[...new Set(lows.filter(l=>l<=mid))].filter(L=>_boxTouch(lows,L,_boxTol(L,atr,cfg),sp).length>=cfg.reqL).sort((a,b)=>a-b);
+      if(!ups.length||!los.length) return null;
+      const vv = cs.map(c=>c.volume||0);
+      let best=null;
+      for(const U of ups){ const utol=_boxTol(U,atr,cfg);
+        for(const L of los){ if(U<=L) continue; const ltol=_boxTol(L,atr,cfg);
+          let ur=[],lr=[];
+          for(let i=0;i<win.length;i++){ const inU=U-utol<=highs[i]&&highs[i]<=U+utol, inL=L-ltol<=lows[i]&&lows[i]<=L+ltol;
+            if(inU&&!inL) ur.push(i); else if(inL&&!inU) lr.push(i); }
+          const ut=_boxDedup(ur,sp), lt=_boxDedup(lr,sp);
+          if(ut.length<cfg.reqU||lt.length<cfg.reqL) continue;
+          const a=_boxAlt(ut,lt,cfg.reqU,cfg.reqL);
+          if(!a.ok) continue;
+          // 箱高上限 + 形成期量縮:只有完全合格的箱才參與競選最近
+          if(L<=0 || (U-L)/L > cfg.maxHeightPct) continue;
+          const eI2 = start + a.establish;
+          let spk=0, bad=false;
+          for(let i=start;i<=eI2;i++){
+            const thr = Math.max(_boxSMA(vv,i,cfg.volShort)||0,_boxSMA(vv,i,cfg.volLong)||0)*cfg.volMult;
+            if(thr>0 && (cs[i].volume||0)>thr){ if(++spk > cfg.formVolSpikes){ bad=true; break; } }
+          }
+          if(bad) continue;
+          // 取 establish 最大(最近成形);同 establish 取上緣較高
+          if(best===null || a.establish>best.est || (a.establish===best.est && U>best.U))
+            best={U,utol,ut,L,ltol,lt,est:a.establish}; } }
+      if(!best) return null;
+      const eI = start + best.est;
+      // 外邊界:盤整區(首觸碰~末觸碰)高低點的 P95/P5,至少含中心±容忍 → 框住約9成K棒
+      const allT = best.ut.concat(best.lt);
+      const a0 = Math.min(...allT), a1 = Math.max(...allT);
+      const aLows=[], aHighs=[];
+      for(let i=a0;i<=a1;i++){ aLows.push(lows[i]); aHighs.push(highs[i]); }
+      const loOut = _boxPctile(aLows, cfg.edgeLowPctile);
+      const upOut = _boxPctile(aHighs, cfg.edgeHighPctile);
+      // 箱高(實際區間 外緣)≤ maxHeightPct → 排除振幅太大(2421型)
+      if(loOut===null || loOut<=0 || (upOut-loOut)/loOut > cfg.maxHeightPct) return null;
+      // 觸碰須靠近箱邊界(距外緣 ≤ edgeNearPct)→ 排除支撐/壓力設在中段的假箱(1805型)
+      if((best.L-loOut)/loOut > cfg.edgeNearPct || (upOut-best.U)/best.U > cfg.edgeNearPct) return null;
+      let pierce=0; for(let i=a0;i<=a1;i++){ if(lows[i]<loOut||highs[i]>upOut) pierce++; }
+      const span=a1-a0+1;
+      if(span>0 && pierce/span > cfg.maxPierceFrac) return null;   // 保險:插破太多不算箱
+      return { start, establishI:eI,
+        upperCenter:best.U, lowerCenter:best.L, upperTol:best.utol, lowerTol:best.ltol,
+        upperOuter:upOut, lowerOuter:loOut, atr,
+        upperTouch:best.ut.map(i=>start+i), lowerTouch:best.lt.map(i=>start+i) };
+    }
+    function _boxVolThr(cs,i,cfg){ const v=cs.map(c=>c.volume||0); return Math.max(_boxSMA(v,i,cfg.volShort)||0,_boxSMA(v,i,cfg.volLong)||0)*cfg.volMult; }
+    function _boxSingle(cs,i,b,cfg){ const c=cs[i].close, vt=_boxVolThr(cs,i,cfg);
+      if(c>=b.upperOuter*(1+cfg.brkPct)&&(cs[i].volume||0)>=vt) return 'up';
+      if(c<=b.lowerOuter*(1-cfg.brkPct)&&(cs[i].volume||0)>=vt) return 'down'; return null; }
+    function _boxConsec(cs,i,b,cfg){ const nn=cfg.consec; if(i-nn+1<0) return null; const s=cs.slice(i-nn+1,i+1);
+      if(s.every(x=>x.close>b.upperOuter)) return 'up'; if(s.every(x=>x.close<b.lowerOuter)) return 'down'; return null; }
+    function _boxEval(cs,cfg){
+      const b=_boxDetect(cs,cfg); if(!b) return null;
+      let status='FORMING', bi=null,bdir=null,brsn=null,pending=null;
+      for(let i=b.establishI+1;i<cs.length;i++){
+        const sb=_boxSingle(cs,i,b,cfg), cb=_boxConsec(cs,i,b,cfg), eff=sb||cb, reason=sb?'price_volume':(cb?'consecutive_closes':null);
+        if(eff==='up'){ status=pending==='down'?'FALSE_DOWN_THEN_UP':'CONFIRMED_UP'; bi=i;bdir='up';brsn=reason; break; }
+        if(eff==='down'){ status=pending==='up'?'FALSE_UP_THEN_DOWN':'CONFIRMED_DOWN'; bi=i;bdir='down';brsn=reason; break; }
+        const c=cs[i].close;
+        if(c>b.upperOuter) pending='up'; else if(c<b.lowerOuter) pending='down';
+        else { if(pending==='up') status='FALSE_UP_PENDING'; else if(pending==='down') status='FALSE_DOWN_PENDING'; }
+      }
+      // 突破過期(距評估日 > breakoutRecency 根)→ 非當前箱
+      if(bi!==null && (cs.length-1 - bi) > cfg.breakoutRecency) return null;
+      const out=(status==='FALSE_UP_PENDING'||status==='FALSE_DOWN_PENDING')?'FORMING':status;
+      return { status:out, box:b, breakoutI:bi, breakoutDir:bdir, breakoutReason:brsn };
+    }
+
+    const _BOX_LABEL = { FORMING:'形成中', CONFIRMED_UP:'向上突破', CONFIRMED_DOWN:'向下跌破',
+      FALSE_UP_THEN_DOWN:'假突破→真跌破', FALSE_DOWN_THEN_UP:'假跌破→真突破' };
+    const _BOX_COLOR = { FORMING:'#9aa0b0', CONFIRMED_UP:'#e74c3c', CONFIRMED_DOWN:'#26c281',
+      FALSE_UP_THEN_DOWN:'#f39c12', FALSE_DOWN_THEN_UP:'#f39c12' };
+
+    function _boxClear() {
+      _boxSeriesRefs.forEach(s => { try { chartInstance.removeSeries(s); } catch(_){} });
+      _boxSeriesRefs = []; _boxMarkers = []; _boxRect = null;
+      try { _refreshChartMarkers(); } catch(_){}
+    }
+    function _boxLine(color, dashed) {
+      return chartInstance.addLineSeries({ color, lineWidth: dashed?1:2,
+        lineStyle: dashed?LightweightCharts.LineStyle.Dashed:LightweightCharts.LineStyle.Solid,
+        crosshairMarkerVisible:false, lastValueVisible:false, priceLineVisible:false });
+    }
+    function _drawBox() {
+      if (!chartInstance || !candleSeriesRef) return;
+      _boxClear();
+      const badge = document.getElementById('boxStatusBadge');
+      if (!_boxEnabled) { if (badge) badge.textContent=''; try { redrawCanvas(); } catch(_){} return; }
+      const cs = _boxLastCandles;
+      const r = (cs && cs.length) ? _boxEval(cs, _boxParams()) : null;
+      if (!r) { if (badge){ badge.textContent='📦 此區間無合格箱型'; badge.style.color='#9aa0b0'; } try { redrawCanvas(); } catch(_){} return; }
+      const b = r.box, col = '#FFC107';
+      const seg = (level, dashed) => {
+        const s = _boxLine(dashed?'#FF9800':col, dashed);
+        s.setData(cs.slice(b.start).map(c => ({ time:c.time, value:level })));
+        _boxSeriesRefs.push(s);
+      };
+      seg(b.upperOuter,false);  seg(b.lowerOuter,false);   // 只畫箱邊界(外緣),不再畫中段觸碰線
+      // 觸碰點 markers(合併進 _refreshChartMarkers)
+      _boxMarkers = [];
+      b.upperTouch.forEach(i => cs[i] && _boxMarkers.push({ time:cs[i].time, position:'aboveBar', color:col, shape:'circle', text:'', size:0 }));
+      b.lowerTouch.forEach(i => cs[i] && _boxMarkers.push({ time:cs[i].time, position:'belowBar', color:col, shape:'circle', text:'', size:0 }));
+      if (r.breakoutI!=null && cs[r.breakoutI]) _boxMarkers.push({
+        time:cs[r.breakoutI].time, position:r.breakoutDir==='up'?'belowBar':'aboveBar',
+        color:_BOX_COLOR[r.status], shape:r.breakoutDir==='up'?'arrowUp':'arrowDown', text:'突破', size:2 });
+      try { _refreshChartMarkers(); } catch(_){}
+      if (badge) {
+        const rsn = r.breakoutReason==='price_volume'?'價+量':(r.breakoutReason==='consecutive_closes'?'連續收破':'');
+        badge.innerHTML = `📦 <b style="color:${_BOX_COLOR[r.status]}">${_BOX_LABEL[r.status]||r.status}</b>`
+          + `　箱 ${b.lowerOuter.toFixed(2)}~${b.upperOuter.toFixed(2)}`
+          + (rsn?`　<span style="color:${_BOX_COLOR[r.status]}">${rsn}</span>`:'');
+        badge.style.color = 'var(--text)';
+      }
+      // 方框範圍:最早觸碰 ~ 突破日(或最新),上下用外緣
+      const allT = b.upperTouch.concat(b.lowerTouch);
+      const t1i = Math.min.apply(null, allT);
+      _boxRect = {
+        t1: cs[t1i].time,
+        t2: (r.breakoutI!=null && cs[r.breakoutI]) ? cs[r.breakoutI].time : cs[cs.length-1].time,
+        top: b.upperOuter, bottom: b.lowerOuter, color: _BOX_COLOR[r.status] || '#FFC107',
+      };
+      try { redrawCanvas(); } catch(_){}
+    }
+    function _boxRedraw() { _drawBox(); }
+    function _boxRectToggle() {
+      const el = document.getElementById('boxRectChk');
+      _boxRectShow = el ? el.checked : true;
+      try { redrawCanvas(); } catch(_){}
+    }
+    function _boxResetParams() {
+      const set=(id,v)=>{ const el=document.getElementById(id); if(el) el.value=v; };
+      set('boxLookback',60); set('boxMaxHeight',10); set('boxTouch',3); set('boxAtrMult',0.25); set('boxTolCap',0.01);
+      set('boxBrkPct',0.03); set('boxVolMult',1.3); set('boxConsec',3);
+      const m=document.getElementById('boxTolMode'); if(m) m.value='atr_capped';
+      _drawBox();
+    }
+    function toggleBox(el) {
+      _boxEnabled = !_boxEnabled;
+      const panel = document.getElementById('boxPanel');
+      if (panel) panel.style.display = _boxEnabled ? 'flex' : 'none';
+      if (el) el.style.opacity = _boxEnabled ? '1' : '0.5';
+      _drawBox();
     }
 
     function _renderVOLChart(candles) {
@@ -5051,8 +5375,31 @@
       if (!canvas || !chartInstance || !candleSeriesRef) return;
       const ctx = canvas.getContext('2d');
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      _drawBoxRectOnCtx(ctx);
       _drawTrendLinesOnCtx(ctx);
       _drawFibLabelsOnCtx(ctx);
+    }
+
+    function _drawBoxRectOnCtx(ctx) {
+      if (!_boxEnabled || !_boxRectShow || !_boxRect || !chartInstance || !candleSeriesRef) return;
+      const ts = chartInstance.timeScale();
+      let x1 = ts.timeToCoordinate(_boxRect.t1);
+      let x2 = ts.timeToCoordinate(_boxRect.t2);
+      const yTop = candleSeriesRef.priceToCoordinate(_boxRect.top);
+      const yBot = candleSeriesRef.priceToCoordinate(_boxRect.bottom);
+      if (yTop == null || yBot == null) return;
+      const W = ctx.canvas.width;
+      if (x1 == null) x1 = 0;          // 端點捲出可視範圍 → 夾到畫布邊界
+      if (x2 == null) x2 = W;
+      const x = Math.min(x1, x2), w = Math.max(2, Math.abs(x2 - x1));
+      const y = Math.min(yTop, yBot), h = Math.max(2, Math.abs(yBot - yTop));
+      ctx.save();
+      ctx.fillStyle = 'rgba(255,193,7,0.10)';
+      ctx.fillRect(x, y, w, h);
+      ctx.strokeStyle = _boxRect.color || '#FFC107';
+      ctx.lineWidth = 1.5; ctx.setLineDash([5, 3]);
+      ctx.strokeRect(x, y, w, h);
+      ctx.restore();
     }
 
     function _drawFibLabelsOnCtx(ctx) {

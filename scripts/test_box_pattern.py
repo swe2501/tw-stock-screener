@@ -23,7 +23,7 @@ def base_box(warmup=14):
     seq = ['U','in','in','L','in','in','U','in','in','L','in','in','U','in','in','L']
     for tag in seq:
         if tag == 'U':   bars.append(bar(100, 98, 99, 1000, ts))
-        elif tag == 'L': bars.append(bar(92, 90, 91, 1000, ts))
+        elif tag == 'L': bars.append(bar(93, 91, 92, 1000, ts))   # 下緣 91 → 箱高(100-91)/91≈9.9%≤10%
         else:            bars.append(bar(97, 93, 95, 1000, ts))
         ts += 1
     return bars                     # len 30, establish 全域索引 29
@@ -37,7 +37,7 @@ print("== box_pattern 測試 ==")
 b = base_box(); add(b,97,93,95,1000); add(b,97,93,95,1000)
 r = evaluate(b, len(b)-1)
 check("1 六次交替→FORMING", r and r["status"]=="FORMING", r["status"] if r else "None")
-check("1 上緣=100/下緣=90", r and abs(r["upper_center"]-100)<1e-6 and abs(r["lower_center"]-90)<1e-6,
+check("1 上緣=100/下緣=91", r and abs(r["upper_center"]-100)<1e-6 and abs(r["lower_center"]-91)<1e-6,
       f'{r["upper_center"]}/{r["lower_center"]}' if r else "None")
 
 # 2. 少於六次(只2上2下) → 不成箱
@@ -104,6 +104,36 @@ check("10a establish當根=FORMING", r_before and r_before["status"]=="FORMING",
       r_before["status"] if r_before else "None")
 check("10b 突破當根=CONFIRMED_UP", r_at and r_at["status"]=="CONFIRMED_UP",
       r_at["status"] if r_at else "None")
+
+# 11. 箱高 >10% → 非箱型(下緣85 → (100-85)/85≈17.6%)
+def wide_box():
+    ts=[0]; b=[]
+    for _ in range(14): b.append(bar(97,93,95,1000, ts[0])); ts[0]+=1
+    for tag in ['U','in','in','L','in','in','U','in','in','L','in','in','U','in','in','L']:
+        if tag=='U': b.append(bar(100,98,99,1000, ts[0]))
+        elif tag=='L': b.append(bar(87,85,86,1000, ts[0]))
+        else: b.append(bar(97,93,95,1000, ts[0]))
+        ts[0]+=1
+    return b
+r=evaluate(wide_box(), 29)
+check("11 箱高>10%→非箱型(None)", r is None, r["status"] if r else "None")
+
+# 12. 形成期爆量:容忍 2 根,第 3 根才作廢
+b=base_box(); b[16].volume=5000; b[20].volume=5000              # 2 根爆量 → 仍是箱
+r=evaluate(b, 29)
+check("12a 形成期2根爆量→仍FORMING", r and r["status"]=="FORMING", r["status"] if r else "None")
+b=base_box(); b[16].volume=5000; b[20].volume=5000; b[24].volume=5000   # 3 根 → 作廢
+r=evaluate(b, 29)
+check("12b 形成期3根爆量→非箱型(None)", r is None, r["status"] if r else "None")
+
+# 13. 突破過期(距評估日 >3 根)→ 非當前箱(None);3 根內仍算
+b=base_box(); add(b,105,101,105,3000)
+for _ in range(4): add(b,97,93,95,1000)      # 突破在30、評估在34 → 距4>3
+check("13a 突破過期(距4)→None", evaluate(b, len(b)-1) is None)
+b=base_box(); add(b,105,101,105,3000)
+for _ in range(3): add(b,97,93,95,1000)      # 距3 ≤3 → 仍 CONFIRMED_UP
+r=evaluate(b, len(b)-1)
+check("13b 突破距3根內→CONFIRMED_UP", r and r["status"]=="CONFIRMED_UP", r["status"] if r else "None")
 
 print(f"\n== 結果: {_PASS} passed, {_FAIL} failed ==")
 sys.exit(1 if _FAIL else 0)

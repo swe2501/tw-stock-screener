@@ -14,7 +14,14 @@ box_pattern.py — 箱型(矩形整理)型態偵測(規則型、可解釋、無�
 from dataclasses import dataclass, field
 
 DEFAULTS = {
-    "lookback_bars": 60,
+    "lookback_bars": 60,               # ≈ 3 個月交易日(形成區間)
+    "max_height_pct": 0.10,            # 箱高上限:(上緣-下緣)/下緣 ≤ 10%(緊密箱)
+    "formation_vol_max_spikes": 2,     # 形成期允許最多幾根量 > max(5,10)×量倍(容忍雜訊)
+    "breakout_recency_bars": 3,        # 突破須發生在評估日近幾根內才報(否則過期=非當前箱)
+    "edge_low_pctile": 5,              # 下外緣=盤整區低點第5百分位(框住約9成K棒)
+    "edge_high_pctile": 95,            # 上外緣=高點第95百分位
+    "edge_near_pct": 0.03,             # 觸碰價位須靠近外緣(距外緣 ≤此%)→ 排除觸碰在中段的假箱
+    "max_pierce_frac": 0.15,           # 保險:插破外緣的根數比例 >此則不算箱
     "required_upper_touches": 3,
     "required_lower_touches": 3,
     "min_touch_spacing_bars": 2,
@@ -72,6 +79,15 @@ def tolerance(edge_price, atr_value, cfg):
 
 
 # ── 觸碰偵測 ───────────────────────────────────────────
+def _pctile(vals, p):
+    """最近排名法百分位(不需 numpy)。"""
+    if not vals:
+        return None
+    s = sorted(vals)
+    idx = int(round(p / 100.0 * (len(s) - 1)))
+    return s[max(0, min(len(s) - 1, idx))]
+
+
 def _dedup_spacing(indices, spacing):
     """連續貼邊只算一次，且兩次計數至少相隔 spacing 根(中間空 spacing 根)。"""
     out = []
@@ -134,10 +150,12 @@ def detect_box(bars, end_i, cfg):
                         if len(_touch_indices(lows, L, tolerance(L, atr_value, cfg), spacing)) >= req_l})
     if not up_levels or not lo_levels:
         return None
-    # 搜尋能構成合法交替箱型的配對；取最外側(上緣最高、下緣最低)。
+    # 搜尋能構成合法交替箱型的配對；取「最近成形」者(第6觸碰=establish 最靠近評估日),
+    # 而非最外側舊箱 → 抓當前有效箱。
     # 觸碰採「不跨箱」規則:一根只有 high 碰上緣且 low 沒碰下緣才算上緣觸碰(反之亦然)，
     # 跨滿整箱的 bar 兩邊都不算 → 排除過窄假箱;突破群聚也因無法與對邊交替而被排除。
     best = None
+    vols = [b.volume for b in bars]
     for upper_center in up_levels:
         upper_tol = tolerance(upper_center, atr_value, cfg)
         for lower_center in lo_levels:
@@ -157,15 +175,53 @@ def detect_box(bars, end_i, cfg):
             if len(upper_touch) < req_u or len(lower_touch) < req_l:
                 continue
             ok, establish_win, _seq = _alternating_ok(upper_touch, lower_touch, req_u, req_l)
-            if ok:
+            if not ok:
+                continue
+            # 箱高上限 + 形成期量縮:只有「完全合格」的箱才參與競選最近，
+            # 避免挑到最近但不合格的箱而漏掉合格箱。
+            if lower_center <= 0 or (upper_center - lower_center) / lower_center > cfg["max_height_pct"]:
+                continue
+            establish_i = start + establish_win
+            spikes = 0
+            bad = False
+            for i in range(start, establish_i + 1):
+                thr = max(sma_at(vols, i, cfg["volume_short_ma"]) or 0,
+                          sma_at(vols, i, cfg["volume_long_ma"]) or 0) * cfg["volume_multiplier"]
+                if thr > 0 and (bars[i].volume or 0) > thr:
+                    spikes += 1
+                    if spikes > cfg["formation_vol_max_spikes"]:
+                        bad = True
+                        break
+            if bad:
+                continue
+            # 取 establish 最大(最近成形);同 establish 取上緣較高
+            if best is None or establish_win > best[6] or (establish_win == best[6] and upper_center > best[0]):
                 best = (upper_center, upper_tol, upper_touch,
                         lower_center, lower_tol, lower_touch, establish_win)
-                break
-        if best:
-            break
     if not best:
         return None
     upper_center, upper_tol, upper_touch, lower_center, lower_tol, lower_touch, establish_win = best
+    # 外緣=盤整區(首~末觸碰)低點P5/高點P95 → 框住約9成K棒
+    all_t = upper_touch + lower_touch
+    a0, a1 = min(all_t), max(all_t)
+    a_lows = [lows[i] for i in range(a0, a1 + 1)]
+    a_highs = [highs[i] for i in range(a0, a1 + 1)]
+    lower_outer = _pctile(a_lows, cfg["edge_low_pctile"])
+    upper_outer = _pctile(a_highs, cfg["edge_high_pctile"])
+    if lower_outer is None or lower_outer <= 0:
+        return None
+    # 箱高(實際區間 外緣)≤ max_height_pct → 排除振幅太大(2421 型)
+    if (upper_outer - lower_outer) / lower_outer > cfg["max_height_pct"]:
+        return None
+    # 觸碰須靠近箱邊界(不是中段):觸碰價位距外緣 ≤ edge_near_pct → 排除支撐/壓力設在中段的假箱(1805 型)
+    if (lower_center - lower_outer) / lower_outer > cfg["edge_near_pct"] \
+       or (upper_outer - upper_center) / upper_center > cfg["edge_near_pct"]:
+        return None
+    # 保險:插破外緣的根數比例 ≤ max_pierce_frac
+    span = a1 - a0 + 1
+    pierce = sum(1 for i in range(a0, a1 + 1) if lows[i] < lower_outer or highs[i] > upper_outer)
+    if span > 0 and pierce / span > cfg["max_pierce_frac"]:
+        return None
     return {
         "window_start_i": start,
         "establish_i": start + establish_win,       # 換回「全域索引」
@@ -173,8 +229,8 @@ def detect_box(bars, end_i, cfg):
         "lower_center": lower_center,
         "upper_tol": upper_tol,
         "lower_tol": lower_tol,
-        "upper_outer": upper_center + upper_tol,
-        "lower_outer": lower_center - lower_tol,
+        "upper_outer": upper_outer,
+        "lower_outer": lower_outer,
         "atr_value": atr_value,
         "upper_touch_indices": [start + i for i in upper_touch],
         "lower_touch_indices": [start + i for i in lower_touch],
@@ -265,6 +321,9 @@ def evaluate(bars, end_i, cfg=None):
             elif pending == "down":
                 status = "FALSE_DOWN_PENDING"
 
+    # 突破過期(距評估日 > breakout_recency_bars 根)→ 非當前箱,不報
+    if breakout_i is not None and (end_i - breakout_i) > cfg["breakout_recency_bars"]:
+        return None
     # PENDING 為內部中間態(非規格輸出列舉)→ 對外視為仍在 FORMING
     out_status = "FORMING" if status in ("FALSE_UP_PENDING", "FALSE_DOWN_PENDING") else status
     result = {

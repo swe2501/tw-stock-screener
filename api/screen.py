@@ -1,5 +1,7 @@
 from http.server import BaseHTTPRequestHandler
 import json
+import csv
+import io
 import os
 import urllib.request
 import urllib.parse
@@ -115,6 +117,15 @@ def _get_json(url, headers=TWSE_HEADERS, timeout=20):
         return None
 
 
+def _get_text(url, headers=TWSE_HEADERS, timeout=20):
+    req = urllib.request.Request(url, headers=headers)
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return resp.read().decode("utf-8-sig", errors="replace")
+    except Exception:
+        return None
+
+
 def _parse_roc_date(roc_str):
     """'115/06/02' -> '20260602'"""
     parts = str(roc_str).replace("-", "/").split("/")
@@ -203,23 +214,101 @@ def _parse_stocks_openapi(rows):
     return stocks, actual_date
 
 
-def fetch_all_stocks_latest():
-    """Returns (stocks_dict, YYYYMMDD_str) for the most recent trading day."""
-    # Primary: legacy TWSE endpoint
-    data = _get_json("https://www.twse.com.tw/exchangeReport/STOCK_DAY_ALL?response=json")
-    if data and data.get("data"):
-        return _parse_stocks_legacy(data)
+def _parse_stocks_csv(text):
+    """新版 TWSE STOCK_DAY_ALL CSV → (stocks_dict, date_str)。
+    2026 起 www.twse.com.tw 不論 response=json 都回傳 CSV，欄位：
+    日期,證券代號,證券名稱,成交股數,成交金額,開盤價,最高價,最低價,收盤價,漲跌價差,成交筆數"""
+    stocks, date_str = {}, ""
+    for row in csv.reader(io.StringIO(text)):
+        if len(row) < 10 or not row[1].strip() or not row[1].strip()[0].isdigit():
+            continue   # 表頭 / 非數字代號
+        try:
+            if not date_str:
+                raw_d = row[0].strip().replace("/", "")
+                if len(raw_d) == 7 and raw_d.isdigit():          # 民國 YYYMMDD
+                    date_str = str(int(raw_d[:3]) + 1911) + raw_d[3:]
+                elif len(raw_d) == 8 and raw_d.isdigit():        # 西元 YYYYMMDD
+                    date_str = raw_d
+            close_p = _pf(row[8]); chg = _pf(row[9])
+            code = row[1].strip()
+            stocks[code] = {
+                "code": code, "name": row[2].strip(),
+                "volume": _pf(row[3]) or 0,
+                "open": _pf(row[5]), "high": _pf(row[6]),
+                "low": _pf(row[7]), "close": close_p,
+                "prev_close": round(close_p - chg, 4) if (close_p is not None and chg is not None) else None,
+            }
+        except Exception:
+            continue
+    return stocks, date_str
 
-    # Fallback: TWSE OpenAPI (more stable, no anti-bot)
+
+def _fetch_stocks_from_price_window():
+    """雲端備援：TWSE 兩個端點從 Vercel 都被擋時，改讀 Supabase price_window
+    （每日排程上傳的證交所 OHLCV）。無 name（顯示用代號）；prev_close 由前一交易日收盤推得。"""
+    if not (SUPABASE_URL and SUPABASE_KEY):
+        return {}, ""
+    def _rows(params):
+        return _cache_sb("/price_window", params=params)[1] or []
+    top = _rows([("select", "trade_date"), ("order", "trade_date.desc"), ("limit", "1")])
+    if not top:
+        return {}, ""
+    latest = top[0]["trade_date"]
+    prev = _rows([("select", "trade_date"), ("trade_date", f"lt.{latest}"),
+                  ("order", "trade_date.desc"), ("limit", "1")])
+    prev_date = prev[0]["trade_date"] if prev else None
+
+    def _all(date):
+        out, off = [], 0
+        while True:                                   # PostgREST 單頁上限 1000，需分頁
+            page = _rows([("select", "code,open,high,low,close,volume"),
+                          ("trade_date", f"eq.{date}"), ("order", "code.asc"),
+                          ("offset", str(off)), ("limit", "1000")])
+            out.extend(page)
+            if len(page) < 1000:
+                break
+            off += 1000
+        return out
+
+    prev_close = {r["code"]: r.get("close") for r in _all(prev_date)} if prev_date else {}
+    stocks = {}
+    for r in _all(latest):
+        code = str(r.get("code", "")).strip()
+        if not code or not code[0].isdigit():
+            continue
+        stocks[code] = {
+            "code": code, "name": code,
+            "volume": r.get("volume") or 0,
+            "open": r.get("open"), "high": r.get("high"),
+            "low": r.get("low"), "close": r.get("close"),
+            "prev_close": prev_close.get(code),
+        }
+    return stocks, latest.replace("-", "")
+
+
+def fetch_all_stocks_latest():
+    """Returns (stocks_dict, YYYYMMDD_str) for the most recent trading day.
+    來源順序：TWSE 主站 CSV → TWSE OpenAPI → Supabase price_window（雲端備援）。"""
+    # Primary: TWSE 主站全市場（2026 起回傳 CSV）
+    txt = _get_text("https://www.twse.com.tw/exchangeReport/STOCK_DAY_ALL?response=csv")
+    if txt and "," in txt:
+        stocks, d = _parse_stocks_csv(txt)
+        if stocks:
+            return stocks, d
+
+    # Fallback 1: TWSE OpenAPI（Vercel 常被擋/逾時，但本機可用）
     rows = _get_json(
         "https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL",
         headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"},
         timeout=20,
     )
     if rows and isinstance(rows, list):
-        return _parse_stocks_openapi(rows)
+        stocks, d = _parse_stocks_openapi(rows)
+        if stocks:
+            return stocks, d
 
-    return {}, ""
+    # Fallback 2: Supabase price_window（TWSE 全擋時仍可運作）
+    return _fetch_stocks_from_price_window()
 
 
 _monthly_cache: dict = {}   # key: "{code}_{yyyymm}" -> (timestamp, rows)
