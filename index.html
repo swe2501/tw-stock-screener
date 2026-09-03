@@ -2654,10 +2654,11 @@
           <b style="font-size:13px">${_htEsc(t.topic)}</b>
         </div>
         ${t.summary ? `<div style="font-size:11.5px;color:var(--text-muted);margin:5px 0">${_htEsc(t.summary)}</div>` : ''}
-        <table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:4px">
-          <thead><tr style="color:var(--text-muted)"><th style="padding:3px 8px;text-align:left">個股（依強度排序）</th>
-            <th style="padding:3px 8px;text-align:right">強度<br><span style="font-weight:400;font-size:10px">RS·均線·近高</span></th><th style="padding:3px 8px;text-align:right">20日漲跌</th><th style="padding:3px 8px;text-align:left">主力</th></tr></thead>
-          <tbody>${rows}</tbody></table>
+        <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;margin-top:4px">
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="color:var(--text-muted)"><th style="padding:3px 8px;text-align:left;white-space:nowrap">個股（依強度排序）</th>
+            <th style="padding:3px 8px;text-align:right;white-space:nowrap">強度<br><span style="font-weight:400;font-size:10px">RS·均線·近高</span></th><th style="padding:3px 8px;text-align:right;white-space:nowrap">20日漲跌</th><th style="padding:3px 8px;text-align:left;white-space:nowrap">主力</th></tr></thead>
+          <tbody>${rows}</tbody></table></div>
         ${srcs ? `<div style="margin-top:5px">${srcs}</div>` : ''}
       </div>`;
     }
