@@ -16,6 +16,15 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 SUPABASE_URL     = os.environ.get("SUPABASE_URL", "")
 SUPABASE_KEY     = os.environ.get("SUPABASE_ANON_KEY", "")
 
+# code→公司名(僅供 price_window 雲端備援時填股名;import 失敗則退回顯示代號，無回歸風險)
+try:
+    from _names import NAMES as _STOCK_NAMES
+except Exception:
+    try:
+        from api._names import NAMES as _STOCK_NAMES
+    except Exception:
+        _STOCK_NAMES = {}
+
 
 def _cache_sb(path, method="GET", body=None, params=None):
     if not (SUPABASE_URL and SUPABASE_KEY):
@@ -277,7 +286,7 @@ def _fetch_stocks_from_price_window():
         if not code or not code[0].isdigit():
             continue
         stocks[code] = {
-            "code": code, "name": code,
+            "code": code, "name": _STOCK_NAMES.get(code, code),
             "volume": r.get("volume") or 0,
             "open": r.get("open"), "high": r.get("high"),
             "low": r.get("low"), "close": r.get("close"),
