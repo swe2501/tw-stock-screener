@@ -1202,7 +1202,7 @@
     <div class="mn-grp"><span class="mn-item">選股 <i>▾</i></span><div class="mn-menu">
       <a onclick="_showView('screen')">篩選器</a><a onclick="_todo('箱型')">箱型</a><a onclick="_todo('漲停分析')">漲停分析</a></div></div>
     <div class="mn-grp"><span class="mn-item">題材族群 <i>▾</i></span><div class="mn-menu">
-      <a class="nav-owner" onclick="openHotTopics()">🔥 話題</a><a onclick="_todo('題材列表')">題材列表</a><a onclick="_todo('產業地圖')">產業地圖</a></div></div>
+      <a class="nav-owner" onclick="openHotTopics()">🔥 話題</a><a onclick="_showView('themes')">題材列表</a><a onclick="_todo('產業地圖')">產業地圖</a></div></div>
     <div class="mn-grp"><span class="mn-item">市場觀察 <i>▾</i></span><div class="mn-menu">
       <a class="nav-owner" onclick="openBrokerSignals()">🎯 主力訊號</a><a class="nav-owner" onclick="openBrokerRankings()">📊 分點回測</a><a onclick="openMarginModal()">📈 融資維持率</a><a onclick="_todo('股期儀表板')">股期儀表板</a></div></div>
     <div class="mn-grp"><span class="mn-item">ETF 分析 <span class="mn-new">新</span> <i>▾</i></span><div class="mn-menu">
@@ -1361,6 +1361,59 @@
     };
   })();
   </script>
+
+  <style>
+    #themesView{max-width:1100px;margin:0 auto;}
+    .tm-head{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
+    .tm-head h2{font-size:19px;font-weight:800;margin:0;}
+    .tm-head .sub{font-size:12px;color:var(--text-muted);}
+    .tm-list{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;}
+    .tm-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;display:flex;flex-direction:column;}
+    .tm-card .top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
+    .tm-card .ttl{font-size:15px;font-weight:800;line-height:1.4;}
+    .tm-heat{flex:0 0 auto;font-size:12px;font-weight:800;color:#231c00;background:var(--accent);border-radius:8px;padding:3px 9px;white-space:nowrap;}
+    .tm-meta{display:flex;gap:8px;flex-wrap:wrap;margin:7px 0 8px;}
+    .tm-badge{font-size:11px;color:var(--text-muted);background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:2px 10px;}
+    .tm-sum{font-size:13px;color:var(--text);line-height:1.7;margin-bottom:10px;}
+    .tm-codes{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;}
+    .tm-chip{font-size:12px;font-weight:600;border:1px solid var(--border);border-radius:8px;padding:3px 9px;color:var(--accent);}
+    .tm-src{font-size:11px;color:var(--text-muted);}
+    .tm-src a{color:var(--accent2);text-decoration:none;margin-right:8px;}
+    .tm-src a:hover{text-decoration:underline;}
+    @media(max-width:820px){.tm-list{grid-template-columns:1fr;}}
+  </style>
+  <div id="themesView" style="display:none">
+    <div class="tm-head"><h2>🔥 題材列表</h2><span class="sub" id="tmSub"></span></div>
+    <div class="tm-list" id="tmList"><div class="fc-empty">載入中…</div></div>
+    <div class="fc-note" id="tmNote"></div>
+  </div>
+  <script>
+  (function(){
+    var el=function(id){return document.getElementById(id);};
+    function esc(s){return String(s==null?'':s).replace(/[&<>]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});}
+    function host(u){try{return new URL(u).hostname.replace(/^www\./,'');}catch(e){return '來源';}}
+    window._themesShow=function(){
+      var SB=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'', AK=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';
+      fetch(SB+'/rest/v1/hot_topics?select=topic,sector,summary,codes,source_urls,heat,published_at,captured_at&order=heat.desc&limit=100',{headers:{apikey:AK,Authorization:'Bearer '+AK}}).then(function(r){return r.json();}).then(function(a){
+        if(!Array.isArray(a)||!a.length){el('tmList').innerHTML='<div class="fc-empty">目前無題材資料</div>';return;}
+        var cap=a[0].captured_at?String(a[0].captured_at).slice(0,10):'';
+        if(el('tmSub'))el('tmSub').textContent='共 '+a.length+' 個題材'+(cap?' · 更新於 '+cap:'');
+        el('tmList').innerHTML=a.map(function(t){
+          var codes=Array.isArray(t.codes)?t.codes.map(function(c){return '<span class="tm-chip">'+esc(c.code)+' '+esc(c.name||'')+'</span>';}).join(''):'';
+          var srcs=Array.isArray(t.source_urls)?t.source_urls.slice(0,4).map(function(u){return '<a href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">'+esc(host(u))+' ↗</a>';}).join(''):'';
+          return '<div class="tm-card"><div class="top"><span class="ttl">'+esc(t.topic)+'</span><span class="tm-heat">熱度 '+esc(t.heat)+'</span></div>'+
+            '<div class="tm-meta">'+(t.sector?'<span class="tm-badge">'+esc(t.sector)+'</span>':'')+(t.published_at?'<span class="tm-badge">📅 '+esc(t.published_at)+'</span>':'')+'</div>'+
+            (t.summary?'<div class="tm-sum">'+esc(t.summary)+'</div>':'')+
+            (codes?'<div class="tm-codes">'+codes+'</div>':'')+
+            (srcs?'<div class="tm-src">來源：'+srcs+'</div>':'')+
+            '</div>';
+        }).join('');
+      }).catch(function(){el('tmList').innerHTML='<div class="fc-empty">讀取失敗</div>';});
+      if(el('tmNote'))el('tmNote').innerHTML='<b>資料源：</b>hot_topics（每日新聞題材彙整流程產出，熱度為該流程評分）。成分股為題材相關個股，來源為原始新聞連結。';
+    };
+    window._VIEWS=window._VIEWS||{}; window._VIEWS.themes={el:'themesView',show:'_themesShow'};
+  })();
+  </script>
   <script>
   (function(){
     var IDX=[{s:'^TWII',n:'台股加權'},{s:'^N225',n:'日經225'},{s:'^IXIC',n:'那斯達克'},{s:'^DJI',n:'道瓊'},{s:'^GSPC',n:'S&P 500'}];
@@ -1417,11 +1470,13 @@
     }
     window._hxShow=function(){ el('homeView').style.display='block'; load(); tiles(); };
     window._hxRetheme=function(){ if(el('homeView')&&el('homeView').style.display!=='none') load(); };
+    // 通用視圖註冊：新增大項只要在此登記 {el:容器id, show:全域函式名}，並提供對應元素/函式即可
+    window._VIEWS = window._VIEWS || {}; window._VIEWS.home={el:'homeView',show:'_hxShow'}; window._VIEWS.focus={el:'focusView',show:'_focusShow'};
     window._showView=function(v){
-      var fw=document.querySelector('.form-wrap'), ra=el('resultsArea'), hv=el('homeView'), fv=el('focusView');
-      if(v==='home'){ if(hv)hv.style.display='block'; if(fv)fv.style.display='none'; if(fw)fw.style.display='none'; if(ra)ra.style.display='none'; window._hxShow(); }
-      else if(v==='focus'){ if(hv)hv.style.display='none'; if(fv)fv.style.display='block'; if(fw)fw.style.display='none'; if(ra)ra.style.display='none'; if(window._focusShow)window._focusShow(); }
-      else { if(hv)hv.style.display='none'; if(fv)fv.style.display='none'; if(fw)fw.style.display=''; if(ra)ra.style.display=''; }
+      var fw=document.querySelector('.form-wrap'), ra=el('resultsArea'), cfg=window._VIEWS[v];
+      Object.keys(window._VIEWS).forEach(function(k){var e=el(window._VIEWS[k].el); if(e)e.style.display='none';});
+      if(cfg){ var e=el(cfg.el); if(e)e.style.display='block'; if(fw)fw.style.display='none'; if(ra)ra.style.display='none'; if(typeof window[cfg.show]==='function')window[cfg.show](); }
+      else { if(fw)fw.style.display=''; if(ra)ra.style.display=''; }
     };
     document.addEventListener('click',function(e){
       var o=e.target.closest('[data-hxo]'); if(o){var k=o.dataset.hxo;open=open===k?null:k;renderCtl();return;}
