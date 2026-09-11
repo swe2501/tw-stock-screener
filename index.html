@@ -1202,7 +1202,7 @@
     <div class="mn-grp"><span class="mn-item">選股 <i>▾</i></span><div class="mn-menu">
       <a onclick="_showView('screen')">篩選器</a><a onclick="_showView('box')">箱型</a><a onclick="_showView('limitup')">漲停分析</a></div></div>
     <div class="mn-grp"><span class="mn-item">題材族群 <i>▾</i></span><div class="mn-menu">
-      <a class="nav-owner" onclick="openHotTopics()">🔥 話題</a><a onclick="_showView('themes')">題材列表</a><a onclick="_todo('產業地圖')">產業地圖</a></div></div>
+      <a class="nav-owner" onclick="openHotTopics()">🔥 話題</a><a onclick="_showView('themes')">題材列表</a><a onclick="_showView('sectors')">產業地圖</a></div></div>
     <div class="mn-grp"><span class="mn-item">市場觀察 <i>▾</i></span><div class="mn-menu">
       <a class="nav-owner" onclick="openBrokerSignals()">🎯 主力訊號</a><a class="nav-owner" onclick="openBrokerRankings()">📊 分點回測</a><a onclick="openMarginModal()">📈 融資維持率</a><a onclick="_showView('greed')">😱 貪婪指標</a><a onclick="_todo('股期儀表板')">股期儀表板</a></div></div>
     <div class="mn-grp"><span class="mn-item">ETF 分析 <span class="mn-new">新</span> <i>▾</i></span><div class="mn-menu">
@@ -1631,6 +1631,57 @@
       el('gdSearch').oninput=render; el('gdSort').onchange=render;
     };
     window._VIEWS=window._VIEWS||{}; window._VIEWS.greed={el:'greedView',show:'_greedShow'};
+  })();
+  </script>
+
+  <style>
+    #sectorView{max-width:1200px;margin:0 auto;}
+    .sm-map{display:flex;flex-wrap:wrap;gap:6px;}
+    .sm-tile{position:relative;border-radius:10px;padding:10px 12px;color:#fff;overflow:hidden;min-width:120px;display:flex;flex-direction:column;justify-content:center;border:1px solid rgba(255,255,255,.08);}
+    .sm-tile .nm{font-size:14px;font-weight:800;line-height:1.2;text-shadow:0 1px 2px rgba(0,0,0,.35);}
+    .sm-tile .pc{font-size:18px;font-weight:800;margin-top:3px;text-shadow:0 1px 2px rgba(0,0,0,.35);}
+    .sm-tile .mt{font-size:11px;opacity:.92;margin-top:2px;text-shadow:0 1px 2px rgba(0,0,0,.35);}
+    .sm-legend{display:flex;align-items:center;gap:10px;font-size:11px;color:var(--text-muted);margin:10px 0 12px;flex-wrap:wrap;}
+    .sm-swatch{display:inline-block;width:60px;height:12px;border-radius:3px;background:linear-gradient(90deg,#0f9d63,#7a7f85,#f0555a);}
+  </style>
+  <div id="sectorView" style="display:none">
+    <div class="tm-head"><h2>🗺️ 產業地圖</h2><span class="sub" id="smSub"></span></div>
+    <div class="sm-legend"><span>跌</span><span class="sm-swatch"></span><span>漲</span><span>· 磚塊大小＝該產業檔數，顏色＝當日平均漲跌幅（紅漲綠跌）</span></div>
+    <div class="sm-map" id="smMap"><div class="fc-empty">載入中…</div></div>
+    <div class="fc-note" id="smNote"></div>
+  </div>
+  <script>
+  (function(){
+    var el=function(id){return document.getElementById(id);};
+    function color(chg){
+      // 紅漲綠跌，強度依 |chg| (0~4% 飽和)
+      var a=Math.min(1,Math.abs(chg)/4);
+      if(chg>=0){ return 'rgb('+Math.round(200+40*a)+','+Math.round(90-60*a)+','+Math.round(95-60*a)+')'; }
+      return 'rgb('+Math.round(30)+','+Math.round(140+30*a)+','+Math.round(110-20*a)+')';
+    }
+    window._sectorShow=function(){
+      el('smMap').innerHTML='<div class="fc-empty">載入中…</div>';
+      fetch('/api/screen?stat=sectors').then(function(r){return r.json();}).then(function(j){
+        if(!j||j.error||!Array.isArray(j.sectors)){el('smMap').innerHTML='<div class="fc-empty">讀取失敗'+((j&&j.error)?'：'+j.error:'')+'</div>';return;}
+        var secs=j.sectors;
+        if(el('smSub'))el('smSub').textContent=(j.date||'')+' · '+secs.length+' 個產業 · '+j.total+' 檔';
+        var maxc=Math.max.apply(null,secs.map(function(s){return s.count;}))||1;
+        el('smMap').innerHTML=secs.map(function(s){
+          var g=Math.max(1,Math.round(s.count/maxc*10));      // flex-grow 1~10
+          var big=s.count>=maxc*0.5;
+          var h=s.count>=maxc*0.6?116:(s.count>=maxc*0.3?98:84);
+          var sign=s.avg_chg>0?'+':'';
+          var top=s.top?(s.top.code+' '+s.top.name+' '+(s.top.chg>0?'+':'')+s.top.chg+'%'):'';
+          return '<div class="sm-tile" style="flex:'+g+' 1 140px;height:'+h+'px;background:'+color(s.avg_chg)+'">'+
+            '<div class="nm">'+s.sector+'</div>'+
+            '<div class="pc">'+sign+Number(s.avg_chg).toFixed(2)+'%</div>'+
+            '<div class="mt">'+s.count+' 檔 · 漲'+s.up+'/跌'+s.down+(big&&top?' · 領漲 '+top:'')+'</div>'+
+          '</div>';
+        }).join('');
+      }).catch(function(){el('smMap').innerHTML='<div class="fc-empty">讀取失敗</div>';});
+      if(el('smNote'))el('smNote').innerHTML='<b>算法與資料源：</b>個股漲跌幅=今收÷前收−1；產業平均漲跌幅=該產業成分股漲跌幅算術平均（等權，非市值加權）。產業別對照 TWSE 上市公司基本資料(t187ap03_L，內嵌於後端)。磚塊大小＝該產業當日有成交的檔數。資料源 price_window。';
+    };
+    window._VIEWS=window._VIEWS||{}; window._VIEWS.sectors={el:'sectorView',show:'_sectorShow'};
   })();
   </script>
   <script>
