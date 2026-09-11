@@ -117,7 +117,7 @@
     #funcMenu {
       display: none; position: absolute; right: 0; top: calc(100% + 6px);
       flex-direction: column; gap: 4px; min-width: 165px; padding: 6px;
-      background: #171a24; border: 1px solid var(--border); border-radius: 10px; z-index: 9998;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 10px; z-index: 9998; box-shadow: 0 12px 30px rgba(0,0,0,.25);
     }
     #funcMenu button { width: 100% !important; text-align: left !important; }
     #funcMenu .btn-label { display: inline !important; }
@@ -4940,18 +4940,27 @@
 
     }
 
+    function _cssv(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+    function _chartTheme(){ return { bg: _cssv('--surface') || '#131722', text: _cssv('--text-muted') || '#c9d1d9', grid: _cssv('--border') || '#2e3350' }; }
     function _chartOpts(height, showTime) {
+      const t = _chartTheme();
       return {
         width: 0, height,
-        layout: { background: { color: '#131722' }, textColor: '#c9d1d9' },
-        grid: { vertLines: { color: '#2e3350' }, horzLines: { color: '#2e3350' } },
+        layout: { background: { color: t.bg }, textColor: t.text },
+        grid: { vertLines: { color: t.grid }, horzLines: { color: t.grid } },
         crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
-        rightPriceScale: { borderColor: '#2e3350', minimumWidth: 65, autoScale: true },
-        timeScale: { borderColor: '#2e3350', timeVisible: true, visible: showTime,
+        rightPriceScale: { borderColor: t.grid, minimumWidth: 65, autoScale: true },
+        timeScale: { borderColor: t.grid, timeVisible: true, visible: showTime,
                      secondsVisible: false, rightOffset: 5 },
         handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true },
         handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: true },
       };
+    }
+    // 切換明暗時，更新已開啟的圖表顏色(主圖/量/MACD/RSI)
+    function _rethemeChart(){
+      const t = _chartTheme();
+      const o = { layout:{ background:{ color:t.bg }, textColor:t.text }, grid:{ vertLines:{ color:t.grid }, horzLines:{ color:t.grid } }, rightPriceScale:{ borderColor:t.grid }, timeScale:{ borderColor:t.grid } };
+      [typeof chartInstance!=='undefined'?chartInstance:null, typeof volInstance!=='undefined'?volInstance:null, typeof macdInstance!=='undefined'?macdInstance:null, typeof rsiInstance!=='undefined'?rsiInstance:null].forEach(c=>{ if(c){ try{ c.applyOptions(o); }catch(_){}}});
     }
 
     function _validCandles(candles) {
