@@ -1200,7 +1200,7 @@
     <a class="mn-item" onclick="_showView('home')">首頁</a>
     <a class="mn-item" onclick="_showView('focus')">今日焦點</a>
     <div class="mn-grp"><span class="mn-item">選股 <i>▾</i></span><div class="mn-menu">
-      <a onclick="_showView('screen')">篩選器</a><a onclick="_todo('箱型')">箱型</a><a onclick="_todo('漲停分析')">漲停分析</a></div></div>
+      <a onclick="_showView('screen')">篩選器</a><a onclick="_showView('box')">箱型</a><a onclick="_todo('漲停分析')">漲停分析</a></div></div>
     <div class="mn-grp"><span class="mn-item">題材族群 <i>▾</i></span><div class="mn-menu">
       <a class="nav-owner" onclick="openHotTopics()">🔥 話題</a><a onclick="_showView('themes')">題材列表</a><a onclick="_todo('產業地圖')">產業地圖</a></div></div>
     <div class="mn-grp"><span class="mn-item">市場觀察 <i>▾</i></span><div class="mn-menu">
@@ -1412,6 +1412,84 @@
       if(el('tmNote'))el('tmNote').innerHTML='<b>資料源：</b>hot_topics（每日新聞題材彙整流程產出，熱度為該流程評分）。成分股為題材相關個股，來源為原始新聞連結。';
     };
     window._VIEWS=window._VIEWS||{}; window._VIEWS.themes={el:'themesView',show:'_themesShow'};
+  })();
+  </script>
+
+  <script>
+  // 共用：股名對照（一次載入、全視圖共用）
+  window._names = window._names || null;
+  window._loadNames = function(cb){
+    if(window._names){ if(cb)cb(window._names); return; }
+    fetch('/api/screen?stat=names').then(function(r){return r.json();}).then(function(m){ window._names = m||{}; if(cb)cb(window._names); }).catch(function(){ window._names = {}; if(cb)cb(window._names); });
+  };
+  </script>
+
+  <style>
+    #boxView{max-width:1100px;margin:0 auto;}
+    .bx-list{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;}
+    .bx-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;}
+    .bx-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;}
+    .bx-code b{color:var(--accent);font-size:15px;} .bx-code span{color:var(--text-muted);font-size:13px;margin-left:4px;}
+    .bx-tag{font-size:11px;font-weight:800;border-radius:8px;padding:3px 9px;white-space:nowrap;}
+    .bx-tag.form{color:var(--text-muted);background:var(--surface2);}
+    .bx-tag.up{color:#231c00;background:var(--red);}
+    .bx-tag.dn{color:#fff;background:var(--green);}
+    .bx-bar{position:relative;height:34px;background:var(--surface2);border-radius:8px;margin:8px 0 6px;overflow:hidden;}
+    .bx-inner{position:absolute;top:0;bottom:0;background:color-mix(in srgb,var(--accent) 22%,transparent);border-left:1px dashed var(--accent);border-right:1px dashed var(--accent);}
+    .bx-mark{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--text);}
+    .bx-mark::after{content:attr(data-p);position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-size:10px;color:var(--text);white-space:nowrap;}
+    .bx-scale{display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);}
+    .bx-meta{font-size:11px;color:var(--text-muted);margin-top:8px;line-height:1.7;}
+    .bx-reason{font-size:12px;color:var(--text);margin-top:4px;}
+    @media(max-width:820px){.bx-list{grid-template-columns:1fr;}}
+  </style>
+  <div id="boxView" style="display:none">
+    <div class="tm-head"><h2>📦 箱型型態</h2><span class="sub" id="bxSub"></span></div>
+    <div class="bx-list" id="bxList"><div class="fc-empty">載入中…</div></div>
+    <div class="fc-note" id="bxNote"></div>
+  </div>
+  <script>
+  (function(){
+    var el=function(id){return document.getElementById(id);};
+    function fmt(v){return v==null?'—':Number(v).toLocaleString(undefined,{maximumFractionDigits:2});}
+    var TAG={FORMING:['整理中','form'],CONFIRMED_UP:['向上突破','up'],CONFIRMED_DOWN:['向下突破','dn']};
+    window._boxShow=function(){
+      var SB=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'', AK=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';
+      var H={apikey:AK,Authorization:'Bearer '+AK};
+      fetch(SB+'/rest/v1/box_patterns?select=code,status,upper_center,lower_center,upper_outer,lower_outer,breakout_date,breakout_direction,breakout_reason,data_date,window_start,window_end&order=status.asc,code.asc&limit=300',{headers:H}).then(function(r){return r.json();}).then(function(rows){
+        if(!Array.isArray(rows)||!rows.length){el('bxList').innerHTML='<div class="fc-empty">目前無箱型資料</div>';return;}
+        var dd=rows[0].data_date||'';
+        var cnt={};rows.forEach(function(x){cnt[x.status]=(cnt[x.status]||0)+1;});
+        if(el('bxSub'))el('bxSub').textContent='共 '+rows.length+' 檔 · 整理中 '+(cnt.FORMING||0)+' · 向上 '+(cnt.CONFIRMED_UP||0)+' · 向下 '+(cnt.CONFIRMED_DOWN||0)+(dd?' · '+dd:'');
+        var codes=rows.map(function(x){return x.code;});
+        window._loadNames(function(names){
+          // 取現價（price_window 最新日，僅這些代號）
+          fetch(SB+'/rest/v1/price_window?select=code,close,trade_date&code=in.('+codes.join(',')+')&order=trade_date.desc',{headers:H}).then(function(r){return r.json();}).then(function(pw){
+            var px={};(pw||[]).forEach(function(r){ if(px[r.code]==null)px[r.code]=r.close; }); // 每碼第一筆=最新
+            el('bxList').innerHTML=rows.map(function(x){
+              var lo=x.lower_outer, hi=x.upper_outer, ic=x.upper_center, il=x.lower_center, cur=px[x.code];
+              var t=TAG[x.status]||['—','form'];
+              var bar='';
+              if(lo!=null&&hi!=null&&hi>lo){
+                var span=hi-lo;
+                var il2=Math.max(0,Math.min(100,(il-lo)/span*100)), iu2=Math.max(0,Math.min(100,(ic-lo)/span*100));
+                bar='<div class="bx-bar"><div class="bx-inner" style="left:'+il2+'%;width:'+(iu2-il2)+'%"></div>'+
+                  (cur!=null?'<div class="bx-mark" data-p="'+fmt(cur)+'" style="left:'+Math.max(0,Math.min(100,(cur-lo)/span*100))+'%"></div>':'')+'</div>'+
+                  '<div class="bx-scale"><span>'+fmt(lo)+'</span><span>箱底 '+fmt(il)+' ~ 箱頂 '+fmt(ic)+'</span><span>'+fmt(hi)+'</span></div>';
+              }
+              return '<div class="bx-card"><div class="bx-top"><span class="bx-code"><b>'+x.code+'</b><span>'+(names[x.code]||'')+'</span></span><span class="bx-tag '+t[1]+'">'+t[0]+'</span></div>'+
+                bar+
+                (x.breakout_reason?'<div class="bx-reason">📌 '+x.breakout_reason+'</div>':'')+
+                '<div class="bx-meta">觀察區間：'+(x.window_start||'')+' ~ '+(x.window_end||'')+(x.breakout_date?' · 突破日 '+x.breakout_date:'')+'</div></div>';
+            }).join('');
+          }).catch(function(){
+            el('bxList').innerHTML=rows.map(function(x){var t=TAG[x.status]||['—','form'];return '<div class="bx-card"><div class="bx-top"><span class="bx-code"><b>'+x.code+'</b><span>'+(names[x.code]||'')+'</span></span><span class="bx-tag '+t[1]+'">'+t[0]+'</span></div><div class="bx-scale"><span>箱底 '+fmt(x.lower_center)+'</span><span>箱頂 '+fmt(x.upper_center)+'</span></div></div>';}).join('');
+          });
+        });
+      }).catch(function(){el('bxList').innerHTML='<div class="fc-empty">讀取失敗</div>';});
+      if(el('bxNote'))el('bxNote').innerHTML='<b>資料源：</b>box_patterns（每日箱型偵測流程產出）。箱頂/箱底為箱體中樞區間(upper/lower_center)，外圍虛線為 upper/lower_outer；直線標記為目前股價(price_window 最新收盤)。狀態：整理中 / 向上突破 / 向下突破。';
+    };
+    window._VIEWS=window._VIEWS||{}; window._VIEWS.box={el:'boxView',show:'_boxShow'};
   })();
   </script>
   <script>

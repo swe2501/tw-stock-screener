@@ -1511,6 +1511,9 @@ class handler(BaseHTTPRequestHandler):
                                              "up_limit": up_lim, "down_limit": dn_lim, "total": len(stocks)})
             except Exception as e:
                 return self._send_json(200, {"error": str(e)})
+        # 股票代號→名稱對照（前端各視圖共用；純靜態，不查 DB）
+        if (qs.get("stat") or [""])[0] == "names":
+            return self._send_json(200, _STOCK_NAMES)
         # 今日焦點三榜（漲幅/跌幅/爆量）：頁面 _showView('focus') 用
         if (qs.get("stat") or [""])[0] == "focus":
             try:
