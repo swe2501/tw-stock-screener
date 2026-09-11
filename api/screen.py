@@ -289,6 +289,94 @@ def _fetch_stocks_from_price_window():
     return stocks, latest.replace("-", "")
 
 
+def _fetch_focus(top_n=30):
+    """今日焦點三榜（伺服器端算，回精簡 JSON）：漲幅榜／跌幅榜／爆量榜。
+    資料源：Supabase price_window（每日上傳的證交所 OHLCV，不落後）。
+      漲跌幅 = (今日收盤 / 前一交易日收盤 - 1) × 100
+      量比   = 今日量 ÷ max(近5日均量, 近10日均量)  ← 均量皆「不含當日」
+      爆量榜 = 量比 ≥ 1.3 者，依量比高到低取前 N（含 ETF）
+    榜單各取前 N（含 ETF）。無前一日收盤者不列入漲跌幅榜。"""
+    if not (SUPABASE_URL and SUPABASE_KEY):
+        return {"error": "no supabase"}
+
+    def _rows(params):
+        return _cache_sb("/price_window", params=params)[1] or []
+
+    # 取最近 12 個交易日（用高流動性個股 2330 的日期序列，足夠算 10 日均量）
+    dser = _rows([("select", "trade_date"), ("code", "eq.2330"),
+                  ("order", "trade_date.desc"), ("limit", "15")])
+    dates = []
+    for r in dser:
+        d = r["trade_date"]
+        if d not in dates:
+            dates.append(d)
+        if len(dates) >= 12:
+            break
+    if len(dates) < 2:
+        return {"error": "not enough dates"}
+    latest = dates[0]
+    since = dates[-1]                      # 最舊的納入日
+
+    # 一次撈這區間所有個股的 收盤/量（分頁；PostgREST 單頁 1000）
+    rows, off = [], 0
+    while True:
+        page = _rows([("select", "code,trade_date,close,volume"),
+                      ("trade_date", f"gte.{since}"), ("order", "code.asc,trade_date.desc"),
+                      ("offset", str(off)), ("limit", "1000")])
+        rows.extend(page)
+        if len(page) < 1000:
+            break
+        off += 1000
+
+    # 依個股彙整（日期由新到舊）
+    by_code = {}
+    for r in rows:
+        c = str(r.get("code", "")).strip()
+        if not c or not c[0].isdigit():
+            continue
+        by_code.setdefault(c, []).append(r)
+
+    gainers, losers, surges = [], [], []
+    for c, arr in by_code.items():
+        arr.sort(key=lambda x: x["trade_date"], reverse=True)   # 新→舊
+        if arr[0]["trade_date"] != latest:
+            continue                                            # 今日無成交（停牌等）
+        cur = arr[0]
+        close = cur.get("close")
+        vol = cur.get("volume") or 0
+        name = _STOCK_NAMES.get(c, c)
+        # 漲跌幅
+        if len(arr) >= 2 and arr[1].get("close"):
+            chg = (close / arr[1]["close"] - 1) * 100 if close is not None else None
+        else:
+            chg = None
+        if chg is not None:
+            rec = {"code": c, "name": name, "close": close, "chg": round(chg, 2)}
+            gainers.append(rec); losers.append(rec)
+        # 量比（均量不含當日）
+        prev_vols = [x.get("volume") or 0 for x in arr[1:11]]
+        if len(prev_vols) >= 5 and vol > 0:
+            ma5 = sum(prev_vols[:5]) / 5.0
+            ma10 = sum(prev_vols[:10]) / len(prev_vols[:10])
+            base = max(ma5, ma10)
+            if base > 0:
+                ratio = vol / base
+                if ratio >= 1.3:
+                    surges.append({"code": c, "name": name, "close": close,
+                                   "chg": round(chg, 2) if chg is not None else None,
+                                   "vol": vol, "ratio": round(ratio, 2)})
+
+    gainers.sort(key=lambda x: x["chg"], reverse=True)
+    losers.sort(key=lambda x: x["chg"])
+    surges.sort(key=lambda x: x["ratio"], reverse=True)
+    return {
+        "date": latest,
+        "gainers": gainers[:top_n],
+        "losers": losers[:top_n],
+        "volume_surge": surges[:top_n],
+    }
+
+
 def fetch_all_stocks_latest():
     """Returns (stocks_dict, YYYYMMDD_str) for the most recent trading day.
     來源順序：TWSE 主站 CSV → TWSE OpenAPI → Supabase price_window（雲端備援）。"""
@@ -1423,6 +1511,17 @@ class handler(BaseHTTPRequestHandler):
                                              "up_limit": up_lim, "down_limit": dn_lim, "total": len(stocks)})
             except Exception as e:
                 return self._send_json(200, {"error": str(e)})
+        # 今日焦點三榜（漲幅/跌幅/爆量）：頁面 _showView('focus') 用
+        if (qs.get("stat") or [""])[0] == "focus":
+            try:
+                n = int((qs.get("n") or ["30"])[0])
+            except Exception:
+                n = 30
+            try:
+                return self._send_json(200, _fetch_focus(max(1, min(n, 50))))
+            except Exception as e:
+                import traceback
+                return self._send_json(200, {"error": str(e), "traceback": traceback.format_exc()})
         self._send_json(200, {"status": "ok"})
 
     def do_POST(self):

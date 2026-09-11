@@ -1198,7 +1198,7 @@
   </script>
   <nav id="mainNav"><div class="mn-inner">
     <a class="mn-item" onclick="_showView('home')">首頁</a>
-    <a class="mn-item" onclick="_todo('今日焦點')">今日焦點</a>
+    <a class="mn-item" onclick="_showView('focus')">今日焦點</a>
     <div class="mn-grp"><span class="mn-item">選股 <i>▾</i></span><div class="mn-menu">
       <a onclick="_showView('screen')">篩選器</a><a onclick="_todo('箱型')">箱型</a><a onclick="_todo('漲停分析')">漲停分析</a></div></div>
     <div class="mn-grp"><span class="mn-item">題材族群 <i>▾</i></span><div class="mn-menu">
@@ -1222,6 +1222,144 @@
     </div>
     <div class="hx-tiles" id="hxTiles"></div>
   </div>
+
+  <style>
+    #focusView{max-width:1200px;margin:0 auto;}
+    .fc-summary{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;}
+    .fc-chip{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px 16px;min-width:120px;}
+    .fc-chip .k{font-size:11px;color:var(--text-muted);}
+    .fc-chip .v{font-size:19px;font-weight:800;margin-top:3px;}
+    .fc-chip .r{font-size:11px;color:var(--text-muted);margin-top:1px;}
+    .fc-up{color:var(--red);} .fc-dn{color:var(--green);}
+    .fc-grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px;}
+    .fc-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;overflow:hidden;}
+    .fc-h{font-size:13px;font-weight:800;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+    .fc-sub{font-size:10px;font-weight:600;color:var(--text-muted);background:var(--surface2);border-radius:6px;padding:1px 6px;}
+    .fc-tbl{max-height:360px;overflow-y:auto;}
+    .fc-row{display:flex;align-items:center;justify-content:space-between;font-size:12.5px;padding:5px 2px;border-bottom:1px solid var(--border);}
+    .fc-row:last-child{border-bottom:0;}
+    .fc-row .n{color:var(--text-muted);width:20px;flex:0 0 20px;text-align:right;margin-right:8px;font-variant-numeric:tabular-nums;}
+    .fc-row .s{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .fc-row .s b{color:var(--accent);font-weight:700;}
+    .fc-row .val{font-variant-numeric:tabular-nums;font-weight:700;margin-left:8px;white-space:nowrap;}
+    .fc-row .val2{font-variant-numeric:tabular-nums;color:var(--text-muted);margin-left:8px;white-space:nowrap;font-size:11px;}
+    .fc-note{font-size:11px;color:var(--text-muted);line-height:1.8;margin:14px 2px 30px;border-top:1px dashed var(--border);padding-top:10px;}
+    .fc-note b{color:var(--text);}
+    .fc-empty{color:var(--text-muted);font-size:12px;padding:8px 2px;}
+    @media(max-width:900px){.fc-grid3{grid-template-columns:1fr;}}
+  </style>
+  <div id="focusView" style="display:none">
+    <div class="fc-summary" id="fcSummary"></div>
+    <div class="fc-grid3">
+      <div class="fc-card"><div class="fc-h">📈 漲幅榜 <span class="fc-sub">TOP30</span></div><div class="fc-tbl" id="fcGainers"><div class="fc-empty">載入中…</div></div></div>
+      <div class="fc-card"><div class="fc-h">📉 跌幅榜 <span class="fc-sub">TOP30</span></div><div class="fc-tbl" id="fcLosers"><div class="fc-empty">載入中…</div></div></div>
+      <div class="fc-card"><div class="fc-h">🔊 爆量榜 <span class="fc-sub">量比≥1.3</span></div><div class="fc-tbl" id="fcSurge"><div class="fc-empty">載入中…</div></div></div>
+    </div>
+    <div class="fc-grid3">
+      <div class="fc-card"><div class="fc-h">🔥 今日題材焦點</div><div id="fcTopics"><div class="fc-empty">載入中…</div></div></div>
+      <div class="fc-card"><div class="fc-h">📦 今日箱型突破</div><div id="fcBox"><div class="fc-empty">載入中…</div></div></div>
+      <div class="fc-card"><div class="fc-h">😱 貪婪 / 恐懼榜</div><div id="fcGreed"><div class="fc-empty">載入中…</div></div></div>
+    </div>
+    <div class="fc-card" id="fcSigCard"><div class="fc-h">🎯 今日主力焦點 <span class="fc-sub">擁有者限定</span></div><div id="fcSig"><div class="fc-empty">—</div></div></div>
+    <div class="fc-note" id="fcNote"></div>
+  </div>
+  <script>
+  (function(){
+    var el=function(id){return document.getElementById(id);};
+    var loaded=false, nameMap={};
+    function nm(code){return nameMap[code]||'';}
+    function rowsHTML(list, valfn){
+      if(!list||!list.length) return '<div class="fc-empty">今日無資料</div>';
+      return list.map(function(x,i){return '<div class="fc-row"><span class="n">'+(i+1)+'</span><span class="s"><b>'+x.code+'</b> '+(x.name||nm(x.code)||'')+'</span>'+valfn(x)+'</div>';}).join('');
+    }
+    function pct(v){return (v>0?'+':'')+Number(v).toFixed(2)+'%';}
+    function cls(v){return v>0?'fc-up':(v<0?'fc-dn':'');}
+    function loadFocus(){
+      fetch('/api/screen?stat=focus&n=30').then(function(r){return r.json();}).then(function(j){
+        if(!j||j.error){['fcGainers','fcLosers','fcSurge'].forEach(function(id){if(el(id))el(id).innerHTML='<div class="fc-empty">讀取失敗</div>';});return;}
+        (j.gainers||[]).forEach(function(x){nameMap[x.code]=x.name;});
+        (j.losers||[]).forEach(function(x){nameMap[x.code]=x.name;});
+        (j.volume_surge||[]).forEach(function(x){nameMap[x.code]=x.name;});
+        if(el('fcGainers'))el('fcGainers').innerHTML=rowsHTML(j.gainers,function(x){return '<span class="val '+cls(x.chg)+'">'+pct(x.chg)+'</span>';});
+        if(el('fcLosers'))el('fcLosers').innerHTML=rowsHTML(j.losers,function(x){return '<span class="val '+cls(x.chg)+'">'+pct(x.chg)+'</span>';});
+        if(el('fcSurge'))el('fcSurge').innerHTML=rowsHTML(j.volume_surge,function(x){return '<span class="val">'+Number(x.ratio).toFixed(2)+'x</span>'+(x.chg!=null?'<span class="val2 '+cls(x.chg)+'">'+pct(x.chg)+'</span>':'');});
+      }).catch(function(){['fcGainers','fcLosers','fcSurge'].forEach(function(id){if(el(id))el(id).innerHTML='<div class="fc-empty">讀取失敗</div>';});});
+    }
+    function loadSummary(){
+      var SB=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'', AK=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';
+      var parts={taiex:'',market:'',margin:''};
+      function render(){
+        el('fcSummary').innerHTML=(parts.taiex||'')+(parts.market||'')+(parts.margin||'');
+      }
+      // 大盤加權（taiex_daily 官方指數）
+      fetch(SB+'/rest/v1/taiex_daily?select=trade_date,close,volume&order=trade_date.desc&limit=2',{headers:{apikey:AK,Authorization:'Bearer '+AK}}).then(function(r){return r.json();}).then(function(a){
+        if(!Array.isArray(a)||a.length<1)return; var cur=a[0],prev=a[1];
+        var chg=prev?((cur.close/prev.close-1)*100):null;
+        parts.taiex='<div class="fc-chip"><div class="k">加權指數 · '+cur.trade_date+'</div><div class="v '+(chg!=null?cls(chg):'')+'">'+Number(cur.close).toLocaleString(undefined,{maximumFractionDigits:0})+'</div><div class="r">'+(chg!=null?pct(chg):'')+'</div></div>';
+        render();
+      }).catch(function(){});
+      // 漲停/跌停 + 漲跌家數
+      fetch('/api/screen?stat=market').then(function(r){return r.json();}).then(function(j){
+        if(!j||j.error)return;
+        parts.market='<div class="fc-chip"><div class="k">漲停 / 跌停</div><div class="v"><span class="fc-up">'+j.up_limit+'</span> / <span class="fc-dn">'+j.down_limit+'</span></div><div class="r">上漲 '+j.up+' · 下跌 '+j.down+'</div></div>';
+        render();
+      }).catch(function(){});
+      // 融資維持率（讀頁面既有徽章）
+      (function rm(n){try{var mb=el('marginRatioBox');var m=mb&&mb.textContent?mb.textContent.replace(/[^0-9.%]/g,''):'';if(m){parts.margin='<div class="fc-chip"><div class="k">融資維持率</div><div class="v">'+m+'</div><div class="r">越低越接近斷頭</div></div>';render();return;}}catch(e){}if(n>0)setTimeout(function(){rm(n-1);},1000);})(6);
+    }
+    function loadTopics(){
+      var SB=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'', AK=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';
+      fetch(SB+'/rest/v1/hot_topics?select=topic,sector,heat,codes&order=heat.desc&limit=8',{headers:{apikey:AK,Authorization:'Bearer '+AK}}).then(function(r){return r.json();}).then(function(a){
+        if(!Array.isArray(a)||!a.length){el('fcTopics').innerHTML='<div class="fc-empty">今日無資料</div>';return;}
+        el('fcTopics').innerHTML=a.map(function(t){var codes=Array.isArray(t.codes)?t.codes.slice(0,4).join('、'):(t.codes||'');return '<div class="fc-row"><span class="s"><b>'+String(t.topic||'').slice(0,16)+'</b>'+(codes?' <span style="color:var(--text-muted)">'+codes+'</span>':'')+'</span><span class="val">'+(t.heat!=null?t.heat:'')+'</span></div>';}).join('');
+      }).catch(function(){el('fcTopics').innerHTML='<div class="fc-empty">讀取失敗</div>';});
+    }
+    function loadBox(){
+      var SB=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'', AK=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';
+      fetch(SB+'/rest/v1/box_patterns?select=code,status,breakout_date,breakout_reason&status=eq.CONFIRMED_UP&order=breakout_date.desc&limit=30',{headers:{apikey:AK,Authorization:'Bearer '+AK}}).then(function(r){return r.json();}).then(function(a){
+        if(!Array.isArray(a)||!a.length){el('fcBox').innerHTML='<div class="fc-empty">今日無向上突破</div>';return;}
+        el('fcBox').innerHTML=a.map(function(x){return '<div class="fc-row"><span class="s"><b>'+x.code+'</b> '+nm(x.code)+'</span><span class="val2">'+(x.breakout_date||'')+'</span></div>';}).join('');
+      }).catch(function(){el('fcBox').innerHTML='<div class="fc-empty">讀取失敗</div>';});
+    }
+    function loadGreed(){
+      var SB=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'', AK=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';
+      var H={apikey:AK,Authorization:'Bearer '+AK};
+      Promise.all([
+        fetch(SB+'/rest/v1/greed_base?select=code,base,exhaust&order=base.desc&limit=5',{headers:H}).then(function(r){return r.json();}),
+        fetch(SB+'/rest/v1/greed_base?select=code,base&order=base.asc&limit=5',{headers:H}).then(function(r){return r.json();})
+      ]).then(function(res){
+        var top=res[0]||[],low=res[1]||[];
+        function seg(title,arr,up){return '<div style="font-size:11px;color:var(--text-muted);margin:4px 0 2px">'+title+'</div>'+(arr.length?arr.map(function(x){return '<div class="fc-row"><span class="s"><b>'+x.code+'</b> '+nm(x.code)+(x.exhaust?' <span style="color:var(--accent2)">利多出盡</span>':'')+'</span><span class="val '+(up?'fc-up':'fc-dn')+'">'+x.base+'</span></div>';}).join(''):'<div class="fc-empty">—</div>');}
+        el('fcGreed').innerHTML=seg('😈 最貪婪 TOP5',top,true)+seg('😱 最恐懼 TOP5',low,false);
+      }).catch(function(){el('fcGreed').innerHTML='<div class="fc-empty">讀取失敗</div>';});
+    }
+    function loadSig(){
+      var SB=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'', AK=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';
+      var _tk=localStorage.getItem('sb_token')||null,_u=null;try{_u=JSON.parse(localStorage.getItem('sb_user')||'null');}catch(_){}
+      var owner=!!_tk&&['swe250165@gmail.com','qa5518556130@gmail.com'].indexOf((_u&&_u.email)||'')>=0;
+      if(!owner){el('fcSigCard').style.display='none';return;}
+      el('fcSigCard').style.display='';
+      fetch(SB+'/rest/v1/broker_signals?select=signal_date,method,rank,code,broker_name,net_lots,win20&order=signal_date.desc,rank.asc&limit=120',{headers:{apikey:AK,Authorization:'Bearer '+_tk}}).then(function(r){return r.json();}).then(function(a){
+        if(!Array.isArray(a)||!a.length){el('fcSig').innerHTML='<div class="fc-empty">—</div>';return;}
+        var d0=a[0].signal_date,seen={},out=[];
+        for(var k=0;k<a.length&&out.length<12;k++){if(a[k].signal_date!==d0)continue;if(seen[a[k].code])continue;seen[a[k].code]=1;out.push(a[k]);}
+        el('fcSig').innerHTML='<div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">'+d0+'</div>'+out.map(function(x){var lots=x.net_lots!=null?(x.net_lots>0?'+':'')+Number(x.net_lots).toLocaleString()+'張':'';return '<div class="fc-row"><span class="s"><b>'+x.code+'</b> '+nm(x.code)+' <span style="color:var(--text-muted)">'+(x.broker_name||'')+'</span></span><span class="val">'+lots+'</span>'+(x.win20!=null?'<span class="val2">勝'+x.win20+'%</span>':'')+'</div>';}).join('');
+      }).catch(function(){el('fcSig').innerHTML='<div class="fc-empty">讀取失敗</div>';});
+    }
+    function note(){
+      el('fcNote').innerHTML='<b>算法與資料源（合夥人複查）：</b>'+
+        '漲跌幅 = (今日收盤 ÷ 前一交易日收盤 − 1)×100，資料源 price_window（每日上傳之證交所官方 OHLCV）。'+
+        '爆量榜：量比 = 今日成交量 ÷ max(近5日均量, 近10日均量)，兩均量皆<b>不含當日</b>；量比 ≥ <b>1.3</b> 才入榜，依量比高到低取前 30（含 ETF，不排除）。'+
+        '各榜取前 30 檔。加權指數用 taiex_daily（官方指數，成交量單位換算為億）。'+
+        '貪婪/恐懼榜取自 greed_base 的 base 分數（0–100），標「利多出盡」= exhaust 旗標。'+
+        '箱型突破 = box_patterns 狀態 CONFIRMED_UP。主力焦點 = broker_signals 最新交易日（僅擁有者可見）。';
+    }
+    window._focusShow=function(){
+      loadFocus(); loadSummary(); loadTopics(); loadBox(); loadGreed(); loadSig(); note();
+      loaded=true;
+    };
+  })();
+  </script>
   <script>
   (function(){
     var IDX=[{s:'^TWII',n:'台股加權'},{s:'^N225',n:'日經225'},{s:'^IXIC',n:'那斯達克'},{s:'^DJI',n:'道瓊'},{s:'^GSPC',n:'S&P 500'}];
@@ -1279,9 +1417,10 @@
     window._hxShow=function(){ el('homeView').style.display='block'; load(); tiles(); };
     window._hxRetheme=function(){ if(el('homeView')&&el('homeView').style.display!=='none') load(); };
     window._showView=function(v){
-      var fw=document.querySelector('.form-wrap'), ra=el('resultsArea'), hv=el('homeView');
-      if(v==='home'){ if(hv)hv.style.display='block'; if(fw)fw.style.display='none'; if(ra)ra.style.display='none'; window._hxShow(); }
-      else { if(hv)hv.style.display='none'; if(fw)fw.style.display=''; if(ra)ra.style.display=''; }
+      var fw=document.querySelector('.form-wrap'), ra=el('resultsArea'), hv=el('homeView'), fv=el('focusView');
+      if(v==='home'){ if(hv)hv.style.display='block'; if(fv)fv.style.display='none'; if(fw)fw.style.display='none'; if(ra)ra.style.display='none'; window._hxShow(); }
+      else if(v==='focus'){ if(hv)hv.style.display='none'; if(fv)fv.style.display='block'; if(fw)fw.style.display='none'; if(ra)ra.style.display='none'; if(window._focusShow)window._focusShow(); }
+      else { if(hv)hv.style.display='none'; if(fv)fv.style.display='none'; if(fw)fw.style.display=''; if(ra)ra.style.display=''; }
     };
     document.addEventListener('click',function(e){
       var o=e.target.closest('[data-hxo]'); if(o){var k=o.dataset.hxo;open=open===k?null:k;renderCtl();return;}
