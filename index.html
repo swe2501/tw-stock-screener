@@ -1154,6 +1154,14 @@
     .hx-menu.up { top:auto; bottom:44px; }
     .hx-opt { display:block; padding:8px 12px; border-radius:7px; font-size:12.5px; color:var(--text); cursor:pointer; white-space:nowrap; }
     .hx-opt:hover { background:var(--ctl-hi); } .hx-opt.on { background:var(--accent); color:#231c00; font-weight:800; }
+    .hx-tiles { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:16px; }
+    .hx-tile { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px; min-height:98px; }
+    .hx-tile .k { font-size:11px; color:var(--text-muted); }
+    .hx-tile .v { font-size:22px; font-weight:800; margin-top:6px; }
+    .hx-tile .r { font-size:11px; color:var(--text-muted); margin-top:3px; }
+    .hx-li { display:flex; justify-content:space-between; font-size:12px; padding:3px 0; }
+    .hx-li .t { color:var(--accent); font-weight:600; }
+    @media (max-width:820px){ .hx-tiles { grid-template-columns:repeat(2,1fr); } }
   </style>
 </head>
 <body>
@@ -1212,6 +1220,7 @@
       <div class="hx-head"><div id="hxStat"></div><div class="hx-ctls"><div class="hx-ddwrap" id="hxRangeWrap"></div><div class="hx-ddwrap" id="hxTypeWrap"></div></div></div>
       <div class="hx-chartbox"><div id="hxChart"></div><div id="hxMsg" class="hx-msg"></div></div>
     </div>
+    <div class="hx-tiles" id="hxTiles"></div>
   </div>
   <script>
   (function(){
@@ -1248,7 +1257,18 @@
         .then(function(j){ var d=(j&&j.data)||[]; cache[key]=d; drawChart(d, idx); })
         .catch(function(){ el('hxMsg').textContent='資料載入失敗，稍後再試'; });
     }
-    window._hxShow=function(){ el('homeView').style.display='block'; load(); };
+    function tiles(){
+      var box=el('hxTiles'); if(!box) return;
+      box.innerHTML='<div class="hx-tile"><div class="k">大盤 台股加權</div><div class="v" id="tvTwii">—</div><div class="r" id="tvTwiiR"></div></div>'
+        +'<div class="hx-tile"><div class="k">融資維持率</div><div class="v" id="tvMm">—</div><div class="r">越低越接近斷頭</div></div>'
+        +'<div class="hx-tile"><div class="k">箱型突破 · 今日</div><div class="v" id="tvBox">—</div><div class="r">CONFIRMED_UP 檔數</div></div>'
+        +'<div class="hx-tile"><div class="k">🔥 話題族群 TOP</div><div id="tvTopics" class="r">載入中…</div></div>';
+      fetch('/api/chart?code=%5ETWII&range=5d&interval=1d').then(function(r){return r.json();}).then(function(j){var d=(j&&j.data)||[];if(d.length<2)return;var a=d[d.length-1],b=d[d.length-2],chg=a.close-b.close,pct=chg/b.close*100,up=chg>=0;var v=el('tvTwii');if(v){v.textContent=Number(a.close).toLocaleString();v.className='v '+(up?'hx-up':'hx-dn');}var rr=el('tvTwiiR');if(rr){rr.textContent=(up?'▲ +':'▼ ')+pct.toFixed(2)+'%';rr.className='r '+(up?'hx-up':'hx-dn');}}).catch(function(){});
+      (function rm(n){try{var mb=document.getElementById('marginRatioBox');var m=mb&&mb.textContent?mb.textContent.replace(/[^0-9.%]/g,''):'';if(m){if(el('tvMm'))el('tvMm').textContent=m;return;}}catch(e){}if(n>0)setTimeout(function(){rm(n-1);},1000);})(5);
+      try{ fetch(SIG_SB_URL+'/rest/v1/box_patterns?select=code&status=eq.CONFIRMED_UP',{headers:{apikey:SIG_SB_ANON,Authorization:'Bearer '+SIG_SB_ANON}}).then(function(r){return r.json();}).then(function(a){if(el('tvBox'))el('tvBox').textContent=Array.isArray(a)?a.length:'—';}).catch(function(){}); }catch(e){}
+      try{ fetch(SIG_SB_URL+'/rest/v1/hot_topics?select=topic,heat&order=heat.desc&limit=5',{headers:{apikey:SIG_SB_ANON,Authorization:'Bearer '+SIG_SB_ANON}}).then(function(r){return r.json();}).then(function(a){if(!el('tvTopics'))return;if(!Array.isArray(a)||!a.length){el('tvTopics').textContent='—';return;}el('tvTopics').innerHTML=a.map(function(t){return '<div class="hx-li"><span class="t">'+String(t.topic||'').slice(0,12)+'</span><span>'+(t.heat!=null?t.heat:'')+'</span></div>';}).join('');}).catch(function(){if(el('tvTopics'))el('tvTopics').textContent='—';}); }catch(e){}
+    }
+    window._hxShow=function(){ el('homeView').style.display='block'; load(); tiles(); };
     window._hxRetheme=function(){ if(el('homeView')&&el('homeView').style.display!=='none') load(); };
     window._showView=function(v){
       var fw=document.querySelector('.form-wrap'), ra=el('resultsArea'), hv=el('homeView');
