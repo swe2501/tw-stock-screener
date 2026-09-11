@@ -1405,6 +1405,24 @@ class handler(BaseHTTPRequestHandler):
             if cached is not None:
                 return self._send_json(200, cached)
             return self._send_json(200, {"pending": True})
+        # 輕量市場計數:只回漲跌/近漲跌停檔數(首頁 tile 用;重用抓全市場函式,不跑完整篩選)
+        if (qs.get("stat") or [""])[0] == "market":
+            try:
+                stocks, mdate = fetch_all_stocks_latest()
+                up = dn = up_lim = dn_lim = 0
+                for s in stocks.values():
+                    c = s.get("close"); p = s.get("prev_close")
+                    if c is None or not p:
+                        continue
+                    chg = (c / p - 1) * 100
+                    if chg > 0: up += 1
+                    elif chg < 0: dn += 1
+                    if chg >= 9.5: up_lim += 1
+                    elif chg <= -9.5: dn_lim += 1
+                return self._send_json(200, {"date": mdate, "up": up, "down": dn,
+                                             "up_limit": up_lim, "down_limit": dn_lim, "total": len(stocks)})
+            except Exception as e:
+                return self._send_json(200, {"error": str(e)})
         self._send_json(200, {"status": "ok"})
 
     def do_POST(self):
