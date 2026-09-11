@@ -1139,6 +1139,7 @@
     .hx-tab { font-size:14px; padding:10px 12px; color:var(--text-muted); border-bottom:3px solid transparent; cursor:pointer; white-space:nowrap; font-weight:600; }
     .hx-tab.on { color:var(--text); border-bottom-color:var(--accent); font-weight:800; }
     .hx-head { display:flex; justify-content:space-between; align-items:flex-start; margin:12px 0 8px; gap:12px; }
+    .hx-ctls { display:flex; gap:8px; align-items:flex-start; }
     .hx-val { font-size:26px; font-weight:800; line-height:1.1; }
     .hx-up { color:var(--red); } .hx-dn { color:var(--green); }
     .hx-sub { font-size:12px; color:var(--text-muted); margin-top:3px; }
@@ -1208,8 +1209,8 @@
   <div id="homeView" style="display:none">
     <div class="hx-card">
       <div class="hx-tabs" id="hxTabs"></div>
-      <div class="hx-head"><div id="hxStat"></div><div class="hx-ddwrap" id="hxRangeWrap"></div></div>
-      <div class="hx-chartbox"><div id="hxChart"></div><div class="hx-ddwrap hx-br" id="hxTypeWrap"></div><div id="hxMsg" class="hx-msg"></div></div>
+      <div class="hx-head"><div id="hxStat"></div><div class="hx-ctls"><div class="hx-ddwrap" id="hxRangeWrap"></div><div class="hx-ddwrap" id="hxTypeWrap"></div></div></div>
+      <div class="hx-chartbox"><div id="hxChart"></div><div id="hxMsg" class="hx-msg"></div></div>
     </div>
   </div>
   <script>
@@ -1223,7 +1224,7 @@
       el('hxTabs').innerHTML=IDX.map(function(d,k){return '<span class="hx-tab'+(k===i?' on':'')+'" data-hxi="'+k+'">'+d.n+'</span>';}).join('');
       el('hxRangeWrap').innerHTML='<button class="hx-dd'+(open==='range'?' act':'')+'" data-hxo="range">🕘 '+RMAP[rng].label+' <i>▾</i></button>'+(open==='range'?'<div class="hx-menu">'+Object.keys(RMAP).map(function(k){return '<span class="hx-opt'+(rng===k?' on':'')+'" data-hxr="'+k+'">'+RMAP[k].label+'</span>';}).join('')+'</div>':'');
       var tL=typ==='candle'?'K線':'江波圖';
-      el('hxTypeWrap').innerHTML='<button class="hx-dd'+(open==='type'?' act':'')+'" data-hxo="type">📊 '+tL+' <i>▾</i></button>'+(open==='type'?'<div class="hx-menu up">'+[['candle','K線'],['line','江波圖']].map(function(a){return '<span class="hx-opt'+(typ===a[0]?' on':'')+'" data-hxt="'+a[0]+'">'+a[1]+'</span>';}).join('')+'</div>':'');
+      el('hxTypeWrap').innerHTML='<button class="hx-dd'+(open==='type'?' act':'')+'" data-hxo="type">📊 '+tL+' <i>▾</i></button>'+(open==='type'?'<div class="hx-menu">'+[['candle','K線'],['line','江波圖']].map(function(a){return '<span class="hx-opt'+(typ===a[0]?' on':'')+'" data-hxt="'+a[0]+'">'+a[1]+'</span>';}).join('')+'</div>':'');
     }
     function drawChart(data, idx){
       var box=el('hxChart'); if(chart){try{chart.remove();}catch(e){}chart=null;} box.innerHTML='';
