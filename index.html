@@ -1117,6 +1117,20 @@
     .margin-ratio.mr-green { color:#3fb950; border-color:#2ea04366; background:#2ea04322; }
     .margin-ratio.mr-amber { color:#e6a23c; border-color:#e6a23c66; background:#e6a23c22; }
     .margin-ratio.mr-red   { color:#f85149; border-color:#f8514966; background:#f8514922; }
+
+    /* ── Step3:SWS 上方大項導覽 ── */
+    #funcDropdown { display:none !important; }   /* 舊「☰功能」隱藏(保留 DOM 供權限程式) */
+    #mainNav { background:var(--surface); border-top:1px solid var(--border); border-bottom:1px solid var(--border); margin:4px -16px 18px; padding:0 16px; }
+    .mn-inner { max-width:1200px; margin:0 auto; display:flex; align-items:center; gap:1px; flex-wrap:wrap; }
+    .mn-item { display:inline-flex; align-items:center; gap:4px; padding:12px 11px; font-size:14px; font-weight:600; color:var(--text-muted); cursor:pointer; white-space:nowrap; text-decoration:none; }
+    .mn-item:hover, .mn-grp:hover .mn-item { color:var(--text); }
+    .mn-item i { font-style:normal; font-size:9px; opacity:.7; }
+    .mn-grp { position:relative; }
+    .mn-menu { position:absolute; top:100%; left:0; min-width:186px; background:var(--surface); border:1px solid var(--border); border-radius:10px; box-shadow:0 14px 34px rgba(0,0,0,.28); padding:6px; display:none; z-index:60; }
+    .mn-grp:hover .mn-menu { display:block; }
+    .mn-menu a { display:block; padding:9px 12px; border-radius:7px; font-size:13.5px; color:var(--text); cursor:pointer; text-decoration:none; white-space:nowrap; }
+    .mn-menu a:hover { background:var(--ctl-hi); }
+    .mn-new { font-size:9px; font-weight:800; color:#fff; background:var(--accent2); border-radius:20px; padding:1px 6px; margin-left:2px; }
   </style>
 </head>
 <body>
@@ -1147,8 +1161,27 @@
   <script>
     (function(){try{if(localStorage.getItem('theme')==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}})();
     function _toggleTheme(){var r=document.documentElement;var toLight=r.getAttribute('data-theme')!=='light';if(toLight)r.setAttribute('data-theme','light');else r.removeAttribute('data-theme');try{localStorage.setItem('theme',toLight?'light':'dark');}catch(e){}var b=document.getElementById('themeToggle');if(b)b.textContent=toLight?'☀️':'🌙';if(typeof _rethemeChart==='function'){try{_rethemeChart();}catch(e){}}}
+    function _todo(n){ if(typeof showToast==='function') showToast((n||'此功能')+'：建置中'); else alert((n||'此功能')+'：建置中'); }
+    function _home(){ try{ ['chartModal','brokerSigModal','brokerRankModal','hotTopicsModal','watchlistPanel','alertPanel','marginModal','backtestModal','sellTrackModal','divAlertModal'].forEach(function(id){var m=document.getElementById(id); if(m){ m.style.display='none'; if(m.classList) m.classList.remove('open'); }}); }catch(e){} window.scrollTo({top:0,behavior:'smooth'}); }
     document.addEventListener('DOMContentLoaded',function(){var b=document.getElementById('themeToggle');if(b)b.textContent=document.documentElement.getAttribute('data-theme')==='light'?'☀️':'🌙';});
   </script>
+  <nav id="mainNav"><div class="mn-inner">
+    <a class="mn-item" onclick="_home()">首頁</a>
+    <a class="mn-item" onclick="_todo('今日焦點')">今日焦點</a>
+    <div class="mn-grp"><span class="mn-item">選股 <i>▾</i></span><div class="mn-menu">
+      <a onclick="_home()">篩選器</a><a onclick="_todo('箱型')">箱型</a><a onclick="_todo('漲停分析')">漲停分析</a></div></div>
+    <div class="mn-grp"><span class="mn-item">題材族群 <i>▾</i></span><div class="mn-menu">
+      <a class="nav-owner" onclick="openHotTopics()">🔥 話題</a><a onclick="_todo('題材列表')">題材列表</a><a onclick="_todo('產業地圖')">產業地圖</a></div></div>
+    <div class="mn-grp"><span class="mn-item">市場觀察 <i>▾</i></span><div class="mn-menu">
+      <a class="nav-owner" onclick="openBrokerSignals()">🎯 主力訊號</a><a class="nav-owner" onclick="openBrokerRankings()">📊 分點回測</a><a onclick="openMarginModal()">📈 融資維持率</a><a onclick="_todo('股期儀表板')">股期儀表板</a></div></div>
+    <div class="mn-grp"><span class="mn-item">ETF 分析 <span class="mn-new">新</span> <i>▾</i></span><div class="mn-menu">
+      <a onclick="_todo('ETF 總覽')">總覽</a><a onclick="_todo('成分股·重疊')">成分股 · 重疊</a><a onclick="_todo('折溢價')">折溢價</a><a onclick="_todo('規模·資金流')">規模 · 資金流</a></div></div>
+    <div class="mn-grp"><span class="mn-item">個股 <i>▾</i></span><div class="mn-menu">
+      <a onclick="_todo('K線圖(用上方搜尋開啟個股)')">K線圖</a><a onclick="_todo('公司資料庫')">公司資料庫</a><a onclick="_todo('估值九宮格')">估值九宮格</a></div></div>
+    <a class="mn-item" onclick="_todo('每日新聞')">每日新聞</a>
+    <div class="mn-grp"><span class="mn-item">我的觀察 <i>▾</i></span><div class="mn-menu">
+      <a class="nav-auth" onclick="openWatchlist()">⭐ 觀察清單</a><a class="nav-auth" onclick="openBacktest()">📈 回測</a><a class="nav-owner" onclick="openSellTrack()">🔻 出場追蹤</a><a class="nav-auth" onclick="openAlertMgr()">🔔 我的警示</a></div></div>
+  </div></nav>
 
   <!-- 📈 大盤融資維持率彈窗（公開） -->
   <div id="marginModal" class="mm-overlay" style="display:none" onclick="if(event.target===this)closeMarginModal()">
@@ -4077,6 +4110,9 @@
       document.getElementById('brokerRankBtn').style.display = _owner ? '' : 'none';
       document.getElementById('sellTrackBtn').style.display = _owner ? '' : 'none';
       document.getElementById('hotTopicsBtn').style.display = _owner ? '' : 'none';
+      // 新版上方導覽:擁有者/登入限定項顯示控制
+      document.querySelectorAll('.nav-owner').forEach(function(el){ el.style.display = _owner ? '' : 'none'; });
+      document.querySelectorAll('.nav-auth').forEach(function(el){ el.style.display = loggedIn ? '' : 'none'; });
       const emailEl = document.getElementById('authUserEmail');
       emailEl.style.display = loggedIn ? '' : 'none';
       if (loggedIn && _authUser) emailEl.textContent = _authUser.email;
