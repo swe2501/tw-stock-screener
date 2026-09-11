@@ -289,35 +289,26 @@ def _fetch_stocks_from_price_window():
     return stocks, latest.replace("-", "")
 
 
-def _fetch_focus(top_n=30):
-    """今日焦點三榜（伺服器端算，回精簡 JSON）：漲幅榜／跌幅榜／爆量榜。
-    資料源：Supabase price_window（每日上傳的證交所 OHLCV，不落後）。
-      漲跌幅 = (今日收盤 / 前一交易日收盤 - 1) × 100
-      量比   = 今日量 ÷ max(近5日均量, 近10日均量)  ← 均量皆「不含當日」
-      爆量榜 = 量比 ≥ 1.3 者，依量比高到低取前 N（含 ETF）
-    榜單各取前 N（含 ETF）。無前一日收盤者不列入漲跌幅榜。"""
+def _load_pw_window(days=12):
+    """共用：讀 price_window 最近 N 個交易日全市場 收盤/量，回 (latest, by_code)。
+    by_code[code] = 該股列表，日期由新到舊。供今日焦點/漲停分析等共用。"""
     if not (SUPABASE_URL and SUPABASE_KEY):
-        return {"error": "no supabase"}
-
+        return None, None
     def _rows(params):
         return _cache_sb("/price_window", params=params)[1] or []
-
-    # 取最近 12 個交易日（用高流動性個股 2330 的日期序列，足夠算 10 日均量）
     dser = _rows([("select", "trade_date"), ("code", "eq.2330"),
-                  ("order", "trade_date.desc"), ("limit", "15")])
+                  ("order", "trade_date.desc"), ("limit", str(days + 3))])
     dates = []
     for r in dser:
         d = r["trade_date"]
         if d not in dates:
             dates.append(d)
-        if len(dates) >= 12:
+        if len(dates) >= days:
             break
     if len(dates) < 2:
-        return {"error": "not enough dates"}
+        return None, None
     latest = dates[0]
-    since = dates[-1]                      # 最舊的納入日
-
-    # 一次撈這區間所有個股的 收盤/量（分頁；PostgREST 單頁 1000）
+    since = dates[-1]
     rows, off = [], 0
     while True:
         page = _rows([("select", "code,trade_date,close,volume"),
@@ -327,14 +318,27 @@ def _fetch_focus(top_n=30):
         if len(page) < 1000:
             break
         off += 1000
-
-    # 依個股彙整（日期由新到舊）
     by_code = {}
     for r in rows:
         c = str(r.get("code", "")).strip()
         if not c or not c[0].isdigit():
             continue
         by_code.setdefault(c, []).append(r)
+    for c in by_code:
+        by_code[c].sort(key=lambda x: x["trade_date"], reverse=True)
+    return latest, by_code
+
+
+def _fetch_focus(top_n=30):
+    """今日焦點三榜（伺服器端算，回精簡 JSON）：漲幅榜／跌幅榜／爆量榜。
+    資料源：Supabase price_window（每日上傳的證交所 OHLCV，不落後）。
+      漲跌幅 = (今日收盤 / 前一交易日收盤 - 1) × 100
+      量比   = 今日量 ÷ max(近5日均量, 近10日均量)  ← 均量皆「不含當日」
+      爆量榜 = 量比 ≥ 1.3 者，依量比高到低取前 N（含 ETF）
+    榜單各取前 N（含 ETF）。無前一日收盤者不列入漲跌幅榜。"""
+    latest, by_code = _load_pw_window(12)
+    if not by_code:
+        return {"error": "no data"}
 
     gainers, losers, surges = [], [], []
     for c, arr in by_code.items():
@@ -375,6 +379,58 @@ def _fetch_focus(top_n=30):
         "losers": losers[:top_n],
         "volume_surge": surges[:top_n],
     }
+
+
+def _fetch_limitup():
+    """漲停分析：今日漲停(漲幅≥9.5%)／跌停(≤-9.5%)清單，含連續漲/跌停天數與量比。
+    資料源：price_window。連續天數 = 從最新日往前數，逐日漲跌幅維持在漲停/跌停區間的天數。
+    量比 = 今日量 ÷ max(近5日均量, 近10日均量)（不含當日）。依連續天數、再依漲跌幅排序。"""
+    latest, by_code = _load_pw_window(14)
+    if not by_code:
+        return {"error": "no data"}
+    ups, downs = [], []
+    for c, arr in by_code.items():
+        if not arr or arr[0]["trade_date"] != latest or len(arr) < 2:
+            continue
+        # 逐日漲跌幅（arr 由新到舊）：chgs[0] 為今日
+        chgs = []
+        for i in range(len(arr) - 1):
+            a, b = arr[i].get("close"), arr[i + 1].get("close")
+            if a is None or not b:
+                break
+            chgs.append((a / b - 1) * 100)
+        if not chgs:
+            continue
+        today = chgs[0]
+        close = arr[0].get("close")
+        vol = arr[0].get("volume") or 0
+        name = _STOCK_NAMES.get(c, c)
+        prev_vols = [x.get("volume") or 0 for x in arr[1:11]]
+        ratio = None
+        if len(prev_vols) >= 5 and vol > 0:
+            base = max(sum(prev_vols[:5]) / 5.0, sum(prev_vols[:10]) / len(prev_vols[:10]))
+            if base > 0:
+                ratio = round(vol / base, 2)
+
+        def streak(sign):
+            n = 0
+            for v in chgs:
+                if (sign > 0 and v >= 9.5) or (sign < 0 and v <= -9.5):
+                    n += 1
+                else:
+                    break
+            return n
+
+        if today >= 9.5:
+            ups.append({"code": c, "name": name, "close": close,
+                        "chg": round(today, 2), "days": streak(1), "ratio": ratio})
+        elif today <= -9.5:
+            downs.append({"code": c, "name": name, "close": close,
+                          "chg": round(today, 2), "days": streak(-1), "ratio": ratio})
+    ups.sort(key=lambda x: (x["days"], x["chg"]), reverse=True)
+    downs.sort(key=lambda x: (x["days"], -x["chg"]), reverse=True)
+    return {"date": latest, "up": ups, "down": downs,
+            "up_count": len(ups), "down_count": len(downs)}
 
 
 def fetch_all_stocks_latest():
@@ -1522,6 +1578,13 @@ class handler(BaseHTTPRequestHandler):
                 n = 30
             try:
                 return self._send_json(200, _fetch_focus(max(1, min(n, 50))))
+            except Exception as e:
+                import traceback
+                return self._send_json(200, {"error": str(e), "traceback": traceback.format_exc()})
+        # 漲停分析：今日漲停/跌停 + 連續天數
+        if (qs.get("stat") or [""])[0] == "limitup":
+            try:
+                return self._send_json(200, _fetch_limitup())
             except Exception as e:
                 import traceback
                 return self._send_json(200, {"error": str(e), "traceback": traceback.format_exc()})
