@@ -1270,7 +1270,7 @@
     function nm(code){return nameMap[code]||(window._names&&window._names[code])||'';}
     function rowsHTML(list, valfn){
       if(!list||!list.length) return '<div class="fc-empty">今日無資料</div>';
-      return list.map(function(x,i){return '<div class="fc-row"><span class="n">'+(i+1)+'</span><span class="s"><b>'+x.code+'</b> '+(x.name||nm(x.code)||'')+'</span>'+valfn(x)+'</div>';}).join('');
+      return list.map(function(x,i){return '<div class="fc-row clk" onclick="_openStock(\''+x.code+'\',\''+(x.name||nm(x.code)||'')+'\')"><span class="n">'+(i+1)+'</span><span class="s"><b>'+x.code+'</b> '+(x.name||nm(x.code)||'')+'</span>'+valfn(x)+'</div>';}).join('');
     }
     function pct(v){return (v>0?'+':'')+Number(v).toFixed(2)+'%';}
     function cls(v){return v>0?'fc-up':(v<0?'fc-dn':'');}
@@ -1330,7 +1330,7 @@
         fetch(SB+'/rest/v1/greed_base?select=code,base&order=base.asc&limit=5',{headers:H}).then(function(r){return r.json();})
       ]).then(function(res){
         var top=res[0]||[],low=res[1]||[];
-        function seg(title,arr,up){return '<div style="font-size:11px;color:var(--text-muted);margin:4px 0 2px">'+title+'</div>'+(arr.length?arr.map(function(x){return '<div class="fc-row"><span class="s"><b>'+x.code+'</b> '+nm(x.code)+(x.exhaust?' <span style="color:var(--accent2)">利多出盡</span>':'')+'</span><span class="val '+(up?'fc-up':'fc-dn')+'">'+x.base+'</span></div>';}).join(''):'<div class="fc-empty">—</div>');}
+        function seg(title,arr,up){return '<div style="font-size:11px;color:var(--text-muted);margin:4px 0 2px">'+title+'</div>'+(arr.length?arr.map(function(x){return '<div class="fc-row clk" onclick="_openStock(\''+x.code+'\',\''+nm(x.code)+'\')"><span class="s"><b>'+x.code+'</b> '+nm(x.code)+(x.exhaust?' <span style="color:var(--accent2)">利多出盡</span>':'')+'</span><span class="val '+(up?'fc-up':'fc-dn')+'">'+x.base+'</span></div>';}).join(''):'<div class="fc-empty">—</div>');}
         el('fcGreed').innerHTML=seg('😈 最貪婪 TOP5',top,true)+seg('😱 最恐懼 TOP5',low,false);
       }).catch(function(){el('fcGreed').innerHTML='<div class="fc-empty">讀取失敗</div>';});
     }
@@ -1344,7 +1344,7 @@
         if(!Array.isArray(a)||!a.length){el('fcSig').innerHTML='<div class="fc-empty">—</div>';return;}
         var d0=a[0].signal_date,seen={},out=[];
         for(var k=0;k<a.length&&out.length<12;k++){if(a[k].signal_date!==d0)continue;if(seen[a[k].code])continue;seen[a[k].code]=1;out.push(a[k]);}
-        el('fcSig').innerHTML='<div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">'+d0+'</div>'+out.map(function(x){var lots=x.net_lots!=null?(x.net_lots>0?'+':'')+Number(x.net_lots).toLocaleString()+'張':'';return '<div class="fc-row"><span class="s"><b>'+x.code+'</b> '+nm(x.code)+' <span style="color:var(--text-muted)">'+(x.broker_name||'')+'</span></span><span class="val">'+lots+'</span>'+(x.win20!=null?'<span class="val2">勝'+x.win20+'%</span>':'')+'</div>';}).join('');
+        el('fcSig').innerHTML='<div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">'+d0+'</div>'+out.map(function(x){var lots=x.net_lots!=null?(x.net_lots>0?'+':'')+Number(x.net_lots).toLocaleString()+'張':'';return '<div class="fc-row clk" onclick="_openStock(\''+x.code+'\',\''+nm(x.code)+'\')"><span class="s"><b>'+x.code+'</b> '+nm(x.code)+' <span style="color:var(--text-muted)">'+(x.broker_name||'')+'</span></span><span class="val">'+lots+'</span>'+(x.win20!=null?'<span class="val2">勝'+x.win20+'%</span>':'')+'</div>';}).join('');
       }).catch(function(){el('fcSig').innerHTML='<div class="fc-empty">讀取失敗</div>';});
     }
     function note(){
@@ -1401,7 +1401,7 @@
         var cap=a[0].captured_at?String(a[0].captured_at).slice(0,10):'';
         if(el('tmSub'))el('tmSub').textContent='共 '+a.length+' 個題材'+(cap?' · 更新於 '+cap:'');
         el('tmList').innerHTML=a.map(function(t){
-          var codes=Array.isArray(t.codes)?t.codes.map(function(c){return '<span class="tm-chip">'+esc(c.code)+' '+esc(c.name||'')+'</span>';}).join(''):'';
+          var codes=Array.isArray(t.codes)?t.codes.map(function(c){return '<span class="tm-chip clk" onclick="_openStock(\''+esc(c.code)+'\',\''+esc(c.name||'')+'\')">'+esc(c.code)+' '+esc(c.name||'')+'</span>';}).join(''):'';
           var srcs=Array.isArray(t.source_urls)?t.source_urls.slice(0,4).map(function(u){return '<a href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">'+esc(host(u))+' ↗</a>';}).join(''):'';
           return '<div class="tm-card"><div class="top"><span class="ttl">'+esc(t.topic)+'</span><span class="tm-heat">熱度 '+esc(t.heat)+'</span></div>'+
             '<div class="tm-meta">'+(t.sector?'<span class="tm-badge">'+esc(t.sector)+'</span>':'')+(t.published_at?'<span class="tm-badge">📅 '+esc(t.published_at)+'</span>':'')+'</div>'+
@@ -1424,7 +1424,10 @@
     if(window._names){ if(cb)cb(window._names); return; }
     fetch('/api/screen?stat=names').then(function(r){return r.json();}).then(function(m){ window._names = m||{}; if(cb)cb(window._names); }).catch(function(){ window._names = {}; if(cb)cb(window._names); });
   };
+  // 共用：點個股開 K 線圖
+  window._openStock = function(code, name){ try{ if(typeof openChart==='function') openChart(String(code), name||((window._names&&window._names[code])||'')); }catch(e){} };
   </script>
+  <style>.clk{cursor:pointer;} .clk:hover{background:var(--surface2);}</style>
 
   <style>
     #boxView{max-width:1100px;margin:0 auto;}
@@ -1479,7 +1482,7 @@
                   (cur!=null?'<div class="bx-mark" data-p="'+fmt(cur)+'" style="left:'+Math.max(0,Math.min(100,(cur-lo)/span*100))+'%"></div>':'')+'</div>'+
                   '<div class="bx-scale"><span>'+fmt(lo)+'</span><span>箱底 '+fmt(il)+' ~ 箱頂 '+fmt(ic)+'</span><span>'+fmt(hi)+'</span></div>';
               }
-              return '<div class="bx-card"><div class="bx-top"><span class="bx-code"><b>'+x.code+'</b><span>'+(names[x.code]||'')+'</span></span><span class="bx-tag '+t[1]+'">'+t[0]+'</span></div>'+
+              return '<div class="bx-card clk" onclick="_openStock(\''+x.code+'\',\''+(names[x.code]||'')+'\')"><div class="bx-top"><span class="bx-code"><b>'+x.code+'</b><span>'+(names[x.code]||'')+'</span></span><span class="bx-tag '+t[1]+'">'+t[0]+'</span></div>'+
                 bar+
                 (x.breakout_reason?'<div class="bx-reason">📌 '+x.breakout_reason+'</div>':'')+
                 '<div class="bx-meta">觀察區間：'+(x.window_start||'')+' ~ '+(x.window_end||'')+(x.breakout_date?' · 突破日 '+x.breakout_date:'')+'</div></div>';
@@ -1528,7 +1531,7 @@
     function daysBadge(d,up){var cls=d>=2?(up?'up':'dn'):'one';return '<span class="lu-days '+cls+'">'+(d>=2?'連'+d+'天':'首日')+'</span>';}
     function rows(list,up){
       if(!list||!list.length)return '<div class="fc-empty">今日無'+(up?'漲停':'跌停')+'</div>';
-      return list.map(function(x){return '<div class="lu-row"><span class="s"><b>'+x.code+'</b> '+(x.name||'')+'</span>'+daysBadge(x.days,up)+'<span class="px">'+fmt(x.close)+'</span><span class="cg '+(up?'fc-up':'fc-dn')+'">'+(x.chg>0?'+':'')+Number(x.chg).toFixed(2)+'%</span><span class="lu-ratio">'+(x.ratio!=null?x.ratio+'x':'—')+'</span></div>';}).join('');
+      return list.map(function(x){return '<div class="lu-row clk" onclick="_openStock(\''+x.code+'\',\''+(x.name||'')+'\')"><span class="s"><b>'+x.code+'</b> '+(x.name||'')+'</span>'+daysBadge(x.days,up)+'<span class="px">'+fmt(x.close)+'</span><span class="cg '+(up?'fc-up':'fc-dn')+'">'+(x.chg>0?'+':'')+Number(x.chg).toFixed(2)+'%</span><span class="lu-ratio">'+(x.ratio!=null?x.ratio+'x':'—')+'</span></div>';}).join('');
     }
     window._limitupShow=function(){
       el('luUp').innerHTML='<div class="fc-empty">載入中…</div>';el('luDn').innerHTML='<div class="fc-empty">載入中…</div>';
@@ -1598,7 +1601,7 @@
       arr.sort(function(a,b){var d=(b[key]||0)-(a[key]||0);return asc?-d:d;});
       var show=arr.slice(0,300);
       el('gdBody').innerHTML=show.length?show.map(function(x){
-        return '<tr><td class="l"><span class="c">'+x.code+'</span> '+(x.name||'')+(x.exhaust?'<span class="gd-ex">利多出盡</span>':'')+'</td>'+
+        return '<tr class="clk" onclick="_openStock(\''+x.code+'\',\''+(x.name||'')+'\')"><td class="l"><span class="c">'+x.code+'</span> '+(x.name||'')+(x.exhaust?'<span class="gd-ex">利多出盡</span>':'')+'</td>'+
           '<td><span class="gd-base" style="background:'+gcol(x.base)+'">'+x.base+'</span></td>'+
           '<td class="gd-sub">'+(x.price_score!=null?x.price_score:'—')+'</td>'+
           '<td class="gd-sub">'+(x.momentum_score!=null?x.momentum_score:'—')+'</td>'+
