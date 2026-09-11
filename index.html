@@ -1267,7 +1267,7 @@
   (function(){
     var el=function(id){return document.getElementById(id);};
     var loaded=false, nameMap={};
-    function nm(code){return nameMap[code]||'';}
+    function nm(code){return nameMap[code]||(window._names&&window._names[code])||'';}
     function rowsHTML(list, valfn){
       if(!list||!list.length) return '<div class="fc-empty">今日無資料</div>';
       return list.map(function(x,i){return '<div class="fc-row"><span class="n">'+(i+1)+'</span><span class="s"><b>'+x.code+'</b> '+(x.name||nm(x.code)||'')+'</span>'+valfn(x)+'</div>';}).join('');
@@ -1356,7 +1356,9 @@
         '箱型突破 = box_patterns 狀態 CONFIRMED_UP。主力焦點 = broker_signals 最新交易日（僅擁有者可見）。';
     }
     window._focusShow=function(){
-      loadFocus(); loadSummary(); loadTopics(); loadBox(); loadGreed(); loadSig(); note();
+      loadFocus(); loadSummary(); loadTopics(); note();
+      if(window._loadNames){ window._loadNames(function(){ loadBox(); loadGreed(); loadSig(); }); }
+      else { loadBox(); loadGreed(); loadSig(); }
       loaded=true;
     };
   })();
