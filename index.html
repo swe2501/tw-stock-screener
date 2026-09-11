@@ -25,7 +25,32 @@
       --text-muted: #8a8a93;
       --text-primary: #ffffff;
       --bg-card: #17171a;   /* modal 卡片：不透明，避免主頁文字透上來 */
+      --ctl-bg: rgba(255,255,255,.08);
+      --ctl-bd: rgba(255,255,255,.15);
+      --ctl-tx: rgba(255,255,255,.85);
+      --ctl-hi: rgba(255,255,255,.14);
       --radius: 12px;
+    }
+    /* ── 亮色主題(我配的 SWS 同品牌版);點右上切換 ── */
+    :root[data-theme="light"] {
+      --bg: #f7f6f3;
+      --surface: #ffffff;
+      --surface2: #f0eee8;
+      --border: #e7e4dd;
+      --accent: #c99700;
+      --accent-hover: #b8860b;
+      --accent2: #7c3aed;
+      --green: #0f9d63;
+      --red: #d64545;
+      --yellow: #c98a1a;
+      --text: #1b1b1e;
+      --text-muted: #6c6c74;
+      --text-primary: #0f0f12;
+      --bg-card: #ffffff;
+      --ctl-bg: rgba(0,0,0,.05);
+      --ctl-bd: rgba(0,0,0,.12);
+      --ctl-tx: #2a2a2e;
+      --ctl-hi: rgba(0,0,0,.08);
     }
 
     body {
@@ -54,9 +79,9 @@
       font-size: 13px;
       padding: 5px 12px;
       border-radius: 6px;
-      border: 1px solid rgba(255,255,255,0.15) !important;
-      background: rgba(255,255,255,0.08) !important;
-      color: rgba(255,255,255,0.85) !important;
+      border: 1px solid var(--ctl-bd) !important;
+      background: var(--ctl-bg) !important;
+      color: var(--ctl-tx) !important;
       cursor: pointer;
       -webkit-tap-highlight-color: transparent !important;
       -webkit-appearance: none !important;
@@ -69,9 +94,9 @@
       transition: background .15s, border-color .15s;
     }
     #authArea button:hover {
-      background: rgba(255,255,255,0.14) !important;
-      border-color: rgba(255,255,255,0.3) !important;
-      color: #fff !important;
+      background: var(--ctl-hi) !important;
+      border-color: var(--accent) !important;
+      color: var(--text-primary) !important;
       box-shadow: none !important;
     }
     #authArea button:focus,
@@ -88,7 +113,7 @@
       border-color: rgba(255,255,255,0.3) !important;
       box-shadow: none !important;
     }
-    #authUserEmail { font-size: 13px; color: rgba(255,255,255,0.7); }
+    #authUserEmail { font-size: 13px; color: var(--text-muted); }
     #funcMenu {
       display: none; position: absolute; right: 0; top: calc(100% + 6px);
       flex-direction: column; gap: 4px; min-width: 165px; padding: 6px;
@@ -152,12 +177,12 @@
     header h1 {
       font-size: 1.5rem;
       font-weight: 700;
-      color: #fff;
+      color: var(--text-primary);
     }
 
     header span {
       background: var(--accent);
-      color: #fff;
+      color: #231c00;
       font-size: 0.7rem;
       font-weight: 600;
       padding: 2px 8px;
@@ -1114,10 +1139,16 @@
           <button id="backtestBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="openBacktest()">📈 <span class="btn-label">回測勝率</span></button>
         </div>
       </div>
+      <button id="themeToggle" tabindex="-1" onmousedown="this.blur()" ontouchend="this.blur()" onclick="_toggleTheme()" title="明暗切換">🌙</button>
       <button id="logoutBtn"   tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="doLogout()">登出</button>
       <button id="loginBtn"    tabindex="-1" onmousedown="this.blur()" ontouchend="this.blur()" onclick="openAuthModal('login')">登入</button>
     </div>
   </header>
+  <script>
+    (function(){try{if(localStorage.getItem('theme')==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}})();
+    function _toggleTheme(){var r=document.documentElement;var toLight=r.getAttribute('data-theme')!=='light';if(toLight)r.setAttribute('data-theme','light');else r.removeAttribute('data-theme');try{localStorage.setItem('theme',toLight?'light':'dark');}catch(e){}var b=document.getElementById('themeToggle');if(b)b.textContent=toLight?'☀️':'🌙';if(typeof _rethemeChart==='function'){try{_rethemeChart();}catch(e){}}}
+    document.addEventListener('DOMContentLoaded',function(){var b=document.getElementById('themeToggle');if(b)b.textContent=document.documentElement.getAttribute('data-theme')==='light'?'☀️':'🌙';});
+  </script>
 
   <!-- 📈 大盤融資維持率彈窗（公開） -->
   <div id="marginModal" class="mm-overlay" style="display:none" onclick="if(event.target===this)closeMarginModal()">
