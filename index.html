@@ -1131,6 +1131,28 @@
     .mn-menu a { display:block; padding:9px 12px; border-radius:7px; font-size:13.5px; color:var(--text); cursor:pointer; text-decoration:none; white-space:nowrap; }
     .mn-menu a:hover { background:var(--ctl-hi); }
     .mn-new { font-size:9px; font-weight:800; color:#fff; background:var(--accent2); border-radius:20px; padding:1px 6px; margin-left:2px; }
+
+    /* ── Step4:首頁 · 大盤與國際指數 ── */
+    #homeView { max-width:1200px; margin:0 auto; }
+    .hx-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:12px 14px 16px; margin-bottom:16px; }
+    .hx-tabs { display:flex; gap:2px; border-bottom:1px solid var(--border); overflow-x:auto; }
+    .hx-tab { font-size:14px; padding:10px 12px; color:var(--text-muted); border-bottom:3px solid transparent; cursor:pointer; white-space:nowrap; font-weight:600; }
+    .hx-tab.on { color:var(--text); border-bottom-color:var(--accent); font-weight:800; }
+    .hx-head { display:flex; justify-content:space-between; align-items:flex-start; margin:12px 0 8px; gap:12px; }
+    .hx-val { font-size:26px; font-weight:800; line-height:1.1; }
+    .hx-up { color:var(--red); } .hx-dn { color:var(--green); }
+    .hx-sub { font-size:12px; color:var(--text-muted); margin-top:3px; }
+    .hx-chartbox { position:relative; }
+    #hxChart { width:100%; height:240px; }
+    .hx-msg { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:13px; pointer-events:none; }
+    .hx-ddwrap { position:relative; }
+    .hx-chartbox .hx-br { position:absolute; bottom:8px; right:8px; z-index:5; }
+    .hx-dd { display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:700; padding:7px 12px; border:1px solid var(--border); border-radius:9px; background:var(--surface); color:var(--text); cursor:pointer; box-shadow:0 2px 10px rgba(0,0,0,.14); }
+    .hx-dd i { font-style:normal; font-size:9px; opacity:.7; } .hx-dd.act { border-color:var(--accent); color:var(--accent); }
+    .hx-menu { position:absolute; right:0; top:40px; background:var(--surface); border:1px solid var(--border); border-radius:10px; box-shadow:0 14px 34px rgba(0,0,0,.28); padding:5px; min-width:120px; z-index:8; }
+    .hx-menu.up { top:auto; bottom:44px; }
+    .hx-opt { display:block; padding:8px 12px; border-radius:7px; font-size:12.5px; color:var(--text); cursor:pointer; white-space:nowrap; }
+    .hx-opt:hover { background:var(--ctl-hi); } .hx-opt.on { background:var(--accent); color:#231c00; font-weight:800; }
   </style>
 </head>
 <body>
@@ -1160,16 +1182,16 @@
   </header>
   <script>
     (function(){try{if(localStorage.getItem('theme')==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}})();
-    function _toggleTheme(){var r=document.documentElement;var toLight=r.getAttribute('data-theme')!=='light';if(toLight)r.setAttribute('data-theme','light');else r.removeAttribute('data-theme');try{localStorage.setItem('theme',toLight?'light':'dark');}catch(e){}var b=document.getElementById('themeToggle');if(b)b.textContent=toLight?'☀️':'🌙';if(typeof _rethemeChart==='function'){try{_rethemeChart();}catch(e){}}}
+    function _toggleTheme(){var r=document.documentElement;var toLight=r.getAttribute('data-theme')!=='light';if(toLight)r.setAttribute('data-theme','light');else r.removeAttribute('data-theme');try{localStorage.setItem('theme',toLight?'light':'dark');}catch(e){}var b=document.getElementById('themeToggle');if(b)b.textContent=toLight?'☀️':'🌙';if(typeof _rethemeChart==='function'){try{_rethemeChart();}catch(e){}}if(typeof _hxRetheme==='function'){try{_hxRetheme();}catch(e){}}}
     function _todo(n){ if(typeof showToast==='function') showToast((n||'此功能')+'：建置中'); else alert((n||'此功能')+'：建置中'); }
     function _home(){ try{ ['chartModal','brokerSigModal','brokerRankModal','hotTopicsModal','watchlistPanel','alertPanel','marginModal','backtestModal','sellTrackModal','divAlertModal'].forEach(function(id){var m=document.getElementById(id); if(m){ m.style.display='none'; if(m.classList) m.classList.remove('open'); }}); }catch(e){} window.scrollTo({top:0,behavior:'smooth'}); }
     document.addEventListener('DOMContentLoaded',function(){var b=document.getElementById('themeToggle');if(b)b.textContent=document.documentElement.getAttribute('data-theme')==='light'?'☀️':'🌙';});
   </script>
   <nav id="mainNav"><div class="mn-inner">
-    <a class="mn-item" onclick="_home()">首頁</a>
+    <a class="mn-item" onclick="_showView('home')">首頁</a>
     <a class="mn-item" onclick="_todo('今日焦點')">今日焦點</a>
     <div class="mn-grp"><span class="mn-item">選股 <i>▾</i></span><div class="mn-menu">
-      <a onclick="_home()">篩選器</a><a onclick="_todo('箱型')">箱型</a><a onclick="_todo('漲停分析')">漲停分析</a></div></div>
+      <a onclick="_showView('screen')">篩選器</a><a onclick="_todo('箱型')">箱型</a><a onclick="_todo('漲停分析')">漲停分析</a></div></div>
     <div class="mn-grp"><span class="mn-item">題材族群 <i>▾</i></span><div class="mn-menu">
       <a class="nav-owner" onclick="openHotTopics()">🔥 話題</a><a onclick="_todo('題材列表')">題材列表</a><a onclick="_todo('產業地圖')">產業地圖</a></div></div>
     <div class="mn-grp"><span class="mn-item">市場觀察 <i>▾</i></span><div class="mn-menu">
@@ -1182,6 +1204,66 @@
     <div class="mn-grp"><span class="mn-item">我的觀察 <i>▾</i></span><div class="mn-menu">
       <a class="nav-auth" onclick="openWatchlist()">⭐ 觀察清單</a><a class="nav-auth" onclick="openBacktest()">📈 回測</a><a class="nav-owner" onclick="openSellTrack()">🔻 出場追蹤</a><a class="nav-auth" onclick="openAlertMgr()">🔔 我的警示</a></div></div>
   </div></nav>
+
+  <div id="homeView" style="display:none">
+    <div class="hx-card">
+      <div class="hx-tabs" id="hxTabs"></div>
+      <div class="hx-head"><div id="hxStat"></div><div class="hx-ddwrap" id="hxRangeWrap"></div></div>
+      <div class="hx-chartbox"><div id="hxChart"></div><div class="hx-ddwrap hx-br" id="hxTypeWrap"></div><div id="hxMsg" class="hx-msg"></div></div>
+    </div>
+  </div>
+  <script>
+  (function(){
+    var IDX=[{s:'^TWII',n:'台股加權'},{s:'^N225',n:'日經225'},{s:'^IXIC',n:'那斯達克'},{s:'^DJI',n:'道瓊'},{s:'^GSPC',n:'S&P 500'}];
+    var RMAP={ today:{range:'1d',interval:'5m',label:'當日'}, '1y':{range:'1y',interval:'1d',label:'近1年'}, '2y':{range:'2y',interval:'1d',label:'近2年'} };
+    var i=0, rng='2y', typ='line', open=null, chart=null, cache={};
+    function el(id){return document.getElementById(id);}
+    function cssv(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
+    function renderCtl(){
+      el('hxTabs').innerHTML=IDX.map(function(d,k){return '<span class="hx-tab'+(k===i?' on':'')+'" data-hxi="'+k+'">'+d.n+'</span>';}).join('');
+      el('hxRangeWrap').innerHTML='<button class="hx-dd'+(open==='range'?' act':'')+'" data-hxo="range">🕘 '+RMAP[rng].label+' <i>▾</i></button>'+(open==='range'?'<div class="hx-menu">'+Object.keys(RMAP).map(function(k){return '<span class="hx-opt'+(rng===k?' on':'')+'" data-hxr="'+k+'">'+RMAP[k].label+'</span>';}).join('')+'</div>':'');
+      var tL=typ==='candle'?'K線':'江波圖';
+      el('hxTypeWrap').innerHTML='<button class="hx-dd'+(open==='type'?' act':'')+'" data-hxo="type">📊 '+tL+' <i>▾</i></button>'+(open==='type'?'<div class="hx-menu up">'+[['candle','K線'],['line','江波圖']].map(function(a){return '<span class="hx-opt'+(typ===a[0]?' on':'')+'" data-hxt="'+a[0]+'">'+a[1]+'</span>';}).join('')+'</div>':'');
+    }
+    function drawChart(data, idx){
+      var box=el('hxChart'); if(chart){try{chart.remove();}catch(e){}chart=null;} box.innerHTML='';
+      if(!data||!data.length){ el('hxMsg').textContent='無資料'; return; } el('hxMsg').textContent='';
+      var t={bg:cssv('--surface'),tx:cssv('--text-muted'),gd:cssv('--border'),up:cssv('--red'),dn:cssv('--green')};
+      chart=LightweightCharts.createChart(box,{width:box.clientWidth||600,height:240,layout:{background:{color:t.bg},textColor:t.tx},grid:{vertLines:{color:t.gd},horzLines:{color:t.gd}},rightPriceScale:{borderColor:t.gd},timeScale:{borderColor:t.gd,timeVisible:rng==='today'}});
+      var s;
+      if(typ==='candle'){ s=chart.addCandlestickSeries({upColor:t.up,downColor:t.dn,borderUpColor:t.up,borderDownColor:t.dn,wickUpColor:t.up,wickDownColor:t.dn}); s.setData(data.map(function(c){return {time:c.time,open:c.open,high:c.high,low:c.low,close:c.close};})); }
+      else { var up=data[data.length-1].close>=data[0].close; var col=up?t.up:t.dn; s=chart.addAreaSeries({lineColor:col,topColor:col+'44',bottomColor:col+'00',lineWidth:2}); s.setData(data.map(function(c){return {time:c.time,value:c.close};})); }
+      chart.timeScale().fitContent();
+      var last=data[data.length-1], first=data[0], chg=last.close-first.close, pct=chg/first.close*100, up2=chg>=0;
+      el('hxStat').innerHTML='<div class="hx-val '+(up2?'hx-up':'hx-dn')+'">'+Number(last.close).toLocaleString()+'</div><div class="hx-sub">'+idx.n+' · '+(up2?'▲':'▼')+' '+(chg>=0?'+':'')+pct.toFixed(2)+'%（'+RMAP[rng].label+'）</div>';
+    }
+    function load(){
+      renderCtl();
+      var idx=IDX[i], rm=RMAP[rng], key=idx.s+rm.range+rm.interval;
+      el('hxMsg').textContent='載入中…';
+      if(cache[key]){ drawChart(cache[key], idx); return; }
+      fetch('/api/chart?code='+encodeURIComponent(idx.s)+'&range='+rm.range+'&interval='+rm.interval)
+        .then(function(r){return r.json();})
+        .then(function(j){ var d=(j&&j.data)||[]; cache[key]=d; drawChart(d, idx); })
+        .catch(function(){ el('hxMsg').textContent='資料載入失敗，稍後再試'; });
+    }
+    window._hxShow=function(){ el('homeView').style.display='block'; load(); };
+    window._hxRetheme=function(){ if(el('homeView')&&el('homeView').style.display!=='none') load(); };
+    window._showView=function(v){
+      var fw=document.querySelector('.form-wrap'), ra=el('resultsArea'), hv=el('homeView');
+      if(v==='home'){ if(hv)hv.style.display='block'; if(fw)fw.style.display='none'; if(ra)ra.style.display='none'; window._hxShow(); }
+      else { if(hv)hv.style.display='none'; if(fw)fw.style.display=''; if(ra)ra.style.display=''; }
+    };
+    document.addEventListener('click',function(e){
+      var o=e.target.closest('[data-hxo]'); if(o){var k=o.dataset.hxo;open=open===k?null:k;renderCtl();return;}
+      var ti=e.target.closest('[data-hxi]'); if(ti){i=+ti.dataset.hxi;open=null;load();return;}
+      var rr=e.target.closest('[data-hxr]'); if(rr){rng=rr.dataset.hxr;open=null;load();return;}
+      var tt=e.target.closest('[data-hxt]'); if(tt){typ=tt.dataset.hxt;open=null;load();return;}
+      if(open&&!e.target.closest('.hx-ddwrap')){open=null;renderCtl();}
+    });
+    document.addEventListener('DOMContentLoaded',function(){ try{ window._showView('home'); }catch(e){} });
+  })();
+  </script>
 
   <!-- 📈 大盤融資維持率彈窗（公開） -->
   <div id="marginModal" class="mm-overlay" style="display:none" onclick="if(event.target===this)closeMarginModal()">
