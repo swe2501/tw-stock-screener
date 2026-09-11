@@ -1204,7 +1204,7 @@
     <div class="mn-grp"><span class="mn-item">題材族群 <i>▾</i></span><div class="mn-menu">
       <a class="nav-owner" onclick="openHotTopics()">🔥 話題</a><a onclick="_showView('themes')">題材列表</a><a onclick="_todo('產業地圖')">產業地圖</a></div></div>
     <div class="mn-grp"><span class="mn-item">市場觀察 <i>▾</i></span><div class="mn-menu">
-      <a class="nav-owner" onclick="openBrokerSignals()">🎯 主力訊號</a><a class="nav-owner" onclick="openBrokerRankings()">📊 分點回測</a><a onclick="openMarginModal()">📈 融資維持率</a><a onclick="_todo('股期儀表板')">股期儀表板</a></div></div>
+      <a class="nav-owner" onclick="openBrokerSignals()">🎯 主力訊號</a><a class="nav-owner" onclick="openBrokerRankings()">📊 分點回測</a><a onclick="openMarginModal()">📈 融資維持率</a><a onclick="_showView('greed')">😱 貪婪指標</a><a onclick="_todo('股期儀表板')">股期儀表板</a></div></div>
     <div class="mn-grp"><span class="mn-item">ETF 分析 <span class="mn-new">新</span> <i>▾</i></span><div class="mn-menu">
       <a onclick="_todo('ETF 總覽')">總覽</a><a onclick="_todo('成分股·重疊')">成分股 · 重疊</a><a onclick="_todo('折溢價')">折溢價</a><a onclick="_todo('規模·資金流')">規模 · 資金流</a></div></div>
     <div class="mn-grp"><span class="mn-item">個股 <i>▾</i></span><div class="mn-menu">
@@ -1541,6 +1541,94 @@
       if(el('luNote'))el('luNote').innerHTML='<b>算法與資料源：</b>漲停=當日漲幅≥+9.5%、跌停=≤−9.5%（price_window 官方收盤推算，含 ETF）。「連N天」=自最新日往前連續維持漲停/跌停的天數。量比=今日量÷max(近5,近10日均量,不含當日)。依連續天數、再依漲跌幅排序。';
     };
     window._VIEWS=window._VIEWS||{}; window._VIEWS.limitup={el:'limitupView',show:'_limitupShow'};
+  })();
+  </script>
+
+  <style>
+    #greedView{max-width:1000px;margin:0 auto;}
+    .gd-bar2{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px;}
+    .gd-bar2 input{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-size:13px;width:180px;}
+    .gd-bar2 select{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 10px;color:var(--text);font-size:13px;}
+    .gd-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+    .gd-scroll{max-height:70vh;overflow-y:auto;}
+    table.gd{width:100%;border-collapse:collapse;font-size:12.5px;}
+    table.gd th{position:sticky;top:0;background:var(--surface2);color:var(--text-muted);font-weight:700;font-size:11px;text-align:right;padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap;z-index:1;}
+    table.gd th.l,table.gd td.l{text-align:left;}
+    table.gd td{padding:7px 10px;border-bottom:1px solid var(--border);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;}
+    table.gd tr:hover td{background:var(--surface2);}
+    table.gd td .c{color:var(--accent);font-weight:700;}
+    .gd-base{display:inline-block;min-width:34px;font-weight:800;text-align:center;border-radius:6px;padding:2px 6px;color:#fff;}
+    .gd-sub{color:var(--text-muted);}
+    .gd-ex{font-size:10px;font-weight:800;color:var(--accent2);border:1px solid var(--accent2);border-radius:5px;padding:0 5px;margin-left:5px;}
+  </style>
+  <div id="greedView" style="display:none">
+    <div class="tm-head"><h2>😱 貪婪指標</h2><span class="sub" id="gdSub"></span></div>
+    <div class="gd-bar2">
+      <input id="gdSearch" type="text" placeholder="搜尋代號 / 名稱…" autocomplete="off">
+      <select id="gdSort">
+        <option value="base">貪婪指數 高→低</option>
+        <option value="base_asc">貪婪指數 低→高(最恐懼)</option>
+        <option value="price_score">價格動能</option>
+        <option value="momentum_score">相對強度</option>
+        <option value="volume_score">量能</option>
+        <option value="chip_score">籌碼</option>
+      </select>
+    </div>
+    <div class="gd-wrap"><div class="gd-scroll"><table class="gd"><thead><tr>
+      <th class="l">代號 / 名稱</th><th>貪婪指數</th><th>價 30%</th><th>動 25%</th><th>量 25%</th><th>籌 20%</th>
+    </tr></thead><tbody id="gdBody"><tr><td class="l" colspan="6">載入中…</td></tr></tbody></table></div></div>
+    <div class="fc-note" id="gdNote"></div>
+  </div>
+  <script>
+  (function(){
+    var el=function(id){return document.getElementById(id);};
+    var DATA=[], loaded=false;
+    function gcol(v){ // 0紅(恐懼藍?)—100 越高越貪婪(紅)。用色相：低=綠 高=紅
+      v=Math.max(0,Math.min(100,v||0));
+      var hue=(1-v/100)*140; // 0=紅(140→0),100→紅; 100 hue0 紅, 0 hue140 綠
+      return 'hsl('+hue+',60%,42%)';
+    }
+    function render(){
+      var q=(el('gdSearch').value||'').trim().toLowerCase();
+      var sort=el('gdSort').value;
+      var arr=DATA.filter(function(x){return !q || x.code.toLowerCase().indexOf(q)>=0 || (x.name||'').toLowerCase().indexOf(q)>=0;});
+      var key=sort.replace('_asc',''); var asc=sort.indexOf('_asc')>=0;
+      arr.sort(function(a,b){var d=(b[key]||0)-(a[key]||0);return asc?-d:d;});
+      var show=arr.slice(0,300);
+      el('gdBody').innerHTML=show.length?show.map(function(x){
+        return '<tr><td class="l"><span class="c">'+x.code+'</span> '+(x.name||'')+(x.exhaust?'<span class="gd-ex">利多出盡</span>':'')+'</td>'+
+          '<td><span class="gd-base" style="background:'+gcol(x.base)+'">'+x.base+'</span></td>'+
+          '<td class="gd-sub">'+(x.price_score!=null?x.price_score:'—')+'</td>'+
+          '<td class="gd-sub">'+(x.momentum_score!=null?x.momentum_score:'—')+'</td>'+
+          '<td class="gd-sub">'+(x.volume_score!=null?x.volume_score:'—')+'</td>'+
+          '<td class="gd-sub">'+(x.chip_score!=null?x.chip_score:'—')+'</td></tr>';
+      }).join(''):'<tr><td class="l" colspan="6">無符合資料</td></tr>';
+      if(el('gdSub'))el('gdSub').textContent='共 '+DATA.length+' 檔'+(q?(' · 篩選 '+arr.length):'')+(arr.length>300?' · 顯示前 300':'');
+    }
+    function fetchAll(SB,H){
+      var out=[];
+      function page(off){
+        return fetch(SB+'/rest/v1/greed_base?select=code,base,price_score,momentum_score,volume_score,chip_score,exhaust,data_date&order=base.desc&offset='+off+'&limit=1000',{headers:H}).then(function(r){return r.json();}).then(function(a){
+          if(!Array.isArray(a))return out; out=out.concat(a); return a.length>=1000?page(off+1000):out;
+        });
+      }
+      return page(0);
+    }
+    window._greedShow=function(){
+      if(loaded){render();return;}
+      var SB=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'', AK=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';
+      var H={apikey:AK,Authorization:'Bearer '+AK};
+      window._loadNames(function(names){
+        fetchAll(SB,H).then(function(rows){
+          DATA=rows.map(function(x){x.name=names[x.code]||'';return x;});
+          loaded=true;
+          if(DATA[0]&&el('gdNote'))el('gdNote').innerHTML='<b>算法（合夥人複查）：</b>貪婪指數 base = 價格動能30% + 相對強度(vs大盤超額報酬)25% + 量能25% + 籌碼20%，各維 0–100 加權；資料源 greed_base（compute_greed.py 每日產出，資料日 '+(DATA[0].data_date||'')+'）。「利多出盡」= 高分且動能轉弱的過熱警示旗標。顏色：越紅越貪婪、越綠越恐懼。';
+          render();
+        });
+      });
+      el('gdSearch').oninput=render; el('gdSort').onchange=render;
+    };
+    window._VIEWS=window._VIEWS||{}; window._VIEWS.greed={el:'greedView',show:'_greedShow'};
   })();
   </script>
   <script>
