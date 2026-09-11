@@ -10,20 +10,22 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg: #0f1117;
-      --surface: #1a1d27;
-      --surface2: #22263a;
-      --border: #2e3350;
-      --accent: #4f8ef7;
-      --accent-hover: #6fa3ff;
-      --green: #26c281;
-      --red: #e74c3c;
-      --yellow: #f39c12;
-      --text: #e2e8f0;
-      --text-muted: #8892a8;
-      --text-primary: #f0f4fc;
-      --bg-card: #171a24;   /* modal 卡片：不透明，避免主頁文字透上來 */
-      --radius: 10px;
+      /* ── SWS 暗色底盤(Step 1 換皮;明色與切換鈕於後續步驟) ── */
+      --bg: #0d0d0f;
+      --surface: #17171a;
+      --surface2: #202027;
+      --border: #2a2a31;
+      --accent: #f5c84b;          /* SWS 金黃 */
+      --accent-hover: #ffd668;
+      --accent2: #9b6cff;         /* SWS 紫(徽章/次要強調) */
+      --green: #22c58a;
+      --red: #f0555a;
+      --yellow: #f5c84b;
+      --text: #f2f2f4;
+      --text-muted: #8a8a93;
+      --text-primary: #ffffff;
+      --bg-card: #17171a;   /* modal 卡片：不透明，避免主頁文字透上來 */
+      --radius: 12px;
     }
 
     body {
@@ -2295,7 +2297,7 @@
         .map(e => ({
           time: e.start_date,
           position: 'belowBar',
-          color: '#4da3ff',
+          color: '#f5c84b',
           shape: 'arrowUp',
           text: e.event_type,
           size: 1,
@@ -2428,7 +2430,7 @@
         : (t && t.year ? `${t.year}-${String(t.month).padStart(2, '0')}-${String(t.day).padStart(2, '0')}` : null));
       const panels = [
         { key: 'k',     h: hK,      label: '加權指數' },
-        { key: 'ratio', h: hS,      label: '融資維持率(%)', color: '#4da3ff', fmt: v => v.toFixed(1) + '%' },
+        { key: 'ratio', h: hS,      label: '融資維持率(%)', color: '#f5c84b', fmt: v => v.toFixed(1) + '%' },
         { key: 'fin',   h: hS,      label: '融資餘額(億)',  color: '#f85149', fmt: v => v.toFixed(0) },
         { key: 'short', h: hS + 26, label: '融券餘額(張)',  color: '#3fb950', fmt: v => (v / 1000).toFixed(0) + 'k' },
       ];
@@ -2610,10 +2612,10 @@
           強度 = 0.6×RS + 0.2×均線多頭 + 0.2×近高比×100<br>
           　　 = 0.6×${s.rs} + 0.2×${maScore} + 0.2×${(nh * 100).toFixed(1)}<br>
           　　 = ${c1} + ${c2} + ${c3} = <b style="color:#67c23a">${s.strength}</b></div>
-        <div style="margin-top:11px"><b style="color:#4da3ff">RS ${s.rs}</b>（相對強度）：該檔「0.6×20日＋0.4×60日報酬」在全市場約 1080 檔的百分位，即贏過約 <b>${s.rs}%</b> 的股票。<br>
+        <div style="margin-top:11px"><b style="color:#f5c84b">RS ${s.rs}</b>（相對強度）：該檔「0.6×20日＋0.4×60日報酬」在全市場約 1080 檔的百分位，即贏過約 <b>${s.rs}%</b> 的股票。<br>
           <span style="color:var(--text-muted)">· 近20日報酬 ${s.ret20 >= 0 ? '+' : ''}${s.ret20}%</span></div>
-        <div style="margin-top:9px"><b style="color:#4da3ff">均線多頭</b>：收盤 &gt; MA20 &gt; MA60 → ${s.above_ma ? '<span style="color:#67c23a">成立，得 100</span>' : '<span style="color:var(--text-muted)">不成立，得 0</span>'}</div>
-        <div style="margin-top:9px"><b style="color:#4da3ff">近波段高比</b>：收盤 ÷ 近60日最高 ＝ <b>${nh}</b>（×100＝${(nh * 100).toFixed(1)}）。越接近 1 越貼近波段高。</div>`;
+        <div style="margin-top:9px"><b style="color:#f5c84b">均線多頭</b>：收盤 &gt; MA20 &gt; MA60 → ${s.above_ma ? '<span style="color:#67c23a">成立，得 100</span>' : '<span style="color:var(--text-muted)">不成立，得 0</span>'}</div>
+        <div style="margin-top:9px"><b style="color:#f5c84b">近波段高比</b>：收盤 ÷ 近60日最高 ＝ <b>${nh}</b>（×100＝${(nh * 100).toFixed(1)}）。越接近 1 越貼近波段高。</div>`;
       document.getElementById('strengthPopup').style.display = 'flex';
     }
 
@@ -2637,7 +2639,7 @@
         ].filter(Boolean).join('　') || '–';
         const ret = s.ret20 != null ? (s.ret20 >= 0 ? '+' : '') + s.ret20 + '%' : '–';
         return `<tr onclick="openChart('${c.code}','${c.code} ${_htEsc(c.name).replace(/'/g,'')}','',0,false)" style="border-bottom:1px solid var(--border);cursor:pointer">
-          <td style="padding:3px 8px;color:#4da3ff">${c.code} ${_htEsc(c.name)}</td>
+          <td style="padding:3px 8px;color:#f5c84b">${c.code} ${_htEsc(c.name)}</td>
           <td onclick="event.stopPropagation();_showStrengthCalc('${c.code}')" title="點看算法" style="padding:3px 8px;text-align:right;cursor:pointer">
             <div style="font-weight:700;color:${col};text-decoration:underline dotted;text-underline-offset:2px">${strg}</div>
             <div style="font-size:10px;color:var(--text-muted);white-space:nowrap">${brk}</div></td>
@@ -2645,12 +2647,12 @@
           <td style="padding:3px 8px;font-size:11px">${force}</td></tr>`;
       }).join('');
       const srcs = (t.source_urls || []).filter(u => /^https?:\/\//.test(u)).map((u, i) =>
-        `<a href="${_htEsc(u)}" target="_blank" rel="noopener" style="color:#4da3ff;font-size:11px;margin-right:8px">來源${i + 1}</a>`).join('');
+        `<a href="${_htEsc(u)}" target="_blank" rel="noopener" style="color:#f5c84b;font-size:11px;margin-right:8px">來源${i + 1}</a>`).join('');
       const heat = t.heat != null ? t.heat : '–';
       return `<div style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:10px">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
           <span style="background:rgba(255,120,60,.15);border:1px solid #ff7a3c;color:#ff7a3c;border-radius:10px;padding:1px 8px;font-size:11px">🔥${heat}</span>
-          <span style="background:rgba(77,163,255,.12);border:1px solid #4da3ff;color:#4da3ff;border-radius:10px;padding:1px 8px;font-size:11px">${_htEsc(t.sector) || '—'}</span>
+          <span style="background:rgba(77,163,255,.12);border:1px solid #f5c84b;color:#f5c84b;border-radius:10px;padding:1px 8px;font-size:11px">${_htEsc(t.sector) || '—'}</span>
           <b style="font-size:13px">${_htEsc(t.topic)}</b>
         </div>
         ${t.summary ? `<div style="font-size:11.5px;color:var(--text-muted);margin:5px 0">${_htEsc(t.summary)}</div>` : ''}
@@ -2725,7 +2727,7 @@
         return `<tr onclick="_rkShowTrades('${view}','${x.broker_id}','${(x.broker_name||'').replace(/'/g,'')}',${isLots})"
             style="border-bottom:1px solid var(--border);cursor:pointer" title="點擊看該分點出手明細">
           <td style="padding:4px 8px;text-align:center">${x.rank}</td>
-          <td style="padding:4px 8px;color:#4da3ff">${x.broker_name || x.broker_id} ›</td>
+          <td style="padding:4px 8px;color:#f5c84b">${x.broker_name || x.broker_id} ›</td>
           ${_rkWinCell(x.win8, x.n8)}
           ${_rkWinCell(x.win20, x.n20)}
           <td style="padding:4px 8px;text-align:right">${x.events ?? '–'}${unresTxt}</td>
@@ -2757,7 +2759,7 @@
         const clickable = viewA
           ? `onclick="_rkShowTrades('${viewA}','${x.broker_id}','${(x.broker_name||'').replace(/'/g,'')}',${isLots})" style="cursor:pointer" title="點擊看該分點出手明細"` : '';
         const nameCell = viewA
-          ? `<td style="padding:5px 10px;font-weight:600;color:#4da3ff">${x.broker_name || x.broker_id} ›</td>`
+          ? `<td style="padding:5px 10px;font-weight:600;color:#f5c84b">${x.broker_name || x.broker_id} ›</td>`
           : `<td style="padding:5px 10px;font-weight:600;color:var(--text-primary)">${x.broker_name || x.broker_id}</td>`;
         return `
         <tr ${clickable} style="border-bottom:1px solid var(--border);background:${i % 2 ? 'transparent' : 'rgba(255,255,255,.02)'}">
@@ -2771,7 +2773,7 @@
         <thead>
           <tr style="color:var(--text-muted)">
             <th rowspan="2" style="padding:4px 10px;text-align:left;vertical-align:bottom;border-bottom:1px solid var(--border)">分點</th>
-            <th colspan="3" style="padding:2px 10px;text-align:center;color:#4da3ff">${labA}</th>
+            <th colspan="3" style="padding:2px 10px;text-align:center;color:#f5c84b">${labA}</th>
             <th style="border-bottom:1px solid var(--border)"></th>
             <th colspan="3" style="padding:2px 10px;text-align:center;color:#ff9f43">${labB}</th>
           </tr>
@@ -2996,7 +2998,7 @@
       if (!rows.length) return '<div style="padding:16px 0">尚無資料（等待計算，或無符合條件的分點）</div>';
       const wc = v => v != null ? `<td style="padding:4px 8px;text-align:right;color:${v>=70?'#e6a23c':'var(--text)'}">${v}%</td>` : '<td style="padding:4px 8px;text-align:right">–</td>';
       const tr = rows.map(x => `<tr onclick="_streakByBroker('${String(x.broker_id||'').replace(/'/g,'')}','${String(x.broker_name||x.broker_id||'').replace(/'/g,'')}')" style="border-bottom:1px solid var(--border);cursor:pointer">
-        <td style="padding:4px 8px;color:#4da3ff">${x.broker_name || x.broker_id}</td>
+        <td style="padding:4px 8px;color:#f5c84b">${x.broker_name || x.broker_id}</td>
         <td style="padding:4px 8px;text-align:right">${x.events}</td>
         ${wc(x.win5)}${wc(x.win10)}${wc(x.win20)}
         <td style="padding:4px 8px;text-align:right">${x.avg_ret != null ? '+' + x.avg_ret + '%' : '–'}</td>
@@ -3012,7 +3014,7 @@
 
     function _floatStreaksTable(floatOnly) {
       const bf = _streakBrokerFilter;
-      const chip = bf ? `<span style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:12px;background:rgba(77,163,255,.15);border:1px solid #4da3ff;font-size:12px;color:#4da3ff">分點：${bf.name}<span onclick="_clearStreakBroker()" style="cursor:pointer;color:#f85149;font-weight:700">✕</span></span>` : '';
+      const chip = bf ? `<span style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:12px;background:rgba(77,163,255,.15);border:1px solid #f5c84b;font-size:12px;color:#f5c84b">分點：${bf.name}<span onclick="_clearStreakBroker()" style="cursor:pointer;color:#f85149;font-weight:700">✕</span></span>` : '';
       const search = `<input id="streakCodeInput" type="text" inputmode="numeric" placeholder="輸入股票代號篩選" value="${_streakCodeFilter}"
         oninput="_streakCodeFilter=this.value.trim(); document.getElementById('streakTableBox').innerHTML=_streakTableInner(${floatOnly});"
         style="padding:4px 8px;font-size:12.5px;border:1px solid var(--border);border-radius:4px;background:var(--input-bg,var(--surface2));color:var(--text);width:150px" />`;
@@ -3038,7 +3040,7 @@
         return `<tr onclick="openChart('${x.code}','${x.code} ${(x.name||'').replace(/'/g,'')}','',0,false,'${x.start_date}','${_bn} 連買起','${x.end_date}','連買迄')"
           style="border-bottom:1px solid var(--border);cursor:pointer">
         <td style="padding:4px 8px">${x.broker_name || x.broker_id}</td>
-        <td style="padding:4px 8px;color:#4da3ff">${x.code} ${x.name || ''}</td>
+        <td style="padding:4px 8px;color:#f5c84b">${x.code} ${x.name || ''}</td>
         <td style="padding:4px 8px;white-space:nowrap;font-size:11px">${x.start_date}~${x.end_date}</td>
         <td style="padding:4px 8px;text-align:right">${x.days}天</td>
         <td style="padding:4px 8px;text-align:right">${Number(x.cum_lots).toLocaleString()}張</td>
@@ -3119,7 +3121,7 @@
               style="border-bottom:1px solid var(--border);cursor:pointer">
             <td style="padding:4px 6px;text-align:center;width:26px">${cb}</td>
             <td style="padding:4px 8px;white-space:nowrap">${x.trade_date}</td>
-            <td style="padding:4px 8px;color:#4da3ff">${x.code} ${x.name || ''}</td>
+            <td style="padding:4px 8px;color:#f5c84b">${x.code} ${x.name || ''}</td>
             <td style="padding:4px 8px;text-align:right">${isLots
               ? Number(x.net_lots).toLocaleString() + ' 張'
               : (x.net_amount_wan != null ? Number(x.net_amount_wan).toLocaleString() + ' 萬' : '–')}</td>
@@ -3232,7 +3234,7 @@
         const anchorMark = (w.anchor_sell_ct > 0)
           ? `<div style="font-size:10px;color:#e74c3c" title="本尊自己的賣超事件次數">🔻本尊賣超 ${w.anchor_sell_ct} 次${w.last_anchor_sell ? `・最近 ${w.last_anchor_sell}` : ''}</div>` : '';
         return `<tr style="border-bottom:1px solid var(--border)">
-          <td style="padding:5px 8px;color:#4da3ff;cursor:pointer" onclick="_stExpand('${w.broker_id}','${w.code}',this)" title="展開賣超事件">${w.code} ${w.stock_name || ''} ›${anchorMark}</td>
+          <td style="padding:5px 8px;color:#f5c84b;cursor:pointer" onclick="_stExpand('${w.broker_id}','${w.code}',this)" title="展開賣超事件">${w.code} ${w.stock_name || ''} ›${anchorMark}</td>
           <td style="padding:5px 8px;color:var(--text-muted);font-size:11px">${w.broker_name || w.broker_id}</td>
           <td style="padding:5px 8px;text-align:right;color:${tcolor};font-weight:700">${gvTxt}${upd}</td>
           <td style="padding:5px 8px;text-align:center;color:${tcolor}">${tlabel}</td>
@@ -3377,7 +3379,7 @@
               style="cursor:pointer;border-bottom:1px solid var(--border)">
             <td style="padding:4px 8px;text-align:center">${x.rank_amt != null ? `${x.rank}／${x.rank_amt}` : x.rank}</td>
             <td style="padding:4px 8px">${x.broker_name}</td>
-            <td style="padding:4px 8px;color:#4da3ff">${x.code}</td>
+            <td style="padding:4px 8px;color:#f5c84b">${x.code}</td>
             <td style="padding:4px 8px;text-align:right">${Number(x.net_lots).toLocaleString()}</td>
             <td style="padding:4px 8px;text-align:right">${x.net_amount_wan != null ? Number(x.net_amount_wan).toLocaleString() : '–'}</td>
             <td style="padding:4px 8px;text-align:right">${x.buy_avg_price ?? '–'}</td>
@@ -3521,7 +3523,7 @@
           const days = Math.round((new Date(up.start_date + 'T00:00:00') - new Date(todayISO + 'T00:00:00')) / 86400000);
           const when = days === 0 ? '（今天）' : `（${days} 天後）`;
           tag.innerHTML = `<span title="${(up.title || '').replace(/"/g, '')}" style="display:inline-block;padding:2px 8px;
-            border:1px solid #4da3ff;border-radius:4px;color:#4da3ff;font-size:12px;white-space:nowrap">📣 ${up.event_type} ${up.start_date}${when}</span>`;
+            border:1px solid #f5c84b;border-radius:4px;color:#f5c84b;font-size:12px;white-space:nowrap">📣 ${up.event_type} ${up.start_date}${when}</span>`;
         }
         _refreshChartMarkers();
       } catch (_) { /* 催化資訊非必要，失敗時靜默 */ }
@@ -3586,8 +3588,8 @@
         `<div style="margin-top:5px"><span style="color:#c678dd;font-weight:600">${cat}（${groups[cat].length}）</span>
           <div style="display:flex;flex-wrap:wrap;margin-top:2px">${groups[cat].sort().map(cb).join('')}</div></div>`).join('');
       panel.innerHTML = `<div><b style="color:#c678dd">主力分點</b>（${list.length}）
-        　<a onclick="_setAllBrokers(true)" style="color:#4da3ff;cursor:pointer">全勾</a>
-        　<a onclick="_setAllBrokers(false)" style="color:#4da3ff;cursor:pointer">全部取消</a></div>
+        　<a onclick="_setAllBrokers(true)" style="color:#f5c84b;cursor:pointer">全勾</a>
+        　<a onclick="_setAllBrokers(false)" style="color:#f5c84b;cursor:pointer">全部取消</a></div>
         <div style="max-height:110px;overflow-y:auto">${sections}</div>`;
       panel.style.display = 'block';
     }
@@ -3690,8 +3692,8 @@
       return `<details style="margin-top:12px;border-top:1px solid var(--border);padding-top:9px">
         <summary style="cursor:pointer;font-size:12px;color:#c678dd;font-weight:600">＋ 完整計分規則與本次改動（合夥人複查）</summary>
         <div style="margin-top:9px;font-size:11.5px;line-height:1.55">
-          <b style="color:#4da3ff">最終公式</b>：貪婪 = 0.70×基礎 + 0.30×催化(取話題/法說/展覽最強者)，四捨五入 0~100。<br>
-          <b style="color:#4da3ff">基礎(四維)</b> = 0.30×價格延伸 + 0.25×動能 + 0.25×量能 + 0.20×籌碼；每維 = 該維各指標「分段線性內插分」的<b>平均</b>（缺值維度自動重歸一化權重）。
+          <b style="color:#f5c84b">最終公式</b>：貪婪 = 0.70×基礎 + 0.30×催化(取話題/法說/展覽最強者)，四捨五入 0~100。<br>
+          <b style="color:#f5c84b">基礎(四維)</b> = 0.30×價格延伸 + 0.25×動能 + 0.25×量能 + 0.20×籌碼；每維 = 該維各指標「分段線性內插分」的<b>平均</b>（缺值維度自動重歸一化權重）。
           <div style="margin-top:8px;color:var(--text)"><b>各指標錨點（x→分，中間線性內插）</b></div>
           <table style="border-collapse:collapse;font-size:11px;margin-top:3px">
             ${row('BIAS20 %', '-10→0, -5→30, -3→40, 8→60, 15→80, 25→100')}
@@ -3735,7 +3737,7 @@
           貪婪 = 0.70×基礎 + 0.30×催化(取最強)<br>
           　　 = 0.70×${d.base} + 0.30×${d.catalyst}${d.catSrc ? '(' + d.catSrc + ')' : ''}<br>
           　　 = ${cB} + ${cC} = <b style="color:#c678dd">${d.greed}</b></div>
-        <div style="margin-top:11px"><b style="color:#4da3ff">基礎分 ${d.base}</b>（70%，四維情緒/擁擠度${d.dataDate ? '・' + d.dataDate : ''}）：</div>
+        <div style="margin-top:11px"><b style="color:#f5c84b">基礎分 ${d.base}</b>（70%，四維情緒/擁擠度${d.dataDate ? '・' + d.dataDate : ''}）：</div>
         <div style="margin-top:5px;font-family:monospace;font-size:11.5px;color:var(--text);line-height:1.6">
           價格延伸 30% = <b>${dim(d.priceS)}</b>（BIAS＋布林%b）<br>
           動能強弱 25% = <b>${dim(d.momS)}</b>（RSI5＋RS vs大盤）<br>
@@ -3813,7 +3815,7 @@
       const tr = rows.map(p => {
         const cur = (_btPrices[p.code] || {}).current;
         return `<tr style="border-bottom:1px solid var(--border)">
-          <td style="padding:4px 6px;color:#4da3ff">${p.code} ${p.name || ''}</td>
+          <td style="padding:4px 6px;color:#f5c84b">${p.code} ${p.name || ''}</td>
           <td style="padding:4px 6px;text-align:right"><input type="number" step="1000" value="${p.shares}" onchange="_btEdit(${p.id},'shares',this.value)" style="${_btInput};width:64px">
             <div style="font-size:10px;color:var(--text-muted)">${(p.shares / 1000).toFixed(2)}張</div></td>
           <td style="padding:4px 6px"><input type="date" value="${p.buy_date}" onchange="_btEdit(${p.id},'buy_date',this.value)" style="${_btInput}"></td>
@@ -3834,11 +3836,11 @@
       const rows = _btPositions.filter(p => p.sold);
       if (!rows.length) return '<div style="padding:16px 0;color:var(--text-muted)">尚無已賣出。</div>';
       const tr = rows.map(p => `<tr style="border-bottom:1px solid var(--border)">
-        <td style="padding:4px 6px;color:#4da3ff">${p.code} ${p.name || ''}</td>
+        <td style="padding:4px 6px;color:#f5c84b">${p.code} ${p.name || ''}</td>
         <td style="padding:4px 6px;white-space:nowrap;font-size:11px">${p.buy_date}～${p.sell_date}</td>
         <td style="padding:4px 6px;text-align:right">${p.buy_price}→${p.sell_price}</td>
         <td style="padding:4px 6px;text-align:right">${_btRetHtml(_btSellRet(p))}</td>
-        <td style="padding:4px 6px;text-align:center"><a onclick="_btUnsell(${p.id})" style="color:#4da3ff;cursor:pointer;font-size:11px">還原</a>　<a onclick="_btDelete(${p.id})" style="color:#f85149;cursor:pointer;font-size:11px">刪除</a></td>
+        <td style="padding:4px 6px;text-align:center"><a onclick="_btUnsell(${p.id})" style="color:#f5c84b;cursor:pointer;font-size:11px">還原</a>　<a onclick="_btDelete(${p.id})" style="color:#f85149;cursor:pointer;font-size:11px">刪除</a></td>
       </tr>`).join('');
       return `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">
         <thead><tr style="color:var(--text-muted);border-bottom:1px solid var(--border)">
