@@ -797,7 +797,7 @@
       width: 100%;
       border-radius: 8px;
       overflow: hidden;
-      background: #131722;
+      background: var(--surface);
     }
 
     /* Main candle panel */
@@ -886,10 +886,10 @@
       flex-shrink: 0;
     }
     .panel-toggle {
-      background: rgba(255,255,255,0.07);
-      border: 1px solid rgba(255,255,255,0.15);
+      background: var(--ctl-bg);
+      border: 1px solid var(--ctl-bd);
       border-radius: 4px;
-      color: rgba(200,209,217,0.6);
+      color: var(--text-muted);
       font-size: 10px;
       line-height: 1;
       padding: 2px 5px;
@@ -897,7 +897,7 @@
       user-select: none;
       flex-shrink: 0;
     }
-    .panel-toggle:hover { background: rgba(255,255,255,0.15); color: #fff; }
+    .panel-toggle:hover { background: var(--ctl-hi); color: var(--text-primary); }
     .ma-toggle {
       cursor: pointer;
       opacity: 1;
@@ -917,7 +917,7 @@
       font-size: 13px;
       font-family: monospace;
       font-weight: bold;
-      color: rgba(200,209,217,0.85);
+      color: var(--text);
       font-family: monospace;
       font-weight: bold;
       letter-spacing: 0.04em;
