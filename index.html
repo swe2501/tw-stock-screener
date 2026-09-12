@@ -33,25 +33,25 @@
     }
     /* ── 亮色主題(我配的 SWS 同品牌版);點右上切換 ── */
     :root[data-theme="light"] {
-      /* 低調奢華：暖象牙底、古董金、霧紫、暖炭字 */
-      --bg: #f4f1ea;
-      --surface: #fdfbf6;
-      --surface2: #efeadf;
-      --border: #e3ddcf;
-      --accent: #a67c2e;
-      --accent-hover: #8a6524;
-      --accent2: #6d5390;
-      --green: #2f8f63;
-      --red: #c1483f;
-      --yellow: #b6842a;
-      --text: #262019;
-      --text-muted: #766e60;
-      --text-primary: #1a140c;
-      --bg-card: #fdfbf6;
-      --ctl-bg: rgba(60,45,20,.05);
-      --ctl-bd: rgba(60,45,20,.14);
-      --ctl-tx: #3a3126;
-      --ctl-hi: rgba(60,45,20,.09);
+      /* 低調奢華但乾淨有 impact：greige 底襯托純白卡片、深炭字、濃琥珀金 */
+      --bg: #e6e3dc;
+      --surface: #ffffff;
+      --surface2: #f1eee8;
+      --border: #d4cec1;
+      --accent: #a97514;
+      --accent-hover: #895e0f;
+      --accent2: #6733b3;
+      --green: #0c9557;
+      --red: #cf372c;
+      --yellow: #b07d16;
+      --text: #17140e;
+      --text-muted: #675f52;
+      --text-primary: #0c0a06;
+      --bg-card: #ffffff;
+      --ctl-bg: rgba(45,35,15,.055);
+      --ctl-bd: rgba(45,35,15,.16);
+      --ctl-tx: #2e271c;
+      --ctl-hi: rgba(45,35,15,.1);
     }
 
     body {
@@ -4286,13 +4286,13 @@
         s += `<path d="M${p[0].toFixed(1)} ${p[1].toFixed(1)} A${R} ${R} 0 0 1 ${q[0].toFixed(1)} ${q[1].toFixed(1)}" fill="none" stroke="${z[2]}" stroke-width="${ringW.toFixed(1)}" stroke-linecap="butt"/>`;
       });
       const tip = pt(val, R + ringW * 0.18);
-      s += `<line x1="${cx}" y1="${cy}" x2="${tip[0].toFixed(1)}" y2="${tip[1].toFixed(1)}" stroke="#f0f4fc" stroke-width="2.5" stroke-linecap="round"/>`;
-      s += `<circle cx="${cx}" cy="${cy}" r="4.5" fill="#f0f4fc" stroke="rgba(15,18,28,.65)" stroke-width="1.5"/>`;
+      s += `<line x1="${cx}" y1="${cy}" x2="${tip[0].toFixed(1)}" y2="${tip[1].toFixed(1)}" stroke="var(--text-primary)" stroke-width="3" stroke-linecap="round"/>`;
+      s += `<circle cx="${cx}" cy="${cy}" r="5" fill="var(--text-primary)" stroke="var(--surface)" stroke-width="1.5"/>`;
       return `<div style="display:inline-flex;align-items:center;gap:8px;white-space:nowrap">
         <svg viewBox="0 0 ${w} ${(cy + 4).toFixed(0)}" width="${w}" style="overflow:visible;flex-shrink:0">${s}</svg>
         <div style="line-height:1.15;white-space:nowrap"><span style="font-size:18px;font-weight:700;color:var(--text)">${val}</span>
           <span style="font-size:11px;color:var(--text-muted)"> 貪婪指標</span><br>
-          <span style="font-size:11px;color:#c678dd">${_greedZone(val)}・點看算法</span></div></div>`;
+          <span style="font-size:11px;color:var(--accent2)">${_greedZone(val)}・點看算法</span></div></div>`;
     }
     async function _loadGreed(code) {
       const el = document.getElementById('greedGauge');
