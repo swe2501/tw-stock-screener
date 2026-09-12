@@ -14,6 +14,7 @@
       --bg: #0d0d0f;
       --surface: #17171a;
       --surface2: #202027;
+      --chart-bg: #17171a;
       --border: #2a2a31;
       --accent: #f5c84b;          /* SWS 金黃 */
       --accent-hover: #ffd668;
@@ -36,9 +37,10 @@
     /* ── 亮色主題(我配的 SWS 同品牌版);點右上切換 ── */
     :root[data-theme="light"] {
       /* 低調奢華但乾淨有 impact：greige 底襯托純白卡片、深炭字、濃琥珀金 */
-      --bg: #dcd8ce;
+      --bg: #ece9e2;
       --surface: #ffffff;
       --surface2: #f2efe8;
+      --chart-bg: #faf8f2;
       --border: #cfc8b9;
       --accent: #bf8410;
       --accent-hover: #9c6a0c;
@@ -805,7 +807,8 @@
       width: 100%;
       border-radius: 8px;
       overflow: hidden;
-      background: var(--surface);
+      background: var(--chart-bg);
+      border: 1px solid var(--border);
     }
 
     /* Main candle panel */
@@ -1012,7 +1015,7 @@
       transition: all 0.15s;
     }
     .tool-btn:hover { color: var(--text); border-color: var(--accent); }
-    .tool-btn.active { background: rgba(243,156,18,0.2); border-color: var(--yellow); color: var(--yellow); }
+    .tool-btn.active { background: var(--ctl-hi); border-color: var(--accent); color: var(--accent); }
 
     tbody tr { cursor: pointer; }
     @keyframes rtBlink { 0%,100%{opacity:1} 50%{opacity:.2} }
@@ -2326,7 +2329,7 @@
         <div class="chart-content">
         <div class="chart-toolbar">
           <div class="chart-toolbar-left">
-            <button class="tool-btn" id="dailyBtn" onclick="loadDailyChart()" style="background:#2962ff;color:#fff">日K</button>
+            <button class="tool-btn" id="dailyBtn" onclick="loadDailyChart()" style="background:var(--accent);color:#231c00;border-color:var(--accent)">日K</button>
             <button class="tool-btn" id="adjDailyBtn" onclick="loadAdjDailyChart()">還原日K</button>
             <div class="toolbar-sep"></div>
             <button class="tool-btn" id="marketBtn" onclick="openMarketChart()">大盤K</button>
@@ -3110,10 +3113,10 @@
         const el = document.createElement('div'); el.style.height = p.h + 'px'; wrap.appendChild(el); host.appendChild(wrap);
         const ch = LightweightCharts.createChart(el, {
           width: W, height: p.h,
-          layout: { background: { color: 'transparent' }, textColor: '#8b95a5', fontSize: 10 },
-          grid: { vertLines: { color: 'rgba(255,255,255,.04)' }, horzLines: { color: 'rgba(255,255,255,.04)' } },
-          rightPriceScale: { borderColor: 'rgba(255,255,255,.1)', autoScale: true },
-          timeScale: { borderColor: 'rgba(255,255,255,.1)', visible: p.key === 'short', timeVisible: false, rightOffset: 3 },
+          layout: { background: { color: 'transparent' }, textColor: _cssv('--text-muted') || '#8b95a5', fontSize: 10 },
+          grid: { vertLines: { color: _cssv('--border') }, horzLines: { color: _cssv('--border') } },
+          rightPriceScale: { borderColor: _cssv('--border'), autoScale: true },
+          timeScale: { borderColor: _cssv('--border'), visible: p.key === 'short', timeVisible: false, rightOffset: 3 },
           crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
           // 橫移/縮放比照主K圖：滑鼠拖曳/滾輪/pinch；垂直觸控拖曳關閉→留給彈窗上下捲
           handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
@@ -5300,10 +5303,10 @@
 
     function _setDailyBtnActive(btn) {
       ['dailyBtn', 'adjDailyBtn'].forEach(id => {
-        document.getElementById(id).style.background = '';
-        document.getElementById(id).style.color = '';
+        const b = document.getElementById(id);
+        b.style.background = ''; b.style.color = ''; b.style.borderColor = '';
       });
-      if (btn) { btn.style.background = '#2962ff'; btn.style.color = '#fff'; }
+      if (btn) { btn.style.background = 'var(--accent)'; btn.style.color = '#231c00'; btn.style.borderColor = 'var(--accent)'; }
     }
 
     function _loadChartUrl(url, subtitle) {
@@ -5583,7 +5586,7 @@
     }
 
     function _cssv(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
-    function _chartTheme(){ return { bg: _cssv('--surface') || '#131722', text: _cssv('--text-muted') || 'var(--text)', grid: _cssv('--border') || 'var(--border)' }; }
+    function _chartTheme(){ return { bg: _cssv('--chart-bg') || _cssv('--surface') || '#131722', text: _cssv('--text-muted') || 'var(--text)', grid: _cssv('--border') || 'var(--border)' }; }
     function _chartOpts(height, showTime) {
       const t = _chartTheme();
       return {
