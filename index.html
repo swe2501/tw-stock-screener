@@ -670,7 +670,7 @@
     .modal-title {
       font-size: 1rem;
       font-weight: 700;
-      color: #fff;
+      color: var(--text-primary);
     }
     .modal-subtitle {
       font-size: 0.78rem;
@@ -5403,18 +5403,19 @@
       if (!tag) return;
       const isLimitUp   = chgPct >=  9.5;
       const isLimitDown = chgPct <= -9.5;
-      const bg   = isLimitUp ? '#e74c3c' : isLimitDown ? '#26c281' : '#2c2c3e';
+      const bg   = isLimitUp ? '#e74c3c' : isLimitDown ? '#26c281' : 'var(--surface2)';
+      const priceClr = isLimitUp || isLimitDown ? '#fff' : 'var(--text)';
       const clr  = isLimitUp || isLimitDown ? '#fff'
-                 : chgPct > 0 ? '#e74c3c' : chgPct < 0 ? '#26c281' : '#aaa';
+                 : chgPct > 0 ? '#e74c3c' : chgPct < 0 ? '#26c281' : 'var(--text-muted)';
       const sign = chgPct >= 0 ? '+' : '';
-      const ts   = hms ? `<span style="font-size:10px;color:#aaa;margin-left:6px">${hms}</span>` : '';
+      const ts   = hms ? `<span style="font-size:10px;color:var(--text-muted);margin-left:6px">${hms}</span>` : '';
       const srcBadge = source === 'twse_mis_browser'
         ? `<span style="font-size:9px;background:#1abc9c;color:#fff;padding:1px 5px;border-radius:4px;margin-left:6px;font-weight:600">TWSE</span>`
         : source === 'yahoo'
         ? `<span style="font-size:9px;background:#e67e22;color:#fff;padding:1px 5px;border-radius:4px;margin-left:6px;font-weight:600">YF</span>`
         : '';
       tag.innerHTML =
-        `<span style="display:inline-flex;align-items:center;gap:6px;background:${bg};color:#fff;`+
+        `<span style="display:inline-flex;align-items:center;gap:6px;background:${bg};color:${priceClr};`+
         `padding:3px 10px;border-radius:6px;font-size:14px;font-weight:700">`+
         `${dot||''}${price.toFixed(2)}<span style="font-size:11px;color:${clr};opacity:.95">`+
         `${sign}${chgPct.toFixed(2)}%</span></span>${ts}${srcBadge}`;
