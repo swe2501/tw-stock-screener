@@ -1149,7 +1149,7 @@
 
     /* ── Step3:SWS 上方大項導覽 ── */
     #funcDropdown { display:none !important; }   /* 舊「☰功能」隱藏(保留 DOM 供權限程式) */
-    #mainNav { background:var(--surface); border-top:1px solid var(--border); border-bottom:1px solid var(--border); margin:4px -16px 18px; padding:0 16px; }
+    #mainNav { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow-sm); max-width:1200px; margin:4px auto 20px; padding:0 12px; }
     .mn-inner { max-width:1200px; margin:0 auto; display:flex; align-items:center; gap:1px; flex-wrap:wrap; }
     .mn-item { display:inline-flex; align-items:center; gap:4px; padding:12px 11px; font-size:14px; font-weight:600; color:var(--text-muted); cursor:pointer; white-space:nowrap; text-decoration:none; }
     .mn-item:hover, .mn-grp:hover .mn-item { color:var(--text); }
