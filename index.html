@@ -1238,7 +1238,7 @@
       <a onclick="_todo('ETF 總覽')">總覽</a><a onclick="_todo('成分股·重疊')">成分股 · 重疊</a><a onclick="_todo('折溢價')">折溢價</a><a onclick="_todo('規模·資金流')">規模 · 資金流</a></div></div>
     <div class="mn-grp"><span class="mn-item">個股 <i>▾</i></span><div class="mn-menu">
       <a onclick="_todo('K線圖(用上方搜尋開啟個股)')">K線圖</a><a onclick="_todo('公司資料庫')">公司資料庫</a><a onclick="_todo('估值九宮格')">估值九宮格</a></div></div>
-    <a class="mn-item" onclick="_todo('每日新聞')">每日新聞</a>
+    <a class="mn-item" onclick="_showView('news')">每日新聞</a>
     <div class="mn-grp"><span class="mn-item">我的觀察 <i>▾</i></span><div class="mn-menu">
       <a class="nav-auth" onclick="openWatchlist()">⭐ 觀察清單</a><a class="nav-auth" onclick="openBacktest()">📈 回測</a><a class="nav-owner" onclick="openSellTrack()">🔻 出場追蹤</a><a class="nav-auth" onclick="openAlertMgr()">🔔 我的警示</a></div></div>
   </div></nav>
@@ -1714,6 +1714,64 @@
       if(el('smNote'))el('smNote').innerHTML='<b>算法與資料源：</b>個股漲跌幅=今收÷前收−1；產業平均漲跌幅=該產業成分股漲跌幅算術平均（等權，非市值加權）。產業別對照 TWSE 上市公司基本資料(t187ap03_L，內嵌於後端)。磚塊大小＝該產業當日有成交的檔數。資料源 price_window。';
     };
     window._VIEWS=window._VIEWS||{}; window._VIEWS.sectors={el:'sectorView',show:'_sectorShow'};
+  })();
+  </script>
+
+  <style>
+    #newsView{max-width:920px;margin:0 auto;}
+    .nw-day{font-size:13px;font-weight:800;color:var(--text-muted);margin:18px 2px 10px;display:flex;align-items:center;gap:8px;}
+    .nw-day::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--accent);flex:0 0 auto;}
+    .nw-day:first-child{margin-top:4px;}
+    .nw-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-sm);padding:14px 18px;margin-bottom:10px;}
+    .nw-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
+    .nw-ttl{font-size:15.5px;font-weight:800;line-height:1.45;}
+    .nw-heat{flex:0 0 auto;font-size:11px;font-weight:800;color:#231c00;background:var(--accent);border-radius:8px;padding:2px 9px;white-space:nowrap;}
+    .nw-meta{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 8px;}
+    .nw-badge{font-size:11px;color:var(--text-muted);background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:2px 10px;}
+    .nw-sum{font-size:13.5px;color:var(--text);line-height:1.75;margin-bottom:10px;}
+    .nw-codes{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px;}
+    .nw-chip{font-size:12px;font-weight:600;border:1px solid var(--border);border-radius:8px;padding:3px 9px;color:var(--accent);cursor:pointer;transition:background .15s;}
+    .nw-chip:hover{background:var(--ctl-hi);}
+    .nw-src{font-size:11.5px;color:var(--text-muted);display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+    .nw-src a{color:var(--accent2);text-decoration:none;border:1px solid var(--border);border-radius:6px;padding:2px 8px;}
+    .nw-src a:hover{border-color:var(--accent2);}
+  </style>
+  <div id="newsView" style="display:none">
+    <div class="tm-head"><h2>📰 每日新聞</h2><span class="sub" id="nwSub"></span></div>
+    <div id="nwList"><div class="fc-empty">載入中…</div></div>
+    <div class="fc-note" id="nwNote"></div>
+  </div>
+  <script>
+  (function(){
+    var el=function(id){return document.getElementById(id);};
+    function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+    function host(u){try{return new URL(u).hostname.replace(/^www\./,'');}catch(e){return '來源';}}
+    window._newsShow=function(){
+      var SB=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'', AK=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';
+      fetch(SB+'/rest/v1/hot_topics?select=topic,sector,summary,codes,source_urls,heat,published_at,captured_at&order=published_at.desc,heat.desc&limit=200',{headers:{apikey:AK,Authorization:'Bearer '+AK}}).then(function(r){return r.json();}).then(function(a){
+        if(!Array.isArray(a)||!a.length){el('nwList').innerHTML='<div class="fc-empty">目前無新聞資料</div>';return;}
+        var cap=a[0].captured_at?String(a[0].captured_at).slice(0,10):'';
+        if(el('nwSub'))el('nwSub').textContent='共 '+a.length+' 則'+(cap?' · 更新於 '+cap:'');
+        // group by published_at
+        var groups={},order=[];
+        a.forEach(function(t){var d=t.published_at||'其他';if(!groups[d]){groups[d]=[];order.push(d);}groups[d].push(t);});
+        el('nwList').innerHTML=order.map(function(d){
+          var items=groups[d].map(function(t){
+            var codes=Array.isArray(t.codes)?t.codes.map(function(c){return '<span class="nw-chip" onclick="_openStock(\''+esc(c.code)+'\',\''+esc(c.name||'')+'\')">'+esc(c.code)+' '+esc(c.name||'')+'</span>';}).join(''):'';
+            var srcs=Array.isArray(t.source_urls)?t.source_urls.map(function(u){return '<a href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">'+esc(host(u))+' ↗</a>';}).join(''):'';
+            return '<div class="nw-item"><div class="nw-top"><span class="nw-ttl">'+esc(t.topic)+'</span>'+(t.heat!=null?'<span class="nw-heat">熱度 '+esc(t.heat)+'</span>':'')+'</div>'+
+              (t.sector?'<div class="nw-meta"><span class="nw-badge">'+esc(t.sector)+'</span></div>':'')+
+              (t.summary?'<div class="nw-sum">'+esc(t.summary)+'</div>':'')+
+              (codes?'<div class="nw-codes">'+codes+'</div>':'')+
+              (srcs?'<div class="nw-src">📎 '+srcs+'</div>':'')+
+            '</div>';
+          }).join('');
+          return '<div class="nw-day">'+esc(d)+'</div>'+items;
+        }).join('');
+      }).catch(function(){el('nwList').innerHTML='<div class="fc-empty">讀取失敗</div>';});
+      if(el('nwNote'))el('nwNote').innerHTML='<b>資料源：</b>hot_topics（每日新聞題材彙整流程產出）。依新聞發布日(published_at)由新到舊排列，每則附原始新聞連結與相關個股(可點擊開 K 線)。';
+    };
+    window._VIEWS=window._VIEWS||{}; window._VIEWS.news={el:'newsView',show:'_newsShow'};
   })();
   </script>
   <script>
