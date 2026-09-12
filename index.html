@@ -681,9 +681,9 @@
       font-size: 0.72rem;
       padding: 1px 7px;
       border-radius: 10px;
-      background: rgba(79,142,247,0.18);
-      color: #7ab4ff;
-      border: 1px solid rgba(79,142,247,0.35);
+      background: var(--surface2);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
       display: none;
     }
 
@@ -2354,7 +2354,7 @@
               </div>
               <div class="label-row">
                 <span class="ma-toggle" onclick="toggleBBand(this)" style="color:#00BCD4">BBAND(20,2)</span>
-                <span class="ma-toggle" id="boxToggle" onclick="toggleBox(this)" style="color:#FFC107;opacity:0.5">📦 箱型</span>
+                <span class="ma-toggle" id="boxToggle" onclick="toggleBox(this)" style="color:var(--accent);opacity:0.65">📦 箱型</span>
               </div>
             </div>
           </div>
@@ -6437,8 +6437,8 @@
       const headerBtn = document.getElementById('chartWatchBtn');
       if (headerBtn) {
         headerBtn.textContent   = watched ? '★ 已列入觀察' : '⭐ 列入觀察';
-        headerBtn.style.color        = watched ? '#f1c40f' : '';
-        headerBtn.style.borderColor  = watched ? '#f1c40f' : '';
+        headerBtn.style.color        = watched ? '#f1c40f' : 'var(--text-muted)';
+        headerBtn.style.borderColor  = watched ? '#f1c40f' : 'var(--border)';
       }
       const statusEl = document.getElementById('chartWatchStatus');
       const saveBtn  = document.getElementById('chartSaveWatchBtn');
