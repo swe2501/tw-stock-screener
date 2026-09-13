@@ -1235,7 +1235,7 @@
     <div class="mn-grp"><span class="mn-item">市場觀察 <i>▾</i></span><div class="mn-menu">
       <a class="nav-owner" onclick="openBrokerSignals()">🎯 主力訊號</a><a class="nav-owner" onclick="openBrokerRankings()">📊 分點回測</a><a onclick="openMarginModal()">📈 融資維持率</a><a onclick="_showView('greed')">😱 貪婪指標</a><a onclick="_todo('股期儀表板')">股期儀表板</a></div></div>
     <div class="mn-grp"><span class="mn-item">ETF 分析 <span class="mn-new">新</span> <i>▾</i></span><div class="mn-menu">
-      <a onclick="_showView('etf')">總覽 · 規模排行</a><a onclick="_todo('成分股·重疊')">成分股 · 重疊</a><a onclick="_todo('折溢價')">折溢價</a><a onclick="_todo('資金流')">資金流</a></div></div>
+      <a onclick="_showView('etf')">總覽 · 規模排行</a><a onclick="_showView('etfdiv')">配息行事曆</a><a onclick="_todo('成分股·重疊')">成分股 · 重疊</a><a onclick="_todo('折溢價')">折溢價</a><a onclick="_todo('資金流')">資金流</a></div></div>
     <div class="mn-grp"><span class="mn-item">個股 <i>▾</i></span><div class="mn-menu">
       <a onclick="_todo('K線圖(用上方搜尋開啟個股)')">K線圖</a><a onclick="_todo('公司資料庫')">公司資料庫</a><a onclick="_todo('估值九宮格')">估值九宮格</a></div></div>
     <a class="mn-item" onclick="_showView('news')">每日新聞</a>
@@ -1881,6 +1881,89 @@
       if(el('efNote'))el('efNote').innerHTML='<b>資料源與口徑：</b>名錄/類型/追蹤指數/上市日 取自 TWSE openapi(t187ap47_L);行情取自 STOCK_DAY_ALL;<b>受益人數</b>為集保 TDCC 官方確切值;<b>規模</b>=集保流通在外單位 × 收盤價 ≈ 資產規模 AUM(僅差折溢價 <1%,非 NAV 計算之官方月報數字)。持股成分/折溢價/資金流待後續資料源接入。';
     };
     window._VIEWS=window._VIEWS||{}; window._VIEWS.etf={el:'etfView',show:'_etfShow'};
+  })();
+  </script>
+
+  <style>
+    #etfdivView{max-width:1080px;margin:0 auto;}
+    .ed-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
+    .ed-tab{font-size:12.5px;border:1px solid var(--border);border-radius:20px;padding:5px 13px;color:var(--text-muted);cursor:pointer;background:var(--surface);}
+    .ed-tab.on{border-color:var(--accent);color:var(--accent);font-weight:700;}
+    .ed-search{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-size:13px;width:200px;margin-bottom:12px;}
+    .ed-up{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;margin-bottom:20px;}
+    .ed-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-sm);padding:12px 14px;cursor:pointer;}
+    .ed-card:hover{border-color:var(--accent);}
+    .ed-card .d{font-size:11px;color:var(--text-muted);}
+    .ed-card .t{font-size:14px;font-weight:800;margin:3px 0;}
+    .ed-card .t .c{color:var(--accent);}
+    .ed-card .row{display:flex;justify-content:space-between;font-size:12px;margin-top:6px;}
+    .ed-card .row b{font-variant-numeric:tabular-nums;}
+    .ed-freq{font-size:10px;font-weight:700;border-radius:5px;padding:1px 6px;background:var(--surface2);color:var(--text-muted);}
+    .ed-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+    .ed-scroll{max-height:60vh;overflow:auto;}
+    table.ed{width:100%;border-collapse:collapse;font-size:12.5px;}
+    table.ed th{position:sticky;top:0;background:var(--surface2);color:var(--text-muted);font-weight:700;font-size:11px;text-align:right;padding:8px 12px;border-bottom:1px solid var(--border);white-space:nowrap;}
+    table.ed th.l,table.ed td.l{text-align:left;}
+    table.ed td{padding:7px 12px;border-bottom:1px solid var(--border);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;}
+    table.ed tbody tr{cursor:pointer;} table.ed tr:hover td{background:var(--surface2);}
+    table.ed td .c{color:var(--accent);font-weight:700;}
+  </style>
+  <div id="etfdivView" style="display:none">
+    <div class="tm-head"><h2>💰 ETF 配息行事曆</h2><span class="sub" id="edSub"></span></div>
+    <div class="ed-tabs" id="edFreq"></div>
+    <input id="edSearch" class="ed-search" type="text" placeholder="搜尋代號 / 名稱…" autocomplete="off">
+    <div style="font-size:12px;color:var(--text-muted);margin:2px 0 8px">📅 近期除息（前 14 天 ~ 未來 120 天）</div>
+    <div class="ed-up" id="edUp"><div class="fc-empty">載入中…</div></div>
+    <div style="font-size:12px;color:var(--text-muted);margin:2px 0 8px">全部配息紀錄（近 2 年，依除息日新到舊）</div>
+    <div class="ed-wrap"><div class="ed-scroll"><table class="ed"><thead><tr>
+      <th class="l">代號 / 名稱</th><th>頻率</th><th>除息日</th><th>發放日</th><th>每單位配息</th><th>單次殖利率</th>
+    </tr></thead><tbody id="edBody"><tr><td class="l" colspan="6">載入中…</td></tr></tbody></table></div></div>
+    <div class="fc-note" id="edNote"></div>
+  </div>
+  <script>
+  (function(){
+    var el=function(id){return document.getElementById(id);};
+    var ROWS=[], PRICE={}, NAME={}, freqF='全部', loaded=false;
+    var FREQS=['全部','月配','雙月配','季配','半年配','年配','不定期'];
+    function deriveFreq(n){return n>=11?'月配':n>=5?'雙月配':n===4?'季配':n===3?'三次配':n===2?'半年配':n===1?'年配':'不定期';}
+    function money(v,d){return v==null?'—':Number(v).toLocaleString('zh-TW',{maximumFractionDigits:d==null?2:d});}
+    var FREQMAP={};
+    function computeFreq(){
+      var now=Date.now(), cut=now-366*86400000, cnt={};
+      ROWS.forEach(function(r){var t=new Date(r.ex_date).getTime();if(t>=cut&&t<=now)cnt[r.code]=(cnt[r.code]||0)+1;});
+      FREQMAP={}; Object.keys(cnt).forEach(function(c){FREQMAP[c]=deriveFreq(cnt[c]);});
+      // ETF 未在近一年配息者標不定期
+      ROWS.forEach(function(r){if(!FREQMAP[r.code])FREQMAP[r.code]='不定期';});
+    }
+    function yld(r){var p=PRICE[r.code];return (p&&r.cash_per_unit!=null)?(r.cash_per_unit/p*100):null;}
+    function tabs(){el('edFreq').innerHTML=FREQS.map(function(f){return '<span class="ed-tab'+(freqF===f?' on':'')+'" data-f="'+f+'">'+f+'</span>';}).join('');}
+    function render(){
+      var q=(el('edSearch').value||'').trim().toLowerCase();
+      var match=function(r){if(freqF!=='全部'&&FREQMAP[r.code]!==freqF)return false;if(q&&(r.code+(NAME[r.code]||r.name||'')).toLowerCase().indexOf(q)<0)return false;return true;};
+      var now=Date.now(), from=now-14*86400000, to=now+120*86400000;
+      var up=ROWS.filter(function(r){var t=new Date(r.ex_date).getTime();return match(r)&&t>=from&&t<=to;}).sort(function(a,b){return a.ex_date.localeCompare(b.ex_date);});
+      el('edUp').innerHTML=up.length?up.map(function(r){var y=yld(r);return '<div class="ed-card" onclick="_openStock(\''+r.code+'\',\''+(NAME[r.code]||r.name||'').replace(/\'/g,'')+'\')"><div class="d">除息 '+r.ex_date+' <span class="ed-freq">'+(FREQMAP[r.code]||'')+'</span></div><div class="t"><span class="c">'+r.code+'</span> '+(NAME[r.code]||r.name||'')+'</div><div class="row"><span>每單位</span><b>'+money(r.cash_per_unit,3)+'</b></div><div class="row"><span>單次殖利率</span><b class="fc-up">'+(y==null?'—':y.toFixed(2)+'%')+'</b></div><div class="row"><span>發放</span><b>'+(r.pay_date||'—')+'</b></div></div>';}).join(''):'<div class="fc-empty">近期無除息</div>';
+      var all=ROWS.filter(match).sort(function(a,b){return b.ex_date.localeCompare(a.ex_date);}).slice(0,500);
+      el('edBody').innerHTML=all.length?all.map(function(r){var y=yld(r);return '<tr onclick="_openStock(\''+r.code+'\',\''+(NAME[r.code]||r.name||'').replace(/\'/g,'')+'\')"><td class="l"><span class="c">'+r.code+'</span> '+(NAME[r.code]||r.name||'')+'</td><td><span class="ed-freq">'+(FREQMAP[r.code]||'')+'</span></td><td>'+r.ex_date+'</td><td>'+(r.pay_date||'—')+'</td><td><b>'+money(r.cash_per_unit,3)+'</b></td><td class="'+(y?'fc-up':'')+'">'+(y==null?'—':y.toFixed(2)+'%')+'</td></tr>';}).join(''):'<tr><td class="l" colspan="6">無資料</td></tr>';
+      el('edSub').textContent='近期除息 '+up.length+' 檔 · 紀錄 '+all.length+' 筆';
+    }
+    window._etfdivShow=function(){
+      if(loaded){render();return;}
+      var SB=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'', AK=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';var H={apikey:AK,Authorization:'Bearer '+AK};
+      Promise.all([
+        fetch(SB+'/rest/v1/etf_distributions?select=code,name,ex_date,pay_date,cash_per_unit&order=ex_date.desc&limit=2000',{headers:H}).then(function(r){return r.json();}),
+        fetch(SB+'/rest/v1/etf_products?select=code,name,close&limit=500',{headers:H}).then(function(r){return r.json();})
+      ]).then(function(res){
+        ROWS=Array.isArray(res[0])?res[0]:[];
+        (Array.isArray(res[1])?res[1]:[]).forEach(function(p){PRICE[p.code]=p.close;NAME[p.code]=p.name;});
+        if(!ROWS.length){el('edUp').innerHTML='<div class="fc-empty">目前無配息資料</div>';el('edBody').innerHTML='<tr><td class="l" colspan="6">目前無配息資料</td></tr>';return;}
+        computeFreq(); loaded=true; tabs(); render();
+      }).catch(function(){el('edBody').innerHTML='<tr><td class="l" colspan="6">讀取失敗</td></tr>';});
+      el('edSearch').oninput=render;
+      el('edFreq').onclick=function(e){var t=e.target.closest('[data-f]');if(!t)return;freqF=t.dataset.f;tabs();render();};
+      if(el('edNote'))el('edNote').innerHTML='<b>資料源與口徑：</b>TWSE ETF 收益分配公告(etfDiv),近 2 年。頻率依近一年除息次數推估(月配≥11、季配=4…)。「單次殖利率」= 該次每單位配息 ÷ 目前收盤價,非年化;年化殖利率待彙整全年配息後再算。';
+    };
+    window._VIEWS=window._VIEWS||{}; window._VIEWS.etfdiv={el:'etfdivView',show:'_etfdivShow'};
   })();
   </script>
   <script>
