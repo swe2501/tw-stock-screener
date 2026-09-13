@@ -116,7 +116,19 @@ def main():
             continue
         seen.add(k)
         uniq.append(r)
-    print(f"抓到 {len(uniq)} 筆配息（涵蓋 {len({r['code'] for r in uniq})} 檔）")
+    print(f"本次抓到 {len(uniq)} 筆配息（涵蓋 {len({r['code'] for r in uniq})} 檔）")
+
+    # 累積合併：保留既有紀錄 + 併入本次(同 code+ex_date 以新的為準)，避免單日 403 造成倒退
+    st, existing = bs._sb(env, "/etf_distributions",
+                          params=[("select", "code,name,ex_date,book_close_date,pay_date,cash_per_unit,year"),
+                                  ("limit", "5000")])
+    merged = {}
+    for r in (existing or []):
+        merged[(r["code"], r["ex_date"])] = r
+    for r in uniq:
+        merged[(r["code"], r["ex_date"])] = r        # 新抓覆蓋舊的
+    uniq = list(merged.values())
+    print(f"合併既有後共 {len(uniq)} 筆（涵蓋 {len({r['code'] for r in uniq})} 檔）")
 
     bs._sb(env, "/etf_distributions", method="DELETE", params=[("code", "neq.__none__")])
     ok = 0
