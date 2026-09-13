@@ -1233,9 +1233,9 @@
     <div class="mn-grp"><span class="mn-item">題材族群 <i>▾</i></span><div class="mn-menu">
       <a class="nav-owner" onclick="openHotTopics()">🔥 話題</a><a onclick="_showView('themes')">題材列表</a><a onclick="_showView('sectors')">產業地圖</a></div></div>
     <div class="mn-grp"><span class="mn-item">市場觀察 <i>▾</i></span><div class="mn-menu">
-      <a class="nav-owner" onclick="openBrokerSignals()">🎯 主力訊號</a><a class="nav-owner" onclick="openBrokerRankings()">📊 分點回測</a><a onclick="openMarginModal()">📈 融資維持率</a><a onclick="_showView('greed')">😱 貪婪指標</a><a onclick="_todo('股期儀表板')">股期儀表板</a></div></div>
+      <a class="nav-owner" onclick="openBrokerSignals()">🎯 主力訊號</a><a class="nav-owner" onclick="openBrokerRankings()">📊 分點回測</a><a onclick="openMarginModal()">📈 融資維持率</a><a onclick="_showView('greed')">😱 貪婪指標</a><a onclick="_showView('inst')">🏦 三大法人買賣超</a><a onclick="_todo('股期儀表板')">股期儀表板</a></div></div>
     <div class="mn-grp"><span class="mn-item">ETF 分析 <span class="mn-new">新</span> <i>▾</i></span><div class="mn-menu">
-      <a onclick="_showView('etf')">總覽 · 規模排行</a><a onclick="_showView('etfdiv')">配息行事曆</a><a onclick="_todo('成分股·重疊')">成分股 · 重疊</a><a onclick="_todo('折溢價')">折溢價</a><a onclick="_todo('資金流')">資金流</a></div></div>
+      <a onclick="_showView('etf')">總覽 · 規模排行</a><a onclick="_showView('etfdiv')">配息行事曆</a><a onclick="_showView('etfhold')">持有人結構</a><a onclick="_todo('成分股·重疊')">成分股 · 重疊</a><a onclick="_todo('折溢價')">折溢價</a></div></div>
     <div class="mn-grp"><span class="mn-item">個股 <i>▾</i></span><div class="mn-menu">
       <a onclick="_todo('K線圖(用上方搜尋開啟個股)')">K線圖</a><a onclick="_todo('公司資料庫')">公司資料庫</a><a onclick="_todo('估值九宮格')">估值九宮格</a></div></div>
     <a class="mn-item" onclick="_showView('news')">每日新聞</a>
@@ -1964,6 +1964,134 @@
       if(el('edNote'))el('edNote').innerHTML='<b>資料源與口徑：</b>TWSE ETF 收益分配公告(etfDiv),近 2 年。頻率依近一年除息次數推估(月配≥11、季配=4…)。「單次殖利率」= 該次每單位配息 ÷ 目前收盤價,非年化;年化殖利率待彙整全年配息後再算。';
     };
     window._VIEWS=window._VIEWS||{}; window._VIEWS.etfdiv={el:'etfdivView',show:'_etfdivShow'};
+  })();
+  </script>
+
+  <style>
+    #instView{max-width:1000px;margin:0 auto;}
+    .in-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px;}
+    .in-seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+    .in-seg button{background:var(--surface);border:0;padding:7px 12px;font-size:13px;color:var(--text-muted);cursor:pointer;}
+    .in-seg button.on{background:var(--accent);color:#231c00;font-weight:700;}
+    .in-lbl{font-size:11px;color:var(--text-muted);margin-right:2px;}
+    .in-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+    .in-scroll{max-height:68vh;overflow:auto;}
+    table.in{width:100%;border-collapse:collapse;font-size:12.5px;}
+    table.in th{position:sticky;top:0;background:var(--surface2);color:var(--text-muted);font-weight:700;font-size:11px;text-align:right;padding:9px 12px;border-bottom:1px solid var(--border);white-space:nowrap;}
+    table.in th.l,table.in td.l{text-align:left;}
+    table.in td{padding:8px 12px;border-bottom:1px solid var(--border);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;}
+    table.in tbody tr{cursor:pointer;} table.in tr:hover td{background:var(--surface2);}
+    table.in td .c{color:var(--accent);font-weight:700;}
+    table.in td.hi{font-weight:800;}
+  </style>
+  <div id="instView" style="display:none">
+    <div class="tm-head"><h2>🏦 三大法人買賣超</h2><span class="sub" id="inSub"></span></div>
+    <div class="in-bar">
+      <span class="in-lbl">方向</span><span class="in-seg" id="inDir"><button data-d="buy" class="on">買超</button><button data-d="sell">賣超</button></span>
+      <span class="in-lbl">法人別</span><span class="in-seg" id="inWho"><button data-w="total_net" class="on">三大合計</button><button data-w="foreign_net">外資</button><button data-w="trust_net">投信</button><button data-w="dealer_net">自營商</button></span>
+      <span class="in-lbl">標的</span><span class="in-seg" id="inScope"><button data-s="stock" class="on">只看個股</button><button data-s="all">含ETF</button></span>
+    </div>
+    <div class="in-wrap"><div class="in-scroll"><table class="in"><thead><tr>
+      <th>#</th><th class="l">股票</th><th>外資</th><th>投信</th><th>自營商</th><th>三大合計</th>
+    </tr></thead><tbody id="inBody"><tr><td class="l" colspan="6">載入中…</td></tr></tbody></table></div></div>
+    <div class="fc-note" id="inNote"></div>
+  </div>
+  <script>
+  (function(){
+    var el=function(id){return document.getElementById(id);};
+    var ROWS=[], dir='buy', who='total_net', scope='stock', loaded=false;
+    function lot(v){return v==null?'—':(v>0?'+':'')+Math.round(v/1000).toLocaleString('zh-TW')+' 張';}
+    function cls(v){return v>0?'fc-up':(v<0?'fc-dn':'');}
+    function render(){
+      var arr=ROWS.filter(function(r){
+        if(scope==='stock'&&String(r.code).slice(0,2)==='00')return false;   // ETF 代號以 00 開頭
+        var v=r[who]; return dir==='buy'?v>0:v<0;
+      }).sort(function(a,b){return dir==='buy'?b[who]-a[who]:a[who]-b[who];}).slice(0,50);
+      el('inBody').innerHTML=arr.length?arr.map(function(r,i){
+        return '<tr onclick="_openStock(\''+r.code+'\',\''+(r.name||'').replace(/\'/g,'')+'\')"><td>'+(i+1)+'</td><td class="l"><span class="c">'+r.code+'</span> '+(r.name||'')+'</td>'+
+          '<td class="'+cls(r.foreign_net)+'">'+lot(r.foreign_net)+'</td>'+
+          '<td class="'+cls(r.trust_net)+'">'+lot(r.trust_net)+'</td>'+
+          '<td class="'+cls(r.dealer_net)+'">'+lot(r.dealer_net)+'</td>'+
+          '<td class="hi '+cls(r.total_net)+'">'+lot(r.total_net)+'</td></tr>';
+      }).join(''):'<tr><td class="l" colspan="6">無符合資料</td></tr>';
+      el('inSub').textContent=(ROWS[0]&&ROWS[0].trade_date||'')+' · '+({total_net:'三大合計',foreign_net:'外資',trust_net:'投信',dealer_net:'自營商'}[who])+' '+(dir==='buy'?'買超':'賣超')+' 前 '+arr.length;
+    }
+    window._instShow=function(){
+      if(loaded){render();return;}
+      var SB=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'', AK=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';
+      fetch(SB+'/rest/v1/institutional_flow?select=code,name,foreign_net,trust_net,dealer_net,total_net,trade_date&limit=2000',{headers:{apikey:AK,Authorization:'Bearer '+AK}}).then(function(r){return r.json();}).then(function(a){
+        if(!Array.isArray(a)||!a.length){el('inBody').innerHTML='<tr><td class="l" colspan="6">目前無資料</td></tr>';return;}
+        ROWS=a; loaded=true; render();
+      }).catch(function(){el('inBody').innerHTML='<tr><td class="l" colspan="6">讀取失敗</td></tr>';});
+      function seg(id,setter){el(id).onclick=function(e){var b=e.target.closest('button');if(!b)return;setter(b);[...el(id).children].forEach(function(x){x.classList.toggle('on',x===b);});render();};}
+      seg('inDir',function(b){dir=b.dataset.d;}); seg('inWho',function(b){who=b.dataset.w;}); seg('inScope',function(b){scope=b.dataset.s;});
+      if(el('inNote'))el('inNote').innerHTML='<b>資料源與口徑：</b>TWSE 三大法人買賣超(T86,ALLBUT0999),當日全上市個股。數值由股數換算為張(÷1000)。目前為<b>單日</b>資料;多日累計(5/10/20/60日)需每日封存歷史後啟用,不以單日冒充。';
+    };
+    window._VIEWS=window._VIEWS||{}; window._VIEWS.inst={el:'instView',show:'_instShow'};
+  })();
+  </script>
+
+  <style>
+    #etfholdView{max-width:900px;margin:0 auto;}
+    .eh-pick{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;}
+    .eh-pick select{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:14px;min-width:280px;}
+    .eh-sum{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;}
+    .eh-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-sm);padding:12px 16px;min-width:150px;}
+    .eh-card .k{font-size:11px;color:var(--text-muted);} .eh-card .v{font-size:22px;font-weight:800;margin-top:3px;letter-spacing:-.02em;}
+    .eh-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+    table.eh{width:100%;border-collapse:collapse;font-size:12.5px;}
+    table.eh th{background:var(--surface2);color:var(--text-muted);font-weight:700;font-size:11px;text-align:right;padding:9px 12px;border-bottom:1px solid var(--border);}
+    table.eh th.l,table.eh td.l{text-align:left;}
+    table.eh td{padding:8px 12px;border-bottom:1px solid var(--border);text-align:right;font-variant-numeric:tabular-nums;}
+    .eh-bar{position:relative;background:var(--surface2);border-radius:4px;height:16px;min-width:60px;overflow:hidden;}
+    .eh-bar i{position:absolute;left:0;top:0;bottom:0;background:var(--accent);opacity:.55;}
+  </style>
+  <div id="etfholdView" style="display:none">
+    <div class="tm-head"><h2>👥 ETF 持有人結構</h2><span class="sub" id="ehSub"></span></div>
+    <div class="eh-pick"><span style="font-size:12px;color:var(--text-muted)">選擇 ETF</span><select id="ehSel"></select></div>
+    <div class="eh-sum" id="ehSum"></div>
+    <div class="eh-wrap"><table class="eh"><thead><tr><th class="l">持股分級(股)</th><th>人數</th><th>股數</th><th class="l">占集保庫存比例</th></tr></thead><tbody id="ehBody"><tr><td class="l" colspan="4">載入中…</td></tr></tbody></table></div>
+    <div class="fc-note" id="ehNote"></div>
+  </div>
+  <script>
+  (function(){
+    var el=function(id){return document.getElementById(id);};
+    var SB=function(){return (typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'';}, AK=function(){return (typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';};
+    var H=function(){return {apikey:AK(),Authorization:'Bearer '+AK()};};
+    var PRODS=[], loaded=false;
+    var TIER={"1":"1–999","2":"1,000–5,000","3":"5,001–10,000","4":"10,001–15,000","5":"15,001–20,000","6":"20,001–30,000","7":"30,001–40,000","8":"40,001–50,000","9":"50,001–100,000","10":"100,001–200,000","11":"200,001–400,000","12":"400,001–600,000","13":"600,001–800,000","14":"800,001–1,000,000","15":"1,000,001 以上"};
+    function money(v){return v==null?'—':Number(v).toLocaleString('zh-TW');}
+    function load(code){
+      var p=PRODS.find(function(x){return x.code===code;})||{};
+      fetch(SB()+'/rest/v1/etf_holders_dist?select=tier,holders,shares,pct,data_date&code=eq.'+code,{headers:H()}).then(function(r){return r.json();}).then(function(rows){
+        if(!Array.isArray(rows)||!rows.length){el('ehBody').innerHTML='<tr><td class="l" colspan="4">無資料</td></tr>';el('ehSum').innerHTML='';return;}
+        var tiers=rows.filter(function(r){return r.tier!=='17'&&r.tier!=='16'&&TIER[r.tier];}).sort(function(a,b){return (+a.tier)-(+b.tier);});
+        var totalRow=rows.find(function(r){return r.tier==='17';});
+        var totalHolders=totalRow?totalRow.holders:tiers.reduce(function(s,r){return s+r.holders;},0);
+        var big=tiers.filter(function(r){return (+r.tier)>=13;}).reduce(function(s,r){return s+(r.pct||0);},0); // 60萬股以上大戶
+        var maxpct=Math.max.apply(null,tiers.map(function(r){return r.pct||0;}));
+        var dd=(rows[0]&&rows[0].data_date)||'';
+        el('ehSum').innerHTML=
+          '<div class="eh-card"><div class="k">總受益人數</div><div class="v">'+money(totalHolders)+'</div></div>'+
+          '<div class="eh-card"><div class="k">大戶占比(≥60萬股)</div><div class="v">'+big.toFixed(1)+'%</div></div>'+
+          '<div class="eh-card"><div class="k">最大級距占比</div><div class="v">'+maxpct.toFixed(1)+'%</div></div>'+
+          '<div class="eh-card"><div class="k">資料日</div><div class="v" style="font-size:15px">'+dd+'</div></div>';
+        el('ehBody').innerHTML=tiers.map(function(r){return '<tr><td class="l">'+TIER[r.tier]+'</td><td>'+money(r.holders)+'</td><td>'+money(r.shares)+'</td><td class="l"><div style="display:flex;align-items:center;gap:8px"><div class="eh-bar" style="flex:1;max-width:160px"><i style="width:'+Math.min(100,(r.pct||0))+'%"></i></div><span>'+(r.pct||0).toFixed(2)+'%</span></div></td></tr>';}).join('');
+        el('ehSub').textContent=code+' '+(p.name||'')+' · 集保股權分散';
+      }).catch(function(){el('ehBody').innerHTML='<tr><td class="l" colspan="4">讀取失敗</td></tr>';});
+    }
+    window._etfholdShow=function(){
+      if(loaded){return;}
+      fetch(SB()+'/rest/v1/etf_products?select=code,name&order=est_scale.desc.nullslast&limit=500',{headers:H()}).then(function(r){return r.json();}).then(function(a){
+        PRODS=Array.isArray(a)?a:[];
+        el('ehSel').innerHTML=PRODS.map(function(p){return '<option value="'+p.code+'">'+p.code+' '+p.name+'</option>';}).join('');
+        loaded=true;
+        el('ehSel').onchange=function(){load(el('ehSel').value);};
+        if(PRODS.length){el('ehSel').value=PRODS[0].code;load(PRODS[0].code);}
+      });
+      if(el('ehNote'))el('ehNote').innerHTML='<b>資料源：</b>集保結算所 TDCC 股權分散表(每週更新)。「大戶占比」= 持股 60 萬股以上級距占集保庫存比例合計;人數/股數/比例皆為官方值。';
+    };
+    window._VIEWS=window._VIEWS||{}; window._VIEWS.etfhold={el:'etfholdView',show:'_etfholdShow'};
   })();
   </script>
   <script>
