@@ -10,6 +10,7 @@ ETF 代號清單取自 Supabase etf_products（先跑過 upload_etf.py）。
 """
 import argparse
 import json
+import random
 import re
 import ssl
 import sys
@@ -99,6 +100,9 @@ def main():
     if not codes:
         print("[error] etf_products 無資料，請先跑 upload_etf.py")
         return
+    # www.twse 每輪約抓數十檔就會被節流(307/403);打亂順序 → 每日輪流不同檔，
+    # 配合累積合併(下方保留既有)，幾天內即補齊全部 ETF 配息，不會永遠卡在同一段。
+    random.shuffle(codes)
     end = datetime.now(timezone(timedelta(hours=8))).strftime("%Y%m%d")
     start = (datetime.now(timezone(timedelta(hours=8))) - timedelta(days=365 * args.years)).strftime("%Y%m%d")
     print(f"抓 {len(codes)} 檔 ETF 近 {args.years} 年配息（{start}~{end}）…")
