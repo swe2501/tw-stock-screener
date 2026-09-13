@@ -86,6 +86,7 @@ def _fetch_div(code, start, end, retries=4):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--years", type=int, default=2, help="抓近幾年配息(預設 2)")
+    ap.add_argument("--delay", type=float, default=0.35, help="每檔間隔秒數(預設 0.35;避 403 可調大)")
     args = ap.parse_args()
 
     env = bs._load_env()
@@ -105,7 +106,7 @@ def main():
     recs = []
     for i, c in enumerate(codes, 1):
         recs.extend(_fetch_div(c, start, end))
-        time.sleep(0.35)               # 溫和節流，避免 IP 被 403
+        time.sleep(args.delay)         # 溫和節流，避免 IP 被 403
         if i % 40 == 0:
             print(f"  …{i}/{len(codes)}（累計 {len(recs)} 筆）")
     # 去重(code, ex_date)
