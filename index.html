@@ -1235,7 +1235,7 @@
     <div class="mn-grp"><span class="mn-item">市場觀察 <i>▾</i></span><div class="mn-menu">
       <a class="nav-owner" onclick="openBrokerSignals()">🎯 主力訊號</a><a class="nav-owner" onclick="openBrokerRankings()">📊 分點回測</a><a onclick="openMarginModal()">📈 融資維持率</a><a onclick="_showView('greed')">😱 貪婪指標</a><a onclick="_showView('inst')">🏦 三大法人買賣超</a><a onclick="_todo('股期儀表板')">股期儀表板</a></div></div>
     <div class="mn-grp"><span class="mn-item">ETF 分析 <span class="mn-new">新</span> <i>▾</i></span><div class="mn-menu">
-      <a onclick="_showView('etf')">總覽 · 規模排行</a><a onclick="_showView('etfcons')">成分股</a><a onclick="_showView('etfrev')">股票反查 ETF</a><a onclick="_showView('etfdiv')">配息行事曆</a><a onclick="_showView('etfhold')">持有人結構</a><a onclick="_showView('etfsim')">ETF 相似度</a><a onclick="_todo('折溢價')">折溢價</a></div></div>
+      <a onclick="_showView('etf')">總覽 · 規模排行</a><a onclick="_showView('etfcons')">成分股</a><a onclick="_showView('etfrev')">股票反查 ETF</a><a onclick="_showView('etfdiv')">配息行事曆</a><a onclick="_showView('etfhold')">持有人結構</a><a onclick="_showView('etfsim')">ETF 相似度</a><a onclick="_showView('etfheavy')">重倉股排行</a><a onclick="_showView('etfprem')">折溢價</a></div></div>
     <div class="mn-grp"><span class="mn-item">個股 <i>▾</i></span><div class="mn-menu">
       <a onclick="_todo('K線圖(用上方搜尋開啟個股)')">K線圖</a><a onclick="_todo('公司資料庫')">公司資料庫</a><a onclick="_todo('估值九宮格')">估值九宮格</a></div></div>
     <a class="mn-item" onclick="_showView('news')">每日新聞</a>
@@ -2123,8 +2123,8 @@
   </div>
   <div id="etfrevView" style="display:none">
     <div class="tm-head"><h2>🔎 股票反查 ETF</h2><span class="sub" id="erSub"></span></div>
-    <div class="ec-pick"><span style="font-size:12px;color:var(--text-muted)">輸入股票</span><input id="erIn" type="text" placeholder="股票代號或名稱,例 2330 / 台積電" autocomplete="off"><button class="btn-preset" id="erBtn">查詢</button></div>
-    <div class="ec-wrap"><div class="ec-scroll"><table class="ec"><thead><tr><th class="l">ETF</th><th>類型</th><th>該股權重</th><th>持股(張)</th><th>ETF規模(億)</th></tr></thead><tbody id="erBody"><tr><td class="l" colspan="5">輸入股票後查詢</td></tr></tbody></table></div></div>
+    <div class="ec-pick"><span style="font-size:12px;color:var(--text-muted)">輸入股票</span><input id="erIn" type="text" placeholder="1–3 檔,空白分隔,例:2330 2454" autocomplete="off" style="min-width:260px"><button class="btn-preset" id="erBtn">查詢</button></div>
+    <div class="ec-wrap"><div class="ec-scroll"><table class="ec"><thead><tr><th class="l">ETF</th><th>類型</th><th>符合股權重合計</th><th>持股(張)</th><th>ETF規模(億)</th></tr></thead><tbody id="erBody"><tr><td class="l" colspan="5">輸入股票後查詢</td></tr></tbody></table></div></div>
     <div class="fc-note" id="erNote"></div>
   </div>
   <script>
@@ -2165,28 +2165,37 @@
     window._VIEWS=window._VIEWS||{}; window._VIEWS.etfcons={el:'etfconsView',show:'_etfconsShow'};
 
     // ---- 股票反查 ETF ----
-    function doReverse(){
+    async function resolveCode(tok){
+      if(/^\d/.test(tok))return tok;
+      var r=await fetch(SB()+'/rest/v1/etf_holdings?select=stock_code,stock_name&stock_name=ilike.*'+encodeURIComponent(tok)+'*&limit=1',{headers:H()}).then(function(x){return x.json();});
+      return (Array.isArray(r)&&r[0])?r[0].stock_code:null;
+    }
+    async function doReverse(){
       var q=(el('erIn').value||'').trim();
       if(!q){return;}
       el('erBody').innerHTML='<tr><td class="l" colspan="5">查詢中…</td></tr>';
-      // 先找 stock_code(允許輸入名稱)
-      var isCode=/^\d/.test(q);
-      var filt=isCode?('stock_code=eq.'+encodeURIComponent(q)):('stock_name=ilike.*'+encodeURIComponent(q)+'*');
-      fetch(SB()+'/rest/v1/etf_holdings?select=code,stock_code,stock_name,weight,shares&'+filt+'&order=weight.desc&limit=200',{headers:H()}).then(function(r){return r.json();}).then(function(rows){
-        if(!Array.isArray(rows)||!rows.length){el('erBody').innerHTML='<tr><td class="l" colspan="5">沒有 ETF 持有這檔(或代號/名稱不符)</td></tr>';el('erSub').textContent='';return;}
-        var stkName=rows[0].stock_name||q;
-        var codes=[...new Set(rows.map(function(r){return r.code;}))];
-        fetch(SB()+'/rest/v1/etf_products?select=code,name,active,aum,est_scale&code=in.('+codes.join(',')+')',{headers:H()}).then(function(r){return r.json();}).then(function(prod){
-          var pm={}; (prod||[]).forEach(function(p){pm[p.code]=p;});
-          el('erBody').innerHTML=rows.map(function(r){var p=pm[r.code]||{};return '<tr onclick="_openStock(\''+r.code+'\',\''+((p.name||'')).replace(/\'/g,'')+'\')"><td class="l"><span class="c">'+r.code+'</span> '+(p.name||'')+'</td><td>'+(p.active?'主動':'被動')+'</td><td><b>'+(r.weight!=null?r.weight.toFixed(2)+'%':'—')+'</b></td><td>'+lot(r.shares)+'</td><td>'+money(p.aum||p.est_scale,0)+'</td></tr>';}).join('');
-          el('erSub').textContent=stkName+' · 被 '+codes.length+' 檔 ETF 持有';
-        });
-      }).catch(function(){el('erBody').innerHTML='<tr><td class="l" colspan="5">讀取失敗</td></tr>';});
+      var toks=q.split(/[\s,、]+/).filter(Boolean).slice(0,3);
+      var codes=[]; for(var i=0;i<toks.length;i++){var c=await resolveCode(toks[i]); if(c)codes.push(c);}
+      codes=[...new Set(codes)];
+      if(!codes.length){el('erBody').innerHTML='<tr><td class="l" colspan="5">找不到對應股票</td></tr>';el('erSub').textContent='';return;}
+      var rows=await fetch(SB()+'/rest/v1/etf_holdings?select=code,stock_code,stock_name,weight,shares&stock_code=in.('+codes.join(',')+')&limit=2000',{headers:H()}).then(function(r){return r.json();});
+      if(!Array.isArray(rows)||!rows.length){el('erBody').innerHTML='<tr><td class="l" colspan="5">沒有 ETF 持有</td></tr>';el('erSub').textContent='';return;}
+      var nameByCode={}; rows.forEach(function(r){nameByCode[r.stock_code]=r.stock_name;});
+      // group by ETF; keep those holding ALL requested stocks
+      var byEtf={}; rows.forEach(function(r){var o=byEtf[r.code]||(byEtf[r.code]={set:{},wsum:0,shs:0});o.set[r.stock_code]=1;o.wsum+=(r.weight||0);o.shs+=(r.shares||0);});
+      var hits=Object.keys(byEtf).filter(function(c){return Object.keys(byEtf[c].set).length===codes.length;});
+      if(!hits.length){el('erBody').innerHTML='<tr><td class="l" colspan="5">沒有同時持有這 '+codes.length+' 檔的 ETF</td></tr>';el('erSub').textContent='';return;}
+      var prod=await fetch(SB()+'/rest/v1/etf_products?select=code,name,active,aum,est_scale&code=in.('+hits.join(',')+')',{headers:H()}).then(function(r){return r.json();});
+      var pm={}; (prod||[]).forEach(function(p){pm[p.code]=p;});
+      hits.sort(function(a,b){return byEtf[b].wsum-byEtf[a].wsum;});
+      el('erBody').innerHTML=hits.map(function(c){var p=pm[c]||{},o=byEtf[c];return '<tr onclick="_openStock(\''+c+'\',\''+((p.name||'')).replace(/\'/g,'')+'\')"><td class="l"><span class="c">'+c+'</span> '+(p.name||'')+'</td><td>'+(p.active?'主動':'被動')+'</td><td><b>'+o.wsum.toFixed(2)+'%</b></td><td>'+lot(o.shs)+'</td><td>'+money(p.aum||p.est_scale,0)+'</td></tr>';}).join('');
+      var label=codes.map(function(c){return (nameByCode[c]||c);}).join(' × ');
+      el('erSub').textContent=label+' · '+hits.length+' 檔 ETF 同時持有';
     }
     window._etfrevShow=function(){
       el('erBtn').onclick=doReverse;
       el('erIn').onkeydown=function(e){if(e.key==='Enter')doReverse();};
-      if(el('erNote'))el('erNote').innerHTML='<b>玩法：</b>輸入個股,列出所有持有它的 ETF 與該股在各 ETF 的權重/張數。資料源:玩股網 ETF 成分股。可看出一檔股票被多少 ETF 重倉(被動買盤概念)。';
+      if(el('erNote'))el('erNote').innerHTML='<b>玩法：</b>輸入 1–3 檔股票(空白分隔),列出<b>同時持有</b>這幾檔的 ETF 交集,權重為符合股在該 ETF 的合計。資料源:玩股網 ETF 成分股。可找「一次買齊心中幾檔的 ETF」。';
     };
     window._VIEWS=window._VIEWS||{}; window._VIEWS.etfrev={el:'etfrevView',show:'_etfrevShow'};
   })();
@@ -2251,6 +2260,86 @@
       if(el('esNote'))el('esNote').innerHTML='<b>算法：</b>持股重疊 = Σ min(A權重, B權重)(兩檔共同持股取較小權重加總)。越高代表兩檔實質持股越像、同時買分散效果越有限。資料源:玩股網 ETF 成分股。';
     };
     window._VIEWS=window._VIEWS||{}; window._VIEWS.etfsim={el:'etfsimView',show:'_etfsimShow'};
+  })();
+  </script>
+
+  <style>
+    #etfheavyView,#etfpremView{max-width:1000px;margin:0 auto;}
+    .eg-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+    .eg-scroll{max-height:70vh;overflow:auto;}
+    table.eg{width:100%;border-collapse:collapse;font-size:12.5px;}
+    table.eg th{position:sticky;top:0;background:var(--surface2);color:var(--text-muted);font-weight:700;font-size:11px;text-align:right;padding:9px 12px;border-bottom:1px solid var(--border);white-space:nowrap;}
+    table.eg th.l,table.eg td.l{text-align:left;}
+    table.eg td{padding:8px 12px;border-bottom:1px solid var(--border);text-align:right;font-variant-numeric:tabular-nums;}
+    table.eg tbody tr{cursor:pointer;} table.eg tr:hover td{background:var(--surface2);}
+    table.eg td .c{color:var(--accent);font-weight:700;}
+    .eg-sub{font-size:11px;color:var(--text-muted);}
+    .ep-seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:12px;}
+    .ep-seg button{background:var(--surface);border:0;padding:7px 14px;font-size:13px;color:var(--text-muted);cursor:pointer;}
+    .ep-seg button.on{background:var(--accent);color:#231c00;font-weight:700;}
+  </style>
+  <div id="etfheavyView" style="display:none">
+    <div class="tm-head"><h2>🏆 ETF 重倉股排行</h2><span class="sub" id="ehvSub"></span></div>
+    <div class="eg-wrap"><div class="eg-scroll"><table class="eg"><thead><tr><th>#</th><th class="l">股票</th><th>被幾檔ETF持有</th><th>合計持股(張)</th><th>今日合計增減(張)</th></tr></thead><tbody id="ehvBody"><tr><td class="l" colspan="5">載入中(彙整成分股…)</td></tr></tbody></table></div></div>
+    <div class="fc-note" id="ehvNote"></div>
+  </div>
+  <div id="etfpremView" style="display:none">
+    <div class="tm-head"><h2>⚖️ ETF 折溢價</h2><span class="sub" id="epSub"></span></div>
+    <div class="ep-seg" id="epSeg"><button data-m="premium" class="on">溢價排行</button><button data-m="discount">折價排行</button></div>
+    <div class="eg-wrap"><div class="eg-scroll"><table class="eg"><thead><tr><th>#</th><th class="l">ETF</th><th>市價</th><th>淨值NAV</th><th>折溢價</th><th>規模(億)</th></tr></thead><tbody id="epBody"><tr><td class="l" colspan="6">載入中…</td></tr></tbody></table></div></div>
+    <div class="fc-note" id="epNote"></div>
+  </div>
+  <script>
+  (function(){
+    var el=function(id){return document.getElementById(id);};
+    var SB=function(){return (typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'';}, AK=function(){return (typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';};
+    var H=function(){return {apikey:AK(),Authorization:'Bearer '+AK()};};
+    var money=function(v,d){return v==null?'—':Number(v).toLocaleString('zh-TW',{maximumFractionDigits:d==null?0:d});};
+    var lot=function(sh){return sh==null?'—':money(Math.round(sh/1000));};
+    function cls(v){return v>0?'fc-up':(v<0?'fc-dn':'');}
+
+    // ---- 重倉股排行(分頁抓全部 etf_holdings 後聚合) ----
+    var heavyLoaded=false;
+    async function fetchAllHoldings(){
+      var out=[],off=0;
+      while(true){
+        var page=await fetch(SB()+'/rest/v1/etf_holdings?select=stock_code,stock_name,shares,delta_shares&order=stock_code.asc&offset='+off+'&limit=1000',{headers:H()}).then(function(r){return r.json();});
+        if(!Array.isArray(page)||!page.length)break;
+        out=out.concat(page); if(page.length<1000)break; off+=1000;
+      }
+      return out;
+    }
+    window._etfheavyShow=function(){
+      if(heavyLoaded)return;
+      fetchAllHoldings().then(function(rows){
+        var m={};
+        rows.forEach(function(r){var k=r.stock_code;if(!k)return;var o=m[k]||(m[k]={code:k,name:r.stock_name,cnt:0,shares:0,delta:0});o.cnt++;o.shares+=(r.shares||0);o.delta+=(r.delta_shares||0);if(r.stock_name)o.name=r.stock_name;});
+        var arr=Object.values(m).sort(function(a,b){return b.cnt-a.cnt||b.shares-a.shares;}).slice(0,100);
+        heavyLoaded=true;
+        el('ehvSub').textContent='彙整 '+rows.length+' 列成分股 · 前 100 檔';
+        el('ehvBody').innerHTML=arr.map(function(x,i){return '<tr onclick="_openStock(\''+x.code+'\',\''+(x.name||'').replace(/\'/g,'')+'\')"><td>'+(i+1)+'</td><td class="l"><span class="c">'+x.code+'</span> '+(x.name||'')+'</td><td><b>'+x.cnt+'</b> 檔</td><td>'+lot(x.shares)+'</td><td class="'+cls(x.delta)+'">'+(x.delta?(x.delta>0?'+':'')+lot(x.delta):'0')+'</td></tr>';}).join('');
+      }).catch(function(){el('ehvBody').innerHTML='<tr><td class="l" colspan="5">讀取失敗</td></tr>';});
+      if(el('ehvNote'))el('ehvNote').innerHTML='<b>算法:</b>彙整所有 ETF 成分股(玩股網),統計每檔個股「被幾檔 ETF 持有」「合計持股張數」「今日合計增減」。被越多 ETF 重倉 = 被動買盤支撐越強。';
+    };
+    window._VIEWS=window._VIEWS||{}; window._VIEWS.etfheavy={el:'etfheavyView',show:'_etfheavyShow'};
+
+    // ---- 折溢價(用 市價 vs NAV) ----
+    var PREM=[], premMode='premium', premLoaded=false;
+    function renderPrem(){
+      var arr=PREM.filter(function(x){return premMode==='premium'?x.prem>0:x.prem<0;}).sort(function(a,b){return premMode==='premium'?b.prem-a.prem:a.prem-b.prem;}).slice(0,50);
+      el('epBody').innerHTML=arr.length?arr.map(function(x,i){return '<tr onclick="_openStock(\''+x.code+'\',\''+(x.name||'').replace(/\'/g,'')+'\')"><td>'+(i+1)+'</td><td class="l"><span class="c">'+x.code+'</span> '+(x.name||'')+'</td><td>'+money(x.close,2)+'</td><td>'+money(x.nav,2)+'</td><td class="'+cls(x.prem)+'"><b>'+(x.prem>0?'+':'')+x.prem.toFixed(2)+'%</b></td><td>'+money(x.aum,0)+'</td></tr>';}).join(''):'<tr><td class="l" colspan="6">無資料</td></tr>';
+      el('epSub').textContent=(premMode==='premium'?'溢價':'折價')+' 前 '+arr.length+' 檔';
+    }
+    window._etfpremShow=function(){
+      if(premLoaded){renderPrem();return;}
+      fetch(SB()+'/rest/v1/etf_products?select=code,name,close,nav,aum&nav=not.is.null&limit=500',{headers:H()}).then(function(r){return r.json();}).then(function(a){
+        PREM=(Array.isArray(a)?a:[]).filter(function(x){return x.close&&x.nav;}).map(function(x){x.prem=(x.close/x.nav-1)*100;return x;});
+        premLoaded=true; renderPrem();
+        el('epSeg').onclick=function(e){var b=e.target.closest('button');if(!b)return;premMode=b.dataset.m;[...el('epSeg').children].forEach(function(x){x.classList.toggle('on',x===b);});renderPrem();};
+      }).catch(function(){el('epBody').innerHTML='<tr><td class="l" colspan="6">讀取失敗</td></tr>';});
+      if(el('epNote'))el('epNote').innerHTML='<b>算法:</b>折溢價 =(市價 ÷ 淨值NAV − 1)×100。>0 溢價(買貴於淨值)、<0 折價。市價取當日收盤、NAV 取玩股網每日淨值。溢價過高買進要小心。';
+    };
+    window._VIEWS=window._VIEWS||{}; window._VIEWS.etfprem={el:'etfpremView',show:'_etfpremShow'};
   })();
   </script>
   <script>
