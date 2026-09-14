@@ -1235,7 +1235,7 @@
     <div class="mn-grp"><span class="mn-item">市場觀察 <i>▾</i></span><div class="mn-menu">
       <a class="nav-owner" onclick="openBrokerSignals()">🎯 主力訊號</a><a class="nav-owner" onclick="openBrokerRankings()">📊 分點回測</a><a onclick="openMarginModal()">📈 融資維持率</a><a onclick="_showView('greed')">😱 貪婪指標</a><a onclick="_showView('inst')">🏦 三大法人買賣超</a><a onclick="_todo('股期儀表板')">股期儀表板</a></div></div>
     <div class="mn-grp"><span class="mn-item">ETF 分析 <span class="mn-new">新</span> <i>▾</i></span><div class="mn-menu">
-      <a onclick="_showView('etf')">總覽 · 規模排行</a><a onclick="_showView('etfcons')">成分股</a><a onclick="_showView('etfrev')">股票反查 ETF</a><a onclick="_showView('etfdiv')">配息行事曆</a><a onclick="_showView('etfhold')">持有人結構</a><a onclick="_showView('etfsim')">ETF 相似度</a><a onclick="_showView('etfheavy')">重倉股排行</a><a onclick="_showView('etfprem')">折溢價</a></div></div>
+      <a onclick="_showView('etf')">總覽 · 規模排行</a><a onclick="_showView('etfcons')">成分股</a><a onclick="_showView('etfrev')">股票反查 ETF</a><a onclick="_showView('etfdiv')">配息行事曆</a><a onclick="_showView('etfhold')">持有人結構</a><a onclick="_showView('etfsim')">ETF 相似度</a><a onclick="_showView('etfheavy')">重倉股排行</a><a onclick="_showView('etfprem')">折溢價</a><a onclick="_showView('etfflow')">資金流</a></div></div>
     <div class="mn-grp"><span class="mn-item">個股 <i>▾</i></span><div class="mn-menu">
       <a onclick="_todo('K線圖(用上方搜尋開啟個股)')">K線圖</a><a onclick="_todo('公司資料庫')">公司資料庫</a><a onclick="_todo('估值九宮格')">估值九宮格</a></div></div>
     <a class="mn-item" onclick="_showView('news')">每日新聞</a>
@@ -2340,6 +2340,61 @@
       if(el('epNote'))el('epNote').innerHTML='<b>算法:</b>折溢價 =(市價 ÷ 淨值NAV − 1)×100。>0 溢價(買貴於淨值)、<0 折價。市價取當日收盤、NAV 取玩股網每日淨值。溢價過高買進要小心。';
     };
     window._VIEWS=window._VIEWS||{}; window._VIEWS.etfprem={el:'etfpremView',show:'_etfpremShow'};
+  })();
+  </script>
+
+  <div id="etfflowView" style="display:none">
+    <div class="tm-head"><h2>💵 ETF 資金流(申購/贖回)</h2><span class="sub" id="eflSub"></span></div>
+    <div class="ep-seg" id="eflPeriod" style="margin-right:10px"><button data-n="5" class="on">近5日</button><button data-n="20">近20日</button><button data-n="60">全部</button></div>
+    <div class="ep-seg" id="eflDir"><button data-d="in" class="on">淨流入</button><button data-d="out">淨流出</button></div>
+    <div class="eg-wrap" style="margin-top:12px"><div class="eg-scroll"><table class="eg"><thead><tr><th>#</th><th class="l">ETF</th><th>期間淨流入(億)</th><th>單位淨變化(萬)</th><th>最新NAV</th></tr></thead><tbody id="eflBody"><tr><td class="l" colspan="5">載入中…</td></tr></tbody></table></div></div>
+    <div class="fc-note" id="eflNote"></div>
+  </div>
+  <script>
+  (function(){
+    var el=function(id){return document.getElementById(id);};
+    var SB=function(){return (typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'';}, AK=function(){return (typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';};
+    var H=function(){return {apikey:AK(),Authorization:'Bearer '+AK()};};
+    var money=function(v,d){return v==null?'—':Number(v).toLocaleString('zh-TW',{maximumFractionDigits:d==null?0:d});};
+    function cls(v){return v>0?'fc-up':(v<0?'fc-dn':'');}
+    var ROWS=[], NAME={}, period=5, dir='in', loaded=false;
+    async function fetchAll(){
+      var out=[],off=0;
+      while(true){
+        var pg=await fetch(SB()+'/rest/v1/etf_fund_flow?select=code,date,nav,net_units&order=date.desc&offset='+off+'&limit=1000',{headers:H()}).then(function(r){return r.json();});
+        if(!Array.isArray(pg)||!pg.length)break; out=out.concat(pg); if(pg.length<1000)break; off+=1000;
+      }
+      return out;
+    }
+    function render(){
+      // group by code, take last <period> dates
+      var byCode={};
+      ROWS.forEach(function(r){(byCode[r.code]||(byCode[r.code]=[])).push(r);});
+      var arr=[];
+      Object.keys(byCode).forEach(function(c){
+        var s=byCode[c].slice().sort(function(a,b){return b.date.localeCompare(a.date);});
+        var use=period>=60?s:s.slice(0,period);
+        var amt=use.reduce(function(t,r){return t+((r.net_units||0)*(r.nav||0));},0)/1e8; // 億
+        var units=use.reduce(function(t,r){return t+(r.net_units||0);},0);
+        arr.push({code:c,name:NAME[c]||'',amt:amt,units:units,nav:s[0]?s[0].nav:null});
+      });
+      arr=arr.filter(function(x){return dir==='in'?x.amt>0:x.amt<0;}).sort(function(a,b){return dir==='in'?b.amt-a.amt:a.amt-b.amt;}).slice(0,50);
+      el('eflBody').innerHTML=arr.length?arr.map(function(x,i){return '<tr onclick="_openStock(\''+x.code+'\',\''+(x.name||'').replace(/\'/g,'')+'\')"><td>'+(i+1)+'</td><td class="l"><span class="c">'+x.code+'</span> '+(x.name||'')+'</td><td class="'+cls(x.amt)+'"><b>'+(x.amt>0?'+':'')+money(x.amt,1)+'</b></td><td class="'+cls(x.units)+'">'+(x.units>0?'+':'')+money(x.units/1e4,0)+'</td><td>'+money(x.nav,2)+'</td></tr>';}).join(''):'<tr><td class="l" colspan="5">無資料</td></tr>';
+      el('eflSub').textContent=(period>=60?'全部':('近'+period+'日'))+' · '+(dir==='in'?'淨流入':'淨流出')+' 前 '+arr.length;
+    }
+    window._etfflowShow=function(){
+      if(loaded){render();return;}
+      Promise.all([fetchAll(), fetch(SB()+'/rest/v1/etf_products?select=code,name&limit=500',{headers:H()}).then(function(r){return r.json();})]).then(function(res){
+        ROWS=res[0]||[]; (res[1]||[]).forEach(function(p){NAME[p.code]=p.name;});
+        loaded=true;
+        if(!ROWS.length){el('eflBody').innerHTML='<tr><td class="l" colspan="5">資金流資料抓取中,稍後再看</td></tr>';return;}
+        render();
+      }).catch(function(){el('eflBody').innerHTML='<tr><td class="l" colspan="5">讀取失敗</td></tr>';});
+      function seg(id,set){el(id).onclick=function(e){var b=e.target.closest('button');if(!b)return;set(b);[...el(id).children].forEach(function(x){x.classList.toggle('on',x===b);});render();};}
+      seg('eflPeriod',function(b){period=+b.dataset.n;}); seg('eflDir',function(b){dir=b.dataset.d;});
+      if(el('eflNote'))el('eflNote').innerHTML='<b>算法:</b>資金流(金額)= Σ(當日受益權單位淨變化 × 當日NAV)。單位淨變化來自玩股網每日申購贖回(discount-premium-data),正=申購/資金流入、負=贖回/流出。目前約近 30 日,每日累積會拉長天期。';
+    };
+    window._VIEWS=window._VIEWS||{}; window._VIEWS.etfflow={el:'etfflowView',show:'_etfflowShow'};
   })();
   </script>
   <script>
