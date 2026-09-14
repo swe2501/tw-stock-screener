@@ -17,4 +17,10 @@
 "C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe" "C:\Users\User\Desktop\AI_stock\scripts\compute_greed.py" >> "C:\Users\User\Desktop\AI_stock\scripts\daily_job_stdout.log" 2>&1
 "C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe" "C:\Users\User\Desktop\AI_stock\scripts\broker_rankings.py" --daily-refresh >> "C:\Users\User\Desktop\AI_stock\scripts\daily_job_stdout.log" 2>&1
 "C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe" "C:\Users\User\Desktop\AI_stock\scripts\sell_tracker.py" >> "C:\Users\User\Desktop\AI_stock\scripts\daily_job_stdout.log" 2>&1
+"C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe" "C:\Users\User\Desktop\AI_stock\scripts\upload_etf.py" >> "C:\Users\User\Desktop\AI_stock\scripts\daily_job_stdout.log" 2>&1
+"C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe" "C:\Users\User\Desktop\AI_stock\scripts\wantgoo_etf.py" >> "C:\Users\User\Desktop\AI_stock\scripts\daily_job_stdout.log" 2>&1
+"C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe" "C:\Users\User\Desktop\AI_stock\scripts\wantgoo_etf_flow.py" >> "C:\Users\User\Desktop\AI_stock\scripts\daily_job_stdout.log" 2>&1
+"C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe" "C:\Users\User\Desktop\AI_stock\scripts\upload_institutional.py" >> "C:\Users\User\Desktop\AI_stock\scripts\daily_job_stdout.log" 2>&1
+"C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe" "C:\Users\User\Desktop\AI_stock\scripts\upload_etf_div.py" >> "C:\Users\User\Desktop\AI_stock\scripts\daily_job_stdout.log" 2>&1
+"C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe" "C:\Users\User\Desktop\AI_stock\scripts\upload_etf_holders.py" >> "C:\Users\User\Desktop\AI_stock\scripts\daily_job_stdout.log" 2>&1
 "C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe" "C:\Users\User\Desktop\AI_stock\scripts\job_health.py" >> "C:\Users\User\Desktop\AI_stock\scripts\daily_job_stdout.log" 2>&1
