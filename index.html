@@ -2714,10 +2714,10 @@
       var box=el('hpKpi'); if(!box)return; box.innerHTML='';
       var out={t:'',f:'',v:'',u:'',m:'',b:''};
       function render(){box.innerHTML=out.t+out.f+out.v+out.u+out.m+out.b;}
-      sb('taiex_daily?select=trade_date,close&order=trade_date.desc&limit=2').then(function(a){
-        if(Array.isArray(a)&&a.length){var c=a[0],p=a[1],chg=p?((c.close/p.close-1)*100):null;
-          out.t=kpi('加權指數',Number(c.close).toLocaleString(undefined,{maximumFractionDigits:0}),chg!=null?(arrow(chg)+pctTxt(chg)):'',chg!=null?cls(chg):'');render();}
-      });
+      fetch('/api/chart?code=%5ETWII&range=5d&interval=1d').then(function(r){return r.json();}).then(function(j){
+        var d=(j&&j.data)||[]; if(d.length<1)return; var c=d[d.length-1],p=d[d.length-2],chg=p?((c.close/p.close-1)*100):null;
+        out.t=kpi('加權指數',Number(c.close).toLocaleString(undefined,{maximumFractionDigits:0}),chg!=null?(arrow(chg)+pctTxt(chg)):'',chg!=null?cls(chg):'');render();
+      }).catch(function(){});
       sb('market_indicators?select=vix,vix_prev,futai_close,futai_prev,usdtwd&order=date.desc&limit=1').then(function(a){
         if(Array.isArray(a)&&a.length){var m=a[0];
           var fd=(m.futai_close!=null&&m.futai_prev)?((m.futai_close/m.futai_prev-1)*100):null;
@@ -2803,10 +2803,10 @@
     function loadDiverge(){
       Promise.all([
         sb('margin_market?select=date,fin_bal_k&order=date.desc&limit=6'),
-        sb('taiex_daily?select=trade_date,close&order=trade_date.desc&limit=6')
+        fetch('/api/chart?code=%5ETWII&range=1mo&interval=1d').then(function(r){return r.json();}).then(function(j){return (j&&j.data)||[];}).catch(function(){return [];})
       ]).then(function(res){
         var box=el('hpDiverge'); if(!box)return;
-        var mm=res[0]||[],tx=res[1]||[];
+        var mm=res[0]||[],tx=(res[1]||[]).slice().reverse();  // chart 由舊到新→轉為新到舊
         if(mm.length<2||tx.length<2){box.innerHTML='<div class="fc-empty">資料不足</div>';return;}
         var mNow=mm[0].fin_bal_k,mOld=mm[Math.min(5,mm.length-1)].fin_bal_k;
         var iNow=tx[0].close,iOld=tx[Math.min(5,tx.length-1)].close;
@@ -2832,8 +2832,8 @@
         +'§2 融資融券：TWSE MI_MARGN（融資餘額仟元、融券張）；官股券商＝兆豐所有分點當日買賣（本機分點資料，金額＝Σ張×成交均價）；富台指／VIX／美元台幣＝玩股網即時。'
         +'§3 市場廣度：上市當日漲跌平與漲跌停家數。'
         +'§3A 盤面結構：各股當日成交金額（TWSE MI_INDEX）依產業歸「電子／金融／其他傳產」三類算佔比；門檻沿用電子&gt;60% 防線、金融&gt;10% 警戒。'
-        +'§4 融資動能背離：加權指數與上市融資餘額的近 5 交易日變化方向比較。'
-        +'KPI 加權指數＝TWSE 官方收盤。';
+        +'§4 融資動能背離：加權指數(^TWII)與上市融資餘額的近 5 交易日變化方向比較。'
+        +'KPI 加權指數與大盤走勢圖＝Yahoo ^TWII。';
     }
 
     function doSearch(){
