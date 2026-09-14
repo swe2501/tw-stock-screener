@@ -1235,7 +1235,7 @@
     <div class="mn-grp"><span class="mn-item">市場觀察 <i>▾</i></span><div class="mn-menu">
       <a class="nav-owner" onclick="openBrokerSignals()">🎯 主力訊號</a><a class="nav-owner" onclick="openBrokerRankings()">📊 分點回測</a><a onclick="openMarginModal()">📈 融資維持率</a><a onclick="_showView('greed')">😱 貪婪指標</a><a onclick="_showView('inst')">🏦 三大法人買賣超</a><a onclick="_todo('股期儀表板')">股期儀表板</a></div></div>
     <div class="mn-grp"><span class="mn-item">ETF 分析 <span class="mn-new">新</span> <i>▾</i></span><div class="mn-menu">
-      <a onclick="_showView('etf')">總覽 · 規模排行</a><a onclick="_showView('etfcons')">成分股</a><a onclick="_showView('etfrev')">股票反查 ETF</a><a onclick="_showView('etfdiv')">配息行事曆</a><a onclick="_showView('etfhold')">持有人結構</a><a onclick="_showView('etfsim')">ETF 相似度</a><a onclick="_showView('etfheavy')">重倉股排行</a><a onclick="_showView('etfprem')">折溢價</a><a onclick="_showView('etfflow')">資金流</a></div></div>
+      <a onclick="_showView('etf')">總覽 · 規模排行</a><a onclick="_showView('etfcons')">成分股</a><a onclick="_showView('etfrev')">股票反查 ETF</a><a onclick="_showView('etfdiv')">配息行事曆</a><a onclick="_showView('etfhold')">持有人結構</a><a onclick="_showView('etfsim')">ETF 相似度</a><a onclick="_showView('etfheavy')">重倉股排行</a><a onclick="_showView('etfprem')">折溢價</a><a onclick="_showView('etfflow')">資金流</a><a onclick="_showView('etfperf')">績效比較</a></div></div>
     <div class="mn-grp"><span class="mn-item">個股 <i>▾</i></span><div class="mn-menu">
       <a onclick="_todo('K線圖(用上方搜尋開啟個股)')">K線圖</a><a onclick="_todo('公司資料庫')">公司資料庫</a><a onclick="_todo('估值九宮格')">估值九宮格</a></div></div>
     <a class="mn-item" onclick="_showView('news')">每日新聞</a>
@@ -2395,6 +2395,102 @@
       if(el('eflNote'))el('eflNote').innerHTML='<b>算法:</b>資金流(金額)= Σ(當日受益權單位淨變化 × 當日NAV)。單位淨變化來自玩股網每日申購贖回(discount-premium-data),正=申購/資金流入、負=贖回/流出。目前約近 30 日,每日累積會拉長天期。';
     };
     window._VIEWS=window._VIEWS||{}; window._VIEWS.etfflow={el:'etfflowView',show:'_etfflowShow'};
+  })();
+  </script>
+
+  <style>
+    #etfperfView{max-width:1040px;margin:0 auto;}
+    .pf-sel{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;}
+    .pf-sel select{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 10px;color:var(--text);font-size:13px;}
+    .pf-tag{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;border:1px solid var(--border);border-radius:16px;padding:3px 10px;cursor:pointer;}
+    .pf-tag i{width:9px;height:9px;border-radius:50%;display:inline-block;}
+    .pf-chart{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:8px;margin-bottom:14px;}
+    #pfChart{width:100%;height:320px;}
+    table.pf{width:100%;border-collapse:collapse;font-size:12.5px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-sm);}
+    table.pf th{background:var(--surface2);color:var(--text-muted);font-weight:700;font-size:11px;text-align:right;padding:9px 12px;border-bottom:1px solid var(--border);}
+    table.pf th.l,table.pf td.l{text-align:left;}
+    table.pf td{padding:8px 12px;border-bottom:1px solid var(--border);text-align:right;font-variant-numeric:tabular-nums;}
+    table.pf td .dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:6px;}
+  </style>
+  <div id="etfperfView" style="display:none">
+    <div class="tm-head"><h2>📈 ETF 績效比較</h2><span class="sub">含息還原,最多 6 檔</span></div>
+    <div class="pf-sel"><select id="pfAdd"><option value="">＋ 加入 ETF</option></select><span id="pfTags"></span></div>
+    <div class="ep-seg" id="pfPeriod" style="margin-bottom:12px"><button data-p="1m">近1月</button><button data-p="3m">近3月</button><button data-p="6m">近半年</button><button data-p="1y" class="on">近1年</button><button data-p="3y">近3年</button></div>
+    <div class="pf-chart"><div id="pfChart"></div></div>
+    <table class="pf"><thead><tr><th class="l">ETF</th><th>近1月</th><th>近3月</th><th>近半年</th><th>近1年</th></tr></thead><tbody id="pfBody"><tr><td class="l" colspan="5">選 ETF 比較含息報酬</td></tr></tbody></table>
+    <div class="fc-note" id="pfNote"></div>
+  </div>
+  <script>
+  (function(){
+    var el=function(id){return document.getElementById(id);};
+    var SB=function(){return (typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'';}, AK=function(){return (typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';};
+    var COLORS=['#e0a500','#2196F3','#e0555a','#22a565','#9b6cff','#ff8c00'];
+    var PRODS=[], sel=['0050','0056','00878'], period='1y', CACHE={}, chart=null, series=[], loaded=false;
+    function cssv(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
+    function fetchAdj(code){
+      if(CACHE[code])return Promise.resolve(CACHE[code]);
+      return fetch('/api/chart?code='+encodeURIComponent(code)+'&range=3y&interval=1d&adj=1').then(function(r){return r.json();}).then(function(j){CACHE[code]=(j&&j.data)||[];return CACHE[code];});
+    }
+    function periodStart(data){
+      if(!data.length)return 0;
+      var last=data[data.length-1].time, d=new Date(last), map={'1m':1,'3m':3,'6m':6,'1y':12,'3y':36};
+      d.setMonth(d.getMonth()-map[period]);
+      var iso=d.toISOString().slice(0,10);
+      for(var i=0;i<data.length;i++){if(data[i].time>=iso)return i;}
+      return 0;
+    }
+    function ret(data,months){
+      if(!data||data.length<2)return null;
+      var last=data[data.length-1].time,d=new Date(last);d.setMonth(d.getMonth()-months);var iso=d.toISOString().slice(0,10);
+      var base=null;for(var i=0;i<data.length;i++){if(data[i].time>=iso){base=data[i].close;break;}}
+      if(!base)return null;return (data[data.length-1].close/base-1)*100;
+    }
+    function ensureChart(){
+      if(chart)return;
+      chart=LightweightCharts.createChart(el('pfChart'),{width:el('pfChart').clientWidth||900,height:320,
+        layout:{background:{color:cssv('--chart-bg')||cssv('--surface')},textColor:cssv('--text-muted')},
+        grid:{vertLines:{color:cssv('--border')},horzLines:{color:cssv('--border')}},
+        rightPriceScale:{borderColor:cssv('--border')},timeScale:{borderColor:cssv('--border')},
+        localization:{priceFormatter:function(v){return (v>0?'+':'')+v.toFixed(1)+'%';}}});
+    }
+    function draw(){
+      ensureChart();
+      series.forEach(function(s){chart.removeSeries(s);}); series=[];
+      sel.forEach(function(code,idx){
+        var data=CACHE[code]||[]; if(data.length<2)return;
+        var st=periodStart(data), base=data[st].close; if(!base)return;
+        var pts=data.slice(st).map(function(r){return {time:r.time,value:+((r.close/base-1)*100).toFixed(2)};});
+        var s=chart.addLineSeries({color:COLORS[idx%COLORS.length],lineWidth:2,priceLineVisible:false,lastValueVisible:true});
+        s.setData(pts); series.push(s);
+      });
+      chart.timeScale().fitContent();
+    }
+    function renderTags(){
+      el('pfTags').innerHTML=sel.map(function(c,i){return '<span class="pf-tag" onclick="window._pfRemove(\''+c+'\')"><i style="background:'+COLORS[i%COLORS.length]+'"></i>'+c+' '+(PRODS.find(function(p){return p.code===c;})||{}).name+' ✕</span>';}).join('');
+    }
+    function renderTable(){
+      el('pfBody').innerHTML=sel.map(function(c,i){var d=CACHE[c]||[];var nm=(PRODS.find(function(p){return p.code===c;})||{}).name||'';
+        function cell(m){var v=ret(d,m);return v==null?'<td>—</td>':'<td class="'+(v>0?'fc-up':(v<0?'fc-dn':''))+'">'+(v>0?'+':'')+v.toFixed(1)+'%</td>';}
+        return '<tr><td class="l"><span class="dot" style="background:'+COLORS[i%COLORS.length]+'"></span><span style="color:var(--accent);font-weight:700">'+c+'</span> '+nm+'</td>'+cell(1)+cell(3)+cell(6)+cell(12)+'</tr>';
+      }).join('');
+    }
+    function refresh(){
+      Promise.all(sel.map(fetchAdj)).then(function(){draw();renderTable();renderTags();});
+    }
+    window._pfRemove=function(c){sel=sel.filter(function(x){return x!==c;});refresh();};
+    window._etfperfShow=function(){
+      if(!loaded){
+        fetch(SB()+'/rest/v1/etf_products?select=code,name&order=est_scale.desc.nullslast&limit=500',{headers:{apikey:AK(),Authorization:'Bearer '+AK()}}).then(function(r){return r.json();}).then(function(a){
+          PRODS=Array.isArray(a)?a:[]; loaded=true;
+          el('pfAdd').innerHTML='<option value="">＋ 加入 ETF(最多6)</option>'+PRODS.map(function(p){return '<option value="'+p.code+'">'+p.code+' '+p.name+'</option>';}).join('');
+          el('pfAdd').onchange=function(){var v=el('pfAdd').value;if(v&&sel.indexOf(v)<0&&sel.length<6)sel.push(v);el('pfAdd').value='';refresh();};
+          el('pfPeriod').onclick=function(e){var b=e.target.closest('button');if(!b)return;period=b.dataset.p;[...el('pfPeriod').children].forEach(function(x){x.classList.toggle('on',x===b);});draw();};
+          refresh();
+        });
+        if(el('pfNote'))el('pfNote').innerHTML='<b>算法:</b>含息還原報酬 —— 用 YF 還原收盤(adjclose,已還原配息與分割),各檔以區間起點為 0% 疊圖比較累積報酬;表格為近1/3/6/12月報酬。含息故高股息 ETF 不會被除息低估。';
+      } else { setTimeout(function(){if(chart)chart.timeScale().fitContent();},50); }
+    };
+    window._VIEWS=window._VIEWS||{}; window._VIEWS.etfperf={el:'etfperfView',show:'_etfperfShow'};
   })();
   </script>
   <script>
