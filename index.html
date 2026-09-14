@@ -1366,7 +1366,7 @@
     function loadSig(){
       var SB=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'', AK=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';
       var _tk=localStorage.getItem('sb_token')||null,_u=null;try{_u=JSON.parse(localStorage.getItem('sb_user')||'null');}catch(_){}
-      var owner=!!_tk&&['swe250165@gmail.com','qa5518556130@gmail.com'].indexOf((_u&&_u.email)||'')>=0;
+      var owner=!!_tk&&['swe250165@gmail.com','qa5518556130@gmail.com','wenpin0617@gmail.com'].indexOf((_u&&_u.email)||'')>=0;
       if(!owner){el('fcSigCard').style.display='none';return;}
       el('fcSigCard').style.display='';
       fetch(SB+'/rest/v1/broker_signals?select=signal_date,method,rank,code,broker_name,net_lots,win20&order=signal_date.desc,rank.asc&limit=120',{headers:{apikey:AK,Authorization:'Bearer '+_tk}}).then(function(r){return r.json();}).then(function(a){
@@ -2539,7 +2539,7 @@
       fetch('/api/chart?code=%5ETWII&range=5d&interval=1d').then(function(r){return r.json();}).then(function(j){var d=(j&&j.data)||[];if(d.length<2)return;var a=d[d.length-1],b=d[d.length-2],chg=a.close-b.close,pct=chg/b.close*100,up=chg>=0;var v=el('tvTwii');if(v){v.textContent=Number(a.close).toLocaleString();v.className='v '+(up?'hx-up':'hx-dn');}var rr=el('tvTwiiR');if(rr){rr.textContent=(up?'▲ +':'▼ ')+pct.toFixed(2)+'%';rr.className='r '+(up?'hx-up':'hx-dn');}}).catch(function(){});
       fetch('/api/screen?stat=market').then(function(r){return r.json();}).then(function(j){if(!j||j.error)return;if(el('tvUpL'))el('tvUpL').textContent=j.up_limit;if(el('tvDnL'))el('tvDnL').textContent=j.down_limit;if(el('tvUD'))el('tvUD').textContent='上漲 '+j.up+' · 下跌 '+j.down;}).catch(function(){});
       try{ var _tk=localStorage.getItem('sb_token')||null; var _u=null; try{_u=JSON.parse(localStorage.getItem('sb_user')||'null');}catch(_){}
-        var owner=!!_tk && ['swe250165@gmail.com','qa5518556130@gmail.com'].indexOf((_u&&_u.email)||'')>=0;
+        var owner=!!_tk && ['swe250165@gmail.com','qa5518556130@gmail.com','wenpin0617@gmail.com'].indexOf((_u&&_u.email)||'')>=0;
         if(!owner){ if(el('tvSig'))el('tvSig').textContent='（擁有者登入後顯示）'; }
         else { fetch(SIG_SB_URL+'/rest/v1/broker_signals?select=signal_date,method,rank,code,broker_name,net_lots&order=signal_date.desc,rank.asc&limit=120',{headers:{apikey:SIG_SB_ANON,Authorization:'Bearer '+_tk}}).then(function(r){return r.json();}).then(function(a){if(!Array.isArray(a)||!a.length){if(el('tvSig'))el('tvSig').textContent='—';return;}var d0=a[0].signal_date,seen={},out=[];for(var k=0;k<a.length&&out.length<4;k++){if(a[k].signal_date!==d0)continue;if(seen[a[k].code])continue;seen[a[k].code]=1;out.push(a[k]);}if(el('tvSig')){el('tvSig').innerHTML='<div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">'+d0+'</div>'+out.map(function(x){var lots=x.net_lots!=null?(x.net_lots>0?'+':'')+Number(x.net_lots).toLocaleString()+'張':'';return '<div class="hx-li"><span class="t">'+x.code+' <span style="color:var(--text-muted);font-weight:400">'+(x.broker_name||'')+'</span></span><span>'+lots+'</span></div>';}).join('');}}).catch(function(){if(el('tvSig'))el('tvSig').textContent='—';}); }
       }catch(e){}
@@ -5489,7 +5489,7 @@
       document.getElementById('backtestBtn').style.display   = loggedIn ? ''     : 'none';
       document.getElementById('funcDropdown').style.display  = loggedIn ? ''     : 'none';
       // 主力訊號／分點回測：僅授權帳號可見（資料端另有 RLS 保護；加人改此陣列＋DB allowed_viewers）
-      const VIEWER_EMAILS = ['swe250165@gmail.com', 'qa5518556130@gmail.com'];
+      const VIEWER_EMAILS = ['swe250165@gmail.com', 'qa5518556130@gmail.com', 'wenpin0617@gmail.com'];
       const _owner = loggedIn && VIEWER_EMAILS.includes(_authUser?.email);
       document.getElementById('brokerSigBtn').style.display = _owner ? '' : 'none';
       document.getElementById('brokerRankBtn').style.display = _owner ? '' : 'none';
