@@ -1458,8 +1458,33 @@
   };
   // 共用：點個股開 K 線圖
   window._openStock = function(code, name){ try{ if(typeof openChart==='function') openChart(String(code), name||((window._names&&window._names[code])||'')); }catch(e){} };
+  // 共用:把原生 <select> 就地變成可輸入過濾的下拉(保留 .value/change 介面,現有邏輯免改)
+  window._searchSelect = function(id, ph){
+    var sel=document.getElementById(id); if(!sel||sel._ss)return; sel._ss=1;
+    var items=[].slice.call(sel.options).filter(function(o){return o.value;}).map(function(o){return {v:o.value,t:o.textContent};});
+    var wrap=document.createElement('span'); wrap.className='ss-wrap';
+    var inp=document.createElement('input'); inp.className='ss-input'; inp.type='text'; inp.placeholder=ph||'輸入代號或名稱過濾'; inp.autocomplete='off';
+    var res=document.createElement('div'); res.className='ss-res';
+    sel.style.display='none';
+    sel.parentNode.insertBefore(wrap, sel); wrap.appendChild(inp); wrap.appendChild(res); wrap.appendChild(sel);
+    function label(v){for(var i=0;i<items.length;i++)if(items[i].v===v)return items[i].t;return '';}
+    inp.value=label(sel.value);
+    function render(){var q=inp.value.trim().toLowerCase();var m=(q?items.filter(function(x){return x.t.toLowerCase().indexOf(q)>=0;}):items).slice(0,50);res.innerHTML=m.map(function(x){return '<div class="ss-i" data-v="'+x.v+'">'+x.t+'</div>';}).join('');res.style.display=m.length?'block':'none';}
+    function pick(v){sel.value=v;sel.dispatchEvent(new Event('change',{bubbles:true}));res.style.display='none';inp.value=sel.value?label(sel.value):'';}
+    inp.addEventListener('focus',function(){try{inp.select();}catch(e){}render();});
+    inp.addEventListener('input',render);
+    res.addEventListener('mousedown',function(e){var d=e.target.closest('[data-v]');if(!d)return;e.preventDefault();pick(d.dataset.v);inp.blur();});
+    inp.addEventListener('keydown',function(e){if(e.key==='Enter'){var f=res.querySelector('[data-v]');if(f){e.preventDefault();pick(f.dataset.v);}}else if(e.key==='Escape'){res.style.display='none';}});
+    document.addEventListener('click',function(e){if(!wrap.contains(e.target))res.style.display='none';});
+  };
   </script>
-  <style>.clk{cursor:pointer;} .clk:hover{background:var(--surface2);}</style>
+  <style>.clk{cursor:pointer;} .clk:hover{background:var(--surface2);}
+    .ss-wrap{position:relative;display:inline-block;}
+    .ss-input{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:14px;min-width:240px;}
+    .ss-res{position:absolute;top:calc(100% + 4px);left:0;z-index:80;min-width:260px;max-height:300px;overflow:auto;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);padding:4px;display:none;}
+    .ss-i{padding:7px 11px;border-radius:6px;font-size:13.5px;color:var(--text);cursor:pointer;white-space:nowrap;}
+    .ss-i:hover{background:var(--ctl-hi);color:var(--accent);}
+  </style>
 
   <style>
     #boxView{max-width:1100px;margin:0 auto;}
@@ -2092,6 +2117,7 @@
         loaded=true;
         el('ehSel').onchange=function(){load(el('ehSel').value);};
         if(PRODS.length){el('ehSel').value=PRODS[0].code;load(PRODS[0].code);}
+        window._searchSelect('ehSel','搜尋 ETF 代號/名稱');
       });
       if(el('ehNote'))el('ehNote').innerHTML='<b>資料源：</b>集保結算所 TDCC 股權分散表(每週更新)。「大戶占比」= 持股 60 萬股以上級距占集保庫存比例合計;人數/股數/比例皆為官方值。';
     };
@@ -2162,6 +2188,7 @@
         el('ecSel').innerHTML=PRODS.map(function(p){return '<option value="'+p.code+'">'+p.code+' '+p.name+'</option>';}).join('');
         el('ecSel').onchange=function(){loadCons(el('ecSel').value);};
         if(PRODS.length){el('ecSel').value=PRODS[0].code;loadCons(PRODS[0].code);}
+        window._searchSelect('ecSel','搜尋 ETF 代號/名稱');
       });
       if(el('ecNote'))el('ecNote').innerHTML='<b>資料源：</b>玩股網 ETF 成分股(每日淨值/持股)。權重、持股張數為官方 PCF;「今日增減」= 對前一日持股股數差。點成分股可開 K 線。';
     };
@@ -2258,6 +2285,7 @@
         el('esA').innerHTML=opts; el('esB').innerHTML=opts;
         if(PRODS.length>1){el('esA').value=PRODS[0].code;el('esB').value=PRODS[1].code;}
         el('esA').onchange=compute; el('esB').onchange=compute;
+        window._searchSelect('esA','ETF A'); window._searchSelect('esB','ETF B');
         compute();
       });
       if(el('esNote'))el('esNote').innerHTML='<b>算法：</b>持股重疊 = Σ min(A權重, B權重)(兩檔共同持股取較小權重加總)。越高代表兩檔實質持股越像、同時買分散效果越有限。資料源:玩股網 ETF 成分股。';
@@ -2487,6 +2515,7 @@
           PRODS=Array.isArray(a)?a:[]; loaded=true;
           el('pfAdd').innerHTML='<option value="">＋ 加入 ETF(最多6)</option>'+PRODS.map(function(p){return '<option value="'+p.code+'">'+p.code+' '+p.name+'</option>';}).join('');
           el('pfAdd').onchange=function(){var v=el('pfAdd').value;if(v&&sel.indexOf(v)<0&&sel.length<6)sel.push(v);el('pfAdd').value='';refresh();};
+          window._searchSelect('pfAdd','＋ 輸入代號/名稱加入');
           el('pfPeriod').onclick=function(e){var b=e.target.closest('button');if(!b)return;period=b.dataset.p;[...el('pfPeriod').children].forEach(function(x){x.classList.toggle('on',x===b);});draw();};
           refresh();
         });
