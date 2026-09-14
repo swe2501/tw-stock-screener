@@ -1235,7 +1235,7 @@
     <div class="mn-grp"><span class="mn-item">市場觀察 <i>▾</i></span><div class="mn-menu">
       <a class="nav-owner" onclick="openBrokerSignals()">🎯 主力訊號</a><a class="nav-owner" onclick="openBrokerRankings()">📊 分點回測</a><a onclick="openMarginModal()">📈 融資維持率</a><a onclick="_showView('greed')">😱 貪婪指標</a><a onclick="_showView('inst')">🏦 三大法人買賣超</a><a onclick="_todo('股期儀表板')">股期儀表板</a></div></div>
     <div class="mn-grp"><span class="mn-item">ETF 分析 <span class="mn-new">新</span> <i>▾</i></span><div class="mn-menu">
-      <a onclick="_showView('etf')">總覽 · 規模排行</a><a onclick="_showView('etfcons')">成分股</a><a onclick="_showView('etfrev')">股票反查 ETF</a><a onclick="_showView('etfdiv')">配息行事曆</a><a onclick="_showView('etfhold')">持有人結構</a><a onclick="_todo('折溢價')">折溢價</a></div></div>
+      <a onclick="_showView('etf')">總覽 · 規模排行</a><a onclick="_showView('etfcons')">成分股</a><a onclick="_showView('etfrev')">股票反查 ETF</a><a onclick="_showView('etfdiv')">配息行事曆</a><a onclick="_showView('etfhold')">持有人結構</a><a onclick="_showView('etfsim')">ETF 相似度</a><a onclick="_todo('折溢價')">折溢價</a></div></div>
     <div class="mn-grp"><span class="mn-item">個股 <i>▾</i></span><div class="mn-menu">
       <a onclick="_todo('K線圖(用上方搜尋開啟個股)')">K線圖</a><a onclick="_todo('公司資料庫')">公司資料庫</a><a onclick="_todo('估值九宮格')">估值九宮格</a></div></div>
     <a class="mn-item" onclick="_showView('news')">每日新聞</a>
@@ -2189,6 +2189,68 @@
       if(el('erNote'))el('erNote').innerHTML='<b>玩法：</b>輸入個股,列出所有持有它的 ETF 與該股在各 ETF 的權重/張數。資料源:玩股網 ETF 成分股。可看出一檔股票被多少 ETF 重倉(被動買盤概念)。';
     };
     window._VIEWS=window._VIEWS||{}; window._VIEWS.etfrev={el:'etfrevView',show:'_etfrevShow'};
+  })();
+  </script>
+
+  <style>
+    #etfsimView{max-width:900px;margin:0 auto;}
+    .es-pick{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px;}
+    .es-pick select{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:14px;min-width:230px;}
+    .es-pick b{color:var(--text-muted);}
+    .es-gauge{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px;text-align:center;margin-bottom:16px;}
+    .es-gauge .pct{font-size:40px;font-weight:800;letter-spacing:-.02em;}
+    .es-gauge .bar{height:12px;border-radius:6px;background:var(--surface2);overflow:hidden;margin:12px auto 8px;max-width:420px;}
+    .es-gauge .bar i{display:block;height:100%;background:var(--accent);}
+    .es-gauge .desc{font-size:13px;color:var(--text-muted);}
+  </style>
+  <div id="etfsimView" style="display:none">
+    <div class="tm-head"><h2>🔗 ETF 相似度</h2><span class="sub">持股重疊,破解「買好幾檔=分散」迷思</span></div>
+    <div class="es-pick"><select id="esA"></select><b>VS</b><select id="esB"></select></div>
+    <div class="es-gauge"><div class="pct" id="esPct">—</div><div class="bar"><i id="esBar" style="width:0%"></i></div><div class="desc" id="esDesc">選兩檔 ETF 比較持股重疊</div></div>
+    <div class="ec-wrap"><div class="ec-scroll"><table class="ec"><thead><tr><th class="l">共同持股</th><th id="esHA">A 權重</th><th id="esHB">B 權重</th><th>取小(重疊)</th></tr></thead><tbody id="esBody"><tr><td class="l" colspan="4">—</td></tr></tbody></table></div></div>
+    <div class="fc-note" id="esNote"></div>
+  </div>
+  <script>
+  (function(){
+    var el=function(id){return document.getElementById(id);};
+    var SB=function(){return (typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'';}, AK=function(){return (typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';};
+    var H=function(){return {apikey:AK(),Authorization:'Bearer '+AK()};};
+    var PRODS=[], loaded=false, CACHE={};
+    function getHoldings(code){
+      if(CACHE[code])return Promise.resolve(CACHE[code]);
+      return fetch(SB()+'/rest/v1/etf_holdings?select=stock_code,stock_name,weight&code=eq.'+code+'&limit=300',{headers:H()}).then(function(r){return r.json();}).then(function(a){CACHE[code]=Array.isArray(a)?a:[];return CACHE[code];});
+    }
+    function nm(code){var p=PRODS.find(function(x){return x.code===code;});return p?p.name:'';}
+    function compute(){
+      var a=el('esA').value, b=el('esB').value;
+      if(!a||!b)return;
+      Promise.all([getHoldings(a),getHoldings(b)]).then(function(res){
+        var A=res[0],B=res[1];
+        if(!A.length||!B.length){el('esPct').textContent='—';el('esDesc').textContent='其中一檔尚無成分股資料';el('esBody').innerHTML='<tr><td class="l" colspan="4">—</td></tr>';return;}
+        var bm={}; B.forEach(function(h){bm[h.stock_code]={w:h.weight||0,n:h.stock_name};});
+        var common=[],overlap=0;
+        A.forEach(function(h){var m=bm[h.stock_code];if(m){var mn=Math.min(h.weight||0,m.w);overlap+=mn;common.push({code:h.stock_code,name:h.stock_name||m.n,wa:h.weight||0,wb:m.w,min:mn});}});
+        common.sort(function(x,y){return y.min-x.min;});
+        el('esPct').textContent=overlap.toFixed(1)+'%';
+        el('esBar').style.width=Math.min(100,overlap)+'%';
+        el('esDesc').textContent=(overlap>70?'高度重疊,分散效果有限':overlap>35?'部分重疊,仍需看共同持股':'重疊較低,選股邏輯差異大')+' · 共同持股 '+common.length+' 檔';
+        el('esHA').textContent=a+' 權重'; el('esHB').textContent=b+' 權重';
+        el('esBody').innerHTML=common.length?common.map(function(c){return '<tr onclick="_openStock(\''+c.code+'\',\''+(c.name||'').replace(/\'/g,'')+'\')"><td class="l"><span class="c">'+c.code+'</span> '+(c.name||'')+'</td><td>'+c.wa.toFixed(2)+'%</td><td>'+c.wb.toFixed(2)+'%</td><td><b>'+c.min.toFixed(2)+'%</b></td></tr>';}).join(''):'<tr><td class="l" colspan="4">無共同持股</td></tr>';
+      });
+    }
+    window._etfsimShow=function(){
+      if(loaded){return;}
+      fetch(SB()+'/rest/v1/etf_products?select=code,name&order=est_scale.desc.nullslast&limit=500',{headers:H()}).then(function(r){return r.json();}).then(function(a){
+        PRODS=Array.isArray(a)?a:[]; loaded=true;
+        var opts=PRODS.map(function(p){return '<option value="'+p.code+'">'+p.code+' '+p.name+'</option>';}).join('');
+        el('esA').innerHTML=opts; el('esB').innerHTML=opts;
+        if(PRODS.length>1){el('esA').value=PRODS[0].code;el('esB').value=PRODS[1].code;}
+        el('esA').onchange=compute; el('esB').onchange=compute;
+        compute();
+      });
+      if(el('esNote'))el('esNote').innerHTML='<b>算法：</b>持股重疊 = Σ min(A權重, B權重)(兩檔共同持股取較小權重加總)。越高代表兩檔實質持股越像、同時買分散效果越有限。資料源:玩股網 ETF 成分股。';
+    };
+    window._VIEWS=window._VIEWS||{}; window._VIEWS.etfsim={el:'etfsimView',show:'_etfsimShow'};
   })();
   </script>
   <script>
