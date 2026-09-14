@@ -2687,9 +2687,10 @@
   /* 首頁「一頁研究手札」報告區（參考合夥人 genshuei 首頁版型，資料走自有管線）*/
   (function(){
     var el=function(id){return document.getElementById(id);};
-    var SB=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'', AK=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';
-    var H={apikey:AK,Authorization:'Bearer '+AK};
-    function sb(path){return fetch(SB+'/rest/v1/'+path,{headers:H}).then(function(r){return r.json();}).catch(function(){return null;});}
+    function sb(path){
+      var U=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'', K=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';
+      return fetch(U+'/rest/v1/'+path,{headers:{apikey:K,Authorization:'Bearer '+K}}).then(function(r){return r.json();}).catch(function(){return null;});
+    }
     function nm(code){return (window._names&&window._names[code])||'';}
     function yi(v){return (Number(v)/1e8);}                 // 元→億
     function fmtYi(v,dp){var n=yi(v);return (n>0?'+':'')+n.toFixed(dp==null?1:dp);}
