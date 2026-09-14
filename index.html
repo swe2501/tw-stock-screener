@@ -1469,10 +1469,10 @@
     sel.parentNode.insertBefore(wrap, sel); wrap.appendChild(inp); wrap.appendChild(res); wrap.appendChild(sel);
     function label(v){for(var i=0;i<items.length;i++)if(items[i].v===v)return items[i].t;return '';}
     inp.value=label(sel.value);
-    function render(){var q=inp.value.trim().toLowerCase();var m=(q?items.filter(function(x){return x.t.toLowerCase().indexOf(q)>=0;}):items).slice(0,50);res.innerHTML=m.map(function(x){return '<div class="ss-i" data-v="'+x.v+'">'+x.t+'</div>';}).join('');res.style.display=m.length?'block':'none';}
+    function renderList(q){q=(q||'').trim().toLowerCase();var m=q?items.filter(function(x){return x.t.toLowerCase().indexOf(q)>=0;}):items;res.innerHTML=m.map(function(x){return '<div class="ss-i" data-v="'+x.v+'">'+x.t+'</div>';}).join('');res.style.display=m.length?'block':'none';}
     function pick(v){sel.value=v;sel.dispatchEvent(new Event('change',{bubbles:true}));res.style.display='none';inp.value=sel.value?label(sel.value):'';}
-    inp.addEventListener('focus',function(){try{inp.select();}catch(e){}render();});
-    inp.addEventListener('input',render);
+    inp.addEventListener('focus',function(){try{inp.select();}catch(e){}renderList('');});   // 點擊先列全部,不受既有值影響
+    inp.addEventListener('input',function(){renderList(inp.value);});                          // 打字才過濾
     res.addEventListener('mousedown',function(e){var d=e.target.closest('[data-v]');if(!d)return;e.preventDefault();pick(d.dataset.v);inp.blur();});
     inp.addEventListener('keydown',function(e){if(e.key==='Enter'){var f=res.querySelector('[data-v]');if(f){e.preventDefault();pick(f.dataset.v);}}else if(e.key==='Escape'){res.style.display='none';}});
     document.addEventListener('click',function(e){if(!wrap.contains(e.target))res.style.display='none';});
