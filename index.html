@@ -1201,11 +1201,12 @@
 </head>
 <body>
   <style>
-    .gs-brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--brand-green,#1e4031);}
-    .gs-mark img{height:40px;width:auto;display:block;}
-    .gs-name{display:flex;flex-direction:column;line-height:1.1;}
-    .gs-name b{font-size:1.35rem;font-weight:800;letter-spacing:.02em;color:var(--brand-green,#1e4031);font-family:"Noto Serif TC",Georgia,"Times New Roman",serif;}
-    .gs-name small{font-size:.62rem;letter-spacing:.14em;color:var(--text-muted);font-weight:600;margin-top:2px;white-space:nowrap;}
+    .gs-brand{display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--brand-green,#1e4031);}
+    .gs-mark{width:42px;height:42px;flex:0 0 auto;background:#fffdf8;border:1px solid var(--border);border-radius:7px;display:grid;place-items:center;overflow:hidden;padding:3px;box-shadow:var(--shadow-sm);}
+    .gs-mark img{width:100%;height:100%;object-fit:contain;display:block;}
+    .gs-name{display:flex;flex-direction:column;line-height:1.05;}
+    .gs-name b{font-size:1.3rem;font-weight:800;letter-spacing:.06em;color:var(--brand-green,#1e4031);font-family:"Noto Serif TC",Georgia,"Times New Roman",serif;}
+    .gs-name small{font-size:.6rem;letter-spacing:.12em;color:var(--text-muted);font-weight:600;margin-top:3px;white-space:nowrap;font-family:Georgia,serif;}
     .gs-edition{background:transparent!important;color:var(--brand-green,#1e4031)!important;border-left:2px solid var(--accent);padding:2px 0 2px 10px!important;font-size:.58rem!important;letter-spacing:.16em;line-height:1.15;border-radius:0!important;font-weight:700;}
     .gs-edition b{font-size:.82rem;letter-spacing:.08em;}
     @media(max-width:640px){ .gs-name small{display:none;} .gs-name b{font-size:1.1rem;} }
@@ -1353,9 +1354,28 @@
     .gs-kpi2 .v{font-size:20px;font-weight:800;margin-top:4px;letter-spacing:-.02em;font-variant-numeric:tabular-nums;}
     .gs-today-foot{margin-top:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
     .gs-tone{font-size:12px;font-weight:800;color:#f4efe1;background:var(--brand-green);padding:6px 12px;border-radius:6px;}
+    /* 判讀依據 + 報告腳 */
+    .gs-sub{font-size:10.5px;color:var(--text-muted);margin-top:3px;line-height:1.5;}
+    .gs-basis{margin-top:14px;border-top:1px dashed var(--border);padding-top:10px;}
+    .gs-basis>summary{cursor:pointer;font-size:12px;font-weight:700;color:var(--brand-green);list-style:none;}
+    .gs-basis>summary::-webkit-details-marker{display:none;}
+    .gs-basis>summary::before{content:"▸ ";color:var(--accent);}
+    .gs-basis[open]>summary::before{content:"▾ ";}
+    .gs-basis .body{font-size:11.5px;color:var(--text-muted);line-height:1.85;margin-top:8px;}
+    .gs-basis .body li{margin-left:4px;}
+    .gs-report{margin-left:auto;font-size:12px;font-weight:700;color:var(--brand-green);text-decoration:none;border-bottom:1px solid var(--accent);}
+    /* 手札左右直欄(僅首頁,寬螢幕) */
+    .gs-rail{position:fixed;top:0;bottom:0;left:0;width:clamp(52px,calc((100vw - 1180px)/2 + 46px),300px);background:var(--brand-green);z-index:1;display:flex;align-items:center;justify-content:center;pointer-events:none;}
+    .gs-rail .txt{writing-mode:vertical-rl;color:rgba(244,239,225,.9);letter-spacing:.55em;font-size:14px;font-weight:600;font-family:"Noto Serif TC",Georgia,serif;}
+    .gs-rail-r{position:fixed;top:0;bottom:0;right:0;width:clamp(0px,calc((100vw - 1180px)/2 - 8px),120px);display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:1;}
+    .gs-rail-r .txt{writing-mode:vertical-rl;color:var(--text-muted);letter-spacing:.3em;font-size:10px;opacity:.55;font-family:Georgia,serif;}
+    #homeView{position:relative;z-index:2;background:linear-gradient(var(--bg),var(--bg)),repeating-linear-gradient(0deg,transparent,transparent 27px,rgba(30,64,49,.035) 27px,rgba(30,64,49,.035) 28px);}
+    @media(max-width:1180px){ .gs-rail,.gs-rail-r{display:none;} }
     @media(max-width:900px){ .gs-hero-grid{grid-template-columns:1fr;gap:22px;} .gs-title{font-size:44px;} }
   </style>
   <div id="homeView" style="display:none">
+    <div class="gs-rail" aria-hidden="true"><span class="txt">盤後研究手札</span></div>
+    <div class="gs-rail-r" aria-hidden="true"><span class="txt">研究不臆測 · 尊重籌碼與順序</span></div>
     <section class="gs-hero">
       <div class="gs-hero-grid">
         <div class="gs-hero-copy">
@@ -1375,7 +1395,8 @@
           <h2 class="gs-today-h" id="gsTodayHeadline">整理今日盤後資料…</h2>
           <p class="gs-today-body" id="gsTodayBody"></p>
           <div class="gs-kpi2" id="gsKpi2"></div>
-          <div class="gs-today-foot"><span class="gs-tone" id="gsTone">今日定調</span></div>
+          <details class="gs-basis"><summary>判讀依據</summary><div class="body" id="gsBasis"></div></details>
+          <div class="gs-today-foot"><span class="gs-tone" id="gsTone">今日定調</span><a href="#" class="gs-report" onclick="try{window._showView('focus')}catch(e){}return false;">閱讀完整報告 →</a></div>
         </aside>
       </div>
     </section>
@@ -2769,39 +2790,69 @@
       });
     }
 
-    /* 今日判讀卡（大盤 / 市場廣度 / 法人 / 槓桿 + 盤後結論）*/
+    /* 今日判讀卡：完全照合夥人四指標演算法（大盤 / 市場廣度 / 法人強度 / 槓桿背離）*/
     function loadToday(){
       var today=new Date().toISOString().slice(0,10);
       Promise.all([
-        fetch('/api/chart?code=%5ETWII&range=5d&interval=1d').then(function(r){return r.json();}).then(function(j){return (j&&j.data)||[];}).catch(function(){return [];}),
+        fetch('/api/chart?code=%5ETWII&range=1mo&interval=1d').then(function(r){return r.json();}).then(function(j){return (j&&j.data)||[];}).catch(function(){return [];}),
         fetch('/api/screen?stat=market').then(function(r){return r.json();}).catch(function(){return null;}),
-        sb('inst_market_daily?select=total_net&order=trade_date.desc&limit=1'),
-        sb('margin_market?select=fin_bal_k,fin_bal_prev_k&order=date.desc&limit=1')
+        sb('inst_market_daily?select=trade_date,foreign_net,trust_net,dealer_net,total_net&order=trade_date.desc&limit=1'),
+        sb('margin_market?select=date,fin_bal_k&order=date.desc&limit=6'),
+        sb('sector_turnover?select=total_amt&order=date.desc&limit=1')
       ]).then(function(res){
-        var d=res[0]||[],mkt=res[1],inst=(res[2]||[])[0],mm=(res[3]||[])[0];
-        var c=d[d.length-1],p=d[d.length-2];
+        var d=res[0]||[],mkt=res[1],inst=(res[2]||[])[0],mm=res[3]||[],st=(res[4]||[])[0];
+        var c=d[d.length-1],p=d[d.length-2],c5=d[Math.max(0,d.length-6)];
         var chg=(c&&p)?((c.close/p.close-1)*100):null;
+        var idx5=(c&&c5)?((c.close/c5.close-1)*100):null;
         var dateStr=(c&&(c.date||c.time))||today;
         if(el('gsHeroDate'))el('gsHeroDate').textContent=dateStr;
         if(el('gsTodayDate'))el('gsTodayDate').textContent=dateStr;
-        var up=mkt?+mkt.up||0:0,dn=mkt?+mkt.down||0:0;
-        var breadth=(up+dn)?Math.round(up/(up+dn)*100):null;
-        var instYi=inst?inst.total_net/1e8:null;
-        var lev=(mm&&mm.fin_bal_prev_k)?((mm.fin_bal_k-mm.fin_bal_prev_k)/mm.fin_bal_prev_k*100):null;
-        function c2(k,v,cl){return '<div class="c"><div class="k">'+k+'</div><div class="v '+(cl||'')+'">'+v+'</div></div>';}
+        // 市場廣度 = 上漲÷全部；廣度差 = (上漲−下跌)÷全部
+        var up=mkt?+mkt.up||0:0,dn=mkt?+mkt.down||0:0,fl=mkt?+mkt.flat||0:0,tot=up+dn+fl||1;
+        var upRatio=up/tot*100, bdDiff=(up-dn)/tot*100;
+        // 法人：主力 + 強度(買賣超÷市場成交額)
+        var lead='—',stren=null,instYi=null;
+        if(inst){
+          instYi=inst.total_net/1e8;
+          var ff=Math.abs(inst.foreign_net||0),tt=Math.abs(inst.trust_net||0),dd=Math.abs(inst.dealer_net||0);
+          lead=(ff>=tt&&ff>=dd)?'外資':(tt>=dd?'投信':'自營商');
+          if(st&&st.total_amt)stren=inst.total_net/st.total_amt*100;
+        }
+        // 槓桿背離 = 五日融資動能 − 五日大盤動能
+        var mNow=mm[0]?mm[0].fin_bal_k:null,m5=mm[Math.min(5,mm.length-1)]?mm[Math.min(5,mm.length-1)].fin_bal_k:null;
+        var mar5=(mNow&&m5)?((mNow/m5-1)*100):null;
+        var lev=(mar5!=null&&idx5!=null)?(mar5-idx5):null;
+        // 2×2 KPI（含子標）
+        function c2(k,v,cl,sub){return '<div class="c"><div class="k">'+k+'</div><div class="v '+(cl||'')+'">'+v+'</div><div class="gs-sub">'+(sub||'')+'</div></div>';}
         if(el('gsKpi2'))el('gsKpi2').innerHTML=
-           c2('大盤',chg!=null?pctTxt(chg):'—',chg!=null?cls(chg):'')
-          +c2('市場廣度',breadth!=null?breadth+'%':'—','')
-          +c2('法人',instYi!=null?((instYi>0?'+':'')+instYi.toFixed(1)+' 億'):'—',instYi!=null?cls(instYi):'')
-          +c2('槓桿',lev!=null?((lev>0?'+':'')+lev.toFixed(2)+' pp'):'—',lev!=null?(lev>0?'hp-up':'hp-dn'):'');
-        var head,tone,extra;
-        if(dn>up*1.4){head='弱勢正在擴散，<em>先觀察賣壓是否收斂</em>。';tone='今日定調 ｜ 空方擴散';extra='跌勢不只集中在少數權值股。';}
-        else if(up>dn*1.4){head='多方轉強，<em>留意攻勢能否延續</em>。';tone='今日定調 ｜ 多方主導';extra='上漲家數明顯居多，人氣回溫。';}
-        else{head='多空拉鋸，<em>等待方向表態</em>。';tone='今日定調 ｜ 多空拉鋸';extra='漲跌互見，量能與族群輪動是關鍵。';}
+           c2('大盤',chg!=null?pctTxt(chg):'—',chg!=null?cls(chg):'','加權指數當日漲跌幅')
+          +c2('市場廣度',Math.round(upRatio)+'%','','廣度差 '+(bdDiff>0?'+':'')+bdDiff.toFixed(1)+' 個百分點')
+          +c2('法人',instYi!=null?((instYi>0?'+':'')+instYi.toFixed(1)+' 億'):'—',instYi!=null?cls(instYi):'',lead+'為主要力量'+(stren!=null?' · 強度 '+(stren>0?'+':'')+stren.toFixed(2)+'%':''))
+          +c2('槓桿',lev!=null?((lev>0?'+':'')+lev.toFixed(2)+' pp'):'—',lev!=null?(lev>0?'hp-up':'hp-dn'):'','五日融資動能減大盤動能');
+        // 定調（合夥人門檻：大盤跌>0.3% 且 上漲占比<45% → 空方擴散）
+        var head,tone,extra,fired=[];
+        var bear=(chg!=null&&chg<-0.3&&upRatio<45), bull=(chg!=null&&chg>0.3&&upRatio>55);
+        if(bear){head='弱勢正在擴散，<em>先觀察賣壓是否收斂</em>。';tone='今日定調 ｜ 空方擴散';extra=(dn?Number(dn).toLocaleString()+' 家收低，':'')+'跌勢已不只集中在少數權值股。';
+          fired=['大盤跌幅超過 0.3%','上漲家數占比低於 45%'];}
+        else if(bull){head='多方轉強，<em>留意攻勢能否延續</em>。';tone='今日定調 ｜ 多方擴張';extra=(up?Number(up).toLocaleString()+' 家收高，':'')+'上漲家數明顯居多，人氣回溫。';
+          fired=['大盤漲幅超過 0.3%','上漲家數占比高於 55%'];}
+        else{head='多空拉鋸，<em>等待方向表態</em>。';tone='今日定調 ｜ 多空拉鋸';extra='漲跌互見，量能與族群輪動是關鍵。';
+          fired=['大盤漲跌幅在 ±0.3% 之間或廣度未過關'];}
         if(el('gsTodayHeadline'))el('gsTodayHeadline').innerHTML=head;
         if(el('gsTone'))el('gsTone').textContent=tone;
-        if(el('gsTodayBody'))el('gsTodayBody').textContent=(dn?Number(dn).toLocaleString()+' 家收低，':'')+extra;
+        if(el('gsTodayBody'))el('gsTodayBody').textContent=extra;
+        if(el('gsBasis'))el('gsBasis').innerHTML='<ul style="margin:0;padding-left:16px">'+fired.map(function(x){return '<li>'+x+'</li>';}).join('')
+          +'</ul><div style="margin-top:6px">市場廣度＝上漲家數÷全部家數；法人強度＝三大法人買賣超÷市場成交額；槓桿背離＝五日融資動能－五日大盤動能。資料源：加權 ^TWII、TWSE 家數/BFI82U/MI_MARGN/MI_INDEX。</div>';
       });
+    }
+
+    /* 每日 slogan（daily_slogan 表；讀不到用預設）*/
+    function loadSlogan(){
+      var t=el('gsTitle')||document.querySelector('.gs-title'); if(!t)return;
+      sb('daily_slogan?select=line1,line2&order=date.desc&limit=1').then(function(a){
+        if(Array.isArray(a)&&a.length&&a[0].line1){var s=a[0];
+          t.innerHTML=String(s.line1).replace(/</g,'&lt;')+'，<br><em>'+String(s.line2||'').replace(/</g,'&lt;')+'。</em>';}
+      }).catch(function(){});
     }
 
     /* §1 三大法人 */
@@ -2919,7 +2970,7 @@
 
     window._hpReport=function(){
       try{ if(typeof window._loadNames==='function')window._loadNames(); }catch(e){}
-      loadTags();loadToday();loadInst();loadMargin();loadBreadth();loadStruct();loadDiverge();loadNote();
+      loadSlogan();loadTags();loadToday();loadInst();loadMargin();loadBreadth();loadStruct();loadDiverge();loadNote();
     };
     window._hpRetheme=window._hpReport;
   })();
