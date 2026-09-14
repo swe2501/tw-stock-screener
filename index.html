@@ -1204,7 +1204,7 @@
     .gs-brand{display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--brand-green,#1e4031);}
     .gs-mark{width:42px;height:42px;flex:0 0 auto;background:#fffdf8;border:1px solid var(--border);border-radius:7px;display:grid;place-items:center;overflow:hidden;padding:3px;box-shadow:var(--shadow-sm);}
     .gs-mark img{width:100%;height:100%;object-fit:contain;display:block;}
-    .gs-name{display:flex;flex-direction:column;line-height:1.05;}
+    .gs-name{display:flex;flex-direction:column;line-height:1.05;background:transparent!important;padding:0!important;border-radius:0!important;color:var(--brand-green)!important;}
     .gs-name b{font-size:1.3rem;font-weight:800;letter-spacing:.06em;color:var(--brand-green,#1e4031);font-family:"Noto Serif TC",Georgia,"Times New Roman",serif;}
     .gs-name small{font-size:.6rem;letter-spacing:.12em;color:var(--text-muted);font-weight:600;margin-top:3px;white-space:nowrap;font-family:Georgia,serif;}
     .gs-edition{background:transparent!important;color:var(--brand-green,#1e4031)!important;border-left:2px solid var(--accent);padding:2px 0 2px 10px!important;font-size:.58rem!important;letter-spacing:.16em;line-height:1.15;border-radius:0!important;font-weight:700;}
@@ -1249,7 +1249,8 @@
   </script>
   <nav id="mainNav"><div class="mn-inner">
     <a class="mn-item" onclick="_showView('home')">首頁</a>
-    <a class="mn-item" onclick="_showView('focus')">今日焦點</a>
+    <div class="mn-grp"><span class="mn-item">今日焦點 <i>▾</i></span><div class="mn-menu">
+      <a onclick="_showView('focus')">排行榜</a><a onclick="_showView('todayindex')">今日索引</a></div></div>
     <div class="mn-grp"><span class="mn-item">選股 <i>▾</i></span><div class="mn-menu">
       <a onclick="_showView('screen')">篩選器</a><a onclick="_showView('box')">箱型</a><a onclick="_showView('limitup')">漲停分析</a></div></div>
     <div class="mn-grp"><span class="mn-item">題材族群 <i>▾</i></span><div class="mn-menu">
@@ -1418,6 +1419,34 @@
     <section class="hp-sec"><div class="hp-sec-h"><span class="hp-sec-no">§4</span> 融資動能背離 <span class="hp-sec-src">加權指數 vs 上市融資餘額 · 近5日</span></div><div id="hpDiverge" class="hp-verdict"><div class="fc-empty">載入中…</div></div></section>
 
     <div class="fc-note" id="hpNote"></div>
+  </div>
+
+  <style>
+    #todayindexView{max-width:1200px;margin:0 auto;}
+    .ti-head{font-size:20px;font-weight:800;color:var(--brand-green);margin:6px 0 4px;font-family:"Noto Serif TC",Georgia,serif;}
+    .ti-sub{font-size:12px;color:var(--text-muted);margin-bottom:16px;}
+    .ti-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+    .ti-card{background:var(--surface);border:1px solid var(--border);border-top:3px solid var(--accent);border-radius:8px;padding:14px 16px;cursor:pointer;box-shadow:var(--shadow-sm);transition:transform .1s,box-shadow .1s;}
+    .ti-card:hover{transform:translateY(-2px);box-shadow:var(--shadow);}
+    .ti-card .no{font-size:11px;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums;}
+    .ti-card .t{font-size:16px;font-weight:800;color:var(--brand-green);margin:4px 0 6px;}
+    .ti-card .m{font-size:11.5px;color:var(--text-muted);display:flex;gap:10px;flex-wrap:wrap;}
+    .ti-card .cs{font-size:12px;color:var(--text);margin-top:8px;line-height:1.6;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+    .ti-back{display:inline-flex;align-items:center;gap:5px;font-size:13px;color:var(--brand-green);cursor:pointer;font-weight:700;margin-bottom:12px;}
+    .ti-detail-h{font-size:24px;font-weight:800;color:var(--brand-green);font-family:"Noto Serif TC",Georgia,serif;}
+    .ti-detail-m{font-size:12px;color:var(--text-muted);margin:4px 0 12px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;}
+    .ti-detail-sum{font-size:13.5px;line-height:1.9;color:var(--text);background:var(--surface);border-left:3px solid var(--accent);padding:10px 14px;border-radius:0 6px 6px 0;margin-bottom:16px;}
+    .ti-stocks{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;}
+    .ti-stk{background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:9px 12px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px;}
+    .ti-stk:hover{border-color:var(--accent);}
+    .ti-stk b{color:var(--brand-green);}
+    .ti-src{display:inline-block;margin-top:14px;font-size:12px;color:var(--brand-green);border-bottom:1px solid var(--accent);text-decoration:none;}
+    @media(max-width:900px){.ti-grid{grid-template-columns:1fr;}}
+  </style>
+  <div id="todayindexView" style="display:none">
+    <div class="ti-head">今日索引</div>
+    <div class="ti-sub">當日盤後彙整的觀察題材，點任一題材看其成分股（可再點開個股 K 線）。資料源：hot_topics（每日新聞／題材彙整）。</div>
+    <div id="tiBody"><div class="fc-empty">載入中…</div></div>
   </div>
 
   <style>
@@ -2786,7 +2815,7 @@
         var box=el('hpTags'); if(!box)return;
         var head='<span class="gs-tags-lbl">今日觀察索引</span>';
         if(!Array.isArray(a)||!a.length){box.innerHTML=head+'<span class="fc-empty">—</span>';return;}
-        box.innerHTML=head+a.map(function(t,i){var s=String(t.topic||'').slice(0,14);return '<span class="gs-tag" data-q="'+s.replace(/"/g,'')+'"><i>'+('0'+(i+1)).slice(-2)+'</i>'+s+'</span>';}).join('');
+        box.innerHTML=head+a.map(function(t,i){var full=String(t.topic||''),s=full.slice(0,14);return '<span class="gs-tag" data-theme="'+full.replace(/"/g,'&quot;')+'"><i>'+('0'+(i+1)).slice(-2)+'</i>'+s+'</span>';}).join('');
       });
     }
 
@@ -2964,7 +2993,7 @@
     }
     document.addEventListener('click',function(e){
       var b=e.target.closest('#hpSearchBtn'); if(b){doSearch();return;}
-      var tg=e.target.closest('.gs-tag'); if(tg){ if(el('hpSearch'))el('hpSearch').value=tg.dataset.q||''; doSearch(); return; }
+      var tg=e.target.closest('.gs-tag'); if(tg){ if(window._openTheme)window._openTheme(tg.dataset.theme||''); return; }
     });
     document.addEventListener('keydown',function(e){ if(e.key==='Enter'&&document.activeElement&&document.activeElement.id==='hpSearch'){e.preventDefault();doSearch();} });
 
@@ -2973,6 +3002,48 @@
       loadSlogan();loadTags();loadToday();loadInst();loadMargin();loadBreadth();loadStruct();loadDiverge();loadNote();
     };
     window._hpRetheme=window._hpReport;
+  })();
+  </script>
+
+  <script>
+  /* 今日索引（今日焦點 > 今日索引）：題材清單 → 點入看成分股 */
+  (function(){
+    var el=function(id){return document.getElementById(id);};
+    function sb(path){var U=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'',K=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';return fetch(U+'/rest/v1/'+path,{headers:{apikey:K,Authorization:'Bearer '+K}}).then(function(r){return r.json();}).catch(function(){return null;});}
+    var _data=null,_sel=null;
+    function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+    function nm(code){return (window._names&&window._names[code])||'';}
+    function codesOf(t){var c=t.codes;if(typeof c==='string'){try{c=JSON.parse(c);}catch(e){c=[];}}return Array.isArray(c)?c:[];}
+    function renderList(){
+      var box=el('tiBody');if(!box)return;
+      if(!Array.isArray(_data)||!_data.length){box.innerHTML='<div class="fc-empty">今日無題材資料</div>';return;}
+      box.innerHTML='<div class="ti-grid">'+_data.map(function(t,i){
+        var cs=codesOf(t).slice(0,6).map(function(c){return (c&&(c.name||c.code))||'';}).filter(Boolean).join('、');
+        return '<div class="ti-card" data-i="'+i+'"><div class="no">'+('0'+(i+1)).slice(-2)+'</div><div class="t">'+esc(t.topic)+'</div><div class="m">'+(t.sector?'<span>'+esc(t.sector)+'</span>':'')+(t.heat!=null?'<span>熱度 '+esc(t.heat)+'</span>':'')+'<span>'+codesOf(t).length+' 檔</span></div>'+(cs?'<div class="cs">'+esc(cs)+'</div>':'')+'</div>';
+      }).join('')+'</div>';
+    }
+    function renderDetail(t){
+      var box=el('tiBody');if(!box)return;var codes=codesOf(t);
+      var stocks=codes.map(function(c){var code=(c&&c.code)||c;var name=(c&&c.name)||nm(code);return '<div class="ti-stk" onclick="_openStock(\''+esc(code)+'\',\''+esc(name)+'\')"><span><b>'+esc(code)+'</b> '+esc(name)+'</span><span style="color:var(--text-muted)">K線›</span></div>';}).join('');
+      box.innerHTML='<div class="ti-back" onclick="window._tiList()">← 返回今日索引</div>'
+        +'<div class="ti-detail-h">'+esc(t.topic)+'</div>'
+        +'<div class="ti-detail-m">'+(t.sector?'<span>'+esc(t.sector)+'</span>':'')+(t.heat!=null?'<span>熱度 '+esc(t.heat)+'</span>':'')+'<span>'+codes.length+' 檔成分股</span></div>'
+        +(t.summary?'<div class="ti-detail-sum">'+esc(t.summary)+'</div>':'')
+        +'<div class="ti-stocks">'+(stocks||'<div class="fc-empty">此題材暫無成分股</div>')+'</div>'
+        +(t.source_url?'<a class="ti-src" href="'+esc(t.source_url)+'" target="_blank" rel="noopener">原始新聞來源 ↗</a>':'');
+    }
+    function load(cb){
+      if(_data){cb&&cb();return;}
+      sb('hot_topics?select=*&order=heat.desc&limit=30').then(function(a){_data=Array.isArray(a)?a:[];
+        _data.forEach(function(t){codesOf(t).forEach(function(c){if(c&&c.code&&c.name&&window._names)window._names[c.code]=c.name;});});
+        cb&&cb();});
+    }
+    window._tiList=function(){_sel=null;renderList();};
+    window._tiShow=function(){ el('todayindexView').style.display='block'; try{if(typeof window._loadNames==='function')window._loadNames();}catch(e){}
+      load(function(){ if(_sel){var t=_data.filter(function(x){return String(x.topic)===String(_sel);})[0]; if(t){renderDetail(t);return;} } renderList(); }); };
+    window._openTheme=function(name){ _sel=name; try{window._showView('todayindex');}catch(e){} };
+    window._VIEWS=window._VIEWS||{}; window._VIEWS.todayindex={el:'todayindexView',show:'_tiShow'};
+    document.addEventListener('click',function(e){var c=e.target.closest('#tiBody .ti-card');if(!c)return;var i=+c.dataset.i;if(_data&&_data[i]){_sel=_data[i].topic;renderDetail(_data[i]);}});
   })();
   </script>
 
