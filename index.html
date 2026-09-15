@@ -1324,8 +1324,9 @@
       .hp-title{font-size:30px;} .hp-kpi{grid-template-columns:repeat(3,1fr);}
       .hp-inst{grid-template-columns:repeat(2,1fr);} .hp-grid{grid-template-columns:1fr;} .hp-struct{grid-template-columns:1fr;}
     }
-    /* ── 跟誰學 兩欄式 hero + 今日判讀卡 ── */
-    .gs-hero{margin:8px 0 22px;}
+    /* ── 跟誰學 兩欄式 hero + 今日判讀卡(全寬大看板,佔約 2/3 螢幕)── */
+    .gs-hero{position:relative;margin:0 calc(50% - 50vw) 22px;min-height:64vh;display:flex;align-items:center;padding:34px 0;overflow:hidden;background:var(--bg) repeating-linear-gradient(0deg,transparent,transparent 27px,rgba(30,64,49,.04) 27px,rgba(30,64,49,.04) 28px);border-bottom:2px solid var(--brand-green);}
+    .gs-hero-inner{width:min(1180px,100% - 36px);margin:0 auto;position:relative;z-index:1;}
     .gs-hero-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:34px;align-items:start;}
     .gs-kicker{font-size:11px;letter-spacing:.06em;color:var(--text-muted);font-weight:600;margin:6px 0 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
     .gs-kicker .tag{background:var(--brand-green);color:#f4efe1;padding:3px 9px;border-radius:4px;font-weight:800;letter-spacing:.1em;}
@@ -1367,19 +1368,19 @@
     .gs-basis .body{font-size:11.5px;color:var(--text-muted);line-height:1.85;margin-top:8px;}
     .gs-basis .body li{margin-left:4px;}
     .gs-report{margin-left:auto;font-size:12px;font-weight:700;color:var(--brand-green);text-decoration:none;border-bottom:1px solid var(--accent);}
-    /* 手札左右直欄(僅首頁,寬螢幕) */
-    .gs-rail{position:fixed;top:0;bottom:0;left:0;width:clamp(52px,calc((100vw - 1180px)/2 + 46px),300px);background:var(--brand-green);z-index:1;display:flex;align-items:center;justify-content:center;pointer-events:none;}
+    /* 手札左右直欄(僅首頁 hero 內,寬螢幕;高度＝hero 高) */
+    .gs-rail{position:absolute;top:0;bottom:0;left:0;width:clamp(52px,calc((100vw - 1180px)/2 + 46px),300px);background:var(--brand-green);z-index:0;display:flex;align-items:center;justify-content:center;pointer-events:none;}
     .gs-rail .txt{writing-mode:vertical-rl;color:rgba(244,239,225,.9);letter-spacing:.55em;font-size:14px;font-weight:600;font-family:"Noto Serif TC",Georgia,serif;}
-    .gs-rail-r{position:fixed;top:0;bottom:0;right:0;width:clamp(0px,calc((100vw - 1180px)/2 - 8px),120px);display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:1;}
+    .gs-rail-r{position:absolute;top:0;bottom:0;right:0;width:clamp(0px,calc((100vw - 1180px)/2 - 8px),120px);display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:0;}
     .gs-rail-r .txt{writing-mode:vertical-rl;color:var(--text-muted);letter-spacing:.3em;font-size:10px;opacity:.55;font-family:Georgia,serif;}
-    #homeView{position:relative;z-index:2;background:linear-gradient(var(--bg),var(--bg)),repeating-linear-gradient(0deg,transparent,transparent 27px,rgba(30,64,49,.035) 27px,rgba(30,64,49,.035) 28px);}
     @media(max-width:1180px){ .gs-rail,.gs-rail-r{display:none;} }
     @media(max-width:900px){ .gs-hero-grid{grid-template-columns:1fr;gap:22px;} .gs-title{font-size:44px;} }
   </style>
   <div id="homeView" style="display:none">
-    <div class="gs-rail" aria-hidden="true"><span class="txt">盤後研究手札</span></div>
-    <div class="gs-rail-r" aria-hidden="true"><span class="txt">研究不臆測 · 尊重籌碼與順序</span></div>
     <section class="gs-hero">
+      <div class="gs-rail" aria-hidden="true"><span class="txt">盤後研究手札</span></div>
+      <div class="gs-rail-r" aria-hidden="true"><span class="txt">研究不臆測 · 尊重籌碼與順序</span></div>
+      <div class="gs-hero-inner">
       <div class="gs-hero-grid">
         <div class="gs-hero-copy">
           <p class="gs-kicker"><span class="tag">FIELD NOTE 001</span> 盤後自動更新 · <span id="gsHeroDate"></span></p>
@@ -1401,6 +1402,7 @@
           <details class="gs-basis"><summary>判讀依據</summary><div class="body" id="gsBasis"></div></details>
           <div class="gs-today-foot"><span class="gs-tone" id="gsTone">今日定調</span><a href="#" class="gs-report" onclick="try{window._showView('focus')}catch(e){}return false;">閱讀完整報告 →</a></div>
         </aside>
+      </div>
       </div>
     </section>
 
