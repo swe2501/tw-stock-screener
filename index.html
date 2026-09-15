@@ -2734,7 +2734,7 @@
   </script>
   <script>
   (function(){
-    var IDX=[{s:'^TWII',n:'台股加權'},{s:'^N225',n:'日經225'},{s:'^IXIC',n:'那斯達克'},{s:'^DJI',n:'道瓊'},{s:'^GSPC',n:'S&P 500'}];
+    var IDX=[{s:'^TWII',n:'台股加權'},{s:'^SOX',n:'費半'},{s:'^N225',n:'日經225'},{s:'^IXIC',n:'那斯達克'},{s:'^DJI',n:'道瓊'},{s:'^GSPC',n:'S&P 500'}];
     var RMAP={ today:{range:'1d',interval:'5m',label:'當日'}, '1y':{range:'1y',interval:'1d',label:'近1年'}, '2y':{range:'2y',interval:'1d',label:'近2年'} };
     var i=0, rng='2y', typ='line', open=null, chart=null, cache={};
     function el(id){return document.getElementById(id);}
@@ -2753,7 +2753,14 @@
       var s;
       if(typ==='candle'){ s=chart.addCandlestickSeries({upColor:t.up,downColor:t.dn,borderUpColor:t.up,borderDownColor:t.dn,wickUpColor:t.up,wickDownColor:t.dn}); s.setData(data.map(function(c){return {time:c.time,open:c.open,high:c.high,low:c.low,close:c.close};})); }
       else { var up=data[data.length-1].close>=data[0].close; var col=up?t.up:t.dn; s=chart.addAreaSeries({lineColor:col,topColor:col+'44',bottomColor:col+'00',lineWidth:2}); s.setData(data.map(function(c){return {time:c.time,value:c.close};})); }
+      // 縮放限制：縮到「起迄剛好佔滿」就不能再縮(鎖左右邊界);放大最多看 10 個交易日
+      chart.timeScale().applyOptions({fixLeftEdge:true, fixRightEdge:true});
       chart.timeScale().fitContent();
+      var _zClamp=false, _minSpan=9;  // 10 根 K = 邏輯跨度 9
+      chart.timeScale().subscribeVisibleLogicalRangeChange(function(r){
+        if(!r||_zClamp)return; var span=r.to-r.from;
+        if(span<_minSpan){ _zClamp=true; try{chart.timeScale().setVisibleLogicalRange({from:r.to-_minSpan, to:r.to});}catch(e){} setTimeout(function(){_zClamp=false;},0); }
+      });
       var last=data[data.length-1], first=data[0], chg=last.close-first.close, pct=chg/first.close*100, up2=chg>=0;
       el('hxStat').innerHTML='<div class="hx-val '+(up2?'hx-up':'hx-dn')+'">'+Number(last.close).toLocaleString()+'</div><div class="hx-sub">'+idx.n+' · '+(up2?'▲':'▼')+' '+(chg>=0?'+':'')+pct.toFixed(2)+'%（'+RMAP[rng].label+'）</div>';
     }
