@@ -1158,6 +1158,7 @@
     .mn-inner { max-width:1200px; margin:0 auto; display:flex; align-items:center; gap:1px; flex-wrap:wrap; }
     .mn-item { display:inline-flex; align-items:center; gap:4px; padding:12px 11px; font-size:14px; font-weight:600; color:var(--text-muted); cursor:pointer; white-space:nowrap; text-decoration:none; }
     .mn-item:hover, .mn-grp:hover .mn-item { color:var(--text); }
+    #mainNav .mn-item.mn-active { color:#f4efe1 !important; background:var(--brand-green,#1e4031); border-radius:8px; font-weight:800; }
     .mn-item i { font-style:normal; font-size:9px; opacity:.7; }
     .mn-grp { position:relative; }
     .mn-menu { position:absolute; top:100%; left:0; min-width:186px; background:var(--surface); border:1px solid var(--border); border-radius:10px; box-shadow:0 14px 34px rgba(0,0,0,.28); padding:6px; display:none; z-index:60; }
@@ -2789,11 +2790,20 @@
     window._hxRetheme=function(){ if(el('homeView')&&el('homeView').style.display!=='none') load(); };
     // 通用視圖註冊：新增大項只要在此登記 {el:容器id, show:全域函式名}，並提供對應元素/函式即可
     window._VIEWS = window._VIEWS || {}; window._VIEWS.home={el:'homeView',show:'_hxShow'}; window._VIEWS.focus={el:'focusView',show:'_focusShow'};
+    var NAVMAP={home:'首頁',focus:'今日焦點',todayindex:'今日焦點',screen:'選股',box:'選股',limitup:'選股',
+      themes:'題材族群',sectors:'題材族群',greed:'市場觀察',inst:'市場觀察',news:'每日新聞',
+      etf:'ETF',etfcons:'ETF',etfrev:'ETF',etfdiv:'ETF',etfhold:'ETF',etfsim:'ETF',etfheavy:'ETF',etfprem:'ETF',etfflow:'ETF',etfperf:'ETF'};
+    function _setNav(v){
+      var label=NAVMAP[v]; var items=document.querySelectorAll('#mainNav .mn-item');
+      for(var i=0;i<items.length;i++){ var t=(items[i].textContent||'').replace(/[▾\s]/g,'');
+        var on=!!label && t.indexOf(label.replace(/\s/g,''))===0; items[i].classList.toggle('mn-active',on); }
+    }
     window._showView=function(v){
       var fw=document.querySelector('.form-wrap'), ra=el('resultsArea'), cfg=window._VIEWS[v];
       Object.keys(window._VIEWS).forEach(function(k){var e=el(window._VIEWS[k].el); if(e)e.style.display='none';});
       if(cfg){ var e=el(cfg.el); if(e)e.style.display='block'; if(fw)fw.style.display='none'; if(ra)ra.style.display='none'; if(typeof window[cfg.show]==='function')window[cfg.show](); }
       else { if(fw)fw.style.display=''; if(ra)ra.style.display=''; }
+      try{ _setNav(cfg?v:''); }catch(_){}
     };
     document.addEventListener('click',function(e){
       var o=e.target.closest('[data-hxo]'); if(o){var k=o.dataset.hxo;open=open===k?null:k;renderCtl();return;}
@@ -3067,7 +3077,7 @@
       var topics=g.topics.slice().sort(function(a,b){return String(b.published_at||'').localeCompare(String(a.published_at||''));});
       var stocks=g.stocks.map(function(c){return chip(c.code,c.name);}).join('');
       var ind=SEC2IND[g.sector];
-      var expand=ind?'<button class="ti-expand" data-ind="'+esc(ind)+'">＋ 展開「'+esc(ind)+'」全部上市股</button><div class="ti-stocks" id="tiIndStocks" style="margin-top:8px"></div>':'';
+      var expand=ind?'<button class="ti-expand" data-ind="'+esc(ind)+'" data-open="0">＋ 展開「'+esc(ind)+'」全部上市股</button><div class="ti-stocks" id="tiIndStocks" style="margin-top:8px"></div>':'';
       var news=topics.map(function(t){var srcs=srcOf(t);var link=srcs.length?'<a class="ti-src" href="'+esc(srcs[0])+'" target="_blank" rel="noopener">新聞來源 ↗</a>':'';
         return '<div class="ti-news"><div class="ti-news-t">'+(t.published_at?'<span class="ti-news-d">'+esc(t.published_at)+'</span> ':'')+esc(t.topic)+'</div>'+(t.summary?'<div class="ti-news-s">'+esc(t.summary)+'</div>':'')+link+'</div>';}).join('');
       box.innerHTML='<div class="ti-back" onclick="window._tiList()">← 返回今日索引</div>'
@@ -3090,7 +3100,13 @@
     window._openTheme=function(name){ _sel=name; try{window._showView('todayindex');}catch(e){} };
     window._VIEWS=window._VIEWS||{}; window._VIEWS.todayindex={el:'todayindexView',show:'_tiShow'};
     document.addEventListener('click',function(e){var c=e.target.closest('#tiBody .ti-card');if(!c)return;var i=+c.dataset.i;if(_themes&&_themes[i]){_sel=_themes[i].sector;renderDetail(_themes[i]);}});
-    document.addEventListener('click',function(e){var b=e.target.closest('.ti-expand');if(!b)return;var ind=b.dataset.ind;b.textContent='載入中…';loadInd(function(){var box=el('tiIndStocks');if(!box)return;var codes=Object.keys(_indmap).filter(function(c){return _indmap[c]===ind;}).sort();box.innerHTML=codes.length?codes.map(function(c){return chip(c,(window._names&&window._names[c])||c);}).join(''):'<div class="fc-empty">查無</div>';b.style.display='none';});});
+    document.addEventListener('click',function(e){var b=e.target.closest('.ti-expand');if(!b)return;var ind=b.dataset.ind;var box=el('tiIndStocks');
+      if(b.dataset.open==='1'){ if(box)box.innerHTML=''; b.dataset.open='0'; b.textContent='＋ 展開「'+ind+'」全部上市股'; return; }
+      b.textContent='載入中…';
+      loadInd(function(){ if(!box)return; var codes=Object.keys(_indmap).filter(function(c){return _indmap[c]===ind;}).sort();
+        box.innerHTML=codes.length?codes.map(function(c){return chip(c,(window._names&&window._names[c])||c);}).join(''):'<div class="fc-empty">查無</div>';
+        b.dataset.open='1'; b.textContent='－ 收起「'+ind+'」全部上市股'; });
+    });
   })();
   </script>
 
