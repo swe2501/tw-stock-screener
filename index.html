@@ -1325,6 +1325,7 @@
       .hp-inst{grid-template-columns:repeat(2,1fr);} .hp-grid{grid-template-columns:1fr;} .hp-struct{grid-template-columns:1fr;}
     }
     /* ── 跟誰學 兩欄式 hero + 今日判讀卡(全寬大看板,佔約 2/3 螢幕)── */
+    html,body{overflow-x:hidden;max-width:100%;}
     .gs-hero{position:relative;margin:0 calc(50% - 50vw) 22px;min-height:64vh;display:flex;align-items:center;padding:34px 0;overflow:hidden;background:var(--bg) repeating-linear-gradient(0deg,transparent,transparent 27px,rgba(30,64,49,.04) 27px,rgba(30,64,49,.04) 28px);border-bottom:2px solid var(--brand-green);}
     .gs-hero-inner{width:min(1180px,100% - 36px);margin:0 auto;position:relative;z-index:1;}
     .gs-hero-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:34px;align-items:start;}
