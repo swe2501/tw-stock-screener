@@ -1450,6 +1450,9 @@
     .ti-news{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:0 6px 6px 0;padding:12px 14px;margin-bottom:10px;}
     .ti-news-t{font-size:14px;font-weight:700;color:var(--text);line-height:1.5;}
     .ti-news-s{font-size:12.5px;color:var(--text-muted);line-height:1.8;margin-top:5px;}
+    .ti-news-d{font-size:11px;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums;margin-right:4px;}
+    .ti-expand{margin-top:10px;font-size:12.5px;font-weight:700;color:var(--brand-green);background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:8px 14px;cursor:pointer;}
+    .ti-expand:hover{border-color:var(--accent);color:var(--accent);}
     @media(max-width:900px){.ti-grid{grid-template-columns:1fr;}}
   </style>
   <div id="todayindexView" style="display:none">
@@ -3046,17 +3049,34 @@
         return '<div class="ti-card" data-i="'+i+'"><div class="no">'+('0'+(i+1)).slice(-2)+'</div><div class="t">'+esc(g.sector)+'</div><div class="m"><span>熱度 '+g.heat+'</span><span>'+g.stocks.length+' 檔</span><span>'+g.topics.length+' 則新聞</span></div>'+(cs?'<div class="cs">'+esc(cs)+'</div>':'')+'</div>';
       }).join('')+'</div>';
     }
+    /* 題材 → 產業別對照(只放能乾淨對到單一產業的;概念型如AI伺服器/散熱/機器人不放,不顯示展開鈕)*/
+    var SEC2IND={'半導體':'半導體業','記憶體':'半導體業','矽晶圓':'半導體業','IC設計':'半導體業','晶圓代工':'半導體業','封測':'半導體業','半導體測試':'半導體業','先進封裝':'半導體業','CoWoS':'半導體業','矽光子':'半導體業',
+      '被動元件':'電子零組件業','PCB':'電子零組件業','印刷電路板':'電子零組件業','銅箔基板':'電子零組件業','連接器':'電子零組件業','電子零組件':'電子零組件業',
+      '面板':'光電業','光電':'光電業','LED':'光電業',
+      '網通':'通信網路業','通信':'通信網路業','光通訊':'通信網路業','衛星':'通信網路業','低軌衛星':'通信網路業',
+      '電子通路':'電子通路業','資訊服務':'資訊服務業','軟體':'資訊服務業',
+      '航運':'航運業','貨櫃':'航運業','散裝':'航運業','鋼鐵':'鋼鐵工業','塑化':'塑膠工業','塑膠':'塑膠工業','化工':'化學工業','化學':'化學工業',
+      '生技':'生技醫療業','生技醫療':'生技醫療業','製藥':'生技醫療業','醫療':'生技醫療業','金融':'金融保險','銀行':'金融保險','壽險':'金融保險','證券':'金融保險',
+      '重電':'電機機械','電機':'電機機械','機械':'電機機械','電線電纜':'電器電纜','電纜':'電器電纜','汽車':'汽車工業','電動車':'汽車工業','車電':'汽車工業',
+      '綠能':'綠能環保','太陽能':'綠能環保','風電':'綠能環保','儲能':'綠能環保','觀光':'觀光餐旅','餐飲':'觀光餐旅','食品':'食品工業','紡織':'紡織纖維','水泥':'水泥工業','營建':'建材營造','油電':'油電燃氣業'};
+    var _indmap=null;
+    function loadInd(cb){ if(_indmap){cb();return;} fetch('/api/screen?stat=industry').then(function(r){return r.json();}).then(function(m){_indmap=m||{};cb();}).catch(function(){_indmap={};cb();}); }
+    function chip(code,name){return '<div class="ti-stk" onclick="_openStock(\''+esc(code)+'\',\''+esc(name)+'\')"><span><b>'+esc(code)+'</b> '+esc(name)+'</span><span style="color:var(--text-muted)">K線›</span></div>';}
     function renderDetail(g){
       var box=el('tiBody');if(!box)return;
-      var stocks=g.stocks.map(function(c){return '<div class="ti-stk" onclick="_openStock(\''+esc(c.code)+'\',\''+esc(c.name)+'\')"><span><b>'+esc(c.code)+'</b> '+esc(c.name)+'</span><span style="color:var(--text-muted)">K線›</span></div>';}).join('');
-      var news=g.topics.map(function(t){var srcs=srcOf(t);var link=srcs.length?'<a class="ti-src" href="'+esc(srcs[0])+'" target="_blank" rel="noopener">新聞來源 ↗</a>':'';
-        return '<div class="ti-news"><div class="ti-news-t">'+esc(t.topic)+'</div>'+(t.summary?'<div class="ti-news-s">'+esc(t.summary)+'</div>':'')+link+'</div>';}).join('');
+      var topics=g.topics.slice().sort(function(a,b){return String(b.published_at||'').localeCompare(String(a.published_at||''));});
+      var stocks=g.stocks.map(function(c){return chip(c.code,c.name);}).join('');
+      var ind=SEC2IND[g.sector];
+      var expand=ind?'<button class="ti-expand" data-ind="'+esc(ind)+'">＋ 展開「'+esc(ind)+'」全部上市股</button><div class="ti-stocks" id="tiIndStocks" style="margin-top:8px"></div>':'';
+      var news=topics.map(function(t){var srcs=srcOf(t);var link=srcs.length?'<a class="ti-src" href="'+esc(srcs[0])+'" target="_blank" rel="noopener">新聞來源 ↗</a>':'';
+        return '<div class="ti-news"><div class="ti-news-t">'+(t.published_at?'<span class="ti-news-d">'+esc(t.published_at)+'</span> ':'')+esc(t.topic)+'</div>'+(t.summary?'<div class="ti-news-s">'+esc(t.summary)+'</div>':'')+link+'</div>';}).join('');
       box.innerHTML='<div class="ti-back" onclick="window._tiList()">← 返回今日索引</div>'
         +'<div class="ti-detail-h">'+esc(g.sector)+'</div>'
-        +'<div class="ti-detail-m"><span>熱度 '+g.heat+'</span><span>'+g.stocks.length+' 檔相關類股</span><span>'+g.topics.length+' 則相關新聞</span></div>'
-        +'<div class="ti-sech">相關類股</div>'
+        +'<div class="ti-detail-m"><span>熱度 '+g.heat+'</span><span>'+g.stocks.length+' 檔相關類股</span><span>'+topics.length+' 則相關新聞</span></div>'
+        +'<div class="ti-sech">相關類股 <span style="font-weight:400;color:var(--text-muted);font-size:11px">近一週新聞出現</span></div>'
         +'<div class="ti-stocks">'+(stocks||'<div class="fc-empty">暫無相關類股</div>')+'</div>'
-        +'<div class="ti-sech">新聞摘要</div>'+(news||'<div class="fc-empty">暫無新聞</div>');
+        + expand
+        +'<div class="ti-sech">新聞摘要 <span style="font-weight:400;color:var(--text-muted);font-size:11px">近 7 天 · 由新到舊</span></div>'+(news||'<div class="fc-empty">暫無新聞</div>');
     }
     function load(cb){
       if(_themes){cb&&cb();return;}
@@ -3070,6 +3090,7 @@
     window._openTheme=function(name){ _sel=name; try{window._showView('todayindex');}catch(e){} };
     window._VIEWS=window._VIEWS||{}; window._VIEWS.todayindex={el:'todayindexView',show:'_tiShow'};
     document.addEventListener('click',function(e){var c=e.target.closest('#tiBody .ti-card');if(!c)return;var i=+c.dataset.i;if(_themes&&_themes[i]){_sel=_themes[i].sector;renderDetail(_themes[i]);}});
+    document.addEventListener('click',function(e){var b=e.target.closest('.ti-expand');if(!b)return;var ind=b.dataset.ind;b.textContent='載入中…';loadInd(function(){var box=el('tiIndStocks');if(!box)return;var codes=Object.keys(_indmap).filter(function(c){return _indmap[c]===ind;}).sort();box.innerHTML=codes.length?codes.map(function(c){return chip(c,(window._names&&window._names[c])||c);}).join(''):'<div class="fc-empty">查無</div>';b.style.display='none';});});
   })();
   </script>
 

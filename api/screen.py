@@ -1615,6 +1615,9 @@ class handler(BaseHTTPRequestHandler):
         # 股票代號→名稱對照（前端各視圖共用；純靜態，不查 DB）
         if (qs.get("stat") or [""])[0] == "names":
             return self._send_json(200, _STOCK_NAMES)
+        # 股票代號→產業別對照（今日索引「展開該產業全部上市股」用；純靜態）
+        if (qs.get("stat") or [""])[0] == "industry":
+            return self._send_json(200, _STOCK_INDUSTRY)
         # 今日焦點三榜（漲幅/跌幅/爆量）：頁面 _showView('focus') 用
         if (qs.get("stat") or [""])[0] == "focus":
             try:
