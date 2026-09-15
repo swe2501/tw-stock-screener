@@ -1445,7 +1445,11 @@
     .ti-stk{background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:9px 12px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px;}
     .ti-stk:hover{border-color:var(--accent);}
     .ti-stk b{color:var(--brand-green);}
-    .ti-src{display:inline-block;margin-top:14px;font-size:12px;color:var(--brand-green);border-bottom:1px solid var(--accent);text-decoration:none;}
+    .ti-src{display:inline-block;margin-top:8px;font-size:12px;color:var(--brand-green);border-bottom:1px solid var(--accent);text-decoration:none;}
+    .ti-sech{font-size:14px;font-weight:800;color:var(--brand-green);margin:18px 0 10px;padding-bottom:5px;border-bottom:1px solid var(--border);}
+    .ti-news{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:0 6px 6px 0;padding:12px 14px;margin-bottom:10px;}
+    .ti-news-t{font-size:14px;font-weight:700;color:var(--text);line-height:1.5;}
+    .ti-news-s{font-size:12.5px;color:var(--text-muted);line-height:1.8;margin-top:5px;}
     @media(max-width:900px){.ti-grid{grid-template-columns:1fr;}}
   </style>
   <div id="todayindexView" style="display:none">
@@ -2814,13 +2818,16 @@
     function cls(v){return v>0?'hp-up':(v<0?'hp-dn':'');}
     function arrow(v){return v>0?'▲ ':(v<0?'▼ ':'');}
 
-    /* 今日觀察索引（hot_topics）*/
+    /* 今日觀察索引：用 hot_topics 的乾淨題材分類(sector),非新聞標題 */
     function loadTags(){
-      sb('hot_topics?select=topic,heat&order=heat.desc&limit=6').then(function(a){
+      sb('hot_topics?select=sector,heat&order=heat.desc&limit=60').then(function(a){
         var box=el('hpTags'); if(!box)return;
         var head='<span class="gs-tags-lbl">今日觀察索引</span>';
         if(!Array.isArray(a)||!a.length){box.innerHTML=head+'<span class="fc-empty">—</span>';return;}
-        box.innerHTML=head+a.map(function(t,i){var full=String(t.topic||''),s=full.slice(0,14);return '<span class="gs-tag" data-theme="'+full.replace(/"/g,'&quot;')+'"><i>'+('0'+(i+1)).slice(-2)+'</i>'+s+'</span>';}).join('');
+        var seen={},list=[];
+        a.forEach(function(t){var s=(t.sector||'').trim();if(!s||seen[s])return;seen[s]=1;list.push(s);});
+        list=list.slice(0,6);
+        box.innerHTML=head+list.map(function(s,i){return '<span class="gs-tag" data-theme="'+s.replace(/"/g,'&quot;')+'"><i>'+('0'+(i+1)).slice(-2)+'</i>'+String(s).replace(/</g,'&lt;')+'</span>';}).join('');
       });
     }
 
@@ -3015,40 +3022,54 @@
   (function(){
     var el=function(id){return document.getElementById(id);};
     function sb(path){var U=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'',K=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';return fetch(U+'/rest/v1/'+path,{headers:{apikey:K,Authorization:'Bearer '+K}}).then(function(r){return r.json();}).catch(function(){return null;});}
-    var _data=null,_sel=null;
+    var _themes=null,_sel=null;
     function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
     function nm(code){return (window._names&&window._names[code])||'';}
     function codesOf(t){var c=t.codes;if(typeof c==='string'){try{c=JSON.parse(c);}catch(e){c=[];}}return Array.isArray(c)?c:[];}
+    function srcOf(t){var s=t.source_urls;if(typeof s==='string'){try{s=JSON.parse(s);}catch(e){s=[s];}}return Array.isArray(s)?s:(s?[s]:[]);}
+    /* 依 sector 歸類成題材 */
+    function group(rows){
+      var map={};
+      rows.forEach(function(t){var s=(t.sector||'其他').trim()||'其他';
+        var g=map[s]||(map[s]={sector:s,heat:0,topics:[],stocks:[],_seen:{}});
+        if((t.heat||0)>g.heat)g.heat=t.heat||0;
+        g.topics.push(t);
+        codesOf(t).forEach(function(c){var code=(c&&c.code)||c;if(code&&!g._seen[code]){g._seen[code]=1;g.stocks.push({code:code,name:(c&&c.name)||nm(code)});}});
+      });
+      return Object.keys(map).map(function(k){return map[k];}).sort(function(a,b){return b.heat-a.heat;});
+    }
     function renderList(){
       var box=el('tiBody');if(!box)return;
-      if(!Array.isArray(_data)||!_data.length){box.innerHTML='<div class="fc-empty">今日無題材資料</div>';return;}
-      box.innerHTML='<div class="ti-grid">'+_data.map(function(t,i){
-        var cs=codesOf(t).slice(0,6).map(function(c){return (c&&(c.name||c.code))||'';}).filter(Boolean).join('、');
-        return '<div class="ti-card" data-i="'+i+'"><div class="no">'+('0'+(i+1)).slice(-2)+'</div><div class="t">'+esc(t.topic)+'</div><div class="m">'+(t.sector?'<span>'+esc(t.sector)+'</span>':'')+(t.heat!=null?'<span>熱度 '+esc(t.heat)+'</span>':'')+'<span>'+codesOf(t).length+' 檔</span></div>'+(cs?'<div class="cs">'+esc(cs)+'</div>':'')+'</div>';
+      if(!Array.isArray(_themes)||!_themes.length){box.innerHTML='<div class="fc-empty">今日無題材資料</div>';return;}
+      box.innerHTML='<div class="ti-grid">'+_themes.map(function(g,i){
+        var cs=g.stocks.slice(0,6).map(function(c){return c.name||c.code;}).filter(Boolean).join('、');
+        return '<div class="ti-card" data-i="'+i+'"><div class="no">'+('0'+(i+1)).slice(-2)+'</div><div class="t">'+esc(g.sector)+'</div><div class="m"><span>熱度 '+g.heat+'</span><span>'+g.stocks.length+' 檔</span><span>'+g.topics.length+' 則新聞</span></div>'+(cs?'<div class="cs">'+esc(cs)+'</div>':'')+'</div>';
       }).join('')+'</div>';
     }
-    function renderDetail(t){
-      var box=el('tiBody');if(!box)return;var codes=codesOf(t);
-      var stocks=codes.map(function(c){var code=(c&&c.code)||c;var name=(c&&c.name)||nm(code);return '<div class="ti-stk" onclick="_openStock(\''+esc(code)+'\',\''+esc(name)+'\')"><span><b>'+esc(code)+'</b> '+esc(name)+'</span><span style="color:var(--text-muted)">K線›</span></div>';}).join('');
+    function renderDetail(g){
+      var box=el('tiBody');if(!box)return;
+      var stocks=g.stocks.map(function(c){return '<div class="ti-stk" onclick="_openStock(\''+esc(c.code)+'\',\''+esc(c.name)+'\')"><span><b>'+esc(c.code)+'</b> '+esc(c.name)+'</span><span style="color:var(--text-muted)">K線›</span></div>';}).join('');
+      var news=g.topics.map(function(t){var srcs=srcOf(t);var link=srcs.length?'<a class="ti-src" href="'+esc(srcs[0])+'" target="_blank" rel="noopener">新聞來源 ↗</a>':'';
+        return '<div class="ti-news"><div class="ti-news-t">'+esc(t.topic)+'</div>'+(t.summary?'<div class="ti-news-s">'+esc(t.summary)+'</div>':'')+link+'</div>';}).join('');
       box.innerHTML='<div class="ti-back" onclick="window._tiList()">← 返回今日索引</div>'
-        +'<div class="ti-detail-h">'+esc(t.topic)+'</div>'
-        +'<div class="ti-detail-m">'+(t.sector?'<span>'+esc(t.sector)+'</span>':'')+(t.heat!=null?'<span>熱度 '+esc(t.heat)+'</span>':'')+'<span>'+codes.length+' 檔成分股</span></div>'
-        +(t.summary?'<div class="ti-detail-sum">'+esc(t.summary)+'</div>':'')
-        +'<div class="ti-stocks">'+(stocks||'<div class="fc-empty">此題材暫無成分股</div>')+'</div>'
-        +(t.source_url?'<a class="ti-src" href="'+esc(t.source_url)+'" target="_blank" rel="noopener">原始新聞來源 ↗</a>':'');
+        +'<div class="ti-detail-h">'+esc(g.sector)+'</div>'
+        +'<div class="ti-detail-m"><span>熱度 '+g.heat+'</span><span>'+g.stocks.length+' 檔相關類股</span><span>'+g.topics.length+' 則相關新聞</span></div>'
+        +'<div class="ti-sech">相關類股</div>'
+        +'<div class="ti-stocks">'+(stocks||'<div class="fc-empty">暫無相關類股</div>')+'</div>'
+        +'<div class="ti-sech">新聞摘要</div>'+(news||'<div class="fc-empty">暫無新聞</div>');
     }
     function load(cb){
-      if(_data){cb&&cb();return;}
-      sb('hot_topics?select=*&order=heat.desc&limit=30').then(function(a){_data=Array.isArray(a)?a:[];
-        _data.forEach(function(t){codesOf(t).forEach(function(c){if(c&&c.code&&c.name&&window._names)window._names[c.code]=c.name;});});
-        cb&&cb();});
+      if(_themes){cb&&cb();return;}
+      sb('hot_topics?select=*&order=heat.desc&limit=60').then(function(a){var rows=Array.isArray(a)?a:[];
+        rows.forEach(function(t){codesOf(t).forEach(function(c){if(c&&c.code&&c.name&&window._names)window._names[c.code]=c.name;});});
+        _themes=group(rows); cb&&cb();});
     }
     window._tiList=function(){_sel=null;renderList();};
     window._tiShow=function(){ el('todayindexView').style.display='block'; try{if(typeof window._loadNames==='function')window._loadNames();}catch(e){}
-      load(function(){ if(_sel){var t=_data.filter(function(x){return String(x.topic)===String(_sel);})[0]; if(t){renderDetail(t);return;} } renderList(); }); };
+      load(function(){ if(_sel){var g=_themes.filter(function(x){return String(x.sector)===String(_sel);})[0]; if(g){renderDetail(g);return;} } renderList(); }); };
     window._openTheme=function(name){ _sel=name; try{window._showView('todayindex');}catch(e){} };
     window._VIEWS=window._VIEWS||{}; window._VIEWS.todayindex={el:'todayindexView',show:'_tiShow'};
-    document.addEventListener('click',function(e){var c=e.target.closest('#tiBody .ti-card');if(!c)return;var i=+c.dataset.i;if(_data&&_data[i]){_sel=_data[i].topic;renderDetail(_data[i]);}});
+    document.addEventListener('click',function(e){var c=e.target.closest('#tiBody .ti-card');if(!c)return;var i=+c.dataset.i;if(_themes&&_themes[i]){_sel=_themes[i].sector;renderDetail(_themes[i]);}});
   })();
   </script>
 
