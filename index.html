@@ -2803,7 +2803,7 @@
       Object.keys(window._VIEWS).forEach(function(k){var e=el(window._VIEWS[k].el); if(e)e.style.display='none';});
       if(cfg){ var e=el(cfg.el); if(e)e.style.display='block'; if(fw)fw.style.display='none'; if(ra)ra.style.display='none'; if(typeof window[cfg.show]==='function')window[cfg.show](); }
       else { if(fw)fw.style.display=''; if(ra)ra.style.display=''; }
-      try{ _setNav(cfg?v:''); }catch(_){}
+      try{ _setNav(v); }catch(_){}
     };
     document.addEventListener('click',function(e){
       var o=e.target.closest('[data-hxo]'); if(o){var k=o.dataset.hxo;open=open===k?null:k;renderCtl();return;}
