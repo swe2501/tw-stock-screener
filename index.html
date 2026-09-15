@@ -1263,7 +1263,7 @@
     <div class="mn-grp"><span class="mn-item">個股 <i>▾</i></span><div class="mn-menu">
       <a onclick="_todo('K線圖(用上方搜尋開啟個股)')">K線圖</a><a onclick="_todo('公司資料庫')">公司資料庫</a><a onclick="_todo('估值九宮格')">估值九宮格</a></div></div>
     <a class="mn-item" onclick="_showView('news')">每日新聞</a>
-    <div class="mn-grp"><span class="mn-item">我的觀察 <i>▾</i></span><div class="mn-menu">
+    <div class="mn-grp" id="navWatchGrp"><span class="mn-item">我的觀察 <i>▾</i></span><div class="mn-menu">
       <a class="nav-auth" onclick="openWatchlist()">⭐ 觀察清單</a><a class="nav-auth" onclick="openBacktest()">📈 回測</a><a class="nav-owner" onclick="openSellTrack()">🔻 出場追蹤</a><a class="nav-auth" onclick="openAlertMgr()">🔔 我的警示</a></div></div>
   </div></nav>
 
@@ -6040,6 +6040,7 @@
       // 新版上方導覽:擁有者/登入限定項顯示控制
       document.querySelectorAll('.nav-owner').forEach(function(el){ el.style.display = _owner ? '' : 'none'; });
       document.querySelectorAll('.nav-auth').forEach(function(el){ el.style.display = loggedIn ? '' : 'none'; });
+      var _wg = document.getElementById('navWatchGrp'); if (_wg) _wg.style.display = loggedIn ? '' : 'none';  // 我的觀察整組登入才顯示(未登入不留空下拉)
       const emailEl = document.getElementById('authUserEmail');
       emailEl.style.display = loggedIn ? '' : 'none';
       if (loggedIn && _authUser) emailEl.textContent = _authUser.email;
