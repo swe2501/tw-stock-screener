@@ -1463,7 +1463,7 @@
       .gs-rtrack>i{position:absolute;top:-4px;width:16px;height:16px;border-radius:50%;background:#fff;border:3px solid var(--brand-green);transform:translateX(-50%);box-shadow:0 1px 4px rgba(0,0,0,.25);}
       .gs-maint>.gs-ruler>b{position:absolute;top:16px;transform:translateX(-50%);font-size:11px;font-weight:800;color:var(--brand-green);white-space:nowrap;}
       /* §5 期貨未平倉 / 散戶多空 */
-      .gs-fut{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+      .gs-fut{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
       .gs-futcard{border:1px solid var(--border);border-radius:10px;padding:13px 15px;}
       .gs-futcard .h{font-size:12.5px;font-weight:800;color:var(--brand-green);margin-bottom:8px;}
       .gs-futcard .big{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;}
@@ -3129,27 +3129,33 @@
       });
     }
 
-    /* §5 台股期貨未平倉（外資）+ 散戶多空比（玩股網現成口徑）*/
+    /* §5 台股期貨未平倉（外資/投信/自營）+ 小台/微台散戶多空比（玩股網現成口徑）*/
     function loadFut(){
-      sb('market_indicators?select=*&order=trade_date.desc&limit=1').then(function(a){
+      sb('futures_daily?select=*&order=trade_date.desc&limit=1').then(function(a){
         var box=el('hpFut'); if(!box)return;
         var d=(Array.isArray(a)&&a[0])||null;
         if(!d){box.innerHTML='<div class="fc-empty">今日無資料</div>';return;}
+        function sub2(lab,v){if(v==null)return '';return '<span style="margin-right:14px">'+lab+' <b class="'+(v>=0?'hp-up':'hp-dn')+'">'+(v>0?'+':'')+(+v).toLocaleString()+'</b></span>';}
         var html='';
-        // 外資台指期未平倉（口數，正=淨多）
+        // 卡1：法人台指期未平倉（外資為主）
         if(d.foreign_oi!=null){var oi=+d.foreign_oi;
-          html+='<div class="gs-futcard"><div class="h">外資 台指期未平倉（淨口數）</div>'
-            +'<div class="big '+(oi>=0?'hp-up':'hp-dn')+'">'+(oi>0?'+':'')+oi.toLocaleString()+'</div>'
-            +'<div class="sub">正值＝淨多單、負值＝淨空單。外資期貨部位常領先現貨方向。'
-            +(d.foreign_oi_chg!=null?'　前日增減 '+(d.foreign_oi_chg>0?'+':'')+(+d.foreign_oi_chg).toLocaleString()+' 口':'')+'</div></div>';}
-        // 散戶多空比
-        if(d.retail_ls!=null){var r=+d.retail_ls,lo=Math.max(0,r),sh=Math.max(0,-r);
-          var tot=Math.abs(r)||1,lw=r>=0?Math.min(100,Math.abs(r)*2):50,sw=r<0?Math.min(100,Math.abs(r)*2):50;
-          html+='<div class="gs-futcard"><div class="h">散戶多空比</div>'
-            +'<div class="big '+(r>=0?'hp-up':'hp-dn')+'">'+(r>0?'+':'')+r.toFixed(1)+'%</div>'
-            +'<div class="gs-lsbar"><span class="lo" style="width:'+(r>=0?Math.min(100,50+Math.abs(r)):50-Math.min(50,Math.abs(r)))+'%"></span><span class="sh" style="width:'+(r>=0?50-Math.min(50,Math.abs(r)):Math.min(100,50+Math.abs(r)))+'%"></span></div>'
-            +'<div class="sub">散戶偏多時常為反指標；比值＝散戶多單÷空單推估（玩股網口徑）。</div></div>';}
-        box.innerHTML=html||'<div class="fc-empty">期貨資料整備中</div>';
+          html+='<div class="gs-futcard"><div class="h">外資 臺股期貨未平倉淨額</div>'
+            +'<div class="big '+(oi>=0?'hp-up':'hp-dn')+'">'+(oi>0?'+':'')+oi.toLocaleString()+' <span style="font-size:13px;font-weight:600;color:var(--text-muted)">口</span></div>'
+            +'<div class="sub">'+sub2('投信',d.trust_oi)+sub2('自營',d.dealer_oi)+'</div>'
+            +'<div class="sub">正值＝淨多、負值＝淨空。外資期貨部位常領先現貨方向。</div></div>';}
+        // 卡2/3：小台、微台散戶多空比（反向指標）
+        function retail(name,ls,lg,sh){
+          if(ls==null)return '';
+          var tot=(lg||0)+(sh||0)||1,lw=(lg||0)/tot*100;
+          return '<div class="gs-futcard"><div class="h">'+name+'散戶多空比</div>'
+            +'<div class="big '+(ls>=0?'hp-up':'hp-dn')+'">'+(ls>0?'+':'')+(+ls).toFixed(2)+'%</div>'
+            +'<div class="gs-lsbar"><span class="lo" style="width:'+lw+'%"></span><span class="sh" style="width:'+(100-lw)+'%"></span></div>'
+            +'<div class="sub"><span class="hp-up">散戶做多 '+(lg!=null?(+lg).toLocaleString():'—')+'</span> · <span class="hp-dn">散戶做空 '+(sh!=null?(+sh).toLocaleString():'—')+'</span> 口</div></div>';
+        }
+        html+=retail('小台 ',d.mtx_ls,d.mtx_long,d.mtx_short);
+        html+=retail('微台 ',d.tmf_ls,d.tmf_long,d.tmf_short);
+        box.innerHTML=(html||'<div class="fc-empty">期貨資料整備中</div>')
+          +'<div style="grid-column:1/-1;font-size:11.5px;color:var(--text-muted);margin-top:2px;line-height:1.7">散戶留倉＝主要月份全市場未平倉 − 三大法人；多空比＝(散戶多單−空單)÷全市場未平倉。散戶偏多（正值）常作反向觀察，不宜單獨當買賣訊號。</div>';
       });
     }
 
@@ -3160,7 +3166,8 @@
         +'§2 融資融券：TWSE MI_MARGN（融資餘額仟元、融券張）；官股券商＝兆豐所有分點當日買賣（本機分點資料，金額＝Σ張×成交均價）；富台指／VIX／美元台幣＝玩股網即時。'
         +'§3 市場廣度：上市當日漲跌平與漲跌停家數。'
         +'§3A 盤面結構：各股當日成交金額（TWSE MI_INDEX）依產業歸「電子／金融／其他傳產」三類算佔比；門檻沿用電子&gt;60% 防線、金融&gt;10% 警戒。'
-        +'§4 融資動能背離：加權指數(^TWII)與上市融資餘額的近 5 交易日變化方向比較。'
+        +'§4 融資動能背離：加權指數(^TWII)與上市融資餘額的 5／10／20／60 交易日變化比較；全市場融資維持率＝玩股網即時實測（含ETF），量表警戒帶 140／160／185% 沿用合夥人分級。'
+        +'§5 期貨：外資／投信／自營臺股期貨未平倉淨額＝玩股網法人及大額未平倉；小台／微台散戶多空比＝(散戶多單−空單)÷主要月份全市場未平倉，散戶＝全市場未平倉−三大法人（玩股網現成口徑）。'
         +'KPI 加權指數與大盤走勢圖＝Yahoo ^TWII。';
     }
 
