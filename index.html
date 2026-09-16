@@ -1521,21 +1521,56 @@
       .cb-conv{margin-top:8px;font-size:12px;color:var(--text-muted);}
       .cb-conv strong{color:var(--brand-green);font-weight:800;font-variant-numeric:tabular-nums;}
       @media(max-width:900px){.cb-pulse{grid-template-columns:repeat(2,1fr);}.cb-ov{grid-template-columns:1fr;}}
-      @media(max-width:760px){.gs-bd2,.gs-fut{grid-template-columns:1fr;}}
+      /* §3A 盤面結構判讀 */
+      .gs-struct header{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:12px;}
+      .gs-struct header .t{font-family:"Noto Serif TC",Georgia,serif;font-size:18px;font-weight:800;color:var(--brand-green);}
+      .gs-struct header small{font-size:11px;color:var(--text-muted);margin-left:8px;}
+      .gs-struct header time{font-size:11px;color:var(--text-muted);font-variant-numeric:tabular-nums;}
+      .gs-ststat{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap;}
+      .gs-ststat em{font-style:normal;font-weight:800;font-size:13px;padding:4px 12px;border-radius:999px;}
+      .gs-ststat.st em{}
+      .gs-ststat em.st-hot{background:rgba(180,40,40,.12);color:var(--red);} .gs-ststat em.st-warn{background:rgba(200,140,20,.14);color:#a5730f;}
+      .gs-ststat em.st-ok,.gs-ststat em.st-rot{background:rgba(30,120,60,.12);color:var(--green);} .gs-ststat em.st-n{background:var(--surface2);color:var(--text-muted);}
+      .gs-ststat p{font-size:12.5px;color:var(--text-muted);margin:0;}
+      .gs-shgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+      .gs-shrow{border:1px solid var(--border);border-radius:10px;padding:12px 14px;}
+      .gs-shrow>span{display:block;font-size:13px;font-weight:800;color:var(--text);margin-bottom:8px;}
+      .gs-shrow>span small{display:block;font-size:10.5px;color:var(--text-muted);font-weight:600;margin-top:2px;}
+      .gs-shrow>i{display:block;height:8px;border-radius:4px;background:var(--surface2);overflow:hidden;margin-bottom:6px;}
+      .gs-shrow>i u{display:block;height:100%;background:linear-gradient(90deg,var(--brand-green),var(--accent));}
+      .gs-shrow>b{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;}
+      .gs-shdet{margin-top:14px;font-size:12px;color:var(--text-muted);}
+      .gs-shdet summary{cursor:pointer;color:var(--brand-green);font-weight:700;}
+      .gs-shdet div{margin-top:8px;line-height:1.9;} .gs-shdet b{color:var(--text);}
+      /* §6 臺指選擇權 */
+      .gs-opt{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+      .gs-optcard{border:1px solid var(--border);border-radius:10px;padding:14px 16px;}
+      .gs-optcard>header{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
+      .gs-optcard>header h4{margin:0;font-size:15px;font-weight:800;color:var(--brand-green);}
+      .gs-optcard>header .stances{display:flex;flex-direction:column;gap:3px;align-items:flex-end;}
+      .gs-optcard>header .stances span{font-size:11px;font-weight:700;color:var(--text-muted);white-space:nowrap;}
+      .gs-opttracks{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+      .gs-opttrack strong{display:block;font-size:11px;color:var(--text-muted);font-weight:800;margin-bottom:8px;letter-spacing:.04em;}
+      .gs-optrow{display:flex;align-items:center;gap:8px;margin-bottom:9px;font-size:12px;}
+      .gs-optrow .cd{font-weight:800;font-size:11px;padding:2px 7px;border-radius:5px;}
+      .gs-optrow .cd.buy{background:rgba(180,40,40,.12);color:var(--red);} .gs-optrow .cd.sell{background:rgba(30,120,60,.12);color:var(--green);}
+      .gs-optrow small{color:var(--text-muted);flex:1;} .gs-optrow b{font-variant-numeric:tabular-nums;font-weight:800;}
+      .gs-optfoot{border-top:1px solid var(--border);margin-top:6px;padding-top:8px;font-size:11.5px;color:var(--text-muted);}
+      @media(max-width:760px){.gs-bd2,.gs-fut,.gs-opt,.gs-shgrid{grid-template-columns:1fr;}.gs-opttracks{grid-template-columns:1fr 1fr;}}
     </style>
     <section class="hp-sec"><div class="hp-sec-h"><span class="hp-sec-no">§1</span> 現貨三大法人買賣超 <span class="hp-sec-src" id="hpInstSrc">上市 TWSE · 上櫃 TPEx（金額）</span></div><div id="hpInst"><div class="fc-empty">載入中…</div></div></section>
 
-    <section class="hp-sec"><div class="hp-sec-h"><span class="hp-sec-no">§2</span> 融資融券餘額 <span class="hp-sec-src">上市 TWSE · 上櫃 TPEx／玩股網（即時）</span></div><div id="hpMargin"><div class="fc-empty">載入中…</div></div></section>
+    <section class="hp-sec"><div class="hp-sec-h"><span class="hp-sec-no">§2</span> 融資融券餘額 <span class="hp-sec-src">上市採交易所彙總融資金額；上櫃採官方個股餘額彙整，券資比以張數計算</span></div><div id="hpMargin"><div class="fc-empty">載入中…</div></div></section>
 
-    <section class="hp-sec"><div class="hp-sec-h"><span class="hp-sec-no">§2A</span> 官股券商動向 <span class="hp-sec-src">八大公股券商 · 淨買賣超</span></div><div id="hpFunds" class="hp-grid"><div class="fc-empty">載入中…</div></div></section>
+    <section class="hp-sec"><div class="hp-sec-h"><span class="hp-sec-no">§3</span> 市場廣度 <span class="hp-sec-src">同時看上市與上櫃的漲跌平及漲跌停家數</span></div><div id="hpBreadth" class="gs-bd2"><div class="fc-empty">載入中…</div></div></section>
 
-    <section class="hp-sec"><div class="hp-sec-h"><span class="hp-sec-no">§3</span> 市場廣度 <span class="hp-sec-src">上市 TWSE · 上櫃 TPEx</span></div><div id="hpBreadth" class="gs-bd2"><div class="fc-empty">載入中…</div></div></section>
-
-    <section class="hp-sec"><div class="hp-sec-h"><span class="hp-sec-no">§3A</span> 盤面結構 · 上市成交比重 <span class="hp-sec-src">電子 &gt;60% 防線 · 金融 &gt;10% 警戒</span></div><div id="hpStruct" class="hp-struct"><div class="fc-empty">載入中…</div></div></section>
+    <section class="hp-sec"><div id="hpStruct" class="hp-struct"><div class="fc-empty">載入中…</div></div></section>
 
     <section class="hp-sec"><div class="hp-sec-h"><span class="hp-sec-no">§4</span> 融資動能背離與市場槓桿 <span class="hp-sec-src">加權指數 vs 上市融資餘額 · 全市場維持率</span></div><div id="hpDiverge" class="hp-verdict"><div class="fc-empty">載入中…</div></div></section>
 
-    <section class="hp-sec"><div class="hp-sec-h"><span class="hp-sec-no">§5</span> 台股期貨未平倉與散戶多空 <span class="hp-sec-src">外資期貨未平倉 · 散戶多空比（玩股網）</span></div><div id="hpFut" class="gs-fut"><div class="fc-empty">載入中…</div></div></section>
+    <section class="hp-sec"><div class="hp-sec-h"><span class="hp-sec-no">§5</span> 臺股期貨未平倉與散戶多空比 <span class="hp-sec-src">大台顯示法人留倉；小台與微台依主要月份全市場 OI 扣除三大法人計算散戶部位</span></div><div id="hpFut" class="gs-fut"><div class="fc-empty">載入中…</div></div></section>
+
+    <section class="hp-sec"><div class="hp-sec-h"><span class="hp-sec-no">§6</span> 臺指選擇權三大法人留倉策略矩陣 <span class="hp-sec-src">CALL 與 PUT 分離解析，依口數與契約金額判定偏多／偏空</span></div><div id="hpOpt" class="gs-opt"><div class="fc-empty">載入中…</div></div></section>
 
     <div class="fc-note" id="hpNote"></div>
   </div>
@@ -3057,21 +3092,24 @@
     /* §2 融資融券餘額:上市/上櫃兩列 */
     function loadMargin(){
       Promise.all([
-        sb('margin_market?select=date,fin_bal_k,fin_bal_prev_k,short_bal_lots&order=date.desc&limit=1'),
+        sb('margin_market?select=date,fin_bal_k,fin_bal_prev_k,short_bal_lots,short_bal_prev_lots&order=date.desc&limit=1'),
         sb('otc_market_daily?select=trade_date,fin_bal_k,fin_prev_k,short_lots,fin_maint&order=trade_date.desc&limit=1')
       ]).then(function(res){
         var box=el('hpMargin'); if(!box)return;
         var t=(res[0]||[])[0],o=(res[1]||[])[0];
         if(!t&&!o){box.innerHTML='<div class="fc-empty">今日無資料</div>';return;}
         var tseM=''; try{var mb=el('marginRatioBox'); if(mb&&mb.textContent){var x=mb.textContent.replace(/[^0-9.%]/g,''); if(x)tseM=x;}}catch(e){}
-        function bal(k){return '<td>'+(k!=null?(k/1e5).toFixed(2):'—')+'</td>';}
-        function chg(k,pk){if(k==null||pk==null)return '<td>—</td>';var d=(k-pk)/1e5;return '<td class="'+cls(d)+'">'+(d>0?'+':'')+d.toFixed(2)+'</td>';}
-        function lot(l){return '<td>'+(l!=null?Number(l).toLocaleString():'—')+'</td>';}
+        function f2y(k){return k/1e5;} // 仟元→億
+        function balc(k){return '<td>'+(k!=null?f2y(k).toFixed(2):'—')+'</td>';}
+        function chgc(k,pk){if(k==null||pk==null)return '<td>—</td>';var d=f2y(k)-f2y(pk);return '<td class="'+(d>=0?'hp-up':'hp-dn')+'">'+(d>0?'+':'')+d.toFixed(2)+'</td>';}
+        function lotc(l){return '<td>'+(l!=null?Number(l).toLocaleString():'—')+'</td>';}
+        function lchg(l,pl){if(l==null||pl==null)return '<td>—</td>';var d=l-pl;return '<td class="'+(d>=0?'hp-up':'hp-dn')+'">'+(d>0?'+':'')+Number(d).toLocaleString()+'</td>';}
+        function mkt(name,m){return '<td class="l mkt"><div>'+name+'</div><div style="font-size:10.5px;color:var(--text-muted);font-weight:600">'+(m||'—')+'</div></td>';}
         var rows='';
-        if(t)rows+='<tr><td class="l mkt">上市</td>'+bal(t.fin_bal_k)+chg(t.fin_bal_k,t.fin_bal_prev_k)+lot(t.short_bal_lots)+'<td>'+(tseM||'—')+'</td></tr>';
-        if(o)rows+='<tr><td class="l mkt">上櫃</td>'+bal(o.fin_bal_k)+chg(o.fin_bal_k,o.fin_prev_k)+lot(o.short_lots)+'<td>'+(o.fin_maint!=null?o.fin_maint+'%':'—')+'</td></tr>';
-        box.innerHTML='<table class="gs-tbl"><thead><tr><th class="l">市場</th><th>融資餘額(億)</th><th>融資增減(億)</th><th>融券餘額(張)</th><th>維持率</th></tr></thead><tbody>'+rows+'</tbody></table>'
-          +'<div style="font-size:11px;color:var(--text-muted);margin-top:10px;line-height:1.7">上市 TWSE MI_MARGN；上櫃即時取玩股網。融資維持率下降＝槓桿部位安全邊際縮小。</div>';
+        if(t)rows+='<tr>'+mkt('上市',tseM)+chgc(t.fin_bal_k,t.fin_bal_prev_k)+balc(t.fin_bal_k)+lchg(t.short_bal_lots,t.short_bal_prev_lots)+lotc(t.short_bal_lots)+'</tr>';
+        if(o)rows+='<tr>'+mkt('上櫃',o.fin_maint!=null?o.fin_maint+'%':'')+chgc(o.fin_bal_k,o.fin_prev_k)+balc(o.fin_bal_k)+'<td>—</td>'+lotc(o.short_lots)+'</tr>';
+        box.innerHTML='<table class="gs-tbl"><thead><tr><th class="l">市場<br><span style="font-weight:600;font-size:10px;color:var(--text-muted)">維持率估算</span></th><th>融資增減(億)</th><th>融資餘額(億)</th><th>融券增減(張)</th><th>融券餘額(張)</th></tr></thead><tbody>'+rows+'</tbody></table>'
+          +'<div style="font-size:11px;color:var(--text-muted);margin-top:10px;line-height:1.7">資券資料於盤後彙整；維持率為整體市場估算值。上市 TWSE MI_MARGN、上櫃玩股網即時。</div>';
       });
     }
 
@@ -3137,16 +3175,32 @@
       });
     }
 
-    /* §3A 盤面結構成交比重 */
+    /* §3A 盤面結構判讀（成交比重 + 研究門檻判讀,照合夥人 IndustryStructureCard）*/
     function loadStruct(){
-      sb('sector_turnover?select=date,elec_pct,fin_pct,trad_pct&order=date.desc&limit=1').then(function(a){
+      Promise.all([
+        sb('sector_turnover?select=date,elec_pct,fin_pct,trad_pct&order=date.desc&limit=1'),
+        sb('chip_brief_daily?select=taiex_pct,trade_date&order=trade_date.desc&limit=1')
+      ]).then(function(res){
         var box=el('hpStruct'); if(!box)return;
-        if(!Array.isArray(a)||!a.length){box.innerHTML='<div class="fc-empty">今日無資料</div>';return;}
-        var s=a[0];
-        function st(lab,thr,pct,warn){return '<div class="hp-st'+(warn?' warn':'')+'"><div class="lab">'+lab+(warn?'<span class="hp-badge d">'+warn+'</span>':'')+'</div><div class="thr">'+thr+'</div><div class="pct">'+Number(pct).toFixed(1)+'%</div><div class="bar"><i style="width:'+Math.min(100,pct)+'%"></i></div></div>';}
-        box.innerHTML=st('電子','門檻 60% 防線',s.elec_pct,s.elec_pct>60?'資金集中':'')
-          +st('金融','門檻 10% 警戒',s.fin_pct,s.fin_pct>10?'轉強':'')
-          +st('其他傳產','非電非金',s.trad_pct,'');
+        var s=(res[0]||[])[0],cb=(res[1]||[])[0]||{};
+        if(!s){box.innerHTML='<div class="fc-empty">今日無資料</div>';return;}
+        var elec=+s.elec_pct,fin=+s.fin_pct,trad=+s.trad_pct,mchg=cb.taiex_pct!=null?+cb.taiex_pct:0,topTradShare=0,topTradName='';
+        var st;
+        if(elec>85)st=['電子過熱失衡','成交過度集中，留意多殺多風險','hot'];
+        else if(mchg>0&&elec<55&&(fin>=10||topTradShare>=15))st=['產業結構背離','指數走高，但電子成交動能偏弱','warn'];
+        else if(elec>=65&&elec<=75)st=['健康主流攻堅','電子維持主流，盤面結構較完整','ok'];
+        else if(elec>=58&&elec<=62)st=['短暫良性輪動','非電子補漲，主流尚未明顯失速','rot'];
+        else st=['結構觀察區','尚未跨過明確研究門檻','n'];
+        var date=cb.trade_date||s.date;
+        function row(lab,val,note){return '<div class="gs-shrow"><span>'+lab+'<small>'+note+'</small></span><i><u style="width:'+Math.min(100,Math.max(0,val))+'%"></u></i><b>'+val.toFixed(1)+'%</b></div>';}
+        box.innerHTML='<div class="gs-struct">'
+          +'<header><div><span class="t">盤面結構判讀</span><small>§3A · 上市成交比重</small></div><time>'+date+'</time></header>'
+          +'<div class="gs-ststat"><em class="st-'+st[2]+'">'+st[0]+'</em><p>'+st[1]+'</p></div>'
+          +'<div class="gs-shgrid">'+row('電子',elec,'60% 防線')+row('金融',fin,'10% 警戒')+row('其他傳產',trad,topTradName?(topTradName+' '+topTradShare.toFixed(1)+'%'):'產業合計')+'</div>'
+          +'<details class="gs-shdet"><summary>查看研究判讀門檻</summary><div>'
+          +'<p><b>健康主流：</b>電子約 65–75%。</p><p><b>良性輪動：</b>電子約 58–62%。</p>'
+          +'<p><b>背離警戒：</b>上漲時電子低於 55%，且金融超過 10% 或單一傳產超過 15%。</p>'
+          +'<p><b>過熱失衡：</b>電子高於 85%。門檻來自研究速查指南，非交易所官方買賣訊號。</p></div></details></div>';
       });
     }
 
@@ -3303,6 +3357,30 @@
       });
     }
 
+    /* §6 臺指選擇權三大法人留倉策略矩陣(照合夥人 OptionActorCard)*/
+    function loadOpt(){
+      sb('options_daily?select=*&order=trade_date.desc&limit=1').then(function(a){
+        var box=el('hpOpt'); if(!box)return;
+        var d=(a||[])[0];
+        if(!d){box.innerHTML='<div class="fc-empty">今日無資料</div>';return;}
+        function ocode(v,cp){return cp==='call'?(v>=0?'BC':'SC'):(v>=0?'BP':'SP');}
+        function stance(cc,pc){var p=cc+'+'+pc;return p==='BC+SP'?'偏多':(p==='SC+BP'?'偏空':'多空分歧');}
+        function sg(v){return (v>0?'+':'')+Number(v).toLocaleString();}
+        function row(name,code,val,money){var buy=(code==='BC'||code==='BP');
+          return '<div class="gs-optrow"><span class="cd '+(buy?'buy':'sell')+'">'+code+'</span><small>'+name+'</small><b class="'+(val>=0?'hp-up':'hp-dn')+'">'+(money?((val>0?'+':'')+(val/1e5).toFixed(2)+' 億'):(sg(val)+' 口'))+'</b></div>';}
+        function card(label,co,po,cv,pv,cvol,pvol){
+          var cc=ocode(co,'call'),pc=ocode(po,'put'),ccv=ocode(cv,'call'),pcv=ocode(pv,'put');
+          return '<div class="gs-optcard"><header><h4>'+label+'</h4><div class="stances"><span>'+cc+'+'+pc+' · '+stance(cc,pc)+'</span><span>'+ccv+'+'+pcv+' · '+stance(ccv,pcv)+'</span></div></header>'
+            +'<div class="gs-opttracks"><div class="gs-opttrack"><strong>口數軌</strong>'+row('CALL 留倉淨口',cc,co)+row('PUT 留倉淨口',pc,po)+'</div>'
+            +'<div class="gs-opttrack"><strong>資金軌</strong>'+row('CALL 留倉淨額',ccv,cv,true)+row('PUT 留倉淨額',pcv,pv,true)+'</div></div>'
+            +'<div class="gs-optfoot">當日淨交易：CALL '+sg(cvol)+' 口 · PUT '+sg(pvol)+' 口</div></div>';
+        }
+        box.innerHTML=card('外資',d.foreign_call_oi,d.foreign_put_oi,d.foreign_call_val,d.foreign_put_val,d.foreign_call_vol,d.foreign_put_vol)
+          +card('自營商',d.dealer_call_oi,d.dealer_put_oi,d.dealer_call_val,d.dealer_put_val,d.dealer_call_vol,d.dealer_put_vol)
+          +'<div style="grid-column:1/-1;font-size:11.5px;color:var(--text-muted);margin-top:2px;line-height:1.7">外資選擇權常用於避險或順勢佈局；當口數與資金同向呈 BC+SP（偏多）或 SC+BP（偏空）時，訊號通常較一致。</div>';
+      });
+    }
+
     function loadNote(){
       var box=el('hpNote'); if(!box)return;
       box.innerHTML='<b>資料源與定義（供合夥人複查）</b><br>'
@@ -3329,7 +3407,7 @@
 
     window._hpReport=function(){
       try{ if(typeof window._loadNames==='function')window._loadNames(); }catch(e){}
-      loadSlogan();loadTags();loadFundRail();loadChipBrief();loadToday();loadInst();loadMargin();loadFunds();loadBreadth();loadStruct();loadDiverge();loadFut();loadNote();
+      loadSlogan();loadTags();loadFundRail();loadChipBrief();loadToday();loadInst();loadMargin();loadBreadth();loadStruct();loadDiverge();loadFut();loadOpt();loadNote();
     };
     window._hpRetheme=window._hpReport;
   })();
