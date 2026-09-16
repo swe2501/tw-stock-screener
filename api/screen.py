@@ -192,7 +192,12 @@ def _parse_roc_date(roc_str):
 
 def _pf(s):
     s = str(s).replace(",", "").strip()
-    return None if s in ("--", "N/A", "", "除權息", "除息", "除權") else float(s)
+    if not s or set(s) <= {"-"} or s in ("N/A", "除權息", "除息", "除權"):
+        return None
+    try:
+        return float(s)
+    except ValueError:
+        return None
 
 
 # ─────────────────────────────────────────────────────────────────────────────
