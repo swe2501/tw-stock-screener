@@ -1414,11 +1414,37 @@
       <div class="hx-chartbox"><div id="hxChart"></div><div id="hxMsg" class="hx-msg"></div></div>
     </div>
 
-    <section class="hp-sec"><div class="hp-sec-h"><span class="hp-sec-no">§1</span> 現貨三大法人買賣超 <span class="hp-sec-src" id="hpInstSrc">TWSE BFI82U · 上市</span></div><div id="hpInst" class="hp-inst"><div class="fc-empty">載入中…</div></div></section>
+    <style>
+      .gs-tbl{width:100%;border-collapse:collapse;font-size:13px;}
+      .gs-tbl th{text-align:right;font-size:11px;color:var(--text-muted);font-weight:700;padding:6px 9px;border-bottom:1px solid var(--border);white-space:nowrap;}
+      .gs-tbl th.l,.gs-tbl td.l{text-align:left;}
+      .gs-tbl td{text-align:right;padding:9px;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;white-space:nowrap;}
+      .gs-tbl tr:last-child td{border-bottom:0;}
+      .gs-tbl .mkt{font-weight:800;color:var(--brand-green);}
+      .gs-tbl tr.sum td{font-weight:800;border-top:2px solid var(--border);}
+      .gs-instbars{margin-top:14px;display:grid;gap:7px;}
+      .gs-ibar{display:flex;align-items:center;gap:10px;font-size:12px;}
+      .gs-ibar .lb{width:56px;color:var(--text-muted);}
+      .gs-ibar .track{flex:1;height:13px;background:var(--surface2);border-radius:7px;position:relative;overflow:hidden;}
+      .gs-ibar .track i{position:absolute;top:0;bottom:0;}
+      .gs-ibar .vv{width:96px;text-align:right;font-variant-numeric:tabular-nums;font-weight:800;}
+      .gs-bd2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+      .gs-bdcard{border:1px solid var(--border);border-radius:10px;padding:13px 15px;}
+      .gs-bdcard .h{display:flex;justify-content:space-between;font-size:13px;font-weight:800;color:var(--brand-green);margin-bottom:8px;}
+      .gs-bdcard .h span:last-child{font-size:10.5px;color:var(--text-muted);font-weight:600;}
+      .gs-bdbar{height:14px;border-radius:7px;overflow:hidden;display:flex;background:var(--surface2);}
+      .gs-bdbar .u{background:var(--red);} .gs-bdbar .f{background:#c9c2b4;} .gs-bdbar .d{background:var(--green);}
+      .gs-bdcard .n{font-size:12px;margin-top:7px;}
+      .gs-bdcard .lim{font-size:11.5px;color:var(--text-muted);margin-top:4px;}
+      @media(max-width:760px){.gs-bd2{grid-template-columns:1fr;}}
+    </style>
+    <section class="hp-sec"><div class="hp-sec-h"><span class="hp-sec-no">§1</span> 現貨三大法人買賣超 <span class="hp-sec-src" id="hpInstSrc">上市 TWSE · 上櫃 TPEx（金額）</span></div><div id="hpInst"><div class="fc-empty">載入中…</div></div></section>
 
-    <section class="hp-sec"><div class="hp-sec-h"><span class="hp-sec-no">§2</span> 資金與槓桿 <span class="hp-sec-src">融資融券 · 官股(兆豐) · 國際</span></div><div id="hpMargin" class="hp-grid"><div class="fc-empty">載入中…</div></div></section>
+    <section class="hp-sec"><div class="hp-sec-h"><span class="hp-sec-no">§2</span> 融資融券餘額 <span class="hp-sec-src">上市 TWSE · 上櫃 TPEx／玩股網（即時）</span></div><div id="hpMargin"><div class="fc-empty">載入中…</div></div></section>
 
-    <section class="hp-sec"><div class="hp-sec-h"><span class="hp-sec-no">§3</span> 市場廣度 <span class="hp-sec-src">上市 TWSE 收盤</span></div><div id="hpBreadth" class="hp-breadth"><div class="fc-empty">載入中…</div></div></section>
+    <section class="hp-sec"><div class="hp-sec-h"><span class="hp-sec-no">§2A</span> 資金與槓桿 · 官股與國際 <span class="hp-sec-src">兆豐 · 富台指 · VIX · 匯率</span></div><div id="hpFunds" class="hp-grid"><div class="fc-empty">載入中…</div></div></section>
+
+    <section class="hp-sec"><div class="hp-sec-h"><span class="hp-sec-no">§3</span> 市場廣度 <span class="hp-sec-src">上市 TWSE · 上櫃 TPEx</span></div><div id="hpBreadth" class="gs-bd2"><div class="fc-empty">載入中…</div></div></section>
 
     <section class="hp-sec"><div class="hp-sec-h"><span class="hp-sec-no">§3A</span> 盤面結構 · 上市成交比重 <span class="hp-sec-src">電子 &gt;60% 防線 · 金融 &gt;10% 警戒</span></div><div id="hpStruct" class="hp-struct"><div class="fc-empty">載入中…</div></div></section>
 
@@ -2916,35 +2942,63 @@
       }).catch(function(){});
     }
 
-    /* §1 三大法人 */
+    /* §1 三大法人:上市/上櫃/合計 三列 + 合計橫條 */
     function loadInst(){
-      sb('inst_market_daily?select=trade_date,foreign_net,trust_net,dealer_net,total_net&order=trade_date.desc&limit=1').then(function(a){
+      Promise.all([
+        sb('inst_market_daily?select=trade_date,foreign_net,trust_net,dealer_net,total_net&order=trade_date.desc&limit=1'),
+        sb('otc_market_daily?select=trade_date,foreign_net,trust_net,dealer_net,total_net&order=trade_date.desc&limit=1')
+      ]).then(function(res){
         var box=el('hpInst'); if(!box)return;
-        if(!Array.isArray(a)||!a.length){box.innerHTML='<div class="fc-empty">今日無資料</div>';return;}
-        var m=a[0]; if(el('hpInstSrc'))el('hpInstSrc').textContent='TWSE BFI82U · 上市 · '+m.trade_date;
-        var items=[['外資',m.foreign_net],['投信',m.trust_net],['自營商',m.dealer_net],['合計',m.total_net]];
+        var tse=(res[0]||[])[0]||null, otc=(res[1]||[])[0]||null;
+        if(!tse&&!otc){box.innerHTML='<div class="fc-empty">今日無資料</div>';return;}
+        var T=tse||{},O=otc||{};
+        var sum={foreign_net:(T.foreign_net||0)+(O.foreign_net||0),trust_net:(T.trust_net||0)+(O.trust_net||0),dealer_net:(T.dealer_net||0)+(O.dealer_net||0),total_net:(T.total_net||0)+(O.total_net||0)};
+        function cell(v){var n=yi(v);return '<td class="'+cls(n)+'">'+(n>0?'+':'')+n.toFixed(2)+'</td>';}
+        function row(lab,o,cl){return '<tr'+(cl?' class="'+cl+'"':'')+'><td class="l mkt">'+lab+'</td>'+cell(o.foreign_net)+cell(o.trust_net)+cell(o.dealer_net)+cell(o.total_net)+'</tr>';}
+        var date=(tse&&tse.trade_date)||(otc&&otc.trade_date)||'';
+        if(el('hpInstSrc'))el('hpInstSrc').textContent='上市 TWSE · 上櫃 TPEx · '+date;
+        var tbl='<table class="gs-tbl"><thead><tr><th class="l">市場</th><th>外資</th><th>投信</th><th>自營商</th><th>合計(億)</th></tr></thead><tbody>'
+          +(tse?row('上市',T):'')+(otc?row('上櫃',O):'')+row('合計',sum,'sum')+'</tbody></table>';
+        var items=[['外資',sum.foreign_net],['投信',sum.trust_net],['自營商',sum.dealer_net],['合計',sum.total_net]];
         var mx=Math.max.apply(null,items.map(function(x){return Math.abs(yi(x[1]))||1;}));
-        box.innerHTML=items.map(function(x){var n=yi(x[1]),w=Math.min(50,Math.abs(n)/mx*50),c=n>0?'var(--red)':'var(--green)';
-          var bar='<div class="bar"><i style="'+(n>=0?'left:50%;':'right:50%;left:auto;')+'width:'+w+'%;background:'+c+'"></i></div>';
-          return '<div class="hp-ic"><div class="lab">'+x[0]+'</div><div class="amt '+cls(n)+'">'+(n>0?'+':'')+n.toFixed(1)+'<small>億</small></div>'+bar+'</div>';
-        }).join('');
+        var bars='<div class="gs-instbars">'+items.map(function(x){var n=yi(x[1]),w=Math.min(48,Math.abs(n)/mx*48),c=n>0?'var(--red)':'var(--green)';
+          return '<div class="gs-ibar"><span class="lb">'+x[0]+'</span><span class="track"><i style="'+(n>=0?'left:50%;':'right:50%;')+'width:'+w+'%;background:'+c+'"></i></span><span class="vv '+cls(n)+'">'+(n>0?'+':'')+n.toFixed(1)+'億</span></div>';}).join('')+'</div>';
+        box.innerHTML=tbl+bars+'<div style="font-size:11px;color:var(--text-muted);margin-top:10px;line-height:1.7">紅＝買超、綠＝賣超（金額）。上市+上櫃合併觀察；兩市背離時搭配題材資金輪動判讀。</div>';
       });
     }
 
-    /* §2 資金與槓桿 */
+    /* §2 融資融券餘額:上市/上櫃兩列 */
     function loadMargin(){
-      var box=el('hpMargin'); if(!box)return;
       Promise.all([
-        sb('margin_market?select=date,fin_bal_k,fin_bal_prev_k,short_bal_lots,short_bal_prev_lots&order=date.desc&limit=1'),
-        sb('gov_broker_daily?select=date,buy_amt,sell_amt,net_amt&order=date.desc&limit=1'),
+        sb('margin_market?select=date,fin_bal_k,fin_bal_prev_k,short_bal_lots&order=date.desc&limit=1'),
+        sb('otc_market_daily?select=trade_date,fin_bal_k,fin_prev_k,short_lots,fin_maint&order=trade_date.desc&limit=1')
+      ]).then(function(res){
+        var box=el('hpMargin'); if(!box)return;
+        var t=(res[0]||[])[0],o=(res[1]||[])[0];
+        if(!t&&!o){box.innerHTML='<div class="fc-empty">今日無資料</div>';return;}
+        var tseM=''; try{var mb=el('marginRatioBox'); if(mb&&mb.textContent){var x=mb.textContent.replace(/[^0-9.%]/g,''); if(x)tseM=x;}}catch(e){}
+        function bal(k){return '<td>'+(k!=null?(k/1e5).toFixed(2):'—')+'</td>';}
+        function chg(k,pk){if(k==null||pk==null)return '<td>—</td>';var d=(k-pk)/1e5;return '<td class="'+cls(d)+'">'+(d>0?'+':'')+d.toFixed(2)+'</td>';}
+        function lot(l){return '<td>'+(l!=null?Number(l).toLocaleString():'—')+'</td>';}
+        var rows='';
+        if(t)rows+='<tr><td class="l mkt">上市</td>'+bal(t.fin_bal_k)+chg(t.fin_bal_k,t.fin_bal_prev_k)+lot(t.short_bal_lots)+'<td>'+(tseM||'—')+'</td></tr>';
+        if(o)rows+='<tr><td class="l mkt">上櫃</td>'+bal(o.fin_bal_k)+chg(o.fin_bal_k,o.fin_prev_k)+lot(o.short_lots)+'<td>'+(o.fin_maint!=null?o.fin_maint+'%':'—')+'</td></tr>';
+        box.innerHTML='<table class="gs-tbl"><thead><tr><th class="l">市場</th><th>融資餘額(億)</th><th>融資增減(億)</th><th>融券餘額(張)</th><th>維持率</th></tr></thead><tbody>'+rows+'</tbody></table>'
+          +'<div style="font-size:11px;color:var(--text-muted);margin-top:10px;line-height:1.7">上市 TWSE MI_MARGN；上櫃即時取玩股網。融資維持率下降＝槓桿部位安全邊際縮小。</div>';
+      });
+    }
+
+    /* §2A 官股(兆豐) + 國際 */
+    function loadFunds(){
+      var box=el('hpFunds'); if(!box)return;
+      Promise.all([
+        sb('gov_broker_daily?select=buy_amt,sell_amt,net_amt&order=date.desc&limit=1'),
         sb('gov_broker_stock?select=code,net_amt&order=net_amt.desc&limit=1'),
         sb('gov_broker_stock?select=code,net_amt&order=net_amt.asc&limit=1'),
         sb('market_indicators?select=futai_close,futai_prev,vix,vix_prev,usdtwd&order=date.desc&limit=1')
       ]).then(function(res){
-        var mm=(res[0]||[])[0],gb=(res[1]||[])[0],tb=(res[2]||[])[0],sbk=(res[3]||[])[0],mi=(res[4]||[])[0];
+        var gb=(res[0]||[])[0],tb=(res[1]||[])[0],sbk=(res[2]||[])[0],mi=(res[3]||[])[0];
         var cards='';
-        if(mm){var bal=mm.fin_bal_k/1e5,d=(mm.fin_bal_prev_k!=null)?(mm.fin_bal_k-mm.fin_bal_prev_k)/1e5:null;
-          cards+='<div class="hp-mc"><div class="lab">融資融券餘額</div><div class="big">'+bal.toFixed(2)+'<small style="font-size:12px"> 億</small></div><div class="sub">融資較前日 <b class="'+(d>0?'hp-up':'hp-dn')+'">'+(d!=null?((d>0?'+':'')+d.toFixed(2)+'億'):'—')+'</b><br>融券餘額 '+Number(mm.short_bal_lots).toLocaleString()+' 張</div></div>';}
         if(gb){var net=yi(gb.net_amt);
           var tbTxt=tb?('買超 '+tb.code+' '+nm(tb.code)+' +'+yi(tb.net_amt).toFixed(1)+'億'):'';
           var sbTxt=sbk?('賣超 '+sbk.code+' '+nm(sbk.code)+' '+yi(sbk.net_amt).toFixed(1)+'億'):'';
@@ -2955,16 +3009,24 @@
       });
     }
 
-    /* §3 市場廣度 */
+    /* §3 市場廣度:上市/上櫃兩欄 */
     function loadBreadth(){
-      fetch('/api/screen?stat=market').then(function(r){return r.json();}).then(function(j){
+      Promise.all([
+        fetch('/api/screen?stat=market').then(function(r){return r.json();}).catch(function(){return null;}),
+        sb('otc_market_daily?select=up,down,flat,up_limit,down_limit&order=trade_date.desc&limit=1')
+      ]).then(function(res){
         var box=el('hpBreadth'); if(!box)return;
-        if(!j||j.error){box.innerHTML='<div class="fc-empty">讀取失敗</div>';return;}
-        var up=+j.up||0,dn=+j.down||0,fl=+j.flat||0,tot=up+dn+fl||1;
-        box.innerHTML='<div class="hp-bd-row"><span style="width:64px">上市</span><div class="hp-bd-bar"><span class="u" style="width:'+(up/tot*100)+'%"></span><span class="f" style="width:'+(fl/tot*100)+'%"></span><span class="d" style="width:'+(dn/tot*100)+'%"></span></div></div>'
-          +'<div class="hp-bd-row" style="color:var(--text-muted);font-size:12px"><span style="width:64px"></span><span class="hp-up">上漲 '+up+'</span>　平盤 '+fl+'　<span class="hp-dn">下跌 '+dn+'</span>　·　漲停 <b class="hp-up">'+j.up_limit+'</b> / 跌停 <b class="hp-dn">'+j.down_limit+'</b></div>'
-          +'<div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;line-height:1.7">指數上漲且多數股票同步走高，趨勢較健康；若指數漲、下跌家數卻居多，代表行情集中在少數權值股。</div>';
-      }).catch(function(){var box=el('hpBreadth');if(box)box.innerHTML='<div class="fc-empty">讀取失敗</div>';});
+        var tse=res[0],otc=(res[1]||[])[0];
+        function card(title,tag,up,dn,fl,ul,dl){var tot=(up+dn+fl)||1;
+          return '<div class="gs-bdcard"><div class="h"><span>'+title+'</span><span>'+tag+'</span></div>'
+            +'<div class="gs-bdbar"><span class="u" style="width:'+(up/tot*100)+'%"></span><span class="f" style="width:'+(fl/tot*100)+'%"></span><span class="d" style="width:'+(dn/tot*100)+'%"></span></div>'
+            +'<div class="n"><span class="hp-up">上漲 '+up+'</span> · 平盤 '+fl+' · <span class="hp-dn">下跌 '+dn+'</span></div>'
+            +'<div class="lim">漲停 <b class="hp-up">'+ul+'</b> / 跌停 <b class="hp-dn">'+dl+'</b></div></div>';}
+        var html='';
+        if(tse&&!tse.error)html+=card('上市','TWSE 收盤',+tse.up||0,+tse.down||0,+tse.flat||0,+tse.up_limit||0,+tse.down_limit||0);
+        if(otc)html+=card('上櫃','TPEx 收盤',+otc.up||0,+otc.down||0,+otc.flat||0,+otc.up_limit||0,+otc.down_limit||0);
+        box.innerHTML=(html||'<div class="fc-empty">讀取失敗</div>')+'<div style="grid-column:1/-1;font-size:11.5px;color:var(--text-muted);margin-top:2px;line-height:1.7">同時看上市與上櫃的漲跌平及漲跌停家數,避免只看加權指數。</div>';
+      });
     }
 
     /* §3A 盤面結構成交比重 */
@@ -3031,7 +3093,7 @@
 
     window._hpReport=function(){
       try{ if(typeof window._loadNames==='function')window._loadNames(); }catch(e){}
-      loadSlogan();loadTags();loadToday();loadInst();loadMargin();loadBreadth();loadStruct();loadDiverge();loadNote();
+      loadSlogan();loadTags();loadToday();loadInst();loadMargin();loadFunds();loadBreadth();loadStruct();loadDiverge();loadNote();
     };
     window._hpRetheme=window._hpReport;
   })();
