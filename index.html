@@ -1425,6 +1425,19 @@
       <div class="hx-chartbox"><div id="hxChart"></div><div id="hxMsg" class="hx-msg"></div></div>
     </div>
 
+    <div class="cb-sheet">
+      <div class="cb-head">
+        <div class="cb-head-l">
+          <p class="cb-eyebrow">DAILY CHIP BRIEF · 每日籌碼簡報</p>
+          <h2 class="cb-title">每日台股籌碼報告</h2>
+          <p class="cb-sub">上市＋上櫃法人、資券、期權、官股與市場廣度，一張表掌握盤後資金位置。</p>
+        </div>
+        <div class="cb-head-r"><b id="cbDate">—</b><span>TWSE · TPEx · TAIFEX · 晚間整合</span></div>
+      </div>
+      <div class="cb-pulse" id="cbPulse"><div class="fc-empty">載入中…</div></div>
+      <div class="cb-ov" id="cbOverview"></div>
+    </div>
+
     <style>
       .gs-tbl{width:100%;border-collapse:collapse;font-size:13px;}
       .gs-tbl th{text-align:right;font-size:11px;color:var(--text-muted);font-weight:700;padding:6px 9px;border-bottom:1px solid var(--border);white-space:nowrap;}
@@ -1481,6 +1494,33 @@
       .gs-futcard .sub{font-size:11.5px;color:var(--text-muted);margin-top:6px;line-height:1.7;}
       .gs-lsbar{height:15px;border-radius:7px;overflow:hidden;display:flex;background:var(--surface2);margin-top:8px;}
       .gs-lsbar .lo{background:var(--red);} .gs-lsbar .sh{background:var(--green);}
+      /* 每日台股籌碼報告 頂部區塊(照合夥人) */
+      .cb-sheet{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px 24px;margin-bottom:16px;box-shadow:var(--shadow);}
+      .cb-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;border-bottom:1px solid var(--border);padding-bottom:16px;margin-bottom:16px;}
+      .cb-eyebrow{font-size:11px;font-weight:800;letter-spacing:.12em;color:var(--accent);margin:0 0 4px;}
+      .cb-title{font-family:"Noto Serif TC",Georgia,serif;font-size:28px;font-weight:800;color:var(--brand-green);margin:0 0 6px;}
+      .cb-sub{font-size:12.5px;color:var(--text-muted);margin:0;max-width:520px;line-height:1.7;}
+      .cb-head-r{text-align:right;white-space:nowrap;}
+      .cb-head-r b{display:block;font-size:15px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;}
+      .cb-head-r span{font-size:10.5px;color:var(--text-muted);letter-spacing:.04em;}
+      .cb-pulse{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px;}
+      .cb-pi{border:1px solid var(--border);border-radius:10px;padding:13px 15px;background:var(--bg);}
+      .cb-pi .k{font-size:12px;font-weight:800;color:var(--brand-green);margin-bottom:7px;}
+      .cb-pi .v{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1;}
+      .cb-pi .n{font-size:11.5px;color:var(--text-muted);margin-top:5px;font-variant-numeric:tabular-nums;}
+      .cb-ov{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+      .cb-ovc{border:1px solid var(--border);border-radius:10px;padding:14px 16px;background:var(--bg);}
+      .cb-ovc header{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px;}
+      .cb-ovc header>span:first-child{font-size:12.5px;font-weight:800;color:var(--brand-green);}
+      .cb-ovc header small{font-weight:600;color:var(--text-muted);font-size:10px;margin-left:5px;letter-spacing:.03em;}
+      .cb-tag{font-size:10.5px;font-weight:700;padding:2px 9px;border-radius:999px;white-space:nowrap;}
+      .cb-tag.g{background:rgba(30,120,60,.12);color:var(--green);} .cb-tag.d{background:rgba(180,40,40,.12);color:var(--red);} .cb-tag.n{background:var(--surface2);color:var(--text-muted);}
+      .cb-ovc .big{font-size:27px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.15;}
+      .cb-ovc .sub{font-size:11.5px;color:var(--text-muted);margin-top:6px;line-height:1.75;}
+      .cb-ovc .sub b{font-weight:800;}
+      .cb-conv{margin-top:8px;font-size:12px;color:var(--text-muted);}
+      .cb-conv strong{color:var(--brand-green);font-weight:800;font-variant-numeric:tabular-nums;}
+      @media(max-width:900px){.cb-pulse{grid-template-columns:repeat(2,1fr);}.cb-ov{grid-template-columns:1fr;}}
       @media(max-width:760px){.gs-bd2,.gs-fut{grid-template-columns:1fr;}}
     </style>
     <section class="hp-sec"><div class="hp-sec-h"><span class="hp-sec-no">§1</span> 現貨三大法人買賣超 <span class="hp-sec-src" id="hpInstSrc">上市 TWSE · 上櫃 TPEx（金額）</span></div><div id="hpInst"><div class="fc-empty">載入中…</div></div></section>
@@ -3191,6 +3231,78 @@
       });
     }
 
+    /* 每日台股籌碼報告 頂部:5 KPI + 台積電權值/官股多天期/富台指換算(照合夥人 100%) */
+    var FTSE_TX_FACTOR=45983/4026.5;
+    function loadChipBrief(){
+      var pulse=el('cbPulse'),ov=el('cbOverview'); if(!pulse||!ov)return;
+      Promise.all([
+        sb('chip_brief_daily?select=*&order=trade_date.desc&limit=1'),
+        sb('market_indicators?select=futai_close,futai_prev,vix,vix_prev,usdtwd,date&order=date.desc&limit=1'),
+        sb('gov_broker_daily?select=date,net_amt,buy_amt,sell_amt&order=date.desc&limit=60'),
+        fetch('/api/chart?code=%5ETWII&range=6mo&interval=1d').then(function(r){return r.json();}).then(function(j){return (j&&j.data)||[];}).catch(function(){return [];})
+      ]).then(function(res){
+        var cb=(res[0]||[])[0]||{},mi=(res[1]||[])[0]||{},gov=res[2]||[],tx=(res[3]||[]).slice().reverse();
+        if(el('cbDate')&&cb.trade_date)el('cbDate').textContent=cb.trade_date;
+        // 5 KPI
+        function note(chg,pct){if(chg==null)return '等待更新';return (chg>0?'+':'')+Number(chg).toFixed(2)+' 點 · '+(pct!=null?((pct>0?'+':'')+Number(pct).toFixed(2)+'%'):'—');}
+        var vc=(mi.vix!=null&&mi.vix_prev!=null)?(mi.vix-mi.vix_prev):null,vp=(vc!=null&&mi.vix_prev)?(vc/mi.vix_prev*100):null;
+        var kpis=[
+          {k:'加權指數',v:cb.taiex_close,c:cb.taiex_chg,p:cb.taiex_pct},
+          {k:'櫃買指數',v:cb.otc_close,c:cb.otc_chg,p:cb.otc_pct},
+          {k:'台指期（日盤）',v:cb.txf_close,c:cb.txf_chg,p:cb.txf_pct},
+          {k:'VIX 指數',v:mi.vix,c:vc,p:vp},
+          {k:'台幣匯率',v:mi.usdtwd,c:null,p:null,note:'USD／TWD'+(mi.date?' · '+mi.date:'')}
+        ];
+        pulse.innerHTML=kpis.map(function(m){
+          var cc=m.c==null?'':(m.c>=0?'hp-up':'hp-dn');
+          var dec=(m.k==='台幣匯率')?3:2;
+          var val=m.v!=null?Number(m.v).toLocaleString(undefined,{minimumFractionDigits:dec,maximumFractionDigits:dec}):'—';
+          return '<div class="cb-pi"><div class="k">'+m.k+'</div><div class="v '+cc+'">'+val+'</div><div class="n">'+(m.note||note(m.c,m.p))+'</div></div>';
+        }).join('');
+        // 台積電權值影響
+        var tsc=cb.tsmc_close,tchg=cb.tsmc_chg,tpct=cb.tsmc_pct,contrib=cb.tsmc_contrib;
+        var tcol=(tchg!=null&&tchg>=0)?'hp-up':'hp-dn';
+        var tsmcCard='<div class="cb-ovc"><header><span>台積電 2330</span><span class="cb-tag n">權值影響</span></header>'
+          +(tsc!=null?'<div class="big '+tcol+'">'+Number(tsc).toLocaleString()+'</div>'
+            +'<div class="sub"><span class="'+tcol+'">'+(tchg>0?'+':'')+Number(tchg).toFixed(2)+' 元 · '+(tpct>0?'+':'')+Number(tpct).toFixed(2)+'%</span><br>'
+            +(contrib!=null?'<b class="'+(contrib>=0?'hp-up':'hp-dn')+'">約'+(contrib>=0?'貢獻':'拖累')+'加權指數 '+Math.abs(contrib).toFixed(1)+' 點</b><br>':'')
+            +'依前一日上市市值權重估算</div>':'<div class="big">資料更新中</div>')+'</div>';
+        // 富台指期換算
+        var fc=mi.futai_close,fp=mi.futai_prev,fchg=(fc!=null&&fp!=null)?(fc-fp):null,fpct=(fchg!=null&&fp)?(fchg/fp*100):null;
+        var fcol=(fchg!=null&&fchg>=0)?'hp-up':'hp-dn',conv=(fc!=null)?fc*FTSE_TX_FACTOR:null;
+        var fb=fpct==null?['n','海外盤—']:(fpct>=.5?['g','海外盤偏多']:(fpct<=-.5?['d','海外盤偏空']:['n','海外盤震盪']));
+        var ftseCard='<div class="cb-ovc"><header><span>富台指期<small>SGX FTSE TAIWAN</small></span><span class="cb-tag '+fb[0]+'">'+fb[1]+'</span></header>'
+          +(fc!=null?'<div class="big '+fcol+'">'+Number(fc).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+'</div>'
+            +'<div class="sub"><span class="'+fcol+'">'+(fchg>0?'+':'')+fchg.toFixed(2)+' 點 · '+(fpct>0?'+':'')+fpct.toFixed(2)+'%</span></div>'
+            +'<div class="cb-conv">↓ 換算參考　<strong>台指期約 '+Math.round(conv).toLocaleString()+' 點</strong></div>':'<div class="big">資料更新中</div>')+'</div>';
+        ov.innerHTML=tsmcCard+'<div id="cbGov"></div>'+ftseCard;
+        // 官股 今日/5/20/60
+        function govNet(pd){if(!gov.length)return null;
+          if(pd==='today')return gov[0].net_amt;
+          var n=pd==='5'?5:pd==='20'?20:60,s=0;for(var i=0;i<Math.min(n,gov.length);i++)s+=(gov[i].net_amt||0);return s;}
+        function mkt(pd){if(pd==='today')return cb.taiex_pct!=null?cb.taiex_pct:null;
+          var n=pd==='5'?5:pd==='20'?20:60;if(tx.length<=n)return null;return (tx[0].close/tx[n].close-1)*100;}
+        function interp(m,g){if(m==null)return['等待同週期大盤資料','暫不推論資金角色','n'];
+          if(m<0&&g>=0)return['防守承接','下跌時官股站在買方','g'];
+          if(m<0&&g<0)return['防守缺席','下跌時官股同步調節','d'];
+          if(m>=0&&g>=0)return['資金共振','上漲時官股同步買超','g'];
+          return['逢高調節','上漲時官股轉為賣超','d'];}
+        var govBox=el('cbGov'),sel='today';
+        function rgov(){
+          var g=govNet(sel),yiv=g!=null?g/1e8:null,st=interp(mkt(sel),yiv||0);
+          var tabs=[['today','今日'],['5','5日'],['20','20日'],['60','60日']].map(function(t){return '<button class="gs-pd'+(t[0]===sel?' on':'')+'" data-p="'+t[0]+'">'+t[1]+'</button>';}).join('');
+          var body;
+          if(yiv==null)body='<div class="big">資料更新中</div>';
+          else{var line=(sel==='today')?('買進 '+(gov[0].buy_amt/1e8).toFixed(2)+'億 · 賣出 '+(gov[0].sell_amt/1e8).toFixed(2)+'億'):(sel+' 日累計'+(yiv>=0?'買超':'賣超'));
+            body='<div class="big '+(yiv>=0?'hp-up':'hp-dn')+'">'+(yiv>=0?'+':'')+yiv.toFixed(2)+' 億</div>'
+              +'<div class="sub">'+line+'<br>'+st[1]+'<br>資料日 '+(gov[0].date||'—')+'</div>';}
+          govBox.innerHTML='<div class="cb-ovc"><header><span>全市場官股券商</span><span class="cb-tag '+st[2]+'">'+st[0]+'</span></header>'
+            +'<div class="gs-pdtabs" style="margin-bottom:10px">'+tabs+'</div>'+body+'</div>';
+        }
+        if(govBox){govBox.addEventListener('click',function(e){var b=e.target.closest('.gs-pd');if(b){sel=b.dataset.p;rgov();}});rgov();}
+      });
+    }
+
     function loadNote(){
       var box=el('hpNote'); if(!box)return;
       box.innerHTML='<b>資料源與定義（供合夥人複查）</b><br>'
@@ -3217,7 +3329,7 @@
 
     window._hpReport=function(){
       try{ if(typeof window._loadNames==='function')window._loadNames(); }catch(e){}
-      loadSlogan();loadTags();loadFundRail();loadToday();loadInst();loadMargin();loadFunds();loadBreadth();loadStruct();loadDiverge();loadFut();loadNote();
+      loadSlogan();loadTags();loadFundRail();loadChipBrief();loadToday();loadInst();loadMargin();loadFunds();loadBreadth();loadStruct();loadDiverge();loadFut();loadNote();
     };
     window._hpRetheme=window._hpReport;
   })();
