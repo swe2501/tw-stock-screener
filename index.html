@@ -1302,6 +1302,10 @@
     .hp-ic .bar i{position:absolute;top:0;bottom:0;left:50%;}
     .hp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
     .hp-mc{border:1px solid var(--border);border-radius:10px;padding:12px 13px;}
+    .gs-rklist{margin-top:8px;display:grid;gap:6px;}
+    .gs-rk{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;gap:8px;}
+    .gs-rk span{color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .gs-rk b{font-variant-numeric:tabular-nums;white-space:nowrap;}
     .hp-mc .lab{font-size:12px;color:var(--text-muted);font-weight:700;}
     .hp-mc .big{font-size:22px;font-weight:800;margin-top:5px;letter-spacing:-.02em;font-variant-numeric:tabular-nums;}
     .hp-mc .sub{font-size:11.5px;color:var(--text-muted);margin-top:3px;line-height:1.6;font-variant-numeric:tabular-nums;}
@@ -1346,6 +1350,12 @@
     .gs-tag:hover{color:var(--accent);}
     .gs-tag:hover i{color:var(--brand-green);}
     .gs-tag i{font-style:normal;color:var(--accent);font-weight:800;font-size:11px;font-variant-numeric:tabular-nums;}
+    .gs-fundrail{display:flex;flex-wrap:wrap;gap:0;margin-top:18px;border-top:1px solid var(--border);padding-top:14px;}
+    .gs-fr{padding:0 20px;border-left:1px solid var(--border);}
+    .gs-fr:first-child{padding-left:0;border-left:0;}
+    .gs-fr .k{font-size:10.5px;color:var(--text-muted);font-weight:700;letter-spacing:.05em;}
+    .gs-fr .v{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--text);margin-top:2px;}
+    .gs-fr .c{font-size:11.5px;font-weight:700;margin-left:5px;}
     .gs-today{background:var(--surface);border:1px solid var(--border);border-top:4px solid var(--brand-green);border-radius:6px;padding:18px 20px 20px;box-shadow:var(--shadow);}
     .gs-today-head{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:12px;gap:8px;}
     .gs-today-head span:first-child{font-size:11px;font-weight:800;letter-spacing:.08em;color:var(--brand-green);}
@@ -1394,6 +1404,7 @@
             <button id="hpSearchBtn" type="button">搜尋</button>
           </form>
           <div class="gs-tags" id="hpTags"><span class="gs-tags-lbl">今日觀察索引</span></div>
+          <div class="gs-fundrail" id="hpFundRail"></div>
         </div>
         <aside class="gs-today">
           <div class="gs-today-head"><span>TODAY'S READING · 今日判讀</span><span id="gsTodayDate"></span></div>
@@ -1476,7 +1487,7 @@
 
     <section class="hp-sec"><div class="hp-sec-h"><span class="hp-sec-no">§2</span> 融資融券餘額 <span class="hp-sec-src">上市 TWSE · 上櫃 TPEx／玩股網（即時）</span></div><div id="hpMargin"><div class="fc-empty">載入中…</div></div></section>
 
-    <section class="hp-sec"><div class="hp-sec-h"><span class="hp-sec-no">§2A</span> 資金與槓桿 · 官股與國際 <span class="hp-sec-src">兆豐 · 富台指 · VIX · 匯率</span></div><div id="hpFunds" class="hp-grid"><div class="fc-empty">載入中…</div></div></section>
+    <section class="hp-sec"><div class="hp-sec-h"><span class="hp-sec-no">§2A</span> 官股券商動向 <span class="hp-sec-src">八大公股券商 · 淨買賣超</span></div><div id="hpFunds" class="hp-grid"><div class="fc-empty">載入中…</div></div></section>
 
     <section class="hp-sec"><div class="hp-sec-h"><span class="hp-sec-no">§3</span> 市場廣度 <span class="hp-sec-src">上市 TWSE · 上櫃 TPEx</span></div><div id="hpBreadth" class="gs-bd2"><div class="fc-empty">載入中…</div></div></section>
 
@@ -3025,24 +3036,45 @@
     }
 
     /* §2A 官股(兆豐) + 國際 */
+    /* hero 資金軌:富台指/VIX/匯率(原 §2A 國際塊,照合夥人移到最上面)*/
+    function loadFundRail(){
+      var box=el('hpFundRail'); if(!box)return;
+      sb('market_indicators?select=futai_close,futai_prev,vix,vix_prev,usdtwd&order=date.desc&limit=1').then(function(a){
+        var mi=(a||[])[0]; if(!mi){box.innerHTML='';return;}
+        var fd=(mi.futai_close!=null&&mi.futai_prev)?((mi.futai_close/mi.futai_prev-1)*100):null;
+        var vd=(mi.vix!=null&&mi.vix_prev)?(mi.vix-mi.vix_prev):null;
+        function it(k,v,c,cc){return '<div class="gs-fr"><div class="k">'+k+'</div><div class="v">'+v+(c?'<span class="c '+cc+'">'+c+'</span>':'')+'</div></div>';}
+        box.innerHTML=it('富台指期',mi.futai_close!=null?Number(mi.futai_close).toLocaleString():'—',fd!=null?pctTxt(fd):'',fd>0?'hp-up':'hp-dn')
+          +it('VIX 波動率',mi.vix!=null?mi.vix.toFixed(2):'—',vd!=null?((vd>0?'+':'')+vd.toFixed(2)):'',vd>0?'hp-dn':'hp-up')
+          +it('美元/台幣',mi.usdtwd!=null?mi.usdtwd.toFixed(3):'—','','');
+      });
+    }
+
+    /* §2A 官股券商動向(八大公股合計 + 買超/賣超榜)*/
     function loadFunds(){
       var box=el('hpFunds'); if(!box)return;
-      Promise.all([
-        sb('gov_broker_daily?select=buy_amt,sell_amt,net_amt&order=date.desc&limit=1'),
-        sb('gov_broker_stock?select=code,net_amt&order=net_amt.desc&limit=1'),
-        sb('gov_broker_stock?select=code,net_amt&order=net_amt.asc&limit=1'),
-        sb('market_indicators?select=futai_close,futai_prev,vix,vix_prev,usdtwd&order=date.desc&limit=1')
-      ]).then(function(res){
-        var gb=(res[0]||[])[0],tb=(res[1]||[])[0],sbk=(res[2]||[])[0],mi=(res[3]||[])[0];
-        var cards='';
-        if(gb){var net=yi(gb.net_amt);
-          var tbTxt=tb?('買超 '+tb.code+' '+nm(tb.code)+' +'+yi(tb.net_amt).toFixed(1)+'億'):'';
-          var sbTxt=sbk?('賣超 '+sbk.code+' '+nm(sbk.code)+' '+yi(sbk.net_amt).toFixed(1)+'億'):'';
-          cards+='<div class="hp-mc"><div class="lab">官股券商 · 兆豐</div><div class="big '+cls(net)+'">'+(net>0?'+':'')+net.toFixed(1)+'<small style="font-size:12px"> 億</small></div><div class="sub">買進 '+yi(gb.buy_amt).toFixed(1)+'億 · 賣出 '+yi(gb.sell_amt).toFixed(1)+'億<br>'+tbTxt+'<br>'+sbTxt+'</div></div>';}
-        if(mi){var fd=(mi.futai_close!=null&&mi.futai_prev)?((mi.futai_close/mi.futai_prev-1)*100):null,vd=(mi.vix!=null&&mi.vix_prev)?(mi.vix-mi.vix_prev):null;
-          cards+='<div class="hp-mc"><div class="lab">國際盤 · 匯率</div><div class="big">'+(mi.futai_close!=null?Number(mi.futai_close).toLocaleString():'—')+'<small style="font-size:12px"> 富台指</small></div><div class="sub">富台指 <b class="'+(fd>0?'hp-up':'hp-dn')+'">'+(fd!=null?pctTxt(fd):'—')+'</b> · VIX '+(mi.vix!=null?mi.vix.toFixed(2):'—')+' <b class="'+(vd>0?'hp-dn':'hp-up')+'">'+(vd!=null?((vd>0?'+':'')+vd.toFixed(2)):'')+'</b><br>美元/台幣 '+(mi.usdtwd!=null?mi.usdtwd.toFixed(3):'—')+'</div></div>';}
-        box.innerHTML=cards||'<div class="fc-empty">今日無資料</div>';
+      sb('gov_broker_daily?select=date,broker,buy_amt,sell_amt,net_amt&order=date.desc&limit=1').then(function(a){
+        var gb=(a||[])[0];
+        if(!gb){box.innerHTML='<div class="fc-empty">今日無資料</div>';return;}
+        var d=gb.date;
+        return Promise.all([
+          sb('gov_broker_stock?select=code,net_amt&date=eq.'+d+'&order=net_amt.desc&limit=5'),
+          sb('gov_broker_stock?select=code,net_amt&date=eq.'+d+'&order=net_amt.asc&limit=5')
+        ]).then(function(res){renderFunds(gb,res[0]||[],res[1]||[]);});
       });
+      function renderFunds(gb,buys,sells){
+        var net=yi(gb.net_amt),nm2=gb.broker||'官股八大';
+        var cards='<div class="hp-mc"><div class="lab">官股券商合計 · '+nm2+'</div>'
+          +'<div class="big '+cls(net)+'">'+(net>0?'+':'')+net.toFixed(1)+'<small style="font-size:12px"> 億</small></div>'
+          +'<div class="sub">買進 '+yi(gb.buy_amt).toFixed(1)+'億 · 賣出 '+yi(gb.sell_amt).toFixed(1)+'億<br>八大公股券商（兆豐/第一金/合庫/華南永昌/臺銀/土銀/彰銀/台企銀）分點淨買賣超加總。官股常被視為「政策防守／調節」訊號。</div></div>';
+        function rank(title,arr,pos){
+          if(!arr.length)return '';
+          var li=arr.map(function(r){var v=yi(r.net_amt);return '<div class="gs-rk"><span>'+r.code+' '+nm(r.code)+'</span><b class="'+(pos?'hp-up':'hp-dn')+'">'+(v>0?'+':'')+v.toFixed(1)+'億</b></div>';}).join('');
+          return '<div class="hp-mc"><div class="lab">'+title+'</div><div class="gs-rklist">'+li+'</div></div>';
+        }
+        cards+=rank('官股買超 TOP5',buys,true)+rank('官股賣超 TOP5',sells,false);
+        box.innerHTML=cards;
+      }
     }
 
     /* §3 市場廣度:上市/上櫃兩欄 */
@@ -3185,7 +3217,7 @@
 
     window._hpReport=function(){
       try{ if(typeof window._loadNames==='function')window._loadNames(); }catch(e){}
-      loadSlogan();loadTags();loadToday();loadInst();loadMargin();loadFunds();loadBreadth();loadStruct();loadDiverge();loadFut();loadNote();
+      loadSlogan();loadTags();loadFundRail();loadToday();loadInst();loadMargin();loadFunds();loadBreadth();loadStruct();loadDiverge();loadFut();loadNote();
     };
     window._hpRetheme=window._hpReport;
   })();
