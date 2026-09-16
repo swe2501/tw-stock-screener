@@ -9,6 +9,10 @@ import math
 import time
 from datetime import datetime, timezone, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
+try:                                            # 固定題材分類(照合夥人),頂層 import 讓 Vercel 打包進 bundle
+    from _theme_members import THEME_MEMBERS
+except Exception:
+    THEME_MEMBERS = {}
 
 # ── 篩選結果暫存（非同步任務：伺服器算完存起來，前端切回來再領）──
 # 用 anon key：screen_cache 的 RLS 已開放 anon 全操作，且 anon key 必為當前專案（不受
@@ -211,12 +215,13 @@ def _parse_stocks_openapi(rows):
             high_p   = _pf(row.get("HighestPrice",  row.get("最高價", "")))
             low_p    = _pf(row.get("LowestPrice",   row.get("最低價", "")))
             vol      = _pf(row.get("TradeVolume",   row.get("成交股數", ""))) or 0
+            val      = _pf(row.get("TradeValue",    row.get("成交金額", ""))) or 0
             chg      = _pf(row.get("Change",        row.get("漲跌價差", "")))
             prev_c   = round(close_p - chg, 4) if (close_p and chg is not None) else None
             name     = str(row.get("Name", row.get("證券名稱", ""))).strip()
             stocks[code] = {
                 "code": code, "name": name,
-                "volume": vol, "open": open_p, "high": high_p,
+                "volume": vol, "value": val, "open": open_p, "high": high_p,
                 "low": low_p, "close": close_p, "prev_close": prev_c,
             }
         except Exception:
@@ -243,7 +248,7 @@ def _parse_stocks_csv(text):
             code = row[1].strip()
             stocks[code] = {
                 "code": code, "name": row[2].strip(),
-                "volume": _pf(row[3]) or 0,
+                "volume": _pf(row[3]) or 0, "value": _pf(row[4]) or 0,
                 "open": _pf(row[5]), "high": _pf(row[6]),
                 "low": _pf(row[7]), "close": close_p,
                 "prev_close": round(close_p - chg, 4) if (close_p is not None and chg is not None) else None,
@@ -501,6 +506,83 @@ def fetch_all_stocks_latest():
 
     # Fallback 2: Supabase price_window（TWSE 全擋時仍可運作）
     return _fetch_stocks_from_price_window()
+
+
+_themes_cache = {"ts": 0, "data": None}
+_THEMES_TTL = 300
+
+def _fetch_tpex_quotes():
+    """上櫃每日收盤 → {code:{close,pct,value,name}}(只取 4 碼上櫃股票)。"""
+    import http.client
+    url = "https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes"
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"})
+        raw = urllib.request.urlopen(req, timeout=25).read()
+    except http.client.IncompleteRead as e:
+        raw = e.partial
+    except Exception:
+        return {}
+    try:
+        rows = json.loads(raw)
+    except Exception:
+        s = raw.decode("utf-8", "replace"); i = s.rfind("},")
+        try:
+            rows = json.loads(s[:i + 1] + "]")
+        except Exception:
+            return {}
+    out = {}
+    for r in rows:
+        code = str(r.get("SecuritiesCompanyCode") or "").strip()
+        if len(code) != 4 or not code.isdigit():
+            continue
+        close = _pf(r.get("Close")); chg = _pf(r.get("Change"))
+        if close is None:
+            continue
+        prev = (close - chg) if chg is not None else None
+        pct = (chg / prev * 100) if prev else 0
+        out[code] = {"close": close, "pct": pct, "value": _pf(r.get("TransactionAmount")) or 0,
+                     "name": str(r.get("CompanyName") or code).strip()}
+    return out
+
+def _theme_stats(smap):
+    """依固定題材分類(_theme_members.THEME_MEMBERS)算各族群統計,回 list(照合夥人 getThemeStats)。"""
+    res = []
+    for name, codes in THEME_MEMBERS.items():
+        members = [(c, smap[c]) for c in codes if c in smap]
+        if len(members) < 2:
+            continue
+        tv = sum(m[1]["value"] for m in members)
+        changes = [m[1]["pct"] for m in members]
+        today = sum(changes) / len(changes) if changes else 0
+        weighted = (sum(m[1]["pct"] * m[1]["value"] for m in members) / tv) if tv else 0
+        leaders = sorted(members, key=lambda m: -abs(m[1]["pct"]))[:3]
+        mem_sorted = sorted(members, key=lambda m: -m[1]["value"])[:40]
+        res.append({
+            "name": name, "memberCount": len(members), "today": round(today, 2),
+            "weightedToday": round(weighted, 2), "tradeValue": tv,
+            "limitUps": sum(1 for m in members if m[1]["pct"] >= 9.5),
+            "limitDowns": sum(1 for m in members if m[1]["pct"] <= -9.5),
+            "leaders": [{"code": m[0], "name": m[1]["name"], "change": round(m[1]["pct"], 2)} for m in leaders],
+            "members": [{"code": m[0], "name": m[1]["name"], "change": round(m[1]["pct"], 2),
+                         "price": m[1]["close"], "tradeValue": m[1]["value"]} for m in mem_sorted],
+        })
+    return res
+
+def _fetch_themes():
+    now = time.time()
+    if _themes_cache["data"] and now - _themes_cache["ts"] < _THEMES_TTL:
+        return _themes_cache["data"]
+    stocks, mdate = fetch_all_stocks_latest()
+    lmap = {}
+    for c, s in stocks.items():
+        cl = s.get("close"); pv = s.get("prev_close")
+        if cl is None:
+            continue
+        lmap[c] = {"close": cl, "pct": ((cl / pv - 1) * 100) if pv else 0,
+                   "value": s.get("value") or 0, "name": s.get("name") or c}
+    data = {"date": mdate, "listed": _theme_stats(lmap), "otc": _theme_stats(_fetch_tpex_quotes())}
+    _themes_cache["ts"] = now; _themes_cache["data"] = data
+    return data
 
 
 _monthly_cache: dict = {}   # key: "{code}_{yyyymm}" -> (timestamp, rows)
@@ -1641,6 +1723,13 @@ class handler(BaseHTTPRequestHandler):
         if (qs.get("stat") or [""])[0] == "sectors":
             try:
                 return self._send_json(200, _fetch_sectors())
+            except Exception as e:
+                import traceback
+                return self._send_json(200, {"error": str(e), "traceback": traceback.format_exc()})
+        # 題材族群熱力圖(固定分類,照合夥人):上市/上櫃各族群 成交額/漲跌/成分
+        if (qs.get("stat") or [""])[0] == "themes":
+            try:
+                return self._send_json(200, _fetch_themes())
             except Exception as e:
                 import traceback
                 return self._send_json(200, {"error": str(e), "traceback": traceback.format_exc()})
