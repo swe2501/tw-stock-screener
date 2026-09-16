@@ -1598,7 +1598,7 @@ class handler(BaseHTTPRequestHandler):
         if (qs.get("stat") or [""])[0] == "market":
             try:
                 stocks, mdate = fetch_all_stocks_latest()
-                up = dn = up_lim = dn_lim = 0
+                up = dn = fl = up_lim = dn_lim = 0
                 for s in stocks.values():
                     c = s.get("close"); p = s.get("prev_close")
                     if c is None or not p:
@@ -1606,9 +1606,10 @@ class handler(BaseHTTPRequestHandler):
                     chg = (c / p - 1) * 100
                     if chg > 0: up += 1
                     elif chg < 0: dn += 1
+                    else: fl += 1
                     if chg >= 9.5: up_lim += 1
                     elif chg <= -9.5: dn_lim += 1
-                return self._send_json(200, {"date": mdate, "up": up, "down": dn,
+                return self._send_json(200, {"date": mdate, "up": up, "down": dn, "flat": fl,
                                              "up_limit": up_lim, "down_limit": dn_lim, "total": len(stocks)})
             except Exception as e:
                 return self._send_json(200, {"error": str(e)})
