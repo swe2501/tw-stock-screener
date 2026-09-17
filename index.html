@@ -1225,8 +1225,8 @@
       <div id="funcDropdown" style="position:relative;display:none">
         <button id="funcMenuBtn" tabindex="-1" onmousedown="this.blur()" ontouchend="this.blur()" onclick="_toggleFuncMenu(event)">☰ <span class="btn-label">功能</span></button>
         <div id="funcMenu" onclick="_closeFuncMenu()">
-          <button id="brokerSigBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="openBrokerSignals()">🎯 <span class="btn-label">主力訊號</span></button>
-          <button id="brokerRankBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="openBrokerRankings()">📊 <span class="btn-label">分點回測</span></button>
+          <button id="brokerSigBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="_showView('sig')">🎯 <span class="btn-label">主力訊號</span></button>
+          <button id="brokerRankBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="_showView('brank')">📊 <span class="btn-label">分點回測</span></button>
           <button id="sellTrackBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="openSellTrack()">🔻 <span class="btn-label">出場追蹤</span></button>
           <button id="watchlistBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="openWatchlist()">⭐ <span class="btn-label">觀察清單</span></button>
           <button id="alertMgrBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="openAlertMgr()">🔔 <span class="btn-label">我的警示</span></button>
@@ -1257,7 +1257,7 @@
     <div class="mn-grp"><span class="mn-item">題材族群 <i>▾</i></span><div class="mn-menu">
       <a class="nav-owner" onclick="openHotTopics()">🔥 話題</a><a onclick="_showView('themes')">題材列表</a><a onclick="_showView('sectors')">產業地圖</a></div></div>
     <div class="mn-grp"><span class="mn-item">市場觀察 <i>▾</i></span><div class="mn-menu">
-      <a class="nav-owner" onclick="openBrokerSignals()">🎯 主力訊號</a><a class="nav-owner" onclick="openBrokerRankings()">📊 分點回測</a><a onclick="openMarginModal()">📈 融資維持率</a><a onclick="_showView('greed')">😱 貪婪指標</a><a onclick="_showView('inst')">🏦 三大法人買賣超</a><a onclick="_todo('股期儀表板')">股期儀表板</a></div></div>
+      <a class="nav-owner" onclick="_showView('sig')">🎯 主力訊號</a><a class="nav-owner" onclick="_showView('brank')">📊 分點回測</a><a onclick="openMarginModal()">📈 融資維持率</a><a onclick="_showView('greed')">😱 貪婪指標</a><a onclick="_showView('inst')">🏦 三大法人買賣超</a><a onclick="_todo('股期儀表板')">股期儀表板</a></div></div>
     <div class="mn-grp"><span class="mn-item">ETF 分析 <span class="mn-new">新</span> <i>▾</i></span><div class="mn-menu">
       <a onclick="_showView('etf')">總覽 · 規模排行</a><a onclick="_showView('etfcons')">成分股</a><a onclick="_showView('etfrev')">股票反查 ETF</a><a onclick="_showView('etfdiv')">配息行事曆</a><a onclick="_showView('etfhold')">持有人結構</a><a onclick="_showView('etfsim')">ETF 相似度</a><a onclick="_showView('etfheavy')">重倉股排行</a><a onclick="_showView('etfprem')">折溢價</a><a onclick="_showView('etfflow')">資金流</a><a onclick="_showView('etfperf')">績效比較</a></div></div>
     <div class="mn-grp"><span class="mn-item">個股 <i>▾</i></span><div class="mn-menu">
@@ -2010,7 +2010,9 @@
   </script>
 
   <style>
-    #greedView{max-width:1000px;margin:0 auto;}
+    #greedView,#sigView,#brankView{max-width:1000px;margin:0 auto;}
+    .mo-navbtn{padding:3px 12px;border:1px solid var(--border);border-radius:6px;background:transparent;color:var(--text);cursor:pointer;font-size:13px;}
+    .mo-navbtn:hover{border-color:var(--accent);color:var(--accent);}
     .gd-bar2{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px;}
     .gd-bar2 input{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-size:13px;width:180px;}
     .gd-bar2 select{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 10px;color:var(--text);font-size:13px;}
@@ -2994,7 +2996,7 @@
     // 通用視圖註冊：新增大項只要在此登記 {el:容器id, show:全域函式名}，並提供對應元素/函式即可
     window._VIEWS = window._VIEWS || {}; window._VIEWS.home={el:'homeView',show:'_hxShow'}; window._VIEWS.focus={el:'focusView',show:'_focusShow'};
     var NAVMAP={home:'首頁',focus:'今日焦點',todayindex:'今日焦點',screen:'選股',box:'選股',limitup:'選股',
-      themes:'題材族群',sectors:'題材族群',greed:'市場觀察',inst:'市場觀察',news:'每日新聞',
+      themes:'題材族群',sectors:'題材族群',greed:'市場觀察',inst:'市場觀察',sig:'市場觀察',brank:'市場觀察',news:'每日新聞',
       etf:'ETF',etfcons:'ETF',etfrev:'ETF',etfdiv:'ETF',etfhold:'ETF',etfsim:'ETF',etfheavy:'ETF',etfprem:'ETF',etfflow:'ETF',etfperf:'ETF'};
     function _setNav(v){
       var label=NAVMAP[v]; var items=document.querySelectorAll('#mainNav .mn-item');
@@ -3226,13 +3228,14 @@
     /* §3A 盤面結構判讀（成交比重 + 研究門檻判讀,照合夥人 IndustryStructureCard）*/
     function loadStruct(){
       Promise.all([
-        sb('sector_turnover?select=date,elec_pct,fin_pct,trad_pct&order=date.desc&limit=1'),
+        sb('sector_turnover?select=date,elec_pct,fin_pct,trad_pct,top_trad_name,top_trad_pct&order=date.desc&limit=1'),
         sb('chip_brief_daily?select=taiex_pct,trade_date&order=trade_date.desc&limit=1')
       ]).then(function(res){
         var box=el('hpStruct'); if(!box)return;
         var s=(res[0]||[])[0],cb=(res[1]||[])[0]||{};
         if(!s){box.innerHTML='<div class="fc-empty">今日無資料</div>';return;}
-        var elec=+s.elec_pct,fin=+s.fin_pct,trad=+s.trad_pct,mchg=cb.taiex_pct!=null?+cb.taiex_pct:0,topTradShare=0,topTradName='';
+        var elec=+s.elec_pct,fin=+s.fin_pct,trad=+s.trad_pct,mchg=cb.taiex_pct!=null?+cb.taiex_pct:0;
+        var topTradShare=s.top_trad_pct!=null?+s.top_trad_pct:0,topTradName=s.top_trad_name||'';
         var st;
         if(elec>85)st=['電子過熱失衡','成交過度集中，留意多殺多風險','hot'];
         else if(mchg>0&&elec<55&&(fin>=10||topTradShare>=15))st=['產業結構背離','指數走高，但電子成交動能偏弱','warn'];
@@ -3560,36 +3563,27 @@
   </div>
 
   <!-- 🎯 主力訊號 modal（僅擁有者可見） -->
-  <div id="brokerSigModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9990;align-items:flex-start;justify-content:center;overflow-y:auto;padding:4vh 12px">
-    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px 22px;max-width:860px;width:100%">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-        <h3 style="margin:0;font-size:1.05rem;color:var(--text-primary)">🎯 高勝率分點當日買超</h3>
-        <button onclick="document.getElementById('brokerSigModal').style.display='none'"
-          style="background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer">&#10005;</button>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-        <button onclick="_sigNav(-1)" style="padding:2px 10px;border:1px solid var(--border);border-radius:4px;background:transparent;color:var(--text);cursor:pointer">←</button>
-        <span id="sigDateLabel" style="font-size:13px;color:var(--text)">—</span>
-        <button onclick="_sigNav(1)" style="padding:2px 10px;border:1px solid var(--border);border-radius:4px;background:transparent;color:var(--text);cursor:pointer">→</button>
-        <span style="font-size:11px;color:var(--text-muted)">追蹤兩種排行榜前 20 名分點；點列可開 K 線圖</span>
-      </div>
-      <div id="sigContent" style="font-size:13px;color:var(--text-muted)">載入中...</div>
+  <!-- 🎯 主力訊號（市場觀察大項 view，參照貪婪指標版型；僅擁有者可見資料）-->
+  <div id="sigView" style="display:none">
+    <div class="tm-head"><h2>🎯 主力訊號</h2><span class="sub">高勝率分點當日買超</span></div>
+    <div class="gd-bar2" style="align-items:center;gap:10px">
+      <button class="mo-navbtn" onclick="_sigNav(-1)">←</button>
+      <span id="sigDateLabel" style="font-size:13px;color:var(--text);font-weight:700">—</span>
+      <button class="mo-navbtn" onclick="_sigNav(1)">→</button>
+      <span style="font-size:11px;color:var(--text-muted)">追蹤兩種排行榜前 20 名分點；點列可開 K 線圖</span>
     </div>
+    <div id="sigContent" style="font-size:13px;color:var(--text-muted)">載入中...</div>
+    <div class="fc-note" id="sigNote"></div>
   </div>
 
-  <!-- 📊 分點回測 modal（僅擁有者可見） -->
-  <div id="brokerRankModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9990;align-items:flex-start;justify-content:center;overflow-y:auto;padding:4vh 12px">
-    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px 22px;max-width:820px;width:100%">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-        <h3 style="margin:0;font-size:1.05rem;color:var(--text-primary)">📊 分點勝率回測榜</h3>
-        <button onclick="document.getElementById('brokerRankModal').style.display='none'"
-          style="background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer">&#10005;</button>
-      </div>
-      <div id="rankSuperBar" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"></div>
-      <div id="rankGroupBar" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"></div>
-      <div id="rankTabBar" style="display:flex;gap:4px;flex-wrap:wrap"></div>
-      <div id="rankContent" style="border:1px solid var(--border);border-top:none;padding:6px 8px 10px;font-size:12.5px;color:var(--text-muted)">載入中...</div>
-    </div>
+  <!-- 📊 分點回測（市場觀察大項 view；僅擁有者可見資料）-->
+  <div id="brankView" style="display:none">
+    <div class="tm-head"><h2>📊 分點回測</h2><span class="sub">分點勝率回測榜</span></div>
+    <div id="rankSuperBar" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"></div>
+    <div id="rankGroupBar" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"></div>
+    <div id="rankTabBar" style="display:flex;gap:4px;flex-wrap:wrap"></div>
+    <div id="rankContent" style="border:1px solid var(--border);border-top:none;padding:6px 8px 10px;font-size:12.5px;color:var(--text-muted)">載入中...</div>
+    <div class="fc-note" id="brankNote"></div>
   </div>
 
   <!-- 🔥 話題族群 modal（僅授權帳號） -->
@@ -4951,7 +4945,6 @@
     const FLOAT_TABS = ['高勝率分點', '連續買超', '流通比'];
 
     async function openBrokerRankings() {
-      document.getElementById('brokerRankModal').style.display = 'flex';
       if (_rankData) { _renderRank(); return; }
       try {
         const r = await fetch(`${SIG_SB_URL}/rest/v1/broker_rankings?select=*&order=rank.asc&limit=500`, {
@@ -5727,8 +5720,10 @@
       } catch (e) { _stFlash('取消失敗：' + e.message, true); }
     }
 
+    window._VIEWS = window._VIEWS || {};
+    window._VIEWS.sig = { el: 'sigView', show: 'openBrokerSignals' };
+    window._VIEWS.brank = { el: 'brankView', show: 'openBrokerRankings' };
     async function openBrokerSignals() {
-      document.getElementById('brokerSigModal').style.display = 'flex';
       if (_sigRows) { _renderSignals(); return; }
       try {
         const r = await fetch(`${SIG_SB_URL}/rest/v1/broker_signals`
