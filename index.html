@@ -3108,7 +3108,8 @@
     /* 每日 slogan（daily_slogan 表；讀不到用預設）*/
     function loadSlogan(){
       var t=el('gsTitle')||document.querySelector('.gs-title'); if(!t)return;
-      sb('daily_slogan?select=line1,line2&order=date.desc&limit=1').then(function(a){
+      var today=new Date(Date.now()+8*3600*1000).toISOString().slice(0,10); // 台北日期
+      sb('daily_slogan?select=line1,line2,date&date=lte.'+today+'&order=date.desc&limit=1').then(function(a){
         if(Array.isArray(a)&&a.length&&a[0].line1){var s=a[0];
           t.innerHTML=String(s.line1).replace(/</g,'&lt;')+'，<br><em>'+String(s.line2||'').replace(/</g,'&lt;')+'。</em>';}
       }).catch(function(){});
