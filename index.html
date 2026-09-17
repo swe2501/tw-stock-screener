@@ -2305,7 +2305,7 @@
     </div>
     <div class="etx-kpi" id="etxKpi"></div>
     <div class="etx-sec"><div class="etx-sh"><div><span class="k">ACTIVE ETF MONITOR</span><h3>ETF 動態監控看板</h3></div>
-      <div class="etx-tools"><span class="etx-seg" id="etxFilter"><button data-f="active" class="on">主動</button><button data-f="all">全部</button><button data-f="passive">被動</button></span>
+      <div class="etx-tools"><span class="etx-seg" id="etxFilter"><button data-f="all" class="on">全部</button><button data-f="active">主動</button><button data-f="passive">被動</button></span>
         <span class="etx-seg" id="etxSort"><button data-s="action" class="on">依今日動作</button><button data-s="scale">依規模</button></span></div></div>
       <div class="etx-cards" id="etxCards"><div class="fc-empty">載入中…</div></div>
     </div>
@@ -2346,7 +2346,7 @@
       function page(off){return fetch(SB()+'/rest/v1/'+base+'&offset='+off+'&limit=1000',{headers:{apikey:AK(),Authorization:'Bearer '+AK()}}).then(function(r){return r.json();}).then(function(a){if(!Array.isArray(a))return out;out=out.concat(a);return a.length>=1000?page(off+1000):out;});}
       return page(0);
     }
-    var PROD=[], HOLD={}, HEAVY=[], loaded=false, filterF='active', sortF='action', revTags=[], drawerCode=null, drawerTab='moves', INST=[], instDir='buy', instInv='total';
+    var PROD=[], HOLD={}, HEAVY=[], loaded=false, filterF='all', sortF='action', revTags=[], drawerCode=null, drawerTab='moves', INST=[], instDir='buy', instInv='total';
     var pmap={};
 
     function netLots(code){var h=HOLD[code]||[];var n=0;h.forEach(function(x){n+=(x.delta_shares||0);});return n;}
