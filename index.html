@@ -2461,7 +2461,7 @@
       ]).then(function(res){
         PROD=(res[0]||[]).filter(function(p){return p&&p.code;});
         pmap={}; PROD.forEach(function(p){pmap[p.code]=p;});
-        HOLD={}; (res[1]||[]).forEach(function(x){(HOLD[x.code]=HOLD[x.code]||[]).push(x);});
+        HOLD={}; (res[1]||[]).forEach(function(x){x.shares=(x.shares||0)/1000;x.delta_shares=(x.delta_shares||0)/1000;(HOLD[x.code]=HOLD[x.code]||[]).push(x);}); // 股→張
         // 重倉股排行:依 stock_code 彙整
         var hv={}; Object.keys(HOLD).forEach(function(c){HOLD[c].forEach(function(x){var k=x.stock_code;if(!k)return;var o=hv[k]||(hv[k]={code:k,name:x.stock_name,count:0,shares:0});o.count++;o.shares+=(x.shares||0);});});
         HEAVY=Object.keys(hv).map(function(k){return hv[k];}).sort(function(a,b){return b.count-a.count||b.shares-a.shares;});
