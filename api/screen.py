@@ -9,6 +9,49 @@ import math
 import time
 from datetime import datetime, timezone, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
+# 固定題材分類(照合夥人 theme-snapshot,39 族群成分股),內嵌避免 Vercel 多 entrypoint/bundle 問題
+THEME_MEMBERS = {
+    "AI 伺服器": ["1587", "2324", "2356", "2357", "2376", "2377", "2382", "3231", "6982", "2025", "6190", "6245", "2301", "5465", "8210", "2308", "2317", "3011", "3044", "3322", "4927", "6698", "6834", "6862", "7861", "3691", "8996", "2618", "2646", "4543", "6134", "8054", "2420", "3002", "3058", "3071", "3211", "2327", "2368", "2383", "2492", "3017", "3236", "3338", "3605", "6155", "8043", "8155", "8358", "3048", "3483", "6584", "2643", "5609", "5426", "4304", "2360", "4549", "2351", "2481", "3563", "4760", "6920", "3260", "5607", "4722", "2421", "6831", "5498", "8390", "2610", "6175", "4551", "1802", "8438", "2345", "3221", "6220", "2425", "3013", "3032", "3564", "6669", "6805", "5288", "1514", "1519", "1608", "1612", "3323", "4931", "6290", "6409", "6412", "1815", "3037", "3042", "3090", "3093", "3115", "3191", "3207", "3217", "3229", "3305", "3357", "3526", "3533", "3653", "3675", "3689", "4573", "4958", "5230", "5328", "5457", "6272", "6418", "6840", "6924", "8046", "8121", "2347", "3540", "6761", "6903", "2059", "4569", "3030", "6425", "2329", "6291", "6411", "6415", "6435", "6693", "2406", "1303", "3388", "3219", "6618", "6727", "5340", "5475", "4999", "6234", "6705", "8021"],
+    "AI PC": ["2454", "2458", "6138", "2344", "2408", "2330", "3711", "4966"],
+    "CoWoS": ["2330", "3711", "3374", "2449", "1560", "3680", "3131", "3583"],
+    "HBM": ["2467", "3443", "6239", "8112"],
+    "CPO": ["6706", "3163", "3363", "3701", "4573", "6205", "3450", "4908", "6530", "6153", "6269", "3081", "6515"],
+    "ASIC": ["2454", "3661", "3443", "3035", "2388", "2401", "6695", "8054"],
+    "Chiplet／3D IC": ["1711", "1717", "2308", "2330", "2360", "2395", "2467", "3037"],
+    "FOPLP 封裝": ["3481", "3580", "3663", "3711", "6239", "8064"],
+    "IC 載板": ["3037", "8046", "3189", "4958"],
+    "ABF 載板": ["3114", "3485", "7795", "3037", "8046", "3189", "8074", "4577", "3231", "3093", "4958", "6691", "1303", "6664"],
+    "PCB": ["2313", "2316", "2355", "2367", "2368", "2429", "3037", "3044"],
+    "PCB 材料": ["2383", "6274", "8358", "4989", "1815", "1802", "5340", "1303", "3189", "3037", "8046", "8021", "6213", "2368"],
+    "記憶體": ["2408", "2344", "2337", "6770", "8084", "8299", "3006", "6531", "3260", "2451", "4967", "8271", "3135"],
+    "矽光子": ["4906", "6706", "4908", "3450", "7728", "3163", "4573", "3081", "6791", "6530", "3019", "3591", "6153", "6498", "3339"],
+    "矽智財 IP": ["3035", "3443", "3529", "3661", "6423", "6533", "6568", "6643"],
+    "矽晶圓": ["3675", "6224", "2302", "2481", "3016", "3532", "5483", "8028", "2303", "2337", "2342", "2344", "2408", "2434", "5347", "5425", "6270", "6291", "6411", "6415", "6435", "6494", "6531", "6568", "6573", "6770", "2406", "1560", "6488", "6742", "6182", "2330", "3686"],
+    "半導體設備": ["2404", "3131", "6187", "2467", "6139", "6706", "5536", "6691", "6903"],
+    "封測": ["3711", "2449", "6239", "8131", "6515", "8150", "8110", "2329", "6257", "2369", "2441", "3264"],
+    "次世代半導體": ["2330", "5347", "2342", "3714", "6488", "8086", "2340", "3707"],
+    "功率半導體": ["2303", "2330", "2342", "2351", "2481", "3317", "3653", "3675"],
+    "氮化鎵": ["8045", "2457", "3015", "3332", "6412", "5222", "3016", "4991", "6182", "6920", "3105", "3317", "3707", "6168", "6488", "6525", "6548", "6719", "8162"],
+    "碳化矽": ["2301", "2457", "3332", "3628", "6282", "2308", "2342", "6270", "4934", "3026", "6651", "8121", "2481", "3016", "3467", "2434", "3317", "3707", "6488", "6525", "6548", "8261"],
+    "散熱模組": ["2354", "2421", "3017", "3324", "3483", "6230", "6591", "3338"],
+    "光通訊": ["2345", "3081", "2455", "3234", "4979", "6451", "3450", "3363"],
+    "被動元件": ["2308", "2327", "2375", "2413", "2428", "2472", "2478", "2484"],
+    "智慧型機器人": ["2049", "2377", "6166", "2359", "8374", "4562", "2365", "2464"],
+    "低軌衛星": ["2313", "2314", "2367", "2383", "2419", "2485", "3062", "3138"],
+    "無人機": ["1611", "1723", "2049", "2303", "2352", "2360", "2385", "2388"],
+    "車用電子": ["1522", "1533", "1612", "2115", "2231", "2301", "2308", "2312"],
+    "電動車": ["1522", "1536", "1723", "2104", "2105", "2204", "2308", "2313"],
+    "資料中心": ["2465", "2438", "4979", "6669", "6588", "4543", "2444", "3664", "6530", "6820", "4977", "5386", "6197", "6199", "6277", "6933", "1612", "3002", "3043", "3211", "3628", "4931", "6290", "6833", "2308", "2484", "3710", "4527", "6230", "3483", "6189", "6227", "5309", "3081", "3450", "6425", "3234", "3661", "6239", "6451", "6568", "6921", "6231", "1504", "3209", "3363", "6220", "6426", "2495", "3324", "3693", "7711", "8210", "6275", "1514", "1519", "2440", "3625", "6121", "6409", "3060", "3236", "3689", "6442", "6751", "8099", "4991", "3105", "3135", "4971", "5274", "6233", "6291", "6125", "2412", "6561", "4999"],
+    "資安": ["2453", "2468", "2471", "2480", "4953", "6214", "6245"],
+    "生技醫療": ["4726", "6662", "3224", "4147", "6472", "6541", "6550", "6589"],
+    "醫療器材": ["1733", "1784", "1799", "3373", "4107", "4121", "4126", "4129"],
+    "新藥研發": ["1760", "3176", "4108", "4128", "4130", "4147", "4157", "4162"],
+    "太陽能": ["2308", "5871", "6409", "2409", "5483", "2371", "3023", "1513"],
+    "風力發電": ["1513", "1514", "1519", "1589", "1605", "1609", "1802", "2013"],
+    "軍工": ["2002", "2049", "2208", "2360", "2634", "3005", "4916", "4971"],
+    "5G 通訊": ["2314", "2317", "2332", "2353", "2356", "2357", "2395", "2412"],
+}
+
 
 # ── 篩選結果暫存（非同步任務：伺服器算完存起來，前端切回來再領）──
 # 用 anon key：screen_cache 的 RLS 已開放 anon 全操作，且 anon key 必為當前專案（不受
@@ -149,7 +192,12 @@ def _parse_roc_date(roc_str):
 
 def _pf(s):
     s = str(s).replace(",", "").strip()
-    return None if s in ("--", "N/A", "", "除權息", "除息", "除權") else float(s)
+    if not s or set(s) <= {"-"} or s in ("N/A", "除權息", "除息", "除權"):
+        return None
+    try:
+        return float(s)
+    except ValueError:
+        return None
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -211,12 +259,13 @@ def _parse_stocks_openapi(rows):
             high_p   = _pf(row.get("HighestPrice",  row.get("最高價", "")))
             low_p    = _pf(row.get("LowestPrice",   row.get("最低價", "")))
             vol      = _pf(row.get("TradeVolume",   row.get("成交股數", ""))) or 0
+            val      = _pf(row.get("TradeValue",    row.get("成交金額", ""))) or 0
             chg      = _pf(row.get("Change",        row.get("漲跌價差", "")))
             prev_c   = round(close_p - chg, 4) if (close_p and chg is not None) else None
             name     = str(row.get("Name", row.get("證券名稱", ""))).strip()
             stocks[code] = {
                 "code": code, "name": name,
-                "volume": vol, "open": open_p, "high": high_p,
+                "volume": vol, "value": val, "open": open_p, "high": high_p,
                 "low": low_p, "close": close_p, "prev_close": prev_c,
             }
         except Exception:
@@ -243,7 +292,7 @@ def _parse_stocks_csv(text):
             code = row[1].strip()
             stocks[code] = {
                 "code": code, "name": row[2].strip(),
-                "volume": _pf(row[3]) or 0,
+                "volume": _pf(row[3]) or 0, "value": _pf(row[4]) or 0,
                 "open": _pf(row[5]), "high": _pf(row[6]),
                 "low": _pf(row[7]), "close": close_p,
                 "prev_close": round(close_p - chg, 4) if (close_p is not None and chg is not None) else None,
@@ -501,6 +550,83 @@ def fetch_all_stocks_latest():
 
     # Fallback 2: Supabase price_window（TWSE 全擋時仍可運作）
     return _fetch_stocks_from_price_window()
+
+
+_themes_cache = {"ts": 0, "data": None}
+_THEMES_TTL = 300
+
+def _fetch_tpex_quotes():
+    """上櫃每日收盤 → {code:{close,pct,value,name}}(只取 4 碼上櫃股票)。"""
+    import http.client
+    url = "https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes"
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"})
+        raw = urllib.request.urlopen(req, timeout=25).read()
+    except http.client.IncompleteRead as e:
+        raw = e.partial
+    except Exception:
+        return {}
+    try:
+        rows = json.loads(raw)
+    except Exception:
+        s = raw.decode("utf-8", "replace"); i = s.rfind("},")
+        try:
+            rows = json.loads(s[:i + 1] + "]")
+        except Exception:
+            return {}
+    out = {}
+    for r in rows:
+        code = str(r.get("SecuritiesCompanyCode") or "").strip()
+        if len(code) != 4 or not code.isdigit():
+            continue
+        close = _pf(r.get("Close")); chg = _pf(r.get("Change"))
+        if close is None:
+            continue
+        prev = (close - chg) if chg is not None else None
+        pct = (chg / prev * 100) if prev else 0
+        out[code] = {"close": close, "pct": pct, "value": _pf(r.get("TransactionAmount")) or 0,
+                     "name": str(r.get("CompanyName") or code).strip()}
+    return out
+
+def _theme_stats(smap):
+    """依固定題材分類(_theme_members.THEME_MEMBERS)算各族群統計,回 list(照合夥人 getThemeStats)。"""
+    res = []
+    for name, codes in THEME_MEMBERS.items():
+        members = [(c, smap[c]) for c in codes if c in smap]
+        if len(members) < 2:
+            continue
+        tv = sum(m[1]["value"] for m in members)
+        changes = [m[1]["pct"] for m in members]
+        today = sum(changes) / len(changes) if changes else 0
+        weighted = (sum(m[1]["pct"] * m[1]["value"] for m in members) / tv) if tv else 0
+        leaders = sorted(members, key=lambda m: -abs(m[1]["pct"]))[:3]
+        mem_sorted = sorted(members, key=lambda m: -m[1]["value"])[:40]
+        res.append({
+            "name": name, "memberCount": len(members), "today": round(today, 2),
+            "weightedToday": round(weighted, 2), "tradeValue": tv,
+            "limitUps": sum(1 for m in members if m[1]["pct"] >= 9.5),
+            "limitDowns": sum(1 for m in members if m[1]["pct"] <= -9.5),
+            "leaders": [{"code": m[0], "name": m[1]["name"], "change": round(m[1]["pct"], 2)} for m in leaders],
+            "members": [{"code": m[0], "name": m[1]["name"], "change": round(m[1]["pct"], 2),
+                         "price": m[1]["close"], "tradeValue": m[1]["value"]} for m in mem_sorted],
+        })
+    return res
+
+def _fetch_themes():
+    now = time.time()
+    if _themes_cache["data"] and now - _themes_cache["ts"] < _THEMES_TTL:
+        return _themes_cache["data"]
+    stocks, mdate = fetch_all_stocks_latest()
+    lmap = {}
+    for c, s in stocks.items():
+        cl = s.get("close"); pv = s.get("prev_close")
+        if cl is None:
+            continue
+        lmap[c] = {"close": cl, "pct": ((cl / pv - 1) * 100) if pv else 0,
+                   "value": s.get("value") or 0, "name": s.get("name") or c}
+    data = {"date": mdate, "listed": _theme_stats(lmap), "otc": _theme_stats(_fetch_tpex_quotes())}
+    _themes_cache["ts"] = now; _themes_cache["data"] = data
+    return data
 
 
 _monthly_cache: dict = {}   # key: "{code}_{yyyymm}" -> (timestamp, rows)
@@ -1598,7 +1724,7 @@ class handler(BaseHTTPRequestHandler):
         if (qs.get("stat") or [""])[0] == "market":
             try:
                 stocks, mdate = fetch_all_stocks_latest()
-                up = dn = up_lim = dn_lim = 0
+                up = dn = fl = up_lim = dn_lim = 0
                 for s in stocks.values():
                     c = s.get("close"); p = s.get("prev_close")
                     if c is None or not p:
@@ -1606,15 +1732,19 @@ class handler(BaseHTTPRequestHandler):
                     chg = (c / p - 1) * 100
                     if chg > 0: up += 1
                     elif chg < 0: dn += 1
+                    else: fl += 1
                     if chg >= 9.5: up_lim += 1
                     elif chg <= -9.5: dn_lim += 1
-                return self._send_json(200, {"date": mdate, "up": up, "down": dn,
+                return self._send_json(200, {"date": mdate, "up": up, "down": dn, "flat": fl,
                                              "up_limit": up_lim, "down_limit": dn_lim, "total": len(stocks)})
             except Exception as e:
                 return self._send_json(200, {"error": str(e)})
         # 股票代號→名稱對照（前端各視圖共用；純靜態，不查 DB）
         if (qs.get("stat") or [""])[0] == "names":
             return self._send_json(200, _STOCK_NAMES)
+        # 股票代號→產業別對照（今日索引「展開該產業全部上市股」用；純靜態）
+        if (qs.get("stat") or [""])[0] == "industry":
+            return self._send_json(200, _STOCK_INDUSTRY)
         # 今日焦點三榜（漲幅/跌幅/爆量）：頁面 _showView('focus') 用
         if (qs.get("stat") or [""])[0] == "focus":
             try:
@@ -1637,6 +1767,13 @@ class handler(BaseHTTPRequestHandler):
         if (qs.get("stat") or [""])[0] == "sectors":
             try:
                 return self._send_json(200, _fetch_sectors())
+            except Exception as e:
+                import traceback
+                return self._send_json(200, {"error": str(e), "traceback": traceback.format_exc()})
+        # 題材族群熱力圖(固定分類,照合夥人):上市/上櫃各族群 成交額/漲跌/成分
+        if (qs.get("stat") or [""])[0] == "themes":
+            try:
+                return self._send_json(200, _fetch_themes())
             except Exception as e:
                 import traceback
                 return self._send_json(200, {"error": str(e), "traceback": traceback.format_exc()})

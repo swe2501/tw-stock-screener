@@ -949,6 +949,82 @@ def fetch_chart(code, range_str="3mo", interval="1d", adj=False, raw=False):
     }
 
 
+def _taiex_twse_recent():
+    """TWSE 官方加權指數近月每日 OHLC(MI_5MINS_HIST,民國日期)→ {iso: {open,high,low,close}}。
+    Yahoo ^TWII 日K 尾巴常落後 1~2 天,用官方源覆蓋修正、並補當日收盤 K。"""
+    out = {}
+    now = datetime.now(timezone(timedelta(hours=8)))
+    months = [now.strftime("%Y%m01")]
+    if now.day <= 7:
+        prev = now.replace(day=1) - timedelta(days=1)
+        months.append(prev.strftime("%Y%m01"))
+    for ym in months:
+        try:
+            url = f"https://www.twse.com.tw/indicesReport/MI_5MINS_HIST?response=json&date={ym}"
+            req = urllib.request.Request(url, headers=TWSE_HEADERS)
+            with urllib.request.urlopen(req, timeout=8) as r:
+                j = json.loads(r.read().decode("utf-8", "replace"))
+            if j.get("stat") != "OK":
+                continue
+            for row in (j.get("data") or []):
+                try:
+                    dp = row[0].split("/")
+                    iso = f"{int(dp[0]) + 1911:04d}-{int(dp[1]):02d}-{int(dp[2]):02d}"
+                    out[iso] = {"open": float(row[1].replace(",", "")), "high": float(row[2].replace(",", "")),
+                                "low": float(row[3].replace(",", "")), "close": float(row[4].replace(",", ""))}
+                except Exception:
+                    continue
+        except Exception:
+            continue
+    return out
+
+
+def _taiex_twse_live():
+    """MIS 即時加權指數(tse_t00)→ 今日 {iso,open,high,low,close(現價)} 或 None。盤中即時用。"""
+    try:
+        url = "https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=tse_t00.tw&json=1&delay=0"
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0",
+                                                   "Referer": "https://mis.twse.com.tw/stock/index.jsp"})
+        with urllib.request.urlopen(req, timeout=6) as r:
+            m = json.loads(r.read().decode("utf-8", "replace"))
+        s = (m.get("msgArray") or [None])[0]
+        if not s:
+            return None
+        def _f(x):
+            try:
+                return float(str(x).replace(",", ""))
+            except Exception:
+                return None
+        d, z = s.get("d"), _f(s.get("z"))
+        if not d or z is None or z <= 0:
+            return None
+        o, h, l = _f(s.get("o")), _f(s.get("h")), _f(s.get("l"))
+        return {"iso": f"{d[0:4]}-{d[4:6]}-{d[6:8]}", "open": o or z, "high": h or z, "low": l or z, "close": z}
+    except Exception:
+        return None
+
+
+def _overlay_taiex(data):
+    """把 TWSE 官方近月 + 即時 疊到 Yahoo ^TWII 日K:修正落後尾巴、補當日(收盤後為當日K,盤中為即時價)。"""
+    if not isinstance(data, list):
+        return data
+    idx = {d.get("time"): d for d in data if isinstance(d, dict)}
+    for iso, o in _taiex_twse_recent().items():
+        if iso in idx:
+            idx[iso].update(o)
+        else:
+            row = {"time": iso, "volume": 0}; row.update(o); data.append(row); idx[iso] = row
+    live = _taiex_twse_live()
+    if live:
+        iso = live.pop("iso")
+        if iso in idx:
+            idx[iso].update(live)
+        else:
+            row = {"time": iso, "volume": 0}; row.update(live); data.append(row)
+    data.sort(key=lambda d: d.get("time", ""))
+    return data
+
+
 class handler(BaseHTTPRequestHandler):
     def log_message(self, format, *args): pass
 
@@ -990,10 +1066,16 @@ class handler(BaseHTTPRequestHandler):
             if not result:
                 self._json(404, {"error": f"no data for {code}"})
                 return
-            # 指數/期貨日K：CDN 快取 4h（一天只更新一次）
-            INDEX_CODES = {"^TWII", "^N225", "^KS11", "^IXIC", "^DJI", "TX=F"}
+            # 台股加權:Yahoo ^TWII 日K 尾巴會落後 → 用 TWSE 官方近月+即時疊加(修尾巴、補當日、盤中即時)
+            if code == "^TWII" and interval == "1d" and isinstance(result.get("data"), list):
+                try:
+                    result["data"] = _overlay_taiex(result["data"])
+                except Exception:
+                    pass
+            # 指數/期貨日K:短快取(~1 分)讓盤中近即時更新、收盤後即呈現當日K
+            INDEX_CODES = {"^TWII", "^SOX", "^N225", "^KS11", "^IXIC", "^DJI", "^GSPC", "TX=F"}
             if code in INDEX_CODES and interval == "1d":
-                cache = "public, s-maxage=14400, stale-while-revalidate=86400"
+                cache = "public, s-maxage=60, stale-while-revalidate=300"
             else:
                 cache = "no-store"
             self._json(200, result, cache=cache)
