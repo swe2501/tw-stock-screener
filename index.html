@@ -1251,7 +1251,7 @@
   <nav id="mainNav"><div class="mn-inner">
     <a class="mn-item" onclick="_showView('home')">首頁</a>
     <div class="mn-grp"><span class="mn-item">今日焦點 <i>▾</i></span><div class="mn-menu">
-      <a onclick="_showView('focus')">排行榜</a><a onclick="_showView('todayindex')">今日索引</a></div></div>
+      <a onclick="_showView('overview')" style="font-weight:800;color:var(--brand-green)">📊 總覽</a><a onclick="_showView('focus')">排行榜</a><a onclick="_showView('todayindex')">今日索引</a></div></div>
     <div class="mn-grp"><span class="mn-item">選股 <i>▾</i></span><div class="mn-menu">
       <a onclick="_showView('screen')">篩選器</a><a onclick="_showView('box')">箱型</a><a onclick="_showView('limitup')">漲停分析</a></div></div>
     <div class="mn-grp"><span class="mn-item">題材族群 <i>▾</i></span><div class="mn-menu">
@@ -1655,6 +1655,216 @@
     <div class="fc-card" id="fcSigCard"><div class="fc-h">🎯 今日主力焦點 <span class="fc-sub">擁有者限定</span></div><div id="fcSig"><div class="fc-empty">—</div></div></div>
     <div class="fc-note" id="fcNote"></div>
   </div>
+
+  <!-- ═══ 今日焦點 · 總覽（100% 仿照合夥人焦點頁）═══ -->
+  <style>
+    #overviewView{max-width:1200px;margin:0 auto;}
+    .ov-hero{background:linear-gradient(180deg,var(--surface),var(--bg));border:1px solid var(--border);border-radius:14px;padding:22px 24px;margin-bottom:18px;}
+    .ov-hero .eyebrow{font-size:11px;letter-spacing:.22em;color:var(--brand-green);font-weight:800;margin:0 0 6px;}
+    .ov-hero h1{font-size:27px;font-weight:900;margin:0;display:flex;align-items:baseline;gap:12px;letter-spacing:-.02em;}
+    .ov-hero h1 time{font-size:13px;font-weight:600;color:var(--text-muted);}
+    .ov-hero p{font-size:12.5px;color:var(--text-muted);margin:8px 0 0;line-height:1.7;max-width:760px;}
+    .ov-sec{margin:22px 0;}
+    .ov-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:12px;}
+    .ov-head h2{font-size:17px;font-weight:800;margin:0;letter-spacing:-.01em;}
+    .ov-head span{font-size:11.5px;color:var(--text-muted);}
+    .ov-grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+    @media(max-width:860px){.ov-grid2{grid-template-columns:1fr;}}
+    .ov-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;overflow:hidden;}
+    .ov-card header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+    .ov-card header h3{font-size:14px;font-weight:800;margin:0;}
+    .ov-card header .tag{font-size:10.5px;font-weight:700;color:var(--text-muted);background:var(--surface2);border-radius:20px;padding:2px 9px;}
+    .ov-thead{display:grid;font-size:10.5px;color:var(--text-muted);font-weight:700;padding:0 2px 6px;border-bottom:1px solid var(--border);}
+    .ov-thead.t-theme{grid-template-columns:1fr 62px 68px 60px;}
+    .ov-thead.t-sector{grid-template-columns:1fr 78px 82px;}
+    .ov-thead.t-move{grid-template-columns:1fr 74px 66px 78px;}
+    .ov-thead span:not(:first-child){text-align:right;}
+    .ov-row{display:grid;align-items:center;font-size:12.5px;padding:8px 2px;border-bottom:1px solid var(--border);text-decoration:none;color:var(--text);}
+    .ov-row:last-child{border-bottom:0;}
+    .ov-row.r-theme{grid-template-columns:1fr 62px 68px 60px;}
+    .ov-row.r-sector{grid-template-columns:1fr 78px 82px;}
+    .ov-row.r-move{grid-template-columns:1fr 74px 66px 78px;}
+    .ov-row>span:not(:first-child),.ov-row>small:not(:first-child){text-align:right;font-variant-numeric:tabular-nums;}
+    .ov-row b{font-weight:700;}
+    .ov-row .nm small{color:var(--text-muted);font-weight:400;margin-left:5px;font-size:11px;}
+    .ov-row .sub{display:block;color:var(--text-muted);font-size:10.5px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ov-row.clk{cursor:pointer;}
+    .ov-row.clk:hover{background:var(--surface2);}
+    .ov-up{color:var(--red);} .ov-dn{color:var(--green);}
+    .ov-lim i{font-style:normal;font-weight:700;} .ov-lim .u{color:var(--red);} .ov-lim .d{color:var(--green);}
+    .ov-rank a{display:grid;grid-template-columns:96px 1fr 74px;align-items:center;gap:10px;font-size:12.5px;padding:7px 2px;text-decoration:none;color:var(--text);border-bottom:1px solid var(--border);}
+    .ov-rank a:last-child{border-bottom:0;}
+    .ov-rank a b{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .ov-rank .bar{height:8px;background:var(--surface2);border-radius:6px;overflow:hidden;}
+    .ov-rank .bar u{display:block;height:100%;border-radius:6px;}
+    .ov-rank.money .bar u{background:linear-gradient(90deg,var(--brand-green),#3aa76d);}
+    .ov-rank.flame .bar u{background:linear-gradient(90deg,#d99a2b,#e15b3a);}
+    .ov-rank a span{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;}
+    .ov-tblwrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+    table.ov-tbl{width:100%;border-collapse:collapse;font-size:12.5px;}
+    table.ov-tbl th{font-size:10.5px;color:var(--text-muted);font-weight:700;text-align:left;padding:10px 12px;border-bottom:1px solid var(--border);background:var(--surface2);}
+    table.ov-tbl td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle;}
+    table.ov-tbl tr:last-child td{border-bottom:0;}
+    table.ov-tbl td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;}
+    table.ov-tbl tr.clk{cursor:pointer;} table.ov-tbl tr.clk:hover{background:var(--surface2);}
+    table.ov-tbl .code{color:var(--text-muted);font-size:11px;margin-left:5px;}
+    .ov-tags{display:flex;flex-wrap:wrap;gap:5px;}
+    .ov-tags .ind{background:var(--surface2);color:var(--text-muted);border-radius:5px;padding:1px 7px;font-size:10.5px;font-weight:600;}
+    .ov-tags .th{background:rgba(45,138,90,.14);color:var(--brand-green);border-radius:5px;padding:1px 7px;font-size:10.5px;font-weight:600;}
+    .ov-note{font-size:11px;color:var(--text-muted);line-height:1.9;margin:20px 2px 34px;border-top:1px dashed var(--border);padding-top:12px;}
+    .ov-note b{color:var(--text);}
+    .ov-empty{color:var(--text-muted);font-size:12px;padding:14px 2px;}
+    @media(max-width:640px){table.ov-tbl .hidesm{display:none;}}
+  </style>
+  <div id="overviewView" style="display:none">
+    <section class="ov-hero">
+      <p class="eyebrow">TODAY'S FOCUS</p>
+      <h1>總覽 <time id="ovDate"></time></h1>
+      <p>官方產業再往下拆成 AI、先進封裝、PCB、車用與能源等細分題材；漲跌與成交額以證交所最新行情重新計算，點擊個股可查看站內個股資訊。</p>
+    </section>
+
+    <section class="ov-sec">
+      <div class="ov-head"><h2>細分題材強弱</h2><span>題材成分股取自固定分類映射，漲跌與成交額以證交所最新行情重新計算</span></div>
+      <div class="ov-grid2">
+        <div class="ov-card"><header><h3>今日強勢題材</h3><span class="tag">▲ 當日</span></header>
+          <div class="ov-thead t-theme"><span>題材</span><span>今日</span><span>資金</span><span>漲／跌停</span></div>
+          <div id="ovThemeStrong"><div class="ov-empty">載入中…</div></div></div>
+        <div class="ov-card"><header><h3>今日弱勢題材</h3><span class="tag">▼ 當日</span></header>
+          <div class="ov-thead t-theme"><span>題材</span><span>今日</span><span>資金</span><span>漲／跌停</span></div>
+          <div id="ovThemeWeak"><div class="ov-empty">載入中…</div></div></div>
+      </div>
+    </section>
+
+    <section class="ov-sec">
+      <div class="ov-grid2">
+        <div class="ov-card"><header><h3>題材資金集中排行</h3><span class="tag">成分股成交額合計</span></header>
+          <div class="ov-rank money" id="ovCapital"><div class="ov-empty">載入中…</div></div></div>
+        <div class="ov-card"><header><h3>題材漲跌停家數最多</h3><span class="tag">題材異動領頭</span></header>
+          <div class="ov-rank flame" id="ovLimit"><div class="ov-empty">載入中…</div></div></div>
+      </div>
+    </section>
+
+    <section class="ov-sec">
+      <div class="ov-head"><h2>官方產業類股</h2><span>依證交所產業類指數當日漲跌幅排序</span></div>
+      <div class="ov-grid2">
+        <div class="ov-card"><header><h3>強勢產業</h3><span class="tag">當日</span></header>
+          <div class="ov-thead t-sector"><span>族群</span><span>漲跌</span><span>指數</span></div>
+          <div id="ovSectorStrong"><div class="ov-empty">載入中…</div></div></div>
+        <div class="ov-card"><header><h3>弱勢產業</h3><span class="tag">當日</span></header>
+          <div class="ov-thead t-sector"><span>族群</span><span>漲跌</span><span>指數</span></div>
+          <div id="ovSectorWeak"><div class="ov-empty">載入中…</div></div></div>
+      </div>
+    </section>
+
+    <section class="ov-sec">
+      <div class="ov-head"><h2>成交值分析</h2><span>當日成交值前 30 名個股；標註所屬產業與題材</span></div>
+      <div class="ov-tblwrap">
+        <table class="ov-tbl"><thead><tr>
+          <th>#</th><th>股票</th><th style="text-align:right">成交值</th><th style="text-align:right">漲跌</th><th style="text-align:right">收盤價</th><th class="hidesm">所屬產業／題材</th>
+        </tr></thead><tbody id="ovTurnover"><tr><td colspan="6"><div class="ov-empty">載入中…</div></td></tr></tbody></table>
+      </div>
+    </section>
+
+    <section class="ov-sec">
+      <div class="ov-head"><h2>個股動向</h2><span>今日漲幅前 20 與跌幅前 20</span></div>
+      <div class="ov-grid2">
+        <div class="ov-card"><header><h3>個股漲幅榜</h3><span class="tag">▲ TOP20</span></header>
+          <div class="ov-thead t-move"><span>股票</span><span>漲跌</span><span>收盤</span><span>產業</span></div>
+          <div id="ovWinners"><div class="ov-empty">載入中…</div></div></div>
+        <div class="ov-card"><header><h3>個股跌幅榜</h3><span class="tag">▼ TOP20</span></header>
+          <div class="ov-thead t-move"><span>股票</span><span>漲跌</span><span>收盤</span><span>產業</span></div>
+          <div id="ovLosers"><div class="ov-empty">載入中…</div></div></div>
+      </div>
+    </section>
+
+    <div class="ov-note" id="ovNote"></div>
+  </div>
+  <script>
+  (function(){
+    var el=function(id){return document.getElementById(id);};
+    var loaded=false;
+    function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+    function spct(v){return (v>0?'+':'')+Number(v).toFixed(2)+'%';}
+    function cls(v){return v>0?'ov-up':(v<0?'ov-dn':'');}
+    function yi(v){return (Number(v)/1e8).toFixed(1)+' 億';}
+    function nfmt(v){return Number(v).toLocaleString(undefined,{maximumFractionDigits:2});}
+    function themeRows(arr){
+      if(!arr||!arr.length) return '<div class="ov-empty">今日無資料</div>';
+      return arr.map(function(t){
+        var leaders=(t.leaders||[]).join('、');
+        return '<div class="ov-row r-theme"><div class="nm"><b>'+esc(t.name)+'</b><span class="sub">'+t.memberCount+' 檔 · '+esc(leaders)+'</span></div>'+
+          '<span class="'+cls(t.today)+'">'+spct(t.today)+'</span>'+
+          '<span>'+yi(t.tradeValue)+'</span>'+
+          '<small class="ov-lim"><i class="u">'+t.limitUps+'</i>／<i class="d">'+t.limitDowns+'</i></small></div>';
+      }).join('');
+    }
+    function rankRows(arr,unit){
+      if(!arr||!arr.length) return '<div class="ov-empty">今日無資料</div>';
+      var vals=arr.map(function(r){return unit==='億'?r.tradeValue/1e8:r.limit;});
+      var max=Math.max.apply(null,vals.concat([1]));
+      return arr.map(function(r,i){
+        var v=vals[i];
+        return '<a><b>'+esc(r.name)+'</b><div class="bar"><u style="width:'+(Math.max(2,v/max*100))+'%"></u></div><span>'+(unit==='億'?v.toFixed(1):v)+' '+unit+'</span></a>';
+      }).join('');
+    }
+    function sectorRows(arr){
+      if(!arr||!arr.length) return '<div class="ov-empty">暫無官方類指數資料</div>';
+      return arr.map(function(s){
+        return '<div class="ov-row r-sector"><b>'+esc(s.name)+'</b><span class="'+cls(s.pct)+'">'+spct(s.pct)+'</span><small>'+(s.close!=null?nfmt(s.close):'—')+'</small></div>';
+      }).join('');
+    }
+    function moveRows(arr){
+      if(!arr||!arr.length) return '<div class="ov-empty">今日無資料</div>';
+      return arr.map(function(s){
+        return '<div class="ov-row r-move clk" onclick="_openStock(\''+s.code+'\',\''+esc(s.name)+'\')"><div class="nm"><b>'+esc(s.name)+'</b><small class="code">'+s.code+'</small></div>'+
+          '<span class="'+cls(s.pct)+'">'+spct(s.pct)+'</span>'+
+          '<span>'+nfmt(s.close)+'</span>'+
+          '<small style="color:var(--text-muted)">'+esc(s.industry||'')+'</small></div>';
+      }).join('');
+    }
+    function turnoverRows(arr){
+      if(!arr||!arr.length) return '<tr><td colspan="6"><div class="ov-empty">今日無資料</div></td></tr>';
+      return arr.map(function(s,i){
+        var tags='<span class="ind">'+esc(s.industry||'其他')+'</span>'+(s.themes||[]).map(function(t){return '<span class="th">'+esc(t)+'</span>';}).join('');
+        return '<tr class="clk" onclick="_openStock(\''+s.code+'\',\''+esc(s.name)+'\')"><td>'+(i+1)+'</td>'+
+          '<td><b>'+esc(s.name)+'</b><span class="code">'+s.code+'</span></td>'+
+          '<td class="num">'+yi(s.value)+'</td>'+
+          '<td class="num '+cls(s.pct)+'">'+spct(s.pct)+'</td>'+
+          '<td class="num">'+nfmt(s.close)+'</td>'+
+          '<td class="hidesm"><div class="ov-tags">'+tags+'</div></td></tr>';
+      }).join('');
+    }
+    window._ovShow=function(){
+      if(loaded) return;
+      loaded=true;
+      fetch('/api/screen?stat=overview').then(function(r){return r.json();}).then(function(j){
+        if(!j||j.error){
+          ['ovThemeStrong','ovThemeWeak','ovCapital','ovLimit','ovSectorStrong','ovSectorWeak','ovWinners','ovLosers'].forEach(function(id){if(el(id))el(id).innerHTML='<div class="ov-empty">讀取失敗</div>';});
+          if(el('ovTurnover'))el('ovTurnover').innerHTML='<tr><td colspan="6"><div class="ov-empty">讀取失敗</div></td></tr>';
+          loaded=false; return;
+        }
+        if(el('ovDate'))el('ovDate').textContent=j.date?('資料日 '+String(j.date).replace(/^(\d{4})(\d{2})(\d{2})$/,'$1/$2/$3')):'';
+        el('ovThemeStrong').innerHTML=themeRows(j.themeStrong);
+        el('ovThemeWeak').innerHTML=themeRows(j.themeWeak);
+        el('ovCapital').innerHTML=rankRows(j.capital,'億');
+        el('ovLimit').innerHTML=rankRows(j.limitGroups,'檔');
+        el('ovSectorStrong').innerHTML=sectorRows(j.sectorsStrong);
+        el('ovSectorWeak').innerHTML=sectorRows(j.sectorsWeak);
+        el('ovTurnover').innerHTML=turnoverRows(j.turnover);
+        el('ovWinners').innerHTML=moveRows(j.winners);
+        el('ovLosers').innerHTML=moveRows(j.losers);
+        var src=j.sectorSource==='official'?'臺灣證券交易所 產業類指數（官方，rwd MI_INDEX）':'產業別彙整（備援）';
+        el('ovNote').innerHTML='<b>資料源與算法</b>：行情＝臺灣證券交易所全市場收盤（STOCK_DAY_ALL）；漲跌幅＝今收／前收−1。'+
+          '題材＝固定題材分類映射，題材今日漲跌幅取成分股算術平均、資金為成分股成交額合計、漲跌停以單日±9.5% 計。'+
+          '官方產業類股＝'+src+'，依當日漲跌幅排序。成交值分析取當日成交值前 30、個股動向取漲跌幅前 20；ETF 不列入個股榜。本頁不構成投資建議。';
+      }).catch(function(){
+        ['ovThemeStrong','ovThemeWeak','ovCapital','ovLimit','ovSectorStrong','ovSectorWeak','ovWinners','ovLosers'].forEach(function(id){if(el(id))el(id).innerHTML='<div class="ov-empty">讀取失敗</div>';});
+        if(el('ovTurnover'))el('ovTurnover').innerHTML='<tr><td colspan="6"><div class="ov-empty">讀取失敗</div></td></tr>';
+        loaded=false;
+      });
+    };
+  })();
+  </script>
   <script>
   (function(){
     var el=function(id){return document.getElementById(id);};
@@ -3276,8 +3486,8 @@
     window._hxShow=function(){ el('homeView').style.display='block'; load(); if(typeof window._hpReport==='function')window._hpReport(); };
     window._hxRetheme=function(){ if(el('homeView')&&el('homeView').style.display!=='none') load(); };
     // 通用視圖註冊：新增大項只要在此登記 {el:容器id, show:全域函式名}，並提供對應元素/函式即可
-    window._VIEWS = window._VIEWS || {}; window._VIEWS.home={el:'homeView',show:'_hxShow'}; window._VIEWS.focus={el:'focusView',show:'_focusShow'};
-    var NAVMAP={home:'首頁',focus:'今日焦點',todayindex:'今日焦點',screen:'選股',box:'選股',limitup:'選股',
+    window._VIEWS = window._VIEWS || {}; window._VIEWS.home={el:'homeView',show:'_hxShow'}; window._VIEWS.focus={el:'focusView',show:'_focusShow'}; window._VIEWS.overview={el:'overviewView',show:'_ovShow'};
+    var NAVMAP={home:'首頁',overview:'今日焦點',focus:'今日焦點',todayindex:'今日焦點',screen:'選股',box:'選股',limitup:'選股',
       themes:'題材族群',sectors:'題材族群',greed:'市場觀察',inst:'市場觀察',sig:'市場觀察',brank:'市場觀察',news:'每日新聞',
       etfx:'ETF',etf:'ETF',etfcons:'ETF',etfrev:'ETF',etfdiv:'ETF',etfhold:'ETF',etfsim:'ETF',etfheavy:'ETF',etfprem:'ETF',etfflow:'ETF',etfperf:'ETF'};
     function _setNav(v){

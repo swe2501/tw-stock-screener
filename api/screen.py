@@ -629,6 +629,93 @@ def _fetch_themes():
     return data
 
 
+def _fetch_twse_index_categories():
+    """證交所官方『產業類指數』當日收盤（主站 rwd MI_INDEX type=IND，與全市場 CSV 同主機，Vercel 可達）。
+    回 [{name(去『類指數』), close(收盤指數), pct(漲跌百分比,帶正負號)}]。
+    欄位：['指數','收盤指數','漲跌(+/-)','漲跌點數','漲跌百分比(%)']；正負號取自『漲跌(+/-)』欄。"""
+    import re as _re
+    try:
+        d = _get_json("https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?date=&type=IND&response=json")
+    except Exception:
+        return []
+    tbls = (d or {}).get("tables") or []
+    if not tbls:
+        return []
+    out = []
+    for r in tbls[0].get("data") or []:
+        try:
+            nm = str(r[0])
+            if not nm.endswith("類指數"):
+                continue
+            pctv = _pf(r[4])
+            if pctv is None:
+                continue
+            if "-" in _re.sub(r"<[^>]+>", "", str(r[2])):
+                pctv = -abs(pctv)
+            out.append({"name": nm.replace("類指數", ""), "close": _pf(r[1]), "pct": round(pctv, 2)})
+        except Exception:
+            continue
+    return out
+
+
+def _fetch_overview():
+    """今日焦點『總覽』：一次算齊合夥人焦點頁六大區塊（伺服器端，回精簡 JSON）。
+      題材（強勢/弱勢/資金集中/漲跌停家數）：固定分類 THEME_MEMBERS + _theme_stats（同題材熱力圖口徑）
+      官方產業類股：證交所 rwd MI_INDEX 產業類指數（官方，帶收盤指數與漲跌%）
+      成交值分析 / 個股動向：全市場 CSV（STOCK_DAY_ALL），漲跌幅=今收/前收-1，成交值取 TradeValue
+    僅取上市 4 碼普通股（含 ETF 於題材外排除：個股榜以 4 碼數字為準）。"""
+    stocks, mdate = fetch_all_stocks_latest()
+    lmap = {}
+    for c, s in stocks.items():
+        cl = s.get("close"); pv = s.get("prev_close")
+        if cl is None:
+            continue
+        lmap[c] = {"close": cl, "pct": ((cl / pv - 1) * 100) if pv else 0,
+                   "value": s.get("value") or 0, "name": s.get("name") or c}
+    themes = _theme_stats(lmap)
+
+    def slim(t):
+        return {"name": t["name"], "memberCount": t["memberCount"], "today": t["today"],
+                "tradeValue": t["tradeValue"], "limitUps": t["limitUps"], "limitDowns": t["limitDowns"],
+                "leaders": [l["name"] for l in t.get("leaders", [])]}
+
+    theme_strong = [slim(t) for t in sorted(themes, key=lambda t: -t["today"])[:12]]
+    theme_weak   = [slim(t) for t in sorted(themes, key=lambda t:  t["today"])[:12]]
+    capital = [{"name": t["name"], "tradeValue": t["tradeValue"]}
+               for t in sorted(themes, key=lambda t: -t["tradeValue"])[:10]]
+    limit_groups = [{"name": t["name"], "limit": t["limitUps"] + t["limitDowns"]}
+                    for t in sorted(themes, key=lambda t: -(t["limitUps"] + t["limitDowns"]))[:10]]
+
+    stheme = {}
+    for name, codes in THEME_MEMBERS.items():
+        for c in codes:
+            stheme.setdefault(c, []).append(name)
+    ind = _get_industry_map() or {}
+
+    common = [(c, m) for c, m in lmap.items()
+              if len(c) == 4 and c.isdigit() and m["close"] and m["close"] > 0]
+
+    def stk(cm):
+        c, m = cm
+        return {"code": c, "name": m["name"], "pct": round(m["pct"], 2), "close": m["close"],
+                "value": m["value"], "industry": ind.get(c, "其他"), "themes": stheme.get(c, [])[:4]}
+
+    turnover = [stk(cm) for cm in sorted(common, key=lambda x: -(x[1]["value"] or 0))[:30]]
+    winners  = [stk(cm) for cm in sorted(common, key=lambda x: -x[1]["pct"])[:20]]
+    losers   = [stk(cm) for cm in sorted(common, key=lambda x:  x[1]["pct"])[:20]]
+
+    sectors = _fetch_twse_index_categories()
+    sectors_strong = sorted(sectors, key=lambda x: -x["pct"])[:10]
+    sectors_weak   = sorted(sectors, key=lambda x:  x["pct"])[:10]
+
+    return {"date": mdate,
+            "themeStrong": theme_strong, "themeWeak": theme_weak,
+            "capital": capital, "limitGroups": limit_groups,
+            "sectorsStrong": sectors_strong, "sectorsWeak": sectors_weak,
+            "sectorSource": "official" if sectors else "none",
+            "turnover": turnover, "winners": winners, "losers": losers}
+
+
 _monthly_cache: dict = {}   # key: "{code}_{yyyymm}" -> (timestamp, rows)
 _CACHE_TTL = 300            # 5 分鐘 TTL，盤中月資料不會變
 
@@ -1774,6 +1861,13 @@ class handler(BaseHTTPRequestHandler):
         if (qs.get("stat") or [""])[0] == "themes":
             try:
                 return self._send_json(200, _fetch_themes())
+            except Exception as e:
+                import traceback
+                return self._send_json(200, {"error": str(e), "traceback": traceback.format_exc()})
+        # 今日焦點『總覽』：合夥人焦點頁六大區塊一次算齊
+        if (qs.get("stat") or [""])[0] == "overview":
+            try:
+                return self._send_json(200, _fetch_overview())
             except Exception as e:
                 import traceback
                 return self._send_json(200, {"error": str(e), "traceback": traceback.format_exc()})
