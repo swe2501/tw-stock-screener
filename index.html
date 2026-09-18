@@ -5502,7 +5502,8 @@
     let _sigReturn = false;  // 從主力訊號開的 K 圖，關閉後要回到訊號視窗
 
     function _sigOpenChart(code, label) {
-      document.getElementById('brokerSigModal').style.display = 'none';
+      // 主力訊號已改為視圖（sigView），K 線圖為覆蓋層 chartModal，視圖仍在底下，
+      // 不需（也不能）操作已移除的 brokerSigModal。舊程式在此丟 null 例外導致點擊無反應。
       _sigReturn = true;
       const d = _sigDates[_sigIdx] || null;   // 當前顯示日期＝該分點買超日，標在 K 線上
       openChart(code, code, '', 0, false, d, label || '主力買點');
@@ -7349,10 +7350,10 @@
       document.getElementById('chartModal').classList.remove('open');
       _destroyCharts();
       _resetDrawingState();
-      // 從主力訊號面板點進來的 → 關閉 K 圖後回到訊號視窗
+      // 從主力訊號面板點進來的 → 關閉 K 圖後回到訊號視圖（主力訊號已改為 sigView）
       if (_sigReturn) {
         _sigReturn = false;
-        document.getElementById('brokerSigModal').style.display = 'flex';
+        try { window._showView('sig'); } catch (e) {}
       }
     }
 
