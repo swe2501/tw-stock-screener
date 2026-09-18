@@ -716,6 +716,48 @@ def _fetch_overview():
             "turnover": turnover, "winners": winners, "losers": losers}
 
 
+def _theme_detail_one(codes, smap, market):
+    """單一題材在某市場(listed/otc)的統計＋『全部』成分股（不設 40 檔上限，照合夥人 theme 頁）。
+    smap: {code:{close,pct,value,name}}。無任何成分股有行情則回 None。"""
+    members = [(c, smap[c]) for c in dict.fromkeys(codes) if c in smap]  # 去重、保序
+    if not members:
+        return None
+    tv = sum(m[1]["value"] or 0 for m in members)
+    changes = [m[1]["pct"] for m in members]
+    today = sum(changes) / len(changes) if changes else 0
+    weighted = (sum(m[1]["pct"] * (m[1]["value"] or 0) for m in members) / tv) if tv else 0
+    mem_sorted = sorted(members, key=lambda m: -(m[1]["value"] or 0))
+    return {
+        "market": market, "memberCount": len(members), "today": round(today, 2),
+        "weightedToday": round(weighted, 2), "tradeValue": tv,
+        "limitUps": sum(1 for m in members if m[1]["pct"] >= 9.5),
+        "limitDowns": sum(1 for m in members if m[1]["pct"] <= -9.5),
+        "members": [{"code": m[0], "name": m[1]["name"], "change": round(m[1]["pct"], 2),
+                     "price": m[1]["close"], "tradeValue": m[1]["value"] or 0} for m in mem_sorted],
+    }
+
+
+def _fetch_theme(name):
+    """題材全貌（照合夥人 /theme/[slug]）：上市＋上櫃該題材的統計與相關個股（依成交值排序）。
+      成分股清單＝固定題材分類 THEME_MEMBERS（合夥人複查用）；行情、漲跌、成交值皆為當日即時計算。
+      上市＝全市場 CSV，上櫃＝TPEx 收盤行情。"""
+    codes = THEME_MEMBERS.get(name)
+    if not codes:
+        return {"error": "theme not found", "name": name}
+    stocks, mdate = fetch_all_stocks_latest()
+    lmap = {}
+    for c, s in stocks.items():
+        cl = s.get("close"); pv = s.get("prev_close")
+        if cl is None:
+            continue
+        lmap[c] = {"close": cl, "pct": ((cl / pv - 1) * 100) if pv else 0,
+                   "value": s.get("value") or 0, "name": s.get("name") or c}
+    otc = _fetch_tpex_quotes()
+    return {"date": mdate, "name": name,
+            "listed": _theme_detail_one(codes, lmap, "listed"),
+            "otc": _theme_detail_one(codes, otc, "otc")}
+
+
 _monthly_cache: dict = {}   # key: "{code}_{yyyymm}" -> (timestamp, rows)
 _CACHE_TTL = 300            # 5 分鐘 TTL，盤中月資料不會變
 
@@ -1868,6 +1910,14 @@ class handler(BaseHTTPRequestHandler):
         if (qs.get("stat") or [""])[0] == "overview":
             try:
                 return self._send_json(200, _fetch_overview())
+            except Exception as e:
+                import traceback
+                return self._send_json(200, {"error": str(e), "traceback": traceback.format_exc()})
+        # 題材全貌：單一題材的相關個股（上市＋上櫃，依成交值排序）
+        if (qs.get("stat") or [""])[0] == "theme":
+            try:
+                name = (qs.get("name") or [""])[0].strip()
+                return self._send_json(200, _fetch_theme(name))
             except Exception as e:
                 import traceback
                 return self._send_json(200, {"error": str(e), "traceback": traceback.format_exc()})

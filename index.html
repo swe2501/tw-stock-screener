@@ -1714,7 +1714,31 @@
     .ov-note{font-size:11px;color:var(--text-muted);line-height:1.9;margin:20px 2px 34px;border-top:1px dashed var(--border);padding-top:12px;}
     .ov-note b{color:var(--text);}
     .ov-empty{color:var(--text-muted);font-size:12px;padding:14px 2px;}
-    @media(max-width:640px){table.ov-tbl .hidesm{display:none;}}
+    .ov-go{font-size:10.5px;font-weight:600;color:var(--brand-green);opacity:0;transition:opacity .12s;}
+    .ov-row.clk:hover .ov-go{opacity:1;}
+    @media(max-width:640px){table.ov-tbl .hidesm{display:none;} .ov-go{display:none;}}
+    /* 題材全貌抽屜 */
+    #themeDrawer{position:fixed;inset:0;z-index:1200;display:none;}
+    #themeDrawer.open{display:block;}
+    #themeDrawer .td-back{position:absolute;inset:0;background:rgba(0,0,0,.5);}
+    #themeDrawer .td-panel{position:absolute;top:0;right:0;height:100%;width:min(720px,96vw);background:var(--bg);border-left:1px solid var(--border);box-shadow:-8px 0 30px rgba(0,0,0,.3);overflow-y:auto;padding:20px 22px 40px;}
+    .td-close{position:absolute;top:14px;right:16px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;width:32px;height:32px;font-size:16px;cursor:pointer;}
+    .td-eyebrow{font-size:10.5px;letter-spacing:.2em;color:var(--brand-green);font-weight:800;margin:2px 0 6px;}
+    .td-title{font-size:23px;font-weight:900;margin:0;letter-spacing:-.02em;}
+    .td-sub{font-size:12px;color:var(--text-muted);margin:6px 0 0;line-height:1.6;}
+    .td-tabs{display:flex;gap:8px;margin:14px 0 4px;}
+    .td-tabs button{background:var(--surface);border:1px solid var(--border);color:var(--text-muted);border-radius:20px;padding:6px 16px;font-size:12.5px;font-weight:700;cursor:pointer;}
+    .td-tabs button.on{background:var(--brand-green);border-color:var(--brand-green);color:#fff;}
+    .td-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0;}
+    @media(max-width:560px){.td-stats{grid-template-columns:repeat(2,1fr);}}
+    .td-stat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:11px 12px;}
+    .td-stat>span{font-size:10.5px;color:var(--text-muted);display:block;}
+    .td-stat b{font-size:19px;font-weight:800;display:block;margin-top:3px;font-variant-numeric:tabular-nums;white-space:nowrap;}
+    #themeDrawer .ov-tblwrap{overflow-x:auto;}
+    #themeDrawer table.ov-tbl{min-width:500px;}
+    .td-memhead{display:flex;align-items:baseline;gap:10px;margin:8px 0 8px;}
+    .td-memhead h3{font-size:15px;font-weight:800;margin:0;}
+    .td-memhead span{font-size:11px;color:var(--text-muted);}
   </style>
   <div id="overviewView" style="display:none">
     <section class="ov-hero">
@@ -1779,6 +1803,26 @@
 
     <div class="ov-note" id="ovNote"></div>
   </div>
+
+  <!-- 題材全貌抽屜（點擊題材 → 相關類股，照合夥人 /theme 頁） -->
+  <div id="themeDrawer">
+    <div class="td-back" onclick="_closeTheme()"></div>
+    <div class="td-panel">
+      <button class="td-close" onclick="_closeTheme()">✕</button>
+      <p class="td-eyebrow">THEME DETAIL · 題材全貌</p>
+      <h1 class="td-title" id="tdTitle">—</h1>
+      <p class="td-sub">同一題材可能同時包含上市與上櫃公司；行情、成交值與漲跌幅依當日最新收盤重新計算。成分股清單取自固定題材分類。</p>
+      <div class="td-tabs" id="tdTabs"></div>
+      <div class="td-stats" id="tdStats"></div>
+      <div class="td-memhead"><h3 id="tdMemTitle">相關個股</h3><span>依成交值排序</span></div>
+      <div class="ov-tblwrap">
+        <table class="ov-tbl"><thead><tr>
+          <th>#</th><th>股票</th><th>市場</th><th style="text-align:right">收盤價</th><th style="text-align:right">漲跌</th><th style="text-align:right">成交值</th>
+        </tr></thead><tbody id="tdMembers"><tr><td colspan="6"><div class="ov-empty">載入中…</div></td></tr></tbody></table>
+      </div>
+      <p class="ov-note" style="margin-bottom:0">成分股＝固定題材分類映射（合夥人複查用）；行情／漲跌／成交值＝當日即時計算（上市：全市場收盤 CSV；上櫃：TPEx 收盤行情）。點股票列可開個股頁。</p>
+    </div>
+  </div>
   <script>
   (function(){
     var el=function(id){return document.getElementById(id);};
@@ -1788,11 +1832,12 @@
     function cls(v){return v>0?'ov-up':(v<0?'ov-dn':'');}
     function yi(v){return (Number(v)/1e8).toFixed(1)+' 億';}
     function nfmt(v){return Number(v).toLocaleString(undefined,{maximumFractionDigits:2});}
+    function tclick(name){return 'onclick="_openThemeDrawer(\''+esc(name).replace(/'/g,"\\'")+'\')"';}
     function themeRows(arr){
       if(!arr||!arr.length) return '<div class="ov-empty">今日無資料</div>';
       return arr.map(function(t){
         var leaders=(t.leaders||[]).join('、');
-        return '<div class="ov-row r-theme"><div class="nm"><b>'+esc(t.name)+'</b><span class="sub">'+t.memberCount+' 檔 · '+esc(leaders)+'</span></div>'+
+        return '<div class="ov-row r-theme clk" '+tclick(t.name)+'><div class="nm"><b>'+esc(t.name)+' <span class="ov-go">相關類股 ›</span></b><span class="sub">'+t.memberCount+' 檔 · '+esc(leaders)+'</span></div>'+
           '<span class="'+cls(t.today)+'">'+spct(t.today)+'</span>'+
           '<span>'+yi(t.tradeValue)+'</span>'+
           '<small class="ov-lim"><i class="u">'+t.limitUps+'</i>／<i class="d">'+t.limitDowns+'</i></small></div>';
@@ -1804,7 +1849,7 @@
       var max=Math.max.apply(null,vals.concat([1]));
       return arr.map(function(r,i){
         var v=vals[i];
-        return '<a><b>'+esc(r.name)+'</b><div class="bar"><u style="width:'+(Math.max(2,v/max*100))+'%"></u></div><span>'+(unit==='億'?v.toFixed(1):v)+' '+unit+'</span></a>';
+        return '<a class="clk" '+tclick(r.name)+'><b>'+esc(r.name)+'</b><div class="bar"><u style="width:'+(Math.max(2,v/max*100))+'%"></u></div><span>'+(unit==='億'?v.toFixed(1):v)+' '+unit+'</span></a>';
       }).join('');
     }
     function sectorRows(arr){
@@ -1834,6 +1879,55 @@
           '<td class="hidesm"><div class="ov-tags">'+tags+'</div></td></tr>';
       }).join('');
     }
+    // ── 題材全貌抽屜 ──
+    var TD={data:null,market:'listed'};
+    function tdMemberRows(d){
+      if(!d||!d.members||!d.members.length) return '<tr><td colspan="6"><div class="ov-empty">此市場無相關個股</div></td></tr>';
+      var mk=d.market==='otc'?'上櫃':'上市';
+      return d.members.map(function(m,i){
+        return '<tr class="clk" onclick="_openStock(\''+m.code+'\',\''+esc(m.name)+'\')"><td>'+(i+1)+'</td>'+
+          '<td><b>'+esc(m.name)+'</b><span class="code">'+m.code+'</span></td>'+
+          '<td><span class="ov-tags"><span class="ind">'+mk+'</span></span></td>'+
+          '<td class="num">'+nfmt(m.price)+'</td>'+
+          '<td class="num '+cls(m.change)+'">'+spct(m.change)+'</td>'+
+          '<td class="num">'+yi(m.tradeValue)+'</td></tr>';
+      }).join('');
+    }
+    function tdRenderStats(d){
+      if(!d){el('tdStats').innerHTML='';return;}
+      el('tdStats').innerHTML=
+        '<div class="td-stat"><span>算術平均</span><b class="'+cls(d.today)+'">'+spct(d.today)+'</b></div>'+
+        '<div class="td-stat"><span>成交額加權</span><b class="'+cls(d.weightedToday)+'">'+spct(d.weightedToday)+'</b></div>'+
+        '<div class="td-stat"><span>成交值合計</span><b>'+yi(d.tradeValue)+'</b></div>'+
+        '<div class="td-stat"><span>漲停／跌停</span><b><span class="ov-up">'+d.limitUps+'</span>／<span class="ov-dn">'+d.limitDowns+'</span></b></div>';
+    }
+    function tdRender(){
+      var j=TD.data; if(!j) return;
+      var d=(TD.market==='otc')?j.otc:j.listed;
+      if(!d){ TD.market=(TD.market==='otc'?'listed':'otc'); d=(TD.market==='otc')?j.otc:j.listed; }
+      el('tdTitle').textContent=j.name||'—';
+      el('tdMemTitle').textContent=(j.name||'')+'相關個股';
+      var L=j.listed,O=j.otc,tabs='';
+      if(L)tabs+='<button class="'+(TD.market==='listed'?'on':'')+'" onclick="_tdTab(\'listed\')">上市 '+L.memberCount+'</button>';
+      if(O)tabs+='<button class="'+(TD.market==='otc'?'on':'')+'" onclick="_tdTab(\'otc\')">上櫃 '+O.memberCount+'</button>';
+      el('tdTabs').innerHTML=tabs;
+      tdRenderStats(d);
+      el('tdMembers').innerHTML=tdMemberRows(d);
+    }
+    window._tdTab=function(m){TD.market=m;tdRender();};
+    window._closeTheme=function(){el('themeDrawer').classList.remove('open');};
+    window._openThemeDrawer=function(name){
+      var dr=el('themeDrawer'); dr.classList.add('open');
+      el('tdTitle').textContent=name; el('tdMemTitle').textContent=name+'相關個股';
+      el('tdTabs').innerHTML=''; el('tdStats').innerHTML='';
+      el('tdMembers').innerHTML='<tr><td colspan="6"><div class="ov-empty">載入中…</div></td></tr>';
+      fetch('/api/screen?stat=theme&name='+encodeURIComponent(name)).then(function(r){return r.json();}).then(function(j){
+        if(!j||j.error||(!j.listed&&!j.otc)){el('tdMembers').innerHTML='<tr><td colspan="6"><div class="ov-empty">找不到題材資料</div></td></tr>';return;}
+        TD.data=j; TD.market=j.listed?'listed':'otc'; tdRender();
+      }).catch(function(){el('tdMembers').innerHTML='<tr><td colspan="6"><div class="ov-empty">讀取失敗</div></td></tr>';});
+    };
+    document.addEventListener('keydown',function(e){if(e.key==='Escape')window._closeTheme();});
+
     window._ovShow=function(){
       if(loaded) return;
       loaded=true;
