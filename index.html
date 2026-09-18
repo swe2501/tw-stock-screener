@@ -2296,6 +2296,21 @@
     .etx-dh{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;border-bottom:1px solid var(--border);padding-bottom:12px;margin-bottom:12px;}
     .etx-dh h2{margin:0;font-size:20px;font-weight:800;color:var(--brand-green);} .etx-dh .x{border:0;background:transparent;font-size:22px;cursor:pointer;color:var(--text-muted);}
     .etx-dtabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px;} .etx-dtabs button{border:0;background:var(--surface2);border-radius:6px;padding:5px 11px;font-size:12px;font-weight:700;color:var(--text-muted);cursor:pointer;} .etx-dtabs button.on{background:var(--brand-green);color:#fff;}
+    .etx-donut{display:grid;grid-template-columns:180px 1fr;gap:18px;align-items:center;margin-bottom:16px;padding:14px;border:1px solid var(--border);border-radius:10px;background:var(--bg);}
+    .etx-donut-fig{position:relative;width:180px;height:180px;}
+    .etx-donut-fig svg{width:180px;height:180px;display:block;}
+    .etx-donut-fig .trk{fill:none;stroke:var(--surface2);stroke-width:20;}
+    .etx-donut-fig path{cursor:pointer;transition:opacity .12s;stroke:var(--surface);stroke-width:1;}
+    .etx-donut-fig path:hover{opacity:.82;}
+    .etx-donut-c{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none;padding:0 26px;}
+    .etx-donut-c strong{font-size:17px;font-weight:800;color:var(--text);line-height:1.2;} .etx-donut-c small{font-size:11px;color:var(--text-muted);margin-top:2px;}
+    .etx-donut-list{display:flex;flex-direction:column;gap:5px;max-height:210px;overflow:auto;}
+    .etx-donut-list .r{display:grid;grid-template-columns:12px 1fr 56px 46px;align-items:center;gap:8px;font-size:12px;color:var(--text);}
+    .etx-donut-list i{width:11px;height:11px;border-radius:3px;flex:0 0 auto;}
+    .etx-donut-list .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;} .etx-donut-list .nm small{color:var(--text-muted);margin-left:4px;}
+    .etx-donut-list em{height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;} .etx-donut-list em u{display:block;height:100%;}
+    .etx-donut-list .w{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;}
+    @media(max-width:600px){.etx-donut{grid-template-columns:1fr;justify-items:center;}}
     @media(max-width:760px){.etx-kpi{grid-template-columns:repeat(2,1fr);}.etx-cards{grid-template-columns:1fr;}}
   </style>
   <div id="etfxView" style="display:none">
@@ -2413,6 +2428,24 @@
     window._etxCloseDrawer=function(){el('etxDrawer').style.display='none';};
     window._etxOpen=function(code){drawerCode=code;drawerTab='moves';el('etxDrawer').style.display='flex';renderDrawer();};
 
+    var _donutItems=[], _donutTotal=0;
+    window._etxDonutHover=function(i){var c=el('etxDonutC');if(!c)return;if(i<0){c.innerHTML='<strong>'+_donutTotal+'</strong><small>檔成分股</small>';}else{var it=_donutItems[i];if(it)c.innerHTML='<strong>'+esc(String(it.nm).replace(/（共.*?）/,''))+'</strong><small>'+it.w.toFixed(2)+'%</small>';}};
+    function buildDonut(holdings){
+      var arr=holdings.filter(function(x){return (x.weight||0)>0;}).slice().sort(function(a,b){return b.weight-a.weight;});
+      _donutTotal=arr.length; if(!arr.length)return '';
+      var PAL=['#1E4D3E','#C59B27','#2563EB','#E11D48','#D97706','#6366F1','#0D9488'],OTHER='#D6CEBE',topN=6,vis;
+      if(arr.length>topN+1){var lead=arr.slice(0,topN),tail=arr.slice(topN);
+        vis=lead.map(function(x,i){return {nm:x.stock_name||x.stock_code,code:x.stock_code,w:x.weight,color:PAL[i%PAL.length]};});
+        vis.push({nm:'其他持股（共 '+tail.length+' 檔）',code:'',w:tail.reduce(function(s,x){return s+x.weight;},0),color:OTHER});
+      } else vis=arr.map(function(x,i){return {nm:x.stock_name||x.stock_code,code:x.stock_code,w:x.weight,color:PAL[i%PAL.length]};});
+      _donutItems=vis;
+      function pt(r,a){var rad=(a-90)*Math.PI/180;return {x:(90+r*Math.cos(rad)).toFixed(2),y:(90+r*Math.sin(rad)).toFixed(2)};}
+      function arc(s,e){var se=Math.min(e,s+359.999),os=pt(70,s),oe=pt(70,se),ie=pt(50,se),is=pt(50,s),la=(se-s>180)?1:0;return 'M '+os.x+' '+os.y+' A 70 70 0 '+la+' 1 '+oe.x+' '+oe.y+' L '+ie.x+' '+ie.y+' A 50 50 0 '+la+' 0 '+is.x+' '+is.y+' Z';}
+      var used=0,paths='';
+      vis.forEach(function(it,i){var seg=Math.min(it.w,Math.max(0,100-used)),s=used*3.6,e=(used+seg)*3.6;used+=seg;if(e>s)paths+='<path d="'+arc(s,e)+'" fill="'+it.color+'" onmouseover="_etxDonutHover('+i+')" onmouseout="_etxDonutHover(-1)"></path>';});
+      var legend=vis.map(function(it,i){return '<div class="r" onmouseover="_etxDonutHover('+i+')" onmouseout="_etxDonutHover(-1)"><i style="background:'+it.color+'"></i><span class="nm"><b>'+esc(it.nm)+'</b>'+(it.code?'<small>'+it.code+'</small>':'')+'</span><em><u style="width:'+Math.min(100,it.w*5)+'%;background:'+it.color+'"></u></em><span class="w">'+it.w.toFixed(2)+'%</span></div>';}).join('');
+      return '<div class="etx-donut"><div class="etx-donut-fig"><svg viewBox="0 0 180 180"><circle class="trk" cx="90" cy="90" r="60"></circle>'+paths+'</svg><div class="etx-donut-c" id="etxDonutC"><strong>'+_donutTotal+'</strong><small>檔成分股</small></div></div><div class="etx-donut-list">'+legend+'</div></div>';
+    }
     function renderDrawer(){
       var p=pmap[drawerCode]||{}, h=(HOLD[drawerCode]||[]).slice();
       var tabs=[['moves','今日異動'],['holdings','成分股'],['profile','規模/基本'],['dividend','配息'],['holders','持有人結構']];
@@ -2423,7 +2456,7 @@
       var body=el('etxDrawerBody');
       if(drawerTab==='holdings'){
         var hs=h.sort(function(a,b){return (b.weight||0)-(a.weight||0);});
-        body.innerHTML=hs.length?'<div style="overflow-x:auto"><table class="etx-tbl"><thead><tr><th class="l">#</th><th class="l">股票</th><th>權重</th><th>持有張數</th><th>今日增減</th></tr></thead><tbody>'+hs.map(function(s,i){return '<tr><td class="l">'+(i+1)+'</td><td class="l" style="cursor:pointer" onclick="_openStock(\''+s.stock_code+'\',\''+esc(s.stock_name||'')+'\')"><b>'+esc(s.stock_name||'')+'</b> <span style="color:var(--text-muted)">'+s.stock_code+'</span></td><td>'+m2(s.weight)+'%</td><td>'+m0(s.shares)+'</td><td class="'+cls(s.delta_shares)+'">'+sg(s.delta_shares)+'</td></tr>';}).join('')+'</tbody></table></div>':'<div class="fc-empty">尚未取得完整成分股。</div>';
+        body.innerHTML=hs.length?(buildDonut(hs)+'<div style="overflow-x:auto"><table class="etx-tbl"><thead><tr><th class="l">#</th><th class="l">股票</th><th>權重</th><th>持有張數</th><th>今日增減</th></tr></thead><tbody>'+hs.map(function(s,i){return '<tr><td class="l">'+(i+1)+'</td><td class="l" style="cursor:pointer" onclick="_openStock(\''+s.stock_code+'\',\''+esc(s.stock_name||'')+'\')"><b>'+esc(s.stock_name||'')+'</b> <span style="color:var(--text-muted)">'+s.stock_code+'</span></td><td>'+m2(s.weight)+'%</td><td>'+m0(s.shares)+'</td><td class="'+cls(s.delta_shares)+'">'+sg(s.delta_shares)+'</td></tr>';}).join('')+'</tbody></table></div>'):'<div class="fc-empty">尚未取得完整成分股。</div>';
       } else if(drawerTab==='moves'){
         var buys=h.filter(function(x){return (x.delta_shares||0)>0;}).sort(function(a,b){return b.delta_shares-a.delta_shares;});
         var sells=h.filter(function(x){return (x.delta_shares||0)<0;}).sort(function(a,b){return a.delta_shares-b.delta_shares;});
