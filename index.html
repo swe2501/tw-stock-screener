@@ -1487,6 +1487,18 @@
       .gs-rtrack{height:11px;border-radius:6px;position:relative;background:linear-gradient(90deg,#c0392b 0 22%,#d99a2b 22% 44%,#cfc8b8 44% 72%,#2e8b57 72% 100%);}
       .gs-rtrack>i{position:absolute;top:14px;transform:translateX(-50%);width:0;height:0;border-left:9px solid transparent;border-right:9px solid transparent;border-bottom:12px solid var(--text);}
       .gs-maint>.gs-ruler>b{position:absolute;top:30px;transform:translateX(-50%);font-size:14px;font-weight:800;color:var(--text);white-space:nowrap;font-variant-numeric:tabular-nums;}
+      /* §4 三組維持率（上市／上櫃／全市場）+ 三條歷史曲線 */
+      .gs-msplit{margin-top:16px;border-top:1px dashed var(--border);padding-top:14px;}
+      .gs-ms3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px;}
+      .gs-msc{border:1px solid var(--border);border-radius:10px;padding:10px 12px;text-align:center;background:var(--surface);}
+      .gs-msc span{display:block;font-size:12px;color:var(--text-muted);font-weight:700;margin-bottom:4px;}
+      .gs-msc b{font-size:20px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;}
+      .gs-msc.all{border-color:var(--brand-green);}
+      .gs-msc.all b{color:var(--brand-green);}
+      .gs-mstitle{font-size:12.5px;font-weight:800;color:var(--text);margin:2px 0 8px;}
+      .gs-mstitle span{font-size:11px;font-weight:600;color:var(--text-muted);margin-left:6px;}
+      #hpMsChart{height:220px;width:100%;}
+      .gs-mmtitle2{font-size:12.5px;font-weight:800;color:var(--text);margin-bottom:8px;}
       /* §4 內嵌融資維持率歷史線圖 */
       .gs-mmwrap{margin-top:18px;border-top:1px dashed var(--border);padding-top:14px;}
       .gs-mmtabs{display:flex;gap:8px;margin-bottom:10px;}
@@ -3998,9 +4010,16 @@
           +'<p id="hpMaintLabel"></p><div class="gs-ruler">'
           +'<div class="gs-rlab"><span style="left:22.22%">140%<small>追繳警戒</small></span><span style="left:44.44%">160%<small>健康區</small></span><span style="left:72.22%">185%<small>高檔浮額</small></span></div>'
           +'<div class="gs-rtrack"><i id="hpMaintMark"></i></div><b id="hpMaintCur"></b></div></div>'
-        +'<div class="gs-mmwrap"><div id="hpMmCur" class="gs-mmcur"></div><div id="hpMmTip" class="gs-mmtip">移動滑鼠或觸控圖上看每日數值</div><div id="hpMmPanels"></div></div>'
-        +'<div class="gs-tip"><span class="ic">📖</span><div><b>學院導讀</b>維持率＝融資擔保品現值 ÷ 融資餘額，越低代表融資戶越接近斷頭；140／160／185% 為追繳、健康、高檔浮額分界。搭配下方加權指數、融資與融券餘額走勢，可看散戶槓桿是追價升溫還是退場。</div></div>';
+        +'<div class="gs-msplit"><div class="gs-ms3">'
+          +'<div class="gs-msc"><span>上市</span><b id="msL">—</b></div>'
+          +'<div class="gs-msc"><span>上櫃</span><b id="msO">—</b></div>'
+          +'<div class="gs-msc all"><span>全市場</span><b id="msA">—</b></div></div>'
+          +'<div class="gs-mstitle">上市／上櫃／全市場 融資維持率走勢 <span id="msNote"></span></div>'
+          +'<div id="hpMsChart"></div></div>'
+        +'<div class="gs-mmwrap"><div class="gs-mmtitle2">加權指數 × 全市場融資維持率 × 融資／融券餘額</div><div id="hpMmCur" class="gs-mmcur"></div><div id="hpMmTip" class="gs-mmtip">移動滑鼠或觸控圖上看每日數值</div><div id="hpMmPanels"></div></div>'
+        +'<div class="gs-tip"><span class="ic">📖</span><div><b>學院導讀</b>維持率＝融資持股現值 ÷ 融資借款金額；140／160／185% 為追繳、健康、高檔浮額分界。上市分子取證交所個股融資餘額×收盤、分母取證交所融資金額；上櫃分子取櫃買個股融資餘額×收盤、分母取玩股網上櫃融資金額；全市場為兩者分子、分母各自加總後相除（非平均）。扣除 ETF 版以「00 開頭」代號剔除。歷史曲線今日之前由玩股網回補、今日起改逐股自算。</div></div>';
       if(window._loadHpMaintChart) window._loadHpMaintChart();
+      if(window._loadMaintSplit) window._loadMaintSplit();
     }
 
     /* §5 台股期貨未平倉（外資/投信/自營）+ 小台/微台散戶多空比（玩股網現成口徑）*/
@@ -5535,6 +5554,67 @@
         : '無資料';
       var host=document.getElementById('hpMmPanels'), tip=document.getElementById('hpMmTip');
       if(host&&tip)_mmBuildPanels(host, tip, data, (_mmData&&_mmData.taiex)||[]);
+      if(window._renderMsplit)window._renderMsplit(ex);
+    };
+    // ── 首頁 §4：上市／上櫃／全市場 三組維持率 + 三條歷史曲線（讀 margin_maint_split，含/扣ETF 切換）──
+    var _msData = null, _msChart = null;
+    window._loadMaintSplit = function(){
+      if(_msData){ window._renderMsplit(_hpMmTabEx); return; }
+      var hdr={apikey:SIG_SB_ANON,Authorization:'Bearer '+SIG_SB_ANON};
+      // PostgREST 單次上限 1000 列，取最新 1000（desc）再反轉為時間升冪
+      var base=SIG_SB_URL+'/rest/v1/margin_maint_split?select=trade_date,exclude_etf,listed_ratio,otc_ratio,all_ratio,otc_loan_est&order=trade_date.desc&limit=1000';
+      Promise.all([
+        fetch(base+'&exclude_etf=eq.false',{headers:hdr}).then(function(r){return r.ok?r.json():[];}),
+        fetch(base+'&exclude_etf=eq.true',{headers:hdr}).then(function(r){return r.ok?r.json():[];})
+      ]).then(function(res){
+        _msData={false:(res[0]||[]).reverse(),true:(res[1]||[]).reverse()};
+        window._renderMsplit(_hpMmTabEx);
+      }).catch(function(){ _msData={false:[],true:[]}; });
+    };
+    window._renderMsplit = function(ex){
+      if(!_msData)return;
+      var rows=_msData[ex]||[], cur=rows[rows.length-1];
+      var L=document.getElementById('msL'),O=document.getElementById('msO'),A=document.getElementById('msA'),
+          note=document.getElementById('msNote');
+      function f(v){return v!=null?Number(v).toFixed(2)+'%':'—';}
+      if(cur){
+        if(L)L.textContent=f(cur.listed_ratio);
+        if(O)O.textContent=f(cur.otc_ratio);
+        if(A)A.textContent=f(cur.all_ratio);
+        if(note)note.textContent='最新 '+cur.trade_date+(cur.otc_loan_est?'（上櫃扣ETF為估算）':'');
+        // 上方量表大數字／判讀／指針改用新版全市場維持率（margin_maint_split），與三卡一致
+        var m=cur.all_ratio!=null?Number(cur.all_ratio):null;
+        var num=document.getElementById('hpMaintNum'),lab=document.getElementById('hpMaintLabel'),
+            mk=document.getElementById('hpMaintMark'),cb=document.getElementById('hpMaintCur');
+        if(m!=null){var pos=Math.min(100,Math.max(0,(m-120)/90*100));
+          if(num)num.textContent=m.toFixed(2)+'%';
+          if(lab)lab.textContent=_hpMaintLabel(m);
+          if(mk)mk.style.left=pos+'%';
+          if(cb){cb.style.left=pos+'%';cb.textContent='目前 '+m.toFixed(2)+'%';}
+        }
+      }
+      var box=document.getElementById('hpMsChart');
+      if(!box||typeof LightweightCharts==='undefined')return;
+      if(_msChart){try{_msChart.remove();}catch(e){}_msChart=null;}
+      if(!rows.length){box.innerHTML='<div style="color:var(--text-muted);font-size:12px;padding:20px 0">暫無歷史資料</div>';return;}
+      box.innerHTML='';
+      var isDark=document.documentElement.getAttribute('data-theme')==='dark'||matchMedia('(prefers-color-scheme:dark)').matches;
+      var bg=isDark?'#0d1117':'#ffffff',tx=isDark?'#c9d1d9':'#333',gd=isDark?'#21262d':'#eee';
+      _msChart=LightweightCharts.createChart(box,{width:box.clientWidth||600,height:220,
+        layout:{background:{color:bg},textColor:tx},grid:{vertLines:{color:gd},horzLines:{color:gd}},
+        rightPriceScale:{borderColor:gd},timeScale:{borderColor:gd},
+        crosshair:{mode:LightweightCharts.CrosshairMode.Normal},handleScale:{axisPressedMouseMove:true},handleScroll:true});
+      function ser(color,title,key){
+        var s=_msChart.addLineSeries({color:color,lineWidth:2,title:title,priceFormat:{type:'custom',formatter:function(v){return v.toFixed(1)+'%';}}});
+        s.setData(rows.filter(function(r){return r[key]!=null;}).map(function(r){return {time:r.trade_date,value:Number(r[key])};}));
+        return s;
+      }
+      var all=ser('#f5c84b','全市場','all_ratio');
+      ser('#e6a23c','上市','listed_ratio');
+      ser('#3fb950','上櫃','otc_ratio');
+      [140,160,185].forEach(function(y){ all.createPriceLine({price:y,color:gd,lineWidth:1,lineStyle:LightweightCharts.LineStyle.Dashed,axisLabelVisible:true,title:y+'%'}); });
+      _msChart.timeScale().fitContent();
+      if(!box._resz){box._resz=true;window.addEventListener('resize',function(){ if(_msChart&&box.clientWidth)_msChart.applyOptions({width:box.clientWidth}); });}
     };
     window._loadHpMaintChart = function(){
       var host=document.getElementById('hpMmPanels'); if(!host)return;
