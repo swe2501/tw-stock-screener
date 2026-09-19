@@ -1219,7 +1219,7 @@
       <span class="gs-name"><b>跟誰學</b><small>盤後研究院 · MARKET ACADEMY</small></span>
     </a>
     <span class="gs-edition" aria-hidden="true">ISSUE<br><b>DAILY</b></span>
-    <button id="marginRatioBox" class="margin-ratio" type="button" onclick="openMarginModal()" style="display:none"></button>
+    <button id="marginRatioBox" class="margin-ratio" type="button" onclick="_gotoMaint()" style="display:none"></button>
     <div id="authArea">
       <div id="authUserEmail" style="display:none"></div>
       <div id="funcDropdown" style="position:relative;display:none">
@@ -1257,7 +1257,7 @@
     <div class="mn-grp"><span class="mn-item">題材族群 <i>▾</i></span><div class="mn-menu">
       <a class="nav-owner" onclick="openHotTopics()">🔥 話題</a><a onclick="_showView('themes')">題材列表</a><a onclick="_showView('sectors')">產業地圖</a></div></div>
     <div class="mn-grp"><span class="mn-item">市場觀察 <i>▾</i></span><div class="mn-menu">
-      <a class="nav-owner" onclick="_showView('sig')">🎯 主力訊號</a><a class="nav-owner" onclick="_showView('brank')">📊 分點回測</a><a onclick="openMarginModal()">📈 融資維持率</a><a onclick="_showView('greed')">😱 貪婪指標</a><a onclick="_showView('inst')">🏦 三大法人買賣超</a><a onclick="_todo('股期儀表板')">股期儀表板</a></div></div>
+      <a class="nav-owner" onclick="_showView('sig')">🎯 主力訊號</a><a class="nav-owner" onclick="_showView('brank')">📊 分點回測</a><a onclick="_gotoMaint()">📈 融資維持率</a><a onclick="_showView('greed')">😱 貪婪指標</a><a onclick="_showView('inst')">🏦 三大法人買賣超</a><a onclick="_todo('股期儀表板')">股期儀表板</a></div></div>
     <div class="mn-grp"><span class="mn-item">ETF 分析 <span class="mn-new">新</span> <i>▾</i></span><div class="mn-menu">
       <a onclick="_showView('etfx')" style="font-weight:800;color:var(--brand-green)">🧭 ETF 探索（工作台）</a><a onclick="_showView('etf')">總覽 · 規模排行</a><a onclick="_showView('etfcons')">成分股</a><a onclick="_showView('etfrev')">股票反查 ETF</a><a onclick="_showView('etfdiv')">配息行事曆</a><a onclick="_showView('etfhold')">持有人結構</a><a onclick="_showView('etfsim')">ETF 相似度</a><a onclick="_showView('etfheavy')">重倉股排行</a><a onclick="_showView('etfprem')">折溢價</a><a onclick="_showView('etfflow')">資金流</a><a onclick="_showView('etfperf')">績效比較</a></div></div>
     <div class="mn-grp"><span class="mn-item">個股 <i>▾</i></span><div class="mn-menu">
@@ -1479,13 +1479,22 @@
       .gs-maint header{display:flex;justify-content:space-between;align-items:baseline;gap:10px;}
       .gs-maint header span{font-size:14.5px;font-weight:800;color:var(--brand-green);background:transparent!important;padding:0;}
       .gs-maint header strong{font-size:30px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;}
-      .gs-maint p{font-size:12.5px;color:var(--text-muted);margin:4px 0 44px;}
-      .gs-ruler{position:relative;margin:0 12px 48px;}
-      .gs-rlab span{position:absolute;top:-36px;transform:translateX(-50%);text-align:center;font-size:14px;font-weight:800;color:var(--text);white-space:nowrap;font-variant-numeric:tabular-nums;}
-      .gs-rlab span small{display:block;font-size:11px;color:var(--text-muted);font-weight:600;margin-top:3px;}
+      .gs-maint p{font-size:12.5px;color:var(--text-muted);margin:4px 0 58px;}
+      .gs-ruler{position:relative;margin:10px 14px 52px;}
+      .gs-rlab span{position:absolute;top:-46px;transform:translateX(-50%);text-align:center;font-size:14px;font-weight:800;color:var(--text);white-space:nowrap;font-variant-numeric:tabular-nums;line-height:1.15;}
+      .gs-rlab span small{display:block;font-size:11px;color:var(--text-muted);font-weight:600;margin-top:4px;}
       .gs-rtrack{height:11px;border-radius:6px;position:relative;background:linear-gradient(90deg,#c0392b 0 22%,#d99a2b 22% 44%,#cfc8b8 44% 72%,#2e8b57 72% 100%);}
       .gs-rtrack>i{position:absolute;top:14px;transform:translateX(-50%);width:0;height:0;border-left:9px solid transparent;border-right:9px solid transparent;border-bottom:12px solid var(--text);}
       .gs-maint>.gs-ruler>b{position:absolute;top:30px;transform:translateX(-50%);font-size:14px;font-weight:800;color:var(--text);white-space:nowrap;font-variant-numeric:tabular-nums;}
+      /* §4 內嵌融資維持率歷史線圖 */
+      .gs-mmwrap{margin-top:18px;border-top:1px dashed var(--border);padding-top:14px;}
+      .gs-mmtabs{display:flex;gap:8px;margin-bottom:10px;}
+      .gs-mmtabs button{background:var(--surface);border:1px solid var(--border);color:var(--text-muted);border-radius:20px;padding:5px 16px;font-size:12.5px;font-weight:700;cursor:pointer;}
+      .gs-mmtabs button.on{background:var(--brand-green);border-color:var(--brand-green);color:#fff;}
+      .gs-mmcur{font-size:13px;color:var(--text);margin-bottom:4px;}
+      .gs-mmtip{font-size:11.5px;color:var(--text-muted);min-height:18px;margin-bottom:6px;}
+      #hpMmPanels .mm-panel{margin-bottom:2px;}
+      #hpMmPanels .mm-plabel{font-size:11px;color:var(--text-muted);font-weight:700;margin:2px 0;}
       /* §5 期貨未平倉 / 散戶多空 */
       .gs-fut{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
       .gs-futcard{border:1px solid var(--border);border-radius:10px;padding:13px 15px;}
@@ -1570,7 +1579,7 @@
 
     <section class="hp-sec"><div id="hpStruct"><div class="fc-empty">載入中…</div></div></section>
 
-    <section class="hp-sec"><div class="hp-sec-h"><span class="hp-sec-no">§4</span> 融資動能背離與市場槓桿 <span class="hp-sec-src">加權指數 vs 上市融資餘額 · 全市場維持率</span></div><div id="hpDiverge" class="hp-verdict"><div class="fc-empty">載入中…</div></div></section>
+    <section class="hp-sec" id="hpMaintSec"><div class="hp-sec-h"><span class="hp-sec-no">§4</span> 融資動能背離與市場槓桿 <span class="hp-sec-src">加權指數 vs 上市融資餘額 · 全市場維持率</span></div><div id="hpDiverge" class="hp-verdict"><div class="fc-empty">載入中…</div></div><div id="hpMaint"></div></section>
 
     <section class="hp-sec"><div class="hp-sec-h"><span class="hp-sec-no">§5</span> 臺股期貨未平倉與散戶多空比 <span class="hp-sec-src">大台顯示法人留倉；小台與微台依主要月份全市場 OI 扣除三大法人計算散戶部位</span></div><div id="hpFut" class="gs-fut"><div class="fc-empty">載入中…</div></div></section>
 
@@ -3941,7 +3950,8 @@
         var box=el('hpDiverge'); if(!box)return;
         var mm=res[0]||[],tx=(res[1]||[]).slice().reverse();  // 由舊到新→新到舊
         var maint=(res[2]&&res[2][0]&&res[2][0].maintenance_ratio!=null)?+res[2][0].maintenance_ratio:null;
-        if(mm.length<2||tx.length<2){box.innerHTML='<div class="fc-empty">資料不足</div>';return;}
+        _renderMaint(maint);   // 維持率量表＋歷史線圖（不依賴背離所需的 /api/chart，獨立呈現）
+        if(mm.length<2||tx.length<2){box.innerHTML='<div class="fc-empty">融資動能背離：資料不足</div>';return;}
         var PERIODS=[5,10,20,60],data={};
         PERIODS.forEach(function(d){
           var mOk=mm.length>d,iOk=tx.length>d;
@@ -3969,18 +3979,28 @@
             body='<div class="gs-mmt">'+line('大盤動能',s.marketPct,range)+line('融資動能',s.marginPct,range)
               +'<div class="gs-div"><span>背離幅度</span><strong class="'+(div>=0?'hp-up':'hp-dn')+'">'+(div>0?'+':'')+div.toFixed(2)+'</strong><small>個百分點</small></div></div>';
           }else body='<div class="fc-empty">官方歷史資料尚未形成完整的 '+sel+' 個共同交易日。</div>';
-          var gauge='';
-          if(maint!=null){var pos=Math.min(100,Math.max(0,(maint-120)/90*100));
-            gauge='<div class="gs-maint"><header><span>全市場融資維持率（即時實測 · 含ETF）</span><strong>'+maint.toFixed(2)+'%</strong></header>'
-              +'<p>'+maintLabel(maint)+'</p><div class="gs-ruler">'
-              +'<div class="gs-rlab"><span style="left:22.22%">140%<small>追繳警戒</small></span><span style="left:44.44%">160%<small>健康區</small></span><span style="left:72.22%">185%<small>高檔浮額</small></span></div>'
-              +'<div class="gs-rtrack"><i style="left:'+pos+'%"></i></div><b style="left:'+pos+'%">目前 '+maint.toFixed(2)+'%</b></div></div>';}
-          box.innerHTML='<div class="gs-mtbar"><div class="gs-cst '+st.t+'"><b>'+st.l+'</b><span>· '+st.d+'</span></div><div class="gs-pdtabs">'+tabs+'</div></div>'+body+gauge
+          box.innerHTML='<div class="gs-mtbar"><div class="gs-cst '+st.t+'"><b>'+st.l+'</b><span>· '+st.d+'</span></div><div class="gs-pdtabs">'+tabs+'</div></div>'+body
             +'<div class="gs-tip"><span class="ic">📖</span><div><b>學院導讀</b>指數上漲、但融資餘額增加得更快，代表散戶槓桿在追價升溫；若此時市場廣度又同步縮小，追高的風險就更需要留意。</div></div>';
         }
         box.onclick=function(e){var t=e.target.closest('.gs-pd');if(t){box._selDays=+t.dataset.d;sel=box._selDays;render();}};
         render();
       });
+    }
+    // 全市場融資維持率：量表（文字間距加大避免重疊）＋ 含/扣ETF 歷史四面板線圖（內嵌自原彈窗）
+    function _renderMaint(maint){
+      var box=el('hpMaint'); if(!box) return;
+      function maintLabel(v){if(v>=185)return'多頭獲利豐厚 · 留意高檔浮額';if(v>=160)return'常態健康區間';if(v>=140)return'弱勢修正警戒 · 部分個股追繳';return'斷頭恐慌區 · 浮額清洗醞釀黃金底';}
+      var gauge='';
+      if(maint!=null){var pos=Math.min(100,Math.max(0,(maint-120)/90*100));
+        gauge='<div class="gs-maint"><header><span>全市場融資維持率（即時實測 · 含ETF）</span><strong>'+maint.toFixed(2)+'%</strong></header>'
+          +'<p>'+maintLabel(maint)+'</p><div class="gs-ruler">'
+          +'<div class="gs-rlab"><span style="left:22.22%">140%<small>追繳警戒</small></span><span style="left:44.44%">160%<small>健康區</small></span><span style="left:72.22%">185%<small>高檔浮額</small></span></div>'
+          +'<div class="gs-rtrack"><i style="left:'+pos+'%"></i></div><b style="left:'+pos+'%">目前 '+maint.toFixed(2)+'%</b></div></div>';}
+      box.innerHTML=gauge
+        +'<div class="gs-mmwrap"><div class="gs-mmtabs"><button id="hpMmInc" class="on" type="button" onclick="window._hpMmTab(false)">含 ETF</button><button id="hpMmEx" type="button" onclick="window._hpMmTab(true)">扣除 ETF</button></div>'
+        +'<div id="hpMmCur" class="gs-mmcur"></div><div id="hpMmTip" class="gs-mmtip">移動滑鼠或觸控圖上看每日數值</div><div id="hpMmPanels"></div></div>'
+        +'<div class="gs-tip"><span class="ic">📖</span><div><b>學院導讀</b>維持率＝融資擔保品現值 ÷ 融資餘額，越低代表融資戶越接近斷頭；140／160／185% 為追繳、健康、高檔浮額分界。搭配下方加權指數、融資與融券餘額走勢，可看散戶槓桿是追價升溫還是退場。</div></div>';
+      if(window._loadHpMaintChart) window._loadHpMaintChart();
     }
 
     /* §5 台股期貨未平倉（外資/投信/自營）+ 小台/微台散戶多空比（玩股網現成口徑）*/
@@ -5461,27 +5481,55 @@
 
     // ── 融資維持率彈窗（含/扣ETF tab + 大盤K/維持率/融資/融券 多面板同步 + hover 數值）──
     let _mmData = null, _mmTab = false, _mmCharts = [];
+    async function _mmLoad() {
+      if (_mmData) return _mmData;
+      try {
+        const hdr = { apikey: SIG_SB_ANON, Authorization: `Bearer ${SIG_SB_ANON}` };
+        const q = u => fetch(`${SIG_SB_URL}/rest/v1/${u}`, { headers: hdr });
+        const [ri, re, rk] = await Promise.all([
+          q('margin_maintenance?select=*&exclude_etf=eq.false&order=trade_date.desc&limit=1000'),
+          q('margin_maintenance?select=*&exclude_etf=eq.true&order=trade_date.desc&limit=1000'),
+          q('taiex_daily?select=*&order=trade_date.desc&limit=1000'),
+        ]);
+        _mmData = {
+          false: ri.ok ? (await ri.json()).reverse() : [],
+          true:  re.ok ? (await re.json()).reverse() : [],
+          taiex: rk.ok ? (await rk.json()).reverse() : [],
+        };
+      } catch (e) { _mmData = { false: [], true: [], taiex: [] }; }
+      return _mmData;
+    }
     async function openMarginModal() {
       document.getElementById('marginModal').style.display = 'flex';
-      if (!_mmData) {
-        try {
-          const hdr = { apikey: SIG_SB_ANON, Authorization: `Bearer ${SIG_SB_ANON}` };
-          const q = u => fetch(`${SIG_SB_URL}/rest/v1/${u}`, { headers: hdr });
-          const [ri, re, rk] = await Promise.all([
-            q('margin_maintenance?select=*&exclude_etf=eq.false&order=trade_date.desc&limit=1000'),
-            q('margin_maintenance?select=*&exclude_etf=eq.true&order=trade_date.desc&limit=1000'),
-            q('taiex_daily?select=*&order=trade_date.desc&limit=1000'),
-          ]);
-          _mmData = {
-            false: ri.ok ? (await ri.json()).reverse() : [],
-            true:  re.ok ? (await re.json()).reverse() : [],
-            taiex: rk.ok ? (await rk.json()).reverse() : [],
-          };
-        } catch (e) { _mmData = { false: [], true: [], taiex: [] }; }
-      }
+      await _mmLoad();
       mmSetTab(_mmTab);
     }
-    function _mmDestroy() { _mmCharts.forEach(c => { try { c.remove(); } catch (_) {} }); _mmCharts = []; }
+    // 融資維持率徽章／導覽點擊 → 回首頁並捲到 §4 全市場融資維持率（量表＋歷史線圖已內嵌，不再開彈窗）
+    window._gotoMaint = function(){
+      try{ if(window._showView) window._showView('home'); }catch(e){}
+      setTimeout(function(){ var s=document.getElementById('hpMaintSec'); if(s) s.scrollIntoView({behavior:'smooth',block:'start'}); }, 80);
+    };
+    // ── 首頁 §4 內嵌版：全市場融資維持率歷史線圖（含/扣 ETF，與彈窗同資料/同繪圖）──
+    var _hpMmTabEx = false;
+    window._hpMmTab = function(ex){
+      _hpMmTabEx = ex;
+      var inc=document.getElementById('hpMmInc'), exb=document.getElementById('hpMmEx');
+      if(inc)inc.classList.toggle('on', !ex); if(exb)exb.classList.toggle('on', ex);
+      var data=(_mmData&&_mmData[ex])||[], cur=data[data.length-1];
+      var curEl=document.getElementById('hpMmCur');
+      if(curEl)curEl.innerHTML = cur
+        ? '最新（'+cur.trade_date+'）維持率 <b style="color:'+_mmColor(cur.maintenance_ratio)+'">'+Number(cur.maintenance_ratio).toFixed(2)+'%</b>'
+          + ' ｜ 融資餘額 '+Number(cur.margin_balance).toLocaleString()+' 億'
+          + (cur.short_balance!=null ? ' ｜ 融券餘額 '+Number(cur.short_balance).toLocaleString()+' 張' : '')
+        : '無資料';
+      var host=document.getElementById('hpMmPanels'), tip=document.getElementById('hpMmTip');
+      if(host&&tip)_mmBuildPanels(host, tip, data, (_mmData&&_mmData.taiex)||[]);
+    };
+    window._loadHpMaintChart = function(){
+      var host=document.getElementById('hpMmPanels'); if(!host)return;
+      _mmLoad().then(function(){ window._hpMmTab(_hpMmTabEx); });
+    };
+    function _mmDestroy() { var h=document.getElementById('mmPanels'); if(h&&h._charts){h._charts.forEach(c => { try { c.remove(); } catch (_) {} }); h._charts=[];} }
     function closeMarginModal() { document.getElementById('marginModal').style.display = 'none'; _mmDestroy(); }
     function mmSetTab(ex) {
       _mmTab = ex;
@@ -5494,18 +5542,16 @@
           + ` ｜ 融資餘額 ${Number(cur.margin_balance).toLocaleString()} 億`
           + (cur.short_balance != null ? ` ｜ 融券餘額 ${Number(cur.short_balance).toLocaleString()} 張` : '')
         : '無資料';
-      _mmBuildPanels(data, (_mmData && _mmData.taiex) || []);
+      _mmBuildPanels(document.getElementById('mmPanels'), document.getElementById('mmTip'), data, (_mmData && _mmData.taiex) || []);
     }
-    function _mmBuildPanels(mdata, taiex) {
-      _mmDestroy();
-      const host = document.getElementById('mmPanels');
+    function _mmBuildPanels(host, tip, mdata, taiex) {
+      (host._charts||[]).forEach(c => { try { c.remove(); } catch (_) {} }); host._charts=[];
       host.innerHTML = '';
       if (typeof LightweightCharts === 'undefined' || !mdata.length) return;
       const W = host.clientWidth || 700;
       const mobile = window.innerWidth < 600;
       const hK = mobile ? 150 : 190, hS = mobile ? 80 : 105;
       const field = { ratio: 'maintenance_ratio', fin: 'margin_balance', short: 'short_balance' };
-      const tip = document.getElementById('mmTip');
       const mmap = Object.fromEntries(mdata.map(x => [x.trade_date, x]));
       const kmap = Object.fromEntries(taiex.map(x => [x.trade_date, x]));
       // 共同日期軸（交集，升冪）→ 四面板等長 → 可用「索引」同步，橫移/縮放行為比照主K圖
@@ -5558,7 +5604,7 @@
         el.addEventListener('touchmove', ev => { const t = ev.touches[0]; if (t) at(t.clientX); }, { passive: true });
         charts.push(ch);
       });
-      _mmCharts = charts;
+      host._charts = charts;
       // 初始顯示最近 105 根 + 右側留 3 空白（比照主K圖）
       const n = dates.length, show = Math.min(105, n);
       charts.forEach(c => { try { c.timeScale().setVisibleLogicalRange({ from: n - show, to: n - 1 + 3 }); } catch (_) {} });
