@@ -571,6 +571,13 @@
 
     @keyframes spin { to { transform: rotate(360deg); } }
 
+    /* 篩選進度條（不確定進度：伺服器背景運算，無精確百分比，以動畫＋計時安撫等待） */
+    .scan-prog{margin:10px 0 2px;}
+    .scan-prog .scan-track{height:8px;border-radius:6px;background:var(--ctl-bg);overflow:hidden;position:relative;}
+    .scan-prog .scan-fill{position:absolute;top:0;left:-40%;width:40%;height:100%;border-radius:6px;background:var(--brand-green);animation:scanslide 1.1s ease-in-out infinite;}
+    .scan-prog .scan-meta{display:flex;justify-content:space-between;font-size:11.5px;color:var(--text-muted);margin-top:5px;}
+    @keyframes scanslide{0%{left:-40%;}50%{left:60%;}100%{left:100%;}}
+
     .empty-state {
       text-align: center;
       padding: 60px 20px;
@@ -4990,6 +4997,26 @@
     function showStatus(html) {
       document.getElementById('statusArea').innerHTML = html;
     }
+    // 篩選進度條：篩選為伺服器背景運算、無精確百分比，改用不確定動畫條＋經過秒數安撫等待
+    var _scanTimer = null, _scanT0 = 0;
+    function _scanStart(){
+      _scanStop();
+      var area = document.getElementById('statusArea'); if(!area) return;
+      var bar = document.createElement('div');
+      bar.id = 'scanProg'; bar.className = 'scan-prog';
+      bar.innerHTML = '<div class="scan-track"><div class="scan-fill"></div></div>'
+        + '<div class="scan-meta"><span>篩選運算中…可切換其他畫面，完成後回來即可看到結果</span><span id="scanElapsed">0.0s</span></div>';
+      area.appendChild(bar);
+      _scanT0 = Date.now();
+      _scanTimer = setInterval(function(){
+        var s = document.getElementById('scanElapsed');
+        if(s) s.textContent = ((Date.now()-_scanT0)/1000).toFixed(1)+'s';
+      }, 100);
+    }
+    function _scanStop(){
+      if(_scanTimer){ clearInterval(_scanTimer); _scanTimer = null; }
+      var b = document.getElementById('scanProg'); if(b) b.remove();
+    }
 
     // 四個 K 棒形態互斥（吞噬/母子邏輯上不可能同時成立）
     function _exclPattern(el) {
@@ -5068,6 +5095,7 @@
       if (noBlackMonths > 0 && noBlackMult > 0)
         hint += `（含 ${noBlackMonths} 個月無放量黑棒篩選，需額外數秒）`;
       showStatus(`<div class="alert alert-info">&#8987; ${hint}</div>`);
+      _scanStart();
 
       const body = {
         date: dateVal ? dateVal.replace(/-/g, '') : '',
@@ -5116,6 +5144,7 @@
           btn.disabled = false;
           btn.innerHTML = '開始篩選';
           if (data.error) {
+            _scanStop();
             showStatus(`<div class="alert alert-error">&#9888; ${data.error}</div>`);
             document.getElementById('resultsArea').innerHTML = '';
             return;
@@ -5134,6 +5163,7 @@
             _screenJob = null;
             btn.disabled = false;
             btn.innerHTML = '開始篩選';
+            _scanStop();
             showStatus(`<div class="alert alert-error">&#9888; 連線錯誤：${err.message}</div>`);
           }
         });
@@ -5212,6 +5242,7 @@
     }
 
     function renderResults(data) {
+      _scanStop();
       const results = data.results || [];
 
       // Show actual data date returned from API
@@ -5322,6 +5353,10 @@
             ${_authToken ? `<td onclick="event.stopPropagation();_btAddPrompt('${s.code}','${s.name.replace(/'/g,"\\'")}',${s.close})" title="加入回測勝率" style="text-align:center;padding:0 4px;cursor:pointer;font-size:15px">📈</td>` : ''}
             <td class="code-cell">
               <a href="https://www.twse.com.tw/zh/trading/historical/stock-day.html?stockNo=${s.code}" target="_blank" onclick="event.stopPropagation()">${s.code}</a>${
+                (window._mkt && window._mkt[String(s.code)]==='otc')
+                  ? `<span class="gs-sd-mkt otc" style="margin-left:6px">上櫃</span>`
+                  : ''
+              }${
                 (s.data_missing && s.data_missing.length)
                   ? `<span class="data-missing-badge" title="部分篩選條件無法確認（${s.data_missing.map(k=>({'no_black':'無放量黑棒篩選','gap_unverified':'跳空前日資料缺失，請手動排查'}[k]||k)).join('、')}），已放行">⚠</span>`
                   : ''
