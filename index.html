@@ -2671,6 +2671,9 @@
       <div class="etx-search"><input id="etxSearch" type="text" placeholder="搜尋 ETF 代號或名稱，直接定位卡片" autocomplete="off"><div id="etxSugg"></div></div>
     </div>
     <div class="etx-kpi" id="etxKpi"></div>
+    <div class="etx-sec"><div class="etx-sh"><div><span class="k">ACTIVE ETF CONSENSUS</span><h3>主動 ETF 集中加碼前 10</h3></div>
+      <div class="etx-tools"><span class="etx-seg" id="etxConWin"><button data-w="today" class="on" onclick="window._etxConWin('today')">今日</button><button data-w="5" onclick="window._etxConWin('5')">近5日</button><button data-w="10" onclick="window._etxConWin('10')">近10日</button></span></div></div>
+      <div id="etxConTable"><div class="fc-empty">載入中…</div></div></div>
     <div class="etx-sec"><div class="etx-sh"><div><span class="k">ACTIVE ETF MONITOR</span><h3>ETF 動態監控看板</h3></div>
       <div class="etx-tools"><span class="etx-seg" id="etxFilter"><button data-f="all" class="on">全部</button><button data-f="active">主動</button><button data-f="passive">被動</button></span>
         <span class="etx-seg" id="etxSort"><button data-s="action" class="on">依今日動作</button><button data-s="scale">依規模</button></span></div></div>
@@ -2718,6 +2721,42 @@
 
     function netLots(code){var h=HOLD[code]||[];var n=0;h.forEach(function(x){n+=(x.delta_shares||0);});return n;}
     function changed(code){var h=HOLD[code]||[];return h.some(function(x){return (x.delta_shares||0)!==0;});}
+
+    // ── 主動 ETF 集中加碼（今日：active.json 一手 PCF 彙整；5/10日：active_etf_flow 歷史快照）──
+    var CON={today:null, flow:null}, conWin='today';
+    var ACTIVE_JSON='https://nctuwanglin.github.io/active-etf/active.json';
+    function conTable(rows, note){
+      if(!rows.length) return '<div class="fc-empty">今日無 ≥2 檔主動 ETF 同步加碼的個股。</div>';
+      return '<div style="overflow-x:auto"><table class="etx-tbl"><thead><tr><th class="l">#</th><th class="l">股票</th><th>加碼(張)</th><th>主動ETF</th><th class="l">同步加碼的 ETF</th></tr></thead><tbody>'+
+        rows.map(function(r,i){return '<tr><td class="l">'+(i+1)+'</td><td class="l" style="cursor:pointer" onclick="_openStock(\''+r.code+'\',\''+esc(r.name||'')+'\')"><b>'+esc(r.name||'')+'</b> <span style="color:var(--text-muted)">'+r.code+'</span></td><td class="hp-up">+'+m0(r.lots)+'</td><td><b>'+r.etfCount+'</b> 檔</td><td class="l" style="font-size:11px;color:var(--text-muted)">'+esc(r.etfs.slice(0,8).join('、'))+'</td></tr>';}).join('')+
+        '</tbody></table></div><div style="font-size:11px;color:var(--text-muted);margin-top:8px">'+note+'</div>';
+    }
+    function renderConsensus(){
+      var box=el('etxConTable'); if(!box) return;
+      if(conWin==='today'){
+        if(CON.today===null){box.innerHTML='<div class="fc-empty">載入中…</div>';return;}
+        var inc=(CON.today.consensus&&CON.today.consensus.increase)||[];
+        var rows=inc.slice().sort(function(a,b){return (b.shares_delta||0)-(a.shares_delta||0);}).slice(0,10).map(function(x){
+          return {code:x.code,name:x.name,lots:(x.shares_delta||0)/1000,etfCount:(x.etfs||[]).length,etfs:x.etfs||[]};});
+        box.innerHTML=conTable(rows,'資料日 '+(CON.today.updated||'')+'｜「集中」＝當日 ≥2 檔主動 ETF 同步加碼；加碼張數為各主動 ETF 合計。資料源：各投信官網 PCF 每日彙整（active-etf）。');
+      } else {
+        var n=parseInt(conWin,10);
+        if(CON.flow===null){box.innerHTML='<div class="fc-empty">載入中…</div>';return;}
+        var dates=[];var seen={};(CON.flow||[]).forEach(function(r){if(!seen[r.data_date]){seen[r.data_date]=1;dates.push(r.data_date);}});
+        dates.sort().reverse(); dates=dates.slice(0,n);
+        if(dates.length<n){box.innerHTML='<div class="fc-empty">近 '+n+' 日資料累積中（目前 '+dates.length+' 個交易日；系統每日快照，滿 '+n+' 日後即顯示）。</div>';return;}
+        var dset={}; dates.forEach(function(d){dset[d]=1;});
+        var agg={};
+        (CON.flow||[]).forEach(function(r){if(!dset[r.data_date])return;var k=r.stock_code;if(!agg[k])agg[k]={code:k,name:r.stock_name,lots:0,etfs:{}};agg[k].lots+=(r.shares_delta||0)/1000;(r.etf_codes||[]).forEach(function(e){agg[k].etfs[e]=1;});});
+        var rows=Object.keys(agg).map(function(k){var a=agg[k];return {code:a.code,name:a.name,lots:a.lots,etfCount:Object.keys(a.etfs).length,etfs:Object.keys(a.etfs)};}).filter(function(r){return r.lots>0;}).sort(function(a,b){return b.lots-a.lots;}).slice(0,10);
+        box.innerHTML=conTable(rows,'近 '+n+' 交易日（'+dates[dates.length-1]+'～'+dates[0]+'）主動 ETF 集中加碼張數加總前 10。資料源：active_etf_flow 每日快照。');
+      }
+    }
+    window._etxConWin=function(w){conWin=w;[].forEach.call(document.querySelectorAll('#etxConWin button'),function(b){b.classList.toggle('on',b.getAttribute('data-w')===w);});renderConsensus();};
+    function loadConsensus(){
+      fetch(ACTIVE_JSON).then(function(r){return r.json();}).then(function(j){CON.today=j||{};if(conWin==='today')renderConsensus();}).catch(function(){CON.today={};if(conWin==='today'&&el('etxConTable'))el('etxConTable').innerHTML='<div class="fc-empty">今日集中加碼讀取失敗</div>';});
+      Q('active_etf_flow?select=data_date,stock_code,stock_name,shares_delta,etf_codes&order=data_date.desc&limit=3000').then(function(a){CON.flow=Array.isArray(a)?a:[];if(conWin!=='today')renderConsensus();}).catch(function(){CON.flow=[];});
+    }
 
     function kpi(){
       var act=PROD.filter(function(p){return p.active;});
@@ -2838,6 +2877,7 @@
     }
 
     window._etfxShow=function(){
+      loadConsensus();
       if(loaded){cards();return;}
       Promise.all([
         Q('etf_products?select=code,name,active,category,index_name,close,change_pct,aum,est_scale,nav,holders,outstanding_units,issued_units,mgmt_fee,manager,listing_date,data_date&order=aum.desc.nullslast&limit=500'),
