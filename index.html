@@ -1519,6 +1519,7 @@
       .gs-msetf{display:flex;gap:18px;margin:8px 0 2px;font-size:12.5px;font-weight:700;color:var(--text);}
       .gs-msetf label{display:inline-flex;align-items:center;gap:5px;cursor:pointer;}
       .gs-msetf input{accent-color:var(--brand-green);cursor:pointer;}
+      .gs-msnote{font-size:11.5px;color:var(--text-muted);margin:2px 0 0;}
       /* §4 內嵌融資維持率歷史線圖 */
       .gs-mmwrap{margin-top:18px;border-top:1px dashed var(--border);padding-top:14px;}
       .gs-mmtabs{display:flex;gap:8px;margin-bottom:10px;}
@@ -5685,8 +5686,7 @@
       var rows=_msData[_msEx]||[], cur=rows[rows.length-1];
       var num=document.getElementById('hpMaintNum'),lab=document.getElementById('hpMaintLabel'),
           mk=document.getElementById('hpMaintMark'),cb=document.getElementById('hpMaintCur'),
-          note=document.getElementById('msNote'),title=document.getElementById('msChartTitle');
-      if(title)title.textContent=meta.title;
+          note=document.getElementById('msNote');
       var m=cur&&cur[meta.key]!=null?Number(cur[meta.key]):null;
       if(m!=null){var pos=Math.min(100,Math.max(0,(m-120)/90*100));
         if(num)num.textContent=m.toFixed(2)+'%';
@@ -5695,27 +5695,7 @@
         if(cb){cb.style.left=pos+'%';cb.textContent='目前 '+m.toFixed(2)+'%';}
       }else if(num){num.textContent='—';}
       if(note){var est=(_msMkt==='otc'&&_msEx)||(_msMkt==='all'&&_msEx);
-        note.textContent=(cur?'最新 '+cur.trade_date:'')+(est?'（上櫃扣ETF為估算）':'');}
-      _msDrawChart(rows, meta);
-    }
-    function _msDrawChart(rows, meta){
-      var box=document.getElementById('hpMsChart');
-      if(!box||typeof LightweightCharts==='undefined')return;
-      if(_msChart){try{_msChart.remove();}catch(e){}_msChart=null;}
-      var pts=rows.filter(function(r){return r[meta.key]!=null;}).map(function(r){return {time:r.trade_date,value:Number(r[meta.key])};});
-      if(!pts.length){box.innerHTML='<div style="color:var(--text-muted);font-size:12px;padding:20px 0">暫無歷史資料</div>';return;}
-      box.innerHTML='';
-      var isDark=document.documentElement.getAttribute('data-theme')==='dark'||matchMedia('(prefers-color-scheme:dark)').matches;
-      var bg=isDark?'#0d1117':'#ffffff',tx=isDark?'#c9d1d9':'#333',gd=isDark?'#21262d':'#eee';
-      _msChart=LightweightCharts.createChart(box,{width:box.clientWidth||600,height:220,
-        layout:{background:{color:bg},textColor:tx},grid:{vertLines:{color:gd},horzLines:{color:gd}},
-        rightPriceScale:{borderColor:gd},timeScale:{borderColor:gd},
-        crosshair:{mode:LightweightCharts.CrosshairMode.Normal},handleScale:{axisPressedMouseMove:true},handleScroll:true});
-      var s=_msChart.addLineSeries({color:meta.color,lineWidth:2,priceFormat:{type:'custom',formatter:function(v){return v.toFixed(1)+'%';}}});
-      s.setData(pts);
-      [140,160,185].forEach(function(y){ s.createPriceLine({price:y,color:gd,lineWidth:1,lineStyle:LightweightCharts.LineStyle.Dashed,axisLabelVisible:true,title:y+'%'}); });
-      _msChart.timeScale().fitContent();
-      if(!box._resz){box._resz=true;window.addEventListener('resize',function(){ if(_msChart&&box.clientWidth)_msChart.applyOptions({width:box.clientWidth}); });}
+        note.textContent=(cur?meta.title+'　最新 '+cur.trade_date:'')+(est?'（上櫃扣ETF為估算）':'');}
     }
     window._loadHpMaintChart = function(){
       var host=document.getElementById('hpMmPanels'); if(!host)return;
