@@ -23,6 +23,25 @@ TWSE_HEADERS = {
 RANGE_DAYS = {"1mo": 35, "3mo": 95, "6mo": 185, "1y": 370, "2y": 730, "3y": 1100}
 YF_HOSTS = ["query1.finance.yahoo.com", "query2.finance.yahoo.com"]
 
+# ── 上櫃(OTC)代號集：讀 Supabase otc_names（快取）；上櫃個股 Yahoo 尾碼用 .TWO（上市為 .TW）──
+_SB_URL = "https://bruqrbvbjxntgoljxsne.supabase.co"
+_SB_ANON = "sb_publishable_KgYlaR-mqtx4uVre6kPD2A_qO6tdT1y"
+_OTC_CODES = None
+
+
+def _is_otc(code):
+    global _OTC_CODES
+    if _OTC_CODES is None:
+        try:
+            req = urllib.request.Request(
+                f"{_SB_URL}/rest/v1/otc_names?select=code",
+                headers={"apikey": _SB_ANON, "Authorization": f"Bearer {_SB_ANON}"})
+            rows = json.loads(urllib.request.urlopen(req, timeout=8).read())
+            _OTC_CODES = set(str(r.get("code")) for r in rows if r.get("code"))
+        except Exception:
+            _OTC_CODES = set()
+    return str(code) in _OTC_CODES
+
 def _parse_taifex_chunk(content):
     """Parse TAIFEX CSV (TX only) → 台指近全 daily candles.
     Keeps highest-volume row per (date, session) = near-month contract.
@@ -595,10 +614,11 @@ def fetch_twse_chart(code, range_str="3mo"):
 
 
 def _yf_symbol(code):
-    """Return Yahoo Finance symbol. Indices (^) and futures (=F) are used as-is."""
+    """Return Yahoo Finance symbol. Indices (^) and futures (=F) are used as-is；
+    上櫃個股用 .TWO、上市用 .TW。"""
     if code.startswith("^") or "=" in code:
         return code
-    return f"{code}.TW"
+    return f"{code}.TWO" if _is_otc(code) else f"{code}.TW"
 
 
 def _twse_latest_candle(code_str):
@@ -654,7 +674,7 @@ def _try_yf_url(url):
 
 def fetch_chart(code, range_str="3mo", interval="1d", adj=False, raw=False):
     # raw=True → 真正未調整原始日K，直接走 TWSE STOCK_DAY（僅台股日K）
-    yf_sym_check = code if (code.startswith("^") or "=" in code) else f"{code}.TW"
+    yf_sym_check = _yf_symbol(code)   # 上櫃→.TWO：raw(還原)TWSE 路徑僅上市(.TW)，上櫃跳過走 YF
     if raw and interval == "1d" and yf_sym_check.endswith(".TW"):
         yf_ev_url = (f"https://query1.finance.yahoo.com/v8/finance/chart/{code}.TW"
                      f"?interval=1d&range={range_str}&events=div%2Csplits")
@@ -758,7 +778,8 @@ def fetch_chart(code, range_str="3mo", interval="1d", adj=False, raw=False):
     # TX=F intraday → Yahoo Finance TX=F directly (falls through to YF code below)
     yf_sym = _yf_symbol(code)
     is_daily = interval == "1d"
-    is_tw_stock = yf_sym.endswith(".TW")
+    is_tw_stock = yf_sym.endswith(".TW") or yf_sym.endswith(".TWO")   # 含上櫃(取名稱/產業)
+    is_listed = yf_sym.endswith(".TW")                                 # 僅上市走 TWSE STOCK_DAY/當日
 
     if is_daily:
         days = RANGE_DAYS.get(range_str, 95)
@@ -779,7 +800,7 @@ def fetch_chart(code, range_str="3mo", interval="1d", adj=False, raw=False):
             attempts.append(f"https://{host}/v8/finance/chart/{encoded_sym}?{url_params_alt}")
 
     # ── 台股日K (range ≤ 1y)：TWSE 主路徑，YF 並行只取 events（不阻塞）────────
-    use_twse_primary = (is_daily and is_tw_stock and not adj
+    use_twse_primary = (is_daily and is_listed and not adj
                         and range_str in ("1mo", "3mo", "6mo", "1y"))
     if use_twse_primary:
         ex = ThreadPoolExecutor(max_workers=4)
@@ -841,7 +862,7 @@ def fetch_chart(code, range_str="3mo", interval="1d", adj=False, raw=False):
     with ThreadPoolExecutor(max_workers=8) as ex:
         for url in attempts:
             tasks[ex.submit(_try_yf_url, url)] = ("yf", url)
-        if is_daily and is_tw_stock:
+        if is_daily and is_listed:
             tasks[ex.submit(_twse_latest_candle, code)] = ("twse", None)
         if is_tw_stock and not use_twse_primary:
             tasks[ex.submit(_fetch_tw_name, code)]     = ("name", None)
