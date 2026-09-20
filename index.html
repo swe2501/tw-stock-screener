@@ -5655,13 +5655,15 @@
       if(!_msData || !_mmData) return;
       var mkt=_msMkt, ex=_msEx, mlabel={all:'全市場',listed:'上市',otc:'上櫃'}[mkt]||'全市場';
       var series=_mmSeries(mkt, ex), cur=series[series.length-1];
+      // 融券官方日期可能落後自算維持率日期 → 最新值往回取最後一筆有融券的
+      var lastShort=null; for(var i=series.length-1;i>=0;i--){ if(series[i].short_balance!=null){ lastShort=series[i]; break; } }
       var tt=document.getElementById('hpMmTitle');
       if(tt) tt.textContent='加權指數 × '+mlabel+'融資維持率 × 融資／融券餘額';
       var curEl=document.getElementById('hpMmCur');
       if(curEl) curEl.innerHTML = cur
         ? '最新（'+cur.trade_date+'）'+mlabel+'維持率 <b style="color:'+_mmColor(cur.maintenance_ratio)+'">'+(cur.maintenance_ratio!=null?Number(cur.maintenance_ratio).toFixed(2):'–')+'%</b>'
           + ' ｜ 融資餘額 '+(cur.margin_balance!=null?Number(cur.margin_balance).toLocaleString():'–')+' 億'
-          + (cur.short_balance!=null ? ' ｜ 融券餘額 '+Number(cur.short_balance).toLocaleString()+' 張' : ' ｜ 融券—')
+          + (lastShort ? ' ｜ 融券餘額 '+Number(lastShort.short_balance).toLocaleString()+' 張'+(lastShort.trade_date!==cur.trade_date?'（'+lastShort.trade_date+'）':'') : ' ｜ 融券—')
         : '無資料';
       var host=document.getElementById('hpMmPanels'), tip=document.getElementById('hpMmTip');
       if(host&&tip)_mmBuildPanels(host, tip, series, (_mmData&&_mmData.taiex)||[]);
@@ -5677,7 +5679,7 @@
       if(_msData){ _msApply(); return; }
       var hdr={apikey:SIG_SB_ANON,Authorization:'Bearer '+SIG_SB_ANON};
       // PostgREST 單次上限 1000 列，取最新 1000（desc）再反轉為時間升冪
-      var base=SIG_SB_URL+'/rest/v1/margin_maint_split?select=trade_date,exclude_etf,listed_ratio,otc_ratio,all_ratio,otc_loan_est&order=trade_date.desc&limit=1000';
+      var base=SIG_SB_URL+'/rest/v1/margin_maint_split?select=trade_date,exclude_etf,listed_ratio,otc_ratio,all_ratio,listed_loan,otc_loan,all_loan,otc_loan_est&order=trade_date.desc&limit=1000';
       Promise.all([
         fetch(base+'&exclude_etf=eq.false',{headers:hdr}).then(function(r){return r.ok?r.json():[];}),
         fetch(base+'&exclude_etf=eq.true',{headers:hdr}).then(function(r){return r.ok?r.json():[];})
