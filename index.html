@@ -1246,6 +1246,62 @@
       <button id="loginBtn"    tabindex="-1" onmousedown="this.blur()" ontouchend="this.blur()" onclick="openAuthModal('login')">登入</button>
     </div>
   </header>
+  <!-- 頂部個股搜尋＋指數快覽（全站可見；下拉帶代號/股名/產業/市場，含上市與上櫃）-->
+  <div class="topsearch">
+    <span class="ts-label">個股搜尋</span>
+    <div class="ts-box">
+      <input id="topStockSearch" type="text" placeholder="輸入代號或股名（含上市／上櫃，支援模糊）" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="topSearchDrop">
+      <button class="idx-btn ts-go" type="button" onclick="window._topSearchGo&&window._topSearchGo()">查詢</button>
+      <div id="topSearchDrop" class="gs-search-drop" role="listbox" hidden></div>
+    </div>
+    <span class="ts-sep"></span>
+    <span class="ts-label">指數快覽</span>
+    <button class="idx-btn" onclick="openIndexChart('^TWII','大盤 加權指數')">大盤</button>
+    <button class="idx-btn" onclick="openIndexChart('^N225','日經225')">日經225</button>
+    <button class="idx-btn" onclick="openIndexChart('^KS11','韓國綜合指數')">韓指</button>
+    <button class="idx-btn" onclick="openIndexChart('^IXIC','那斯達克綜合指數')">那指</button>
+    <button class="idx-btn" onclick="openIndexChart('^DJI','道瓊工業指數')">道指</button>
+  </div>
+  <script>
+  // 頂部個股搜尋自動完成（用 window._names/_mkt/_ind；與首頁 hero 搜尋同資料）
+  (function(){
+    var inp, drop, list=[], sel=-1;
+    function match(q){ q=(q||'').trim(); if(!q)return[]; var names=window._names||{}, ql=q.toLowerCase();
+      var ce=[],cp=[],ne=[],nn=[],seen={};
+      for(var c in names){ if(seen[c])continue; var nm=names[c]||'', cl=c.toLowerCase(), nl=nm.toLowerCase();
+        var it={code:c,name:nm};
+        if(cl===ql){ce.push(it);seen[c]=1;} else if(cl.indexOf(ql)===0){cp.push(it);seen[c]=1;}
+        else if(nl===ql){ne.push(it);seen[c]=1;} else if(nl.indexOf(ql)>=0||cl.indexOf(ql)>=0){nn.push(it);seen[c]=1;} }
+      function s(a,b){return a.code<b.code?-1:1;} cp.sort(s); nn.sort(s);
+      return ce.concat(cp,ne,nn).slice(0,20); }
+    function render(){ if(!drop)return; if(!list.length){drop.hidden=true; if(inp)inp.setAttribute('aria-expanded','false'); return;}
+      drop.innerHTML=list.map(function(it,i){
+        var ind=(window._indLabel&&window._indLabel(it.code))||'';
+        var mk=(window._mktLabel&&window._mktLabel(it.code))||'';
+        var tag=ind?'<span class="gs-sd-ind">'+ind+'</span>':'';
+        var mkt=mk==='上櫃'?'<span class="gs-sd-mkt otc">上櫃</span>':(mk==='上市'?'<span class="gs-sd-mkt twse">上市</span>':'');
+        return '<div class="gs-sd-item'+(i===sel?' on':'')+'" role="option" data-code="'+it.code+'"><span class="gs-sd-code">'+it.code+'</span><span class="gs-sd-name">'+(it.name||'')+'</span>'+tag+mkt+'</div>';
+      }).join(''); drop.hidden=false; if(inp)inp.setAttribute('aria-expanded','true'); }
+    function open(code){ if(drop)drop.hidden=true; if(window._openStock)window._openStock(String(code), (window._names&&window._names[code])||''); }
+    function oninput(){ if(!inp)return; var run=function(){ list=match(inp.value); sel=-1; render(); }; if(!window._names){ window._loadNames&&window._loadNames(run); } else run(); }
+    window._topSearchGo=function(){ if(!inp)return; var q=(inp.value||'').trim(); if(!q)return;
+      if(sel>=0&&list[sel]){open(list[sel].code);return;}
+      var run=function(){ var l=match(q); if(l.length)open(l[0].code); else if(/^\d/.test(q))open(q.split(/\s+/)[0]); };
+      if(!window._names){window._loadNames&&window._loadNames(run);} else run(); };
+    document.addEventListener('DOMContentLoaded',function(){
+      inp=document.getElementById('topStockSearch'); drop=document.getElementById('topSearchDrop'); if(!inp)return;
+      try{ window._loadNames&&window._loadNames(); }catch(e){}
+      inp.addEventListener('input',oninput);
+      inp.addEventListener('keydown',function(e){ var o=drop&&!drop.hidden;
+        if(e.key==='ArrowDown'&&o){e.preventDefault();sel=Math.min(list.length-1,sel+1);render();}
+        else if(e.key==='ArrowUp'&&o){e.preventDefault();sel=Math.max(0,sel-1);render();}
+        else if(e.key==='Enter'){e.preventDefault();window._topSearchGo();}
+        else if(e.key==='Escape'&&o){drop.hidden=true;sel=-1;} });
+      document.addEventListener('click',function(e){ var it=e.target.closest('#topSearchDrop .gs-sd-item'); if(it){open(it.dataset.code);return;}
+        if(!e.target.closest('.topsearch')){ if(drop)drop.hidden=true; } });
+    });
+  })();
+  </script>
   <script>
     (function(){try{if(localStorage.getItem('theme')==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}})();
     function _toggleTheme(){var r=document.documentElement;var toLight=r.getAttribute('data-theme')!=='light';if(toLight)r.setAttribute('data-theme','light');else r.removeAttribute('data-theme');try{localStorage.setItem('theme',toLight?'light':'dark');}catch(e){}var b=document.getElementById('themeToggle');if(b)b.textContent=toLight?'☀️':'🌙';if(typeof _rethemeChart==='function'){try{_rethemeChart();}catch(e){}}if(typeof _hxRetheme==='function'){try{_hxRetheme();}catch(e){}}}
@@ -1356,6 +1412,16 @@
     .gs-sd-mkt.twse{background:rgba(30,64,49,.12);color:var(--brand-green);}
     .gs-sd-mkt.otc{background:rgba(155,108,255,.14);color:var(--accent2);}
     .gs-sd-empty{padding:12px;font-size:13px;color:var(--text-muted);text-align:center;}
+    .gs-sd-ind{font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;flex-shrink:0;background:rgba(181,138,45,.14);color:var(--accent);}
+    /* 頁首橫條：個股搜尋＋指數快覽（紅框位置）*/
+    .topsearch{display:flex;align-items:center;flex-wrap:wrap;gap:8px;max-width:1200px;margin:0 auto;padding:8px 16px;border-bottom:1px solid var(--border);}
+    .topsearch .ts-label{font-size:12.5px;font-weight:800;color:var(--brand-green);white-space:nowrap;}
+    .topsearch .ts-box{position:relative;display:flex;align-items:center;gap:6px;flex:0 1 360px;min-width:220px;}
+    .topsearch .ts-box>input{flex:1;padding:6px 10px;font-size:14px;border:1.5px solid var(--brand-green);border-radius:8px;background:var(--surface);color:var(--text);outline:none;}
+    .topsearch .ts-box .gs-search-drop{top:calc(100% + 4px);}
+    .topsearch .ts-sep{width:1px;height:20px;background:var(--border);margin:0 4px;}
+    .topsearch .ts-go{white-space:nowrap;}
+    @media(max-width:600px){ .topsearch{gap:6px;padding:6px 12px;} .topsearch .ts-box{flex-basis:100%;} }
     .gs-search svg{color:var(--text-muted);flex:0 0 auto;}
     .gs-search input{flex:1;border:0;background:transparent;font-size:15px;color:var(--text);padding:8px 4px;outline:none;}
     .gs-search button{border:0;background:var(--brand-green);color:#f4efe1;font-weight:800;font-size:14px;padding:10px 22px;border-radius:7px;cursor:pointer;}
@@ -2256,19 +2322,23 @@
   // 共用：股名對照（一次載入、全視圖共用）
   window._names = window._names || null;   // 代號→名稱（上市＋上櫃合併）
   window._mkt = window._mkt || {};         // 代號→市場別 'twse'|'otc'
+  window._ind = window._ind || {};         // 代號→產業別（如 2330→半導體；上市為主）
   window._loadNames = function(cb){
     if(window._names){ if(cb)cb(window._names); return; }
     var SB='https://bruqrbvbjxntgoljxsne.supabase.co', AK='sb_publishable_KgYlaR-mqtx4uVre6kPD2A_qO6tdT1y';
     var pNames=fetch('/api/screen?stat=names').then(function(r){return r.json();}).catch(function(){return {};});
     var pOtc=fetch(SB+'/rest/v1/otc_names?select=code,name',{headers:{apikey:AK,Authorization:'Bearer '+AK}}).then(function(r){return r.ok?r.json():[];}).catch(function(){return [];});
-    Promise.all([pNames,pOtc]).then(function(res){
-      var m=res[0]||{}, otc=res[1]||[];
+    var pInd=fetch('/api/screen?stat=industries').then(function(r){return r.json();}).catch(function(){return {};});
+    Promise.all([pNames,pOtc,pInd]).then(function(res){
+      var m=res[0]||{}, otc=res[1]||[], ind=res[2]||{};
       for(var c in m){ window._mkt[c]='twse'; }
       otc.forEach(function(r){ if(r&&r.code){ if(!m[r.code])m[r.code]=r.name; window._mkt[r.code]='otc'; } });
+      window._ind=ind||{};
       window._names=m; if(cb)cb(window._names);
     }).catch(function(){ window._names={}; if(cb)cb(window._names); });
   };
   window._mktLabel = function(code){ var k=window._mkt&&window._mkt[String(code)]; return k==='otc'?'上櫃':(k==='twse'?'上市':''); };
+  window._indLabel = function(code){ return (window._ind&&window._ind[String(code)])||''; };
   // 共用：點個股開 K 線圖
   window._openStock = function(code, name){ try{ if(typeof openChart==='function') openChart(String(code), name||((window._names&&window._names[code])||'')); }catch(e){} };
   // 共用:把原生 <select> 就地變成可輸入過濾的下拉(保留 .value/change 介面,現有邏輯免改)
@@ -4810,24 +4880,7 @@
     </div>
   </div>
 
-  <!-- 個股搜尋 -->
-  <div class="index-row">
-    <span class="index-row-label">個股搜尋</span>
-    <input id="stockSearchInput" type="text" placeholder="輸入股票代號" inputmode="numeric"
-      style="width:120px;padding:4px 8px;font-size:14px;border:1px solid var(--border);border-radius:6px;background:var(--input-bg);color:var(--text);"
-      onkeydown="if(event.key==='Enter') searchStock()" />
-    <button class="idx-btn" onclick="searchStock()">查詢</button>
-  </div>
-
-  <!-- 指數快覽 -->
-  <div class="index-row">
-    <span class="index-row-label">指數快覽</span>
-    <button class="idx-btn" onclick="openIndexChart('^TWII','大盤 加權指數')">大盤</button>
-    <button class="idx-btn" onclick="openIndexChart('^N225','日經225')">日經225</button>
-    <button class="idx-btn" onclick="openIndexChart('^KS11','韓國綜合指數')">韓指</button>
-    <button class="idx-btn" onclick="openIndexChart('^IXIC','那斯達克綜合指數')">那指</button>
-    <button class="idx-btn" onclick="openIndexChart('^DJI','道瓊工業指數')">道指</button>
-  </div>
+  <!-- （個股搜尋＋指數快覽已移至頁首 header 下方橫條 .topsearch）-->
 
   <div class="results-wrap">
     <div id="statusArea"></div>

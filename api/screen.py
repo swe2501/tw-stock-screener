@@ -1871,6 +1871,12 @@ class handler(BaseHTTPRequestHandler):
         # 股票代號→名稱對照（前端各視圖共用；純靜態，不查 DB）
         if (qs.get("stat") or [""])[0] == "names":
             return self._send_json(200, _STOCK_NAMES)
+        if (qs.get("stat") or [""])[0] == "industries":
+            # code→產業別中文（供首頁搜尋下拉顯示，如 2330→半導體）；上市為主
+            try:
+                return self._send_json(200, _get_industry_map())
+            except Exception:
+                return self._send_json(200, {})
         # 股票代號→產業別對照（今日索引「展開該產業全部上市股」用；純靜態）
         if (qs.get("stat") or [""])[0] == "industry":
             return self._send_json(200, _STOCK_INDUSTRY)
