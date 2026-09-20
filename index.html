@@ -4041,11 +4041,8 @@
           +'<div id="msEtfRow" class="gs-msetf" hidden><label><input type="radio" name="msEtf" value="inc" checked onchange="window._msSelEtf(false)">含 ETF</label><label><input type="radio" name="msEtf" value="exc" onchange="window._msSelEtf(true)">扣除 ETF</label></div>'
           +'<p id="hpMaintLabel"></p><div class="gs-ruler">'
           +'<div class="gs-rlab"><span style="left:22.22%">140%<small>追繳警戒</small></span><span style="left:44.44%">160%<small>健康區</small></span><span style="left:72.22%">185%<small>高檔浮額</small></span></div>'
-          +'<div class="gs-rtrack"><i id="hpMaintMark"></i></div><b id="hpMaintCur"></b></div></div>'
-        +'<div class="gs-msplit">'
-          +'<div class="gs-mstitle"><span id="msChartTitle">全市場 融資維持率走勢</span> <span id="msNote"></span></div>'
-          +'<div id="hpMsChart"></div></div>'
-        +'<div class="gs-mmwrap"><div class="gs-mmtitle2">加權指數 × 全市場融資維持率 × 融資／融券餘額（即時實測參考）</div><div id="hpMmCur" class="gs-mmcur"></div><div id="hpMmTip" class="gs-mmtip">移動滑鼠或觸控圖上看每日數值</div><div id="hpMmPanels"></div></div>'
+          +'<div class="gs-rtrack"><i id="hpMaintMark"></i></div><b id="hpMaintCur"></b></div><p id="msNote" class="gs-msnote"></p></div>'
+        +'<div class="gs-mmwrap"><div class="gs-mmtitle2">加權指數 × 全市場融資維持率 × 融資／融券餘額</div><div id="hpMmCur" class="gs-mmcur"></div><div id="hpMmTip" class="gs-mmtip">移動滑鼠或觸控圖上看每日數值</div><div id="hpMmPanels"></div></div>'
         +'<div class="gs-tip"><span class="ic">📖</span><div><b>學院導讀</b>維持率＝融資持股現值 ÷ 融資借款金額；140／160／185% 為追繳、健康、高檔浮額分界。上市分子取證交所個股融資餘額×收盤、分母取證交所融資金額（含/扣ETF 皆為實算）；上櫃分子取櫃買個股融資餘額×收盤、分母取玩股網上櫃融資金額（扣ETF 為估算）；全市場為兩者分子、分母各自加總後相除（非平均）。扣除 ETF 版以「00 開頭」代號剔除。歷史曲線今日之前由玩股網回補、今日起改每日逐股自算。</div></div>';
       if(window._loadHpMaintChart) window._loadHpMaintChart();
       if(window._loadMaintSplit) window._loadMaintSplit();
