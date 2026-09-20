@@ -3988,20 +3988,22 @@
     function loadDiverge(){
       Promise.all([
         sb('margin_market?select=date,fin_bal_k&order=date.desc&limit=70'),
-        fetch('/api/chart?code=%5ETWII&range=6mo&interval=1d').then(function(r){return r.json();}).then(function(j){return (j&&j.data)||[];}).catch(function(){return [];}),
+        sb('taiex_daily?select=trade_date,close&order=trade_date.desc&limit=100'),   // 證交所加權(官方)，與融資對齊日期
         sb('margin_maintenance?select=trade_date,maintenance_ratio&exclude_etf=eq.false&order=trade_date.desc&limit=1')
       ]).then(function(res){
         var box=el('hpDiverge'); if(!box)return;
-        var mm=res[0]||[],tx=(res[1]||[]).slice().reverse();  // 由舊到新→新到舊
+        var mm=res[0]||[],tx=res[1]||[];  // 皆新→舊
         var maint=(res[2]&&res[2][0]&&res[2][0].maintenance_ratio!=null)?+res[2][0].maintenance_ratio:null;
         _renderMaint();   // 維持率量表＋歷史線圖（含/扣ETF 切換連動，不依賴 /api/chart）
         if(mm.length<2||tx.length<2){box.innerHTML='<div class="fc-empty">融資動能背離：資料不足</div>';return;}
+        var txMap={}; tx.forEach(function(r){ txMap[r.trade_date]=+r.close; });
         var PERIODS=[5,10,20,60],data={};
         PERIODS.forEach(function(d){
-          var mOk=mm.length>d,iOk=tx.length>d;
+          var mOk=mm.length>d;
+          var endD=mm[0].date, startD=mOk?mm[d].date:null;               // 融資的起訖交易日
           var mNow=mm[0].fin_bal_k,mOld=mOk?mm[d].fin_bal_k:null;
-          var iNow=tx[0].close,iOld=iOk?tx[d].close:null;
-          data[d]={days:d,marketPct:(iOld?(iNow/iOld-1)*100:null),marginPct:(mOld?(mNow/mOld-1)*100:null)};
+          var iNow=txMap[endD], iOld=(startD!=null?txMap[startD]:null);   // 加權取「相同兩個交易日」→ 大盤與融資同窗口
+          data[d]={days:d,marketPct:(iNow&&iOld?(iNow/iOld-1)*100:null),marginPct:(mOld?(mNow/mOld-1)*100:null)};
         });
         function statusFor(mk,mg){var t=0.2;
           if(mk>0&&mg>mk+t)return{l:'散戶過熱',d:'留意追高風險',t:'d'};
@@ -4181,7 +4183,7 @@
         +'§2 融資融券：TWSE MI_MARGN（融資餘額仟元、融券張）；官股券商＝八大公股券商（兆豐／第一金／合庫／華南永昌／臺銀／土銀／彰銀／台企銀）合計買賣超（本機分點資料，金額＝Σ張×成交均價，盤後日更；官股常逢高調節、大盤上漲時多為賣超）。KPI：台指VIX＝期交所臺指選擇權波動率指數（MIS，以 CBOE VIX 公式編製、標的為台指選擇權，非美股 ^VIX；盤後取當日值）；美元／台幣＝TAIFEX 官方匯率；富台指（SGX FTSE Taiwan）＝玩股網（無免費官方源）。以上 KPI 皆盤後日更、非盤中即時。'
         +'§3 市場廣度：上市當日漲跌平與漲跌停家數。'
         +'§3A 盤面結構：各股當日成交金額（TWSE MI_INDEX）依產業歸「電子／金融／其他傳產」三類算佔比；門檻沿用電子&gt;60% 防線、金融&gt;10% 警戒。'
-        +'§4 融資動能背離：加權指數(^TWII)與上市融資餘額的 5／10／20／60 交易日變化比較；全市場融資維持率＝玩股網即時實測（含ETF），量表警戒帶 140／160／185% 沿用合夥人分級。'
+        +'§4 融資動能背離：證交所加權指數(taiex_daily)與上市融資餘額(TWSE MI_MARGN)的 5／10／20／60 交易日變化比較，兩者對齊到相同起訖交易日（避免資料源日期落差造成大盤動能失真）；全市場融資維持率＝逐股自算（見學院導讀），量表警戒帶 140／160／185% 沿用合夥人分級。'
         +'§5 期貨：外資／投信／自營臺股期貨未平倉淨額＝玩股網法人及大額未平倉；小台／微台散戶多空比＝(散戶多單−空單)÷主要月份全市場未平倉，散戶＝全市場未平倉−三大法人（玩股網現成口徑）。'
         +'KPI 加權指數與大盤走勢圖＝Yahoo ^TWII。';
     }
