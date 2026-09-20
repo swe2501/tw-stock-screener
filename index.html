@@ -3997,13 +3997,15 @@
         _renderMaint();   // 維持率量表＋歷史線圖（含/扣ETF 切換連動，不依賴 /api/chart）
         if(mm.length<2||tx.length<2){box.innerHTML='<div class="fc-empty">融資動能背離：資料不足</div>';return;}
         var txMap={}; tx.forEach(function(r){ txMap[r.trade_date]=+r.close; });
+        var mmMap={}; mm.forEach(function(r){ mmMap[r.date]=r.fin_bal_k; });
+        // 兩表共同交易日（新→舊）→ 大盤與融資同一組日期、同窗口
+        var common=mm.map(function(r){return r.date;}).filter(function(d){return txMap[d]!=null;});
         var PERIODS=[5,10,20,60],data={};
         PERIODS.forEach(function(d){
-          var mOk=mm.length>d;
-          var endD=mm[0].date, startD=mOk?mm[d].date:null;               // 融資的起訖交易日
-          var mNow=mm[0].fin_bal_k,mOld=mOk?mm[d].fin_bal_k:null;
-          var iNow=txMap[endD], iOld=(startD!=null?txMap[startD]:null);   // 加權取「相同兩個交易日」→ 大盤與融資同窗口
-          data[d]={days:d,marketPct:(iNow&&iOld?(iNow/iOld-1)*100:null),marginPct:(mOld?(mNow/mOld-1)*100:null)};
+          var ok=common.length>d, endD=common[0], startD=ok?common[d]:null;
+          data[d]={days:d,
+            marketPct:(ok?(txMap[endD]/txMap[startD]-1)*100:null),
+            marginPct:(ok?(mmMap[endD]/mmMap[startD]-1)*100:null)};
         });
         function statusFor(mk,mg){var t=0.2;
           if(mk>0&&mg>mk+t)return{l:'散戶過熱',d:'留意追高風險',t:'d'};
@@ -5750,8 +5752,8 @@
       const field = { ratio: 'maintenance_ratio', fin: 'margin_balance', short: 'short_balance' };
       const mmap = Object.fromEntries(mdata.map(x => [x.trade_date, x]));
       const kmap = Object.fromEntries(taiex.map(x => [x.trade_date, x]));
-      // 共同日期軸（交集，升冪）→ 四面板等長 → 可用「索引」同步，橫移/縮放行為比照主K圖
-      const dates = mdata.map(x => x.trade_date).filter(d => kmap[d]);
+      // 日期軸＝維持率資料的日期（不被加權截斷）→ 折線最新值與量表一致；加權若缺該日則補空白
+      const dates = mdata.map(x => x.trade_date);
       if (!dates.length) return;
       const showTip = d => {
         if (!d) { tip.textContent = '移動滑鼠或觸控圖上看每日數值'; return; }
@@ -5787,7 +5789,7 @@
         });
         if (p.key === 'k') {
           const s = ch.addCandlestickSeries({ upColor: '#ef5350', downColor: '#26a69a', wickUpColor: '#ef5350', wickDownColor: '#26a69a', borderVisible: false, priceFormat: { type: 'price', precision: 0, minMove: 1 } });
-          s.setData(dates.map(d => { const c = kmap[d]; return { time: d, open: +c.open, high: +c.high, low: +c.low, close: +c.close }; }));
+          s.setData(dates.map(d => { const c = kmap[d]; return c ? { time: d, open: +c.open, high: +c.high, low: +c.low, close: +c.close } : { time: d }; }));
         } else {
           const s = ch.addLineSeries({ color: p.color, lineWidth: 2, priceFormat: { type: 'custom', minMove: 0.01, formatter: p.fmt } });
           const f = field[p.key];
