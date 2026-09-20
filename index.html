@@ -3902,7 +3902,7 @@
         var vd=(mi.vix!=null&&mi.vix_prev)?(mi.vix-mi.vix_prev):null;
         function it(k,v,c,cc){return '<div class="gs-fr"><div class="k">'+k+'</div><div class="v">'+v+(c?'<span class="c '+cc+'">'+c+'</span>':'')+'</div></div>';}
         box.innerHTML=it('富台指期',mi.futai_close!=null?Number(mi.futai_close).toLocaleString():'—',fd!=null?pctTxt(fd):'',fd>0?'hp-up':'hp-dn')
-          +it('VIX 波動率',mi.vix!=null?mi.vix.toFixed(2):'—',vd!=null?((vd>0?'+':'')+vd.toFixed(2)):'',vd>0?'hp-dn':'hp-up')
+          +it('台指VIX',mi.vix!=null?mi.vix.toFixed(2):'—',vd!=null?((vd>0?'+':'')+vd.toFixed(2)):'',vd>0?'hp-dn':'hp-up')
           +it('美元/台幣',mi.usdtwd!=null?mi.usdtwd.toFixed(3):'—','','');
       });
     }
@@ -4097,7 +4097,7 @@
           {k:'加權指數',v:cb.taiex_close,c:cb.taiex_chg,p:cb.taiex_pct},
           {k:'櫃買指數',v:cb.otc_close,c:cb.otc_chg,p:cb.otc_pct},
           {k:'台指期（日盤）',v:cb.txf_close,c:cb.txf_chg,p:cb.txf_pct},
-          {k:'VIX 指數',v:mi.vix,c:vc,p:vp},
+          {k:'台指VIX',v:mi.vix,c:vc,p:vp,note:'臺指選擇權波動率指數（期交所）'},
           {k:'台幣匯率',v:mi.usdtwd,c:null,p:null,note:'USD／TWD'+(mi.date?' · '+mi.date:'')}
         ];
         pulse.innerHTML=kpis.map(function(m){
@@ -4178,7 +4178,7 @@
       var box=el('hpNote'); if(!box)return;
       box.innerHTML='<b>資料源與定義（供合夥人複查）</b><br>'
         +'§1 三大法人：TWSE BFI82U 三大法人買賣金額統計（上市，買賣差／元）。'
-        +'§2 融資融券：TWSE MI_MARGN（融資餘額仟元、融券張）；官股券商＝兆豐所有分點當日買賣（本機分點資料，金額＝Σ張×成交均價）；富台指／VIX／美元台幣＝玩股網即時。'
+        +'§2 融資融券：TWSE MI_MARGN（融資餘額仟元、融券張）；官股券商＝八大公股券商（兆豐／第一金／合庫／華南永昌／臺銀／土銀／彰銀／台企銀）合計買賣超（本機分點資料，金額＝Σ張×成交均價，盤後日更；官股常逢高調節、大盤上漲時多為賣超）。KPI：台指VIX＝期交所臺指選擇權波動率指數（MIS，以 CBOE VIX 公式編製、標的為台指選擇權，非美股 ^VIX；盤後取當日值）；美元／台幣＝TAIFEX 官方匯率；富台指（SGX FTSE Taiwan）＝玩股網（無免費官方源）。以上 KPI 皆盤後日更、非盤中即時。'
         +'§3 市場廣度：上市當日漲跌平與漲跌停家數。'
         +'§3A 盤面結構：各股當日成交金額（TWSE MI_INDEX）依產業歸「電子／金融／其他傳產」三類算佔比；門檻沿用電子&gt;60% 防線、金融&gt;10% 警戒。'
         +'§4 融資動能背離：加權指數(^TWII)與上市融資餘額的 5／10／20／60 交易日變化比較；全市場融資維持率＝玩股網即時實測（含ETF），量表警戒帶 140／160／185% 沿用合夥人分級。'
