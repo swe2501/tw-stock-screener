@@ -3806,6 +3806,8 @@
       if(cfg){ var e=el(cfg.el); if(e)e.style.display='block'; if(fw)fw.style.display='none'; if(ra)ra.style.display='none'; if(typeof window[cfg.show]==='function')window[cfg.show](); }
       else { if(fw)fw.style.display=''; if(ra)ra.style.display=''; }
       try{ _setNav(v); }catch(_){}
+      // 首頁已有 hero 搜尋 → 隱藏頁首搜尋列；其他視圖才顯示
+      try{ var ts=document.querySelector('.topsearch'); if(ts)ts.hidden=(v==='home'); }catch(_){}
     };
     document.addEventListener('click',function(e){
       var o=e.target.closest('[data-hxo]'); if(o){var k=o.dataset.hxo;open=open===k?null:k;renderCtl();return;}
