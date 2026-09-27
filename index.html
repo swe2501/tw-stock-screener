@@ -3182,7 +3182,8 @@
     var el=function(id){return document.getElementById(id);};
     var NS=[5,10,20,60,120,240,480], n=20, mode='res', latest=null, cache={};
     function nm(c){return (window._names&&window._names[c])||'';}
-    function px(v){return v==null?'—':(+v>=100?Math.round(v):(+v).toFixed(v>=10?1:2));}
+    function px(v){return v==null?'—':String(+(+v).toFixed(2));}   // 收盤：原值
+    function zp(v){return v==null?'—':(+v>=1000?Math.round(v):(+v).toFixed(v>=100?1:2));}   // 區間上下緣(計算值)
     function render(a){
       if(!a||!a.length){ el('srTbl').innerHTML='<div class="fc-empty">此條件暫無符合個股</div>'; return; }
       var R=mode==='res';
@@ -3191,7 +3192,7 @@
           var lo=R?r.res_lo:r.sup_lo, hi=R?r.res_hi:r.sup_hi, d=R?r.res_dist:r.sup_dist, v=R?r.res_vol:r.sup_vol;
           return '<tr class="clk" onclick="window._srPickN='+n+';_openStock(\''+r.code+'\',\''+nm(r.code).replace(/'/g,'')+'\')">'
             +'<td class="l"><span class="rk">'+(i+1)+'</span></td><td class="l"><span class="c">'+r.code+'</span> '+nm(r.code)+'</td>'
-            +'<td>'+px(r.close)+'</td><td style="color:'+(R?'var(--red)':'var(--green)')+';font-weight:700">'+px(lo)+'～'+px(hi)+'</td>'
+            +'<td>'+px(r.close)+'</td><td style="color:'+(R?'var(--red)':'var(--green)')+';font-weight:700">'+zp(lo)+'～'+zp(hi)+'</td>'
             +'<td>'+(R?'+':'−')+d+'%</td><td>'+(v!=null?Number(v).toLocaleString():'—')+'</td><td>'+(r._zv/1e8).toFixed(1)+'</td><td>'+(r.avg_value/1e8).toFixed(1)+'</td></tr>';
         }).join('')+'</tbody></table>';
     }
@@ -5819,7 +5820,7 @@
           };
           // 支撐壓力：stock_sr（分價量表，各 N 日）→ 右側表格＋K 線價位帶（_srDraw 於每次重繪 K 線時呼叫）
           var SR={code:null, rows:[], n:20, lines:[]};
-          function srPx(v){return v==null?'—':(+v>=100?Math.round(v):(+v).toFixed(v>=10?1:2));}
+          function srPx(v){return v==null?'—':(+v>=1000?Math.round(v):(+v).toFixed(v>=100?1:2));}
           function srRender(){
             var box=el('cnpSr'); if(!box)return;
             if(!SR.rows.length){ box.innerHTML='<div class="fc-empty">暫無支撐壓力資料（ETF、歷史不足或成交值過低的個股不計算）</div>'; return; }
