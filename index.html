@@ -1474,6 +1474,9 @@
     .gs-optsr{margin-top:14px;border:1px solid var(--border);border-radius:8px;padding:12px 16px;background:var(--surface);}
     .gs-osr-algo{margin-top:8px;font-size:11px;color:var(--text-muted);line-height:1.8;}
     .gs-osr-algo summary{cursor:pointer;font-weight:700;}
+    .ch-legend{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 18px;font-size:12px;color:var(--text-muted);margin-top:8px;}
+    .ch-legend span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+    .ch-legend i{display:inline-block;width:22px;height:0;}
     table.gs-nd{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums;}
     table.gs-nd th{font-size:11px;color:var(--text-muted);font-weight:700;text-align:left;padding:5px 8px;border-bottom:1px solid var(--border);white-space:nowrap;}
     table.gs-nd td{padding:6px 8px;border-bottom:1px solid var(--border);vertical-align:top;}
@@ -2703,6 +2706,7 @@
         <div class="fh-sec-h"><span class="no">第 1 層</span>避險比率歷史走勢（近 2 年）</div>
         <div class="fh-sec-sub">紅線＝避險比率(%)左軸、藍線＝加權指數右軸；破除「空單口數多＝崩盤」迷思，看名目占持股市值比率的歷史位置。</div>
         <div id="fhChart" style="width:100%"></div>
+        <div class="ch-legend"><span><i style="border-top:3px solid #e03e2d"></i>避險比率 R（左軸 %）</span><span><i style="border-top:2px dashed #3a86e0"></i>加權指數（右軸）</span><span><i style="border-top:1px dashed #e03e2d"></i>P95 顯著偏高線（近 2 年第 95 百分位）</span><span><i style="border-top:1px dashed #b58a2d"></i>P80 偏高線（近 2 年第 80 百分位）</span></div>
         <div id="fhChartTip" style="font-size:12px;color:var(--text-muted);margin-top:6px">移動滑鼠看每日數值</div>
       </div>
 
@@ -2801,14 +2805,14 @@
         crosshair:{mode:LightweightCharts.CrosshairMode.Normal},
         handleScroll:{mouseWheel:true,pressedMouseMove:true,horzTouchDrag:true,vertTouchDrag:false},
         handleScale:{mouseWheel:true,pinch:true,axisPressedMouseMove:false}});
-      var rs=chart.addLineSeries({color:'#e03e2d',lineWidth:2,priceScaleId:'left',priceFormat:{type:'custom',minMove:0.001,formatter:function(v){return v.toFixed(2)+'%';}}});
+      var rs=chart.addLineSeries({color:'#e03e2d',lineWidth:2,priceScaleId:'left',title:'避險比率',priceFormat:{type:'custom',minMove:0.001,formatter:function(v){return v.toFixed(2)+'%';}}});
       rs.setData(DATA.map(function(r){var v=ratioOf(r);return v!=null?{time:r.trade_date,value:v}:{time:r.trade_date};}));
-      var is=chart.addLineSeries({color:'#3a86e0',lineWidth:1,priceScaleId:'right',lineStyle:2,priceFormat:{type:'custom',minMove:1,formatter:function(v){return (v/1000).toFixed(0)+'k';}}});
+      var is=chart.addLineSeries({color:'#3a86e0',lineWidth:1,priceScaleId:'right',lineStyle:2,title:'加權',priceFormat:{type:'custom',minMove:1,formatter:function(v){return Math.round(v).toLocaleString();}}});
       is.setData(DATA.map(function(r){return r.taiex_close!=null?{time:r.trade_date,value:+r.taiex_close}:{time:r.trade_date};}));
       // P80/P95 警戒線
       var ser=DATA.map(ratioOf).filter(function(x){return x!=null;});
-      rs.createPriceLine({price:pct(ser,80),color:'#b58a2d',lineWidth:1,lineStyle:2,axisLabelVisible:true,title:'P80'});
-      rs.createPriceLine({price:pct(ser,95),color:'#e03e2d',lineWidth:1,lineStyle:2,axisLabelVisible:true,title:'P95'});
+      rs.createPriceLine({price:pct(ser,80),color:'#b58a2d',lineWidth:1,lineStyle:2,axisLabelVisible:true,title:'P80 偏高線'});
+      rs.createPriceLine({price:pct(ser,95),color:'#e03e2d',lineWidth:1,lineStyle:2,axisLabelVisible:true,title:'P95 顯著偏高線'});
       var kmap=Object.fromEntries(DATA.map(function(r){return [r.trade_date,r];}));
       chart.subscribeCrosshairMove(function(pm){ var d=pm.time; var r=kmap[d]; if(!r){el('fhChartTip').textContent='移動滑鼠看每日數值';return;}
         el('fhChartTip').innerHTML='<b>'+d+'</b>　避險比率 <b style="color:#e03e2d">'+(ratioOf(r)!=null?ratioOf(r).toFixed(3)+'%':'–')+'</b>　加權 '+(r.taiex_close!=null?(+r.taiex_close).toFixed(0):'–')+'　淨空 '+Math.round(r.eq_net_lots).toLocaleString()+' 口';});
@@ -2961,6 +2965,7 @@
         <div class="bd-sec-h"><span>📈</span>站上均線廣度歷史走勢</div>
         <div class="bd-sec-sub">綠=站上60MA家數%（季線·牛熊護城河50%）、黃=站上20MA家數%（月線）、藍=加權指數。破除單看指數的盲點。</div>
         <div id="bdChart" style="width:100%"></div>
+        <div class="ch-legend"><span><i style="border-top:3px solid #0a9a56"></i>站上 60MA 家數 %（季線，左軸）</span><span><i style="border-top:2px solid #d2a12b"></i>站上 20MA 家數 %（月線，左軸）</span><span><i style="border-top:2px dashed #3a86e0"></i>加權指數（右軸）</span><span><i style="border-top:1px dashed #0a9a56"></i>50% 牛熊線（過半個股站上季線＝多頭）</span></div>
         <div id="bdChartTip" style="font-size:12px;color:var(--text-muted);margin-top:6px">移動滑鼠看每日數值</div>
       </div>
 
@@ -3062,13 +3067,13 @@
         rightPriceScale:{borderColor:_cssv('--border')},leftPriceScale:{visible:true,borderColor:_cssv('--border')},
         timeScale:{borderColor:_cssv('--border')},crosshair:{mode:LightweightCharts.CrosshairMode.Normal},
         handleScroll:{mouseWheel:true,pressedMouseMove:true,horzTouchDrag:true,vertTouchDrag:false},handleScale:{mouseWheel:true,pinch:true,axisPressedMouseMove:false}});
-      var s60=chart.addLineSeries({color:'#0a9a56',lineWidth:2,priceScaleId:'left',priceFormat:{type:'custom',minMove:0.1,formatter:function(v){return v.toFixed(0)+'%';}}});
+      var s60=chart.addLineSeries({color:'#0a9a56',lineWidth:2,priceScaleId:'left',title:'站上60MA',priceFormat:{type:'custom',minMove:0.1,formatter:function(v){return v.toFixed(0)+'%';}}});
       s60.setData(arr.map(function(r){return r.ma60_pct!=null?{time:r.trade_date,value:r.ma60_pct}:{time:r.trade_date};}));
-      var s20=chart.addLineSeries({color:'#d2a12b',lineWidth:1,priceScaleId:'left'});
+      var s20=chart.addLineSeries({color:'#d2a12b',lineWidth:1,priceScaleId:'left',title:'站上20MA'});
       s20.setData(arr.map(function(r){return r.ma20_pct!=null?{time:r.trade_date,value:r.ma20_pct}:{time:r.trade_date};}));
-      var si=chart.addLineSeries({color:'#3a86e0',lineWidth:1,priceScaleId:'right',lineStyle:2,priceFormat:{type:'custom',minMove:1,formatter:function(v){return (v/1000).toFixed(0)+'k';}}});
+      var si=chart.addLineSeries({color:'#3a86e0',lineWidth:1,priceScaleId:'right',lineStyle:2,title:'加權',priceFormat:{type:'custom',minMove:1,formatter:function(v){return Math.round(v).toLocaleString();}}});
       si.setData(arr.map(function(r){return TX[r.trade_date]!=null?{time:r.trade_date,value:TX[r.trade_date]}:{time:r.trade_date};}));
-      s60.createPriceLine({price:50,color:'#0a9a56',lineWidth:1,lineStyle:2,axisLabelVisible:true,title:'50%牛熊'});
+      s60.createPriceLine({price:50,color:'#0a9a56',lineWidth:1,lineStyle:2,axisLabelVisible:true,title:'50% 牛熊線'});
       var bmap=Object.fromEntries(arr.map(function(r){return [r.trade_date,r];}));
       chart.subscribeCrosshairMove(function(pm){var d=pm.time,r=bmap[d]; if(!r){el('bdChartTip').textContent='移動滑鼠看每日數值';return;} el('bdChartTip').innerHTML='<b>'+d+'</b>　站上60MA <b style="color:#0a9a56">'+(r.ma60_pct!=null?r.ma60_pct+'%':'–')+'</b>　20MA '+(r.ma20_pct!=null?r.ma20_pct+'%':'–')+'　加權 '+(TX[d]!=null?TX[d].toFixed(0):'–')+'　淨上漲 '+((r.up-r.down)>=0?'+':'')+(r.up-r.down);});
       var n=arr.length; try{chart.timeScale().setVisibleLogicalRange({from:Math.max(0,n-160),to:n+2});}catch(_){}
