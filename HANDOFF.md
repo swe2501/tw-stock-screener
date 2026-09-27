@@ -120,7 +120,9 @@ git commit -am "..."; git push origin HEAD:prod
 | 外資空單溫度計（付費） | 市場觀察 | foreign_hedge_daily | foreign_hedge.py | project_foreign_hedge |
 | 大盤多空廣度（付費） | 市場觀察＋首頁§3鈕 | breadth_daily | breadth_daily.py | project_breadth |
 | K線 基本面/新聞分頁 | K線 modal 右側 | stock_fundamentals, stock_financials | fundamentals.py | project_fundamentals |
-| 選擇權支撐壓力區 | 首頁「今日判讀」卡 | option_sr | option_sr.py | project_option_sr |
+| 選擇權支撐壓力區（價平+主次區間，週/月 tab） | 首頁 §6 選擇權矩陣下方 | option_sr（PK trade_date+kind） | option_sr.py | project_option_sr |
+| 選擇權 N 日大量區（5~480日，壓力/支撐前5） | 首頁 §6 選擇權矩陣下方 | option_nday（本機明細 txo_daily） | txo_history.py → option_nday.py | project_stock_sr |
+| 個股分價量表壓力支撐 | 選股「🧱 壓力支撐逼近」＋K線右側「🧱 支撐壓力」分頁/圖上色帶 | stock_sr（PK code+n，每日覆蓋） | stock_sr.py（歷史 backfill_stock_2y.py） | project_stock_sr |
 | 流動性前30 | 選股 | liquidity_top | liquidity_top.py | project_liquidity_top |
 | 主動ETF成分/集中 | ETF分析 | etf_holdings, active_etf_flow | upload_active_etf_holdings.py, active_etf_flow.py | project_active_etf_consensus |
 | 台指VIX/富台指/匯率 KPI | 首頁 hero | market_indicators | market_indicators.py | project_taifex_vix |
@@ -189,7 +191,7 @@ git commit -am "..."; git push origin HEAD:prod
 - 上櫃現貨流動性前30（目前只做上市＋期貨，符合「證交所＋期交所」原話）。
 
 ### 每日排程腳本順序（run_daily_job.bat 尾段新增的）
-`... margin_ratio → margin_maintenance_calc → fetch_otc_index → otc_broker_daily → compute_greed → ... → market_indicators → active_etf_flow → upload_active_etf_holdings → foreign_hedge --daily → breadth_daily → fundamentals → option_sr → liquidity_top → job_health`
+`... margin_ratio → margin_maintenance_calc → fetch_otc_index → otc_broker_daily → compute_greed → ... → market_indicators → active_etf_flow → upload_active_etf_holdings → foreign_hedge --daily → breadth_daily → fundamentals → option_sr → txo_history → option_nday → stock_sr → liquidity_top → job_health`
 
 ---
 
