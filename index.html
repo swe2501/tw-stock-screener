@@ -1464,7 +1464,9 @@
     .gs-kpi2 .k{font-size:11px;color:var(--text-muted);}
     .gs-kpi2 .v{font-size:20px;font-weight:800;margin-top:4px;letter-spacing:-.02em;font-variant-numeric:tabular-nums;}
     /* 選擇權支撐壓力區 */
-    .gs-optsr{margin-top:8px;border:1px solid var(--border);border-radius:8px;padding:10px 13px;background:var(--surface);}
+    .gs-optsr{margin-top:14px;border:1px solid var(--border);border-radius:8px;padding:12px 16px;background:var(--surface);}
+    .gs-osr-algo{margin-top:8px;font-size:11px;color:var(--text-muted);line-height:1.8;}
+    .gs-osr-algo summary{cursor:pointer;font-weight:700;}
     .gs-optsr .gs-osr-h{font-size:12px;font-weight:800;color:var(--brand-green);margin-bottom:7px;}
     .gs-optsr .gs-osr-h span{font-weight:600;color:var(--text-muted);font-size:11px;}
     .gs-osr-row{display:flex;align-items:center;justify-content:space-between;gap:8px;font-variant-numeric:tabular-nums;}
@@ -1521,7 +1523,6 @@
           <h2 class="gs-today-h" id="gsTodayHeadline">整理今日盤後資料…</h2>
           <p class="gs-today-body" id="gsTodayBody"></p>
           <div class="gs-kpi2" id="gsKpi2"></div>
-          <div class="gs-optsr" id="gsOptSR"></div>
           <details class="gs-basis"><summary>判讀依據</summary><div class="body" id="gsBasis"></div></details>
           <div class="gs-today-foot"><span class="gs-tone" id="gsTone">今日定調</span><a href="#" class="gs-report" onclick="try{window._showView('focus')}catch(e){}return false;">閱讀完整報告 →</a></div>
         </aside>
@@ -1714,7 +1715,7 @@
       <div style="text-align:center;margin-top:12px"><button onclick="try{window._showView('fhedge')}catch(e){}" style="background:var(--accent);color:#231c00;font-weight:800;border:0;border-radius:9px;padding:10px 22px;font-size:14px;cursor:pointer">🌡️ 外資空單溫度計 →</button><div style="font-size:11.5px;color:var(--text-muted);margin-top:5px">外資期貨淨空名目 ÷ 持股市值＝避險比率，看 2 年歷史位置（進階籌碼）</div></div>
     </section>
 
-    <section class="hp-sec"><div class="hp-sec-h"><span class="hp-sec-no">§6</span> 臺指選擇權三大法人留倉策略矩陣 <span class="hp-sec-src">CALL 與 PUT 分離解析，依口數與契約金額判定偏多／偏空</span></div><div id="hpOpt" class="gs-opt"><div class="fc-empty">載入中…</div></div></section>
+    <section class="hp-sec"><div class="hp-sec-h"><span class="hp-sec-no">§6</span> 臺指選擇權三大法人留倉策略矩陣 <span class="hp-sec-src">CALL 與 PUT 分離解析，依口數與契約金額判定偏多／偏空</span></div><div id="hpOpt" class="gs-opt"><div class="fc-empty">載入中…</div></div><div class="gs-optsr" id="gsOptSR" style="display:none"></div></section>
 
     <div class="fc-note" id="hpNote"></div>
     </div><!-- /cb-sheet 每日台股籌碼報告 -->
@@ -4483,7 +4484,7 @@
         if(el('gsTone'))el('gsTone').textContent=tone;
         if(el('gsTodayBody'))el('gsTodayBody').textContent=extra;
         if(el('gsBasis'))el('gsBasis').innerHTML='<ul style="margin:0;padding-left:16px">'+fired.map(function(x){return '<li>'+x+'</li>';}).join('')
-          +'</ul><div style="margin-top:6px">市場廣度＝上漲家數÷全部家數；法人強度＝三大法人買賣超÷市場成交額；槓桿背離＝五日融資動能－五日大盤動能。資料源：加權 ^TWII、TWSE 家數/BFI82U/MI_MARGN/MI_INDEX。<br>選擇權支撐壓力區（2026-09-27 改版，與合夥人定案）＝台指選擇權(TXO)一般盤未平倉(OI)，分「週選」（最近到期週選）與「月選」（最近月）兩個分頁：①先用 T 字報價判斷價平＝買權、賣權結算價最接近的履約價（無結算價時取最接近加權指數者）；②價平以上看買權 OI 找壓力、價平以下看賣權 OI 找支撐；③大量＝該側窗口內 OI ≥ 窗口內平均 OI × 1.3，相鄰大量履約價（間距 ≤100 點）合併成一個區間；④主要＝離價平最近的大量區、次要＝再往外的下一個大量區；窗口先取價平 ±5%，找不到再擴到 ±10%，再找不到就不限範圍。Put/Call OI 比為情緒輔助。（舊版：最近月月選全部履約價中 OI 最大者，不看價平。）資料源：TAIFEX openapi DailyMarketReportOpt（盤後日更、慢一交易日）。</div>';
+          +'</ul><div style="margin-top:6px">市場廣度＝上漲家數÷全部家數；法人強度＝三大法人買賣超÷市場成交額；槓桿背離＝五日融資動能－五日大盤動能。資料源：加權 ^TWII、TWSE 家數/BFI82U/MI_MARGN/MI_INDEX。</div>';
       });
       // 選擇權支撐壓力區
       sb('option_sr?select=*&order=trade_date.desc&limit=4').then(function(a){
@@ -4506,7 +4507,8 @@
             +'<span class="gs-osr-bar">現價 '+(o.spot!=null?Math.round(o.spot).toLocaleString():'—')+'</span>'
             +'<span class="gs-osr-r">壓力 '+(nz?z(o.res1_lo,o.res1_hi):(o.resistance||'—'))+'</span></div>'
             +'<div class="gs-osr-sub">次支撐 '+(nz?z(o.sup2_lo,o.sup2_hi):(o.support2||'—'))+' · 次壓力 '+(nz?z(o.res2_lo,o.res2_hi):(o.resistance2||'—'))
-            +' · Put/Call OI 比 '+(o.pc_ratio!=null?o.pc_ratio:'—')+(o.pc_ratio!=null?(o.pc_ratio>=1?'（偏空避險）':'（偏多）'):'')+'</div>';
+            +' · Put/Call OI 比 '+(o.pc_ratio!=null?o.pc_ratio:'—')+(o.pc_ratio!=null?(o.pc_ratio>=1?'（偏空避險）':'（偏多）'):'')+'</div>'
+            +'<details class="gs-osr-algo"><summary>算法說明</summary><div>2026-09-27 改版（與合夥人定案）＝台指選擇權(TXO)一般盤未平倉(OI)，分「週選」（最近到期週選）與「月選」（最近月）兩個分頁：①先用 T 字報價判斷價平＝買權、賣權結算價最接近的履約價（無結算價時取最接近加權指數者）；②價平以上看買權 OI 找壓力、價平以下看賣權 OI 找支撐；③大量＝該側窗口內 OI ≥ 窗口內平均 OI × 1.3，相鄰大量履約價（間距 ≤100 點）合併成一個區間；④主要＝離價平最近的大量區、次要＝再往外的下一個大量區；窗口先取價平 ±5%，找不到再擴到 ±10%，再找不到就不限範圍。Put/Call OI 比為情緒輔助。（舊版：最近月月選全部履約價中 OI 最大者，不看價平。）資料源：TAIFEX openapi DailyMarketReportOpt（盤後日更、慢一交易日）。</div></details>';
           box.querySelectorAll('.gs-osr-tabs button').forEach(function(b){ b.onclick=function(){ render(b.getAttribute('data-k')); }; });
         }
         render(cur);
