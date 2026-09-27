@@ -1463,6 +1463,15 @@
     .gs-kpi2 .c{background:var(--surface);padding:11px 13px;}
     .gs-kpi2 .k{font-size:11px;color:var(--text-muted);}
     .gs-kpi2 .v{font-size:20px;font-weight:800;margin-top:4px;letter-spacing:-.02em;font-variant-numeric:tabular-nums;}
+    /* 選擇權支撐壓力區 */
+    .gs-optsr{margin-top:8px;border:1px solid var(--border);border-radius:8px;padding:10px 13px;background:var(--surface);}
+    .gs-optsr .gs-osr-h{font-size:12px;font-weight:800;color:var(--brand-green);margin-bottom:7px;}
+    .gs-optsr .gs-osr-h span{font-weight:600;color:var(--text-muted);font-size:11px;}
+    .gs-osr-row{display:flex;align-items:center;justify-content:space-between;gap:8px;font-variant-numeric:tabular-nums;}
+    .gs-osr-s{font-size:17px;font-weight:800;color:var(--green);white-space:nowrap;}
+    .gs-osr-r{font-size:17px;font-weight:800;color:var(--red);white-space:nowrap;}
+    .gs-osr-bar{flex:1;text-align:center;font-size:11px;color:var(--text-muted);border-top:1px dashed var(--border);position:relative;top:-1px;padding:0 6px;}
+    .gs-osr-sub{font-size:11px;color:var(--text-muted);margin-top:6px;}
     .gs-today-foot{margin-top:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
     .gs-tone{font-size:12px;font-weight:800;color:#f4efe1;background:var(--brand-green);padding:6px 12px;border-radius:6px;}
     /* 判讀依據 + 報告腳 */
@@ -1508,6 +1517,7 @@
           <h2 class="gs-today-h" id="gsTodayHeadline">整理今日盤後資料…</h2>
           <p class="gs-today-body" id="gsTodayBody"></p>
           <div class="gs-kpi2" id="gsKpi2"></div>
+          <div class="gs-optsr" id="gsOptSR"></div>
           <details class="gs-basis"><summary>判讀依據</summary><div class="body" id="gsBasis"></div></details>
           <div class="gs-today-foot"><span class="gs-tone" id="gsTone">今日定調</span><a href="#" class="gs-report" onclick="try{window._showView('focus')}catch(e){}return false;">閱讀完整報告 →</a></div>
         </aside>
@@ -4295,7 +4305,7 @@
     // 通用視圖註冊：新增大項只要在此登記 {el:容器id, show:全域函式名}，並提供對應元素/函式即可
     window._VIEWS = window._VIEWS || {}; window._VIEWS.home={el:'homeView',show:'_hxShow'}; window._VIEWS.focus={el:'focusView',show:'_focusShow'}; window._VIEWS.overview={el:'overviewView',show:'_ovShow'};
     var NAVMAP={home:'首頁',overview:'今日焦點',focus:'今日焦點',todayindex:'今日焦點',screen:'選股',box:'選股',limitup:'選股',
-      themes:'題材族群',sectors:'題材族群',greed:'市場觀察',inst:'市場觀察',sig:'市場觀察',brank:'市場觀察',news:'每日新聞',
+      themes:'題材族群',sectors:'題材族群',greed:'市場觀察',inst:'市場觀察',sig:'市場觀察',brank:'市場觀察',fhedge:'市場觀察',breadth:'市場觀察',news:'每日新聞',
       etfx:'ETF',etf:'ETF',etfcons:'ETF',etfrev:'ETF',etfdiv:'ETF',etfhold:'ETF',etfsim:'ETF',etfheavy:'ETF',etfprem:'ETF',etfflow:'ETF',etfperf:'ETF'};
     function _setNav(v){
       var label=NAVMAP[v]; var items=document.querySelectorAll('#mainNav .mn-item');
@@ -4402,7 +4412,18 @@
         if(el('gsTone'))el('gsTone').textContent=tone;
         if(el('gsTodayBody'))el('gsTodayBody').textContent=extra;
         if(el('gsBasis'))el('gsBasis').innerHTML='<ul style="margin:0;padding-left:16px">'+fired.map(function(x){return '<li>'+x+'</li>';}).join('')
-          +'</ul><div style="margin-top:6px">市場廣度＝上漲家數÷全部家數；法人強度＝三大法人買賣超÷市場成交額；槓桿背離＝五日融資動能－五日大盤動能。資料源：加權 ^TWII、TWSE 家數/BFI82U/MI_MARGN/MI_INDEX。</div>';
+          +'</ul><div style="margin-top:6px">市場廣度＝上漲家數÷全部家數；法人強度＝三大法人買賣超÷市場成交額；槓桿背離＝五日融資動能－五日大盤動能。資料源：加權 ^TWII、TWSE 家數/BFI82U/MI_MARGN/MI_INDEX。<br>選擇權支撐壓力區＝台指選擇權(TXO)最近月月選、一般盤各履約價最大未平倉(OI)：壓力＝買權最大OI履約價、支撐＝賣權最大OI履約價；Put/Call OI 比為情緒輔助。資料源：TAIFEX openapi DailyMarketReportOpt（盤後日更、慢一交易日）。</div>';
+      });
+      // 選擇權支撐壓力區
+      sb('option_sr?select=*&order=trade_date.desc&limit=1').then(function(a){
+        var box=el('gsOptSR'); if(!box)return; var o=a&&a[0];
+        if(!o){ box.style.display='none'; return; }
+        box.style.display='';
+        box.innerHTML='<div class="gs-osr-h">🎯 選擇權支撐壓力區　<span>'+(o.contract||'')+' 月選 · 最大未平倉（'+(o.trade_date||'')+'）</span></div>'
+          +'<div class="gs-osr-row"><span class="gs-osr-s">支撐 '+o.support+'</span>'
+          +'<span class="gs-osr-bar">現價 '+(o.spot!=null?Math.round(o.spot).toLocaleString():'—')+'</span>'
+          +'<span class="gs-osr-r">壓力 '+o.resistance+'</span></div>'
+          +'<div class="gs-osr-sub">次支撐 '+(o.support2||'—')+' · 次壓力 '+(o.resistance2||'—')+' · Put/Call OI 比 '+(o.pc_ratio!=null?o.pc_ratio:'—')+(o.pc_ratio!=null?(o.pc_ratio>=1?'（偏空避險）':'（偏多）'):'')+'</div>';
       });
     }
 
