@@ -1472,6 +1472,10 @@
     .gs-osr-r{font-size:17px;font-weight:800;color:var(--red);white-space:nowrap;}
     .gs-osr-bar{flex:1;text-align:center;font-size:11px;color:var(--text-muted);border-top:1px dashed var(--border);position:relative;top:-1px;padding:0 6px;}
     .gs-osr-sub{font-size:11px;color:var(--text-muted);margin-top:6px;}
+    .gs-osr-tabs{float:right;display:inline-flex;gap:4px;}
+    .gs-optsr .gs-osr-tabs button{font:inherit;font-size:11px;font-weight:700;padding:1px 9px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer;}
+    .gs-optsr .gs-osr-tabs button.on{background:var(--brand-green);border-color:var(--brand-green);color:#fff;}
+    .gs-osr-meta{font-size:11px;color:var(--text-muted);margin:-3px 0 7px;font-variant-numeric:tabular-nums;}
     .gs-today-foot{margin-top:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
     .gs-tone{font-size:12px;font-weight:800;color:#f4efe1;background:var(--brand-green);padding:6px 12px;border-radius:6px;}
     /* 判讀依據 + 報告腳 */
@@ -4479,18 +4483,33 @@
         if(el('gsTone'))el('gsTone').textContent=tone;
         if(el('gsTodayBody'))el('gsTodayBody').textContent=extra;
         if(el('gsBasis'))el('gsBasis').innerHTML='<ul style="margin:0;padding-left:16px">'+fired.map(function(x){return '<li>'+x+'</li>';}).join('')
-          +'</ul><div style="margin-top:6px">市場廣度＝上漲家數÷全部家數；法人強度＝三大法人買賣超÷市場成交額；槓桿背離＝五日融資動能－五日大盤動能。資料源：加權 ^TWII、TWSE 家數/BFI82U/MI_MARGN/MI_INDEX。<br>選擇權支撐壓力區＝台指選擇權(TXO)最近月月選、一般盤各履約價最大未平倉(OI)：壓力＝買權最大OI履約價、支撐＝賣權最大OI履約價；Put/Call OI 比為情緒輔助。資料源：TAIFEX openapi DailyMarketReportOpt（盤後日更、慢一交易日）。</div>';
+          +'</ul><div style="margin-top:6px">市場廣度＝上漲家數÷全部家數；法人強度＝三大法人買賣超÷市場成交額；槓桿背離＝五日融資動能－五日大盤動能。資料源：加權 ^TWII、TWSE 家數/BFI82U/MI_MARGN/MI_INDEX。<br>選擇權支撐壓力區（2026-09-27 改版，與合夥人定案）＝台指選擇權(TXO)一般盤未平倉(OI)，分「週選」（最近到期週選）與「月選」（最近月）兩個分頁：①先用 T 字報價判斷價平＝買權、賣權結算價最接近的履約價（無結算價時取最接近加權指數者）；②價平以上看買權 OI 找壓力、價平以下看賣權 OI 找支撐；③大量＝該側窗口內 OI ≥ 窗口內平均 OI × 1.3，相鄰大量履約價（間距 ≤100 點）合併成一個區間；④主要＝離價平最近的大量區、次要＝再往外的下一個大量區；窗口先取價平 ±5%，找不到再擴到 ±10%，再找不到就不限範圍。Put/Call OI 比為情緒輔助。（舊版：最近月月選全部履約價中 OI 最大者，不看價平。）資料源：TAIFEX openapi DailyMarketReportOpt（盤後日更、慢一交易日）。</div>';
       });
       // 選擇權支撐壓力區
-      sb('option_sr?select=*&order=trade_date.desc&limit=1').then(function(a){
-        var box=el('gsOptSR'); if(!box)return; var o=a&&a[0];
-        if(!o){ box.style.display='none'; return; }
-        box.style.display='';
-        box.innerHTML='<div class="gs-osr-h">🎯 選擇權支撐壓力區　<span>'+(o.contract||'')+' 月選 · 最大未平倉（'+(o.trade_date||'')+'）</span></div>'
-          +'<div class="gs-osr-row"><span class="gs-osr-s">支撐 '+o.support+'</span>'
-          +'<span class="gs-osr-bar">現價 '+(o.spot!=null?Math.round(o.spot).toLocaleString():'—')+'</span>'
-          +'<span class="gs-osr-r">壓力 '+o.resistance+'</span></div>'
-          +'<div class="gs-osr-sub">次支撐 '+(o.support2||'—')+' · 次壓力 '+(o.resistance2||'—')+' · Put/Call OI 比 '+(o.pc_ratio!=null?o.pc_ratio:'—')+(o.pc_ratio!=null?(o.pc_ratio>=1?'（偏空避險）':'（偏多）'):'')+'</div>';
+      sb('option_sr?select=*&order=trade_date.desc&limit=4').then(function(a){
+        var box=el('gsOptSR'); if(!box)return;
+        a=(a||[]).filter(function(r){return a[0]&&r.trade_date===a[0].trade_date;});
+        if(!a.length){ box.style.display='none'; return; }
+        var by={}; a.forEach(function(r){ by[r.kind||'month']=r; });
+        var kinds=['week','month'].filter(function(k){return by[k];});
+        var cur=window._osrKind&&by[window._osrKind]?window._osrKind:kinds[0];
+        function z(lo,hi){ return lo==null?'—':(lo===hi||hi==null?String(lo):lo+'～'+hi); }
+        function render(k){
+          var o=by[k]; window._osrKind=k;
+          var nz=o.res1_lo!=null||o.sup1_lo!=null;   // 新欄位(價平+主次區間)
+          box.style.display='';
+          box.innerHTML='<div class="gs-osr-h">🎯 選擇權支撐壓力區'
+            +'<span class="gs-osr-tabs">'+kinds.map(function(x){return '<button type="button" data-k="'+x+'" class="'+(x===k?'on':'')+'">'+(x==='week'?'週選':'月選')+'</button>';}).join('')+'</span></div>'
+            +'<div class="gs-osr-meta">'+(o.contract||'')+(o.expiry?' · 到期 '+o.expiry.slice(5):'')
+            +(o.atm!=null?' · 價平 '+o.atm+(o.atm_call!=null?'（C '+o.atm_call+' / P '+o.atm_put+'）':''):'')+' · '+(o.trade_date||'')+'</div>'
+            +'<div class="gs-osr-row"><span class="gs-osr-s">支撐 '+(nz?z(o.sup1_lo,o.sup1_hi):(o.support||'—'))+'</span>'
+            +'<span class="gs-osr-bar">現價 '+(o.spot!=null?Math.round(o.spot).toLocaleString():'—')+'</span>'
+            +'<span class="gs-osr-r">壓力 '+(nz?z(o.res1_lo,o.res1_hi):(o.resistance||'—'))+'</span></div>'
+            +'<div class="gs-osr-sub">次支撐 '+(nz?z(o.sup2_lo,o.sup2_hi):(o.support2||'—'))+' · 次壓力 '+(nz?z(o.res2_lo,o.res2_hi):(o.resistance2||'—'))
+            +' · Put/Call OI 比 '+(o.pc_ratio!=null?o.pc_ratio:'—')+(o.pc_ratio!=null?(o.pc_ratio>=1?'（偏空避險）':'（偏多）'):'')+'</div>';
+          box.querySelectorAll('.gs-osr-tabs button').forEach(function(b){ b.onclick=function(){ render(b.getAttribute('data-k')); }; });
+        }
+        render(cur);
       });
     }
 
