@@ -6447,7 +6447,8 @@
           grid: { vertLines: { color: _cssv('--border') }, horzLines: { color: _cssv('--border') } },
           rightPriceScale: { borderColor: _cssv('--border'), autoScale: true },
           timeScale: { borderColor: _cssv('--border'), visible: p.key === 'short', timeVisible: false, rightOffset: 3, fixLeftEdge: true, fixRightEdge: true },
-          crosshair: { mode: LightweightCharts.CrosshairMode.Normal, vertLine: { labelVisible: false } },
+          crosshair: { mode: LightweightCharts.CrosshairMode.Magnet, vertLine: { labelVisible: false },
+                       horzLine: p.color ? { labelBackgroundColor: p.color } : {} },
           // 橫移/縮放比照主K圖：滑鼠拖曳/滾輪/pinch；垂直觸控拖曳關閉→留給彈窗上下捲
           handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
           handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: false },
