@@ -1140,6 +1140,7 @@
       border: 1px solid var(--border, #333); cursor: pointer; font-family: inherit;
     }
     .margin-ratio:hover { filter: brightness(1.15); }
+    #marginRatioBox { display: none !important; }   /* 2026-09-27 頁首徽章拿掉（元素保留：首頁其他區塊讀它的數值）*/
     /* 融資維持率彈窗 */
     .mm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 9996;
       display: flex; align-items: center; justify-content: center; }
@@ -10485,5 +10486,44 @@
       </div>
     </div>
   </div>
+  <script>
+  /* 瀏覽器「上一頁」：切換視圖、開 K 線都寫入 history；上一頁＝回上一個視圖／先關 K 線（2026-09-27）*/
+  (function(){
+    var cur=null, popping=false, initHash=location.hash.slice(1);   // 先記住：初始化顯示 home 時會改寫網址
+    var origShow=window._showView, origOpen=window.openChart, origClose=window.closeChart;
+    function chartOpen(){ var m=document.getElementById('chartModal'); return !!(m&&m.classList.contains('open')); }
+    window._showView=function(v){
+      var r=origShow.apply(this,arguments);
+      if(!popping){
+        var url=location.pathname+location.search+(v&&v!=='home'?'#'+v:'');
+        if(cur===null) history.replaceState({v:v},'',url);
+        else if(v!==cur) history.pushState({v:v},'',url);
+      }
+      cur=v; return r;
+    };
+    if(typeof origOpen==='function') window.openChart=function(){
+      if(!chartOpen()&&!popping) history.pushState({v:cur,modal:1},'',location.href);
+      return origOpen.apply(this,arguments);
+    };
+    if(typeof origClose==='function') window.closeChart=function(){
+      if(!popping&&history.state&&history.state.modal){ history.back(); return; }   // 由 popstate 實際關閉
+      return origClose.apply(this,arguments);
+    };
+    window.addEventListener('popstate',function(e){
+      popping=true;
+      try{
+        if(chartOpen()&&typeof origClose==='function'){ origClose(); return; }
+        var v=(e.state&&e.state.v)||(location.hash.slice(1)||'home');
+        if(!window._VIEWS||!window._VIEWS[v]) v='home';
+        if(v!==cur) window._showView(v);
+      } finally { popping=false; }
+    });
+    // 網址帶 #視圖 → 直接開該視圖（在原本 DOMContentLoaded 顯示 home 之後執行）
+    document.addEventListener('DOMContentLoaded',function(){
+      var h=initHash;
+      if(h&&h!=='home'&&window._VIEWS&&window._VIEWS[h]){ cur=null; window._showView(h); }
+    });
+  })();
+  </script>
 </body>
 </html>
