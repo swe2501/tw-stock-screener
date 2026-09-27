@@ -6415,7 +6415,7 @@
         { key: 'fin',   h: hS,      label: '融資餘額(億)',  color: '#f85149', fmt: v => v.toFixed(0) },
         { key: 'short', h: hS + 26, label: '融券餘額(張)',  color: '#3fb950', fmt: v => (v / 1000).toFixed(0) + 'k' },
       ];
-      const charts = [];
+      const charts = [], infos = [];
       panels.forEach(p => {
         const wrap = document.createElement('div'); wrap.className = 'mm-panel';
         const lbl = document.createElement('div'); lbl.className = 'mm-plabel'; lbl.textContent = p.label; wrap.appendChild(lbl);
@@ -6426,25 +6426,44 @@
           grid: { vertLines: { color: _cssv('--border') }, horzLines: { color: _cssv('--border') } },
           rightPriceScale: { borderColor: _cssv('--border'), autoScale: true },
           timeScale: { borderColor: _cssv('--border'), visible: p.key === 'short', timeVisible: false, rightOffset: 3, fixLeftEdge: true, fixRightEdge: true },
-          crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+          crosshair: { mode: LightweightCharts.CrosshairMode.Normal, vertLine: { labelVisible: false } },
           // 橫移/縮放比照主K圖：滑鼠拖曳/滾輪/pinch；垂直觸控拖曳關閉→留給彈窗上下捲
           handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
           handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: false },
         });
+        let s;
         if (p.key === 'k') {
-          const s = ch.addCandlestickSeries({ upColor: '#ef5350', downColor: '#26a69a', wickUpColor: '#ef5350', wickDownColor: '#26a69a', borderVisible: false, priceFormat: { type: 'price', precision: 0, minMove: 1 } });
+          s = ch.addCandlestickSeries({ upColor: '#ef5350', downColor: '#26a69a', wickUpColor: '#ef5350', wickDownColor: '#26a69a', borderVisible: false, priceFormat: { type: 'price', precision: 0, minMove: 1 } });
           s.setData(dates.map(d => { const c = kmap[d]; return c ? { time: d, open: +c.open, high: +c.high, low: +c.low, close: +c.close } : { time: d }; }));
         } else {
-          const s = ch.addLineSeries({ color: p.color, lineWidth: 2, priceFormat: { type: 'custom', minMove: 0.01, formatter: p.fmt } });
+          s = ch.addLineSeries({ color: p.color, lineWidth: 2, priceFormat: { type: 'custom', minMove: 0.01, formatter: p.fmt } });
           const f = field[p.key];
           s.setData(dates.map(d => { const v = mmap[d] && mmap[d][f]; return v != null ? { time: d, value: +v } : { time: d }; }));
         }
-        // 純依 x 座標換算日期 → 同一欄不論滑鼠/手指高度都顯示當日值（不必貼著線）
-        const at = clientX => showTip(toDate(ch.timeScale().coordinateToTime(clientX - el.getBoundingClientRect().left)));
-        el.addEventListener('pointermove', ev => at(ev.clientX));
-        el.addEventListener('touchstart', ev => { const t = ev.touches[0]; if (t) at(t.clientX); }, { passive: true });
-        el.addEventListener('touchmove', ev => { const t = ev.touches[0]; if (t) at(t.clientX); }, { passive: true });
+        const getVal = d => { if (p.key === 'k') { const c = kmap[d]; return c && c.close != null ? +c.close : null; } const v = mmap[d] && mmap[d][field[p.key]]; return v != null ? +v : null; };
+        infos.push({ ch, el, s, getVal });
         charts.push(ch);
+      });
+      // ★ 十字虛線跨四面板同步：任一面板移動 → 其餘三面板畫出同一時間點的十字線，並顯示對應數值
+      let chSync = false;
+      const crossAt = (srcCh, srcEl, clientX) => {
+        const t = srcCh.timeScale().coordinateToTime(clientX - srcEl.getBoundingClientRect().left);
+        showTip(toDate(t));
+        if (chSync) return;
+        chSync = true;
+        infos.forEach(o => {
+          if (o.ch === srcCh) return;
+          const v = t == null ? null : o.getVal(toDate(t));
+          try { if (t != null && v != null) o.ch.setCrosshairPosition(v, t, o.s); else o.ch.clearCrosshairPosition(); } catch (_) {}
+        });
+        chSync = false;
+      };
+      const crossClear = () => { showTip(null); infos.forEach(o => { try { o.ch.clearCrosshairPosition(); } catch (_) {} }); };
+      infos.forEach(o => {
+        o.el.addEventListener('pointermove', ev => crossAt(o.ch, o.el, ev.clientX));
+        o.el.addEventListener('pointerleave', crossClear);
+        o.el.addEventListener('touchstart', ev => { const t = ev.touches[0]; if (t) crossAt(o.ch, o.el, t.clientX); }, { passive: true });
+        o.el.addEventListener('touchmove', ev => { const t = ev.touches[0]; if (t) crossAt(o.ch, o.el, t.clientX); }, { passive: true });
       });
       host._charts = charts;
       // 初始顯示最近 105 根 + 右側留 3 空白（比照主K圖）
