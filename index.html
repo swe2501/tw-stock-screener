@@ -752,6 +752,12 @@
     .cnp-tabs { display:flex; gap:4px; margin:-2px 0 8px; flex-shrink:0; }
     .cnp-tab { flex:1; background:var(--surface2); border:1px solid var(--border); border-radius:7px; padding:6px 4px; font-size:12px; color:var(--text-muted); cursor:pointer; font-weight:600; white-space:nowrap; }
     .cnp-tab.on { background:var(--accent); color:#231c00; border-color:var(--accent); }
+    .cnp-nsec { margin-bottom:10px; }
+    .cnp-nh { font-size:12px; font-weight:800; color:var(--brand-green); margin:2px 0 5px; }
+    .cnp-nh span { font-weight:500; color:var(--text-muted); font-size:10.5px; margin-left:6px; }
+    .cnp-ntag { display:inline-block; font-size:10px; padding:0 6px; border-radius:8px; border:1px solid var(--border); color:var(--text-muted); margin-right:4px; vertical-align:1px; }
+    .cnp-ntag.on { background:var(--accent); border-color:var(--accent); color:#231c00; font-weight:700; }
+    details.cnp-news summary { cursor:pointer; }
     .cnp-pane { display:flex; flex-direction:column; gap:10px; flex:1; min-height:0; overflow-y:auto; }
     .cnp-fcard { background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:10px 12px; }
     .cnp-fgrid { display:grid; grid-template-columns:1fr 1fr; gap:8px 12px; }
@@ -5804,20 +5810,49 @@
             function kv(k,v){return '<div><div class="cnp-fk">'+k+'</div><div class="cnp-fv">'+v+'</div></div>';}
             function col(v){var c=v>=0?'var(--green)':'var(--red)';return '<span style="color:'+c+'">'+(v>=0?'+':'')+v+'%</span>';}
           };
-          window._loadStockNews=function(code){
-            var box=el('cnpNews'); if(!box)return; box.innerHTML='<div class="fc-empty">載入中…</div>';
+          // 相關新聞三區（2026-09-27）：📢 重大訊息(官方,依代號) / 📰 個股新聞(Google 新聞,標題含股名或代號) / 🏷️ 族群新聞(AI 題材,依族群成分)
+          window._loadStockNews=function(code, name){
+            var box=el('cnpNews'); if(!box)return;
+            name=name||((window._names&&window._names[code])||'');
             var SB=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'', AK=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';
             var H={apikey:AK,Authorization:'Bearer '+AK};
-            fetch(SB+'/rest/v1/hot_topics?select=topic,summary,codes,source_urls,published_at&order=published_at.desc&limit=300',{headers:H}).then(function(r){return r.json();}).then(function(a){
-              var hit=(Array.isArray(a)?a:[]).filter(function(t){return Array.isArray(t.codes)&&t.codes.some(function(c){return String(c.code)===String(code);});}).slice(0,15);
-              if(!hit.length){ box.innerHTML='<div class="fc-empty">近期無相關新聞</div>'; return; }
-              box.innerHTML=hit.map(function(t){
-                var u=(Array.isArray(t.source_urls)&&t.source_urls.length)?t.source_urls[0]:'';
-                var ttl=u?('<a href="'+u+'" target="_blank" rel="noopener noreferrer">'+esc(t.topic)+' ↗</a>'):esc(t.topic);
-                return '<div class="cnp-news">'+ttl+'<div class="d">'+(t.published_at||'')+'</div>'+(t.summary?'<div style="margin-top:4px;color:var(--text-muted)">'+esc(t.summary)+'</div>':'')+'</div>';
-              }).join('');
-            }).catch(function(){ box.innerHTML='<div class="fc-empty">讀取失敗</div>'; });
             function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+            function sec(id,title,note){return '<div class="cnp-nsec" id="'+id+'"><div class="cnp-nh">'+title+'<span>'+note+'</span></div><div class="cnp-nb"><div class="fc-empty">載入中…</div></div></div>';}
+            box.innerHTML=sec('cnpNsAnn','📢 重大訊息','公開資訊觀測站 · 近 90 天')
+              +sec('cnpNsStock','📰 個股新聞','Google 新聞 · 標題有提到本檔 · 近 14 天')
+              +sec('cnpNsTheme','🏷️ 族群新聞','AI 題材彙整 · 本檔屬於該族群 · 近 7 天');
+            function fill(id,html){ var s=el(id); if(s&&box.contains(s)) s.querySelector('.cnp-nb').innerHTML=html; }
+            var cur=code;
+            // 📢 重大訊息
+            fetch(SB+'/rest/v1/stock_announce?select=ann_date,ann_time,subject,detail&code=eq.'+code+'&order=ann_date.desc,ann_time.desc&limit=10',{headers:H}).then(function(r){return r.json();}).then(function(a){
+              if(cur!==code)return;
+              a=Array.isArray(a)?a:[];
+              fill('cnpNsAnn', a.length? a.map(function(t){
+                return '<details class="cnp-news"><summary>'+esc(t.subject)+'</summary><div class="d">'+t.ann_date+' '+(t.ann_time||'')+'</div>'
+                  +(t.detail?'<div style="margin-top:4px;color:var(--text-muted);white-space:pre-line">'+esc(t.detail)+(t.detail.length>=300?'…':'')+'</div>':'')+'</details>';
+              }).join('') : '<div class="fc-empty">近期無重大訊息</div>');
+            }).catch(function(){ fill('cnpNsAnn','<div class="fc-empty">讀取失敗</div>'); });
+            // 📰 個股新聞
+            fetch('/api/screen?stat=stocknews&code='+encodeURIComponent(code)+'&name='+encodeURIComponent(name)).then(function(r){return r.json();}).then(function(j){
+              if(cur!==code)return;
+              var a=(j&&j.items)||[];
+              fill('cnpNsStock', a.length? a.slice(0,12).map(function(t){
+                return '<div class="cnp-news"><a href="'+esc(t.url)+'" target="_blank" rel="noopener noreferrer">'+esc(t.title)+' ↗</a><div class="d">'+esc(t.published_at)+(t.source?' · '+esc(t.source):'')+'</div></div>';
+              }).join('') : '<div class="fc-empty">近 14 天無個股新聞</div>');
+            }).catch(function(){ fill('cnpNsStock','<div class="fc-empty">讀取失敗</div>'); });
+            // 🏷️ 族群新聞（提到本檔者標「提及本檔」並排前面）
+            fetch(SB+'/rest/v1/hot_topics?select=topic,sector,summary,codes,source_urls,published_at&codes=cs.'+encodeURIComponent(JSON.stringify([{code:String(code)}]))+'&order=published_at.desc&limit=30',{headers:H}).then(function(r){return r.json();}).then(function(a){
+              if(cur!==code)return;
+              a=Array.isArray(a)?a:[];
+              a.forEach(function(t){ var s=(t.topic||'')+(t.summary||''); t._m=(name&&s.indexOf(name)>=0)||s.indexOf(code)>=0; });
+              a.sort(function(x,y){ return (y._m?1:0)-(x._m?1:0) || String(y.published_at||'').localeCompare(String(x.published_at||'')); });
+              fill('cnpNsTheme', a.length? a.slice(0,12).map(function(t){
+                var u=(Array.isArray(t.source_urls)&&t.source_urls.length)?t.source_urls[0]:'';
+                var ttl=u?('<a href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">'+esc(t.topic)+' ↗</a>'):esc(t.topic);
+                return '<div class="cnp-news">'+(t._m?'<span class="cnp-ntag on">提及本檔</span>':'')+(t.sector?'<span class="cnp-ntag">'+esc(t.sector)+'</span>':'')+ttl
+                  +'<div class="d">'+(t.published_at||'')+'</div>'+(t.summary?'<div style="margin-top:4px;color:var(--text-muted)">'+esc(t.summary)+'</div>':'')+'</div>';
+              }).join('') : '<div class="fc-empty">近 7 天無族群新聞</div>');
+            }).catch(function(){ fill('cnpNsTheme','<div class="fc-empty">讀取失敗</div>'); });
           };
           // 支撐壓力：stock_sr（分價量表，各 N 日）→ 右側表格＋K 線價位帶（_srDraw 於每次重繪 K 線時呼叫）
           var SR={code:null, rows:[], n:20, lines:[]};
@@ -5857,7 +5892,7 @@
             }).catch(function(){ if(box)box.innerHTML='<div class="fc-empty">讀取失敗</div>'; });
           };
           window._cnpOnOpen=function(code, name, market){
-            _loadFundamentals(code, market); _loadStockNews(code); _loadStockSr(code);
+            _loadFundamentals(code, market); _loadStockNews(code, name); _loadStockSr(code);
             // 預設分頁：登入預設觀察備註，否則基本面
             _cnpTab(window._loggedIn ? 'note' : 'fund');
           };
