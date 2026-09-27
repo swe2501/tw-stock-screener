@@ -1330,7 +1330,7 @@
     <div class="mn-grp"><span class="mn-item">今日焦點 <i>▾</i></span><div class="mn-menu">
       <a onclick="_showView('overview')" style="font-weight:800;color:var(--brand-green)">📊 總覽</a><a onclick="_showView('focus')">排行榜</a><a onclick="_showView('todayindex')">今日索引</a></div></div>
     <div class="mn-grp"><span class="mn-item">選股 <i>▾</i></span><div class="mn-menu">
-      <a onclick="_showView('screen')">指標</a><a onclick="_showView('box')">箱型</a><a onclick="_showView('limitup')">上漲下跌亮燈區</a><a onclick="_showView('liq')">💧 流動性前30</a></div></div>
+      <a onclick="_showView('screen')">指標</a><a onclick="_showView('box')">箱型</a><a onclick="_showView('limitup')">上漲下跌亮燈區</a><a onclick="_showView('liq')">💧 流動性前30</a><a onclick="_showView('sr')">🧱 壓力支撐逼近</a></div></div>
     <div class="mn-grp"><span class="mn-item">題材族群 <i>▾</i></span><div class="mn-menu">
       <a class="nav-owner" onclick="openHotTopics()">🔥 話題</a><a onclick="_showView('themes')">題材列表</a><a onclick="_showView('sectors')">產業地圖</a></div></div>
     <div class="mn-grp"><span class="mn-item">市場觀察 <i>▾</i></span><div class="mn-menu">
@@ -1467,6 +1467,12 @@
     .gs-optsr{margin-top:14px;border:1px solid var(--border);border-radius:8px;padding:12px 16px;background:var(--surface);}
     .gs-osr-algo{margin-top:8px;font-size:11px;color:var(--text-muted);line-height:1.8;}
     .gs-osr-algo summary{cursor:pointer;font-weight:700;}
+    table.gs-nd{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums;}
+    table.gs-nd th{font-size:11px;color:var(--text-muted);font-weight:700;text-align:left;padding:5px 8px;border-bottom:1px solid var(--border);white-space:nowrap;}
+    table.gs-nd td{padding:6px 8px;border-bottom:1px solid var(--border);vertical-align:top;}
+    table.gs-nd td:first-child{white-space:nowrap;font-weight:700;color:var(--text-muted);}
+    table.gs-nd td.r{color:var(--red);font-weight:600;} table.gs-nd td.s{color:var(--green);font-weight:600;}
+    .gs-nd-sep{color:var(--text-muted);margin:0 5px;font-weight:400;}
     .gs-optsr .gs-osr-h{font-size:12px;font-weight:800;color:var(--brand-green);margin-bottom:7px;}
     .gs-optsr .gs-osr-h span{font-weight:600;color:var(--text-muted);font-size:11px;}
     .gs-osr-row{display:flex;align-items:center;justify-content:space-between;gap:8px;font-variant-numeric:tabular-nums;}
@@ -1715,7 +1721,7 @@
       <div style="text-align:center;margin-top:12px"><button onclick="try{window._showView('fhedge')}catch(e){}" style="background:var(--accent);color:#231c00;font-weight:800;border:0;border-radius:9px;padding:10px 22px;font-size:14px;cursor:pointer">🌡️ 外資空單溫度計 →</button><div style="font-size:11.5px;color:var(--text-muted);margin-top:5px">外資期貨淨空名目 ÷ 持股市值＝避險比率，看 2 年歷史位置（進階籌碼）</div></div>
     </section>
 
-    <section class="hp-sec"><div class="hp-sec-h"><span class="hp-sec-no">§6</span> 臺指選擇權三大法人留倉策略矩陣 <span class="hp-sec-src">CALL 與 PUT 分離解析，依口數與契約金額判定偏多／偏空</span></div><div id="hpOpt" class="gs-opt"><div class="fc-empty">載入中…</div></div><div class="gs-optsr" id="gsOptSR" style="display:none"></div></section>
+    <section class="hp-sec"><div class="hp-sec-h"><span class="hp-sec-no">§6</span> 臺指選擇權三大法人留倉策略矩陣 <span class="hp-sec-src">CALL 與 PUT 分離解析，依口數與契約金額判定偏多／偏空</span></div><div id="hpOpt" class="gs-opt"><div class="fc-empty">載入中…</div></div><div class="gs-optsr" id="gsOptSR" style="display:none"></div><div class="gs-optsr" id="gsOptNday" style="display:none"></div></section>
 
     <div class="fc-note" id="hpNote"></div>
     </div><!-- /cb-sheet 每日台股籌碼報告 -->
@@ -3159,6 +3165,67 @@
   })();
   </script>
 
+  <!-- ══ 壓力支撐逼近（選股；個股分價量表）══ -->
+  <div id="srView" style="display:none;max-width:1040px;margin:0 auto;">
+    <div class="tm-head"><h2>🧱 壓力支撐逼近</h2><span class="sub" id="srSub"></span></div>
+    <div class="liq-tip">用個股過去 N 日的<b>分價量表</b>找出上方套牢大量區（壓力）與下方承接大量區（支撐），列出<b>收盤價最接近</b>的個股。點任一列開 K 線，圖上會畫出該股的壓力／支撐帶。</div>
+    <div class="liq-seg" id="srNSeg"></div>
+    <div class="liq-seg" id="srMSeg" style="margin-left:8px">
+      <button data-m="res" class="on">逼近壓力</button>
+      <button data-m="sup">靠近支撐</button>
+    </div>
+    <div id="srTbl"><div class="fc-empty">載入中…</div></div>
+    <div class="fc-note" id="srNote"><b>算法（2026-09-27 與合夥人定案）：</b>分價量表以最新收盤價為中心、每格寬＝收盤價的 1%，每天成交量依當日最低～最高價均勻分攤到涵蓋的價格格。<b>大量格</b>＝量 ≥ 所有有量格平均 × 1.3（同選擇權「均量 1.3 倍」原則）。<b>壓力區</b>＝收盤價以上量最大的大量格（上方沒有大量格＝無套牢壓力，例如創新高，不列入）；<b>支撐區</b>＝收盤價以下量最大的大量格。距離＝壓力區下緣（或支撐區上緣）與收盤價的差 ÷ 收盤價。列入條件：距離 0～3%、近 20 日日均成交值 ≥ 5,000 萬、排除 ETF，依距離由近到遠（距離以 1% 為一格；同一格內依區內成交值＝區內張數×區間均價由大到小，避免低價股因張數多而霸榜）取前 20 名；歷史不足 N 天的個股不列入該 N。資料：上市＋上櫃每日 K 線（TWSE/TPEx 官方，歷史以 Yahoo 回補），盤後日更。</div>
+  </div>
+  <script>
+  (function(){
+    var el=function(id){return document.getElementById(id);};
+    var NS=[5,10,20,60,120,240,480], n=20, mode='res', latest=null, cache={};
+    function nm(c){return (window._names&&window._names[c])||'';}
+    function px(v){return v==null?'—':(+v>=100?Math.round(v):(+v).toFixed(v>=10?1:2));}
+    function render(a){
+      if(!a||!a.length){ el('srTbl').innerHTML='<div class="fc-empty">此條件暫無符合個股</div>'; return; }
+      var R=mode==='res';
+      el('srTbl').innerHTML='<table class="liq"><thead><tr><th class="l">排名</th><th class="l">代號 / 名稱</th><th>收盤</th><th>'+(R?'壓力區':'支撐區')+'</th><th>距離</th><th>區內量(張)</th><th>區內成交值(億)</th><th>日均成交值(億)</th></tr></thead><tbody>'
+        +a.map(function(r,i){
+          var lo=R?r.res_lo:r.sup_lo, hi=R?r.res_hi:r.sup_hi, d=R?r.res_dist:r.sup_dist, v=R?r.res_vol:r.sup_vol;
+          return '<tr class="clk" onclick="window._srPickN='+n+';_openStock(\''+r.code+'\',\''+nm(r.code).replace(/'/g,'')+'\')">'
+            +'<td class="l"><span class="rk">'+(i+1)+'</span></td><td class="l"><span class="c">'+r.code+'</span> '+nm(r.code)+'</td>'
+            +'<td>'+px(r.close)+'</td><td style="color:'+(R?'var(--red)':'var(--green)')+';font-weight:700">'+px(lo)+'～'+px(hi)+'</td>'
+            +'<td>'+(R?'+':'−')+d+'%</td><td>'+(v!=null?Number(v).toLocaleString():'—')+'</td><td>'+(r._zv/1e8).toFixed(1)+'</td><td>'+(r.avg_value/1e8).toFixed(1)+'</td></tr>';
+        }).join('')+'</tbody></table>';
+    }
+    function load(){
+      var key=n+'_'+mode; if(cache[key]){ render(cache[key]); return; }
+      el('srTbl').innerHTML='<div class="fc-empty">載入中…</div>';
+      var SB=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'', AK=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';
+      var H={apikey:AK,Authorization:'Bearer '+AK};
+      var p=mode==='res'?'res':'sup';
+      var q=SB+'/rest/v1/stock_sr?select=*&n=eq.'+n+'&trade_date=eq.'+latest+'&'+p+'_dist=gte.0&'+p+'_dist=lte.3&avg_value=gte.50000000&order='+p+'_dist.asc&limit=1000';
+      // 距離以 1% 為一格(0.5/1.5/2.5%)，同一格內依「區內成交值」(張×價) 大到小，避免低價股張數多而霸榜
+      fetch(q,{headers:H}).then(function(r){return r.json();}).then(function(a){
+        a=Array.isArray(a)?a:[];
+        a.forEach(function(r){ r._zv=(r[p+'_vol']||0)*1000*((+r[p+'_lo']+ +r[p+'_hi'])/2); });
+        a.sort(function(x,y){ return Math.floor(x[p+'_dist'])-Math.floor(y[p+'_dist']) || y._zv-x._zv; });
+        cache[key]=a.slice(0,20); render(cache[key]); })
+        .catch(function(){ el('srTbl').innerHTML='<div class="fc-empty">讀取失敗</div>'; });
+    }
+    window._srShow=function(){
+      el('srNSeg').innerHTML=NS.map(function(x){return '<button data-n="'+x+'" class="'+(x===n?'on':'')+'">'+x+' 日</button>';}).join('');
+      el('srNSeg').querySelectorAll('button').forEach(function(b){ b.onclick=function(){ n=+b.dataset.n; el('srNSeg').querySelectorAll('button').forEach(function(x){x.classList.toggle('on',x===b);}); load(); }; });
+      el('srMSeg').querySelectorAll('button').forEach(function(b){ b.onclick=function(){ mode=b.dataset.m; el('srMSeg').querySelectorAll('button').forEach(function(x){x.classList.toggle('on',x===b);}); load(); }; });
+      if(window._loadNames&&!window._names) try{ window._loadNames(function(){ if(latest)load(); }); }catch(e){}
+      if(latest){ load(); return; }
+      var SB=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'', AK=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';
+      fetch(SB+'/rest/v1/stock_sr?select=trade_date&order=trade_date.desc&limit=1',{headers:{apikey:AK,Authorization:'Bearer '+AK}}).then(function(r){return r.json();}).then(function(a){
+        if(!Array.isArray(a)||!a.length){ el('srTbl').innerHTML='<div class="fc-empty">暫無資料</div>'; return; }
+        latest=a[0].trade_date; el('srSub').textContent='資料日 '+latest+' · 各天數前 20 名'; load();
+      }).catch(function(){ el('srTbl').innerHTML='<div class="fc-empty">讀取失敗</div>'; });
+    };
+    window._VIEWS=window._VIEWS||{}; window._VIEWS.sr={el:'srView',show:'_srShow'};
+  })();
+  </script>
+
   <style>
     #sectorView{max-width:1200px;margin:0 auto;}
     .sm-map{display:flex;flex-wrap:wrap;gap:6px;}
@@ -4376,7 +4443,7 @@
     window._hxRetheme=function(){ if(el('homeView')&&el('homeView').style.display!=='none') load(); };
     // 通用視圖註冊：新增大項只要在此登記 {el:容器id, show:全域函式名}，並提供對應元素/函式即可
     window._VIEWS = window._VIEWS || {}; window._VIEWS.home={el:'homeView',show:'_hxShow'}; window._VIEWS.focus={el:'focusView',show:'_focusShow'}; window._VIEWS.overview={el:'overviewView',show:'_ovShow'};
-    var NAVMAP={home:'首頁',overview:'今日焦點',focus:'今日焦點',todayindex:'今日焦點',screen:'選股',box:'選股',limitup:'選股',liq:'選股',
+    var NAVMAP={home:'首頁',overview:'今日焦點',focus:'今日焦點',todayindex:'今日焦點',screen:'選股',box:'選股',limitup:'選股',liq:'選股',sr:'選股',
       themes:'題材族群',sectors:'題材族群',greed:'市場觀察',inst:'市場觀察',sig:'市場觀察',brank:'市場觀察',fhedge:'市場觀察',breadth:'市場觀察',news:'每日新聞',
       etfx:'ETF',etf:'ETF',etfcons:'ETF',etfrev:'ETF',etfdiv:'ETF',etfhold:'ETF',etfsim:'ETF',etfheavy:'ETF',etfprem:'ETF',etfflow:'ETF',etfperf:'ETF'};
     function _setNav(v){
@@ -4512,6 +4579,26 @@
           box.querySelectorAll('.gs-osr-tabs button').forEach(function(b){ b.onclick=function(){ render(b.getAttribute('data-k')); }; });
         }
         render(cur);
+      });
+      // 選擇權 N 日大量區（壓力/支撐前 5）
+      sb('option_nday?select=*&order=trade_date.desc&limit=1').then(function(a){
+        var box=el('gsOptNday'); if(!box)return; var o=a&&a[0];
+        if(!o||!o.data){ box.style.display='none'; return; }
+        var NS=['5','10','20','60','120','240','480'];
+        function zs(arr){ return (arr||[]).map(function(z){return z[0]===z[1]?String(z[0]):z[0]+'～'+z[1];}).join('<span class="gs-nd-sep">·</span>')||'—'; }
+        function render(k){
+          window._ndKind=k; var d=o.data[k]||{};
+          box.style.display='';
+          box.innerHTML='<div class="gs-osr-h">📊 N 日大量區　壓力／支撐前 5'
+            +'<span class="gs-osr-tabs">'+[['vol','成交量'],['oi','未平倉']].map(function(x){return '<button type="button" data-k="'+x[0]+'" class="'+(x[0]===k?'on':'')+'">'+x[1]+'</button>';}).join('')+'</span></div>'
+            +'<div class="gs-osr-meta">價平 '+o.atm+'（'+(o.contract||'')+' 月選 T 字）· '+o.trade_date+' · 依'+(k==='vol'?'成交量':'未平倉')+'大到小排序</div>'
+            +'<div style="overflow-x:auto"><table class="gs-nd"><thead><tr><th>天數</th><th class="r">壓力區（價平以上 Call）</th><th class="s">支撐區（價平以下 Put）</th></tr></thead><tbody>'
+            +NS.map(function(n){ var x=d[n]; return '<tr><td>'+n+' 日</td>'+(x?('<td class="r">'+zs(x.res)+'</td><td class="s">'+zs(x.sup)+'</td>'):'<td colspan="2" style="color:var(--text-muted)">歷史資料累積中</td>')+'</tr>'; }).join('')
+            +'</tbody></table></div>'
+            +'<details class="gs-osr-algo"><summary>算法說明</summary><div>2026-09-27 與合夥人定案。價平＝最新交易日最近月月選 T 字報價（買權、賣權結算價最接近的履約價）。<b>成交量</b>＝過去 N 個交易日各履約價所有 TXO 合約（週選＋月選）一般盤成交量加總；<b>未平倉</b>＝過去 N 個交易日每天取當天最近月月選各履約價未平倉，再對 N 天取平均。壓力看價平以上買權、支撐看價平以下賣權；窗口先取價平 ±10%，不足 5 區再放寬到 ±20%（更遠的是舊價位，無參考性，不列）。大量＝窗口內量 ≥ 窗口平均 × 1.3；以峰值為中心：量最大的大量履約價為峰，峰 ±100 點內的大量檔位併成同一區（最寬 200 點），排除後再找下一個峰，共 5 區，依量大到小排序。資料源：TAIFEX 選擇權每日交易行情（盤後日更）。</div></details>';
+          box.querySelectorAll('.gs-osr-tabs button').forEach(function(b){ b.onclick=function(){ render(b.getAttribute('data-k')); }; });
+        }
+        render(window._ndKind||'vol');
       });
     }
 
@@ -5633,6 +5720,7 @@
             <button class="cnp-tab" data-t="note" id="cnpTabNote" onclick="_cnpTab('note')" style="display:none">📝 觀察備註</button>
             <button class="cnp-tab on" data-t="fund" id="cnpTabFund" onclick="_cnpTab('fund')">📋 基本面</button>
             <button class="cnp-tab" data-t="news" id="cnpTabNews" onclick="_cnpTab('news')">📰 相關新聞</button>
+            <button class="cnp-tab" data-t="sr" id="cnpTabSr" onclick="_cnpTab('sr')">🧱 支撐壓力</button>
           </div>
           <!-- 觀察備註（登入才顯示分頁）-->
           <div class="cnp-pane" id="cnpNote" style="display:none">
@@ -5661,12 +5749,14 @@
           <div class="cnp-pane" id="cnpFund"><div class="fc-empty">載入中…</div></div>
           <!-- 相關新聞 -->
           <div class="cnp-pane" id="cnpNews" style="display:none"><div class="fc-empty">載入中…</div></div>
+          <!-- 支撐壓力（分價量表）-->
+          <div class="cnp-pane" id="cnpSr" style="display:none"><div class="fc-empty">載入中…</div></div>
         </div>
         <script>
         (function(){
           var el=function(id){return document.getElementById(id);};
           window._cnpTab=function(t){
-            ['note','fund','news'].forEach(function(k){
+            ['note','fund','news','sr'].forEach(function(k){
               var p=el('cnp'+k.charAt(0).toUpperCase()+k.slice(1)); if(p)p.style.display=(k===t)?'flex':'none';
               var b=el('cnpTab'+k.charAt(0).toUpperCase()+k.slice(1)); if(b)b.classList.toggle('on',k===t);
             });
@@ -5727,8 +5817,45 @@
             }).catch(function(){ box.innerHTML='<div class="fc-empty">讀取失敗</div>'; });
             function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
           };
+          // 支撐壓力：stock_sr（分價量表，各 N 日）→ 右側表格＋K 線價位帶（_srDraw 於每次重繪 K 線時呼叫）
+          var SR={code:null, rows:[], n:20, lines:[]};
+          function srPx(v){return v==null?'—':(+v>=100?Math.round(v):(+v).toFixed(v>=10?1:2));}
+          function srRender(){
+            var box=el('cnpSr'); if(!box)return;
+            if(!SR.rows.length){ box.innerHTML='<div class="fc-empty">暫無支撐壓力資料（ETF、歷史不足或成交值過低的個股不計算）</div>'; return; }
+            box.innerHTML='<div class="cnp-fcard" style="overflow-x:auto"><div class="cnp-fk" style="margin-bottom:4px">分價量表 · 點列切換 K 線上畫的天數（目前 '+SR.n+' 日）</div>'
+              +'<table class="cnp-ftable"><thead><tr><th class="l">天數</th><th>壓力區</th><th>距離</th><th>支撐區</th><th>距離</th></tr></thead><tbody>'
+              +SR.rows.map(function(r){
+                return '<tr data-n="'+r.n+'" style="cursor:pointer'+(r.n===SR.n?';background:var(--surface2);font-weight:700':'')+'"><td class="l">'+r.n+' 日</td>'
+                  +'<td style="color:var(--red)">'+(r.res_lo!=null?srPx(r.res_lo)+'～'+srPx(r.res_hi):'無')+'</td><td>'+(r.res_dist!=null?'+'+r.res_dist+'%':'—')+'</td>'
+                  +'<td style="color:var(--green)">'+(r.sup_lo!=null?srPx(r.sup_lo)+'～'+srPx(r.sup_hi):'無')+'</td><td>'+(r.sup_dist!=null?'−'+r.sup_dist+'%':'—')+'</td></tr>';
+              }).join('')+'</tbody></table></div>'
+              +'<div class="cnp-fk" style="opacity:.85;line-height:1.7">算法：過去 N 日每天成交量依最低～最高價均勻分攤到價格格（格寬＝收盤價 1%）；量 ≥ 平均格量 × 1.3 為大量格。壓力＝收盤以上量最大的大量格（「無」＝上方無套牢大量，如創新高）、支撐＝收盤以下量最大的大量格。資料日 '+(SR.rows[0].trade_date||'')+'。</div>';
+            box.querySelectorAll('tr[data-n]').forEach(function(tr){ tr.onclick=function(){ SR.n=+tr.getAttribute('data-n'); srRender(); window._srDraw(); }; });
+          }
+          window._srDraw=function(){
+            if(typeof candleSeriesRef==='undefined'||!candleSeriesRef)return;
+            SR.lines.forEach(function(l){ try{ l.s.removePriceLine(l.p); }catch(e){} }); SR.lines=[];
+            var r=SR.rows.filter(function(x){return x.n===SR.n;})[0]; if(!r||SR.code!==currentCode)return;
+            var D=LightweightCharts.LineStyle.Dashed;
+            [['res',  '#e74c3c','壓'],['sup','#26c281','撐']].forEach(function(z){
+              var lo=r[z[0]+'_lo'], hi=r[z[0]+'_hi']; if(lo==null)return;
+              [hi,lo].forEach(function(p,i){
+                SR.lines.push({s:candleSeriesRef, p:candleSeriesRef.createPriceLine({price:+p, color:z[1], lineWidth:1, lineStyle:D, axisLabelVisible:i===0, title:i===0?(z[2]+SR.n+'日'):''})});
+              });
+            });
+          };
+          window._loadStockSr=function(code){
+            SR.code=code; SR.rows=[]; if(window._srPickN){ SR.n=window._srPickN; window._srPickN=null; }
+            var box=el('cnpSr'); if(box)box.innerHTML='<div class="fc-empty">載入中…</div>';
+            var SB=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'', AK=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';
+            fetch(SB+'/rest/v1/stock_sr?select=*&code=eq.'+code+'&order=n.asc',{headers:{apikey:AK,Authorization:'Bearer '+AK}}).then(function(r){return r.json();}).then(function(a){
+              if(SR.code!==code)return;
+              SR.rows=Array.isArray(a)?a:[]; srRender(); try{ window._srDraw(); }catch(e){}
+            }).catch(function(){ if(box)box.innerHTML='<div class="fc-empty">讀取失敗</div>'; });
+          };
           window._cnpOnOpen=function(code, name, market){
-            _loadFundamentals(code, market); _loadStockNews(code);
+            _loadFundamentals(code, market); _loadStockNews(code); _loadStockSr(code);
             // 預設分頁：登入預設觀察備註，否則基本面
             _cnpTab(window._loggedIn ? 'note' : 'fund');
           };
@@ -9138,6 +9265,7 @@
           size: 1,
         }));
       _refreshChartMarkers();
+      try { window._srDraw && window._srDraw(); } catch (_) {}   // 分價量表壓力/支撐帶
 
       // MA 5/10/20/60/120/240 均線
       const closes = candles.map(c => c.close);
