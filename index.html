@@ -1483,6 +1483,25 @@
     table.gs-nd td:first-child{white-space:nowrap;font-weight:700;color:var(--text-muted);}
     table.gs-nd td.r{color:var(--red);font-weight:600;} table.gs-nd td.s{color:var(--green);font-weight:600;}
     .gs-nd-sep{color:var(--text-muted);margin:0 5px;font-weight:400;}
+    .osr-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:4px 0 12px;}
+    .osr-kpis>div{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 10px;min-width:0;}
+    .osr-kpis span{display:block;font-size:10.5px;color:var(--text-muted);}
+    .osr-kpis b{font-size:16px;font-variant-numeric:tabular-nums;}
+    .osr-kpis small{display:block;font-size:10.5px;color:var(--text-muted);}
+    .osr-bar2{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:11px;color:var(--text-muted);margin-bottom:6px;flex-wrap:wrap;}
+    .osr-head{display:grid;grid-template-columns:1fr 34px 1fr;font-size:11px;font-weight:700;padding:0 2px 4px;border-bottom:1px solid var(--border);}
+    .osr-head .r{color:var(--red);text-align:right;} .osr-head .s{color:var(--green);}
+    .osr-pair{display:grid;grid-template-columns:1fr 34px 1fr;align-items:center;padding:7px 2px;border-bottom:1px dashed var(--border);}
+    .osr-rk{justify-self:center;width:22px;height:22px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;color:var(--text-muted);}
+    .osr-side .zn{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap;}
+    .osr-side .zn em{font-style:normal;font-size:10.5px;font-weight:600;color:var(--text-muted);margin:0 5px;}
+    .osr-side .zn.na{color:var(--text-muted);font-weight:400;}
+    .osr-side .bar{height:5px;background:var(--surface2);border-radius:3px;overflow:hidden;margin:4px 0 2px;}
+    .osr-side .bar u{display:block;height:100%;text-decoration:none;}
+    .osr-side .qv{font-size:10.5px;color:var(--text-muted);font-variant-numeric:tabular-nums;}
+    .osr-side.r{text-align:right;} .osr-side.r .zn{color:var(--red);} .osr-side.r .bar{direction:rtl;} .osr-side.r .bar u{background:var(--red);opacity:.75;}
+    .osr-side.s .zn{color:var(--green);} .osr-side.s .bar u{background:var(--green);opacity:.75;}
+    @media (max-width:600px){ .osr-kpis{grid-template-columns:repeat(2,1fr);} .osr-side .zn{font-size:13px;} .osr-side .zn em{display:block;margin:0;} }
     .gs-optsr .gs-osr-h{font-size:12px;font-weight:800;color:var(--brand-green);margin-bottom:7px;}
     .gs-optsr .gs-osr-h span{font-weight:600;color:var(--text-muted);font-size:11px;}
     .gs-osr-row{display:flex;align-items:center;justify-content:space-between;gap:8px;font-variant-numeric:tabular-nums;}
@@ -1731,7 +1750,7 @@
       <div style="text-align:center;margin-top:12px"><button onclick="try{window._showView('fhedge')}catch(e){}" style="background:var(--accent);color:#231c00;font-weight:800;border:0;border-radius:9px;padding:10px 22px;font-size:14px;cursor:pointer">🌡️ 外資空單溫度計 →</button><div style="font-size:11.5px;color:var(--text-muted);margin-top:5px">外資期貨淨空名目 ÷ 持股市值＝避險比率，看 2 年歷史位置（進階籌碼）</div></div>
     </section>
 
-    <section class="hp-sec"><div class="hp-sec-h"><span class="hp-sec-no">§6</span> 臺指選擇權三大法人留倉策略矩陣 <span class="hp-sec-src">CALL 與 PUT 分離解析，依口數與契約金額判定偏多／偏空</span></div><div id="hpOpt" class="gs-opt"><div class="fc-empty">載入中…</div></div><div class="gs-optsr" id="gsOptSR" style="display:none"></div><div class="gs-optsr" id="gsOptNday" style="display:none"></div></section>
+    <section class="hp-sec"><div class="hp-sec-h"><span class="hp-sec-no">§6</span> 臺指選擇權三大法人留倉策略矩陣 <span class="hp-sec-src">CALL 與 PUT 分離解析，依口數與契約金額判定偏多／偏空</span></div><div id="hpOpt" class="gs-opt"><div class="fc-empty">載入中…</div></div><div class="gs-optsr" id="gsOptSR" style="display:none"></div></section>
 
     <div class="fc-note" id="hpNote"></div>
     </div><!-- /cb-sheet 每日台股籌碼報告 -->
@@ -4566,52 +4585,54 @@
         if(el('gsBasis'))el('gsBasis').innerHTML='<ul style="margin:0;padding-left:16px">'+fired.map(function(x){return '<li>'+x+'</li>';}).join('')
           +'</ul><div style="margin-top:6px">市場廣度＝上漲家數÷全部家數；法人強度＝三大法人買賣超÷市場成交額；槓桿背離＝五日融資動能－五日大盤動能。資料源：加權 ^TWII、TWSE 家數/BFI82U/MI_MARGN/MI_INDEX。</div>';
       });
-      // 選擇權支撐壓力區
-      sb('option_sr?select=*&order=trade_date.desc&limit=4').then(function(a){
+      // 選擇權支撐壓力區（2026-09-28 合併卡：週選=5日、月選=20日 N日大量區，壓力/支撐第1~5名成對顯示）
+      Promise.all([sb('option_sr?select=*&order=trade_date.desc&limit=4'), sb('option_nday?select=*&order=trade_date.desc&limit=1')]).then(function(res){
         var box=el('gsOptSR'); if(!box)return;
-        a=(a||[]).filter(function(r){return a[0]&&r.trade_date===a[0].trade_date;});
-        if(!a.length){ box.style.display='none'; return; }
+        var a=res[0]||[], nd=(res[1]||[])[0];
+        a=a.filter(function(r){return a[0]&&r.trade_date===a[0].trade_date;});
         var by={}; a.forEach(function(r){ by[r.kind||'month']=r; });
-        var kinds=['week','month'].filter(function(k){return by[k];});
-        var cur=window._osrKind&&by[window._osrKind]?window._osrKind:kinds[0];
-        function z(lo,hi){ return lo==null?'—':(lo===hi||hi==null?String(lo):lo+'～'+hi); }
-        function render(k){
-          var o=by[k]; window._osrKind=k;
-          var nz=o.res1_lo!=null||o.sup1_lo!=null;   // 新欄位(價平+主次區間)
+        var D=(nd&&nd.data&&nd.data.week)?nd.data:null;
+        var kinds=['week','month'].filter(function(k){return (D&&D[k])||by[k];});
+        if(!kinds.length){ box.style.display='none'; return; }
+        var NMAP={week:'5',month:'20'};
+        var kind=window._osrKind&&kinds.indexOf(window._osrKind)>=0?window._osrKind:kinds[0], metric=window._osrMetric||'vol';
+        function z(x){ return x[0]===x[1]?x[0].toLocaleString():x[0].toLocaleString()+'～'+x[1].toLocaleString(); }
+        function q(v){ return v>=1e4?(v/1e4).toFixed(1)+' 萬口':Math.round(v).toLocaleString()+' 口'; }
+        function dist(p,spot){ if(!spot)return ''; var d=(p-spot)/spot*100; return (d>=0?'+':'−')+Math.abs(d).toFixed(1)+'%'; }
+        function side(zz,cls,edge,spot,mx){
+          if(!zz) return '<div class="osr-side '+cls+'"><div class="zn na">—</div></div>';
+          return '<div class="osr-side '+cls+'"><div class="zn">'+z(zz)+'<em>'+dist(zz[edge],spot)+'</em></div>'
+            +'<div class="bar"><u style="width:'+(mx?(zz[2]/mx*100).toFixed(0):0)+'%"></u></div><div class="qv">'+q(zz[2])+'</div></div>';
+        }
+        function render(){
+          window._osrKind=kind; window._osrMetric=metric;
+          var o=by[kind]||{}, d=D&&D[kind], n=NMAP[kind], x=d&&d[metric]&&d[metric][n];
+          var spot=(nd&&nd.spot)||o.spot, atm=(d&&d.atm)||o.atm;
+          var res=(x&&x.res)||[], sup=(x&&x.sup)||[], mx=0;
+          res.concat(sup).forEach(function(zz){ if(zz[2]>mx)mx=zz[2]; });
+          var rows='';
+          for(var i=0;i<5;i++){
+            rows+='<div class="osr-pair">'+side(res[i],'r',0,spot,mx)+'<div class="osr-rk">'+(i+1)+'</div>'+side(sup[i],'s',1,spot,mx)+'</div>';
+          }
+          var tabs=function(list,cur,attr){ return '<span class="gs-osr-tabs">'+list.map(function(t){return '<button type="button" data-'+attr+'="'+t[0]+'" class="'+(t[0]===cur?'on':'')+'">'+t[1]+'</button>';}).join('')+'</span>'; };
           box.style.display='';
           box.innerHTML='<div class="gs-osr-h">🎯 選擇權支撐壓力區'
-            +'<span class="gs-osr-tabs">'+kinds.map(function(x){return '<button type="button" data-k="'+x+'" class="'+(x===k?'on':'')+'">'+(x==='week'?'週選':'月選')+'</button>';}).join('')+'</span></div>'
-            +'<div class="gs-osr-meta">'+(o.contract||'')+(o.expiry?' · 到期 '+o.expiry.slice(5):'')
-            +(o.atm!=null?' · 價平 '+o.atm+(o.atm_call!=null?'（C '+o.atm_call+' / P '+o.atm_put+'）':''):'')+' · '+(o.trade_date||'')+'</div>'
-            +'<div class="gs-osr-row"><span class="gs-osr-s">支撐 '+(nz?z(o.sup1_lo,o.sup1_hi):(o.support||'—'))+'</span>'
-            +'<span class="gs-osr-bar">現價 '+(o.spot!=null?Math.round(o.spot).toLocaleString():'—')+'</span>'
-            +'<span class="gs-osr-r">壓力 '+(nz?z(o.res1_lo,o.res1_hi):(o.resistance||'—'))+'</span></div>'
-            +'<div class="gs-osr-sub">次支撐 '+(nz?z(o.sup2_lo,o.sup2_hi):(o.support2||'—'))+' · 次壓力 '+(nz?z(o.res2_lo,o.res2_hi):(o.resistance2||'—'))
-            +' · Put/Call OI 比 '+(o.pc_ratio!=null?o.pc_ratio:'—')+(o.pc_ratio!=null?(o.pc_ratio>=1?'（偏空避險）':'（偏多）'):'')+'</div>'
-            +'<details class="gs-osr-algo"><summary>算法說明</summary><div>2026-09-27 改版（與合夥人定案）＝台指選擇權(TXO)一般盤未平倉(OI)，分「週選」（最近到期週選）與「月選」（最近月）兩個分頁：①先用 T 字報價判斷價平＝買權、賣權結算價最接近的履約價（無結算價時取最接近加權指數者）；②價平以上看買權 OI 找壓力、價平以下看賣權 OI 找支撐；③大量＝該側窗口內 OI ≥ 窗口內平均 OI × 1.3，相鄰大量履約價（間距 ≤100 點）合併成一個區間；④主要＝離價平最近的大量區、次要＝再往外的下一個大量區；窗口先取價平 ±5%，找不到再擴到 ±10%，再找不到就不限範圍。Put/Call OI 比為情緒輔助。（舊版：最近月月選全部履約價中 OI 最大者，不看價平。）資料源：TAIFEX openapi DailyMarketReportOpt（盤後日更、慢一交易日）。</div></details>';
-          box.querySelectorAll('.gs-osr-tabs button').forEach(function(b){ b.onclick=function(){ render(b.getAttribute('data-k')); }; });
+              +tabs(kinds.map(function(k){return [k,k==='week'?'週選 · 5日':'月選 · 20日'];}),kind,'k')+'</div>'
+            +'<div class="osr-kpis">'
+              +'<div><span>現價</span><b>'+(spot?Math.round(spot).toLocaleString():'—')+'</b></div>'
+              +'<div><span>價平（T 字）</span><b>'+(atm!=null?atm.toLocaleString():'—')+'</b>'+(o.atm_call!=null&&o.atm===atm?'<small>C '+o.atm_call+' / P '+o.atm_put+'</small>':'')+'</div>'
+              +'<div><span>合約</span><b>'+((d&&d.contract)||o.contract||'—')+'</b>'+(o.expiry?'<small>到期 '+o.expiry.slice(5)+'</small>':'')+'</div>'
+              +'<div><span>Put/Call OI 比</span><b>'+(o.pc_ratio!=null?o.pc_ratio:'—')+'</b>'+(o.pc_ratio!=null?'<small>'+(o.pc_ratio>=1?'偏空避險':'偏多')+'</small>':'')+'</div>'
+            +'</div>'
+            +'<div class="osr-bar2"><span>依 '+n+' 日'+(metric==='vol'?'成交量':'平均未平倉')+'由大到小，第 1 名壓力對第 1 名支撐</span>'+tabs([['vol','成交量'],['oi','未平倉']],metric,'m')+'</div>'
+            +'<div class="osr-head"><span class="r">壓力區　價平以上 Call</span><span></span><span class="s">支撐區　價平以下 Put</span></div>'
+            +(x?rows:'<div class="fc-empty">資料累積中</div>')
+            +'<div class="gs-osr-meta" style="margin-top:8px">資料日 '+((nd&&nd.trade_date)||o.trade_date||'')+' · 百分比＝距現價 · 範圍：價平上下 10%</div>'
+            +'<details class="gs-osr-algo"><summary>算法說明</summary><div>2026-09-27 與合夥人定案，2026-09-28 修正。<b>合約與天數</b>：週選分頁＝最近到期週選、看 5 個交易日；月選分頁＝最近月月選、看 20 個交易日。<b>價平</b>＝該合約最新交易日 T 字報價中，買權、賣權結算價最接近的履約價（無結算價時取最接近加權指數者）。<b>成交量</b>＝過去 N 日各履約價所有台指選擇權（週選＋月選）一般盤成交量加總；<b>未平倉</b>＝過去 N 日每天取該類合約（週選／月選）各履約價未平倉，再對 N 天取平均。<b>範圍</b>：只看價平上下 10%（合夥人修正）；壓力看價平以上買權、支撐看價平以下賣權。<b>大量</b>＝範圍內量 ≥ 範圍平均 × 1.3。<b>區間</b>：以峰值為中心，量最大的大量履約價為峰，峰上下 100 點內的大量檔位併成同一區（最寬 200 點），排除後再找下一個峰，壓力、支撐各取 5 區，依量由大到小排名，同名次成對顯示。Put/Call OI 比＝該合約全部賣權未平倉 ÷ 買權未平倉，為情緒輔助。資料源：TAIFEX 選擇權每日交易行情（盤後日更）。</div></details>';
+          box.querySelectorAll('[data-k]').forEach(function(bt){ bt.onclick=function(){ kind=bt.getAttribute('data-k'); render(); }; });
+          box.querySelectorAll('[data-m]').forEach(function(bt){ bt.onclick=function(){ metric=bt.getAttribute('data-m'); render(); }; });
         }
-        render(cur);
-      });
-      // 選擇權 N 日大量區（壓力/支撐前 5）
-      sb('option_nday?select=*&order=trade_date.desc&limit=1').then(function(a){
-        var box=el('gsOptNday'); if(!box)return; var o=a&&a[0];
-        if(!o||!o.data){ box.style.display='none'; return; }
-        var NS=['5','10','20','60','120','240','480'];
-        function zs(arr){ return (arr||[]).map(function(z){return z[0]===z[1]?String(z[0]):z[0]+'～'+z[1];}).join('<span class="gs-nd-sep">·</span>')||'—'; }
-        function render(k){
-          window._ndKind=k; var d=o.data[k]||{};
-          box.style.display='';
-          box.innerHTML='<div class="gs-osr-h">📊 N 日大量區　壓力／支撐前 5'
-            +'<span class="gs-osr-tabs">'+[['vol','成交量'],['oi','未平倉']].map(function(x){return '<button type="button" data-k="'+x[0]+'" class="'+(x[0]===k?'on':'')+'">'+x[1]+'</button>';}).join('')+'</span></div>'
-            +'<div class="gs-osr-meta">價平 '+o.atm+'（'+(o.contract||'')+' 月選 T 字）· '+o.trade_date+' · 依'+(k==='vol'?'成交量':'未平倉')+'大到小排序</div>'
-            +'<div style="overflow-x:auto"><table class="gs-nd"><thead><tr><th>天數</th><th class="r">壓力區（價平以上 Call）</th><th class="s">支撐區（價平以下 Put）</th></tr></thead><tbody>'
-            +NS.map(function(n){ var x=d[n]; return '<tr><td>'+n+' 日</td>'+(x?('<td class="r">'+zs(x.res)+'</td><td class="s">'+zs(x.sup)+'</td>'):'<td colspan="2" style="color:var(--text-muted)">歷史資料累積中</td>')+'</tr>'; }).join('')
-            +'</tbody></table></div>'
-            +'<details class="gs-osr-algo"><summary>算法說明</summary><div>2026-09-27 與合夥人定案。價平＝最新交易日最近月月選 T 字報價（買權、賣權結算價最接近的履約價）。<b>成交量</b>＝過去 N 個交易日各履約價所有 TXO 合約（週選＋月選）一般盤成交量加總；<b>未平倉</b>＝過去 N 個交易日每天取當天最近月月選各履約價未平倉，再對 N 天取平均。壓力看價平以上買權、支撐看價平以下賣權；窗口先取價平 ±10%，不足 5 區再放寬到 ±20%（更遠的是舊價位，無參考性，不列）。大量＝窗口內量 ≥ 窗口平均 × 1.3；以峰值為中心：量最大的大量履約價為峰，峰 ±100 點內的大量檔位併成同一區（最寬 200 點），排除後再找下一個峰，共 5 區，依量大到小排序。資料源：TAIFEX 選擇權每日交易行情（盤後日更）。</div></details>';
-          box.querySelectorAll('.gs-osr-tabs button').forEach(function(b){ b.onclick=function(){ render(b.getAttribute('data-k')); }; });
-        }
-        render(window._ndKind||'vol');
+        render();
       });
     }
 

@@ -1,15 +1,16 @@
 """
-option_nday.py — 台指選擇權(TXO)「N 日大量區」壓力／支撐前 5 名（N = 5/10/20/60/120/240/480 交易日）。
+option_nday.py — 台指選擇權(TXO)「N 日大量區」壓力／支撐前 5 名，週選／月選各自一組。
 讀本機 txo_daily（txo_history.py 產生），結果一天一列寫 Supabase option_nday（data 為 jsonb）。
+前端（首頁 §6「選擇權支撐壓力區」合併卡）：週選分頁用 5 日、月選分頁用 20 日，壓力/支撐第 1~5 名一對一對顯示。
 
-算法（2026-09-27 與合夥人定案）：
-  價平：最新交易日最近月月選 T 字報價（買權、賣權結算價最接近的履約價；無則最接近加權指數）。
+算法（2026-09-27 與合夥人定案；2026-09-28 合夥人修正：只找價平上下 10%）：
+  合約／價平：週選＝當天最近到期週選(W/F)、月選＝最近月月選；價平＝最新交易日該合約 T 字報價
+    （買權、賣權結算價最接近的履約價；無則最接近加權指數）。
   兩種量都算：
     vol＝過去 N 個交易日、各履約價「所有 TXO 合約(週選+月選)」一般盤成交量加總（Call/Put 分開）。
-    oi ＝過去 N 個交易日，每天取「當天最近月月選」各履約價未平倉，再對 N 天取平均。
-  壓力＝價平以上 Call、支撐＝價平以下 Put：
-    窗口先取價平 ±10%，不足 5 區再放寬到 ±20%（到此為止；更遠是舊價位、無參考性）；
-    大量＝窗口內 量 ≥ 窗口平均 × 1.3；以峰值為中心：取量最大的大量履約價為峰，峰 ±100 點內的大量檔
+    oi ＝過去 N 個交易日，每天取「當天的該類合約」（週選＝最近週選、月選＝最近月月選）各履約價未平倉，對 N 天取平均。
+  壓力＝價平以上 Call、支撐＝價平以下 Put，範圍＝價平 ±10%（不再放寬）；
+    大量＝範圍內 量 ≥ 範圍平均 × 1.3；以峰值為中心：取量最大的大量履約價為峰，峰 ±100 點內的大量檔
     併成一區（最寬 200 點），排除後再找下一個峰，共 5 區，依量排序。
 用法：python scripts/option_nday.py [--dry]
 """
@@ -26,7 +27,7 @@ if sys.stdout and hasattr(sys.stdout, "reconfigure"):
 
 DB_PATH = Path(r"D:\stock_data\wantgoo_full.db")
 NS = (5, 10, 20, 60, 120, 240, 480)
-WINDOWS = (0.10, 0.20)
+WINDOWS = (0.10,)             # 2026-09-28 合夥人：只找價平上下 10%
 TOP = 5
 
 
@@ -34,14 +35,19 @@ def _is_month(code):
     return len(code) == 6 and code.isdigit()
 
 
-def _near_month_map(conn, since):
-    """每個交易日 → 當天最近月月選代碼（到期日 > 當天的最早月選）。"""
-    m = {}
+def _is_week(code):
+    return len(code) == 8 and code[:6].isdigit() and code[6] in "WF"
+
+
+def _near_map(conn, since, kind):
+    """每個交易日 → 當天最近到期的合約代碼（kind=week：週選 W/F；month：月選）。"""
+    ok = _is_week if kind == "week" else _is_month
+    m, exp_of = {}, {}
     for d, c in conn.execute("select distinct trade_date, contract from txo_daily where trade_date >= ?", (since,)):
-        if not _is_month(c):
+        if not ok(c):
             continue
-        exp = osr._expiry(c)
-        if exp and exp > date.fromisoformat(d) and (d not in m or exp < osr._expiry(m[d])):
+        exp = exp_of.setdefault(c, osr._expiry(c))
+        if exp and exp > date.fromisoformat(d) and (d not in m or exp < exp_of[m[d]]):
             m[d] = c
     return m
 
@@ -64,6 +70,7 @@ def _top_zones(side, atm, up):
             zs.append([min(grp), max(grp), round(sum(big[k] for k in grp))])
             for k in grp:
                 del big[k]
+        zs.sort(key=lambda z: -z[2])          # 依區間總量排名（與前端顯示的量一致）
         best, tag = zs, f"{int(w * 100)}%"
         if len(zs) >= TOP:
             break
@@ -78,40 +85,44 @@ def main():
     if not dates:
         print("[error] txo_daily 無資料，先跑 txo_history.py"); return
     T = dates[0]
-    nm = _near_month_map(conn, dates[-1])
-    contract = nm.get(T)
-    calls, puts = {}, {}
-    for k, cp, st, oi in conn.execute("select strike, cp, settle, oi from txo_daily where trade_date=? and contract=?", (T, contract)):
-        (calls if cp == "C" else puts)[k] = (st, oi)
     spot = osr._taiex_latest(env) if env.get("SUPABASE_SERVICE_KEY") else None
-    atm, atm_by = osr._atm(calls, puts, spot)
-    print(f"最新交易日 {T}，近月 {contract}，價平 {atm}（{atm_by}），可用 {len(dates)} 個交易日")
+    print(f"最新交易日 {T}，可用 {len(dates)} 個交易日，現價 {spot}")
+    f = lambda zs: " ".join(str(z[0]) if z[0] == z[1] else f"{z[0]}~{z[1]}" for z in zs)
+    data = {}
+    for kind in ("week", "month"):
+        cmap = _near_map(conn, dates[-1], kind)
+        contract = cmap.get(T)
+        calls, puts = {}, {}
+        for k, cp, st, oi in conn.execute("select strike, cp, settle, oi from txo_daily where trade_date=? and contract=?", (T, contract)):
+            (calls if cp == "C" else puts)[k] = (st, oi)
+        atm, atm_by = osr._atm(calls, puts, spot)
+        print(f"[{kind}] {contract} 價平 {atm}（{atm_by}）")
+        conn.execute("drop table if exists cm"); conn.execute("create temp table cm (trade_date text, contract text)")
+        conn.executemany("insert into cm values (?,?)", cmap.items())
+        d = {"contract": contract, "atm": atm, "atm_by": atm_by, "vol": {}, "oi": {}}
+        for n in NS:
+            if len(dates) < n:
+                continue
+            since = dates[n - 1]
+            vol = {"C": {}, "P": {}}
+            for k, cp, v in conn.execute("select strike, cp, sum(volume) from txo_daily where trade_date >= ? group by strike, cp", (since,)):
+                vol[cp][k] = v or 0
+            oi = {"C": {}, "P": {}}
+            for k, cp, v in conn.execute("""select t.strike, t.cp, sum(t.oi) from txo_daily t
+                    join cm on cm.trade_date = t.trade_date and cm.contract = t.contract
+                    where t.trade_date >= ? group by t.strike, t.cp""", (since,)):
+                oi[cp][k] = (v or 0) / n
+            for key, src in (("vol", vol), ("oi", oi)):
+                res, _ = _top_zones(src["C"], atm, True)
+                sup, _ = _top_zones(src["P"], atm, False)
+                d[key][str(n)] = {"res": res, "sup": sup}
+            if n in (5, 20):
+                print(f"   {n:>3} 日 vol 壓力[{f(d['vol'][str(n)]['res'])}] 支撐[{f(d['vol'][str(n)]['sup'])}]")
+                print(f"          oi  壓力[{f(d['oi'][str(n)]['res'])}] 支撐[{f(d['oi'][str(n)]['sup'])}]")
+        data[kind] = d
 
-    conn.execute("create temp table nm (trade_date text, contract text)")
-    conn.executemany("insert into nm values (?,?)", nm.items())
-    data = {"vol": {}, "oi": {}}
-    for n in NS:
-        if len(dates) < n:
-            print(f"  {n} 日：資料不足（{len(dates)} 天），略過"); continue
-        since = dates[n - 1]
-        vol = {"C": {}, "P": {}}
-        for k, cp, v in conn.execute("select strike, cp, sum(volume) from txo_daily where trade_date >= ? group by strike, cp", (since,)):
-            vol[cp][k] = v or 0
-        oi = {"C": {}, "P": {}}
-        for k, cp, v in conn.execute("""select t.strike, t.cp, sum(t.oi) from txo_daily t
-                join nm on nm.trade_date = t.trade_date and nm.contract = t.contract
-                where t.trade_date >= ? group by t.strike, t.cp""", (since,)):
-            oi[cp][k] = (v or 0) / n
-        for key, src in (("vol", vol), ("oi", oi)):
-            res, rw = _top_zones(src["C"], atm, True)
-            sup, sw = _top_zones(src["P"], atm, False)
-            data[key][str(n)] = {"res": res, "sup": sup, "win": {"res": rw, "sup": sw}}
-        f = lambda zs: " ".join(str(z[0]) if z[0] == z[1] else f"{z[0]}~{z[1]}" for z in zs)
-        print(f"  {n:>3} 日 vol 壓力[{f(data['vol'][str(n)]['res'])}] 支撐[{f(data['vol'][str(n)]['sup'])}]")
-        print(f"  {'':>3}    oi  壓力[{f(data['oi'][str(n)]['res'])}] 支撐[{f(data['oi'][str(n)]['sup'])}]")
-
-    row = {"trade_date": T, "contract": contract, "atm": atm, "spot": round(spot, 2) if spot else None,
-           "days": len(dates), "data": data}
+    row = {"trade_date": T, "contract": data["month"]["contract"], "atm": data["month"]["atm"],
+           "spot": round(spot, 2) if spot else None, "days": len(dates), "data": data}
     if dry:
         return
     key = env["SUPABASE_SERVICE_KEY"]

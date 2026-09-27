@@ -7,7 +7,7 @@ option_sr.py — 台指選擇權(TXO)「支撐壓力區」，供首頁「今日�
   3. 大量：窗口內該側(價平以上 CALL／價平以下 PUT) OI ≥ 窗口內平均 OI × 1.3。
      相鄰大量履約價(間距 ≤100 點)合併成一個區間。
   4. 主要＝離價平最近的大量區；次要＝再往外的下一個大量區。
-     窗口先取價平 ±5%，找不到再擴到 ±10%，再找不到就不限範圍。
+     範圍＝價平上下 10%（2026-09-28 合夥人修正；原為 ±5%→±10%→不限）。
   另存 CALL/PUT 總 OI 與 Put/Call OI 比(市場情緒輔助)。
 資料源：TAIFEX openapi `DailyMarketReportOpt`（CSV，urllib 可讀；固定欄位、含交易時段，取「一般」盤）。
   欄位(0起)：0日期 1契約 2到期月份(週選如 202610W1/202609F4) 3履約價 4買賣權 …9成交量 10結算價 11未沖銷契約量 …17交易時段。
@@ -27,7 +27,7 @@ if sys.stdout and hasattr(sys.stdout, "reconfigure"):
 _CTX = ssl.create_default_context(); _CTX.check_hostname = False; _CTX.verify_mode = ssl.CERT_NONE
 API = "https://openapi.taifex.com.tw/v1/DailyMarketReportOpt"
 
-WINDOWS = (0.05, 0.10, None)   # 價平 ±5% → ±10% → 不限
+WINDOWS = (0.10,)             # 2026-09-28 合夥人：只找價平上下 10%
 BIG_MULT = 1.3                 # 大量＝窗口內平均 OI × 1.3
 MERGE_GAP = 100                # 相鄰大量履約價間距 ≤100 點合併成區間
 
@@ -145,7 +145,14 @@ def main():
 
     req = urllib.request.Request(API, headers={"User-Agent": "Mozilla/5.0"})
     text = urllib.request.urlopen(req, timeout=45, context=_CTX).read().decode("utf-8-sig", "replace")
-    rows = list(csv.reader(text.splitlines()))
+    if text.lstrip().startswith("["):
+        # 2026-09-28 起 openapi 改回傳 JSON：依原 CSV 欄位順序轉成列（0日期 1契約 2到期月份 3履約價 4買賣權 …10結算價 11未沖銷 …17交易時段）
+        keys = ["Date", "Contract", "ContractMonth(Week)", "StrikePrice", "CallPut", "Open", "High", "Low", "Close",
+                "Volume", "SettlementPrice", "OpenInterest", "BestBid", "BestAsk", "HistoricalHigh", "HistoricalLow",
+                "TradingHalt", "TradingSession"]
+        rows = [keys] + [[str(r.get(k, "")) for k in keys] for r in json.loads(text)]
+    else:
+        rows = list(csv.reader(text.splitlines()))
     if len(rows) < 2:
         print("[error] openapi 無資料"); return
     body = [r for r in rows[1:] if len(r) >= 18 and r[1] == "TXO" and r[17].strip() == "一般"]
