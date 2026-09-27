@@ -1330,7 +1330,7 @@
     <div class="mn-grp"><span class="mn-item">今日焦點 <i>▾</i></span><div class="mn-menu">
       <a onclick="_showView('overview')" style="font-weight:800;color:var(--brand-green)">📊 總覽</a><a onclick="_showView('focus')">排行榜</a><a onclick="_showView('todayindex')">今日索引</a></div></div>
     <div class="mn-grp"><span class="mn-item">選股 <i>▾</i></span><div class="mn-menu">
-      <a onclick="_showView('screen')">指標</a><a onclick="_showView('box')">箱型</a><a onclick="_showView('limitup')">上漲下跌亮燈區</a></div></div>
+      <a onclick="_showView('screen')">指標</a><a onclick="_showView('box')">箱型</a><a onclick="_showView('limitup')">上漲下跌亮燈區</a><a onclick="_showView('liq')">💧 流動性前30</a></div></div>
     <div class="mn-grp"><span class="mn-item">題材族群 <i>▾</i></span><div class="mn-menu">
       <a class="nav-owner" onclick="openHotTopics()">🔥 話題</a><a onclick="_showView('themes')">題材列表</a><a onclick="_showView('sectors')">產業地圖</a></div></div>
     <div class="mn-grp"><span class="mn-item">市場觀察 <i>▾</i></span><div class="mn-menu">
@@ -3087,6 +3087,73 @@
   })();
   </script>
 
+  <!-- ══ 流動性前 30（選股）══ -->
+  <style>
+    #liqView{max-width:1040px;margin:0 auto;}
+    .liq-seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:14px;}
+    .liq-seg button{background:var(--surface);border:0;padding:8px 16px;font-size:13.5px;color:var(--text-muted);cursor:pointer;font-weight:600;}
+    .liq-seg button.on{background:var(--accent);color:#231c00;}
+    .liq-tip{background:var(--surface2);border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:8px;padding:10px 14px;font-size:12.5px;color:var(--text-muted);margin-bottom:14px;}
+    table.liq{width:100%;border-collapse:collapse;font-size:13px;}
+    table.liq th{text-align:right;font-size:11px;color:var(--text-muted);font-weight:700;padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap;}
+    table.liq th.l,table.liq td.l{text-align:left;}
+    table.liq td{text-align:right;padding:9px 10px;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;white-space:nowrap;}
+    table.liq tr.clk{cursor:pointer;} table.liq tr.clk:hover td{background:var(--surface2);}
+    table.liq .rk{display:inline-block;min-width:22px;text-align:center;font-weight:800;color:var(--accent);}
+    table.liq .c{color:var(--brand-green);font-weight:700;}
+  </style>
+  <div id="liqView" style="display:none">
+    <div class="tm-head"><h2>💧 流動性前 30</h2><span class="sub" id="liqSub"></span></div>
+    <div class="liq-tip">挑選成交熱絡的標的，<b>規避流動性風險、避免進出場滑價</b>。現貨＝上市普通股當日成交金額前 30；期貨＝期交所全契約當日成交量前 30（含大/小/微台指與熱門股票期貨）。</div>
+    <div class="liq-seg" id="liqSeg">
+      <button data-m="spot" class="on">現貨（成交金額）</button>
+      <button data-m="fut">期貨（成交量）</button>
+    </div>
+    <div id="liqTbl"><div class="fc-empty">載入中…</div></div>
+    <div class="fc-note" id="liqNote"></div>
+  </div>
+  <script>
+  (function(){
+    var el=function(id){return document.getElementById(id);};
+    var DATA={spot:[],fut:[]}, loaded=false, mode='spot';
+    function yi(v){return v==null?'—':(v/1e8).toFixed(1);}
+    function render(){
+      var arr=DATA[mode]||[];
+      if(!arr.length){ el('liqTbl').innerHTML='<div class="fc-empty">暫無資料</div>'; return; }
+      var isSpot=mode==='spot';
+      var head='<table class="liq"><thead><tr><th class="l">排名</th><th class="l">代號 / 名稱</th>'
+        +(isSpot?'<th>成交金額(億)</th><th>成交量(張)</th>':'<th>成交量(口)</th>')+'</tr></thead><tbody>';
+      var body=arr.map(function(r){
+        var openable=isSpot||/^\d{4}$/.test(String(r.code));   // 現貨或股票期貨(代號4碼)可點開K線
+        var nameCell='<span class="c">'+r.code+'</span> '+(r.name||'');
+        var tds=isSpot? ('<td>'+yi(r.turnover)+'</td><td>'+(r.volume!=null?Number(r.volume).toLocaleString():'—')+'</td>')
+                      : ('<td>'+(r.volume!=null?Number(r.volume).toLocaleString():'—')+'</td>');
+        return '<tr'+(openable?' class="clk" onclick="_openStock(\''+r.code+'\',\''+(r.name||'').replace(/期貨$/,'')+'\')"':'')+'>'
+          +'<td class="l"><span class="rk">'+r.rank+'</span></td><td class="l">'+nameCell+'</td>'+tds+'</tr>';
+      }).join('');
+      el('liqTbl').innerHTML=head+body+'</tbody></table>';
+    }
+    window._liqShow=function(){
+      el('liqSeg').querySelectorAll('button').forEach(function(b){ b.onclick=function(){ el('liqSeg').querySelectorAll('button').forEach(function(x){x.classList.remove('on');}); b.classList.add('on'); mode=b.dataset.m; render(); }; });
+      if(loaded){ render(); return; }
+      var SB=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'', AK=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';
+      var H={apikey:AK,Authorization:'Bearer '+AK};
+      fetch(SB+'/rest/v1/liquidity_top?select=*&order=trade_date.desc,market.asc,rank.asc&limit=120',{headers:H}).then(function(r){return r.json();}).then(function(a){
+        a=Array.isArray(a)?a:[]; if(!a.length){el('liqTbl').innerHTML='<div class="fc-empty">暫無資料</div>';return;}
+        var latest=a[0].trade_date;
+        DATA={spot:[],fut:[]};
+        a.filter(function(r){return r.trade_date===latest;}).forEach(function(r){ if(DATA[r.market])DATA[r.market].push(r); });
+        DATA.spot.sort(function(x,y){return x.rank-y.rank;}); DATA.fut.sort(function(x,y){return x.rank-y.rank;});
+        loaded=true;
+        if(el('liqSub'))el('liqSub').textContent='資料日 '+latest+' · 成交量/值前 30';
+        if(el('liqNote'))el('liqNote').innerHTML='<b>算法與資料源：</b>現貨＝TWSE STOCK_DAY_ALL 上市普通股(排除ETF)當日<b>成交金額</b>前30；期貨＝TAIFEX DailyMarketReportFut 一般盤各契約<b>成交量</b>合併月份後前30，契約中文名以指數期貨對照＋股票期貨 SSFLists(代號→標的)還原。盤後日更。用途：流動性愈高、進出場滑價愈小。';
+        render();
+      }).catch(function(){ el('liqTbl').innerHTML='<div class="fc-empty">讀取失敗</div>'; });
+    };
+    window._VIEWS=window._VIEWS||{}; window._VIEWS.liq={el:'liqView',show:'_liqShow'};
+  })();
+  </script>
+
   <style>
     #sectorView{max-width:1200px;margin:0 auto;}
     .sm-map{display:flex;flex-wrap:wrap;gap:6px;}
@@ -4304,7 +4371,7 @@
     window._hxRetheme=function(){ if(el('homeView')&&el('homeView').style.display!=='none') load(); };
     // 通用視圖註冊：新增大項只要在此登記 {el:容器id, show:全域函式名}，並提供對應元素/函式即可
     window._VIEWS = window._VIEWS || {}; window._VIEWS.home={el:'homeView',show:'_hxShow'}; window._VIEWS.focus={el:'focusView',show:'_focusShow'}; window._VIEWS.overview={el:'overviewView',show:'_ovShow'};
-    var NAVMAP={home:'首頁',overview:'今日焦點',focus:'今日焦點',todayindex:'今日焦點',screen:'選股',box:'選股',limitup:'選股',
+    var NAVMAP={home:'首頁',overview:'今日焦點',focus:'今日焦點',todayindex:'今日焦點',screen:'選股',box:'選股',limitup:'選股',liq:'選股',
       themes:'題材族群',sectors:'題材族群',greed:'市場觀察',inst:'市場觀察',sig:'市場觀察',brank:'市場觀察',fhedge:'市場觀察',breadth:'市場觀察',news:'每日新聞',
       etfx:'ETF',etf:'ETF',etfcons:'ETF',etfrev:'ETF',etfdiv:'ETF',etfhold:'ETF',etfsim:'ETF',etfheavy:'ETF',etfprem:'ETF',etfflow:'ETF',etfperf:'ETF'};
     function _setNav(v){
