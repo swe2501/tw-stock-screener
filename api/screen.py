@@ -2086,6 +2086,20 @@ class handler(BaseHTTPRequestHandler):
                 return self._send_json(200, _fetch_disposal(), cache="public, s-maxage=1800, max-age=300")
             except Exception as e:
                 return self._send_json(200, {"error": str(e)})
+        # 證交所休市日（openapi holidaySchedule；名稱含「開始交易」「最後交易」者為交易日）→ 前端結算日順延用；CDN 快取 1 天 2026-09-28
+        if (qs.get("stat") or [""])[0] == "holidays":
+            try:
+                import ssl as _ssl, re as _re
+                ctx = _ssl.create_default_context(); ctx.check_hostname = False; ctx.verify_mode = _ssl.CERT_NONE
+                req = urllib.request.Request("https://openapi.twse.com.tw/v1/holidaySchedule/holidaySchedule", headers={"User-Agent": "Mozilla/5.0"})
+                out = []
+                for r in json.loads(urllib.request.urlopen(req, timeout=20, context=ctx).read().decode("utf-8-sig")):
+                    d = _re.sub(r"\D", "", str(r.get("Date", "")))
+                    if len(d) >= 7 and not _re.search(r"開始交易|最後交易", str(r.get("Name", ""))):
+                        out.append(f"{int(d[:-4]) + 1911}-{d[-4:-2]}-{d[-2:]}")
+                return self._send_json(200, {"closed": sorted(set(out))}, cache="public, s-maxage=86400, max-age=3600")
+            except Exception as e:
+                return self._send_json(200, {"closed": [], "error": str(e)})
         # 個股新聞（Google 新聞 RSS，即時查、不存 DB；CDN 快取 30 分鐘）
         if (qs.get("stat") or [""])[0] == "stocknews":
             code = (qs.get("code") or [""])[0].strip()
