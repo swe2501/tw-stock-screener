@@ -2923,7 +2923,9 @@
     .pf .mc-h{color:var(--pf-t1);} .pf .mc-h span{color:var(--pf-mut);}
     .pf table.mc-t th{color:var(--pf-mut);border-bottom-color:var(--pf-bd);} .pf table.mc-t td{border-bottom-color:var(--pf-bd);color:var(--pf-t3);}
     .pf .mc-r{background:var(--pf-inner);} .pf .mc-r.g{color:var(--pf-bull);} .pf .mc-r.r{color:var(--pf-bear);}
-    .pf .mc-own{border-color:var(--pf-warn);} .pf .mc-pin{border-color:var(--pf-bd);color:var(--pf-mut);} .pf .mc-pin.on{background:var(--pf-accent);border-color:var(--pf-accent);color:#0b1120;}
+    .pf .mc-own{border-color:var(--pf-warn);}
+    .mc-rm{font-size:11.5px;padding:2px 9px;border-radius:999px;border:1px solid rgba(244,63,94,.45);background:transparent;color:#f43f5e;cursor:pointer;white-space:nowrap;font-family:inherit;}
+    .mc-rm:hover{background:rgba(244,63,94,.1);} .mc-rm[data-m="show"]{border-color:var(--pf-bd);color:var(--pf-sky);} .pf .mc-pin{border-color:var(--pf-bd);color:var(--pf-mut);} .pf .mc-pin.on{background:var(--pf-accent);border-color:var(--pf-accent);color:#0b1120;}
     .pf .mc-news{border-bottom-color:var(--pf-bd);} .pf .mc-news a{color:var(--pf-t2);} .pf .mc-news span,.pf .mc-note{color:var(--pf-mut);}
     .pf .fc-empty{color:var(--pf-mut);}
     .pf-evtbl{margin-top:20px;padding-top:16px;border-top:1px solid var(--pf-bd);}
@@ -3387,7 +3389,9 @@
         var ev=(Array.isArray(res[0])?res[0]:[]).filter(function(e){return MC_ORDER[e.country];}), news=Array.isArray(res[1])?res[1]:[];
         ev.sort(function(x,y){ return x.occ_time<y.occ_time?-1:x.occ_time>y.occ_time?1:(MC_ORDER[x.country]||9)-(MC_ORDER[y.country]||9); });
         var owner=!!window._isOwner;
-        var pub=ev.filter(function(e){return e.importance==='high'||e.pinned;});
+        var pub=ev.filter(function(e){return (e.importance==='high'||e.pinned)&&!e.hidden;});
+        // 管理員「移除」按鈕：已列上的中重要度＝取消列上；高重要度＝隱藏（可在下方還原）
+        function rm(e){ return owner?'<td><button type="button" class="mc-rm" data-oid="'+e.occurrence_id+'" data-m="'+(e.importance==='high'?'hide':'unpin')+'" title="'+(e.importance==='high'?'隱藏此事件（所有人不再看到，可還原）':'取消列上')+'">✕ 移除</button></td>':''; }
         var nowIso=new Date(now).toISOString();
         var fut=pub.filter(function(e){return e.occ_time>=nowIso;}), past=pub.filter(function(e){return e.occ_time<nowIso&&e.actual!=null&&e.actual!=='';}).reverse();
         function star(e){ return e.importance==='high'?'<span class="mc-imp h" title="高重要度">★★★</span>':'<span class="mc-imp m" title="中重要度（會員列上）">★★</span>'; }
@@ -3397,12 +3401,12 @@
           return '<span class="mc-r '+cls+'">'+(a>f?'高於預期':(a<f?'低於預期':'符合預期'))+'</span>'; }
         var h='';
         h+='<div class="mc-blk"><div class="mc-h">📅 未來 7 天總經事件</div>';
-        h+=fut.length?('<table class="mc-t"><thead><tr><th>時間(台灣)</th><th>國家</th><th class="l">事件</th><th>預測</th><th>前值</th></tr></thead><tbody>'
-          +fut.map(function(e){ return '<tr><td>'+mcTime(e.occ_time)+'</td><td>'+ctry(e)+'</td><td class="l">'+star(e)+mcEsc(e.title)+'</td><td>'+mcVal(e.forecast,e.unit)+'</td><td>'+mcVal(e.previous,e.unit)+'</td></tr>'; }).join('')+'</tbody></table>')
+        h+=fut.length?('<table class="mc-t"><thead><tr><th>時間(台灣)</th><th>國家</th><th class="l">事件</th><th>預測</th><th>前值</th>'+(owner?'<th></th>':'')+'</tr></thead><tbody>'
+          +fut.map(function(e){ return '<tr><td>'+mcTime(e.occ_time)+'</td><td>'+ctry(e)+'</td><td class="l">'+star(e)+mcEsc(e.title)+'</td><td>'+mcVal(e.forecast,e.unit)+'</td><td>'+mcVal(e.previous,e.unit)+'</td>'+rm(e)+'</tr>'; }).join('')+'</tbody></table>')
           :'<div class="fc-empty">未來 7 天無高重要度事件</div>';
         h+='</div><div class="mc-blk"><div class="mc-h">📊 近 7 天已公布</div>';
-        h+=past.length?('<table class="mc-t"><thead><tr><th>時間(台灣)</th><th>國家</th><th class="l">事件</th><th>實際</th><th>預測</th><th>前值</th><th>結果</th></tr></thead><tbody>'
-          +past.map(function(e){ return '<tr><td>'+mcTime(e.occ_time)+'</td><td>'+ctry(e)+'</td><td class="l">'+star(e)+mcEsc(e.title)+'</td><td><b>'+mcVal(e.actual,e.unit)+'</b></td><td>'+mcVal(e.forecast,e.unit)+'</td><td>'+mcVal(e.previous,e.unit)+'</td><td>'+res2(e)+'</td></tr>'; }).join('')+'</tbody></table>')
+        h+=past.length?('<table class="mc-t"><thead><tr><th>時間(台灣)</th><th>國家</th><th class="l">事件</th><th>實際</th><th>預測</th><th>前值</th><th>結果</th>'+(owner?'<th></th>':'')+'</tr></thead><tbody>'
+          +past.map(function(e){ return '<tr><td>'+mcTime(e.occ_time)+'</td><td>'+ctry(e)+'</td><td class="l">'+star(e)+mcEsc(e.title)+'</td><td><b>'+mcVal(e.actual,e.unit)+'</b></td><td>'+mcVal(e.forecast,e.unit)+'</td><td>'+mcVal(e.previous,e.unit)+'</td><td>'+res2(e)+'</td>'+rm(e)+'</tr>'; }).join('')+'</tbody></table>')
           :'<div class="fc-empty">近 7 天無已公布數據</div>';
         h+='</div>';
         if(owner){
@@ -3413,6 +3417,9 @@
                 +'<td><button type="button" class="mc-pin'+(e.pinned?' on':'')+'" data-oid="'+e.occurrence_id+'" data-p="'+(e.pinned?0:1)+'">'+(e.pinned?'✓ 已列上（取消）':'＋ 列上去')+'</button></td></tr>'; }).join('')+'</tbody></table>')
             :'<div class="fc-empty">目前無中重要度事件</div>';
           h+='</div>';
+          var hid=ev.filter(function(e){return e.hidden;});
+          if(hid.length){ h+='<div class="mc-blk mc-own"><div class="mc-h">🗑 已移除事件（僅籌碼會員可見）<span>按「還原」恢復公開</span></div><table class="mc-t"><tbody>'
+            +hid.map(function(e){ return '<tr><td>'+mcTime(e.occ_time)+'</td><td>'+ctry(e)+'</td><td class="l">'+star(e)+mcEsc(e.title)+(e.hidden_by?' <small>移除者 '+mcEsc(e.hidden_by)+'</small>':'')+'</td><td><button type="button" class="mc-rm" data-oid="'+e.occurrence_id+'" data-m="show">↺ 還原</button></td></tr>'; }).join('')+'</tbody></table></div>'; }
         }
         h+='<div class="mc-blk"><div class="mc-h">📰 宏觀新聞</div>';
         h+=news.length?news.map(function(n){ return '<div class="mc-news"><a href="'+mcEsc(n.link)+'" target="_blank" rel="noopener noreferrer">'+mcEsc(n.title)+' ↗</a><span>'+(n.published_at?mcTime(n.published_at):'')+(n.source?' · '+mcEsc(n.source):'')+'</span></div>'; }).join('')
@@ -3421,7 +3428,22 @@
         el('fhEvents').innerHTML=h;
         el('fhEvents').querySelectorAll('table.mc-t tbody').forEach(function(tb,i){ fold(tb,5,'ev'+i); });
         el('fhEvents').querySelectorAll('.mc-pin').forEach(function(bt){ bt.onclick=function(){ mcPin(bt, SB, H); }; });
+        el('fhEvents').querySelectorAll('.mc-rm').forEach(function(bt){ bt.onclick=function(){ mcRemove(bt, SB, H); }; });
       });
+    }
+    function mcRemove(bt, SB, H){
+      var tk=(typeof _authToken!=='undefined'&&_authToken)?_authToken:null;
+      if(!tk){ alert('請先登入籌碼會員帳號'); return; }
+      var m=bt.getAttribute('data-m'), email=(typeof _authUser!=='undefined'&&_authUser&&_authUser.email)||null, now=new Date().toISOString();
+      if(m!=='show' && !confirm(m==='hide'?'確定要移除這個事件？所有人將不再看到（可在「已移除事件」還原）':'確定要取消列上這個事件？')) return;
+      var body=m==='hide'?{hidden:true,hidden_by:email,hidden_at:now}:(m==='show'?{hidden:false,hidden_by:null,hidden_at:null}:{pinned:false,pinned_by:null,pinned_at:null});
+      bt.disabled=true;
+      fetch(SB+'/rest/v1/macro_events?occurrence_id=eq.'+bt.getAttribute('data-oid'),{method:'PATCH',
+        headers:{apikey:H.apikey,Authorization:'Bearer '+tk,'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify(body)})
+      .then(function(r){return r.json();}).then(function(a){
+        if(!Array.isArray(a)||!a.length){ alert('更新失敗：'+((a&&a.message)||'此帳號沒有籌碼會員權限')); bt.disabled=false; return; }
+        renderEvents(SB,H);
+      }).catch(function(){ alert('更新失敗，請稍後再試'); bt.disabled=false; });
     }
     function mcPin(bt, SB, H){
       var tk=(typeof _authToken!=='undefined'&&_authToken)?_authToken:null;
@@ -3491,10 +3513,10 @@
         if(window._isOwner){ render(); renderEvents(SB,H); renderEvCards(SB,H); }
         Promise.all([
           fetch(SB+'/rest/v1/catalyst_events?select=start_date&code=eq.2330&event_type=eq.'+encodeURIComponent('法說會')+'&order=start_date.asc&limit=100',{headers:H}).then(function(r){return r.json();}).catch(function(){return [];}),
-          fetch(SB+'/rest/v1/macro_events?select=occ_time,title,importance,pinned&or=(importance.eq.high,pinned.eq.true)&order=occ_time.asc&limit=1000',{headers:H}).then(function(r){return r.json();}).catch(function(){return [];})
+          fetch(SB+'/rest/v1/macro_events?select=*&or=(importance.eq.high,pinned.eq.true)&order=occ_time.asc&limit=1000',{headers:H}).then(function(r){return r.json();}).catch(function(){return [];})
         ]).then(function(ev){
           var ex=[]; (Array.isArray(ev[0])?ev[0]:[]).forEach(function(e){ if(e.start_date) ex.push({d:e.start_date.slice(0,10),n:'台積電法說會'}); });
-          (Array.isArray(ev[1])?ev[1]:[]).forEach(function(e){ if(!e.occ_time) return; var t=new Date(new Date(e.occ_time).getTime()+8*3600e3); ex.push({d:iso(t),n:e.title}); });
+          (Array.isArray(ev[1])?ev[1]:[]).forEach(function(e){ if(!e.occ_time||e.hidden) return; var t=new Date(new Date(e.occ_time).getTime()+8*3600e3); ex.push({d:iso(t),n:e.title}); });
           buildEvents(ex); if(window._isOwner) render();
         });
       }).catch(function(){ if(el('fhNarrative'))el('fhNarrative').textContent='資料讀取失敗'; });
