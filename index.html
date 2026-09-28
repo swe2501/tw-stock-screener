@@ -282,6 +282,16 @@
     /* 只讓右邊的小日曆圖示變手指游標（不動整框） */
     input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; }
 
+    /* 掏金篩選器：進階條件分類分頁 */
+    .sc-cat{margin-top:18px;padding-top:16px;border-top:1px solid var(--border);}
+    .sc-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;}
+    .sc-tabs button{background:var(--surface2);border:1px solid var(--border);color:var(--text-muted);border-radius:999px;padding:6px 16px;font-size:.88rem;font-weight:700;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;}
+    .sc-tabs button.on{background:var(--accent);border-color:var(--accent);color:#231c00;}
+    .sc-tabs button i{font-style:normal;font-size:.72rem;min-width:18px;height:18px;line-height:18px;border-radius:9px;background:#e74c3c;color:#fff;text-align:center;padding:0 5px;display:none;}
+    .sc-tabs button i.has{display:inline-block;}
+    .sc-panel .sc-cbs{margin-top:0;padding-top:0;border-top:0;}
+    .sc-fields{display:grid;grid-template-columns:1fr;gap:18px;}
+    .sc-note{font-size:.78rem;color:var(--text-muted);margin-bottom:10px;}
     .checkbox-grid {
       display: flex;
       flex-wrap: wrap;
@@ -1346,7 +1356,7 @@
     <div class="mn-grp"><span class="mn-item">今日焦點 <i>▾</i></span><div class="mn-menu">
       <a onclick="_showView('overview')" style="font-weight:800;color:var(--brand-green)">📊 總覽</a><a onclick="_showView('focus')">排行榜</a><a onclick="_showView('todayindex')">今日索引</a></div></div>
     <div class="mn-grp"><span class="mn-item">選股 <i>▾</i></span><div class="mn-menu">
-      <a onclick="_showView('screen')">指標</a><a onclick="_showView('box')">箱型</a><a onclick="_showView('limitup')">上漲下跌亮燈區</a><a onclick="_showView('liq')">💧 流動性排行</a><a onclick="_showView('sr')">🧱 壓力支撐逼近</a></div></div>
+      <a onclick="_showView('screen')">⛏ 掏金篩選器</a><a onclick="_showView('box')">箱型</a><a onclick="_showView('limitup')">上漲下跌亮燈區</a><a onclick="_showView('liq')">💧 流動性排行</a><a onclick="_showView('sr')">🧱 壓力支撐逼近</a></div></div>
     <div class="mn-grp"><span class="mn-item">題材族群 <i>▾</i></span><div class="mn-menu">
       <a class="nav-owner" onclick="openHotTopics()">🔥 話題</a><a onclick="_showView('themes')">題材列表</a><a onclick="_showView('sectors')">產業地圖</a></div></div>
     <div class="mn-grp"><span class="mn-item">市場觀察 <i>▾</i></span><div class="mn-menu">
@@ -5899,38 +5909,6 @@
                  oninput="if(this.value){document.getElementById('volume_multiplier').value=''}" />
         </div>
 
-        <div class="field" style="grid-column:1/-1;">
-          <label>無放量黑棒篩選</label>
-          <div class="label-hint">放量黑棒出現次數 ≤ 容忍根數才通過；容忍 0 根即一根都不容許（例：24 = 過去 2 年）</div>
-          <div style="display:flex;align-items:center;gap:8px;margin-top:2px;flex-wrap:wrap;">
-            <span style="font-size:0.85rem;color:var(--text-muted);white-space:nowrap;">過去</span>
-            <input type="number" id="no_black_years" min="1" max="120" step="1" placeholder="例：24"
-              style="width:80px;height:42px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:0.95rem;padding:10px 13px;outline:none;appearance:none;-webkit-appearance:none;flex-shrink:0;" />
-            <span style="font-size:0.85rem;color:var(--text-muted);white-space:nowrap;">月，</span>
-            <input type="number" id="no_black_mult" min="0.5" step="0.1" placeholder="例：1.5"
-              style="width:80px;height:42px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:0.95rem;padding:10px 13px;outline:none;appearance:none;-webkit-appearance:none;flex-shrink:0;" />
-            <span style="font-size:0.85rem;color:var(--text-muted);white-space:nowrap;">倍放量黑棒</span>
-            <span style="display:inline-flex;align-items:center;gap:8px;flex-shrink:0;">
-              <span style="font-size:0.85rem;color:var(--text-muted);white-space:nowrap;">容忍</span>
-              <input type="number" id="no_black_tolerance" min="0" max="20" step="1" placeholder="0"
-                style="width:70px;height:42px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:0.95rem;padding:10px 13px;outline:none;appearance:none;-webkit-appearance:none;" />
-              <span style="font-size:0.85rem;color:var(--text-muted);white-space:nowrap;">根</span>
-            </span>
-          </div>
-        </div>
-
-        <div class="field">
-          <label>箱型狀態</label>
-          <div class="label-hint">勾選要保留的箱型型態（可複選；對結果即時過濾，每日盤後更新。細部參數請到個股 K 圖調整）</div>
-          <div id="box_filter" style="display:flex;flex-wrap:wrap;gap:6px 14px;padding-top:2px">
-            <label style="display:inline-flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="checkbox" class="box-cb" value="CONFIRMED_UP" onchange="onBoxFilterChange()">向上突破</label>
-            <label style="display:inline-flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="checkbox" class="box-cb" value="CONFIRMED_DOWN" onchange="onBoxFilterChange()">向下跌破</label>
-            <label style="display:inline-flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="checkbox" class="box-cb" value="FORMING" onchange="onBoxFilterChange()">形成中</label>
-            <label style="display:inline-flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="checkbox" class="box-cb" value="FALSE_UP_THEN_DOWN" onchange="onBoxFilterChange()">假突破→真跌破</label>
-            <label style="display:inline-flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="checkbox" class="box-cb" value="FALSE_DOWN_THEN_UP" onchange="onBoxFilterChange()">假跌破→真突破</label>
-          </div>
-        </div>
-
         <div class="field">
           <label>產業別</label>
           <div class="label-hint">篩選特定產業（對結果即時過濾）</div>
@@ -5975,50 +5953,47 @@
 
       </div>
 
-      <!-- 複選框獨立一行 + 按鈕靠右 -->
-      <div class="checkbox-grid">
-        <label class="checkbox-row">
-          <input type="checkbox" id="limit_up" />
-          <div>
-            <div class="cb-label">漲停板</div>
-            <div class="cb-hint">當日收盤達漲停價（+10%）</div>
-          </div>
-        </label>
-        <div class="checkbox-row" style="align-items:flex-start;">
-          <div style="flex:1;">
-            <div class="cb-label" style="margin-bottom:6px;">MACD 分組（擇一）</div>
-            <div style="display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--text);">
-              <div style="color:#e74c3c;font-weight:600;">多</div>
-              <label style="display:flex;gap:6px;align-items:center;cursor:pointer;">
-                <input type="checkbox" class="macd-cb" data-mode="long1" onchange="_macdExcl(this)" />0軸上黃金交叉（DIF 上穿 DEA 且 DIF&gt;0）</label>
-              <label style="display:flex;gap:6px;align-items:center;cursor:pointer;">
-                <input type="checkbox" class="macd-cb" data-mode="long2" onchange="_macdExcl(this)" />兩線由下上穿 0 軸（近 5 根內）</label>
-              <label style="display:flex;gap:6px;align-items:center;cursor:pointer;">
-                <input type="checkbox" class="macd-cb" data-mode="long3" onchange="_macdExcl(this)" />區間內 0 軸下黃金交叉 ≥2 次</label>
-              <div style="color:#2ecc71;font-weight:600;margin-top:2px;">空</div>
-              <label style="display:flex;gap:6px;align-items:center;cursor:pointer;">
-                <input type="checkbox" class="macd-cb" data-mode="short1" onchange="_macdExcl(this)" />0軸下死亡交叉（DIF 下穿 DEA 且 DIF&lt;0）</label>
-              <label style="display:flex;gap:6px;align-items:center;cursor:pointer;">
-                <input type="checkbox" class="macd-cb" data-mode="short2" onchange="_macdExcl(this)" />兩線由上下穿 0 軸（近 5 根內）</label>
-              <label style="display:flex;gap:6px;align-items:center;cursor:pointer;">
-                <input type="checkbox" class="macd-cb" data-mode="short3" onchange="_macdExcl(this)" />區間內 0 軸上死亡交叉 ≥2 次</label>
-            </div>
-            <div id="macdRangeBox" style="display:none;margin-top:8px;align-items:center;gap:6px;font-size:12px;color:var(--text-muted);">
-              <span>起</span>
-              <input type="date" id="macd_start" style="padding:3px 6px;font-size:13px;border:1px solid var(--border);border-radius:4px;background:var(--input-bg);color:var(--text);" />
-              <span>訖</span>
-              <input type="date" id="macd_end" style="padding:3px 6px;font-size:13px;border:1px solid var(--border);border-radius:4px;background:var(--input-bg);color:var(--text);" />
-              <span style="margin-left:2px;">（區間模式吃此起訖日，不看上方日期）</span>
-            </div>
+      <!-- 進階篩選分類（2026-09-28）：型態／K棒／缺口／漲停跌停／指標／真名絕招；分頁只切換顯示，已勾選的條件不論在哪一頁都會生效 -->
+      <div class="sc-cat">
+        <div class="sc-tabs" id="scTabs"><button type="button" data-cat="shape" class="on">型態<i></i></button><button type="button" data-cat="kbar">K棒<i></i></button><button type="button" data-cat="gap">缺口<i></i></button><button type="button" data-cat="limit">漲停/跌停<i></i></button><button type="button" data-cat="ind">指標<i></i></button><button type="button" data-cat="zm">真名絕招<i></i></button></div>
+        <div class="sc-panel" data-cat="shape">
+          <div class="sc-fields">
+        <div class="field" style="grid-column:1/-1;margin:0">
+          <label>碗型（無放量黑棒）</label>
+          <div class="label-hint">放量黑棒出現次數 ≤ 容忍根數才通過；容忍 0 根即一根都不容許（例：24 = 過去 2 年）</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:2px;flex-wrap:wrap;">
+            <span style="font-size:0.85rem;color:var(--text-muted);white-space:nowrap;">過去</span>
+            <input type="number" id="no_black_years" min="1" max="120" step="1" placeholder="例：24"
+              style="width:80px;height:42px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:0.95rem;padding:10px 13px;outline:none;appearance:none;-webkit-appearance:none;flex-shrink:0;" />
+            <span style="font-size:0.85rem;color:var(--text-muted);white-space:nowrap;">月，</span>
+            <input type="number" id="no_black_mult" min="0.5" step="0.1" placeholder="例：1.5"
+              style="width:80px;height:42px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:0.95rem;padding:10px 13px;outline:none;appearance:none;-webkit-appearance:none;flex-shrink:0;" />
+            <span style="font-size:0.85rem;color:var(--text-muted);white-space:nowrap;">倍放量黑棒</span>
+            <span style="display:inline-flex;align-items:center;gap:8px;flex-shrink:0;">
+              <span style="font-size:0.85rem;color:var(--text-muted);white-space:nowrap;">容忍</span>
+              <input type="number" id="no_black_tolerance" min="0" max="20" step="1" placeholder="0"
+                style="width:70px;height:42px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:0.95rem;padding:10px 13px;outline:none;appearance:none;-webkit-appearance:none;" />
+              <span style="font-size:0.85rem;color:var(--text-muted);white-space:nowrap;">根</span>
+            </span>
           </div>
         </div>
-        <label class="checkbox-row">
-          <input type="checkbox" id="gap_up" />
-          <div>
-            <div class="cb-label">跳空向上（開高）</div>
-            <div class="cb-hint">開盤高於昨日實體（昨紅K比昨收、昨黑K比昨開）</div>
+
+        <div class="field" style="grid-column:1/-1;margin:0">
+          <label>箱型狀態</label>
+          <div class="label-hint">勾選要保留的箱型型態（可複選；對結果即時過濾，每日盤後更新。細部參數請到個股 K 圖調整）</div>
+          <div id="box_filter" style="display:flex;flex-wrap:wrap;gap:6px 14px;padding-top:2px">
+            <label style="display:inline-flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="checkbox" class="box-cb" value="CONFIRMED_UP" onchange="onBoxFilterChange()">向上突破</label>
+            <label style="display:inline-flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="checkbox" class="box-cb" value="CONFIRMED_DOWN" onchange="onBoxFilterChange()">向下跌破</label>
+            <label style="display:inline-flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="checkbox" class="box-cb" value="FORMING" onchange="onBoxFilterChange()">形成中</label>
+            <label style="display:inline-flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="checkbox" class="box-cb" value="FALSE_UP_THEN_DOWN" onchange="onBoxFilterChange()">假突破→真跌破</label>
+            <label style="display:inline-flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="checkbox" class="box-cb" value="FALSE_DOWN_THEN_UP" onchange="onBoxFilterChange()">假跌破→真突破</label>
           </div>
-        </label>
+        </div>
+
+          </div>
+        </div>
+        <div class="sc-panel" data-cat="kbar" style="display:none">
+          <div class="checkbox-grid sc-cbs">
         <label class="checkbox-row">
           <input type="checkbox" id="doji" />
           <div>
@@ -6061,6 +6036,17 @@
             <div class="cb-hint">當日黑K實體藏在前一日紅K實體內（當日影線不計）</div>
           </div>
         </label>
+          </div>
+        </div>
+        <div class="sc-panel" data-cat="gap" style="display:none">
+          <div class="checkbox-grid sc-cbs">
+        <label class="checkbox-row">
+          <input type="checkbox" id="gap_up" />
+          <div>
+            <div class="cb-label">跳空向上（開高）</div>
+            <div class="cb-hint">開盤高於昨日實體（昨紅K比昨收、昨黑K比昨開）</div>
+          </div>
+        </label>
         <label class="checkbox-row">
           <input type="checkbox" id="gap_down" onchange="if(!this.checked) document.getElementById('gap_down_min').value=''" />
           <div>
@@ -6080,6 +6066,54 @@
             <div class="cb-hint">前日跳空向下 + 今日突破 + 價差≥1元 + 前日縮量</div>
           </div>
         </label>
+          </div>
+        </div>
+        <div class="sc-panel" data-cat="limit" style="display:none">
+          <div class="sc-note">跌停板篩選尚未提供，之後補上。</div>
+          <div class="checkbox-grid sc-cbs">
+        <label class="checkbox-row">
+          <input type="checkbox" id="limit_up" />
+          <div>
+            <div class="cb-label">漲停板</div>
+            <div class="cb-hint">當日收盤達漲停價（+10%）</div>
+          </div>
+        </label>
+          </div>
+        </div>
+        <div class="sc-panel" data-cat="ind" style="display:none">
+          <div class="checkbox-grid sc-cbs">
+        <div class="checkbox-row" style="align-items:flex-start;">
+          <div style="flex:1;">
+            <div class="cb-label" style="margin-bottom:6px;">MACD 分組（擇一）</div>
+            <div style="display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--text);">
+              <div style="color:#e74c3c;font-weight:600;">多</div>
+              <label style="display:flex;gap:6px;align-items:center;cursor:pointer;">
+                <input type="checkbox" class="macd-cb" data-mode="long1" onchange="_macdExcl(this)" />0軸上黃金交叉（DIF 上穿 DEA 且 DIF&gt;0）</label>
+              <label style="display:flex;gap:6px;align-items:center;cursor:pointer;">
+                <input type="checkbox" class="macd-cb" data-mode="long2" onchange="_macdExcl(this)" />兩線由下上穿 0 軸（近 5 根內）</label>
+              <label style="display:flex;gap:6px;align-items:center;cursor:pointer;">
+                <input type="checkbox" class="macd-cb" data-mode="long3" onchange="_macdExcl(this)" />區間內 0 軸下黃金交叉 ≥2 次</label>
+              <div style="color:#2ecc71;font-weight:600;margin-top:2px;">空</div>
+              <label style="display:flex;gap:6px;align-items:center;cursor:pointer;">
+                <input type="checkbox" class="macd-cb" data-mode="short1" onchange="_macdExcl(this)" />0軸下死亡交叉（DIF 下穿 DEA 且 DIF&lt;0）</label>
+              <label style="display:flex;gap:6px;align-items:center;cursor:pointer;">
+                <input type="checkbox" class="macd-cb" data-mode="short2" onchange="_macdExcl(this)" />兩線由上下穿 0 軸（近 5 根內）</label>
+              <label style="display:flex;gap:6px;align-items:center;cursor:pointer;">
+                <input type="checkbox" class="macd-cb" data-mode="short3" onchange="_macdExcl(this)" />區間內 0 軸上死亡交叉 ≥2 次</label>
+            </div>
+            <div id="macdRangeBox" style="display:none;margin-top:8px;align-items:center;gap:6px;font-size:12px;color:var(--text-muted);">
+              <span>起</span>
+              <input type="date" id="macd_start" style="padding:3px 6px;font-size:13px;border:1px solid var(--border);border-radius:4px;background:var(--input-bg);color:var(--text);" />
+              <span>訖</span>
+              <input type="date" id="macd_end" style="padding:3px 6px;font-size:13px;border:1px solid var(--border);border-radius:4px;background:var(--input-bg);color:var(--text);" />
+              <span style="margin-left:2px;">（區間模式吃此起訖日，不看上方日期）</span>
+            </div>
+          </div>
+        </div>
+          </div>
+        </div>
+        <div class="sc-panel" data-cat="zm" style="display:none">
+          <div class="checkbox-grid sc-cbs">
         <label class="checkbox-row">
           <input type="checkbox" id="zhenming1"
                  onchange="if(this.checked)document.getElementById('zhenming2').checked=false" />
@@ -6096,14 +6130,28 @@
             <div class="cb-hint">長紅棒 3%＋放量 1.5倍＋任一較短均線當日新上穿較長均線（5/10/20/60/120/240 全配對）</div>
           </div>
         </label>
-        <button class="btn-submit" id="submitBtn" onclick="doScreen()" style="margin-left:auto;align-self:flex-end;">
-          開始篩選
-        </button>
+          </div>
+        </div>
       </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:16px"><button class="btn-submit" id="submitBtn" onclick="doScreen()">開始篩選</button></div>
       <div id="dataDateDisplay" style="margin-top:12px;font-size:0.78rem;color:var(--text-muted);"></div>
     </div>
   </div>
 
+  <script>
+  // 掏金篩選器分類分頁：切換顯示＋每類已設定條件數的小紅點（2026-09-28）
+  (function(){
+    var tabs=document.getElementById('scTabs'); if(!tabs) return;
+    function show(cat){ tabs.querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', b.dataset.cat===cat); });
+      document.querySelectorAll('.sc-panel').forEach(function(p){ p.style.display = p.dataset.cat===cat ? '' : 'none'; }); }
+    function count(){ document.querySelectorAll('.sc-panel').forEach(function(p){
+        var n=0; p.querySelectorAll('input').forEach(function(x){ if(x.type==='checkbox'?x.checked:(x.value!=='' && x.type!=='date')) n++; });
+        var i=tabs.querySelector('button[data-cat="'+p.dataset.cat+'"] i'); if(i){ i.textContent=n; i.classList.toggle('has', n>0); } }); }
+    tabs.querySelectorAll('button').forEach(function(b){ b.onclick=function(){ show(b.dataset.cat); }; });
+    document.querySelector('.sc-cat').addEventListener('change', count); document.querySelector('.sc-cat').addEventListener('input', count);
+    window._scCount=count; count();
+  })();
+  </script>
   <!-- （個股搜尋＋指數快覽已移至頁首 header 下方橫條 .topsearch）-->
 
   <div class="results-wrap">
