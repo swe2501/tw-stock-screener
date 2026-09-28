@@ -1,9 +1,9 @@
 """
-liquidity_top.py — 流動性排行：現貨(上市)成交值前30、個股期貨成交量前50（2026-09-28 起不含指數類期貨）。
-旨在規避流動性風險/避免滑價：優先挑成交熱絡的標的。供「選股 → 流動性前30」分頁。
+liquidity_top.py — 流動性排行：現貨(上市)成交值前50、個股期貨成交量前50（2026-09-28 起兩者皆前 50）（2026-09-28 起不含指數類期貨）。
+旨在規避流動性風險/避免滑價：優先挑成交熱絡的標的。供「選股 → 流動性排行」分頁。
 
 資料源（皆免費官方、urllib 可讀）：
-  現貨：TWSE openapi STOCK_DAY_ALL（TradeValue 成交金額、TradeVolume 成交股數），上市普通股取成交值前30。
+  現貨：TWSE openapi STOCK_DAY_ALL（TradeValue 成交金額、TradeVolume 成交股數），上市普通股取成交值前50。
   個股期貨：TAIFEX openapi DailyMarketReportFut（一般盤各契約 Volume，排除價差委託列「202610/202611」避免重複計量），
         只留 SSFLists 中「普通股」標的的股票期貨（排除指數期貨、ETF 期貨），合併同契約各月份後取成交量前 50；
         標準型(2,000股)/小型(100股)依期交所「股票期貨交易標的」頁 www.taifex.com.tw/cht/2/stockLists 的股數欄判斷，小型標「小型期貨」。
@@ -48,7 +48,7 @@ def spot_top():
             and not str(r.get("Code")).startswith("00")]      # 上市普通股(排除ETF)
     rows.sort(key=lambda r: -_num(r.get("TradeValue")))
     out = []
-    for i, r in enumerate(rows[:30], 1):
+    for i, r in enumerate(rows[:50], 1):
         out.append({"trade_date": iso, "market": "spot", "rank": i,
                     "code": str(r["Code"]).strip(), "name": r.get("Name", ""),
                     "turnover": round(_num(r.get("TradeValue"))), "volume": round(_num(r.get("TradeVolume")) / 1000)})
