@@ -665,7 +665,7 @@
       border: 1px solid var(--border);
       border-radius: 14px;
       width: 100%;
-      max-width: 1080px;
+      max-width: 1440px;   /* 2026-09-28 加寬以容納右側分頁完整內容 */
       max-height: 96vh;
       display: flex;
       flex-direction: column;
@@ -734,7 +734,7 @@
       overflow-y: auto;
     }
     .chart-note-panel {
-      width: 290px;
+      width: 350px;
       flex-shrink: 0;
       border-left: 1px solid var(--border);
       padding: 14px 14px 18px;
@@ -749,8 +749,8 @@
       font-weight: 500;
     }
     /* K線右側分頁：觀察備註 / 基本面 / 相關新聞 */
-    .cnp-tabs { display:flex; gap:4px; margin:-2px 0 8px; flex-shrink:0; }
-    .cnp-tab { flex:1; background:var(--surface2); border:1px solid var(--border); border-radius:7px; padding:6px 4px; font-size:12px; color:var(--text-muted); cursor:pointer; font-weight:600; white-space:nowrap; }
+    .cnp-tabs { display:grid; grid-template-columns:repeat(auto-fit,minmax(74px,1fr)); gap:4px; margin:-2px 0 8px; flex-shrink:0; }
+    .cnp-tab { min-width:0; background:var(--surface2); border:1px solid var(--border); border-radius:7px; padding:6px 4px; font-size:12px; color:var(--text-muted); cursor:pointer; font-weight:600; white-space:nowrap; }
     .cnp-tab.on { background:var(--accent); color:#231c00; border-color:var(--accent); }
     .cnp-nsec { margin-bottom:10px; }
     .cnp-nh { font-size:12px; font-weight:800; color:var(--brand-green); margin:2px 0 5px; }
@@ -765,7 +765,9 @@
     .cnp-ftable { width:100%; border-collapse:collapse; font-size:11.5px; }
     .cnp-ftable th, .cnp-ftable td { padding:5px 6px; border-bottom:1px solid var(--border); text-align:right; white-space:nowrap; }
     .cnp-ftable th { color:var(--text-muted); font-weight:600; } .cnp-ftable td.l, .cnp-ftable th.l { text-align:left; }
-    .cnp-news { border-left:3px solid var(--accent); background:var(--bg); border-radius:6px; padding:8px 10px; font-size:12px; }
+    .cnp-news { border:1px solid var(--border); border-left:3px solid var(--accent); background:var(--bg); border-radius:8px; padding:9px 11px; font-size:12.5px; line-height:1.55; box-shadow:0 1px 2px rgba(0,0,0,.04); }
+    .cnp-nb { display:flex; flex-direction:column; gap:8px; }
+    .cnp-nsec { margin-bottom:16px; }
     .cnp-news a { color:inherit; text-decoration:none; font-weight:700; } .cnp-news a:hover { color:var(--brand-green); text-decoration:underline; }
     .cnp-news .d { font-size:10.5px; color:var(--text-muted); margin-top:2px; }
     .chart-note-panel textarea {
@@ -850,8 +852,9 @@
     }
     #chartContainer {
       width: 100%;
-      height: 220px;
+      height: 400px;   /* 2026-09-28 由 220 加高，看得出漲跌幅度 */
     }
+    @media (max-width: 700px) { #chartContainer { height: 300px; } }
     #fibCanvas {
       position: absolute;
       top: 0; left: 0;
@@ -1052,6 +1055,12 @@
     tbody tr { cursor: pointer; }
     @keyframes rtBlink { 0%,100%{opacity:1} 50%{opacity:.2} }
 
+    /* ── K-line chart modal: 平板(≤1100px) 右側分頁改到 K 線下方，讓 K 線吃滿寬度 ── */
+    @media (max-width: 1100px) {
+      .modal-body { flex-direction: column; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+      .chart-content { overflow-y: visible; flex-shrink: 0; }
+      .chart-note-panel { width: 100%; border-left: none; border-top: 1px solid var(--border); overflow-y: visible; flex-shrink: 0; }
+    }
     /* ── K-line chart modal: mobile full-screen ── */
     @media (max-width: 700px) {
       .modal-overlay {
@@ -5912,7 +5921,7 @@
               box.innerHTML=h;
             }).catch(function(){ box.innerHTML='<div class="fc-empty">讀取失敗</div>'; });
             function kv(k,v){return '<div><div class="cnp-fk">'+k+'</div><div class="cnp-fv">'+v+'</div></div>';}
-            function col(v){var c=v>=0?'var(--green)':'var(--red)';return '<span style="color:'+c+'">'+(v>=0?'+':'')+v+'%</span>';}
+            function col(v){v=Number(v);var c=v>=0?'var(--green)':'var(--red)';return '<span style="color:'+c+'">'+(v>=0?'+':'')+v.toFixed(2)+'%</span>';}
           };
           // 相關新聞三區（2026-09-27）：📢 重大訊息(官方,依代號) / 📰 個股新聞(Google 新聞,標題含股名或代號) / 🏷️ 族群新聞(AI 題材,依族群成分)
           window._loadStockNews=function(code, name){
@@ -8006,11 +8015,19 @@
       const sections = ['大單前20', '小單前20', '其他'].filter(c => groups[c]).map(cat =>
         `<div style="margin-top:5px"><span style="color:#c678dd;font-weight:600">${cat}（${groups[cat].length}）</span>
           <div style="display:flex;flex-wrap:wrap;margin-top:2px">${groups[cat].sort().map(cb).join('')}</div></div>`).join('');
-      panel.innerHTML = `<div><b style="color:#c678dd">主力分點</b>（${list.length}）
+      const open = !!window._brokerPanelOpen;
+      panel.innerHTML = `<div><a onclick="_toggleBrokerPanel()" style="cursor:pointer;text-decoration:none"><b style="color:#c678dd">主力分點</b>（${list.length}）
+          <span id="brokerPanelArrow" style="color:var(--text-muted);font-size:11px">${open ? '▾ 收合' : '▸ 展開分點清單'}</span></a>
         　<a onclick="_setAllBrokers(true)" style="color:#f5c84b;cursor:pointer">全勾</a>
         　<a onclick="_setAllBrokers(false)" style="color:#f5c84b;cursor:pointer">全部取消</a></div>
-        <div style="max-height:110px;overflow-y:auto">${sections}</div>`;
+        <div id="brokerPanelList" style="max-height:110px;overflow-y:auto;display:${open ? 'block' : 'none'}">${sections}</div>`;
       panel.style.display = 'block';
+    }
+    function _toggleBrokerPanel() {   // 主力分點清單展開／收合（記住狀態，換股票時沿用）
+      window._brokerPanelOpen = !window._brokerPanelOpen;
+      const l = document.getElementById('brokerPanelList'), a = document.getElementById('brokerPanelArrow');
+      if (l) l.style.display = window._brokerPanelOpen ? 'block' : 'none';
+      if (a) a.textContent = window._brokerPanelOpen ? '▾ 收合' : '▸ 展開分點清單';
     }
     function _toggleBroker(b, on) {
       if (!_brokerChecked) return;
@@ -9380,7 +9397,7 @@
       if (chartInstance) { try { chartInstance.remove(); } catch(_) {} chartInstance = null; }
       const el = document.getElementById('chartContainer');
       el.innerHTML = '';
-      const opts = _chartOpts(220, false);
+      const opts = _chartOpts(el.clientHeight || 400, false);
       opts.width = el.clientWidth || el.offsetWidth || 600;
       if (opts.width === 0) return; // 容器不可見，放棄渲染
       opts.rightPriceScale.scaleMargins = { top: 0.04, bottom: 0.02 };
@@ -9425,6 +9442,7 @@
           crosshairMarkerVisible: false,
           lastValueVisible: false,
           priceLineVisible: false,
+          autoscaleInfoProvider: () => null,   // 縱軸只看 K 棒，均線不拉寬範圍（仿 TradingView）
         });
         s.setData(candles.map((c, i) => sma[i] !== null ? { time: c.time, value: sma[i] } : null).filter(Boolean));
         seriesMap[`ma${period}`] = s;
@@ -9432,7 +9450,7 @@
 
       // Bollinger Bands (20, 2) — hidden by default
       const bbData = calcBBand(closes);
-      const bbOpts = { lineWidth: 1, crosshairMarkerVisible: false, lastValueVisible: false, priceLineVisible: false, visible: false };
+      const bbOpts = { lineWidth: 1, crosshairMarkerVisible: false, lastValueVisible: false, priceLineVisible: false, visible: false, autoscaleInfoProvider: () => null };
       const bbUpper = chartInstance.addLineSeries({ ...bbOpts, color: '#00BCD4', lineStyle: LightweightCharts.LineStyle.Dashed });
       const bbMid   = chartInstance.addLineSeries({ ...bbOpts, color: '#00BCD4' });
       const bbLower = chartInstance.addLineSeries({ ...bbOpts, color: '#00BCD4', lineStyle: LightweightCharts.LineStyle.Dashed });
