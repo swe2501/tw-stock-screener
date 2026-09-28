@@ -1,6 +1,6 @@
 # AI_stock 「跟誰學｜盤後研究院」開發交接文件
 
-> 最後更新：2026-09-28（由 Claude Opus 5.5 於本帳號最後一個 session 更新）
+> 最後更新：2026-09-28（fufongart 帳號 session；先前由 swe250165 帳號建立）
 > 目標：讓另一位開發者（含另一個帳號的 Claude Code）能無痛接手本專案的開發與維運。
 > 本站定位：以**真實官方資料**打造合夥人風格的台股**盤後**研究網站（非盤中即時）。
 > 正式網址：tw-stock-screener-neon.vercel.app　Repo：swe2501/tw-stock-screener
@@ -184,24 +184,31 @@ W=<prod_wt 路徑> && cd $W && git fetch -q origin && git reset -q --hard origin
 
 ---
 
-## 8. 目前狀態（2026-09-28 交接時）
+## 8. 目前狀態（2026-09-28，fufongart 帳號 session 更新）
 
-### prod（commit `a7d21e6`）
-溫度計改版（四層）、結算日卡、K 圖市值、掏金篩選器、產業地圖成分股、處置股、每日新聞改版（含 news_feed）。
+### prod（commit `a289af8`）— 本 session 依用戶指示分批推了 3 批
+交接時 prod 是 `a7d21e6`；本 session：
+- `34c5d6e`：交接時 uat 那 7 項（市場廣度五分頁＋盤面結構卡付費入口、溫度計長表開合、全站配色改完美.html 風、首頁金融終端主視覺、事件前/連假前避險偵測、總經事件移除/還原、長均線改 10>20>60）。
+- `2b1e611`：個股搜尋改 `type=search`＋密碼管理器忽略屬性（防瀏覽器自動填 email，合夥人回報）、話題族群由 dialog 改成**頁面**（view=`hottopics`，nav-owner，NAVMAP→題材族群）、今日焦點題材新聞標題可點跳原文。
+- `a289af8`：SPEC-TA-SR-002 個股支撐壓力改依週期、每日新聞明色版改報紙白。
+- **`sql/macro_events_hidden.sql` 用戶已執行**（總經事件移除/還原完整運作）。
+- uat 目前＝prod（無待推差異）。
 
-### 已在 uat、**等用戶確認後才可推 prod**
-1. 大盤多空廣度頁的市場廣度五分頁＋首頁盤面結構卡「付費解鎖更多」入口
-2. 溫度計長表開啟／收起
-3. 全站配色改完美.html 風格
-4. 首頁主視覺改金融終端風
-5. 事件前／連假前避險偵測
-6. 總經事件「移除／還原」（需先跑 `sql/macro_events_hidden.sql`）
-7. 長均線改 10>20>60
-（uat 最新 commit `680a29d`）
+### SPEC-TA-SR-002 已完成（取代 SR-001 的跨週期）
+不跨週期混算：(a) 同量取**最早**（stock_sr.py `cand[-1]`）；(b) K 線圖「支撐壓力」改**依週期勾選**（5/10/20/60/120/240/480，預設 20，`_srPeriods`）；(c) 逼近列表 `srNSel`＋K 線右側 `srTabSel` 改**週期下拉（預設 20）**、右側彙總改單一週期（不用跨週期 srLevels）；(d) 多空線數比率**取消**。已重跑 stock_sr(15,669)/stock_sr_h(15,336)。詳見 memory `project_stock_sr`。
+
+### 🔨 進行中（未完成）— 首頁選擇權支撐壓力改「OI 三層峰值」
+玩股網式（https://www.wantgoo.com/option/support-resistance）。**參數已與用戶定案**：
+- CALL 只取 strike>ref 找壓力、PUT 只取 strike<ref 找支撐，兩側分開；OI 缺/負/0 剔除。
+- 峰值＝4 條件同時成立：① OI≥該側 P70 ② OI≥該側 max×0.12 ③ OI≥前後各 5 有效履約價中位數×1.5 ④ 局部高點（≥前後各 2 且至少高於其一；平台只留一代表）。
+- 峰群**合併距離 100 點**（保留群內最大 OI 為代表）；壓力 strike 低→高、支撐 高→低各取**前 3（離 ref 近到遠，非 OI 大小）**；不足 3 標「候選不足」不硬湊。
+- 每層回 strike／OI／OIΔ／距 ref 點數／同側百分位／中位數倍數／判定原因。
+- **referencePrice＝台指期 TX 近月結算價**（`DailyMarketReportFut` 一般盤，同盤後截面；實測近月 202610＝48125），標 `ref_kind`；OIΔ 由本機 `txo_daily`（今日OI−前一交易日OI）算，新履約價無前值→「—」。
+- 要改：`scripts/option_sr.py`（重寫核心，取代舊「大量區×1.3」）；**Supabase `option_sr` 加欄位 `res_levels jsonb, sup_levels jsonb, ref_price numeric, ref_kind text` → 需寫 `sql/option_sr_levels.sql` 請用戶執行**；`index.html` #gsOptSR 卡改顯示每側三層＋明細；舊 res1/sup1… 填第 1 層相容。
+- **狀態**：盤點＋參數確認完成，正在寫 option_sr.py（被「更新交接文件」打斷，尚未動到程式碼與表）。測試情境：遠方第三層 OI 極大不可排第一層、週/月隔離、CALL/PUT 分離、平台峰、缺值、只 2 峰、ref 變動重排。
 
 ### 待用戶／合夥人決定
-- **個股支撐壓力 SPEC-TA-SR-002**（`C:\...\支撐壓力\多週期大量區K棒水平線與支撐壓力判定規範.docx`）：核心算法與現行 stock_sr.py 一致，且明言「不做跨週期混算」→ 原本待定的「多空線數比率」取消。待確認三點：(1) 最大量同量時取最早一根（規範 idxmax）或最近一根（現行）；(2) K 圖支撐壓力改「依週期勾選」取代跨週期第 1~5 層；(3) 逼近排行／右側彙總改週期下拉（預設 20 日）。
-- **明燈與冥燈**（新大項，見 memory `project_mingdeng`）：已定＝付費才能看、長黑棒＝(開−收)/收 ≥5%（量 > max(5,10 日均量)×1.3 為出貨）。待定＝長上影線門檻（過去對話找不到定義，提議「上影線 ≥ 實體且 ≥ 股價 2%」）、點名真人呈現方式、第一批追蹤名單。三階段計畫：①回測引擎＋MOPS 內部人申報＋管理者登錄表單 ②YouTube 字幕 AI 抽取＋美國國會申報 ③產業連動視窗；FB/Threads/X 不爬。
+- **明燈與冥燈**（memory `project_mingdeng`）：付費才能看；長黑棒＝(開−收)/收≥5%；**長上影線公式已確認**＝紅棒(最高−收)/收、黑棒(最高−開)/收，**門檻待用戶回**（我提議≥3%）；另待「點名真人呈現方式」與「第一批追蹤名單」（合夥人整理中）。三階段：①回測引擎＋MOPS 內部人申報＋管理者登錄 ②YouTube 字幕 AI＋美國國會申報 ③產業連動；FB/Threads/X 不爬。
 
 ### 其他待辦
 - 約 2026-10-03：主動 ETF「今日」改讀自有 active_etf_flow。
@@ -222,5 +229,5 @@ W=<prod_wt 路徑> && cd $W && git fetch -q origin && git reset -q --hard origin
 - [ ] 讀本檔 §0 鐵則、§7 眉角、§8 目前狀態。
 - [ ] 讀 memory 索引與相關 project_*.md。
 - [ ] 確認 `.env` 有 SUPABASE_SERVICE_KEY，能跑 `python.exe scripts/xxx.py`。
-- [ ] 問用戶 `sql/macro_events_hidden.sql` 是否已執行；uat 那 7 項是否可推 prod。
+- [ ] 接手時先看 §8「🔨 進行中」：首頁選擇權支撐壓力 OI 三層改版還沒寫完（參數已定案，待寫 option_sr.py＋`sql/option_sr_levels.sql`＋前端）。
 - [ ] 流程：討論算法/門檻 → 估容量 → 寫 `sql/*.sql` 請用戶執行 → 腳本（入 bat）→ 前端視圖（_VIEWS＋NAVMAP，跟隨全站明暗）→ 頁尾標算法 → 本機驗證 → 推 uat → 回報「已部署到 uat，請確認…」→ 等「推 prod」。
