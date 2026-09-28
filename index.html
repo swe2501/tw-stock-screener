@@ -3293,7 +3293,7 @@
   <!-- ══ 壓力支撐逼近（選股；個股分價量表）══ -->
   <div id="srView" style="display:none;max-width:1040px;margin:0 auto;">
     <div class="tm-head"><h2>🧱 壓力支撐逼近</h2><span class="sub" id="srSub"></span></div>
-    <div class="liq-tip">用個股過去 N 日的<b>分價量表</b>找出上方套牢大量區（壓力）與下方承接大量區（支撐），列出<b>收盤價最接近</b>的個股。點任一列開 K 線，圖上會畫出該股的壓力／支撐帶。</div>
+    <div class="liq-tip">依<b>多週期大量 K 棒水平線</b>（合夥人規格 SPEC-TA-SR-001）找出每檔的支撐與壓力，列出<b>收盤價最接近</b>最近壓力（或支撐）的個股。「綜合」＝7 個週期共 21 條線中最近的一條；其他頁籤＝只看該週期的 3 條線。點任一列開 K 線。</div>
     <div class="liq-seg" id="srSSeg">
       <button data-s="day" class="on">日K 分價</button>
       <button data-s="hour">小時K 分價</button>
@@ -3304,26 +3304,31 @@
       <button data-m="sup">靠近支撐</button>
     </div>
     <div id="srTbl"><div class="fc-empty">載入中…</div></div>
-    <div class="fc-note" id="srNote"><b>算法（2026-09-27 與合夥人定案）：</b>分價量表以最新收盤價為中心、每格寬＝收盤價的 1%，每天成交量依當日最低～最高價均勻分攤到涵蓋的價格格。<b>大量格</b>＝量 ≥ 所有有量格平均 × 1.3（同選擇權「均量 1.3 倍」原則）。<b>壓力區</b>＝收盤價以上量最大的大量格（上方沒有大量格＝無套牢壓力，例如創新高，不列入）；<b>支撐區</b>＝收盤價以下量最大的大量格。距離＝壓力區下緣（或支撐區上緣）與收盤價的差 ÷ 收盤價。列入條件：距離 0～3%、近 20 日日均成交值 ≥ 5,000 萬、排除 ETF，依距離由近到遠（距離以 1% 為一格；同一格內依區內成交值＝區內張數×區間均價由大到小，避免低價股因張數多而霸榜）取前 20 名；歷史不足 N 天的個股不列入該 N。<b>日K／小時K 兩版（2026-09-28）</b>：日K版＝每天一根日K，當天成交量依最低～最高價均勻分攤；小時K版＝改用 60 分鐘K 逐根分攤（每天 5 根，較貼近實際各價位成交），Yahoo 小時K 常缺 9:00 開盤那根的量與收盤集合競價，「日成交量 − 小時K 加總」的差額依當日最低～最高價均勻分攤；沒有小時K的日子（Yahoo 約只有近 2 年）退回用日K。資料：上市＋上櫃每日 K 線（TWSE/TPEx 官方，歷史以 Yahoo 回補）、60 分鐘K（Yahoo），盤後日更。</div>
+    <div class="fc-note" id="srNote"><b>算法（規格 SPEC-TA-SR-001，2026-09-28 合夥人定案）：</b>週期 P＝5、10、20、60、120、240、480 根 K 棒（日K版＝日K 根數、小時K版＝60 分鐘K 根數）。每個週期在最近 P 根中取<b>成交量最大的那根</b>（同量取最近），以其最高價 H、中點 M＝(高+低)/2、最低價 L 畫三條水平線，共 21 條。以最新收盤 C 判定：C＞H 三線皆支撐；M＜C≤H 則 H 為壓力、M/L 為支撐；L≤C≤M 則 H/M 為壓力、L 為支撐；C＜L 三線皆壓力。<b>最近壓力</b>＝所有壓力線中最低者、<b>最近支撐</b>＝所有支撐線中最高者，距離＝|線−收盤|÷收盤。列入條件：距離大於 0 且 ≤ 3%（收盤剛好壓在線上者不列，多半是當日自身就是那根大量K）、近 20 日日均成交值 ≥ 5,000 萬、排除 ETF，依距離由近到遠取前 20 名；歷史不足 P 根的週期不計。小時K版的收盤一律用當日實際收盤。「多空線數比率」待合夥人確認公式後加入。資料：上市＋上櫃日K（TWSE/TPEx 官方）、60 分鐘K（Yahoo），盤後日更。</div>
   </div>
   <script>
   (function(){
     var el=function(id){return document.getElementById(id);};
-    var NS=[5,10,20,60,120,240,480], n=20, mode='res', src='day', latestBy={}, cache={};
+    var NS=[0,5,10,20,60,120,240,480], n=0, mode='res', src='day', latestBy={}, cache={};
     function tbl(){ return src==='hour'?'stock_sr_h':'stock_sr'; }
     function nm(c){return (window._names&&window._names[c])||'';}
     function px(v){return v==null?'—':String(+(+v).toFixed(2));}   // 收盤：原值
     function zp(v){return v==null?'—':(+v>=1000?Math.round(v):(+v).toFixed(v>=100?1:2));}   // 區間上下緣(計算值)
+    function srcOf(r,R){   // 這條最近線來自哪個週期的高/中/低
+      if(!r.n){ var t=String(r.src||'').split('；').filter(function(x){return x.indexOf(R?'壓:':'撐:')===0;})[0]; return t?t.slice(2):''; }
+      var v=+(R?r.res_lo:r.sup_lo), k=[['h','高'],['m','中'],['l','低']].filter(function(p){return Math.abs(+r[p[0]]-v)<1e-6;})[0];
+      return r.n+(k?k[1]:'');
+    }
     function render(a){
       if(!a||!a.length){ el('srTbl').innerHTML='<div class="fc-empty">此條件暫無符合個股</div>'; return; }
       var R=mode==='res';
-      el('srTbl').innerHTML='<table class="liq"><thead><tr><th class="l">排名</th><th class="l">代號 / 名稱</th><th>收盤</th><th>'+(R?'壓力區':'支撐區')+'</th><th>距離</th><th>區內量(張)</th><th>區內成交值(億)</th><th>日均成交值(億)</th></tr></thead><tbody>'
+      el('srTbl').innerHTML='<table class="liq"><thead><tr><th class="l">排名</th><th class="l">代號 / 名稱</th><th>收盤</th><th>'+(R?'最近壓力':'最近支撐')+'</th><th>距離</th><th class="l">來源（週期·高/中/低）</th><th>日均成交值(億)</th></tr></thead><tbody>'
         +a.map(function(r,i){
-          var lo=R?r.res_lo:r.sup_lo, hi=R?r.res_hi:r.sup_hi, d=R?r.res_dist:r.sup_dist, v=R?r.res_vol:r.sup_vol;
-          return '<tr class="clk" onclick="window._srPickN='+n+';window._srPickSrc=\''+src+'\';_openStock(\''+r.code+'\',\''+nm(r.code).replace(/'/g,'')+'\')">'
+          var v=R?r.res_lo:r.sup_lo, d=R?r.res_dist:r.sup_dist;
+          return '<tr class="clk" onclick="window._srPickSrc=\''+src+'\';_openStock(\''+r.code+'\',\''+nm(r.code).replace(/'/g,'')+'\')">'
             +'<td class="l"><span class="rk">'+(i+1)+'</span></td><td class="l"><span class="c">'+r.code+'</span> '+nm(r.code)+'</td>'
-            +'<td>'+px(r.close)+'</td><td style="color:'+(R?'var(--red)':'var(--green)')+';font-weight:700">'+zp(lo)+'～'+zp(hi)+'</td>'
-            +'<td>'+(R?'+':'−')+d+'%</td><td>'+(v!=null?Number(v).toLocaleString():'—')+'</td><td>'+(r._zv/1e8).toFixed(1)+'</td><td>'+(r.avg_value/1e8).toFixed(1)+'</td></tr>';
+            +'<td>'+px(r.close)+'</td><td style="color:'+(R?'var(--red)':'var(--green)')+';font-weight:700">'+zp(v)+'</td>'
+            +'<td>'+(R?'+':'−')+d+'%</td><td class="l" style="font-size:12px;color:var(--text-muted)">'+srcOf(r,R)+'</td><td>'+(r.avg_value/1e8).toFixed(1)+'</td></tr>';
         }).join('')+'</tbody></table>';
     }
     function load(){
@@ -3334,17 +3339,15 @@
       var SB=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'', AK=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';
       var H={apikey:AK,Authorization:'Bearer '+AK};
       var p=mode==='res'?'res':'sup';
-      var q=SB+'/rest/v1/'+tbl()+'?select=*&n=eq.'+n+'&trade_date=eq.'+latest+'&'+p+'_dist=gte.0&'+p+'_dist=lte.3&avg_value=gte.50000000&order='+p+'_dist.asc&limit=1000';
+      var q=SB+'/rest/v1/'+tbl()+'?select=*&n=eq.'+n+'&trade_date=eq.'+latest+'&'+p+'_dist=gt.0&'+p+'_dist=lte.3&avg_value=gte.50000000&order='+p+'_dist.asc&limit=20';   // 距離>0：排除收盤剛好壓在線上（多為當日自身就是大量K）
       // 距離以 1% 為一格(0.5/1.5/2.5%)，同一格內依「區內成交值」(張×價) 大到小，避免低價股張數多而霸榜
       fetch(q,{headers:H}).then(function(r){return r.json();}).then(function(a){
         a=Array.isArray(a)?a:[];
-        a.forEach(function(r){ r._zv=(r[p+'_vol']||0)*1000*((+r[p+'_lo']+ +r[p+'_hi'])/2); });
-        a.sort(function(x,y){ return Math.floor(x[p+'_dist'])-Math.floor(y[p+'_dist']) || y._zv-x._zv; });
         cache[key]=a.slice(0,20); render(cache[key]); })
         .catch(function(){ el('srTbl').innerHTML='<div class="fc-empty">讀取失敗</div>'; });
     }
     window._srShow=function(){
-      el('srNSeg').innerHTML=NS.map(function(x){return '<button data-n="'+x+'" class="'+(x===n?'on':'')+'">'+x+' 日</button>';}).join('');
+      el('srNSeg').innerHTML=NS.map(function(x){return '<button data-n="'+x+'" class="'+(x===n?'on':'')+'">'+(x?x+' 根':'綜合')+'</button>';}).join('');
       el('srNSeg').querySelectorAll('button').forEach(function(b){ b.onclick=function(){ n=+b.dataset.n; el('srNSeg').querySelectorAll('button').forEach(function(x){x.classList.toggle('on',x===b);}); load(); }; });
       el('srMSeg').querySelectorAll('button').forEach(function(b){ b.onclick=function(){ mode=b.dataset.m; el('srMSeg').querySelectorAll('button').forEach(function(x){x.classList.toggle('on',x===b);}); load(); }; });
       el('srSSeg').querySelectorAll('button').forEach(function(b){ b.onclick=function(){ src=b.dataset.s; el('srSSeg').querySelectorAll('button').forEach(function(x){x.classList.toggle('on',x===b);}); load(); }; });
@@ -5789,8 +5792,17 @@
           <span id="mkCmp" style="margin-left:10px;font-size:12px"></span>
         </div>
         <div id="srLinePanel" style="padding:6px 8px;border-top:1px solid var(--border);font-size:12px;color:var(--text)">
-          <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;user-select:none"><input type="checkbox" id="srLineChk" onchange="window._srLinesOn=this.checked;window._srDraw&&window._srDraw()"><b style="color:#c0392b">支撐壓力線</b></label>
-          <span style="color:var(--text-muted);font-size:11px;margin-left:6px">顯示分價量表的壓力（紅）／支撐（綠）虛線；天數與日K／小時K 版在右側「🧱 支撐壓力」分頁切換</span>
+          <a onclick="_srTogglePanel()" style="cursor:pointer;text-decoration:none;user-select:none"><span id="srLineArrow" style="color:var(--text-muted);font-size:11px;margin-right:4px">▸</span><b style="color:#c0392b">支撐壓力</b></a>
+          <span id="srLineOpts" style="display:none">
+            <label style="margin-left:14px;cursor:pointer"><input type="checkbox" id="srRank1" onchange="_srRankToggle(1,this.checked)"> 第1（主要）</label>
+            <label style="margin-left:10px;cursor:pointer"><input type="checkbox" id="srRank2" onchange="_srRankToggle(2,this.checked)"> 第2（次要）</label>
+            <label style="margin-left:10px;cursor:pointer"><input type="checkbox" id="srRank3" onchange="_srRankToggle(3,this.checked)"> 第3</label>
+            <label style="margin-left:10px;cursor:pointer"><input type="checkbox" id="srRank4" onchange="_srRankToggle(4,this.checked)"> 第4</label>
+            <label style="margin-left:10px;cursor:pointer"><input type="checkbox" id="srRank5" onchange="_srRankToggle(5,this.checked)"> 第5</label>
+            　<a onclick="_srRankAll(true)" style="color:#f5c84b;cursor:pointer">全勾</a>
+            　<a onclick="_srRankAll(false)" style="color:#f5c84b;cursor:pointer">全部取消</a>
+            <div style="color:var(--text-muted);font-size:11px;margin-top:3px">第 N 層＝離收盤第 N 近的支撐（綠）與壓力（紅），由 7 個週期大量 K 棒的高／中／低共 21 條線排序而來；日K／小時K 版在右側「🧱 支撐壓力」分頁切換。</div>
+          </span>
         </div>
         <div id="vpPanel" style="padding:6px 8px;border-top:1px solid var(--border);font-size:12px;color:var(--text)">
           <a onclick="_vpTogglePanel()" style="cursor:pointer;text-decoration:none;user-select:none"><span id="vpArrow" style="color:var(--text-muted);font-size:11px;margin-right:4px">▸</span><b style="color:#b58a2d">價量分析</b></a>
@@ -6012,35 +6024,60 @@
           // 支撐壓力：stock_sr（分價量表，各 N 日）→ 右側表格＋K 線價位帶（_srDraw 於每次重繪 K 線時呼叫）
           var SR={code:null, rows:[], n:20, lines:[], src:'day'};
           function srPx(v){return v==null?'—':(+v>=1000?Math.round(v):(+v).toFixed(v>=100?1:2));}
+          // 依規格分類：狀態 A~D 與各線屬性（S=支撐、R=壓力）
+          function srClassify(c,h,m,l){
+            if(c>h) return ['A',{H:'S',M:'S',L:'S'}];
+            if(m<c&&c<=h) return ['B',{H:'R',M:'S',L:'S'}];
+            if(l<=c&&c<=m) return ['C',{H:'R',M:'R',L:'S'}];
+            return ['D',{H:'R',M:'R',L:'R'}];
+          }
+          var SR_PART={H:'高',M:'中',L:'低'}, SR_STATE={A:'股價在大量區之上',B:'在大量區上半部',C:'在大量區下半部',D:'股價在大量區之下'};
+          // 21 條線聚合：支撐由高到低、壓力由低到高；同價位合併來源
+          function srLevels(){
+            var S={}, R={};
+            SR.rows.forEach(function(r){ if(!r.n||r.h==null) return; var c=+r.close, cl=srClassify(c,+r.h,+r.m,+r.l)[1];
+              ['H','M','L'].forEach(function(k){ var v=+r[k.toLowerCase()], key=v.toFixed(2), bag=cl[k]==='S'?S:R; (bag[key]=bag[key]||{v:v,src:[]}).src.push(r.n+SR_PART[k]); }); });
+            var sv=Object.keys(S).map(function(k){return S[k];}).sort(function(a,b){return b.v-a.v;});
+            var rv=Object.keys(R).map(function(k){return R[k];}).sort(function(a,b){return a.v-b.v;});
+            return {S:sv, R:rv};
+          }
           function srRender(){
             var box=el('cnpSr'); if(!box)return;
-            var seg='<div class="gs-osr-tabs" style="float:none;margin-bottom:8px">'+[['day','日K 分價'],['hour','小時K 分價']].map(function(t){return '<button type="button" data-src="'+t[0]+'" class="'+(t[0]===SR.src?'on':'')+'">'+t[1]+'</button>';}).join('')+'</div>';
-            if(!SR.rows.length){ box.innerHTML='<div class="gs-optsr" style="border:0;padding:0;background:none">'+seg+'</div><div class="fc-empty">暫無支撐壓力資料（ETF、歷史不足或成交值過低的個股不計算'+(SR.src==='hour'?'；小時K版資料準備中':'')+'）</div>'; bindSrc(box); return; }
-            box.innerHTML='<div class="gs-optsr" style="border:0;padding:0;background:none">'+seg+'</div><div class="cnp-fcard" style="overflow-x:auto"><div class="cnp-fk" style="margin-bottom:4px">分價量表（'+(SR.src==='hour'?'小時K':'日K')+'）· 點列切換 K 線上畫的天數（目前 '+SR.n+' 日）</div>'
-              +'<table class="cnp-ftable"><thead><tr><th class="l">天數</th><th>壓力區</th><th>距離</th><th>支撐區</th><th>距離</th></tr></thead><tbody>'
-              +SR.rows.map(function(r){
-                return '<tr data-n="'+r.n+'" style="cursor:pointer'+(r.n===SR.n?';background:var(--surface2);font-weight:700':'')+'"><td class="l">'+r.n+' 日</td>'
-                  +'<td style="color:var(--red)">'+(r.res_lo!=null?srPx(r.res_lo)+'～'+srPx(r.res_hi):'無')+'</td><td>'+(r.res_dist!=null?'+'+r.res_dist+'%':'—')+'</td>'
-                  +'<td style="color:var(--green)">'+(r.sup_lo!=null?srPx(r.sup_lo)+'～'+srPx(r.sup_hi):'無')+'</td><td>'+(r.sup_dist!=null?'−'+r.sup_dist+'%':'—')+'</td></tr>';
-              }).join('')+'</tbody></table></div>'
-              +'<div class="cnp-fk" style="opacity:.85;line-height:1.7">算法：過去 N 日成交量依'+(SR.src==='hour'?'每根 60 分鐘K 的最低～最高價均勻分攤（小時K 缺的開盤量／集合競價依當日高低均勻分攤）':'每天日K 的最低～最高價均勻分攤')+'到價格格（格寬＝收盤價 1%）；量 ≥ 平均格量 × 1.3 為大量格。壓力＝收盤以上量最大的大量格（「無」＝上方無套牢大量，如創新高）、支撐＝收盤以下量最大的大量格。資料日 '+(SR.rows[0].trade_date||'')+'。</div>';
-            box.querySelectorAll('tr[data-n]').forEach(function(tr){ tr.onclick=function(){ SR.n=+tr.getAttribute('data-n'); srRender(); window._srDraw(); }; });
+            var seg='<div class="gs-osr-tabs" style="float:none;margin-bottom:8px">'+[['day','日K'],['hour','小時K']].map(function(t){return '<button type="button" data-src="'+t[0]+'" class="'+(t[0]===SR.src?'on':'')+'">'+t[1]+'</button>';}).join('')+'</div>';
+            var rows=SR.rows.filter(function(r){return r.n&&r.h!=null;});
+            if(!rows.length){ box.innerHTML='<div class="gs-optsr" style="border:0;padding:0;background:none">'+seg+'</div><div class="fc-empty">暫無支撐壓力資料（ETF 或歷史不足的個股不計算）</div>'; bindSrc(box); return; }
+            var close=+rows[0].close, unit=SR.src==='hour'?'根':'日', lv=srLevels();
+            var cell=function(v,a){ return '<td style="color:'+(a==='S'?'var(--green)':'var(--red)')+';font-weight:700" title="'+(a==='S'?'支撐':'壓力')+'">'+srPx(v)+'</td>'; };
+            var sum='<div class="cnp-fgrid" style="margin-bottom:8px">'
+              +'<div><div class="cnp-fk">最近壓力</div><div class="cnp-fv" style="color:var(--red)">'+(lv.R.length?srPx(lv.R[0].v)+' <small style="font-size:11px;color:var(--text-muted)">+'+((lv.R[0].v-close)/close*100).toFixed(2)+'%</small>':'無')+'</div></div>'
+              +'<div><div class="cnp-fk">最近支撐</div><div class="cnp-fv" style="color:var(--green)">'+(lv.S.length?srPx(lv.S[0].v)+' <small style="font-size:11px;color:var(--text-muted)">−'+((close-lv.S[0].v)/close*100).toFixed(2)+'%</small>':'無')+'</div></div>'
+              +'<div><div class="cnp-fk">支撐線／壓力線</div><div class="cnp-fv">'+lv.S.reduce(function(a,x){return a+x.src.length;},0)+' ／ '+lv.R.reduce(function(a,x){return a+x.src.length;},0)+' 條</div></div>'
+              +'<div><div class="cnp-fk">收盤</div><div class="cnp-fv">'+srPx(close)+'</div></div></div>';
+            box.innerHTML='<div class="gs-optsr" style="border:0;padding:0;background:none">'+seg+'</div>'
+              +'<div class="cnp-fcard">'+sum+'</div>'
+              +'<div class="cnp-fcard" style="overflow-x:auto"><div class="cnp-fk" style="margin-bottom:4px">各週期大量 K 棒（'+(SR.src==='hour'?'小時K':'日K')+'）· <span style="color:var(--red)">紅＝壓力</span>、<span style="color:var(--green)">綠＝支撐</span></div>'
+              +'<table class="cnp-ftable"><thead><tr><th class="l">週期</th><th>大量K</th><th>高</th><th>中</th><th>低</th></tr></thead><tbody>'
+              +rows.map(function(r){ var c=srClassify(close,+r.h,+r.m,+r.l);
+                return '<tr title="狀態 '+c[0]+'：'+SR_STATE[c[0]]+'"><td class="l">'+r.n+' '+unit+'</td><td style="font-size:10.5px;color:var(--text-muted)">'+String(r.anchor_date||'').slice(2)+'</td>'+cell(r.h,c[1].H)+cell(r.m,c[1].M)+cell(r.l,c[1].L)+'</tr>'; }).join('')
+              +'</tbody></table></div>'
+              +'<div class="cnp-fk" style="opacity:.85;line-height:1.7">算法（規格 SPEC-TA-SR-001，2026-09-28 合夥人定案）：各週期回溯 N 根'+(SR.src==='hour'?'小時K':'日K')+'，取成交量最大的那根（同量取最近），以其最高、中點（高低平均）、最低畫三條水平線；收盤價在線之上＝支撐、在線之下＝壓力（收盤恰在大量區內時依規格狀態 B／C 判定）。最近支撐＝所有支撐線中最高者、最近壓力＝所有壓力線中最低者。K 線上要畫哪幾層，請在圖上方「支撐壓力」勾選。資料日 '+(rows[0].trade_date||'')+'。</div>';
             bindSrc(box);
           }
           function bindSrc(box){ box.querySelectorAll('[data-src]').forEach(function(b){ b.onclick=function(){ SR.src=b.getAttribute('data-src'); fetchSr(SR.code); }; }); }
+          window._srRanks=window._srRanks||{};          // 勾選要畫的層級：1=主要、2=次要…
           window._srDraw=function(){
             if(typeof candleSeriesRef==='undefined'||!candleSeriesRef)return;
             SR.lines.forEach(function(l){ try{ l.s.removePriceLine(l.p); }catch(e){} }); SR.lines=[];
-            if(!window._srLinesOn) return;                // 使用者開關（預設關，K 圖乾淨）
-            var r=SR.rows.filter(function(x){return x.n===SR.n;})[0]; if(!r||SR.code!==currentCode)return;
-            var D=LightweightCharts.LineStyle.Dashed;
-            [['res',  '#e74c3c','壓'],['sup','#26c281','撐']].forEach(function(z){
-              var lo=r[z[0]+'_lo'], hi=r[z[0]+'_hi']; if(lo==null)return;
-              [hi,lo].forEach(function(p,i){
-                SR.lines.push({s:candleSeriesRef, p:candleSeriesRef.createPriceLine({price:+p, color:z[1], lineWidth:1, lineStyle:D, axisLabelVisible:i===0, title:i===0?(z[2]+SR.n+'日'+(SR.src==='hour'?'(時)':'')):''})});
-              });
-            });
+            if(SR.code!==currentCode) return;
+            var lv=srLevels(), tag=SR.src==='hour'?'(時)':'';
+            Object.keys(window._srRanks).forEach(function(k){ if(!window._srRanks[k]) return; var i=+k-1;
+              [[lv.S[i],'#26c281','撐'],[lv.R[i],'#e74c3c','壓']].forEach(function(z){ if(!z[0]) return;
+                SR.lines.push({s:candleSeriesRef, p:candleSeriesRef.createPriceLine({price:z[0].v, color:z[1], lineWidth:i===0?2:1, lineStyle:LightweightCharts.LineStyle.Dashed, axisLabelVisible:true, title:z[2]+k+tag+' '+z[0].src.join('、')})});
+              }); });
           };
+          window._srTogglePanel=function(){ var o=el('srLineOpts'), open=o.style.display==='none'; o.style.display=open?'inline':'none'; el('srLineArrow').textContent=open?'▾':'▸'; };
+          window._srRankToggle=function(k,on){ window._srRanks[k]=on; window._srDraw(); };
+          window._srRankAll=function(on){ [1,2,3,4,5].forEach(function(k){ window._srRanks[k]=on; var c=el('srRank'+k); if(c)c.checked=on; }); window._srDraw(); };
           window._loadStockSr=function(code){
             if(window._srPickN){ SR.n=window._srPickN; window._srPickN=null; }
             if(window._srPickSrc){ SR.src=window._srPickSrc; window._srPickSrc=null; }
