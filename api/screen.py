@@ -1953,6 +1953,19 @@ class handler(BaseHTTPRequestHandler):
             except Exception as e:
                 import traceback
                 return self._send_json(200, {"error": str(e), "traceback": traceback.format_exc()})
+        # 上櫃 ETF 代號→名稱（TPEx openapi，前端搜尋清單用；前端直連會被跨站擋；CDN 快取 1 天）2026-09-28
+        if (qs.get("stat") or [""])[0] == "otcetf":
+            try:
+                req = urllib.request.Request("https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes",
+                                             headers={"User-Agent": "Mozilla/5.0"})
+                import ssl as _ssl
+                ctx = _ssl.create_default_context(); ctx.check_hostname = False; ctx.verify_mode = _ssl.CERT_NONE
+                rows = json.loads(urllib.request.urlopen(req, timeout=20, context=ctx).read().decode("utf-8-sig"))
+                out = {str(r.get("SecuritiesCompanyCode", "")).strip(): str(r.get("CompanyName", "")).strip()
+                       for r in rows if str(r.get("SecuritiesCompanyCode", "")).startswith("00")}
+                return self._send_json(200, out, cache="public, s-maxage=86400, max-age=3600")
+            except Exception as e:
+                return self._send_json(200, {"error": str(e)})
         # 個股新聞（Google 新聞 RSS，即時查、不存 DB；CDN 快取 30 分鐘）
         if (qs.get("stat") or [""])[0] == "stocknews":
             code = (qs.get("code") or [""])[0].strip()
