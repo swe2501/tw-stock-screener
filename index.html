@@ -1309,7 +1309,7 @@
         var ind=(window._indLabel&&window._indLabel(it.code))||'';
         var mk=(window._mktLabel&&window._mktLabel(it.code))||'';
         var tag=ind?'<span class="gs-sd-ind">'+ind+'</span>':'';
-        var mkt=mk==='上櫃'?'<span class="gs-sd-mkt otc">上櫃</span>':(mk==='上市'?'<span class="gs-sd-mkt twse">上市</span>':'');
+        var mkt=mk==='上櫃'?'<span class="gs-sd-mkt otc">上櫃</span>':(mk==='上市'?'<span class="gs-sd-mkt twse">上市</span>':(mk==='ETF'?'<span class="gs-sd-mkt etf">ETF</span>':''));
         return '<div class="gs-sd-item'+(i===sel?' on':'')+'" role="option" data-code="'+it.code+'"><span class="gs-sd-code">'+it.code+'</span><span class="gs-sd-name">'+(it.name||'')+'</span>'+tag+mkt+'</div>';
       }).join(''); drop.hidden=false; if(inp)inp.setAttribute('aria-expanded','true'); }
     function open(code){ if(drop)drop.hidden=true; if(window._openStock)window._openStock(String(code), (window._names&&window._names[code])||''); }
@@ -1439,6 +1439,7 @@
     .gs-sd-mkt{font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;flex-shrink:0;}
     .gs-sd-mkt.twse{background:rgba(30,64,49,.12);color:var(--brand-green);}
     .gs-sd-mkt.otc{background:rgba(155,108,255,.14);color:var(--accent2);}
+    .gs-sd-mkt.etf{background:rgba(58,134,224,.14);color:#3a86e0;}
     .gs-sd-empty{padding:12px;font-size:13px;color:var(--text-muted);text-align:center;}
     .gs-sd-ind{font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;flex-shrink:0;background:rgba(181,138,45,.14);color:var(--accent);}
     /* 頁首橫條：個股搜尋＋指數快覽（紅框位置）*/
@@ -2424,15 +2425,19 @@
     var pNames=fetch('/api/screen?stat=names').then(function(r){return r.json();}).catch(function(){return {};});
     var pOtc=fetch(SB+'/rest/v1/otc_names?select=code,name',{headers:{apikey:AK,Authorization:'Bearer '+AK}}).then(function(r){return r.ok?r.json():[];}).catch(function(){return [];});
     var pInd=fetch('/api/screen?stat=industries').then(function(r){return r.json();}).catch(function(){return {};});
-    Promise.all([pNames,pOtc,pInd]).then(function(res){
-      var m=res[0]||{}, otc=res[1]||[], ind=res[2]||{};
+    var pEtf=fetch(SB+'/rest/v1/etf_products?select=code,name,category',{headers:{apikey:AK,Authorization:'Bearer '+AK}}).then(function(r){return r.ok?r.json():[];}).catch(function(){return [];});   // 2026-09-28 ETF 也可搜尋
+    var pOtcEtf=fetch('/api/screen?stat=otcetf').then(function(r){return r.json();}).catch(function(){return {};});   // 上櫃 ETF（債券型等，etf_products 沒有）
+    Promise.all([pNames,pOtc,pInd,pEtf,pOtcEtf]).then(function(res){
+      var m=res[0]||{}, otc=res[1]||[], ind=res[2]||{}, etf=res[3]||[], oe=res[4]||{};
       for(var c in m){ window._mkt[c]='twse'; }
       otc.forEach(function(r){ if(r&&r.code){ if(!m[r.code])m[r.code]=r.name; window._mkt[r.code]='otc'; } });
       window._ind=ind||{};
+      etf.forEach(function(r){ if(r&&r.code){ if(!m[r.code])m[r.code]=r.name; window._mkt[r.code]='etf'; if(r.category&&!window._ind[r.code]) window._ind[r.code]=r.category; } });
+      if(!oe.error) for(var oc in oe){ if(oc&&!m[oc]){ m[oc]=oe[oc]; window._mkt[oc]='etf'; } }   // 放最後，避免被上市標記蓋掉
       window._names=m; if(cb)cb(window._names);
     }).catch(function(){ window._names={}; if(cb)cb(window._names); });
   };
-  window._mktLabel = function(code){ var k=window._mkt&&window._mkt[String(code)]; return k==='otc'?'上櫃':(k==='twse'?'上市':''); };
+  window._mktLabel = function(code){ var k=window._mkt&&window._mkt[String(code)]; return k==='otc'?'上櫃':(k==='twse'?'上市':(k==='etf'?'ETF':'')); };
   window._indLabel = function(code){ return (window._ind&&window._ind[String(code)])||''; };
   // 共用：點個股開 K 線圖
   window._openStock = function(code, name){ try{ if(typeof openChart==='function') openChart(String(code), name||((window._names&&window._names[code])||'')); }catch(e){} };
@@ -5115,7 +5120,7 @@
       if(!_hpList.length){ box.hidden=true; if(inp)inp.setAttribute('aria-expanded','false'); return; }
       var h='';
       _hpList.forEach(function(it,i){
-        var mk=it.mkt==='otc'?'<span class="gs-sd-mkt otc">上櫃</span>':(it.mkt==='twse'?'<span class="gs-sd-mkt twse">上市</span>':'');
+        var mk=it.mkt==='otc'?'<span class="gs-sd-mkt otc">上櫃</span>':(it.mkt==='twse'?'<span class="gs-sd-mkt twse">上市</span>':(it.mkt==='etf'?'<span class="gs-sd-mkt etf">ETF</span>':''));
         var ind=(window._indLabel&&window._indLabel(it.code))||'';
         var indtag=ind?'<span class="gs-sd-ind">'+ind+'</span>':'';
         h+='<div class="gs-sd-item'+(i===_hpSel?' on':'')+'" role="option" data-code="'+it.code+'" data-name="'+(it.name||'').replace(/"/g,'&quot;')+'"><span class="gs-sd-code">'+it.code+'</span><span class="gs-sd-name">'+(it.name||'')+'</span>'+indtag+mk+'</div>';

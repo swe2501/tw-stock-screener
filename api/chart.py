@@ -1084,6 +1084,12 @@ class handler(BaseHTTPRequestHandler):
                 if result:
                     result["code"] = "TX=F"
                     result["name"] = "台指期貨走勢（大盤近似）"
+            # 上櫃 ETF（如 00679B）不在 otc_names 清單 → 上市(.TW)抓不到時改用上櫃(.TWO)重試（2026-09-28）
+            if (not result or not result.get("data")) and code[:4].isdigit() and not _is_otc(code):
+                _OTC_CODES.add(code)
+                result = fetch_chart(code, range_str, interval, adj=adj, raw=raw)
+                if not result or not result.get("data"):
+                    _OTC_CODES.discard(code)
             if not result:
                 self._json(404, {"error": f"no data for {code}"})
                 return
