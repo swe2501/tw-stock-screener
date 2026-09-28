@@ -5772,8 +5772,12 @@
         </div>
         <div id="brokerFilterPanel" style="display:none;padding:6px 8px;border-top:1px solid var(--border);font-size:12px;color:var(--text)"></div>
         <div id="mkPanel" style="padding:6px 8px;border-top:1px solid var(--border);font-size:12px;color:var(--text)">
-          <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;user-select:none"><input type="checkbox" id="mkChk" onchange="_mkToggle(this.checked)"><b style="color:#5a78aa">大盤K</b></label>
-          <span style="color:var(--text-muted);font-size:11px;margin-left:6px">疊加加權指數比較強弱（大盤價格在左軸、空心藍灰 K 棒）</span>
+          <a onclick="_mkTogglePanel()" style="cursor:pointer;text-decoration:none;user-select:none"><span id="mkArrow" style="color:var(--text-muted);font-size:11px;margin-right:4px">▸</span><b style="color:#5a78aa">大盤K</b></a>
+          <span id="mkOpts" style="display:none">
+            <label style="display:inline-flex;align-items:center;gap:3px;margin-left:14px;cursor:pointer"><input type="checkbox" id="mkDayChk" onchange="_mkPick('day',this.checked)">日K</label>
+            <label style="display:inline-flex;align-items:center;gap:3px;margin-left:12px;cursor:pointer"><input type="checkbox" id="mkHourChk" onchange="_mkPick('hour',this.checked)">小時K</label>
+            <span style="color:var(--text-muted);font-size:11px;margin-left:8px">疊加加權指數比較強弱（大盤價格在左軸、空心藍灰 K 棒；勾小時K 會切到小時K 圖）</span>
+          </span>
           <span id="mkCmp" style="margin-left:10px;font-size:12px"></span>
         </div>
         <div id="vpPanel" style="padding:6px 8px;border-top:1px solid var(--border);font-size:12px;color:var(--text)">
@@ -10710,9 +10714,25 @@
       try{ chartInstance&&chartInstance.applyOptions({leftPriceScale:{visible:false}}); }catch(e){}
       if(el('mkCmp')) el('mkCmp').innerHTML='';
     }
-    window._mkToggle=function(on){ MK.on=on; window._mkApply(false); };
+    function syncChk(){   // 勾選框跟著目前圖表週期（一次只勾一個）
+      var h=!!window._chartIsHourly;
+      if(el('mkDayChk')) el('mkDayChk').checked=MK.on&&!h;
+      if(el('mkHourChk')) el('mkHourChk').checked=MK.on&&h;
+    }
+    window._mkTogglePanel=function(){
+      var o=el('mkOpts'), open=o.style.display==='none';
+      o.style.display=open?'inline':'none'; el('mkArrow').textContent=open?'▾':'▸';
+    };
+    window._mkPick=function(tf,on){
+      if(!on){ MK.on=false; syncChk(); window._mkApply(false); return; }
+      MK.on=true; var h=!!window._chartIsHourly;
+      if(tf==='hour'&&!h){ syncChk(); if(typeof loadHourlyChart==='function') loadHourlyChart(); return; }   // 圖表重繪後自動疊加
+      if(tf==='day'&&h){ syncChk(); if(typeof loadDailyChart==='function') loadDailyChart(); return; }
+      syncChk(); window._mkApply(false);
+    };
     window._mkApply=function(rebuilt){
       if(rebuilt) MK.series=null;                     // 主圖重建後舊 series 已隨舊圖銷毀
+      syncChk();
       if(!MK.on||typeof currentCode==='undefined'||currentCode==='^TWII'){ off(); return; }
       if(typeof chartInstance==='undefined'||!chartInstance||!window._vpCandles||!window._vpCandles.length) return;
       var cs=window._vpCandles, hourly=!!window._chartIsHourly, t0=cs[0].time, t1=cs[cs.length-1].time;
