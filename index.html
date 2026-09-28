@@ -2867,6 +2867,14 @@
     }
     function card(k,v,s){ return '<div class="fh-card"><div class="k"><span>'+k+'</span></div><div class="v">'+v+'</div><div class="s">'+(s||'')+'</div></div>'; }
 
+    // 縮放限制（比照首頁台股加權圖）：左右邊界鎖在資料起迄、不能縮出空白；放大最多看 10 個交易日
+      window._clampChartZoom = window._clampChartZoom || function(ch, minBars){
+        ch.timeScale().applyOptions({fixLeftEdge:true, fixRightEdge:true, rightOffset:0});
+        var busy=false, minSpan=(minBars||10)-1;
+        ch.timeScale().subscribeVisibleLogicalRangeChange(function(r){
+          if(!r||busy) return; if(r.to-r.from<minSpan){ busy=true; try{ ch.timeScale().setVisibleLogicalRange({from:r.to-minSpan, to:r.to}); }catch(e){} setTimeout(function(){busy=false;},0); }
+        });
+      };
     function _cssv(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
     function renderChart(){
       var host=el('fhChart'); if(typeof LightweightCharts==='undefined'){host.innerHTML='<div class="fc-empty">圖表載入失敗</div>';return;}
@@ -2890,7 +2898,8 @@
       var kmap=Object.fromEntries(DATA.map(function(r){return [r.trade_date,r];}));
       chart.subscribeCrosshairMove(function(pm){ var d=pm.time; var r=kmap[d]; if(!r){el('fhChartTip').textContent='移動滑鼠看每日數值';return;}
         el('fhChartTip').innerHTML='<b>'+d+'</b>　避險比率 <b style="color:#e03e2d">'+(ratioOf(r)!=null?ratioOf(r).toFixed(3)+'%':'–')+'</b>　<span style="color:#3a86e0">加權 <b>'+(r.taiex_close!=null?(+r.taiex_close).toFixed(0):'–')+'</b></span>　淨空 '+Math.round(r.eq_net_lots).toLocaleString()+' 口';});
-      var n=DATA.length; try{chart.timeScale().setVisibleLogicalRange({from:Math.max(0,n-250),to:n+2});}catch(_){}
+      window._clampChartZoom(chart, 10);
+      var n=DATA.length; try{chart.timeScale().setVisibleLogicalRange({from:Math.max(0,n-250),to:n-1});}catch(_){}
     }
 
     function renderQuad(cur,prev){
@@ -3209,7 +3218,8 @@
       s60.createPriceLine({price:50,color:'#0a9a56',lineWidth:1,lineStyle:2,axisLabelVisible:true,title:'50% 牛熊線'});
       var bmap=Object.fromEntries(arr.map(function(r){return [r.trade_date,r];}));
       chart.subscribeCrosshairMove(function(pm){var d=pm.time,r=bmap[d]; if(!r){el('bdChartTip').textContent='移動滑鼠看每日數值';return;} el('bdChartTip').innerHTML='<b>'+d+'</b>　站上60MA <b style="color:#0a9a56">'+(r.ma60_pct!=null?r.ma60_pct+'%':'–')+'</b>　<span style="color:#d2a12b">20MA <b>'+(r.ma20_pct!=null?r.ma20_pct+'%':'–')+'</b></span>　<span style="color:#3a86e0">加權 <b>'+(TX[d]!=null?TX[d].toFixed(0):'–')+'</b></span>　淨上漲 '+((r.up-r.down)>=0?'+':'')+(r.up-r.down);});
-      var n=arr.length; try{chart.timeScale().setVisibleLogicalRange({from:Math.max(0,n-160),to:n+2});}catch(_){}
+      window._clampChartZoom(chart, 10);   // 縮放限制同首頁台股加權圖
+      var n=arr.length; try{chart.timeScale().setVisibleLogicalRange({from:Math.max(0,n-160),to:n-1});}catch(_){}
     }
     function renderQuad(){
       var t=rows('tse'), o=rows('otc'); if(!t.length||!o.length){el('bdQuad').innerHTML='<div class="fc-empty">上市/上櫃資料不足</div>';return;}
