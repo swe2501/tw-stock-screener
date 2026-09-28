@@ -123,7 +123,7 @@ git commit -am "..."; git push origin HEAD:prod
 | K線 基本面/新聞分頁 | K線 modal 右側 | stock_fundamentals, stock_financials | fundamentals.py | project_fundamentals |
 | 選擇權支撐壓力區（價平+主次區間，週/月 tab） | 首頁 §6 選擇權矩陣下方 | option_sr（PK trade_date+kind） | option_sr.py | project_option_sr |
 | 選擇權 N 日大量區（5~480日，壓力/支撐前5） | 首頁 §6 選擇權矩陣下方 | option_nday（本機明細 txo_daily） | txo_history.py → option_nday.py | project_stock_sr |
-| 個股分價量表壓力支撐 | 選股「🧱 壓力支撐逼近」＋K線右側「🧱 支撐壓力」分頁/圖上色帶 | stock_sr（PK code+n，每日覆蓋） | stock_sr.py（歷史 backfill_stock_2y.py） | project_stock_sr |
+| 個股分價量表壓力支撐（日K／小時K 兩版可切換） | 選股「🧱 壓力支撐逼近」＋K線右側「🧱 支撐壓力」分頁/圖上色帶 | stock_sr（日K）、stock_sr_h（小時K）；本機 stock_hourly | stock_sr.py [--src hour]、fetch_hourly.py（歷史 backfill_stock_2y.py） | project_stock_sr |
 | 流動性排行（現貨、個股期貨各前50） | 選股 | liquidity_top | liquidity_top.py | project_liquidity_top |
 | 主動ETF成分/集中 | ETF分析 | etf_holdings, active_etf_flow | upload_active_etf_holdings.py, active_etf_flow.py | project_active_etf_consensus |
 | 台指VIX/富台指/匯率 KPI | 首頁 hero | market_indicators | market_indicators.py | project_taifex_vix |
