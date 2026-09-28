@@ -1709,7 +1709,8 @@
       .cb-pi .k{font-size:12px;font-weight:800;color:var(--brand-green);margin-bottom:7px;}
       .cb-pi .v{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1;}
       .cb-pi .n{font-size:11.5px;color:var(--text-muted);margin-top:5px;font-variant-numeric:tabular-nums;}
-      .cb-ov{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+      .cb-ov{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+      @media(max-width:1200px){.cb-ov{grid-template-columns:repeat(2,1fr);}}
       .cb-ovc{border:1px solid var(--border);border-radius:10px;padding:14px 16px;background:var(--bg);}
       .cb-ovc header{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px;}
       .cb-ovc header>span:first-child{font-size:12.5px;font-weight:800;color:var(--brand-green);background:transparent!important;padding:0;}
@@ -2701,134 +2702,332 @@
   })();
   </script>
 
-  <!-- ══ 外資空單溫度計（市場觀察 · 付費分頁）══ -->
+  <!-- ══ 外資空單溫度計（市場觀察 · 付費分頁）══ 2026-09-28 版面與配色 100% 比照合夥人「完美.html」 -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
-    #fhedgeView{max-width:1140px;margin:0 auto;}
-    .fh-topbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;}
-    .fh-seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;}
-    .fh-seg button{background:var(--surface);border:0;padding:7px 14px;font-size:13px;color:var(--text-muted);cursor:pointer;font-weight:600;}
-    .fh-seg button.on{background:var(--accent);color:#231c00;}
-    /* 付費遮罩 */
-    .fh-lock{position:relative;border:1px dashed var(--accent);border-radius:14px;padding:36px 20px;text-align:center;background:var(--surface);}
-    .fh-lock .ic{font-size:34px;}
-    .fh-lock h3{font-size:18px;font-weight:800;margin:8px 0 4px;color:var(--brand-green);}
-    .fh-lock p{color:var(--text-muted);font-size:13.5px;max-width:520px;margin:4px auto;}
-    .fh-lock .cta{display:inline-block;margin-top:14px;background:var(--accent);color:#231c00;font-weight:800;border-radius:8px;padding:9px 20px;cursor:pointer;border:0;font-size:14px;}
-    .fh-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:12px;margin-bottom:16px;}
-    .fh-card{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:13px 15px;box-shadow:var(--shadow-sm);}
-    .fh-card .k{font-size:11.5px;color:var(--text-muted);display:flex;justify-content:space-between;}
-    .fh-card .v{font-size:22px;font-weight:800;margin-top:5px;font-variant-numeric:tabular-nums;letter-spacing:-.01em;}
-    .fh-card .s{font-size:11.5px;color:var(--text-muted);margin-top:3px;}
-    .fh-banner{border-radius:12px;padding:15px 18px;margin-bottom:16px;border-left:4px solid var(--accent);background:var(--surface2);}
-    .fh-banner .lab{font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--brand-green);}
-    .fh-banner .big{font-size:16px;font-weight:600;margin-top:4px;line-height:1.6;}
-    .fh-tag{display:inline-block;font-weight:800;border-radius:6px;padding:2px 10px;font-size:15px;}
-    .fh-tag.normal{background:rgba(10,154,86,.15);color:var(--green);border:1px solid rgba(10,154,86,.4);}
-    .fh-tag.high{background:rgba(181,138,45,.15);color:var(--accent);border:1px solid rgba(181,138,45,.45);}
-    .fh-tag.extreme{background:rgba(224,62,45,.13);color:var(--red);border:1px solid rgba(224,62,45,.4);}
-    .fh-sec{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:16px;box-shadow:var(--shadow-sm);}
-    .fh-sec-h{font-size:14.5px;font-weight:800;margin-bottom:4px;display:flex;align-items:center;gap:8px;}
-    .fh-sec-h .no{background:var(--accent);color:#231c00;font-size:11px;font-weight:800;border-radius:5px;padding:1px 7px;}
-    .fh-sec-sub{font-size:12px;color:var(--text-muted);margin-bottom:12px;}
-    .fh-quad{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-    @media(max-width:600px){.fh-quad{grid-template-columns:1fr;}}
-    .fh-q{border:1px solid var(--border);border-radius:10px;padding:12px 14px;opacity:.6;transition:.2s;}
-    .fh-q.on{opacity:1;border-width:2px;border-color:var(--accent);background:var(--surface2);}
-    .fh-q .qh{font-size:12.5px;font-weight:800;}
-    .fh-q .qd{font-size:11.5px;color:var(--text-muted);margin-top:2px;}
-    .fh-q .qp{font-size:12px;margin-top:6px;line-height:1.5;}
-    .fh-ev{border-left:3px solid var(--accent);background:var(--surface2);border-radius:7px;padding:9px 12px;margin-bottom:8px;font-size:12.5px;}
-    .fh-ev .d{font-size:11px;color:var(--text-muted);}
-    .fh-sim{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
-    @media(max-width:760px){.fh-sim{grid-template-columns:1fr;}}
-    .fh-sl{margin-bottom:14px;}
-    .fh-sl .lb{display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px;}
-    .fh-sl .lb b{font-variant-numeric:tabular-nums;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:1px 8px;}
-    .fh-sl input[type=range]{width:100%;accent-color:var(--accent);}
-    .fh-simout{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px;}
-    .fh-simout .row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;text-align:center;margin-bottom:12px;}
-    .fh-simout .row .b{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:9px;}
-    .fh-simout .row .b .kk{font-size:10.5px;color:var(--text-muted);}
-    .fh-simout .row .b .vv{font-size:17px;font-weight:800;margin-top:3px;font-variant-numeric:tabular-nums;}
-    .fh-simtxt{font-size:12.5px;line-height:1.6;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;}
-    .fh-blur{filter:blur(6px);pointer-events:none;user-select:none;}
+    /* ── 完美.html 配色系統（可重用：之後全站比照時直接套 .pf 容器）── */
+    .pf{--pf-page:#070c18;--pf-card:rgba(15,23,42,.75);--pf-card-bd:rgba(255,255,255,.08);--pf-card-sh:0 10px 25px -5px rgba(0,0,0,.4),0 8px 10px -6px rgba(0,0,0,.3);
+        --pf-inner:rgba(15,23,42,.9);--pf-inner2:rgba(11,17,32,.6);--pf-bd:#1e293b;--pf-bd2:rgba(30,41,59,.8);
+        --pf-t1:#ffffff;--pf-t2:#e2e8f0;--pf-t3:#cbd5e1;--pf-mut:#94a3b8;--pf-mut2:#64748b;
+        --pf-bull:#10b981;--pf-bear:#f43f5e;--pf-accent:#38bdf8;--pf-brand:#6366f1;--pf-warn:#f59e0b;--pf-sky:#38bdf8;--pf-sky-strong:#7dd3fc;
+        --pf-grid:rgba(255,255,255,.05);--pf-hl-bg:rgba(8,47,73,.4);--pf-track:#1e293b;
+        font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans TC",sans-serif;color:var(--pf-t2);}
+    .pf.pf-light{--pf-page:#f8fafc;--pf-card:rgba(255,255,255,.9);--pf-card-bd:rgba(226,232,240,.8);--pf-card-sh:0 4px 6px -1px rgba(0,0,0,.05),0 2px 4px -2px rgba(0,0,0,.05);
+        --pf-inner:rgba(241,245,249,.9);--pf-inner2:#ffffff;--pf-bd:#e2e8f0;--pf-bd2:#e2e8f0;
+        --pf-t1:#0f172a;--pf-t2:#1e293b;--pf-t3:#334155;--pf-mut:#64748b;--pf-mut2:#94a3b8;
+        --pf-sky:#0284c7;--pf-sky-strong:#0369a1;--pf-grid:rgba(0,0,0,.05);--pf-hl-bg:#f0f9ff;--pf-track:#e2e8f0;}
+    body.pf-page-dark{background:#070c18;} body.pf-page-light{background:#f8fafc;}
+    #fhedgeView.pf{max-width:1280px;margin:0 auto;background:var(--pf-page);border-radius:18px;padding:0 0 8px;}
+    .pf .mono,.pf .pf-num{font-family:"JetBrains Mono",ui-monospace,monospace;}
+    .pf-glass{background:var(--pf-card);border:1px solid var(--pf-card-bd);box-shadow:var(--pf-card-sh);border-radius:16px;}
+    .pf-sec{padding:20px;margin:0 16px 24px;}
+    .pf-h3{font-weight:700;font-size:16px;color:var(--pf-t1);display:flex;align-items:center;gap:8px;margin:0;}
+    .pf-sub{font-size:12px;color:var(--pf-mut);margin-top:4px;}
+    .pf-hd{padding-bottom:12px;border-bottom:1px solid var(--pf-bd2);display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;}
+    .pf-ic{width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;font-size:15px;}
+    /* 頂部標題列 */
+    .pf-top{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;padding:14px 20px;border-radius:18px 18px 0 0;border-bottom:1px solid var(--pf-bd2);margin-bottom:24px;background:var(--pf-card);}
+    .pf-logo{width:40px;height:40px;border-radius:12px;background:linear-gradient(45deg,#38bdf8,#6366f1,#22d3ee);padding:1.5px;box-shadow:0 10px 15px -3px rgba(14,165,233,.2);flex-shrink:0;}
+    .pf-logo>div{width:100%;height:100%;border-radius:10px;background:var(--pf-page);display:flex;align-items:center;justify-content:center;color:var(--pf-accent);font-size:18px;}
+    .pf-title{font-weight:700;font-size:18px;letter-spacing:-.01em;color:var(--pf-t1);display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0;}
+    .pf-pill{font-size:11px;padding:2px 8px;border-radius:999px;font-family:"JetBrains Mono",monospace;background:rgba(14,165,233,.1);color:var(--pf-sky);border:1px solid rgba(14,165,233,.3);font-weight:500;}
+    .pf-tagline{font-size:12px;color:var(--pf-mut);display:flex;gap:8px;margin-top:2px;flex-wrap:wrap;}
+    .pf-live{display:flex;align-items:center;gap:8px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);padding:6px 12px;border-radius:8px;color:#34d399;font-size:12px;font-family:"JetBrains Mono",monospace;}
+    .pf.pf-light .pf-live{color:#059669;}
+    .pf-dot{position:relative;width:8px;height:8px;} .pf-dot i{position:absolute;inset:0;border-radius:50%;background:#10b981;}
+    .pf-dot i:first-child{background:#34d399;opacity:.75;animation:pfPing 1.2s cubic-bezier(0,0,.2,1) infinite;}
+    @keyframes pfPing{75%,100%{transform:scale(2);opacity:0;}}
+    .pf-btn{padding:6px 10px;border-radius:8px;border:1px solid var(--pf-bd);background:var(--pf-inner2);color:var(--pf-t3);cursor:pointer;font-size:12px;font-weight:500;font-family:inherit;box-shadow:0 1px 2px rgba(0,0,0,.05);}
+    .pf-btn:hover{color:var(--pf-t1);border-color:var(--pf-mut2);}
+    .pf-seg{display:inline-flex;border:1px solid var(--pf-bd);border-radius:8px;overflow:hidden;}
+    .pf-seg button{background:var(--pf-inner2);border:0;padding:6px 12px;font-size:12px;color:var(--pf-mut);cursor:pointer;font-weight:600;font-family:inherit;}
+    .pf-seg button.on{background:rgba(14,165,233,.15);color:var(--pf-sky);}
+    /* 三層架構概覽 */
+    .pf-layers{margin:0 16px 24px;padding:18px;display:grid;grid-template-columns:repeat(3,1fr);gap:16px;background:linear-gradient(90deg,var(--pf-card),var(--pf-card));}
+    .pf-layer{display:flex;gap:14px;align-items:flex-start;}
+    .pf-layer+.pf-layer{border-left:1px solid var(--pf-bd2);padding-left:14px;}
+    .pf-lno{padding:10px;border-radius:12px;font-size:14px;font-weight:700;font-family:"JetBrains Mono",monospace;flex-shrink:0;}
+    .pf-lk{font-size:11px;text-transform:uppercase;letter-spacing:.05em;font-weight:600;}
+    .pf-lt{font-size:14px;font-weight:600;color:var(--pf-t2);margin-top:2px;}
+    .pf-ld{font-size:12px;color:var(--pf-mut);margin-top:4px;line-height:1.6;}
+    /* 6 大指標卡 */
+    .pf-sech{display:flex;justify-content:space-between;align-items:center;margin:0 16px 12px;gap:10px;flex-wrap:wrap;}
+    .pf-sech h2{font-size:13px;font-weight:600;color:var(--pf-t3);text-transform:uppercase;letter-spacing:.05em;display:flex;align-items:center;gap:8px;margin:0;}
+    .pf-sech span{font-size:12px;color:var(--pf-mut2);font-family:"JetBrains Mono",monospace;}
+    .pf-cards{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin:0 16px 24px;}
+    .pf-kc{padding:16px;border-radius:12px;display:flex;flex-direction:column;justify-content:space-between;min-width:0;}
+    .pf-kc .k{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--pf-mut);font-weight:500;gap:6px;}
+    .pf-kc .v{font-size:24px;font-weight:700;font-family:"JetBrains Mono",monospace;color:var(--pf-t1);letter-spacing:-.02em;margin-top:8px;white-space:nowrap;}
+    .pf-kc .v small{font-size:13px;font-weight:400;color:var(--pf-mut);}
+    .pf-kc .s{font-size:12px;font-family:"JetBrains Mono",monospace;color:var(--pf-mut);margin:2px 0 8px;}
+    .pf-kc .s b{color:var(--pf-t3);font-weight:600;}
+    .pf-kc .f{font-size:11px;color:var(--pf-mut2);}
+    .pf-kc.hl{border-color:rgba(56,189,248,.4);} .pf-kc.hl .k,.pf-kc.hl .f{color:var(--pf-sky);font-weight:600;} .pf-kc.hl .v{color:var(--pf-sky);}
+    .pf-badge{font-size:10px;font-family:"JetBrains Mono",monospace;padding:2px 6px;border-radius:4px;font-weight:600;}
+    .pf-bar{width:100%;height:6px;background:var(--pf-track);border-radius:999px;overflow:hidden;margin-top:8px;}
+    .pf-bar>i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#10b981,#f59e0b,#f43f5e);}
+    .pf-state{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:6px;border:1px solid;}
+    .c-bull{color:var(--pf-bull)!important;} .c-bear{color:var(--pf-bear)!important;} .c-warn{color:var(--pf-warn)!important;} .c-sky{color:var(--pf-sky)!important;}
+    /* 中段雙圖 */
+    .pf-two{display:grid;grid-template-columns:7fr 5fr;gap:24px;margin:0 16px 24px;}
+    .pf-two>.pf-glass{padding:20px;display:flex;flex-direction:column;justify-content:space-between;min-width:0;}
+    .pf-leg{display:flex;align-items:center;gap:12px;font-size:12px;color:var(--pf-t3);flex-wrap:wrap;}
+    .pf-leg i{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:4px;vertical-align:-1px;}
+    .pf-note{margin-top:12px;padding:12px;border-radius:12px;background:var(--pf-inner);border:1px solid var(--pf-bd);font-size:13px;line-height:1.7;color:var(--pf-t3);}
+    .pf-note strong{color:var(--pf-t1);}
+    .pf-legend2{margin-top:12px;padding-top:10px;border-top:1px solid var(--pf-bd2);display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--pf-mut);}
+    .pf-legend2 span{display:inline-flex;align-items:center;gap:4px;}
+    .pf-legend2 u{display:inline-block;width:14px;height:0;text-decoration:none;}
+    .pf-diag{margin-top:16px;background:var(--pf-inner);padding:14px;border-radius:12px;border:1px solid var(--pf-bd);font-size:12px;}
+    .pf-diag .r{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px;} .pf-diag .r span{color:var(--pf-mut);font-weight:500;}
+    .pf-diag .r b{font-family:"JetBrains Mono",monospace;color:var(--pf-t2);}
+    .pf-diag .star{font-size:11px;color:var(--pf-sky);padding-top:6px;border-top:1px solid var(--pf-bd);line-height:1.6;}
+    #fhChartTip,#fhFxTip{font-size:12px;color:var(--pf-mut);margin-top:6px;font-family:"JetBrains Mono",monospace;}
+    /* 第二層 四象限 */
+    .pf-rowlab{font-size:11px;font-family:"JetBrains Mono",monospace;font-weight:600;display:flex;align-items:center;gap:6px;padding:0 4px;margin:0 0 6px;}
+    .pf-rowlab i{width:6px;height:6px;border-radius:50%;display:inline-block;}
+    .pf-quads{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+    .pf-q{padding:16px;border-radius:12px;border:1px solid var(--pf-bd);background:var(--pf-inner2);opacity:.7;transition:.2s;}
+    .pf-q.on{opacity:1;border:2px solid #0ea5e9;background:var(--pf-hl-bg);box-shadow:0 1px 2px rgba(0,0,0,.05);}
+    .pf-q .qh{display:flex;justify-content:space-between;align-items:center;gap:8px;}
+    .pf-q .qn{font-size:12px;font-weight:700;font-family:"JetBrains Mono",monospace;}
+    .pf-q .qd{font-size:12px;color:var(--pf-t2);margin-top:6px;font-weight:700;}
+    .pf-q .qp{font-size:12px;color:var(--pf-mut);margin-top:4px;line-height:1.6;}
+    .pf-q.on .qp{color:var(--pf-t3);}
+    .pf-ping{display:inline-flex;align-items:center;gap:4px;}
+    .pf-ping i{width:6px;height:6px;border-radius:50%;background:var(--pf-accent);animation:pfPing 1.2s cubic-bezier(0,0,.2,1) infinite;}
+    .pf-contracts{margin-top:16px;padding-top:12px;border-top:1px solid var(--pf-bd);display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;font-size:12px;color:var(--pf-mut);font-family:"JetBrains Mono",monospace;}
+    /* 第三層 事件倒數卡 */
+    .pf-evs{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:16px;}
+    .pf-ev{background:var(--pf-inner);border-radius:12px;padding:16px;border:1px solid var(--pf-bd);display:flex;flex-direction:column;justify-content:space-between;}
+    .pf-ev .eh{display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:12px;font-weight:600;}
+    .pf-ev .en{font-size:24px;font-weight:700;font-family:"JetBrains Mono",monospace;color:var(--pf-t1);margin-top:12px;}
+    .pf-ev .en small{font-size:12px;font-weight:400;color:var(--pf-mut);}
+    .pf-ev .ed{font-size:12px;color:var(--pf-mut);margin:2px 0 12px;}
+    .pf-ev .ew{font-size:11px;padding:6px 8px;border-radius:4px;line-height:1.55;}
+    .pf-ev .ew.warn{color:#fcd34d;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);}
+    .pf.pf-light .pf-ev .ew.warn{color:#b45309;}
+    .pf-ev .ew.n{color:var(--pf-t3);background:var(--pf-inner2);border:1px solid var(--pf-bd);}
+    /* 事件表／新聞沿用 mc-*，在 .pf 內換成完美配色 */
+    .pf .mc-h{color:var(--pf-t1);} .pf .mc-h span{color:var(--pf-mut);}
+    .pf table.mc-t th{color:var(--pf-mut);border-bottom-color:var(--pf-bd);} .pf table.mc-t td{border-bottom-color:var(--pf-bd);color:var(--pf-t3);}
+    .pf .mc-r{background:var(--pf-inner);} .pf .mc-r.g{color:var(--pf-bull);} .pf .mc-r.r{color:var(--pf-bear);}
+    .pf .mc-own{border-color:var(--pf-warn);} .pf .mc-pin{border-color:var(--pf-bd);color:var(--pf-mut);} .pf .mc-pin.on{background:var(--pf-accent);border-color:var(--pf-accent);color:#0b1120;}
+    .pf .mc-news{border-bottom-color:var(--pf-bd);} .pf .mc-news a{color:var(--pf-t2);} .pf .mc-news span,.pf .mc-note{color:var(--pf-mut);}
+    .pf .fc-empty{color:var(--pf-mut);}
+    .pf-evtbl{margin-top:20px;padding-top:16px;border-top:1px solid var(--pf-bd);}
+    /* 每日明細表 */
+    .pf-tbl{width:100%;text-align:left;font-size:12px;font-family:"JetBrains Mono",monospace;border-collapse:collapse;}
+    .pf-tbl thead{background:var(--pf-inner);color:var(--pf-mut);} .pf-tbl th{padding:10px 12px;border-bottom:1px solid var(--pf-bd);font-weight:500;white-space:nowrap;}
+    .pf-tbl td{padding:10px 12px;border-bottom:1px solid var(--pf-bd2);white-space:nowrap;color:var(--pf-t3);} .pf-tbl tr:hover td{background:rgba(148,163,184,.08);}
+    /* 模擬器 */
+    .pf-sim{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:16px;}
+    .pf-sl{margin-bottom:16px;} .pf-sl .lb{display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-bottom:6px;color:var(--pf-t3);font-weight:500;}
+    .pf-sl .lb b{font-family:"JetBrains Mono",monospace;font-weight:700;color:var(--pf-t1);background:var(--pf-inner);padding:2px 8px;border-radius:4px;border:1px solid var(--pf-bd);}
+    .pf-sl input[type=range]{width:100%;height:6px;accent-color:var(--pf-accent);cursor:pointer;}
+    .pf-sl .tk{display:flex;justify-content:space-between;font-size:10px;color:var(--pf-mut2);margin-top:4px;font-family:"JetBrains Mono",monospace;}
+    .pf-out{padding:20px;border-radius:12px;background:var(--pf-inner);border:1px solid var(--pf-bd);display:flex;flex-direction:column;gap:16px;}
+    .pf-out .oh{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--pf-mut);font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:8px;}
+    .pf-out .ob{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;text-align:center;}
+    .pf-out .ob>div{background:var(--pf-inner2);padding:12px;border-radius:8px;border:1px solid var(--pf-bd);}
+    .pf-out .ob span{font-size:11px;color:var(--pf-mut2);display:block;} .pf-out .ob b{font-size:18px;font-weight:700;font-family:"JetBrains Mono",monospace;color:var(--pf-t1);display:block;margin-top:4px;}
+    .pf-out .ot{font-size:12px;color:var(--pf-t3);line-height:1.7;background:var(--pf-inner2);padding:14px;border-radius:8px;border:1px solid var(--pf-bd);}
+    .pf-select{background:var(--pf-inner);font-size:12px;color:var(--pf-t2);border-radius:4px;padding:6px 10px;border:1px solid var(--pf-bd);font-family:inherit;cursor:pointer;}
+    .pf-foot{margin:0 16px;padding:14px 4px 6px;border-top:1px solid var(--pf-bd2);font-size:12px;color:var(--pf-mut);line-height:1.8;}
+    .pf-foot b{color:var(--pf-t2);}
+    .pf-lock{margin:0 16px 24px;padding:36px 20px;text-align:center;border:1px dashed var(--pf-accent);}
+    .pf-lock h3{font-size:18px;font-weight:800;margin:8px 0 4px;color:var(--pf-t1);} .pf-lock p{color:var(--pf-mut);font-size:13.5px;max-width:520px;margin:4px auto;}
+    .pf-lock .cta{display:inline-block;margin-top:14px;background:var(--pf-accent);color:#0b1120;font-weight:800;border-radius:8px;padding:9px 20px;cursor:pointer;border:0;font-size:14px;}
+    @media(max-width:1100px){.pf-cards{grid-template-columns:repeat(3,1fr);} .pf-two{grid-template-columns:1fr;} .pf-evs{grid-template-columns:repeat(2,1fr);}}
+    @media(max-width:760px){.pf-cards{grid-template-columns:repeat(2,1fr);} .pf-layers{grid-template-columns:1fr;} .pf-layer+.pf-layer{border-left:0;padding-left:0;border-top:1px solid var(--pf-bd2);padding-top:12px;}
+      .pf-quads,.pf-sim{grid-template-columns:1fr;} .pf-evs{grid-template-columns:1fr;} .pf-sec{margin:0 8px 16px;padding:14px;} .pf-cards,.pf-two,.pf-layers,.pf-sech{margin-left:8px;margin-right:8px;} .pf-kc .v{font-size:20px;}}
   </style>
-  <div id="fhedgeView" style="display:none">
-    <div class="tm-head"><h2>🌡️ 外資空單溫度計</h2><span class="sub" id="fhSub"></span></div>
-    <div id="fhLock" class="fh-lock" style="display:none">
-      <div class="ic">🔒</div>
+  <div id="fhedgeView" class="pf" style="display:none">
+    <!-- 頂部標題列 -->
+    <div class="pf-top">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div class="pf-logo"><div>🛡️</div></div>
+        <div>
+          <h2 class="pf-title">外資期權空單與持股配置分析平台 <span class="pf-pill">INSTITUTIONAL</span></h2>
+          <div class="pf-tagline"><span>3-Layer Institutional Framework</span><span style="opacity:.5">•</span><span>客觀真實數據驅動・破除單一口數恐慌迷思</span></div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <div class="pf-seg" id="fhModeSeg"><button data-m="excl" class="on">扣 ETF</button><button data-m="incl">含一般 ETF</button></div>
+        <div class="pf-live"><span class="pf-dot"><i></i><i></i></span><span id="fhStamp">盤後數據連線中...</span></div>
+        <button class="pf-btn" id="fhThemeBtn" title="切換深色/淺色模式">🌙</button>
+      </div>
+    </div>
+
+    <div id="fhLock" class="pf-glass pf-lock" style="display:none">
+      <div style="font-size:34px">🔒</div>
       <h3>付費解鎖更多</h3>
       <p>外資期貨淨空名目 ÷ 外資持股市值＝避險比率，搭配 2 年歷史百分位分級、今日現期貨象限與情境模擬。此為進階籌碼分析。</p>
       <p style="margin-top:6px">已開通「主力籌碼」的帳號可直接瀏覽。請登入你的授權帳號。</p>
       <button class="cta" onclick="try{document.getElementById('loginBtn').click()}catch(e){}">登入 / 解鎖</button>
     </div>
+
     <div id="fhBody">
-      <div class="fh-topbar">
-        <div class="fh-seg" id="fhModeSeg">
-          <button data-m="excl" class="on">扣 ETF（上市普通股）</button>
-          <button data-m="incl">含一般 ETF</button>
-        </div>
-        <span style="font-size:12px;color:var(--text-muted)" id="fhAsof"></span>
-      </div>
-      <div class="fh-banner">
-        <div class="lab">客觀綜合判讀</div>
-        <div class="big" id="fhNarrative">計算中…</div>
-      </div>
-      <div class="fh-cards" id="fhCards"></div>
-
-      <div class="fh-sec">
-        <div class="fh-sec-h"><span class="no">第 1 層</span>避險比率歷史走勢（近 2 年）</div>
-        <div class="fh-sec-sub">紅線＝避險比率(%)左軸、藍線＝加權指數右軸；破除「空單口數多＝崩盤」迷思，看名目占持股市值比率的歷史位置。</div>
-        <div id="fhChart" style="width:100%"></div>
-        <div class="ch-legend"><span><i style="border-top:3px solid #e03e2d"></i>避險比率 R（左軸 %）</span><span><i style="border-top:2px dashed #3a86e0"></i>加權指數（右軸）</span><span><i style="border-top:1px dashed #e03e2d"></i>P95 顯著偏高線（近 2 年第 95 百分位）</span><span><i style="border-top:1px dashed #b58a2d"></i>P80 偏高線（近 2 年第 80 百分位）</span></div>
-        <div id="fhChartTip" style="font-size:12px;color:var(--text-muted);margin-top:6px">移動滑鼠看每日數值</div>
+      <!-- 三層式架構指引概覽 -->
+      <div class="pf-glass pf-layers">
+        <div class="pf-layer"><div class="pf-lno" style="background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.2);color:#38bdf8">01</div>
+          <div><div class="pf-lk c-sky">第一層：規模相對比率</div><div class="pf-lt">空單名目規模 vs 現貨持股市值</div>
+            <div class="pf-ld">透過大+小+微台換算總契約市值，衡量外資每百元持股僅配多少避險空單（含近 2 年歷史 PR 水位）。</div></div></div>
+        <div class="pf-layer"><div class="pf-lno" style="background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.2);color:#6366f1">02</div>
+          <div><div class="pf-lk" style="color:#818cf8">第二層：今日動態矩陣</div><div class="pf-lt">現貨買賣超 ⊗ 期貨淨單變動</div>
+            <div class="pf-ld">即時判斷「買現貨+加空單（鎖利避險/拉積盤）」、「賣現貨+加空單（實質做空）」等四象限真實交易企圖。</div></div></div>
+        <div class="pf-layer"><div class="pf-lno" style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.2);color:#10b981">03</div>
+          <div><div class="pf-lk c-bull">第三層：宏觀佐證與事件窗</div><div class="pf-lt">台幣匯率趨勢 ⊗ 衍生品結算窗</div>
+            <div class="pf-ld">觀察新台幣升貶與外資真金白銀淨匯出入，結合台指期結算、FOMC、權值法說倒數，辨識真倒貨或假摔誘空。</div></div></div>
       </div>
 
-      <div class="fh-sec">
-        <div class="fh-sec-h"><span class="no">第 2 層</span>今日現期貨交叉象限</div>
-        <div class="fh-sec-sub">現貨買賣超（外資 BFI82U）× 期貨淨部位日變動（大台等值）。判斷今日是鎖利避險、實質做空、軋空或平倉。</div>
-        <div class="fh-quad" id="fhQuad"></div>
-      </div>
+      <!-- 6 大核心指標卡片 -->
+      <div class="pf-sech"><h2><span class="c-sky">〰</span> 市場盤後真實數據監測 (Real Market Institutional Metrics)</h2><span>來源：證交所 TWSE / 期交所 TAIFEX 公開盤後</span></div>
+      <div class="pf-cards" id="fhCards"></div>
 
-      <div class="fh-sec">
-        <div class="fh-sec-h"><span class="no">第 3 層</span>宏觀佐證與事件窗</div>
-        <div class="fh-sec-sub">全球總經大事件（美、日、韓、中、歐元區）＋宏觀新聞＋台指期結算窗；外資常於大事件前後調整期貨空單。</div>
-        <div id="fhEvents"></div>
-      </div>
-
-      <div class="fh-sec">
-        <div class="fh-sec-h">🧮 情境模擬計算器</div>
-        <div class="fh-sec-sub">自訂參數，即時估算避險比率與其在 2 年歷史的百分位（PR 對照真實分布）。</div>
-        <div class="fh-sim">
+      <!-- 中段雙圖 -->
+      <div class="pf-two">
+        <div class="pf-glass">
           <div>
-            <div class="fh-sl"><div class="lb"><span>加權指數（點）</span><b id="fhSvIdx">—</b></div><input type="range" id="fhSlIdx" min="15000" max="55000" step="50"></div>
-            <div class="fh-sl"><div class="lb"><span>外資合計淨空（大台等值口，負=淨空）</span><b id="fhSvLots">—</b></div><input type="range" id="fhSlLots" min="-120000" max="40000" step="500"></div>
-            <div class="fh-sl"><div class="lb"><span>外資持股市值（兆）</span><b id="fhSvV">—</b></div><input type="range" id="fhSlV" min="30" max="110" step="0.5"></div>
-            <div class="fh-sl"><div class="lb"><span>今日外資現貨買賣超（億）</span><b id="fhSvSpot">—</b></div><input type="range" id="fhSlSpot" min="-1500" max="1500" step="10"></div>
-          </div>
-          <div class="fh-simout">
-            <div class="row">
-              <div class="b"><div class="kk">淨空名目</div><div class="vv" id="fhSimH">—</div></div>
-              <div class="b"><div class="kk">避險比率</div><div class="vv" id="fhSimR" style="color:var(--accent)">—</div></div>
-              <div class="b"><div class="kk">歷史百分位</div><div class="vv" id="fhSimPR" style="color:var(--red)">—</div></div>
+            <div class="pf-hd">
+              <div><h3 class="pf-h3"><span style="color:#f43f5e">↗</span> 第一層：外資期貨空單實質避險比例歷史走勢</h3>
+                <div class="pf-sub">破除單一口數迷思：計算名目契約價值占現貨市值之實質比率（近 2 年，可縮放）</div></div>
+              <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding-top:4px;">
+                <div class="pf-leg"><span><i style="background:#f43f5e"></i>避險比率 (%)</span><span><i style="background:#0ea5e9"></i>加權指數</span></div>
+                <button class="pf-btn" id="fhBandBtn"><span id="fhBandDot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#f59e0b;margin-right:6px"></span>P80／P95 歷史警戒帶</button>
+                <button class="pf-btn" id="fhResetBtn" title="重設圖表">重設</button>
+              </div>
             </div>
-            <div class="fh-simtxt" id="fhSimTxt"></div>
+            <div id="fhChart" style="width:100%;margin-top:16px;"></div>
+            <div id="fhChartTip">移動滑鼠看每日數值</div>
+          </div>
+          <div class="pf-legend2">
+            <span><u style="border-top:2px solid #f43f5e"></u>紅實線：避險比率 (左軸)</span>
+            <span><u style="border-top:2px dashed #0284c7"></u>藍虛線：加權指數 (右軸)</span>
+            <span><u style="border-top:2px dashed #f59e0b"></u>橙虛線：P80 偏高線</span>
+            <span><u style="border-top:2px dashed #f43f5e"></u>紅虛線：P95 顯著偏高線</span>
+          </div>
+          <div class="pf-note" id="fhNarrative"><strong>系統客觀解讀：</strong>計算中…</div>
+        </div>
+        <div class="pf-glass">
+          <div>
+            <div class="pf-hd" style="display:block">
+              <h3 class="pf-h3"><span style="color:#10b981">⇄</span> 第三層：匯率 vs 外資真金白銀流向</h3>
+              <div class="pf-sub">美元/新台幣與現貨買賣超（檢驗真撤資或假做空）</div>
+            </div>
+            <div class="pf-leg" style="margin-top:12px;font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--pf-mut)"><span><i style="background:rgba(16,185,129,.75)"></i>外資現貨買賣超 (億元)</span><span><i style="background:#f59e0b"></i>USD/TWD 匯率（右軸反轉：台幣升值 ↑）</span></div>
+            <div id="fhFxChart" style="width:100%;margin-top:8px;"></div>
+            <div id="fhFxTip">移動滑鼠看每日數值</div>
+          </div>
+          <div class="pf-diag">
+            <div class="r"><span>近 20 日現貨淨買超</span><b id="fhFlowSum">—</b></div>
+            <div class="r"><span>匯率相對趨勢</span><b id="fhFxTrend">—</b></div>
+            <div class="star">★ 核心診斷：若期貨空單大增但匯率持續強升，極高機率為套利型資產保值，無須過度恐慌。</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 第二層：今日現期貨交叉矩陣 -->
+      <div class="pf-glass pf-sec">
+        <div class="pf-hd" style="align-items:center">
+          <div><h3 class="pf-h3"><span style="color:#6366f1">▦</span> 第二層：今日現期貨交叉矩陣 (4-Quadrant Institutional Matrix)</h3>
+            <div class="pf-sub">現貨買賣超金額 ⊗ 期貨實質淨部位增減 (垂直二維象限排列)</div></div>
+          <span class="pf-badge" style="font-size:12px;padding:4px 10px;background:rgba(99,102,241,.1);color:#a5b4fc;border:1px solid rgba(99,102,241,.2)">今日動態定位</span>
+        </div>
+        <div style="margin-top:16px">
+          <div class="pf-rowlab c-bull"><i style="background:#10b981"></i> 現貨做多維度 (買超 +)</div>
+          <div class="pf-quads"><div id="fhQ1"></div><div id="fhQ2"></div></div>
+          <div class="pf-rowlab c-bear" style="margin-top:4px"><i style="background:#f43f5e"></i> 現貨提款維度 (賣超 -)</div>
+          <div class="pf-quads"><div id="fhQ4"></div><div id="fhQ3"></div></div>
+        </div>
+        <div class="pf-contracts" id="fhContracts"></div>
+      </div>
+
+      <!-- 第三層：衍生品結算與關鍵事件窗風險倒數 -->
+      <div class="pf-glass pf-sec">
+        <div class="pf-hd" style="align-items:center">
+          <div><h3 class="pf-h3"><span style="color:#f59e0b">📅</span> 第三層：衍生品結算與關鍵事件窗風險倒數 (Event Windows &amp; Volatility Nodes)</h3>
+            <div class="pf-sub">外資空單常在結算前 72 小時產生極端平倉或刻意壓制行情，需密切核對關鍵時間戳</div></div>
+          <span style="font-size:12px;color:var(--pf-mut2);font-family:'JetBrains Mono',monospace">即刻監控系統節點</span>
+        </div>
+        <div class="pf-evs" id="fhEvCards"></div>
+        <div class="pf-evtbl"><div id="fhEvents"></div></div>
+      </div>
+
+      <!-- 市場實盤每日明細對照表 -->
+      <div class="pf-glass pf-sec">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+          <div><h3 class="pf-h3" style="font-size:14px">市場實盤每日明細對照表</h3>
+            <div class="pf-sub">完整列出期交所未平倉淨額、現貨買賣超與市值避險比率真實序列（近 20 個交易日）</div></div>
+          <span style="font-size:12px;color:var(--pf-mut2);font-family:'JetBrains Mono',monospace">換算公式：等值大台 = 大台 + 小台/4 + 微台/20</span>
+        </div>
+        <div style="overflow-x:auto"><table class="pf-tbl"><thead><tr>
+          <th>資料日期</th><th>加權收盤</th><th>大台淨口數</th><th>小台淨口數</th><th>微台淨口數</th><th>等值大台合計</th><th>現貨買賣超 (億)</th><th>外資市值 (兆)</th><th style="text-align:right">實質避險比例</th>
+        </tr></thead><tbody id="fhTable"></tbody></table></div>
+      </div>
+
+      <!-- 量化情境模擬計算器 -->
+      <div class="pf-glass pf-sec">
+        <div class="pf-hd" style="align-items:center">
+          <div><h3 class="pf-h3"><span class="c-sky">🧮</span> 量化情境模擬計算器 (Institutional Calculator)</h3>
+            <div class="pf-sub">自訂市場參數，即時估算實質名目避險比率與當前防禦風險度（PR 對照近 2 年真實分布）</div></div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <select class="pf-select" id="fhScenario">
+              <option value="custom">自訂情境推演</option>
+              <option value="historical_rally">歷史空單新高 (純避險拉積)</option>
+              <option value="cash_out">實質提款大放空 (現貨大賣+空單爆量)</option>
+              <option value="bull_squeeze">空頭回補軋空潮 (現貨大買+期貨翻多)</option>
+            </select>
+            <button class="pf-btn" id="fhSimReset" style="font-family:'JetBrains Mono',monospace">重設預設值</button>
+          </div>
+        </div>
+        <div class="pf-sim">
+          <div>
+            <div class="pf-sl"><div class="lb"><span>台股加權指數 (點位)</span><b id="fhSvIdx">—</b></div><input type="range" id="fhSlIdx" min="15000" max="60000" step="50"><div class="tk"><span>15,000</span><span>37,500</span><span>60,000</span></div></div>
+            <div class="pf-sl"><div class="lb"><span>外資合計淨空單部位 (等值大台口數)</span><b id="fhSvLots" class="c-bear" style="background:rgba(244,63,94,.1);border-color:rgba(244,63,94,.3)">—</b></div><input type="range" id="fhSlLots" min="0" max="150000" step="250" style="accent-color:#f43f5e"><div class="tk"><span>0 口 (純多)</span><span>75,000 口</span><span>150,000 口 (極端警戒)</span></div></div>
+            <div class="pf-sl"><div class="lb"><span>外資台股持股市值 (兆新台幣 NTD)</span><b id="fhSvV" class="c-sky">—</b></div><input type="range" id="fhSlV" min="30" max="120" step="0.5"><div class="tk"><span>30 兆</span><span>75 兆</span><span>120 兆</span></div></div>
+            <div class="pf-sl"><div class="lb"><span>今日外資現貨買賣超 (新台幣 億元)</span><b id="fhSvSpot" class="c-bull">—</b></div><input type="range" id="fhSlSpot" min="-1500" max="1500" step="10" style="accent-color:#10b981"><div class="tk"><span>-1,500 億 (大提款)</span><span>0 億</span><span>+1,500 億 (大回補)</span></div></div>
+          </div>
+          <div class="pf-out">
+            <div class="oh"><span>模擬量化指標結算 (SIMULATED OUTPUT)</span><span id="fhSimRisk" class="pf-state">—</span></div>
+            <div class="ob">
+              <div><span>期貨空單總市值</span><b id="fhSimH">—</b></div>
+              <div><span>實質避險佔比</span><b id="fhSimR" class="c-sky">—</b></div>
+              <div><span>推估歷史分位 PR</span><b id="fhSimPR" class="c-warn">—</b></div>
+            </div>
+            <div class="ot" id="fhSimTxt"></div>
           </div>
         </div>
       </div>
     </div>
-    <div class="fc-note" id="fhNote"></div>
+    <div class="pf-foot" id="fhNote"></div>
   </div>
   <script>
   (function(){
     var el=function(id){return document.getElementById(id);};
-    var DATA=[], loaded=false, mode='excl', chart=null;
+    var DATA=[], loaded=false, mode='excl', chart=null, fxChart=null, bandLines=[], showBand=true, FX={}, SBx='', Hx=null;
     function ratioOf(r){ return mode==='excl'? r.ratio_excl : r.ratio_incl; }
     function vOf(r){ return mode==='excl'? r.v_excl_etf : r.v_incl_etf; }
     function pct(a,p){ a=a.slice().sort(function(x,y){return x-y;}); var i=(a.length-1)*p/100,lo=Math.floor(i); return lo+1>=a.length?a[lo]:a[lo]+(a[lo+1]-a[lo])*(i-lo); }
     function rankOf(a,v){ var n=0; for(var i=0;i<a.length;i++) if(a[i]<=v)n++; return a.length? n/a.length*100 : 0; }
-    function fmtV(x){ if(x==null)return '—'; var a=Math.abs(x); if(a>=1e12)return (x/1e12).toFixed(2)+' 兆'; if(a>=1e8)return (x/1e8).toFixed(1)+' 億'; return Math.round(x).toLocaleString(); }
     function tier(rank,r){ if(r>1.2)return {t:'顯著偏高',c:'extreme'}; if(rank>=95)return {t:'顯著偏高',c:'extreme'}; if(rank>=80)return {t:'偏高',c:'high'}; return {t:'歷史常態',c:'normal'}; }
+    function n0(v){ return Math.round(v).toLocaleString(); }
+    function sgn(v,d){ return (v>0?'+':'')+(d==null?n0(v):v.toFixed(d)); }
+    var QDEF={
+      1:{h:'象限 I • 積極軋空大漲',tag:'攻勢主升',c:'#34d399',cl:'bull',d:'現貨大買 (+) ⊗ 空單大減 (-)',p:'外資在現貨大幅加碼回補，同時空單大量停損平倉，容易引發期現共振之強烈軋空。',label:'積極做多軋空大漲',risk:'偏多攻擊態勢'},
+      2:{h:'象限 II • 結構性鎖利避險',tag:'鎖利避險',c:'#7dd3fc',cl:'sky',d:'現貨買超 (+) ⊗ 空單增加 (+)',p:'集中買超權值股維持大盤點位，同時建立指數期貨空單鎖定波段利潤，非翻空。',label:'結構性鎖利避險拉積',risk:'中度套期保值'},
+      3:{h:'象限 III • 實質作空全面撤退',tag:'高危警戒',c:'#fb7185',cl:'bear',d:'現貨大賣 (-) ⊗ 空單大增 (+)',p:'現貨真金白銀倒貨，期權同步重倉追擊放空，伴隨台幣貶值，屬真正翻空信號。',label:'實質做空全面撤退',risk:'高危全面放空'},
+      4:{h:'象限 IV • 獲利平倉 / 換月整理',tag:'跌勢鈍化',c:'#fbbf24',cl:'warn',d:'現貨賣超 (-) ⊗ 空單回補 (-)',p:'現貨處於被動調節，但期貨空單大幅獲利了結或月結算轉倉換約操作。',label:'震盪修復獲利平倉',risk:'弱勢防守收斂'}
+    };
+    var CLS={bull:'background:rgba(16,185,129,.1);color:#10b981;border-color:rgba(16,185,129,.3)',sky:'background:rgba(14,165,233,.1);color:var(--pf-sky);border-color:rgba(14,165,233,.3)',
+             bear:'background:rgba(244,63,94,.1);color:#f43f5e;border-color:rgba(244,63,94,.3)',warn:'background:rgba(245,158,11,.1);color:#f59e0b;border-color:rgba(245,158,11,.3)'};
+    function quadOf(spot, dLots){ var addShort=dLots<0; return spot>=0?(addShort?2:1):(addShort?3:4); }
+
+    // ── 深淺色（預設深色，同完美.html；偏好存本機）──
+    function theme(){ try{ return localStorage.getItem('fhTheme')||'dark'; }catch(e){ return 'dark'; } }
+    function applyTheme(){ var t=theme(), v=el('fhedgeView'); v.classList.toggle('pf-light', t==='light'); el('fhThemeBtn').textContent=t==='light'?'🌙':'☀️';
+      var shown=v.style.display!=='none'; document.body.classList.toggle('pf-page-dark', shown&&t==='dark'); document.body.classList.toggle('pf-page-light', shown&&t==='light'); }
+    window._fhPageBg=function(on){ if(!on){ document.body.classList.remove('pf-page-dark','pf-page-light'); } else applyTheme(); };
 
     function applyGate(){
       var owner = !!window._isOwner;
@@ -2841,31 +3040,42 @@
     function render(){
       if(!DATA.length)return;
       var ser=DATA.map(ratioOf).filter(function(x){return x!=null;});
-      var p50=pct(ser,50),p80=pct(ser,80),p95=pct(ser,95);
+      var p80=pct(ser,80),p95=pct(ser,95);
       var cur=DATA[DATA.length-1], prev=DATA[DATA.length-2]||cur;
       var r=ratioOf(cur), rank=rankOf(ser,r), tg=tier(rank,r);
-      // 指標卡
       var lots=cur.eq_net_lots, dLots=(cur.eq_net_lots-(prev.eq_net_lots||cur.eq_net_lots));
-      el('fhCards').innerHTML=[
-        card('加權指數', (+cur.taiex_close).toLocaleString(undefined,{maximumFractionDigits:0}), '總體現貨估值中樞'),
-        card('外資持股市值 V', fmtV(vOf(cur)), mode==='excl'?'上市普通股 Σ(外資股數×收盤)':'含一般 ETF'),
-        card('台指期合計淨空', Math.round(lots).toLocaleString()+' 口', '大台等值｜今日 '+(dLots>=0?'+':'')+Math.round(dLots).toLocaleString()+' 口'),
-        card('避險比率 R', r.toFixed(3)+'%', '淨空名目 ÷ 持股市值'),
-        card('歷史百分位 PR', rank.toFixed(1), '近 2 年（P80 '+p80.toFixed(2)+'% / P95 '+p95.toFixed(2)+'%）'),
-        card('外資現貨買賣超', cur.spot_net!=null?((cur.spot_net>=0?'+':'')+fmtV(cur.spot_net)):'—', cur.usdtwd?('USD/TWD '+(+cur.usdtwd).toFixed(3)):'')
-      ].join('');
-      // 分級 banner
-      var spotTxt = cur.spot_net==null?'現貨資料缺':(cur.spot_net>=0?('現貨買超 '+ (cur.spot_net/1e8).toFixed(0)+' 億'):('現貨賣超 '+Math.abs(cur.spot_net/1e8).toFixed(0)+' 億'));
-      el('fhNarrative').innerHTML='目前外資期貨淨空名目約占持股市值 <b>'+r.toFixed(3)+'%</b>，在近 2 年位於第 <b>'+rank.toFixed(1)+'</b> 百分位 → <span class="fh-tag '+tg.c+'">'+tg.t+'</span>。'+spotTxt+'，大台等值淨空 '+Math.round(lots).toLocaleString()+' 口（今日'+(dLots<0?'增空':'減空')+' '+Math.abs(Math.round(dLots)).toLocaleString()+' 口）。'+(r>1.2?'<b style="color:var(--red)">已突破 1.2% 系統性警戒紅線。</b>':'尚未觸及 1.2% 系統性警戒紅線。');
-      el('fhSub').textContent='資料日 '+cur.trade_date+' · 近 '+DATA.length+' 交易日';
-      el('fhAsof').textContent='含/扣 ETF 影響分母（外資持股市值）';
-      renderChart(); renderQuad(cur,prev);
-      // note
-      el('fhNote').innerHTML='<b>算法與資料源（合夥人複查）：</b>避險比率 R＝外資期貨淨空名目 H ÷ 外資持股市值 V ×100。H＝MAX(−Σ(外資各契約 net 口×指數×每點價值),0)，每點價值 大台200/小台50/微台10；V(上市)＝Σ(TWSE mi-qfiis 全體外資持有股數×當日收盤)，扣 ETF＝排除 00 開頭。分級＝近 2 年歷史百分位（&lt;P80 常態／P80–P95 偏高／≥P95 顯著偏高）＋固定紅線 &gt;1.2% 觸發極端。資料源：TWSE MI_QFIIS／STOCK_DAY_ALL／BFI82U、TAIFEX futContractsDate（外資各契約未平倉）、加權指數 ^TWII、匯率 USD/TWD。每日盤後更新（foreign_hedge.py→foreign_hedge_daily）。註：外資持股市值分母與坊間示意圖（假資料 24–30 兆）定義不同，本站採官方持股股數×市價（約 75 兆），故 %較低，惟分級採歷史百分位不受絕對值影響。';
-      // 模擬器初始
+      var q=quadOf(cur.spot_net||0, dLots), Q=QDEF[q];
+      var idxChg=(+cur.taiex_close)-(+prev.taiex_close), idxPct=idxChg/(+prev.taiex_close)*100;
+      var H=cur.short_notional||0, V=vOf(cur)||0;
+      var fxNow=FX[cur.trade_date]!=null?FX[cur.trade_date]:(cur.usdtwd!=null?+cur.usdtwd:null);
+      var fxPrevDay=(function(){ var ks=Object.keys(FX).filter(function(k){return k<cur.trade_date;}).sort(); return ks.length?FX[ks[ks.length-1]]:null; })();
+      var fxChg=(fxNow!=null&&fxPrevDay!=null)?fxNow-fxPrevDay:null;
+      el('fhStamp').textContent='盤後基準: '+cur.trade_date+' 15:00';
+      var tierTxt=tg.c==='extreme'?'顯著偏高避險區間 (PR ≥ 95)':(tg.c==='high'?'偏高避險區間 (PR ≥ 80)':'歷史常態區間 (PR < 80)');
+      el('fhCards').innerHTML=
+        kcard('加權指數 TAIEX','<span class="'+(idxChg>=0?'c-bull':'c-bear')+'">'+(idxChg>=0?'↗':'↘')+'</span>',
+          (+cur.taiex_close).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}),
+          '<span class="'+(idxChg>=0?'c-bull':'c-bear')+'">'+sgn(idxChg,2)+' ('+sgn(idxPct,2)+'%)</span>','總體現貨估值中樞')
+        +kcard('外資現貨持股市值','<span class="c-sky">🏛</span>',(V/1e12).toFixed(2)+' <small>兆</small>',
+          '計算口徑 <b>'+(mode==='excl'?'扣 ETF':'含一般 ETF')+'</b>','現貨多頭底倉基礎')
+        +kcard('台指期合計淨空部位','<span class="pf-badge" style="background:rgba(244,63,94,.1);color:#f43f5e;border:1px solid rgba(244,63,94,.3)">'+(lots<0?'淨空方':'淨多方')+'</span>',
+          '<span class="c-bear">'+n0(lots)+'</span> <small>口</small>','今日單日變動: <b class="'+(dLots<0?'c-bear':'c-bull')+'">'+sgn(dLots)+' 口</b>','大台+小台/4+微台/20等值')
+        +kcard('避險空單 / 市值比','<span class="c-sky">%</span>',r.toFixed(2)+'%','等值名目本金: <b>'+n0(H/1e8)+' 億</b>','每100元現貨配'+r.toFixed(2)+'元避險','hl')
+        +kcard('歷史空單分位數 (PR)','<span class="c-warn">◔</span>','<span class="c-warn">PR '+rank.toFixed(1)+'</span>',
+          '<div class="pf-bar"><i style="width:'+Math.min(100,rank)+'%"></i></div>','<span class="c-warn" style="display:flex;justify-content:space-between;font-weight:500"><span>'+tierTxt+'</span><span>近2年統計</span></span>')
+        +kcard('USD / TWD 匯率','<span style="color:var(--pf-mut)">💱</span>',fxNow!=null?fxNow.toFixed(3):'—',
+          fxChg!=null?('<span class="'+(fxChg<=0?'c-bull':'c-bear')+'">'+(fxChg<=0?'升值 ':'貶值 ')+sgn(fxChg,3)+' ('+sgn(fxChg/fxPrevDay*100,2)+'%)</span>'):'—',
+          '<span class="pf-state" style="'+CLS[Q.cl]+'">'+Q.label+'</span>');
+      el('fhNarrative').innerHTML='<strong>系統客觀解讀：</strong>當前等值空單約 '+(Math.abs(lots)/1e4).toFixed(1)+' 萬口，空單名目合約市值占外資持股市值 <strong>'+r.toFixed(2)+'%</strong>。歷史百分位位於 <strong>PR '+rank.toFixed(1)+'</strong>（近 2 年 P80 '+p80.toFixed(2)+'%、P95 '+p95.toFixed(2)+'%），屬於「'+tg.t+'」'+(tg.c==='normal'?'的常態保護水位':'的結構性保護')+'，'+(r>1.2?'<strong style="color:#f43f5e">已突破 1.2% 系統性全面大逃殺警戒線</strong>。':'尚未進入 >1.2% 之系統性全面大逃殺警戒線。')
+        +' 今日'+(cur.spot_net==null?'現貨資料缺':(cur.spot_net>=0?'現貨買超 '+n0(cur.spot_net/1e8)+' 億':'現貨賣超 '+n0(Math.abs(cur.spot_net)/1e8)+' 億'))+'、空單'+(dLots<0?'增加 ':'減少 ')+n0(Math.abs(dLots))+' 口 → '+Q.h.replace(' • ','・')+'。';
+      renderChart(); renderFx(); renderQuad(q); renderTable();
+      el('fhContracts').innerHTML='<div>大台指 (TX): <span class="'+(cur.fx_tx_net<0?'c-bear':'c-bull')+'" style="font-weight:600">'+n0(cur.fx_tx_net)+' 口</span></div>'
+        +'<div>小台指 (MTX): <span class="'+(cur.fx_mtx_net<0?'c-bear':'c-bull')+'" style="font-weight:600">'+n0(cur.fx_mtx_net)+' 口 (約 '+n0(cur.fx_mtx_net/4)+' 大台)</span></div>'
+        +'<div>微台指 (TMF): <span class="'+(cur.fx_tmf_net<0?'c-bear':'c-bull')+'" style="font-weight:600">'+n0(cur.fx_tmf_net)+' 口 (約 '+n0(cur.fx_tmf_net/20)+' 大台)</span></div>';
+      el('fhNote').innerHTML='<b>算法與資料源（合夥人複查）：</b>避險比率 R＝外資期貨淨空名目 H ÷ 外資持股市值 V ×100。H＝MAX(−Σ(外資各契約 net 口×指數×每點價值),0)，每點價值 大台200/小台50/微台10；V(上市)＝Σ(TWSE mi-qfiis 全體外資持有股數×當日收盤)，扣 ETF＝排除 00 開頭。分級＝近 2 年歷史百分位（&lt;P80 常態／P80–P95 偏高／≥P95 顯著偏高）＋固定紅線 &gt;1.2% 觸發極端。第二層象限＝今日外資現貨買賣超正負 × 等值大台淨口數較前一日增減（淨空增加＝空單增加）。第三層：USD/TWD 為 Yahoo 每日匯率、現貨買賣超為 TWSE BFI82U 外資及陸資；事件倒數＝台指期結算（每月第三個週三）、台積電法說會（催化事件表）、FOMC 與台灣央行利率決議（investing.com 經濟日曆，尚未公告者顯示「尚未公告」）。資料源：TWSE MI_QFIIS／STOCK_DAY_ALL／BFI82U、TAIFEX futContractsDate、加權指數。每日盤後更新（foreign_hedge.py→foreign_hedge_daily）。版面與配色比照合夥人「完美.html」（2026-09-28）。';
       initSim(cur, ser);
     }
-    function card(k,v,s){ return '<div class="fh-card"><div class="k"><span>'+k+'</span></div><div class="v">'+v+'</div><div class="s">'+(s||'')+'</div></div>'; }
+    function kcard(k,icon,v,s,f,cls){ return '<div class="pf-glass pf-kc'+(cls?' '+cls:'')+'"><div class="k"><span>'+k+'</span>'+icon+'</div><div><div class="v">'+v+'</div><div class="s">'+s+'</div></div><div class="f">'+(f||'')+'</div></div>'; }
 
     // 縮放限制：每根 K 棒寬度上限＝圖寬÷10（最多放大到 10 個交易日）、下限＝圖寬÷資料天數（最多縮到全部資料剛好填滿，不再縮小）
     window._clampChartZoom = function(ch, minBars, n){
@@ -2873,63 +3083,119 @@
         ch.timeScale().applyOptions({fixLeftEdge:true, fixRightEdge:true, rightOffset:0, minBarSpacing:w/n, maxBarSpacing:w/minBars}); }catch(e){} }
       ap(); window.addEventListener('resize', function(){ setTimeout(ap, 60); });
     };
-    function _cssv(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+    function pfColors(){ var dark=theme()!=='light'; return {text:dark?'#64748b':'#94a3b8', grid:dark?'rgba(255,255,255,.05)':'rgba(0,0,0,.05)', dark:dark}; }
+    function baseOpts(host,h){ var c=pfColors(); return {width:host.clientWidth||800,height:h,layout:{background:{color:'transparent'},textColor:c.text,fontSize:11,fontFamily:'JetBrains Mono, monospace'},
+        grid:{vertLines:{color:c.grid},horzLines:{color:c.grid}},timeScale:{borderColor:c.grid,timeVisible:false},crosshair:{mode:LightweightCharts.CrosshairMode.Normal},
+        handleScroll:{mouseWheel:true,pressedMouseMove:true,horzTouchDrag:true,vertTouchDrag:false},handleScale:{mouseWheel:true,pinch:true,axisPressedMouseMove:false}}; }
     function renderChart(){
       var host=el('fhChart'); if(typeof LightweightCharts==='undefined'){host.innerHTML='<div class="fc-empty">圖表載入失敗</div>';return;}
-      host.innerHTML=''; var mob=window.innerWidth<600, W=host.clientWidth||900, Hh=mob?260:340;
-      chart=LightweightCharts.createChart(host,{width:W,height:Hh,
-        layout:{background:{color:'transparent'},textColor:_cssv('--text-muted')||'#8b95a5',fontSize:10},
-        grid:{vertLines:{color:_cssv('--border')},horzLines:{color:_cssv('--border')}},
-        rightPriceScale:{borderColor:_cssv('--border')}, leftPriceScale:{visible:true,borderColor:_cssv('--border')},
-        timeScale:{borderColor:_cssv('--border'),timeVisible:false},
-        crosshair:{mode:LightweightCharts.CrosshairMode.Normal},
-        handleScroll:{mouseWheel:true,pressedMouseMove:true,horzTouchDrag:true,vertTouchDrag:false},
-        handleScale:{mouseWheel:true,pinch:true,axisPressedMouseMove:false}});
-      var rs=chart.addLineSeries({color:'#e03e2d',lineWidth:2,priceScaleId:'left',title:'避險比率',priceFormat:{type:'custom',minMove:0.001,formatter:function(v){return v.toFixed(2)+'%';}}});
-      rs.setData(DATA.map(function(r){var v=ratioOf(r);return v!=null?{time:r.trade_date,value:v}:{time:r.trade_date};}));
-      var is=chart.addLineSeries({color:'#3a86e0',lineWidth:1,priceScaleId:'right',lineStyle:2,title:'加權',priceFormat:{type:'custom',minMove:1,formatter:function(v){return Math.round(v).toLocaleString();}}});
-      is.setData(DATA.map(function(r){return r.taiex_close!=null?{time:r.trade_date,value:+r.taiex_close}:{time:r.trade_date};}));
-      // P80/P95 警戒線
+      if(chart){ try{chart.remove();}catch(e){} } host.innerHTML='';
+      var o=baseOpts(host, window.innerWidth<600?260:320);
+      o.leftPriceScale={visible:true,borderColor:pfColors().grid,textColor:'#f43f5e'}; o.rightPriceScale={borderColor:pfColors().grid,textColor:'#0284c7'};
+      chart=LightweightCharts.createChart(host,o);
+      var rs=chart.addAreaSeries({lineColor:'#f43f5e',topColor:pfColors().dark?'rgba(244,63,94,0.12)':'rgba(244,63,94,0.06)',bottomColor:'rgba(244,63,94,0)',lineWidth:2,priceScaleId:'left',title:'避險比率',
+        crosshairMarkerBorderColor:'#f43f5e',crosshairMarkerBackgroundColor:pfColors().dark?'#0b1120':'#ffffff',crosshairMarkerRadius:5,
+        priceFormat:{type:'custom',minMove:0.001,formatter:function(v){return v.toFixed(2)+'%';}}});
+      rs.setData(DATA.filter(function(r){return ratioOf(r)!=null;}).map(function(r){return {time:r.trade_date,value:ratioOf(r)};}));
+      var is=chart.addLineSeries({color:'#0284c7',lineWidth:2,lineStyle:LightweightCharts.LineStyle.Dashed,priceScaleId:'right',title:'加權',
+        crosshairMarkerBorderColor:'#0284c7',crosshairMarkerBackgroundColor:pfColors().dark?'#0b1120':'#ffffff',crosshairMarkerRadius:5,
+        priceFormat:{type:'custom',minMove:1,formatter:function(v){return Math.round(v).toLocaleString();}}});
+      is.setData(DATA.filter(function(r){return r.taiex_close!=null;}).map(function(r){return {time:r.trade_date,value:+r.taiex_close};}));
       var ser=DATA.map(ratioOf).filter(function(x){return x!=null;});
-      rs.createPriceLine({price:pct(ser,80),color:'#b58a2d',lineWidth:1,lineStyle:2,axisLabelVisible:true,title:'P80 偏高線'});
-      rs.createPriceLine({price:pct(ser,95),color:'#e03e2d',lineWidth:1,lineStyle:2,axisLabelVisible:true,title:'P95 顯著偏高線'});
-      var kmap=Object.fromEntries(DATA.map(function(r){return [r.trade_date,r];}));
-      chart.subscribeCrosshairMove(function(pm){ var d=pm.time; var r=kmap[d]; if(!r){el('fhChartTip').textContent='移動滑鼠看每日數值';return;}
-        el('fhChartTip').innerHTML='<b>'+d+'</b>　避險比率 <b style="color:#e03e2d">'+(ratioOf(r)!=null?ratioOf(r).toFixed(3)+'%':'–')+'</b>　加權 <b style="color:#3a86e0">'+(r.taiex_close!=null?(+r.taiex_close).toFixed(0):'–')+'</b>　淨空 '+Math.round(r.eq_net_lots).toLocaleString()+' 口';});
+      bandLines=[]; if(showBand){
+        bandLines.push(rs.createPriceLine({price:pct(ser,80),color:'#f59e0b',lineWidth:2,lineStyle:LightweightCharts.LineStyle.Dashed,axisLabelVisible:true,title:'P80 偏高線'}));
+        bandLines.push(rs.createPriceLine({price:pct(ser,95),color:'#f43f5e',lineWidth:1,lineStyle:LightweightCharts.LineStyle.Dashed,axisLabelVisible:true,title:'P95 顯著偏高線'}));
+      }
+      var kmap={}; DATA.forEach(function(r){kmap[r.trade_date]=r;});
+      chart.subscribeCrosshairMove(function(pm){ var r=kmap[pm.time]; if(!r){el('fhChartTip').textContent='移動滑鼠看每日數值';return;}
+        el('fhChartTip').innerHTML='<b style="color:var(--pf-t2)">'+pm.time+'</b>　避險比率 <b style="color:#f43f5e">'+(ratioOf(r)!=null?ratioOf(r).toFixed(3)+'%':'–')+'</b>　加權 <b style="color:#0284c7">'+(r.taiex_close!=null?(+r.taiex_close).toFixed(0):'–')+'</b>　淨空 '+n0(r.eq_net_lots)+' 口'; });
       window._clampChartZoom(chart, 10, DATA.length);
       var n=DATA.length; try{chart.timeScale().setVisibleLogicalRange({from:Math.max(0,n-250),to:n-1});}catch(_){}
     }
-
-    function renderQuad(cur,prev){
-      var spot=cur.spot_net||0, dLots=cur.eq_net_lots-(prev.eq_net_lots||cur.eq_net_lots);
-      // 空單增 = 淨空更負 = dLots<0
-      var addShort=dLots<0;
-      var q; if(spot>=0&&!addShort)q=1; else if(spot>=0&&addShort)q=2; else if(spot<0&&addShort)q=3; else q=4;
-      var defs=[
-        {n:1,h:'象限 I · 積極軋空大漲',d:'現貨買超 (+) × 空單減 (−)',p:'現貨加碼同時空單回補平倉，易期現共振軋空。'},
-        {n:2,h:'象限 II · 結構性鎖利避險',d:'現貨買超 (+) × 空單增 (+)',p:'買權值股拉抬點位、同時建立指數空單鎖利，非翻空。'},
-        {n:3,h:'象限 III · 實質做空撤退',d:'現貨賣超 (−) × 空單增 (+)',p:'現貨倒貨且期貨追空，常伴台幣走貶，真正翻空訊號。'},
-        {n:4,h:'象限 IV · 獲利平倉／換月',d:'現貨賣超 (−) × 空單減 (−)',p:'現貨被動調節、期貨空單獲利了結或換月轉倉。'}
-      ];
-      el('fhQuad').innerHTML=defs.map(function(x){return '<div class="fh-q'+(x.n===q?' on':'')+'"><div class="qh">'+x.h+(x.n===q?' ✅ 今日':'')+'</div><div class="qd">'+x.d+'</div><div class="qp">'+x.p+'</div></div>';}).join('');
+    function renderFx(){
+      var host=el('fhFxChart'); if(typeof LightweightCharts==='undefined') return;
+      if(fxChart){ try{fxChart.remove();}catch(e){} } host.innerHTML='';
+      var rows=DATA.filter(function(r){return r.spot_net!=null;}).slice(-60);
+      if(!rows.length){ host.innerHTML='<div class="fc-empty">暫無資料</div>'; return; }
+      var o=baseOpts(host, 260); o.leftPriceScale={visible:true,borderColor:pfColors().grid,textColor:'#10b981'}; o.rightPriceScale={visible:true,borderColor:pfColors().grid,textColor:'#f59e0b',invertScale:true};
+      fxChart=LightweightCharts.createChart(host,o);
+      var hs=fxChart.addHistogramSeries({priceScaleId:'left',title:'',priceFormat:{type:'custom',minMove:1,formatter:function(v){return Math.round(v)+'';}}});
+      hs.setData(rows.map(function(r){ var v=r.spot_net/1e8; return {time:r.trade_date,value:v,color:v>=0?'rgba(16,185,129,0.75)':'rgba(244,63,94,0.75)'}; }));
+      var fxRows=rows.filter(function(r){return FX[r.trade_date]!=null;});
+      var ls=fxChart.addLineSeries({priceScaleId:'right',color:'#f59e0b',lineWidth:2,title:'USD/TWD',crosshairMarkerBackgroundColor:'#f59e0b',
+        priceFormat:{type:'custom',minMove:0.001,formatter:function(v){return v.toFixed(3);}}});
+      ls.setData(fxRows.map(function(r){return {time:r.trade_date,value:FX[r.trade_date]};}));
+      var km={}; rows.forEach(function(r){km[r.trade_date]=r;});
+      fxChart.subscribeCrosshairMove(function(pm){ var r=km[pm.time]; if(!r){el('fhFxTip').textContent='移動滑鼠看每日數值';return;}
+        var v=r.spot_net/1e8; el('fhFxTip').innerHTML='<b style="color:var(--pf-t2)">'+pm.time+'</b>　現貨 <b class="'+(v>=0?'c-bull':'c-bear')+'">'+sgn(v,1)+' 億</b>　USD/TWD <b class="c-warn">'+(FX[pm.time]!=null?FX[pm.time].toFixed(3):'–')+'</b>'; });
+      window._clampChartZoom(fxChart, 10, rows.length);
+      var sum20=rows.slice(-20).reduce(function(a,r){return a+r.spot_net/1e8;},0);
+      el('fhFlowSum').innerHTML='<span class="'+(sum20>=0?'c-bull':'c-bear')+'">'+sgn(sum20,1)+' 億新台幣</span>';
+      var f20=fxRows.slice(-20); if(f20.length>=2){ var a=FX[f20[0].trade_date], b=FX[f20[f20.length-1].trade_date];
+        el('fhFxTrend').textContent=b<a?'台幣震盪走升（熱錢未外逃）':(b>a?'台幣走貶（留意外資匯出）':'台幣持平'); } else el('fhFxTrend').textContent='—';
+    }
+    function renderQuad(q){
+      [1,2,3,4].forEach(function(n){ var d=QDEF[n], on=n===q;
+        el('fhQ'+n).className='pf-q'+(on?' on':'');
+        el('fhQ'+n).innerHTML='<div class="qh"><span class="qn" style="color:'+(on?'var(--pf-sky-strong)':d.c)+'">'+d.h+'</span>'
+          +(on?'<span class="pf-badge pf-ping" style="background:rgba(14,165,233,.2);color:var(--pf-sky);border:1px solid rgba(14,165,233,.3)"><i></i> 今日命中</span>'
+              :'<span class="pf-badge" style="'+CLS[d.cl]+';border:1px solid">'+d.tag+'</span>')+'</div>'
+          +'<div class="qd">'+d.d+'</div><div class="qp">'+d.p+'</div>';
+      });
+    }
+    function renderTable(){
+      el('fhTable').innerHTML=DATA.slice(-20).reverse().map(function(r){ var rt=ratioOf(r);
+        return '<tr><td style="font-weight:600;color:var(--pf-t2)">'+r.trade_date+'</td><td>'+(r.taiex_close!=null?(+r.taiex_close).toLocaleString(undefined,{maximumFractionDigits:2}):'—')+'</td>'
+          +'<td class="c-bear">'+n0(r.fx_tx_net)+'</td><td class="c-bear">'+n0(r.fx_mtx_net)+'</td><td class="c-bear">'+n0(r.fx_tmf_net)+'</td>'
+          +'<td class="c-bear" style="font-weight:700">'+n0(r.eq_net_lots)+'</td>'
+          +'<td class="'+(r.spot_net>=0?'c-bull':'c-bear')+'" style="font-weight:700">'+(r.spot_net!=null?sgn(r.spot_net/1e8,1):'—')+'</td>'
+          +'<td>'+((vOf(r)||0)/1e12).toFixed(2)+'</td><td style="text-align:right;font-weight:700;color:#f43f5e">'+(rt!=null?rt.toFixed(3)+'%':'—')+'</td></tr>'; }).join('');
     }
 
-    // 第 3 層 宏觀佐證（2026-09-28）：investing.com 經濟日曆(macro_events)＋宏觀新聞(macro_news)＋台指期結算
-    //   高重要度直接顯示；中重要度只給籌碼會員(_isOwner)看，按「列上去」(pinned=true)才公開。
+    // ── 第三層 事件倒數卡 ──
+    function daysTo(d){ var t=new Date(d); var now=new Date(Date.now()+8*3600e3); var a=Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate());
+      var tw=new Date(t.getTime()+8*3600e3); var b=Date.UTC(tw.getUTCFullYear(),tw.getUTCMonth(),tw.getUTCDate()); return Math.round((b-a)/864e5); }
+    function nextSettleDate(){ var d=new Date(Date.now()+8*3600e3); for(var k=0;k<3;k++){ var y=d.getUTCFullYear(), m=d.getUTCMonth()+k, first=new Date(Date.UTC(y,m,1)), off=(3-first.getUTCDay()+7)%7, w=new Date(Date.UTC(y,m,1+off+14));
+      if(w.getTime()+864e5>d.getTime()) return w; } return null; }
+    function evCard(icon,title,tagTxt,tagStyle,num,unit,desc,warn,warnCls,titleColor){
+      return '<div class="pf-ev"><div><div class="eh"><span style="color:'+titleColor+';display:flex;align-items:center;gap:6px">'+icon+' '+title+'</span><span class="pf-badge" style="'+tagStyle+';font-weight:700">'+tagTxt+'</span></div>'
+        +'<div class="en">'+num+' <small>'+unit+'</small></div><div class="ed">'+desc+'</div></div><div class="ew '+warnCls+'">'+warn+'</div></div>'; }
+    function renderEvCards(SB,H){
+      var nowIso=new Date().toISOString(), today=new Date(Date.now()+8*3600e3).toISOString().slice(0,10);
+      Promise.all([
+        fetch(SB+'/rest/v1/catalyst_events?select=start_date,event_type&code=eq.2330&event_type=eq.'+encodeURIComponent('法說會')+'&start_date=gte.'+today+'&order=start_date.asc&limit=1',{headers:H}).then(function(r){return r.json();}).catch(function(){return [];}),
+        fetch(SB+'/rest/v1/macro_events?select=occ_time,title,country&country=eq.US&title=ilike.'+encodeURIComponent('*利率決議*')+'&occ_time=gte.'+nowIso+'&order=occ_time.asc&limit=1',{headers:H}).then(function(r){return r.json();}).catch(function(){return [];}),
+        fetch(SB+'/rest/v1/macro_events?select=occ_time,title,country&country=eq.TW&title=ilike.'+encodeURIComponent('*利率*')+'&occ_time=gte.'+nowIso+'&order=occ_time.asc&limit=1',{headers:H}).then(function(r){return r.json();}).catch(function(){return [];})
+      ]).then(function(res){
+        var cur=DATA[DATA.length-1]||{}, st=nextSettleDate(), stDays=st?daysTo(st.toISOString()):null;
+        var tsmc=(res[0]||[])[0], fomc=(res[1]||[])[0], cbc=(res[2]||[])[0];
+        var shortLots=Math.abs(cur.eq_net_lots||0);
+        var twDate=function(iso){ var t=new Date(new Date(iso).getTime()+8*3600e3); return (t.getUTCMonth()+1)+'/'+t.getUTCDate(); };
+        el('fhEvCards').innerHTML=
+          evCard('⚑','台指期近月合約結算','高波動','background:rgba(244,63,94,.2);color:#fb7185',stDays!=null?stDays:'—','天後結算'+(st?'（'+(st.getUTCMonth()+1)+'/'+st.getUTCDate()+'）':''),'每月第三個星期三（次月合約轉倉期）',
+            '⚠ 目前外資等值淨空 '+n0(shortLots)+' 口'+(shortLots>35000?'，若未於結算前撤退，易引發尾盤定價刻意壓低。':'，結算前留意尾盤定價與轉倉動向。'),'warn','#fb7185')
+          +evCard('▣','台積電 (2330) 季度法說會','權值中樞','background:rgba(14,165,233,.2);color:var(--pf-sky)',tsmc?daysTo(tsmc.start_date):'—',tsmc?'天後召開（'+tsmc.start_date.slice(5).replace('-','/')+'）':'尚未公告','資本支出與先進製程展望',
+            '外資常在此事件前大增期貨空單做為法說黑天鵝的免死金牌。','n','var(--pf-sky)')
+          +evCard('$','美國 FOMC 利率決策','全球流動性','background:rgba(99,102,241,.2);color:#a5b4fc',fomc?daysTo(fomc.occ_time):'—',fomc?'天後公布（台灣時間 '+twDate(fomc.occ_time)+'）':'尚未公告','美債殖利率與點陣圖預期',
+            '直接連動美元指數 (DXY) 走勢與外資被動型 ETF 資金進出。','n','#818cf8')
+          +evCard('⚖','台灣央行 CBC 理監事會','匯率防線','background:rgba(16,185,129,.2);color:#34d399',cbc?daysTo(cbc.occ_time):'—',cbc?'天後決議（'+twDate(cbc.occ_time)+'）':'尚未公告','貨幣政策與房貸信用管制調整（每季一次）',
+            '關注新台幣防守底線，若阻貶力度強大將緩解外資外逃賣壓。','n','#34d399');
+      });
+    }
+
+    // 第 3 層 宏觀事件表（investing.com，高重要度公開、中重要度會員列上；國家限美日韓中歐，台灣只供倒數卡）
     var MC_ORDER={US:1,JP:2,KR:3,CN:4,EU:5}, MC_FLAG={US:'🇺🇸',JP:'🇯🇵',KR:'🇰🇷',CN:'🇨🇳',EU:'🇪🇺'};
     function mcTime(t){ var d=new Date(t); var p=function(n){return (n<10?'0':'')+n;}; var tw=new Date(d.getTime()+8*3600e3);
       return p(tw.getUTCMonth()+1)+'/'+p(tw.getUTCDate())+' '+p(tw.getUTCHours())+':'+p(tw.getUTCMinutes()); }
     function mcEsc(x){ return String(x==null?'':x).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
     function mcVal(v,u){ return (v==null||v==='')?'—':(v+(u||'')); }
-    function nextSettle(){ var d=new Date(Date.now()+8*3600e3); for(var k=0;k<3;k++){ var y=d.getUTCFullYear(), m=d.getUTCMonth()+k, first=new Date(Date.UTC(y,m,1)), off=(3-first.getUTCDay()+7)%7, w=new Date(Date.UTC(y,m,1+off+14));
-        if(w.getTime()+86400e3>d.getTime()) return w.getUTCFullYear()+'/'+(w.getUTCMonth()+1)+'/'+w.getUTCDate(); } return ''; }
     function renderEvents(SB,H){
       var now=Date.now(), from=new Date(now-7*86400e3).toISOString(), to=new Date(now+7*86400e3).toISOString();
       Promise.all([
         fetch(SB+'/rest/v1/macro_events?select=*&occ_time=gte.'+from+'&occ_time=lte.'+to+'&order=occ_time.asc&limit=500',{headers:H}).then(function(r){return r.json();}).catch(function(){return [];}),
         fetch(SB+'/rest/v1/macro_news?select=*&order=published_at.desc&limit=10',{headers:H}).then(function(r){return r.json();}).catch(function(){return [];})
       ]).then(function(res){
-        var ev=Array.isArray(res[0])?res[0]:[], news=Array.isArray(res[1])?res[1]:[];
+        var ev=(Array.isArray(res[0])?res[0]:[]).filter(function(e){return MC_ORDER[e.country];}), news=Array.isArray(res[1])?res[1]:[];
         ev.sort(function(x,y){ return x.occ_time<y.occ_time?-1:x.occ_time>y.occ_time?1:(MC_ORDER[x.country]||9)-(MC_ORDER[y.country]||9); });
         var owner=!!window._isOwner;
         var pub=ev.filter(function(e){return e.importance==='high'||e.pinned;});
@@ -2945,8 +3211,7 @@
         h+=fut.length?('<table class="mc-t"><thead><tr><th>時間(台灣)</th><th>國家</th><th class="l">事件</th><th>預測</th><th>前值</th></tr></thead><tbody>'
           +fut.map(function(e){ return '<tr><td>'+mcTime(e.occ_time)+'</td><td>'+ctry(e)+'</td><td class="l">'+star(e)+mcEsc(e.title)+'</td><td>'+mcVal(e.forecast,e.unit)+'</td><td>'+mcVal(e.previous,e.unit)+'</td></tr>'; }).join('')+'</tbody></table>')
           :'<div class="fc-empty">未來 7 天無高重要度事件</div>';
-        h+='</div>';
-        h+='<div class="mc-blk"><div class="mc-h">📊 近 7 天已公布</div>';
+        h+='</div><div class="mc-blk"><div class="mc-h">📊 近 7 天已公布</div>';
         h+=past.length?('<table class="mc-t"><thead><tr><th>時間(台灣)</th><th>國家</th><th class="l">事件</th><th>實際</th><th>預測</th><th>前值</th><th>結果</th></tr></thead><tbody>'
           +past.map(function(e){ return '<tr><td>'+mcTime(e.occ_time)+'</td><td>'+ctry(e)+'</td><td class="l">'+star(e)+mcEsc(e.title)+'</td><td><b>'+mcVal(e.actual,e.unit)+'</b></td><td>'+mcVal(e.forecast,e.unit)+'</td><td>'+mcVal(e.previous,e.unit)+'</td><td>'+res2(e)+'</td></tr>'; }).join('')+'</tbody></table>')
           :'<div class="fc-empty">近 7 天無已公布數據</div>';
@@ -2963,9 +3228,7 @@
         h+='<div class="mc-blk"><div class="mc-h">📰 宏觀新聞</div>';
         h+=news.length?news.map(function(n){ return '<div class="mc-news"><a href="'+mcEsc(n.link)+'" target="_blank" rel="noopener noreferrer">'+mcEsc(n.title)+' ↗</a><span>'+(n.published_at?mcTime(n.published_at):'')+(n.source?' · '+mcEsc(n.source):'')+'</span></div>'; }).join('')
           :'<div class="fc-empty">暫無新聞</div>';
-        h+='</div>';
-        h+='<div class="fh-ev" style="border-left-color:var(--text-muted)"><div class="d">下次台指期近月結算：'+nextSettle()+'（每月第三個週三）</div>外資空單常於結算前 72 小時調整、易壓低尾盤定價。</div>';
-        h+='<div class="mc-note">資料源：investing.com 香港站經濟日曆（重要度依該站三級分類；國家依序美、日、韓、中、歐元區）與「商業、財經大事」新聞，每日盤後更新。結果欄「高於／低於預期」依實際值與預測值比較，綠色＝該站判定利多該國貨幣、紅色＝利空。</div>';
+        h+='</div><div class="mc-note">資料源：investing.com 香港站經濟日曆（重要度依該站三級分類；國家依序美、日、韓、中、歐元區）與「商業、財經大事」新聞，每日盤後更新。結果欄「高於／低於預期」依實際值與預測值比較，綠色＝該站判定利多該國貨幣、紅色＝利空。</div>';
         el('fhEvents').innerHTML=h;
         el('fhEvents').querySelectorAll('.mc-pin').forEach(function(bt){ bt.onclick=function(){ mcPin(bt, SB, H); }; });
       });
@@ -2984,37 +3247,57 @@
       }).catch(function(){ alert('更新失敗，請稍後再試'); bt.disabled=false; });
     }
 
-    var SIM_SER=[];
+    // ── 量化情境模擬計算器 ──
+    var SIM_SER=[], SIM_BASE=null;
+    function setSim(idx,shortLots,Vt,spot){ el('fhSlIdx').value=idx; el('fhSlLots').value=shortLots; el('fhSlV').value=Vt; el('fhSlSpot').value=spot; calcSim(); }
     function initSim(cur, ser){
       SIM_SER=ser;
-      el('fhSlIdx').value=Math.round(cur.taiex_close);
-      el('fhSlLots').value=Math.round(cur.eq_net_lots);
-      el('fhSlV').value=(vOf(cur)/1e12).toFixed(1);
-      el('fhSlSpot').value=cur.spot_net!=null?Math.round(cur.spot_net/1e8):0;
-      ['fhSlIdx','fhSlLots','fhSlV','fhSlSpot'].forEach(function(id){ el(id).oninput=calcSim; });
-      calcSim();
+      var maxShort=Math.max.apply(null,DATA.map(function(r){return -(r.eq_net_lots||0);}));
+      SIM_BASE={idx:Math.round(cur.taiex_close), lots:Math.round(-cur.eq_net_lots), V:+(vOf(cur)/1e12).toFixed(1), spot:cur.spot_net!=null?Math.round(cur.spot_net/1e8):0, maxShort:Math.round(maxShort)};
+      ['fhSlIdx','fhSlLots','fhSlV','fhSlSpot'].forEach(function(id){ el(id).oninput=function(){ el('fhScenario').value='custom'; calcSim(); }; });
+      el('fhScenario').onchange=function(){ var b=SIM_BASE, m=el('fhScenario').value;
+        if(m==='historical_rally') setSim(b.idx, b.maxShort, b.V, 280);
+        else if(m==='cash_out') setSim(Math.round(b.idx*0.95), Math.round(b.lots*1.25), +(b.V*0.9).toFixed(1), -580);
+        else if(m==='bull_squeeze') setSim(Math.round(b.idx*1.02), Math.round(b.lots*0.35), b.V, 490);
+        else calcSim(); };
+      el('fhSimReset').onclick=function(){ el('fhScenario').value='custom'; setSim(SIM_BASE.idx, SIM_BASE.lots, SIM_BASE.V, SIM_BASE.spot); };
+      setSim(SIM_BASE.idx, SIM_BASE.lots, SIM_BASE.V, SIM_BASE.spot);
     }
     function calcSim(){
-      var idx=+el('fhSlIdx').value, lots=+el('fhSlLots').value, V=+el('fhSlV').value*1e12, spot=+el('fhSlSpot').value*1e8;
-      el('fhSvIdx').textContent=idx.toLocaleString(); el('fhSvLots').textContent=lots.toLocaleString()+' 口';
-      el('fhSvV').textContent=V/1e12+' 兆'; el('fhSvSpot').textContent=(spot>=0?'+':'')+(spot/1e8)+' 億';
-      var notional=lots*idx*200; var H=Math.max(-notional,0);
-      var r=V>0? H/V*100:0; var rank=rankOf(SIM_SER,r);
-      el('fhSimH').textContent=(H/1e8).toFixed(0)+' 億'; el('fhSimR').textContent=r.toFixed(3)+'%'; el('fhSimPR').textContent=rank.toFixed(1);
-      var tg=tier(rank,r);
-      var quad = spot>=0?(lots< (+el('fhSlLots').defaultValue||lots)?'':''):'';
-      el('fhSimTxt').innerHTML='避險比率 <b>'+r.toFixed(3)+'%</b> → 近 2 年第 <b>'+rank.toFixed(1)+'</b> 百分位（<span class="fh-tag '+tg.c+'">'+tg.t+'</span>）。'+(r>1.2?'已逾 1.2% 系統性警戒。':(rank>=80?'空單相對持股偏高，屬結構性保護、非必然下跌訊號。':'空單占比處歷史常態區間。'));
+      var idx=+el('fhSlIdx').value, shortLots=+el('fhSlLots').value, Vt=+el('fhSlV').value, spot=+el('fhSlSpot').value;
+      el('fhSvIdx').textContent=idx.toLocaleString(); el('fhSvLots').textContent='-'+shortLots.toLocaleString()+' 口';
+      el('fhSvV').textContent=Vt.toFixed(1)+' 兆'; el('fhSvSpot').textContent=(spot>=0?'+':'')+spot+' 億';
+      var H=shortLots*idx*200, r=Vt>0?H/(Vt*1e12)*100:0, rank=rankOf(SIM_SER,r);
+      el('fhSimH').textContent=n0(H/1e8)+' 億'; el('fhSimR').textContent=r.toFixed(2)+'%'; el('fhSimPR').textContent='PR '+rank.toFixed(1);
+      var q=quadOf(spot, SIM_BASE?-(shortLots-SIM_BASE.lots):0), Q=QDEF[q];
+      var rk=el('fhSimRisk'); rk.textContent=Q.risk; rk.setAttribute('style',CLS[Q.cl]+';border:1px solid;font-family:\'JetBrains Mono\',monospace');
+      var txt={
+        2:'<strong class="c-sky">機構全景診斷【象限二・鎖利避險拉積】：</strong>外資現貨買超 +'+spot+' 億，同時空單增至 '+shortLots.toLocaleString()+' 口（等值名目佔持股市值 '+r.toFixed(2)+'%、PR '+rank.toFixed(1)+'）。顯示外資無意摜壓大盤出脫現貨，而是利用權值股拉升點位、同時建立避險對沖未實現損益。不宜盲目將高口數視為崩盤徵兆。',
+        3:'<strong class="c-bear">機構全景診斷【象限三・真倒貨強烈看空】：</strong>外資單日現貨倒貨 '+Math.abs(spot)+' 億，且空單飆高至 '+shortLots.toLocaleString()+' 口（PR '+rank.toFixed(1)+'）。此屬最高等級「現貨期貨雙重狙擊」，若伴隨新台幣持續貶值，代表外資真金白銀撤資，應立刻採取防守策略，嚴禁摸底。',
+        1:'<strong class="c-bull">機構全景診斷【象限一・軋空大進擊】：</strong>現貨大買 +'+spot+' 億，且期貨空單降至 '+shortLots.toLocaleString()+' 口。外資避險意願降低，整體風險偏好（Risk-On）升溫，權值股與衍生品同向共振，易形成多頭軋空主升段。',
+        4:'<strong class="c-warn">機構全景診斷【象限四・空單獲利平倉結算】：</strong>現貨賣超調節 '+Math.abs(spot)+' 億，但期貨空單未見增長反呈回補（'+shortLots.toLocaleString()+' 口）。多為跌深後的期權獲利了結或月結算轉倉被動收斂，空頭動能已鈍化。'
+      }[q];
+      el('fhSimTxt').innerHTML=txt+(r>1.2?' <strong class="c-bear">避險比率已逾 1.2% 系統性警戒。</strong>':'');
     }
 
     window._fhedgeShow=function(){
-      applyGate();
+      applyGate(); applyTheme();
       if(loaded){ if(window._isOwner) render(); return; }
       var SB=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'', AK=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';
-      var H={apikey:AK,Authorization:'Bearer '+AK};
+      var H={apikey:AK,Authorization:'Bearer '+AK}; SBx=SB; Hx=H;
       el('fhModeSeg').querySelectorAll('button').forEach(function(b){ b.onclick=function(){ el('fhModeSeg').querySelectorAll('button').forEach(function(x){x.classList.remove('on');}); b.classList.add('on'); mode=b.dataset.m; render(); }; });
-      fetch(SB+'/rest/v1/foreign_hedge_daily?select=*&order=trade_date.desc&limit=1000',{headers:H}).then(function(r){return r.json();}).then(function(a){ a=Array.isArray(a)?a.reverse():a;   /* 取最新 1000 筆再轉回舊→新（單次上限 1000）*/
-        DATA=Array.isArray(a)?a:[]; loaded=true;
-        if(window._isOwner){ render(); renderEvents(SB,H); }
+      el('fhThemeBtn').onclick=function(){ try{ localStorage.setItem('fhTheme', theme()==='light'?'dark':'light'); }catch(e){} applyTheme(); if(loaded&&window._isOwner) render(); };
+      el('fhBandBtn').onclick=function(){ showBand=!showBand; el('fhBandDot').style.background=showBand?'#f59e0b':'#94a3b8'; renderChart(); };
+      el('fhResetBtn').onclick=function(){ showBand=true; el('fhBandDot').style.background='#f59e0b'; renderChart(); };
+      Promise.all([
+        fetch(SB+'/rest/v1/foreign_hedge_daily?select=*&order=trade_date.desc&limit=1000',{headers:H}).then(function(r){return r.json();}),   /* 取最新 1000 筆再轉回舊→新（單次上限 1000）*/
+        fetch('/api/chart?code=TWD%3DX&range=1y&interval=1d').then(function(r){return r.json();}).catch(function(){return null;})
+      ]).then(function(res){
+        var a=res[0]; DATA=Array.isArray(a)?a.reverse():[];
+        FX={}; ((res[1]&&res[1].data)||[]).forEach(function(c){ if(c&&c.close) FX[typeof c.time==='number'?new Date(c.time*1000).toISOString().slice(0,10):c.time]=+c.close; });
+        DATA.forEach(function(r){ if(FX[r.trade_date]==null&&r.usdtwd!=null) FX[r.trade_date]=+r.usdtwd; });   // Yahoo 缺日以自有匯率補
+        loaded=true;
+        if(window._isOwner){ render(); renderEvents(SB,H); renderEvCards(SB,H); }
       }).catch(function(){ if(el('fhNarrative'))el('fhNarrative').textContent='資料讀取失敗'; });
     };
     window._VIEWS=window._VIEWS||{}; window._VIEWS.fhedge={el:'fhedgeView',show:'_fhedgeShow'};
@@ -5123,7 +5406,19 @@
           +(fc!=null?'<div class="big '+fcol+'">'+Number(fc).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+'</div>'
             +'<div class="sub"><span class="'+fcol+'">'+(fchg>0?'+':'')+fchg.toFixed(2)+' 點 · '+(fpct>0?'+':'')+fpct.toFixed(2)+'%</span></div>'
             +'<div class="cb-conv">↓ 換算參考　<strong>台指期約 '+Math.round(conv).toLocaleString()+' 點</strong></div>':'<div class="big">資料更新中</div>')+'</div>';
-        ov.innerHTML=tsmcCard+'<div id="cbGov"></div>'+ftseCard;
+        // 期貨結算日（台指期月合約＝每月第三個週三；週選＝每週三、週五；遇休市順延，此處未扣國定假日）2026-09-28
+        function twToday(){var d=new Date(Date.now()+8*3600e3);return Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate());}
+        function nextMonthly(t0){var d=new Date(t0);for(var k=0;k<3;k++){var y=d.getUTCFullYear(),m=d.getUTCMonth()+k,f=new Date(Date.UTC(y,m,1)).getUTCDay(),w=Date.UTC(y,m,1+((3-f+7)%7)+14);if(w>=t0)return w;}return null;}
+        function nextDow(t0,dow){var d=new Date(t0).getUTCDay();return t0+((dow-d+7)%7)*864e5;}
+        var t0=twToday(),mSet=nextMonthly(t0),wWed=nextDow(t0,3),wFri=nextDow(t0,5);
+        var mDays=mSet!=null?Math.round((mSet-t0)/864e5):null;
+        function md(t){var d=new Date(t);return (d.getUTCMonth()+1)+'/'+d.getUTCDate()+'（'+'日一二三四五六'[d.getUTCDay()]+'）';}
+        var stTag=mDays===0?['d','今日結算']:(mDays!=null&&mDays<=3?['d','結算週']:['n','月合約']);
+        var settleCard='<div class="cb-ovc"><header><span>台指期結算日<small>TAIFEX TX</small></span><span class="cb-tag '+stTag[0]+'">'+stTag[1]+'</span></header>'
+          +(mSet!=null?'<div class="big">'+md(mSet)+'</div>'
+            +'<div class="sub">'+(mDays===0?'<b class="hp-dn">今日 13:30 月合約結算</b>':'距月結算 <b>'+mDays+'</b> 天（每月第三個週三）')+'<br>'
+            +'週選結算：週三 '+md(wWed)+'、週五 '+md(wFri)+'<br>遇休市順延至次一交易日</div>':'<div class="big">—</div>')+'</div>';
+        ov.innerHTML=tsmcCard+'<div id="cbGov"></div>'+ftseCard+settleCard;
         // 官股 今日/5/20/60
         function govNet(pd){if(!gov.length)return null;
           if(pd==='today')return gov[0].net_amt;
@@ -5825,6 +6120,7 @@
             <div class="modal-title" id="modalTitle">—</div>
             <span id="industryTag"></span>
             <span id="mktTag" style="display:none;font-size:.72rem;padding:1px 7px;border-radius:10px;font-weight:700"></span>
+            <span id="capTag" title="市值＝已發行普通股數 × 最新收盤（股數：證交所／櫃買中心公司基本資料）" style="display:none;font-size:.72rem;padding:1px 7px;border-radius:10px;font-weight:700;background:rgba(210,161,43,.14);color:#a8801a"></span>
             <span id="chartPriceTag"></span>
             <span id="divTag"></span>
             <span id="catalystTag"></span>
@@ -6663,7 +6959,27 @@
       return code && !code.startsWith('^') && !code.includes('=');
     }
 
+    // K 線標題列「市值」＝已發行普通股數 × 最新收盤（股數：/api/screen?stat=shares，官方被擋時後端改用內嵌備援表）2026-09-28
+    let _shares = null, _sharesLoading = null, _capPrice = null;
+    window._capCode = null;
+    function _loadShares() {
+      if (_shares) return Promise.resolve(_shares);
+      if (_sharesLoading) return _sharesLoading;
+      _sharesLoading = fetch('/api/screen?stat=shares').then(r => r.json()).catch(() => ({}))
+        .then(j => (_shares = (j && !j.error) ? j : {}));
+      return _sharesLoading;
+    }
+    function _paintCap() {
+      const t = document.getElementById('capTag'); if (!t) return;
+      const code = window._capCode, sh = _shares && code ? _shares[code] : null;
+      if (!sh || !_capPrice) { t.style.display = 'none'; return; }
+      const cap = sh * _capPrice;
+      t.textContent = '市值 ' + (cap >= 1e12 ? (cap / 1e12).toFixed(2) + ' 兆' : Math.round(cap / 1e8).toLocaleString() + ' 億');
+      t.style.display = 'inline-block';
+    }
+    window._setCapPrice = function (price) { _capPrice = price; if (_shares) _paintCap(); else _loadShares().then(_paintCap); };
     function _setMktTag(code) {   // K 線標題列顯示 上市／上櫃（ETF 另標）2026-09-28
+      window._capCode = String(code || '').replace(/\.TWO?$/,''); _capPrice = null; _paintCap();
       const t = document.getElementById('mktTag'); if (!t) return;
       const paint = () => {
         const mk = (window._mktLabel && window._mktLabel(code)) || '', etf = window._isEtf && window._isEtf(code);
@@ -9398,6 +9714,7 @@
 
     // ── 價格標籤渲染（共用）───────────────────────────────
     function _renderPriceTag(price, chgPct, dot, hms, source) {
+      try { window._setCapPrice && window._setCapPrice(price); } catch (_) {}
       const tag = document.getElementById('chartPriceTag');
       if (!tag) return;
       const isLimitUp   = chgPct >=  9.5;
@@ -11019,7 +11336,8 @@
         if(cur===null) history.replaceState({v:v},'',url);
         else if(v!==cur) history.pushState({v:v},'',url);
       }
-      cur=v; return r;
+      cur=v; try{ window._fhPageBg && window._fhPageBg(v==='fhedge'); }catch(e){}
+      return r;
     };
     if(typeof origOpen==='function') window.openChart=function(){
       if(!chartOpen()&&!popping) history.pushState({v:cur,modal:1},'',location.href);
