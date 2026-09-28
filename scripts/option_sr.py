@@ -3,7 +3,8 @@ option_sr.py — 台指選擇權(TXO)「支撐壓力 OI 三層峰值」，供首
 
 方法（2026-09-28 與用戶定案，比照玩股網 option/support-resistance）：
   參考價 ref＝台指期 TX 近月「一般盤結算價」（DailyMarketReportFut，同盤後截面），ref_kind='TX近月結算'；取不到才退回加權收盤。
-  兩側分開：CALL 只看 strike > ref 找壓力、PUT 只看 strike < ref 找支撐；OI 缺／負／0 剔除。
+  價平＝最接近加權收盤的履約價（同玩股網反灰列），價平本身兩側都排除（2026-09-29 用戶要求）。
+  兩側分開：CALL 只看 strike > max(ref, 價平) 找壓力、PUT 只看 strike < min(ref, 價平) 找支撐；OI 缺／負／0 剔除。
   峰值＝下列 4 條件同時成立：
     ① OI ≥ 該側 OI 的第 70 百分位（P70）
     ② OI ≥ 該側最大 OI × 0.20
@@ -170,9 +171,12 @@ def _median(a):
     return None if not n else (a[n // 2] if n % 2 else (a[n // 2 - 1] + a[n // 2]) / 2)
 
 
-def _levels(side, ref, up, prev, cp):
+def _levels(side, ref, up, prev, cp, atm=None):
     """回傳 (前 3 層清單, 統計)。side＝{strike: oi}。"""
-    pts = sorted((k, oi) for k, oi in side.items() if oi and oi > 0 and (k > ref if up else k < ref))
+    # 2026-09-29：價平那一檔兩側都排除（比照玩股網反灰），壓力取 > max(ref, 價平)、支撐取 < min(ref, 價平)
+    hi = max(ref, atm) if atm else ref
+    lo = min(ref, atm) if atm else ref
+    pts = sorted((k, oi) for k, oi in side.items() if oi and oi > 0 and (k > hi if up else k < lo))
     if not pts:
         return [], {"n": 0}
     ois = [o for _, o in pts]
@@ -226,14 +230,16 @@ def _build(kind, code, rows, ref, ref_kind, spot, iso):
     if not calls and not puts:
         return None
     prev = _prev_oi(code, iso)
-    res, rst = _levels(calls, ref, True, prev, "C")
-    sup, sst = _levels(puts, ref, False, prev, "P")
+    ks = sorted(set(calls) | set(puts))
+    atm = min(ks, key=lambda k: abs(k - spot)) if (spot and ks) else None     # 價平＝最接近加權收盤的履約價（同玩股網）
+    res, rst = _levels(calls, ref, True, prev, "C", atm)
+    sup, sst = _levels(puts, ref, False, prev, "P", atm)
     call_tot = sum(calls.values()); put_tot = sum(puts.values())
     L = lambda a, i, f: a[i][f] if len(a) > i else None
     return {
         "trade_date": iso, "kind": kind, "contract": code, "expiry": str(_expiry(code)),
         "spot": round(spot, 2) if spot else None, "ref_price": ref, "ref_kind": ref_kind,
-        "atm": None, "atm_call": None, "atm_put": None,
+        "atm": atm, "atm_call": None, "atm_put": None,
         "res_levels": res, "sup_levels": sup,
         "res1_lo": L(res, 0, "strike"), "res1_hi": L(res, 0, "strike"), "res1_oi": L(res, 0, "oi"),
         "res2_lo": L(res, 1, "strike"), "res2_hi": L(res, 1, "strike"), "res2_oi": L(res, 1, "oi"),
