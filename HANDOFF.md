@@ -55,14 +55,23 @@
 - prod：同目錄 `prod_wt`
 - 若資料夾不見（Temp 被清）：`git worktree prune` 後 `git worktree add <路徑> origin/uat` 重建。
 
-### 推 uat（Bash）
+### 推 uat（Bash）— 2026-09-28 起一律 **git merge**，禁止「複製 index.html 覆蓋」
+舊做法（reset 到 origin/uat 再 cp index.html）會把合夥人或別人推到 uat 的修改**默默蓋掉**，已停用。
+2026-09-28 已做首次正式合併（uat `a59688b`，之後 Andrew 是 uat 的祖先，可乾淨合併）。
 ```bash
-W=<uat_wt 路徑> && cd $W && git fetch -q origin && git reset -q --hard origin/uat \
- && cp /c/Users/User/Desktop/AI_stock/index.html . && cp /c/Users/User/Desktop/AI_stock/api/screen.py api/ \
- && git add index.html api/screen.py && git commit -q -m "uat: ...
+W=<uat_wt 路徑> && cd $W && git fetch -q origin && git checkout -q --detach origin/uat \
+ && git merge --no-ff origin/Andrew -m "merge Andrew → uat: <摘要>
 
 Co-Authored-By: Claude <模型版本> <noreply@anthropic.com>" && git push -q origin HEAD:uat
 ```
+- **有衝突就停下來**告知用戶衝突檔與兩邊差異，不要 `--ours/--theirs` 整份覆蓋。
+- uat 上有些檔案（logo、vercel.json logo 路由、box/greed/etf 腳本）曾只提交在 uat；已補提交進 Andrew（以本機實際排程版本為準，compute_greed.py 取 9/24 較新版）。
+
+### 協作：合夥人也 clone 這個 repo 改版面
+- 合夥人**不直接推 uat／prod**：從最新 uat 開自己的分支 `git fetch origin && git checkout -b <他的名字>-layout origin/uat`，改完 `git push origin <分支>`，告訴用戶分支名稱。
+- 收到後：`git fetch origin` → 合併進 Andrew（`git merge origin/<分支>`；本機未提交檔案擋住時改在暫時 worktree 合併）→ 衝突逐段比對、不整份覆蓋 → 本機驗證 → 走上面的 uat 流程。
+- 他改版面前先問會動哪幾頁，我方避開同區塊（index.html 單檔，衝突機率高）。
+- 遠端 `Duke` 分支**不是合夥人的**（6 月初始版本，來源不明），不要動。
 - uat 預覽網址（Vercel 保護，需登入）：tw-stock-screener-git-uat-andrew250165s-projects.vercel.app。無法用 curl 驗後端，所以新 API 一律先在本機 `import screen` 直接呼叫函式驗證。
 
 ### 推 prod（**須用戶明確說「推 prod」**）

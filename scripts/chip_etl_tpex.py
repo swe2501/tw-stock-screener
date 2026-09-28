@@ -160,16 +160,23 @@ def main():
     args = ap.parse_args()
     conn = _db()
     if args.daily:
-        last = conn.execute("select max(trade_date) from institutional_trades where market='tpex'").fetchone()[0]
+        # 起點取兩表較落後者：避免某表(如融資)當日失敗、另一表前進，導致缺口永遠補不到
+        li = conn.execute("select max(trade_date) from institutional_trades where market='tpex'").fetchone()[0]
+        lm = conn.execute("select max(trade_date) from margin_short where market='tpex'").fetchone()[0]
+        cand = [x for x in (li, lm) if x]
+        last = min(cand) if cand else None
         start = (date.fromisoformat(last) + timedelta(days=1)).isoformat() if last else (date.today() - timedelta(days=7)).isoformat()
         end = date.today().isoformat()
         if start > end:
-            print(f"[daily] 已是最新（DB 最新 {last}），無需回補"); return
+            print(f"[daily] 已是最新（三大法人 {li} / 融資 {lm}），無需回補"); return
         args.start, args.end = start, end
     elif not (args.start and args.end):
         ap.error("需 --start/--end 或 --daily")
     dates = _dates(args.start, args.end)
-    done = {r[0] for r in conn.execute("select distinct trade_date from institutional_trades where market='tpex'")}
+    # 「已完成」須兩表都齊才跳過；只有一表有的日期要重抓（insert or replace，安全）→ 自我修復缺口
+    di = {r[0] for r in conn.execute("select distinct trade_date from institutional_trades where market='tpex'")}
+    dm = {r[0] for r in conn.execute("select distinct trade_date from margin_short where market='tpex'")}
+    done = di & dm
     print(f"TPEX {args.start}~{args.end}（{len(dates)} 平日）{'[dry]' if args.dry_run else ''}")
     oi = om = sk = 0
     for d in dates:
