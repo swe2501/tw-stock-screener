@@ -13,7 +13,7 @@ option_sr.py — 台指選擇權(TXO)「支撐壓力 OI 三層峰值」，供首
   排序：壓力 strike 由低到高、支撐由高到低（離 ref 近→遠，不是依 OI 大小），各取前 3 層；不足 3 層標「候選不足」，不硬湊。
   每層回傳 strike／OI／OIΔ（今日 OI − 前一交易日 OI，本機 txo_daily；新履約價無前值→None）／距 ref 點數／同側百分位／中位數倍數／判定原因。
   另存 CALL/PUT 總 OI 與 Put/Call OI 比（市場情緒輔助）。舊欄位 res1/res2/sup1/sup2 填第 1、2 層（相容）。
-合約：週選＝到期日在資料日之後最近的週選(W=週三/F=週五)；月選＝最近月。
+合約：週選＝實際到期日在資料日之後最近的週選(W=週三/F=週五)；月選＝最近月。實際到期日＝原定到期日遇休市（週末、證交所休市日期表、過去日期以本機實際交易日核對）順延至次一交易日。
 資料源：TAIFEX openapi DailyMarketReportOpt（JSON/CSV 皆可，取「一般」盤）＋ DailyMarketReportFut。
 → Supabase option_sr(PK trade_date+kind)；新欄位 res_levels/sup_levels(jsonb)、ref_price、ref_kind（sql/option_sr_levels.sql）。
 用法：python scripts/option_sr.py [--dry]
@@ -60,6 +60,62 @@ def _expiry(code):
     return _nth_weekday(y, mo, 2 if m.group(3) == "W" else 4, int(m.group(4)))
 
 
+_HOL = None
+_PAST = None
+
+
+def _holidays():
+    """證交所休市日期表（openapi holidaySchedule，當年度）：名稱含「開始交易」「最後交易」者為交易日，其餘為休市。"""
+    global _HOL
+    if _HOL is None:
+        _HOL = set()
+        try:
+            req = urllib.request.Request("https://openapi.twse.com.tw/v1/holidaySchedule/holidaySchedule", headers={"User-Agent": "Mozilla/5.0"})
+            for r in json.loads(urllib.request.urlopen(req, timeout=30, context=_CTX).read().decode("utf-8-sig")):
+                d = re.sub(r"\D", "", str(r.get("Date", "")))
+                if len(d) >= 7 and not re.search(r"開始交易|最後交易", str(r.get("Name", ""))):
+                    _HOL.add(date(int(d[:-4]) + 1911, int(d[-4:-2]), int(d[-2:])))
+        except Exception as e:
+            print(f"[warn] 休市日期表取得失敗（只排除週末）：{e}")
+    return _HOL
+
+
+def _past_days():
+    """本機 stock_daily 已有的交易日（過去日期用實際資料判斷，可涵蓋颱風等臨時停市）。"""
+    global _PAST
+    if _PAST is None:
+        try:
+            import sqlite3
+            import broker_analysis as ba
+            c = sqlite3.connect(str(ba.DB_PATH))
+            _PAST = {date.fromisoformat(r[0]) for r in c.execute("select distinct trade_date from stock_daily where trade_date>='2024-01-01'")}
+        except Exception:
+            _PAST = set()
+    return _PAST
+
+
+def _is_trading(d, asof):
+    if d.weekday() >= 5 or d in _holidays():
+        return False
+    past = _past_days()
+    if past and min(past) <= d <= max(past):      # 本機資料涵蓋範圍內：以實際有無交易為準（含颱風停市）
+        return d in past
+    return True
+
+
+def _expiry_adj(code, asof):
+    """實際到期日：原定到期日遇休市順延至次一交易日（實證：202510F2 10/10→10/13、202602 2/18→2/23）。"""
+    d = _expiry(code)
+    if not d:
+        return None
+    from datetime import timedelta
+    for _ in range(15):
+        if _is_trading(d, asof):
+            return d
+        d = d + timedelta(days=1)
+    return d
+
+
 def _taiex_latest(env):
     key = env["SUPABASE_SERVICE_KEY"]
     req = urllib.request.Request(env["SUPABASE_URL"] + "/rest/v1/taiex_daily?select=trade_date,close&order=trade_date.desc&limit=1",
@@ -79,7 +135,7 @@ def _tx_ref(dt):
             cm = str(r.get("ContractMonth(Week)", "")).strip()
             if r.get("Contract") != "TX" or r.get("TradingSession") != "一般" or not re.match(r"^\d{6}$", cm):
                 continue
-            sp, ex = _num(r.get("SettlementPrice")), _expiry(cm)
+            sp, ex = _num(r.get("SettlementPrice")), _expiry_adj(cm, dt)
             if sp and ex and ex > dt:
                 cand.append((ex, sp, cm))
         if cand:
@@ -217,7 +273,7 @@ def main():
     iso = dt.isoformat()
 
     codes = {r[2].strip() for r in body}
-    live = [(c, _expiry(c)) for c in codes if _expiry(c) and _expiry(c) > dt]
+    live = [(c, _expiry_adj(c, dt)) for c in codes if _expiry_adj(c, dt) and _expiry_adj(c, dt) > dt]   # 依實際（休市順延後）到期日
     weekly = sorted([x for x in live if re.search(r"[WF]\d$", x[0])], key=lambda x: x[1])
     monthly = sorted([x for x in live if re.match(r"^\d{6}$", x[0])], key=lambda x: x[1])
     spot = _taiex_latest(env)
@@ -231,6 +287,10 @@ def main():
             print(f"[warn] 找不到{kind}合約（{iso}）"); continue
         row = _build(kind, lst[0][0], body, ref, ref_kind, spot, iso)
         if row:
+            sched = _expiry(lst[0][0])
+            row["expiry"] = str(lst[0][1])
+            if sched != lst[0][1]:
+                row["meta"]["expiry_sched"] = str(sched)      # 原定到期日（遇休市已順延）
             out.append(row)
             fmt = lambda a: "、".join(f"{x['strike']}(OI {x['oi']:,} Δ{x['oi_delta'] if x['oi_delta'] is not None else '—'} PR{x['pct']} ×{x['med_mult']})" for x in a) or "無"
             print(f"[{kind}] {row['contract']}(到期 {row['expiry']}) ref {ref}（{ref_kind}）\n  壓力 {fmt(row['res_levels'])}"
