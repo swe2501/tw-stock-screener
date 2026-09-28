@@ -3164,7 +3164,7 @@
       if(!arr.length){ el('liqTbl').innerHTML='<div class="fc-empty">暫無資料</div>'; return; }
       var isSpot=mode==='spot';
       var head='<table class="liq"><thead><tr><th class="l">排名</th><th class="l">代號 / 名稱</th>'
-        +(isSpot?'<th>成交金額(億)</th><th>成交量(張)</th>':'<th>成交量(口)</th>')+'</tr></thead><tbody>';
+        +(isSpot?'<th>成交金額(億)</th><th>成交量(張)</th>':'<th>成交量(口，標準型等值)</th>')+'</tr></thead><tbody>';
       var body=arr.map(function(r){
         var openable=/^\d{4}$/.test(String(r.code));   // 現貨與個股期貨(標的代號4碼)皆可點開K線
         var nameCell='<span class="c">'+r.code+'</span> '+(r.name||'');
@@ -3188,7 +3188,7 @@
         DATA.spot.sort(function(x,y){return x.rank-y.rank;}); DATA.fut.sort(function(x,y){return x.rank-y.rank;});
         loaded=true;
         if(el('liqSub'))el('liqSub').textContent='資料日 '+latest+' · 現貨、個股期貨各前 50';
-        if(el('liqNote'))el('liqNote').innerHTML='<b>算法與資料源：</b>現貨＝TWSE STOCK_DAY_ALL 上市普通股(排除ETF)當日<b>成交金額</b>前 50；個股期貨＝TAIFEX DailyMarketReportFut 一般盤、只留個股期貨（SSFLists 普通股標的，排除指數類與 ETF 期貨；排除價差委託避免重複計量），各月份<b>成交量</b>合併後取前 50；標準型（每口 2,000 股）與小型（每口 100 股）分開排名，小型標「小型期貨」（依期交所股票期貨交易標的頁的股數欄判斷）。2026-09-28 起不含加權指數類期貨。盤後日更。用途：流動性愈高、進出場滑價愈小。';
+        if(el('liqNote'))el('liqNote').innerHTML='<b>算法與資料源：</b>現貨＝TWSE STOCK_DAY_ALL 上市普通股(排除ETF)當日<b>成交金額</b>前 50；個股期貨＝TAIFEX DailyMarketReportFut 一般盤、只留個股期貨（SSFLists 普通股標的，排除指數類與 ETF 期貨；排除價差委託避免重複計量），各月份<b>成交量</b>合併後取前 50；同一檔的小型個股期貨（每口 100 股）併入標準型（每口 2,000 股）：小型口數 ÷ 20 換算成標準型等值口數後加總，名稱標「（含小型）」（每口股數依期交所股票期貨交易標的頁判斷）。2026-09-28 起不含加權指數類期貨。盤後日更。用途：流動性愈高、進出場滑價愈小。';
         render();
       }).catch(function(){ el('liqTbl').innerHTML='<div class="fc-empty">讀取失敗</div>'; });
     };
