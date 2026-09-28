@@ -3958,7 +3958,7 @@
       <em>DAILY MARKET &amp; INDUSTRY NEWS</em></section>
     <section class="nw-ctrl"><div>
       <form id="nwForm" onsubmit="return false"><span class="k">日期</span><label><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><input type="date" id="nwDate"></label>
-        <span class="k">產業</span><select id="nwSec" aria-label="選擇產業"><option value="">全部產業</option></select><button type="button" id="nwApply">套用篩選</button></form>
+        <span class="k">時段</span><select id="nwPer" aria-label="選擇新聞時段"><option value="all">全部時段</option><option value="hot">焦點題材（AI 彙整）</option><option value="pre">盤前 06:00-09:00</option><option value="during">盤中 09:00-13:30</option><option value="post">盤後 13:30-18:00</option><option value="night">晚間總經 18:00+</option></select><button type="button" id="nwApply">套用篩選</button></form>
       <form class="q" id="nwQForm" onsubmit="return false"><span class="k" style="margin-right:10px">搜尋</span><label><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="nwQ" placeholder="代號、股名、產業或新聞標題"><button type="button" id="nwQBtn">查詢</button></label></form>
       <small id="nwCount"></small>
     </div></section>
@@ -3973,65 +3973,86 @@
     // hot_topics 的 codes／source_urls 可能是 JSON 陣列或 Python 字串表示 → 一律用正規式抽取
     function codesOf(v){ if(Array.isArray(v)) return v; var out=[],re=/['"]code['"]\s*:\s*['"]([^'"]+)['"]\s*,\s*['"]name['"]\s*:\s*['"]([^'"]*)['"]/g,m; while((m=re.exec(String(v||''))))out.push({code:m[1],name:m[2]}); return out; }
     function urlsOf(v){ if(Array.isArray(v)) return v; return String(v||'').match(/https?:\/\/[^'"\s\],]+/g)||[]; }
-    var ALL=[], DATES=[], DATE='', SEC='', Q='';
+    var SB='', H={}, HOT=[], FEED={}, CNT={}, DATES=[], DATE='', SEC='', Q='', PER='all';
+    var PLABEL={all:'全部時段',hot:'焦點題材（AI 彙整）',pre:'盤前 06:00-09:00',during:'盤中 09:00-13:30',post:'盤後 13:30-18:00',night:'晚間總經 18:00+'};
     function wk(d){ return '週'+'日一二三四五六'[new Date(d+'T12:00:00+08:00').getDay()]; }
-    function tier(h){ h=+h||0; return h>=80?0:(h>=60?1:2); }
-    var TIER=['焦點新聞 熱度 80+','重要新聞 熱度 60–79','一般新聞 熱度 60 以下'];
+    function twHM(iso){ var t=new Date(new Date(iso).getTime()+8*3600e3); return ('0'+t.getUTCHours()).slice(-2)+':'+('0'+t.getUTCMinutes()).slice(-2); }
+    function seg(iso){ var hm=twHM(iso), v=+hm.slice(0,2)*60+ +hm.slice(3); return v>=360&&v<540?'pre':(v>=540&&v<810?'during':(v>=810&&v<1080?'post':'night')); }
     var ICO_CLOCK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
     var ICO_UP='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg>';
+    // 兩種來源統一成卡片資料：{kind, title, link, time, desc, source, tags[], codes[], heat, per}
+    function items(){
+      var hot=HOT.filter(function(t){return t.published_at===DATE;}).map(function(t){ var u=t._urls[0]||'';
+        return {kind:'hot',title:t.topic,link:u,time:t.published_at,desc:t.summary||'',source:u?host(u):'彙整',tags:t.sector?[t.sector]:[],codes:t._codes,heat:t.heat,per:'hot',more:t._urls.length-1}; })
+        .sort(function(a,b){return (+b.heat||0)-(+a.heat||0);});
+      var feed=(FEED[DATE]||[]).map(function(r){ return {kind:'feed',title:r.title,link:r.link,time:twHM(r.published_at),desc:r.description||'',source:r.source,tags:r.tags||[],codes:r.codes||[],per:seg(r.published_at)}; });
+      return hot.concat(feed);
+    }
     function render(){
-      var day=ALL.filter(function(t){return t.published_at===DATE;});
-      var q=Q.trim().toLowerCase();
-      var vis=day.filter(function(t){ if(SEC&&t.sector!==SEC) return false; if(!q) return true;
-        return (t.topic+' '+(t.summary||'')+' '+(t.sector||'')+' '+t._codes.map(function(c){return c.code+' '+c.name;}).join(' ')).toLowerCase().indexOf(q)>=0; });
-      el('nwMastTxt').textContent=DATE+'（'+wk(DATE)+'）　·　已保存 '+DATES.length+' 個新聞日期　·　每日盤後更新';
+      var day=items(), q=Q.trim().toLowerCase();
+      var vis=day.filter(function(t){ if(PER!=='all'&&t.per!==PER) return false; if(SEC&&t.tags.indexOf(SEC)<0) return false; if(!q) return true;
+        return (t.title+' '+t.desc+' '+t.tags.join(' ')+' '+t.codes.map(function(c){return c.code+' '+c.name;}).join(' ')).toLowerCase().indexOf(q)>=0; });
+      el('nwMastTxt').textContent=DATE+'（'+wk(DATE)+'）　·　已保存 '+DATES.length+' 個新聞日期　·　每 4 小時更新';
       el('nwCount').textContent='顯示 '+vis.length+'／'+day.length+' 則';
-      // 左側產業索引＝當日各產業則數（點選即篩選，再點取消）
-      var cnt={}; day.forEach(function(t){ var s=t.sector||'其他'; cnt[s]=(cnt[s]||0)+1; });
-      var idx=Object.keys(cnt).sort(function(a,b){return cnt[b]-cnt[a];});
-      el('nwIndex').innerHTML='<h2>產業索引</h2>'+(idx.length?('<a data-s=""'+(SEC===''?' class="on"':'')+'><b>全部產業</b><span>×'+day.length+'</span></a>'
+      // 左側產業索引＝當日（套用時段後）各產業／關鍵字標籤則數，點選即篩選
+      var base=day.filter(function(t){return PER==='all'||t.per===PER;}), cnt={};
+      base.forEach(function(t){ t.tags.forEach(function(s){ cnt[s]=(cnt[s]||0)+1; }); });
+      var idx=Object.keys(cnt).sort(function(a,b){return cnt[b]-cnt[a];}).slice(0,24);
+      el('nwIndex').innerHTML='<h2>產業索引</h2>'+(idx.length?('<a data-s=""'+(SEC===''?' class="on"':'')+'><b>全部</b><span>×'+base.length+'</span></a>'
           +idx.map(function(s){return '<a data-s="'+esc(s)+'"'+(SEC===s?' class="on"':'')+'><b>'+esc(s)+'</b><span>×'+cnt[s]+'</span></a>';}).join('')):'<p style="font-size:12px;color:var(--nw-muted)">本日尚無產業分類。</p>')
-        +'<div class="nw-rss"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8M15 18h-5M10 6h8v4h-8z"/></svg><b>合法彙整</b><p>僅顯示新聞重點摘要、相關個股與原文連結，版權屬各原始媒體。</p></div>';
-      el('nwIndex').querySelectorAll('a[data-s]').forEach(function(a){ a.onclick=function(){ SEC=(SEC===a.dataset.s)?'':a.dataset.s; el('nwSec').value=SEC; render(); }; });
-      // 產業下拉選單
-      el('nwSec').innerHTML='<option value="">全部產業</option>'+idx.map(function(s){return '<option value="'+esc(s)+'"'+(SEC===s?' selected':'')+'>'+esc(s)+'</option>';}).join('');
-      var groups=[0,1,2].map(function(k){ return {name:TIER[k], items:vis.filter(function(t){return tier(t.heat)===k;}).sort(function(a,b){return (+b.heat||0)-(+a.heat||0);})}; }).filter(function(g){return g.items.length;});
-      if(!groups.length){ el('nwList').innerHTML='<div class="nw-empty"><h2>'+(day.length?'沒有符合條件的新聞':'這個日期尚無新聞')+'</h2><p style="font-size:13px;color:var(--nw-muted)">'+(day.length?'請調整產業或搜尋關鍵字。':'請改選其他日期。')+'</p></div>'; return; }
+        +'<div class="nw-rss"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8M15 18h-5M10 6h8v4h-8z"/></svg><b>合法彙整</b><p>僅顯示 RSS 標題、前言與原文連結，版權屬各原始媒體。</p></div>';
+      el('nwIndex').querySelectorAll('a[data-s]').forEach(function(a){ a.onclick=function(){ SEC=(SEC===a.dataset.s)?'':a.dataset.s; render(); }; });
+      var order=['hot','pre','during','post','night'];
+      var groups=order.map(function(k){ return {name:PLABEL[k], items:vis.filter(function(t){return t.per===k;})}; }).filter(function(g){return g.items.length;});
+      if(!groups.length){ el('nwList').innerHTML='<div class="nw-empty"><h2>'+(day.length?'沒有符合條件的新聞':'這個日期尚無新聞')+'</h2><p style="font-size:13px;color:var(--nw-muted)">'+(day.length?'請調整時段、產業或搜尋關鍵字。':'請改選其他日期；系統每四小時保存最新新聞。')+'</p></div>'; return; }
       el('nwList').innerHTML=groups.map(function(g){
         return '<section class="nw-seg"><header><h2>'+g.name+'</h2><span>'+g.items.length+' 則</span></header><div class="nw-cards">'
-          +g.items.map(function(t){ var u=t._urls[0]||'';
-            return '<article><div class="nw-meta"><b>'+esc(u?host(u):'彙整')+'</b><time>'+ICO_CLOCK+esc(t.published_at)+'</time>'+(t.heat!=null?'<span class="ht">熱度 '+esc(t.heat)+'</span>':'')+'</div>'
-              +'<h3>'+(u?'<a href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">'+esc(t.topic)+'</a>':esc(t.topic))+'</h3>'
-              +(t.summary?'<p>'+esc(t.summary)+'</p>':'')
-              +'<div class="nw-tags">'+(t.sector?'<a class="sec" data-s="'+esc(t.sector)+'">'+esc(t.sector)+'</a>':'')
-                +t._codes.map(function(c){return '<a data-c="'+esc(c.code)+'" data-n="'+esc(c.name)+'">'+esc(c.code)+' '+esc(c.name)+'</a>';}).join('')+'</div>'
-              +(u?'<a class="nw-read" href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">前往原文 '+ICO_UP+'</a>':'')
-              +(t._urls.length>1?' <span style="font-size:10px;color:var(--nw-muted)">（另有 '+(t._urls.length-1)+' 則來源）</span>':'')
+          +g.items.map(function(t){
+            return '<article><div class="nw-meta"><b>'+esc(t.source)+'</b><time>'+ICO_CLOCK+esc(t.time)+'</time>'+(t.heat!=null?'<span class="ht">熱度 '+esc(t.heat)+'</span>':'')+'</div>'
+              +'<h3>'+(t.link?'<a href="'+esc(t.link)+'" target="_blank" rel="noopener noreferrer">'+esc(t.title)+'</a>':esc(t.title))+'</h3>'
+              +(t.desc?'<p>'+esc(t.desc)+'</p>':'')
+              +'<div class="nw-tags">'+t.tags.map(function(s){return '<a class="sec" data-s="'+esc(s)+'">'+esc(s)+'</a>';}).join('')
+                +t.codes.map(function(c){return '<a data-c="'+esc(c.code)+'" data-n="'+esc(c.name)+'">'+esc(c.code)+' '+esc(c.name)+'</a>';}).join('')+'</div>'
+              +(t.link?'<a class="nw-read" href="'+esc(t.link)+'" target="_blank" rel="noopener noreferrer">前往原文 '+ICO_UP+'</a>':'')
+              +(t.more>0?' <span style="font-size:10px;color:var(--nw-muted)">（另有 '+t.more+' 則來源）</span>':'')
               +'</article>'; }).join('')+'</div></section>'; }).join('');
       el('nwList').querySelectorAll('.nw-tags a').forEach(function(a){ a.onclick=function(){
         if(a.dataset.c){ if(typeof _openStock==='function') _openStock(a.dataset.c, a.dataset.n); else if(typeof openChart==='function') openChart(a.dataset.c, a.dataset.n); }
-        else { SEC=a.dataset.s; el('nwSec').value=SEC; render(); window.scrollTo({top:el('newsView').offsetTop,behavior:'smooth'}); } }; });
+        else { SEC=a.dataset.s; render(); window.scrollTo({top:el('newsView').offsetTop,behavior:'smooth'}); } }; });
+    }
+    function loadDate(d){
+      DATE=d; el('nwDate').value=d;
+      if(FEED[d]){ render(); return; }
+      el('nwList').innerHTML='<div class="nw-empty"><h2>載入中…</h2></div>';
+      fetch(SB+'/rest/v1/news_feed?select=title,link,published_at,description,source,tags,codes&news_date=eq.'+d+'&order=published_at.desc&limit=500',{headers:H})
+        .then(function(r){return r.json();}).then(function(a){ FEED[d]=Array.isArray(a)?a:[]; render(); }).catch(function(){ FEED[d]=[]; render(); });
     }
     var bound=false;
     window._newsShow=function(){
       if(!bound){ bound=true;
-        el('nwApply').onclick=function(){ var d=el('nwDate').value; if(d) DATE=d; SEC=el('nwSec').value; render(); };
-        el('nwDate').onchange=function(){ if(this.value){ DATE=this.value; SEC=''; render(); } };
-        el('nwSec').onchange=function(){ SEC=this.value; render(); };
+        el('nwApply').onclick=function(){ PER=el('nwPer').value; var d=el('nwDate').value; if(d&&d!==DATE){ SEC=''; loadDate(d); } else render(); };
+        el('nwDate').onchange=function(){ if(this.value){ SEC=''; loadDate(this.value); } };
+        el('nwPer').onchange=function(){ PER=this.value; render(); };
         el('nwQBtn').onclick=function(){ Q=el('nwQ').value; render(); };
         el('nwQ').onkeydown=function(e){ if(e.key==='Enter'){ Q=this.value; render(); } };
         el('nwQ').oninput=function(){ if(!this.value&&Q){ Q=''; render(); } };
       }
-      var SB=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'', AK=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';
-      fetch(SB+'/rest/v1/hot_topics?select=topic,sector,summary,codes,source_urls,heat,published_at,captured_at&order=published_at.desc,heat.desc&limit=1000',{headers:{apikey:AK,Authorization:'Bearer '+AK}}).then(function(r){return r.json();}).then(function(a){
-        if(!Array.isArray(a)||!a.length){ el('nwList').innerHTML='<div class="nw-empty"><h2>目前無新聞資料</h2></div>'; return; }
-        ALL=a.filter(function(t){return t.published_at;}).map(function(t){ t._codes=codesOf(t.codes); t._urls=urlsOf(t.source_urls); return t; });
-        DATES=[]; ALL.forEach(function(t){ if(DATES.indexOf(t.published_at)<0) DATES.push(t.published_at); });
-        if(!DATE||DATES.indexOf(DATE)<0) DATE=DATES[0];
-        el('nwDate').value=DATE; el('nwDate').max=DATES[0]; el('nwDate').min=DATES[DATES.length-1];
-        render();
-      }).catch(function(){ el('nwList').innerHTML='<div class="nw-empty"><h2>讀取失敗</h2></div>'; });
-      el('nwNote').innerHTML='新聞來源：hot_topics（每日新聞題材彙整流程，自經濟日報、工商時報、鉅亨網等財經媒體與公開資訊整理），本站只保存標題、重點摘要、產業分類、相關個股與原文連結，不儲存新聞全文。版面比照合夥人「每日新聞與產業」頁（2026-09-28）：左側產業索引＝所選日期各產業則數（點選即篩選）；因新聞僅有發布日期、無發布時間，原「盤前／盤中／盤後／晚間」時段分組改為依熱度分組（80 以上焦點、60–79 重要、60 以下一般），同組內依熱度由高到低。點產業標籤可篩選、點個股標籤開 K 線。';
+      SB=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:''; var AK=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:''; H={apikey:AK,Authorization:'Bearer '+AK};
+      Promise.all([
+        fetch(SB+'/rest/v1/hot_topics?select=topic,sector,summary,codes,source_urls,heat,published_at&order=published_at.desc,heat.desc&limit=1000',{headers:H}).then(function(r){return r.json();}).catch(function(){return [];}),
+        fetch(SB+'/rest/v1/news_feed?select=news_date&order=news_date.desc&limit=1000',{headers:H}).then(function(r){return r.json();}).catch(function(){return [];})
+      ]).then(function(res){
+        HOT=(Array.isArray(res[0])?res[0]:[]).filter(function(t){return t.published_at;}).map(function(t){ t._codes=codesOf(t.codes); t._urls=urlsOf(t.source_urls); return t; });
+        CNT={}; HOT.forEach(function(t){ CNT[t.published_at]=(CNT[t.published_at]||0)+1; });
+        (Array.isArray(res[1])?res[1]:[]).forEach(function(r){ CNT[r.news_date]=(CNT[r.news_date]||0)+1; });
+        DATES=Object.keys(CNT).sort().reverse();
+        if(!DATES.length){ el('nwList').innerHTML='<div class="nw-empty"><h2>目前無新聞資料</h2></div>'; return; }
+        el('nwDate').max=DATES[0];
+        // 預設日期＝最近一個「超過 10 則」的日期（避免假日只剩零星幾則）；都不到 10 則就用最新日期
+        var def=DATES.filter(function(d){return CNT[d]>10;})[0]||DATES[0];
+        loadDate(DATE&&CNT[DATE]?DATE:def);
+      });
+      el('nwNote').innerHTML='新聞來源：焦點題材＝hot_topics（AI 每小時搜尋財經媒體整理的熱門題材與相關個股，依熱度排序）；時段新聞＝news_feed（中央社產經 RSS、Yahoo 股市 RSS、臺灣證券交易所 OpenAPI 最新消息、MOPS 上市／上櫃每日重大訊息，每 4 小時保存、留 30 天），依發布時間分盤前 06:00–09:00／盤中 09:00–13:30／盤後 13:30–18:00／晚間 18:00 以後。個股標籤＝標題或摘要提到的上市櫃個股（代號比對；兩字股名只比對常見大型股以免誤判）；產業標籤＝提到個股的產業別＋關鍵字。左側產業索引＝所選日期與時段的標籤則數（點選即篩選）。預設開啟最近一個超過 10 則新聞的日期。本站只保存標題、時間、摘要、分類與原文連結，不儲存新聞全文。版面比照合夥人「每日新聞與產業」頁（2026-09-28）。';
     };
     window._VIEWS=window._VIEWS||{}; window._VIEWS.news={el:'newsView',show:'_newsShow'};
   })();
