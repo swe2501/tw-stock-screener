@@ -4,7 +4,7 @@ stock_sr.py — 個股「多週期大量區 K 棒水平線」支撐／壓力（�
 
 算法：
   週期 P ∈ {5, 10, 20, 60, 120, 240, 480}（以「根 K 棒」計；日K版＝日K 根數、小時K版＝60 分鐘K 根數）。
-  1) 大量 K 棒：在最新 K 棒 t 的回溯窗口 [t−P+1, t] 內取成交量最大的那根 idx_P；同量取時間最近者。
+  1) 大量 K 棒：在最新 K 棒 t 的回溯窗口 [t−P+1, t] 內取成交量最大的那根 idx_P；同量取時間最早者（規範 idxmax）。
   2) 三條水平線：H_P＝該根最高、M_P＝(最高+最低)/2、L_P＝該根最低。
   3) 以最新收盤 C_t 判定（兩版都用當日實際收盤；小時K 最後一根不含收盤集合競價，不用它）：
        狀態 A  C_t > H_P          → H、M、L 全為支撐（第1~3支撐），無壓力
@@ -59,7 +59,8 @@ def compute(code, bars, close, trade_date, avg_value):
         vmax = max(b[3] or 0 for b in win)
         if vmax <= 0:
             continue
-        lab, h, l, v = next(b for b in win if (b[3] or 0) == vmax)     # 由新到舊 → 第一個即時間最近者
+        cand = [b for b in win if (b[3] or 0) == vmax]                 # 由新到舊；同量取時間最早者(規範 idxmax) → 取最後一個(=最舊)
+        lab, h, l, v = cand[-1]
         m = (h + l) / 2
         st, attr = classify(close, h, m, l)
         vals = {"H": h, "M": m, "L": l}
