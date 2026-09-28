@@ -3005,7 +3005,7 @@
       var SB=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'', AK=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';
       var H={apikey:AK,Authorization:'Bearer '+AK};
       el('fhModeSeg').querySelectorAll('button').forEach(function(b){ b.onclick=function(){ el('fhModeSeg').querySelectorAll('button').forEach(function(x){x.classList.remove('on');}); b.classList.add('on'); mode=b.dataset.m; render(); }; });
-      fetch(SB+'/rest/v1/foreign_hedge_daily?select=*&order=trade_date.asc&limit=2000',{headers:H}).then(function(r){return r.json();}).then(function(a){
+      fetch(SB+'/rest/v1/foreign_hedge_daily?select=*&order=trade_date.desc&limit=1000',{headers:H}).then(function(r){return r.json();}).then(function(a){ a=Array.isArray(a)?a.reverse():a;   /* 取最新 1000 筆再轉回舊→新（單次上限 1000）*/
         DATA=Array.isArray(a)?a:[]; loaded=true;
         if(window._isOwner){ render(); renderEvents(SB,H); }
       }).catch(function(){ if(el('fhNarrative'))el('fhNarrative').textContent='資料讀取失敗'; });
@@ -3208,7 +3208,7 @@
       si.setData(arr.map(function(r){return TX[r.trade_date]!=null?{time:r.trade_date,value:TX[r.trade_date]}:{time:r.trade_date};}));
       s60.createPriceLine({price:50,color:'#0a9a56',lineWidth:1,lineStyle:2,axisLabelVisible:true,title:'50% 牛熊線'});
       var bmap=Object.fromEntries(arr.map(function(r){return [r.trade_date,r];}));
-      chart.subscribeCrosshairMove(function(pm){var d=pm.time,r=bmap[d]; if(!r){el('bdChartTip').textContent='移動滑鼠看每日數值';return;} el('bdChartTip').innerHTML='<b>'+d+'</b>　站上60MA <b style="color:#0a9a56">'+(r.ma60_pct!=null?r.ma60_pct+'%':'–')+'</b>　20MA '+(r.ma20_pct!=null?r.ma20_pct+'%':'–')+'　<span style="color:#3a86e0">加權 <b>'+(TX[d]!=null?TX[d].toFixed(0):'–')+'</b></span>　淨上漲 '+((r.up-r.down)>=0?'+':'')+(r.up-r.down);});
+      chart.subscribeCrosshairMove(function(pm){var d=pm.time,r=bmap[d]; if(!r){el('bdChartTip').textContent='移動滑鼠看每日數值';return;} el('bdChartTip').innerHTML='<b>'+d+'</b>　站上60MA <b style="color:#0a9a56">'+(r.ma60_pct!=null?r.ma60_pct+'%':'–')+'</b>　<span style="color:#d2a12b">20MA <b>'+(r.ma20_pct!=null?r.ma20_pct+'%':'–')+'</b></span>　<span style="color:#3a86e0">加權 <b>'+(TX[d]!=null?TX[d].toFixed(0):'–')+'</b></span>　淨上漲 '+((r.up-r.down)>=0?'+':'')+(r.up-r.down);});
       var n=arr.length; try{chart.timeScale().setVisibleLogicalRange({from:Math.max(0,n-160),to:n+2});}catch(_){}
     }
     function renderQuad(){
@@ -3231,8 +3231,8 @@
       var H={apikey:AK,Authorization:'Bearer '+AK};
       el('bdModeSeg').querySelectorAll('button').forEach(function(b){b.onclick=function(){el('bdModeSeg').querySelectorAll('button').forEach(function(x){x.classList.remove('on');});b.classList.add('on');mode=b.dataset.m;render();};});
       Promise.all([
-        fetch(SB+'/rest/v1/breadth_daily?select=*&order=trade_date.asc&limit=5000',{headers:H}).then(function(r){return r.json();}),
-        fetch(SB+'/rest/v1/taiex_daily?select=trade_date,close&order=trade_date.asc&limit=3000',{headers:H}).then(function(r){return r.json();})
+        fetch(SB+'/rest/v1/breadth_daily?select=*&order=trade_date.desc&limit=1000',{headers:H}).then(function(r){return r.json();}).then(function(a){return Array.isArray(a)?a.reverse():a;}),   /* 取最新 1000 筆再轉回舊→新 */
+        fetch(SB+'/rest/v1/taiex_daily?select=trade_date,close&order=trade_date.desc&limit=1000',{headers:H})   /* 取最新 1000 日（PostgREST 單次上限 1000，舊寫法由舊到新會截掉近期）*/.then(function(r){return r.json();})
       ]).then(function(res){
         (res[0]||[]).forEach(function(r){(BY[r.market]=BY[r.market]||[]).push(r);});
         (res[1]||[]).forEach(function(r){TX[r.trade_date]=+r.close;});
