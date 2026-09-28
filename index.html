@@ -3297,7 +3297,7 @@
       <button data-m="sup">靠近支撐</button>
     </div>
     <div id="srTbl"><div class="fc-empty">載入中…</div></div>
-    <div class="fc-note" id="srNote"><b>算法（2026-09-27 與合夥人定案）：</b>分價量表以最新收盤價為中心、每格寬＝收盤價的 1%，每天成交量依當日最低～最高價均勻分攤到涵蓋的價格格。<b>大量格</b>＝量 ≥ 所有有量格平均 × 1.3（同選擇權「均量 1.3 倍」原則）。<b>壓力區</b>＝收盤價以上量最大的大量格（上方沒有大量格＝無套牢壓力，例如創新高，不列入）；<b>支撐區</b>＝收盤價以下量最大的大量格。距離＝壓力區下緣（或支撐區上緣）與收盤價的差 ÷ 收盤價。列入條件：距離 0～3%、近 20 日日均成交值 ≥ 5,000 萬、排除 ETF，依距離由近到遠（距離以 1% 為一格；同一格內依區內成交值＝區內張數×區間均價由大到小，避免低價股因張數多而霸榜）取前 20 名；歷史不足 N 天的個股不列入該 N。<b>日K／小時K 兩版（2026-09-28）</b>：日K版＝每天一根日K，當天成交量依最低～最高價均勻分攤；小時K版＝改用 60 分鐘K 逐根分攤（每天 5 根，較貼近實際各價位成交），盤中K 不含 13:30 收盤集合競價的量，差額補在當日收盤價；沒有小時K的日子（Yahoo 約只有近 2 年）退回用日K。資料：上市＋上櫃每日 K 線（TWSE/TPEx 官方，歷史以 Yahoo 回補）、60 分鐘K（Yahoo），盤後日更。</div>
+    <div class="fc-note" id="srNote"><b>算法（2026-09-27 與合夥人定案）：</b>分價量表以最新收盤價為中心、每格寬＝收盤價的 1%，每天成交量依當日最低～最高價均勻分攤到涵蓋的價格格。<b>大量格</b>＝量 ≥ 所有有量格平均 × 1.3（同選擇權「均量 1.3 倍」原則）。<b>壓力區</b>＝收盤價以上量最大的大量格（上方沒有大量格＝無套牢壓力，例如創新高，不列入）；<b>支撐區</b>＝收盤價以下量最大的大量格。距離＝壓力區下緣（或支撐區上緣）與收盤價的差 ÷ 收盤價。列入條件：距離 0～3%、近 20 日日均成交值 ≥ 5,000 萬、排除 ETF，依距離由近到遠（距離以 1% 為一格；同一格內依區內成交值＝區內張數×區間均價由大到小，避免低價股因張數多而霸榜）取前 20 名；歷史不足 N 天的個股不列入該 N。<b>日K／小時K 兩版（2026-09-28）</b>：日K版＝每天一根日K，當天成交量依最低～最高價均勻分攤；小時K版＝改用 60 分鐘K 逐根分攤（每天 5 根，較貼近實際各價位成交），Yahoo 小時K 常缺 9:00 開盤那根的量與收盤集合競價，「日成交量 − 小時K 加總」的差額依當日最低～最高價均勻分攤；沒有小時K的日子（Yahoo 約只有近 2 年）退回用日K。資料：上市＋上櫃每日 K 線（TWSE/TPEx 官方，歷史以 Yahoo 回補）、60 分鐘K（Yahoo），盤後日更。</div>
   </div>
   <script>
   (function(){
@@ -5754,6 +5754,7 @@
           <div class="chart-toolbar-left">
             <button class="tool-btn" id="dailyBtn" onclick="loadDailyChart()" style="background:var(--accent);color:#231c00;border-color:var(--accent)">日K</button>
             <button class="tool-btn" id="adjDailyBtn" onclick="loadAdjDailyChart()">還原日K</button>
+            <button class="tool-btn" id="hourlyBtn" onclick="loadHourlyChart()">小時K</button>
             <div class="toolbar-sep"></div>
             <button class="tool-btn" id="marketBtn" onclick="openMarketChart()">大盤K</button>
             <button class="tool-btn" id="backBtn" style="display:none" onclick="goBackToStock()">← 返回</button>
@@ -5771,6 +5772,15 @@
           </div>
         </div>
         <div id="brokerFilterPanel" style="display:none;padding:6px 8px;border-top:1px solid var(--border);font-size:12px;color:var(--text)"></div>
+        <div id="vpPanel" style="padding:6px 8px;border-top:1px solid var(--border);font-size:12px;color:var(--text)">
+          <a onclick="_vpTogglePanel()" style="cursor:pointer;text-decoration:none;user-select:none"><span id="vpArrow" style="color:var(--text-muted);font-size:11px;margin-right:4px">▸</span><b style="color:#b58a2d">價量分析</b></a>
+          <span id="vpOpts" style="display:none">
+            <label style="display:inline-flex;align-items:center;gap:3px;margin-left:14px;cursor:pointer"><input type="checkbox" id="vpDayChk" onchange="_vpToggle('day',this.checked)"><i style="display:inline-block;width:10px;height:10px;background:rgba(224,165,0,.55);border-radius:2px"></i>日價量分析圖</label>
+            <label style="display:inline-flex;align-items:center;gap:3px;margin-left:12px;cursor:pointer"><input type="checkbox" id="vpHourChk" onchange="_vpToggle('hour',this.checked)"><i style="display:inline-block;width:10px;height:10px;background:rgba(58,134,224,.55);border-radius:2px"></i>小時價量分析圖</label>
+            <span id="vpMsg" style="margin-left:10px;color:var(--text-muted);font-size:11px"></span>
+            <div style="color:var(--text-muted);font-size:11px;margin-top:3px;line-height:1.6">統計畫面上看得到的 K 棒期間，依價位把成交量畫成橫向柱狀（越長＝該價位成交越多，最長者標價位）。日價量＝每根日K 的量依當日最低～最高價均勻分攤；小時價量＝每根 60 分鐘K 分攤（較貼近實際成交價位）；Yahoo 小時K 常缺 9:00 開盤量與收盤集合競價，當日差額依當日最低～最高均勻分攤。價位切 48 格。</div>
+          </span>
+        </div>
         <div id="boxPanel" style="display:none;padding:6px 10px;border-top:1px solid var(--border);font-size:12px;color:var(--text);gap:10px;flex-wrap:wrap;align-items:center">
           <span id="boxStatusBadge" style="font-weight:600"></span>
           <span style="opacity:.4">·</span>
@@ -5790,6 +5800,7 @@
         <div id="chartWrapper" style="display:none">
           <div id="mainChartPanel">
             <div id="chartContainer"></div>
+            <canvas id="vpCanvas" style="position:absolute;top:0;left:0;pointer-events:none;z-index:5"></canvas>
             <div id="ohlcTooltip"></div>
             <canvas id="fibCanvas"></canvas>
             <div id="chartOverlay"></div>
@@ -5992,7 +6003,7 @@
                   +'<td style="color:var(--red)">'+(r.res_lo!=null?srPx(r.res_lo)+'～'+srPx(r.res_hi):'無')+'</td><td>'+(r.res_dist!=null?'+'+r.res_dist+'%':'—')+'</td>'
                   +'<td style="color:var(--green)">'+(r.sup_lo!=null?srPx(r.sup_lo)+'～'+srPx(r.sup_hi):'無')+'</td><td>'+(r.sup_dist!=null?'−'+r.sup_dist+'%':'—')+'</td></tr>';
               }).join('')+'</tbody></table></div>'
-              +'<div class="cnp-fk" style="opacity:.85;line-height:1.7">算法：過去 N 日成交量依'+(SR.src==='hour'?'每根 60 分鐘K 的最低～最高價均勻分攤（收盤集合競價的量補在收盤價）':'每天日K 的最低～最高價均勻分攤')+'到價格格（格寬＝收盤價 1%）；量 ≥ 平均格量 × 1.3 為大量格。壓力＝收盤以上量最大的大量格（「無」＝上方無套牢大量，如創新高）、支撐＝收盤以下量最大的大量格。資料日 '+(SR.rows[0].trade_date||'')+'。</div>';
+              +'<div class="cnp-fk" style="opacity:.85;line-height:1.7">算法：過去 N 日成交量依'+(SR.src==='hour'?'每根 60 分鐘K 的最低～最高價均勻分攤（小時K 缺的開盤量／集合競價依當日高低均勻分攤）':'每天日K 的最低～最高價均勻分攤')+'到價格格（格寬＝收盤價 1%）；量 ≥ 平均格量 × 1.3 為大量格。壓力＝收盤以上量最大的大量格（「無」＝上方無套牢大量，如創新高）、支撐＝收盤以下量最大的大量格。資料日 '+(SR.rows[0].trade_date||'')+'。</div>';
             box.querySelectorAll('tr[data-n]').forEach(function(tr){ tr.onclick=function(){ SR.n=+tr.getAttribute('data-n'); srRender(); window._srDraw(); }; });
             bindSrc(box);
           }
@@ -9097,7 +9108,7 @@
     }
 
     function _setDailyBtnActive(btn) {
-      ['dailyBtn', 'adjDailyBtn'].forEach(id => {
+      ['dailyBtn', 'adjDailyBtn', 'hourlyBtn'].forEach(id => {
         const b = document.getElementById(id);
         b.style.background = ''; b.style.color = ''; b.style.borderColor = '';
       });
@@ -9113,8 +9124,11 @@
             document.getElementById('chartLoading').innerHTML = '⚠ 無法取得圖表資料';
             return;
           }
-          const first = data.data[0].time;
-          const last  = data.data[data.data.length - 1].time;
+          window._chartIsHourly = typeof data.data[0].time === 'number';
+          if (window._chartIsHourly) data.data.forEach(c => { c.time += 8 * 3600; });
+          const _fmtT = t => typeof t === 'number' ? new Date(t * 1000).toISOString().slice(0, 16).replace('T', ' ') : t;
+          const first = _fmtT(data.data[0].time);
+          const last  = _fmtT(data.data[data.data.length - 1].time);
           const subtitleEl = document.getElementById('modalSubtitle');
           subtitleEl.textContent = `${subtitle} ・ ${first} ～ ${last}`;
           const industryTag = document.getElementById('industryTag');
@@ -9138,6 +9152,11 @@
     function loadDailyChart() {
       _setDailyBtnActive(document.getElementById('dailyBtn'));
       _loadChartUrl(`/api/chart?code=${encodeURIComponent(currentCode)}&range=3y&interval=1d&raw=1`, '日K');
+    }
+
+    function loadHourlyChart() {   // 60 分鐘K，近 1 年（2026-09-28）
+      _setDailyBtnActive(document.getElementById('hourlyBtn'));
+      _loadChartUrl(`/api/chart?code=${encodeURIComponent(currentCode)}&range=1y&interval=60m`, '小時K');
     }
 
     function loadAdjDailyChart() {
@@ -9444,6 +9463,9 @@
         }));
       _refreshChartMarkers();
       try { window._srDraw && window._srDraw(); } catch (_) {}   // 分價量表壓力/支撐帶
+      window._vpCandles = candles;                                  // 價量分析：可見範圍重算
+      try { chartInstance.timeScale().subscribeVisibleLogicalRangeChange(() => window._vpSchedule && window._vpSchedule()); } catch (_) {}
+      try { window._vpSchedule && window._vpSchedule(); } catch (_) {}
 
       // MA 5/10/20/60/120/240 均線
       const closes = candles.map(c => c.close);
@@ -10663,6 +10685,97 @@
       </div>
     </div>
   </div>
+  <script>
+  /* 價量分析（Volume Profile，2026-09-28）：K 線上疊加橫向柱狀的各價位成交量，統計畫面可見的 K 棒期間。
+     日價量＝日K 依最低～最高均勻分攤；小時價量＝60 分鐘K 分攤＋收盤集合競價差額補在收盤價。 */
+  (function(){
+    var VP={day:false, hour:false, cache:{}, raf:0}, ROWS=48;
+    function el(id){ return document.getElementById(id); }
+    function dkey(t){ return typeof t==='number' ? new Date(t*1000).toISOString().slice(0,10) : (typeof t==='string' ? t : (t&&t.year ? t.year+'-'+String(t.month).padStart(2,'0')+'-'+String(t.day).padStart(2,'0') : '')); }
+    function fetchBars(kind){
+      var code=(typeof currentCode!=='undefined')?currentCode:''; var k=code+'|'+kind;
+      if(VP.cache[k]) return VP.cache[k];
+      var url=kind==='day' ? '/api/chart?code='+encodeURIComponent(code)+'&range=3y&interval=1d&raw=1'
+                           : '/api/chart?code='+encodeURIComponent(code)+'&range=2y&interval=60m';
+      VP.cache[k]=fetch(url).then(function(r){return r.json();}).then(function(d){
+        var a=(d&&d.data)||[]; if(kind==='hour') a.forEach(function(c){ if(typeof c.time==='number') c.time+=8*3600; });
+        return a;
+      }).catch(function(){ delete VP.cache[k]; return []; });
+      return VP.cache[k];
+    }
+    function barsFor(kind){   // 目前圖表本身就是該週期時直接用畫面上的 K 棒
+      var hourly=!!window._chartIsHourly;
+      if((kind==='hour')===hourly && window._vpCandles) return Promise.resolve(window._vpCandles);
+      return fetchBars(kind);
+    }
+    function clear(){ var c=el('vpCanvas'); if(c){ var x=c.getContext('2d'); x.clearRect(0,0,c.width,c.height); } }
+    window._vpTogglePanel=function(){
+      var o=el('vpOpts'), open=o.style.display==='none';
+      o.style.display=open?'inline':'none'; el('vpArrow').textContent=open?'▾':'▸';
+    };
+    window._vpToggle=function(kind,on){ VP[kind]=on; window._vpSchedule(); };
+    window._vpSchedule=function(){ clearTimeout(VP.raf); VP.raf=setTimeout(draw, 40); };   // 用 timer（背景分頁 rAF 會暫停）；拖曳時 40ms 去抖動
+    window.addEventListener('resize', function(){ window._vpSchedule(); });
+
+    function draw(){
+      var cv=el('vpCanvas'), host=el('chartContainer');
+      if(!cv||!host) return;
+      if(!VP.day&&!VP.hour){ clear(); if(el('vpMsg')) el('vpMsg').textContent=''; return; }
+      if(typeof chartInstance==='undefined'||!chartInstance||typeof candleSeriesRef==='undefined'||!candleSeriesRef||!window._vpCandles) return;
+      var cs=window._vpCandles, lr=chartInstance.timeScale().getVisibleLogicalRange(); if(!lr||!cs.length) return;
+      var i0=Math.max(0,Math.floor(lr.from)), i1=Math.min(cs.length-1,Math.ceil(lr.to)); if(i1<i0) return;
+      var vis=cs.slice(i0,i1+1), pmin=Infinity, pmax=-Infinity;
+      vis.forEach(function(c){ if(c.low<pmin)pmin=c.low; if(c.high>pmax)pmax=c.high; });
+      if(!(pmax>pmin)) return;
+      var tFrom=vis[0].time, tTo=vis[vis.length-1].time, dFrom=dkey(tFrom), dTo=dkey(tTo), hourly=!!window._chartIsHourly;
+      var need=[]; if(VP.day) need.push('day'); if(VP.hour) need.push('hour');
+      if(el('vpMsg')) el('vpMsg').textContent='計算中…';
+      Promise.all([barsFor('day'), VP.hour?barsFor('hour'):Promise.resolve([])]).then(function(res){
+        var day=res[0]||[], hr=res[1]||[], step=(pmax-pmin)/ROWS, prof={};
+        function add(kind,h,l,v){
+          if(!v||h==null||l==null) return; var a=prof[kind]||(prof[kind]=new Array(ROWS).fill(0));
+          if(h<=l){ var k=Math.floor((l-pmin)/step); if(k>=0&&k<ROWS) a[k]+=v; return; }
+          var k0=Math.max(0,Math.floor((l-pmin)/step)), k1=Math.min(ROWS-1,Math.floor((h-pmin)/step));
+          for(var k=k0;k<=k1;k++){ var ov=Math.min(h,pmin+(k+1)*step)-Math.max(l,pmin+k*step); if(ov>0) a[k]+=v*ov/(h-l); }
+        }
+        var inDay=function(c){ var d=dkey(c.time); return d>=dFrom&&d<=dTo; };
+        if(VP.day) day.filter(inDay).forEach(function(c){ add('day',c.high,c.low,c.volume); });
+        if(VP.hour){
+          var hsel=hr.filter(function(c){ return hourly ? (c.time>=tFrom&&c.time<=tTo) : inDay(c); }), sum={};
+          hsel.forEach(function(c){ add('hour',c.high,c.low,c.volume); var d=dkey(c.time); sum[d]=(sum[d]||0)+(c.volume||0); });
+          day.filter(inDay).forEach(function(c){ var d=dkey(c.time); if(sum[d]!=null){ var rest=(c.volume||0)-sum[d]; if(rest>0) add('hour',c.high,c.low,rest); } });   // 小時K 缺的量(開盤/集合競價)依當日高低均勻分攤
+        }
+        render(prof, step, pmin, need);
+        if(el('vpMsg')) el('vpMsg').textContent=dFrom+' ～ '+dTo+(VP.hour&&!hr.length?'（小時K 資料取得失敗）':'');
+      });
+    }
+    function render(prof, step, pmin, need){
+      var cv=el('vpCanvas'), host=el('chartContainer'), dpr=window.devicePixelRatio||1;
+      var W=host.clientWidth, H=host.clientHeight; cv.width=W*dpr; cv.height=H*dpr; cv.style.width=W+'px'; cv.style.height=H+'px';
+      var x=cv.getContext('2d'); x.setTransform(dpr,0,0,dpr,0,0); x.clearRect(0,0,W,H);
+      var psw=0; try{ psw=chartInstance.priceScale('right').width(); }catch(e){}
+      var plotW=W-psw, maxW=plotW*0.30, both=need.length===2;
+      var COL={day:['rgba(224,165,0,.30)','rgba(224,165,0,.70)'], hour:['rgba(58,134,224,.30)','rgba(58,134,224,.70)']};
+      need.forEach(function(kind,ki){
+        var a=prof[kind]; if(!a) return; var mx=Math.max.apply(null,a); if(!(mx>0)) return; var poc=a.indexOf(mx);
+        for(var k=0;k<ROWS;k++){
+          if(!a[k]) continue;
+          var yTop=candleSeriesRef.priceToCoordinate(pmin+(k+1)*step), yBot=candleSeriesRef.priceToCoordinate(pmin+k*step);
+          if(yTop==null||yBot==null) continue;
+          var hh=Math.max(1,yBot-yTop-1), y=yTop;
+          if(both){ hh=Math.max(1,hh/2); if(ki===1) y=yTop+hh; }
+          var w=a[k]/mx*maxW;
+          x.fillStyle=COL[kind][k===poc?1:0]; x.fillRect(plotW-w, y, w, hh);
+        }
+        var yP=candleSeriesRef.priceToCoordinate(pmin+(poc+0.5)*step);
+        if(yP!=null){ var lab=(kind==='day'?'日':'時')+' 最大量 '+(Math.round((pmin+(poc+0.5)*step)*100)/100).toLocaleString();
+          x.font='11px sans-serif'; var tw=x.measureText(lab).width, lx=plotW-a[poc]/mx*maxW-tw-8;
+          x.fillStyle='rgba(255,255,255,.75)'; x.fillRect(lx-3, yP-8+(both&&ki===1?10:0), tw+6, 15);
+          x.fillStyle=kind==='day'?'#9a6b00':'#1f5fae'; x.fillText(lab, lx, yP+3+(both&&ki===1?10:0)); }
+      });
+    }
+  })();
+  </script>
   <script>
   /* 瀏覽器「上一頁」：切換視圖、開 K 線都寫入 history；上一頁＝回上一個視圖／先關 K 線（2026-09-27）*/
   (function(){
