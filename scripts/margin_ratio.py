@@ -91,9 +91,6 @@ def _taiex(latest_date):
 _TW = timezone(timedelta(hours=8))          # wantgoo 時間戳為「台北午夜」(UTC+8)，用 UTC 取 date 會早一天
 
 
-_TW = timezone(timedelta(hours=8))          # wantgoo 時間戳為「台北午夜」(UTC+8)，用 UTC 取 date 會早一天
-
-
 def _iso(ms):
     return datetime.fromtimestamp(ms / 1000, _TW).date().isoformat()
 
