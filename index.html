@@ -8016,18 +8016,19 @@
         `<div style="margin-top:5px"><span style="color:#c678dd;font-weight:600">${cat}（${groups[cat].length}）</span>
           <div style="display:flex;flex-wrap:wrap;margin-top:2px">${groups[cat].sort().map(cb).join('')}</div></div>`).join('');
       const open = !!window._brokerPanelOpen;
-      panel.innerHTML = `<div><a onclick="_toggleBrokerPanel()" style="cursor:pointer;text-decoration:none"><b style="color:#c678dd">主力分點</b>（${list.length}）
-          <span id="brokerPanelArrow" style="color:var(--text-muted);font-size:11px">${open ? '▾ 收合' : '▸ 展開分點清單'}</span></a>
-        　<a onclick="_setAllBrokers(true)" style="color:#f5c84b;cursor:pointer">全勾</a>
-        　<a onclick="_setAllBrokers(false)" style="color:#f5c84b;cursor:pointer">全部取消</a></div>
+      // 收合：只顯示「▸ 主力分點」；展開：▾＋全勾／全部取消＋分點清單（2026-09-28）
+      panel.innerHTML = `<div><a onclick="_toggleBrokerPanel()" style="cursor:pointer;text-decoration:none;user-select:none"><span id="brokerPanelArrow" style="color:var(--text-muted);font-size:11px;margin-right:4px">${open ? '▾' : '▸'}</span><b style="color:#c678dd">主力分點</b></a>
+        <span id="brokerPanelActs" style="display:${open ? 'inline' : 'none'}">　<a onclick="_setAllBrokers(true)" style="color:#f5c84b;cursor:pointer">全勾</a>
+        　<a onclick="_setAllBrokers(false)" style="color:#f5c84b;cursor:pointer">全部取消</a></span></div>
         <div id="brokerPanelList" style="max-height:110px;overflow-y:auto;display:${open ? 'block' : 'none'}">${sections}</div>`;
       panel.style.display = 'block';
     }
     function _toggleBrokerPanel() {   // 主力分點清單展開／收合（記住狀態，換股票時沿用）
       window._brokerPanelOpen = !window._brokerPanelOpen;
-      const l = document.getElementById('brokerPanelList'), a = document.getElementById('brokerPanelArrow');
+      const l = document.getElementById('brokerPanelList'), a = document.getElementById('brokerPanelArrow'), x = document.getElementById('brokerPanelActs');
       if (l) l.style.display = window._brokerPanelOpen ? 'block' : 'none';
-      if (a) a.textContent = window._brokerPanelOpen ? '▾ 收合' : '▸ 展開分點清單';
+      if (x) x.style.display = window._brokerPanelOpen ? 'inline' : 'none';
+      if (a) a.textContent = window._brokerPanelOpen ? '▾' : '▸';
     }
     function _toggleBroker(b, on) {
       if (!_brokerChecked) return;
