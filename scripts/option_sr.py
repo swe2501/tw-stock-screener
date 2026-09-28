@@ -13,7 +13,7 @@ option_sr.py — 台指選擇權(TXO)「支撐壓力 OI 三層峰值」，供首
   排序：壓力 strike 由低到高、支撐由高到低（離 ref 近→遠，不是依 OI 大小），各取前 3 層；不足 3 層標「候選不足」，不硬湊。
   每層回傳 strike／OI／OIΔ（今日 OI − 前一交易日 OI，本機 txo_daily；新履約價無前值→None）／距 ref 點數／同側百分位／中位數倍數／判定原因。
   另存 CALL/PUT 總 OI 與 Put/Call OI 比（市場情緒輔助）。舊欄位 res1/res2/sup1/sup2 填第 1、2 層（相容）。
-合約：week＝最近的週三週選(W)、weekf＝最近的週五週選(F)、month＝最近月月選，三者分開計算不混算。實際到期日＝原定到期日遇休市（週末、證交所休市日期表、過去日期以本機實際交易日核對）順延至次一交易日。
+合約：week＝最近的週三週選(W)（不看週五 F 系列）、month＝最近月月選，分開計算不混算。實際到期日＝原定到期日遇休市（週末、證交所休市日期表、過去日期以本機實際交易日核對）順延至次一交易日。
 資料源：TAIFEX openapi DailyMarketReportOpt（JSON/CSV 皆可，取「一般」盤）＋ DailyMarketReportFut。
 → Supabase option_sr(PK trade_date+kind)；新欄位 res_levels/sup_levels(jsonb)、ref_price、ref_kind（sql/option_sr_levels.sql）。
 用法：python scripts/option_sr.py [--dry]
@@ -283,7 +283,7 @@ def main():
         ref, ref_kind = spot, "加權收盤(備援)"
 
     out = []
-    for kind, lst in (("week", wed), ("weekf", fri), ("month", monthly)):   # 週三／週五週選分開（比照玩股網），不混算
+    for kind, lst in (("week", wed), ("month", monthly)):   # 週選＝週三(W)系列（2026-09-28 用戶定：不看週五系列）、月選，不混算
         if not lst:
             print(f"[warn] 找不到{kind}合約（{iso}）"); continue
         row = _build(kind, lst[0][0], body, ref, ref_kind, spot, iso)
