@@ -1,28 +1,27 @@
 """
-stock_sr.py — 個股分價量表「壓力區／支撐區」（N = 5/10/20/60/120/240/480 交易日），寫 Supabase stock_sr。
-供前端「選股 → 🧱 壓力支撐逼近」列表（各 N 前 20 名）與 K 線圖壓力/支撐色帶。
+stock_sr.py — 個股「多週期大量區 K 棒水平線」支撐／壓力（規格 SPEC-TA-SR-001，2026-09-28 合夥人定案），寫 Supabase stock_sr / stock_sr_h。
+供：K 線右側「🧱 支撐壓力」分頁、K 線圖支撐壓力線、選股「🧱 壓力支撐逼近」列表。
 
-算法（2026-09-27 與合夥人定案）：
-  分價量表：以最新收盤價為中心、格寬＝收盤價的 1%（格 k 覆蓋 收盤×(1+(k−0.5)%) ～ 收盤×(1+(k+0.5)%)）；
-    每天成交量依「最低～最高價」均勻分攤到涵蓋的格子（最高=最低時全放同一格）。
-  大量格＝量 ≥ 全部有量格子平均 × 1.3（同選擇權「均量 1.3 倍」原則）。
-  壓力區＝收盤格「以上」量最大、且為大量的格；上方無大量格＝無套牢壓力（如創新高），不列。
-    距離＝(壓力區下緣 − 收盤) ÷ 收盤。
-  支撐區＝收盤格「以下」量最大、且為大量的格；距離＝(收盤 − 支撐區上緣) ÷ 收盤。
-  列表條件（前端查詢）：距離 0～3%、近 20 日日均成交值 ≥ 5,000 萬、排除 ETF(00 開頭)，依距離近到遠取前 20。
-  歷史不足 N 天的股票略過該 N。
-資料：本機 stock_daily（上市＋上櫃；backfill_stock_2y.py 回補、每日 fetch_prices*.py 更新）。
-存法：Supabase stock_sr PK(code, n) 每日覆蓋（只留最新快照，約 1.4 萬列，不累積歷史）。
-兩個版本（2026-09-28）：
-  日K版（預設，→ stock_sr）：每天一根日K，量依當日最低～最高均勻分攤。
-  小時K版（--src hour，→ stock_sr_h）：每天用 Yahoo 60 分鐘K（fetch_hourly.py 存本機 stock_hourly）逐根分攤，
-    較貼近實際各價位成交；Yahoo 歷史小時K 常缺 9:00 開盤那根的量、也不一定含 13:30 收盤集合競價 →
-    「日成交量 − 當日小時K量加總」的差額，依當日最低～最高價均勻分攤（同日K版做法，中性處理；2026-09-28 修正，原本補在收盤價會把開盤量誤堆到收盤價）；
-    某天沒有小時K（超過 Yahoo 730 天或缺資料）時該天退回用日K。
+算法：
+  週期 P ∈ {5, 10, 20, 60, 120, 240, 480}（以「根 K 棒」計；日K版＝日K 根數、小時K版＝60 分鐘K 根數）。
+  1) 大量 K 棒：在最新 K 棒 t 的回溯窗口 [t−P+1, t] 內取成交量最大的那根 idx_P；同量取時間最近者。
+  2) 三條水平線：H_P＝該根最高、M_P＝(最高+最低)/2、L_P＝該根最低。
+  3) 以最新收盤 C_t 判定（兩版都用當日實際收盤；小時K 最後一根不含收盤集合競價，不用它）：
+       狀態 A  C_t > H_P          → H、M、L 全為支撐（第1~3支撐），無壓力
+       狀態 B  M_P < C_t ≤ H_P    → H＝壓力1；M＝支撐1、L＝支撐2
+       狀態 C  L_P ≤ C_t ≤ M_P    → M＝壓力1、H＝壓力2；L＝支撐1
+       狀態 D  C_t < L_P          → L、M、H 全為壓力（第1~3壓力），無支撐
+  4) 聚合：21 條線依上述屬性分成支撐集合、壓力集合；最近支撐＝支撐中最高者、最近壓力＝壓力中最低者；
+     另存支撐線數、壓力線數（「多空線數比率」公式待合夥人確認後再加）。
+  儲存：每檔每版 8 列——n=5~480 各一列（該週期 H/M/L、大量K日期與量、狀態、該週期最近支撐/壓力），
+        n=0 為 21 條線聚合（最近支撐/壓力、來源、線數）。距離＝|線 − 收盤| ÷ 收盤。
+  列表（前端）：距離 0～3%、近 20 日日均成交值 ≥ 5,000 萬、排除 ETF，依距離近到遠取前 20。
+  歷史不足 P 根的週期略過。
+資料：本機 stock_daily（日K）、stock_hourly（60 分鐘K，Yahoo；歷史小時K 常缺 9:00 那根的量，該根量=0 不會被選為大量K）。
+存法：Supabase PK(code, n) 每日覆蓋（只留最新快照）。
 用法：python scripts/stock_sr.py [--src day|hour] [--dry] [--code 2330]
 """
-import json, math, sqlite3, sys, urllib.request
-from collections import defaultdict
+import json, sqlite3, sys, time, urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -33,76 +32,71 @@ if sys.stdout and hasattr(sys.stdout, "reconfigure"):
 
 DB_PATH = Path(r"D:\stock_data\wantgoo_full.db")
 NS = (5, 10, 20, 60, 120, 240, 480)
-BIN_PCT = 0.01
-BIG_MULT = 1.3
 STALE_DAYS = 7      # 最新資料比全市場最新日落後超過這麼多「交易日」視為下市/停牌，略過
+PART = {"H": "高", "M": "中", "L": "低"}
 
 
-def _profile_snapshots(days, close, w):
-    """days: 由新到舊，每天一個 [(high, low, volume), ...]（日K版 1 根、小時K版多根）。
-    逐日累加分價量，於第 N 天時快照。回傳 {N: {格: 量}}。格 k 覆蓋 [close + (k-0.5)w, close + (k+0.5)w)，收盤價所在格為 0。"""
-    acc = defaultdict(float); out = {}
-    kof = lambda p: math.floor((p - close) / w + 0.5)
-    for i, bars in enumerate(days, 1):
-        for h, l, v in bars:
-            if not v:
-                continue
-            k0, k1 = kof(l), kof(h)
-            if k1 <= k0 or h <= l:
-                acc[k0] += v
-            else:
-                for k in range(k0, k1 + 1):
-                    ov = min(h, close + (k + 0.5) * w) - max(l, close + (k - 0.5) * w)
-                    if ov > 0:
-                        acc[k] += v * ov / (h - l)
-        if i in NS:
-            out[i] = dict(acc)
-    return out
+def classify(c, h, m, l):
+    """回傳 (狀態, {線名: 'S'|'R'})，依規格 2.1~2.4。"""
+    if c > h:
+        return "A", {"H": "S", "M": "S", "L": "S"}
+    if m < c <= h:
+        return "B", {"H": "R", "M": "S", "L": "S"}
+    if l <= c <= m:
+        return "C", {"H": "R", "M": "R", "L": "S"}
+    return "D", {"H": "R", "M": "R", "L": "R"}
 
 
-def _days(rows, hourly=None):
-    """rows 由新到舊 [(date, high, low, close, volume)] → 每天的 bar 清單。
-    hourly={date: [(h,l,v),...]} 時用小時K，「日量 − 小時K量加總」的差額依當日最低～最高均勻分攤（缺的開盤量/集合競價，中性處理）。"""
-    out = []
-    for d, h, l, c, v in rows:
-        hb = hourly.get(d) if hourly else None
-        if hb:
-            rest = (v or 0) - sum(x[2] for x in hb)
-            out.append(hb + ([(h, l, rest)] if rest > 0 and h and l else []))
-        else:
-            out.append([(h, l, v)])
-    return out
-
-
-def compute(code, rows, hourly=None):
-    """rows 由新到舊 [(date, high, low, close, volume)]。"""
-    d0, _, _, close, _ = rows[0]
-    if not close:
-        return []
-    w = close * BIN_PCT
-    lo = lambda k: round(close + (k - 0.5) * w, 2)
-    hi = lambda k: round(close + (k + 0.5) * w, 2)
-    avg_value = sum((r[3] or 0) * (r[4] or 0) for r in rows[:20]) / min(20, len(rows))
-    out = []
-    for n, prof in _profile_snapshots(_days(rows, hourly), close, w).items():
-        vals = [v for v in prof.values() if v > 0]
-        thr = sum(vals) / len(vals) * BIG_MULT if vals else 0
-        up = {k: v for k, v in prof.items() if k > 0 and v >= thr and v > 0}
-        dn = {k: v for k, v in prof.items() if k < 0 and v >= thr and v > 0}
-        rk = max(up, key=up.get) if up else None
-        sk = max(dn, key=dn.get) if dn else None
+def compute(code, bars, close, trade_date, avg_value):
+    """bars 由新到舊 [(label, high, low, volume)]；close＝最新收盤 C_t。"""
+    r2 = lambda v: round(v, 2)
+    dist = lambda v: round(abs(v - close) / close * 100, 2)
+    out, lines = [], []          # lines: (值, 屬性, 來源文字)
+    for n in NS:
+        if len(bars) < n:
+            continue
+        win = bars[:n]
+        vmax = max(b[3] or 0 for b in win)
+        if vmax <= 0:
+            continue
+        lab, h, l, v = next(b for b in win if (b[3] or 0) == vmax)     # 由新到舊 → 第一個即時間最近者
+        m = (h + l) / 2
+        st, attr = classify(close, h, m, l)
+        vals = {"H": h, "M": m, "L": l}
+        sup = [vals[k] for k in vals if attr[k] == "S"]
+        res = [vals[k] for k in vals if attr[k] == "R"]
+        for k in vals:
+            lines.append((vals[k], attr[k], f"{n}{PART[k]}"))
+        ns, nr = (max(sup) if sup else None), (min(res) if res else None)
         out.append({
-            "code": code, "n": n, "trade_date": d0, "close": close,
-            "res_lo": lo(rk) if rk is not None else None,
-            "res_hi": hi(rk) if rk is not None else None,
-            "res_vol": round(up[rk] / 1000) if rk is not None else None,           # 張
-            "res_dist": round((lo(rk) - close) / close * 100, 2) if rk is not None else None,
-            "sup_lo": lo(sk) if sk is not None else None,
-            "sup_hi": hi(sk) if sk is not None else None,
-            "sup_vol": round(dn[sk] / 1000) if sk is not None else None,
-            "sup_dist": round((close - hi(sk)) / close * 100, 2) if sk is not None else None,
+            "code": code, "n": n, "trade_date": trade_date, "close": close,
+            "h": r2(h), "m": r2(m), "l": r2(l), "anchor_date": lab, "anchor_vol": round(v / 1000),
+            "state": st, "src": None, "sup_cnt": len(sup), "res_cnt": len(res),
+            "res_lo": r2(nr) if nr is not None else None, "res_hi": r2(nr) if nr is not None else None,
+            "res_dist": dist(nr) if nr is not None else None, "res_vol": round(v / 1000) if nr is not None else None,
+            "sup_lo": r2(ns) if ns is not None else None, "sup_hi": r2(ns) if ns is not None else None,
+            "sup_dist": dist(ns) if ns is not None else None, "sup_vol": round(v / 1000) if ns is not None else None,
             "avg_value": round(avg_value),
         })
+    if not out:
+        return []
+    S = sorted([x for x in lines if x[1] == "S"], key=lambda x: -x[0])
+    R = sorted([x for x in lines if x[1] == "R"], key=lambda x: x[0])
+    src = []
+    if R:
+        src.append("壓:" + "、".join(x[2] for x in R if abs(x[0] - R[0][0]) < 1e-9))
+    if S:
+        src.append("撐:" + "、".join(x[2] for x in S if abs(x[0] - S[0][0]) < 1e-9))
+    out.append({
+        "code": code, "n": 0, "trade_date": trade_date, "close": close,
+        "h": None, "m": None, "l": None, "anchor_date": None, "anchor_vol": None,
+        "state": None, "src": "；".join(src) or None, "sup_cnt": len(S), "res_cnt": len(R),
+        "res_lo": r2(R[0][0]) if R else None, "res_hi": r2(R[0][0]) if R else None,
+        "res_dist": dist(R[0][0]) if R else None, "res_vol": None,
+        "sup_lo": r2(S[0][0]) if S else None, "sup_hi": r2(S[0][0]) if S else None,
+        "sup_dist": dist(S[0][0]) if S else None, "sup_vol": None,
+        "avg_value": round(avg_value),
+    })
     return out
 
 
@@ -121,21 +115,25 @@ def main():
         codes = [c for c in codes if c in only]
     out = []
     for c in codes:
-        rows = conn.execute("select trade_date, high, low, close, volume from stock_daily where code=? "
-                            "and high is not null and low is not null order by trade_date desc limit ?", (c, max(NS))).fetchall()
-        if not rows:
+        drows = conn.execute("select trade_date, high, low, close, volume from stock_daily where code=? "
+                             "and high is not null and low is not null order by trade_date desc limit ?", (c, max(NS))).fetchall()
+        if not drows or not drows[0][3]:
             continue
-        hourly = None
+        avg_value = sum((r[3] or 0) * (r[4] or 0) for r in drows[:20]) / min(20, len(drows))
         if src == "hour":
-            hourly = defaultdict(list)
-            for d, h, l, v in conn.execute("select trade_date, high, low, volume from stock_hourly where code=? and trade_date >= ?",
-                                           (c, rows[-1][0])):
-                hourly[d].append((h, l, v))
-        out += compute(c, rows, hourly)
+            hrows = conn.execute("select ts, high, low, close, volume from stock_hourly where code=? and high is not null "
+                                 "order by ts desc limit ?", (c, max(NS))).fetchall()
+            if not hrows:
+                continue
+            bars = [(time.strftime("%Y-%m-%d %H:%M", time.gmtime(ts + 8 * 3600)), h, l, v) for ts, h, l, _, v in hrows]
+        else:
+            bars = [(d, h, l, v) for d, h, l, _, v in drows]
+        close, tdate = drows[0][3], drows[0][0]   # C_t 兩版都用當日實際收盤（小時K 最後一根不含 13:30 集合競價，會與收盤價不同）
+        out += compute(c, bars, close, tdate, avg_value)
     print(f"[{src}] 最新日 {latest}：{len(codes)} 檔 → {len(out):,} 列")
     if dry or only:
-        for r in out[:14] if only else []:
-            print(r)
+        for r in out[:16] if only else []:
+            print({k: r[k] for k in ("code", "n", "close", "h", "m", "l", "anchor_date", "anchor_vol", "state", "sup_lo", "sup_dist", "res_lo", "res_dist", "src", "sup_cnt", "res_cnt")})
         if dry:
             return
     env = bs._load_env(); key = env["SUPABASE_SERVICE_KEY"]
@@ -145,10 +143,9 @@ def main():
         req = urllib.request.Request(env["SUPABASE_URL"] + f"/rest/v1/{table}?on_conflict=code,n",
                                      data=json.dumps(out[i:i + 1000]).encode(), method="POST", headers=hdr)
         urllib.request.urlopen(req, timeout=60).read()
-    # 清掉不在本次名單的舊列（下市/停牌），只留最新快照
     if not only:
-        req = urllib.request.Request(env["SUPABASE_URL"] + f"/rest/v1/{table}?trade_date=lt.{cutoff}",
-                                     method="DELETE", headers=hdr)
+        # 清掉不在本次名單的舊列（下市/停牌）
+        req = urllib.request.Request(env["SUPABASE_URL"] + f"/rest/v1/{table}?trade_date=lt.{cutoff}", method="DELETE", headers=hdr)
         urllib.request.urlopen(req, timeout=60).read()
     print(f"已寫入 {table} {len(out):,} 列")
 
