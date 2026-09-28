@@ -118,6 +118,7 @@ git commit -am "..."; git push origin HEAD:prod
 | 貪婪指標 | 市場觀察 | greed_base | compute_greed.py | project_greed_index |
 | 融資維持率三組 | 首頁§4 | margin_maint_split | margin_ratio.py / margin_maintenance_calc.py | project_margin_maint_split |
 | 外資空單溫度計（付費） | 市場觀察 | foreign_hedge_daily | foreign_hedge.py | project_foreign_hedge |
+| 宏觀佐證與事件窗（溫度計第3層） | 市場觀察→外資空單溫度計 | macro_events, macro_news | macro_events.py（Playwright 真 Chrome） | project_macro_events |
 | 大盤多空廣度（付費） | 市場觀察＋首頁§3鈕 | breadth_daily | breadth_daily.py | project_breadth |
 | K線 基本面/新聞分頁 | K線 modal 右側 | stock_fundamentals, stock_financials | fundamentals.py | project_fundamentals |
 | 選擇權支撐壓力區（價平+主次區間，週/月 tab） | 首頁 §6 選擇權矩陣下方 | option_sr（PK trade_date+kind） | option_sr.py | project_option_sr |

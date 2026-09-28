@@ -41,6 +41,7 @@
 "C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe" "C:\Users\User\Desktop\AI_stock\scripts\active_etf_flow.py" >> "C:\Users\User\Desktop\AI_stock\scripts\daily_job_stdout.log" 2>&1
 "C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe" "C:\Users\User\Desktop\AI_stock\scripts\upload_active_etf_holdings.py" >> "C:\Users\User\Desktop\AI_stock\scripts\daily_job_stdout.log" 2>&1
 "C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe" "C:\Users\User\Desktop\AI_stock\scripts\foreign_hedge.py" --daily >> "C:\Users\User\Desktop\AI_stock\scripts\daily_job_stdout.log" 2>&1
+"C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe" "C:\Users\User\Desktop\AI_stock\scripts\macro_events.py" >> "C:\Users\User\Desktop\AI_stock\scripts\daily_job_stdout.log" 2>&1
 "C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe" "C:\Users\User\Desktop\AI_stock\scripts\breadth_daily.py" >> "C:\Users\User\Desktop\AI_stock\scripts\daily_job_stdout.log" 2>&1
 "C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe" "C:\Users\User\Desktop\AI_stock\scripts\fundamentals.py" >> "C:\Users\User\Desktop\AI_stock\scripts\daily_job_stdout.log" 2>&1
 "C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe" "C:\Users\User\Desktop\AI_stock\scripts\option_sr.py" >> "C:\Users\User\Desktop\AI_stock\scripts\daily_job_stdout.log" 2>&1
