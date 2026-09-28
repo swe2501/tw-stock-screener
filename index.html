@@ -1337,7 +1337,7 @@
     <div class="mn-grp"><span class="mn-item">今日焦點 <i>▾</i></span><div class="mn-menu">
       <a onclick="_showView('overview')" style="font-weight:800;color:var(--brand-green)">📊 總覽</a><a onclick="_showView('focus')">排行榜</a><a onclick="_showView('todayindex')">今日索引</a></div></div>
     <div class="mn-grp"><span class="mn-item">選股 <i>▾</i></span><div class="mn-menu">
-      <a onclick="_showView('screen')">指標</a><a onclick="_showView('box')">箱型</a><a onclick="_showView('limitup')">上漲下跌亮燈區</a><a onclick="_showView('liq')">💧 流動性前30</a><a onclick="_showView('sr')">🧱 壓力支撐逼近</a></div></div>
+      <a onclick="_showView('screen')">指標</a><a onclick="_showView('box')">箱型</a><a onclick="_showView('limitup')">上漲下跌亮燈區</a><a onclick="_showView('liq')">💧 流動性排行</a><a onclick="_showView('sr')">🧱 壓力支撐逼近</a></div></div>
     <div class="mn-grp"><span class="mn-item">題材族群 <i>▾</i></span><div class="mn-menu">
       <a class="nav-owner" onclick="openHotTopics()">🔥 話題</a><a onclick="_showView('themes')">題材列表</a><a onclick="_showView('sectors')">產業地圖</a></div></div>
     <div class="mn-grp"><span class="mn-item">市場觀察 <i>▾</i></span><div class="mn-menu">
@@ -3129,7 +3129,7 @@
   })();
   </script>
 
-  <!-- ══ 流動性前 30（選股）══ -->
+  <!-- ══ 流動性排行（選股）══ -->
   <style>
     #liqView{max-width:1040px;margin:0 auto;}
     .liq-seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:14px;}
@@ -3145,8 +3145,8 @@
     table.liq .c{color:var(--brand-green);font-weight:700;}
   </style>
   <div id="liqView" style="display:none">
-    <div class="tm-head"><h2>💧 流動性前 30</h2><span class="sub" id="liqSub"></span></div>
-    <div class="liq-tip">挑選成交熱絡的標的，<b>規避流動性風險、避免進出場滑價</b>。現貨＝上市普通股當日成交金額前 30；個股期貨＝期交所個股期貨當日成交量前 50（不含大台、小台等指數類期貨）。</div>
+    <div class="tm-head"><h2>💧 流動性排行</h2><span class="sub" id="liqSub"></span></div>
+    <div class="liq-tip">挑選成交熱絡的標的，<b>規避流動性風險、避免進出場滑價</b>。現貨＝上市普通股當日成交金額前 50；個股期貨＝期交所個股期貨當日成交量前 50（不含大台、小台等指數類期貨）。</div>
     <div class="liq-seg" id="liqSeg">
       <button data-m="spot" class="on">現貨（成交金額）</button>
       <button data-m="fut">個股期貨（成交量）</button>
@@ -3187,8 +3187,8 @@
         a.filter(function(r){return r.trade_date===latest;}).forEach(function(r){ if(DATA[r.market])DATA[r.market].push(r); });
         DATA.spot.sort(function(x,y){return x.rank-y.rank;}); DATA.fut.sort(function(x,y){return x.rank-y.rank;});
         loaded=true;
-        if(el('liqSub'))el('liqSub').textContent='資料日 '+latest+' · 現貨前 30 · 個股期貨前 50';
-        if(el('liqNote'))el('liqNote').innerHTML='<b>算法與資料源：</b>現貨＝TWSE STOCK_DAY_ALL 上市普通股(排除ETF)當日<b>成交金額</b>前30；個股期貨＝TAIFEX DailyMarketReportFut 一般盤、只留個股期貨（SSFLists 普通股標的，排除指數類與 ETF 期貨；排除價差委託避免重複計量），各月份<b>成交量</b>合併後取前 50；標準型（每口 2,000 股）與小型（每口 100 股）分開排名，小型標「小型期貨」（依期交所股票期貨交易標的頁的股數欄判斷）。2026-09-28 起不含加權指數類期貨。盤後日更。用途：流動性愈高、進出場滑價愈小。';
+        if(el('liqSub'))el('liqSub').textContent='資料日 '+latest+' · 現貨、個股期貨各前 50';
+        if(el('liqNote'))el('liqNote').innerHTML='<b>算法與資料源：</b>現貨＝TWSE STOCK_DAY_ALL 上市普通股(排除ETF)當日<b>成交金額</b>前 50；個股期貨＝TAIFEX DailyMarketReportFut 一般盤、只留個股期貨（SSFLists 普通股標的，排除指數類與 ETF 期貨；排除價差委託避免重複計量），各月份<b>成交量</b>合併後取前 50；標準型（每口 2,000 股）與小型（每口 100 股）分開排名，小型標「小型期貨」（依期交所股票期貨交易標的頁的股數欄判斷）。2026-09-28 起不含加權指數類期貨。盤後日更。用途：流動性愈高、進出場滑價愈小。';
         render();
       }).catch(function(){ el('liqTbl').innerHTML='<div class="fc-empty">讀取失敗</div>'; });
     };
