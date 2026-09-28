@@ -11,7 +11,7 @@ create table if not exists public.breadth_ext (
   ma20_cnt int, ma60_cnt int, ma240_cnt int, both_cnt int,   -- 站上 20/60/240 日線家數；both＝同時站上 20 與 60
   ma20_base int, ma60_base int, ma240_base int, both_base int, -- 有足夠歷史可計算的家數（比例分母）
   bull_s int, bear_s int, base_s int, -- 短均線 5>10>20 多頭 / 5<10<20 空頭 / 可計算家數
-  bull_l int, bear_l int, base_l int, -- 長均線 20>60>240 多頭 / 20<60<240 空頭 / 可計算家數
+  bull_l int, bear_l int, base_l int, -- 長均線 10>20>60 多頭 / 10<20<60 空頭 / 可計算家數
   new_high int, new_low int, base_hl int,  -- 52 週(252 交易日)收盤新高/新低
   taiex numeric, taiex_ex2330 numeric,     -- 加權指數收盤 / 扣除台積電估算指數
   updated_at timestamptz not null default now(),

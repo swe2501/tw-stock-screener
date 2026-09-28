@@ -9,7 +9,7 @@ breadth_ext.py — 市場廣度延伸指標（比照玩股網 騰落線／多空
   maN_cnt/maN_base     收盤 > N 日均線（含當日）家數 / 有 N 日歷史可計算家數，N=20/60/240
   both_cnt/both_base   同時站上 20 與 60 日線
   bull_s/bear_s/base_s 短均線多頭 MA5>MA10>MA20 / 空頭 MA5<MA10<MA20
-  bull_l/bear_l/base_l 長均線多頭 MA20>MA60>MA240 / 空頭 MA20<MA60<MA240
+  bull_l/bear_l/base_l 長均線多頭 MA10>MA20>MA60 / 空頭 MA10<MA20<MA60（2026-09-28 改，與玩股網數值對得上）
   new_high/new_low     收盤 > / < 前 251 個交易日（含當日共 252 日＝52 週）最高 / 最低收盤
   taiex / taiex_ex2330 加權收盤 / 扣除台積電估算指數：r_ex＝(r_加權 − w×r_2330) ÷ (1 − w)，
                        w＝前一日台積電市值 ÷ 上市普通股總市值（股數用證交所 t187ap03_L 現行已發行股數；除權息日略有誤差）
@@ -101,10 +101,10 @@ def compute(series, kind):
                 f["base_s"] = 1
                 if m5 > m10 > m20: f["bull_s"] = 1
                 elif m5 < m10 < m20: f["bear_s"] = 1
-            if m240 is not None:
+            if m60 is not None:
                 f["base_l"] = 1
-                if m20 > m60 > m240: f["bull_l"] = 1
-                elif m20 < m60 < m240: f["bear_l"] = 1
+                if m10 > m20 > m60: f["bull_l"] = 1
+                elif m10 < m20 < m60: f["bear_l"] = 1
             if i >= 251:
                 f["base_hl"] = 1
                 if c > cl[dq_max[0]]: f["new_high"] = 1
