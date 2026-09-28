@@ -6,6 +6,8 @@ option_nday.py — 台指選擇權(TXO)「N 日大量區」壓力／支撐前 5 
 算法（2026-09-27 與合夥人定案；2026-09-28 合夥人修正：只找價平上下 10%）：
   合約／價平：週選＝當天最近到期週選(W/F)、月選＝最近月月選；價平＝最新交易日該合約 T 字報價
     （買權、賣權結算價最接近的履約價；無則最接近加權指數）。
+  不跨結算週期（2026-09-28 用戶要求）：窗口＝min(N, 本結算週期已過交易日)，週選以上一次週結算（週三/週五，含月結算週三）、
+    月選以上一次月結算為界（結算日皆為休市順延後的實際日）；未平倉平均除以實際天數；實際天數存 data[kind].days[N]。
   兩種量都算：
     vol＝過去 N 個交易日、各履約價「所有 TXO 合約(週選+月選)」一般盤成交量加總（Call/Put 分開）。
     oi ＝過去 N 個交易日，每天取「當天的該類合約」（週選＝最近週選、月選＝最近月月選）各履約價未平倉，對 N 天取平均。
@@ -29,6 +31,17 @@ DB_PATH = Path(r"D:\stock_data\wantgoo_full.db")
 NS = (5, 10, 20, 60, 120, 240, 480)
 WINDOWS = (0.10,)             # 2026-09-28 合夥人：只找價平上下 10%
 TOP = 5
+BIG_MULT = 1.3        # 大量＝範圍內平均 × 1.3（原引用 option_sr，該檔 2026-09-28 改 OI 三層峰值後移到此處）
+MERGE_GAP = 100       # 峰值 ±100 點內併成一區
+
+
+def _atm(calls, puts, spot):
+    """T字價平：買權、賣權結算價最接近的履約價；無結算價則取最接近指數者。calls/puts＝{strike:(settle, oi)}"""
+    both = [k for k in calls if k in puts and calls[k][0] and puts[k][0]]
+    if both:
+        return min(both, key=lambda k: abs(calls[k][0] - puts[k][0])), "T字"
+    ks = sorted(set(calls) | set(puts))
+    return (min(ks, key=lambda k: abs(k - spot)), "指數") if spot and ks else (None, None)
 
 
 def _is_month(code):
@@ -46,10 +59,24 @@ def _near_map(conn, since, kind):
     for d, c in conn.execute("select distinct trade_date, contract from txo_daily where trade_date >= ?", (since,)):
         if not ok(c):
             continue
-        exp = exp_of.setdefault(c, osr._expiry(c))
+        exp = exp_of.setdefault(c, osr._expiry_adj(c, date.fromisoformat(d)))     # 實際到期日（遇休市順延）
         if exp and exp > date.fromisoformat(d) and (d not in m or exp < exp_of[m[d]]):
             m[d] = c
     return m
+
+
+def _prev_settle(conn, kind, cur_exp):
+    """本合約之前最近一次「同週期」結算日（實際、休市順延後）：
+    週選＝所有週選(W/F)與月選的結算（月結算的週三即當週週三結算）；月選＝只看月選結算。"""
+    ok = (lambda c: _is_week(c) or _is_month(c)) if kind == "week" else _is_month
+    best = None
+    for (c,) in conn.execute("select distinct contract from txo_daily"):
+        if not ok(c):
+            continue
+        e = osr._expiry_adj(c, cur_exp)
+        if e and e < cur_exp and (best is None or e > best):
+            best = e
+    return best
 
 
 def _top_zones(side, atm, up):
@@ -61,12 +88,12 @@ def _top_zones(side, atm, up):
         cand = {k: v for k, v in side.items() if (k > atm if up else k < atm) and v > 0 and abs(k - atm) <= atm * w}
         if not cand:
             continue
-        thr = sum(cand.values()) / len(cand) * osr.BIG_MULT
+        thr = sum(cand.values()) / len(cand) * BIG_MULT
         big = {k: v for k, v in cand.items() if v >= thr}
         zs = []
         while big and len(zs) < TOP:
             peak = max(big, key=big.get)
-            grp = [k for k in big if abs(k - peak) <= osr.MERGE_GAP]
+            grp = [k for k in big if abs(k - peak) <= MERGE_GAP]
             zs.append([min(grp), max(grp), round(sum(big[k] for k in grp))])
             for k in grp:
                 del big[k]
@@ -95,15 +122,21 @@ def main():
         calls, puts = {}, {}
         for k, cp, st, oi in conn.execute("select strike, cp, settle, oi from txo_daily where trade_date=? and contract=?", (T, contract)):
             (calls if cp == "C" else puts)[k] = (st, oi)
-        atm, atm_by = osr._atm(calls, puts, spot)
+        atm, atm_by = _atm(calls, puts, spot)
         print(f"[{kind}] {contract} 價平 {atm}（{atm_by}）")
         conn.execute("drop table if exists cm"); conn.execute("create temp table cm (trade_date text, contract text)")
         conn.executemany("insert into cm values (?,?)", cmap.items())
-        d = {"contract": contract, "atm": atm, "atm_by": atm_by, "vol": {}, "oi": {}}
+        cur_exp = osr._expiry_adj(contract, date.fromisoformat(T))
+        ps = _prev_settle(conn, kind, cur_exp)
+        # 不跨結算週期：窗口只取上一次同週期結算日「之後」的交易日；若今天就是上一檔的結算日（本週期尚無完整日），至少保留今天
+        cyc = [x for x in dates if ps is None or x > ps.isoformat()] or [T]
+        d = {"contract": contract, "atm": atm, "atm_by": atm_by, "vol": {}, "oi": {}, "days": {},
+             "expiry": cur_exp.isoformat() if cur_exp else None, "prev_settle": ps.isoformat() if ps else None, "cycle_days": len(cyc)}
+        print(f"   本週期：上次結算 {ps}，本週期已 {len(cyc)} 個交易日（到期 {cur_exp}）")
         for n in NS:
-            if len(dates) < n:
-                continue
-            since = dates[n - 1]
+            win = cyc[:n]                   # dates 由新到舊
+            since, neff = win[-1], len(win)
+            d["days"][str(n)] = neff
             vol = {"C": {}, "P": {}}
             for k, cp, v in conn.execute("select strike, cp, sum(volume) from txo_daily where trade_date >= ? group by strike, cp", (since,)):
                 vol[cp][k] = v or 0
@@ -111,7 +144,7 @@ def main():
             for k, cp, v in conn.execute("""select t.strike, t.cp, sum(t.oi) from txo_daily t
                     join cm on cm.trade_date = t.trade_date and cm.contract = t.contract
                     where t.trade_date >= ? group by t.strike, t.cp""", (since,)):
-                oi[cp][k] = (v or 0) / n
+                oi[cp][k] = (v or 0) / neff
             for key, src in (("vol", vol), ("oi", oi)):
                 res, _ = _top_zones(src["C"], atm, True)
                 sup, _ = _top_zones(src["P"], atm, False)
