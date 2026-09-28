@@ -91,11 +91,45 @@ def _bband_pctb(closes, n=20, k=2):
 
 def _fetch_taiex():
     env = bs._load_env()
-    url = f"{env['SUPABASE_URL']}/rest/v1/taiex_daily?select=trade_date,close&order=trade_date.asc&limit=1250"
+    # desc+limit 取「最新」N 列（asc+limit 在總列數>limit 時會回最舊、害 RS 用到舊資料）
+    url = f"{env['SUPABASE_URL']}/rest/v1/taiex_daily?select=trade_date,close&order=trade_date.desc&limit=400"
     key = env.get("SUPABASE_ANON_KEY") or env.get("SUPABASE_SERVICE_KEY")
     req = urllib.request.Request(url, headers={"apikey": key, "Authorization": f"Bearer {key}"})
     rows = json.loads(urllib.request.urlopen(req, timeout=30).read())
     return {r["trade_date"]: float(r["close"]) for r in rows}
+
+
+def _fetch_otc_index():
+    """櫃買指數（供上櫃個股 RS 大盤基準；比照上市用加權）。回 {date: close}；缺表時回 {}。"""
+    env = bs._load_env()
+    url = f"{env['SUPABASE_URL']}/rest/v1/otc_index_daily?select=trade_date,close&order=trade_date.desc&limit=400"
+    key = env.get("SUPABASE_ANON_KEY") or env.get("SUPABASE_SERVICE_KEY")
+    req = urllib.request.Request(url, headers={"apikey": key, "Authorization": f"Bearer {key}"})
+    try:
+        rows = json.loads(urllib.request.urlopen(req, timeout=30).read())
+        return {r["trade_date"]: float(r["close"]) for r in rows if r.get("close") is not None}
+    except Exception as e:
+        print(f"  (櫃買指數讀取失敗，上櫃RS暫用加權:{type(e).__name__})"); return {}
+
+
+def _fetch_lawshow():
+    """近期法說會事件（利多出盡的『事件時間』閘）。回 {code: set(start_date)}。"""
+    env = bs._load_env()
+    key = env.get("SUPABASE_ANON_KEY") or env.get("SUPABASE_SERVICE_KEY")
+    # event_type=法說會（URL 編碼）
+    url = (f"{env['SUPABASE_URL']}/rest/v1/catalyst_events?select=code,start_date"
+           f"&event_type=eq.%E6%B3%95%E8%AA%AA%E6%9C%83&order=start_date.desc&limit=3000")
+    try:
+        req = urllib.request.Request(url, headers={"apikey": key, "Authorization": f"Bearer {key}"})
+        rows = json.loads(urllib.request.urlopen(req, timeout=30).read())
+        m = {}
+        for r in rows:
+            c = str(r.get("code") or ""); d = r.get("start_date")
+            if c and d:
+                m.setdefault(c, set()).add(d)
+        return m
+    except Exception as e:
+        print(f"  (法說會讀取失敗，利多出盡事件閘略過:{type(e).__name__})"); return {}
 
 
 def main():
@@ -110,6 +144,18 @@ def main():
     tdates = sorted(taiex)
     tx_last = tdates[-1]
     tx_ret20 = (taiex[tx_last] / taiex[tdates[-21]] - 1) * 100 if len(tdates) >= 21 else 0.0
+    # 上櫃 RS 基準＝櫃買指數（比照上市用加權）；缺資料則退回加權
+    otc_idx = _fetch_otc_index()
+    odates = sorted(otc_idx)
+    otc_ret20 = (otc_idx[odates[-1]] / otc_idx[odates[-21]] - 1) * 100 if len(odates) >= 21 else tx_ret20
+    otc_codes = set(r[0] for r in conn.execute("select distinct code from stock_daily where market='otc'"))
+    print(f"  大盤20日：加權 {tx_ret20:+.2f}% / 櫃買 {otc_ret20:+.2f}%（上櫃 {len(otc_codes)} 檔用櫃買）")
+    # 利多出盡「事件時間」閘：法說會當天或開完 1~2 交易日內。
+    # 錨定在「被評分的 stock_daily 交易日」(非 taiex，避免資料源日期不同步)。
+    lawshow = _fetch_lawshow()
+    recent_law = set(r[0] for r in conn.execute(
+        "select distinct trade_date from stock_daily order by trade_date desc limit 3"))
+    print(f"  法說會事件：{len(lawshow)} 檔有紀錄；近3交易日窗 {sorted(recent_law)}")
 
     # 每檔 stock_daily 最近 70 根(RS 用20、利多出盡高檔用近60日最低)
     rows = conn.execute(
@@ -171,7 +217,7 @@ def main():
         pb = _bband_pctb(closes, 20)
         rsi5 = _rsi(closes, 5)
         ret20 = (c0 / closes[-21] - 1) * 100 if closes[-21] else 0.0
-        rs_excess = ret20 - tx_ret20
+        rs_excess = ret20 - (otc_ret20 if code in otc_codes else tx_ret20)   # 上櫃比櫃買、上市比加權
         mv20 = _sma(vols, 20)
         vr = (vols[-1] / mv20) if mv20 else None
         dtr = (dt_map.get(code) / vols[-1] * 100) if (code in dt_map and vols[-1]) else None
@@ -188,16 +234,28 @@ def main():
         if den == 0:
             continue
         base = round(num / den)
-        # 利多出盡⚠️(Q8):基礎分≥80 且 爆量 且(長黑 或 高檔)
-        exhaust = False
-        if base >= 80:
-            sma5v, sma10v = _sma(vols, 5), _sma(vols, 10)
-            vol_spike = sma5v and sma10v and vols[-1] > max(sma5v, sma10v) * 1.3
-            long_black = opens[-1] and (c0 / opens[-1] - 1) <= -0.05
-            low60 = min(lows[-60:]) if len(lows) >= 60 else min(lows)
-            high_zone = low60 and c0 > low60 * 1.3
-            exhaust = bool(vol_spike and (long_black or high_zone))
-        recs.append({"code": code, "base": base, "exhaust": exhaust,
+        # 利多/利空出盡（合夥人定案 2026-09-22）：事件時間 + 過熱/悲觀 + 反轉K，三者皆須成立。
+        #   反轉K 為「必要」條件（不再用『高檔』替代）；上影/下影用合夥人定義：
+        #     上影比 =(高 − max(開,收))/收；下影比 =(min(開,收) − 低)/收。
+        exhaust = False; capitulation = False
+        o0, h0, l0 = opens[-1], highs[-1], lows[-1]
+        ma5 = _sma(closes, 5)
+        sma5v, sma10v = _sma(vols, 5), _sma(vols, 10)
+        vol_spike = bool(sma5v and sma10v and vols[-1] > max(sma5v, sma10v) * 1.3)
+        upper = (h0 - max(o0, c0)) / c0 if c0 else 0.0
+        lower = (min(o0, c0) - l0) / c0 if c0 else 0.0
+        long_black = bool(o0 and (c0 / o0 - 1) <= -0.05)
+        long_red = bool(o0 and (c0 / o0 - 1) >= 0.05)
+        # 頂部反轉：爆量長黑 或 爆量長上影(≥3%)跌破5MA
+        rev_top = vol_spike and (long_black or (upper >= 0.03 and ma5 and c0 < ma5))
+        # 底部反轉：爆量長紅 或 爆量長下影(≥3%)站回5MA
+        rev_bot = vol_spike and (long_red or (lower >= 0.03 and ma5 and c0 > ma5))
+        law_ok = bool(code in lawshow and (lawshow[code] & recent_law))  # 法說會在近3交易日
+        if base >= 80 and law_ok and rev_top:
+            exhaust = True                 # 利多出盡：高分 + 法說會時間 + 頂部反轉K
+        if base <= 20 and rev_bot:
+            capitulation = True            # 利空出盡：極度悲觀 + 底部反轉K（不需事件）
+        recs.append({"code": code, "base": base, "exhaust": exhaust, "capitulation": capitulation,
                      "price_score": round(price_s) if price_s is not None else None,
                      "momentum_score": round(mom_s) if mom_s is not None else None,
                      "volume_score": round(vol_s) if vol_s is not None else None,
@@ -206,8 +264,10 @@ def main():
 
     recs.sort(key=lambda r: -r["base"])
     exn = [r["code"] for r in recs if r["exhaust"]]
+    cap = [r["code"] for r in recs if r["capitulation"]]
     print(f"算出 {len(recs)} 檔(資料日 {latest}){'（dry-run）' if dry else ''}")
     print(f"  利多出盡⚠️ {len(exn)} 檔: {exn[:12]}")
+    print(f"  利空出盡💚 {len(cap)} 檔: {cap[:12]}")
     print("  貪婪前8:", [(r["code"], r["base"]) for r in recs[:8]])
     print("  恐懼後8:", [(r["code"], r["base"]) for r in recs[-8:]])
     for r in recs[:3]:

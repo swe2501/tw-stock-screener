@@ -1354,6 +1354,13 @@
   </script>
   <script>
     (function(){try{if(localStorage.getItem('theme')==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}})();
+    // 台股休市判定（全站共用）：證交所休市日期表（/api/screen?stat=holidays）＋週末；結算日遇休市順延至次一交易日 2026-09-28
+    window._twHol=null; window._twHolP=null;
+    window._loadTwHol=function(){ if(window._twHolP) return window._twHolP;
+      window._twHolP=fetch('/api/screen?stat=holidays').then(function(r){return r.json();}).then(function(j){ var o={}; ((j&&j.closed)||[]).forEach(function(d){o[d]=1;}); window._twHol=o; return o; })
+        .catch(function(){ window._twHol={}; return {}; }); return window._twHolP; };
+    window._twIsTrading=function(iso){ var w=new Date(iso+'T00:00:00Z').getUTCDay(); return w>0&&w<6&&!(window._twHol&&window._twHol[iso]); };
+    window._twAdj=function(iso){ var d=new Date(iso+'T00:00:00Z'); for(var i=0;i<15;i++){ var s=d.toISOString().slice(0,10); if(window._twIsTrading(s)) return s; d=new Date(d.getTime()+864e5); } return iso; };
     function _toggleTheme(){var r=document.documentElement;var toLight=r.getAttribute('data-theme')!=='light';if(toLight)r.setAttribute('data-theme','light');else r.removeAttribute('data-theme');try{localStorage.setItem('theme',toLight?'light':'dark');}catch(e){}var b=document.getElementById('themeToggle');if(b)b.textContent=toLight?'☀️':'🌙';if(typeof _rethemeChart==='function'){try{_rethemeChart();}catch(e){}}if(typeof _hxRetheme==='function'){try{_hxRetheme();}catch(e){}}if(typeof window._fhRetheme==='function'){try{window._fhRetheme();}catch(e){}}}
     function _todo(n){ if(typeof showToast==='function') showToast((n||'此功能')+'：建置中'); else alert((n||'此功能')+'：建置中'); }
     function _home(){ try{ ['chartModal','brokerSigModal','brokerRankModal','hotTopicsModal','watchlistPanel','alertPanel','marginModal','backtestModal','sellTrackModal','divAlertModal'].forEach(function(id){var m=document.getElementById(id); if(m){ m.style.display='none'; if(m.classList) m.classList.remove('open'); }}); }catch(e){} window.scrollTo({top:0,behavior:'smooth'}); }
@@ -3214,7 +3221,7 @@
       el('fhContracts').innerHTML='<div>大台指 (TX): <span class="'+(cur.fx_tx_net<0?'c-bear':'c-bull')+'" style="font-weight:600">'+n0(cur.fx_tx_net)+' 口</span></div>'
         +'<div>小台指 (MTX): <span class="'+(cur.fx_mtx_net<0?'c-bear':'c-bull')+'" style="font-weight:600">'+n0(cur.fx_mtx_net)+' 口 (約 '+n0(cur.fx_mtx_net/4)+' 大台)</span></div>'
         +'<div>微台指 (TMF): <span class="'+(cur.fx_tmf_net<0?'c-bear':'c-bull')+'" style="font-weight:600">'+n0(cur.fx_tmf_net)+' 口 (約 '+n0(cur.fx_tmf_net/20)+' 大台)</span></div>';
-      el('fhNote').innerHTML='<b>算法與資料源（合夥人複查）：</b>避險比率 R＝外資期貨淨空名目 H ÷ 外資持股市值 V ×100。H＝MAX(−Σ(外資各契約 net 口×指數×每點價值),0)，每點價值 大台200/小台50/微台10；V(上市)＝Σ(TWSE mi-qfiis 全體外資持有股數×當日收盤)，扣 ETF＝排除 00 開頭。分級＝近 2 年歷史百分位（&lt;P80 常態／P80–P95 偏高／≥P95 顯著偏高）＋固定紅線 &gt;1.2% 觸發極端。第三層象限＝今日外資現貨買賣超正負 × 等值大台淨口數較前一日增減（淨空增加＝空單增加）。第二層：USD/TWD 為 Yahoo 每日匯率、現貨買賣超為 TWSE BFI82U 外資及陸資（抓取失敗的日子每日自動回補近 60 天）；第四層事件倒數＝台指期結算（每月第三個週三）、台積電法說會（催化事件表）、FOMC 與台灣央行利率決議（investing.com 經濟日曆，尚未公告者顯示「尚未公告」）。資料源：TWSE MI_QFIIS／STOCK_DAY_ALL／BFI82U、TAIFEX futContractsDate、加權指數。每日盤後更新（foreign_hedge.py→foreign_hedge_daily）。版面與配色比照合夥人「完美.html」（2026-09-28）。<br><b>事件前／連假前避險偵測（2026-09-28 合夥人定案）：</b>交易日 t 近 3 日累計空單增加（等值大台淨口數減少量，t 與前 2 日合計）≥ 5,000 口，且 t 之後 1～3 個交易日內有事件 → 疑似事件前避險；t 之後休市 ≥ 3 天 → 疑似連假前避險。事件＝台指期結算（每月第三個週三）、FOMC（聯準會公布之會議日）、台灣央行理監事會（每季，2026 年日期依往例推估）、台積電法說會、高重要度總經數據與會員列上的中重要度事件（後兩者僅限資料庫保存期間）。僅為時間上的相關，不代表確定因果。';
+      el('fhNote').innerHTML='<b>算法與資料源（合夥人複查）：</b>避險比率 R＝外資期貨淨空名目 H ÷ 外資持股市值 V ×100。H＝MAX(−Σ(外資各契約 net 口×指數×每點價值),0)，每點價值 大台200/小台50/微台10；V(上市)＝Σ(TWSE mi-qfiis 全體外資持有股數×當日收盤)，扣 ETF＝排除 00 開頭。分級＝近 2 年歷史百分位（&lt;P80 常態／P80–P95 偏高／≥P95 顯著偏高）＋固定紅線 &gt;1.2% 觸發極端。第三層象限＝今日外資現貨買賣超正負 × 等值大台淨口數較前一日增減（淨空增加＝空單增加）。第二層：USD/TWD 為 Yahoo 每日匯率、現貨買賣超為 TWSE BFI82U 外資及陸資（抓取失敗的日子每日自動回補近 60 天）；第四層事件倒數＝台指期結算（每月第三個週三）、台積電法說會（催化事件表）、FOMC 與台灣央行利率決議（investing.com 經濟日曆，尚未公告者顯示「尚未公告」）。資料源：TWSE MI_QFIIS／STOCK_DAY_ALL／BFI82U、TAIFEX futContractsDate、加權指數。每日盤後更新（foreign_hedge.py→foreign_hedge_daily）。版面與配色比照合夥人「完美.html」（2026-09-28）。<br><b>事件前／連假前避險偵測（2026-09-28 合夥人定案）：</b>交易日 t 近 3 日累計空單增加（等值大台淨口數減少量，t 與前 2 日合計）≥ 5,000 口，且 t 之後 1～3 個交易日內有事件 → 疑似事件前避險；t 之後休市 ≥ 3 天 → 疑似連假前避險。事件＝台指期結算（每月第三個週三，遇休市順延至次一交易日）、FOMC（聯準會公布之會議日）、台灣央行理監事會（每季，2026 年日期依往例推估）、台積電法說會、高重要度總經數據與會員列上的中重要度事件（後兩者僅限資料庫保存期間）。僅為時間上的相關，不代表確定因果。';
       initSim(cur, ser);
     }
     function kcard(k,icon,v,s,f,cls){ return '<div class="pf-glass pf-kc'+(cls?' '+cls:'')+'"><div class="k"><span>'+k+'</span>'+icon+'</div><div><div class="v">'+v+'</div><div class="s">'+s+'</div></div><div class="f">'+(f||'')+'</div></div>'; }
@@ -3292,14 +3299,17 @@
     //   (2) 連假前：t 之後休市 ≥ 3 天（下個交易日距 t ≥ 4 個日曆天）→ 「疑似連假前避險」
     // 事件：台指期結算（每月第三個週三）、FOMC、台灣央行理監事會、台積電法說會（catalyst_events）、
     //       高重要度總經數據與會員列上的中重要度事件（macro_events；僅資料庫保存期間內）。
-    var HX_TH=5000, EVTS=[], FLAGS={};
+    var HX_TH=5000, EVTS=[], FLAGS={}, EVX=[];
     var FOMC=['2024-01-31','2024-03-20','2024-05-01','2024-06-12','2024-07-31','2024-09-18','2024-11-07','2024-12-18',
       '2025-01-29','2025-03-19','2025-05-07','2025-06-18','2025-07-30','2025-09-17','2025-10-29','2025-12-10',
       '2026-01-28','2026-03-18','2026-04-29','2026-06-17','2026-07-29','2026-09-16','2026-10-28','2026-12-09'];
     var CBC=['2024-03-21','2024-06-13','2024-09-19','2024-12-19','2025-03-20','2025-06-19','2025-09-18','2025-12-18',
       '2026-03-19','2026-06-18','2026-09-17','2026-12-17'];
     function iso(d){ return d.toISOString().slice(0,10); }
-    function settleDates(){ var out=[]; for(var y=2024;y<=2027;y++) for(var m=0;m<12;m++){ var f=new Date(Date.UTC(y,m,1)).getUTCDay(); out.push(iso(new Date(Date.UTC(y,m,1+((3-f+7)%7)+14)))); } return out; }
+    // 結算日遇休市順延：歷史以實際交易日（DATA）為準，未來用證交所休市表
+    function settleDates(){ var out=[], ds=DATA.map(function(r){return r.trade_date;});
+      for(var y=2024;y<=2027;y++) for(var m=0;m<12;m++){ var f=new Date(Date.UTC(y,m,1)).getUTCDay(), sc=iso(new Date(Date.UTC(y,m,1+((3-f+7)%7)+14)));
+        var real=(ds.length&&sc<=ds[ds.length-1])?(ds.filter(function(d){return d>=sc;})[0]||sc):(window._twAdj?window._twAdj(sc):sc); out.push(real); } return out; }
     function buildEvents(extra){
       EVTS=[]; settleDates().forEach(function(d){ EVTS.push({d:d,n:'台指期結算'}); });
       FOMC.forEach(function(d){ EVTS.push({d:d,n:'FOMC 利率決議'}); }); CBC.forEach(function(d){ EVTS.push({d:d,n:'台灣央行理監事會'}); });
@@ -3349,6 +3359,7 @@
     function daysTo(d){ var t=new Date(d); var now=new Date(Date.now()+8*3600e3); var a=Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate());
       var tw=new Date(t.getTime()+8*3600e3); var b=Date.UTC(tw.getUTCFullYear(),tw.getUTCMonth(),tw.getUTCDate()); return Math.round((b-a)/864e5); }
     function nextSettleDate(){ var d=new Date(Date.now()+8*3600e3); for(var k=0;k<3;k++){ var y=d.getUTCFullYear(), m=d.getUTCMonth()+k, first=new Date(Date.UTC(y,m,1)), off=(3-first.getUTCDay()+7)%7, w=new Date(Date.UTC(y,m,1+off+14));
+      if(window._twAdj) w=new Date(window._twAdj(w.toISOString().slice(0,10))+'T00:00:00Z');   // 遇休市順延
       if(w.getTime()+864e5>d.getTime()) return w; } return null; }
     function evCard(icon,title,tagTxt,tagStyle,num,unit,desc,warn,warnCls,titleColor){
       return '<div class="pf-ev"><div><div class="eh"><span style="color:'+titleColor+';display:flex;align-items:center;gap:6px">'+icon+' '+title+'</span><span class="pf-badge" style="'+tagStyle+';font-weight:700">'+tagTxt+'</span></div>'
@@ -3513,13 +3524,14 @@
         loaded=true;
         buildEvents([]);
         if(window._isOwner){ render(); renderEvents(SB,H); renderEvCards(SB,H); }
+        if(window._loadTwHol) window._loadTwHol().then(function(){ buildEvents(EVX); if(window._isOwner){ render(); renderEvCards(SB,H); } });
         Promise.all([
           fetch(SB+'/rest/v1/catalyst_events?select=start_date&code=eq.2330&event_type=eq.'+encodeURIComponent('法說會')+'&order=start_date.asc&limit=100',{headers:H}).then(function(r){return r.json();}).catch(function(){return [];}),
           fetch(SB+'/rest/v1/macro_events?select=*&or=(importance.eq.high,pinned.eq.true)&order=occ_time.asc&limit=1000',{headers:H}).then(function(r){return r.json();}).catch(function(){return [];})
         ]).then(function(ev){
           var ex=[]; (Array.isArray(ev[0])?ev[0]:[]).forEach(function(e){ if(e.start_date) ex.push({d:e.start_date.slice(0,10),n:'台積電法說會'}); });
           (Array.isArray(ev[1])?ev[1]:[]).forEach(function(e){ if(!e.occ_time||e.hidden) return; var t=new Date(new Date(e.occ_time).getTime()+8*3600e3); ex.push({d:iso(t),n:e.title}); });
-          buildEvents(ex); if(window._isOwner) render();
+          EVX=ex; buildEvents(ex); if(window._isOwner) render();
         });
       }).catch(function(){ if(el('fhNarrative'))el('fhNarrative').textContent='資料讀取失敗'; });
     };
@@ -3875,14 +3887,14 @@
         el('bxHead').innerHTML='<div class="bx-title"><b>多空頭排列</b><span>多頭排列股票家數佔'+MKN[MKT]+'比例</span><time>'+d+'</time></div>'
           +'<div class="bx-cards"><div class="bx-card"><div class="k">短均線 多頭排列</div><div class="v" style="color:'+UP+'">'+f1(bs)+'%</div><div class="s">MA5 &gt; MA10 &gt; MA20　'+cur.bull_s+' 檔</div></div>'
           +'<div class="bx-card"><div class="k">短均線 空頭排列</div><div class="v" style="color:'+DN+'">'+f1(es)+'%</div><div class="s">MA5 &lt; MA10 &lt; MA20　'+cur.bear_s+' 檔</div></div>'
-          +'<div class="bx-card"><div class="k">長均線 多頭排列</div><div class="v" style="color:'+UP+'">'+f1(bl)+'%</div><div class="s">MA10 &gt; MA20 &gt; MA60　'+cur.bull_l+' 檔</div></div>'
-          +'<div class="bx-card"><div class="k">長均線 空頭排列</div><div class="v" style="color:'+DN+'">'+f1(el2)+'%</div><div class="s">MA10 &lt; MA20 &lt; MA60　'+cur.bear_l+' 檔</div></div></div>';
+          +'<div class="bx-card"><div class="k">長均線 多頭排列</div><div class="v" style="color:#f59e0b">'+f1(bl)+'%</div><div class="s">MA10 &gt; MA20 &gt; MA60　'+cur.bull_l+' 檔</div></div>'
+          +'<div class="bx-card"><div class="k">長均線 空頭排列</div><div class="v" style="color:#8b5cf6">'+f1(el2)+'%</div><div class="s">MA10 &lt; MA20 &lt; MA60　'+cur.bear_l+' 檔</div></div></div>';
         var ch=mkChart(window.innerWidth<600?300:380); if(!ch) return;
         line(ch,rows,function(r){return pct(r.bull_s,r.base_s);},UP,2); line(ch,rows,function(r){return pct(r.bear_s,r.base_s);},DN,2);
-        line(ch,rows,function(r){return r.base_l>=50?pct(r.bull_l,r.base_l):null;},'#f08c7f',2,LightweightCharts.LineStyle.Dotted); line(ch,rows,function(r){return r.base_l>=50?pct(r.bear_l,r.base_l):null;},'#62c294',2,LightweightCharts.LineStyle.Dotted);
+        line(ch,rows,function(r){return r.base_l>=50?pct(r.bull_l,r.base_l):null;},'#f59e0b',2); line(ch,rows,function(r){return r.base_l>=50?pct(r.bear_l,r.base_l):null;},'#8b5cf6',2);
         addIdx(ch,rows);
-        finish(ch,rows,function(r){ return '短多 <b style="color:'+UP+'">'+f1(pct(r.bull_s,r.base_s))+'%</b> 短空 <b style="color:'+DN+'">'+f1(pct(r.bear_s,r.base_s))+'%</b>　長多 <b style="color:'+UP+'">'+f1(pct(r.bull_l,r.base_l))+'%</b> 長空 <b style="color:'+DN+'">'+f1(pct(r.bear_l,r.base_l))+'%</b>'; });
-        legend([[UP,'短均線多頭排列 %'],[DN,'短均線空頭排列 %'],['#f08c7f','長均線多頭排列 %','2px dotted'],['#62c294','長均線空頭排列 %','2px dotted']]);
+        finish(ch,rows,function(r){ return '短多 <b style="color:'+UP+'">'+f1(pct(r.bull_s,r.base_s))+'%</b> 短空 <b style="color:'+DN+'">'+f1(pct(r.bear_s,r.base_s))+'%</b>　長多 <b style="color:#f59e0b">'+f1(pct(r.bull_l,r.base_l))+'%</b> 長空 <b style="color:#8b5cf6">'+f1(pct(r.bear_l,r.base_l))+'%</b>'; });
+        legend([[UP,'短均線多頭排列 %'],[DN,'短均線空頭排列 %'],['#f59e0b','長均線多頭排列 %'],['#8b5cf6','長均線空頭排列 %']]);
         el('bxNote').innerHTML=note+'<br>多頭排列＝短期均線在中期之上、中期在長期之上（持有越久成本越低）。短均線：MA5 &gt; MA10 &gt; MA20（空頭反之）；長均線：MA10 &gt; MA20 &gt; MA60（空頭反之；2026-09-28 依合夥人改為與玩股網一致）。比例分母＝有足夠歷史可計算該組均線的家數。'+(EX&&MKT!=='otc'?'<br>大盤扣除台積電：r＝(r加權 − w×r台積電) ÷ (1 − w)，w＝前一日台積電市值 ÷ 上市普通股總市值（股數用證交所現行已發行股數估算）。':'');
       } else if(TAB==='width'){
         var w20=pct(cur.ma20_cnt,cur.ma20_base), w60=pct(cur.ma60_cnt,cur.ma60_base), w240=pct(cur.ma240_cnt,cur.ma240_base);
@@ -5583,52 +5595,44 @@
         if(el('gsBasis'))el('gsBasis').innerHTML='<ul style="margin:0;padding-left:16px">'+fired.map(function(x){return '<li>'+x+'</li>';}).join('')
           +'</ul><div style="margin-top:6px">市場廣度＝上漲家數÷全部家數；法人強度＝三大法人買賣超÷市場成交額；槓桿背離＝五日融資動能－五日大盤動能。資料源：加權 ^TWII、TWSE 家數/BFI82U/MI_MARGN/MI_INDEX。</div>';
       });
-      // 選擇權支撐壓力區（2026-09-28 合併卡：週選=5日、月選=20日 N日大量區，壓力/支撐第1~5名成對顯示）
-      Promise.all([sb('option_sr?select=*&order=trade_date.desc&limit=4'), sb('option_nday?select=*&order=trade_date.desc&limit=1')]).then(function(res){
+      // 選擇權支撐壓力區（2026-09-28 起只顯示「OI 三層峰值」；舊 N 日大量區分頁已依用戶要求移除）
+      sb('option_sr?select=*&order=trade_date.desc&limit=6').then(function(a){
         var box=el('gsOptSR'); if(!box)return;
-        var a=res[0]||[], nd=(res[1]||[])[0];
+        a=Array.isArray(a)?a:[];
         a=a.filter(function(r){return a[0]&&r.trade_date===a[0].trade_date;});
-        var by={}; a.forEach(function(r){ by[r.kind||'month']=r; });
-        var D=(nd&&nd.data&&nd.data.week)?nd.data:null;
-        var kinds=['week','month'].filter(function(k){return (D&&D[k])||by[k];});
+        var by={}; a.forEach(function(r){ if(r.res_levels||r.sup_levels) by[r.kind||'month']=r; });
+        var kinds=['week','month'].filter(function(k){return by[k];});   // 週選＝週三(W)系列（2026-09-28 用戶定：不看週五系列）、月選
         if(!kinds.length){ box.style.display='none'; return; }
-        var NMAP={week:'5',month:'20'};
-        var kind=window._osrKind&&kinds.indexOf(window._osrKind)>=0?window._osrKind:kinds[0], metric=window._osrMetric||'vol';
-        function z(x){ return x[0]===x[1]?x[0].toLocaleString():x[0].toLocaleString()+'～'+x[1].toLocaleString(); }
-        function q(v){ return v>=1e4?(v/1e4).toFixed(1)+' 萬口':Math.round(v).toLocaleString()+' 口'; }
-        function dist(p,spot){ if(!spot)return ''; var d=(p-spot)/spot*100; return (d>=0?'+':'−')+Math.abs(d).toFixed(1)+'%'; }
-        function side(zz,cls,edge,spot,mx){
-          if(!zz) return '<div class="osr-side '+cls+'"><div class="zn na">—</div></div>';
-          return '<div class="osr-side '+cls+'"><div class="zn">'+z(zz)+'<em>'+dist(zz[edge],spot)+'</em></div>'
-            +'<div class="bar"><u style="width:'+(mx?(zz[2]/mx*100).toFixed(0):0)+'%"></u></div><div class="qv">'+q(zz[2])+'</div></div>';
+        var kind=window._osrKind&&kinds.indexOf(window._osrKind)>=0?window._osrKind:kinds[0];
+        function pk(lv,cls,mx){
+          if(!lv) return '<div class="osr-side '+cls+'"><div class="zn na">—</div></div>';
+          var dl=lv.oi_delta==null?'—':((lv.oi_delta>0?'+':'')+lv.oi_delta.toLocaleString());
+          return '<div class="osr-side '+cls+'" title="'+(lv.reason||'')+'"><div class="zn">'+lv.strike.toLocaleString()+'<em>'+(lv.dist>0?'+':'−')+Math.abs(Math.round(lv.dist)).toLocaleString()+' 點</em></div>'
+            +'<div class="bar"><u style="width:'+(mx?(lv.oi/mx*100).toFixed(0):0)+'%"></u></div>'
+            +'<div class="qv">OI '+lv.oi.toLocaleString()+' 口　Δ '+dl+'</div><div class="qv" style="opacity:.75">同側 PR '+(lv.pct!=null?lv.pct:'—')+' · 中位數 ×'+(lv.med_mult!=null?lv.med_mult:'—')+'</div></div>';
         }
         function render(){
-          window._osrKind=kind; window._osrMetric=metric;
-          var o=by[kind]||{}, d=D&&D[kind], n=NMAP[kind], x=d&&d[metric]&&d[metric][n];
-          var spot=(nd&&nd.spot)||o.spot, atm=(d&&d.atm)||o.atm;
-          var res=(x&&x.res)||[], sup=(x&&x.sup)||[], mx=0;
-          res.concat(sup).forEach(function(zz){ if(zz[2]>mx)mx=zz[2]; });
-          var rows='';
-          for(var i=0;i<5;i++){
-            rows+='<div class="osr-pair">'+side(res[i],'r',0,spot,mx)+'<div class="osr-rk">'+(i+1)+'</div>'+side(sup[i],'s',1,spot,mx)+'</div>';
-          }
-          var tabs=function(list,cur,attr){ return '<span class="gs-osr-tabs">'+list.map(function(t){return '<button type="button" data-'+attr+'="'+t[0]+'" class="'+(t[0]===cur?'on':'')+'">'+t[1]+'</button>';}).join('')+'</span>'; };
+          window._osrKind=kind;
+          var o=by[kind]||{}, res=o.res_levels||[], sup=o.sup_levels||[], mx=0;
+          res.concat(sup).forEach(function(l){ if(l.oi>mx)mx=l.oi; });
+          var m=o.meta||{}, rs=(m.res||{}), ss=(m.sup||{});
+          var rows=''; for(var i=0;i<5;i++) rows+='<div class="osr-pair">'+pk(res[i],'r',mx)+'<div class="osr-rk">'+(i+1)+'</div>'+pk(sup[i],'s',mx)+'</div>';
+          var short=(rs.short?'壓力':'')+(rs.short&&ss.short?'、':'')+(ss.short?'支撐':'');
+          var tabs='<span class="gs-osr-tabs">'+kinds.map(function(k){return '<button type="button" data-k="'+k+'" class="'+(k===kind?'on':'')+'">'+(k==='week'?'週選':'月選')+'</button>';}).join('')+'</span>';
           box.style.display='';
-          box.innerHTML='<div class="gs-osr-h">🎯 選擇權支撐壓力區'
-              +tabs(kinds.map(function(k){return [k,k==='week'?'週選 · 5日':'月選 · 20日'];}),kind,'k')+'</div>'
+          box.innerHTML='<div class="gs-osr-h">🎯 選擇權支撐壓力區'+tabs+'</div>'
             +'<div class="osr-kpis">'
-              +'<div><span>現價</span><b>'+(spot?Math.round(spot).toLocaleString():'—')+'</b></div>'
-              +'<div><span>價平（T 字）</span><b>'+(atm!=null?atm.toLocaleString():'—')+'</b>'+(o.atm_call!=null&&o.atm===atm?'<small>C '+o.atm_call+' / P '+o.atm_put+'</small>':'')+'</div>'
-              +'<div><span>合約</span><b>'+((d&&d.contract)||o.contract||'—')+'</b>'+(o.expiry?'<small>到期 '+o.expiry.slice(5)+'</small>':'')+'</div>'
+              +'<div><span>參考價</span><b>'+(o.ref_price?Math.round(o.ref_price).toLocaleString():'—')+'</b><small>'+(o.ref_kind||'')+'</small></div>'
+              +'<div><span>加權收盤</span><b>'+(o.spot?Math.round(o.spot).toLocaleString():'—')+'</b></div>'
+              +'<div><span>合約</span><b>'+(o.contract||'—')+'</b>'+(o.expiry?'<small>到期 '+o.expiry.slice(5)+(m.expiry_sched?'（原 '+m.expiry_sched.slice(5)+' 遇休市順延）':'')+'</small>':'')+'</div>'
               +'<div><span>Put/Call OI 比</span><b>'+(o.pc_ratio!=null?o.pc_ratio:'—')+'</b>'+(o.pc_ratio!=null?'<small>'+(o.pc_ratio>=1?'偏空避險':'偏多')+'</small>':'')+'</div>'
             +'</div>'
-            +'<div class="osr-bar2"><span>依 '+n+' 日'+(metric==='vol'?'成交量':'平均未平倉')+'由大到小，第 1 名壓力對第 1 名支撐</span>'+tabs([['vol','成交量'],['oi','未平倉']],metric,'m')+'</div>'
-            +'<div class="osr-head"><span class="r">壓力區　價平以上 Call</span><span></span><span class="s">支撐區　價平以下 Put</span></div>'
-            +(x?rows:'<div class="fc-empty">資料累積中</div>')
-            +'<div class="gs-osr-meta" style="margin-top:8px">資料日 '+((nd&&nd.trade_date)||o.trade_date||'')+' · 百分比＝距現價 · 範圍：價平上下 10%</div>'
-            +'<details class="gs-osr-algo"><summary>算法說明</summary><div>2026-09-27 與合夥人定案，2026-09-28 修正。<b>合約與天數</b>：週選分頁＝最近到期週選、看 5 個交易日；月選分頁＝最近月月選、看 20 個交易日。<b>價平</b>＝該合約最新交易日 T 字報價中，買權、賣權結算價最接近的履約價（無結算價時取最接近加權指數者）。<b>成交量</b>＝過去 N 日各履約價所有台指選擇權（週選＋月選）一般盤成交量加總；<b>未平倉</b>＝過去 N 日每天取該類合約（週選／月選）各履約價未平倉，再對 N 天取平均。<b>範圍</b>：只看價平上下 10%（合夥人修正）；壓力看價平以上買權、支撐看價平以下賣權。<b>大量</b>＝範圍內量 ≥ 範圍平均 × 1.3。<b>區間</b>：以峰值為中心，量最大的大量履約價為峰，峰上下 100 點內的大量檔位併成同一區（最寬 200 點），排除後再找下一個峰，壓力、支撐各取 5 區，依量由大到小排名，同名次成對顯示。Put/Call OI 比＝該合約全部賣權未平倉 ÷ 買權未平倉，為情緒輔助。資料源：TAIFEX 選擇權每日交易行情（盤後日更）。</div></details>';
+            +'<div class="osr-bar2"><span>OI 三層峰值：該合約今日未平倉的明顯峰值，依離參考價近→遠各取 5 層（潛在壓力／潛在支撐，非必然反轉價位）</span></div>'
+            +'<div class="osr-head"><span class="r">潛在壓力　參考價以上 Call（近→遠）</span><span></span><span class="s">潛在支撐　參考價以下 Put（近→遠）</span></div>'
+            +rows+(short?'<div class="gs-osr-meta" style="color:var(--yellow)">⚠ '+short+'側符合條件的峰值不足 5 層（候選不足，不降低門檻硬湊）</div>':'')
+            +'<div class="gs-osr-meta" style="margin-top:8px">資料日 '+(o.trade_date||'')+' · 點數＝距參考價</div>'
+            +'<details class="gs-osr-algo"><summary>算法說明</summary><div><b>【OI 三層峰值】（2026-09-28 定案，比照玩股網選擇權支撐壓力；以 2026-09-24 202609W5 對照一致）</b>參考價＝台指期 TX 近月一般盤結算價。買權只看參考價以上找壓力、賣權只看參考價以下找支撐，OI 缺／0／負剔除。峰值須同時符合：① OI ≥ 同側第 70 百分位；② OI ≥ 同側最大 OI × 0.20；③ OI ≥ 前後各 5 個有效履約價 OI 中位數 × 1.5；④ 局部高點（≥ 前後各 2 檔且至少高於其一，平台只留一個）。相鄰峰值 200 點內合併、留 OI 最大者。壓力由低到高、支撐由高到低（離參考價近→遠，非依 OI 大小）各取 5 層（2026-09-29 由 3 層改 5 層），不足 5 層標「候選不足」不硬湊。<b>合約</b>：週選＝週三到期（W）系列（不含週五系列）、月選，兩者分開計算不混算，各依「實際到期日」選最近一檔；原定到期日遇休市（週末、證交所休市日期表、過去日期以實際交易日核對，含颱風停市）順延至次一交易日（與期交所實際一致，例：202510F2 10/10→10/13）。Δ＝今日 OI − 前一交易日 OI（新履約價無前值顯示—）；PR＝該檔 OI 在同側的百分位；中位數倍數＝OI ÷ 鄰近中位數。Put/Call OI 比＝該合約全部賣權未平倉 ÷ 買權未平倉，為情緒輔助。資料源：TAIFEX 選擇權／期貨每日交易行情（盤後日更）。本指標為籌碼分布參考，未驗證交易績效。</div></details>';
           box.querySelectorAll('[data-k]').forEach(function(bt){ bt.onclick=function(){ kind=bt.getAttribute('data-k'); render(); }; });
-          box.querySelectorAll('[data-m]').forEach(function(bt){ bt.onclick=function(){ metric=bt.getAttribute('data-m'); render(); }; });
         }
         render();
       });
@@ -5986,18 +5990,26 @@
           +(fc!=null?'<div class="big '+fcol+'">'+Number(fc).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+'</div>'
             +'<div class="sub"><span class="'+fcol+'">'+(fchg>0?'+':'')+fchg.toFixed(2)+' 點 · '+(fpct>0?'+':'')+fpct.toFixed(2)+'%</span></div>'
             +'<div class="cb-conv">↓ 換算參考　<strong>台指期約 '+Math.round(conv).toLocaleString()+' 點</strong></div>':'<div class="big">資料更新中</div>')+'</div>';
-        // 期貨結算日（台指期月合約＝每月第三個週三；週選＝每週三、週五；遇休市順延，此處未扣國定假日）2026-09-28
-        function twToday(){var d=new Date(Date.now()+8*3600e3);return Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate());}
-        function nextMonthly(t0){var d=new Date(t0);for(var k=0;k<3;k++){var y=d.getUTCFullYear(),m=d.getUTCMonth()+k,f=new Date(Date.UTC(y,m,1)).getUTCDay(),w=Date.UTC(y,m,1+((3-f+7)%7)+14);if(w>=t0)return w;}return null;}
-        function nextDow(t0,dow){var d=new Date(t0).getUTCDay();return t0+((dow-d+7)%7)*864e5;}
-        var t0=twToday(),mSet=nextMonthly(t0),wWed=nextDow(t0,3),wFri=nextDow(t0,5);
-        var mDays=mSet!=null?Math.round((mSet-t0)/864e5):null;
-        function md(t){var d=new Date(t);return (d.getUTCMonth()+1)+'/'+d.getUTCDate()+'（'+'日一二三四五六'[d.getUTCDay()]+'）';}
-        var stTag=mDays===0?['d','今日結算']:(mDays!=null&&mDays<=3?['d','結算週']:['n','月合約']);
-        var settleCard='<div class="cb-ovc"><header><span>台指期結算日<small>TAIFEX TX</small></span><span class="cb-tag '+stTag[0]+'">'+stTag[1]+'</span></header>'
-          +(mSet!=null?'<div class="big">'+md(mSet)+'</div>'
-            +'<div class="sub">'+(mDays===0?'<b class="hp-dn">今日 13:30 月合約結算</b>':'距月結算 <b>'+mDays+'</b> 天（每月第三個週三）')+'<br>'
-            +'週選結算：週三 '+md(wWed)+'、週五 '+md(wFri)+'<br>遇休市順延至次一交易日</div>':'<div class="big">—</div>')+'</div>';
+        // 期貨結算日（月合約＝每月第三個週三；週選＝每週三、週五；遇休市順延至次一交易日，休市表＝證交所）2026-09-28
+        function settleCardHtml(){
+          var toIso=function(t){return new Date(t).toISOString().slice(0,10);}, fromIso=function(s){return Date.parse(s+'T00:00:00Z');};
+          var d0=new Date(Date.now()+8*3600e3), today=Date.UTC(d0.getUTCFullYear(),d0.getUTCMonth(),d0.getUTCDate());
+          var adj=function(t){return fromIso(window._twAdj(toIso(t)));};
+          var mSet=null, mSched=null;
+          for(var k=0;k<3&&mSet==null;k++){ var y=d0.getUTCFullYear(),m=d0.getUTCMonth()+k,f=new Date(Date.UTC(y,m,1)).getUTCDay(),w=Date.UTC(y,m,1+((3-f+7)%7)+14),a2=adj(w); if(a2>=today){ mSet=a2; mSched=w; } }
+          var nxt=function(dow){ for(var i=-7;i<14;i++){ var t=today+i*864e5; if(new Date(t).getUTCDay()!==dow) continue; var a3=adj(t); if(a3>=today) return [a3,t]; } return [null,null]; };
+          var wW=nxt(3), wF=nxt(5);
+          var mDays=mSet!=null?Math.round((mSet-today)/864e5):null;
+          function md(t){var d=new Date(t);return (d.getUTCMonth()+1)+'/'+d.getUTCDate()+'（'+'日一二三四五六'[d.getUTCDay()]+'）';}
+          function mv(a,sc){ return md(a)+(a!==sc?'<small style="color:var(--yellow)">（原 '+md(sc)+' 遇休市順延）</small>':''); }
+          var stTag=mDays===0?['d','今日結算']:(mDays!=null&&mDays<=3?['d','結算週']:['n','月合約']);
+          return '<header><span>台指期結算日<small>TAIFEX TX</small></span><span class="cb-tag '+stTag[0]+'">'+stTag[1]+'</span></header>'
+            +(mSet!=null?'<div class="big">'+md(mSet)+'</div>'
+              +'<div class="sub">'+(mDays===0?'<b class="hp-dn">今日 13:30 月合約結算</b>':'距月結算 <b>'+mDays+'</b> 天（每月第三個週三'+(mSet!==mSched?'，原 '+md(mSched)+' 遇休市順延':'')+'）')+'<br>'
+              +'週選結算：週三 '+(wW[0]?mv(wW[0],wW[1]):'—')+'、週五 '+(wF[0]?mv(wF[0],wF[1]):'—')+'<br>已依證交所休市日期表順延</div>':'<div class="big">—</div>');
+        }
+        var settleCard='<div class="cb-ovc" id="cbSettle">'+settleCardHtml()+'</div>';
+        window._loadTwHol().then(function(){ var c=el('cbSettle'); if(c) c.innerHTML=settleCardHtml(); });
         ov.innerHTML=tsmcCard+'<div id="cbGov"></div>'+ftseCard+settleCard;
         // 官股 今日/5/20/60
         function govNet(pd){if(!gov.length)return null;
