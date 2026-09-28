@@ -3146,10 +3146,10 @@
   </style>
   <div id="liqView" style="display:none">
     <div class="tm-head"><h2>💧 流動性前 30</h2><span class="sub" id="liqSub"></span></div>
-    <div class="liq-tip">挑選成交熱絡的標的，<b>規避流動性風險、避免進出場滑價</b>。現貨＝上市普通股當日成交金額前 30；期貨＝期交所全契約當日成交量前 30（含大/小/微台指與熱門股票期貨）。</div>
+    <div class="liq-tip">挑選成交熱絡的標的，<b>規避流動性風險、避免進出場滑價</b>。現貨＝上市普通股當日成交金額前 30；個股期貨＝期交所個股期貨當日成交量前 50（不含大台、小台等指數類期貨）。</div>
     <div class="liq-seg" id="liqSeg">
       <button data-m="spot" class="on">現貨（成交金額）</button>
-      <button data-m="fut">期貨（成交量）</button>
+      <button data-m="fut">個股期貨（成交量）</button>
     </div>
     <div id="liqTbl"><div class="fc-empty">載入中…</div></div>
     <div class="fc-note" id="liqNote"></div>
@@ -3166,11 +3166,11 @@
       var head='<table class="liq"><thead><tr><th class="l">排名</th><th class="l">代號 / 名稱</th>'
         +(isSpot?'<th>成交金額(億)</th><th>成交量(張)</th>':'<th>成交量(口)</th>')+'</tr></thead><tbody>';
       var body=arr.map(function(r){
-        var openable=isSpot||/^\d{4}$/.test(String(r.code));   // 現貨或股票期貨(代號4碼)可點開K線
+        var openable=/^\d{4}$/.test(String(r.code));   // 現貨與個股期貨(標的代號4碼)皆可點開K線
         var nameCell='<span class="c">'+r.code+'</span> '+(r.name||'');
         var tds=isSpot? ('<td>'+yi(r.turnover)+'</td><td>'+(r.volume!=null?Number(r.volume).toLocaleString():'—')+'</td>')
                       : ('<td>'+(r.volume!=null?Number(r.volume).toLocaleString():'—')+'</td>');
-        return '<tr'+(openable?' class="clk" onclick="_openStock(\''+r.code+'\',\''+(r.name||'').replace(/期貨$/,'')+'\')"':'')+'>'
+        return '<tr'+(openable?' class="clk" onclick="_openStock(\''+r.code+'\',\''+(r.name||'').replace(/(小型)?期貨$/,'')+'\')"':'')+'>'
           +'<td class="l"><span class="rk">'+r.rank+'</span></td><td class="l">'+nameCell+'</td>'+tds+'</tr>';
       }).join('');
       el('liqTbl').innerHTML=head+body+'</tbody></table>';
@@ -3187,8 +3187,8 @@
         a.filter(function(r){return r.trade_date===latest;}).forEach(function(r){ if(DATA[r.market])DATA[r.market].push(r); });
         DATA.spot.sort(function(x,y){return x.rank-y.rank;}); DATA.fut.sort(function(x,y){return x.rank-y.rank;});
         loaded=true;
-        if(el('liqSub'))el('liqSub').textContent='資料日 '+latest+' · 成交量/值前 30';
-        if(el('liqNote'))el('liqNote').innerHTML='<b>算法與資料源：</b>現貨＝TWSE STOCK_DAY_ALL 上市普通股(排除ETF)當日<b>成交金額</b>前30；期貨＝TAIFEX DailyMarketReportFut 一般盤各契約<b>成交量</b>合併月份後前30，契約中文名以指數期貨對照＋股票期貨 SSFLists(代號→標的)還原。盤後日更。用途：流動性愈高、進出場滑價愈小。';
+        if(el('liqSub'))el('liqSub').textContent='資料日 '+latest+' · 現貨前 30 · 個股期貨前 50';
+        if(el('liqNote'))el('liqNote').innerHTML='<b>算法與資料源：</b>現貨＝TWSE STOCK_DAY_ALL 上市普通股(排除ETF)當日<b>成交金額</b>前30；個股期貨＝TAIFEX DailyMarketReportFut 一般盤、只留個股期貨（SSFLists 普通股標的，排除指數類與 ETF 期貨；排除價差委託避免重複計量），各月份<b>成交量</b>合併後取前 50；標準型（每口 2,000 股）與小型（每口 100 股）分開排名，小型標「小型期貨」（依期交所股票期貨交易標的頁的股數欄判斷）。2026-09-28 起不含加權指數類期貨。盤後日更。用途：流動性愈高、進出場滑價愈小。';
         render();
       }).catch(function(){ el('liqTbl').innerHTML='<div class="fc-empty">讀取失敗</div>'; });
     };
