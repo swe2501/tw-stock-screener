@@ -1,21 +1,24 @@
 # AI_stock 「跟誰學｜盤後研究院」開發交接文件
 
-> 最後更新：2026-09-27
-> 目標：讓另一位開發者（含 Claude Code）能無痛接手本專案的開發與維運。
-> 本站定位：以**真實官方資料**打造合夥人 genshuei 風格的台股**盤後**研究網站（非盤中即時）。
+> 最後更新：2026-09-28（fufongart 帳號 session；先前由 swe250165 帳號建立）
+> 目標：讓另一位開發者（含另一個帳號的 Claude Code）能無痛接手本專案的開發與維運。
+> 本站定位：以**真實官方資料**打造合夥人風格的台股**盤後**研究網站（非盤中即時）。
+> 正式網址：tw-stock-screener-neon.vercel.app　Repo：swe2501/tw-stock-screener
 
 ---
 
 ## 0. 最重要的鐵則（先看這段）
 
-1. **語言**：一律**繁體中文**回覆與溝通。
+1. **語言**：所有處理過程與結論一律**繁體中文**（用戶明確要求過多次）。
 2. **部署**：**uat 先行**；**prod 一定要用戶明確說「推 prod」才能推**。禁止自作主張推 prod。
-3. **算法先討論**：評分／權重／門檻類邏輯，動工前先跟用戶討論，不要自己定死。
-4. **算法標註在網站**：所有算分方法與每次改動，都要標在網站上（頁尾/note 區）供合夥人複查。
-5. **能自己做就自己做**：SQL 自己用 Chrome 在 Supabase 跑，不要叫用戶手動；資料修正自己跑腳本。
-6. **容量估算**：任何「會存資料」的功能，動工前先估總資料量對照 Supabase 免費版上限（曾爆磁碟）。
+3. **算法先討論**：評分／權重／門檻類邏輯，動工前先跟用戶討論，不要自己定死（用戶給的門檻若與實際資料不合，先拿資料回報再請他選，例如「空單增 2000 口」實測太鬆 → 用戶改選「3 日累計 ≥5000」）。
+4. **算法標註在網站**：所有算分方法與每次改動，都要標在網站上（頁尾 note 區）供合夥人複查。
+5. **SQL**：Supabase 無 DDL API。建表 SQL 寫進 `sql/*.sql`，**請用戶到 Supabase SQL Editor 手動執行**（本機 Chrome 擴充功能帳號與 app 帳號不同時連不上，見 memory `reference_chrome_bridge_account`）。用戶回「SQL 跑好了」再繼續。
+6. **容量估算**：任何會存資料的功能，動工前先估總資料量（曾爆 Supabase 磁碟）。
 7. **不碰**：信用卡／密碼／CAPTCHA／下單／金流。
-8. **Git commit 屬名**：結尾加 `Co-Authored-By: Claude <當下實際模型版本> <noreply@anthropic.com>`（例：`Claude Opus 5.5`），用當時跑的模型版本，不要沿用舊版號。
+8. **Git commit 屬名**：結尾加 `Co-Authored-By: Claude <當下實際模型版本> <noreply@anthropic.com>`，用當時跑的模型版本。
+9. **有開通籌碼權限的會員＝管理者**（`window._isOwner` / `VIEWER_EMAILS`）。會員專屬按鈕（列上去、移除…）寫入要靠 RLS 白名單。
+10. **不放假資料**：合夥人給的範本 HTML（完美.html、神燈與冥燈.html）裡的數字多為示範假資料，上線只能用自有資料算出的真數字。
 
 ---
 
@@ -23,190 +26,204 @@
 
 | 項目 | 路徑 / 值 |
 |---|---|
-| 主 repo | `C:\Users\User\Desktop\AI_stock` |
-| 前端主檔 | `index.html`（單檔 SPA，~700KB＋，所有視圖都在裡面） |
-| 後端 API（Vercel serverless） | `api/*.py`（screen.py, chart.py, alert.py…） |
-| 每日排程腳本 | `scripts/*.py`，由 `scripts/run_daily_job.bat` 串起 |
-| Python | `C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe` |
-| 本機股價 SQLite | `D:\stock_data\wantgoo_full.db`（表：stock_daily 等；**注意上櫃/上市各半**，見眉角） |
-| Supabase 專案 | `bruqrbvbjxntgoljxsne`（名稱 Taiwan stock2 / stock filter）URL `https://bruqrbvbjxntgoljxsne.supabase.co` |
-| 部署平台 | Vercel（分支 push 自動部署） |
-| 分支 | `Andrew`(本機工作)、`uat`(測試)、`prod`(正式，含 `.github/` 雲端排程) |
+| 主 repo | `C:\Users\User\Desktop\AI_stock`（工作分支 `Andrew`） |
+| 前端主檔 | `index.html`（單檔 SPA，約 900KB，所有視圖都在裡面） |
+| 後端 API（Vercel serverless） | `api/*.py`（screen.py 以 `stat=` 多工、chart.py…）。**api/ 下每個 .py 都會被當函式**，不可放共用模組 → 需要的對照表直接內嵌在 screen.py |
+| 每日排程 | `scripts/run_daily_job.bat`（Windows 工作排程器，盤後） |
+| 其他排程 | `scripts/run_codex_topics.bat`（平日 9~15 點每小時，AI 熱門題材）、`AI_stock_news_feed` → `scripts/run_news_feed.bat`（每 4 小時，06:30 起） |
+| Python | `C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe`（一律用完整路徑） |
+| 本機 SQLite | `D:\stock_data\wantgoo_full.db`：stock_daily（上市 twse／上櫃 otc 普通股，2024-07 起；**market 為 NULL 的約 31 萬列＝上市**）、stock_hourly、txo_daily、**etf_daily（新，上市/上櫃 ETF）** 等 |
+| Supabase | `https://bruqrbvbjxntgoljxsne.supabase.co`；腳本用 `.env` 的 `SUPABASE_SERVICE_KEY`，前端用 anon key（index.html 常數 `SIG_SB_URL`/`SIG_SB_ANON`） |
+| 合夥人參考站（本機） | `C:\Users\User\Desktop\AI台股研究雷達實戰班\真名版網站\genshuei-market`（vinext dev，http://localhost:3000，例：/news） |
+| 合夥人規格文件 | `C:\Users\User\Desktop\AI台股研究雷達實戰班\` 下各資料夾（盤面結構判讀、支撐壓力、外資期權空單與持股配置\完美.html、明燈與冥燈…）；.docx 用 python zipfile 解 `word/document.xml` 讀 |
+| 本機預覽 | 另一個 session 開的 `npx serve` 在 http://localhost:3333（靜態 index.html）；在頁面用 JS 覆寫 fetch 把 `/api/` 導到正式站即可測。付費頁測試時設 `window._isOwner=true` |
 
-### 執行指令注意
-- Windows。**PowerShell 為主**，Bash 工具也有但**背景 Bash 無網路**（getaddrinfo 失敗）→ 要跑有網路的背景任務用 **PowerShell `run_in_background`**。
-- PowerShell 跑 python 帶中文/`&&` 會壞 → 用獨立呼叫或 here-string；長字串用 `@'...'@`。
-- 跑 python 一律用上面那個完整路徑的 python.exe。
+### 執行指令眉角
+- Windows。Bash（Git Bash）與 PowerShell 皆可；背景 Bash 目前可連網（ETF 回補即以背景 Bash 完成）。
+- **heredoc 內的 Windows 路徑**：`printf`/`sed` 會把 `\U`、`\n` 吃掉 → 寫 .bat/.py 一律用檔案編輯工具或 python 腳本，不要用 printf/sed 塞反斜線路徑。
+- **.bat 不可寫中文註解**（cmd 以 Big5 解讀 UTF-8 會報錯）。
+- Python 印中文要設 `PYTHONIOENCODING=utf-8`，否則 cp950 會炸 `≥` 等字元。
 
 ---
 
 ## 2. 部署流程（uat / prod）
 
-本機在 `Andrew` 分支工作，但**功能是直接 commit 到 `origin/uat`**（透過 worktree），確認後再 promote 到 `prod`。
+本機在 `Andrew` 分支 commit＋push，再用 worktree 把檔案同步到 uat／prod（本機工作區有大量未追蹤檔，用 worktree 不會卡 checkout）。
 
-> 此 worktree 推法與 `CLAUDE.md` 的 `git merge Andrew` 推法**是同一件事**（Andrew→uat→prod），擇一即可。本機工作區常有大量未 commit 修改時，用 worktree 比較不會卡 checkout。
-
-### Worktree 位置（已建好，重用即可；`git worktree list` 可查）
+### Worktree（重用即可；`git worktree list` 可查）
 - uat：`C:\Users\User\AppData\Local\Temp\claude\C--Users-User-Desktop-trip-project\6a747587-922c-41c7-aaca-1b22bfdea8f3\scratchpad\uat_wt`
-- prod：同目錄下 `prod_wt`
-- 若資料夾不見了（Temp 被清），用 `git worktree prune` 後 `git worktree add <路徑> origin/uat` 重建。
+- prod：同目錄 `prod_wt`
+- 若資料夾不見（Temp 被清）：`git worktree prune` 後 `git worktree add <路徑> origin/uat` 重建。
 
-### 推 uat（每次改完 index.html）
-```powershell
-$uat="...\scratchpad\uat_wt"; cd $uat
-git fetch origin uat --quiet; git reset --hard origin/uat --quiet
-Copy-Item "C:\Users\User\Desktop\AI_stock\index.html" "$uat\index.html" -Force
-git add index.html
-git commit -m "feat(...): ...`n`nCo-Authored-By: Claude <當下模型版本> <noreply@anthropic.com>"
-git push origin HEAD:uat
+### 推 uat（Bash）
+```bash
+W=<uat_wt 路徑> && cd $W && git fetch -q origin && git reset -q --hard origin/uat \
+ && cp /c/Users/User/Desktop/AI_stock/index.html . && cp /c/Users/User/Desktop/AI_stock/api/screen.py api/ \
+ && git add index.html api/screen.py && git commit -q -m "uat: ...
+
+Co-Authored-By: Claude <模型版本> <noreply@anthropic.com>" && git push -q origin HEAD:uat
 ```
+- uat 預覽網址（Vercel 保護，需登入）：tw-stock-screener-git-uat-andrew250165s-projects.vercel.app。無法用 curl 驗後端，所以新 API 一律先在本機 `import screen` 直接呼叫函式驗證。
 
-### 推 prod（**須用戶明確授權**）
-用 prod_wt，從 uat 取檔但**保留 prod 專屬的 `.github/`（雲端排程 yml）**：
-```powershell
-$prod="...\scratchpad\prod_wt"; cd $prod
-git fetch origin uat prod --quiet; git checkout -q prod; git reset --hard origin/prod --quiet
-git checkout origin/uat -- .        # 取 uat 全部內容
-git checkout HEAD -- .github        # 還原 prod 專屬 .github（雲端排程只在 prod）
-git commit -am "..."; git push origin HEAD:prod
+### 推 prod（**須用戶明確說「推 prod」**）
+```bash
+W=<prod_wt 路徑> && cd $W && git fetch -q origin && git reset -q --hard origin/prod \
+ && git checkout origin/uat -- . && git checkout HEAD -- .github \
+ && git commit -q -m "prod: ..." && git push -q origin HEAD:prod
 ```
-- prod push 偶爾被「Production Deploy」classifier 擋（非必現）→ 重試即可。
+- `.github/`（GitHub Actions 雲端排程）只存在 prod，務必還原。
+- 推完約 1 分鐘生效；用 curl 打正式站新 `stat=` 端點驗證。
 
-### 眉角
-- 後端 `scripts/*.py`、Supabase 資料修正都是**本機/資料層**，前端直讀 Supabase → **不需部署**即生效。只有 `index.html`（與 `api/`）改動需部署。
+### 不需部署即生效的
+`scripts/*.py`、Supabase 資料修正、本機 SQLite → 前端直讀 Supabase，改完即生效。只有 `index.html`、`api/` 需部署。
 
 ---
 
 ## 3. 前端架構（index.html）
 
-- **單頁多視圖**：`window._VIEWS[viewName] = {el:'xxxView', show:'_xxxShow'}`。切換用 `window._showView('viewName')`：隱藏所有視圖 el、顯示目標 el、呼叫其 show 函式。
-- **導覽**：頂部 `#mainNav`，大項用 `.mn-grp>.mn-item`（hover 下拉），子項 `<a onclick="_showView('x')">`。
-  - `_setNav(v)` 依 `NAVMAP{view→大項中文}` 把對應大項加 `.mn-active`（綠底 focus）。**新增視圖記得補進 NAVMAP**，否則綠底不亮。
-- **資料層**：多處各自定義 `sb(path)` / `Q()`，都是 `fetch(SIG_SB_URL + '/rest/v1/' + path, {headers:{apikey:SIG_SB_ANON, Authorization:'Bearer '+SIG_SB_ANON}})`。`SIG_SB_URL`/`SIG_SB_ANON` 是全域常數（anon key）。
-- **付費 gate（主力籌碼帳號）**：
-  - `window._isOwner`（由 `_applyAuthState` 設定，= 登入 email ∈ `VIEWER_EMAILS` 白名單，含用戶 swe250165@gmail.com）。
-  - 付費分頁在 show 時呼叫自己的 `applyGate()`：owner 顯示內容、非 owner 顯示「付費解鎖更多」teaser（`#xxLock`/`#xxBody`）。
-  - `_applyAuthState` 內會呼叫各分頁的 `window._xxxApplyGate()` 以在登入狀態變動時即時切換。
-  - `.nav-owner` class = 僅 owner 可見的選單項（完全隱藏）；付費分頁本身**不加** nav-owner（大家都看得到入口，內容才 gate）。
-- **圖表**：用 LightweightCharts 4.1.3（CDN 已載）。多面板同步十字線用 `chart.setCrosshairPosition(price,time,series)`；要吸附線值用 `crosshair.mode = CrosshairMode.Magnet`。
-- **個股搜尋**：頂部 `.topsearch`（首頁隱藏，靠 `.topsearch[hidden]{display:none}` 蓋過 flex）＋ 首頁 hero `#hpSearch`。自動完成資料 `window._names/_mkt/_ind`（`_loadNames()`），含上市（API `screen.py?stat=names`）＋上櫃（`otc_names` 表）＋產業（`screen.py?stat=industries`）。
-- **K線 modal**（`#chartModal`，`openChart(code,name,...)`）：右側 `#chartNotePanel` 為三分頁（觀察備註/基本面/相關新聞，見 §5）。
+- **視圖註冊**：`window._VIEWS[name]={el:'xxxView',show:'_xxxShow'}`，`_showView(name)` 切換；新視圖要補 `NAVMAP{view→大項}`（大項 focus 底色）。
+- **瀏覽器上一頁**：history 模組包裝 `_showView`（切頁時也呼叫 `window._fhPageBg`）。
+- **付費 gate**：頁面 show 時 `applyGate()`；owner 顯示內容、否則顯示「付費解鎖更多」`#xxLock`。登入狀態變動時 `_applyAuthState` 會呼叫各頁 `window._xxxApplyGate()`。
+- **全站配色（2026-09-28 改為合夥人「完美.html」風格）**：開頭兩組 CSS 變數 `:root{}`（深色預設）與 `:root[data-theme="light"]{}`。
+  - 深色：底 #070c18、卡片 #0f172a、強調天藍 #38bdf8、次強調靛藍 #6366f1；淺色：底 #f8fafc、白卡、強調 #0284c7。
+  - 強調色按鈕文字用 `var(--on-accent)`、品牌底色上的文字用 `var(--on-brand)`（勿再寫死 #231c00／#f4efe1）。
+  - `--brand-green` 為沿用舊名的「標題／導覽強調色」。
+  - 字型 Inter＋Noto Sans TC，數字等寬 JetBrains Mono。
+  - 明暗切換：右上 `#themeToggle` → `_toggleTheme()`（寫 localStorage `theme`），並呼叫各頁 retheme hook（`_rethemeChart`、`_hxRetheme`、`window._fhRetheme`）。**新頁若自有配色，必須跟隨 `html[data-theme]`，不可自存一套**（曾因此被用戶罵）。
+  - 例外：**每日新聞頁**刻意 100% 照合夥人 /news 的米色報紙風（有自己的 `--nw-*` 變數，深色另有覆寫）。
+- **外資空單溫度計**的樣式寫成可重用的 `.pf` 容器（`--pf-*` 變數），`.pf.pf-light` 為淺色。
+- **圖表**：LightweightCharts 4.1.3。縮放限制用 `window._clampChartZoom(chart, 10, 資料筆數)`（最多放大到 10 日、最多縮到剛好填滿）。資料多於 1000 筆要 `order=desc&limit=1000` 再反轉。
+- **個股搜尋**：`window._loadNames()` → `_names/_mkt/_ind/_etf`，含上市、上櫃、ETF（`etf_products`＋`screen.py?stat=otcetf`）。
+- **K 線 modal**（`openChart(code,name,…)`）：標題列有 產業／上市上櫃／**市值**（新）／價格；左側面板 主力分點／大盤K／支撐壓力／價量分析（皆可摺疊）；右側分頁 觀察備註／基本面／相關新聞／支撐壓力。
 
 ---
 
-## 4. 後端資料管線
+## 4. 後端資料管線與排程
 
-- `scripts/run_daily_job.bat`：每日盤後（Windows 排程）依序跑所有腳本，log 到 `daily_job_stdout.log`。新增每日腳本要加進這裡。
-- 部分腳本已搬 **GitHub Actions 雲端排程**（prod 分支 `.github/workflows/daily-cloud-jobs.yml`，台灣週一~五 20:30）：法說會、除權息因子。**wantgoo 擋雲端 IP(403)**，故需 wantgoo 登入的腳本（margin_ratio 當日值、market_indicators 富台指）留本機。
-- Supabase 寫入：腳本用 `SUPABASE_SERVICE_KEY`（`broker_signals._load_env()` 讀 .env）POST/upsert；前端用 anon key 讀。
-
-### 建表流程（Supabase 無 DDL API）
-用 Chrome（用戶已登入 Supabase）在 SQL Editor 跑：
-1. `mcp__claude-in-chrome__navigate` 到 `https://supabase.com/dashboard/project/bruqrbvbjxntgoljxsne/sql/new`
-2. JS：`monaco.editor.getModels()[0].setValue(sql)`，SQL 內含 `create table` + `alter table enable row level security` + `create policy anon_read_x for select to anon using(true)`。
-3. 點 Run（DDL 會跳「Potential issue detected」→ 再點「Run query」確認）。**Chrome 分頁若 viewport 0×0（視窗沒顯示）→ 點擊/截圖失效，但 JS 可執行**：用 JS 直接找按鈕文字點擊（先點含「Run」非「Run query」的鈕、等 1.2s、再點「Run query」）。
-4. 用 REST 以 anon key 驗證表存在（200 []）。
+- `run_daily_job.bat` 尾段順序（新增的以 ★ 標）：
+  `… market_indicators → active_etf_flow → upload_active_etf_holdings → foreign_hedge --daily（★含 fill_spot 回補近 60 天現貨買賣超空值）→ macro_events → breadth_daily → ★etf_daily → ★breadth_ext → fundamentals → option_sr → txo_history → option_nday → stock_sr → liquidity_top → job_health`
+- GitHub Actions（prod 分支）：法說會、除權息因子（台灣週一~五 20:30）。wantgoo 擋雲端 IP，需登入的腳本留本機。
+- **price_window 上傳**（`upload_price_window.py`）：2026-09-28 改為「upsert → 刪過期」。舊的「整張 DELETE 再 INSERT」在兩個排程重疊時互刪，造成 9/21~9/23 只剩 4 成檔數、真名二式誤判（6533）。
 
 ---
 
-## 5. 已完成功能模組總表
-
-> 每個功能＝【Supabase 表】＋【scripts 腳本(每日)】＋【index.html 視圖/區塊】。詳見對應 memory 檔（`.claude/.../memory/*.md`）。
+## 5. 功能模組總表
 
 | 功能 | 位置 | 表 | 腳本 | memory |
 |---|---|---|---|---|
 | 貪婪指標 | 市場觀察 | greed_base | compute_greed.py | project_greed_index |
 | 融資維持率三組 | 首頁§4 | margin_maint_split | margin_ratio.py / margin_maintenance_calc.py | project_margin_maint_split |
-| 外資空單溫度計（付費） | 市場觀察 | foreign_hedge_daily | foreign_hedge.py | project_foreign_hedge |
-| 宏觀佐證與事件窗（溫度計第3層） | 市場觀察→外資空單溫度計 | macro_events, macro_news | macro_events.py（Playwright 真 Chrome） | project_macro_events |
-| 大盤多空廣度（付費） | 市場觀察＋首頁§3鈕 | breadth_daily | breadth_daily.py | project_breadth |
-| K線 基本面/新聞分頁 | K線 modal 右側 | stock_fundamentals, stock_financials | fundamentals.py | project_fundamentals |
-| 選擇權支撐壓力區（價平+主次區間，週/月 tab） | 首頁 §6 選擇權矩陣下方 | option_sr（PK trade_date+kind） | option_sr.py | project_option_sr |
-| 選擇權 N 日大量區（5~480日，壓力/支撐前5） | 首頁 §6 選擇權矩陣下方 | option_nday（本機明細 txo_daily） | txo_history.py → option_nday.py | project_stock_sr |
-| 個股支撐壓力（多週期大量K棒水平線 SPEC-TA-SR-001；日K／小時K 兩版） | 選股「🧱 壓力支撐逼近」＋K線右側「🧱 支撐壓力」分頁/圖上色帶 | stock_sr（日K）、stock_sr_h（小時K）；本機 stock_hourly | stock_sr.py [--src hour]、fetch_hourly.py（歷史 backfill_stock_2y.py） | project_stock_sr |
-| 流動性排行（現貨、個股期貨各前50） | 選股 | liquidity_top | liquidity_top.py | project_liquidity_top |
-| 主動ETF成分/集中 | ETF分析 | etf_holdings, active_etf_flow | upload_active_etf_holdings.py, active_etf_flow.py | project_active_etf_consensus |
-| 台指VIX/富台指/匯率 KPI | 首頁 hero | market_indicators | market_indicators.py | project_taifex_vix |
+| 外資空單溫度計（付費） | 市場觀察 | foreign_hedge_daily, macro_events, macro_news, catalyst_events | foreign_hedge.py, macro_events.py | project_foreign_hedge, project_macro_events, project_perfect_theme |
+| 大盤多空廣度（付費）＋市場廣度五分頁 | 市場觀察；首頁盤面結構卡「付費解鎖更多」 | breadth_daily, **breadth_ext** | breadth_daily.py, **etf_daily.py, breadth_ext.py** | project_breadth |
+| 盤面結構判讀（12 規則＋櫃買/集中強弱勢） | 首頁 §3A | taiex_daily, otc_index_daily… | margin_ratio.py（taiex 補官方） | project_market_structure |
+| 處置股（新） | 市場觀察 | 無（即時抓） | api `stat=disposal` | — |
+| 每日籌碼報告（含**台指期結算日卡**） | 首頁 | chip_brief 等 | chip_brief.py… | — |
+| 每日新聞（改版） | 每日新聞 | hot_topics, **news_feed** | run_codex_topics.bat→upload_hot_topics.py、**news_feed.py** | project_news_feed |
+| 掏金篩選器（原「指標」） | 選股 | price_window | api screen.py | — |
+| 產業地圖（點磚塊帶成分股） | 題材族群 | price_window | api `stat=sectors` | — |
+| K 線市值（新） | K 線標題列 | 無 | api `stat=shares`（官方被擋用內嵌 `_SHARES_FALLBACK`） | — |
+| K 線 基本面/新聞 | K 線右側 | stock_fundamentals, stock_financials | fundamentals.py | project_fundamentals |
+| 選擇權支撐壓力／N 日大量區 | 首頁 §6 | option_sr, option_nday | option_sr.py, txo_history.py, option_nday.py | project_option_sr, project_stock_sr |
+| 個股支撐壓力（SPEC-TA-SR-001） | 選股「🧱 壓力支撐逼近」＋K 線 | stock_sr, stock_sr_h | stock_sr.py [--src hour], fetch_hourly.py | project_stock_sr |
+| 流動性排行 | 選股 | liquidity_top | liquidity_top.py | project_liquidity_top |
+| 主動 ETF | ETF 分析 | etf_holdings, active_etf_flow | … | project_active_etf_consensus |
 
-### 重點功能細節
-- **外資空單溫度計**：避險比率 R = 外資期貨淨空名目 H ÷ 外資持股市值 V ×100。H＝MAX(−Σ(外資各契約 net 口×指數×每點價值),0)，每點：大台200/小台50/微台10。V(上市)＝Σ(mi-qfiis 全體外資持有股數×收盤)，扣ETF=排除00開頭。分級用**2年歷史百分位**（<P80常態/P80–95偏高/≥P95顯著偏高）＋固定紅線>1.2%。前端三層架構（完美.html 藍本）＋情境模擬器。
-- **大盤多空廣度**：每市場(tse/otc/all)算 漲跌平/漲跌停/站上5-10-20-60MA%/新高低/漲跌量比。情緒燈號用手冊§6滲透率門檻；SOP 用 60/20MA廣度。'all'=tse+otc 原始計數相加後算 pct。
-- **K線基本面**：PE/PB/殖利率(BWIBBU/TPEx)、月營收YoY(t187ap05)、季報累計毛利率/營益率/淨利率/EPS(t187ap06 六業別)。相關新聞=hot_topics 依代號過濾。
-- **選擇權支撐壓力**：TXO 最近月月選、一般盤各履約價最大未平倉：壓力=買權最大OI履約價、支撐=賣權最大OI履約價＋P/C比。
-- **流動性排行**（2026-09-28 改）：現貨=上市成交金額前50、個股期貨=成交量前50（只留個股期貨、排除指數類/ETF 期貨與價差單；標準型/小型分開，小型標「小型期貨」）。
+### 2026-09-28 這個帳號做的事（細節）
+
+1. **外資空單溫度計改版**（合夥人很滿意）：版面／配色 100% 比照 `完美.html`。
+   - 頂部標題列、四層概覽（01 規模比率／02 匯率 vs 真金白銀／03 今日現期貨矩陣／04 事件窗倒數）、6 指標卡、第一層避險比率走勢（P80/P95 警戒帶）、第二層 USD/TWD（Yahoo `TWD=X`，右軸反轉）vs 外資現貨買賣超柱狀、第三層四象限、第四層 4 張倒數卡（台指期結算＝每月第三個週三；台積電法說＝catalyst_events；FOMC＝macro_events「美國利率決議」；台灣央行＝investing.com 無資料→顯示「尚未公告」）＋總經事件表、每日明細表、情境模擬器（情境選單＋重設）。
+   - 長表「開啟全部 N 筆 ▾／收起 ▴」（預設 5 列）：未來 7 天、近 7 天、中重要度、每日明細、避險偵測表。
+   - **事件前／連假前避險偵測**（合夥人定案）：交易日 t 近 3 日累計空單增加（等值大台淨口數減少量）≥ **5,000 口**，且 t 後 1~3 個交易日內有事件 →「疑似事件前避險」；t 後休市 ≥3 天 →「疑似連假前避險」。事件＝台指期結算、FOMC（程式內建 2024~2026 會議日）、台灣央行（內建，2026 為依往例推估）、台積電法說、高重要度與會員列上的總經事件（排除已移除）。呈現：走勢圖標記、明細表 ⚑、第四層偵測表、解讀文字。近 2 年觸發 17 次。
+   - **總經事件管理**：會員可「列上去」中重要度事件，並新增「✕ 移除」（高重要度＝hidden、已列上＝取消列上）與「已移除事件」還原區。**需要 `sql/macro_events_hidden.sql`（加 hidden 欄位）——截至交接用戶尚未回報已執行，請先確認。**
+   - `macro_events.py`：抓未來 90 天；國家加台灣（只留標題含「利率」者，但實測 investing 沒有台灣利率決議）。
+   - `foreign_hedge.py`：新增 `fill_spot()`（`--fill-spot` 可單跑），已補 7 天空值；9/22 缺漏以 `--backfill 20` 補上。
+2. **全站配色改完美.html 風格**＋首頁主視覺改金融終端風（移除左側深藍色帶、網格淡底＋光暈、Inter 標題＋天藍→靛藍漸層）。
+3. **掏金篩選器**：「指標」改名；固定顯示 日期/最低價/長紅/放量/長黑/縮量/產業；其餘分 型態（碗型＝原無放量黑棒、箱型）／K棒／缺口／漲停跌停（跌停尚未做）／指標（MACD）／真名絕招，**比照 K 線主力分點的摺疊列**，列上與「目前組合」顯示已選條件，附全部清除。
+4. **產業地圖**：`stat=sectors` 回傳每產業成分股 `[代號,名稱,收盤,漲跌幅,成交值億]`（約 83KB），點磚塊展開、可依漲幅/跌幅/成交值排序。
+5. **處置股**：上市 `openapi.twse.com.tw/v1/announcement/punish`＋上櫃 `tpex.org.tw/openapi/v1/tpex_disposal_information`，只留迄日 ≥ 今天，同代號取迄日最晚一筆；上櫃次數依措施文字判斷（「所有投資人」＝第二次全額預收）；預設排除 5 碼可轉債。
+6. **K 線市值**：已發行股數（t187ap03_L＋mopsfin_t187ap03_O）× 最新收盤。
+7. **每日籌碼報告**：新增「台指期結算日」卡（月結算＋週三/週五週選；未扣國定假日）。
+8. **每日新聞改版**（比照合夥人 /news）：報頭、日期＋時段篩選、搜尋、左側產業索引、雙欄卡片。來源＝`hot_topics`（AI 焦點題材，依熱度）＋`news_feed`（中央社財經 RSS、Yahoo 股市 RSS、證交所 newsList、MOPS 上市/上櫃重大訊息；每 4 小時；留 30 天），依發布時間分盤前/盤中/盤後/晚間。預設開最近 >10 則的日期。
+   - 個股比對：代號、≥3 字股名、兩字股名只比白名單 `TWO_OK`，外國公司名先遮蔽（輝達新→達新、海力士→力士 曾誤判）。
+   - hot_topics 的 codes/source_urls 存成 **Python 字串表示**，前端用正規式解析（舊版因此從未顯示個股與連結）。
+9. **市場廣度延伸（大盤多空廣度頁下半）**：比照玩股網 騰落線／多空頭排列／市場寬度／新高-新低＋合夥人要的「站上 60 日／20 日／兩者皆站上 家數（上市/上櫃）」。
+   - 切換：上市櫃／上市／上櫃 × 含 ETF／扣 ETF；「大盤扣除台積電」＝r_ex=(r加權−w×r2330)/(1−w)，w=前日台積電市值÷上市總市值（現行股數估算）。上櫃圖疊櫃買指數（otc_index_daily 僅 2026-02 起）。
+   - 定義：上漲佔比＝上漲÷(上漲＋下跌)（不含平盤，與玩股網對得上）；短均線 5>10>20；**長均線 10>20>60**（反推與玩股網一致）；市場寬度 20/60/240 日；新高低＝52 週（252 日）收盤。
+   - 資料：`etf_daily.py`（Yahoo 回補 2 年＋官方每日）→ 本機 etf_daily；`breadth_ext.py` 每日全量重算 6 組合約 3,200 列上傳 breadth_ext（約 40 秒）。
+   - 9/24 對照玩股網：寬度 20/60/240 = 46.0/42.2/44.5% vs 46.26/41.87/43.81%；短排列 28.4/20.2% vs 28.59/19.59%；長排列 20.6/47.3% vs 20.88/48.13%。
 
 ---
 
-## 6. 資料源清單（實測可行的端點）
+## 6. 資料源清單（實測可行）
 
-### TWSE（證交所，urllib 大多可讀）
-- `openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL`：全上市 OHLCV＋成交金額(TradeValue)。**JSON 穩定**（舊 www rwd 端點改回傳 CSV）。
-- `www.twse.com.tw/rwd/zh/fund/MI_QFIIS?date=YYYYMMDD&response=json&selectType=ALLBUT0999`：外資持股統計（欄位[5]=全體外資持有股數）。**密集請求會 307/308 限流**→退避重試＋節流。
-- `www.twse.com.tw/rwd/zh/fund/BFI82U?dayDate=YYYYMMDD&type=day&response=json`：三大法人買賣金額（主列開頭「外資及陸資」）。
-- `openapi.twse.com.tw/v1/exchangeReport/BWIBBU_ALL`：PE/殖利率/PB。
-- `openapi.twse.com.tw/v1/opendata/t187ap03_L`（基本資料/董事長）、`t187ap05_L`（月營收）、`t187ap06_L_ci/_ins/_basi/_bd/_mim/_fh`（綜合損益表，六業別；金額**仟元**，EPS 在末欄，季別為**累計**）。
-
-### TPEx（櫃買，urllib 可讀）
-- `www.tpex.org.tw/openapi/v1/tpex_mainboard_peratio_analysis`（PE/PB/殖利率）、`mopsfin_t187ap05_O`（月營收）、`mopsfin_t187ap06_O_ci/...`（財報）。
-
-### TAIFEX（期交所）
-- `openapi.taifex.com.tw/v1/DailyMarketReportOpt`：**選擇權每日行情 CSV**（含未沖銷契約量 OI 在 index 11、交易時段一般/盤後）。**urllib 可讀、無 403**。
-- `openapi.taifex.com.tw/v1/DailyMarketReportFut`：期貨每日 JSON（各契約 Volume/OI）。
-- `openapi.taifex.com.tw/v1/SSFLists`：股票期貨 320 檔 代號→StockCode/StockName（`SSOLists`=股票選擇權）。
-- `www.taifex.com.tw/cht/3/futContractsDate?queryDate=YYYY%2FMM%2FDD`：三大法人各契約未平倉 HTML（urllib 可讀；`futures_market.py` 有解析器 `_parse_inst`）。
-- **台指VIX**：`www.taifex.com.tw/file/taifex/Dailydownload/vix/log2data/{YYYYMM}new.txt`（每日收盤月檔，Tab 分隔，數字 ASCII；盤後日更、慢一交易日）。**www 與 mis 有 WAF 擋 urllib**，但這個靜態檔＋openapi 用 urllib 可讀；MIS 即時頁需真瀏覽器。
-- ⚠️ TAIFEX **openapi 用 urllib 可讀**（實測 DailyMarketReportOpt/Fut/SSFLists 都 OK），但 **www.taifex.com.tw 與 mis.taifex.com.tw 的「即時/查詢頁」有 WAF**，PowerShell/urllib 常 403 → 需 Playwright 真瀏覽器（見 market_indicators）。
-
+### TWSE
+- `openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL`（含 ETF）、`/opendata/t187ap03_L`（基本資料＋已發行股數）、`/opendata/t187ap04_L`（每日重大訊息）、`/announcement/punish`（處置）、`/news/newsList`、`BWIBBU_ALL`、`t187ap05_L`、`t187ap06_L_*`。
+- `www.twse.com.tw/rwd/zh/fund/MI_QFIIS`（外資持股，限流 307/308）、`rwd/zh/fund/BFI82U?dayDate=…`（三大法人；**偶爾限流回空 → fill_spot 會補**）、`rwd/zh/TAIEX/MI_5MINS_HIST?date=YYYYMM01`（加權日 OHLC，補 Yahoo ^TWII 缺日）。
+### TPEx
+- `tpex.org.tw/openapi/v1/`：`tpex_mainboard_daily_close_quotes`（含 ETF）、`mopsfin_t187ap03_O`（IssueShares）、`mopsfin_t187ap04_O`（重大訊息）、`tpex_disposal_information`、`tpex_trading_warning_information`、`tpex_mainboard_peratio_analysis`…（完整清單：`/openapi/swagger.json`）。
+### TAIFEX
+- `openapi.taifex.com.tw/v1/DailyMarketReportOpt|Fut`、`SSFLists`；`www.taifex.com.tw/cht/3/futContractsDate`（法人未平倉）；台指 VIX 月檔。www/mis 查詢頁有 WAF → Playwright。
 ### 其他
-- **Yahoo Finance**：`query1.finance.yahoo.com/v8/finance/chart/{code}.TW?range=2y&interval=1d`（上市 .TW、上櫃 .TWO、加權 ^TWII）。歷史回補用。
-- **玩股網（wantgoo）**：需登入，用 Playwright persistent context（`.wantgoo_profile`、channel=chrome、headless=False）。富台指、當日融資維持率、主力分點。**該 profile 若已有 Chrome 開著會鎖住**（launch TargetClosedError）→ 先關掉佔用的 Chrome。
-- **active.json**：`nctuwanglin.github.io/active-etf/active.json`（主動ETF PCF 持股/集中加碼，第三方彙整）。
+- Yahoo v8 chart（.TW/.TWO/^TWII/TWD=X）；investing.com 經濟日曆（Playwright 真 Chrome、每頁開新瀏覽器）；Google News RSS（個股新聞）；中央社 `feeds.feedburner.com/rsscna/finance`；Yahoo 股市 `tw.stock.yahoo.com/rss?category=tw-market`；玩股網（需登入 profile）。
 
 ---
 
-## 7. 踩雷／眉角（省下你重踩的時間）
+## 7. 踩雷／眉角
 
-1. **PostgREST 單次上限 1000 列**：`order desc + limit` 取最新再反轉；大量 upsert 分批（chunk 500~1000）。**bulk insert 每列 key 必須完全一致**（PGRST102 "All object keys must match"）→ 上傳前用固定欄位 normalize（缺補 None）。
-2. **財報金額單位＝仟元**→存前 ×1000；季別是**累計**（年初至該季）非單季。年度是民國（115=2026）。
-3. **選擇權 www HTML 表格會「塌欄」**：無成交的價外/深價內履約價欄位位移，定位解析會把價格誤當 OI → 支撐壓力顛倒。**改用 openapi CSV**（固定欄位）。
-4. **price_window 上市曾整個凍結**：本機 `stock_daily` 加了第 8 欄 `market` 後，`fetch_prices.py` 的 insert 只給 7 欄 → 上市每日寫入全失敗（上櫃另支腳本正常）。這會連累所有用上市價的功能（篩選MA/箱型/廣度）。已修（insert 明列欄位＋openapi 備援）。**若上市資料又落後，先查 fetch_prices.py / upload_price_window.py**。
-5. **mi-qfiis 限流**（307/308 重導同網址）：退避重試（sleep 4*(t+1)+2）＋每筆 sleep 1.2s。
-6. **金融股損益表格式不同**（利息淨收益，無毛利）：金控收益基數失真→ margin abs>150 一律設 None。跨業別以 (code,year,season) 去重。
-7. **加權指數/大盤動能對齊**：taiex_daily 與 margin 資料日期可能差一天 → 用兩表**共同交易日**交集對齊，否則數值會偏。
-8. **工具輸出偶爾被污染**（假 success/注入）：關鍵結果一律用獨立 REST/Grep 再驗證一次，別只信單一輸出。
-9. **背景 Bash 無網路**；要網路的背景任務用 PowerShell run_in_background。
-10. **Supabase anon 讀取**：新表建完必加 `create policy ... for select to anon`，否則前端讀到 404/空。
+1. PostgREST 單次 1000 列：`order desc + limit 1000` 再反轉；upsert 分批且每列 key 一致。
+2. 財報金額仟元、季別為累計；金融股格式不同。
+3. 選擇權 www HTML 會塌欄 → 用 openapi CSV。
+4. **price_window 不可整表 DELETE 再 INSERT**（排程重疊互刪）→ 已改 upsert。上市資料若落後，先查 fetch_prices.py / upload_price_window.py。
+5. mi-qfiis、BFI82U 限流 → 退避重試＋節流；空值靠 fill_spot 補。
+6. Yahoo ^TWII 偶有整天缺（例 2026-09-22）→ margin_ratio.py `_taiex()` 用證交所 MI_5MINS_HIST 補近 3 個月。
+7. 2026-09-25（中秋）、09-28（教師節）休市；9/24 為交接時最新交易日。
+8. 背景 Bash 可連網；但 heredoc/printf 會吃反斜線路徑。
+9. 新表必加 anon select policy。
+10. 工具輸出偶有污染 → 關鍵結果用獨立查詢再驗證。
+11. 本機 stock_daily 沒有 ETF → ETF 在 etf_daily；market 為 NULL 的列視為上市。
 
 ---
 
-## 8. 目前狀態（2026-09-27）
+## 8. 目前狀態（2026-09-28，fufongart 帳號 session 更新）
 
-### 已上 prod（2026-09-27，commit `8c6c13d`）
-1. 外資空單溫度計　2. 大盤多空廣度　3. K線右側分頁（觀察備註/基本面/相關新聞，含金融股）　4. 融資維持率四面板十字線（跨面板同步＋Magnet 吸附值）　5. 選擇權支撐壓力區　6. 上方大項綠底 focus 修正（NAVMAP 補新視圖）　7. 「篩選器」改名「指標」　8. 流動性前30
-（另：price_window 上市凍結修復、金融股財報補齊＝本機資料層，已即時生效。）
-目前 uat 與 prod 內容一致（`.github` 除外，那是 prod 專屬），沒有待推 prod 的批次。
+### prod（commit `a289af8`）— 本 session 依用戶指示分批推了 3 批
+交接時 prod 是 `a7d21e6`；本 session：
+- `34c5d6e`：交接時 uat 那 7 項（市場廣度五分頁＋盤面結構卡付費入口、溫度計長表開合、全站配色改完美.html 風、首頁金融終端主視覺、事件前/連假前避險偵測、總經事件移除/還原、長均線改 10>20>60）。
+- `2b1e611`：個股搜尋改 `type=search`＋密碼管理器忽略屬性（防瀏覽器自動填 email，合夥人回報）、話題族群由 dialog 改成**頁面**（view=`hottopics`，nav-owner，NAVMAP→題材族群）、今日焦點題材新聞標題可點跳原文。
+- `a289af8`：SPEC-TA-SR-002 個股支撐壓力改依週期、每日新聞明色版改報紙白。
+- **`sql/macro_events_hidden.sql` 用戶已執行**（總經事件移除/還原完整運作）。
+- uat 目前＝prod（無待推差異）。
 
-### 待辦 / 未到期
-- **約 2026-10-03**：主動ETF「今日」分頁從第三方 active.json 切成自有 `active_etf_flow` 表（累積滿 10 交易日後）。前端 `_etxConWin('today')` 改讀表。
-- 外資空單溫度計 / 大盤多空廣度的歷史目前約 1~2 年，手冊建議 2~3 年門檻校準 → 可再用 Yahoo 延長。
-- 上櫃現貨流動性排行（目前只做上市＋期貨，符合「證交所＋期交所」原話）。
+### SPEC-TA-SR-002 已完成（取代 SR-001 的跨週期）
+不跨週期混算：(a) 同量取**最早**（stock_sr.py `cand[-1]`）；(b) K 線圖「支撐壓力」改**依週期勾選**（5/10/20/60/120/240/480，預設 20，`_srPeriods`）；(c) 逼近列表 `srNSel`＋K 線右側 `srTabSel` 改**週期下拉（預設 20）**、右側彙總改單一週期（不用跨週期 srLevels）；(d) 多空線數比率**取消**。已重跑 stock_sr(15,669)/stock_sr_h(15,336)。詳見 memory `project_stock_sr`。
 
-### 每日排程腳本順序（run_daily_job.bat 尾段新增的）
-`... margin_ratio → margin_maintenance_calc → fetch_otc_index → otc_broker_daily → compute_greed → ... → market_indicators → active_etf_flow → upload_active_etf_holdings → foreign_hedge --daily → breadth_daily → fundamentals → option_sr → txo_history → option_nday → stock_sr → liquidity_top → job_health`
+### ✅ 首頁選擇權支撐壓力「OI 三層峰值」已完成（uat，待用戶確認推 prod）
+- `scripts/option_sr.py` 重寫核心（參數同定案：TX 近月一般盤結算為 ref、CALL>ref/PUT<ref、四條件峰值 P70/最大×0.12/鄰近各5中位數×1.5/局部高點各2、100 點合併、近→遠各 3 層、不足標候選不足；OIΔ 由本機 txo_daily）。7 種假資料情境已測過。
+- `sql/option_sr_levels.sql` 用戶已執行（res_levels/sup_levels jsonb、ref_price、ref_kind）；9/24 已上傳。
+- `index.html` #gsOptSR：新增預設分頁「OI 三層峰值」，保留「N日成交量／N日未平倉」大量區分頁（option_nday）；舊欄位 res1/sup1… 填第 1、2 層相容。
+- 待確認：9/24 最近週選 202609F4 原到期 9/25 遇中秋休市，程式仍選它（未依休市順延跳下一檔）。
+
+### 待用戶／合夥人決定
+- **明燈與冥燈**（memory `project_mingdeng`）：付費才能看；長黑棒＝(開−收)/收≥5%；**長上影線公式已確認**＝紅棒(最高−收)/收、黑棒(最高−開)/收，**門檻待用戶回**（我提議≥3%）；另待「點名真人呈現方式」與「第一批追蹤名單」（合夥人整理中）。三階段：①回測引擎＋MOPS 內部人申報＋管理者登錄 ②YouTube 字幕 AI＋美國國會申報 ③產業連動；FB/Threads/X 不爬。
+
+### 其他待辦
+- 約 2026-10-03：主動 ETF「今日」改讀自有 active_etf_flow。
+- 掏金篩選器「跌停板」條件尚未做。
+- 首頁台股加權圖可套用 `_clampChartZoom`（曾提議未做）。
+- 台灣央行 2026 下半年會議日為推估，官方公布後更新溫度計內 `CBC` 陣列。
 
 ---
 
 ## 9. 記憶檔（.claude memory）
 
-專案知識在 `C:\Users\User\.claude\projects\C--Users-User-Desktop-AI-stock\memory\*.md`，`MEMORY.md` 是索引（在 AI_stock 開 session 會自動載入）。
-（2026-09-27 前早期 session 誤開在 trip project，記憶曾存在 `...trip-project\memory`，已全數搬到上述路徑並刪除舊檔。）接手後建議先讀完索引與各 project_*.md（每個功能的定案規格、資料源、眉角都在裡面）。
+`C:\Users\User\.claude\projects\C--Users-User-Desktop-AI-stock\memory\*.md`，`MEMORY.md` 為索引（同一台電腦、同一 Windows 使用者開 Claude Code 於 AI_stock 會自動載入；**若新帳號讀不到，請手動讀這個資料夾**）。本 session 新增：`project_news_feed.md`、`project_mingdeng.md`；`feedback_language.md`（一律中文）、`reference_chrome_bridge_account.md`（Chrome 帳號不同就請用戶手動跑 SQL）務必先看。
 
 ---
 
 ## 10. 快速上手檢查清單
 
-- [ ] 讀本檔 §0 鐵則 + §7 眉角。
-- [ ] 確認能跑 `python.exe scripts/xxx.py`（.env 有 SUPABASE_SERVICE_KEY）。
-- [ ] 確認 Chrome 已登入 Supabase（建表用）。
-- [ ] 改前端 → 推 uat → 用 preview/瀏覽器驗證 → 回報用戶 → **等「推 prod」才 promote**。
-- [ ] 新功能：先討論算法/門檻 → 估容量 → 建表(anon policy) → 腳本(入 bat) → 前端視圖(_VIEWS+NAVMAP) → 頁尾標算法 → 驗證 → uat。
+- [ ] 讀本檔 §0 鐵則、§7 眉角、§8 目前狀態。
+- [ ] 讀 memory 索引與相關 project_*.md。
+- [ ] 確認 `.env` 有 SUPABASE_SERVICE_KEY，能跑 `python.exe scripts/xxx.py`。
+- [ ] 接手時先看 §8「🔨 進行中」：首頁選擇權支撐壓力 OI 三層改版還沒寫完（參數已定案，待寫 option_sr.py＋`sql/option_sr_levels.sql`＋前端）。
+- [ ] 流程：討論算法/門檻 → 估容量 → 寫 `sql/*.sql` 請用戶執行 → 腳本（入 bat）→ 前端視圖（_VIEWS＋NAVMAP，跟隨全站明暗）→ 頁尾標算法 → 本機驗證 → 推 uat → 回報「已部署到 uat，請確認…」→ 等「推 prod」。

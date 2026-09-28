@@ -24,6 +24,26 @@ if sys.stdout and hasattr(sys.stdout, "reconfigure"):
 CHUNK = 5000
 
 
+def _upsert(env, body):
+    """以 (code, trade_date) 主鍵 upsert(需 service key);重跑/重疊執行都不會掉資料。"""
+    import json, urllib.request, urllib.error
+    key = env["SUPABASE_SERVICE_KEY"]
+    req = urllib.request.Request(f"{env['SUPABASE_URL']}/rest/v1/price_window?on_conflict=code,trade_date",
+                                 data=json.dumps(body).encode(), method="POST", headers={
+                                     "Content-Type": "application/json", "apikey": key, "Authorization": f"Bearer {key}",
+                                     "Prefer": "resolution=merge-duplicates,return=minimal"})
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(req, timeout=120) as r:
+                return r.status, None
+        except urllib.error.HTTPError as e:
+            if attempt == 2:
+                return e.code, e.read()[:300]
+        except Exception as e:
+            if attempt == 2:
+                return 0, str(e)[:300]
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--days", type=int, default=250, help="上傳近幾個交易日(預設 250)")
@@ -46,15 +66,16 @@ def main():
     recs = [{"code": c, "trade_date": d, "open": o, "high": h, "low": lw, "close": cl, "volume": v}
             for c, d, o, h, lw, cl, v in rows]
 
-    # 整張換掉(近 N 天滾動,舊的自動退場)
-    bs._sb(env, "/price_window", method="DELETE", params=[("code", "neq.__none__")])
+    # 2026-09-28 改為「upsert → 刪過期」:舊做法「整張 DELETE 再 INSERT」在兩個排程重疊時會互刪,
+    # 9/21~9/23 因此只剩約 4 成檔數,造成真名二式等均線篩選誤判(例:6533 缺 3 天被算成新上穿)。
     ok = 0
     for i in range(0, len(recs), CHUNK):
-        s, r = bs._sb(env, "/price_window", method="POST", body=recs[i:i + CHUNK])
-        if s in (200, 201):
+        s, r = _upsert(env, recs[i:i + CHUNK])
+        if s in (200, 201, 204):
             ok += len(recs[i:i + CHUNK])
         else:
             print(f"[error] 第 {i} 批上傳失敗 ({s}): {r}"); return
+    bs._sb(env, "/price_window", method="DELETE", params=[("trade_date", f"lt.{lo}")])   # 滾出窗外的舊日
     print(f"已上傳 {ok} 列價格窗（近 {args.days} 交易日 {lo}~{hi}）到 price_window")
 
 
