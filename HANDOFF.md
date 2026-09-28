@@ -110,7 +110,7 @@ W=<prod_wt 路徑> && cd $W && git fetch -q origin && git reset -q --hard origin
 ## 4. 後端資料管線與排程
 
 - `run_daily_job.bat` 尾段順序（新增的以 ★ 標）：
-  `… market_indicators → active_etf_flow → upload_active_etf_holdings → foreign_hedge --daily（★含 fill_spot 回補近 60 天現貨買賣超空值）→ macro_events → breadth_daily → ★etf_daily → ★breadth_ext → fundamentals → option_sr → txo_history → option_nday → stock_sr → liquidity_top → job_health`
+  `… market_indicators → active_etf_flow → upload_active_etf_holdings → foreign_hedge --daily（★含 fill_spot 回補近 60 天現貨買賣超空值）→ macro_events → breadth_daily → ★etf_daily → ★breadth_ext → fundamentals → option_sr → txo_history（供 OIΔ）→ stock_sr（option_nday 已於 2026-09-29 移出排程） → liquidity_top → job_health`
 - GitHub Actions（prod 分支）：法說會、除權息因子（台灣週一~五 20:30）。wantgoo 擋雲端 IP，需登入的腳本留本機。
 - **price_window 上傳**（`upload_price_window.py`）：2026-09-28 改為「upsert → 刪過期」。舊的「整張 DELETE 再 INSERT」在兩個排程重疊時互刪，造成 9/21~9/23 只剩 4 成檔數、真名二式誤判（6533）。
 
@@ -132,7 +132,7 @@ W=<prod_wt 路徑> && cd $W && git fetch -q origin && git reset -q --hard origin
 | 產業地圖（點磚塊帶成分股） | 題材族群 | price_window | api `stat=sectors` | — |
 | K 線市值（新） | K 線標題列 | 無 | api `stat=shares`（官方被擋用內嵌 `_SHARES_FALLBACK`） | — |
 | K 線 基本面/新聞 | K 線右側 | stock_fundamentals, stock_financials | fundamentals.py | project_fundamentals |
-| 選擇權支撐壓力／N 日大量區 | 首頁 §6 | option_sr, option_nday | option_sr.py, txo_history.py, option_nday.py | project_option_sr, project_stock_sr |
+| 選擇權支撐壓力（OI 峰值，方案 A、5 層、週選＝週三 W 系列／月選） | 首頁 §6 | option_sr（res_levels/sup_levels） | option_sr.py、txo_history.py（OIΔ 用）；舊 option_nday.py 已停用 | project_option_sr |
 | 個股支撐壓力（SPEC-TA-SR-001） | 選股「🧱 壓力支撐逼近」＋K 線 | stock_sr, stock_sr_h | stock_sr.py [--src hour], fetch_hourly.py | project_stock_sr |
 | 流動性排行 | 選股 | liquidity_top | liquidity_top.py | project_liquidity_top |
 | 主動 ETF | ETF 分析 | etf_holdings, active_etf_flow | … | project_active_etf_consensus |
@@ -209,7 +209,7 @@ W=<prod_wt 路徑> && cd $W && git fetch -q origin && git reset -q --hard origin
 ### ✅ 首頁選擇權支撐壓力「OI 三層峰值」已完成（uat，待用戶確認推 prod）
 - `scripts/option_sr.py` 重寫核心（參數同定案：TX 近月一般盤結算為 ref、CALL>ref/PUT<ref、四條件峰值 P70/最大×0.12/鄰近各5中位數×1.5/局部高點各2、100 點合併、近→遠各 3 層、不足標候選不足；OIΔ 由本機 txo_daily）。7 種假資料情境已測過。
 - `sql/option_sr_levels.sql` 用戶已執行（res_levels/sup_levels jsonb、ref_price、ref_kind）；9/24 已上傳。
-- `index.html` #gsOptSR：新增預設分頁「OI 三層峰值」，保留「N日成交量／N日未平倉」大量區分頁（option_nday）；舊欄位 res1/sup1… 填第 1、2 層相容。
+- `index.html` #gsOptSR：只顯示 OI 峰值（2026-09-29：方案 A 最大×0.20、200 點合併、5 層、週選只看週三 W 系列、舊 N 日大量區分頁與 option_nday 排程皆移除；已推 prod `d738cb4`）。舊欄位 res1/sup1… 填第 1、2 層相容。
 - 待確認：9/24 最近週選 202609F4 原到期 9/25 遇中秋休市，程式仍選它（未依休市順延跳下一檔）。
 
 ### 待用戶／合夥人決定
