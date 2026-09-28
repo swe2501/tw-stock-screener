@@ -3689,7 +3689,7 @@
       var txUp = (txCur!=null && txPrevKey!=null)? txCur> TX[txPrevKey] : (netAdv>0);
       var se=sentiment(ulPct,dlPct);
       el('bdSentiment').className='bd-badge '+se.c; el('bdSentiment').textContent=se.t;
-      el('bdNarrative').innerHTML=combo(txUp,cur.up,cur.down)+'。<br>淨上漲 <b style="color:'+(netAdv>=0?'var(--green)':'var(--red)')+'">'+(netAdv>=0?'+':'')+netAdv+' 家</b>（漲'+cur.up+'/跌'+cur.down+'/平'+cur.flat+'）；漲停 '+cur.up_limit+'（滲透 '+ulPct.toFixed(2)+'%）· 跌停 '+cur.down_limit+'（'+dlPct.toFixed(2)+'%）。站上60MA '+(ma60!=null?ma60+'%':'—')+'、20MA '+(ma20!=null?ma20+'%':'—')+'。';
+      el('bdNarrative').innerHTML=combo(txUp,cur.up,cur.down)+'。<br>淨上漲 <b style="color:'+(netAdv>0?'var(--red)':(netAdv<0?'var(--green)':'var(--text-muted)'))+'">'+(netAdv>=0?'+':'')+netAdv+' 家</b>（漲'+cur.up+'/跌'+cur.down+'/平'+cur.flat+'）；漲停 '+cur.up_limit+'（滲透 '+ulPct.toFixed(2)+'%）· 跌停 '+cur.down_limit+'（'+dlPct.toFixed(2)+'%）。站上60MA '+(ma60!=null?ma60+'%':'—')+'、20MA '+(ma20!=null?ma20+'%':'—')+'。';
       el('bdSub').textContent='資料日 '+cur.trade_date+' · '+(mode==='all'?'含櫃買 全市場':'不含櫃買 僅上市');
       el('bdUniv').textContent='母體 '+univ+' 家（排除 ETF/DR）';
       // cards
@@ -6854,7 +6854,7 @@
             <label style="margin-left:8px;cursor:pointer"><input type="checkbox" data-p="480" onchange="_srPeriodToggle(480,this.checked)"> 480日</label>
             　<a onclick="_srPeriodAll(true)" style="color:var(--accent);cursor:pointer">全勾</a>
             　<a onclick="_srPeriodAll(false)" style="color:var(--accent);cursor:pointer">全部取消</a>
-            <div style="color:var(--text-muted);font-size:11px;margin-top:3px">勾週期＝在圖上畫該週期回溯大量 K 棒的高／中／低三條線（<span style="color:#26c281">綠＝支撐</span>、<span style="color:#e74c3c">紅＝壓力</span>）；各週期獨立、不跨週期混算。日K／小時K 版在右側「🧱 支撐壓力」分頁切換。</div>
+            <div style="color:var(--text-muted);font-size:11px;margin-top:3px">勾週期＝在圖上畫該週期回溯大量 K 棒的高／中／低三條線（<span style="color:#e74c3c">紅＝支撐</span>、<span style="color:#26c281">綠＝壓力</span>）；各週期獨立、不跨週期混算。日K／小時K 版在右側「🧱 支撐壓力」分頁切換。</div>
           </span>
         </div>
         <div id="vpPanel" style="padding:6px 8px;border-top:1px solid var(--border);font-size:12px;color:var(--text)">
@@ -6893,10 +6893,10 @@
             <div id="maLabel">
               <div class="label-row">
                 <span class="ma-toggle" id="maAllToggle" onclick="toggleAllMA()" style="color:var(--text);border:1px solid var(--border);border-radius:3px;padding:0 4px;margin-right:4px;">均線</span>
-                <span class="ma-toggle" onclick="toggleSeriesViz('ma5')"   style="color:#E0A500">MA5</span>
-                <span class="ma-toggle" onclick="toggleSeriesViz('ma10')"  style="color:#FF8C00">MA10</span>
-                <span class="ma-toggle" onclick="toggleSeriesViz('ma20')"  style="color:#2196F3">MA20</span>
-                <span class="ma-toggle" onclick="toggleSeriesViz('ma60')"  style="color:#FF4081">MA60</span>
+                <span class="ma-toggle" onclick="toggleSeriesViz('ma5')"   style="color:#F2C200">MA5</span>
+                <span class="ma-toggle" onclick="toggleSeriesViz('ma10')"  style="color:#2196F3">MA10</span>
+                <span class="ma-toggle" onclick="toggleSeriesViz('ma20')"  style="color:#FF4081">MA20</span>
+                <span class="ma-toggle" onclick="toggleSeriesViz('ma60')"  style="color:#FF8C00">MA60</span>
                 <span class="ma-toggle" onclick="toggleSeriesViz('ma120')" style="color:#AB47BC">MA120</span>
                 <span class="ma-toggle" onclick="toggleSeriesViz('ma240')" style="color:#4CAF50">MA240</span>
               </div>
@@ -7028,7 +7028,7 @@
               box.innerHTML=h;
             }).catch(function(){ box.innerHTML='<div class="fc-empty">讀取失敗</div>'; });
             function kv(k,v){return '<div><div class="cnp-fk">'+k+'</div><div class="cnp-fv">'+v+'</div></div>';}
-            function col(v){v=Number(v);var c=v>=0?'var(--green)':'var(--red)';return '<span style="color:'+c+'">'+(v>=0?'+':'')+v.toFixed(2)+'%</span>';}
+            function col(v){v=Number(v);var c=v>0?'var(--red)':(v<0?'var(--green)':'var(--text-muted)');   /* 台股慣例：正紅負綠 */return '<span style="color:'+c+'">'+(v>=0?'+':'')+v.toFixed(2)+'%</span>';}
           };
           // 相關新聞三區（2026-09-27）：📢 重大訊息(官方,依代號) / 📰 個股新聞(Google 新聞,標題含股名或代號) / 🏷️ 族群新聞(AI 題材,依族群成分)
           window._loadStockNews=function(code, name){
@@ -7103,10 +7103,10 @@
             var opts=[5,10,20,60,120,240,480].map(function(x){return '<option value="'+x+'"'+(+x===+SR.n?' selected':'')+'>'+x+' '+unit+'</option>';}).join('');
             var selrow=rows.filter(function(r){return +r.n===+SR.n;})[0];
             var cst=selrow?srClassify(close,+selrow.h,+selrow.m,+selrow.l):null;
-            var cell=function(v,a){ return '<td style="color:'+(a==='S'?'var(--green)':'var(--red)')+';font-weight:700" title="'+(a==='S'?'支撐':'壓力')+'">'+srPx(v)+'</td>'; };
+            var cell=function(v,a){ return '<td style="color:'+(a==='S'?'var(--red)':'var(--green)')+';font-weight:700" title="'+(a==='S'?'支撐':'壓力')+'">'+srPx(v)+'</td>'; };
             var sum='<div class="cnp-fgrid" style="margin-bottom:8px">'
-              +'<div><div class="cnp-fk">最近壓力（'+SR.n+unit+'）</div><div class="cnp-fv" style="color:var(--red)">'+(selrow&&selrow.res_lo!=null?srPx(selrow.res_lo)+' <small style="font-size:11px;color:var(--text-muted)">+'+selrow.res_dist+'%</small>':'無')+'</div></div>'
-              +'<div><div class="cnp-fk">最近支撐（'+SR.n+unit+'）</div><div class="cnp-fv" style="color:var(--green)">'+(selrow&&selrow.sup_lo!=null?srPx(selrow.sup_lo)+' <small style="font-size:11px;color:var(--text-muted)">−'+selrow.sup_dist+'%</small>':'無')+'</div></div>'
+              +'<div><div class="cnp-fk">最近壓力（'+SR.n+unit+'）</div><div class="cnp-fv" style="color:var(--green)">'+(selrow&&selrow.res_lo!=null?srPx(selrow.res_lo)+' <small style="font-size:11px;color:var(--text-muted)">+'+selrow.res_dist+'%</small>':'無')+'</div></div>'
+              +'<div><div class="cnp-fk">最近支撐（'+SR.n+unit+'）</div><div class="cnp-fv" style="color:var(--red)">'+(selrow&&selrow.sup_lo!=null?srPx(selrow.sup_lo)+' <small style="font-size:11px;color:var(--text-muted)">−'+selrow.sup_dist+'%</small>':'無')+'</div></div>'
               +'<div><div class="cnp-fk">狀態</div><div class="cnp-fv" style="font-size:13.5px">'+(cst?cst[0]+'·'+SR_STATE[cst[0]]:'該週期歷史不足')+'</div></div>'
               +'<div><div class="cnp-fk">收盤</div><div class="cnp-fv">'+srPx(close)+'</div></div></div>';
             box.innerHTML='<div class="gs-optsr" style="border:0;padding:0;background:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap">'+seg
@@ -7131,7 +7131,7 @@
             SR.rows.forEach(function(r){ if(!r.n||r.h==null||!window._srPeriods[r.n]) return;
               var cl=srClassify(+r.close,+r.h,+r.m,+r.l)[1];
               [['h','高','H'],['m','中','M'],['l','低','L']].forEach(function(p){ var v=+r[p[0]], isS=cl[p[2]]==='S';
-                SR.lines.push({s:candleSeriesRef, p:candleSeriesRef.createPriceLine({price:v, color:isS?'#26c281':'#e74c3c', lineWidth:1, lineStyle:LightweightCharts.LineStyle.Dashed, axisLabelVisible:true, title:r.n+'日'+p[1]+tag})});
+                SR.lines.push({s:candleSeriesRef, p:candleSeriesRef.createPriceLine({price:v, color:isS?'#e74c3c':'#26c281', lineWidth:1   /* 2026-09-29：支撐紅、壓力綠 */, lineStyle:LightweightCharts.LineStyle.Dashed, axisLabelVisible:true, title:r.n+'日'+p[1]+tag})});
               }); });
           };
           window._srTogglePanel=function(){ var o=el('srLineOpts'), open=o.style.display==='none'; o.style.display=open?'inline':'none'; el('srLineArrow').textContent=open?'▾':'▸'; };
@@ -10622,10 +10622,10 @@
       // MA 5/10/20/60/120/240 均線
       const closes = candles.map(c => c.close);
       const MA_COLORS = [
-        { period: 5,   color: '#E0A500' },  // 琥珀金(白/暗底皆可見)
-        { period: 10,  color: '#FF8C00' },  // 亮橘
-        { period: 20,  color: '#2196F3' },  // 藍
-        { period: 60,  color: '#FF4081' },  // 桃紅
+        { period: 5,   color: '#F2C200' },  // 黃（2026-09-29 用戶指定）
+        { period: 10,  color: '#2196F3' },  // 藍（原 MA20 色）
+        { period: 20,  color: '#FF4081' },  // 桃紅（原 MA60 色）
+        { period: 60,  color: '#FF8C00' },  // 亮橘（原 MA10 色）
         { period: 120, color: '#AB47BC' },  // 紫
         { period: 240, color: '#4CAF50' },  // 綠
       ];
