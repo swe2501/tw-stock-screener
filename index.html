@@ -1309,7 +1309,7 @@
         var ind=(window._indLabel&&window._indLabel(it.code))||'';
         var mk=(window._mktLabel&&window._mktLabel(it.code))||'';
         var tag=ind?'<span class="gs-sd-ind">'+ind+'</span>':'';
-        var mkt=mk==='上櫃'?'<span class="gs-sd-mkt otc">上櫃</span>':(mk==='上市'?'<span class="gs-sd-mkt twse">上市</span>':(mk==='ETF'?'<span class="gs-sd-mkt etf">ETF</span>':''));
+        var mkt=(window._isEtf&&window._isEtf(it.code)?'<span class="gs-sd-mkt etf">ETF</span>':'')+(mk==='上櫃'?'<span class="gs-sd-mkt otc">上櫃</span>':(mk==='上市'?'<span class="gs-sd-mkt twse">上市</span>':''));
         return '<div class="gs-sd-item'+(i===sel?' on':'')+'" role="option" data-code="'+it.code+'"><span class="gs-sd-code">'+it.code+'</span><span class="gs-sd-name">'+(it.name||'')+'</span>'+tag+mkt+'</div>';
       }).join(''); drop.hidden=false; if(inp)inp.setAttribute('aria-expanded','true'); }
     function open(code){ if(drop)drop.hidden=true; if(window._openStock)window._openStock(String(code), (window._names&&window._names[code])||''); }
@@ -2432,12 +2432,14 @@
       for(var c in m){ window._mkt[c]='twse'; }
       otc.forEach(function(r){ if(r&&r.code){ if(!m[r.code])m[r.code]=r.name; window._mkt[r.code]='otc'; } });
       window._ind=ind||{};
-      etf.forEach(function(r){ if(r&&r.code){ if(!m[r.code])m[r.code]=r.name; window._mkt[r.code]='etf'; if(r.category&&!window._ind[r.code]) window._ind[r.code]=r.category; } });
-      if(!oe.error) for(var oc in oe){ if(oc&&!m[oc]){ m[oc]=oe[oc]; window._mkt[oc]='etf'; } }   // 放最後，避免被上市標記蓋掉
+      window._etf=window._etf||{};
+      etf.forEach(function(r){ if(r&&r.code){ if(!m[r.code])m[r.code]=r.name; if(!window._mkt[r.code]) window._mkt[r.code]='twse'; window._etf[r.code]=1; if(r.category&&!window._ind[r.code]) window._ind[r.code]=r.category; } });   // etf_products 皆為上市
+      if(!oe.error) for(var oc in oe){ if(/^00[0-9A-Z]{2,5}$/.test(oc)&&typeof oe[oc]==='string'){ if(!m[oc]) m[oc]=oe[oc]; window._mkt[oc]='otc'; window._etf[oc]=1; } }   // 上櫃 ETF（放最後，避免被上市標記蓋掉）
       window._names=m; if(cb)cb(window._names);
     }).catch(function(){ window._names={}; if(cb)cb(window._names); });
   };
-  window._mktLabel = function(code){ var k=window._mkt&&window._mkt[String(code)]; return k==='otc'?'上櫃':(k==='twse'?'上市':(k==='etf'?'ETF':'')); };
+  window._mktLabel = function(code){ var k=window._mkt&&window._mkt[String(code)]; return k==='otc'?'上櫃':(k==='twse'?'上市':''); };
+  window._isEtf = function(code){ return !!(window._etf&&window._etf[String(code)]); };
   window._indLabel = function(code){ return (window._ind&&window._ind[String(code)])||''; };
   // 共用：點個股開 K 線圖
   window._openStock = function(code, name){ try{ if(typeof openChart==='function') openChart(String(code), name||((window._names&&window._names[code])||'')); }catch(e){} };
@@ -5120,7 +5122,7 @@
       if(!_hpList.length){ box.hidden=true; if(inp)inp.setAttribute('aria-expanded','false'); return; }
       var h='';
       _hpList.forEach(function(it,i){
-        var mk=it.mkt==='otc'?'<span class="gs-sd-mkt otc">上櫃</span>':(it.mkt==='twse'?'<span class="gs-sd-mkt twse">上市</span>':(it.mkt==='etf'?'<span class="gs-sd-mkt etf">ETF</span>':''));
+        var mk=(window._isEtf&&window._isEtf(it.code)?'<span class="gs-sd-mkt etf">ETF</span>':'')+(it.mkt==='otc'?'<span class="gs-sd-mkt otc">上櫃</span>':(it.mkt==='twse'?'<span class="gs-sd-mkt twse">上市</span>':''));
         var ind=(window._indLabel&&window._indLabel(it.code))||'';
         var indtag=ind?'<span class="gs-sd-ind">'+ind+'</span>':'';
         h+='<div class="gs-sd-item'+(i===_hpSel?' on':'')+'" role="option" data-code="'+it.code+'" data-name="'+(it.name||'').replace(/"/g,'&quot;')+'"><span class="gs-sd-code">'+it.code+'</span><span class="gs-sd-name">'+(it.name||'')+'</span>'+indtag+mk+'</div>';
@@ -5734,6 +5736,7 @@
           <div class="modal-title-row">
             <div class="modal-title" id="modalTitle">—</div>
             <span id="industryTag"></span>
+            <span id="mktTag" style="display:none;font-size:.72rem;padding:1px 7px;border-radius:10px;font-weight:700"></span>
             <span id="chartPriceTag"></span>
             <span id="divTag"></span>
             <span id="catalystTag"></span>
@@ -5784,6 +5787,10 @@
             <span style="color:var(--text-muted);font-size:11px;margin-left:8px">疊加加權指數比較強弱（大盤價格在左軸、空心藍灰 K 棒；勾小時K 會切到小時K 圖）</span>
           </span>
           <span id="mkCmp" style="margin-left:10px;font-size:12px"></span>
+        </div>
+        <div id="srLinePanel" style="padding:6px 8px;border-top:1px solid var(--border);font-size:12px;color:var(--text)">
+          <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;user-select:none"><input type="checkbox" id="srLineChk" onchange="window._srLinesOn=this.checked;window._srDraw&&window._srDraw()"><b style="color:#c0392b">支撐壓力線</b></label>
+          <span style="color:var(--text-muted);font-size:11px;margin-left:6px">顯示分價量表的壓力（紅）／支撐（綠）虛線；天數與日K／小時K 版在右側「🧱 支撐壓力」分頁切換</span>
         </div>
         <div id="vpPanel" style="padding:6px 8px;border-top:1px solid var(--border);font-size:12px;color:var(--text)">
           <a onclick="_vpTogglePanel()" style="cursor:pointer;text-decoration:none;user-select:none"><span id="vpArrow" style="color:var(--text-muted);font-size:11px;margin-right:4px">▸</span><b style="color:#b58a2d">價量分析</b></a>
@@ -6024,6 +6031,7 @@
           window._srDraw=function(){
             if(typeof candleSeriesRef==='undefined'||!candleSeriesRef)return;
             SR.lines.forEach(function(l){ try{ l.s.removePriceLine(l.p); }catch(e){} }); SR.lines=[];
+            if(!window._srLinesOn) return;                // 使用者開關（預設關，K 圖乾淨）
             var r=SR.rows.filter(function(x){return x.n===SR.n;})[0]; if(!r||SR.code!==currentCode)return;
             var D=LightweightCharts.LineStyle.Dashed;
             [['res',  '#e74c3c','壓'],['sup','#26c281','撐']].forEach(function(z){
@@ -6533,6 +6541,18 @@
       return code && !code.startsWith('^') && !code.includes('=');
     }
 
+    function _setMktTag(code) {   // K 線標題列顯示 上市／上櫃（ETF 另標）2026-09-28
+      const t = document.getElementById('mktTag'); if (!t) return;
+      const paint = () => {
+        const mk = (window._mktLabel && window._mktLabel(code)) || '', etf = window._isEtf && window._isEtf(code);
+        if (!mk || String(code).startsWith('^')) { t.style.display = 'none'; return; }
+        t.textContent = (etf ? 'ETF · ' : '') + mk;
+        t.style.background = mk === '上櫃' ? 'rgba(155,108,255,.14)' : 'rgba(58,134,224,.12)';
+        t.style.color = mk === '上櫃' ? 'var(--accent2)' : '#3a86e0';
+        t.style.display = 'inline-block';
+      };
+      if (window._names) paint(); else if (window._loadNames) window._loadNames(paint);
+    }
     function _setToolbarForCode(sym) {
       const mk = document.getElementById('mkPanel'); if (mk) mk.style.display = (sym === '^TWII') ? 'none' : '';   // 大盤本身不疊大盤
     }
@@ -6562,6 +6582,7 @@
       try { _cnpOnOpen(code, name, currentIndustry); } catch(_) {}
       document.getElementById('modalTitle').textContent = `${code}　${name}`;
       document.getElementById('industryTag').style.display = 'none';
+      _setMktTag(code);
       const _pt = document.getElementById('chartPriceTag'); if (_pt) _pt.innerHTML = '';
       _loadDividendInfo(code);
       _loadCatalystInfo(code);
