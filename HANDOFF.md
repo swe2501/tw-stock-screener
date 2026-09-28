@@ -197,15 +197,11 @@ W=<prod_wt 路徑> && cd $W && git fetch -q origin && git reset -q --hard origin
 ### SPEC-TA-SR-002 已完成（取代 SR-001 的跨週期）
 不跨週期混算：(a) 同量取**最早**（stock_sr.py `cand[-1]`）；(b) K 線圖「支撐壓力」改**依週期勾選**（5/10/20/60/120/240/480，預設 20，`_srPeriods`）；(c) 逼近列表 `srNSel`＋K 線右側 `srTabSel` 改**週期下拉（預設 20）**、右側彙總改單一週期（不用跨週期 srLevels）；(d) 多空線數比率**取消**。已重跑 stock_sr(15,669)/stock_sr_h(15,336)。詳見 memory `project_stock_sr`。
 
-### 🔨 進行中（未完成）— 首頁選擇權支撐壓力改「OI 三層峰值」
-玩股網式（https://www.wantgoo.com/option/support-resistance）。**參數已與用戶定案**：
-- CALL 只取 strike>ref 找壓力、PUT 只取 strike<ref 找支撐，兩側分開；OI 缺/負/0 剔除。
-- 峰值＝4 條件同時成立：① OI≥該側 P70 ② OI≥該側 max×0.12 ③ OI≥前後各 5 有效履約價中位數×1.5 ④ 局部高點（≥前後各 2 且至少高於其一；平台只留一代表）。
-- 峰群**合併距離 100 點**（保留群內最大 OI 為代表）；壓力 strike 低→高、支撐 高→低各取**前 3（離 ref 近到遠，非 OI 大小）**；不足 3 標「候選不足」不硬湊。
-- 每層回 strike／OI／OIΔ／距 ref 點數／同側百分位／中位數倍數／判定原因。
-- **referencePrice＝台指期 TX 近月結算價**（`DailyMarketReportFut` 一般盤，同盤後截面；實測近月 202610＝48125），標 `ref_kind`；OIΔ 由本機 `txo_daily`（今日OI−前一交易日OI）算，新履約價無前值→「—」。
-- 要改：`scripts/option_sr.py`（重寫核心，取代舊「大量區×1.3」）；**Supabase `option_sr` 加欄位 `res_levels jsonb, sup_levels jsonb, ref_price numeric, ref_kind text` → 需寫 `sql/option_sr_levels.sql` 請用戶執行**；`index.html` #gsOptSR 卡改顯示每側三層＋明細；舊 res1/sup1… 填第 1 層相容。
-- **狀態**：盤點＋參數確認完成，正在寫 option_sr.py（被「更新交接文件」打斷，尚未動到程式碼與表）。測試情境：遠方第三層 OI 極大不可排第一層、週/月隔離、CALL/PUT 分離、平台峰、缺值、只 2 峰、ref 變動重排。
+### ✅ 首頁選擇權支撐壓力「OI 三層峰值」已完成（uat，待用戶確認推 prod）
+- `scripts/option_sr.py` 重寫核心（參數同定案：TX 近月一般盤結算為 ref、CALL>ref/PUT<ref、四條件峰值 P70/最大×0.12/鄰近各5中位數×1.5/局部高點各2、100 點合併、近→遠各 3 層、不足標候選不足；OIΔ 由本機 txo_daily）。7 種假資料情境已測過。
+- `sql/option_sr_levels.sql` 用戶已執行（res_levels/sup_levels jsonb、ref_price、ref_kind）；9/24 已上傳。
+- `index.html` #gsOptSR：新增預設分頁「OI 三層峰值」，保留「N日成交量／N日未平倉」大量區分頁（option_nday）；舊欄位 res1/sup1… 填第 1、2 層相容。
+- 待確認：9/24 最近週選 202609F4 原到期 9/25 遇中秋休市，程式仍選它（未依休市順延跳下一檔）。
 
 ### 待用戶／合夥人決定
 - **明燈與冥燈**（memory `project_mingdeng`）：付費才能看；長黑棒＝(開−收)/收≥5%；**長上影線公式已確認**＝紅棒(最高−收)/收、黑棒(最高−開)/收，**門檻待用戶回**（我提議≥3%）；另待「點名真人呈現方式」與「第一批追蹤名單」（合夥人整理中）。三階段：①回測引擎＋MOPS 內部人申報＋管理者登錄 ②YouTube 字幕 AI＋美國國會申報 ③產業連動；FB/Threads/X 不爬。
