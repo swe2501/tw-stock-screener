@@ -2943,6 +2943,11 @@
     .pf-out .ob span{font-size:11px;color:var(--pf-mut2);display:block;} .pf-out .ob b{font-size:18px;font-weight:700;font-family:"JetBrains Mono",monospace;color:var(--pf-t1);display:block;margin-top:4px;}
     .pf-out .ot{font-size:12px;color:var(--pf-t3);line-height:1.7;background:var(--pf-inner2);padding:14px;border-radius:8px;border:1px solid var(--pf-bd);}
     .pf-select{background:var(--pf-inner);font-size:12px;color:var(--pf-t2);border-radius:4px;padding:6px 10px;border:1px solid var(--pf-bd);font-family:inherit;cursor:pointer;}
+    .pf-hx{margin-top:16px;padding-top:14px;border-top:1px solid var(--pf-bd);}
+    .pf-hx-h{font-size:14px;font-weight:700;color:var(--pf-t1);margin-bottom:8px;} .pf-hx-h span{font-size:12px;font-weight:400;color:var(--pf-mut);margin-left:8px;}
+    .pf-hx-alert{font-size:13px;padding:10px 12px;border-radius:8px;margin-bottom:10px;color:#fcd34d;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);}
+    .pf.pf-light .pf-hx-alert{color:#b45309;}
+    .pf-hx-ok{font-size:12.5px;padding:10px 12px;border-radius:8px;margin-bottom:10px;color:var(--pf-t3);background:var(--pf-inner);border:1px solid var(--pf-bd);}
     .pf-fold{display:block;margin:8px auto 4px;padding:6px 16px;border-radius:999px;border:1px solid var(--pf-bd);background:var(--pf-inner2);color:var(--pf-sky);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;}
     .pf-fold:hover{border-color:var(--pf-sky);}
     .pf-foot{margin:0 16px;padding:14px 4px 6px;border-top:1px solid var(--pf-bd2);font-size:12px;color:var(--pf-mut);line-height:1.8;}
@@ -3066,6 +3071,7 @@
           <span style="font-size:12px;color:var(--pf-mut2);font-family:'JetBrains Mono',monospace">即刻監控系統節點</span>
         </div>
         <div class="pf-evs" id="fhEvCards"></div>
+        <div class="pf-hx" id="fhHedgeFlags"></div>
         <div class="pf-evtbl"><div id="fhEvents"></div></div>
       </div>
 
@@ -3197,11 +3203,13 @@
           '<span class="pf-state" style="'+CLS[Q.cl]+'">'+Q.label+'</span>');
       el('fhNarrative').innerHTML='<strong>系統客觀解讀：</strong>當前等值空單約 '+(Math.abs(lots)/1e4).toFixed(1)+' 萬口，空單名目合約市值占外資持股市值 <strong>'+r.toFixed(2)+'%</strong>。歷史百分位位於 <strong>PR '+rank.toFixed(1)+'</strong>（近 2 年 P80 '+p80.toFixed(2)+'%、P95 '+p95.toFixed(2)+'%），屬於「'+tg.t+'」'+(tg.c==='normal'?'的常態保護水位':'的結構性保護')+'，'+(r>1.2?'<strong style="color:#f43f5e">已突破 1.2% 系統性全面大逃殺警戒線</strong>。':'尚未進入 >1.2% 之系統性全面大逃殺警戒線。')
         +' 今日'+(cur.spot_net==null?'現貨資料缺':(cur.spot_net>=0?'現貨買超 '+n0(cur.spot_net/1e8)+' 億':'現貨賣超 '+n0(Math.abs(cur.spot_net)/1e8)+' 億'))+'、空單'+(dLots<0?'增加 ':'減少 ')+n0(Math.abs(dLots))+' 口 → '+Q.h.replace(' • ','・')+'。';
-      renderChart(); renderFx(); renderQuad(q); renderTable();
+      computeFlags(); var cfl=FLAGS[cur.trade_date];
+      if(cfl) el('fhNarrative').innerHTML+=' <strong style="color:#f59e0b">⚠ 近 3 日累計空單增加 '+n0(cfl.cum)+' 口，'+flagText(cur.trade_date,cfl)+'。</strong>';
+      renderChart(); renderFx(); renderQuad(q); renderTable(); renderHedgeFlags();
       el('fhContracts').innerHTML='<div>大台指 (TX): <span class="'+(cur.fx_tx_net<0?'c-bear':'c-bull')+'" style="font-weight:600">'+n0(cur.fx_tx_net)+' 口</span></div>'
         +'<div>小台指 (MTX): <span class="'+(cur.fx_mtx_net<0?'c-bear':'c-bull')+'" style="font-weight:600">'+n0(cur.fx_mtx_net)+' 口 (約 '+n0(cur.fx_mtx_net/4)+' 大台)</span></div>'
         +'<div>微台指 (TMF): <span class="'+(cur.fx_tmf_net<0?'c-bear':'c-bull')+'" style="font-weight:600">'+n0(cur.fx_tmf_net)+' 口 (約 '+n0(cur.fx_tmf_net/20)+' 大台)</span></div>';
-      el('fhNote').innerHTML='<b>算法與資料源（合夥人複查）：</b>避險比率 R＝外資期貨淨空名目 H ÷ 外資持股市值 V ×100。H＝MAX(−Σ(外資各契約 net 口×指數×每點價值),0)，每點價值 大台200/小台50/微台10；V(上市)＝Σ(TWSE mi-qfiis 全體外資持有股數×當日收盤)，扣 ETF＝排除 00 開頭。分級＝近 2 年歷史百分位（&lt;P80 常態／P80–P95 偏高／≥P95 顯著偏高）＋固定紅線 &gt;1.2% 觸發極端。第三層象限＝今日外資現貨買賣超正負 × 等值大台淨口數較前一日增減（淨空增加＝空單增加）。第二層：USD/TWD 為 Yahoo 每日匯率、現貨買賣超為 TWSE BFI82U 外資及陸資（抓取失敗的日子每日自動回補近 60 天）；第四層事件倒數＝台指期結算（每月第三個週三）、台積電法說會（催化事件表）、FOMC 與台灣央行利率決議（investing.com 經濟日曆，尚未公告者顯示「尚未公告」）。資料源：TWSE MI_QFIIS／STOCK_DAY_ALL／BFI82U、TAIFEX futContractsDate、加權指數。每日盤後更新（foreign_hedge.py→foreign_hedge_daily）。版面與配色比照合夥人「完美.html」（2026-09-28）。';
+      el('fhNote').innerHTML='<b>算法與資料源（合夥人複查）：</b>避險比率 R＝外資期貨淨空名目 H ÷ 外資持股市值 V ×100。H＝MAX(−Σ(外資各契約 net 口×指數×每點價值),0)，每點價值 大台200/小台50/微台10；V(上市)＝Σ(TWSE mi-qfiis 全體外資持有股數×當日收盤)，扣 ETF＝排除 00 開頭。分級＝近 2 年歷史百分位（&lt;P80 常態／P80–P95 偏高／≥P95 顯著偏高）＋固定紅線 &gt;1.2% 觸發極端。第三層象限＝今日外資現貨買賣超正負 × 等值大台淨口數較前一日增減（淨空增加＝空單增加）。第二層：USD/TWD 為 Yahoo 每日匯率、現貨買賣超為 TWSE BFI82U 外資及陸資（抓取失敗的日子每日自動回補近 60 天）；第四層事件倒數＝台指期結算（每月第三個週三）、台積電法說會（催化事件表）、FOMC 與台灣央行利率決議（investing.com 經濟日曆，尚未公告者顯示「尚未公告」）。資料源：TWSE MI_QFIIS／STOCK_DAY_ALL／BFI82U、TAIFEX futContractsDate、加權指數。每日盤後更新（foreign_hedge.py→foreign_hedge_daily）。版面與配色比照合夥人「完美.html」（2026-09-28）。<br><b>事件前／連假前避險偵測（2026-09-28 合夥人定案）：</b>交易日 t 近 3 日累計空單增加（等值大台淨口數減少量，t 與前 2 日合計）≥ 5,000 口，且 t 之後 1～3 個交易日內有事件 → 疑似事件前避險；t 之後休市 ≥ 3 天 → 疑似連假前避險。事件＝台指期結算（每月第三個週三）、FOMC（聯準會公布之會議日）、台灣央行理監事會（每季，2026 年日期依往例推估）、台積電法說會、高重要度總經數據與會員列上的中重要度事件（後兩者僅限資料庫保存期間）。僅為時間上的相關，不代表確定因果。';
       initSim(cur, ser);
     }
     function kcard(k,icon,v,s,f,cls){ return '<div class="pf-glass pf-kc'+(cls?' '+cls:'')+'"><div class="k"><span>'+k+'</span>'+icon+'</div><div><div class="v">'+v+'</div><div class="s">'+s+'</div></div><div class="f">'+(f||'')+'</div></div>'; }
@@ -3226,6 +3234,7 @@
         crosshairMarkerBorderColor:'#f43f5e',crosshairMarkerBackgroundColor:pfColors().dark?'#0b1120':'#ffffff',crosshairMarkerRadius:5,
         priceFormat:{type:'custom',minMove:0.001,formatter:function(v){return v.toFixed(2)+'%';}}});
       rs.setData(DATA.filter(function(r){return ratioOf(r)!=null;}).map(function(r){return {time:r.trade_date,value:ratioOf(r)};}));
+      try{ rs.setMarkers(Object.keys(FLAGS).sort().map(function(t){ var f=FLAGS[t]; return {time:t,position:'aboveBar',color:'#f59e0b',shape:'arrowDown',text:f.ev.length?'事件避險':'連假避險'}; })); }catch(e){}
       var is=chart.addLineSeries({color:'#0284c7',lineWidth:2,lineStyle:LightweightCharts.LineStyle.Dashed,priceScaleId:'right',title:'加權',
         crosshairMarkerBorderColor:'#0284c7',crosshairMarkerBackgroundColor:pfColors().dark?'#0b1120':'#ffffff',crosshairMarkerRadius:5,
         priceFormat:{type:'custom',minMove:1,formatter:function(v){return Math.round(v).toLocaleString();}}});
@@ -3272,9 +3281,58 @@
           +'<div class="qd">'+d.d+'</div><div class="qp">'+d.p+'</div>';
       });
     }
+    // ══ 事件前／連假前避險偵測（合夥人 2026-09-28 定案）══
+    // 規則：交易日 t 的「近 3 日累計空單增加」＝Σ(前一日等值淨口數 − 當日)（t 與前 2 個交易日）≥ 5,000 口，且
+    //   (1) 事件前：某事件落在 t 之後第 1～3 個交易日內 → 「疑似事件前避險」
+    //   (2) 連假前：t 之後休市 ≥ 3 天（下個交易日距 t ≥ 4 個日曆天）→ 「疑似連假前避險」
+    // 事件：台指期結算（每月第三個週三）、FOMC、台灣央行理監事會、台積電法說會（catalyst_events）、
+    //       高重要度總經數據與會員列上的中重要度事件（macro_events；僅資料庫保存期間內）。
+    var HX_TH=5000, EVTS=[], FLAGS={};
+    var FOMC=['2024-01-31','2024-03-20','2024-05-01','2024-06-12','2024-07-31','2024-09-18','2024-11-07','2024-12-18',
+      '2025-01-29','2025-03-19','2025-05-07','2025-06-18','2025-07-30','2025-09-17','2025-10-29','2025-12-10',
+      '2026-01-28','2026-03-18','2026-04-29','2026-06-17','2026-07-29','2026-09-16','2026-10-28','2026-12-09'];
+    var CBC=['2024-03-21','2024-06-13','2024-09-19','2024-12-19','2025-03-20','2025-06-19','2025-09-18','2025-12-18',
+      '2026-03-19','2026-06-18','2026-09-17','2026-12-17'];
+    function iso(d){ return d.toISOString().slice(0,10); }
+    function settleDates(){ var out=[]; for(var y=2024;y<=2027;y++) for(var m=0;m<12;m++){ var f=new Date(Date.UTC(y,m,1)).getUTCDay(); out.push(iso(new Date(Date.UTC(y,m,1+((3-f+7)%7)+14)))); } return out; }
+    function buildEvents(extra){
+      EVTS=[]; settleDates().forEach(function(d){ EVTS.push({d:d,n:'台指期結算'}); });
+      FOMC.forEach(function(d){ EVTS.push({d:d,n:'FOMC 利率決議'}); }); CBC.forEach(function(d){ EVTS.push({d:d,n:'台灣央行理監事會'}); });
+      (extra||[]).forEach(function(e){ EVTS.push(e); });
+    }
+    // 交易日序列：歷史用 DATA；最後一日之後用「平日且不在已知休市」估算（今天之前缺的平日視為休市）
+    function computeFlags(){
+      FLAGS={}; if(DATA.length<4) return;
+      var dates=DATA.map(function(r){return r.trade_date;}), idx={}; dates.forEach(function(d,i){idx[d]=i;});
+      var today=iso(new Date(Date.now()+8*3600e3));
+      function nextTradingDays(i,k){ var out=[]; for(var j=i+1;j<dates.length&&out.length<k;j++) out.push(dates[j]);
+        var d=new Date(dates[dates.length-1]+'T00:00:00Z'); while(out.length<k){ d=new Date(d.getTime()+864e5); var w=d.getUTCDay(), s=iso(d); if(w>0&&w<6&&s>=today) out.push(s); if(d.getUTCFullYear()>2030) break; } return out; }
+      for(var i=3;i<dates.length;i++){
+        var cum=0; for(var j=i-2;j<=i;j++) cum+=(DATA[j-1].eq_net_lots-DATA[j].eq_net_lots);
+        if(cum<HX_TH) continue;
+        var nx=nextTradingDays(i,3), t=dates[i], hit=[];
+        EVTS.forEach(function(e){ if(e.d>t && e.d<=nx[nx.length-1]){ var k=nx.filter(function(x){return x<e.d;}).length+1; if(k<=3) hit.push({n:e.n,d:e.d,k:k}); } });
+        var nd=nx[0], gap=nd?Math.round((new Date(nd+'T00:00:00Z')-new Date(t+'T00:00:00Z'))/864e5):0;
+        var hol=gap>=4;
+        if(hit.length||hol) FLAGS[t]={cum:Math.round(cum),ev:hit,hol:hol,gap:gap,next:nd};
+      }
+    }
+    function flagText(t,f){ var a=[]; if(f.ev.length) a.push('疑似事件前避險（'+f.ev.map(function(e){return e.n+' '+e.d.slice(5).replace('-','/');}).join('、')+'）');
+      if(f.hol) a.push('疑似連假前避險（休市 '+(f.gap-1)+' 天，'+(f.next||'').slice(5).replace('-','/')+' 開盤）'); return a.join('；'); }
+    function renderHedgeFlags(){
+      var box=el('fhHedgeFlags'); if(!box) return;
+      var ks=Object.keys(FLAGS).sort().reverse(), cur=DATA[DATA.length-1], cf=cur&&FLAGS[cur.trade_date];
+      var head=cf?'<div class="pf-hx-alert">⚠ '+cur.trade_date+' 近 3 日累計空單增加 <b>'+n0(cf.cum)+' 口</b> → '+flagText(cur.trade_date,cf)+'</div>'
+        :'<div class="pf-hx-ok">目前未觸發：最新交易日 '+(cur?cur.trade_date:'—')+' 近 3 日累計空單增加 '+(cur&&DATA.length>3?n0(DATA[DATA.length-4].eq_net_lots-cur.eq_net_lots):'—')+' 口（門檻 5,000 口，且需落在事件前 1～3 個交易日或連假前）。</div>';
+      box.innerHTML='<div class="pf-hx-h">🔎 事件前／連假前避險偵測 <span>近 2 年觸發 '+ks.length+' 次</span></div>'+head
+        +(ks.length?'<div style="overflow-x:auto"><table class="pf-tbl"><thead><tr><th>觸發日</th><th style="text-align:right">近 3 日累計增空</th><th>判定</th></tr></thead><tbody>'
+          +ks.map(function(t){ var f=FLAGS[t]; return '<tr><td style="font-weight:600;color:var(--pf-t2)">'+t+'</td><td style="text-align:right" class="c-bear">+'+n0(f.cum)+' 口</td><td style="white-space:normal">'+flagText(t,f)+'</td></tr>'; }).join('')+'</tbody></table></div>':'');
+      var tb=box.querySelector('tbody'); if(tb) fold(tb,5,'hx');
+    }
     function renderTable(){
       el('fhTable').innerHTML=DATA.slice(-20).reverse().map(function(r){ var rt=ratioOf(r);
-        return '<tr><td style="font-weight:600;color:var(--pf-t2)">'+r.trade_date+'</td><td>'+(r.taiex_close!=null?(+r.taiex_close).toLocaleString(undefined,{maximumFractionDigits:2}):'—')+'</td>'
+        var fg=FLAGS[r.trade_date];
+        return '<tr><td style="font-weight:600;color:var(--pf-t2)">'+r.trade_date+(fg?' <span title="'+flagText(r.trade_date,fg)+'（近 3 日累計增空 '+n0(fg.cum)+' 口）" style="color:#f59e0b;cursor:help">⚑</span>':'')+'</td><td>'+(r.taiex_close!=null?(+r.taiex_close).toLocaleString(undefined,{maximumFractionDigits:2}):'—')+'</td>'
           +'<td class="c-bear">'+n0(r.fx_tx_net)+'</td><td class="c-bear">'+n0(r.fx_mtx_net)+'</td><td class="c-bear">'+n0(r.fx_tmf_net)+'</td>'
           +'<td class="c-bear" style="font-weight:700">'+n0(r.eq_net_lots)+'</td>'
           +'<td class="'+(r.spot_net>=0?'c-bull':'c-bear')+'" style="font-weight:700">'+(r.spot_net!=null?sgn(r.spot_net/1e8,1):'—')+'</td>'
@@ -3428,7 +3486,16 @@
         FX={}; ((res[1]&&res[1].data)||[]).forEach(function(c){ if(c&&c.close) FX[typeof c.time==='number'?new Date(c.time*1000).toISOString().slice(0,10):c.time]=+c.close; });
         DATA.forEach(function(r){ if(FX[r.trade_date]==null&&r.usdtwd!=null) FX[r.trade_date]=+r.usdtwd; });   // Yahoo 缺日以自有匯率補
         loaded=true;
+        buildEvents([]);
         if(window._isOwner){ render(); renderEvents(SB,H); renderEvCards(SB,H); }
+        Promise.all([
+          fetch(SB+'/rest/v1/catalyst_events?select=start_date&code=eq.2330&event_type=eq.'+encodeURIComponent('法說會')+'&order=start_date.asc&limit=100',{headers:H}).then(function(r){return r.json();}).catch(function(){return [];}),
+          fetch(SB+'/rest/v1/macro_events?select=occ_time,title,importance,pinned&or=(importance.eq.high,pinned.eq.true)&order=occ_time.asc&limit=1000',{headers:H}).then(function(r){return r.json();}).catch(function(){return [];})
+        ]).then(function(ev){
+          var ex=[]; (Array.isArray(ev[0])?ev[0]:[]).forEach(function(e){ if(e.start_date) ex.push({d:e.start_date.slice(0,10),n:'台積電法說會'}); });
+          (Array.isArray(ev[1])?ev[1]:[]).forEach(function(e){ if(!e.occ_time) return; var t=new Date(new Date(e.occ_time).getTime()+8*3600e3); ex.push({d:iso(t),n:e.title}); });
+          buildEvents(ex); if(window._isOwner) render();
+        });
       }).catch(function(){ if(el('fhNarrative'))el('fhNarrative').textContent='資料讀取失敗'; });
     };
     window._VIEWS=window._VIEWS||{}; window._VIEWS.fhedge={el:'fhedgeView',show:'_fhedgeShow'};
