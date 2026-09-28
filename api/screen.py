@@ -1822,14 +1822,48 @@ def screen(params):
 # Vercel handler
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _fetch_stock_news(code, name):
+    """個股新聞：Google 新聞 RSS 以「股名 代號」搜尋近 14 天，只留標題含股名或代號者（K 線右側「個股新聞」用）。"""
+    import xml.etree.ElementTree as ET
+    from email.utils import parsedate_to_datetime
+    name = name or _STOCK_NAMES.get(code, "")
+    q = urllib.parse.quote(f"{name} {code} when:14d".strip())
+    url = f"https://news.google.com/rss/search?q={q}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant"
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    with urllib.request.urlopen(req, timeout=10) as r:
+        root = ET.fromstring(r.read())
+    out, seen = [], set()
+    for it in root.iter("item"):
+        title = (it.findtext("title") or "").strip()
+        src = (it.findtext("source") or "").strip()
+        if src and title.endswith(" - " + src):
+            title = title[: -len(src) - 3].strip()
+        if not title or title in seen:
+            continue
+        if (name and name not in title) and code not in title:
+            continue                                   # 標題沒提到這檔 → 不算個股新聞
+        if "股市爆料同學會" in title or "今日股價" in title or "營收查詢" in title \
+                or title.endswith("股份有限公司"):
+            continue                                   # 論壇頁/行情頁/公司簡介頁，非新聞
+        try:
+            d = parsedate_to_datetime(it.findtext("pubDate")).astimezone(timezone(timedelta(hours=8)))
+            ds = d.strftime("%Y-%m-%d %H:%M")
+        except Exception:
+            ds = ""
+        seen.add(title)
+        out.append({"title": title, "source": src, "url": (it.findtext("link") or "").strip(), "published_at": ds})
+    out.sort(key=lambda x: x["published_at"], reverse=True)
+    return {"code": code, "name": name, "items": out[:20]}
+
+
 class handler(BaseHTTPRequestHandler):
     def log_message(self, format, *args): pass
 
-    def _send_json(self, code, data):
+    def _send_json(self, code, data, cache=None):
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Cache-Control", "no-store")
+        self.send_header("Cache-Control", cache or "no-store")
         self.end_headers()
         self.wfile.write(json.dumps(data, ensure_ascii=False).encode("utf-8"))
 
@@ -1919,6 +1953,16 @@ class handler(BaseHTTPRequestHandler):
             except Exception as e:
                 import traceback
                 return self._send_json(200, {"error": str(e), "traceback": traceback.format_exc()})
+        # 個股新聞（Google 新聞 RSS，即時查、不存 DB；CDN 快取 30 分鐘）
+        if (qs.get("stat") or [""])[0] == "stocknews":
+            code = (qs.get("code") or [""])[0].strip()
+            name = (qs.get("name") or [""])[0].strip()
+            if not code.isalnum() or len(code) > 6:
+                return self._send_json(400, {"error": "bad code"})
+            try:
+                return self._send_json(200, _fetch_stock_news(code, name), cache="public, s-maxage=1800, max-age=600")
+            except Exception as e:
+                return self._send_json(200, {"code": code, "items": [], "error": str(e)})
         # 題材全貌：單一題材的相關個股（上市＋上櫃，依成交值排序）
         if (qs.get("stat") or [""])[0] == "theme":
             try:

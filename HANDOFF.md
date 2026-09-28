@@ -118,10 +118,13 @@ git commit -am "..."; git push origin HEAD:prod
 | 貪婪指標 | 市場觀察 | greed_base | compute_greed.py | project_greed_index |
 | 融資維持率三組 | 首頁§4 | margin_maint_split | margin_ratio.py / margin_maintenance_calc.py | project_margin_maint_split |
 | 外資空單溫度計（付費） | 市場觀察 | foreign_hedge_daily | foreign_hedge.py | project_foreign_hedge |
+| 宏觀佐證與事件窗（溫度計第3層） | 市場觀察→外資空單溫度計 | macro_events, macro_news | macro_events.py（Playwright 真 Chrome） | project_macro_events |
 | 大盤多空廣度（付費） | 市場觀察＋首頁§3鈕 | breadth_daily | breadth_daily.py | project_breadth |
 | K線 基本面/新聞分頁 | K線 modal 右側 | stock_fundamentals, stock_financials | fundamentals.py | project_fundamentals |
-| 選擇權支撐壓力區 | 首頁「今日判讀」卡 | option_sr | option_sr.py | project_option_sr |
-| 流動性前30 | 選股 | liquidity_top | liquidity_top.py | project_liquidity_top |
+| 選擇權支撐壓力區（價平+主次區間，週/月 tab） | 首頁 §6 選擇權矩陣下方 | option_sr（PK trade_date+kind） | option_sr.py | project_option_sr |
+| 選擇權 N 日大量區（5~480日，壓力/支撐前5） | 首頁 §6 選擇權矩陣下方 | option_nday（本機明細 txo_daily） | txo_history.py → option_nday.py | project_stock_sr |
+| 個股分價量表壓力支撐 | 選股「🧱 壓力支撐逼近」＋K線右側「🧱 支撐壓力」分頁/圖上色帶 | stock_sr（PK code+n，每日覆蓋） | stock_sr.py（歷史 backfill_stock_2y.py） | project_stock_sr |
+| 流動性排行（現貨、個股期貨各前50） | 選股 | liquidity_top | liquidity_top.py | project_liquidity_top |
 | 主動ETF成分/集中 | ETF分析 | etf_holdings, active_etf_flow | upload_active_etf_holdings.py, active_etf_flow.py | project_active_etf_consensus |
 | 台指VIX/富台指/匯率 KPI | 首頁 hero | market_indicators | market_indicators.py | project_taifex_vix |
 
@@ -130,7 +133,7 @@ git commit -am "..."; git push origin HEAD:prod
 - **大盤多空廣度**：每市場(tse/otc/all)算 漲跌平/漲跌停/站上5-10-20-60MA%/新高低/漲跌量比。情緒燈號用手冊§6滲透率門檻；SOP 用 60/20MA廣度。'all'=tse+otc 原始計數相加後算 pct。
 - **K線基本面**：PE/PB/殖利率(BWIBBU/TPEx)、月營收YoY(t187ap05)、季報累計毛利率/營益率/淨利率/EPS(t187ap06 六業別)。相關新聞=hot_topics 依代號過濾。
 - **選擇權支撐壓力**：TXO 最近月月選、一般盤各履約價最大未平倉：壓力=買權最大OI履約價、支撐=賣權最大OI履約價＋P/C比。
-- **流動性前30**：現貨=上市成交金額前30、期貨=各契約成交量前30（股票期貨代號用 SSFLists 還原成標的名）。
+- **流動性排行**（2026-09-28 改）：現貨=上市成交金額前50、個股期貨=成交量前50（只留個股期貨、排除指數類/ETF 期貨與價差單；標準型/小型分開，小型標「小型期貨」）。
 
 ---
 
@@ -186,10 +189,10 @@ git commit -am "..."; git push origin HEAD:prod
 ### 待辦 / 未到期
 - **約 2026-10-03**：主動ETF「今日」分頁從第三方 active.json 切成自有 `active_etf_flow` 表（累積滿 10 交易日後）。前端 `_etxConWin('today')` 改讀表。
 - 外資空單溫度計 / 大盤多空廣度的歷史目前約 1~2 年，手冊建議 2~3 年門檻校準 → 可再用 Yahoo 延長。
-- 上櫃現貨流動性前30（目前只做上市＋期貨，符合「證交所＋期交所」原話）。
+- 上櫃現貨流動性排行（目前只做上市＋期貨，符合「證交所＋期交所」原話）。
 
 ### 每日排程腳本順序（run_daily_job.bat 尾段新增的）
-`... margin_ratio → margin_maintenance_calc → fetch_otc_index → otc_broker_daily → compute_greed → ... → market_indicators → active_etf_flow → upload_active_etf_holdings → foreign_hedge --daily → breadth_daily → fundamentals → option_sr → liquidity_top → job_health`
+`... margin_ratio → margin_maintenance_calc → fetch_otc_index → otc_broker_daily → compute_greed → ... → market_indicators → active_etf_flow → upload_active_etf_holdings → foreign_hedge --daily → breadth_daily → fundamentals → option_sr → txo_history → option_nday → stock_sr → liquidity_top → job_health`
 
 ---
 
