@@ -1743,6 +1743,26 @@
       .gs-shdet{margin-top:14px;font-size:12px;color:var(--text-muted);}
       .gs-shdet summary{cursor:pointer;color:var(--brand-green);font-weight:700;}
       .gs-shdet div{margin-top:8px;line-height:1.9;} .gs-shdet b{color:var(--text);}
+      .gs-ststat em.st-crash{background:rgba(150,20,20,.18);color:#9b1c1c;} .gs-ststat em.st-bad{background:var(--surface2);color:var(--text-muted);border:1px dashed var(--border);}
+      .gs-ststat em.st-def{background:rgba(120,70,170,.14);color:#7b4bb0;} .gs-ststat em.st-bear{background:rgba(60,60,60,.16);color:var(--text);}
+      .gs-ststat em.st-weak{background:var(--surface2);color:var(--text-muted);} .gs-ststat em.st-pull{background:rgba(220,110,20,.14);color:#c0620a;}
+      .gs-ststat em.st-strong{background:rgba(30,140,70,.16);color:var(--green);} .gs-ststat em.st-ok{background:rgba(20,130,130,.14);color:#127a7a;} .gs-ststat em.st-rot{background:rgba(40,110,200,.12);color:#2a6fc0;}
+      .gs-strisk{font-size:12px;color:#a5300f;background:rgba(200,60,20,.08);border-left:3px solid #c0392b;border-radius:6px;padding:6px 10px;margin:-6px 0 12px;}
+      .gs-otc{margin-top:14px;border:1px solid var(--border);border-radius:10px;padding:12px 14px;}
+      .gs-otc-h{font-size:13px;font-weight:800;color:var(--text);margin-bottom:8px;} .gs-otc-h small{font-weight:500;font-size:11px;color:var(--text-muted);margin-left:6px;}
+      .gs-otc-top{display:flex;align-items:center;gap:16px;flex-wrap:wrap;} .gs-otc-top p{margin:4px 0 0;font-size:12.5px;color:var(--text-muted);}
+      .gs-otc-top em{font-style:normal;font-weight:800;font-size:13px;padding:3px 11px;border-radius:999px;background:var(--surface2);}
+      .gs-otc-top em.st-otc-otc{background:rgba(180,40,40,.12);color:var(--red);} .gs-otc-top em.st-otc-twse{background:rgba(30,120,60,.12);color:var(--green);}
+      .gs-otc-top em.st-otc-div{background:rgba(200,140,20,.16);color:#a5730f;} .gs-otc-top em.st-otc-sync{background:rgba(40,110,200,.12);color:#2a6fc0;}
+      .gs-otc-val{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;min-width:110px;} .gs-otc-val small{font-size:13px;color:var(--text-muted);}
+      .gs-otc-val.up{color:var(--red);} .gs-otc-val.dn{color:var(--green);}
+      .gs-otc-sub{font-size:12px;color:var(--text-muted);margin:8px 0;}
+      .gs-otc-hist{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;align-items:end;margin-top:6px;}
+      .gs-otc-hist span{display:flex;flex-direction:column;align-items:center;font-size:10.5px;color:var(--text-muted);font-variant-numeric:tabular-nums;}
+      .gs-otc-hist i{display:block;width:60%;min-height:2px;border-radius:3px 3px 0 0;margin-bottom:3px;}
+      .gs-otc-hist span.up i{background:var(--red);opacity:.6;} .gs-otc-hist span.dn i{background:var(--green);opacity:.6;}
+      .gs-otc-hist span{height:78px;justify-content:flex-end;} .gs-otc-hist b{font-size:11px;color:var(--text);}
+      @media (max-width:600px){ .gs-shgrid{grid-template-columns:1fr;} .gs-otc-hist{grid-template-columns:repeat(4,1fr);} .gs-otc-hist span:nth-child(-n+4){display:none;} }
       /* 各卡片底部學院導讀/筆記(照合夥人) */
       .gs-tip{background:var(--surface2);border-left:3px solid var(--accent);border-radius:8px;padding:11px 14px;margin-top:14px;font-size:12px;line-height:1.85;color:var(--text-muted);display:flex;gap:9px;align-items:flex-start;}
       .gs-tip .ic{flex:0 0 auto;font-size:14px;line-height:1.4;}
@@ -2847,6 +2867,12 @@
     }
     function card(k,v,s){ return '<div class="fh-card"><div class="k"><span>'+k+'</span></div><div class="v">'+v+'</div><div class="s">'+(s||'')+'</div></div>'; }
 
+    // 縮放限制：每根 K 棒寬度上限＝圖寬÷10（最多放大到 10 個交易日）、下限＝圖寬÷資料天數（最多縮到全部資料剛好填滿，不再縮小）
+    window._clampChartZoom = function(ch, minBars, n){
+      function ap(){ try{ var w=ch.timeScale().width(); if(!w||!n) return;
+        ch.timeScale().applyOptions({fixLeftEdge:true, fixRightEdge:true, rightOffset:0, minBarSpacing:w/n, maxBarSpacing:w/minBars}); }catch(e){} }
+      ap(); window.addEventListener('resize', function(){ setTimeout(ap, 60); });
+    };
     function _cssv(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
     function renderChart(){
       var host=el('fhChart'); if(typeof LightweightCharts==='undefined'){host.innerHTML='<div class="fc-empty">圖表載入失敗</div>';return;}
@@ -2869,8 +2895,9 @@
       rs.createPriceLine({price:pct(ser,95),color:'#e03e2d',lineWidth:1,lineStyle:2,axisLabelVisible:true,title:'P95 顯著偏高線'});
       var kmap=Object.fromEntries(DATA.map(function(r){return [r.trade_date,r];}));
       chart.subscribeCrosshairMove(function(pm){ var d=pm.time; var r=kmap[d]; if(!r){el('fhChartTip').textContent='移動滑鼠看每日數值';return;}
-        el('fhChartTip').innerHTML='<b>'+d+'</b>　避險比率 <b style="color:#e03e2d">'+(ratioOf(r)!=null?ratioOf(r).toFixed(3)+'%':'–')+'</b>　加權 '+(r.taiex_close!=null?(+r.taiex_close).toFixed(0):'–')+'　淨空 '+Math.round(r.eq_net_lots).toLocaleString()+' 口';});
-      var n=DATA.length; try{chart.timeScale().setVisibleLogicalRange({from:Math.max(0,n-250),to:n+2});}catch(_){}
+        el('fhChartTip').innerHTML='<b>'+d+'</b>　避險比率 <b style="color:#e03e2d">'+(ratioOf(r)!=null?ratioOf(r).toFixed(3)+'%':'–')+'</b>　加權 <b style="color:#3a86e0">'+(r.taiex_close!=null?(+r.taiex_close).toFixed(0):'–')+'</b>　淨空 '+Math.round(r.eq_net_lots).toLocaleString()+' 口';});
+      window._clampChartZoom(chart, 10, DATA.length);
+      var n=DATA.length; try{chart.timeScale().setVisibleLogicalRange({from:Math.max(0,n-250),to:n-1});}catch(_){}
     }
 
     function renderQuad(cur,prev){
@@ -2985,7 +3012,7 @@
       var SB=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'', AK=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';
       var H={apikey:AK,Authorization:'Bearer '+AK};
       el('fhModeSeg').querySelectorAll('button').forEach(function(b){ b.onclick=function(){ el('fhModeSeg').querySelectorAll('button').forEach(function(x){x.classList.remove('on');}); b.classList.add('on'); mode=b.dataset.m; render(); }; });
-      fetch(SB+'/rest/v1/foreign_hedge_daily?select=*&order=trade_date.asc&limit=2000',{headers:H}).then(function(r){return r.json();}).then(function(a){
+      fetch(SB+'/rest/v1/foreign_hedge_daily?select=*&order=trade_date.desc&limit=1000',{headers:H}).then(function(r){return r.json();}).then(function(a){ a=Array.isArray(a)?a.reverse():a;   /* 取最新 1000 筆再轉回舊→新（單次上限 1000）*/
         DATA=Array.isArray(a)?a:[]; loaded=true;
         if(window._isOwner){ render(); renderEvents(SB,H); }
       }).catch(function(){ if(el('fhNarrative'))el('fhNarrative').textContent='資料讀取失敗'; });
@@ -3188,8 +3215,9 @@
       si.setData(arr.map(function(r){return TX[r.trade_date]!=null?{time:r.trade_date,value:TX[r.trade_date]}:{time:r.trade_date};}));
       s60.createPriceLine({price:50,color:'#0a9a56',lineWidth:1,lineStyle:2,axisLabelVisible:true,title:'50% 牛熊線'});
       var bmap=Object.fromEntries(arr.map(function(r){return [r.trade_date,r];}));
-      chart.subscribeCrosshairMove(function(pm){var d=pm.time,r=bmap[d]; if(!r){el('bdChartTip').textContent='移動滑鼠看每日數值';return;} el('bdChartTip').innerHTML='<b>'+d+'</b>　站上60MA <b style="color:#0a9a56">'+(r.ma60_pct!=null?r.ma60_pct+'%':'–')+'</b>　20MA '+(r.ma20_pct!=null?r.ma20_pct+'%':'–')+'　加權 '+(TX[d]!=null?TX[d].toFixed(0):'–')+'　淨上漲 '+((r.up-r.down)>=0?'+':'')+(r.up-r.down);});
-      var n=arr.length; try{chart.timeScale().setVisibleLogicalRange({from:Math.max(0,n-160),to:n+2});}catch(_){}
+      chart.subscribeCrosshairMove(function(pm){var d=pm.time,r=bmap[d]; if(!r){el('bdChartTip').textContent='移動滑鼠看每日數值';return;} el('bdChartTip').innerHTML='<b>'+d+'</b>　站上60MA <b style="color:#0a9a56">'+(r.ma60_pct!=null?r.ma60_pct+'%':'–')+'</b>　20MA <b style="color:#d2a12b">'+(r.ma20_pct!=null?r.ma20_pct+'%':'–')+'</b>　加權 <b style="color:#3a86e0">'+(TX[d]!=null?TX[d].toFixed(0):'–')+'</b>　淨上漲 '+((r.up-r.down)>=0?'+':'')+(r.up-r.down);});
+      window._clampChartZoom(chart, 10, arr.length);   // 最多放大到 10 日、最多縮到剛好填滿
+      var n=arr.length; try{chart.timeScale().setVisibleLogicalRange({from:Math.max(0,n-160),to:n-1});}catch(_){}
     }
     function renderQuad(){
       var t=rows('tse'), o=rows('otc'); if(!t.length||!o.length){el('bdQuad').innerHTML='<div class="fc-empty">上市/上櫃資料不足</div>';return;}
@@ -3211,8 +3239,8 @@
       var H={apikey:AK,Authorization:'Bearer '+AK};
       el('bdModeSeg').querySelectorAll('button').forEach(function(b){b.onclick=function(){el('bdModeSeg').querySelectorAll('button').forEach(function(x){x.classList.remove('on');});b.classList.add('on');mode=b.dataset.m;render();};});
       Promise.all([
-        fetch(SB+'/rest/v1/breadth_daily?select=*&order=trade_date.asc&limit=5000',{headers:H}).then(function(r){return r.json();}),
-        fetch(SB+'/rest/v1/taiex_daily?select=trade_date,close&order=trade_date.asc&limit=3000',{headers:H}).then(function(r){return r.json();})
+        fetch(SB+'/rest/v1/breadth_daily?select=*&order=trade_date.desc&limit=1000',{headers:H}).then(function(r){return r.json();}).then(function(a){return Array.isArray(a)?a.reverse():a;}),   /* 取最新 1000 筆再轉回舊→新 */
+        fetch(SB+'/rest/v1/taiex_daily?select=trade_date,close&order=trade_date.desc&limit=1000',{headers:H})   /* 取最新 1000 日（PostgREST 單次上限 1000，舊寫法由舊到新會截掉近期）*/.then(function(r){return r.json();})
       ]).then(function(res){
         (res[0]||[]).forEach(function(r){(BY[r.market]=BY[r.market]||[]).push(r);});
         (res[1]||[]).forEach(function(r){TX[r.trade_date]=+r.close;});
@@ -4866,33 +4894,90 @@
       });
     }
 
-    /* §3A 盤面結構判讀（成交比重 + 研究門檻判讀,照合夥人 IndustryStructureCard）*/
+    /* §3A 盤面結構判讀（2026-09-28 改依《台股盤面結構判讀規格書_多空雙向定案版》＋《櫃買_集中強弱勢判斷標準手冊》）
+       一、上市成交比重 12 條規則（0~11，嚴格由上往下、符合即停；指數 ±0.2% 抗噪濾網）
+       二、(櫃買 − 集中) 強弱勢 ＝ (櫃買漲跌幅 − 加權漲跌幅) × 1000（千分點 ‰），四大型態＋±15 臨界＋連續擴大/收斂 */
+    function evalStruct(e,f,t,m,idx){
+      if([e,f,t,m,idx].some(function(x){return x==null||isNaN(x);})) return ['資料異常','輸入參數無法解析為合法數值，請檢查資料來源','bad'];
+      if(!(e>=0&&e<=100&&f>=0&&f<=100&&t>=0&&t<=100&&m>=0&&m<=100)) return ['資料異常','類股成交佔比超出 0%~100% 範圍','bad'];
+      if(t>0&&m>t) return ['資料異常','單一傳產佔比不可大於傳產總佔比','bad'];
+      if(t>0){ var tot=e+f+t; if(tot<95||tot>105) return ['資料異常','三類加總異常（'+tot.toFixed(1)+'%），請確認資料源無重複計算','bad']; }
+      else if(e+f>100) return ['資料異常','電子加金融合計已達 '+(e+f).toFixed(1)+'%，超出合理範圍','bad'];
+      if(e>=85&&idx<=-0.2) return ['電子爆量殺盤','電子權值遭集中拋售下殺，多殺多賣壓沈重，切忌盲目摸底抄底','crash'];
+      if(e>=85) return ['電子過熱失衡','成交過度集中，多頭風險增溫，留意高檔假突破或爆量洗盤震盪','hot'];
+      if(idx>=0.2&&e<55&&(f>=10||m>=15)) return ['非電主導 / 結構背離','指數走強但電子失速。單日突發需提防權值掩護；若具族群連續性則為非電波段主流','warn'];
+      if(idx<=0&&e<55&&(f>=10||m>=15)) return ['非電防禦避險','電子權值失守退潮，資金轉入金融或特定傳產避險撐盤，盤勢轉為防守格局','def'];
+      if(idx<=-0.2&&e<55) return ['主流失速下挫','電子動能枯竭且無族群能有效撐盤，空方主導實質修正格局','bear'];
+      if(e<55) return ['量能退潮弱勢','電子動能低於 55% 防線，缺乏主攻部隊，盤面偏弱整理','weak'];
+      if(e>=75&&idx<=-0.2) return ['權值急跌承壓','電子維持絕對主力但遭逢大盤修正，短線回檔洗盤，留意技術面支撐防守','pull'];
+      if(e>=75) return ['電子強勢主攻','電子維持絕對主流地位，多頭結構強勁，追價宜留意短線均線乖離','strong'];
+      if(e>=65) return ['健康主流攻堅','電子維持台股常規主力配置，量能適中，盤面結構扎實平穩','ok'];
+      if(e>=55&&idx>-0.2) return ['短暫良性輪動','非電子補漲接棒，容許大盤小幅震盪，主流尚未失速，結構呈良性輪動','rot'];
+      return ['權值回檔觀察區','電子動能稍有降溫且大盤出現實質拉回壓力，缺乏明確族群導向，建議中性觀望','n'];
+    }
+    function evalOtc(d,o,t){   // d＝(櫃買−集中)‰；o、t＝櫃買、加權漲跌幅%
+      var pat;
+      if(Math.abs(d)<=2){ pat=['型態三：雙市同步同向', (o>=1&&t>=1)?'內外資合力攻堅，系統性噴出':((o<=-1&&t<=-1)?'系統性崩跌，需絕對停損':'量縮整理，適合觀望或區間操作'),'sync']; }
+      else if(o*t<0){ pat=['型態四：逆向背離', t>0?'加權漲、櫃買跌：外資硬撐指數、內資棄守出逃，常引發尾盤急殺，多單警戒':'加權跌、櫃買漲：權值受拖累下殺但內資逆勢收紅，中小型低檔承接力道強','div']; }
+      else if(d>0){ pat=['型態一：櫃買強於集中','內資主導攻勢、賺錢效應高，適合順勢做多題材股與中小型成長股','otc']; }
+      else { pat=['型態二：集中強於櫃買','權值撐盤出小、賺指數賠差價，追價題材股易套牢，宜縮小部位或聚焦權值龍頭','twse']; }
+      var alert=d>15?'⚠ 強多噴出臨界（> +15）：內資極度亢奮，留意短線乖離過大、主力隔日沖出貨':(d<-15?'⚠ 恐慌出逃臨界（< −15）：資金瘋狂棄守中小型股，最危險的結構破壞訊號':'');
+      return {pat:pat, alert:alert};
+    }
     function loadStruct(){
       Promise.all([
         sb('sector_turnover?select=date,elec_pct,fin_pct,trad_pct,top_trad_name,top_trad_pct&order=date.desc&limit=1'),
-        sb('chip_brief_daily?select=taiex_pct,trade_date&order=trade_date.desc&limit=1')
+        sb('taiex_daily?select=trade_date,close&order=trade_date.desc&limit=15'),
+        sb('otc_index_daily?select=trade_date,close&order=trade_date.desc&limit=15')
       ]).then(function(res){
         var box=el('hpStruct'); if(!box)return;
-        var s=(res[0]||[])[0],cb=(res[1]||[])[0]||{};
+        var s=(res[0]||[])[0], tx=(res[1]||[]).slice().reverse(), ox=(res[2]||[]).slice().reverse();
         if(!s){box.innerHTML='<div class="fc-empty">今日無資料</div>';return;}
-        var elec=+s.elec_pct,fin=+s.fin_pct,trad=+s.trad_pct,mchg=cb.taiex_pct!=null?+cb.taiex_pct:0;
-        var topTradShare=s.top_trad_pct!=null?+s.top_trad_pct:0,topTradName=s.top_trad_name||'';
-        var st;
-        if(elec>85)st=['電子過熱失衡','成交過度集中，留意多殺多風險','hot'];
-        else if(mchg>0&&elec<55&&(fin>=10||topTradShare>=15))st=['產業結構背離','指數走高，但電子成交動能偏弱','warn'];
-        else if(elec>=65&&elec<=75)st=['健康主流攻堅','電子維持主流，盤面結構較完整','ok'];
-        else if(elec>=58&&elec<=62)st=['短暫良性輪動','非電子補漲，主流尚未明顯失速','rot'];
-        else st=['結構觀察區','尚未跨過明確研究門檻','n'];
-        var date=cb.trade_date||s.date;
-        function row(lab,val,note){return '<div class="gs-shrow"><span>'+lab+'<small>'+note+'</small></span><i><u style="width:'+Math.min(100,Math.max(0,val))+'%"></u></i><b>'+val.toFixed(1)+'%</b></div>';}
+        // 加權／櫃買每日漲跌幅（兩市共同交易日才計算，避免缺日造成跨日誤差）
+        var tm={}, om={}; tx.forEach(function(r){tm[r.trade_date]=+r.close;}); ox.forEach(function(r){om[r.trade_date]=+r.close;});
+        var days=tx.map(function(r){return r.trade_date;}).filter(function(d){return om[d]!=null;});
+        var ser=[]; for(var i=1;i<days.length;i++){ var a=days[i-1], b=days[i], tp=(tm[b]/tm[a]-1)*100, op=(om[b]/om[a]-1)*100; ser.push({d:b,t:tp,o:op,diff:Math.round((op-tp)*10*100)/100}); }
+        var tpct={}; for(var j=1;j<tx.length;j++){ tpct[tx[j].trade_date]=(+tx[j].close/+tx[j-1].close-1)*100; }
+        var e=+s.elec_pct, f=+s.fin_pct, tr=+s.trad_pct, mx=s.top_trad_pct!=null?+s.top_trad_pct:0, idx=tpct[s.date]!=null?tpct[s.date]:null;
+        var st=evalStruct(e,f,tr,mx,idx);
+        var trBar=Math.max(0,100-e-f);   // 殘差配平：進度條由其他傳產吸收四捨五入差
+        function row(lab,val,note,bar){return '<div class="gs-shrow"><span>'+lab+'<small>'+note+'</small></span><i><u style="width:'+Math.min(100,Math.max(0,bar))+'%"></u></i><b>'+val.toFixed(1)+'%</b></div>';}
+        var risk=(st[0]==='非電主導 / 結構背離')?'<div class="gs-strisk">⚠ 風控提示：指數上漲但電子失速，勿盲目追價；需觀察非電族群是否具連續性。</div>'
+                :(st[0]==='電子爆量殺盤'?'<div class="gs-strisk">⚠ 風控提示：電子權值集中拋售，切勿急於摸底抄底。</div>':'');
+        // (櫃買 − 集中) 強弱勢
+        var otcHtml='<div class="fc-empty">櫃買／加權資料不足</div>';
+        var last=ser[ser.length-1];
+        if(last){
+          var ev=evalOtc(last.diff,last.o,last.t), k=ser.length-1, up=0, dn=0;
+          while(k>0&&ser[k].diff>ser[k-1].diff){up++;k--;} k=ser.length-1; while(k>0&&ser[k].diff<ser[k-1].diff){dn++;k--;}
+          var trend=up>=3?('連續 '+up+' 日擴大 ▲（中小型股動能轉強）'):(dn>=3?('連續 '+dn+' 日收斂 ▼（留意頭部或資金退出中小型）'):(up?'較前日擴大':(dn?'較前日收斂':'與前日持平')));
+          var f2=function(v){return (v>0?'+':'')+v.toFixed(2);};
+          otcHtml='<div class="gs-otc-top"><div class="gs-otc-val '+(last.diff>=0?'up':'dn')+'">'+f2(last.diff)+' <small>‰</small></div>'
+            +'<div><em class="st-otc-'+ev.pat[2]+'">'+ev.pat[0]+'</em><p>'+ev.pat[1]+'</p></div></div>'
+            +'<div class="gs-otc-sub">櫃買 '+f2(last.o)+'%　加權 '+f2(last.t)+'%　·　'+trend+(last.d!==s.date?'　·　資料日 '+last.d:'')+'</div>'
+            +(ev.alert?'<div class="gs-strisk">'+ev.alert+'</div>':'')
+            +'<div class="gs-otc-hist">'+ser.slice(-8).map(function(x){return '<span class="'+(x.diff>=0?'up':'dn')+'" title="'+x.d+'　櫃買 '+f2(x.o)+'%／加權 '+f2(x.t)+'%"><i style="height:'+Math.min(100,Math.abs(x.diff)/15*100)+'%"></i><b>'+f2(x.diff)+'</b><small>'+x.d.slice(5)+'</small></span>';}).join('')+'</div>';
+        }
         box.innerHTML='<div class="gs-struct">'
-          +'<header><div><span class="t">盤面結構判讀</span><small>§3A · 上市成交比重</small></div><time>'+date+'</time></header>'
-          +'<div class="gs-ststat"><em class="st-'+st[2]+'">'+st[0]+'</em><p>'+st[1]+'</p></div>'
-          +'<div class="gs-shgrid">'+row('電子',elec,'60% 防線')+row('金融',fin,'10% 警戒')+row('其他傳產',trad,topTradName?(topTradName+' '+topTradShare.toFixed(1)+'%'):'產業合計')+'</div>'
+          +'<header><div><span class="t">盤面結構判讀</span><small>§3A · 上市成交比重 ＋ 櫃買／集中強弱勢</small></div><time>'+s.date+'</time></header>'
+          +'<div class="gs-ststat"><em class="st-'+st[2]+'">'+st[0]+'</em><p>'+st[1]+(idx!=null?'（加權 '+(idx>=0?'+':'')+idx.toFixed(2)+'%）':'')+'</p></div>'+risk
+          +'<div class="gs-shgrid">'+row('電子',e,'55% 防線',e)+row('金融',f,'10% 警戒',f)+row('其他傳產',tr,s.top_trad_name?(s.top_trad_name+' '+mx.toFixed(1)+'%'):'產業合計',trBar)+'</div>'
+          +'<div class="gs-otc"><div class="gs-otc-h">(櫃買 − 集中) 強弱勢　<small>千分點 ‰：+5.00 ≈ 櫃買比加權多漲 0.5%</small></div>'+otcHtml+'</div>'
           +'<details class="gs-shdet"><summary>查看研究判讀門檻</summary><div>'
-          +'<p><b>健康主流：</b>電子約 65–75%。</p><p><b>良性輪動：</b>電子約 58–62%。</p>'
-          +'<p><b>背離警戒：</b>上漲時電子低於 55%，且金融超過 10% 或單一傳產超過 15%。</p>'
-          +'<p><b>過熱失衡：</b>電子高於 85%。門檻來自研究速查指南，非交易所官方買賣訊號。</p></div></details></div>';
+          +'<p><b>一、上市成交比重（規格書 多空雙向定案版，嚴格由上往下、符合即停；指數以 ±0.2% 過濾微幅雜訊）</b></p>'
+          +'<p>0 資料異常：任一欄 &lt;0 或 &gt;100、單一傳產 &gt; 傳產總額、三類加總偏離 95%~105%。<br>'
+          +'1 電子 ≥85% 且 指數 ≤−0.2% → 電子爆量殺盤　2 電子 ≥85% → 電子過熱失衡<br>'
+          +'3 指數 ≥+0.2% 且 電子 &lt;55% 且（金融 ≥10% 或 單一傳產 ≥15%）→ 非電主導 / 結構背離<br>'
+          +'4 指數 ≤0% 且 電子 &lt;55% 且（金融 ≥10% 或 單一傳產 ≥15%）→ 非電防禦避險<br>'
+          +'5 指數 ≤−0.2% 且 電子 &lt;55% → 主流失速下挫　6 電子 &lt;55% → 量能退潮弱勢<br>'
+          +'7 電子 ≥75% 且 指數 ≤−0.2% → 權值急跌承壓　8 電子 ≥75% → 電子強勢主攻　9 電子 ≥65% → 健康主流攻堅<br>'
+          +'10 電子 ≥55% 且 指數 &gt;−0.2% → 短暫良性輪動　11 其餘（電子 55%~65% 且 指數 ≤−0.2%）→ 權值回檔觀察區</p>'
+          +'<p>進度條殘差配平：其他傳產的進度條＝100% − 電子 − 金融，確保三條合計 100%。資料：證交所每日收盤行情成交金額（電子/金融/其他傳產）、加權指數（證交所官方＋Yahoo）。</p>'
+          +'<p><b>二、(櫃買 − 集中) 強弱勢（強弱勢判斷標準手冊）</b>＝ROUND[(櫃買漲跌幅 − 加權漲跌幅) × 1000, 2]，單位千分點 ‰，兩市取共同交易日計算。判定順序：'
+          +'|差額| ≤2 → 型態三 雙市同步同向（兩市皆漲 ≥1% 為同步大漲、皆跌 ≤−1% 為同步大跌，其餘為同步橫盤）；'
+          +'兩市一漲一跌 → 型態四 逆向背離；差額 &gt;0 → 型態一 櫃買強於集中；差額 &lt;0 → 型態二 集中強於櫃買。'
+          +'&gt;+15 強多噴出臨界、&lt;−15 恐慌出逃臨界；歷史常態約 −10~+10。連續 3 日以上遞增／遞減標示為連續擴大／收斂（斜率勝於絕對值）。資料：櫃買指數（櫃買中心）、加權指數。</p>'
+          +'<p>門檻來自研究規格書與手冊，非交易所官方買賣訊號。</p></div></details></div>';
       });
     }
 
