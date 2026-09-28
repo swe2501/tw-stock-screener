@@ -7,7 +7,7 @@ macro_events.py — 宏觀事件（經濟日曆）＋宏觀新聞，供「外資
   宏觀新聞：hk.investing.com/news/economy 頁內 __NEXT_DATA__ 的 newsStore._news。
 範圍（2026-09-28 用戶定）：國家依序 美國、日本、韓國、中國、歐元區；重要度 高＋中
   （高＝直接顯示；中＝只給籌碼會員看，會員按「列上去」才公開 → pinned 欄位由前端寫，本腳本不覆蓋）。
-  日曆抓 過去 7 天～未來 14 天；新聞保留 14 天、事件保留 90 天。
+  日曆抓 過去 7 天～未來 90 天（倒數卡用；前端事件表只顯示前後 7 天）；另抓台灣(46)只供「台灣央行」倒數卡；新聞保留 14 天、事件保留 90 天。
 → Supabase macro_events(occurrence_id PK)、macro_news(id PK)。
 用法：python scripts/macro_events.py [--dry]
 注意：會開一個 Chrome 視窗（移到螢幕外），約 30 秒。
@@ -24,7 +24,8 @@ if sys.stdout and hasattr(sys.stdout, "reconfigure"):
 
 TW = timezone(timedelta(hours=8))
 # investing.com country_id → (代碼, 中文, 排序)
-COUNTRIES = {5: ("US", "美國", 1), 35: ("JP", "日本", 2), 11: ("KR", "韓國", 3), 37: ("CN", "中國", 4), 72: ("EU", "歐元區", 5)}
+COUNTRIES = {5: ("US", "美國", 1), 35: ("JP", "日本", 2), 11: ("KR", "韓國", 3), 37: ("CN", "中國", 4), 72: ("EU", "歐元區", 5),
+             46: ("TW", "台灣", 6)}   # 台灣只給溫度計「台灣央行」倒數卡用，前端事件表不顯示
 IMP = {"high": 3, "medium": 2}
 API = "https://endpoints.investing.com/pd-instruments/v1/calendars/economic/events/occurrences"
 BASE = "https://hk.investing.com"
@@ -34,7 +35,7 @@ def fetch():
     from playwright.sync_api import sync_playwright
     now = datetime.now(TW)
     s = (now - timedelta(days=7)).strftime("%Y-%m-%dT00:00:00.000+08:00")
-    e = (now + timedelta(days=14)).strftime("%Y-%m-%dT23:59:59.999+08:00")
+    e = (now + timedelta(days=90)).strftime("%Y-%m-%dT23:59:59.999+08:00")   # 90 天：FOMC、央行等倒數卡需要
     q = (f"{API}?domain_id=55&limit=500&start_date={urllib.parse.quote(s)}&end_date={urllib.parse.quote(e)}"
          f"&country_ids={','.join(str(c) for c in COUNTRIES)}")
     def next_data(pg, want):
@@ -91,7 +92,12 @@ def build(cal, news):
     rows = []
     for o in cal.get("occurrences", []):
         e = ev.get(o["event_id"])
-        if not e or e.get("country_id") not in COUNTRIES or e.get("importance") not in IMP:
+        if not e or e.get("country_id") not in COUNTRIES:
+            continue
+        if e.get("country_id") == 46:          # 台灣：只收央行利率決議（不論重要度，供倒數卡）
+            if "利率" not in str(e.get("event_meta_title") or e.get("long_name") or ""):
+                continue
+        elif e.get("importance") not in IMP:
             continue
         cc, cn, _ = COUNTRIES[e["country_id"]]
         rows.append({
