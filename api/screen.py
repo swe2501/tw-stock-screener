@@ -152,7 +152,23 @@ def _get_industry_map() -> dict:
     if not _industry_cache:
         _industry_cache = dict(_STOCK_INDUSTRY)
         _industry_cache_ts = time.time()
-    return _industry_cache
+    # 上櫃產業別（TPEx 公司基本資料，2026-09-28；搜尋下拉讓上櫃股也帶產業）
+    if not _industry_cache.get("__otc_loaded"):
+        try:
+            import ssl as _ssl
+            ctx = _ssl.create_default_context(); ctx.check_hostname = False; ctx.verify_mode = _ssl.CERT_NONE
+            req = urllib.request.Request("https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap03_O",
+                                         headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"})
+            with urllib.request.urlopen(req, timeout=6, context=ctx) as r:
+                for row in json.loads(r.read().decode("utf-8-sig")):
+                    code = str(row.get("SecuritiesCompanyCode", "")).strip()
+                    ind = str(row.get("SecuritiesIndustryCode", "")).strip()
+                    if code and code not in _industry_cache:
+                        _industry_cache[code] = _INDUSTRY_CODE_MAP.get(ind, ind)
+            _industry_cache["__otc_loaded"] = "1"
+        except Exception:
+            pass
+    return {k: v for k, v in _industry_cache.items() if k != "__otc_loaded"}
 
 
 def _get_json(url, headers=TWSE_HEADERS, timeout=20):
