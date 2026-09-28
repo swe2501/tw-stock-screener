@@ -5756,7 +5756,6 @@
             <button class="tool-btn" id="adjDailyBtn" onclick="loadAdjDailyChart()">還原日K</button>
             <button class="tool-btn" id="hourlyBtn" onclick="loadHourlyChart()">小時K</button>
             <div class="toolbar-sep"></div>
-            <button class="tool-btn" id="marketBtn" onclick="openMarketChart()">大盤K</button>
             <button class="tool-btn" id="backBtn" style="display:none" onclick="goBackToStock()">← 返回</button>
           </div>
           <div class="chart-tool-btns">
@@ -5772,6 +5771,11 @@
           </div>
         </div>
         <div id="brokerFilterPanel" style="display:none;padding:6px 8px;border-top:1px solid var(--border);font-size:12px;color:var(--text)"></div>
+        <div id="mkPanel" style="padding:6px 8px;border-top:1px solid var(--border);font-size:12px;color:var(--text)">
+          <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;user-select:none"><input type="checkbox" id="mkChk" onchange="_mkToggle(this.checked)"><b style="color:#5a78aa">大盤K</b></label>
+          <span style="color:var(--text-muted);font-size:11px;margin-left:6px">疊加加權指數比較強弱（大盤價格在左軸、空心藍灰 K 棒）</span>
+          <span id="mkCmp" style="margin-left:10px;font-size:12px"></span>
+        </div>
         <div id="vpPanel" style="padding:6px 8px;border-top:1px solid var(--border);font-size:12px;color:var(--text)">
           <a onclick="_vpTogglePanel()" style="cursor:pointer;text-decoration:none;user-select:none"><span id="vpArrow" style="color:var(--text-muted);font-size:11px;margin-right:4px">▸</span><b style="color:#b58a2d">價量分析</b></a>
           <span id="vpOpts" style="display:none">
@@ -6521,7 +6525,7 @@
     }
 
     function _setToolbarForCode(sym) {
-      document.getElementById('marketBtn').style.display = (sym === '^TWII') ? 'none' : 'inline-block';
+      const mk = document.getElementById('mkPanel'); if (mk) mk.style.display = (sym === '^TWII') ? 'none' : '';   // 大盤本身不疊大盤
     }
 
     function openChart(code, name, industry = '', price = 0, fromScreen = false, markDate = null, markLabel = '📍', markDate2 = null, markLabel2 = null) {
@@ -9464,7 +9468,8 @@
       _refreshChartMarkers();
       try { window._srDraw && window._srDraw(); } catch (_) {}   // 分價量表壓力/支撐帶
       window._vpCandles = candles;                                  // 價量分析：可見範圍重算
-      try { chartInstance.timeScale().subscribeVisibleLogicalRangeChange(() => window._vpSchedule && window._vpSchedule()); } catch (_) {}
+      try { chartInstance.timeScale().subscribeVisibleLogicalRangeChange(() => { window._vpSchedule && window._vpSchedule(); window._mkCmpSchedule && window._mkCmpSchedule(); }); } catch (_) {}
+      try { window._mkApply && window._mkApply(true); } catch (_) {}
       try { window._vpSchedule && window._vpSchedule(); } catch (_) {}
 
       // MA 5/10/20/60/120/240 均線
@@ -10685,6 +10690,63 @@
       </div>
     </div>
   </div>
+  <script>
+  /* 大盤K 疊加（2026-09-28）：個股 K 線上疊加加權指數(^TWII) K 棒於左軸，並依可見區間比較漲跌幅強弱。 */
+  (function(){
+    var MK={on:false, series:null, cache:{}, data:null, t:0};
+    function el(id){ return document.getElementById(id); }
+    function fetchIdx(hourly){
+      var k=hourly?'h':'d'; if(MK.cache[k]) return MK.cache[k];
+      var url='/api/chart?code=%5ETWII&'+(hourly?'range=1y&interval=60m':'range=3y&interval=1d');
+      MK.cache[k]=fetch(url).then(function(r){return r.json();}).then(function(d){
+        var a=(d&&d.data)||[]; if(hourly) a.forEach(function(c){ if(typeof c.time==='number') c.time+=8*3600; });
+        return a.filter(function(c){ return c&&c.open>0&&c.close>0; });
+      }).catch(function(){ delete MK.cache[k]; return []; });
+      return MK.cache[k];
+    }
+    function off(){
+      if(MK.series&&typeof chartInstance!=='undefined'&&chartInstance){ try{ chartInstance.removeSeries(MK.series); }catch(e){} }
+      MK.series=null; MK.data=null;
+      try{ chartInstance&&chartInstance.applyOptions({leftPriceScale:{visible:false}}); }catch(e){}
+      if(el('mkCmp')) el('mkCmp').innerHTML='';
+    }
+    window._mkToggle=function(on){ MK.on=on; window._mkApply(false); };
+    window._mkApply=function(rebuilt){
+      if(rebuilt) MK.series=null;                     // 主圖重建後舊 series 已隨舊圖銷毀
+      if(!MK.on||typeof currentCode==='undefined'||currentCode==='^TWII'){ off(); return; }
+      if(typeof chartInstance==='undefined'||!chartInstance||!window._vpCandles||!window._vpCandles.length) return;
+      var cs=window._vpCandles, hourly=!!window._chartIsHourly, t0=cs[0].time, t1=cs[cs.length-1].time;
+      if(el('mkCmp')) el('mkCmp').textContent='載入大盤中…';
+      fetchIdx(hourly).then(function(a){
+        if(!MK.on||window._vpCandles!==cs) return;    // 等待中切換了股票/週期
+        var d=a.filter(function(c){ return c.time>=t0&&c.time<=t1; });
+        if(!d.length){ if(el('mkCmp')) el('mkCmp').textContent='大盤資料取得失敗'; return; }
+        if(MK.series){ try{ chartInstance.removeSeries(MK.series); }catch(e){} }
+        chartInstance.applyOptions({leftPriceScale:{visible:true, borderColor:'rgba(128,128,128,.3)', scaleMargins:{top:0.04,bottom:0.02}}});
+        MK.series=chartInstance.addCandlestickSeries({priceScaleId:'left', title:'加權',
+          upColor:'rgba(0,0,0,0)', downColor:'rgba(90,120,170,.35)', borderUpColor:'#5a78aa', borderDownColor:'#5a78aa',
+          wickUpColor:'#5a78aa', wickDownColor:'#5a78aa', priceLineVisible:false, lastValueVisible:true,
+          priceFormat:{type:'price', precision:0, minMove:1}});
+        MK.series.setData(d.map(function(c){ return {time:c.time, open:c.open, high:c.high, low:c.low, close:c.close}; }));
+        MK.data=d; window._mkCmpSchedule();
+      });
+    };
+    window._mkCmpSchedule=function(){ clearTimeout(MK.t); MK.t=setTimeout(cmp, 60); };
+    function cmp(){
+      var box=el('mkCmp'); if(!box||!MK.on||!MK.data||!window._vpCandles||typeof chartInstance==='undefined'||!chartInstance) return;
+      var cs=window._vpCandles, lr=chartInstance.timeScale().getVisibleLogicalRange(); if(!lr) return;
+      var i0=Math.max(0,Math.ceil(lr.from)), i1=Math.min(cs.length-1,Math.floor(lr.to)); if(i1<=i0) return;
+      var a=cs[i0], b=cs[i1], idx={};
+      MK.data.forEach(function(c){ idx[c.time]=c; });
+      var ia=idx[a.time], ib=idx[b.time];
+      if(!ia||!ib){ box.textContent=''; return; }
+      var sp=(b.close/a.close-1)*100, ip=(ib.close/ia.close-1)*100, df=sp-ip;
+      var f=function(v){ return (v>=0?'+':'')+v.toFixed(2)+'%'; }, lab=function(t){ return typeof t==='number'?new Date(t*1000).toISOString().slice(5,16).replace('T',' '):t; };
+      box.innerHTML='<span style="color:var(--text-muted)">'+lab(a.time)+' ～ '+lab(b.time)+'：</span>個股 <b>'+f(sp)+'</b>｜大盤 <b>'+f(ip)+'</b> → '
+        +'<b style="color:'+(df>=0?'var(--red)':'var(--green)')+'">'+(df>=0?'強於大盤 ':'弱於大盤 ')+Math.abs(df).toFixed(2)+' 個百分點</b>';
+    }
+  })();
+  </script>
   <script>
   /* 價量分析（Volume Profile，2026-09-28）：K 線上疊加橫向柱狀的各價位成交量，統計畫面可見的 K 棒期間。
      日價量＝日K 依最低～最高均勻分攤；小時價量＝60 分鐘K 分攤＋收盤集合競價差額補在收盤價。 */
