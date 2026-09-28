@@ -3873,15 +3873,15 @@
         el('bxHead').innerHTML='<div class="bx-title"><b>多空頭排列</b><span>多頭排列股票家數佔'+MKN[MKT]+'比例</span><time>'+d+'</time></div>'
           +'<div class="bx-cards"><div class="bx-card"><div class="k">短均線 多頭排列</div><div class="v" style="color:'+UP+'">'+f1(bs)+'%</div><div class="s">MA5 &gt; MA10 &gt; MA20　'+cur.bull_s+' 檔</div></div>'
           +'<div class="bx-card"><div class="k">短均線 空頭排列</div><div class="v" style="color:'+DN+'">'+f1(es)+'%</div><div class="s">MA5 &lt; MA10 &lt; MA20　'+cur.bear_s+' 檔</div></div>'
-          +'<div class="bx-card"><div class="k">長均線 多頭排列</div><div class="v" style="color:'+UP+'">'+f1(bl)+'%</div><div class="s">MA20 &gt; MA60 &gt; MA240　'+cur.bull_l+' 檔</div></div>'
-          +'<div class="bx-card"><div class="k">長均線 空頭排列</div><div class="v" style="color:'+DN+'">'+f1(el2)+'%</div><div class="s">MA20 &lt; MA60 &lt; MA240　'+cur.bear_l+' 檔</div></div></div>';
+          +'<div class="bx-card"><div class="k">長均線 多頭排列</div><div class="v" style="color:'+UP+'">'+f1(bl)+'%</div><div class="s">MA10 &gt; MA20 &gt; MA60　'+cur.bull_l+' 檔</div></div>'
+          +'<div class="bx-card"><div class="k">長均線 空頭排列</div><div class="v" style="color:'+DN+'">'+f1(el2)+'%</div><div class="s">MA10 &lt; MA20 &lt; MA60　'+cur.bear_l+' 檔</div></div></div>';
         var ch=mkChart(window.innerWidth<600?300:380); if(!ch) return;
         line(ch,rows,function(r){return pct(r.bull_s,r.base_s);},UP,2); line(ch,rows,function(r){return pct(r.bear_s,r.base_s);},DN,2);
         line(ch,rows,function(r){return r.base_l>=50?pct(r.bull_l,r.base_l):null;},'#f08c7f',2,LightweightCharts.LineStyle.Dotted); line(ch,rows,function(r){return r.base_l>=50?pct(r.bear_l,r.base_l):null;},'#62c294',2,LightweightCharts.LineStyle.Dotted);
         addIdx(ch,rows);
         finish(ch,rows,function(r){ return '短多 <b style="color:'+UP+'">'+f1(pct(r.bull_s,r.base_s))+'%</b> 短空 <b style="color:'+DN+'">'+f1(pct(r.bear_s,r.base_s))+'%</b>　長多 <b style="color:'+UP+'">'+f1(pct(r.bull_l,r.base_l))+'%</b> 長空 <b style="color:'+DN+'">'+f1(pct(r.bear_l,r.base_l))+'%</b>'; });
         legend([[UP,'短均線多頭排列 %'],[DN,'短均線空頭排列 %'],['#f08c7f','長均線多頭排列 %','2px dotted'],['#62c294','長均線空頭排列 %','2px dotted']]);
-        el('bxNote').innerHTML=note+'<br>多頭排列＝短期均線在中期之上、中期在長期之上（持有越久成本越低）。短均線：MA5 &gt; MA10 &gt; MA20（空頭反之）；長均線：MA20 &gt; MA60 &gt; MA240（空頭反之）。比例分母＝有足夠歷史可計算該組均線的家數（長均線需 240 日，資料自 2025-07 起才完整）。'+(EX&&MKT!=='otc'?'<br>大盤扣除台積電：r＝(r加權 − w×r台積電) ÷ (1 − w)，w＝前一日台積電市值 ÷ 上市普通股總市值（股數用證交所現行已發行股數估算）。':'');
+        el('bxNote').innerHTML=note+'<br>多頭排列＝短期均線在中期之上、中期在長期之上（持有越久成本越低）。短均線：MA5 &gt; MA10 &gt; MA20（空頭反之）；長均線：MA10 &gt; MA20 &gt; MA60（空頭反之；2026-09-28 依合夥人改為與玩股網一致）。比例分母＝有足夠歷史可計算該組均線的家數。'+(EX&&MKT!=='otc'?'<br>大盤扣除台積電：r＝(r加權 − w×r台積電) ÷ (1 − w)，w＝前一日台積電市值 ÷ 上市普通股總市值（股數用證交所現行已發行股數估算）。':'');
       } else if(TAB==='width'){
         var w20=pct(cur.ma20_cnt,cur.ma20_base), w60=pct(cur.ma60_cnt,cur.ma60_base), w240=pct(cur.ma240_cnt,cur.ma240_base);
         el('bxHead').innerHTML='<div class="bx-title"><b>市場寬度</b><span>成分股大於均線比例</span><time>'+d+'</time></div>'
