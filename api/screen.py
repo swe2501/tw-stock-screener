@@ -527,12 +527,14 @@ def _fetch_sectors():
         chg = (a / b - 1) * 100
         sec = ind.get(c) or "未分類"
         d = agg.setdefault(sec, {"sector": sec, "count": 0, "sum": 0.0,
-                                 "up": 0, "down": 0, "top": None, "bot": None})
+                                 "up": 0, "down": 0, "top": None, "bot": None, "stocks": []})
         d["count"] += 1
         d["sum"] += chg
         if chg > 0: d["up"] += 1
         elif chg < 0: d["down"] += 1
         name = _STOCK_NAMES.get(c, c)
+        # 成分股明細（產業地圖點磚塊展開用）：[代號, 名稱, 收盤, 漲跌幅%, 成交值(億)] 2026-09-28
+        d["stocks"].append([c, name, a, round(chg, 2), round(a * (arr[0].get("volume") or 0) / 1e8, 2)])
         if d["top"] is None or chg > d["top"]["chg"]:
             d["top"] = {"code": c, "name": name, "chg": round(chg, 2)}
         if d["bot"] is None or chg < d["bot"]["chg"]:
@@ -541,6 +543,7 @@ def _fetch_sectors():
     for d in agg.values():
         d["avg_chg"] = round(d["sum"] / d["count"], 2) if d["count"] else 0
         del d["sum"]
+        d["stocks"].sort(key=lambda x: x[3], reverse=True)
         out.append(d)
     out.sort(key=lambda x: x["count"], reverse=True)
     return {"date": latest, "sectors": out, "total": sum(x["count"] for x in out)}

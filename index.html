@@ -2759,7 +2759,7 @@
     .pf-seg button{background:var(--pf-inner2);border:0;padding:6px 12px;font-size:12px;color:var(--pf-mut);cursor:pointer;font-weight:600;font-family:inherit;}
     .pf-seg button.on{background:rgba(14,165,233,.15);color:var(--pf-sky);}
     /* 三層架構概覽 */
-    .pf-layers{margin:0 16px 24px;padding:18px;display:grid;grid-template-columns:repeat(3,1fr);gap:16px;background:linear-gradient(90deg,var(--pf-card),var(--pf-card));}
+    .pf-layers{margin:0 16px 24px;padding:18px;display:grid;grid-template-columns:repeat(4,1fr);gap:16px;background:linear-gradient(90deg,var(--pf-card),var(--pf-card));}
     .pf-layer{display:flex;gap:14px;align-items:flex-start;}
     .pf-layer+.pf-layer{border-left:1px solid var(--pf-bd2);padding-left:14px;}
     .pf-lno{padding:10px;border-radius:12px;font-size:14px;font-weight:700;font-family:"JetBrains Mono",monospace;flex-shrink:0;}
@@ -2854,7 +2854,7 @@
     .pf-lock{margin:0 16px 24px;padding:36px 20px;text-align:center;border:1px dashed var(--pf-accent);}
     .pf-lock h3{font-size:18px;font-weight:800;margin:8px 0 4px;color:var(--pf-t1);} .pf-lock p{color:var(--pf-mut);font-size:13.5px;max-width:520px;margin:4px auto;}
     .pf-lock .cta{display:inline-block;margin-top:14px;background:var(--pf-accent);color:#0b1120;font-weight:800;border-radius:8px;padding:9px 20px;cursor:pointer;border:0;font-size:14px;}
-    @media(max-width:1100px){.pf-cards{grid-template-columns:repeat(3,1fr);} .pf-two{grid-template-columns:1fr;} .pf-evs{grid-template-columns:repeat(2,1fr);}}
+    @media(max-width:1100px){.pf-layers{grid-template-columns:repeat(2,1fr);} .pf-layers .pf-layer:nth-child(3){border-left:0;padding-left:0;} .pf-cards{grid-template-columns:repeat(3,1fr);} .pf-two{grid-template-columns:1fr;} .pf-evs{grid-template-columns:repeat(2,1fr);}}
     @media(max-width:760px){.pf-cards{grid-template-columns:repeat(2,1fr);} .pf-layers{grid-template-columns:1fr;} .pf-layer+.pf-layer{border-left:0;padding-left:0;border-top:1px solid var(--pf-bd2);padding-top:12px;}
       .pf-quads,.pf-sim{grid-template-columns:1fr;} .pf-evs{grid-template-columns:1fr;} .pf-sec{margin:0 8px 16px;padding:14px;} .pf-cards,.pf-two,.pf-layers,.pf-sech{margin-left:8px;margin-right:8px;} .pf-kc .v{font-size:20px;}}
   </style>
@@ -2865,7 +2865,7 @@
         <div class="pf-logo"><div>🛡️</div></div>
         <div>
           <h2 class="pf-title">外資期權空單與持股配置分析平台 <span class="pf-pill">INSTITUTIONAL</span></h2>
-          <div class="pf-tagline"><span>3-Layer Institutional Framework</span><span style="opacity:.5">•</span><span>客觀真實數據驅動・破除單一口數恐慌迷思</span></div>
+          <div class="pf-tagline"><span>4-Layer Institutional Framework</span><span style="opacity:.5">•</span><span>客觀真實數據驅動・破除單一口數恐慌迷思</span></div>
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
@@ -2889,12 +2889,15 @@
         <div class="pf-layer"><div class="pf-lno" style="background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.2);color:#38bdf8">01</div>
           <div><div class="pf-lk c-sky">第一層：規模相對比率</div><div class="pf-lt">空單名目規模 vs 現貨持股市值</div>
             <div class="pf-ld">透過大+小+微台換算總契約市值，衡量外資每百元持股僅配多少避險空單（含近 2 年歷史 PR 水位）。</div></div></div>
-        <div class="pf-layer"><div class="pf-lno" style="background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.2);color:#6366f1">02</div>
-          <div><div class="pf-lk" style="color:#818cf8">第二層：今日動態矩陣</div><div class="pf-lt">現貨買賣超 ⊗ 期貨淨單變動</div>
-            <div class="pf-ld">即時判斷「買現貨+加空單（鎖利避險/拉積盤）」、「賣現貨+加空單（實質做空）」等四象限真實交易企圖。</div></div></div>
-        <div class="pf-layer"><div class="pf-lno" style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.2);color:#10b981">03</div>
-          <div><div class="pf-lk c-bull">第三層：宏觀佐證與事件窗</div><div class="pf-lt">台幣匯率趨勢 ⊗ 衍生品結算窗</div>
-            <div class="pf-ld">觀察新台幣升貶與外資真金白銀淨匯出入，結合台指期結算、FOMC、權值法說倒數，辨識真倒貨或假摔誘空。</div></div></div>
+        <div class="pf-layer"><div class="pf-lno" style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.2);color:#10b981">02</div>
+          <div><div class="pf-lk c-bull">第二層：匯率 vs 真金白銀</div><div class="pf-lt">台幣匯率趨勢 ⊗ 外資現貨買賣超</div>
+            <div class="pf-ld">觀察新台幣升貶與外資真金白銀淨匯出入，辨識是真撤資還是套利型避險。</div></div></div>
+        <div class="pf-layer"><div class="pf-lno" style="background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.2);color:#6366f1">03</div>
+          <div><div class="pf-lk" style="color:#818cf8">第三層：今日動態矩陣</div><div class="pf-lt">現貨買賣超 ⊗ 期貨淨單變動</div>
+            <div class="pf-ld">判斷「買現貨+加空單（鎖利避險/拉積盤）」、「賣現貨+加空單（實質做空）」等四象限真實交易企圖。</div></div></div>
+        <div class="pf-layer"><div class="pf-lno" style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);color:#f59e0b">04</div>
+          <div><div class="pf-lk c-warn">第四層：事件窗風險倒數</div><div class="pf-lt">衍生品結算 ⊗ 關鍵事件</div>
+            <div class="pf-ld">結合台指期結算、FOMC、台積電法說、央行理監事會倒數，辨識真倒貨或假摔誘空。</div></div></div>
       </div>
 
       <!-- 6 大核心指標卡片 -->
@@ -2928,7 +2931,7 @@
         <div class="pf-glass">
           <div>
             <div class="pf-hd" style="display:block">
-              <h3 class="pf-h3"><span style="color:#10b981">⇄</span> 第三層：匯率 vs 外資真金白銀流向</h3>
+              <h3 class="pf-h3"><span style="color:#10b981">⇄</span> 第二層：匯率 vs 外資真金白銀流向</h3>
               <div class="pf-sub">美元/新台幣與現貨買賣超（檢驗真撤資或假做空）</div>
             </div>
             <div class="pf-leg" style="margin-top:12px;font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--pf-mut)"><span><i style="background:rgba(16,185,129,.75)"></i>外資現貨買賣超 (億元)</span><span><i style="background:#f59e0b"></i>USD/TWD 匯率（右軸反轉：台幣升值 ↑）</span></div>
@@ -2943,10 +2946,10 @@
         </div>
       </div>
 
-      <!-- 第二層：今日現期貨交叉矩陣 -->
+      <!-- 第三層：今日現期貨交叉矩陣 -->
       <div class="pf-glass pf-sec">
         <div class="pf-hd" style="align-items:center">
-          <div><h3 class="pf-h3"><span style="color:#6366f1">▦</span> 第二層：今日現期貨交叉矩陣 (4-Quadrant Institutional Matrix)</h3>
+          <div><h3 class="pf-h3"><span style="color:#6366f1">▦</span> 第三層：今日現期貨交叉矩陣 (4-Quadrant Institutional Matrix)</h3>
             <div class="pf-sub">現貨買賣超金額 ⊗ 期貨實質淨部位增減 (垂直二維象限排列)</div></div>
           <span class="pf-badge" style="font-size:12px;padding:4px 10px;background:rgba(99,102,241,.1);color:#a5b4fc;border:1px solid rgba(99,102,241,.2)">今日動態定位</span>
         </div>
@@ -2959,10 +2962,10 @@
         <div class="pf-contracts" id="fhContracts"></div>
       </div>
 
-      <!-- 第三層：衍生品結算與關鍵事件窗風險倒數 -->
+      <!-- 第四層：衍生品結算與關鍵事件窗風險倒數 -->
       <div class="pf-glass pf-sec">
         <div class="pf-hd" style="align-items:center">
-          <div><h3 class="pf-h3"><span style="color:#f59e0b">📅</span> 第三層：衍生品結算與關鍵事件窗風險倒數 (Event Windows &amp; Volatility Nodes)</h3>
+          <div><h3 class="pf-h3"><span style="color:#f59e0b">📅</span> 第四層：衍生品結算與關鍵事件窗風險倒數 (Event Windows &amp; Volatility Nodes)</h3>
             <div class="pf-sub">外資空單常在結算前 72 小時產生極端平倉或刻意壓制行情，需密切核對關鍵時間戳</div></div>
           <span style="font-size:12px;color:var(--pf-mut2);font-family:'JetBrains Mono',monospace">即刻監控系統節點</span>
         </div>
@@ -3089,7 +3092,7 @@
       el('fhContracts').innerHTML='<div>大台指 (TX): <span class="'+(cur.fx_tx_net<0?'c-bear':'c-bull')+'" style="font-weight:600">'+n0(cur.fx_tx_net)+' 口</span></div>'
         +'<div>小台指 (MTX): <span class="'+(cur.fx_mtx_net<0?'c-bear':'c-bull')+'" style="font-weight:600">'+n0(cur.fx_mtx_net)+' 口 (約 '+n0(cur.fx_mtx_net/4)+' 大台)</span></div>'
         +'<div>微台指 (TMF): <span class="'+(cur.fx_tmf_net<0?'c-bear':'c-bull')+'" style="font-weight:600">'+n0(cur.fx_tmf_net)+' 口 (約 '+n0(cur.fx_tmf_net/20)+' 大台)</span></div>';
-      el('fhNote').innerHTML='<b>算法與資料源（合夥人複查）：</b>避險比率 R＝外資期貨淨空名目 H ÷ 外資持股市值 V ×100。H＝MAX(−Σ(外資各契約 net 口×指數×每點價值),0)，每點價值 大台200/小台50/微台10；V(上市)＝Σ(TWSE mi-qfiis 全體外資持有股數×當日收盤)，扣 ETF＝排除 00 開頭。分級＝近 2 年歷史百分位（&lt;P80 常態／P80–P95 偏高／≥P95 顯著偏高）＋固定紅線 &gt;1.2% 觸發極端。第二層象限＝今日外資現貨買賣超正負 × 等值大台淨口數較前一日增減（淨空增加＝空單增加）。第三層：USD/TWD 為 Yahoo 每日匯率、現貨買賣超為 TWSE BFI82U 外資及陸資；事件倒數＝台指期結算（每月第三個週三）、台積電法說會（催化事件表）、FOMC 與台灣央行利率決議（investing.com 經濟日曆，尚未公告者顯示「尚未公告」）。資料源：TWSE MI_QFIIS／STOCK_DAY_ALL／BFI82U、TAIFEX futContractsDate、加權指數。每日盤後更新（foreign_hedge.py→foreign_hedge_daily）。版面與配色比照合夥人「完美.html」（2026-09-28）。';
+      el('fhNote').innerHTML='<b>算法與資料源（合夥人複查）：</b>避險比率 R＝外資期貨淨空名目 H ÷ 外資持股市值 V ×100。H＝MAX(−Σ(外資各契約 net 口×指數×每點價值),0)，每點價值 大台200/小台50/微台10；V(上市)＝Σ(TWSE mi-qfiis 全體外資持有股數×當日收盤)，扣 ETF＝排除 00 開頭。分級＝近 2 年歷史百分位（&lt;P80 常態／P80–P95 偏高／≥P95 顯著偏高）＋固定紅線 &gt;1.2% 觸發極端。第三層象限＝今日外資現貨買賣超正負 × 等值大台淨口數較前一日增減（淨空增加＝空單增加）。第二層：USD/TWD 為 Yahoo 每日匯率、現貨買賣超為 TWSE BFI82U 外資及陸資（抓取失敗的日子每日自動回補近 60 天）；第四層事件倒數＝台指期結算（每月第三個週三）、台積電法說會（催化事件表）、FOMC 與台灣央行利率決議（investing.com 經濟日曆，尚未公告者顯示「尚未公告」）。資料源：TWSE MI_QFIIS／STOCK_DAY_ALL／BFI82U、TAIFEX futContractsDate、加權指數。每日盤後更新（foreign_hedge.py→foreign_hedge_daily）。版面與配色比照合夥人「完美.html」（2026-09-28）。';
       initSim(cur, ser);
     }
     function kcard(k,icon,v,s,f,cls){ return '<div class="pf-glass pf-kc'+(cls?' '+cls:'')+'"><div class="k"><span>'+k+'</span>'+icon+'</div><div><div class="v">'+v+'</div><div class="s">'+s+'</div></div><div class="f">'+(f||'')+'</div></div>'; }
@@ -3703,11 +3706,26 @@
     .sm-tile .mt{font-size:11px;opacity:.92;margin-top:2px;text-shadow:0 1px 2px rgba(0,0,0,.35);}
     .sm-legend{display:flex;align-items:center;gap:10px;font-size:11px;color:var(--text-muted);margin:10px 0 12px;flex-wrap:wrap;}
     .sm-swatch{display:inline-block;width:60px;height:12px;border-radius:3px;background:linear-gradient(90deg,#0f9d63,#7a7f85,#f0555a);}
+    .sm-tile{cursor:pointer;transition:transform .12s,box-shadow .12s;}
+    .sm-tile:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.18);}
+    .sm-tile.on{outline:3px solid var(--accent);outline-offset:1px;}
+    .sm-list{margin-top:14px;border:1px solid var(--border);border-radius:12px;background:var(--surface);padding:14px 16px;}
+    .sm-list .hd{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;}
+    .sm-list .hd b{font-size:16px;color:var(--text);}
+    .sm-list .hd span{font-size:12px;color:var(--text-muted);}
+    .sm-sort button{background:var(--surface2);border:1px solid var(--border);color:var(--text-muted);border-radius:999px;padding:3px 12px;font-size:12px;font-weight:700;cursor:pointer;margin-left:4px;font-family:inherit;}
+    .sm-sort button.on{background:var(--accent);border-color:var(--accent);color:#231c00;}
+    .sm-tbl{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums;}
+    .sm-tbl th{font-size:12px;color:var(--text-muted);font-weight:600;text-align:right;padding:6px 8px;border-bottom:1px solid var(--border);white-space:nowrap;}
+    .sm-tbl td{text-align:right;padding:6px 8px;border-bottom:1px solid var(--border);white-space:nowrap;}
+    .sm-tbl th.l,.sm-tbl td.l{text-align:left;}
+    .sm-tbl tbody tr{cursor:pointer;} .sm-tbl tbody tr:hover td{background:var(--surface2);}
   </style>
   <div id="sectorView" style="display:none">
     <div class="tm-head"><h2>🗺️ 產業地圖</h2><span class="sub" id="smSub"></span></div>
     <div class="sm-legend"><span>跌</span><span class="sm-swatch"></span><span>漲</span><span>· 磚塊大小＝該產業檔數，顏色＝當日平均漲跌幅（紅漲綠跌）</span></div>
     <div class="sm-map" id="smMap"><div class="fc-empty">載入中…</div></div>
+    <div class="sm-list" id="smList" style="display:none"></div>
     <div class="fc-note" id="smNote"></div>
   </div>
   <script>
@@ -3719,11 +3737,34 @@
       if(chg>=0){ return 'rgb('+Math.round(200+40*a)+','+Math.round(90-60*a)+','+Math.round(95-60*a)+')'; }
       return 'rgb('+Math.round(30)+','+Math.round(140+30*a)+','+Math.round(110-20*a)+')';
     }
+    // 點磚塊 → 下方展開該產業成分股（可依漲跌幅／成交值排序；點個股開 K 線）2026-09-28
+    var SECS=[], CUR=null, SORT='chg';
+    function nm(c,n){ return (n&&n!==c)?n:((window._names&&window._names[c])||c); }
+    function pick(sec, scroll){
+      var s=SECS.filter(function(x){return x.sector===sec;})[0], box=el('smList'); if(!s||!box) return;
+      if(CUR===sec&&scroll&&box.style.display!=='none'){ CUR=null; box.style.display='none'; el('smMap').querySelectorAll('.sm-tile').forEach(function(t){t.classList.remove('on');}); return; }
+      CUR=sec; el('smMap').querySelectorAll('.sm-tile').forEach(function(t){ t.classList.toggle('on', t.dataset.sec===sec); });
+      var st=(s.stocks||[]).slice(); st.sort(function(a,b){ return SORT==='val'?b[4]-a[4]:(SORT==='dn'?a[3]-b[3]:b[3]-a[3]); });
+      var cc=function(v){return v>0?'hp-up':(v<0?'hp-dn':'');};
+      box.innerHTML='<div class="hd"><div><b>'+sec+'</b>　<span>'+s.count+' 檔 · 漲 '+s.up+'／跌 '+s.down+' · 平均 <span class="'+cc(s.avg_chg)+'">'+(s.avg_chg>0?'+':'')+Number(s.avg_chg).toFixed(2)+'%</span></span></div>'
+        +'<div class="sm-sort"><span style="font-size:12px;color:var(--text-muted)">排序</span>'
+        +[['chg','漲幅'],['dn','跌幅'],['val','成交值']].map(function(o){return '<button data-s="'+o[0]+'"'+(SORT===o[0]?' class="on"':'')+'>'+o[1]+'</button>';}).join('')
+        +'<button data-x="1" title="收合">✕</button></div></div>'
+        +'<div style="overflow-x:auto;max-height:520px;overflow-y:auto"><table class="sm-tbl"><thead><tr><th class="l">#</th><th class="l">個股</th><th>收盤</th><th>漲跌幅</th><th>成交值(億)</th></tr></thead><tbody>'
+        +st.map(function(r,i){ return '<tr data-c="'+r[0]+'" data-n="'+nm(r[0],r[1])+'"><td class="l" style="color:var(--text-muted)">'+(i+1)+'</td><td class="l"><b>'+nm(r[0],r[1])+'</b> <span style="color:var(--text-muted)">'+r[0]+'</span></td>'
+            +'<td>'+Number(r[2]).toLocaleString(undefined,{maximumFractionDigits:2})+'</td><td class="'+cc(r[3])+'" style="font-weight:700">'+(r[3]>0?'+':'')+r[3].toFixed(2)+'%</td><td>'+r[4].toFixed(2)+'</td></tr>'; }).join('')
+        +'</tbody></table></div>';
+      box.style.display='';
+      box.querySelectorAll('.sm-sort button').forEach(function(b){ b.onclick=function(){ if(b.dataset.x){ pick(sec,true); return; } SORT=b.dataset.s; pick(sec,false); }; });
+      box.querySelectorAll('tbody tr').forEach(function(tr){ tr.onclick=function(){ if(typeof openChart==='function') openChart(tr.dataset.c, tr.dataset.n); }; });
+      if(scroll) box.scrollIntoView({behavior:'smooth',block:'start'});
+    }
     window._sectorShow=function(){
+      if(window._loadNames && !window._names) try{ window._loadNames(function(){ if(CUR) pick(CUR,false); }); }catch(e){}
       el('smMap').innerHTML='<div class="fc-empty">載入中…</div>';
       fetch('/api/screen?stat=sectors').then(function(r){return r.json();}).then(function(j){
         if(!j||j.error||!Array.isArray(j.sectors)){el('smMap').innerHTML='<div class="fc-empty">讀取失敗'+((j&&j.error)?'：'+j.error:'')+'</div>';return;}
-        var secs=j.sectors;
+        var secs=j.sectors; SECS=secs;
         if(el('smSub'))el('smSub').textContent=(j.date||'')+' · '+secs.length+' 個產業 · '+j.total+' 檔';
         var maxc=Math.max.apply(null,secs.map(function(s){return s.count;}))||1;
         el('smMap').innerHTML=secs.map(function(s){
@@ -3732,14 +3773,16 @@
           var h=s.count>=maxc*0.6?116:(s.count>=maxc*0.3?98:84);
           var sign=s.avg_chg>0?'+':'';
           var top=s.top?(s.top.code+' '+s.top.name+' '+(s.top.chg>0?'+':'')+s.top.chg+'%'):'';
-          return '<div class="sm-tile" style="flex:'+g+' 1 140px;height:'+h+'px;background:'+color(s.avg_chg)+'">'+
+          return '<div class="sm-tile'+(s.sector===CUR?' on':'')+'" data-sec="'+s.sector+'" title="點擊查看成分股" style="flex:'+g+' 1 140px;height:'+h+'px;background:'+color(s.avg_chg)+'">'+
             '<div class="nm">'+s.sector+'</div>'+
             '<div class="pc">'+sign+Number(s.avg_chg).toFixed(2)+'%</div>'+
             '<div class="mt">'+s.count+' 檔 · 漲'+s.up+'/跌'+s.down+(big&&top?' · 領漲 '+top:'')+'</div>'+
           '</div>';
         }).join('');
+        el('smMap').querySelectorAll('.sm-tile').forEach(function(t){ t.onclick=function(){ pick(t.dataset.sec, true); }; });
+        if(CUR) pick(CUR, false);
       }).catch(function(){el('smMap').innerHTML='<div class="fc-empty">讀取失敗</div>';});
-      if(el('smNote'))el('smNote').innerHTML='<b>算法與資料源：</b>個股漲跌幅=今收÷前收−1；產業平均漲跌幅=該產業成分股漲跌幅算術平均（等權，非市值加權）。產業別對照 TWSE 上市公司基本資料(t187ap03_L，內嵌於後端)。磚塊大小＝該產業當日有成交的檔數。資料源 price_window。';
+      if(el('smNote'))el('smNote').innerHTML='<b>算法與資料源：</b>個股漲跌幅=今收÷前收−1；產業平均漲跌幅=該產業成分股漲跌幅算術平均（等權，非市值加權）。產業別對照 TWSE 上市公司基本資料(t187ap03_L，內嵌於後端)。磚塊大小＝該產業當日有成交的檔數。點磚塊可展開該產業成分股（收盤、漲跌幅、成交值＝收盤×成交股數，可依漲幅／跌幅／成交值排序，點個股開 K 線）。資料源 price_window。';
     };
     window._VIEWS=window._VIEWS||{}; window._VIEWS.sectors={el:'sectorView',show:'_sectorShow'};
   })();
