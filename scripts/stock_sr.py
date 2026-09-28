@@ -16,7 +16,8 @@ stock_sr.py — 個股分價量表「壓力區／支撐區」（N = 5/10/20/60/1
 兩個版本（2026-09-28）：
   日K版（預設，→ stock_sr）：每天一根日K，量依當日最低～最高均勻分攤。
   小時K版（--src hour，→ stock_sr_h）：每天用 Yahoo 60 分鐘K（fetch_hourly.py 存本機 stock_hourly）逐根分攤，
-    較貼近實際各價位成交；盤中K 不含 13:30 收盤集合競價的量 → 「日成交量 − 當日小時K量加總」補在當日收盤價；
+    較貼近實際各價位成交；Yahoo 歷史小時K 常缺 9:00 開盤那根的量、也不一定含 13:30 收盤集合競價 →
+    「日成交量 − 當日小時K量加總」的差額，依當日最低～最高價均勻分攤（同日K版做法，中性處理；2026-09-28 修正，原本補在收盤價會把開盤量誤堆到收盤價）；
     某天沒有小時K（超過 Yahoo 730 天或缺資料）時該天退回用日K。
 用法：python scripts/stock_sr.py [--src day|hour] [--dry] [--code 2330]
 """
@@ -61,13 +62,13 @@ def _profile_snapshots(days, close, w):
 
 def _days(rows, hourly=None):
     """rows 由新到舊 [(date, high, low, close, volume)] → 每天的 bar 清單。
-    hourly={date: [(h,l,v),...]} 時用小時K，並把「日量 − 小時K量加總」補在當日收盤價（收盤集合競價）。"""
+    hourly={date: [(h,l,v),...]} 時用小時K，「日量 − 小時K量加總」的差額依當日最低～最高均勻分攤（缺的開盤量/集合競價，中性處理）。"""
     out = []
     for d, h, l, c, v in rows:
         hb = hourly.get(d) if hourly else None
         if hb:
             rest = (v or 0) - sum(x[2] for x in hb)
-            out.append(hb + ([(c, c, rest)] if rest > 0 and c else []))
+            out.append(hb + ([(h, l, rest)] if rest > 0 and h and l else []))
         else:
             out.append([(h, l, v)])
     return out
