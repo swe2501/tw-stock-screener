@@ -282,13 +282,19 @@
     /* 只讓右邊的小日曆圖示變手指游標（不動整框） */
     input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; }
 
-    /* 掏金篩選器：進階條件分類分頁 */
-    .sc-cat{margin-top:18px;padding-top:16px;border-top:1px solid var(--border);}
-    .sc-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;}
-    .sc-tabs button{background:var(--surface2);border:1px solid var(--border);color:var(--text-muted);border-radius:999px;padding:6px 16px;font-size:.88rem;font-weight:700;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;}
-    .sc-tabs button.on{background:var(--accent);border-color:var(--accent);color:#231c00;}
-    .sc-tabs button i{font-style:normal;font-size:.72rem;min-width:18px;height:18px;line-height:18px;border-radius:9px;background:#e74c3c;color:#fff;text-align:center;padding:0 5px;display:none;}
-    .sc-tabs button i.has{display:inline-block;}
+    /* 掏金篩選器：進階條件分類（比照 K 線「主力分點」摺疊列）*/
+    .sc-cat{margin-top:18px;border-top:1px solid var(--border);}
+    .sc-combo{padding:10px 8px;font-size:.85rem;color:var(--text);line-height:1.8;}
+    .sc-combo #scCombo{color:var(--text-muted);}
+    .sc-combo a{margin-left:12px;color:#f5c84b;cursor:pointer;font-size:.8rem;white-space:nowrap;}
+    .sc-chip{display:inline-block;background:var(--surface2);border:1px solid var(--border);border-radius:999px;padding:0 9px;margin:2px 6px 2px 0;font-size:.78rem;color:var(--text);white-space:nowrap;}
+    .sc-panel{border-top:1px solid var(--border);padding:8px;}
+    .sc-hd{display:flex;align-items:center;flex-wrap:wrap;gap:4px 10px;}
+    .sc-hd>a{cursor:pointer;text-decoration:none;user-select:none;font-size:.92rem;white-space:nowrap;}
+    .sc-ar{color:var(--text-muted);font-size:11px;margin-right:4px;display:inline-block;width:10px;}
+    .sc-sum .sc-chip{border-color:currentColor;text-decoration:none;background:transparent;}
+    .sc-hd>a b{text-decoration:none;}
+    .sc-body{padding:10px 0 4px 16px;}
     .sc-panel .sc-cbs{margin-top:0;padding-top:0;border-top:0;}
     .sc-fields{display:grid;grid-template-columns:1fr;gap:18px;}
     .sc-note{font-size:.78rem;color:var(--text-muted);margin-bottom:10px;}
@@ -5956,8 +5962,10 @@
 
       <!-- 進階篩選分類（2026-09-28）：型態／K棒／缺口／漲停跌停／指標／真名絕招；分頁只切換顯示，已勾選的條件不論在哪一頁都會生效 -->
       <div class="sc-cat">
-        <div class="sc-tabs" id="scTabs"><button type="button" data-cat="shape" class="on">型態<i></i></button><button type="button" data-cat="kbar">K棒<i></i></button><button type="button" data-cat="gap">缺口<i></i></button><button type="button" data-cat="limit">漲停/跌停<i></i></button><button type="button" data-cat="ind">指標<i></i></button><button type="button" data-cat="zm">真名絕招<i></i></button></div>
+        <div class="sc-combo"><b>目前組合：</b><span id="scCombo"></span><a onclick="_scClearAll()">全部清除</a></div>
         <div class="sc-panel" data-cat="shape">
+          <div class="sc-hd"><a onclick="_scToggle('shape')"><span class="sc-ar">▸</span><b style="color:#b58a2d">型態</b></a><span class="sc-sum"></span></div>
+          <div class="sc-body" style="display:none">
           <div class="sc-fields">
         <div class="field" style="grid-column:1/-1;margin:0">
           <label>碗型（無放量黑棒）</label>
@@ -5992,8 +6000,11 @@
         </div>
 
           </div>
+          </div>
         </div>
-        <div class="sc-panel" data-cat="kbar" style="display:none">
+        <div class="sc-panel" data-cat="kbar">
+          <div class="sc-hd"><a onclick="_scToggle('kbar')"><span class="sc-ar">▸</span><b style="color:#c0392b">K棒</b></a><span class="sc-sum"></span></div>
+          <div class="sc-body" style="display:none">
           <div class="checkbox-grid sc-cbs">
         <label class="checkbox-row">
           <input type="checkbox" id="doji" />
@@ -6038,8 +6049,11 @@
           </div>
         </label>
           </div>
+          </div>
         </div>
-        <div class="sc-panel" data-cat="gap" style="display:none">
+        <div class="sc-panel" data-cat="gap">
+          <div class="sc-hd"><a onclick="_scToggle('gap')"><span class="sc-ar">▸</span><b style="color:#5a78aa">缺口</b></a><span class="sc-sum"></span></div>
+          <div class="sc-body" style="display:none">
           <div class="checkbox-grid sc-cbs">
         <label class="checkbox-row">
           <input type="checkbox" id="gap_up" />
@@ -6068,8 +6082,11 @@
           </div>
         </label>
           </div>
+          </div>
         </div>
-        <div class="sc-panel" data-cat="limit" style="display:none">
+        <div class="sc-panel" data-cat="limit">
+          <div class="sc-hd"><a onclick="_scToggle('limit')"><span class="sc-ar">▸</span><b style="color:#e74c3c">漲停/跌停</b></a><span class="sc-sum"></span></div>
+          <div class="sc-body" style="display:none">
           <div class="sc-note">跌停板篩選尚未提供，之後補上。</div>
           <div class="checkbox-grid sc-cbs">
         <label class="checkbox-row">
@@ -6080,8 +6097,11 @@
           </div>
         </label>
           </div>
+          </div>
         </div>
-        <div class="sc-panel" data-cat="ind" style="display:none">
+        <div class="sc-panel" data-cat="ind">
+          <div class="sc-hd"><a onclick="_scToggle('ind')"><span class="sc-ar">▸</span><b style="color:#c678dd">指標</b></a><span class="sc-sum"></span></div>
+          <div class="sc-body" style="display:none">
           <div class="checkbox-grid sc-cbs">
         <div class="checkbox-row" style="align-items:flex-start;">
           <div style="flex:1;">
@@ -6112,8 +6132,11 @@
           </div>
         </div>
           </div>
+          </div>
         </div>
-        <div class="sc-panel" data-cat="zm" style="display:none">
+        <div class="sc-panel" data-cat="zm">
+          <div class="sc-hd"><a onclick="_scToggle('zm')"><span class="sc-ar">▸</span><b style="color:#0a9a56">真名絕招</b></a><span class="sc-sum"></span></div>
+          <div class="sc-body" style="display:none">
           <div class="checkbox-grid sc-cbs">
         <label class="checkbox-row">
           <input type="checkbox" id="zhenming1"
@@ -6132,6 +6155,7 @@
           </div>
         </label>
           </div>
+          </div>
         </div>
       </div>
       <div style="display:flex;justify-content:flex-end;margin-top:16px"><button class="btn-submit" id="submitBtn" onclick="doScreen()">開始篩選</button></div>
@@ -6140,17 +6164,42 @@
   </div>
 
   <script>
-  // 掏金篩選器分類分頁：切換顯示＋每類已設定條件數的小紅點（2026-09-28）
+  // 掏金篩選器：分類摺疊列＋已選條件摘要（比照 K 線主力分點；2026-09-28）
   (function(){
-    var tabs=document.getElementById('scTabs'); if(!tabs) return;
-    function show(cat){ tabs.querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', b.dataset.cat===cat); });
-      document.querySelectorAll('.sc-panel').forEach(function(p){ p.style.display = p.dataset.cat===cat ? '' : 'none'; }); }
-    function count(){ document.querySelectorAll('.sc-panel').forEach(function(p){
-        var n=0; p.querySelectorAll('input').forEach(function(x){ if(x.type==='checkbox'?x.checked:(x.value!=='' && x.type!=='date')) n++; });
-        var i=tabs.querySelector('button[data-cat="'+p.dataset.cat+'"] i'); if(i){ i.textContent=n; i.classList.toggle('has', n>0); } }); }
-    tabs.querySelectorAll('button').forEach(function(b){ b.onclick=function(){ show(b.dataset.cat); }; });
-    document.querySelector('.sc-cat').addEventListener('change', count); document.querySelector('.sc-cat').addEventListener('input', count);
-    window._scCount=count; count();
+    var cat=document.querySelector('.sc-cat'); if(!cat) return;
+    var $=function(id){return document.getElementById(id);};
+    var v=function(id){var e=$(id);return e&&e.value!==''?e.value:null;};
+    function esc(t){return String(t).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});}
+    function txt(cb){ var r=cb.closest('.checkbox-row'), l=r&&r.querySelector('.cb-label');
+      if(cb.classList.contains('box-cb')) return '箱型 '+cb.parentNode.textContent.trim();
+      if(cb.classList.contains('macd-cb')) return 'MACD '+(/long/.test(cb.dataset.mode)?'多：':'空：')+cb.parentNode.textContent.trim().replace(/（.*$/,'');
+      var t=l?l.textContent.trim():cb.id; if(cb.id==='gap_down'&&v('gap_down_min')) t+=' ≥'+v('gap_down_min')+'元'; return t; }
+    function picked(p){ var a=[];
+      if(p.dataset.cat==='shape'&&v('no_black_years')) a.push('碗型 '+v('no_black_years')+'月'+(v('no_black_mult')?' '+v('no_black_mult')+'倍':'')+' 容忍'+(v('no_black_tolerance')||0)+'根');
+      p.querySelectorAll('input[type=checkbox]').forEach(function(cb){ if(cb.checked) a.push(txt(cb)); });
+      if(p.dataset.cat==='ind'&&document.querySelector('.macd-cb[data-mode$="3"]:checked')&&v('macd_start')) a.push('區間 '+v('macd_start')+'～'+(v('macd_end')||'今'));
+      return a; }
+    function base(){ var a=[], ind=$('industry_filter');
+      if(v('date')) a.push('日期 '+v('date')); if(v('min_price')) a.push('股價≥'+v('min_price'));
+      if(v('red_candle_pct')) a.push('長紅≥'+v('red_candle_pct')+'%'); if(v('black_candle_pct')) a.push('長黑≥'+v('black_candle_pct')+'%');
+      if(v('volume_multiplier')) a.push('放量'+v('volume_multiplier')+'倍'); if(v('shrink_multiplier')) a.push('縮量'+v('shrink_multiplier')+'倍');
+      if(ind&&ind.value) a.push(ind.value); return a; }
+    function refresh(){
+      var all=base();
+      cat.querySelectorAll('.sc-panel').forEach(function(p){ var a=picked(p), col=p.querySelector('.sc-hd b').style.color;
+        p.querySelector('.sc-sum').innerHTML=a.map(function(t){return '<span class="sc-chip" style="color:'+col+'">'+esc(t)+'</span>';}).join('');
+        all=all.concat(a); });
+      $('scCombo').innerHTML=all.length?all.map(function(t){return '<span class="sc-chip">'+esc(t)+'</span>';}).join(''):'尚未設定任何條件';
+    }
+    window._scToggle=function(k){ var p=cat.querySelector('.sc-panel[data-cat="'+k+'"]'), b=p.querySelector('.sc-body'), open=b.style.display==='none';
+      b.style.display=open?'':'none'; p.querySelector('.sc-ar').textContent=open?'▾':'▸'; };
+    window._scClearAll=function(){
+      ['date','min_price','red_candle_pct','volume_multiplier','black_candle_pct','shrink_multiplier','no_black_years','no_black_mult','no_black_tolerance','gap_down_min','macd_start','macd_end'].forEach(function(id){ var e=$(id); if(e) e.value=''; });
+      cat.querySelectorAll('input[type=checkbox]').forEach(function(cb){ if(cb.checked){ cb.checked=false; cb.dispatchEvent(new Event('change',{bubbles:true})); } });
+      var ind=$('industry_filter'); if(ind&&ind.value){ ind.value=''; ind.dispatchEvent(new Event('change',{bubbles:true})); }
+      refresh(); };
+    var form=cat.closest('.card')||document; form.addEventListener('change',refresh); form.addEventListener('input',refresh);
+    window._scCount=refresh; refresh();
   })();
   </script>
   <!-- （個股搜尋＋指數快覽已移至頁首 header 下方橫條 .topsearch）-->
