@@ -7995,7 +7995,7 @@
           _brokerEntriesRaw.push({ date: t.trade_date, broker: m.name, cat: m.cat });
         }
         const distinct = [...new Map(_brokerEntriesRaw.map(e => [e.broker, e.cat]))].map(([name, cat]) => ({ name, cat }));
-        _brokerChecked = new Set(distinct.map(d => d.name));   // 預設全勾
+        _brokerChecked = new Set();   // 預設全不勾，K 圖乾淨；展開「主力分點」自行勾選（2026-09-28）
         _renderBrokerFilter(distinct);
         _refreshChartMarkers();
       } catch (_) { /* 主力標記非必要，失敗時靜默 */ }
@@ -8010,7 +8010,7 @@
       const cb = b => {
         const bb = b.replace(/'/g, "\\'");
         return `<label style="display:inline-flex;align-items:center;gap:3px;margin:2px 10px 2px 0;cursor:pointer;white-space:nowrap">
-          <input type="checkbox" checked onchange="_toggleBroker('${bb}',this.checked)">${b}</label>`;
+          <input type="checkbox"${_brokerChecked && _brokerChecked.has(b) ? ' checked' : ''} onchange="_toggleBroker('${bb}',this.checked)">${b}</label>`;
       };
       const sections = ['大單前20', '小單前20', '其他'].filter(c => groups[c]).map(cat =>
         `<div style="margin-top:5px"><span style="color:#c678dd;font-weight:600">${cat}（${groups[cat].length}）</span>
