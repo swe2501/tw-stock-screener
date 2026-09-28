@@ -1740,6 +1740,8 @@
       .cb-conv strong{color:var(--brand-green);font-weight:800;font-variant-numeric:tabular-nums;}
       @media(max-width:900px){.cb-pulse{grid-template-columns:repeat(2,1fr);}.cb-ov{grid-template-columns:1fr;}}
       /* §3A 盤面結構判讀 */
+      .gs-more{display:block;margin:12px 0 4px;padding:9px 12px;border:1px dashed var(--accent);border-radius:9px;font-size:13px;font-weight:800;color:var(--accent);cursor:pointer;text-align:center;}
+      .gs-more:hover{background:var(--surface2);}
       .gs-struct header{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:12px;}
       .gs-struct header .t{font-family:"Noto Serif TC",Georgia,serif;font-size:18px;font-weight:800;color:var(--brand-green);}
       .gs-struct header small{font-size:11px;color:var(--text-muted);margin-left:8px;}
@@ -2937,6 +2939,8 @@
     .pf-out .ob span{font-size:11px;color:var(--pf-mut2);display:block;} .pf-out .ob b{font-size:18px;font-weight:700;font-family:"JetBrains Mono",monospace;color:var(--pf-t1);display:block;margin-top:4px;}
     .pf-out .ot{font-size:12px;color:var(--pf-t3);line-height:1.7;background:var(--pf-inner2);padding:14px;border-radius:8px;border:1px solid var(--pf-bd);}
     .pf-select{background:var(--pf-inner);font-size:12px;color:var(--pf-t2);border-radius:4px;padding:6px 10px;border:1px solid var(--pf-bd);font-family:inherit;cursor:pointer;}
+    .pf-fold{display:block;margin:8px auto 4px;padding:6px 16px;border-radius:999px;border:1px solid var(--pf-bd);background:var(--pf-inner2);color:var(--pf-sky);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;}
+    .pf-fold:hover{border-color:var(--pf-sky);}
     .pf-foot{margin:0 16px;padding:14px 4px 6px;border-top:1px solid var(--pf-bd2);font-size:12px;color:var(--pf-mut);line-height:1.8;}
     .pf-foot b{color:var(--pf-t2);}
     .pf-lock{margin:0 16px 24px;padding:36px 20px;text-align:center;border:1px dashed var(--pf-accent);}
@@ -3112,6 +3116,19 @@
   <script>
   (function(){
     var el=function(id){return document.getElementById(id);};
+    // 長表格「開啟／收起」：預設只顯示前 n 列，按鈕切換（狀態依 key 記住，重繪後維持）2026-09-28
+    var FOLD={};
+    function fold(tbody, n, key){
+      if(!tbody) return; var rows=[].slice.call(tbody.children); var old=document.querySelector('#fhedgeView .pf-fold[data-k="'+key+'"]'); if(old) old.remove();
+      if(rows.length<=n) return;
+      var open=!!FOLD[key];
+      rows.forEach(function(r,i){ r.style.display=(open||i<n)?'':'none'; });
+      var b=document.createElement('button'); b.type='button'; b.className='pf-fold'; b.setAttribute('data-k',key);
+      b.textContent=open?'收起 ▴':'開啟全部 '+rows.length+' 筆 ▾';
+      b.onclick=function(){ FOLD[key]=!FOLD[key]; fold(tbody,n,key); };
+      var tbl=tbody.closest('table'), host=tbl.parentNode.classList.contains('mc-blk')||tbl.parentNode.id?tbl:tbl.parentNode;
+      host.parentNode.insertBefore(b, host.nextSibling);
+    }
     var DATA=[], loaded=false, mode='excl', chart=null, fxChart=null, bandLines=[], showBand=true, FX={}, SBx='', Hx=null;
     function ratioOf(r){ return mode==='excl'? r.ratio_excl : r.ratio_incl; }
     function vOf(r){ return mode==='excl'? r.v_excl_etf : r.v_incl_etf; }
@@ -3258,6 +3275,7 @@
           +'<td class="c-bear" style="font-weight:700">'+n0(r.eq_net_lots)+'</td>'
           +'<td class="'+(r.spot_net>=0?'c-bull':'c-bear')+'" style="font-weight:700">'+(r.spot_net!=null?sgn(r.spot_net/1e8,1):'—')+'</td>'
           +'<td>'+((vOf(r)||0)/1e12).toFixed(2)+'</td><td style="text-align:right;font-weight:700;color:#f43f5e">'+(rt!=null?rt.toFixed(3)+'%':'—')+'</td></tr>'; }).join('');
+      fold(el('fhTable'),5,'detail');
     }
 
     // ── 第三層 事件倒數卡 ──
@@ -3338,6 +3356,7 @@
           :'<div class="fc-empty">暫無新聞</div>';
         h+='</div><div class="mc-note">資料源：investing.com 香港站經濟日曆（重要度依該站三級分類；國家依序美、日、韓、中、歐元區）與「商業、財經大事」新聞，每日盤後更新。結果欄「高於／低於預期」依實際值與預測值比較，綠色＝該站判定利多該國貨幣、紅色＝利空。</div>';
         el('fhEvents').innerHTML=h;
+        el('fhEvents').querySelectorAll('table.mc-t tbody').forEach(function(tb,i){ fold(tb,5,'ev'+i); });
         el('fhEvents').querySelectorAll('.mc-pin').forEach(function(bt){ bt.onclick=function(){ mcPin(bt, SB, H); }; });
       });
     }
@@ -3505,6 +3524,23 @@
         <div class="bd-sec-sub">加權(外資/權值) vs 櫃買(內資/中小題材) 家數結構交叉，辨識拉積掩護或內資暗多。</div>
         <div class="bd-quad" id="bdQuad"></div>
       </div>
+      <!-- ══ 市場廣度指標（比照玩股網 騰落線／多空頭排列／市場寬度／新高-新低 ＋ 站上均線家數）2026-09-28 ══ -->
+      <div class="bd-sec" id="bxSec">
+        <div class="bd-sec-h"><span>🧮</span>市場廣度指標（騰落線／多空頭排列／市場寬度／新高-新低／站上均線家數）</div>
+        <div class="bx-bar">
+          <div class="bx-tabs" id="bxTabs"><button data-t="adl" class="on">騰落線</button><button data-t="arr">多空頭排列</button><button data-t="width">市場寬度</button><button data-t="hl">新高-新低</button><button data-t="ma">站上均線家數</button></div>
+          <div class="bx-opts">
+            <select id="bxMkt" class="bx-sel"><option value="all">上市櫃</option><option value="tse">上市</option><option value="otc">上櫃</option></select>
+            <span class="bx-seg" id="bxEtf"><button data-e="excl" class="on">扣除 ETF</button><button data-e="incl">含 ETF</button></span>
+            <label class="bx-cb" id="bxExLab"><input type="checkbox" id="bxEx"> 大盤扣除台積電</label>
+          </div>
+        </div>
+        <div id="bxHead"></div>
+        <div id="bxChart" style="width:100%;margin-top:10px"></div>
+        <div id="bxTip" style="font-size:12px;color:var(--text-muted);margin-top:6px">移動滑鼠看每日數值</div>
+        <div id="bxLegend" class="ch-legend"></div>
+        <div class="fc-note" id="bxNote" style="margin-top:10px"></div>
+      </div>
     </div>
     <div class="fc-note" id="bdNote"></div>
   </div>
@@ -3625,6 +3661,7 @@
     }
     window._breadthShow=function(){
       applyGate();
+      if(window._isOwner&&window._bxShow) setTimeout(window._bxShow,0);
       if(loaded){ if(window._isOwner) render(); return; }
       var SB=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'', AK=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';
       var H={apikey:AK,Authorization:'Bearer '+AK};
@@ -3639,6 +3676,184 @@
       }).catch(function(){ if(el('bdNarrative'))el('bdNarrative').textContent='資料讀取失敗'; });
     };
     window._VIEWS=window._VIEWS||{}; window._VIEWS.breadth={el:'breadthView',show:'_breadthShow'};
+  })();
+  </script>
+  <style>
+    .bx-bar{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;margin:4px 0 12px;}
+    .bx-tabs{display:flex;flex-wrap:wrap;border-bottom:1px solid var(--border);}
+    .bx-tabs button{background:none;border:0;border-bottom:3px solid transparent;padding:8px 14px;font-size:14px;font-weight:700;color:var(--text-muted);cursor:pointer;font-family:inherit;}
+    .bx-tabs button.on{color:var(--text);border-bottom-color:var(--accent);}
+    .bx-opts{display:flex;flex-wrap:wrap;align-items:center;gap:10px;}
+    .bx-sel{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:6px 10px;font-size:13px;font-family:inherit;}
+    .bx-seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+    .bx-seg button{background:var(--surface2);border:0;padding:6px 12px;font-size:12.5px;color:var(--text-muted);cursor:pointer;font-weight:700;font-family:inherit;}
+    .bx-seg button.on{background:var(--accent);color:#231c00;}
+    .bx-cb{display:inline-flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;color:var(--text);}
+    .bx-title{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;}
+    .bx-title b{font-size:17px;} .bx-title .pill{background:rgba(58,134,224,.12);color:#3a86e0;border-radius:6px;padding:3px 10px;font-size:13px;font-weight:700;}
+    .bx-title time{margin-left:auto;font-size:13px;color:var(--text-muted);}
+    .bx-tbl{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums;border:1px solid var(--border);}
+    .bx-tbl th{background:var(--surface2);color:var(--text-muted);font-weight:600;font-size:12.5px;padding:8px;border:1px solid var(--border);text-align:center;}
+    .bx-tbl td{padding:9px 8px;border:1px solid var(--border);text-align:center;font-weight:700;}
+    .bx-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+    .bx-card{border:1px solid var(--border);border-radius:10px;padding:12px 14px;background:var(--surface2);}
+    .bx-card .k{font-size:12px;color:var(--text-muted);font-weight:700;} .bx-card .v{font-size:24px;font-weight:800;margin-top:4px;font-variant-numeric:tabular-nums;}
+    .bx-card .s{font-size:11.5px;color:var(--text-muted);margin-top:2px;}
+    @media(max-width:760px){.bx-cards{grid-template-columns:1fr 1fr;} .bx-tbl{font-size:12.5px;}}
+  </style>
+  <script>
+  (function(){
+    var el=function(id){return document.getElementById(id);};
+    var CACHE={}, TAB='adl', MKT='all', ETF='excl', EX=false, OTCIDX=null, chart=null;
+    var MKN={all:'上市櫃',tse:'上市',otc:'上櫃'};
+    var UP='#e03e2d', DN='#0a9a56', BLUE='#3a86e0', GOLD='#d2a12b', PURP='#9b6cff';
+    function pct(a,b){ return b?a/b*100:null; }
+    function f1(v){ return v==null?'—':v.toFixed(2); }
+    function n0(v){ return v==null?'—':Math.round(v).toLocaleString(); }
+    function sb(){ var SB=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'', AK=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:''; return {SB:SB,H:{apikey:AK,Authorization:'Bearer '+AK}}; }
+    function load(mk,etf){
+      var k=mk+'|'+etf; if(CACHE[k]) return Promise.resolve(CACHE[k]);
+      var s=sb();
+      return fetch(s.SB+'/rest/v1/breadth_ext?select=*&market=eq.'+mk+'&etf=eq.'+etf+'&order=trade_date.desc&limit=1000',{headers:s.H})
+        .then(function(r){return r.json();}).then(function(a){ CACHE[k]=Array.isArray(a)?a.reverse():[]; return CACHE[k]; });
+    }
+    function loadOtcIdx(){
+      if(OTCIDX) return Promise.resolve(OTCIDX); var s=sb();
+      return fetch(s.SB+'/rest/v1/otc_index_daily?select=trade_date,close&order=trade_date.desc&limit=1000',{headers:s.H}).then(function(r){return r.json();})
+        .then(function(a){ OTCIDX={}; (Array.isArray(a)?a:[]).forEach(function(r){OTCIDX[r.trade_date]=+r.close;}); return OTCIDX; }).catch(function(){ OTCIDX={}; return OTCIDX; });
+    }
+    function idxOf(r){ if(MKT==='otc') return OTCIDX&&OTCIDX[r.trade_date]!=null?OTCIDX[r.trade_date]:null; return EX?(r.taiex_ex2330!=null?+r.taiex_ex2330:null):(r.taiex!=null?+r.taiex:null); }
+    function idxName(){ return MKT==='otc'?'櫃買指數':(EX?'加權指數（扣除台積電）':'加權指數'); }
+    function mkChart(h){
+      var host=el('bxChart'); if(chart){ try{chart.remove();}catch(e){} } host.innerHTML='';
+      if(typeof LightweightCharts==='undefined'){ host.innerHTML='<div class="fc-empty">圖表載入失敗</div>'; return null; }
+      var cs=getComputedStyle(document.body), tc=cs.getPropertyValue('--text-muted')||'#888', gc='rgba(128,128,128,.12)';
+      chart=LightweightCharts.createChart(host,{width:host.clientWidth||800,height:h,layout:{background:{color:'transparent'},textColor:tc.trim()||'#888',fontSize:11},
+        grid:{vertLines:{color:gc},horzLines:{color:gc}},leftPriceScale:{visible:true,borderColor:gc},rightPriceScale:{borderColor:gc},timeScale:{borderColor:gc},
+        crosshair:{mode:LightweightCharts.CrosshairMode.Normal},handleScale:{axisPressedMouseMove:false}});
+      return chart;
+    }
+    function addIdx(ch, rows){
+      var s=ch.addLineSeries({color:BLUE,lineWidth:2,lineStyle:LightweightCharts.LineStyle.Dashed,priceScaleId:'right',title:'',priceLineVisible:false,lastValueVisible:true,
+        priceFormat:{type:'custom',minMove:0.01,formatter:function(v){return v>=1000?Math.round(v).toLocaleString():v.toFixed(2);}}});
+      s.setData(rows.filter(function(r){return idxOf(r)!=null;}).map(function(r){return {time:r.trade_date,value:idxOf(r)};}));
+    }
+    function line(ch, rows, fn, color, w, style){
+      var s=ch.addLineSeries({color:color,lineWidth:w||2,lineStyle:style||0,priceScaleId:'left',priceLineVisible:false,lastValueVisible:true,
+        priceFormat:{type:'custom',minMove:0.01,formatter:function(v){return Math.abs(v)>=1000?Math.round(v).toLocaleString():v.toFixed(2);}}});
+      s.setData(rows.filter(function(r){return fn(r)!=null;}).map(function(r){return {time:r.trade_date,value:fn(r)};})); return s;
+    }
+    function finish(ch, rows, tip){
+      var km={}; rows.forEach(function(r){km[r.trade_date]=r;});
+      ch.subscribeCrosshairMove(function(p){ var r=km[p.time]; el('bxTip').innerHTML=r?('<b>'+p.time+'</b>　'+tip(r)+'　'+idxName()+' <b style="color:'+BLUE+'">'+(idxOf(r)!=null?n0(idxOf(r)):'—')+'</b>'):'移動滑鼠看每日數值'; });
+      if(window._clampChartZoom) window._clampChartZoom(ch,10,rows.length);
+      try{ ch.timeScale().setVisibleLogicalRange({from:Math.max(0,rows.length-250),to:rows.length-1}); }catch(e){}
+    }
+    function legend(items){ el('bxLegend').innerHTML=items.map(function(x){return '<span><i style="border-top:'+(x[2]||'2px solid')+' '+x[0]+'"></i>'+x[1]+'</span>';}).join('')+'<span><i style="border-top:2px dashed '+BLUE+'"></i>'+idxName()+'（右軸）</span>'; }
+    function render(){
+      var rows=CACHE[MKT+'|'+ETF]||[]; if(!rows.length){ el('bxHead').innerHTML='<div class="fc-empty">暫無資料</div>'; return; }
+      var cur=rows[rows.length-1], prev=rows[rows.length-2]||cur, d=cur.trade_date.replace(/-/g,'/');
+      var ur=function(r){return pct(r.up,r.up+r.down);};   // 比照玩股網：上漲 ÷（上漲＋下跌），不含平盤
+      el('bxExLab').style.display=MKT==='otc'?'none':'';
+      var note='<b>算法：</b>母體＝'+MKN[MKT]+(ETF==='incl'?'普通股＋ETF':'普通股（扣除 ETF）')+'，當日有成交且有前一日收盤者（'+cur.universe+' 檔）。資料源：本機日K（證交所／櫃買中心盤後，ETF 歷史以 Yahoo 回補）→ breadth_ext，每日盤後重算。';
+      if(TAB==='adl'){
+        var avg=function(n){ var a=rows.slice(-n); return a.reduce(function(s,r){return s+ur(r);},0)/a.length; };
+        var a3=avg(3), a5=avg(5), bias=a3>=55?['偏多','rgba(224,62,45,.12)',UP]:(a3<=45?['偏空','rgba(10,154,86,.12)',DN]:['持平','rgba(58,134,224,.12)',BLUE]);
+        el('bxHead').innerHTML='<div class="bx-title"><b>騰落線</b><span>即時多空力道分析</span><span class="pill" style="background:'+bias[1]+';color:'+bias[2]+'">目前多空：'+bias[0]+'</span><time>'+d+'</time></div>'
+          +'<div style="overflow-x:auto"><table class="bx-tbl"><thead><tr><th colspan="4">近期漲率分析（上漲家數佔比 %）</th><th colspan="6">漲跌家數分佈</th></tr>'
+          +'<tr><th>5日平均</th><th>3日平均</th><th>昨日</th><th>今日</th><th>上漲</th><th>漲停</th><th>紅K</th><th>下跌</th><th>跌停</th><th>黑K</th></tr></thead><tbody><tr>'
+          +[a5,a3,ur(prev),ur(cur)].map(function(v){return '<td style="color:'+(v>=50?UP:DN)+'">'+f1(v)+'</td>';}).join('')
+          +'<td style="color:'+UP+'">'+cur.up+'</td><td style="color:'+UP+'">'+cur.up_limit+'</td><td style="color:'+UP+'">'+cur.red_k+'</td><td style="color:'+DN+'">'+cur.down+'</td><td style="color:'+DN+'">'+cur.down_limit+'</td><td style="color:'+DN+'">'+cur.black_k+'</td></tr></tbody></table></div>';
+        var ch=mkChart(window.innerWidth<600?300:380); if(!ch) return;
+        var adl=0, ser=rows.map(function(r){ adl+=r.up-r.down; return {time:r.trade_date,value:adl,net:r.up-r.down}; });
+        var s=ch.addLineSeries({color:PURP,lineWidth:2,priceScaleId:'left',priceLineVisible:false,priceFormat:{type:'custom',minMove:1,formatter:function(v){return Math.round(v).toLocaleString();}}});
+        s.setData(ser.map(function(x){return {time:x.time,value:x.value};}));
+        var hs=ch.addHistogramSeries({priceScaleId:'net',priceLineVisible:false,lastValueVisible:false}); ch.priceScale('net').applyOptions({scaleMargins:{top:.78,bottom:0},visible:false});
+        hs.setData(ser.map(function(x){return {time:x.time,value:x.net,color:x.net>=0?'rgba(224,62,45,.55)':'rgba(10,154,86,.55)'};}));
+        addIdx(ch,rows); var am={}; ser.forEach(function(x){am[x.time]=x;});
+        finish(ch,rows,function(r){ var x=am[r.trade_date]; return '騰落指標 <b style="color:'+PURP+'">'+n0(x.value)+'</b>　淨上漲家數 <b style="color:'+(x.net>=0?UP:DN)+'">'+(x.net>0?'+':'')+x.net+'</b>　上漲佔比 <b>'+f1(ur(r))+'%</b>'; });
+        legend([[PURP,'騰落指標（累計淨上漲家數，左軸）'],['#e03e2d','每日淨上漲家數（下方柱）','6px solid']]);
+        el('bxNote').innerHTML=note+'<br>上漲／下跌＝收盤高於／低於前一交易日收盤；漲停／跌停＝漲跌幅 ≥ +9.5%／≤ −9.5%；紅K／黑K＝收盤高於／低於開盤。上漲家數佔比＝上漲家數 ÷（上漲＋下跌家數，不含平盤；與玩股網數值對得上），比例愈高代表買進股票勝率愈高。騰落指標＝每日（上漲 − 下跌）家數自 '+rows[0].trade_date+' 起累加（起點不同，絕對值與玩股網不同，看趨勢與背離）。「目前多空」＝近 3 日上漲佔比平均 ≥ 55% 偏多、≤ 45% 偏空、其餘持平。';
+      } else if(TAB==='arr'){
+        var bs=pct(cur.bull_s,cur.base_s), es=pct(cur.bear_s,cur.base_s), bl=pct(cur.bull_l,cur.base_l), el2=pct(cur.bear_l,cur.base_l);
+        el('bxHead').innerHTML='<div class="bx-title"><b>多空頭排列</b><span>多頭排列股票家數佔'+MKN[MKT]+'比例</span><time>'+d+'</time></div>'
+          +'<div class="bx-cards"><div class="bx-card"><div class="k">短均線 多頭排列</div><div class="v" style="color:'+UP+'">'+f1(bs)+'%</div><div class="s">MA5 &gt; MA10 &gt; MA20　'+cur.bull_s+' 檔</div></div>'
+          +'<div class="bx-card"><div class="k">短均線 空頭排列</div><div class="v" style="color:'+DN+'">'+f1(es)+'%</div><div class="s">MA5 &lt; MA10 &lt; MA20　'+cur.bear_s+' 檔</div></div>'
+          +'<div class="bx-card"><div class="k">長均線 多頭排列</div><div class="v" style="color:'+UP+'">'+f1(bl)+'%</div><div class="s">MA20 &gt; MA60 &gt; MA240　'+cur.bull_l+' 檔</div></div>'
+          +'<div class="bx-card"><div class="k">長均線 空頭排列</div><div class="v" style="color:'+DN+'">'+f1(el2)+'%</div><div class="s">MA20 &lt; MA60 &lt; MA240　'+cur.bear_l+' 檔</div></div></div>';
+        var ch=mkChart(window.innerWidth<600?300:380); if(!ch) return;
+        line(ch,rows,function(r){return pct(r.bull_s,r.base_s);},UP,2); line(ch,rows,function(r){return pct(r.bear_s,r.base_s);},DN,2);
+        line(ch,rows,function(r){return r.base_l>=50?pct(r.bull_l,r.base_l):null;},'#f08c7f',2,LightweightCharts.LineStyle.Dotted); line(ch,rows,function(r){return r.base_l>=50?pct(r.bear_l,r.base_l):null;},'#62c294',2,LightweightCharts.LineStyle.Dotted);
+        addIdx(ch,rows);
+        finish(ch,rows,function(r){ return '短多 <b style="color:'+UP+'">'+f1(pct(r.bull_s,r.base_s))+'%</b> 短空 <b style="color:'+DN+'">'+f1(pct(r.bear_s,r.base_s))+'%</b>　長多 <b style="color:'+UP+'">'+f1(pct(r.bull_l,r.base_l))+'%</b> 長空 <b style="color:'+DN+'">'+f1(pct(r.bear_l,r.base_l))+'%</b>'; });
+        legend([[UP,'短均線多頭排列 %'],[DN,'短均線空頭排列 %'],['#f08c7f','長均線多頭排列 %','2px dotted'],['#62c294','長均線空頭排列 %','2px dotted']]);
+        el('bxNote').innerHTML=note+'<br>多頭排列＝短期均線在中期之上、中期在長期之上（持有越久成本越低）。短均線：MA5 &gt; MA10 &gt; MA20（空頭反之）；長均線：MA20 &gt; MA60 &gt; MA240（空頭反之）。比例分母＝有足夠歷史可計算該組均線的家數（長均線需 240 日，資料自 2025-07 起才完整）。'+(EX&&MKT!=='otc'?'<br>大盤扣除台積電：r＝(r加權 − w×r台積電) ÷ (1 − w)，w＝前一日台積電市值 ÷ 上市普通股總市值（股數用證交所現行已發行股數估算）。':'');
+      } else if(TAB==='width'){
+        var w20=pct(cur.ma20_cnt,cur.ma20_base), w60=pct(cur.ma60_cnt,cur.ma60_base), w240=pct(cur.ma240_cnt,cur.ma240_base);
+        el('bxHead').innerHTML='<div class="bx-title"><b>市場寬度</b><span>成分股大於均線比例</span><time>'+d+'</time></div>'
+          +'<div class="bx-cards"><div class="bx-card"><div class="k">短期市場寬度 20 日</div><div class="v" style="color:'+GOLD+'">'+f1(w20)+'%</div><div class="s">'+cur.ma20_cnt+' / '+cur.ma20_base+' 檔</div></div>'
+          +'<div class="bx-card"><div class="k">短期市場寬度 60 日</div><div class="v" style="color:'+DN+'">'+f1(w60)+'%</div><div class="s">'+cur.ma60_cnt+' / '+cur.ma60_base+' 檔</div></div>'
+          +'<div class="bx-card"><div class="k">長期市場寬度 240 日</div><div class="v" style="color:'+PURP+'">'+f1(w240)+'%</div><div class="s">'+cur.ma240_cnt+' / '+cur.ma240_base+' 檔</div></div>'
+          +'<div class="bx-card"><div class="k">位階判讀</div><div class="v" style="font-size:18px">'+((w20>=85&&w240>=85)?'長期頭部區':(w20<=15&&w240<=15)?'長期底部區':(w20>=85||w60>=85)?'階段性頭部區':(w20<=15||w60<=15)?'階段性底部區':'中性區')+'</div><div class="s">≥85% 頭部、≤15% 底部</div></div></div>';
+        var ch=mkChart(window.innerWidth<600?300:380); if(!ch) return;
+        var s20=line(ch,rows,function(r){return pct(r.ma20_cnt,r.ma20_base);},GOLD,2); line(ch,rows,function(r){return pct(r.ma60_cnt,r.ma60_base);},DN,2);
+        line(ch,rows,function(r){return r.ma240_base>=50?pct(r.ma240_cnt,r.ma240_base):null;},PURP,2);
+        s20.createPriceLine({price:85,color:UP,lineWidth:1,lineStyle:LightweightCharts.LineStyle.Dashed,axisLabelVisible:true,title:'85% 頭部'});
+        s20.createPriceLine({price:15,color:DN,lineWidth:1,lineStyle:LightweightCharts.LineStyle.Dashed,axisLabelVisible:true,title:'15% 底部'});
+        addIdx(ch,rows);
+        finish(ch,rows,function(r){ return '20日 <b style="color:'+GOLD+'">'+f1(pct(r.ma20_cnt,r.ma20_base))+'%</b>　60日 <b style="color:'+DN+'">'+f1(pct(r.ma60_cnt,r.ma60_base))+'%</b>　240日 <b style="color:'+PURP+'">'+f1(pct(r.ma240_cnt,r.ma240_base))+'%</b>'; });
+        legend([[GOLD,'站上 20 日線 %'],[DN,'站上 60 日線 %'],[PURP,'站上 240 日線 %']]);
+        el('bxNote').innerHTML=note+'<br>市場寬度＝收盤價大於 N 日均線的家數 ÷ 有 N 日歷史可計算的家數；短期用 20、60 日，長期用 240 日。接近或高於 85% 通常對應階段性頭部、接近或低於 15% 為階段性底部；短期與長期同時 ≥85% 可能為長期頭部、同時 ≤15% 為長期底部。';
+      } else if(TAB==='hl'){
+        var diff=cur.new_high-cur.new_low;
+        el('bxHead').innerHTML='<div class="bx-title"><b>新高-新低</b><span>新高-新低家數差指數（52 週）</span><time>'+d+'</time></div>'
+          +'<div class="bx-cards"><div class="bx-card"><div class="k">新高-新低家數差</div><div class="v" style="color:'+(diff>=0?UP:DN)+'">'+(diff>0?'+':'')+diff+'</div><div class="s">前一日 '+((prev.new_high-prev.new_low)>0?'+':'')+(prev.new_high-prev.new_low)+'</div></div>'
+          +'<div class="bx-card"><div class="k">創 52 週新高</div><div class="v" style="color:'+UP+'">'+cur.new_high+'</div><div class="s">家</div></div>'
+          +'<div class="bx-card"><div class="k">創 52 週新低</div><div class="v" style="color:'+DN+'">'+cur.new_low+'</div><div class="s">家</div></div>'
+          +'<div class="bx-card"><div class="k">可計算家數</div><div class="v">'+cur.base_hl+'</div><div class="s">有滿 252 日歷史</div></div></div>';
+        var ch=mkChart(window.innerWidth<600?300:380); if(!ch) return;
+        var hs=ch.addHistogramSeries({priceScaleId:'left',priceLineVisible:false,priceFormat:{type:'custom',minMove:1,formatter:function(v){return Math.round(v)+'';}}});
+        var hr=rows.filter(function(r){return r.base_hl>=50;});
+        hs.setData(hr.map(function(r){var v=r.new_high-r.new_low; return {time:r.trade_date,value:v,color:v>=0?'rgba(224,62,45,.6)':'rgba(10,154,86,.6)'};}));
+        addIdx(ch,hr);
+        finish(ch,hr,function(r){ var v=r.new_high-r.new_low; return '家數差 <b style="color:'+(v>=0?UP:DN)+'">'+(v>0?'+':'')+v+'</b>　新高 <b style="color:'+UP+'">'+r.new_high+'</b>　新低 <b style="color:'+DN+'">'+r.new_low+'</b>'; });
+        legend([[UP,'新高 − 新低 家數差（柱，左軸）','6px solid']]);
+        el('bxNote').innerHTML=note+'<br>新高／新低＝當日收盤高於／低於前 251 個交易日（含當日共 252 日 ≈ 52 週）的最高／最低收盤；需有滿 252 日歷史才計入（資料自 2025-07 起）。家數差與指數同向可確認趨勢；背離可提示頭部與底部。';
+      } else {
+        Promise.all([load('tse',ETF),load('otc',ETF),load('all',ETF)]).then(function(res){
+          var L=function(a){return a[a.length-1]||{};}, t=L(res[0]), o=L(res[1]), a=L(res[2]);
+          var row=function(nm,r){ return '<tr><td style="text-align:left">'+nm+'</td>'
+            +'<td>'+n0(r.ma60_cnt)+' <small style="color:var(--text-muted);font-weight:400">/ '+n0(r.ma60_base)+'（'+f1(pct(r.ma60_cnt,r.ma60_base))+'%）</small></td>'
+            +'<td>'+n0(r.ma20_cnt)+' <small style="color:var(--text-muted);font-weight:400">/ '+n0(r.ma20_base)+'（'+f1(pct(r.ma20_cnt,r.ma20_base))+'%）</small></td>'
+            +'<td style="color:'+UP+'">'+n0(r.both_cnt)+' <small style="color:var(--text-muted);font-weight:400">/ '+n0(r.both_base)+'（'+f1(pct(r.both_cnt,r.both_base))+'%）</small></td></tr>'; };
+          el('bxHead').innerHTML='<div class="bx-title"><b>站上均線家數</b><span>以當日收盤為基準</span><time>'+d+'</time></div>'
+            +'<div style="overflow-x:auto"><table class="bx-tbl"><thead><tr><th style="text-align:left">市場</th><th>站上 60 日線</th><th>站上 20 日線</th><th>20 與 60 日線都站上</th></tr></thead><tbody>'
+            +row('上市',t)+row('上櫃',o)+row('上市櫃合計',a)+'</tbody></table></div>';
+          var rs=CACHE[MKT+'|'+ETF]||[], ch=mkChart(window.innerWidth<600?300:360); if(!ch) return;
+          line(ch,rs,function(r){return r.ma60_cnt;},DN,2); line(ch,rs,function(r){return r.ma20_cnt;},GOLD,2); line(ch,rs,function(r){return r.both_cnt;},UP,2);
+          addIdx(ch,rs);
+          finish(ch,rs,function(r){ return '站上60日 <b style="color:'+DN+'">'+r.ma60_cnt+'</b>　站上20日 <b style="color:'+GOLD+'">'+r.ma20_cnt+'</b>　都站上 <b style="color:'+UP+'">'+r.both_cnt+'</b> 家'; });
+          legend([[DN,MKN[MKT]+' 站上 60 日線家數'],[GOLD,'站上 20 日線家數'],[UP,'20 與 60 日線都站上家數']]);
+          el('bxNote').innerHTML=note+'<br>站上 N 日線＝當日收盤 &gt; 含當日的 N 日收盤均價；「都站上」＝同時高於 20 日與 60 日均線。斜線後為有足夠歷史可計算的家數（分母），括號為佔比。上方表格固定列出上市、上櫃、合計；走勢圖依上方「上市櫃／上市／上櫃」切換。';
+        });
+      }
+    }
+    function refresh(){
+      el('bxHead').innerHTML='<div class="fc-empty">載入中…</div>';
+      Promise.all([load(MKT,ETF), MKT==='otc'?loadOtcIdx():Promise.resolve()]).then(render).catch(function(){ el('bxHead').innerHTML='<div class="fc-empty">讀取失敗</div>'; });
+    }
+    var bound=false;
+    window._bxShow=function(){
+      if(!el('bxSec')) return;
+      if(!bound){ bound=true;
+        el('bxTabs').querySelectorAll('button').forEach(function(b){ b.onclick=function(){ el('bxTabs').querySelectorAll('button').forEach(function(x){x.classList.toggle('on',x===b);}); TAB=b.dataset.t; refresh(); }; });
+        el('bxEtf').querySelectorAll('button').forEach(function(b){ b.onclick=function(){ el('bxEtf').querySelectorAll('button').forEach(function(x){x.classList.toggle('on',x===b);}); ETF=b.dataset.e; refresh(); }; });
+        el('bxMkt').onchange=function(){ MKT=this.value; refresh(); };
+        el('bxEx').onchange=function(){ EX=this.checked; render(); };
+        window.addEventListener('resize',function(){ if(chart&&el('bxChart').clientWidth) try{chart.applyOptions({width:el('bxChart').clientWidth});}catch(e){} });
+      }
+      refresh();
+    };
   })();
   </script>
 
@@ -5514,6 +5729,7 @@
           +'<div class="gs-ststat"><em class="st-'+st[2]+'">'+st[0]+'</em><p>'+st[1]+(idx!=null?'（加權 '+(idx>=0?'+':'')+idx.toFixed(2)+'%）':'')+'</p></div>'+risk
           +'<div class="gs-shgrid">'+row('電子',e,'55% 防線',e)+row('金融',f,'10% 警戒',f)+row('其他傳產',tr,s.top_trad_name?(s.top_trad_name+' '+mx.toFixed(1)+'%'):'產業合計',trBar)+'</div>'
           +'<div class="gs-otc"><div class="gs-otc-h">(櫃買 − 集中) 強弱勢　<small>千分點 ‰：+5.00 ≈ 櫃買比加權多漲 0.5%</small></div>'+otcHtml+'</div>'
+          +'<a class="gs-more" onclick="_showView(&quot;breadth&quot;)">🔒 付費解鎖更多：騰落線／多空頭排列／市場寬度／新高-新低／站上均線家數 →</a>'
           +'<details class="gs-shdet"><summary>查看研究判讀門檻</summary><div>'
           +'<p><b>一、上市成交比重（規格書 多空雙向定案版，嚴格由上往下、符合即停；指數以 ±0.2% 過濾微幅雜訊）</b></p>'
           +'<p>0 資料異常：任一欄 &lt;0 或 &gt;100、單一傳產 &gt; 傳產總額、三類加總偏離 95%~105%。<br>'
