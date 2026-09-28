@@ -6,8 +6,7 @@ liquidity_top.py — 流動性排行：現貨(上市)成交值前50、個股期�
   現貨：TWSE openapi STOCK_DAY_ALL（TradeValue 成交金額、TradeVolume 成交股數），上市普通股取成交值前50。
   個股期貨：TAIFEX openapi DailyMarketReportFut（一般盤各契約 Volume，排除價差委託列「202610/202611」避免重複計量），
         只留 SSFLists 中「普通股」標的的股票期貨（排除指數期貨、ETF 期貨），合併同契約各月份後取成交量前 50；
-        同一檔的小型(每口100股)併入標準型(每口2,000股)：小型口數 ÷ 20 換算成標準型等值口數後加總（2026-09-28），
-        每口股數依期交所「股票期貨交易標的」頁 www.taifex.com.tw/cht/2/stockLists 判斷。
+        標準型(2,000股)/小型(100股)依期交所「股票期貨交易標的」頁 www.taifex.com.tw/cht/2/stockLists 的股數欄判斷，小型標「小型期貨」。
 → Supabase liquidity_top((trade_date,market,rank) PK；market: spot / fut)。
 用法：python scripts/liquidity_top.py
 """
@@ -98,21 +97,14 @@ def fut_top(n=50):
             continue                                            # 只留個股期貨（排除指數/ETF 期貨）
         agg[c] = agg.get(c, 0) + _num(r.get("Volume"))
     size = _contract_shares()
-    # 2026-09-28：同一檔的小型併入標準型——口數依每口股數換算成標準型等值（小型 100 股 ÷ 標準 2,000 股 = 1/20 口）後加總
-    by = {}
-    for c, vol in agg.items():
-        sn, sc, _ = ssf[c]
-        b = by.setdefault(sc, {"name": sn.rstrip("*＊ "), "eq": 0.0, "mini": False})
-        sh = size.get(c, 2000)
-        b["eq"] += vol * sh / 2000
-        b["mini"] = b["mini"] or sh == 100
-    ranked = sorted(by.items(), key=lambda x: -x[1]["eq"])[:n]
+    ranked = sorted(agg.items(), key=lambda x: -x[1])[:n]
     out = []
-    for i, (sc, b) in enumerate(ranked, 1):
-        out.append({"trade_date": iso, "market": "fut", "rank": i, "code": sc,
-                    "name": b["name"] + "期貨" + ("（含小型）" if b["mini"] else ""),
-                    "turnover": None, "volume": round(b["eq"])})
-    print(f"個股期貨：{len(agg)} 個契約 → {len(by)} 檔標的，股數對照 {len(size)} 筆")
+    for i, (c, vol) in enumerate(ranked, 1):
+        sn, sc, _ = ssf[c]; sn = sn.rstrip("*＊ ")
+        name = f"{sn}{'小型' if size.get(c) == 100 else ''}期貨"
+        out.append({"trade_date": iso, "market": "fut", "rank": i,
+                    "code": sc, "name": name, "turnover": None, "volume": round(vol)})
+    print(f"個股期貨：{len(agg)} 個契約，股數對照 {len(size)} 筆")
     return out, iso
 
 
