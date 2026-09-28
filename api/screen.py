@@ -152,7 +152,23 @@ def _get_industry_map() -> dict:
     if not _industry_cache:
         _industry_cache = dict(_STOCK_INDUSTRY)
         _industry_cache_ts = time.time()
-    return _industry_cache
+    # 上櫃產業別（TPEx 公司基本資料，2026-09-28；搜尋下拉讓上櫃股也帶產業）
+    if not _industry_cache.get("__otc_loaded"):
+        try:
+            import ssl as _ssl
+            ctx = _ssl.create_default_context(); ctx.check_hostname = False; ctx.verify_mode = _ssl.CERT_NONE
+            req = urllib.request.Request("https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap03_O",
+                                         headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"})
+            with urllib.request.urlopen(req, timeout=6, context=ctx) as r:
+                for row in json.loads(r.read().decode("utf-8-sig")):
+                    code = str(row.get("SecuritiesCompanyCode", "")).strip()
+                    ind = str(row.get("SecuritiesIndustryCode", "")).strip()
+                    if code and code not in _industry_cache:
+                        _industry_cache[code] = _INDUSTRY_CODE_MAP.get(ind, ind)
+            _industry_cache["__otc_loaded"] = "1"
+        except Exception:
+            pass
+    return {k: v for k, v in _industry_cache.items() if k != "__otc_loaded"}
 
 
 def _get_json(url, headers=TWSE_HEADERS, timeout=20):
@@ -1953,6 +1969,19 @@ class handler(BaseHTTPRequestHandler):
             except Exception as e:
                 import traceback
                 return self._send_json(200, {"error": str(e), "traceback": traceback.format_exc()})
+        # 上櫃 ETF 代號→名稱（TPEx openapi，前端搜尋清單用；前端直連會被跨站擋；CDN 快取 1 天）2026-09-28
+        if (qs.get("stat") or [""])[0] == "otcetf":
+            try:
+                req = urllib.request.Request("https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes",
+                                             headers={"User-Agent": "Mozilla/5.0"})
+                import ssl as _ssl
+                ctx = _ssl.create_default_context(); ctx.check_hostname = False; ctx.verify_mode = _ssl.CERT_NONE
+                rows = json.loads(urllib.request.urlopen(req, timeout=20, context=ctx).read().decode("utf-8-sig"))
+                out = {str(r.get("SecuritiesCompanyCode", "")).strip(): str(r.get("CompanyName", "")).strip()
+                       for r in rows if str(r.get("SecuritiesCompanyCode", "")).startswith("00")}
+                return self._send_json(200, out, cache="public, s-maxage=86400, max-age=3600")
+            except Exception as e:
+                return self._send_json(200, {"error": str(e)})
         # 個股新聞（Google 新聞 RSS，即時查、不存 DB；CDN 快取 30 分鐘）
         if (qs.get("stat") or [""])[0] == "stocknews":
             code = (qs.get("code") or [""])[0].strip()
