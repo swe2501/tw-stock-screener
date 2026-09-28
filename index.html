@@ -1578,7 +1578,7 @@
           <p class="gs-today-body" id="gsTodayBody"></p>
           <div class="gs-kpi2" id="gsKpi2"></div>
           <details class="gs-basis"><summary>判讀依據</summary><div class="body" id="gsBasis"></div></details>
-          <div class="gs-today-foot"><span class="gs-tone" id="gsTone">今日定調</span><a href="#" class="gs-report" onclick="try{window._showView('focus')}catch(e){}return false;">閱讀完整報告 →</a></div>
+          <div class="gs-today-foot"><span class="gs-tone" id="gsTone">今日定調</span><a href="#" class="gs-report" onclick="try{var t=document.getElementById('cbSheet');if(t)t.scrollIntoView({behavior:'smooth',block:'start'});}catch(e){}return false;">閱讀完整報告 →</a></div>
         </aside>
       </div>
       </div>
@@ -1590,7 +1590,7 @@
       <div class="hx-chartbox"><div id="hxChart"></div><div id="hxMsg" class="hx-msg"></div></div>
     </div>
 
-    <div class="cb-sheet">
+    <div class="cb-sheet" id="cbSheet" style="scroll-margin-top:12px">
       <div class="cb-head">
         <div class="cb-head-l">
           <p class="cb-eyebrow">DAILY CHIP BRIEF · 每日籌碼簡報</p>
