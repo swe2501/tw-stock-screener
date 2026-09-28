@@ -3877,62 +3877,161 @@
   </script>
 
   <style>
-    #newsView{max-width:920px;margin:0 auto;}
-    .nw-day{font-size:13px;font-weight:800;color:var(--text-muted);margin:18px 2px 10px;display:flex;align-items:center;gap:8px;}
-    .nw-day::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--accent);flex:0 0 auto;}
-    .nw-day:first-child{margin-top:4px;}
-    .nw-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-sm);padding:14px 18px;margin-bottom:10px;}
-    .nw-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
-    .nw-ttl{font-size:15.5px;font-weight:800;line-height:1.45;}
-    a.nw-ttl{color:inherit;text-decoration:none;cursor:pointer;}
-    a.nw-ttl:hover{color:var(--brand-green);text-decoration:underline;}
-    .nw-heat{flex:0 0 auto;font-size:11px;font-weight:800;color:#231c00;background:var(--accent);border-radius:8px;padding:2px 9px;white-space:nowrap;}
-    .nw-meta{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 8px;}
-    .nw-badge{font-size:11px;color:var(--text-muted);background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:2px 10px;}
-    .nw-sum{font-size:13.5px;color:var(--text);line-height:1.75;margin-bottom:10px;}
-    .nw-codes{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px;}
-    .nw-chip{font-size:12px;font-weight:600;border:1px solid var(--border);border-radius:8px;padding:3px 9px;color:var(--accent);cursor:pointer;transition:background .15s;}
-    .nw-chip:hover{background:var(--ctl-hi);}
-    .nw-src{font-size:11.5px;color:var(--text-muted);display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
-    .nw-src a{color:var(--accent2);text-decoration:none;border:1px solid var(--border);border-radius:6px;padding:2px 8px;}
-    .nw-src a:hover{border-color:var(--accent2);}
+    /* ══ 每日新聞與產業：版面／配色 100% 比照合夥人 genshuei-market /news（2026-09-28，數值取自該頁實際套用樣式）══ */
+    #newsView{--nw-paper:#f7f3e9;--nw-white:#ffffff;--nw-ink:#153d33;--nw-card:#fffdf8;--nw-card-bd:rgba(201,191,171,.72);--nw-card-sh:rgba(226,216,197,.65);
+      --nw-rule:#1c2524;--nw-dbl:#222;--nw-line:#aeb9c0;--nw-line2:#cad0d2;--nw-dash:#c4c9ca;--nw-ctrl:#f3eee4;--nw-note:#f1ede5;
+      --nw-muted:#7a858b;--nw-muted2:#68757d;--nw-body:#354854;--nw-src:#8e3b32;--nw-red:#8f4242;--nw-tag-bg:#f3e8e5;--nw-tag:#a64943;
+      --nw-gold:#b58a2d;--nw-diamond:#c94444;--nw-em:#9b927f;--nw-input-bd:#26333a;--nw-sel-bd:#d6d0c5;--nw-sel-bg:#fff4e8;--nw-sel:#a54628;
+      --nw-serif:'Noto Serif TC',ui-serif,Georgia,Cambria,'Times New Roman',serif;
+      max-width:1180px;margin:0 auto;background:var(--nw-paper);color:var(--nw-ink);border-radius:4px;overflow:hidden;}
+    :root:not([data-theme="light"]) #newsView{--nw-paper:#15191c;--nw-white:#1b2024;--nw-ink:#e3dccb;--nw-card:#1e2428;--nw-card-bd:rgba(120,112,96,.5);--nw-card-sh:rgba(0,0,0,.35);
+      --nw-rule:#d9d2c0;--nw-dbl:#bdb5a2;--nw-line:#3b454b;--nw-line2:#3b454b;--nw-dash:#3f474c;--nw-ctrl:#1b2024;--nw-note:#22282c;
+      --nw-muted:#8d989e;--nw-muted2:#8d989e;--nw-body:#c2c9cd;--nw-src:#e0897d;--nw-red:#e0897d;--nw-tag-bg:rgba(166,73,67,.2);--nw-tag:#eba59e;
+      --nw-em:#8f8878;--nw-input-bd:#56636b;--nw-sel-bd:#56636b;--nw-sel-bg:rgba(181,138,45,.18);--nw-sel:#e8c26a;}
+    #newsView .nw-mast{background:var(--nw-white);border-bottom:.8px solid var(--nw-line);padding:20px 24px 28px;text-align:center;}
+    #newsView .nw-rule6{height:6px;background:var(--nw-rule);margin-bottom:24px;}
+    #newsView .nw-title{display:flex;align-items:center;justify-content:space-between;border-top:3px double var(--nw-dbl);border-bottom:3px double var(--nw-dbl);padding:12px 35px;font:900 clamp(30px,5vw,52px) var(--nw-serif);letter-spacing:.26em;color:var(--nw-ink);}
+    #newsView .nw-title i{width:9px;height:9px;background:var(--nw-diamond);transform:rotate(45deg);flex:0 0 auto;}
+    #newsView .nw-mast p{display:flex;justify-content:center;align-items:center;gap:8px;font-weight:700;font-size:16px;margin:16px 0;flex-wrap:wrap;}
+    #newsView .nw-mast p svg{width:14px;height:14px;color:#7d67d9;}
+    #newsView .nw-mast em{font:italic 10px Georgia,serif;letter-spacing:.2em;color:var(--nw-em);}
+    #newsView .nw-ctrl{background:var(--nw-ctrl);border-bottom:.8px solid var(--nw-line2);}
+    #newsView .nw-ctrl>div{display:grid;grid-template-columns:1.1fr 2.1fr auto;align-items:center;gap:18px;padding:15px 24px;}
+    #newsView .nw-ctrl form{display:grid;grid-template-columns:auto minmax(150px,1fr) auto minmax(150px,1fr) auto;align-items:center;gap:10px;margin:0;}
+    #newsView .nw-ctrl form.q{display:flex;}
+    #newsView .nw-ctrl span.k{font:700 10px var(--nw-serif);letter-spacing:.18em;white-space:nowrap;}
+    #newsView .nw-ctrl label{display:flex;align-items:center;background:var(--nw-white);border:.8px solid var(--nw-input-bd);flex:1;min-width:0;height:42px;}
+    #newsView .nw-ctrl form.q label{border-color:#982e2e;}
+    #newsView .nw-ctrl label svg{width:15px;height:15px;margin-left:9px;flex:0 0 auto;}
+    #newsView .nw-ctrl input{border:0;outline:0;padding:8px;flex:1;min-width:0;background:transparent;color:var(--nw-ink);font:700 11px inherit;}
+    #newsView .nw-ctrl form.q input{font:13px inherit;}
+    #newsView .nw-ctrl select{min-height:42px;padding:0 30px 0 12px;border:.8px solid var(--nw-sel-bd);border-radius:10px;background:var(--nw-white);color:var(--nw-ink);font:13px inherit;min-width:0;}
+    #newsView .nw-ctrl button{border:0;background:var(--nw-gold);color:#fff;padding:9px 13px;font-weight:800;white-space:nowrap;height:42px;cursor:pointer;font-family:inherit;font-size:14px;}
+    #newsView .nw-ctrl form.q button{background:#172a38;}
+    #newsView .nw-ctrl small{color:var(--nw-red);font-size:12.8px;white-space:nowrap;}
+    #newsView .nw-layout{display:grid;grid-template-columns:235px 1fr;gap:28px;padding:28px 24px;}
+    #newsView .nw-index{border-right:1px solid var(--nw-line);padding-right:20px;}
+    #newsView .nw-index h2{font:700 18px var(--nw-serif);text-align:center;border-bottom:3px double #1d272d;padding-bottom:12px;margin:0;color:var(--nw-ink);}
+    :root:not([data-theme="light"]) #newsView .nw-index h2{border-bottom-color:var(--nw-dbl);}
+    #newsView .nw-index>a{display:flex;justify-content:space-between;align-items:center;padding:10px 5px;border-bottom:.8px dashed var(--nw-dash);cursor:pointer;color:var(--nw-ink);text-decoration:none;}
+    #newsView .nw-index>a b{font:700 12px var(--nw-serif);}
+    #newsView .nw-index>a span{font:10px Georgia,serif;color:var(--nw-muted);}
+    #newsView .nw-index>a.on{border:1px solid var(--nw-gold);background:var(--nw-sel-bg);color:var(--nw-sel);}
+    #newsView .nw-index>a:hover b{color:var(--nw-gold);}
+    #newsView .nw-rss{margin-top:25px;padding:15px;background:var(--nw-note);}
+    #newsView .nw-rss svg{width:18px;height:18px;color:var(--nw-gold);}
+    #newsView .nw-rss b{display:block;font-family:var(--nw-serif);}
+    #newsView .nw-rss p{font-size:10px;line-height:1.7;color:var(--nw-muted2);margin:4px 0 0;}
+    #newsView .nw-stream{min-width:0;}
+    #newsView .nw-seg{margin-bottom:36px;}
+    #newsView .nw-seg>header{display:flex;align-items:center;border-bottom:2px solid #1c272d;padding-bottom:8px;margin-bottom:16px;}
+    :root:not([data-theme="light"]) #newsView .nw-seg>header{border-bottom-color:var(--nw-dbl);}
+    #newsView .nw-seg>header h2{font:700 22px var(--nw-serif);margin:0;border-left:4px solid var(--nw-gold);padding-left:10px;color:var(--nw-ink);}
+    #newsView .nw-seg>header span{margin-left:auto;color:#6e7a81;font-size:10px;}
+    #newsView .nw-cards{display:grid;grid-template-columns:1fr 1fr;gap:22px;}
+    #newsView .nw-cards article{position:relative;background:var(--nw-card);border:.8px solid var(--nw-card-bd);border-radius:2px 16px;box-shadow:5px 5px 0 var(--nw-card-sh);padding:18px 20px 20px 22px;min-width:0;}
+    #newsView .nw-cards article:before{content:'';position:absolute;left:0;top:18px;bottom:48px;width:2px;background:var(--nw-ink);}
+    #newsView .nw-meta{display:flex;align-items:center;gap:12px;font-size:9px;color:#758087;}
+    #newsView .nw-meta b{color:var(--nw-src);}
+    #newsView .nw-meta time{display:flex;align-items:center;gap:4px;} #newsView .nw-meta svg{width:12px;height:12px;}
+    #newsView .nw-meta .ht{margin-left:auto;font-weight:800;color:var(--nw-gold);}
+    #newsView .nw-cards h3{font:700 21px/1.35 var(--nw-serif);margin:8px 0 13px;color:var(--nw-ink);}
+    #newsView .nw-cards h3 a{color:inherit;text-decoration:none;} #newsView .nw-cards h3 a:hover{text-decoration:underline;}
+    #newsView .nw-cards p{font:13px/1.8 var(--nw-serif);color:var(--nw-body);margin:0 0 15px;}
+    #newsView .nw-tags{display:flex;flex-wrap:wrap;gap:5px;}
+    #newsView .nw-tags a{background:var(--nw-tag-bg);color:var(--nw-tag);padding:4px 7px;font-size:9px;border-radius:999px;cursor:pointer;text-decoration:none;}
+    #newsView .nw-tags a.sec{background:#f3efe6;color:#8a6920;}
+    :root:not([data-theme="light"]) #newsView .nw-tags a.sec{background:rgba(181,138,45,.18);color:#e8c26a;}
+    #newsView .nw-read{display:inline-flex;align-items:center;gap:3px;margin-top:12px;font-size:10px;font-weight:700;color:var(--nw-ink);text-decoration:none;}
+    #newsView .nw-read svg{width:13px;height:13px;}
+    #newsView .nw-empty{text-align:center;padding:80px 20px;background:var(--nw-white);}
+    #newsView .nw-empty h2{font-family:var(--nw-serif);}
+    #newsView .nw-foot{border-top:.8px solid var(--nw-line);padding:20px 24px 35px;color:var(--nw-muted2);font-size:10px;line-height:1.6;}
+    @media(max-width:900px){#newsView .nw-ctrl>div{grid-template-columns:1fr;} #newsView .nw-layout{grid-template-columns:1fr;}
+      #newsView .nw-index{border-right:0;padding-right:0;} #newsView .nw-index>a{display:inline-flex;gap:8px;border:1px solid #c3c9cb;margin:3px;padding:7px 9px;}
+      #newsView .nw-rss{display:none;} #newsView .nw-ctrl form{grid-template-columns:auto 1fr;} #newsView .nw-ctrl form button{grid-column:1/-1;}}
+    @media(max-width:680px){#newsView .nw-title{padding-inline:10px;letter-spacing:.08em;} #newsView .nw-ctrl small{display:none;} #newsView .nw-cards{grid-template-columns:1fr;} #newsView .nw-cards h3{font-size:19px;}}
   </style>
   <div id="newsView" style="display:none">
-    <div class="tm-head"><h2>📰 每日新聞</h2><span class="sub" id="nwSub"></span></div>
-    <div id="nwList"><div class="fc-empty">載入中…</div></div>
-    <div class="fc-note" id="nwNote"></div>
+    <section class="nw-mast"><div class="nw-rule6"></div><div class="nw-title"><i></i>每 日 新 聞 與 產 業<i></i></div>
+      <p><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span id="nwMastTxt">載入中…</span></p>
+      <em>DAILY MARKET &amp; INDUSTRY NEWS</em></section>
+    <section class="nw-ctrl"><div>
+      <form id="nwForm" onsubmit="return false"><span class="k">日期</span><label><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><input type="date" id="nwDate"></label>
+        <span class="k">產業</span><select id="nwSec" aria-label="選擇產業"><option value="">全部產業</option></select><button type="button" id="nwApply">套用篩選</button></form>
+      <form class="q" id="nwQForm" onsubmit="return false"><span class="k" style="margin-right:10px">搜尋</span><label><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="nwQ" placeholder="代號、股名、產業或新聞標題"><button type="button" id="nwQBtn">查詢</button></label></form>
+      <small id="nwCount"></small>
+    </div></section>
+    <section class="nw-layout"><aside class="nw-index" id="nwIndex"><h2>產業索引</h2></aside><div class="nw-stream" id="nwList"><div class="nw-empty"><h2>載入中…</h2></div></div></section>
+    <footer class="nw-foot" id="nwNote"></footer>
   </div>
   <script>
   (function(){
     var el=function(id){return document.getElementById(id);};
     function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
-    function host(u){try{return new URL(u).hostname.replace(/^www\./,'');}catch(e){return '來源';}}
+    function host(u){try{var h=new URL(u).hostname.replace(/^www\./,'');var m={'money.udn.com':'經濟日報','udn.com':'聯合新聞網','ctee.com.tw':'工商時報','cnyes.com':'鉅亨網','news.cnyes.com':'鉅亨網','technews.tw':'科技新報','digitimes.com.tw':'DIGITIMES','moneydj.com':'MoneyDJ','tw.stock.yahoo.com':'Yahoo股市','cna.com.tw':'中央社','wealth.com.tw':'財訊','businesstoday.com.tw':'今周刊','mops.twse.com.tw':'MOPS重大訊息'};return m[h]||h;}catch(e){return '來源';}}
+    // hot_topics 的 codes／source_urls 可能是 JSON 陣列或 Python 字串表示 → 一律用正規式抽取
+    function codesOf(v){ if(Array.isArray(v)) return v; var out=[],re=/['"]code['"]\s*:\s*['"]([^'"]+)['"]\s*,\s*['"]name['"]\s*:\s*['"]([^'"]*)['"]/g,m; while((m=re.exec(String(v||''))))out.push({code:m[1],name:m[2]}); return out; }
+    function urlsOf(v){ if(Array.isArray(v)) return v; return String(v||'').match(/https?:\/\/[^'"\s\],]+/g)||[]; }
+    var ALL=[], DATES=[], DATE='', SEC='', Q='';
+    function wk(d){ return '週'+'日一二三四五六'[new Date(d+'T12:00:00+08:00').getDay()]; }
+    function tier(h){ h=+h||0; return h>=80?0:(h>=60?1:2); }
+    var TIER=['焦點新聞 熱度 80+','重要新聞 熱度 60–79','一般新聞 熱度 60 以下'];
+    var ICO_CLOCK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+    var ICO_UP='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg>';
+    function render(){
+      var day=ALL.filter(function(t){return t.published_at===DATE;});
+      var q=Q.trim().toLowerCase();
+      var vis=day.filter(function(t){ if(SEC&&t.sector!==SEC) return false; if(!q) return true;
+        return (t.topic+' '+(t.summary||'')+' '+(t.sector||'')+' '+t._codes.map(function(c){return c.code+' '+c.name;}).join(' ')).toLowerCase().indexOf(q)>=0; });
+      el('nwMastTxt').textContent=DATE+'（'+wk(DATE)+'）　·　已保存 '+DATES.length+' 個新聞日期　·　每日盤後更新';
+      el('nwCount').textContent='顯示 '+vis.length+'／'+day.length+' 則';
+      // 左側產業索引＝當日各產業則數（點選即篩選，再點取消）
+      var cnt={}; day.forEach(function(t){ var s=t.sector||'其他'; cnt[s]=(cnt[s]||0)+1; });
+      var idx=Object.keys(cnt).sort(function(a,b){return cnt[b]-cnt[a];});
+      el('nwIndex').innerHTML='<h2>產業索引</h2>'+(idx.length?('<a data-s=""'+(SEC===''?' class="on"':'')+'><b>全部產業</b><span>×'+day.length+'</span></a>'
+          +idx.map(function(s){return '<a data-s="'+esc(s)+'"'+(SEC===s?' class="on"':'')+'><b>'+esc(s)+'</b><span>×'+cnt[s]+'</span></a>';}).join('')):'<p style="font-size:12px;color:var(--nw-muted)">本日尚無產業分類。</p>')
+        +'<div class="nw-rss"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8M15 18h-5M10 6h8v4h-8z"/></svg><b>合法彙整</b><p>僅顯示新聞重點摘要、相關個股與原文連結，版權屬各原始媒體。</p></div>';
+      el('nwIndex').querySelectorAll('a[data-s]').forEach(function(a){ a.onclick=function(){ SEC=(SEC===a.dataset.s)?'':a.dataset.s; el('nwSec').value=SEC; render(); }; });
+      // 產業下拉選單
+      el('nwSec').innerHTML='<option value="">全部產業</option>'+idx.map(function(s){return '<option value="'+esc(s)+'"'+(SEC===s?' selected':'')+'>'+esc(s)+'</option>';}).join('');
+      var groups=[0,1,2].map(function(k){ return {name:TIER[k], items:vis.filter(function(t){return tier(t.heat)===k;}).sort(function(a,b){return (+b.heat||0)-(+a.heat||0);})}; }).filter(function(g){return g.items.length;});
+      if(!groups.length){ el('nwList').innerHTML='<div class="nw-empty"><h2>'+(day.length?'沒有符合條件的新聞':'這個日期尚無新聞')+'</h2><p style="font-size:13px;color:var(--nw-muted)">'+(day.length?'請調整產業或搜尋關鍵字。':'請改選其他日期。')+'</p></div>'; return; }
+      el('nwList').innerHTML=groups.map(function(g){
+        return '<section class="nw-seg"><header><h2>'+g.name+'</h2><span>'+g.items.length+' 則</span></header><div class="nw-cards">'
+          +g.items.map(function(t){ var u=t._urls[0]||'';
+            return '<article><div class="nw-meta"><b>'+esc(u?host(u):'彙整')+'</b><time>'+ICO_CLOCK+esc(t.published_at)+'</time>'+(t.heat!=null?'<span class="ht">熱度 '+esc(t.heat)+'</span>':'')+'</div>'
+              +'<h3>'+(u?'<a href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">'+esc(t.topic)+'</a>':esc(t.topic))+'</h3>'
+              +(t.summary?'<p>'+esc(t.summary)+'</p>':'')
+              +'<div class="nw-tags">'+(t.sector?'<a class="sec" data-s="'+esc(t.sector)+'">'+esc(t.sector)+'</a>':'')
+                +t._codes.map(function(c){return '<a data-c="'+esc(c.code)+'" data-n="'+esc(c.name)+'">'+esc(c.code)+' '+esc(c.name)+'</a>';}).join('')+'</div>'
+              +(u?'<a class="nw-read" href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">前往原文 '+ICO_UP+'</a>':'')
+              +(t._urls.length>1?' <span style="font-size:10px;color:var(--nw-muted)">（另有 '+(t._urls.length-1)+' 則來源）</span>':'')
+              +'</article>'; }).join('')+'</div></section>'; }).join('');
+      el('nwList').querySelectorAll('.nw-tags a').forEach(function(a){ a.onclick=function(){
+        if(a.dataset.c){ if(typeof _openStock==='function') _openStock(a.dataset.c, a.dataset.n); else if(typeof openChart==='function') openChart(a.dataset.c, a.dataset.n); }
+        else { SEC=a.dataset.s; el('nwSec').value=SEC; render(); window.scrollTo({top:el('newsView').offsetTop,behavior:'smooth'}); } }; });
+    }
+    var bound=false;
     window._newsShow=function(){
+      if(!bound){ bound=true;
+        el('nwApply').onclick=function(){ var d=el('nwDate').value; if(d) DATE=d; SEC=el('nwSec').value; render(); };
+        el('nwDate').onchange=function(){ if(this.value){ DATE=this.value; SEC=''; render(); } };
+        el('nwSec').onchange=function(){ SEC=this.value; render(); };
+        el('nwQBtn').onclick=function(){ Q=el('nwQ').value; render(); };
+        el('nwQ').onkeydown=function(e){ if(e.key==='Enter'){ Q=this.value; render(); } };
+        el('nwQ').oninput=function(){ if(!this.value&&Q){ Q=''; render(); } };
+      }
       var SB=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'', AK=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';
-      fetch(SB+'/rest/v1/hot_topics?select=topic,sector,summary,codes,source_urls,heat,published_at,captured_at&order=published_at.desc,heat.desc&limit=200',{headers:{apikey:AK,Authorization:'Bearer '+AK}}).then(function(r){return r.json();}).then(function(a){
-        if(!Array.isArray(a)||!a.length){el('nwList').innerHTML='<div class="fc-empty">目前無新聞資料</div>';return;}
-        var cap=a[0].captured_at?String(a[0].captured_at).slice(0,10):'';
-        if(el('nwSub'))el('nwSub').textContent='共 '+a.length+' 則'+(cap?' · 更新於 '+cap:'');
-        // group by published_at
-        var groups={},order=[];
-        a.forEach(function(t){var d=t.published_at||'其他';if(!groups[d]){groups[d]=[];order.push(d);}groups[d].push(t);});
-        el('nwList').innerHTML=order.map(function(d){
-          var items=groups[d].map(function(t){
-            var codes=Array.isArray(t.codes)?t.codes.map(function(c){return '<span class="nw-chip" onclick="_openStock(\''+esc(c.code)+'\',\''+esc(c.name||'')+'\')">'+esc(c.code)+' '+esc(c.name||'')+'</span>';}).join(''):'';
-            var srcs=Array.isArray(t.source_urls)?t.source_urls.map(function(u){return '<a href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">'+esc(host(u))+' ↗</a>';}).join(''):'';
-            var purl=(Array.isArray(t.source_urls)&&t.source_urls.length)?t.source_urls[0]:'';
-            var ttl=purl?('<a class="nw-ttl" href="'+esc(purl)+'" target="_blank" rel="noopener noreferrer">'+esc(t.topic)+' ↗</a>'):('<span class="nw-ttl">'+esc(t.topic)+'</span>');
-            return '<div class="nw-item"><div class="nw-top">'+ttl+(t.heat!=null?'<span class="nw-heat">熱度 '+esc(t.heat)+'</span>':'')+'</div>'+
-              (t.sector?'<div class="nw-meta"><span class="nw-badge">'+esc(t.sector)+'</span></div>':'')+
-              (t.summary?'<div class="nw-sum">'+esc(t.summary)+'</div>':'')+
-              (codes?'<div class="nw-codes">'+codes+'</div>':'')+
-              (srcs?'<div class="nw-src">📎 '+srcs+'</div>':'')+
-            '</div>';
-          }).join('');
-          return '<div class="nw-day">'+esc(d)+'</div>'+items;
-        }).join('');
-      }).catch(function(){el('nwList').innerHTML='<div class="fc-empty">讀取失敗</div>';});
-      if(el('nwNote'))el('nwNote').innerHTML='<b>資料源：</b>hot_topics（每日新聞題材彙整流程產出）。依新聞發布日(published_at)由新到舊排列，每則附原始新聞連結與相關個股(可點擊開 K 線)。';
+      fetch(SB+'/rest/v1/hot_topics?select=topic,sector,summary,codes,source_urls,heat,published_at,captured_at&order=published_at.desc,heat.desc&limit=1000',{headers:{apikey:AK,Authorization:'Bearer '+AK}}).then(function(r){return r.json();}).then(function(a){
+        if(!Array.isArray(a)||!a.length){ el('nwList').innerHTML='<div class="nw-empty"><h2>目前無新聞資料</h2></div>'; return; }
+        ALL=a.filter(function(t){return t.published_at;}).map(function(t){ t._codes=codesOf(t.codes); t._urls=urlsOf(t.source_urls); return t; });
+        DATES=[]; ALL.forEach(function(t){ if(DATES.indexOf(t.published_at)<0) DATES.push(t.published_at); });
+        if(!DATE||DATES.indexOf(DATE)<0) DATE=DATES[0];
+        el('nwDate').value=DATE; el('nwDate').max=DATES[0]; el('nwDate').min=DATES[DATES.length-1];
+        render();
+      }).catch(function(){ el('nwList').innerHTML='<div class="nw-empty"><h2>讀取失敗</h2></div>'; });
+      el('nwNote').innerHTML='新聞來源：hot_topics（每日新聞題材彙整流程，自經濟日報、工商時報、鉅亨網等財經媒體與公開資訊整理），本站只保存標題、重點摘要、產業分類、相關個股與原文連結，不儲存新聞全文。版面比照合夥人「每日新聞與產業」頁（2026-09-28）：左側產業索引＝所選日期各產業則數（點選即篩選）；因新聞僅有發布日期、無發布時間，原「盤前／盤中／盤後／晚間」時段分組改為依熱度分組（80 以上焦點、60–79 重要、60 以下一般），同組內依熱度由高到低。點產業標籤可篩選、點個股標籤開 K 線。';
     };
     window._VIEWS=window._VIEWS||{}; window._VIEWS.news={el:'newsView',show:'_newsShow'};
   })();
