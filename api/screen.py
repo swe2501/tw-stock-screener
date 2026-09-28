@@ -508,6 +508,80 @@ def _fetch_limitup():
             "up_count": len(ups), "down_count": len(downs)}
 
 
+def _fetch_disposal():
+    """處置股：上市 TWSE openapi announcement/punish ＋ 上櫃 TPEx tpex_disposal_information，
+    只留處置期間尚未結束者（迄日 ≥ 今天，台灣時間），併 price_window 最新收盤/漲跌幅。2026-09-28
+    次數：上市欄位直接給；上櫃依措施文字——「所有投資人…」＝第二次（全額預收），否則第一次。"""
+    import re as _re, ssl as _ssl
+    from datetime import datetime as _dt, timedelta as _td, timezone as _tz
+    ctx = _ssl.create_default_context(); ctx.check_hostname = False; ctx.verify_mode = _ssl.CERT_NONE
+    today = (_dt.now(_tz(_td(hours=8)))).strftime("%Y-%m-%d")
+
+    def roc(t):          # 1150924 / 115/09/24 → 2026-09-24
+        d = _re.sub(r"\D", "", t or "")
+        if len(d) < 7:
+            return None
+        return f"{int(d[:-4]) + 1911}-{d[-4:-2]}-{d[-2:]}"
+
+    def get(url):
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        return json.loads(urllib.request.urlopen(req, timeout=20, context=ctx).read().decode("utf-8-sig"))
+
+    def interval(t):
+        m = _re.search(r"每\s*([0-9一二三四五六七八九十]+)\s*分鐘", t or "")
+        if not m:
+            return None
+        v = m.group(1); cn = {"一": 1, "二": 2, "三": 3, "四": 4, "五": 5, "十": 10, "二十": 20, "二十五": 25}
+        return int(v) if v.isdigit() else cn.get(v)
+
+    out, errs = [], []
+    try:
+        for r in get("https://openapi.twse.com.tw/v1/announcement/punish"):
+            per = str(r.get("DispositionPeriod", "")).replace("～", "~").split("~")
+            if len(per) != 2 or not r.get("Code"):
+                continue
+            det = r.get("Detail", "")
+            out.append({"mkt": "上市", "code": str(r["Code"]).strip(), "name": str(r.get("Name", "")).strip(),
+                        "ann": roc(r.get("Date")), "start": roc(per[0]), "end": roc(per[1]),
+                        "level": str(r.get("DispositionMeasures", "")).strip() or None,
+                        "reason": str(r.get("ReasonsOfDisposition", "")).strip(), "mins": interval(det),
+                        "full": "所有投資人" in det, "detail": det.strip()})
+    except Exception as e:
+        errs.append(f"上市：{str(e)[:60]}")
+    try:
+        for r in get("https://www.tpex.org.tw/openapi/v1/tpex_disposal_information"):
+            per = str(r.get("DispositionPeriod", "")).split("~")
+            if len(per) != 2:
+                continue
+            det = r.get("DisposalCondition", "")
+            full = "所有投資人" in det
+            out.append({"mkt": "上櫃", "code": str(r.get("SecuritiesCompanyCode", "")).strip(), "name": str(r.get("CompanyName", "")).strip(),
+                        "ann": roc(r.get("Date")), "start": roc(per[0]), "end": roc(per[1]),
+                        "level": "第二次處置" if full else "第一次處置",
+                        "reason": str(r.get("DispositionReasons", "")).strip(), "mins": interval(det),
+                        "full": full, "detail": det.strip()})
+    except Exception as e:
+        errs.append(f"上櫃：{str(e)[:60]}")
+    out = [x for x in out if x["end"] and x["end"] >= today and x["code"]]
+    # 同代號重複公告（延長/再次處置）只留迄日最晚的一筆
+    best = {}
+    for x in out:
+        k = x["code"]
+        if k not in best or (x["end"], x["ann"] or "") > (best[k]["end"], best[k]["ann"] or ""):
+            best[k] = x
+    out = sorted(best.values(), key=lambda x: (x["ann"] or "", x["code"]), reverse=True)
+    try:
+        latest, by_code = _load_pw_window(2)
+        for x in out:
+            arr = (by_code or {}).get(x["code"])
+            if arr and len(arr) >= 2 and arr[0].get("close") and arr[1].get("close"):
+                x["close"] = arr[0]["close"]; x["chg"] = round((arr[0]["close"] / arr[1]["close"] - 1) * 100, 2)
+        px_date = latest
+    except Exception:
+        px_date = None
+    return {"today": today, "px_date": px_date, "items": out, "errors": errs}
+
+
 def _fetch_sectors():
     """產業地圖：以產業別彙整當日表現。
       個股漲跌幅 = 今收/前收-1；產業平均漲跌幅 = 該產業成分股漲跌幅算術平均。
@@ -2006,6 +2080,12 @@ class handler(BaseHTTPRequestHandler):
             if len(out) < 500:                       # 官方被擋 → 內嵌備援（短快取，稍後再試官方）
                 return self._send_json(200, _SHARES_FALLBACK, cache="public, s-maxage=3600, max-age=600")
             return self._send_json(200, out, cache="public, s-maxage=86400, max-age=3600")
+        # 處置股（上市＋上櫃，即時抓官方 openapi；CDN 快取 30 分鐘）2026-09-28
+        if (qs.get("stat") or [""])[0] == "disposal":
+            try:
+                return self._send_json(200, _fetch_disposal(), cache="public, s-maxage=1800, max-age=300")
+            except Exception as e:
+                return self._send_json(200, {"error": str(e)})
         # 個股新聞（Google 新聞 RSS，即時查、不存 DB；CDN 快取 30 分鐘）
         if (qs.get("stat") or [""])[0] == "stocknews":
             code = (qs.get("code") or [""])[0].strip()

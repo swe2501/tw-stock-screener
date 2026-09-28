@@ -1366,7 +1366,7 @@
     <div class="mn-grp"><span class="mn-item">題材族群 <i>▾</i></span><div class="mn-menu">
       <a class="nav-owner" onclick="openHotTopics()">🔥 話題</a><a onclick="_showView('themes')">題材列表</a><a onclick="_showView('sectors')">產業地圖</a></div></div>
     <div class="mn-grp"><span class="mn-item">市場觀察 <i>▾</i></span><div class="mn-menu">
-      <a class="nav-owner" onclick="_showView('sig')">🎯 主力訊號</a><a class="nav-owner" onclick="_showView('brank')">📊 分點回測</a><a onclick="_showView('greed')">😱 貪婪指標</a><a onclick="_showView('inst')">🏦 三大法人個股買賣超</a><a onclick="_showView('fhedge')">🌡️ 外資空單溫度計</a><a onclick="_showView('breadth')">📊 大盤多空廣度</a></div></div>
+      <a class="nav-owner" onclick="_showView('sig')">🎯 主力訊號</a><a class="nav-owner" onclick="_showView('brank')">📊 分點回測</a><a onclick="_showView('greed')">😱 貪婪指標</a><a onclick="_showView('inst')">🏦 三大法人個股買賣超</a><a onclick="_showView('fhedge')">🌡️ 外資空單溫度計</a><a onclick="_showView('breadth')">📊 大盤多空廣度</a><a onclick="_showView('disposal')">🚫 處置股</a></div></div>
     <div class="mn-grp"><span class="mn-item">ETF 分析 <span class="mn-new">新</span> <i>▾</i></span><div class="mn-menu">
       <a onclick="_showView('etfx')" style="font-weight:800;color:var(--brand-green)">🧭 ETF 探索（工作台）</a><a onclick="_showView('etf')">總覽 · 規模排行</a><a onclick="_showView('etfcons')">成分股</a><a onclick="_showView('etfrev')">股票反查 ETF</a><a onclick="_showView('etfdiv')">配息行事曆</a><a onclick="_showView('etfhold')">持有人結構</a><a onclick="_showView('etfsim')">ETF 相似度</a><a onclick="_showView('etfheavy')">重倉股排行</a><a onclick="_showView('etfprem')">折溢價</a><a onclick="_showView('etfflow')">資金流</a><a onclick="_showView('etfperf')">績效比較</a></div></div>
     <a class="mn-item" onclick="_showView('news')">每日新聞</a>
@@ -2718,6 +2718,94 @@
   })();
   </script>
 
+  <!-- ══ 處置股（市場觀察）══ 2026-09-28 -->
+  <style>
+    #disposalView{max-width:1200px;margin:0 auto;}
+    .dp-bar{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;margin:4px 0 12px;font-size:13px;color:var(--text-muted);}
+    .dp-bar label{display:inline-flex;align-items:center;gap:4px;cursor:pointer;color:var(--text);}
+    .dp-seg button{background:var(--surface2);border:1px solid var(--border);color:var(--text-muted);border-radius:999px;padding:4px 13px;font-size:12.5px;font-weight:700;cursor:pointer;margin-right:4px;font-family:inherit;}
+    .dp-seg button.on{background:var(--accent);border-color:var(--accent);color:#231c00;}
+    .dp-sum{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px;}
+    .dp-sum div{border:1px solid var(--border);border-radius:10px;padding:10px 14px;background:var(--surface);}
+    .dp-sum b{display:block;font-size:22px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;}
+    .dp-sum span{font-size:12px;color:var(--text-muted);}
+    .dp-tbl{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums;}
+    .dp-tbl th{font-size:12px;color:var(--text-muted);font-weight:600;text-align:left;padding:7px 8px;border-bottom:1px solid var(--border);white-space:nowrap;}
+    .dp-tbl td{padding:8px;border-bottom:1px solid var(--border);vertical-align:top;}
+    .dp-tbl td.r,.dp-tbl th.r{text-align:right;white-space:nowrap;}
+    .dp-tbl tr.main{cursor:pointer;} .dp-tbl tr.main:hover td{background:var(--surface2);}
+    .dp-tag{display:inline-block;font-size:11px;font-weight:700;padding:1px 8px;border-radius:999px;white-space:nowrap;margin:1px 4px 1px 0;}
+    .dp-tag.l1{background:rgba(230,126,34,.14);color:#d35400;} .dp-tag.l2{background:rgba(231,76,60,.15);color:#c0392b;}
+    .dp-tag.new{background:rgba(52,152,219,.14);color:#2e86c1;} .dp-tag.out{background:rgba(39,174,96,.14);color:#1e8449;}
+    .dp-tag.mk{background:var(--surface2);color:var(--text-muted);}
+    .dp-det td{background:var(--surface2);font-size:12px;color:var(--text-muted);white-space:pre-wrap;line-height:1.7;}
+    @media(max-width:760px){.dp-sum{grid-template-columns:repeat(2,1fr);} .dp-hide-m{display:none;}}
+  </style>
+  <div id="disposalView" style="display:none">
+    <div class="tm-head"><h2>🚫 處置股</h2><span class="sub" id="dpSub"></span></div>
+    <div class="dp-sum" id="dpSum"></div>
+    <div class="dp-bar">
+      <span class="dp-seg" id="dpSeg"><button data-m="all" class="on">全部</button><button data-m="上市">上市</button><button data-m="上櫃">上櫃</button></span>
+      <label><input type="checkbox" id="dpCb"> 含可轉債／權證等</label>
+      <span>點列可展開處置全文，點代號開 K 線</span>
+    </div>
+    <div style="overflow-x:auto"><table class="dp-tbl"><thead><tr>
+      <th>個股</th><th class="r">收盤</th><th class="r">漲跌幅</th><th>處置期間</th><th class="r">剩餘</th><th>次數／預收</th><th class="r">撮合</th><th class="dp-hide-m">原因</th>
+    </tr></thead><tbody id="dpBody"><tr><td colspan="8" class="fc-empty">載入中…</td></tr></tbody></table></div>
+    <div class="fc-note" id="dpNote"></div>
+  </div>
+  <script>
+  (function(){
+    var el=function(id){return document.getElementById(id);};
+    var D=null, MK='all', OPEN={};
+    function esc(t){return String(t==null?'':t).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+    function isStock(c){ return /^\d{4}$/.test(c) || /^00\d{2,4}[A-Z]?$/.test(c); }
+    function tradingDays(a,b){ var n=0, d=new Date(a+'T00:00:00Z'), e=new Date(b+'T00:00:00Z'); while(d<=e){ var w=d.getUTCDay(); if(w>0&&w<6) n++; d=new Date(d.getTime()+864e5); } return n; }
+    function md(d){ return d?d.slice(5).replace('-','/'):'—'; }
+    function render(){
+      if(!D) return;
+      var inc=el('dpCb').checked, today=D.today;
+      var list=D.items.filter(function(x){ return (MK==='all'||x.mkt===MK) && (inc||isStock(x.code)); });
+      var stocks=D.items.filter(function(x){return isStock(x.code);});
+      var newest=stocks.reduce(function(m,x){return x.ann>m?x.ann:m;},'');
+      el('dpSum').innerHTML='<div><b>'+stocks.length+'</b><span>處置中股票（上市 '+stocks.filter(function(x){return x.mkt==='上市';}).length+'／上櫃 '+stocks.filter(function(x){return x.mkt==='上櫃';}).length+'）</span></div>'
+        +'<div><b>'+stocks.filter(function(x){return x.ann===newest;}).length+'</b><span>最新公告（'+md(newest)+'）</span></div>'
+        +'<div><b>'+stocks.filter(function(x){return x.full;}).length+'</b><span>全額預收（第二次以上）</span></div>'
+        +'<div><b>'+stocks.filter(function(x){return tradingDays(today,x.end)<=2;}).length+'</b><span>2 個交易日內出關</span></div>';
+      if(!list.length){ el('dpBody').innerHTML='<tr><td colspan="8" class="fc-empty">目前沒有處置中的'+(inc?'有價證券':'股票')+'</td></tr>'; return; }
+      var cc=function(v){return v>0?'hp-up':(v<0?'hp-dn':'');};
+      el('dpBody').innerHTML=list.map(function(x,i){
+        var left=tradingDays(today<x.start?x.start:today,x.end), k=x.mkt+x.code;
+        var nm=(x.name&&x.name!==x.code)?x.name:((window._names&&window._names[x.code])||'');
+        return '<tr class="main" data-k="'+esc(k)+'"><td><a class="dp-open" data-c="'+esc(x.code)+'" data-n="'+esc(nm)+'" style="cursor:pointer"><b>'+esc(nm)+'</b> <span style="color:var(--text-muted)">'+esc(x.code)+'</span></a><br>'
+          +'<span class="dp-tag mk">'+x.mkt+'</span>'+(x.ann===newest?'<span class="dp-tag new">新公告</span>':'')+(left<=2?'<span class="dp-tag out">即將出關</span>':'')+'</td>'
+          +'<td class="r">'+(x.close!=null?Number(x.close).toLocaleString(undefined,{maximumFractionDigits:2}):'—')+'</td>'
+          +'<td class="r '+cc(x.chg)+'" style="font-weight:700">'+(x.chg!=null?(x.chg>0?'+':'')+x.chg.toFixed(2)+'%':'—')+'</td>'
+          +'<td style="white-space:nowrap">'+md(x.start)+' ～ '+md(x.end)+'<br><span style="font-size:11px;color:var(--text-muted)">公告 '+md(x.ann)+'</span></td>'
+          +'<td class="r">'+(today<x.start?'<span style="color:var(--text-muted)">未開始</span>':'約 '+left+' 日')+'</td>'
+          +'<td><span class="dp-tag '+(x.full?'l2':'l1')+'">'+esc(x.level||'—')+'</span><br><span style="font-size:11px;color:var(--text-muted)">'+(x.full?'所有委託全額預收':'單筆≥10張或累積≥30張預收')+'</span></td>'
+          +'<td class="r">'+(x.mins?'每 '+x.mins+' 分鐘':'—')+'</td>'
+          +'<td class="dp-hide-m" style="font-size:12px">'+esc(x.reason)+'</td></tr>'
+          +(OPEN[k]?'<tr class="dp-det"><td colspan="8">'+esc(x.detail)+'</td></tr>':'');
+      }).join('');
+      el('dpBody').querySelectorAll('tr.main').forEach(function(tr){ tr.onclick=function(ev){
+        var a=ev.target.closest('.dp-open'); if(a){ if(typeof openChart==='function') openChart(a.dataset.c, a.dataset.n); return; }
+        OPEN[tr.dataset.k]=!OPEN[tr.dataset.k]; render(); }; });
+    }
+    window._disposalShow=function(){
+      el('dpSeg').querySelectorAll('button').forEach(function(b){ b.onclick=function(){ MK=b.dataset.m; el('dpSeg').querySelectorAll('button').forEach(function(x){x.classList.toggle('on',x===b);}); render(); }; });
+      el('dpCb').onchange=render;
+      if(window._loadNames && !window._names) try{ window._loadNames(render); }catch(e){}
+      fetch('/api/screen?stat=disposal').then(function(r){return r.json();}).then(function(j){
+        if(!j||j.error||!Array.isArray(j.items)){ el('dpBody').innerHTML='<tr><td colspan="8" class="fc-empty">讀取失敗'+(j&&j.error?'：'+esc(j.error):'')+'</td></tr>'; return; }
+        D=j; el('dpSub').textContent='更新 '+j.today+(j.px_date?' · 股價 '+j.px_date:'')+((j.errors&&j.errors.length)?' · ⚠ '+j.errors.join('；'):'');
+        render();
+      }).catch(function(){ el('dpBody').innerHTML='<tr><td colspan="8" class="fc-empty">讀取失敗</td></tr>'; });
+      el('dpNote').innerHTML='<b>資料源與判讀：</b>上市＝證交所 OpenAPI「公布處置有價證券」(announcement/punish)，上櫃＝櫃買中心 OpenAPI「上櫃處置有價證券資訊」(tpex_disposal_information)，每次開頁即時抓取（CDN 快取 30 分鐘）。只列處置期間迄日 ≥ 今天者；同代號多筆公告取迄日最晚一筆。次數：上市直接用官方「第N次處置」欄；上櫃官方無此欄，依措施文字判斷——「所有投資人每日委託…收取全部價金」＝第二次（全額預收），否則第一次（單筆達 10 交易單位或累積 30 以上才預收）。撮合＝措施內「約每 N 分鐘撮合一次」。剩餘＝今天到處置迄日的週一～週五天數（未扣國定假日，實際依官方順延）。預設只列股票與 ETF，勾「含可轉債／權證等」才列 5 碼以上代號。收盤／漲跌幅取自 price_window 最新交易日。';
+    };
+    window._VIEWS=window._VIEWS||{}; window._VIEWS.disposal={el:'disposalView',show:'_disposalShow'};
+  })();
+  </script>
   <!-- ══ 外資空單溫度計（市場觀察 · 付費分頁）══ 2026-09-28 版面與配色 100% 比照合夥人「完美.html」 -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
@@ -4955,7 +5043,7 @@
     // 通用視圖註冊：新增大項只要在此登記 {el:容器id, show:全域函式名}，並提供對應元素/函式即可
     window._VIEWS = window._VIEWS || {}; window._VIEWS.home={el:'homeView',show:'_hxShow'}; window._VIEWS.focus={el:'focusView',show:'_focusShow'}; window._VIEWS.overview={el:'overviewView',show:'_ovShow'};
     var NAVMAP={home:'首頁',overview:'今日焦點',focus:'今日焦點',todayindex:'今日焦點',screen:'選股',box:'選股',limitup:'選股',liq:'選股',sr:'選股',
-      themes:'題材族群',sectors:'題材族群',greed:'市場觀察',inst:'市場觀察',sig:'市場觀察',brank:'市場觀察',fhedge:'市場觀察',breadth:'市場觀察',news:'每日新聞',
+      themes:'題材族群',sectors:'題材族群',greed:'市場觀察',inst:'市場觀察',sig:'市場觀察',brank:'市場觀察',fhedge:'市場觀察',disposal:'市場觀察',breadth:'市場觀察',news:'每日新聞',
       etfx:'ETF',etf:'ETF',etfcons:'ETF',etfrev:'ETF',etfdiv:'ETF',etfhold:'ETF',etfsim:'ETF',etfheavy:'ETF',etfprem:'ETF',etfflow:'ETF',etfperf:'ETF'};
     function _setNav(v){
       var label=NAVMAP[v]; var items=document.querySelectorAll('#mainNav .mn-item');
