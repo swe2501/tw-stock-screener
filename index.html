@@ -5602,9 +5602,11 @@
         a=a.filter(function(r){return a[0]&&r.trade_date===a[0].trade_date;});
         var by={}; a.forEach(function(r){ by[r.kind||'month']=r; });
         var D=(nd&&nd.data&&nd.data.week)?nd.data:null;
-        var kinds=['week','month'].filter(function(k){return (D&&D[k])||by[k];});
+        // 週三(W)／週五(F)週選分開（2026-09-28）；N 日大量區（option_nday）只算最近一檔週選 → 依其合約代碼掛到對應分頁
+        if(D&&D.week&&/F\d$/.test(D.week.contract||'')){ D.weekf=D.week; delete D.week; }
+        var kinds=['week','weekf','month'].filter(function(k){return (D&&D[k])||by[k];});
         if(!kinds.length){ box.style.display='none'; return; }
-        var NMAP={week:'5',month:'20'};
+        var NMAP={week:'5',weekf:'5',month:'20'};
         var kind=window._osrKind&&kinds.indexOf(window._osrKind)>=0?window._osrKind:kinds[0], metric=window._osrMetric||'peak';
         function z(x){ return x[0]===x[1]?x[0].toLocaleString():x[0].toLocaleString()+'～'+x[1].toLocaleString(); }
         function q(v){ return v>=1e4?(v/1e4).toFixed(1)+' 萬口':Math.round(v).toLocaleString()+' 口'; }
@@ -5633,7 +5635,9 @@
         function render(){
           window._osrKind=kind; window._osrMetric=metric;
           var o0=by[kind]||{}, hasPeak=!!(o0.res_levels||o0.sup_levels);
+          var hasNd=!!(D&&D[kind]);
           if(metric==='peak'&&!hasPeak) metric='vol';
+          if(metric!=='peak'&&!hasNd&&hasPeak) metric='peak';
           var o=by[kind]||{}, d=D&&D[kind], n=NMAP[kind], x=d&&d[metric]&&d[metric][n];
           var spot=(nd&&nd.spot)||o.spot, atm=(d&&d.atm)||o.atm;
           var res=(x&&x.res)||[], sup=(x&&x.sup)||[], mx=0;
@@ -5645,17 +5649,17 @@
           var tabs=function(list,cur,attr){ return '<span class="gs-osr-tabs">'+list.map(function(t){return '<button type="button" data-'+attr+'="'+t[0]+'" class="'+(t[0]===cur?'on':'')+'">'+t[1]+'</button>';}).join('')+'</span>'; };
           box.style.display='';
           box.innerHTML='<div class="gs-osr-h">🎯 選擇權支撐壓力區'
-              +tabs(kinds.map(function(k){return [k,k==='week'?'週選 · 5日':'月選 · 20日'];}),kind,'k')+'</div>'
+              +tabs(kinds.map(function(k){return [k,k==='week'?'週三週選':(k==='weekf'?'週五週選':'月選')];}),kind,'k')+'</div>'
             +'<div class="osr-kpis">'
               +(metric==='peak'&&o.ref_price?'<div><span>參考價</span><b>'+Math.round(o.ref_price).toLocaleString()+'</b><small>'+(o.ref_kind||'')+'</small></div>':'<div><span>現價</span><b>'+(spot?Math.round(spot).toLocaleString():'—')+'</b></div>')
               +(metric==='peak'?'<div><span>加權收盤</span><b>'+(o.spot?Math.round(o.spot).toLocaleString():'—')+'</b></div>':'<div><span>價平（T 字）</span><b>'+(atm!=null?atm.toLocaleString():'—')+'</b>'+(o.atm_call!=null&&o.atm===atm?'<small>C '+o.atm_call+' / P '+o.atm_put+'</small>':'')+'</div>')
               +'<div><span>合約</span><b>'+((d&&d.contract)||o.contract||'—')+'</b>'+(o.expiry?'<small>到期 '+o.expiry.slice(5)+(o.meta&&o.meta.expiry_sched?'（原 '+o.meta.expiry_sched.slice(5)+' 遇休市順延）':'')+'</small>':'')+'</div>'
               +'<div><span>Put/Call OI 比</span><b>'+(o.pc_ratio!=null?o.pc_ratio:'—')+'</b>'+(o.pc_ratio!=null?'<small>'+(o.pc_ratio>=1?'偏空避險':'偏多')+'</small>':'')+'</div>'
             +'</div>'
-            +'<div class="osr-bar2"><span>'+(metric==='peak'?'該合約今日未平倉峰值，依離參考價近→遠取 3 層':'依 '+n+' 日'+(metric==='vol'?'成交量':'平均未平倉')+'由大到小，第 1 名壓力對第 1 名支撐'+(d&&d.days&&d.days[n]<+n?'<b style="color:var(--yellow)">（不跨結算：本週期自 '+(d.prev_settle||'').slice(5).replace('-','/')+' 結算後僅 '+d.days[n]+' 個交易日）</b>':''))+'</span>'+tabs((hasPeak?[['peak','OI 三層峰值']]:[]).concat([['vol',n+'日成交量'],['oi',n+'日未平倉']]),metric,'m')+'</div>'
+            +'<div class="osr-bar2"><span>'+(metric==='peak'?'該合約今日未平倉峰值，依離參考價近→遠取 3 層':'依 '+n+' 日'+(metric==='vol'?'成交量':'平均未平倉')+'由大到小，第 1 名壓力對第 1 名支撐'+(d&&d.days&&d.days[n]<+n?'<b style="color:var(--yellow)">（不跨結算：本週期自 '+(d.prev_settle||'').slice(5).replace('-','/')+' 結算後僅 '+d.days[n]+' 個交易日）</b>':''))+'</span>'+tabs((hasPeak?[['peak','OI 三層峰值']]:[]).concat(hasNd?[['vol',n+'日成交量（舊）'],['oi',n+'日未平倉（舊）']]:[]),metric,'m')+'</div>'
             +(metric==='peak'?renderPeak(o):'<div class="osr-head"><span class="r">壓力區　價平以上 Call</span><span></span><span class="s">支撐區　價平以下 Put</span></div>'+(x?rows:'<div class="fc-empty">資料累積中</div>'))
             +'<div class="gs-osr-meta" style="margin-top:8px">資料日 '+((metric==='peak'?o.trade_date:(nd&&nd.trade_date))||o.trade_date||'')+(metric==='peak'?' · 點數＝距參考價':' · 百分比＝距現價 · 範圍：價平上下 10%')+'</div>'
-            +'<details class="gs-osr-algo"><summary>算法說明</summary><div><b>【OI 三層峰值】（2026-09-28 定案，比照玩股網支撐壓力）</b>參考價＝台指期 TX 近月一般盤結算價。買權只看參考價以上找壓力、賣權只看參考價以下找支撐，OI 缺／0／負剔除。峰值須同時符合：① OI ≥ 同側第 70 百分位；② OI ≥ 同側最大 OI × 0.12；③ OI ≥ 前後各 5 個有效履約價 OI 中位數 × 1.5；④ 局部高點（≥ 前後各 2 檔且至少高於其一，平台只留一個）。相鄰峰值 100 點內合併、留 OI 最大者。壓力由低到高、支撐由高到低（離參考價近→遠，非依 OI 大小）各取 3 層，不足 3 層標「候選不足」不硬湊。<b>合約</b>：週選／月選依「實際到期日」選最近一檔，原定到期日遇休市（週末、證交所休市日期表、過去日期以實際交易日核對，含颱風停市）順延至次一交易日（與期交所實際一致，例：202510F2 10/10→10/13）。Δ＝今日 OI − 前一交易日 OI（新履約價無前值顯示—）；PR＝該檔 OI 在同側的百分位；中位數倍數＝OI ÷ 鄰近中位數。<br><b>【N 日大量區】</b>2026-09-27 與合夥人定案，2026-09-28 修正。<b>不跨結算週期</b>：窗口＝min(N 日, 本結算週期已過交易日)，週選以上一次週結算（週三／週五，含月結算週三）、月選以上一次月結算為界（結算日遇休市順延），未平倉平均除以實際天數。<b>合約與天數</b>：週選分頁＝最近到期週選、看 5 個交易日；月選分頁＝最近月月選、看 20 個交易日。<b>價平</b>＝該合約最新交易日 T 字報價中，買權、賣權結算價最接近的履約價（無結算價時取最接近加權指數者）。<b>成交量</b>＝過去 N 日各履約價所有台指選擇權（週選＋月選）一般盤成交量加總；<b>未平倉</b>＝過去 N 日每天取該類合約（週選／月選）各履約價未平倉，再對 N 天取平均。<b>範圍</b>：只看價平上下 10%（合夥人修正）；壓力看價平以上買權、支撐看價平以下賣權。<b>大量</b>＝範圍內量 ≥ 範圍平均 × 1.3。<b>區間</b>：以峰值為中心，量最大的大量履約價為峰，峰上下 100 點內的大量檔位併成同一區（最寬 200 點），排除後再找下一個峰，壓力、支撐各取 5 區，依量由大到小排名，同名次成對顯示。Put/Call OI 比＝該合約全部賣權未平倉 ÷ 買權未平倉，為情緒輔助。資料源：TAIFEX 選擇權每日交易行情（盤後日更）。</div></details>';
+            +'<details class="gs-osr-algo"><summary>算法說明</summary><div><b>【OI 三層峰值】（2026-09-28 定案，比照玩股網支撐壓力）</b>參考價＝台指期 TX 近月一般盤結算價。買權只看參考價以上找壓力、賣權只看參考價以下找支撐，OI 缺／0／負剔除。峰值須同時符合：① OI ≥ 同側第 70 百分位；② OI ≥ 同側最大 OI × 0.20（2026-09-28 定案）；③ OI ≥ 前後各 5 個有效履約價 OI 中位數 × 1.5；④ 局部高點（≥ 前後各 2 檔且至少高於其一，平台只留一個）。相鄰峰值 200 點內合併、留 OI 最大者。週三週選、週五週選、月選三者分開計算不混算。壓力由低到高、支撐由高到低（離參考價近→遠，非依 OI 大小）各取 3 層，不足 3 層標「候選不足」不硬湊。<b>合約</b>：週選／月選依「實際到期日」選最近一檔，原定到期日遇休市（週末、證交所休市日期表、過去日期以實際交易日核對，含颱風停市）順延至次一交易日（與期交所實際一致，例：202510F2 10/10→10/13）。Δ＝今日 OI − 前一交易日 OI（新履約價無前值顯示—）；PR＝該檔 OI 在同側的百分位；中位數倍數＝OI ÷ 鄰近中位數。<br><b>【N 日大量區】</b>2026-09-27 與合夥人定案，2026-09-28 修正。<b>不跨結算週期</b>：窗口＝min(N 日, 本結算週期已過交易日)，週選以上一次週結算（週三／週五，含月結算週三）、月選以上一次月結算為界（結算日遇休市順延），未平倉平均除以實際天數。<b>合約與天數</b>：週選分頁＝最近到期週選、看 5 個交易日；月選分頁＝最近月月選、看 20 個交易日。<b>價平</b>＝該合約最新交易日 T 字報價中，買權、賣權結算價最接近的履約價（無結算價時取最接近加權指數者）。<b>成交量</b>＝過去 N 日各履約價所有台指選擇權（週選＋月選）一般盤成交量加總；<b>未平倉</b>＝過去 N 日每天取該類合約（週選／月選）各履約價未平倉，再對 N 天取平均。<b>範圍</b>：只看價平上下 10%（合夥人修正）；壓力看價平以上買權、支撐看價平以下賣權。<b>大量</b>＝範圍內量 ≥ 範圍平均 × 1.3。<b>區間</b>：以峰值為中心，量最大的大量履約價為峰，峰上下 100 點內的大量檔位併成同一區（最寬 200 點），排除後再找下一個峰，壓力、支撐各取 5 區，依量由大到小排名，同名次成對顯示。Put/Call OI 比＝該合約全部賣權未平倉 ÷ 買權未平倉，為情緒輔助。資料源：TAIFEX 選擇權每日交易行情（盤後日更）。</div></details>';
           box.querySelectorAll('[data-k]').forEach(function(bt){ bt.onclick=function(){ kind=bt.getAttribute('data-k'); render(); }; });
           box.querySelectorAll('[data-m]').forEach(function(bt){ bt.onclick=function(){ metric=bt.getAttribute('data-m'); render(); }; });
         }
