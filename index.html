@@ -1648,6 +1648,9 @@
       .gs-tbl tr:last-child td{border-bottom:0;}
       .gs-tbl .mkt{font-weight:800;color:var(--brand-green);}
       .gs-tbl tr.sum td{font-weight:800;border-top:2px solid var(--border);}
+      /* 手機：表格縮字縮距，放不下時在表格內左右滑動，不再超出卡片（2026-09-29）*/
+      @media(max-width:640px){ .gs-tbl{display:block;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;font-size:12px;}
+        .gs-tbl th{padding:5px 6px;font-size:10.5px;} .gs-tbl td{padding:7px 6px;} .gs-tbl th:first-child,.gs-tbl td:first-child{position:sticky;left:0;background:var(--surface);z-index:1;} }
       .gs-instbars{margin-top:14px;display:grid;gap:7px;}
       .gs-ibar{display:flex;align-items:center;gap:10px;font-size:12px;}
       .gs-ibar .lb{width:56px;color:var(--text-muted);}
@@ -1804,7 +1807,10 @@
       .gs-optcard>header{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
       .gs-optcard>header h4{margin:0;font-size:15px;font-weight:800;color:var(--brand-green);}
       .gs-optcard>header .stances{display:flex;flex-direction:column;gap:3px;align-items:flex-end;}
-      .gs-optcard>header .stances span{font-size:11px;font-weight:700;color:var(--text-muted);white-space:nowrap;}
+      .gs-optcard>header .stances span{font-size:11px;font-weight:700;white-space:nowrap;padding:3px 10px;border-radius:999px;background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);}
+      .gs-optcard>header .stances span.bull{background:rgba(225,29,72,.10);color:var(--red);border-color:rgba(225,29,72,.35);}
+      .gs-optcard>header .stances span.bear{background:rgba(5,150,105,.10);color:var(--green);border-color:rgba(5,150,105,.35);}
+      .gs-optcard>header .stances span i{font-style:normal;opacity:.75;margin-right:4px;}
       .gs-opttracks{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
       .gs-opttrack strong{display:block;font-size:11px;color:var(--text-muted);font-weight:800;margin-bottom:8px;letter-spacing:.04em;}
       .gs-optrow{display:flex;align-items:center;gap:8px;margin-bottom:9px;font-size:12px;}
@@ -6051,7 +6057,10 @@
           return '<div class="gs-optrow"><span class="cd '+(buy?'buy':'sell')+'">'+code+'</span><small>'+name+'</small><b class="'+(val>=0?'hp-up':'hp-dn')+'">'+(money?((val>0?'+':'')+(val/1e5).toFixed(2)+' 億'):(sg(val)+' 口'))+'</b></div>';}
         function card(label,co,po,cv,pv,cvol,pvol){
           var cc=ocode(co,'call'),pc=ocode(po,'put'),ccv=ocode(cv,'call'),pcv=ocode(pv,'put');
-          return '<div class="gs-optcard"><header><h4>'+label+'</h4><div class="stances"><span>'+cc+'+'+pc+' · '+stance(cc,pc)+'</span><span>'+ccv+'+'+pcv+' · '+stance(ccv,pcv)+'</span></div></header>'
+          var tag=function(pfx,code,st){ return '<span class="'+(st==='偏多'?'bull':(st==='偏空'?'bear':''))+'"><i>'+pfx+'</i>'+code+' · '+st+'</span>'; };
+          var s1=stance(cc,pc), s2=stance(ccv,pcv), same=(cc+pc)===(ccv+pcv);
+          var tags=same?tag('口數＋資金一致',cc+'+'+pc,s1):(tag('口數',cc+'+'+pc,s1)+tag('資金',ccv+'+'+pcv,s2));   // 兩軌結論相同只顯示一個，避免看起來重複
+          return '<div class="gs-optcard"><header><h4>'+label+'</h4><div class="stances">'+tags+'</div></header>'
             +'<div class="gs-opttracks"><div class="gs-opttrack"><strong>口數軌</strong>'+row('CALL 留倉淨口',cc,co)+row('PUT 留倉淨口',pc,po)+'</div>'
             +'<div class="gs-opttrack"><strong>資金軌</strong>'+row('CALL 留倉淨額',ccv,cv,true)+row('PUT 留倉淨額',pcv,pv,true)+'</div></div>'
             +'<div class="gs-optfoot">當日淨交易：CALL '+sg(cvol)+' 口 · PUT '+sg(pvol)+' 口</div></div>';
