@@ -1,5 +1,9 @@
 # AGENTS.md — 本 repo 的 AI agent 分工規範
 
+> **先判斷你在做哪一種任務：**
+> - 若你正在執行「**話題族群 hot_topics 排程**」（網搜新聞 → 產 `scripts/hot_topics.json`）→ 適用下方「Codex 的唯一任務」，**禁止任何 Git 操作**。
+> - 若你是在**合夥人的電腦**、由合夥人本人要求**修改版面／開自己的分支** → 下方 Git 禁令**不適用**，改依本檔最後的「**合夥人協作規範**」：可以從 uat 開自己的分支、commit、push 自己的分支（但不可碰 uat／prod／Andrew）。
+
 本專案由兩個 AI agent 共用，**各有車道，不得越界**。
 
 | Agent | 負責 | 讀哪份規範 |
@@ -34,3 +38,21 @@
 
 ## 若你（Codex）覺得需要改程式或改上傳邏輯
 **停手，交給 Claude Code / 使用者處理**，不要自己動手改，以免與另一個 agent 的變更互相覆蓋。
+
+---
+
+## 合夥人協作規範（2026-09-29 新增；與上方「話題族群排程」是不同任務）
+
+上方的 Git 禁令**只適用於本機每小時跑的「話題族群 hot_topics」排程任務**。
+若你是在**合夥人自己的電腦 clone**、由合夥人本人明確指示「修改版面／程式並開分支」，改適用本段：
+
+### ✅ 允許（僅限合夥人明確指示時）
+- 從最新 uat 開**自己的分支**：`git fetch origin && git checkout -b <合夥人名字>-layout origin/uat`
+- 在該分支修改 `index.html` 等檔案、`git add`／`git commit`。
+- 推送到**自己的分支**：`git push origin <合夥人名字>-layout`，並告知使用者分支名稱。
+
+### ⛔ 仍然禁止
+- **不可推送或合併到 `uat`、`prod`、`Andrew`**，也不可 force push 任何分支。合併與部署一律由使用者（Claude Code）處理。
+- 不可修改 `.env.local`、排程（`.bat`／Task Scheduler）、Supabase 資料或 schema。
+- 不可動遠端 `Duke` 分支（來源不明，非合夥人分支）。
+- 改版面前先跟使用者說會動哪幾頁，避免與 Claude Code 同時改同一區塊造成衝突。
