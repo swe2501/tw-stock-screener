@@ -1101,7 +1101,68 @@ def fetch_pw_one(code, date_str, s):
         "adj_high": h, "adj_low": l,
         "prev_prev_low": pp_l, "prev_prev_adj_low": pp_l,
         "prev_vols": prev_vols, "all_closes": all_closes, "all_dates": all_dates,
+        "bars": [(r["trade_date"], r.get("open"), r.get("high"), r.get("low"), r["close"], r.get("volume") or 0)
+                 for r in rows if r.get("close") is not None],      # 真名三式用
     }
+
+
+# ── 真名三式（2026-09-29 依合夥人《真名三式交易戰法核心定義與實戰指南》，參數經用戶定案）────────
+ZM3_BLACK = 3.0      # 長黑：(開−收)/收 ≥ 3%
+ZM3_RED = 3.0        # 長紅：(收−開)/收 ≥ 3%
+ZM3_WINDOW = 12      # 長黑後 12 個交易日內反包
+ZM3_VOL_MULT = 1.5   # 帶量：長紅量 ≥ max(5日,10日均量)×1.5（加分標籤，非必要）
+ZM3_PRIOR_HIGH_N = 20  # 第一目標「前高」＝長黑前 20 個交易日（含長黑日）最高價
+
+
+def zhenming3_at(bars, t=None):
+    """bars＝[(date, o, h, l, c, v), ...] 由舊到新；t＝要判定的那一天 index（預設最後一天）。
+    成立回 dict，否則 None。規則：
+      ① 長紅：t 日 (收−開)/收 ≥ 3%
+      ② 長黑：t 之前 1~12 個交易日內最近一根 (開−收)/收 ≥ 3% 的 K 棒（b）
+      ③ 多頭：b 前一日收盤 > MA20 且 MA5 > MA10 > MA20
+      ④ 站穩一半：t 日收盤 ≥ 長黑實體中點 (開b+收b)/2
+      ⑤ 第一次：b+1 ~ t−1 之間沒有任何一天收盤已站上中點（同一根長黑只算第一次）
+    附帶：帶量、停損參考＝min(長紅低, 長黑~長紅期間最低)、第一目標＝長黑前 20 日最高價。"""
+    n = len(bars)
+    if t is None:
+        t = n - 1
+    if t < 25:
+        return None
+    _, o, h, l, c, v = bars[t]
+    if not o or not c or c <= o or (c - o) / c * 100 < ZM3_RED:
+        return None
+    b = None
+    for k in range(1, ZM3_WINDOW + 1):
+        j = t - k
+        if j < 21:
+            break
+        _, bo, bh, bl, bc, bv = bars[j]
+        if bo and bc and bo > bc and (bo - bc) / bc * 100 >= ZM3_BLACK:
+            b = j
+            break
+    if b is None:
+        return None
+    closes = [x[4] for x in bars[:b]]          # 到 b 前一日
+    if len(closes) < 20:
+        return None
+    ma = lambda p: sum(closes[-p:]) / p
+    m5, m10, m20 = ma(5), ma(10), ma(20)
+    if not (closes[-1] > m20 and m5 > m10 > m20):
+        return None
+    bo, bc = bars[b][1], bars[b][4]
+    mid = (bo + bc) / 2
+    if c < mid:
+        return None
+    if any(bars[j][4] >= mid for j in range(b + 1, t)):
+        return None
+    pv = [x[5] for x in bars[max(0, t - 10):t] if x[5]]
+    base = max(sum(pv[-5:]) / min(5, len(pv)), sum(pv) / len(pv)) if pv else 0
+    vol = bool(base and v and v >= base * ZM3_VOL_MULT)
+    stop = min(x[3] for x in bars[b:t + 1] if x[3])
+    target = max(x[2] for x in bars[max(0, b - ZM3_PRIOR_HIGH_N + 1):b + 1] if x[2])
+    return {"black_date": bars[b][0], "black_pct": round((bo - bc) / bc * 100, 2), "mid": round(mid, 2),
+            "day_n": t - b, "vol": vol, "vol_ratio": round(v / base, 2) if base else None,
+            "stop": round(stop, 2), "target": round(target, 2)}
 
 
 def _parse_mi_index_rows(rows, code_name_map, col_o, col_h, col_l, col_c, col_v, col_sign, col_diff):
@@ -1482,6 +1543,7 @@ def screen(params):
     check_earn_gap_down = bool(params.get("earn_gap_down", False))
     check_zhenming1  = bool(params.get("zhenming1", False))
     check_zhenming2  = bool(params.get("zhenming2", False))
+    check_zhenming3  = bool(params.get("zhenming3", False))
     no_black_months  = min(int(params.get("no_black_months") or 0), 120)
     no_black_years   = no_black_months / 12  # 轉換為年（可為小數）傳給 YF API
     no_black_mult    = float(params.get("no_black_mult") or 0)
@@ -1615,7 +1677,7 @@ def screen(params):
 
     # ── price_window 逐股讀（真名/MACD/放量;涵蓋歷史日 → 修正「回搜近期日期漏股」如 3443/8-11）──
     need_pw = (vol_mult > 0 or shrink_mult > 0 or bool(macd_mode)
-               or check_zhenming1 or check_zhenming2)
+               or check_zhenming1 or check_zhenming2 or check_zhenming3)
     pw_data = {}
     if need_pw:
         def fetch_pw_only(code):
@@ -1872,6 +1934,13 @@ def screen(params):
                 if not crossed:
                     continue
 
+        zm3 = None
+        if check_zhenming3:
+            bars = (pw_data.get(code) or {}).get("bars") or []
+            zm3 = zhenming3_at(bars) if bars else None
+            if not zm3:
+                continue
+
         pc = s.get("prev_close")
         change_pct = round((c - pc) / pc * 100, 2) if pc and pc > 0 else None
 
@@ -1890,6 +1959,8 @@ def screen(params):
         if vol_ratio is not None: item["vol_ratio"] = round(vol_ratio, 2)
         if code in _gap_unverified:
             item.setdefault("data_missing", []).append("gap_unverified")
+        if zm3:
+            item["zm3"] = zm3
 
         results.append(item)
 

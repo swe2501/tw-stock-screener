@@ -301,6 +301,8 @@
     .sc-body{padding:10px 0 4px 16px;}
     .sc-panel .sc-cbs{margin-top:0;padding-top:0;border-top:0;}
     .sc-fields{display:grid;grid-template-columns:1fr;gap:18px;}
+    .zm3-info{font-size:11px;color:var(--text-muted);line-height:1.5;margin-top:2px;white-space:nowrap;}
+    .zm3-info b{color:var(--red);}
     .sc-note{font-size:.78rem;color:var(--text-muted);margin-bottom:10px;}
     .checkbox-grid {
       display: flex;
@@ -6734,6 +6736,14 @@
             <div class="cb-hint">長紅棒 3%＋放量 1.5倍＋任一較短均線當日新上穿較長均線（5/10/20/60/120/240 全配對）</div>
           </div>
         </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="zhenming3" />
+          <div>
+            <div class="cb-label">真名三式（多頭回洗反包）</div>
+            <div class="cb-hint">多頭排列（長黑前一日收盤＞MA20 且 MA5＞MA10＞MA20）中出現長黑 3%，12 個交易日內長紅 3% 收盤站上長黑實體 1/2（同一根長黑只取第一次）；帶量＝長紅量 ≥ max(5日,10日均量)×1.5，另加標籤。<br>
+            <b>歷史回測</b>（2024-07～2026-09 上市櫃約 7,000 筆，隔日開盤進場、突破前高賣半、剩餘跌破 10MA 出、跌破停損全出、扣成本 0.585%）：勝率 35.6%、平均 −0.46%；帶量 32.6%、不帶量 36.8%。持有 20 日平均 +1.10%（對照任意多頭排列日 +0.23%）。未達原文件宣稱之 50%～60%，僅供參考、不代表未來績效。</div>
+          </div>
+        </label>
           </div>
           </div>
         </div>
@@ -7263,6 +7273,7 @@
       const macdEnd   = document.getElementById('macd_end').value;
       const zhenming1 = document.getElementById('zhenming1').checked;
       const zhenming2 = document.getElementById('zhenming2').checked;
+      const zhenming3 = document.getElementById('zhenming3').checked;
       const noBlackMonths = parseInt(document.getElementById('no_black_years').value) || 0;
       const noBlackMult  = parseFloat(document.getElementById('no_black_mult').value) || 0;
       const noBlackTol   = parseInt(document.getElementById('no_black_tolerance').value) || 0;
@@ -7307,6 +7318,7 @@
         macd_end:   macdEnd,
         zhenming1: zhenming1,
         zhenming2: zhenming2,
+        zhenming3: zhenming3,
         no_black_months:     noBlackMonths,
         no_black_mult:       noBlackMult,
         no_black_tolerance:  noBlackTol,
@@ -7548,7 +7560,7 @@
                   ? `<span class="data-missing-badge" title="部分篩選條件無法確認（${s.data_missing.map(k=>({'no_black':'無放量黑棒篩選','gap_unverified':'跳空前日資料缺失，請手動排查'}[k]||k)).join('、')}），已放行">⚠</span>`
                   : ''
               }</td>
-            <td class="name-cell">${s.name}</td>
+            <td class="name-cell">${s.name}${s.zm3 ? `<div class="zm3-info" title="真名三式：長黑 ${s.zm3.black_date}（−${s.zm3.black_pct}%）後第 ${s.zm3.day_n} 天反包；停損參考 ${s.zm3.stop}（長紅低與洗盤最低取低者）；第一目標 ${s.zm3.target}（長黑前 20 日最高）">三式・長黑 ${s.zm3.black_date.slice(5).replace('-','/')}・½ ${s.zm3.mid}・第${s.zm3.day_n}天${s.zm3.vol ? '・<b>帶量</b>' : ''}<br>停損 ${s.zm3.stop}・目標 ${s.zm3.target}</div>` : ''}</td>
             <td class="neutral col-open">${s.open}</td>
             <td class="neutral col-high">${s.high}</td>
             <td class="neutral col-low">${s.low}</td>
