@@ -215,7 +215,7 @@ W=<prod_wt 路徑> && cd $W && git fetch -q origin && git reset -q --hard origin
 ### 協作流程（2026-09-28 起）
 - uat 一律 **git merge** Andrew（見 §2），不再複製 index.html 覆蓋。
 - 合夥人（不是 `Duke` 分支）會 clone repo 改版面：他開自己的分支 → 告知分支名 → 我方合併進 Andrew、逐段處理衝突 → uat。
-- **合夥人分支＝`user/ui-redesign`**（2026-09-29 由我方從 uat `a15423d` 建立；他用的 AI 會讀 AGENTS.md，舊版禁止所有 Git 導致無法開分支，已在 AGENTS.md 開頭標明 Git 禁令只限話題族群排程、合夥人依「合夥人協作規範」）。他推完後：`git fetch origin && git merge origin/user/ui-redesign`（進 Andrew）。
+- 合夥人用的 AI 會讀 AGENTS.md；舊版禁止所有 Git 導致他無法開分支 → 2026-09-29 已在 AGENTS.md 開頭標明 Git 禁令只限話題族群排程、合夥人依「合夥人協作規範」。用戶會把新版 AGENTS.md 傳給合夥人覆蓋後，由合夥人**自己**開分支（我方不代開；曾代開 user/ui-redesign 已依用戶要求刪除）。他推完告知分支名後：`git fetch origin && git merge origin/<分支>`（進 Andrew）。
 
 ### 待用戶／合夥人決定
 - **明燈與冥燈**（memory `project_mingdeng`）：付費才能看；長黑棒＝(開−收)/收≥5%；**長上影線公式已確認**＝紅棒(最高−收)/收、黑棒(最高−開)/收，**門檻待用戶回**（我提議≥3%）；另待「點名真人呈現方式」與「第一批追蹤名單」（合夥人整理中）。三階段：①回測引擎＋MOPS 內部人申報＋管理者登錄 ②YouTube 字幕 AI＋美國國會申報 ③產業連動；FB/Threads/X 不爬。
