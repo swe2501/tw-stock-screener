@@ -117,7 +117,8 @@ def upload_broker_trades(conn, env, views, d90):
                     continue
                 picked.append({"view": view, "broker_id": bid, "trade_date": d,
                                "code": code, "name": names.get(code, ""),
-                               "net_lots": int(net), "net_amount_wan": amt})
+                               "net_lots": int(net), "net_amount_wan": amt,
+                               "buy_avg_price": round(price, 2) if price else None})
                 if len(picked) >= TRADE_CAP:
                     break
             all_rows.extend(picked)

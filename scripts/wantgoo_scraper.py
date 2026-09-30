@@ -131,6 +131,36 @@ def _save_local_rows(records):
         print(f"  [warn] 本機 SQLite 寫入失敗：{e}")
 
 
+# 玩股網對「當日分點尚未更新」的個股，查詢會回傳前一交易日的舊資料。
+# 舊程式把請求日期直接當 trade_date 存入，造成整檔分點與前一日 byte 完全相同的假資料
+# （例：6213 跌停日 9/17 整檔 810 筆 == 9/16）。以下記錄被判定為「來源未更新」而跳過的股，
+# 供每日排程做新鮮度監控（C）。
+STALE_SKIPPED: list[tuple[str, str, str]] = []   # (code, requested_date, mirrored_prev_date)
+
+
+def _rowset_key(rec):
+    """比對用正規化 tuple：分點、買量、賣量、買均價、賣均價（不含 code/date）。"""
+    return (str(rec["broker_id"]), int(rec["buy_vol"]), int(rec["sell_vol"]),
+            rec["buy_avg_price"], rec["sell_avg_price"])
+
+
+def _prev_day_rowset(conn, code, date_str):
+    """回傳該股『嚴格早於 date_str 的最近一個已存交易日』與其整檔分點集合 (prev_date, set|None)。"""
+    row = conn.execute(
+        "select max(trade_date) from wantgoo_daily where code=? and trade_date<?",
+        (code, date_str),
+    ).fetchone()
+    prev = row[0] if row else None
+    if not prev:
+        return None, None
+    s = set()
+    for bid, bv, sv, ba, sa in conn.execute(
+        "select broker_id, buy_vol, sell_vol, buy_avg_price, sell_avg_price "
+        "from wantgoo_daily where code=? and trade_date=?", (code, prev)):
+        s.add((str(bid), int(bv), int(sv), ba, sa))
+    return prev, s
+
+
 def _save_wantgoo_rows(code, date_str, rows):
     """rows: list of {agentId, agentName, buyQuantities, sellQuantities, buyPriceAvg, sellPriceAvg}"""
     if not rows:
@@ -153,6 +183,18 @@ def _save_wantgoo_rows(code, date_str, rows):
         })
     if not records:
         return
+    # ── A. 來源未更新防呆：若本日整檔分點與『前一交易日』byte 完全相同 → 判定玩股網回傳舊資料，跳過不寫 ──
+    #   門檻刻意設為「整檔完全相同」（非單列），活躍股每日必有差異不會誤殺；
+    #   整檔數百筆連買均價都到分毫相同，實務上不可能真實重演。
+    try:
+        conn = _local_db()
+        prev_date, prev_set = _prev_day_rowset(conn, code, date_str)
+        if prev_set is not None and {_rowset_key(r) for r in records} == prev_set:
+            STALE_SKIPPED.append((code, date_str, prev_date))
+            print(f"  {date_str}: [stale] 整檔分點與 {prev_date} 完全相同，判定來源未更新，跳過不寫（{code}）")
+            return
+    except Exception as e:
+        print(f"  [warn] 新鮮度比對失敗（照舊寫入）：{e}")
     # 全量（~200 家分點）只寫本機 D 槽 SQLite（2026-07 起不再上傳 Supabase）
     _save_local_rows(records)
 

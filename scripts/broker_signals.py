@@ -53,6 +53,23 @@ def _load_env():
     return env
 
 
+def latest_trade_date(env, table, col="trade_date"):
+    """回傳某表現有最新 trade_date（'YYYY-MM-DD'）或 None。
+    給 TAIFEX openapi 類腳本做「新鮮度防呆」：來源日期沒有比既有最新日新就不覆寫（等來源更新）。
+    任何錯誤一律回 None（fail-open：呼叫端照舊寫入，不影響現況）。"""
+    try:
+        key = env.get("SUPABASE_SERVICE_KEY") or env.get("SUPABASE_ANON_KEY")
+        if not env.get("SUPABASE_URL") or not key:
+            return None
+        url = f"{env['SUPABASE_URL']}/rest/v1/{table}?select={col}&order={col}.desc&limit=1"
+        req = urllib.request.Request(url, headers={"apikey": key, "Authorization": f"Bearer {key}"})
+        with urllib.request.urlopen(req, timeout=20) as r:
+            arr = json.loads(r.read().decode("utf-8", "replace"))
+        return arr[0][col] if arr and arr[0].get(col) else None
+    except Exception:
+        return None
+
+
 def _sb(env, path, method="GET", body=None, params=None, retries=3):
     # broker_signals 表僅擁有者可讀（RLS），帶條件的 DELETE 需要列可見性，
     # 匿名金鑰做不到 → 必須用 service_role 金鑰（只存在本機 .env.local）
@@ -378,23 +395,11 @@ def main():
         print("重傳完成")
         return
 
-    records = (collect_signals(conn, prices, sig_date, "lots", top_lots)
-               + collect_signals(conn, prices, sig_date, "amount", top_amt))
-    print(f"當日訊號：{len(records)} 筆")
-    if not records:
-        print("無訊號可上傳")
-        return
-
-    # 先刪除同日舊資料再上傳（重跑安全）
-    status, _ = _sb(env, "/broker_signals", method="DELETE",
-                    params=[("signal_date", f"eq.{sig_date}")])
-    if status not in (200, 204):
-        print(f"[warn] 刪除舊資料失敗 ({status})")
-    status, resp = _sb(env, "/broker_signals", method="POST", body=records)
-    if status in (200, 201):
-        print(f"已上傳 {len(records)} 筆到 Supabase broker_signals")
-    else:
-        print(f"[error] 上傳失敗 ({status}): {resp}")
+    # 方案2：不再上傳 broker_signals 顯示表（已廢）。「主力訊號」前端改讀
+    # broker_trades（大單張數/金額）∩ broker_rankings 名單，與 K 線 marker/分點清單同一來源。
+    # broker_trades 由 broker_rankings.py --daily-refresh 每日重建（本 job 之後執行）。
+    # 本函式僅保留「實測勝率」純實測 pipeline。
+    print("[方案2] broker_signals 顯示表已停用，主力訊號改由 broker_trades∩broker_rankings 供給")
 
     # 實測勝率（純實測）：記錄大單前20+小單前20 兩族群當日訊號，評分後上傳
     n = record_pools(conn, prices, sig_date, get_pool_rankings(env))
