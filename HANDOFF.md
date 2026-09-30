@@ -241,7 +241,7 @@ W=<prod_wt 路徑> && cd $W && git fetch -q origin && git reset -q --hard origin
 ### 協作流程（2026-09-28 起）
 - uat 一律 **git merge** Andrew（見 §2），不再複製 index.html 覆蓋。
 - 合夥人（不是 `Duke` 分支）會 clone repo 改版面：他開自己的分支 → 告知分支名 → 我方合併進 Andrew、逐段處理衝突 → uat。
-- **2026-09-30 GitHub 協作者**：合夥人 justy 的 GitHub 帳號 `qa5518556130-dot`（email qa5518556130@gmail.com）已由 owner `swe2501` 加為 collaborator（Write，個人 repo 預設）；他 push 前需先接受邀請 email。之前他 push 403 就是還沒被加。
+- **2026-09-30 GitHub 協作者**：合夥人 justy 的 GitHub 帳號 `qa5518556130-dot`（email qa5518556130@gmail.com）已由 owner `swe2501` 加為 collaborator（Write，個人 repo 預設），**且已接受邀請（2026-09-30），可直接 push**。之前他 push 403 就是還沒被加。他若用 commit 交付：`git fetch origin && git merge origin/<他的分支>`（進 Andrew）→ uat → prod。
 - **2026-09-30 交付方式實況**：justy 這次不是用 commit 交付——他推的 `origin/justy-layout` 分支內容 = uat 原點（0 筆他的 commit，blob 與 uat 相同）；實際交付是一份**完整 HTML 檔**放在桌面（見上「uat 待驗」段路徑）。故本次改採「以他的檔案為新 index.html」而非合併分支。日後他若改用 commit 交付，仍照原流程 `git merge origin/<分支>` 進 Andrew。
 - 合夥人用的 AI 會讀 AGENTS.md；舊版禁止所有 Git 導致他無法開分支 → 2026-09-29 已在 AGENTS.md 開頭標明 Git 禁令只限話題族群排程、合夥人依「合夥人協作規範」。用戶會把新版 AGENTS.md 傳給合夥人覆蓋後，由合夥人**自己**開分支（我方不代開；曾代開 user/ui-redesign 已依用戶要求刪除）。他推完告知分支名後：`git fetch origin && git merge origin/<分支>`（進 Andrew）。
 
