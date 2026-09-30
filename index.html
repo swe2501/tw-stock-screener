@@ -3121,7 +3121,9 @@
   window._mkt = window._mkt || {};         // 代號→市場別 'twse'|'otc'
   window._ind = window._ind || {};         // 代號→產業別（如 2330→半導體；上市為主）
   window._loadNames = function(cb){
-    if(window._names){ if(cb)cb(window._names); return; }
+    // 2026-10-01：內嵌 window._names 只有股票(line 1261)、無 ETF/上櫃。若仍用「window._names 存在就短路」，
+    // 完整合併(含 ETF)永遠不會跑 → ETF 搜不到。改用 _namesFull 旗標：完整版載過才短路。
+    if(window._namesFull){ if(cb)cb(window._names); return; }
     var SB='https://bruqrbvbjxntgoljxsne.supabase.co', AK='sb_publishable_KgYlaR-mqtx4uVre6kPD2A_qO6tdT1y';
     var pNames=fetch('https://tw-stock-screener-neon.vercel.app/api/screen?stat=names').then(function(r){return r.json();}).catch(function(){return {};});
     var pOtc=fetch(SB+'/rest/v1/otc_names?select=code,name',{headers:{apikey:AK,Authorization:'Bearer '+AK}}).then(function(r){return r.ok?r.json():[];}).catch(function(){return [];});
@@ -3129,15 +3131,15 @@
     var pEtf=fetch(SB+'/rest/v1/etf_products?select=code,name,category',{headers:{apikey:AK,Authorization:'Bearer '+AK}}).then(function(r){return r.ok?r.json():[];}).catch(function(){return [];});   // 2026-09-28 ETF 也可搜尋
     var pOtcEtf=fetch('https://tw-stock-screener-neon.vercel.app/api/screen?stat=otcetf').then(function(r){return r.json();}).catch(function(){return {};});   // 上櫃 ETF（債券型等，etf_products 沒有）
     Promise.all([pNames,pOtc,pInd,pEtf,pOtcEtf]).then(function(res){
-      var m=res[0]||{}, otc=res[1]||[], ind=res[2]||{}, etf=res[3]||[], oe=res[4]||{};
+      var m=Object.assign({}, window._names||{}, res[0]||{}), otc=res[1]||[], ind=res[2]||{}, etf=res[3]||[], oe=res[4]||{};  // 保留內嵌股票字典，stat=names 失敗也不清空
       for(var c in m){ window._mkt[c]='twse'; }
       otc.forEach(function(r){ if(r&&r.code){ if(!m[r.code])m[r.code]=r.name; window._mkt[r.code]='otc'; } });
       window._ind=ind||{};
       window._etf=window._etf||{};
       etf.forEach(function(r){ if(r&&r.code){ if(!m[r.code])m[r.code]=r.name; if(!window._mkt[r.code]) window._mkt[r.code]='twse'; window._etf[r.code]=1; if(r.category&&!window._ind[r.code]) window._ind[r.code]=r.category; } });   // etf_products 皆為上市
       if(!oe.error) for(var oc in oe){ if(/^00[0-9A-Z]{2,5}$/.test(oc)&&typeof oe[oc]==='string'){ if(!m[oc]) m[oc]=oe[oc]; window._mkt[oc]='otc'; window._etf[oc]=1; } }   // 上櫃 ETF（放最後，避免被上市標記蓋掉）
-      window._names=m; if(cb)cb(window._names);
-    }).catch(function(){ window._names={}; if(cb)cb(window._names); });
+      window._names=m; window._namesFull=true; if(cb)cb(window._names);
+    }).catch(function(){ if(cb)cb(window._names||{}); });   // 失敗不清空既有內嵌字典、不設 _namesFull(下次重試)
   };
   window._mktLabel = function(code){ var k=window._mkt&&window._mkt[String(code)]; return k==='otc'?'上櫃':(k==='twse'?'上市':''); };
   window._isEtf = function(code){ return !!(window._etf&&window._etf[String(code)]); };
