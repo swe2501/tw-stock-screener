@@ -231,8 +231,14 @@ W=<prod_wt 路徑> && cd $W && git fetch -q origin && git reset -q --hard origin
 - **實作**：`backtest_zhenming3.py` 進場 `entry=b[t][4]`（訊號日收盤）、出場自次日起算、hold 重算；`index.html` 真名三式說明改「訊號日收盤進場」＋新數字＋執行前提註記（收盤確認即買進、多一個「當根收盤即成交」假設、非前視偏誤、仍未達原文件 50~60%）。**`zhenming3_at` 篩選邏輯與結果列停損/目標不變**。
 - 部署 Andrew `ad9bb0c`→uat `f232abd`→prod `aad7433`；線上驗證說明顯示 42.5%。
 
-### prod 目前 = `aad7433`（2026-09-30）
+### 🔧 篩選進度條改百分比 & 手機下拉修復（2026-09-30，已上 prod）
+- **進度條 %（prod `db15d42`）**：後端一次算完才回、無中途進度 → 進度條改「時間估計 %」：`_scanStart` 依預期時長推進、封頂 95%，`renderResults` 完成補 100% 並把實際耗時存 `localStorage('zm_scan_ms')` 下次自適應；`scanElapsed`(秒)→`scanPct`(%)、`.scan-fill` 由不確定動畫改確定式寬度。**真實逐檔 % 未做**（需改 `api/screen.py` 於運算迴圈回報 processed/total 到 job 暫存＋前端輪詢）。
+- **手機下拉修復（prod `e0fe1d6`）**：合夥人回報手機版下拉「options 被擋住」。根因＝手機 nav 被 `.pro` 區塊 `width:100% !important` 壓成兩行、下拉又是相對該項 absolute→壓到第二行 nav。修法（`@media max-width:600px`）：`#mainNav .mn-grp{position:static}`＋`.mn-menu{left/right:8;top:calc(100%+3px);width:auto}`＋`#mainNav{overflow:visible}` → 下拉改掛在整個 sticky `#mainNav` 底部左右滿寬，不壓 nav。桌機(≥601)不受影響。
+
+### prod 目前 = `e0fe1d6`（2026-09-30）
 近期推 prod 的批次（新→舊）：
+- `e0fe1d6`：手機下拉不再蓋住第二行 nav。
+- `db15d42`：篩選進度條改顯示百分比（時間估計）取代秒數。
 - `aad7433`：真名三式進場改「訊號日收盤」（回測 35.6%→42.5%、平均 −0.44%→+0.47%）。
 - `db655d5`：選擇權支撐壓力卡隱藏「成交量」切換，固定 OI 峰值。
 - `d1c44da`：合夥人 redesign2 輕更新（選擇權 OI 峰值前端修回、ETF 甜甜圈、廣度分頁與篩選分離、結算日遇休市順延、多空排列配色、行動版表格）。
