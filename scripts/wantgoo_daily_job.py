@@ -117,78 +117,164 @@ def _plan_backfill(code: str) -> tuple[str, str] | None:
     return start.isoformat(), end.isoformat()
 
 
+PER_STOCK_TIMEOUT = 120   # 單支股票整體逾時（秒）
+RESTART_EVERY     = 200    # 每處理這麼多支就主動重啟瀏覽器，清掉累積記憶體（根治 ~480 支整個瀏覽器崩潰）
+COOLDOWN_SEC      = 180    # 主回合後補跑前先冷卻，避免 wantgoo 限流
+MAX_RETRY_ROUNDS  = 2      # 主回合外最多再補幾輪失敗股
+PROFILE_RELEASE_S = 3      # 關掉 context 後等 profile 釋放再重開（避免 profile 鎖殘留導致重啟後又崩）
+STALE_ALERT_THRESHOLD = 30 # C. 新鮮度警告門檻：跳過（來源未更新）股數 ≥ 此值就打 [warn]（正常應為個位數）
+
+
+async def _open(p):
+    """開一個 persistent context 並確認已登入。回傳 (context, page)；未登入回 (context, None)。"""
+    ws.PROFILE_DIR.mkdir(exist_ok=True)
+    context = await p.chromium.launch_persistent_context(
+        str(ws.PROFILE_DIR),
+        headless=False,
+        viewport={"width": 1280, "height": 900},
+        channel="chrome",
+        args=["--disable-blink-features=AutomationControlled"],
+        ignore_default_args=["--enable-automation", "--no-sandbox"],
+    )
+    await context.add_init_script(
+        "Object.defineProperty(navigator, 'webdriver', {get: () => undefined});"
+    )
+    page = context.pages[0] if context.pages else await context.new_page()
+    await page.goto("https://www.wantgoo.com/", wait_until="domcontentloaded", timeout=30000)
+    if not await ws.is_logged_in(page):
+        return context, None
+    return context, page
+
+
+async def _restart(context, p):
+    """關掉舊 context、等 profile 釋放、重開一個已登入的。回傳 (context, page)。"""
+    try:
+        await asyncio.wait_for(context.close(), timeout=30)
+    except Exception:
+        pass
+    await asyncio.sleep(PROFILE_RELEASE_S)
+    return await _open(p)
+
+
+async def _scrape_pass(p, codes, plan_fn, throttle_ms):
+    """對 codes 掃一輪。定期重啟瀏覽器、context 死掉就整個重啟。
+    回傳 (processed, skipped, failed)。失敗股只記入 failed（不打 [warn]，交由呼叫端最終判定）。"""
+    context, page = await _open(p)
+    if page is None:
+        _log("尚未登入 Wantgoo，請先執行 wantgoo_scraper.py 重新登入。中止。")
+        try: await context.close()
+        except Exception: pass
+        return 0, 0, None   # None 表示登入失效（與「跑完但 0 失敗」的 [] 區別）
+
+    processed = skipped = since_restart = 0
+    failed = []
+    for i, code in enumerate(codes, 1):
+        rng = plan_fn(code)
+        if rng is None:
+            skipped += 1
+            continue
+        date_from, date_to = rng
+        days_slash = ws._weekdays(date_from, date_to)
+        if not days_slash:
+            skipped += 1
+            continue
+
+        # 定期重啟瀏覽器，清掉累積狀態（避免跑到 ~480 支整個 Chrome 崩潰）
+        if since_restart >= RESTART_EVERY:
+            _log(f"  [restart] 已處理 {since_restart} 支，主動重啟瀏覽器清狀態")
+            context, page = await _restart(context, p)
+            if page is None:
+                _log("  [restart] 重啟後登入失效，中止本輪"); break
+            since_restart = 0
+
+        _log(f"[{i}/{len(codes)}] {code} {date_from}~{date_to}（{len(days_slash)} 交易日）")
+        try:
+            await asyncio.wait_for(
+                ws.scrape_code(page, code, days_slash, throttle_ms=throttle_ms),
+                timeout=PER_STOCK_TIMEOUT,
+            )
+            processed += 1
+            since_restart += 1
+        except Exception as e:
+            failed.append(code)
+            _log(f"  [miss] {code} 逾時/失敗：{type(e).__name__} {e}")   # 非最終標籤，可能於補跑救回
+            # 先試重建分頁；context 已死則整個瀏覽器重啟（根治連鎖失敗）
+            rebuilt = False
+            try:
+                if not page.is_closed():
+                    try: await asyncio.wait_for(page.close(), timeout=15)
+                    except Exception: pass
+                page = await asyncio.wait_for(context.new_page(), timeout=30)
+                await asyncio.wait_for(
+                    page.goto("https://www.wantgoo.com/", wait_until="domcontentloaded", timeout=30000),
+                    timeout=35,
+                )
+                rebuilt = True
+            except Exception:
+                pass
+            if not rebuilt:
+                _log("  [reopen] 分頁重建失敗（context 可能已死），重啟整個瀏覽器")
+                context, page = await _restart(context, p)
+                if page is None:
+                    _log("  [reopen] 重啟後登入失效，中止本輪"); break
+                since_restart = 0
+            await asyncio.sleep(2)
+
+    try: await context.close()
+    except Exception: pass
+    return processed, skipped, failed
+
+
 async def _run(mode: str):
     codes = _load_codes()
     if not codes:
         _log("找不到股票清單，結束")
         return
 
-    plan_fn      = _plan_daily if mode == "daily" else _plan_backfill
-    throttle_ms  = 500 if mode == "daily" else 600
-
+    plan_fn     = _plan_daily if mode == "daily" else _plan_backfill
+    throttle_ms = 500 if mode == "daily" else 600
     _log(f"開始執行，模式：{mode}")
-    ws.PROFILE_DIR.mkdir(exist_ok=True)
 
     async with async_playwright() as p:
-        context = await p.chromium.launch_persistent_context(
-            str(ws.PROFILE_DIR),
-            headless=False,
-            viewport={"width": 1280, "height": 900},
-            channel="chrome",
-            args=["--disable-blink-features=AutomationControlled"],
-            ignore_default_args=["--enable-automation", "--no-sandbox"],
-        )
-        await context.add_init_script(
-            "Object.defineProperty(navigator, 'webdriver', {get: () => undefined});"
-        )
-        page = context.pages[0] if context.pages else await context.new_page()
+        total_proc = 0
+        last_skip = 0
+        pending = codes
+        for rnd in range(MAX_RETRY_ROUNDS + 1):
+            proc, skip, failed = await _scrape_pass(p, pending, plan_fn, throttle_ms)
+            if failed is None:   # 登入失效 → 不印「本次完成」，讓 job_health 判定未完成
+                _log("因未登入而中止，本次未完成。")
+                return
+            total_proc += proc
+            last_skip = skip
+            _log(f"第 {rnd + 1} 回合：處理 {proc} 支，略過 {skip} 支，失敗 {len(failed)} 支")
+            if not failed or rnd >= MAX_RETRY_ROUNDS:
+                break
+            _log(f"還有 {len(failed)} 支失敗，冷卻 {COOLDOWN_SEC}s 後補跑（第 {rnd + 2} 回合）")
+            await asyncio.sleep(COOLDOWN_SEC)
+            pending = failed
 
-        await page.goto("https://www.wantgoo.com/", wait_until="domcontentloaded", timeout=30000)
-        if not await ws.is_logged_in(page):
-            _log("尚未登入 Wantgoo，請先執行 wantgoo_scraper.py 重新登入。中止。")
-            await context.close()
-            return
+    # 只有「補跑後仍失敗」的股票才打 [warn]，讓 job_health 的失敗數反映真實殘留
+    for code in failed:
+        _log(f"  [warn] {code} 多次補跑後仍失敗")
 
-        PER_STOCK_TIMEOUT = 120   # 單支股票整體逾時（秒）：卡在開頁/瀏覽器 wedge/DB 都會被中斷，避免整批無限卡死
-        skipped = processed = 0
-        for i, code in enumerate(codes, 1):
-            rng = plan_fn(code)
-            if rng is None:
-                skipped += 1
-                continue
-            date_from, date_to = rng
-            days_slash = ws._weekdays(date_from, date_to)
-            if not days_slash:
-                skipped += 1
-                continue
-            _log(f"[{i}/{len(codes)}] {code} {date_from}~{date_to}（{len(days_slash)} 交易日）")
-            try:
-                # 整支包逾時：playwright 自帶的逾時在瀏覽器被 wedge 時可能失效，外層再保一層硬逾時
-                await asyncio.wait_for(
-                    ws.scrape_code(page, code, days_slash, throttle_ms=throttle_ms),
-                    timeout=PER_STOCK_TIMEOUT,
-                )
-                processed += 1
-            except Exception as e:
-                # 逾時或例外：跳過該股，並重建分頁以復原可能卡死的 tab（避免後續連鎖卡住）
-                _log(f"  [warn] {code} 逾時/失敗，跳過並重建分頁：{type(e).__name__} {e}")
-                try:
-                    try:
-                        await asyncio.wait_for(page.close(), timeout=15)
-                    except Exception:
-                        pass
-                    page = await asyncio.wait_for(context.new_page(), timeout=30)
-                    await asyncio.wait_for(
-                        page.goto("https://www.wantgoo.com/", wait_until="domcontentloaded", timeout=30000),
-                        timeout=35,
-                    )
-                except Exception as e2:
-                    _log(f"  [warn] 分頁重建失敗（後續可能連鎖失敗）：{e2}")
-                await asyncio.sleep(2)
+    # C. 資料新鮮度監控：統計本次被判定「來源未更新（整檔與前一交易日相同）」而跳過的股數。
+    #    正常應為個位數（如當日跌停/停牌未更新的個股）；若異常偏高代表玩股網大面積尚未更新，
+    #    可能是排程跑太早，應延後重跑。
+    stale = getattr(ws, "STALE_SKIPPED", [])
+    if stale:
+        by_date = {}
+        for _c, d, _p in stale:
+            by_date[d] = by_date.get(d, 0) + 1
+        summary = "、".join(f"{d} {n} 支" for d, n in sorted(by_date.items()))
+        sample = "、".join(c for c, _d, _p in stale[:10])
+        _log(f"[新鮮度] 來源未更新而跳過 {len(stale)} 支（{summary}）；範例：{sample}")
+        if len(stale) >= STALE_ALERT_THRESHOLD:
+            _log(f"  [warn][新鮮度] 跳過數達 {len(stale)}（門檻 {STALE_ALERT_THRESHOLD}），"
+                 f"疑似玩股網大面積尚未更新／排程跑太早，建議稍後重跑補齊")
+    else:
+        _log("[新鮮度] 無來源未更新的個股（全部為當日新資料）")
 
-        await context.close()
-
-    _log(f"本次完成。處理 {processed} 支，略過 {skipped} 支。\n")
+    _log(f"本次完成。處理 {total_proc} 支，略過 {last_skip} 支。\n")
 
 
 def main():
