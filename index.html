@@ -596,7 +596,7 @@
     /* 篩選進度條（不確定進度：伺服器背景運算，無精確百分比，以動畫＋計時安撫等待） */
     .scan-prog{margin:10px 0 2px;}
     .scan-prog .scan-track{height:8px;border-radius:6px;background:var(--ctl-bg);overflow:hidden;position:relative;}
-    .scan-prog .scan-fill{position:absolute;top:0;left:-40%;width:40%;height:100%;border-radius:6px;background:var(--brand-green);animation:scanslide 1.1s ease-in-out infinite;}
+    .scan-prog .scan-fill{position:absolute;top:0;left:0;width:0;height:100%;border-radius:6px;background:var(--brand-green);transition:width .3s ease;}
     .scan-prog .scan-meta{display:flex;justify-content:space-between;font-size:11.5px;color:var(--text-muted);margin-top:5px;}
     @keyframes scanslide{0%{left:-40%;}50%{left:60%;}100%{left:100%;}}
 
@@ -7856,12 +7856,18 @@
       var bar = document.createElement('div');
       bar.id = 'scanProg'; bar.className = 'scan-prog';
       bar.innerHTML = '<div class="scan-track"><div class="scan-fill"></div></div>'
-        + '<div class="scan-meta"><span>篩選運算中…可切換其他畫面，完成後回來即可看到結果</span><span id="scanElapsed">0.0s</span></div>';
+        + '<div class="scan-meta"><span>篩選運算中…可切換其他畫面，完成後回來即可看到結果</span><span id="scanPct">0%</span></div>';
       area.appendChild(bar);
       _scanT0 = Date.now();
+      // 進度％：後端一次算完才回、無中途進度 → 依「預期時長」時間估計推進，封頂 95% 等真結果，
+      // 完成時（renderResults）記錄實際耗時到 localStorage，下次自適應校準。
+      var expect = 9000; try{ var v = parseInt(localStorage.getItem('zm_scan_ms')); if(v > 1500 && v < 120000) expect = v; }catch(e){}
+      var fill = bar.querySelector('.scan-fill');
       _scanTimer = setInterval(function(){
-        var s = document.getElementById('scanElapsed');
-        if(s) s.textContent = ((Date.now()-_scanT0)/1000).toFixed(1)+'s';
+        var pct = Math.min(95, (Date.now()-_scanT0) / expect * 100);
+        if(fill) fill.style.width = pct.toFixed(0)+'%';
+        var s = document.getElementById('scanPct');
+        if(s) s.textContent = Math.round(pct)+'%';
       }, 100);
     }
     function _scanStop(){
@@ -8095,6 +8101,10 @@
     }
 
     function renderResults(data) {
+      // 完成：進度補到 100%，並記錄實際耗時供下次估計自適應
+      try{ if(_scanT0){ var _dur = Date.now()-_scanT0; if(_dur > 1500 && _dur < 120000) localStorage.setItem('zm_scan_ms', String(_dur));
+        var _f = document.querySelector('#scanProg .scan-fill'); if(_f) _f.style.width='100%';
+        var _p = document.getElementById('scanPct'); if(_p) _p.textContent='100%'; } }catch(e){}
       _scanStop();
       const results = data.results || [];
 
