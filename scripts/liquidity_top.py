@@ -124,6 +124,11 @@ def main():
         print("[error] 缺 SUPABASE_SERVICE_KEY"); sys.exit(1)
     srows, siso = spot_top()
     frows, fiso = fut_top()
+    # 新鮮度防呆（同 option_sr）：現貨/期貨較新的一個都沒比既有最新日新就不寫，等補跑。fail-open。
+    _lat = bs.latest_trade_date(env, "liquidity_top")
+    _newest = max([d for d in (siso, fiso) if d], default=None)
+    if _lat and _newest and _newest <= _lat and "--force" not in sys.argv:
+        print(f"[skip] liquidity_top 已有 {_lat}，來源仍為 現貨{siso}/期貨{fiso}（尚未更新）→ 不覆寫，等補跑"); return
     st = _upsert(env, srows + frows)
     print(f"已寫入 liquidity_top（現貨 {siso} {len(srows)} 筆、期貨 {fiso} {len(frows)} 筆，status {st}）")
     print("現貨前3:", [(r["rank"], r["code"], r["name"], round(r["turnover"]/1e8, 1)) for r in srows[:3]])

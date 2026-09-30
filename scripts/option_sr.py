@@ -278,6 +278,12 @@ def main():
     dt = datetime.strptime(body[0][0], "%Y%m%d").date()
     iso = dt.isoformat()
 
+    # 新鮮度防呆：TAIFEX openapi 這系列發布有延遲，19:00 排程常在來源更新前跑到。
+    # 來源日期沒有比既有最新日新就不寫（等隔天早上補跑那輪來源更新後再寫）。fail-open。
+    _lat = bs.latest_trade_date(env, "option_sr")
+    if _lat and iso <= _lat and "--force" not in sys.argv:
+        print(f"[skip] option_sr 已有 {_lat}，TAIFEX openapi 仍為 {iso}（尚未更新）→ 不覆寫，等補跑"); return
+
     codes = {r[2].strip() for r in body}
     live = [(c, _expiry_adj(c, dt)) for c in codes if _expiry_adj(c, dt) and _expiry_adj(c, dt) > dt]   # 依實際（休市順延後）到期日
     wed = sorted([x for x in live if re.search(r"W\d$", x[0])], key=lambda x: x[1])      # 週三週選系列

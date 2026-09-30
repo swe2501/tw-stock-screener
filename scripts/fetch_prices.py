@@ -38,6 +38,7 @@ def _db():
             trade_date text not null,
             open real, high real, low real, close real,
             volume integer,
+            market text default 'twse',
             primary key (code, trade_date)
         )
     """)
@@ -124,6 +125,30 @@ def fetch_twse_all(universe=None):
     return out, skipped
 
 
+def fetch_twse_openapi(universe=None):
+    """備援：openapi.twse.com.tw STOCK_DAY_ALL(JSON，慢約一交易日但穩)。主站 CSV 失敗時用。
+    回 [(code,date,o,h,l,c,v), ...]。"""
+    ctx = ssl.create_default_context(); ctx.check_hostname = False; ctx.verify_mode = ssl.CERT_NONE
+    req = urllib.request.Request("https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL", headers=YF_HEADERS)
+    with urllib.request.urlopen(req, timeout=30, context=ctx) as r:
+        data = json.loads(r.read())
+    out = []
+    for row in data:
+        code = str(row.get("Code", "")).strip()
+        if universe and code not in universe:
+            continue
+        d = _roc_to_iso(row.get("Date"))
+        c = _num(row.get("ClosingPrice"))
+        if not d or c is None:
+            continue
+        o = _num(row.get("OpeningPrice")) or c
+        h = _num(row.get("HighestPrice")) or c
+        low = _num(row.get("LowestPrice")) or c
+        v = _num(row.get("TradeVolume"))
+        out.append((code, d, o, h, low, c, int(v) if v is not None else 0))
+    return out
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--code", help="只抓指定代碼（逗號分隔），用 Yahoo 抓整年歷史")
@@ -137,17 +162,24 @@ def main():
 
     # ── 預設：TWSE 官方當日全市場（一次請求、收盤定案，每日更新用）──
     if not args.code and not args.yahoo:
+        rows, skipped = [], 0
         try:
             rows, skipped = fetch_twse_all(set(universe))
         except Exception as e:
-            print(f"[error] TWSE 當日抓取失敗：{e}")
-            return
+            print(f"[warn] TWSE 主站 CSV 抓取失敗：{e}")
+        if not rows:   # 主站失敗/空 → 改用 openapi 備援(避免上市價格長期凍結)
+            try:
+                rows = fetch_twse_openapi(set(universe))
+                if rows:
+                    print(f"[info] 主站無資料，改用 openapi 備援（{rows[0][1]}）")
+            except Exception as e:
+                print(f"[error] openapi 備援也失敗：{e}")
         if rows:
             conn.executemany(
-                "insert or replace into stock_daily values (?,?,?,?,?,?,?)", rows)
+                "insert or replace into stock_daily (code,trade_date,open,high,low,close,volume,market) "
+                "values (?,?,?,?,?,?,?,'twse')", rows)
             conn.commit()
-            print(f"TWSE 當日（{rows[0][1]}）：寫入 {len(rows):,} 支，"
-                  f"略過 {skipped} 支（當日無成交/非追蹤清單）")
+            print(f"TWSE 當日（{rows[0][1]}）：寫入 {len(rows):,} 支，略過 {skipped} 支")
         else:
             print("[warn] TWSE 當日無資料（假日或 API 異常）")
         return
@@ -160,7 +192,8 @@ def main():
         rows = fetch_year(code)
         if rows:
             conn.executemany(
-                "insert or replace into stock_daily values (?,?,?,?,?,?,?)", rows)
+                "insert or replace into stock_daily (code,trade_date,open,high,low,close,volume,market) "
+                "values (?,?,?,?,?,?,?,'twse')", rows)
             conn.commit()
             total += len(rows)
         if i % 100 == 0:
