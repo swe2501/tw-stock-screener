@@ -199,18 +199,17 @@ W=<prod_wt 路徑> && cd $W && git fetch -q origin && git reset -q --hard origin
 
 ## 8. 目前狀態（2026-09-30）
 
-### 🔴 uat 待驗（2026-09-30）：全站採用合夥人 redesign 版面 + 真名三式
-- **背景**：合夥人（justy）交付一份完整 redesign HTML（`C:\Users\User\Desktop\AI台股研究雷達實戰班\tw-stock-screener-redesign\tw-stock-screener-redesign.html`，1.29MB）。掃描確認＝**我們同一支 app 換皮**（同 Supabase 專案 `bruqrbvbjxntgoljxsne`、同 `/api/screen`·`/api/chart`、同 `_VIEWS`/`NAVMAP`/`VIEWER_EMAILS`/`_isOwner`）。用戶選 **A 案：直接以他的檔案為新 `index.html`**（而非逐塊搬 CSS）。
-- **他的 fork 缺、我方補回的**：只有「**真名三式（多頭回洗反包）**」（他只有舊 zhenming1/2）。已補：勾選框 `#zhenming3`、`doScreen` 讀取＋payload `zhenming3`、結果列 `name-cell` 的 `s.zm3` 標籤（長黑日/½價/第幾天/帶量/停損/目標）、`.zm3-info` CSS。**後端 `screen.py` 的 `zhenming3_at` 未動**（只換 index.html）。
-- **他的 fork 沒有、我方也還沒做的（無損失）**：選擇權 OI 三層峰值（見下）、明燈冥燈。
-- **未採用他的舊 zhenming 之外，OI 峰值前端**：他的 redesign 沒有 `#gsOptSR` 的 OI 峰值卡嗎？→ 有 `srClassify/_srPeriods/_srDraw`（SPEC-002 個股支撐壓力他已有）；但選擇權首頁 OI 峰值卡需上線後在 uat 檢查是否顯示（後端 option_sr 已在跑，前端若缺再補）。
-- **部署**：`index.html` commit 進 Andrew `1cbf396` → uat_wt `git merge -X theirs Andrew`（衝突全取 Andrew，index.html blob 與 Andrew 完全一致）→ push `uat` = `fbe8ed5`。
-- **本機驗證 OK**（真實 Supabase 資料）：hero/今日判讀/每日籌碼報告/K線圖/選股頁全渲染、無 console 錯誤、真名三式三式齊全。`/api/` 本機不動（`npx serve`/python http.server 靜態），選股實跑須在 uat 驗。
-- **備份**：舊版 index.html 存於本 session scratchpad `index_ours_backup.html`。
-- **⏳ 待用戶在 uat 確認「呈現 100% 一致」後，明確說「推 prod」才上 prod。**
-- 頁尾已加「改動紀錄（供合夥人複查）」note。
+### 全站採用合夥人 redesign 版面（2026-09-30，已上 prod）＋ redesign2 輕更新（uat 待驗）
+- **背景**：合夥人（justy）交付完整 redesign HTML（桌面 `AI台股研究雷達實戰班\tw-stock-screener-redesign\tw-stock-screener-redesign*.html`）。掃描確認＝**我們同一支 app 換皮**（同 Supabase 專案 `bruqrbvbjxntgoljxsne`、同 `/api/screen`·`/api/chart`、同 `_VIEWS`/`NAVMAP`/`VIEWER_EMAILS`/`_isOwner`）。用戶選 **A 案：直接以他的檔案為新 `index.html`**（非逐塊搬 CSS）。他交付走桌面檔、非 git commit（`origin/justy-layout` 是空分支）。
+- **redesign（第一版）已上 prod**：Andrew `1cbf396`→uat `fbe8ed5`→prod `ddb290e`。我方補回他 fork 缺的「**真名三式**」前端（`#zhenming3` 勾選框＋`doScreen` payload＋結果列 `name-cell` 的 `s.zm3` 標籤＋`.zm3-info` CSS；後端 `screen.py zhenming3_at` 未動）。
+- **redesign2（輕更新，2026-09-30，uat 待驗）**：Andrew `9254f9a`→uat `a8c9ae1`（尚未推 prod）。他這版拿**我 prod 版（已含真名三式）當基底**再細修：ETF 甜甜圈互動重繪、市場廣度「分頁與篩選分離」、**選擇權支撐壓力卡改讀 OI 峰值 schema**（`res_levels`/`sup_levels`/`ref_price`/`ref_kind`/`meta`）、結算日遇休市順延（新增全站 `_twHol`/`_twAdj` 讀 `/api/screen?stat=holidays`）、多空排列配色（長多#f59e0b/長空#8b5cf6）、行動版表格、文案微調。
+- **⚠️ 踩雷修正**：第一版 redesign 把選擇權卡「降級」成舊「N日大量區 vol/oi」前端（我方原始 index.html 本來就是 OI 峰值前端）；redesign2 修回。已驗證線上 `option_sr` 表有 OI 峰值資料（2026-09-24、ref 48125 TX近月結算202610、月選 res/sup 各 5 層、週選 4 層）→ 新前端顯示正常。
+- **本機驗證 OK**（真實 Supabase）：hero/今日判讀/每日籌碼報告/K線圖/選股頁（含真名三式）/選擇權 OI 峰值卡 全渲染、無頁面錯誤。`/api/` 本機不動（靜態伺服器），選股實跑須 uat 驗。
+- **備份**：`index_ours_backup.html`（原始 pre-justy）、`index_prev_deployed.html`（第一版 redesign）於本 session scratchpad。
+- **⏳ redesign2 待用戶在 uat 確認後，明確說「推 prod」才上 prod。**
+- 頁尾「改動紀錄（供合夥人複查）」note 已更新含輕更新項目。
 
-### prod（commit `22e9573`）＝ uat 舊基礎，無待推項目
+### prod（redesign `ddb290e`；redesign2 待推）
 近期推 prod 的批次（新→舊）：
 - `22e9573`：K 線均線色（MA5 黃／MA10 藍／MA20 桃紅／MA60 橘）、個股支撐線紅壓力線綠、正紅負綠修正（基本面 YoY、廣度淨上漲）。
 - `dfc5ac9`：選擇權支撐壓力**排除價平**（價平＝最接近加權收盤的履約價，同玩股網反灰列）。
