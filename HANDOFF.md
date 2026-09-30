@@ -199,6 +199,13 @@ W=<prod_wt 路徑> && cd $W && git fetch -q origin && git reset -q --hard origin
 
 ## 8. 目前狀態（2026-09-30）
 
+### 🔒 上線前資安稽核＋修復（2026-09-30，已套用 Supabase 正式庫）
+- **稽核結論：可上線**。密碼走 Supabase Auth（bcrypt 雜湊、我方未存明文）；前端/API 無硬編 service_role/JWT；`.env.local` 已 gitignore；使用者資料 API（watchlist/broker_watch）驗 token 走 RLS；全部表 RLS 皆啟用、無裸表。
+- **修掉的真漏洞**：`broker_daily`、`broker_signals`、`wantgoo_daily` 三張表原掛有「對 `public`（含 anon）開放 INSERT/UPDATE/DELETE、`USING=true`」的 RLS 政策 → 前端公開 anon key 可插假資料/刪光（broker_signals 主力訊號尤其嚴重）。已 `DROP` 這些政策（這三張由本機腳本 service_role 寫入，繞過 RLS，管線不受影響）。真實寫入複驗：anon INSERT/DELETE → 401 permission denied ✅；screener 的 `screen_cache` 仍可 anon 寫（POST 201/DEL 204）✅；讀取正常。
+- **踩雷提醒（測 RLS 的正確方法）**：用「不匹配任何列的 PATCH」測寫入權會有**偽陽性**——RLS 已開但無 UPDATE 政策時，UPDATE 影響 0 列會回 204（成功），並非真能改資料。要驗真漏洞須：①查 `pg_class.relrowsecurity`（RLS 是否開）＋ `pg_policies`（有無 anon/public 的 INSERT/UPDATE/DELETE/ALL 政策且 USING/CHECK=true）；②用「會匹配到真實列」的 INSERT/DELETE 實測（被擋＝401 `42501`）。
+- **anon 應為唯讀**：本次也逐欄 revoke 了 anon 的欄位級 INSERT/UPDATE（防禦縱深）；日後新表請確保只給 anon `SELECT`、寫入一律走 service_role。
+- 其他建議（非阻斷）：CORS 目前 `*` 可收斂到正式網域；確認 Vercel 已設 `CRON_SECRET`（alert.py 用）。
+
 ### 全站採用合夥人 redesign 版面（2026-09-30，已上 prod）＋ redesign2 輕更新（uat 待驗）
 - **背景**：合夥人（justy）交付完整 redesign HTML（桌面 `AI台股研究雷達實戰班\tw-stock-screener-redesign\tw-stock-screener-redesign*.html`）。掃描確認＝**我們同一支 app 換皮**（同 Supabase 專案 `bruqrbvbjxntgoljxsne`、同 `/api/screen`·`/api/chart`、同 `_VIEWS`/`NAVMAP`/`VIEWER_EMAILS`/`_isOwner`）。用戶選 **A 案：直接以他的檔案為新 `index.html`**（非逐塊搬 CSS）。他交付走桌面檔、非 git commit（`origin/justy-layout` 是空分支）。
 - **redesign（第一版）已上 prod**：Andrew `1cbf396`→uat `fbe8ed5`→prod `ddb290e`。我方補回他 fork 缺的「**真名三式**」前端（`#zhenming3` 勾選框＋`doScreen` payload＋結果列 `name-cell` 的 `s.zm3` 標籤＋`.zm3-info` CSS；後端 `screen.py zhenming3_at` 未動）。
