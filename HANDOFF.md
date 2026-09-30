@@ -215,15 +215,18 @@ W=<prod_wt 路徑> && cd $W && git fetch -q origin && git reset -q --hard origin
 - **A 已補**：手動重跑三支 → option_sr/futures_daily/liquidity_top 皆 2026-09-29，線上驗證選擇權卡＝資料日 9/29、ref 47,781。
 - **B 防呆**：`broker_signals.py` 新增 `latest_trade_date(env,table)`（fail-open）；`option_sr.py`/`futures_market.py`/`liquidity_top.py` 加「來源日期沒比 Supabase 既有最新日新就 `[skip]` 不覆寫」（`--force` 可繞過）。已測資料最新時三支皆正確 skip。
 - **B 補跑排程**：新 `scripts/run_taifex_catchup.bat` 跑這三支；Windows 排程 `AI_stock_taifex_catchup`（週二~六 **08:30**，此時 openapi 必已發布前一交易日）。主排程若跑太早被防呆擋下 → 隔天早上補跑寫入。
-- **⚠️ option_nday（成交量模式用）排程先前已移除、仍停 9/24**；卡片預設「未平倉(OI峰值)」模式讀 option_sr 不受影響。待用戶決定：①恢復 option_nday 排程讓成交量模式可用 ②前端隱藏成交量切換 ③維持現狀（成交量模式顯示舊資料）。**尚未動作**。
+- **option_nday（成交量模式用）排程先前已移除、仍停 9/24**；用戶選 **①隱藏成交量切換**（2026-09-30 已實作並上 prod `db655d5`）：`index.html` 的 `#gsOptSR` render() 已移除整個 `osr-mode-tabs` 切換列，卡片固定顯示「未平倉 OI 峰值」（mode 恆為 `oi`）。**`option_nday` 表保留未刪**、成交量分層資料的 `pkVol`/`ndayRows` 前端程式也保留（未走），日後若要恢復成交量模式：把切換列加回 + 恢復 option_nday 抓取排程即可。線上驗證：無切換鈕、資料日 9/29。
 
 ### ✅ 請另一個 claude code 帳號複查（Andrew `f84a17c` 一併提交）
 用戶說明：下列後端腳本的既有未提交改動是「用另一 claude code 帳號」所做，本次一併 commit，請該帳號確認是否符合預期：
 `broker_rankings.py`、`fetch_prices.py`、`run_codex_topics.bat`、`wantgoo_daily_job.py`、`wantgoo_scraper.py`。
 （另 `futures_market.py` 原為未追蹤檔，本次首次納入版控。）
 
-### prod（redesign `ddb290e`；redesign2 待推）
+### prod 目前 = `db655d5`（2026-09-30）
 近期推 prod 的批次（新→舊）：
+- `db655d5`：選擇權支撐壓力卡隱藏「成交量」切換，固定 OI 峰值。
+- `d1c44da`：合夥人 redesign2 輕更新（選擇權 OI 峰值前端修回、ETF 甜甜圈、廣度分頁與篩選分離、結算日遇休市順延、多空排列配色、行動版表格）。
+- `ddb290e`：全站採用合夥人 redesign 版面（含真名三式）。
 - `22e9573`：K 線均線色（MA5 黃／MA10 藍／MA20 桃紅／MA60 橘）、個股支撐線紅壓力線綠、正紅負綠修正（基本面 YoY、廣度淨上漲）。
 - `dfc5ac9`：選擇權支撐壓力**排除價平**（價平＝最接近加權收盤的履約價，同玩股網反灰列）。
 - `d738cb4`：選擇權 OI 峰值方案 A＋5 層＋週選只看週三系列、結算日休市順延、N 日不跨結算（後端）、多空頭排列四色、協作流程文件。
@@ -238,7 +241,7 @@ W=<prod_wt 路徑> && cd $W && git fetch -q origin && git reset -q --hard origin
 ### 協作流程（2026-09-28 起）
 - uat 一律 **git merge** Andrew（見 §2），不再複製 index.html 覆蓋。
 - 合夥人（不是 `Duke` 分支）會 clone repo 改版面：他開自己的分支 → 告知分支名 → 我方合併進 Andrew、逐段處理衝突 → uat。
-- **2026-09-30 GitHub 協作者**：合夥人 justy 的 GitHub 帳號 `qa5518556130-dot`（email qa5518556130@gmail.com）已由 owner `swe2501` 加為 collaborator（Write，個人 repo 預設）；他 push 前需先接受邀請 email。之前他 push 403 就是還沒被加。
+- **2026-09-30 GitHub 協作者**：合夥人 justy 的 GitHub 帳號 `qa5518556130-dot`（email qa5518556130@gmail.com）已由 owner `swe2501` 加為 collaborator（Write，個人 repo 預設），**且已接受邀請（2026-09-30），可直接 push**。之前他 push 403 就是還沒被加。他若用 commit 交付：`git fetch origin && git merge origin/<他的分支>`（進 Andrew）→ uat → prod。
 - **2026-09-30 交付方式實況**：justy 這次不是用 commit 交付——他推的 `origin/justy-layout` 分支內容 = uat 原點（0 筆他的 commit，blob 與 uat 相同）；實際交付是一份**完整 HTML 檔**放在桌面（見上「uat 待驗」段路徑）。故本次改採「以他的檔案為新 index.html」而非合併分支。日後他若改用 commit 交付，仍照原流程 `git merge origin/<分支>` 進 Andrew。
 - 合夥人用的 AI 會讀 AGENTS.md；舊版禁止所有 Git 導致他無法開分支 → 2026-09-29 已在 AGENTS.md 開頭標明 Git 禁令只限話題族群排程、合夥人依「合夥人協作規範」。用戶會把新版 AGENTS.md 傳給合夥人覆蓋後，由合夥人**自己**開分支（我方不代開；曾代開 user/ui-redesign 已依用戶要求刪除）。他推完告知分支名後：`git fetch origin && git merge origin/<分支>`（進 Andrew）。
 

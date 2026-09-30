@@ -3,7 +3,9 @@ backtest_zhenming3.py — 「真名三式」歷史回測（判定函式與網站
 
 資料：本機 SQLite stock_daily（上市 twse／上櫃 otc 普通股，2024-07 起，未還原價）。
 交易規則（依合夥人文件 SOP，文件未明定處取保守做法）：
-  進場：訊號日「次一交易日開盤」買進（避免用當日收盤的前視偏誤）。
+  進場：訊號日「收盤」買進（真名三式以收盤價定義，收盤確認訊號即以該收盤價進場；出場規則自次一交易日起算）。
+        2026-09-30 由「次日開盤」改為「訊號日收盤」——合夥人發現次日開盤常跳空開高＝系統性追高，
+        回測比較（約 7,000 筆）勝率 35.6%→42.5%、平均報酬 −0.44%→+0.47%。此法多一個「當根收盤即成交」假設，數字稍樂觀但非前視偏誤。
   停損：任何一天最低價 ≤ 停損參考價 → 以停損價出場（若開盤已跳空跌破，以開盤價出場）；全部部位。
   第一目標：最高價 > 前高（長黑前 20 日最高）→ 以前高價賣出一半（開盤已跳空越過則以開盤價）。
   剩餘一半：收盤跌破 10 日均線 → 當日收盤出場；最長持有 60 個交易日後收盤出場。
@@ -45,10 +47,10 @@ def load():
 
 def simulate(b, t, sig):
     """回 dict 或 None（資料不足以進場）。"""
-    e = t + 1
+    e = t + 1              # 出場規則自訊號日次一交易日起算
     if e >= len(b):
         return None
-    entry = b[e][1]
+    entry = b[t][4]        # 進場＝訊號日收盤（收盤確認訊號即以該收盤價買進）
     stop, target = sig["stop"], sig["target"]
     half_done, half_px, exit_px, exit_i, reason = False, None, None, None, None
     for i in range(e, min(len(b), e + MAX_HOLD)):
@@ -77,7 +79,7 @@ def simulate(b, t, sig):
     else:
         ret = exit_px / entry - 1
     ret -= COST
-    return {"date": b[t][0], "entry_date": b[e][0], "entry": entry, "ret": ret, "hold": exit_i - e + 1,
+    return {"date": b[t][0], "entry_date": b[t][0], "entry": entry, "ret": ret, "hold": exit_i - t,
             "tp1": half_done, "reason": reason, "vol": sig["vol"]}
 
 
