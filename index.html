@@ -1870,6 +1870,13 @@
     #todayindexView .ti-card:first-child { grid-column:1; }
   }
   @media(max-width:600px) {
+    /* 手機下拉修正(2026-09-30)：導覽列換成兩行時，下拉原本 absolute 貼在該項正下方會蓋住第二行 nav（合夥人回報 options 被擋住）。
+       改成掛在整個 #mainNav 底部、左右滿寬展開，並取消 overflow 裁切；#mainNav 本身為 sticky＝定位祖先，選單即以它為基準。 */
+    #mainNav { overflow:visible !important; }
+    #mainNav .mn-grp { position:static !important; }
+    #mainNav .mn-menu { left:8px !important; right:8px !important; top:calc(100% + 3px) !important; min-width:0 !important; width:auto !important; }
+  }
+  @media(max-width:600px) {
     .gs-hero-grid { gap:18px !important; }.gs-title{font-size:34px !important;}.gs-deck{font-size:13px !important;}
     .gs-search { flex-wrap:wrap; }.gs-search button{width:100%;}.hp-sec{padding:15px !important;}
     .pro-barplot { min-width:720px; }.pro-date{font-size:13px;}
