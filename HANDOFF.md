@@ -215,15 +215,18 @@ W=<prod_wt 路徑> && cd $W && git fetch -q origin && git reset -q --hard origin
 - **A 已補**：手動重跑三支 → option_sr/futures_daily/liquidity_top 皆 2026-09-29，線上驗證選擇權卡＝資料日 9/29、ref 47,781。
 - **B 防呆**：`broker_signals.py` 新增 `latest_trade_date(env,table)`（fail-open）；`option_sr.py`/`futures_market.py`/`liquidity_top.py` 加「來源日期沒比 Supabase 既有最新日新就 `[skip]` 不覆寫」（`--force` 可繞過）。已測資料最新時三支皆正確 skip。
 - **B 補跑排程**：新 `scripts/run_taifex_catchup.bat` 跑這三支；Windows 排程 `AI_stock_taifex_catchup`（週二~六 **08:30**，此時 openapi 必已發布前一交易日）。主排程若跑太早被防呆擋下 → 隔天早上補跑寫入。
-- **⚠️ option_nday（成交量模式用）排程先前已移除、仍停 9/24**；卡片預設「未平倉(OI峰值)」模式讀 option_sr 不受影響。待用戶決定：①恢復 option_nday 排程讓成交量模式可用 ②前端隱藏成交量切換 ③維持現狀（成交量模式顯示舊資料）。**尚未動作**。
+- **option_nday（成交量模式用）排程先前已移除、仍停 9/24**；用戶選 **①隱藏成交量切換**（2026-09-30 已實作並上 prod `db655d5`）：`index.html` 的 `#gsOptSR` render() 已移除整個 `osr-mode-tabs` 切換列，卡片固定顯示「未平倉 OI 峰值」（mode 恆為 `oi`）。**`option_nday` 表保留未刪**、成交量分層資料的 `pkVol`/`ndayRows` 前端程式也保留（未走），日後若要恢復成交量模式：把切換列加回 + 恢復 option_nday 抓取排程即可。線上驗證：無切換鈕、資料日 9/29。
 
 ### ✅ 請另一個 claude code 帳號複查（Andrew `f84a17c` 一併提交）
 用戶說明：下列後端腳本的既有未提交改動是「用另一 claude code 帳號」所做，本次一併 commit，請該帳號確認是否符合預期：
 `broker_rankings.py`、`fetch_prices.py`、`run_codex_topics.bat`、`wantgoo_daily_job.py`、`wantgoo_scraper.py`。
 （另 `futures_market.py` 原為未追蹤檔，本次首次納入版控。）
 
-### prod（redesign `ddb290e`；redesign2 待推）
+### prod 目前 = `db655d5`（2026-09-30）
 近期推 prod 的批次（新→舊）：
+- `db655d5`：選擇權支撐壓力卡隱藏「成交量」切換，固定 OI 峰值。
+- `d1c44da`：合夥人 redesign2 輕更新（選擇權 OI 峰值前端修回、ETF 甜甜圈、廣度分頁與篩選分離、結算日遇休市順延、多空排列配色、行動版表格）。
+- `ddb290e`：全站採用合夥人 redesign 版面（含真名三式）。
 - `22e9573`：K 線均線色（MA5 黃／MA10 藍／MA20 桃紅／MA60 橘）、個股支撐線紅壓力線綠、正紅負綠修正（基本面 YoY、廣度淨上漲）。
 - `dfc5ac9`：選擇權支撐壓力**排除價平**（價平＝最接近加權收盤的履約價，同玩股網反灰列）。
 - `d738cb4`：選擇權 OI 峰值方案 A＋5 層＋週選只看週三系列、結算日休市順延、N 日不跨結算（後端）、多空頭排列四色、協作流程文件。
