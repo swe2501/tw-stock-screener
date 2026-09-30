@@ -197,9 +197,20 @@ W=<prod_wt 路徑> && cd $W && git fetch -q origin && git reset -q --hard origin
 
 ---
 
-## 8. 目前狀態（2026-09-29）
+## 8. 目前狀態（2026-09-30）
 
-### prod（commit `22e9573`）＝ uat，無待推項目
+### 🔴 uat 待驗（2026-09-30）：全站採用合夥人 redesign 版面 + 真名三式
+- **背景**：合夥人（justy）交付一份完整 redesign HTML（`C:\Users\User\Desktop\AI台股研究雷達實戰班\tw-stock-screener-redesign\tw-stock-screener-redesign.html`，1.29MB）。掃描確認＝**我們同一支 app 換皮**（同 Supabase 專案 `bruqrbvbjxntgoljxsne`、同 `/api/screen`·`/api/chart`、同 `_VIEWS`/`NAVMAP`/`VIEWER_EMAILS`/`_isOwner`）。用戶選 **A 案：直接以他的檔案為新 `index.html`**（而非逐塊搬 CSS）。
+- **他的 fork 缺、我方補回的**：只有「**真名三式（多頭回洗反包）**」（他只有舊 zhenming1/2）。已補：勾選框 `#zhenming3`、`doScreen` 讀取＋payload `zhenming3`、結果列 `name-cell` 的 `s.zm3` 標籤（長黑日/½價/第幾天/帶量/停損/目標）、`.zm3-info` CSS。**後端 `screen.py` 的 `zhenming3_at` 未動**（只換 index.html）。
+- **他的 fork 沒有、我方也還沒做的（無損失）**：選擇權 OI 三層峰值（見下）、明燈冥燈。
+- **未採用他的舊 zhenming 之外，OI 峰值前端**：他的 redesign 沒有 `#gsOptSR` 的 OI 峰值卡嗎？→ 有 `srClassify/_srPeriods/_srDraw`（SPEC-002 個股支撐壓力他已有）；但選擇權首頁 OI 峰值卡需上線後在 uat 檢查是否顯示（後端 option_sr 已在跑，前端若缺再補）。
+- **部署**：`index.html` commit 進 Andrew `1cbf396` → uat_wt `git merge -X theirs Andrew`（衝突全取 Andrew，index.html blob 與 Andrew 完全一致）→ push `uat` = `fbe8ed5`。
+- **本機驗證 OK**（真實 Supabase 資料）：hero/今日判讀/每日籌碼報告/K線圖/選股頁全渲染、無 console 錯誤、真名三式三式齊全。`/api/` 本機不動（`npx serve`/python http.server 靜態），選股實跑須在 uat 驗。
+- **備份**：舊版 index.html 存於本 session scratchpad `index_ours_backup.html`。
+- **⏳ 待用戶在 uat 確認「呈現 100% 一致」後，明確說「推 prod」才上 prod。**
+- 頁尾已加「改動紀錄（供合夥人複查）」note。
+
+### prod（commit `22e9573`）＝ uat 舊基礎，無待推項目
 近期推 prod 的批次（新→舊）：
 - `22e9573`：K 線均線色（MA5 黃／MA10 藍／MA20 桃紅／MA60 橘）、個股支撐線紅壓力線綠、正紅負綠修正（基本面 YoY、廣度淨上漲）。
 - `dfc5ac9`：選擇權支撐壓力**排除價平**（價平＝最接近加權收盤的履約價，同玩股網反灰列）。
@@ -215,6 +226,8 @@ W=<prod_wt 路徑> && cd $W && git fetch -q origin && git reset -q --hard origin
 ### 協作流程（2026-09-28 起）
 - uat 一律 **git merge** Andrew（見 §2），不再複製 index.html 覆蓋。
 - 合夥人（不是 `Duke` 分支）會 clone repo 改版面：他開自己的分支 → 告知分支名 → 我方合併進 Andrew、逐段處理衝突 → uat。
+- **2026-09-30 GitHub 協作者**：合夥人 justy 的 GitHub 帳號 `qa5518556130-dot`（email qa5518556130@gmail.com）已由 owner `swe2501` 加為 collaborator（Write，個人 repo 預設）；他 push 前需先接受邀請 email。之前他 push 403 就是還沒被加。
+- **2026-09-30 交付方式實況**：justy 這次不是用 commit 交付——他推的 `origin/justy-layout` 分支內容 = uat 原點（0 筆他的 commit，blob 與 uat 相同）；實際交付是一份**完整 HTML 檔**放在桌面（見上「uat 待驗」段路徑）。故本次改採「以他的檔案為新 index.html」而非合併分支。日後他若改用 commit 交付，仍照原流程 `git merge origin/<分支>` 進 Andrew。
 - 合夥人用的 AI 會讀 AGENTS.md；舊版禁止所有 Git 導致他無法開分支 → 2026-09-29 已在 AGENTS.md 開頭標明 Git 禁令只限話題族群排程、合夥人依「合夥人協作規範」。用戶會把新版 AGENTS.md 傳給合夥人覆蓋後，由合夥人**自己**開分支（我方不代開；曾代開 user/ui-redesign 已依用戶要求刪除）。他推完告知分支名後：`git fetch origin && git merge origin/<分支>`（進 Andrew）。
 
 ### 待用戶／合夥人決定
