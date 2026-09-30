@@ -6275,7 +6275,7 @@
               +'<div><span>合約</span><b>'+(o.contract||'—')+'</b>'+(o.expiry?'<small>到期 '+o.expiry.slice(5)+(m.expiry_sched?'（原 '+m.expiry_sched.slice(5)+' 遇休市順延）':'')+'</small>':'')+'</div>'
               +'<div><span>Put/Call OI 比</span><b>'+(o.pc_ratio!=null?o.pc_ratio:'—')+'</b>'+(o.pc_ratio!=null?'<small>'+(o.pc_ratio>=1?'偏空避險':'偏多')+'</small>':'')+'</div>'
             +'</div>'
-            +'<div class="osr-bar2"><span>'+(mode==='volume'?(kind==='week'?'週選 5 日':'月選 20 日')+'成交大量區：價平上下 10% 內依成交量排序並合併相近履約價':'OI 峰值：該合約今日未平倉的明顯峰值，依離參考價近→遠各取 5 層（潛在壓力／潛在支撐，非必然反轉價位）')+'</span><span class="osr-mode-tabs" aria-label="支撐壓力資料模式"><button type="button" data-osr-mode="volume" class="'+(mode==='volume'?'on':'')+'" '+(hasVol?'':'disabled title="目前沒有成交量分層資料"')+' aria-pressed="'+(mode==='volume')+'">成交量</button><button type="button" data-osr-mode="oi" class="'+(mode==='oi'?'on':'')+'" aria-pressed="'+(mode==='oi')+'">未平倉</button></span></div>'
+            +'<div class="osr-bar2"><span>'+(mode==='volume'?(kind==='week'?'週選 5 日':'月選 20 日')+'成交大量區：價平上下 10% 內依成交量排序並合併相近履約價':'OI 峰值：該合約今日未平倉的明顯峰值，依離參考價近→遠各取 5 層（潛在壓力／潛在支撐，非必然反轉價位）')+'</span></div>' /* 2026-09-30 隱藏「成交量」切換（option_nday 排程已移除、資料停更）；固定顯示未平倉 OI 峰值 */
             +'<div class="osr-head"><span class="r">潛在壓力　參考價以上 Call（'+(mode==='volume'?'量大→量小':'近→遠')+'）</span><span></span><span class="s">潛在支撐　參考價以下 Put（'+(mode==='volume'?'量大→量小':'近→遠')+'）</span></div>'
             +rows+(short?'<div class="gs-osr-meta" style="color:var(--yellow)"> '+short+'側符合條件的峰值不足 5 層（候選不足，不降低門檻硬湊）</div>':'')
             +'<div class="gs-osr-meta" style="margin-top:8px">資料日 '+(mode==='volume'?(ndayRows[0]&&ndayRows[0].trade_date||''):(o.trade_date||''))+' · '+(mode==='volume'?'區間依成交量由大到小':'點數＝距參考價')+'</div>'
