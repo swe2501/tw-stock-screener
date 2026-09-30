@@ -5839,6 +5839,7 @@
 
   <style>
     #etfheavyView,#etfpremView{max-width:1000px;margin:0 auto;}
+    #etfflowView{max-width:1040px !important;margin:0 auto !important;}  /* 蓋過 [id$=View] 1420!important，避免窄表靠左(偏左) 2026-10-01 */
     .eg-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
     .eg-scroll{max-height:70vh;overflow:auto;}
     table.eg{width:100%;border-collapse:collapse;font-size:12.5px;}
@@ -8418,18 +8419,31 @@
     // 清除舊版本留在 localStorage 的永久標記（已改為暫時性設計）
     try { localStorage.removeItem('chart_markers_v1'); } catch (_) {}
 
+    // 標記日期吸附：訊號日若非交易日(如中秋/教師節休市)或 K 線缺該根，
+    // 吸附到 ≤ 該日的最近一根 K 棒(無更早者取最早)，避免標記被靜默丟棄看不到買點。2026-10-01
+    let _ctSorted = null, _ctSortedSrc = null;
+    function _snapMarkerDate(date) {
+      if (!_lastCandleTimes || !date) return null;
+      if (_lastCandleTimes.has(date)) return date;
+      if (_ctSortedSrc !== _lastCandleTimes) { _ctSorted = Array.from(_lastCandleTimes).sort(); _ctSortedSrc = _lastCandleTimes; }
+      if (!_ctSorted.length) return null;
+      let best = null;
+      for (let i = _ctSorted.length - 1; i >= 0; i--) { if (_ctSorted[i] <= date) { best = _ctSorted[i]; break; } }
+      return best || _ctSorted[0];
+    }
+
     function _refreshChartMarkers() {
       if (!candleSeriesRef) return;
       const user = (_userMarkers[currentCode] || [])
-        .filter(m => _lastCandleTimes && _lastCandleTimes.has(m.date))
-        .map(m => ({
-          time: m.date,
+        .map(m => { const t = _snapMarkerDate(m.date); return t ? {
+          time: t,
           position: 'aboveBar',
           color: '#ff1744',
           shape: 'arrowDown',
           text: m.label,
           size: 1,
-        }));
+        } : null; })
+        .filter(Boolean);
       const catalyst = _catalystEvents
         .filter(e => _lastCandleTimes && _lastCandleTimes.has(e.start_date))
         .map(e => ({
@@ -8443,8 +8457,8 @@
       const bmap = {};
       (_brokerEntriesRaw || []).forEach(e => {
         if (_brokerChecked && !_brokerChecked.has(e.broker)) return;   // 未勾選不顯示
-        if (!_lastCandleTimes || !_lastCandleTimes.has(e.date)) return;
-        (bmap[e.date] = bmap[e.date] || []).push(e.broker);
+        const t = _snapMarkerDate(e.date); if (!t) return;             // 非交易日吸附到最近 K 棒
+        (bmap[t] = bmap[t] || []).push(e.broker);
       });
       const broker = Object.entries(bmap).map(([date, arr]) => ({
         time: date,
@@ -9945,7 +9959,7 @@
       const el = document.getElementById('greedGauge');
       if (el) { el.style.display = 'none'; el.innerHTML = ''; }
       _greedData = null;
-      if (!_isStock(code)) return;
+      if (!_isStock(code) || /^00/.test(String(code))) return;   // ETF(00 開頭)無貪婪指數資料(greed_base 只算個股)→ 隱藏儀表，不顯示誤導的 0（2026-10-01）
       try {
         const hdr = { apikey: SIG_SB_ANON, Authorization: `Bearer ${SIG_SB_ANON}` };
         const [rb, rt, rc, re] = await Promise.all([
