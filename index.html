@@ -2016,7 +2016,7 @@
     <div class="mn-grp"><span class="mn-item">題材族群 <i>▾</i></span><div class="mn-menu">
       <a class="nav-owner" onclick="_showView('hottopics')"> 話題</a><a onclick="_showView('themes')">題材列表</a><a onclick="_showView('sectors')">產業地圖</a></div></div>
     <div class="mn-grp"><span class="mn-item">市場觀察 <i>▾</i></span><div class="mn-menu">
-      <a class="nav-owner" onclick="_showView('sig')"> 主力訊號</a><a class="nav-owner" onclick="_showView('brank')"> 分點回測</a><a onclick="_showView('greed')"> 貪婪指標</a><a onclick="_showView('inst')"> 三大法人個股買賣超</a><a onclick="_showView('fhedge')"> 外資空單溫度計</a><a onclick="_showView('breadth')"> 大盤多空廣度</a><a onclick="_showView('disposal')"> 處置股</a></div></div>
+      <a class="nav-owner" onclick="_showView('sig')"> 主力訊號</a><a class="nav-owner" onclick="_showView('brank')"> 分點回測</a><a class="nav-owner" onclick="_showView('mingdeng')"> 明燈冥燈</a><a onclick="_showView('greed')"> 貪婪指標</a><a onclick="_showView('inst')"> 三大法人個股買賣超</a><a onclick="_showView('fhedge')"> 外資空單溫度計</a><a onclick="_showView('breadth')"> 大盤多空廣度</a><a onclick="_showView('disposal')"> 處置股</a></div></div>
     <div class="mn-grp"><span class="mn-item">ETF 分析 <i>▾</i></span><div class="mn-menu">
       <a onclick="_showView('etfx')" style="font-weight:800;color:var(--brand-green)"> ETF 探索</a><a onclick="_showView('etf')">總覽 · 規模排行</a><a onclick="_showView('etfcons')">成分股</a><a onclick="_showView('etfrev')">股票反查 ETF</a><a onclick="_showView('etfdiv')">配息行事曆</a><a onclick="_showView('etfhold')">持有人結構</a><a onclick="_showView('etfsim')">ETF 相似度</a><a onclick="_showView('etfheavy')">重倉股排行</a><a onclick="_showView('etfprem')">折溢價</a><a onclick="_showView('etfflow')">資金流</a><a onclick="_showView('etfperf')">績效比較</a></div></div>
     <a class="mn-item" onclick="_showView('news')">每日新聞</a>
@@ -6137,7 +6137,7 @@
     // 通用視圖註冊：新增大項只要在此登記 {el:容器id, show:全域函式名}，並提供對應元素/函式即可
     window._VIEWS = window._VIEWS || {}; window._VIEWS.home={el:'homeView',show:'_hxShow'}; window._VIEWS.focus={el:'focusView',show:'_focusShow'}; window._VIEWS.overview={el:'overviewView',show:'_ovShow'};
     var NAVMAP={home:'首頁',overview:'今日焦點',focus:'今日焦點',todayindex:'今日焦點',screen:'選股',box:'選股',limitup:'選股',liq:'選股',sr:'選股',
-      themes:'題材族群',sectors:'題材族群',hottopics:'題材族群',greed:'市場觀察',inst:'市場觀察',sig:'市場觀察',brank:'市場觀察',fhedge:'市場觀察',disposal:'市場觀察',breadth:'市場觀察',news:'每日新聞',
+      themes:'題材族群',sectors:'題材族群',hottopics:'題材族群',greed:'市場觀察',inst:'市場觀察',sig:'市場觀察',brank:'市場觀察',mingdeng:'市場觀察',fhedge:'市場觀察',disposal:'市場觀察',breadth:'市場觀察',news:'每日新聞',
       etfx:'ETF',etf:'ETF',etfcons:'ETF',etfrev:'ETF',etfdiv:'ETF',etfhold:'ETF',etfsim:'ETF',etfheavy:'ETF',etfprem:'ETF',etfflow:'ETF',etfperf:'ETF'};
     function _setNav(v){
       var label=NAVMAP[v]; var items=document.querySelectorAll('#mainNav .mn-item');
@@ -6916,6 +6916,118 @@
       <div class="mm-foot">維持率＝融資擔保品現值 ÷ 融資餘額，越低代表融資戶越接近斷頭。資料來源：玩股網</div>
     </div>
   </div>
+
+  <!-- 明燈與冥燈（市場觀察大項 view；付費/擁有者可見；2026-10-01 Phase 1）-->
+  <style>
+    #mingdengView{max-width:1100px;margin:0 auto;}
+    #mingdengView .md-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:16px;box-shadow:var(--shadow-sm);}
+    #mingdengView .md-card h3{margin:0 0 10px;font-size:15px;color:var(--brand-green);font-weight:800;}
+    #mingdengView .md-frm{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;align-items:end;}
+    #mingdengView .md-frm label{display:block;font-size:11.5px;color:var(--text-muted);margin-bottom:3px;}
+    #mingdengView .md-frm input,#mingdengView .md-frm select{width:100%;padding:7px 9px;font-size:13px;border:1px solid var(--border);border-radius:6px;background:var(--input-bg,var(--surface));color:var(--text);}
+    #mingdengView .md-frm .full{grid-column:1/-1;}
+    #mingdengView .md-ladders{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+    #mingdengView .md-row{display:grid;grid-template-columns:28px 1fr auto;gap:8px;align-items:center;padding:9px 10px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;background:var(--surface);}
+    #mingdengView .md-row .rk{font:800 13px/1 "JetBrains Mono",monospace;color:var(--text-muted);text-align:center;}
+    #mingdengView .md-row .nm{font-weight:700;} #mingdengView .md-row .meta{font-size:11px;color:var(--text-muted);}
+    #mingdengView .md-row .pct{font-size:18px;font-weight:850;text-align:right;}
+    #mingdengView .md-green .pct{color:var(--red);} #mingdengView .md-red .pct{color:var(--green);}
+    #mingdengView .md-calls table{width:100%;border-collapse:collapse;font-size:12.5px;}
+    #mingdengView .md-calls th,#mingdengView .md-calls td{padding:6px 8px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap;}
+    #mingdengView .md-del{color:var(--green);cursor:pointer;border:0;background:none;font-size:12px;}
+    #mingdengView .md-btn{padding:8px 18px;font-size:13px;font-weight:700;border:0;border-radius:7px;background:var(--accent);color:var(--on-accent);cursor:pointer;}
+    @media(max-width:760px){#mingdengView .md-frm{grid-template-columns:1fr 1fr;}#mingdengView .md-ladders{grid-template-columns:1fr;}}
+  </style>
+  <div id="mingdengView" style="display:none">
+    <div class="tm-head"><h2> 明燈與冥燈</h2><span class="sub">真人點名回測 · 神燈跟單／冥燈避雷（付費）</span></div>
+    <div id="mdLock" style="display:none;text-align:center;padding:60px 20px;color:var(--text-muted)">
+      <div style="font-size:40px;margin-bottom:10px"></div>
+      <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px">明燈與冥燈 為付費功能</div>
+      <div style="font-size:13px">追蹤真人點名的歷史勝率／最大回撤，分出「神燈（跟單）」與「冥燈（反著做）」。開通主力籌碼權限後可見。</div>
+    </div>
+    <div id="mdBody" style="display:none">
+      <div class="md-card" id="mdFormCard">
+        <h3> 管理者登錄點名</h3>
+        <div class="md-frm">
+          <div><label>真人／帳號名 *</label><input id="mdPerson" type="text" placeholder="例：某某分析師"></div>
+          <div><label>來源平台</label><select id="mdPlatform"><option value="財經名嘴/雜誌">財經名嘴/雜誌</option><option value="YouTube">YouTube</option><option value="社群/論壇大戶">社群/論壇大戶</option><option value="國會/大股東申報">國會/大股東申報</option><option value="其他">其他</option></select></div>
+          <div><label>股票代號 *</label><input id="mdCode" type="text" placeholder="例：2330"></div>
+          <div><label>點名日期 *</label><input id="mdDate" type="date"></div>
+          <div><label>方向</label><select id="mdDir"><option value="long">看多（跟單買）</option><option value="short">看空（示警/放空）</option></select></div>
+          <div class="full"><label>來源連結（選填）</label><input id="mdUrl" type="text" placeholder="https://..."></div>
+          <div class="full"><label>備註（選填）</label><input id="mdNoteIn" type="text" placeholder="例：封面標題／影片重點"></div>
+          <div class="full" style="display:flex;justify-content:flex-end;gap:10px;align-items:center"><span id="mdMsg" style="font-size:12px;color:var(--text-muted)"></span><button class="md-btn" id="mdSubmit">送出登錄</button></div>
+        </div>
+      </div>
+      <div class="md-ladders">
+        <div class="md-card md-green"><h3> 神燈天梯（跟單勝率高）</h3><div id="mdGreen"><div class="fc-empty">尚無達標者（樣本需≥10 且滿 20 交易日）</div></div></div>
+        <div class="md-card md-red"><h3> 冥燈天梯（反向勝率高·反著做）</h3><div id="mdRed"><div class="fc-empty">尚無達標者</div></div></div>
+      </div>
+      <div class="md-card md-calls"><h3> 已登錄點名（近 50 筆）</h3><div id="mdCalls"><div class="fc-empty">載入中…</div></div></div>
+      <div class="fc-note" id="mdNote"></div>
+    </div>
+  </div>
+  <script>
+  (function(){
+    var el=function(id){return document.getElementById(id);};
+    function SB(){return (typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'';}
+    function AK(){return (typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';}
+    function tok(){try{return localStorage.getItem('sb_token')||'';}catch(e){return '';}}
+    function email(){try{return (JSON.parse(localStorage.getItem('sb_user')||'{}')||{}).email||'';}catch(e){return '';}}
+    function H(){return {apikey:AK(),Authorization:'Bearer '+(tok()||AK()),'Content-Type':'application/json'};}
+    function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+    function pct(v){return (v==null)?'—':(Math.round(v*10)/10)+'%';}
+
+    window._mingdengShow=function(){
+      var owner=!!window._isOwner;
+      el('mdLock').style.display=owner?'none':'';
+      el('mdBody').style.display=owner?'':'none';
+      if(!owner) return;
+      var d=el('mdDate'); if(d&&!d.value){ try{d.value=new Date(Date.now()+8*3600e3).toISOString().slice(0,10);}catch(e){} }
+      _mdLoadScores(); _mdLoadCalls();
+      if(el('mdNote')) el('mdNote').innerHTML='<b>算法（供複查）：</b>一筆點名＝真人+股票+點名日+方向。進場＝點名日<b>次一交易日開盤</b>；一買即跌＝T+1 收盤<進場；T+20 報酬＝第20交易日收盤÷進場−1；MDD＝T+1~T+20 最低價最深回撤。看多勝＝T+20>0、看空勝＝T+20<0。<b>神燈</b>＝跟單勝率≥70%、平均MDD≤8%、一買即跌率≤15%、樣本≥10；<b>冥燈</b>＝反向勝率≥75%、一買即跌率≥80%、樣本≥10；其餘＝觀察中。數字由本站自有日K回測算出（滿20交易日才列入），不代表未來績效。資料源：mingdeng_calls（管理者登錄）＋ scripts/mingdeng.py 回測 → mingdeng_scores。';
+    };
+
+    el('mdSubmit').onclick=function(){
+      var person=(el('mdPerson').value||'').trim(), code=(el('mdCode').value||'').trim(), date=el('mdDate').value;
+      if(!person||!code||!date){ el('mdMsg').textContent='真人名、股票代號、日期為必填'; return; }
+      el('mdMsg').textContent='送出中…'; el('mdSubmit').disabled=true;
+      var row={person:person, platform:el('mdPlatform').value, code:code, call_date:date, direction:el('mdDir').value,
+               source_url:(el('mdUrl').value||'').trim()||null, note:(el('mdNoteIn').value||'').trim()||null, created_by:email()};
+      fetch(SB()+'/rest/v1/mingdeng_calls',{method:'POST',headers:Object.assign({Prefer:'return=minimal'},H()),body:JSON.stringify(row)})
+        .then(function(r){ el('mdSubmit').disabled=false;
+          if(r.ok){ el('mdMsg').textContent='已登錄 ✓'; el('mdPerson').value='';el('mdCode').value='';el('mdUrl').value='';el('mdNoteIn').value=''; _mdLoadCalls(); setTimeout(function(){el('mdMsg').textContent='';},2500); }
+          else { r.text().then(function(t){ el('mdMsg').textContent='失敗：'+t.slice(0,80); }); }
+        }).catch(function(e){ el('mdSubmit').disabled=false; el('mdMsg').textContent='錯誤：'+e.message; });
+    };
+
+    function _mdLoadScores(){
+      fetch(SB()+'/rest/v1/mingdeng_scores?select=*&order=win_rate.desc',{headers:H()}).then(function(r){return r.ok?r.json():[];}).then(function(a){
+        a=Array.isArray(a)?a:[];
+        var g=a.filter(function(x){return x.label==='明燈';}), rd=a.filter(function(x){return x.label==='冥燈';});
+        function card(x,rk,green){ return '<div class="md-row md-'+(green?'green':'red')+'"><div class="rk">'+rk+'</div>'
+          +'<div><div class="nm">'+esc(x.person)+' <span class="meta">'+esc(x.platform||'')+' · '+(x.direction==='short'?'看空':'看多')+'</span></div>'
+          +'<div class="meta">樣本 '+(x.n||0)+' · 平均報酬 '+pct(x.avg_follow_ret)+' · MDD '+pct(x.avg_mdd)+' · 一買即跌 '+pct(x.buy_drop_rate)+'</div></div>'
+          +'<div class="pct">'+pct(green?x.win_rate:x.rev_win_rate)+'</div></div>'; }
+        el('mdGreen').innerHTML=g.length?g.map(function(x,i){return card(x,i+1,true);}).join(''):'<div class="fc-empty">尚無達標者（樣本需≥10 且滿 20 交易日）</div>';
+        el('mdRed').innerHTML=rd.length?rd.map(function(x,i){return card(x,i+1,false);}).join(''):'<div class="fc-empty">尚無達標者</div>';
+      }).catch(function(){});
+    }
+
+    function _mdLoadCalls(){
+      fetch(SB()+'/rest/v1/mingdeng_calls?select=*&order=created_at.desc&limit=50',{headers:H()}).then(function(r){return r.ok?r.json():[];}).then(function(a){
+        a=Array.isArray(a)?a:[];
+        if(!a.length){ el('mdCalls').innerHTML='<div class="fc-empty">尚無登錄點名。用上方表單新增。</div>'; return; }
+        var rows=a.map(function(x){ return '<tr><td>'+esc(x.call_date)+'</td><td>'+esc(x.person)+'</td><td>'+esc(x.platform||'')+'</td><td>'+esc(x.code)+'</td><td>'+(x.direction==='short'?'看空':'看多')+'</td><td>'+(x.source_url?'<a href="'+esc(x.source_url)+'" target="_blank" rel="noopener">連結</a>':'')+'</td><td><button class="md-del" data-id="'+esc(x.id)+'">刪除</button></td></tr>'; }).join('');
+        el('mdCalls').innerHTML='<table><thead><tr><th>點名日</th><th>真人</th><th>平台</th><th>代號</th><th>方向</th><th>來源</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>';
+        el('mdCalls').querySelectorAll('.md-del').forEach(function(b){ b.onclick=function(){ if(!confirm('刪除這筆點名？'))return;
+          fetch(SB()+'/rest/v1/mingdeng_calls?id=eq.'+encodeURIComponent(b.dataset.id),{method:'DELETE',headers:H()}).then(function(r){ if(r.ok)_mdLoadCalls(); }); }; });
+      }).catch(function(){ el('mdCalls').innerHTML='<div class="fc-empty">載入失敗</div>'; });
+    }
+
+    window._VIEWS=window._VIEWS||{}; window._VIEWS.mingdeng={el:'mingdengView',show:'_mingdengShow'};
+  })();
+  </script>
 
   <!--  主力訊號 modal（僅擁有者可見） -->
   <!--  主力訊號（市場觀察大項 view，參照貪婪指標版型；僅擁有者可見資料）-->
