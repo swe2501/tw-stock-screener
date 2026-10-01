@@ -7499,6 +7499,7 @@
             <button class="tool-btn" id="dailyBtn" onclick="loadDailyChart()" style="background:var(--accent);color:var(--on-accent);border-color:var(--accent)">日K</button>
             <button class="tool-btn" id="adjDailyBtn" onclick="loadAdjDailyChart()">還原日K</button>
             <button class="tool-btn" id="hourlyBtn" onclick="loadHourlyChart()">小時K</button>
+            <button class="tool-btn" id="trendBtn" onclick="loadTrendChart()">走勢</button>
             <div class="toolbar-sep"></div>
             <button class="tool-btn" id="backBtn" style="display:none" onclick="goBackToStock()">← 返回</button>
           </div>
@@ -10832,6 +10833,7 @@
     }
 
     function _applyRealtimeCandle(d) {
+      if (window._chartMode === 'trend') { _applyRealtimeTrend(d); return; }   // 江波圖模式：更新分時序列
       if (!candleSeriesRef) return;
       const c = d.close;
 
@@ -11008,18 +11010,90 @@
     }
 
     function loadDailyChart() {
+      window._chartMode = 'candle';
       _setDailyBtnActive(document.getElementById('dailyBtn'));
       _loadChartUrl(`https://tw-stock-screener-neon.vercel.app/api/chart?code=${encodeURIComponent(currentCode)}&range=3y&interval=1d&raw=1`, '日K');
     }
 
     function loadHourlyChart() {   // 60 分鐘K，近 1 年（2026-09-28）
+      window._chartMode = 'candle';
       _setDailyBtnActive(document.getElementById('hourlyBtn'));
       _loadChartUrl(`https://tw-stock-screener-neon.vercel.app/api/chart?code=${encodeURIComponent(currentCode)}&range=1y&interval=60m`, '小時K');
     }
 
     function loadAdjDailyChart() {
+      window._chartMode = 'candle';
       _setDailyBtnActive(document.getElementById('adjDailyBtn'));
       _loadChartUrl(`https://tw-stock-screener-neon.vercel.app/api/chart?code=${encodeURIComponent(currentCode)}&range=3y&interval=1d&adj=1`, '還原日K');
+    }
+
+    // ── 江波圖（當日分時走勢）：前收基線(紅上綠下)＋均價線(VWAP)＋量柱；盤中沿用既有 5 秒即時輪詢 ──
+    window._chartMode = window._chartMode || 'candle';   // 'candle' | 'trend'
+    let _trendRef = null;   // {price, avg, vol, prev, lastT}
+    function loadTrendChart() {
+      if (!currentCode) return;
+      window._chartMode = 'trend';
+      _setDailyBtnActive(document.getElementById('trendBtn'));
+      _stopRealtimeUpdates();
+      _chartLoading();
+      document.getElementById('modalSubtitle').textContent = '分時走勢 ・ 載入中…';
+      Promise.all([
+        fetch(`https://tw-stock-screener-neon.vercel.app/api/chart?code=${encodeURIComponent(currentCode)}&range=1d&interval=1m`).then(r => r.json()).catch(() => ({})),
+        fetch(`https://tw-stock-screener-neon.vercel.app/api/realtime?code=${encodeURIComponent(currentCode)}&_=${Date.now()}`, { cache: 'no-store' }).then(r => r.json()).catch(() => ({})),
+      ]).then(([ch, rt]) => {
+        if (window._chartMode !== 'trend') return;   // 使用者已切走
+        const bars = (((ch && ch.data) || []).filter(b => typeof b.time === 'number' && b.close > 0)
+          .map(b => ({ time: b.time + 8 * 3600, close: +b.close, volume: +(b.volume || 0) })));
+        const prev = (rt && rt.prev_close > 0) ? rt.prev_close : (bars.length ? bars[0].close : 0);
+        if (!bars.length && !(rt && rt.close)) { document.getElementById('chartLoading').innerHTML = ' 無分時資料（非交易日或尚未開盤）'; return; }
+        renderTrendChart(bars, prev, rt);
+        _startRealtimeUpdates();   // 內部 _isTradingHours() 把關，盤中才真的輪詢
+      }).catch(() => { document.getElementById('chartLoading').innerHTML = ' 分時載入失敗，請重試'; });
+    }
+
+    function renderTrendChart(bars, prev, rt) {
+      if (chartInstance) { try { chartInstance.remove(); } catch (_) {} chartInstance = null; }
+      if (volInstance) { try { volInstance.remove(); } catch (_) {} volInstance = null; }
+      if (typeof macdInstance !== 'undefined' && macdInstance) { try { macdInstance.remove(); } catch (_) {} macdInstance = null; }
+      if (typeof rsiInstance !== 'undefined' && rsiInstance) { try { rsiInstance.remove(); } catch (_) {} rsiInstance = null; }
+      candleSeriesRef = null; volSeriesRef = null; _lastCandleTimes = null; _trendRef = null;
+      const el = document.getElementById('chartContainer'); if (!el) return; el.innerHTML = '';
+      const opts = _chartOpts(el.clientHeight || 400, true);
+      opts.width = el.clientWidth || el.offsetWidth || 600; if (!opts.width) return;
+      opts.rightPriceScale.scaleMargins = { top: 0.08, bottom: 0.30 };
+      chartInstance = LightweightCharts.createChart(el, opts);
+      // 量柱（底部獨立刻度）
+      const volS = chartInstance.addHistogramSeries({ priceScaleId: 'tvol', priceFormat: { type: 'volume' }, priceLineVisible: false, lastValueVisible: false });
+      chartInstance.priceScale('tvol').applyOptions({ scaleMargins: { top: 0.84, bottom: 0 } });
+      volS.setData(bars.map(b => ({ time: b.time, value: b.volume, color: b.close >= prev ? 'rgba(231,76,60,.45)' : 'rgba(38,194,129,.45)' })));
+      // 均價線（累計 VWAP）
+      let cumPV = 0, cumV = 0;
+      const avg = bars.map(b => { cumV += b.volume; cumPV += b.close * b.volume; return { time: b.time, value: cumV > 0 ? +(cumPV / cumV).toFixed(2) : b.close }; });
+      const avgS = chartInstance.addLineSeries({ color: '#f5a623', lineWidth: 1, priceLineVisible: false, lastValueVisible: true, crosshairMarkerVisible: false });
+      avgS.setData(avg);
+      // 走勢線（前收為基線：在前收之上紅、之下綠）
+      const priceS = chartInstance.addBaselineSeries({ baseValue: { type: 'price', price: prev },
+        topLineColor: '#e74c3c', topFillColor1: 'rgba(231,76,60,.28)', topFillColor2: 'rgba(231,76,60,.02)',
+        bottomLineColor: '#26c281', bottomFillColor1: 'rgba(38,194,129,.02)', bottomFillColor2: 'rgba(38,194,129,.28)',
+        lineWidth: 2, priceLineVisible: false, lastValueVisible: true });
+      priceS.setData(bars.map(b => ({ time: b.time, value: b.close })));
+      if (prev > 0) priceS.createPriceLine({ price: prev, color: '#8b95a5', lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: '前收' });
+      try { chartInstance.timeScale().fitContent(); } catch (_) {}
+      _trendRef = { price: priceS, avg: avgS, vol: volS, prev: prev, lastT: bars.length ? bars[bars.length - 1].time : 0 };
+      const ld = document.getElementById('chartLoading'); if (ld) ld.style.display = 'none';
+      document.getElementById('modalSubtitle').textContent = '分時走勢（當日）' + (rt && rt.hms ? ' ・ ' + rt.hms : '');
+      if (rt && rt.close) _renderPriceTag(rt.close, rt.change_pct || 0, '', rt.hms || '', rt.source || '');
+    }
+
+    function _applyRealtimeTrend(d) {
+      if (!_trendRef || !d || !d.close) return;
+      const tmin = Math.floor(Date.now() / 1000 / 60) * 60 + 8 * 3600;   // 對齊分鐘（TW 時間）
+      const t = Math.max(tmin, _trendRef.lastT || 0);
+      try { _trendRef.price.update({ time: t, value: d.close }); } catch (_) {}
+      _trendRef.lastT = t;
+      const dot = (d.is_trading && _isTradingHours())
+        ? '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#2ecc71;margin-right:6px;flex-shrink:0;animation:rtBlink 1.2s infinite"></span>' : '';
+      _renderPriceTag(d.close, d.change_pct || 0, dot, d.hms || '', d.source || '');
     }
 
     // ── Technical indicator calculations ──────────────────
