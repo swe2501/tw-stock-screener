@@ -242,8 +242,17 @@ W=<prod_wt 路徑> && cd $W && git fetch -q origin && git reset -q --hard origin
 - **進度條 %（prod `db15d42`）**：後端一次算完才回、無中途進度 → 進度條改「時間估計 %」：`_scanStart` 依預期時長推進、封頂 95%，`renderResults` 完成補 100% 並把實際耗時存 `localStorage('zm_scan_ms')` 下次自適應；`scanElapsed`(秒)→`scanPct`(%)、`.scan-fill` 由不確定動畫改確定式寬度。**真實逐檔 % 未做**（需改 `api/screen.py` 於運算迴圈回報 processed/total 到 job 暫存＋前端輪詢）。
 - **手機下拉修復（prod `e0fe1d6`）**：合夥人回報手機版下拉「options 被擋住」。根因＝手機 nav 被 `.pro` 區塊 `width:100% !important` 壓成兩行、下拉又是相對該項 absolute→壓到第二行 nav。修法（`@media max-width:600px`）：`#mainNav .mn-grp{position:static}`＋`.mn-menu{left/right:8;top:calc(100%+3px);width:auto}`＋`#mainNav{overflow:visible}` → 下拉改掛在整個 sticky `#mainNav` 底部左右滿寬，不壓 nav。桌機(≥601)不受影響。
 
-### prod 目前 = `e0fe1d6`（2026-09-30）
+### 🔨 江波圖（當日分時走勢，2026-10-01 上線）
+- **入口**：K 圖工具列「走勢」鈕（`#trendBtn`，日K/還原日K/小時K 旁）。`window._chartMode`＝`'candle'|'trend'`。
+- **資料**：`/api/chart?code=X&range=1d&interval=1m`（**後端已支援、免改**；Yahoo 1m，非日線回 unix 時間戳、量已轉張、OTC 自動 .TWO）回補當日；盤中沿用**既有** 5 秒即時輪詢 `_realtimeTimer`→`_fetchAndApplyRealtime`→`_applyRealtimeCandle`（在 trend 模式委派 `_applyRealtimeTrend`）；`_isTradingHours()` 把關、`closeChart` 自動停。
+- **渲染 `renderTrendChart`**：`addBaselineSeries`（baseValue＝前收，紅在上/綠在下）＋均價線（累計 VWAP）＋量柱＋前收虛線。前收取 `/api/realtime` 的 `prev_close`。建圖前**必須** `#chartWrapper.style.display='block'`（`_chartLoading()` 會設 none）否則容器 0×0 空白。走勢模式用 `_setKlineChromeVisible(false)` 隱藏 MA/BBAND 圖例與 VOL/MACD/RSI 子面板（candle 模式還原）。
+- **待辦（v2）**：盤中即時目前只更新價格點，均價/量尾端未即時重算（下次整檔重載才更新）；MIS 'v' 為當日累計量，若要即時量柱需算每分鐘差額。
+
+### prod 目前 = `6a9dd44`（2026-10-01）
 近期推 prod 的批次（新→舊）：
+- `6a9dd44`：江波圖走勢空白（`#chartWrapper` 被 `_chartLoading()` 設 none 未設回 block→容器 0×0，上櫃/切分頁明顯）＋走勢鈕與其他模式鈕互斥（`_setDailyBtnActive` 清單補 trendBtn）修正。
+- `1847257`：**新增江波圖（當日分時走勢）**＋「走勢」切換鈕（見下）；走勢模式隱藏 MA/BBAND 圖例與 VOL/MACD/RSI 子面板（`_setKlineChromeVisible`）。
+- `35c82e7`/`984e185`：ETF 搜尋修復（內嵌股名字典短路，改 `_namesFull` 旗標；原本**所有 ETF 搜不到**）、ETF 貪婪指數隱藏（00 開頭不顯示誤導 0）、ETF 資金流置中（`#etfflowView` max-width 1040!important）、主力買點吸附最近交易日（訊號日休市時）、ETF 配息欄位不被捲軸壓（scrollbar-gutter:stable）。
 - `e0fe1d6`：手機下拉不再蓋住第二行 nav。
 - `db15d42`：篩選進度條改顯示百分比（時間估計）取代秒數。
 - `aad7433`：真名三式進場改「訊號日收盤」（回測 35.6%→42.5%、平均 −0.44%→+0.47%）。
