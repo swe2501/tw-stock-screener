@@ -10968,9 +10968,9 @@
     }
 
     function _setDailyBtnActive(btn) {
-      ['dailyBtn', 'adjDailyBtn', 'hourlyBtn'].forEach(id => {
+      ['dailyBtn', 'adjDailyBtn', 'hourlyBtn', 'trendBtn'].forEach(id => {
         const b = document.getElementById(id);
-        b.style.background = ''; b.style.color = ''; b.style.borderColor = '';
+        if (b) { b.style.background = ''; b.style.color = ''; b.style.borderColor = ''; }
       });
       if (btn) { btn.style.background = 'var(--accent)'; btn.style.color = 'var(--on-accent)'; btn.style.borderColor = 'var(--accent)'; }
     }
@@ -11069,6 +11069,9 @@
       if (typeof macdInstance !== 'undefined' && macdInstance) { try { macdInstance.remove(); } catch (_) {} macdInstance = null; }
       if (typeof rsiInstance !== 'undefined' && rsiInstance) { try { rsiInstance.remove(); } catch (_) {} rsiInstance = null; }
       candleSeriesRef = null; volSeriesRef = null; _lastCandleTimes = null; _trendRef = null;
+      // _chartLoading() 會把 #chartWrapper 設 none（顯示 spinner），這裡要先設回 block，容器才有尺寸可畫
+      var _cw = document.getElementById('chartWrapper'); if (_cw) _cw.style.display = 'block';
+      var _cl = document.getElementById('chartLoading'); if (_cl) _cl.style.display = 'none';
       const el = document.getElementById('chartContainer'); if (!el) return; el.innerHTML = '';
       const opts = _chartOpts(el.clientHeight || 400, true);
       opts.width = el.clientWidth || el.offsetWidth || 600; if (!opts.width) return;
