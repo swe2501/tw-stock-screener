@@ -11010,19 +11010,19 @@
     }
 
     function loadDailyChart() {
-      window._chartMode = 'candle';
+      window._chartMode = 'candle'; _setKlineChromeVisible(true);
       _setDailyBtnActive(document.getElementById('dailyBtn'));
       _loadChartUrl(`https://tw-stock-screener-neon.vercel.app/api/chart?code=${encodeURIComponent(currentCode)}&range=3y&interval=1d&raw=1`, '日K');
     }
 
     function loadHourlyChart() {   // 60 分鐘K，近 1 年（2026-09-28）
-      window._chartMode = 'candle';
+      window._chartMode = 'candle'; _setKlineChromeVisible(true);
       _setDailyBtnActive(document.getElementById('hourlyBtn'));
       _loadChartUrl(`https://tw-stock-screener-neon.vercel.app/api/chart?code=${encodeURIComponent(currentCode)}&range=1y&interval=60m`, '小時K');
     }
 
     function loadAdjDailyChart() {
-      window._chartMode = 'candle';
+      window._chartMode = 'candle'; _setKlineChromeVisible(true);
       _setDailyBtnActive(document.getElementById('adjDailyBtn'));
       _loadChartUrl(`https://tw-stock-screener-neon.vercel.app/api/chart?code=${encodeURIComponent(currentCode)}&range=3y&interval=1d&adj=1`, '還原日K');
     }
@@ -11030,6 +11030,18 @@
     // ── 江波圖（當日分時走勢）：前收基線(紅上綠下)＋均價線(VWAP)＋量柱；盤中沿用既有 5 秒即時輪詢 ──
     window._chartMode = window._chartMode || 'candle';   // 'candle' | 'trend'
     let _trendRef = null;   // {price, avg, vol, prev, lastT}
+    // 走勢模式隱藏 K 線專屬 UI（MA/BBAND 圖例、VOL/MACD/RSI 子面板）；candle 模式還原原本顯示狀態
+    function _setKlineChromeVisible(show) {
+      ['maLabel', 'volPanel', 'macdPanel', 'rsiPanel'].forEach(function (id) {
+        var e = document.getElementById(id); if (!e) return;
+        if (show) {
+          if (e.dataset._prevDisp !== undefined) { e.style.display = e.dataset._prevDisp; delete e.dataset._prevDisp; }
+        } else {
+          if (e.dataset._prevDisp === undefined) e.dataset._prevDisp = e.style.display || '';
+          e.style.display = 'none';
+        }
+      });
+    }
     function loadTrendChart() {
       if (!currentCode) return;
       window._chartMode = 'trend';
@@ -11080,6 +11092,7 @@
       if (prev > 0) priceS.createPriceLine({ price: prev, color: '#8b95a5', lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: '前收' });
       try { chartInstance.timeScale().fitContent(); } catch (_) {}
       _trendRef = { price: priceS, avg: avgS, vol: volS, prev: prev, lastT: bars.length ? bars[bars.length - 1].time : 0 };
+      _setKlineChromeVisible(false);   // 隱藏 MA/BBAND 圖例與 VOL/MACD/RSI 子面板
       const ld = document.getElementById('chartLoading'); if (ld) ld.style.display = 'none';
       document.getElementById('modalSubtitle').textContent = '分時走勢（當日）' + (rt && rt.hms ? ' ・ ' + rt.hms : '');
       if (rt && rt.close) _renderPriceTag(rt.close, rt.change_pct || 0, '', rt.hms || '', rt.source || '');
