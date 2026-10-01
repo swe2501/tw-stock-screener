@@ -3121,7 +3121,9 @@
   window._mkt = window._mkt || {};         // 代號→市場別 'twse'|'otc'
   window._ind = window._ind || {};         // 代號→產業別（如 2330→半導體；上市為主）
   window._loadNames = function(cb){
-    if(window._names){ if(cb)cb(window._names); return; }
+    // 2026-10-01：內嵌 window._names 只有股票(line 1261)、無 ETF/上櫃。若仍用「window._names 存在就短路」，
+    // 完整合併(含 ETF)永遠不會跑 → ETF 搜不到。改用 _namesFull 旗標：完整版載過才短路。
+    if(window._namesFull){ if(cb)cb(window._names); return; }
     var SB='https://bruqrbvbjxntgoljxsne.supabase.co', AK='sb_publishable_KgYlaR-mqtx4uVre6kPD2A_qO6tdT1y';
     var pNames=fetch('https://tw-stock-screener-neon.vercel.app/api/screen?stat=names').then(function(r){return r.json();}).catch(function(){return {};});
     var pOtc=fetch(SB+'/rest/v1/otc_names?select=code,name',{headers:{apikey:AK,Authorization:'Bearer '+AK}}).then(function(r){return r.ok?r.json():[];}).catch(function(){return [];});
@@ -3129,15 +3131,15 @@
     var pEtf=fetch(SB+'/rest/v1/etf_products?select=code,name,category',{headers:{apikey:AK,Authorization:'Bearer '+AK}}).then(function(r){return r.ok?r.json():[];}).catch(function(){return [];});   // 2026-09-28 ETF 也可搜尋
     var pOtcEtf=fetch('https://tw-stock-screener-neon.vercel.app/api/screen?stat=otcetf').then(function(r){return r.json();}).catch(function(){return {};});   // 上櫃 ETF（債券型等，etf_products 沒有）
     Promise.all([pNames,pOtc,pInd,pEtf,pOtcEtf]).then(function(res){
-      var m=res[0]||{}, otc=res[1]||[], ind=res[2]||{}, etf=res[3]||[], oe=res[4]||{};
+      var m=Object.assign({}, window._names||{}, res[0]||{}), otc=res[1]||[], ind=res[2]||{}, etf=res[3]||[], oe=res[4]||{};  // 保留內嵌股票字典，stat=names 失敗也不清空
       for(var c in m){ window._mkt[c]='twse'; }
       otc.forEach(function(r){ if(r&&r.code){ if(!m[r.code])m[r.code]=r.name; window._mkt[r.code]='otc'; } });
       window._ind=ind||{};
       window._etf=window._etf||{};
       etf.forEach(function(r){ if(r&&r.code){ if(!m[r.code])m[r.code]=r.name; if(!window._mkt[r.code]) window._mkt[r.code]='twse'; window._etf[r.code]=1; if(r.category&&!window._ind[r.code]) window._ind[r.code]=r.category; } });   // etf_products 皆為上市
       if(!oe.error) for(var oc in oe){ if(/^00[0-9A-Z]{2,5}$/.test(oc)&&typeof oe[oc]==='string'){ if(!m[oc]) m[oc]=oe[oc]; window._mkt[oc]='otc'; window._etf[oc]=1; } }   // 上櫃 ETF（放最後，避免被上市標記蓋掉）
-      window._names=m; if(cb)cb(window._names);
-    }).catch(function(){ window._names={}; if(cb)cb(window._names); });
+      window._names=m; window._namesFull=true; if(cb)cb(window._names);
+    }).catch(function(){ if(cb)cb(window._names||{}); });   // 失敗不清空既有內嵌字典、不設 _namesFull(下次重試)
   };
   window._mktLabel = function(code){ var k=window._mkt&&window._mkt[String(code)]; return k==='otc'?'上櫃':(k==='twse'?'上市':''); };
   window._isEtf = function(code){ return !!(window._etf&&window._etf[String(code)]); };
@@ -5108,7 +5110,7 @@
     .etx-links button:hover{border-color:var(--accent);color:var(--accent);}
     .etx-drawer{position:fixed;inset:0;z-index:9995;display:flex;justify-content:flex-end;}
     .etx-drawer .bg{position:absolute;inset:0;background:rgba(0,0,0,.5);}
-    .etx-drawer .panel{position:relative;width:min(680px,96vw);background:var(--surface);height:100%;overflow-y:auto;padding:20px 22px;box-shadow:-4px 0 24px rgba(0,0,0,.25);}
+    .etx-drawer .panel{position:relative;width:min(680px,96vw);background:var(--surface);height:100%;overflow-y:auto;scrollbar-gutter:stable;padding:20px 22px;box-shadow:-4px 0 24px rgba(0,0,0,.25);box-sizing:border-box;}
     .etx-dh{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;border-bottom:1px solid var(--border);padding-bottom:12px;margin-bottom:12px;}
     .etx-dh h2{margin:0;font-size:20px;font-weight:800;color:var(--brand-green);} .etx-dh .x{border:0;background:transparent;font-size:22px;cursor:pointer;color:var(--text-muted);}
     .etx-dtabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px;} .etx-dtabs button{border:0;background:var(--surface2);border-radius:6px;padding:5px 11px;font-size:12px;font-weight:700;color:var(--text-muted);cursor:pointer;} .etx-dtabs button.on{background:var(--brand-green);color:#fff;}
@@ -5839,6 +5841,7 @@
 
   <style>
     #etfheavyView,#etfpremView{max-width:1000px;margin:0 auto;}
+    #etfflowView{max-width:1040px !important;margin:0 auto !important;}  /* 蓋過 [id$=View] 1420!important，避免窄表靠左(偏左) 2026-10-01 */
     .eg-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
     .eg-scroll{max-height:70vh;overflow:auto;}
     table.eg{width:100%;border-collapse:collapse;font-size:12.5px;}
@@ -7496,6 +7499,7 @@
             <button class="tool-btn" id="dailyBtn" onclick="loadDailyChart()" style="background:var(--accent);color:var(--on-accent);border-color:var(--accent)">日K</button>
             <button class="tool-btn" id="adjDailyBtn" onclick="loadAdjDailyChart()">還原日K</button>
             <button class="tool-btn" id="hourlyBtn" onclick="loadHourlyChart()">小時K</button>
+            <button class="tool-btn" id="trendBtn" onclick="loadTrendChart()">走勢</button>
             <div class="toolbar-sep"></div>
             <button class="tool-btn" id="backBtn" style="display:none" onclick="goBackToStock()">← 返回</button>
           </div>
@@ -8418,18 +8422,31 @@
     // 清除舊版本留在 localStorage 的永久標記（已改為暫時性設計）
     try { localStorage.removeItem('chart_markers_v1'); } catch (_) {}
 
+    // 標記日期吸附：訊號日若非交易日(如中秋/教師節休市)或 K 線缺該根，
+    // 吸附到 ≤ 該日的最近一根 K 棒(無更早者取最早)，避免標記被靜默丟棄看不到買點。2026-10-01
+    let _ctSorted = null, _ctSortedSrc = null;
+    function _snapMarkerDate(date) {
+      if (!_lastCandleTimes || !date) return null;
+      if (_lastCandleTimes.has(date)) return date;
+      if (_ctSortedSrc !== _lastCandleTimes) { _ctSorted = Array.from(_lastCandleTimes).sort(); _ctSortedSrc = _lastCandleTimes; }
+      if (!_ctSorted.length) return null;
+      let best = null;
+      for (let i = _ctSorted.length - 1; i >= 0; i--) { if (_ctSorted[i] <= date) { best = _ctSorted[i]; break; } }
+      return best || _ctSorted[0];
+    }
+
     function _refreshChartMarkers() {
       if (!candleSeriesRef) return;
       const user = (_userMarkers[currentCode] || [])
-        .filter(m => _lastCandleTimes && _lastCandleTimes.has(m.date))
-        .map(m => ({
-          time: m.date,
+        .map(m => { const t = _snapMarkerDate(m.date); return t ? {
+          time: t,
           position: 'aboveBar',
           color: '#ff1744',
           shape: 'arrowDown',
           text: m.label,
           size: 1,
-        }));
+        } : null; })
+        .filter(Boolean);
       const catalyst = _catalystEvents
         .filter(e => _lastCandleTimes && _lastCandleTimes.has(e.start_date))
         .map(e => ({
@@ -8443,8 +8460,8 @@
       const bmap = {};
       (_brokerEntriesRaw || []).forEach(e => {
         if (_brokerChecked && !_brokerChecked.has(e.broker)) return;   // 未勾選不顯示
-        if (!_lastCandleTimes || !_lastCandleTimes.has(e.date)) return;
-        (bmap[e.date] = bmap[e.date] || []).push(e.broker);
+        const t = _snapMarkerDate(e.date); if (!t) return;             // 非交易日吸附到最近 K 棒
+        (bmap[t] = bmap[t] || []).push(e.broker);
       });
       const broker = Object.entries(bmap).map(([date, arr]) => ({
         time: date,
@@ -9945,7 +9962,7 @@
       const el = document.getElementById('greedGauge');
       if (el) { el.style.display = 'none'; el.innerHTML = ''; }
       _greedData = null;
-      if (!_isStock(code)) return;
+      if (!_isStock(code) || /^00/.test(String(code))) return;   // ETF(00 開頭)無貪婪指數資料(greed_base 只算個股)→ 隱藏儀表，不顯示誤導的 0（2026-10-01）
       try {
         const hdr = { apikey: SIG_SB_ANON, Authorization: `Bearer ${SIG_SB_ANON}` };
         const [rb, rt, rc, re] = await Promise.all([
@@ -10816,6 +10833,7 @@
     }
 
     function _applyRealtimeCandle(d) {
+      if (window._chartMode === 'trend') { _applyRealtimeTrend(d); return; }   // 江波圖模式：更新分時序列
       if (!candleSeriesRef) return;
       const c = d.close;
 
@@ -10992,18 +11010,103 @@
     }
 
     function loadDailyChart() {
+      window._chartMode = 'candle'; _setKlineChromeVisible(true);
       _setDailyBtnActive(document.getElementById('dailyBtn'));
       _loadChartUrl(`https://tw-stock-screener-neon.vercel.app/api/chart?code=${encodeURIComponent(currentCode)}&range=3y&interval=1d&raw=1`, '日K');
     }
 
     function loadHourlyChart() {   // 60 分鐘K，近 1 年（2026-09-28）
+      window._chartMode = 'candle'; _setKlineChromeVisible(true);
       _setDailyBtnActive(document.getElementById('hourlyBtn'));
       _loadChartUrl(`https://tw-stock-screener-neon.vercel.app/api/chart?code=${encodeURIComponent(currentCode)}&range=1y&interval=60m`, '小時K');
     }
 
     function loadAdjDailyChart() {
+      window._chartMode = 'candle'; _setKlineChromeVisible(true);
       _setDailyBtnActive(document.getElementById('adjDailyBtn'));
       _loadChartUrl(`https://tw-stock-screener-neon.vercel.app/api/chart?code=${encodeURIComponent(currentCode)}&range=3y&interval=1d&adj=1`, '還原日K');
+    }
+
+    // ── 江波圖（當日分時走勢）：前收基線(紅上綠下)＋均價線(VWAP)＋量柱；盤中沿用既有 5 秒即時輪詢 ──
+    window._chartMode = window._chartMode || 'candle';   // 'candle' | 'trend'
+    let _trendRef = null;   // {price, avg, vol, prev, lastT}
+    // 走勢模式隱藏 K 線專屬 UI（MA/BBAND 圖例、VOL/MACD/RSI 子面板）；candle 模式還原原本顯示狀態
+    function _setKlineChromeVisible(show) {
+      ['maLabel', 'volPanel', 'macdPanel', 'rsiPanel'].forEach(function (id) {
+        var e = document.getElementById(id); if (!e) return;
+        if (show) {
+          if (e.dataset._prevDisp !== undefined) { e.style.display = e.dataset._prevDisp; delete e.dataset._prevDisp; }
+        } else {
+          if (e.dataset._prevDisp === undefined) e.dataset._prevDisp = e.style.display || '';
+          e.style.display = 'none';
+        }
+      });
+    }
+    function loadTrendChart() {
+      if (!currentCode) return;
+      window._chartMode = 'trend';
+      _setDailyBtnActive(document.getElementById('trendBtn'));
+      _stopRealtimeUpdates();
+      _chartLoading();
+      document.getElementById('modalSubtitle').textContent = '分時走勢 ・ 載入中…';
+      Promise.all([
+        fetch(`https://tw-stock-screener-neon.vercel.app/api/chart?code=${encodeURIComponent(currentCode)}&range=1d&interval=1m`).then(r => r.json()).catch(() => ({})),
+        fetch(`https://tw-stock-screener-neon.vercel.app/api/realtime?code=${encodeURIComponent(currentCode)}&_=${Date.now()}`, { cache: 'no-store' }).then(r => r.json()).catch(() => ({})),
+      ]).then(([ch, rt]) => {
+        if (window._chartMode !== 'trend') return;   // 使用者已切走
+        const bars = (((ch && ch.data) || []).filter(b => typeof b.time === 'number' && b.close > 0)
+          .map(b => ({ time: b.time + 8 * 3600, close: +b.close, volume: +(b.volume || 0) })));
+        const prev = (rt && rt.prev_close > 0) ? rt.prev_close : (bars.length ? bars[0].close : 0);
+        if (!bars.length && !(rt && rt.close)) { document.getElementById('chartLoading').innerHTML = ' 無分時資料（非交易日或尚未開盤）'; return; }
+        renderTrendChart(bars, prev, rt);
+        _startRealtimeUpdates();   // 內部 _isTradingHours() 把關，盤中才真的輪詢
+      }).catch(() => { document.getElementById('chartLoading').innerHTML = ' 分時載入失敗，請重試'; });
+    }
+
+    function renderTrendChart(bars, prev, rt) {
+      if (chartInstance) { try { chartInstance.remove(); } catch (_) {} chartInstance = null; }
+      if (volInstance) { try { volInstance.remove(); } catch (_) {} volInstance = null; }
+      if (typeof macdInstance !== 'undefined' && macdInstance) { try { macdInstance.remove(); } catch (_) {} macdInstance = null; }
+      if (typeof rsiInstance !== 'undefined' && rsiInstance) { try { rsiInstance.remove(); } catch (_) {} rsiInstance = null; }
+      candleSeriesRef = null; volSeriesRef = null; _lastCandleTimes = null; _trendRef = null;
+      const el = document.getElementById('chartContainer'); if (!el) return; el.innerHTML = '';
+      const opts = _chartOpts(el.clientHeight || 400, true);
+      opts.width = el.clientWidth || el.offsetWidth || 600; if (!opts.width) return;
+      opts.rightPriceScale.scaleMargins = { top: 0.08, bottom: 0.30 };
+      chartInstance = LightweightCharts.createChart(el, opts);
+      // 量柱（底部獨立刻度）
+      const volS = chartInstance.addHistogramSeries({ priceScaleId: 'tvol', priceFormat: { type: 'volume' }, priceLineVisible: false, lastValueVisible: false });
+      chartInstance.priceScale('tvol').applyOptions({ scaleMargins: { top: 0.84, bottom: 0 } });
+      volS.setData(bars.map(b => ({ time: b.time, value: b.volume, color: b.close >= prev ? 'rgba(231,76,60,.45)' : 'rgba(38,194,129,.45)' })));
+      // 均價線（累計 VWAP）
+      let cumPV = 0, cumV = 0;
+      const avg = bars.map(b => { cumV += b.volume; cumPV += b.close * b.volume; return { time: b.time, value: cumV > 0 ? +(cumPV / cumV).toFixed(2) : b.close }; });
+      const avgS = chartInstance.addLineSeries({ color: '#f5a623', lineWidth: 1, priceLineVisible: false, lastValueVisible: true, crosshairMarkerVisible: false });
+      avgS.setData(avg);
+      // 走勢線（前收為基線：在前收之上紅、之下綠）
+      const priceS = chartInstance.addBaselineSeries({ baseValue: { type: 'price', price: prev },
+        topLineColor: '#e74c3c', topFillColor1: 'rgba(231,76,60,.28)', topFillColor2: 'rgba(231,76,60,.02)',
+        bottomLineColor: '#26c281', bottomFillColor1: 'rgba(38,194,129,.02)', bottomFillColor2: 'rgba(38,194,129,.28)',
+        lineWidth: 2, priceLineVisible: false, lastValueVisible: true });
+      priceS.setData(bars.map(b => ({ time: b.time, value: b.close })));
+      if (prev > 0) priceS.createPriceLine({ price: prev, color: '#8b95a5', lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: '前收' });
+      try { chartInstance.timeScale().fitContent(); } catch (_) {}
+      _trendRef = { price: priceS, avg: avgS, vol: volS, prev: prev, lastT: bars.length ? bars[bars.length - 1].time : 0 };
+      _setKlineChromeVisible(false);   // 隱藏 MA/BBAND 圖例與 VOL/MACD/RSI 子面板
+      const ld = document.getElementById('chartLoading'); if (ld) ld.style.display = 'none';
+      document.getElementById('modalSubtitle').textContent = '分時走勢（當日）' + (rt && rt.hms ? ' ・ ' + rt.hms : '');
+      if (rt && rt.close) _renderPriceTag(rt.close, rt.change_pct || 0, '', rt.hms || '', rt.source || '');
+    }
+
+    function _applyRealtimeTrend(d) {
+      if (!_trendRef || !d || !d.close) return;
+      const tmin = Math.floor(Date.now() / 1000 / 60) * 60 + 8 * 3600;   // 對齊分鐘（TW 時間）
+      const t = Math.max(tmin, _trendRef.lastT || 0);
+      try { _trendRef.price.update({ time: t, value: d.close }); } catch (_) {}
+      _trendRef.lastT = t;
+      const dot = (d.is_trading && _isTradingHours())
+        ? '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#2ecc71;margin-right:6px;flex-shrink:0;animation:rtBlink 1.2s infinite"></span>' : '';
+      _renderPriceTag(d.close, d.change_pct || 0, dot, d.hms || '', d.source || '');
     }
 
     // ── Technical indicator calculations ──────────────────
