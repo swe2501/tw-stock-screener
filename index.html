@@ -10753,6 +10753,8 @@
       currentCode = sym; currentName = name;
       document.getElementById('modalTitle').textContent = name;
       document.getElementById('industryTag').style.display = 'none';
+      var _mt = document.getElementById('mktTag'); if (_mt) _mt.style.display = 'none';   // 指數不標 上市/ETF（清掉上一檔殘留）2026-10-02
+      window._capCode = null; _paintCap();   // 指數無市值
       _loadDividendInfo(sym);
       _setToolbarForCode(sym);
       document.getElementById('backBtn').style.display = 'none';
