@@ -1946,6 +1946,7 @@
     <span class="ts-sep"></span>
     <span class="ts-label">指數快覽</span>
     <button class="idx-btn" onclick="openIndexChart('^TWII','大盤 加權指數')">大盤</button>
+    <button class="idx-btn" onclick="openIndexChart('^SOX','費城半導體指數')">費半</button>
     <button class="idx-btn" onclick="openIndexChart('^N225','日經225')">日經225</button>
     <button class="idx-btn" onclick="openIndexChart('^KS11','韓國綜合指數')">韓指</button>
     <button class="idx-btn" onclick="openIndexChart('^IXIC','那斯達克綜合指數')">那指</button>
@@ -11110,10 +11111,11 @@
           } else {
             industryTag.style.display = 'none';
           }
-          if (data.name && data.name !== currentCode) {
+          if (data.name && data.name !== currentCode && !String(currentCode).startsWith('^')) {
             currentName = data.name;
             document.getElementById('modalTitle').textContent = `${currentCode}　${data.name}`;
           }
+          // 指數(^開頭)保留 openIndexChart 設定的中文標題，不被 Yahoo 英文名覆蓋（2026-10-02）
           renderTVChart(data.data, data.events || []);
         })
         .catch(() => {
