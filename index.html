@@ -5842,7 +5842,7 @@
 
   <style>
     #etfheavyView,#etfpremView{max-width:1000px;margin:0 auto;}
-    #etfflowView{max-width:1040px !important;margin:0 auto !important;}  /* 蓋過 [id$=View] 1420!important，避免窄表靠左(偏左) 2026-10-01 */
+    #etfflowView{max-width:1420px !important;margin-left:auto !important;margin-right:auto !important;}  /* 與其他 ETF 頁(#etfxView 1420 置中)同寬，避免切換時版面跳動 2026-10-03 */
     .eg-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
     .eg-scroll{max-height:70vh;overflow:auto;}
     table.eg{width:100%;border-collapse:collapse;font-size:12.5px;}
