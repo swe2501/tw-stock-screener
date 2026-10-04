@@ -2498,7 +2498,7 @@
     <div class="fc-note" id="hpNote"></div>
     </div><!-- /cb-sheet 每日台股籌碼報告 -->
     <div style="max-width:1200px;margin:14px auto 0;padding:10px 14px;font-size:11.5px;line-height:1.7;color:var(--text-muted);border-top:1px dashed var(--border);">
-      <b>改動紀錄（供合夥人複查）</b>：2026-09-30 全站版面採用合夥人 redesign 版；同日輕更新（ETF 甜甜圈互動、市場廣度分頁與篩選分離、選擇權支撐壓力 OI 峰值前端、結算日遇休市順延、多空排列配色、行動版表格）。掏金篩選器含「真名三式（多頭回洗反包）」（演算法與歷史回測見該勾選框）。2026-10-04 個股K圖量能面板新增「籌碼」分頁：三大法人每日淨買賣超堆疊柱（外資/投信/自營，紅買綠賣以0為基準，單位張，含合計線；滑鼠移至柱上顯示當日數值），對齊日K日期（僅日K、近120交易日）；資料源＝本站 institutional_trades（TWSE／TPEx T86 三大法人日報）每日推送至 Supabase inst_daily（scripts/inst_daily_push.py）。資料與演算法沿用本站真實資料源（TWSE／TPEx／TAIFEX／Supabase），未更動後端。
+      <b>改動紀錄（供合夥人複查）</b>：2026-09-30 全站版面採用合夥人 redesign 版；同日輕更新（ETF 甜甜圈互動、市場廣度分頁與篩選分離、選擇權支撐壓力 OI 峰值前端、結算日遇休市順延、多空排列配色、行動版表格）。掏金篩選器含「真名三式（多頭回洗反包）」（演算法與歷史回測見該勾選框）。2026-10-04 個股K圖量能面板新增「籌碼」分頁：三大法人每日淨買賣超堆疊柱（外資/投信/自營，紅買綠賣以0為基準，單位張，含合計線；滑鼠移至柱上顯示當日數值），對齊日K日期（僅日K、近120交易日）；資料源＝本站 institutional_trades（TWSE／TPEx T86 三大法人日報）每日推送至 Supabase inst_daily（scripts/inst_daily_push.py）。同日籌碼頁改為最上層分頁（點「籌碼」隱藏技術指標 VOL/MACD/RSI），並拆出「大戶 vs 散戶（週）」：資料源＝TDCC 集保股權分散表（每週五）＋當週收盤換算市值；大戶＝持股≥300張 或 市值≥3000萬、散戶＝持股<20張 或 市值<100萬（跨 TDCC 級距用均勻分布內插，為近似值），畫週增減（大戶紅綠柱／散戶藍線，單位張）；覆蓋熱門前300檔、每週更新（scripts/holder_flow_push.py → Supabase holder_flow）。資料與演算法沿用本站真實資料源（TWSE／TPEx／TAIFEX／TDCC／Supabase），未更動後端。
     </div>
   </div>
 
@@ -7776,9 +7776,9 @@
               <div class="sub-panel-header">
                 <div id="chipHolderLabel">
                   <b style="color:var(--text)">大戶 vs 散戶(週)</b>
-                  <span><span class="cl-dot" style="background:#e03e2d"></span>大戶 ≥300張/3000萬</span>
-                  <span><span class="cl-dot" style="background:#0a9a56"></span>散戶 &lt;20張/100萬</span>
-                  <span style="color:var(--text-muted)">週增減(張)</span>
+                  <span><span class="cl-dot" style="background:#e03e2d"></span>大戶柱 ≥300張/3000萬</span>
+                  <span><span class="cl-dot" style="background:#1e6fd6"></span>散戶線 &lt;20張/100萬</span>
+                  <span style="color:var(--text-muted)">週增減(張,紅買綠賣)</span>
                   <span id="chipHolderVals" style="color:var(--text-muted);font-weight:normal"></span>
                 </div>
               </div>
@@ -12129,10 +12129,59 @@
       if (code !== currentCode) return;
       if (!document.getElementById('subTabChip').classList.contains('on')) return;
       if (!rows.length) {
-        el.innerHTML = '<div style="padding:22px 10px;color:var(--text-muted);font-size:12px;text-align:center">大戶／散戶（TDCC 集保・週）資料建置中<br>熱門前 300 檔、每週更新（大戶≥300張或3000萬、散戶&lt;20張或100萬）</div>';
+        el.innerHTML = '<div style="padding:22px 10px;color:var(--text-muted);font-size:12px;text-align:center">此標的尚無大戶／散戶資料<br>（TDCC 集保・週；目前覆蓋熱門前 300 檔，每週更新）</div>';
         return;
       }
-      // Phase 2：資料就緒後於此繪製週買賣超柱（大戶紅／散戶綠）。
+      const candlesV = _validCandles(candles);
+      const times = candlesV.map(c => c.time);
+      const hmap = {};   // week_date -> row
+      rows.forEach(r => { hmap[r.week_date] = r; });
+      window._holderMap = hmap;
+      const opts = _chartOpts(el.clientHeight || 120, false);
+      opts.width = el.clientWidth || document.getElementById('chartContainer').clientWidth || 600;
+      if (!opts.width) return;
+      opts.handleScroll = false; opts.handleScale = false;
+      opts.rightPriceScale.scaleMargins = { top: 0.12, bottom: 0.12 };
+      chipHolderInstance = LightweightCharts.createChart(el, opts);
+      // anchor：對齊主圖日K索引（週資料只落在週五，其餘日空白）
+      const anchor = chipHolderInstance.addLineSeries({ color: 'rgba(0,0,0,0)', priceScaleId: '', lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false });
+      anchor.setData(times.map(t => ({ time: t, value: 0 })));
+      // 可視範圍自動縮放（大戶/散戶 週增減 張）
+      const _autoH = () => {
+        const range = chipHolderInstance.timeScale().getVisibleLogicalRange();
+        let from = range ? Math.max(0, Math.floor(range.from)) : 0;
+        let to = range ? Math.min(times.length - 1, Math.ceil(range.to)) : times.length - 1;
+        let mx = 0, mn = 0;
+        for (let i = from; i <= to; i++) {
+          const r = hmap[times[i]]; if (!r) continue;
+          [r.big_net, r.retail_net].forEach(v => { if (v == null) return; mx = Math.max(mx, v); mn = Math.min(mn, v); });
+        }
+        if (mx === 0 && mn === 0) mx = 1;
+        const pad = (mx - mn) * 0.1 || 1;
+        return { priceRange: { minValue: mn - pad, maxValue: mx + pad } };
+      };
+      // 大戶 週增減：柱（紅買/綠賣）
+      const bigS = chipHolderInstance.addHistogramSeries({ priceScaleId: 'right', priceLineVisible: false, lastValueVisible: false, autoscaleInfoProvider: _autoH });
+      bigS.setData(times.map(t => { const r = hmap[t]; return (r && r.big_net != null) ? { time: t, value: r.big_net, color: r.big_net >= 0 ? 'rgba(224,62,45,0.75)' : 'rgba(10,154,86,0.75)' } : null; }).filter(Boolean));
+      // 散戶 週增減：線（深藍），與大戶對比
+      const retS = chipHolderInstance.addLineSeries({ color: '#1e6fd6', lineWidth: 2, priceScaleId: 'right', lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: true, autoscaleInfoProvider: _autoH });
+      retS.setData(times.map(t => { const r = hmap[t]; return (r && r.retail_net != null) ? { time: t, value: r.retail_net } : null; }).filter(Boolean));
+      bigS.createPriceLine({ price: 0, color: 'rgba(200,209,217,0.3)', lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: false });
+
+      try { const w = chartInstance.priceScale('right').width(); if (w > 0) chipHolderInstance.priceScale('right').applyOptions({ minimumWidth: w }); } catch (_) {}
+      try { const r = chartInstance.timeScale().getVisibleLogicalRange(); if (r) chipHolderInstance.timeScale().setVisibleLogicalRange(r); } catch (_) {}
+      try { if (window._chartSyncGroup && window._chartSyncGroup.indexOf(chipHolderInstance) < 0) window._chartSyncGroup.push(chipHolderInstance); } catch (_) {}
+
+      const _hv = document.getElementById('chipHolderVals');
+      chipHolderInstance.subscribeCrosshairMove(param => {
+        if (!_hv) return;
+        if (!param || !param.time || !hmap[param.time]) { _hv.textContent = ''; return; }
+        const r = hmap[param.time];
+        const f = v => v == null ? '—' : _chipFmt(v);
+        _hv.innerHTML = `　${String(param.time).replace(/-/g, '/')}　` +
+          `<span style="color:#e03e2d">大戶 ${f(r.big_net)}</span>(占${r.big_pct}%)　` +
+          `<span style="color:#1e6fd6">散戶 ${f(r.retail_net)}</span>(占${r.retail_pct}%)`;
+      });
     }
 
     function _syncTimeRanges(charts) {
