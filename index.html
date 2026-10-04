@@ -2498,7 +2498,7 @@
     <div class="fc-note" id="hpNote"></div>
     </div><!-- /cb-sheet 每日台股籌碼報告 -->
     <div style="max-width:1200px;margin:14px auto 0;padding:10px 14px;font-size:11.5px;line-height:1.7;color:var(--text-muted);border-top:1px dashed var(--border);">
-      <b>改動紀錄（供合夥人複查）</b>：2026-09-30 全站版面採用合夥人 redesign 版；同日輕更新（ETF 甜甜圈互動、市場廣度分頁與篩選分離、選擇權支撐壓力 OI 峰值前端、結算日遇休市順延、多空排列配色、行動版表格）。掏金篩選器含「真名三式（多頭回洗反包）」（演算法與歷史回測見該勾選框）。2026-10-04 個股K圖量能面板新增「籌碼」分頁：三大法人每日淨買賣超堆疊柱（外資/投信/自營，紅買綠賣以0為基準，單位張，含合計線；滑鼠移至柱上顯示當日數值），對齊日K日期（僅日K、近120交易日）；資料源＝本站 institutional_trades（TWSE／TPEx T86 三大法人日報）每日推送至 Supabase inst_daily（scripts/inst_daily_push.py）。同日籌碼頁改為最上層分頁（點「籌碼」隱藏技術指標 VOL/MACD/RSI），並拆出「大戶 vs 散戶（週）」：資料源＝TDCC 集保股權分散表（每週五）＋當週收盤換算市值；大戶＝持股≥300張 或 市值≥3000萬、散戶＝持股<20張 或 市值<100萬（跨 TDCC 級距用均勻分布內插，為近似值），畫週增減（大戶紅綠柱／散戶藍線，單位張）；覆蓋熱門前300檔、每週更新（scripts/holder_flow_push.py → Supabase holder_flow）。資料與演算法沿用本站真實資料源（TWSE／TPEx／TAIFEX／TDCC／Supabase），未更動後端。
+      <b>改動紀錄（供合夥人複查）</b>：2026-09-30 全站版面採用合夥人 redesign 版；同日輕更新（ETF 甜甜圈互動、市場廣度分頁與篩選分離、選擇權支撐壓力 OI 峰值前端、結算日遇休市順延、多空排列配色、行動版表格）。掏金篩選器含「真名三式（多頭回洗反包）」（演算法與歷史回測見該勾選框）。2026-10-04 個股K圖量能面板新增「籌碼」分頁：三大法人每日淨買賣超堆疊柱（外資/投信/自營，紅買綠賣以0為基準，單位張，含合計線；滑鼠移至柱上顯示當日數值），對齊日K日期（僅日K、近120交易日）；資料源＝本站 institutional_trades（TWSE／TPEx T86 三大法人日報）每日推送至 Supabase inst_daily（scripts/inst_daily_push.py）。同日籌碼頁改為最上層分頁（點「籌碼」隱藏技術指標 VOL/MACD/RSI），並拆出「大戶 vs 散戶（週）」：資料源＝TDCC 集保股權分散表（每週五）＋當週收盤換算市值；大戶＝持股≥300張 或 市值≥3000萬、散戶＝持股<20張 或 市值<100萬（跨 TDCC 級距用均勻分布內插，為近似值），畫週增減（大戶紅綠柱／散戶藍線，單位張）；覆蓋熱門前500檔、每週更新（scripts/holder_flow_push.py → Supabase holder_flow）。籌碼頁再拆為「三大法人(日)」與「大戶散戶(週)」兩個獨立分頁。資料與演算法沿用本站真實資料源（TWSE／TPEx／TAIFEX／TDCC／Supabase），未更動後端。
     </div>
   </div>
 
@@ -7720,10 +7720,11 @@
               </div>
             </div>
           </div>
-          <!-- 子面板分頁：技術指標(量/MACD/RSI) ↔ 籌碼(三大法人日 + 大戶散戶週) -->
+          <!-- 子面板分頁：技術指標(量/MACD/RSI) / 三大法人(日) / 大戶散戶(週) 各自獨立 -->
           <div id="subTabs">
             <span class="chip-tab on" id="subTabTech" onclick="_chipTab('tech')">技術指標</span>
-            <span class="chip-tab" id="subTabChip" onclick="_chipTab('chip')">籌碼</span>
+            <span class="chip-tab" id="subTabInst" onclick="_chipTab('inst')">三大法人</span>
+            <span class="chip-tab" id="subTabHolder" onclick="_chipTab('holder')">大戶散戶</span>
           </div>
           <div id="volPanel">
             <div class="sub-panel-header">
@@ -7757,9 +7758,8 @@
             </div>
             <div id="rsiContainer"></div>
           </div>
-          <!-- 籌碼頁（拆成兩張：三大法人日柱、大戶/散戶週柱）-->
-          <div id="chipPage" style="display:none">
-            <div id="chipInstPanel">
+          <!-- 籌碼：三大法人(日) 與 大戶/散戶(週) 各自獨立分頁 -->
+            <div id="chipInstPanel" style="display:none">
               <div class="sub-panel-header">
                 <div id="chipLabel">
                   <b style="color:var(--text)">三大法人(日)</b>
@@ -7772,7 +7772,7 @@
               </div>
               <div id="chipContainer"></div>
             </div>
-            <div id="chipHolderPanel">
+            <div id="chipHolderPanel" style="display:none">
               <div class="sub-panel-header">
                 <div id="chipHolderLabel">
                   <b style="color:var(--text)">大戶 vs 散戶(週)</b>
@@ -7784,7 +7784,6 @@
               </div>
               <div id="chipHolderContainer"></div>
             </div>
-          </div>
         </div>
 
         </div><!-- /chart-content -->
@@ -11084,14 +11083,15 @@
       Object.keys(seriesMap).forEach(k => delete seriesMap[k]);
       // Reset all ma-toggle labels to visible
       document.querySelectorAll('.ma-toggle').forEach(el => el.classList.remove('hidden'));
-      // 子面板分頁歸零：預設回「技術指標」（顯示 VOL/MACD/RSI，隱藏籌碼頁）
-      window._chipBuiltFor = null;
+      // 子面板分頁歸零：預設回「技術指標」（顯示 VOL/MACD/RSI，隱藏籌碼兩頁）
+      window._chipInstBuiltFor = null; window._chipHolderBuiltFor = null;
       ['volPanel', 'macdPanel', 'rsiPanel'].forEach(id => { const e = document.getElementById(id); if (e) e.style.display = ''; });
-      const _cp = document.getElementById('chipPage'); if (_cp) _cp.style.display = 'none';
+      ['chipInstPanel', 'chipHolderPanel'].forEach(id => { const e = document.getElementById(id); if (e) e.style.display = 'none'; });
       const _cc = document.getElementById('chipContainer'); if (_cc) _cc.innerHTML = '';
       const _hc = document.getElementById('chipHolderContainer'); if (_hc) _hc.innerHTML = '';
-      const _tt = document.getElementById('subTabTech'), _tc = document.getElementById('subTabChip');
-      if (_tt) _tt.classList.add('on'); if (_tc) _tc.classList.remove('on');
+      const _tt = document.getElementById('subTabTech');
+      ['subTabInst', 'subTabHolder'].forEach(id => { const e = document.getElementById(id); if (e) e.classList.remove('on'); });
+      if (_tt) _tt.classList.add('on');
     }
 
     function toggleAllMA() {
@@ -11210,7 +11210,7 @@
     let _trendRef = null;   // {price, avg, vol, prev, lastT}
     // 走勢模式隱藏 K 線專屬 UI（MA/BBAND 圖例、VOL/MACD/RSI 子面板）；candle 模式還原原本顯示狀態
     function _setKlineChromeVisible(show) {
-      ['maLabel', 'subTabs', 'volPanel', 'macdPanel', 'rsiPanel', 'chipPage'].forEach(function (id) {
+      ['maLabel', 'subTabs', 'volPanel', 'macdPanel', 'rsiPanel', 'chipInstPanel', 'chipHolderPanel'].forEach(function (id) {
         var e = document.getElementById(id); if (!e) return;
         if (show) {
           if (e.dataset._prevDisp !== undefined) { e.style.display = e.dataset._prevDisp; delete e.dataset._prevDisp; }
@@ -11412,9 +11412,8 @@
       document.getElementById('chartWrapper').style.display = 'block';
 
       window._chartMainCandles = candles;   // 籌碼子面板要對齊的日K序列
-      // 籌碼僅對日K有意義（inst_daily/TDCC 為日/週資料）→ 小時K 隱藏「籌碼」分頁
-      const _tabChip = document.getElementById('subTabChip');
-      if (_tabChip) _tabChip.style.display = window._chartIsHourly ? 'none' : '';
+      // 籌碼僅對日K有意義（inst_daily/TDCC 為日/週資料）→ 小時K 隱藏「三大法人/大戶散戶」分頁
+      ['subTabInst', 'subTabHolder'].forEach(id => { const e = document.getElementById(id); if (e) e.style.display = window._chartIsHourly ? 'none' : ''; });
 
       _updatePriceTag(candles);
       _renderMainChart(candles, events || []);
@@ -11992,25 +11991,33 @@
       v = Math.round(v);
       return (v > 0 ? '+' : '') + v.toLocaleString('en-US');
     }
+    function _realignChip(ci, cid) {
+      try {
+        ci.applyOptions({ width: document.getElementById(cid).clientWidth });
+        const r = chartInstance.timeScale().getVisibleLogicalRange();
+        if (r) ci.timeScale().setVisibleLogicalRange(r);
+      } catch (_) {}
+    }
+    // 三個獨立分頁：技術指標(VOL/MACD/RSI) / 三大法人(日) / 大戶散戶(週)，一次只顯示一組
     function _chipTab(which) {
-      const chip = (which === 'chip');
-      if (chip && window._chartIsHourly) return;   // 籌碼僅日K
-      const _tt = document.getElementById('subTabTech'), _tc = document.getElementById('subTabChip');
-      if (_tt) _tt.classList.toggle('on', !chip);
-      if (_tc) _tc.classList.toggle('on', chip);
-      ['volPanel', 'macdPanel', 'rsiPanel'].forEach(id => { const e = document.getElementById(id); if (e) e.style.display = chip ? 'none' : ''; });
-      const page = document.getElementById('chipPage'); if (page) page.style.display = chip ? '' : 'none';
-      if (chip) {
-        if (window._chipBuiltFor !== currentCode || !chipInstance) {
-          window._chipBuiltFor = currentCode;
-          setTimeout(() => { _renderCHIPChart(window._chartMainCandles || []); _renderHolderChart(window._chartMainCandles || []); }, 0);
-        } else {
-          setTimeout(() => {
-            const r = chartInstance.timeScale().getVisibleLogicalRange();
-            if (chipInstance) { try { chipInstance.applyOptions({ width: document.getElementById('chipContainer').clientWidth }); if (r) chipInstance.timeScale().setVisibleLogicalRange(r); } catch (_) {} }
-            if (chipHolderInstance) { try { chipHolderInstance.applyOptions({ width: document.getElementById('chipHolderContainer').clientWidth }); if (r) chipHolderInstance.timeScale().setVisibleLogicalRange(r); } catch (_) {} }
-          }, 0);
-        }
+      if ((which === 'inst' || which === 'holder') && window._chartIsHourly) return;   // 籌碼僅日K
+      const tabs = { tech: 'subTabTech', inst: 'subTabInst', holder: 'subTabHolder' };
+      Object.entries(tabs).forEach(([k, id]) => { const e = document.getElementById(id); if (e) e.classList.toggle('on', k === which); });
+      const tech = (which === 'tech');
+      ['volPanel', 'macdPanel', 'rsiPanel'].forEach(id => { const e = document.getElementById(id); if (e) e.style.display = tech ? '' : 'none'; });
+      const ip = document.getElementById('chipInstPanel'), hp = document.getElementById('chipHolderPanel');
+      if (ip) ip.style.display = (which === 'inst') ? '' : 'none';
+      if (hp) hp.style.display = (which === 'holder') ? '' : 'none';
+      if (which === 'inst') {
+        if (window._chipInstBuiltFor !== currentCode || !chipInstance) {
+          window._chipInstBuiltFor = currentCode;
+          setTimeout(() => _renderCHIPChart(window._chartMainCandles || []), 0);
+        } else setTimeout(() => _realignChip(chipInstance, 'chipContainer'), 0);
+      } else if (which === 'holder') {
+        if (window._chipHolderBuiltFor !== currentCode || !chipHolderInstance) {
+          window._chipHolderBuiltFor = currentCode;
+          setTimeout(() => _renderHolderChart(window._chartMainCandles || []), 0);
+        } else setTimeout(() => _realignChip(chipHolderInstance, 'chipHolderContainer'), 0);
       } else {
         setTimeout(() => {
           try { if (volInstance)  volInstance.applyOptions({ width: document.getElementById('volContainer').clientWidth }); } catch (_) {}
@@ -12033,8 +12040,8 @@
         if (r.ok) rows = await r.json();
       } catch (_) {}
       if (code !== currentCode) return;   // 期間換股
-      // 使用者在 fetch 期間切回「技術指標」→ 不建圖
-      if (!document.getElementById('subTabChip').classList.contains('on')) return;
+      // 使用者在 fetch 期間切走「三大法人」分頁 → 不建圖
+      if (!document.getElementById('subTabInst').classList.contains('on')) return;
       const times = candles.map(c => c.time);
       const chipMap = {};
       rows.forEach(r => { chipMap[r.trade_date] = { f: +r.foreign_net || 0, t: +r.trust_net || 0, d: +r.dealer_net || 0, sum: +r.total_net || 0 }; });
@@ -12127,7 +12134,7 @@
         if (r.ok) rows = await r.json();
       } catch (_) {}
       if (code !== currentCode) return;
-      if (!document.getElementById('subTabChip').classList.contains('on')) return;
+      if (!document.getElementById('subTabHolder').classList.contains('on')) return;
       if (!rows.length) {
         el.innerHTML = '<div style="padding:22px 10px;color:var(--text-muted);font-size:12px;text-align:center">此標的尚無大戶／散戶資料<br>（TDCC 集保・週；目前覆蓋熱門前 300 檔，每週更新）</div>';
         return;
