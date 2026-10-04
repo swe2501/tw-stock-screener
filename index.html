@@ -999,6 +999,23 @@
       border-top: 1px solid var(--border);
     }
     #volContainer { width: 100%; height: 70px; }
+    /* 子面板分頁（技術指標 ↔ 籌碼）*/
+    #subTabs { display: flex; gap: 8px; padding: 6px 8px 4px; border-top: 1px solid var(--border); }
+    #chipPage { width: 100%; }
+    #chipInstPanel, #chipHolderPanel { position: relative; width: 100%; border-top: 1px solid var(--border); }
+    #chipContainer { width: 100%; height: 130px; }
+    #chipHolderContainer { width: 100%; height: 130px; }
+    .chip-tab {
+      cursor: pointer; font-size: 12px; font-weight: bold;
+      padding: 2px 12px; border: 1px solid var(--border); border-radius: 4px;
+      color: var(--text-muted); background: transparent; white-space: nowrap; user-select: none;
+    }
+    .chip-tab.on { color: var(--on-accent); background: var(--accent); border-color: var(--accent); }
+    #chipLabel, #chipHolderLabel {
+      font-size: 12px; font-family: monospace; font-weight: bold;
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    }
+    #chipLabel .cl-dot, #chipHolderLabel .cl-dot { display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:3px; vertical-align:middle; }
     #volLabel, #macdLabel, #rsiLabel {
       font-size: 13px;
       font-family: monospace;
@@ -2481,7 +2498,7 @@
     <div class="fc-note" id="hpNote"></div>
     </div><!-- /cb-sheet 每日台股籌碼報告 -->
     <div style="max-width:1200px;margin:14px auto 0;padding:10px 14px;font-size:11.5px;line-height:1.7;color:var(--text-muted);border-top:1px dashed var(--border);">
-      <b>改動紀錄（供合夥人複查）</b>：2026-09-30 全站版面採用合夥人 redesign 版；同日輕更新（ETF 甜甜圈互動、市場廣度分頁與篩選分離、選擇權支撐壓力 OI 峰值前端、結算日遇休市順延、多空排列配色、行動版表格）。掏金篩選器含「真名三式（多頭回洗反包）」（演算法與歷史回測見該勾選框）。資料與演算法沿用本站真實資料源（TWSE／TPEx／TAIFEX／Supabase），未更動後端。
+      <b>改動紀錄（供合夥人複查）</b>：2026-09-30 全站版面採用合夥人 redesign 版；同日輕更新（ETF 甜甜圈互動、市場廣度分頁與篩選分離、選擇權支撐壓力 OI 峰值前端、結算日遇休市順延、多空排列配色、行動版表格）。掏金篩選器含「真名三式（多頭回洗反包）」（演算法與歷史回測見該勾選框）。2026-10-04 個股K圖量能面板新增「籌碼」分頁：三大法人每日淨買賣超堆疊柱（外資/投信/自營，紅買綠賣以0為基準，單位張，含合計線；滑鼠移至柱上顯示當日數值），對齊日K日期（僅日K、近120交易日）；資料源＝本站 institutional_trades（TWSE／TPEx T86 三大法人日報）每日推送至 Supabase inst_daily（scripts/inst_daily_push.py）。同日籌碼頁改為最上層分頁（點「籌碼」隱藏技術指標 VOL/MACD/RSI），並拆出「大戶 vs 散戶（週）」：資料源＝TDCC 集保股權分散表（每週五）＋當週收盤換算市值；大戶＝持股≥300張 或 市值≥3000萬、散戶＝持股<20張 或 市值<100萬（跨 TDCC 級距用均勻分布內插，為近似值），畫週增減（大戶紅綠柱／散戶藍線，單位張）；覆蓋熱門前300檔、每週更新（scripts/holder_flow_push.py → Supabase holder_flow）。資料與演算法沿用本站真實資料源（TWSE／TPEx／TAIFEX／TDCC／Supabase），未更動後端。
     </div>
   </div>
 
@@ -7703,6 +7720,11 @@
               </div>
             </div>
           </div>
+          <!-- 子面板分頁：技術指標(量/MACD/RSI) ↔ 籌碼(三大法人日 + 大戶散戶週) -->
+          <div id="subTabs">
+            <span class="chip-tab on" id="subTabTech" onclick="_chipTab('tech')">技術指標</span>
+            <span class="chip-tab" id="subTabChip" onclick="_chipTab('chip')">籌碼</span>
+          </div>
           <div id="volPanel">
             <div class="sub-panel-header">
               <div id="volLabel">
@@ -7734,6 +7756,34 @@
               <button class="panel-toggle" onclick="toggleChartPanel('rsiContainer', this)">▲</button>
             </div>
             <div id="rsiContainer"></div>
+          </div>
+          <!-- 籌碼頁（拆成兩張：三大法人日柱、大戶/散戶週柱）-->
+          <div id="chipPage" style="display:none">
+            <div id="chipInstPanel">
+              <div class="sub-panel-header">
+                <div id="chipLabel">
+                  <b style="color:var(--text)">三大法人(日)</b>
+                  <span><span class="cl-dot" style="background:#2563eb"></span>外資</span>
+                  <span><span class="cl-dot" style="background:#f59e0b"></span>投信</span>
+                  <span><span class="cl-dot" style="background:#9ca3af"></span>自營</span>
+                  <span style="color:var(--text-muted)">合計 ・淨買賣超(張)</span>
+                  <span id="chipVals" style="color:var(--text-muted);font-weight:normal"></span>
+                </div>
+              </div>
+              <div id="chipContainer"></div>
+            </div>
+            <div id="chipHolderPanel">
+              <div class="sub-panel-header">
+                <div id="chipHolderLabel">
+                  <b style="color:var(--text)">大戶 vs 散戶(週)</b>
+                  <span><span class="cl-dot" style="background:#e03e2d"></span>大戶柱 ≥300張/3000萬</span>
+                  <span><span class="cl-dot" style="background:#1e6fd6"></span>散戶線 &lt;20張/100萬</span>
+                  <span style="color:var(--text-muted)">週增減(張,紅買綠賣)</span>
+                  <span id="chipHolderVals" style="color:var(--text-muted);font-weight:normal"></span>
+                </div>
+              </div>
+              <div id="chipHolderContainer"></div>
+            </div>
           </div>
         </div>
 
@@ -8423,6 +8473,8 @@
     let volInstance   = null;
     let macdInstance  = null;
     let rsiInstance   = null;
+    let chipInstance  = null;   // 籌碼頁-三大法人每日淨買賣超堆疊柱（日）
+    let chipHolderInstance = null;   // 籌碼頁-大戶/散戶週買賣超（TDCC 週）
     let candleSeriesRef = null;
     let volSeriesRef    = null;
     let _rtOpen = null, _rtHigh = null, _rtLow = null; // running tracking
@@ -11026,10 +11078,20 @@
       if (volInstance)   { try { volInstance.remove();   } catch(_){} volInstance   = null; }
       if (macdInstance)  { try { macdInstance.remove();  } catch(_){} macdInstance  = null; }
       if (rsiInstance)   { try { rsiInstance.remove();   } catch(_){} rsiInstance   = null; }
+      if (chipInstance)  { try { chipInstance.remove();  } catch(_){} chipInstance  = null; }
+      if (chipHolderInstance) { try { chipHolderInstance.remove(); } catch(_){} chipHolderInstance = null; }
       candleSeriesRef = null;
       Object.keys(seriesMap).forEach(k => delete seriesMap[k]);
       // Reset all ma-toggle labels to visible
       document.querySelectorAll('.ma-toggle').forEach(el => el.classList.remove('hidden'));
+      // 子面板分頁歸零：預設回「技術指標」（顯示 VOL/MACD/RSI，隱藏籌碼頁）
+      window._chipBuiltFor = null;
+      ['volPanel', 'macdPanel', 'rsiPanel'].forEach(id => { const e = document.getElementById(id); if (e) e.style.display = ''; });
+      const _cp = document.getElementById('chipPage'); if (_cp) _cp.style.display = 'none';
+      const _cc = document.getElementById('chipContainer'); if (_cc) _cc.innerHTML = '';
+      const _hc = document.getElementById('chipHolderContainer'); if (_hc) _hc.innerHTML = '';
+      const _tt = document.getElementById('subTabTech'), _tc = document.getElementById('subTabChip');
+      if (_tt) _tt.classList.add('on'); if (_tc) _tc.classList.remove('on');
     }
 
     function toggleAllMA() {
@@ -11148,7 +11210,7 @@
     let _trendRef = null;   // {price, avg, vol, prev, lastT}
     // 走勢模式隱藏 K 線專屬 UI（MA/BBAND 圖例、VOL/MACD/RSI 子面板）；candle 模式還原原本顯示狀態
     function _setKlineChromeVisible(show) {
-      ['maLabel', 'volPanel', 'macdPanel', 'rsiPanel'].forEach(function (id) {
+      ['maLabel', 'subTabs', 'volPanel', 'macdPanel', 'rsiPanel', 'chipPage'].forEach(function (id) {
         var e = document.getElementById(id); if (!e) return;
         if (show) {
           if (e.dataset._prevDisp !== undefined) { e.style.display = e.dataset._prevDisp; delete e.dataset._prevDisp; }
@@ -11349,6 +11411,11 @@
       document.getElementById('chartLoading').style.display = 'none';
       document.getElementById('chartWrapper').style.display = 'block';
 
+      window._chartMainCandles = candles;   // 籌碼子面板要對齊的日K序列
+      // 籌碼僅對日K有意義（inst_daily/TDCC 為日/週資料）→ 小時K 隱藏「籌碼」分頁
+      const _tabChip = document.getElementById('subTabChip');
+      if (_tabChip) _tabChip.style.display = window._chartIsHourly ? 'none' : '';
+
       _updatePriceTag(candles);
       _renderMainChart(candles, events || []);
       // 箱型偵測改用「證交所資料(price_window)」——與篩選器/box_patterns 同源,避免 K圖(YF)與篩選器不一致;
@@ -11428,6 +11495,8 @@
         if (volInstance)   volInstance.applyOptions({ width: document.getElementById('volContainer').clientWidth });
         if (macdInstance)  macdInstance.applyOptions({ width: document.getElementById('macdContainer').clientWidth });
         if (rsiInstance)   rsiInstance.applyOptions({ width: document.getElementById('rsiContainer').clientWidth });
+        if (chipInstance)  { const _ce = document.getElementById('chipContainer'); if (_ce && _ce.clientWidth) chipInstance.applyOptions({ width: _ce.clientWidth }); }
+        if (chipHolderInstance) { const _he = document.getElementById('chipHolderContainer'); if (_he && _he.clientWidth) chipHolderInstance.applyOptions({ width: _he.clientWidth }); }
         resizeFibCanvas();
         if (trendLines.length > 0 || (_boxEnabled && _boxRectShow && _boxRect)) redrawCanvas();
       }).observe(mainEl);
@@ -11445,6 +11514,7 @@
       const _rightMax = candles.length - 1 + 5;
       let _lockingZoom = false;
       const _allCharts = [chartInstance, volInstance, macdInstance, rsiInstance].filter(Boolean);
+      window._chartSyncGroup = _allCharts;   // 籌碼面板建立後會 push 進來一起同步縮放
       _allCharts.forEach(c => {
         c.timeScale().subscribeVisibleLogicalRangeChange(range => {
           if (_lockingZoom || !range) return;
@@ -11484,7 +11554,7 @@
     function _rethemeChart(){
       const t = _chartTheme();
       const o = { layout:{ background:{ color:t.bg }, textColor:t.text }, grid:{ vertLines:{ color:t.grid }, horzLines:{ color:t.grid } }, rightPriceScale:{ borderColor:t.grid }, timeScale:{ borderColor:t.grid } };
-      [typeof chartInstance!=='undefined'?chartInstance:null, typeof volInstance!=='undefined'?volInstance:null, typeof macdInstance!=='undefined'?macdInstance:null, typeof rsiInstance!=='undefined'?rsiInstance:null].forEach(c=>{ if(c){ try{ c.applyOptions(o); }catch(_){}}});
+      [typeof chartInstance!=='undefined'?chartInstance:null, typeof volInstance!=='undefined'?volInstance:null, typeof macdInstance!=='undefined'?macdInstance:null, typeof rsiInstance!=='undefined'?rsiInstance:null, typeof chipInstance!=='undefined'?chipInstance:null, typeof chipHolderInstance!=='undefined'?chipHolderInstance:null].forEach(c=>{ if(c){ try{ c.applyOptions(o); }catch(_){}}});
     }
 
     function _validCandles(candles) {
@@ -11911,6 +11981,207 @@
           price: p, color: c, lineWidth: 1,
           lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: '',
         }));
+    }
+
+    // ── 籌碼子面板（三大法人每日淨買賣超堆疊柱；資料 inst_daily，單位張，近120交易日）──
+    // 「量 / 籌碼」分頁切換，與量柱共用同一面板槽位；籌碼圖純跟隨主圖時間軸（不自行縮放）。
+    function _chipColors() {
+      return { f: '#2563eb', t: '#f59e0b', d: '#9ca3af', sum: (_cssv('--text') || '#e5e7eb') };
+    }
+    function _chipFmt(v) {
+      v = Math.round(v);
+      return (v > 0 ? '+' : '') + v.toLocaleString('en-US');
+    }
+    function _chipTab(which) {
+      const chip = (which === 'chip');
+      if (chip && window._chartIsHourly) return;   // 籌碼僅日K
+      const _tt = document.getElementById('subTabTech'), _tc = document.getElementById('subTabChip');
+      if (_tt) _tt.classList.toggle('on', !chip);
+      if (_tc) _tc.classList.toggle('on', chip);
+      ['volPanel', 'macdPanel', 'rsiPanel'].forEach(id => { const e = document.getElementById(id); if (e) e.style.display = chip ? 'none' : ''; });
+      const page = document.getElementById('chipPage'); if (page) page.style.display = chip ? '' : 'none';
+      if (chip) {
+        if (window._chipBuiltFor !== currentCode || !chipInstance) {
+          window._chipBuiltFor = currentCode;
+          setTimeout(() => { _renderCHIPChart(window._chartMainCandles || []); _renderHolderChart(window._chartMainCandles || []); }, 0);
+        } else {
+          setTimeout(() => {
+            const r = chartInstance.timeScale().getVisibleLogicalRange();
+            if (chipInstance) { try { chipInstance.applyOptions({ width: document.getElementById('chipContainer').clientWidth }); if (r) chipInstance.timeScale().setVisibleLogicalRange(r); } catch (_) {} }
+            if (chipHolderInstance) { try { chipHolderInstance.applyOptions({ width: document.getElementById('chipHolderContainer').clientWidth }); if (r) chipHolderInstance.timeScale().setVisibleLogicalRange(r); } catch (_) {} }
+          }, 0);
+        }
+      } else {
+        setTimeout(() => {
+          try { if (volInstance)  volInstance.applyOptions({ width: document.getElementById('volContainer').clientWidth }); } catch (_) {}
+          try { if (macdInstance) macdInstance.applyOptions({ width: document.getElementById('macdContainer').clientWidth }); } catch (_) {}
+          try { if (rsiInstance)  rsiInstance.applyOptions({ width: document.getElementById('rsiContainer').clientWidth }); } catch (_) {}
+        }, 0);
+      }
+    }
+    async function _renderCHIPChart(candles) {
+      candles = _validCandles(candles);
+      const el = document.getElementById('chipContainer');
+      if (!el) return;
+      if (chipInstance) { try { chipInstance.remove(); } catch (_) {} chipInstance = null; }
+      el.innerHTML = '';
+      const code = currentCode;
+      let rows = [];
+      try {
+        const r = await fetch(`${SIG_SB_URL}/rest/v1/inst_daily?select=trade_date,foreign_net,trust_net,dealer_net,total_net&code=eq.${encodeURIComponent(code)}&order=trade_date.asc&limit=400`,
+          { headers: { apikey: SIG_SB_ANON, Authorization: `Bearer ${SIG_SB_ANON}` } });
+        if (r.ok) rows = await r.json();
+      } catch (_) {}
+      if (code !== currentCode) return;   // 期間換股
+      // 使用者在 fetch 期間切回「技術指標」→ 不建圖
+      if (!document.getElementById('subTabChip').classList.contains('on')) return;
+      const times = candles.map(c => c.time);
+      const chipMap = {};
+      rows.forEach(r => { chipMap[r.trade_date] = { f: +r.foreign_net || 0, t: +r.trust_net || 0, d: +r.dealer_net || 0, sum: +r.total_net || 0 }; });
+      window._chipMap = chipMap;
+      if (!rows.length) {
+        el.innerHTML = '<div style="padding:22px 10px;color:var(--text-muted);font-size:12px;text-align:center">此標的無三大法人資料<br>（僅上市櫃個股；指數／ETF 不適用）</div>';
+        return;
+      }
+      const opts = _chartOpts(el.clientHeight || 120, false);
+      opts.width = el.clientWidth || document.getElementById('chartContainer').clientWidth || 600;
+      if (!opts.width) return;
+      opts.handleScroll = false; opts.handleScale = false;   // 純跟隨主圖
+      opts.rightPriceScale.scaleMargins = { top: 0.12, bottom: 0.12 };
+      chipInstance = LightweightCharts.createChart(el, opts);
+
+      // anchor：覆蓋全部日K時間戳，使邏輯索引與主圖對齊
+      const anchor = chipInstance.addLineSeries({ color: 'rgba(0,0,0,0)', priceScaleId: '', lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false });
+      anchor.setData(times.map(t => ({ time: t, value: 0 })));
+
+      // 堆疊：外資(底)→投信→自營，正值往上疊、負值往下疊（分向累計）
+      const order = ['f', 't', 'd'];
+      const cum = { f: [], t: [], d: [] };
+      times.forEach(t => {
+        const m = chipMap[t]; let pos = 0, neg = 0;
+        order.forEach(k => {
+          if (!m) { cum[k].push(null); return; }
+          const v = m[k];
+          if (v >= 0) { pos += v; cum[k].push(pos); } else { neg += v; cum[k].push(neg); }
+        });
+      });
+      const C = _chipColors();
+      // Y 軸只看可視範圍（堆疊正合計 / 負合計 / 三大法人合計）
+      const _auto = () => {
+        const range = chipInstance.timeScale().getVisibleLogicalRange();
+        let from = range ? Math.max(0, Math.floor(range.from)) : 0;
+        let to = range ? Math.min(times.length - 1, Math.ceil(range.to)) : times.length - 1;
+        let mx = 0, mn = 0;
+        for (let i = from; i <= to; i++) {
+          const m = chipMap[times[i]]; if (!m) continue;
+          let pos = 0, neg = 0;
+          ['f', 't', 'd'].forEach(k => { const v = m[k]; if (v >= 0) pos += v; else neg += v; });
+          mx = Math.max(mx, pos, m.sum); mn = Math.min(mn, neg, m.sum);
+        }
+        if (mx === 0 && mn === 0) mx = 1;
+        const pad = (mx - mn) * 0.1 || 1;
+        return { priceRange: { minValue: mn - pad, maxValue: mx + pad } };
+      };
+      // 加入順序：自營→投信→外資（外資畫最上層，正向底段蓋住較高的累計柱 → 視覺堆疊）
+      [['d', C.d], ['t', C.t], ['f', C.f]].forEach(([k, col]) => {
+        const s = chipInstance.addHistogramSeries({ priceScaleId: 'right', priceLineVisible: false, lastValueVisible: false, autoscaleInfoProvider: _auto });
+        s.setData(times.map((t, i) => cum[k][i] != null ? { time: t, value: cum[k][i], color: col } : null).filter(Boolean));
+      });
+      // 三大法人合計線
+      const sumS = chipInstance.addLineSeries({ color: C.sum, lineWidth: 1, priceScaleId: 'right', lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false, autoscaleInfoProvider: _auto });
+      sumS.setData(times.map(t => chipMap[t] ? { time: t, value: chipMap[t].sum } : null).filter(Boolean));
+      sumS.createPriceLine({ price: 0, color: 'rgba(200,209,217,0.3)', lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: false });
+
+      // 對齊主圖：價軸寬 + 可視範圍
+      try { const w = chartInstance.priceScale('right').width(); if (w > 0) chipInstance.priceScale('right').applyOptions({ minimumWidth: w }); } catch (_) {}
+      try { const r = chartInstance.timeScale().getVisibleLogicalRange(); if (r) chipInstance.timeScale().setVisibleLogicalRange(r); } catch (_) {}
+      // 併入縮放同步群組 → 主圖/量/MACD/RSI 縮放時 chip 一起移動
+      try { if (window._chartSyncGroup && window._chartSyncGroup.indexOf(chipInstance) < 0) window._chartSyncGroup.push(chipInstance); } catch (_) {}
+
+      // crosshair：顯示當日 外資/投信/自營/合計（張）
+      const _cv = document.getElementById('chipVals');
+      chipInstance.subscribeCrosshairMove(param => {
+        if (!_cv) return;
+        if (!param || !param.time || !chipMap[param.time]) { _cv.textContent = ''; return; }
+        const m = chipMap[param.time];
+        _cv.innerHTML = `　${String(param.time).replace(/-/g, '/')}　` +
+          `<span style="color:${C.f}">外 ${_chipFmt(m.f)}</span>　` +
+          `<span style="color:${C.t}">投 ${_chipFmt(m.t)}</span>　` +
+          `<span style="color:${C.d}">自 ${_chipFmt(m.d)}</span>　` +
+          `合 ${_chipFmt(m.sum)}`;
+      });
+    }
+
+    // ── 大戶/散戶（TDCC 週；大戶≥300張或3000萬、散戶<20張或100萬）──
+    // Phase 2：資料走 holder_flow（熱門前300、每週更新）；表建好前先顯示建置中版位。
+    async function _renderHolderChart(candles) {
+      const el = document.getElementById('chipHolderContainer');
+      if (!el) return;
+      if (chipHolderInstance) { try { chipHolderInstance.remove(); } catch (_) {} chipHolderInstance = null; }
+      el.innerHTML = '';
+      const code = currentCode;
+      let rows = [];
+      try {
+        const r = await fetch(`${SIG_SB_URL}/rest/v1/holder_flow?select=week_date,big_net,retail_net,big_pct,retail_pct&code=eq.${encodeURIComponent(code)}&order=week_date.asc&limit=120`,
+          { headers: { apikey: SIG_SB_ANON, Authorization: `Bearer ${SIG_SB_ANON}` } });
+        if (r.ok) rows = await r.json();
+      } catch (_) {}
+      if (code !== currentCode) return;
+      if (!document.getElementById('subTabChip').classList.contains('on')) return;
+      if (!rows.length) {
+        el.innerHTML = '<div style="padding:22px 10px;color:var(--text-muted);font-size:12px;text-align:center">此標的尚無大戶／散戶資料<br>（TDCC 集保・週；目前覆蓋熱門前 300 檔，每週更新）</div>';
+        return;
+      }
+      const candlesV = _validCandles(candles);
+      const times = candlesV.map(c => c.time);
+      const hmap = {};   // week_date -> row
+      rows.forEach(r => { hmap[r.week_date] = r; });
+      window._holderMap = hmap;
+      const opts = _chartOpts(el.clientHeight || 120, false);
+      opts.width = el.clientWidth || document.getElementById('chartContainer').clientWidth || 600;
+      if (!opts.width) return;
+      opts.handleScroll = false; opts.handleScale = false;
+      opts.rightPriceScale.scaleMargins = { top: 0.12, bottom: 0.12 };
+      chipHolderInstance = LightweightCharts.createChart(el, opts);
+      // anchor：對齊主圖日K索引（週資料只落在週五，其餘日空白）
+      const anchor = chipHolderInstance.addLineSeries({ color: 'rgba(0,0,0,0)', priceScaleId: '', lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false });
+      anchor.setData(times.map(t => ({ time: t, value: 0 })));
+      // 可視範圍自動縮放（大戶/散戶 週增減 張）
+      const _autoH = () => {
+        const range = chipHolderInstance.timeScale().getVisibleLogicalRange();
+        let from = range ? Math.max(0, Math.floor(range.from)) : 0;
+        let to = range ? Math.min(times.length - 1, Math.ceil(range.to)) : times.length - 1;
+        let mx = 0, mn = 0;
+        for (let i = from; i <= to; i++) {
+          const r = hmap[times[i]]; if (!r) continue;
+          [r.big_net, r.retail_net].forEach(v => { if (v == null) return; mx = Math.max(mx, v); mn = Math.min(mn, v); });
+        }
+        if (mx === 0 && mn === 0) mx = 1;
+        const pad = (mx - mn) * 0.1 || 1;
+        return { priceRange: { minValue: mn - pad, maxValue: mx + pad } };
+      };
+      // 大戶 週增減：柱（紅買/綠賣）
+      const bigS = chipHolderInstance.addHistogramSeries({ priceScaleId: 'right', priceLineVisible: false, lastValueVisible: false, autoscaleInfoProvider: _autoH });
+      bigS.setData(times.map(t => { const r = hmap[t]; return (r && r.big_net != null) ? { time: t, value: r.big_net, color: r.big_net >= 0 ? 'rgba(224,62,45,0.75)' : 'rgba(10,154,86,0.75)' } : null; }).filter(Boolean));
+      // 散戶 週增減：線（深藍），與大戶對比
+      const retS = chipHolderInstance.addLineSeries({ color: '#1e6fd6', lineWidth: 2, priceScaleId: 'right', lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: true, autoscaleInfoProvider: _autoH });
+      retS.setData(times.map(t => { const r = hmap[t]; return (r && r.retail_net != null) ? { time: t, value: r.retail_net } : null; }).filter(Boolean));
+      bigS.createPriceLine({ price: 0, color: 'rgba(200,209,217,0.3)', lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: false });
+
+      try { const w = chartInstance.priceScale('right').width(); if (w > 0) chipHolderInstance.priceScale('right').applyOptions({ minimumWidth: w }); } catch (_) {}
+      try { const r = chartInstance.timeScale().getVisibleLogicalRange(); if (r) chipHolderInstance.timeScale().setVisibleLogicalRange(r); } catch (_) {}
+      try { if (window._chartSyncGroup && window._chartSyncGroup.indexOf(chipHolderInstance) < 0) window._chartSyncGroup.push(chipHolderInstance); } catch (_) {}
+
+      const _hv = document.getElementById('chipHolderVals');
+      chipHolderInstance.subscribeCrosshairMove(param => {
+        if (!_hv) return;
+        if (!param || !param.time || !hmap[param.time]) { _hv.textContent = ''; return; }
+        const r = hmap[param.time];
+        const f = v => v == null ? '—' : _chipFmt(v);
+        _hv.innerHTML = `　${String(param.time).replace(/-/g, '/')}　` +
+          `<span style="color:#e03e2d">大戶 ${f(r.big_net)}</span>(占${r.big_pct}%)　` +
+          `<span style="color:#1e6fd6">散戶 ${f(r.retail_net)}</span>(占${r.retail_pct}%)`;
+      });
     }
 
     function _syncTimeRanges(charts) {
