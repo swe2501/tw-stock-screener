@@ -5308,7 +5308,14 @@
     window._etxAddStock=function(code){if(revTags.indexOf(code)<0&&revTags.length<3)revTags.push(code);renderRev();el('etxRevResult').scrollIntoView({block:'nearest'});};
     window._etxDelStock=function(code){revTags=revTags.filter(function(c){return c!==code;});renderRev();};
     window._etxCloseDrawer=function(){el('etxDrawer').style.display='none';};
-    window._etxOpen=function(code){drawerCode=code;drawerTab='moves';el('etxDrawer').style.display='flex';renderDrawer();};
+    window._etxOpen=function(code){drawerCode=code;drawerTab='overview';el('etxDrawer').style.display='flex';renderDrawer();};
+    // 持股集中度（前1/5/10大、其他、檔數）
+    function _concentration(h){
+      var arr=(h||[]).filter(function(x){return (x.weight||0)>0;}).slice().sort(function(a,b){return b.weight-a.weight;});
+      var sum=function(n){return arr.slice(0,n).reduce(function(s,x){return s+(x.weight||0);},0);};
+      var total=arr.reduce(function(s,x){return s+(x.weight||0);},0);
+      return {count:arr.length, top1:sum(1), top5:sum(5), top10:sum(10), other:Math.max(0,total-sum(10)), top1name:(arr[0]&&(arr[0].stock_name||arr[0].stock_code))||'—'};
+    }
 
     var _donutItems=[], _donutTotal=0;
     window._etxDonutHover=function(i){var c=el('etxDonutC');if(!c)return;if(i<0){c.innerHTML='<strong>'+_donutTotal+'</strong><small>檔成分股</small>';}else{var it=_donutItems[i];if(it)c.innerHTML='<strong>'+esc(String(it.nm).replace(/（共.*?）/,''))+'</strong><small>'+it.w.toFixed(2)+'%</small>';}};
@@ -5350,15 +5357,43 @@
     }
     function renderDrawer(){
       var p=pmap[drawerCode]||{}, h=(HOLD[drawerCode]||[]).slice();
-      var tabs=[['moves','今日異動'],['holdings','成分股'],['profile','規模/基本'],['dividend','配息'],['holders','持有人結構']];
+      var tabs=[['overview','總覽'],['moves','今日動作'],['holdings','成分股'],['dividend','配息'],['profile','規模/基本'],['holders','持有人']];
       var head='<div class="etx-dh"><div><small style="font-size:10.5px;color:var(--text-muted);font-weight:800">'+(p.active?'ACTIVE ETF':'PASSIVE ETF')+' · 跟誰學研究卡</small><h2>'+drawerCode+' '+esc(p.name||'')+'</h2><div style="font-size:12px;color:var(--text-muted)">'+esc(p.category||'')+(p.manager?' · '+esc(p.manager):'')+'</div></div><button class="x" onclick="window._etxCloseDrawer()">✕</button></div>';
       var hero='<div class="etx-mets" style="margin-bottom:14px"><div><small>收盤</small><b>'+m2(p.close)+'</b></div><div><small>行情</small><b class="'+cls(p.change_pct)+'">'+(p.change_pct==null?'—':(p.change_pct>0?'+':'')+p.change_pct.toFixed(2)+'%')+'</b></div><div><small>規模</small><b>'+(p.aum!=null?m0(p.aum)+' 億':'—')+'</b></div><div><small>受益人數</small><b>'+m0(p.holders)+'</b></div></div>';
       var tb='<div class="etx-dtabs">'+tabs.map(function(t){return '<button class="'+(t[0]===drawerTab?'on':'')+'" onclick="window._etxTab(\''+t[0]+'\')">'+t[1]+'</button>';}).join('')+'</div>';
       el('etxDrawerPanel').innerHTML=head+hero+tb+'<div id="etxDrawerBody"><div class="fc-empty">載入中…</div></div>';
       var body=el('etxDrawerBody');
-      if(drawerTab==='holdings'){
+      if(drawerTab==='overview'){
+        var con=_concentration(h);
+        var buys0=h.filter(function(x){return (x.delta_shares||0)>0;}).sort(function(a,b){return b.delta_shares-a.delta_shares;});
+        var sells0=h.filter(function(x){return (x.delta_shares||0)<0;}).sort(function(a,b){return a.delta_shares-b.delta_shares;});
+        var netAct=h.reduce(function(s,x){return s+(x.delta_shares||0);},0);
+        var _isAct=!!p.active, _age=(function(){var ld=p.listing_date;if(!ld)return null;var y=(Date.now()-Date.parse(ld+'T00:00:00Z'))/(365.25*864e5);return y>0?y:null;})();
+        var card=function(t,rows){return '<div class="etx-ovc" style="border:1px solid var(--border);border-radius:10px;padding:10px 12px;background:var(--surface)"><h5 style="margin:0 0 6px;font-size:12px;color:var(--text-muted);font-weight:800">'+t+'</h5>'+rows+'</div>';};
+        var kv=function(k,v){return '<div class="etx-ovr" style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:3px 0;font-size:13px"><span style="color:var(--text-muted)">'+k+'</span><b style="font-variant-numeric:tabular-nums;text-align:right">'+v+'</b></div>';};
+        var html='<div class="etx-ovgrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px">';
+        html+=card('行情', kv('收盤',m2(p.close))+kv('今日漲跌',(p.change_pct==null?'—':'<span class="'+cls(p.change_pct)+'">'+(p.change_pct>0?'+':'')+p.change_pct.toFixed(2)+'%</span>'))+kv('淨值(NAV)',p.nav!=null?m2(p.nav):'—'));
+        html+=card('規模', kv('資產規模',p.aum!=null?m0(p.aum)+' 億':'—')+kv('受益人數',p.holders!=null?m0(p.holders):'—')+kv('上市日',esc(p.listing_date||'—'))+kv('ETF 年齡',_age!=null?_age.toFixed(1)+' 年':'—'));
+        html+=card('配息', '<div class="etx-ovr"><span>載入中…</span><b></b></div>');
+        html+=card('持股集中度', kv('第一大',esc(con.top1name)+'（'+m2(con.top1)+'%）')+kv('前五大',m2(con.top5)+'%')+kv('前十大',m2(con.top10)+'%')+kv('成分股數',con.count?m0(con.count)+' 檔':'—'));
+        html+=card('今日動作'+(_isAct?'（持股調整）':'（配置變動）'), kv('最大加碼',buys0.length?(esc(buys0[0].stock_name||buys0[0].stock_code)+' '+sg(buys0[0].delta_shares,' 張')):'—')+kv('最大減碼',sells0.length?(esc(sells0[0].stock_name||sells0[0].stock_code)+' '+sg(sells0[0].delta_shares,' 張')):'—')+kv('持股淨動作',sg(netAct,' 張')));
+        html+=card('ETF 特色', kv('類型',_isAct?'主動型':'被動型')+kv('追蹤指數',esc(p.index_name||'—'))+kv('發行投信',esc(_etfIssuer(p.name))));
+        html+='</div>';
+        body.innerHTML=html;
+        // 配息摘要非同步補上
+        var _ovCode=drawerCode;
+        Q('etf_distributions?select=ex_date,cash_per_unit,year&code=eq.'+drawerCode+'&order=ex_date.desc&limit=60').then(function(a){
+          if(drawerTab!=='overview'||drawerCode!==_ovCode)return;   // 期間切走/換檔
+          var sm=_divSummary(a,p.close);
+          var cards=body.querySelectorAll('.etx-ovc');
+          var divCard=cards[2]; if(!divCard)return;
+          divCard.innerHTML='<h5>配息</h5>'+(sm?(kv('配息頻率',sm.freq)+kv('近12月配息',m2(sm.sum12))+kv('近12月殖利率',sm.yield12!=null?sm.yield12.toFixed(2)+'%':'—')+kv('連續配息',sm.consecYears?sm.consecYears+' 年':'—')):'<div class="etx-ovr"><span>配息</span><b>資料不足</b></div>');
+        }).catch(function(){});
+      } else if(drawerTab==='holdings'){
         var hs=h.sort(function(a,b){return (b.weight||0)-(a.weight||0);});
-        body.innerHTML=hs.length?(buildDonut(hs)+'<div style="overflow-x:auto"><table class="etx-tbl"><thead><tr><th class="l">#</th><th class="l">股票</th><th>權重</th><th>持有張數</th><th>今日增減</th></tr></thead><tbody>'+hs.map(function(s,i){return '<tr><td class="l">'+(i+1)+'</td><td class="l" style="cursor:pointer" onclick="_openStock(\''+s.stock_code+'\',\''+esc(s.stock_name||'')+'\')"><b>'+esc(s.stock_name||'')+'</b> <span style="color:var(--text-muted)">'+s.stock_code+'</span></td><td>'+m2(s.weight)+'%</td><td>'+m0(s.shares)+'</td><td class="'+cls(s.delta_shares)+'">'+sg(s.delta_shares)+'</td></tr>';}).join('')+'</tbody></table></div>'):'<div class="fc-empty">尚未取得完整成分股。</div>';
+        var _con=_concentration(hs);
+        var _conBar=hs.length?('<div class="etx-mets" style="margin-bottom:12px"><div><small>第一大</small><b>'+m2(_con.top1)+'%</b></div><div><small>前五大</small><b>'+m2(_con.top5)+'%</b></div><div><small>前十大</small><b>'+m2(_con.top10)+'%</b></div><div><small>其他</small><b>'+m2(_con.other)+'%</b></div><div><small>成分股數</small><b>'+m0(_con.count)+'</b></div></div>'):'';
+        body.innerHTML=hs.length?(_conBar+buildDonut(hs)+'<div style="overflow-x:auto"><table class="etx-tbl"><thead><tr><th class="l">#</th><th class="l">股票</th><th>權重</th><th>持有張數</th><th>今日增減</th></tr></thead><tbody>'+hs.map(function(s,i){return '<tr><td class="l">'+(i+1)+'</td><td class="l" style="cursor:pointer" onclick="_openStock(\''+s.stock_code+'\',\''+esc(s.stock_name||'')+'\')"><b>'+esc(s.stock_name||'')+'</b> <span style="color:var(--text-muted)">'+s.stock_code+'</span></td><td>'+m2(s.weight)+'%</td><td>'+m0(s.shares)+'</td><td class="'+cls(s.delta_shares)+'">'+sg(s.delta_shares)+'</td></tr>';}).join('')+'</tbody></table></div>'):'<div class="fc-empty">尚未取得完整成分股。</div>';
       } else if(drawerTab==='moves'){
         var buys=h.filter(function(x){return (x.delta_shares||0)>0;}).sort(function(a,b){return b.delta_shares-a.delta_shares;});
         var sells=h.filter(function(x){return (x.delta_shares||0)<0;}).sort(function(a,b){return a.delta_shares-b.delta_shares;});
@@ -5399,7 +5434,18 @@
               +'</div>'
               +'<div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">近12月殖利率＝近12個月每單位累計配息 ÷ 目前收盤價'+(p.close!=null?('（'+m2(p.close)+'）'):'')+'，為歷史現金殖利率；「連續 X 年」＝連續有配息的年度數。單次配息不等於年化殖利率。</div>';
           }
-          body.innerHTML=sum+'<div style="overflow-x:auto"><table class="etx-tbl"><thead><tr><th class="l">除息日</th><th class="l">發放日</th><th>每單位配息</th></tr></thead><tbody>'+a.map(function(d){return '<tr><td class="l">'+esc(d.ex_date||'—')+'</td><td class="l">'+esc(d.pay_date||'—')+'</td><td>'+m2(d.cash_per_unit)+'</td></tr>';}).join('')+'</tbody></table></div>';
+          // 配息柱狀圖：單次 / 年度累計 切換
+          var asc=a.filter(function(d){return d.cash_per_unit!=null&&+d.cash_per_unit>0&&d.ex_date;}).slice().sort(function(x,y){return x.ex_date<y.ex_date?-1:1;});
+          var single=asc.map(function(d){return {label:String(d.ex_date).slice(2),val:+d.cash_per_unit};});
+          var yrMap={}; asc.forEach(function(d){var y=d.year||String(d.ex_date).slice(0,4);yrMap[y]=(yrMap[y]||0)+(+d.cash_per_unit);});
+          var yearly=Object.keys(yrMap).sort().map(function(y){return {label:y,val:yrMap[y]};});
+          function _divBars(data){ if(!data.length)return '<div class="fc-empty">無資料</div>'; var mx=Math.max.apply(null,data.map(function(d){return d.val;}).concat([0.0001]));
+            return '<div style="display:flex;align-items:flex-end;gap:4px;height:130px;overflow-x:auto;padding:4px 2px 0">'+data.map(function(d){var hh=Math.max(3,d.val/mx*100);return '<div title="'+d.label+'：'+d.val.toFixed(2)+' 元" style="flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%"><b style="font-size:9px;color:var(--text-muted)">'+d.val.toFixed(2)+'</b><div style="width:14px;height:'+hh+'px;background:var(--accent);border-radius:2px 2px 0 0;opacity:.8"></div><small style="font-size:9px;color:var(--text-muted);margin-top:3px;white-space:nowrap">'+d.label+'</small></div>';}).join('')+'</div>';
+          }
+          var chartBox='<div style="margin-bottom:10px"><div class="etx-seg" style="display:inline-flex;gap:4px;margin-bottom:6px"><button type="button" class="on" data-dm="single" style="font-size:12px;padding:2px 10px;border:1px solid var(--border);border-radius:6px;cursor:pointer;background:var(--accent);color:var(--on-accent)">單次配息</button><button type="button" data-dm="yearly" style="font-size:12px;padding:2px 10px;border:1px solid var(--border);border-radius:6px;cursor:pointer;background:transparent;color:var(--text-muted)">年度累計</button></div><div id="etxDivChart">'+_divBars(single)+'</div></div>';
+          body.innerHTML=sum+chartBox+'<div style="overflow-x:auto"><table class="etx-tbl"><thead><tr><th class="l">除息日</th><th class="l">發放日</th><th>每單位配息</th></tr></thead><tbody>'+a.map(function(d){return '<tr><td class="l">'+esc(d.ex_date||'—')+'</td><td class="l">'+esc(d.pay_date||'—')+'</td><td>'+m2(d.cash_per_unit)+'</td></tr>';}).join('')+'</tbody></table></div>';
+          var seg=body.querySelector('.etx-seg');
+          if(seg) seg.onclick=function(e){var btn=e.target.closest('button[data-dm]');if(!btn)return;[].forEach.call(seg.children,function(b){var on=b===btn;b.classList.toggle('on',on);b.style.background=on?'var(--accent)':'transparent';b.style.color=on?'var(--on-accent)':'var(--text-muted)';});el('etxDivChart').innerHTML=_divBars(btn.dataset.dm==='yearly'?yearly:single);};
         });
       } else if(drawerTab==='holders'){
         Q('etf_holders_dist?select=tier,holders,shares,pct&code=eq.'+drawerCode+'&limit=30').then(function(a){
