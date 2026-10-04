@@ -1002,9 +1002,12 @@
     /* 子面板分頁（技術指標 ↔ 籌碼）*/
     #subTabs { display: flex; gap: 8px; padding: 6px 8px 4px; border-top: 1px solid var(--border); }
     #chipPage { width: 100%; }
-    #chipInstPanel, #chipHolderPanel { position: relative; width: 100%; border-top: 1px solid var(--border); }
-    #chipContainer { width: 100%; height: 130px; }
-    #chipHolderContainer { width: 100%; height: 130px; }
+    .chip-sub { position: relative; width: 100%; border-top: 1px solid var(--border); }
+    .chip-c { width: 100%; height: 108px; }
+    .chip-h { font-size: 12px; font-family: monospace; font-weight: bold; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .chip-h .cl-u { color: var(--text-muted); font-weight: normal; }
+    .chip-h .chip-v { color: var(--text-muted); font-weight: normal; }
+    .chip-empty { padding: 18px 10px; color: var(--text-muted); font-size: 12px; text-align: center; }
     .chip-tab {
       cursor: pointer; font-size: 12px; font-weight: bold;
       padding: 2px 12px; border: 1px solid var(--border); border-radius: 4px;
@@ -2498,7 +2501,7 @@
     <div class="fc-note" id="hpNote"></div>
     </div><!-- /cb-sheet 每日台股籌碼報告 -->
     <div style="max-width:1200px;margin:14px auto 0;padding:10px 14px;font-size:11.5px;line-height:1.7;color:var(--text-muted);border-top:1px dashed var(--border);">
-      <b>改動紀錄（供合夥人複查）</b>：2026-09-30 全站版面採用合夥人 redesign 版；同日輕更新（ETF 甜甜圈互動、市場廣度分頁與篩選分離、選擇權支撐壓力 OI 峰值前端、結算日遇休市順延、多空排列配色、行動版表格）。掏金篩選器含「真名三式（多頭回洗反包）」（演算法與歷史回測見該勾選框）。2026-10-04 個股K圖量能面板新增「籌碼」分頁：三大法人每日淨買賣超堆疊柱（外資/投信/自營，紅買綠賣以0為基準，單位張，含合計線；滑鼠移至柱上顯示當日數值），對齊日K日期（僅日K、近120交易日）；資料源＝本站 institutional_trades（TWSE／TPEx T86 三大法人日報）每日推送至 Supabase inst_daily（scripts/inst_daily_push.py）。同日籌碼頁改為最上層分頁（點「籌碼」隱藏技術指標 VOL/MACD/RSI），並拆出「大戶 vs 散戶（週）」：資料源＝TDCC 集保股權分散表（每週五）＋當週收盤換算市值；大戶＝持股≥300張 或 市值≥3000萬、散戶＝持股<20張 或 市值<100萬（跨 TDCC 級距用均勻分布內插，為近似值），畫週增減（大戶紅綠柱／散戶藍線，單位張）；覆蓋熱門前500檔、每週更新（scripts/holder_flow_push.py → Supabase holder_flow）。籌碼頁再拆為「三大法人(日)」與「大戶散戶(週)」兩個獨立分頁。資料與演算法沿用本站真實資料源（TWSE／TPEx／TAIFEX／TDCC／Supabase），未更動後端。
+      <b>改動紀錄（供合夥人複查）</b>：2026-09-30 全站版面採用合夥人 redesign 版；同日輕更新（ETF 甜甜圈互動、市場廣度分頁與篩選分離、選擇權支撐壓力 OI 峰值前端、結算日遇休市順延、多空排列配色、行動版表格）。掏金篩選器含「真名三式（多頭回洗反包）」（演算法與歷史回測見該勾選框）。2026-10-04 個股K圖量能面板新增「籌碼」分頁：三大法人每日淨買賣超堆疊柱（外資/投信/自營，紅買綠賣以0為基準，單位張，含合計線；滑鼠移至柱上顯示當日數值），對齊日K日期（僅日K、近120交易日）；資料源＝本站 institutional_trades（TWSE／TPEx T86 三大法人日報）每日推送至 Supabase inst_daily（scripts/inst_daily_push.py）。同日籌碼頁改為最上層分頁（點「籌碼」隱藏技術指標 VOL/MACD/RSI），並拆出「大戶 vs 散戶（週）」：資料源＝TDCC 集保股權分散表（每週五）＋當週收盤換算市值；大戶＝持股≥300張 或 市值≥3000萬、散戶＝持股<20張 或 市值<100萬（跨 TDCC 級距用均勻分布內插，為近似值），畫週增減（大戶紅綠柱／散戶藍線，單位張）；覆蓋熱門前500檔、每週更新（scripts/holder_flow_push.py → Supabase holder_flow）。籌碼頁最終版：單一「籌碼」分頁內拆成外資(日)／投信(日)／自營(日)／大戶(週)／散戶(週) 五張獨立柱狀圖（紅買綠賣）。另：K圖新增標記分類顯示開關（法說會／除權息，比照均線顯示隱藏，動態偵測）；修正指數與外國大盤相關新聞殘留前一檔個股的 bug（指數改載市場新聞 macro_news）；外資空單避險歷史圖右上新增「事件避險／連假避險」標記開關；§4 融資動能背離加入「今日／3 日」週期；富台指期（SGX FTSE Taiwan）新增最後交易日倒數（每月倒數第二個營業日，依證交所休市表）。資料與演算法沿用本站真實資料源（TWSE／TPEx／TAIFEX／TDCC／Supabase），未更動後端。
     </div>
   </div>
 
@@ -3695,6 +3698,8 @@
               <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding-top:4px;">
                 <div class="pf-leg"><span><i style="background:#f43f5e"></i>避險比率 (%)</span><span><i style="background:#0ea5e9"></i>加權指數</span></div>
                 <button class="pf-btn" id="fhBandBtn"><span id="fhBandDot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#f59e0b;margin-right:6px"></span>P80／P95 歷史警戒帶</button>
+                <button class="pf-btn" id="fhEvBtn"><span id="fhEvDot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#f59e0b;margin-right:6px"></span>事件避險</button>
+                <button class="pf-btn" id="fhHolBtn"><span id="fhHolDot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#f59e0b;margin-right:6px"></span>連假避險</button>
                 <button class="pf-btn" id="fhResetBtn" title="重設圖表">重設</button>
               </div>
             </div>
@@ -3819,7 +3824,7 @@
       var tbl=tbody.closest('table'), host=tbl.parentNode.classList.contains('mc-blk')||tbl.parentNode.id?tbl:tbl.parentNode;
       host.parentNode.insertBefore(b, host.nextSibling);
     }
-    var DATA=[], loaded=false, mode='excl', chart=null, fxChart=null, bandLines=[], showBand=true, FX={}, SBx='', Hx=null;
+    var DATA=[], loaded=false, mode='excl', chart=null, fxChart=null, bandLines=[], showBand=true, showEv=true, showHol=true, FX={}, SBx='', Hx=null;
     function ratioOf(r){ return mode==='excl'? r.ratio_excl : r.ratio_incl; }
     function vOf(r){ return mode==='excl'? r.v_excl_etf : r.v_incl_etf; }
     function pct(a,p){ a=a.slice().sort(function(x,y){return x-y;}); var i=(a.length-1)*p/100,lo=Math.floor(i); return lo+1>=a.length?a[lo]:a[lo]+(a[lo+1]-a[lo])*(i-lo); }
@@ -3914,7 +3919,7 @@
         crosshairMarkerBorderColor:'#f43f5e',crosshairMarkerBackgroundColor:pfColors().dark?'#0b1120':'#ffffff',crosshairMarkerRadius:5,
         priceFormat:{type:'custom',minMove:0.001,formatter:function(v){return v.toFixed(2)+'%';}}});
       rs.setData(DATA.filter(function(r){return ratioOf(r)!=null;}).map(function(r){return {time:r.trade_date,value:ratioOf(r)};}));
-      try{ rs.setMarkers(Object.keys(FLAGS).sort().map(function(t){ var f=FLAGS[t]; return {time:t,position:'aboveBar',color:'#f59e0b',shape:'arrowDown',text:f.ev.length?'事件避險':'連假避險'}; })); }catch(e){}
+      try{ rs.setMarkers(Object.keys(FLAGS).sort().map(function(t){ var f=FLAGS[t], isEv=f.ev.length>0; if(isEv&&!showEv)return null; if(!isEv&&!showHol)return null; return {time:t,position:'aboveBar',color:'#f59e0b',shape:'arrowDown',text:isEv?'事件避險':'連假避險'}; }).filter(Boolean)); }catch(e){}
       var is=chart.addLineSeries({color:'#0284c7',lineWidth:2,lineStyle:LightweightCharts.LineStyle.Dashed,priceScaleId:'right',title:'加權',
         crosshairMarkerBorderColor:'#0284c7',crosshairMarkerBackgroundColor:pfColors().dark?'#0b1120':'#ffffff',crosshairMarkerRadius:5,
         priceFormat:{type:'custom',minMove:1,formatter:function(v){return Math.round(v).toLocaleString();}}});
@@ -4181,7 +4186,9 @@
       el('fhModeSeg').querySelectorAll('button').forEach(function(b){ b.onclick=function(){ el('fhModeSeg').querySelectorAll('button').forEach(function(x){x.classList.remove('on');}); b.classList.add('on'); mode=b.dataset.m; render(); }; });
       el('fhThemeBtn').onclick=function(){ if(typeof _toggleTheme==='function') _toggleTheme(); };
       el('fhBandBtn').onclick=function(){ showBand=!showBand; el('fhBandDot').style.background=showBand?'#f59e0b':'#94a3b8'; renderChart(); };
-      el('fhResetBtn').onclick=function(){ showBand=true; el('fhBandDot').style.background='#f59e0b'; renderChart(); };
+      el('fhEvBtn').onclick=function(){ showEv=!showEv; el('fhEvDot').style.background=showEv?'#f59e0b':'#94a3b8'; renderChart(); };
+      el('fhHolBtn').onclick=function(){ showHol=!showHol; el('fhHolDot').style.background=showHol?'#f59e0b':'#94a3b8'; renderChart(); };
+      el('fhResetBtn').onclick=function(){ showBand=true; showEv=true; showHol=true; el('fhBandDot').style.background='#f59e0b'; el('fhEvDot').style.background='#f59e0b'; el('fhHolDot').style.background='#f59e0b'; renderChart(); };
       Promise.all([
         fetch(SB+'/rest/v1/foreign_hedge_daily?select=*&order=trade_date.desc&limit=1000',{headers:H}).then(function(r){return r.json();}),   /* 取最新 1000 筆再轉回舊→新（單次上限 1000）*/
         fetch('https://tw-stock-screener-neon.vercel.app/api/chart?code=TWD%3DX&range=1y&interval=1d').then(function(r){return r.json();}).catch(function(){return null;})
@@ -6554,7 +6561,7 @@
         var mmMap={}; mm.forEach(function(r){ mmMap[r.date]=r.fin_bal_k; });
         // 兩表共同交易日（新→舊）→ 大盤與融資同一組日期、同窗口
         var common=mm.map(function(r){return r.date;}).filter(function(d){return txMap[d]!=null;});
-        var PERIODS=[5,10,20,60],data={};
+        var PERIODS=[1,3,5,10,20,60],data={};
         PERIODS.forEach(function(d){
           var ok=common.length>d, endD=common[0], startD=ok?common[d]:null;
           data[d]={days:d,
@@ -6575,7 +6582,7 @@
         function render(){
           var s=data[sel],ready=(s.marketPct!=null&&s.marginPct!=null);
           var st=ready?statusFor(s.marketPct,s.marginPct):{l:'歷史資料累積中',d:'等待共同交易日',t:'n'};
-          var tabs=PERIODS.map(function(d){return '<button class="gs-pd'+(d===sel?' on':'')+'" data-d="'+d+'">'+d+'日</button>';}).join('');
+          var tabs=PERIODS.map(function(d){return '<button class="gs-pd'+(d===sel?' on':'')+'" data-d="'+d+'">'+(d===1?'今日':d+'日')+'</button>';}).join('');
           var body;
           if(ready){var range=Math.max(1,Math.abs(s.marketPct),Math.abs(s.marginPct))*1.12,div=s.marginPct-s.marketPct;
             body='<div class="gs-mmt">'+line('大盤動能',s.marketPct,range)+line('融資動能',s.marginPct,range)
@@ -6676,10 +6683,22 @@
         var fc=mi.futai_close,fp=mi.futai_prev,fchg=(fc!=null&&fp!=null)?(fc-fp):null,fpct=(fchg!=null&&fp)?(fchg/fp*100):null;
         var fcol=(fchg!=null&&fchg>=0)?'hp-up':'hp-dn',conv=(fc!=null)?fc*FTSE_TX_FACTOR:null;
         var fb=fpct==null?['n','海外盤—']:(fpct>=.5?['g','海外盤偏多']:(fpct<=-.5?['d','海外盤偏空']:['n','海外盤震盪']));
+        // 富台指（SGX FTSE Taiwan）最後交易日＝每月「倒數第二個營業日」；休市依證交所休市表
+        function _futaiTrades(y,m){ var arr=[], d=new Date(Date.UTC(y,m+1,0)); while(d.getUTCMonth()===m){ var iso=d.toISOString().slice(0,10); if(window._twIsTrading(iso)) arr.push(iso); d=new Date(d.getTime()-864e5); } return arr; }  // 由月底往前，arr[0]=最後營業日、arr[1]=倒數第二
+        function _futaiSettleHtml(){
+          var d0=new Date(Date.now()+8*3600e3), todayIso=new Date(Date.UTC(d0.getUTCFullYear(),d0.getUTCMonth(),d0.getUTCDate())).toISOString().slice(0,10);
+          var y=d0.getUTCFullYear(), m=d0.getUTCMonth(), a=_futaiTrades(y,m), s=a[1];
+          if(!s || s<todayIso){ var nm=new Date(Date.UTC(y,m+1,1)); a=_futaiTrades(nm.getUTCFullYear(),nm.getUTCMonth()); s=a[1]; }
+          if(!s) return '';
+          var days=Math.round((Date.parse(s+'T00:00:00Z')-Date.parse(todayIso+'T00:00:00Z'))/864e5);
+          var dt=new Date(s+'T00:00:00Z'), md=(dt.getUTCMonth()+1)+'/'+dt.getUTCDate()+'（'+'日一二三四五六'[dt.getUTCDay()]+'）';
+          return '<div class="cb-conv" id="cbFutaiSettle">🏁 最後交易日 <strong>'+md+'</strong>　'+(days===0?'<b class="hp-dn">今日最後交易</b>':'距結算 <b>'+days+'</b> 天')+'<br><small style="color:var(--text-muted)">每月倒數第二個營業日 · 已依證交所休市表</small></div>';
+        }
         var ftseCard='<div class="cb-ovc"><header><span>富台指期<small>SGX FTSE TAIWAN</small></span><span class="cb-tag '+fb[0]+'">'+fb[1]+'</span></header>'
           +(fc!=null?'<div class="big '+fcol+'">'+Number(fc).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+'</div>'
             +'<div class="sub"><span class="'+fcol+'">'+(fchg>0?'+':'')+fchg.toFixed(2)+' 點 · '+(fpct>0?'+':'')+fpct.toFixed(2)+'%</span></div>'
-            +'<div class="cb-conv">↓ 換算參考　<strong>台指期約 '+Math.round(conv).toLocaleString()+' 點</strong></div>':'<div class="big">資料更新中</div>')+'</div>';
+            +'<div class="cb-conv">↓ 換算參考　<strong>台指期約 '+Math.round(conv).toLocaleString()+' 點</strong></div>'
+            +_futaiSettleHtml():'<div class="big">資料更新中</div>')+'</div>';
         // 期貨結算日（月合約＝每月第三個週三；週選＝每週三、週五；遇休市順延至次一交易日，休市表＝證交所）2026-09-28
         function settleCardHtml(){
           var toIso=function(t){return new Date(t).toISOString().slice(0,10);}, fromIso=function(s){return Date.parse(s+'T00:00:00Z');};
@@ -6699,7 +6718,7 @@
               +'週選結算：週三 '+(wW[0]?mv(wW[0],wW[1]):'—')+'、週五 '+(wF[0]?mv(wF[0],wF[1]):'—')+'<br>已依證交所休市日期表順延</div>':'<div class="big">—</div>');
         }
         var settleCard='<div class="cb-ovc" id="cbSettle">'+settleCardHtml()+'</div>';
-        window._loadTwHol().then(function(){ var c=el('cbSettle'); if(c) c.innerHTML=settleCardHtml(); });
+        window._loadTwHol().then(function(){ var c=el('cbSettle'); if(c) c.innerHTML=settleCardHtml(); var fc2=el('cbFutaiSettle'); if(fc2){ var nf=_futaiSettleHtml(); if(nf){ var tmp=document.createElement('div'); tmp.innerHTML=nf; fc2.innerHTML=tmp.firstChild.innerHTML; } } });
         ov.innerHTML=tsmcCard+'<div id="cbGov"></div>'+ftseCard+settleCard;
         // 官股 今日/5/20/60
         function govNet(pd){if(!gov.length)return null;
@@ -7717,13 +7736,13 @@
                 <span class="ma-toggle" onclick="toggleBBand(this)" style="color:#00BCD4">BBAND(20,2)</span>
                 <span class="ma-toggle" id="boxToggle" onclick="toggleBox(this)" style="color:var(--accent);opacity:0.65"> 箱型</span>
               </div>
+              <div class="label-row" id="markerToggles"></div>
             </div>
           </div>
-          <!-- 子面板分頁：技術指標(量/MACD/RSI) / 三大法人(日) / 大戶散戶(週) 各自獨立 -->
+          <!-- 子面板分頁：技術指標(量/MACD/RSI) ↔ 籌碼(外資/投信/自營 日 + 大戶/散戶 週，各自獨立柱) -->
           <div id="subTabs">
             <span class="chip-tab on" id="subTabTech" onclick="_chipTab('tech')">技術指標</span>
-            <span class="chip-tab" id="subTabInst" onclick="_chipTab('inst')">三大法人</span>
-            <span class="chip-tab" id="subTabHolder" onclick="_chipTab('holder')">大戶散戶</span>
+            <span class="chip-tab" id="subTabChip" onclick="_chipTab('chip')">籌碼</span>
           </div>
           <div id="volPanel">
             <div class="sub-panel-header">
@@ -7757,32 +7776,29 @@
             </div>
             <div id="rsiContainer"></div>
           </div>
-          <!-- 籌碼：三大法人(日) 與 大戶/散戶(週) 各自獨立分頁 -->
-            <div id="chipInstPanel" style="display:none">
-              <div class="sub-panel-header">
-                <div id="chipLabel">
-                  <b style="color:var(--text)">三大法人(日)</b>
-                  <span><span class="cl-dot" style="background:#2563eb"></span>外資</span>
-                  <span><span class="cl-dot" style="background:#f59e0b"></span>投信</span>
-                  <span><span class="cl-dot" style="background:#9ca3af"></span>自營</span>
-                  <span style="color:var(--text-muted)">合計 ・淨買賣超(張)</span>
-                  <span id="chipVals" style="color:var(--text-muted);font-weight:normal"></span>
-                </div>
-              </div>
-              <div id="chipContainer"></div>
+          <!-- 籌碼頁：外資/投信/自營(日) + 大戶/散戶(週) 各自一張柱狀圖（紅買綠賣） -->
+          <div id="chipPage" style="display:none">
+            <div class="chip-sub">
+              <div class="sub-panel-header"><div class="chip-h"><b>外資(日)</b><span class="cl-u">淨買賣超(張)</span><span class="chip-v" id="vFgn"></span></div></div>
+              <div class="chip-c" id="cFgn"></div>
             </div>
-            <div id="chipHolderPanel" style="display:none">
-              <div class="sub-panel-header">
-                <div id="chipHolderLabel">
-                  <b style="color:var(--text)">大戶 vs 散戶(週)</b>
-                  <span><span class="cl-dot" style="background:#e03e2d"></span>大戶柱 ≥300張/3000萬</span>
-                  <span><span class="cl-dot" style="background:#1e6fd6"></span>散戶線 &lt;20張/100萬</span>
-                  <span style="color:var(--text-muted)">週增減(張,紅買綠賣)</span>
-                  <span id="chipHolderVals" style="color:var(--text-muted);font-weight:normal"></span>
-                </div>
-              </div>
-              <div id="chipHolderContainer"></div>
+            <div class="chip-sub">
+              <div class="sub-panel-header"><div class="chip-h"><b>投信(日)</b><span class="cl-u">淨買賣超(張)</span><span class="chip-v" id="vTrust"></span></div></div>
+              <div class="chip-c" id="cTrust"></div>
             </div>
+            <div class="chip-sub">
+              <div class="sub-panel-header"><div class="chip-h"><b>自營商(日)</b><span class="cl-u">淨買賣超(張)</span><span class="chip-v" id="vDealer"></span></div></div>
+              <div class="chip-c" id="cDealer"></div>
+            </div>
+            <div class="chip-sub">
+              <div class="sub-panel-header"><div class="chip-h"><b>大戶(週)</b><span class="cl-u">≥300張/3000萬 · 週增減(張)</span><span class="chip-v" id="vBig"></span></div></div>
+              <div class="chip-c" id="cBig"></div>
+            </div>
+            <div class="chip-sub">
+              <div class="sub-panel-header"><div class="chip-h"><b>散戶(週)</b><span class="cl-u">&lt;20張/100萬 · 週增減(張)</span><span class="chip-v" id="vRetail"></span></div></div>
+              <div class="chip-c" id="cRetail"></div>
+            </div>
+          </div>
         </div>
 
         </div><!-- /chart-content -->
@@ -7918,6 +7934,22 @@
                   +'<div class="d">'+(t.published_at||'')+'</div>'+(t.summary?'<div style="margin-top:4px;color:var(--text-muted)">'+esc(t.summary)+'</div>':'')+'</div>';
               }).join('') : '<div class="fc-empty">近 7 天無族群新聞</div>');
             }).catch(function(){ fill('cnpNsTheme','<div class="fc-empty">讀取失敗</div>'); });
+          };
+          // 指數（^開頭）的右側面板：避免沿用上一檔個股殘留；相關新聞改載總經/市場新聞(macro_news)
+          window._loadIndexPanels=function(sym,name){
+            var SB=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'', AK=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';
+            var H={apikey:AK,Authorization:'Bearer '+AK};
+            function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+            var fb=el('cnpFund'); if(fb) fb.innerHTML='<div class="fc-empty">指數無個股基本面資料</div>';
+            var sb=el('cnpSr');   if(sb) sb.innerHTML='<div class="fc-empty">指數無分價量支撐壓力資料</div>';
+            var nb=el('cnpNews'); if(!nb) return;
+            nb.innerHTML='<div class="cnp-nsec"><div class="cnp-nh"> 市場新聞<span>總經／國際財經 · 近期</span></div><div class="cnp-nb" id="cnpIdxNews"><div class="fc-empty">載入中…</div></div></div>';
+            window._cnpIdxCur=sym; var cur=sym;
+            fetch(SB+'/rest/v1/macro_news?select=title,link,published_at,source&order=published_at.desc&limit=20',{headers:H}).then(function(r){return r.json();}).then(function(a){
+              if(window._cnpIdxCur!==cur)return;
+              a=Array.isArray(a)?a:[]; var box=el('cnpIdxNews'); if(!box)return;
+              box.innerHTML=a.length? a.map(function(n){ return '<div class="cnp-news"><a href="'+esc(n.link)+'" target="_blank" rel="noopener noreferrer">'+esc(n.title)+' </a><div class="d">'+esc(n.published_at||'')+(n.source?' · '+esc(n.source):'')+'</div></div>'; }).join('') : '<div class="fc-empty">近期無市場新聞</div>';
+            }).catch(function(){ var box=el('cnpIdxNews'); if(box)box.innerHTML='<div class="fc-empty">讀取失敗</div>'; });
           };
           // 支撐壓力：stock_sr（分價量表，各 N 日）→ 右側表格＋K 線價位帶（_srDraw 於每次重繪 K 線時呼叫）
           var SR={code:null, rows:[], n:20, lines:[], src:'day'};
@@ -8598,8 +8630,26 @@
       return best || _ctSorted[0];
     }
 
+    // K 圖標記分類顯示開關（比照均線顯示/隱藏）；將來新增標記類別只要在 _MK_DEFS 加一行即可
+    window._mkShow = window._mkShow || { div: true, catalyst: true, broker: true, user: true };
+    const _MK_DEFS = [
+      ['catalyst', '法說會', '#f5c84b'],
+      ['div',      '除權息', '#f39c12'],
+      ['broker',   '主力進場', '#c678dd'],
+      ['user',     '標記',   '#ff1744'],
+    ];
+    function _toggleMarker(k) { window._mkShow[k] = !window._mkShow[k]; _refreshChartMarkers(); }
+    function _renderMarkerToggles(present) {
+      const host = document.getElementById('markerToggles'); if (!host) return;
+      const S = window._mkShow;
+      const chips = _MK_DEFS.filter(d => present[d[0]]).map(([k, label, color]) =>
+        `<span class="ma-toggle${S[k] ? '' : ' hidden'}" onclick="_toggleMarker('${k}')" style="color:${color}">◆${label}</span>`);
+      host.innerHTML = chips.length ? ('<span style="color:var(--text-muted);font-weight:bold">標記</span>' + chips.join('')) : '';
+    }
+
     function _refreshChartMarkers() {
       if (!candleSeriesRef) return;
+      const S = window._mkShow;
       const user = (_userMarkers[currentCode] || [])
         .map(m => { const t = _snapMarkerDate(m.date); return t ? {
           time: t,
@@ -8634,8 +8684,17 @@
         text: arr[0] + (arr.length > 1 ? `+${arr.length - 1}` : ''),
         size: 1,
       }));
-      const all = [..._lastDivMarkers, ...catalyst, ...broker, ...user, ...(_boxMarkers || [])].sort((a, b) => a.time < b.time ? -1 : 1);
+      const div = _lastDivMarkers || [];
+      const present = { div: div.length > 0, catalyst: catalyst.length > 0, broker: broker.length > 0, user: user.length > 0 };
+      const sel = [];
+      if (S.div) sel.push(...div);
+      if (S.catalyst) sel.push(...catalyst);
+      if (S.broker) sel.push(...broker);
+      if (S.user) sel.push(...user);
+      sel.push(...(_boxMarkers || []));   // 箱型標記另有自己的開關，不納入此分類
+      const all = sel.sort((a, b) => a.time < b.time ? -1 : 1);
       try { candleSeriesRef.setMarkers(all); } catch (_) {}
+      _renderMarkerToggles(present);
     }
 
     function _addChartMarker(code, date, label) {
@@ -10811,6 +10870,8 @@
       document.getElementById('chartModal').classList.add('open');
       if (!fibSetupDone) { setupFibOverlay(); fibSetupDone = true; }
       loadDailyChart();
+      // 指數：重載右側面板（避免沿用上一檔個股的新聞/基本面殘留）＋預設切到相關新聞
+      try { window._loadIndexPanels && window._loadIndexPanels(sym, name); window._cnpTab && window._cnpTab('news'); } catch (_) {}
     }
 
     function openMarketChart() {
@@ -10825,6 +10886,7 @@
       _setToolbarForCode('^TWII');
       document.getElementById('backBtn').style.display = prevCode ? 'inline-block' : 'none';
       loadDailyChart();
+      try { window._loadIndexPanels && window._loadIndexPanels('^TWII', '大盤 加權指數'); window._cnpTab && window._cnpTab('news'); } catch (_) {}
     }
 
     function goBackToStock() {
@@ -11076,21 +11138,18 @@
       if (volInstance)   { try { volInstance.remove();   } catch(_){} volInstance   = null; }
       if (macdInstance)  { try { macdInstance.remove();  } catch(_){} macdInstance  = null; }
       if (rsiInstance)   { try { rsiInstance.remove();   } catch(_){} rsiInstance   = null; }
-      if (chipInstance)  { try { chipInstance.remove();  } catch(_){} chipInstance  = null; }
-      if (chipHolderInstance) { try { chipHolderInstance.remove(); } catch(_){} chipHolderInstance = null; }
+      try { _destroyChipCharts(); } catch (_) {}
       candleSeriesRef = null;
       Object.keys(seriesMap).forEach(k => delete seriesMap[k]);
       // Reset all ma-toggle labels to visible
       document.querySelectorAll('.ma-toggle').forEach(el => el.classList.remove('hidden'));
-      // 子面板分頁歸零：預設回「技術指標」（顯示 VOL/MACD/RSI，隱藏籌碼兩頁）
-      window._chipInstBuiltFor = null; window._chipHolderBuiltFor = null;
+      // 子面板分頁歸零：預設回「技術指標」（顯示 VOL/MACD/RSI，隱藏籌碼頁）
+      window._chipBuiltFor = null;
       ['volPanel', 'macdPanel', 'rsiPanel'].forEach(id => { const e = document.getElementById(id); if (e) e.style.display = ''; });
-      ['chipInstPanel', 'chipHolderPanel'].forEach(id => { const e = document.getElementById(id); if (e) e.style.display = 'none'; });
-      const _cc = document.getElementById('chipContainer'); if (_cc) _cc.innerHTML = '';
-      const _hc = document.getElementById('chipHolderContainer'); if (_hc) _hc.innerHTML = '';
-      const _tt = document.getElementById('subTabTech');
-      ['subTabInst', 'subTabHolder'].forEach(id => { const e = document.getElementById(id); if (e) e.classList.remove('on'); });
-      if (_tt) _tt.classList.add('on');
+      const _cp = document.getElementById('chipPage'); if (_cp) _cp.style.display = 'none';
+      ['cFgn', 'cTrust', 'cDealer', 'cBig', 'cRetail'].forEach(id => { const e = document.getElementById(id); if (e) e.innerHTML = ''; });
+      const _tt = document.getElementById('subTabTech'), _tc = document.getElementById('subTabChip');
+      if (_tt) _tt.classList.add('on'); if (_tc) _tc.classList.remove('on');
     }
 
     function toggleAllMA() {
@@ -11209,7 +11268,7 @@
     let _trendRef = null;   // {price, avg, vol, prev, lastT}
     // 走勢模式隱藏 K 線專屬 UI（MA/BBAND 圖例、VOL/MACD/RSI 子面板）；candle 模式還原原本顯示狀態
     function _setKlineChromeVisible(show) {
-      ['maLabel', 'subTabs', 'volPanel', 'macdPanel', 'rsiPanel', 'chipInstPanel', 'chipHolderPanel'].forEach(function (id) {
+      ['maLabel', 'subTabs', 'volPanel', 'macdPanel', 'rsiPanel', 'chipPage'].forEach(function (id) {
         var e = document.getElementById(id); if (!e) return;
         if (show) {
           if (e.dataset._prevDisp !== undefined) { e.style.display = e.dataset._prevDisp; delete e.dataset._prevDisp; }
@@ -11411,8 +11470,9 @@
       document.getElementById('chartWrapper').style.display = 'block';
 
       window._chartMainCandles = candles;   // 籌碼子面板要對齊的日K序列
-      // 籌碼僅對日K有意義（inst_daily/TDCC 為日/週資料）→ 小時K 隱藏「三大法人/大戶散戶」分頁
-      ['subTabInst', 'subTabHolder'].forEach(id => { const e = document.getElementById(id); if (e) e.style.display = window._chartIsHourly ? 'none' : ''; });
+      // 籌碼僅對日K有意義（inst_daily/TDCC 為日/週資料）→ 小時K 隱藏「籌碼」分頁
+      const _tabChip = document.getElementById('subTabChip');
+      if (_tabChip) _tabChip.style.display = window._chartIsHourly ? 'none' : '';
 
       _updatePriceTag(candles);
       _renderMainChart(candles, events || []);
@@ -11493,8 +11553,7 @@
         if (volInstance)   volInstance.applyOptions({ width: document.getElementById('volContainer').clientWidth });
         if (macdInstance)  macdInstance.applyOptions({ width: document.getElementById('macdContainer').clientWidth });
         if (rsiInstance)   rsiInstance.applyOptions({ width: document.getElementById('rsiContainer').clientWidth });
-        if (chipInstance)  { const _ce = document.getElementById('chipContainer'); if (_ce && _ce.clientWidth) chipInstance.applyOptions({ width: _ce.clientWidth }); }
-        if (chipHolderInstance) { const _he = document.getElementById('chipHolderContainer'); if (_he && _he.clientWidth) chipHolderInstance.applyOptions({ width: _he.clientWidth }); }
+        try { Object.entries(_chipCharts).forEach(([k, ch]) => { if (!ch) return; const _e = document.getElementById(_CHIP_CID[k]); if (_e && _e.clientWidth) ch.applyOptions({ width: _e.clientWidth }); }); } catch (_) {}
         resizeFibCanvas();
         if (trendLines.length > 0 || (_boxEnabled && _boxRectShow && _boxRect)) redrawCanvas();
       }).observe(mainEl);
@@ -11552,7 +11611,7 @@
     function _rethemeChart(){
       const t = _chartTheme();
       const o = { layout:{ background:{ color:t.bg }, textColor:t.text }, grid:{ vertLines:{ color:t.grid }, horzLines:{ color:t.grid } }, rightPriceScale:{ borderColor:t.grid }, timeScale:{ borderColor:t.grid } };
-      [typeof chartInstance!=='undefined'?chartInstance:null, typeof volInstance!=='undefined'?volInstance:null, typeof macdInstance!=='undefined'?macdInstance:null, typeof rsiInstance!=='undefined'?rsiInstance:null, typeof chipInstance!=='undefined'?chipInstance:null, typeof chipHolderInstance!=='undefined'?chipHolderInstance:null].forEach(c=>{ if(c){ try{ c.applyOptions(o); }catch(_){}}});
+      [typeof chartInstance!=='undefined'?chartInstance:null, typeof volInstance!=='undefined'?volInstance:null, typeof macdInstance!=='undefined'?macdInstance:null, typeof rsiInstance!=='undefined'?rsiInstance:null].concat(Object.values((typeof _chipCharts!=='undefined'&&_chipCharts)||{})).forEach(c=>{ if(c){ try{ c.applyOptions(o); }catch(_){}}});
     }
 
     function _validCandles(candles) {
@@ -11990,33 +12049,31 @@
       v = Math.round(v);
       return (v > 0 ? '+' : '') + v.toLocaleString('en-US');
     }
-    function _realignChip(ci, cid) {
-      try {
-        ci.applyOptions({ width: document.getElementById(cid).clientWidth });
-        const r = chartInstance.timeScale().getVisibleLogicalRange();
-        if (r) ci.timeScale().setVisibleLogicalRange(r);
-      } catch (_) {}
+    // ── 籌碼頁：外資/投信/自營(日,inst_daily) + 大戶/散戶(週,holder_flow)，各自一張柱(紅買綠賣) ──
+    const _chipCharts = (window._chipCharts = window._chipCharts || {});
+    const _CHIP_CID = { fgn: 'cFgn', trust: 'cTrust', dealer: 'cDealer', big: 'cBig', retail: 'cRetail' };
+    function _destroyChipCharts() {
+      Object.values(_chipCharts).forEach(ch => { if (ch) try { ch.remove(); } catch (_) {} });
+      for (const k in _chipCharts) delete _chipCharts[k];
     }
-    // 三個獨立分頁：技術指標(VOL/MACD/RSI) / 三大法人(日) / 大戶散戶(週)，一次只顯示一組
     function _chipTab(which) {
-      if ((which === 'inst' || which === 'holder') && window._chartIsHourly) return;   // 籌碼僅日K
-      const tabs = { tech: 'subTabTech', inst: 'subTabInst', holder: 'subTabHolder' };
-      Object.entries(tabs).forEach(([k, id]) => { const e = document.getElementById(id); if (e) e.classList.toggle('on', k === which); });
-      const tech = (which === 'tech');
-      ['volPanel', 'macdPanel', 'rsiPanel'].forEach(id => { const e = document.getElementById(id); if (e) e.style.display = tech ? '' : 'none'; });
-      const ip = document.getElementById('chipInstPanel'), hp = document.getElementById('chipHolderPanel');
-      if (ip) ip.style.display = (which === 'inst') ? '' : 'none';
-      if (hp) hp.style.display = (which === 'holder') ? '' : 'none';
-      if (which === 'inst') {
-        if (window._chipInstBuiltFor !== currentCode || !chipInstance) {
-          window._chipInstBuiltFor = currentCode;
-          setTimeout(() => _renderCHIPChart(window._chartMainCandles || []), 0);
-        } else setTimeout(() => _realignChip(chipInstance, 'chipContainer'), 0);
-      } else if (which === 'holder') {
-        if (window._chipHolderBuiltFor !== currentCode || !chipHolderInstance) {
-          window._chipHolderBuiltFor = currentCode;
-          setTimeout(() => _renderHolderChart(window._chartMainCandles || []), 0);
-        } else setTimeout(() => _realignChip(chipHolderInstance, 'chipHolderContainer'), 0);
+      const chip = (which === 'chip');
+      if (chip && window._chartIsHourly) return;   // 籌碼僅日K
+      const _tt = document.getElementById('subTabTech'), _tc = document.getElementById('subTabChip');
+      if (_tt) _tt.classList.toggle('on', !chip);
+      if (_tc) _tc.classList.toggle('on', chip);
+      ['volPanel', 'macdPanel', 'rsiPanel'].forEach(id => { const e = document.getElementById(id); if (e) e.style.display = chip ? 'none' : ''; });
+      const page = document.getElementById('chipPage'); if (page) page.style.display = chip ? '' : 'none';
+      if (chip) {
+        if (window._chipBuiltFor !== currentCode || !_chipCharts.fgn) {
+          window._chipBuiltFor = currentCode;
+          setTimeout(() => _renderChipAll(window._chartMainCandles || []), 0);
+        } else {
+          setTimeout(() => {
+            const r = chartInstance.timeScale().getVisibleLogicalRange();
+            Object.entries(_chipCharts).forEach(([k, ch]) => { if (!ch) return; try { ch.applyOptions({ width: document.getElementById(_CHIP_CID[k]).clientWidth }); if (r) ch.timeScale().setVisibleLogicalRange(r); } catch (_) {} });
+          }, 0);
+        }
       } else {
         setTimeout(() => {
           try { if (volInstance)  volInstance.applyOptions({ width: document.getElementById('volContainer').clientWidth }); } catch (_) {}
@@ -12025,7 +12082,65 @@
         }, 0);
       }
     }
-    async function _renderCHIPChart(candles) {
+    // 單一柱狀子圖（紅買綠賣，純跟隨主圖時間軸）
+    function _buildBarPanel(cid, vid, times, dataMap, pick) {
+      const el = document.getElementById(cid); if (!el) return null;
+      el.innerHTML = '';
+      const opts = _chartOpts(el.clientHeight || 108, false);
+      opts.width = el.clientWidth || document.getElementById('chartContainer').clientWidth || 600;
+      if (!opts.width) return null;
+      opts.handleScroll = false; opts.handleScale = false;
+      opts.rightPriceScale.scaleMargins = { top: 0.16, bottom: 0.16 };
+      const ch = LightweightCharts.createChart(el, opts);
+      const anchor = ch.addLineSeries({ color: 'rgba(0,0,0,0)', priceScaleId: '', lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false });
+      anchor.setData(times.map(t => ({ time: t, value: 0 })));
+      const auto = () => {
+        const r = ch.timeScale().getVisibleLogicalRange();
+        let from = r ? Math.max(0, Math.floor(r.from)) : 0, to = r ? Math.min(times.length - 1, Math.ceil(r.to)) : times.length - 1;
+        let mx = 0, mn = 0;
+        for (let i = from; i <= to; i++) { const v = pick(dataMap[times[i]]); if (v == null) continue; mx = Math.max(mx, v); mn = Math.min(mn, v); }
+        if (mx === 0 && mn === 0) mx = 1;
+        const pad = (mx - mn) * 0.1 || 1;
+        return { priceRange: { minValue: mn - pad, maxValue: mx + pad } };
+      };
+      const s = ch.addHistogramSeries({ priceScaleId: 'right', priceLineVisible: false, lastValueVisible: false, autoscaleInfoProvider: auto });
+      s.setData(times.map(t => { const v = pick(dataMap[t]); return v != null ? { time: t, value: v, color: v >= 0 ? 'rgba(224,62,45,0.8)' : 'rgba(10,154,86,0.8)' } : null; }).filter(Boolean));
+      s.createPriceLine({ price: 0, color: 'rgba(200,209,217,0.3)', lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: false });
+      try { const w = chartInstance.priceScale('right').width(); if (w > 0) ch.priceScale('right').applyOptions({ minimumWidth: w }); } catch (_) {}
+      try { const r = chartInstance.timeScale().getVisibleLogicalRange(); if (r) ch.timeScale().setVisibleLogicalRange(r); } catch (_) {}
+      try { if (window._chartSyncGroup && window._chartSyncGroup.indexOf(ch) < 0) window._chartSyncGroup.push(ch); } catch (_) {}
+      const vEl = document.getElementById(vid);
+      ch.subscribeCrosshairMove(p => { if (!vEl) return; const v = (p && p.time) ? pick(dataMap[p.time]) : null; if (v == null) { vEl.textContent = ''; return; } vEl.innerHTML = '　' + String(p.time).replace(/-/g, '/') + '　' + _chipFmt(v) + ' 張'; });
+      return ch;
+    }
+    async function _renderChipAll(candles) {
+      candles = _validCandles(candles);
+      const code = currentCode;
+      const times = candles.map(c => c.time);
+      _destroyChipCharts();
+      const H = { apikey: SIG_SB_ANON, Authorization: `Bearer ${SIG_SB_ANON}` };
+      let inst = [], hold = [];
+      try { const r = await fetch(`${SIG_SB_URL}/rest/v1/inst_daily?select=trade_date,foreign_net,trust_net,dealer_net&code=eq.${encodeURIComponent(code)}&order=trade_date.asc&limit=400`, { headers: H }); if (r.ok) inst = await r.json(); } catch (_) {}
+      try { const r = await fetch(`${SIG_SB_URL}/rest/v1/holder_flow?select=week_date,big_net,retail_net&code=eq.${encodeURIComponent(code)}&order=week_date.asc&limit=160`, { headers: H }); if (r.ok) hold = await r.json(); } catch (_) {}
+      if (code !== currentCode) return;
+      if (!document.getElementById('subTabChip').classList.contains('on')) return;
+      const im = {}; inst.forEach(r => { im[r.trade_date] = { f: +r.foreign_net || 0, t: +r.trust_net || 0, d: +r.dealer_net || 0 }; });
+      const hm = {}; hold.forEach(r => { hm[r.week_date] = { big: r.big_net, ret: r.retail_net }; });
+      if (inst.length) {
+        _chipCharts.fgn    = _buildBarPanel('cFgn',    'vFgn',    times, im, m => m ? m.f : null);
+        _chipCharts.trust  = _buildBarPanel('cTrust',  'vTrust',  times, im, m => m ? m.t : null);
+        _chipCharts.dealer = _buildBarPanel('cDealer', 'vDealer', times, im, m => m ? m.d : null);
+      } else {
+        ['cFgn', 'cTrust', 'cDealer'].forEach(id => { const e = document.getElementById(id); if (e) e.innerHTML = '<div class="chip-empty">無三大法人資料（指數／ETF 不適用）</div>'; });
+      }
+      if (hold.length) {
+        _chipCharts.big    = _buildBarPanel('cBig',    'vBig',    times, hm, m => m ? m.big : null);
+        _chipCharts.retail = _buildBarPanel('cRetail', 'vRetail', times, hm, m => m ? m.ret : null);
+      } else {
+        ['cBig', 'cRetail'].forEach(id => { const e = document.getElementById(id); if (e) e.innerHTML = '<div class="chip-empty">無大戶／散戶資料（僅熱門前 500 檔・每週更新）</div>'; });
+      }
+    }
+    async function _renderCHIPChart_UNUSED(candles) {
       candles = _validCandles(candles);
       const el = document.getElementById('chipContainer');
       if (!el) return;
