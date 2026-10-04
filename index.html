@@ -12071,7 +12071,7 @@
         } else {
           setTimeout(() => {
             const r = chartInstance.timeScale().getVisibleLogicalRange();
-            Object.entries(_chipCharts).forEach(([k, ch]) => { if (!ch) return; try { ch.applyOptions({ width: document.getElementById(_CHIP_CID[k]).clientWidth }); if (r) ch.timeScale().setVisibleLogicalRange(r); } catch (_) {} });
+            Object.entries(_chipCharts).forEach(([k, ch]) => { if (!ch) return; try { ch.applyOptions({ width: document.getElementById(_CHIP_CID[k]).clientWidth }); if (k === 'big' || k === 'retail') ch.timeScale().fitContent(); else if (r) ch.timeScale().setVisibleLogicalRange(r); } catch (_) {} });
           }, 0);
         }
       } else {
@@ -12082,8 +12082,9 @@
         }, 0);
       }
     }
-    // 單一柱狀子圖（紅買綠賣，純跟隨主圖時間軸）
-    function _buildBarPanel(cid, vid, times, dataMap, pick) {
+    // 單一柱狀子圖（紅買綠賣）。weekly=false：對齊主圖日K時間軸並併入縮放同步；
+    // weekly=true：改用資料自身的週日期軸，柱子連續填滿(fitContent)、較寬、不留日間空隙，不跟主圖同步。
+    function _buildBarPanel(cid, vid, times, dataMap, pick, weekly) {
       const el = document.getElementById(cid); if (!el) return null;
       el.innerHTML = '';
       const opts = _chartOpts(el.clientHeight || 108, false);
@@ -12091,9 +12092,12 @@
       if (!opts.width) return null;
       opts.handleScroll = false; opts.handleScale = false;
       opts.rightPriceScale.scaleMargins = { top: 0.16, bottom: 0.16 };
+      if (weekly) opts.timeScale.rightOffset = 0;
       const ch = LightweightCharts.createChart(el, opts);
-      const anchor = ch.addLineSeries({ color: 'rgba(0,0,0,0)', priceScaleId: '', lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false });
-      anchor.setData(times.map(t => ({ time: t, value: 0 })));
+      if (!weekly) {
+        const anchor = ch.addLineSeries({ color: 'rgba(0,0,0,0)', priceScaleId: '', lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false });
+        anchor.setData(times.map(t => ({ time: t, value: 0 })));
+      }
       const auto = () => {
         const r = ch.timeScale().getVisibleLogicalRange();
         let from = r ? Math.max(0, Math.floor(r.from)) : 0, to = r ? Math.min(times.length - 1, Math.ceil(r.to)) : times.length - 1;
@@ -12107,8 +12111,12 @@
       s.setData(times.map(t => { const v = pick(dataMap[t]); return v != null ? { time: t, value: v, color: v >= 0 ? 'rgba(224,62,45,0.8)' : 'rgba(10,154,86,0.8)' } : null; }).filter(Boolean));
       s.createPriceLine({ price: 0, color: 'rgba(200,209,217,0.3)', lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: false });
       try { const w = chartInstance.priceScale('right').width(); if (w > 0) ch.priceScale('right').applyOptions({ minimumWidth: w }); } catch (_) {}
-      try { const r = chartInstance.timeScale().getVisibleLogicalRange(); if (r) ch.timeScale().setVisibleLogicalRange(r); } catch (_) {}
-      try { if (window._chartSyncGroup && window._chartSyncGroup.indexOf(ch) < 0) window._chartSyncGroup.push(ch); } catch (_) {}
+      if (weekly) {
+        try { ch.timeScale().fitContent(); } catch (_) {}   // 週資料：填滿寬度，柱子連續
+      } else {
+        try { const r = chartInstance.timeScale().getVisibleLogicalRange(); if (r) ch.timeScale().setVisibleLogicalRange(r); } catch (_) {}
+        try { if (window._chartSyncGroup && window._chartSyncGroup.indexOf(ch) < 0) window._chartSyncGroup.push(ch); } catch (_) {}
+      }
       const vEl = document.getElementById(vid);
       ch.subscribeCrosshairMove(p => { if (!vEl) return; const v = (p && p.time) ? pick(dataMap[p.time]) : null; if (v == null) { vEl.textContent = ''; return; } vEl.innerHTML = '　' + String(p.time).replace(/-/g, '/') + '　' + _chipFmt(v) + ' 張'; });
       return ch;
@@ -12134,8 +12142,9 @@
         ['cFgn', 'cTrust', 'cDealer'].forEach(id => { const e = document.getElementById(id); if (e) e.innerHTML = '<div class="chip-empty">無三大法人資料（指數／ETF 不適用）</div>'; });
       }
       if (hold.length) {
-        _chipCharts.big    = _buildBarPanel('cBig',    'vBig',    times, hm, m => m ? m.big : null);
-        _chipCharts.retail = _buildBarPanel('cRetail', 'vRetail', times, hm, m => m ? m.ret : null);
+        const wtimes = Object.keys(hm).sort();   // 週資料自身日期軸（連續、無日間空隙）
+        _chipCharts.big    = _buildBarPanel('cBig',    'vBig',    wtimes, hm, m => m ? m.big : null, true);
+        _chipCharts.retail = _buildBarPanel('cRetail', 'vRetail', wtimes, hm, m => m ? m.ret : null, true);
       } else {
         ['cBig', 'cRetail'].forEach(id => { const e = document.getElementById(id); if (e) e.innerHTML = '<div class="chip-empty">無大戶／散戶資料（僅熱門前 500 檔・每週更新）</div>'; });
       }
