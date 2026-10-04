@@ -5328,6 +5328,26 @@
       var legend=vis.map(function(it,i){return '<div class="r" onmouseover="_etxDonutHover('+i+')" onmouseout="_etxDonutHover(-1)"><i style="background:'+it.color+'"></i><span class="nm"><b>'+esc(it.nm)+'</b>'+(it.code?'<small>'+it.code+'</small>':'')+'</span><em><u style="width:'+Math.min(100,it.w*5)+'%;background:'+it.color+'"></u></em><span class="w">'+it.w.toFixed(2)+'%</span></div>';}).join('');
       return '<div class="etx-donut"><div class="etx-donut-fig"><svg viewBox="0 0 180 180"><circle class="trk" cx="90" cy="90" r="60"></circle>'+paths+'</svg><div class="etx-donut-c" id="etxDonutC"><strong>'+_donutTotal+'</strong><small>檔成分股</small></div></div><div class="etx-donut-list">'+legend+'</div></div>';
     }
+    // ── ETF 詳情 P0 helpers（級距中文化／發行投信推導／配息摘要）──
+    var _ETF_TIER=[null,'1張以下','1–5張','5–10張','10–15張','15–20張','20–30張','30–40張','40–50張','50–100張','100–200張','200–400張','400–600張','600–800張','800–1000張','1000張以上'];
+    function _tierLabel(t){ var n=parseInt(t,10); if(n>=1&&n<=15) return _ETF_TIER[n]; if(n===16) return '差異數調整'; if(n===17) return '合計'; return String(t); }
+    var _ETF_ISSUERS=[['中國信託','中國信託投信'],['中信','中國信託投信'],['華南永昌','華南永昌投信'],['富蘭克林','富蘭克林華美投信'],['元大','元大投信'],['國泰','國泰投信'],['富邦','富邦投信'],['群益','群益投信'],['統一','統一投信'],['永豐','永豐投信'],['凱基','凱基投信'],['兆豐','兆豐投信'],['第一金','第一金投信'],['復華','復華投信'],['台新','台新投信'],['新光','新光投信'],['大華','大華銀投信'],['野村','野村投信'],['安聯','安聯投信'],['保德信','保德信投信'],['日盛','日盛投信'],['街口','街口投信'],['FT','富蘭克林華美投信'],['PGIM','保德信投信']];
+    function _etfIssuer(name){ name=String(name||''); for(var i=0;i<_ETF_ISSUERS.length;i++){ if(name.indexOf(_ETF_ISSUERS[i][0])>=0) return _ETF_ISSUERS[i][1]; } return '—'; }
+    function _divSummary(rows, close){
+      var valid=(rows||[]).filter(function(d){return d.cash_per_unit!=null&&+d.cash_per_unit>0&&d.ex_date;});
+      if(!valid.length) return null;
+      valid.sort(function(a,b){return a.ex_date<b.ex_date?1:-1;});   // 新→舊
+      var cut=new Date(Date.now()-365*864e5).toISOString().slice(0,10);
+      var last12=valid.filter(function(d){return d.ex_date>=cut;});
+      var sum12=last12.reduce(function(s,d){return s+(+d.cash_per_unit);},0);
+      var yield12=(close&&sum12>0)?(sum12/close*100):null;
+      var n12=last12.length;
+      var freq=n12>=11?'月配':(n12>=5?'季配':(n12>=3?'雙月配':(n12===2?'半年配':(n12===1?'年配':'—'))));
+      var years={}; valid.forEach(function(d){ var y=d.year||((d.ex_date||'').slice(0,4)); if(y) years[+y]=1; });
+      var ylist=Object.keys(years).map(Number).sort(function(a,b){return b-a;});
+      var consec=ylist.length?1:0; for(var i=1;i<ylist.length;i++){ if(ylist[i]===ylist[i-1]-1) consec++; else break; }
+      return {sum12:sum12, yield12:yield12, freq:freq, consecYears:consec, last:valid[0], count12:n12};
+    }
     function renderDrawer(){
       var p=pmap[drawerCode]||{}, h=(HOLD[drawerCode]||[]).slice();
       var tabs=[['moves','今日異動'],['holdings','成分股'],['profile','規模/基本'],['dividend','配息'],['holders','持有人結構']];
@@ -5342,17 +5362,67 @@
       } else if(drawerTab==='moves'){
         var buys=h.filter(function(x){return (x.delta_shares||0)>0;}).sort(function(a,b){return b.delta_shares-a.delta_shares;});
         var sells=h.filter(function(x){return (x.delta_shares||0)<0;}).sort(function(a,b){return a.delta_shares-b.delta_shares;});
-        body.innerHTML='<div class="etx-acts"><div class="etx-acol buy"><h5>加碼焦點</h5>'+(buys.length?buys.map(function(s){return '<div><span class="g">'+esc(s.stock_name||s.stock_code)+'</span><b class="hp-up">'+sg(s.delta_shares,' 張')+'</b></div>';}).join(''):'<div class="g">今日無加碼</div>')+'</div><div class="etx-acol sell"><h5>減碼焦點</h5>'+(sells.length?sells.map(function(s){return '<div><span class="g">'+esc(s.stock_name||s.stock_code)+'</span><b class="hp-dn">'+sg(s.delta_shares,' 張')+'</b></div>';}).join(''):'<div class="g">今日無減碼</div>')+'</div></div>';
+        var _isAct=!!p.active, _upT=_isAct?'加碼焦點':'權重調升', _dnT=_isAct?'減碼焦點':'權重調降';
+        var _note=_isAct
+          ? '主動 ETF：經理人持股調整（當日較前一日之持股張數增減）。'
+          : '被動 ETF：持股配置變動（PCF 每日申購買回清單變化，可能受申贖、指數換股與權重調整影響，非經理人主動買賣）。';
+        body.innerHTML='<div class="etx-acts"><div class="etx-acol buy"><h5>'+_upT+'</h5>'+(buys.length?buys.map(function(s){return '<div><span class="g">'+esc(s.stock_name||s.stock_code)+'</span><b class="hp-up">'+sg(s.delta_shares,' 張')+'</b></div>';}).join(''):'<div class="g">今日無'+(_isAct?'加碼':'調升')+'</div>')+'</div><div class="etx-acol sell"><h5>'+_dnT+'</h5>'+(sells.length?sells.map(function(s){return '<div><span class="g">'+esc(s.stock_name||s.stock_code)+'</span><b class="hp-dn">'+sg(s.delta_shares,' 張')+'</b></div>';}).join(''):'<div class="g">今日無'+(_isAct?'減碼':'調降')+'</div>')+'</div></div>'
+          +'<div style="font-size:11px;color:var(--text-muted);margin-top:8px">'+_note+'</div>';
       } else if(drawerTab==='profile'){
+        var _ou=(p.outstanding_units!=null?p.outstanding_units:p.issued_units);
         body.innerHTML='<table class="etx-tbl"><tbody>'+
-          [['資產規模(AUM)',p.aum!=null?m0(p.aum)+' 億':'—'],['淨值(NAV)',m2(p.nav)],['受益人數',m0(p.holders)],['流通在外單位',m0(p.outstanding_units||p.issued_units)],['追蹤指數',esc(p.index_name||'—')],['經理費',p.mgmt_fee!=null?p.mgmt_fee+'%':'—'],['發行商',esc(p.manager||'—')],['上市日',esc(p.listing_date||'—')]].map(function(r){return '<tr><td class="l" style="color:var(--text-muted)">'+r[0]+'</td><td>'+r[1]+'</td></tr>';}).join('')+'</tbody></table>';
+          [['ETF 類型', p.active?'主動型':'被動型'],
+           ['發行投信', esc(_etfIssuer(p.name))],
+           ['基金經理人', esc(p.manager||'—')],
+           ['追蹤指數', esc(p.index_name||'—')],
+           ['上市日', esc(p.listing_date||'—')],
+           ['資產規模(AUM)', p.aum!=null?m0(p.aum)+' 億':'—'],
+           ['淨值(NAV)', p.nav!=null?m2(p.nav):'—'],
+           ['流通在外單位', _ou!=null?m0(_ou):'—'],
+           ['受益人數', p.holders!=null?m0(p.holders):'—'],
+           ['經理費', p.mgmt_fee!=null?p.mgmt_fee+'%':'—']
+          ].map(function(r){return '<tr><td class="l" style="color:var(--text-muted)">'+r[0]+'</td><td>'+r[1]+'</td></tr>';}).join('')+'</tbody></table>'
+          +'<div style="font-size:11px;color:var(--text-muted);margin-top:6px">發行投信由基金名稱推定；基金經理人為 TWSE 公告之經理人。缺漏欄位顯示「—」。</div>';
       } else if(drawerTab==='dividend'){
-        Q('etf_distributions?select=ex_date,pay_date,cash_per_unit,year&code=eq.'+drawerCode+'&order=ex_date.desc&limit=20').then(function(a){
-          body.innerHTML=(Array.isArray(a)&&a.length)?'<div style="overflow-x:auto"><table class="etx-tbl"><thead><tr><th class="l">除息日</th><th class="l">發放日</th><th>每單位配息</th></tr></thead><tbody>'+a.map(function(d){return '<tr><td class="l">'+esc(d.ex_date||'—')+'</td><td class="l">'+esc(d.pay_date||'—')+'</td><td>'+m2(d.cash_per_unit)+'</td></tr>';}).join('')+'</tbody></table></div>':'<div class="fc-empty">無配息紀錄。</div>';
+        Q('etf_distributions?select=ex_date,pay_date,cash_per_unit,year&code=eq.'+drawerCode+'&order=ex_date.desc&limit=60').then(function(a){
+          a=Array.isArray(a)?a:[];
+          if(!a.length){ body.innerHTML='<div class="fc-empty">無配息紀錄。</div>'; return; }
+          var sm=_divSummary(a, p.close);
+          var sum='';
+          if(sm){
+            sum='<div class="etx-mets" style="margin-bottom:12px">'
+              +'<div><small>配息頻率</small><b>'+sm.freq+'</b></div>'
+              +'<div><small>近12月配息</small><b>'+m2(sm.sum12)+'</b></div>'
+              +'<div><small>近12月殖利率</small><b>'+(sm.yield12!=null?sm.yield12.toFixed(2)+'%':'—')+'</b></div>'
+              +'<div><small>連續配息</small><b>'+(sm.consecYears?sm.consecYears+' 年':'—')+'</b></div>'
+              +'<div><small>最近除息</small><b>'+esc((sm.last&&sm.last.ex_date)||'—')+'</b></div>'
+              +'</div>'
+              +'<div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">近12月殖利率＝近12個月每單位累計配息 ÷ 目前收盤價'+(p.close!=null?('（'+m2(p.close)+'）'):'')+'，為歷史現金殖利率；「連續 X 年」＝連續有配息的年度數。單次配息不等於年化殖利率。</div>';
+          }
+          body.innerHTML=sum+'<div style="overflow-x:auto"><table class="etx-tbl"><thead><tr><th class="l">除息日</th><th class="l">發放日</th><th>每單位配息</th></tr></thead><tbody>'+a.map(function(d){return '<tr><td class="l">'+esc(d.ex_date||'—')+'</td><td class="l">'+esc(d.pay_date||'—')+'</td><td>'+m2(d.cash_per_unit)+'</td></tr>';}).join('')+'</tbody></table></div>';
         });
       } else if(drawerTab==='holders'){
-        Q('etf_holders_dist?select=tier,holders,shares,pct&code=eq.'+drawerCode+'&order=tier.asc&limit=30').then(function(a){
-          body.innerHTML=(Array.isArray(a)&&a.length)?'<div style="overflow-x:auto"><table class="etx-tbl"><thead><tr><th class="l">持股級距</th><th>人數</th><th>股數</th><th>佔比</th></tr></thead><tbody>'+a.map(function(d){return '<tr><td class="l">'+esc(d.tier||'')+'</td><td>'+m0(d.holders)+'</td><td>'+m0(d.shares)+'</td><td>'+m2(d.pct)+'%</td></tr>';}).join('')+'</tbody></table></div>':'<div class="fc-empty">無持有人結構資料。</div>';
+        Q('etf_holders_dist?select=tier,holders,shares,pct&code=eq.'+drawerCode+'&limit=30').then(function(a){
+          a=Array.isArray(a)?a:[];
+          if(!a.length){ body.innerHTML='<div class="fc-empty">無持有人結構資料。</div>'; return; }
+          // 只取 1–15 級距、依數值排序（排除 16 差異調整 / 17 合計）
+          var rows=a.filter(function(d){var n=parseInt(d.tier,10);return n>=1&&n<=15;}).sort(function(x,y){return parseInt(x.tier,10)-parseInt(y.tier,10);});
+          // 小/中/大 分組：小額<20張(1–5)、中型20–400張(6–11)、大額≥400張(12–15)
+          function grp(lo,hi){var s=0;rows.forEach(function(d){var n=parseInt(d.tier,10);if(n>=lo&&n<=hi)s+=(+d.pct||0);});return s;}
+          var gSmall=grp(1,5), gMid=grp(6,11), gBig=grp(12,15);
+          var sumc='<div class="etx-mets" style="margin-bottom:12px">'
+            +'<div><small>小額(&lt;20張)</small><b>'+gSmall.toFixed(2)+'%</b></div>'
+            +'<div><small>中型(20–400張)</small><b>'+gMid.toFixed(2)+'%</b></div>'
+            +'<div><small>大額(≥400張)</small><b>'+gBig.toFixed(2)+'%</b></div>'
+            +'</div>';
+          var maxPct=Math.max.apply(null,rows.map(function(d){return +d.pct||0;}).concat([1]));
+          var tbl='<div style="overflow-x:auto"><table class="etx-tbl"><thead><tr><th class="l">持股級距</th><th>人數</th><th>股數(張)</th><th>佔比</th></tr></thead><tbody>'+rows.map(function(d){
+            var pc=+d.pct||0, w=Math.max(2,pc/maxPct*100);
+            return '<tr><td class="l">'+esc(_tierLabel(d.tier))+'</td><td>'+m0(d.holders)+'</td><td>'+m0((d.shares||0)/1000)+'</td>'
+              +'<td><div style="display:flex;align-items:center;gap:6px;justify-content:flex-end"><span style="display:inline-block;height:7px;width:'+w+'px;max-width:90px;background:var(--accent);border-radius:2px;opacity:.75"></span><b>'+m2(pc)+'%</b></div></td></tr>';
+          }).join('')+'</tbody></table></div>'
+          +'<div style="font-size:11px;color:var(--text-muted);margin-top:6px">資料源：集保 TDCC 股權分散表（單一期）。級距以持股張數劃分；股數已換算為張。</div>';
+          body.innerHTML=sumc+tbl;
         });
       }
     }
@@ -11623,12 +11693,34 @@
       );
     }
 
+    // 十字線跨面板同步：滑鼠在任一圖移動時，其餘面板畫出同一時間的垂直十字線（子面板已隱藏水平線）
+    let _xhairBusy = false;
+    function _wireXhair(ch) {
+      ch.subscribeCrosshairMove(param => {
+        if (_xhairBusy) return; _xhairBusy = true;
+        const group = window._chartSyncGroup || [];
+        try {
+          if (param && param.time) {
+            group.forEach(o => {
+              if (o === ch || !o._xhairSeries) return;
+              const px = (o === chartInstance) ? (window._chartCloseByTime && window._chartCloseByTime[param.time]) : 0;
+              if (o === chartInstance && px == null) return;
+              try { o.setCrosshairPosition(px != null ? px : 0, param.time, o._xhairSeries); } catch (_) {}
+            });
+          } else {
+            group.forEach(o => { if (o !== ch) { try { o.clearCrosshairPosition(); } catch (_) {} } });
+          }
+        } finally { requestAnimationFrame(() => { _xhairBusy = false; }); }
+      });
+    }
+    const _NO_HORZ = { crosshair: { horzLine: { visible: false } } };
+
     function _renderMainChart(candles, events) {
       candles = _validCandles(candles);
       if (chartInstance) { try { chartInstance.remove(); } catch(_) {} chartInstance = null; }
       const el = document.getElementById('chartContainer');
       el.innerHTML = '';
-      const opts = _chartOpts(el.clientHeight || 400, false);
+      const opts = _chartOpts(el.clientHeight || 400, true);   // 主圖顯示 X 軸日期（日期標在 K 棒正下方）
       opts.width = el.clientWidth || el.offsetWidth || 600;
       if (opts.width === 0) return; // 容器不可見，放棄渲染
       opts.rightPriceScale.scaleMargins = { top: 0.04, bottom: 0.02 };
@@ -11640,6 +11732,9 @@
         wickUpColor: '#e74c3c', wickDownColor: '#26c281',
       });
       candleSeriesRef.setData(candles);
+      chartInstance._xhairSeries = candleSeriesRef;
+      window._chartCloseByTime = {}; candles.forEach(c => { window._chartCloseByTime[c.time] = c.close; });
+      _wireXhair(chartInstance);
 
       // Ex-dividend / split markers＋使用者自訂日期標記（合併後一次 setMarkers）
       _lastCandleTimes = new Set(candles.map(c => c.time));
@@ -11959,6 +12054,7 @@
       vma10s.setData(candles.map((c, i) => vma10[i] !== null ? { time: c.time, value: vma10[i] } : null).filter(Boolean));
       seriesMap['volMa5']  = vma5s;
       seriesMap['volMa10'] = vma10s;
+      volInstance.applyOptions(_NO_HORZ); volInstance._xhairSeries = volSeries; _wireXhair(volInstance);
     }
 
     function _renderMACDChart(candles) {
@@ -12001,6 +12097,7 @@
       seriesMap['macdLine'] = macdSeries;
       seriesMap['macdSig']  = sigSeries;
       seriesMap['macdHist'] = histSeries;
+      macdInstance.applyOptions(_NO_HORZ); macdInstance._xhairSeries = macdAnchor; _wireXhair(macdInstance);
     }
 
     function _renderRSIChart(candles) {
@@ -12038,6 +12135,7 @@
           price: p, color: c, lineWidth: 1,
           lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: '',
         }));
+      rsiInstance.applyOptions(_NO_HORZ); rsiInstance._xhairSeries = rsiAnchor; _wireXhair(rsiInstance);
     }
 
     // ── 籌碼子面板（三大法人每日淨買賣超堆疊柱；資料 inst_daily，單位張，近120交易日）──
@@ -12071,7 +12169,7 @@
         } else {
           setTimeout(() => {
             const r = chartInstance.timeScale().getVisibleLogicalRange();
-            Object.entries(_chipCharts).forEach(([k, ch]) => { if (!ch) return; try { ch.applyOptions({ width: document.getElementById(_CHIP_CID[k]).clientWidth }); if (k === 'big' || k === 'retail') ch.timeScale().fitContent(); else if (r) ch.timeScale().setVisibleLogicalRange(r); } catch (_) {} });
+            Object.entries(_chipCharts).forEach(([k, ch]) => { if (!ch) return; try { ch.applyOptions({ width: document.getElementById(_CHIP_CID[k]).clientWidth }); if (r) ch.timeScale().setVisibleLogicalRange(r); } catch (_) {} });
           }, 0);
         }
       } else {
@@ -12117,6 +12215,7 @@
         try { const r = chartInstance.timeScale().getVisibleLogicalRange(); if (r) ch.timeScale().setVisibleLogicalRange(r); } catch (_) {}
         try { if (window._chartSyncGroup && window._chartSyncGroup.indexOf(ch) < 0) window._chartSyncGroup.push(ch); } catch (_) {}
       }
+      ch.applyOptions(_NO_HORZ); ch._xhairSeries = s; _wireXhair(ch);
       const vEl = document.getElementById(vid);
       ch.subscribeCrosshairMove(p => { if (!vEl) return; const v = (p && p.time) ? pick(dataMap[p.time]) : null; if (v == null) { vEl.textContent = ''; return; } vEl.innerHTML = '　' + String(p.time).replace(/-/g, '/') + '　' + _chipFmt(v) + ' 張'; });
       return ch;
@@ -12142,9 +12241,17 @@
         ['cFgn', 'cTrust', 'cDealer'].forEach(id => { const e = document.getElementById(id); if (e) e.innerHTML = '<div class="chip-empty">無三大法人資料（指數／ETF 不適用）</div>'; });
       }
       if (hold.length) {
-        const wtimes = Object.keys(hm).sort();   // 週資料自身日期軸（連續、無日間空隙）
-        _chipCharts.big    = _buildBarPanel('cBig',    'vBig',    wtimes, hm, m => m ? m.big : null, true);
-        _chipCharts.retail = _buildBarPanel('cRetail', 'vRetail', wtimes, hm, m => m ? m.ret : null, true);
+        // 週資料「前向填滿」到日K軸：每個交易日取其所屬週(集保結算週五)的週增減 →
+        // 一週 5 個交易日同值＝一根橫跨整週的寬柱，且與日K/三大法人同軸對齊(可被十字線貫穿)。
+        const _fri = d => { const dt = new Date(d + 'T00:00:00Z'), wd = dt.getUTCDay(), add = (wd >= 1 && wd <= 5) ? (5 - wd) : 0; return new Date(dt.getTime() + add * 864e5).toISOString().slice(0, 10); };
+        const dmapBig = {}, dmapRet = {};
+        times.forEach(t => {
+          const f = _fri(t); let w = hm[f];
+          for (let k = 1; k <= 3 && !w; k++) { w = hm[new Date(Date.parse(f) - k * 864e5).toISOString().slice(0, 10)] || hm[new Date(Date.parse(f) + k * 864e5).toISOString().slice(0, 10)]; }
+          if (w) { if (w.big != null) dmapBig[t] = { v: w.big }; if (w.ret != null) dmapRet[t] = { v: w.ret }; }
+        });
+        _chipCharts.big    = _buildBarPanel('cBig',    'vBig',    times, dmapBig, m => m ? m.v : null);
+        _chipCharts.retail = _buildBarPanel('cRetail', 'vRetail', times, dmapRet, m => m ? m.v : null);
       } else {
         ['cBig', 'cRetail'].forEach(id => { const e = document.getElementById(id); if (e) e.innerHTML = '<div class="chip-empty">無大戶／散戶資料（僅熱門前 500 檔・每週更新）</div>'; });
       }
