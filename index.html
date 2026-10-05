@@ -6601,7 +6601,7 @@
               +'<div><span>參考價</span><b>'+(o.ref_price?Math.round(o.ref_price).toLocaleString():'—')+'</b><small>'+(o.ref_kind||'')+'</small></div>'
               +'<div><span>價平（兩側排除）</span><b>'+(o.atm!=null?o.atm.toLocaleString():'—')+'</b><small>加權收盤 '+(o.spot?Math.round(o.spot).toLocaleString():'—')+' 最接近的履約價</small></div>'
               +'<div><span>合約</span><b>'+(o.contract||'—')+'</b>'+(o.expiry?'<small>到期 '+o.expiry.slice(5)+(m.expiry_sched?'（原 '+m.expiry_sched.slice(5)+' 遇休市順延）':'')+'</small>':'')+'</div>'
-              +'<div><span>Put/Call 比（未平倉）</span><b>'+(o.pc_ratio!=null?o.pc_ratio:'—')+'</b>'+(o.pc_ratio!=null?'<small>'+(o.pc_ratio>1?'偏多':(o.pc_ratio<1?'偏空':'中性'))+'</small>':'')+'</div>'
+              +'<div><span>Put/Call 比</span><b>'+(o.pc_ratio!=null?o.pc_ratio:'—')+'</b>'+(o.pc_ratio!=null?'<small>'+(o.pc_ratio>1?'偏多':(o.pc_ratio<1?'偏空':'中性'))+'</small>':'')+'</div>'
             +'</div>'
             +'<div class="osr-bar2"><span>'+(mode==='volume'?(kind==='week'?'週選 5 日':'月選 20 日')+'成交大量區：價平上下 10% 內依成交量排序並合併相近履約價':'OI 峰值：該合約今日未平倉的明顯峰值，依離參考價近→遠各取 5 層（潛在壓力／潛在支撐，非必然反轉價位）')+'</span></div>' /* 2026-09-30 隱藏「成交量」切換（option_nday 排程已移除、資料停更）；固定顯示未平倉 OI 峰值 */
             +'<div class="osr-head"><span class="r">潛在壓力　參考價以上 Call（'+(mode==='volume'?'量大→量小':'近→遠')+'）</span><span></span><span class="s">潛在支撐　參考價以下 Put（'+(mode==='volume'?'量大→量小':'近→遠')+'）</span></div>'
