@@ -6703,10 +6703,27 @@
         var fd=(mi.futai_close!=null&&mi.futai_prev)?((mi.futai_close/mi.futai_prev-1)*100):null;
         var vd=(mi.vix!=null&&mi.vix_prev)?(mi.vix-mi.vix_prev):null;
         function it(k,v,c,cc){return '<div class="gs-fr"><div class="k">'+k+'</div><div class="v">'+v+(c?'<span class="c '+cc+'">'+c+'</span>':'')+'</div></div>';}
-        box.innerHTML=it('富台指期',mi.futai_close!=null?Number(mi.futai_close).toLocaleString():'—',fd!=null?pctTxt(fd):'',fd>0?'hp-up':'hp-dn')
-          +it('台指VIX',mi.vix!=null?mi.vix.toFixed(2):'—',vd!=null?((vd>0?'+':'')+vd.toFixed(2)):'',vd>0?'hp-dn':'hp-up')
-          +it('美元/台幣',mi.usdtwd!=null?mi.usdtwd.toFixed(3):'—','','');
+        function render(){
+          var tx=_txSettle();
+          var txV, txC, txCc;
+          if(tx){ var dt=new Date(tx.t), md=(dt.getUTCMonth()+1)+'/'+dt.getUTCDate(); txV=(tx.days===0?'今日結算':tx.days+' 天'); txC=md+'（三）'; txCc=tx.days<=3?'hp-dn':''; }
+          else { txV='—'; txC=''; txCc=''; }
+          box.innerHTML=it('富台指期',mi.futai_close!=null?Number(mi.futai_close).toLocaleString():'—',fd!=null?pctTxt(fd):'',fd>0?'hp-up':'hp-dn')
+            +it('台指VIX',mi.vix!=null?mi.vix.toFixed(2):'—',vd!=null?((vd>0?'+':'')+vd.toFixed(2)):'',vd>0?'hp-dn':'hp-up')
+            +it('美元/台幣',mi.usdtwd!=null?mi.usdtwd.toFixed(3):'—','','')
+            +it('台指期結算',txV,txC,txCc);
+        }
+        render();
+        if(window._loadTwHol) window._loadTwHol().then(render);   // 休市表載入後重算順延
       });
+    }
+    // 台指期(TAIFEX TX)月結算日＝每月第三個週三，遇休市順延至次一交易日；回最近一次(含今日)及距今天數
+    function _txSettle(){
+      var toIso=function(t){return new Date(t).toISOString().slice(0,10);}, fromIso=function(s){return Date.parse(s+'T00:00:00Z');};
+      var d0=new Date(Date.now()+8*3600e3), today=Date.UTC(d0.getUTCFullYear(),d0.getUTCMonth(),d0.getUTCDate());
+      var adj=function(t){return fromIso(window._twAdj?window._twAdj(toIso(t)):toIso(t));};
+      for(var k=0;k<3;k++){ var y=d0.getUTCFullYear(),m=d0.getUTCMonth()+k,f=new Date(Date.UTC(y,m,1)).getUTCDay(),w=Date.UTC(y,m,1+((3-f+7)%7)+14),a=adj(w); if(a>=today) return {t:a, days:Math.round((a-today)/864e5)}; }
+      return null;
     }
 
     /* §2A 官股券商動向(八大公股合計 + 買超/賣超榜)*/
