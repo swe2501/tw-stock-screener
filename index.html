@@ -6312,6 +6312,7 @@
     <div class="pf-sel"><select id="pfAdd"><option value="">＋ 加入 ETF</option></select><span id="pfTags"></span></div>
     <div class="ep-seg" id="pfPeriod" style="margin-bottom:12px"><button data-p="1m">近1月</button><button data-p="3m">近3月</button><button data-p="6m">近半年</button><button data-p="1y" class="on">近1年</button><button data-p="3y">近3年</button></div>
     <div class="pf-chart"><div id="pfChart"></div></div>
+    <div id="pfWarn" style="font-size:12px;color:var(--yellow);margin:6px 0"></div>
     <table class="pf"><thead><tr><th class="l">ETF</th><th>近1月</th><th>近3月</th><th>近半年</th><th>近1年</th></tr></thead><tbody id="pfBody"><tr><td class="l" colspan="5">選 ETF 比較含息報酬</td></tr></tbody></table>
     <div class="fc-note" id="pfNote"></div>
   </div>
@@ -6337,6 +6338,7 @@
     function ret(data,months){
       if(!data||data.length<2)return null;
       var last=data[data.length-1].time,d=new Date(last);d.setMonth(d.getMonth()-months);var iso=d.toISOString().slice(0,10);
+      if(Date.parse(data[0].time)-Date.parse(iso) > 10*864e5) return 'short';   // 上市未滿此期間 → 不以全期數字誤導
       var base=null;for(var i=0;i<data.length;i++){if(data[i].time>=iso){base=data[i].close;break;}}
       if(!base)return null;return (data[data.length-1].close/base-1)*100;
     }
@@ -6359,13 +6361,17 @@
         s.setData(pts); series.push(s);
       });
       chart.timeScale().fitContent();
+      // 未滿本期間警示（以「自上市以來」計，與滿期 ETF 不可直接比較）
+      var mo={'1m':1,'3m':3,'6m':6,'1y':12,'3y':36}[period]||12;
+      var warn=sel.filter(function(c){var d=CACHE[c]||[];return d.length&&ret(d,mo)==='short';}).map(function(c){var d=CACHE[c];return c+'（上市 '+d[0].time+'）';});
+      var wEl=el('pfWarn'); if(wEl) wEl.innerHTML = warn.length? ('⚠ 下列 ETF 上市未滿本期間，線圖與末端數字為「自上市以來」報酬，不可與滿期 ETF 直接比較：'+warn.join('、')) : '';
     }
     function renderTags(){
       el('pfTags').innerHTML=sel.map(function(c,i){return '<span class="pf-tag" onclick="window._pfRemove(\''+c+'\')"><i style="background:'+COLORS[i%COLORS.length]+'"></i>'+c+' '+(PRODS.find(function(p){return p.code===c;})||{}).name+' ✕</span>';}).join('');
     }
     function renderTable(){
       el('pfBody').innerHTML=sel.map(function(c,i){var d=CACHE[c]||[];var nm=(PRODS.find(function(p){return p.code===c;})||{}).name||'';
-        function cell(m){var v=ret(d,m);return v==null?'<td>—</td>':'<td class="'+(v>0?'fc-up':(v<0?'fc-dn':''))+'">'+(v>0?'+':'')+v.toFixed(1)+'%</td>';}
+        function cell(m){var v=ret(d,m);if(v==='short')return '<td style="color:var(--text-muted)" title="上市未滿此期間">未滿</td>';return v==null?'<td>—</td>':'<td class="'+(v>0?'fc-up':(v<0?'fc-dn':''))+'">'+(v>0?'+':'')+v.toFixed(1)+'%</td>';}
         return '<tr><td class="l"><span class="dot" style="background:'+COLORS[i%COLORS.length]+'"></span><span style="color:var(--accent);font-weight:700">'+c+'</span> '+nm+'</td>'+cell(1)+cell(3)+cell(6)+cell(12)+'</tr>';
       }).join('');
     }
@@ -11918,8 +11924,19 @@
 
     // 十字線跨面板同步：滑鼠在任一圖移動時，其餘面板畫出同一時間的垂直十字線（子面板已隱藏水平線）
     let _xhairBusy = false;
+    // 籌碼頁跨面板 tooltip：十字線移到任一面板，5 張籌碼值(外資/投信/自營/大戶/散戶)同步更新
+    function _chipTipAll(time) {
+      const ups = window._chipTipUpdaters || [];
+      ups.forEach(u => {
+        const e = document.getElementById(u.vid); if (!e) return;
+        const v = (time && u.map) ? u.pick(u.map[time]) : null;
+        if (v == null) { e.textContent = ''; return; }
+        e.innerHTML = '　' + String(time).replace(/-/g, '/') + (u.week ? '（當週）' : '') + '　' + _chipFmt(v) + ' 張';
+      });
+    }
     function _wireXhair(ch) {
       ch.subscribeCrosshairMove(param => {
+        try { _chipTipAll(param && param.time ? param.time : null); } catch (_) {}
         if (_xhairBusy) return; _xhairBusy = true;
         const group = window._chartSyncGroup || [];
         try {
@@ -12496,10 +12513,14 @@
       if (!document.getElementById('subTabChip').classList.contains('on')) return;
       const im = {}; inst.forEach(r => { im[r.trade_date] = { f: +r.foreign_net || 0, t: +r.trust_net || 0, d: +r.dealer_net || 0 }; });
       const hm = {}; hold.forEach(r => { hm[r.week_date] = { big: r.big_net, ret: r.retail_net }; });
+      const _chipTipReg = []; window._chipTipUpdaters = _chipTipReg;   // 跨面板 tooltip：十字線移到任一面板都更新全部籌碼值
       if (inst.length) {
         _chipCharts.fgn    = _buildBarPanel('cFgn',    'vFgn',    times, im, m => m ? m.f : null);
         _chipCharts.trust  = _buildBarPanel('cTrust',  'vTrust',  times, im, m => m ? m.t : null);
         _chipCharts.dealer = _buildBarPanel('cDealer', 'vDealer', times, im, m => m ? m.d : null);
+        _chipTipReg.push({ vid: 'vFgn', map: im, pick: m => m ? m.f : null });
+        _chipTipReg.push({ vid: 'vTrust', map: im, pick: m => m ? m.t : null });
+        _chipTipReg.push({ vid: 'vDealer', map: im, pick: m => m ? m.d : null });
       } else {
         ['cFgn', 'cTrust', 'cDealer'].forEach(id => { const e = document.getElementById(id); if (e) e.innerHTML = '<div class="chip-empty">無三大法人資料（指數／ETF 不適用）</div>'; });
       }
@@ -12515,6 +12536,8 @@
         });
         _chipCharts.big    = _buildBandPanel('cBig',    'vBig',    times, dmapBig, m => m ? m.v : null);
         _chipCharts.retail = _buildBandPanel('cRetail', 'vRetail', times, dmapRet, m => m ? m.v : null);
+        _chipTipReg.push({ vid: 'vBig', map: dmapBig, pick: m => m ? m.v : null, week: true });
+        _chipTipReg.push({ vid: 'vRetail', map: dmapRet, pick: m => m ? m.v : null, week: true });
       } else {
         ['cBig', 'cRetail'].forEach(id => { const e = document.getElementById(id); if (e) e.innerHTML = '<div class="chip-empty">無大戶／散戶資料（僅熱門前 500 檔・每週更新）</div>'; });
       }
