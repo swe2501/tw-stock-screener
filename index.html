@@ -5341,6 +5341,9 @@
       });
       return out.sort(function(a,b){return b.overlap-a.overlap;}).slice(0,15);
     }
+    // ── 投資試算 純函式 ──
+    function _fvMonthly(P,annR,years){ var n=years*12, r=annR/100/12; if(!(P>0)||n<=0) return 0; if(Math.abs(r)<1e-9) return P*n; return P*((Math.pow(1+r,n)-1)/r); }
+    function _pmtForTarget(FV,annR,years){ var n=years*12, r=annR/100/12; if(!(FV>0)||n<=0) return 0; if(Math.abs(r)<1e-9) return FV/n; return FV*r/(Math.pow(1+r,n)-1); }
     function _etxPerfChart(adj, bench, code){
       var el2=document.getElementById('etxPerfChart'); if(!el2||typeof LightweightCharts==='undefined') return;
       var bmap={}; (bench||[]).forEach(function(d){ bmap[d.time]=d.close; });
@@ -5395,7 +5398,7 @@
     }
     function renderDrawer(){
       var p=pmap[drawerCode]||{}, h=(HOLD[drawerCode]||[]).slice();
-      var tabs=[['overview','總覽'],['moves','今日動作'],['holdings','成分股'],['perf','績效'],['similar','相似'],['dividend','配息'],['profile','規模/基本'],['holders','持有人']];
+      var tabs=[['overview','總覽'],['moves','今日動作'],['holdings','成分股'],['perf','績效'],['similar','相似'],['dividend','配息'],['calc','投資試算'],['profile','規模/基本'],['holders','持有人']];
       var head='<div class="etx-dh"><div><small style="font-size:10.5px;color:var(--text-muted);font-weight:800">'+(p.active?'ACTIVE ETF':'PASSIVE ETF')+' · 跟誰學研究卡</small><h2>'+drawerCode+' '+esc(p.name||'')+'</h2><div style="font-size:12px;color:var(--text-muted)">'+esc(p.category||'')+(p.manager?' · '+esc(p.manager):'')+'</div></div><button class="x" onclick="window._etxCloseDrawer()">✕</button></div>';
       var hero='<div class="etx-mets" style="margin-bottom:14px"><div><small>收盤</small><b>'+m2(p.close)+'</b></div><div><small>行情</small><b class="'+cls(p.change_pct)+'">'+(p.change_pct==null?'—':(p.change_pct>0?'+':'')+p.change_pct.toFixed(2)+'%')+'</b></div><div><small>規模</small><b>'+(p.aum!=null?m0(p.aum)+' 億':'—')+'</b></div><div><small>受益人數</small><b>'+m0(p.holders)+'</b></div></div>';
       var tb='<div class="etx-dtabs">'+tabs.map(function(t){return '<button class="'+(t[0]===drawerTab?'on':'')+'" onclick="window._etxTab(\''+t[0]+'\')">'+t[1]+'</button>';}).join('')+'</div>';
@@ -5475,6 +5478,7 @@
             return '<tr><td class="l">'+pr[0]+'</td><td class="'+cls(p2)+'">'+(p2==null?'—':(p2>0?'+':'')+p2.toFixed(2)+'%')+'</td><td class="'+cls(a2)+'">'+(a2==null?'—':(a2>0?'+':'')+a2.toFixed(2)+'%')+'</td><td>'+(ann==null?'—':(ann>0?'+':'')+ann.toFixed(2)+'%')+'</td></tr>';
           }).join('');
           var allP=_retAll(uP), allA=_retAll(uA), allAnn=(allA!=null&&uA.length>252)?_annualize(allA,uA.length):null;
+          window._etfHistReturn=window._etfHistReturn||{}; window._etfHistReturn[_pcode]=(allAnn!=null?allAnn:_retOver(uA,252));
           rows+='<tr><td class="l">成立以來*</td><td class="'+cls(allP)+'">'+(allP==null?'—':(allP>0?'+':'')+allP.toFixed(2)+'%')+'</td><td class="'+cls(allA)+'">'+(allA==null?'—':(allA>0?'+':'')+allA.toFixed(2)+'%')+'</td><td>'+(allAnn==null?'—':(allAnn>0?'+':'')+allAnn.toFixed(2)+'%')+'</td></tr>';
           var mdd=_maxDD(uA), vol=_annVol(uA);
           var risk='<div class="etx-mets" style="margin:12px 0"><div><small>最大回撤</small><b class="hp-dn">'+(mdd==null?'—':mdd.toFixed(2)+'%')+'</b></div><div><small>年化波動度</small><b>'+(vol==null?'—':vol.toFixed(2)+'%')+'</b></div><div><small>行情起點</small><b>'+((uA[0]&&uA[0].time)||'—')+'</b></div></div>';
@@ -5482,6 +5486,17 @@
             +'<div style="overflow-x:auto"><table class="etx-tbl"><thead><tr><th class="l">期間</th><th>價格報酬</th><th>含息報酬</th><th>年化</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+risk
             +'<div style="font-size:12px;font-weight:700;margin:6px 0 4px">含息走勢 vs 加權指數（起點正規化 100）</div><div id="etxPerfChart" style="height:180px;width:100%"></div>';
           try{ _etxPerfChart(uA, bench, _pcode); }catch(_){}
+        });
+      } else if(drawerTab==='calc'){
+        body.innerHTML='<div class="fc-empty">載入中…</div>';
+        var _ccode=drawerCode, _cclose=p.close;
+        Q('etf_distributions?select=ex_date,cash_per_unit,year&code=eq.'+_ccode+'&order=ex_date.desc&limit=60').then(function(a){
+          if(drawerTab!=='calc'||drawerCode!==_ccode)return;
+          var sm=_divSummary(a,_cclose);
+          window._calcCtx={yield:(sm&&sm.yield12!=null)?sm.yield12:null, hist:(window._etfHistReturn&&window._etfHistReturn[_ccode])||null, close:_cclose, freq:(sm&&sm.freq)||'—'};
+          window._calcSel=window._calcSel||{mode:'dca',dca:'invest',retMode:'6',div:'lump',yldMode:'y12'};
+          body.innerHTML=window._calcHTML();
+          window._calcRun();
         });
       } else if(drawerTab==='similar'){
         var sims=_etfSimilar(drawerCode);
@@ -5541,6 +5556,82 @@
       }
     }
     window._etxTab=function(t){drawerTab=t;renderDrawer();};
+    // ── 投資試算 UI ──
+    function _cNum(id){ var e=document.getElementById(id); if(!e)return 0; var v=parseFloat(String(e.value).replace(/,/g,'')); return (isFinite(v)&&v>0)?v:0; }
+    function _cMoney(v){ if(!isFinite(v)||v<=0) return '—'; if(v>=1e8) return (v/1e8).toFixed(2)+' 億'; if(v>=1e4) return (v/1e4).toFixed(1)+' 萬'; return Math.round(v).toLocaleString(); }
+    function _segBtn(dataAttr,val,label,on){ return '<button type="button" '+dataAttr+'="'+val+'" class="'+(on?'on':'')+'" style="font-size:12px;padding:3px 10px;border:1px solid var(--border);border-radius:6px;cursor:pointer;background:'+(on?'var(--accent)':'transparent')+';color:'+(on?'var(--on-accent)':'var(--text-muted)')+'">'+label+'</button>'; }
+    window._calcHTML=function(){
+      var S=window._calcSel, ctx=window._calcCtx||{};
+      var seg=function(html){ return '<div class="etx-seg" style="display:inline-flex;gap:6px;flex-wrap:wrap;margin:4px 0 10px">'+html+'</div>'; };
+      var inp=function(id,val){ return '<input id="'+id+'" type="number" inputmode="numeric" value="'+val+'" oninput="window._calcRun()" style="width:100%;box-sizing:border-box;padding:8px 10px;font-size:15px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-variant-numeric:tabular-nums">'; };
+      var lab=function(t){ return '<div style="font-size:12px;color:var(--text-muted);margin:8px 0 4px">'+t+'</div>'; };
+      var h='';
+      h+=seg(_segBtn('data-m','dca','定期定額',S.mode==='dca')+_segBtn('data-m','div','配息現金流',S.mode==='div'));
+      // DCA
+      h+='<div id="c_dca">';
+      h+=seg(_segBtn('data-d','invest','每月投入',S.dca==='invest')+_segBtn('data-d','target','設定目標',S.dca==='target'));
+      h+=lab('預期年化報酬率')+seg(_segBtn('data-r','3','保守 3%',S.retMode==='3')+_segBtn('data-r','6','中性 6%',S.retMode==='6')+(ctx.hist!=null?_segBtn('data-r','hist','歷史 '+ctx.hist.toFixed(1)+'%',S.retMode==='hist'):'')+_segBtn('data-r','custom','自訂',S.retMode==='custom'));
+      h+='<div id="c_rwrap" style="'+(S.retMode==='custom'?'':'display:none')+'">'+inp('c_r','8')+'</div>';
+      h+='<div id="c_dca_invest">'+lab('每月投入金額 (元)')+inp('c_pmt','3000')+'</div>';
+      h+='<div id="c_dca_target">'+lab('目標資產 (元)')+inp('c_fv','1000000')+'</div>';
+      h+='<div id="c_dca_out" style="margin-top:12px"></div></div>';
+      // DIV
+      h+='<div id="c_div" style="display:none">';
+      h+=seg(_segBtn('data-v','lump','一次投入',S.div==='lump')+_segBtn('data-v','want','每月想領',S.div==='want'));
+      h+=lab('殖利率')+seg((ctx.yield!=null?_segBtn('data-y','y12','近12月 '+ctx.yield.toFixed(2)+'%',S.yldMode==='y12'):'')+_segBtn('data-y','custom','自訂',S.yldMode==='custom'||ctx.yield==null));
+      h+='<div id="c_ywrap" style="'+((S.yldMode==='custom'||ctx.yield==null)?'':'display:none')+'">'+inp('c_y','5')+'</div>';
+      h+='<div id="c_div_lump">'+lab('投入本金 (元)')+inp('c_prin','1000000')+'</div>';
+      h+='<div id="c_div_want">'+lab('每月想領 (元)')+inp('c_want','30000')+'</div>';
+      h+='<div id="c_div_out" style="margin-top:12px"></div></div>';
+      h+='<div style="font-size:11px;color:var(--text-muted);margin-top:12px;line-height:1.6">本試算依輸入報酬率／殖利率進行複利估算，未計入交易成本、稅費與市場波動，不代表未來實際收益。配息頻率：'+ctx.freq+'；半年配等非月配者為「平均每月折算現金流」，非每月實際入帳。</div>';
+      return h;
+    };
+    window._calcRun=function(){
+      var S=window._calcSel, ctx=window._calcCtx||{};
+      var show=function(id,on){ var e=document.getElementById(id); if(e) e.style.display=on?'':'none'; };
+      show('c_dca',S.mode==='dca'); show('c_div',S.mode==='div');
+      var rw=document.getElementById('c_rwrap'); if(rw) rw.style.display=(S.retMode==='custom')?'':'none';
+      var yw=document.getElementById('c_ywrap'); if(yw) yw.style.display=((S.yldMode==='custom'||ctx.yield==null))?'':'none';
+      if(S.mode==='dca'){
+        show('c_dca_invest',S.dca==='invest'); show('c_dca_target',S.dca==='target');
+        var r = S.retMode==='custom'?_cNum('c_r'):(S.retMode==='hist'?(ctx.hist||0):parseFloat(S.retMode));
+        var yrs=[3,5,10,15,20], out=document.getElementById('c_dca_out'); if(!out)return;
+        if(S.dca==='invest'){
+          var P=_cNum('c_pmt');
+          var data=yrs.map(function(y){var fv=_fvMonthly(P,r,y),pr=P*12*y;return {y:y,fv:fv,pr:pr,gain:Math.max(0,fv-pr)};});
+          var mx=Math.max.apply(null,data.map(function(d){return d.fv;}).concat([1]));
+          out.innerHTML='<div style="display:flex;align-items:flex-end;gap:8px;height:120px;margin-bottom:10px">'+data.map(function(d){var hh=Math.max(4,d.fv/mx*100);return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end"><b style="font-size:10px;color:var(--text-muted)">'+_cMoney(d.fv)+'</b><div style="width:60%;height:'+hh+'px;background:var(--accent);border-radius:3px 3px 0 0;opacity:.85"></div><small style="font-size:10px;color:var(--text-muted);margin-top:3px">'+d.y+'年</small></div>';}).join('')+'</div>'
+            +'<div style="overflow-x:auto"><table class="etx-tbl"><thead><tr><th class="l">年限</th><th>累積本金</th><th>預估收益</th><th>預估總資產</th></tr></thead><tbody>'+data.map(function(d){return '<tr><td class="l">'+d.y+' 年</td><td>'+_cMoney(d.pr)+'</td><td class="hp-up">'+_cMoney(d.gain)+'</td><td><b>'+_cMoney(d.fv)+'</b></td></tr>';}).join('')+'</tbody></table></div>';
+        } else {
+          var FV=_cNum('c_fv');
+          out.innerHTML='<div style="overflow-x:auto"><table class="etx-tbl"><thead><tr><th class="l">達標年限</th><th>每月需投入</th></tr></thead><tbody>'+yrs.map(function(y){var pmt=_pmtForTarget(FV,r,y);return '<tr><td class="l">'+y+' 年</td><td><b>'+_cMoney(pmt)+'</b></td></tr>';}).join('')+'</tbody></table></div><div style="font-size:11px;color:var(--text-muted);margin-top:6px">以年化 '+r+'% 複利反推（每月月底投入）。</div>';
+        }
+      } else {
+        show('c_div_lump',S.div==='lump'); show('c_div_want',S.div==='want');
+        var y = (S.yldMode==='custom'||ctx.yield==null)?_cNum('c_y'):(ctx.yield||0);
+        var out2=document.getElementById('c_div_out'); if(!out2)return;
+        if(S.div==='lump'){
+          var prin=_cNum('c_prin'), annual=prin*y/100, monthly=annual/12;
+          out2.innerHTML='<div class="etx-mets"><div><small>每年現金流</small><b>'+_cMoney(annual)+'</b></div><div><small>平均每月折算</small><b>'+_cMoney(monthly)+'</b></div><div><small>採用殖利率</small><b>'+(y>0?y.toFixed(2)+'%':'—')+'</b></div></div><div style="font-size:11px;color:var(--text-muted);margin-top:6px">配息頻率 '+ctx.freq+'；非月配者「每月」為全年折算，實際於除息月份入帳。</div>';
+        } else {
+          var want=_cNum('c_want'), need=(y>0)?(want*12/(y/100)):0;
+          out2.innerHTML='<div class="etx-mets"><div><small>每月想領</small><b>'+_cMoney(want)+'</b></div><div><small>需投入本金</small><b>'+_cMoney(need)+'</b></div><div><small>採用殖利率</small><b>'+(y>0?y.toFixed(2)+'%':'—')+'</b></div></div><div style="font-size:11px;color:var(--text-muted);margin-top:6px">依殖利率反推所需本金；非月配者為平均折算。</div>';
+        }
+      }
+    };
+    // 投資試算分頁的 seg 按鈕事件（委派）
+    document.addEventListener('click',function(e){
+      var b=e.target.closest('#etxDrawerBody .etx-seg button[data-m],#etxDrawerBody .etx-seg button[data-d],#etxDrawerBody .etx-seg button[data-r],#etxDrawerBody .etx-seg button[data-v],#etxDrawerBody .etx-seg button[data-y]');
+      if(!b||!window._calcSel)return;
+      var S=window._calcSel;
+      if(b.hasAttribute('data-m'))S.mode=b.getAttribute('data-m');
+      else if(b.hasAttribute('data-d'))S.dca=b.getAttribute('data-d');
+      else if(b.hasAttribute('data-r'))S.retMode=b.getAttribute('data-r');
+      else if(b.hasAttribute('data-v'))S.div=b.getAttribute('data-v');
+      else if(b.hasAttribute('data-y'))S.yldMode=b.getAttribute('data-y');
+      else return;
+      if(drawerTab==='calc'){ el('etxDrawerBody').innerHTML=window._calcHTML(); window._calcRun(); }
+    });
     window._etxSimDiff=function(codeB){
       var A=HOLD[drawerCode]||[], B=HOLD[codeB]||[];
       var aw={},bw={},names={};
@@ -12301,7 +12392,7 @@
         } else {
           setTimeout(() => {
             const r = chartInstance.timeScale().getVisibleLogicalRange();
-            Object.entries(_chipCharts).forEach(([k, ch]) => { if (!ch) return; try { ch.applyOptions({ width: document.getElementById(_CHIP_CID[k]).clientWidth }); if (r) ch.timeScale().setVisibleLogicalRange(r); } catch (_) {} });
+            Object.entries(_chipCharts).forEach(([k, ch]) => { if (!ch) return; try { ch.applyOptions({ width: document.getElementById(_CHIP_CID[k]).clientWidth }); if (ch._weekly) ch.timeScale().fitContent(); else if (r) ch.timeScale().setVisibleLogicalRange(r); } catch (_) {} });
           }, 0);
         }
       } else {
@@ -12341,13 +12432,15 @@
       s.setData(times.map(t => { const v = pick(dataMap[t]); return v != null ? { time: t, value: v, color: v >= 0 ? 'rgba(224,62,45,0.8)' : 'rgba(10,154,86,0.8)' } : null; }).filter(Boolean));
       s.createPriceLine({ price: 0, color: 'rgba(200,209,217,0.3)', lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: false });
       try { const w = chartInstance.priceScale('right').width(); if (w > 0) ch.priceScale('right').applyOptions({ minimumWidth: w }); } catch (_) {}
+      ch.applyOptions(_NO_HORZ); ch._xhairSeries = s;
       if (weekly) {
-        try { ch.timeScale().fitContent(); } catch (_) {}   // 週資料：填滿寬度，柱子連續
+        ch._weekly = true;
+        try { ch.timeScale().fitContent(); } catch (_) {}   // 週資料：一週一根較粗柱、填滿寬度
       } else {
         try { const r = chartInstance.timeScale().getVisibleLogicalRange(); if (r) ch.timeScale().setVisibleLogicalRange(r); } catch (_) {}
         try { if (window._chartSyncGroup && window._chartSyncGroup.indexOf(ch) < 0) window._chartSyncGroup.push(ch); } catch (_) {}
+        _wireXhair(ch);   // 僅日軸子圖參與十字線同步
       }
-      ch.applyOptions(_NO_HORZ); ch._xhairSeries = s; _wireXhair(ch);
       const vEl = document.getElementById(vid);
       ch.subscribeCrosshairMove(p => { if (!vEl) return; const v = (p && p.time) ? pick(dataMap[p.time]) : null; if (v == null) { vEl.textContent = ''; return; } vEl.innerHTML = '　' + String(p.time).replace(/-/g, '/') + '　' + _chipFmt(v) + ' 張'; });
       return ch;
@@ -12373,17 +12466,10 @@
         ['cFgn', 'cTrust', 'cDealer'].forEach(id => { const e = document.getElementById(id); if (e) e.innerHTML = '<div class="chip-empty">無三大法人資料（指數／ETF 不適用）</div>'; });
       }
       if (hold.length) {
-        // 週資料「前向填滿」到日K軸：每個交易日取其所屬週(集保結算週五)的週增減 →
-        // 一週 5 個交易日同值＝一根橫跨整週的寬柱，且與日K/三大法人同軸對齊(可被十字線貫穿)。
-        const _fri = d => { const dt = new Date(d + 'T00:00:00Z'), wd = dt.getUTCDay(), add = (wd >= 1 && wd <= 5) ? (5 - wd) : 0; return new Date(dt.getTime() + add * 864e5).toISOString().slice(0, 10); };
-        const dmapBig = {}, dmapRet = {};
-        times.forEach(t => {
-          const f = _fri(t); let w = hm[f];
-          for (let k = 1; k <= 3 && !w; k++) { w = hm[new Date(Date.parse(f) - k * 864e5).toISOString().slice(0, 10)] || hm[new Date(Date.parse(f) + k * 864e5).toISOString().slice(0, 10)]; }
-          if (w) { if (w.big != null) dmapBig[t] = { v: w.big }; if (w.ret != null) dmapRet[t] = { v: w.ret }; }
-        });
-        _chipCharts.big    = _buildBarPanel('cBig',    'vBig',    times, dmapBig, m => m ? m.v : null);
-        _chipCharts.retail = _buildBarPanel('cRetail', 'vRetail', times, dmapRet, m => m ? m.v : null);
+        // 週資料用自身的週日期軸：一週一根「較粗」的柱（不前向填滿成五根）；不與日軸同步縮放。
+        const wtimes = Object.keys(hm).sort();
+        _chipCharts.big    = _buildBarPanel('cBig',    'vBig',    wtimes, hm, m => m ? m.big : null, true);
+        _chipCharts.retail = _buildBarPanel('cRetail', 'vRetail', wtimes, hm, m => m ? m.ret : null, true);
       } else {
         ['cBig', 'cRetail'].forEach(id => { const e = document.getElementById(id); if (e) e.innerHTML = '<div class="chip-empty">無大戶／散戶資料（僅熱門前 500 檔・每週更新）</div>'; });
       }
