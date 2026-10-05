@@ -12445,6 +12445,44 @@
       ch.subscribeCrosshairMove(p => { if (!vEl) return; const v = (p && p.time) ? pick(dataMap[p.time]) : null; if (v == null) { vEl.textContent = ''; return; } vEl.innerHTML = '　' + String(p.time).replace(/-/g, '/') + '　' + _chipFmt(v) + ' 張'; });
       return ch;
     }
+    // 週資料實心粗柱（baseline 階梯填滿，紅上綠下）；前向填滿到日K軸 → 每週一整塊、佔滿5天、與日軸對齊同步
+    function _buildBandPanel(cid, vid, times, dataMap, pick) {
+      const el = document.getElementById(cid); if (!el) return null;
+      el.innerHTML = '';
+      const opts = _chartOpts(el.clientHeight || 108, false);
+      opts.width = el.clientWidth || document.getElementById('chartContainer').clientWidth || 600;
+      if (!opts.width) return null;
+      opts.handleScroll = false; opts.handleScale = false;
+      opts.rightPriceScale.scaleMargins = { top: 0.16, bottom: 0.16 };
+      const ch = LightweightCharts.createChart(el, opts);
+      const anchor = ch.addLineSeries({ color: 'rgba(0,0,0,0)', priceScaleId: '', lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false });
+      anchor.setData(times.map(t => ({ time: t, value: 0 })));
+      const auto = () => {
+        const r = ch.timeScale().getVisibleLogicalRange();
+        let from = r ? Math.max(0, Math.floor(r.from)) : 0, to = r ? Math.min(times.length - 1, Math.ceil(r.to)) : times.length - 1;
+        let mx = 0, mn = 0;
+        for (let i = from; i <= to; i++) { const v = pick(dataMap[times[i]]); if (v == null) continue; mx = Math.max(mx, v); mn = Math.min(mn, v); }
+        if (mx === 0 && mn === 0) mx = 1; const pad = (mx - mn) * 0.1 || 1;
+        return { priceRange: { minValue: mn - pad, maxValue: mx + pad } };
+      };
+      const s = ch.addBaselineSeries({
+        baseValue: { type: 'price', price: 0 }, priceScaleId: 'right',
+        lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
+        lineType: (LightweightCharts.LineType ? LightweightCharts.LineType.WithSteps : 1),
+        topLineColor: 'rgba(224,62,45,0.9)', topFillColor1: 'rgba(224,62,45,0.8)', topFillColor2: 'rgba(224,62,45,0.8)',
+        bottomLineColor: 'rgba(10,154,86,0.9)', bottomFillColor1: 'rgba(10,154,86,0.8)', bottomFillColor2: 'rgba(10,154,86,0.8)',
+        autoscaleInfoProvider: auto,
+      });
+      // 僅有週對應的交易日才給值（其餘為空白點 → 面積不連過空檔）；步階填滿使每週成一整塊
+      s.setData(times.map(t => { const v = pick(dataMap[t]); return v != null ? { time: t, value: v } : { time: t }; }));
+      try { const w = chartInstance.priceScale('right').width(); if (w > 0) ch.priceScale('right').applyOptions({ minimumWidth: w }); } catch (_) {}
+      try { const r = chartInstance.timeScale().getVisibleLogicalRange(); if (r) ch.timeScale().setVisibleLogicalRange(r); } catch (_) {}
+      try { if (window._chartSyncGroup && window._chartSyncGroup.indexOf(ch) < 0) window._chartSyncGroup.push(ch); } catch (_) {}
+      ch.applyOptions(_NO_HORZ); ch._xhairSeries = anchor; _wireXhair(ch);
+      const vEl = document.getElementById(vid);
+      ch.subscribeCrosshairMove(p => { if (!vEl) return; const v = (p && p.time) ? pick(dataMap[p.time]) : null; if (v == null) { vEl.textContent = ''; return; } vEl.innerHTML = '　' + String(p.time).replace(/-/g, '/') + '（當週）　' + _chipFmt(v) + ' 張'; });
+      return ch;
+    }
     async function _renderChipAll(candles) {
       candles = _validCandles(candles);
       const code = currentCode;
@@ -12466,10 +12504,17 @@
         ['cFgn', 'cTrust', 'cDealer'].forEach(id => { const e = document.getElementById(id); if (e) e.innerHTML = '<div class="chip-empty">無三大法人資料（指數／ETF 不適用）</div>'; });
       }
       if (hold.length) {
-        // 週資料用自身的週日期軸：一週一根「較粗」的柱（不前向填滿成五根）；不與日軸同步縮放。
-        const wtimes = Object.keys(hm).sort();
-        _chipCharts.big    = _buildBarPanel('cBig',    'vBig',    wtimes, hm, m => m ? m.big : null, true);
-        _chipCharts.retail = _buildBarPanel('cRetail', 'vRetail', wtimes, hm, m => m ? m.ret : null, true);
+        // 週資料前向填滿到日K軸：每個交易日取其所屬週(集保結算週五)的週增減，一週5日同值。
+        // 以「基準面積(baseline，階梯)」繪成一整塊實心粗柱，佔滿整週5天、與日軸對齊、紅上綠下、無內部縫。
+        const _fri = d => { const dt = new Date(d + 'T00:00:00Z'), wd = dt.getUTCDay(), add = (wd >= 1 && wd <= 5) ? (5 - wd) : 0; return new Date(dt.getTime() + add * 864e5).toISOString().slice(0, 10); };
+        const dmapBig = {}, dmapRet = {};
+        times.forEach(t => {
+          const f = _fri(t); let w = hm[f];
+          for (let k = 1; k <= 3 && !w; k++) { w = hm[new Date(Date.parse(f) - k * 864e5).toISOString().slice(0, 10)] || hm[new Date(Date.parse(f) + k * 864e5).toISOString().slice(0, 10)]; }
+          if (w) { if (w.big != null) dmapBig[t] = { v: w.big }; if (w.ret != null) dmapRet[t] = { v: w.ret }; }
+        });
+        _chipCharts.big    = _buildBandPanel('cBig',    'vBig',    times, dmapBig, m => m ? m.v : null);
+        _chipCharts.retail = _buildBandPanel('cRetail', 'vRetail', times, dmapRet, m => m ? m.v : null);
       } else {
         ['cBig', 'cRetail'].forEach(id => { const e = document.getElementById(id); if (e) e.innerHTML = '<div class="chip-empty">無大戶／散戶資料（僅熱門前 500 檔・每週更新）</div>'; });
       }
