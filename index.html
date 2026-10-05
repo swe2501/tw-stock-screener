@@ -6601,13 +6601,13 @@
               +'<div><span>參考價</span><b>'+(o.ref_price?Math.round(o.ref_price).toLocaleString():'—')+'</b><small>'+(o.ref_kind||'')+'</small></div>'
               +'<div><span>價平（兩側排除）</span><b>'+(o.atm!=null?o.atm.toLocaleString():'—')+'</b><small>加權收盤 '+(o.spot?Math.round(o.spot).toLocaleString():'—')+' 最接近的履約價</small></div>'
               +'<div><span>合約</span><b>'+(o.contract||'—')+'</b>'+(o.expiry?'<small>到期 '+o.expiry.slice(5)+(m.expiry_sched?'（原 '+m.expiry_sched.slice(5)+' 遇休市順延）':'')+'</small>':'')+'</div>'
-              +'<div><span>Put/Call OI 比</span><b>'+(o.pc_ratio!=null?o.pc_ratio:'—')+'</b>'+(o.pc_ratio!=null?'<small>'+(o.pc_ratio>=1?'偏空避險':'偏多')+'</small>':'')+'</div>'
+              +'<div><span>Put/Call OI 比</span><b>'+(o.pc_ratio!=null?o.pc_ratio:'—')+'</b>'+(o.pc_ratio!=null?'<small>'+(o.pc_ratio>1?'偏多':(o.pc_ratio<1?'偏空':'中性'))+'</small>':'')+'</div>'
             +'</div>'
             +'<div class="osr-bar2"><span>'+(mode==='volume'?(kind==='week'?'週選 5 日':'月選 20 日')+'成交大量區：價平上下 10% 內依成交量排序並合併相近履約價':'OI 峰值：該合約今日未平倉的明顯峰值，依離參考價近→遠各取 5 層（潛在壓力／潛在支撐，非必然反轉價位）')+'</span></div>' /* 2026-09-30 隱藏「成交量」切換（option_nday 排程已移除、資料停更）；固定顯示未平倉 OI 峰值 */
             +'<div class="osr-head"><span class="r">潛在壓力　參考價以上 Call（'+(mode==='volume'?'量大→量小':'近→遠')+'）</span><span></span><span class="s">潛在支撐　參考價以下 Put（'+(mode==='volume'?'量大→量小':'近→遠')+'）</span></div>'
             +rows+(short?'<div class="gs-osr-meta" style="color:var(--yellow)"> '+short+'側符合條件的峰值不足 5 層（候選不足，不降低門檻硬湊）</div>':'')
             +'<div class="gs-osr-meta" style="margin-top:8px">資料日 '+(mode==='volume'?(ndayRows[0]&&ndayRows[0].trade_date||''):(o.trade_date||''))+' · '+(mode==='volume'?'區間依成交量由大到小':'點數＝距參考價')+'</div>'
-            +'<details class="gs-osr-algo"><summary>算法說明</summary><div><b>【OI 三層峰值】（2026-09-28 定案，比照玩股網選擇權支撐壓力；以 2026-09-24 202609W5 對照一致）</b>參考價＝台指期 TX 近月一般盤結算價。價平＝最接近加權收盤的履約價（同玩股網反灰列），價平本身不列入支撐或壓力（2026-09-29）。買權只看參考價與價平以上找壓力、賣權只看參考價與價平以下找支撐，OI 缺／0／負剔除。峰值須同時符合：① OI ≥ 同側第 70 百分位；② OI ≥ 同側最大 OI × 0.20；③ OI ≥ 前後各 5 個有效履約價 OI 中位數 × 1.5；④ 局部高點（≥ 前後各 2 檔且至少高於其一，平台只留一個）。相鄰峰值 200 點內合併、留 OI 最大者。壓力由低到高、支撐由高到低（離參考價近→遠，非依 OI 大小）各取 5 層（2026-09-29 由 3 層改 5 層），不足 5 層標「候選不足」不硬湊。<b>合約</b>：週選＝週三到期（W）系列（不含週五系列）、月選，兩者分開計算不混算，各依「實際到期日」選最近一檔；原定到期日遇休市（週末、證交所休市日期表、過去日期以實際交易日核對，含颱風停市）順延至次一交易日（與期交所實際一致，例：202510F2 10/10→10/13）。Δ＝今日 OI − 前一交易日 OI（新履約價無前值顯示—）；PR＝該檔 OI 在同側的百分位；中位數倍數＝OI ÷ 鄰近中位數。Put/Call OI 比＝該合約全部賣權未平倉 ÷ 買權未平倉，為情緒輔助。資料源：TAIFEX 選擇權／期貨每日交易行情（盤後日更）。本指標為籌碼分布參考，未驗證交易績效。</div></details>';
+            +'<details class="gs-osr-algo"><summary>算法說明</summary><div><b>【OI 三層峰值】（2026-09-28 定案，比照玩股網選擇權支撐壓力；以 2026-09-24 202609W5 對照一致）</b>參考價＝台指期 TX 近月一般盤結算價。價平＝最接近加權收盤的履約價（同玩股網反灰列），價平本身不列入支撐或壓力（2026-09-29）。買權只看參考價與價平以上找壓力、賣權只看參考價與價平以下找支撐，OI 缺／0／負剔除。峰值須同時符合：① OI ≥ 同側第 70 百分位；② OI ≥ 同側最大 OI × 0.20；③ OI ≥ 前後各 5 個有效履約價 OI 中位數 × 1.5；④ 局部高點（≥ 前後各 2 檔且至少高於其一，平台只留一個）。相鄰峰值 200 點內合併、留 OI 最大者。壓力由低到高、支撐由高到低（離參考價近→遠，非依 OI 大小）各取 5 層（2026-09-29 由 3 層改 5 層），不足 5 層標「候選不足」不硬湊。<b>合約</b>：週選＝週三到期（W）系列（不含週五系列）、月選，兩者分開計算不混算，各依「實際到期日」選最近一檔；原定到期日遇休市（週末、證交所休市日期表、過去日期以實際交易日核對，含颱風停市）順延至次一交易日（與期交所實際一致，例：202510F2 10/10→10/13）。Δ＝今日 OI − 前一交易日 OI（新履約價無前值顯示—）；PR＝該檔 OI 在同側的百分位；中位數倍數＝OI ÷ 鄰近中位數。Put/Call OI 比＝該合約全部賣權未平倉 ÷ 買權未平倉，為情緒輔助（>1 偏多、<1 偏空、=1 中性）。資料源：TAIFEX 選擇權／期貨每日交易行情（盤後日更）。本指標為籌碼分布參考，未驗證交易績效。</div></details>';
         }
         // 綁在不會被 innerHTML 取代的外層，重繪後按鈕仍維持完整互動。
         box.addEventListener('click',function(e){
@@ -7972,7 +7972,7 @@
             <span style="margin-left:12px;color:var(--text-muted)">畫週期：</span>
             <label style="margin-left:8px;cursor:pointer"><input type="checkbox" data-p="5" onchange="_srPeriodToggle(5,this.checked)"> 5日</label>
             <label style="margin-left:8px;cursor:pointer"><input type="checkbox" data-p="10" onchange="_srPeriodToggle(10,this.checked)"> 10日</label>
-            <label style="margin-left:8px;cursor:pointer"><input type="checkbox" data-p="20" checked onchange="_srPeriodToggle(20,this.checked)"> 20日</label>
+            <label style="margin-left:8px;cursor:pointer"><input type="checkbox" data-p="20" onchange="_srPeriodToggle(20,this.checked)"> 20日</label>
             <label style="margin-left:8px;cursor:pointer"><input type="checkbox" data-p="60" onchange="_srPeriodToggle(60,this.checked)"> 60日</label>
             <label style="margin-left:8px;cursor:pointer"><input type="checkbox" data-p="120" onchange="_srPeriodToggle(120,this.checked)"> 120日</label>
             <label style="margin-left:8px;cursor:pointer"><input type="checkbox" data-p="240" onchange="_srPeriodToggle(240,this.checked)"> 240日</label>
@@ -8292,7 +8292,7 @@
             var _ts=el('srTabSel'); if(_ts)_ts.onchange=function(){ SR.n=+_ts.value; srRender(); };
           }
           function bindSrc(box){ box.querySelectorAll('[data-src]').forEach(function(b){ b.onclick=function(){ SR.src=b.getAttribute('data-src'); fetchSr(SR.code); }; }); }
-          window._srPeriods=window._srPeriods||{20:true};   // 勾選要畫的「週期」(SPEC-002：依週期，不跨週期混算)；預設 20 日
+          window._srPeriods=window._srPeriods||{};   // 勾選要畫的「週期」(SPEC-002：依週期，不跨週期混算)；預設全部不勾（不畫 S/R）
           window._srDraw=function(){
             if(typeof candleSeriesRef==='undefined'||!candleSeriesRef)return;
             SR.lines.forEach(function(l){ try{ l.s.removePriceLine(l.p); }catch(e){} }); SR.lines=[];
