@@ -1,6 +1,7 @@
 .vercel
 *.json
 !vercel.json
+!group-catalog.json
 .wantgoo_profile/
 .env.local
 scripts/__pycache__/
