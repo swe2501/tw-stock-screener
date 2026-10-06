@@ -404,6 +404,218 @@ def _load_pw_window(days=12):
     return latest, by_code
 
 
+# 集團季底行情觀察池。名單採公開關係企業的保守口徑，僅納入目前有價格資料的上市櫃公司；
+# 「集團作帳」是市場慣用頁名，不代表公司存在操縱價格行為。
+_GROUP_BOOK_MEMBERS = {
+    "台塑集團": ["1301", "1303", "1326", "1434", "6505", "8046", "8131"],
+    "遠東集團": ["1102", "1402", "1710", "2606", "2845", "2903", "4904"],
+    "統一集團": ["1216", "1232", "2855", "2912", "9907"],
+    "長榮集團": ["2211", "2603", "2607", "2618", "2645"],
+    "裕隆集團": ["2201", "2204", "2227", "9941"],
+    "富邦集團": ["2881", "3045", "8454"],
+    "國泰集團": ["2501", "2882"],
+    "潤泰集團": ["2597", "2915", "8463", "9945"],
+    "聯華神通集團": ["1229", "2347", "3706", "6112"],
+    "遠雄集團": ["2712", "5522", "5607"],
+    "鴻海集團": ["2317", "2328", "2354", "2392", "3062", "4958", "6414", "6451"],
+    "金仁寶集團": ["2312", "2324", "6282", "9105"],
+    "華碩集團": ["2357", "3515", "4938"],
+    "國巨集團": ["2327", "2375", "2472"],
+    "華新麗華集團": ["1605", "2344", "2492", "6239"],
+    "中鋼集團": ["2002", "2013", "2014"],
+    "永豐餘集團": ["1905", "1907", "6790"],
+    "台聚集團": ["1304", "1305", "1308", "1309", "1313"],
+    "義聯集團": ["2007", "2023", "2069"],
+    "佳世達集團": ["2352", "2409", "8163"],
+    "聯電集團": ["2303", "3034", "3035", "3037"],
+    "聯發科集團": ["2454", "4961", "6526"],
+    "緯創集團": ["3231", "6285", "6669"],
+    "宏碁集團": ["2353", "3046", "6776"],
+    "新光集團": ["1419", "2530", "2887", "9925"],
+    "和泰集團": ["2207", "6592"],
+    "三商集團": ["2850", "2905", "2945"],
+    "興富發集團": ["1808", "2542", "3056", "6177"],
+    "威京集團": ["2515", "2540"],
+    "欣陸集團": ["2546", "3703"],
+    "冠德集團": ["2520", "2546"],
+    "力麗集團": ["1444", "1447", "5364"],
+    "炎洲集團": ["4306"],
+    "中美晶集團": ["3707", "5483", "6488"],
+    "日月光集團": ["3711"],
+    "群光藍天集團": ["2362", "2385", "3617"],
+    "大同集團": ["2371", "6172"],
+    "東元集團": ["1504"],
+    "士林電機集團": ["1503"],
+    "南紡集團": ["1440", "2101"],
+    "味全頂新集團": ["1201"],
+    "巨大集團": ["9921"],
+    "寶成集團": ["9904"],
+    "震旦集團": ["2373"],
+    "台泥集團": ["1101"],
+    "光寶集團": ["2301"],
+    "台達集團": ["2308"],
+    "廣達集團": ["2382"],
+    "英業達集團": ["2356"],
+    "大聯大集團": ["3702"],
+    "神基集團": ["3005"],
+    "中信集團": ["2891"],
+    "元大集團": ["2885"],
+    "永豐金集團": ["2890"],
+    "兆豐集團": ["2886"],
+    "第一金集團": ["2892"],
+    "華南金集團": ["2880"],
+    "玉山集團": ["2884"],
+    "合庫集團": ["5880"],
+    "凱基集團": ["2883"],
+    "大成集團": ["1210"],
+    "卜蜂集團": ["1215"],
+    "王品集團": ["2727"],
+    "全家集團": ["5903"],
+    "大亞集團": ["1609"],
+    "三陽集團": ["2206"],
+    "三地集團": ["1438", "5905", "8927"],
+    "台積電集團": ["2330", "3443"],
+}
+
+_GROUP_BOOK_CATEGORIES = {
+    "台塑集團":"傳產", "遠東集團":"綜合", "統一集團":"消費", "長榮集團":"航運", "裕隆集團":"汽車",
+    "富邦集團":"金融", "國泰集團":"金融", "潤泰集團":"綜合", "聯華神通集團":"電子", "遠雄集團":"建設",
+    "鴻海集團":"電子", "金仁寶集團":"電子", "華碩集團":"電子", "國巨集團":"電子", "華新麗華集團":"電子",
+    "中鋼集團":"傳產", "永豐餘集團":"傳產", "台聚集團":"傳產", "義聯集團":"傳產", "佳世達集團":"電子",
+    "聯電集團":"電子", "聯發科集團":"電子", "緯創集團":"電子", "宏碁集團":"電子", "新光集團":"金融",
+    "和泰集團":"汽車", "三商集團":"消費", "興富發集團":"建設", "威京集團":"建設", "欣陸集團":"建設",
+    "冠德集團":"建設", "力麗集團":"傳產", "炎洲集團":"傳產", "中美晶集團":"電子", "日月光集團":"電子",
+    "群光藍天集團":"電子", "大同集團":"綜合", "東元集團":"電子", "士林電機集團":"電子", "南紡集團":"傳產",
+    "味全頂新集團":"消費", "巨大集團":"消費", "寶成集團":"消費", "震旦集團":"消費",
+    "台泥集團":"傳產", "光寶集團":"電子", "台達集團":"電子", "廣達集團":"電子", "英業達集團":"電子",
+    "大聯大集團":"電子", "神基集團":"電子", "中信集團":"金融", "元大集團":"金融", "永豐金集團":"金融",
+    "兆豐集團":"金融", "第一金集團":"金融", "華南金集團":"金融", "玉山集團":"金融", "合庫集團":"金融",
+    "凱基集團":"金融", "大成集團":"消費", "卜蜂集團":"消費", "王品集團":"消費", "全家集團":"消費",
+    "大亞集團":"傳產", "三陽集團":"汽車", "三地集團":"建設",
+    "台積電集團":"電子",
+}
+
+# 前後端共用的完整名錄由使用者提供的研究規格匯入；讀取失敗時保留上方內嵌名錄，
+# 避免部署平台未打包靜態資料時讓 API 整體失效。
+try:
+    _catalog_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "group-catalog.json")
+    with open(_catalog_path, "r", encoding="utf-8") as _catalog_file:
+        _catalog_groups = json.load(_catalog_file).get("groups", [])
+    if len(_catalog_groups) >= 100:
+        _GROUP_BOOK_MEMBERS = {
+            g["name"]: [m["code"] for m in g.get("members", []) if m.get("code")]
+            for g in _catalog_groups
+        }
+        _GROUP_BOOK_CATEGORIES = {g["name"]: g.get("category", "綜合") for g in _catalog_groups}
+except (OSError, ValueError, TypeError, KeyError):
+    pass
+
+
+def _median(values):
+    vals = sorted(float(v) for v in values if v is not None and math.isfinite(float(v)))
+    if not vals:
+        return None
+    n = len(vals)
+    return vals[n // 2] if n % 2 else (vals[n // 2 - 1] + vals[n // 2]) / 2.0
+
+
+def _fetch_groupbook(window=10):
+    """依 price_window 計算各集團季底前 N 個交易日的歷史表現與排名。"""
+    window = 5 if window <= 5 else (20 if window >= 20 else 10)
+    codes = sorted({c for members in _GROUP_BOOK_MEMBERS.values() for c in members})
+    if not (SUPABASE_URL and SUPABASE_KEY):
+        return {"error": "price data unavailable"}
+    rows, off = [], 0
+    code_filter = "in.(" + ",".join(codes) + ")"
+    while True:
+        page = _cache_sb("/price_window", params=[
+            ("select", "code,trade_date,close,volume"), ("code", code_filter),
+            ("order", "code.asc,trade_date.asc"), ("offset", str(off)), ("limit", "1000")
+        ])[1] or []
+        rows.extend(page)
+        if len(page) < 1000:
+            break
+        off += 1000
+        if off >= 60000:
+            break
+    by_code = {}
+    for r in rows:
+        c, d, px = str(r.get("code", "")), str(r.get("trade_date", "")), r.get("close")
+        if c in codes and d and px is not None:
+            by_code.setdefault(c, []).append({"date": d, "close": float(px), "volume": float(r.get("volume") or 0)})
+    for arr in by_code.values():
+        arr.sort(key=lambda x: x["date"])
+    if not by_code:
+        return {"error": "no group price data"}
+
+    stock_events = {}
+    for code, arr in by_code.items():
+        quarters = {}
+        for i, r in enumerate(arr):
+            y, m = int(r["date"][:4]), int(r["date"][5:7])
+            quarters.setdefault((y, (m - 1) // 3 + 1), []).append(i)
+        evs = {}
+        for q, idxs in quarters.items():
+            end, start = idxs[-1], idxs[-1] - window
+            if start < idxs[0] or not arr[start]["close"]:
+                continue
+            seq = [x["close"] for x in arr[start:end + 1] if x["close"]]
+            ret = (arr[end]["close"] / arr[start]["close"] - 1) * 100
+            peak, mdd = seq[0], 0.0
+            for px in seq:
+                peak = max(peak, px)
+                mdd = min(mdd, (px / peak - 1) * 100)
+            evs[q] = {"ret": ret, "mdd": mdd, "start": arr[start]["date"], "end": arr[end]["date"]}
+        stock_events[code] = evs
+
+    all_quarters = sorted({q for evs in stock_events.values() for q in evs})
+    bench = {q: _median([evs[q]["ret"] for evs in stock_events.values() if q in evs]) for q in all_quarters}
+    groups = []
+    for name, members in _GROUP_BOOK_MEMBERS.items():
+        present = [c for c in members if c in by_code]
+        events = []
+        for q in all_quarters:
+            rs = [stock_events[c][q]["ret"] for c in present if q in stock_events.get(c, {})]
+            ds = [stock_events[c][q]["mdd"] for c in present if q in stock_events.get(c, {})]
+            if not rs or bench.get(q) is None:
+                continue
+            gr = _median(rs)
+            active = [c for c in present if q in stock_events.get(c, {})]
+            events.append({"quarter": "%d Q%d" % q, "return": gr, "excess": gr - bench[q],
+                           "breadth": sum(1 for x in rs if x > 0) / len(rs) * 100,
+                           "drawdown": _median(ds), "start": min(stock_events[c][q]["start"] for c in active),
+                           "end": max(stock_events[c][q]["end"] for c in active)})
+        n = len(events)
+        abs_win = sum(1 for e in events if e["return"] > 0) / n * 100 if n else 0
+        excess_win = sum(1 for e in events if e["excess"] > 0) / n * 100 if n else 0
+        double_win = sum(1 for e in events if e["return"] > 0 and e["excess"] > 0) / n * 100 if n else 0
+        med_ret, med_exc = _median([e["return"] for e in events]) or 0, _median([e["excess"] for e in events]) or 0
+        breadth, mdd = _median([e["breadth"] for e in events]) or 0, _median([e["drawdown"] for e in events]) or 0
+        confidence = min(100.0, n / 12.0 * 100.0) * (len(present) / max(1, len(members)))
+        exc_score = max(0.0, min(100.0, 50 + med_exc * 10))
+        risk_score = max(0.0, min(100.0, 50 + med_ret * 5 + mdd * 3))
+        score = double_win * .35 + exc_score * .25 + breadth * .15 + risk_score * .15 + confidence * .10
+        member_rows = []
+        for c in present:
+            evs = list(stock_events.get(c, {}).values())
+            wins = sum(1 for e in evs if e["ret"] > 0)
+            member_rows.append({"code": c, "name": _STOCK_NAMES.get(c, c), "winRate": round(wins / len(evs) * 100, 1) if evs else None,
+                                "medianReturn": round(_median([e["ret"] for e in evs]) or 0, 2), "samples": len(evs)})
+        member_rows.sort(key=lambda x: (x["winRate"] if x["winRate"] is not None else -1, x["medianReturn"]), reverse=True)
+        groups.append({"name": name, "category": _GROUP_BOOK_CATEGORIES.get(name, "綜合"), "score": round(score, 1), "samples": n, "confidence": round(confidence, 1),
+                       "absWinRate": round(abs_win, 1), "excessWinRate": round(excess_win, 1), "doubleWinRate": round(double_win, 1),
+                       "medianReturn": round(med_ret, 2), "medianExcess": round(med_exc, 2), "breadth": round(breadth, 1),
+                       "maxDrawdown": round(mdd, 2), "members": member_rows,
+                       "events": [{k: (round(v, 2) if isinstance(v, float) else v) for k, v in e.items()} for e in reversed(events)]})
+    groups.sort(key=lambda x: x["score"], reverse=True)
+    for i, g in enumerate(groups):
+        g["rank"] = i + 1
+    latest = max(r["date"] for arr in by_code.values() for r in arr)
+    earliest = min(r["date"] for arr in by_code.values() for r in arr)
+    return {"date": latest, "from": earliest, "window": window, "benchmark": "集團股觀察池同期等權中位數", "groups": groups,
+            "disclaimer": "本頁為季底行情統計觀察，不代表企業存在作價或操縱行為；歷史統計不保證未來績效。"}
+
+
 def _fetch_focus(top_n=30):
     """今日焦點三榜（伺服器端算，回精簡 JSON）：漲幅榜／跌幅榜／爆量榜。
     資料源：Supabase price_window（每日上傳的證交所 OHLCV，不落後）。
@@ -2110,6 +2322,14 @@ class handler(BaseHTTPRequestHandler):
         if (qs.get("stat") or [""])[0] == "themes":
             try:
                 return self._send_json(200, _fetch_themes())
+            except Exception as e:
+                import traceback
+                return self._send_json(200, {"error": str(e), "traceback": traceback.format_exc()})
+        # 集團季底行情：公開關係企業觀察池的 N 日統計、勝率與風險調整排名
+        if (qs.get("stat") or [""])[0] == "groupbook":
+            try:
+                window = int((qs.get("window") or ["10"])[0])
+                return self._send_json(200, _fetch_groupbook(window), cache="public, s-maxage=3600, max-age=300")
             except Exception as e:
                 import traceback
                 return self._send_json(200, {"error": str(e), "traceback": traceback.format_exc()})
