@@ -27,16 +27,16 @@ const normalizeSite=value=>{if(!value)return'';value=String(value).trim();return
 
 function iconCandidates(html, base){
   const out=[];
+  for(const m of html.matchAll(/<img\b[^>]*>/gi)){
+    const tag=m[0]; if(!/logo/i.test(tag))continue;
+    const src=(tag.match(/\b(?:src|data-src|data-lazy-src)=["']([^"']+)/i)||[])[1]||(tag.match(/\bsrcset=["']([^"', ]+)/i)||[])[1];
+    if(src)try{out.push(new URL(src,base).href)}catch{}
+  }
   for(const m of html.matchAll(/<link\b[^>]*>/gi)){
     const tag=m[0], rel=(tag.match(/\brel=["']([^"']+)/i)||[])[1]||'';
     if(!/icon/i.test(rel))continue;
     const href=(tag.match(/\bhref=["']([^"']+)/i)||[])[1];
     if(href)try{out.push(new URL(href,base).href)}catch{}
-  }
-  for(const m of html.matchAll(/<img\b[^>]*>/gi)){
-    const tag=m[0]; if(!/logo/i.test(tag))continue;
-    const src=(tag.match(/\b(?:src|data-src|data-lazy-src)=["']([^"']+)/i)||[])[1]||(tag.match(/\bsrcset=["']([^"', ]+)/i)||[])[1];
-    if(src)try{out.push(new URL(src,base).href)}catch{}
   }
   try{out.push(new URL('/favicon.ico',base).href)}catch{}
   return [...new Set(out)];
@@ -65,7 +65,11 @@ await fs.mkdir(outputDir,{recursive:true});
 let manifest={};
 try{manifest=JSON.parse((await fs.readFile(manifestPath,'utf8')).replace(/^window\.GROUP_LOGOS=/,'').replace(/;\s*$/,''))}catch{}
 for(const [i,group] of catalog.groups.entries()){
-  if(manifest[group.name]){console.log(`[${i+1}/${catalog.groups.length}] KEEP ${group.name}`);continue}
+  if(manifest[group.name]){
+    const old=manifest[group.name].path||'',ext=path.extname(old).toLowerCase();let size=0;
+    try{size=(await fs.stat(path.join(root,old))).size}catch{}
+    if(ext==='.svg'||(ext!=='.ico'&&size>=1800)){console.log(`[${i+1}/${catalog.groups.length}] KEEP ${group.name}`);continue}
+  }
   const core=group.members?.[0];
   const company=core&&companies.get(String(core.code));
   const site=normalizeSite(officialDomains[group.name]||company?.['網址']);
