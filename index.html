@@ -2037,7 +2037,7 @@
     <div class="mn-grp"><span class="mn-item">題材族群 <i>▾</i></span><div class="mn-menu">
       <a class="nav-owner" onclick="_showView('hottopics')"> 話題</a><a onclick="_showView('themes')">題材列表</a><a onclick="_showView('sectors')">產業地圖</a></div></div>
     <div class="mn-grp"><span class="mn-item">市場觀察 <i>▾</i></span><div class="mn-menu">
-      <a class="nav-owner" onclick="_showView('sig')"> 主力訊號</a><a class="nav-owner" onclick="_showView('brank')"> 分點回測</a><a class="nav-owner" onclick="_showView('mingdeng')"> 明燈冥燈</a><a onclick="_showView('greed')"> 貪婪指標</a><a onclick="_showView('inst')"> 三大法人個股買賣超</a><a onclick="_showView('fhedge')"> 外資空單溫度計</a><a onclick="_showView('breadth')"> 大盤多空廣度</a><a onclick="_showView('disposal')"> 處置股</a></div></div>
+      <a class="nav-owner" onclick="_showView('sig')"> 主力訊號</a><a class="nav-owner" onclick="_showView('brank')"> 分點回測</a><a class="nav-owner" onclick="_showView('mingdeng')"> 明燈冥燈</a><a onclick="_showView('greed')"> 貪婪指標</a><a onclick="_showView('inst')"> 三大法人個股買賣超</a><a onclick="_showView('fhedge')"> 外資空單溫度計</a><a onclick="_showView('breadth')"> 大盤多空廣度</a><a onclick="_showView('usty')"> 美債對標</a><a onclick="_showView('disposal')"> 處置股</a></div></div>
     <div class="mn-grp"><span class="mn-item">ETF 分析 <i>▾</i></span><div class="mn-menu">
       <a onclick="_showView('etfx')" style="font-weight:800;color:var(--brand-green)"> ETF 探索</a><a onclick="_showView('etf')">總覽 · 規模排行</a><a onclick="_showView('etfcons')">成分股</a><a onclick="_showView('etfrev')">股票反查 ETF</a><a onclick="_showView('etfdiv')">配息行事曆</a><a onclick="_showView('etfhold')">持有人結構</a><a onclick="_showView('etfsim')">ETF 相似度</a><a onclick="_showView('etfheavy')">重倉股排行</a><a onclick="_showView('etfprem')">折溢價</a><a onclick="_showView('etfflow')">資金流</a><a onclick="_showView('etfperf')">績效比較</a></div></div>
     <a class="mn-item" onclick="_showView('news')">每日新聞</a>
@@ -2501,7 +2501,7 @@
     <div class="fc-note" id="hpNote"></div>
     </div><!-- /cb-sheet 每日台股籌碼報告 -->
     <div style="max-width:1200px;margin:14px auto 0;padding:10px 14px;font-size:11.5px;line-height:1.7;color:var(--text-muted);border-top:1px dashed var(--border);">
-      <b>改動紀錄（供合夥人複查）</b>：2026-09-30 全站版面採用合夥人 redesign 版；同日輕更新（ETF 甜甜圈互動、市場廣度分頁與篩選分離、選擇權支撐壓力 OI 峰值前端、結算日遇休市順延、多空排列配色、行動版表格）。掏金篩選器含「真名三式（多頭回洗反包）」（演算法與歷史回測見該勾選框）。2026-10-04 個股K圖量能面板新增「籌碼」分頁：三大法人每日淨買賣超堆疊柱（外資/投信/自營，紅買綠賣以0為基準，單位張，含合計線；滑鼠移至柱上顯示當日數值），對齊日K日期（僅日K、近120交易日）；資料源＝本站 institutional_trades（TWSE／TPEx T86 三大法人日報）每日推送至 Supabase inst_daily（scripts/inst_daily_push.py）。同日籌碼頁改為最上層分頁（點「籌碼」隱藏技術指標 VOL/MACD/RSI），並拆出「大戶 vs 散戶（週）」：資料源＝TDCC 集保股權分散表（每週五）＋當週收盤換算市值；大戶＝持股≥300張 或 市值≥3000萬、散戶＝持股<20張 或 市值<100萬（跨 TDCC 級距用均勻分布內插，為近似值），畫週增減（大戶紅綠柱／散戶藍線，單位張）；覆蓋熱門前500檔、每週更新（scripts/holder_flow_push.py → Supabase holder_flow）。籌碼頁最終版：單一「籌碼」分頁內拆成外資(日)／投信(日)／自營(日)／大戶(週)／散戶(週) 五張獨立柱狀圖（紅買綠賣）。另：K圖新增標記分類顯示開關（法說會／除權息，比照均線顯示隱藏，動態偵測）；修正指數與外國大盤相關新聞殘留前一檔個股的 bug（指數改載市場新聞 macro_news）；外資空單避險歷史圖右上新增「事件避險／連假避險」標記開關；§4 融資動能背離加入「今日／3 日」週期；富台指期（SGX FTSE Taiwan）新增最後交易日倒數（每月倒數第二個營業日，依證交所休市表）。資料與演算法沿用本站真實資料源（TWSE／TPEx／TAIFEX／TDCC／Supabase），未更動後端。
+      <b>改動紀錄（供合夥人複查）</b>：2026-09-30 全站版面採用合夥人 redesign 版；同日輕更新（ETF 甜甜圈互動、市場廣度分頁與篩選分離、選擇權支撐壓力 OI 峰值前端、結算日遇休市順延、多空排列配色、行動版表格）。掏金篩選器含「真名三式（多頭回洗反包）」（演算法與歷史回測見該勾選框）。2026-10-04 個股K圖量能面板新增「籌碼」分頁：三大法人每日淨買賣超堆疊柱（外資/投信/自營，紅買綠賣以0為基準，單位張，含合計線；滑鼠移至柱上顯示當日數值），對齊日K日期（僅日K、近120交易日）；資料源＝本站 institutional_trades（TWSE／TPEx T86 三大法人日報）每日推送至 Supabase inst_daily（scripts/inst_daily_push.py）。同日籌碼頁改為最上層分頁（點「籌碼」隱藏技術指標 VOL/MACD/RSI），並拆出「大戶 vs 散戶（週）」：資料源＝TDCC 集保股權分散表（每週五）＋當週收盤換算市值；大戶＝持股≥300張 或 市值≥3000萬、散戶＝持股<20張 或 市值<100萬（跨 TDCC 級距用均勻分布內插，為近似值），畫週增減（大戶紅綠柱／散戶藍線，單位張）；覆蓋熱門前500檔、每週更新（scripts/holder_flow_push.py → Supabase holder_flow）。籌碼頁最終版：單一「籌碼」分頁內拆成外資(日)／投信(日)／自營(日)／大戶(週)／散戶(週) 五張獨立柱狀圖（紅買綠賣）。另：K圖新增標記分類顯示開關（法說會／除權息，比照均線顯示隱藏，動態偵測）；修正指數與外國大盤相關新聞殘留前一檔個股的 bug（指數改載市場新聞 macro_news）；外資空單避險歷史圖右上新增「事件避險／連假避險」標記開關；§4 融資動能背離加入「今日／3 日」週期；富台指期（SGX FTSE Taiwan）新增最後交易日倒數（每月倒數第二個營業日，依證交所休市表）。2026-10-06「市場觀察」新增「美債對標」：以 US10Y 為錨，切換公債天期與熱門對標資產（高股息/科技成長/投等債/定存），呈現收益率利差、存續期敏感度與合規機會／風險定性；US10Y／US2Y 預填自美國財政部官方 Daily Treasury Par Yield Curve Rates（scripts/ust_yields_push.py → Supabase ust_yields，每日更新，可手動調整為示意假設）。資料與演算法沿用本站真實資料源（TWSE／TPEx／TAIFEX／TDCC／US Treasury／Supabase），未更動後端。
     </div>
   </div>
 
@@ -6395,6 +6395,139 @@
     window._VIEWS=window._VIEWS||{}; window._VIEWS.etfperf={el:'etfperfView',show:'_etfperfShow'};
   })();
   </script>
+
+  <!-- ══ 美債對標（市場觀察）：以 US10Y 為錨的對標資產比價＋合規機會/風險定性 ══ 2026-10-06 -->
+  <div id="ustView" style="display:none"><div class="usty-wrap" id="ustBody"></div></div>
+  <style>
+    #ustView{max-width:1040px;margin:0 auto}
+    .usty-wrap{--uc:#0891b2;--ua:#d97706;--ue:#16a34a;--ur:#dc2626}
+    :root:not([data-theme="light"]) .usty-wrap{--uc:#22d3ee;--ua:#fbbf24;--ue:#34d399;--ur:#fb7185}
+    @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .usty-wrap{--uc:#22d3ee;--ua:#fbbf24;--ue:#34d399;--ur:#fb7185}}
+    .usty-card{background:var(--surface);border:1px solid var(--border);border-radius:14px}
+    .usty-eye{letter-spacing:.2em;text-transform:uppercase;font-size:11px;color:var(--text-muted);font-family:monospace}
+    .usty-num{font-family:monospace;font-variant-numeric:tabular-nums}
+    .usty-inp{background:var(--bg,var(--surface));border:1px solid var(--border);color:var(--text);border-radius:9px;padding:8px 10px;font-family:monospace;width:100%;font-size:15px}
+    .usty-tab{font-family:monospace;font-size:13px;border:1px solid var(--border);background:var(--surface);color:var(--text-muted);border-radius:10px;padding:10px 12px;cursor:pointer;text-align:left;line-height:1.35}
+    .usty-tab[aria-selected="true"]{border-color:var(--uc);color:var(--text);box-shadow:0 0 0 1px color-mix(in srgb,var(--uc) 45%,transparent)}
+    .usty-dot{width:9px;height:9px;border-radius:50%;display:inline-block;box-shadow:0 0 0 3px color-mix(in srgb,currentColor 18%,transparent)}
+    .usty-seg{height:12px;border-radius:999px;background:var(--border);overflow:hidden}
+    .usty-seg>i{display:block;height:100%;border-radius:999px;transition:width .5s ease}
+    .usty-badge{font-family:monospace;font-weight:700;letter-spacing:.12em;font-size:clamp(19px,4.8vw,28px);padding:11px 18px;border-radius:12px;display:inline-flex;align-items:center;gap:12px;border:1px solid}
+    @media(prefers-reduced-motion:reduce){.usty-seg>i{transition:none}}
+  </style>
+  <script>
+  (function(){
+    var el=function(id){return document.getElementById(id);};
+    var SB=function(){return (typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'';},AK=function(){return (typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';};
+    var M=[
+     { btn:['超短天期 1–3M','高股息 ETF / REITs'], core:'股息率 vs 無風險利率 · 息收溢價與下行資本損失',
+       p:{name:'高股息 ETF / REITs',tick:'0056 · 00878 · 00919 · VNQ',py:5.5,risk:'高（股價回撤）'},
+       b:{name:'超短天期國庫券',tick:'SGOV · 00865B',dur:0.25,yf:function(s){return Math.max(s.y2+0.4,s.y10);}},
+       mOpp:'息收溢價，資金駐留', mRisk:'無風險吸金，權益承壓',
+       opp:['無風險利率回落時，高息資產相對吸引力回升，資金傾向回補。','息收與房地產現金流於通膨趨緩階段具相對防禦性。'],
+       risk:['當超短公債利率逼近或超越股息率，資金排擠使權益端評價承壓。','股息率不含資本利得保證，利率高檔期的價格回撤需防範。'] },
+     { btn:['短天期 1–3Y','定存 / 貨幣市場'], core:'再投資風險 vs 短端鎖利 · 現金部位的到期滾動',
+       p:{name:'銀行定存 / 貨幣市場基金 (MMF)',tick:'美元高利定存 · MMF',py:4.6,risk:'低（本金穩定）'},
+       b:{name:'短天期公債',tick:'SHY · 1–3Y UST',dur:1.9,yf:function(s){return s.y2;}},
+       mOpp:'短端鎖利，現金有息', mRisk:'再投受限，續期不定',
+       opp:['短端利率高檔時，現金等價物提供相對明確的名目息收。','流動性佳、存續期短，對利率波動的價格敏感度低。'],
+       risk:['降息循環一旦啟動，到期再投資的收益率面臨下修（再投資風險）。','名目息收於通膨未回落前，實質購買力仍可能被侵蝕。'] },
+     { btn:['中天期 7–10Y','高本益比科技成長'], core:'折現率 vs 遠期盈餘倍數 · DCF 分母對估值的敏感度',
+       p:{name:'高本益比科技成長股',tick:'QQQ · 00662 · 大型權值科技',py:3.2,risk:'很高（久期型股票）'},
+       b:{name:'中天期基準公債',tick:'IEF · 00697B · 10Y 基準',dur:7.6,yf:function(s){return s.y10;}},
+       mOpp:'折現趨緩，成長回神', mRisk:'估值重估，折現加劇',
+       opp:['10Y 殖利率見頂回落時，折現率下降有利遠期盈餘的現值回升。','結構性成長題材於利率穩定階段，評價波動區間收斂。'],
+       risk:['無風險折現率上行直接壓縮遠期盈餘倍數，高估值端波動放大。','長天期（久期型）成長股對利率變動的評價敏感度顯著偏高。'] },
+     { btn:['超長天期 20Y+','投資級公司債'], core:'信用利差 vs 久期彈性 · 違約補償與利率資本利得的不對稱',
+       p:{name:'高評級投資級公司債',tick:'LQD · 00720B · 00937B',py:5.3,risk:'中高（久期＋信用）'},
+       b:{name:'超長天期公債',tick:'TLT · 00687B · 00679B',dur:16.8,yf:function(s){return s.y10+0.35;}},
+       mOpp:'久期具彈，利差墊高', mRisk:'信用分化，留意違約',
+       opp:['降息前夕，長天期部位具備利率下行帶來的資本增值不對稱彈性。','投資級信用利差若維持，於息收之外提供額外風險補償。'],
+       risk:['景氣放緩時信用利差擴大，違約補償是否足夠為核心風險。','超長存續期對利率上行高度敏感，價格波動幅度顯著。'] },
+    ];
+    var sel=0, latest=null, built=false;
+    function pctTxt(x){return (x>=0?'+':'')+x.toFixed(2)+'%';}
+    function clamp(x,a,b){return Math.max(a,Math.min(b,x));}
+    function st(){ return { y10:parseFloat(el('ust10').value)||0, y2:parseFloat(el('ust2').value)||0 }; }
+
+    function shell(){
+      var tabs=M.map(function(m,i){return '<button class="usty-tab" role="tab" type="button" aria-selected="'+(i===sel)+'" data-i="'+i+'"><div class="usty-num" style="font-size:11px;color:var(--uc);letter-spacing:.08em">'+m.btn[0]+'</div><div style="font-weight:700;margin-top:3px">'+m.btn[1]+'</div></button>';}).join('');
+      return ''+
+      '<div style="margin-bottom:14px"><div class="usty-eye">Rate-Anchored Benchmarking · 總經定性</div>'+
+        '<h2 style="margin:4px 0 0;font-size:clamp(19px,4vw,26px);font-weight:900">美債殖利率對標儀表</h2>'+
+        '<p style="margin:6px 0 0;color:var(--text-muted);font-size:13px">以 10 年期美國公債殖利率為定價之錨，切換公債天期與熱門對標資產，檢視收益率利差、存續期敏感度與此利率環境下的客觀機會／風險定性。</p>'+
+        '<div id="ustSrc" class="usty-num" style="font-size:11px;color:var(--text-muted);margin-top:4px"></div></div>'+
+      '<div class="usty-card" style="padding:14px 16px;margin-bottom:16px"><div class="usty-eye" style="margin-bottom:12px">US Treasury Benchmark · 基準</div>'+
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;align-items:end">'+
+          '<label style="display:block"><span style="font-size:12px;color:var(--text-muted)">US 10Y 殖利率 (%)</span><input id="ust10" class="usty-inp usty-num" type="number" step="0.05" inputmode="decimal" style="margin-top:6px"></label>'+
+          '<label style="display:block"><span style="font-size:12px;color:var(--text-muted)">US 2Y 殖利率 (%)</span><input id="ust2" class="usty-inp usty-num" type="number" step="0.05" inputmode="decimal" style="margin-top:6px"></label>'+
+          '<div class="usty-card" style="padding:10px 12px"><div style="font-size:11px;color:var(--text-muted)">殖利率曲線 10Y−2Y</div><div style="display:flex;align-items:center;gap:8px;margin-top:6px"><span id="ustCurveDot" class="usty-dot"></span><span id="ustCurveVal" class="usty-num" style="font-size:16px;font-weight:700"></span><span id="ustCurveTxt" style="font-size:12px;color:var(--text-muted)"></span></div></div>'+
+          '<div class="usty-card" style="padding:10px 12px"><div style="font-size:11px;color:var(--text-muted)">股權風險溢價 ERP<span id="ustErpScope" style="opacity:.7"></span></div><div style="display:flex;align-items:center;gap:8px;margin-top:6px"><span id="ustErpDot" class="usty-dot"></span><span id="ustErpVal" class="usty-num" style="font-size:16px;font-weight:700"></span><span id="ustErpTxt" style="font-size:12px;color:var(--text-muted)"></span></div></div>'+
+        '</div></div>'+
+      '<div role="tablist" id="ustTabs" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin-bottom:16px">'+tabs+'</div>'+
+      '<div class="usty-card" style="padding:18px 16px">'+
+        '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:6px"><div class="usty-eye" id="ustCore"></div><span class="usty-num" id="ustTag" style="font-size:11px;color:var(--text-muted)"></span></div>'+
+        '<div style="margin:4px 0 18px"><span id="ustMotto" class="usty-badge"><span class="usty-dot"></span><span id="ustMottoTxt"></span></span></div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+
+          '<div class="usty-card" style="padding:14px"><div class="usty-eye" style="color:var(--uc)">對標資產</div><div id="ustPName" style="font-weight:700;margin-top:6px"></div><div id="ustPTick" class="usty-num" style="color:var(--text-muted);font-size:12px;margin-top:3px"></div>'+
+            '<dl style="margin:12px 0 0;display:grid;grid-template-columns:auto 1fr;gap:7px 10px;font-size:13px"><dt style="color:var(--text-muted)">預期殖利率</dt><dd class="usty-num" id="ustPy" style="margin:0;text-align:right;font-weight:700"></dd><dt style="color:var(--text-muted)">波動／天期風險</dt><dd id="ustPRisk" style="margin:0;text-align:right"></dd></dl>'+
+            '<label style="display:block;margin-top:12px"><span style="font-size:11px;color:var(--text-muted)">調整預期殖利率 (%，示意假設)</span><input id="ustPyIn" class="usty-inp usty-num" type="number" step="0.1" inputmode="decimal" style="margin-top:5px"></label></div>'+
+          '<div class="usty-card" style="padding:14px"><div class="usty-eye" style="color:var(--ua)">對應公債</div><div id="ustBName" style="font-weight:700;margin-top:6px"></div><div id="ustBTick" class="usty-num" style="color:var(--text-muted);font-size:12px;margin-top:3px"></div>'+
+            '<dl style="margin:12px 0 0;display:grid;grid-template-columns:auto 1fr;gap:7px 10px;font-size:13px"><dt style="color:var(--text-muted)">參考殖利率</dt><dd class="usty-num" id="ustBy" style="margin:0;text-align:right;font-weight:700"></dd><dt style="color:var(--text-muted)">存續期間</dt><dd class="usty-num" id="ustBDur" style="margin:0;text-align:right"></dd><dt style="color:var(--text-muted)">利率 +1% 理論價損</dt><dd class="usty-num" id="ustBDn" style="margin:0;text-align:right;color:var(--ur)"></dd><dt style="color:var(--text-muted)">利率 −1% 理論價益</dt><dd class="usty-num" id="ustBUp" style="margin:0;text-align:right;color:var(--ue)"></dd></dl></div>'+
+        '</div>'+
+        '<div style="margin-top:16px;display:grid;gap:14px">'+
+          '<div><div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);margin-bottom:6px"><span>收益率利差空間（對標殖利率 − 公債殖利率）</span><span id="ustSpreadVal" class="usty-num" style="font-weight:700"></span></div><div class="usty-seg"><i id="ustSpreadBar"></i></div></div>'+
+          '<div><div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);margin-bottom:6px"><span>資金排擠強度（無風險利率對該資產的替代壓力）</span><span id="ustCrowdVal" class="usty-num" style="font-weight:700"></span></div><div class="usty-seg"><i id="ustCrowdBar"></i></div></div>'+
+        '</div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px">'+
+          '<div class="usty-card" style="border-color:color-mix(in srgb,var(--ue) 35%,var(--border));padding:14px"><div class="usty-eye" style="color:var(--ue)">總經機會環境</div><ul id="ustOpp" style="margin:10px 0 0;padding-left:18px;font-size:13px;line-height:1.7"></ul></div>'+
+          '<div class="usty-card" style="border-color:color-mix(in srgb,var(--ur) 35%,var(--border));padding:14px"><div class="usty-eye" style="color:var(--ur)">潛在市場風險</div><ul id="ustRisk" style="margin:10px 0 0;padding-left:18px;font-size:13px;line-height:1.7"></ul></div>'+
+        '</div>'+
+      '</div>'+
+      '<p style="margin:16px 0 0;color:var(--text-muted);font-size:11.5px;line-height:1.7">本模組為客觀總經教育用途；US10Y／US2Y 預設為美國財政部官方最新收盤值（可手動調整為示意假設），其餘對標數值為示意假設，非即時行情、非個股或商品之買賣建議，亦不構成投資招攬或獲利保證。存續期理論損益為線性近似（損益 ≈ −存續期 × 利率變動）。資料源：U.S. Department of the Treasury（Daily Treasury Par Yield Curve Rates）。</p>';
+    }
+
+    function render(){
+      var s=st(), m=M[sel];
+      [].forEach.call(el('ustTabs').children,function(c,i){c.setAttribute('aria-selected', i===sel);});
+      var curve=s.y10-s.y2; el('ustCurveVal').textContent=pctTxt(curve);
+      var cd=el('ustCurveDot'),ct=el('ustCurveTxt');
+      if(curve<0){cd.style.color='var(--ur)';ct.textContent='倒掛 · 景氣放緩訊號';}
+      else if(curve<0.3){cd.style.color='var(--ua)';ct.textContent='平坦 · 轉折觀察區';}
+      else {cd.style.color='var(--ue)';ct.textContent='正斜率 · 結構正常';}
+      var py=parseFloat(el('ustPyIn').value); if(!isFinite(py)) py=m.p.py;
+      var by=m.b.yf(s);
+      var erp=py-s.y10; el('ustErpScope').textContent=' · '+m.btn[1]; el('ustErpVal').textContent=pctTxt(erp);
+      var ed=el('ustErpDot'),et=el('ustErpTxt');
+      if(erp<1){ed.style.color='var(--ur)';et.textContent='溢價收窄';}else if(erp<3){ed.style.color='var(--ua)';et.textContent='溢價中性';}else{ed.style.color='var(--ue)';et.textContent='溢價充足';}
+      el('ustCore').textContent=m.core; el('ustTag').textContent='DUR '+m.b.dur.toFixed(1)+' · 示意假設';
+      var spread=py-by, oppState=spread>=1.5, col=oppState?'var(--ue)':'var(--ua)';
+      var mo=el('ustMotto'); mo.style.color=col; mo.style.borderColor='color-mix(in srgb,'+col+' 55%,transparent)'; mo.style.background='color-mix(in srgb,'+col+' 12%,var(--surface))';
+      el('ustMottoTxt').textContent=oppState?m.mOpp:m.mRisk;
+      el('ustPName').textContent=m.p.name; el('ustPTick').textContent=m.p.tick; el('ustPy').textContent=py.toFixed(2)+'%'; el('ustPRisk').textContent=m.p.risk;
+      el('ustBName').textContent=m.b.name; el('ustBTick').textContent=m.b.tick; el('ustBy').textContent=by.toFixed(2)+'%'; el('ustBDur').textContent=m.b.dur.toFixed(1)+' 年';
+      el('ustBDn').textContent=(-m.b.dur).toFixed(1)+'%'; el('ustBUp').textContent='+'+m.b.dur.toFixed(1)+'%';
+      el('ustSpreadVal').textContent=pctTxt(spread);
+      var sb=el('ustSpreadBar'); sb.style.width=clamp((spread+2)/6*100,3,100)+'%'; sb.style.background=spread>=0?'linear-gradient(90deg,var(--uc),var(--ue))':'linear-gradient(90deg,var(--ua),var(--ur))';
+      var crowd=py>0?clamp(by/py*100,0,100):0; el('ustCrowdVal').textContent=crowd.toFixed(0)+'%';
+      var cb=el('ustCrowdBar'); cb.style.width=clamp(crowd,3,100)+'%'; cb.style.background=crowd>=85?'linear-gradient(90deg,var(--ua),var(--ur))':'linear-gradient(90deg,var(--border),var(--uc))';
+      el('ustOpp').innerHTML=m.opp.map(function(t){return '<li>'+t+'</li>';}).join('');
+      el('ustRisk').innerHTML=m.risk.map(function(t){return '<li>'+t+'</li>';}).join('');
+    }
+    function bind(){
+      el('ustTabs').addEventListener('click',function(e){var b=e.target.closest('button[data-i]');if(!b)return;sel=+b.dataset.i;el('ustPyIn').value=M[sel].p.py.toFixed(1);render();});
+      ['ust10','ust2','ustPyIn'].forEach(function(id){el(id).addEventListener('input',render);});
+    }
+    window._ustyShow=function(){
+      if(!built){ el('ustBody').innerHTML=shell(); built=true; bind(); el('ust10').value='4.50'; el('ust2').value='4.00'; el('ustPyIn').value=M[0].p.py.toFixed(1); render();
+        fetch(SB()+'/rest/v1/ust_yields?select=trade_date,y2,y10&order=trade_date.desc&limit=1',{headers:{apikey:AK(),Authorization:'Bearer '+AK()}}).then(function(r){return r.json();}).then(function(a){
+          var d=Array.isArray(a)&&a[0]; if(d){ if(d.y10!=null)el('ust10').value=(+d.y10).toFixed(2); if(d.y2!=null)el('ust2').value=(+d.y2).toFixed(2); el('ustSrc').textContent='美國財政部官方 · 資料日 '+d.trade_date+'（可手動調整）'; render(); }
+        }).catch(function(){});
+      } else { render(); }
+    };
+    window._VIEWS=window._VIEWS||{}; window._VIEWS.usty={el:'ustView',show:'_ustyShow'};
+  })();
+  </script>
   <script>
   (function(){
     var IDX=[{s:'^TWII',n:'台股加權'},{s:'^SOX',n:'費半'},{s:'^IXIC',n:'那斯達克'},{s:'^DJI',n:'道瓊'},{s:'^GSPC',n:'S&P 500'},{s:'^N225',n:'日經225'},{s:'^KS11',n:'韓股'}];
@@ -6461,7 +6594,7 @@
     // 通用視圖註冊：新增大項只要在此登記 {el:容器id, show:全域函式名}，並提供對應元素/函式即可
     window._VIEWS = window._VIEWS || {}; window._VIEWS.home={el:'homeView',show:'_hxShow'}; window._VIEWS.focus={el:'focusView',show:'_focusShow'}; window._VIEWS.overview={el:'overviewView',show:'_ovShow'};
     var NAVMAP={home:'首頁',overview:'今日焦點',focus:'今日焦點',todayindex:'今日焦點',screen:'選股',box:'選股',limitup:'選股',liq:'選股',sr:'選股',
-      themes:'題材族群',sectors:'題材族群',hottopics:'題材族群',greed:'市場觀察',inst:'市場觀察',sig:'市場觀察',brank:'市場觀察',mingdeng:'市場觀察',fhedge:'市場觀察',disposal:'市場觀察',breadth:'市場觀察',news:'每日新聞',
+      themes:'題材族群',sectors:'題材族群',hottopics:'題材族群',greed:'市場觀察',inst:'市場觀察',sig:'市場觀察',brank:'市場觀察',mingdeng:'市場觀察',fhedge:'市場觀察',disposal:'市場觀察',breadth:'市場觀察',usty:'市場觀察',news:'每日新聞',
       etfx:'ETF',etf:'ETF',etfcons:'ETF',etfrev:'ETF',etfdiv:'ETF',etfhold:'ETF',etfsim:'ETF',etfheavy:'ETF',etfprem:'ETF',etfflow:'ETF',etfperf:'ETF'};
     function _setNav(v){
       var label=NAVMAP[v]; var items=document.querySelectorAll('#mainNav .mn-item');
