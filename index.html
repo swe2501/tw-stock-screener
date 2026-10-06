@@ -7050,9 +7050,9 @@
       box.innerHTML=
         '<div class="gs-maint"><header>'
           +'<span>融資維持率</span>'
-          +'<span class="gs-mmtabs gs-mmtabs-top"><button id="msTabAll" class="on" type="button" onclick="window._msSelMkt(\'all\')">全市場</button><button id="msTabListed" type="button" onclick="window._msSelMkt(\'listed\')">上市</button><button id="msTabOtc" type="button" onclick="window._msSelMkt(\'otc\')">上櫃</button></span>'
+          +'<span class="gs-mmtabs gs-mmtabs-top"><button id="msTabListed" class="on" type="button" onclick="window._msSelMkt(\'listed\')">上市</button><button id="msTabAll" type="button" onclick="window._msSelMkt(\'all\')">全市場</button><button id="msTabOtc" type="button" onclick="window._msSelMkt(\'otc\')">上櫃</button></span>'
           +'<strong id="hpMaintNum">—</strong></header>'
-          +'<div id="msEtfRow" class="gs-msetf" hidden><label><input type="radio" name="msEtf" value="inc" checked onchange="window._msSelEtf(false)">含 ETF</label><label><input type="radio" name="msEtf" value="exc" onchange="window._msSelEtf(true)">扣除 ETF</label></div>'
+          +'<div id="msEtfRow" class="gs-msetf"><label><input type="radio" name="msEtf" value="inc" checked onchange="window._msSelEtf(false)">含 ETF</label><label><input type="radio" name="msEtf" value="exc" onchange="window._msSelEtf(true)">扣除 ETF</label></div>'
           +'<p id="hpMaintLabel"></p><div class="gs-ruler">'
           +'<div class="gs-rlab"><span style="left:22.22%">140%<small>追繳警戒</small></span><span style="left:44.44%">160%<small>健康區</small></span><span style="left:72.22%">185%<small>高檔浮額</small></span></div>'
           +'<div class="gs-rtrack"><i id="hpMaintMark"></i></div><b id="hpMaintCur"></b></div><p id="msNote" class="gs-msnote"></p></div>'
@@ -9232,6 +9232,10 @@
     // 依市場(全/上市/上櫃)+含扣ETF 組出四面板序列：維持率+融資餘額取自 margin_maint_split(三市場同表)，
     // 融券取自 全市場 margin_maintenance / 上市 margin_market / 上櫃 otc_market_daily。
     function _mmSeries(mkt, ex){
+      // 上市＝玩股網「大盤」口徑：維持率/融資/融券全取自 margin_maintenance（官方逐股，與玩股網一致）
+      if(mkt==='listed'){
+        return ((_mmData&&_mmData[ex])||[]).map(function(r){ return {trade_date:r.trade_date, maintenance_ratio:r.maintenance_ratio, margin_balance:r.margin_balance, short_balance:r.short_balance}; });
+      }
       var split=(_msData&&_msData[ex])||[];
       var rk={all:'all_ratio',listed:'listed_ratio',otc:'otc_ratio'}[mkt]||'all_ratio';
       var lk={all:'all_loan',listed:'listed_loan',otc:'otc_loan'}[mkt]||'all_loan';
@@ -9263,7 +9267,7 @@
       if(host&&tip)_mmBuildPanels(host, tip, series, (_mmData&&_mmData.taiex)||[]);
     };
     // ── 首頁 §4：融資維持率 tab（上市／上櫃／全市場）＋上市 radio（含/扣ETF）；讀 margin_maint_split ──
-    var _msData = null, _msChart = null, _msMkt = 'all', _msEx = false;
+    var _msData = null, _msChart = null, _msMkt = 'listed', _msEx = false;   // 預設上市（＝玩股網大盤口徑）
     var _MS_META = {
       all:    {key:'all_ratio',    color:'#f5c84b', title:'全市場 融資維持率走勢'},
       listed: {key:'listed_ratio', color:'#e6a23c', title:'上市 融資維持率走勢'},
@@ -9298,11 +9302,12 @@
     function _msApply(){
       if(!_msData)return;
       var meta=_MS_META[_msMkt]||_MS_META.all;
-      var rows=_msData[_msEx]||[], cur=rows[rows.length-1];
+      var useMM=(_msMkt==='listed' && _mmData && (_mmData[_msEx]||[]).length);   // 上市用 margin_maintenance（＝玩股網）
+      var rows=useMM?_mmData[_msEx]:(_msData[_msEx]||[]), cur=rows[rows.length-1];
       var num=document.getElementById('hpMaintNum'),lab=document.getElementById('hpMaintLabel'),
           mk=document.getElementById('hpMaintMark'),cb=document.getElementById('hpMaintCur'),
           note=document.getElementById('msNote');
-      var m=cur&&cur[meta.key]!=null?Number(cur[meta.key]):null;
+      var m=cur?(useMM?(cur.maintenance_ratio!=null?Number(cur.maintenance_ratio):null):(cur[meta.key]!=null?Number(cur[meta.key]):null)):null;
       if(m!=null){var pos=Math.min(100,Math.max(0,(m-120)/90*100));
         if(num)num.textContent=m.toFixed(2)+'%';
         if(lab)lab.textContent=_hpMaintLabel(m);
@@ -9315,7 +9320,7 @@
     }
     window._loadHpMaintChart = function(){
       var host=document.getElementById('hpMmPanels'); if(!host)return;
-      _mmLoad().then(function(){ if(window._mmRenderPanels)window._mmRenderPanels(); });
+      _mmLoad().then(function(){ try{ _msApply(); }catch(_){} if(window._mmRenderPanels)window._mmRenderPanels(); });
     };
     function _mmDestroy() { var h=document.getElementById('mmPanels'); if(h&&h._charts){h._charts.forEach(c => { try { c.remove(); } catch (_) {} }); h._charts=[];} }
     function closeMarginModal() { document.getElementById('marginModal').style.display = 'none'; _mmDestroy(); }
