@@ -321,7 +321,7 @@
     .chart-layer-toolbar{display:flex;align-items:center;gap:5px;margin:7px 8px 0;padding:4px;border:1px solid var(--border);border-radius:11px;background:color-mix(in srgb,var(--surface2) 72%,var(--surface));box-shadow:0 3px 10px rgba(31,42,61,.045);overflow-x:auto;scrollbar-width:none;}
     .chart-layer-toolbar::-webkit-scrollbar{display:none;}
     .chart-layer-tab{--layer-accent:#7085a3;position:relative;display:inline-flex;align-items:center;gap:7px;flex:0 0 auto;border:1px solid transparent;border-radius:8px;background:transparent;color:var(--text-muted);padding:7px 12px;font-size:11.5px;font-weight:800;white-space:nowrap;cursor:pointer;transition:color .17s ease,background .17s ease,border-color .17s ease,box-shadow .17s ease,transform .15s ease;}
-    .chart-layer-tab[data-layer="mk"]{--layer-accent:#6680a7}.chart-layer-tab[data-layer="sr"]{--layer-accent:#b75a55}.chart-layer-tab[data-layer="vp"]{--layer-accent:#b58a2d}
+    .chart-layer-tab[data-layer="mk"]{--layer-accent:#6680a7}.chart-layer-tab[data-layer="sr"]{--layer-accent:#b75a55}.chart-layer-tab[data-layer="vp"]{--layer-accent:#b58a2d}.chart-layer-tab[data-layer="broker"]{--layer-accent:#a45fba}
     .chart-layer-tab:hover{color:var(--text);background:color-mix(in srgb,var(--surface) 78%,transparent);}
     .chart-layer-tab:active{transform:scale(.97)}
     .chart-layer-tab.is-open{color:var(--layer-accent);background:var(--surface);border-color:color-mix(in srgb,var(--layer-accent) 30%,var(--border));box-shadow:0 3px 9px rgba(31,42,61,.07);}
@@ -329,6 +329,18 @@
     .chart-layer-tab.is-enabled .layer-dot{background:var(--layer-accent);box-shadow:0 0 7px color-mix(in srgb,var(--layer-accent) 62%,transparent);transform:scale(1.12);}
     .chart-layer-tab .layer-count{display:none;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:color-mix(in srgb,var(--layer-accent) 11%,var(--surface));color:var(--layer-accent);font-size:9px;line-height:16px;text-align:center;}
     .chart-layer-tab .layer-count.show{display:inline-block;}
+    .broker-panel-head{display:flex;align-items:center;justify-content:flex-end;gap:4px;margin:1px 2px 11px;font-size:11.5px;}
+    .broker-panel-head a{display:inline-flex;align-items:center;justify-content:center;min-width:48px;padding:5px 10px;border:1px solid var(--border);background:var(--surface);color:var(--text-muted);cursor:pointer;text-decoration:none;font-weight:800;line-height:1;border-radius:7px;transition:color .16s ease,border-color .16s ease,background .16s ease,transform .14s ease;}
+    .broker-panel-head a:first-child{color:#9556aa;border-color:color-mix(in srgb,#a45fba 30%,var(--border));background:color-mix(in srgb,#a45fba 7%,var(--surface));}
+    .broker-panel-head a:hover{color:var(--text);border-color:color-mix(in srgb,#a45fba 42%,var(--border));background:color-mix(in srgb,#a45fba 10%,var(--surface));}
+    .broker-panel-head a:active{transform:scale(.97);}
+    .broker-panel-list{max-height:176px;overflow-y:auto;padding:2px 6px 9px;}
+    .broker-panel-group+ .broker-panel-group{margin-top:10px;padding-top:9px;border-top:1px solid var(--border);}
+    .broker-panel-title{display:flex;align-items:center;gap:6px;color:#a45fba;font-size:11.5px;font-weight:800;margin-bottom:6px;}
+    .broker-panel-title small{color:var(--text-muted);font-size:10px;font-weight:700;}
+    .broker-panel-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(138px,1fr));gap:6px 8px;}
+    .broker-panel-grid label{display:flex;align-items:center;gap:7px;min-width:0;padding:6px 8px;border:1px solid color-mix(in srgb,#a45fba 14%,var(--border));border-radius:7px;background:color-mix(in srgb,var(--surface2) 72%,transparent);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2;}
+    .broker-panel-grid input{flex:0 0 auto;accent-color:#a45fba;}
     .chart-feature-panel{display:none;margin-top:6px;transform:none!important;}
     .chart-feature-panel.is-open{display:block;}
     .chart-feature-panel>a{display:none!important;}
@@ -2371,6 +2383,9 @@
       .gs-pdtabs{display:flex;gap:4px;background:var(--surface2);border-radius:8px;padding:3px;}
       .gs-pd{border:0;background:transparent;font-size:12px;font-weight:700;color:var(--text-muted);padding:5px 12px;border-radius:6px;cursor:pointer;}
       .gs-pd.on{background:var(--brand-green);color:#fff;}
+      .gs-pdselect{display:flex;align-items:center;gap:7px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:0 10px;color:var(--text-muted);}
+      .gs-pdselect span{font-size:10.5px;font-weight:700;letter-spacing:.04em;white-space:nowrap;}
+      .gs-pdselect select{appearance:none;border:0;background:transparent;color:var(--text);font-size:12.5px;font-weight:800;padding:7px 18px 7px 0;cursor:pointer;outline:0;background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);background-position:calc(100% - 7px) 52%,calc(100% - 3px) 52%;background-size:4px 4px,4px 4px;background-repeat:no-repeat;}
       .gs-mmt{display:grid;gap:13px;margin-bottom:16px;}
       .gs-mline{display:grid;grid-template-columns:64px 78px 1fr;align-items:center;gap:12px;font-size:12.5px;}
       .gs-mline>span{color:var(--text-muted);} .gs-mline>b{font-weight:800;font-variant-numeric:tabular-nums;}
@@ -2389,9 +2404,17 @@
       .gs-ruler{position:relative;margin:10px 14px 52px;}
       .gs-rlab span{position:absolute;top:-46px;transform:translateX(-50%);text-align:center;font-size:14px;font-weight:800;color:var(--text);white-space:nowrap;font-variant-numeric:tabular-nums;line-height:1.15;}
       .gs-rlab span small{display:block;font-size:11px;color:var(--text-muted);font-weight:600;margin-top:4px;}
-      .gs-rtrack{height:11px;border-radius:6px;position:relative;background:linear-gradient(90deg,#c0392b 0 22%,#d99a2b 22% 44%,#cfc8b8 44% 72%,#2e8b57 72% 100%);}
-      .gs-rtrack>i{position:absolute;top:14px;transform:translateX(-50%);width:0;height:0;border-left:9px solid transparent;border-right:9px solid transparent;border-bottom:12px solid var(--text);}
-      .gs-maint>.gs-ruler>b{position:absolute;top:30px;transform:translateX(-50%);font-size:14px;font-weight:800;color:var(--text);white-space:nowrap;font-variant-numeric:tabular-nums;}
+      .gs-rtrack{height:10px;border-radius:5px;position:relative;display:flex;overflow:visible;background:var(--surface2);isolation:isolate;}
+      .gs-rseg{height:10px;flex:none;box-shadow:inset 1px 0 rgba(255,255,255,.18);}
+      .gs-rseg:first-child{border-radius:6px 0 0 6px;}.gs-rseg:last-of-type{border-radius:0 6px 6px 0;}
+      .gs-rtrack:after{content:"";position:absolute;z-index:1;inset:0;border-radius:5px;background-image:linear-gradient(100deg,transparent,rgba(255,255,255,.38),transparent);background-repeat:no-repeat;background-size:16% 100%;background-position:-22% 0;animation:gs-ruler-sheen 6s ease-in-out infinite;pointer-events:none;}
+      .gs-rtrack>i{position:absolute;z-index:2;top:50%;transform:translate(-50%,-50%);width:10px;height:10px;border:2px solid var(--surface);border-radius:50%;background:var(--maint-color,var(--text));box-shadow:0 0 0 3px color-mix(in srgb,var(--maint-color,var(--text)) 18%,transparent),0 0 12px color-mix(in srgb,var(--maint-color,var(--text)) 72%,transparent);}
+      .gs-rtrack>i:after{content:"";position:absolute;left:3px;top:10px;width:1px;height:12px;background:color-mix(in srgb,var(--maint-color,var(--text)) 55%,transparent);}
+      .gs-rtrack>i[hidden]{display:none;}
+      .gs-maint>.gs-ruler>b{position:absolute;top:27px;transform:translateX(-50%);font-size:13px;font-weight:800;color:var(--text);white-space:nowrap;font-variant-numeric:tabular-nums;padding:5px 10px;border:1px solid color-mix(in srgb,var(--maint-color,var(--border)) 38%,var(--border));border-radius:999px;background:color-mix(in srgb,var(--maint-color,var(--surface2)) 9%,var(--surface));line-height:1;}
+      @keyframes gs-ruler-sheen{0%,54%{background-position:-22% 0;opacity:0}60%{opacity:.78}76%{background-position:122% 0;opacity:.32}77%,100%{background-position:122% 0;opacity:0}}
+      @media(prefers-reduced-motion:reduce){.gs-rtrack:after{animation:none}}
+      @media(max-width:480px){.gs-rlab span{font-size:11px}.gs-rlab span small{display:none}.gs-ruler{margin-left:6px;margin-right:6px}.gs-maint>.gs-ruler>b{font-size:12px}}
       /* §4 三組維持率（上市／上櫃／全市場）+ 三條歷史曲線 */
       .gs-msplit{margin-top:16px;border-top:1px dashed var(--border);padding-top:14px;}
       .gs-ms3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px;}
@@ -7212,15 +7235,14 @@
           if(mk<0&&mg>=0)return{l:'弱勢攤平',d:'提防多殺多',t:'d'};
           if(mk<0&&mg<mk-t)return{l:'融資停損',d:'浮額清洗中',t:'n'};
           return{l:'同步修正',d:'融資退場仍有限',t:'n'};}
-        function maintLabel(v){if(v>=185)return'多頭獲利豐厚 · 留意高檔浮額';if(v>=160)return'常態健康區間';if(v>=140)return'弱勢修正警戒 · 部分個股追繳';return'斷頭恐慌區 · 浮額清洗醞釀黃金底';}
-        var sel=box._selDays||5;
+        var sel=box._selDays||1;
         function line(lab,val,range){var w=Math.min(50,Math.abs(val)/range*50),left=val>=0?50:50-w;
           return '<div class="gs-mline"><span>'+lab+'</span><b class="'+(val>=0?'hp-up':'hp-dn')+'">'+(val>0?'+':'')+val.toFixed(2)+'%</b>'
             +'<div class="gs-mtrack"><i></i><u class="'+(val>=0?'pos':'neg')+'" style="left:'+left+'%;width:'+w+'%"></u><em style="left:'+(val>=0?50+w:50-w)+'%"></em></div></div>';}
         function render(){
           var s=data[sel],ready=(s.marketPct!=null&&s.marginPct!=null);
           var st=ready?statusFor(s.marketPct,s.marginPct):{l:'歷史資料累積中',d:'等待共同交易日',t:'n'};
-          var tabs=PERIODS.map(function(d){return '<button class="gs-pd'+(d===sel?' on':'')+'" data-d="'+d+'">'+(d===1?'今日':d+'日')+'</button>';}).join('');
+          var tabs='<label class="gs-pdselect"><span>週期</span><select class="gs-pd" aria-label="選擇觀察週期">'+PERIODS.map(function(d){return '<option value="'+d+'"'+(d===sel?' selected':'')+'>'+(d===1?'今日':d+'日')+'</option>';}).join('')+'</select></label>';
           var body;
           if(ready){var range=Math.max(1,Math.abs(s.marketPct),Math.abs(s.marginPct))*1.12,div=s.marginPct-s.marketPct;
             body='<div class="gs-mmt">'+line('大盤動能',s.marketPct,range)+line('融資動能',s.marginPct,range)
@@ -7229,9 +7251,37 @@
           box.innerHTML='<div class="gs-mtbar"><div class="gs-cst '+st.t+'"><b>'+st.l+'</b><span>· '+st.d+'</span></div><div class="gs-pdtabs">'+tabs+'</div></div>'+body
             +'<div class="gs-tip"><span class="ic"></span><div><b>學院導讀</b>指數上漲、但融資餘額增加得更快，代表散戶槓桿在追價升溫；若此時市場廣度又同步縮小，追高的風險就更需要留意。</div></div>';
         }
-        box.onclick=function(e){var t=e.target.closest('.gs-pd');if(t){box._selDays=+t.dataset.d;sel=box._selDays;render();}};
+        box.onchange=function(e){var t=e.target.closest('.gs-pd');if(t){box._selDays=+t.value;sel=box._selDays;render();}};
         render();
       });
+    }
+    const MAINT_BANDS = [
+      { min: -Infinity, max: 130, label: '斷頭潮',             color: '#B83A2D', textColor: '#B83A2D' },
+      { min: 130,       max: 140, label: '追繳警戒',           color: '#D85A3A', textColor: '#C84E30' },
+      { min: 140,       max: 155, label: '降溫區',             color: '#E7A52B', textColor: '#B87D12' },
+      { min: 155,       max: 175, label: '健康',               color: '#C9C4B5', textColor: '#7D7766' },
+      { min: 175,       max: 190, label: '偏熱',               color: '#4A9B72', textColor: '#3D8661' },
+      { min: 190,       max: Infinity, label: '過熱・高檔浮額', color: '#27885C', textColor: '#27885C' }
+    ];
+    function getMaintBand(value){
+      if(value==null || !Number.isFinite(Number(value))) return null;
+      var rounded=Math.round((Number(value)+Number.EPSILON)*100)/100;
+      return MAINT_BANDS.find(function(b){return rounded>=b.min&&rounded<b.max;})||null;
+    }
+    window.getMaintBand=getMaintBand;
+    function _maintScalePos(value){return Math.min(100,Math.max(0,(value-120)/90*100));}
+    window._maintScalePos=_maintScalePos;
+    function _maintScaleHtml(){
+      var min=120,max=210;
+      return MAINT_BANDS.map(function(b){
+        var lo=Math.max(min,b.min),hi=Math.min(max,b.max);
+        return hi>lo?'<span class="gs-rseg" style="width:'+((hi-lo)/(max-min)*100)+'%;background:'+b.color+'"></span>':'';
+      }).join('');
+    }
+    function _maintTicksHtml(){
+      return MAINT_BANDS.slice(1).map(function(b){
+        return '<span style="left:'+_maintScalePos(b.min)+'%">'+b.min+'<small>'+b.label+'</small></span>';
+      }).join('');
     }
     // 全市場融資維持率：量表（含/扣ETF 切換移到標題列，切換連動大數字/指針/線圖）＋歷史四面板線圖
     function _renderMaint(){
@@ -7242,9 +7292,9 @@
           +'<span class="gs-mmtabs gs-mmtabs-top"><button id="msTabListed" class="on" type="button" onclick="window._msSelMkt(\'listed\')">上市</button><button id="msTabAll" type="button" onclick="window._msSelMkt(\'all\')">全市場</button><button id="msTabOtc" type="button" onclick="window._msSelMkt(\'otc\')">上櫃</button></span>'
           +'<strong id="hpMaintNum">—</strong></header>'
           +'<div id="msEtfRow" class="gs-msetf"><label><input type="radio" name="msEtf" value="inc" checked onchange="window._msSelEtf(false)">含 ETF</label><label><input type="radio" name="msEtf" value="exc" onchange="window._msSelEtf(true)">扣除 ETF</label></div>'
-          +'<p id="hpMaintLabel"></p><div class="gs-ruler">'
-          +'<div class="gs-rlab"><span style="left:22.22%">140%<small>追繳警戒</small></span><span style="left:44.44%">160%<small>健康區</small></span><span style="left:72.22%">185%<small>高檔浮額</small></span></div>'
-          +'<div class="gs-rtrack"><i id="hpMaintMark"></i></div><b id="hpMaintCur"></b></div><p id="msNote" class="gs-msnote"></p></div>'
+          +'<p id="hpMaintLabel">資料更新中</p><div class="gs-ruler">'
+          +'<div class="gs-rlab">'+_maintTicksHtml()+'</div>'
+          +'<div class="gs-rtrack">'+_maintScaleHtml()+'<i id="hpMaintMark" hidden></i></div><b id="hpMaintCur">--</b></div><p id="msNote" class="gs-msnote"></p></div>'
         +'<div class="gs-mmwrap"><div class="gs-mmtitle2" id="hpMmTitle">加權指數 × 全市場融資維持率 × 融資／融券餘額</div><div id="hpMmCur" class="gs-mmcur"></div><div id="hpMmTip" class="gs-mmtip">移動滑鼠或觸控圖上看每日數值</div><div id="hpMmPanels"></div></div>'
         +'<div class="gs-tip"><span class="ic"></span><div><b>學院導讀</b>維持率＝融資持股現值 ÷ 融資借款金額；140／160／185% 為追繳、健康、高檔浮額分界。上市分子取證交所個股融資餘額×收盤、分母取證交所融資金額（含/扣ETF 皆為實算）；上櫃分子取櫃買個股融資餘額×收盤、分母取玩股網上櫃融資金額（扣ETF 為估算）；全市場為兩者分子、分母各自加總後相除（非平均）。扣除 ETF 版以「00 開頭」代號剔除。歷史曲線今日之前由玩股網回補、今日起改每日逐股自算。</div></div>'
         +'<div class="mm-explain"><div class="mm-ex-h">圖解 · 我們怎麼算、跟玩股網差在哪</div><div class="mm-ex-body">'
@@ -8313,12 +8363,13 @@
             <button class="tool-btn" onclick="clearAllDrawings()">✕ 清除</button>
           </div>
         </div>
-        <div id="brokerFilterPanel" style="display:none;padding:6px 8px;border-top:1px solid var(--border);font-size:12px;color:var(--text)"></div>
         <div class="chart-layer-toolbar" role="tablist" aria-label="圖表圖層工具">
           <button class="chart-layer-tab" data-layer="mk" type="button" onclick="_mkTogglePanel()"><span class="layer-dot"></span>大盤K<span class="layer-count"></span></button>
           <button class="chart-layer-tab" data-layer="sr" type="button" onclick="_srTogglePanel()"><span class="layer-dot"></span>支撐壓力<span class="layer-count"></span></button>
           <button class="chart-layer-tab" data-layer="vp" type="button" onclick="_vpTogglePanel()"><span class="layer-dot"></span>價量分析<span class="layer-count"></span></button>
+          <button class="chart-layer-tab" data-layer="broker" type="button" onclick="_toggleBrokerPanel()"><span class="layer-dot"></span>主力分點<span class="layer-count"></span></button>
         </div>
+        <div id="brokerFilterPanel" class="chart-feature-panel" style="display:none;padding:12px 14px 10px;border-top:1px solid var(--border);font-size:12px;color:var(--text)"></div>
         <div id="mkPanel" class="chart-feature-panel" style="padding:6px 8px;border-top:1px solid var(--border);font-size:12px;color:var(--text)">
           <a onclick="_mkTogglePanel()" style="cursor:pointer;text-decoration:none;user-select:none"><span id="mkArrow" style="color:var(--text-muted);font-size:11px;margin-right:4px">▸</span><b style="color:#5a78aa">大盤K</b></a>
           <span id="mkOpts" style="display:none">
@@ -8667,8 +8718,8 @@
               }); });
           };
           window._chartLayerPanel=function(kind,open){
-            var map={mk:['mkPanel','mkOpts'],sr:['srLinePanel','srLineOpts'],vp:['vpPanel','vpOpts']};
-            Object.keys(map).forEach(function(k){var p=el(map[k][0]),o=el(map[k][1]),active=k===kind&&open;if(p)p.classList.toggle('is-open',active);if(o&&!active)o.style.display='none';var b=document.querySelector('.chart-layer-tab[data-layer="'+k+'"]');if(b)b.classList.toggle('is-open',active);});
+            var map={mk:['mkPanel','mkOpts'],sr:['srLinePanel','srLineOpts'],vp:['vpPanel','vpOpts'],broker:['brokerFilterPanel','brokerFilterPanel']};
+            Object.keys(map).forEach(function(k){var p=el(map[k][0]),o=el(map[k][1]),active=k===kind&&open;if(p)p.classList.toggle('is-open',active);if(o&&!active)o.style.display='none';var b=document.querySelector('.chart-layer-tab[data-layer="'+k+'"]');if(b)b.classList.toggle('is-open',active);if(k==='broker'&&!active){window._brokerPanelOpen=false;var a=el('brokerPanelArrow'),x=el('brokerPanelActs');if(a)a.textContent='▸';if(x)x.style.display='none';}});
           };
           window._chartLayerStatus=function(kind,on,count){var b=document.querySelector('.chart-layer-tab[data-layer="'+kind+'"]');if(!b)return;b.classList.toggle('is-enabled',!!on);var n=b.querySelector('.layer-count');if(n){n.textContent=count||'';n.classList.toggle('show',!!count);}};
           window._srTogglePanel=function(){ var o=el('srLineOpts'), open=o.style.display==='none'; o.style.display=open?'block':'none'; window._chartLayerPanel('sr',open); el('srLineArrow').textContent=open?'▾':'▸'; };
@@ -9439,7 +9490,6 @@
     };
     // ── 首頁 §4 內嵌版：全市場融資維持率歷史線圖（含/扣 ETF，與彈窗同資料/同繪圖）──
     var _hpMmTabEx = false;
-    function _hpMaintLabel(v){if(v>=185)return'多頭獲利豐厚 · 留意高檔浮額';if(v>=160)return'常態健康區間';if(v>=140)return'弱勢修正警戒 · 部分個股追繳';return'斷頭恐慌區 · 浮額清洗醞釀黃金底';}
     // 依市場(全/上市/上櫃)+含扣ETF 組出四面板序列：維持率+融資餘額取自 margin_maint_split(三市場同表)，
     // 融券取自 全市場 margin_maintenance / 上市 margin_market / 上櫃 otc_market_daily。
     function _mmSeries(mkt, ex){
@@ -9469,8 +9519,9 @@
       var tt=document.getElementById('hpMmTitle');
       if(tt) tt.textContent='加權指數 × '+mlabel+'融資維持率 × 融資／融券餘額';
       var curEl=document.getElementById('hpMmCur');
+      var curBand=cur?getMaintBand(cur.maintenance_ratio):null;
       if(curEl) curEl.innerHTML = cur
-        ? '最新（'+cur.trade_date+'）'+mlabel+'維持率 <b style="color:'+_mmColor(cur.maintenance_ratio)+'">'+(cur.maintenance_ratio!=null?Number(cur.maintenance_ratio).toFixed(2):'–')+'%</b>'
+        ? '最新（'+cur.trade_date+'）'+mlabel+'維持率 <b style="color:'+(curBand?curBand.textColor:'var(--text-muted)')+'">'+(curBand?Number(cur.maintenance_ratio).toFixed(2):'--')+(curBand?'%':'')+'</b>'
           + ' ｜ 融資餘額 '+(cur.margin_balance!=null?Number(cur.margin_balance).toLocaleString():'–')+' 億'
           + (lastShort ? ' ｜ 融券餘額 '+Number(lastShort.short_balance).toLocaleString()+' 張'+(lastShort.trade_date!==cur.trade_date?'（'+lastShort.trade_date+'）':'') : ' ｜ 融券—')
         : '無資料';
@@ -9519,12 +9570,18 @@
           mk=document.getElementById('hpMaintMark'),cb=document.getElementById('hpMaintCur'),
           note=document.getElementById('msNote');
       var m=cur?(useMM?(cur.maintenance_ratio!=null?Number(cur.maintenance_ratio):null):(cur[meta.key]!=null?Number(cur[meta.key]):null)):null;
-      if(m!=null){var pos=Math.min(100,Math.max(0,(m-120)/90*100));
-        if(num)num.textContent=m.toFixed(2)+'%';
-        if(lab)lab.textContent=_hpMaintLabel(m);
-        if(mk)mk.style.left=pos+'%';
-        if(cb){cb.style.left=pos+'%';cb.textContent='目前 '+m.toFixed(2)+'%';}
-      }else if(num){num.textContent='—';}
+      var band=getMaintBand(m);
+      if(band){var shown=Math.round((m+Number.EPSILON)*100)/100,pos=_maintScalePos(shown);
+        if(num){num.textContent=shown.toFixed(2)+'%';num.style.color=band.textColor;}
+        if(lab){lab.textContent=band.label;lab.style.color=band.textColor;}
+        if(mk){mk.hidden=false;mk.style.left=pos+'%';mk.style.setProperty('--maint-color',band.color);}
+        if(cb){cb.style.left=pos+'%';cb.style.color=band.textColor;cb.style.setProperty('--maint-color',band.color);cb.textContent='目前 '+shown.toFixed(2)+'%';}
+      }else{
+        if(num){num.textContent='--';num.style.color='var(--text-muted)';}
+        if(lab){lab.textContent='資料更新中';lab.style.color='var(--text-muted)';}
+        if(mk){mk.hidden=true;mk.style.removeProperty('--maint-color');}
+        if(cb){cb.textContent='--';cb.style.left='50%';cb.style.color='var(--text-muted)';cb.style.removeProperty('--maint-color');}
+      }
       if(note){var est=(_msMkt==='otc'&&_msEx)||(_msMkt==='all'&&_msEx);
         note.textContent=(cur?meta.title+'　最新 '+cur.trade_date:'')+(est?'（上櫃扣ETF為估算）':'');}
       if(window._mmRenderPanels)window._mmRenderPanels();
@@ -9533,6 +9590,11 @@
       var host=document.getElementById('hpMmPanels'); if(!host)return;
       _mmLoad().then(function(){ try{ _msApply(); }catch(_){} if(window._mmRenderPanels)window._mmRenderPanels(); });
     };
+    // §4 可能早於本段資料函式完成渲染；函式就緒後補啟動，避免首次進頁停在「資料更新中」。
+    if(document.getElementById('hpMaint')){
+      window._loadHpMaintChart();
+      window._loadMaintSplit();
+    }
     function _mmDestroy() { var h=document.getElementById('mmPanels'); if(h&&h._charts){h._charts.forEach(c => { try { c.remove(); } catch (_) {} }); h._charts=[];} }
     function closeMarginModal() { document.getElementById('marginModal').style.display = 'none'; _mmDestroy(); }
     function mmSetTab(ex) {
@@ -10758,6 +10820,7 @@
       _brokerEntriesRaw = []; _brokerChecked = null;
       const panel = document.getElementById('brokerFilterPanel');
       if (panel) { panel.style.display = 'none'; panel.innerHTML = ''; }
+      if (window._chartLayerStatus) window._chartLayerStatus('broker', false, 0);
       if (!_isStock(code) || !_authToken) return;
       try {
         const meta = await _ensureBrokerMeta();
@@ -10780,41 +10843,41 @@
     function _renderBrokerFilter(list) {
       const panel = document.getElementById('brokerFilterPanel');
       if (!panel) return;
-      if (!list.length) { panel.style.display = 'none'; panel.innerHTML = ''; return; }
+      if (!list.length) { panel.style.display = 'none'; panel.innerHTML = ''; if(window._chartLayerStatus)window._chartLayerStatus('broker',false,0); return; }
       const groups = {};
       list.forEach(d => (groups[d.cat] = groups[d.cat] || []).push(d.name));
       const cb = b => {
         const bb = b.replace(/'/g, "\\'");
-        return `<label style="display:inline-flex;align-items:center;gap:3px;margin:2px 10px 2px 0;cursor:pointer;white-space:nowrap">
+        return `<label title="${b}">
           <input type="checkbox"${_brokerChecked && _brokerChecked.has(b) ? ' checked' : ''} onchange="_toggleBroker('${bb}',this.checked)">${b}</label>`;
       };
       const sections = ['大單前20', '小單前20', '其他'].filter(c => groups[c]).map(cat =>
-        `<div style="margin-top:5px"><span style="color:#c678dd;font-weight:600">${cat}（${groups[cat].length}）</span>
-          <div style="display:flex;flex-wrap:wrap;margin-top:2px">${groups[cat].sort().map(cb).join('')}</div></div>`).join('');
+        `<div class="broker-panel-group"><div class="broker-panel-title">${cat}<small>${groups[cat].length} 家</small></div>
+          <div class="broker-panel-grid">${groups[cat].sort().map(cb).join('')}</div></div>`).join('');
       const open = !!window._brokerPanelOpen;
-      // 收合：只顯示「▸ 主力分點」；展開：▾＋全勾／全部取消＋分點清單（2026-09-28）
-      panel.innerHTML = `<div><a onclick="_toggleBrokerPanel()" style="cursor:pointer;text-decoration:none;user-select:none"><span id="brokerPanelArrow" style="color:var(--text-muted);font-size:11px;margin-right:4px">${open ? '▾' : '▸'}</span><b style="color:#c678dd">主力分點</b></a>
-        <span id="brokerPanelActs" style="display:${open ? 'inline' : 'none'}">　<a onclick="_setAllBrokers(true)" style="color:var(--accent);cursor:pointer">全勾</a>
-        　<a onclick="_setAllBrokers(false)" style="color:var(--accent);cursor:pointer">全部取消</a></span></div>
-        <div id="brokerPanelList" style="max-height:110px;overflow-y:auto;display:${open ? 'block' : 'none'}">${sections}</div>`;
-      panel.style.display = 'block';
+      panel.innerHTML = `<div class="broker-panel-head"><a onclick="_setAllBrokers(true)">全選</a><a onclick="_setAllBrokers(false)">清除</a></div>
+        <div id="brokerPanelList" class="broker-panel-list">${sections}</div>`;
+      panel.style.display = open ? 'block' : 'none';
+      if(window._chartLayerStatus)window._chartLayerStatus('broker',false,0);
     }
     function _toggleBrokerPanel() {   // 主力分點清單展開／收合（記住狀態，換股票時沿用）
-      window._brokerPanelOpen = !window._brokerPanelOpen;
-      const l = document.getElementById('brokerPanelList'), a = document.getElementById('brokerPanelArrow'), x = document.getElementById('brokerPanelActs');
-      if (l) l.style.display = window._brokerPanelOpen ? 'block' : 'none';
-      if (x) x.style.display = window._brokerPanelOpen ? 'inline' : 'none';
-      if (a) a.textContent = window._brokerPanelOpen ? '▾' : '▸';
+      const panel = document.getElementById('brokerFilterPanel'), l = document.getElementById('brokerPanelList');
+      if(!panel||!l)return;
+      window._brokerPanelOpen = panel.style.display === 'none';
+      panel.style.display = window._brokerPanelOpen ? 'block' : 'none';
+      if(window._chartLayerPanel)window._chartLayerPanel('broker',window._brokerPanelOpen);
     }
     function _toggleBroker(b, on) {
       if (!_brokerChecked) return;
       if (on) _brokerChecked.add(b); else _brokerChecked.delete(b);
+      if(window._chartLayerStatus)window._chartLayerStatus('broker',_brokerChecked.size>0,_brokerChecked.size);
       _refreshChartMarkers();
     }
     function _setAllBrokers(on) {
       if (!_brokerChecked) return;
       _brokerChecked = on ? new Set(_brokerEntriesRaw.map(e => e.broker)) : new Set();
       document.querySelectorAll('#brokerFilterPanel input[type=checkbox]').forEach(cb => { cb.checked = on; });
+      if(window._chartLayerStatus)window._chartLayerStatus('broker',_brokerChecked.size>0,_brokerChecked.size);
       _refreshChartMarkers();
     }
 
