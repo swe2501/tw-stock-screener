@@ -2337,6 +2337,20 @@
     .gs-basis[open]>summary::before{content:"▾ ";}
     .gs-basis .body{font-size:11.5px;color:var(--text-muted);line-height:1.85;margin-top:8px;}
     .gs-basis .body li{margin-left:4px;}
+    .gs-basis .dr-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:9px;}
+    .gs-basis .dr-chip{border:1px solid var(--border);border-radius:7px;padding:5px 7px;background:color-mix(in srgb,var(--surface) 92%,var(--accent) 8%);line-height:1.35;}
+    .gs-basis .dr-chip small{display:block;color:var(--text-muted);font-size:9px;letter-spacing:.04em;}
+    .gs-basis .dr-chip b{display:block;color:var(--text);font-size:11px;}
+    .gs-basis .dr-cols{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+    .gs-basis .dr-cols strong{color:var(--text);font-size:10.5px;}
+    .gs-basis .dr-note{border-top:1px solid var(--border);margin-top:8px;padding-top:6px;}
+    @media(max-width:640px){.gs-basis .dr-grid{grid-template-columns:repeat(2,minmax(0,1fr));}.gs-basis .dr-cols{grid-template-columns:1fr;}}
+    .gs-title{font-size:clamp(38px,4vw,52px) !important;line-height:1.1 !important;}
+    .gs-title .gs-title-line{display:block;text-wrap:balance;}
+    .gs-title .gs-title-em{display:block;margin-top:.02em;font-size:.76em;line-height:1.12;letter-spacing:-.035em;text-wrap:balance;}
+    .gs-title .gs-title-em .semantic-line{display:block;}
+    @media(max-width:900px){.gs-title{font-size:42px !important;}}
+    @media(max-width:600px){.gs-title{font-size:34px !important;}}
     .gs-report{margin-left:auto;font-size:12px;font-weight:700;color:var(--brand-green);text-decoration:none;border-bottom:1px solid var(--accent);}
     /* 手札左右直欄(僅首頁 hero 內,寬螢幕;高度＝hero 高) */
     .gs-rail{position:absolute;top:0;bottom:0;left:0;width:clamp(0px,calc((100vw - 1180px)/2 - 8px),120px);background:none;border-right:1px solid var(--border);z-index:0;display:flex;align-items:center;justify-content:center;pointer-events:none;}
@@ -6912,14 +6926,20 @@
       Promise.all([
         fetch('https://tw-stock-screener-neon.vercel.app/api/chart?code=%5ETWII&range=1mo&interval=1d').then(function(r){return r.json();}).then(function(j){return (j&&j.data)||[];}).catch(function(){return [];}),
         fetch('https://tw-stock-screener-neon.vercel.app/api/screen?stat=market').then(function(r){return r.json();}).catch(function(){return null;}),
-        sb('inst_market_daily?select=trade_date,foreign_net,trust_net,dealer_net,total_net&order=trade_date.desc&limit=1'),
+        sb('inst_market_daily?select=trade_date,foreign_net,trust_net,dealer_net,total_net&order=trade_date.desc&limit=20'),
         sb('margin_market?select=date,fin_bal_k&order=date.desc&limit=6'),
-        sb('sector_turnover?select=total_amt&order=date.desc&limit=1')
+        sb('sector_turnover?select=date,total_amt&order=date.desc&limit=20')
       ]).then(function(res){
-        var d=res[0]||[],mkt=res[1],inst=(res[2]||[])[0],mm=res[3]||[],st=(res[4]||[])[0];
+        var d=res[0]||[],mkt=res[1],instRows=res[2]||[],inst=instRows[0],mm=res[3]||[],turnRows=res[4]||[],st=turnRows[0];
         var c=d[d.length-1],p=d[d.length-2],c5=d[Math.max(0,d.length-6)];
         var chg=(c&&p)?((c.close/p.close-1)*100):null;
         var idx5=(c&&c5)?((c.close/c5.close-1)*100):null;
+        var c3=d[Math.max(0,d.length-4)],c20=d[Math.max(0,d.length-21)];
+        var idx3=(c&&c3)?((c.close/c3.close-1)*100):null,idx20=(c&&c20)?((c.close/c20.close-1)*100):null;
+        function avgClose(rows){var a=rows.map(function(x){return Number(x&&x.close);}).filter(Number.isFinite);return a.length?a.reduce(function(s,n){return s+n;},0)/a.length:null;}
+        function avgVolume(rows){var a=rows.map(function(x){return Number(x&&(x.volume!=null?x.volume:x.vol));}).filter(Number.isFinite);return a.length?a.reduce(function(s,n){return s+n;},0)/a.length:null;}
+        var ma5=avgClose(d.slice(-5)),ma20=avgClose(d.slice(-20)),prevMa5=avgClose(d.slice(-10,-5));
+        var vol20=avgVolume(d.slice(-21,-1)),volRatio=(c&&Number(c.volume!=null?c.volume:c.vol)&&vol20)?Number(c.volume!=null?c.volume:c.vol)/vol20:null;
         var dateStr=(c&&(c.date||c.time))||today;
         if(el('gsHeroDate'))el('gsHeroDate').textContent=dateStr;
         if(el('gsTodayDate'))el('gsTodayDate').textContent=dateStr;
@@ -6938,6 +6958,12 @@
         var mNow=mm[0]?mm[0].fin_bal_k:null,m5=mm[Math.min(5,mm.length-1)]?mm[Math.min(5,mm.length-1)].fin_bal_k:null;
         var mar5=(mNow&&m5)?((mNow/m5-1)*100):null;
         var lev=(mar5!=null&&idx5!=null)?(mar5-idx5):null;
+        function sumField(rows,key,n){return rows.slice(0,n).reduce(function(s,r){return s+(Number(r&&r[key])||0);},0);}
+        function sumTurn(n){return turnRows.slice(0,n).reduce(function(s,r){return s+(Number(r&&r.total_amt)||0);},0);}
+        var inst3Yi=instRows.length?yi(sumField(instRows,'total_net',3)):null,inst5Yi=instRows.length?yi(sumField(instRows,'total_net',5)):null;
+        var turn3=sumTurn(3),turn5=sumTurn(5),inst3Strength=turn3?sumField(instRows,'total_net',3)/turn3*100:null,inst5Strength=turn5?sumField(instRows,'total_net',5)/turn5*100:null;
+        var instStreak=0;if(instRows.length){var firstSign=Math.sign(Number(instRows[0].total_net)||0);for(var si=0;si<instRows.length&&firstSign&&Math.sign(Number(instRows[si].total_net)||0)===firstSign;si++)instStreak+=firstSign;}
+        window.__dailyResearchSnapshot={date:dateStr,chg:chg,ret3:idx3,ret5:idx5,ret20:idx20,close:c?Number(c.close):null,ma5:ma5,ma20:ma20,ma5Slope:(ma5!=null&&prevMa5)?(ma5/prevMa5-1)*100:null,volumeRatio:volRatio,up:up,down:dn,flat:fl,upRatio:upRatio,breadthDiff:bdDiff,instYi:instYi,instStrength:stren,inst3Yi:inst3Yi,inst5Yi:inst5Yi,inst3Strength:inst3Strength,inst5Strength:inst5Strength,instStreak:instStreak,leader:lead,margin5:mar5,leverage:lev};
         // 2×2 KPI（含子標）
         function c2(k,v,cl,sub){return '<div class="c"><div class="k">'+k+'</div><div class="v '+(cl||'')+'">'+v+'</div><div class="gs-sub">'+(sub||'')+'</div></div>';}
         if(el('gsKpi2'))el('gsKpi2').innerHTML=
@@ -6945,20 +6971,30 @@
           +c2('市場廣度',Math.round(upRatio)+'%','','廣度差 '+(bdDiff>0?'+':'')+bdDiff.toFixed(1)+' 個百分點')
           +c2('法人',instYi!=null?((instYi>0?'+':'')+instYi.toFixed(1)+' 億'):'—',instYi!=null?cls(instYi):'',lead+'為主要力量'+(stren!=null?' · 強度 '+(stren>0?'+':'')+stren.toFixed(2)+'%':''))
           +c2('槓桿',lev!=null?((lev>0?'+':'')+lev.toFixed(2)+' pp'):'—',lev!=null?(lev>0?'hp-up':'hp-dn'):'','五日融資動能減大盤動能');
-        // 定調（合夥人門檻：大盤跌>0.3% 且 上漲占比<45% → 空方擴散）
-        var head,tone,extra,fired=[];
-        var bear=(chg!=null&&chg<-0.3&&upRatio<45), bull=(chg!=null&&chg>0.3&&upRatio>55);
-        if(bear){head='弱勢正在擴散，<em>先觀察賣壓是否收斂</em>。';tone='今日定調 ｜ 空方擴散';extra=(dn?Number(dn).toLocaleString()+' 家收低，':'')+'跌勢已不只集中在少數權值股。';
-          fired=['大盤跌幅超過 0.3%','上漲家數占比低於 45%'];}
-        else if(bull){head='多方轉強，<em>留意攻勢能否延續</em>。';tone='今日定調 ｜ 多方擴張';extra=(up?Number(up).toLocaleString()+' 家收高，':'')+'上漲家數明顯居多，人氣回溫。';
-          fired=['大盤漲幅超過 0.3%','上漲家數占比高於 55%'];}
-        else{head='多空拉鋸，<em>等待方向表態</em>。';tone='今日定調 ｜ 多空拉鋸';extra='漲跌互見，量能與族群輪動是關鍵。';
-          fired=['大盤漲跌幅在 ±0.3% 之間或廣度未過關'];}
+        // 今日字卡：九種互斥盤型，只解讀單日大盤／廣度／法人，不取代左側短中期研究結論。
+        var head,tone,extra,fired=[],fundSignal=stren!=null?stren:(instYi!=null?instYi/250:null);
+        var fullBull=chg!=null&&chg>=0.7&&upRatio>=60;
+        var fullBear=chg!=null&&chg<=-0.7&&upRatio<=40;
+        var indexLed=chg!=null&&chg>0.15&&upRatio<45;
+        var breadthHeld=chg!=null&&chg<-0.15&&upRatio>55;
+        var mildBull=chg!=null&&!fullBull&&!indexLed&&((chg>0.3&&upRatio>55)||(chg>0&&upRatio>=60));
+        var mildBear=chg!=null&&!fullBear&&!breadthHeld&&((chg<-0.3&&upRatio<45)||(chg<0&&upRatio<=40));
+        var rangeMarket=chg!=null&&Math.abs(chg)<=0.3&&upRatio>=45&&upRatio<=55;
+        if(fullBull){head='多方全面擴張，<em>留意量能能否延續</em>。';tone='今日定調 ｜ 多方全面擴張';extra=(up?Number(up).toLocaleString()+' 家收高，':'')+'指數與市場廣度同步轉強。';fired=['大盤漲幅至少 0.7%','上漲家數占比至少 60%'];}
+        else if(fullBear){head='空方全面擴散，<em>先觀察賣壓是否收斂</em>。';tone='今日定調 ｜ 空方全面擴散';extra=(dn?Number(dn).toLocaleString()+' 家收低，':'')+'指數與市場廣度同步轉弱。';fired=['大盤跌幅至少 0.7%','上漲家數占比不高於 40%'];}
+        else if(indexLed){head='權值股拉抬指數，<em>市場廣度尚未跟上</em>。';tone='今日定調 ｜ 權值拉抬';extra='指數收高，但多數個股尚未形成同步攻勢。';fired=['大盤漲幅超過 0.15%','上漲家數占比低於 45%'];}
+        else if(breadthHeld){head='指數受到權值壓抑，<em>個股結構仍有支撐</em>。';tone='今日定調 ｜ 個股有撐';extra='指數收低，但上漲家數仍占多數，內部結構未同步轉弱。';fired=['大盤跌幅超過 0.15%','上漲家數占比高於 55%'];}
+        else if(mildBull){head='多方溫和占優，<em>觀察攻勢能否擴散</em>。';tone='今日定調 ｜ 多方溫和占優';extra='指數與廣度偏多，但尚未達到全面擴張。';fired=['大盤或市場廣度偏多','尚未同時達到強勢門檻'];}
+        else if(mildBear){head='空方溫和占優，<em>留意支撐是否失守</em>。';tone='今日定調 ｜ 空方溫和占優';extra='指數與廣度偏弱，但尚未形成全面空方。';fired=['大盤或市場廣度偏空','尚未同時達到弱勢門檻'];}
+        else if(rangeMarket&&fundSignal!=null&&fundSignal>=0.4){head='指數仍在整理，<em>法人買盤率先表態</em>。';tone='今日定調 ｜ 整理偏多';extra='盤面方向尚未明朗，但法人買盤強度已高於中性區。';fired=['大盤漲跌幅在 ±0.3%','市場廣度介於 45%～55%','法人強度至少 +0.4%'];}
+        else if(rangeMarket&&fundSignal!=null&&fundSignal<=-0.4){head='指數仍在整理，<em>法人賣壓率先升高</em>。';tone='今日定調 ｜ 整理偏空';extra='盤面方向尚未明朗，但法人賣壓強度已低於中性區。';fired=['大盤漲跌幅在 ±0.3%','市場廣度介於 45%～55%','法人強度不高於 -0.4%'];}
+        else{head='多空拉鋸，<em>等待方向表態</em>。';tone='今日定調 ｜ 多空拉鋸';extra='漲跌互見，量能與族群輪動是關鍵。';fired=['其他八種盤型皆未成立','方向與廣度尚未形成一致訊號'];}
         if(el('gsTodayHeadline'))el('gsTodayHeadline').innerHTML=head;
         if(el('gsTone'))el('gsTone').textContent=tone;
         if(el('gsTodayBody'))el('gsTodayBody').textContent=extra;
         if(el('gsBasis'))el('gsBasis').innerHTML='<ul style="margin:0;padding-left:16px">'+fired.map(function(x){return '<li>'+x+'</li>';}).join('')
           +'</ul><div style="margin-top:6px">市場廣度＝上漲家數÷全部家數；法人強度＝三大法人買賣超÷市場成交額；槓桿背離＝五日融資動能－五日大盤動能。資料源：加權 ^TWII、TWSE 家數/BFI82U/MI_MARGN/MI_INDEX。</div>';
+        document.dispatchEvent(new CustomEvent('daily-research-ready',{detail:window.__dailyResearchSnapshot}));
       });
       // 選擇權支撐壓力區：支援 OI 峰值與真實 N 日成交大量區資料切換。
       Promise.all([sb('option_sr?select=*&order=trade_date.desc&limit=6'),sb('option_nday?select=trade_date,data&order=trade_date.desc&limit=1').catch(function(){return [];})]).then(function(all){
@@ -14652,43 +14688,69 @@
   function dailyResearchDeck(){
     const deck=document.querySelector('.gs-deck'),hero=document.querySelector('.gs-title'),headline=document.getElementById('gsTodayHeadline'),body=document.getElementById('gsTodayBody'),tone=document.getElementById('gsTone'),kpis=document.getElementById('gsKpi2');
     if(!deck||!hero||!headline||!body||!tone||!kpis)return;
-    const clean=s=>(s||'').replace(/\s+/g,' ').replace(/[。．]+$/,'').trim();
-    const number=s=>{const n=parseFloat(String(s||'').replace(/,/g,''));return Number.isFinite(n)?n:null;};
+    const valid=n=>n!==null&&n!==undefined&&n!==''&&Number.isFinite(Number(n)),fmt=(n,d=1)=>(Number(n)>0?'+':'')+Number(n).toFixed(d),sign=n=>!valid(n)||Math.abs(Number(n))<.0001?0:Number(n)>0?1:-1;
+    function researchReading(s){
+      if(!s||!valid(s.chg)||!valid(s.upRatio))return null;
+      let trend=0,breadth=0,funds=0,support=[],counter=[],dataCount=0;
+      const add=(bucket,score,text)=>{if(!score)return bucket;dataCount++;(score>0?support:counter).push(text);return bucket+score;};
+      trend=add(trend,s.chg>=.7?2:s.chg>=.2?1:s.chg<=-.7?-2:s.chg<=-.2?-1:0,'大盤當日 '+fmt(s.chg,2)+'%');
+      if(valid(s.ret5))trend=add(trend,s.ret5>=2?2:s.ret5>=.5?1:s.ret5<=-2?-2:s.ret5<=-.5?-1:0,'五日報酬 '+fmt(s.ret5,2)+'%');
+      if(valid(s.close)&&valid(s.ma20))trend=add(trend,s.close>s.ma20?1:-1,'指數'+(s.close>s.ma20?'站上':'跌破')+'月線');
+      if(valid(s.ma5)&&valid(s.ma20))trend=add(trend,s.ma5>s.ma20?1:-1,'短均線'+(s.ma5>s.ma20?'領先':'落後')+'月線');
+      breadth=add(breadth,s.upRatio>=65?2:s.upRatio>=55?1:s.upRatio<=35?-2:s.upRatio<45?-1:0,'上漲家數占比 '+Math.round(s.upRatio)+'%');
+      breadth=add(breadth,s.breadthDiff>=20?1:s.breadthDiff<=-20?-1:0,'廣度差 '+fmt(s.breadthDiff,1)+' pp');
+      const fs=valid(s.instStrength)?s.instStrength:(valid(s.instYi)?s.instYi/200:null);
+      if(valid(fs))funds=add(funds,fs>=1.5?2:fs>=.4?1:fs<=-1.5?-2:fs<=-.4?-1:0,valid(s.instStrength)?'法人當日強度 '+fmt(s.instStrength,2)+'%':'法人當日買賣超 '+fmt(s.instYi,1)+' 億');
+      if(valid(s.inst3Strength))funds=add(funds,s.inst3Strength>=.25?1:s.inst3Strength<=-.25?-1:0,'法人三日強度 '+fmt(s.inst3Strength,2)+'%');
+      if(valid(s.inst5Strength))funds=add(funds,s.inst5Strength>=.2?1:s.inst5Strength<=-.2?-1:0,'法人五日強度 '+fmt(s.inst5Strength,2)+'%');
+      const marketScore=trend+breadth,market=marketScore>=6?'強勢多頭':marketScore>=3?'偏多擴張':marketScore<=-6?'明顯空方':marketScore<=-3?'偏空收縮':'區間整理';
+      const fundState=funds>=3?'強力流入':funds>=1?'溫和流入':funds<=-3?'強力流出':funds<=-1?'溫和流出':'資金中性';
+      const divergence=sign(trend)&&sign(breadth)&&sign(trend)!==sign(breadth);
+      const fundConflict=sign(s.instStrength)&&((sign(s.inst3Strength)&&sign(s.instStrength)!==sign(s.inst3Strength))||(sign(s.inst5Strength)&&sign(s.instStrength)!==sign(s.inst5Strength)));
+      let leverage='槓桿穩定';
+      if(valid(s.leverage)){if(s.leverage>2)leverage=valid(s.ret5)&&s.ret5<0?'弱勢加碼':'槓桿升溫';else if(s.leverage<-2)leverage='去槓桿';}
+      const volume=!valid(s.volumeRatio)?'量能待確認':s.volumeRatio>=1.25?'明顯放量':s.volumeRatio<=.75?'量能收縮':'量能平穩';
+      const first=market==='強勢多頭'?'多方結構持續擴張':market==='偏多擴張'?'指數結構偏多':market==='明顯空方'?'空方結構持續擴散':market==='偏空收縮'?'市場結構轉弱':'指數仍在整理';
+      let second='等待有效方向確認';
+      if(fundConflict)second=sign(s.instStrength)<0?'法人短線賣壓與波段流入分歧':'法人短線買盤與波段流出分歧';
+      else if(fundState==='強力流入')second='法人買盤率先升高';
+      else if(fundState==='強力流出')second='法人賣壓率先升高';
+      else if(divergence)second='指數與市場廣度出現分歧';
+      else if(leverage==='弱勢加碼')second='弱勢融資仍在增加';
+      else if(leverage==='槓桿升溫')second='追價槓桿正在升溫';
+      else if(fundState==='溫和流入')second='資金溫和回流';
+      else if(fundState==='溫和流出')second='資金動能轉弱';
+      const axes=[sign(trend),sign(breadth),sign(funds)].filter(Boolean),same=axes.length?Math.max(axes.filter(x=>x>0).length,axes.filter(x=>x<0).length):0;
+      const confidence=(dataCount>=5&&axes.length>=3&&same===axes.length)?'高':(dataCount>=3&&same>=2)?'中':'低';
+      const supports=support.slice(0,4),warnings=counter.slice(0,4);
+      if(trend>0)supports.push('趨勢綜合 '+trend+' 分');else if(trend<0)warnings.push('趨勢綜合 '+trend+' 分');
+      if(breadth>0)supports.push('廣度綜合 '+breadth+' 分');else if(breadth<0)warnings.push('廣度綜合 '+breadth+' 分');
+      if(funds>0)supports.push('資金綜合 '+funds+' 分');else if(funds<0)warnings.push('資金綜合 '+funds+' 分');
+      if(divergence)warnings.push('指數與廣度不同步');
+      if(fundConflict)warnings.push('法人當日與3／5日方向不同步');
+      if(/升溫|弱勢/.test(leverage))warnings.push(leverage);
+      if(volume==='明顯放量')supports.push('量能提供確認');else if(volume==='量能收縮')warnings.push('量能尚未確認');
+      if(!supports.length)supports.push('目前沒有足夠的同向強勢證據');
+      if(!warnings.length)warnings.push('未出現明顯反向訊號');
+      return {market,fundState,leverage,volume,confidence,first,second,supports,warnings,headline:first+'，'+second+'。',trend,breadth,funds};
+    }
+    const semanticLines=text=>{
+      const chars=Array.from(text||'');if(chars.length<=12)return '<span class="semantic-line">'+text+'</span>';
+      const middle=chars.length/2,cuts=[];chars.forEach((ch,i)=>{if('與但而'.includes(ch))cuts.push(i);else if('、，'.includes(ch))cuts.push(i+1);});
+      if(!cuts.length)return '<span class="semantic-line">'+text+'</span>';
+      const at=cuts.sort((a,b)=>Math.abs(a-middle)-Math.abs(b-middle))[0];
+      return '<span class="semantic-line">'+chars.slice(0,at).join('')+'</span><span class="semantic-line">'+chars.slice(at).join('')+'</span>';
+    };
     const update=()=>{
-      const head=clean(headline.textContent),breadth=clean(body.textContent),label=clean(tone.textContent).replace(/^今日定調\s*[｜|]\s*/,''),cards=[...kpis.querySelectorAll('.c')];
-      if(!head||/整理今日/.test(head)||!cards.length)return;
-      const byName=n=>cards.find(c=>clean(c.querySelector('.k')?.textContent)===n);
-      const fact=n=>{const c=byName(n);return c?clean(c.querySelector('.v')?.textContent):'';};
-      const inst=fact('法人'),lev=fact('槓桿'),market=fact('大盤'),wide=fact('市場廣度');
-      const iv=number(inst),lv=number(lev),mv=number(market),wv=number(wide);
-      let slogan=['先看資金','再看故事'];
-      if(/空方/.test(label)){
-        if(iv!=null&&iv<-100&&lv!=null&&lv>1.5)slogan=['賣壓未退','槓桿先降溫'];
-        else if(iv!=null&&iv<-100)slogan=['資金轉守','先等賣壓收斂'];
-        else if(lv!=null&&lv>1.5)slogan=['弱勢遇上槓桿','防守擺在前面'];
-        else slogan=['弱勢正在擴散','紀律比猜底重要'];
-      }else if(/多方/.test(label)){
-        if(iv!=null&&iv>100&&lv!=null&&lv<1.5)slogan=['資金正在回流','順勢也看續航'];
-        else if(lv!=null&&lv>2)slogan=['趨勢是朋友','過熱是提醒'];
-        else if(wv!=null&&wv>65)slogan=['多方全面點火','量價決定高度'];
-        else slogan=['趨勢站在多方','續航交給量能'];
-      }else{
-        if(iv!=null&&Math.abs(iv)>200)slogan=['指數還在整理','資金已先表態'];
-        else if(lv!=null&&lv>2)slogan=['表面看似平靜','槓桿正在升溫'];
-        else if(mv!=null&&Math.abs(mv)>.15&&wv!=null&&((mv>0&&wv<45)||(mv<0&&wv>55)))slogan=['指數與廣度背離','先辨認真假突破'];
-        else slogan=['多空仍在拉鋸','等待有效突破'];
-      }
-      const heroHTML=slogan[0]+'，<br><em>'+slogan[1]+'。</em>';
-      if(hero.innerHTML!==heroHTML){hero.innerHTML=heroHTML;hero.dataset.dynamicSlogan='true';}
-      let close='等待成交量與族群輪動形成更明確方向。';
-      if(/空方|弱勢/.test(label+' '+head))close='短線先守風險，觀察賣壓與融資浮額是否同步收斂。';
-      else if(/多方|轉強/.test(label+' '+head))close='留意量能與上漲家數能否延續，避免只由少數權值股撐盤。';
-      const facts=[inst&&'法人合計 '+inst,lev&&'槓桿背離 '+lev].filter(Boolean).join('、');
-      deck.textContent=(label?label+'：':'')+head+'。'+(breadth?breadth+' ':'')+(facts?facts+'；':'')+close;
+      const s=window.__dailyResearchSnapshot,r=researchReading(s);if(!r)return;
+      const heroHTML='<span class="gs-title-line">'+r.first+'，</span><em class="gs-title-em">'+semanticLines(r.second+'。')+'</em>';
+      hero.innerHTML=heroHTML;hero.dataset.dynamicSlogan='true';delete hero.dataset.titleSize;
+      const inst=valid(s.instYi)?fmt(s.instYi,1)+' 億':'—',lev=valid(s.leverage)?fmt(s.leverage,2)+' pp':'—';
+      deck.textContent=r.market+'：'+r.headline+' 市場廣度 '+Math.round(s.upRatio)+'%，法人合計 '+inst+'，槓桿背離 '+lev+'；判讀信心'+r.confidence+'。';
       deck.setAttribute('data-daily-summary','true');
     };
-    let timer;new MutationObserver(()=>{clearTimeout(timer);timer=setTimeout(update,30)}).observe(document.querySelector('.gs-today'),{childList:true,characterData:true,subtree:true});
-    let heroTimer;new MutationObserver(()=>{if(hero.dataset.dynamicSlogan==='true'){clearTimeout(heroTimer);heroTimer=setTimeout(update,40);}}).observe(hero,{childList:true,characterData:true,subtree:true});
+    document.addEventListener('daily-research-ready',update);
+    let timer;new MutationObserver(()=>{clearTimeout(timer);timer=setTimeout(update,40)}).observe(kpis,{childList:true,characterData:true,subtree:true});
     update();
   }
   document.addEventListener('DOMContentLoaded',()=>{
