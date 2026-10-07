@@ -329,9 +329,12 @@
     .chart-layer-tab.is-enabled .layer-dot{background:var(--layer-accent);box-shadow:0 0 7px color-mix(in srgb,var(--layer-accent) 62%,transparent);transform:scale(1.12);}
     .chart-layer-tab .layer-count{display:none;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:color-mix(in srgb,var(--layer-accent) 11%,var(--surface));color:var(--layer-accent);font-size:9px;line-height:16px;text-align:center;}
     .chart-layer-tab .layer-count.show{display:inline-block;}
-    .broker-panel-head{display:flex;align-items:center;justify-content:flex-end;gap:14px;margin-bottom:8px;font-size:11.5px;}
-    .broker-panel-head a{color:var(--accent);cursor:pointer;text-decoration:none;font-weight:700;}
-    .broker-panel-list{max-height:176px;overflow-y:auto;padding-right:4px;}
+    .broker-panel-head{display:flex;align-items:center;justify-content:flex-end;gap:4px;margin:1px 2px 11px;font-size:11.5px;}
+    .broker-panel-head a{display:inline-flex;align-items:center;justify-content:center;min-width:48px;padding:5px 10px;border:1px solid var(--border);background:var(--surface);color:var(--text-muted);cursor:pointer;text-decoration:none;font-weight:800;line-height:1;border-radius:7px;transition:color .16s ease,border-color .16s ease,background .16s ease,transform .14s ease;}
+    .broker-panel-head a:first-child{color:#9556aa;border-color:color-mix(in srgb,#a45fba 30%,var(--border));background:color-mix(in srgb,#a45fba 7%,var(--surface));}
+    .broker-panel-head a:hover{color:var(--text);border-color:color-mix(in srgb,#a45fba 42%,var(--border));background:color-mix(in srgb,#a45fba 10%,var(--surface));}
+    .broker-panel-head a:active{transform:scale(.97);}
+    .broker-panel-list{max-height:176px;overflow-y:auto;padding:2px 6px 9px;}
     .broker-panel-group+ .broker-panel-group{margin-top:10px;padding-top:9px;border-top:1px solid var(--border);}
     .broker-panel-title{display:flex;align-items:center;gap:6px;color:#a45fba;font-size:11.5px;font-weight:800;margin-bottom:6px;}
     .broker-panel-title small{color:var(--text-muted);font-size:10px;font-weight:700;}
@@ -8366,7 +8369,7 @@
           <button class="chart-layer-tab" data-layer="vp" type="button" onclick="_vpTogglePanel()"><span class="layer-dot"></span>價量分析<span class="layer-count"></span></button>
           <button class="chart-layer-tab" data-layer="broker" type="button" onclick="_toggleBrokerPanel()"><span class="layer-dot"></span>主力分點<span class="layer-count"></span></button>
         </div>
-        <div id="brokerFilterPanel" class="chart-feature-panel" style="display:none;padding:6px 8px;border-top:1px solid var(--border);font-size:12px;color:var(--text)"></div>
+        <div id="brokerFilterPanel" class="chart-feature-panel" style="display:none;padding:12px 14px 10px;border-top:1px solid var(--border);font-size:12px;color:var(--text)"></div>
         <div id="mkPanel" class="chart-feature-panel" style="padding:6px 8px;border-top:1px solid var(--border);font-size:12px;color:var(--text)">
           <a onclick="_mkTogglePanel()" style="cursor:pointer;text-decoration:none;user-select:none"><span id="mkArrow" style="color:var(--text-muted);font-size:11px;margin-right:4px">▸</span><b style="color:#5a78aa">大盤K</b></a>
           <span id="mkOpts" style="display:none">
