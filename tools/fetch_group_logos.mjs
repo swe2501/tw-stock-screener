@@ -27,17 +27,28 @@ const normalizeSite=value=>{if(!value)return'';value=String(value).trim();return
 
 function iconCandidates(html, base){
   const out=[];
+  for(const m of html.matchAll(/<meta\b[^>]*>/gi)){
+    const tag=m[0], key=(tag.match(/\b(?:property|name)=["']([^"']+)/i)||[])[1]||'';
+    if(!/(?:og:logo|twitter:image|og:image)/i.test(key))continue;
+    const src=(tag.match(/\bcontent=["']([^"']+)/i)||[])[1];
+    if(src)try{out.push(new URL(src,base).href)}catch{}
+  }
+  for(const m of html.matchAll(/["']logo["']\s*:\s*["']([^"']+)/gi)){
+    try{out.push(new URL(m[1].replaceAll('\\/','/'),base).href)}catch{}
+  }
   for(const m of html.matchAll(/<img\b[^>]*>/gi)){
     const tag=m[0]; if(!/logo/i.test(tag))continue;
     const src=(tag.match(/\b(?:src|data-src|data-lazy-src)=["']([^"']+)/i)||[])[1]||(tag.match(/\bsrcset=["']([^"', ]+)/i)||[])[1];
     if(src)try{out.push(new URL(src,base).href)}catch{}
   }
+  const links=[];
   for(const m of html.matchAll(/<link\b[^>]*>/gi)){
     const tag=m[0], rel=(tag.match(/\brel=["']([^"']+)/i)||[])[1]||'';
     if(!/icon/i.test(rel))continue;
     const href=(tag.match(/\bhref=["']([^"']+)/i)||[])[1];
-    if(href)try{out.push(new URL(href,base).href)}catch{}
+    if(href)try{links.push({url:new URL(href,base).href,apple:/apple-touch/i.test(rel),size:parseInt((tag.match(/\bsizes=["'](\d+)/i)||[])[1]||'0',10)})}catch{}
   }
+  links.sort((a,b)=>(b.apple-a.apple)||(b.size-a.size)).forEach(x=>out.push(x.url));
   try{out.push(new URL('/favicon.ico',base).href)}catch{}
   return [...new Set(out)];
 }
@@ -46,6 +57,7 @@ async function fetchLogo(site){
   site=normalizeSite(site);
   let response,finalUrl=site,html='';
   try{response=await fetch(site,{headers,redirect:'follow',signal:timeout(15000)});finalUrl=response.url||site;if(response.ok)html=await response.text()}catch{}
+  let best=null;
   for(const url of iconCandidates(html,finalUrl)){
     try{
       const r=await fetch(url,{headers:{...headers,referer:finalUrl},redirect:'follow',signal:timeout(12000)});
@@ -55,9 +67,20 @@ async function fetchLogo(site){
       if(bytes.length<100||bytes.length>2_000_000)continue;
       const ext=contentExt(type)||path.extname(new URL(r.url).pathname).slice(1).toLowerCase();
       if(!['svg','png','webp','jpg','jpeg','ico'].includes(ext))continue;
-      return {bytes,ext:ext==='jpeg'?'jpg':ext,source:r.url,site:finalUrl};
+      const normalizedExt=ext==='jpeg'?'jpg':ext;
+      const score=(normalizedExt==='svg'?1_000_000:normalizedExt==='ico'?-100_000:0)+Math.min(bytes.length,500_000);
+      if(!best||score>best.score)best={bytes,ext:normalizedExt,source:r.url,site:finalUrl,score};
     }catch{}
   }
+  if(best)return best;
+  try{
+    const fallback=`https://www.google.com/s2/favicons?domain_url=${encodeURIComponent(finalUrl)}&sz=256`;
+    const r=await fetch(fallback,{headers,redirect:'follow',signal:timeout(12000)});
+    if(r.ok){
+      const bytes=new Uint8Array(await r.arrayBuffer());
+      if(bytes.length>=500)return {bytes,ext:'png',source:fallback,site:finalUrl,score:bytes.length};
+    }
+  }catch{}
   throw new Error('no usable official icon');
 }
 
@@ -68,7 +91,7 @@ for(const [i,group] of catalog.groups.entries()){
   if(manifest[group.name]){
     const old=manifest[group.name].path||'',ext=path.extname(old).toLowerCase();let size=0;
     try{size=(await fs.stat(path.join(root,old))).size}catch{}
-    if(ext==='.svg'||(ext!=='.ico'&&size>=1800)){console.log(`[${i+1}/${catalog.groups.length}] KEEP ${group.name}`);continue}
+    if(ext==='.svg'||(ext!=='.ico'&&size>=8000)){console.log(`[${i+1}/${catalog.groups.length}] KEEP ${group.name}`);continue}
   }
   const core=group.members?.[0];
   const company=core&&companies.get(String(core.code));
