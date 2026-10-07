@@ -1889,7 +1889,8 @@ def screen(params):
 
     # ── price_window 逐股讀（真名/MACD/放量;涵蓋歷史日 → 修正「回搜近期日期漏股」如 3443/8-11）──
     need_pw = (vol_mult > 0 or shrink_mult > 0 or bool(macd_mode)
-               or check_zhenming1 or check_zhenming2 or check_zhenming3)
+               or check_zhenming1 or check_zhenming2 or check_zhenming3
+               or check_harami_bull or check_harami_bear)   # 母子線需 MA20 判趨勢 → 抓歷史
     pw_data = {}
     if need_pw:
         def fetch_pw_only(code):
@@ -2024,6 +2025,18 @@ def screen(params):
                              and round(c, 4) >= round(prev_open_gap, 4)
                              and round(o, 4) <= round(prev_close_gap, 4))
                 if not (_hbull_ok or _hbear_ok):
+                    continue
+                # 趨勢前提（A）：排除高檔回檔/低檔反彈的假母子
+                #   多頭母子須出現在跌勢（母線收盤 < MA20）；空頭母子須出現在漲勢（母線收盤 > MA20）
+                _h_cls = ((pw_data.get(code) or {}).get("all_closes")
+                          or (s.get("all_closes") if is_historical
+                              else (monthly_yf.get(code) or {}).get("all_closes")) or [])
+                _h_ma20 = _ma(_h_cls[:-1], 20)   # MA20 以「母線」當日為基準（排除今日子線）
+                if _h_ma20 is None:
+                    _gap_unverified.add(code)    # 歷史不足 20 根 → 放行並標記，不誤殺
+                elif _hbull_ok and not (prev_close_gap < _h_ma20):
+                    continue
+                elif _hbear_ok and not (prev_close_gap > _h_ma20):
                     continue
 
         # 賺向下跳空價差（選定日期D，篩選D_prev跳空向下 + D當天突破 + 跳空≥1 + D_prev縮量）
