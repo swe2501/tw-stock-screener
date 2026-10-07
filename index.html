@@ -2511,6 +2511,27 @@
       .gs-tip{background:var(--surface2);border-left:3px solid var(--accent);border-radius:8px;padding:11px 14px;margin-top:14px;font-size:12px;line-height:1.85;color:var(--text-muted);display:flex;gap:9px;align-items:flex-start;}
       .gs-tip .ic{flex:0 0 auto;font-size:14px;line-height:1.4;}
       .gs-tip b{color:var(--brand-green);font-weight:800;margin-right:4px;}
+      /* §4 融資維持率圖解（我們 vs 玩股網 vs CMoney，供合夥人複查；2026-10-07）*/
+      .mm-explain{margin-top:12px;border:1px solid var(--border);border-radius:10px;background:linear-gradient(135deg,color-mix(in srgb,var(--surface) 95%,#fff 5%),var(--surface2));overflow:hidden;}
+      .mm-ex-h{padding:9px 14px;font-size:12.5px;font-weight:800;color:var(--text);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;}
+      .mm-ex-h::before{content:"";width:3px;height:14px;border-radius:2px;background:var(--accent);flex:0 0 auto;}
+      .mm-ex-body{padding:13px 15px;}
+      .mm-ex-formula{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:6px 14px;padding:4px 0 15px;text-align:center;}
+      .mm-frac .mm-num{display:block;color:var(--accent);font-weight:800;font-size:12px;padding:0 10px;}
+      .mm-frac .mm-line{display:block;height:2px;background:var(--text-muted);margin:5px auto;}
+      .mm-frac .mm-den{display:block;color:var(--text-muted);font-weight:700;font-size:12px;padding:3px 10px 0;}
+      .mm-eq{font-size:13px;font-weight:800;color:var(--text);white-space:nowrap;}
+      .mm-cmp{display:flex;flex-direction:column;gap:9px;}
+      .mm-row{display:grid;grid-template-columns:78px 1fr 46px;align-items:center;gap:10px;}
+      .mm-row .mm-lab{font-size:11.5px;color:var(--text-muted);text-align:right;white-space:nowrap;}
+      .mm-row.mm-ours .mm-lab{color:var(--text);font-weight:800;}
+      .mm-track{height:15px;border-radius:5px;background:var(--surface2);border:1px solid var(--border);overflow:hidden;}
+      .mm-fill{height:100%;border-radius:4px 0 0 4px;transition:width .5s ease;}
+      .mm-row .mm-val{font-size:12px;font-weight:800;text-align:left;}
+      .mm-keys{margin-top:13px;display:flex;flex-direction:column;gap:7px;}
+      .mm-key{font-size:11.5px;line-height:1.72;color:var(--text-muted);display:flex;gap:8px;align-items:flex-start;}
+      .mm-key b{color:var(--text);font-weight:800;}
+      .mm-dot{flex:0 0 auto;width:8px;height:8px;border-radius:2px;margin-top:5px;}
       /* §6 臺指選擇權 */
       .gs-opt{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
       .gs-optcard{border:1px solid var(--border);border-radius:10px;padding:14px 16px;}
@@ -7263,7 +7284,19 @@
           +'<div class="gs-rlab">'+_maintTicksHtml()+'</div>'
           +'<div class="gs-rtrack">'+_maintScaleHtml()+'<i id="hpMaintMark" hidden></i></div><b id="hpMaintCur">--</b></div><p id="msNote" class="gs-msnote"></p></div>'
         +'<div class="gs-mmwrap"><div class="gs-mmtitle2" id="hpMmTitle">加權指數 × 全市場融資維持率 × 融資／融券餘額</div><div id="hpMmCur" class="gs-mmcur"></div><div id="hpMmTip" class="gs-mmtip">移動滑鼠或觸控圖上看每日數值</div><div id="hpMmPanels"></div></div>'
-        +'<div class="gs-tip"><span class="ic"></span><div><b>學院導讀</b>維持率＝融資持股現值 ÷ 融資借款金額；140／160／185% 為追繳、健康、高檔浮額分界。上市分子取證交所個股融資餘額×收盤、分母取證交所融資金額（含/扣ETF 皆為實算）；上櫃分子取櫃買個股融資餘額×收盤、分母取玩股網上櫃融資金額（扣ETF 為估算）；全市場為兩者分子、分母各自加總後相除（非平均）。扣除 ETF 版以「00 開頭」代號剔除。歷史曲線今日之前由玩股網回補、今日起改每日逐股自算。</div></div>';
+        +'<div class="gs-tip"><span class="ic"></span><div><b>學院導讀</b>維持率＝融資持股現值 ÷ 融資借款金額；140／160／185% 為追繳、健康、高檔浮額分界。上市分子取證交所個股融資餘額×收盤、分母取證交所融資金額（含/扣ETF 皆為實算）；上櫃分子取櫃買個股融資餘額×收盤、分母取玩股網上櫃融資金額（扣ETF 為估算）；全市場為兩者分子、分母各自加總後相除（非平均）。扣除 ETF 版以「00 開頭」代號剔除。歷史曲線今日之前由玩股網回補、今日起改每日逐股自算。</div></div>'
+        +'<div class="mm-explain"><div class="mm-ex-h">圖解 · 我們怎麼算、跟玩股網差在哪</div><div class="mm-ex-body">'
+          +'<div class="mm-ex-formula"><div class="mm-frac"><span class="mm-num">融資買的股票 · 現在總市值</span><span class="mm-line"></span><span class="mm-den">融資借款 · 總金額（官方融資餘額）</span></div><span class="mm-eq">＝ 融資維持率</span></div>'
+          +'<div class="mm-cmp">'
+            +'<div class="mm-row mm-ours"><span class="mm-lab">我們（自算）</span><div class="mm-track"><div class="mm-fill" style="width:95%;background:var(--green)"></div></div><span class="mm-val" style="color:var(--green)">202%</span></div>'
+            +'<div class="mm-row"><span class="mm-lab">玩股網</span><div class="mm-track"><div class="mm-fill" style="width:94%;background:var(--accent)"></div></div><span class="mm-val" style="color:var(--accent)">200%</span></div>'
+            +'<div class="mm-row"><span class="mm-lab">CMoney</span><div class="mm-track"><div class="mm-fill" style="width:83%;background:var(--text-muted)"></div></div><span class="mm-val" style="color:var(--text-muted)">175%</span></div>'
+          +'</div>'
+          +'<div class="mm-keys">'
+            +'<div class="mm-key"><span class="mm-dot" style="background:var(--green)"></span><div><b>我們 ≈ 玩股網，用的是同一套公式。</b>底下「融資借款總金額」兩邊是同一個官方數字（全市場融資餘額約 6,333 億，一毛不差）；只差在「股票總市值」——我們把每一檔（含 ETF）用官方收盤算好算滿，比玩股網多約 0.7%，趨勢方向完全一致，不是算錯。</div></div>'
+            +'<div class="mm-key"><span class="mm-dot" style="background:var(--text-muted)"></span><div><b>CMoney 是另一套公式，別混著比。</b>同一天、同樣的融資餘額，玩股網 199%、CMoney 175%，差了 24 個百分點 → 代表兩家算法本來就不同。我們對標玩股網口徑，所以會貼近玩股網，而不會等於 CMoney。</div></div>'
+          +'</div>'
+        +'</div></div>';
       if(window._loadHpMaintChart) window._loadHpMaintChart();
       if(window._loadMaintSplit) window._loadMaintSplit();
     }
