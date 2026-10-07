@@ -329,6 +329,15 @@
     .chart-layer-tab.is-enabled .layer-dot{background:var(--layer-accent);box-shadow:0 0 7px color-mix(in srgb,var(--layer-accent) 62%,transparent);transform:scale(1.12);}
     .chart-layer-tab .layer-count{display:none;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:color-mix(in srgb,var(--layer-accent) 11%,var(--surface));color:var(--layer-accent);font-size:9px;line-height:16px;text-align:center;}
     .chart-layer-tab .layer-count.show{display:inline-block;}
+    .broker-panel-head{display:flex;align-items:center;justify-content:flex-end;gap:14px;margin-bottom:8px;font-size:11.5px;}
+    .broker-panel-head a{color:var(--accent);cursor:pointer;text-decoration:none;font-weight:700;}
+    .broker-panel-list{max-height:176px;overflow-y:auto;padding-right:4px;}
+    .broker-panel-group+ .broker-panel-group{margin-top:10px;padding-top:9px;border-top:1px solid var(--border);}
+    .broker-panel-title{display:flex;align-items:center;gap:6px;color:#a45fba;font-size:11.5px;font-weight:800;margin-bottom:6px;}
+    .broker-panel-title small{color:var(--text-muted);font-size:10px;font-weight:700;}
+    .broker-panel-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(138px,1fr));gap:6px 8px;}
+    .broker-panel-grid label{display:flex;align-items:center;gap:7px;min-width:0;padding:6px 8px;border:1px solid color-mix(in srgb,#a45fba 14%,var(--border));border-radius:7px;background:color-mix(in srgb,var(--surface2) 72%,transparent);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2;}
+    .broker-panel-grid input{flex:0 0 auto;accent-color:#a45fba;}
     .chart-feature-panel{display:none;margin-top:6px;transform:none!important;}
     .chart-feature-panel.is-open{display:block;}
     .chart-feature-panel>a{display:none!important;}
@@ -8706,7 +8715,7 @@
               }); });
           };
           window._chartLayerPanel=function(kind,open){
-            var map={mk:['mkPanel','mkOpts'],sr:['srLinePanel','srLineOpts'],vp:['vpPanel','vpOpts'],broker:['brokerFilterPanel','brokerPanelList']};
+            var map={mk:['mkPanel','mkOpts'],sr:['srLinePanel','srLineOpts'],vp:['vpPanel','vpOpts'],broker:['brokerFilterPanel','brokerFilterPanel']};
             Object.keys(map).forEach(function(k){var p=el(map[k][0]),o=el(map[k][1]),active=k===kind&&open;if(p)p.classList.toggle('is-open',active);if(o&&!active)o.style.display='none';var b=document.querySelector('.chart-layer-tab[data-layer="'+k+'"]');if(b)b.classList.toggle('is-open',active);if(k==='broker'&&!active){window._brokerPanelOpen=false;var a=el('brokerPanelArrow'),x=el('brokerPanelActs');if(a)a.textContent='▸';if(x)x.style.display='none';}});
           };
           window._chartLayerStatus=function(kind,on,count){var b=document.querySelector('.chart-layer-tab[data-layer="'+kind+'"]');if(!b)return;b.classList.toggle('is-enabled',!!on);var n=b.querySelector('.layer-count');if(n){n.textContent=count||'';n.classList.toggle('show',!!count);}};
@@ -10836,28 +10845,23 @@
       list.forEach(d => (groups[d.cat] = groups[d.cat] || []).push(d.name));
       const cb = b => {
         const bb = b.replace(/'/g, "\\'");
-        return `<label style="display:inline-flex;align-items:center;gap:3px;margin:2px 10px 2px 0;cursor:pointer;white-space:nowrap">
+        return `<label title="${b}">
           <input type="checkbox"${_brokerChecked && _brokerChecked.has(b) ? ' checked' : ''} onchange="_toggleBroker('${bb}',this.checked)">${b}</label>`;
       };
       const sections = ['大單前20', '小單前20', '其他'].filter(c => groups[c]).map(cat =>
-        `<div style="margin-top:5px"><span style="color:#c678dd;font-weight:600">${cat}（${groups[cat].length}）</span>
-          <div style="display:flex;flex-wrap:wrap;margin-top:2px">${groups[cat].sort().map(cb).join('')}</div></div>`).join('');
+        `<div class="broker-panel-group"><div class="broker-panel-title">${cat}<small>${groups[cat].length} 家</small></div>
+          <div class="broker-panel-grid">${groups[cat].sort().map(cb).join('')}</div></div>`).join('');
       const open = !!window._brokerPanelOpen;
-      // 收合：只顯示「▸ 主力分點」；展開：▾＋全勾／全部取消＋分點清單（2026-09-28）
-      panel.innerHTML = `<div><a onclick="_toggleBrokerPanel()" style="cursor:pointer;text-decoration:none;user-select:none"><span id="brokerPanelArrow" style="color:var(--text-muted);font-size:11px;margin-right:4px">${open ? '▾' : '▸'}</span><b style="color:#c678dd">主力分點</b></a>
-        <span id="brokerPanelActs" style="display:${open ? 'inline' : 'none'}">　<a onclick="_setAllBrokers(true)" style="color:var(--accent);cursor:pointer">全勾</a>
-        　<a onclick="_setAllBrokers(false)" style="color:var(--accent);cursor:pointer">全部取消</a></span></div>
-        <div id="brokerPanelList" style="max-height:110px;overflow-y:auto;display:${open ? 'block' : 'none'}">${sections}</div>`;
-      panel.style.display = 'block';
+      panel.innerHTML = `<div class="broker-panel-head"><a onclick="_setAllBrokers(true)">全選</a><a onclick="_setAllBrokers(false)">清除</a></div>
+        <div id="brokerPanelList" class="broker-panel-list">${sections}</div>`;
+      panel.style.display = open ? 'block' : 'none';
       if(window._chartLayerStatus)window._chartLayerStatus('broker',false,0);
     }
     function _toggleBrokerPanel() {   // 主力分點清單展開／收合（記住狀態，換股票時沿用）
-      const l = document.getElementById('brokerPanelList'), a = document.getElementById('brokerPanelArrow'), x = document.getElementById('brokerPanelActs');
-      if(!l)return;
-      window._brokerPanelOpen = l.style.display === 'none';
-      if (l) l.style.display = window._brokerPanelOpen ? 'block' : 'none';
-      if (x) x.style.display = window._brokerPanelOpen ? 'inline' : 'none';
-      if (a) a.textContent = window._brokerPanelOpen ? '▾' : '▸';
+      const panel = document.getElementById('brokerFilterPanel'), l = document.getElementById('brokerPanelList');
+      if(!panel||!l)return;
+      window._brokerPanelOpen = panel.style.display === 'none';
+      panel.style.display = window._brokerPanelOpen ? 'block' : 'none';
       if(window._chartLayerPanel)window._chartLayerPanel('broker',window._brokerPanelOpen);
     }
     function _toggleBroker(b, on) {
