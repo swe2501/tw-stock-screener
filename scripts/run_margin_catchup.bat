@@ -17,6 +17,7 @@ set LOG=%DIR%\margin_catchup.log
 echo ==== catchup start %date% %time% ==== >> "%LOG%" 2>&1
 "%PY%" "%DIR%\chip_etl_twse.py" --daily >> "%LOG%" 2>&1
 "%PY%" "%DIR%\chip_etl_tpex.py" --daily >> "%LOG%" 2>&1
-"%PY%" "%DIR%\margin_ratio.py"           >> "%LOG%" 2>&1
-"%PY%" "%DIR%\inst_daily_push.py"        >> "%LOG%" 2>&1
+"%PY%" "%DIR%\margin_ratio.py"              >> "%LOG%" 2>&1
+"%PY%" "%DIR%\margin_maintenance_calc.py"   >> "%LOG%" 2>&1
+"%PY%" "%DIR%\inst_daily_push.py"           >> "%LOG%" 2>&1
 echo ==== catchup end   %date% %time% ==== >> "%LOG%" 2>&1
