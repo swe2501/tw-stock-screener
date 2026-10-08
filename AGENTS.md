@@ -2,7 +2,7 @@
 
 > **先判斷你在做哪一種任務：**
 > - 若你正在執行「**話題族群 hot_topics 排程**」（網搜新聞 → 產 `scripts/hot_topics.json`）→ 適用下方「Codex 的唯一任務」，**禁止任何 Git 操作**。
-> - 若你是在**合夥人的電腦**、由合夥人本人要求**修改版面／開自己的分支** → 下方 Git 禁令**不適用**，改依本檔最後的「**合夥人協作規範**」：可以從 uat 開自己的分支、commit、push 自己的分支（但不可碰 uat／prod／Andrew）。
+> - 若你是在**合夥人的電腦**、由合夥人本人要求**修改版面／開自己的分支** → 下方 Git 禁令**不適用**，改依本檔最後的「**合夥人協作規範**」：可以從 uat 開自己的分支、commit、push 自己的分支，**也可以把自己的分支合併並推送到 `uat`**（但仍不可碰 `prod`／`Andrew`）。
 
 本專案由兩個 AI agent 共用，**各有車道，不得越界**。
 
@@ -50,9 +50,14 @@
 - 從最新 uat 開**自己的分支**：`git fetch origin && git checkout -b <合夥人名字>-layout origin/uat`
 - 在該分支修改 `index.html` 等檔案、`git add`／`git commit`。
 - 推送到**自己的分支**：`git push origin <合夥人名字>-layout`，並告知使用者分支名稱。
+- **（2026-10-08 更新：開放合併／推送到 `uat`）** 可以把自己的分支合併並推送到 `uat`：
+  **務必先對齊最新 uat**，否則會覆蓋別人剛推的 commit 或被遠端拒絕。步驟：
+  `git fetch origin` → `git checkout uat && git reset --hard origin/uat` → `git merge <合夥人名字>-layout`
+  →（有衝突就解；index.html 多半只在同區塊）→ `git push origin uat`。推完告知使用者。
 
 ### ⛔ 仍然禁止
-- **不可推送或合併到 `uat`、`prod`、`Andrew`**，也不可 force push 任何分支。合併與部署一律由使用者（Claude Code）處理。
+- **不可推送或合併到 `prod`、`Andrew`**，也不可 force push 任何分支。prod 部署一律由使用者（Claude Code）處理。
+- （`uat` 已於 2026-10-08 開放合併／推送，見上方「✅ 允許」；但推 `uat` 前**務必先 `git fetch` 對齊最新**，避免覆蓋 Claude Code／使用者剛推的 commit。）
 - 不可修改 `.env.local`、排程（`.bat`／Task Scheduler）、Supabase 資料或 schema。
 - 不可動遠端 `Duke` 分支（來源不明，非合夥人分支）。
 - 改版面前先跟使用者說會動哪幾頁，避免與 Claude Code 同時改同一區塊造成衝突。
