@@ -7378,18 +7378,7 @@
           +'<div class="gs-rtrack">'+_maintScaleHtml()+'<i id="hpMaintMark" hidden></i></div><b id="hpMaintCur">--</b></div><p id="msNote" class="gs-msnote"></p></div>'
         +'<div class="gs-mmwrap"><div class="gs-mmtitle2" id="hpMmTitle">加權指數 × 全市場融資維持率 × 融資／融券餘額</div><div id="hpMmCur" class="gs-mmcur"></div><div id="hpMmTip" class="gs-mmtip">移動滑鼠或觸控圖上看每日數值</div><div id="hpMmPanels"></div></div>'
         +'<div class="gs-tip"><span class="ic"></span><div><b>學院導讀</b>維持率＝融資持股現值 ÷ 融資借款金額；140／160／185% 為追繳、健康、高檔浮額分界。上市分子取證交所個股融資餘額×收盤、分母取證交所融資金額（含/扣ETF 皆為實算）；上櫃分子取櫃買個股融資餘額×收盤、分母取玩股網上櫃融資金額（扣ETF 為估算）；全市場為兩者分子、分母各自加總後相除（非平均）。扣除 ETF 版以「00 開頭」代號剔除。歷史曲線今日之前由玩股網回補、今日起改每日逐股自算。</div></div>'
-        +'<div class="mm-explain"><div class="mm-ex-h">圖解 · 我們怎麼算、跟玩股網差在哪</div><div class="mm-ex-body">'
-          +'<div class="mm-ex-formula"><div class="mm-frac"><span class="mm-num">融資買的股票 · 現在總市值</span><span class="mm-line"></span><span class="mm-den">融資借款 · 總金額（官方融資餘額）</span></div><span class="mm-eq">＝ 融資維持率</span></div>'
-          +'<div class="mm-cmp">'
-            +'<div class="mm-row mm-ours"><span class="mm-lab">我們（自算）</span><div class="mm-track"><div class="mm-fill" style="width:95%;background:var(--green)"></div></div><span class="mm-val" style="color:var(--green)">202%</span></div>'
-            +'<div class="mm-row"><span class="mm-lab">玩股網</span><div class="mm-track"><div class="mm-fill" style="width:94%;background:var(--accent)"></div></div><span class="mm-val" style="color:var(--accent)">200%</span></div>'
-            +'<div class="mm-row"><span class="mm-lab">CMoney</span><div class="mm-track"><div class="mm-fill" style="width:83%;background:var(--text-muted)"></div></div><span class="mm-val" style="color:var(--text-muted)">175%</span></div>'
-          +'</div>'
-          +'<div class="mm-keys">'
-            +'<div class="mm-key"><span class="mm-dot" style="background:var(--green)"></span><div><b>我們 ≈ 玩股網，用的是同一套公式。</b>底下「融資借款總金額」兩邊是同一個官方數字（全市場融資餘額約 6,333 億，一毛不差）；只差在「股票總市值」——我們把每一檔（含 ETF）用官方收盤算好算滿，比玩股網多約 0.7%，趨勢方向完全一致，不是算錯。</div></div>'
-            +'<div class="mm-key"><span class="mm-dot" style="background:var(--text-muted)"></span><div><b>CMoney 是另一套公式，別混著比。</b>同一天、同樣的融資餘額，玩股網 199%、CMoney 175%，差了 24 個百分點 → 代表兩家算法本來就不同。我們對標玩股網口徑，所以會貼近玩股網，而不會等於 CMoney。</div></div>'
-          +'</div>'
-        +'</div></div>';
+        +'</div>';
       if(window._loadHpMaintChart) window._loadHpMaintChart();
       if(window._loadMaintSplit) window._loadMaintSplit();
     }
