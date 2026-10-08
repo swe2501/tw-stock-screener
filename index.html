@@ -8442,6 +8442,8 @@
           <button class="chart-layer-tab" data-layer="sr" type="button" onclick="_srTogglePanel()"><span class="layer-dot"></span>支撐壓力<span class="layer-count"></span></button>
           <button class="chart-layer-tab" data-layer="vp" type="button" onclick="_vpTogglePanel()"><span class="layer-dot"></span>價量分析<span class="layer-count"></span></button>
           <button class="chart-layer-tab" data-layer="broker" type="button" onclick="_toggleBrokerPanel()"><span class="layer-dot"></span>主力分點<span class="layer-count"></span></button>
+          <span style="flex:0 0 auto;width:1px;height:20px;background:var(--border);margin:0 2px"></span>
+          <div class="label-row" id="markerToggles" style="display:inline-flex;align-items:center;gap:7px;flex:0 0 auto;white-space:nowrap"></div>
         </div>
         <div id="brokerFilterPanel" class="chart-feature-panel" style="display:none;padding:12px 14px 10px;border-top:1px solid var(--border);font-size:12px;color:var(--text)"></div>
         <div id="mkPanel" class="chart-feature-panel" style="padding:6px 8px;border-top:1px solid var(--border);font-size:12px;color:var(--text)">
@@ -8516,7 +8518,6 @@
                 <span class="ma-toggle" onclick="toggleBBand(this)" style="color:#00BCD4">BBAND(20,2)</span>
                 <span class="ma-toggle" id="boxToggle" onclick="toggleBox(this)" style="color:var(--accent);opacity:0.65"> 箱型</span>
               </div>
-              <div class="label-row" id="markerToggles"></div>
             </div>
           </div>
           <!-- 子面板分頁：技術指標(量/MACD/RSI) ↔ 籌碼(外資/投信/自營 日 + 大戶/散戶 週，各自獨立柱) -->
@@ -13287,15 +13288,17 @@
     }
 
     function _drawTrendLinesOnCtx(ctx) {
+      // 趨勢線配色隨版面：亮色版近黑、暗色版白（2026-10-08）
+      const _tlc = document.documentElement.getAttribute('data-theme') === 'light' ? '#111827' : '#f8fafc';
       trendLines.forEach(line => {
         const x1 = chartInstance.timeScale().timeToCoordinate(line.time1);
         const y1 = candleSeriesRef.priceToCoordinate(line.price1);
         const x2 = chartInstance.timeScale().timeToCoordinate(line.time2);
         const y2 = candleSeriesRef.priceToCoordinate(line.price2);
         if (x1 == null || y1 == null || x2 == null || y2 == null) return;
-        ctx.strokeStyle = '#f39c12'; ctx.lineWidth = 1.5; ctx.setLineDash([]);
+        ctx.strokeStyle = _tlc; ctx.lineWidth = 1.5; ctx.setLineDash([]);
         ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
-        ctx.fillStyle = '#f39c12';
+        ctx.fillStyle = _tlc;
         [{ x: x1, y: y1 }, { x: x2, y: y2 }].forEach(p => {
           ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI * 2); ctx.fill();
         });
