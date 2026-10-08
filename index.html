@@ -8436,6 +8436,9 @@
           <div class="chart-toolbar-left">
             <button class="tool-btn" id="dailyBtn" onclick="loadDailyChart()" style="background:var(--accent);color:var(--on-accent);border-color:var(--accent)">日K</button>
             <button class="tool-btn" id="adjDailyBtn" onclick="loadAdjDailyChart()">還原日K</button>
+            <button class="tool-btn" id="weeklyBtn" onclick="loadWeeklyChart()">週K</button>
+            <button class="tool-btn" id="monthlyBtn" onclick="loadMonthlyChart()">月K</button>
+            <button class="tool-btn" id="yearlyBtn" onclick="loadYearlyChart()">年K</button>
             <button class="tool-btn" id="hourlyBtn" onclick="loadHourlyChart()">小時K</button>
             <button class="tool-btn" id="trendBtn" onclick="loadTrendChart()">走勢</button>
             <div class="toolbar-sep"></div>
@@ -12032,7 +12035,20 @@
       if (btn) { btn.style.background = 'var(--accent)'; btn.style.color = 'var(--on-accent)'; btn.style.borderColor = 'var(--accent)'; }
     }
 
-    function _loadChartUrl(url, subtitle) {
+    // 日K → 週/月/年K 聚合（前端）：依 keyFn 分組，開=首日、高=區間最高、低=區間最低、收=末日、量=加總；時間取該組最後一個交易日
+    function _aggCandles(daily, keyFn) {
+      const groups = new Map();
+      (daily || []).forEach(c => {
+        if (!c || c.time == null) return;
+        const k = keyFn(c.time); let g = groups.get(k);
+        if (!g) { groups.set(k, { time: c.time, open: +c.open, high: +c.high, low: +c.low, close: +c.close, volume: +c.volume || 0 }); }
+        else { g.high = Math.max(g.high, +c.high); g.low = Math.min(g.low, +c.low); g.close = +c.close; g.time = c.time; g.volume += +c.volume || 0; }
+      });
+      return Array.from(groups.values());
+    }
+    function _wkKey(d) { const dt = new Date(d + 'T00:00:00Z'); const day = dt.getUTCDay() || 7; dt.setUTCDate(dt.getUTCDate() + 4 - day); const ys = new Date(Date.UTC(dt.getUTCFullYear(), 0, 1)); const wk = Math.ceil((((dt - ys) / 86400000) + 1) / 7); return dt.getUTCFullYear() + '-W' + wk; }
+
+    function _loadChartUrl(url, subtitle, agg) {
       _chartLoading();
       fetch(url)
         .then(r => r.json())
@@ -12041,6 +12057,7 @@
             document.getElementById('chartLoading').innerHTML = ' 無法取得圖表資料';
             return;
           }
+          if (agg) data.data = agg(data.data);
           window._chartIsHourly = typeof data.data[0].time === 'number';
           if (window._chartIsHourly) data.data.forEach(c => { c.time += 8 * 3600; });
           const _fmtT = t => typeof t === 'number' ? new Date(t * 1000).toISOString().slice(0, 16).replace('T', ' ') : t;
@@ -12083,6 +12100,22 @@
       window._chartMode = 'candle'; _setKlineChromeVisible(true);
       _setDailyBtnActive(document.getElementById('adjDailyBtn'));
       _loadChartUrl(`https://tw-stock-screener-neon.vercel.app/api/chart?code=${encodeURIComponent(currentCode)}&range=3y&interval=1d&adj=1`, '還原日K');
+    }
+    // 週/月/年K 皆由 3y 日K前端聚合（api/chart 目前最長穩定支援 3y；更長年K歷史待後端擴充）2026-10-09
+    function loadWeeklyChart() {
+      window._chartMode = 'candle'; _setKlineChromeVisible(true);
+      _setDailyBtnActive(document.getElementById('weeklyBtn'));
+      _loadChartUrl(`https://tw-stock-screener-neon.vercel.app/api/chart?code=${encodeURIComponent(currentCode)}&range=3y&interval=1d&raw=1`, '週K', d => _aggCandles(d, _wkKey));
+    }
+    function loadMonthlyChart() {
+      window._chartMode = 'candle'; _setKlineChromeVisible(true);
+      _setDailyBtnActive(document.getElementById('monthlyBtn'));
+      _loadChartUrl(`https://tw-stock-screener-neon.vercel.app/api/chart?code=${encodeURIComponent(currentCode)}&range=3y&interval=1d&raw=1`, '月K', d => _aggCandles(d, t => String(t).slice(0, 7)));
+    }
+    function loadYearlyChart() {
+      window._chartMode = 'candle'; _setKlineChromeVisible(true);
+      _setDailyBtnActive(document.getElementById('yearlyBtn'));
+      _loadChartUrl(`https://tw-stock-screener-neon.vercel.app/api/chart?code=${encodeURIComponent(currentCode)}&range=3y&interval=1d&raw=1`, '年K', d => _aggCandles(d, t => String(t).slice(0, 4)));
     }
 
     // ── 江波圖（當日分時走勢）：前收基線(紅上綠下)＋均價線(VWAP)＋量柱；盤中沿用既有 5 秒即時輪詢 ──
