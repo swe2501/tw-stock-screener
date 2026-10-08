@@ -13299,17 +13299,36 @@
       ctx.restore();
     }
 
+    function _fibRoundRect(ctx, x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+    }
     function _drawFibLabelsOnCtx(ctx) {
       if (!fibLevels.length || !candleSeriesRef) return;
-      ctx.font = 'bold 11px monospace';
+      const light = document.documentElement.getAttribute('data-theme') === 'light';
+      // 黃金口袋：38.2%~61.8% 之間淡色填充（最常見的回撤進場區）
+      const za = fibLevels.find(l => l.label === '38.2%'), zb = fibLevels.find(l => l.label === '61.8%');
+      if (za && zb) {
+        const ya = candleSeriesRef.priceToCoordinate(za.price), yb = candleSeriesRef.priceToCoordinate(zb.price);
+        if (ya != null && yb != null) {
+          ctx.fillStyle = light ? 'rgba(79,142,247,0.06)' : 'rgba(125,211,252,0.07)';
+          ctx.fillRect(0, Math.min(ya, yb), ctx.canvas.width, Math.abs(yb - ya));
+        }
+      }
+      // 標籤：% ＋ 價格，主題感知膠囊底（亮色白底、暗色深底），文字用該線顏色
+      ctx.font = '700 11px -apple-system,"Segoe UI",system-ui,sans-serif';
+      ctx.textBaseline = 'middle';
       fibLevels.forEach(({ price, label, color }) => {
         const y = candleSeriesRef.priceToCoordinate(price);
         if (y == null) return;
-        const w = ctx.measureText(label).width;
-        ctx.fillStyle = 'rgba(0,0,0,0.6)';
-        ctx.fillRect(3, y - 13, w + 6, 16);
+        const txt = label + '　' + price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const w = ctx.measureText(txt).width, pad = 7, h = 17, x = 6;
+        ctx.fillStyle = light ? 'rgba(255,255,255,0.9)' : 'rgba(12,18,28,0.86)';
+        _fibRoundRect(ctx, x, y - h / 2, w + pad * 2, h, 5); ctx.fill();
+        ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.globalAlpha = 0.55; ctx.stroke(); ctx.globalAlpha = 1;
         ctx.fillStyle = color;
-        ctx.fillText(label, 6, y - 1);
+        ctx.fillText(txt, x + pad, y + 0.5);
       });
     }
 
