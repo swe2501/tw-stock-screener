@@ -321,7 +321,7 @@
     .chart-layer-toolbar{display:flex;align-items:center;gap:5px;margin:7px 8px 0;padding:4px;border:1px solid var(--border);border-radius:11px;background:color-mix(in srgb,var(--surface2) 72%,var(--surface));box-shadow:0 3px 10px rgba(31,42,61,.045);overflow-x:auto;scrollbar-width:none;}
     .chart-layer-toolbar::-webkit-scrollbar{display:none;}
     .chart-layer-tab{--layer-accent:#7085a3;position:relative;display:inline-flex;align-items:center;gap:7px;flex:0 0 auto;border:1px solid transparent;border-radius:8px;background:transparent;color:var(--text-muted);padding:7px 12px;font-size:11.5px;font-weight:800;white-space:nowrap;cursor:pointer;transition:color .17s ease,background .17s ease,border-color .17s ease,box-shadow .17s ease,transform .15s ease;}
-    .chart-layer-tab[data-layer="mk"]{--layer-accent:#6680a7}.chart-layer-tab[data-layer="sr"]{--layer-accent:#b75a55}.chart-layer-tab[data-layer="vp"]{--layer-accent:#b58a2d}.chart-layer-tab[data-layer="broker"]{--layer-accent:#a45fba}
+    .chart-layer-tab[data-layer="mk"]{--layer-accent:#6680a7}.chart-layer-tab[data-layer="sr"]{--layer-accent:#b75a55}.chart-layer-tab[data-layer="vp"]{--layer-accent:#b58a2d}.chart-layer-tab[data-layer="broker"]{--layer-accent:#a45fba}.chart-layer-tab[data-layer="mkann"]{--layer-accent:#e0872f}
     .chart-layer-tab:hover{color:var(--text);background:color-mix(in srgb,var(--surface) 78%,transparent);}
     .chart-layer-tab:active{transform:scale(.97)}
     .chart-layer-tab.is-open{color:var(--layer-accent);background:var(--surface);border-color:color-mix(in srgb,var(--layer-accent) 30%,var(--border));box-shadow:0 3px 9px rgba(31,42,61,.07);}
@@ -8457,8 +8457,8 @@
           <button class="chart-layer-tab" data-layer="sr" type="button" onclick="_srTogglePanel()"><span class="layer-dot"></span>支撐壓力<span class="layer-count"></span></button>
           <button class="chart-layer-tab" data-layer="vp" type="button" onclick="_vpTogglePanel()"><span class="layer-dot"></span>價量分析<span class="layer-count"></span></button>
           <button class="chart-layer-tab" data-layer="broker" type="button" onclick="_toggleBrokerPanel()"><span class="layer-dot"></span>主力分點<span class="layer-count"></span></button>
-          <span style="flex:0 0 auto;width:1px;height:20px;background:var(--border);margin:0 2px"></span>
-          <div class="label-row" id="markerToggles" style="display:inline-flex;align-items:center;gap:7px;flex:0 0 auto;white-space:nowrap"></div>
+          <button class="chart-layer-tab" data-layer="mkann" type="button" onclick="_mkAnnTogglePanel()"><span class="layer-dot"></span>標記<span class="layer-count"></span></button>
+          <div class="label-row" id="markerToggles" style="display:none;align-items:center;gap:7px;flex:0 0 auto;white-space:nowrap"></div>
         </div>
         <div id="brokerFilterPanel" class="chart-feature-panel" style="display:none;padding:12px 14px 10px;border-top:1px solid var(--border);font-size:12px;color:var(--text)"></div>
         <div id="mkPanel" class="chart-feature-panel" style="padding:6px 8px;border-top:1px solid var(--border);font-size:12px;color:var(--text)">
@@ -9445,7 +9445,8 @@
       const S = window._mkShow;
       const chips = _MK_DEFS.filter(d => present[d[0]]).map(([k, label, color]) =>
         `<button type="button" class="chart-layer-tab${S[k] ? ' is-enabled' : ''}" style="--layer-accent:${color}" onclick="_toggleMarker('${k}')"><span class="layer-dot"></span>${label}</button>`);
-      host.innerHTML = chips.length ? ('<span style="color:var(--text-muted);font-weight:800;font-size:11.5px">標記</span>' + chips.join('')) : '';
+      host.innerHTML = chips.join('');
+      const _tb = document.querySelector('.chart-layer-tab[data-layer="mkann"]'); if (_tb) _tb.classList.toggle('is-enabled', chips.length > 0);
     }
 
     function _refreshChartMarkers() {
@@ -12421,6 +12422,13 @@
         layout: { background: { color: t.bg }, textColor: t.text },
         grid: { vertLines: { color: t.grid }, horzLines: { color: t.grid } },
         crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+        localization: { timeFormatter: function(tt){   // 十字線時間標籤：YYYY/MM/DD（日K純日期；小時K補 HH:00）2026-10-09
+          if (tt && typeof tt === 'object' && tt.year) return tt.year + '/' + String(tt.month).padStart(2,'0') + '/' + String(tt.day).padStart(2,'0');
+          var d = new Date(typeof tt === 'number' ? (tt < 1e12 ? tt*1000 : tt) : Date.parse(tt));
+          if (isNaN(d)) return String(tt);
+          var s = d.getUTCFullYear() + '/' + String(d.getUTCMonth()+1).padStart(2,'0') + '/' + String(d.getUTCDate()).padStart(2,'0');
+          return d.getUTCHours() ? (s + ' ' + String(d.getUTCHours()).padStart(2,'0') + ':00') : s;
+        } },
         rightPriceScale: { borderColor: t.grid, minimumWidth: 65, autoScale: true },
         timeScale: { borderColor: t.grid, timeVisible: true, visible: showTime,
                      secondsVisible: false, rightOffset: 5 },
@@ -14098,6 +14106,13 @@
     window._mkTogglePanel=function(){
       var o=el('mkOpts'), open=o.style.display==='none';
       o.style.display=open?'block':'none'; window._chartLayerPanel('mk',open); el('mkArrow').textContent=open?'▾':'▸';
+    };
+    // 「標記」tab：點開才 inline 展開法說會/除權息開關（與大盤K等同一 group）2026-10-09
+    window._mkAnnTogglePanel=function(){
+      var mt=el('markerToggles'); if(!mt) return;
+      var open = (mt.style.display==='none' || !mt.style.display);
+      mt.style.display = open ? 'inline-flex' : 'none';
+      var b=document.querySelector('.chart-layer-tab[data-layer="mkann"]'); if(b) b.classList.toggle('is-open', open);
     };
     window._mkPick=function(tf,on){
       if(!on){ MK.on=false; window._chartLayerStatus('mk',false,0);syncChk(); window._mkApply(false); return; }
