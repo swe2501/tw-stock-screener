@@ -2378,6 +2378,18 @@
           </form>
           <div class="gs-tags" id="hpTags"><span class="gs-tags-lbl">今日觀察索引</span></div>
           <div class="gs-fundrail" id="hpFundRail"></div>
+          <style>
+            .gs-investment-note{margin-top:24px;padding:2px 0 2px 16px;border-left:2px solid var(--accent,#3a86e0);}
+            .gs-investment-note[hidden]{display:none;}
+            .gs-investment-note-label{display:flex;align-items:center;gap:12px;color:var(--text-muted,#60738f);font-size:11px;font-weight:600;letter-spacing:.12em;line-height:1.6;}
+            .gs-investment-note-label span{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.08em;opacity:.65;}
+            .gs-investment-note p{margin:7px 0 0;font-family:'Noto Serif TC',serif;font-size:22px;font-weight:700;line-height:1.7;letter-spacing:.035em;color:var(--text-muted,#60738f);overflow-wrap:anywhere;}
+            @media(max-width:600px){.gs-investment-note{margin-top:20px;padding-left:13px;}.gs-investment-note p{font-size:18px;letter-spacing:.02em;}}
+          </style>
+          <section class="gs-investment-note" aria-labelledby="gsInvestmentNoteLabel" hidden>
+            <div class="gs-investment-note-label" id="gsInvestmentNoteLabel">投資守紀 <span>DAILY NOTE</span></div>
+            <p id="gsInvestmentNoteQuote"></p>
+          </section>
         </div>
         <aside class="gs-today">
           <div class="gs-today-head"><span>TODAY'S READING · 今日判讀</span><span id="gsTodayDate"></span></div>
@@ -7060,13 +7072,13 @@
       });
     }
 
-    /* 每日 slogan（daily_slogan 表；讀不到用預設）*/
+    /* 投資手記（daily_slogan 表；依台北日期讀取，無資料時隱藏，不更新主標題）*/
     function loadSlogan(){
-      var t=el('gsTitle')||document.querySelector('.gs-title'); if(!t)return;
+      var t=el('gsInvestmentNoteQuote'),note=document.querySelector('.gs-investment-note'); if(!t||!note)return;
       var today=new Date(Date.now()+8*3600*1000).toISOString().slice(0,10); // 台北日期
       sb('daily_slogan?select=line1,line2,date&date=lte.'+today+'&order=date.desc&limit=1').then(function(a){
         if(Array.isArray(a)&&a.length&&a[0].line1){var s=a[0];
-          t.innerHTML=String(s.line1).replace(/</g,'&lt;')+'，<br><em>'+String(s.line2||'').replace(/</g,'&lt;')+'。</em>';}
+          t.textContent=String(s.line1)+(s.line2?'，'+String(s.line2):'')+'。';note.hidden=false;}
       }).catch(function(){});
     }
 
