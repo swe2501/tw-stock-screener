@@ -1135,6 +1135,8 @@
       border-radius: 6px;
       cursor: pointer;
       transition: all 0.15s;
+      white-space: nowrap;      /* 手機上避免按鈕文字直書 2026-10-09 */
+      flex: 0 0 auto;
     }
     .tool-btn:hover { color: var(--text); border-color: var(--accent); }
     .tool-btn.active { background: var(--ctl-hi); border-color: var(--accent); color: var(--accent); }
@@ -2236,6 +2238,8 @@
     #chartSearchBox>input::placeholder{color:var(--text-muted);}
     #chartSearchBox .gs-search-drop{left:auto;right:0;width:340px;max-width:82vw;z-index:1200;box-shadow:0 22px 48px rgba(15,23,42,.28);}
     @media(max-width:700px){ #chartSearchBox>input{width:118px;} #chartSearchBox .gs-search-drop{width:min(340px,86vw);} }
+    @media(max-width:600px){ #chartSearchBox{display:none;} }   /* 手機：K圖搜尋收起，避免擠壞標題列直書 2026-10-09 */
+    #chartModal .modal-title-row > span, #chartModal #modalSubtitle, #chartModal .modal-title { white-space:nowrap; }
     .gs-search svg{color:var(--text-muted);flex:0 0 auto;}
     .gs-search input{flex:1;border:0;background:transparent;font-size:15px;color:var(--text);padding:8px 4px;outline:none;}
     .gs-search button{border:0;background:linear-gradient(90deg,#0ea5e9,#6366f1);color:#fff;font-weight:800;font-size:14px;padding:10px 22px;border-radius:7px;cursor:pointer;}
