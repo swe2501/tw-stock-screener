@@ -9448,7 +9448,7 @@
       const host = document.getElementById('markerToggles'); if (!host) return;
       const S = window._mkShow;
       const chips = _MK_DEFS.filter(d => present[d[0]]).map(([k, label, color]) =>
-        `<button type="button" class="chart-layer-tab" style="--layer-accent:${color}${S[k] ? ';color:' + color + ';font-weight:800' : ''}" onclick="_toggleMarker('${k}')">${label}</button>`);
+        `<button type="button" class="chart-layer-tab${S[k] ? ' is-open' : ''}" onclick="_toggleMarker('${k}')">${label}</button>`);
       host.innerHTML = chips.join('');
     }
 
