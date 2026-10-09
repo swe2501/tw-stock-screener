@@ -2018,7 +2018,7 @@
     <span class="ts-label">指數快覽</span>
     <button class="idx-btn" onclick="openIndexChart('^TWII','大盤 加權指數')">大盤</button>
     <button class="idx-btn" onclick="openIndexChart('^SOX','費城半導體指數')">費半</button>
-    <button class="idx-btn" onclick="openIndexChart('^N225','日經225')">日經225</button>
+    <button class="idx-btn" onclick="openIndexChart('^N225','日經')">日經</button>
     <button class="idx-btn" onclick="openIndexChart('^KS11','韓國綜合指數')">韓指</button>
     <button class="idx-btn" onclick="openIndexChart('^IXIC','那斯達克綜合指數')">那指</button>
     <button class="idx-btn" onclick="openIndexChart('^DJI','道瓊工業指數')">道指</button>
@@ -6816,7 +6816,7 @@
   </script>
   <script>
   (function(){
-    var IDX=[{s:'^TWII',n:'台股加權'},{s:'^SOX',n:'費半'},{s:'^IXIC',n:'那斯達克'},{s:'^DJI',n:'道瓊'},{s:'^GSPC',n:'S&P 500'},{s:'^N225',n:'日經225'},{s:'^KS11',n:'韓股'}];
+    var IDX=[{s:'^TWII',n:'台股加權'},{s:'^SOX',n:'費半'},{s:'^IXIC',n:'那斯達克'},{s:'^DJI',n:'道瓊'},{s:'^GSPC',n:'S&P 500'},{s:'^N225',n:'日經'},{s:'^KS11',n:'韓股'}];
     var RMAP={ today:{range:'1d',interval:'5m',label:'當日'}, '1y':{range:'1y',interval:'1d',label:'近1年'}, '2y':{range:'2y',interval:'1d',label:'近2年'} };
     var i=0, rng='2y', typ='line', open=null, chart=null, cache={};
     function el(id){return document.getElementById(id);}
@@ -8452,6 +8452,15 @@
             <button class="tool-btn" onclick="resetZoom()" title="恢復全覽">↺ 還原</button>
             <button class="tool-btn" id="fibBtn" onclick="toggleFibMode()"> 斐波那契</button>
             <button class="tool-btn" id="trendBtn" onclick="toggleTrendLine()"> 趨勢線</button>
+            <button class="tool-btn" data-drawtool="seg" onclick="_setDrawTool('seg')">線段</button>
+            <button class="tool-btn" data-drawtool="hline" onclick="_setDrawTool('hline')">水平線</button>
+            <button class="tool-btn" data-drawtool="vline" onclick="_setDrawTool('vline')">垂直線</button>
+            <button class="tool-btn" data-drawtool="parallel" onclick="_setDrawTool('parallel')">通道</button>
+            <button class="tool-btn" data-drawtool="arrowup" onclick="_setDrawTool('arrowup')">↑箭頭</button>
+            <button class="tool-btn" data-drawtool="arrowdown" onclick="_setDrawTool('arrowdown')">↓箭頭</button>
+            <button class="tool-btn" data-drawtool="rect" onclick="_setDrawTool('rect')">矩形</button>
+            <button class="tool-btn" data-drawtool="text" onclick="_setDrawTool('text')">文字</button>
+            <button class="tool-btn" data-drawtool="eraser" onclick="_setDrawTool('eraser')">橡皮擦</button>
             <button class="tool-btn" onclick="clearAllDrawings()">✕ 清除</button>
           </div>
         </div>
@@ -9327,6 +9336,12 @@
     // Rubber-band zoom
     let zoomMode = false;
     let zoomDragStart = null; // { x } pixel
+    // 畫線套件（點擊放點）：線段/水平線/垂直線/通道/上下箭頭/矩形/文字 + 橡皮擦（2026-10-09）
+    let _drawTool = null;     // 目前工具
+    let _drawShapes = [];     // [{type, pts:[{time,price}], text?}]
+    let _drawPending = [];    // 進行中已放的點
+    let _drawSetupDone = false;
+    const _DRAW_NEED = { seg: 2, hline: 1, vline: 1, parallel: 3, arrowup: 1, arrowdown: 1, rect: 2, text: 1 };
 
     // ── Open / close ──────────────────────────────────────
     function _isStock(code) {
@@ -13308,6 +13323,7 @@
       _drawBoxRectOnCtx(ctx);
       _drawTrendLinesOnCtx(ctx);
       _drawFibLabelsOnCtx(ctx);
+      _drawShapesOnCtx(ctx);
     }
 
     function _drawBoxRectOnCtx(ctx) {
@@ -13591,6 +13607,8 @@
       fibMode = false; fibDragStart = null;
       trendLineMode = false; trendStart = null;
       zoomMode = false; zoomDragStart = null;
+      _drawTool = null; _drawPending = [];
+      document.querySelectorAll('[data-drawtool]').forEach(b => b.classList.remove('active'));
       document.getElementById('fibBtn').classList.remove('active');
       document.getElementById('trendBtn').classList.remove('active');
       document.getElementById('zoomRubberBtn').classList.remove('active');
@@ -13642,7 +13660,100 @@
       ts.setVisibleLogicalRange({ from: center - newSpan / 2, to: center + newSpan / 2 });
     }
 
+    // ══ 畫線套件：渲染 / 橡皮擦 / 工具切換 / 點擊互動 ══════════
+    function _ptSegDist(px, py, x1, y1, x2, y2) {
+      const dx = x2 - x1, dy = y2 - y1, L2 = dx * dx + dy * dy;
+      let t = L2 ? ((px - x1) * dx + (py - y1) * dy) / L2 : 0; t = Math.max(0, Math.min(1, t));
+      return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
+    }
+    function _drawArrowGlyph(ctx, x, y, up) {
+      const d = up ? 1 : -1; ctx.lineWidth = 2; ctx.beginPath();
+      ctx.moveTo(x, y); ctx.lineTo(x, y + d * 16);
+      ctx.moveTo(x, y); ctx.lineTo(x - 5, y + d * 6);
+      ctx.moveTo(x, y); ctx.lineTo(x + 5, y + d * 6); ctx.stroke();
+    }
+    function _drawShapesOnCtx(ctx) {
+      if ((!_drawShapes.length && !_drawPending.length) || !candleSeriesRef || !chartInstance) return;
+      const col = _trendColor(), ts = chartInstance.timeScale();
+      const X = t => (t == null ? null : ts.timeToCoordinate(t)), Y = p => candleSeriesRef.priceToCoordinate(p);
+      const light = document.documentElement.getAttribute('data-theme') === 'light';
+      ctx.save();
+      _drawShapes.forEach(s => {
+        ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = 1.5; ctx.setLineDash([]);
+        const p = s.pts;
+        if (s.type === 'seg') { const a = X(p[0].time), b = Y(p[0].price), c = X(p[1].time), e = Y(p[1].price); if ([a, b, c, e].some(v => v == null)) return; ctx.beginPath(); ctx.moveTo(a, b); ctx.lineTo(c, e); ctx.stroke(); }
+        else if (s.type === 'hline') { const y = Y(p[0].price); if (y == null) return; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(ctx.canvas.width, y); ctx.stroke(); }
+        else if (s.type === 'vline') { const x = X(p[0].time); if (x == null) return; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, ctx.canvas.height); ctx.stroke(); }
+        else if (s.type === 'rect') { const a = X(p[0].time), b = Y(p[0].price), c = X(p[1].time), e = Y(p[1].price); if ([a, b, c, e].some(v => v == null)) return; ctx.strokeRect(Math.min(a, c), Math.min(b, e), Math.abs(c - a), Math.abs(e - b)); }
+        else if (s.type === 'parallel') { const a = X(p[0].time), b = Y(p[0].price), c = X(p[1].time), e = Y(p[1].price), f = X(p[2].time), g = Y(p[2].price); if ([a, b, c, e, f, g].some(v => v == null)) return; const ox = f - a, oy = g - b; ctx.beginPath(); ctx.moveTo(a, b); ctx.lineTo(c, e); ctx.moveTo(a + ox, b + oy); ctx.lineTo(c + ox, e + oy); ctx.stroke(); }
+        else if (s.type === 'arrowup' || s.type === 'arrowdown') { const x = X(p[0].time), y = Y(p[0].price); if (x == null || y == null) return; _drawArrowGlyph(ctx, x, y, s.type === 'arrowup'); }
+        else if (s.type === 'text') { const x = X(p[0].time), y = Y(p[0].price); if (x == null || y == null) return; ctx.font = '700 12px -apple-system,"Segoe UI",system-ui,sans-serif'; ctx.textBaseline = 'middle'; const tw = ctx.measureText(s.text || '').width; ctx.fillStyle = light ? 'rgba(255,255,255,0.9)' : 'rgba(12,18,28,0.86)'; _fibRoundRect(ctx, x, y - 10, tw + 12, 20, 5); ctx.fill(); ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.globalAlpha = 0.5; ctx.stroke(); ctx.globalAlpha = 1; ctx.fillStyle = col; ctx.fillText(s.text || '', x + 6, y + 1); }
+      });
+      // 進行中的點（放了但還沒完成）：畫小圓點
+      ctx.fillStyle = col;
+      _drawPending.forEach(q => { const x = X(q.time), y = Y(q.price); if (x != null && y != null) { ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill(); } });
+      ctx.restore();
+    }
+    function _distToShape(s, px, py, X, Y) {
+      const p = s.pts;
+      if (s.type === 'seg' || s.type === 'parallel') { const a = X(p[0].time), b = Y(p[0].price), c = X(p[1].time), e = Y(p[1].price); if ([a, b, c, e].some(v => v == null)) return 1e9; return _ptSegDist(px, py, a, b, c, e); }
+      if (s.type === 'hline') { const y = Y(p[0].price); return y == null ? 1e9 : Math.abs(py - y); }
+      if (s.type === 'vline') { const x = X(p[0].time); return x == null ? 1e9 : Math.abs(px - x); }
+      if (s.type === 'rect') { const a = X(p[0].time), b = Y(p[0].price), c = X(p[1].time), e = Y(p[1].price); if ([a, b, c, e].some(v => v == null)) return 1e9; const l = Math.min(a, c), r = Math.max(a, c), t = Math.min(b, e), bo = Math.max(b, e); const inside = px >= l && px <= r && py >= t && py <= bo; return inside ? Math.min(px - l, r - px, py - t, bo - py) : Math.hypot(Math.max(l - px, 0, px - r), Math.max(t - py, 0, py - bo)); }
+      const x = X(p[0].time), y = Y(p[0].price); if (x == null || y == null) return 1e9; return Math.hypot(px - x, py - y);
+    }
+    function _eraseAt(px, py) {
+      const ts = chartInstance.timeScale(), X = t => (t == null ? null : ts.timeToCoordinate(t)), Y = p => candleSeriesRef.priceToCoordinate(p);
+      let best = null, bestD = 10;
+      _drawShapes.forEach((s, i) => { const d = _distToShape(s, px, py, X, Y); if (d < bestD) { bestD = d; best = { a: 's', i }; } });
+      trendLines.forEach((l, i) => { const a = X(l.time1), b = Y(l.price1), c = X(l.time2), e = Y(l.price2); if ([a, b, c, e].every(v => v != null)) { const d = _ptSegDist(px, py, a, b, c, e); if (d < bestD) { bestD = d; best = { a: 't', i }; } } });
+      if (best) { if (best.a === 's') _drawShapes.splice(best.i, 1); else trendLines.splice(best.i, 1); redrawCanvas(); }
+    }
+    function _setupDrawTools() {
+      if (_drawSetupDone) return;
+      const overlay = document.getElementById('chartOverlay'); if (!overlay) return;
+      _drawSetupDone = true;
+      const gx = cx => cx - overlay.getBoundingClientRect().left, gy = cy => cy - overlay.getBoundingClientRect().top;
+      overlay.addEventListener('click', e => {
+        if (!_drawTool || !chartInstance || !candleSeriesRef) return;
+        const px = gx(e.clientX), py = gy(e.clientY);
+        if (_drawTool === 'eraser') { _eraseAt(px, py); return; }
+        const time = chartInstance.timeScale().coordinateToTime(px), price = candleSeriesRef.coordinateToPrice(py);
+        if (price == null) return;
+        if (_drawTool !== 'hline' && time == null) return;   // 需要時間的工具點在空白區不收
+        _drawPending.push({ time, price });
+        const need = _DRAW_NEED[_drawTool] || 1;
+        if (_drawPending.length >= need) {
+          const shape = { type: _drawTool, pts: _drawPending.map(q => ({ time: q.time, price: q.price })) };
+          if (_drawTool === 'text') { const t = prompt('輸入註解文字：', ''); if (!t) { _drawPending = []; redrawCanvas(); return; } shape.text = t; }
+          _drawShapes.push(shape); _drawPending = [];
+        }
+        redrawCanvas();
+      });
+      overlay.addEventListener('mousemove', e => {
+        if (!_drawTool || !_drawPending.length) return;
+        redrawCanvas();
+        const canvas = document.getElementById('fibCanvas'); if (!canvas) return;
+        const ctx = canvas.getContext('2d'), last = _drawPending[_drawPending.length - 1];
+        const lx = chartInstance.timeScale().timeToCoordinate(last.time), ly = candleSeriesRef.priceToCoordinate(last.price);
+        if (lx == null || ly == null) return;
+        ctx.save(); ctx.strokeStyle = _trendColor(); ctx.lineWidth = 1.2; ctx.setLineDash([5, 3]);
+        ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(gx(e.clientX), gy(e.clientY)); ctx.stroke(); ctx.restore();
+      });
+    }
+    window._setDrawTool = function (tool) {
+      const prev = _drawTool;
+      _deactivateAllModes();          // 關掉框選/斐波那契/趨勢線（也會清 _drawTool）
+      _setupDrawTools();
+      _drawTool = (prev === tool) ? null : tool; _drawPending = [];
+      document.querySelectorAll('[data-drawtool]').forEach(b => b.classList.toggle('active', b.getAttribute('data-drawtool') === _drawTool));
+      const ov = document.getElementById('chartOverlay');
+      if (ov) { ov.style.display = _drawTool ? 'block' : 'none'; ov.style.cursor = _drawTool === 'eraser' ? 'cell' : (_drawTool ? 'crosshair' : ''); }
+      redrawCanvas();
+    };
+
     function clearAllDrawings() {
+      _drawShapes = []; _drawPending = [];
       fibLines.forEach(pl => {
         try { if (candleSeriesRef) candleSeriesRef.removePriceLine(pl); } catch(e) {}
       });
