@@ -1146,6 +1146,9 @@
     .draw-dd-menu.open { display: flex; }
     .draw-dd-menu button { background: none; border: 0; color: var(--text); text-align: left; padding: 7px 11px; border-radius: 6px; font-size: .78rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
     .draw-dd-menu button:hover { background: color-mix(in srgb, var(--accent) 12%, var(--surface)); color: var(--accent); }
+    .draw-dd-menu-right { left: auto; right: 0; }
+    #maLabel #fibBtn { opacity: .6; }
+    #maLabel #fibBtn.active { opacity: 1; text-decoration: underline; font-weight: 800; }
     .tool-btn.dd-active { background: var(--ctl-hi); border-color: var(--accent); color: var(--accent); }
     .draw-text-input { font: 700 13px -apple-system,"Segoe UI",system-ui,sans-serif; padding: 2px 6px; border: 1px solid var(--accent); border-radius: 5px; background: var(--surface); color: var(--text); outline: none; min-width: 80px; }
 
@@ -8462,27 +8465,6 @@
             <div class="toolbar-sep"></div>
             <button class="tool-btn" id="zoomRubberBtn" onclick="toggleZoomMode()"> 框選放大</button>
             <button class="tool-btn" onclick="resetZoom()" title="恢復全覽">↺ 還原</button>
-            <span class="draw-dd">
-              <button class="tool-btn" id="ddLineBtn" onclick="_toggleDrawDD('line')">畫線工具 ▾</button>
-              <div class="draw-dd-menu" id="ddLineMenu">
-                <button type="button" onclick="_pickDraw('seg')">線段</button>
-                <button type="button" onclick="_pickDraw('hline')">水平線</button>
-                <button type="button" onclick="_pickDraw('vline')">垂直線</button>
-                <button type="button" onclick="_pickDraw('parallel')">通道</button>
-                <button type="button" onclick="_pickDraw('arrowup')">↑ 箭頭</button>
-                <button type="button" onclick="_pickDraw('arrowdown')">↓ 箭頭</button>
-              </div>
-            </span>
-            <span class="draw-dd">
-              <button class="tool-btn" id="ddShapeBtn" onclick="_toggleDrawDD('shape')">圖形註解 ▾</button>
-              <div class="draw-dd-menu" id="ddShapeMenu">
-                <button type="button" onclick="_pickDraw('rect')">矩形</button>
-                <button type="button" onclick="_pickDraw('circle')">圓形</button>
-                <button type="button" onclick="_pickDraw('text')">文字</button>
-              </div>
-            </span>
-            <button class="tool-btn" id="eraserBtn" data-drawtool="eraser" onclick="_setDrawTool('eraser')" title="橡皮擦" aria-label="橡皮擦"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M20 20H8.5L3.8 15.3a2 2 0 0 1 0-2.8l8-8a2 2 0 0 1 2.8 0l5.1 5.1a2 2 0 0 1 0 2.8L14 20"/><path d="M6.5 11.5l6 6"/></svg></button>
-            <button class="tool-btn" onclick="clearAllDrawings()">✕ 清除</button>
           </div>
         </div>
         <div class="chart-layer-toolbar" role="tablist" aria-label="圖表圖層工具">
@@ -8493,7 +8475,27 @@
           <div class="label-row" id="markerToggles" style="display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;white-space:nowrap"></div>
           <span style="flex:0 0 auto;width:1px;height:20px;background:var(--border);margin:0 3px"></span>
           <span style="flex:0 0 auto;color:var(--text-muted);font-weight:800;font-size:11.5px">標記</span>
-          <button class="tool-btn" id="fibBtn" onclick="toggleFibMode()" style="margin-left:auto;flex:0 0 auto"> 斐波那契</button>
+          <span class="draw-dd" style="margin-left:auto;flex:0 0 auto">
+            <button class="tool-btn" id="ddLineBtn" onclick="_toggleDrawDD('line')">畫線工具 ▾</button>
+            <div class="draw-dd-menu" id="ddLineMenu">
+              <button type="button" onclick="_pickDraw('seg')">線段</button>
+              <button type="button" onclick="_pickDraw('hline')">水平線</button>
+              <button type="button" onclick="_pickDraw('vline')">垂直線</button>
+              <button type="button" onclick="_pickDraw('parallel')">通道</button>
+              <button type="button" onclick="_pickDraw('arrowup')">↑ 箭頭</button>
+              <button type="button" onclick="_pickDraw('arrowdown')">↓ 箭頭</button>
+            </div>
+          </span>
+          <span class="draw-dd" style="flex:0 0 auto">
+            <button class="tool-btn" id="ddShapeBtn" onclick="_toggleDrawDD('shape')">圖形註解 ▾</button>
+            <div class="draw-dd-menu draw-dd-menu-right" id="ddShapeMenu">
+              <button type="button" onclick="_pickDraw('rect')">矩形</button>
+              <button type="button" onclick="_pickDraw('circle')">圓形</button>
+              <button type="button" onclick="_pickDraw('text')">文字</button>
+            </div>
+          </span>
+          <button class="tool-btn" id="eraserBtn" data-drawtool="eraser" onclick="_setDrawTool('eraser')" title="橡皮擦" aria-label="橡皮擦" style="flex:0 0 auto"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M20 20H8.5L3.8 15.3a2 2 0 0 1 0-2.8l8-8a2 2 0 0 1 2.8 0l5.1 5.1a2 2 0 0 1 0 2.8L14 20"/><path d="M6.5 11.5l6 6"/></svg></button>
+          <button class="tool-btn" onclick="clearAllDrawings()" style="flex:0 0 auto">✕ 全部清除</button>
         </div>
         <div id="brokerFilterPanel" class="chart-feature-panel" style="display:none;padding:12px 14px 10px;border-top:1px solid var(--border);font-size:12px;color:var(--text)"></div>
         <div id="mkPanel" class="chart-feature-panel" style="padding:6px 8px;border-top:1px solid var(--border);font-size:12px;color:var(--text)">
@@ -8567,6 +8569,7 @@
               <div class="label-row">
                 <span class="ma-toggle" onclick="toggleBBand(this)" style="color:#00BCD4">BBAND(20,2)</span>
                 <span class="ma-toggle" id="boxToggle" onclick="toggleBox(this)" style="color:var(--accent);opacity:0.65"> 箱型</span>
+                <span class="ma-toggle" id="fibBtn" onclick="toggleFibMode()" style="color:#D99A2B"> 斐波那契</span>
               </div>
             </div>
           </div>
