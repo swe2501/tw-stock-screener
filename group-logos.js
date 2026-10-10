@@ -1073,12 +1073,6 @@ window.GROUP_LOGOS={
     "site": "http://www.BionetCorp.com",
     "coreCode": "1784"
   },
-  "新纖集團": {
-    "path": "assets/group-logos/新纖集團.png",
-    "source": "official site",
-    "site": "https://www.shinkong.com.tw/",
-    "coreCode": "1409"
-  },
   "金鼎集團": {
     "path": "assets/group-logos/金鼎集團.gif",
     "source": "official site",
@@ -1108,12 +1102,6 @@ window.GROUP_LOGOS={
     "source": "official site",
     "site": "http://www.wwunion.com/",
     "coreCode": "2816"
-  },
-  "新光集團": {
-    "path": "assets/group-logos/新光集團.png",
-    "source": "official site",
-    "site": "https://www.shinkong.com.tw/",
-    "coreCode": "1409"
   },
   "萬泰集團": {
     "path": "assets/group-logos/萬泰集團.png",
