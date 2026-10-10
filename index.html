@@ -8569,6 +8569,8 @@
               <div class="label-row">
                 <span class="ma-toggle" onclick="toggleBBand(this)" style="color:#00BCD4">BBAND(20,2)</span>
                 <span class="ma-toggle" id="boxToggle" onclick="toggleBox(this)" style="color:var(--accent);opacity:0.65"> 箱型</span>
+              </div>
+              <div class="label-row">
                 <span class="ma-toggle" id="fibBtn" onclick="toggleFibMode()" style="color:#D99A2B"> 斐波那契</span>
               </div>
             </div>
@@ -13468,7 +13470,8 @@
         if (high !== low) drawFibLines(high, low);
         redrawCanvas();
         fibDragStart = null; fibMode = false;
-        document.getElementById('fibBtn').classList.remove('active');
+        // 保留 active：斐波那契線正顯示中，再按一次才清除（比照 BBAND 開關）
+        document.getElementById('fibBtn').classList.toggle('active', fibLevels.length > 0);
         overlay.style.display = trendLineMode ? 'block' : 'none';
       }
 
@@ -13640,7 +13643,7 @@
       document.querySelectorAll('[data-drawtool]').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('.tool-btn.dd-active').forEach(b => b.classList.remove('dd-active'));
       document.querySelectorAll('.draw-dd-menu.open').forEach(m => m.classList.remove('open'));
-      document.getElementById('fibBtn').classList.remove('active');
+      document.getElementById('fibBtn').classList.toggle('active', fibLevels.length > 0);
       document.getElementById('trendBtn').classList.remove('active');
       document.getElementById('zoomRubberBtn').classList.remove('active');
       document.getElementById('chartOverlay').style.display = 'none';
@@ -13649,6 +13652,15 @@
 
     function toggleFibMode() {
       if (!chartInstance) return;
+      // 已畫出斐波那契 → 再按一次就清除（開關邏輯比照 BBAND）
+      if (fibLevels.length > 0 || fibLines.length > 0) {
+        fibLines.forEach(pl => { try { if (candleSeriesRef) candleSeriesRef.removePriceLine(pl); } catch (e) {} });
+        fibLines = []; fibLevels = []; fibMode = false; fibDragStart = null;
+        document.getElementById('fibBtn').classList.remove('active');
+        document.getElementById('chartOverlay').style.display = (trendLineMode || zoomMode || _drawTool) ? 'block' : 'none';
+        redrawCanvas();
+        return;
+      }
       const next = !fibMode;
       _deactivateAllModes();
       fibMode = next;
@@ -13822,8 +13834,17 @@
       redrawCanvas();
     };
     window._toggleDrawDD = function (which) {
-      const map = { line: 'ddLineMenu', shape: 'ddShapeMenu' };
-      Object.keys(map).forEach(k => { const m = document.getElementById(map[k]); if (m) { if (k === which) m.classList.toggle('open'); else m.classList.remove('open'); } });
+      // 工具列 overflow:auto 會裁切 absolute 下拉，改用 fixed 依按鈕位置定位
+      const map = { line: ['ddLineBtn', 'ddLineMenu'], shape: ['ddShapeBtn', 'ddShapeMenu'] };
+      Object.keys(map).forEach(k => {
+        const [bid, mid] = map[k], m = document.getElementById(mid), b = document.getElementById(bid);
+        if (!m) return;
+        if (k === which) {
+          const willOpen = !m.classList.contains('open');
+          m.classList.toggle('open', willOpen);
+          if (willOpen && b) { const r = b.getBoundingClientRect(); m.style.position = 'fixed'; m.style.top = (r.bottom + 4) + 'px'; m.style.left = 'auto'; m.style.right = (window.innerWidth - r.right) + 'px'; }
+        } else m.classList.remove('open');
+      });
     };
     window._pickDraw = function (tool) {
       ['ddLineMenu', 'ddShapeMenu'].forEach(id => { const m = document.getElementById(id); if (m) m.classList.remove('open'); });
