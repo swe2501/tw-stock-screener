@@ -1055,12 +1055,6 @@ window.GROUP_LOGOS={
     "site": "http://www.kenmec.com",
     "coreCode": "6125"
   },
-  "王品集團": {
-    "path": "assets/group-logos/王品集團.svg",
-    "source": "official site",
-    "site": "http://www.wowprime.com",
-    "coreCode": "2727"
-  },
   "台苯集團": {
     "path": "assets/group-logos/台苯集團.png",
     "source": "official site",
