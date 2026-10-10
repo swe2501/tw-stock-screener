@@ -1026,39 +1026,111 @@ window.GROUP_LOGOS={
     "coreCode": "1909"
   },
   "宏盛集團": {
-    "path": "assets/group-logos/宏盛集團.ico",
-    "source": "https://hsc.com.tw/favicon.ico",
-    "site": "https://hsc.com.tw/",
+    "path": "assets/group-logos/宏盛集團.png",
+    "source": "official site",
+    "site": "http://www.hsc.com.tw",
     "coreCode": "2534"
   },
   "南訊集團": {
-    "path": "assets/group-logos/南訊集團.png",
-    "source": "https://looptelecom.com/favicon.ico",
-    "site": "https://looptelecom.com/",
+    "path": "assets/group-logos/南訊集團.svg",
+    "source": "official site",
+    "site": "https://www.looptelecom.com",
     "coreCode": "3025"
   },
   "友嘉集團": {
     "path": "assets/group-logos/友嘉集團.jpg",
-    "source": "https://ffg-tw.com/favicon.ico",
-    "site": "https://ffg-tw.com/",
+    "source": "official site",
+    "site": "https://www.ffg-tw.com/",
     "coreCode": "NO_MEMBERS"
   },
-  "中環集團": {
-    "path": "assets/group-logos/中環集團.png",
-    "source": "https://deltamac.com.tw/favicon.ico",
-    "site": "https://deltamac.com.tw/",
-    "coreCode": "6144"
-  },
   "友華集團": {
-    "path": "assets/group-logos/友華集團.png",
-    "source": "https://oep.com.tw/favicon.ico",
-    "site": "https://oep.com.tw/",
+    "path": "assets/group-logos/友華集團.svg",
+    "source": "official site",
+    "site": "https://www.oep.com.tw",
     "coreCode": "4120"
   },
   "廣運集團": {
-    "path": "assets/group-logos/廣運集團.ico",
-    "source": "https://kenmec.com/favicon.ico",
-    "site": "https://kenmec.com/",
+    "path": "assets/group-logos/廣運集團.png",
+    "source": "official site",
+    "site": "http://www.kenmec.com",
     "coreCode": "6125"
+  },
+  "王品集團": {
+    "path": "assets/group-logos/王品集團.svg",
+    "source": "official site",
+    "site": "http://www.wowprime.com",
+    "coreCode": "2727"
+  },
+  "台苯集團": {
+    "path": "assets/group-logos/台苯集團.png",
+    "source": "official site",
+    "site": "http://www.smct.com.tw/",
+    "coreCode": "1310"
+  },
+  "訊聯集團": {
+    "path": "assets/group-logos/訊聯集團.png",
+    "source": "official site",
+    "site": "http://www.BionetCorp.com",
+    "coreCode": "1784"
+  },
+  "新纖集團": {
+    "path": "assets/group-logos/新纖集團.png",
+    "source": "official site",
+    "site": "https://www.shinkong.com.tw/",
+    "coreCode": "1409"
+  },
+  "金鼎集團": {
+    "path": "assets/group-logos/金鼎集團.gif",
+    "source": "official site",
+    "site": "http://www.ffg.com.tw",
+    "coreCode": "1815"
+  },
+  "國碩集團": {
+    "path": "assets/group-logos/國碩集團.ico",
+    "source": "official site",
+    "site": "http://www.gigastorage.com.tw/index.aspx",
+    "coreCode": "2406"
+  },
+  "聯發集團": {
+    "path": "assets/group-logos/聯發集團.jpg",
+    "source": "official site",
+    "site": "https://www.lanfa.com.tw",
+    "coreCode": "1459"
+  },
+  "漢唐集團": {
+    "path": "assets/group-logos/漢唐集團.jpg",
+    "source": "official site",
+    "site": "http://www.uisco.com.tw",
+    "coreCode": "2404"
+  },
+  "旺旺集團": {
+    "path": "assets/group-logos/旺旺集團.png",
+    "source": "official site",
+    "site": "http://www.wwunion.com/",
+    "coreCode": "2816"
+  },
+  "新光集團": {
+    "path": "assets/group-logos/新光集團.png",
+    "source": "official site",
+    "site": "https://www.shinkong.com.tw/",
+    "coreCode": "1409"
+  },
+  "萬泰集團": {
+    "path": "assets/group-logos/萬泰集團.png",
+    "source": "official site",
+    "site": "http://www.wontex.com",
+    "coreCode": "6190"
+  },
+  "台航集團": {
+    "path": "assets/group-logos/台航集團.png",
+    "source": "official site",
+    "site": "http://www.taiwanline.com.tw",
+    "coreCode": "2617"
+  },
+  "和大集團": {
+    "path": "assets/group-logos/和大集團.svg",
+    "source": "official site",
+    "site": "https://www.hota.com.tw",
+    "coreCode": "1536"
   }
 };
