@@ -4493,11 +4493,20 @@
     @media(max-width:760px){.bd-stage{grid-template-columns:1fr 1fr;}}
     .bd-st{border:1px solid var(--border);border-radius:10px;padding:11px 12px;background:var(--surface2);}
     .bd-st .t{font-size:11px;color:var(--text-muted);font-weight:700;} .bd-st .m{font-size:14px;font-weight:800;margin-top:4px;} .bd-st .d{font-size:10.5px;color:var(--text-muted);margin-top:3px;line-height:1.4;}
-    .bd-quad{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+    .bd-quad{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
     @media(max-width:600px){.bd-quad{grid-template-columns:1fr;}}
-    .bd-q{border:1px solid var(--border);border-radius:10px;padding:12px 14px;opacity:.55;transition:.2s;}
-    .bd-q.on{opacity:1;border-width:2px;border-color:var(--accent);background:var(--surface2);}
-    .bd-q .qh{font-size:12.5px;font-weight:800;} .bd-q .qp{font-size:11.5px;color:var(--text-muted);margin-top:4px;line-height:1.5;}
+    .bd-q{border:1px solid var(--border);border-radius:12px;padding:16px;opacity:.7;transition:.2s;background:var(--surface);}
+    .bd-q.on{opacity:1;border-width:2px;border-color:#0ea5e9;background:var(--surface2);box-shadow:0 1px 2px rgba(0,0,0,.05);}
+    .bd-q .qh{display:flex;justify-content:space-between;align-items:center;gap:8px;}
+    .bd-q .qn{font-size:12px;font-weight:700;font-family:"JetBrains Mono",monospace;}
+    .bd-q .qd{font-size:12px;color:var(--text);margin-top:6px;font-weight:700;}
+    .bd-q .qp{font-size:11.5px;color:var(--text-muted);margin-top:4px;line-height:1.6;}
+    .bd-q.on .qp{color:var(--text);}
+    .bd-badge{font-size:10px;font-family:"JetBrains Mono",monospace;padding:2px 6px;border-radius:4px;font-weight:600;border:1px solid;white-space:nowrap;}
+    .bd-ping{display:inline-flex;align-items:center;gap:4px;}
+    .bd-ping i{width:6px;height:6px;border-radius:50%;background:#0ea5e9;animation:pfPing 1.2s cubic-bezier(0,0,.2,1) infinite;}
+    .bd-rowlab{font-size:11px;font-family:"JetBrains Mono",monospace;font-weight:600;display:flex;align-items:center;gap:6px;padding:0 4px;margin:0 0 6px;}
+    .bd-rowlab i{width:6px;height:6px;border-radius:50%;display:inline-block;}
     .bd-sop{border-radius:12px;padding:16px 18px;margin-bottom:16px;border:1px solid var(--border);}
     .bd-sop.g{border-color:rgba(10,154,86,.5);box-shadow:0 0 0 1px rgba(10,154,86,.2) inset;}
     .bd-sop.a{border-color:rgba(181,138,45,.5);} .bd-sop.r{border-color:rgba(224,62,45,.5);} .bd-sop.b{border-color:rgba(58,134,224,.5);}
@@ -4554,7 +4563,7 @@
       <div class="bd-sec">
         <div class="bd-sec-h"><span></span>上市 vs 上櫃 家數矩陣</div>
         <div class="bd-sec-sub">加權(外資/權值) vs 櫃買(內資/中小題材) 家數結構交叉，辨識拉積掩護或內資暗多。</div>
-        <div class="bd-quad" id="bdQuad"></div>
+        <div id="bdQuad"></div>
       </div>
       <!-- ══ 市場廣度指標（比照玩股網 騰落線／多空頭排列／市場寬度／新高-新低 ＋ 站上均線家數）2026-09-28 ══ -->
       <div class="bd-sec" id="bxSec">
@@ -4684,12 +4693,24 @@
       var tseUp=tc.up>tc.down, otcUp=oc.up>oc.down;
       var q; if(tseUp&&otcUp)q=0; else if(tseUp&&!otcUp)q=1; else if(!tseUp&&otcUp)q=2; else q=3;
       var defs=[
-        {h:'全市場健康共振（真多頭）',p:'上市櫃同步漲多跌少，資金全面擴散、中小型股賺錢效應最佳，順勢偏多。'},
-        {h:'拉權值掩護出中小（拉積虛胖）',p:'上市漲、上櫃跌：權值撐盤但多數中小股失血，禁盲目追價、防高檔倒貨。'},
-        {h:'壓權值偷買中小（內資暗多）',p:'上市跌、上櫃漲：外資調節權值避險、本土內資活絡，重個股、輕指數。'},
-        {h:'全市場系統性通殺（恐慌出清）',p:'上市櫃同步下跌，系統性賣壓出籠，嚴控水位不接刀、待右側止跌。'}
+        {n:'I',t:'全市場健康共振',tag:'真多頭',c:'#10b981',d:'上市 漲 (+) ⊗ 上櫃 漲 (+)',p:'上市櫃同步漲多跌少，資金全面擴散、中小型股賺錢效應最佳，順勢偏多。'},
+        {n:'II',t:'拉權值掩護出中小',tag:'拉積虛胖',c:'#f59e0b',d:'上市 漲 (+) ⊗ 上櫃 跌 (-)',p:'上市漲、上櫃跌：權值撐盤但多數中小股失血，禁盲目追價、防高檔倒貨。'},
+        {n:'III',t:'壓權值偷買中小',tag:'內資暗多',c:'#0ea5e9',d:'上市 跌 (-) ⊗ 上櫃 漲 (+)',p:'上市跌、上櫃漲：外資調節權值避險、本土內資活絡，重個股、輕指數。'},
+        {n:'IV',t:'全市場系統性通殺',tag:'恐慌出清',c:'#f43f5e',d:'上市 跌 (-) ⊗ 上櫃 跌 (-)',p:'上市櫃同步下跌，系統性賣壓出籠，嚴控水位不接刀、待右側止跌。'}
       ];
-      el('bdQuad').innerHTML=defs.map(function(x,i){return '<div class="bd-q'+(i===q?' on':'')+'"><div class="qh">'+x.h+(i===q?'  今日':'')+'</div><div class="qp">'+x.p+'</div></div>';}).join('');
+      function _bdBadge(c){ var m={'#10b981':'16,185,129','#f59e0b':'245,158,11','#0ea5e9':'14,165,233','#f43f5e':'244,63,94'}, rgb=m[c]||'99,102,241'; return 'color:'+c+';background:rgba('+rgb+',.12);border-color:rgba('+rgb+',.35)'; }
+      function _bdCard(i){ var x=defs[i], on=i===q;
+        return '<div class="bd-q'+(on?' on':'')+'"><div class="qh">'
+          +'<span class="qn" style="color:'+(on?'#0ea5e9':x.c)+'">象限 '+x.n+' • '+x.t+'</span>'
+          +(on?'<span class="bd-badge bd-ping" style="color:#0ea5e9;background:rgba(14,165,233,.15);border-color:rgba(14,165,233,.4)"><i></i> 今日命中</span>'
+               :'<span class="bd-badge" style="'+_bdBadge(x.c)+'">'+x.tag+'</span>')
+          +'</div><div class="qd">'+x.d+'</div><div class="qp">'+x.p+'</div></div>';
+      }
+      el('bdQuad').innerHTML=
+        '<div class="bd-rowlab" style="color:#10b981"><i style="background:#10b981"></i> 加權(上市)偏多維度 (漲 +)</div>'
+        +'<div class="bd-quad">'+_bdCard(0)+_bdCard(1)+'</div>'
+        +'<div class="bd-rowlab" style="color:#f43f5e;margin-top:8px"><i style="background:#f43f5e"></i> 加權(上市)偏空維度 (跌 -)</div>'
+        +'<div class="bd-quad">'+_bdCard(2)+_bdCard(3)+'</div>';
     }
     window._breadthShow=function(){
       applyGate();
