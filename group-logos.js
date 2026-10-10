@@ -53,12 +53,6 @@ window.GROUP_LOGOS={
     "site": "https://www.acer.com/tw-zh/",
     "coreCode": "2353"
   },
-  "明基友達集團": {
-    "path": "assets/group-logos/明基友達集團.svg",
-    "source": "official site",
-    "site": "https://www.auo.com",
-    "coreCode": "2409"
-  },
   "廣達集團": {
     "path": "assets/group-logos/廣達集團.png",
     "source": "https://www.quantatw.com/Quanta/chinese/esg/ESG2023/images/logo.png",
@@ -149,12 +143,6 @@ window.GROUP_LOGOS={
     "site": "https://www.yuanta.com/",
     "coreCode": "2885"
   },
-  "巨大集團": {
-    "path": "assets/group-logos/巨大集團.png",
-    "source": "official site",
-    "site": "https://www.giantgroup-cycling.com/",
-    "coreCode": "9921"
-  },
   "美利達集團": {
     "path": "assets/group-logos/美利達集團.svg",
     "source": "official site",
@@ -232,12 +220,6 @@ window.GROUP_LOGOS={
     "source": "https://www.continental-holdings.com/app/uploads/2020/09/cropped-chc-logo-square-2-7-180x180.png",
     "site": "https://www.continental-holdings.com/zh/",
     "coreCode": "3703"
-  },
-  "卜蜂集團": {
-    "path": "assets/group-logos/卜蜂集團.png",
-    "source": "official site",
-    "site": "http://www.cptwn.com.tw",
-    "coreCode": "1215"
   },
   "大成集團": {
     "path": "assets/group-logos/大成集團.svg",
@@ -323,12 +305,6 @@ window.GROUP_LOGOS={
     "site": "https://www.aseglobal.com/",
     "coreCode": "3711"
   },
-  "威剛集團": {
-    "path": "assets/group-logos/威剛集團.svg",
-    "source": "official site",
-    "site": "https://www.adata.com",
-    "coreCode": "3260"
-  },
   "金寶／仁寶集團": {
     "path": "assets/group-logos/金寶／仁寶集團.svg",
     "source": "https://www.compal.com/static/images/logo/compal-logo_green.969a82d6c214.svg",
@@ -352,12 +328,6 @@ window.GROUP_LOGOS={
     "source": "https://www.teco.com.tw/favicon.ico",
     "site": "https://www.teco.com.tw/",
     "coreCode": "1504"
-  },
-  "寶成集團": {
-    "path": "assets/group-logos/寶成集團.png",
-    "source": "official site",
-    "site": "https://www.pouchen.com",
-    "coreCode": "9904"
   },
   "正新集團": {
     "path": "assets/group-logos/正新集團.png",
@@ -436,12 +406,6 @@ window.GROUP_LOGOS={
     "source": "https://www.hhe.com.tw/favicon.ico",
     "site": "https://www.hhe.com.tw/",
     "coreCode": "2545"
-  },
-  "國揚集團": {
-    "path": "assets/group-logos/國揚集團.png",
-    "source": "official site",
-    "site": "https://www.kycc.com.tw",
-    "coreCode": "2505"
   },
   "萬海集團": {
     "path": "assets/group-logos/萬海集團.ico",
@@ -677,12 +641,6 @@ window.GROUP_LOGOS={
     "site": "https://www.realtek.com/",
     "coreCode": "2379"
   },
-  "盛弘集團": {
-    "path": "assets/group-logos/盛弘集團.jpg",
-    "source": "official site",
-    "site": "https://www.share-hope.com",
-    "coreCode": "8403"
-  },
   "台南企業集團": {
     "path": "assets/group-logos/台南企業集團.svg",
     "source": "https://www.tai-nan.com/assets/images/common/logo.svg",
@@ -808,12 +766,6 @@ window.GROUP_LOGOS={
     "source": "https://www.universal-tex.com/images/slogo.png",
     "site": "https://www.universal-tex.com/",
     "coreCode": "1445"
-  },
-  "富鼎先進集團": {
-    "path": "assets/group-logos/富鼎先進集團.svg",
-    "source": "official site",
-    "site": "https://www.a-power.com.tw",
-    "coreCode": "8261"
   },
   "亞光集團": {
     "path": "assets/group-logos/亞光集團.png",
