@@ -1140,6 +1140,14 @@
     }
     .tool-btn:hover { color: var(--text); border-color: var(--accent); }
     .tool-btn.active { background: var(--ctl-hi); border-color: var(--accent); color: var(--accent); }
+    /* 畫線工具/圖形註解 下拉選單 2026-10-10 */
+    .draw-dd { position: relative; display: inline-flex; flex: 0 0 auto; }
+    .draw-dd-menu { position: absolute; top: calc(100% + 4px); left: 0; z-index: 30; display: none; flex-direction: column; min-width: 104px; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; box-shadow: 0 12px 28px rgba(0,0,0,.22); padding: 4px; }
+    .draw-dd-menu.open { display: flex; }
+    .draw-dd-menu button { background: none; border: 0; color: var(--text); text-align: left; padding: 7px 11px; border-radius: 6px; font-size: .78rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
+    .draw-dd-menu button:hover { background: color-mix(in srgb, var(--accent) 12%, var(--surface)); color: var(--accent); }
+    .tool-btn.dd-active { background: var(--ctl-hi); border-color: var(--accent); color: var(--accent); }
+    .draw-text-input { font: 700 13px -apple-system,"Segoe UI",system-ui,sans-serif; padding: 2px 6px; border: 1px solid var(--accent); border-radius: 5px; background: var(--surface); color: var(--text); outline: none; min-width: 80px; }
 
     tbody tr { cursor: pointer; }
     @keyframes rtBlink { 0%,100%{opacity:1} 50%{opacity:.2} }
@@ -8444,7 +8452,7 @@
             <button class="tool-btn" id="weeklyBtn" onclick="loadWeeklyChart()">週K</button>
             <button class="tool-btn" id="monthlyBtn" onclick="loadMonthlyChart()">月K</button>
             <button class="tool-btn" id="yearlyBtn" onclick="loadYearlyChart()">年K</button>
-            <button class="tool-btn" id="trendBtn" onclick="loadTrendChart()">走勢</button>
+            <button class="tool-btn" id="trendBtn" onclick="loadTrendChart()">今日走勢</button>
             <div class="toolbar-sep"></div>
             <button class="tool-btn" id="backBtn" style="display:none" onclick="goBackToStock()">← 返回</button>
           </div>
@@ -8455,16 +8463,26 @@
             <button class="tool-btn" id="zoomRubberBtn" onclick="toggleZoomMode()"> 框選放大</button>
             <button class="tool-btn" onclick="resetZoom()" title="恢復全覽">↺ 還原</button>
             <button class="tool-btn" id="fibBtn" onclick="toggleFibMode()"> 斐波那契</button>
-            <button class="tool-btn" id="trendBtn" onclick="toggleTrendLine()"> 趨勢線</button>
-            <button class="tool-btn" data-drawtool="seg" onclick="_setDrawTool('seg')">線段</button>
-            <button class="tool-btn" data-drawtool="hline" onclick="_setDrawTool('hline')">水平線</button>
-            <button class="tool-btn" data-drawtool="vline" onclick="_setDrawTool('vline')">垂直線</button>
-            <button class="tool-btn" data-drawtool="parallel" onclick="_setDrawTool('parallel')">通道</button>
-            <button class="tool-btn" data-drawtool="arrowup" onclick="_setDrawTool('arrowup')">↑箭頭</button>
-            <button class="tool-btn" data-drawtool="arrowdown" onclick="_setDrawTool('arrowdown')">↓箭頭</button>
-            <button class="tool-btn" data-drawtool="rect" onclick="_setDrawTool('rect')">矩形</button>
-            <button class="tool-btn" data-drawtool="text" onclick="_setDrawTool('text')">文字</button>
-            <button class="tool-btn" data-drawtool="eraser" onclick="_setDrawTool('eraser')">橡皮擦</button>
+            <span class="draw-dd">
+              <button class="tool-btn" id="ddLineBtn" onclick="_toggleDrawDD('line')">畫線工具 ▾</button>
+              <div class="draw-dd-menu" id="ddLineMenu">
+                <button type="button" onclick="_pickDraw('seg')">線段</button>
+                <button type="button" onclick="_pickDraw('hline')">水平線</button>
+                <button type="button" onclick="_pickDraw('vline')">垂直線</button>
+                <button type="button" onclick="_pickDraw('parallel')">通道</button>
+                <button type="button" onclick="_pickDraw('arrowup')">↑ 箭頭</button>
+                <button type="button" onclick="_pickDraw('arrowdown')">↓ 箭頭</button>
+              </div>
+            </span>
+            <span class="draw-dd">
+              <button class="tool-btn" id="ddShapeBtn" onclick="_toggleDrawDD('shape')">圖形註解 ▾</button>
+              <div class="draw-dd-menu" id="ddShapeMenu">
+                <button type="button" onclick="_pickDraw('rect')">矩形</button>
+                <button type="button" onclick="_pickDraw('circle')">圓形</button>
+                <button type="button" onclick="_pickDraw('text')">文字</button>
+              </div>
+            </span>
+            <button class="tool-btn" id="eraserBtn" data-drawtool="eraser" onclick="_setDrawTool('eraser')" title="橡皮擦" aria-label="橡皮擦"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M20 20H8.5L3.8 15.3a2 2 0 0 1 0-2.8l8-8a2 2 0 0 1 2.8 0l5.1 5.1a2 2 0 0 1 0 2.8L14 20"/><path d="M6.5 11.5l6 6"/></svg></button>
             <button class="tool-btn" onclick="clearAllDrawings()">✕ 清除</button>
           </div>
         </div>
@@ -9343,9 +9361,13 @@
     // 畫線套件（點擊放點）：線段/水平線/垂直線/通道/上下箭頭/矩形/文字 + 橡皮擦（2026-10-09）
     let _drawTool = null;     // 目前工具
     let _drawShapes = [];     // [{type, pts:[{time,price}], text?}]
-    let _drawPending = [];    // 進行中已放的點
+    let _drawPending = [];    // 點擊放點工具：進行中已放的點
+    let _shapeDrag = null;    // 拖拉工具(矩形/圓形)：拖拉起點
     let _drawSetupDone = false;
-    const _DRAW_NEED = { seg: 2, hline: 1, vline: 1, parallel: 3, arrowup: 1, arrowdown: 1, rect: 2, text: 1 };
+    // 點擊放點工具所需點數（矩形/圓形改用拖拉、文字用內嵌輸入，不列此）
+    const _DRAW_NEED = { seg: 2, hline: 1, vline: 1, parallel: 3, arrowup: 1, arrowdown: 1 };
+    const _DRAG_TOOLS = ['rect', 'circle'];
+    const _CLICK_TOOLS = ['seg', 'hline', 'vline', 'parallel', 'arrowup', 'arrowdown'];
 
     // ── Open / close ──────────────────────────────────────
     function _isStock(code) {
@@ -13611,8 +13633,10 @@
       fibMode = false; fibDragStart = null;
       trendLineMode = false; trendStart = null;
       zoomMode = false; zoomDragStart = null;
-      _drawTool = null; _drawPending = [];
+      _drawTool = null; _drawPending = []; _shapeDrag = null;
       document.querySelectorAll('[data-drawtool]').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tool-btn.dd-active').forEach(b => b.classList.remove('dd-active'));
+      document.querySelectorAll('.draw-dd-menu.open').forEach(m => m.classList.remove('open'));
       document.getElementById('fibBtn').classList.remove('active');
       document.getElementById('trendBtn').classList.remove('active');
       document.getElementById('zoomRubberBtn').classList.remove('active');
@@ -13689,6 +13713,7 @@
         else if (s.type === 'hline') { const y = Y(p[0].price); if (y == null) return; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(ctx.canvas.width, y); ctx.stroke(); }
         else if (s.type === 'vline') { const x = X(p[0].time); if (x == null) return; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, ctx.canvas.height); ctx.stroke(); }
         else if (s.type === 'rect') { const a = X(p[0].time), b = Y(p[0].price), c = X(p[1].time), e = Y(p[1].price); if ([a, b, c, e].some(v => v == null)) return; ctx.strokeRect(Math.min(a, c), Math.min(b, e), Math.abs(c - a), Math.abs(e - b)); }
+        else if (s.type === 'circle') { const a = X(p[0].time), b = Y(p[0].price), c = X(p[1].time), e = Y(p[1].price); if ([a, b, c, e].some(v => v == null)) return; ctx.beginPath(); ctx.ellipse((a + c) / 2, (b + e) / 2, Math.abs(c - a) / 2, Math.abs(e - b) / 2, 0, 0, Math.PI * 2); ctx.stroke(); }
         else if (s.type === 'parallel') { const a = X(p[0].time), b = Y(p[0].price), c = X(p[1].time), e = Y(p[1].price), f = X(p[2].time), g = Y(p[2].price); if ([a, b, c, e, f, g].some(v => v == null)) return; const ox = f - a, oy = g - b; ctx.beginPath(); ctx.moveTo(a, b); ctx.lineTo(c, e); ctx.moveTo(a + ox, b + oy); ctx.lineTo(c + ox, e + oy); ctx.stroke(); }
         else if (s.type === 'arrowup' || s.type === 'arrowdown') { const x = X(p[0].time), y = Y(p[0].price); if (x == null || y == null) return; _drawArrowGlyph(ctx, x, y, s.type === 'arrowup'); }
         else if (s.type === 'text') { const x = X(p[0].time), y = Y(p[0].price); if (x == null || y == null) return; ctx.font = '700 12px -apple-system,"Segoe UI",system-ui,sans-serif'; ctx.textBaseline = 'middle'; const tw = ctx.measureText(s.text || '').width; ctx.fillStyle = light ? 'rgba(255,255,255,0.9)' : 'rgba(12,18,28,0.86)'; _fibRoundRect(ctx, x, y - 10, tw + 12, 20, 5); ctx.fill(); ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.globalAlpha = 0.5; ctx.stroke(); ctx.globalAlpha = 1; ctx.fillStyle = col; ctx.fillText(s.text || '', x + 6, y + 1); }
@@ -13704,6 +13729,7 @@
       if (s.type === 'hline') { const y = Y(p[0].price); return y == null ? 1e9 : Math.abs(py - y); }
       if (s.type === 'vline') { const x = X(p[0].time); return x == null ? 1e9 : Math.abs(px - x); }
       if (s.type === 'rect') { const a = X(p[0].time), b = Y(p[0].price), c = X(p[1].time), e = Y(p[1].price); if ([a, b, c, e].some(v => v == null)) return 1e9; const l = Math.min(a, c), r = Math.max(a, c), t = Math.min(b, e), bo = Math.max(b, e); const inside = px >= l && px <= r && py >= t && py <= bo; return inside ? Math.min(px - l, r - px, py - t, bo - py) : Math.hypot(Math.max(l - px, 0, px - r), Math.max(t - py, 0, py - bo)); }
+      if (s.type === 'circle') { const a = X(p[0].time), b = Y(p[0].price), c = X(p[1].time), e = Y(p[1].price); if ([a, b, c, e].some(v => v == null)) return 1e9; const cx = (a + c) / 2, cy = (b + e) / 2, rx = Math.abs(c - a) / 2 || 1, ry = Math.abs(e - b) / 2 || 1; const ang = Math.atan2((py - cy) / ry, (px - cx) / rx); return Math.hypot(px - (cx + rx * Math.cos(ang)), py - (cy + ry * Math.sin(ang))); }
       const x = X(p[0].time), y = Y(p[0].price); if (x == null || y == null) return 1e9; return Math.hypot(px - x, py - y);
     }
     function _eraseAt(px, py) {
@@ -13713,48 +13739,90 @@
       trendLines.forEach((l, i) => { const a = X(l.time1), b = Y(l.price1), c = X(l.time2), e = Y(l.price2); if ([a, b, c, e].every(v => v != null)) { const d = _ptSegDist(px, py, a, b, c, e); if (d < bestD) { bestD = d; best = { a: 't', i }; } } });
       if (best) { if (best.a === 's') _drawShapes.splice(best.i, 1); else trendLines.splice(best.i, 1); redrawCanvas(); }
     }
+    function _coordAt(px, py) { return { time: chartInstance.timeScale().coordinateToTime(px), price: candleSeriesRef.coordinateToPrice(py) }; }
+    function _previewShape(ctx, type, s, e) {
+      ctx.save(); ctx.strokeStyle = _trendColor(); ctx.lineWidth = 1.5; ctx.setLineDash([5, 3]);
+      if (type === 'rect') ctx.strokeRect(Math.min(s.px, e.px), Math.min(s.py, e.py), Math.abs(e.px - s.px), Math.abs(e.py - s.py));
+      else if (type === 'circle') { const cx = (s.px + e.px) / 2, cy = (s.py + e.py) / 2; ctx.beginPath(); ctx.ellipse(cx, cy, Math.abs(e.px - s.px) / 2, Math.abs(e.py - s.py) / 2, 0, 0, Math.PI * 2); ctx.stroke(); }
+      ctx.restore();
+    }
+    function _showTextInput(px, py, time, price) {   // 小畫家式：原地內嵌輸入框，不用瀏覽器 popup
+      const host = document.getElementById('chartOverlay'); if (!host) return;
+      const inp = document.createElement('input');
+      inp.type = 'text'; inp.className = 'draw-text-input';
+      inp.style.cssText = 'position:absolute;z-index:40;left:' + px + 'px;top:' + (py - 11) + 'px;';
+      host.appendChild(inp); setTimeout(function () { inp.focus(); }, 0);
+      let done = false;
+      const commit = function () { if (done) return; done = true; const v = inp.value.trim(); inp.remove(); if (v) { _drawShapes.push({ type: 'text', pts: [{ time: time, price: price }], text: v }); redrawCanvas(); } };
+      inp.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); commit(); } else if (ev.key === 'Escape') { done = true; inp.remove(); } });
+      inp.addEventListener('blur', commit);
+    }
     function _setupDrawTools() {
       if (_drawSetupDone) return;
       const overlay = document.getElementById('chartOverlay'); if (!overlay) return;
       _drawSetupDone = true;
       const gx = cx => cx - overlay.getBoundingClientRect().left, gy = cy => cy - overlay.getBoundingClientRect().top;
-      overlay.addEventListener('click', e => {
-        if (!_drawTool || !chartInstance || !candleSeriesRef) return;
-        const px = gx(e.clientX), py = gy(e.clientY);
-        if (_drawTool === 'eraser') { _eraseAt(px, py); return; }
-        const time = chartInstance.timeScale().coordinateToTime(px), price = candleSeriesRef.coordinateToPrice(py);
-        if (price == null) return;
-        if (_drawTool !== 'hline' && time == null) return;   // 需要時間的工具點在空白區不收
-        _drawPending.push({ time, price });
-        const need = _DRAW_NEED[_drawTool] || 1;
-        if (_drawPending.length >= need) {
-          const shape = { type: _drawTool, pts: _drawPending.map(q => ({ time: q.time, price: q.price })) };
-          if (_drawTool === 'text') { const t = prompt('輸入註解文字：', ''); if (!t) { _drawPending = []; redrawCanvas(); return; } shape.text = t; }
-          _drawShapes.push(shape); _drawPending = [];
-        }
-        redrawCanvas();
+      overlay.addEventListener('mousedown', e => {
+        if (!_drawTool || !chartInstance || !candleSeriesRef || _DRAG_TOOLS.indexOf(_drawTool) < 0) return;
+        const px = gx(e.clientX), py = gy(e.clientY), c = _coordAt(px, py);
+        if (c.time == null || c.price == null) return;
+        _shapeDrag = { px, py, time: c.time, price: c.price };
       });
       overlay.addEventListener('mousemove', e => {
-        if (!_drawTool || !_drawPending.length) return;
-        redrawCanvas();
-        const canvas = document.getElementById('fibCanvas'); if (!canvas) return;
-        const ctx = canvas.getContext('2d'), last = _drawPending[_drawPending.length - 1];
-        const lx = chartInstance.timeScale().timeToCoordinate(last.time), ly = candleSeriesRef.priceToCoordinate(last.price);
-        if (lx == null || ly == null) return;
-        ctx.save(); ctx.strokeStyle = _trendColor(); ctx.lineWidth = 1.2; ctx.setLineDash([5, 3]);
-        ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(gx(e.clientX), gy(e.clientY)); ctx.stroke(); ctx.restore();
+        if (!_drawTool) return;
+        const px = gx(e.clientX), py = gy(e.clientY);
+        if (_shapeDrag) { redrawCanvas(); _previewShape(document.getElementById('fibCanvas').getContext('2d'), _drawTool, { px: _shapeDrag.px, py: _shapeDrag.py }, { px, py }); return; }
+        if (_CLICK_TOOLS.indexOf(_drawTool) >= 0 && _drawPending.length) {
+          redrawCanvas(); const ctx = document.getElementById('fibCanvas').getContext('2d');
+          const last = _drawPending[_drawPending.length - 1], lx = chartInstance.timeScale().timeToCoordinate(last.time), ly = candleSeriesRef.priceToCoordinate(last.price);
+          if (lx != null && ly != null) { ctx.save(); ctx.strokeStyle = _trendColor(); ctx.lineWidth = 1.2; ctx.setLineDash([5, 3]); ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(px, py); ctx.stroke(); ctx.restore(); }
+        }
       });
+      overlay.addEventListener('mouseup', e => {
+        if (!_shapeDrag) return;
+        const px = gx(e.clientX), py = gy(e.clientY), c = _coordAt(px, py), s = _shapeDrag; _shapeDrag = null;
+        if (c.time != null && c.price != null && Math.abs(px - s.px) > 4 && Math.abs(py - s.py) > 4)
+          _drawShapes.push({ type: _drawTool, pts: [{ time: s.time, price: s.price }, { time: c.time, price: c.price }] });
+        redrawCanvas();
+      });
+      overlay.addEventListener('click', e => {
+        if (!_drawTool || !chartInstance || !candleSeriesRef || _DRAG_TOOLS.indexOf(_drawTool) >= 0) return;
+        const px = gx(e.clientX), py = gy(e.clientY);
+        if (_drawTool === 'eraser') { _eraseAt(px, py); return; }
+        const c = _coordAt(px, py); if (c.price == null) return;
+        if (_drawTool === 'text') { if (c.time == null) return; _showTextInput(px, py, c.time, c.price); return; }
+        if (_drawTool !== 'hline' && c.time == null) return;
+        _drawPending.push({ time: c.time, price: c.price });
+        if (_drawPending.length >= (_DRAW_NEED[_drawTool] || 1)) { _drawShapes.push({ type: _drawTool, pts: _drawPending.map(q => ({ time: q.time, price: q.price })) }); _drawPending = []; }
+        redrawCanvas();
+      });
+    }
+    function _syncDrawDDActive() {
+      const lineTools = ['seg', 'hline', 'vline', 'parallel', 'arrowup', 'arrowdown'], shapeTools = ['rect', 'circle', 'text'];
+      const lb = document.getElementById('ddLineBtn'), sb = document.getElementById('ddShapeBtn');
+      if (lb) lb.classList.toggle('dd-active', lineTools.indexOf(_drawTool) >= 0);
+      if (sb) sb.classList.toggle('dd-active', shapeTools.indexOf(_drawTool) >= 0);
     }
     window._setDrawTool = function (tool) {
       const prev = _drawTool;
-      _deactivateAllModes();          // 關掉框選/斐波那契/趨勢線（也會清 _drawTool）
+      _deactivateAllModes();          // 關掉框選/斐波那契（也會清 _drawTool/dd-active）
       _setupDrawTools();
-      _drawTool = (prev === tool) ? null : tool; _drawPending = [];
+      _drawTool = (prev === tool) ? null : tool; _drawPending = []; _shapeDrag = null;
       document.querySelectorAll('[data-drawtool]').forEach(b => b.classList.toggle('active', b.getAttribute('data-drawtool') === _drawTool));
+      _syncDrawDDActive();
       const ov = document.getElementById('chartOverlay');
       if (ov) { ov.style.display = _drawTool ? 'block' : 'none'; ov.style.cursor = _drawTool === 'eraser' ? 'cell' : (_drawTool ? 'crosshair' : ''); }
       redrawCanvas();
     };
+    window._toggleDrawDD = function (which) {
+      const map = { line: 'ddLineMenu', shape: 'ddShapeMenu' };
+      Object.keys(map).forEach(k => { const m = document.getElementById(map[k]); if (m) { if (k === which) m.classList.toggle('open'); else m.classList.remove('open'); } });
+    };
+    window._pickDraw = function (tool) {
+      ['ddLineMenu', 'ddShapeMenu'].forEach(id => { const m = document.getElementById(id); if (m) m.classList.remove('open'); });
+      _setDrawTool(tool);
+    };
+    document.addEventListener('click', e => { if (!e.target.closest('.draw-dd')) ['ddLineMenu', 'ddShapeMenu'].forEach(id => { const m = document.getElementById(id); if (m) m.classList.remove('open'); }); });
 
     function clearAllDrawings() {
       _drawShapes = []; _drawPending = [];
