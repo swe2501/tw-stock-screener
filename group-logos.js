@@ -1052,13 +1052,6 @@ window.GROUP_LOGOS={
     "coreCode": "8261",
     "bg": "dark"
   },
-  "王品集團": {
-    "path": "assets/group-logos/王品集團.svg",
-    "source": "官網白色向量 logo（需深色底）",
-    "site": "https://www.wowprime.com/",
-    "coreCode": "2727",
-    "bg": "dark"
-  },
   "威剛集團": {
     "path": "assets/group-logos/威剛集團.png",
     "source": "official/wikidata",
