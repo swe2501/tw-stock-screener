@@ -413,12 +413,6 @@ window.GROUP_LOGOS={
     "site": "http://tw.wanhai.com/",
     "coreCode": "2615"
   },
-  "漢來美食集團": {
-    "path": "assets/group-logos/漢來美食集團.png",
-    "source": "official/wikidata",
-    "site": "https://www.hilai-foods.com",
-    "coreCode": "1268"
-  },
   "瓦城集團": {
     "path": "assets/group-logos/瓦城集團.svg",
     "source": "https://www.ttfb.com/favicon.svg",
@@ -442,12 +436,6 @@ window.GROUP_LOGOS={
     "source": "official site",
     "site": "https://www.gdc.com.tw",
     "coreCode": "2504"
-  },
-  "森崴能源／正崴集團": {
-    "path": "assets/group-logos/森崴能源／正崴集團.png",
-    "source": "official/wikidata",
-    "site": "",
-    "coreCode": ""
   },
   "世紀鋼集團": {
     "path": "assets/group-logos/世紀鋼集團.png",
@@ -502,12 +490,6 @@ window.GROUP_LOGOS={
     "source": "https://dimerco.com/wp-content/uploads/2022/10/dimerco-logo-header.png",
     "site": "https://dimerco.com/",
     "coreCode": "5609"
-  },
-  "正崴集團": {
-    "path": "assets/group-logos/正崴集團.png",
-    "source": "official/wikidata",
-    "site": "https://www.foxlink.com",
-    "coreCode": "2392"
   },
   "智冠集團": {
     "path": "assets/group-logos/智冠集團.png",
@@ -646,12 +628,6 @@ window.GROUP_LOGOS={
     "source": "https://www.tai-nan.com/assets/images/common/logo.svg",
     "site": "https://www.tai-nan.com/",
     "coreCode": "1473"
-  },
-  "宏正集團": {
-    "path": "assets/group-logos/宏正集團.png",
-    "source": "official/wikidata",
-    "site": "http://www.aten.com/tw/zh/",
-    "coreCode": "6277"
   },
   "圓剛集團": {
     "path": "assets/group-logos/圓剛集團.webp",
@@ -1083,14 +1059,8 @@ window.GROUP_LOGOS={
     "coreCode": "2727",
     "bg": "dark"
   },
-  "國揚集團": {
-    "path": "assets/group-logos/國揚集團.png",
-    "source": "official/wikidata",
-    "site": "https://www.kycc.com.tw",
-    "coreCode": "2505"
-  },
   "威剛集團": {
-    "path": "assets/group-logos/威剛集團.svg",
+    "path": "assets/group-logos/威剛集團.png",
     "source": "official/wikidata",
     "site": "https://www.adata.com",
     "coreCode": "3260"
@@ -1112,12 +1082,6 @@ window.GROUP_LOGOS={
     "source": "https://www.pouchen.com/images/logo.png",
     "site": "https://www.pouchen.com/",
     "coreCode": "9904"
-  },
-  "退輔會集團": {
-    "path": "assets/group-logos/退輔會集團.png",
-    "source": "official/wikidata",
-    "site": "https://www.shinshinltd.com.tw",
-    "coreCode": "2901"
   },
   "明基友達集團": {
     "path": "assets/group-logos/明基友達集團.svg",
