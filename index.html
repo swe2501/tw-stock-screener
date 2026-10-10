@@ -13902,13 +13902,11 @@
     document.addEventListener('click', e => { if (!e.target.closest('.draw-dd')) ['ddLineMenu', 'ddShapeMenu'].forEach(id => { const m = document.getElementById(id); if (m) m.classList.remove('open'); }); });
 
     function clearAllDrawings() {
+      // 不清斐波那契（它是獨立開關，要用再按一次斐波那契來清）
       _drawShapes = []; _drawPending = [];
-      fibLines.forEach(pl => {
-        try { if (candleSeriesRef) candleSeriesRef.removePriceLine(pl); } catch(e) {}
-      });
-      fibLines = []; fibLevels = []; fibDragStart = null;
       trendLines = []; trendStart = null;
       _clearCanvas();
+      redrawCanvas();   // 重畫，保留斐波那契線與標籤
     }
 
     function drawFibLines(high, low) {
