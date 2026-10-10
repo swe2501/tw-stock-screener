@@ -13834,7 +13834,7 @@
       redrawCanvas();
     };
     window._toggleDrawDD = function (which) {
-      // 工具列 overflow:auto 會裁切 absolute 下拉，改用 fixed 依按鈕位置定位
+      // 工具列 overflow:auto 會裁切下拉；把選單搬到 body 並用 fixed 依按鈕實際座標定位、夾進視窗內
       const map = { line: ['ddLineBtn', 'ddLineMenu'], shape: ['ddShapeBtn', 'ddShapeMenu'] };
       Object.keys(map).forEach(k => {
         const [bid, mid] = map[k], m = document.getElementById(mid), b = document.getElementById(bid);
@@ -13842,7 +13842,14 @@
         if (k === which) {
           const willOpen = !m.classList.contains('open');
           m.classList.toggle('open', willOpen);
-          if (willOpen && b) { const r = b.getBoundingClientRect(); m.style.position = 'fixed'; m.style.top = (r.bottom + 4) + 'px'; m.style.left = 'auto'; m.style.right = (window.innerWidth - r.right) + 'px'; }
+          if (willOpen && b) {
+            if (m.parentElement !== document.body) document.body.appendChild(m);
+            m.style.position = 'fixed'; m.style.zIndex = '99999'; m.style.right = 'auto';
+            const r = b.getBoundingClientRect(), mw = m.offsetWidth || 140;
+            let left = Math.max(6, Math.min(r.right - mw, window.innerWidth - mw - 6));
+            m.style.top = (r.bottom + 4) + 'px';
+            m.style.left = left + 'px';
+          }
         } else m.classList.remove('open');
       });
     };
