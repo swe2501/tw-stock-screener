@@ -102,8 +102,8 @@ window.GROUP_LOGOS={
     "coreCode": "9945"
   },
   "中鋼集團": {
-    "path": "assets/group-logos/中鋼集團.ico",
-    "source": "https://www.csc.com.tw/images/csc_logo.ico",
+    "path": "assets/group-logos/中鋼集團.svg",
+    "source": "Wikimedia官方China Steel logo",
     "site": "https://www.csc.com.tw/",
     "coreCode": "2002"
   },
