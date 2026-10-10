@@ -1024,5 +1024,41 @@ window.GROUP_LOGOS={
     "source": "https://www.longchenpaper.com/images/pic-share.jpg",
     "site": "https://www.longchenpaper.com/",
     "coreCode": "1909"
+  },
+  "宏盛集團": {
+    "path": "assets/group-logos/宏盛集團.ico",
+    "source": "https://hsc.com.tw/favicon.ico",
+    "site": "https://hsc.com.tw/",
+    "coreCode": "2534"
+  },
+  "南訊集團": {
+    "path": "assets/group-logos/南訊集團.png",
+    "source": "https://looptelecom.com/favicon.ico",
+    "site": "https://looptelecom.com/",
+    "coreCode": "3025"
+  },
+  "友嘉集團": {
+    "path": "assets/group-logos/友嘉集團.jpg",
+    "source": "https://ffg-tw.com/favicon.ico",
+    "site": "https://ffg-tw.com/",
+    "coreCode": "NO_MEMBERS"
+  },
+  "中環集團": {
+    "path": "assets/group-logos/中環集團.png",
+    "source": "https://deltamac.com.tw/favicon.ico",
+    "site": "https://deltamac.com.tw/",
+    "coreCode": "6144"
+  },
+  "友華集團": {
+    "path": "assets/group-logos/友華集團.png",
+    "source": "https://oep.com.tw/favicon.ico",
+    "site": "https://oep.com.tw/",
+    "coreCode": "4120"
+  },
+  "廣運集團": {
+    "path": "assets/group-logos/廣運集團.ico",
+    "source": "https://kenmec.com/favicon.ico",
+    "site": "https://kenmec.com/",
+    "coreCode": "6125"
   }
 };
