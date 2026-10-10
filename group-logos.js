@@ -1093,5 +1093,11 @@ window.GROUP_LOGOS={
     "source": "用戶提供官方logo",
     "site": "https://www.shinkong.com.tw/",
     "coreCode": "1409"
+  },
+  "王品集團": {
+    "path": "assets/group-logos/王品集團.png",
+    "source": "wowprime官網官方紅色logo",
+    "site": "https://www.wowprime.com/",
+    "coreCode": "2727"
   }
 };
