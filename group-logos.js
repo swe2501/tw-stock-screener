@@ -173,12 +173,6 @@ window.GROUP_LOGOS={
     "site": "http://www.kindom.com.tw/",
     "coreCode": "2520"
   },
-  "鄉林集團": {
-    "path": "assets/group-logos/鄉林集團.webp",
-    "source": "https://i0.wp.com/shininggroup.com/wp-content/uploads/2023/05/index-2225x1080_LaluNanjingPool-6.jpg?fit=1200%2C582&",
-    "site": "https://shininggroup.com/",
-    "coreCode": "5531"
-  },
   "華固集團": {
     "path": "assets/group-logos/華固集團.png",
     "source": "https://www.huaku.com.tw/static/web/styles/images/logo.png",
@@ -436,12 +430,6 @@ window.GROUP_LOGOS={
     "source": "https://www.hotaimotor.com.tw/images/layout/logo.png?v=m9PkKq6r7YviRzhQuxmeq7SpNGHoNb6n_Y8bmvl104c",
     "site": "https://www.hotaimotor.com.tw/",
     "coreCode": "2207"
-  },
-  "群光藍天集團": {
-    "path": "assets/group-logos/群光藍天集團.webp",
-    "source": "https://www.chicony.com/upload/2018_11_302/20181130135242sq6hd5Rdh1.jpg",
-    "site": "https://www.chicony.com/chicony/en",
-    "coreCode": "2385"
   },
   "全家集團": {
     "path": "assets/group-logos/全家集團.svg",
