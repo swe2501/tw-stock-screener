@@ -6,9 +6,9 @@ window.GROUP_LOGOS={
     "coreCode": "1605"
   },
   "國巨集團": {
-    "path": "assets/group-logos/國巨集團.ico",
-    "source": "https://yageogroup.com/favicon.ico",
-    "site": "https://yageogroup.com/",
+    "path": "assets/group-logos/國巨集團.jpg",
+    "source": "用戶提供官方logo",
+    "site": "https://WWW.YAGEO.COM",
     "coreCode": "2327"
   },
   "聯發科集團": {
@@ -161,12 +161,6 @@ window.GROUP_LOGOS={
     "site": "http://www.airtac.com/",
     "coreCode": "1590"
   },
-  "劍麟集團": {
-    "path": "assets/group-logos/劍麟集團.ico",
-    "source": "https://www.irf.biz/favicon.ico",
-    "site": "https://www.irf.biz/",
-    "coreCode": "2228"
-  },
   "興富發集團": {
     "path": "assets/group-logos/興富發集團.png",
     "source": "https://www.highwealth.com.tw/img/header_logo.png",
@@ -192,9 +186,9 @@ window.GROUP_LOGOS={
     "coreCode": "2548"
   },
   "長虹集團": {
-    "path": "assets/group-logos/長虹集團.webp",
-    "source": "https://chonghong.com.tw/wp-content/uploads/2026/07/LOGO-20260505-FIX.webp",
-    "site": "https://chonghong.com.tw/",
+    "path": "assets/group-logos/長虹集團.jpg",
+    "source": "用戶提供官方logo",
+    "site": "http://www.chonghong.com.tw",
     "coreCode": "5534"
   },
   "三地集團": {
@@ -377,12 +371,6 @@ window.GROUP_LOGOS={
     "site": "https://www.depoautolamp.com/index_en.php",
     "coreCode": "6605"
   },
-  "東陽集團": {
-    "path": "assets/group-logos/東陽集團.webp",
-    "source": "https://www.tyg.com.tw/wp-content/uploads/tyg-headquarters-drone-shot-2.webp",
-    "site": "https://www.tyg.com.tw/",
-    "coreCode": "1319"
-  },
   "朋億／聖暉集團": {
     "path": "assets/group-logos/朋億／聖暉集團.png",
     "source": "https://www.acter.com.tw/images/favicon/apple-icon-180x180.png",
@@ -402,14 +390,14 @@ window.GROUP_LOGOS={
     "coreCode": "1563"
   },
   "皇翔集團": {
-    "path": "assets/group-logos/皇翔集團.ico",
-    "source": "https://www.hhe.com.tw/favicon.ico",
-    "site": "https://www.hhe.com.tw/",
+    "path": "assets/group-logos/皇翔集團.png",
+    "source": "用戶提供官方logo",
+    "site": "https://www.hhe.com.tw",
     "coreCode": "2545"
   },
   "萬海集團": {
-    "path": "assets/group-logos/萬海集團.ico",
-    "source": "http://tw.wanhai.com/favicon.ico",
+    "path": "assets/group-logos/萬海集團.png",
+    "source": "用戶提供官方logo",
     "site": "http://tw.wanhai.com/",
     "coreCode": "2615"
   },
@@ -449,12 +437,6 @@ window.GROUP_LOGOS={
     "site": "https://www.hotaimotor.com.tw/",
     "coreCode": "2207"
   },
-  "威京集團": {
-    "path": "assets/group-logos/威京集團.ico",
-    "source": "https://www.cpdc.com.tw/favicon.ico",
-    "site": "https://www.cpdc.com.tw/",
-    "coreCode": "1314"
-  },
   "群光藍天集團": {
     "path": "assets/group-logos/群光藍天集團.webp",
     "source": "https://www.chicony.com/upload/2018_11_302/20181130135242sq6hd5Rdh1.jpg",
@@ -487,8 +469,8 @@ window.GROUP_LOGOS={
   },
   "中菲集團": {
     "path": "assets/group-logos/中菲集團.webp",
-    "source": "https://dimerco.com/wp-content/uploads/2022/10/dimerco-logo-header.png",
-    "site": "https://dimerco.com/",
+    "source": "用戶提供官方logo",
+    "site": "http://www.dimerco.com",
     "coreCode": "5609"
   },
   "智冠集團": {
@@ -502,12 +484,6 @@ window.GROUP_LOGOS={
     "source": "official/wikidata",
     "site": "http://www.holystone.com.tw",
     "coreCode": "3026"
-  },
-  "萬華企業集團": {
-    "path": "assets/group-logos/萬華企業集團.webp",
-    "source": "https://irp.cdn-website.com/fc0d3b1c/dms3rep/multi/opt/S__171720740-1920w.jpg",
-    "site": "https://www.wanhwa.com.tw/",
-    "coreCode": "2701"
   },
   "燦坤企業集團": {
     "path": "assets/group-logos/燦坤企業集團.png",
@@ -539,23 +515,11 @@ window.GROUP_LOGOS={
     "site": "http://www.ece.com.tw",
     "coreCode": "2483"
   },
-  "事欣集團": {
-    "path": "assets/group-logos/事欣集團.webp",
-    "source": "https://parpro.com/wp-content/uploads/2024/03/nadcapLogo3.jpg",
-    "site": "https://parpro.com/",
-    "coreCode": "4916"
-  },
   "燁聯鋼鐵集團": {
     "path": "assets/group-logos/燁聯鋼鐵集團.jpg",
     "source": "https://www.yiehphui.com.tw/assets/image/logo/yp.jpg",
     "site": "https://www.yiehphui.com.tw/",
     "coreCode": "2023"
-  },
-  "聚亨集團": {
-    "path": "assets/group-logos/聚亨集團.ico",
-    "source": "https://www.tycons.com.tw/site/themes/default/cht/images/favicon.ico",
-    "site": "https://www.tycons.com.tw/",
-    "coreCode": "2022"
   },
   "台橡集團": {
     "path": "assets/group-logos/台橡集團.svg",
@@ -582,9 +546,9 @@ window.GROUP_LOGOS={
     "coreCode": "2414"
   },
   "松翰集團": {
-    "path": "assets/group-logos/松翰集團.ico",
-    "source": "https://www.sonix.com.tw/favicon.ico",
-    "site": "https://www.sonix.com.tw/",
+    "path": "assets/group-logos/松翰集團.png",
+    "source": "用戶提供官方logo",
+    "site": "https://www.sonix.com.tw",
     "coreCode": "5471"
   },
   "中強光電集團": {
@@ -605,12 +569,6 @@ window.GROUP_LOGOS={
     "site": "https://www.rexon.net/",
     "coreCode": "1515"
   },
-  "倍微集團": {
-    "path": "assets/group-logos/倍微集團.ico",
-    "source": "https://www.pct.com.tw/static/favicon.ico",
-    "site": "https://www.pct.com.tw/",
-    "coreCode": "6270"
-  },
   "正隆集團": {
     "path": "assets/group-logos/正隆集團.png",
     "source": "https://www.clc.com.tw/styles/images/common/apple-touch-icon.png",
@@ -628,12 +586,6 @@ window.GROUP_LOGOS={
     "source": "https://www.tai-nan.com/assets/images/common/logo.svg",
     "site": "https://www.tai-nan.com/",
     "coreCode": "1473"
-  },
-  "圓剛集團": {
-    "path": "assets/group-logos/圓剛集團.webp",
-    "source": "official site",
-    "site": "https://www.avermedia.com",
-    "coreCode": "2417"
   },
   "強茂集團": {
     "path": "assets/group-logos/強茂集團.png",
@@ -822,9 +774,9 @@ window.GROUP_LOGOS={
     "coreCode": "5425"
   },
   "中鼎工程集團": {
-    "path": "assets/group-logos/中鼎工程集團.ico",
-    "source": "https://www.ctci.com/favicon.ico",
-    "site": "https://www.ctci.com/",
+    "path": "assets/group-logos/中鼎工程集團.jpg",
+    "source": "用戶提供官方logo",
+    "site": "https://www.ctci.com",
     "coreCode": "9933"
   },
   "友訊集團": {
@@ -989,12 +941,6 @@ window.GROUP_LOGOS={
     "site": "http://www.ffg.com.tw",
     "coreCode": "1815"
   },
-  "國碩集團": {
-    "path": "assets/group-logos/國碩集團.ico",
-    "source": "official site",
-    "site": "http://www.gigastorage.com.tw/index.aspx",
-    "coreCode": "2406"
-  },
   "聯發集團": {
     "path": "assets/group-logos/聯發集團.jpg",
     "source": "official site",
@@ -1099,5 +1045,65 @@ window.GROUP_LOGOS={
     "source": "wowprime官網官方紅色logo",
     "site": "https://www.wowprime.com/",
     "coreCode": "2727"
+  },
+  "統一集團": {
+    "path": "assets/group-logos/統一集團.jpg",
+    "source": "用戶提供官方logo",
+    "site": "https://www.uni-president.com.tw",
+    "coreCode": "1216"
+  },
+  "國揚集團": {
+    "path": "assets/group-logos/國揚集團.webp",
+    "source": "用戶提供官方logo",
+    "site": "https://www.kycc.com.tw",
+    "coreCode": "2505"
+  },
+  "漢來美食集團": {
+    "path": "assets/group-logos/漢來美食集團.jpg",
+    "source": "用戶提供官方logo",
+    "site": "https://www.hilai-foods.com",
+    "coreCode": "1268"
+  },
+  "健喬信元集團": {
+    "path": "assets/group-logos/健喬信元集團.jpg",
+    "source": "用戶提供官方logo",
+    "site": "http://www.synmosa.com.tw",
+    "coreCode": "4114"
+  },
+  "中環集團": {
+    "path": "assets/group-logos/中環集團.jpg",
+    "source": "用戶提供官方logo",
+    "site": "https://www.deltamac.com.tw",
+    "coreCode": "6144"
+  },
+  "宏正集團": {
+    "path": "assets/group-logos/宏正集團.png",
+    "source": "用戶提供官方logo",
+    "site": "http://www.aten.com/tw/zh/",
+    "coreCode": "6277"
+  },
+  "正崴集團": {
+    "path": "assets/group-logos/正崴集團.jpg",
+    "source": "用戶提供官方logo",
+    "site": "https://www.foxlink.com",
+    "coreCode": "2392"
+  },
+  "國泰集團": {
+    "path": "assets/group-logos/國泰集團.jpg",
+    "source": "用戶提供官方logo",
+    "site": "https://www.cathayholdings.com",
+    "coreCode": "2882"
+  },
+  "新光集團": {
+    "path": "assets/group-logos/新光集團.jpg",
+    "source": "用戶提供官方logo",
+    "site": "https://www.shinkong.com.tw/",
+    "coreCode": "1409"
+  },
+  "光寶集團": {
+    "path": "assets/group-logos/光寶集團.png",
+    "source": "用戶提供官方logo",
+    "site": "http://www.liteon.com/",
+    "coreCode": "2301"
   }
 };
