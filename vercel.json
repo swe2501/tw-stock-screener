@@ -12,6 +12,22 @@
     {
       "src": "logo.png",
       "use": "@vercel/static"
+    },
+    {
+      "src": "group-catalog.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "group-catalog.json",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "group-logos.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "assets/**",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
@@ -20,8 +36,7 @@
       "dest": "/api/$1.py"
     },
     {
-      "src": "/logo.png",
-      "dest": "/logo.png"
+      "handle": "filesystem"
     },
     {
       "src": "/(.*)",
