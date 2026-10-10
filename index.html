@@ -3911,7 +3911,7 @@
     <div id="fhLock" class="pf-glass pf-lock" style="display:none">
       <div style="font-size:34px"></div>
       <h3>付費解鎖更多</h3>
-      <p>外資期貨淨空名目 ÷ 外資持股市值＝避險比率，搭配 2 年歷史百分位分級、今日現期貨象限與情境模擬。此為進階籌碼分析。</p>
+      <p>外資期貨淨空名目 ÷ 外資持股市值＝相對規模指標（非單一法人避險比率；分母多為被動/長線持股，分子多為造市/套利部位，法律主體不同），搭配 2 年歷史百分位分級、今日現期貨象限與情境模擬。此為進階籌碼分析。</p>
       <p style="margin-top:6px">已開通「主力籌碼」的帳號可直接瀏覽。請登入你的授權帳號。</p>
       <button class="cta" onclick="try{document.getElementById('loginBtn').click()}catch(e){}">登入 / 解鎖</button>
     </div>
@@ -3927,7 +3927,7 @@
             <div class="pf-ld">觀察新台幣升貶與外資真金白銀淨匯出入，辨識是真撤資還是套利型避險。</div></div></div>
         <div class="pf-layer"><div class="pf-lno" style="background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.2);color:#6366f1">03</div>
           <div><div class="pf-lk" style="color:#818cf8">第三層：今日動態矩陣</div><div class="pf-lt">現貨買賣超 ⊗ 期貨淨單變動</div>
-            <div class="pf-ld">判斷「買現貨+加空單（鎖利避險/拉積盤）」、「賣現貨+加空單（實質做空）」等四象限真實交易企圖。</div></div></div>
+            <div class="pf-ld">以「現貨買賣超 × 期貨淨部位增減」四象限呈現今日配置狀態（偏多增曝險／保留現貨提高防禦／偏空減曝險／訊號混合）；交易動機未確認，不臆斷。</div></div></div>
         <div class="pf-layer"><div class="pf-lno" style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);color:#f59e0b">04</div>
           <div><div class="pf-lk c-warn">第四層：事件窗風險倒數</div><div class="pf-lt">衍生品結算 ⊗ 關鍵事件</div>
             <div class="pf-ld">結合台指期結算、FOMC、台積電法說、央行理監事會倒數，辨識真倒貨或假摔誘空。</div></div></div>
@@ -3976,7 +3976,7 @@
           <div class="pf-diag">
             <div class="r"><span>近 20 日現貨淨買超</span><b id="fhFlowSum">—</b></div>
             <div class="r"><span>匯率相對趨勢</span><b id="fhFxTrend">—</b></div>
-            <div class="star">★ 核心診斷：若期貨空單大增但匯率持續強升，極高機率為套利型資產保值，無須過度恐慌。</div>
+            <div class="star">★ 核心診斷：若期貨往空方調整（空單增）但台幣持續強升，兩者方向分歧，可能涉及套利或資產保值，惟交易動機未確認；匯率僅供佐證或提示分歧，不單獨推翻期現貨方向。</div>
           </div>
         </div>
       </div>
@@ -4082,10 +4082,10 @@
     function n0(v){ return Math.round(v).toLocaleString(); }
     function sgn(v,d){ return (v>0?'+':'')+(d==null?n0(v):v.toFixed(d)); }
     var QDEF={
-      1:{h:'象限 I • 積極軋空大漲',tag:'攻勢主升',c:'#34d399',cl:'bull',d:'現貨大買 (+) ⊗ 空單大減 (-)',p:'外資在現貨大幅加碼回補，同時空單大量停損平倉，容易引發期現共振之強烈軋空。',label:'積極做多軋空大漲',risk:'偏多攻擊態勢'},
-      2:{h:'象限 II • 結構性鎖利避險',tag:'鎖利避險',c:'#7dd3fc',cl:'sky',d:'現貨買超 (+) ⊗ 空單增加 (+)',p:'集中買超權值股維持大盤點位，同時建立指數期貨空單鎖定波段利潤，非翻空。',label:'結構性鎖利避險拉積',risk:'中度套期保值'},
-      3:{h:'象限 III • 實質作空全面撤退',tag:'高危警戒',c:'#fb7185',cl:'bear',d:'現貨大賣 (-) ⊗ 空單大增 (+)',p:'現貨真金白銀倒貨，期權同步重倉追擊放空，伴隨台幣貶值，屬真正翻空信號。',label:'實質做空全面撤退',risk:'高危全面放空'},
-      4:{h:'象限 IV • 獲利平倉 / 換月整理',tag:'跌勢鈍化',c:'#fbbf24',cl:'warn',d:'現貨賣超 (-) ⊗ 空單回補 (-)',p:'現貨處於被動調節，但期貨空單大幅獲利了結或月結算轉倉換約操作。',label:'震盪修復獲利平倉',risk:'弱勢防守收斂'}
+      1:{h:'象限 I • 偏多增曝險',tag:'偏多增曝險',c:'#34d399',cl:'bull',d:'現貨買超 (+) ⊗ 期貨往多方調整（空單減）',p:'現貨買超、同時期貨往多方調整（空單減少）：今日偏多、增加曝險。若空單大幅回補可留意軋空可能，但不確認後續走勢。',label:'偏多增曝險',risk:'方向偏多'},
+      2:{h:'象限 II • 保留現貨・提高防禦',tag:'動機未確認',c:'#7dd3fc',cl:'sky',d:'現貨買超 (+) ⊗ 期貨往空方調整（空單增）',p:'現貨買超或未明顯減持、同時期貨往空方調整（空單增加）：可能為保留現貨、提高防禦，也可能涉及套利；交易動機未確認、非翻空。',label:'保留現貨・提高防禦',risk:'動機未確認'},
+      3:{h:'象限 III • 偏空減曝險',tag:'偏空減曝險',c:'#fb7185',cl:'bear',d:'現貨賣超 (-) ⊗ 期貨往空方調整（空單增）',p:'現貨賣超、同時期貨往空方調整（空單增加）：今日偏空、降低曝險。匯率是否同步佐證另見匯率層；匯率走弱不等於已確認外資淨匯出。',label:'偏空減曝險',risk:'方向偏空'},
+      4:{h:'象限 IV • 訊號混合',tag:'訊號混合',c:'#fbbf24',cl:'warn',d:'現貨賣超 (-) ⊗ 期貨往多方調整（空單回補）',p:'現貨賣超、但期貨往多方調整（空單回補）：現貨與期貨方向未一致，訊號混合，可能同步縮減現貨與避險部位，不宜單向解讀。',label:'訊號混合',risk:'方向未一致'}
     };
     var CLS={bull:'background:rgba(16,185,129,.1);color:#10b981;border-color:rgba(16,185,129,.3)',sky:'background:rgba(14,165,233,.1);color:var(--pf-sky);border-color:rgba(14,165,233,.3)',
              bear:'background:rgba(244,63,94,.1);color:#f43f5e;border-color:rgba(244,63,94,.3)',warn:'background:rgba(245,158,11,.1);color:#f59e0b;border-color:rgba(245,158,11,.3)'};
@@ -4419,12 +4419,12 @@
       var q=quadOf(spot, SIM_BASE?-(shortLots-SIM_BASE.lots):0), Q=QDEF[q];
       var rk=el('fhSimRisk'); rk.textContent=Q.risk; rk.setAttribute('style',CLS[Q.cl]+';border:1px solid;font-family:\'JetBrains Mono\',monospace');
       var txt={
-        2:'<strong class="c-sky">機構全景診斷【象限二・鎖利避險拉積】：</strong>外資現貨買超 +'+spot+' 億，同時空單增至 '+shortLots.toLocaleString()+' 口（等值名目佔持股市值 '+r.toFixed(2)+'%、PR '+rank.toFixed(1)+'）。顯示外資無意摜壓大盤出脫現貨，而是利用權值股拉升點位、同時建立避險對沖未實現損益。不宜盲目將高口數視為崩盤徵兆。',
-        3:'<strong class="c-bear">機構全景診斷【象限三・真倒貨強烈看空】：</strong>外資單日現貨倒貨 '+Math.abs(spot)+' 億，且空單飆高至 '+shortLots.toLocaleString()+' 口（PR '+rank.toFixed(1)+'）。此屬最高等級「現貨期貨雙重狙擊」，若伴隨新台幣持續貶值，代表外資真金白銀撤資，應立刻採取防守策略，嚴禁摸底。',
-        1:'<strong class="c-bull">機構全景診斷【象限一・軋空大進擊】：</strong>現貨大買 +'+spot+' 億，且期貨空單降至 '+shortLots.toLocaleString()+' 口。外資避險意願降低，整體風險偏好（Risk-On）升溫，權值股與衍生品同向共振，易形成多頭軋空主升段。',
-        4:'<strong class="c-warn">機構全景診斷【象限四・空單獲利平倉結算】：</strong>現貨賣超調節 '+Math.abs(spot)+' 億，但期貨空單未見增長反呈回補（'+shortLots.toLocaleString()+' 口）。多為跌深後的期權獲利了結或月結算轉倉被動收斂，空頭動能已鈍化。'
+        2:'<strong class="c-sky">今日配置判讀【象限二・保留現貨、提高防禦】：</strong>外資現貨買超 +'+spot+' 億，同時期貨往空方調整、空單增至 '+shortLots.toLocaleString()+' 口（淨空名目佔持股市值 '+r.toFixed(2)+'%、PR '+rank.toFixed(1)+'，此為相對規模指標、非單一法人避險比率）。可能為保留現貨、提高防禦，也可能涉及套利；交易動機未確認、非翻空，不宜將高口數逕視為崩盤徵兆。',
+        3:'<strong class="c-bear">今日配置判讀【象限三・偏空減曝險】：</strong>外資現貨賣超 '+Math.abs(spot)+' 億，且期貨往空方調整、空單增至 '+shortLots.toLocaleString()+' 口（PR '+rank.toFixed(1)+'）。今日偏空、降低曝險。是否有匯率同步佐證另見匯率層；僅台幣貶值不等於已確認外資淨匯出，請勿單以此判定撤資。',
+        1:'<strong class="c-bull">今日配置判讀【象限一・偏多增曝險】：</strong>外資現貨買超 +'+spot+' 億，且期貨往多方調整、空單降至 '+shortLots.toLocaleString()+' 口。今日偏多、增加曝險；若空單大幅回補可留意軋空可能，但不確認後續走勢。',
+        4:'<strong class="c-warn">今日配置判讀【象限四・訊號混合】：</strong>外資現貨賣超 '+Math.abs(spot)+' 億，但期貨往多方調整、空單回補（'+shortLots.toLocaleString()+' 口）。現貨與期貨方向未一致，訊號混合，可能同步縮減現貨與避險部位，不宜單向解讀。'
       }[q];
-      el('fhSimTxt').innerHTML=txt+(r>1.2?' <strong class="c-bear">避險比率已逾 1.2% 系統性警戒。</strong>':'');
+      el('fhSimTxt').innerHTML=txt+(r>1.2?' <strong class="c-sky">淨空相對規模指標偏高（歷史相對罕見，非下跌保證、非單一法人避險比率）。</strong>':'');
     }
 
     window._fhedgeShow=function(){
