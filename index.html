@@ -13811,6 +13811,48 @@
         if (_drawPending.length >= (_DRAW_NEED[_drawTool] || 1)) { _drawShapes.push({ type: _drawTool, pts: _drawPending.map(q => ({ time: q.time, price: q.price })) }); _drawPending = []; }
         redrawCanvas();
       });
+      // ── 手機觸控支援（新畫線套件原本只綁滑鼠事件，觸控被既有 preventDefault 吃掉合成 click）──
+      overlay.addEventListener('touchstart', e => {
+        if (!_drawTool || !chartInstance || !candleSeriesRef) return;
+        const t = e.touches[0]; if (!t) return;
+        if (_DRAG_TOOLS.indexOf(_drawTool) >= 0) {
+          const px = gx(t.clientX), py = gy(t.clientY), c = _coordAt(px, py);
+          if (c.time == null || c.price == null) return;
+          _shapeDrag = { px, py, time: c.time, price: c.price };
+          e.preventDefault();
+        }
+      }, { passive: false });
+      overlay.addEventListener('touchmove', e => {
+        if (!_drawTool) return;
+        const t = e.touches[0]; if (!t) return;
+        const px = gx(t.clientX), py = gy(t.clientY);
+        if (_shapeDrag) { e.preventDefault(); redrawCanvas(); _previewShape(document.getElementById('fibCanvas').getContext('2d'), _drawTool, { px: _shapeDrag.px, py: _shapeDrag.py }, { px, py }); return; }
+        if (_CLICK_TOOLS.indexOf(_drawTool) >= 0 && _drawPending.length) {
+          e.preventDefault(); redrawCanvas(); const ctx = document.getElementById('fibCanvas').getContext('2d');
+          const last = _drawPending[_drawPending.length - 1], lx = chartInstance.timeScale().timeToCoordinate(last.time), ly = candleSeriesRef.priceToCoordinate(last.price);
+          if (lx != null && ly != null) { ctx.save(); ctx.strokeStyle = _trendColor(); ctx.lineWidth = 1.2; ctx.setLineDash([5, 3]); ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(px, py); ctx.stroke(); ctx.restore(); }
+        }
+      }, { passive: false });
+      overlay.addEventListener('touchend', e => {
+        if (!_drawTool || !chartInstance || !candleSeriesRef) return;
+        const t = e.changedTouches[0]; if (!t) return;
+        const px = gx(t.clientX), py = gy(t.clientY);
+        if (_shapeDrag) {   // 拖拉工具（矩形/圓形）結束
+          const c = _coordAt(px, py), s = _shapeDrag; _shapeDrag = null;
+          if (c.time != null && c.price != null && Math.abs(px - s.px) > 4 && Math.abs(py - s.py) > 4)
+            _drawShapes.push({ type: _drawTool, pts: [{ time: s.time, price: s.price }, { time: c.time, price: c.price }] });
+          redrawCanvas(); e.preventDefault(); return;
+        }
+        if (_DRAG_TOOLS.indexOf(_drawTool) >= 0) return;   // 拖拉工具但沒有效拖曳
+        // 點擊類工具（線段/水平線/.../箭頭）、文字、橡皮擦：以「點一下」處理
+        if (_drawTool === 'eraser') { _eraseAt(px, py); e.preventDefault(); return; }
+        const c = _coordAt(px, py); if (c.price == null) return;
+        if (_drawTool === 'text') { if (c.time == null) return; _showTextInput(px, py, c.time, c.price); e.preventDefault(); return; }
+        if (_drawTool !== 'hline' && c.time == null) return;
+        _drawPending.push({ time: c.time, price: c.price });
+        if (_drawPending.length >= (_DRAW_NEED[_drawTool] || 1)) { _drawShapes.push({ type: _drawTool, pts: _drawPending.map(q => ({ time: q.time, price: q.price })) }); _drawPending = []; }
+        redrawCanvas(); e.preventDefault();
+      }, { passive: false });
     }
     function _syncDrawDDActive() {
       const lineTools = ['seg', 'hline', 'vline', 'parallel', 'arrowup', 'arrowdown'], shapeTools = ['rect', 'circle', 'text'];
