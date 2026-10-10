@@ -1130,5 +1130,11 @@ window.GROUP_LOGOS={
     "source": "https://www.drewloong.com.tw/wp-content/uploads/2018/06/logoss.png",
     "site": "https://www.drewloong.com.tw/",
     "coreCode": "4572"
+  },
+  "新纖集團": {
+    "path": "assets/group-logos/新纖集團.png",
+    "source": "用戶提供官方logo",
+    "site": "https://www.shinkong.com.tw/",
+    "coreCode": "1409"
   }
 };
