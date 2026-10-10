@@ -1054,5 +1054,81 @@ window.GROUP_LOGOS={
     "source": "official site",
     "site": "https://www.hota.com.tw",
     "coreCode": "1536"
+  },
+  "卜蜂集團": {
+    "path": "assets/group-logos/卜蜂集團.png",
+    "source": "官網白色字標（需深色底）",
+    "site": "https://www.cptwn.com.tw/",
+    "coreCode": "1215",
+    "bg": "dark"
+  },
+  "巨大集團": {
+    "path": "assets/group-logos/巨大集團.png",
+    "source": "官網白色 GIANT GROUP 字標（需深色底）",
+    "site": "https://www.giantgroup-cycling.com/",
+    "coreCode": "9921",
+    "bg": "dark"
+  },
+  "富鼎先進集團": {
+    "path": "assets/group-logos/富鼎先進集團.svg",
+    "source": "官網白色向量 logo（需深色底）",
+    "site": "https://www.a-power.com.tw/",
+    "coreCode": "8261",
+    "bg": "dark"
+  },
+  "王品集團": {
+    "path": "assets/group-logos/王品集團.svg",
+    "source": "官網白色向量 logo（需深色底）",
+    "site": "https://www.wowprime.com/",
+    "coreCode": "2727",
+    "bg": "dark"
+  },
+  "國揚集團": {
+    "path": "assets/group-logos/國揚集團.ico",
+    "source": "官網圖示",
+    "site": "https://www.kyd.com.tw/",
+    "coreCode": "2505"
+  },
+  "威剛集團": {
+    "path": "assets/group-logos/威剛集團.ico",
+    "source": "官網圖示（蜂鳥標誌）",
+    "site": "https://www.adata.com/",
+    "coreCode": "3260"
+  },
+  "盛弘集團": {
+    "path": "assets/group-logos/盛弘集團.jpg",
+    "source": "官網圖示（SH）",
+    "site": "https://www.sharehope.com.tw/",
+    "coreCode": "8403"
+  },
+  "錸德集團": {
+    "path": "assets/group-logos/錸德集團.png",
+    "source": "https://www.ritek.com/apple-touch-icon.png",
+    "site": "https://www.ritek.com/",
+    "coreCode": "2349"
+  },
+  "寶成集團": {
+    "path": "assets/group-logos/寶成集團.png",
+    "source": "https://www.pouchen.com/images/logo.png",
+    "site": "https://www.pouchen.com/",
+    "coreCode": "9904"
+  },
+  "退輔會集團": {
+    "path": "assets/group-logos/退輔會集團.ico",
+    "source": "https://www.vac.gov.tw/favicon.ico",
+    "site": "https://www.vac.gov.tw/",
+    "coreCode": "2901"
+  },
+  "明基友達集團": {
+    "path": "assets/group-logos/明基友達集團.svg",
+    "source": "https://auo.com/template/images/common/auo-logo.svg",
+    "site": "https://auo.com/",
+    "coreCode": "2409"
+  },
+  "駐龍集團": {
+    "path": "assets/group-logos/駐龍集團.png",
+    "source": "https://www.drewloong.com.tw/wp-content/uploads/2018/06/logoss.png",
+    "site": "https://www.drewloong.com.tw/",
+    "coreCode": "4572"
   }
 };
