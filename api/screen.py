@@ -1604,6 +1604,12 @@ def calc_limit_up(prev_close):
     tick = get_tick_size(raw)
     return round(math.floor(raw / tick) * tick, 10)
 
+def calc_limit_down(prev_close):
+    # 跌停價＝前收×0.9，依升降單位無條件進位（跌幅不得超過 10%）
+    raw = prev_close * 0.9
+    tick = get_tick_size(raw)
+    return round(math.ceil(round(raw / tick, 8)) * tick, 10)
+
 def _ma(closes, n):
     return sum(closes[-n:]) / n if len(closes) >= n else None
 
@@ -1731,6 +1737,7 @@ def screen(params):
     vol_mult         = float(params.get("volume_multiplier") or 0)
     shrink_mult      = float(params.get("shrink_multiplier") or 0)
     check_limit_up   = bool(params.get("limit_up", False))
+    check_limit_down = bool(params.get("limit_down", False))
     check_doji       = bool(params.get("doji", False))
     doji_range_min   = float(params.get("doji_range_min") or 1.0)  # 十字線最小振幅 %
     check_hanging    = bool(params.get("hanging_man", False))  # 吊人線：收=開=高、低<收
@@ -1821,6 +1828,12 @@ def screen(params):
             pc = s.get("prev_close")
             if not pc or pc <= 0: continue
             if c < calc_limit_up(pc) * 0.999: continue
+
+        # 跌停板
+        if check_limit_down:
+            pc = s.get("prev_close")
+            if not pc or pc <= 0: continue
+            if c > calc_limit_down(pc) * 1.001: continue
 
         # 十字線：開盤 = 收盤（零誤差），且當日振幅 ≥ doji_range_min%（排除一字線/冷門股）
         if check_doji:
