@@ -15,9 +15,9 @@
 
 ### 部署環境速查
 - Repo：`github.com/swe2501/tw-stock-screener`
-- 本機主檔：`C:\Users\User\Desktop\AI_stock\index.html`（單檔 SPA，~14,600+ 行，**非 git 目錄**）
-- Git 透過 worktree：`...\scratchpad\uat_wt`（分支 uat）、`...\scratchpad\prod_wt`（分支 prod）
-- 開發流程：改 Desktop 的檔 → `cp` 到 uat_wt → commit → `git push origin uat`
+- 本機主檔：`C:\Users\User\Desktop\AI_stock\index.html`（單檔 SPA；此資料夾**是 git 目錄，分支 `Andrew`**）
+- Git worktree：`...\scratchpad\uat_wt`（uat）、`...\scratchpad\prod_wt`（prod）
+- 開發流程（2026-10-11 更正，以 `HANDOFF.md` 第一節與 `CLAUDE.md` 為準）：**先 `git fetch` 並把本機對齊 uat** → 改本機檔 → commit 到 Andrew 並 push → 在 uat_wt 用 `git merge --no-ff origin/Andrew` 合併後推 uat。**不要再用 `cp` 把本機檔案複製進 uat_wt**：合夥人會直接推 uat，本機檔案較舊時會蓋掉他的修改（10-11 本機 `index.html` 就比 uat 舊、缺合夥人三次 ETF 修改）。
 - prod 網址：`tw-stock-screener-neon.vercel.app`（Vercel Hobby，team andrew250165s-projects）
 - uat 預覽（登入後可看）：`tw-stock-screener-git-uat-andrew250165s-projects.vercel.app`
 - Commit 屬名結尾：`Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`

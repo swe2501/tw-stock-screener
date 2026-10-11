@@ -9,14 +9,17 @@
 - **uat 先行；prod 一定要用戶明確說「推 prod」才能推。禁止自作主張推 prod。**
 - 分支：`Andrew`＝本機開發；`uat`、`prod`＝部署分支。正式站 prod = https://tw-stock-screener-neon.vercel.app
 - 主程式：單檔 SPA `index.html`（約 1.27MB）。
-- **推 uat**：commit `index.html` 到 Andrew → 到 uat worktree：
-  `git fetch -q origin; git checkout -q -B uat origin/uat; git merge -X theirs Andrew -m "..."; git push origin uat`
-  （worktree 路徑見 scratchpad `uat_wt`）
+- ⚠️ **動手前先同步（2026-10-11 教訓）**：合夥人（JUSTY，分支 `justy-layout`）與其他 session 會**直接推 uat**，本機 `C:\Users\User\Desktop\AI_stock` 的檔案可能比 uat 舊。10-11 就發生本機 `index.html` 停在 00:11 的版本、缺合夥人當天三次 ETF 修改；若照舊流程「改本機 → 複製到 uat_wt → commit」會把他的修改整個蓋掉。
+  **每次開工先跑**：`git fetch origin && git status -sb && git rev-list --left-right --count HEAD...origin/uat`；本機落後就先 `git merge --ff-only origin/uat`（本機有未提交修改時先備份或 commit）。**禁止用複製檔案覆蓋 uat。**
+- **推 uat（與 `CLAUDE.md` 一致，一律 git merge）**：commit 到 Andrew 並 push → 到 uat worktree：
+  `git fetch -q origin; git checkout -q --detach origin/uat; git merge --no-ff origin/Andrew -m "merge Andrew → uat: ..."; git push origin HEAD:uat`
+  （worktree 路徑見 scratchpad `uat_wt`）。**有衝突就停下來告知用戶衝突檔與兩邊差異，不可用 `-X theirs`／`--ours` 整份覆蓋**（舊版本文件寫的 `-X theirs` 已作廢）。
 - **推 prod**（需用戶明確同意）：prod worktree：
   `git reset --hard origin/prod; git checkout origin/uat -- .; git checkout HEAD -- .github; git commit; git push origin HEAD:prod`
   **務必保留 prod 專屬的 `.github/workflows/daily-cloud-jobs.yml`。**
 - 驗證 prod：`fetch(prod_url?_=Date.now(),{cache:'no-store'})`，CDN 約 20–60s 傳播。
 - 每次改動標註在**頁尾「改動紀錄」**供合夥人複查（鐵則）。
+- ⚠️ **Vercel 免費(Hobby)方案上限 12 個 Serverless Function**。`vercel.json` 用 `builds:[{src:"api/*.py"}]` → **每個 `api/*.py` = 1 個 function**。api 檔數 >12 → **每次 build 都 Error（~13–36s 秒殺）**「No more than 12 Serverless Functions on the Hobby plan」，alias **退回上一個成功版本**，造成「推了卻看不到新功能」的假象。**加新 api 端點前務必先數**：`git ls-tree -r --name-only origin/uat | grep -E "^api/.*\.py$" | wc -l`。詳見下方「六、2026-10-11」。
 
 ## 二、資料層
 
@@ -72,3 +75,33 @@
 - `scripts/inst_daily_push.py`、`scripts/holder_flow_push.py`、`scripts/chip_etl_tdcc.py`、`scripts/run_daily_job.bat`
 - `sql/inst_daily.sql`、`sql/holder_flow.sql`
 - `index.html`（籌碼、ETF 抽屜、K 圖、首頁 §4、避險圖、富台指倒數）
+
+---
+
+## 六、2026-10-11 本期修復與重要限制
+
+### A.（最重要）Vercel build 連環失敗 — Hobby 12 function 上限
+- **現象**：合夥人改了 ETF 配息頁（配息日曆＋配息來源圓餅圖）、技術面(Put/Call) 等，**推到 uat 了、GitHub 上也在**，但**線上 uat 完全看不到**。
+- **根因**：合夥人 commit `032cee5` 新增 `api/pc_ratio.py`（Put/Call 技術圖）→ api 從 12 變 **13 個** → 超過 Vercel **Hobby 方案 12 個 Serverless Function 硬上限** → **從該 commit 起每一次 build 都 Error**（Vercel Deployments 一整排紅色 Error，秒數很短 13–36s）。uat alias 因此**退回最後一次成功的 `3b028f7`（22h 前）**，配息改版(`e64d9d8`)與今日動作修正(`5a9c141`)全上不了線。
+- **排查步驟**：Vercel → Deployments → 看狀態欄若一排短秒數 Error → 點進去看紅框「Build Failed」訊息。數 function：`git ls-tree -r --name-only origin/uat | grep -E "^api/.*\.py$" | wc -l`。找前端沒用到的死檔：`git show origin/uat:index.html | grep -oE "/api/[a-z_]+" | sort -u` 比對 `api/` 實際檔案清單。
+- **解法**（commit `5152bd0`，只推 uat）：移除死檔 **`api/sessions.py`**（台指期日/夜盤 K 線端點，功能早已併入 `chart.py` 的日盤＋夜盤合併，前端 `index.html` 0 次呼叫 `/api/sessions`）→ 回到 **12 個** → build 恢復 Ready。線上實測 00981A 配息頁已正常顯示配息日曆（除息 2026-09-16 已過／發放 2026-10-13 即將到來）＋圓餅圖，技術面分頁也上線。
+- **教訓**：**以後要加 api 端點前先確認 ≤12**；真的需要更多就得升級 Vercel Pro（付費，需用戶決定）。
+
+### B. 主動 ETF「今日動作」永遠空白 — delta_shares 未計算
+- **現象**：00981A 等 22 檔主動式 ETF 的「今日加減碼」一直空白（被動 ETF 正常）。
+- **根因**：`scripts/upload_active_etf_holdings.py` 原本只寫 `shares/weight`，**沒算 `delta_shares`**（今日股數−前一日），前端讀 `etf_holdings.delta_shares` 自然全空。
+- **解法**：在 DELETE 覆蓋前**先讀既有(前一日)持股算 delta**（比照被動 ETF `wantgoo_etf.py`），已 commit 進 repo（原本此腳本未納版控）。下次盤後(交易日)跑完 `run_daily_job.bat` 即自動生效。（10-08 的歷史缺口另以 github `nctuwanglin/active-etf` 10-07 快照回填過一次。）
+
+### C.「為什麼合夥人截圖有配息日曆，線上卻沒有？」
+- 因為配息頁（配息日曆/圓餅圖）是**純前端 + Supabase 匿名查詢**（`Q('etf_distributions...')`），**完全不經 `/api` serverless function**。他在**本機 localhost / 本地開發環境**跑最新 `index.html` 當然看得到；但那份新程式碼**從未在 Vercel 成功部署過**（所有含配息日曆的 build 都卡在 12-function 上限失敗），所以任何 Vercel 線上網址（含 uat alias 與 preview）都看不到。失敗的 build 不會產生可用的 preview URL。簡言之：**「本機看得到 + 已 push」≠「已部署成功」**。
+
+### D. 2026-10-11 晚：本機／Andrew 對齊 uat（整理）
+- 原狀：Andrew 落後 uat 19 個提交；本機 `index.html`、`scripts/wantgoo_etf.py` 為舊版，缺合夥人當天新增的 `api/pc_ratio.py`、`scripts/etf_move_rows.py`、`tests/`。
+- 處理：逐檔比對確認本機獨有內容只有 `HANDOFF.md` 第六節與 `待提供logo清單.md`（其餘 236 個 logo 圖與 uat 完全相同），備份後 `git reset --hard origin/uat` 對齊，再放回這兩份文件並提交。Andrew＝uat。
+- 驗證：`index.html` 41 段內嵌腳本語法 0 錯、4 支 Python 語法 OK、`tests/` 6 個測試通過。
+- 注意：`scripts/wantgoo_etf.py` 已是合夥人重構版（成分股列組裝移到 `etf_move_rows.build_holdings_rows`；進入條件由「有 nav 或有成分股」改為「有成分股」），每日排程自此跑這一版。
+- 相關文件：`交接文件_畫線套件與集團logo.md`（畫線套件、logo 機制）、`待提供logo清單.md`（還缺的 34 個集團 logo，等用戶提供圖）、`融資維持率_交接文件.md`（§4 口徑 A/B/C 待合夥人決定）。
+
+### 待辦
+- 本次只推 uat。**推 prod 需用戶明確同意**；屆時把累積的 uat 變更一起上 prod，並 `git push origin origin/uat:justy-layout` 對齊 justy-layout（見 [記憶] deploy-prod-sync-justy）。
+- ETF 版面改回舊樣（今日加減碼原貌＋多一顆按鈕）仍 **DEFERRED**（用戶「先不改版面」，待合夥人確認位置/樣式/按鈕功能）。
