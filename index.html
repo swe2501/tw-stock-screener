@@ -7482,11 +7482,12 @@
             marginPct:(ok?(mmMap[endD]/mmMap[startD]-1)*100:null)};
         });
         function statusFor(mk,mg){var t=0.2;
-          if(mk>0&&mg>mk+t)return{l:'散戶過熱',d:'留意追高風險',t:'d'};
-          if(mk>0)return{l:'籌碼沉澱',d:'法人大戶控盤',t:'g'};
-          if(mk<0&&mg>=0)return{l:'弱勢攤平',d:'提防多殺多',t:'d'};
-          if(mk<0&&mg<mk-t)return{l:'融資停損',d:'浮額清洗中',t:'n'};
-          return{l:'同步修正',d:'融資退場仍有限',t:'n'};}
+          if(mk>0&&mg>mk+t)return{l:'散戶過熱',d:'指數上漲、融資增幅更快，留意追高後的回檔壓力。',small:'觀察上漲家數是否跟上，融資是否持續增加。',t:'d'};
+          if(mk>0)return{l:'籌碼沉澱',d:'指數走高、槓桿增幅受控，搭配市場廣度觀察支撐。',small:'留意法人買賣超與成交量，確認上漲支撐。',t:'g'};
+          if(mk<0&&mg>=0)return{l:'弱勢攤平',d:'指數下跌、融資未退，若跌勢延續，提防多殺多。',small:'留意融資維持率與下跌家數，觀察賣壓變化。',t:'d'};
+          if(mk<0&&mg<mk-t)return{l:'融資停損',d:'融資減幅大於指數跌幅，槓桿加速退場，觀察賣壓是否收斂。',small:'觀察融資減少後，價格與市場廣度是否止穩。',t:'n'};
+          if(mk===0)return{l:'方向未明',d:'指數持平、方向尚未明朗，觀察融資增減與市場廣度。',small:'搭配成交量與市場廣度，等待方向逐漸明朗。',t:'n'};
+          return{l:'同步修正',d:'指數與融資同步下降，但槓桿退場有限，留意後續變化。',small:'留意融資退場速度，以及下跌家數是否收斂。',t:'n'};}
         var sel=box._selDays||1;
         function line(lab,val,range){var w=Math.min(50,Math.abs(val)/range*50),left=val>=0?50:50-w;
           return '<div class="gs-mline"><span>'+lab+'</span><b class="'+(val>=0?'hp-up':'hp-dn')+'">'+(val>0?'+':'')+val.toFixed(2)+'%</b>'
@@ -7502,7 +7503,7 @@
               +'<div class="gs-div-axis"><span>減少 ←</span><span>共同基準 0%</span><span>→ 增加</span></div>'
               +'<div class="gs-div-date">比較日期 '+s.startDate+' → '+s.endDate+' · 兩項數據使用相同起訖交易日</div></div>';
           }else body='<div class="fc-empty">官方歷史資料尚未形成完整的 '+sel+' 個共同交易日。</div>';
-          box.innerHTML='<div class="gs-mtbar"><div class="gs-cst '+st.t+'"><b>'+st.l+'</b><span>· '+st.d+'</span></div><div class="gs-pdtabs">'+tabs+'</div></div>'+body
+          box.innerHTML='<div class="gs-mtbar"><div class="gs-cst '+st.t+'"><b>'+st.l+'</b><span class="gs-status-desc">'+st.d+'</span>'+(st.small?'<small class="gs-status-note">'+st.small+'</small>':'')+'</div><div class="gs-pdtabs">'+tabs+'</div></div>'+body
             +'<div class="gs-tip"><span class="ic"></span><div><b>學院導讀</b>指數上漲、但融資餘額增加得更快，代表散戶槓桿在追價升溫；若此時市場廣度又同步縮小，追高的風險就更需要留意。</div></div>';
         }
         box.onchange=function(e){var t=e.target.closest('.gs-pd');if(t){box._selDays=+t.value;sel=box._selDays;render();}};
@@ -8657,6 +8658,27 @@
     #etfxView .etx-card:hover :is(.hb,.pro-move-bar)::after{animation-duration:2.8s;}
     @keyframes etx-meteor{0%,35%{left:-35%;opacity:0;}45%{opacity:1;}75%{left:110%;opacity:1;}85%,100%{left:110%;opacity:0;}}
     @media(prefers-reduced-motion:reduce){#etfxView .etx-card:hover,#etfxView .etx-card :is(.hb,.pro-move-bar)::after{animation:none!important;}#etfxView .etx-card :is(.hb,.pro-move-bar)::after{display:none;}}
+
+    #hpBreadth .gs-bdbar,#hpStruct .pro-bar{position:relative;overflow:hidden;isolation:isolate;}
+    #hpDiverge .gs-mtrack>u{position:absolute;overflow:hidden;isolation:isolate;}
+    #hpBreadth .gs-bdbar::after,#hpStruct .pro-bar::after,#hpDiverge .gs-mtrack u::after{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(105deg,transparent 35%,#ffffff55 48%,#ffffff9a 51%,transparent 62%);background-size:250% 100%;animation:etx-chart-light 7s ease-in-out infinite;}
+    #hpStruct .pro-gauge-svg{position:relative;}
+    #hpStruct .pro-gauge-value{animation:hp-gauge-glow 4s ease-in-out infinite;}
+    @keyframes hp-gauge-glow{0%,100%{filter:drop-shadow(0 0 2px color-mix(in srgb,var(--accent) 12%,transparent));}50%{filter:drop-shadow(0 0 6px color-mix(in srgb,var(--accent) 35%,transparent));}}
+    #hpBreadth .gs-bdcard:hover,#hpStruct .pro-gauge:hover,#hpDiverge .gs-mtbar:hover{animation:etx-card-glint 1.4s ease-out 1;}
+    #hpDiverge .gs-cst b{animation:hp-gauge-glow 4s ease-in-out infinite;}
+    @media(prefers-reduced-motion:reduce){#hpBreadth .gs-bdbar::after,#hpStruct .pro-bar::after,#hpDiverge .gs-mtrack u::after{animation:none!important;opacity:0;}#hpStruct .pro-gauge-value,#hpDiverge .gs-cst b,#hpBreadth .gs-bdcard:hover,#hpStruct .pro-gauge:hover,#hpDiverge .gs-mtbar:hover{animation:none!important;}}
+    #hpDiverge .gs-cst .gs-status-desc{display:block;margin:7px 0 0;font-size:13px;line-height:1.7;color:var(--text);}
+    #hpDiverge .gs-status-note{display:block;margin-top:5px;font-size:11px;line-height:1.7;color:var(--text-muted);}
+
+    .cb-pulse>div,.cb-ovc{animation:hp-card-breathe 5s ease-in-out infinite;}
+    .cb-pulse>div:nth-child(2n),.cb-ovc:nth-child(2n){animation-delay:1s;}
+    @keyframes hp-card-breathe{0%,100%{box-shadow:0 0 0 transparent;}50%{box-shadow:0 0 12px color-mix(in srgb,var(--accent) 10%,transparent);}}
+    .cb-pulse>div:hover,.cb-ovc:hover{animation:etx-card-glint 1.4s ease-out 1;border-color:color-mix(in srgb,var(--accent) 40%,var(--border))!important;}
+    #hpInst .gs-ibar .track>i{position:absolute;overflow:hidden;isolation:isolate;}
+    #hpInst .gs-ibar .track>i::after{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(105deg,transparent 35%,#ffffff55 48%,#ffffffa0 51%,transparent 62%);background-size:250% 100%;animation:etx-chart-light 7s ease-in-out infinite;}
+    #hpInst .gs-tbl tbody tr:hover{background:color-mix(in srgb,var(--accent) 5%,var(--surface));}
+    @media(prefers-reduced-motion:reduce){.cb-pulse>div,.cb-ovc,.cb-pulse>div:hover,.cb-ovc:hover{animation:none!important;}#hpInst .gs-ibar .track>i::after{animation:none!important;opacity:0;}}
     .etx-move-filters{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 12px;}
     .etx-move-filter{--move-color:#d85a5a;border:1px solid color-mix(in srgb,var(--move-color) 50%,transparent);background:color-mix(in srgb,var(--move-color) 7%,var(--surface));color:var(--move-color);border-radius:99px;padding:7px 14px;font:inherit;font-size:12px;cursor:pointer;}
     .etx-move-filter.new{--move-color:#a58b23;}.etx-move-filter.removed{--move-color:#7e8795;}.etx-move-filter.sell{--move-color:#4b9c89;}
