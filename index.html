@@ -14271,7 +14271,7 @@
           const willOpen = !m.classList.contains('open');
           m.classList.toggle('open', willOpen);
           if (willOpen && b) {
-            const host = document.fullscreenElement || document.body;   // 2026-10-11 瀏覽器全螢幕時只顯示全螢幕元素內的東西，選單要掛在 K 圖彈窗內才看得到
+            const host = b.closest('.modal-overlay') || document.fullscreenElement || document.body;   // 2026-10-11 一律掛在 K 圖彈窗（最外層遮罩）內：瀏覽器全螢幕只顯示全螢幕元素內的東西，掛 body 會看不到
             if (m.parentElement !== host) host.appendChild(m);
             m.style.position = 'fixed'; m.style.zIndex = '99999'; m.style.right = 'auto';
             const r = b.getBoundingClientRect(), mw = m.offsetWidth || 140;
