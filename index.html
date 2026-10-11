@@ -1585,6 +1585,13 @@
   #chartModal.open .modal-box { transform:translateY(0) scale(1);opacity:1; }
   #chartModal .modal-header { position:sticky;top:0;z-index:9;background:color-mix(in srgb,var(--surface) 94%,transparent);backdrop-filter:blur(16px); }
   #chartModal .modal-close { border:1px solid var(--border) !important;border-radius:8px !important;width:34px;height:34px; }
+  /* K 圖全視窗（2026-10-11，直播用）：彈窗撐滿整個視窗、主圖高度隨視窗高度加大；Esc 或再按一次還原 */
+  #chartModal.kfull.modal-overlay { padding:0 !important;background:var(--surface) !important;backdrop-filter:none; }
+  #chartModal.kfull .modal-box { width:100vw !important;max-width:none !important;height:100vh !important;height:100dvh !important;max-height:none !important;margin:0 !important;border-radius:0 !important;border:0 !important;box-shadow:none !important;transform:none !important; }
+  #chartModal.kfull #chartContainer { height:max(420px, calc(100vh - 520px)); }
+  #chartModal.kfull #chartFullBtn { border-color:var(--accent) !important;color:var(--accent) !important; }
+  #chartModal.etx-embedded #chartFullBtn { display:none; }
+  @media (max-width:700px){ #chartFullBtn { display:none; } }   /* 手機版 K 圖本來就是整頁 */
 
   /* Editorial news desk: one lead story, then compact research cards. */
   #newsView { max-width:1420px !important;margin:18px auto 0 !important;background:transparent !important;color:var(--text) !important; }
@@ -2674,7 +2681,7 @@
     <div class="fc-note" id="hpNote"></div>
     </div><!-- /cb-sheet 每日台股籌碼報告 -->
     <div style="max-width:1200px;margin:14px auto 0;padding:10px 14px;font-size:11.5px;line-height:1.7;color:var(--text-muted);border-top:1px dashed var(--border);">
-      <b>改動紀錄（供合夥人複查）</b>：2026-09-30 全站版面採用合夥人 redesign 版；同日輕更新（ETF 甜甜圈互動、市場廣度分頁與篩選分離、選擇權支撐壓力 OI 峰值前端、結算日遇休市順延、多空排列配色、行動版表格）。掏金篩選器含「真名三式（多頭回洗反包）」（演算法與歷史回測見該勾選框）。2026-10-04 個股K圖量能面板新增「籌碼」分頁：三大法人每日淨買賣超堆疊柱（外資/投信/自營，紅買綠賣以0為基準，單位張，含合計線；滑鼠移至柱上顯示當日數值），對齊日K日期（僅日K、近120交易日）；資料源＝本站 institutional_trades（TWSE／TPEx T86 三大法人日報）每日推送至 Supabase inst_daily（scripts/inst_daily_push.py）。同日籌碼頁改為最上層分頁（點「籌碼」隱藏技術指標 VOL/MACD/RSI），並拆出「大戶 vs 散戶（週）」：資料源＝TDCC 集保股權分散表（每週五）＋當週收盤換算市值；大戶＝持股≥300張 或 市值≥3000萬、散戶＝持股<20張 或 市值<100萬（跨 TDCC 級距用均勻分布內插，為近似值），畫週增減（大戶紅綠柱／散戶藍線，單位張）；覆蓋熱門前500檔、每週更新（scripts/holder_flow_push.py → Supabase holder_flow）。籌碼頁最終版：單一「籌碼」分頁內拆成外資(日)／投信(日)／自營(日)／大戶(週)／散戶(週) 五張獨立柱狀圖（紅買綠賣）。另：K圖新增標記分類顯示開關（法說會／除權息，比照均線顯示隱藏，動態偵測）；修正指數與外國大盤相關新聞殘留前一檔個股的 bug（指數改載市場新聞 macro_news）；外資空單避險歷史圖右上新增「事件避險／連假避險」標記開關；§4 融資動能背離加入「今日／3 日」週期；富台指期（SGX FTSE Taiwan）新增最後交易日倒數（每月倒數第二個營業日，依證交所休市表）。2026-10-06「市場觀察」新增「美債對標」：以 US10Y 為錨，切換公債天期與熱門對標資產（高股息/科技成長/投等債/定存），呈現收益率利差、存續期敏感度與合規機會／風險定性；US10Y／US2Y 預填自美國財政部官方 Daily Treasury Par Yield Curve Rates（scripts/ust_yields_push.py → Supabase ust_yields，每日更新，可手動調整為示意假設）。資料與演算法沿用本站真實資料源（TWSE／TPEx／TAIFEX／TDCC／US Treasury／Supabase），未更動後端。
+      <b>改動紀錄（供合夥人複查）</b>：2026-09-30 全站版面採用合夥人 redesign 版；同日輕更新（ETF 甜甜圈互動、市場廣度分頁與篩選分離、選擇權支撐壓力 OI 峰值前端、結算日遇休市順延、多空排列配色、行動版表格）。掏金篩選器含「真名三式（多頭回洗反包）」（演算法與歷史回測見該勾選框）。2026-10-04 個股K圖量能面板新增「籌碼」分頁：三大法人每日淨買賣超堆疊柱（外資/投信/自營，紅買綠賣以0為基準，單位張，含合計線；滑鼠移至柱上顯示當日數值），對齊日K日期（僅日K、近120交易日）；資料源＝本站 institutional_trades（TWSE／TPEx T86 三大法人日報）每日推送至 Supabase inst_daily（scripts/inst_daily_push.py）。同日籌碼頁改為最上層分頁（點「籌碼」隱藏技術指標 VOL/MACD/RSI），並拆出「大戶 vs 散戶（週）」：資料源＝TDCC 集保股權分散表（每週五）＋當週收盤換算市值；大戶＝持股≥300張 或 市值≥3000萬、散戶＝持股<20張 或 市值<100萬（跨 TDCC 級距用均勻分布內插，為近似值），畫週增減（大戶紅綠柱／散戶藍線，單位張）；覆蓋熱門前500檔、每週更新（scripts/holder_flow_push.py → Supabase holder_flow）。籌碼頁最終版：單一「籌碼」分頁內拆成外資(日)／投信(日)／自營(日)／大戶(週)／散戶(週) 五張獨立柱狀圖（紅買綠賣）。另：K圖新增標記分類顯示開關（法說會／除權息，比照均線顯示隱藏，動態偵測）；修正指數與外國大盤相關新聞殘留前一檔個股的 bug（指數改載市場新聞 macro_news）；外資空單避險歷史圖右上新增「事件避險／連假避險」標記開關；§4 融資動能背離加入「今日／3 日」週期；富台指期（SGX FTSE Taiwan）新增最後交易日倒數（每月倒數第二個營業日，依證交所休市表）。2026-10-06「市場觀察」新增「美債對標」：以 US10Y 為錨，切換公債天期與熱門對標資產（高股息/科技成長/投等債/定存），呈現收益率利差、存續期敏感度與合規機會／風險定性；US10Y／US2Y 預填自美國財政部官方 Daily Treasury Par Yield Curve Rates（scripts/ust_yields_push.py → Supabase ust_yields，每日更新，可手動調整為示意假設）。資料與演算法沿用本站真實資料源（TWSE／TPEx／TAIFEX／TDCC／US Treasury／Supabase），未更動後端。2026-10-11 K 圖右上角新增「⛶ 全視窗」按鈕（直播／簡報用）：K 圖彈窗撐滿整個視窗並嘗試進入瀏覽器全螢幕，主圖高度隨視窗加大；再按一次或按 Esc 還原（Esc 先還原、不關閉 K 圖），手機版不顯示（本來就是整頁）。純版面功能，未更動資料與演算法。
     </div>
   </div>
 
@@ -8700,6 +8707,10 @@
             <input id="chartStockSearch" type="search" name="tw-stock-qc" placeholder="搜尋代號／股名" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="chartSearchDrop">
             <div id="chartSearchDrop" class="gs-search-drop" role="listbox" hidden></div>
           </div>
+          <button id="chartFullBtn" type="button" onclick="_toggleChartFull()" title="全視窗（直播／簡報用；再按一次或按 Esc 還原）"
+            style="background:none;border:1px solid var(--border);border-radius:6px;
+                   color:var(--text-muted);padding:4px 10px;font-size:13px;cursor:pointer;
+                   white-space:nowrap;transition:all 0.15s">⛶ 全視窗</button>
           <button id="chartWatchBtn" onclick="toggleWatchFromChart()"
             style="background:none;border:1px solid var(--border);border-radius:6px;
                    color:var(--text-muted);padding:4px 10px;font-size:13px;cursor:pointer;
@@ -9596,6 +9607,7 @@
       if (e.key === 'Escape') {
         const wp = document.getElementById('watchlistPanel');
         if (wp && !wp.classList.contains('hidden')) { closeWatchlist(); return; }
+        { const _cm = document.getElementById('chartModal'); if (_cm && _cm.classList.contains('kfull')) { _setChartFull(false); return; } }   // 全視窗中按 Esc 先還原，不關 K 圖
         closeChart();
       }
     });
@@ -12041,11 +12053,40 @@
     }
 
     var _chartRequestId=0;
+    // K 圖全視窗（直播／簡報用）：彈窗撐滿視窗，並嘗試進入瀏覽器全螢幕（被瀏覽器拒絕也不影響，仍是撐滿視窗）2026-10-11
+    function _setChartFull(on) {
+      const m = document.getElementById('chartModal'), b = document.getElementById('chartFullBtn');
+      if (!m) return;
+      m.classList.toggle('kfull', !!on);
+      if (b) b.textContent = on ? '🗗 還原' : '⛶ 全視窗';
+      try {
+        if (on && !document.fullscreenElement && m.requestFullscreen) { const pr = m.requestFullscreen(); if (pr && pr.catch) pr.catch(function(){}); }
+        else if (!on && document.fullscreenElement === m && document.exitFullscreen) document.exitFullscreen();
+      } catch (_) {}
+      // 尺寸變了：直接重繪各圖（不只靠 ResizeObserver——分頁在背景或被擷取時瀏覽器不一定觸發），其餘疊圖(價量分析等)靠 resize 事件
+      const _fit = function(){
+        try {
+          const me = document.getElementById('chartContainer');
+          if (chartInstance && me && me.clientWidth) chartInstance.applyOptions({ width: me.clientWidth, height: me.clientHeight || 400 });
+          [[volInstance,'volContainer'],[macdInstance,'macdContainer'],[rsiInstance,'rsiContainer']].forEach(function(x){ const e = document.getElementById(x[1]); if (x[0] && e && e.clientWidth) x[0].applyOptions({ width: e.clientWidth }); });
+          Object.entries(_chipCharts || {}).forEach(function(kv){ const e = document.getElementById(_CHIP_CID[kv[0]]); if (kv[1] && e && e.clientWidth) kv[1].applyOptions({ width: e.clientWidth }); });
+          resizeFibCanvas(); redrawCanvas();
+        } catch (_) {}
+        try { window.dispatchEvent(new Event('resize')); } catch (_) {}
+      };
+      setTimeout(_fit, 120); setTimeout(_fit, 500);   // 第二次涵蓋瀏覽器全螢幕切換動畫結束後的最終尺寸
+    }
+    function _toggleChartFull() { const m = document.getElementById('chartModal'); _setChartFull(!(m && m.classList.contains('kfull'))); }
+    window._toggleChartFull = _toggleChartFull;
+    // 使用者用 Esc／F11 離開瀏覽器全螢幕時，同步還原版面
+    document.addEventListener('fullscreenchange', function(){ const m = document.getElementById('chartModal'); if (m && m.classList.contains('kfull') && !document.fullscreenElement) _setChartFull(false); });
+
     function closeChart() {
       if(document.getElementById('chartModal').classList.contains('etx-embedded')){window._etxTab('overview');return;}
       _chartRequestId++;
       _userMarkers = {};  // 關閉 K 圖時清掉所有日期標記（暫時性設計）
       _stopRealtimeUpdates();
+      _setChartFull(false);
       document.getElementById('chartModal').classList.remove('open');
       _destroyCharts();
       _resetDrawingState();
@@ -12729,7 +12770,7 @@
       const mainEl = document.getElementById('chartContainer');
       if(_chartResizeObserver)_chartResizeObserver.disconnect();
       _chartResizeObserver=new ResizeObserver(() => {
-        if (chartInstance) chartInstance.applyOptions({ width: mainEl.clientWidth });
+        if (chartInstance) chartInstance.applyOptions({ width: mainEl.clientWidth, height: mainEl.clientHeight || 400 });   // 2026-10-11 全視窗時主圖高度會變，一併套用
         if (volInstance)   volInstance.applyOptions({ width: document.getElementById('volContainer').clientWidth });
         if (macdInstance)  macdInstance.applyOptions({ width: document.getElementById('macdContainer').clientWidth });
         if (rsiInstance)   rsiInstance.applyOptions({ width: document.getElementById('rsiContainer').clientWidth });
