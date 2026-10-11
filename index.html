@@ -2681,7 +2681,7 @@
     <div class="fc-note" id="hpNote"></div>
     </div><!-- /cb-sheet 每日台股籌碼報告 -->
     <div style="max-width:1200px;margin:14px auto 0;padding:10px 14px;font-size:11.5px;line-height:1.7;color:var(--text-muted);border-top:1px dashed var(--border);">
-      <b>改動紀錄（供合夥人複查）</b>：2026-09-30 全站版面採用合夥人 redesign 版；同日輕更新（ETF 甜甜圈互動、市場廣度分頁與篩選分離、選擇權支撐壓力 OI 峰值前端、結算日遇休市順延、多空排列配色、行動版表格）。掏金篩選器含「真名三式（多頭回洗反包）」（演算法與歷史回測見該勾選框）。2026-10-04 個股K圖量能面板新增「籌碼」分頁：三大法人每日淨買賣超堆疊柱（外資/投信/自營，紅買綠賣以0為基準，單位張，含合計線；滑鼠移至柱上顯示當日數值），對齊日K日期（僅日K、近120交易日）；資料源＝本站 institutional_trades（TWSE／TPEx T86 三大法人日報）每日推送至 Supabase inst_daily（scripts/inst_daily_push.py）。同日籌碼頁改為最上層分頁（點「籌碼」隱藏技術指標 VOL/MACD/RSI），並拆出「大戶 vs 散戶（週）」：資料源＝TDCC 集保股權分散表（每週五）＋當週收盤換算市值；大戶＝持股≥300張 或 市值≥3000萬、散戶＝持股<20張 或 市值<100萬（跨 TDCC 級距用均勻分布內插，為近似值），畫週增減（大戶紅綠柱／散戶藍線，單位張）；覆蓋熱門前500檔、每週更新（scripts/holder_flow_push.py → Supabase holder_flow）。籌碼頁最終版：單一「籌碼」分頁內拆成外資(日)／投信(日)／自營(日)／大戶(週)／散戶(週) 五張獨立柱狀圖（紅買綠賣）。另：K圖新增標記分類顯示開關（法說會／除權息，比照均線顯示隱藏，動態偵測）；修正指數與外國大盤相關新聞殘留前一檔個股的 bug（指數改載市場新聞 macro_news）；外資空單避險歷史圖右上新增「事件避險／連假避險」標記開關；§4 融資動能背離加入「今日／3 日」週期；富台指期（SGX FTSE Taiwan）新增最後交易日倒數（每月倒數第二個營業日，依證交所休市表）。2026-10-06「市場觀察」新增「美債對標」：以 US10Y 為錨，切換公債天期與熱門對標資產（高股息/科技成長/投等債/定存），呈現收益率利差、存續期敏感度與合規機會／風險定性；US10Y／US2Y 預填自美國財政部官方 Daily Treasury Par Yield Curve Rates（scripts/ust_yields_push.py → Supabase ust_yields，每日更新，可手動調整為示意假設）。資料與演算法沿用本站真實資料源（TWSE／TPEx／TAIFEX／TDCC／US Treasury／Supabase），未更動後端。2026-10-11 K 圖右上角新增「⛶ 全視窗」按鈕（直播／簡報用）：K 圖彈窗撐滿整個視窗並嘗試進入瀏覽器全螢幕，主圖高度隨視窗加大；再按一次或按 Esc 還原（Esc 先還原、不關閉 K 圖），手機版不顯示（本來就是整頁）。純版面功能，未更動資料與演算法。同日 K 圖顯示設定改為「記住上一次」：均線（MA5～MA240、全部均線）、BBAND、量均線、MACD／RSI 線、大盤K、支撐壓力勾選的週期、價量分析、箱型的開關，換股票（含右上角搜尋）、切換日／週／月／小時、關掉再開、重新整理後都沿用上一次的設定，不再還原成預設（設定存在各自瀏覽器，不跨裝置；主力分點因每檔分點不同，仍是每檔各自勾選）。純顯示設定，未更動資料與演算法。
+      <b>改動紀錄（供合夥人複查）</b>：2026-09-30 全站版面採用合夥人 redesign 版；同日輕更新（ETF 甜甜圈互動、市場廣度分頁與篩選分離、選擇權支撐壓力 OI 峰值前端、結算日遇休市順延、多空排列配色、行動版表格）。掏金篩選器含「真名三式（多頭回洗反包）」（演算法與歷史回測見該勾選框）。2026-10-04 個股K圖量能面板新增「籌碼」分頁：三大法人每日淨買賣超堆疊柱（外資/投信/自營，紅買綠賣以0為基準，單位張，含合計線；滑鼠移至柱上顯示當日數值），對齊日K日期（僅日K、近120交易日）；資料源＝本站 institutional_trades（TWSE／TPEx T86 三大法人日報）每日推送至 Supabase inst_daily（scripts/inst_daily_push.py）。同日籌碼頁改為最上層分頁（點「籌碼」隱藏技術指標 VOL/MACD/RSI），並拆出「大戶 vs 散戶（週）」：資料源＝TDCC 集保股權分散表（每週五）＋當週收盤換算市值；大戶＝持股≥300張 或 市值≥3000萬、散戶＝持股<20張 或 市值<100萬（跨 TDCC 級距用均勻分布內插，為近似值），畫週增減（大戶紅綠柱／散戶藍線，單位張）；覆蓋熱門前500檔、每週更新（scripts/holder_flow_push.py → Supabase holder_flow）。籌碼頁最終版：單一「籌碼」分頁內拆成外資(日)／投信(日)／自營(日)／大戶(週)／散戶(週) 五張獨立柱狀圖（紅買綠賣）。另：K圖新增標記分類顯示開關（法說會／除權息，比照均線顯示隱藏，動態偵測）；修正指數與外國大盤相關新聞殘留前一檔個股的 bug（指數改載市場新聞 macro_news）；外資空單避險歷史圖右上新增「事件避險／連假避險」標記開關；§4 融資動能背離加入「今日／3 日」週期；富台指期（SGX FTSE Taiwan）新增最後交易日倒數（每月倒數第二個營業日，依證交所休市表）。2026-10-06「市場觀察」新增「美債對標」：以 US10Y 為錨，切換公債天期與熱門對標資產（高股息/科技成長/投等債/定存），呈現收益率利差、存續期敏感度與合規機會／風險定性；US10Y／US2Y 預填自美國財政部官方 Daily Treasury Par Yield Curve Rates（scripts/ust_yields_push.py → Supabase ust_yields，每日更新，可手動調整為示意假設）。資料與演算法沿用本站真實資料源（TWSE／TPEx／TAIFEX／TDCC／US Treasury／Supabase），未更動後端。2026-10-11 K 圖右上角新增「⛶ 全視窗」按鈕（直播／簡報用）：K 圖彈窗撐滿整個視窗並嘗試進入瀏覽器全螢幕，主圖高度隨視窗加大；再按一次或按 Esc 還原（Esc 先還原、不關閉 K 圖），手機版不顯示（本來就是整頁）。純版面功能，未更動資料與演算法。同日 K 圖顯示設定改為「記住上一次」：均線（MA5～MA240、全部均線）、BBAND、量均線、MACD／RSI 線、大盤K、支撐壓力勾選的週期、價量分析、箱型的開關，換股票（含右上角搜尋）、切換日／週／月／小時、關掉再開、重新整理後都沿用上一次的設定，不再還原成預設（設定存在各自瀏覽器，不跨裝置；主力分點因每檔分點不同，仍是每檔各自勾選）。純顯示設定，未更動資料與演算法。同日修正：全螢幕時「畫線工具／圖形註解」下拉選單點不出來（選單原本掛在網頁最外層，瀏覽器全螢幕只顯示 K 圖彈窗內的內容），改為全螢幕時掛在 K 圖彈窗內。
     </div>
   </div>
 
@@ -10864,6 +10864,7 @@
         t.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:10001;padding:9px 16px;border-radius:8px;font-size:13px;color:#fff;box-shadow:0 4px 16px rgba(0,0,0,.4);transition:opacity .3s;max-width:90vw;text-align:center';
         document.body.appendChild(t);
       }
+      { const _fh = document.fullscreenElement || document.body; if (t.parentElement !== _fh) _fh.appendChild(t); }   // 全螢幕時提示也要掛在全螢幕元素內
       t.style.background = err ? '#c0392b' : '#2a7d4f';
       t.textContent = msg; t.style.opacity = '1';
       clearTimeout(t._tmr); t._tmr = setTimeout(() => { t.style.opacity = '0'; }, 2800);
@@ -12108,7 +12109,8 @@
     function _toggleChartFull() { const m = document.getElementById('chartModal'); _setChartFull(!(m && m.classList.contains('kfull'))); }
     window._toggleChartFull = _toggleChartFull;
     // 使用者用 Esc／F11 離開瀏覽器全螢幕時，同步還原版面
-    document.addEventListener('fullscreenchange', function(){ const m = document.getElementById('chartModal'); if (m && m.classList.contains('kfull') && !document.fullscreenElement) _setChartFull(false); });
+    document.addEventListener('fullscreenchange', function(){ ['ddLineMenu','ddShapeMenu'].forEach(function(id){ const d = document.getElementById(id); if (d) d.classList.remove('open'); });
+      const m = document.getElementById('chartModal'); if (m && m.classList.contains('kfull') && !document.fullscreenElement) _setChartFull(false); });
 
     function closeChart() {
       if(document.getElementById('chartModal').classList.contains('etx-embedded')){window._etxTab('overview');return;}
@@ -14269,7 +14271,8 @@
           const willOpen = !m.classList.contains('open');
           m.classList.toggle('open', willOpen);
           if (willOpen && b) {
-            if (m.parentElement !== document.body) document.body.appendChild(m);
+            const host = document.fullscreenElement || document.body;   // 2026-10-11 瀏覽器全螢幕時只顯示全螢幕元素內的東西，選單要掛在 K 圖彈窗內才看得到
+            if (m.parentElement !== host) host.appendChild(m);
             m.style.position = 'fixed'; m.style.zIndex = '99999'; m.style.right = 'auto';
             const r = b.getBoundingClientRect(), mw = m.offsetWidth || 140;
             let left = Math.max(6, Math.min(r.right - mw, window.innerWidth - mw - 6));
