@@ -2681,7 +2681,7 @@
     <div class="fc-note" id="hpNote"></div>
     </div><!-- /cb-sheet 每日台股籌碼報告 -->
     <div style="max-width:1200px;margin:14px auto 0;padding:10px 14px;font-size:11.5px;line-height:1.7;color:var(--text-muted);border-top:1px dashed var(--border);">
-      <b>改動紀錄（供合夥人複查）</b>：2026-09-30 全站版面採用合夥人 redesign 版；同日輕更新（ETF 甜甜圈互動、市場廣度分頁與篩選分離、選擇權支撐壓力 OI 峰值前端、結算日遇休市順延、多空排列配色、行動版表格）。掏金篩選器含「真名三式（多頭回洗反包）」（演算法與歷史回測見該勾選框）。2026-10-04 個股K圖量能面板新增「籌碼」分頁：三大法人每日淨買賣超堆疊柱（外資/投信/自營，紅買綠賣以0為基準，單位張，含合計線；滑鼠移至柱上顯示當日數值），對齊日K日期（僅日K、近120交易日）；資料源＝本站 institutional_trades（TWSE／TPEx T86 三大法人日報）每日推送至 Supabase inst_daily（scripts/inst_daily_push.py）。同日籌碼頁改為最上層分頁（點「籌碼」隱藏技術指標 VOL/MACD/RSI），並拆出「大戶 vs 散戶（週）」：資料源＝TDCC 集保股權分散表（每週五）＋當週收盤換算市值；大戶＝持股≥300張 或 市值≥3000萬、散戶＝持股<20張 或 市值<100萬（跨 TDCC 級距用均勻分布內插，為近似值），畫週增減（大戶紅綠柱／散戶藍線，單位張）；覆蓋熱門前500檔、每週更新（scripts/holder_flow_push.py → Supabase holder_flow）。籌碼頁最終版：單一「籌碼」分頁內拆成外資(日)／投信(日)／自營(日)／大戶(週)／散戶(週) 五張獨立柱狀圖（紅買綠賣）。另：K圖新增標記分類顯示開關（法說會／除權息，比照均線顯示隱藏，動態偵測）；修正指數與外國大盤相關新聞殘留前一檔個股的 bug（指數改載市場新聞 macro_news）；外資空單避險歷史圖右上新增「事件避險／連假避險」標記開關；§4 融資動能背離加入「今日／3 日」週期；富台指期（SGX FTSE Taiwan）新增最後交易日倒數（每月倒數第二個營業日，依證交所休市表）。2026-10-06「市場觀察」新增「美債對標」：以 US10Y 為錨，切換公債天期與熱門對標資產（高股息/科技成長/投等債/定存），呈現收益率利差、存續期敏感度與合規機會／風險定性；US10Y／US2Y 預填自美國財政部官方 Daily Treasury Par Yield Curve Rates（scripts/ust_yields_push.py → Supabase ust_yields，每日更新，可手動調整為示意假設）。資料與演算法沿用本站真實資料源（TWSE／TPEx／TAIFEX／TDCC／US Treasury／Supabase），未更動後端。2026-10-11 K 圖右上角新增「⛶ 全視窗」按鈕（直播／簡報用）：K 圖彈窗撐滿整個視窗並嘗試進入瀏覽器全螢幕，主圖高度隨視窗加大；再按一次或按 Esc 還原（Esc 先還原、不關閉 K 圖），手機版不顯示（本來就是整頁）。純版面功能，未更動資料與演算法。
+      <b>改動紀錄（供合夥人複查）</b>：2026-09-30 全站版面採用合夥人 redesign 版；同日輕更新（ETF 甜甜圈互動、市場廣度分頁與篩選分離、選擇權支撐壓力 OI 峰值前端、結算日遇休市順延、多空排列配色、行動版表格）。掏金篩選器含「真名三式（多頭回洗反包）」（演算法與歷史回測見該勾選框）。2026-10-04 個股K圖量能面板新增「籌碼」分頁：三大法人每日淨買賣超堆疊柱（外資/投信/自營，紅買綠賣以0為基準，單位張，含合計線；滑鼠移至柱上顯示當日數值），對齊日K日期（僅日K、近120交易日）；資料源＝本站 institutional_trades（TWSE／TPEx T86 三大法人日報）每日推送至 Supabase inst_daily（scripts/inst_daily_push.py）。同日籌碼頁改為最上層分頁（點「籌碼」隱藏技術指標 VOL/MACD/RSI），並拆出「大戶 vs 散戶（週）」：資料源＝TDCC 集保股權分散表（每週五）＋當週收盤換算市值；大戶＝持股≥300張 或 市值≥3000萬、散戶＝持股<20張 或 市值<100萬（跨 TDCC 級距用均勻分布內插，為近似值），畫週增減（大戶紅綠柱／散戶藍線，單位張）；覆蓋熱門前500檔、每週更新（scripts/holder_flow_push.py → Supabase holder_flow）。籌碼頁最終版：單一「籌碼」分頁內拆成外資(日)／投信(日)／自營(日)／大戶(週)／散戶(週) 五張獨立柱狀圖（紅買綠賣）。另：K圖新增標記分類顯示開關（法說會／除權息，比照均線顯示隱藏，動態偵測）；修正指數與外國大盤相關新聞殘留前一檔個股的 bug（指數改載市場新聞 macro_news）；外資空單避險歷史圖右上新增「事件避險／連假避險」標記開關；§4 融資動能背離加入「今日／3 日」週期；富台指期（SGX FTSE Taiwan）新增最後交易日倒數（每月倒數第二個營業日，依證交所休市表）。2026-10-06「市場觀察」新增「美債對標」：以 US10Y 為錨，切換公債天期與熱門對標資產（高股息/科技成長/投等債/定存），呈現收益率利差、存續期敏感度與合規機會／風險定性；US10Y／US2Y 預填自美國財政部官方 Daily Treasury Par Yield Curve Rates（scripts/ust_yields_push.py → Supabase ust_yields，每日更新，可手動調整為示意假設）。資料與演算法沿用本站真實資料源（TWSE／TPEx／TAIFEX／TDCC／US Treasury／Supabase），未更動後端。2026-10-11 K 圖右上角新增「⛶ 全視窗」按鈕（直播／簡報用）：K 圖彈窗撐滿整個視窗並嘗試進入瀏覽器全螢幕，主圖高度隨視窗加大；再按一次或按 Esc 還原（Esc 先還原、不關閉 K 圖），手機版不顯示（本來就是整頁）。純版面功能，未更動資料與演算法。同日 K 圖顯示設定改為「記住上一次」：均線（MA5～MA240、全部均線）、BBAND、量均線、MACD／RSI 線、大盤K、支撐壓力勾選的週期、價量分析、箱型的開關，換股票（含右上角搜尋）、切換日／週／月／小時、關掉再開、重新整理後都沿用上一次的設定，不再還原成預設（設定存在各自瀏覽器，不跨裝置；主力分點因每檔分點不同，仍是每檔各自勾選）。純顯示設定，未更動資料與演算法。
     </div>
   </div>
 
@@ -9135,7 +9135,11 @@
             var _ts=el('srTabSel'); if(_ts)_ts.onchange=function(){ SR.n=+_ts.value; srRender(); };
           }
           function bindSrc(box){ box.querySelectorAll('[data-src]').forEach(function(b){ b.onclick=function(){ SR.src=b.getAttribute('data-src'); fetchSr(SR.code); }; }); }
-          window._srPeriods=window._srPeriods||{};   // 勾選要畫的「週期」(SPEC-002：依週期，不跨週期混算)；預設全部不勾（不畫 S/R）
+          // K 圖顯示設定記憶（2026-10-11）：均線／指標線、大盤K、支撐壓力週期、價量分析、箱型的開關記在瀏覽器 localStorage，
+          // 換股票、換週期、關掉再開、重新整理都沿用上一次的設定（不再每次還原成預設）。
+          window._kPref=window._kPref||(function(){var K='kchart_prefs_v1',o={};try{o=JSON.parse(localStorage.getItem(K)||'{}')||{};}catch(e){o={};}
+            return {get:function(k,d){return (k in o)?o[k]:d;},set:function(k,v){o[k]=v;try{localStorage.setItem(K,JSON.stringify(o));}catch(e){}}};})();
+          window._srPeriods=window._srPeriods||window._kPref.get('sr',null)||{};   // 勾選要畫的「週期」(SPEC-002：依週期，不跨週期混算)；預設全部不勾（不畫 S/R）
           window._srDraw=function(){
             if(typeof candleSeriesRef==='undefined'||!candleSeriesRef)return;
             SR.lines.forEach(function(l){ try{ l.s.removePriceLine(l.p); }catch(e){} }); SR.lines=[];
@@ -9153,8 +9157,9 @@
           };
           window._chartLayerStatus=function(kind,on,count){var b=document.querySelector('.chart-layer-tab[data-layer="'+kind+'"]');if(!b)return;b.classList.toggle('is-enabled',!!on);var n=b.querySelector('.layer-count');if(n){n.textContent=count||'';n.classList.toggle('show',!!count);}};
           window._srTogglePanel=function(){ var o=el('srLineOpts'), open=o.style.display==='none'; o.style.display=open?'block':'none'; window._chartLayerPanel('sr',open); el('srLineArrow').textContent=open?'▾':'▸'; };
-          window._srPeriodToggle=function(n,on){ window._srPeriods[n]=on;var c=Object.keys(window._srPeriods).filter(function(k){return window._srPeriods[k];}).length;window._chartLayerStatus('sr',c>0,c);window._srDraw(); };
-          window._srPeriodAll=function(on){ [5,10,20,60,120,240,480].forEach(function(n){ window._srPeriods[n]=on; var c=document.querySelector('#srLineOpts [data-p="'+n+'"]'); if(c)c.checked=on; }); window._chartLayerStatus('sr',on,on?7:0);window._srDraw(); };
+          window._srPeriodToggle=function(n,on){ window._srPeriods[n]=on;var c=Object.keys(window._srPeriods).filter(function(k){return window._srPeriods[k];}).length;window._chartLayerStatus('sr',c>0,c);window._kPref.set('sr',window._srPeriods);window._srDraw(); };
+          window._srPeriodAll=function(on){ [5,10,20,60,120,240,480].forEach(function(n){ window._srPeriods[n]=on; var c=document.querySelector('#srLineOpts [data-p="'+n+'"]'); if(c)c.checked=on; }); window._chartLayerStatus('sr',on,on?7:0);window._kPref.set('sr',window._srPeriods);window._srDraw(); };
+          window._srSyncUI=function(){ var n=0; document.querySelectorAll('#srLineOpts [data-p]').forEach(function(c){ var on=!!window._srPeriods[c.getAttribute('data-p')]; c.checked=on; if(on)n++; }); window._chartLayerStatus('sr',n>0,n); };
           window._loadStockSr=function(code){
             if(window._srPickN){ SR.n=window._srPickN; window._srPickN=null; }
             if(window._srPickSrc){ SR.src=window._srPickSrc; window._srPickSrc=null; }
@@ -9750,6 +9755,7 @@
       _loadBrokerEntries(code);
       _loadGreed(code);
       _setToolbarForCode(code);
+      _kSyncLayerUI();   // 圖層開關沿用上一次的設定
       document.getElementById('backBtn').style.display = 'none';
       document.getElementById('chartModal').classList.add('open');
       if (!fibSetupDone) { setupFibOverlay(); fibSetupDone = true; }
@@ -11678,6 +11684,7 @@
       visible = visible === false;
       keys.forEach(k => { if (seriesMap[k]) seriesMap[k].applyOptions({ visible }); });
       span.classList.toggle('hidden', !visible);
+      _kVizSet(keys, visible);
     }
 
     // ── Auth ──────────────────────────────────────────────
@@ -12350,8 +12357,8 @@
       try { _destroyChipCharts(); } catch (_) {}
       candleSeriesRef = null;
       Object.keys(seriesMap).forEach(k => delete seriesMap[k]);
-      // Reset all ma-toggle labels to visible
-      document.querySelectorAll('.ma-toggle').forEach(el => el.classList.remove('hidden'));
+      // 標籤依記憶的開關顯示（2026-10-11 起不再每次還原成全部顯示）
+      _kSyncVizLabels();
       // 子面板分頁歸零：預設回「技術指標」（顯示 VOL/MACD/RSI，隱藏籌碼頁）
       window._chipBuiltFor = null;
       ['volPanel', 'macdPanel', 'rsiPanel'].forEach(id => { const e = document.getElementById(id); if (e) e.style.display = ''; });
@@ -12359,6 +12366,33 @@
       ['cFgn', 'cTrust', 'cDealer', 'cBig', 'cRetail'].forEach(id => { const e = document.getElementById(id); if (e) e.innerHTML = ''; });
       const _tt = document.getElementById('subTabTech'), _tc = document.getElementById('subTabChip');
       if (_tt) _tt.classList.add('on'); if (_tc) _tc.classList.remove('on');
+    }
+
+    // ── K 圖線條顯示記憶（2026-10-11）：key → 是否顯示；沒記過的用預設（BBAND 預設關、其餘預設開） ──
+    const _K_MA_KEYS = ['ma5','ma10','ma20','ma60','ma120','ma240'];
+    const _K_BB_KEYS = ['bbUpper','bbMid','bbLower'];
+    function _kViz() { return (window._kPref && window._kPref.get('viz', null)) || {}; }
+    function _kVizOn(key) { const v = _kViz()[key]; return v == null ? _K_BB_KEYS.indexOf(key) < 0 : !!v; }
+    function _kVizSet(keys, visible) { const v = _kViz(); keys.forEach(k => { v[k] = !!visible; }); if (window._kPref) window._kPref.set('viz', v); }
+    function _kSyncVizLabels() {
+      document.querySelectorAll('.ma-toggle[onclick^="toggleSeriesViz("]').forEach(el => {
+        const m = /toggleSeriesViz\('([^']+)'\)/.exec(el.getAttribute('onclick') || ''); if (m) el.classList.toggle('hidden', !_kVizOn(m[1]));
+      });
+      const all = document.getElementById('maAllToggle'); if (all) all.classList.toggle('hidden', !_K_MA_KEYS.some(_kVizOn));
+      const bb = document.querySelector('.ma-toggle[onclick="toggleBBand(this)"]'); if (bb) bb.classList.toggle('hidden', _kViz().bbUpper === false);
+    }
+    // 圖表（重）建好後呼叫：把記憶的開關套到剛建立的線上
+    function _kApplyViz() {
+      Object.keys(seriesMap).forEach(k => { try { seriesMap[k].applyOptions({ visible: _kVizOn(k) }); } catch (_) {} });
+      _kSyncVizLabels();
+    }
+    // 大盤K／支撐壓力／價量分析／箱型：勾選框與按鈕燈號對齊記憶
+    function _kSyncLayerUI() {
+      try { window._srSyncUI && window._srSyncUI(); } catch (_) {}
+      try { window._mkSyncUI && window._mkSyncUI(); } catch (_) {}
+      try { window._vpSyncUI && window._vpSyncUI(); } catch (_) {}
+      try { const bp = document.getElementById('boxPanel'), bt = document.getElementById('boxToggle');
+        if (bp) bp.style.display = _boxEnabled ? 'flex' : 'none'; if (bt && _boxEnabled) bt.style.opacity = '1'; } catch (_) {}
     }
 
     function toggleAllMA() {
@@ -12378,6 +12412,7 @@
       });
       const btn = document.getElementById('maAllToggle');
       if (btn) btn.classList.toggle('hidden', !makeVisible);
+      _kVizSet(keys, makeVisible);
     }
 
     function toggleSeriesViz(key) {
@@ -12389,6 +12424,7 @@
       visible = visible === false ? true : false;
       s.applyOptions({ visible });
       if (span) span.classList.toggle('hidden', !visible);
+      _kVizSet([key], visible); _kSyncVizLabels();
     }
 
     function toggleChartPanel(containerId, btn) {
@@ -12982,10 +13018,11 @@
       seriesMap['bbUpper'] = bbUpper;
       seriesMap['bbMid']   = bbMid;
       seriesMap['bbLower'] = bbLower;
+      _kApplyViz();
     }
 
     // ──  箱型型態偵測(前端即時版,對應 scripts/box_pattern.py;參數可調)────────────
-    var _boxEnabled = false;
+    var _boxEnabled = !!(window._kPref && window._kPref.get('box', false));   // 2026-10-11 記住上次開關
     var _boxLastCandles = [];
     var _boxSeriesRefs = [];
     var _boxMarkers = [];
@@ -13186,6 +13223,7 @@
     }
     function toggleBox(el) {
       _boxEnabled = !_boxEnabled;
+      if (window._kPref) window._kPref.set('box', _boxEnabled);
       const panel = document.getElementById('boxPanel');
       if (panel) panel.style.display = _boxEnabled ? 'flex' : 'none';
       if (el) el.style.opacity = _boxEnabled ? '1' : '0.5';
@@ -13246,6 +13284,7 @@
       vma10s.setData(candles.map((c, i) => vma10[i] !== null ? { time: c.time, value: vma10[i] } : null).filter(Boolean));
       seriesMap['volMa5']  = vma5s;
       seriesMap['volMa10'] = vma10s;
+      _kApplyViz();
       volInstance.applyOptions(_NO_HORZ); volInstance._xhairSeries = volSeries; _wireXhair(volInstance);
     }
 
@@ -13289,6 +13328,7 @@
       seriesMap['macdLine'] = macdSeries;
       seriesMap['macdSig']  = sigSeries;
       seriesMap['macdHist'] = histSeries;
+      _kApplyViz();
       macdInstance.applyOptions(_NO_HORZ); macdInstance._xhairSeries = macdAnchor; _wireXhair(macdInstance);
     }
 
@@ -13322,6 +13362,7 @@
       r5.setData(times.map((t, i)  => rsi5[i]  !== null ? { time: t, value: rsi5[i]  } : null).filter(Boolean));
       seriesMap['rsi5']  = r5;
       seriesMap['rsi10'] = r10;
+      _kApplyViz();
       [{ p: 70, c: 'rgba(231,76,60,0.4)' }, { p: 50, c: 'rgba(200,209,217,0.2)' }, { p: 30, c: 'rgba(38,194,129,0.4)' }]
         .forEach(({ p, c }) => r10.createPriceLine({
           price: p, color: c, lineWidth: 1,
@@ -14734,7 +14775,7 @@
   <script>
   /* 大盤K 疊加（2026-09-28）：個股 K 線上疊加加權指數(^TWII) K 棒於左軸，並依可見區間比較漲跌幅強弱。 */
   (function(){
-    var MK={on:false, series:null, cache:{}, data:null, t:0};
+    var MK={on:!!(window._kPref&&window._kPref.get('mk',false)), series:null, cache:{}, data:null, t:0};   // 2026-10-11 記住上次開關
     function el(id){ return document.getElementById(id); }
     function fetchIdx(hourly){
       var k=hourly?'h':'d'; if(MK.cache[k]) return MK.cache[k];
@@ -14761,6 +14802,7 @@
       o.style.display=open?'block':'none'; window._chartLayerPanel('mk',open); el('mkArrow').textContent=open?'▾':'▸';
     };
     window._mkPick=function(tf,on){
+      if(window._kPref) window._kPref.set('mk',!!on);
       if(!on){ MK.on=false; window._chartLayerStatus('mk',false,0);syncChk(); window._mkApply(false); return; }
       MK.on=true; var h=!!window._chartIsHourly;
       window._chartLayerStatus('mk',true,0);
@@ -14768,6 +14810,7 @@
       if(tf==='day'&&h){ syncChk(); if(typeof loadDailyChart==='function') loadDailyChart(); return; }
       syncChk(); window._mkApply(false);
     };
+    window._mkSyncUI=function(){ syncChk(); window._chartLayerStatus('mk',MK.on,0); };
     window._mkApply=function(rebuilt){
       if(rebuilt) MK.series=null;                     // 主圖重建後舊 series 已隨舊圖銷毀
       syncChk();
@@ -14809,7 +14852,8 @@
   /* 價量分析（Volume Profile，2026-09-28）：K 線上疊加橫向柱狀的各價位成交量，統計畫面可見的 K 棒期間。
      日價量＝日K 依最低～最高均勻分攤；小時價量＝60 分鐘K 分攤＋收盤集合競價差額補在收盤價。 */
   (function(){
-    var VP={day:false, hour:false, cache:{}, raf:0}, ROWS=48;
+    var _vp0=(window._kPref&&window._kPref.get('vp',null))||{};   // 2026-10-11 記住上次開關
+    var VP={day:!!_vp0.day, hour:!!_vp0.hour, cache:{}, raf:0}, ROWS=48;
     function el(id){ return document.getElementById(id); }
     function dkey(t){ return typeof t==='number' ? new Date(t*1000).toISOString().slice(0,10) : (typeof t==='string' ? t : (t&&t.year ? t.year+'-'+String(t.month).padStart(2,'0')+'-'+String(t.day).padStart(2,'0') : '')); }
     function fetchBars(kind){
@@ -14833,7 +14877,8 @@
       var o=el('vpOpts'), open=o.style.display==='none';
       o.style.display=open?'block':'none'; window._chartLayerPanel('vp',open); el('vpArrow').textContent=open?'▾':'▸';
     };
-    window._vpToggle=function(kind,on){ VP[kind]=on;var c=(VP.day?1:0)+(VP.hour?1:0);window._chartLayerStatus('vp',c>0,c);window._vpSchedule(); };
+    window._vpToggle=function(kind,on){ VP[kind]=on;var c=(VP.day?1:0)+(VP.hour?1:0);window._chartLayerStatus('vp',c>0,c);if(window._kPref)window._kPref.set('vp',{day:!!VP.day,hour:!!VP.hour});window._vpSchedule(); };
+    window._vpSyncUI=function(){ if(el('vpDayChk'))el('vpDayChk').checked=!!VP.day; if(el('vpHourChk'))el('vpHourChk').checked=!!VP.hour; var c=(VP.day?1:0)+(VP.hour?1:0); window._chartLayerStatus('vp',c>0,c); };
     window._vpSchedule=function(){ clearTimeout(VP.raf); VP.raf=setTimeout(draw, 40); };   // 用 timer（背景分頁 rAF 會暫停）；拖曳時 40ms 去抖動
     window.addEventListener('resize', function(){ window._vpSchedule(); });
 
