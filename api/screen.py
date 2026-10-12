@@ -2340,14 +2340,20 @@ class handler(BaseHTTPRequestHandler):
         # 產業地圖：各產業當日彙整
         if (qs.get("stat") or [""])[0] == "sectors":
             try:
-                return self._send_json(200, _fetch_sectors())
+                _d = _fetch_sectors()
+                # 2026-10-12 每日更新一次的彙整：讓 CDN 快取 5 分鐘、過期先回舊的再背景更新（有錯不快取）
+                _ok = isinstance(_d, dict) and not _d.get("error")
+                return self._send_json(200, _d, cache="public, max-age=60, s-maxage=300, stale-while-revalidate=86400" if _ok else None)
             except Exception as e:
                 import traceback
                 return self._send_json(200, {"error": str(e), "traceback": traceback.format_exc()})
         # 題材族群熱力圖(固定分類,照合夥人):上市/上櫃各族群 成交額/漲跌/成分
         if (qs.get("stat") or [""])[0] == "themes":
             try:
-                return self._send_json(200, _fetch_themes())
+                _d = _fetch_themes()
+                # 2026-10-12 每日更新一次的彙整：讓 CDN 快取 5 分鐘、過期先回舊的再背景更新（有錯不快取）
+                _ok = isinstance(_d, dict) and not _d.get("error")
+                return self._send_json(200, _d, cache="public, max-age=60, s-maxage=300, stale-while-revalidate=86400" if _ok else None)
             except Exception as e:
                 import traceback
                 return self._send_json(200, {"error": str(e), "traceback": traceback.format_exc()})

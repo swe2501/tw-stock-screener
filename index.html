@@ -2681,7 +2681,7 @@
     <div class="fc-note" id="hpNote"></div>
     </div><!-- /cb-sheet 每日台股籌碼報告 -->
     <div style="max-width:1200px;margin:14px auto 0;padding:10px 14px;font-size:11.5px;line-height:1.7;color:var(--text-muted);border-top:1px dashed var(--border);">
-      <b>改動紀錄（供合夥人複查）</b>：2026-09-30 全站版面採用合夥人 redesign 版；同日輕更新（ETF 甜甜圈互動、市場廣度分頁與篩選分離、選擇權支撐壓力 OI 峰值前端、結算日遇休市順延、多空排列配色、行動版表格）。掏金篩選器含「真名三式（多頭回洗反包）」（演算法與歷史回測見該勾選框）。2026-10-04 個股K圖量能面板新增「籌碼」分頁：三大法人每日淨買賣超堆疊柱（外資/投信/自營，紅買綠賣以0為基準，單位張，含合計線；滑鼠移至柱上顯示當日數值），對齊日K日期（僅日K、近120交易日）；資料源＝本站 institutional_trades（TWSE／TPEx T86 三大法人日報）每日推送至 Supabase inst_daily（scripts/inst_daily_push.py）。同日籌碼頁改為最上層分頁（點「籌碼」隱藏技術指標 VOL/MACD/RSI），並拆出「大戶 vs 散戶（週）」：資料源＝TDCC 集保股權分散表（每週五）＋當週收盤換算市值；大戶＝持股≥300張 或 市值≥3000萬、散戶＝持股<20張 或 市值<100萬（跨 TDCC 級距用均勻分布內插，為近似值），畫週增減（大戶紅綠柱／散戶藍線，單位張）；覆蓋熱門前500檔、每週更新（scripts/holder_flow_push.py → Supabase holder_flow）。籌碼頁最終版：單一「籌碼」分頁內拆成外資(日)／投信(日)／自營(日)／大戶(週)／散戶(週) 五張獨立柱狀圖（紅買綠賣）。另：K圖新增標記分類顯示開關（法說會／除權息，比照均線顯示隱藏，動態偵測）；修正指數與外國大盤相關新聞殘留前一檔個股的 bug（指數改載市場新聞 macro_news）；外資空單避險歷史圖右上新增「事件避險／連假避險」標記開關；§4 融資動能背離加入「今日／3 日」週期；富台指期（SGX FTSE Taiwan）新增最後交易日倒數（每月倒數第二個營業日，依證交所休市表）。2026-10-06「市場觀察」新增「美債對標」：以 US10Y 為錨，切換公債天期與熱門對標資產（高股息/科技成長/投等債/定存），呈現收益率利差、存續期敏感度與合規機會／風險定性；US10Y／US2Y 預填自美國財政部官方 Daily Treasury Par Yield Curve Rates（scripts/ust_yields_push.py → Supabase ust_yields，每日更新，可手動調整為示意假設）。資料與演算法沿用本站真實資料源（TWSE／TPEx／TAIFEX／TDCC／US Treasury／Supabase），未更動後端。2026-10-11 K 圖右上角新增「⛶ 全視窗」按鈕（直播／簡報用）：K 圖彈窗撐滿整個視窗並嘗試進入瀏覽器全螢幕，主圖高度隨視窗加大；再按一次或按 Esc 還原（Esc 先還原、不關閉 K 圖），手機版不顯示（本來就是整頁）。純版面功能，未更動資料與演算法。同日 K 圖顯示設定改為「記住上一次」：均線（MA5～MA240、全部均線）、BBAND、量均線、MACD／RSI 線、大盤K、支撐壓力勾選的週期、價量分析、箱型的開關，換股票（含右上角搜尋）、切換日／週／月／小時、關掉再開、重新整理後都沿用上一次的設定，不再還原成預設（設定存在各自瀏覽器，不跨裝置；主力分點因每檔分點不同，仍是每檔各自勾選）。純顯示設定，未更動資料與演算法。同日修正：全螢幕時「畫線工具／圖形註解」下拉選單點不出來（選單原本掛在網頁最外層，瀏覽器全螢幕只顯示 K 圖彈窗內的內容），改為全螢幕時掛在 K 圖彈窗內。2026-10-12 ①外資空單溫度計新增「第三層之二：匯率 × 現貨 × 期貨 三維交叉矩陣」：原四象限保留，各象限再交叉台幣升／貶共 8 格（匯率門檻：USD/TWD 日變動 ±0.10%，其間視為持平、兩列都不命中），並附五邊形雷達（現貨買賣超、期貨部位增減、台幣升貶、指數漲跌四項取近 60 個交易日百分位，避險水位＝100−近 2 年 PR；外圈偏多、內圈偏空，不合成單一分數）；原象限 III 單獨提到匯率的文字移除，匯率一律在此層交叉。②掏金篩選器新增「跌停板」（收盤 ≤ 跌停價；跌停價＝前收×0.9 依升降單位無條件進位）。③K 圖畫線套件：最後一根 K 棒右側空白區也能落點（改記邏輯索引）；右鍵取消目前工具；輔助線與圖形改虛線；橡皮擦可按住左鍵拖曳連續清除（判定距離 10→14px）；線條只畫在繪圖區內不蓋到價格軸；縮放／平移／拖價格軸時線條跟著重畫。同日修正：選了畫線工具後換另一檔股票，按鈕仍反藍但實際不能畫——改為換股票／換週期後工具維持啟用可直接畫，關閉 K 圖時才取消。
+      <b>改動紀錄（供合夥人複查）</b>：2026-09-30 全站版面採用合夥人 redesign 版；同日輕更新（ETF 甜甜圈互動、市場廣度分頁與篩選分離、選擇權支撐壓力 OI 峰值前端、結算日遇休市順延、多空排列配色、行動版表格）。掏金篩選器含「真名三式（多頭回洗反包）」（演算法與歷史回測見該勾選框）。2026-10-04 個股K圖量能面板新增「籌碼」分頁：三大法人每日淨買賣超堆疊柱（外資/投信/自營，紅買綠賣以0為基準，單位張，含合計線；滑鼠移至柱上顯示當日數值），對齊日K日期（僅日K、近120交易日）；資料源＝本站 institutional_trades（TWSE／TPEx T86 三大法人日報）每日推送至 Supabase inst_daily（scripts/inst_daily_push.py）。同日籌碼頁改為最上層分頁（點「籌碼」隱藏技術指標 VOL/MACD/RSI），並拆出「大戶 vs 散戶（週）」：資料源＝TDCC 集保股權分散表（每週五）＋當週收盤換算市值；大戶＝持股≥300張 或 市值≥3000萬、散戶＝持股<20張 或 市值<100萬（跨 TDCC 級距用均勻分布內插，為近似值），畫週增減（大戶紅綠柱／散戶藍線，單位張）；覆蓋熱門前500檔、每週更新（scripts/holder_flow_push.py → Supabase holder_flow）。籌碼頁最終版：單一「籌碼」分頁內拆成外資(日)／投信(日)／自營(日)／大戶(週)／散戶(週) 五張獨立柱狀圖（紅買綠賣）。另：K圖新增標記分類顯示開關（法說會／除權息，比照均線顯示隱藏，動態偵測）；修正指數與外國大盤相關新聞殘留前一檔個股的 bug（指數改載市場新聞 macro_news）；外資空單避險歷史圖右上新增「事件避險／連假避險」標記開關；§4 融資動能背離加入「今日／3 日」週期；富台指期（SGX FTSE Taiwan）新增最後交易日倒數（每月倒數第二個營業日，依證交所休市表）。2026-10-06「市場觀察」新增「美債對標」：以 US10Y 為錨，切換公債天期與熱門對標資產（高股息/科技成長/投等債/定存），呈現收益率利差、存續期敏感度與合規機會／風險定性；US10Y／US2Y 預填自美國財政部官方 Daily Treasury Par Yield Curve Rates（scripts/ust_yields_push.py → Supabase ust_yields，每日更新，可手動調整為示意假設）。資料與演算法沿用本站真實資料源（TWSE／TPEx／TAIFEX／TDCC／US Treasury／Supabase），未更動後端。2026-10-11 K 圖右上角新增「⛶ 全視窗」按鈕（直播／簡報用）：K 圖彈窗撐滿整個視窗並嘗試進入瀏覽器全螢幕，主圖高度隨視窗加大；再按一次或按 Esc 還原（Esc 先還原、不關閉 K 圖），手機版不顯示（本來就是整頁）。純版面功能，未更動資料與演算法。同日 K 圖顯示設定改為「記住上一次」：均線（MA5～MA240、全部均線）、BBAND、量均線、MACD／RSI 線、大盤K、支撐壓力勾選的週期、價量分析、箱型的開關，換股票（含右上角搜尋）、切換日／週／月／小時、關掉再開、重新整理後都沿用上一次的設定，不再還原成預設（設定存在各自瀏覽器，不跨裝置；主力分點因每檔分點不同，仍是每檔各自勾選）。純顯示設定，未更動資料與演算法。同日修正：全螢幕時「畫線工具／圖形註解」下拉選單點不出來（選單原本掛在網頁最外層，瀏覽器全螢幕只顯示 K 圖彈窗內的內容），改為全螢幕時掛在 K 圖彈窗內。2026-10-12 ①外資空單溫度計新增「第三層之二：匯率 × 現貨 × 期貨 三維交叉矩陣」：原四象限保留，各象限再交叉台幣升／貶共 8 格（匯率門檻：USD/TWD 日變動 ±0.10%，其間視為持平、兩列都不命中），並附五邊形雷達（現貨買賣超、期貨部位增減、台幣升貶、指數漲跌四項取近 60 個交易日百分位，避險水位＝100−近 2 年 PR；外圈偏多、內圈偏空，不合成單一分數）；原象限 III 單獨提到匯率的文字移除，匯率一律在此層交叉。②掏金篩選器新增「跌停板」（收盤 ≤ 跌停價；跌停價＝前收×0.9 依升降單位無條件進位）。③K 圖畫線套件：最後一根 K 棒右側空白區也能落點（改記邏輯索引）；右鍵取消目前工具；輔助線與圖形改虛線；橡皮擦可按住左鍵拖曳連續清除（判定距離 10→14px）；線條只畫在繪圖區內不蓋到價格軸；縮放／平移／拖價格軸時線條跟著重畫。同日修正：選了畫線工具後換另一檔股票，按鈕仍反藍但實際不能畫——改為換股票／換週期後工具維持啟用可直接畫，關閉 K 圖時才取消。同日：K 圖畫的線與圖形改為「每檔股票各自記住」——換到別檔不會帶過去，切回來還在，重新整理後也保留（存在各自瀏覽器，最多留最近 150 檔）。題材列表／產業地圖載入加速：先顯示瀏覽器裡上一次的資料、背景再更新，進站閒置時預先抓好；後端這兩支改為可由 CDN 快取 5 分鐘（資料本身每日更新一次，內容與算法不變）。
     </div>
   </div>
 
@@ -3301,14 +3301,28 @@
       _sel=null; renderDetail();
       [].forEach.call(el('tmxHeat').querySelectorAll('.tmx-cell.on'),function(c){c.classList.remove('on');});
     };
+    // 2026-10-12 載入加速：先用瀏覽器裡上一次的資料立刻畫出來，再背景抓最新的，有變才重畫（資料每日更新一次，先看到舊的幾乎不會差）。
+    window._swrJson=window._swrJson||function(key,url,paint,fail,loading){
+      var K='swr_'+key, c=null, had=false;
+      try{ c=JSON.parse(localStorage.getItem(K)||'null'); if(c&&c.d){ had=true; paint(c.d); } }catch(e){ had=false; }
+      if(!had&&loading) loading();
+      return fetch(url).then(function(r){return r.json();}).then(function(d){
+        if(!d||d.error){ if(!had&&fail) fail(d); return; }
+        var same=false; try{ same=had&&JSON.stringify(c.d)===JSON.stringify(d); }catch(e){}
+        try{ localStorage.setItem(K,JSON.stringify({t:Date.now(),d:d})); }catch(e){}
+        if(!same) paint(d);
+      }).catch(function(){ if(!had&&fail) fail(); });
+    };
+    // 進站後閒置時先把題材列表／產業地圖的資料抓好放著（10 分鐘內抓過就不重抓），點開就不用等
+    setTimeout(function(){ ['themes','sectors'].forEach(function(k){ try{ var c=JSON.parse(localStorage.getItem('swr_'+k)||'null'); if(c&&c.t&&Date.now()-c.t<600000) return; }catch(e){}
+      window._swrJson(k,'https://tw-stock-screener-neon.vercel.app/api/screen?stat='+k,function(){}); }); }, 4000);
     window._themesShow=function(){
       if(_data){renderHeat();renderDetail();return;}
-      fetch('https://tw-stock-screener-neon.vercel.app/api/screen?stat=themes').then(function(r){return r.json();}).then(function(d){
-        if(!d||d.error){el('tmxHeat').innerHTML='<div class="fc-empty">讀取失敗</div>';return;}
+      window._swrJson('themes','https://tw-stock-screener-neon.vercel.app/api/screen?stat=themes',function(d){
         _data=d;
         if(el('tmSub'))el('tmSub').textContent='固定題材分類（合夥人口徑）· '+(d.date||'')+' · 共 '+((d.listed||[]).length)+' 個上市族群';
         renderHeat();renderDetail();
-      }).catch(function(){el('tmxHeat').innerHTML='<div class="fc-empty">讀取失敗</div>';});
+      },function(){el('tmxHeat').innerHTML='<div class="fc-empty">讀取失敗</div>';});
       if(el('tmNote'))el('tmNote').innerHTML='<b>資料源與定義：</b>題材分類採固定成分股清單（與合夥人一致，涵蓋 AI 伺服器／CoWoS／HBM／CPO／記憶體／散熱等 39 族群）。面積＝族群成分股當日成交額合計；顏色＝成交額加權或算術平均漲跌幅。上市 TWSE STOCK_DAY_ALL、上櫃 TPEx 收盤行情。';
     };
     document.addEventListener('click',function(e){
@@ -5216,8 +5230,7 @@
     }
     window._sectorShow=function(){
       if(window._loadNames && !window._names) try{ window._loadNames(function(){ if(CUR) pick(CUR,false); }); }catch(e){}
-      el('smMap').innerHTML='<div class="fc-empty">載入中…</div>';
-      fetch('https://tw-stock-screener-neon.vercel.app/api/screen?stat=sectors').then(function(r){return r.json();}).then(function(j){
+      var _paint=function(j){
         if(!j||j.error||!Array.isArray(j.sectors)){el('smMap').innerHTML='<div class="fc-empty">讀取失敗'+((j&&j.error)?'：'+j.error:'')+'</div>';return;}
         var secs=j.sectors; SECS=secs;
         if(el('smSub'))el('smSub').textContent=(j.date||'')+' · '+secs.length+' 個產業 · '+j.total+' 檔';
@@ -5236,7 +5249,8 @@
         }).join('');
         el('smMap').querySelectorAll('.sm-tile').forEach(function(t){ t.onclick=function(){ pick(t.dataset.sec, true); }; });
         if(CUR) pick(CUR, false);
-      }).catch(function(){el('smMap').innerHTML='<div class="fc-empty">讀取失敗</div>';});
+      };
+      window._swrJson('sectors','https://tw-stock-screener-neon.vercel.app/api/screen?stat=sectors',_paint,function(j){el('smMap').innerHTML='<div class="fc-empty">讀取失敗'+((j&&j.error)?'：'+j.error:'')+'</div>';},function(){el('smMap').innerHTML='<div class="fc-empty">載入中…</div>';});
       if(el('smNote'))el('smNote').innerHTML='<b>算法與資料源：</b>個股漲跌幅=今收÷前收−1；產業平均漲跌幅=該產業成分股漲跌幅算術平均（等權，非市值加權）。產業別對照 TWSE 上市公司基本資料(t187ap03_L，內嵌於後端)。磚塊大小＝該產業當日有成交的檔數。點磚塊可展開該產業成分股（收盤、漲跌幅、成交值＝收盤×成交股數，可依漲幅／跌幅／成交值排序，點個股開 K 線）。資料源 price_window。';
     };
     window._VIEWS=window._VIEWS||{}; window._VIEWS.sectors={el:'sectorView',show:'_sectorShow'};
@@ -12436,7 +12450,25 @@
       if (e.target === document.getElementById('chartModal')) closeChart();
     }
 
+    // 2026-10-12 每檔股票各自記住自己畫的線／圖形（存瀏覽器 localStorage，最多留最近 150 檔）；換股票時存回上一檔、載入這一檔
+    let _drawCode = null, _drawStore = null;
+    function _drawStoreLoad() { if (_drawStore) return _drawStore; try { _drawStore = JSON.parse(localStorage.getItem('kchart_draw_v1') || '{}') || {}; } catch (_) { _drawStore = {}; } return _drawStore; }
+    function _drawStoreSave() {
+      const st = _drawStoreLoad();
+      if (_drawCode) { if (_drawShapes.length) st[_drawCode] = { t: Date.now(), s: _drawShapes }; else delete st[_drawCode]; }
+      const ks = Object.keys(st); if (ks.length > 150) ks.sort((a, b) => (st[a].t || 0) - (st[b].t || 0)).slice(0, ks.length - 150).forEach(k => delete st[k]);
+      try { localStorage.setItem('kchart_draw_v1', JSON.stringify(st)); } catch (_) {}
+    }
+    function _drawSwap(code) {
+      if (!code || code === _drawCode) return;
+      _drawStoreSave();
+      const e = _drawStoreLoad()[code];
+      _drawShapes = (e && Array.isArray(e.s)) ? e.s.slice() : []; _drawPending = []; _drawCode = code;
+    }
+    window.addEventListener('pagehide', () => { try { _drawStoreSave(); } catch (_) {} });
+
     function _resetDrawingState() {
+      try { _drawSwap(currentCode); _drawStoreSave(); } catch (_) {}
       fibLines = []; fibMode = false; fibDragStart = null;
       trendLines = []; trendLineMode = false; trendStart = null;
       document.getElementById('fibBtn').classList.remove('active');
