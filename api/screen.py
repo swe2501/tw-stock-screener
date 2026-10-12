@@ -1318,6 +1318,75 @@ def fetch_pw_one(code, date_str, s):
     }
 
 
+# ── 20 日 SMA 三階段買點（2026-10-12 依合夥人規格；參數為初版，待以歷史圖表對照肉眼判斷後調整）────────
+SMA20_N = 20            # 均線週期（簡單移動平均，含當日收盤）
+SMA20_VOL_MULT = 1.3    # 帶量：今日量 ≥ 1.3 × max(截至昨日 5 日均量, 截至昨日 10 日均量)
+SMA20_LONG_RED = 0.03   # 長紅棒：(收−開)/收 ≥ 3%
+SMA20_LONG_TAIL = 0.03  # 長下影線：(min(開,收)−低)/收 ≥ 3%
+SMA20_PREV_DOWN_N = 5   # 原本下彎：前 5 個交易日內至少一天 MA 低於前一天
+
+
+def sma20_stage_scan(bars):
+    """bars＝[(date, o, h, l, c, v), ...] 由舊到新。回 [(index, stage), ...]（stage＝1/2/3，各輪各階段只記首次）。
+    每天先檢查重置：MA[t] < MA[t-1] → 清除階段、當天不觸發。
+      買點1（尚未記錄 1）：均線原本下彎（前 5 日內至少一天 MA 低於前一天）且目前走平或上彎（MA[t]≥MA[t-1] 且 MA[t]≥MA[t-3]）、
+                         紅 K、收盤 > MA、帶量 1.3 倍。
+      買點2（已記 1）：均線維持上彎（MA[t]>MA[t-1] 且 MA[t]>MA[t-3]）、最低 ≤ MA、收盤 > MA。
+      買點3（已記 1、2）：最高 < MA（整根在均線下），且 長紅 3%／長下影 3%／十字線（開＝收）任一。成立後該輪完成，待下彎重置。
+    同一天不跨階段。資料窗內還沒出現過重置日之前，無法確定該輪從哪開始 → 不產生訊號。"""
+    n = len(bars)
+    out = []
+    N = SMA20_N
+    if n < N + SMA20_PREV_DOWN_N + 2:
+        return out
+    closes = [b[4] for b in bars]
+    if any(x is None for x in closes):
+        return out
+    ma = [None] * n
+    run = 0.0
+    for i in range(n):
+        run += closes[i]
+        if i >= N:
+            run -= closes[i - N]
+        if i >= N - 1:
+            ma[i] = round(run / N, 6)
+    stage, known = 0, False
+    for i in range(N + SMA20_PREV_DOWN_N, n):      # 需要 MA[i-6]（判斷前 5 日每天是否低於其前一天）
+        m, m1, m3 = ma[i], ma[i - 1], ma[i - 3]
+        if m < m1:                                 # 下彎第一天即重置，當天不觸發
+            stage, known = 0, True
+            continue
+        if not known or stage >= 3:
+            continue
+        _, o, h, l, c, v = bars[i]
+        if o is None or h is None or l is None or not c:
+            continue
+        if stage == 0:
+            was_down = any(ma[d] < ma[d - 1] for d in range(i - SMA20_PREV_DOWN_N, i))
+            if not (was_down and m >= m1 and m >= m3 and c > o and c > m):
+                continue
+            vs = [bars[d][5] or 0 for d in range(i - 10, i)]
+            base = max(sum(vs[-5:]) / 5.0, sum(vs) / 10.0)
+            if base > 0 and (v or 0) >= SMA20_VOL_MULT * base:
+                stage = 1
+                out.append((i, 1))
+        elif stage == 1:
+            if m > m1 and m > m3 and l <= m and c > m:
+                stage = 2
+                out.append((i, 2))
+        elif stage == 2:
+            if h < m and ((c - o) / c >= SMA20_LONG_RED or (min(o, c) - l) / c >= SMA20_LONG_TAIL or o == c):
+                stage = 3
+                out.append((i, 3))
+    return out
+
+
+def sma20_stage_at(bars):
+    """最後一根 K 棒當天觸發的階段（1/2/3），沒有回 0。"""
+    sig = sma20_stage_scan(bars)
+    return sig[-1][1] if sig and sig[-1][0] == len(bars) - 1 else 0
+
+
 # ── 真名三式（2026-09-29 依合夥人《真名三式交易戰法核心定義與實戰指南》，參數經用戶定案）────────
 ZM3_BLACK = 3.0      # 長黑：(開−收)/收 ≥ 3%
 ZM3_RED = 3.0        # 長紅：(收−開)/收 ≥ 3%
@@ -1763,6 +1832,10 @@ def screen(params):
     check_zhenming1  = bool(params.get("zhenming1", False))
     check_zhenming2  = bool(params.get("zhenming2", False))
     check_zhenming3  = bool(params.get("zhenming3", False))
+    try:
+        sma20_stages = {int(x) for x in (params.get("sma20_stages") or []) if int(x) in (1, 2, 3)}
+    except (TypeError, ValueError):
+        sma20_stages = set()
     no_black_months  = min(int(params.get("no_black_months") or 0), 120)
     no_black_years   = no_black_months / 12  # 轉換為年（可為小數）傳給 YF API
     no_black_mult    = float(params.get("no_black_mult") or 0)
@@ -1902,7 +1975,7 @@ def screen(params):
 
     # ── price_window 逐股讀（真名/MACD/放量;涵蓋歷史日 → 修正「回搜近期日期漏股」如 3443/8-11）──
     need_pw = (vol_mult > 0 or shrink_mult > 0 or bool(macd_mode)
-               or check_zhenming1 or check_zhenming2 or check_zhenming3
+               or check_zhenming1 or check_zhenming2 or check_zhenming3 or bool(sma20_stages)
                or check_harami_bull or check_harami_bear)   # 母子線需 MA20 判趨勢 → 抓歷史
     pw_data = {}
     if need_pw:
@@ -2179,6 +2252,13 @@ def screen(params):
             if not zm3:
                 continue
 
+        sma20_hit = 0
+        if sma20_stages:
+            bars = (pw_data.get(code) or {}).get("bars") or []
+            sma20_hit = sma20_stage_at(bars) if bars else 0
+            if sma20_hit not in sma20_stages:
+                continue
+
         pc = s.get("prev_close")
         change_pct = round((c - pc) / pc * 100, 2) if pc and pc > 0 else None
 
@@ -2199,6 +2279,8 @@ def screen(params):
             item.setdefault("data_missing", []).append("gap_unverified")
         if zm3:
             item["zm3"] = zm3
+        if sma20_hit:
+            item["sma20_stage"] = sma20_hit
 
         results.append(item)
 
