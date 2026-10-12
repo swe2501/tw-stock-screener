@@ -2681,7 +2681,7 @@
     <div class="fc-note" id="hpNote"></div>
     </div><!-- /cb-sheet 每日台股籌碼報告 -->
     <div style="max-width:1200px;margin:14px auto 0;padding:10px 14px;font-size:11.5px;line-height:1.7;color:var(--text-muted);border-top:1px dashed var(--border);">
-      <b>改動紀錄（供合夥人複查）</b>：2026-09-30 全站版面採用合夥人 redesign 版；同日輕更新（ETF 甜甜圈互動、市場廣度分頁與篩選分離、選擇權支撐壓力 OI 峰值前端、結算日遇休市順延、多空排列配色、行動版表格）。掏金篩選器含「真名三式（多頭回洗反包）」（演算法與歷史回測見該勾選框）。2026-10-04 個股K圖量能面板新增「籌碼」分頁：三大法人每日淨買賣超堆疊柱（外資/投信/自營，紅買綠賣以0為基準，單位張，含合計線；滑鼠移至柱上顯示當日數值），對齊日K日期（僅日K、近120交易日）；資料源＝本站 institutional_trades（TWSE／TPEx T86 三大法人日報）每日推送至 Supabase inst_daily（scripts/inst_daily_push.py）。同日籌碼頁改為最上層分頁（點「籌碼」隱藏技術指標 VOL/MACD/RSI），並拆出「大戶 vs 散戶（週）」：資料源＝TDCC 集保股權分散表（每週五）＋當週收盤換算市值；大戶＝持股≥300張 或 市值≥3000萬、散戶＝持股<20張 或 市值<100萬（跨 TDCC 級距用均勻分布內插，為近似值），畫週增減（大戶紅綠柱／散戶藍線，單位張）；覆蓋熱門前500檔、每週更新（scripts/holder_flow_push.py → Supabase holder_flow）。籌碼頁最終版：單一「籌碼」分頁內拆成外資(日)／投信(日)／自營(日)／大戶(週)／散戶(週) 五張獨立柱狀圖（紅買綠賣）。另：K圖新增標記分類顯示開關（法說會／除權息，比照均線顯示隱藏，動態偵測）；修正指數與外國大盤相關新聞殘留前一檔個股的 bug（指數改載市場新聞 macro_news）；外資空單避險歷史圖右上新增「事件避險／連假避險」標記開關；§4 融資動能背離加入「今日／3 日」週期；富台指期（SGX FTSE Taiwan）新增最後交易日倒數（每月倒數第二個營業日，依證交所休市表）。2026-10-06「市場觀察」新增「美債對標」：以 US10Y 為錨，切換公債天期與熱門對標資產（高股息/科技成長/投等債/定存），呈現收益率利差、存續期敏感度與合規機會／風險定性；US10Y／US2Y 預填自美國財政部官方 Daily Treasury Par Yield Curve Rates（scripts/ust_yields_push.py → Supabase ust_yields，每日更新，可手動調整為示意假設）。資料與演算法沿用本站真實資料源（TWSE／TPEx／TAIFEX／TDCC／US Treasury／Supabase），未更動後端。2026-10-11 K 圖右上角新增「⛶ 全視窗」按鈕（直播／簡報用）：K 圖彈窗撐滿整個視窗並嘗試進入瀏覽器全螢幕，主圖高度隨視窗加大；再按一次或按 Esc 還原（Esc 先還原、不關閉 K 圖），手機版不顯示（本來就是整頁）。純版面功能，未更動資料與演算法。
+      <b>改動紀錄（供合夥人複查）</b>：2026-09-30 全站版面採用合夥人 redesign 版；同日輕更新（ETF 甜甜圈互動、市場廣度分頁與篩選分離、選擇權支撐壓力 OI 峰值前端、結算日遇休市順延、多空排列配色、行動版表格）。掏金篩選器含「真名三式（多頭回洗反包）」（演算法與歷史回測見該勾選框）。2026-10-04 個股K圖量能面板新增「籌碼」分頁：三大法人每日淨買賣超堆疊柱（外資/投信/自營，紅買綠賣以0為基準，單位張，含合計線；滑鼠移至柱上顯示當日數值），對齊日K日期（僅日K、近120交易日）；資料源＝本站 institutional_trades（TWSE／TPEx T86 三大法人日報）每日推送至 Supabase inst_daily（scripts/inst_daily_push.py）。同日籌碼頁改為最上層分頁（點「籌碼」隱藏技術指標 VOL/MACD/RSI），並拆出「大戶 vs 散戶（週）」：資料源＝TDCC 集保股權分散表（每週五）＋當週收盤換算市值；大戶＝持股≥300張 或 市值≥3000萬、散戶＝持股<20張 或 市值<100萬（跨 TDCC 級距用均勻分布內插，為近似值），畫週增減（大戶紅綠柱／散戶藍線，單位張）；覆蓋熱門前500檔、每週更新（scripts/holder_flow_push.py → Supabase holder_flow）。籌碼頁最終版：單一「籌碼」分頁內拆成外資(日)／投信(日)／自營(日)／大戶(週)／散戶(週) 五張獨立柱狀圖（紅買綠賣）。另：K圖新增標記分類顯示開關（法說會／除權息，比照均線顯示隱藏，動態偵測）；修正指數與外國大盤相關新聞殘留前一檔個股的 bug（指數改載市場新聞 macro_news）；外資空單避險歷史圖右上新增「事件避險／連假避險」標記開關；§4 融資動能背離加入「今日／3 日」週期；富台指期（SGX FTSE Taiwan）新增最後交易日倒數（每月倒數第二個營業日，依證交所休市表）。2026-10-06「市場觀察」新增「美債對標」：以 US10Y 為錨，切換公債天期與熱門對標資產（高股息/科技成長/投等債/定存），呈現收益率利差、存續期敏感度與合規機會／風險定性；US10Y／US2Y 預填自美國財政部官方 Daily Treasury Par Yield Curve Rates（scripts/ust_yields_push.py → Supabase ust_yields，每日更新，可手動調整為示意假設）。資料與演算法沿用本站真實資料源（TWSE／TPEx／TAIFEX／TDCC／US Treasury／Supabase），未更動後端。2026-10-11 K 圖右上角新增「⛶ 全視窗」按鈕（直播／簡報用）：K 圖彈窗撐滿整個視窗並嘗試進入瀏覽器全螢幕，主圖高度隨視窗加大；再按一次或按 Esc 還原（Esc 先還原、不關閉 K 圖），手機版不顯示（本來就是整頁）。純版面功能，未更動資料與演算法。同日 K 圖顯示設定改為「記住上一次」：均線（MA5～MA240、全部均線）、BBAND、量均線、MACD／RSI 線、大盤K、支撐壓力勾選的週期、價量分析、箱型的開關，換股票（含右上角搜尋）、切換日／週／月／小時、關掉再開、重新整理後都沿用上一次的設定，不再還原成預設（設定存在各自瀏覽器，不跨裝置；主力分點因每檔分點不同，仍是每檔各自勾選）。純顯示設定，未更動資料與演算法。同日修正：全螢幕時「畫線工具／圖形註解」下拉選單點不出來（選單原本掛在網頁最外層，瀏覽器全螢幕只顯示 K 圖彈窗內的內容），改為全螢幕時掛在 K 圖彈窗內。2026-10-12 ①外資空單溫度計新增「第三層之二：匯率 × 現貨 × 期貨 三維交叉矩陣」：原四象限保留，各象限再交叉台幣升／貶共 8 格（匯率門檻：USD/TWD 日變動 ±0.10%，其間視為持平、兩列都不命中），並附五邊形雷達（現貨買賣超、期貨部位增減、台幣升貶、指數漲跌四項取近 60 個交易日百分位，避險水位＝100−近 2 年 PR；外圈偏多、內圈偏空，不合成單一分數）；原象限 III 單獨提到匯率的文字移除，匯率一律在此層交叉。②掏金篩選器新增「跌停板」（收盤 ≤ 跌停價；跌停價＝前收×0.9 依升降單位無條件進位）。③K 圖畫線套件：最後一根 K 棒右側空白區也能落點（改記邏輯索引）；右鍵取消目前工具；輔助線與圖形改虛線；橡皮擦可按住左鍵拖曳連續清除（判定距離 10→14px）；線條只畫在繪圖區內不蓋到價格軸；縮放／平移／拖價格軸時線條跟著重畫。同日修正：選了畫線工具後換另一檔股票，按鈕仍反藍但實際不能畫——改為換股票／換週期後工具維持啟用可直接畫，關閉 K 圖時才取消。同日：K 圖畫的線與圖形改為「每檔股票各自記住」——換到別檔不會帶過去，切回來還在，重新整理後也保留（存在各自瀏覽器，最多留最近 150 檔）。題材列表／產業地圖載入加速：先顯示瀏覽器裡上一次的資料、背景再更新，進站閒置時預先抓好；後端這兩支改為可由 CDN 快取 5 分鐘（資料本身每日更新一次，內容與算法不變）。再改為「前一晚先算好」：每日排程尾端把兩頁的彙整結果存進 Supabase page_cache（scripts/page_cache_push.py，每頁 1 列每日覆寫），前端直接讀表；表內沒有或超過 4 天未更新才退回後端現算。
     </div>
   </div>
 
@@ -3301,14 +3301,33 @@
       _sel=null; renderDetail();
       [].forEach.call(el('tmxHeat').querySelectorAll('.tmx-cell.on'),function(c){c.classList.remove('on');});
     };
+    // 2026-10-12 載入加速：先用瀏覽器裡上一次的資料立刻畫出來，再背景抓最新的，有變才重畫（資料每日更新一次，先看到舊的幾乎不會差）。
+    window._swrJson=window._swrJson||function(key,url,paint,fail,loading){
+      var K='swr_'+key, c=null, had=false;
+      try{ c=JSON.parse(localStorage.getItem(K)||'null'); if(c&&c.d){ had=true; paint(c.d); } }catch(e){ had=false; }
+      if(!had&&loading) loading();
+      // 2026-10-12 先讀前一晚算好存進 Supabase page_cache 的整頁資料（快）；表裡沒有、或超過 4 天沒更新，才退回請後端現算
+      var SB=(typeof SIG_SB_URL!=='undefined'&&SIG_SB_URL)?SIG_SB_URL:'https://bruqrbvbjxntgoljxsne.supabase.co', AK=(typeof SIG_SB_ANON!=='undefined'&&SIG_SB_ANON)?SIG_SB_ANON:'sb_publishable_KgYlaR-mqtx4uVre6kPD2A_qO6tdT1y';
+      var fresh=fetch(SB+'/rest/v1/page_cache?kind=eq.'+encodeURIComponent(key)+'&select=payload,updated_at',{headers:{apikey:AK,Authorization:'Bearer '+AK}}).then(function(r){return r.json();}).then(function(a){
+        var x=Array.isArray(a)&&a[0]; if(!x||!x.payload||x.payload.error||(Date.now()-new Date(x.updated_at).getTime())>4*86400000) throw new Error('no table row'); return x.payload;
+      }).catch(function(){ return fetch(url).then(function(r){return r.json();}); });
+      return fresh.then(function(d){
+        if(!d||d.error){ if(!had&&fail) fail(d); return; }
+        var same=false; try{ same=had&&JSON.stringify(c.d)===JSON.stringify(d); }catch(e){}
+        try{ localStorage.setItem(K,JSON.stringify({t:Date.now(),d:d})); }catch(e){}
+        if(!same) paint(d);
+      }).catch(function(){ if(!had&&fail) fail(); });
+    };
+    // 進站後閒置時先把題材列表／產業地圖的資料抓好放著（10 分鐘內抓過就不重抓），點開就不用等
+    setTimeout(function(){ ['themes','sectors'].forEach(function(k){ try{ var c=JSON.parse(localStorage.getItem('swr_'+k)||'null'); if(c&&c.t&&Date.now()-c.t<600000) return; }catch(e){}
+      window._swrJson(k,'https://tw-stock-screener-neon.vercel.app/api/screen?stat='+k,function(){}); }); }, 4000);
     window._themesShow=function(){
       if(_data){renderHeat();renderDetail();return;}
-      fetch('https://tw-stock-screener-neon.vercel.app/api/screen?stat=themes').then(function(r){return r.json();}).then(function(d){
-        if(!d||d.error){el('tmxHeat').innerHTML='<div class="fc-empty">讀取失敗</div>';return;}
+      window._swrJson('themes','https://tw-stock-screener-neon.vercel.app/api/screen?stat=themes',function(d){
         _data=d;
         if(el('tmSub'))el('tmSub').textContent='固定題材分類（合夥人口徑）· '+(d.date||'')+' · 共 '+((d.listed||[]).length)+' 個上市族群';
         renderHeat();renderDetail();
-      }).catch(function(){el('tmxHeat').innerHTML='<div class="fc-empty">讀取失敗</div>';});
+      },function(){el('tmxHeat').innerHTML='<div class="fc-empty">讀取失敗</div>';});
       if(el('tmNote'))el('tmNote').innerHTML='<b>資料源與定義：</b>題材分類採固定成分股清單（與合夥人一致，涵蓋 AI 伺服器／CoWoS／HBM／CPO／記憶體／散熱等 39 族群）。面積＝族群成分股當日成交額合計；顏色＝成交額加權或算術平均漲跌幅。上市 TWSE STOCK_DAY_ALL、上櫃 TPEx 收盤行情。';
     };
     document.addEventListener('click',function(e){
@@ -3841,6 +3860,20 @@
     .pf-q .qd{font-size:12px;color:var(--pf-t2);margin-top:6px;font-weight:700;}
     .pf-q .qp{font-size:12px;color:var(--pf-mut);margin-top:4px;line-height:1.6;}
     .pf-q.on .qp{color:var(--pf-t3);}
+    /* 第三層之二：匯率×現貨×期貨（2026-10-12） */
+    .pf-fx3{display:grid;grid-template-columns:300px 1fr;gap:16px;margin-top:16px;align-items:start;}
+    .pf-fx3-radar{border:1px solid var(--pf-bd);border-radius:12px;background:var(--pf-inner2);padding:10px 8px 12px;}
+    .pf-fx3-radar svg{display:block;width:100%;height:auto;}
+    .pf-fx3-leg{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;font-size:11px;color:var(--pf-mut);margin-top:4px;}
+    .pf-fx3-leg i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px;}
+    .pf-quads4{grid-template-columns:repeat(4,1fr);gap:8px;}
+    .pf-quads4 .pf-q{padding:11px 12px;}
+    .pf-quads4 .pf-q.col{opacity:.92;border-style:dashed;border-color:#0ea5e9;}
+    .pf-quads4 .pf-q .qn{font-size:11.5px;}
+    .pf-quads4 .pf-q .qp{font-size:11.5px;}
+    .pf-fx3-note{font-size:11px;color:var(--pf-mut);line-height:1.7;margin-top:10px;padding-top:10px;border-top:1px solid var(--pf-bd);}
+    @media (max-width:1180px){.pf-fx3{grid-template-columns:1fr;}.pf-fx3-radar{max-width:340px;margin:0 auto;width:100%;}.pf-quads4{grid-template-columns:1fr 1fr;}}
+    @media (max-width:560px){.pf-quads4{grid-template-columns:1fr;}}
     .pf-ping{display:inline-flex;align-items:center;gap:4px;}
     .pf-ping i{width:6px;height:6px;border-radius:50%;background:var(--pf-accent);animation:pfPing 1.2s cubic-bezier(0,0,.2,1) infinite;}
     .pf-contracts{margin-top:16px;padding-top:12px;border-top:1px solid var(--pf-bd);display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;font-size:12px;color:var(--pf-mut);font-family:"JetBrains Mono",monospace;}
@@ -4004,6 +4037,25 @@
         <div class="pf-contracts" id="fhContracts"></div>
       </div>
 
+      <!-- 第三層之二：匯率 × 現貨 × 期貨 三維交叉（2026-10-12 合夥人要求：匯率要每個象限都交叉，不能只有一格提到） -->
+      <div class="pf-glass pf-sec">
+        <div class="pf-hd" style="align-items:center">
+          <div><h3 class="pf-h3"><span style="color:#f59e0b">⬠</span> 第三層之二：匯率 × 現貨 × 期貨 三維交叉矩陣 (FX-Confirmed Matrix)</h3>
+            <div class="pf-sub">上方四象限（現貨 ⊗ 期貨）再各自交叉台幣升貶，共 8 格；匯率是資金進出的佐證，不單獨推翻期現貨方向</div></div>
+          <span class="pf-badge" id="fhFx3Badge" style="font-size:12px;padding:4px 10px;background:rgba(245,158,11,.1);color:#f59e0b;border:1px solid rgba(245,158,11,.25)">—</span>
+        </div>
+        <div class="pf-fx3">
+          <div class="pf-fx3-radar"><div id="fhFx3Radar"></div><div class="pf-fx3-leg" id="fhFx3Leg"></div></div>
+          <div class="pf-fx3-grid">
+            <div class="pf-rowlab c-bull"><i style="background:#10b981"></i> 台幣升值（USD/TWD 下跌，資金流入方向）</div>
+            <div class="pf-quads pf-quads4" id="fhFx3Up"></div>
+            <div class="pf-rowlab c-bear" style="margin-top:4px"><i style="background:#f43f5e"></i> 台幣貶值（USD/TWD 上漲，資金流出方向）</div>
+            <div class="pf-quads pf-quads4" id="fhFx3Dn"></div>
+          </div>
+        </div>
+        <div class="pf-fx3-note algo-gated">判定方式：① 匯率＝USD/TWD 當日收盤對前一交易日的變動，跌 ≥ 0.10% 記「升值」、漲 ≥ 0.10% 記「貶值」、其間記「持平」（持平時兩列都不命中，只標出現期貨所在欄）。② 現貨／期貨象限沿用上方第三層。③ 五邊形＝五個面向各自在近 60 個交易日的百分位（0～100，50＝中位），外圈＝偏多／資金流入、內圈＝偏空／資金流出：現貨買賣超、期貨淨部位單日增減、台幣升貶幅、指數漲跌幅，以及避險水位（＝100 − 避險比率近 2 年 PR，避險越低越靠外）。五邊形只呈現各面向相對位置，不合成單一分數、不預測走勢。匯率會受出口商拋匯、央行調節、美元指數等非外資因素影響，升貶不等於已確認外資淨匯入／匯出。</div>
+      </div>
+
       <!-- 第四層：衍生品結算與關鍵事件窗風險倒數 -->
       <div class="pf-glass pf-sec">
         <div class="pf-hd" style="align-items:center">
@@ -4091,7 +4143,7 @@
     var QDEF={
       1:{h:'象限 I • 偏多增曝險',tag:'偏多增曝險',c:'#34d399',cl:'bull',d:'現貨買超 (+) ⊗ 期貨往多方調整（空單減）',p:'現貨買超、同時期貨往多方調整（空單減少）：今日偏多、增加曝險。若空單大幅回補可留意軋空可能，但不確認後續走勢。',label:'偏多增曝險',risk:'方向偏多'},
       2:{h:'象限 II • 保留現貨・提高防禦',tag:'動機未確認',c:'#7dd3fc',cl:'sky',d:'現貨買超 (+) ⊗ 期貨往空方調整（空單增）',p:'現貨買超或未明顯減持、同時期貨往空方調整（空單增加）：可能為保留現貨、提高防禦，也可能涉及套利；交易動機未確認、非翻空。',label:'保留現貨・提高防禦',risk:'動機未確認'},
-      3:{h:'象限 III • 偏空減曝險',tag:'偏空減曝險',c:'#fb7185',cl:'bear',d:'現貨賣超 (-) ⊗ 期貨往空方調整（空單增）',p:'現貨賣超、同時期貨往空方調整（空單增加）：今日偏空、降低曝險。匯率是否同步佐證另見匯率層；匯率走弱不等於已確認外資淨匯出。',label:'偏空減曝險',risk:'方向偏空'},
+      3:{h:'象限 III • 偏空減曝險',tag:'偏空減曝險',c:'#fb7185',cl:'bear',d:'現貨賣超 (-) ⊗ 期貨往空方調整（空單增）',p:'現貨賣超、同時期貨往空方調整（空單增加）：今日偏空、降低曝險。',label:'偏空減曝險',risk:'方向偏空'},
       4:{h:'象限 IV • 訊號混合',tag:'訊號混合',c:'#fbbf24',cl:'warn',d:'現貨賣超 (-) ⊗ 期貨往多方調整（空單回補）',p:'現貨賣超、但期貨往多方調整（空單回補）：現貨與期貨方向未一致，訊號混合，可能同步縮減現貨與避險部位，不宜單向解讀。',label:'訊號混合',risk:'方向未一致'}
     };
     var CLS={bull:'background:rgba(16,185,129,.1);color:#10b981;border-color:rgba(16,185,129,.3)',sky:'background:rgba(14,165,233,.1);color:var(--pf-sky);border-color:rgba(14,165,233,.3)',
@@ -4147,6 +4199,7 @@
       computeFlags(); var cfl=FLAGS[cur.trade_date];
       if(cfl) el('fhNarrative').innerHTML+=' <strong style="color:#f59e0b"> 近 3 日累計空單增加 '+n0(cfl.cum)+' 口，'+flagText(cur.trade_date,cfl)+'。</strong>';
       renderChart(); renderFx(); renderQuad(q); renderTable(); renderHedgeFlags();
+      try{ renderFx3(q, cur, rank); }catch(e){}
       el('fhContracts').innerHTML='<div>大台指 (TX): <span class="'+(cur.fx_tx_net<0?'c-bear':'c-bull')+'" style="font-weight:600">'+n0(cur.fx_tx_net)+' 口</span></div>'
         +'<div>小台指 (MTX): <span class="'+(cur.fx_mtx_net<0?'c-bear':'c-bull')+'" style="font-weight:600">'+n0(cur.fx_mtx_net)+' 口 (約 '+n0(cur.fx_mtx_net/4)+' 大台)</span></div>'
         +'<div>微台指 (TMF): <span class="'+(cur.fx_tmf_net<0?'c-bear':'c-bull')+'" style="font-weight:600">'+n0(cur.fx_tmf_net)+' 口 (約 '+n0(cur.fx_tmf_net/20)+' 大台)</span></div>';
@@ -4212,6 +4265,59 @@
       el('fhFlowSum').innerHTML='<span class="'+(sum20>=0?'c-bull':'c-bear')+'">'+sgn(sum20,1)+' 億新台幣</span>';
       var f20=fxRows.slice(-20); if(f20.length>=2){ var a=FX[f20[0].trade_date], b=FX[f20[f20.length-1].trade_date];
         el('fhFxTrend').textContent=b<a?'台幣震盪走升（熱錢未外逃）':(b>a?'台幣走貶（留意外資匯出）':'台幣持平'); } else el('fhFxTrend').textContent='—';
+    }
+    // ══ 第三層之二：匯率 × 現貨 × 期貨（2026-10-12）══
+    // 8 格＝上方四象限各自再交叉台幣升／貶；FX_FLAT＝匯率視為持平的門檻（日變動絕對值 < 0.10%）
+    var FX_FLAT=0.10, FX3_WIN=60;
+    var FX3={
+      up:{1:{t:'三向一致偏多',tag:'流入佐證',cl:'bull',p:'買超、空單減、台幣升：現貨、期貨、匯率同向，資金流入的佐證最完整。'},
+          2:{t:'流入但加避險',tag:'防禦型加碼',cl:'sky',p:'買超且台幣升（資金流入方向），但同步加空單：邊買邊鎖風險，也可能是套利；偏多但保留防禦。'},
+          3:{t:'偏空・流出未獲佐證',tag:'匯率分歧',cl:'warn',p:'賣超且加空單，但台幣升：賣股資金可能仍停泊台幣未匯出，或匯市另有非外資因素；偏空，惟資金流出未獲匯率佐證。'},
+          4:{t:'縮部位・資金未離場',tag:'中性調節',cl:'sky',p:'賣超、空單回補、台幣升：現貨與避險部位同步縮減，但匯率未見流出；偏中性調節，不宜解讀為撤資。'}},
+      dn:{1:{t:'偏多・流入未獲佐證',tag:'匯率分歧',cl:'warn',p:'買超且空單減，但台幣貶：買盤可能來自既有台幣部位而非新匯入，或匯市另有非外資因素；偏多，惟資金流入未獲匯率佐證。'},
+          2:{t:'買超但防禦加重',tag:'動機未確認',cl:'warn',p:'買超、同步加空單、台幣貶：期貨與匯率都偏防禦，買超的持續性待觀察；交易動機未確認、非翻空。'},
+          3:{t:'三向一致偏空',tag:'流出佐證',cl:'bear',p:'賣超、空單增、台幣貶：現貨、期貨、匯率同向，資金流出的佐證最完整（仍不等於已確認外資淨匯出金額）。'},
+          4:{t:'現貨撤出・避險隨之解除',tag:'偏空調節',cl:'bear',p:'賣超且台幣貶（資金流出方向），空單回補：較可能是現貨減碼後避險部位跟著解除，而非轉多；偏空調節。'}}
+    };
+    function fxPctOn(i){ if(i<1) return null; var a=FX[DATA[i].trade_date], b=FX[DATA[i-1].trade_date]; if(a==null&&DATA[i].usdtwd!=null)a=+DATA[i].usdtwd; if(b==null&&DATA[i-1].usdtwd!=null)b=+DATA[i-1].usdtwd; return (a!=null&&b!=null&&b>0)?(a/b-1)*100:null; }
+    function pctRank(arr,v){ var a=arr.filter(function(x){return x!=null&&isFinite(x);}); if(v==null||!isFinite(v)||a.length<5) return null; var le=0,lt=0; a.forEach(function(x){ if(x<v)lt++; if(x<=v)le++; }); return (lt+le)/2/a.length*100; }
+    function renderFx3(q, cur, rank){
+      var n=DATA.length-1, i0=Math.max(1,n-FX3_WIN+1), idx=[]; for(var i=i0;i<=n;i++) idx.push(i);
+      var fxp=fxPctOn(n), st=fxp==null?'na':(fxp<=-FX_FLAT?'up':(fxp>=FX_FLAT?'dn':'flat'));
+      var bd=el('fhFx3Badge');
+      if(bd) bd.textContent=st==='na'?'匯率資料缺':('USD/TWD '+(fxp>=0?'+':'')+fxp.toFixed(2)+'% → '+(st==='up'?'台幣升值':(st==='dn'?'台幣貶值':'匯率持平（< '+FX_FLAT.toFixed(2)+'%）')));
+      ['up','dn'].forEach(function(row){
+        el(row==='up'?'fhFx3Up':'fhFx3Dn').innerHTML=[1,2,4,3].map(function(k){ var d=FX3[row][k], on=(st===row&&k===q), col=(!on&&k===q&&(st==='flat'||st==='na'));
+          return '<div class="pf-q'+(on?' on':'')+(col?' col':'')+'"><div class="qh"><span class="qn" style="color:'+(on?'var(--pf-sky-strong)':QDEF[k].c)+'">'+['','I','II','III','IV'][k]+'・'+d.t+'</span>'
+            +(on?'<span class="pf-badge pf-ping" style="background:rgba(14,165,233,.2);color:var(--pf-sky);border:1px solid rgba(14,165,233,.3)"><i></i> 今日命中</span>'
+                :'<span class="pf-badge" style="'+CLS[d.cl]+';border:1px solid">'+(col?'今日所在欄':d.tag)+'</span>')+'</div>'
+            +'<div class="qd">'+QDEF[k].label+' ⊗ '+(row==='up'?'台幣升值':'台幣貶值')+'</div><div class="qp">'+d.p+'</div></div>'; }).join('');
+      });
+      // 五邊形：五個面向在近 60 個交易日的百分位（外圈＝偏多／流入）
+      var dl=function(i){ return (DATA[i].eq_net_lots!=null&&DATA[i-1].eq_net_lots!=null)?DATA[i].eq_net_lots-DATA[i-1].eq_net_lots:null; };
+      var ip=function(i){ var a=+DATA[i].taiex_close,b=+DATA[i-1].taiex_close; return (a&&b)?(a/b-1)*100:null; };
+      var ax=[
+        {k:'現貨買賣超',v:pctRank(idx.map(function(i){return DATA[i].spot_net;}), cur.spot_net)},
+        {k:'台幣升貶',v:pctRank(idx.map(function(i){var x=fxPctOn(i);return x==null?null:-x;}), fxp==null?null:-fxp)},
+        {k:'指數漲跌',v:pctRank(idx.map(ip), ip(n))},
+        {k:'避險水位',v:(rank==null||!isFinite(rank))?null:100-rank},
+        {k:'期貨部位增減',v:pctRank(idx.map(dl), dl(n))}
+      ];
+      var cx=150, cy=132, R=84, pt=function(j,rr){ var a=-Math.PI/2+j*2*Math.PI/5; return [cx+rr*Math.cos(a), cy+rr*Math.sin(a)]; };
+      var poly=function(rs){ return rs.map(function(rr,j){ var p=pt(j,rr); return p[0].toFixed(1)+','+p[1].toFixed(1); }).join(' '); };
+      var bull=ax.filter(function(a){return a.v!=null&&a.v>=50;}).length, known=ax.filter(function(a){return a.v!=null;}).length;
+      var colr=known&&bull*2>known?'#f43f5e':(known&&bull*2<known?'#10b981':'#f59e0b');   /* 配色慣例：偏多紅、偏空綠 */
+      var svg='<svg viewBox="0 0 300 270" role="img" aria-label="匯率、現貨、期貨五面向雷達圖">';
+      [25,50,75,100].forEach(function(g){ svg+='<polygon points="'+poly([0,1,2,3,4].map(function(){return R*g/100;}))+'" fill="none" style="stroke:var(--pf-bd)" stroke-width="'+(g===50?1.4:1)+'"'+(g===50?' stroke-dasharray="4 3"':'')+'/>'; });
+      for(var j=0;j<5;j++){ var e=pt(j,R); svg+='<line x1="'+cx+'" y1="'+cy+'" x2="'+e[0].toFixed(1)+'" y2="'+e[1].toFixed(1)+'" style="stroke:var(--pf-bd)" stroke-width="1"/>'; }
+      svg+='<polygon points="'+poly(ax.map(function(a){return R*(a.v==null?50:a.v)/100;}))+'" fill="'+colr+'" fill-opacity=".18" stroke="'+colr+'" stroke-width="2" stroke-linejoin="round"/>';
+      ax.forEach(function(a,j){ var p=pt(j,R*(a.v==null?50:a.v)/100), l=pt(j,R+22), anc=Math.abs(l[0]-cx)<8?'middle':(l[0]>cx?'start':'end');
+        svg+='<circle cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="3" fill="'+colr+'"/>'
+          +'<text x="'+l[0].toFixed(1)+'" y="'+(l[1]-3).toFixed(1)+'" text-anchor="'+anc+'" style="fill:var(--pf-t2);font-size:13px;font-weight:700">'+(a.v==null?'—':Math.round(a.v))+'</text>'
+          +'<text x="'+l[0].toFixed(1)+'" y="'+(l[1]+11).toFixed(1)+'" text-anchor="'+anc+'" style="fill:var(--pf-mut);font-size:10.5px">'+a.k+'</text>'; });
+      svg+='</svg>';
+      el('fhFx3Radar').innerHTML=svg;
+      el('fhFx3Leg').innerHTML='<span><i style="background:'+colr+'"></i>今日（近 '+FX3_WIN+' 日百分位）</span><span><i style="background:transparent;border:1px dashed var(--pf-mut)"></i>中位 50</span><span>外圈偏多・內圈偏空</span>';
     }
     function renderQuad(q){
       [1,2,3,4].forEach(function(n){ var d=QDEF[n], on=n===q;
@@ -4427,7 +4533,7 @@
       var rk=el('fhSimRisk'); rk.textContent=Q.risk; rk.setAttribute('style',CLS[Q.cl]+';border:1px solid;font-family:\'JetBrains Mono\',monospace');
       var txt={
         2:'<strong class="c-sky">今日配置判讀【象限二・保留現貨、提高防禦】：</strong>外資現貨買超 +'+spot+' 億，同時期貨往空方調整、空單增至 '+shortLots.toLocaleString()+' 口（淨空名目佔持股市值 '+r.toFixed(2)+'%、PR '+rank.toFixed(1)+'，此為相對規模指標、非單一法人避險比率）。可能為保留現貨、提高防禦，也可能涉及套利；交易動機未確認、非翻空，不宜將高口數逕視為崩盤徵兆。',
-        3:'<strong class="c-bear">今日配置判讀【象限三・偏空減曝險】：</strong>外資現貨賣超 '+Math.abs(spot)+' 億，且期貨往空方調整、空單增至 '+shortLots.toLocaleString()+' 口（PR '+rank.toFixed(1)+'）。今日偏空、降低曝險。是否有匯率同步佐證另見匯率層；僅台幣貶值不等於已確認外資淨匯出，請勿單以此判定撤資。',
+        3:'<strong class="c-bear">今日配置判讀【象限三・偏空減曝險】：</strong>外資現貨賣超 '+Math.abs(spot)+' 億，且期貨往空方調整、空單增至 '+shortLots.toLocaleString()+' 口（PR '+rank.toFixed(1)+'）。今日偏空、降低曝險。匯率是否同步佐證，四個象限一律見「第三層之二」。',
         1:'<strong class="c-bull">今日配置判讀【象限一・偏多增曝險】：</strong>外資現貨買超 +'+spot+' 億，且期貨往多方調整、空單降至 '+shortLots.toLocaleString()+' 口。今日偏多、增加曝險；若空單大幅回補可留意軋空可能，但不確認後續走勢。',
         4:'<strong class="c-warn">今日配置判讀【象限四・訊號混合】：</strong>外資現貨賣超 '+Math.abs(spot)+' 億，但期貨往多方調整、空單回補（'+shortLots.toLocaleString()+' 口）。現貨與期貨方向未一致，訊號混合，可能同步縮減現貨與避險部位，不宜單向解讀。'
       }[q];
@@ -5159,8 +5265,7 @@
     }
     window._sectorShow=function(){
       if(window._loadNames && !window._names) try{ window._loadNames(function(){ if(CUR) pick(CUR,false); }); }catch(e){}
-      el('smMap').innerHTML='<div class="fc-empty">載入中…</div>';
-      fetch('https://tw-stock-screener-neon.vercel.app/api/screen?stat=sectors').then(function(r){return r.json();}).then(function(j){
+      var _paint=function(j){
         if(!j||j.error||!Array.isArray(j.sectors)){el('smMap').innerHTML='<div class="fc-empty">讀取失敗'+((j&&j.error)?'：'+j.error:'')+'</div>';return;}
         var secs=j.sectors; SECS=secs;
         if(el('smSub'))el('smSub').textContent=(j.date||'')+' · '+secs.length+' 個產業 · '+j.total+' 檔';
@@ -5179,7 +5284,8 @@
         }).join('');
         el('smMap').querySelectorAll('.sm-tile').forEach(function(t){ t.onclick=function(){ pick(t.dataset.sec, true); }; });
         if(CUR) pick(CUR, false);
-      }).catch(function(){el('smMap').innerHTML='<div class="fc-empty">讀取失敗</div>';});
+      };
+      window._swrJson('sectors','https://tw-stock-screener-neon.vercel.app/api/screen?stat=sectors',_paint,function(j){el('smMap').innerHTML='<div class="fc-empty">讀取失敗'+((j&&j.error)?'：'+j.error:'')+'</div>';},function(){el('smMap').innerHTML='<div class="fc-empty">載入中…</div>';});
       if(el('smNote'))el('smNote').innerHTML='<b>算法與資料源：</b>個股漲跌幅=今收÷前收−1；產業平均漲跌幅=該產業成分股漲跌幅算術平均（等權，非市值加權）。產業別對照 TWSE 上市公司基本資料(t187ap03_L，內嵌於後端)。磚塊大小＝該產業當日有成交的檔數。點磚塊可展開該產業成分股（收盤、漲跌幅、成交值＝收盤×成交股數，可依漲幅／跌幅／成交值排序，點個股開 K 線）。資料源 price_window。';
     };
     window._VIEWS=window._VIEWS||{}; window._VIEWS.sectors={el:'sectorView',show:'_sectorShow'};
@@ -8611,13 +8717,19 @@
         <div class="sc-panel" data-cat="limit">
           <div class="sc-hd"><a onclick="_scToggle('limit')"><span class="sc-ar">▸</span><b style="color:#e74c3c">漲停/跌停</b></a><span class="sc-sum"></span></div>
           <div class="sc-body" style="display:none">
-          <div class="sc-note">跌停板篩選尚未提供，之後補上。</div>
           <div class="checkbox-grid sc-cbs">
         <label class="checkbox-row">
           <input type="checkbox" id="limit_up" />
           <div>
             <div class="cb-label">漲停板</div>
             <div class="cb-hint">當日收盤達漲停價（+10%）</div>
+          </div>
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="limit_down" />
+          <div>
+            <div class="cb-label">跌停板</div>
+            <div class="cb-hint">當日收盤達跌停價（−10%）</div>
           </div>
         </label>
           </div>
@@ -9324,7 +9436,11 @@
             var _ts=el('srTabSel'); if(_ts)_ts.onchange=function(){ SR.n=+_ts.value; srRender(); };
           }
           function bindSrc(box){ box.querySelectorAll('[data-src]').forEach(function(b){ b.onclick=function(){ SR.src=b.getAttribute('data-src'); fetchSr(SR.code); }; }); }
-          window._srPeriods=window._srPeriods||{};   // 勾選要畫的「週期」(SPEC-002：依週期，不跨週期混算)；預設全部不勾（不畫 S/R）
+          // K 圖顯示設定記憶（2026-10-11）：均線／指標線、大盤K、支撐壓力週期、價量分析、箱型的開關記在瀏覽器 localStorage，
+          // 換股票、換週期、關掉再開、重新整理都沿用上一次的設定（不再每次還原成預設）。
+          window._kPref=window._kPref||(function(){var K='kchart_prefs_v1',o={};try{o=JSON.parse(localStorage.getItem(K)||'{}')||{};}catch(e){o={};}
+            return {get:function(k,d){return (k in o)?o[k]:d;},set:function(k,v){o[k]=v;try{localStorage.setItem(K,JSON.stringify(o));}catch(e){}}};})();
+          window._srPeriods=window._srPeriods||window._kPref.get('sr',null)||{};   // 勾選要畫的「週期」(SPEC-002：依週期，不跨週期混算)；預設全部不勾（不畫 S/R）
           window._srDraw=function(){
             if(typeof candleSeriesRef==='undefined'||!candleSeriesRef)return;
             SR.lines.forEach(function(l){ try{ l.s.removePriceLine(l.p); }catch(e){} }); SR.lines=[];
@@ -9342,8 +9458,9 @@
           };
           window._chartLayerStatus=function(kind,on,count){var b=document.querySelector('.chart-layer-tab[data-layer="'+kind+'"]');if(!b)return;b.classList.toggle('is-enabled',!!on);var n=b.querySelector('.layer-count');if(n){n.textContent=count||'';n.classList.toggle('show',!!count);}};
           window._srTogglePanel=function(){ var o=el('srLineOpts'), open=o.style.display==='none'; o.style.display=open?'block':'none'; window._chartLayerPanel('sr',open); el('srLineArrow').textContent=open?'▾':'▸'; };
-          window._srPeriodToggle=function(n,on){ window._srPeriods[n]=on;var c=Object.keys(window._srPeriods).filter(function(k){return window._srPeriods[k];}).length;window._chartLayerStatus('sr',c>0,c);window._srDraw(); };
-          window._srPeriodAll=function(on){ [5,10,20,60,120,240,480].forEach(function(n){ window._srPeriods[n]=on; var c=document.querySelector('#srLineOpts [data-p="'+n+'"]'); if(c)c.checked=on; }); window._chartLayerStatus('sr',on,on?7:0);window._srDraw(); };
+          window._srPeriodToggle=function(n,on){ window._srPeriods[n]=on;var c=Object.keys(window._srPeriods).filter(function(k){return window._srPeriods[k];}).length;window._chartLayerStatus('sr',c>0,c);window._kPref.set('sr',window._srPeriods);window._srDraw(); };
+          window._srPeriodAll=function(on){ [5,10,20,60,120,240,480].forEach(function(n){ window._srPeriods[n]=on; var c=document.querySelector('#srLineOpts [data-p="'+n+'"]'); if(c)c.checked=on; }); window._chartLayerStatus('sr',on,on?7:0);window._kPref.set('sr',window._srPeriods);window._srDraw(); };
+          window._srSyncUI=function(){ var n=0; document.querySelectorAll('#srLineOpts [data-p]').forEach(function(c){ var on=!!window._srPeriods[c.getAttribute('data-p')]; c.checked=on; if(on)n++; }); window._chartLayerStatus('sr',n>0,n); };
           window._loadStockSr=function(code){
             if(window._srPickN){ SR.n=window._srPickN; window._srPickN=null; }
             if(window._srPickSrc){ SR.src=window._srPickSrc; window._srPickSrc=null; }
@@ -9451,6 +9568,7 @@
       const volMult   = parseFloat(document.getElementById('volume_multiplier').value) || 0;
       const shrinkMult = parseFloat(document.getElementById('shrink_multiplier').value) || 0;
       const limitUp = document.getElementById('limit_up').checked;
+      const limitDown = !!document.getElementById('limit_down')?.checked;
       const doji    = document.getElementById('doji').checked;
       const engulfBull = document.getElementById('engulf_bull').checked;
       const engulfBear = document.getElementById('engulf_bear').checked;
@@ -9497,6 +9615,7 @@
         volume_multiplier: volMult,
         shrink_multiplier: shrinkMult,
         limit_up: limitUp,
+        limit_down: limitDown,
         doji:     doji,
         engulf_bull: engulfBull,
         engulf_bear: engulfBear,
@@ -9654,6 +9773,7 @@
       // API 回傳格式為 2026/07/14，統一轉成 K 棒使用的 2026-07-14
       _lastScreenDate = data.date ? String(data.date).replace(/\//g, '-') : null;
       _lastScreenLimitUp = !!document.getElementById('limit_up')?.checked;
+      _lastScreenLimitDown = !!document.getElementById('limit_down')?.checked;
       // MACD 多3/空3：記住起訖，點進 K 圖時標示區間兩端（直接讀 DOM，本函式非 doScreen 作用域）
       const _mEl = document.querySelector('.macd-cb:checked');
       const _mMode = _mEl ? _mEl.dataset.mode : '';
@@ -9917,7 +10037,7 @@
         _addChartMarker(code, _lastMacdRange.start, '起');
         _addChartMarker(code, _lastMacdRange.end, '訖');
       } else if (fromScreen && _lastScreenDate) {
-        _addChartMarker(code, _lastScreenDate, _lastScreenLimitUp ? '漲停' : '');
+        _addChartMarker(code, _lastScreenDate, _lastScreenLimitUp ? '漲停' : (_lastScreenLimitDown ? '跌停' : ''));
       }
       // 指定日期標記（例：從分點明細點某筆買超，標在那天）
       if (markDate) {
@@ -9939,6 +10059,7 @@
       _loadBrokerEntries(code);
       _loadGreed(code);
       _setToolbarForCode(code);
+      _kSyncLayerUI();   // 圖層開關沿用上一次的設定
       document.getElementById('backBtn').style.display = 'none';
       document.getElementById('chartModal').classList.add('open');
       if (!fibSetupDone) { setupFibOverlay(); fibSetupDone = true; }
@@ -9955,6 +10076,7 @@
     let _lastCandleTimes = null;   // 本次圖表的所有 K 棒日期
     let _lastScreenDate = null;    // 最近一次篩選的資料日期
     let _lastScreenLimitUp = false; // 最近一次篩選是否勾了漲停板
+    let _lastScreenLimitDown = false; // 最近一次篩選是否勾了跌停板
     let _lastMacdRange = null;     // 最近一次 MACD 多3/空3 的起訖 {start,end}
 
     // 清除舊版本留在 localStorage 的永久標記（已改為暫時性設計）
@@ -11047,6 +11169,7 @@
         t.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:10001;padding:9px 16px;border-radius:8px;font-size:13px;color:#fff;box-shadow:0 4px 16px rgba(0,0,0,.4);transition:opacity .3s;max-width:90vw;text-align:center';
         document.body.appendChild(t);
       }
+      { const _fh = document.fullscreenElement || document.body; if (t.parentElement !== _fh) _fh.appendChild(t); }   // 全螢幕時提示也要掛在全螢幕元素內
       t.style.background = err ? '#c0392b' : '#2a7d4f';
       t.textContent = msg; t.style.opacity = '1';
       clearTimeout(t._tmr); t._tmr = setTimeout(() => { t.style.opacity = '0'; }, 2800);
@@ -11867,6 +11990,7 @@
       visible = visible === false;
       keys.forEach(k => { if (seriesMap[k]) seriesMap[k].applyOptions({ visible }); });
       span.classList.toggle('hidden', !visible);
+      _kVizSet(keys, visible);
     }
 
     // ── Auth ──────────────────────────────────────────────
@@ -12290,7 +12414,8 @@
     function _toggleChartFull() { const m = document.getElementById('chartModal'); _setChartFull(!(m && m.classList.contains('kfull'))); }
     window._toggleChartFull = _toggleChartFull;
     // 使用者用 Esc／F11 離開瀏覽器全螢幕時，同步還原版面
-    document.addEventListener('fullscreenchange', function(){ const m = document.getElementById('chartModal'); if (m && m.classList.contains('kfull') && !document.fullscreenElement) _setChartFull(false); });
+    document.addEventListener('fullscreenchange', function(){ ['ddLineMenu','ddShapeMenu'].forEach(function(id){ const d = document.getElementById(id); if (d) d.classList.remove('open'); });
+      const m = document.getElementById('chartModal'); if (m && m.classList.contains('kfull') && !document.fullscreenElement) _setChartFull(false); });
 
     function closeChart() {
       if(document.getElementById('chartModal').classList.contains('etx-embedded')){window._etxTab('overview');return;}
@@ -12300,6 +12425,7 @@
       _setChartFull(false);
       document.getElementById('chartModal').classList.remove('open');
       _destroyCharts();
+      if (_drawTool) { try { window._setDrawTool(_drawTool); } catch (_) {} }   // 關閉 K 圖時取消畫線工具（按鈕一併還原）
       _resetDrawingState();
       // 從主力訊號面板點進來的 → 關閉 K 圖後回到訊號視圖（主力訊號已改為 sigView）
       if (_sigReturn) {
@@ -12518,12 +12644,32 @@
       if (e.target === document.getElementById('chartModal')) closeChart();
     }
 
+    // 2026-10-12 每檔股票各自記住自己畫的線／圖形（存瀏覽器 localStorage，最多留最近 150 檔）；換股票時存回上一檔、載入這一檔
+    let _drawCode = null, _drawStore = null;
+    function _drawStoreLoad() { if (_drawStore) return _drawStore; try { _drawStore = JSON.parse(localStorage.getItem('kchart_draw_v1') || '{}') || {}; } catch (_) { _drawStore = {}; } return _drawStore; }
+    function _drawStoreSave() {
+      const st = _drawStoreLoad();
+      if (_drawCode) { if (_drawShapes.length) st[_drawCode] = { t: Date.now(), s: _drawShapes }; else delete st[_drawCode]; }
+      const ks = Object.keys(st); if (ks.length > 150) ks.sort((a, b) => (st[a].t || 0) - (st[b].t || 0)).slice(0, ks.length - 150).forEach(k => delete st[k]);
+      try { localStorage.setItem('kchart_draw_v1', JSON.stringify(st)); } catch (_) {}
+    }
+    function _drawSwap(code) {
+      if (!code || code === _drawCode) return;
+      _drawStoreSave();
+      const e = _drawStoreLoad()[code];
+      _drawShapes = (e && Array.isArray(e.s)) ? e.s.slice() : []; _drawPending = []; _drawCode = code;
+    }
+    window.addEventListener('pagehide', () => { try { _drawStoreSave(); } catch (_) {} });
+
     function _resetDrawingState() {
+      try { _drawSwap(currentCode); _drawStoreSave(); } catch (_) {}
       fibLines = []; fibMode = false; fibDragStart = null;
       trendLines = []; trendLineMode = false; trendStart = null;
       document.getElementById('fibBtn').classList.remove('active');
       document.getElementById('trendBtn').classList.remove('active');
-      document.getElementById('chartOverlay').style.display = 'none';
+      // 2026-10-12：換股票／換週期重畫時，已選的畫線工具維持啟用（按鈕反藍＝真的能畫）；只清掉畫到一半的點
+      _drawPending = []; _shapeDrag = null;
+      document.getElementById('chartOverlay').style.display = _drawTool ? 'block' : 'none';
       _clearCanvas();
     }
 
@@ -12539,8 +12685,8 @@
       try { _destroyChipCharts(); } catch (_) {}
       candleSeriesRef = null;
       Object.keys(seriesMap).forEach(k => delete seriesMap[k]);
-      // Reset all ma-toggle labels to visible
-      document.querySelectorAll('.ma-toggle').forEach(el => el.classList.remove('hidden'));
+      // 標籤依記憶的開關顯示（2026-10-11 起不再每次還原成全部顯示）
+      _kSyncVizLabels();
       // 子面板分頁歸零：預設回「技術指標」（顯示 VOL/MACD/RSI，隱藏籌碼頁）
       window._chipBuiltFor = null;
       ['volPanel', 'macdPanel', 'rsiPanel'].forEach(id => { const e = document.getElementById(id); if (e) e.style.display = ''; });
@@ -12548,6 +12694,33 @@
       ['cFgn', 'cTrust', 'cDealer', 'cBig', 'cRetail'].forEach(id => { const e = document.getElementById(id); if (e) e.innerHTML = ''; });
       const _tt = document.getElementById('subTabTech'), _tc = document.getElementById('subTabChip');
       if (_tt) _tt.classList.add('on'); if (_tc) _tc.classList.remove('on');
+    }
+
+    // ── K 圖線條顯示記憶（2026-10-11）：key → 是否顯示；沒記過的用預設（BBAND 預設關、其餘預設開） ──
+    const _K_MA_KEYS = ['ma5','ma10','ma20','ma60','ma120','ma240'];
+    const _K_BB_KEYS = ['bbUpper','bbMid','bbLower'];
+    function _kViz() { return (window._kPref && window._kPref.get('viz', null)) || {}; }
+    function _kVizOn(key) { const v = _kViz()[key]; return v == null ? _K_BB_KEYS.indexOf(key) < 0 : !!v; }
+    function _kVizSet(keys, visible) { const v = _kViz(); keys.forEach(k => { v[k] = !!visible; }); if (window._kPref) window._kPref.set('viz', v); }
+    function _kSyncVizLabels() {
+      document.querySelectorAll('.ma-toggle[onclick^="toggleSeriesViz("]').forEach(el => {
+        const m = /toggleSeriesViz\('([^']+)'\)/.exec(el.getAttribute('onclick') || ''); if (m) el.classList.toggle('hidden', !_kVizOn(m[1]));
+      });
+      const all = document.getElementById('maAllToggle'); if (all) all.classList.toggle('hidden', !_K_MA_KEYS.some(_kVizOn));
+      const bb = document.querySelector('.ma-toggle[onclick="toggleBBand(this)"]'); if (bb) bb.classList.toggle('hidden', _kViz().bbUpper === false);
+    }
+    // 圖表（重）建好後呼叫：把記憶的開關套到剛建立的線上
+    function _kApplyViz() {
+      Object.keys(seriesMap).forEach(k => { try { seriesMap[k].applyOptions({ visible: _kVizOn(k) }); } catch (_) {} });
+      _kSyncVizLabels();
+    }
+    // 大盤K／支撐壓力／價量分析／箱型：勾選框與按鈕燈號對齊記憶
+    function _kSyncLayerUI() {
+      try { window._srSyncUI && window._srSyncUI(); } catch (_) {}
+      try { window._mkSyncUI && window._mkSyncUI(); } catch (_) {}
+      try { window._vpSyncUI && window._vpSyncUI(); } catch (_) {}
+      try { const bp = document.getElementById('boxPanel'), bt = document.getElementById('boxToggle');
+        if (bp) bp.style.display = _boxEnabled ? 'flex' : 'none'; if (bt && _boxEnabled) bt.style.opacity = '1'; } catch (_) {}
     }
 
     function toggleAllMA() {
@@ -12567,6 +12740,7 @@
       });
       const btn = document.getElementById('maAllToggle');
       if (btn) btn.classList.toggle('hidden', !makeVisible);
+      _kVizSet(keys, makeVisible);
     }
 
     function toggleSeriesViz(key) {
@@ -12578,6 +12752,7 @@
       visible = visible === false ? true : false;
       s.applyOptions({ visible });
       if (span) span.classList.toggle('hidden', !visible);
+      _kVizSet([key], visible); _kSyncVizLabels();
     }
 
     function toggleChartPanel(containerId, btn) {
@@ -12993,7 +13168,7 @@
 
       // Redraw trend lines / fib labels when chart is panned / zoomed
       chartInstance.timeScale().subscribeVisibleTimeRangeChange(() => {
-        if (trendLines.length > 0 || trendStart || fibLevels.length > 0 || (_boxEnabled && _boxRectShow && _boxRect)) redrawCanvas();
+        if (trendLines.length > 0 || trendStart || fibLevels.length > 0 || _drawShapes.length > 0 || _drawPending.length > 0 || (_boxEnabled && _boxRectShow && _boxRect)) _redrawSoon();   // 2026-10-12 補上畫線套件圖形
       });
 
       // Zoom / scroll lock + cross-panel sync via logical range.
@@ -13132,7 +13307,7 @@
       _refreshChartMarkers();
       try { window._srDraw && window._srDraw(); } catch (_) {}   // 分價量表壓力/支撐帶
       window._vpCandles = candles;                                  // 價量分析：可見範圍重算
-      try { chartInstance.timeScale().subscribeVisibleLogicalRangeChange(() => { window._vpSchedule && window._vpSchedule(); window._mkCmpSchedule && window._mkCmpSchedule(); }); } catch (_) {}
+      try { chartInstance.timeScale().subscribeVisibleLogicalRangeChange(() => { window._vpSchedule && window._vpSchedule(); window._mkCmpSchedule && window._mkCmpSchedule(); if (_drawShapes.length || _drawPending.length || trendLines.length) _redrawSoon(); }); } catch (_) {}
       try { window._mkApply && window._mkApply(true); } catch (_) {}
       try { window._vpSchedule && window._vpSchedule(); } catch (_) {}
 
@@ -13171,10 +13346,11 @@
       seriesMap['bbUpper'] = bbUpper;
       seriesMap['bbMid']   = bbMid;
       seriesMap['bbLower'] = bbLower;
+      _kApplyViz();
     }
 
     // ──  箱型型態偵測(前端即時版,對應 scripts/box_pattern.py;參數可調)────────────
-    var _boxEnabled = false;
+    var _boxEnabled = !!(window._kPref && window._kPref.get('box', false));   // 2026-10-11 記住上次開關
     var _boxLastCandles = [];
     var _boxSeriesRefs = [];
     var _boxMarkers = [];
@@ -13375,6 +13551,7 @@
     }
     function toggleBox(el) {
       _boxEnabled = !_boxEnabled;
+      if (window._kPref) window._kPref.set('box', _boxEnabled);
       const panel = document.getElementById('boxPanel');
       if (panel) panel.style.display = _boxEnabled ? 'flex' : 'none';
       if (el) el.style.opacity = _boxEnabled ? '1' : '0.5';
@@ -13435,6 +13612,7 @@
       vma10s.setData(candles.map((c, i) => vma10[i] !== null ? { time: c.time, value: vma10[i] } : null).filter(Boolean));
       seriesMap['volMa5']  = vma5s;
       seriesMap['volMa10'] = vma10s;
+      _kApplyViz();
       volInstance.applyOptions(_NO_HORZ); volInstance._xhairSeries = volSeries; _wireXhair(volInstance);
     }
 
@@ -13478,6 +13656,7 @@
       seriesMap['macdLine'] = macdSeries;
       seriesMap['macdSig']  = sigSeries;
       seriesMap['macdHist'] = histSeries;
+      _kApplyViz();
       macdInstance.applyOptions(_NO_HORZ); macdInstance._xhairSeries = macdAnchor; _wireXhair(macdInstance);
     }
 
@@ -13511,6 +13690,7 @@
       r5.setData(times.map((t, i)  => rsi5[i]  !== null ? { time: t, value: rsi5[i]  } : null).filter(Boolean));
       seriesMap['rsi5']  = r5;
       seriesMap['rsi10'] = r10;
+      _kApplyViz();
       [{ p: 70, c: 'rgba(231,76,60,0.4)' }, { p: 50, c: 'rgba(200,209,217,0.2)' }, { p: 30, c: 'rgba(38,194,129,0.4)' }]
         .forEach(({ p, c }) => r10.createPriceLine({
           price: p, color: c, lineWidth: 1,
@@ -13889,6 +14069,14 @@
       _drawShapesOnCtx(ctx);
     }
 
+    // 圖表範圍變動時重畫：變動事件當下價格軸還沒重算（要等圖表自己重繪），所以立刻畫一次、下一個畫格與稍後再各補畫一次 2026-10-12
+    let _rsT1 = 0, _rsT2 = 0;
+    function _redrawSoon() {
+      redrawCanvas();
+      try { requestAnimationFrame(redrawCanvas); } catch (_) {}
+      clearTimeout(_rsT1); clearTimeout(_rsT2); _rsT1 = setTimeout(redrawCanvas, 50); _rsT2 = setTimeout(redrawCanvas, 260);
+    }
+
     function _drawBoxRectOnCtx(ctx) {
       if (!_boxEnabled || !_boxRectShow || !_boxRect || !chartInstance || !candleSeriesRef) return;
       const ts = chartInstance.timeScale();
@@ -14250,57 +14438,69 @@
     function _drawShapesOnCtx(ctx) {
       if ((!_drawShapes.length && !_drawPending.length) || !candleSeriesRef || !chartInstance) return;
       const col = _trendColor(), ts = chartInstance.timeScale();
-      const X = t => (t == null ? null : ts.timeToCoordinate(t)), Y = p => candleSeriesRef.priceToCoordinate(p);
+      const X = _dX, Y = p => candleSeriesRef.priceToCoordinate(p);
       const light = document.documentElement.getAttribute('data-theme') === 'light';
-      ctx.save();
+      ctx.save(); _dClip(ctx);
       _drawShapes.forEach(s => {
-        ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = 1.5; ctx.setLineDash([]);
+        ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = 1.5; ctx.setLineDash(['arrowup', 'arrowdown', 'text'].indexOf(s.type) >= 0 ? [] : [6, 4]);   // 2026-10-12 輔助線／圖形改虛線（箭頭、文字維持實線）
         const p = s.pts;
-        if (s.type === 'seg') { const a = X(p[0].time), b = Y(p[0].price), c = X(p[1].time), e = Y(p[1].price); if ([a, b, c, e].some(v => v == null)) return; ctx.beginPath(); ctx.moveTo(a, b); ctx.lineTo(c, e); ctx.stroke(); }
+        if (s.type === 'seg') { const a = X(p[0]), b = Y(p[0].price), c = X(p[1]), e = Y(p[1].price); if ([a, b, c, e].some(v => v == null)) return; ctx.beginPath(); ctx.moveTo(a, b); ctx.lineTo(c, e); ctx.stroke(); }
         else if (s.type === 'hline') { const y = Y(p[0].price); if (y == null) return; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(ctx.canvas.width, y); ctx.stroke(); }
-        else if (s.type === 'vline') { const x = X(p[0].time); if (x == null) return; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, ctx.canvas.height); ctx.stroke(); }
-        else if (s.type === 'rect') { const a = X(p[0].time), b = Y(p[0].price), c = X(p[1].time), e = Y(p[1].price); if ([a, b, c, e].some(v => v == null)) return; ctx.strokeRect(Math.min(a, c), Math.min(b, e), Math.abs(c - a), Math.abs(e - b)); }
-        else if (s.type === 'circle') { const a = X(p[0].time), b = Y(p[0].price), c = X(p[1].time), e = Y(p[1].price); if ([a, b, c, e].some(v => v == null)) return; ctx.beginPath(); ctx.ellipse((a + c) / 2, (b + e) / 2, Math.abs(c - a) / 2, Math.abs(e - b) / 2, 0, 0, Math.PI * 2); ctx.stroke(); }
-        else if (s.type === 'parallel') { const a = X(p[0].time), b = Y(p[0].price), c = X(p[1].time), e = Y(p[1].price), f = X(p[2].time), g = Y(p[2].price); if ([a, b, c, e, f, g].some(v => v == null)) return; const ox = f - a, oy = g - b; ctx.beginPath(); ctx.moveTo(a, b); ctx.lineTo(c, e); ctx.moveTo(a + ox, b + oy); ctx.lineTo(c + ox, e + oy); ctx.stroke(); }
-        else if (s.type === 'arrowup' || s.type === 'arrowdown') { const x = X(p[0].time), y = Y(p[0].price); if (x == null || y == null) return; _drawArrowGlyph(ctx, x, y, s.type === 'arrowup'); }
-        else if (s.type === 'text') { const x = X(p[0].time), y = Y(p[0].price); if (x == null || y == null) return; ctx.font = '700 12px -apple-system,"Segoe UI",system-ui,sans-serif'; ctx.textBaseline = 'middle'; const tw = ctx.measureText(s.text || '').width; ctx.fillStyle = light ? 'rgba(255,255,255,0.9)' : 'rgba(12,18,28,0.86)'; _fibRoundRect(ctx, x, y - 10, tw + 12, 20, 5); ctx.fill(); ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.globalAlpha = 0.5; ctx.stroke(); ctx.globalAlpha = 1; ctx.fillStyle = col; ctx.fillText(s.text || '', x + 6, y + 1); }
+        else if (s.type === 'vline') { const x = X(p[0]); if (x == null) return; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, ctx.canvas.height); ctx.stroke(); }
+        else if (s.type === 'rect') { const a = X(p[0]), b = Y(p[0].price), c = X(p[1]), e = Y(p[1].price); if ([a, b, c, e].some(v => v == null)) return; ctx.strokeRect(Math.min(a, c), Math.min(b, e), Math.abs(c - a), Math.abs(e - b)); }
+        else if (s.type === 'circle') { const a = X(p[0]), b = Y(p[0].price), c = X(p[1]), e = Y(p[1].price); if ([a, b, c, e].some(v => v == null)) return; ctx.beginPath(); ctx.ellipse((a + c) / 2, (b + e) / 2, Math.abs(c - a) / 2, Math.abs(e - b) / 2, 0, 0, Math.PI * 2); ctx.stroke(); }
+        else if (s.type === 'parallel') { const a = X(p[0]), b = Y(p[0].price), c = X(p[1]), e = Y(p[1].price), f = X(p[2]), g = Y(p[2].price); if ([a, b, c, e, f, g].some(v => v == null)) return; const ox = f - a, oy = g - b; ctx.beginPath(); ctx.moveTo(a, b); ctx.lineTo(c, e); ctx.moveTo(a + ox, b + oy); ctx.lineTo(c + ox, e + oy); ctx.stroke(); }
+        else if (s.type === 'arrowup' || s.type === 'arrowdown') { const x = X(p[0]), y = Y(p[0].price); if (x == null || y == null) return; _drawArrowGlyph(ctx, x, y, s.type === 'arrowup'); }
+        else if (s.type === 'text') { const x = X(p[0]), y = Y(p[0].price); if (x == null || y == null) return; ctx.font = '700 12px -apple-system,"Segoe UI",system-ui,sans-serif'; ctx.textBaseline = 'middle'; const tw = ctx.measureText(s.text || '').width; ctx.fillStyle = light ? 'rgba(255,255,255,0.9)' : 'rgba(12,18,28,0.86)'; _fibRoundRect(ctx, x, y - 10, tw + 12, 20, 5); ctx.fill(); ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.globalAlpha = 0.5; ctx.stroke(); ctx.globalAlpha = 1; ctx.fillStyle = col; ctx.fillText(s.text || '', x + 6, y + 1); }
       });
       // 進行中的點（放了但還沒完成）：畫小圓點
-      ctx.fillStyle = col;
-      _drawPending.forEach(q => { const x = X(q.time), y = Y(q.price); if (x != null && y != null) { ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill(); } });
+      ctx.fillStyle = col; ctx.setLineDash([]);
+      _drawPending.forEach(q => { const x = X(q), y = Y(q.price); if (x != null && y != null) { ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill(); } });
       ctx.restore();
     }
     function _distToShape(s, px, py, X, Y) {
       const p = s.pts;
-      if (s.type === 'seg' || s.type === 'parallel') { const a = X(p[0].time), b = Y(p[0].price), c = X(p[1].time), e = Y(p[1].price); if ([a, b, c, e].some(v => v == null)) return 1e9; return _ptSegDist(px, py, a, b, c, e); }
+      if (s.type === 'seg' || s.type === 'parallel') { const a = X(p[0]), b = Y(p[0].price), c = X(p[1]), e = Y(p[1].price); if ([a, b, c, e].some(v => v == null)) return 1e9; return _ptSegDist(px, py, a, b, c, e); }
       if (s.type === 'hline') { const y = Y(p[0].price); return y == null ? 1e9 : Math.abs(py - y); }
-      if (s.type === 'vline') { const x = X(p[0].time); return x == null ? 1e9 : Math.abs(px - x); }
-      if (s.type === 'rect') { const a = X(p[0].time), b = Y(p[0].price), c = X(p[1].time), e = Y(p[1].price); if ([a, b, c, e].some(v => v == null)) return 1e9; const l = Math.min(a, c), r = Math.max(a, c), t = Math.min(b, e), bo = Math.max(b, e); const inside = px >= l && px <= r && py >= t && py <= bo; return inside ? Math.min(px - l, r - px, py - t, bo - py) : Math.hypot(Math.max(l - px, 0, px - r), Math.max(t - py, 0, py - bo)); }
-      if (s.type === 'circle') { const a = X(p[0].time), b = Y(p[0].price), c = X(p[1].time), e = Y(p[1].price); if ([a, b, c, e].some(v => v == null)) return 1e9; const cx = (a + c) / 2, cy = (b + e) / 2, rx = Math.abs(c - a) / 2 || 1, ry = Math.abs(e - b) / 2 || 1; const ang = Math.atan2((py - cy) / ry, (px - cx) / rx); return Math.hypot(px - (cx + rx * Math.cos(ang)), py - (cy + ry * Math.sin(ang))); }
-      const x = X(p[0].time), y = Y(p[0].price); if (x == null || y == null) return 1e9; return Math.hypot(px - x, py - y);
+      if (s.type === 'vline') { const x = X(p[0]); return x == null ? 1e9 : Math.abs(px - x); }
+      if (s.type === 'rect') { const a = X(p[0]), b = Y(p[0].price), c = X(p[1]), e = Y(p[1].price); if ([a, b, c, e].some(v => v == null)) return 1e9; const l = Math.min(a, c), r = Math.max(a, c), t = Math.min(b, e), bo = Math.max(b, e); const inside = px >= l && px <= r && py >= t && py <= bo; return inside ? Math.min(px - l, r - px, py - t, bo - py) : Math.hypot(Math.max(l - px, 0, px - r), Math.max(t - py, 0, py - bo)); }
+      if (s.type === 'circle') { const a = X(p[0]), b = Y(p[0].price), c = X(p[1]), e = Y(p[1].price); if ([a, b, c, e].some(v => v == null)) return 1e9; const cx = (a + c) / 2, cy = (b + e) / 2, rx = Math.abs(c - a) / 2 || 1, ry = Math.abs(e - b) / 2 || 1; const ang = Math.atan2((py - cy) / ry, (px - cx) / rx); return Math.hypot(px - (cx + rx * Math.cos(ang)), py - (cy + ry * Math.sin(ang))); }
+      const x = X(p[0]), y = Y(p[0].price); if (x == null || y == null) return 1e9; return Math.hypot(px - x, py - y);
     }
     function _eraseAt(px, py) {
-      const ts = chartInstance.timeScale(), X = t => (t == null ? null : ts.timeToCoordinate(t)), Y = p => candleSeriesRef.priceToCoordinate(p);
-      let best = null, bestD = 10;
+      const ts = chartInstance.timeScale(), X = _dX, Y = p => candleSeriesRef.priceToCoordinate(p);
+      let best = null, bestD = 14;
       _drawShapes.forEach((s, i) => { const d = _distToShape(s, px, py, X, Y); if (d < bestD) { bestD = d; best = { a: 's', i }; } });
       trendLines.forEach((l, i) => { const a = X(l.time1), b = Y(l.price1), c = X(l.time2), e = Y(l.price2); if ([a, b, c, e].every(v => v != null)) { const d = _ptSegDist(px, py, a, b, c, e); if (d < bestD) { bestD = d; best = { a: 't', i }; } } });
       if (best) { if (best.a === 's') _drawShapes.splice(best.i, 1); else trendLines.splice(best.i, 1); redrawCanvas(); }
     }
-    function _coordAt(px, py) { return { time: chartInstance.timeScale().coordinateToTime(px), price: candleSeriesRef.coordinateToPrice(py) }; }
+    // 2026-10-12：點除了 time 也記「邏輯索引 li」。最後一根 K 棒右邊的空白區 coordinateToTime 回 null（原本點不下去），改用 li 定位。
+    function _coordAt(px, py) { const ts = chartInstance.timeScale(); let li = null; try { li = ts.coordinateToLogical(px); } catch (_) {} return { time: ts.coordinateToTime(px), price: candleSeriesRef.coordinateToPrice(py), li: li }; }
+    function _noT(c) { return (c.time === null || c.time === undefined) && (c.li === null || c.li === undefined); }
+    // 點 → 畫面 x：有 time 用 time（切換週期仍對得上日期），沒有（未來空白區）才用 li；也接受直接傳 time（舊趨勢線）
+    function _dX(q) {
+      if (q == null || !chartInstance) return null; const ts = chartInstance.timeScale();
+      if (typeof q !== 'object' || !('price' in q)) { try { return ts.timeToCoordinate(q); } catch (_) { return null; } }
+      try { if (q.time != null) return ts.timeToCoordinate(q.time); if (q.li != null) return ts.logicalToCoordinate(q.li); } catch (_) {}
+      return null;
+    }
+    // 只畫在 K 線繪圖區內（不蓋到右側價格軸、下方時間軸）
+    function _dClip(ctx) { try { const ts = chartInstance.timeScale(), host = document.getElementById('chartContainer'); const w = ts.width(), h = (host ? host.clientHeight : ctx.canvas.height) - ts.height(); if (w > 0 && h > 0) { ctx.beginPath(); ctx.rect(0, 0, w, h); ctx.clip(); } } catch (_) {} }
+    let _erasing = false;   // 橡皮擦：按住左鍵拖曳連續清除
     function _previewShape(ctx, type, s, e) {
       ctx.save(); ctx.strokeStyle = _trendColor(); ctx.lineWidth = 1.5; ctx.setLineDash([5, 3]);
       if (type === 'rect') ctx.strokeRect(Math.min(s.px, e.px), Math.min(s.py, e.py), Math.abs(e.px - s.px), Math.abs(e.py - s.py));
       else if (type === 'circle') { const cx = (s.px + e.px) / 2, cy = (s.py + e.py) / 2; ctx.beginPath(); ctx.ellipse(cx, cy, Math.abs(e.px - s.px) / 2, Math.abs(e.py - s.py) / 2, 0, 0, Math.PI * 2); ctx.stroke(); }
       ctx.restore();
     }
-    function _showTextInput(px, py, time, price) {   // 小畫家式：原地內嵌輸入框，不用瀏覽器 popup
+    function _showTextInput(px, py, time, price, li) {   // 小畫家式：原地內嵌輸入框，不用瀏覽器 popup
       const host = document.getElementById('chartOverlay'); if (!host) return;
       const inp = document.createElement('input');
       inp.type = 'text'; inp.className = 'draw-text-input';
       inp.style.cssText = 'position:absolute;z-index:40;left:' + px + 'px;top:' + (py - 11) + 'px;';
       host.appendChild(inp); setTimeout(function () { inp.focus(); }, 0);
       let done = false;
-      const commit = function () { if (done) return; done = true; const v = inp.value.trim(); inp.remove(); if (v) { _drawShapes.push({ type: 'text', pts: [{ time: time, price: price }], text: v }); redrawCanvas(); } };
+      const commit = function () { if (done) return; done = true; const v = inp.value.trim(); inp.remove(); if (v) { _drawShapes.push({ type: 'text', pts: [{ time: time, price: price, li: li }], text: v }); redrawCanvas(); } };
       inp.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); commit(); } else if (ev.key === 'Escape') { done = true; inp.remove(); } });
       inp.addEventListener('blur', commit);
     }
@@ -14310,47 +14510,61 @@
       _drawSetupDone = true;
       const gx = cx => cx - overlay.getBoundingClientRect().left, gy = cy => cy - overlay.getBoundingClientRect().top;
       overlay.addEventListener('mousedown', e => {
+        if (_drawTool === 'eraser' && e.button === 0 && chartInstance && candleSeriesRef) { _erasing = true; _eraseAt(gx(e.clientX), gy(e.clientY)); return; }   // 按住左鍵開始連續清除
         if (!_drawTool || !chartInstance || !candleSeriesRef || _DRAG_TOOLS.indexOf(_drawTool) < 0) return;
         const px = gx(e.clientX), py = gy(e.clientY), c = _coordAt(px, py);
-        if (c.time == null || c.price == null) return;
-        _shapeDrag = { px, py, time: c.time, price: c.price };
+        if (_noT(c) || c.price == null) return;
+        _shapeDrag = { px, py, time: c.time, price: c.price, li: c.li };
       });
       overlay.addEventListener('mousemove', e => {
         if (!_drawTool) return;
         const px = gx(e.clientX), py = gy(e.clientY);
+        if (_drawTool === 'eraser') { if (_erasing && (e.buttons & 1)) _eraseAt(px, py); else _erasing = false; return; }
         if (_shapeDrag) { redrawCanvas(); _previewShape(document.getElementById('fibCanvas').getContext('2d'), _drawTool, { px: _shapeDrag.px, py: _shapeDrag.py }, { px, py }); return; }
         if (_CLICK_TOOLS.indexOf(_drawTool) >= 0 && _drawPending.length) {
           redrawCanvas(); const ctx = document.getElementById('fibCanvas').getContext('2d');
-          const last = _drawPending[_drawPending.length - 1], lx = chartInstance.timeScale().timeToCoordinate(last.time), ly = candleSeriesRef.priceToCoordinate(last.price);
+          const last = _drawPending[_drawPending.length - 1], lx = _dX(last), ly = candleSeriesRef.priceToCoordinate(last.price);
           if (lx != null && ly != null) { ctx.save(); ctx.strokeStyle = _trendColor(); ctx.lineWidth = 1.2; ctx.setLineDash([5, 3]); ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(px, py); ctx.stroke(); ctx.restore(); }
         }
       });
       overlay.addEventListener('mouseup', e => {
+        _erasing = false;
         if (!_shapeDrag) return;
         const px = gx(e.clientX), py = gy(e.clientY), c = _coordAt(px, py), s = _shapeDrag; _shapeDrag = null;
-        if (c.time != null && c.price != null && Math.abs(px - s.px) > 4 && Math.abs(py - s.py) > 4)
-          _drawShapes.push({ type: _drawTool, pts: [{ time: s.time, price: s.price }, { time: c.time, price: c.price }] });
+        if (!_noT(c) && c.price != null && Math.abs(px - s.px) > 4 && Math.abs(py - s.py) > 4)
+          _drawShapes.push({ type: _drawTool, pts: [{ time: s.time, price: s.price, li: s.li }, { time: c.time, price: c.price, li: c.li }] });
         redrawCanvas();
       });
       overlay.addEventListener('click', e => {
         if (!_drawTool || !chartInstance || !candleSeriesRef || _DRAG_TOOLS.indexOf(_drawTool) >= 0) return;
         const px = gx(e.clientX), py = gy(e.clientY);
-        if (_drawTool === 'eraser') { _eraseAt(px, py); return; }
+        if (_drawTool === 'eraser') return;   // 已在 mousedown／拖曳時清除
         const c = _coordAt(px, py); if (c.price == null) return;
-        if (_drawTool === 'text') { if (c.time == null) return; _showTextInput(px, py, c.time, c.price); return; }
-        if (_drawTool !== 'hline' && c.time == null) return;
-        _drawPending.push({ time: c.time, price: c.price });
-        if (_drawPending.length >= (_DRAW_NEED[_drawTool] || 1)) { _drawShapes.push({ type: _drawTool, pts: _drawPending.map(q => ({ time: q.time, price: q.price })) }); _drawPending = []; }
+        if (_drawTool === 'text') { if (_noT(c)) return; _showTextInput(px, py, c.time, c.price, c.li); return; }
+        if (_drawTool !== 'hline' && _noT(c)) return;
+        _drawPending.push({ time: c.time, price: c.price, li: c.li });
+        if (_drawPending.length >= (_DRAW_NEED[_drawTool] || 1)) { _drawShapes.push({ type: _drawTool, pts: _drawPending.map(q => ({ time: q.time, price: q.price, li: q.li })) }); _drawPending = []; }
         redrawCanvas();
       });
+      window.addEventListener('mouseup', () => { _erasing = false; });
+      // 右鍵＝取消目前選的畫線工具／圖形（進行中未完成的點一併清掉）2026-10-12
+      overlay.addEventListener('contextmenu', e => { if (!_drawTool) return; e.preventDefault(); window._setDrawTool(_drawTool); });
+      // 圖表被縮放／拖曳（含拖價格軸改上下比例，這個沒有事件可訂閱）時讓畫好的線跟著重畫
+      const _host = document.getElementById('chartContainer');
+      if (_host) {
+        const kick = () => { if (!_drawShapes.length && !trendLines.length) return; _redrawSoon(); };
+        ['wheel', 'touchmove', 'dblclick', 'mouseup'].forEach(ev => _host.addEventListener(ev, kick, { passive: true }));
+        _host.addEventListener('mousemove', e => { if (e.buttons) kick(); }, { passive: true });
+      }
       // ── 手機觸控支援（新畫線套件原本只綁滑鼠事件，觸控被既有 preventDefault 吃掉合成 click）──
       overlay.addEventListener('touchstart', e => {
         if (!_drawTool || !chartInstance || !candleSeriesRef) return;
         const t = e.touches[0]; if (!t) return;
+        if (_drawTool === 'eraser') { _eraseAt(gx(t.clientX), gy(t.clientY)); e.preventDefault(); return; }
         if (_DRAG_TOOLS.indexOf(_drawTool) >= 0) {
           const px = gx(t.clientX), py = gy(t.clientY), c = _coordAt(px, py);
-          if (c.time == null || c.price == null) return;
-          _shapeDrag = { px, py, time: c.time, price: c.price };
+          if (_noT(c) || c.price == null) return;
+          _shapeDrag = { px, py, time: c.time, price: c.price, li: c.li };
           e.preventDefault();
         }
       }, { passive: false });
@@ -14358,10 +14572,11 @@
         if (!_drawTool) return;
         const t = e.touches[0]; if (!t) return;
         const px = gx(t.clientX), py = gy(t.clientY);
+        if (_drawTool === 'eraser') { e.preventDefault(); if (chartInstance && candleSeriesRef) _eraseAt(px, py); return; }   // 手指滑過即清除
         if (_shapeDrag) { e.preventDefault(); redrawCanvas(); _previewShape(document.getElementById('fibCanvas').getContext('2d'), _drawTool, { px: _shapeDrag.px, py: _shapeDrag.py }, { px, py }); return; }
         if (_CLICK_TOOLS.indexOf(_drawTool) >= 0 && _drawPending.length) {
           e.preventDefault(); redrawCanvas(); const ctx = document.getElementById('fibCanvas').getContext('2d');
-          const last = _drawPending[_drawPending.length - 1], lx = chartInstance.timeScale().timeToCoordinate(last.time), ly = candleSeriesRef.priceToCoordinate(last.price);
+          const last = _drawPending[_drawPending.length - 1], lx = _dX(last), ly = candleSeriesRef.priceToCoordinate(last.price);
           if (lx != null && ly != null) { ctx.save(); ctx.strokeStyle = _trendColor(); ctx.lineWidth = 1.2; ctx.setLineDash([5, 3]); ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(px, py); ctx.stroke(); ctx.restore(); }
         }
       }, { passive: false });
@@ -14371,18 +14586,18 @@
         const px = gx(t.clientX), py = gy(t.clientY);
         if (_shapeDrag) {   // 拖拉工具（矩形/圓形）結束
           const c = _coordAt(px, py), s = _shapeDrag; _shapeDrag = null;
-          if (c.time != null && c.price != null && Math.abs(px - s.px) > 4 && Math.abs(py - s.py) > 4)
-            _drawShapes.push({ type: _drawTool, pts: [{ time: s.time, price: s.price }, { time: c.time, price: c.price }] });
+          if (!_noT(c) && c.price != null && Math.abs(px - s.px) > 4 && Math.abs(py - s.py) > 4)
+            _drawShapes.push({ type: _drawTool, pts: [{ time: s.time, price: s.price, li: s.li }, { time: c.time, price: c.price, li: c.li }] });
           redrawCanvas(); e.preventDefault(); return;
         }
         if (_DRAG_TOOLS.indexOf(_drawTool) >= 0) return;   // 拖拉工具但沒有效拖曳
         // 點擊類工具（線段/水平線/.../箭頭）、文字、橡皮擦：以「點一下」處理
-        if (_drawTool === 'eraser') { _eraseAt(px, py); e.preventDefault(); return; }
+        if (_drawTool === 'eraser') { e.preventDefault(); return; }
         const c = _coordAt(px, py); if (c.price == null) return;
-        if (_drawTool === 'text') { if (c.time == null) return; _showTextInput(px, py, c.time, c.price); e.preventDefault(); return; }
-        if (_drawTool !== 'hline' && c.time == null) return;
-        _drawPending.push({ time: c.time, price: c.price });
-        if (_drawPending.length >= (_DRAW_NEED[_drawTool] || 1)) { _drawShapes.push({ type: _drawTool, pts: _drawPending.map(q => ({ time: q.time, price: q.price })) }); _drawPending = []; }
+        if (_drawTool === 'text') { if (_noT(c)) return; _showTextInput(px, py, c.time, c.price, c.li); e.preventDefault(); return; }
+        if (_drawTool !== 'hline' && _noT(c)) return;
+        _drawPending.push({ time: c.time, price: c.price, li: c.li });
+        if (_drawPending.length >= (_DRAW_NEED[_drawTool] || 1)) { _drawShapes.push({ type: _drawTool, pts: _drawPending.map(q => ({ time: q.time, price: q.price, li: q.li })) }); _drawPending = []; }
         redrawCanvas(); e.preventDefault();
       }, { passive: false });
     }
@@ -14417,7 +14632,8 @@
           const willOpen = !m.classList.contains('open');
           m.classList.toggle('open', willOpen);
           if (willOpen && b) {
-            if (m.parentElement !== document.body) document.body.appendChild(m);
+            const host = b.closest('.modal-overlay') || document.fullscreenElement || document.body;   // 2026-10-11 一律掛在 K 圖彈窗（最外層遮罩）內：瀏覽器全螢幕只顯示全螢幕元素內的東西，掛 body 會看不到
+            if (m.parentElement !== host) host.appendChild(m);
             m.style.position = 'fixed'; m.style.zIndex = '99999'; m.style.right = 'auto';
             const r = b.getBoundingClientRect(), mw = m.offsetWidth || 140;
             let left = Math.max(6, Math.min(r.right - mw, window.innerWidth - mw - 6));
@@ -14923,7 +15139,7 @@
   <script>
   /* 大盤K 疊加（2026-09-28）：個股 K 線上疊加加權指數(^TWII) K 棒於左軸，並依可見區間比較漲跌幅強弱。 */
   (function(){
-    var MK={on:false, series:null, cache:{}, data:null, t:0};
+    var MK={on:!!(window._kPref&&window._kPref.get('mk',false)), series:null, cache:{}, data:null, t:0};   // 2026-10-11 記住上次開關
     function el(id){ return document.getElementById(id); }
     function fetchIdx(hourly){
       var k=hourly?'h':'d'; if(MK.cache[k]) return MK.cache[k];
@@ -14950,6 +15166,7 @@
       o.style.display=open?'block':'none'; window._chartLayerPanel('mk',open); el('mkArrow').textContent=open?'▾':'▸';
     };
     window._mkPick=function(tf,on){
+      if(window._kPref) window._kPref.set('mk',!!on);
       if(!on){ MK.on=false; window._chartLayerStatus('mk',false,0);syncChk(); window._mkApply(false); return; }
       MK.on=true; var h=!!window._chartIsHourly;
       window._chartLayerStatus('mk',true,0);
@@ -14957,6 +15174,7 @@
       if(tf==='day'&&h){ syncChk(); if(typeof loadDailyChart==='function') loadDailyChart(); return; }
       syncChk(); window._mkApply(false);
     };
+    window._mkSyncUI=function(){ syncChk(); window._chartLayerStatus('mk',MK.on,0); };
     window._mkApply=function(rebuilt){
       if(rebuilt) MK.series=null;                     // 主圖重建後舊 series 已隨舊圖銷毀
       syncChk();
@@ -14998,7 +15216,8 @@
   /* 價量分析（Volume Profile，2026-09-28）：K 線上疊加橫向柱狀的各價位成交量，統計畫面可見的 K 棒期間。
      日價量＝日K 依最低～最高均勻分攤；小時價量＝60 分鐘K 分攤＋收盤集合競價差額補在收盤價。 */
   (function(){
-    var VP={day:false, hour:false, cache:{}, raf:0}, ROWS=48;
+    var _vp0=(window._kPref&&window._kPref.get('vp',null))||{};   // 2026-10-11 記住上次開關
+    var VP={day:!!_vp0.day, hour:!!_vp0.hour, cache:{}, raf:0}, ROWS=48;
     function el(id){ return document.getElementById(id); }
     function dkey(t){ return typeof t==='number' ? new Date(t*1000).toISOString().slice(0,10) : (typeof t==='string' ? t : (t&&t.year ? t.year+'-'+String(t.month).padStart(2,'0')+'-'+String(t.day).padStart(2,'0') : '')); }
     function fetchBars(kind){
@@ -15022,7 +15241,8 @@
       var o=el('vpOpts'), open=o.style.display==='none';
       o.style.display=open?'block':'none'; window._chartLayerPanel('vp',open); el('vpArrow').textContent=open?'▾':'▸';
     };
-    window._vpToggle=function(kind,on){ VP[kind]=on;var c=(VP.day?1:0)+(VP.hour?1:0);window._chartLayerStatus('vp',c>0,c);window._vpSchedule(); };
+    window._vpToggle=function(kind,on){ VP[kind]=on;var c=(VP.day?1:0)+(VP.hour?1:0);window._chartLayerStatus('vp',c>0,c);if(window._kPref)window._kPref.set('vp',{day:!!VP.day,hour:!!VP.hour});window._vpSchedule(); };
+    window._vpSyncUI=function(){ if(el('vpDayChk'))el('vpDayChk').checked=!!VP.day; if(el('vpHourChk'))el('vpHourChk').checked=!!VP.hour; var c=(VP.day?1:0)+(VP.hour?1:0); window._chartLayerStatus('vp',c>0,c); };
     window._vpSchedule=function(){ clearTimeout(VP.raf); VP.raf=setTimeout(draw, 40); };   // 用 timer（背景分頁 rAF 會暫停）；拖曳時 40ms 去抖動
     window.addEventListener('resize', function(){ window._vpSchedule(); });
 
