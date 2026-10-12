@@ -9676,7 +9676,8 @@
       body.job_id = jobId;
       _screenJob = { id: jobId, active: true };
 
-      fetch('https://tw-stock-screener-neon.vercel.app/api/screen', {
+      // uat 分支別名(含 git-uat)打自己的同源後端，以便測試尚未上 prod 的篩選規則；其餘(prod/preview/local)維持 prod
+      fetch((location.hostname.indexOf('git-uat')>=0?'':'https://tw-stock-screener-neon.vercel.app')+'/api/screen', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -9728,7 +9729,7 @@
         return;
       }
       try {
-        const r = await fetch(`https://tw-stock-screener-neon.vercel.app/api/screen?job_id=${encodeURIComponent(jobId)}&_=${Date.now()}`, { cache: 'no-store' });
+        const r = await fetch(`${location.hostname.indexOf('git-uat')>=0?'':'https://tw-stock-screener-neon.vercel.app'}/api/screen?job_id=${encodeURIComponent(jobId)}&_=${Date.now()}`, { cache: 'no-store' });
         const data = await r.json();
         if (!_screenJob || _screenJob.id !== jobId) return;
         if (!data.pending) {                                  // 結果到手
