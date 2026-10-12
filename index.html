@@ -4520,6 +4520,31 @@
     .bd-sop .tag{display:inline-block;font-weight:900;border-radius:7px;padding:3px 12px;font-size:13px;letter-spacing:1px;}
     .bd-sop .exp{font-size:24px;font-weight:900;margin-top:8px;font-variant-numeric:tabular-nums;}
     .bd-sop .act{font-size:12.5px;color:var(--text);line-height:1.6;margin-top:8px;background:var(--surface2);border-radius:8px;padding:10px 12px;}
+
+#breadthView .bd-banner{padding:24px;background:linear-gradient(115deg,var(--surface),var(--surface2));border:1px solid var(--border);border-left:3px solid var(--accent);gap:20px}
+#breadthView .bd-banner .big{font-size:21px;line-height:1.6}#breadthView .bd-banner .lab{letter-spacing:1px;margin-bottom:8px}#breadthView .bd-detail{display:block;font-size:12px;font-weight:400;color:var(--text-muted);margin-top:10px}
+#breadthView #bdSentiment{font-size:12px;padding:7px 12px;border-radius:20px}
+#breadthView .bd-cards{grid-template-columns:repeat(6,minmax(0,1fr));gap:14px;margin:20px 0}#breadthView .bd-card{padding:20px 17px;border-radius:14px;transition:border-color .25s,box-shadow .25s}#breadthView .bd-card .v{font-size:26px;margin:9px 0}#breadthView .bd-card .s{font-size:11px;line-height:1.6;min-height:35px}
+#breadthView .bd-card:hover,#breadthView .bd-st:hover{border-color:var(--accent);box-shadow:0 5px 18px rgba(58,120,170,.09)}
+#breadthView .bd-meter{height:4px;background:var(--surface2);border-radius:6px;margin-top:14px;overflow:hidden}#breadthView .bd-meter i{display:block;height:100%;border-radius:6px;background:var(--accent);position:relative;overflow:hidden}#breadthView .bd-meter i::after{content:'';position:absolute;inset:0;background:linear-gradient(100deg,transparent,rgba(255,255,255,.65),transparent);transform:translateX(-110%);animation:bdRefineLight 7s ease-in-out infinite;pointer-events:none}@keyframes bdRefineLight{0%,65%{transform:translateX(-110%)}90%,100%{transform:translateX(110%)}}
+#breadthView .bd-sec{padding:23px;border-radius:15px}#breadthView .bd-sec-sub{line-height:1.7;margin:7px 0 20px}#breadthView .bd-stage{gap:16px}#breadthView .bd-st{background:var(--surface);padding:18px 14px;border-radius:12px;position:relative;transition:border-color .25s}#breadthView .bd-st:not(:last-child)::after{content:'→';position:absolute;right:-14px;top:21px;color:var(--text-muted);font-size:12px}#breadthView .bd-st .t{display:flex;align-items:center;gap:6px;font-size:11px}#breadthView .bd-state-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);flex-shrink:0}#breadthView .bd-st .m{font-size:17px;margin:12px 0 7px}#breadthView .bd-st .d{line-height:1.7}
+#breadthView .bd-sop{background:var(--surface);padding:24px;border-radius:15px}#breadthView .bd-sop .exp{font-size:30px;margin-top:18px}#breadthView .bd-risk-ruler{margin:20px 0 14px}#breadthView .bd-risk-track{height:7px;border-radius:8px;background:var(--surface2);position:relative}#breadthView .bd-risk-track i{position:absolute;height:100%;background:linear-gradient(90deg,#b8a577,#9d834f);border-radius:8px}#breadthView .bd-risk-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);margin-top:8px}#breadthView .bd-sop .act{background:transparent;border-top:1px solid var(--border);border-radius:0;padding:14px 0 0;font-size:12px}
+@media(max-width:1100px){#breadthView .bd-cards{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:760px){#breadthView .bd-stage{grid-template-columns:1fr}#breadthView .bd-st:not(:last-child)::after{content:'↓';right:18px;top:auto;bottom:-16px}#breadthView .bd-banner .big{font-size:18px}#breadthView .bd-cards{grid-template-columns:repeat(2,minmax(0,1fr))}#breadthView .bd-sop .exp{font-size:25px}}@media(prefers-reduced-motion:reduce){#breadthView .bd-meter i::after{animation:none;display:none}}
+
+#breadthView .bd-risk-track{height:9px;background:repeating-linear-gradient(90deg,transparent 0,transparent calc(10% - 1px),var(--border) calc(10% - 1px),var(--border) 10%),var(--surface2)}
+#breadthView .bd-risk-track i{box-shadow:0 0 14px rgba(181,154,101,.25)}#breadthView .bd-risk-track i::after{content:'';position:absolute;inset:0;overflow:hidden;border-radius:8px;background:linear-gradient(100deg,transparent 20%,rgba(255,255,255,.75) 50%,transparent 80%);background-size:200% 100%;animation:bdRiskSweep 6s ease-in-out infinite}
+#breadthView .bd-risk-track i::before{content:'';position:absolute;inset:-3px -3px;border-left:6px solid #c6ae76;border-right:6px solid #c6ae76;border-radius:10px;animation:bdRiskBreath 3.5s ease-in-out infinite}
+@keyframes bdRiskSweep{0%,55%{background-position:180% 0}100%{background-position:-80% 0}}@keyframes bdRiskBreath{0%,100%{filter:drop-shadow(0 0 2px #b59a65)}50%{filter:drop-shadow(0 0 7px #b59a65)}}
+@media(prefers-reduced-motion:reduce){#breadthView .bd-risk-track i::before,#breadthView .bd-risk-track i::after{animation:none}}
+
+#breadthView .bd-cards{grid-template-columns:repeat(6,minmax(0,1fr));align-items:stretch;gap:13px}
+#breadthView .bd-card{display:flex;flex-direction:column;padding:18px 16px;border:1px solid var(--border);border-radius:13px;background:var(--surface);box-shadow:var(--shadow-sm);min-width:0}
+#breadthView .bd-card .v{font-size:25px;line-height:1.4;margin:8px 0;font-variant-numeric:tabular-nums}
+#breadthView .bd-card .s{min-height:36px;font-size:11px;line-height:1.65}#breadthView .bd-meter{margin-top:auto;height:5px;position:relative;flex-shrink:0;overflow:visible;background:var(--surface2)}#breadthView .bd-meter i{overflow:hidden}#breadthView .bd-split{display:flex;overflow:hidden}#breadthView .bd-split i{border-radius:0}
+#breadthView .bd-ma::after{content:'';position:absolute;left:50%;top:-3px;width:1px;height:11px;background:var(--text-muted);opacity:.55}
+#breadthView .bd-scale{display:flex;justify-content:space-between;font-size:9px;color:var(--text-muted);margin-top:7px;line-height:1.4}
+#breadthView .bd-card:hover{border-color:var(--accent);box-shadow:0 4px 16px rgba(58,120,170,.1)}
+@media(max-width:1100px){#breadthView .bd-cards{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:600px){#breadthView .bd-cards{grid-template-columns:repeat(2,minmax(0,1fr))}#breadthView .bd-card{padding:16px 13px}}
     .bd-blur{filter:blur(6px);pointer-events:none;user-select:none;}
   </style>
   <div id="breadthView" style="display:none">
@@ -4556,7 +4581,7 @@
           <span class="tag" id="bdSopTag">—</span>
         </div>
         <div class="exp" id="bdSopExp">—</div>
-        <div class="act" id="bdSopAct"></div>
+        <div class="bd-risk-ruler"><div class="bd-risk-track"><i id="bdRiskRange"></i></div><div class="bd-risk-labels"><span>0% 曝險</span><span>50%</span><span>100% 曝險</span></div></div><div class="act" id="bdSopAct"></div>
       </div>
 
       <div class="bd-sec">
@@ -4629,25 +4654,30 @@
       var txUp = (txCur!=null && txPrevKey!=null)? txCur> TX[txPrevKey] : (netAdv>0);
       var se=sentiment(ulPct,dlPct);
       el('bdSentiment').className='bd-badge '+se.c; el('bdSentiment').textContent=se.t;
-      el('bdNarrative').innerHTML=combo(txUp,cur.up,cur.down)+'。<br>淨上漲 <b style="color:'+(netAdv>0?'var(--red)':(netAdv<0?'var(--green)':'var(--text-muted)'))+'">'+(netAdv>=0?'+':'')+netAdv+' 家</b>（漲'+cur.up+'/跌'+cur.down+'/平'+cur.flat+'）；漲停 '+cur.up_limit+'（滲透 '+ulPct.toFixed(2)+'%）· 跌停 '+cur.down_limit+'（'+dlPct.toFixed(2)+'%）。站上60MA '+(ma60!=null?ma60+'%':'—')+'、20MA '+(ma20!=null?ma20+'%':'—')+'。';
+      el('bdNarrative').innerHTML=combo(txUp,cur.up,cur.down)+'。<span class="bd-detail">淨上漲 <b style="color:'+(netAdv>0?'var(--red)':(netAdv<0?'var(--green)':'var(--text-muted)'))+'">'+(netAdv>=0?'+':'')+netAdv+' 家</b>（漲'+cur.up+'/跌'+cur.down+'/平'+cur.flat+'）；漲停 '+cur.up_limit+'（滲透 '+ulPct.toFixed(2)+'%）· 跌停 '+cur.down_limit+'（'+dlPct.toFixed(2)+'%）。站上60MA '+(ma60!=null?ma60+'%':'—')+'、20MA '+(ma20!=null?ma20+'%':'—')+'。</span>';
       el('bdSub').textContent='資料日 '+cur.trade_date+' · '+(mode==='all'?'含櫃買 全市場':'不含櫃買 僅上市');
       el('bdUniv').textContent='母體 '+univ+' 家（排除 ETF/DR）';
       // cards
-      el('bdCards').innerHTML=[
-        card('淨上漲家數',(netAdv>=0?'+':'')+netAdv+' 家','漲'+cur.up+' / 跌'+cur.down),
-        card('漲停滲透率',ulPct.toFixed(2)+'%','標竿健康 1.2~2%'),
-        card('跌停滲透率',dlPct.toFixed(2)+'%','冰點 ≥2%'),
-        card('停板多頭比',lbull!=null?lbull.toFixed(1)+'%':'樣本不足','漲停÷(漲停+跌停)，需≥10家'),
-        card('站上60MA',ma60!=null?ma60+'%':'—','季線·牛市護城河 >50%'),
-        card('站上20MA',ma20!=null?ma20+'%':'—','月線·過熱>80% 超賣<20%')
-      ].join('');
+      var metricCards=[
+        card('淨上漲家數',(netAdv>=0?'+':'')+netAdv+' 家','漲'+cur.up+' / 跌'+cur.down,cur.up/univ*100,netAdv<0?'var(--green)':'var(--red)','breadth',[cur.up,cur.flat,cur.down]),
+        card('漲停滲透率',ulPct.toFixed(2)+'%','標竿健康 1.2~2%',ulPct/2.5*100,'var(--red)'),
+        card('跌停滲透率',dlPct.toFixed(2)+'%','冰點 ≥2%',dlPct/2*100,'var(--green)'),
+        card('停板多頭比',lbull!=null?lbull.toFixed(1)+'%':'樣本不足','漲停÷(漲停+跌停)，需≥10家',lbull),
+        card('站上60MA',ma60!=null?ma60+'%':'—','季線·牛市護城河 >50%',ma60,null,'ma'),
+        card('站上20MA',ma20!=null?ma20+'%':'—','月線·過熱>80% 超賣<20%',ma20,null,'ma')
+      ];
+      el('bdCards').innerHTML=metricCards.join('');
       renderStage(arr,cur,ma60,ma20,dlPct,netAdv);
       renderSop(ma60,ma20,dlPct,netAdv);
       renderChart(arr);
       renderQuad();
       el('bdNote').innerHTML='<b>算法與資料源（合夥人複查，依《大盤多空與市場廣度實戰判讀手冊》）：</b>家數/漲跌停＝各股當日收盤 vs 前一交易日（漲跌停門檻±9.5%，10%制）；滲透率＝漲/跌停家數÷有效母體（排除 ETF 00/DR）；站上均線廣度＝收盤>該股 N 日均線的家數÷有 N 日歷史者（N=5/10/20/60）；漲跌量比＝Σ上漲股成交額÷Σ下跌股成交額；新高/新低＝52週(252日)。情緒門檻採手冊§6實務區間（漲停過熱≥2.5%、健康1.2~2%、跌停冰點≥2%），手冊註明門檻宜以2~3年歷史滾動百分位校準（目前資料約1年、將隨每日累積延長）。SOP 依 60日/20日廣度（手冊§8）。5階週期上層不可被下層推翻；加權5分K盤中戰術層暫未納入。資料源：Supabase price_window 全市場收盤（breadth_daily.py 每日盤後計算），加權指數 taiex_daily。';
     }
-    function card(k,v,s){ return '<div class="bd-card"><div class="k">'+k+'</div><div class="v">'+v+'</div><div class="s">'+(s||'')+'</div></div>'; }
+    function card(k,v,s,pct,tone,type,parts){
+      var meter='<i style="width:'+Math.max(0,Math.min(100,pct||0))+'%;background:'+(tone||'var(--accent)')+'"></i>';
+      if(type==='breadth'){var total=parts.reduce(function(a,b){return a+b;},0)||1;meter=parts.map(function(n,i){return '<i style="width:'+(n/total*100)+'%;background:'+['var(--red)','#b9b6ad','var(--green)'][i]+'"></i>';}).join('');}
+      return '<div class="bd-card"><div class="k">'+k+'</div><div class="v"'+(type==='breadth'?' style="color:'+tone+'"':'')+'>'+v+'</div><div class="s">'+(s||'')+'</div><div class="bd-meter '+(type==='breadth'?'bd-split':'')+(type==='ma'?' bd-ma':'')+'" aria-hidden="true">'+meter+'</div>'+(type==='ma'?'<div class="bd-scale"><span>0%</span><span>50%</span><span>100%</span></div>':(type==='breadth'?'<div class="bd-scale"><span>上漲</span><span>平盤</span><span>下跌</span></div>':''))+'</div>';
+    }
     function tierBadge(v,hi,lo){ if(v==null)return '<span class="bd-badge n" style="font-size:12px;padding:2px 8px">—</span>'; var c=v>=hi?'g':(v<lo?'r':'a'); return '<span class="bd-badge '+c+'" style="font-size:12px;padding:2px 8px">'+v+'%</span>'; }
     function renderStage(arr,cur,ma60,ma20,dlPct,netAdv){
       // 10日騰落斜率、5日連續：用近 N 日 netAdv
@@ -4662,7 +4692,7 @@
         {t:'5日 週線·動能',m:(pos5>=3?'連續推進':'弱勢/走平'),d:'近5日淨上漲為正 '+pos5+'/5 天'},
         {t:'今日 盤後結構',m:(netAdv>=0?'漲多於跌':'跌多於漲'),d:'淨上漲 '+(netAdv>=0?'+':'')+netAdv+'、跌停滲透 '+dlPct.toFixed(2)+'%'}
       ];
-      el('bdStage').innerHTML=st.map(function(x){return '<div class="bd-st"><div class="t">'+x.t+'</div><div class="m">'+x.m+'</div><div class="d">'+x.d+'</div></div>';}).join('');
+      el('bdStage').innerHTML=st.map(function(x){return '<div class="bd-st"><div class="t"><i class="bd-state-dot" style="background:'+( /牛市|健康|多方|推進|漲多/.test(x.m)?'var(--red)':(/空方|弱勢|跌多|警戒/.test(x.m)?'var(--green)':'var(--accent)'))+'"></i>'+x.t+'</div><div class="m" style="color:'+( /牛市|健康|多方|推進|漲多/.test(x.m)?'var(--red)':(/空方|弱勢|跌多|警戒/.test(x.m)?'var(--green)':'var(--text-muted)'))+'">'+x.m+'</div><div class="d">'+x.d+'</div></div>';}).join('');
     }
     function renderSop(ma60,ma20,dlPct,netAdv){
       var tag,exp,act,cls;
@@ -4671,7 +4701,7 @@
       else if(ma60!=null&&ma60<30){cls='r';tag='空手觀望';exp='0% ~ 20%';act='60日廣度跌破 30% 警戒線，現金為王；多單僅限超短線快進快出，逢反彈視為調節逃命點。';}
       else {cls='a';tag='震盪防守';exp='30% ~ 50%';act='廣度背離或20日廣度轉弱。收緊移動停利停損、淘汰轉弱持股，降低整體槓桿與水位。';}
       el('bdSop').className='bd-sop '+cls; el('bdSopTag').className='tag bd-badge '+cls;
-      el('bdSopTag').textContent=tag; el('bdSopExp').textContent='建議總曝險 '+exp; el('bdSopAct').textContent=act;
+      el('bdSopTag').textContent=tag; el('bdSopExp').textContent='建議總曝險 '+exp; el('bdSopAct').textContent=act; var range=exp.match(/\d+/g); if(el('bdRiskRange')&&range){el('bdRiskRange').style.left=range[0]+'%';el('bdRiskRange').style.width=(Number(range[1])-Number(range[0]))+'%';}
     }
     var chart=null;
     function renderChart(arr){
@@ -6838,120 +6868,275 @@
     .usty-tab{font-family:monospace;font-size:13px;border:1px solid var(--border);background:var(--surface);color:var(--text-muted);border-radius:10px;padding:10px 12px;cursor:pointer;text-align:left;line-height:1.35}
     .usty-tab[aria-selected="true"]{border-color:var(--uc);color:var(--text);box-shadow:0 0 0 1px color-mix(in srgb,var(--uc) 45%,transparent)}
     .usty-dot{width:9px;height:9px;border-radius:50%;display:inline-block;box-shadow:0 0 0 3px color-mix(in srgb,currentColor 18%,transparent)}
+
+#ustView .ust-research-head h2{font-size:26px;letter-spacing:.3px;margin:8px 0}#ustView .ust-research-head p{font-size:13px;color:var(--text-muted);margin-bottom:22px}
+#ustView .usty-card{border-radius:16px;padding:24px;margin-bottom:18px;background:var(--surface);border:1px solid var(--border);box-shadow:var(--shadow-sm)}
+#ustView .ust-benchmark{display:grid;grid-template-columns:1.2fr .8fr 1fr;gap:28px;align-items:center;border-top:2px solid #b59a65}#ustView strong{display:block;font-size:30px;font-weight:800;font-variant-numeric:tabular-nums;margin:10px 0}#ustView small{display:block;font-size:11px;line-height:1.7;color:var(--text-muted)}#ustView label{font-size:12px;color:var(--text-muted)}#ustView .usty-inp{margin-top:8px;width:100%;box-sizing:border-box;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:11px 13px}#ustView .ust-curve b{display:block;font-size:20px;margin:9px 0}
+#ustView .ust-search-row{display:flex;align-items:stretch;gap:10px;margin-top:8px}#ustView .ust-search-row input{margin:0;flex:1;min-width:0}#ustView .ust-search-row button{background:#315a73!important;color:#fff!important;border:0;border-radius:9px;padding:10px 24px;font-weight:700}#ustView #ustMatches{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;font-size:12px}#ustView #ustMatches button{padding:7px 12px;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:8px}
+#ustView .ust-result h3{font-size:20px;margin:12px 0}#ustView .ust-verdict{display:inline-block;padding:10px 15px;border-radius:9px;font-size:15px;font-weight:700;color:var(--text)!important;-webkit-text-fill-color:var(--text)!important;background:var(--surface2);border:1px solid var(--border)}#ustView .ust-verdict[data-state="lower"]{color:#94571e!important;-webkit-text-fill-color:#94571e!important;background:#fbefdf;border-color:#e9ccaa}#ustView .ust-verdict[data-state="higher"]{color:#285c69!important;-webkit-text-fill-color:#285c69!important;background:#e9f3f4;border-color:#b8d7dd}
+:root:not([data-theme="light"]) #ustView .ust-verdict[data-state="lower"]{color:#f2c28f!important;-webkit-text-fill-color:#f2c28f!important;background:#34291f;border-color:#6d5033}:root:not([data-theme="light"]) #ustView .ust-verdict[data-state="higher"]{color:#a8d6dd!important;-webkit-text-fill-color:#a8d6dd!important;background:#1b3037;border-color:#385963}
+#ustView .ust-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px;margin:26px 0}#ustView .ust-metrics>div+div{border-left:1px solid var(--border);padding-left:22px}#ustView .ust-bar-row{display:grid;grid-template-columns:40px minmax(0,1fr) 65px;gap:14px;align-items:center;font-size:12px;margin:15px 0}#ustView .ust-bar{height:6px;background:var(--surface2);border-radius:6px}#ustView .ust-bar i{display:block;height:100%;border-radius:6px}#ustView .ust-caption{color:var(--text-muted);font-size:11px;line-height:1.8;margin-top:18px}#ustView summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--text)}#ustView .ust-rules ul{font-size:12px;color:var(--text-muted);line-height:1.9;padding-left:20px}#ustView .ust-sim-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-top:20px}
+@media(max-width:650px){#ustView .usty-card{padding:18px}#ustView .ust-benchmark,#ustView .ust-sim-grid{grid-template-columns:1fr}#ustView .ust-metrics{gap:10px}#ustView .ust-metrics>div+div{padding-left:10px}#ustView strong{font-size:23px}#ustView .ust-search-row button{padding:10px 15px}}
+
+#ustView .ust-search{position:relative;z-index:2;overflow:visible}#ustView #ustMatches{display:block;position:absolute;left:24px;right:24px;top:112px;max-height:320px;overflow-y:auto;z-index:20;margin:0;border-radius:12px;background:var(--surface);box-shadow:0 12px 32px rgba(20,35,55,.15);border:1px solid var(--border);padding:6px}#ustView #ustMatches:empty{display:none}#ustView #ustMatches button{display:grid;grid-template-columns:70px minmax(0,1fr) 40px;align-items:center;gap:12px;width:100%;text-align:left;border:0;background:transparent;border-radius:8px;padding:11px 12px;transform:none!important;box-shadow:none!important;font-size:12px}#ustView #ustMatches button b{color:var(--accent);font-variant-numeric:tabular-nums}#ustView #ustMatches button small{text-align:right}#ustView #ustMatches button:hover,#ustView #ustMatches button[aria-selected="true"]{background:var(--surface2);color:var(--text)}#ustView .ust-search-help{margin-top:12px;font-size:10px}
+#ustView .ust-hint{font-size:12px;line-height:1.8;color:var(--text-muted);margin:10px 0 0;border-left:2px solid #b59a65;padding-left:10px}
+#ustView .usty-card{transition:border-color .25s,box-shadow .25s;animation:ustCardBreath 6s ease-in-out infinite}#ustView .usty-card:nth-of-type(2n){animation-delay:1.4s}#ustView .usty-card:hover{border-color:#b59a65;box-shadow:0 4px 20px rgba(181,154,101,.13)}#ustView strong,#ustView .ust-curve b{animation:ustNumberGlow 5s ease-in-out infinite}#ustView .ust-verdict{animation:ustCardBreath 4s ease-in-out infinite}#ustView .ust-bar i{position:relative;overflow:hidden}#ustView .ust-bar i::after{content:'';position:absolute;inset:0;background:linear-gradient(100deg,transparent,rgba(255,255,255,.8),transparent);transform:translateX(-110%);animation:bdRefineLight 6s ease-in-out infinite;pointer-events:none}#ustView .ust-search-row button{position:relative;overflow:hidden}#ustView .ust-search-row button::after{content:'';position:absolute;inset:0;background:linear-gradient(100deg,transparent,rgba(255,255,255,.25),transparent);transform:translateX(-110%);animation:bdRefineLight 7s ease-in-out infinite;pointer-events:none}
+@keyframes ustCardBreath{0%,100%{box-shadow:0 2px 8px rgba(120,145,170,.05)}50%{box-shadow:0 3px 18px rgba(181,154,101,.12)}}@keyframes ustNumberGlow{0%,100%{text-shadow:none}50%{text-shadow:0 0 16px rgba(181,154,101,.2)}}
+@media(max-width:650px){#ustView #ustMatches{left:18px;right:18px;top:100px}}
+@media(prefers-reduced-motion:reduce){#ustView .usty-card,#ustView strong,#ustView .ust-curve b,#ustView .ust-verdict,#ustView .ust-bar i::after,#ustView .ust-search-row button::after{animation:none!important}#ustView .ust-bar i::after,#ustView .ust-search-row button::after{display:none}}
+
+#ustView [hidden]{display:none!important}#ustView .ust-mode-tabs{display:inline-flex;padding:5px;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;margin:0 0 20px}#ustView .ust-mode-tabs button,#ustView .ust-scenario-tabs button{border:1px solid transparent!important;background:var(--surface2)!important;color:var(--text-muted)!important;border-radius:8px;padding:10px 15px;font-size:12px;transform:none!important;transition:background .2s,color .2s,border-color .2s!important;position:relative;overflow:hidden}#ustView .ust-mode-tabs button[aria-selected="true"],#ustView .ust-scenario-tabs button[aria-selected="true"]{background:#315a73!important;color:#fff!important;border-color:#5d94b2!important;animation:ustSelectedPulse 3.6s ease-in-out infinite}#ustView .ust-mode-tabs button:hover,#ustView .ust-scenario-tabs button:hover{border-color:#b59a65!important}#ustView .ust-mode-tabs button[aria-selected="true"]::after,#ustView .ust-scenario-tabs button[aria-selected="true"]::after{content:'';position:absolute;inset:0;background:linear-gradient(100deg,transparent,rgba(255,255,255,.25),transparent);transform:translateX(-110%);animation:bdRefineLight 6s infinite;pointer-events:none}
+:root:not([data-theme="light"]) #ustView .ust-mode-tabs button[aria-selected="true"],:root:not([data-theme="light"]) #ustView .ust-scenario-tabs button[aria-selected="true"]{background:#243f4a!important;color:#a5f3fc!important;border-color:#4d8c9d!important}
+#ustView .ust-scenario-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px}#ustView .ust-scenario-tabs button{text-align:left}#ustView .ust-scenario-tabs small{font-size:10px;color:inherit;margin-top:6px;line-height:1.5}#ustView .ust-terminal{background:var(--surface);color:var(--text);border-color:var(--border)}#ustView .ust-terminal .usty-eye{color:#22d3ee}#ustView .ust-terminal strong{font-size:25px}#ustView .ust-sidecards{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:24px 0}#ustView .ust-sidecards article{padding:20px;background:#172236;border:1px solid #334155;border-radius:12px}#ustView .ust-sidecards h3{font-size:15px;line-height:1.7}#ustView .ust-sidecards p,#ustView .ust-sidecards ul,#ustView .ust-terminal details p{font-size:12px;line-height:1.9;color:#b8c5d6}#ustView .ust-sidecards h4{font-size:13px;color:#22d3ee}#ustView .ust-sidecards article:last-child h4{color:#fbbf24}#ustView .ust-terminal .ust-sim-grid{grid-template-columns:1fr}#ustView .ust-terminal .ust-bar-row{grid-template-columns:65px minmax(0,1fr) 65px}#ustView #ustMatches button{grid-template-columns:95px minmax(0,1fr) 55px}#ustView #ustMatches button[aria-selected="true"]{background:#315a73!important;color:#fff!important}#ustView #ustMatches button[aria-selected="true"] b,#ustView #ustMatches button[aria-selected="true"] small{color:#fff!important}
+@keyframes ustSelectedPulse{0%,100%{box-shadow:0 0 0 1px rgba(34,211,238,.08)}50%{box-shadow:0 0 15px rgba(34,211,238,.2)}}@media(max-width:700px){#ustView .ust-sidecards{grid-template-columns:1fr}#ustView .ust-scenario-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(prefers-reduced-motion:reduce){#ustView .ust-mode-tabs button,#ustView .ust-scenario-tabs button,#ustView .ust-mode-tabs button::after,#ustView .ust-scenario-tabs button::after{animation:none!important}}
+
+/* 與本站研究卡風格一致，所有研究區跟隨主題 */
+#ustView .ust-terminal{background:var(--surface);color:var(--text);border-color:var(--border)}
+#ustView .ust-terminal .usty-eye{color:var(--accent)}
+#ustView .ust-sidecards article{background:color-mix(in srgb,var(--surface2) 60%,var(--surface));border-color:var(--border);border-radius:13px}
+#ustView .ust-sidecards h3{color:var(--text);font-size:15px;font-weight:700}
+#ustView .ust-sidecards p,#ustView .ust-sidecards ul,#ustView .ust-terminal details p{color:var(--text-muted);font-size:12px;line-height:1.85}
+#ustView .ust-sidecards h4{color:var(--accent)}#ustView .ust-sidecards article:last-child h4{color:#ad8541}
+#ustView .ust-terminal strong{font-size:26px;color:var(--text);letter-spacing:-.3px}
+#ustView .ust-mode-tabs button,#ustView .ust-scenario-tabs button{font-family:inherit;line-height:1.6}
+#ustView .ust-sidecards article{animation:ustCardBreath 6s ease-in-out infinite;transition:border-color .25s,box-shadow .25s}
+#ustView .ust-sidecards article:hover{border-color:var(--accent)}
+#ustView .usty-eye{animation:ustNumberGlow 5s ease-in-out infinite}
+#ustView .usty-inp:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 12%,transparent);outline:none}
+#ustView .ust-terminal .ust-bar-row:first-child i{background:linear-gradient(90deg,#466c86,#6698b5)!important}
+#ustView .ust-terminal .ust-bar-row:nth-child(2) i{background:linear-gradient(90deg,#9f895e,#c5ad79)!important}
+#ustView .ust-terminal .ust-verdict{font-family:inherit;letter-spacing:.5px;font-size:17px;padding:11px 16px}
+@media(prefers-reduced-motion:reduce){#ustView .ust-sidecards article,#ustView .usty-eye{animation:none!important}}
     .usty-seg{height:12px;border-radius:999px;background:var(--border);overflow:hidden}
     .usty-seg>i{display:block;height:100%;border-radius:999px;transition:width .5s ease}
     .usty-badge{font-family:monospace;font-weight:700;letter-spacing:.12em;font-size:clamp(19px,4.8vw,28px);padding:11px 18px;border-radius:12px;display:inline-flex;align-items:center;gap:12px;border:1px solid}
     @media(prefers-reduced-motion:reduce){.usty-seg>i{transition:none}}
+
+#ustView .ust-search-row button{background:linear-gradient(120deg,#315a73,#447a99)!important;color:#fff!important;transition:box-shadow .2s}
+:root:not([data-theme="light"]) #ustView .ust-search-row button{background:linear-gradient(120deg,#cfb475,#ead49d)!important;color:#18212c!important}
+#ustView .ust-search-row button:hover{box-shadow:0 0 18px color-mix(in srgb,var(--accent) 28%,transparent)}
+#ustView #ustMatches em{display:block;font-style:normal;font-size:10px;color:var(--text-muted);margin-top:5px;line-height:1.6}
+#ustView #ustMatches button[aria-selected="true"] em{color:#dbeaf2}
+#ustView .ust-explore{border-top:1px solid var(--border);margin-top:18px;padding-top:16px}
+#ustView .ust-explore-tabs,#ustView .ust-explore-items{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+#ustView .ust-explore button{font:inherit;font-size:11px;border:1px solid var(--border);border-radius:8px;padding:7px 11px;background:var(--surface2);color:var(--text);cursor:pointer;transition:border-color .2s,box-shadow .2s}
+#ustView .ust-explore-tabs button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent);background:color-mix(in srgb,var(--accent) 9%,var(--surface))}
+#ustView .ust-explore button:hover{border-color:var(--accent);box-shadow:0 0 12px color-mix(in srgb,var(--accent) 15%,transparent)}
+#ustView .ust-explore-items span{margin-left:8px;color:var(--text-muted)}
+#ustView .ust-explore-items{animation:ustReveal .3s ease-out}
+#ustView .ust-profile{display:grid;grid-template-columns:1fr 1fr;gap:18px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:18px;margin:20px 0}
+#ustView .ust-profile[hidden]{display:none}#ustView .ust-profile small{display:block;margin-bottom:7px;color:var(--text-muted);font-size:10px}#ustView .ust-profile b,#ustView .ust-profile span{font-size:12px;line-height:1.8;color:var(--text)}
+#ustView .ust-chart-head{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:24px 0 18px;font-size:12px}#ustView .ust-chart-head small{font-size:10px;color:var(--text-muted)}
+#ustView #ustBars{padding:12px 18px;background:color-mix(in srgb,var(--surface2) 70%,var(--surface));border:1px solid var(--border);border-radius:12px}
+#ustView #ustBars .ust-bar{height:10px;background:color-mix(in srgb,var(--border) 45%,var(--surface));position:relative}#ustView #ustBars i{animation:ustRailReveal .6s ease-out;transform-origin:left}#ustView #ustBars b{font-variant-numeric:tabular-nums}#ustView #ustBars .ust-bar-row:first-child i{background:linear-gradient(90deg,#466c86,#6698b5)!important}#ustView #ustBars .ust-bar-row:last-child i{background:linear-gradient(90deg,#9f895e,#c5ad79)!important}
+@keyframes ustReveal{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}@keyframes ustRailReveal{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@media(max-width:650px){#ustView .ust-profile{grid-template-columns:1fr}#ustView #ustBars{padding:10px}#ustView .ust-explore-items button{max-width:100%;text-align:left}}
+@media(prefers-reduced-motion:reduce){#ustView .ust-explore-items,#ustView #ustBars i{animation:none!important}}
+
+:root[data-theme="light"] #ustView .ust-mode-tabs button[aria-selected="true"],:root[data-theme="light"] #ustView .ust-scenario-tabs button[aria-selected="true"]{background:linear-gradient(120deg,#315a73,#447a99)!important;color:#fff!important;border-color:#5d94b2!important}
+:root:not([data-theme="light"]) #ustView .ust-mode-tabs button[aria-selected="true"],:root:not([data-theme="light"]) #ustView .ust-scenario-tabs button[aria-selected="true"]{background:linear-gradient(120deg,#cfb475,#ead49d)!important;color:#18212c!important;border-color:#d4bd86!important}
+#ustView .ust-mode-tabs button[aria-selected="true"],#ustView .ust-scenario-tabs button[aria-selected="true"]{animation:ustThemePulse 4s ease-in-out infinite}
+#ustView #ustMatches button{position:relative;padding-right:43px;animation:ustOptionPulse 5s ease-in-out infinite!important;transition:background .2s,outline-color .2s!important;outline:1px solid transparent;outline-offset:-1px}
+#ustView #ustMatches button:nth-child(2n){animation-delay:1s!important}
+#ustView #ustMatches button::after{content:'→';position:absolute;right:13px;top:50%;transform:translateY(-50%);color:var(--accent);font-size:18px;opacity:.65;pointer-events:none}
+#ustView #ustMatches button:hover,#ustView #ustMatches button[aria-selected="true"]{outline-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,var(--surface))}
+#ustView #ustMatches button:hover::after,#ustView #ustMatches button[aria-selected="true"]::after{animation:ustArrowNudge 1.2s ease-in-out infinite;opacity:1}
+#ustView #ustMatches button[aria-selected="true"]::after{color:#fff}
+@keyframes ustThemePulse{0%,100%{box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 10%,transparent)}50%{box-shadow:0 0 15px color-mix(in srgb,var(--accent) 25%,transparent)}}
+@keyframes ustOptionPulse{0%,100%{box-shadow:inset 0 0 0 1px transparent}50%{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 25%,transparent)}}
+@keyframes ustArrowNudge{0%,100%{transform:translate(0,-50%)}50%{transform:translate(4px,-50%)}}
+@media(prefers-reduced-motion:reduce){#ustView #ustMatches button,#ustView #ustMatches button::after,#ustView .ust-mode-tabs button,#ustView .ust-scenario-tabs button{animation:none!important}}
+
+#ustView .ust-terminal .ust-sidecards{align-items:start}
+#ustView .ust-terminal .ust-sim-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:14px}
+#ustView .ust-terminal .ust-sidecards article{min-width:0}
+#ustView .ust-terminal .ust-sidecards label{font-size:11px;line-height:1.7}
+#ustView .ust-terminal .ust-sidecards input{font-size:17px;padding:10px 12px}
+#ustView .ust-anchor-settings{border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:14px 0;margin:0 0 20px}
+#ustView .ust-anchor-settings>div{max-width:440px;padding-top:14px}#ustView .ust-anchor-settings small{font-size:11px;line-height:1.8;color:var(--text-muted)}
+#ustView .ust-judgment-tags{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 10px}#ustView .ust-judgment-tags span{font-size:10px;padding:6px 10px;border:1px solid var(--border);background:var(--surface2);border-radius:20px;color:var(--text-muted)}
+#ustView .ust-judgment-tags span:first-child{border-color:color-mix(in srgb,var(--accent) 40%,var(--border));color:var(--accent);animation:ustThemePulse 5s infinite}
+#ustView .ust-judgment-details summary{font-size:11px;color:var(--accent);display:inline-block}#ustView .ust-judgment-details ul{font-size:11px;color:var(--text-muted);line-height:1.9;padding:12px 12px 12px 28px;background:var(--surface2);border-radius:10px;margin-top:10px}
+@media(max-width:650px){#ustView .ust-terminal .ust-sim-grid{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){#ustView .ust-judgment-tags span{animation:none!important}}
+
+#ustView .ust-nine-head{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;margin:20px 0 12px;font-size:12px}#ustView .ust-nine-head small{color:var(--text-muted);font-size:10px}
+#ustView .ust-nine-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}#ustView .ust-nine-grid button{position:relative;text-align:left;border:1px solid var(--border);border-radius:10px;background:var(--surface2);color:var(--text);padding:12px;font:inherit;cursor:pointer;transition:border-color .2s,box-shadow .2s;min-width:0}#ustView .ust-nine-grid small{display:block;color:var(--text-muted);font-size:10px;margin-bottom:7px}#ustView .ust-nine-grid b{font-size:12px;line-height:1.7}#ustView .ust-nine-grid em{display:block;font-style:normal;color:var(--accent);font-size:10px;margin-top:6px}#ustView .ust-nine-grid .is-current{border-color:var(--accent);animation:ustThemePulse 5s infinite}#ustView .ust-nine-grid button:hover,#ustView .ust-nine-grid button[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 12px color-mix(in srgb,var(--accent) 18%,transparent)}#ustView .ust-nine-preview{font-size:11px;line-height:1.8;color:var(--text-muted);min-height:22px}
+@media(max-width:650px){#ustView .ust-nine-grid{gap:6px}#ustView .ust-nine-grid button{padding:9px 7px}#ustView .ust-nine-grid b{font-size:11px}#ustView .ust-nine-grid small{font-size:9px}}
+@media(prefers-reduced-motion:reduce){#ustView .ust-nine-grid .is-current{animation:none!important}}
+
+#ustView .ust-status-line{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:12px 0}
+#ustView .ust-auto-result{display:flex;flex-direction:column;gap:5px;padding:10px 15px;border:1px solid var(--border);border-radius:10px;background:var(--surface2);max-width:100%}
+#ustView .ust-auto-result small{font-size:10px;color:var(--text-muted)}#ustView .ust-auto-result b{font-size:13px;line-height:1.6;color:var(--text)}
+#ustView .ust-auto-result[data-ready="true"]{border-color:color-mix(in srgb,var(--accent) 45%,var(--border));animation:ustThemePulse 5s infinite}#ustView .ust-auto-result[data-ready="true"] b{color:var(--accent)}
+@media(prefers-reduced-motion:reduce){#ustView .ust-auto-result{animation:none!important}}
+
+#ustView .ust-status-line{display:grid;grid-template-columns:repeat(2,minmax(0,300px));align-items:stretch;gap:12px}
+#ustView .ust-status-line #ustStatus,#ustView .ust-status-line #ustAutoResult{box-sizing:border-box;min-height:86px;width:100%;margin:0;padding:13px 17px;border-radius:12px;display:flex;flex-direction:column;justify-content:center;gap:6px;line-height:1.6;letter-spacing:0}
+#ustView .ust-status-line .ust-status-label,#ustView .ust-status-line .ust-auto-result small{font-size:10px;font-weight:500;color:var(--text-muted);-webkit-text-fill-color:currentColor}
+#ustView .ust-status-line #ustStatus b,#ustView .ust-status-line #ustAutoResult b{font-size:14px;font-weight:700;color:inherit;-webkit-text-fill-color:currentColor}
+#ustView .ust-status-line [data-state="higher"],#ustView #ustProverb[data-state="higher"]{background:#fff0ee!important;color:#b93c3c!important;border:1px solid #efb8b4!important}
+#ustView .ust-status-line [data-state="lower"],#ustView #ustProverb[data-state="lower"]{background:#edf7f0!important;color:#287446!important;border:1px solid #b0d7be!important}
+#ustView .ust-status-line [data-state="neutral"],#ustView #ustProverb[data-state="neutral"]{background:#fff8e5!important;color:#906a16!important;border:1px solid #e4d093!important}
+#ustView .ust-status-line [data-state="missing"],#ustView #ustProverb[data-state="missing"]{background:var(--surface2)!important;color:var(--text-muted)!important;border:1px solid var(--border)!important;animation:none!important}
+:root:not([data-theme="light"]) #ustView .ust-status-line [data-state="higher"],:root:not([data-theme="light"]) #ustView #ustProverb[data-state="higher"]{background:#352123!important;color:#f39b98!important;border-color:#704044!important}
+:root:not([data-theme="light"]) #ustView .ust-status-line [data-state="lower"],:root:not([data-theme="light"]) #ustView #ustProverb[data-state="lower"]{background:#182f27!important;color:#8ad5a6!important;border-color:#38634d!important}
+:root:not([data-theme="light"]) #ustView .ust-status-line [data-state="neutral"],:root:not([data-theme="light"]) #ustView #ustProverb[data-state="neutral"]{background:#332c1b!important;color:#e6c773!important;border-color:#736238!important}
+#ustView .ust-status-line #ustAutoResult[data-ready="true"] b{color:inherit}
+@media(max-width:650px){#ustView .ust-status-line{grid-template-columns:1fr}#ustView .ust-status-line #ustStatus,#ustView .ust-status-line #ustAutoResult{min-height:80px}}
+
+#ustView .ust-meaning{display:grid;grid-template-columns:1fr 1fr;gap:18px;padding:15px 18px;margin:14px 0 18px;border:1px solid var(--border);border-radius:12px;background:color-mix(in srgb,var(--surface2) 65%,var(--surface))}
+#ustView .ust-meaning small{font-size:10px;color:var(--accent);font-weight:600}#ustView .ust-meaning p{font-size:12px;line-height:1.9;color:var(--text-muted);margin:6px 0 0}
+@media(max-width:650px){#ustView .ust-meaning{grid-template-columns:1fr;gap:12px;padding:14px}}
+
+#ustView .ust-global-heading{display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap}#ustView .ust-global-heading .ust-mode-tabs{margin:0}
+#ustView [data-horizon][aria-pressed="true"]{background:#315a73!important;color:#fff!important;animation:ustThemePulse 5s infinite}:root:not([data-theme="light"]) #ustView [data-horizon][aria-pressed="true"]{background:#d4bd86!important;color:#18212c!important}
+#ustView .ust-global-signals{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0}#ustView .ust-global-signals article,#ustView .ust-global-assets article{padding:16px;border:1px solid var(--border);border-radius:12px;background:var(--surface2);min-width:0}#ustView .ust-global-signals small,#ustView .ust-global-assets small{color:var(--text-muted);font-size:10px}#ustView .ust-global-signals b{display:block;margin:8px 0;font-size:14px;color:var(--text)}#ustView .ust-global-signals span{display:block;font-size:10px;line-height:1.8;color:var(--text-muted)}
+#ustView .ust-global-assets{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:18px 0}#ustView .ust-global-assets h4{margin:8px 0 12px;color:var(--text);font-size:16px}#ustView .ust-global-assets p{font-size:11px;color:var(--text-muted);line-height:1.9}#ustView .ust-global-assets p b{display:block;color:var(--accent);font-size:10px}#ustView .ust-global-assets article:hover{border-color:var(--accent);box-shadow:0 0 15px color-mix(in srgb,var(--accent) 12%,transparent)}
+@media(max-width:850px){#ustView .ust-global-signals,#ustView .ust-global-assets{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:450px){#ustView .ust-global-assets{grid-template-columns:1fr}}
   </style>
   <script>
   (function(){
     var el=function(id){return document.getElementById(id);};
     var SB=function(){return (typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'';},AK=function(){return (typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';};
-    var M=[
-     { btn:['超短天期 1–3M','高股息 ETF / REITs'], core:'股息率 vs 無風險利率 · 息收溢價與下行資本損失',
-       p:{name:'高股息 ETF / REITs',tick:'0056 · 00878 · 00919 · VNQ',py:5.5,risk:'高（股價回撤）'},
-       b:{name:'超短天期國庫券',tick:'SGOV · 00865B',dur:0.25,yf:function(s){return Math.max(s.y2+0.4,s.y10);}},
-       mOpp:'息收溢價，資金駐留', mRisk:'無風險吸金，權益承壓',
-       opp:['無風險利率回落時，高息資產相對吸引力回升，資金傾向回補。','息收與房地產現金流於通膨趨緩階段具相對防禦性。'],
-       risk:['當超短公債利率逼近或超越股息率，資金排擠使權益端評價承壓。','股息率不含資本利得保證，利率高檔期的價格回撤需防範。'] },
-     { btn:['短天期 1–3Y','定存 / 貨幣市場'], core:'再投資風險 vs 短端鎖利 · 現金部位的到期滾動',
-       p:{name:'銀行定存 / 貨幣市場基金 (MMF)',tick:'美元高利定存 · MMF',py:4.6,risk:'低（本金穩定）'},
-       b:{name:'短天期公債',tick:'SHY · 1–3Y UST',dur:1.9,yf:function(s){return s.y2;}},
-       mOpp:'短端鎖利，現金有息', mRisk:'再投受限，續期不定',
-       opp:['短端利率高檔時，現金等價物提供相對明確的名目息收。','流動性佳、存續期短，對利率波動的價格敏感度低。'],
-       risk:['降息循環一旦啟動，到期再投資的收益率面臨下修（再投資風險）。','名目息收於通膨未回落前，實質購買力仍可能被侵蝕。'] },
-     { btn:['中天期 7–10Y','高本益比科技成長'], core:'折現率 vs 遠期盈餘倍數 · DCF 分母對估值的敏感度',
-       p:{name:'高本益比科技成長股',tick:'QQQ · 00662 · 大型權值科技',py:3.2,risk:'很高（久期型股票）'},
-       b:{name:'中天期基準公債',tick:'IEF · 00697B · 10Y 基準',dur:7.6,yf:function(s){return s.y10;}},
-       mOpp:'折現趨緩，成長回神', mRisk:'估值重估，折現加劇',
-       opp:['10Y 殖利率見頂回落時，折現率下降有利遠期盈餘的現值回升。','結構性成長題材於利率穩定階段，評價波動區間收斂。'],
-       risk:['無風險折現率上行直接壓縮遠期盈餘倍數，高估值端波動放大。','長天期（久期型）成長股對利率變動的評價敏感度顯著偏高。'] },
-     { btn:['超長天期 20Y+','投資級公司債'], core:'信用利差 vs 久期彈性 · 違約補償與利率資本利得的不對稱',
-       p:{name:'高評級投資級公司債',tick:'LQD · 00720B · 00937B',py:5.3,risk:'中高（久期＋信用）'},
-       b:{name:'超長天期公債',tick:'TLT · 00687B · 00679B',dur:16.8,yf:function(s){return s.y10+0.35;}},
-       mOpp:'久期具彈，利差墊高', mRisk:'信用分化，留意違約',
-       opp:['降息前夕，長天期部位具備利率下行帶來的資本增值不對稱彈性。','投資級信用利差若維持，於息收之外提供額外風險補償。'],
-       risk:['景氣放緩時信用利差擴大，違約補償是否足夠為核心風險。','超長存續期對利率上行高度敏感，價格波動幅度顯著。'] },
+    var built=false, rates={}, rateDate='', rateHistory=[], selected=null, token=0, suggestToken=0, suggestTimer, products=[];
+    var API=location.protocol==='file:'?'https://tw-stock-screener-neon.vercel.app':'';
+    var crossCatalog=[["^TWII", "台股加權指數", "指數", "台灣 加權 TWII"], ["^TWOII", "櫃買指數", "指數", "台灣 OTC"], ["^GSPC", "S&P 500", "指數", "標普 美國 SP500"], ["^IXIC", "那斯達克綜合", "指數", "NASDAQ 美國"], ["^NDX", "Nasdaq 100", "指數", "科技 那斯達克"], ["^SOX", "費城半導體", "指數", "費半 SOX"], ["^DJI", "道瓊工業", "指數", "Dow 美國"], ["^N225", "日經225", "指數", "日本 Nikkei"], ["^KS11", "韓國綜合", "指數", "韓股 KOSPI"], ["^HSI", "香港恆生", "指數", "港股 恒生"], ["000001.SS", "上海綜合", "指數", "上證 中國"], ["^STOXX50E", "歐洲50", "指數", "歐股 Euro"], ["GC=F", "黃金期貨", "商品", "黃金 gold"], ["SI=F", "白銀期貨", "商品", "白銀 silver"], ["CL=F", "WTI 原油期貨", "商品", "石油 原油 oil"], ["BZ=F", "Brent 原油期貨", "商品", "布蘭特 布倫特 石油"], ["HG=F", "銅期貨", "商品", "銅 copper"], ["NG=F", "天然氣期貨", "商品", "天然氣 natural gas"], ["ZC=F", "玉米期貨", "商品", "玉米 corn"], ["ZW=F", "小麥期貨", "商品", "小麥 wheat"], ["ZS=F", "黃豆期貨", "商品", "黃豆 大豆 soybean"], ["QQQ", "Invesco Nasdaq 100 ETF", "海外ETF", "科技 成長"], ["VNQ", "Vanguard 房地產 ETF", "海外ETF", "REITs 房地產"], ["LQD", "iShares 投資級公司債 ETF", "海外ETF", "公司債 信用"], ["IEF", "iShares 7–10年美債 ETF", "海外ETF", "中天期 公債"], ["TLT", "iShares 20年以上美債 ETF", "海外ETF", "長天期 公債"], ["SGOV", "iShares 0–3月美債 ETF", "海外ETF", "短天期 國庫券"], ["MMF", "美元貨幣市場基金", "現金", "貨幣市場 美元"], ["USD-DEPOSIT", "美元定存", "現金", "銀行 定存"]];
+    var scenarios=[{"title": "超短天期", "sub": "1–3M · 高股息／REITs", "assets": "0056 · 00878 · 00919 · VNQ", "bond": "SGOV · 00865B · 3個月美債", "tenor": "3m", "core": "股息收益差與權益價格波動", "risk": "股息不固定；權益價格與匯率波動", "dur": 0.25, "phrases": ["息差尚存，波動並存", "息差收窄，回撤防範"], "opp": ["短端收益率下降時，固定的股息收益差可能擴大。", "持續現金流可提供部分息收來源，須確認分配組成。"], "risks": ["歷史股息不保證延續，價格下跌可能超過配息。", "跨幣別比較尚未調整匯率、稅費及避險成本。"]}, {"title": "短天期", "sub": "1–3Y · 定存／貨幣市場", "assets": "美元定存 · MMF", "bond": "2年美債 · 短天期公債", "tenor": "2y", "core": "到期再投資與流動性差異", "risk": "再投資收益變化；MMF 非定存保證", "dur": 1.9, "phrases": ["息收具備，再投受限", "定價分水，續期觀察"], "opp": ["約定期間的定存利率可提供名目收益的可見度。", "短天期資產通常較低的價格敏感度有助流動性管理。"], "risks": ["到期續存與 MMF 收益率會隨短期市場利率調整。", "定存提領限制與 MMF 信用、流動性風險需分別確認。"]}, {"title": "中天期", "sub": "7–10Y · 科技成長", "assets": "QQQ · 00662 · 科技成長股", "bond": "IEF · 00697B · 10年美債", "tenor": "10y", "core": "折現率與遠期盈餘估值", "risk": "股息率不代表成長價值；盈餘預期敏感", "dur": 7.6, "phrases": ["定價分水，波動拉鋸", "估值重估，折現加劇"], "opp": ["其他条件不變時，折現率下降可提高遠期現金流現值。", "獲利成長若實現，可部分抵銷折現率變化的影響。"], "risks": ["股息收益差無法衡量科技股完整估值與總報酬。", "折現率與盈餘預期同時變化時，估值波動可能放大。"]}, {"title": "超長天期", "sub": "20Y+ · 投資級公司債", "assets": "LQD · 00720B · 00937B", "bond": "TLT · 00679B · 20年美債", "tenor": "20y", "core": "收益率差、信用與久期風險", "risk": "利率與信用利差雙重敏感度", "dur": 16.8, "phrases": ["利差墊高，信用分化", "息收具備，留意違約"], "opp": ["其他條件不變時，利率下降可帶來債券價格回升。", "正收益率差提供額外名目補償，需評估其風險來源。"], "risks": ["景氣轉弱時信用利差擴大，可能抵銷公債利率下降效應。", "長久期對利率變化敏感，線性試算忽略凸性與信用變動。"]}];
+    var scenarioIndex=0;
+    var tenors=[['3m','3個月'],['6m','6個月'],['1y','1年'],['2y','2年'],['10y','10年'],['20y','20年'],['30y','30年']];
+    function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+    function fmt(x){return x!=null&&Number.isFinite(+x)?(+x).toFixed(2)+'%':'—';}
+    function q(path){return fetch(SB()+'/rest/v1/'+path,{headers:{apikey:AK(),Authorization:'Bearer '+AK()}}).then(function(r){if(!r.ok)throw Error('資料暫無法取得');return r.json();});}
+    var environmentPeriod='short',macroSeries={};
+    function environmentShell(){return '<section class="usty-card ust-environment"><div class="ust-global-heading"><div><div class="usty-eye">Global Lens · 全球商品環境</div><h3>先看環境，再看商品敏感度</h3></div><div class="ust-mode-tabs" aria-label="觀察期間"><button type="button" data-horizon="short" aria-pressed="true">短期 1～3個月</button><button type="button" data-horizon="medium" aria-pressed="false">中期 6～12個月</button></div></div><p id="ustHorizonNote" class="ust-caption"></p><div id="ustEnvironmentSignals" class="ust-global-signals"></div><div id="ustGlobalAssets" class="ust-global-assets"></div><details class="ust-judgment-details"><summary>ⓘ 環境判讀依據與範圍</summary><ul><li>短期：同期限利率最新值減20個有效觀測日前；中期：減60個有效觀測日前。超過±0.10百分點才標示方向。</li><li>通膨採美國CPI年增率，短期與3個月前、中期與6個月前比較，±0.2百分點內視為變化有限。</li><li>就業採美國失業率，同樣與3／6個月前比較，±0.2百分點內視為變化有限；不能單靠失業率宣告衰退。</li><li>全球商品同等呈現，環境資料目前以美元利率與美國總經為主，不代表各國通膨、政策或估值。</li><li>期間是觀察視角，並非未來報酬預測。估值與信用來源尚未完整，不判定泡沫、便宜或整體投資優勢。</li></ul></details></section>';}
+    function environmentUpdate(){
+      if(!el('ustGlobalAssets'))return;var span=environmentPeriod==='short'?20:60,months=environmentPeriod==='short'?3:6,key=el('ustTenor').value;
+      function trend(k){var a=rateHistory.filter(function(r){return r.rates&&Number.isFinite(r.rates[k])&&r.date<=rateDate;}).sort(function(a,b){return a.date.localeCompare(b.date);});if(a.length<span+1||a[a.length-1].date!==rateDate)return null;var end=a[a.length-1],start=a[a.length-1-span],d=end.rates[k]-start.rates[k];return {d:d,from:start.date,to:end.date,word:d>.1?'上升':d<-.1?'下降':'持平'};}
+      var t=trend(key),long=trend('10y'),short=trend('3m');
+      function monthly(id,inflation){var a=macroSeries[id]||[];if(a.length<months+(inflation?13:1))return null;var n=a.length-1,p=n-months;var v=inflation?(a[n].value/a[n-12].value-1)*100:a[n].value,prev=inflation?(a[p].value/a[p-12].value-1)*100:a[p].value;return {v:v,d:v-prev,date:a[n].date};}
+      var cpi=monthly('CPIAUCSL',true),jobs=monthly('UNRATE',false),dollar=macroSeries.DTWEXBGS||[],dx=dollar.length>span?dollar[dollar.length-1]:null;
+      el('ustHorizonNote').textContent=(environmentPeriod==='short'?'短期環境：最近20個有效交易觀測與近3個月經濟變化。':'中期環境：最近60個有效交易觀測與近6個月經濟變化。')+' 自動取資料；各來源日期分別列示。';
+      var signals=[['所選美債期限',t?t.word+' · '+(t.d>=0?'+':'')+t.d.toFixed(2)+' pp':'歷史資料不足',t?t.from+' → '+t.to:'需要 '+(span+1)+' 筆同期限觀測'],['美國通膨',cpi?(cpi.d>.2?'升溫':cpi.d<-.2?'降溫':'變化有限')+' · 年增 '+cpi.v.toFixed(2)+'%':'資料待取得',cpi?'資料期 '+cpi.date+'；非全球通膨':'FRED / BLS · CPI'],['美國就業',jobs?(jobs.d>.2?'失業率上升':jobs.d<-.2?'失業率下降':'變化有限')+' · '+jobs.v.toFixed(2)+'%':'資料待取得',jobs?'資料期 '+jobs.date:'FRED / BLS · UNRATE'],['廣義美元',dx?dx.value.toFixed(2):'資料待取得',dx?'資料日 '+dx.date+' · 指數水準':'Federal Reserve · DTWEXBGS']];
+      el('ustEnvironmentSignals').innerHTML=signals.map(function(x){return '<article><small>'+x[0]+'</small><b>'+esc(x[1])+'</b><span>'+esc(x[2])+'</span></article>';}).join('');
+      var falling=long&&long.d<-.1,rising=long&&long.d>.1;
+      var assets=[['全球股票','利率與盈餘並看',falling?'折現壓力減輕的條件':'仍需辨識折現率與盈餘的共同變化','盈餘下降可能抵銷利率改善；各市場估值資料待接'],['高股息／REITs','息收與融資結構',falling?'利率回落可能減輕部分融資壓力':'觀察收益差與融資成本','配息、負債與利率重定價不同，不將整類視為同一商品'],['公債','久期與期限曲線',falling?'其他條件不變，利率下降有利債券價格':rising?'利率上升對長久期價格壓力較大':'利率變化有限，仍需比較期限與久期','利率反向變化會反向影響價格；各期限未必同向'],['公司債','利率與信用分開',falling?'公債利率回落提供價格有利條件':'觀察公債利率與信用補償','信用利差擴大可能抵銷利率效應；信用資料未接齊'],['現金／貨幣市場','短端與再投資',short&&short.d<-.1?'短端回落，續存收益可能調整':'觀察短端收益與收益調整速度','既有約定利率與新一期收益分開；基金另有信用與流動性風險'],['原物料','供需與美元並看',cpi&&cpi.d>.2?'通膨升溫，需分辨商品供給與需求來源':'觀察需求、供給與美元變化','無配息收益，不套股息差；原油與黃金反應可能不同']];
+      el('ustGlobalAssets').innerHTML=assets.map(function(x){return '<article><small>'+x[1]+'</small><h4>'+x[0]+'</h4><p><b>環境線索</b>'+esc(!long?'利率歷史資料不足，暫不判定方向。':x[2])+'</p><p><b>反向風險／待補資訊</b>'+esc(x[3])+'</p></article>';}).join('');
+    }
+    function shell(){return '<div class="ust-research-head"><div class="usty-eye">Yield Research · 收益率比較</div><h2>美債殖利率對標</h2><p>自動觀察利率與經濟環境，平行比較全球商品的敏感度、壓力與有利條件。</p></div>'+
+      environmentShell()+'<section class="usty-card ust-benchmark"><div><div class="usty-eye">US Treasury · 美債基準</div><strong id="ustLiveRate">—</strong><small id="ustLiveDate">載入官方資料…</small></div><label>美債期限<select id="ustTenor" class="usty-inp">'+tenors.map(function(t){return '<option value="'+t[0]+'"'+(t[0]==='10y'?' selected':'')+'>'+t[1]+'期</option>';}).join('')+'</select></label><div class="ust-curve"><small>10年 − 2年利差</small><b id="ustCurve">—</b><small>期限結構觀察，非買賣訊號</small></div></section>'+
+      '<div class="ust-mode-tabs" role="tablist" aria-label="研究模式"><button id="ustActualTab" role="tab" aria-selected="true" aria-controls="ustActualPanel">實際殖利率比較</button><button id="ustResearchTab" role="tab" aria-selected="false" aria-controls="ustResearchPanel">進階情境試算</button></div><div id="ustActualPanel" role="tabpanel"><section class="usty-card ust-search"><form id="ustSearchForm"><label for="ustQuery">搜尋股票、ETF、國際指數或商品</label><div class="ust-search-row"><input id="ustQuery" class="usty-inp" placeholder="代號或名稱：2330、QQQ、黃金、原油、日經" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="ustMatches"><button type="submit">比較</button></div></form><div id="ustMatches" role="listbox" aria-label="搜尋候選標的"></div><small class="ust-search-help">輸入代號或名稱，選取標的即可比較；↑↓ 選擇，Enter 確認。</small><div id="ustExplore" class="ust-explore"></div></section>'+
+      '<section class="usty-card ust-result"><div class="usty-eye">Comparison · 比較結果</div><h3 id="ustAssetName">選擇你想比較的標的</h3><div class="ust-status-line"><div id="ustStatus" class="ust-verdict">搜尋後顯示實際數據與計算依據</div><div id="ustAutoResult" class="ust-auto-result" role="status" aria-live="polite" hidden><small>自動情境判讀</small><b id="ustAutoText"></b></div></div><p id="ustHint" class="ust-hint"></p><div id="ustInterpretation"></div><div id="ustJudgment"></div><div class="ust-metrics"><div><small>標的殖利率</small><strong id="ustAssetRate">—</strong><small id="ustAssetDate">—</small></div><div><small>美債殖利率</small><strong id="ustCompareRate">—</strong><small id="ustCompareDate">—</small></div><div><small>殖利率差</small><strong id="ustDifference">—</strong><small>標的 − 美債・百分點</small></div></div><div id="ustProfile" class="ust-profile" hidden></div><div class="ust-chart-head"><span>收益率雙軌比較</span><small>同一比例尺 · 歷史息收與美債基準</small></div><div id="ustBars"></div><p id="ustMethod" class="ust-caption">不以假設值補足缺漏資料。</p></section>'+
+      '</div><div id="ustResearchPanel" role="tabpanel" hidden>'+researchShell()+'</div><details class="usty-card ust-rules" open><summary>比較規則與資料口徑</summary><ul><li>美債採官方最新可取得的每日名目殖利率，預設10年期；休市或尚未公布時顯示最近資料日。</li><li>股票採本站收錄的官方殖利率，標示來源口徑；ETF 採近12個月已除息的每單位現金配息合計 ÷ 最新收盤價 ×100%。</li><li>指數須有該指數的股息殖利率資料，不以 ETF 或個股替代。資料不足不判定為零。</li><li>差距為正、負或零，分別顯示高於、低於或等於美債；不使用未驗證的便宜、昂貴或資金流向分級。</li></ul><p class="ust-caption">不同幣別、稅費、股利口徑及價格風險未調整。殖利率較高不代表總報酬較高，也不代表買賣建議。</p></details>'+
+      '<details class="usty-card ust-simulation"><summary>情境試算 · 手動假設</summary><div class="ust-sim-grid"><label>假設標的殖利率 (%)<input id="ustSimAsset" class="usty-inp" type="number" min="0" step="0.01" placeholder="輸入假設值"></label><label>假設美債殖利率 (%)<input id="ustSimBond" class="usty-inp" type="number" min="0" step="0.01" placeholder="輸入假設值"></label><div><small>假設差距</small><strong id="ustSimDiff">—</strong></div></div><p class="ust-caption">試算只使用手動假設，不影響上方實際比較。</p></details>';}
+    function researchShell(){return '<div class="ust-scenario-tabs" role="tablist" aria-label="情境類別">'+scenarios.map(function(x,i){return '<button role="tab" data-scenario="'+i+'" aria-selected="'+(i===0)+'"><b>'+x.title+'</b><small>'+x.sub+'</small></button>';}).join('')+'</div><section class="usty-card ust-terminal"><div class="usty-eye">Macro Lens · 客觀情境研究</div><h3 id="ustResearchCore"></h3><div id="ustProverb" class="ust-verdict"></div><p id="ustProverbNote" class="ust-hint"></p><div id="ustResearchInterpretation"></div><div id="ustResearchJudgment"></div><div class="ust-sidecards"><article><small>對標商品</small><h3 id="ustScenarioAssets"></h3><p id="ustScenarioRisk"></p><label>假設商品收益率 (%)<input id="ustResearchYield" type="number" min="0" step="0.01" class="usty-inp" placeholder="不預填商品收益率"></label></article><article><small>對應公債／教育參考</small><h3 id="ustScenarioBond"></h3><div class="ust-sim-grid"><label><span id="ustMatchedLabel">對應期限收益率假設 (%)</span><input id="ustResearchBondYield" class="usty-inp" type="number" min="0" step="0.01" placeholder="官方值未取得"></label><label>公債久期假設 (年)<input id="ustResearchDuration" class="usty-inp" type="number" min="0" step="0.1" value="0.25"></label></div><small>久期為教育假設，不代表所列 ETF 的實際久期。</small></article></div><details class="ust-anchor-settings"><summary>10年共同基準 · 進階設定</summary><div><label>10年基準假設 (%)<input id="ustResearch10" class="usty-inp" type="number" min="0" step="0.01" value="4.5"></label><small>作為跨情境共同參考；上方息差以「對應期限」計算，兩者分開呈現。</small></div></details><div class="ust-metrics"><div><small>假設收益率差</small><strong id="ustResearchSpread">—</strong></div><div><small>利率上升1百分點 · 線性價格變化</small><strong id="ustResearchDown">—</strong></div><div><small>利率下降1百分點 · 線性價格變化</small><strong id="ustResearchUp">—</strong></div></div><div id="ustResearchBars"></div><p id="ustResearchAnchor" class="ust-caption"></p><p class="ust-caption">收益率差不是完整 ERP 或信用利差；未進行現金流期限配對、OAS、違約或匯率調整。「替代收益比例」只表示公債收益率／商品收益率，不代表資金流量或投資機率。</p><div class="ust-sidecards"><article><h4>條件式機會環境</h4><ul id="ustResearchOpp"></ul></article><article><h4>結構性風險</h4><ul id="ustResearchRisk"></ul></article></div><details><summary>再投資 vs 長久期 · 延伸觀察</summary><p>定存安穩，再投受限：到期再投資的利率可能變化；存款保障仍視銀行、地區與限額。</p><p>久期具彈，兩極分化：長久期價格對利率變化較敏感，漲跌皆可能放大。</p></details><p class="ust-caption">本頁為教育研究；呈現歷史資料、明示假設與条件式推論，不构成投資招攬、個別投資建議或獲利保證。</p></section>';}
+    function numberValue(id){var x=el(id).value;return x!==''&&Number.isFinite(+x)&&+x>=0?+x:null;}
+    var nineRules=[['息差尚存，利率上行','息差為正，仍須分別觀察利率與商品價格波動。'],['息差尚存，利率持平','名目息差提供比較資訊，不代表風險相同。'],['息差尚存，利率回落','利率回落下仍有息差，配息持續性需另行確認。'],['收益接近，利率上行','收益率接近，利率上升對各商品影響不同。'],['收益接近，風險有別','收益率接近，仍需區分信用、匯率與價格風險。'],['收益接近，利率回落','息收接近，價格反應取決於久期與商品結構。'],['息差偏低，利率上行','歷史息收較低，價格成長與總報酬需另行評估。'],['息差偏低，利率持平','名目息收較低，不等於商品估值偏高。'],['息差偏低，利率回落','利率回落不保證息差改善或商品價格上升。']];
+    var nineMeaning=[
+      ['息收高於美債，但同期限公債利率正在上升。','觀察息差是否縮小，以及價格波動是否加大。'],
+      ['公債利率變化有限，標的息收仍較高。','確認收益能否持續，以及額外收益承擔哪些風險。'],
+      ['公債利率回落；若標的收益不變，息差可能擴大。','觀察標的配息或收益是否也在下降。'],
+      ['兩者息收接近，而公債利率正在走高。','觀察息差變化，以及標的價格對利率的敏感度。'],
+      ['收益率相近，但商品結構與風險可能不同。','比較收益穩定性、信用、匯率與價格波動。'],
+      ['目前息收接近，但公債利率環境正在改變。','觀察兩者收益調整的速度與幅度。'],
+      ['標的息收較低，而公債利率仍在上升。','確認報酬來源是否更依賴成長或價格變化。'],
+      ['息收差距仍存在，公債利率變化有限。','分開評估成長、收益持續性與風險，不只看殖利率。'],
+      ['公債利率回落，但標的息收目前仍較低。','觀察息差是否收窄，以及標的收益有無同步調整。']
     ];
-    var sel=0, latest=null, built=false;
-    function pctTxt(x){return (x>=0?'+':'')+x.toFixed(2)+'%';}
-    function clamp(x,a,b){return Math.max(a,Math.min(b,x));}
-    function st(){ return { y10:parseFloat(el('ust10').value)||0, y2:parseFloat(el('ust2').value)||0 }; }
-
-    function shell(){
-      var tabs=M.map(function(m,i){return '<button class="usty-tab" role="tab" type="button" aria-selected="'+(i===sel)+'" data-i="'+i+'"><div class="usty-num" style="font-size:11px;color:var(--uc);letter-spacing:.08em">'+m.btn[0]+'</div><div style="font-weight:700;margin-top:3px">'+m.btn[1]+'</div></button>';}).join('');
-      return ''+
-      '<div style="margin-bottom:14px"><div class="usty-eye">Rate-Anchored Benchmarking · 總經定性</div>'+
-        '<h2 style="margin:4px 0 0;font-size:clamp(19px,4vw,26px);font-weight:900">美債殖利率對標儀表</h2>'+
-        '<p style="margin:6px 0 0;color:var(--text-muted);font-size:13px">以 10 年期美國公債殖利率為定價之錨，切換公債天期與熱門對標資產，檢視收益率利差、存續期敏感度與此利率環境下的客觀機會／風險定性。</p>'+
-        '<div id="ustSrc" class="usty-num" style="font-size:11px;color:var(--text-muted);margin-top:4px"></div></div>'+
-      '<div class="usty-card" style="padding:14px 16px;margin-bottom:16px"><div class="usty-eye" style="margin-bottom:12px">US Treasury Benchmark · 基準</div>'+
-        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;align-items:end">'+
-          '<label style="display:block"><span style="font-size:12px;color:var(--text-muted)">US 10Y 殖利率 (%)</span><input id="ust10" class="usty-inp usty-num" type="number" step="0.05" inputmode="decimal" style="margin-top:6px"></label>'+
-          '<label style="display:block"><span style="font-size:12px;color:var(--text-muted)">US 2Y 殖利率 (%)</span><input id="ust2" class="usty-inp usty-num" type="number" step="0.05" inputmode="decimal" style="margin-top:6px"></label>'+
-          '<div class="usty-card" style="padding:10px 12px"><div style="font-size:11px;color:var(--text-muted)">殖利率曲線 10Y−2Y</div><div style="display:flex;align-items:center;gap:8px;margin-top:6px"><span id="ustCurveDot" class="usty-dot"></span><span id="ustCurveVal" class="usty-num" style="font-size:16px;font-weight:700"></span><span id="ustCurveTxt" style="font-size:12px;color:var(--text-muted)"></span></div></div>'+
-          '<div class="usty-card" style="padding:10px 12px"><div style="font-size:11px;color:var(--text-muted)">股權風險溢價 ERP<span id="ustErpScope" style="opacity:.7"></span></div><div style="display:flex;align-items:center;gap:8px;margin-top:6px"><span id="ustErpDot" class="usty-dot"></span><span id="ustErpVal" class="usty-num" style="font-size:16px;font-weight:700"></span><span id="ustErpTxt" style="font-size:12px;color:var(--text-muted)"></span></div></div>'+
-        '</div></div>'+
-      '<div role="tablist" id="ustTabs" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin-bottom:16px">'+tabs+'</div>'+
-      '<div class="usty-card" style="padding:18px 16px">'+
-        '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:6px"><div class="usty-eye" id="ustCore"></div><span class="usty-num" id="ustTag" style="font-size:11px;color:var(--text-muted)"></span></div>'+
-        '<div style="margin:4px 0 18px"><span id="ustMotto" class="usty-badge"><span class="usty-dot"></span><span id="ustMottoTxt"></span></span></div>'+
-        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+
-          '<div class="usty-card" style="padding:14px"><div class="usty-eye" style="color:var(--uc)">對標資產</div><div id="ustPName" style="font-weight:700;margin-top:6px"></div><div id="ustPTick" class="usty-num" style="color:var(--text-muted);font-size:12px;margin-top:3px"></div>'+
-            '<dl style="margin:12px 0 0;display:grid;grid-template-columns:auto 1fr;gap:7px 10px;font-size:13px"><dt style="color:var(--text-muted)">預期殖利率</dt><dd class="usty-num" id="ustPy" style="margin:0;text-align:right;font-weight:700"></dd><dt style="color:var(--text-muted)">波動／天期風險</dt><dd id="ustPRisk" style="margin:0;text-align:right"></dd></dl>'+
-            '<label style="display:block;margin-top:12px"><span style="font-size:11px;color:var(--text-muted)">調整預期殖利率 (%，示意假設)</span><input id="ustPyIn" class="usty-inp usty-num" type="number" step="0.1" inputmode="decimal" style="margin-top:5px"></label></div>'+
-          '<div class="usty-card" style="padding:14px"><div class="usty-eye" style="color:var(--ua)">對應公債</div><div id="ustBName" style="font-weight:700;margin-top:6px"></div><div id="ustBTick" class="usty-num" style="color:var(--text-muted);font-size:12px;margin-top:3px"></div>'+
-            '<dl style="margin:12px 0 0;display:grid;grid-template-columns:auto 1fr;gap:7px 10px;font-size:13px"><dt style="color:var(--text-muted)">參考殖利率</dt><dd class="usty-num" id="ustBy" style="margin:0;text-align:right;font-weight:700"></dd><dt style="color:var(--text-muted)">存續期間</dt><dd class="usty-num" id="ustBDur" style="margin:0;text-align:right"></dd><dt style="color:var(--text-muted)">利率 +1% 理論價損</dt><dd class="usty-num" id="ustBDn" style="margin:0;text-align:right;color:var(--ur)"></dd><dt style="color:var(--text-muted)">利率 −1% 理論價益</dt><dd class="usty-num" id="ustBUp" style="margin:0;text-align:right;color:var(--ue)"></dd></dl></div>'+
-        '</div>'+
-        '<div style="margin-top:16px;display:grid;gap:14px">'+
-          '<div><div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);margin-bottom:6px"><span>收益率利差空間（對標殖利率 − 公債殖利率）</span><span id="ustSpreadVal" class="usty-num" style="font-weight:700"></span></div><div class="usty-seg"><i id="ustSpreadBar"></i></div></div>'+
-          '<div><div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);margin-bottom:6px"><span>資金排擠強度（無風險利率對該資產的替代壓力）</span><span id="ustCrowdVal" class="usty-num" style="font-weight:700"></span></div><div class="usty-seg"><i id="ustCrowdBar"></i></div></div>'+
-        '</div>'+
-        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px">'+
-          '<div class="usty-card" style="border-color:color-mix(in srgb,var(--ue) 35%,var(--border));padding:14px"><div class="usty-eye" style="color:var(--ue)">總經機會環境</div><ul id="ustOpp" style="margin:10px 0 0;padding-left:18px;font-size:13px;line-height:1.7"></ul></div>'+
-          '<div class="usty-card" style="border-color:color-mix(in srgb,var(--ur) 35%,var(--border));padding:14px"><div class="usty-eye" style="color:var(--ur)">潛在市場風險</div><ul id="ustRisk" style="margin:10px 0 0;padding-left:18px;font-size:13px;line-height:1.7"></ul></div>'+
-        '</div>'+
-      '</div>'+
-      '<p style="margin:16px 0 0;color:var(--text-muted);font-size:11.5px;line-height:1.7">本模組為客觀總經教育用途；US10Y／US2Y 預設為美國財政部官方最新收盤值（可手動調整為示意假設），其餘對標數值為示意假設，非即時行情、非個股或商品之買賣建議，亦不構成投資招攬或獲利保證。存續期理論損益為線性近似（損益 ≈ −存續期 × 利率變動）。資料源：U.S. Department of the Treasury（Daily Treasury Par Yield Curve Rates）。</p>';
+    function interpretation(index,diff,code,type,scenario){
+      var detail='觀察配息持續性、盈餘變化與價格波動。';
+      if(scenario===1||['MMF','USD-DEPOSIT'].includes(code))detail='區分原約定利率與到期續存利率；貨幣市場基金另看收益與流動性。';
+      else if(scenario===3||['LQD','00720B','00937B','SGOV','IEF','TLT','00679B','00687B','00697B'].includes(code)||/B$/.test(code||''))detail='債券另看久期、信用與匯率；利率與價格通常反向，仍受其他因素影響。';
+      else if(scenario===2||['QQQ','00662','^NDX'].includes(code))detail='科技成長另看盈餘預期與折現率；股息率無法衡量完整估值。';
+      else if(type==='商品')detail='觀察供需、美元與價格波動；無息商品不套用息差情境。';
+      var meaning=index!=null?nineMeaning[index][0]:diff==null?'收益率資料不足，目前無法解讀完整情境。':'目前只能確認息差；尚缺同期限歷史利率，無法判定方向。';
+      var watch=index!=null?nineMeaning[index][1]:'確認資料來源、日期及同期限歷史觀測是否完整。';
+      return '<div class="ust-meaning"><div><small>這代表什麼</small><p>'+esc(meaning)+'</p></div><div><small>觀察重點</small><p>'+esc(watch)+' '+esc(detail)+'</p></div></div>';
     }
-
-    function render(){
-      var s=st(), m=M[sel];
-      [].forEach.call(el('ustTabs').children,function(c,i){c.setAttribute('aria-selected', i===sel);});
-      var curve=s.y10-s.y2; el('ustCurveVal').textContent=pctTxt(curve);
-      var cd=el('ustCurveDot'),ct=el('ustCurveTxt');
-      if(curve<0){cd.style.color='var(--ur)';ct.textContent='倒掛 · 景氣放緩訊號';}
-      else if(curve<0.3){cd.style.color='var(--ua)';ct.textContent='平坦 · 轉折觀察區';}
-      else {cd.style.color='var(--ue)';ct.textContent='正斜率 · 結構正常';}
-      var py=parseFloat(el('ustPyIn').value); if(!isFinite(py)) py=m.p.py;
-      var by=m.b.yf(s);
-      var erp=py-s.y10; el('ustErpScope').textContent=' · '+m.btn[1]; el('ustErpVal').textContent=pctTxt(erp);
-      var ed=el('ustErpDot'),et=el('ustErpTxt');
-      if(erp<1){ed.style.color='var(--ur)';et.textContent='溢價收窄';}else if(erp<3){ed.style.color='var(--ua)';et.textContent='溢價中性';}else{ed.style.color='var(--ue)';et.textContent='溢價充足';}
-      el('ustCore').textContent=m.core; el('ustTag').textContent='DUR '+m.b.dur.toFixed(1)+' · 示意假設';
-      var spread=py-by, oppState=spread>=1.5, col=oppState?'var(--ue)':'var(--ua)';
-      var mo=el('ustMotto'); mo.style.color=col; mo.style.borderColor='color-mix(in srgb,'+col+' 55%,transparent)'; mo.style.background='color-mix(in srgb,'+col+' 12%,var(--surface))';
-      el('ustMottoTxt').textContent=oppState?m.mOpp:m.mRisk;
-      el('ustPName').textContent=m.p.name; el('ustPTick').textContent=m.p.tick; el('ustPy').textContent=py.toFixed(2)+'%'; el('ustPRisk').textContent=m.p.risk;
-      el('ustBName').textContent=m.b.name; el('ustBTick').textContent=m.b.tick; el('ustBy').textContent=by.toFixed(2)+'%'; el('ustBDur').textContent=m.b.dur.toFixed(1)+' 年';
-      el('ustBDn').textContent=(-m.b.dur).toFixed(1)+'%'; el('ustBUp').textContent='+'+m.b.dur.toFixed(1)+'%';
-      el('ustSpreadVal').textContent=pctTxt(spread);
-      var sb=el('ustSpreadBar'); sb.style.width=clamp((spread+2)/6*100,3,100)+'%'; sb.style.background=spread>=0?'linear-gradient(90deg,var(--uc),var(--ue))':'linear-gradient(90deg,var(--ua),var(--ur))';
-      var crowd=py>0?clamp(by/py*100,0,100):0; el('ustCrowdVal').textContent=crowd.toFixed(0)+'%';
-      var cb=el('ustCrowdBar'); cb.style.width=clamp(crowd,3,100)+'%'; cb.style.background=crowd>=85?'linear-gradient(90deg,var(--ua),var(--ur))':'linear-gradient(90deg,var(--border),var(--uc))';
-      el('ustOpp').innerHTML=m.opp.map(function(t){return '<li>'+t+'</li>';}).join('');
-      el('ustRisk').innerHTML=m.risk.map(function(t){return '<li>'+t+'</li>';}).join('');
+    function rateTrend(key){var a=rateHistory.filter(function(r){return r.date<=rateDate&&r.rates&&Number.isFinite(r.rates[key]);}).sort(function(a,b){return a.date.localeCompare(b.date);});if(a.length<21||a[a.length-1].date!==rateDate)return null;var last=a[a.length-1],prev=a[a.length-21],delta=last.rates[key]-prev.rates[key];return {index:delta>.1?0:delta<-.1?2:1,delta:delta,from:prev.date,to:last.date};}
+    function ruleIndex(diff,key){var t=rateTrend(key);return diff==null||!t?null:(diff>.25?0:diff<-.25?2:1)*3+t.index;}
+    function judgment(diff,risk,scenario,key){
+      var trend=rateTrend(key),active=ruleIndex(diff,key),label=diff==null?'資料不足':diff>.25?'高於美債':diff<-.25?'低於美債':'接近美債';
+      return '<div class="ust-judgment-tags"><span>息差：'+label+'</span><span>利率方向：'+(trend?['上升','持平','下降'][trend.index]:'資料不足')+'</span><span>風險：'+esc(risk)+'</span></div><details class="ust-judgment-details"><summary>ⓘ 判斷依據</summary><ul><li>息差＝'+(scenario?'假設商品收益率 − 對應期限假設收益率':'標的歷史收益率 − 所選期限美債收益率')+'。</li><li>息差大於 +0.25 百分點為高於；小於 −0.25 為低於；其餘為接近。</li><li>利率方向＝同期限官方最新值減20個有效資料交易日前的值；大於 +0.10 百分點為上升，小於 −0.10 為下降，其餘為持平。</li><li>'+(trend?'比較日期 '+trend.from+' → '+trend.to+'；變化 '+(trend.delta>=0?'+':'')+trend.delta.toFixed(2)+' 百分點。':'尚缺同期限21筆有效觀測，不以單日或其他期限替代。')+'</li><li>門檻為本站研究顯示規則，不是公認投資標準。'+(scenario?'息差使用手動假設，利率方向使用官方歷史資料，兩者來源不同。':'標的與美債日期分別標示；日期差異、幣別與稅費仍影響可比性。')+'</li><li>九種文案描述收益差與利率方向，不推定估值、信用利差或真實資金流向；資料缺漏不补零。</li></ul></details>';
     }
-    function bind(){
-      el('ustTabs').addEventListener('click',function(e){var b=e.target.closest('button[data-i]');if(!b)return;sel=+b.dataset.i;el('ustPyIn').value=M[sel].p.py.toFixed(1);render();});
-      ['ust10','ust2','ustPyIn'].forEach(function(id){el(id).addEventListener('input',render);});
+    function researchUpdate(){var sc=scenarios[scenarioIndex],py=numberValue('ustResearchYield'),by=numberValue('ustResearchBondYield'),dur=numberValue('ustResearchDuration'),diff=py!=null&&by!=null?py-by:null;
+      var anchor=numberValue('ustResearch10');el('ustResearchAnchor').textContent='10年基準假設：'+fmt(anchor)+'；商品對10年收益差：'+(py!=null&&anchor!=null?(py-anchor).toFixed(2)+' pp':'—')+'。此差距不是完整 ERP。';
+      el('ustResearchCore').textContent=sc.core;el('ustScenarioAssets').textContent=sc.assets;el('ustScenarioBond').textContent=sc.bond;el('ustScenarioRisk').textContent=sc.risk;
+      el('ustProverb').textContent=diff==null?'資料待備，定性觀察':scenarioIndex===2?'定價分水，波動拉鋸':sc.phrases[diff>0?0:1];el('ustProverb').dataset.state=diff==null?'missing':diff>.25?'higher':diff<-.25?'lower':'neutral';
+      el('ustProverbNote').textContent=diff==null?'未提供收益假設，暫不判讀息差。':scenarioIndex===2?'此為收益差情境，不能據此推論 DCF 或科技股估值已轉強／轉弱。':'依手動假設收益率差的正負切換；不判定商品吸引力或真實資金流向。';
+      el('ustResearchJudgment').innerHTML=judgment(diff,scenarioIndex===0?'權益與配息':scenarioIndex===1?'再投資與流動性':scenarioIndex===2?'估值與盈餘':'信用與久期',true,sc.tenor);var ri=ruleIndex(diff,sc.tenor);if(ri!=null){el('ustProverb').textContent=nineRules[ri][0];el('ustProverbNote').textContent=nineRules[ri][1];}el('ustResearchInterpretation').innerHTML=interpretation(ri,diff,'','',scenarioIndex);
+      el('ustResearchSpread').textContent=diff==null?'—':diff.toFixed(2)+' pp';el('ustResearchDown').textContent=dur==null?'—':'−'+dur.toFixed(2)+'%';el('ustResearchUp').textContent=dur==null?'—':'+'+dur.toFixed(2)+'%';
+      var ratio=py>0&&by!=null?by/py*100:null;var max=Math.max(py||0,by||0,1);
+      el('ustResearchBars').innerHTML=[['商品假設',py],['公債假設',by]].map(function(r,i){return '<div class="ust-bar-row"><span>'+r[0]+'</span><div class="ust-bar"><i style="width:'+(r[1]==null?0:r[1]/max*100)+'%;background:'+(i?'#fbbf24':'#22d3ee')+'"></i></div><b>'+fmt(r[1])+'</b></div>';}).join('')+'<small>替代收益比例：'+(ratio==null?'—':ratio.toFixed(1)+'%')+' · 顯示比例，不截斷為100%，非資金排擠強度</small>';
+      el('ustResearchOpp').innerHTML=sc.opp.map(function(x){return '<li>'+esc(x)+'</li>';}).join('');el('ustResearchRisk').innerHTML=sc.risks.map(function(x){return '<li>'+esc(x)+'</li>';}).join('');
     }
-    window._ustyShow=function(){
-      if(!built){ el('ustBody').innerHTML=shell(); built=true; bind(); el('ust10').value='4.50'; el('ust2').value='4.00'; el('ustPyIn').value=M[0].p.py.toFixed(1); render();
-        fetch(SB()+'/rest/v1/ust_yields?select=trade_date,y2,y10&order=trade_date.desc&limit=1',{headers:{apikey:AK(),Authorization:'Bearer '+AK()}}).then(function(r){return r.json();}).then(function(a){
-          var d=Array.isArray(a)&&a[0]; if(d){ if(d.y10!=null)el('ust10').value=(+d.y10).toFixed(2); if(d.y2!=null)el('ust2').value=(+d.y2).toFixed(2); el('ustSrc').textContent='美國財政部官方 · 資料日 '+d.trade_date+'（可手動調整）'; render(); }
-        }).catch(function(){});
-      } else { render(); }
+    function selectScenario(i){scenarioIndex=i;var sc=scenarios[i];el('ustResearchDuration').value=sc.dur;el('ustMatchedLabel').textContent=(tenors.find(function(t){return t[0]===sc.tenor;})||['','對應期限'])[1]+'美債收益率假設 (%)';el('ustResearchBondYield').value=rates[sc.tenor]!=null?rates[sc.tenor]:'';document.querySelectorAll('#ustView [data-scenario]').forEach(function(b){b.setAttribute('aria-selected',+b.dataset.scenario===i?'true':'false');});researchUpdate();}
+    function bindResearch(){function mode(research){el('ustActualPanel').hidden=research;el('ustResearchPanel').hidden=!research;el('ustActualTab').setAttribute('aria-selected',String(!research));el('ustResearchTab').setAttribute('aria-selected',String(research));}el('ustActualTab').onclick=function(){mode(false);};el('ustResearchTab').onclick=function(){mode(true);};document.querySelectorAll('#ustView [data-scenario]').forEach(function(b){b.onclick=function(){selectScenario(+b.dataset.scenario);};});['ustResearchYield','ustResearch10','ustResearchBondYield','ustResearchDuration'].forEach(function(id){el(id).oninput=researchUpdate;});selectScenario(0);}
+    var exploreGroups=[['高股息',['0056','00878','00919','VNQ']],['科技',['QQQ','00662','^NDX','^SOX']],['債券',['SGOV','IEF','TLT','LQD']],['國際指數',['^GSPC','^DJI','^N225','^HSI']],['原物料',['GC=F','SI=F','CL=F','HG=F']]];
+    function describe(code,type){
+      var k=crossCatalog.find(function(x){return x[0]===code;});
+      if(code==='QQQ'||code==='^NDX'||code==='00662')return ['追蹤 Nasdaq 100・科技成長','觀察歷史息收與折現率環境','科技集中、估值與匯率波動'];
+      if(type==='商品')return [k?k[1]+'・商品價格曝險':'原物料商品','觀察利率、美元與供需變化','價格波動；期貨另有轉倉與槓桿風險'];
+      if(type==='指數')return ['跨市場指數・市場整體表現','須使用指數自身殖利率口徑','成分集中、市場與匯率波動'];
+      if(['LQD','00720B','00937B'].includes(code))return ['投資級公司債・信用息收','區分公債利率與信用利差','久期、信用利差與匯率波動'];
+      if(['SGOV','IEF','TLT'].includes(code))return ['美國公債 ETF・利率曝險','殖利率與久期須分別觀察','利率變化、基金價格與匯率波動'];
+      if(code==='VNQ')return ['美國房地產・REITs','觀察配息與利率環境','房地產景氣、融資與匯率風險'];
+      return [code.startsWith('00')?'台灣 ETF・分散持股':'台灣個股・企業權益','歷史配息收益與公債基準比較','價格波動與配息持續性'];
+    }
+    function drawExplore(i){var group=exploreGroups[i||0];el('ustExplore').innerHTML='<small>熱門探索</small><div class="ust-explore-tabs">'+exploreGroups.map(function(g,j){return '<button type="button" data-group="'+j+'" aria-pressed="'+(g===group)+'">'+g[0]+'</button>';}).join('')+'</div><div class="ust-explore-items">'+group[1].map(function(c){var k=crossCatalog.find(function(x){return x[0]===c;});var n=k?k[1]:(window._names||{})[c]||c;return '<button type="button" data-pick="'+esc(c)+'" data-name="'+esc(n)+'"><b>'+esc(c)+'</b><span>'+esc(n)+'</span></button>';}).join('')+'</div>';}
+    function update(){
+      environmentUpdate();
+      var key=el('ustTenor').value,by=rates[key],py=selected&&selected.yield;
+      el('ustLiveRate').textContent=fmt(by);el('ustLiveDate').textContent=rateDate?'資料日 '+rateDate+' · 美國財政部':'官方資料暫未取得';
+      el('ustCurve').textContent=rates['10y']!=null&&rates['2y']!=null?(rates['10y']-rates['2y']).toFixed(2)+' 個百分點':'—';
+      el('ustCompareRate').textContent=fmt(by);el('ustCompareDate').textContent=rateDate?'資料日 '+rateDate:'資料未提供';
+      el('ustAssetName').textContent=selected?selected.name:'選擇你想比較的標的';el('ustAssetRate').textContent=fmt(py);el('ustAssetDate').textContent=selected?(selected.date?'資料日 '+selected.date:'資料日期未提供'):'—';
+      var diff=py!=null&&by!=null?py-by:null;
+      el('ustDifference').textContent=diff!=null?(diff>0?'+':'')+diff.toFixed(2)+' pp':'—';
+      el('ustStatus').textContent=diff!=null?(diff>0?'現金收益率高於美債':diff<0?'現金收益率低於美債':'現金收益率與美債相同'):(selected?(selected.type==='商品'?'商品無息，供需主導':'資料不足，暫不比較'):'搜尋後顯示實際數據與計算依據');
+      var tone=diff==null?'missing':diff>.25?'higher':diff<-.25?'lower':'neutral';el('ustStatus').dataset.state=tone;el('ustStatus').innerHTML='<small class="ust-status-label">歷史收益率比較</small><b>'+esc(diff==null?el('ustStatus').textContent:diff>.25?'現金收益率高於美債':diff<-.25?'現金收益率低於美債':'現金收益率接近美債')+'</b>';
+      el('ustHint').textContent=selected&&selected.type==='商品'?'商品收益來自價格變化；期貨另有轉倉、槓桿與基差風險。':diff==null?'先確認資料完整性，再閱讀收益差距。':diff>0?'歷史配息提供額外息收，但仍需觀察價格波動與配息持續性。':diff<0?'美債名目收益率較高；股價成長與匯率變化仍會影響總報酬。':'收益率相近，需再比較價格風險、匯率與稅費。';
+      el('ustJudgment').innerHTML=judgment(diff,selected?(selected.type==='商品'?'供需與價格':selected.type==='指數'?'市場波動':'價格與收益變化'):'尚未選定',false,key);var ri=ruleIndex(diff,key);el('ustAutoResult').hidden=!selected;el('ustAutoResult').dataset.ready=String(ri!=null);el('ustAutoResult').dataset.state=ri==null?'missing':tone;el('ustAutoText').textContent=ri!=null?nineRules[ri][0]:diff==null?'待判讀：收益率資料不足':'待判讀：同期限歷史利率不足';if(ri!=null)el('ustHint').textContent=nineRules[ri][1];el('ustInterpretation').innerHTML=selected?interpretation(ri,diff,selected.code,selected.type,null):'';
+      el('ustMethod').textContent=selected?selected.method:'不以假設值補足缺漏資料。';
+      var profile=el('ustProfile');profile.hidden=!selected;if(selected){var info=describe(selected.code,selected.type);profile.innerHTML='<div><small>商品特色</small><b>'+esc(info[0])+'</b></div><div><small>比較重點</small><span>'+esc(info[1])+'</span></div><div><small>主要風險</small><span>'+esc(info[2])+'</span></div><div><small>資料狀態</small><span>'+esc(selected.date?'資料日 '+selected.date:'收益率／日期尚未接齊')+'</span></div>';profile.getAnimations().forEach(function(a){a.cancel();});if(!matchMedia('(prefers-reduced-motion: reduce)').matches)profile.animate([{opacity:.3,transform:'translateY(6px)'},{opacity:1,transform:'translateY(0)'}],{duration:280});}
+      var mx=Math.max(py||0,by||0,1);
+      el('ustBars').innerHTML=[['標的',py],['美債',by]].map(function(r,i){return '<div class="ust-bar-row"><span>'+r[0]+'</span><div class="ust-bar"><i style="width:'+(r[1]!=null?r[1]/mx*100:0)+'%;background:'+(i?'#b59a65':'#4f87a4')+'"></i></div><b>'+fmt(r[1])+'</b></div>';}).join('');
+    }
+    async function choose(code,name){
+      var id=++token;el('ustMatches').textContent='取得標的資料…';
+      try{
+        var result={name:code+' '+name,yield:null,date:null,method:'目前沒有此指數的官方股息殖利率資料，未以 ETF 替代。'};
+        var known=crossCatalog.find(function(x){return x[0]===code;});
+        if(known){result.type=known[2];result.method=known[2]==='商品'?'原物料現貨／期貨沒有股息殖利率，不能直接計算息差。可在跨資產情境研究閱讀利率、美元與供需風險。':known[2]==='指數'?'此指數股息殖利率來源尚未接齊；不可用追蹤 ETF 替代。':'已收錄商品搜尋；該商品最新收益率來源尚未接齊，暫不計算利差。';}
+        if(!known&&!code.startsWith('^')){
+          if(code.startsWith('00')){
+            var data=await Promise.all([q('etf_products?select=*&code=eq.'+encodeURIComponent(code)+'&limit=1'),q('etf_distributions?select=ex_date,cash_per_unit&code=eq.'+encodeURIComponent(code)+'&order=ex_date.desc&limit=100')]);
+            var product=data[0][0]||{},ds=data[1];var today=new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Taipei'});var end=product.trade_date||product.date||today;var lower=new Date(end+'T00:00:00Z');lower.setUTCFullYear(lower.getUTCFullYear()-1);var lo=lower.toISOString().slice(0,10);var paid=ds.filter(function(d){return d.ex_date>lo&&d.ex_date<=end;});
+            var sum=paid.reduce(function(n,d){return n+(d.cash_per_unit!=null?+d.cash_per_unit:0);},0);
+            var complete=paid.length&&paid.every(function(d){return d.cash_per_unit!=null&&Number.isFinite(+d.cash_per_unit);});
+            result.yield=product.close>0&&complete?sum/product.close*100:null;result.date=product.trade_date||product.date||null;
+            result.method='歷史現金殖利率：近12個月已除息配息合計 '+sum.toFixed(2)+' 元 ÷ 收盤價 '+(product.close||'未提供')+'。窗口 '+lo+' 至 '+end+'；僅依本站已收錄配息，缺漏不補零。'+(!result.date?'收盤日期未提供，資料新鮮度尚無法確認。':'');
+          }else{
+            var f=(await q('stock_fundamentals?select=*&code=eq.'+encodeURIComponent(code)+'&limit=1'))[0]||{};
+            result.yield=f.dividend_yield!=null&&Number.isFinite(+f.dividend_yield)?+f.dividend_yield:null;result.date=f.trade_date||f.date||f.updated_at&&f.updated_at.slice(0,10)||null;
+            result.method='本站收錄的官方個股殖利率口徑；可能包含特定股票股利，與 ETF 純現金配息口徑不同。不是預測殖利率。';
+          }
+        }
+        if(id!==token)return;result.code=code;result.type=result.type||(code.startsWith('00')?'ETF':'個股');selected=result;el('ustMatches').textContent='';update();
+      }catch(e){if(id===token)el('ustMatches').textContent='資料暫無法取得，請稍後重試。';}
+    }
+    function suggestions(){
+      var term=el('ustQuery').value.trim().toLowerCase(),pool=[],seen={};
+      function add(code,name,type){if(seen[code])return;seen[code]=1;if((code+' '+name).toLowerCase().includes(term))pool.push({code:code,name:name,type:type});}
+      if(term){crossCatalog.forEach(function(x){if((x.join(' ')).toLowerCase().includes(term)){seen[x[0]]=1;pool.push({code:x[0],name:x[1],type:x[2]});}});products.forEach(function(x){add(x.code,x.name,'ETF');});Object.keys(window._names||{}).forEach(function(c){add(c,window._names[c],c.startsWith('00')?'ETF':'個股');});}
+      return pool.sort(function(a,b){return (b.code.toLowerCase()===term)-(a.code.toLowerCase()===term)||a.code.localeCompare(b.code);}).slice(0,8);
+    }
+    function drawSuggestions(){var hits=suggestions();el('ustQuery').setAttribute('aria-expanded',hits.length?'true':'false');el('ustMatches').innerHTML=hits.map(function(x){return '<button type="button" role="option" aria-selected="false" data-code="'+esc(x.code)+'" data-name="'+esc(x.name)+'"><b>'+esc(x.code)+'</b><span>'+esc(x.name)+'<em>'+esc(describe(x.code,x.type)[0])+'</em></span><small>'+x.type+'</small></button>';}).join('');}
+    function dismiss(){++suggestToken;clearTimeout(suggestTimer);el('ustMatches').innerHTML='';el('ustQuery').setAttribute('aria-expanded','false');}
+    function accept(b){el('ustQuery').value=b.dataset.code+' '+b.dataset.name;dismiss();choose(b.dataset.code,b.dataset.name);}
+    function search(e){e.preventDefault();clearTimeout(suggestTimer);var active=el('ustMatches').querySelector('[aria-selected="true"]'),hits=suggestions(),term=el('ustQuery').value.trim(),code=term.split(/\s+/)[0];if(active){accept(active);return;}if(hits.length===1||hits.some(function(x){return x.code===code;})){var hit=hits.find(function(x){return x.code===code;})||hits[0];el('ustQuery').value=hit.code+' '+hit.name;dismiss();choose(hit.code,hit.name);return;}if(/^\d{4,6}[A-Z]?$/.test(code)){dismiss();choose(code,(window._names||{})[code]||'');return;}drawSuggestions();if(!hits.length)el('ustMatches').textContent='找不到標的，請輸入股票或 ETF 代號。';}
+    window._ustyShow=function(){if(built)return;built=true;el('ustBody').innerHTML=shell();document.querySelectorAll('#ustView [data-horizon]').forEach(function(b){b.onclick=function(){environmentPeriod=b.dataset.horizon;document.querySelectorAll('#ustView [data-horizon]').forEach(function(x){x.setAttribute('aria-pressed',String(x===b));});environmentUpdate();};});fetch(API+'/api/screen?stat=macro_environment').then(function(r){if(!r.ok)throw Error();return r.json();}).then(function(d){macroSeries=d.series||{};environmentUpdate();}).catch(function(){environmentUpdate();});bindResearch();drawExplore(0);el('ustExplore').onclick=function(e){var g=e.target.closest('[data-group]'),b=e.target.closest('[data-pick]');if(g)drawExplore(+g.dataset.group);if(b){el('ustQuery').value=b.dataset.pick+' '+b.dataset.name;dismiss();choose(b.dataset.pick,b.dataset.name);}};el('ustTenor').onchange=update;el('ustSearchForm').onsubmit=search;el('ustMatches').onclick=function(e){var b=e.target.closest('button[data-code]');if(b)accept(b);};el('ustQuery').oninput=function(){clearTimeout(suggestTimer);suggestTimer=setTimeout(drawSuggestions,120);};el('ustQuery').onfocus=drawSuggestions;el('ustQuery').onkeydown=function(e){var opts=Array.from(el('ustMatches').querySelectorAll('button[data-code]'));if(e.key==='Escape'){dismiss();return;}if(!opts.length||!['ArrowDown','ArrowUp'].includes(e.key))return;e.preventDefault();var i=opts.findIndex(function(b){return b.getAttribute('aria-selected')==='true';});i=e.key==='ArrowDown'?(i+1)%opts.length:(i<=0?opts.length-1:i-1);opts.forEach(function(b,j){b.setAttribute('aria-selected',j===i?'true':'false');});opts[i].scrollIntoView({block:'nearest'});};document.addEventListener('click',function(e){if(!e.target.closest('#ustView .ust-search'))dismiss();});q('etf_products?select=code,name&limit=500').then(function(a){products=Array.isArray(a)?a:[];if(document.activeElement===el('ustQuery'))drawSuggestions();}).catch(function(){});['ustSimAsset','ustSimBond'].forEach(function(id){el(id).oninput=function(){var a=el('ustSimAsset').value,b=el('ustSimBond').value;el('ustSimDiff').textContent=a!==''&&b!==''?(+a-+b).toFixed(2)+' pp':'—';};});update();
+      fetch(API+'/api/screen?stat=treasury').then(function(r){if(!r.ok)throw Error();return r.json();}).then(function(d){if(!d.rates||!d.date)throw Error();rates=d.rates;rateDate=d.date;rateHistory=Array.isArray(d.history)?d.history:[];update();el('ustResearch10').value=rates['10y']!=null?rates['10y']:4.5;selectScenario(scenarioIndex);}).catch(function(){q('ust_yields?select=trade_date,y2,y10&order=trade_date.desc&limit=1').then(function(a){var d=a[0];if(d){rates={'10y':d.y10,'2y':d.y2};rateDate=d.trade_date;update();}}).catch(function(){update();});});
     };
     window._VIEWS=window._VIEWS||{}; window._VIEWS.usty={el:'ustView',show:'_ustyShow'};
   })();
@@ -8571,6 +8756,10 @@
     #etxDrawer .etx-dtabs button{flex:0 0 auto;min-height:36px;box-sizing:border-box;padding:7px 13px;border:1px solid transparent!important;border-radius:8px;font-size:12px;font-weight:700;line-height:20px;white-space:nowrap;transform:none!important;box-shadow:none!important;transition:background .18s ease,color .18s ease,border-color .18s ease!important;}
     #etxDrawer .etx-dtabs button:hover{transform:none!important;background:color-mix(in srgb,var(--accent) 8%,var(--surface))!important;color:var(--accent)!important;border-color:color-mix(in srgb,var(--accent) 24%,var(--border))!important;box-shadow:none!important;}
     #etxDrawer .etx-dtabs button.on,#etxDrawer .etx-dtabs button.on:hover{background:var(--brand-green)!important;color:#fff!important;border-color:transparent!important;box-shadow:none!important;}
+    :root[data-theme="light"] #etxDrawer .etx-dtabs button.on,:root[data-theme="light"] #etxDrawer .etx-dtabs button.on:hover{background:#18233f!important;color:#fff!important;border-color:#18233f!important;}
+    :root:not([data-theme="light"]) #etxDrawer .etx-dtabs button.on,:root:not([data-theme="light"]) #etxDrawer .etx-dtabs button.on:hover{background:#dcc17c!important;color:#18212c!important;border-color:#dcc17c!important;}
+    :root:not([data-theme="light"]) #etfxView #etxConWin button.on,:root:not([data-theme="light"]) #etfxView #etxConWin button.on:hover,:root:not([data-theme="light"]) #etfxView #etxConWin button.on:focus{background:#dcc17c!important;color:#18212c!important;border-color:#dcc17c!important;text-shadow:none!important;-webkit-text-fill-color:#18212c!important;}
+    :root[data-theme="light"] #etfxView #etxConWin button.on,:root[data-theme="light"] #etfxView #etxConWin button.on:hover,:root[data-theme="light"] #etfxView #etxConWin button.on:focus{background:#18233f!important;color:#fff!important;border-color:#18233f!important;text-shadow:none!important;-webkit-text-fill-color:#fff!important;}
     #etxDrawer .etx-dtabs button:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
     @media(max-width:600px){#etxDrawer .etx-dtabs{gap:7px;}#etxDrawer .etx-dtabs button{padding:6px 11px;}}
 
@@ -14899,13 +15088,14 @@
   <script>
   /* 瀏覽器「上一頁」：切換視圖、開 K 線都寫入 history；上一頁＝回上一個視圖／先關 K 線（2026-09-27）*/
   (function(){
-    var cur=null, popping=false, initHash=location.hash.slice(1);   // 先記住：初始化顯示 home 時會改寫網址
+    var cur=null, popping=false, initHash=location.hash.slice(1)||new URLSearchParams(location.search).get('view')||''; window.__initialView=initHash;   // 先記住：初始化顯示 home 時會改寫網址
     var origShow=window._showView, origOpen=window.openChart, origClose=window.closeChart;
     function chartOpen(){ var m=document.getElementById('chartModal'); return !!(m&&m.classList.contains('open')); }
     window._showView=function(v){
       var r=origShow.apply(this,arguments);
       if(!popping){
-        var url=location.pathname+location.search+(v&&v!=='home'?'#'+v:'');
+        var params=new URLSearchParams(location.search);params.delete('view');var query=params.toString();
+        var url=location.pathname+(query?'?'+query:'')+(v&&v!=='home'?'#'+v:'');
         if(cur===null) history.replaceState({v:v},'',url);
         else if(v!==cur) history.pushState({v:v},'',url);
       }
@@ -15013,10 +15203,19 @@
   }
   function resetViewScroll(){
     const original=window._showView;if(typeof original!=='function'||original.__proScroll)return;
-    function wrapped(view){const out=original.apply(this,arguments);if(view==='home'||view==='fhedge'){requestAnimationFrame(()=>{scrollTo({top:0,left:0,behavior:'auto'});document.scrollingElement.scrollTop=0;if(view==='home')history.replaceState(null,'',location.pathname+'?view=home');});}return out;}
+    if('scrollRestoration' in history)history.scrollRestoration='manual';
+    let scrollFrame;
+    function wrapped(view){
+      const out=original.apply(this,arguments);
+      cancelAnimationFrame(scrollFrame);
+      scrollFrame=requestAnimationFrame(()=>{
+        document.body.classList.remove('pro-nav-compact');
+        scrollTo({top:0,left:0,behavior:'instant'});
+        if(document.scrollingElement)document.scrollingElement.scrollTop=0;
+      });
+      return out;
+    }
     wrapped.__proScroll=true;window._showView=wrapped;
-    document.querySelectorAll('#mainNav a').forEach(a=>{if((a.textContent||'').trim()==='首頁')a.addEventListener('click',()=>setTimeout(()=>scrollTo(0,0),0));});
-    document.addEventListener('click',e=>{const a=e.target.closest('[onclick*="fhedge"]');if(!a)return;setTimeout(()=>{window._showView('fhedge');scrollTo({top:0,left:0,behavior:'auto'});document.scrollingElement.scrollTop=0;},0);});
   }
   function markPrimaryButtons(){
     const ids=['loginBtn','authSubmit','submitBtn','hpSearchBtn','nwApply','nwQBtn','resetPwBtn'];
@@ -15429,7 +15628,7 @@
     themeIcon();decorateIcons();protectSearchInputs();stickyNavigation();resetViewScroll();markPrimaryButtons();makeScreenWorkspace();observeStructure();observeSectorMatrix();observeHeatmaps();observePremiumWidgets();pulseQuotes();observeResearchSurfaces();dailyResearchDeck();
     new MutationObserver(m=>m.forEach(x=>x.addedNodes.forEach(n=>{if(n.nodeType===1)protectSearchInputs(n);}))).observe(document.body,{childList:true,subtree:true});
     let rt;addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(relayoutTreemaps,100);},{passive:true});
-    const initialView=new URLSearchParams(location.search).get('view');
+    const initialView=window.__initialView||location.hash.slice(1)||new URLSearchParams(location.search).get('view');
     if(initialView&&typeof window._showView==='function')window._showView(initialView);
   });
 })();

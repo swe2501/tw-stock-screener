@@ -2269,6 +2269,70 @@ class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         # 領取非同步篩選結果：?job_id=xxx → 有結果回結果，沒好回 {pending:true}
         qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+        if (qs.get("stat") or [""])[0] == "macro_environment":
+            from datetime import datetime, timezone, timedelta
+            start = (datetime.now(timezone.utc) - timedelta(days=850)).date().isoformat()
+            today = datetime.now(timezone.utc).date().isoformat()
+            def load_series(series):
+                url = "https://fred.stlouisfed.org/graph/" + "fredgraph.csv?" + urllib.parse.urlencode({"id": series, "cosd": start, "coed": today})
+                try:
+                    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+                    raw = urllib.request.urlopen(req, timeout=8).read().decode("utf-8-sig")
+                    observations = []
+                    for row in csv.DictReader(io.StringIO(raw)):
+                        day = row.get("observation_date") or row.get("DATE") or ""
+                        try:
+                            value = float(row.get(series, ""))
+                            if day and day <= today and math.isfinite(value):
+                                observations.append({"date": day, "value": value})
+                        except (TypeError, ValueError):
+                            pass
+                    return series, sorted(observations, key=lambda r: r["date"])
+                except Exception:
+                    return series, []
+            with ThreadPoolExecutor(max_workers=3) as pool:
+                data = dict(pool.map(load_series, ["CPIAUCSL", "UNRATE", "DTWEXBGS"]))
+            return self._send_json(200, {"series": data, "source": "FRED / BLS / Federal Reserve", "scope": "US macro and broad dollar; not complete global coverage"}, cache="public, s-maxage=1800, max-age=300")
+        if (qs.get("stat") or [""])[0] == "treasury":
+            try:
+                from datetime import datetime, timezone
+                import xml.etree.ElementTree as ET
+                now = datetime.now(timezone.utc)
+                url = "https://home.treasury.gov/sites/default/files/interest-rates/yield.xml"
+                req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+                root = ET.fromstring(urllib.request.urlopen(req, timeout=15).read())
+                rows = []
+                fields = {"BC_3MONTH": "3m", "BC_6MONTH": "6m", "BC_1YEAR": "1y", "BC_2YEAR": "2y", "BC_10YEAR": "10y", "BC_20YEAR": "20y", "BC_30YEAR": "30y"}
+                for entry in root.iter():
+                    if entry.tag.rsplit("}", 1)[-1] not in ("properties", "G_NEW_DATE"):
+                        continue
+                    values = {e.tag.rsplit("}", 1)[-1]: e.text for e in entry.iter()}
+                    raw_date = values.get("NEW_DATE") or ""
+                    try:
+                        date = datetime.strptime(raw_date[:10], "%m-%d-%Y").date().isoformat() if "T" not in raw_date else raw_date[:10]
+                    except ValueError:
+                        continue
+                    if not date or date > now.date().isoformat():
+                        continue
+                    rates = {}
+                    for field, key in fields.items():
+                        try:
+                            value = float(values.get(field))
+                            if 0 <= value <= 100:
+                                rates[key] = value
+                        except (TypeError, ValueError):
+                            pass
+                    if "10y" in rates:
+                        rows.append({"date": date, "rates": rates})
+                if not rows:
+                    raise ValueError("No valid Treasury observations")
+                rows = sorted({r["date"]: r for r in rows}.values(), key=lambda r: r["date"])
+                result = dict(rows[-1])
+                result["history"] = rows[-260:]
+                result["source"] = "U.S. Department of the Treasury"
+                return self._send_json(200, result, cache="public, s-maxage=1800, max-age=300")
+            except Exception:
+                return self._send_json(502, {"error": "Treasury data unavailable"})
         job_id = (qs.get("job_id") or [""])[0].strip()
         if job_id:
             cached = _cache_get(job_id)
@@ -2438,3 +2502,4 @@ class handler(BaseHTTPRequestHandler):
             self._send_json(200, result)
         except Exception as e:
             self._send_json(500, {"error": str(e), "traceback": traceback.format_exc(), "results": []})
+
