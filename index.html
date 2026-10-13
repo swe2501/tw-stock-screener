@@ -2672,7 +2672,7 @@
 
     <section class="hp-sec" id="hpMaintSec"><div class="hp-sec-h"><span class="hp-sec-no">§4</span> 融資動能背離與市場槓桿 <span class="hp-sec-src">加權指數 vs 上市融資餘額 · 全市場維持率</span></div><div id="hpDiverge" class="hp-verdict"><div class="fc-empty">載入中…</div></div><div id="hpMaint"></div></section>
 
-    <section class="hp-sec"><div class="hp-sec-h"><span class="hp-sec-no">§5</span> 臺股期貨未平倉與散戶多空比 <span class="hp-sec-src">大台顯示法人留倉；小台與微台依主要月份全市場 OI 扣除三大法人計算散戶部位</span></div><div id="hpFut" class="gs-fut"><div class="fc-empty">載入中…</div></div>
+    <section class="hp-sec"><div class="hp-sec-h"><span class="hp-sec-no">§5</span> 臺股期貨未平倉與散戶多空比 <span class="hp-sec-src">大台顯示法人留倉；小台與微台依主要月份全市場 OI 扣除三大法人計算散戶部位</span></div><div id="hpFut" class="gs-fut"><div class="fc-empty">載入中…</div></div><div class="fx-cost-host" id="hpForeignCost"></div>
       <div style="text-align:center;margin-top:12px"><a href="?view=fhedge#fhedge" onclick="window.location.assign(this.href);return false" class="pro-fhedge-cta" style="background:var(--accent);color:var(--on-accent);font-weight:800;border:0;border-radius:9px;padding:10px 22px;font-size:14px;cursor:pointer">外資空單溫度計 →</a><div style="font-size:11.5px;color:var(--text-muted);margin-top:5px">外資期貨淨空名目 ÷ 持股市值＝避險比率，看 2 年歷史位置（進階籌碼）</div></div>
     </section>
 
@@ -3975,7 +3975,7 @@
 
       <!-- 6 大核心指標卡片 -->
       <div class="pf-sech"><h2><span class="c-sky"></span> 市場盤後真實數據監測 (Real Market Institutional Metrics)</h2><span>來源：證交所 TWSE / 期交所 TAIFEX 公開盤後</span></div>
-      <div class="pf-cards" id="fhCards"></div>
+      <div class="pf-cards" id="fhCards"></div><div class="fx-cost-host" id="fhForeignCost"></div>
 
       <!-- 中段雙圖 -->
       <div class="pf-two">
@@ -7874,7 +7874,7 @@
         html+=retail('小台 ',d.mtx_ls,d.mtx_long,d.mtx_short);
         html+=retail('微台 ',d.tmf_ls,d.tmf_long,d.tmf_short);
         box.innerHTML=(html||'<div class="fc-empty">期貨資料整備中</div>')
-          +'<div class="gs-tip" style="grid-column:1/-1"><span class="ic"></span><div>散戶部位＝主要月份全市場未平倉扣掉三大法人，多空比再以總未平倉為分母。正值代表散戶偏多，一般當反向參考，別單獨拿來當買賣訊號。</div></div>';
+          +'<div class="gs-tip" style="grid-column:1/-1"><span class="ic"></span><div>散戶部位＝主要月份全市場未平倉扣掉三大法人，多空比再以總未平倉為分母。正值代表散戶偏多，一般當反向參考，別單獨拿來當買賣訊號。 外資結算成本：高於成本500點偏多、低於500點偏空，其餘多空拉鋸；僅依價格位置判讀。</div></div>';
       });
     }
 
@@ -15853,5 +15853,142 @@
   });
 })();
 </script>
+
+<style>
+/* Compact settlement metric inherits each page's existing card palette. */
+#hpFut{grid-template-columns:repeat(4,minmax(0,1fr))}
+#fhCards{grid-template-columns:repeat(7,minmax(0,1fr))}
+.fx-cost-host{min-width:0;display:flex}.fx-cost{box-sizing:border-box;width:100%;padding:14px 15px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);transition:border-color .25s,box-shadow .25s}
+#fhForeignCost .fx-cost{background:var(--pf-card,var(--surface));border-color:var(--pf-bd,var(--border));border-radius:14px;padding:18px 16px;box-shadow:0 3px 12px rgba(0,0,0,.04)}
+.fx-cost:hover{border-color:color-mix(in srgb,var(--accent) 45%,var(--border));box-shadow:0 4px 16px color-mix(in srgb,var(--accent) 9%,transparent)}
+.fx-cost-top{display:flex;align-items:center;justify-content:space-between;gap:8px}.fx-cost h3{font-size:12.5px;font-weight:800;color:var(--text);margin:0;line-height:1.6}.fx-cost-month{font-size:10px;color:var(--text-muted);white-space:nowrap}
+.fx-cost-number{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.3;margin:12px 0 7px;color:var(--accent)}.fx-cost-number span{font-size:10px;font-weight:500;color:var(--text-muted);margin-left:5px}
+.fx-cost-state{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;min-height:20px;color:var(--text-muted)}.fx-cost-state.up{color:#cb5653}.fx-cost-state.down{color:#489857}.fx-cost-state.flat{color:#a58326}
+:root:not([data-theme="light"]) .fx-cost-state.up{color:#ed8d87}:root:not([data-theme="light"]) .fx-cost-state.down{color:#86c99d}:root:not([data-theme="light"]) .fx-cost-state.flat{color:#dfc46f}
+.fx-cost-track{position:relative;height:6px;background:linear-gradient(90deg,rgba(72,152,87,.35) 0% 25%,var(--surface2) 25% 75%,rgba(203,86,83,.35) 75%);border-radius:6px;margin:14px 0 8px}.fx-cost-track:before{content:'';position:absolute;left:50%;top:-3px;width:1px;height:12px;background:var(--text-muted);opacity:.5}.fx-cost-dot{position:absolute;top:-3px;width:12px;height:12px;border:2px solid var(--surface);border-radius:50%;background:var(--accent);transform:translateX(-50%);box-shadow:0 0 9px color-mix(in srgb,var(--accent) 40%,transparent);animation:fxCostPulse 4s ease-in-out infinite}.fx-cost-scale{display:flex;justify-content:space-between;font-size:9px;color:var(--text-muted);font-variant-numeric:tabular-nums}.fx-cost-caption{font-size:10px;line-height:1.8;color:var(--text-muted);margin:12px 0 0}.fx-cost details{font-size:10px;line-height:1.8;color:var(--text-muted);margin-top:7px}.fx-cost summary{font-size:10px;cursor:pointer;color:var(--accent)}.fx-cost details div{padding-top:8px}.fx-cost a{color:var(--accent)}
+@keyframes fxCostPulse{50%{box-shadow:0 0 15px color-mix(in srgb,var(--accent) 60%,transparent)}}
+@media(max-width:1400px){#fhCards{grid-template-columns:repeat(4,minmax(0,1fr))}}@media(max-width:1100px){#hpFut{grid-template-columns:repeat(2,minmax(0,1fr))}#fhCards{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:760px){#hpFut{grid-template-columns:1fr}#fhCards{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(prefers-reduced-motion:reduce){.fx-cost-dot{animation:none}}
+
+.fx-cost h3{font-size:14px}.fx-cost-month{font-size:11px}.fx-cost-state{display:block;font-size:12px;line-height:1.8}.fx-cost-state b{display:block;font-size:13px;color:inherit}.fx-cost-caption{font-size:11px}.fx-cost-scale{font-size:10px;line-height:1.7}.fx-cost-disclosure{display:block;font-size:10px;opacity:.85;margin-top:5px}
+.fx-ecg{--ecg-color:var(--accent);margin:12px 0}.fx-ecg.up{--ecg-color:#cf625b}.fx-ecg.down{--ecg-color:#4f9d6a}.fx-ecg.flat{--ecg-color:#b49644}.fx-ecg-price{font-size:11px;color:var(--text-muted);font-variant-numeric:tabular-nums;line-height:1.7}
+.fx-ecg-plot{height:52px;position:relative;margin:3px 0 5px;background:linear-gradient(90deg,transparent 34%,color-mix(in srgb,var(--accent) 5%,transparent) 34% 66%,transparent 66%);border-radius:8px}
+.fx-ecg svg{display:block;width:100%;height:52px;overflow:visible}.fx-ecg path{fill:none;vector-effect:non-scaling-stroke;stroke-linecap:round;stroke-linejoin:round}.fx-ecg-base{stroke:var(--ecg-color);stroke-width:1.3;opacity:.3}.fx-ecg-light{stroke:var(--ecg-color);stroke-width:1.8;stroke-dasharray:12 88;stroke-dashoffset:100;filter:drop-shadow(0 0 3px var(--ecg-color));animation:fxHeartbeat 4.5s linear infinite}
+.fx-ecg-threshold{position:absolute;top:24px;height:9px;width:1px;background:var(--text-muted);opacity:.45}.fx-ecg-threshold.low{left:34%}.fx-ecg-threshold.center{left:50%;height:13px;top:22px}.fx-ecg-threshold.high{left:66%}.fx-ecg-dot{position:absolute;top:23px;width:10px;height:10px;border-radius:50%;background:var(--ecg-color);border:2px solid var(--surface);transform:translateX(-50%);box-shadow:0 0 9px var(--ecg-color);animation:fxCostPulse 4s infinite}
+.fx-cost-scale span:nth-child(2){text-align:center}.fx-cost-scale span:last-child{text-align:right}@keyframes fxHeartbeat{to{stroke-dashoffset:0}}@media(prefers-reduced-motion:reduce){.fx-ecg-light,.fx-ecg-dot{animation:none}.fx-ecg-light{stroke-dasharray:none;opacity:.6}}
+
+#hpFut,#fhCards{align-items:start}.fx-cost-host{align-self:start}.fx-cost{padding:13px 15px}.fx-cost-number{margin:9px 0 5px}.fx-cost-state{display:flex;flex-wrap:wrap;gap:2px 8px;line-height:1.6}.fx-cost-state b{font-size:12px}.fx-ecg{margin:9px 0}.fx-ecg-price{font-size:11px}.fx-ecg-plot{height:44px;margin:1px 0 3px}.fx-ecg svg{height:44px}.fx-ecg-threshold{top:19px}.fx-ecg-threshold.center{top:17px}.fx-ecg-dot{top:17px}.fx-ecg-axis{stroke:var(--border);stroke-width:1}.fx-ecg-band{position:absolute;top:8px;height:28px;border-radius:5px;background:color-mix(in srgb,var(--accent) 6%,transparent)}.fx-cost-scale{font-size:10px;gap:6px;flex-wrap:wrap;line-height:1.6}.fx-cost-caption{margin:9px 0 0;font-size:10px}.fx-cost details{margin-top:4px}
+:root:not([data-theme="light"]) .fx-ecg.up{--ecg-color:#ed8d87}:root:not([data-theme="light"]) .fx-ecg.down{--ecg-color:#86c99d}:root:not([data-theme="light"]) .fx-ecg.flat{--ecg-color:#dfc46f}
+.fx-ecg-base{opacity:.5}.fx-ecg-light{stroke-width:2;stroke-dasharray:20 80;animation-duration:3.6s}
+.fx-cost-rule{font-size:10px;line-height:1.8;color:var(--text-muted);margin:7px 0 0}
+
+.fx-ecg{margin:12px 0 10px}.fx-ecg-plot{height:65px;margin:0 0 4px;padding-top:12px}.fx-ecg svg{height:44px}.fx-ecg-threshold.center{top:29px;height:13px}.fx-ecg-dot{top:29px}.fx-ecg-cost-label{position:absolute;top:49px;transform:translateX(-50%);white-space:nowrap;font-size:10px;line-height:1.5;color:var(--text-muted);font-variant-numeric:tabular-nums}.fx-ecg-current-label{position:absolute;top:1px;transform:translateX(-50%);font-size:12px;line-height:1.5;white-space:nowrap;color:var(--ecg-color);font-variant-numeric:tabular-nums}.fx-ecg-pending{position:absolute;top:0;right:0;font-size:10px;color:var(--text-muted)}
+
+#hpFut{align-items:stretch}#hpForeignCost{align-self:stretch}#hpForeignCost .fx-cost{padding:13px 15px;display:flex;flex-direction:column}#hpForeignCost .fx-cost-state{font-size:11px;gap:2px 5px}#hpForeignCost .fx-cost-state b{font-size:10px;padding:1px 6px;border:1px solid currentColor;border-radius:5px;font-weight:600}#hpForeignCost .fx-ecg{margin:4px 0 3px}#hpForeignCost .fx-ecg-plot{height:57px}#hpForeignCost .fx-cost-caption{margin-top:auto;padding-top:6px;font-size:10px}
+#fhCards{grid-template-columns:repeat(6,minmax(0,1fr))}#fhForeignCost{display:block;margin:0 16px 24px}#fhForeignCost .fx-cost{padding:20px 24px;display:grid;grid-template-columns:minmax(220px,.8fr) minmax(0,1.6fr);gap:6px 28px}#fhForeignCost .fx-cost-top,#fhForeignCost .fx-cost-number,#fhForeignCost .fx-cost-state,#fhForeignCost .fx-cost-caption{grid-column:1}#fhForeignCost .fx-ecg{grid-column:2;grid-row:1/5;align-self:center;margin:0}#fhForeignCost .fx-ecg-plot{height:100px;padding-top:30px}#fhForeignCost .fx-ecg svg{height:55px}#fhForeignCost .fx-ecg-threshold.center{top:49px}#fhForeignCost .fx-ecg-dot{top:52px}#fhForeignCost .fx-ecg-cost-label{top:80px;font-size:12px}#fhForeignCost .fx-ecg-current-label{top:16px;font-size:16px}#fhForeignCost .fx-cost-rule{grid-column:1/-1;margin:3px 0;font-size:11px}#fhForeignCost .fx-analysis-metrics{grid-column:1/-1}
+.fx-analysis-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:15px;border-top:1px solid var(--border);padding-top:16px;margin-top:12px}.fx-analysis-metrics small,.fx-analysis-metrics span{display:block;font-size:10px;color:var(--text-muted);line-height:1.8}.fx-analysis-metrics b{display:block;font-size:15px;color:var(--text);font-variant-numeric:tabular-nums;margin:5px 0}
+.fx-ecg-plot:before{content:'';position:absolute;inset:10px 0 8px;background:repeating-linear-gradient(90deg,transparent 0,transparent calc(20% - 1px),var(--border) calc(20% - 1px),var(--border) 20%);opacity:.18;pointer-events:none}.fx-ecg-base{filter:drop-shadow(0 0 5px var(--ecg-color));opacity:.45;stroke-width:1.6}.fx-ecg-light{stroke-dasharray:22 78;stroke-width:2;filter:drop-shadow(0 0 4px var(--ecg-color))}.fx-ecg-dot:after{content:'';position:absolute;inset:-5px;border:1px solid var(--ecg-color);border-radius:50%;animation:fxCostHalo 3.8s ease-out infinite;pointer-events:none}@keyframes fxCostHalo{0%{transform:scale(.6);opacity:.7}80%,100%{transform:scale(1.7);opacity:0}}
+@media(max-width:1100px){#fhCards{grid-template-columns:repeat(3,minmax(0,1fr))}.fx-analysis-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:760px){#fhCards{grid-template-columns:repeat(2,minmax(0,1fr))}#fhForeignCost{margin:0 8px 16px}#fhForeignCost .fx-cost{display:block;padding:18px}#fhForeignCost .fx-ecg{margin:12px 0}}@media(prefers-reduced-motion:reduce){.fx-ecg-dot:after{animation:none;display:none}}
+
+.fx-cost-zone{position:absolute;top:17px;height:31px;box-sizing:border-box;border:1px solid rgba(181,154,101,.45);border-radius:7px;background:linear-gradient(180deg,rgba(181,154,101,.08),rgba(181,154,101,.025));pointer-events:none}.fx-cost-zone span{position:absolute;top:-15px;left:50%;transform:translateX(-50%);font-size:9px;line-height:1.4;white-space:nowrap;color:#a48b56;letter-spacing:.3px}.fx-ecg-tail{stroke:var(--ecg-color);stroke-width:3;opacity:.2;stroke-dasharray:28 72;stroke-dashoffset:100;filter:blur(1px);animation:fxHeartbeat 3.6s linear infinite}.fx-ecg-base{animation:fxPeakBreath 4.5s ease-in-out infinite}.fx-ecg-light{stroke-dasharray:9 91;stroke-width:2.2}.fx-ecg-dot{z-index:2}
+#fhForeignCost .fx-cost-zone{top:35px;height:40px;border-radius:9px}#fhForeignCost .fx-cost-zone span{top:-17px;font-size:11px}
+#hpForeignCost .fx-cost-caption{margin-top:5px;padding-top:0;font-size:10px;line-height:1.6}#hpForeignCost .fx-cost-rule{display:none}#hpForeignCost .fx-ecg-plot{height:57px}
+@keyframes fxPeakBreath{0%,100%{opacity:.38;filter:drop-shadow(0 0 2px var(--ecg-color))}50%{opacity:.65;filter:drop-shadow(0 0 5px var(--ecg-color))}}@media(prefers-reduced-motion:reduce){.fx-ecg-tail,.fx-ecg-base{animation:none}.fx-ecg-tail{display:none}}
+
+.fx-ecg-lead-shadow{stroke:var(--ecg-color);stroke-width:3;opacity:.25;stroke-dasharray:15 85;stroke-dashoffset:100;filter:blur(1px);animation:fxLeadConnect 4.8s linear infinite}.fx-ecg-white-lead{stroke:#fff;stroke-width:1.7;stroke-dasharray:8 92;stroke-dashoffset:100;filter:drop-shadow(0 0 2px var(--ecg-color));animation:fxLeadConnect 4.8s linear infinite}
+.fx-ecg-tail,.fx-ecg-light{animation-duration:4.8s;animation-delay:1.6s}@keyframes fxLeadConnect{0%{stroke-dashoffset:100;opacity:0}8%{opacity:1}40%{stroke-dashoffset:0;opacity:1}48%,100%{stroke-dashoffset:0;opacity:0}}@media(prefers-reduced-motion:reduce){.fx-ecg-lead-shadow,.fx-ecg-white-lead{animation:none;display:none}}
+
+/* One white sweep only; the state-colored waveform remains softly illuminated. */
+.fx-ecg-white-lead{stroke:#fff;stroke-width:1.8;stroke-dasharray:7 93;filter:drop-shadow(0 0 2px var(--ecg-color));animation:fxOneSweep 5.2s linear infinite}@keyframes fxOneSweep{0%{stroke-dashoffset:100;opacity:0}8%{opacity:1}80%{stroke-dashoffset:0;opacity:1}88%,100%{stroke-dashoffset:0;opacity:0}}
+#fhForeignCost .fx-ecg.up .fx-ecg-current-label{top:72px}#fhForeignCost .fx-ecg.up .fx-ecg-cost-label{top:85px}
+.fx-flight{position:absolute;top:47px;width:18px;height:18px;transform:translateX(-50%);color:var(--ecg-color);opacity:0;pointer-events:none;z-index:3}
+#fhForeignCost .fx-flight svg{width:18px;height:18px;overflow:visible;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 3px var(--ecg-color))}
+.fx-play .fx-flight.rocket{animation:fxRocketLaunch 4.8s ease-out infinite}.fx-play .fx-flight.meteor{animation:fxMeteorFall 4.8s ease-in infinite}
+@keyframes fxRocketLaunch{0%{transform:translate(-50%,0) scale(.65);opacity:0}6%{opacity:1}32%{opacity:.8}44%,100%{transform:translate(24px,-38px) scale(.85);opacity:0}}
+@keyframes fxMeteorFall{0%{transform:translate(-50%,0) scale(.7);opacity:0}6%{opacity:1}32%{opacity:.8}44%,100%{transform:translate(-44px,32px) scale(.9);opacity:0}}
+.fx-cross-arcs{position:absolute;left:50%;top:46px;width:22px;height:22px;transform:translateX(-50%);pointer-events:none}.fx-cross-arcs i{position:absolute;inset:0;border:1px solid transparent;border-top-color:var(--ecg-color);border-bottom-color:color-mix(in srgb,var(--ecg-color) 35%,transparent);border-radius:50%;animation:fxArcClockwise 5s linear infinite;opacity:.65}.fx-cross-arcs i+i{inset:-4px;border-top-color:transparent;border-right-color:var(--ecg-color);border-bottom-color:transparent;border-left-color:color-mix(in srgb,var(--ecg-color) 35%,transparent);animation:fxArcCounter 6s linear infinite}
+@keyframes fxArcClockwise{to{transform:rotate(360deg)}}@keyframes fxArcCounter{to{transform:rotate(-360deg)}}
+@media(prefers-reduced-motion:reduce){.fx-ecg-white-lead,.fx-flight,.fx-cross-arcs i{animation:none!important}.fx-flight{display:none}}
+
+#fhForeignCost .fx-cost-state{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px}
+#fhForeignCost .fx-cost-state b{display:inline-flex;align-items:center;padding:3px 9px;border:1px solid currentColor;border-radius:6px;font-size:11px;font-weight:600;line-height:1.5;color:inherit;background:transparent}
+#fhForeignCost .fx-cost-state.up b{background:rgba(203,86,83,.06)}#fhForeignCost .fx-cost-state.down b{background:rgba(72,152,87,.06)}#fhForeignCost .fx-cost-state.flat b{background:rgba(165,131,38,.07)}
+:root:not([data-theme="light"]) #fhForeignCost .fx-cost-state.up b{background:rgba(237,141,135,.08)}:root:not([data-theme="light"]) #fhForeignCost .fx-cost-state.down b{background:rgba(134,201,157,.08)}:root:not([data-theme="light"]) #fhForeignCost .fx-cost-state.flat b{background:rgba(223,196,111,.08)}
+
+#fhForeignCost .fx-ecg.flat .fx-ecg-current-label{top:72px}#fhForeignCost .fx-ecg.flat .fx-ecg-cost-label{top:92px;font-size:11px}
+.fx-tug-meet{position:absolute;top:56px;width:0;height:0;color:var(--ecg-color);pointer-events:none;z-index:3}.fx-tug-ray{position:absolute;top:0;width:28px;height:2px;border-radius:3px;box-shadow:0 0 6px var(--ecg-color);opacity:0}.fx-tug-ray.left{left:-28px;background:linear-gradient(90deg,transparent,currentColor);animation:fxTugFromLeft 5s ease-in-out infinite}.fx-tug-ray.right{left:0;background:linear-gradient(90deg,currentColor,transparent);animation:fxTugFromRight 5s ease-in-out infinite}
+@keyframes fxTugFromLeft{0%{transform:translateX(-65px);opacity:0}10%{opacity:.8}40%{transform:translateX(0);opacity:1}46%,100%{transform:translateX(0);opacity:0}}@keyframes fxTugFromRight{0%{transform:translateX(65px);opacity:0}10%{opacity:.8}40%{transform:translateX(0);opacity:1}46%,100%{transform:translateX(0);opacity:0}}
+.fx-tug-firework{position:absolute;top:0;left:0}.fx-tug-firework i{position:absolute;bottom:0;left:-1px;width:1.5px;height:11px;border-radius:3px;background:linear-gradient(0deg,transparent,var(--ecg-color));transform-origin:bottom;opacity:0;filter:drop-shadow(0 0 3px var(--ecg-color));animation:fxTugSpark 5s ease-out infinite}
+@keyframes fxTugSpark{0%,40%{transform:rotate(var(--spark-angle)) translateY(0) scaleY(.3);opacity:0}44%{opacity:.95}61%{transform:rotate(var(--spark-angle)) translateY(-33px) scaleY(.9);opacity:.65}73%,100%{transform:rotate(var(--spark-angle)) translateY(-43px) scaleY(.3);opacity:0}}
+@media(prefers-reduced-motion:reduce){.fx-tug-ray,.fx-tug-firework i{animation:none;display:none}}
+
+/* A continuous SVG subpath lets the same light pass every peak without resetting. */
+.fx-ecg-white-lead{stroke-dasharray:8 92;stroke-dashoffset:100;animation:fxContinuousSweep 3.8s linear infinite;opacity:1}
+@keyframes fxContinuousSweep{from{stroke-dashoffset:100}to{stroke-dashoffset:0}}
+.fx-play .fx-flight.rocket{animation:fxRocketContinuous 3.8s linear infinite}.fx-play .fx-flight.meteor{animation:fxMeteorContinuous 3.8s linear infinite}
+@keyframes fxRocketContinuous{0%{transform:translate(-50%,0) scale(.65);opacity:0}8%{opacity:.85}75%{opacity:.85}100%{transform:translate(24px,-38px) scale(.85);opacity:0}}
+@keyframes fxMeteorContinuous{0%{transform:translate(-50%,0) scale(.7);opacity:0}8%{opacity:.85}75%{opacity:.85}100%{transform:translate(-44px,32px) scale(.9);opacity:0}}
+@media(prefers-reduced-motion:reduce){.fx-ecg-white-lead,.fx-play .fx-flight{animation:none!important}}
+
+#fhForeignCost .fx-ecg.flat .fx-ecg-white-lead{display:none}
+.fx-tug-ray.left{background:linear-gradient(90deg,transparent,#fff);animation:fxTugContinuousLeft 3.8s linear infinite;box-shadow:0 0 5px var(--ecg-color)}
+.fx-tug-ray.right{background:linear-gradient(90deg,#fff,transparent);animation:fxTugContinuousRight 3.8s linear infinite;box-shadow:0 0 5px var(--ecg-color)}
+@keyframes fxTugContinuousLeft{0%{transform:translateX(-65px);opacity:.7}90%{opacity:1}100%{transform:translateX(0);opacity:.8}}
+@keyframes fxTugContinuousRight{0%{transform:translateX(65px);opacity:.7}90%{opacity:1}100%{transform:translateX(0);opacity:.8}}
+.fx-tug-firework i{animation:fxTugContinuousSpark 3.8s ease-out infinite}
+@keyframes fxTugContinuousSpark{0%{transform:rotate(var(--spark-angle)) translateY(0) scaleY(.3);opacity:.9}25%{transform:rotate(var(--spark-angle)) translateY(-33px) scaleY(.9);opacity:.6}40%,100%{transform:rotate(var(--spark-angle)) translateY(-43px) scaleY(.3);opacity:0}}
+@media(prefers-reduced-motion:reduce){.fx-tug-ray,.fx-tug-firework i{animation:none!important;display:none}}
+
+/* Shared 5s timeline: white light arrives at 60%, then the endpoint effect fires. */
+.fx-ecg-white-lead{animation:fxArriveThenLaunch 5s linear infinite;stroke-dasharray:8 92}
+@keyframes fxArriveThenLaunch{0%{stroke-dashoffset:100;opacity:0}3%{opacity:1}60%{stroke-dashoffset:0;opacity:1}64%,100%{stroke-dashoffset:0;opacity:0}}
+.fx-play .fx-flight.rocket{animation:fxRocketAfterArrival 5s linear infinite}.fx-play .fx-flight.meteor{animation:fxMeteorAfterArrival 5s linear infinite}
+@keyframes fxRocketAfterArrival{0%,60%{transform:translate(-50%,0) scale(.65);opacity:0}64%{opacity:1}88%{opacity:.8}100%{transform:translate(24px,-38px) scale(.85);opacity:0}}
+@keyframes fxMeteorAfterArrival{0%,60%{transform:translate(-50%,0) scale(.7);opacity:0}64%{opacity:1}88%{opacity:.8}100%{transform:translate(-44px,32px) scale(.9);opacity:0}}
+.fx-tug-ray.left{animation:fxTugArriveLeft 5s linear infinite}.fx-tug-ray.right{animation:fxTugArriveRight 5s linear infinite}
+@keyframes fxTugArriveLeft{0%{transform:translateX(-65px);opacity:0}3%{opacity:1}60%{transform:translateX(0);opacity:1}64%,100%{transform:translateX(0);opacity:0}}
+@keyframes fxTugArriveRight{0%{transform:translateX(65px);opacity:0}3%{opacity:1}60%{transform:translateX(0);opacity:1}64%,100%{transform:translateX(0);opacity:0}}
+.fx-tug-firework i{animation:fxSparkAfterArrival 5s ease-out infinite}
+@keyframes fxSparkAfterArrival{0%,60%{transform:rotate(var(--spark-angle)) translateY(0) scaleY(.3);opacity:0}64%{opacity:1}83%{transform:rotate(var(--spark-angle)) translateY(-33px) scaleY(.9);opacity:.7}100%{transform:rotate(var(--spark-angle)) translateY(-43px) scaleY(.3);opacity:0}}
+@media(prefers-reduced-motion:reduce){.fx-ecg-white-lead,.fx-play .fx-flight,.fx-tug-ray,.fx-tug-firework i{animation:none!important;display:none}}
+
+/* Arrival and launch share the exact 60% frame; no post-arrival fade-in gap. */
+@keyframes fxRocketAfterArrival{0%,59.99%{transform:translate(-50%,0) scale(.65);opacity:0}60%{transform:translate(-50%,0) scale(.65);opacity:1}88%{opacity:.8}100%{transform:translate(24px,-38px) scale(.85);opacity:0}}
+@keyframes fxMeteorAfterArrival{0%,59.99%{transform:translate(-50%,0) scale(.7);opacity:0}60%{transform:translate(-50%,0) scale(.7);opacity:1}88%{opacity:.8}100%{transform:translate(-44px,32px) scale(.9);opacity:0}}
+@keyframes fxSparkAfterArrival{0%,59.99%{transform:rotate(var(--spark-angle)) translateY(0) scaleY(.3);opacity:0}60%{transform:rotate(var(--spark-angle)) translateY(0) scaleY(.3);opacity:1}83%{transform:rotate(var(--spark-angle)) translateY(-33px) scaleY(.9);opacity:.7}100%{transform:rotate(var(--spark-angle)) translateY(-43px) scaleY(.3);opacity:0}}
+</style>
+<script>
+(function(){
+ var verifiedSettlement={"date":"2026-09-16","product":"TX","basis":{"long":{"lots":7805.0,"amount_thousand":71902338.0,"point":46061.715566944265},"short":{"lots":84156.0,"amount_thousand":775297770.0,"point":46063.13097105376},"net":{"lots":-76351.0,"amount_thousand":-703395432.0,"point":46063.27566109154}},"unit":"TWD thousand","source_url":"https://www.taifex.com.tw/cht/3/futContractsDate?queryType=1&doQuery=1&queryDate=2026%2F09%2F16","scope":"All listed TX delivery months; settlement-value proxy, not entry cost"};
+ var basis='net',snapshot=null,current=null,period=null,api=location.protocol==='file:'?'https://tw-stock-screener-neon.vercel.app':'',busy=false;
+ function fmt(v){return Number.isFinite(v)?v.toLocaleString('zh-TW',{maximumFractionDigits:2}):'—';}
+ function monthly(y,m){var d=new Date(Date.UTC(y,m,1)),day=1+(3-d.getUTCDay()+7)%7+14,iso=new Date(Date.UTC(y,m,day)).toISOString().slice(0,10);return window._twAdj?window._twAdj(iso):iso;}
+ function getPeriod(){var now=new Date(Date.now()+8*3600e3),today=now.toISOString().slice(0,10),y=now.getUTCFullYear(),m=now.getUTCMonth(),date=monthly(y,m);if(date>today){m--;date=monthly(y,m);}var following=new Date(Date.UTC(y,m+1,1));return {date:date,month:following.toISOString().slice(0,7),next:monthly(following.getUTCFullYear(),following.getUTCMonth())};}
+ var hosts=['hpForeignCost','fhForeignCost'].map(function(id){return document.getElementById(id);});
+ function mount(){hosts.forEach(function(host,i){var grid=document.getElementById(i?'fhCards':'hpFut');if(!grid||!host)return;if(i){if(grid.nextElementSibling!==host)grid.insertAdjacentElement('afterend',host);}else{if(host.parentNode===grid)return;var tip=grid.querySelector('.gs-tip');grid.insertBefore(host,tip||null);}});}
+ ['hpFut','fhCards'].forEach(function(id){var grid=document.getElementById(id);if(grid)new MutationObserver(mount).observe(grid,{childList:true});});mount();
+ function ecg(v,price,diff,tone,detailed){
+  var valid=Number.isFinite(v),ready=diff!=null,extent=Math.max(1000,ready?Math.ceil(Math.abs(diff)/500)*500:1000),pad=500,min=valid?Math.min(v,ready?price:v)-pad:0,max=valid?Math.max(v,ready?price:v)+pad:1;
+  var costPos=valid?8+(v-min)/(max-min)*84:50,position=ready?8+(price-min)/(max-min)*84:50,start=costPos*3,end=position*3,mid=(start+end)/2,dir=end>=start?1:-1;
+  var length=Math.abs(end-start),waves=length>90?(detailed?3:2):length>42?1:0,path='M'+start+' 26';
+  for(var k=0;k<waves;k++){var center=start+(end-start)*(k+1)/(waves+1),width=Math.min(10,length/(waves+1)/3),height=[13,9,15][k];path+=' L'+(center-width*1.5*dir)+' 26 L'+(center-width*dir)+' '+(26-height*.35)+' L'+(center-width*.5*dir)+' '+(26+height*.55)+' L'+center+' '+(26-height)+' L'+(center+width*.5*dir)+' '+(26+height*.7)+' L'+(center+width*dir)+' 24 L'+(center+width*1.5*dir)+' 26';}
+  path+=' L'+end+' 26';var lead='M'+(dir>0?0:300)+' 26 L'+start+' 26';
+  function integer(n){return Number.isFinite(n)?Math.round(n).toLocaleString('zh-TW'):'—';}
+  var icon='';
+  if(detailed&&ready){
+   if(tone==='flat')icon='<span class="fx-tug-meet" style="left:'+costPos+'%" aria-hidden="true"><i class="fx-tug-ray left"></i><i class="fx-tug-ray right"></i><span class="fx-tug-firework">'+[-36,-18,0,18,36].map(function(angle){return '<i style="--spark-angle:'+angle+'deg"></i>';}).join('')+'</span></span>';
+   else icon='<span class="fx-flight '+(tone==='up'?'rocket':'meteor')+'" style="left:'+position+'%" aria-hidden="true">'+(tone==='up'?'<svg viewBox="0 0 24 24"><path d="M8 15 C7 9 12 4 20 3 C19 11 14 16 9 16 Z M8 11 L4 12 L3 17 L8 15 M12 16 L12 21 L17 20 L17 15 M7 17 L3 21"/><circle cx="15" cy="8" r="2"/></svg>':'<svg viewBox="0 0 24 24"><circle cx="7" cy="17" r="4"/><path d="M9 12 L19 2 M12 15 L22 5 M6 10 L13 3 M14 18 L20 12"/></svg>')+'</span>';
+  }
+  return '<div class="fx-ecg '+tone+'"><div class="fx-ecg-plot" style="background:none">'+(valid?'<div class="fx-cost-zone" style="left:'+(costPos-500/(max-min)*84)+'%;width:'+(1000/(max-min)*84)+'%"><span>±500</span></div>':'')+'<svg viewBox="0 0 300 52" preserveAspectRatio="none" aria-hidden="true"><path class="fx-ecg-axis" d="M0 26 H300"/><path class="fx-ecg-white-lead" pathLength="100" d="'+lead+path.replace(/^M[^ ]+ 26/,'')+'"/><path class="fx-ecg-base" d="'+path+'"/>'+'</svg><i class="fx-ecg-threshold center" style="left:'+costPos+'%"></i><span class="fx-ecg-cost-label" style="left:'+costPos+'%">成本 '+integer(v)+'</span>'+(ready?'<i class="fx-ecg-dot" style="left:'+position+'%"></i>'+icon+'<b class="fx-ecg-current-label" style="left:'+position+'%">'+integer(price)+'</b>':'<span class="fx-ecg-pending">目前價格待更新</span>')+'</div></div>';
+ }
+ function render(error){hosts.forEach(function(host){if(!host)return;var b=snapshot&&snapshot.basis.net,v=b&&b.point,price=current&&current.price,diff=Number.isFinite(price)&&Number.isFinite(v)?price-v:null,tone=diff==null?'':diff>500?'up':diff< -500?'down':'flat',status=diff==null?'價格資料待更新':diff>500?'外資籌碼樂觀':diff< -500?'外資籌碼悲觀':'多空拉鋸';var month=period?+period.month.slice(5)+'月':'';
+ host.innerHTML='<article class="fx-cost"><div class="fx-cost-top"><h3>外資結算成本</h3><span class="fx-cost-month">'+month+' · 估算</span></div><div class="fx-cost-number">'+fmt(v)+'<span>點</span></div><div class="fx-cost-state '+tone+'">'+(!Number.isFinite(v)?'結算資料待更新':diff==null?status:'<span>'+(diff>0?'在成本之上 ':diff<0?'在成本之下 ':'與成本相同 ')+fmt(Math.abs(diff))+'點</span><b>'+status+'</b>')+'</div>'+ecg(v,price,diff,tone,host.id==='fhForeignCost')+'<p class="fx-cost-caption">基準 '+(snapshot?snapshot.date.slice(5):period?period.date.slice(5):'—')+' · 下次 '+(period?period.next.slice(5):'—')+' 盤後</p><p class="fx-cost-rule">高於成本500點偏多、低於500點偏空；其餘多空拉鋸。僅依價格位置判讀。</p>'+ (host.id==='fhForeignCost'?'<div class="fx-analysis-metrics"><div><small>目前臺指期</small><b>'+fmt(price)+' 點</b><span>價格日 '+(current?current.date:'待更新')+'</span></div><div><small>距估算成本</small><b>'+(diff==null?'—':(diff>=0?'+':'')+fmt(diff))+' 點</b><span>以固定結算基準比較</span></div><div><small>上／下方向門檻</small><b>'+fmt(Number.isFinite(v)?v+500:null)+'／'+fmt(Number.isFinite(v)?v-500:null)+'</b><span>成本上下500點</span></div><div><small>觀察月份</small><b>'+month+'</b><span>基準取自結算日，盤後公布才更新</span></div></div>':'')+'</article>';if(host.id==='fhForeignCost'){var chart=host.querySelector('.fx-ecg');function play(){if(!chart)return;chart.classList.remove('fx-play');chart.querySelectorAll('.fx-ecg-white-lead,.fx-tug-ray,.fx-tug-firework i,.fx-flight').forEach(function(n){n.style.animation='none';});void chart.offsetWidth;chart.classList.add('fx-play');chart.querySelectorAll('.fx-ecg-white-lead,.fx-tug-ray,.fx-tug-firework i,.fx-flight').forEach(function(n){n.style.animation='';});}host.onpointerenter=play;if(host.dataset.lastTone!==tone){host.dataset.lastTone=tone;requestAnimationFrame(play);}}});mount();}
+ async function load(){if(busy)return;busy=true;if(window._loadTwHol){try{await window._loadTwHol();}catch(e){}}period=getPeriod();if(verifiedSettlement.date===period.date)snapshot=verifiedSettlement;render();
+ try{var r=await fetch(api+'/api/screen?stat=foreign_settlement_cost&date='+period.date);if(!r.ok)throw Error();snapshot=await r.json();if(snapshot.date!==period.date)throw Error();}catch(e){snapshot=null;var today=new Date(Date.now()+8*3600e3).toISOString().slice(0,10);if(period.date===today){var d=new Date(period.date+'T00:00:00Z'),previous=monthly(d.getUTCFullYear(),d.getUTCMonth()-1);try{var r2=await fetch(api+'/api/screen?stat=foreign_settlement_cost&date='+previous);if(!r2.ok)throw Error();var old=await r2.json();if(old.date!==previous)throw Error();snapshot=old;period={date:previous,month:period.date.slice(0,7),next:period.date};}catch(e){}}}
+ if(!snapshot&&verifiedSettlement.date===period.date)snapshot=verifiedSettlement;
+ try{if(typeof SIG_SB_URL!=='undefined'&&typeof SIG_SB_ANON!=='undefined'){var r=await fetch(SIG_SB_URL+'/rest/v1/chip_brief_daily?select=trade_date,txf_close&order=trade_date.desc&limit=1',{headers:{apikey:SIG_SB_ANON,Authorization:'Bearer '+SIG_SB_ANON}});if(r.ok){var a=await r.json();if(a[0]&&a[0].txf_close!=null)current={price:+a[0].txf_close,date:a[0].trade_date};}}}catch(e){}render(snapshot?'':'精確日期資料待取得。');}
+ window._loadForeignSettlementCost=load;document.addEventListener('DOMContentLoaded',load);
+})();
+</script>
+
 </body>
 </html>

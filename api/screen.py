@@ -2282,6 +2282,50 @@ class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         # 領取非同步篩選結果：?job_id=xxx → 有結果回結果，沒好回 {pending:true}
         qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+        if (qs.get("stat") or [""])[0] == "foreign_settlement_cost":
+            import re
+            import html as html_lib
+            day = (qs.get("date") or [""])[0]
+            try:
+                parsed = datetime.strptime(day, "%Y-%m-%d").date()
+                if parsed > datetime.now(timezone(timedelta(hours=8))).date():
+                    raise ValueError("Future date")
+            except ValueError:
+                return self._send_json(400, {"error": "Invalid historical date"})
+            url = "https://www.taifex.com.tw/cht/3/futContractsDate?" + urllib.parse.urlencode({"queryType": "1", "doQuery": "1", "queryDate": day.replace("-", "/")})
+            try:
+                req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+                raw = urllib.request.urlopen(req, timeout=15).read().decode("utf-8")
+                def plain(x):
+                    return re.sub(r"\s+", " ", html_lib.unescape(re.sub(r"<[^>]+>", " ", x))).strip()
+                dates = re.findall(r"日期\s*[:：]?\s*(\d{4}/\d{2}/\d{2})", plain(raw))
+                if day.replace("-", "/") not in dates:
+                    raise ValueError("Source observation date mismatch")
+                rows = [[plain(c) for c in re.findall(r"<t[dh][^>]*>([\s\S]*?)</t[dh]>", tr, re.I)] for tr in re.findall(r"<tr[^>]*>([\s\S]*?)</tr>", raw, re.I)]
+                product = ""
+                found = None
+                for cells in rows:
+                    if cells and re.fullmatch(r"\d+", cells[0]) and len(cells) > 1:
+                        product = cells[1]
+                    if product not in ("臺股期貨", "台股期貨"):
+                        continue
+                    ix = next((i for i, x in enumerate(cells) if "外資" in x), None)
+                    if ix is None:
+                        continue
+                    vals = [float(x.replace(",", "")) for x in cells[ix+1:] if re.fullmatch(r"-?[\d,]+(?:\.\d+)?", x)]
+                    if len(vals) < 12:
+                        continue
+                    found = {}
+                    for key, a, b in [("long", 6, 7), ("short", 8, 9), ("net", 10, 11)]:
+                        lots, amount = vals[a], vals[b]
+                        point = amount * 1000 / 200 / lots if lots != 0 else None
+                        found[key] = {"lots": lots, "amount_thousand": amount, "point": point if point is not None and point > 0 and math.isfinite(point) else None}
+                    break
+                if found is None:
+                    raise ValueError("No paired foreign TX fields")
+                return self._send_json(200, {"date": day, "product": "TX", "basis": found, "unit": "TWD thousand", "source_url": url, "scope": "All listed TX delivery months; settlement-value proxy, not entry cost"}, cache="public, s-maxage=1800, max-age=300")
+            except Exception:
+                return self._send_json(502, {"error": "Exact-date TAIFEX data unavailable", "date": day})
         if (qs.get("stat") or [""])[0] == "macro_environment":
             from datetime import datetime, timezone, timedelta
             start = (datetime.now(timezone.utc) - timedelta(days=850)).date().isoformat()
