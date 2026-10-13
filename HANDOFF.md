@@ -1,6 +1,8 @@
-# 交接文件 — AI_stock 盤後研究院（2026-10-05）
+# 交接文件 — AI_stock 盤後研究院（2026-10-05；最後更新 2026-10-13）
 
 本文件記錄近期 session 新增/修改的功能、資料來源、部署流程與待辦，供合夥人與後續開發者接手。
+
+> **接手先看**：第一節（部署鐵則）→ 第七節（最新一期，全部在 uat、尚未上 prod）→ 第六節（Vercel 12 function 上限）。交接文件不只這一份，另有 `交接文件_畫線套件與集團logo.md`、`待提供logo清單.md`、`融資維持率_交接文件.md`、`AGENTS.md`、`CLAUDE.md`，請全部讀。
 
 ---
 
@@ -75,6 +77,7 @@
 - `scripts/inst_daily_push.py`、`scripts/holder_flow_push.py`、`scripts/chip_etl_tdcc.py`、`scripts/run_daily_job.bat`
 - `sql/inst_daily.sql`、`sql/holder_flow.sql`
 - `index.html`（籌碼、ETF 抽屜、K 圖、首頁 §4、避險圖、富台指倒數）
+- 第七節新增：`scripts/page_cache_push.py`、`sql/page_cache.sql`、`api/screen.py`（`calc_limit_down`、`sma20_stage_scan`、sectors／themes 快取標頭）
 
 ---
 
@@ -105,3 +108,72 @@
 ### 待辦
 - 本次只推 uat。**推 prod 需用戶明確同意**；屆時把累積的 uat 變更一起上 prod，並 `git push origin origin/uat:justy-layout` 對齊 justy-layout（見 [記憶] deploy-prod-sync-justy）。
 - ETF 版面改回舊樣（今日加減碼原貌＋多一顆按鈕）仍 **DEFERRED**（用戶「先不改版面」，待合夥人確認位置/樣式/按鈕功能）。
+
+---
+
+## 七、2026-10-11 ～ 10-13 本期新增與修正（全部在 uat，尚未上 prod）
+
+> 狀態：Andrew＝uat 內容一致（uat 另含合夥人 10-12 晚推的 `c0b8db5` 美債研究／全球環境頁）。prod 仍停在 `6431e1b`（10-08）。
+> **凡是標「需 prod」的項目，在 uat 上測不到**——因為前端呼叫後端一律寫死正式站網址（`https://tw-stock-screener-neon.vercel.app/api/...`），後端程式要推 prod 才會更新。
+
+### A. K 圖
+
+| 功能 | 重點 | 關鍵程式（index.html） |
+|---|---|---|
+| ⛶ 全視窗按鈕 | 彈窗加 class `kfull` 撐滿視窗並嘗試 `requestFullscreen()`；Esc 先還原不關圖；關圖自動還原；手機與 ETF 內嵌模式不顯示 | `_setChartFull` / `_toggleChartFull`、CSS `#chartModal.kfull …` |
+| 顯示設定記憶 | 均線各條／全部、BBAND、量均線、MACD／RSI 線、大盤K、支撐壓力週期、價量分析、箱型、葛蘭碧買點標記；換股票、換週期、關掉再開、重新整理都沿用 | `window._kPref`（localStorage `kchart_prefs_v1`）、`_kVizOn/_kVizSet/_kApplyViz/_kSyncVizLabels/_kSyncLayerUI`、`_srSyncUI/_mkSyncUI/_vpSyncUI` |
+| 全螢幕下拉選單 | 「畫線工具／圖形註解」選單原本搬到 `body`，瀏覽器全螢幕只顯示全螢幕元素內的內容所以看不到 → 改為一律掛在 `.modal-overlay`（K 圖彈窗）內 | `_toggleDrawDD` |
+| 畫線套件修正 | ①點同時記 `time` 與邏輯索引 `li`，最後一根 K 棒右側空白區也能落點 ②右鍵取消工具 ③線與圖形改虛線（箭頭、文字實線）④橡皮擦按住左鍵拖曳連續清除，判定 10→14px ⑤只畫在繪圖區內（`_dClip`）⑥縮放／平移時重畫 | `_coordAt` / `_dX` / `_noT` / `_dClip` / `_redrawSoon` / `_setupDrawTools` |
+| 換股後工具狀態 | 換股票／換週期後已選工具維持啟用（按鈕反藍＝真的能畫）；關閉 K 圖才取消 | `_resetDrawingState`、`closeChart` |
+| 每檔各自記線 | 換股票時存回上一檔、載入這一檔；重新整理後保留；最多留最近 150 檔 | `_drawSwap` / `_drawStoreSave`（localStorage `kchart_draw_v1`） |
+
+**眉角**
+- 圖表範圍變動事件觸發的當下，價格軸還沒重算（要等圖表自己重繪），所以 `_redrawSoon` 是「立刻畫＋下一個畫格＋50ms＋260ms」各補一次。拖右側價格軸改上下比例**沒有事件可訂閱**，靠 `chartContainer` 的滑鼠／滾輪事件觸發重畫。
+- 舊的「趨勢線」（`trendLines`）與斐波那契**沒有**納入每檔記憶，仍是換圖就清。
+- 開著「大盤K」時左側多一條價格軸，畫線座標可能偏移（原本就有，未處理）。
+- 設定與畫線都存在各自瀏覽器，不跨裝置。主力分點勾選因每檔分點不同，不納入記憶。
+
+### B. 外資空單溫度計：第三層之二（匯率 × 現貨 × 期貨）
+- 原四象限保留；下方新增 8 格矩陣（四象限 × 台幣升／貶）＋五邊形雷達。原象限 III 單獨提匯率的文字已移除。
+- 程式：`FX3`（8 格文字）、`renderFx3(q, cur, rank)`、`fxPctOn`、`pctRank`；常數 `FX_FLAT=0.10`、`FX3_WIN=60`。
+- **三個門檻是 Claude 先定的初版，尚待用戶／合夥人確認**：匯率持平範圍 ±0.10%（持平時兩列都不命中，只標所在欄）、雷達比較期間近 60 個交易日百分位、避險水位＝100−近 2 年 PR。8 格判讀文字也待合夥人過目。
+- 雷達只呈現五個面向各自的相對位置，不合成單一分數。算法說明在該區塊下方（`algo-gated`）。
+
+### C. 掏金篩選器
+
+| 項目 | 說明 | 狀態 |
+|---|---|---|
+| 跌停板 | 收盤 ≤ 跌停價；跌停價＝前收×0.9 依升降單位無條件進位（`calc_limit_down`） | **需 prod**（uat 勾了會被正式站後端忽略、回傳未篩結果） |
+| 葛蘭碧買點 1／2／3 | 獨立分類 `data-cat="granville"`（排在「真名絕招」後）；可複選；參數 `sma20_stages` | **需 prod** |
+| 葛蘭碧買點 K 圖標記 | 日 K 圖層列「葛蘭碧買點」開關（預設關、會記住），標出歷史每一輪的買1／買2／買3；週／月／小時 K 不顯示 | uat 可看 |
+
+**葛蘭碧買點規則**（合夥人 2026-10-12 規格，參數為初版）
+- 均線＝20 日簡單移動平均（含當日）。帶量 1.3 倍、長紅／長下影 3%、十字線＝開等於收。
+- 每天先檢查重置：`MA[t] < MA[t-1]` 即清除所有階段、當天不觸發。依序 1→2→3、同一天不跨階段、每階段只記首次。
+- **前後端是兩份同規則的程式，改參數兩邊要一起改**：後端 `api/screen.py` 的 `sma20_stage_scan` / `sma20_stage_at`（常數 `SMA20_*`），前端 `index.html` 的 `_sma20Scan` / `_sma20Build`。已用 2330、2603、3026 比對，訊號日期完全一致。
+- 額外的保守處理（規格沒寫）：資料窗內尚未出現過重置日之前不產生訊號（無法確定該輪起點）。
+- 試算（上市櫃 1,964 檔、2024 年至今）：買點 1 共 15,582 次、買點 2 共 8,317 次、**買點 3 只有 1,432 次**（平均一檔不到一次；台積電等大型股近 3 年 0 次）。原因是買點 3 要求整根 K 棒在均線下，但均線下彎一天就重置，兩者能同時成立的時間很短。**是否放寬待合夥人決定**。
+- 內部變數仍叫 `sma20_*`，只有畫面文字改成「葛蘭碧買點」。
+
+### D. 產業地圖／題材列表載入加速（預算表）
+- **原因**：兩頁每次都等後端現算（產業地圖實測 2.6～11.9 秒、題材列表 0.5～3.2 秒）。
+- **做法**：每晚把結果存進 Supabase `page_cache`，前端直接讀表（實測約 0.15～0.2 秒）。
+  - 表：`page_cache(kind pk, trade_date, payload jsonb, updated_at)`，RLS 訪客唯讀；建表 SQL 在 `sql/page_cache.sql`（**已於 10-12 執行**）。容量：每頁 1 列每日覆寫，合計約 150 KB，不成長。
+  - 腳本：`scripts/page_cache_push.py`——呼叫正式站既有端點（`stat=sectors`、`stat=themes`）取結果後覆寫；抓取失敗或內容不完整就不覆寫。已排入 `run_daily_job.bat`（`job_health.py` 之前）。**已手動跑過一次成功，尚未經過排程自動跑的那一輪，請確認隔天資料日有更新。**
+  - 前端：`window._swrJson(key, url, paint, fail, loading)`——先畫 localStorage 上次的資料 → 讀 `page_cache` → 表內沒有或超過 4 天未更新才退回後端。進站 4 秒後閒置預抓。
+  - 後端：`stat=sectors`／`stat=themes` 成功回應加 `Cache-Control: s-maxage=300, stale-while-revalidate=86400`（**需 prod**）。
+- **取捨**：這兩頁改成固定顯示排程跑完那一刻的結果，盤中不會變。要盤中更新就把腳本多排幾個時段。
+- 之後要讓別的頁面也走預算表：在 `page_cache_push.py` 的 `KINDS` 加一項（含驗證函式），前端改用 `_swrJson`。
+
+### E. 這幾天踩到的坑
+1. **主工作區被別的程序切分支**：10-12 23:44 主工作區從 Andrew 被切到 `justy-layout`（非 Claude 所為，疑為另一個視窗／工具），導致一筆提交落在本機 justy-layout。已用 cherry-pick 搬回 Andrew、本機 justy-layout 還原成遠端狀態，遠端 justy-layout 未受影響。**教訓：每次 commit 前先 `git status -sb` 確認在 Andrew。**
+2. **批次字串取代改到自己剛插入的函式**：把 `c.time == null` 全域換成 `_noT(c)` 時，連 `_noT` 的定義本身也被換掉，變成無限遞迴、線段點不下去。實測才抓到。**教訓：先做取代、再插入新函式；改完一定要用真的點擊實測。**
+3. **預覽面板在背景時不繪圖**：`requestAnimationFrame` 不觸發、`innerWidth` 為 0、圖表範圍設了不生效、截圖逾時。驗證互動要先用一次真的滑鼠操作（`computer` 的 click／scroll）把面板喚醒，並以 `find` 取得的 `ref` 點擊，不要只呼叫函式。
+4. **瀏覽器全螢幕無法在預覽環境進入**：全螢幕相關修正只能驗證到「全視窗（`kfull`）」，真正的瀏覽器全螢幕要請用戶在 uat 親測。
+5. **Chrome 擴充功能連不上**（帳號不一致，見記憶 `reference_chrome_bridge_account`）：SQL 請用戶到 Supabase SQL Editor 手動貼。
+
+### F. 待辦 / 等回覆
+- **推 prod**：uat 累積了第六節與本節全部內容，等用戶說「推prod」。推完要測「需 prod」的三項（跌停板、葛蘭碧買點篩選、後端快取標頭），並依第六節待辦對齊 justy-layout（justy-layout 有獨立 commit 要先回報）。
+- **等用戶在 uat 確認**：瀏覽器全螢幕下的下拉選單、拖價格軸時畫線是否跟上、匯率矩陣三個門檻與 8 格文字、葛蘭碧買點 3 是否放寬。
+- **可選**：均線 SMA／EMA 切換（會影響篩選結果與既有回測數字，動工前先討論範圍）；K 圖標記文字「買1」是否改全名；大盤K 開啟時畫線座標偏移。
+- 其餘沿用第四節、第六節待辦（34 個集團 logo、融資維持率口徑、ETF 今日加減碼版面、明燈與冥燈、真名三式調參、篩選器納入上櫃）。
