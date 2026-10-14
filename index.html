@@ -2706,7 +2706,17 @@
     .ti-card .t{font-size:16px;font-weight:800;color:var(--brand-green);margin:4px 0 6px;}
     .ti-card .m{font-size:11.5px;color:var(--text-muted);display:flex;gap:10px;flex-wrap:wrap;}
     .ti-card .cs{font-size:12px;color:var(--text);margin-top:8px;line-height:1.6;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
-    .ti-back{display:inline-flex;align-items:center;gap:5px;font-size:13px;color:var(--brand-green);cursor:pointer;font-weight:700;margin-bottom:12px;}
+    .ti-back{display:inline-flex;align-items:center;gap:7px;font-size:15.5px;color:#fff;cursor:pointer;font-weight:800;margin-bottom:14px;
+      background:var(--brand-green);padding:9px 18px;border-radius:999px;position:relative;overflow:hidden;letter-spacing:.3px;
+      box-shadow:0 2px 10px rgba(16,185,129,.38);transition:transform .15s ease,box-shadow .15s ease,filter .15s ease;}
+    .ti-back:hover{transform:translateX(-3px) scale(1.05);box-shadow:0 5px 16px rgba(16,185,129,.55);filter:brightness(1.08);}
+    .ti-back::after{content:"";position:absolute;top:0;left:-65%;width:45%;height:100%;pointer-events:none;
+      background:linear-gradient(120deg,transparent,rgba(255,255,255,.7),transparent);transform:skewX(-20deg);
+      animation:tiBackShine 3s ease-in-out infinite;}
+    @keyframes tiBackShine{0%{left:-65%}40%,100%{left:140%}}
+    .ti-back .ti-back-arrow{display:inline-block;font-size:17px;animation:tiBackNudge 1.6s ease-in-out infinite;}
+    @keyframes tiBackNudge{0%,100%{transform:translateX(0)}50%{transform:translateX(-5px)}}
+    @media (prefers-reduced-motion:reduce){.ti-back::after,.ti-back .ti-back-arrow{animation:none;}}
     .ti-detail-h{font-size:24px;font-weight:800;color:var(--brand-green);font-family:"Noto Serif TC",Georgia,serif;}
     .ti-detail-m{font-size:12px;color:var(--text-muted);margin:4px 0 12px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;}
     .ti-detail-sum{font-size:13.5px;line-height:1.9;color:var(--text);background:var(--surface);border-left:3px solid var(--accent);padding:10px 14px;border-radius:0 6px 6px 0;margin-bottom:16px;}
@@ -8249,7 +8259,7 @@
         var link=url?'<a class="ti-src" href="'+esc(url)+'" target="_blank" rel="noopener">新聞來源 </a>':'';
         var ttl=url?('<a class="ti-news-link" href="'+esc(url)+'" target="_blank" rel="noopener">'+esc(t.topic)+' </a>'):esc(t.topic);
         return '<div class="ti-news"><div class="ti-news-t">'+(t.published_at?'<span class="ti-news-d">'+esc(t.published_at)+'</span> ':'')+ttl+'</div>'+(t.summary?'<div class="ti-news-s">'+esc(t.summary)+'</div>':'')+link+'</div>';}).join('');
-      box.innerHTML='<div class="ti-back" onclick="window._tiList()">← 返回今日索引</div>'
+      box.innerHTML='<div class="ti-back" onclick="window._tiList()"><span class="ti-back-arrow">←</span> 返回今日索引</div>'
         +'<div class="ti-detail-h">'+esc(g.sector)+'</div>'
         +'<div class="ti-detail-m"><span>熱度 '+g.heat+'</span><span>'+g.stocks.length+' 檔相關類股</span><span>'+topics.length+' 則相關新聞</span></div>'
         +'<div class="ti-sech">相關類股 <span style="font-weight:400;color:var(--text-muted);font-size:11px">近一週新聞出現</span></div>'
