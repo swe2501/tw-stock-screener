@@ -7885,7 +7885,7 @@
       Promise.all([
         sb('chip_brief_daily?select=*&order=trade_date.desc&limit=1'),
         sb('market_indicators?select=futai_close,futai_prev,vix,vix_prev,usdtwd,date&order=date.desc&limit=1'),
-        sb('gov_broker_daily?select=date,net_amt,buy_amt,sell_amt&order=date.desc&limit=60'),
+        sb('gov_broker_daily?select=date,net_amt,buy_amt,sell_amt,net5,net20,net60&order=date.desc&limit=60'),
         fetch('https://tw-stock-screener-neon.vercel.app/api/chart?code=%5ETWII&range=6mo&interval=1d').then(function(r){return r.json();}).then(function(j){return (j&&j.data)||[];}).catch(function(){return [];})
       ]).then(function(res){
         var cb=(res[0]||[])[0]||{},mi=(res[1]||[])[0]||{},gov=res[2]||[],tx=(res[3]||[]).slice().reverse();
@@ -7958,6 +7958,8 @@
         // 官股 今日/5/20/60
         function govNet(pd){if(!gov.length)return null;
           if(pd==='today')return gov[0].net_amt;
+          var fld=pd==='5'?'net5':pd==='20'?'net20':'net60';
+          if(gov[0][fld]!=null)return gov[0][fld];   // money-link 直接提供精準近 N 日累計（實際成交金額）
           var n=pd==='5'?5:pd==='20'?20:60,s=0;for(var i=0;i<Math.min(n,gov.length);i++)s+=(gov[i].net_amt||0);return s;}
         function mkt(pd){if(pd==='today')return cb.taiex_pct!=null?cb.taiex_pct:null;
           var n=pd==='5'?5:pd==='20'?20:60;if(tx.length<=n)return null;return (tx[0].close/tx[n].close-1)*100;}
