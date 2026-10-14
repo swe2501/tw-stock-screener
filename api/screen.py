@@ -1087,6 +1087,71 @@ def _fetch_theme_all():
     return {"date": mdate, "themes": themes}
 
 
+# 官方產業類指數名 → 本站個股產業別(_STOCK_INDUSTRY 值)；複合指數取聯集。未列者以字尾/子字串 fallback 比對。
+SECTOR_INDEX_MAP = {
+    "水泥": ["水泥工業"], "食品": ["食品工業"], "塑膠": ["塑膠工業"], "紡織纖維": ["紡織纖維"],
+    "電機機械": ["電機機械"], "機電": ["電機機械"], "電器電纜": ["電器電纜"], "化學": ["化學工業"],
+    "生技醫療": ["生技醫療業"], "玻璃陶瓷": ["玻璃陶瓷"], "造紙": ["造紙工業"], "鋼鐵": ["鋼鐵工業"],
+    "橡膠": ["橡膠工業"], "汽車": ["汽車工業"], "半導體": ["半導體業"], "電腦及週邊設備": ["電腦及週邊設備業"],
+    "光電": ["光電業"], "通信網路": ["通信網路業"], "電子零組件": ["電子零組件業"], "電子通路": ["電子通路業"],
+    "資訊服務": ["資訊服務業"], "其他電子": ["其他電子業"], "建材營造": ["建材營造"], "航運": ["航運業"],
+    "觀光餐旅": ["觀光餐旅"], "觀光": ["觀光餐旅"], "金融保險": ["金融保險"], "金融": ["金融保險"],
+    "貿易百貨": ["貿易百貨"], "油電燃氣": ["油電燃氣業"], "居家生活": ["居家生活"], "運動休閒": ["運動休閒"],
+    "綠能環保": ["綠能環保"], "數位雲端": ["數位雲端"], "其他": ["其他"],
+    # 複合指數（取聯集）
+    "塑膠化工": ["塑膠工業", "化學工業"],
+    "化學生技醫療": ["化學工業", "生技醫療業"],
+    "水泥窯製": ["水泥工業", "玻璃陶瓷"],
+    "電子工業": ["半導體業", "電腦及週邊設備業", "光電業", "通信網路業", "電子零組件業",
+                "電子通路業", "資訊服務業", "其他電子業"],
+}
+
+
+def _industries_for_sector(name, all_inds):
+    """官方類指數名 → 對應的個股產業別清單。先查 SECTOR_INDEX_MAP，否則用字尾/子字串 fallback。"""
+    if name in SECTOR_INDEX_MAP:
+        return [i for i in SECTOR_INDEX_MAP[name] if i in all_inds]
+    hits = [i for i in all_inds if i == name or i.replace("工業", "").replace("業", "") == name or (name and name in i)]
+    return hits
+
+
+def _fetch_sector_all():
+    """所有官方產業類指數的成分股（複用 _fetch_sectors 已算好的細產業成分，依對照表聚合；複合取聯集）。
+    回 {date, sectors: {name: {listed}}}，格式比照題材抽屜。產業類指數為上市，otc 從缺。"""
+    sd = _fetch_sectors()
+    if not isinstance(sd, dict) or sd.get("error"):
+        return {"error": "no sector data"}
+    by_ind = {}
+    for d in sd.get("sectors", []):
+        by_ind[d.get("sector")] = [
+            {"code": s[0], "name": s[1], "change": s[3], "price": s[2], "tradeValue": int((s[4] or 0) * 1e8)}
+            for s in d.get("stocks", [])]
+    all_inds = set(by_ind.keys())
+    out = {}
+    for name in SECTOR_INDEX_MAP:
+        mem = []
+        for i in _industries_for_sector(name, all_inds):
+            mem += by_ind.get(i, [])
+        if not mem:
+            continue
+        seen, mm = set(), []
+        for x in sorted(mem, key=lambda z: -(z["tradeValue"] or 0)):
+            if x["code"] in seen:
+                continue
+            seen.add(x["code"]); mm.append(x)
+        tv = sum(x["tradeValue"] or 0 for x in mm)
+        chgs = [x["change"] for x in mm if x["change"] is not None]
+        detail = {"market": "listed", "memberCount": len(mm),
+                  "today": round(sum(chgs) / len(chgs), 2) if chgs else 0,
+                  "weightedToday": round(sum((x["change"] or 0) * (x["tradeValue"] or 0) for x in mm) / tv, 2) if tv else 0,
+                  "tradeValue": tv,
+                  "limitUps": sum(1 for x in mm if (x["change"] or 0) >= 9.5),
+                  "limitDowns": sum(1 for x in mm if (x["change"] or 0) <= -9.5),
+                  "members": mm}
+        out[name] = {"listed": detail, "otc": None}
+    return {"date": sd.get("date"), "sectors": out}
+
+
 _monthly_cache: dict = {}   # key: "{code}_{yyyymm}" -> (timestamp, rows)
 _CACHE_TTL = 300            # 5 分鐘 TTL，盤中月資料不會變
 
@@ -2656,6 +2721,13 @@ class handler(BaseHTTPRequestHandler):
         if (qs.get("stat") or [""])[0] == "themeall":
             try:
                 return self._send_json(200, _fetch_theme_all(), cache="public, s-maxage=600, max-age=300")
+            except Exception as e:
+                import traceback
+                return self._send_json(200, {"error": str(e), "traceback": traceback.format_exc()})
+        # 所有官方產業類指數的成分股（複用產業地圖已算好的細產業成分，依對照表聚合）
+        if (qs.get("stat") or [""])[0] == "sectorall":
+            try:
+                return self._send_json(200, _fetch_sector_all(), cache="public, s-maxage=600, max-age=300")
             except Exception as e:
                 import traceback
                 return self._send_json(200, {"error": str(e), "traceback": traceback.format_exc()})
