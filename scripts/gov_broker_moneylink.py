@@ -80,9 +80,11 @@ def main():
         if data.get(k):
             s = data[k]
             print(f"  {k}: 買 {s['buy_m']/100:.2f}億 賣 {s['sell_m']/100:.2f}億 淨 {s['net_m']/100:+.2f}億")
+    _m = lambda v: (v * 1_000_000) if v is not None else None
     row = {"date": date_iso, "broker": "官股八大(money-link全市場)",
            "buy_amt": whole["buy_m"] * 1_000_000, "sell_amt": whole["sell_m"] * 1_000_000,
-           "net_amt": whole["net_m"] * 1_000_000}
+           "net_amt": whole["net_m"] * 1_000_000,
+           "net5": _m(whole["d5_m"]), "net20": _m(whole["d20_m"]), "net60": _m(whole["d60_m"])}
     print(f"全市場 {date_iso}: 買 {row['buy_amt']/1e8:.2f}億 賣 {row['sell_amt']/1e8:.2f}億 淨 {row['net_amt']/1e8:+.2f}億")
     if dry:
         print("[dry] 未寫入"); return
