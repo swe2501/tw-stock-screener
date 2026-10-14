@@ -3086,47 +3086,61 @@
         _newsCache=Array.isArray(a)?a:[]; tdRenderNews();
       }).catch(function(){var b=el('tdNews');if(b)b.innerHTML='<div class="ov-empty">新聞讀取失敗</div>';});
     }
+    function _tdUse(j,name){
+      if(!j||j.error||(!j.listed&&!j.otc)){el('tdMembers').innerHTML='<tr><td colspan="6"><div class="ov-empty">找不到題材資料</div></td></tr>';el('tdNews').innerHTML='<div class="ov-empty">—</div>';return;}
+      TD.data=j; TD.market=j.listed?'listed':'otc'; tdRender(); tdLoadNews();
+    }
+    function _tdSingle(name){   // 退回：單一題材現算（themeall 快取沒有時）
+      fetch('https://tw-stock-screener-neon.vercel.app/api/screen?stat=theme&name='+encodeURIComponent(name)).then(function(r){return r.json();}).then(function(j){_tdUse(j,name);})
+        .catch(function(){el('tdMembers').innerHTML='<tr><td colspan="6"><div class="ov-empty">讀取失敗</div></td></tr>';el('tdNews').innerHTML='<div class="ov-empty">讀取失敗</div>';});
+    }
     window._openThemeDrawer=function(name){
       var dr=el('themeDrawer'); dr.classList.add('open');
       el('tdTitle').textContent=name; el('tdMemTitle').textContent=name+'相關個股';
       el('tdTabs').innerHTML=''; el('tdStats').innerHTML='';
       el('tdMembers').innerHTML='<tr><td colspan="6"><div class="ov-empty">載入中…</div></td></tr>';
       el('tdNews').innerHTML='<div class="ov-empty">載入中…</div>';
-      fetch('https://tw-stock-screener-neon.vercel.app/api/screen?stat=theme&name='+encodeURIComponent(name)).then(function(r){return r.json();}).then(function(j){
-        if(!j||j.error||(!j.listed&&!j.otc)){el('tdMembers').innerHTML='<tr><td colspan="6"><div class="ov-empty">找不到題材資料</div></td></tr>';el('tdNews').innerHTML='<div class="ov-empty">—</div>';return;}
-        TD.data=j; TD.market=j.listed?'listed':'otc'; tdRender(); tdLoadNews();
-      }).catch(function(){el('tdMembers').innerHTML='<tr><td colspan="6"><div class="ov-empty">讀取失敗</div></td></tr>';el('tdNews').innerHTML='<div class="ov-empty">讀取失敗</div>';});
+      // 2026-10-14 優化：所有題材詳情一次預算好(themeall，page_cache/SWR)，點題材直接讀快取秒開；缺快取才退回單一題材現算
+      var TA=window._themeAll;
+      if(TA&&TA.themes&&TA.themes[name]){var t=TA.themes[name];_tdUse({date:TA.date,name:name,listed:t.listed,otc:t.otc},name);return;}
+      var url=(location.hostname.indexOf('git-uat')>=0?'':'https://tw-stock-screener-neon.vercel.app')+'/api/screen?stat=themeall';
+      window._swrJson('themeall',url,function(d){
+        if(!d||!d.themes)return;
+        window._themeAll=d;
+        if(el('themeDrawer').classList.contains('open')&&el('tdTitle').textContent===name){
+          var t=d.themes[name]; if(t)_tdUse({date:d.date,name:name,listed:t.listed,otc:t.otc},name); else _tdSingle(name);
+        }
+      },function(){ _tdSingle(name); });
     };
     document.addEventListener('keydown',function(e){if(e.key==='Escape')window._closeTheme();});
 
+    function _ovFail(){
+      ['ovThemeStrong','ovThemeWeak','ovCapital','ovLimit','ovSectorStrong','ovSectorWeak','ovWinners','ovLosers'].forEach(function(id){if(el(id))el(id).innerHTML='<div class="ov-empty">讀取失敗</div>';});
+      if(el('ovTurnover'))el('ovTurnover').innerHTML='<tr><td colspan="6"><div class="ov-empty">讀取失敗</div></td></tr>';
+      loaded=false;
+    }
+    function _ovPaint(j){
+      if(!j||j.error){ _ovFail(); return; }
+      if(el('ovDate'))el('ovDate').textContent=j.date?('資料日 '+String(j.date).replace(/^(\d{4})(\d{2})(\d{2})$/,'$1/$2/$3')):'';
+      el('ovThemeStrong').innerHTML=themeRows(j.themeStrong);
+      el('ovThemeWeak').innerHTML=themeRows(j.themeWeak);
+      el('ovCapital').innerHTML=rankRows(j.capital,'億');
+      el('ovLimit').innerHTML=rankRows(j.limitGroups,'檔');
+      el('ovSectorStrong').innerHTML=sectorRows(j.sectorsStrong);
+      el('ovSectorWeak').innerHTML=sectorRows(j.sectorsWeak);
+      el('ovTurnover').innerHTML=turnoverRows(j.turnover);
+      el('ovWinners').innerHTML=moveRows(j.winners);
+      el('ovLosers').innerHTML=moveRows(j.losers);
+      var src=j.sectorSource==='official'?'臺灣證券交易所 產業類指數（官方，rwd MI_INDEX）':'產業別彙整（備援）';
+      el('ovNote').innerHTML='<b>資料源與算法</b>：行情＝臺灣證券交易所全市場收盤（STOCK_DAY_ALL）；漲跌幅＝今收／前收−1。'+
+        '題材＝固定題材分類映射，題材今日漲跌幅取成分股算術平均、資金為成分股成交額合計、漲跌停以單日±9.5% 計。'+
+        '官方產業類股＝'+src+'，依當日漲跌幅排序。成交值分析取當日成交值前 30、個股動向取漲跌幅前 20；ETF 不列入個股榜。本頁不構成投資建議。';
+    }
     window._ovShow=function(){
       if(loaded) return;
       loaded=true;
-      fetch('https://tw-stock-screener-neon.vercel.app/api/screen?stat=overview').then(function(r){return r.json();}).then(function(j){
-        if(!j||j.error){
-          ['ovThemeStrong','ovThemeWeak','ovCapital','ovLimit','ovSectorStrong','ovSectorWeak','ovWinners','ovLosers'].forEach(function(id){if(el(id))el(id).innerHTML='<div class="ov-empty">讀取失敗</div>';});
-          if(el('ovTurnover'))el('ovTurnover').innerHTML='<tr><td colspan="6"><div class="ov-empty">讀取失敗</div></td></tr>';
-          loaded=false; return;
-        }
-        if(el('ovDate'))el('ovDate').textContent=j.date?('資料日 '+String(j.date).replace(/^(\d{4})(\d{2})(\d{2})$/,'$1/$2/$3')):'';
-        el('ovThemeStrong').innerHTML=themeRows(j.themeStrong);
-        el('ovThemeWeak').innerHTML=themeRows(j.themeWeak);
-        el('ovCapital').innerHTML=rankRows(j.capital,'億');
-        el('ovLimit').innerHTML=rankRows(j.limitGroups,'檔');
-        el('ovSectorStrong').innerHTML=sectorRows(j.sectorsStrong);
-        el('ovSectorWeak').innerHTML=sectorRows(j.sectorsWeak);
-        el('ovTurnover').innerHTML=turnoverRows(j.turnover);
-        el('ovWinners').innerHTML=moveRows(j.winners);
-        el('ovLosers').innerHTML=moveRows(j.losers);
-        var src=j.sectorSource==='official'?'臺灣證券交易所 產業類指數（官方，rwd MI_INDEX）':'產業別彙整（備援）';
-        el('ovNote').innerHTML='<b>資料源與算法</b>：行情＝臺灣證券交易所全市場收盤（STOCK_DAY_ALL）；漲跌幅＝今收／前收−1。'+
-          '題材＝固定題材分類映射，題材今日漲跌幅取成分股算術平均、資金為成分股成交額合計、漲跌停以單日±9.5% 計。'+
-          '官方產業類股＝'+src+'，依當日漲跌幅排序。成交值分析取當日成交值前 30、個股動向取漲跌幅前 20；ETF 不列入個股榜。本頁不構成投資建議。';
-      }).catch(function(){
-        ['ovThemeStrong','ovThemeWeak','ovCapital','ovLimit','ovSectorStrong','ovSectorWeak','ovWinners','ovLosers'].forEach(function(id){if(el(id))el(id).innerHTML='<div class="ov-empty">讀取失敗</div>';});
-        if(el('ovTurnover'))el('ovTurnover').innerHTML='<tr><td colspan="6"><div class="ov-empty">讀取失敗</div></td></tr>';
-        loaded=false;
-      });
+      // 2026-10-14 改走 page_cache（夜間預算）+ localStorage SWR：秒出上次結果、背景更新；缺快取才退回後端現算
+      window._swrJson('overview','https://tw-stock-screener-neon.vercel.app/api/screen?stat=overview', _ovPaint, _ovFail);
     };
   })();
   </script>
@@ -3333,7 +3347,7 @@
       }).catch(function(){ if(!had&&fail) fail(); });
     };
     // 進站後閒置時先把題材列表／產業地圖的資料抓好放著（10 分鐘內抓過就不重抓），點開就不用等
-    setTimeout(function(){ ['themes','sectors'].forEach(function(k){ try{ var c=JSON.parse(localStorage.getItem('swr_'+k)||'null'); if(c&&c.t&&Date.now()-c.t<600000) return; }catch(e){}
+    setTimeout(function(){ ['themes','sectors','overview'].forEach(function(k){ try{ var c=JSON.parse(localStorage.getItem('swr_'+k)||'null'); if(c&&c.t&&Date.now()-c.t<600000) return; }catch(e){}
       window._swrJson(k,'https://tw-stock-screener-neon.vercel.app/api/screen?stat='+k,function(){}); }); }, 4000);
     window._themesShow=function(){
       if(_data){renderHeat();renderDetail();return;}
