@@ -27,6 +27,7 @@ KINDS = {
     "themes": lambda d: isinstance(d.get("listed"), list) and len(d["listed"]) >= 5,
     "overview": lambda d: bool(d.get("date")) and isinstance(d.get("turnover"), list),           # 今日焦點總覽/排行榜
     "themeall": lambda d: isinstance(d.get("themes"), dict) and len(d["themes"]) >= 10,           # 所有題材詳情（點題材秒開）
+    "sectorall": lambda d: isinstance(d.get("sectors"), dict) and len(d["sectors"]) >= 10,        # 所有官方產業類指數成分股（點產業秒開）
 }
 
 
