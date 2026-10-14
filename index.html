@@ -2808,6 +2808,9 @@
     .ov-row.clk{cursor:pointer;}
     .ov-row.clk:hover{background:var(--surface2);}
     .ov-up{color:var(--red);} .ov-dn{color:var(--green);}
+    /* 題材成分股：漲停反紅、跌停反綠（實心底，±9.5% 與卡片漲停/跌停計數一致）*/
+    #tdMembers b.td-limup{background:var(--red);color:#fff;padding:1px 7px;border-radius:4px;}
+    #tdMembers b.td-limdn{background:var(--green);color:#fff;padding:1px 7px;border-radius:4px;}
     .ov-lim i{font-style:normal;font-weight:700;} .ov-lim .u{color:var(--red);} .ov-lim .d{color:var(--green);}
     .ov-rank a{display:grid;grid-template-columns:96px 1fr 74px;align-items:center;gap:10px;font-size:12.5px;padding:7px 2px;text-decoration:none;color:var(--text);border-bottom:1px solid var(--border);}
     .ov-rank a:last-child{border-bottom:0;}
@@ -3020,8 +3023,9 @@
       if(!d||!d.members||!d.members.length) return '<tr><td colspan="6"><div class="ov-empty">此市場無相關個股</div></td></tr>';
       var mk=d.market==='otc'?'上櫃':'上市';
       return d.members.map(function(m,i){
+        var lim=m.change>=9.5?'td-limup':(m.change<=-9.5?'td-limdn':'');  // 漲停反紅／跌停反綠
         return '<tr class="clk" onclick="_openStock(\''+m.code+'\',\''+esc(m.name)+'\')"><td>'+(i+1)+'</td>'+
-          '<td><b>'+esc(m.name)+'</b><span class="code">'+m.code+'</span></td>'+
+          '<td><b class="'+lim+'">'+esc(m.name)+'</b><span class="code">'+m.code+'</span></td>'+
           '<td><span class="ov-tags"><span class="ind">'+mk+'</span></span></td>'+
           '<td class="num">'+nfmt(m.price)+'</td>'+
           '<td class="num '+cls(m.change)+'">'+spct(m.change)+'</td>'+
