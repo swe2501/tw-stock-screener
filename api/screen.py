@@ -1066,6 +1066,27 @@ def _fetch_theme(name):
             "otc": _theme_detail_one(codes, otc, "otc")}
 
 
+def _fetch_theme_all():
+    """所有題材的詳情（一次抓全市場，供夜間 page_cache 預算；前端讀快取秒開，取代每點一題材就現抓全市場）。
+    回 {date, themes: {name: {listed, otc}}}，格式與 _fetch_theme 單一題材的 listed/otc 一致。"""
+    stocks, mdate = fetch_all_stocks_latest()
+    lmap = {}
+    for c, s in stocks.items():
+        cl = s.get("close"); pv = s.get("prev_close")
+        if cl is None:
+            continue
+        lmap[c] = {"close": cl, "pct": ((cl / pv - 1) * 100) if pv else 0,
+                   "value": s.get("value") or 0, "name": s.get("name") or c}
+    otc = _fetch_tpex_quotes()
+    themes = {}
+    for name, codes in THEME_MEMBERS.items():
+        listed = _theme_detail_one(codes, lmap, "listed")
+        o = _theme_detail_one(codes, otc, "otc")
+        if listed or o:
+            themes[name] = {"listed": listed, "otc": o}
+    return {"date": mdate, "themes": themes}
+
+
 _monthly_cache: dict = {}   # key: "{code}_{yyyymm}" -> (timestamp, rows)
 _CACHE_TTL = 300            # 5 分鐘 TTL，盤中月資料不會變
 
@@ -2628,6 +2649,13 @@ class handler(BaseHTTPRequestHandler):
             try:
                 name = (qs.get("name") or [""])[0].strip()
                 return self._send_json(200, _fetch_theme(name))
+            except Exception as e:
+                import traceback
+                return self._send_json(200, {"error": str(e), "traceback": traceback.format_exc()})
+        # 所有題材詳情一次算（供夜間 page_cache 預算／前端快取，取代每點一題材就現抓全市場）
+        if (qs.get("stat") or [""])[0] == "themeall":
+            try:
+                return self._send_json(200, _fetch_theme_all(), cache="public, s-maxage=600, max-age=300")
             except Exception as e:
                 import traceback
                 return self._send_json(200, {"error": str(e), "traceback": traceback.format_exc()})

@@ -25,6 +25,8 @@ API = "https://tw-stock-screener-neon.vercel.app/api/screen?stat="
 KINDS = {
     "sectors": lambda d: isinstance(d.get("sectors"), list) and len(d["sectors"]) >= 10,
     "themes": lambda d: isinstance(d.get("listed"), list) and len(d["listed"]) >= 5,
+    "overview": lambda d: bool(d.get("date")) and isinstance(d.get("turnover"), list),           # 今日焦點總覽/排行榜
+    "themeall": lambda d: isinstance(d.get("themes"), dict) and len(d["themes"]) >= 10,           # 所有題材詳情（點題材秒開）
 }
 
 
