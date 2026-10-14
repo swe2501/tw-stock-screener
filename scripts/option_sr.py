@@ -15,7 +15,9 @@ option_sr.py — 台指選擇權(TXO)「支撐壓力 OI 三層峰值」，供首
   每層回傳 strike／OI／OIΔ（今日 OI − 前一交易日 OI，本機 txo_daily；新履約價無前值→None）／距 ref 點數／同側百分位／中位數倍數／判定原因。
   另存 CALL/PUT 總 OI 與 Put/Call OI 比（市場情緒輔助）。舊欄位 res1/res2/sup1/sup2 填第 1、2 層（相容）。
 合約：week＝最近的週三週選(W)（不看週五 F 系列）、month＝最近月月選，分開計算不混算。實際到期日＝原定到期日遇休市（週末、證交所休市日期表、過去日期以本機實際交易日核對）順延至次一交易日。
-資料源：TAIFEX openapi DailyMarketReportOpt（JSON/CSV 皆可，取「一般」盤）＋ DailyMarketReportFut。
+資料源（2026-10-14 改全同日官網來源，與合夥人 Put/Call 即時爬蟲同層，不再用 T+1 的 openapi）：
+  OI＝本機 txo_daily（官網 optDataDown，txo_history.py 同日寫入）、參考價＝TX 近月一般盤結算價（官網 futDataDown 同日）、
+  價平＝當日加權收盤（Supabase taiex_daily）。排程務必把 option_sr 排在 txo_history 之後。
 → Supabase option_sr(PK trade_date+kind)；新欄位 res_levels/sup_levels(jsonb)、ref_price、ref_kind（sql/option_sr_levels.sql）。
 用法：python scripts/option_sr.py [--dry]
 """
@@ -125,18 +127,38 @@ def _taiex_latest(env):
     return float(d[0]["close"]) if d else None
 
 
+FUT_DOWN = "https://www.taifex.com.tw/cht/3/futDataDown"   # 官網期貨每日下載（同日，當天盤後即有；比 openapi 的 T+1 快）
+
+
 def _tx_ref(dt):
-    """台指期 TX 近月一般盤結算價（近月＝到期日 > 資料日的最早月份契約）。"""
+    """台指期 TX 近月『一般盤』結算價（官網 futDataDown 同日；近月＝到期日 > 資料日的最早月份契約）。
+    futDataDown 欄位：0 日期 1 契約 2 到期月份(週別) 3 開 4 高 5 低 6 收 7 漲跌 8 漲跌% 9 量 10 結算價 ...
+    一般盤列才有結算價（夜盤列結算價為 '-' → _num=None 自動略過）。"""
     try:
-        req = urllib.request.Request(API_FUT, headers={"User-Agent": "Mozilla/5.0"})
-        t = urllib.request.urlopen(req, timeout=45, context=_CTX).read().decode("utf-8-sig", "replace")
-        rows = json.loads(t) if t.lstrip().startswith("[") else []
+        import urllib.parse
+        d = dt.strftime("%Y/%m/%d")
+        body = urllib.parse.urlencode({"down_type": "1", "commodity_id": "TX",
+                                       "queryStartDate": d, "queryEndDate": d}).encode()
+        req = urllib.request.Request(FUT_DOWN, data=body, method="POST",
+                                     headers={"User-Agent": "Mozilla/5.0",
+                                              "Content-Type": "application/x-www-form-urlencoded"})
+        raw = urllib.request.urlopen(req, timeout=60, context=_CTX).read()
+        txt = None
+        for enc in ("ms950", "big5", "utf-8-sig", "utf-8"):
+            try:
+                txt = raw.decode(enc); break
+            except Exception:
+                pass
+        if not txt:
+            return None, None
         cand = []
-        for r in rows:
-            cm = str(r.get("ContractMonth(Week)", "")).strip()
-            if r.get("Contract") != "TX" or r.get("TradingSession") != "一般" or not re.match(r"^\d{6}$", cm):
+        for r in csv.reader(txt.splitlines()):
+            if len(r) < 11 or r[1].strip() != "TX":
                 continue
-            sp, ex = _num(r.get("SettlementPrice")), _expiry_adj(cm, dt)
+            cm = r[2].strip()
+            if not re.match(r"^\d{6}$", cm):
+                continue
+            sp, ex = _num(r[10]), _expiry_adj(cm, dt)      # r[10]=結算價
             if sp and ex and ex > dt:
                 cand.append((ex, sp, cm))
         if cand:
@@ -305,51 +327,31 @@ def main():
     if not env.get("SUPABASE_SERVICE_KEY"):
         print("[error] 缺 SUPABASE_SERVICE_KEY"); sys.exit(1)
 
-    req = urllib.request.Request(API, headers={"User-Agent": "Mozilla/5.0"})
-    text = urllib.request.urlopen(req, timeout=45, context=_CTX).read().decode("utf-8-sig", "replace")
-    if text.lstrip().startswith("["):
-        # 2026-09-28 起 openapi 改回傳 JSON：依原 CSV 欄位順序轉成列（0日期 1契約 2到期月份 3履約價 4買賣權 …10結算價 11未沖銷 …17交易時段）
-        keys = ["Date", "Contract", "ContractMonth(Week)", "StrikePrice", "CallPut", "Open", "High", "Low", "Close",
-                "Volume", "SettlementPrice", "OpenInterest", "BestBid", "BestAsk", "HistoricalHigh", "HistoricalLow",
-                "TradingHalt", "TradingSession"]
-        rows = [keys] + [[str(r.get(k, "")) for k in keys] for r in json.loads(text)]
-    else:
-        rows = list(csv.reader(text.splitlines()))
-    if len(rows) < 2:
-        print("[error] openapi 無資料"); return
-    body = [r for r in rows[1:] if len(r) >= 18 and r[1] == "TXO" and r[17].strip() == "一般"]
-    if not body:
-        print("[error] openapi 無 TXO 一般盤資料"); return
-    dt = datetime.strptime(body[0][0], "%Y%m%d").date()
-    iso = dt.isoformat()
+    # 2026-10-14：全程改用「同日官網來源」(與合夥人 Put/Call 即時爬蟲同層)，根治「OI/價平 比 Put/Call 慢一天」：
+    #   OI＝本機 txo_daily（官網 optDataDown 同日下載，txo_history.py 寫入）、
+    #   參考價＝TX 近月一般盤結算價（官網 futDataDown 同日）、價平＝當日加權收盤（taiex_daily）。
+    #   不再依賴 T+1 才發布的 openapi DailyMarketReport（那才是延遲元凶）。排程務必把 option_sr 排在 txo_history 之後。
+    iso = _txo_latest_date()
+    if not iso:
+        print("[error] 本機 txo_daily 無資料（請先跑 txo_history.py）"); return
+    dt = date.fromisoformat(iso)
 
-    # 2026-10-14：TAIFEX openapi(DailyMarketReport)常比交易日慢 1 天發布，但本機 txo_daily（較快來源、
-    # 與官網 Put/Call 同步）已有當日各檔 OI。openapi 落後時改用 txo_daily 當日 OI 計算（OI 峰值演算法完全
-    # 不變），參考價暫以當日加權收盤備援；根治「OI/價平 比 Put/Call 慢一天」。需 taiex_daily 也有當日收盤。
-    use_txo = False
-    _tdt = _txo_latest_date()
-    if _tdt and _tdt > iso and _taiex_close(env, _tdt) is not None:
-        print(f"[info] openapi 仍為 {iso}，本機 txo_daily 已有 {_tdt} → 改用 txo_daily 當日 OI（參考價用加權收盤備援）")
-        body = _txo_body(_tdt); dt = date.fromisoformat(_tdt); iso = _tdt; use_txo = True
-
-    # 新鮮度防呆：TAIFEX openapi 這系列發布有延遲，19:00 排程常在來源更新前跑到。
-    # 來源日期沒有比既有最新日新就不寫（等隔天早上補跑那輪來源更新後再寫）。fail-open。
     _lat = bs.latest_trade_date(env, "option_sr")
     if _lat and iso <= _lat and "--force" not in sys.argv:
-        print(f"[skip] option_sr 已有 {_lat}，來源最新僅 {iso}（{'txo_daily' if use_txo else 'openapi'}，尚未更新）→ 不覆寫，等補跑"); return
+        print(f"[skip] option_sr 已有 {_lat}，txo_daily 最新為 {iso}（尚未更新）→ 不覆寫"); return
+
+    body = _txo_body(iso)
+    if not body:
+        print(f"[error] txo_daily {iso} 無 TXO 資料"); return
 
     codes = {r[2].strip() for r in body}
     live = [(c, _expiry_adj(c, dt)) for c in codes if _expiry_adj(c, dt) and _expiry_adj(c, dt) > dt]   # 依實際（休市順延後）到期日
     wed = sorted([x for x in live if re.search(r"W\d$", x[0])], key=lambda x: x[1])      # 週三週選系列
-    fri = sorted([x for x in live if re.search(r"F\d$", x[0])], key=lambda x: x[1])      # 週五週選系列
     monthly = sorted([x for x in live if re.match(r"^\d{6}$", x[0])], key=lambda x: x[1])
-    spot = _taiex_close(env, iso) if use_txo else _taiex_latest(env)
-    if use_txo:
-        ref, ref_kind = spot, "加權收盤(備援)"      # openapi 未發布，以當日加權收盤為參考價
-    else:
-        ref, ref_kind = _tx_ref(dt)
-        if ref is None:
-            ref, ref_kind = spot, "加權收盤(備援)"
+    spot = _taiex_close(env, iso)
+    ref, ref_kind = _tx_ref(dt)          # 官網 futDataDown 同日 TX 近月結算；取不到才退回加權收盤
+    if ref is None:
+        ref, ref_kind = spot, "加權收盤(備援)"
 
     out = []
     for kind, lst in (("week", wed), ("month", monthly)):   # 週選＝週三(W)系列（2026-09-28 用戶定：不看週五系列）、月選，不混算
