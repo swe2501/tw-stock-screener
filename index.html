@@ -3141,6 +3141,10 @@
       loaded=true;
       // 2026-10-14 改走 page_cache（夜間預算）+ localStorage SWR：秒出上次結果、背景更新；缺快取才退回後端現算
       window._swrJson('overview','https://tw-stock-screener-neon.vercel.app/api/screen?stat=overview', _ovPaint, _ovFail);
+      // 看總覽的同時，背景把所有題材詳情(themeall)預載好，點題材即秒開（host-aware：uat 同源、prod neon）
+      setTimeout(function(){ try{ var c=JSON.parse(localStorage.getItem('swr_themeall')||'null'); if(window._themeAll||(c&&c.t&&Date.now()-c.t<600000))return; }catch(e){}
+        var u=(location.hostname.indexOf('git-uat')>=0?'':'https://tw-stock-screener-neon.vercel.app')+'/api/screen?stat=themeall';
+        window._swrJson('themeall',u,function(d){ if(d&&d.themes) window._themeAll=d; },function(){}); }, 800);
     };
   })();
   </script>
