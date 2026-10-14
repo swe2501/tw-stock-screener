@@ -177,3 +177,28 @@
 - **等用戶在 uat 確認**：瀏覽器全螢幕下的下拉選單、拖價格軸時畫線是否跟上、匯率矩陣三個門檻與 8 格文字、葛蘭碧買點 3 是否放寬。
 - **可選**：均線 SMA／EMA 切換（會影響篩選結果與既有回測數字，動工前先討論範圍）；K 圖標記文字「買1」是否改全名；大盤K 開啟時畫線座標偏移。
 - 其餘沿用第四節、第六節待辦（34 個集團 logo、融資維持率口徑、ETF 今日加減碼版面、明燈與冥燈、真名三式調參、篩選器納入上櫃）。
+
+---
+
+## 八、2026-10-14 本期新增與修正（全部在 uat，尚未上 prod）
+
+### A. 選擇權「支撐壓力卡」價平/OI 延遲 → 改全同日官網來源（`scripts/option_sr.py`）
+- **現象**：首頁選擇權卡的 OI/價平/參考價停在前一交易日，但同卡的 Put/Call 比（合夥人 `api/pc_ratio.py` 即時抓官網 pcRatio）已是當日 → 兩個日期對不上、「價平沒變更」。
+- **根因**：option_sr 原本抓 TAIFEX **openapi `DailyMarketReportOpt/Fut`，那是 T+1 才發布**（實測 10-14 中午仍停 10-12）。調排程時間救不了（當天根本還沒資料）。
+- **修法（全同日來源，比照合夥人即時爬蟲）**：當日各檔 OI 改讀本機 `txo_daily`（官網 `optDataDown` 同日，`txo_history.py` 寫入）；參考價＝TX 近月一般盤結算（官網 `futDataDown` 同日 POST，`_tx_ref` 改寫）；價平＝當日加權收盤（`taiex_daily`）。移除 openapi 依賴與備援切換。OI 峰值演算法不變，`--dry --force` 實測與原路徑結果完全一致。
+- **排程**：`run_daily_job.bat` 已把 `txo_history.py` 移到 `option_sr.py` 之前（option_sr 依賴當日 txo_daily，順序反了會讀舊資料）。
+
+### B. 官股券商買賣超 → 改用 money-link 實際成交金額（對上合夥人看盤軟體）
+- **現象**：首頁「全市場官股券商」卡淨買賣超只有 ~225 億，合夥人看盤軟體（CMoney 系）是全市場 412.61 億。
+- **根因**：原 `gov_broker.py` 用本機 wantgoo 分點「Σ張×均價」**估算**（分點涵蓋其實近全量、但只有張+均價、無實際成交金額），口徑系統性偏低約三成；免費網頁（histock/MoneyDJ）只有 top-N、拿不到各家買賣總額。
+- **來源（用戶提供）**：**money-link 富聯網** `https://www.money-link.com.tw/stxba/imwcontent0.asp?page=hott3&ID=HOTT3`——靜態 HTML，含「上市/上櫃/**全市場** × 8 家官股券商 × 今日買進/賣出/買賣超/近5/20/60/今年以來」**實際成交金額**（百萬元，含鉅額）。全市場合計 2026/10/13：買 1331.12億 / 賣 918.51億 / **淨 +412.61億**，與合夥人 1:1。
+- **做法**：新增 `scripts/gov_broker_moneylink.py`（取全市場合計 → `gov_broker_daily` buy/sell/net_amt＋近5/20/60）；`gov_broker.py` 不再寫每日總額、只留個股買賣超榜 `gov_broker_stock`；`gov_broker_daily` 新增 `net5/net20/net60` 欄位（Supabase Management API 在瀏覽器內執行 DDL）；前端 `govNet()` 改為優先讀 net5/20/60 精準值（缺值才退回加總每日）。`run_daily_job.bat` 已在 gov_broker 後串入 gov_broker_moneylink。
+- 個股「買超/賣超 TOP5」小榜仍由 gov_broker_stock（wantgoo）提供。
+
+### C. K 圖「列入觀察」按鈕點了沒反應（合夥人改版遺漏）
+- `toggleWatchFromChart()` 原本只 `document.getElementById('chartNoteInput')?.focus()`，但該輸入框在 `display:none` 的「觀察備註」分頁內 → focus 隱藏元素＝沒反應。
+- **修法**：未登入先 `openAuthModal('login')`；登入則 `window._cnpTab('note')` 切到觀察備註分頁(顯示 #cnpNote) 再 focus。「加入回測」本身正常（未登入會跳「請先登入」toast）。
+
+### 待辦
+- **推 prod**：第六/七/八節累積全部在 uat，等用戶說「推 prod」；推完依鐵則把 justy-layout 對齊 uat（`git push origin origin/uat:justy-layout`）。
+- option_sr 乾淨版、官股 money-link 皆只動 uat；排程腳本已就位，下一個交易日盤後跑 `run_daily_job.bat` 即生效。

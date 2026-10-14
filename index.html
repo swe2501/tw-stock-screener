@@ -14933,7 +14933,11 @@
     }
 
     function toggleWatchFromChart() {
-      document.getElementById('chartNoteInput')?.focus();
+      // 2026-10-14 修：原本只 focus 隱藏的 #chartNoteInput（在 display:none 的分頁內）→ 點了沒反應。
+      // 未登入先跳登入；登入則切到「觀察備註」分頁(顯示 #cnpNote)再 focus。
+      if (!_authToken) { openAuthModal('login'); return; }
+      if (window._cnpTab) window._cnpTab('note');
+      setTimeout(function(){ document.getElementById('chartNoteInput')?.focus(); }, 60);
     }
 
     async function saveWatchFromChart() {
