@@ -147,6 +147,51 @@ def _tx_ref(dt):
     return None, None
 
 
+def _txo_latest_date():
+    """本機 txo_daily 最新交易日（較快來源，常早 openapi 一天；與官網 Put/Call 同步）。"""
+    try:
+        import sqlite3
+        import broker_analysis as ba
+        c = sqlite3.connect(str(ba.DB_PATH))
+        d = c.execute("select max(trade_date) from txo_daily").fetchone()[0]
+        c.close()
+        return d
+    except Exception as e:
+        print(f"[warn] 讀 txo_daily 最新日期失敗：{e}")
+        return None
+
+
+def _taiex_close(env, iso):
+    """指定日加權收盤（Supabase taiex_daily）；無則 None。"""
+    try:
+        key = env["SUPABASE_SERVICE_KEY"]
+        req = urllib.request.Request(
+            env["SUPABASE_URL"] + f"/rest/v1/taiex_daily?select=close&trade_date=eq.{iso}&limit=1",
+            headers={"apikey": key, "Authorization": f"Bearer {key}"})
+        d = json.loads(urllib.request.urlopen(req, timeout=20).read())
+        return float(d[0]["close"]) if d else None
+    except Exception:
+        return None
+
+
+def _txo_body(iso):
+    """以本機 txo_daily 當日各契約 OI 組成與 openapi DailyMarketReportOpt 相同索引的列。
+    只填下游會用到的欄位：0 日期(yyyymmdd) 1 'TXO' 2 契約 3 履約價 4 買/賣權 11 OI 17 盤別。"""
+    import sqlite3
+    import broker_analysis as ba
+    c = sqlite3.connect(str(ba.DB_PATH))
+    ymd = iso.replace("-", "")
+    out = []
+    for contract, strike, cp, oi in c.execute(
+            "select contract,strike,cp,oi from txo_daily where trade_date=?", (iso,)):
+        row = [""] * 18
+        row[0] = ymd; row[1] = "TXO"; row[2] = str(contract); row[3] = str(strike)
+        row[4] = "買權" if cp == "C" else "賣權"; row[11] = str(oi if oi is not None else 0); row[17] = "一般"
+        out.append(row)
+    c.close()
+    return out
+
+
 def _prev_oi(code, iso):
     """本機 txo_daily：該契約前一交易日各 (strike, cp) 的 OI。"""
     try:
@@ -278,21 +323,33 @@ def main():
     dt = datetime.strptime(body[0][0], "%Y%m%d").date()
     iso = dt.isoformat()
 
+    # 2026-10-14：TAIFEX openapi(DailyMarketReport)常比交易日慢 1 天發布，但本機 txo_daily（較快來源、
+    # 與官網 Put/Call 同步）已有當日各檔 OI。openapi 落後時改用 txo_daily 當日 OI 計算（OI 峰值演算法完全
+    # 不變），參考價暫以當日加權收盤備援；根治「OI/價平 比 Put/Call 慢一天」。需 taiex_daily 也有當日收盤。
+    use_txo = False
+    _tdt = _txo_latest_date()
+    if _tdt and _tdt > iso and _taiex_close(env, _tdt) is not None:
+        print(f"[info] openapi 仍為 {iso}，本機 txo_daily 已有 {_tdt} → 改用 txo_daily 當日 OI（參考價用加權收盤備援）")
+        body = _txo_body(_tdt); dt = date.fromisoformat(_tdt); iso = _tdt; use_txo = True
+
     # 新鮮度防呆：TAIFEX openapi 這系列發布有延遲，19:00 排程常在來源更新前跑到。
     # 來源日期沒有比既有最新日新就不寫（等隔天早上補跑那輪來源更新後再寫）。fail-open。
     _lat = bs.latest_trade_date(env, "option_sr")
     if _lat and iso <= _lat and "--force" not in sys.argv:
-        print(f"[skip] option_sr 已有 {_lat}，TAIFEX openapi 仍為 {iso}（尚未更新）→ 不覆寫，等補跑"); return
+        print(f"[skip] option_sr 已有 {_lat}，來源最新僅 {iso}（{'txo_daily' if use_txo else 'openapi'}，尚未更新）→ 不覆寫，等補跑"); return
 
     codes = {r[2].strip() for r in body}
     live = [(c, _expiry_adj(c, dt)) for c in codes if _expiry_adj(c, dt) and _expiry_adj(c, dt) > dt]   # 依實際（休市順延後）到期日
     wed = sorted([x for x in live if re.search(r"W\d$", x[0])], key=lambda x: x[1])      # 週三週選系列
     fri = sorted([x for x in live if re.search(r"F\d$", x[0])], key=lambda x: x[1])      # 週五週選系列
     monthly = sorted([x for x in live if re.match(r"^\d{6}$", x[0])], key=lambda x: x[1])
-    spot = _taiex_latest(env)
-    ref, ref_kind = _tx_ref(dt)
-    if ref is None:
-        ref, ref_kind = spot, "加權收盤(備援)"
+    spot = _taiex_close(env, iso) if use_txo else _taiex_latest(env)
+    if use_txo:
+        ref, ref_kind = spot, "加權收盤(備援)"      # openapi 未發布，以當日加權收盤為參考價
+    else:
+        ref, ref_kind = _tx_ref(dt)
+        if ref is None:
+            ref, ref_kind = spot, "加權收盤(備援)"
 
     out = []
     for kind, lst in (("week", wed), ("month", monthly)):   # 週選＝週三(W)系列（2026-09-28 用戶定：不看週五系列）、月選，不混算
