@@ -1,0 +1,247 @@
+"""
+intraday_push.py — 盤中(09:00–13:35)掃 mis.twse.com.tw 全市場即時報價，注入
+api/screen.py 的 _INTRADAY，現算「題材詳情／產業地圖／今日焦點」盤中版，推進
+Supabase page_cache（kind=themeall / sectorall / overview）。
+
+前端 window._swrJson 本來就讀 page_cache → 盤中這三張頁面/卡片即時更新；收盤後本腳本
+停止，夜間排程(page_cache_push.py)再用官方盤後值回填。prod 的 api/screen.py 永不設定
+_INTRADAY，盤後行為與現狀 100% 相同。
+
+用法：
+  python scripts/intraday_push.py            # 單次：盤中才動作，非盤中直接結束
+  python scripts/intraday_push.py --loop      # 常駐：盤中每 90 秒一輪，收盤自動結束
+  python scripts/intraday_push.py --force      # 不檢查時段，強制跑一次（測試）
+"""
+import sys
+import time
+import json
+import ssl
+import datetime
+import urllib.request
+import urllib.parse
+import os
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "scripts"))
+import broker_signals as bs                      # noqa: E402
+
+# screen.py 在模組載入時就讀 os.environ 的 SUPABASE_*，故先把 .env.local 灌進環境，
+# 讓 fetch_all_stocks_latest 的 price_window 備援在 TWSE 被擋時仍能取得代號清單。
+_ENV = bs._load_env()
+for _k in ("SUPABASE_URL", "SUPABASE_ANON_KEY", "SUPABASE_SERVICE_KEY"):
+    if _ENV.get(_k):
+        os.environ.setdefault(_k, _ENV[_k])
+sys.path.insert(0, str(ROOT / "api"))
+import screen                                     # noqa: E402
+
+if sys.stdout and hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(errors="replace")
+
+INTERVAL = 90                                      # 每輪間隔（秒）
+TZ = datetime.timezone(datetime.timedelta(hours=8))
+MIS = "https://mis.twse.com.tw/stock/api/getStockInfo.jsp"
+MIS_HEADERS = {"User-Agent": "Mozilla/5.0",
+               "Referer": "https://mis.twse.com.tw/stock/fibest.jsp",
+               "Accept": "application/json"}
+BATCH = 100                                        # mis 每次查詢檔數
+MIN_LISTED = 500                                   # 上市掃到檔數低於此 → 視為來源異常，不覆寫
+# mis.twse.com.tw 憑證缺 Subject Key Identifier，Python 3.14 的 RFC5280 嚴格副檔檢查會擋。
+# 只清掉 VERIFY_X509_STRICT 旗標，憑證鏈與主機名驗證「仍然開著」（比盲關 CERT_NONE 安全）。
+_CTX = ssl.create_default_context()
+_CTX.verify_flags &= ~ssl.VERIFY_X509_STRICT
+DRY = False                                         # --dry：只現算不寫 page_cache（測試用）
+
+
+def _now():
+    return datetime.datetime.now(TZ)
+
+
+def _in_session(dt=None):
+    """台股盤中：週一~五 09:00–13:35（含尾盤試撮緩衝）。"""
+    dt = dt or _now()
+    if dt.weekday() >= 5:
+        return False
+    hm = dt.hour * 60 + dt.minute
+    return 9 * 60 <= hm <= 13 * 60 + 35
+
+
+def _pf(x):
+    try:
+        if x in (None, "", "-", "- "):
+            return None
+        return float(x)
+    except (TypeError, ValueError):
+        return None
+
+
+def _mis_batch(ex_chs):
+    q = "|".join(ex_chs)
+    url = (f"{MIS}?ex_ch={urllib.parse.quote(q)}&json=1&delay=0"
+           f"&_={int(time.time() * 1000)}")
+    req = urllib.request.Request(url, headers=MIS_HEADERS)
+    with urllib.request.urlopen(req, timeout=20, context=_CTX) as r:
+        d = json.loads(r.read().decode("utf-8", "replace"))
+    return d.get("msgArray") or []
+
+
+def _scan(codes, ex):
+    """批次查 mis，回 {code:{price,prev,vol(股),name}}。ex: 'tse'(上市) / 'otc'(上櫃)。"""
+    out = {}
+    chs = [f"{ex}_{c}.tw" for c in codes]
+    for i in range(0, len(chs), BATCH):
+        batch = chs[i:i + BATCH]
+        arr = []
+        for attempt in range(2):
+            try:
+                arr = _mis_batch(batch)
+                break
+            except Exception as e:                 # noqa: BLE001
+                if attempt == 0:
+                    time.sleep(1)
+                else:
+                    print(f"[mis] {ex} batch@{i} 失敗：{e}")
+        for m in arr:
+            c = str(m.get("c") or "").strip()
+            if not c:
+                continue
+            z = _pf(m.get("z"))
+            if z is None:
+                z = _pf(m.get("pz"))               # 無當盤成交→前一筆成交價
+            y = _pf(m.get("y"))                     # 昨收
+            if z is None:
+                z = y                               # 仍無成交→以昨收視為平盤
+            if z is None or y is None:
+                continue
+            v = _pf(m.get("v")) or 0                # 累積成交量(張)
+            out[c] = {"price": z, "prev": y, "vol": int(v * 1000),
+                      "name": (m.get("n") or c).strip()}
+        time.sleep(0.15)
+    return out
+
+
+def _otc_codes(env):
+    """上櫃代號清單：讀 Supabase otc_names（每日排程維護，868 檔），比 TPEx openapi 穩定。"""
+    try:
+        st, rows = bs._sb(env, "/otc_names", method="GET", params=[("select", "code")])
+        codes = [str(r.get("code") or "").strip() for r in (rows or [])]
+        return [c for c in codes if c]
+    except Exception as e:                            # noqa: BLE001
+        print(f"[intraday] otc_names 讀取失敗：{e}")
+        return []
+
+
+def _universe(env):
+    """全市場代號清單（上市 / 上櫃）。上市取自 TWSE 全市場代號，上櫃取自 otc_names 表。"""
+    screen._INTRADAY = {"listed": {}, "otc": {}, "date": None}
+    listed, _ = screen.fetch_all_stocks_latest()
+    return list(listed.keys()), _otc_codes(env)
+
+
+# 盤中專用 kind（與夜間盤後 overview/themeall/sectorall 分開存）：只有部署了盤中前端的
+# 站台(先 uat)會在盤中讀 *_rt；舊的 prod 前端照舊讀盤後 kind，不受影響。推 prod 後 prod 才吃盤中。
+_VALID = {
+    "overview": lambda d: bool(d.get("date")) and isinstance(d.get("turnover"), list) and d["turnover"],
+    "themes": lambda d: isinstance(d.get("listed"), list) and len(d["listed"]) >= 5,
+    "sectors": lambda d: isinstance(d.get("sectors"), list) and len(d["sectors"]) >= 10,
+    "themeall": lambda d: isinstance(d.get("themes"), dict) and len(d["themes"]) >= 10,
+    "sectorall": lambda d: isinstance(d.get("sectors"), dict) and len(d["sectors"]) >= 10,
+}
+_RT_KIND = {k: k + "_rt" for k in _VALID}
+
+
+def _one_pass(lcodes, ocodes, env):
+    listed = _scan(lcodes, "tse")
+    otc = _scan(ocodes, "otc")
+    if len(listed) < MIN_LISTED:
+        print(f"[intraday] 上市僅 {len(listed)} 檔(<{MIN_LISTED})，疑似來源異常，本輪不覆寫")
+        return False
+    today = _now().strftime("%Y%m%d")
+    screen._INTRADAY = {"listed": listed, "otc": otc, "date": today}
+    screen._themes_cache = {"ts": 0, "data": None}   # 清掉 5 分鐘快取，確保本輪現算盤中
+    try:
+        payloads = {
+            "overview": screen._fetch_overview(),
+            "themes": screen._fetch_themes(),
+            "sectors": screen._fetch_sectors(),
+            "themeall": screen._fetch_theme_all(),
+            "sectorall": screen._fetch_sector_all(),
+        }
+    finally:
+        screen._INTRADAY = {"listed": {}, "otc": {}, "date": None}
+        screen._themes_cache = {"ts": 0, "data": None}
+
+    hhmm = _now().strftime("%H:%M")
+    td = f"{today[:4]}-{today[4:6]}-{today[6:]}"
+    ok = 0
+    for base, d in payloads.items():
+        kind = _RT_KIND[base]
+        if not isinstance(d, dict) or d.get("error") or not _VALID[base](d):
+            print(f"[intraday] {hhmm} {kind} 內容不完整，略過(保留原資料)")
+            continue
+        size = len(json.dumps(d, ensure_ascii=False).encode("utf-8")) // 1024
+        if DRY:
+            print(f"[intraday] {hhmm} {kind} [DRY 不寫] 日={d.get('date')} 大小={size}KB")
+            ok += 1
+            continue
+        row = {"kind": kind, "trade_date": td, "payload": d,
+               "updated_at": datetime.datetime.now(datetime.timezone.utc).isoformat()}
+        bs._sb(env, "/page_cache", method="DELETE", params=[("kind", f"eq.{kind}")])
+        st, _ = bs._sb(env, "/page_cache", method="POST", body=[row])
+        print(f"[intraday] {hhmm} {kind} 寫入 status={st} 大小={size}KB")
+        ok += 1
+    print(f"[intraday] {hhmm} 上市{len(listed)}/上櫃{len(otc)} → 推送 {ok}/{len(payloads)}")
+    return ok > 0
+
+
+def main():
+    global DRY
+    force = "--force" in sys.argv
+    loop = "--loop" in sys.argv
+    DRY = "--dry" in sys.argv
+    env = bs._load_env()
+    if not env.get("SUPABASE_SERVICE_KEY"):
+        print("[error] .env.local 缺 SUPABASE_SERVICE_KEY（寫 page_cache 需要），中止")
+        return 1
+
+    if not loop:
+        if not force and not _in_session():
+            print("[intraday] 非盤中時段，結束（加 --force 可強制測試）")
+            return 0
+        l, o = _universe(env)
+        print(f"[intraday] universe 上市{len(l)} 上櫃{len(o)}")
+        _one_pass(l, o, env)
+        return 0
+
+    print("[intraday] 常駐模式啟動（盤中每 %d 秒一輪）" % INTERVAL)
+    l = o = None
+    uni_ts = 0.0
+    while True:
+        if not _in_session():
+            if _now().hour >= 14:
+                print("[intraday] 已過 14:00，收盤結束常駐")
+                break
+            time.sleep(30)
+            continue
+        if l is None or time.time() - uni_ts > 3600:   # universe 每小時更新一次
+            try:
+                l, o = _universe(env)
+                uni_ts = time.time()
+                print(f"[intraday] universe 上市{len(l)} 上櫃{len(o)}")
+            except Exception as e:                       # noqa: BLE001
+                print(f"[intraday] universe 取得失敗：{e}")
+                time.sleep(30)
+                continue
+        t0 = time.time()
+        try:
+            _one_pass(l, o, env)
+        except Exception as e:                           # noqa: BLE001
+            print(f"[intraday] 本輪失敗：{e}")
+        rest = INTERVAL - (time.time() - t0)
+        if rest > 0:
+            time.sleep(rest)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
