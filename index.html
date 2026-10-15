@@ -2851,8 +2851,8 @@
     .ti-card .m{font-size:11.5px;color:var(--text-muted);display:flex;gap:10px;flex-wrap:wrap;}
     .ti-card .cs{font-size:12px;color:var(--text);margin-top:8px;line-height:1.6;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
     .ti-back{display:inline-flex;align-items:center;gap:7px;font-size:15.5px;color:#fff;cursor:pointer;font-weight:800;margin-bottom:14px;
-      background:var(--brand-green);padding:9px 18px;border-radius:999px;position:relative;overflow:hidden;letter-spacing:.3px;
-      box-shadow:0 2px 10px rgba(16,185,129,.38);transition:transform .15s ease,box-shadow .15s ease,filter .15s ease;}
+      background:linear-gradient(135deg,#10b981,#0d9488);padding:9px 18px;border-radius:999px;position:relative;overflow:hidden;letter-spacing:.3px;
+      box-shadow:0 2px 12px rgba(16,185,129,.45);transition:transform .15s ease,box-shadow .15s ease,filter .15s ease;}
     .ti-back:hover{transform:translateX(-3px) scale(1.05);box-shadow:0 5px 16px rgba(16,185,129,.55);filter:brightness(1.08);}
     .ti-back::after{content:"";position:absolute;top:0;left:-65%;width:45%;height:100%;pointer-events:none;
       background:linear-gradient(120deg,transparent,rgba(255,255,255,.7),transparent);transform:skewX(-20deg);
@@ -3255,10 +3255,10 @@
       el('tdMembers').innerHTML='<tr><td colspan="6"><div class="ov-empty">載入中…</div></td></tr>';
       el('tdNews').innerHTML='<div class="ov-empty">載入中…</div>';
       // 2026-10-14 優化：所有題材詳情一次預算好(themeall，page_cache/SWR)，點題材直接讀快取秒開；缺快取才退回單一題材現算
-      var TA=window._themeAll;
-      if(TA&&TA.themes&&TA.themes[name]){var t=TA.themes[name];_tdUse({date:TA.date,name:name,listed:t.listed,otc:t.otc},name);return;}
+      var TA=window._themeAll, _rt=(window._twSession&&window._twSession());
+      if(!_rt&&TA&&TA.themes&&TA.themes[name]){var t=TA.themes[name];_tdUse({date:TA.date,name:name,listed:t.listed,otc:t.otc},name);return;}
       var url=(location.hostname.indexOf('git-uat')>=0?'':'https://tw-stock-screener-neon.vercel.app')+'/api/screen?stat=themeall';
-      window._swrJson('themeall',url,function(d){
+      window._swrRT('themeall',url,function(d){
         if(!d||!d.themes)return;
         window._themeAll=d;
         if(el('themeDrawer').classList.contains('open')&&el('tdTitle').textContent===name){
@@ -3277,10 +3277,10 @@
       el('tdTabs').innerHTML=''; el('tdStats').innerHTML='';
       el('tdMembers').innerHTML='<tr><td colspan="6"><div class="ov-empty">載入中…</div></td></tr>';
       el('tdNews').innerHTML='<div class="ov-empty">載入中…</div>';
-      var SA=window._sectorAll;
-      if(SA&&SA.sectors&&SA.sectors[name]){var t=SA.sectors[name];_secUse({date:SA.date,name:name,listed:t.listed,otc:t.otc},name);return;}
+      var SA=window._sectorAll, _rt=(window._twSession&&window._twSession());
+      if(!_rt&&SA&&SA.sectors&&SA.sectors[name]){var t=SA.sectors[name];_secUse({date:SA.date,name:name,listed:t.listed,otc:t.otc},name);return;}
       var url=(location.hostname.indexOf('git-uat')>=0?'':'https://tw-stock-screener-neon.vercel.app')+'/api/screen?stat=sectorall';
-      window._swrJson('sectorall',url,function(d){
+      window._swrRT('sectorall',url,function(d){
         if(!d||!d.sectors)return;
         window._sectorAll=d;
         if(el('themeDrawer').classList.contains('open')&&el('tdTitle').textContent===name){
@@ -3316,13 +3316,15 @@
       if(loaded) return;
       loaded=true;
       // 2026-10-14 改走 page_cache（夜間預算）+ localStorage SWR：秒出上次結果、背景更新；缺快取才退回後端現算
-      window._swrJson('overview','https://tw-stock-screener-neon.vercel.app/api/screen?stat=overview', _ovPaint, _ovFail);
+      // 2026-10-15 盤中改走 _swrRT（優先 overview_rt），並每 90 秒自動刷新
+      window._swrRT('overview','https://tw-stock-screener-neon.vercel.app/api/screen?stat=overview', _ovPaint, _ovFail);
+      window._rtStart(function(){ window._swrRT('overview','https://tw-stock-screener-neon.vercel.app/api/screen?stat=overview', _ovPaint, _ovFail); });
       // 看總覽的同時，背景把所有題材詳情(themeall)＋官方產業成分股(sectorall)預載好，點進去即秒開（host-aware：uat 同源、prod neon）
       var _hb=(location.hostname.indexOf('git-uat')>=0?'':'https://tw-stock-screener-neon.vercel.app');
       setTimeout(function(){ try{ var c=JSON.parse(localStorage.getItem('swr_themeall')||'null'); if(!(window._themeAll||(c&&c.t&&Date.now()-c.t<600000)))
-          window._swrJson('themeall',_hb+'/api/screen?stat=themeall',function(d){ if(d&&d.themes) window._themeAll=d; },function(){}); }catch(e){}
+          window._swrRT('themeall',_hb+'/api/screen?stat=themeall',function(d){ if(d&&d.themes) window._themeAll=d; },function(){}); }catch(e){}
         try{ var c2=JSON.parse(localStorage.getItem('swr_sectorall')||'null'); if(!(window._sectorAll||(c2&&c2.t&&Date.now()-c2.t<600000)))
-          window._swrJson('sectorall',_hb+'/api/screen?stat=sectorall',function(d){ if(d&&d.sectors) window._sectorAll=d; },function(){}); }catch(e){} }, 800);
+          window._swrRT('sectorall',_hb+'/api/screen?stat=sectorall',function(d){ if(d&&d.sectors) window._sectorAll=d; },function(){}); }catch(e){} }, 800);
     };
   })();
   </script>
@@ -3523,16 +3525,44 @@
         if(!same) paint(d);
       }).catch(function(){ if(!had&&fail) fail(); });
     };
+    // ── 盤中即時（第3層）：台股盤中優先讀 page_cache 的 <kind>_rt（本機 mis 掃盤每 90 秒推），
+    //    非盤中或 _rt 不新鮮(>6分) 一律退回盤後 _swrJson，行為與現狀相同。─────────
+    window._twSession=window._twSession||function(){
+      var n=new Date(), tw=new Date(n.getTime()+n.getTimezoneOffset()*60000+8*3600000);
+      var d=tw.getDay(); if(d===0||d===6) return false;
+      var m=tw.getHours()*60+tw.getMinutes(); return m>=540&&m<=816;   // 09:00–13:36(台北時間)
+    };
+    window._swrRT=window._swrRT||function(key,url,paint,fail,loading){
+      if(!(window._twSession&&window._twSession())) return window._swrJson(key,url,paint,fail,loading);
+      var K='swr_'+key, had=false;
+      try{ var c=JSON.parse(localStorage.getItem(K)||'null'); if(c&&c.d){ had=true; paint(c.d); } }catch(e){}
+      if(!had&&loading) loading();
+      var SB=(typeof SIG_SB_URL!=='undefined'&&SIG_SB_URL)?SIG_SB_URL:'https://bruqrbvbjxntgoljxsne.supabase.co',
+          AK=(typeof SIG_SB_ANON!=='undefined'&&SIG_SB_ANON)?SIG_SB_ANON:'sb_publishable_KgYlaR-mqtx4uVre6kPD2A_qO6tdT1y';
+      return fetch(SB+'/rest/v1/page_cache?kind=eq.'+encodeURIComponent(key)+'_rt&select=payload,updated_at',{headers:{apikey:AK,Authorization:'Bearer '+AK}})
+        .then(function(r){return r.json();}).then(function(a){
+          var x=Array.isArray(a)&&a[0];
+          if(!x||!x.payload||x.payload.error||(Date.now()-new Date(x.updated_at).getTime())>360000) throw 0;
+          try{ localStorage.setItem(K,JSON.stringify({t:Date.now(),d:x.payload})); }catch(e){}
+          paint(x.payload); return x.payload;
+        }).catch(function(){ return window._swrJson(key,url,paint,fail,loading); });
+    };
+    window._rtStop=window._rtStop||function(){ if(window._rtTimer){clearInterval(window._rtTimer);window._rtTimer=null;} };
+    window._rtStart=window._rtStart||function(fn){ window._rtStop();
+      if(window._twSession&&window._twSession()){ window._rtTimer=setInterval(function(){
+        if(window._twSession&&window._twSession()){ try{fn();}catch(e){} } else { window._rtStop(); } }, 90000); } };
     // 進站後閒置時先把題材列表／產業地圖的資料抓好放著（10 分鐘內抓過就不重抓），點開就不用等
     setTimeout(function(){ ['themes','sectors','overview'].forEach(function(k){ try{ var c=JSON.parse(localStorage.getItem('swr_'+k)||'null'); if(c&&c.t&&Date.now()-c.t<600000) return; }catch(e){}
       window._swrJson(k,'https://tw-stock-screener-neon.vercel.app/api/screen?stat='+k,function(){}); }); }, 4000);
     window._themesShow=function(){
-      if(_data){renderHeat();renderDetail();return;}
-      window._swrJson('themes','https://tw-stock-screener-neon.vercel.app/api/screen?stat=themes',function(d){
+      if(_data&&!(window._twSession&&window._twSession())){renderHeat();renderDetail();return;}
+      var _tpaint=function(d){
         _data=d;
         if(el('tmSub'))el('tmSub').textContent='固定題材分類（合夥人口徑）· '+(d.date||'')+' · 共 '+((d.listed||[]).length)+' 個上市族群';
         renderHeat();renderDetail();
-      },function(){el('tmxHeat').innerHTML='<div class="fc-empty">讀取失敗</div>';});
+      };
+      window._swrRT('themes','https://tw-stock-screener-neon.vercel.app/api/screen?stat=themes',_tpaint,function(){el('tmxHeat').innerHTML='<div class="fc-empty">讀取失敗</div>';});
+      window._rtStart(function(){ window._swrRT('themes','https://tw-stock-screener-neon.vercel.app/api/screen?stat=themes',_tpaint,function(){}); });
       if(el('tmNote'))el('tmNote').innerHTML='<b>學院導讀</b> 先找多數成分股一起走強的題材，再確認成交是否集中於少數股票。題材熱度不代表行情一定延續，請搭配族群持續性和個股趨勢。';
     };
     document.addEventListener('click',function(e){
@@ -5641,7 +5671,8 @@
         el('smMap').querySelectorAll('.sm-tile').forEach(function(t){ t.onclick=function(){ pick(t.dataset.sec, true); }; });
         if(CUR) pick(CUR, false);
       };
-      window._swrJson('sectors','https://tw-stock-screener-neon.vercel.app/api/screen?stat=sectors',_paint,function(j){el('smMap').innerHTML='<div class="fc-empty">讀取失敗'+((j&&j.error)?'：'+j.error:'')+'</div>';},function(){el('smMap').innerHTML='<div class="fc-empty">載入中…</div>';});
+      window._swrRT('sectors','https://tw-stock-screener-neon.vercel.app/api/screen?stat=sectors',_paint,function(j){el('smMap').innerHTML='<div class="fc-empty">讀取失敗'+((j&&j.error)?'：'+j.error:'')+'</div>';},function(){el('smMap').innerHTML='<div class="fc-empty">載入中…</div>';});
+      window._rtStart(function(){ window._swrRT('sectors','https://tw-stock-screener-neon.vercel.app/api/screen?stat=sectors',_paint,function(){}); });
       if(el('smNote'))el('smNote').innerHTML='<b>學院導讀</b> 先看哪個產業有多數股票一起走強，再點開成分股確認。只有少數股票上漲，與整個族群同步擴散的意義不同；搭配成交活躍度與持續天數，比只看顏色更完整。';
     };
     window._VIEWS=window._VIEWS||{}; window._VIEWS.sectors={el:'sectorView',show:'_sectorShow'};
