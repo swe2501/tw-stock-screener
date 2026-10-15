@@ -69,6 +69,11 @@
     if(!data.length||data.some(x=>!/^\d{4}-\d{2}-\d{2}$/.test(x.time)||![x.open,x.high,x.low,x.close].every(v=>Number.isFinite(v)&&v>0)||x.low>Math.min(x.open,x.close)||x.high<Math.max(x.open,x.close)||x.low>x.high))throw Error('需要完整且有效的日線開高低收資料，不能用收盤價虛構 K 棒');
     if(new Set(data.map(x=>x.time)).size!==data.length)throw Error('歷史行情日期重複');return data;
   }
+  function scan(rows,s){
+    validate(s);if(s.entry.some(r=>r.type==='always'))throw Error('買進持有是回測方式，請先新增可用於選股的買進條件');
+    const data=prepare(rows),i=data.length-1,checks=s.entry.map(r=>{const v=indicators(data,r),cross=r.op.startsWith('cross'),ready=i>=0&&Number.isFinite(v.left[i])&&Number.isFinite(v.right[i])&&(!cross||i>0&&Number.isFinite(v.left[i-1])&&Number.isFinite(v.right[i-1]));return {rule:describeRule(r),ready,matched:ready&&match(r,v,i)};});
+    return {date:data[i].time,ready:checks.every(x=>x.ready),matched:checks.every(x=>x.ready)&&(s.entryMode==='all'?checks.every(x=>x.matched):checks.some(x=>x.matched)),checks};
+  }
   function run(rows,s,p){
     validate(s);const data=prepare(rows);
     if(!Number.isFinite(p.capital)||p.capital<100||p.capital>1e9||![p.fee,p.tax,p.slip].every(x=>Number.isFinite(x)&&x>=0&&x<=.05)||!Number.isFinite(p.allocation)||p.allocation<=0||p.allocation>1||!['ratio','amount'].includes(p.sizing)||p.sizing==='amount'&&(!Number.isFinite(p.amount)||p.amount<=0))throw Error('資金或交易成本設定無效');
@@ -97,5 +102,5 @@
     }
     return {curve,trades,returnPct:(curve.at(-1).equity/p.capital-1)*100,benchmarkPct:(curve.at(-1).benchmark/p.capital-1)*100,drawdown:dd*100,closed,winRate:closed?wins/closed*100:null,openShares:qty,fees,first:curve[0].date,last:curve.at(-1).date,strategy:copy(s),parameters:copy(p)};
   }
-  window.AcademyStrategyEngine={definitions,opNames,rule,template,validate,describeRule,summary,sma,ema,indicators,prepare,run};
+  window.AcademyStrategyEngine={definitions,opNames,rule,template,validate,describeRule,summary,sma,ema,indicators,prepare,run,scan};
 })();

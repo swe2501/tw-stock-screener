@@ -37,3 +37,17 @@ test('allocation and fixed amount size whole shares; snapshots do not mutate',()
 test('invalid data, parameters, rules and warmup are rejected',()=>{
  const a=bars([10,10,10,10,10,10]);assert.throws(()=>E.prepare([{time:'2026-01-01',close:10}]),/開高低收/);assert.throws(()=>E.prepare([...a,a[0]]),/重複/);assert.throws(()=>E.run(a,E.template('rsi'),params),/暖機/);const s=E.template();s.entry[0].fast=s.entry[0].slow;assert.throws(()=>E.validate(s),/必須小於/);s.entry[0].fast=NaN;assert.throws(()=>E.validate(s),/無效/);s.entry[0]={type:'unknown',op:'above'};assert.throws(()=>E.validate(s),/不支援/);
 });
+test('screening and backtesting use the same buy rules and all/any logic',()=>{
+ const rows=bars([10,9,8,10,12,11,13,10,14,15]);
+ for(const type of ['trend','breakout','rsi','macd','kd']){
+  const s=E.template(type);for(const r of [...s.entry,...s.exit]){if(r.period)r.period=2;if(r.fast)r.fast=2;if(r.slow)r.slow=3;if(r.signal)r.signal=2;}
+  for(const mode of ['all','any']){s.entryMode=mode;const snap=E.scan(rows.slice(0,-1),s),p={...params,start:rows.at(-1).time,end:rows.at(-1).time};
+   const extended=[...rows,{...rows.at(-1),time:'2026-01-11'},{...rows.at(-1),time:'2026-01-12'}];
+   const run=E.run(extended,s,{...p,end:'2026-01-12'});assert.equal(run.trades.some(t=>t.date===rows.at(-1).time&&t.side==='買進'),snap.matched);
+  }
+ }
+});
+test('screening rejects hold-only and distinguishes missing warmup from a failed condition',()=>{
+ assert.throws(()=>E.scan(bars([1,2,3]),E.template('hold')),/選股/);
+ const s=E.template();assert.equal(E.scan(bars([1,2]),s).ready,false);assert.equal(E.scan(bars(Array.from({length:40},(_,i)=>50-i)),s).matched,false);
+});

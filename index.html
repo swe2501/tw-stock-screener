@@ -12995,17 +12995,19 @@
       const m = document.getElementById('chartModal'); if (m && m.classList.contains('kfull') && !document.fullscreenElement) _setChartFull(false); });
 
     function closeChart() {
+      const wasMemberChart=document.body.classList.contains('mc-chart-open');
       if(document.getElementById('chartModal').classList.contains('etx-embedded')){window._etxTab('overview');return;}
       _chartRequestId++;
       _userMarkers = {};  // 關閉 K 圖時清掉所有日期標記（暫時性設計）
       _stopRealtimeUpdates();
       _setChartFull(false);
       document.getElementById('chartModal').classList.remove('open');
+      document.body.classList.remove('mc-chart-open');
       _destroyCharts();
       if (_drawTool) { try { window._setDrawTool(_drawTool); } catch (_) {} }   // 關閉 K 圖時取消畫線工具（按鈕一併還原）
       _resetDrawingState();
       // 從主力訊號面板點進來的 → 關閉 K 圖後回到訊號視圖（主力訊號已改為 sigView）
-      if (_sigReturn) {
+      if (_sigReturn && !wasMemberChart) {
         _sigReturn = false;
         try { window._showView('sig'); } catch (e) {}
       }
@@ -16684,5 +16686,6 @@
 <script src="assets/member-research.js" defer></script>
 <script src="assets/member-center.js" defer></script>
 <script src="assets/member-signin.js" defer></script>
+<script src="assets/member-private-screen.js" defer></script>
 </body>
 </html>
