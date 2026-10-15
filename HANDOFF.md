@@ -200,5 +200,45 @@
 - **修法**：未登入先 `openAuthModal('login')`；登入則 `window._cnpTab('note')` 切到觀察備註分頁(顯示 #cnpNote) 再 focus。「加入回測」本身正常（未登入會跳「請先登入」toast）。
 
 ### 待辦
-- **推 prod**：第六/七/八節累積全部在 uat，等用戶說「推 prod」；推完依鐵則把 justy-layout 對齊 uat（`git push origin origin/uat:justy-layout`）。
+- **推 prod**：第六/七/八/九節累積全部在 uat，等用戶說「推 prod」；推完依鐵則把 justy-layout 對齊 uat（`git push origin origin/uat:justy-layout`）。
 - option_sr 乾淨版、官股 money-link 皆只動 uat；排程腳本已就位，下一個交易日盤後跑 `run_daily_job.bat` 即生效。
+
+
+## 九、2026-10-15 盤中即時（第3層：mis 全市場掃盤）
+
+**目標**：題材列表／產業地圖／今日焦點（及題材/產業抽屜）盤中跟著即時更新，收盤回盤後。
+
+### 架構（後端注入 + 本機掃盤推 page_cache + 前端盤中讀 *_rt）
+- **`api/screen.py`**：新增模組級注入點 `_INTRADAY = {"listed":{code:{price,prev,vol,name}}, "otc":{...}, "date"}`。
+  `fetch_all_stocks_latest` / `_fetch_tpex_quotes` / `_fetch_sectors` 在 `_INTRADAY` 有值時改用盤中快照；
+  `_fetch_sectors` 的彙整核心抽成 `_sectors_from(items, date)` 盤後/盤中共用。**prod/Vercel 永不設定 `_INTRADAY` → 盤後行為 100% 不變（零風險）**。
+- **`scripts/intraday_push.py`**（本機）：盤中(週一~五 09:00–13:35)掃 mis `getStockInfo.jsp` 全市場——
+  上市代號取自 TWSE 全市場(`fetch_all_stocks_latest`)、上櫃代號取自 Supabase `otc_names`(868 檔，比 TPEx openapi 穩)；
+  批次 100 檔，`z`成交價 / `y`昨收 / `v`累積張數(×1000=股)。注入 screen 後現算
+  **themes / sectors / overview / themeall / sectorall**，寫 `page_cache` 的 **`*_rt`** kind（trade_date=今日、updated_at=now）。
+  `--loop` 常駐每 90 秒一輪、過 14:00 自動結束；`--force` 不檢查時段、`--dry` 只算不寫。
+  mis 憑證缺 Subject Key Identifier → 只清 `ssl.VERIFY_X509_STRICT` 旗標（**鏈與主機名仍驗證**，比盲關 CERT_NONE 安全）。
+  防呆：上市掃到 <500 檔不覆寫。單輪實測 ~22 秒（遠低於 90 秒）。
+- **`index.html`**：新增 `window._twSession()`(台北 09:00–13:36 判斷，任何瀏覽器時區都正確)、
+  `window._swrRT(key,...)`(盤中優先讀 `<key>_rt`，不新鮮>6分或非盤中→退回盤後 `_swrJson`)、
+  `window._rtStart/_rtStop`(盤中每 90 秒自動刷新目前這張頁)。今日焦點(`_ovShow`)、題材列表(`_themesShow`)、
+  產業地圖、題材抽屜、產業抽屜 5 處改走 `_swrRT`；抽屜盤中略過記憶體舊快取直接讀 `_rt`。
+
+### 為何用 `*_rt` 而非直接覆寫 themes/sectors/overview
+page_cache 是 **uat 與 prod 共用**同一個 Supabase。若推盤中到原 kind，舊 prod 前端會立刻吃到盤中 → 等於沒經核准就動 prod。
+分 `*_rt` 後：**只有部署了盤中前端的站台（目前 uat）會在盤中讀 `*_rt`；prod 舊前端照舊讀盤後 kind，不受影響**。
+推 prod 後 prod 前端才會開始吃盤中。夜間 `page_cache_push.py` 仍只寫盤後 kind（themes/sectors/overview/themeall/sectorall），互不干擾。
+
+### 排程（待設定）
+`scripts/run_intraday.bat` 已建好（設 UTF-8、cd 專案、跑 `intraday_push.py --loop`，log→`D:\stock_data\intraday_push.log`）。
+需在工作排程器新增一個**週一~五 08:55** 觸發的任務指向它（詳見對話中的 schtasks 指令）。
+**注意這跟夜間 `run_daily_job.bat` 是兩個獨立任務**（一個白天常駐、一個晚上跑一次）。
+
+### 驗證
+`--dry --force` + 實寫皆通過：題材成員覆蓋 395/406（缺 11 為興櫃等拿不到盤中者）、
+今日焦點台積電 -2.01%/跌停反綠/漲停反紅皆正確、OTC 已納入。前端強制盤中後 `_swrRT` 確實讀到 `*_rt` 並正常 render。
+
+### 待辦 / 等回覆
+- **設排程**：請用戶確認後，用 schtasks 把 `run_intraday.bat` 排進週一~五 08:55（或由 Claude 代跑該指令）。
+- 今日焦點的「官方產業類股強弱」小區塊盤中仍是盤後值（來源 TWSE rwd MI_INDEX 盤後；其餘區塊皆盤中），可接受；日後要盤中可用產業地圖口徑近似。
+- 推 prod 時這節一起上；上後 prod 才吃盤中。
