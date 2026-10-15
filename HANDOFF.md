@@ -239,6 +239,35 @@ page_cache 是 **uat 與 prod 共用**同一個 Supabase。若推盤中到原 ki
 今日焦點台積電 -2.01%/跌停反綠/漲停反紅皆正確、OTC 已納入。前端強制盤中後 `_swrRT` 確實讀到 `*_rt` 並正常 render。
 
 ### 待辦 / 等回覆
-- **設排程**：請用戶確認後，用 schtasks 把 `run_intraday.bat` 排進週一~五 08:55（或由 Claude 代跑該指令）。
+- **設排程**：✅ 已註冊 Windows 工作排程器任務 `AI_stock_Intraday`（週一~五 08:55 → `run_intraday.bat`）。
 - 今日焦點的「官方產業類股強弱」小區塊盤中仍是盤後值（來源 TWSE rwd MI_INDEX 盤後；其餘區塊皆盤中），可接受；日後要盤中可用產業地圖口徑近似。
 - 推 prod 時這節一起上；上後 prod 才吃盤中。
+
+
+## 十、2026-10-15 首頁指標卡「2 年走勢線圖」dialog
+
+**目標**：首頁「每日台股籌碼報告」KPI 卡片點一下 → 彈出該指標近 2 年走勢線圖（走勢面積圖／K棒／十字線）。
+
+### 卡片 → 資料來源
+- **櫃買指數(=OTC)／台指期(日盤)／台指VIX／富台指** → Supabase 新表 `index_history`（玩股網每日 OHLC）。
+- **台幣匯率** → 既有 `/api/chart?code=TWD=X&range=2y`（Yahoo，回傳含 OHLC，K棒也可用）。
+- **加權** → 維持原本 `_openMarketTrain()`（市場列車），不改。
+
+### 玩股網歷史 API（關鍵坑）
+- 端點：`/investrue/{code}/historical-daily-candlesticks?before=<交易日ms>&top=490`（≈2 年）；全球商品用 `/global/stwn&/...`。
+  code：`vixtwn`(VIX)、`two`(櫃買/OTC)、`wtx&`(台指期)、`stwn&`(富台指)、`0000`(加權)。
+- **區分大小寫**（用 `TWO` 會 400，要 `two`）；`before` 必須是**頁面給的有效交易日午夜 ms**，亂給會 400。
+- 有 Cloudflare → 要**真實瀏覽器**，沿用既有玩股網登入 Playwright profile（`wantgoo_scraper.PROFILE_DIR`，`market_indicators.py` 同款）。回 `[{time,open,high,low,close,volume}]` 降冪。
+
+### 新增/修改
+- **`scripts/index_history.py`**（新）：導到各商品**自己的頁面**（確保 before/大小寫正確）→ 讀頁面自己打的 top=490 URL 原樣重打拿 JSON → upsert `index_history`(code,trade_date,OHLC；RLS anon 可讀，service key 寫)。launch 遇 profile 鎖會清 `SingletonLock` 重試一次。
+- **`index_history` 表**：DDL 已在 Supabase 後台頁內（Management API）執行；四檔各回補 490 筆（≈2 年）。
+- **`run_daily_job.bat`**：`market_indicators.py` 之後串 `index_history.py` 每日續抓（兩者共用同一 wantgoo profile、依序跑，靠 lock-retry 防衝突）。
+- **`index.html`**：通用 `window._openSeriesChart(cfg)` + `window._scCfg`(key＝卡片中文名) + `window._openKpiChart(k)`，沿用 VIX dialog 的 lightweight-charts。櫃買/台指期/匯率卡改可點；VIX 改讀 `index_history`（補足 2 年 OHLC、K棒可用）；富台指換算卡可點。
+
+### 驗證
+本機起站實測：櫃買 490 筆 2024-10→2026-10、canvas 正常、走勢/K棒可切；VIX/台指期/富台指同路徑皆開得出；匯率 518 筆（含 OHLC）。Console 無 JS 錯誤。
+
+### 待辦 / 注意
+- 已上 **uat**；**未上 prod**，推 prod 時連同第六~九節一起。
+- 當時工作目錄被另一並行 session 切到合夥人分支 `codex/member-system`（內容＝當時 uat），本功能 commit 落在那條再乾淨 merge 進 uat（只有這一個 commit）。合夥人會員系統已在 uat。
