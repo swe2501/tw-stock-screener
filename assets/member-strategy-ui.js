@@ -15,7 +15,7 @@
   }
   function attachSearch(input){
     input.removeAttribute('list');input.id=input.id||'ms-search-'+crypto.randomUUID();input.setAttribute('role','combobox');input.setAttribute('aria-autocomplete','list');input.setAttribute('aria-expanded','false');
-    const wrap=input.closest('label')||input.parentElement;wrap.classList.add('ms-autocomplete','gs-search');const drop=document.createElement('div');drop.className='gs-search-drop ms-search-drop';drop.id=input.id+'-options';drop.dataset.searchInput=input.id;drop.setAttribute('role','listbox');drop.hidden=true;input.setAttribute('aria-controls',drop.id);wrap.append(drop);
+    const wrap=input.closest('label')||input.parentElement;wrap.classList.add('ms-autocomplete');const drop=document.createElement('div');drop.className='gs-search-drop ms-search-drop';drop.id=input.id+'-options';drop.dataset.searchInput=input.id;drop.setAttribute('role','listbox');drop.hidden=true;input.setAttribute('aria-controls',drop.id);wrap.append(drop);
     const life=new AbortController(),options={signal:life.signal};let hits=[],selected=-1;
     const close=()=>{drop.hidden=true;input.setAttribute('aria-expanded','false');input.removeAttribute('aria-activedescendant');};
     function draw(){
@@ -25,7 +25,7 @@
       if(window._academyEnhanceSearchPanel)window._academyEnhanceSearchPanel(drop);else{drop.insertAdjacentHTML('afterbegin','<div class="pro-search-head"><span>專業搜尋面板</span><b>最佳符合</b></div>');drop.insertAdjacentHTML('beforeend','<div class="pro-search-foot">↑↓ 選擇 · Enter 確認 · Esc 關閉</div>');}
       if(selected>=0)drop.querySelector('[aria-selected=true]')?.scrollIntoView({block:'nearest'});
     }
-    const choose=code=>{input.value=code;input.dispatchEvent(new Event('input',{bubbles:true}));close();input.focus();close();};
+    const choose=code=>{input.value=code;input.dispatchEvent(new Event('input',{bubbles:true}));close();input.focus({preventScroll:true});close();};
     input.addEventListener('input',()=>{selected=-1;if(!window._names&&window._loadNames){window._loadNames(()=>{if(input.isConnected)draw();});}else draw();},options);
     input.addEventListener('focus',()=>{selected=-1;draw();},options);
     input.addEventListener('keydown',e=>{if(e.key==='ArrowDown'||e.key==='ArrowUp'){if(drop.hidden)draw();if(hits.length){e.preventDefault();selected=Math.max(0,Math.min(hits.length-1,selected+(e.key==='ArrowDown'?1:-1)));draw();}}else if(e.key==='Escape'){e.preventDefault();close();}else if(e.key==='Enter'&&!drop.hidden&&hits.length){e.preventDefault();choose(hits[selected<0?0:selected][0]);input.form?.requestSubmit();}},options);
@@ -35,10 +35,11 @@
   }
   function makeChart(host){
     let chart=null,candles=null,lines=[],lowerChart=null,observer=null,alive=true,currentRows=[],currentStrategy=null,currentTrades=[],currentRange=null,indicatorChoice=0;
-    const maVisibility=new Map([2,10,20,60,130,240].map(n=>[n,true]));
+    const maVisibility=new Map([5,10,20,60,120,240].map(n=>[n,true]));
     host.innerHTML='<div class="ms-chart-legend"></div><div class="ms-candles" aria-label="歷史日K圖"></div><div class="ms-chart-readout" aria-live="off"></div><div class="ms-indicator-tools"></div><div class="ms-indicator-chart"></div>';
     const panel=host.querySelector('.ms-candles'),sub=host.querySelector('.ms-indicator-chart'),legend=host.querySelector('.ms-chart-legend'),readout=host.querySelector('.ms-chart-readout');
-    const colors=['#e5ad25','#408de0','#bd7ddc','#39a48d','#e78068','#7489ad'];
+    const colors=['#e5ad25','#408de0','#e25858','#ed983e','#ad76dd','#7489ad'];
+    const maColor=n=>({5:colors[0],10:colors[1],20:colors[2],60:colors[3],120:colors[4],240:colors[5]}[n]||'#39a48d');
     const theme=()=>document.documentElement.dataset.theme==='light';
     const options=height=>({width:Math.max(260,panel.clientWidth),height,layout:{background:{color:'transparent'},textColor:theme()?'#64788e':'#a9bdd1'},grid:{vertLines:{color:theme()?'#edf1f6':'#213346'},horzLines:{color:theme()?'#edf1f6':'#213346'}},timeScale:{borderColor:theme()?'#dbe5f0':'#31465c'},rightPriceScale:{borderVisible:false},crosshair:{mode:0}});
     function fallback(rows,overlays){
@@ -49,9 +50,9 @@
       if(!alive||!host.isConnected)return;currentRows=rows;currentStrategy=strategy;currentTrades=trades;currentRange=range;
       if(!rows.length){candles?.setData([]);candles?.setMarkers([]);lines.forEach(l=>chart?.removeSeries(l));lines=[];if(lowerChart){lowerChart.remove();lowerChart=null;}host.querySelector('.ms-indicator-tools').replaceChildren();if(!chart)panel.innerHTML='<div class="ms-chart-empty">載入真實日K行情後顯示</div>';legend.textContent='日K圖';readout.textContent='尚未載入有效行情';sub.hidden=true;return;}if(!chart)panel.replaceChildren();
       try{E.validate({...strategy,name:'圖表預覽',entry:strategy?.entry?.length?strategy.entry:[E.rule('always')],exit:strategy?.exit||[],entryMode:strategy?.entryMode||'all',exitMode:strategy?.exitMode||'any',risk:strategy?.risk||{stop:0,take:0,maxBars:0}});}catch{strategy={entry:[],exit:[]};}
-      const unique=new Map([2,10,20,60,130,240].map(n=>[n,n])),overlays=[];for(const r of [...(strategy?.entry||[]),...(strategy?.exit||[])]){if(r.type==='ma')unique.set(r.period,r.period);if(r.type==='maPair'){unique.set(r.fast,r.fast);unique.set(r.slow,r.slow);}}
-      const periods=[...unique.keys()].sort((a,b)=>a-b);periods.forEach(n=>{if(!maVisibility.has(n))maVisibility.set(n,true);if(maVisibility.get(n))overlays.push({name:'SMA '+n,period:n,color:colors[periods.indexOf(n)%colors.length],values:E.sma(rows.map(x=>x.close),n)});});
-      legend.innerHTML='<b>日K</b>'+periods.map((n,i)=>`<button type="button" data-ma-period="${n}" aria-pressed="${maVisibility.get(n)}" style="--ma-color:${colors[i%colors.length]}" title="顯示／隱藏 ${n} 日均線，不改變策略條件">${n} 日</button>`).join('');
+      const unique=new Map([5,10,20,60,120,240].map(n=>[n,n])),overlays=[];for(const r of [...(strategy?.entry||[]),...(strategy?.exit||[])]){if(r.type==='ma')unique.set(r.period,r.period);if(r.type==='maPair'){unique.set(r.fast,r.fast);unique.set(r.slow,r.slow);}}
+      const periods=[...unique.keys()].sort((a,b)=>a-b);periods.forEach(n=>{if(!maVisibility.has(n))maVisibility.set(n,true);if(maVisibility.get(n))overlays.push({name:'SMA '+n,period:n,color:maColor(n),values:E.sma(rows.map(x=>x.close),n)});});
+      legend.innerHTML='<b>日K</b>'+periods.map((n,i)=>`<button type="button" data-ma-period="${n}" aria-pressed="${maVisibility.get(n)}" style="--ma-color:${maColor(n)}" title="顯示／隱藏 ${n} 日均線，不改變策略條件">${n} 日</button>`).join('');
       legend.querySelectorAll('[data-ma-period]').forEach(b=>b.onclick=()=>{const n=+b.dataset.maPeriod;maVisibility.set(n,!maVisibility.get(n));draw(rows,strategy,trades,range);});
       readout.textContent=rows.length?`${rows[0].time} ～ ${rows.at(-1).time} · 收盤 ${rows.at(-1).close.toLocaleString()} · ${trades.length?'買賣點為已執行回測結果':'指標預覽，尚無回測買賣點'}`:'尚無行情';
       if(!window.LightweightCharts){fallback(rows,overlays);sub.hidden=true;return;}
@@ -70,6 +71,7 @@
     return {draw,destroy:cleanup,refresh:()=>draw(currentRows,currentStrategy,currentTrades,currentRange)};
   }
   let dispose=()=>{};
+  addEventListener('academy-member-closed',()=>dispose());
   function render(ctx,state,save,isCurrent){
     dispose();const {main,go}=ctx;let strategy=E.template(),selectedId=null,market=null,result=null,loadId=0,controller=null,destroySearch=()=>{};
     state.strategies=Array.isArray(state.strategies)?state.strategies:[];

@@ -8553,7 +8553,7 @@
     }
     document.addEventListener('input',function(e){ if(e.target&&e.target.id==='hpSearch')_hpInput(); });
     document.addEventListener('click',function(e){
-      var it=e.target.closest('.gs-sd-item'); if(it){ _hpOpen(it.dataset.code,it.dataset.name); return; }
+      var it=e.target.closest('#hpSearchDrop .gs-sd-item'); if(it){ _hpOpen(it.dataset.code,it.dataset.name); return; }
       var b=e.target.closest('#hpSearchBtn'); if(b){doSearch();return;}
       var tg=e.target.closest('.gs-tag'); if(tg){ if(window._openTheme)window._openTheme(tg.dataset.theme||''); return; }
       if(!e.target.closest('.gs-search')){ var d=el('hpSearchDrop'); if(d)d.hidden=true; }
@@ -9792,7 +9792,7 @@
               <span style="white-space:nowrap;color:#666;font-size:10px">張時通知</span>
             </div>
             <div class="chart-watch-status" id="chartWatchStatus">★ 已列入觀察清單</div>
-            <button class="btn-save-chart-watch" id="chartSaveWatchBtn" onclick="saveWatchFromChart()"> 儲存到觀察清單</button>
+            <button class="btn-save-chart-watch" id="chartSaveWatchBtn" onclick="saveWatchFromChart()"> 儲存收藏理由與到價設定</button>
             <button class="btn-remove-chart-watch" id="chartRemoveWatchBtn" onclick="removeWatchFromChart()" style="display:none">✕ 移除觀察清單</button>
           </div>
           <!-- 基本面 -->
@@ -15324,7 +15324,7 @@
       const saveBtn  = document.getElementById('chartSaveWatchBtn');
       const rmBtn    = document.getElementById('chartRemoveWatchBtn');
       if (statusEl) statusEl.style.display = 'none'; // 由 header 按鈕顯示狀態，這裡不重複
-      if (saveBtn)  saveBtn.textContent = watched ? ' 儲存備註' : ' 儲存到觀察清單';
+      if (saveBtn)  saveBtn.textContent = ' 儲存收藏理由與到價設定';
       if (rmBtn)    rmBtn.style.display = watched ? '' : 'none';
     }
 
@@ -15409,7 +15409,7 @@
           _refreshWatchBtns();
           if (!document.getElementById('watchlistPanel').classList.contains('hidden'))
             _renderWatchTable();
-          showToast(`${code} ${name} 已加入觀察清單`);
+          showToast(`${code} ${name} 已加入會員中心 → 我的自選`);
         } else {
           showToast('儲存失敗，請稍後再試', true);
         }
