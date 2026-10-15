@@ -2140,6 +2140,7 @@
   }
 </style>
 <link rel="stylesheet" href="assets/member-center.css">
+<link rel="stylesheet" href="assets/member-strategy.css">
 </head>
 <body>
   <style>
@@ -10388,12 +10389,6 @@
           <tr onclick="openChart('${s.code}','${s.name.replace(/'/g,"\\'")}','${(s.industry||'').replace(/'/g,"\\'")}',${s.close},true)">
             <td data-viewed-code="${s.code}"
               style="text-align:center;width:44px;font-size:14px;${viewed(s.code) ? 'color:#4caf50' : 'color:rgba(255,255,255,0.15)'}">${viewed(s.code) ? '✓' : '–'}</td>
-            ${_authToken ? `<td style="text-align:center;padding:0 4px">
-              <span class="watch-star-col" data-code="${s.code}"
-                style="font-size:16px;cursor:default;${isWatched ? 'color:#f1c40f' : 'color:rgba(255,255,255,0.2)'}"
-                title="${isWatched ? '已列入觀察' : '尚未列入觀察'}">
-                ${isWatched ? '★' : '☆'}</span>
-            </td>` : ''}
             ${_authToken ? `<td onclick="event.stopPropagation();_btAddPrompt('${s.code}','${s.name.replace(/'/g,"\\'")}',${s.close})" title="加入回測勝率" style="text-align:center;padding:0 4px;cursor:pointer;font-size:15px"></td>` : ''}
             <td class="code-cell">
               <a href="https://www.twse.com.tw/zh/trading/historical/stock-day.html?stockNo=${s.code}" target="_blank" onclick="event.stopPropagation()">${s.code}</a>${
@@ -10424,7 +10419,6 @@
             <thead>
               <tr>
                 <th style="text-align:center;width:44px">已看過</th>
-                ${_authToken ? '<th style="text-align:center;width:52px">列入觀察</th>' : ''}
                 ${_authToken ? '<th style="text-align:center;width:44px">回測</th>' : ''}
                 <th onclick="setSort('code')" class="${sortKey==='code'?'sorted':''}">代號<span class="sort-arrow">${sortKey==='code'?(sortDir>0?'▲':'▼'):''}</span></th>
                 <th>名稱</th>
@@ -16683,6 +16677,8 @@
 </script>
 <script src="assets/member-identity.js" defer></script>
 <script src="assets/member-features.js" defer></script>
+<script src="assets/member-strategy-engine.js" defer></script>
+<script src="assets/member-strategy-ui.js" defer></script>
 <script src="assets/member-research.js" defer></script>
 <script src="assets/member-center.js" defer></script>
 <script src="assets/member-signin.js" defer></script>
