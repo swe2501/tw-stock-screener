@@ -8302,42 +8302,59 @@
     window._openSeriesChart=function(cfg){
       if(document.getElementById('seriesChartDialog'))return;
       var dialog=document.createElement('dialog');dialog.id='seriesChartDialog';dialog.className='vix-chart-dialog';
-      dialog.innerHTML='<header><div><h3>'+cfg.title+'</h3><small>'+cfg.subtitle+'</small></div><button class="vix-close" type="button" aria-label="關閉走勢圖">✕</button></header><div class="vix-chart-controls"><button type="button" data-sc-mode="line" aria-pressed="true">走勢</button><button type="button" data-sc-mode="candles" aria-pressed="false">K棒</button></div><div class="vix-history-status">載入中…</div><div class="vix-history-chart"></div><p class="vix-history-tip">移動滑鼠查看日期與數值</p>';
+      var marksBtnHtml=cfg.yearHigh?'<button type="button" data-sc-marks aria-pressed="true">一年新高</button>':'';
+      dialog.innerHTML='<header><div><h3>'+cfg.title+'</h3><small>'+cfg.subtitle+'</small></div><button class="vix-close" type="button" aria-label="關閉走勢圖">✕</button></header><div class="vix-chart-controls"><button type="button" data-sc-mode="line" aria-pressed="true">走勢</button><button type="button" data-sc-mode="candles" aria-pressed="false">K棒</button><button type="button" data-sc-bench aria-pressed="false">疊加大盤</button>'+marksBtnHtml+'</div><div class="vix-history-status">載入中…</div><div class="vix-history-chart"></div><p class="vix-history-tip">移動滑鼠查看日期與數值</p>';
       document.body.append(dialog);dialog.showModal();dialog.querySelector('.vix-close').focus();
       var closed=false;dialog.querySelector('.vix-close').onclick=function(){dialog.close();};
       var prec=cfg.precision==null?2:cfg.precision;
       var SB=(typeof SIG_SB_URL!=='undefined'&&SIG_SB_URL)?SIG_SB_URL:'https://bruqrbvbjxntgoljxsne.supabase.co',
-          AK=(typeof SIG_SB_ANON!=='undefined'&&SIG_SB_ANON)?SIG_SB_ANON:'sb_publishable_KgYlaR-mqtx4uVre6kPD2A_qO6tdT1y';
+          AK=(typeof SIG_SB_ANON!=='undefined'&&SIG_SB_ANON)?SIG_SB_ANON:'sb_publishable_KgYlaR-mqtx4uVre6kPD2A_qO6tdT1y',
+          hb=(location.hostname.indexOf('git-uat')>=0?'':'https://tw-stock-screener-neon.vercel.app');
       var fetchData;
       if(cfg.source==='apichart'){
-        var hb=(location.hostname.indexOf('git-uat')>=0?'':'https://tw-stock-screener-neon.vercel.app');
         fetchData=fetch(hb+'/api/chart?code='+encodeURIComponent(cfg.apiCode)+'&range=2y&interval=1d').then(function(r){return r.json();}).then(function(j){
           return ((j&&j.data)||[]).map(function(d){return {time:String(d.time||d.date||'').slice(0,10),value:Number(d.close),open:d.open!=null?Number(d.open):null,high:d.high!=null?Number(d.high):null,low:d.low!=null?Number(d.low):null,close:Number(d.close)};}).filter(function(x){return x.time&&isFinite(x.value);});});
       } else {
         fetchData=fetch(SB+'/rest/v1/index_history?code=eq.'+encodeURIComponent(cfg.code)+'&select=trade_date,open,high,low,close&order=trade_date.asc',{headers:{apikey:AK,Authorization:'Bearer '+AK}}).then(function(r){return r.json();}).then(function(a){
           return (a||[]).map(function(r){return {time:r.trade_date,value:Number(r.close),open:r.open!=null?Number(r.open):null,high:r.high!=null?Number(r.high):null,low:r.low!=null?Number(r.low):null,close:Number(r.close)};}).filter(function(x){return x.time&&isFinite(x.value);});});
       }
+      // 大盤(加權 ^TWII)疊加序列：/api/chart 2 年；失敗回空陣列(開關停用)。比照各圖右軸做法。
+      var benchFetch=fetch(hb+'/api/chart?code=%5ETWII&range=2y&interval=1d').then(function(r){return r.json();}).then(function(j){
+        return ((j&&j.data)||[]).map(function(d){return {time:String(d.time||d.date||'').slice(0,10),value:Number(d.close)};}).filter(function(x){return x.time&&isFinite(x.value);});}).catch(function(){return [];});
       var chart=null,observer=null;
       dialog.addEventListener('close',function(){closed=true;if(observer)observer.disconnect();if(chart)chart.remove();dialog.remove();},{once:true});
-      fetchData.then(function(data){
+      Promise.all([fetchData,benchFetch]).then(function(resAll){
         if(closed)return;
+        var data=resAll[0],benchData=resAll[1]||[];
         var status=dialog.querySelector('.vix-history-status'),host=dialog.querySelector('.vix-history-chart');
         if(!data.length){status.textContent='目前沒有可用歷史資料';return;}
         var candleData=data.filter(function(r){return r.open!=null&&r.high!=null&&r.low!=null&&isFinite(r.open)&&isFinite(r.high)&&isFinite(r.low);}).map(function(r){return {time:r.time,open:r.open,high:r.high,low:r.low,close:r.close!=null?r.close:r.value};});
         status.textContent=data[0].time+' → '+data[data.length-1].time+' · '+data.length+' 筆'+(candleData.length?'':'｜僅收盤序列');
         var candleBtn=dialog.querySelector('[data-sc-mode="candles"]');candleBtn.disabled=!candleData.length;if(!candleData.length)candleBtn.title='此來源僅有每日收盤';
+        // 一年新高：每段突破只標首日(避免「一年新高」字樣重疊)
         var marks=[];
-        if(cfg.yearHigh){for(var i=252;i<data.length;i++){var hi=Math.max.apply(null,data.slice(i-252,i).map(function(r){return r.value;}));if(data[i].value>hi)marks.push({time:data[i].time,position:'aboveBar',color:'#e0a619',shape:'arrowDown',text:'一年新高'});}}
+        if(cfg.yearHigh){var prev=false;for(var i=252;i<data.length;i++){var hi=Math.max.apply(null,data.slice(i-252,i).map(function(r){return r.value;}));var isHigh=data[i].value>hi;if(isHigh&&!prev)marks.push({time:data[i].time,position:'aboveBar',color:'#e0a619',shape:'arrowDown',text:'一年新高'});prev=isHigh;}}
         if(typeof LightweightCharts==='undefined'){host.textContent='圖表套件尚未載入，請稍後再試。';return;}
         var light=document.documentElement.dataset.theme==='light',mm=Math.pow(10,-prec);
-        chart=LightweightCharts.createChart(host,{width:host.clientWidth,height:360,layout:{background:{color:'transparent'},textColor:light?'#52677d':'#bacbdd'},grid:{vertLines:{color:light?'#e5ecf3':'#263a4d'},horzLines:{color:light?'#e5ecf3':'#263a4d'}},timeScale:{borderColor:light?'#d8e3ed':'#334a60'},rightPriceScale:{borderColor:light?'#d8e3ed':'#334a60'}});
+        chart=LightweightCharts.createChart(host,{width:host.clientWidth,height:360,layout:{background:{color:'transparent'},textColor:light?'#52677d':'#bacbdd'},grid:{vertLines:{color:light?'#e5ecf3':'#263a4d'},horzLines:{color:light?'#e5ecf3':'#263a4d'}},timeScale:{borderColor:light?'#d8e3ed':'#334a60'},rightPriceScale:{borderColor:light?'#d8e3ed':'#334a60'},leftPriceScale:{visible:false,borderColor:light?'#d8e3ed':'#334a60'}});
         var series=chart.addAreaSeries({lineColor:'#d5a14b',topColor:'rgba(213,161,75,.22)',bottomColor:'rgba(213,161,75,.015)',lineWidth:2,priceLineVisible:false,priceFormat:{type:'price',precision:prec,minMove:mm}});
-        series.setData(data.map(function(r){return {time:r.time,value:r.value};}));if(marks.length)series.setMarkers(marks);
+        series.setData(data.map(function(r){return {time:r.time,value:r.value};}));
         var candles=null,mode='line';
-        if(candleData.length){candles=chart.addCandlestickSeries({visible:false,upColor:'#dd685f',downColor:'#4caf83',wickUpColor:'#dd685f',wickDownColor:'#4caf83',borderVisible:false,priceLineVisible:false,priceFormat:{type:'price',precision:prec,minMove:mm}});candles.setData(candleData);if(marks.length)candles.setMarkers(marks.filter(function(m){return candleData.some(function(c){return c.time===m.time;});}));}
+        if(candleData.length){candles=chart.addCandlestickSeries({visible:false,upColor:'#dd685f',downColor:'#4caf83',wickUpColor:'#dd685f',wickDownColor:'#4caf83',borderVisible:false,priceLineVisible:false,priceFormat:{type:'price',precision:prec,minMove:mm}});candles.setData(candleData);}
+        // 大盤疊加（左軸，藍色虛線）
+        var bench=null;
+        if(benchData.length){bench=chart.addLineSeries({color:'#3a86e0',lineWidth:1,lineStyle:LightweightCharts.LineStyle.Dashed,priceScaleId:'left',title:'加權',visible:false,priceLineVisible:false,crosshairMarkerVisible:false,lastValueVisible:true,priceFormat:{type:'custom',minMove:1,formatter:function(v){return Math.round(v).toLocaleString();}}});bench.setData(benchData);}
+        var benchBtn=dialog.querySelector('[data-sc-bench]');benchBtn.disabled=!bench;if(!bench)benchBtn.title='大盤資料暫時無法取得';
+        if(benchBtn&&bench)benchBtn.onclick=function(){var on=benchBtn.getAttribute('aria-pressed')!=='true';benchBtn.setAttribute('aria-pressed',String(on));bench.applyOptions({visible:on});chart.priceScale('left').applyOptions({visible:on});};
+        // 一年新高 開關
+        var marksOn=true;
+        function applyMarks(){var mk=marksOn?marks:[];series.setMarkers(mk);if(candles)candles.setMarkers(mk.filter(function(m){return candleData.some(function(c){return c.time===m.time;});}));}
+        if(marks.length)applyMarks();
+        var marksBtn=dialog.querySelector('[data-sc-marks]');
+        if(marksBtn)marksBtn.onclick=function(){marksOn=!marksOn;marksBtn.setAttribute('aria-pressed',String(marksOn));applyMarks();};
         chart.timeScale().fitContent();
         dialog.querySelectorAll('[data-sc-mode]').forEach(function(btn){btn.onclick=function(){if(btn.disabled)return;mode=btn.dataset.scMode;series.applyOptions({visible:mode==='line'});if(candles)candles.applyOptions({visible:mode==='candles'});dialog.querySelectorAll('[data-sc-mode]').forEach(function(b){b.setAttribute('aria-pressed',String(b===btn));});};});
-        chart.subscribeCrosshairMove(function(pm){var v=pm.seriesData.get(mode==='candles'&&candles?candles:series);dialog.querySelector('.vix-history-tip').textContent=(v&&pm.time)?(pm.time+'｜'+Number(v.value!=null?v.value:v.close).toLocaleString(undefined,{minimumFractionDigits:prec,maximumFractionDigits:prec})+(cfg.unit||'')):'移動滑鼠查看日期與數值';});
+        chart.subscribeCrosshairMove(function(pm){var v=pm.seriesData.get(mode==='candles'&&candles?candles:series),b=bench?pm.seriesData.get(bench):null;dialog.querySelector('.vix-history-tip').textContent=(v&&pm.time)?(pm.time+'｜'+Number(v.value!=null?v.value:v.close).toLocaleString(undefined,{minimumFractionDigits:prec,maximumFractionDigits:prec})+(cfg.unit||'')+(b&&b.value!=null?'　加權 '+Math.round(b.value).toLocaleString():'')):'移動滑鼠查看日期與數值';});
         observer=new ResizeObserver(function(){chart.applyOptions({width:host.clientWidth});});observer.observe(host);
       }).catch(function(){var s=dialog.querySelector('.vix-history-status');if(s)s.textContent='讀取失敗，請稍後再試。';});
     };
