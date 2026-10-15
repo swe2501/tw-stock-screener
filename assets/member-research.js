@@ -1,0 +1,132 @@
+/* Member research tools. Watchlist uses the existing account service; research drafts are explicitly local. */
+(() => {
+  'use strict';
+  const API='https://tw-stock-screener-neon.vercel.app/api';
+  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const card=(title,body)=>`<section class="mc-card"><h2>${title}</h2>${body}</section>`;
+  const key=uid=>'academy.research.v1.'+uid;
+  function read(uid){try{const d=JSON.parse(localStorage.getItem(key(uid))||'null');if(d&&Array.isArray(d.groups)&&Array.isArray(d.observations)&&Array.isArray(d.runs))return d;}catch{}return {groups:['長期關注','等待機會','ETF'].map(name=>({id:crypto.randomUUID(),name})),labels:{},observations:[],runs:[]};}
+  function write(uid,data){localStorage.setItem(key(uid),JSON.stringify(data));}
+  function uid(){try{return JSON.parse(localStorage.getItem('sb_user')||'{}').id;}catch{return null;}}
+  async function watch(method='GET',body,code){
+    const token=localStorage.getItem('sb_token');if(!token)throw Error('請先登入會員');
+    const r=await fetch(API+'/watchlist'+(code?'?code='+encodeURIComponent(code):''),{method,headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});
+    if(!r.ok)throw Error(r.status===401?'登入已過期，請重新登入':'收藏服務未完成操作，請稍後再試');
+    const data=await r.json();if(method==='GET'&&!Array.isArray(data))throw Error('收藏資料格式異常');
+    if(typeof _loadWatchCodes==='function'&&method!=='GET')await _loadWatchCodes();
+    dispatchEvent(new CustomEvent('academy-watch-changed'));return data;
+  }
+  const star='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2.7 2.87 5.82 6.43.93-4.65 4.54 1.1 6.4L12 17.37l-5.75 3.02 1.1-6.4L2.7 9.45l6.43-.93Z"/></svg>';
+  const starred=new Set(),busy=new Set();
+  async function refreshStars(){if(!localStorage.getItem('sb_token')){starred.clear();paintStars();return;}try{const rows=await watch();starred.clear();rows.forEach(r=>starred.add(r.code));paintStars();}catch{}}
+  function paintStars(){document.querySelectorAll('[data-academy-star]').forEach(b=>{const on=starred.has(b.dataset.academyStar);b.classList.toggle('is-saved',on);b.setAttribute('aria-pressed',String(on));b.title=on?'取消收藏':'收藏股票／ETF';});}
+  async function toggle(code,name='',button){
+    if(!localStorage.getItem('sb_token')){window.openAuthModal?.('login');return;}
+    if(busy.has(code))return;busy.add(code);if(button)button.disabled=true;
+    try{const rows=await watch(),exists=rows.some(x=>x.code===code);await watch(exists?'DELETE':'POST',exists?null:{code,name:name||code,industry:'',note:''},exists?code:null);await refreshStars();if(button&&!exists){button.classList.remove('mc-star-pop');void button.offsetWidth;button.classList.add('mc-star-pop');}window.showToast?.(exists?'已取消收藏':'已加入總收藏');}
+    catch(e){window.showToast?.(e.message,true);}finally{busy.delete(code);if(button)button.disabled=false;}
+  }
+  function upgradeEntries(){
+    document.querySelectorAll('.watch-star-col[data-code]').forEach(el=>{if(el.dataset.researchReady)return;el.dataset.researchReady='1';el.setAttribute('role','button');el.tabIndex=0;el.setAttribute('aria-label','切換收藏 '+el.dataset.code);el.style.cursor='pointer';el.addEventListener('click',e=>{e.stopPropagation();toggle(el.dataset.code,window._names?.[el.dataset.code]||'',el);});el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();el.click();}});});
+    document.querySelectorAll('#efBody [data-research-code],#tmxDetail [data-research-code],.sm-tbl tr[data-c],#etxCards [data-code],#etxDrawerPanel .etx-dh[data-research-code],.gs-sd-item[data-code]').forEach(el=>{
+      if(el.querySelector('[data-academy-star]'))return;
+      const code=el.dataset.researchCode||el.dataset.code||el.dataset.c;if(!/^[0-9]{4,6}[A-Za-z]?$/.test(code))return;
+      const b=document.createElement('button');b.type='button';b.className='mc-gold-star';b.dataset.academyStar=code;b.innerHTML=star;b.setAttribute('aria-label','切換收藏 '+code);
+      b.onmousedown=e=>{e.preventDefault();e.stopPropagation();};b.onclick=e=>{e.preventDefault();e.stopPropagation();toggle(code,el.dataset.n||window._names?.[code]||el.querySelector('.nm,.gs-sd-name')?.textContent||el.querySelector('h2')?.textContent.replace(code,'').trim()||code,b);};
+      (el.matches('tr')?el.querySelector('td'):el).append(b);
+    });paintStars();
+    const anchor=document.getElementById('chartWatchBtn');
+    if(anchor&&!document.getElementById('academyChartStar')){
+      const b=document.createElement('button');b.id='academyChartStar';b.type='button';b.className='mc-gold-star';b.innerHTML=star;b.setAttribute('aria-label','收藏目前標的');anchor.before(b);
+      b.onclick=()=>{const c=window.AcademyResearchChartContext?.();if(c?.code)toggle(c.code,c.name,b);};
+      const observation=document.createElement('button');observation.type='button';observation.textContent='加入技術觀察';observation.onclick=()=>{const c=window.AcademyResearchChartContext?.();if(c?.code){sessionStorage.setItem('academy.observation.seed',JSON.stringify(c));window.closeChart?.();window.openMemberCenter?.('favorites');}};anchor.after(observation);
+    }
+    const c=window.AcademyResearchChartContext?.(),b=document.getElementById('academyChartStar');if(b&&c?.code){b.dataset.academyStar=c.code;paintStars();}
+  }
+  let queued=false;new MutationObserver(()=>{if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;upgradeEntries();});}).observe(document.body,{childList:true,subtree:true});
+  addEventListener('academy-auth-changed',refreshStars);addEventListener('storage',refreshStars);upgradeEntries();refreshStars();
+  function exportFile(name,value){const a=document.createElement('a'),url=URL.createObjectURL(new Blob([value],{type:'text/markdown;charset=utf-8'}));a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+  /* Close signals are executed at the next valid session open. Whole shares, no leverage. */
+  function backtest(rows,p){
+    if(!Array.isArray(rows)||!['hold','cross','price'].includes(p.strategy)||!Number.isFinite(p.capital)||p.capital<=0||![p.fee,p.tax,p.slip].every(v=>Number.isFinite(v)&&v>=0&&v<.1)||!Number.isInteger(p.fast)||!Number.isInteger(p.slow)||p.fast<2||p.fast>=p.slow)throw Error('回測設定無效');
+    const data=rows.filter(x=>/^\d{4}-\d{2}-\d{2}$/.test(x.time)&&[x.open,x.close].every(v=>Number.isFinite(+v)&&+v>0)).sort((a,b)=>a.time.localeCompare(b.time));
+    if(new Set(data.map(x=>x.time)).size!==data.length)throw Error('歷史行情日期重複，無法回測');
+    if(data.length&&p.start<data[0].time)throw Error('起始日期早於可用行情，請縮短回測期間');
+    const start=data.findIndex(x=>x.time>=p.start),last=data.findLastIndex(x=>x.time<=p.end);
+    if(start<0||last-start<2||p.start>p.end)throw Error('所選期間沒有足夠行情');
+    if(p.strategy!=='hold'&&start<p.slow)throw Error('區間前資料不足，請縮短均線或將開始日期往後移');
+    const ma=(i,n)=>{if(i<n-1)return null;let total=0;for(let j=i-n+1;j<=i;j++)total+=+data[j].close;return total/n;};
+    let cash=p.capital,shares=0,peak=p.capital,drawdown=0,entryCost=0,wins=0,closed=0;const trades=[],curve=[];
+    let benchmarkShares=0,benchmarkCash=p.capital;
+    for(let i=start;i<=last;i++){
+      const x=data[i],prev=i-1;
+      if(i===start){const price=+x.open*(1+p.slip);benchmarkShares=Math.floor(p.capital/(price*(1+p.fee)));benchmarkCash-=benchmarkShares*price*(1+p.fee);}
+      const wanted=p.strategy==='hold'?true:p.strategy==='cross'?ma(prev,p.fast)>ma(prev,p.slow):+data[prev].close>ma(prev,p.slow);
+      if(wanted&&!shares){const price=+x.open*(1+p.slip),qty=Math.floor(cash/(price*(1+p.fee)));if(qty>0){entryCost=qty*price*(1+p.fee);cash-=entryCost;shares=qty;trades.push({date:x.time,side:'買進',price,shares:qty,cost:qty*price*p.fee});}}
+      else if(!wanted&&shares){const price=+x.open*(1-p.slip),net=shares*price*(1-p.fee-p.tax);cash+=net;closed++;if(net>entryCost)wins++;trades.push({date:x.time,side:'賣出',price,shares,cost:shares*price*(p.fee+p.tax)});shares=0;}
+      const equity=cash+shares*+x.close;peak=Math.max(peak,equity);drawdown=Math.max(drawdown,(peak-equity)/peak);curve.push({date:x.time,equity,benchmark:benchmarkCash+benchmarkShares*+x.close});
+    }
+    return {curve,trades,returnPct:(curve.at(-1).equity/p.capital-1)*100,benchmarkPct:(curve.at(-1).benchmark/p.capital-1)*100,drawdown:drawdown*100,closed,winRate:closed?wins/closed*100:null,openShares:shares,first:curve[0].date,last:curve.at(-1).date};
+  }
+  let renderGeneration=0;
+  function render(view,ctx){
+    const generation=++renderGeneration;
+    if(!['favorites','strategy'].includes(view))return false;
+    const {main,profile,go}=ctx;if(!profile){main.innerHTML=card('研究工具','<p>正在確認會員資料…</p>');return true;}
+    let state=read(profile.id),rows=[];const save=()=>write(profile.id,state);
+    const notice='<p class="mc-note">股票／ETF 收藏沿用帳號觀察清單。分類、技術觀察與回測紀錄目前為本機草稿，尚未跨裝置同步。</p>';
+    const message=()=>main.querySelector('[data-research-status]');
+    if(view==='favorites'){
+      let seed={};try{seed=JSON.parse(sessionStorage.getItem('academy.observation.seed')||'{}');}catch{}sessionStorage.removeItem('academy.observation.seed');
+      main.innerHTML=card('我的自選',notice+'<div class="mc-research-tabs"><button data-pane="list" aria-pressed="true">自選標的</button><button data-pane="observe" aria-pressed="false">技術觀察</button></div><div role="status" data-research-status></div><div data-list-pane><form data-add-favorite><label>股票／ETF 代號<input name="code" required pattern="[0-9]{4,6}[A-Za-z]?" placeholder="例如 2330、0050"></label><button class="mc-primary">加入總收藏</button></form><div class="mc-research-tools"><label>搜尋收藏<input data-find placeholder="代號或名稱"></label><label>分類<select data-filter><option value="">總收藏</option></select></label><label>排序<select data-sort><option value="new">最新加入</option><option value="code">代號</option><option value="name">名稱</option></select></label></div><div data-favorite-list>讀取收藏中…</div><details><summary>管理分類</summary><form data-add-group><label>新分類名稱<input name="name" required maxlength="20"></label><button>新增分類</button></form><div data-groups></div></details></div><div data-observe-pane hidden></div>');
+      const paint=()=>{
+        const filter=main.querySelector('[data-filter]'),selected=filter.value;filter.innerHTML='<option value="">總收藏</option>'+state.groups.map(g=>`<option value="${esc(g.id)}">${esc(g.name)}</option>`).join('');filter.value=selected;
+        const q=main.querySelector('[data-find]').value.trim().toLowerCase(),sort=main.querySelector('[data-sort]').value;
+        let shown=rows.filter(r=>(!filter.value||(state.labels[r.code]||[]).includes(filter.value))&&(`${r.code} ${r.name}`.toLowerCase().includes(q)));
+        if(sort==='code'||sort==='name')shown=[...shown].sort((a,b)=>String(a[sort]||'').localeCompare(String(b[sort]||''),'zh-TW'));
+        main.querySelector('[data-favorite-list]').innerHTML=shown.length?shown.map(r=>`<article class="mc-research-item"><div><b>${esc(r.code)} ${esc(r.name)}</b><small>收藏日期 ${esc((r.added_at||'').slice(0,10)||'未提供')}</small><p>${esc(r.note||'尚未填寫收藏理由')}</p></div><div class="mc-research-actions"><button class="mc-gold-star is-saved" data-academy-star="${esc(r.code)}" aria-pressed="true" aria-label="取消收藏 ${esc(r.code)}">${star}</button><button data-chart="${esc(r.code)}">技術分析</button><button data-observe="${esc(r.code)}">加入觀察</button><button data-test="${esc(r.code)}">回測</button>${/^00/.test(r.code)?`<button data-etf-info="${esc(r.code)}" data-etf-tab="overview">ETF 行情</button><button data-etf-info="${esc(r.code)}" data-etf-tab="dividend">ETF 配息</button>`:''}</div><details><summary>分類與收藏理由</summary><form data-edit-favorite="${esc(r.code)}"><label>收藏理由<input name="note" maxlength="500" value="${esc(r.note||'')}"></label>${state.groups.map(g=>`<label class="mc-check"><input type="checkbox" name="group" value="${esc(g.id)}" ${(state.labels[r.code]||[]).includes(g.id)?'checked':''}>${esc(g.name)}</label>`).join('')}<button>儲存</button></form></details></article>`).join(''):'<p class="mc-muted">這裡還沒有收藏，可直接輸入代號，或到個股／ETF 技術分析頁點星星。</p>';
+        main.querySelector('[data-groups]').innerHTML=state.groups.map(g=>`<form data-edit-group="${esc(g.id)}" class="mc-code-form"><input name="name" aria-label="分類名稱" maxlength="20" required value="${esc(g.name)}"><button>改名</button><button type="button" data-group-up="${esc(g.id)}" aria-label="向上移動 ${esc(g.name)}">↑</button><button type="button" data-group-down="${esc(g.id)}" aria-label="向下移動 ${esc(g.name)}">↓</button><button type="button" data-remove-group="${esc(g.id)}">刪除分類</button></form>`).join('');
+      };
+      const observationForm=(code='',name='')=>{
+        main.querySelector('[data-observe-pane]').innerHTML=`<p class="mc-muted">記下為什麼關注即可。進階條件只做觀察記錄，尚未啟用自動通知。</p><form data-new-observation><label>標的代號<input name="code" required pattern="[0-9]{4,6}[A-Za-z]?" value="${esc(code)}"></label><label>觀察理由<textarea name="reason" required maxlength="1000" placeholder="例如：觀察回到月線附近能否止穩"></textarea></label><label>週期<select name="period"><option value="日線">日線</option><option value="週線">週線</option><option value="月線">月線</option></select></label><details><summary>進階：設定觀察條件（選填）</summary><label>觀察方式<select name="condition"><option value="note">只記筆記</option><option value="above">突破指定價格</option><option value="below">跌破指定價格</option><option value="maAbove">站上指定均線</option><option value="maBelow">跌破指定均線</option></select></label><label>價位或均線天數<input name="value" type="number" min="0.01" step="any"></label></details><button class="mc-primary">儲存觀察</button></form><div data-observations>${state.observations.map(o=>`<article class="mc-research-item"><b>${esc(o.code)} · ${esc(o.period)} · ${o.ended?'已結束':'觀察中'}</b><small>${esc(o.created_at.slice(0,10))} · 條件：${esc(o.conditionLabel||'只記筆記')}</small>${o.chart_snapshot?`<small>來源圖表：${esc(o.chart_snapshot.period)} · 資料日 ${esc(o.chart_snapshot.data_date||'未提供')} · ${esc((o.chart_snapshot.ma||[]).join('、'))}</small>`:''}<p>${esc(o.reason)}</p><button data-end-observation="${esc(o.id)}">${o.ended?'恢復觀察':'結束觀察'}</button><button data-observation-note="${esc(o.id)}">建立研究筆記</button></article>`).join('')}</div>`;
+      };
+      const pane=(name,code='')=>{main.querySelector('[data-list-pane]').hidden=name!=='list';main.querySelector('[data-observe-pane]').hidden=name!=='observe';main.querySelectorAll('[data-pane]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.pane===name)));if(name==='observe')observationForm(code);};
+      main.querySelector('[data-observe-pane]').hidden=true;
+      main.oninput=e=>{if(e.target.matches('[data-find]'))paint();};main.onchange=e=>{if(e.target.matches('[data-filter],[data-sort]'))paint();};
+      main.onclick=async e=>{const b=e.target.closest('button');if(!b)return;try{
+        if(b.dataset.pane)pane(b.dataset.pane);
+        if(b.dataset.academyStar){b.disabled=true;const removed=rows.find(r=>r.code===b.dataset.academyStar);await watch('DELETE',null,b.dataset.academyStar);rows=rows.filter(r=>r.code!==b.dataset.academyStar);paint();message().innerHTML='已取消收藏。<button data-undo>復原</button>';const prior=await Promise.resolve(b.dataset.academyStar);main.querySelector('[data-undo]').onclick=async()=>{try{await watch('POST',{code:prior,name:removed?.name||window._names?.[prior]||prior,industry:removed?.industry||'',note:removed?.note||'',price_at_add:removed?.price_at_add??null,target_price:removed?.target_price??null,rt_target_price:removed?.rt_target_price??null,vol_target:removed?.vol_target??null});rows=await watch();paint();message().textContent='已恢復收藏';}catch(err){message().textContent=err.message;}};refreshStars();}
+        if(b.dataset.chart){const r=rows.find(x=>x.code===b.dataset.chart);document.querySelector('.member-page [data-back]').click();window.openChart?.(r.code,r.name||r.code);}
+        if(b.dataset.etfInfo){document.querySelector('.member-page [data-back]').click();window._etxOpen?.(b.dataset.etfInfo,b.dataset.etfTab);}
+        if(b.dataset.groupUp||b.dataset.groupDown){const i=state.groups.findIndex(g=>g.id===(b.dataset.groupUp||b.dataset.groupDown)),j=i+(b.dataset.groupUp?-1:1);if(j>=0&&j<state.groups.length){[state.groups[i],state.groups[j]]=[state.groups[j],state.groups[i]];save();paint();}}
+        if(b.dataset.observe)pane('observe',b.dataset.observe);
+        if(b.dataset.test){sessionStorage.setItem('academy.backtest.seed',b.dataset.test);go('strategy');}
+        if(b.dataset.removeGroup){const id=b.dataset.removeGroup;state.groups=state.groups.filter(g=>g.id!==id);for(const c in state.labels)state.labels[c]=state.labels[c].filter(x=>x!==id);save();paint();message().textContent='分類已刪除，標的仍保留於總收藏';}
+        if(b.dataset.endObservation){const o=state.observations.find(x=>x.id===b.dataset.endObservation);o.ended=!o.ended;save();observationForm();}
+        if(b.dataset.observationNote){const o=state.observations.find(x=>x.id===b.dataset.observationNote);sessionStorage.setItem('academy.note.seed',JSON.stringify({title:o.code+' 技術觀察',body:o.reason+'\n週期：'+o.period+'\n觀察建立：'+o.created_at}));go('workspace');}
+      }catch(err){message().textContent=err.message;b.disabled=false;}};
+      main.onsubmit=async e=>{e.preventDefault();const form=e.target,d=new FormData(form),b=form.querySelector('button');b.disabled=true;try{
+        if(form.hasAttribute('data-add-favorite')){const code=String(d.get('code')).trim().toUpperCase();if(rows.some(r=>r.code===code))throw Error('這檔標的已在總收藏');const c=await fetch(API+'/chart?code='+encodeURIComponent(code)+'&range=1mo&interval=1d');if(!c.ok)throw Error('找不到此標的行情，請確認代號');const j=await c.json();if(!j.data?.length)throw Error('此標的尚無行情資料');await watch('POST',{code,name:j.name||code,industry:j.industry||'',note:''});rows=await watch();paint();form.reset();message().textContent='已加入總收藏';refreshStars();}
+        if(form.hasAttribute('data-add-group')||form.dataset.editGroup){const name=String(d.get('name')).trim();if(!name)throw Error('請填寫分類名稱');if(state.groups.some(g=>g.name===name&&g.id!==form.dataset.editGroup))throw Error('已有同名分類');if(form.dataset.editGroup)state.groups.find(g=>g.id===form.dataset.editGroup).name=name;else{if(state.groups.length>=20)throw Error('最多可建立 20 個分類');state.groups.push({id:crypto.randomUUID(),name});}save();paint();message().textContent='分類已保存在此裝置';}
+        if(form.dataset.editFavorite){const r=rows.find(x=>x.code===form.dataset.editFavorite);await watch('PATCH',{id:r.id,note:String(d.get('note')).trim()});state.labels[r.code]=d.getAll('group');save();r.note=String(d.get('note')).trim();paint();message().textContent='收藏理由已同步，分類已保存在此裝置';}
+        if(form.hasAttribute('data-new-observation')){const code=String(d.get('code')).trim().toUpperCase(),reason=String(d.get('reason')).trim(),condition=String(d.get('condition')),value=Number(d.get('value'));if(!reason)throw Error('請填寫觀察理由');if(condition!=='note'&&(!Number.isFinite(value)||value<=0||condition.startsWith('ma')&&!Number.isInteger(value)))throw Error('請填寫有效價位或整數均線天數');if(state.observations.length>=200)throw Error('最多保留 200 筆觀察，請先匯出整理');if(!rows.some(r=>r.code===code)){const check=await fetch(API+'/chart?code='+encodeURIComponent(code)+'&range=1mo&interval=1d');if(!check.ok)throw Error('找不到此標的行情，請確認代號');const quote=await check.json();if(!quote.data?.length)throw Error('此標的尚無行情資料');await watch('POST',{code,name:window._names?.[code]||code,note:''});rows=await watch();}const conditionLabel=form.elements.condition.selectedOptions[0].textContent+(condition==='note'?'':' '+value);state.observations.unshift({id:crypto.randomUUID(),code,period:d.get('period'),reason,condition,value,conditionLabel,chart_snapshot:seed.code===code?seed.chart_snapshot||null:null,created_at:new Date().toISOString(),ended:false});save();observationForm();message().textContent='觀察已保存在此裝置，標的已加入總收藏';refreshStars();}
+      }catch(err){message().textContent=err.message;}finally{b.disabled=false;}};
+      watch().then(data=>{if(generation!==renderGeneration||!main.isConnected||!location.hash.endsWith('/favorites'))return;rows=data;paint();if(seed.code)pane('observe',seed.code);}).catch(e=>{if(main.isConnected)message().textContent=e.message;});
+    }
+    if(view==='strategy')renderStrategy(ctx,state,save,()=>generation===renderGeneration);
+    return true;
+  }
+  function renderStrategy(ctx,state,save,isCurrent){
+    const {main,go}=ctx,seed=sessionStorage.getItem('academy.backtest.seed')||'2330';sessionStorage.removeItem('academy.backtest.seed');
+    main.innerHTML=card('策略回測','<p class="mc-muted">用台積電（2330）跑一次均線範例，再換成自己的收藏。結果為價格報酬，不含配息，不代表未來績效。</p><details open><summary>新手先看：這個策略怎麼運作？</summary><p>短均線高於長均線時持有，反過來則退出。訊號以當日收盤確認，下一交易日開盤執行；第一次進場也只使用前一天已知資料。</p><p>目前為零股整數股模擬，全資金、無槓桿；期末持股按收盤估值，不視為已賣出。</p></details><form data-backtest><div class="mc-grid"><label>① 股票／ETF 代號<input name="code" required pattern="[0-9]{4,6}[A-Za-z]?" value="'+esc(seed)+'"></label><label>② 策略<select name="strategy"><option value="cross">均線交叉：短均線高於長均線持有</option><option value="price">價格站上長均線時持有</option><option value="hold">買進持有</option></select></label><label>③ 起始日期<input type="date" name="start" required value="'+new Date(Date.now()-180*86400000).toISOString().slice(0,10)+'"></label><label>結束日期<input type="date" name="end" required value="'+new Date().toISOString().slice(0,10)+'"></label><label>④ 模擬資金（元）<input type="number" name="capital" min="1000" max="100000000" value="100000" required></label><label>短均線（交易日）<input type="number" name="fast" min="2" max="120" value="5" required></label><label>長均線（交易日）<input type="number" name="slow" min="3" max="240" value="20" required></label></div><details><summary>交易成本設定：範例值可修改，依你的交易條件確認</summary><label>單邊手續費（%）<input name="fee" type="number" min="0" max="5" step="0.0001" value="0.1425" required></label><label>賣出交易稅（%）<input name="tax" type="number" min="0" max="5" step="0.0001" value="0.3" required></label><small>股票與不同 ETF 的適用條件不同，切換標的後請自行確認。</small><label>單邊滑價（%）<input name="slip" type="number" min="0" max="5" step="0.0001" value="0.05" required></label></details><button class="mc-primary">⑤ 執行歷史回測</button></form><div data-backtest-status role="status"></div>')+'<div data-backtest-result></div>'+card('已儲存的回測',state.runs.length?state.runs.map(r=>`<div class="mc-row"><span>${esc(r.code)} · ${esc(r.parameters.strategy)} · ${esc(r.created_at.slice(0,10))}</span><span>${r.result.returnPct.toFixed(2)}%</span></div>`).join(''):'<p class="mc-muted">成功執行後可儲存在此裝置。</p>');
+    main.querySelector('[data-backtest]').onsubmit=async e=>{e.preventDefault();const b=e.target.querySelector('button'),status=main.querySelector('[data-backtest-status]'),out=main.querySelector('[data-backtest-result]');b.disabled=true;out.replaceChildren();status.textContent='正在讀取歷史日線…';try{
+      const d=Object.fromEntries(new FormData(e.target)),p={...d,capital:+d.capital,fast:+d.fast,slow:+d.slow,fee:+d.fee/100,tax:+d.tax/100,slip:+d.slip/100},r=await fetch(API+'/chart?code='+encodeURIComponent(d.code)+'&range=3y&interval=1d&adj=0');if(!r.ok)throw Error('行情服務暫時無法使用');const j=await r.json();if(j.events?.some(e=>e.type==='split'&&e.date>=p.start&&e.date<=p.end))throw Error('資料含分割事件，需要先確認還原價格，暫不執行');const result=backtest(j.data,p);if(!e.target.isConnected||!isCurrent())return;const percent=v=>v.toFixed(2)+'%';
+      const all=[...result.curve.map(x=>x.equity),...result.curve.map(x=>x.benchmark)],low=Math.min(...all),high=Math.max(...all),points=k=>result.curve.map((x,i)=>(20+i/(result.curve.length-1)*760).toFixed(1)+','+(190-(x[k]-low)/(high-low||1)*160).toFixed(1)).join(' ');
+      out.innerHTML=card(esc(d.code)+' '+esc(j.name||'')+' 回測結果',`<p class="mc-muted">實際期間 ${result.first} ～ ${result.last} · 原始日線價格 · 不含配息。遇停牌／無開盤資料的日期不成交；未納入漲跌停排隊、最低手續費或成交量限制。</p><div class="mc-feature-stats"><div><b>${percent(result.returnPct)}</b><span>策略價格報酬</span></div><div><b>${percent(result.drawdown)}</b><span>最大回撤</span></div><div><b>${percent(result.benchmarkPct)}</b><span>買進持有價格報酬</span></div></div><svg class="mc-equity" viewBox="0 0 800 220" role="img" aria-label="資產曲線，藍色為策略，金色為買進持有"><polyline points="${points('benchmark')}" stroke="#d6ab34"/><polyline points="${points('equity')}" stroke="#438dde"/></svg><p>藍：策略；金：買進持有。已完成 ${result.closed} 筆交易；勝率 ${result.winRate===null?'無已平倉交易':percent(result.winRate)}；期末持股 ${result.openShares} 股。</p><button data-save-run>儲存本次回測</button><button data-run-note>建立研究筆記</button><details><summary>查看完整成交紀錄（${result.trades.length} 筆）</summary>${result.trades.map(t=>`<div class="mc-row">${t.date} ${t.side} ${t.shares} 股 · ${t.price.toFixed(2)} 元 · 費稅 ${t.cost.toFixed(2)} 元</div>`).join('')||'<p>期間沒有成交</p>'}</details>`);
+      status.textContent='回測完成。資料來源：網站行情 API；本次資料擷取 '+new Date().toLocaleString('zh-TW')+'。';
+      out.querySelector('[data-save-run]').onclick=ev=>{try{if(state.runs.length>=50)throw Error('最多保留 50 筆回測，請先匯出整理');state.runs.unshift({id:crypto.randomUUID(),code:d.code,parameters:p,result,created_at:new Date().toISOString()});save();ev.target.disabled=true;ev.target.textContent='已儲存在此裝置';}catch(err){status.textContent=err.message;}};
+      out.querySelector('[data-run-note]').onclick=()=>{sessionStorage.setItem('academy.note.seed',JSON.stringify({title:d.code+' 回測研究',body:JSON.stringify({parameters:p,actualPeriod:[result.first,result.last],returnPct:result.returnPct,drawdown:result.drawdown},null,2)}));go('workspace');};
+    }catch(err){status.textContent=err.message;}finally{b.disabled=false;}};
+  }
+  window.AcademyResearch={render,toggle,backtest,read,exportFile,setCodes:codes=>{starred.clear();codes.forEach(c=>starred.add(c));paintStars();}};
+})();

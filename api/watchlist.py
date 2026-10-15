@@ -86,6 +86,8 @@ class handler(BaseHTTPRequestHandler):
         code = (qs.get("code") or [None])[0]
         if not code:
             return self._json(400, {"error": "code required"})
-        _sb("/watchlist", method="DELETE", token=token,
-            params={"code": f"eq.{code}"})
+        status, data = _sb("/watchlist", method="DELETE", token=token,
+                           params={"code": f"eq.{code}"})
+        if status >= 400:
+            return self._json(status, data)
         self._json(200, {"ok": True})

@@ -3500,7 +3500,7 @@
       if(!_sel){box.innerHTML='';return;}
       var t=rows().filter(function(x){return x.name===_sel;})[0];
       if(!t){box.innerHTML='';return;}
-      var mrows=(t.members||[]).map(function(m){return '<tr><td onclick="_openStock(\''+esc(m.code)+'\',\''+esc(m.name||'')+'\')">'+esc(m.code)+' '+esc(m.name||'')+'</td><td>'+(m.price!=null?Number(m.price).toLocaleString():'—')+'</td><td class="'+(m.change>=0?'hp-up':'hp-dn')+'">'+sg(m.change)+'</td><td>'+(m.tradeValue/1e8).toFixed(2)+'</td></tr>';}).join('');
+      var mrows=(t.members||[]).map(function(m){return '<tr data-research-code="'+esc(m.code)+'"><td onclick="_openStock(\''+esc(m.code)+'\',\''+esc(m.name||'')+'\')">'+esc(m.code)+' '+esc(m.name||'')+'</td><td>'+(m.price!=null?Number(m.price).toLocaleString():'—')+'</td><td class="'+(m.change>=0?'hp-up':'hp-dn')+'">'+sg(m.change)+'</td><td>'+(m.tradeValue/1e8).toFixed(2)+'</td></tr>';}).join('');
       box.innerHTML='<div class="dh pro-heat-detail-head"><span>'+esc(t.name)+'　'+(_market==='otc'?'上櫃':'上市')+' · '+t.memberCount+' 檔 · 成交額加權 '+sg(t.weightedToday)+'／算術平均 '+sg(t.today)+' · 漲停 '+t.limitUps+'／跌停 '+t.limitDowns+'</span><button class="pro-heat-close" type="button" onclick="_closeThemeDetail()" aria-label="關閉成分股清單" title="關閉並返回完整熱力圖">×</button></div>'
         +'<table class="tmx-mtbl"><thead><tr><th>成分股（依成交額）</th><th>收盤</th><th>漲跌幅</th><th>成交額(億)</th></tr></thead><tbody>'+mrows+'</tbody></table>';
     }
@@ -6190,9 +6190,9 @@
     }
     window._etxReleaseChart=releaseETFChart;
     window._etxCloseDrawer=function(){etxOpenToken++;releaseETFChart();el('etxDrawer').style.display='none';};
-    window._etxOpen=function(code){
+    window._etxOpen=function(code,initialTab){
       if(el('etxDrawer').parentNode!==document.body)document.body.appendChild(el('etxDrawer'));
-      releaseETFChart();drawerCode=String(code);drawerTab='overview';movesFilter='summary';holdingsMode='stocks';
+      releaseETFChart();drawerCode=String(code);drawerTab=['overview','dividend','technical'].includes(initialTab)?initialTab:'overview';movesFilter='summary';holdingsMode='stocks';
       el('etxDrawer').style.display='flex';var token=++etxOpenToken;
       if(pmap[drawerCode]){renderDrawer();refreshActiveDrawer(drawerCode,token);return;}
       el('etxDrawerPanel').innerHTML='<button class="etx-loading-close" onclick="_etxCloseDrawer()">關閉 ✕</button><div class="fc-empty">載入 ETF 資訊…</div>';
@@ -6311,7 +6311,7 @@
       var activeMatches=activeSource&&activeSource.data_date===holdingsDate;
       if(activeMatches){allHoldings=mergeActiveMoves(allHoldings,activeSource,holdingsDate);if(p.aum==null&&Number.isFinite(activeSource.scale)&&activeSource.scale>0)p=Object.assign({},p,{aum:activeSource.scale/1e8});}
       var tabs=[['overview','總覽'],['technical','技術面'],['moves','今日動作'],['holdings','成分股'],['perf','績效'],['similar','相似'],['dividend','配息'],['calc','投資試算'],['profile','規模/基本'],['holders','持有人']];
-      var head='<div class="etx-dh"><div><small style="font-size:10.5px;color:var(--text-muted);font-weight:800">'+(p.active?'ACTIVE ETF':'PASSIVE ETF')+' · 跟誰學研究卡</small><h2>'+drawerCode+' '+esc(p.name||'')+'</h2><div style="font-size:12px;color:var(--text-muted)">'+esc(p.category||'')+(p.manager?' · '+esc(p.manager):'')+'</div></div><button class="x" onclick="window._etxCloseDrawer()">✕</button></div>';
+      var head='<div class="etx-dh" data-research-code="'+drawerCode+'"><div><small style="font-size:10.5px;color:var(--text-muted);font-weight:800">'+(p.active?'ACTIVE ETF':'PASSIVE ETF')+' · 跟誰學研究卡</small><h2>'+drawerCode+' '+esc(p.name||'')+'</h2><div style="font-size:12px;color:var(--text-muted)">'+esc(p.category||'')+(p.manager?' · '+esc(p.manager):'')+'</div></div><button class="x" onclick="window._etxCloseDrawer()">✕</button></div>';
       var hero='<div class="etx-mets" style="margin-bottom:14px"><div><small>收盤</small><b>'+m2(p.close)+'</b></div><div><small>行情</small><b class="'+cls(p.change_pct)+'">'+(p.change_pct==null?'—':(p.change_pct>0?'+':'')+p.change_pct.toFixed(2)+'%')+'</b></div><div><small>規模</small><b>'+(p.aum!=null?m0(p.aum)+' 億':'—')+'</b></div><div><small>受益人數</small><b>'+m0(p.holders)+'</b></div></div>';
       var tb='<div class="etx-dtabs">'+tabs.map(function(t){return '<button class="'+(t[0]===drawerTab?'on':'')+'" onclick="window._etxTab(\''+t[0]+'\')">'+t[1]+'</button>';}).join('')+'</div>';
       el('etxDrawerPanel').innerHTML=head+hero+tb+'<div id="etxDrawerBody"><div class="fc-empty">載入中…</div></div>';
@@ -6686,7 +6686,7 @@
       arr.sort(function(a,b){var av=a[key],bv=b[key];av=av==null?-Infinity:av;bv=bv==null?-Infinity:bv;var d=bv-av;return asc?-d:d;});
       var show=arr.slice(0,400);
       el('efBody').innerHTML=show.length?show.map(function(x){
-        return '<tr onclick="_openStock(\''+x.code+'\',\''+(x.name||'').replace(/\'/g,'')+'\')"><td class="l"><span class="c">'+x.code+'</span> '+(x.name||'')+' <span class="ef-tag '+(x.active?'act':'pas')+'">'+(x.active?'主動':'被動')+'</span></td>'+
+        return '<tr data-research-code="'+x.code+'" onclick="_openStock(\''+x.code+'\',\''+(x.name||'').replace(/\'/g,'')+'\')"><td class="l"><span class="c">'+x.code+'</span> '+(x.name||'')+' <span class="ef-tag '+(x.active?'act':'pas')+'">'+(x.active?'主動':'被動')+'</span></td>'+
           '<td class="ef-cat2">'+(x.category||'—')+'</td>'+
           '<td>'+money(x.close,2)+'</td>'+
           '<td class="'+cls(x.change_pct)+'">'+(x.change_pct==null?'—':(x.change_pct>0?'+':'')+x.change_pct.toFixed(2)+'%')+'</td>'+
@@ -10398,6 +10398,7 @@
     });
 
     // ── K線圖 state ─────────────────────────────────────────
+    window.AcademyResearchChartContext=()=>({code:currentCode,name:currentName,industry:currentIndustry,chart_snapshot:window._academyChartSnapshot?.code===currentCode?{...window._academyChartSnapshot,ma:[...document.querySelectorAll('#chartModal .ma-toggle:not(.hidden)')].map(e=>e.textContent.trim()).filter(t=>/^MA[0-9]+$/.test(t))}:null,created_at:new Date().toISOString()});
     let currentCode = '';
     let currentName = '';
     let currentIndustry = '';
@@ -13305,6 +13306,7 @@
     function _wkKey(d) { const dt = new Date(d + 'T00:00:00Z'); const day = dt.getUTCDay() || 7; dt.setUTCDate(dt.getUTCDate() + 4 - day); const ys = new Date(Date.UTC(dt.getUTCFullYear(), 0, 1)); const wk = Math.ceil((((dt - ys) / 86400000) + 1) / 7); return dt.getUTCFullYear() + '-W' + wk; }
 
     function _loadChartUrl(url, subtitle, agg) {
+      window._academyChartSnapshot={code:currentCode,period:subtitle,url};
       const requestId=++_chartRequestId;
       _chartLoading();
       fetch(url)
@@ -13315,6 +13317,7 @@
             document.getElementById('chartLoading').innerHTML = ' 無法取得圖表資料';
             return;
           }
+          if(window._academyChartSnapshot?.code===currentCode)window._academyChartSnapshot.data_date=data.data.at(-1)?.time||null;
           if (agg) data.data = agg(data.data);
           window._chartIsHourly = typeof data.data[0].time === 'number';
           if (window._chartIsHourly) data.data.forEach(c => { c.time += 8 * 3600; });
@@ -15224,6 +15227,7 @@
     }
 
     function _refreshWatchBtns() {
+      window.AcademyResearch?.setCodes([..._watchCodes]);
       document.querySelectorAll('.watch-btn[data-code]').forEach(btn => {
         const code = btn.dataset.code;
         btn.classList.toggle('active', _watchCodes.has(code));
@@ -16606,6 +16610,7 @@
 </script>
 <script src="assets/member-identity.js" defer></script>
 <script src="assets/member-features.js" defer></script>
+<script src="assets/member-research.js" defer></script>
 <script src="assets/member-center.js" defer></script>
 <script src="assets/member-signin.js" defer></script>
 </body>
