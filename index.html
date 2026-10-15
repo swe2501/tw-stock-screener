@@ -8289,6 +8289,75 @@
       }else host.textContent=data.length?'圖表套件尚未載入，請稍後再試。':'歷史資料尚待更新。';
       dialog.querySelector('.vix-close').onclick=function(){dialog.close();};dialog.addEventListener('close',function(){if(observer)observer.disconnect();if(chart)chart.remove();dialog.remove();},{once:true});
     };
+    // 首頁指標卡「2 年走勢線圖」通用 dialog（2026-10-15）。index_history 來源＝玩股網每日 OHLC；
+    // apichart 來源＝/api/chart(僅收盤，畫線)。VIX 另加一年新高標記。
+    window._scCfg={
+      '櫃買指數':{code:'two',title:'櫃買指數走勢',subtitle:'櫃檯買賣中心 OTC 綜合指數 · 近 2 年',precision:2,source:'index_history'},
+      '台指期（日盤）':{code:'wtx&',title:'台指期（日盤）走勢',subtitle:'臺股期貨近月 · 近 2 年',precision:0,source:'index_history'},
+      '台指VIX':{code:'vixtwn',title:'台指VIX走勢',subtitle:'臺指選擇權波動率指數 · 近 2 年',precision:2,source:'index_history',yearHigh:true},
+      '台幣匯率':{apiCode:'TWD=X',title:'台幣匯率走勢',subtitle:'USD／TWD · 近 2 年',precision:3,source:'apichart'},
+      '富台指':{code:'stwn&',title:'富台指走勢',subtitle:'SGX FTSE Taiwan 期貨 · 近 2 年',precision:1,source:'index_history'}
+    };
+    window._openKpiChart=function(k){var c=window._scCfg[k];if(c)window._openSeriesChart(c);};
+    window._openSeriesChart=function(cfg){
+      if(document.getElementById('seriesChartDialog'))return;
+      var dialog=document.createElement('dialog');dialog.id='seriesChartDialog';dialog.className='vix-chart-dialog';
+      var marksBtnHtml=cfg.yearHigh?'<button type="button" data-sc-marks aria-pressed="true">一年新高</button>':'';
+      dialog.innerHTML='<header><div><h3>'+cfg.title+'</h3><small>'+cfg.subtitle+'</small></div><button class="vix-close" type="button" aria-label="關閉走勢圖">✕</button></header><div class="vix-chart-controls"><button type="button" data-sc-mode="line" aria-pressed="true">走勢</button><button type="button" data-sc-mode="candles" aria-pressed="false">K棒</button><button type="button" data-sc-bench aria-pressed="false">疊加大盤</button>'+marksBtnHtml+'</div><div class="vix-history-status">載入中…</div><div class="vix-history-chart"></div><p class="vix-history-tip">移動滑鼠查看日期與數值</p>';
+      document.body.append(dialog);dialog.showModal();dialog.querySelector('.vix-close').focus();
+      var closed=false;dialog.querySelector('.vix-close').onclick=function(){dialog.close();};
+      var prec=cfg.precision==null?2:cfg.precision;
+      var SB=(typeof SIG_SB_URL!=='undefined'&&SIG_SB_URL)?SIG_SB_URL:'https://bruqrbvbjxntgoljxsne.supabase.co',
+          AK=(typeof SIG_SB_ANON!=='undefined'&&SIG_SB_ANON)?SIG_SB_ANON:'sb_publishable_KgYlaR-mqtx4uVre6kPD2A_qO6tdT1y',
+          hb=(location.hostname.indexOf('git-uat')>=0?'':'https://tw-stock-screener-neon.vercel.app');
+      var fetchData;
+      if(cfg.source==='apichart'){
+        fetchData=fetch(hb+'/api/chart?code='+encodeURIComponent(cfg.apiCode)+'&range=2y&interval=1d').then(function(r){return r.json();}).then(function(j){
+          return ((j&&j.data)||[]).map(function(d){return {time:String(d.time||d.date||'').slice(0,10),value:Number(d.close),open:d.open!=null?Number(d.open):null,high:d.high!=null?Number(d.high):null,low:d.low!=null?Number(d.low):null,close:Number(d.close)};}).filter(function(x){return x.time&&isFinite(x.value);});});
+      } else {
+        fetchData=fetch(SB+'/rest/v1/index_history?code=eq.'+encodeURIComponent(cfg.code)+'&select=trade_date,open,high,low,close&order=trade_date.asc',{headers:{apikey:AK,Authorization:'Bearer '+AK}}).then(function(r){return r.json();}).then(function(a){
+          return (a||[]).map(function(r){return {time:r.trade_date,value:Number(r.close),open:r.open!=null?Number(r.open):null,high:r.high!=null?Number(r.high):null,low:r.low!=null?Number(r.low):null,close:Number(r.close)};}).filter(function(x){return x.time&&isFinite(x.value);});});
+      }
+      // 大盤(加權 ^TWII)疊加序列：/api/chart 2 年；失敗回空陣列(開關停用)。比照各圖右軸做法。
+      var benchFetch=fetch(hb+'/api/chart?code=%5ETWII&range=2y&interval=1d').then(function(r){return r.json();}).then(function(j){
+        return ((j&&j.data)||[]).map(function(d){return {time:String(d.time||d.date||'').slice(0,10),value:Number(d.close)};}).filter(function(x){return x.time&&isFinite(x.value);});}).catch(function(){return [];});
+      var chart=null,observer=null;
+      dialog.addEventListener('close',function(){closed=true;if(observer)observer.disconnect();if(chart)chart.remove();dialog.remove();},{once:true});
+      Promise.all([fetchData,benchFetch]).then(function(resAll){
+        if(closed)return;
+        var data=resAll[0],benchData=resAll[1]||[];
+        var status=dialog.querySelector('.vix-history-status'),host=dialog.querySelector('.vix-history-chart');
+        if(!data.length){status.textContent='目前沒有可用歷史資料';return;}
+        var candleData=data.filter(function(r){return r.open!=null&&r.high!=null&&r.low!=null&&isFinite(r.open)&&isFinite(r.high)&&isFinite(r.low);}).map(function(r){return {time:r.time,open:r.open,high:r.high,low:r.low,close:r.close!=null?r.close:r.value};});
+        status.textContent=data[0].time+' → '+data[data.length-1].time+' · '+data.length+' 筆'+(candleData.length?'':'｜僅收盤序列');
+        var candleBtn=dialog.querySelector('[data-sc-mode="candles"]');candleBtn.disabled=!candleData.length;if(!candleData.length)candleBtn.title='此來源僅有每日收盤';
+        // 一年新高：每段突破只標首日(避免「一年新高」字樣重疊)
+        var marks=[];
+        if(cfg.yearHigh){var prev=false;for(var i=252;i<data.length;i++){var hi=Math.max.apply(null,data.slice(i-252,i).map(function(r){return r.value;}));var isHigh=data[i].value>hi;if(isHigh&&!prev)marks.push({time:data[i].time,position:'aboveBar',color:'#e0a619',shape:'arrowDown',text:'一年新高'});prev=isHigh;}}
+        if(typeof LightweightCharts==='undefined'){host.textContent='圖表套件尚未載入，請稍後再試。';return;}
+        var light=document.documentElement.dataset.theme==='light',mm=Math.pow(10,-prec);
+        chart=LightweightCharts.createChart(host,{width:host.clientWidth,height:360,layout:{background:{color:'transparent'},textColor:light?'#52677d':'#bacbdd'},grid:{vertLines:{color:light?'#e5ecf3':'#263a4d'},horzLines:{color:light?'#e5ecf3':'#263a4d'}},timeScale:{borderColor:light?'#d8e3ed':'#334a60'},rightPriceScale:{borderColor:light?'#d8e3ed':'#334a60'},leftPriceScale:{visible:false,borderColor:light?'#d8e3ed':'#334a60'}});
+        var series=chart.addAreaSeries({lineColor:'#d5a14b',topColor:'rgba(213,161,75,.22)',bottomColor:'rgba(213,161,75,.015)',lineWidth:2,priceLineVisible:false,priceFormat:{type:'price',precision:prec,minMove:mm}});
+        series.setData(data.map(function(r){return {time:r.time,value:r.value};}));
+        var candles=null,mode='line';
+        if(candleData.length){candles=chart.addCandlestickSeries({visible:false,upColor:'#dd685f',downColor:'#4caf83',wickUpColor:'#dd685f',wickDownColor:'#4caf83',borderVisible:false,priceLineVisible:false,priceFormat:{type:'price',precision:prec,minMove:mm}});candles.setData(candleData);}
+        // 大盤疊加（左軸，藍色虛線）
+        var bench=null;
+        if(benchData.length){bench=chart.addLineSeries({color:'#3a86e0',lineWidth:1,lineStyle:LightweightCharts.LineStyle.Dashed,priceScaleId:'left',title:'加權',visible:false,priceLineVisible:false,crosshairMarkerVisible:false,lastValueVisible:true,priceFormat:{type:'custom',minMove:1,formatter:function(v){return Math.round(v).toLocaleString();}}});bench.setData(benchData);}
+        var benchBtn=dialog.querySelector('[data-sc-bench]');benchBtn.disabled=!bench;if(!bench)benchBtn.title='大盤資料暫時無法取得';
+        if(benchBtn&&bench)benchBtn.onclick=function(){var on=benchBtn.getAttribute('aria-pressed')!=='true';benchBtn.setAttribute('aria-pressed',String(on));bench.applyOptions({visible:on});chart.priceScale('left').applyOptions({visible:on});};
+        // 一年新高 開關
+        var marksOn=true;
+        function applyMarks(){var mk=marksOn?marks:[];series.setMarkers(mk);if(candles)candles.setMarkers(mk.filter(function(m){return candleData.some(function(c){return c.time===m.time;});}));}
+        if(marks.length)applyMarks();
+        var marksBtn=dialog.querySelector('[data-sc-marks]');
+        if(marksBtn)marksBtn.onclick=function(){marksOn=!marksOn;marksBtn.setAttribute('aria-pressed',String(marksOn));applyMarks();};
+        chart.timeScale().fitContent();
+        dialog.querySelectorAll('[data-sc-mode]').forEach(function(btn){btn.onclick=function(){if(btn.disabled)return;mode=btn.dataset.scMode;series.applyOptions({visible:mode==='line'});if(candles)candles.applyOptions({visible:mode==='candles'});dialog.querySelectorAll('[data-sc-mode]').forEach(function(b){b.setAttribute('aria-pressed',String(b===btn));});};});
+        chart.subscribeCrosshairMove(function(pm){var v=pm.seriesData.get(mode==='candles'&&candles?candles:series),b=bench?pm.seriesData.get(bench):null;dialog.querySelector('.vix-history-tip').textContent=(v&&pm.time)?(pm.time+'｜'+Number(v.value!=null?v.value:v.close).toLocaleString(undefined,{minimumFractionDigits:prec,maximumFractionDigits:prec})+(cfg.unit||'')+(b&&b.value!=null?'　加權 '+Math.round(b.value).toLocaleString():'')):'移動滑鼠查看日期與數值';});
+        observer=new ResizeObserver(function(){chart.applyOptions({width:host.clientWidth});});observer.observe(host);
+      }).catch(function(){var s=dialog.querySelector('.vix-history-status');if(s)s.textContent='讀取失敗，請稍後再試。';});
+    };
     function vixAnnualState(rows){
       var seen={}, daily=(rows||[]).filter(function(r){if(!r.date||seen[r.date])return false;seen[r.date]=true;return true;}).sort(function(a,b){return b.date.localeCompare(a.date);}).slice(0,253);
       if(daily.length<253||daily.some(function(r){return r.vix==null||!isFinite(Number(r.vix))||Number(r.vix)<=0;}))return {state:'missing',date:daily[0]?daily[0].date:''};
@@ -8322,7 +8391,11 @@
           var isVix=m.k==='台指VIX', alert=isVix&&vixYear.state==='new';
           if(isVix)vixChartRows=res[1]||[];
           var badge=isVix?(vixYear.state==='new'?'<span class="vix-year-badge"><i class="vix-warning-icon" aria-hidden="true">⚠</i>創一年新高</span>':''):'';
-          return '<div class="cb-pi'+(alert?' vix-year-alert':'')+'"'+(m.k==='加權指數'?' role="button" tabindex="0" onclick="_openMarketTrain()" onkeydown="if(event.key===String.fromCharCode(13)||event.key===String.fromCharCode(32)){event.preventDefault();_openMarketTrain()}" aria-label="查看加權走勢與市場列車"':isVix?' role="button" tabindex="0" onclick="_openTaiwanVix()" onkeydown="if(event.key===String.fromCharCode(13)||event.key===String.fromCharCode(32)){event.preventDefault();_openTaiwanVix()}" aria-label="查看台指VIX走勢圖" title="點看台指VIX走勢；資料日 '+vixYear.date+'"':'')+'><div class="k">'+m.k+'</div><div class="v '+cc+'">'+val+'</div><div class="n">'+(m.note||note(m.c,m.p))+'</div>'+badge+(isVix?'<small class="vix-year-date">資料日 '+vixYear.date+'</small>':'')+'</div>';
+          var kd=' onkeydown="if(event.key===String.fromCharCode(13)||event.key===String.fromCharCode(32)){event.preventDefault();this.click()}"';
+          var clickAttr='';
+          if(m.k==='加權指數') clickAttr=' role="button" tabindex="0" onclick="_openMarketTrain()"'+kd+' aria-label="查看加權走勢與市場列車"';
+          else if(window._scCfg&&window._scCfg[m.k]) clickAttr=' role="button" tabindex="0" onclick="_openKpiChart(\''+m.k+'\')"'+kd+' aria-label="查看'+m.k+'近兩年走勢圖"'+(isVix?' title="點看台指VIX走勢；資料日 '+vixYear.date+'"':'');
+          return '<div class="cb-pi'+(alert?' vix-year-alert':'')+'"'+clickAttr+'><div class="k">'+m.k+'</div><div class="v '+cc+'">'+val+'</div><div class="n">'+(m.note||note(m.c,m.p))+'</div>'+badge+(isVix?'<small class="vix-year-date">資料日 '+vixYear.date+'</small>':'')+'</div>';
         }).join('');
         // 台積電權值影響
         var tsc=cb.tsmc_close,tchg=cb.tsmc_chg,tpct=cb.tsmc_pct,contrib=cb.tsmc_contrib;
@@ -8347,7 +8420,7 @@
           var dt=new Date(s+'T00:00:00Z'), md=(dt.getUTCMonth()+1)+'/'+dt.getUTCDate()+'（'+'日一二三四五六'[dt.getUTCDay()]+'）';
           return '<div class="cb-conv" id="cbFutaiSettle">🏁 最後交易日 <strong>'+md+'</strong>　'+(days===0?'<b class="hp-dn">今日最後交易</b>':'距結算 <b>'+days+'</b> 天')+'<br><small style="color:var(--text-muted)">每月倒數第二個營業日 · 已依證交所休市表</small></div>';
         }
-        var ftseCard='<div class="cb-ovc"><header><span>富台指期<small>SGX FTSE TAIWAN</small></span><span class="cb-tag '+fb[0]+'">'+fb[1]+'</span></header>'
+        var ftseCard='<div class="cb-ovc" role="button" tabindex="0" style="cursor:pointer" onclick="_openKpiChart(\'富台指\')" onkeydown="if(event.key===String.fromCharCode(13)||event.key===String.fromCharCode(32)){event.preventDefault();this.click()}" aria-label="查看富台指近兩年走勢圖"><header><span>富台指期<small>SGX FTSE TAIWAN</small></span><span class="cb-tag '+fb[0]+'">'+fb[1]+'</span></header>'
           +(fc!=null?'<div class="big '+fcol+'">'+Number(fc).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+'</div>'
             +'<div class="sub"><span class="'+fcol+'">'+(fchg>0?'+':'')+fchg.toFixed(2)+' 點 · '+(fpct>0?'+':'')+fpct.toFixed(2)+'%</span></div>'
             +'<div class="cb-conv">↓ 換算參考　<strong>台指期約 '+Math.round(conv).toLocaleString()+' 點</strong></div>'
