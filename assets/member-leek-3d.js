@@ -18,7 +18,7 @@ function create(host,options){
  function build(){
   const cream=material('#fbf0d3',{roughness:.38}),rootMat=material('#c2ab70'),dark=material('#25201f',{roughness:.16}),shine=material('#ffffff',{roughness:.1}),pink=material('#e9a08c',{transparent:true,opacity:.57}),gold=material('#d8b876',{metalness:.7,roughness:.28}),accent=material(options.row===0?'#9479b4':options.row===1?'#477c8d':'#6e9a7e',{roughness:.56});
   plant=new T.Group();scene.add(plant);
-  const outline=[[.025,-.48],[.17,-.44],[.32,-.30],[.40,-.08],[.395,.16],[.31,.36],[.18,.52],[.105,.59]].map(([x,y])=>new T.Vector2(x,y));body=mesh(new T.LatheGeometry(outline,64),cream);
+  const outline=[[.025,-.48],[.17,-.44],[.32,-.30],[.40,-.08],[.395,.16],[.31,.36],[.18,.52],[.105,.59]].map(([x,y])=>new T.Vector2(x,y));const profile=new T.CatmullRomCurve3(outline.map(v=>new T.Vector3(v.x,v.y,0)));body=mesh(new T.LatheGeometry(profile.getPoints(80).map(v=>new T.Vector2(Math.max(.005,v.x),v.y)),80),cream);
   for(const side of [-1,1]){const eye=ball(.077,dark,plant,[.76,1.15,.43]);eye.position.set(side*.155,.12,.358);eyes.push(eye);const glint=ball(.022,shine,eye,[1,1,.8]);glint.position.set(-.023,.029,.068);const glint2=ball(.009,shine,eye);glint2.position.set(.021,-.025,.068);const cheek=ball(.058,pink,plant,[1,.5,.13]);cheek.position.set(side*.27,-.015,.307);
    const arm=new T.Group();arm.position.set(side*.32,-.12,.025);plant.add(arm);tube([[0,0,0],[side*.14,-.065,.06],[side*.15,-.16,.11]],.035,cream,arm);const hand=ball(.05,cream,arm,[1,.8,1]);hand.position.set(side*.15,-.16,.11);arms.push(arm);
    tube([[side*.12,-.4,0],[side*.18,-.55,.05],[side*.16,-.66,.11],[side*.24,-.68,.17]],.018,rootMat);

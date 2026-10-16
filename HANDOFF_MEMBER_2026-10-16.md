@@ -1,3 +1,5 @@
+> **UAT 託管狀態補充**：Git 的 `uat`／`justy-layout` 已推送角色修復與 3D 試作，但實際 Vercel UAT 網頁仍未載入 `member-cloud.js` 或 `member-leek-3d.js`。目前 Vercel 帳號開 `andrew250165s-projects/tw-stock-screener` 顯示 404，無法檢查／觸發該專案部署；需要有該專案權限者部署最新 `uat` 的 Preview，勿動正式站部署。外部 HTTP GET 會轉到 Vercel 登入頁，不能當部署探測。本機即時驗收已開 `http://127.0.0.1:49674/`（本機 Python session 59396，非長期託管）。預覽檔在 chat 的 `work/companion-review.html`，限定 localhost 的 server 只供應該頁與 repo assets，沒有會員資料或 DB 寫入；不必登入會員即可試操作。
+
 > **最新狀態，取代下文舊阻礙**：使用者已確認允許在共用 PRODUCTION 專案套用四份會員 SQL；四份已成功執行。線上驗證 13 RLS 表、9 函式、7 圖片 policy；CAS／跨會員隔離／直接刪除拒絕通過且測試寫入已回滾。詳細端到端驗收界限與尚缺寄信 worker 見 `docs/member-db-status.md`。九角色初始裁切已改精確取圖；小韭菜新增可選真 3D 造型試作（原創程式幾何），三種節奏、連續待機／成長／拖曳運鏡，未取代原插畫，其他角色仍為插畫互動。不得宣稱九角色高品質 3D 素材已完成。
 
 > **後續權限核對更新**：已可用 Chrome 的 GitHub 登入會話操作 `Taiwan stock2 / bruqrbvbjxntgoljxsne` SQL Editor，只讀 catalog 成功。新會員物件／圖片 bucket／storage policy 皆無。Run 遷移被自動核准審查拒絕，原因是共用專案標示 PRODUCTION、包含 Auth trigger 與權限，尚缺對這個具體正式目標的確認；已發出確認待回覆。**不得繞路執行；目前未套用任何 schema。** 待接續頁及詳細證據見 `docs/member-db-status.md`。這取代下段「無可用管理連線」的較早狀態。
