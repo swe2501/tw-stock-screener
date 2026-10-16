@@ -16004,7 +16004,9 @@
       const searchable=inp.type==='search'||/搜尋|代號|股名|名稱|新聞|產業|ETF/i.test(inp.placeholder||'');if(!searchable)return;
       inp.autocomplete='off';inp.autocorrect='off';inp.autocapitalize='off';inp.spellcheck=false;
       inp.setAttribute('data-form-type','other');inp.setAttribute('data-lpignore','true');inp.setAttribute('data-1p-ignore','true');
-      inp.name='market-query-'+(inp.id||i);inp.setAttribute('autocomplete','one-time-code');
+      // Named controls are part of form serialization and component lookups (e.g. symbolText).
+      // Autofill protection must not rewrite an existing field contract.
+      if(!inp.name)inp.name='market-query-'+(inp.id||i);inp.setAttribute('autocomplete','one-time-code');
       const clearEmail=()=>{if(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((inp.value||'').trim())){inp.value='';inp.dispatchEvent(new Event('input',{bubbles:true}));}};clearEmail();
       if(!inp.dataset.proSearchGuard){inp.dataset.proSearchGuard='1';inp.readOnly=true;const unlock=()=>{inp.readOnly=false;clearEmail();};inp.addEventListener('pointerdown',unlock,{once:true});inp.addEventListener('focus',unlock,{once:true});setTimeout(unlock,700);[50,250,900,2200].forEach(ms=>setTimeout(clearEmail,ms));inp.addEventListener('change',clearEmail);}
     });

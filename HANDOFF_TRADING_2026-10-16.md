@@ -1,3 +1,5 @@
+> **真正全站衝突已定位**：完整 index 的 `protectSearchInputs` 曾將所有搜尋框 name 改成 `market-query-*`，包含記帳的 `symbolText`，使 productChanged／selectedSpec 查找回傳 null、拋錯並中止格式切換。已改成只替沒有 name 的輸入框指定名稱，保留既有表單欄位契約。新增 `tests/trade-product-full-page.browser.cjs` 載入完整 index 與全部真實模組，以隔離 HTTP 及假 REST 重現失敗後修正，六種商品切換通過、pageerror 為空；先前只載會員模組的 fixture 沒涵蓋這個衝突。使用者目前直接開 file:// 本機檔，已開分頁需重新整理才能載入新程式，推 Git 分支不會自動更新該分頁。
+
 > **商品格式切換修正**：交易方式同步監聽 input／change，不必等 select 失焦才更新；同一切換的重複事件不二次清空價量。現股／ETF／融資／融券共用整張／零股格式；期貨為口數及年月乘數；選擇權為買方／賣方、Call／Put、履約價、年月乘數，成交價標示為權利金。跨商品格式清除不相容標的、價量與合約資料；新的交易方式預設開倉動作，避免沿用上一格式的平倉／方向。六種交易方式與 input-only 更新已通過瀏覽器測試。
 
 > **最新單位／3D 製作接續**：期貨和選擇權固定以口記錄，隱藏整個數量單位選單；口數欄照常可輸入。股票類保留整張／零股。真正角色模型仍 0／135，已準備 Tripo 官方 CLI、135 份原畫需求與參考區域、單一候選的零費用 dry-run；等待使用者自行登入，沒有生成費用或模型完成宣稱。工具選擇與本機接續方式見 `docs/companion-production-workflow.md`，憑證與工具快取不在 repo。
