@@ -16020,12 +16020,11 @@
     const original=window._showView;if(typeof original!=='function'||original.__proScroll)return;
     if('scrollRestoration' in history)history.scrollRestoration='manual';
     let scrollFrame,settleFrame,finishHomeScroll=()=>{};
-    function wrapped(view){
+    function queueScroll(animate){
       finishHomeScroll();
-      const out=original.apply(this,arguments);
       cancelAnimationFrame(scrollFrame);
       scrollFrame=requestAnimationFrame(()=>{
-        const smooth=view==='home'&&scrollY>0&&!matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const smooth=animate&&scrollY>0&&!matchMedia('(prefers-reduced-motion: reduce)').matches;
         if(smooth){
           const events=new AbortController(),deadline=performance.now()+5000;
           document.body.classList.add('pro-home-scrolling');
@@ -16040,9 +16039,37 @@
           if(document.scrollingElement)document.scrollingElement.scrollTop=0;
         }
       });
+    }
+    function wrapped(view){
+      finishHomeScroll();
+      const out=original.apply(this,arguments);
+      queueScroll(view==='home');
       return out;
     }
     wrapped.__proScroll=true;window._showView=wrapped;
+    const nav=document.getElementById('mainNav');
+    if(!nav)return;
+    nav.querySelectorAll('span.mn-item').forEach(item=>{item.tabIndex=0;item.setAttribute('role','button');});
+    function returnToCurrentPage(e){
+      const item=e.target.closest('.mn-item');
+      // The active parent includes all of its child views. Do not rerender or change history.
+      if(!item?.classList.contains('mn-active')||document.body.classList.contains('mc-open'))return;
+      e.preventDefault();e.stopImmediatePropagation();
+      const group=item.closest('.mn-grp'),menu=group?.querySelector('.mn-menu');
+      if(menu){
+        menu.classList.add('mn-hide');
+        const clear=()=>{menu.classList.remove('mn-hide');group.removeEventListener('mouseleave',clear);nav.removeEventListener('pointerdown',clear);};
+        group.addEventListener('mouseleave',clear,{once:true});
+        nav.addEventListener('pointerdown',clear,{once:true});
+      }
+      queueScroll(true);
+    }
+    nav.addEventListener('click',returnToCurrentPage,true);
+    nav.addEventListener('keydown',e=>{
+      if((e.key==='Enter'||e.key===' ')&&e.target.matches('span.mn-item')){
+        if(e.target.classList.contains('mn-active'))returnToCurrentPage(e);
+      }
+    });
   }
   function markPrimaryButtons(){
     const ids=['loginBtn','authSubmit','submitBtn','hpSearchBtn','nwApply','nwQBtn','resetPwBtn'];
