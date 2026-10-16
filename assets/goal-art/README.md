@@ -14,3 +14,7 @@ Companion atlas: Production-ready character-selection atlas for a premium animat
 ## Runtime
 
 `member-goal-art.js` selects atlas regions. CSS provides breathing motion, particles, mist and progress-dependent crossfade. These are illustrated scene animations, **not video or frame-by-frame skeletal character animation**. Static mode and reduced-motion preferences disable motion. Artwork remains on a midnight stage in both themes, while the surrounding UI follows the site's theme.
+
+## Full companion evolution update
+
+The runtime now uses transparent five-stage atlases, independent scenic backgrounds and scene controls. See [EVOLUTION-PROMPTS.md](EVOLUTION-PROMPTS.md) for generation/edit prompts, files and animation limits. Original two atlases above remain as source and gallery thumbnails. All nine companions are available in the gallery; every companion has distinct early/mid/late/final artwork, stage previews and local click interactions.
