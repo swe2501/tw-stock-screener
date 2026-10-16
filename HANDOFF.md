@@ -1,3 +1,5 @@
+最新交易紀錄與目標：[HANDOFF_TRADING_2026-10-16.md](HANDOFF_TRADING_2026-10-16.md)
+
 > **2026-10-16 會員／自選／策略最新交接**：請先讀 [HANDOFF_MEMBER_2026-10-16.md](HANDOFF_MEMBER_2026-10-16.md)。包含本機 justy-layout／UAT 最新狀態、分類溢位、拖曳排序、私房篩選器與尚未啟用的會員服務；舊的部署範例仍須遵守目前 AGENTS.md。
 
 # 交接文件 — AI_stock 盤後研究院（2026-10-05；最後更新 2026-10-13）

@@ -30,3 +30,4 @@ test('SMS payload normalizes number; session accepted only after user validation
 test('expired OAuth callback does not exchange tokens',async()=>{
   const {api,saved,context,calls}=setup();saved.set('academy.oauth',JSON.stringify({verifier:'secret',created:Date.now()-700000}));context.location.search='?code=expired';await assert.rejects(api.consumeCallback(),/逾時/);assert.equal(calls.length,0);assert.equal(saved.has('academy.oauth'),false);
 });
+test('profile gender is optional and validated independently of goal appearance',async()=>{const {api,calls,saved}=setup();saved.set('sb_token','test');await api.updateProfile({gender:'女性'});assert.equal(JSON.parse(calls.at(-1).body).data.gender,'女性');await api.updateProfile({gender:''});assert.equal(JSON.parse(calls.at(-1).body).data.gender,'');await assert.rejects(api.updateProfile({gender:'arbitrary'}),/性別/);});
