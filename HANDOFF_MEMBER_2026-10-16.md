@@ -6,6 +6,8 @@
 
 > **2026-10-16 追加交接（優先於下文舊狀態）**：先讀 `docs/member-db-status.md` 最新節。使用者已授權今日會員功能與既有未串接功能接資料庫。新增 `member-cloud.js` 已接交易／目標／研究／筆記／草稿／私房偏好與私有圖片，支援離線、CAS 與明確版本選擇；12 項同步測試、隔離 PostgreSQL 四份 SQL 與整合瀏覽器測試通過。線上表本輪只讀仍 404，**尚未啟用跨裝置**。缺的是可管理專案的 Supabase 連線；GitHub 登入不等於這個對話已取得該連線。已建議 Supabase 外掛，尚未確認連線。不得再以舊 AGENTS 限制要求重複授權，也不得盲目重跑非冪等 SQL。圖片備份與 3D 素材／寄信 worker 等剩餘內容見最新盤點。
 
+> **API 預算更新**：公開站內搜尋已由獨立 `api/site_search.py` 併入 `api/prices.py`，部署入口由 13 降為 12。舊搜尋網址保留別名；新前端使用 prices 的 `action=site_search`。後續新增前必跑 `scripts/check_api_budget.py`，不得超過 12。抽離標記與升級清單見 `docs/api-budget.md`；不增加會員資料庫或排程入口。
+
 # 會員中心、自選、策略與私房篩選器交接
 
 更新日期：2026-10-16（Asia/Taipei）。使用者要求本次工作完成後交由另一個 AI 接手。

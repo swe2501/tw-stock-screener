@@ -32,6 +32,10 @@
   ],
   "routes": [
     {
+      "src": "/api/site_search(?:\\.py)?$",
+      "dest": "/api/prices.py?action=site_search"
+    },
+    {
       "src": "/api/(.*)",
       "dest": "/api/$1.py"
     },

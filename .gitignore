@@ -5,5 +5,6 @@
 .wantgoo_profile/
 .env.local
 scripts/__pycache__/
+__pycache__/
 scripts/daily_job.log
 scripts/daily_job_stdout.log

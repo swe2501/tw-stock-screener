@@ -61,3 +61,10 @@
 - 不可修改 `.env.local`、排程（`.bat`／Task Scheduler）、Supabase 資料或 schema。
 - 不可動遠端 `Duke` 分支（來源不明，非合夥人分支）。
 - 改版面前先跟使用者說會動哪幾頁，避免與 Claude Code 同時改同一區塊造成衝突。
+
+## API 數量規範（2026-10-16 使用者指示）
+
+- 新增 API 前依 `vercel.json` 盤點部署 Function 入口，最多 **12 支**；超過必須先合併，不能先部署第 13 支。
+- 修改 API／部署設定後、提交與部署前執行 `python scripts/check_api_budget.py`。未知 runtime／部署模式不得略過，先更新盤點程式。
+- 合併時維持原網址相容、參數驗證、授權與快取邊界，優先合併同類公開入口，不混淆私人會員權限。
+- 站內搜尋已合併至 `api/prices.py`；抽離步驟見 `docs/api-budget.md`。升級方案不自動解除使用者上限。
