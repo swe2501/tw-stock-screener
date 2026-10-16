@@ -34,3 +34,4 @@ test('expired OAuth callback does not exchange tokens',async()=>{
 test('LINE stays available when public settings omit custom providers',async()=>{
   const {api,calls}=setup({external:{google:true}});assert.equal(api.providerEnabled({external:{}},'line'),true);await api.startOAuth('line');assert.equal(new URL(calls.at(-1).redirect).searchParams.get('provider'),'custom:line');
 });
+test('profile gender is optional and validated independently of goal appearance',async()=>{const {api,calls,saved}=setup();saved.set('sb_token','test');await api.updateProfile({gender:'女性'});assert.equal(JSON.parse(calls.at(-1).body).data.gender,'女性');await api.updateProfile({gender:''});assert.equal(JSON.parse(calls.at(-1).body).data.gender,'');await assert.rejects(api.updateProfile({gender:'arbitrary'}),/性別/);});

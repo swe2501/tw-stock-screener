@@ -1608,7 +1608,7 @@
   #mainNav .mn-active { color:var(--nav-active-text) !important;background:linear-gradient(135deg,var(--cta-start),var(--cta-end)) !important;border-radius:8px !important;box-shadow:inset 0 1px rgba(255,255,255,.24),0 5px 14px var(--cta-glow); }
   #mainNav .mn-active::after { display:none; }
   body.pro-nav-compact>header { transform:translateY(-110%);opacity:0;pointer-events:none; }
-  body.pro-nav-compact #mainNav { position:fixed !important;top:0;left:0;right:0;width:100%;margin:0 !important;box-shadow:0 10px 30px rgba(4,10,18,.18); }
+  body.pro-nav-compact #mainNav { position:fixed !important;top:0;left:0;right:0;width:100% !important;box-sizing:border-box;margin:0 !important;box-shadow:0 10px 30px rgba(4,10,18,.18); }
   body.pro-nav-compact #mainNav .mn-inner { margin-inline:auto; }
   :root:not([data-theme="light"]) #mainNav .mn-item:not(.mn-active):hover { color:#E7EDF4 !important;background:rgba(42,112,168,.13) !important;box-shadow:inset 0 -2px rgba(63,143,201,.55) !important; }
   .mn-menu { border:1px solid var(--border) !important;border-radius:10px !important;padding:7px !important;background:var(--surface) !important;box-shadow:var(--shadow) !important; }
@@ -2140,6 +2140,9 @@
   }
 </style>
 <link rel="stylesheet" href="assets/member-center.css">
+<link rel="stylesheet" href="assets/member-strategy.css">
+<link rel="stylesheet" href="assets/member-trade.css">
+<link rel="stylesheet" href="assets/site-search.css">
 </head>
 <body>
   <style>
@@ -2293,7 +2296,7 @@
     document.addEventListener('click',function(e){var a=e.target.closest('#mainNav .mn-menu a');if(!a)return;var menu=a.closest('.mn-menu');if(!menu)return;menu.classList.add('mn-hide');var grp=menu.closest('.mn-grp');function clr(){menu.classList.remove('mn-hide');if(grp)grp.removeEventListener('mouseleave',clr);}if(grp)grp.addEventListener('mouseleave',clr,{once:true});setTimeout(function(){document.addEventListener('pointerdown',clr,{once:true});},50);});
   </script>
   <nav id="mainNav"><div class="mn-inner">
-    <a class="mn-item" href="?view=home" onclick="window.location.assign(this.href);return false">首頁</a>
+    <a class="mn-item" href="?view=home" onclick="if(window._showView){window._showView('home');return false;}">首頁</a>
     <div class="mn-grp"><span class="mn-item">今日焦點 <i>▾</i></span><div class="mn-menu">
       <a onclick="_showView('overview')" style="font-weight:800;color:var(--brand-green)"> 總覽</a><a onclick="_showView('focus')">排行榜</a><a onclick="_showView('todayindex')">今日索引</a></div></div>
     <div class="mn-grp"><span class="mn-item">選股 <i>▾</i></span><div class="mn-menu">
@@ -3500,7 +3503,7 @@
       if(!_sel){box.innerHTML='';return;}
       var t=rows().filter(function(x){return x.name===_sel;})[0];
       if(!t){box.innerHTML='';return;}
-      var mrows=(t.members||[]).map(function(m){return '<tr><td onclick="_openStock(\''+esc(m.code)+'\',\''+esc(m.name||'')+'\')">'+esc(m.code)+' '+esc(m.name||'')+'</td><td>'+(m.price!=null?Number(m.price).toLocaleString():'—')+'</td><td class="'+(m.change>=0?'hp-up':'hp-dn')+'">'+sg(m.change)+'</td><td>'+(m.tradeValue/1e8).toFixed(2)+'</td></tr>';}).join('');
+      var mrows=(t.members||[]).map(function(m){return '<tr data-research-code="'+esc(m.code)+'"><td onclick="_openStock(\''+esc(m.code)+'\',\''+esc(m.name||'')+'\')">'+esc(m.code)+' '+esc(m.name||'')+'</td><td>'+(m.price!=null?Number(m.price).toLocaleString():'—')+'</td><td class="'+(m.change>=0?'hp-up':'hp-dn')+'">'+sg(m.change)+'</td><td>'+(m.tradeValue/1e8).toFixed(2)+'</td></tr>';}).join('');
       box.innerHTML='<div class="dh pro-heat-detail-head"><span>'+esc(t.name)+'　'+(_market==='otc'?'上櫃':'上市')+' · '+t.memberCount+' 檔 · 成交額加權 '+sg(t.weightedToday)+'／算術平均 '+sg(t.today)+' · 漲停 '+t.limitUps+'／跌停 '+t.limitDowns+'</span><button class="pro-heat-close" type="button" onclick="_closeThemeDetail()" aria-label="關閉成分股清單" title="關閉並返回完整熱力圖">×</button></div>'
         +'<table class="tmx-mtbl"><thead><tr><th>成分股（依成交額）</th><th>收盤</th><th>漲跌幅</th><th>成交額(億)</th></tr></thead><tbody>'+mrows+'</tbody></table>';
     }
@@ -3550,7 +3553,7 @@
     window._rtStop=window._rtStop||function(){ if(window._rtTimer){clearInterval(window._rtTimer);window._rtTimer=null;} };
     window._rtStart=window._rtStart||function(fn){ window._rtStop();
       if(window._twSession&&window._twSession()){ window._rtTimer=setInterval(function(){
-        if(window._twSession&&window._twSession()){ try{fn();}catch(e){} } else { window._rtStop(); } }, 90000); } };
+        if(window._twSession&&window._twSession()){ try{fn();}catch(e){} } else { window._rtStop(); } }, 35000); } };
     // 進站後閒置時先把題材列表／產業地圖的資料抓好放著（10 分鐘內抓過就不重抓），點開就不用等
     setTimeout(function(){ ['themes','sectors','overview'].forEach(function(k){ try{ var c=JSON.parse(localStorage.getItem('swr_'+k)||'null'); if(c&&c.t&&Date.now()-c.t<600000) return; }catch(e){}
       window._swrJson(k,'https://tw-stock-screener-neon.vercel.app/api/screen?stat='+k,function(){}); }); }, 4000);
@@ -5776,7 +5779,7 @@
     // hot_topics 的 codes／source_urls 可能是 JSON 陣列或 Python 字串表示 → 一律用正規式抽取
     function codesOf(v){ if(Array.isArray(v)) return v; var out=[],re=/['"]code['"]\s*:\s*['"]([^'"]+)['"]\s*,\s*['"]name['"]\s*:\s*['"]([^'"]*)['"]/g,m; while((m=re.exec(String(v||''))))out.push({code:m[1],name:m[2]}); return out; }
     function urlsOf(v){ if(Array.isArray(v)) return v; return String(v||'').match(/https?:\/\/[^'"\s\],]+/g)||[]; }
-    var SB='', H={}, HOT=[], FEED={}, CNT={}, DATES=[], DATE='', SEC='', Q='', PER='all';
+    var SB='', H={}, HOT=[], FEED={}, CNT={}, DATES=[], DATE='', SEC='', Q='', PER='all', OPEN_DATE='', SHOW_REV=0;
     var PLABEL={all:'全部時段',hot:'焦點題材（AI 彙整）',pre:'盤前 06:00-09:00',during:'盤中 09:00-13:30',post:'盤後 13:30-18:00',night:'晚間總經 18:00+'};
     function wk(d){ return '週'+'日一二三四五六'[new Date(d+'T12:00:00+08:00').getDay()]; }
     function twHM(iso){ var t=new Date(new Date(iso).getTime()+8*3600e3); return ('0'+t.getUTCHours()).slice(-2)+':'+('0'+t.getUTCMinutes()).slice(-2); }
@@ -5831,7 +5834,9 @@
         .then(function(r){return r.json();}).then(function(a){ FEED[d]=Array.isArray(a)?a:[]; render(); }).catch(function(){ FEED[d]=[]; render(); });
     }
     var bound=false;
+    window._newsOpenSaved=function(date,query){if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return;OPEN_DATE=date;Q=String(query||'');SEC='';PER='all';el('nwQ').value=Q;el('nwPer').value='all';window._showView('news');};
     window._newsShow=function(){
+      var showRevision=++SHOW_REV;
       if(!bound){ bound=true;
         el('nwApply').onclick=function(){ PER=el('nwPer').value; var d=el('nwDate').value; if(d&&d!==DATE){ SEC=''; loadDate(d); } else render(); };
         el('nwDate').onchange=function(){ if(this.value){ SEC=''; loadDate(this.value); } };
@@ -5845,15 +5850,16 @@
         fetch(SB+'/rest/v1/hot_topics?select=topic,sector,summary,codes,source_urls,heat,published_at&order=published_at.desc,heat.desc&limit=1000',{headers:H}).then(function(r){return r.json();}).catch(function(){return [];}),
         fetch(SB+'/rest/v1/news_feed?select=news_date&order=news_date.desc&limit=1000',{headers:H}).then(function(r){return r.json();}).catch(function(){return [];})
       ]).then(function(res){
+        if(showRevision!==SHOW_REV)return;
         HOT=(Array.isArray(res[0])?res[0]:[]).filter(function(t){return t.published_at;}).map(function(t){ t._codes=codesOf(t.codes); t._urls=urlsOf(t.source_urls); return t; });
         CNT={}; HOT.forEach(function(t){ CNT[t.published_at]=(CNT[t.published_at]||0)+1; });
         (Array.isArray(res[1])?res[1]:[]).forEach(function(r){ CNT[r.news_date]=(CNT[r.news_date]||0)+1; });
         DATES=Object.keys(CNT).sort().reverse();
-        if(!DATES.length){ el('nwList').innerHTML='<div class="nw-empty"><h2>目前無新聞資料</h2></div>'; return; }
-        el('nwDate').max=DATES[0];
+        if(!DATES.length&&!OPEN_DATE){ el('nwList').innerHTML='<div class="nw-empty"><h2>目前無新聞資料</h2></div>'; return; }
+        el('nwDate').max=DATES[0]||OPEN_DATE;
         // 預設日期＝最近一個「超過 10 則」的日期（避免假日只剩零星幾則）；都不到 10 則就用最新日期
         var def=DATES.filter(function(d){return CNT[d]>10;})[0]||DATES[0];
-        loadDate(DATE&&CNT[DATE]?DATE:def);
+        loadDate(OPEN_DATE||(DATE&&CNT[DATE]?DATE:def));OPEN_DATE='';
       });
       el('nwNote').innerHTML='<b>學院導讀</b> 先確認消息時間、來源和事件進度，再對照價格是否已反映。新聞熱度是觀察線索，不是趨勢延續的保證。';
     };
@@ -6190,9 +6196,9 @@
     }
     window._etxReleaseChart=releaseETFChart;
     window._etxCloseDrawer=function(){etxOpenToken++;releaseETFChart();el('etxDrawer').style.display='none';};
-    window._etxOpen=function(code){
+    window._etxOpen=function(code,initialTab){
       if(el('etxDrawer').parentNode!==document.body)document.body.appendChild(el('etxDrawer'));
-      releaseETFChart();drawerCode=String(code);drawerTab='overview';movesFilter='summary';holdingsMode='stocks';
+      releaseETFChart();drawerCode=String(code);drawerTab=['overview','dividend','technical'].includes(initialTab)?initialTab:'overview';movesFilter='summary';holdingsMode='stocks';
       el('etxDrawer').style.display='flex';var token=++etxOpenToken;
       if(pmap[drawerCode]){renderDrawer();refreshActiveDrawer(drawerCode,token);return;}
       el('etxDrawerPanel').innerHTML='<button class="etx-loading-close" onclick="_etxCloseDrawer()">關閉 ✕</button><div class="fc-empty">載入 ETF 資訊…</div>';
@@ -6311,7 +6317,7 @@
       var activeMatches=activeSource&&activeSource.data_date===holdingsDate;
       if(activeMatches){allHoldings=mergeActiveMoves(allHoldings,activeSource,holdingsDate);if(p.aum==null&&Number.isFinite(activeSource.scale)&&activeSource.scale>0)p=Object.assign({},p,{aum:activeSource.scale/1e8});}
       var tabs=[['overview','總覽'],['technical','技術面'],['moves','今日動作'],['holdings','成分股'],['perf','績效'],['similar','相似'],['dividend','配息'],['calc','投資試算'],['profile','規模/基本'],['holders','持有人']];
-      var head='<div class="etx-dh"><div><small style="font-size:10.5px;color:var(--text-muted);font-weight:800">'+(p.active?'ACTIVE ETF':'PASSIVE ETF')+' · 跟誰學研究卡</small><h2>'+drawerCode+' '+esc(p.name||'')+'</h2><div style="font-size:12px;color:var(--text-muted)">'+esc(p.category||'')+(p.manager?' · '+esc(p.manager):'')+'</div></div><button class="x" onclick="window._etxCloseDrawer()">✕</button></div>';
+      var head='<div class="etx-dh" data-research-code="'+drawerCode+'"><div><small style="font-size:10.5px;color:var(--text-muted);font-weight:800">'+(p.active?'ACTIVE ETF':'PASSIVE ETF')+' · 跟誰學研究卡</small><h2>'+drawerCode+' '+esc(p.name||'')+'</h2><div style="font-size:12px;color:var(--text-muted)">'+esc(p.category||'')+(p.manager?' · '+esc(p.manager):'')+'</div></div><button class="x" onclick="window._etxCloseDrawer()">✕</button></div>';
       var hero='<div class="etx-mets" style="margin-bottom:14px"><div><small>收盤</small><b>'+m2(p.close)+'</b></div><div><small>行情</small><b class="'+cls(p.change_pct)+'">'+(p.change_pct==null?'—':(p.change_pct>0?'+':'')+p.change_pct.toFixed(2)+'%')+'</b></div><div><small>規模</small><b>'+(p.aum!=null?m0(p.aum)+' 億':'—')+'</b></div><div><small>受益人數</small><b>'+m0(p.holders)+'</b></div></div>';
       var tb='<div class="etx-dtabs">'+tabs.map(function(t){return '<button class="'+(t[0]===drawerTab?'on':'')+'" onclick="window._etxTab(\''+t[0]+'\')">'+t[1]+'</button>';}).join('')+'</div>';
       el('etxDrawerPanel').innerHTML=head+hero+tb+'<div id="etxDrawerBody"><div class="fc-empty">載入中…</div></div>';
@@ -6686,7 +6692,7 @@
       arr.sort(function(a,b){var av=a[key],bv=b[key];av=av==null?-Infinity:av;bv=bv==null?-Infinity:bv;var d=bv-av;return asc?-d:d;});
       var show=arr.slice(0,400);
       el('efBody').innerHTML=show.length?show.map(function(x){
-        return '<tr onclick="_openStock(\''+x.code+'\',\''+(x.name||'').replace(/\'/g,'')+'\')"><td class="l"><span class="c">'+x.code+'</span> '+(x.name||'')+' <span class="ef-tag '+(x.active?'act':'pas')+'">'+(x.active?'主動':'被動')+'</span></td>'+
+        return '<tr data-research-code="'+x.code+'" onclick="_openStock(\''+x.code+'\',\''+(x.name||'').replace(/\'/g,'')+'\')"><td class="l"><span class="c">'+x.code+'</span> '+(x.name||'')+' <span class="ef-tag '+(x.active?'act':'pas')+'">'+(x.active?'主動':'被動')+'</span></td>'+
           '<td class="ef-cat2">'+(x.category||'—')+'</td>'+
           '<td>'+money(x.close,2)+'</td>'+
           '<td class="'+cls(x.change_pct)+'">'+(x.change_pct==null?'—':(x.change_pct>0?'+':'')+x.change_pct.toFixed(2)+'%')+'</td>'+
@@ -8302,42 +8308,59 @@
     window._openSeriesChart=function(cfg){
       if(document.getElementById('seriesChartDialog'))return;
       var dialog=document.createElement('dialog');dialog.id='seriesChartDialog';dialog.className='vix-chart-dialog';
-      dialog.innerHTML='<header><div><h3>'+cfg.title+'</h3><small>'+cfg.subtitle+'</small></div><button class="vix-close" type="button" aria-label="關閉走勢圖">✕</button></header><div class="vix-chart-controls"><button type="button" data-sc-mode="line" aria-pressed="true">走勢</button><button type="button" data-sc-mode="candles" aria-pressed="false">K棒</button></div><div class="vix-history-status">載入中…</div><div class="vix-history-chart"></div><p class="vix-history-tip">移動滑鼠查看日期與數值</p>';
+      var marksBtnHtml=cfg.yearHigh?'<button type="button" data-sc-marks aria-pressed="true">一年新高</button>':'';
+      dialog.innerHTML='<header><div><h3>'+cfg.title+'</h3><small>'+cfg.subtitle+'</small></div><button class="vix-close" type="button" aria-label="關閉走勢圖">✕</button></header><div class="vix-chart-controls"><button type="button" data-sc-mode="line" aria-pressed="true">走勢</button><button type="button" data-sc-mode="candles" aria-pressed="false">K棒</button><button type="button" data-sc-bench aria-pressed="false">疊加大盤</button>'+marksBtnHtml+'</div><div class="vix-history-status">載入中…</div><div class="vix-history-chart"></div><p class="vix-history-tip">移動滑鼠查看日期與數值</p>';
       document.body.append(dialog);dialog.showModal();dialog.querySelector('.vix-close').focus();
       var closed=false;dialog.querySelector('.vix-close').onclick=function(){dialog.close();};
       var prec=cfg.precision==null?2:cfg.precision;
       var SB=(typeof SIG_SB_URL!=='undefined'&&SIG_SB_URL)?SIG_SB_URL:'https://bruqrbvbjxntgoljxsne.supabase.co',
-          AK=(typeof SIG_SB_ANON!=='undefined'&&SIG_SB_ANON)?SIG_SB_ANON:'sb_publishable_KgYlaR-mqtx4uVre6kPD2A_qO6tdT1y';
+          AK=(typeof SIG_SB_ANON!=='undefined'&&SIG_SB_ANON)?SIG_SB_ANON:'sb_publishable_KgYlaR-mqtx4uVre6kPD2A_qO6tdT1y',
+          hb=(location.hostname.indexOf('git-uat')>=0?'':'https://tw-stock-screener-neon.vercel.app');
       var fetchData;
       if(cfg.source==='apichart'){
-        var hb=(location.hostname.indexOf('git-uat')>=0?'':'https://tw-stock-screener-neon.vercel.app');
         fetchData=fetch(hb+'/api/chart?code='+encodeURIComponent(cfg.apiCode)+'&range=2y&interval=1d').then(function(r){return r.json();}).then(function(j){
           return ((j&&j.data)||[]).map(function(d){return {time:String(d.time||d.date||'').slice(0,10),value:Number(d.close),open:d.open!=null?Number(d.open):null,high:d.high!=null?Number(d.high):null,low:d.low!=null?Number(d.low):null,close:Number(d.close)};}).filter(function(x){return x.time&&isFinite(x.value);});});
       } else {
         fetchData=fetch(SB+'/rest/v1/index_history?code=eq.'+encodeURIComponent(cfg.code)+'&select=trade_date,open,high,low,close&order=trade_date.asc',{headers:{apikey:AK,Authorization:'Bearer '+AK}}).then(function(r){return r.json();}).then(function(a){
           return (a||[]).map(function(r){return {time:r.trade_date,value:Number(r.close),open:r.open!=null?Number(r.open):null,high:r.high!=null?Number(r.high):null,low:r.low!=null?Number(r.low):null,close:Number(r.close)};}).filter(function(x){return x.time&&isFinite(x.value);});});
       }
+      // 大盤(加權 ^TWII)疊加序列：/api/chart 2 年；失敗回空陣列(開關停用)。比照各圖右軸做法。
+      var benchFetch=fetch(hb+'/api/chart?code=%5ETWII&range=2y&interval=1d').then(function(r){return r.json();}).then(function(j){
+        return ((j&&j.data)||[]).map(function(d){return {time:String(d.time||d.date||'').slice(0,10),value:Number(d.close)};}).filter(function(x){return x.time&&isFinite(x.value);});}).catch(function(){return [];});
       var chart=null,observer=null;
       dialog.addEventListener('close',function(){closed=true;if(observer)observer.disconnect();if(chart)chart.remove();dialog.remove();},{once:true});
-      fetchData.then(function(data){
+      Promise.all([fetchData,benchFetch]).then(function(resAll){
         if(closed)return;
+        var data=resAll[0],benchData=resAll[1]||[];
         var status=dialog.querySelector('.vix-history-status'),host=dialog.querySelector('.vix-history-chart');
         if(!data.length){status.textContent='目前沒有可用歷史資料';return;}
         var candleData=data.filter(function(r){return r.open!=null&&r.high!=null&&r.low!=null&&isFinite(r.open)&&isFinite(r.high)&&isFinite(r.low);}).map(function(r){return {time:r.time,open:r.open,high:r.high,low:r.low,close:r.close!=null?r.close:r.value};});
         status.textContent=data[0].time+' → '+data[data.length-1].time+' · '+data.length+' 筆'+(candleData.length?'':'｜僅收盤序列');
         var candleBtn=dialog.querySelector('[data-sc-mode="candles"]');candleBtn.disabled=!candleData.length;if(!candleData.length)candleBtn.title='此來源僅有每日收盤';
+        // 一年新高：每段突破只標首日(避免「一年新高」字樣重疊)
         var marks=[];
-        if(cfg.yearHigh){for(var i=252;i<data.length;i++){var hi=Math.max.apply(null,data.slice(i-252,i).map(function(r){return r.value;}));if(data[i].value>hi)marks.push({time:data[i].time,position:'aboveBar',color:'#e0a619',shape:'arrowDown',text:'一年新高'});}}
+        if(cfg.yearHigh){var prev=false;for(var i=252;i<data.length;i++){var hi=Math.max.apply(null,data.slice(i-252,i).map(function(r){return r.value;}));var isHigh=data[i].value>hi;if(isHigh&&!prev)marks.push({time:data[i].time,position:'aboveBar',color:'#e0a619',shape:'arrowDown',text:'一年新高'});prev=isHigh;}}
         if(typeof LightweightCharts==='undefined'){host.textContent='圖表套件尚未載入，請稍後再試。';return;}
         var light=document.documentElement.dataset.theme==='light',mm=Math.pow(10,-prec);
-        chart=LightweightCharts.createChart(host,{width:host.clientWidth,height:360,layout:{background:{color:'transparent'},textColor:light?'#52677d':'#bacbdd'},grid:{vertLines:{color:light?'#e5ecf3':'#263a4d'},horzLines:{color:light?'#e5ecf3':'#263a4d'}},timeScale:{borderColor:light?'#d8e3ed':'#334a60'},rightPriceScale:{borderColor:light?'#d8e3ed':'#334a60'}});
+        chart=LightweightCharts.createChart(host,{width:host.clientWidth,height:360,layout:{background:{color:'transparent'},textColor:light?'#52677d':'#bacbdd'},grid:{vertLines:{color:light?'#e5ecf3':'#263a4d'},horzLines:{color:light?'#e5ecf3':'#263a4d'}},timeScale:{borderColor:light?'#d8e3ed':'#334a60'},rightPriceScale:{borderColor:light?'#d8e3ed':'#334a60'},leftPriceScale:{visible:false,borderColor:light?'#d8e3ed':'#334a60'}});
         var series=chart.addAreaSeries({lineColor:'#d5a14b',topColor:'rgba(213,161,75,.22)',bottomColor:'rgba(213,161,75,.015)',lineWidth:2,priceLineVisible:false,priceFormat:{type:'price',precision:prec,minMove:mm}});
-        series.setData(data.map(function(r){return {time:r.time,value:r.value};}));if(marks.length)series.setMarkers(marks);
+        series.setData(data.map(function(r){return {time:r.time,value:r.value};}));
         var candles=null,mode='line';
-        if(candleData.length){candles=chart.addCandlestickSeries({visible:false,upColor:'#dd685f',downColor:'#4caf83',wickUpColor:'#dd685f',wickDownColor:'#4caf83',borderVisible:false,priceLineVisible:false,priceFormat:{type:'price',precision:prec,minMove:mm}});candles.setData(candleData);if(marks.length)candles.setMarkers(marks.filter(function(m){return candleData.some(function(c){return c.time===m.time;});}));}
+        if(candleData.length){candles=chart.addCandlestickSeries({visible:false,upColor:'#dd685f',downColor:'#4caf83',wickUpColor:'#dd685f',wickDownColor:'#4caf83',borderVisible:false,priceLineVisible:false,priceFormat:{type:'price',precision:prec,minMove:mm}});candles.setData(candleData);}
+        // 大盤疊加（左軸，藍色虛線）
+        var bench=null;
+        if(benchData.length){bench=chart.addLineSeries({color:'#3a86e0',lineWidth:1,lineStyle:LightweightCharts.LineStyle.Dashed,priceScaleId:'left',title:'加權',visible:false,priceLineVisible:false,crosshairMarkerVisible:false,lastValueVisible:true,priceFormat:{type:'custom',minMove:1,formatter:function(v){return Math.round(v).toLocaleString();}}});bench.setData(benchData);}
+        var benchBtn=dialog.querySelector('[data-sc-bench]');benchBtn.disabled=!bench;if(!bench)benchBtn.title='大盤資料暫時無法取得';
+        if(benchBtn&&bench)benchBtn.onclick=function(){var on=benchBtn.getAttribute('aria-pressed')!=='true';benchBtn.setAttribute('aria-pressed',String(on));bench.applyOptions({visible:on});chart.priceScale('left').applyOptions({visible:on});};
+        // 一年新高 開關
+        var marksOn=true;
+        function applyMarks(){var mk=marksOn?marks:[];series.setMarkers(mk);if(candles)candles.setMarkers(mk.filter(function(m){return candleData.some(function(c){return c.time===m.time;});}));}
+        if(marks.length)applyMarks();
+        var marksBtn=dialog.querySelector('[data-sc-marks]');
+        if(marksBtn)marksBtn.onclick=function(){marksOn=!marksOn;marksBtn.setAttribute('aria-pressed',String(marksOn));applyMarks();};
         chart.timeScale().fitContent();
         dialog.querySelectorAll('[data-sc-mode]').forEach(function(btn){btn.onclick=function(){if(btn.disabled)return;mode=btn.dataset.scMode;series.applyOptions({visible:mode==='line'});if(candles)candles.applyOptions({visible:mode==='candles'});dialog.querySelectorAll('[data-sc-mode]').forEach(function(b){b.setAttribute('aria-pressed',String(b===btn));});};});
-        chart.subscribeCrosshairMove(function(pm){var v=pm.seriesData.get(mode==='candles'&&candles?candles:series);dialog.querySelector('.vix-history-tip').textContent=(v&&pm.time)?(pm.time+'｜'+Number(v.value!=null?v.value:v.close).toLocaleString(undefined,{minimumFractionDigits:prec,maximumFractionDigits:prec})+(cfg.unit||'')):'移動滑鼠查看日期與數值';});
+        chart.subscribeCrosshairMove(function(pm){var v=pm.seriesData.get(mode==='candles'&&candles?candles:series),b=bench?pm.seriesData.get(bench):null;dialog.querySelector('.vix-history-tip').textContent=(v&&pm.time)?(pm.time+'｜'+Number(v.value!=null?v.value:v.close).toLocaleString(undefined,{minimumFractionDigits:prec,maximumFractionDigits:prec})+(cfg.unit||'')+(b&&b.value!=null?'　加權 '+Math.round(b.value).toLocaleString():'')):'移動滑鼠查看日期與數值';});
         observer=new ResizeObserver(function(){chart.applyOptions({width:host.clientWidth});});observer.observe(host);
       }).catch(function(){var s=dialog.querySelector('.vix-history-status');if(s)s.textContent='讀取失敗，請稍後再試。';});
     };
@@ -8508,6 +8531,7 @@
       byCodePfx.sort(sc);byName.sort(sc);
       return byCodeExact.concat(byCodePfx,byNameExact,byName).slice(0,20);
     }
+    window._academyStockMatches=_hpMatch;
     function _hpRenderDrop(){
       var box=el('hpSearchDrop'), inp=el('hpSearch'); if(!box)return;
       if(!_hpList.length){ box.hidden=true; if(inp)inp.setAttribute('aria-expanded','false'); return; }
@@ -8534,7 +8558,7 @@
     }
     document.addEventListener('input',function(e){ if(e.target&&e.target.id==='hpSearch')_hpInput(); });
     document.addEventListener('click',function(e){
-      var it=e.target.closest('.gs-sd-item'); if(it){ _hpOpen(it.dataset.code,it.dataset.name); return; }
+      var it=e.target.closest('#hpSearchDrop .gs-sd-item'); if(it){ _hpOpen(it.dataset.code,it.dataset.name); return; }
       var b=e.target.closest('#hpSearchBtn'); if(b){doSearch();return;}
       var tg=e.target.closest('.gs-tag'); if(tg){ if(window._openTheme)window._openTheme(tg.dataset.theme||''); return; }
       if(!e.target.closest('.gs-search')){ var d=el('hpSearchDrop'); if(d)d.hidden=true; }
@@ -9773,7 +9797,7 @@
               <span style="white-space:nowrap;color:#666;font-size:10px">張時通知</span>
             </div>
             <div class="chart-watch-status" id="chartWatchStatus">★ 已列入觀察清單</div>
-            <button class="btn-save-chart-watch" id="chartSaveWatchBtn" onclick="saveWatchFromChart()"> 儲存到觀察清單</button>
+            <button class="btn-save-chart-watch" id="chartSaveWatchBtn" onclick="saveWatchFromChart()"> 儲存收藏理由與到價設定</button>
             <button class="btn-remove-chart-watch" id="chartRemoveWatchBtn" onclick="removeWatchFromChart()" style="display:none">✕ 移除觀察清單</button>
           </div>
           <!-- 基本面 -->
@@ -10371,12 +10395,6 @@
           <tr onclick="openChart('${s.code}','${s.name.replace(/'/g,"\\'")}','${(s.industry||'').replace(/'/g,"\\'")}',${s.close},true)">
             <td data-viewed-code="${s.code}"
               style="text-align:center;width:44px;font-size:14px;${viewed(s.code) ? 'color:#4caf50' : 'color:rgba(255,255,255,0.15)'}">${viewed(s.code) ? '✓' : '–'}</td>
-            ${_authToken ? `<td style="text-align:center;padding:0 4px">
-              <span class="watch-star-col" data-code="${s.code}"
-                style="font-size:16px;cursor:default;${isWatched ? 'color:#f1c40f' : 'color:rgba(255,255,255,0.2)'}"
-                title="${isWatched ? '已列入觀察' : '尚未列入觀察'}">
-                ${isWatched ? '★' : '☆'}</span>
-            </td>` : ''}
             ${_authToken ? `<td onclick="event.stopPropagation();_btAddPrompt('${s.code}','${s.name.replace(/'/g,"\\'")}',${s.close})" title="加入回測勝率" style="text-align:center;padding:0 4px;cursor:pointer;font-size:15px"></td>` : ''}
             <td class="code-cell">
               <a href="https://www.twse.com.tw/zh/trading/historical/stock-day.html?stockNo=${s.code}" target="_blank" onclick="event.stopPropagation()">${s.code}</a>${
@@ -10407,7 +10425,6 @@
             <thead>
               <tr>
                 <th style="text-align:center;width:44px">已看過</th>
-                ${_authToken ? '<th style="text-align:center;width:52px">列入觀察</th>' : ''}
                 ${_authToken ? '<th style="text-align:center;width:44px">回測</th>' : ''}
                 <th onclick="setSort('code')" class="${sortKey==='code'?'sorted':''}">代號<span class="sort-arrow">${sortKey==='code'?(sortDir>0?'▲':'▼'):''}</span></th>
                 <th>名稱</th>
@@ -10454,6 +10471,7 @@
     });
 
     // ── K線圖 state ─────────────────────────────────────────
+    window.AcademyResearchChartContext=()=>({code:currentCode,name:currentName,industry:currentIndustry,chart_snapshot:window._academyChartSnapshot?.code===currentCode?{...window._academyChartSnapshot,ma:[...document.querySelectorAll('#chartModal .ma-toggle:not(.hidden)')].map(e=>e.textContent.trim()).filter(t=>/^MA[0-9]+$/.test(t))}:null,created_at:new Date().toISOString()});
     let currentCode = '';
     let currentName = '';
     let currentIndustry = '';
@@ -12982,17 +13000,19 @@
       const m = document.getElementById('chartModal'); if (m && m.classList.contains('kfull') && !document.fullscreenElement) _setChartFull(false); });
 
     function closeChart() {
+      const wasMemberChart=document.body.classList.contains('mc-chart-open');
       if(document.getElementById('chartModal').classList.contains('etx-embedded')){window._etxTab('overview');return;}
       _chartRequestId++;
       _userMarkers = {};  // 關閉 K 圖時清掉所有日期標記（暫時性設計）
       _stopRealtimeUpdates();
       _setChartFull(false);
       document.getElementById('chartModal').classList.remove('open');
+      document.body.classList.remove('mc-chart-open');
       _destroyCharts();
       if (_drawTool) { try { window._setDrawTool(_drawTool); } catch (_) {} }   // 關閉 K 圖時取消畫線工具（按鈕一併還原）
       _resetDrawingState();
       // 從主力訊號面板點進來的 → 關閉 K 圖後回到訊號視圖（主力訊號已改為 sigView）
-      if (_sigReturn) {
+      if (_sigReturn && !wasMemberChart) {
         _sigReturn = false;
         try { window._showView('sig'); } catch (e) {}
       }
@@ -13361,6 +13381,7 @@
     function _wkKey(d) { const dt = new Date(d + 'T00:00:00Z'); const day = dt.getUTCDay() || 7; dt.setUTCDate(dt.getUTCDate() + 4 - day); const ys = new Date(Date.UTC(dt.getUTCFullYear(), 0, 1)); const wk = Math.ceil((((dt - ys) / 86400000) + 1) / 7); return dt.getUTCFullYear() + '-W' + wk; }
 
     function _loadChartUrl(url, subtitle, agg) {
+      window._academyChartSnapshot={code:currentCode,period:subtitle,url};
       const requestId=++_chartRequestId;
       _chartLoading();
       fetch(url)
@@ -13371,6 +13392,7 @@
             document.getElementById('chartLoading').innerHTML = ' 無法取得圖表資料';
             return;
           }
+          if(window._academyChartSnapshot?.code===currentCode)window._academyChartSnapshot.data_date=data.data.at(-1)?.time||null;
           if (agg) data.data = agg(data.data);
           window._chartIsHourly = typeof data.data[0].time === 'number';
           if (window._chartIsHourly) data.data.forEach(c => { c.time += 8 * 3600; });
@@ -13888,7 +13910,7 @@
       ];
       MA_COLORS.forEach(({ period, color }) => {
         const sma = calcSMA(closes, period);
-        const s = chartInstance.addLineSeries({
+        const s = chartInstance.addLineSeries({crosshairMarkerRadius:1.5,crosshairMarkerBorderWidth:0,
           color, lineWidth: 1.5,
           crosshairMarkerVisible: false,
           lastValueVisible: false,
@@ -14163,12 +14185,12 @@
       })));
       volSeriesRef = volSeries;
 
-      const vma5s = volInstance.addLineSeries({
+      const vma5s = volInstance.addLineSeries({crosshairMarkerRadius:1.5,crosshairMarkerBorderWidth:0,
         color: '#f39c12', lineWidth: 1,
         crosshairMarkerVisible: false, lastValueVisible: false,
         autoscaleInfoProvider: _autoScale,
       });
-      const vma10s = volInstance.addLineSeries({
+      const vma10s = volInstance.addLineSeries({crosshairMarkerRadius:1.5,crosshairMarkerBorderWidth:0,
         color: '#e74c3c', lineWidth: 1,
         crosshairMarkerVisible: false, lastValueVisible: false,
         autoscaleInfoProvider: _autoScale,
@@ -14210,9 +14232,9 @@
           color: hist[i] >= 0 ? 'rgba(231,76,60,0.65)' : 'rgba(38,194,129,0.65)',
         } : null).filter(Boolean)
       );
-      const macdSeries = macdInstance.addLineSeries({ color: '#e74c3c', lineWidth: 1, priceScaleId: 'right' });
+      const macdSeries = macdInstance.addLineSeries({crosshairMarkerRadius:1.5,crosshairMarkerBorderWidth:0, color: '#e74c3c', lineWidth: 1, priceScaleId: 'right' });
       macdSeries.setData(times.map((t, i) => macd[i] !== null ? { time: t, value: macd[i] } : null).filter(Boolean));
-      const sigSeries = macdInstance.addLineSeries({ color: '#f39c12', lineWidth: 1, priceScaleId: 'right' });
+      const sigSeries = macdInstance.addLineSeries({crosshairMarkerRadius:1.5,crosshairMarkerBorderWidth:0, color: '#f39c12', lineWidth: 1, priceScaleId: 'right' });
       sigSeries.setData(times.map((t, i) => signal[i] !== null ? { time: t, value: signal[i] } : null).filter(Boolean));
       macdSeries.createPriceLine({
         price: 0, color: 'rgba(200,209,217,0.25)', lineWidth: 1,
@@ -14249,8 +14271,8 @@
       rsiAnchor.setData(times.map(t => ({ time: t, value: 0 })));
 
       const autoScale = () => ({ priceRange: { minValue: 0, maxValue: 100 } });
-      const r10 = rsiInstance.addLineSeries({ color: '#4f8ef7', lineWidth: 1, priceScaleId: 'right', autoscaleInfoProvider: autoScale });
-      const r5  = rsiInstance.addLineSeries({ color: '#f39c12', lineWidth: 1, priceScaleId: 'right', autoscaleInfoProvider: autoScale });
+      const r10 = rsiInstance.addLineSeries({crosshairMarkerRadius:1.5,crosshairMarkerBorderWidth:0, color: '#4f8ef7', lineWidth: 1, priceScaleId: 'right', autoscaleInfoProvider: autoScale });
+      const r5  = rsiInstance.addLineSeries({crosshairMarkerRadius:1.5,crosshairMarkerBorderWidth:0, color: '#f39c12', lineWidth: 1, priceScaleId: 'right', autoscaleInfoProvider: autoScale });
       r10.setData(times.map((t, i) => rsi10[i] !== null ? { time: t, value: rsi10[i] } : null).filter(Boolean));
       r5.setData(times.map((t, i)  => rsi5[i]  !== null ? { time: t, value: rsi5[i]  } : null).filter(Boolean));
       seriesMap['rsi5']  = r5;
@@ -15280,6 +15302,7 @@
     }
 
     function _refreshWatchBtns() {
+      window.AcademyResearch?.setCodes([..._watchCodes]);
       document.querySelectorAll('.watch-btn[data-code]').forEach(btn => {
         const code = btn.dataset.code;
         btn.classList.toggle('active', _watchCodes.has(code));
@@ -15308,7 +15331,7 @@
       const saveBtn  = document.getElementById('chartSaveWatchBtn');
       const rmBtn    = document.getElementById('chartRemoveWatchBtn');
       if (statusEl) statusEl.style.display = 'none'; // 由 header 按鈕顯示狀態，這裡不重複
-      if (saveBtn)  saveBtn.textContent = watched ? ' 儲存備註' : ' 儲存到觀察清單';
+      if (saveBtn)  saveBtn.textContent = ' 儲存收藏理由與到價設定';
       if (rmBtn)    rmBtn.style.display = watched ? '' : 'none';
     }
 
@@ -15393,7 +15416,7 @@
           _refreshWatchBtns();
           if (!document.getElementById('watchlistPanel').classList.contains('hidden'))
             _renderWatchTable();
-          showToast(`${code} ${name} 已加入觀察清單`);
+          showToast(`${code} ${name} 已加入會員中心 → 我的自選`);
         } else {
           showToast('儲存失敗，請稍後再試', true);
         }
@@ -15981,36 +16004,78 @@
       const searchable=inp.type==='search'||/搜尋|代號|股名|名稱|新聞|產業|ETF/i.test(inp.placeholder||'');if(!searchable)return;
       inp.autocomplete='off';inp.autocorrect='off';inp.autocapitalize='off';inp.spellcheck=false;
       inp.setAttribute('data-form-type','other');inp.setAttribute('data-lpignore','true');inp.setAttribute('data-1p-ignore','true');
-      inp.name='market-query-'+(inp.id||i);inp.setAttribute('autocomplete','one-time-code');
+      // Named controls are part of form serialization and component lookups (e.g. symbolText).
+      // Autofill protection must not rewrite an existing field contract.
+      if(!inp.name)inp.name='market-query-'+(inp.id||i);inp.setAttribute('autocomplete','one-time-code');
       const clearEmail=()=>{if(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((inp.value||'').trim())){inp.value='';inp.dispatchEvent(new Event('input',{bubbles:true}));}};clearEmail();
       if(!inp.dataset.proSearchGuard){inp.dataset.proSearchGuard='1';inp.readOnly=true;const unlock=()=>{inp.readOnly=false;clearEmail();};inp.addEventListener('pointerdown',unlock,{once:true});inp.addEventListener('focus',unlock,{once:true});setTimeout(unlock,700);[50,250,900,2200].forEach(ms=>setTimeout(clearEmail,ms));inp.addEventListener('change',clearEmail);}
     });
   }
   function stickyNavigation(){
     let last=scrollY,ticking=false;
-    const sync=()=>{const y=scrollY,down=y>last+3;if(y<90)document.body.classList.remove('pro-nav-compact');else if(down)document.body.classList.add('pro-nav-compact');else if(y<last-3)document.body.classList.remove('pro-nav-compact');last=y;ticking=false;};
+    const sync=()=>{const y=scrollY,down=y>last+3;if(y<90){document.body.classList.remove('pro-nav-compact');}else if(document.body.classList.contains('pro-home-scrolling')||down)document.body.classList.add('pro-nav-compact');else if(y<last-3)document.body.classList.remove('pro-nav-compact');last=y;ticking=false;};
     addEventListener('scroll',()=>{if(!ticking){requestAnimationFrame(sync);ticking=true;}},{passive:true});
   }
   function resetViewScroll(){
     const original=window._showView;if(typeof original!=='function'||original.__proScroll)return;
     if('scrollRestoration' in history)history.scrollRestoration='manual';
-    let scrollFrame;
-    function wrapped(view){
-      const out=original.apply(this,arguments);
+    let scrollFrame,settleFrame,finishHomeScroll=()=>{};
+    function queueScroll(animate){
+      finishHomeScroll();
       cancelAnimationFrame(scrollFrame);
       scrollFrame=requestAnimationFrame(()=>{
-        document.body.classList.remove('pro-nav-compact');
-        scrollTo({top:0,left:0,behavior:'instant'});
-        if(document.scrollingElement)document.scrollingElement.scrollTop=0;
+        const smooth=animate&&scrollY>0&&!matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if(smooth){
+          const events=new AbortController(),deadline=performance.now()+5000;
+          document.body.classList.add('pro-home-scrolling');
+          finishHomeScroll=()=>{cancelAnimationFrame(settleFrame);events.abort();scrollTo({top:scrollY<=1?0:scrollY,left:scrollX,behavior:'instant'});document.body.classList.remove('pro-home-scrolling');finishHomeScroll=()=>{};};
+          ['wheel','touchstart','pointerdown','keydown'].forEach(type=>addEventListener(type,finishHomeScroll,{once:true,passive:true,signal:events.signal}));
+          scrollTo({top:0,left:0,behavior:'smooth'});
+          const settle=()=>{if(scrollY<=1||performance.now()>deadline){finishHomeScroll();if(scrollY<=1)document.body.classList.remove('pro-nav-compact');}else settleFrame=requestAnimationFrame(settle);};
+          settleFrame=requestAnimationFrame(settle);
+        }else{
+          document.body.classList.remove('pro-nav-compact');
+          scrollTo({top:0,left:0,behavior:'instant'});
+          if(document.scrollingElement)document.scrollingElement.scrollTop=0;
+        }
       });
+    }
+    function wrapped(view){
+      finishHomeScroll();
+      const out=original.apply(this,arguments);
+      queueScroll(view==='home');
       return out;
     }
     wrapped.__proScroll=true;window._showView=wrapped;
+    const nav=document.getElementById('mainNav');
+    if(!nav)return;
+    nav.querySelectorAll('span.mn-item').forEach(item=>{item.tabIndex=0;item.setAttribute('role','button');});
+    function returnToCurrentPage(e){
+      const item=e.target.closest('.mn-item');
+      // The active parent includes all of its child views. Do not rerender or change history.
+      if(!item?.classList.contains('mn-active')||document.body.classList.contains('mc-open'))return;
+      e.preventDefault();e.stopImmediatePropagation();
+      const group=item.closest('.mn-grp'),menu=group?.querySelector('.mn-menu');
+      if(menu){
+        menu.classList.add('mn-hide');
+        const clear=()=>{menu.classList.remove('mn-hide');group.removeEventListener('mouseleave',clear);nav.removeEventListener('pointerdown',clear);};
+        group.addEventListener('mouseleave',clear,{once:true});
+        nav.addEventListener('pointerdown',clear,{once:true});
+      }
+      queueScroll(true);
+    }
+    nav.addEventListener('click',returnToCurrentPage,true);
+    nav.addEventListener('keydown',e=>{
+      if((e.key==='Enter'||e.key===' ')&&e.target.matches('span.mn-item')){
+        if(e.target.classList.contains('mn-active'))returnToCurrentPage(e);
+      }
+    });
   }
   function markPrimaryButtons(){
     const ids=['loginBtn','authSubmit','submitBtn','hpSearchBtn','nwApply','nwQBtn','resetPwBtn'];
     ids.forEach(id=>document.getElementById(id)?.classList.add('pro-primary'));
     document.querySelectorAll('button').forEach(b=>{
+      if(b.closest('.mc-nav,.mc-top-actions')){b.classList.remove('pro-primary');return;}
       const t=(b.textContent||'').trim();
       if(/^(開始篩選|開始探索|搜尋|查詢|套用篩選|登入|立即訂閱|解鎖)/.test(t)&&!/清除|取消|關閉/.test(t))b.classList.add('pro-primary');
     });
@@ -16306,7 +16371,7 @@
   async function enhanceSearchPanel(drop){
     if(!drop||drop.hidden)return;
     const items=[...drop.querySelectorAll('.gs-sd-item')];if(!items.length)return;
-    const inp=drop.id==='topSearchDrop'?document.getElementById('topStockSearch'):document.getElementById('hpSearch'),q=(inp?.value||'').trim().toLowerCase();
+    const inp=drop.dataset.searchInput?document.getElementById(drop.dataset.searchInput):drop.id==='topSearchDrop'?document.getElementById('topStockSearch'):document.getElementById('hpSearch'),q=(inp?.value||'').trim().toLowerCase();
     const key=q+'|'+items.map(i=>i.dataset.code||'').join(',');
     if(drop.dataset.proEnhancedKey===key&&drop.querySelector('.pro-search-head')&&drop.querySelector('.pro-search-foot'))return;
     drop.dataset.proEnhancedKey=key;drop.querySelectorAll('.pro-search-head,.pro-search-foot').forEach(e=>e.remove());
@@ -16321,6 +16386,7 @@
     const codes=items.map(i=>i.dataset.code).filter(Boolean);await loadSearchQuotes(codes);
     [...drop.querySelectorAll('.gs-sd-item')].forEach(it=>{const n=proQuoteCache[it.dataset.code],quote=it.querySelector('.pro-search-quote');if(!quote)return;quote.classList.remove('up','down');if(Number.isFinite(n)){quote.textContent=(n>0?'+':'')+n.toFixed(2)+'%';if(n>0)quote.classList.add('up');else if(n<0)quote.classList.add('down');}else quote.textContent='—';});
   }
+  window._academyEnhanceSearchPanel=enhanceSearchPanel;
   let proTopicTrendPromise;
   function loadTopicTrends(){
     if(proTopicTrendPromise)return proTopicTrendPromise;
@@ -16654,15 +16720,29 @@
  window._openMarketTrain=async function(){if(document.getElementById('marketTrainDialog'))return;const d=document.createElement('dialog');d.id='marketTrainDialog';d.className='market-train-dialog';d.innerHTML='<header><div><h2>加權指數 · 市場列車</h2><small>盤後收盤觀察</small></div><div class="train-dialog-actions"><button class="train-fullscreen" aria-label="切換全螢幕">⛶ 全螢幕</button><button class="train-close" aria-label="關閉市場列車">✕</button></div></header><div class="train-loading" role="status">讀取加權指數歷史資料…</div><div class="train-content" hidden></div>';document.body.append(d);d.showModal();d.querySelector('.train-close').onclick=()=>d.close();d.querySelector('.train-fullscreen').onclick=function(){const panel=d.querySelector('.train-compass-panel'),compass=d.querySelector('.train-map-compass');if(panel)panel.hidden=true;if(compass)compass.setAttribute('aria-expanded','false');const full=d.classList.toggle('train-is-fullscreen');this.textContent=full?'⛶ 還原視窗':'⛶ 全螢幕';};let chart,ro,stopRail,stopSea;d.addEventListener('close',()=>{if(stopRail)stopRail();if(stopSea)stopSea();if(ro)ro.disconnect();if(chart)chart.remove();d.remove();},{once:true});
  try{const req=await fetch(SIG_SB_URL+'/rest/v1/taiex_daily?select=trade_date,open,high,low,close&order=trade_date.desc&limit=700',{headers:{apikey:SIG_SB_ANON,Authorization:'Bearer '+SIG_SB_ANON}});if(!req.ok)throw Error('資料暫時無法取得');const rows=await req.json();if(!d.isConnected)return;if(!Array.isArray(rows)||!rows.length)throw Error('尚無加權歷史資料');const r=analyze(rows),m=meanings[r.state],dir=r.short===1?'north':r.short===-1?'south':'pause';const content=d.querySelector('.train-content');content.classList.add(dir);content.innerHTML=`<section class="train-chart-section"><div class="train-chart-heading"><h3>加權指數走勢</h3><span>${r.data[r.data.length-1].trade_date}｜${Number(r.data[r.data.length-1].close).toLocaleString()} 點</span></div><div class="train-chart-modes"><button type="button" data-index-mode="line" aria-pressed="true">走勢</button><button type="button" data-index-mode="candles" aria-pressed="false">K棒</button><small class="train-candle-note"></small></div><div class="train-ma-toggles">${periods.map((p,i)=>`<button aria-pressed="true" data-period="${p}" style="--ma-color:${colors[i]}">${p}日均線</button>`).join('')}</div><div class="train-index-chart"></div><p class="train-crosshair">移動滑鼠查看收盤與均線</p></section><section class="train-stage"><div class="train-map-card">${map(r)}</div><div class="train-story"><small>目前站位</small><h3>${r.state==='missing'?'待確認':stations[r.station][0]+'站'}</h3><div class="train-state">${m[0]}</div><p>${m[1]}</p><div class="train-reason"><b>狀態解惑</b><p>${r.state==='missing'?'資料不足，先不推定趨勢。':'短線'+(r.short===1?'股價與短均線同向改善':r.short===-1?'股價與短均線同向轉弱':'尚未形成一致方向')+'；中期'+(r.mid===1?'20與60日結構向上':r.mid===-1?'20與60日結構向下':'仍在整理或確認')+'。長期提供背景，不由單日漲跌改寫。'}</p></div><div class="train-layer-lights">${[['短期',r.short,'5 / 10日'],['中期',r.mid,'20 / 60日'],['長期',r.long,'120 / 240日']].map(x=>`<details class="train-layer-detail"><summary><i class="${x[1]===1?'north':x[1]===-1?'south':'pause'}"></i><b>${x[0]}：${x[1]==null?'資訊不足':x[1]===1?'向北':x[1]===-1?'向南':'整理／分歧'}</b><small>${x[2]}</small><span aria-hidden="true">＋</span></summary><p>${x[0]==='短期'?'觀察最近幾天的價格節奏，主要決定羅盤方向。短線轉弱可能只是回站，還要看中期結構是否保持。':x[0]==='中期'?'觀察波段主方向。中期仍向上時，短線拉回與中期轉空需要分開理解；若價格與中期均線一起轉弱，再留意南下是否成立。':'觀察較長時間的市場背景。長期向上不代表短線不會下跌，長期轉弱也可能出現反彈；用來理解站位，不直接決定今天的行駛方向。'}</p><p>${x[1]==null?'目前歷史資料不足，暫不推定方向。':x[1]===1?'目前價格位置與這組均線方向較一致向上，接下來觀察能否持續站穩。':x[1]===-1?'目前價格位置與這組均線方向較一致向下，反彈時觀察結構是否真的改善。':'目前價格位置、均線排列或方向尚未一致，先保留結論，搭配K棒、量能與廣度確認。'}</p></details>`).join('')}</div><div class="train-next"><b>下一個確認點</b><p>${m[2]}</p></div><div class="train-forks"><div><b>改善觀察</b><p>短線重新站穩，中期維持或恢復向上，再看成交量與市場參與是否配合。</p></div><div><b>轉弱觀察</b><p>短線持續轉弱，價格失守中期均線且均線開始下彎，留意轉轍是否成立。</p></div></div><div class="train-guide"><b>學院導讀</b><p>先看中長期結構，再看短線方向。列車回站或反彈，不一定改變主趨勢；搭配K棒、成交量與市場廣度確認。站名不是指數目標，動畫不是未來路徑。</p></div></div></section>`;content.hidden=false;d.querySelector('.train-loading').hidden=true;stopRail=animateRail(content);stopSea=animateSea(content);bindTrainCompass(content);
  const host=content.querySelector('.train-index-chart');if(typeof LightweightCharts==='undefined'){host.textContent='圖表套件尚未載入';return;}
- const light=document.documentElement.dataset.theme==='light';chart=LightweightCharts.createChart(host,{width:host.clientWidth,height:310,layout:{background:{color:'transparent'},textColor:light?'#536b80':'#a8bfd2'},grid:{vertLines:{color:light?'#e4edf4':'#253a4b'},horzLines:{color:light?'#e4edf4':'#253a4b'}},timeScale:{borderColor:light?'#cfdde8':'#30495c'}});const price=chart.addLineSeries({color:light?'#233c56':'#e8f2fb',lineWidth:2,priceLineVisible:false,title:'加權收盤'});price.setData(r.data.map(x=>({time:x.trade_date,value:+x.close})));const candleRows=r.data.filter(x=>['open','high','low'].every(k=>x[k]!=null&&Number.isFinite(+x[k]))).map(x=>({time:x.trade_date,open:+x.open,high:+x.high,low:+x.low,close:+x.close}));const candles=chart.addCandlestickSeries({visible:false,upColor:'#dd685f',downColor:'#4caf83',wickUpColor:'#dd685f',wickDownColor:'#4caf83',borderVisible:false,priceLineVisible:false});candles.setData(candleRows);let chartMode='line';const candleBtn=content.querySelector('[data-index-mode=candles]');candleBtn.disabled=!candleRows.length;if(!candleRows.length)content.querySelector('.train-candle-note').textContent='開高低資料尚未齊備';content.querySelectorAll('[data-index-mode]').forEach(btn=>btn.onclick=()=>{if(btn.disabled)return;chartMode=btn.dataset.indexMode;price.applyOptions({visible:chartMode==='line'});candles.applyOptions({visible:chartMode==='candles'});content.querySelectorAll('[data-index-mode]').forEach(b=>b.setAttribute('aria-pressed',String(b===btn)));});const series={};periods.forEach((p,i)=>{const v=chart.addLineSeries({color:colors[i],lineWidth:1,priceLineVisible:false,title:p+'日'});v.setData(r.data.map((x,j)=>({time:x.trade_date,value:r.ma[p][j]})).filter(x=>x.value!=null));series[p]=v;});chart.timeScale().setVisibleLogicalRange({from:Math.max(0,r.data.length-180),to:r.data.length-1});content.querySelectorAll('[data-period]').forEach(btn=>btn.onclick=()=>{const on=btn.getAttribute('aria-pressed')!=='true';btn.setAttribute('aria-pressed',String(on));series[btn.dataset.period].applyOptions({visible:on});});chart.subscribeCrosshairMove(pm=>{const v=pm.seriesData.get(chartMode==='candles'?candles:price);content.querySelector('.train-crosshair').textContent=v&&pm.time?pm.time+'｜加權收盤 '+Number(v.value??v.close).toLocaleString()+' 點':'移動滑鼠查看收盤與均線';});ro=new ResizeObserver(()=>chart.applyOptions({width:host.clientWidth}));ro.observe(host);
+ const light=document.documentElement.dataset.theme==='light';chart=LightweightCharts.createChart(host,{width:host.clientWidth,height:310,layout:{background:{color:'transparent'},textColor:light?'#536b80':'#a8bfd2'},grid:{vertLines:{color:light?'#e4edf4':'#253a4b'},horzLines:{color:light?'#e4edf4':'#253a4b'}},timeScale:{borderColor:light?'#cfdde8':'#30495c'}});const price=chart.addLineSeries({color:light?'#233c56':'#e8f2fb',lineWidth:2,priceLineVisible:false,title:'加權收盤'});price.setData(r.data.map(x=>({time:x.trade_date,value:+x.close})));const candleRows=r.data.filter(x=>['open','high','low'].every(k=>x[k]!=null&&Number.isFinite(+x[k]))).map(x=>({time:x.trade_date,open:+x.open,high:+x.high,low:+x.low,close:+x.close}));const candles=chart.addCandlestickSeries({visible:false,upColor:'#dd685f',downColor:'#4caf83',wickUpColor:'#dd685f',wickDownColor:'#4caf83',borderVisible:false,priceLineVisible:false});candles.setData(candleRows);let chartMode='line';const candleBtn=content.querySelector('[data-index-mode=candles]');candleBtn.disabled=!candleRows.length;if(!candleRows.length)content.querySelector('.train-candle-note').textContent='開高低資料尚未齊備';content.querySelectorAll('[data-index-mode]').forEach(btn=>btn.onclick=()=>{if(btn.disabled)return;chartMode=btn.dataset.indexMode;price.applyOptions({visible:chartMode==='line'});candles.applyOptions({visible:chartMode==='candles'});content.querySelectorAll('[data-index-mode]').forEach(b=>b.setAttribute('aria-pressed',String(b===btn)));});const series={};periods.forEach((p,i)=>{const v=chart.addLineSeries({crosshairMarkerRadius:1.5,crosshairMarkerBorderWidth:0,color:colors[i],lineWidth:1,priceLineVisible:false,title:p+'日'});v.setData(r.data.map((x,j)=>({time:x.trade_date,value:r.ma[p][j]})).filter(x=>x.value!=null));series[p]=v;});chart.timeScale().setVisibleLogicalRange({from:Math.max(0,r.data.length-180),to:r.data.length-1});content.querySelectorAll('[data-period]').forEach(btn=>btn.onclick=()=>{const on=btn.getAttribute('aria-pressed')!=='true';btn.setAttribute('aria-pressed',String(on));series[btn.dataset.period].applyOptions({visible:on});});chart.subscribeCrosshairMove(pm=>{const v=pm.seriesData.get(chartMode==='candles'?candles:price);content.querySelector('.train-crosshair').textContent=v&&pm.time?pm.time+'｜加權收盤 '+Number(v.value??v.close).toLocaleString()+' 點':'移動滑鼠查看收盤與均線';});ro=new ResizeObserver(()=>chart.applyOptions({width:host.clientWidth}));ro.observe(host);
  }catch(e){if(d.isConnected)d.querySelector('.train-loading').textContent=e.message+'，請關閉後再試。';}
  };
 })();
 
 </script>
 <script src="assets/member-identity.js" defer></script>
+<script src="assets/member-cloud.js" defer></script>
 <script src="assets/member-features.js" defer></script>
+<script src="assets/member-strategy-engine.js" defer></script>
+<script src="assets/member-strategy-ui.js" defer></script>
+<script src="assets/member-research.js" defer></script>
+<script src="assets/member-trade-engine.js" defer></script>
+<script src="assets/goal-models/manifest.js" defer></script>
+<script src="assets/member-companion-3d.js" defer></script>
+<script src="assets/member-companion-rig.js" defer></script>
+<script src="assets/member-leek-3d.js" defer></script>
+<script src="assets/member-goal-art.js" defer></script>
+<script src="assets/site-search.js" defer></script>
+<script src="assets/member-derivatives-catalog.js" defer></script>
+<script src="assets/member-trade-ui.js" defer></script>
 <script src="assets/member-center.js" defer></script>
 <script src="assets/member-signin.js" defer></script>
+<script src="assets/member-private-screen.js" defer></script>
 </body>
 </html>
