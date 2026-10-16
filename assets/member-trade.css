@@ -72,3 +72,13 @@ dialog.mt-dialog{position:fixed;inset:0;margin:auto!important;box-sizing:border-
 .mt-evolution-controls>.mt-stage-path>button{width:100%;max-width:none;min-width:0;display:grid;align-content:start}.mt-stage-path button>span{width:100%}
 
 .mt-model-ready .mt-companion-prop-layer{display:none} /* Authored GLBs carry their own rigged props. */
+
+.mt-dialog [data-order-toggle]{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:7px 10px;box-shadow:none;white-space:nowrap}.mt-dialog [data-order-toggle][aria-pressed=true]{color:var(--accent);border-color:var(--accent)}
+.mt-dialog .mt-manager-row .mt-drag-handle{flex:none;display:grid;place-items:center;width:26px;min-width:26px;min-height:34px;padding:3px!important;border:0;background:transparent;color:var(--text-muted);box-shadow:none;cursor:grab;touch-action:none}.mt-dialog .mt-drag-handle[hidden]{display:none!important}.mt-dialog .mt-drag-handle:active{cursor:grabbing}.mt-dialog .mt-drag-handle:hover{color:var(--accent);background:color-mix(in srgb,var(--accent) 7%,transparent)}.mt-dialog .mt-manager-row.is-dragging{background:color-mix(in srgb,var(--accent) 7%,var(--surface));border-radius:9px;box-shadow:0 6px 18px #18384f12;position:relative;z-index:2}
+
+.mt-market-context{max-width:380px;margin:14px 0 0}.mt-market-context label{margin:0}.mt-market-context select{width:100%}
+/* Compact field actions deliberately opt out of the site's large CTA glow. */
+.mt-root .mt-field-title button,.mt-root .mt-field-title button:hover,.mt-root .mt-field-title button:focus{box-shadow:none!important;transform:none!important;filter:none!important;outline:none!important;background:transparent!important}
+.mt-root .mt-field-title button:hover{background:var(--mt-soft)!important;text-decoration:underline;text-underline-offset:3px}
+.mt-root .mt-field-title button:focus-visible{outline:1px solid var(--mt-blue)!important;outline-offset:1px!important}
+.mt-catalog-caption,.mt-catalog-foot{padding:8px 10px;font-size:10px;color:var(--text-muted);line-height:1.6}.mt-catalog-caption{border-bottom:1px solid var(--border)}.mt-catalog-foot{border-top:1px solid var(--border)}.mt-suggestions button{padding:9px 10px;min-height:45px}.mt-suggestions button span{min-width:0}.mt-suggestions button em{display:block;font-size:10px;color:var(--text-muted);font-style:normal;margin-top:3px}.mt-suggestions button:hover,.mt-suggestions button[aria-selected=true]{box-shadow:none!important;transform:none!important;background:var(--mt-soft)}

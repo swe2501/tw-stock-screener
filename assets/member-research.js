@@ -197,5 +197,5 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
       out.querySelector('[data-run-note]').onclick=()=>{sessionStorage.setItem('academy.note.seed',JSON.stringify({title:d.code+' 回測研究',body:JSON.stringify({parameters:p,actualPeriod:[result.first,result.last],returnPct:result.returnPct,drawdown:result.drawdown},null,2)}));go('workspace');};
     }catch(err){status.textContent=err.message;}finally{b.disabled=false;}};
   }
-  window.AcademyResearch={render,toggle,backtest,read,exportFile,setCodes:codes=>{starred.clear();codes.forEach(c=>starred.add(c));paintStars();}};
+  window.AcademyResearch={sortable,render,toggle,backtest,read,exportFile,setCodes:codes=>{starred.clear();codes.forEach(c=>starred.add(c));paintStars();}};
 })();
