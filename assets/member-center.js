@@ -1,5 +1,12 @@
 (() => {
   'use strict';
+  // A backdrop click dismisses only the top native modal. Dragging out of a form does not.
+  let backdropPress=null;
+  const topDialog=()=>[...document.querySelectorAll('dialog[open]')].filter(d=>d.matches(':modal')).at(-1);
+  const outsideDialog=(d,e)=>{const r=d.getBoundingClientRect();return e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom;};
+  document.addEventListener('pointerdown',e=>{const d=topDialog();backdropPress=e.button===0&&d&&e.target===d&&outsideDialog(d,e)?d:null;},true);
+  document.addEventListener('pointercancel',()=>backdropPress=null,true);
+  document.addEventListener('click',e=>{const d=backdropPress;backdropPress=null;if(!d||topDialog()!==d||e.target!==d||!outsideDialog(d,e))return;e.preventDefault();e.stopPropagation();if(d.requestClose)d.requestClose();else d.close();},true);
 const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,value):localStorage.setItem(key,value),removeLocal=key=>window.AcademyCloud?window.AcademyCloud.removeItem(key):localStorage.removeItem(key);
 
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
