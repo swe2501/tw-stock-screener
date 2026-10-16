@@ -65,7 +65,7 @@ def ell(name,pos,scale,material,b='body',segments=32,rings=20):
  for v in o.data.vertices:v.co+=o.location
  o.location=(0,0,0);return finish(o,name,material,b)
 def curve(name,pts,radius,material,b='body'):
- data=bpy.data.curves.new(name,'CURVE');data.dimensions='3D';data.resolution_u=8;data.bevel_depth=radius;data.bevel_resolution=2
+ data=bpy.data.curves.new(name,'CURVE');data.dimensions='3D';data.resolution_u=7;data.bevel_depth=radius;data.bevel_resolution=2
  sp=data.splines.new('BEZIER');sp.bezier_points.add(len(pts)-1)
  for q,p in zip(sp.bezier_points,pts):q.co=p;q.handle_left_type='AUTO';q.handle_right_type='AUTO'
  o=bpy.data.objects.new(name,data);scene.collection.objects.link(o);bpy.ops.object.select_all(action='DESELECT');bpy.context.view_layer.objects.active=o;o.select_set(True);bpy.ops.object.convert(target='MESH');o.select_set(False);return finish(o,name,material,b)
