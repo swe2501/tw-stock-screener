@@ -4,7 +4,10 @@
   const config=()=>({url:typeof SIG_SB_URL!=='undefined'?SIG_SB_URL:'',key:typeof SIG_SB_ANON!=='undefined'?SIG_SB_ANON:''});
   const fields=['display_name','full_name','city','birth_date','experience','markets','purpose','member_preferences','member_learning'];
   const providerId=provider=>provider==='line'?'custom:line':provider;
-  const providerEnabled=(s,provider)=>!!s.external?.[providerId(provider)];
+  // Public /settings omits custom providers. LINE was verified against /authorize.
+  // Keep this explicit deployment configuration separate from built-in provider flags.
+  const configuredCustomProviders=new Set(['custom:line']);
+  const providerEnabled=(s,provider)=>configuredCustomProviders.has(providerId(provider))||!!s.external?.[providerId(provider)];
   function normalizePhone(value){
     let phone=String(value).trim().replace(/[\s()\-]/g,'');
     if(/^09\d{8}$/.test(phone))phone='+886'+phone.slice(1);

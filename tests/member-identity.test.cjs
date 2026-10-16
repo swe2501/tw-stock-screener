@@ -30,3 +30,7 @@ test('SMS payload normalizes number; session accepted only after user validation
 test('expired OAuth callback does not exchange tokens',async()=>{
   const {api,saved,context,calls}=setup();saved.set('academy.oauth',JSON.stringify({verifier:'secret',created:Date.now()-700000}));context.location.search='?code=expired';await assert.rejects(api.consumeCallback(),/逾時/);assert.equal(calls.length,0);assert.equal(saved.has('academy.oauth'),false);
 });
+
+test('LINE stays available when public settings omit custom providers',async()=>{
+  const {api,calls}=setup({external:{google:true}});assert.equal(api.providerEnabled({external:{}},'line'),true);await api.startOAuth('line');assert.equal(new URL(calls.at(-1).redirect).searchParams.get('provider'),'custom:line');
+});
