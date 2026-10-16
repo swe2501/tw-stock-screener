@@ -18,3 +18,9 @@ Companion atlas: Production-ready character-selection atlas for a premium animat
 ## Full companion evolution update
 
 The runtime now uses transparent five-stage atlases, independent scenic backgrounds and scene controls. See [EVOLUTION-PROMPTS.md](EVOLUTION-PROMPTS.md) for generation/edit prompts, files and animation limits. Original two atlases above remain as source and gallery thumbnails. All nine companions are available in the gallery; every companion has distinct early/mid/late/final artwork, stage previews and local click interactions.
+
+## All appearances / local mesh update
+
+Eight `*-genders-v2.png` atlases now supply five columns of growth and three persona rows (female, male, neutral) for every non-immortal theme. Immortal keeps `immortal-evolution-alpha.png`. The original A/B atlases are retained as references; gallery thumbnails now use first-stage neutral regions from the new atlases. Generation provenance and prompts: [GENDER-PROMPTS-v2.md](GENDER-PROMPTS-v2.md).
+
+`member-companion-rig.js` uses local 2D WebGL mesh deformation with damped pointer response, breathing, gesture envelopes and sequential stage fades. It replaces whole-image spinning and prolonged double-image blending. Scene backgrounds, progress lighting, effects and fallback CSS remain. This is **2.5D illustrated animation, not a rigged 3D game character**; real 3D models and authored skeletal clips are still required for that user request.
