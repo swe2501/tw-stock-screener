@@ -14,7 +14,7 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
   let profile = null, current = 'overview', returnFocus = null, oldOverflow = '', request = 0, returnScroll={x:0,y:0};
   const page = document.createElement('section');
   page.className = 'member-page'; page.hidden = true; page.setAttribute('aria-label','會員中心');
-  page.innerHTML = `<div class="mc-shell"><div class="mc-top"><div><span class="mc-kicker">MARKET ACADEMY · MEMBER</span><h1>會員中心</h1><div class="mc-muted">你的研究工作區，從這裡開始。</div></div><button type="button" data-back>← 返回原頁</button></div><div class="mc-layout"><nav class="mc-nav" aria-label="會員功能"></nav><main class="mc-main" tabindex="-1"></main></div></div>`;
+  page.innerHTML = `<div class="mc-shell"><div class="mc-top"><div><span class="mc-kicker">MARKET ACADEMY · MEMBER</span><h1>會員中心</h1><div class="mc-muted">你的研究工作區，從這裡開始。</div></div><div class="mc-top-actions"><button type="button" data-member-theme></button><button type="button" data-back>← 返回原頁</button><button type="button" data-member-logout>登出</button><span class="mc-action-status" role="status"></span></div></div><div class="mc-layout"><nav class="mc-nav" aria-label="會員功能"></nav><main class="mc-main" tabindex="-1"></main></div></div>`;
   document.body.append(page);
   const brandbar=document.createElement('div');brandbar.className='mc-brandbar';
   for(const selector of ['body>header .gs-brand','body>header .gs-edition']){const original=document.querySelector(selector);if(original){const clone=original.cloneNode(true);clone.removeAttribute('onclick');clone.removeAttribute('id');clone.querySelectorAll('[id],[onclick]').forEach(el=>{el.removeAttribute('id');el.removeAttribute('onclick');});if(clone.matches('a'))clone.addEventListener('click',e=>{e.preventDefault();page.querySelector('[data-back]').click();});brandbar.append(clone);}}
@@ -42,7 +42,7 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
     try{if(new URL(url).protocol!=='https:')return;}catch{return;}
     [avatar,...page.querySelectorAll('.mc-portrait')].forEach(el=>{const img=new Image();img.alt='會員頭像';img.referrerPolicy='no-referrer';img.addEventListener('error',()=>{el.innerHTML=personIcon;});img.src=url;el.replaceChildren(img);});
   }
-  function sync(){const logged=!!localStorage.getItem('sb_token');avatar.hidden=!logged;avatar.style.display=logged?'grid':'none';if(!logged){cloudCleanup();cloudHost.hidden=true;window.AcademyCloud?.cancel();profile=null;if(!page.hidden)close();}avatar.innerHTML=personIcon;hydrateImages();}
+  function sync(){const logged=!!localStorage.getItem('sb_token');avatar.hidden=!logged;avatar.style.display=logged?'grid':'none';if(!logged){cloudCleanup();cloudHost.hidden=true;window.AcademyCloud?.cancel();profile=null;if(!page.hidden)goHome();}page.querySelector("[data-member-logout]").hidden=!logged;avatar.innerHTML=personIcon;hydrateImages();}
   async function api(method='GET',body){
     if(window.AcademyIdentity)return method==='GET'?AcademyIdentity.getProfile():AcademyIdentity.updateProfile(body);
     throw new Error('會員元件載入未完成，請重新整理頁面');
@@ -91,6 +91,27 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
     render();main.focus({preventScroll:true});page.scrollTop=0;if(localStorage.getItem('sb_token')&&(!profile||reopened))load();
   }
   function close(){if(document.body.classList.contains('mc-chart-open'))window.closeChart?.();document.body.classList.remove('mc-chart-open');dispatchEvent(new Event('academy-member-closed'));page.querySelectorAll('dialog[open]').forEach(d=>d.close());request++;page.hidden=true;document.body.classList.remove('mc-open');document.body.style.overflow=oldOverflow;returnFocus?.focus?.({preventScroll:true});requestAnimationFrame(()=>scrollTo(returnScroll.x,returnScroll.y));}
+  function goHome(){
+    returnScroll={x:0,y:0};
+    if(!page.hidden)close();
+    const params=new URLSearchParams(location.search);params.delete('view');const query=params.toString();
+    history.replaceState({v:'home'},'',location.pathname+(query?'?'+query:''));
+    window._showView?.('home');
+    requestAnimationFrame(()=>scrollTo({top:0,left:0,behavior:'instant'}));
+  }
+  const memberTheme=page.querySelector('[data-member-theme]');
+  function syncTheme(){const dark=document.documentElement.getAttribute('data-theme')!=='light';memberTheme.textContent=dark?'☀ 淺色模式':'☾ 深色模式';memberTheme.setAttribute('aria-label',dark?'切換淺色模式':'切換深色模式');}
+  memberTheme.addEventListener('click',()=>{if(typeof window._toggleTheme==='function')window._toggleTheme();else theme?.click();syncTheme();});
+  new MutationObserver(syncTheme).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});syncTheme();
+  page.querySelector('[data-member-logout]').addEventListener('click',async e=>{
+    const b=e.currentTarget,status=page.querySelector('.mc-action-status');b.disabled=true;b.textContent='登出中…';status.textContent='';
+    try{
+      if(typeof window.doLogout!=='function')throw Error('登出服務尚未載入，請重新整理後重試');
+      await window.doLogout();
+      if(localStorage.getItem('sb_token'))throw Error('尚未完成登出，請再試一次');
+      dispatchEvent(new Event('academy-auth-changed'));sync();
+    }catch(err){status.textContent=err.message;}finally{b.disabled=false;b.textContent='登出';}
+  });
   page.querySelector('[data-back]').addEventListener('click',()=>{if(history.state?.academyMember)history.back();else close();});
   document.querySelector('body>header .gs-brand')?.addEventListener('click',()=>{if(!page.hidden){returnScroll={x:0,y:0};close();history.replaceState({...history.state,academyMember:false},'',location.pathname+location.search);}},true);
   addEventListener('resize',()=>{if(!page.hidden)positionUnderHeader();});
