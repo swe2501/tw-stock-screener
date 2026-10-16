@@ -1,4 +1,6 @@
--- REVIEW / ISOLATED STAGING FIRST. NOT applied to any database by Codex.
+-- DEPLOYED 2026-10-16 to bruqrbvbjxntgoljxsne after explicit shared-PRODUCTION approval.
+-- Initial migration: do not rerun against existing objects. See docs/member-db-status.md for verification.
+-- REVIEW / ISOLATED STAGING FIRST. Applied after explicit approval; see header.
 -- Personal research storage only; never use these payloads to grant benefits/points.
 begin;
 create table public.member_research_documents (

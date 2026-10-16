@@ -1,3 +1,5 @@
+-- DEPLOYED 2026-10-16 to bruqrbvbjxntgoljxsne after explicit shared-PRODUCTION approval.
+-- Initial migration: do not rerun against existing objects. See docs/member-db-status.md for verification.
 -- Member-owned avatar writes and private trading screenshots. Review existing
 -- buckets/policies first; never change an existing bucket's visibility here.
 begin;

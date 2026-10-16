@@ -1,4 +1,6 @@
--- REVIEW / STAGING FIRST. Source preparation only: NOT applied by Codex.
+-- DEPLOYED 2026-10-16 to bruqrbvbjxntgoljxsne after explicit shared-PRODUCTION approval.
+-- Initial migration: do not rerun against existing objects. See docs/member-db-status.md for verification.
+-- REVIEW / STAGING FIRST. Source preparation only: Applied after explicit approval; see header.
 -- Run after member-services.sql in an isolated staging database. PostgreSQL 13+.
 begin;
 
@@ -57,5 +59,5 @@ grant select on public.member_referral_summary to authenticated;
 grant select on public.member_referral_summary to service_role;
 
 commit;
--- Intentionally no seeds, real point awards, activities, live schema changes,
--- auth-provider changes, avatar bucket, or outbox worker are executed by this file.
+-- No seeds, point awards, activity records, auth-provider settings or outbox
+-- worker are created by this migration. Storage is in member-storage.sql.

@@ -1,3 +1,5 @@
+> 2026-10-16 update: `assets/member-leek-3d.js` is an original procedural volume study, available only by choosing the leek 3D study in the companion preview/goal settings. It has real three-dimensional surfaces, lighting, camera orbit, continuous idle and growth, and three scene styles. It is **not approved production character art**, does not fill any manifest entry, and does not make the other eight companions 3D. Keep the illustrated option until appearance is accepted. No test tetrahedron is used in this study.
+
 # True 3D companion assets — not yet supplied
 
 The production manifest is intentionally empty. No test model is shipped as a user character. The fallback remains the existing illustrated scene. A working GLB player does **not** imply the nine characters have been produced or approved.

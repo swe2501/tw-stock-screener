@@ -1,4 +1,6 @@
--- REVIEW / STAGING FIRST. Prepared for the project administrator; NOT applied by Codex.
+-- DEPLOYED 2026-10-16 to bruqrbvbjxntgoljxsne after explicit shared-PRODUCTION approval.
+-- Initial migration: do not rerun against existing objects. See docs/member-db-status.md for verification.
+-- REVIEW / STAGING FIRST. Prepared for the project administrator; Applied after explicit approval; see header.
 -- Requires Supabase PostgreSQL 13+. Review existing objects before running.
 begin;
 
