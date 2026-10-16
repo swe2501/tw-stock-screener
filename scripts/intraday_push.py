@@ -47,7 +47,7 @@ MIS_HEADERS = {"User-Agent": "Mozilla/5.0",
                "Accept": "application/json"}
 BATCH = 150                                        # mis 每次查詢檔數（實測上限 ~150，200 會 rtcode 9999）
 CONC = 12                                           # mis 批次並行數（實測 12 最快 ~28 秒；16 反而被節流變慢）
-MIN_LISTED = 500                                   # 上市掃到檔數低於此 → 視為來源異常，不覆寫
+MIN_LISTED = 950                                   # 上市掃到檔數低於此(正常~1040；少一批~890) → 視為缺漏，不覆寫
 # mis.twse.com.tw 憑證缺 Subject Key Identifier，Python 3.14 的 RFC5280 嚴格副檔檢查會擋。
 # 只清掉 VERIFY_X509_STRICT 旗標，憑證鏈與主機名驗證「仍然開著」（比盲關 CERT_NONE 安全）。
 _CTX = ssl.create_default_context()
@@ -119,12 +119,16 @@ def _scan(codes, ex):
     batches = [chs[i:i + BATCH] for i in range(0, len(chs), BATCH)]
 
     def _one(batch):
-        for attempt in range(2):
+        # 批次失敗若整批丟掉會漏 ~150 檔（含大權值股），市值加權會劇烈失真 → 重試 4 次
+        for attempt in range(4):
             try:
-                return _mis_batch(batch)
+                arr = _mis_batch(batch)
+                if arr:
+                    return arr
             except Exception:                        # noqa: BLE001
-                if attempt == 0:
-                    time.sleep(0.4)
+                pass
+            time.sleep(0.5 * (attempt + 1))
+        print(f"[mis] {ex} 一批 {len(batch)} 檔重試 4 次仍失敗")
         return []
 
     with ThreadPoolExecutor(max_workers=CONC) as pool:
