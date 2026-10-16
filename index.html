@@ -1608,7 +1608,7 @@
   #mainNav .mn-active { color:var(--nav-active-text) !important;background:linear-gradient(135deg,var(--cta-start),var(--cta-end)) !important;border-radius:8px !important;box-shadow:inset 0 1px rgba(255,255,255,.24),0 5px 14px var(--cta-glow); }
   #mainNav .mn-active::after { display:none; }
   body.pro-nav-compact>header { transform:translateY(-110%);opacity:0;pointer-events:none; }
-  body.pro-nav-compact #mainNav { position:fixed !important;top:0;left:0;right:0;width:100%;margin:0 !important;box-shadow:0 10px 30px rgba(4,10,18,.18); }
+  body.pro-nav-compact #mainNav { position:fixed !important;top:0;left:0;right:0;width:100% !important;box-sizing:border-box;margin:0 !important;box-shadow:0 10px 30px rgba(4,10,18,.18); }
   body.pro-nav-compact #mainNav .mn-inner { margin-inline:auto; }
   :root:not([data-theme="light"]) #mainNav .mn-item:not(.mn-active):hover { color:#E7EDF4 !important;background:rgba(42,112,168,.13) !important;box-shadow:inset 0 -2px rgba(63,143,201,.55) !important; }
   .mn-menu { border:1px solid var(--border) !important;border-radius:10px !important;padding:7px !important;background:var(--surface) !important;box-shadow:var(--shadow) !important; }
