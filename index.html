@@ -2296,7 +2296,7 @@
     document.addEventListener('click',function(e){var a=e.target.closest('#mainNav .mn-menu a');if(!a)return;var menu=a.closest('.mn-menu');if(!menu)return;menu.classList.add('mn-hide');var grp=menu.closest('.mn-grp');function clr(){menu.classList.remove('mn-hide');if(grp)grp.removeEventListener('mouseleave',clr);}if(grp)grp.addEventListener('mouseleave',clr,{once:true});setTimeout(function(){document.addEventListener('pointerdown',clr,{once:true});},50);});
   </script>
   <nav id="mainNav"><div class="mn-inner">
-    <a class="mn-item" href="?view=home" onclick="window.location.assign(this.href);return false">首頁</a>
+    <a class="mn-item" href="?view=home" onclick="if(window._showView){window._showView('home');return false;}">首頁</a>
     <div class="mn-grp"><span class="mn-item">今日焦點 <i>▾</i></span><div class="mn-menu">
       <a onclick="_showView('overview')" style="font-weight:800;color:var(--brand-green)"> 總覽</a><a onclick="_showView('focus')">排行榜</a><a onclick="_showView('todayindex')">今日索引</a></div></div>
     <div class="mn-grp"><span class="mn-item">選股 <i>▾</i></span><div class="mn-menu">
@@ -16011,20 +16011,32 @@
   }
   function stickyNavigation(){
     let last=scrollY,ticking=false;
-    const sync=()=>{const y=scrollY,down=y>last+3;if(y<90)document.body.classList.remove('pro-nav-compact');else if(down)document.body.classList.add('pro-nav-compact');else if(y<last-3)document.body.classList.remove('pro-nav-compact');last=y;ticking=false;};
+    const sync=()=>{const y=scrollY,down=y>last+3;if(y<90){document.body.classList.remove('pro-nav-compact');}else if(document.body.classList.contains('pro-home-scrolling')||down)document.body.classList.add('pro-nav-compact');else if(y<last-3)document.body.classList.remove('pro-nav-compact');last=y;ticking=false;};
     addEventListener('scroll',()=>{if(!ticking){requestAnimationFrame(sync);ticking=true;}},{passive:true});
   }
   function resetViewScroll(){
     const original=window._showView;if(typeof original!=='function'||original.__proScroll)return;
     if('scrollRestoration' in history)history.scrollRestoration='manual';
-    let scrollFrame;
+    let scrollFrame,settleFrame,finishHomeScroll=()=>{};
     function wrapped(view){
+      finishHomeScroll();
       const out=original.apply(this,arguments);
       cancelAnimationFrame(scrollFrame);
       scrollFrame=requestAnimationFrame(()=>{
-        document.body.classList.remove('pro-nav-compact');
-        scrollTo({top:0,left:0,behavior:'instant'});
-        if(document.scrollingElement)document.scrollingElement.scrollTop=0;
+        const smooth=view==='home'&&scrollY>0&&!matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if(smooth){
+          const events=new AbortController(),deadline=performance.now()+5000;
+          document.body.classList.add('pro-home-scrolling');
+          finishHomeScroll=()=>{cancelAnimationFrame(settleFrame);events.abort();scrollTo({top:scrollY<=1?0:scrollY,left:scrollX,behavior:'instant'});document.body.classList.remove('pro-home-scrolling');finishHomeScroll=()=>{};};
+          ['wheel','touchstart','pointerdown','keydown'].forEach(type=>addEventListener(type,finishHomeScroll,{once:true,passive:true,signal:events.signal}));
+          scrollTo({top:0,left:0,behavior:'smooth'});
+          const settle=()=>{if(scrollY<=1||performance.now()>deadline){finishHomeScroll();if(scrollY<=1)document.body.classList.remove('pro-nav-compact');}else settleFrame=requestAnimationFrame(settle);};
+          settleFrame=requestAnimationFrame(settle);
+        }else{
+          document.body.classList.remove('pro-nav-compact');
+          scrollTo({top:0,left:0,behavior:'instant'});
+          if(document.scrollingElement)document.scrollingElement.scrollTop=0;
+        }
       });
       return out;
     }
