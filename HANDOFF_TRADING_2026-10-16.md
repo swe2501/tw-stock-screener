@@ -1,5 +1,7 @@
 # 交易紀錄與目標交接 — 2026-10-16
 
+> 本文件含時序更新，舊段落中的 SVG／簡易月曆／混合淡入淡出說明已被後續版本取代。最新「已完成／未完成」以 [完成度盤點](docs/member-completion-status-2026-10-16.md) 為準。真正 GLB 播放器已加入，正式角色模型仍缺；個人研究雲端與會員服務資料庫仍未啟用。
+
 ## 已實作
 - 研究與學習：新增「交易紀錄」「我的目標」。交易工作台包含批次成交、代號／名稱建議、草稿、複製列、快捷鍵、整股／零股、融資／融券、期貨／選擇權、多空開平倉。
 - FIFO 分攤開倉費稅、部分出場、完整結束、重新開倉分成不同交易週期。不同帳戶、實際／模擬、合約月、買賣權及履約價分開。
@@ -70,3 +72,9 @@
 - New site-search.js/.css adds a compact navigation-right search. Stock/ETF autocomplete reuses the homepage names/ranking and market/industry metadata; stock activation opens native openChart directly. Site results index actual navigation links, member feature routes and already loaded public news links. All/stock/content scopes, keyboard selection, Enter/Escape, slash shortcut, focus management, outside close, HTML escaping and light/dark/mobile styling.
 - Search is **not a full historical article search**. For all news/history, add a server-backed public content index with stable IDs, titles, excerpts, route/URL, date, permissions, ranking and pagination. Do not search private profile/journal data. Current UI explicitly labels loaded-news scope.
 - Validation: 30 engine/identity/strategy tests; member-trade-ui.browser.cjs covers journal, enabled futures inputs, nine × three appearances with live WebGL initialization, all stages/actions, reduced motion and dark/mobile. site-search.browser.cjs covers stock/ETF, member routes, loaded news, scopes, escaping, keyboard, repeated open/close and mobile bounds. Screenshots are in the chat workspace work/journal-qa.
+
+## 2026-10-16 follow-up: actual 3D player and saved-news search
+
+- Added local Three.js / GLTFLoader and a genuine skinned GLB companion player. Approved theme/gender stage manifests select it; the production manifest is empty, so existing users retain the illustrated fallback. Source, asset delivery contract and `validate_companion_models.cjs` are ready. Browser tests use a synthetic skinned tetrahedron solely to verify actual bone motion, five clips, crossfade/idle return, stage replacement, invalid-model fallback, reduced motion and GPU lifecycle. The 135 production stage slots are still missing; do not call the characters game-quality 3D finished.
+- Search now queries all dates in existing public news/topic tables through read-only same-origin `/api/site_search`. Results show date/source/snippet and source links, with specified-date news navigation for linkless topics. Includes partial-source errors/retry, stale request cancellation, debouncing, bounded cache and selection preservation. No new DB objects needed. Search covers saved titles/excerpts/summaries, not publisher article full text.
+- Prepared source-only SQL supplements for missing member services plus optimistic-concurrency research documents. No database connection/migration, live records, provider settings, scheduler or bucket changes. Frontend cloud migration/queue/conflict UI, private image upload and isolated PostgreSQL/RLS tests remain undone. See completion-status document for exact remaining work.

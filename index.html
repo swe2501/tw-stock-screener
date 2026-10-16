@@ -5779,7 +5779,7 @@
     // hot_topics 的 codes／source_urls 可能是 JSON 陣列或 Python 字串表示 → 一律用正規式抽取
     function codesOf(v){ if(Array.isArray(v)) return v; var out=[],re=/['"]code['"]\s*:\s*['"]([^'"]+)['"]\s*,\s*['"]name['"]\s*:\s*['"]([^'"]*)['"]/g,m; while((m=re.exec(String(v||''))))out.push({code:m[1],name:m[2]}); return out; }
     function urlsOf(v){ if(Array.isArray(v)) return v; return String(v||'').match(/https?:\/\/[^'"\s\],]+/g)||[]; }
-    var SB='', H={}, HOT=[], FEED={}, CNT={}, DATES=[], DATE='', SEC='', Q='', PER='all';
+    var SB='', H={}, HOT=[], FEED={}, CNT={}, DATES=[], DATE='', SEC='', Q='', PER='all', OPEN_DATE='', SHOW_REV=0;
     var PLABEL={all:'全部時段',hot:'焦點題材（AI 彙整）',pre:'盤前 06:00-09:00',during:'盤中 09:00-13:30',post:'盤後 13:30-18:00',night:'晚間總經 18:00+'};
     function wk(d){ return '週'+'日一二三四五六'[new Date(d+'T12:00:00+08:00').getDay()]; }
     function twHM(iso){ var t=new Date(new Date(iso).getTime()+8*3600e3); return ('0'+t.getUTCHours()).slice(-2)+':'+('0'+t.getUTCMinutes()).slice(-2); }
@@ -5834,7 +5834,9 @@
         .then(function(r){return r.json();}).then(function(a){ FEED[d]=Array.isArray(a)?a:[]; render(); }).catch(function(){ FEED[d]=[]; render(); });
     }
     var bound=false;
+    window._newsOpenSaved=function(date,query){if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return;OPEN_DATE=date;Q=String(query||'');SEC='';PER='all';el('nwQ').value=Q;el('nwPer').value='all';window._showView('news');};
     window._newsShow=function(){
+      var showRevision=++SHOW_REV;
       if(!bound){ bound=true;
         el('nwApply').onclick=function(){ PER=el('nwPer').value; var d=el('nwDate').value; if(d&&d!==DATE){ SEC=''; loadDate(d); } else render(); };
         el('nwDate').onchange=function(){ if(this.value){ SEC=''; loadDate(this.value); } };
@@ -5848,15 +5850,16 @@
         fetch(SB+'/rest/v1/hot_topics?select=topic,sector,summary,codes,source_urls,heat,published_at&order=published_at.desc,heat.desc&limit=1000',{headers:H}).then(function(r){return r.json();}).catch(function(){return [];}),
         fetch(SB+'/rest/v1/news_feed?select=news_date&order=news_date.desc&limit=1000',{headers:H}).then(function(r){return r.json();}).catch(function(){return [];})
       ]).then(function(res){
+        if(showRevision!==SHOW_REV)return;
         HOT=(Array.isArray(res[0])?res[0]:[]).filter(function(t){return t.published_at;}).map(function(t){ t._codes=codesOf(t.codes); t._urls=urlsOf(t.source_urls); return t; });
         CNT={}; HOT.forEach(function(t){ CNT[t.published_at]=(CNT[t.published_at]||0)+1; });
         (Array.isArray(res[1])?res[1]:[]).forEach(function(r){ CNT[r.news_date]=(CNT[r.news_date]||0)+1; });
         DATES=Object.keys(CNT).sort().reverse();
-        if(!DATES.length){ el('nwList').innerHTML='<div class="nw-empty"><h2>目前無新聞資料</h2></div>'; return; }
-        el('nwDate').max=DATES[0];
+        if(!DATES.length&&!OPEN_DATE){ el('nwList').innerHTML='<div class="nw-empty"><h2>目前無新聞資料</h2></div>'; return; }
+        el('nwDate').max=DATES[0]||OPEN_DATE;
         // 預設日期＝最近一個「超過 10 則」的日期（避免假日只剩零星幾則）；都不到 10 則就用最新日期
         var def=DATES.filter(function(d){return CNT[d]>10;})[0]||DATES[0];
-        loadDate(DATE&&CNT[DATE]?DATE:def);
+        loadDate(OPEN_DATE||(DATE&&CNT[DATE]?DATE:def));OPEN_DATE='';
       });
       el('nwNote').innerHTML='<b>學院導讀</b> 先確認消息時間、來源和事件進度，再對照價格是否已反映。新聞熱度是觀察線索，不是趨勢延續的保證。';
     };
@@ -16687,6 +16690,8 @@
 <script src="assets/member-strategy-ui.js" defer></script>
 <script src="assets/member-research.js" defer></script>
 <script src="assets/member-trade-engine.js" defer></script>
+<script src="assets/goal-models/manifest.js" defer></script>
+<script src="assets/member-companion-3d.js" defer></script>
 <script src="assets/member-companion-rig.js" defer></script>
 <script src="assets/member-goal-art.js" defer></script>
 <script src="assets/site-search.js" defer></script>
