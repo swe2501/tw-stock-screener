@@ -21,6 +21,7 @@ import urllib.request
 import urllib.parse
 import os
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -38,13 +39,14 @@ import screen                                     # noqa: E402
 if sys.stdout and hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(errors="replace")
 
-INTERVAL = 90                                      # 每輪間隔（秒）
+INTERVAL = 35                                      # 每輪間隔（秒）；全市場一輪盤中 ~28-30 秒，故 ~35 秒為實際極限
 TZ = datetime.timezone(datetime.timedelta(hours=8))
 MIS = "https://mis.twse.com.tw/stock/api/getStockInfo.jsp"
 MIS_HEADERS = {"User-Agent": "Mozilla/5.0",
                "Referer": "https://mis.twse.com.tw/stock/fibest.jsp",
                "Accept": "application/json"}
-BATCH = 100                                        # mis 每次查詢檔數
+BATCH = 150                                        # mis 每次查詢檔數（實測上限 ~150，200 會 rtcode 9999）
+CONC = 12                                           # mis 批次並行數（實測 12 最快 ~28 秒；16 反而被節流變慢）
 MIN_LISTED = 500                                   # 上市掃到檔數低於此 → 視為來源異常，不覆寫
 # mis.twse.com.tw 憑證缺 Subject Key Identifier，Python 3.14 的 RFC5280 嚴格副檔檢查會擋。
 # 只清掉 VERIFY_X509_STRICT 旗標，憑證鏈與主機名驗證「仍然開著」（比盲關 CERT_NONE 安全）。
@@ -85,38 +87,59 @@ def _mis_batch(ex_chs):
     return d.get("msgArray") or []
 
 
+def _cur_price(m):
+    """mis 盤中當前價：盤中 top-level z/pz/tv 常為 '-'，真正最近成交價在巢狀 trade.z。
+    順序：z → trade.z → 最佳買賣中價(b/a) → 今開 o → 昨收 y。"""
+    z = _pf(m.get("z"))
+    if z is not None:
+        return z
+    tr = m.get("trade")
+    if isinstance(tr, dict):
+        tz = _pf(tr.get("z"))
+        if tz is not None:
+            return tz
+    bp = _pf((m.get("b") or "").split("_")[0])
+    ap = _pf((m.get("a") or "").split("_")[0])
+    if bp is not None and ap is not None:
+        return (bp + ap) / 2
+    if ap is not None:
+        return ap
+    if bp is not None:
+        return bp
+    o = _pf(m.get("o"))
+    if o is not None:
+        return o
+    return _pf(m.get("y"))
+
+
 def _scan(codes, ex):
-    """批次查 mis，回 {code:{price,prev,vol(股),name}}。ex: 'tse'(上市) / 'otc'(上櫃)。"""
+    """批次查 mis（並行），回 {code:{price,prev,vol(股),name}}。ex: 'tse'(上市) / 'otc'(上櫃)。"""
     out = {}
     chs = [f"{ex}_{c}.tw" for c in codes]
-    for i in range(0, len(chs), BATCH):
-        batch = chs[i:i + BATCH]
-        arr = []
+    batches = [chs[i:i + BATCH] for i in range(0, len(chs), BATCH)]
+
+    def _one(batch):
         for attempt in range(2):
             try:
-                arr = _mis_batch(batch)
-                break
-            except Exception as e:                 # noqa: BLE001
+                return _mis_batch(batch)
+            except Exception:                        # noqa: BLE001
                 if attempt == 0:
-                    time.sleep(1)
-                else:
-                    print(f"[mis] {ex} batch@{i} 失敗：{e}")
-        for m in arr:
-            c = str(m.get("c") or "").strip()
-            if not c:
-                continue
-            z = _pf(m.get("z"))
-            if z is None:
-                z = _pf(m.get("pz"))               # 無當盤成交→前一筆成交價
-            y = _pf(m.get("y"))                     # 昨收
-            if z is None:
-                z = y                               # 仍無成交→以昨收視為平盤
-            if z is None or y is None:
-                continue
-            v = _pf(m.get("v")) or 0                # 累積成交量(張)
-            out[c] = {"price": z, "prev": y, "vol": int(v * 1000),
-                      "name": (m.get("n") or c).strip()}
-        time.sleep(0.15)
+                    time.sleep(0.4)
+        return []
+
+    with ThreadPoolExecutor(max_workers=CONC) as pool:
+        for arr in pool.map(_one, batches):
+            for m in arr:
+                c = str(m.get("c") or "").strip()
+                if not c:
+                    continue
+                y = _pf(m.get("y"))                   # 昨收
+                price = _cur_price(m)
+                if price is None or y is None:
+                    continue
+                v = _pf(m.get("v")) or 0              # 累積成交量(張)
+                out[c] = {"price": price, "prev": y, "vol": int(v * 1000),
+                          "name": (m.get("n") or c).strip()}
     return out
 
 
