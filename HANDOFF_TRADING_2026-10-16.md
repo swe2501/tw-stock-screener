@@ -35,3 +35,11 @@
 - 新 UI：批次、搜尋、部分／全平倉、計畫、資金、覆盤、九主題、外觀性別、里程碑、Excel 缺合約阻擋、配對匯入、quota 失敗、深淺／手機通過。
 - 截圖在本機聊天 work/journal-qa（虛構測試會員與行情，非真實績效），不納入 repo。
 - 原自選／策略整合回歸另執行。
+
+## 2026-10-16 follow-up corrections
+- All trading dialogs explicitly restore `inset:0; margin:auto`, correcting host global CSS resets that placed dialogs at top-left.
+- Strategy picker has inline add/manage: guided multiple entry/exit rules with independent indicator parameters, all/any and risk. Shares the existing research strategy store; historical snapshots unchanged. Reason add/rename/remove adjacent to its picker; two-click removal, retained historical labels.
+- Clear-draft control reduced to secondary text-sized action plus explicit confirm dialog; cancel preserves input.
+- Position detail now labels average entry / realized PnL in TWD and pending fee status. Derivatives show month and multiplier. New derivative multiplier starts blank and is required; existing contracts have an explicit confirmed batch multiplier correction that updates all matching fills and revalidates ledger.
+- Replaced simple SVG characters with original imagegen illustrated atlases (see assets/goal-art/README.md, full prompts). Direct nine-companion gallery, stage and appearance preview, create-goal from preview. Immortal five-stage blend and female/male/neutral rows. CSS motion is explicitly illustrated breathing/particles/mist, not a fully rigged film clip.
+- Extended browser fixture validates centering, inline strategy creation/parameters, reason create/remove, clear cancellation, nine companion previews and blank required futures multiplier.
