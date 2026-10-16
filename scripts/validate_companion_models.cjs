@@ -2,7 +2,7 @@
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const root=path.resolve(__dirname,'..'),assetRoot=path.join(root,'assets','goal-models'),context={window:{}};
 vm.runInNewContext(fs.readFileSync(path.join(assetRoot,'manifest.js'),'utf8'),context,{timeout:1000});
-const manifest=context.window.AcademyCompanionModels,required=['enter','idle','interact','evolve','celebrate'],missing=[],errors=[];let count=0;
+const manifest=context.window.AcademyCompanionModels,required=['enter','idle','interact','evolve','celebrate','interact_pat','interact_offer','interact_play','interact_care','interact_cheer'],missing=[],errors=[];let count=0;
 for(const theme of ['immortal','garden','mountain','space','castle','pet','ocean','gem','train'])for(const gender of ['female','male','neutral']){
  const cfg=manifest?.version===1?manifest.themes?.[theme]?.[gender]:null;
  if(!cfg){missing.push(theme+'/'+gender);continue;}
@@ -14,7 +14,7 @@ for(const theme of ['immortal','garden','mountain','space','castle','pet','ocean
   const json=JSON.parse(b.subarray(20,20+b.readUInt32LE(12)).toString('utf8'));
   if(json.buffers?.some(x=>x.uri)||json.images?.some(x=>x.uri))throw Error('embedded resources required');
   if(!json.skins?.some(x=>x.joints?.length)||!json.nodes?.some(x=>x.mesh!==undefined&&x.skin!==undefined))throw Error('skinned mesh required');
-  if(required.some(name=>!json.animations?.some(x=>x.name===name&&x.channels?.length)))throw Error('five authored clips required');
+  if(required.some(name=>!json.animations?.some(x=>x.name===name&&x.channels?.length)))throw Error('five lifecycle and five interaction clips required');
   count++;
  }catch(error){errors.push(theme+'/'+gender+'/'+stage+': '+error.message);}
 }
