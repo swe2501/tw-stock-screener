@@ -16075,6 +16075,7 @@
     const ids=['loginBtn','authSubmit','submitBtn','hpSearchBtn','nwApply','nwQBtn','resetPwBtn'];
     ids.forEach(id=>document.getElementById(id)?.classList.add('pro-primary'));
     document.querySelectorAll('button').forEach(b=>{
+      if(b.closest('.mc-nav,.mc-top-actions')){b.classList.remove('pro-primary');return;}
       const t=(b.textContent||'').trim();
       if(/^(開始篩選|開始探索|搜尋|查詢|套用篩選|登入|立即訂閱|解鎖)/.test(t)&&!/清除|取消|關閉/.test(t))b.classList.add('pro-primary');
     });

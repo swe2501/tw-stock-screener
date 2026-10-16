@@ -73,3 +73,13 @@ body.academy-research-ready #chartWatchBtn,body.academy-research-ready #chartBac
 .member-page [data-member-logout]:hover{color:#be5353;border-color:#be5353;background:color-mix(in srgb,#be5353 5%,var(--surface))}
 .mc-action-status{flex-basis:100%;font-size:12px;line-height:1.6;color:var(--text-muted);text-align:right}.mc-action-status:empty{display:none}
 @media(max-width:700px){.mc-top{flex-direction:column;align-items:stretch}.mc-top-actions{justify-content:flex-start}.mc-action-status{text-align:left}}
+
+/* Member navigation has one hover treatment, independent of button wording. */
+.member-page .mc-nav button{position:relative;overflow:hidden;isolation:isolate}
+.member-page .mc-nav button::after{content:"";position:absolute;inset:0;pointer-events:none;transform:translateX(-125%);background:linear-gradient(105deg,transparent 20%,color-mix(in srgb,var(--accent) 13%,transparent) 50%,transparent 80%);opacity:0}
+.member-page .mc-nav button:hover::after,.member-page .mc-nav button:focus-visible::after{animation:mc-nav-sweep .65s ease-out both}
+@keyframes mc-nav-sweep{0%{transform:translateX(-125%);opacity:0}20%{opacity:1}85%{opacity:1}100%{transform:translateX(125%);opacity:0}}
+.member-page .mc-top-actions button{background:var(--surface)!important;color:var(--text)!important;border-color:var(--border)!important;box-shadow:0 2px 8px #183e5808!important;transform:none!important;animation:none!important}
+.member-page .mc-top-actions button:hover{background:color-mix(in srgb,var(--accent) 6%,var(--surface))!important;border-color:color-mix(in srgb,var(--accent) 35%,var(--border))!important;box-shadow:0 3px 12px #183e5810!important}
+.member-page .mc-top-actions button::after{display:none!important}
+@media(prefers-reduced-motion:reduce){.member-page .mc-nav button::after{animation:none!important}}
