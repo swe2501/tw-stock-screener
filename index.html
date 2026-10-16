@@ -3551,7 +3551,7 @@
     window._rtStop=window._rtStop||function(){ if(window._rtTimer){clearInterval(window._rtTimer);window._rtTimer=null;} };
     window._rtStart=window._rtStart||function(fn){ window._rtStop();
       if(window._twSession&&window._twSession()){ window._rtTimer=setInterval(function(){
-        if(window._twSession&&window._twSession()){ try{fn();}catch(e){} } else { window._rtStop(); } }, 90000); } };
+        if(window._twSession&&window._twSession()){ try{fn();}catch(e){} } else { window._rtStop(); } }, 35000); } };
     // 進站後閒置時先把題材列表／產業地圖的資料抓好放著（10 分鐘內抓過就不重抓），點開就不用等
     setTimeout(function(){ ['themes','sectors','overview'].forEach(function(k){ try{ var c=JSON.parse(localStorage.getItem('swr_'+k)||'null'); if(c&&c.t&&Date.now()-c.t<600000) return; }catch(e){}
       window._swrJson(k,'https://tw-stock-screener-neon.vercel.app/api/screen?stat='+k,function(){}); }); }, 4000);

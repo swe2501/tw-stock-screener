@@ -194,6 +194,48 @@ def _get_industry_map() -> dict:
     return {k: v for k, v in _industry_cache.items() if k != "__otc_loaded"}
 
 
+_shares_cache: dict = {}
+_shares_cache_ts: float = 0.0
+
+
+def _get_shares_map() -> dict:
+    """code → 發行股數（上市 t187ap03_L + 上櫃 mopsfin_t187ap03_O）。供產業『市值加權』漲跌幅用。
+    市值＝收盤 × 發行股數，貼近官方類指數口徑。快取 24h；抓不到回 {}（呼叫端退回等權）。"""
+    global _shares_cache, _shares_cache_ts
+    if _shares_cache and time.time() - _shares_cache_ts < 86400:
+        return _shares_cache
+    import ssl as _ssl
+    ctx = _ssl.create_default_context()
+    ctx.verify_flags &= ~_ssl.VERIFY_X509_STRICT       # TWSE/TPEx 憑證缺 SKI，仍驗鏈與主機名
+    out = {}
+    try:
+        req = urllib.request.Request("https://openapi.twse.com.tw/v1/opendata/t187ap03_L",
+                                     headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"})
+        with urllib.request.urlopen(req, timeout=8, context=ctx) as r:
+            for row in json.loads(r.read()):
+                code = str(row.get("公司代號", "")).strip()
+                sh = _pf(row.get("已發行普通股數或TDR原股發行股數"))
+                if code and sh:
+                    out[code] = sh
+    except Exception:
+        pass
+    try:
+        req = urllib.request.Request("https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap03_O",
+                                     headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"})
+        with urllib.request.urlopen(req, timeout=8, context=ctx) as r:
+            for row in json.loads(r.read().decode("utf-8-sig")):
+                code = str(row.get("SecuritiesCompanyCode", "")).strip()
+                sh = _pf(row.get("IssueShares"))
+                if code and sh and code not in out:
+                    out[code] = sh
+    except Exception:
+        pass
+    if out:
+        _shares_cache = out
+        _shares_cache_ts = time.time()
+    return _shares_cache
+
+
 def _get_json(url, headers=TWSE_HEADERS, timeout=20):
     req = urllib.request.Request(url, headers=headers)
     try:
@@ -816,13 +858,14 @@ def _fetch_disposal():
 
 def _fetch_sectors():
     """產業地圖：以產業別彙整當日表現。
-      個股漲跌幅 = 今收/前收-1；產業平均漲跌幅 = 該產業成分股漲跌幅算術平均。
+      個股漲跌幅 = 今收/前收-1；產業漲跌幅 = 成分股『市值加權』(收盤×發行股數)。
     回每個產業：檔數、平均漲跌幅、上漲/下跌家數、漲最多/跌最多代表股。
     產業對照 _get_industry_map()（Vercel 用內嵌 _STOCK_INDUSTRY）。"""
+    shares = _get_shares_map()
     if _INTRADAY.get("listed"):                      # 盤中：用 mis 即時快照
         items = ((c, q.get("price"), q.get("prev"), q.get("vol") or 0)
                  for c, q in _INTRADAY["listed"].items())
-        return _sectors_from(items, _INTRADAY.get("date") or "")
+        return _sectors_from(items, _INTRADAY.get("date") or "", shares)
     latest, by_code = _load_pw_window(3)
     if not by_code:
         return {"error": "no data"}
@@ -832,35 +875,43 @@ def _fetch_sectors():
             if not arr or arr[0]["trade_date"] != latest or len(arr) < 2:
                 continue
             yield c, arr[0].get("close"), arr[1].get("close"), (arr[0].get("volume") or 0)
-    return _sectors_from(_rows(), latest)
+    return _sectors_from(_rows(), latest, shares)
 
 
-def _sectors_from(items, date_str):
-    """產業彙整共用核心。items 產生 (code, close, prev, volume)。盤後/盤中同一套算法。"""
+def _sectors_from(items, date_str, shares=None):
+    """產業彙整共用核心。items 產生 (code, close, prev, volume)。盤後/盤中同一套算法。
+    產業漲跌幅＝成分股漲跌幅以『市值加權』(收盤×發行股數，貼近官方類指數口徑，2026-10-16 用戶定案)；
+    無發行股數(整個產業市值=0，極少數)才退回算術平均。方塊大小仍用成交金額。"""
     ind = _get_industry_map() or {}
+    shares = shares or {}
     agg = {}
     for c, a, b, vol in items:
         if a is None or not b:
             continue
         chg = (a / b - 1) * 100
+        turnover = a * (vol or 0)                   # 成交金額(元)＝收盤×成交股數（方塊大小用）
+        mcap = a * (shares.get(c) or 0)             # 市值(元)＝收盤×發行股數（加權用）
         sec = ind.get(c) or "未分類"
-        d = agg.setdefault(sec, {"sector": sec, "count": 0, "sum": 0.0,
+        d = agg.setdefault(sec, {"sector": sec, "count": 0, "sum": 0.0, "msum": 0.0, "mtot": 0.0,
                                  "up": 0, "down": 0, "top": None, "bot": None, "stocks": []})
         d["count"] += 1
         d["sum"] += chg
+        d["msum"] += chg * mcap
+        d["mtot"] += mcap
         if chg > 0: d["up"] += 1
         elif chg < 0: d["down"] += 1
         name = _STOCK_NAMES.get(c, c)
         # 成分股明細（產業地圖點磚塊展開用）：[代號, 名稱, 收盤, 漲跌幅%, 成交值(億)] 2026-09-28
-        d["stocks"].append([c, name, a, round(chg, 2), round(a * (vol or 0) / 1e8, 2)])
+        d["stocks"].append([c, name, a, round(chg, 2), round(turnover / 1e8, 2)])
         if d["top"] is None or chg > d["top"]["chg"]:
             d["top"] = {"code": c, "name": name, "chg": round(chg, 2)}
         if d["bot"] is None or chg < d["bot"]["chg"]:
             d["bot"] = {"code": c, "name": name, "chg": round(chg, 2)}
     out = []
     for d in agg.values():
-        d["avg_chg"] = round(d["sum"] / d["count"], 2) if d["count"] else 0
-        del d["sum"]
+        # 市值加權；整個產業無發行股數資料(極少數)才退回算術平均
+        d["avg_chg"] = round(d["msum"] / d["mtot"], 2) if d["mtot"] > 0 else (round(d["sum"] / d["count"], 2) if d["count"] else 0)
+        del d["sum"], d["msum"], d["mtot"]
         d["stocks"].sort(key=lambda x: x[3], reverse=True)
         out.append(d)
     out.sort(key=lambda x: x["count"], reverse=True)
