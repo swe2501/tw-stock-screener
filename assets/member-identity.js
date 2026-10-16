@@ -3,10 +3,10 @@
   'use strict';
   const config=()=>({url:typeof SIG_SB_URL!=='undefined'?SIG_SB_URL:'',key:typeof SIG_SB_ANON!=='undefined'?SIG_SB_ANON:''});
   const fields=['display_name','full_name','gender','city','birth_date','experience','markets','purpose','member_preferences','member_learning'];
-  const providerId=provider=>provider==='line'?'custom:line':provider;
+  const providerId=provider=>provider==='line'?'custom:line-web':provider;
   // Public /settings omits custom providers. LINE was verified against /authorize.
   // Keep this explicit deployment configuration separate from built-in provider flags.
-  const configuredCustomProviders=new Set(['custom:line']);
+  const configuredCustomProviders=new Set(['custom:line-web']);
   const providerEnabled=(s,provider)=>configuredCustomProviders.has(providerId(provider))||!!s.external?.[providerId(provider)];
   function normalizePhone(value){
     let phone=String(value).trim().replace(/[\s()\-]/g,'');
