@@ -1,3 +1,5 @@
+> **後續權限核對更新**：已可用 Chrome 的 GitHub 登入會話操作 `Taiwan stock2 / bruqrbvbjxntgoljxsne` SQL Editor，只讀 catalog 成功。新會員物件／圖片 bucket／storage policy 皆無。Run 遷移被自動核准審查拒絕，原因是共用專案標示 PRODUCTION、包含 Auth trigger 與權限，尚缺對這個具體正式目標的確認；已發出確認待回覆。**不得繞路執行；目前未套用任何 schema。** 待接續頁及詳細證據見 `docs/member-db-status.md`。這取代下段「無可用管理連線」的較早狀態。
+
 > **2026-10-16 追加交接（優先於下文舊狀態）**：先讀 `docs/member-db-status.md` 最新節。使用者已授權今日會員功能與既有未串接功能接資料庫。新增 `member-cloud.js` 已接交易／目標／研究／筆記／草稿／私房偏好與私有圖片，支援離線、CAS 與明確版本選擇；12 項同步測試、隔離 PostgreSQL 四份 SQL 與整合瀏覽器測試通過。線上表本輪只讀仍 404，**尚未啟用跨裝置**。缺的是可管理專案的 Supabase 連線；GitHub 登入不等於這個對話已取得該連線。已建議 Supabase 外掛，尚未確認連線。不得再以舊 AGENTS 限制要求重複授權，也不得盲目重跑非冪等 SQL。圖片備份與 3D 素材／寄信 worker 等剩餘內容見最新盤點。
 
 # 會員中心、自選、策略與私房篩選器交接

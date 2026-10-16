@@ -22,7 +22,14 @@
 | member_feedback_tickets / member_rewards / member_coupons | HTTP 404 / PGRST205 |
 | member_point_ledger / member_referral_summary / academy_events | HTTP 404 / PGRST205 |
 
-**目前阻礙是連線能力，不是使用者未授權。** GitHub 登入可用於登入 Supabase 帳號，但這個對話仍未取得可管理對應專案的 Supabase 連線；沒有可用的資料庫管理工具或本機管理憑證。已建議 Supabase 外掛，尚無連線成功證據。不得要求使用者在聊天貼私鑰。
+**後續瀏覽器核對已取得管理介面，不再是無連線。** Chrome 已透過 GitHub 登入 Supabase「stock filter / Taiwan stock2」，專案 ID 與網站設定均為 `bruqrbvbjxntgoljxsne`。ChatGPT OAuth 授權頁顯示帳號無必要權限，但 SQL Editor 的只讀查詢成功，回傳 `current_user = postgres`。
+
+- 線上 catalog：public 的 `member_%`／`academy_events` 物件皆無，public 名稱含 member 的函式皆無；指定兩個圖片 bucket 無，storage.objects 既有 policy 無。
+- 資料庫 UI 標示 `main / PRODUCTION`；與 UAT 共用。未讀出會員列或憑證。
+- 已把第一份會員服務 SQL 填入新的 SQL Editor 分頁；**按 Run 被自動核准審查攔下，沒有執行遷移**。理由：這是正式共用目標，非冪等遷移含 Auth trigger／權限／獎勵推薦 RPC，使用者尚未明確確認對該 PRODUCTION 目標套用。
+- 已向使用者提出具體確認：允許在這個共用專案套用四份 SQL，或暫不套用。**確認待回覆，不能改走其他管道繞過審查。**
+- 瀏覽器待接續頁面：`https://supabase.com/dashboard/project/bruqrbvbjxntgoljxsne/sql/91abcc42-228f-4314-9c03-5dca51c37d72`。編輯區有待執行服務 SQL，Results 仍是上一個只讀盤點的三列空陣列，不是遷移成功證據。
+- 不需要使用者在聊天貼私鑰。已讀取的 SQL、程式與測試全部在 repo，可審查後接續。
 
 ## SQL 與驗證
 
@@ -38,9 +45,9 @@
 `tests/member-cloud.test.cjs` 12 項通過（假 REST）：舊資料匯移、第二裝置讀回、離線、衝突、刪除版本、上傳中修改、切帳號、缺表、身分不符、缺圖清理、損壞同步 metadata、跨裝置私有截圖。
 `tests/member-trade-ui.browser.cjs` 已載入真正 cloud 模組並使用假 REST，確認交易／策略寫入及頁首同步狀態；不是線上會員測試。`tests/member-cloud.browser.cjs` 另驗證衝突的兩次確認、保留本機／雲端選擇、版本遞增及備份下載。
 
-## 連線後要完成
+## 確認共用正式目標後要完成
 
-- 先確認專案 ID 與既有 table/function/policy 定義，UAT 與正式站共用 Supabase；比較現況後只套用需要的增量。這些 SQL 為初次建置檔，**不是可盲目重跑的冪等遷移**。既有公開 Storage policy 可能和新 policy 疊加，也必須審查。
+- 專案 ID 與既有會員物件／圖片 policy 已完成只讀預檢；取得使用者對共用 PRODUCTION 目標的具體確認後，依序套用、逐步核對結果。這些 SQL 為初次建置檔，**不是可盲目重跑的冪等遷移**。既有公開 Storage policy 可能和新 policy 疊加，也必須審查。
 - 套用後用真實測試會員驗證兩會員隔離、兩裝置衝突、離線恢復、頭像、私有附件與 token 過期，再更新本檔「線上已啟用」。
 - Auth OAuth／SMS 需確認後台 provider 與實際服務；寄信 outbox worker、寄送服務與送達驗證尚缺。不得把 queued 當成已送達。
 - 點數／優惠／推薦的真實活動規則與獎勵資料尚未建立；不從本機目標進度發放真實權益。
