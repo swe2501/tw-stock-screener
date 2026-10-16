@@ -3,7 +3,7 @@
 begin;
 create table public.member_research_documents (
   user_id uuid not null references auth.users(id) on delete cascade,
-  kind text not null check(kind in ('journal','research','private_screen')),
+  kind text not null check(kind in ('journal','journal_draft','research','workspace','workspace_draft','workspace_trash','feedback_draft','private_screen')),
   revision bigint not null default 1 check(revision>0),
   payload jsonb not null check(jsonb_typeof(payload)='object' and octet_length(payload::text)<=8388608),
   updated_at timestamptz not null default now(),
@@ -11,11 +11,9 @@ create table public.member_research_documents (
 );
 alter table public.member_research_documents enable row level security;
 revoke all on public.member_research_documents from public,anon,authenticated;
-grant select,delete on public.member_research_documents to authenticated;
+grant select on public.member_research_documents to authenticated;
 grant all on public.member_research_documents to service_role;
 create policy member_read_own on public.member_research_documents for select to authenticated
-  using (user_id=(select auth.uid()));
-create policy member_delete_own on public.member_research_documents for delete to authenticated
   using (user_id=(select auth.uid()));
 
 -- Optimistic concurrency: expected revision 0 creates a document; conflicts are
@@ -26,7 +24,7 @@ returns jsonb language plpgsql security definer set search_path='' as $$
 declare u uuid:=auth.uid(); current_revision bigint; saved public.member_research_documents%rowtype;
 begin
   if u is null then raise exception 'MEMBER_VERIFY_REQUIRED'; end if;
-  if p_kind is null or p_kind not in ('journal','research','private_screen')
+  if p_kind is null or p_kind not in ('journal','journal_draft','research','workspace','workspace_draft','workspace_trash','feedback_draft','private_screen')
     or p_expected_revision is null or p_expected_revision<0
     or p_payload is null or jsonb_typeof(p_payload)<>'object'
     or octet_length(p_payload::text)>8388608 then raise exception 'MEMBER_INPUT_INVALID'; end if;
@@ -48,6 +46,7 @@ end $$;
 revoke all on function public.save_member_research_document(text,bigint,jsonb) from public,anon,authenticated;
 grant execute on function public.save_member_research_document(text,bigint,jsonb) to authenticated;
 commit;
--- This draft alone does not enable cloud sync. Frontend migration/conflict UI,
--- offline queue, account-switch cancellation, private image storage and isolated
--- two-user/two-device RLS tests remain prerequisites. No localStorage auto-upload.
+-- Frontend sync/conflict/offline/private-image paths now exist in member-cloud.js.
+-- Isolated PostgreSQL/RLS tests pass; live Supabase deployment and end-to-end
+-- two-user/two-device/storage verification are still required. Inspect existing
+-- objects before applying: this file is an initial migration, not idempotent.
