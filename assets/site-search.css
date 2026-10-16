@@ -27,3 +27,20 @@
 @keyframes ss-sheen{0%{transform:translateX(-125%);opacity:0}18%{opacity:1}85%{opacity:1}100%{transform:translateX(125%);opacity:0}}
 @media(max-width:600px){.ss-result{padding-block:7px;min-height:48px}}
 @media(prefers-reduced-motion:reduce){.ss-result::after{display:none}.ss-result:hover::after,.ss-result[aria-selected=true]::after{animation:none}}
+
+/* Larger primary navigation with enough room for the search and dropdown panels. */
+#mainNav .mn-inner{box-sizing:border-box;gap:5px;flex-wrap:wrap!important}
+#mainNav .mn-grp{flex-shrink:0}
+#mainNav .mn-item{box-sizing:border-box;font-size:16px!important;line-height:1.5;min-height:52px;padding:14px 15px!important;gap:6px}
+#mainNav .mn-item i{font-size:10px}
+#mainNav .site-search{flex:1 1 260px;min-width:220px;max-width:380px;margin-left:auto}
+@media(max-width:1240px){#mainNav .site-search{flex:1 0 100%;max-width:none;min-width:0;margin:2px 0 8px}#mainNav .mn-item{padding-inline:13px!important}}
+@media(max-width:900px){
+ #mainNav{overflow:visible!important}
+ #mainNav .mn-inner{padding-inline:10px!important;gap:4px}
+ #mainNav .mn-inner>.mn-grp,#mainNav .mn-inner>a.mn-item{flex:0 0 calc((100% - 12px)/4);min-width:0}
+ #mainNav .mn-grp{position:static!important}
+ #mainNav .mn-item{width:100%;justify-content:center;font-size:14px!important;min-height:46px;padding:11px 5px!important;gap:3px}
+ #mainNav .mn-menu{left:8px!important;right:8px!important;top:calc(100% + 3px)!important;min-width:0!important;width:auto!important;max-height:calc(100dvh - 210px);overflow-y:auto;overscroll-behavior:contain}
+ #mainNav .site-search{max-width:none;flex:1 0 100%;width:100%;min-width:0}
+}
