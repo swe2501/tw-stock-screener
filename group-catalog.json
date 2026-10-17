@@ -992,7 +992,69 @@
         }
       ],
       "thesis": "低調穩健之法人防禦型作帳，很少全面大漲，多由欣銓以穩定殖利率與投信買超作為主力配置。",
-      "focus": "欣銓：車用與利基型封測訂單穩固，季底常成為投信穩定獲利與換股防守標的。"
+      "focus": "欣銓：車用與利基型封測訂單穩固，季底常成為投信穩定獲利與換股防守標的。",
+      "quarterlyReasons": {
+        "2025Q4": {
+          "2337": {
+            "text": "官方事實：旺宏第三季營收82.14億元，季增21%，但毛利率為13.5%，營業利益率為負13.9%。研究觀察：營收回升與獲利修復尚未同步，本季應分別追蹤毛利率、產品組合與營業虧損是否改善，不能只依營收成長判斷復甦。",
+            "source_urls": [
+              "https://www.mxic.com.tw/Lists/QuarterlyResults/Attachments/640/2025q3_release_en.pdf"
+            ],
+            "published_on": "2025-10-29",
+            "reviewed_on": "2026-10-17",
+            "fact_period": "2025Q3",
+            "review_type": "sourced_research"
+          }
+        },
+        "2026Q1": {
+          "2337": {
+            "text": "官方事實：旺宏第四季營收77.29億元，季減6%，毛利率24.2%，營業虧損3.92億元，較前季縮減66%。研究觀察：收入下降但毛利率與虧損改善，應觀察產品組合及成本改善能否延續至新年度；虧損收斂不等於已轉為獲利。",
+            "source_urls": [
+              "https://www.mxic.com.tw/Lists/QuarterlyResults/Attachments/646/2025q4_release_en.pdf"
+            ],
+            "published_on": "2026-01-27",
+            "reviewed_on": "2026-10-17",
+            "fact_period": "2025Q4",
+            "review_type": "sourced_research"
+          }
+        },
+        "2026Q2": {
+          "2337": {
+            "text": "官方事實：旺宏公告三月合併營收約44.22億元，年增96%；二月約30.30億元，年增60%。研究觀察：進入第二季前的營收動能提高，需用後續季度毛利率及存貨資料辨別成長品質；月營收本身無法拆解售價、出貨量與產品組合，也不能直接推算獲利。",
+            "source_urls": [
+              "https://www.mxic.com.tw/en-us/about/investor-relations/Pages/monthly-sales.aspx?ViewType=print"
+            ],
+            "published_on": "2026-04-07",
+            "reviewed_on": "2026-10-17",
+            "fact_period": "2026年3月",
+            "review_type": "sourced_research"
+          }
+        },
+        "2026Q3": {
+          "2337": {
+            "text": "官方事實：旺宏六月合併營收約69.56億元，年增216%，高於五月約62.56億元。研究觀察：第三季的研究重點是第二季收入擴張能否轉化為持續獲利與現金流；基期與產品組合均可能影響年增幅度，不能把營收年增率當成出貨量增幅。",
+            "source_urls": [
+              "https://www.mxic.com.tw/en-us/about/investor-relations/Pages/monthly-sales.aspx?ViewType=print"
+            ],
+            "published_on": "2026-07-07",
+            "reviewed_on": "2026-10-17",
+            "fact_period": "2026年6月",
+            "review_type": "sourced_research"
+          }
+        },
+        "2026Q4": {
+          "2337": {
+            "text": "官方事實：旺宏九月合併營收約83.67億元，年增188%，高於八月約81.45億元；這是第三季月份資料。研究觀察：第四季應核對營收續航、毛利率與庫存周轉的變化，區分成長速度和獲利品質；截至核對日不能把第三季月營收當作第四季已實現業績。",
+            "source_urls": [
+              "https://www.mxic.com.tw/en-us/about/investor-relations/Pages/monthly-sales.aspx?ViewType=print"
+            ],
+            "published_on": "2026-10-07",
+            "reviewed_on": "2026-10-17",
+            "fact_period": "2026年9月",
+            "review_type": "sourced_research"
+          }
+        }
+      }
     },
     {
       "order": 11,
