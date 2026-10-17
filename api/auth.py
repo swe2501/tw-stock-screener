@@ -94,6 +94,11 @@ class handler(BaseHTTPRequestHandler):
             return self._json(400, {"error": "email and password required"})
 
         if action == "register":
+            confirmation = body.get("password_confirm")
+            if not isinstance(password, str) or len(password) < 6:
+                return self._json(400, {"error": "密碼至少 6 個字元"})
+            if not isinstance(confirmation, str) or confirmation != password:
+                return self._json(400, {"error": "兩次輸入的密碼不一致，請重新確認"})
             status, data = _sb("/signup", {"email": email, "password": password})
             if status in (200, 201) and data.get("access_token"):
                 return self._json(200, {

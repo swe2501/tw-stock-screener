@@ -9034,6 +9034,7 @@
       <h2 id="authTitle">歡迎回來</h2>
       <div class="auth-field"><label>Email</label><input type="email" id="authEmail" autocomplete="username" aria-label="電子信箱" placeholder="請輸入電子信箱"></div>
       <div class="auth-field"><label>密碼</label><div class="pw-wrap"><input type="password" id="authPassword" autocomplete="current-password" aria-label="密碼" placeholder="請輸入密碼（至少 6 個字元）"><button class="pw-eye" type="button" onclick="togglePwEye()" id="pwEyeBtn"></button></div></div>
+      <div class="auth-field" id="authConfirmField" hidden><label for="authPasswordConfirm">確認密碼</label><input type="password" id="authPasswordConfirm" autocomplete="new-password" aria-label="確認密碼" placeholder="請再次輸入密碼" minlength="6"></div>
       <button class="auth-submit" id="authSubmit" onclick="doAuth()">登入</button>
       <div id="authForgotRow" style="text-align:right;margin-top:8px">
         <a href="javascript:void(0)" onclick="sendPasswordReset()"
@@ -9049,9 +9050,10 @@
       <h3 style="margin:0 0 4px;color:var(--text-primary);font-size:1.1rem">設定新密碼</h3>
       <p style="margin:0 0 16px;color:var(--text-muted);font-size:.85rem">請輸入新密碼（至少 6 個字元）</p>
       <div class="pw-wrap" style="margin-bottom:12px">
-        <input type="password" id="newPwInput" placeholder="新密碼"
+        <input type="password" id="newPwInput" autocomplete="new-password" aria-label="新密碼" placeholder="新密碼"
           style="width:100%;padding:9px 11px;background:var(--bg);border:1px solid var(--border);border-radius:7px;color:var(--text)">
       </div>
+      <div class="pw-wrap" style="margin-bottom:12px"><label for="newPwConfirm" style="display:block;font-size:12px;margin-bottom:6px">確認新密碼</label><input type="password" id="newPwConfirm" autocomplete="new-password" aria-label="確認新密碼" placeholder="請再次輸入新密碼" style="width:100%;padding:9px 11px;background:var(--bg);border:1px solid var(--border);border-radius:7px;color:var(--text)"></div>
       <div id="resetPwError" style="color:#e74c3c;font-size:12px;min-height:16px;margin-bottom:8px"></div>
       <button onclick="submitNewPassword()" id="resetPwBtn"
         style="width:100%;padding:9px 0;background:var(--accent);color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:.95rem">更新密碼並登入</button>
@@ -12877,6 +12879,7 @@
       document.getElementById('authError').textContent = '';
       document.getElementById('authEmail').value = '';
       document.getElementById('authPassword').value = '';
+      document.getElementById('authPasswordConfirm').value = '';
       document.getElementById('authModal').classList.add('open');
     }
     function closeAuthModal() {
@@ -12896,6 +12899,9 @@
     }
     function switchAuthTab(tab) {
       _authTab = tab;
+      document.getElementById('authConfirmField').hidden = tab !== 'register';
+      document.getElementById('authPasswordConfirm').required = tab === 'register';
+      document.getElementById('authPasswordConfirm').value = '';
       document.getElementById('tabLogin').classList.toggle('active', tab === 'login');
       document.getElementById('tabRegister').classList.toggle('active', tab === 'register');
       document.getElementById('authTitle').textContent = tab === 'login' ? '歡迎回來' : '建立帳號';
@@ -12946,6 +12952,7 @@
       const errEl = document.getElementById('resetPwError');
       const btn = document.getElementById('resetPwBtn');
       if (!pw || pw.length < 6) { errEl.textContent = '密碼至少 6 個字元'; return; }
+      if (pw !== document.getElementById('newPwConfirm').value) { errEl.textContent = '兩次輸入的新密碼不一致，請重新確認'; return; }
       btn.disabled = true; btn.textContent = '更新中...';
       try {
         const r = await fetch(`${SIG_SB_URL}/auth/v1/user`, {
@@ -12975,12 +12982,15 @@
       const errEl    = document.getElementById('authError');
       const btn      = document.getElementById('authSubmit');
       if (!email || !password) { errEl.textContent = '請填寫 email 和密碼'; return; }
+      if (_authTab === 'register' && password.length < 6) { errEl.textContent = '密碼至少 6 個字元'; return; }
+      const confirmation = document.getElementById('authPasswordConfirm').value;
+      if (_authTab === 'register' && password !== confirmation) { errEl.textContent = '兩次輸入的密碼不一致，請重新確認'; document.getElementById('authPasswordConfirm').focus(); return; }
       btn.disabled = true; btn.textContent = '處理中...';
       try {
         const r = await fetch('https://tw-stock-screener-neon.vercel.app/api/auth', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: _authTab, email, password }),
+          body: JSON.stringify({ action: _authTab, email, password, ...(_authTab === 'register' ? { password_confirm: confirmation } : {}) }),
         });
         const d = await r.json();
         if (!r.ok) { errEl.textContent = d.error || '發生錯誤'; return; }
@@ -13083,9 +13093,9 @@
       btn.textContent = ' 立即測試（掃描並寄信）';
     }
 
-    document.getElementById('authPassword').addEventListener('keydown', e => {
-      if (e.key === 'Enter') doAuth();
-    });
+    ['authPassword','authPasswordConfirm'].forEach(id=>document.getElementById(id).addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) { if (_authTab === 'register' && id === 'authPassword') document.getElementById('authPasswordConfirm').focus(); else doAuth(); }
+    }));
     document.getElementById('authModal').addEventListener('click', e => {
       if (e.target === document.getElementById('authModal')) closeAuthModal();
     });

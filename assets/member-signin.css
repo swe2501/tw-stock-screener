@@ -129,3 +129,7 @@
 #authModal.is-phone-view .auth-box h2{position:static;width:auto;height:auto;clip-path:none;margin:0 0 13px}
 
 #authModal .academy-phone button:disabled{opacity:.5;cursor:not-allowed}
+
+.academy-session-notice{position:fixed;z-index:21000;right:16px;bottom:16px;width:min(360px,calc(100vw - 32px));box-sizing:border-box;padding:16px;border:1px solid var(--border);border-radius:20px;background:var(--surface);color:var(--text);box-shadow:0 8px 30px #102c4a30;font-size:13px;line-height:1.7}.academy-session-notice[hidden]{display:none}.academy-session-notice p{margin:0 0 10px}.academy-session-notice button{border:1px solid var(--border);border-radius:999px;padding:7px 12px;margin-right:6px;background:var(--bg);color:var(--text);font:inherit;cursor:pointer}
+@media(max-height:860px){#authModal:has(#tabRegister.active) .auth-box{padding-top:12px;padding-bottom:10px}#authModal:has(#tabRegister.active) .auth-brand{margin-bottom:8px}#authModal:has(#tabRegister.active) .auth-field{margin-bottom:6px}}
+@media(max-height:700px){#authModal:has(#tabRegister.active) .auth-brand .gs-mark{width:44px!important;height:44px!important}#authModal:has(#tabRegister.active) .auth-field input{min-height:36px;padding:6px 12px}#authModal:has(#tabRegister.active) .academy-social-grid button{min-height:36px}#authModal:has(#tabRegister.active) .academy-social-grid{gap:4px}#authModal:has(#tabRegister.active) .academy-social-status{margin-top:3px}#authModal:has(#tabRegister.active) .auth-account-switch{margin:3px 0 5px}}

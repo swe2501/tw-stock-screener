@@ -50,6 +50,22 @@ class PhoneGuardTests(unittest.TestCase):
             remote.assert_called_once_with("/logout", {}, token="phone-token")
         self.assertEqual(result[0][0], 200)
 
+    def test_registration_confirmation_checked_before_auth_request(self):
+        from api import auth
+        for confirmation, expected in [(None, 400), ("different", 400), ("synthetic-password", 200)]:
+            instance = auth.handler.__new__(auth.handler)
+            body = {"action":"register", "email":"fixture@example.test", "password":"synthetic-password"}
+            if confirmation is not None: body["password_confirm"] = confirmation
+            raw = json.dumps(body).encode()
+            instance.headers = {"Content-Length":str(len(raw))}
+            instance.rfile = io.BytesIO(raw)
+            result = []
+            instance._json = lambda *args: result.append(args)
+            with patch.object(auth, "_sb", return_value=(200, {"access_token":"fixture", "user":{"id":"fixture"}})) as remote:
+                instance.do_POST()
+                self.assertEqual(remote.call_count, int(expected == 200))
+            self.assertEqual(result[0][0], expected)
+
     def test_auth_outage_fails_closed(self):
         with patch.dict(os.environ, {"MEMBER_REQUIRE_VERIFIED_PHONE":"1", "SUPABASE_URL":"https://auth.fixture", "SUPABASE_ANON_KEY":"public"}), patch("urllib.request.urlopen", side_effect=TimeoutError):
             self.assertEqual(member_phone.check("token")[0],503)
