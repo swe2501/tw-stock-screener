@@ -52,13 +52,13 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
     if(anchor&&!document.getElementById('academyChartStar')){
       const b=document.createElement('button');b.id='academyChartStar';b.type='button';b.className='mc-gold-star mc-chart-bookmark';b.innerHTML=star+'<span>收藏</span>';b.setAttribute('aria-label','收藏目前標的');anchor.before(b);
       b.onclick=()=>{const c=window.AcademyResearchChartContext?.();if(c?.code)toggle(c.code,c.name,b);};
-      document.body.classList.add('academy-research-ready');const menu=document.createElement('details');menu.className='mc-chart-research-menu';menu.innerHTML='<summary>研究工具 <span aria-hidden="true">⌄</span></summary><div class="mc-chart-research-options"><button type="button" data-chart-action="reason"><b>編輯收藏理由／到價設定</b><small>理由同步「我的自選」；到價設定在完整 K 圖查看</small></button><button type="button" data-chart-action="strategy"><b>設定策略回測</b><small>會員中心 → 策略回測，完成後可保存</small></button><button type="button" data-chart-action="simulation"><b>手動模擬交易</b><small>K 圖內練習下單，不會加入收藏</small></button></div>';anchor.after(menu);
+      document.body.classList.add('academy-research-ready');const menu=document.createElement('details');menu.className='mc-chart-research-menu';menu.innerHTML='<summary>研究工具 <span aria-hidden="true">⌄</span></summary><div class="mc-chart-research-options"><button type="button" data-chart-action="reason"><b>編輯收藏理由／到價設定</b><small>理由同步「我的自選」；到價設定在完整 K 圖查看</small></button><button type="button" data-chart-action="strategy"><b>設定策略回測</b><small>帶入目前標的到策略工作台；策略存於「我的策略庫」</small></button><button type="button" data-chart-action="simulation"><b>手動模擬交易</b><small>K 圖內練習下單，不會加入收藏</small></button></div>';anchor.after(menu);
       menu.onclick=e=>{const action=e.target.closest('[data-chart-action]')?.dataset.chartAction;if(!action)return;menu.open=false;const c=window.AcademyResearchChartContext?.();if(!c?.code)return;
         if(action==='reason'){anchor.click();return;}
         if(action==='simulation'){document.getElementById('chartBacktestBtn')?.click();return;}
         if(!localStorage.getItem('sb_token')){window.openAuthModal?.('login');return;}
         if(action==='observation')sessionStorage.setItem('academy.observation.seed',JSON.stringify(c));
-        if(action==='strategy')sessionStorage.setItem('academy.backtest.seed',c.code);
+        if(action==='strategy'){sessionStorage.setItem('academy.backtest.seed',c.code);sessionStorage.setItem('academy.strategy.chartContext',JSON.stringify({code:c.code,name:c.name,period:c.chart_snapshot?.period||'',source:'full-chart'}));}
         window.closeChart?.();window.openMemberCenter?.(action==='strategy'?'strategy':'favorites');
       };
     }

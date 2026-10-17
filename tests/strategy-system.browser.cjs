@@ -1,0 +1,43 @@
+/* Storage, original-data replay and chart handoff; synthetic quotes and identity only. */
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
+const root=path.resolve(__dirname,'..'),output=process.env.QA_OUTPUT;
+const rows=Array.from({length:1097},(_,i)=>({time:new Date(Date.UTC(2023,9,16+i)).toISOString().slice(0,10),open:100+i*.1,high:102+i*.1,low:99+i*.1,close:101+i*.1,volume:10000}));
+const key='academy.research.v1.strategy-system-fixture';
+(async()=>{const b=await chromium.launch({channel:'msedge',headless:true});try{
+ const p=await b.newPage({viewport:{width:1440,height:1050}}),errors=[];let changedFeed=false,quoteRequests=0;
+ p.on('pageerror',e=>{errors.push(e.message);console.error('PAGE',e.message);});
+ await p.route('**/api/chart?**',r=>{quoteRequests++;return r.fulfill({headers:{'Access-Control-Allow-Origin':'*'},json:{name:'隔離行情',data:changedFeed?rows.map(x=>({...x,open:x.open*2,high:x.high*2,low:x.low*2,close:x.close*2})):rows}});});
+ await p.route('http://127.0.0.1:49997/api/auth',r=>r.fulfill({json:{enabled:false}}));
+ await p.route('http://127.0.0.1:49997/',r=>r.fulfill({contentType:'text/html',body:`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>:root{--surface:#fff;--bg:#f5f7fa;--text:#263448;--text-muted:#61738a;--border:#dce4eb;--accent:#3483ce}*{box-sizing:border-box}body{margin:0;font:15px system-ui;background:var(--bg);color:var(--text)}main{max-width:1160px;margin:auto;padding:24px}.mc-card{padding:24px;background:var(--surface);border:1px solid var(--border);border-radius:20px;margin-bottom:20px}input,select,textarea{max-width:100%;font:inherit}button{font:inherit;border:1px solid var(--border);border-radius:18px;padding:10px 14px;background:var(--surface);color:var(--text)}label{display:block}.mc-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}${fs.readFileSync(path.join(root,'assets/member-strategy.css'),'utf8')}</style><main class="member-page"></main><script>localStorage.setItem('sb_token','fixture');localStorage.setItem('sb_user',JSON.stringify({id:'strategy-system-fixture'}));window._names={'2330':'測試標的'};window.chartCalls=[];window.openChart=(...args)=>chartCalls.push(args);window.saved=0;if(!sessionStorage.getItem('fixture.initialized')){sessionStorage.setItem('academy.backtest.seed','2330');sessionStorage.setItem('academy.strategy.chartContext',JSON.stringify({code:'2330',name:'測試標的',period:'週K',source:'full-chart'}));sessionStorage.setItem('fixture.initialized','1');}</script><script>${fs.readFileSync(path.join(root,'assets/member-strategy-engine.js'),'utf8')}</script><script>${fs.readFileSync(path.join(root,'assets/member-strategy-ui.js'),'utf8')}</script><script>window.state=JSON.parse(localStorage.getItem('${key}')||'null')||{strategies:[],runs:[]};AcademyStrategyUI.render({main:document.querySelector('main'),go:()=>{}},state,()=>{localStorage.setItem('${key}',JSON.stringify(state));window.saved++;},()=>true);</script>`}));
+ await p.goto('http://127.0.0.1:49997/');await p.waitForFunction(()=>document.querySelector('[name=auditDate]').value);
+ assert.match(await p.locator('[data-origin-title]').textContent(),/週K/);assert.match(await p.locator('[data-origin-title]').textContent(),/本頁日線/);
+ await p.locator('[data-return-chart]').click();assert.equal(await p.evaluate(()=>chartCalls[0][0]),'2330');
+ assert.equal(await p.locator('.ms-chat-dialog').isVisible(),false);assert.match(await p.locator('[data-audit-result]').textContent(),/當日：/);
+ await p.locator('[data-strategy-name]').fill('我的均線研究');await p.locator('[data-save-strategy]').click();
+ assert.equal(await p.locator('[data-library-list] .ms-library-item').count(),1);assert.match(await p.locator('[data-library-count]').textContent(),/1 個/);
+ await p.locator('[data-rule-param=fast]').first().fill('7');
+ assert.equal(await p.evaluate(()=>JSON.parse(localStorage.getItem('academy.strategy.drafts.v1.strategy-system-fixture'))[0].strategy.entry[0].fast),7);
+ await p.reload();await p.waitForFunction(()=>document.querySelector('[name=auditDate]').value);
+ assert.equal(await p.locator('[data-library-list] .ms-library-item').count(),1);await p.locator('[data-drafts] summary').click();await p.locator('[data-resume-draft]').first().click();
+ assert.equal(await p.locator('[data-rule-param=fast]').first().inputValue(),'7');await p.locator('[data-save-strategy]').click();assert.match(await p.locator('[data-library-list]').textContent(),/版本 2/);
+ await p.locator('[data-template]').selectOption('hold');await p.locator('[data-strategy-name]').fill('原始資料重跑測試');await p.locator('[data-save-strategy]').click();assert.equal(await p.locator('[data-library-list] .ms-library-item').count(),2);
+ await p.locator('[name=start]').fill('2026-01-03');await p.locator('[name=end]').fill('2026-10-16');
+ await p.locator('[data-run-strategy] details summary').click();for(const name of ['fee','tax','slip'])await p.locator('[name='+name+']').fill('0');
+ await p.locator('[data-run-strategy] button[type=submit]').click();await p.locator('[data-save-run]').waitFor();
+ await p.locator('[data-save-run]').click();assert.equal(await p.evaluate(()=>state.runs.length),1);assert.ok(await p.evaluate(()=>state.runs[0].dataSnapshot.data.length>1000));
+ assert.match(await p.locator('[data-run-history]').textContent(),/含當次行情快照/);
+ const original=await p.evaluate(()=>state.runs[0].result.returnPct);
+ const downloadPromise=p.waitForEvent('download');await p.locator('[data-export-current-run]').click();const download=await downloadPromise,bundle=JSON.parse(fs.readFileSync(await download.path(),'utf8'));
+ assert.equal(bundle.engineVersion,'2.0.0');assert.ok(bundle.dataSnapshot.data.length>1000);
+ changedFeed=true;await p.locator('.ms-market-search button').click();await p.waitForFunction(()=>document.querySelector('.ms-market-status').textContent.includes('原始日線'));
+ const before=quoteRequests;await p.locator('[data-replay-run]').click();assert.match(await p.locator('[data-strategy-status]').textContent(),/一致/);assert.equal(quoteRequests,before);assert.equal(await p.evaluate(()=>state.runs[0].result.returnPct),original);
+ await p.locator('[data-delete-run]').click();assert.equal(await p.evaluate(()=>state.runs.length),0);await p.locator('[data-undo-run]').click();assert.equal(await p.evaluate(()=>state.runs.length),1);
+ await p.locator('[data-strategy-file]').setInputFiles({name:'run.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(bundle))});await p.getByText('已載入規則、參數與行情快照，來源未經驗證；請檢查後手動執行回測。',{exact:true}).waitFor();assert.equal(await p.locator('[data-strategy-result]').textContent(),'');assert.match(await p.locator('.ms-market-status').textContent(),/來源未經驗證/);
+ const saved=await p.evaluate(()=>state.strategies.length);await p.locator('[data-strategy-file]').setInputFiles({name:'bad.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify({kind:'academy-strategy',version:1,strategy:{name:'bad',entry:[]}}))});await p.waitForFunction(()=>!document.querySelector('[data-library-status]').textContent.includes('已載入規則'));assert.equal(await p.evaluate(()=>state.strategies.length),saved);
+ if(output){fs.mkdirSync(output,{recursive:true});await p.screenshot({path:path.join(output,'strategy-library-desktop.png')});}
+ await p.setViewportSize({width:390,height:844});assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await p.getByRole('button',{name:'開啟策略小書靈聊天室',exact:true}).click();await p.waitForFunction(()=>document.querySelector('[data-ai-status]').textContent.includes('尚未啟用'));
+ assert.ok(await p.locator('.ms-chat-dialog').evaluate(e=>e.getBoundingClientRect().width<=innerWidth-16));
+ if(output)await p.screenshot({path:path.join(output,'strategy-chat-mobile.png')});await p.mouse.click(3,3);assert.equal(await p.locator('.ms-chat-dialog').isVisible(),false);
+ assert.deepEqual(errors,[]);console.log('PASS strategy library/reload/revisions, owner draft recovery, chart origin, numeric audit, raw-data replay without network, backup import/export, history undo and chat layout');
+}finally{await b.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

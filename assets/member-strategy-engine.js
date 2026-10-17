@@ -1,6 +1,7 @@
 /* Deterministic daily-bar engine. Rules inspect the previous close, never the execution bar. */
 (() => {
   'use strict';
+  const VERSION='2.0.0';
   const definitions={
     ma:{name:'價格與均線',fields:{period:['均線週期',20,2,240]},ops:['above','below','crossUp','crossDown']},
     maPair:{name:'兩條均線',fields:{fast:['短均線',5,2,239],slow:['長均線',20,3,240]},ops:['above','below','crossUp','crossDown']},
@@ -65,10 +66,16 @@
   function match(r,series,i){if(r.type==='always')return true;const {left:l,right:v}=series;if(i<0||!Number.isFinite(l[i])||!Number.isFinite(v[i]))return false;if(r.op==='above')return l[i]>v[i];if(r.op==='below')return l[i]<v[i];if(i<1||!Number.isFinite(l[i-1])||!Number.isFinite(v[i-1]))return false;return r.op==='crossUp'?l[i]>v[i]&&l[i-1]<=v[i-1]:l[i]<v[i]&&l[i-1]>=v[i-1];}
   function prepare(rows){
     if(!Array.isArray(rows))throw Error('歷史行情格式無效');
-    const data=rows.map(x=>({...x,open:+x.open,high:+x.high,low:+x.low,close:+x.close,volume:x.volume==null?null:+x.volume})).sort((a,b)=>String(a.time).localeCompare(String(b.time)));
-    if(!data.length||data.some(x=>!/^\d{4}-\d{2}-\d{2}$/.test(x.time)||![x.open,x.high,x.low,x.close].every(v=>Number.isFinite(v)&&v>0)||x.low>Math.min(x.open,x.close)||x.high<Math.max(x.open,x.close)||x.low>x.high))throw Error('需要完整且有效的日線開高低收資料，不能用收盤價虛構 K 棒');
+    if(rows.some(x=>!x||typeof x!=='object'))throw Error('歷史行情格式無效');
+    const data=rows.map(x=>({...x,open:+x.open,high:+x.high,low:+x.low,close:+x.close,volume:x.volume==null||String(x.volume).trim()===''?null:+x.volume})).sort((a,b)=>String(a.time).localeCompare(String(b.time)));
+    if(!data.length||data.some(x=>!/^\d{4}-\d{2}-\d{2}$/.test(x.time)||!Number.isFinite(Date.parse(x.time+'T00:00:00Z'))||new Date(x.time+'T00:00:00Z').toISOString().slice(0,10)!==x.time||![x.open,x.high,x.low,x.close].every(v=>Number.isFinite(v)&&v>0)||x.low>Math.min(x.open,x.close)||x.high<Math.max(x.open,x.close)||x.low>x.high))throw Error('需要完整且有效的日線開高低收資料，不能用收盤價虛構 K 棒');
     if(new Set(data.map(x=>x.time)).size!==data.length)throw Error('歷史行情日期重複');return data;
   }
+  function inspectAt(data,s,i,cache){
+    const side=key=>{const checks=s[key].map(r=>{const v=cache.get(r),cross=r.op.startsWith('cross'),ready=r.type==='always'||i>=0&&Number.isFinite(v.left[i])&&Number.isFinite(v.right[i])&&(!cross||i>0&&Number.isFinite(v.left[i-1])&&Number.isFinite(v.right[i-1]));return {rule:describeRule(r),ready,matched:ready&&match(r,v,i),left:Number.isFinite(v.left[i])?v.left[i]:null,right:Number.isFinite(v.right[i])?v.right[i]:null,previousLeft:Number.isFinite(v.left[i-1])?v.left[i-1]:null,previousRight:Number.isFinite(v.right[i-1])?v.right[i-1]:null};});return {mode:s[key+'Mode'],checks,ready:checks.every(c=>c.ready),matched:!!checks.length&&checks.every(c=>c.ready)&&(s[key+'Mode']==='all'?checks.every(c=>c.matched):checks.some(c=>c.matched))};};
+    return {date:data[i]?.time||null,entry:side('entry'),exit:side('exit')};
+  }
+  function inspect(rows,s,date){validate(s);const data=prepare(rows),i=data.findIndex(x=>x.time===date);if(i<0)throw Error('所選日期沒有日K資料');const cache=new Map([...s.entry,...s.exit].map(r=>[r,indicators(data,r)]));return inspectAt(data,s,i,cache);}
   function scan(rows,s){
     validate(s);if(s.entry.some(r=>r.type==='always'))throw Error('買進持有是回測方式，請先新增可用於選股的買進條件');
     const data=prepare(rows),i=data.length-1,checks=s.entry.map(r=>{const v=indicators(data,r),cross=r.op.startsWith('cross'),ready=i>=0&&Number.isFinite(v.left[i])&&Number.isFinite(v.right[i])&&(!cross||i>0&&Number.isFinite(v.left[i-1])&&Number.isFinite(v.right[i-1]));return {rule:describeRule(r),ready,matched:ready&&match(r,v,i)};});
@@ -78,29 +85,33 @@
     validate(s);const data=prepare(rows);
     if(!Number.isFinite(p.capital)||p.capital<100||p.capital>1e9||![p.fee,p.tax,p.slip].every(x=>Number.isFinite(x)&&x>=0&&x<=.05)||!Number.isFinite(p.allocation)||p.allocation<=0||p.allocation>1||!['ratio','amount'].includes(p.sizing)||p.sizing==='amount'&&(!Number.isFinite(p.amount)||p.amount<=0))throw Error('資金或交易成本設定無效');
     if(!/^\d{4}-\d{2}-\d{2}$/.test(p.start)||!/^\d{4}-\d{2}-\d{2}$/.test(p.end)||p.start>p.end||p.start<data[0].time||p.end<data[0].time)throw Error('請選擇行情可用範圍內的回測日期');
+    if([p.start,p.end].some(d=>!Number.isFinite(Date.parse(d+'T00:00:00Z'))||new Date(d+'T00:00:00Z').toISOString().slice(0,10)!==d))throw Error('回測日期無效');
     const first=data.findIndex(x=>x.time>=p.start),last=data.findLastIndex(x=>x.time<=p.end);if(first<0||last-first<2)throw Error('所選期間不足三根日K');
+    if(p.end>data.at(-1).time)throw Error('結束日期超出已載入行情，請確認資料日期後再回測');
     const rules=[...s.entry,...s.exit],cache=new Map(rules.map(r=>[r,indicators(data,r)]));
     if(rules.some(r=>r.type==='volume')&&data.slice(0,last+1).some(x=>!Number.isFinite(x.volume)||x.volume<0))throw Error('此策略需要完整成交量資料');
     if(rules.some(r=>r.type!=='always'&&(first<1||!Number.isFinite(cache.get(r).left[first-1])||!Number.isFinite(cache.get(r).right[first-1])||r.op.startsWith('cross')&&(first<2||!Number.isFinite(cache.get(r).left[first-2])||!Number.isFinite(cache.get(r).right[first-2])))))throw Error('開始日期前的指標暖機資料不足，請將起始日期往後移');
     const evaluate=(side,i)=>s[side].length?(s[side+'Mode']==='all'?s[side].every(r=>match(r,cache.get(r),i)):s[side].some(r=>match(r,cache.get(r),i))):false;
     let cash=p.capital,qty=0,buyPrice=0,buyCost=0,held=0,peak=p.capital,dd=0,wins=0,closed=0,fees=0;const trades=[],curve=[];
     const benchmarkFill=data[first].open*(1+p.slip),benchmarkQty=Math.floor(p.capital/(benchmarkFill*(1+p.fee))),benchmarkCash=p.capital-benchmarkQty*benchmarkFill*(1+p.fee);
-    const sell=(bar,raw,reason)=>{const price=raw*(1-p.slip),cost=qty*price*(p.fee+p.tax),net=qty*price-cost,pnl=net-buyCost;cash+=net;fees+=cost;closed++;if(pnl>0)wins++;trades.push({date:bar.time,side:'賣出',price,shares:qty,cost,reason,pnl});qty=0;held=0;};
+    let buyDate=null;
+    const sell=(bar,raw,reason,signal=null)=>{const price=raw*(1-p.slip),cost=qty*price*(p.fee+p.tax),net=qty*price-cost,pnl=net-buyCost;cash+=net;fees+=cost;closed++;if(pnl>0)wins++;trades.push({date:bar.time,side:'賣出',price,rawPrice:raw,shares:qty,cost,reason,pnl,returnPct:buyCost?pnl/buyCost*100:null,entryDate:buyDate,entryPrice:buyPrice,signal});qty=0;held=0;};
     for(let i=first;i<=last;i++){
       const bar=data[i];let sold=false;
       if(qty){const stop=buyPrice*(1-s.risk.stop/100),take=buyPrice*(1+s.risk.take/100);
-        if(evaluate('exit',i-1)||s.risk.maxBars&&held>=s.risk.maxBars){sell(bar,bar.open,'前日賣出訊號／持有期限');sold=true;}
+        if(evaluate('exit',i-1)){sell(bar,bar.open,'前日賣出訊號',inspectAt(data,s,i-1,cache));sold=true;}
+        else if(s.risk.maxBars&&held>=s.risk.maxBars){sell(bar,bar.open,'持有期限');sold=true;}
         else if(s.risk.stop&&bar.open<=stop){sell(bar,bar.open,'跳空停損');sold=true;}
         else if(s.risk.take&&bar.open>=take){sell(bar,bar.open,'跳空停利');sold=true;}
       }
       if(!qty&&!sold&&evaluate('entry',i-1)){
         const price=bar.open*(1+p.slip),budget=p.sizing==='amount'?Math.min(cash,p.amount):cash*p.allocation,n=Math.floor(budget/(price*(1+p.fee)));
-        if(n>0){qty=n;buyPrice=price;buyCost=n*price*(1+p.fee);cash-=buyCost;held=0;fees+=n*price*p.fee;trades.push({date:bar.time,side:'買進',price,shares:n,cost:n*price*p.fee,reason:i===first&&s.entry.some(r=>r.type==='always')?'期間起始':'前日買進訊號'});}
+        if(n>0){qty=n;buyPrice=price;buyDate=bar.time;buyCost=n*price*(1+p.fee);cash-=buyCost;held=0;fees+=n*price*p.fee;trades.push({date:bar.time,side:'買進',price,rawPrice:bar.open,shares:n,cost:n*price*p.fee,reason:i===first&&s.entry.some(r=>r.type==='always')?'期間起始':'前日買進訊號',signal:inspectAt(data,s,i-1,cache)});}
       }
       if(qty){const stop=buyPrice*(1-s.risk.stop/100),take=buyPrice*(1+s.risk.take/100);if(s.risk.stop&&bar.low<=stop)sell(bar,Math.min(bar.open,stop),'盤中停損（同棒雙觸價以停損優先）');else if(s.risk.take&&bar.high>=take)sell(bar,Math.max(bar.open,take),'盤中停利');}
       if(qty)held++;const equity=cash+qty*bar.close;peak=Math.max(peak,equity);dd=Math.max(dd,(peak-equity)/peak);curve.push({date:bar.time,equity,benchmark:benchmarkCash+benchmarkQty*bar.close});
     }
-    return {curve,trades,returnPct:(curve.at(-1).equity/p.capital-1)*100,benchmarkPct:(curve.at(-1).benchmark/p.capital-1)*100,drawdown:dd*100,closed,winRate:closed?wins/closed*100:null,openShares:qty,fees,first:curve[0].date,last:curve.at(-1).date,strategy:copy(s),parameters:copy(p)};
+    return {engineVersion:VERSION,curve,trades,returnPct:(curve.at(-1).equity/p.capital-1)*100,benchmarkPct:(curve.at(-1).benchmark/p.capital-1)*100,drawdown:dd*100,closed,winRate:closed?wins/closed*100:null,openShares:qty,fees,first:curve[0].date,last:curve.at(-1).date,strategy:copy(s),parameters:copy(p)};
   }
-  window.AcademyStrategyEngine={definitions,opNames,rule,template,validate,describeRule,summary,sma,ema,indicators,prepare,run,scan};
+  window.AcademyStrategyEngine={VERSION,definitions,opNames,rule,template,validate,describeRule,summary,sma,ema,indicators,prepare,run,scan,inspect};
 })();
