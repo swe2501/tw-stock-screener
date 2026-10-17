@@ -10626,8 +10626,10 @@
     }
 
     // K 圖標記分類顯示開關（比照均線顯示/隱藏）；將來新增標記類別只要在 _MK_DEFS 加一行即可
-    window._mkShow = window._mkShow || { div: true, catalyst: true, broker: true, user: true };
+    window._mkShow = window._mkShow || { broker: true, user: true };
     if (window._mkShow.sma20 == null) window._mkShow.sma20 = !!(window._kPref && window._kPref.get('mk_sma20', false));   // 20MA 買點標記預設關，開關會記住
+    if (window._mkShow.div == null) window._mkShow.div = !!(window._kPref && window._kPref.get('mk_div', false));         // 除權息標記預設關，開關會記住
+    if (window._mkShow.catalyst == null) window._mkShow.catalyst = !!(window._kPref && window._kPref.get('mk_catalyst', false)); // 法說會標記預設關，開關會記住
     let _sma20Markers = [];   // 本次圖表的 20MA 三階段買點標記（僅日 K）
     // 20 日 SMA 三階段買點（2026-10-12；與後端 api/screen.py sma20_stage_scan 同一套規則，改參數兩邊要一起改）
     function _sma20Scan(cs) {
@@ -10673,7 +10675,7 @@
       ['user',     '標記',   '#ff1744'],
       ['sma20',    '葛蘭碧買點', '#1e88e5'],
     ];
-    function _toggleMarker(k) { window._mkShow[k] = !window._mkShow[k]; if (k === 'sma20' && window._kPref) window._kPref.set('mk_sma20', window._mkShow[k]); _refreshChartMarkers(); }
+    function _toggleMarker(k) { window._mkShow[k] = !window._mkShow[k]; if ((k === 'sma20' || k === 'div' || k === 'catalyst') && window._kPref) window._kPref.set('mk_' + k, window._mkShow[k]); _refreshChartMarkers(); }
     function _renderMarkerToggles(present) {
       const host = document.getElementById('markerToggles'); if (!host) return;
       const S = window._mkShow;
