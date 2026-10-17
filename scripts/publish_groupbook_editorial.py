@@ -3,19 +3,21 @@ import datetime
 import importlib.util
 import json
 from pathlib import Path
-from audit_groupbook_research import audit,valid_reason
+from audit_groupbook_research import audit,valid_reason,valid_exclusion
+from groupbook_research_catalog import load_groups
 from groupbook_precompute import publish
 ROOT=Path(__file__).resolve().parent.parent
 
-def run(env):
+def run(env,require_complete=True):
     if not env.get("SUPABASE_SERVICE_KEY"):raise ValueError("Service key required")
     spec=importlib.util.spec_from_file_location("editorial_screen",ROOT/"api/screen.py")
     screen=importlib.util.module_from_spec(spec);spec.loader.exec_module(screen)
     screen.SUPABASE_URL=env["SUPABASE_URL"];screen.SUPABASE_KEY=env.get("SUPABASE_ANON_KEY") or env["SUPABASE_SERVICE_KEY"]
-    groups=json.loads((ROOT/"group-catalog.json").read_text(encoding="utf-8"))["groups"]
+    groups=load_groups()
     report=audit(groups);rows=[]
+    if require_complete and not report["complete"]:raise ValueError("Quarterly research coverage is incomplete; no snapshot published")
     for quarter in report["quarters"]:
-        editorial={g["name"]:{c:r for c,r in g.get("quarterlyReasons",{}).get(quarter,{}).items() if valid_reason(r,quarter)} for g in groups}
+        editorial={g["name"]:{c:r for c,r in g.get("quarterlyReasons",{}).get(quarter,{}).items() if valid_reason(r,quarter) or valid_exclusion(r,quarter)} for g in groups}
         editorial={name:reasons for name,reasons in editorial.items() if reasons}
         if not editorial:continue
         status,prior=screen._cache_sb("/page_cache",params=screen._snapshot_params("groupbook_research_"+quarter))
@@ -26,6 +28,8 @@ def run(env):
         existing={name:dict(reasons) for name,reasons in data.get("editorial",{}).items()}
         for name,reasons in editorial.items():existing.setdefault(name,{}).update(reasons)
         data["editorial"]=existing;data["editorialCoverage"]=[r for r in report["rows"] if r["quarter"]==quarter]
+        data["availableQuarters"]=report["quarters"]
+        data["editorialSummary"]={key:report[key] for key in ("uniqueExpected","uniqueCovered","uniqueNotApplicable","uniqueHistoricalBackground","researchTypes","complete")}
         data["editorialReviewedOn"]=datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8))).date().isoformat()
         rows.append(dict(kind="groupbook_research_"+quarter,trade_date=data.get("date"),payload=data))
     publish(env,rows)

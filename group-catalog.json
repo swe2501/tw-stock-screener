@@ -184,23 +184,30 @@
             "fact_period": "2026 年 7～9 月營收"
           },
           "3443": {
-            "text": "官方事實：創意財務行事曆列第三季營運結果與業務報告預定於 2026/10/29 17:30 發布。研究觀察：本季先追蹤第三季實績及公司後續展望；截至資料核對日，這場活動尚未發生，不預填其財報數字或結論。",
+            "text": "官方事實：創意10月5日公告的9月營收約71.45億元、年增97.8%，前九月合計約440.99億元、年增102.8%；另以2025Q4管理報告所述Turnkey占比83%、毛利率19%作歷史業務模式背景。研究觀察：第四季不能把營收擴張直接當成毛利同步成長，應對照NRE與Turnkey組合、成本與後續財報；舊季度組合不是本季實際占比，10月29日預定財報活動亦未先視為已發生。",
             "source_urls": [
-              "https://www.guc-asic.com/en/investor/financial"
+              "https://www.guc-asic.com/en/investor/financial",
+              "https://www.guc-asic.com/upload/2026_01_29/8_20260129184435tjqzu9PHp1.pdf"
             ],
+            "published_on": "2026-10-05",
             "reviewed_on": "2026-10-17",
-            "fact_period": "2026 Q4 財報公布事件（預定 10/29）"
+            "fact_period": "2026年9月及前九月營收；另引2025Q4管理報告作模式比較",
+            "review_type": "sourced_research"
           }
         },
         "2026Q3": {
           "3583": {
-            "text": "官方事實：辛耘於 2026/09/03 參加證交所與富邦證券合辦的 SEMICON Taiwan 主題式業績發表會，說明 2026 上半年財務資訊。研究觀察：以該次法說作為第三季研究資料入口，核對公司營運說明；此處未將未讀取的簡報內容或供應鏈訂單推論當成事實。",
+            "text": "官方事實：辛耘9月3日簡報揭露2026年上半年營收61.15億元、毛利率約37%，製造業務占營收52%，公司並將製造業務毛利列為高於平均的項目。研究觀察：第三季研究製造與代理組合的改變及獲利品質，仍需對照驗收、成本與後續實績；上半年結果不是第三季已實現業績，也不能單由占比變動認定全部成長原因。",
+            "review_type": "sourced_research",
             "source_urls": [
-              "https://www.scientech.com.tw/zh-hant/Investor/Shareholder/InvestorConference"
+              "https://www.scientech.com.tw/sites/scientech.com.tw/files/document/InvestorConference/20260903%E6%B3%95%E4%BA%BA%E8%AA%AA%E6%98%8E%E6%9C%83-%E5%AF%8C%E9%82%A6%28%E8%8B%B1%E6%96%87%29.pdf"
             ],
             "published_on": "2026-09-03",
             "reviewed_on": "2026-10-17",
-            "fact_period": "2026 Q3 法說／2026 H1 財務資料"
+            "fact_period": "2026-09-03簡報；2026年上半年業務與財務",
+            "event_title": "辛耘2026年9月3日英文法人說明會簡報",
+            "source_sha256": "80fc47508ed050a7d18781850b8663d49a060adf0e75752ed740042f97085856",
+            "source_verified": true
           },
           "2330": {
             "text": "官方事實：台積電於 2026-07-16 公布 2026Q3 營收指引 446～458 億美元、毛利率 65%～67%；官方特別指出 2 奈米快速放量對第三季營運的支撐。研究觀察：本季追蹤 2 奈米放量與產品組合變化；須同時觀察新製程爬坡成本與毛利率，不能只把需求增加視為必然推升股價。",
