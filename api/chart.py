@@ -66,14 +66,84 @@ def _tx_session_quotes(rows):
     return result
 
 
+def _tx_sessions_from_taifex():
+    """外資結算成本用：期交所 futDataDown(同日) 取近月 TX 的 日盤(一般)/夜盤(盤後) 收盤。
+    取代 openapi DailyMarketReportFut(T+1 延遲、Vercel 常被擋)。回 {day, night}。"""
+    cookie = _taifex_cookie_str()
+    end = datetime.now(timezone(timedelta(hours=8)))
+    start = end - timedelta(days=10)
+    post_data = urllib.parse.urlencode({
+        "down_type": "1", "commodity_id": "TX", "commodity_id2": "",
+        "queryStartDate": start.strftime("%Y/%m/%d"), "queryEndDate": end.strftime("%Y/%m/%d"),
+    }).encode()
+    req = urllib.request.Request(
+        "https://www.taifex.com.tw/cht/3/futDataDown", data=post_data,
+        headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                 "Referer": "https://www.taifex.com.tw/cht/3/dlFutDailyMarketView",
+                 "Origin": "https://www.taifex.com.tw",
+                 "Content-Type": "application/x-www-form-urlencoded", "Cookie": cookie})
+    with urllib.request.urlopen(req, timeout=10) as r:
+        raw = r.read()
+    content = None
+    for enc in ("utf-8-sig", "utf-8", "ms950", "big5"):
+        try:
+            content = raw.decode(enc); break
+        except Exception:
+            pass
+    if not content:
+        return {"day": None, "night": None}
+    best = {}  # (date, session) → (vol, close, month)；挑成交量最大＝近月
+    for line in content.split("\n"):
+        if not line or not line[0].isdigit():
+            continue
+        c = line.split(",")
+        if len(c) < 18 or c[1].strip() != "TX":
+            continue
+        sess = {"一般": "day", "夜盤": "night", "盤後": "night"}.get(c[17].strip())
+        month = c[2].strip()
+        if not sess or not re.fullmatch(r"\d{6}", month):   # \d{6} 排除價差組合(202610/202611)
+            continue
+        date = c[0].strip().replace("/", "-")
+        try:
+            close = float(c[6].replace(",", "").strip())
+            vol = int(c[9].replace(",", "").strip() or "0")
+        except Exception:
+            continue
+        if not math.isfinite(close) or close <= 0 or month < date[:4] + date[5:7]:
+            continue
+        key = (date, sess)
+        if key not in best or vol > best[key][0]:
+            best[key] = (vol, close, month)
+    if not best:
+        return {"day": None, "night": None}
+    latest = max(k[0] for k in best)
+    res = {"day": None, "night": None}
+    for (date, sess), (vol, close, month) in best.items():
+        if date == latest:
+            res[sess] = {"price": close, "date": date, "contractMonth": month, "session": sess}
+    return res
+
+
 def fetch_tx_sessions():
-    req = urllib.request.Request(TX_SESSION_SOURCE, headers=YF_HEADERS)
-    with urllib.request.urlopen(req, timeout=10) as response:
-        rows = json.loads(response.read(4_000_001))
-    if not isinstance(rows, list):
-        raise ValueError("invalid TAIFEX session response")
-    return {"code": "TX=F", "sessions": _tx_session_quotes(rows),
-            "source_url": TX_SESSION_SOURCE, "quoteType": "published_daily",
+    # 主來源：futDataDown(同日)；失敗才退回 openapi(T+1、常被擋)
+    sessions, src = None, "https://www.taifex.com.tw/cht/3/futDataDown"
+    try:
+        sessions = _tx_sessions_from_taifex()
+    except Exception:
+        sessions = None
+    if not sessions or not (sessions.get("day") or sessions.get("night")):
+        try:
+            req = urllib.request.Request(TX_SESSION_SOURCE, headers=YF_HEADERS)
+            with urllib.request.urlopen(req, timeout=10) as response:
+                rows = json.loads(response.read(4_000_001))
+            if isinstance(rows, list):
+                sessions, src = _tx_session_quotes(rows), TX_SESSION_SOURCE
+        except Exception:
+            pass
+    if not sessions:
+        sessions = {"day": None, "night": None}
+    return {"code": "TX=F", "sessions": sessions,
+            "source_url": src, "quoteType": "published_daily",
             "dateBasis": "TAIFEX trading date", "currency": "TWD"}
 
 # ── 上櫃(OTC)代號集：讀 Supabase otc_names（快取）；上櫃個股 Yahoo 尾碼用 .TWO（上市為 .TW）──
