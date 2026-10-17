@@ -1,4 +1,5 @@
--- NOT APPLIED. Shared production/UAT Auth requires explicit activation approval.
+-- APPLIED 2026-10-18 to bruqrbvbjxntgoljxsne after explicit shared-site approval.
+-- Custom Access Token Hook enabled. Initial migration: do not rerun.
 begin;
 create table public.member_device_sessions (
   user_id uuid not null references auth.users(id) on delete cascade,

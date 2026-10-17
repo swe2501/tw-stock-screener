@@ -1,6 +1,10 @@
 # 兩個登入工作階段上限
 
-狀態：SQL 尚未套用，Auth Hook 尚未啟用。推送 UAT 程式不等於限制已生效。
+狀態：2026-10-18 已取得使用者明確同意，SQL 套用至共用專案 bruqrbvbjxntgoljxsne，Custom Access Token Hook 已顯示 Enabled，指向 public.member_device_limit_hook。限制適用 UAT 與正式站。
+
+線上驗證：既有物件預檢為 NULL，確認沒有既有 Auth Hook 後才建立。可回滾 SQL 測試通過前兩名額放行、第三名額拒絕、原 session 重用、刪除測試 Auth session 後釋放名額；所有測試資料 ROLLBACK。SQL Editor 不允許 SET ROLE supabase_auth_admin，因此未假稱完成此角色的實際執行測試。Catalog 確認 RLS 已啟用、Auth 角色具有函式與表權限、authenticated/anon 無直接執行權限、所有帳號名額均未超過二個。驗證查詢：https://supabase.com/dashboard/project/bruqrbvbjxntgoljxsne/sql/460934de-d330-4ddb-b886-c7608333e03a 。啟用後以既有瀏覽器登入進入 UAT 會員總覽，會員資料仍可讀取。
+
+尚未完成：三個獨立瀏覽器的實際 OAuth／Email 登入與並發核發測試，不能以 SQL 測試替代。單台登出修正已推 UAT；正式站前端與 API 的版本未在本次推送 prod，需經既有正式發布流程帶入；舊版正式站的登出仍可能登出全部裝置。
 
 以 Supabase 核發憑證前的 Custom Access Token Hook 控制 Google、LINE、Email、OTP 及 refresh。每位會員使用交易鎖序列化名額分配；不信任前端提供的裝置編號。兩個有效 Auth session 以外拒絕核發憑證，原兩個 session 可繼續更新。
 
