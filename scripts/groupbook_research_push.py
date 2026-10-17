@@ -68,6 +68,29 @@ def build(groups, datasets, today):
                 stocks=stocks, missingCodes=sorted(codes-stocks.keys()), totalStocks=len(codes),
                 sourceType="official_revenue", groupsCovered=sum(any(m["code"] in stocks for m in g["members"]) for g in groups))
 
+def financial_entries(groups, datasets, today):
+    codes={m["code"] for g in groups for m in g["members"]}
+    result={}
+    for source, rows in datasets:
+        if not isinstance(rows,list): raise ValueError("Invalid financial source")
+        for row in rows:
+            code=str(row.get("公司代號") or row.get("SecuritiesCompanyCode") or "").strip()
+            if code not in codes: continue
+            year=number(row.get("年度") or row.get("Year"));season=number(row.get("季別") or row.get("Season"))
+            if year is None or season is None or int(season) not in (1,2,3,4): continue
+            year=int(year)+(1911 if year<1911 else 0);season=int(season)
+            report=roc_date(row.get("出表日期") or row.get("Date"))
+            if (year,season)>=(today.year,(today.month-1)//3+1) or report>today: continue
+            eps=number(row.get("基本每股盈餘（元）"))
+            if eps is None: continue
+            period=f"{year} 年第 {season} 季止累計"
+            value=dict(text=f"官方財報：{period}基本每股盈餘 {eps:.2f} 元。此為年初至該季累計數，不是單季 EPS。",
+                       fact_period=period+"；來源出表日 "+report.isoformat(),reviewed_on=today.isoformat(),
+                       source_urls=[source],year=year,season=season,eps_cumulative=eps)
+            if code not in result or (year,season)>(result[code]["year"],result[code]["season"]):result[code]=value
+    return result
+
+
 def run(env):
     if not env.get("SUPABASE_SERVICE_KEY"): raise ValueError("Service key required")
     datasets=[]
@@ -78,6 +101,16 @@ def run(env):
     groups=json.loads((ROOT/"group-catalog.json").read_text(encoding="utf-8"))["groups"]
     today=datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8))).date()
     data=build(groups,datasets,today)
+    from concurrent.futures import ThreadPoolExecutor
+    urls=["https://openapi.twse.com.tw/v1/opendata/t187ap06_L_"+kind for kind in ("ci","ins","basi","bd","mim","fh")]
+    urls += ["https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap06_O_"+kind for kind in ("ci","ins","basi","bd","mim")]
+    def fetch_financial(url):
+        with urllib.request.urlopen(urllib.request.Request(url,headers={"User-Agent":"groupbook-research/1.0"}),timeout=60) as response:
+            return url,json.load(response)
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        financial_data=list(pool.map(fetch_financial,urls))
+    data["financials"]=financial_entries(groups,financial_data,today)
+    print(f"[group research] financial coverage={len(data['financials'])}/{data['totalStocks']}")
     row=dict(kind="groupbook_research_"+data["quarter"], trade_date=data["date"], payload=data,
              updated_at=datetime.datetime.now(datetime.timezone.utc).isoformat())
     publish(env,[row])
