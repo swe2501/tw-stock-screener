@@ -49,3 +49,13 @@ OAuth 手動綁定還需要 Supabase Auth 開啟 **Allow manual linking**。未�
 已登入卻跳登入視窗的原因包括：本機靜態預覽沒有 /api/auth；目前共用登入 API 對 phone_policy 回 400「email and password required」（唯讀確認）。本機預覽改用既有登入服務位置。針對舊版 API 明確的 unknown action / email and password required 回應，視為該版本尚未部署手機 gate，維持既有會員入口；新版後端與 RLS 仍是授權依據，不因前端相容處理而放行被伺服器拒絕的操作。
 
 503／網路失敗改顯示獨立可重試通知，不清登入資訊、不自動開登入視窗。若 Auth 明確回 401，才提示重新登入，仍由使用者按按鈕開啟。密碼 mismatch、正常登入、服務失敗重試與舊版 API 相容均有完整頁面測試。
+
+## 統一閱讀與綁定管理
+
+`assets/site-readability.css` 提供一般內文 16px、操作文字約 14～15px、輔助資料約 14px 的階層，表格與導覽依可用寬度換行，保留圖表繪圖座標及登入表單既有緊湊布局。搜尋橫列移除底部 20px margin、外框與陰影，接齊導覽。首頁選項減少 padding，已選導覽以柔和呼吸光提示；reduced-motion 停用動畫。
+
+聯絡資料與綁定管理的 native dialog 使用 fixed/inset:0/margin:auto 置中，桌面及手機皆驗證。未開通 provider 仍可開啟狀態說明，不能假造授權。已綁社群帳號提供「更改綁定」：會員明確確認後才處理，先查 Auth 身分與另一個已驗證的可用登入方式，先預檢 manual linking 開通，再重新讀取同會員與相同 token，最後解除選定 identity 並導向新授權。只有一個可用入口、服務未開通或手動綁定未開通時，不解除原身分。取消新授權不復原舊綁定，操作前清楚說明可用其他已綁方式登入；會員 ID 與研究資料不變。未對真實會員執行 unlink 或 OAuth 更換。
+
+官方身份更換限制：https://supabase.com/docs/guides/auth/auth-identity-linking
+
+首頁外資成本只保留估算成本、盤別、價差與簡短基準資訊。未平倉口數與完整行情來源說明只在外資空單溫度計詳細頁建立 DOM，首頁不顯示；首頁卡片以內容高度排列，不再隨右側明細拉長。

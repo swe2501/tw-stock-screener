@@ -51,7 +51,7 @@
   }
   async function consumeCallback(){const q=new URLSearchParams(location.search);if(!q.has('code')&&!q.has('error'))return;let saved;try{saved=JSON.parse(sessionStorage.getItem('academy.oauth')||'null');}catch{}if(!saved)return;
     sessionStorage.removeItem('academy.oauth');q.delete('code');const failure=q.has('error');['error','error_code','error_description'].forEach(k=>q.delete(k));const code=new URLSearchParams(location.search).get('code');history.replaceState(history.state,'',location.pathname+(q.size?'?'+q:'')+(saved.returnHash||''));
-    if(!saved.verifier||!Number.isFinite(saved.created)||saved.created>Date.now())throw Error('登入驗證資料異常，請重試');if(failure)throw Error('你已取消登入，或登入服務未完成授權');if(Date.now()-saved.created>600000)throw Error('登入驗證已逾時，請重試');if(saved.intent==='link'){let owner;try{owner=JSON.parse(localStorage.getItem('sb_user')||'null')?.id;}catch{}if(!saved.userId||owner!==saved.userId||!localStorage.getItem('sb_token'))throw Error('會員登入狀態已變更，請重新登入原帳號後再綁定');}
+    if(!saved.verifier||!Number.isFinite(saved.created)||saved.created>Date.now())throw Error('登入驗證資料異常，請重試');if(failure)throw Error(saved.replacement?'新帳號尚未綁定，請使用其他已綁定方式登入，再重新操作':'你已取消登入，或登入服務未完成授權');if(Date.now()-saved.created>600000)throw Error('登入驗證已逾時，請重試');if(saved.intent==='link'){let owner;try{owner=JSON.parse(localStorage.getItem('sb_user')||'null')?.id;}catch{}if(!saved.userId||owner!==saved.userId||!localStorage.getItem('sb_token'))throw Error('會員登入狀態已變更，請重新登入原帳號後再綁定');}
     await accept(await request('/auth/v1/token?grant_type=pkce',{method:'POST',auth:false,body:{auth_code:code,code_verifier:saved.verifier}}),saved.intent==='link'?saved.userId:null);
     if(saved.intent==='link')window.dispatchEvent(new Event('academy-identity-linked'));
   }
@@ -68,6 +68,20 @@
       if(target.protocol!=='https:'||target.username||target.password)throw Error('綁定網址異常，請稍後重試');
       location.assign(target.href);
     }catch(error){sessionStorage.removeItem('academy.oauth');throw error;}
+  }
+  async function replaceOAuth(provider){
+    if(!['google','apple','facebook','line'].includes(provider))throw Error('不支援的綁定方式');
+    const token=localStorage.getItem('sb_token'),user=await request('/auth/v1/user'),s=await settings(),identities=user.identities||[],same=i=>i.provider===providerId(provider)||(provider==='line'&&['custom:line','custom:line-web'].includes(i.provider));
+    const target=identities.find(same),identityId=target?.identity_id||target?.id,other=i=>!same(i)&&((i.provider==='email'&&user.email_confirmed_at)||(i.provider==='phone'&&user.phone_confirmed_at)||['google','apple','facebook','line','custom:line','custom:line-web'].includes(i.provider));
+    if(!providerEnabled(s,provider))throw Error('此登入方式尚未開通，暫時無法更改');
+    if(!identityId||!identities.some(other))throw Error('請先綁定並驗證另一種登入方式，再更換這個帳號');
+    callback();const verifier=b64(crypto.getRandomValues(new Uint8Array(48))),challenge=b64(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(verifier))));
+    const q=new URLSearchParams({provider:providerId(provider),redirect_to:callback(),code_challenge:challenge,code_challenge_method:'s256',skip_http_redirect:'true'});
+    // Confirm manual linking is enabled before removing an existing identity.
+    const result=await request('/auth/v1/user/identities/authorize?'+q),url=new URL(result?.url||'');if(url.protocol!=='https:'||url.username||url.password)throw Error('綁定網址異常，請稍後重試');
+    const fresh=await request('/auth/v1/user');if(fresh.id!==user.id||localStorage.getItem('sb_token')!==token||!(fresh.identities||[]).some(i=>(i.identity_id||i.id)===identityId)||!(fresh.identities||[]).some(i=>!same(i)&&((i.provider==='email'&&fresh.email_confirmed_at)||(i.provider==='phone'&&fresh.phone_confirmed_at)||['google','apple','facebook','line','custom:line','custom:line-web'].includes(i.provider))))throw Error('會員狀態已變更，請重新開啟設定');
+    await request('/auth/v1/user/identities/'+encodeURIComponent(identityId),{method:'DELETE'});
+    sessionStorage.setItem('academy.oauth',JSON.stringify({intent:'link',replacement:provider,userId:user.id,verifier,created:Date.now(),returnHash:'#member/security'}));location.assign(url.href);
   }
   async function sendContactLink(kind,value){
     if(!['email','phone'].includes(kind))throw Error('不支援的驗證方式');
@@ -103,5 +117,5 @@
   const bindReferral=code=>rpc('bind_member_referral',{p_code:String(code).trim().toUpperCase()});
   const submitFeedback=data=>rpc('submit_member_feedback',data);
   const claimReward=id=>rpc('claim_member_reward',{p_reward_id:id});
-  window.AcademyIdentity={normalizePhone,getProfile,updateProfile,saveAvatar,settings,providerEnabled,startOAuth,linkOAuth,sendContactLink,verifyContactLink,sendMemberEmail,sendPhone,verifyPhone,consumeCallback,memberResource,revokeOtherSessions,ensureReferralCode,redeemCode,bindReferral,submitFeedback,claimReward};
+  window.AcademyIdentity={normalizePhone,getProfile,updateProfile,saveAvatar,settings,providerEnabled,startOAuth,linkOAuth,replaceOAuth,sendContactLink,verifyContactLink,sendMemberEmail,sendPhone,verifyPhone,consumeCallback,memberResource,revokeOtherSessions,ensureReferralCode,redeemCode,bindReferral,submitFeedback,claimReward};
 })();

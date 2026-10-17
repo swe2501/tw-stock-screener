@@ -76,3 +76,12 @@ test('contact verification cannot claim success until the server reports the sam
 });
 
 test('phone login rejects unverified or mismatched server phone, ignoring metadata claims',async()=>{for(const user of [{id:'verified-user',phone:'+886912345678',user_metadata:{phone_verified:true}},{id:'verified-user',phone:'+886998765432',phone_confirmed_at:'2026-10-17'}]){const {api,context,accepted}=setup();const base=context.fetch;context.fetch=async(url,options)=>url.endsWith('/user')?{ok:true,status:200,json:async()=>user}:base(url,options);await assert.rejects(api.verifyPhone('0912345678','123456'),/手機驗證/);assert.equal(accepted.length,0);}});
+
+test('replacement preflights linking and retains another verified identity before deleting',async()=>{
+ const {api,saved,context,calls}=setup();saved.set('sb_token','original-token');let phase='before';const base=context.fetch;
+ context.fetch=async(url,options)=>{if(url.endsWith('/user')){calls.push({url,...options});return{ok:true,status:200,json:async()=>({id:'original-user',email_confirmed_at:'2026-10-17',identities:[{identity_id:'google-old',provider:'google'},{identity_id:'email-id',provider:'email'}]})};}if(options?.method==='DELETE'){calls.push({url,...options});phase='deleted';return{ok:true,status:204};}return base(url,options);};
+ await api.replaceOAuth('google');const pre=calls.findIndex(c=>c.url?.includes('/identities/authorize?')),del=calls.findIndex(c=>c.method==='DELETE');assert.ok(pre>=0&&del>pre);assert.equal(phase,'deleted');assert.ok(calls[del].url.endsWith('/identities/google-old'));assert.equal(JSON.parse(saved.get('academy.oauth')).userId,'original-user');assert.equal(JSON.parse(saved.get('academy.oauth')).replacement,'google');
+});
+test('replacement cannot remove the only login or unlink before manual linking is available',async()=>{
+ for(const manual of [false,true]){const {api,saved,context,calls}=setup();saved.set('sb_token','original-token');const base=context.fetch;context.fetch=async(url,options)=>{if(url.endsWith('/user'))return{ok:true,status:200,json:async()=>({id:'original-user',email_confirmed_at:manual?'2026-10-17':null,identities:[{identity_id:'old',provider:'google'},...(manual?[{provider:'email'}]:[])]})};if(url.includes('/identities/authorize?'))return{ok:false,status:400,json:async()=>({error_code:'manual_linking_disabled'})};return base(url,options);};await assert.rejects(api.replaceOAuth('google'),manual?/尚未開啟帳號綁定/:/另一種登入方式/);assert.equal(calls.some(c=>c.method==='DELETE'),false);}
+});

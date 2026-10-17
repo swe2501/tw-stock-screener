@@ -1,0 +1,22 @@
+/* Shared reading scale. Keep chart geometry, badges and authentication forms separate. */
+:root{--reading-body:16px;--reading-control:15px;--reading-meta:14px}
+body{font-size:var(--reading-body);line-height:1.65}
+body :is(p,li,label,summary):not(:where(#authModal *,#resetPwModal *,#chartModal *,.sm-tile *,.tmx-cell *)){font-size:16px!important;line-height:1.8}
+body :is(table th,table td):not(:where(#chartModal *)){font-size:14px!important;line-height:1.6}
+body :is(small,.hp-sec-src,.gs-kicker,.hp-k .k,.hp-k .r,.hp-st .thr,.fx-cost-caption,.fx-session-note):not(:where(#authModal *,#resetPwModal *)){font-size:14px!important;line-height:1.75}
+.member-page{font-size:16px}.member-page :is(button,input,select,textarea){font-size:15px}.member-page :is(.mc-security-state,.mc-security-provider small,.mc-cloud-host,.mc-card small){font-size:14px!important}.member-page .mc-security-provider strong{font-size:16px}.member-page .mc-security-actions{gap:8px;min-width:0}.member-page .mc-security-actions button{font-size:14px;min-height:40px;white-space:normal}.member-page .mc-security-row{flex-wrap:wrap}.member-page .mc-security-provider{flex:1 1 180px}.member-page .mc-security-actions{flex:0 1 auto}
+.member-page .mc-contact-dialog{position:fixed;inset:0;margin:auto;height:fit-content;width:min(480px,calc(100vw - 32px));max-height:calc(100dvh - 32px);padding:26px;overflow:auto}.member-page .mc-contact-dialog h2{font-size:23px}.member-page .mc-contact-dialog :is(p,label,[role=status]){font-size:15px!important;line-height:1.8}
+.ms-chat-dialog :is(.ms-ai-message,.ms-ai-message p){font-size:15px!important;line-height:1.8}.ms-chat-dialog .ms-ai-message>b{font-size:12px}.ms-chat-dialog .ms-chat-keyboard-hint{font-size:12px}
+body>.topsearch{margin-bottom:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:transparent;padding:8px 13px!important}
+body>.topsearch .ts-label{font-size:14px}body>.topsearch .ts-box{min-width:0}body>.topsearch .ts-box>input{min-width:0;font-size:15px!important}.topsearch .btn{font-size:14px}
+#mainNav .mn-inner{gap:3px;align-items:center;flex-wrap:wrap}#mainNav .mn-item{font-size:15px!important;line-height:1.5!important;padding:8px 11px!important;white-space:nowrap}#mainNav .mn-active{animation:site-nav-breathe 4.8s ease-in-out infinite}#mainNav .mn-menu a{font-size:15px!important;line-height:1.6}#mainNav .site-search{margin:3px 0 3px auto;flex:1 1 230px;max-width:360px;min-width:200px}.ss-inline input[type=search]{font-size:14px!important}
+@keyframes site-nav-breathe{0%,100%{box-shadow:inset 0 1px #ffffff33,0 3px 9px var(--cta-glow)}50%{box-shadow:inset 0 1px #ffffff55,0 0 15px var(--cta-glow);filter:brightness(1.06)}}
+:is(.gs-deck,.hp-verdict,.gs-rk,.hp-mc .lab,.hp-ic .lab,.hp-st .lab){font-size:15px!important;line-height:1.75}.hp-sec-h{font-size:18px!important}.hp-sec :is(button,a.btn){font-size:15px!important}
+#hpFut{align-items:start!important}#hpForeignCost{align-self:start!important}#hpForeignCost .fx-cost-caption{margin-top:8px;padding-top:0}#hpForeignCost .fx-cost-state{font-size:14px}#hpForeignCost .fx-session-switch button{font-size:14px;padding:6px 14px}
+@media(max-width:1050px){#mainNav .site-search{max-width:none;flex-basis:100%;margin:3px 0 7px}#mainNav .mn-inner{row-gap:3px}}
+@media(max-width:700px){.member-page .mc-contact-dialog{padding:22px}.member-page .mc-security-actions{margin-left:0;flex-basis:100%;justify-content:flex-start;padding-left:53px}.member-page .mc-layout{min-width:0}.member-page .mc-main{min-width:0}.member-page .mc-card{padding:20px}.member-page .mc-security-provider{min-width:0}.member-page .mc-top{flex-wrap:wrap}.member-page .mc-top-actions{flex-wrap:wrap}}
+@media(prefers-reduced-motion:reduce){#mainNav .mn-active{animation:none}}
+
+body .member-page .mc-muted{font-size:16px!important;line-height:1.8}
+
+#authModal,#resetPwModal{line-height:1.4}
