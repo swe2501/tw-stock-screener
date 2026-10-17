@@ -12,7 +12,7 @@
         {
           "code": "2330",
           "name": "台積電",
-          "relation": "核心直屬／轉投資",
+          "relation": "核心直屬與轉投資",
           "market": "上市",
           "verified": true,
           "officialSite": "https://www.tsmc.com"
@@ -20,7 +20,7 @@
         {
           "code": "5347",
           "name": "世界",
-          "relation": "核心直屬／轉投資",
+          "relation": "核心直屬與轉投資",
           "market": "上櫃",
           "verified": true,
           "officialSite": "www.vis.com.tw"
@@ -28,7 +28,7 @@
         {
           "code": "3443",
           "name": "創意",
-          "relation": "核心直屬／轉投資",
+          "relation": "核心直屬與轉投資",
           "market": "上市",
           "verified": true,
           "officialSite": "www.guc-asic.com"
@@ -36,7 +36,7 @@
         {
           "code": "3374",
           "name": "精材",
-          "relation": "核心直屬／轉投資",
+          "relation": "核心直屬與轉投資",
           "market": "上櫃",
           "verified": true,
           "officialSite": "www.xintec.com.tw"
@@ -44,7 +44,7 @@
         {
           "code": "6789",
           "name": "采鈺",
-          "relation": "核心直屬／轉投資",
+          "relation": "核心直屬與轉投資",
           "market": "上市",
           "verified": true,
           "officialSite": "http://www.viseratech.com"
@@ -52,7 +52,7 @@
         {
           "code": "3131",
           "name": "弘塑",
-          "relation": "供應鏈協作",
+          "relation": "CoWoS／先進封裝與製程設備大聯盟",
           "market": "上櫃",
           "verified": true,
           "officialSite": "https://www.gptc.com.tw/"
@@ -60,7 +60,7 @@
         {
           "code": "3583",
           "name": "辛耘",
-          "relation": "供應鏈協作",
+          "relation": "CoWoS／先進封裝與製程設備大聯盟",
           "market": "上市",
           "verified": true,
           "officialSite": "www.scientech.com.tw/zh-hant"
@@ -68,7 +68,7 @@
         {
           "code": "6187",
           "name": "萬潤",
-          "relation": "供應鏈協作",
+          "relation": "CoWoS／先進封裝與製程設備大聯盟",
           "market": "上櫃",
           "verified": true,
           "officialSite": "www.allring-tech.com.tw"
@@ -76,7 +76,7 @@
         {
           "code": "2467",
           "name": "志聖",
-          "relation": "供應鏈協作",
+          "relation": "CoWoS／先進封裝與製程設備大聯盟",
           "market": "上市",
           "verified": true,
           "officialSite": "www.csun.com.tw"
@@ -84,7 +84,7 @@
         {
           "code": "5443",
           "name": "均豪",
-          "relation": "供應鏈協作",
+          "relation": "CoWoS／先進封裝與製程設備大聯盟",
           "market": "上櫃",
           "verified": true,
           "officialSite": "https://www.gpmcorp.com.tw/index.php"
@@ -92,7 +92,7 @@
         {
           "code": "6640",
           "name": "均華",
-          "relation": "供應鏈協作",
+          "relation": "CoWoS／先進封裝與製程設備大聯盟",
           "market": "上櫃",
           "verified": true,
           "officialSite": "https://www.gmmcorp.com.tw/"
@@ -100,7 +100,7 @@
         {
           "code": "3680",
           "name": "家登",
-          "relation": "供應鏈協作",
+          "relation": "CoWoS／先進封裝與製程設備大聯盟",
           "market": "上櫃",
           "verified": true,
           "officialSite": "http://www.gudeng.com"
@@ -108,7 +108,7 @@
         {
           "code": "6515",
           "name": "穎崴",
-          "relation": "供應鏈協作",
+          "relation": "CoWoS／先進封裝與製程設備大聯盟",
           "market": "上市",
           "verified": true,
           "officialSite": "https://www.winwayglobal.com/"
@@ -116,7 +116,7 @@
         {
           "code": "6223",
           "name": "旺矽",
-          "relation": "供應鏈協作",
+          "relation": "CoWoS／先進封裝與製程設備大聯盟",
           "market": "上櫃",
           "verified": true,
           "officialSite": "www.mpi.com.tw"
@@ -124,7 +124,7 @@
         {
           "code": "2404",
           "name": "漢唐",
-          "relation": "供應鏈協作",
+          "relation": "廠務工程與化學材料核心",
           "market": "上市",
           "verified": true,
           "officialSite": "http://www.uisco.com.tw"
@@ -132,7 +132,7 @@
         {
           "code": "6691",
           "name": "洋基工程",
-          "relation": "供應鏈協作",
+          "relation": "廠務工程與化學材料核心",
           "market": "上市",
           "verified": true,
           "officialSite": "www.yankey.com.tw/"
@@ -140,7 +140,7 @@
         {
           "code": "6196",
           "name": "帆宣",
-          "relation": "供應鏈協作",
+          "relation": "廠務工程與化學材料核心",
           "market": "上市",
           "verified": true,
           "officialSite": "https://www.micb2b.com"
@@ -148,7 +148,7 @@
         {
           "code": "4770",
           "name": "上品",
-          "relation": "供應鏈協作",
+          "relation": "廠務工程與化學材料核心",
           "market": "上市",
           "verified": true,
           "officialSite": "https://www.alliedsupreme.com"
@@ -156,7 +156,7 @@
         {
           "code": "1773",
           "name": "勝一",
-          "relation": "供應鏈協作",
+          "relation": "廠務工程與化學材料核心",
           "market": "上市",
           "verified": true,
           "officialSite": "http://www.shinychem.com.tw/"

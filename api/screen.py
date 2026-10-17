@@ -588,18 +588,20 @@ def _fetch_groupbook(window=10):
     if not (SUPABASE_URL and SUPABASE_KEY):
         return {"error": "price data unavailable"}
     rows, off = [], 0
+    today = datetime.now(timezone(timedelta(hours=8))).date()
+    current_quarter = (today.year, (today.month - 1) // 3 + 1)
     code_filter = "in.(" + ",".join(codes) + ")"
     while True:
-        page = _cache_sb("/price_window", params=[
+        status, page = _cache_sb("/price_window", params=[
             ("select", "code,trade_date,close,volume"), ("code", code_filter),
             ("order", "code.asc,trade_date.asc"), ("offset", str(off)), ("limit", "1000")
-        ])[1] or []
+        ])
+        if status != 200 or not isinstance(page, list):
+            return {"error": "incomplete group price data"}
         rows.extend(page)
         if len(page) < 1000:
             break
         off += 1000
-        if off >= 60000:
-            break
     by_code = {}
     for r in rows:
         c, d, px = str(r.get("code", "")), str(r.get("trade_date", "")), r.get("close")
@@ -618,6 +620,9 @@ def _fetch_groupbook(window=10):
             quarters.setdefault((y, (m - 1) // 3 + 1), []).append(i)
         evs = {}
         for q, idxs in quarters.items():
+            # Only completed calendar quarters belong in historical season-end statistics.
+            if q >= current_quarter:
+                continue
             end, start = idxs[-1], idxs[-1] - window
             if start < idxs[0] or not arr[start]["close"]:
                 continue
