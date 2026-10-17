@@ -22,13 +22,13 @@ const root=path.resolve(__dirname,'..'),output=process.env.QA_OUTPUT;
  });
  await p.goto('https://strategy.fixture.test/#member/strategy');
  await p.locator('.ms-creation-workspace').waitFor({timeout:20000});
- assert.equal(await p.locator('.ms-chat-dialog').isVisible(),false);await p.getByRole('button',{name:'開啟策略小書靈聊天室',exact:true}).click();await p.getByText('AI 助手尚未啟用 · 仍可在工作台編輯及回測策略',{exact:true}).waitFor();
- assert.equal(await p.locator('[data-ai-form] button').isDisabled(),true);
+ assert.equal(await p.locator('.ms-chat-dialog').isVisible(),false);await p.getByRole('button',{name:'開啟策略小書靈聊天室',exact:true}).click();await p.getByText('本機引導可用 · AI 自由討論尚未啟用',{exact:true}).waitFor();
+ assert.equal(await p.locator('[data-ai-form] button').isDisabled(),false);assert.equal(await p.locator('[data-assistant-mode] [value=ai]').evaluate(e=>e.disabled),true);
  assert.equal(await p.locator('[data-rule-param=fast]').first().inputValue(),'5');
  assert.equal(await p.locator('[data-rule-param=slow]').first().inputValue(),'20');
  if(output){fs.mkdirSync(output,{recursive:true});await p.screenshot({path:path.join(output,'full-page-desktop.png')});}
  await p.setViewportSize({width:390,height:844});
  assert.ok(await p.locator('.member-page').evaluate(e=>e.scrollWidth<=innerWidth+1));
  if(output)await p.screenshot({path:path.join(output,'full-page-mobile.png')});await p.evaluate(()=>document.documentElement.dataset.theme='dark');if(output)await p.screenshot({path:path.join(output,'full-page-mobile-dark.png')});assert.ok(await p.locator('.member-page').evaluate(e=>e.scrollWidth<=innerWidth+1));
- assert.deepEqual(errors,[]);console.log('PASS full index/modules: assistant disabled, editable 5/20 rules, no errors or mobile overflow');
+ assert.deepEqual(errors,[]);console.log('PASS full index/modules: local guide available, paid AI disabled, editable 5/20 rules, no errors or mobile overflow');
 }finally{await b.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

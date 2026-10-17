@@ -64,6 +64,19 @@ class AssistantTest(unittest.TestCase):
             code, data = agent.respond(self.body, "fixture")
             self.assertEqual(code, 502); self.assertNotIn("fixture-provider-key", json.dumps(data))
 
+    def test_formula_envelope_is_bounded_and_never_executed_on_server(self):
+        draft = strategy()
+        draft["entry"] = [{"type": "formula", "op": "above", "code": "param 週期 = 20\nclose > SMA(close, 週期)", "params": {"週期": 30}}]
+        self.assertEqual(agent.clean_strategy(draft), draft)
+        with patch.object(agent, "_model_request", return_value={"message": "請確認", "proposal": None}) as call:
+            self.assertEqual(agent.respond({**self.body, "strategy": draft}, "fixture")[0], 200)
+            self.assertEqual(call.call_args.args[0]["draft"]["entry"][0]["params"]["週期"], 30)
+        # No second Python formula interpreter. Semantic rejection is tested
+        # against the shared browser parser before any proposal can be applied.
+        for changed in ({"code": "x"*4001}, {"params": {"period": float("inf")}}, {"params": {"period": True}}, {"params": {"bad.key": 2}}, {"params": []}):
+            bad = {**draft, "entry": [{**draft["entry"][0], **changed}]}
+            with self.assertRaises(ValueError): agent.clean_strategy(bad)
+
     def test_existing_auth_route_dispatches_privately_and_rejects_bad_bodies(self):
         handler = object.__new__(AuthHandler)
         def send(body):
