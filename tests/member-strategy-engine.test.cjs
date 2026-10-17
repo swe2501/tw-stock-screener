@@ -51,3 +51,28 @@ test('screening rejects hold-only and distinguishes missing warmup from a failed
  assert.throws(()=>E.scan(bars([1,2,3]),E.template('hold')),/選股/);
  const s=E.template();assert.equal(E.scan(bars([1,2]),s).ready,false);assert.equal(E.scan(bars(Array.from({length:40},(_,i)=>50-i)),s).matched,false);
 });
+
+test('inspection exposes the same current/prior values used for a crossover',()=>{
+ const data=bars([10,9,8,11,14,12]),s=E.template();s.entry=[{...E.rule('maPair','crossUp'),fast:2,slow:3}];s.exit=[];
+ const audit=E.inspect(data,s,'2026-01-05'),rule=audit.entry.checks[0],series=E.indicators(data,s.entry[0]);
+ assert.equal(rule.left,series.left[4]);assert.equal(rule.right,series.right[4]);assert.equal(rule.previousLeft,series.left[3]);assert.equal(rule.previousRight,series.right[3]);
+ assert.equal(audit.entry.matched,rule.left>rule.right&&rule.previousLeft<=rule.previousRight);
+ assert.throws(()=>E.inspect(data,s,'2026-01-20'),/沒有/);
+});
+
+test('executed indicator trades retain previous-day evidence and net closed-trade ROI',()=>{
+ const s=E.template();s.entry=[{...E.rule('ma','above'),period:2}];s.exit=[{...E.rule('ma','below'),period:2}];
+ const result=E.run(bars([10,20,30,5,1,1]),s,{...params,start:'2026-01-04'});
+ assert.equal(result.engineVersion,E.VERSION);assert.equal(result.trades[0].signal.date,'2026-01-03');
+ assert.equal(result.trades[0].signal.entry.checks[0].left,30);assert.equal(result.trades[0].signal.entry.checks[0].right,25);
+ assert.equal(result.trades[1].entryDate,'2026-01-04');assert.equal(result.trades[1].returnPct,-80);
+ assert.equal(result.trades[1].signal.date,'2026-01-04');
+});
+
+test('invalid calendar dates, blank volume and unavailable period ends fail explicitly',()=>{
+ assert.throws(()=>E.prepare([{time:'2026-02-30',open:1,high:1,low:1,close:1}]),/開高低收/);
+ assert.throws(()=>E.prepare([null]),/格式/);
+ const data=bars([10,10,10,10,10,10]);assert.throws(()=>E.run(data,E.template('hold'),{...params,end:'2026-01-07'}),/超出/);
+ const s=E.template('breakout');for(const r of [...s.entry,...s.exit])if(r.period)r.period=2;data[0].volume='';
+ assert.throws(()=>E.run(data,s,{...params,start:'2026-01-04'}),/成交量/);
+});

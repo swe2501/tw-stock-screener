@@ -28,6 +28,7 @@ class handler(BaseHTTPRequestHandler):
         body = json.dumps(data, ensure_ascii=False).encode()
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Cache-Control", "no-store")
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
         self.end_headers()
@@ -41,9 +42,22 @@ class handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_POST(self):
-        length = int(self.headers.get("Content-Length", 0))
-        body = json.loads(self.rfile.read(length) or b"{}")
+        try:
+            length = int(self.headers.get("Content-Length", 0))
+            if not 0 <= length <= 32768:
+                return self._json(413, {"error": "request too large"})
+            body = json.loads(self.rfile.read(length) or b"{}")
+            if not isinstance(body, dict): raise ValueError()
+        except (ValueError, TypeError):
+            return self._json(400, {"error": "invalid request"})
         action = body.get("action", "")
+
+        if action == "strategy_assistant":
+            from lib.strategy_assistant import respond
+            auth = self.headers.get("Authorization", "")
+            token = auth[7:].strip() if auth.startswith("Bearer ") else ""
+            status, data = respond(body, token)
+            return self._json(status, data)
 
         # Token refresh — 不需要 email/password
         if action == "refresh":

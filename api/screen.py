@@ -703,6 +703,7 @@ def _fetch_groupbook(window=10, price_rows=None):
             "disclaimer": "本頁為季底行情統計觀察，不代表企業存在作價或操縱行為；歷史統計不保證未來績效。"}
 
 
+
 def _fetch_focus(top_n=30):
     """今日焦點三榜（伺服器端算，回精簡 JSON）：漲幅榜／跌幅榜／爆量榜。
     資料源：Supabase price_window（每日上傳的證交所 OHLCV，不落後）。
@@ -1529,15 +1530,16 @@ SMA20_VOL_MULT = 1.3    # 帶量：今日量 ≥ 1.3 × max(截至昨日 5 日�
 SMA20_LONG_RED = 0.03   # 長紅棒：(收−開)/收 ≥ 3%
 SMA20_LONG_TAIL = 0.03  # 長下影線：(min(開,收)−低)/收 ≥ 3%
 SMA20_PREV_DOWN_N = 5   # 原本下彎：前 5 個交易日內至少一天 MA 低於前一天
+SMA20_RESET_N = 3       # 連續 N 天 MA 下彎才重置該輪（健康回測只壓 1~2 天 MA，不該殺掉整輪）2026-10-17
 
 
 def sma20_stage_scan(bars):
     """bars＝[(date, o, h, l, c, v), ...] 由舊到新。回 [(index, stage), ...]（stage＝1/2/3，各輪各階段只記首次）。
-    每天先檢查重置：MA[t] < MA[t-1] → 清除階段、當天不觸發。
+    重置：MA 連續 SMA20_RESET_N(=3) 天下彎才清除該輪（健康回測只壓 1~2 天 MA，不重置）。
       買點1（尚未記錄 1）：均線原本下彎（前 5 日內至少一天 MA 低於前一天）且目前走平或上彎（MA[t]≥MA[t-1] 且 MA[t]≥MA[t-3]）、
                          紅 K、收盤 > MA、帶量 1.3 倍。
-      買點2（已記 1）：均線維持上彎（MA[t]>MA[t-1] 且 MA[t]>MA[t-3]）、最低 ≤ MA、收盤 > MA。
-      買點3（已記 1、2）：最高 < MA（整根在均線下），且 長紅 3%／長下影 3%／十字線（開＝收）任一。成立後該輪完成，待下彎重置。
+      買點2（已記 1）：回測不破——最低 ≤ MA（盤中碰到/跌破月線）、收盤 > MA（站回月線上）。不要求月線仍上彎。
+      買點3（已記 1、2）：收盤 < MA（跌破月線），且 長紅 3%／長下影 3%／十字線（開＝收）任一。成立後該輪完成。
     同一天不跨階段。資料窗內還沒出現過重置日之前，無法確定該輪從哪開始 → 不產生訊號。"""
     n = len(bars)
     out = []
@@ -1555,11 +1557,16 @@ def sma20_stage_scan(bars):
             run -= closes[i - N]
         if i >= N - 1:
             ma[i] = round(run / N, 6)
-    stage, known = 0, False
+    stage, known, down = 0, False, 0
     for i in range(N + SMA20_PREV_DOWN_N, n):      # 需要 MA[i-6]（判斷前 5 日每天是否低於其前一天）
         m, m1, m3 = ma[i], ma[i - 1], ma[i - 3]
-        if m < m1:                                 # 下彎第一天即重置，當天不觸發
-            stage, known = 0, True
+        if m < m1:                                 # 累計連續下彎天數；見到下彎即「已知輪起點」
+            down += 1
+            known = True
+        else:
+            down = 0
+        if down >= SMA20_RESET_N:                  # 連續 N 天下彎＝趨勢壞 → 重置該輪（1~2 天回測不重置）
+            stage = 0
             continue
         if not known or stage >= 3:
             continue
@@ -1576,11 +1583,11 @@ def sma20_stage_scan(bars):
                 stage = 1
                 out.append((i, 1))
         elif stage == 1:
-            if m > m1 and m > m3 and l <= m and c > m:
+            if l <= m and c > m:                   # 買2 回測不破：盤中碰月線、收盤站回（不再要求月線嚴格上彎）
                 stage = 2
                 out.append((i, 2))
         elif stage == 2:
-            if h < m and ((c - o) / c >= SMA20_LONG_RED or (min(o, c) - l) / c >= SMA20_LONG_TAIL or o == c):
+            if c < m and ((c - o) / c >= SMA20_LONG_RED or (min(o, c) - l) / c >= SMA20_LONG_TAIL or o == c):   # 買3：收盤跌破月線＋止跌K(長紅/長下影/十字)；不再要求整根都在月線下
                 stage = 3
                 out.append((i, 3))
     return out
@@ -2850,6 +2857,26 @@ class handler(BaseHTTPRequestHandler):
             except Exception as e:
                 import traceback
                 return self._send_json(200, {"error": str(e), "traceback": traceback.format_exc()})
+        # AI 判定買點（骨架）：目前回「假資料」示意，CDN 快取一天。
+        # 接真 AI 時在此改為：① 查 Supabase 共享快取(aibuy_<code>+當日) → 有就回；
+        #                    ② 無 → 抓該股近 1 年 OHLC＋葛蘭碧買點 → 呼叫 Claude/OpenAI(結構化 JSON)
+        #                          → 寫回 Supabase(用 service key env) → 回傳。
+        if (qs.get("stat") or [""])[0] == "aibuy":
+            code = (qs.get("code") or [""])[0].strip()[:8]
+            today = datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m-%d")
+            payload = {
+                "code": code, "date": today, "model": "placeholder", "stub": True,
+                "verdict": "觀望", "score": 55,
+                "summary": "（假資料示意）" + code + " 目前站在月線上方整理，量能未明顯放大，"
+                           "等待『帶量突破(買1)』或『回測不破(買2)』的進場點。接入 AI 後此段改為即時判讀。",
+                "points": [
+                    {"label": "型態", "text": "站上月線、短均線走平，尚未出現帶量突破"},
+                    {"label": "量能", "text": "成交量低於 20 日均量，追價意願不足"},
+                    {"label": "葛蘭碧", "text": "最近一組為買2 回測不破，尚未見買3"},
+                ],
+                "disclaimer": "AI 輔助判讀、非投資建議。目前為假資料，待接入 AI 後取代。",
+            }
+            return self._send_json(200, payload, cache="public, s-maxage=86400, max-age=3600")
         self._send_json(200, {"status": "ok"})
 
     def do_POST(self):
