@@ -201,6 +201,52 @@
             "published_on": "2026-09-03",
             "reviewed_on": "2026-10-17",
             "fact_period": "2026 Q3 法說／2026 H1 財務資料"
+          },
+          "2330": {
+            "text": "官方事實：台積電於 2026-07-16 公布 2026Q3 營收指引 446～458 億美元、毛利率 65%～67%；官方特別指出 2 奈米快速放量對第三季營運的支撐。研究觀察：本季追蹤 2 奈米放量與產品組合變化；須同時觀察新製程爬坡成本與毛利率，不能只把需求增加視為必然推升股價。",
+            "source_urls": [
+              "https://investor.tsmc.com/english/quarterly-results/2026/q2"
+            ],
+            "published_on": "2026-07-16",
+            "reviewed_on": "2026-10-17",
+            "fact_period": "2026Q3 公司當時展望",
+            "review_type": "sourced_research"
+          }
+        },
+        "2025Q4": {
+          "2330": {
+            "text": "官方事實：台積電於 2025-10-16 公布 2025Q4 營收指引 322～334 億美元、毛利率 59%～61%；官方表示先進製程需求持續強勁。研究觀察：以先進製程需求與公司當季指引作為研究主軸，追蹤營收能否落在指引區間，以及匯率與海外廠成本對毛利率的影響。",
+            "source_urls": [
+              "https://investor.tsmc.com/english/quarterly-results/2025/q3"
+            ],
+            "published_on": "2025-10-16",
+            "reviewed_on": "2026-10-17",
+            "fact_period": "2025Q4 公司當時展望",
+            "review_type": "sourced_research"
+          }
+        },
+        "2026Q1": {
+          "2330": {
+            "text": "官方事實：台積電於 2026-01-15 公布 2026Q1 營收指引 346～358 億美元、毛利率 63%～65%；公司將全年資本預算列為 520～560 億美元。研究觀察：研究重點是全年擴產投資與先進製程需求的匹配程度；全年資本預算不等於當季已支出，也不直接證明股價會有季底行情。",
+            "source_urls": [
+              "https://investor.tsmc.com/english/quarterly-results/2025/q4"
+            ],
+            "published_on": "2026-01-15",
+            "reviewed_on": "2026-10-17",
+            "fact_period": "2026Q1 公司當時展望",
+            "review_type": "sourced_research"
+          }
+        },
+        "2026Q2": {
+          "2330": {
+            "text": "官方事實：台積電於 2026-04-16 公布 2026Q2 營收指引 390～402 億美元、毛利率 65.5%～67.5%；官方表示先進製程需求持續支撐第二季業務。研究觀察：以先進製程需求能否轉化為營收及毛利率追蹤季度營運；這是公司當時展望，不能用其後公布的第二季實績倒填當時判讀。",
+            "source_urls": [
+              "https://investor.tsmc.com/english/quarterly-results/2026/q1"
+            ],
+            "published_on": "2026-04-16",
+            "reviewed_on": "2026-10-17",
+            "fact_period": "2026Q2 公司當時展望",
+            "review_type": "sourced_research"
           }
         }
       }
