@@ -581,27 +581,47 @@ def _median(values):
     return vals[n // 2] if n % 2 else (vals[n // 2 - 1] + vals[n // 2]) / 2.0
 
 
-def _fetch_groupbook(window=10):
+def _load_groupbook_prices(codes):
+    rows, off = [], 0
+    while True:
+        status, page = _cache_sb("/price_window", params=[
+            ("select", "code,trade_date,close"), ("code", "in.(" + ",".join(codes) + ")"),
+            ("order", "code.asc,trade_date.asc"), ("offset", str(off)), ("limit", "1000")
+        ])
+        if status != 200 or not isinstance(page, list):
+            return None
+        rows.extend(page)
+        if len(page) < 1000:
+            return rows
+        off += 1000
+
+
+def _read_groupbook_snapshot(window=10):
+    window = 5 if window <= 5 else (20 if window >= 20 else 10)
+    status, rows = _cache_sb("/page_cache", params=[
+        ("kind", "eq.groupbook_" + str(window)), ("select", "payload,updated_at"), ("limit", "1")
+    ])
+    if status != 200 or not isinstance(rows, list) or not rows:
+        return {"error": "group snapshot unavailable"}
+    data = rows[0].get("payload")
+    if not isinstance(data, dict) or data.get("error") or data.get("window") != window or not isinstance(data.get("groups"), list) or not data["groups"]:
+        return {"error": "invalid group snapshot"}
+    return dict(data, updatedAt=rows[0].get("updated_at"), precomputed=True)
+
+
+def _fetch_groupbook(window=10, price_rows=None):
     """依 price_window 計算各集團季底前 N 個交易日的歷史表現與排名。"""
     window = 5 if window <= 5 else (20 if window >= 20 else 10)
     codes = sorted({c for members in _GROUP_BOOK_MEMBERS.values() for c in members})
     if not (SUPABASE_URL and SUPABASE_KEY):
         return {"error": "price data unavailable"}
-    rows, off = [], 0
     today = datetime.now(timezone(timedelta(hours=8))).date()
     current_quarter = (today.year, (today.month - 1) // 3 + 1)
-    code_filter = "in.(" + ",".join(codes) + ")"
-    while True:
-        status, page = _cache_sb("/price_window", params=[
-            ("select", "code,trade_date,close,volume"), ("code", code_filter),
-            ("order", "code.asc,trade_date.asc"), ("offset", str(off)), ("limit", "1000")
-        ])
-        if status != 200 or not isinstance(page, list):
-            return {"error": "incomplete group price data"}
-        rows.extend(page)
-        if len(page) < 1000:
-            break
-        off += 1000
+    rows = price_rows
+    if rows is None:
+        rows = _load_groupbook_prices(codes)
+    if rows is None:
+        return {"error": "incomplete group price data"}
     by_code = {}
     for r in rows:
         c, d, px = str(r.get("code", "")), str(r.get("trade_date", "")), r.get("close")
@@ -2736,7 +2756,7 @@ class handler(BaseHTTPRequestHandler):
         if (qs.get("stat") or [""])[0] == "groupbook":
             try:
                 window = int((qs.get("window") or ["10"])[0])
-                return self._send_json(200, _fetch_groupbook(window), cache="public, s-maxage=3600, max-age=300")
+                return self._send_json(200, _read_groupbook_snapshot(window), cache="public, s-maxage=300, max-age=60")
             except Exception as e:
                 import traceback
                 return self._send_json(200, {"error": str(e), "traceback": traceback.format_exc()})

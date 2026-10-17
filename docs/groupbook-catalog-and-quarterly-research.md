@@ -19,3 +19,10 @@
 - 以台灣日期判斷季度，只納入已結束季度，集團與個股樣本一致。
 - 研究台改呼叫同站 API，UAT 可驗證自己的後端。
 - 大量行情仍逐頁讀取，實際部署需觀察回應時間；本次未改資料表或補寫行情。
+
+## 每日預先計算
+- `scripts/page_cache_push.py` 在每日行情上傳後呼叫 `groupbook_precompute.run`。
+- 行情只讀一次，算出 5／10／20 日完整結果，一次原子 upsert 至既有 page_cache 的 groupbook_5、groupbook_10、groupbook_20。失敗保留前次結果。
+- 公開 groupbook API 僅讀 page_cache，不提供訪客現算 fallback。payload.date 為行情資料日，updatedAt 為預算產生時間。
+- 初次執行：python scripts/groupbook_precompute.py --env-file <既有環境檔路徑>。可加 --dry-run 驗證而不寫入；金鑰不送至前端。
+- 本機每日排程使用主 checkout 的程式碼；需要將此版 scripts/page_cache_push.py、scripts/groupbook_precompute.py、api/screen.py 與 group-catalog.json 同步到實際排程執行的 checkout。worktree 或 UAT push 本身不會更新另一個 checkout。
