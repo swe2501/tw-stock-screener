@@ -2925,6 +2925,7 @@
   <div id="focusView" style="display:none">
     <div class="fc-summary" id="fcSummary"></div>
     <div class="fc-grid3">
+      <div id="fcSnapshotDate" style="grid-column:1 / -1;font-size:12px;color:var(--text-muted)"></div>
       <div class="fc-card"><div class="fc-h"> 漲幅榜 <span class="fc-sub">TOP30</span></div><div class="fc-tbl" id="fcGainers"><div class="fc-empty">載入中…</div></div></div>
       <div class="fc-card"><div class="fc-h"> 跌幅榜 <span class="fc-sub">TOP30</span></div><div class="fc-tbl" id="fcLosers"><div class="fc-empty">載入中…</div></div></div>
       <div class="fc-card"><div class="fc-h"> 爆量榜 <span class="fc-sub">量比≥1.3</span></div><div class="fc-tbl" id="fcSurge"><div class="fc-empty">載入中…</div></div></div>
@@ -3350,16 +3351,20 @@
     }
     function pct(v){return (v>0?'+':'')+Number(v).toFixed(2)+'%';}
     function cls(v){return v>0?'fc-up':(v<0?'fc-dn':'');}
+    var focusRequest=null,focusFetchedAt=0;
     function loadFocus(){
-      fetch('https://tw-stock-screener-neon.vercel.app/api/screen?stat=focus&n=30').then(function(r){return r.json();}).then(function(j){
+      if(focusRequest||Date.now()-focusFetchedAt<300000)return;
+      focusRequest=fetch('/api/screen?stat=focus&n=30').then(function(r){return r.json();}).then(function(j){
         if(!j||j.error){['fcGainers','fcLosers','fcSurge'].forEach(function(id){if(el(id))el(id).innerHTML='<div class="fc-empty">讀取失敗</div>';});return;}
+        focusFetchedAt=Date.now();
+        if(el('fcSnapshotDate'))el('fcSnapshotDate').textContent='排行榜行情日 '+j.date+' · 每日盤後預算';
         (j.gainers||[]).forEach(function(x){nameMap[x.code]=x.name;});
         (j.losers||[]).forEach(function(x){nameMap[x.code]=x.name;});
         (j.volume_surge||[]).forEach(function(x){nameMap[x.code]=x.name;});
         if(el('fcGainers'))el('fcGainers').innerHTML=rowsHTML(j.gainers,function(x){return '<span class="val '+cls(x.chg)+'">'+pct(x.chg)+'</span>';});
         if(el('fcLosers'))el('fcLosers').innerHTML=rowsHTML(j.losers,function(x){return '<span class="val '+cls(x.chg)+'">'+pct(x.chg)+'</span>';});
         if(el('fcSurge'))el('fcSurge').innerHTML=rowsHTML(j.volume_surge,function(x){return '<span class="val">'+Number(x.ratio).toFixed(2)+'x</span>'+(x.chg!=null?'<span class="val2 '+cls(x.chg)+'">'+pct(x.chg)+'</span>':'');});
-      }).catch(function(){['fcGainers','fcLosers','fcSurge'].forEach(function(id){if(el(id))el(id).innerHTML='<div class="fc-empty">讀取失敗</div>';});});
+      }).catch(function(){['fcGainers','fcLosers','fcSurge'].forEach(function(id){if(el(id))el(id).innerHTML='<div class="fc-empty">預算資料暫不可用</div>';});}).finally(function(){focusRequest=null});
     }
     function loadSummary(){
       var SB=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'', AK=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';
@@ -3627,6 +3632,10 @@
     #groupBookView .gb-member small{display:block;grid-column:auto}
     #groupBookView .gb-close{flex-shrink:0}
     @media(max-width:620px){#groupBookView .gb-member,#groupBookView .gb-member-head{grid-template-columns:44px minmax(50px,1fr) 76px 82px;gap:4px;padding-left:4px;padding-right:4px}#groupBookView .gb-detail{padding:14px}}
+    /* Match the overview theme drawer: full-height right-hand panel. */
+    #gbDetail.on:before{background:rgba(0,0,0,.5);backdrop-filter:none}
+    #groupBookView .gb-detail{top:0;right:0;bottom:0;left:auto;width:min(720px,96vw);height:100dvh;max-height:100dvh;box-sizing:border-box;border-radius:0;border:0;border-left:1px solid var(--border);background:var(--bg);padding:20px 22px 40px;overflow-y:auto;overscroll-behavior:contain;box-shadow:-8px 0 30px rgba(0,0,0,.3)}
+    @media(max-width:620px){#groupBookView .gb-detail{top:0;right:0;bottom:0;left:auto;width:96vw;height:100dvh;max-height:100dvh;border-radius:0;padding:20px 14px 40px;animation:gbSlideIn .24s ease}}
   </style>
   <div id="groupBookView" style="display:none"><section class="gb-hero"><div class="gb-kicker">GROUP QUARTER-END RESEARCH</div><div class="gb-titleline"><div><h2>集團作帳研究台</h2><p>前 30 名季底行情排行與台灣集團關係企業集中在同一頁；點集團從右側開啟研究面板，點個股直接查看既有 K 線。</p></div><div class="gb-controls"><div class="gb-seg" id="gbWindow"><button data-w="5">5 日</button><button data-w="10" class="on">10 日</button><button data-w="20">20 日</button></div><div class="gb-seg" id="gbMode"><button data-m="cards" class="on">圖卡</button><button data-m="list">條列</button></div></div></div></section><div class="gb-main-tabs" id="gbMainTabs"><button data-tab="all" class="on">所有集團</button><button data-tab="ranking">作帳績效排名 TOP 30</button><button data-tab="famous">作帳紅不讓</button></div><div class="gb-tools"><div class="gb-searchwrap"><div class="gb-searchbox"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="gbSearch" class="gb-search" type="search" autocomplete="off" placeholder="搜尋集團、股票代號或名稱"></div><div id="gbSearchDrop" class="gb-searchdrop" hidden></div></div><div class="gb-cats" id="gbCats"></div></div><div class="gb-meta" id="gbMeta"></div><div id="gbBoard"><div class="fc-empty">建立集團名錄中…</div></div><div id="gbDetail"></div><div class="gb-note"><b>判讀方式：</b>雙重勝率＝該季區間報酬為正、且同時勝過觀察池基準；排名綜合雙重勝率、超額報酬、集團上漲家數廣度、報酬／回撤與樣本信心。僅使用有價格資料的成員；歷史勝率僅納入已結束季度，本季不列入計算。資料不足者不列入排名。集團名錄會先顯示，讀取每日預先計算的資料後補上排名；本頁不構成投資建議。</div></div>
   <script src="group-catalog.js"></script>
