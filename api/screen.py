@@ -1595,6 +1595,7 @@ def sma20_stage_scan(bars):
         if i >= N - 1:
             ma[i] = round(run / N, 6)
     stage, known, down, away = 0, False, 0, False
+    b2_close, b2_gain = None, False                # 買2 當天收盤；買2 之後是否曾「賺過」（某天收盤 > 買2 收盤）
     for i in range(N + SMA20_PREV_DOWN_N, n):      # 需要 MA[i-6]（判斷前 5 日每天是否低於其前一天）
         m, m1, m3 = ma[i], ma[i - 1], ma[i - 3]
         if m < m1:                                 # 累計連續下彎天數；見到下彎即「已知輪起點」
@@ -1627,13 +1628,15 @@ def sma20_stage_scan(bars):
                     away = True
                 continue
             if m * (1 - SMA20_BREAK_TOL) <= l <= m * (1 + SMA20_TOUCH_TOL) and c > m:   # 2026-10-17 回測月線不破：最低碰到月線（差 0.5% 內也算）、最多破 1%、收盤站回；原註解： 買2 回測不破：盤中碰月線、收盤站回（不再要求月線嚴格上彎）
-                stage = 2
+                stage, b2_close, b2_gain = 2, c, False
                 out.append((i, 2))
         elif stage == 2:
             doji = abs(c - o) / c <= SMA20_DOJI_BODY and (h - l) / c >= SMA20_DOJI_RANGE   # 2026-10-17 十字線放寬
-            if c < m and ((c - o) / c >= SMA20_LONG_RED or (min(o, c) - l) / c >= SMA20_LONG_TAIL or doji):   # 買3：收盤跌破月線＋止跌K(長紅/長下影/十字)；不再要求整根都在月線下
+            if b2_gain and c < m and ((c - o) / c >= SMA20_LONG_RED or (min(o, c) - l) / c >= SMA20_LONG_TAIL or doji):   # 買3：收盤跌破月線＋止跌K(長紅/長下影/十字)；不再要求整根都在月線下
                 stage = 3
                 out.append((i, 3))
+            elif c > b2_close:                     # 2026-10-17 用戶指定：買2 之後從沒賺過（收盤都沒高於買2 收盤）就不標買3
+                b2_gain = True
     return out
 
 
