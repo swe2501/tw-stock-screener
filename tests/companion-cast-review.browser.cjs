@@ -25,9 +25,25 @@ const output=path.resolve(process.env.QA_OUTPUT||'work/companion-cast-qa');fs.mk
      if(after.some(v=>!Number.isFinite(v)))throw Error('Non finite pose');
     }
     r.mixer.stopAllAction();r.mixer.clipAction(r.clips.idle).reset().play();r.mixer.setTime(.3);r.model.updateMatrixWorld(true);
-    return {clips:clips.length,bones,meshes:meshes.length,animated};
+    // Measure posed vertices assigned to anatomical bones, excluding tool,
+    // plant and root bones. Some body-bound accessories remain included;
+    // this is a volume regression check, not anatomical/art approval.
+    let min=[Infinity,Infinity,Infinity],max=[-Infinity,-Infinity,-Infinity],count=0;
+    for(const m of meshes){const pos=m.geometry.attributes.position,si=m.geometry.attributes.skinIndex;
+     m.skeleton.update();
+     for(let i=0;i<pos.count;i++){
+      const bone=m.skeleton.bones[si.getX(i)].name;
+      if(!/^(body|head|arm-?1|foot-?1|tail|ear-?1|eye-?1|wing-?1)$/.test(bone))continue;
+      const v=m.position.clone().fromBufferAttribute(pos,i);m.applyBoneTransform(i,v);m.localToWorld(v);
+      for(let axis=0;axis<3;axis++){const value=v.getComponent(axis);min[axis]=Math.min(min[axis],value);max[axis]=Math.max(max[axis],value);}count++;
+     }
+    }
+    const bodySize=max.map((v,i)=>v-min[i]);
+    return {clips:clips.length,bones,meshes:meshes.length,animated,bodySize,bodyVertexCount:count};
    },{gestures});
    assert.ok(result.meshes>0);assert.ok(result.bones>0&&result.bones<60);assert.equal(result.clips,10);assert.equal(result.animated,5);
+   assert.ok(result.bodyVertexCount>100);assert.ok(result.bodySize.every(v=>Number.isFinite(v)&&v>.03));
+   assert.ok(result.bodySize[2]/result.bodySize[0]>.16,`${theme}/${persona}/${stage} body depth/width ${result.bodySize[2]/result.bodySize[0]}`);
    report.push({id:`${theme}/${persona}/${stage}`,...result});
    if(persona==='neutral'&&stage===0){await page.getByRole('button',{name:'正面',exact:true}).click();assert.equal(await page.getByRole('button',{name:'正面',exact:true}).getAttribute('aria-pressed'),'true');await page.screenshot({path:path.join(output,theme+'-front.png')});await page.getByRole('button',{name:'側面',exact:true}).click();await page.screenshot({path:path.join(output,theme+'-side.png')});await page.getByRole('button',{name:'背面',exact:true}).click();await page.screenshot({path:path.join(output,theme+'-back.png')});}
   }

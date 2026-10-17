@@ -189,7 +189,7 @@ class Character:
   faces.extend([tuple(range(7,-1,-1)),tuple(N*8+i for i in range(8))])
   return self.mesh(name,vs,faces,color,bone,'silk')
 
- def face(self,center=(0,-.38,1.77),spacing=.21,eye_size=.115,bone='head',closed=False,skin=None,mouth_depth=.045):
+ def face(self,center=(0,-.38,1.77),spacing=.21,eye_size=.115,bone='head',closed=False,skin=None,mouth_depth=.045,smile=False):
   x,y,z=center;skin=skin or CREAM
   for side in [-1,1]:
    b='eye'+str(side);xx=x+side*spacing
@@ -209,8 +209,11 @@ class Character:
    if self.persona=='female' and not closed:
     self.tube('Outer eyelash',[(xx+side*eye_size*.65,y-.035,z+.055),(xx+side*eye_size*1.1,y-.025,z+.11)],.009,DARK,b)
   self.mouth=(x,y-mouth_depth,z-.21)
-  self.ell('Happy mouth',self.mouth,(.064,.020,.045),(.18,.025,.045),bone,'gloss',n=20,rings=12)
-  self.ell('Tongue',(x,y-mouth_depth-.019,z-.228),(.038,.008,.017),PINK,bone,n=16,rings=10)
+  if smile:
+   self.tube('Quiet curved smile',[(x-.053,y-mouth_depth,z-.19),(x,y-mouth_depth-.014,z-.21),(x+.053,y-mouth_depth,z-.19)],.0055,(.25,.08,.07),bone,steps=6,sides=8,taper=.55)
+  else:
+   self.ell('Happy mouth',self.mouth,(.064,.020,.045),(.18,.025,.045),bone,'gloss',n=20,rings=12)
+   self.ell('Tongue',(x,y-mouth_depth-.019,z-.228),(.038,.008,.017),PINK,bone,n=16,rings=10)
 
  def jewel(self,pos,size=.10,bone='body'):
   self.ell('Gilded brooch',pos,(size,.035,size*1.15),GOLD,bone,'gold',n=20,rings=12)
@@ -240,17 +243,27 @@ class Character:
    sides=smooth((abs(v.x)-.12)/.13)*smooth((h+.045-v.z)/.13)
    return mix(coat,cheek,max(chin,sides)*front)
   self.ell('Continuous fur torso',(0,.105,.75),(.36,.335,.53),body_color,n=32,rings=24)
+  # The skull rises slightly with growth; a real neck must grow with it,
+  # otherwise late-stage heads visibly float above the collar.
+  self.ell('Continuous fox neck',(0,.06,1.18+.0175*s),(.19,.20,.20+.0175*s),coat,n=24,rings=16)
   self.ell('Sculpted fox head',(0,.05,h),(.47,.39,.405),head_color,'head',n=40,rings=28)
   for side in [-1,1]:
    b='ear'+str(side)
-   self.leaf('Cupped triangular fox ear',(side*.25,.035,h+.17),(side*.42,.055,h+.68),.17,coat,b,curl=.025,thickness=.075,triangular=True)
-   self.leaf('Soft pink triangular inner ear',(side*.28,-.030,h+.27),(side*.415,.042,h+.60),.095,mix(PINK,CREAM,.67),b,curl=.012,thickness=.012,triangular=True)
+   self.leaf('Cupped triangular fox ear',(side*.27,.035,h+.12),(side*.43,.055,h+.53),.22,coat,b,curl=.030,thickness=.085,triangular=True)
+   self.leaf('Soft pink triangular inner ear',(side*.29,-.040,h+.22),(side*.425,.038,h+.46),.125,mix(PINK,CREAM,.67),b,curl=.016,thickness=.016,triangular=True)
    # Long connected forelegs and grounded paws, with a thicker seated haunch.
    self.ell('Seated rear haunch',(side*.28,.08,.30),(.21,.25,.25),coat,'foot'+str(side),rotation=(0,side*.18,0))
    self.ell('Rear fox paw',(side*.30,-.10,.105),(.17,.24,.105),mix(coat,DARK,.22),'foot'+str(side))
-   self.tube('Tapered continuous foreleg',[(side*.18,.05,1.06),(side*.25,-.14,.70),(side*.225,-.265,.16)],.115,coat,'arm'+str(side),steps=7,sides=12,taper=.74)
-   self.ell('Front fox paw',(side*.225,-.265,.115),(.125,.17,.115),mix(coat,DARK,.14),'arm'+str(side),n=24,rings=14)
-   for j in range(2):self.tube('Fine paw toe crease',[(side*.225+(j-.5)*.055,-.419,.10),(side*.225+(j-.5)*.055,-.411,.16)],.004,mix(coat,DARK,.45),'arm'+str(side),steps=3)
+   if pet:
+    self.tube('Tapered continuous foreleg',[(side*.18,.05,1.06),(side*.25,-.14,.70),(side*.225,-.265,.16)],.115,coat,'arm'+str(side),steps=7,sides=12,taper=.74)
+    self.ell('Front fox paw',(side*.225,-.265,.115),(.125,.17,.115),mix(coat,DARK,.14),'arm'+str(side),n=24,rings=14)
+   else:
+    # Bent elbows and raised hands distinguish the upright gardener/hiker
+    # from the four-legged guardian. Hands are full rounded meshes.
+    self.tube('Bent sleeved forearm',[(side*.25,.015,1.04),(side*.34,-.17,.77),(side*.20,-.36,.84)],.105,coat,'arm'+str(side),steps=9,sides=16,taper=.72)
+    self.ell('Raised soft fox hand',(side*.17,-.385,.865),(.10,.09,.13),mix(coat,DARK,.32),'arm'+str(side),rotation=(0,side*.20,side*.22),n=24,rings=16)
+    for j in range(2):self.tube('Raised hand finger crease',[(side*.17+(j-.5)*.040,-.469,.87),(side*.17+(j-.5)*.040,-.465,.93)],.0035,mix(coat,DARK,.65),'arm'+str(side),steps=3,taper=.35)
+    self.ring('Embroidered cuff',(side*.22,-.33,.82),.083,.009,GOLD,'arm'+str(side),axis='Y',n=24)
   # One continuous tapered muzzle; the pale cheek pattern is on the skull itself.
   vs=[];faces=[];N=32
   for j,(y,rx,rz,zz) in enumerate([(-.245,.245,.14,h-.13),(-.32,.215,.12,h-.14),(-.405,.15,.085,h-.13),(-.465,.080,.050,h-.105),(-.482,.035,.025,h-.10)]):
@@ -280,8 +293,9 @@ class Character:
   self.tube('Fox smile right',[(0,-.463,h-.165),(.038,-.459,h-.18),(.078,-.431,h-.17)],.006,(.17,.055,.025),'head',steps=5,taper=.70)
   self.tube('Nose to smile',[(0,-.488,h-.11),(0,-.469,h-.165)],.004,(.17,.055,.025),'head',steps=3,taper=.70)
   # Volumetric bushy tail, tapering naturally. Color is continuous across the tip.
-  tail_color=lambda v:mix(coat,cheek,smooth((v.z-.70)/.20))
-  self.tube('Continuous bushy fox tail',[(.02,.30,.42),(.37,.48,.28),(.70,.38,.44),(.77,.23,.81),(.63,.12,1.10)],.205,tail_color,'tail',steps=10,sides=16,taper=.18)
+  tail_color=lambda v:mix(coat,cheek,smooth((v.z-.74)/.24))
+  tail_side=1 if pet else -1
+  self.tube('Continuous bushy fox tail',[(.02,.30,.38),(tail_side*.39,.43,.32),(tail_side*.69,.33,.57),(tail_side*.74,.18,.91),(tail_side*.58,.15,1.17)],.255,tail_color,'tail',steps=12,sides=20,taper=.25)
   # Short sculpted tufts follow the skin. These add silhouette and soft fur,
   # rather than a set of hard spikes or a painted billboard.
   for i in range(115):
@@ -299,7 +313,7 @@ class Character:
    n=Vector((v.x/.36**2,v.y/.335**2,v.z/.53**2)).normalized();down=Vector((0,0,-1));down-=n*down.dot(n)
    if down.length<.1:continue
    down.normalize();self.tube('Fine body fur',[p,p+n*.006+down*.018,p+down*.037],.007,body_color(p),steps=2,sides=5,taper=.015)
-  self.head_top=(0,.03,h+.405);self.paw=(.225,-.265,.23)
+  self.head_top=(0,.03,h+.405);self.paw=(.225,-.265,.23) if pet else (.17,-.385,.91)
   if pet:
    self.features+=['refined continuous fox anatomy','modeled fur and embedded fiber normal','sleeping initial stage' if s==0 else 'inset amber eyes']
    if s>=1:self.ring('Guardian collar',(0,0,1.15),.27,.035,self.primary,'body',material='silk');self.jewel((0,-.28,1.12),.075)
@@ -428,6 +442,13 @@ class Character:
   self.ell('Cream belly',(0,-.23,.65),(.27,.07,.35),CREAM)
   self.ell('Dragon skull',(0,.05,1.55),(.44,.37,.43),coat,'head')
   self.ell('Dragon snout',(0,-.30,1.43),(.28,.17,.19),mix(coat,CREAM,.5),'head')
+  for side in [-1,1]:
+   self.ell('Recessed dragon nostril',(side*.105,-.458,1.49),(.026,.014,.017),mix(coat,DARK,.72),'head',n=16,rings=10)
+   self.tube('Soft dragon brow',[(side*.10,-.31,1.84),(side*.20,-.32,1.88),(side*.29,-.26,1.83)],.018,mix(coat,CREAM,.18),'head',steps=5,taper=.32)
+  self.tube('Curved lower dragon smile',[(-.14,-.436,1.35),(0,-.478,1.32),(.14,-.436,1.35)],.006,mix(coat,DARK,.65),'head',steps=6,taper=.55)
+  for i in range(4):
+   z=.46+i*.105;w=.20+.025*math.sin(i)
+   self.tube('Curved belly plate suture',[(-w,-.265,z),(0,-.303,z-.018),(w,-.265,z)],.005,mix(CREAM,GOLD,.35),steps=5,taper=.6)
   self.face((0,-.307,1.67),.20,.12,skin=mix(coat,CREAM,.4),closed=gem and s==0)
   for side in [-1,1]:
    self.tube('Curved ivory horn',[(side*.25,.06,1.81),(side*.29,.06,2.08),(side*.21,.04,2.20)],.065,GOLD,'head','gold',taper=.01)
@@ -482,6 +503,10 @@ class Character:
   self.ell('Turtle head',(0,-.42,.90),(.35,.32,.32),mix(skin,CREAM,.45),'head')
   self.face((0,-.675,.96),.17,.11,skin=CREAM)
   for side in [-1,1]:
+   self.ell('Turtle small nostril',(side*.052,-.724,.918),(.011,.009,.008),mix(skin,DARK,.65),'head',n=12,rings=8)
+   self.tube('Curved flipper leading ridge',[(side*.30,-.30,.37),(side*.51,-.36,.39),(side*.76,-.25,.30)],.009,mix(skin,CREAM,.34),'arm'+str(side),steps=6,taper=.3)
+  self.tube('Small tapered turtle tail',[(0,.59,.40),(0,.83,.28),(0,.96,.24)],.055,skin,'tail',steps=6,sides=10,taper=.03)
+  for side in [-1,1]:
    self.ell('Front flipper',(side*.48,-.25,.31),(.34,.17,.10),skin,'arm'+str(side),rotation=(0,side*.18,side*.35))
    self.ell('Hind flipper',(side*.39,.57,.22),(.23,.14,.085),skin,'foot'+str(side),rotation=(0,0,-side*.4))
    for i in range(6):self.ell('Flipper scale',(side*(.38+(i%3)*.10),-.30+(i//3)*.09,.39),(.028,.039,.009),mix(skin,CREAM,.35),'arm'+str(side),n=10,rings=6)
@@ -519,6 +544,12 @@ class Character:
    self.ell('Magnetic space boot',(side*.21,-.10,.16),(.20,.27,.15),self.primary,'foot'+str(side))
    self.ring('Sleeve trim',(side*.40,0,.90),.13,.025,GOLD,'arm'+str(side))
   self.ell('Life support pack',(0,.28,1.02),(.31,.16,.38),self.primary)
+  # Working rear hardware makes the astronaut readable from every angle.
+  for side in [-1,1]:
+   self.tube('Life-support hose',[(side*.23,.36,1.25),(side*.43,.28,1.04),(side*.30,-.04,.78)],.026,self.secondary,steps=7,sides=10,taper=1)
+   self.ring('Boot ankle cuff',(side*.20,0,.31),.17,.018,GOLD,'foot'+str(side),n=24)
+   for i in range(3):self.tube('Space boot sole tread',[(side*.21-.12,-.26+i*.09,.055),(side*.21+.12,-.26+i*.09,.055)],.011,mix(self.primary,DARK,.3),'foot'+str(side),steps=2,taper=1)
+  for i in range(3):self.ell('Instrument status lamp',(-.14+i*.14,-.278,.88),(.025,.013,.025),[LEAF,GOLD,PINK][i],'body','gloss',n=12,rings=8)
   self.head_top=(0,0,2.18);self.paw=(.43,-.05,.95)
   self.features+=['child astronaut','rocket' if s<3 else 'piloted starship']
   if s>=1:
@@ -571,8 +602,9 @@ class Character:
    # Later forms really become a person in robes, retaining a chive-leaf emblem.
    self.lathe('Flowing pleated immortal robe',[(.11,.49),(.25,.42),(.62,.29),(1.12,.24),(1.40,.31)],self.primary,flute=.055)
    self.lathe('Pale inner robe',[(.14,.28),(.65,.18),(1.27,.15)],CREAM,center=(0,-.08,0),flute=.03)
+   self.ell('Immortal neck',(0,.005,1.47),(.105,.115,.22),(.92,.69,.48),n=24,rings=16)
    self.ell('Immortal face',(0,.010,1.85),(.28,.245,.34),(.92,.69,.48),'head')
-   self.face((0,-.198,1.86),.12,.075,skin=(.94,.75,.57))
+   self.face((0,-.198,1.86),.12,.075,skin=(.94,.75,.57),smile=True)
    hair=(.13,.07,.13) if self.persona=='female' else (.09,.08,.07) if self.persona=='male' else (.71,.75,.67)
    self.ell('Immortal hair crown',(0,.035,2.055),(.29,.23,.19),hair,'head',n=24,rings=16)
    for side in [-1,1]:self.tube('Swept immortal fringe',[(side*.01,-.16,2.18),(side*.14,-.235,2.13),(side*.24,-.20,1.98)],.050,hair,'head',steps=5,taper=.16)
@@ -603,6 +635,12 @@ class Character:
   self.ring('Chimney golden rim',(0,-.05,1.54),.17,.025,GOLD)
   self.ell('Engine cab',(0,.66,1.10),(.42,.28,.40),self.primary)
   self.ell('Curved cab roof',(0,.66,1.49),(.49,.35,.085),self.secondary)
+  for side in [-1,1]:
+   self.tube('Engine handrail',[(side*.36,-.23,1.12),(side*.42,.21,1.12),(side*.39,.47,1.11)],.013,GOLD,material='gold',steps=5,taper=1)
+   self.ell('Engine side brass plate',(side*.419,.13,.87),(.015,.14,.09),GOLD,'body','gold',n=16,rings=10)
+   for i in range(3):self.ell('Boiler plate rivet',(side*.430,.04+i*.08,.88),(.012,.017,.017),CREAM,'body','gold',n=10,rings=6)
+   self.tube('Lower passenger step',[(side*.40,.51,.47),(side*.56,.51,.47),(side*.56,.77,.47),(side*.40,.77,.47)],.022,GOLD,material='gold',steps=2,taper=1)
+  self.ring('Headlamp gold housing',(0,-.53,.48),.085,.015,GOLD,'head',axis='Y',n=24)
   for side in [-1,1]:
    self.ell('Cab window',(side*.40,.61,1.16),(.018,.15,.20),(.87,.66,.20),'body','gloss',n=16,rings=10)
    for j in range(3):
@@ -776,6 +814,15 @@ class Character:
   for o in self.objects:o.select_set(True)
   bpy.context.view_layer.objects.active=self.objects[0];bpy.ops.object.join()
   mesh=bpy.context.object;mesh.name='Authored '+self.theme+' '+self.persona+' stage '+str(self.stage)
+  mesh.data.calc_loop_triangles()
+  if len(mesh.data.loop_triangles)>50000:
+   # Later garden stages carry many flowers. Reduce the rest surface before
+   # skin deformation, retaining UVs, vertex colors and deform groups.
+   budget=mesh.modifiers.new('Mobile surface budget','DECIMATE')
+   budget.ratio=48000/len(mesh.data.loop_triangles);budget.use_collapse_triangulate=True
+   while list(mesh.modifiers).index(budget)>0:
+    bpy.ops.object.modifier_move_up(modifier=budget.name)
+   bpy.ops.object.modifier_apply(modifier=budget.name)
   bpy.ops.object.select_all(action='DESELECT');mesh.select_set(True);self.rig.select_set(True);bpy.context.view_layer.objects.active=self.rig
   temporary=directory/(str(self.stage)+'.tmp.glb')
   bpy.ops.export_scene.gltf(filepath=str(temporary),export_format='GLB',use_selection=True,
