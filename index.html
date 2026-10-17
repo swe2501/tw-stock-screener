@@ -3615,6 +3615,7 @@
   <div id="groupBookView" style="display:none"><section class="gb-hero"><div class="gb-kicker">GROUP QUARTER-END RESEARCH</div><div class="gb-titleline"><div><h2>集團作帳研究台</h2><p>前 30 名季底行情排行與台灣集團關係企業集中在同一頁；點集團從右側開啟研究面板，點個股直接查看既有 K 線。</p></div><div class="gb-controls"><div class="gb-seg" id="gbWindow"><button data-w="5">5 日</button><button data-w="10" class="on">10 日</button><button data-w="20">20 日</button></div><div class="gb-seg" id="gbMode"><button data-m="cards" class="on">圖卡</button><button data-m="list">條列</button></div></div></div></section><div class="gb-main-tabs" id="gbMainTabs"><button data-tab="all" class="on">所有集團</button><button data-tab="ranking">作帳績效排名 TOP 30</button><button data-tab="famous">作帳紅不讓</button></div><div class="gb-tools"><div class="gb-searchwrap"><div class="gb-searchbox"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="gbSearch" class="gb-search" type="search" autocomplete="off" placeholder="搜尋集團、股票代號或名稱"></div><div id="gbSearchDrop" class="gb-searchdrop" hidden></div></div><div class="gb-cats" id="gbCats"></div></div><div class="gb-meta" id="gbMeta"></div><div id="gbBoard"><div class="fc-empty">建立集團名錄中…</div></div><div id="gbDetail"></div><div class="gb-note"><b>判讀方式：</b>雙重勝率＝該季區間報酬為正、且同時勝過觀察池基準；排名綜合雙重勝率、超額報酬、集團上漲家數廣度、報酬／回撤與樣本信心。僅使用有價格資料的成員；歷史勝率僅納入已結束季度，本季不列入計算。資料不足者不列入排名。集團名錄會先顯示，統計資料載入後再自動補上排名；本頁不構成投資建議。</div></div>
   <script src="group-catalog.js"></script>
   <script src="assets/groupbook-model.js"></script>
+  <script src="assets/groupbook-cache.js"></script>
   <script src="group-logos.js"></script>
   <script>
   (function(){
@@ -3647,7 +3648,9 @@
     document.addEventListener('change',function(e){if(e.target.id==='gbResearchQuarter'){researchQuarter=e.target.value;detail()}});
     function merge(j){if(!j||!Array.isArray(j.groups))return;var stats=new Map(j.groups.map(function(g){return[g.name,g]}));groups=groups.map(function(g){return GroupBookModel.merge(g,stats.get(g.name)||{samples:0,members:[],events:[]})});loaded=true;render()}
 
-    function load(){var sequence=++loadSequence;loaded=false;groups=groups.map(GroupBookModel.create);render();fetch('/api/screen?stat=groupbook&window='+win).then(function(r){if(!r.ok)throw Error('統計載入失敗');return r.json()}).then(function(j){if(sequence===loadSequence){if(!j||!Array.isArray(j.groups))throw Error('統計資料格式異常');merge(j)}}).catch(function(){if(sequence===loadSequence){loaded=true;render();el('gbMeta').insertAdjacentHTML('beforeend','<span class="gb-pill">統計暫不可用，完整名錄仍可查閱</span>')}})}
+    var getStatistics=createGroupBookCache(function(days){return fetch('/api/screen?stat=groupbook&window='+days).then(function(r){if(!r.ok)throw Error('統計載入失敗');return r.json()})});
+    var displayedWindow=null;
+    function load(){var sequence=++loadSequence;if(displayedWindow!==win){loaded=false;groups=groups.map(GroupBookModel.create);render()}getStatistics(win).then(function(j){if(sequence===loadSequence){displayedWindow=win;merge(j)}}).catch(function(){if(sequence===loadSequence){loaded=true;render();el('gbMeta').insertAdjacentHTML('beforeend','<span class="gb-pill">統計暫不可用，完整名錄仍可查閱</span>')}})}
     window._groupBookShow=function(){cats();render();if(window._loadNames)window._loadNames(function(){hydrateNames();render()});load()};
     document.addEventListener('input',function(e){if(e.target.id==='gbSearch'){query=e.target.value;selected='';renderSearch();render()}});
     document.addEventListener('click',function(e){if(!e.target.closest('#gbSearchGo'))return;renderSearch();var first=el('gbSearchDrop')&&el('gbSearchDrop').querySelector('.gb-result');if(first)first.click()});
