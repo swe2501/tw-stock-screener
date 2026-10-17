@@ -22,7 +22,17 @@ const root=path.resolve(__dirname,'..'),output=process.env.QA_OUTPUT;
  });
  await p.goto('https://strategy.fixture.test/#member/strategy');
  await p.locator('.ms-creation-workspace').waitFor({timeout:20000});
- const launch=p.locator('.ms-chat-launcher'),start=await launch.boundingBox();await p.mouse.move(start.x+start.width/2,start.y+start.height/2);await p.mouse.down();await p.mouse.move(600,350,{steps:12});await p.mouse.up();assert.equal(await p.locator('.ms-chat-dialog').isVisible(),false);assert.ok(await launch.evaluate(e=>getComputedStyle(e).transitionTimingFunction.includes('cubic-bezier')));assert.ok(await launch.evaluate(e=>parseInt(e.style.getPropertyValue('--ms-dock-duration'))>=600));await p.waitForFunction(()=>document.querySelector('.ms-chat-launcher').getBoundingClientRect().left<=14);
+ const launch=p.locator('.ms-chat-launcher');
+ for(const width of [1512,390,320]){
+  await p.setViewportSize({width,height:844});
+  for(const key of ['ArrowRight','ArrowLeft','ArrowDown']){
+   await launch.focus();await p.keyboard.press('Alt+'+key);
+   await p.waitForFunction(()=>!document.querySelector('.ms-chat-launcher').classList.contains('is-docking'));
+   assert.ok(await launch.evaluate(e=>{const label=e.querySelector('span:not(.ms-chat-question)'),r=document.createRange();r.selectNodeContents(label);const lines=r.getClientRects(),a=e.getBoundingClientRect(),b=label.getBoundingClientRect();return lines.length===1&&a.left>=10&&a.right<=innerWidth-10&&b.left>=a.left&&b.right<=a.right;}),'Companion label stays on one line within each docked edge at '+width);
+  }
+ }
+ await p.setViewportSize({width:1512,height:1050});
+ const start=await launch.boundingBox();await p.mouse.move(start.x+start.width/2,start.y+start.height/2);await p.mouse.down();await p.mouse.move(600,350,{steps:12});await p.mouse.up();assert.equal(await p.locator('.ms-chat-dialog').isVisible(),false);assert.ok(await launch.evaluate(e=>getComputedStyle(e).transitionTimingFunction.includes('cubic-bezier')));assert.ok(await launch.evaluate(e=>parseInt(e.style.getPropertyValue('--ms-dock-duration'))>=600));await p.waitForFunction(()=>document.querySelector('.ms-chat-launcher').getBoundingClientRect().left<=14);
 
  await launch.evaluate(e=>{window.hintTimes=[];let on=false;new MutationObserver(()=>{const next=e.classList.contains('ms-hint-visible');if(next&&!on)window.hintTimes.push(performance.now());on=next;}).observe(e,{attributes:true,attributeFilter:['class']});});
  await p.waitForFunction(()=>window.hintTimes.length>=2,{},{timeout:7500});const hintTimes=await p.evaluate(()=>window.hintTimes);assert.ok(hintTimes[1]-hintTimes[0]>=2800&&hintTimes[1]-hintTimes[0]<3400);assert.equal(await launch.locator('>svg').evaluate(e=>getComputedStyle(e).animationName),'ms-mascot-glimmer');
