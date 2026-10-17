@@ -333,3 +333,24 @@ page_cache 是 **uat 與 prod 共用**同一個 Supabase。若推盤中到原 ki
 - **推 prod**：第六~十一節全部累積在 uat，等用戶說「推 prod」；推完依鐵則把 justy-layout 對齊 uat（`git push origin origin/uat:justy-layout`）。見 [[deploy-prod-sync-justy]]。
 - Gmail 轉寄：用戶自己在 Gmail 設定加轉寄地址＋請合夥人點驗證（草稿已在草稿匣）。
 - 葛蘭碧規則參數（RESET_N=3 等）、產業市值加權、AI 判讀口徑，皆初版可再調。
+
+## 十二、2026-10-17 晚：AI 判定真後端（已上 uat，未上 prod）＋葛蘭碧說明補正
+
+### A. AI 判定（`api/screen.py` `_aibuy*`、`?stat=aibuy&code=`，仍 12 個函式）
+- **開關全在 Vercel 環境變數**（Settings → Environment Variables，改完要 Redeploy 才生效）：
+  `ANTHROPIC_API_KEY`／`OPENAI_API_KEY`（沒有任何一把＝回假資料）、`AI_PROVIDER`（anthropic｜openai，不設＝有哪把用哪把、都有優先 anthropic）、`AI_MODEL`（不設＝`claude-haiku-5-5`／`gpt-4.1-mini`）、`AI_DAILY_LIMIT`（預設 300）、`SUPABASE_SERVICE_KEY`（有才寫共享快取與每日計數）。
+- 流程：驗代號（4～6 碼英數）→ 讀 `price_window` 日線（<80 根回假資料）→ 查共享快取 `page_cache` kind=`aibuy_<代號>`（同資料日＋同模型才用）→ 檢查每日計數 `aibuy__count` → 程式先算好均線／量比／漲跌／區間／葛蘭碧紀錄＋近 40 根日線 → 呼叫 AI（Anthropic 用 `output_config.format` json_schema＋effort low；OpenAI 用 json_object＋temperature 0）→ 驗格式、夾分數 0～100 → 寫回快取與計數 → 回傳（含 usage token 數）。
+- 任何錯誤（金鑰錯、逾時、格式不符、拒答）都退回假資料並附 `stub_reason`，前端照常顯示「假資料示意」。
+- 只用 Python 標準庫 urllib（`requirements.txt` 規定不裝外部套件），沒裝 Anthropic SDK。
+- 成本估算（Haiku 5.5 $0.10/$0.50 每百萬 token）：輸入約 2,000 token、輸出含思考約 500～1,500 token → **約 US$0.001／次**；同檔同資料日只算一次，加上每日上限 300 次，**最壞約 US$0.3／日**。
+- 共享快取容量：每檔 1 列（約 2～3 KB），全市場約 2,000 檔上限 ≈ 6 MB。
+- ⚠️ `screen.py` 註解提到 Vercel 上的 service key 可能過期；若過期，快取與計數寫不進去 → 每日上限失效、只剩 CDN 快取（成功結果 1 小時）擋重複呼叫。設金鑰時一併確認 `SUPABASE_SERVICE_KEY` 有效。
+- 前端 `_aiBuyLoad/_aiBuyRender`：只有真的判讀結果才存 localStorage（假資料、錯誤、舊版後端回 `{status:ok}` 都不存），金鑰設好後不會被當天舊假資料卡住。
+- **還沒用真金鑰跑過**（目前沒有金鑰）；已用 Python 測：無金鑰→假資料、假金鑰→退回假資料（HTTPError）、模擬 AI 回應→正確解析與夾分數。
+
+### B. 葛蘭碧說明補正
+- 程式（前後端）已是 10-17 修正版，但篩選器說明仍寫舊規則 → 已改：買點 2 不要求均線上彎、買點 3 改「收盤 < 均線」、重置改「連續 3 天下彎」，並附全市場試算（上市櫃 1,964 檔、2024 年至今：買1 13,362／買2 9,425／買3 4,136 次；買1→2 中位 8 日、2→3 中位 7 日）。前後端用 8 檔比對訊號完全一致。
+
+### 待辦
+- 用戶在 Vercel 設 `ANTHROPIC_API_KEY`（或 OpenAI）後 Redeploy uat，實測一檔看真判讀；確認 `SUPABASE_SERVICE_KEY` 有效。
+- 推 prod 時這節一起上（前端呼叫正式站的 `?stat=aibuy`，prod 未更新前面板顯示「暫時無法取得」）。
