@@ -437,7 +437,69 @@
         }
       ],
       "thesis": "聯電權值大負責穩盤，作帳主力專攻具先進製程、高毛利之中小型 IC 設計與載板廠，股性活潑。",
-      "focus": "智原、矽統、原相：智原具先進封裝／ASIC 題材；矽統具轉型與董監持股戰略意義；原相籌碼集中度高。"
+      "focus": "智原、矽統、原相：智原具先進封裝／ASIC 題材；矽統具轉型與董監持股戰略意義；原相籌碼集中度高。",
+      "quarterlyReasons": {
+        "2025Q4": {
+          "2303": {
+            "text": "官方事實：聯電公布第三季稼動率 78%，指出 22 奈米營收占比已超過 10%，並預期第四季晶圓出貨量與第三季相當。研究觀察：以 22 奈米產品組合改善與成熟製程需求復甦為本季研究主軸；需核對出貨回升是否能抵銷平均售價及折舊壓力。",
+            "source_urls": [
+              "https://www.umc.com/en/Download/quarterly_results/QuarterlyResultsDetail/2025/2025Q3"
+            ],
+            "published_on": "2025-10-29",
+            "reviewed_on": "2026-10-17",
+            "fact_period": "2025Q4 研究／當時公布的營運資訊",
+            "review_type": "sourced_research"
+          }
+        },
+        "2026Q1": {
+          "2303": {
+            "text": "官方事實：聯電表示 2025 年第四季 22 奈米營收季增 31%，全年 22 奈米營收年增 93%；公司預期第一季晶圓需求維持穩健。研究觀察：本季追蹤 22 奈米新產品導入及新加坡產能帶來的組合變化；資本投入與營收轉化存在時間差，不能把技術合作直接視為當季已實現獲利。",
+            "source_urls": [
+              "https://www.umc.com/en/Download/quarterly_results/QuarterlyResultsDetail/2025/2025Q4"
+            ],
+            "published_on": "2026-01-28",
+            "reviewed_on": "2026-10-17",
+            "fact_period": "2026Q1 研究／當時公布的營運資訊",
+            "review_type": "sourced_research"
+          }
+        },
+        "2026Q2": {
+          "2303": {
+            "text": "官方事實：聯電公布第一季 22 奈米占營收 14%，並預期第二季晶圓出貨量以高個位數幅度成長，通訊需求回升是公司說明的因素之一。研究觀察：以通訊需求、8 吋與12 吋出貨成長及產品組合為研究重點，並觀察售價和產能利用率能否同步改善；數據屬公司當時公布的展望。",
+            "source_urls": [
+              "https://www.umc.com/en/Download/quarterly_results/QuarterlyResultsDetail/2026/2026Q1"
+            ],
+            "published_on": "2026-04-29",
+            "reviewed_on": "2026-10-17",
+            "fact_period": "2026Q2 研究／當時公布的營運資訊",
+            "review_type": "sourced_research"
+          }
+        },
+        "2026Q3": {
+          "2303": {
+            "text": "官方事實：聯電公布第二季稼動率 85%、22 奈米營收占比 17.5%，並預期第三季稼動率超過 90%；同時調高全年資本支出至20億美元。研究觀察：本季追蹤成熟製程產能利用率回升與擴產節奏，對照電源管理、感測器及微控制器需求；擴產所增加的折舊與現金支出也是觀察項目。",
+            "source_urls": [
+              "https://www.umc.com/en/Download/quarterly_results/QuarterlyResultsDetail/2026/2026Q2"
+            ],
+            "published_on": "2026-07-29",
+            "reviewed_on": "2026-10-17",
+            "fact_period": "2026Q3 研究／當時公布的營運資訊",
+            "review_type": "sourced_research"
+          }
+        },
+        "2026Q4": {
+          "2303": {
+            "text": "官方事實：聯電7月29日公布第二季22奈米營收占比17.5%，並預期第三季稼動率超過90%；官網列第三季法說預定於2026/10/28舉行。研究觀察：本季核對第三季需求復甦是否落實、擴產與產品組合對後續獲利的影響；截至10/17，10/28法說尚未發生，不預填其業績數字或第四季指引。",
+            "source_urls": [
+              "https://www.umc.com/en/Download/quarterly_results/QuarterlyResultsDetail/2026/2026Q2",
+              "https://www.umc.com/en/IR_Event/ir_events"
+            ],
+            "reviewed_on": "2026-10-17",
+            "fact_period": "2026 Q4 研究；引用7/29已公布資訊與10/28預定事件",
+            "review_type": "sourced_research"
+          }
+        }
+      }
     },
     {
       "order": 4,
