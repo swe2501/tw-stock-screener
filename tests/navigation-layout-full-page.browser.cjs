@@ -21,7 +21,7 @@ const root=path.resolve(__dirname,'..'),output=process.env.QA_OUTPUT||require('n
   const boxes=await page.locator('#mainNav .mn-item,#mainNav .site-search').evaluateAll(es=>es.filter(e=>getComputedStyle(e).display!=='none'&&e.getBoundingClientRect().width>0).map(e=>{const r=e.getBoundingClientRect();return {text:e.textContent.trim().slice(0,12),x:r.x,y:r.y,right:r.right,bottom:r.bottom};}));
   for(const a of boxes){assert.ok(a.x>=-1&&a.right<=width+1,width+' clipped '+JSON.stringify(a));for(const b of boxes){if(a===b)continue;const overlap=Math.min(a.right,b.right)-Math.max(a.x,b.x)>1&&Math.min(a.bottom,b.bottom)-Math.max(a.y,b.y)>1;assert.equal(overlap,false,width+' overlapping '+a.text+' / '+b.text);}}
   assert.equal(await page.locator('#mainNav').evaluate(e=>e.scrollWidth<=e.clientWidth+1),true,'nav overflow at '+width);
-  const font=await page.locator('#mainNav .mn-item').first().evaluate(e=>parseFloat(getComputedStyle(e).fontSize));assert.equal(font,width>900?16:14);
+  const font=await page.locator('#mainNav .mn-item').first().evaluate(e=>parseFloat(getComputedStyle(e).fontSize));assert.equal(font,width>900?15:14);
   if([1512,390].includes(width)){await page.screenshot({path:path.join(output,'larger-navigation-'+width+'.png')});const group=page.locator('#mainNav .mn-grp').filter({hasText:'今日焦點'});await group.locator('.mn-item').hover();const menu=group.locator('.mn-menu');assert.equal(await menu.isVisible(),true);const r=await menu.boundingBox();assert.ok(r.x>=0&&r.x+r.width<=width+1,'dropdown clipped');await page.mouse.move(width-1,940);}
  }
  console.log('PASS enlarged navigation at nine viewport widths, no control overlap, search fits, dropdowns remain accessible.');

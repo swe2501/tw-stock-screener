@@ -81,3 +81,13 @@
 
 .academy-provider-icon.api-apple{border:1px solid var(--border)}
 #authModal [data-provider=apple] .academy-provider-icon{border:0}
+
+/* Login and registration own the active styling; neither is a global CTA. */
+#authModal .auth-tabs .auth-tab{background:transparent!important;background-image:none!important;border:1px solid transparent!important;color:var(--text-muted)!important;box-shadow:none!important;animation:none!important}
+#authModal .auth-tabs .auth-tab.active{background:linear-gradient(110deg,var(--cta-start),var(--cta-end))!important;border-color:transparent!important;color:var(--on-accent,#fff)!important;box-shadow:0 3px 10px color-mix(in srgb,var(--accent) 15%,transparent)!important}
+#authModal .auth-brand{margin:8px 0 28px}
+#authModal .auth-brand .gs-brand{flex-direction:column;gap:12px;text-align:center}
+#authModal .auth-brand .gs-mark{width:92px!important;height:92px!important;border-radius:25px!important}
+#authModal .auth-brand .gs-name b{font-size:30px!important;line-height:1.25}
+#authModal .auth-brand .gs-name small{display:block!important;font-size:10px!important;line-height:1.6;margin-top:5px}
+@media(max-width:600px){#authModal .auth-brand .gs-mark{width:82px!important;height:82px!important;border-radius:23px!important}#authModal .auth-brand .gs-name b{font-size:28px!important}}
