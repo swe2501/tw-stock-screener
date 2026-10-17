@@ -9615,9 +9615,11 @@
           <button class="chart-layer-tab" data-layer="sr" type="button" onclick="_srTogglePanel()"><span class="layer-dot"></span>支撐壓力<span class="layer-count"></span></button>
           <button class="chart-layer-tab" data-layer="vp" type="button" onclick="_vpTogglePanel()"><span class="layer-dot"></span>價量分析<span class="layer-count"></span></button>
           <button class="chart-layer-tab" data-layer="broker" type="button" onclick="_toggleBrokerPanel()"><span class="layer-dot"></span>主力分點<span class="layer-count"></span></button>
+          <button class="chart-layer-tab" data-layer="ai" type="button" onclick="_aiBuyToggle()"><span class="layer-dot"></span>✨ AI 判定<span class="layer-count"></span></button>
           <div class="label-row" id="markerToggles" style="display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;white-space:nowrap"></div>
         </div>
         <div id="sma20GroupPanel" class="chart-feature-panel" style="display:none;padding:7px 12px;border-top:1px solid var(--border);font-size:12px;color:var(--text);flex-wrap:wrap;gap:6px;align-items:center"></div>
+        <div id="aiBuyPanel" class="chart-feature-panel" style="display:none;padding:12px 14px;border-top:1px solid var(--border);font-size:12.5px;color:var(--text)"></div>
         <div id="brokerFilterPanel" class="chart-feature-panel" style="display:none;padding:12px 14px 10px;border-top:1px solid var(--border);font-size:12px;color:var(--text)"></div>
         <div id="mkPanel" class="chart-feature-panel" style="padding:6px 8px;border-top:1px solid var(--border);font-size:12px;color:var(--text)">
           <a onclick="_mkTogglePanel()" style="cursor:pointer;text-decoration:none;user-select:none"><span id="mkArrow" style="color:var(--text-muted);font-size:11px;margin-right:4px">▸</span><b style="color:#5a78aa">大盤K</b></a>
@@ -10669,7 +10671,7 @@
         } else if (stage === 1) {
           if (l <= m && c > m) { stage = 2; out.push({ i, stage: 2, g: grp }); }   // 買2 回測不破：盤中碰月線、收盤站回（不再要求月線嚴格上彎）
         } else if (stage === 2) {
-          if (h < m && ((c - o) / c >= 0.03 || (Math.min(o, c) - l) / c >= 0.03 || o === c)) { stage = 3; out.push({ i, stage: 3, g: grp }); }
+          if (c < m && ((c - o) / c >= 0.03 || (Math.min(o, c) - l) / c >= 0.03 || o === c)) { stage = 3; out.push({ i, stage: 3, g: grp }); }   // 買3：收盤跌破月線＋止跌K
         }
       }
       return out;
@@ -10781,6 +10783,54 @@
         + `<label class="sma20-grp sma20-grp-all${allOn ? ' is-on' : ''}"><input type="checkbox" ${allOn ? 'checked' : ''} onchange="_toggleSma20AllGroups(this.checked)">全部</label>`
         + `<span class="sma20-grp-sep">|</span>${boxes}`;
       panel.style.display = 'flex';
+    }
+
+    // ── AI 判定買點（骨架，2026-10-17）──────────────────────────────────────
+    // 點按鈕開/關面板；開啟時：先讀 localStorage 當日快取 → 無則呼叫後端 /api/screen?stat=aibuy
+    // （目前後端回假資料）。接真 AI 後只要後端那支換成真呼叫＋Supabase 共享快取，前端不用動。
+    window._aiBuyOpen = false;
+    window._aiBuyToggle = function () {
+      window._aiBuyOpen = !window._aiBuyOpen;
+      const btn = document.querySelector('.chart-layer-tab[data-layer="ai"]');
+      if (btn) btn.classList.toggle('is-enabled', window._aiBuyOpen);
+      const panel = document.getElementById('aiBuyPanel');
+      if (!panel) return;
+      if (!window._aiBuyOpen) { panel.style.display = 'none'; return; }
+      panel.style.display = 'block';
+      _aiBuyLoad();
+    };
+    function _aiBuyLoad(force) {
+      const panel = document.getElementById('aiBuyPanel'); if (!panel) return;
+      const code = currentCode; if (!code) { panel.innerHTML = '<div class="ov-empty">請先選一檔股票</div>'; return; }
+      const today = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
+      const key = 'aibuy_' + code + '_' + today;
+      if (!force) {
+        try { const c = JSON.parse(localStorage.getItem(key) || 'null'); if (c) { _aiBuyRender(c); return; } } catch (e) {}
+      }
+      panel.innerHTML = '<div class="ov-empty">AI 判讀中…</div>';
+      const hb = (location.hostname.indexOf('git-uat') >= 0 ? '' : 'https://tw-stock-screener-neon.vercel.app');
+      fetch(hb + '/api/screen?stat=aibuy&code=' + encodeURIComponent(code))
+        .then(r => r.json())
+        .then(d => { try { localStorage.setItem(key, JSON.stringify(d)); } catch (e) {} _aiBuyRender(d); })
+        .catch(() => { panel.innerHTML = '<div class="ov-empty">AI 判讀暫時無法取得，請稍後再試。</div>'; });
+    }
+    function _aiBuyRender(d) {
+      const panel = document.getElementById('aiBuyPanel'); if (!panel || !d) return;
+      const _e = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+      const vmap = { '偏多': '#dd685f', '買進': '#dd685f', '觀望': '#c6a654', '偏空': '#4caf83', '賣出': '#4caf83' };
+      const vc = vmap[d.verdict] || '#8a97a8';
+      const pts = (d.points || []).map(p => `<li><b>${_e(p.label)}</b>：${_e(p.text)}</li>`).join('');
+      panel.innerHTML =
+        `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px">
+           <span style="font-weight:800;font-size:15px">✨ AI 判定</span>
+           <span style="padding:2px 10px;border-radius:999px;background:${vc};color:#fff;font-weight:800">${_e(d.verdict || '—')}</span>
+           ${d.score != null ? `<span style="color:var(--text-muted)">評分 <b style="color:${vc}">${d.score}</b>/100</span>` : ''}
+           <span style="color:var(--text-muted);font-size:11px">資料日 ${_e(d.date || '')}</span>
+           ${d.stub ? '<span style="padding:2px 8px;border:1px dashed #c6a654;border-radius:6px;color:#c6a654;font-size:11px">假資料示意</span>' : ''}
+         </div>
+         <div style="margin-bottom:8px;line-height:1.6">${_e(d.summary || '')}</div>
+         ${pts ? `<ul style="margin:0 0 8px;padding-left:18px;line-height:1.7">${pts}</ul>` : ''}
+         <div style="font-size:11px;color:var(--text-muted)">${_e(d.disclaimer || '')}</div>`;
     }
 
     function _addChartMarker(code, date, label) {
