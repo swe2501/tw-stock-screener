@@ -596,6 +596,21 @@ def _load_groupbook_prices(codes):
         off += 1000
 
 
+def _read_groupbook_research(quarter):
+    import re
+    if not re.fullmatch(r"20[0-9]{2}Q[1-4]", quarter):
+        return {"error": "invalid research quarter"}
+    status, rows = _cache_sb("/page_cache", params=[
+        ("kind", "eq.groupbook_research_" + quarter), ("select", "payload,updated_at"), ("limit", "1")
+    ])
+    if status != 200 or not isinstance(rows, list) or not rows:
+        return {"error": "research snapshot unavailable"}
+    data = rows[0].get("payload")
+    if not isinstance(data, dict) or data.get("quarter") != quarter or not isinstance(data.get("stocks"), dict):
+        return {"error": "invalid research snapshot"}
+    return dict(data, updatedAt=rows[0].get("updated_at"))
+
+
 def _read_groupbook_snapshot(window=10):
     window = 5 if window <= 5 else (20 if window >= 20 else 10)
     status, rows = _cache_sb("/page_cache", params=[
@@ -2775,6 +2790,9 @@ class handler(BaseHTTPRequestHandler):
             except Exception as e:
                 import traceback
                 return self._send_json(200, {"error": str(e), "traceback": traceback.format_exc()})
+        if (qs.get("stat") or [""])[0] == "groupresearch":
+            quarter = (qs.get("quarter") or [""])[0]
+            return self._send_json(200, _read_groupbook_research(quarter), cache="public, s-maxage=300, max-age=60")
         # 集團季底行情：公開關係企業觀察池的 N 日統計、勝率與風險調整排名
         if (qs.get("stat") or [""])[0] == "groupbook":
             try:
