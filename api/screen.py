@@ -581,27 +581,47 @@ def _median(values):
     return vals[n // 2] if n % 2 else (vals[n // 2 - 1] + vals[n // 2]) / 2.0
 
 
-def _fetch_groupbook(window=10):
+def _load_groupbook_prices(codes):
+    rows, off = [], 0
+    while True:
+        status, page = _cache_sb("/price_window", params=[
+            ("select", "code,trade_date,close"), ("code", "in.(" + ",".join(codes) + ")"),
+            ("order", "code.asc,trade_date.asc"), ("offset", str(off)), ("limit", "1000")
+        ])
+        if status != 200 or not isinstance(page, list):
+            return None
+        rows.extend(page)
+        if len(page) < 1000:
+            return rows
+        off += 1000
+
+
+def _read_groupbook_snapshot(window=10):
+    window = 5 if window <= 5 else (20 if window >= 20 else 10)
+    status, rows = _cache_sb("/page_cache", params=[
+        ("kind", "eq.groupbook_" + str(window)), ("select", "payload,updated_at"), ("limit", "1")
+    ])
+    if status != 200 or not isinstance(rows, list) or not rows:
+        return {"error": "group snapshot unavailable"}
+    data = rows[0].get("payload")
+    if not isinstance(data, dict) or data.get("error") or data.get("window") != window or not isinstance(data.get("groups"), list) or not data["groups"]:
+        return {"error": "invalid group snapshot"}
+    return dict(data, updatedAt=rows[0].get("updated_at"), precomputed=True)
+
+
+def _fetch_groupbook(window=10, price_rows=None):
     """依 price_window 計算各集團季底前 N 個交易日的歷史表現與排名。"""
     window = 5 if window <= 5 else (20 if window >= 20 else 10)
     codes = sorted({c for members in _GROUP_BOOK_MEMBERS.values() for c in members})
     if not (SUPABASE_URL and SUPABASE_KEY):
         return {"error": "price data unavailable"}
-    rows, off = [], 0
     today = datetime.now(timezone(timedelta(hours=8))).date()
     current_quarter = (today.year, (today.month - 1) // 3 + 1)
-    code_filter = "in.(" + ",".join(codes) + ")"
-    while True:
-        status, page = _cache_sb("/price_window", params=[
-            ("select", "code,trade_date,close,volume"), ("code", code_filter),
-            ("order", "code.asc,trade_date.asc"), ("offset", str(off)), ("limit", "1000")
-        ])
-        if status != 200 or not isinstance(page, list):
-            return {"error": "incomplete group price data"}
-        rows.extend(page)
-        if len(page) < 1000:
-            break
-        off += 1000
+    rows = price_rows
+    if rows is None:
+        rows = _load_groupbook_prices(codes)
+    if rows is None:
+        return {"error": "incomplete group price data"}
     by_code = {}
     for r in rows:
         c, d, px = str(r.get("code", "")), str(r.get("trade_date", "")), r.get("close")
@@ -681,6 +701,7 @@ def _fetch_groupbook(window=10):
     earliest = min(r["date"] for arr in by_code.values() for r in arr)
     return {"date": latest, "from": earliest, "window": window, "benchmark": "集團股觀察池同期等權中位數", "groups": groups,
             "disclaimer": "本頁為季底行情統計觀察，不代表企業存在作價或操縱行為；歷史統計不保證未來績效。"}
+
 
 
 def _fetch_focus(top_n=30):
@@ -1509,15 +1530,16 @@ SMA20_VOL_MULT = 1.3    # 帶量：今日量 ≥ 1.3 × max(截至昨日 5 日�
 SMA20_LONG_RED = 0.03   # 長紅棒：(收−開)/收 ≥ 3%
 SMA20_LONG_TAIL = 0.03  # 長下影線：(min(開,收)−低)/收 ≥ 3%
 SMA20_PREV_DOWN_N = 5   # 原本下彎：前 5 個交易日內至少一天 MA 低於前一天
+SMA20_RESET_N = 3       # 連續 N 天 MA 下彎才重置該輪（健康回測只壓 1~2 天 MA，不該殺掉整輪）2026-10-17
 
 
 def sma20_stage_scan(bars):
     """bars＝[(date, o, h, l, c, v), ...] 由舊到新。回 [(index, stage), ...]（stage＝1/2/3，各輪各階段只記首次）。
-    每天先檢查重置：MA[t] < MA[t-1] → 清除階段、當天不觸發。
+    重置：MA 連續 SMA20_RESET_N(=3) 天下彎才清除該輪（健康回測只壓 1~2 天 MA，不重置）。
       買點1（尚未記錄 1）：均線原本下彎（前 5 日內至少一天 MA 低於前一天）且目前走平或上彎（MA[t]≥MA[t-1] 且 MA[t]≥MA[t-3]）、
                          紅 K、收盤 > MA、帶量 1.3 倍。
-      買點2（已記 1）：均線維持上彎（MA[t]>MA[t-1] 且 MA[t]>MA[t-3]）、最低 ≤ MA、收盤 > MA。
-      買點3（已記 1、2）：最高 < MA（整根在均線下），且 長紅 3%／長下影 3%／十字線（開＝收）任一。成立後該輪完成，待下彎重置。
+      買點2（已記 1）：回測不破——最低 ≤ MA（盤中碰到/跌破月線）、收盤 > MA（站回月線上）。不要求月線仍上彎。
+      買點3（已記 1、2）：最高 < MA（整根在均線下），且 長紅 3%／長下影 3%／十字線（開＝收）任一。成立後該輪完成。
     同一天不跨階段。資料窗內還沒出現過重置日之前，無法確定該輪從哪開始 → 不產生訊號。"""
     n = len(bars)
     out = []
@@ -1535,11 +1557,16 @@ def sma20_stage_scan(bars):
             run -= closes[i - N]
         if i >= N - 1:
             ma[i] = round(run / N, 6)
-    stage, known = 0, False
+    stage, known, down = 0, False, 0
     for i in range(N + SMA20_PREV_DOWN_N, n):      # 需要 MA[i-6]（判斷前 5 日每天是否低於其前一天）
         m, m1, m3 = ma[i], ma[i - 1], ma[i - 3]
-        if m < m1:                                 # 下彎第一天即重置，當天不觸發
-            stage, known = 0, True
+        if m < m1:                                 # 累計連續下彎天數；見到下彎即「已知輪起點」
+            down += 1
+            known = True
+        else:
+            down = 0
+        if down >= SMA20_RESET_N:                  # 連續 N 天下彎＝趨勢壞 → 重置該輪（1~2 天回測不重置）
+            stage = 0
             continue
         if not known or stage >= 3:
             continue
@@ -1556,7 +1583,7 @@ def sma20_stage_scan(bars):
                 stage = 1
                 out.append((i, 1))
         elif stage == 1:
-            if m > m1 and m > m3 and l <= m and c > m:
+            if l <= m and c > m:                   # 買2 回測不破：盤中碰月線、收盤站回（不再要求月線嚴格上彎）
                 stage = 2
                 out.append((i, 2))
         elif stage == 2:
@@ -2736,7 +2763,7 @@ class handler(BaseHTTPRequestHandler):
         if (qs.get("stat") or [""])[0] == "groupbook":
             try:
                 window = int((qs.get("window") or ["10"])[0])
-                return self._send_json(200, _fetch_groupbook(window), cache="public, s-maxage=3600, max-age=300")
+                return self._send_json(200, _read_groupbook_snapshot(window), cache="public, s-maxage=300, max-age=60")
             except Exception as e:
                 import traceback
                 return self._send_json(200, {"error": str(e), "traceback": traceback.format_exc()})
