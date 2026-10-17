@@ -12737,6 +12737,7 @@
     }
 
     // ── Auth ──────────────────────────────────────────────
+    const _authEndpoint = location.protocol === 'file:' || ['localhost', '127.0.0.1', '::1', '[::1]'].includes(location.hostname) ? 'https://tw-stock-screener-neon.vercel.app/api/auth' : '/api/auth';
     let _authToken   = localStorage.getItem('sb_token')   || null;
     let _authRefresh = localStorage.getItem('sb_refresh')  || null;
     let _authUser    = JSON.parse(localStorage.getItem('sb_user') || 'null');
@@ -12761,12 +12762,12 @@
       if (_refreshing) return _refreshing;
       _refreshing = (async () => {
         try {
-          const r = await fetch('/api/auth', {
+          const r = await fetch(_authEndpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: 'refresh', refresh_token: _authRefresh }),
           });
-          if (!r.ok) { _forceLogout(); return false; }
+          if (!r.ok) { if (r.status === 401) _forceLogout(); return false; }
           const d = await r.json();
           _authToken   = d.access_token;
           _authRefresh = d.refresh_token || _authRefresh;
@@ -12987,7 +12988,7 @@
       if (_authTab === 'register' && password !== confirmation) { errEl.textContent = '兩次輸入的密碼不一致，請重新確認'; document.getElementById('authPasswordConfirm').focus(); return; }
       btn.disabled = true; btn.textContent = '處理中...';
       try {
-        const r = await fetch('/api/auth', {
+        const r = await fetch(_authEndpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: _authTab, email, password, ...(_authTab === 'register' ? { password_confirm: confirmation } : {}) }),
@@ -13013,7 +13014,7 @@
     }
     async function doLogout() {
       try {
-        const response = await fetch('/api/auth', {
+        const response = await fetch(_authEndpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_authToken}` },
           body: JSON.stringify({ action: 'logout', email: '', password: '' }),
