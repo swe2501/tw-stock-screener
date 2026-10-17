@@ -31,6 +31,9 @@ def run(env,require_complete=True):
         data["availableQuarters"]=report["quarters"]
         data["editorialSummary"]={key:report[key] for key in ("uniqueExpected","uniqueCovered","uniqueNotApplicable","uniqueHistoricalBackground","researchTypes","complete")}
         data["editorialReviewedOn"]=datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8))).date().isoformat()
+        # Leave room for snapshot metadata below the deployment's response-size ceiling.
+        if len(json.dumps(data,ensure_ascii=False).encode("utf-8"))>4_200_000:
+            raise ValueError("Research snapshot exceeds response budget; nothing published")
         rows.append(dict(kind="groupbook_research_"+quarter,trade_date=data.get("date"),payload=data))
     publish(env,rows)
     print(f"editorial snapshots={len(rows)}; coverage={report['uniqueCovered']}/{report['uniqueExpected']}; complete={report['complete']}")
