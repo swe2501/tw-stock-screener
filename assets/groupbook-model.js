@@ -16,5 +16,7 @@
   }
   function quarterKey(value){return String(value||'').replace(/\s/g,'');}
   function reasons(g,quarter){var q=(g.quarterlyReasons||{})[quarterKey(quarter)]||{};return g.members.map(function(m){var r=q[m.code];return {code:m.code,name:m.name,text:r&&r.text||'',sourceUrls:r&&Array.isArray(r.source_urls)?r.source_urls:[]};});}
-  root.GroupBookModel={create:create,merge:merge,reasons:reasons};
+  function sampleLabel(rate,samples){return samples>0&&rate!=null?Math.round(rate*samples/100)+'／'+samples+' 季':'無有效季度';}
+  function periodLabel(events){var quarters=(events||[]).map(function(e){return e.quarter}).sort();return quarters.length?quarters[0]+'～'+quarters[quarters.length-1]:'尚無有效季度';}
+  root.GroupBookModel={create:create,merge:merge,reasons:reasons,sampleLabel:sampleLabel,periodLabel:periodLabel};
 })(typeof window!=='undefined'?window:globalThis);
