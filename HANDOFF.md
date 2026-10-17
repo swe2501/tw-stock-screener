@@ -275,3 +275,61 @@ page_cache 是 **uat 與 prod 共用**同一個 Supabase。若推盤中到原 ki
 ### 待辦 / 注意
 - 已上 **uat**；**未上 prod**，推 prod 時連同第六~九節一起。
 - 當時工作目錄被另一並行 session 切到合夥人分支 `codex/member-system`（內容＝當時 uat），本功能 commit 落在那條再乾淨 merge 進 uat（只有這一個 commit）。合夥人會員系統已在 uat。
+
+
+## 十一、2026-10-16 ～ 10-17 本期新增與修正（全部在 uat，尚未上 prod）
+
+> 注意：這段期間**合夥人的 login agent 持續在推 uat**（會員系統/交易紀錄/3D 角色等），且**共用同一個工作目錄**，工作樹常有未提交檔。動 uat 前務必 `git fetch`；本地 Andrew 有時沒 ff 對齊（不影響 uat 已部署內容）。uat↔prod **共用同一個 Supabase**。
+
+### A. 指標卡走勢圖：新增「疊加大盤」「一年新高」開關（`index.html` `_openSeriesChart`）
+- **疊加大盤**：五張卡 dialog 皆可切，加權(^TWII 2年, /api/chart)以藍色虛線疊在**左軸**(獨立刻度)，十字線同顯指標值＋加權。
+- **一年新高**：僅 VIX，標記可開關；每段突破只標首日（修掉「一年新高」字樣重疊）。
+
+### B. 盤中即時：價格修正＋產業改市值加權＋掃盤穩定性（`scripts/intraday_push.py`、`api/screen.py`）
+- **價格 bug（關鍵）**：盤中 mis `getStockInfo` 的 top-level `z/pz/tv` 多為 `-`，真正最近成交價在**巢狀 `trade.z`**。舊碼退回昨收→全市場幾乎平盤（產業漲0跌0、%偏低）。`_cur_price` 改為 `z → trade.z → 最佳買賣中價(b/a) → 今開o → 昨收y`。
+- **產業地圖改市值加權（貼三竹官方類指數）**：新增 `_get_shares_map()`（TWSE `t187ap03_L` 上市＋TPEx `mopsfin_t187ap03_O` 上櫃發行股數，快取 24h，SSL 清 `VERIFY_X509_STRICT`）。`_sectors_from(items, date, shares)` 產業漲跌幅改 **Σ(漲跌×市值)/Σ市值**（市值＝收盤×發行股數）；方塊大小仍用成交金額；整產業無股數才退回算術平均。**實測：半導體 0.52 vs 三竹 0.26、電機 2.00 vs 2.20、金融 1.90 vs 1.89、玻璃 6.40 vs 6.24，貼。**（成交金額加權實測不準，已否決。）發行股數抓取 ~20 秒、偶爾 timeout→空→退回等權，屬正常。
+- **掃盤穩定性**：mis 一批上限 ~150（200 報 rtcode 9999）；盤中單請求 ~6 秒（payload 大）；並行 `CONC=12` 最快 ~28 秒/全市場（16 併反被節流）。`BATCH=150`、`INTERVAL=35` 秒、前端輪詢 35 秒（**5 秒全市場不可行**）。並行偶有整批失敗被靜默丟 → 漏大權值股(如大立光8100億市值)→市值加權劇烈跳動；修法：每批**重試 4 次**、`MIN_LISTED` 500→**950**（少一批剩~890 會擋下不覆寫）。
+- 盤中 pusher 當天用新碼手動重啟過（`schtasks /Run /TN "AI_stock_Intraday"`）；排程任務隔天 08:55 自動吃新碼。
+
+### C. 會員中心資料後端盤點（`docs/member-db-status.md`，給 login agent 追）
+- **登入/個資/頭像**＝Supabase Auth（已接）；**自選/目標價/回測/分點追蹤**＝`watchlist`/`backtest_positions`/`broker_watchlist` 表（已接、跨裝置同步）。
+- **會員中心新面板/交易紀錄/我的目標/研究筆記/自訂策略**＝**只存 localStorage**（不跨裝置）。
+- **獎勵/點數/優惠券/推薦/回饋/活動**＝程式有接但 **Supabase 表/RPC 全 404 未建**；遷移檔 `docs/database/member-services.sql` 已寫未套用，且前端查的 `member_point_ledger`/`member_referral_summary`/`academy_events` **連 SQL 都沒有**。
+
+### D. Vercel 部署失敗（已解）＋ 12 函式硬限制
+- 失敗根因：合夥人加 `api/site_search.py`＝**第 13 個 Serverless Function**，超過 **Hobby 12 上限**→全線 build 失敗（uat/justy-layout 都中）。**合夥人已自行移除 site_search.py**，回到 12、build 恢復。見 [[vercel-hobby-12-function-limit]]。
+- 長期：Hobby 不能邀成員、不能給合夥人看 build log。**升 Pro（~US$20/月/seat，viewer 免費）**可一次解：函式上限、合夥人收部署信、他的 AI 看 log。用戶暫不升。
+- **任何新 api 功能都要併進現有 `.py`（如 `?stat=xxx`）、不能新增檔**，否則又爆 12。
+
+### E. Vercel 部署失敗轉寄給合夥人（Gmail，待用戶自己設定）
+- 用戶要「Vercel 失敗信也寄合夥人 qa5518556130@gmail.com」。Hobby 不能加 Vercel 成員→走 **Gmail 原生轉寄**：用戶 Gmail 設定→轉寄→加 `qa5518556130@gmail.com`→合夥人點驗證。**驗證通知信草稿已用 Gmail 連接器存進用戶草稿匣**（主旨「請協助點一下 Gmail 轉寄驗證信…」）。Gmail 設定那兩個鈕我的工具碰不到，要用戶自己按。
+
+### F. K 圖「法說會/除權息」標記改預設關閉（`index.html`）
+- `_mkShow` 的 `div`(除權息)、`catalyst`(法說會) 由預設 true→**false**，比照葛蘭碧用 `_kPref` 記住(`mk_div`/`mk_catalyst`)。
+
+### G. 葛蘭碧買點大改（`index.html _sma20Scan` ＋ `api/screen.py sma20_stage_scan`，兩邊同步、參數對齊）
+- **動態組數＋各組 checkbox**：每個「買1」開啟新的一組；點葛蘭碧按鈕下方 `#sma20GroupPanel` 列「共 N 組／全部／第1組…(帶買1起始日)」checkbox，可單獨顯示/隱藏某組。`_sma20GroupsOn`(null=全顯)、換股票重置。
+- **買2 修正**：由「月線嚴格上彎(m>m1&&m>m3)＋最低≤月線＋收盤>月線」改為 **「最低≤月線＋收盤>月線」(回測不破)**（拿掉月線上彎要求）。
+- **重置修正**：MA 下彎「1 天」→ **連續 `SMA20_RESET_N=3` 天** 才重置（健康回測壓 1~2 天不殺輪）。
+- **買3 修正**：由「整根在月線下(h<m)」改為 **「收盤跌破月線(c<m)」** ＋止跌K(長紅≥3%/長下影≥3%/十字開=收，不變)，與買2「收盤站回」對稱。
+- 買1 未動。實測國巨 2327 序列乾淨：買1(收上月線)→買2(回測不破)→買3(收破月線)。**規則參數初版，可再依個案調。**
+
+### H. ✨ AI 判定買點（骨架已上，真 AI 後端**未完成＝下一步**）
+- **骨架已上 uat**：`api/screen.py` 新增 `?stat=aibuy&code=XXX`（**沒新增函式、仍 12 個**），目前回**假資料(stub)**＋CDN 快取一天。前端 K 圖工具列加「✨ AI 判定」按鈕(`_aiBuyToggle`)＋面板 `#aiBuyPanel`(判讀/評分/摘要/型態量能葛蘭碧三點/免責)＋localStorage 當日快取。前端 host-aware，uat 打同源。
+- **架構方向（已與用戶定）**：按需(用戶點才算)、不掃全市場；省錢靠「同檔當天快取」。金鑰放**後端 env**(Vercel)，絕不放前端。模型建議 Haiku 5.5(~$0.001/次)或 GPT-4.1 mini(可 temperature=0 更穩，Claude 5 系列已無 temperature)。
+- **下一步（用戶指示「先寫好後端、用環境變數開關，有 key 就走真的」）＝未完成**：把 `?stat=aibuy` 改為：
+  1. 讀 env `AI_PROVIDER`(anthropic/openai)、`ANTHROPIC_API_KEY`/`OPENAI_API_KEY`、`AI_MODEL`。**無 key→回現有 stub**；有 key→走真的。
+  2. 抓該股近 1 年日線（`price_window` via `_cache_sb`，code eq）＋算 `sma20_stage_scan` 買點。
+  3. 組精簡 prompt（近 ~60 根 OHLC＋MA20＋最近買點），urllib 呼叫 Anthropic Messages API(`x-api-key`,`anthropic-version:2023-06-01`) 或 OpenAI chat/completions(`temperature:0`,`response_format json_object`)，要求**只回 JSON**(verdict/score/summary/points/disclaimer)，容錯解析。
+  4. 回傳**同 stub 格式**(stub:false)，前端不用動。任何錯誤→退回 stub（功能不壞）。
+  5. (選)有 `SUPABASE_SERVICE_KEY` env 才加 Supabase 共享快取(kind `aibuy_<code>`)。
+- 參考：Claude API 技能給的定價/模型 ID（Haiku 5.5 `claude-haiku-5-5` $0.10/$0.50、Sonnet 5.5 `claude-sonnet-5-5` $2/$10、Opus 5.5 `claude-opus-5-5` $4/$20，皆 per 1M token）。見 [[index-chart-dialogs]] 無關，另記。
+
+### I. Supabase 合夥人權限（已開）
+- 已邀 `qa5518556130@gmail.com` 為 **Developer**（組織層級＝Taiwan stock2 ＋ LINE 貼身秘書**兩個專案**，用戶確認過）。開之前**全量備份**在 `D:\stock_data\supabase_backup\2026-10-15\`（67 表 148MB）。
+
+### 待辦 / 等回覆
+- **接真 AI 後端**（H 的下一步）＝**當前未完成任務**，用戶切帳號前交代「先寫好後端、用環境變數開關」。
+- **推 prod**：第六~十一節全部累積在 uat，等用戶說「推 prod」；推完依鐵則把 justy-layout 對齊 uat（`git push origin origin/uat:justy-layout`）。見 [[deploy-prod-sync-justy]]。
+- Gmail 轉寄：用戶自己在 Gmail 設定加轉寄地址＋請合夥人點驗證（草稿已在草稿匣）。
+- 葛蘭碧規則參數（RESET_N=3 等）、產業市值加權、AI 判讀口徑，皆初版可再調。
