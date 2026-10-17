@@ -6,6 +6,8 @@ import ssl
 from pathlib import Path
 import urllib.request
 from groupbook_precompute import publish
+from groupbook_research_catalog import load_groups
+from audit_groupbook_research import QUARTERS
 ROOT = Path(__file__).resolve().parent.parent
 SOURCES = (
     ("上市", "https://openapi.twse.com.tw/v1/opendata/t187ap05_L"),
@@ -76,7 +78,7 @@ def build(groups, datasets, today):
     editorial={g["name"]:g.get("quarterlyReasons",{}).get(quarter,{}) for g in groups if g.get("quarterlyReasons",{}).get(quarter)}
     return dict(date=today.isoformat(), quarter=quarter, editorial=editorial,
                 stocks=stocks, missingCodes=sorted(codes-stocks.keys()), totalStocks=len(codes),
-                sourceType="official_revenue", groupsCovered=sum(any(m["code"] in stocks for m in g["members"]) for g in groups))
+                sourceType="official_revenue",availableQuarters=list(QUARTERS), groupsCovered=sum(any(m["code"] in stocks for m in g["members"]) for g in groups))
 
 def financial_entries(groups, datasets, today):
     codes={m["code"] for g in groups for m in g["members"]}
@@ -107,7 +109,7 @@ def run(env):
     for _, source in SOURCES:
         with official_response(source) as response: rows=json.load(response)
         datasets.append((source,rows))
-    groups=json.loads((ROOT/"group-catalog.json").read_text(encoding="utf-8"))["groups"]
+    groups=load_groups()
     today=datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8))).date()
     data=build(groups,datasets,today)
     from concurrent.futures import ThreadPoolExecutor

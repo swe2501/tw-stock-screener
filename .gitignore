@@ -8,3 +8,7 @@ scripts/__pycache__/
 __pycache__/
 scripts/daily_job.log
 scripts/daily_job_stdout.log
+
+# Reviewed quarterly research; raw source downloads remain outside the repository.
+!data/groupbook-quarterly-research.json
+!data/groupbook-research-sources.json
