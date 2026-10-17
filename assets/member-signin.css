@@ -127,3 +127,5 @@
 @media(max-height:700px){#authModal .auth-box{padding:12px 22px 10px}#authModal .auth-box h2{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);margin:0}#authModal .auth-brand .gs-mark{width:50px!important;height:50px!important}#authModal .auth-brand{margin-bottom:8px}#authModal .auth-tabs{margin-bottom:8px}#authModal .academy-social-grid button{min-height:38px}#authModal .academy-social-status{font-size:10px;margin-top:5px}#authModal .auth-account-switch{margin:4px 0 7px}}
 
 #authModal.is-phone-view .auth-box h2{position:static;width:auto;height:auto;clip-path:none;margin:0 0 13px}
+
+#authModal .academy-phone button:disabled{opacity:.5;cursor:not-allowed}
