@@ -12966,6 +12966,7 @@
         _applyAuthState();
         _loadWatchCodes();
         closeAuthModal();
+        window.dispatchEvent(new Event('academy-auth-changed'));
       } catch(e) {
         errEl.textContent = '網路錯誤，請重試';
       } finally {

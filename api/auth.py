@@ -52,10 +52,18 @@ class handler(BaseHTTPRequestHandler):
             return self._json(400, {"error": "invalid request"})
         action = body.get("action", "")
 
+        if action == "phone_policy":
+            from lib.member_phone import required
+            return self._json(200, {"required": required(), "version": 1})
+
         if action == "strategy_assistant":
             from lib.strategy_assistant import respond
             auth = self.headers.get("Authorization", "")
             token = auth[7:].strip() if auth.startswith("Bearer ") else ""
+            from lib.member_phone import check
+            blocked = check(token)
+            if blocked:
+                return self._json(*blocked)
             status, data = respond(body, token)
             return self._json(status, data)
 
@@ -69,9 +77,15 @@ class handler(BaseHTTPRequestHandler):
                 return self._json(200, {
                     "access_token":  data["access_token"],
                     "refresh_token": data.get("refresh_token", rt),
-                    "user": {"id": data["user"]["id"], "email": data["user"]["email"]},
+                    "user": {k: data["user"].get(k) for k in ("id", "email", "phone", "phone_confirmed_at")},
                 })
             return self._json(401, {"error": "session expired, please login again"})
+
+        if action == "logout":
+            token = (self.headers.get("Authorization") or "").replace("Bearer ", "")
+            if token:
+                _sb("/logout", {}, token=token)
+            return self._json(200, {"ok": True})
 
         email = body.get("email", "").strip().lower()
         password = body.get("password", "")
@@ -85,7 +99,7 @@ class handler(BaseHTTPRequestHandler):
                 return self._json(200, {
                     "access_token":  data["access_token"],
                     "refresh_token": data.get("refresh_token", ""),
-                    "user": {"id": data["user"]["id"], "email": data["user"]["email"]},
+                    "user": {k: data["user"].get(k) for k in ("id", "email", "phone", "phone_confirmed_at")},
                 })
             err = (data.get("msg") or data.get("error_description") or data.get("error") or "registration failed")
             return self._json(400, {"error": err})
@@ -96,16 +110,10 @@ class handler(BaseHTTPRequestHandler):
                 return self._json(200, {
                     "access_token":  data["access_token"],
                     "refresh_token": data.get("refresh_token", ""),
-                    "user": {"id": data["user"]["id"], "email": data["user"]["email"]},
+                    "user": {k: data["user"].get(k) for k in ("id", "email", "phone", "phone_confirmed_at")},
                 })
             err = (data.get("error_description") or data.get("msg") or "invalid email or password")
             return self._json(401, {"error": err})
-
-        elif action == "logout":
-            token = (self.headers.get("Authorization") or "").replace("Bearer ", "")
-            if token:
-                _sb("/logout", {}, token=token)
-            return self._json(200, {"ok": True})
 
         else:
             return self._json(400, {"error": "unknown action"})

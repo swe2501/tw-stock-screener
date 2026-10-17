@@ -1,0 +1,29 @@
+/* Offline full-site fixtures; no live SMS, provider calls or real accounts. */
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const {chromium}=require('playwright'),root=path.resolve(__dirname,'..');
+(async()=>{const browser=await chromium.launch({channel:'msedge',headless:true});try{
+ let required=false,confirmed=false,pending=null,smsEnabled=false;const calls=[],errors=[];
+ const user=()=>({id:'original-member',email:'fixture@example.test',phone:confirmed?'886912345678':null,phone_confirmed_at:confirmed?'2026-10-17':null,identities:[{provider:'google'}],user_metadata:{}});
+ const p=await browser.newPage({viewport:{width:1366,height:768},reducedMotion:'reduce'});p.on('pageerror',e=>errors.push(e.message));
+ await p.route('**/*',r=>{const u=new URL(r.request().url()),body=r.request().postDataJSON?.bind(r.request());
+ if(u.pathname==='/api/auth')return r.fulfill({json:{required,version:1}});
+ if(u.origin==='https://phone.fixture.test'){const f=path.resolve(root,'.'+decodeURIComponent(u.pathname==='/'?'/index.html':u.pathname));if(f.startsWith(root+path.sep)&&fs.existsSync(f)&&fs.statSync(f).isFile())return r.fulfill({path:f});return r.fulfill({json:{}});}
+ if(u.hostname.endsWith('.supabase.co')){let data={};try{data=body()||{};}catch{}calls.push({path:u.pathname,method:r.request().method(),body:data});
+ if(u.pathname==='/auth/v1/settings')return r.fulfill({json:{external:{phone:smsEnabled,google:true}}});
+ if(u.pathname==='/auth/v1/user'){if(r.request().method()==='PUT')pending=data.phone;return r.fulfill({json:user()});}
+ if(u.pathname==='/auth/v1/otp')return r.fulfill({json:{}});
+ if(u.pathname==='/auth/v1/verify'){confirmed=true;assert.equal(data.token,'123456');return r.fulfill({json:{access_token:'phone-token',refresh_token:'refresh',user:user()}});}
+ return r.fulfill({json:[]});}return r.fulfill({json:{}});});
+ await p.goto('https://phone.fixture.test/');await p.waitForFunction(()=>window.AcademyPhoneGate);await p.evaluate(()=>openAuthModal('register'));
+ const modal=p.locator('#authModal'),box=modal.locator('.auth-box');await modal.locator('[data-provider=phone] small').getByText('待開通',{exact:true}).waitFor();
+ for(const [width,height] of [[1366,768],[390,844],[375,667]]){await p.setViewportSize({width,height});for(const tab of ['login','register']){await p.evaluate(t=>switchAuthTab(t),tab);assert.ok(await box.evaluate(e=>e.scrollHeight<=e.clientHeight+1),`no scroll ${width}x${height} ${tab}`);assert.ok(await box.evaluate(e=>{const r=e.getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight+1;}));}}
+ const output=process.env.QA_OUTPUT;if(output){fs.mkdirSync(output,{recursive:true});await box.screenshot({path:path.join(output,'signup-compact.png')});}smsEnabled=true;await p.reload();await p.evaluate(()=>openAuthModal('login'));await modal.locator('[data-provider=phone]:not(:disabled)').waitFor();
+ await modal.locator('[data-provider=phone]').click();assert.equal(await modal.locator('#authEmail').isVisible(),false);assert.equal(await modal.locator('[data-phone-verify]').isVisible(),false);
+ await modal.locator('#academy-phone-number').fill('0912345678');await modal.locator('[data-send-phone]').click();await modal.locator('#academy-phone-code').waitFor();assert.equal(await modal.locator('[data-send-phone]').isDisabled(),true);assert.equal(calls.find(c=>c.path.endsWith('/otp')).body.phone,'+886912345678');
+ await modal.locator('#academy-phone-number').fill('0987654321');await modal.locator('#academy-phone-code').fill('123456');await modal.locator('button[type=submit]').click();assert.match(await modal.locator('.academy-social-status').textContent(),/先傳送驗證碼/);assert.equal(calls.some(c=>c.path.endsWith('/verify')),false);
+ await modal.locator('#academy-phone-number').fill('0912345678');await modal.locator('button[type=submit]').click();await p.waitForFunction(()=>localStorage.getItem('sb_token')==='phone-token');await modal.waitFor({state:'hidden'});
+ // Existing OAuth member must bind to the same account; cannot close or choose OTP signup.
+ required=true;confirmed=false;calls.length=0;await p.reload();await modal.locator('.academy-phone').waitFor();if(output)await box.screenshot({path:path.join(output,'phone-binding.png')});assert.equal(await modal.locator('.auth-close').isVisible(),false);await p.keyboard.press('Escape');assert.equal(await modal.isVisible(),true);await p.evaluate(()=>closeAuthModal());assert.equal(await modal.isVisible(),true);await p.evaluate(()=>openMemberCenter('strategy'));assert.equal(await p.locator('.member-page').isVisible(),false);
+ await modal.locator('#academy-phone-number').fill('0912345678');await modal.locator('[data-send-phone]').click();await modal.locator('#academy-phone-code').fill('123456');await modal.locator('button[type=submit]').click();await modal.waitFor({state:'hidden'});assert.equal(calls.some(c=>c.path.endsWith('/otp')),false);assert.equal(calls.find(c=>c.method==='PUT').body.phone,'+886912345678');assert.equal(calls.find(c=>c.path.endsWith('/verify')).body.type,'phone_change');assert.equal(await p.evaluate(()=>JSON.parse(localStorage.getItem('sb_user')).id),'original-member');
+ await p.evaluate(()=>openMemberCenter('overview'));await p.locator('.member-page:not([hidden])').waitFor();confirmed=false;await p.reload();await modal.locator('.academy-phone').waitFor();await modal.locator('[data-phone-back]').click();await modal.waitFor({state:'hidden'});assert.equal(await p.evaluate(()=>localStorage.getItem('sb_token')),null);assert.equal(await p.evaluate(()=>location.hash),'');assert.deepEqual(errors,[]);console.log('PASS viewport fit, SMS login, code cooldown, changed-number guard, mandatory same-account binding, no close bypass, verified member access');
+ }finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

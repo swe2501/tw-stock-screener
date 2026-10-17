@@ -11,7 +11,7 @@ function setup(settings={external:{google:true,apple:true,'custom:line-web':true
     location:{protocol:'https:',origin:'https://site.example',pathname:'/',search:'',hash:'',assign:url=>calls.push({redirect:url})},
     history:{replaceState(){}},localStorage:storage,sessionStorage:storage,
     window:{_acceptMemberSession:s=>accepted.push(s),dispatchEvent(){}},
-    fetch:async(url,options)=>{calls.push({url,...options});let data=url.endsWith('/settings')?settings:url.endsWith('/user')?{id:'verified-user'}:{access_token:'access',refresh_token:'refresh'};if(url.includes('/authorize?'))data={url:'https://provider.example/authorize'};return {ok:true,status:200,json:async()=>data};}};
+    fetch:async(url,options)=>{calls.push({url,...options});let data=url.endsWith('/settings')?settings:url.endsWith('/user')?{id:'verified-user',phone:'+886912345678',phone_confirmed_at:'2026-10-17'}:{access_token:'access',refresh_token:'refresh'};if(url.includes('/authorize?'))data={url:'https://provider.example/authorize'};return {ok:true,status:200,json:async()=>data};}};
   vm.runInNewContext(fs.readFileSync('assets/member-identity.js','utf8'),context);
   return {api:context.window.AcademyIdentity,calls,saved,accepted,context};
 }
@@ -63,7 +63,9 @@ test('phone linking updates authenticated user, never creates a new OTP member',
  const {api,saved,calls}=setup();saved.set('sb_token','original-token');const pending=await api.sendContactLink('phone','0912345678');assert.equal(pending.userId,'verified-user');assert.equal(pending.value,'+886912345678');const call=calls.find(c=>c.method==='PUT');assert.ok(call.url.endsWith('/auth/v1/user'));assert.equal(call.headers.Authorization,'Bearer original-token');assert.equal(JSON.parse(call.body).phone,'+886912345678');assert.equal(calls.some(c=>c.url?.includes('/otp')),false);
 });
 test('contact verification cannot claim success until the server reports the same member and verified contact',async()=>{
- const {api,saved,context}=setup();saved.set('sb_token','original-token');await assert.rejects(api.verifyContactLink({userId:'verified-user',kind:'phone',value:'+886912345678'},'123456'),/尚未完成驗證/);
+ const {api,saved,context}=setup();saved.set('sb_token','original-token');const original=context.fetch;context.fetch=async(url,options)=>url.endsWith('/user')?{ok:true,status:200,json:async()=>({id:'verified-user'})}:original(url,options);await assert.rejects(api.verifyContactLink({userId:'verified-user',kind:'phone',value:'+886912345678'},'123456'),/尚未完成驗證/);
  const base=context.fetch;context.fetch=async(url,options)=>url.endsWith('/user')?{ok:true,status:200,json:async()=>({id:'verified-user',phone:'+886912345678',phone_confirmed_at:'2026-10-17'})}:base(url,options);
  const profile=await api.verifyContactLink({userId:'verified-user',kind:'phone',value:'+886912345678'},'123456');assert.equal(profile.phone_verified,true);
 });
+
+test('phone login rejects unverified or mismatched server phone, ignoring metadata claims',async()=>{for(const user of [{id:'verified-user',phone:'+886912345678',user_metadata:{phone_verified:true}},{id:'verified-user',phone:'+886998765432',phone_confirmed_at:'2026-10-17'}]){const {api,context,accepted}=setup();const base=context.fetch;context.fetch=async(url,options)=>url.endsWith('/user')?{ok:true,status:200,json:async()=>user}:base(url,options);await assert.rejects(api.verifyPhone('0912345678','123456'),/手機驗證/);assert.equal(accepted.length,0);}});

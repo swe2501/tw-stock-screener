@@ -63,6 +63,10 @@ class handler(BaseHTTPRequestHandler):
         token = self._token()
         if not token:
             return self._json(401, {"error": "unauthorized"})
+        from lib.member_phone import check
+        blocked = check(token)
+        if blocked:
+            return self._json(*blocked)
         status, data = _sb("/broker_watchlist", token=token, params={
             "select": ("id,broker_id,broker_name,code,stock_name,buy_from_date,"
                        "total_buy_lots,peak_lots,cur_lots,giveback_pct,tier,anchor_sell_ct,"
@@ -74,6 +78,10 @@ class handler(BaseHTTPRequestHandler):
         token = self._token()
         if not token:
             return self._json(401, {"error": "unauthorized"})
+        from lib.member_phone import check
+        blocked = check(token)
+        if blocked:
+            return self._json(*blocked)
         length = int(self.headers.get("Content-Length", 0))
         body = json.loads(self.rfile.read(length) or b"{}")
         row = {k: body.get(k) for k in ("broker_id", "broker_name", "code", "stock_name")}
@@ -89,6 +97,10 @@ class handler(BaseHTTPRequestHandler):
         token = self._token()
         if not token:
             return self._json(401, {"error": "unauthorized"})
+        from lib.member_phone import check
+        blocked = check(token)
+        if blocked:
+            return self._json(*blocked)
         qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
         broker_id = (qs.get("broker_id") or [None])[0]
         code = (qs.get("code") or [None])[0]

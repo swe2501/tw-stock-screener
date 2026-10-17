@@ -52,6 +52,10 @@ class handler(BaseHTTPRequestHandler):
         token = self._token()
         if not token:
             return self._json(401, {"error": "unauthorized"})
+        from lib.member_phone import check
+        blocked = check(token)
+        if blocked:
+            return self._json(*blocked)
         status, data = _sb("/watchlist", token=token,
                            params={"select": "*", "order": "added_at.desc"})
         self._json(status, data)
@@ -60,6 +64,10 @@ class handler(BaseHTTPRequestHandler):
         token = self._token()
         if not token:
             return self._json(401, {"error": "unauthorized"})
+        from lib.member_phone import check
+        blocked = check(token)
+        if blocked:
+            return self._json(*blocked)
         length = int(self.headers.get("Content-Length", 0))
         body = json.loads(self.rfile.read(length) or b"{}")
         status, data = _sb("/watchlist", method="POST", body=body, token=token)
@@ -69,6 +77,10 @@ class handler(BaseHTTPRequestHandler):
         token = self._token()
         if not token:
             return self._json(401, {"error": "unauthorized"})
+        from lib.member_phone import check
+        blocked = check(token)
+        if blocked:
+            return self._json(*blocked)
         length = int(self.headers.get("Content-Length", 0))
         body = json.loads(self.rfile.read(length) or b"{}")
         item_id = body.pop("id", None)
@@ -82,6 +94,10 @@ class handler(BaseHTTPRequestHandler):
         token = self._token()
         if not token:
             return self._json(401, {"error": "unauthorized"})
+        from lib.member_phone import check
+        blocked = check(token)
+        if blocked:
+            return self._json(*blocked)
         qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
         code = (qs.get("code") or [None])[0]
         if not code:

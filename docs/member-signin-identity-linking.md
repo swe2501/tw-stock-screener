@@ -1,6 +1,6 @@
 # 登入版面與同帳號綁定
 
-2026-10-17：登入視窗採跟誰學現有 Logo、帳號密碼在前、社群入口在後；輸入框 18px 圓角、主要及社群按鈕膠囊形。滑光只作用在本站視窗外框，第三方 Logo 保持原樣。遵循 reduced-motion；視窗可捲動、Esc／背景可關閉、Tab 留在視窗內。
+2026-10-17：登入視窗採跟誰學現有 Logo、帳號密碼在前、社群入口在後；輸入框 18px 圓角、主要及社群按鈕膠囊形。滑光只作用在本站視窗外框，第三方 Logo 保持原樣。遵循 reduced-motion；主畫面依螢幕高度緊湊排列；額外內容必要時可捲動、一般登入 Esc／背景可關閉、Tab 留在視窗內。
 
 ## 真實開通狀態
 
@@ -31,3 +31,5 @@ OAuth 手動綁定還需要 Supabase Auth 開啟 **Allow manual linking**。未�
 - https://developers.google.com/identity/branding-guidelines
 - https://developer.apple.com/design/human-interface-guidelines/sign-in-with-apple/
 - https://developers.line.biz/en/docs/line-login/login-button/
+
+手機登入與強制綁定的啟用狀態、API guard 與必要的資料庫權限部署見 [member-phone-rollout.md](member-phone-rollout.md)。目前正式強制尚未啟用。
