@@ -704,6 +704,22 @@ def _fetch_groupbook(window=10, price_rows=None):
 
 
 
+def _read_focus_snapshot(top_n=30):
+    status, rows = _cache_sb("/page_cache", params=[
+        ("kind", "eq.focus"), ("select", "payload,updated_at"), ("limit", "1")
+    ])
+    if status != 200 or not isinstance(rows, list) or not rows:
+        return {"error": "focus snapshot unavailable"}
+    data = rows[0].get("payload")
+    keys = ("gainers", "losers", "volume_surge")
+    if not isinstance(data, dict) or data.get("error") or not data.get("date") or not all(isinstance(data.get(k), list) for k in keys):
+        return {"error": "invalid focus snapshot"}
+    result = dict(data, updatedAt=rows[0].get("updated_at"), precomputed=True)
+    for key in keys:
+        result[key] = data[key][:max(1, min(top_n, 50))]
+    return result
+
+
 def _fetch_focus(top_n=30):
     """今日焦點三榜（伺服器端算，回精簡 JSON）：漲幅榜／跌幅榜／爆量榜。
     資料源：Supabase price_window（每日上傳的證交所 OHLCV，不落後）。
@@ -2728,7 +2744,7 @@ class handler(BaseHTTPRequestHandler):
             except Exception:
                 n = 30
             try:
-                return self._send_json(200, _fetch_focus(max(1, min(n, 50))))
+                return self._send_json(200, _read_focus_snapshot(n), cache="public, s-maxage=300, max-age=60")
             except Exception as e:
                 import traceback
                 return self._send_json(200, {"error": str(e), "traceback": traceback.format_exc()})

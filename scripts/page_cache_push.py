@@ -67,6 +67,13 @@ def main():
         size = len(json.dumps(d, ensure_ascii=False).encode("utf-8"))
         print(f"[page_cache] {kind} 寫入 status={st} 資料日={td} 大小={size // 1024}KB")
         ok += 1
+    focus_ok = False
+    try:
+        from focus_precompute import run as run_focus
+        run_focus(env)
+        focus_ok = True
+    except Exception as e:
+        print(f"[page_cache] focus failed; previous snapshot retained: {type(e).__name__}")
     groupbook_ok = False
     try:
         from groupbook_precompute import run
@@ -75,7 +82,7 @@ def main():
     except Exception as e:
         print(f"[page_cache] groupbook failed; previous snapshots retained: {type(e).__name__}")
     print(f"[page_cache] 完成 {ok}/{len(KINDS)}; groupbook={groupbook_ok}")
-    return 0 if ok == len(KINDS) and groupbook_ok else 1
+    return 0 if ok == len(KINDS) and groupbook_ok and focus_ok else 1
 
 
 if __name__ == "__main__":
