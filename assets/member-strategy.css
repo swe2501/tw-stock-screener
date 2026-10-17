@@ -66,3 +66,14 @@ body.mc-chart-open :is(#greedPopup,#strengthPopup,#btAddPopup,#btSellPopup,#_stF
 
 /* The site has an important global button transition; docking needs position transitions. */
 .ms-chat-launcher.is-docking{transition:left var(--ms-dock-duration,780ms) cubic-bezier(.25,.1,.25,1),top var(--ms-dock-duration,780ms) cubic-bezier(.25,.1,.25,1),transform .2s ease,box-shadow .2s ease!important;will-change:left,top}.ms-chat-launcher.is-dragging{transition:none!important}.ms-chat-head .ms-chat-controls button,.ms-chat-dialog .ms-assistant button:not(.mc-primary){background:var(--surface)!important;color:var(--text)!important;border-color:var(--border)!important}@media(prefers-reduced-motion:reduce){.ms-chat-launcher.is-docking{transition:none!important;will-change:auto}}
+
+/* Rounded speech bubbles and a gentle glow on the companion itself. */
+.ms-chat-dialog .ms-ai-conversation{padding:8px 9px 12px;gap:12px}
+.ms-chat-dialog .ms-ai-message{position:relative;border-radius:23px 23px 23px 10px;padding:12px 15px;max-width:min(85%,620px)}
+.ms-chat-dialog .ms-ai-message.user{border-radius:23px 23px 10px 23px}
+.ms-chat-dialog .ms-ai-message:before{content:'';position:absolute;bottom:12px;left:-5px;width:9px;height:9px;transform:rotate(45deg);background:var(--bg);border-left:1px solid var(--border);border-bottom:1px solid var(--border);border-radius:0 0 0 3px}
+.ms-chat-dialog .ms-ai-message.user:before{left:auto;right:-5px;background:#2e64c6;border:0;border-radius:0 3px 0 0}
+.ms-chat-launcher>svg{animation:ms-mascot-glimmer 3s ease-in-out infinite}
+@keyframes ms-mascot-glimmer{0%,100%{filter:drop-shadow(0 0 0 transparent)}50%{filter:drop-shadow(0 0 6px #71b9e5aa) brightness(1.12)}}
+.ms-chat-dialog .ms-chat-keyboard-hint{font-size:10px;margin:3px 0;color:var(--text-muted)}
+@media(prefers-reduced-motion:reduce){.ms-chat-launcher>svg{animation:none}}
