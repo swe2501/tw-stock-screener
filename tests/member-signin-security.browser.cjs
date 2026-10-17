@@ -33,6 +33,7 @@ const root=path.resolve(__dirname,'..'),output=process.env.QA_OUTPUT||require('n
 
  for(const width of [1512,1024,390]){await page.setViewportSize({width,height:1100});assert.ok(await page.evaluate(()=>{const e=document.querySelector('#mainNav'),rs=[...e.querySelector('.mn-inner').children].filter(n=>getComputedStyle(n).display!=='none').map(n=>n.getBoundingClientRect());return rs.every((r,i)=>r.x>=-1&&r.right<=innerWidth+1&&rs.slice(i+1).every(q=>Math.min(r.right,q.right)-Math.max(r.left,q.left)<1||Math.min(r.bottom,q.bottom)-Math.max(r.top,q.top)<1));}),'nav controls must not collide '+width);}
  await page.setViewportSize({width:1512,height:1100});if(output){await page.evaluate(()=>closeAuthModal());await page.locator('#mainNav').screenshot({path:path.join(output,'navigation-compact.png')});await page.locator('.topsearch').screenshot({path:path.join(output,'search-toolbar-clean.png')});await page.evaluate(()=>openAuthModal('login'));}
+ assert.equal(await page.locator('#mainNav .mn-active').first().evaluate(e=>getComputedStyle(e).animationName),'site-nav-breathe');
  assert.match(await box.evaluate(e=>getComputedStyle(e).animationName),/ma-auth/);
 
  await page.emulateMedia({reducedMotion:'no-preference'});
