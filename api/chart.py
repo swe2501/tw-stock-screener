@@ -6,6 +6,8 @@ import urllib.parse
 import http.cookiejar
 import zipfile
 import io
+import math
+import re
 from datetime import datetime, timezone, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -22,6 +24,57 @@ TWSE_HEADERS = {
 
 RANGE_DAYS = {"1mo": 35, "3mo": 95, "6mo": 185, "1y": 370, "2y": 730, "3y": 1100}
 YF_HOSTS = ["query1.finance.yahoo.com", "query2.finance.yahoo.com"]
+
+TX_SESSION_SOURCE = "https://openapi.taifex.com.tw/v1/DailyMarketReportFut"
+
+
+def _tx_session_quotes(rows):
+    """Latest official daily quotes, with day/night kept separate on one contract.
+
+    TAIFEX's Date is the trading date (also for the overnight session), not
+    necessarily the calendar date on which an overnight trade occurred.
+    """
+    candidates = []
+    for row in rows:
+        if not isinstance(row, dict) or row.get("Contract") != "TX":
+            continue
+        day = str(row.get("Date", ""))
+        month = str(row.get("ContractMonth(Week)", ""))
+        session = {"一般": "day", "盤後": "night", "夜盤": "night"}.get(row.get("TradingSession"))
+        if not session or not re.fullmatch(r"\d{8}", day) or not re.fullmatch(r"\d{6}", month):
+            continue
+        try:
+            date = datetime.strptime(day, "%Y%m%d").strftime("%Y-%m-%d")
+            datetime.strptime(month, "%Y%m")
+            price = float(str(row.get("Last", "")).replace(",", ""))
+        except (ValueError, TypeError):
+            continue
+        if not math.isfinite(price) or price <= 0 or month < day[:6]:
+            continue
+        candidates.append((date, month, session, price))
+    # Use the latest published trading date. Do not fill a missing session
+    # with an older quote or another contract, which would hide stale data.
+    if not candidates:
+        return {"day": None, "night": None}
+    latest = max(item[0] for item in candidates)
+    contract = min(item[1] for item in candidates if item[0] == latest)
+    result = {"day": None, "night": None}
+    for date, month, session, price in candidates:
+        if date == latest and month == contract:
+            result[session] = {"price": price, "date": date, "contractMonth": month,
+                               "session": session}
+    return result
+
+
+def fetch_tx_sessions():
+    req = urllib.request.Request(TX_SESSION_SOURCE, headers=YF_HEADERS)
+    with urllib.request.urlopen(req, timeout=10) as response:
+        rows = json.loads(response.read(4_000_001))
+    if not isinstance(rows, list):
+        raise ValueError("invalid TAIFEX session response")
+    return {"code": "TX=F", "sessions": _tx_session_quotes(rows),
+            "source_url": TX_SESSION_SOURCE, "quoteType": "published_daily",
+            "dateBasis": "TAIFEX trading date", "currency": "TWD"}
 
 # ── 上櫃(OTC)代號集：讀 Supabase otc_names（快取）；上櫃個股 Yahoo 尾碼用 .TWO（上市為 .TW）──
 _SB_URL = "https://bruqrbvbjxntgoljxsne.supabase.co"
@@ -1074,6 +1127,16 @@ class handler(BaseHTTPRequestHandler):
 
         if not code:
             self._json(400, {"error": "missing code parameter"})
+            return
+
+        if "session" in params:
+            if code != "TX=F" or interval != "1d" or params["session"] != ["split"]:
+                self._json(400, {"error": "session=split requires TX=F daily quotes"})
+                return
+            try:
+                self._json(200, fetch_tx_sessions(), cache="public, s-maxage=300, stale-while-revalidate=300")
+            except Exception:
+                self._json(502, {"error": "TAIFEX session quotes unavailable"})
             return
 
         try:

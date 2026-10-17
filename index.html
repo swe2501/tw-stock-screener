@@ -329,6 +329,13 @@
     .chart-layer-tab.is-enabled .layer-dot{background:var(--layer-accent);box-shadow:0 0 7px color-mix(in srgb,var(--layer-accent) 62%,transparent);transform:scale(1.12);}
     .chart-layer-tab .layer-count{display:none;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:color-mix(in srgb,var(--layer-accent) 11%,var(--surface));color:var(--layer-accent);font-size:9px;line-height:16px;text-align:center;}
     .chart-layer-tab .layer-count.show{display:inline-block;}
+    /* 葛蘭碧買點 組別 checkbox（2026-10-17） */
+    #sma20GroupPanel .sma20-grp{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border:1px solid var(--border);border-radius:999px;background:var(--surface2);color:var(--text-muted);font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap;}
+    #sma20GroupPanel .sma20-grp.is-on{border-color:#1e88e5;color:#1e88e5;background:color-mix(in srgb,#1e88e5 10%,var(--surface));}
+    #sma20GroupPanel .sma20-grp input{margin:0;cursor:pointer;accent-color:#1e88e5;}
+    #sma20GroupPanel .sma20-grp .sma20-grp-d{color:var(--text-muted);font-weight:600;font-size:10.5px;}
+    #sma20GroupPanel .sma20-grp.is-on .sma20-grp-d{color:color-mix(in srgb,#1e88e5 70%,var(--text-muted));}
+    #sma20GroupPanel .sma20-grp-sep{color:var(--border);margin:0 2px;}
     .broker-panel-head{display:flex;align-items:center;justify-content:flex-end;gap:4px;margin:1px 2px 11px;font-size:11.5px;}
     .broker-panel-head a{display:inline-flex;align-items:center;justify-content:center;min-width:48px;padding:5px 10px;border:1px solid var(--border);background:var(--surface);color:var(--text-muted);cursor:pointer;text-decoration:none;font-weight:800;line-height:1;border-radius:7px;transition:color .16s ease,border-color .16s ease,background .16s ease,transform .14s ease;}
     .broker-panel-head a:first-child{color:#9556aa;border-color:color-mix(in srgb,#a45fba 30%,var(--border));background:color-mix(in srgb,#a45fba 7%,var(--surface));}
@@ -9613,6 +9620,7 @@
           <button class="chart-layer-tab" data-layer="broker" type="button" onclick="_toggleBrokerPanel()"><span class="layer-dot"></span>主力分點<span class="layer-count"></span></button>
           <div class="label-row" id="markerToggles" style="display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;white-space:nowrap"></div>
         </div>
+        <div id="sma20GroupPanel" class="chart-feature-panel" style="display:none;padding:7px 12px;border-top:1px solid var(--border);font-size:12px;color:var(--text);flex-wrap:wrap;gap:6px;align-items:center"></div>
         <div id="brokerFilterPanel" class="chart-feature-panel" style="display:none;padding:12px 14px 10px;border-top:1px solid var(--border);font-size:12px;color:var(--text)"></div>
         <div id="mkPanel" class="chart-feature-panel" style="padding:6px 8px;border-top:1px solid var(--border);font-size:12px;color:var(--text)">
           <a onclick="_mkTogglePanel()" style="cursor:pointer;text-decoration:none;user-select:none"><span id="mkArrow" style="color:var(--text-muted);font-size:11px;margin-right:4px">▸</span><b style="color:#5a78aa">大盤K</b></a>
@@ -10640,13 +10648,14 @@
     if (window._mkShow.div == null) window._mkShow.div = !!(window._kPref && window._kPref.get('mk_div', false));         // 除權息標記預設關，開關會記住
     if (window._mkShow.catalyst == null) window._mkShow.catalyst = !!(window._kPref && window._kPref.get('mk_catalyst', false)); // 法說會標記預設關，開關會記住
     let _sma20Markers = [];   // 本次圖表的 20MA 三階段買點標記（僅日 K）
+    let _sma20GroupCount = 0, _sma20GroupStart = {};   // 動態組數（每個買1開啟一組）＋各組起始日
     // 20 日 SMA 三階段買點（2026-10-12；與後端 api/screen.py sma20_stage_scan 同一套規則，改參數兩邊要一起改）
     function _sma20Scan(cs) {
       const N = 20, n = cs.length, out = [];
       if (n < N + 7) return out;
       const ma = new Array(n).fill(null); let run = 0;
       for (let i = 0; i < n; i++) { run += cs[i].close; if (i >= N) run -= cs[i - N].close; if (i >= N - 1) ma[i] = Math.round(run / N * 1e6) / 1e6; }
-      let stage = 0, known = false;
+      let stage = 0, known = false, grp = 0;                        // grp＝第幾組（每個買1開啟新的一組）
       for (let i = N + 5; i < n; i++) {
         const m = ma[i], m1 = ma[i - 1], m3 = ma[i - 3];
         if (m < m1) { stage = 0; known = true; continue; }          // 下彎第一天即重置，當天不觸發
@@ -10658,24 +10667,26 @@
           if (!(wasDown && m >= m1 && m >= m3 && c > o && c > m)) continue;
           let s5 = 0, s10 = 0; for (let d = i - 10; d < i; d++) { const x = cs[d].volume || 0; s10 += x; if (d >= i - 5) s5 += x; }
           const base = Math.max(s5 / 5, s10 / 10);
-          if (base > 0 && v >= 1.3 * base) { stage = 1; out.push({ i, stage: 1 }); }
+          if (base > 0 && v >= 1.3 * base) { stage = 1; grp++; out.push({ i, stage: 1, g: grp }); }
         } else if (stage === 1) {
-          if (m > m1 && m > m3 && l <= m && c > m) { stage = 2; out.push({ i, stage: 2 }); }
+          if (m > m1 && m > m3 && l <= m && c > m) { stage = 2; out.push({ i, stage: 2, g: grp }); }
         } else if (stage === 2) {
-          if (h < m && ((c - o) / c >= 0.03 || (Math.min(o, c) - l) / c >= 0.03 || o === c)) { stage = 3; out.push({ i, stage: 3 }); }
+          if (h < m && ((c - o) / c >= 0.03 || (Math.min(o, c) - l) / c >= 0.03 || o === c)) { stage = 3; out.push({ i, stage: 3, g: grp }); }
         }
       }
       return out;
     }
     function _sma20Build(candles) {
-      _sma20Markers = [];
+      _sma20Markers = []; _sma20GroupCount = 0; _sma20GroupStart = {}; window._sma20GroupsOn = null;   // null＝全部顯示（預設；換股票重置）
       try {
         const n = candles.length; if (n < 40 || typeof candles[n - 1].time !== 'string') return;      // 小時 K 不算
         const span = (new Date(candles[n - 1].time) - new Date(candles[n - 31].time)) / 86400000;
         if (!(span < 60)) return;                                                                    // 30 根跨超過 60 天＝週／月／年 K，不算
         const col = { 1: '#00acc1', 2: '#1e88e5', 3: '#8e24aa' };
-        _sma20Markers = _sma20Scan(candles).map(x => ({ time: candles[x.i].time, position: 'belowBar', color: col[x.stage], shape: 'arrowUp', text: '買' + x.stage, size: 1 }));
-      } catch (_) { _sma20Markers = []; }
+        const sc = _sma20Scan(candles);
+        sc.forEach(x => { if (x.g > _sma20GroupCount) _sma20GroupCount = x.g; if (x.stage === 1) _sma20GroupStart[x.g] = candles[x.i].time; });
+        _sma20Markers = sc.map(x => ({ time: candles[x.i].time, position: 'belowBar', color: col[x.stage], shape: 'arrowUp', text: '買' + x.stage, size: 1, group: x.g }));
+      } catch (_) { _sma20Markers = []; _sma20GroupCount = 0; }
     }
     const _MK_DEFS = [
       ['catalyst', '法說會', '#f5c84b'],
@@ -10737,11 +10748,41 @@
       if (S.catalyst) sel.push(...catalyst);
       if (S.broker) sel.push(...broker);
       if (S.user) sel.push(...user);
-      if (S.sma20) sel.push(..._sma20Markers);
+      if (S.sma20) sel.push(..._sma20Markers.filter(m => !window._sma20GroupsOn || window._sma20GroupsOn.has(m.group)));
       sel.push(...(_boxMarkers || []));   // 箱型標記另有自己的開關，不納入此分類
       const all = sel.sort((a, b) => a.time < b.time ? -1 : 1);
       try { candleSeriesRef.setMarkers(all); } catch (_) {}
       _renderMarkerToggles(present);
+      _renderSma20Groups();
+    }
+    function _ensureSma20GroupsSet() {
+      if (!window._sma20GroupsOn) { window._sma20GroupsOn = new Set(); for (let k = 1; k <= _sma20GroupCount; k++) window._sma20GroupsOn.add(k); }
+    }
+    function _toggleSma20Group(g) {
+      _ensureSma20GroupsSet();
+      if (window._sma20GroupsOn.has(g)) window._sma20GroupsOn.delete(g); else window._sma20GroupsOn.add(g);
+      _refreshChartMarkers();
+    }
+    function _toggleSma20AllGroups(on) {
+      window._sma20GroupsOn = new Set();
+      if (on) for (let k = 1; k <= _sma20GroupCount; k++) window._sma20GroupsOn.add(k);
+      _refreshChartMarkers();
+    }
+    // 點葛蘭碧按鈕(開啟時)在下方列出各組買點 checkbox，可單獨顯示/隱藏某一組
+    function _renderSma20Groups() {
+      const panel = document.getElementById('sma20GroupPanel'); if (!panel) return;
+      if (!(window._mkShow && window._mkShow.sma20 && _sma20GroupCount > 0)) { panel.style.display = 'none'; panel.innerHTML = ''; return; }
+      const allOn = !window._sma20GroupsOn || window._sma20GroupsOn.size === _sma20GroupCount;
+      let boxes = '';
+      for (let g = 1; g <= _sma20GroupCount; g++) {
+        const on = !window._sma20GroupsOn || window._sma20GroupsOn.has(g);
+        const d = _sma20GroupStart[g] ? _sma20GroupStart[g].slice(5).replace('-', '/') : '';
+        boxes += `<label class="sma20-grp${on ? ' is-on' : ''}"><input type="checkbox" ${on ? 'checked' : ''} onchange="_toggleSma20Group(${g})">第${g}組${d ? `<span class="sma20-grp-d">${d}</span>` : ''}</label>`;
+      }
+      panel.innerHTML = `<b style="color:#1e88e5">葛蘭碧買點 · 共 ${_sma20GroupCount} 組</b>`
+        + `<label class="sma20-grp sma20-grp-all${allOn ? ' is-on' : ''}"><input type="checkbox" ${allOn ? 'checked' : ''} onchange="_toggleSma20AllGroups(this.checked)">全部</label>`
+        + `<span class="sma20-grp-sep">|</span>${boxes}`;
+      panel.style.display = 'flex';
     }
 
     function _addChartMarker(code, date, label) {
@@ -16604,11 +16645,19 @@
 @keyframes fxRocketAfterArrival{0%,59.99%{transform:translate(-50%,0) scale(.65);opacity:0}60%{transform:translate(-50%,0) scale(.65);opacity:1}88%{opacity:.8}100%{transform:translate(24px,-38px) scale(.85);opacity:0}}
 @keyframes fxMeteorAfterArrival{0%,59.99%{transform:translate(-50%,0) scale(.7);opacity:0}60%{transform:translate(-50%,0) scale(.7);opacity:1}88%{opacity:.8}100%{transform:translate(-44px,32px) scale(.9);opacity:0}}
 @keyframes fxSparkAfterArrival{0%,59.99%{transform:rotate(var(--spark-angle)) translateY(0) scaleY(.3);opacity:0}60%{transform:rotate(var(--spark-angle)) translateY(0) scaleY(.3);opacity:1}83%{transform:rotate(var(--spark-angle)) translateY(-33px) scaleY(.9);opacity:.7}100%{transform:rotate(var(--spark-angle)) translateY(-43px) scaleY(.3);opacity:0}}
+
+/* Shared day/night choice controls the quote, graph and comparison together. */
+.fx-session-switch{display:flex;gap:4px;align-items:center;justify-self:start;border:1px solid var(--border);background:var(--surface);padding:4px;border-radius:24px;margin:6px 0;max-width:100%}
+.fx-session-switch button{border:0;border-radius:20px;padding:7px 16px;min-height:36px;font:inherit;font-size:12px;background:transparent;color:var(--text-muted);cursor:pointer;white-space:nowrap}
+.fx-session-switch button[aria-pressed="true"]{background:var(--accent);color:#fff;box-shadow:0 2px 7px color-mix(in srgb,var(--accent) 20%,transparent)}
+.fx-session-switch button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.fx-session-note{font-size:10px;line-height:1.8;color:var(--text-muted);margin:7px 0 0;overflow-wrap:anywhere}
+#fhForeignCost .fx-session-switch{grid-column:1}#fhForeignCost .fx-session-note{grid-column:1/-1}#fhForeignCost .fx-ecg{grid-row:1/6}
 </style>
 <script>
 (function(){
  var verifiedSettlement={"date":"2026-09-16","product":"TX","basis":{"long":{"lots":7805.0,"amount_thousand":71902338.0,"point":46061.715566944265},"short":{"lots":84156.0,"amount_thousand":775297770.0,"point":46063.13097105376},"net":{"lots":-76351.0,"amount_thousand":-703395432.0,"point":46063.27566109154}},"unit":"TWD thousand","source_url":"https://www.taifex.com.tw/cht/3/futContractsDate?queryType=1&doQuery=1&queryDate=2026%2F09%2F16","scope":"All listed TX delivery months; settlement-value proxy, not entry cost"};
- var basis='net',snapshot=null,current=null,period=null,api=location.protocol==='file:'?'https://tw-stock-screener-neon.vercel.app':'',busy=false;
+ var basis='net',snapshot=null,quotes={day:null,night:null},marketSession='day',quotesLoading=true,period=null,api=location.protocol==='file:'?'https://tw-stock-screener-neon.vercel.app':'',busy=false;
  function fmt(v){return Number.isFinite(v)?v.toLocaleString('zh-TW',{maximumFractionDigits:2}):'—';}
  function monthly(y,m){var d=new Date(Date.UTC(y,m,1)),day=1+(3-d.getUTCDay()+7)%7+14,iso=new Date(Date.UTC(y,m,day)).toISOString().slice(0,10);return window._twAdj?window._twAdj(iso):iso;}
  function getPeriod(){var now=new Date(Date.now()+8*3600e3),today=now.toISOString().slice(0,10),y=now.getUTCFullYear(),m=now.getUTCMonth(),date=monthly(y,m);if(date>today){m--;date=monthly(y,m);}var following=new Date(Date.UTC(y,m+1,1));return {date:date,month:following.toISOString().slice(0,7),next:monthly(following.getUTCFullYear(),following.getUTCMonth())};}
@@ -16629,12 +16678,13 @@
   }
   return '<div class="fx-ecg '+tone+'"><div class="fx-ecg-plot" style="background:none">'+(valid?'<div class="fx-cost-zone" style="left:'+(costPos-500/(max-min)*84)+'%;width:'+(1000/(max-min)*84)+'%"><span>±500</span></div>':'')+'<svg viewBox="0 0 300 52" preserveAspectRatio="none" aria-hidden="true"><path class="fx-ecg-axis" d="M0 26 H300"/><path class="fx-ecg-white-lead" pathLength="100" d="'+lead+path.replace(/^M[^ ]+ 26/,'')+'"/><path class="fx-ecg-base" d="'+path+'"/>'+'</svg><i class="fx-ecg-threshold center" style="left:'+costPos+'%"></i><span class="fx-ecg-cost-label" style="left:'+costPos+'%">成本 '+integer(v)+'</span>'+(ready?'<i class="fx-ecg-dot" style="left:'+position+'%"></i>'+icon+'<b class="fx-ecg-current-label" style="left:'+position+'%">'+integer(price)+'</b>':'<span class="fx-ecg-pending">目前價格待更新</span>')+'</div></div>';
  }
- function render(error){hosts.forEach(function(host){if(!host)return;var b=snapshot&&snapshot.basis.net,v=b&&b.point,price=current&&current.price,diff=Number.isFinite(price)&&Number.isFinite(v)?price-v:null,tone=diff==null?'':diff>500?'up':diff< -500?'down':'flat',status=diff==null?'價格資料待更新':diff>500?'外資籌碼樂觀':diff< -500?'外資籌碼悲觀':'多空拉鋸';var month=period?+period.month.slice(5)+'月':'';
- host.innerHTML='<article class="fx-cost"><div class="fx-cost-top"><h3>外資結算成本</h3><span class="fx-cost-month">'+month+' · 估算</span></div><div class="fx-cost-number">'+fmt(v)+'<span>點</span></div><div class="fx-cost-state '+tone+'">'+(!Number.isFinite(v)?'結算資料待更新':diff==null?status:'<span>'+(diff>0?'在成本之上 ':diff<0?'在成本之下 ':'與成本相同 ')+fmt(Math.abs(diff))+'點</span><b>'+status+'</b>')+'</div>'+ecg(v,price,diff,tone,host.id==='fhForeignCost')+'<p class="fx-cost-caption">基準 '+(snapshot?snapshot.date.slice(5):period?period.date.slice(5):'—')+' · 下次 '+(period?period.next.slice(5):'—')+' 盤後</p><p class="fx-cost-rule">高於成本500點偏多、低於500點偏空；其餘多空拉鋸。僅依價格位置判讀。</p>'+ (host.id==='fhForeignCost'?'<div class="fx-analysis-metrics"><div><small>目前臺指期</small><b>'+fmt(price)+' 點</b><span>價格日 '+(current?current.date:'待更新')+'</span></div><div><small>距估算成本</small><b>'+(diff==null?'—':(diff>=0?'+':'')+fmt(diff))+' 點</b><span>以固定結算基準比較</span></div><div><small>上／下方向門檻</small><b>'+fmt(Number.isFinite(v)?v+500:null)+'／'+fmt(Number.isFinite(v)?v-500:null)+'</b><span>成本上下500點</span></div><div><small>觀察月份</small><b>'+month+'</b><span>基準取自結算日，盤後公布才更新</span></div></div>':'')+'</article>';if(host.id==='fhForeignCost'){var chart=host.querySelector('.fx-ecg');function play(){if(!chart)return;chart.classList.remove('fx-play');chart.querySelectorAll('.fx-ecg-white-lead,.fx-tug-ray,.fx-tug-firework i,.fx-flight').forEach(function(n){n.style.animation='none';});void chart.offsetWidth;chart.classList.add('fx-play');chart.querySelectorAll('.fx-ecg-white-lead,.fx-tug-ray,.fx-tug-firework i,.fx-flight').forEach(function(n){n.style.animation='';});}host.onpointerenter=play;if(host.dataset.lastTone!==tone){host.dataset.lastTone=tone;requestAnimationFrame(play);}}});mount();}
+ function render(error){var current=quotes[marketSession],sessionLabel=marketSession==='night'?'夜盤':'日盤';hosts.forEach(function(host){if(!host)return;var b=snapshot&&snapshot.basis.net,v=b&&b.point,price=current&&current.price,diff=Number.isFinite(price)&&Number.isFinite(v)?price-v:null,tone=diff==null?'':diff>500?'up':diff< -500?'down':'flat',status=diff==null?'價格資料待更新':diff>500?'外資籌碼樂觀':diff< -500?'外資籌碼悲觀':'多空拉鋸';var month=period?+period.month.slice(5)+'月':'';
+ host.innerHTML='<article class="fx-cost"><div class="fx-cost-top"><h3>外資結算成本</h3><span class="fx-cost-month">'+month+' · 估算</span></div><div class="fx-session-switch" role="group" aria-label="臺指期行情盤別">'+['day','night'].map(function(key){return '<button type="button" data-fx-session="'+key+'" aria-pressed="'+(marketSession===key)+'">'+(key==='day'?'日盤':'夜盤')+'</button>';}).join('')+'</div><div class="fx-cost-number">'+fmt(v)+'<span>點</span></div><div class="fx-cost-state '+tone+'">'+(!Number.isFinite(v)?'結算資料待更新':diff==null?status:'<span>'+(diff>0?'在成本之上 ':diff<0?'在成本之下 ':'與成本相同 ')+fmt(Math.abs(diff))+'點</span><b>'+status+'</b>')+'</div>'+ecg(v,price,diff,tone,host.id==='fhForeignCost')+'<p class="fx-cost-caption">基準 '+(snapshot?snapshot.date.slice(5):period?period.date.slice(5):'—')+' · 下次 '+(period?period.next.slice(5):'—')+' 盤後</p><p class="fx-cost-rule">高於成本500點偏多、低於500點偏空；其餘多空拉鋸。僅依價格位置判讀。</p>'+ (host.id==='fhForeignCost'?'<div class="fx-analysis-metrics"><div><small>臺指期 · '+sessionLabel+'收盤</small><b>'+fmt(price)+' 點</b><span>'+(current?'交易日 '+current.date+' · '+current.contractMonth+' 近月合約':quotesLoading?'行情載入中…':sessionLabel+'資料待更新')+'</span></div><div><small>距估算成本</small><b>'+(diff==null?'—':(diff>=0?'+':'')+fmt(diff))+' 點</b><span>'+sessionLabel+'收盤與固定結算基準比較</span></div><div><small>上／下方向門檻</small><b>'+fmt(Number.isFinite(v)?v+500:null)+'／'+fmt(Number.isFinite(v)?v-500:null)+'</b><span>成本上下500點</span></div><div><small>觀察月份</small><b>'+month+'</b><span>基準取自結算日，盤後公布才更新</span></div></div>':'')+'<p class="fx-session-note" aria-live="polite">'+sessionLabel+' · '+(current?'交易日 '+current.date+' · 近月 '+current.contractMonth:quotesLoading?'行情載入中…':'資料待更新')+' · 期交所公布行情，非即時報價</p></article>';if(host.id==='fhForeignCost'){var chart=host.querySelector('.fx-ecg');function play(){if(!chart)return;chart.classList.remove('fx-play');chart.querySelectorAll('.fx-ecg-white-lead,.fx-tug-ray,.fx-tug-firework i,.fx-flight').forEach(function(n){n.style.animation='none';});void chart.offsetWidth;chart.classList.add('fx-play');chart.querySelectorAll('.fx-ecg-white-lead,.fx-tug-ray,.fx-tug-firework i,.fx-flight').forEach(function(n){n.style.animation='';});}host.onpointerenter=play;host.dataset.lastTone=tone;requestAnimationFrame(play);}});mount();}
  async function load(){if(busy)return;busy=true;if(window._loadTwHol){try{await window._loadTwHol();}catch(e){}}period=getPeriod();if(verifiedSettlement.date===period.date)snapshot=verifiedSettlement;render();
  try{var r=await fetch(api+'/api/screen?stat=foreign_settlement_cost&date='+period.date);if(!r.ok)throw Error();snapshot=await r.json();if(snapshot.date!==period.date)throw Error();}catch(e){snapshot=null;var today=new Date(Date.now()+8*3600e3).toISOString().slice(0,10);if(period.date===today){var d=new Date(period.date+'T00:00:00Z'),previous=monthly(d.getUTCFullYear(),d.getUTCMonth()-1);try{var r2=await fetch(api+'/api/screen?stat=foreign_settlement_cost&date='+previous);if(!r2.ok)throw Error();var old=await r2.json();if(old.date!==previous)throw Error();snapshot=old;period={date:previous,month:period.date.slice(0,7),next:period.date};}catch(e){}}}
  if(!snapshot&&verifiedSettlement.date===period.date)snapshot=verifiedSettlement;
- try{if(typeof SIG_SB_URL!=='undefined'&&typeof SIG_SB_ANON!=='undefined'){var r=await fetch(SIG_SB_URL+'/rest/v1/chip_brief_daily?select=trade_date,txf_close&order=trade_date.desc&limit=1',{headers:{apikey:SIG_SB_ANON,Authorization:'Bearer '+SIG_SB_ANON}});if(r.ok){var a=await r.json();if(a[0]&&a[0].txf_close!=null)current={price:+a[0].txf_close,date:a[0].trade_date};}}}catch(e){}render(snapshot?'':'精確日期資料待取得。');}
+ try{var quoteResponse=await fetch(api+'/api/chart?code=TX%3DF&interval=1d&session=split');if(!quoteResponse.ok)throw Error();var quoteData=await quoteResponse.json();if(quoteData.quoteType!=='published_daily'||!quoteData.sessions)throw Error();['day','night'].forEach(function(key){var q=quoteData.sessions[key];quotes[key]=q&&q.session===key&&typeof q.price==='number'&&Number.isFinite(q.price)&&q.price>0&&/^\d{4}-\d{2}-\d{2}$/.test(q.date)&&/^\d{6}$/.test(q.contractMonth)?q:null;});}catch(e){quotes={day:null,night:null};}quotesLoading=false;busy=false;render(snapshot?'':'精確日期資料待取得。');}
+ hosts.forEach(function(host){if(host)host.addEventListener('click',function(event){var button=event.target.closest('[data-fx-session]');if(!button||!host.contains(button))return;var next=button.dataset.fxSession;if(next!=='day'&&next!=='night')return;marketSession=next;render();var focused=host.querySelector('[data-fx-session="'+next+'"]');if(focused)focused.focus({preventScroll:true});});});
  window._loadForeignSettlementCost=load;document.addEventListener('DOMContentLoaded',load);
 })();
 </script>

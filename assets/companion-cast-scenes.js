@@ -17,7 +17,17 @@ export function createHabitat(T,theme,stage,accent='#8cae9a',painted=false){
  // explicitly scenery, never a flat image substituted for the 3D character.
  if(painted){
   const geometry=new T.PlaneGeometry(40,40),material=new T.ShadowMaterial({opacity:.18}),floor=new T.Mesh(geometry,material);floor.rotation.x=-Math.PI/2;floor.position.y=-.965;floor.receiveShadow=true;group.add(floor);
-  return {group,cfg,update(){},dispose(){geometry.dispose();material.dispose();}};
+  // A soft grounding shadow remains visible against detailed painted ground,
+  // while the real shadow above follows the animated model and light.
+  const pixels=new Uint8Array(64*64*4);
+  for(let y=0;y<64;y++)for(let x=0;x<64;x++){
+   const r=((x-31.5)/31.5)**2+((y-31.5)/31.5)**2,i=(y*64+x)*4;
+   pixels[i]=18;pixels[i+1]=28;pixels[i+2]=23;pixels[i+3]=Math.round(110*Math.exp(-r*4)*Math.max(0,1-r));
+  }
+  const texture=new T.DataTexture(pixels,64,64,T.RGBAFormat);texture.needsUpdate=true;
+  const contactGeometry=new T.PlaneGeometry(2.1,1.5),contactMaterial=new T.MeshBasicMaterial({map:texture,transparent:true,depthWrite:false,toneMapped:false});
+  const contact=new T.Mesh(contactGeometry,contactMaterial);contact.name='Soft grounding shadow';contact.rotation.x=-Math.PI/2;contact.position.y=-.958;group.add(contact);
+  return {group,cfg,update(){},dispose(){geometry.dispose();material.dispose();contactGeometry.dispose();contactMaterial.dispose();texture.dispose();}};
  }
  let serial=0;const seed=theme.split('').reduce((a,c)=>a+c.charCodeAt(0),0)+stage*73;
  const rand=()=>{const x=Math.sin(++serial*12.9898+seed)*43758.5453;return x-Math.floor(x);};
