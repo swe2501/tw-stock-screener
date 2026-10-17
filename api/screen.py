@@ -1565,6 +1565,7 @@ SMA20_TOUCH_TOL = 0.005  # 買2「碰到月線」：最低 ≤ 月線×(1+0.5%)�
 SMA20_BREAK_TOL = 0.01   # 買2「不破」：最低 ≥ 月線×(1−1%)（盤中只能破一點點，破太深不算回測不破）
 SMA20_DOJI_BODY = 0.005  # 買3 十字線放寬：實體 |收−開| ≤ 收盤 0.5%（原本要開＝收）
 SMA20_DOJI_RANGE = 0.02  # 十字線另需當日振幅 (高−低) ≥ 收盤 2%，排除幾乎不動的小 K
+SMA20_FROM_BELOW_N = 3   # 買1「從月線下突破」：前 3 根內至少一根收盤在當天月線下（剛從下面站上來；早已站上月線的不算）2026-10-17 用戶指定
 SMA20_AWAY = 0.03        # 買2 前股價需先「離開月線」：買1 之後至少一天收盤 ≥ 月線×(1+3%)，之後第一次回測不破才算（買1 隔天還貼著月線不算回測）2026-10-17
 SMA20_RESET_N = 3       # 連續 N 天 MA 下彎才重置該輪（健康回測只壓 1~2 天 MA，不該殺掉整輪）2026-10-17
 
@@ -1612,6 +1613,8 @@ def sma20_stage_scan(bars):
         if stage == 0:
             was_down = any(ma[d] < ma[d - 1] for d in range(i - SMA20_PREV_DOWN_N, i))
             if not (was_down and m >= m1 and m >= m3 and c > o and c > m):
+                continue
+            if not any(closes[d] < ma[d] for d in range(i - SMA20_FROM_BELOW_N, i)):   # 前 3 根都已在月線上＝早就站上，不算突破
                 continue
             vs = [bars[d][5] or 0 for d in range(i - 10, i)]
             base = max(sum(vs[-5:]) / 5.0, sum(vs) / 10.0)
