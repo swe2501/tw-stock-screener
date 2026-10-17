@@ -26,6 +26,8 @@ const root=path.resolve(__dirname,'..'),output=process.env.QA_OUTPUT||require('n
  const modal=page.locator('#authModal'),box=modal.locator('.auth-box');
 
  await page.evaluate(()=>{document.querySelector('.topsearch').hidden=false;scrollTo(0,0);});assert.ok(await page.evaluate(()=>Math.abs(document.querySelector('#mainNav').getBoundingClientRect().top-document.querySelector('.topsearch').getBoundingClientRect().bottom)<2),'search toolbar and navigation must meet');
+
+ await page.evaluate(()=>{const fixture=document.createElement('div');fixture.id='cbGov';fixture.innerHTML='<div class="cb-ovc"><header>全市場官股券商</header><div class="gs-pdtabs"><button class="gs-pd on">今日</button><button class="gs-pd">5日</button><button class="gs-pd">20日</button><button class="gs-pd">60日</button></div><div class="big">測試摘要</div></div>';fixture.style.width='340px';document.body.append(fixture);});assert.ok(await page.locator('#cbGov .gs-pdtabs').last().evaluate(e=>e.getBoundingClientRect().right-e.lastElementChild.getBoundingClientRect().right<8),'government broker tabs must fit choices');await page.locator('#cbGov').last().evaluate(e=>e.remove());
  await modal.locator('[data-provider=google]:not(:disabled)').waitFor();assert.equal(await modal.locator('[data-auth-brand] img[alt="跟誰學 Logo"]').count(),1);
  const positions=await modal.evaluate(e=>({email:e.querySelector('#authEmail').getBoundingClientRect().top,social:e.querySelector('.academy-social').getBoundingClientRect().top}));assert.ok(positions.email<positions.social);
  for(const provider of ['google','line'])assert.equal(await modal.locator('[data-provider='+provider+'] img').evaluate(e=>e.complete&&e.naturalWidth>0),true,provider+' original mark must load');

@@ -39,8 +39,11 @@ let mode='normal';
  assert.equal(await detail.evaluate(e=>e.scrollWidth<=e.clientWidth),true);
  const output=process.env.QA_OUTPUT;
  if(output){fs.mkdirSync(output,{recursive:true});await detail.screenshot({path:path.join(output,'day-mobile.png')});}
- await page.setViewportSize({width:1512,height:1000});assert.ok(await page.locator('#hpFut .hp-mc').first().evaluate(e=>e.getBoundingClientRect().height<280),'summary cards must not stretch with detailed content');if(output)await page.locator('#hpFut').screenshot({path:path.join(output,'home-cost-summary.png')});
+ await page.setViewportSize({width:1512,height:1000});assert.ok(await page.locator('#hpFut .hp-mc').first().evaluate(e=>e.getBoundingClientRect().height<280),'summary cards must not stretch with detailed content');assert.ok(await page.locator('#hpForeignCost .fx-session-switch').evaluate(e=>{const last=e.lastElementChild.getBoundingClientRect(),r=e.getBoundingClientRect();return r.right-last.right<=7;}),'session segments must fit content');assert.ok(await page.locator('#hpFut').evaluate(e=>{const heights=[...e.children].map(c=>c.getBoundingClientRect().height);return Math.max(...heights)-Math.min(...heights)<2;}),'summary cards must share row height');if(output)await page.locator('#hpFut').screenshot({path:path.join(output,'home-cost-summary.png')});
 
+ await page.setViewportSize({width:1512,height:1000});
+
+ for(const width of [1512,1220,390,320]){await page.setViewportSize({width,height:1000});assert.ok(await page.locator('#hpForeignCost').evaluate(e=>{const number=e.querySelector('.fx-cost-number'),n=number.getBoundingClientRect(),s=e.querySelector('.fx-session-switch').getBoundingClientRect();return n.right<=s.left+1&&number.scrollWidth<=number.clientWidth+1&&e.scrollWidth<=e.clientWidth+1;}),'cost and session controls must not overlap '+width);}
  await page.setViewportSize({width:1512,height:1000});
  await page.emulateMedia({reducedMotion:'no-preference'});
  async function freeze(ms){await page.waitForTimeout(80);await detail.evaluate((e,t)=>e.getAnimations({subtree:true}).forEach(a=>{a.pause();a.currentTime=t;}),ms);}
