@@ -26,3 +26,6 @@
 - 公開 groupbook API 僅讀 page_cache，不提供訪客現算 fallback。payload.date 為行情資料日，updatedAt 為預算產生時間。
 - 初次執行：python scripts/groupbook_precompute.py --env-file <既有環境檔路徑>。可加 --dry-run 驗證而不寫入；金鑰不送至前端。
 - 本機每日排程使用主 checkout 的程式碼；需要將此版 scripts/page_cache_push.py、scripts/groupbook_precompute.py、api/screen.py 與 group-catalog.json 同步到實際排程執行的 checkout。worktree 或 UAT push 本身不會更新另一個 checkout。
+
+## 首批有來源的季度研究（2026-10-17）
+台積電生態系：2026Q4 收錄 2330 公司展望、3374 第三季月營收追蹤背景、3443 預定財報事件；2026Q3 收錄 3583 法說紀錄。資料核對日、公告／活動日及實際涵蓋期間各自記錄。事件僅記錄已公開時程，未將未發生的活動當成已公布業績。其餘股票仍待逐筆核對；沒有自動生成或自動更新內容。
