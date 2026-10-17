@@ -329,6 +329,13 @@
     .chart-layer-tab.is-enabled .layer-dot{background:var(--layer-accent);box-shadow:0 0 7px color-mix(in srgb,var(--layer-accent) 62%,transparent);transform:scale(1.12);}
     .chart-layer-tab .layer-count{display:none;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:color-mix(in srgb,var(--layer-accent) 11%,var(--surface));color:var(--layer-accent);font-size:9px;line-height:16px;text-align:center;}
     .chart-layer-tab .layer-count.show{display:inline-block;}
+    /* 葛蘭碧買點 組別 checkbox（2026-10-17） */
+    #sma20GroupPanel .sma20-grp{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border:1px solid var(--border);border-radius:999px;background:var(--surface2);color:var(--text-muted);font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap;}
+    #sma20GroupPanel .sma20-grp.is-on{border-color:#1e88e5;color:#1e88e5;background:color-mix(in srgb,#1e88e5 10%,var(--surface));}
+    #sma20GroupPanel .sma20-grp input{margin:0;cursor:pointer;accent-color:#1e88e5;}
+    #sma20GroupPanel .sma20-grp .sma20-grp-d{color:var(--text-muted);font-weight:600;font-size:10.5px;}
+    #sma20GroupPanel .sma20-grp.is-on .sma20-grp-d{color:color-mix(in srgb,#1e88e5 70%,var(--text-muted));}
+    #sma20GroupPanel .sma20-grp-sep{color:var(--border);margin:0 2px;}
     .broker-panel-head{display:flex;align-items:center;justify-content:flex-end;gap:4px;margin:1px 2px 11px;font-size:11.5px;}
     .broker-panel-head a{display:inline-flex;align-items:center;justify-content:center;min-width:48px;padding:5px 10px;border:1px solid var(--border);background:var(--surface);color:var(--text-muted);cursor:pointer;text-decoration:none;font-weight:800;line-height:1;border-radius:7px;transition:color .16s ease,border-color .16s ease,background .16s ease,transform .14s ease;}
     .broker-panel-head a:first-child{color:#9556aa;border-color:color-mix(in srgb,#a45fba 30%,var(--border));background:color-mix(in srgb,#a45fba 7%,var(--surface));}
@@ -9610,6 +9617,7 @@
           <button class="chart-layer-tab" data-layer="broker" type="button" onclick="_toggleBrokerPanel()"><span class="layer-dot"></span>主力分點<span class="layer-count"></span></button>
           <div class="label-row" id="markerToggles" style="display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;white-space:nowrap"></div>
         </div>
+        <div id="sma20GroupPanel" class="chart-feature-panel" style="display:none;padding:7px 12px;border-top:1px solid var(--border);font-size:12px;color:var(--text);flex-wrap:wrap;gap:6px;align-items:center"></div>
         <div id="brokerFilterPanel" class="chart-feature-panel" style="display:none;padding:12px 14px 10px;border-top:1px solid var(--border);font-size:12px;color:var(--text)"></div>
         <div id="mkPanel" class="chart-feature-panel" style="padding:6px 8px;border-top:1px solid var(--border);font-size:12px;color:var(--text)">
           <a onclick="_mkTogglePanel()" style="cursor:pointer;text-decoration:none;user-select:none"><span id="mkArrow" style="color:var(--text-muted);font-size:11px;margin-right:4px">▸</span><b style="color:#5a78aa">大盤K</b></a>
@@ -10637,13 +10645,14 @@
     if (window._mkShow.div == null) window._mkShow.div = !!(window._kPref && window._kPref.get('mk_div', false));         // 除權息標記預設關，開關會記住
     if (window._mkShow.catalyst == null) window._mkShow.catalyst = !!(window._kPref && window._kPref.get('mk_catalyst', false)); // 法說會標記預設關，開關會記住
     let _sma20Markers = [];   // 本次圖表的 20MA 三階段買點標記（僅日 K）
+    let _sma20GroupCount = 0, _sma20GroupStart = {};   // 動態組數（每個買1開啟一組）＋各組起始日
     // 20 日 SMA 三階段買點（2026-10-12；與後端 api/screen.py sma20_stage_scan 同一套規則，改參數兩邊要一起改）
     function _sma20Scan(cs) {
       const N = 20, n = cs.length, out = [];
       if (n < N + 7) return out;
       const ma = new Array(n).fill(null); let run = 0;
       for (let i = 0; i < n; i++) { run += cs[i].close; if (i >= N) run -= cs[i - N].close; if (i >= N - 1) ma[i] = Math.round(run / N * 1e6) / 1e6; }
-      let stage = 0, known = false;
+      let stage = 0, known = false, grp = 0;                        // grp＝第幾組（每個買1開啟新的一組）
       for (let i = N + 5; i < n; i++) {
         const m = ma[i], m1 = ma[i - 1], m3 = ma[i - 3];
         if (m < m1) { stage = 0; known = true; continue; }          // 下彎第一天即重置，當天不觸發
@@ -10655,24 +10664,26 @@
           if (!(wasDown && m >= m1 && m >= m3 && c > o && c > m)) continue;
           let s5 = 0, s10 = 0; for (let d = i - 10; d < i; d++) { const x = cs[d].volume || 0; s10 += x; if (d >= i - 5) s5 += x; }
           const base = Math.max(s5 / 5, s10 / 10);
-          if (base > 0 && v >= 1.3 * base) { stage = 1; out.push({ i, stage: 1 }); }
+          if (base > 0 && v >= 1.3 * base) { stage = 1; grp++; out.push({ i, stage: 1, g: grp }); }
         } else if (stage === 1) {
-          if (m > m1 && m > m3 && l <= m && c > m) { stage = 2; out.push({ i, stage: 2 }); }
+          if (m > m1 && m > m3 && l <= m && c > m) { stage = 2; out.push({ i, stage: 2, g: grp }); }
         } else if (stage === 2) {
-          if (h < m && ((c - o) / c >= 0.03 || (Math.min(o, c) - l) / c >= 0.03 || o === c)) { stage = 3; out.push({ i, stage: 3 }); }
+          if (h < m && ((c - o) / c >= 0.03 || (Math.min(o, c) - l) / c >= 0.03 || o === c)) { stage = 3; out.push({ i, stage: 3, g: grp }); }
         }
       }
       return out;
     }
     function _sma20Build(candles) {
-      _sma20Markers = [];
+      _sma20Markers = []; _sma20GroupCount = 0; _sma20GroupStart = {}; window._sma20GroupsOn = null;   // null＝全部顯示（預設；換股票重置）
       try {
         const n = candles.length; if (n < 40 || typeof candles[n - 1].time !== 'string') return;      // 小時 K 不算
         const span = (new Date(candles[n - 1].time) - new Date(candles[n - 31].time)) / 86400000;
         if (!(span < 60)) return;                                                                    // 30 根跨超過 60 天＝週／月／年 K，不算
         const col = { 1: '#00acc1', 2: '#1e88e5', 3: '#8e24aa' };
-        _sma20Markers = _sma20Scan(candles).map(x => ({ time: candles[x.i].time, position: 'belowBar', color: col[x.stage], shape: 'arrowUp', text: '買' + x.stage, size: 1 }));
-      } catch (_) { _sma20Markers = []; }
+        const sc = _sma20Scan(candles);
+        sc.forEach(x => { if (x.g > _sma20GroupCount) _sma20GroupCount = x.g; if (x.stage === 1) _sma20GroupStart[x.g] = candles[x.i].time; });
+        _sma20Markers = sc.map(x => ({ time: candles[x.i].time, position: 'belowBar', color: col[x.stage], shape: 'arrowUp', text: '買' + x.stage, size: 1, group: x.g }));
+      } catch (_) { _sma20Markers = []; _sma20GroupCount = 0; }
     }
     const _MK_DEFS = [
       ['catalyst', '法說會', '#f5c84b'],
@@ -10734,11 +10745,41 @@
       if (S.catalyst) sel.push(...catalyst);
       if (S.broker) sel.push(...broker);
       if (S.user) sel.push(...user);
-      if (S.sma20) sel.push(..._sma20Markers);
+      if (S.sma20) sel.push(..._sma20Markers.filter(m => !window._sma20GroupsOn || window._sma20GroupsOn.has(m.group)));
       sel.push(...(_boxMarkers || []));   // 箱型標記另有自己的開關，不納入此分類
       const all = sel.sort((a, b) => a.time < b.time ? -1 : 1);
       try { candleSeriesRef.setMarkers(all); } catch (_) {}
       _renderMarkerToggles(present);
+      _renderSma20Groups();
+    }
+    function _ensureSma20GroupsSet() {
+      if (!window._sma20GroupsOn) { window._sma20GroupsOn = new Set(); for (let k = 1; k <= _sma20GroupCount; k++) window._sma20GroupsOn.add(k); }
+    }
+    function _toggleSma20Group(g) {
+      _ensureSma20GroupsSet();
+      if (window._sma20GroupsOn.has(g)) window._sma20GroupsOn.delete(g); else window._sma20GroupsOn.add(g);
+      _refreshChartMarkers();
+    }
+    function _toggleSma20AllGroups(on) {
+      window._sma20GroupsOn = new Set();
+      if (on) for (let k = 1; k <= _sma20GroupCount; k++) window._sma20GroupsOn.add(k);
+      _refreshChartMarkers();
+    }
+    // 點葛蘭碧按鈕(開啟時)在下方列出各組買點 checkbox，可單獨顯示/隱藏某一組
+    function _renderSma20Groups() {
+      const panel = document.getElementById('sma20GroupPanel'); if (!panel) return;
+      if (!(window._mkShow && window._mkShow.sma20 && _sma20GroupCount > 0)) { panel.style.display = 'none'; panel.innerHTML = ''; return; }
+      const allOn = !window._sma20GroupsOn || window._sma20GroupsOn.size === _sma20GroupCount;
+      let boxes = '';
+      for (let g = 1; g <= _sma20GroupCount; g++) {
+        const on = !window._sma20GroupsOn || window._sma20GroupsOn.has(g);
+        const d = _sma20GroupStart[g] ? _sma20GroupStart[g].slice(5).replace('-', '/') : '';
+        boxes += `<label class="sma20-grp${on ? ' is-on' : ''}"><input type="checkbox" ${on ? 'checked' : ''} onchange="_toggleSma20Group(${g})">第${g}組${d ? `<span class="sma20-grp-d">${d}</span>` : ''}</label>`;
+      }
+      panel.innerHTML = `<b style="color:#1e88e5">葛蘭碧買點 · 共 ${_sma20GroupCount} 組</b>`
+        + `<label class="sma20-grp sma20-grp-all${allOn ? ' is-on' : ''}"><input type="checkbox" ${allOn ? 'checked' : ''} onchange="_toggleSma20AllGroups(this.checked)">全部</label>`
+        + `<span class="sma20-grp-sep">|</span>${boxes}`;
+      panel.style.display = 'flex';
     }
 
     function _addChartMarker(code, date, label) {
