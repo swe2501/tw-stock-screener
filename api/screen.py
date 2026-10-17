@@ -1609,6 +1609,207 @@ def sma20_stage_scan(bars):
     return out
 
 
+# ── AI 判定買點（2026-10-17）────────────────────────────────────────────────
+# 開關全靠 Vercel 環境變數，程式不放任何金鑰：
+#   AI_PROVIDER        anthropic｜openai（不設＝有哪把金鑰就用哪家，兩把都有優先 anthropic）
+#   ANTHROPIC_API_KEY  / OPENAI_API_KEY   沒有金鑰 → 回假資料（stub），功能不壞
+#   AI_MODEL           不設＝anthropic 用 claude-haiku-5-5、openai 用 gpt-4.1-mini
+#   AI_DAILY_LIMIT     每日最多真的呼叫幾次 AI（預設 300；需 SUPABASE_SERVICE_KEY 才能計數）
+#   SUPABASE_SERVICE_KEY  有才寫共享快取（page_cache kind=aibuy_<代號>）與每日計數
+# 流程：驗代號 → 讀該股 price_window 日線 → 先查共享快取（同資料日＋同模型）→ 沒有才呼叫 AI
+#       → 寫回快取 → 回傳；任何錯誤都退回假資料並附原因，前端照常顯示。
+AIBUY_DISCLAIMER = "AI 依本站日線與葛蘭碧規則自動判讀，僅供研究參考，非投資建議；技術面不含基本面與消息面。"
+_AIBUY_SCHEMA = {
+    "type": "object", "additionalProperties": False,
+    "required": ["verdict", "score", "summary", "points"],
+    "properties": {
+        "verdict": {"type": "string", "enum": ["偏多", "觀望", "偏空"]},
+        "score": {"type": "integer"},
+        "summary": {"type": "string"},
+        "points": {"type": "array", "items": {
+            "type": "object", "additionalProperties": False, "required": ["label", "text"],
+            "properties": {"label": {"type": "string"}, "text": {"type": "string"}}}},
+    },
+}
+_AIBUY_SYSTEM = (
+    "你是台股技術面的判讀助手，讀者是盤後研究網站的會員。只能根據使用者提供的日線數據與已算好的指標判讀，"
+    "不得引用數據以外的新聞、基本面或你自己記得的股價；數據沒有的事就說沒有。用繁體中文、台灣用語。\n"
+    "輸出規則：verdict 只能是「偏多」「觀望」「偏空」三選一，代表目前技術面位置，不是買賣指令；"
+    "score 為 0～100 的整數，50 為中性，越高代表技術面越強；summary 為 2～3 句、80 字以內的白話結論；"
+    "points 固定 4 點，label 依序為「型態」「量能」「葛蘭碧」「風險」，每點 50 字以內，盡量引用具體數字（價位、均線、量比、日期）。"
+    "不要寫「建議買進／賣出」、目標價或保證性字眼。"
+)
+
+
+def _aibuy_stub(code, reason=""):
+    today = datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m-%d")
+    return {
+        "code": code, "date": today, "model": "placeholder", "stub": True, "stub_reason": reason,
+        "verdict": "觀望", "score": 55,
+        "summary": "（假資料示意）" + code + " 目前站在月線上方整理，量能未明顯放大，"
+                   "等待『帶量突破(買1)』或『回測不破(買2)』的進場點。接入 AI 後此段改為即時判讀。",
+        "points": [
+            {"label": "型態", "text": "站上月線、短均線走平，尚未出現帶量突破"},
+            {"label": "量能", "text": "成交量低於 20 日均量，追價意願不足"},
+            {"label": "葛蘭碧", "text": "最近一組為買2 回測不破，尚未見買3"},
+        ],
+        "disclaimer": "AI 輔助判讀、非投資建議。目前為假資料" + ("（" + reason + "）" if reason else "") + "。",
+    }
+
+
+def _aibuy_provider():
+    prov = (os.environ.get("AI_PROVIDER") or "").strip().lower()
+    akey, okey = os.environ.get("ANTHROPIC_API_KEY", ""), os.environ.get("OPENAI_API_KEY", "")
+    if not prov:
+        prov = "anthropic" if akey else ("openai" if okey else "")
+    key = akey if prov == "anthropic" else (okey if prov == "openai" else "")
+    if not key:
+        return None, None, None
+    model = (os.environ.get("AI_MODEL") or "").strip() or ("claude-haiku-5-5" if prov == "anthropic" else "gpt-4.1-mini")
+    return prov, key, model
+
+
+def _sb_service(path, method="GET", body=None, params=None, prefer="return=minimal"):
+    """用 service key 寫 Supabase（只給 AI 共享快取／計數用）；沒設金鑰或失敗回 (0, None)。"""
+    skey = os.environ.get("SUPABASE_SERVICE_KEY", "")
+    if not (SUPABASE_URL and skey):
+        return 0, None
+    url = f"{SUPABASE_URL}/rest/v1{path}" + ("?" + urllib.parse.urlencode(params) if params else "")
+    req = urllib.request.Request(url, data=json.dumps(body).encode() if body is not None else None, method=method, headers={
+        "Content-Type": "application/json", "apikey": skey, "Authorization": f"Bearer {skey}", "Prefer": prefer})
+    try:
+        with urllib.request.urlopen(req, timeout=8) as r:
+            raw = r.read()
+            return r.status, (json.loads(raw) if raw else None)
+    except Exception:
+        return 0, None
+
+
+def _aibuy_bars(code):
+    st, rows = _cache_sb("/price_window", params=[
+        ("select", "trade_date,open,high,low,close,volume"), ("code", f"eq.{code}"),
+        ("order", "trade_date.asc"), ("limit", "1000")])
+    rows = rows if (st == 200 and isinstance(rows, list)) else []
+    return [(r["trade_date"], r.get("open"), r.get("high"), r.get("low"), r["close"], r.get("volume") or 0)
+            for r in rows if r.get("close") is not None and r.get("open") is not None]
+
+
+def _aibuy_facts(code, bars):
+    """把日線整理成精簡、可驗證的數據給 AI（指標由程式算好，不讓模型自己算）。"""
+    n = len(bars)
+    closes = [b[4] for b in bars]
+
+    def ma(k, i):
+        return sum(closes[i - k + 1:i + 1]) / k if i - k + 1 >= 0 else None
+    t = n - 1
+    d, o, h, l, c, v = bars[t]
+    vol5 = sum(b[5] for b in bars[t - 5:t]) / 5 if t >= 5 else None
+    vol20 = sum(b[5] for b in bars[t - 20:t]) / 20 if t >= 20 else None
+    f = lambda x, k=2: "—" if x is None else f"{x:.{k}f}"
+    pct = lambda a, b: "—" if not a or not b else f"{(a / b - 1) * 100:+.2f}%"
+    m20, m20_3 = ma(20, t), ma(20, t - 3)
+    lines = [
+        f"股票：{code} {_STOCK_NAMES.get(code, '')}　資料日：{d}（共 {n} 根日線）",
+        f"最新一根：開 {o} 高 {h} 低 {l} 收 {c}，成交 {round(v / 1000)} 張",
+        f"均線（簡單平均）：MA5 {f(ma(5, t))}｜MA10 {f(ma(10, t))}｜MA20 {f(m20)}｜MA60 {f(ma(60, t))}｜MA120 {f(ma(120, t))}",
+        f"MA20 斜率：今日 vs 3 日前 {f(m20)} vs {f(m20_3)}（{'上彎' if m20 and m20_3 and m20 > m20_3 else '走平或下彎'}）",
+        f"量比：今日量 ÷ 前 5 日均量 = {f(v / vol5 if vol5 else None)}；÷ 前 20 日均量 = {f(v / vol20 if vol20 else None)}",
+        f"漲跌：近 5 日 {pct(c, closes[t - 5] if t >= 5 else None)}、近 20 日 {pct(c, closes[t - 20] if t >= 20 else None)}、近 60 日 {pct(c, closes[t - 60] if t >= 60 else None)}",
+        f"區間：近 20 日高 {max(b[2] for b in bars[-20:])} 低 {min(b[3] for b in bars[-20:])}；近 60 日高 {max(b[2] for b in bars[-60:])} 低 {min(b[3] for b in bars[-60:])}",
+    ]
+    sig = sma20_stage_scan(bars)
+    if sig:
+        last = sig[-1]
+        lines.append("葛蘭碧買點（本站規則：買1 均線翻揚帶量站上、買2 回測月線不破、買3 跌破月線出現止跌K；月線連續 3 天下彎才重置）最近紀錄："
+                     + "、".join(f"{bars[i][0]} 買{st}" for i, st in sig[-6:])
+                     + f"；距最近一次（買{last[1]}）{t - last[0]} 個交易日。")
+    else:
+        lines.append("葛蘭碧買點：資料期間內沒有出現。")
+    lines.append("近 40 根日線（日期,開,高,低,收,量(張),MA20）：")
+    for i in range(max(0, n - 40), n):
+        b = bars[i]
+        lines.append(f"{b[0]},{b[1]},{b[2]},{b[3]},{b[4]},{round((b[5] or 0) / 1000)},{f(ma(20, i))}")
+    return "\n".join(lines), (sig[-1] if sig else None)
+
+
+def _aibuy_call(prov, key, model, facts):
+    """呼叫 AI，回 (dict, usage)。只接受符合格式的 JSON，其餘一律丟例外交給上層退回假資料。"""
+    if prov == "anthropic":
+        body = {"model": model, "max_tokens": 4000, "system": _AIBUY_SYSTEM,
+                "messages": [{"role": "user", "content": facts}],
+                "output_config": {"effort": "low", "format": {"type": "json_schema", "schema": _AIBUY_SCHEMA}}}
+        req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=json.dumps(body).encode(), method="POST",
+                                     headers={"content-type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01"})
+        with urllib.request.urlopen(req, timeout=25) as r:
+            resp = json.loads(r.read())
+        if resp.get("stop_reason") == "refusal":
+            raise ValueError("模型拒答")
+        text = "".join(b.get("text", "") for b in resp.get("content", []) if b.get("type") == "text")
+        u = resp.get("usage") or {}
+        usage = {"input": u.get("input_tokens"), "output": u.get("output_tokens")}
+    else:
+        body = {"model": model, "temperature": 0, "response_format": {"type": "json_object"},
+                "messages": [{"role": "system", "content": _AIBUY_SYSTEM + "\n只回傳 JSON 物件，欄位：verdict, score, summary, points[{label,text}]。"},
+                             {"role": "user", "content": facts}]}
+        req = urllib.request.Request("https://api.openai.com/v1/chat/completions", data=json.dumps(body).encode(), method="POST",
+                                     headers={"content-type": "application/json", "authorization": f"Bearer {key}"})
+        with urllib.request.urlopen(req, timeout=25) as r:
+            resp = json.loads(r.read())
+        text = resp["choices"][0]["message"]["content"]
+        u = resp.get("usage") or {}
+        usage = {"input": u.get("prompt_tokens"), "output": u.get("completion_tokens")}
+    out = json.loads(text)
+    if out.get("verdict") not in ("偏多", "觀望", "偏空") or not isinstance(out.get("points"), list) or not out.get("summary"):
+        raise ValueError("AI 回傳格式不符")
+    out["score"] = max(0, min(100, int(out.get("score") or 50)))
+    out["points"] = [{"label": str(x.get("label", ""))[:12], "text": str(x.get("text", ""))[:200]}
+                     for x in out["points"] if isinstance(x, dict)][:6]
+    out["summary"] = str(out["summary"])[:400]
+    return out, usage
+
+
+def _aibuy(code):
+    """回 (payload, cache_control)。"""
+    prov, key, model = _aibuy_provider()
+    if not prov:
+        return _aibuy_stub(code, "尚未設定 AI 金鑰"), "public, s-maxage=300, max-age=60"
+    bars = _aibuy_bars(code)
+    if len(bars) < 80:
+        return _aibuy_stub(code, "日線資料不足"), "public, s-maxage=600, max-age=60"
+    data_date = bars[-1][0]
+    kind = f"aibuy_{code}"
+    st, rows = _cache_sb("/page_cache", params=[("kind", f"eq.{kind}"), ("select", "payload"), ("limit", "1")])
+    if st == 200 and rows:
+        pl = rows[0].get("payload") or {}
+        if pl.get("date") == data_date and pl.get("model") == model and not pl.get("stub"):
+            return dict(pl, cached=True), "public, s-maxage=3600, max-age=600"
+    # 每日上限（有 service key 才計數；沒有就只靠 CDN 與共享快取擋重複呼叫）
+    today = datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m-%d")
+    limit = int(os.environ.get("AI_DAILY_LIMIT") or 300)
+    cst, crow = _cache_sb("/page_cache", params=[("kind", "eq.aibuy__count"), ("select", "payload"), ("limit", "1")])
+    cnt = (crow[0].get("payload") or {}) if (cst == 200 and crow) else {}
+    used = int(cnt.get("n") or 0) if cnt.get("date") == today else 0
+    if used >= limit:
+        return _aibuy_stub(code, f"今日 AI 判讀已達上限 {limit} 次"), "public, s-maxage=600, max-age=60"
+    facts, last_sig = _aibuy_facts(code, bars)
+    try:
+        out, usage = _aibuy_call(prov, key, model, facts)
+    except Exception as e:                                  # noqa: BLE001
+        return _aibuy_stub(code, "AI 暫時無法回應：" + type(e).__name__), "public, s-maxage=120, max-age=30"
+    payload = dict(out, code=code, date=data_date, model=model, provider=prov, stub=False, usage=usage,
+                   disclaimer=AIBUY_DISCLAIMER,
+                   generated_at=datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m-%d %H:%M"),
+                   last_signal=({"date": bars[last_sig[0]][0], "stage": last_sig[1]} if last_sig else None))
+    up = "resolution=merge-duplicates,return=minimal"
+    _sb_service("/page_cache", "POST", body=[{"kind": kind, "trade_date": data_date, "payload": payload,
+                                              "updated_at": datetime.now(timezone.utc).isoformat()}],
+                params=[("on_conflict", "kind")], prefer=up)
+    _sb_service("/page_cache", "POST", body=[{"kind": "aibuy__count", "trade_date": today, "payload": {"date": today, "n": used + 1},
+                                              "updated_at": datetime.now(timezone.utc).isoformat()}],
+                params=[("on_conflict", "kind")], prefer=up)
+    return payload, "public, s-maxage=3600, max-age=600"
+
+
 def sma20_stage_at(bars):
     """最後一根 K 棒當天觸發的階段（1/2/3），沒有回 0。"""
     sig = sma20_stage_scan(bars)
@@ -2873,26 +3074,17 @@ class handler(BaseHTTPRequestHandler):
             except Exception as e:
                 import traceback
                 return self._send_json(200, {"error": str(e), "traceback": traceback.format_exc()})
-        # AI 判定買點（骨架）：目前回「假資料」示意，CDN 快取一天。
-        # 接真 AI 時在此改為：① 查 Supabase 共享快取(aibuy_<code>+當日) → 有就回；
-        #                    ② 無 → 抓該股近 1 年 OHLC＋葛蘭碧買點 → 呼叫 Claude/OpenAI(結構化 JSON)
-        #                          → 寫回 Supabase(用 service key env) → 回傳。
+        # AI 判定買點：有 AI 金鑰（Vercel 環境變數）就走真的，沒有就回假資料；實作見 _aibuy()
         if (qs.get("stat") or [""])[0] == "aibuy":
-            code = (qs.get("code") or [""])[0].strip()[:8]
-            today = datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m-%d")
-            payload = {
-                "code": code, "date": today, "model": "placeholder", "stub": True,
-                "verdict": "觀望", "score": 55,
-                "summary": "（假資料示意）" + code + " 目前站在月線上方整理，量能未明顯放大，"
-                           "等待『帶量突破(買1)』或『回測不破(買2)』的進場點。接入 AI 後此段改為即時判讀。",
-                "points": [
-                    {"label": "型態", "text": "站上月線、短均線走平，尚未出現帶量突破"},
-                    {"label": "量能", "text": "成交量低於 20 日均量，追價意願不足"},
-                    {"label": "葛蘭碧", "text": "最近一組為買2 回測不破，尚未見買3"},
-                ],
-                "disclaimer": "AI 輔助判讀、非投資建議。目前為假資料，待接入 AI 後取代。",
-            }
-            return self._send_json(200, payload, cache="public, s-maxage=86400, max-age=3600")
+            import re as _re
+            code = (qs.get("code") or [""])[0].strip().upper()[:8]
+            if not _re.fullmatch(r"[0-9A-Z]{4,6}", code):
+                return self._send_json(200, {"error": "代號格式不正確"})
+            try:
+                payload, cc = _aibuy(code)
+            except Exception as e:                      # noqa: BLE001
+                payload, cc = _aibuy_stub(code, "伺服器錯誤：" + type(e).__name__), "public, s-maxage=60, max-age=30"
+            return self._send_json(200, payload, cache=cc)
         self._send_json(200, {"status": "ok"})
 
     def do_POST(self):
