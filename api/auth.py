@@ -16,9 +16,13 @@ def _sb(path, body, token=None):
     req = urllib.request.Request(url, data=data, headers=headers, method="POST")
     try:
         with urllib.request.urlopen(req, timeout=10) as r:
-            return r.status, json.loads(r.read())
+            raw = r.read()
+            return r.status, json.loads(raw) if raw else {}
     except urllib.error.HTTPError as e:
-        return e.code, json.loads(e.read())
+        result = json.loads(e.read())
+        if "MEMBER_DEVICE_LIMIT" in str(result):
+            return 403, {"error": "此帳號已有 2 台裝置登入，請先登出其中一台後再試。", "code": "MEMBER_DEVICE_LIMIT"}
+        return e.code, result
 
 
 class handler(BaseHTTPRequestHandler):
@@ -84,7 +88,9 @@ class handler(BaseHTTPRequestHandler):
         if action == "logout":
             token = (self.headers.get("Authorization") or "").replace("Bearer ", "")
             if token:
-                _sb("/logout", {}, token=token)
+                status, data = _sb("/logout?scope=local", {}, token=token)
+                if status not in (200, 204, 401):
+                    return self._json(503, {"error": "登出尚未完成，請稍後重試；裝置名額尚未釋放。"})
             return self._json(200, {"ok": True})
 
         email = body.get("email", "").strip().lower()

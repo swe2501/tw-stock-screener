@@ -47,7 +47,7 @@ class PhoneGuardTests(unittest.TestCase):
         instance._json = lambda *args: result.append(args)
         with patch.object(auth, "_sb", return_value=(200, {})) as remote:
             instance.do_POST()
-            remote.assert_called_once_with("/logout", {}, token="phone-token")
+            remote.assert_called_once_with("/logout?scope=local", {}, token="phone-token")
         self.assertEqual(result[0][0], 200)
 
     def test_registration_confirmation_checked_before_auth_request(self):

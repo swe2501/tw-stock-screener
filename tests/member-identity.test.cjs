@@ -15,6 +15,13 @@ function setup(settings={external:{google:true,apple:true,'custom:line-web':true
   vm.runInNewContext(fs.readFileSync('assets/member-identity.js','utf8'),context);
   return {api:context.window.AcademyIdentity,calls,saved,accepted,context};
 }
+
+test('device limit from Auth preserves current local session and exposes actionable message',async()=>{
+  const {api,context,saved,accepted}=setup();saved.set('sb_token','original-token');
+  context.fetch=async()=>({ok:false,status:403,json:async()=>({message:'MEMBER_DEVICE_LIMIT: limit reached'})});
+  await assert.rejects(api.verifyPhone('0912345678','123456'),/已有 2 台裝置登入/);
+  assert.equal(saved.get('sb_token'),'original-token');assert.equal(accepted.length,0);
+});
 test('Taiwan and international numbers normalize; invalid numbers rejected',()=>{
   const {api}=setup();assert.equal(api.normalizePhone('0912-345-678'),'+886912345678');assert.equal(api.normalizePhone('+1 (202) 555-0123'),'+12025550123');assert.throws(()=>api.normalizePhone('123'));
 });
