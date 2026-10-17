@@ -1539,7 +1539,7 @@ def sma20_stage_scan(bars):
       買點1（尚未記錄 1）：均線原本下彎（前 5 日內至少一天 MA 低於前一天）且目前走平或上彎（MA[t]≥MA[t-1] 且 MA[t]≥MA[t-3]）、
                          紅 K、收盤 > MA、帶量 1.3 倍。
       買點2（已記 1）：回測不破——最低 ≤ MA（盤中碰到/跌破月線）、收盤 > MA（站回月線上）。不要求月線仍上彎。
-      買點3（已記 1、2）：最高 < MA（整根在均線下），且 長紅 3%／長下影 3%／十字線（開＝收）任一。成立後該輪完成。
+      買點3（已記 1、2）：收盤 < MA（跌破月線），且 長紅 3%／長下影 3%／十字線（開＝收）任一。成立後該輪完成。
     同一天不跨階段。資料窗內還沒出現過重置日之前，無法確定該輪從哪開始 → 不產生訊號。"""
     n = len(bars)
     out = []
@@ -1587,7 +1587,7 @@ def sma20_stage_scan(bars):
                 stage = 2
                 out.append((i, 2))
         elif stage == 2:
-            if h < m and ((c - o) / c >= SMA20_LONG_RED or (min(o, c) - l) / c >= SMA20_LONG_TAIL or o == c):
+            if c < m and ((c - o) / c >= SMA20_LONG_RED or (min(o, c) - l) / c >= SMA20_LONG_TAIL or o == c):   # 買3：收盤跌破月線＋止跌K(長紅/長下影/十字)；不再要求整根都在月線下
                 stage = 3
                 out.append((i, 3))
     return out
@@ -2857,6 +2857,26 @@ class handler(BaseHTTPRequestHandler):
             except Exception as e:
                 import traceback
                 return self._send_json(200, {"error": str(e), "traceback": traceback.format_exc()})
+        # AI 判定買點（骨架）：目前回「假資料」示意，CDN 快取一天。
+        # 接真 AI 時在此改為：① 查 Supabase 共享快取(aibuy_<code>+當日) → 有就回；
+        #                    ② 無 → 抓該股近 1 年 OHLC＋葛蘭碧買點 → 呼叫 Claude/OpenAI(結構化 JSON)
+        #                          → 寫回 Supabase(用 service key env) → 回傳。
+        if (qs.get("stat") or [""])[0] == "aibuy":
+            code = (qs.get("code") or [""])[0].strip()[:8]
+            today = datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m-%d")
+            payload = {
+                "code": code, "date": today, "model": "placeholder", "stub": True,
+                "verdict": "觀望", "score": 55,
+                "summary": "（假資料示意）" + code + " 目前站在月線上方整理，量能未明顯放大，"
+                           "等待『帶量突破(買1)』或『回測不破(買2)』的進場點。接入 AI 後此段改為即時判讀。",
+                "points": [
+                    {"label": "型態", "text": "站上月線、短均線走平，尚未出現帶量突破"},
+                    {"label": "量能", "text": "成交量低於 20 日均量，追價意願不足"},
+                    {"label": "葛蘭碧", "text": "最近一組為買2 回測不破，尚未見買3"},
+                ],
+                "disclaimer": "AI 輔助判讀、非投資建議。目前為假資料，待接入 AI 後取代。",
+            }
+            return self._send_json(200, payload, cache="public, s-maxage=86400, max-age=3600")
         self._send_json(200, {"status": "ok"})
 
     def do_POST(self):
