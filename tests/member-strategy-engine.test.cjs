@@ -126,3 +126,18 @@ test('natural-language direct input still requires exit and risk decisions',()=>
  const g=E.formula.createGuide();assert.equal(g.send('收盤價高於20日均線').proposal,null);g.send('只用停損停利／持有期限');g.send('0');g.send('0');g.send('0');const p=g.send('明確條件').proposal;assert.ok(p);assert.equal(p.exit.length,0);assert.equal(p.risk.stop,0);
  const data=bars(Array.from({length:35},(_,i)=>i+10)),snap=E.scan(data,p);assert.equal(snap.matched,true);assert.equal(E.inspect(data,p,data.at(-1).time).entry.matched,snap.matched);
 });
+
+test('public strategy search shows sources and separates discussion-only concepts',()=>{
+ const all=E.formula.searchCatalog();assert.equal(all.length,8);assert.equal(all.filter(c=>c.supported).length,6);assert.ok(all.every(c=>c.source.startsWith('https://www.tradingview.com/support/')));
+ assert.equal(E.formula.searchCatalog('MACD')[0].id,'macd');assert.equal(E.formula.searchCatalog('布林')[0].supported,false);assert.equal(E.formula.searchCatalog('未知的神奇獲利法').length,0);
+ all[0].title='mutated';assert.notEqual(E.formula.searchCatalog()[0].title,'mutated');
+});
+test('performance goals require research context and never become a guaranteed strategy',()=>{
+ const g=E.formula.createGuide();let r=g.send('我想要開發一個有七成的策略');assert.match(r.message,/勝率不能承諾/);assert.equal(r.proposal,null);
+ assert.match(g.send('期貨／選擇權').message,/不能|不會/);g.send('股票／ETF 日線');assert.match(g.send('還不確定').message,/研究分類/);g.send('中長波段');assert.match(g.send('我不懂差異').message,/高勝率也可能/);r=g.send('先看趨勢與報酬');assert.equal(r.references.length,3);assert.equal(r.proposal,null);assert.ok(r.choices.includes('MACD 動能'));assert.match(r.message,/沒有依未驗證/);
+ r=g.send('MACD 動能');assert.match(r.message,/快線/);g.send('12');assert.match(g.send('5').message,/大於快線/);g.send('26');g.send('9');g.send('向上穿越');g.send('只用停損停利／持有期限');g.send('5');g.send('10');g.send('20');r=g.send('動能研究');E.validate(r.proposal);assert.equal(r.proposal.entry[0].type,'macd');assert.equal(r.proposal.entry[0].fast,12);assert.equal(r.proposal.entry[0].slow,26);assert.equal(r.proposal.entry[0].signal,9);
+});
+test('discussion-only catalog entries cannot create executable drafts and KD requires both smoothing values',()=>{
+ const g=E.formula.createGuide();g.send('研究方向：bb');g.send('股票／ETF 日線');g.send('短波段');let r=g.send('先看回撤與虧損幅度');assert.ok(r.choices.includes('布林通道'));r=g.send('布林通道');assert.equal(r.proposal,null);assert.match(r.message,/不能套用回測/);r=g.send('選可驗算方向');assert.ok(r.references.every(c=>c.supported));
+ const kd=E.formula.createGuide();kd.send('KD');kd.send('9');assert.match(kd.send('0').message,/1～30/);kd.send('3');kd.send('3');kd.send('向上穿越');kd.send('只用停損停利／持有期限');kd.send('5');kd.send('0');kd.send('0');const p=kd.send('KD研究').proposal;E.validate(p);assert.equal(p.entry[0].smoothK,3);assert.equal(p.entry[0].smoothD,3);assert.equal(p.entry[0].period,9);
+});
