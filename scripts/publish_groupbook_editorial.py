@@ -35,6 +35,8 @@ def run(env,require_complete=True):
         if len(json.dumps(data,ensure_ascii=False).encode("utf-8"))>4_200_000:
             raise ValueError("Research snapshot exceeds response budget; nothing published")
         rows.append(dict(kind="groupbook_research_"+quarter,trade_date=data.get("date"),payload=data))
-    publish(env,rows)
+    # Rich research can make a five-quarter JSON insert exceed the REST statement
+    # budget. Validate every quarter above, then append one version per request.
+    for row in rows:publish(env,[row])
     print(f"editorial snapshots={len(rows)}; coverage={report['uniqueCovered']}/{report['uniqueExpected']}; complete={report['complete']}")
     return report
