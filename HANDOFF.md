@@ -354,3 +354,12 @@ page_cache 是 **uat 與 prod 共用**同一個 Supabase。若推盤中到原 ki
 ### 待辦
 - 用戶在 Vercel 設 `ANTHROPIC_API_KEY`（或 OpenAI）後 Redeploy uat，實測一檔看真判讀；確認 `SUPABASE_SERVICE_KEY` 有效。
 - 推 prod 時這節一起上（前端呼叫正式站的 `?stat=aibuy`，prod 未更新前面板顯示「暫時無法取得」）。
+
+### C.（10-17 晚）AI 判定加入「形態判定」（AI 看圖）
+- 用戶決定形態由 **AI 看圖判斷**（不用程式規則，避免死板）。後端 `_aibuy_png()` 用純標準庫把最近 160 根日 K 畫成 PNG（紅漲綠跌、20 日均線、成交量、每 20 根一條垂直格線），連同格線對應日期與價格刻度文字說明一起送給 AI（Anthropic 用 image content block；OpenAI 用 image_url data URI）。
+- 形態只能從 10 種擇用（`AIBUY_PATTERNS`：圓形底、頭肩頂、頭肩底、M頭、W底、箱型、上升／下降趨勢線、上升／下降軌道），輸出 `patterns[{name,status(形成中/已確認),confidence(高/中/低),detail}]`，不給目標價；後端會丟掉清單外名稱、修正不合法的狀態／信心。
+- 「頭尖頂」依用戶描述當作頭肩頂。
+- `AIBUY_VER=2`：共享快取要版本相符才用，舊版結果自動重算。
+- 核對 AI 看到的圖：`/api/screen?stat=aibuy&code=2327&img=1`（需推到該環境後才有）。
+- 成本：圖片約 1,000～1,500 token，每次約多 US$0.0002（Haiku 5.5）。Haiku 看圖辨形態的能力有限，若判讀品質不夠，在 Vercel 設 `AI_MODEL=claude-sonnet-5-5`（約貴 20 倍、仍約 US$0.02／次）。
+- 逾時由 25 秒改 40 秒（看圖較慢）；Vercel 函式本身的時間上限需留意。
