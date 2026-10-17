@@ -163,7 +163,93 @@
         }
       ],
       "thesis": "「母體控盤，艦隊飆漲」：台積電本身市值佔大盤逾三成，主要擔綱加權指數攻防與護盤角色；季底與年底法人（外資、投信）拚績效、做帳的最大火力，100% 集中於轉投資血親、CoWoS/先進封裝設備股與特用化學品。通常在季末前 1~1.5 個月由股本較輕（小於 30 億）的設備與耗材股率先啟動主升段，伴隨台積電資本支出上修或先進封裝擴產題材，呈現齊漲帶動效應。",
-      "focus": "弘塑、萬潤、精材、創意、采鈺、辛耘：\n1. 創意（3443）：台積電官方 ASIC 出海口，高價 IP 股在季底極易拉抬投信基金淨值。\n2. 精材（3374）、采鈺（6789）：台積電直屬封裝與彩色濾光膜廠，股本適中，直接承接先進測試與微型光學轉單。\n3. 弘塑（3131）、萬潤（6187）、辛耘（3583）：CoWoS 濕製程與點膠貼合設備純度最高，每逢季底作帳常走出翻倍暴衝行情。"
+      "focus": "弘塑、萬潤、精材、創意、采鈺、辛耘：\n1. 創意（3443）：台積電官方 ASIC 出海口，高價 IP 股在季底極易拉抬投信基金淨值。\n2. 精材（3374）、采鈺（6789）：台積電直屬封裝與彩色濾光膜廠，股本適中，直接承接先進測試與微型光學轉單。\n3. 弘塑（3131）、萬潤（6187）、辛耘（3583）：CoWoS 濕製程與點膠貼合設備純度最高，每逢季底作帳常走出翻倍暴衝行情。",
+      "quarterlyReasons": {
+        "2026Q4": {
+          "2330": {
+            "text": "官方事實：台積電於 2026/10/15 公布第四季美元營收指引 523～543 億美元、毛利率 65%～67%，並表示先進製程需求及 2 奈米放量支撐第四季營運。研究觀察：本季以指引達成情況與先進製程需求作為追蹤主軸；這是公司展望，並非已實現的第四季業績。",
+            "source_urls": [
+              "https://pr.tsmc.com/english/news/3346"
+            ],
+            "published_on": "2026-10-15",
+            "reviewed_on": "2026-10-17",
+            "fact_period": "2026 Q4 公司展望"
+          },
+          "3374": {
+            "text": "官方事實：精材官網列示 2026 年 7、8、9 月營收分別為 860,894、908,948、932,243 仟元；9 月年增 21.33%。研究觀察：以第三季逐月營收變化作為第四季追蹤起點，後續核對成長是否延續；這些數字不等於第四季營收。",
+            "source_urls": [
+              "https://www.xintec.com.tw/eng/FIN/IR_Monthly-Revenue.html"
+            ],
+            "reviewed_on": "2026-10-17",
+            "fact_period": "2026 年 7～9 月營收"
+          },
+          "3443": {
+            "text": "官方事實：創意財務行事曆列第三季營運結果與業務報告預定於 2026/10/29 17:30 發布。研究觀察：本季先追蹤第三季實績及公司後續展望；截至資料核對日，這場活動尚未發生，不預填其財報數字或結論。",
+            "source_urls": [
+              "https://www.guc-asic.com/en/investor/financial"
+            ],
+            "reviewed_on": "2026-10-17",
+            "fact_period": "2026 Q4 財報公布事件（預定 10/29）"
+          }
+        },
+        "2026Q3": {
+          "3583": {
+            "text": "官方事實：辛耘於 2026/09/03 參加證交所與富邦證券合辦的 SEMICON Taiwan 主題式業績發表會，說明 2026 上半年財務資訊。研究觀察：以該次法說作為第三季研究資料入口，核對公司營運說明；此處未將未讀取的簡報內容或供應鏈訂單推論當成事實。",
+            "source_urls": [
+              "https://www.scientech.com.tw/zh-hant/Investor/Shareholder/InvestorConference"
+            ],
+            "published_on": "2026-09-03",
+            "reviewed_on": "2026-10-17",
+            "fact_period": "2026 Q3 法說／2026 H1 財務資料"
+          },
+          "2330": {
+            "text": "官方事實：台積電於 2026-07-16 公布 2026Q3 營收指引 446～458 億美元、毛利率 65%～67%；官方特別指出 2 奈米快速放量對第三季營運的支撐。研究觀察：本季追蹤 2 奈米放量與產品組合變化；須同時觀察新製程爬坡成本與毛利率，不能只把需求增加視為必然推升股價。",
+            "source_urls": [
+              "https://investor.tsmc.com/english/quarterly-results/2026/q2"
+            ],
+            "published_on": "2026-07-16",
+            "reviewed_on": "2026-10-17",
+            "fact_period": "2026Q3 公司當時展望",
+            "review_type": "sourced_research"
+          }
+        },
+        "2025Q4": {
+          "2330": {
+            "text": "官方事實：台積電於 2025-10-16 公布 2025Q4 營收指引 322～334 億美元、毛利率 59%～61%；官方表示先進製程需求持續強勁。研究觀察：以先進製程需求與公司當季指引作為研究主軸，追蹤營收能否落在指引區間，以及匯率與海外廠成本對毛利率的影響。",
+            "source_urls": [
+              "https://investor.tsmc.com/english/quarterly-results/2025/q3"
+            ],
+            "published_on": "2025-10-16",
+            "reviewed_on": "2026-10-17",
+            "fact_period": "2025Q4 公司當時展望",
+            "review_type": "sourced_research"
+          }
+        },
+        "2026Q1": {
+          "2330": {
+            "text": "官方事實：台積電於 2026-01-15 公布 2026Q1 營收指引 346～358 億美元、毛利率 63%～65%；公司將全年資本預算列為 520～560 億美元。研究觀察：研究重點是全年擴產投資與先進製程需求的匹配程度；全年資本預算不等於當季已支出，也不直接證明股價會有季底行情。",
+            "source_urls": [
+              "https://investor.tsmc.com/english/quarterly-results/2025/q4"
+            ],
+            "published_on": "2026-01-15",
+            "reviewed_on": "2026-10-17",
+            "fact_period": "2026Q1 公司當時展望",
+            "review_type": "sourced_research"
+          }
+        },
+        "2026Q2": {
+          "2330": {
+            "text": "官方事實：台積電於 2026-04-16 公布 2026Q2 營收指引 390～402 億美元、毛利率 65.5%～67.5%；官方表示先進製程需求持續支撐第二季業務。研究觀察：以先進製程需求能否轉化為營收及毛利率追蹤季度營運；這是公司當時展望，不能用其後公布的第二季實績倒填當時判讀。",
+            "source_urls": [
+              "https://investor.tsmc.com/english/quarterly-results/2026/q1"
+            ],
+            "published_on": "2026-04-16",
+            "reviewed_on": "2026-10-17",
+            "fact_period": "2026Q2 公司當時展望",
+            "review_type": "sourced_research"
+          }
+        }
+      }
     },
     {
       "order": 2,
@@ -261,7 +347,69 @@
         }
       ],
       "thesis": "台股作帳最指標陣營，交叉持股極深。通常在 10 月底～11 月由中小型小雞先行點火，最後由母公司補漲掩護。",
-      "focus": "信昌電、精成科、瀚宇博：股本在 17～50 億元，拉抬成本低，搭上元件或 PCB 題材可快速提升母公司淨值（NAV）。"
+      "focus": "信昌電、精成科、瀚宇博：股本在 17～50 億元，拉抬成本低，搭上元件或 PCB 題材可快速提升母公司淨值（NAV）。",
+      "quarterlyReasons": {
+        "2025Q4": {
+          "2344": {
+            "text": "官方事實：公司說明第三季DDR4銷售較前季逾倍增，帶動20奈米產品成長；高密度NOR產品組合改善，SLC NAND位元出貨年增逾20%。研究觀察：本季從DDR4及20奈米產品組合追蹤需求改善是否持續；需同時區分價格、出貨量與產品組合對獲利的貢獻，不能只以記憶體題材判定季底行情。",
+            "source_urls": [
+              "https://www.winbond.com/hq/about-winbond/news-and-events/news/news00567.html?__locale=tw"
+            ],
+            "published_on": "2025-11-05",
+            "reviewed_on": "2026-10-17",
+            "fact_period": "2025 Q3財報／2025 Q4研究",
+            "review_type": "sourced_research"
+          }
+        },
+        "2026Q1": {
+          "2344": {
+            "text": "官方事實：公司表示2025全年營收成長受惠需求結構轉變及記憶體價格上升，20奈米產品營收貢獻快速成長。研究觀察：第一季研究主軸是價格上升與高價值產品組合能否延續；全年毛利率與單季數據須分開比較，並觀察價格循環轉變所帶來的風險。",
+            "source_urls": [
+              "https://www.winbond.com/hq/about-winbond/news-and-events/news/news00579.html?__locale=en"
+            ],
+            "published_on": "2026-02-10",
+            "reviewed_on": "2026-10-17",
+            "fact_period": "2025全年財報／2026 Q1研究",
+            "review_type": "sourced_research"
+          }
+        },
+        "2026Q2": {
+          "2344": {
+            "text": "官方事實：第一季CMS產品線占營收47%，公司指出20奈米產品及高價值應用需求強勁，Flash高密度產品出貨比重提高。研究觀察：本季追蹤CMS成長及Flash產品結構是否能延續，不把單季毛利率直接外推全年；同時觀察需求擴張與實際產品出貨的對應情況。",
+            "source_urls": [
+              "https://www.winbond.com/hq/about-winbond/news-and-events/news/news00586.html?__locale=en"
+            ],
+            "published_on": "2026-05-05",
+            "reviewed_on": "2026-10-17",
+            "fact_period": "2026 Q1財報／2026 Q2研究",
+            "review_type": "sourced_research"
+          }
+        },
+        "2026Q3": {
+          "2344": {
+            "text": "官方事實：第二季CMS占營收53%，公司指出AI需求支撐成長，混合平均售價的提升同時反映價格及有利產品組合；SLC NAND製程產品營收貢獻增加。研究觀察：本季分辨純價格上升與產品組合改善，觀察20奈米與SLC NAND的出貨延續性；報價高檔的循環風險與擴產成本不可忽略。",
+            "source_urls": [
+              "https://www.winbond.com/hq/about-winbond/news-and-events/news/news00582.html?__locale=cs"
+            ],
+            "published_on": "2026-08-06",
+            "reviewed_on": "2026-10-17",
+            "fact_period": "2026 Q2財報／2026 Q3研究",
+            "review_type": "sourced_research"
+          }
+        },
+        "2026Q4": {
+          "2344": {
+            "text": "官方事實：華邦宣布簽約以現金收購英飛凌NOR Flash與F-RAM事業全部股權，基礎交易價格11.2億美元，仍有交割調整條件。研究觀察：本季追蹤交割條件、資金安排與產品整合進度；來源證明的是簽約，沒有將交易寫成已完成，也未把併購效益當作已實現獲利。",
+            "source_urls": [
+              "https://www.winbond.com/hq/about-winbond/news-and-events/news/news00590.html"
+            ],
+            "published_on": "2026-09-16",
+            "reviewed_on": "2026-10-17",
+            "fact_period": "引用9/16已簽約收購公告／2026 Q4追蹤",
+            "review_type": "sourced_research"
+          }
+        }
+      }
     },
     {
       "order": 3,
@@ -351,7 +499,120 @@
         }
       ],
       "thesis": "聯電權值大負責穩盤，作帳主力專攻具先進製程、高毛利之中小型 IC 設計與載板廠，股性活潑。",
-      "focus": "智原、矽統、原相：智原具先進封裝／ASIC 題材；矽統具轉型與董監持股戰略意義；原相籌碼集中度高。"
+      "focus": "智原、矽統、原相：智原具先進封裝／ASIC 題材；矽統具轉型與董監持股戰略意義；原相籌碼集中度高。",
+      "quarterlyReasons": {
+        "2025Q4": {
+          "2303": {
+            "text": "官方事實：聯電公布第三季稼動率 78%，指出 22 奈米營收占比已超過 10%，並預期第四季晶圓出貨量與第三季相當。研究觀察：以 22 奈米產品組合改善與成熟製程需求復甦為本季研究主軸；需核對出貨回升是否能抵銷平均售價及折舊壓力。",
+            "source_urls": [
+              "https://www.umc.com/en/Download/quarterly_results/QuarterlyResultsDetail/2025/2025Q3"
+            ],
+            "published_on": "2025-10-29",
+            "reviewed_on": "2026-10-17",
+            "fact_period": "2025Q4 研究／當時公布的營運資訊",
+            "review_type": "sourced_research"
+          },
+          "3034": {
+            "text": "官方事實：第三季營收年減11.82%，毛利率36.29%；簡報列出顯示驅動IC與SoC的營收分項。研究觀察：本季從產品組合與毛利率追蹤營運壓力是否改善，同時觀察庫存及應收帳款；不把顯示產品題材直接解釋為獲利或股價必然回升。",
+            "source_urls": [
+              "https://www.novatek.com.tw/upload/website/_FIN2025Q3_e_25110616_350.pdf"
+            ],
+            "reviewed_on": "2026-10-17",
+            "fact_period": "2025 Q3財報／2025 Q4研究",
+            "review_type": "sourced_research",
+            "published_on": "2025-11-06"
+          }
+        },
+        "2026Q1": {
+          "2303": {
+            "text": "官方事實：聯電表示 2025 年第四季 22 奈米營收季增 31%，全年 22 奈米營收年增 93%；公司預期第一季晶圓需求維持穩健。研究觀察：本季追蹤 22 奈米新產品導入及新加坡產能帶來的組合變化；資本投入與營收轉化存在時間差，不能把技術合作直接視為當季已實現獲利。",
+            "source_urls": [
+              "https://www.umc.com/en/Download/quarterly_results/QuarterlyResultsDetail/2025/2025Q4"
+            ],
+            "published_on": "2026-01-28",
+            "reviewed_on": "2026-10-17",
+            "fact_period": "2026Q1 研究／當時公布的營運資訊",
+            "review_type": "sourced_research"
+          },
+          "3034": {
+            "text": "官方事實：公司第四季營收較第三季下降，毛利率由36.29%改善為38.19%；期末庫存較第三季下降。研究觀察：本季研究重點是營收與毛利率不同方向的原因及庫存消化情況，區分成本或組合改善與真正需求回升，避免只依單一毛利率數字判斷景氣反轉。",
+            "source_urls": [
+              "https://www.novatek.com.tw/upload/website/_FIN2025Q4_e_26020909_536.pdf",
+              "https://www.novatek.com.tw/en-global/Download/ir_event/Index/analyst_meeting"
+            ],
+            "reviewed_on": "2026-10-17",
+            "fact_period": "2025 Q4財報／2026 Q1研究",
+            "review_type": "sourced_research",
+            "published_on": "2026-02-06"
+          }
+        },
+        "2026Q2": {
+          "2303": {
+            "text": "官方事實：聯電公布第一季 22 奈米占營收 14%，並預期第二季晶圓出貨量以高個位數幅度成長，通訊需求回升是公司說明的因素之一。研究觀察：以通訊需求、8 吋與12 吋出貨成長及產品組合為研究重點，並觀察售價和產能利用率能否同步改善；數據屬公司當時公布的展望。",
+            "source_urls": [
+              "https://www.umc.com/en/Download/quarterly_results/QuarterlyResultsDetail/2026/2026Q1"
+            ],
+            "published_on": "2026-04-29",
+            "reviewed_on": "2026-10-17",
+            "fact_period": "2026Q2 研究／當時公布的營運資訊",
+            "review_type": "sourced_research"
+          },
+          "3034": {
+            "text": "官方事實：第一季營收年減14.66%，毛利率39.06%；簡報顯示SoC營收比重44%，顯示驅動IC56%。研究觀察：本季觀察SoC比重變化能否改善整體獲利，並對照營收年減與庫存變化；產品比重提高可能同時受其他產品萎縮影響，不能只看比重就推論新產品需求。",
+            "source_urls": [
+              "https://www.novatek.com.tw/upload/website/_FIN2026Q1_e_26050716_294.pdf"
+            ],
+            "reviewed_on": "2026-10-17",
+            "fact_period": "2026 Q1財報／2026 Q2研究",
+            "review_type": "sourced_research",
+            "published_on": "2026-05-07"
+          }
+        },
+        "2026Q3": {
+          "2303": {
+            "text": "官方事實：聯電公布第二季稼動率 85%、22 奈米營收占比 17.5%，並預期第三季稼動率超過 90%；同時調高全年資本支出至20億美元。研究觀察：本季追蹤成熟製程產能利用率回升與擴產節奏，對照電源管理、感測器及微控制器需求；擴產所增加的折舊與現金支出也是觀察項目。",
+            "source_urls": [
+              "https://www.umc.com/en/Download/quarterly_results/QuarterlyResultsDetail/2026/2026Q2"
+            ],
+            "published_on": "2026-07-29",
+            "reviewed_on": "2026-10-17",
+            "fact_period": "2026Q3 研究／當時公布的營運資訊",
+            "review_type": "sourced_research"
+          },
+          "3034": {
+            "text": "官方事實：第二季營收季增23.83%、毛利率42.42%，簡報列示SoC占比51%、顯示驅動IC49%。研究觀察：本季研究重點是產品組合轉變與獲利改善的延續性，對照營收、毛利率及營運資金變化；第二季已實現的改善不能直接當成第三季成長保證。",
+            "source_urls": [
+              "https://www.novatek.com.tw/upload/website/_FIN2026Q2_e_26080616_775.pdf"
+            ],
+            "reviewed_on": "2026-10-17",
+            "fact_period": "2026 Q2財報／2026 Q3研究",
+            "review_type": "sourced_research",
+            "published_on": "2026-08-06"
+          }
+        },
+        "2026Q4": {
+          "2303": {
+            "text": "官方事實：聯電7月29日公布第二季22奈米營收占比17.5%，並預期第三季稼動率超過90%；官網列第三季法說預定於2026/10/28舉行。研究觀察：本季核對第三季需求復甦是否落實、擴產與產品組合對後續獲利的影響；截至10/17，10/28法說尚未發生，不預填其業績數字或第四季指引。",
+            "source_urls": [
+              "https://www.umc.com/en/Download/quarterly_results/QuarterlyResultsDetail/2026/2026Q2",
+              "https://www.umc.com/en/IR_Event/ir_events"
+            ],
+            "reviewed_on": "2026-10-17",
+            "fact_period": "2026 Q4 研究；引用7/29已公布資訊與10/28預定事件",
+            "review_type": "sourced_research"
+          },
+          "3034": {
+            "text": "官方事實：官網列第三季財報及法說預定於11/6舉行，最近已公布簡報顯示第二季產品組合中SoC占比提高。研究觀察：本季核對SoC與驅動IC的實際需求、毛利率和庫存變化；截至10/17，11/6活動尚未發生，未將其後業績寫入本筆研究。",
+            "source_urls": [
+              "https://www.novatek.com.tw/upload/website/_FIN2026Q2_e_26080616_775.pdf",
+              "https://www.novatek.com.tw/en-global/Download/ir_event/Index/analyst_meeting"
+            ],
+            "reviewed_on": "2026-10-17",
+            "fact_period": "引用8/6已公布資訊；11/6預定法說",
+            "review_type": "sourced_research"
+          }
+        }
+      }
     },
     {
       "order": 4,
@@ -509,7 +770,69 @@
         }
       ],
       "thesis": "著重技術整併與實質業績，多由富爸爸入股換血、具獲利爆發力之轉投資公司領軍作帳。",
-      "focus": "九暘、亞信、晶心科：九暘與亞信受惠富爸爸網通資源注入；晶心科受惠 RISC-V 架構推廣。"
+      "focus": "九暘、亞信、晶心科：九暘與亞信受惠富爸爸網通資源注入；晶心科受惠 RISC-V 架構推廣。",
+      "quarterlyReasons": {
+        "2025Q4": {
+          "2454": {
+            "text": "官方事實：公司說明第三季營收季減主要因部分客戶提前在上半年拉貨，年增則與AI旗艦手機及AI平板市占提升有關。研究觀察：本季區分拉貨時點與終端需求的變化，追蹤旗艦產品市占能否抵銷前期提前備貨影響；財報同時揭露毛利率下降，不宜只看營收年增。",
+            "source_urls": [
+              "https://www.mediatek.com/hubfs/MediaTek%20Assets/Pdfs/Quarterly%20Earnings%20Release/2025/Quarterly%20Earnings%20Release-2025Q3/Press%20Release.pdf?hsLang=en"
+            ],
+            "reviewed_on": "2026-10-17",
+            "fact_period": "2025 Q3財報／2025 Q4研究",
+            "review_type": "sourced_research",
+            "published_on": "2025-10-31"
+          }
+        },
+        "2026Q1": {
+          "2454": {
+            "text": "官方事實：公司將第四季營收季增歸因於天璣9500旗艦SoC放量及有利匯率，但毛利率季減0.4個百分點。研究觀察：第一季研究重點是旗艦新品放量能否延續、匯率與產品組合對毛利率的影響；產品規格升級不等於營收成長必然轉化為同幅度獲利。",
+            "source_urls": [
+              "https://www.mediatek.com/hubfs/MediaTek%20Assets/Pdfs/Quarterly%20Earnings%20Release/2025/Quarterly%20Earnings%20Release-2025Q4/Press%20Release.pdf?hsLang=en"
+            ],
+            "reviewed_on": "2026-10-17",
+            "fact_period": "2025 Q4財報／2026 Q1研究",
+            "review_type": "sourced_research",
+            "published_on": "2026-02-04"
+          }
+        },
+        "2026Q2": {
+          "2454": {
+            "text": "官方事實：公司說明第一季手機營收下降，抵銷智慧邊緣平台成長；營收年減2.7%，毛利率46.3%，庫存週轉天數高於前季。研究觀察：本季觀察智慧邊緣平台的成長能否降低手機需求波動，並核對庫存與研發費用的變化；不把多元產品布局直接當作當季獲利已轉強。",
+            "source_urls": [
+              "https://www.mediatek.com/hubfs/MediaTek%20Assets/Pdfs/Quarterly%20Earnings%20Release/2026/Quarterly%20Earnings%20Release-2026Q1/Press%20Release.pdf?hsLang=en"
+            ],
+            "reviewed_on": "2026-10-17",
+            "fact_period": "2026 Q1財報／2026 Q2研究",
+            "review_type": "sourced_research",
+            "published_on": "2026-04-30"
+          }
+        },
+        "2026Q3": {
+          "2454": {
+            "text": "官方事實：公司說明第二季智慧邊緣平台市占擴張，抵銷手機需求下降；營收年增1.2%，但毛利率較去年同期下降。研究觀察：本季研究主軸是非手機產品成長與手機需求的拉鋸，需同時追蹤毛利率及持續研發投入；營收小幅增加不能單獨支持獲利成長判斷。",
+            "source_urls": [
+              "https://www.mediatek.com/hubfs/MediaTek%20Assets/Pdfs/Quarterly%20Earnings%20Release/2026/Quarterly%20Earnings%20Release-2026Q2/Press%20Release.pdf?hsLang=en"
+            ],
+            "reviewed_on": "2026-10-17",
+            "fact_period": "2026 Q2財報／2026 Q3研究",
+            "review_type": "sourced_research",
+            "published_on": "2026-07-31"
+          }
+        },
+        "2026Q4": {
+          "2454": {
+            "text": "官方事實：官網列第三季法說預定10/30舉行；最近一次已公布季度資料指出智慧邊緣平台成長抵銷手機需求下降。研究觀察：本季核對手機與非手機成長來源、產品組合及研發支出對利潤的影響；截至10/17，10/30法說尚未發生，第三季實績和第四季指引仍待核對。",
+            "source_urls": [
+              "https://www.mediatek.com/hubfs/MediaTek%20Assets/Pdfs/Quarterly%20Earnings%20Release/2026/Quarterly%20Earnings%20Release-2026Q2/Press%20Release.pdf?hsLang=en",
+              "https://www.mediatek.com/investor-relations/ir-events"
+            ],
+            "reviewed_on": "2026-10-17",
+            "fact_period": "引用7/31已公布資訊；10/30預定法說",
+            "review_type": "sourced_research"
+          }
+        }
+      }
     },
     {
       "order": 7,
@@ -669,7 +992,69 @@
         }
       ],
       "thesis": "低調穩健之法人防禦型作帳，很少全面大漲，多由欣銓以穩定殖利率與投信買超作為主力配置。",
-      "focus": "欣銓：車用與利基型封測訂單穩固，季底常成為投信穩定獲利與換股防守標的。"
+      "focus": "欣銓：車用與利基型封測訂單穩固，季底常成為投信穩定獲利與換股防守標的。",
+      "quarterlyReasons": {
+        "2025Q4": {
+          "2337": {
+            "text": "官方事實：旺宏第三季營收82.14億元，季增21%，但毛利率為13.5%，營業利益率為負13.9%。研究觀察：營收回升與獲利修復尚未同步，本季應分別追蹤毛利率、產品組合與營業虧損是否改善，不能只依營收成長判斷復甦。",
+            "source_urls": [
+              "https://www.mxic.com.tw/Lists/QuarterlyResults/Attachments/640/2025q3_release_en.pdf"
+            ],
+            "published_on": "2025-10-29",
+            "reviewed_on": "2026-10-17",
+            "fact_period": "2025Q3",
+            "review_type": "sourced_research"
+          }
+        },
+        "2026Q1": {
+          "2337": {
+            "text": "官方事實：旺宏第四季營收77.29億元，季減6%，毛利率24.2%，營業虧損3.92億元，較前季縮減66%。研究觀察：收入下降但毛利率與虧損改善，應觀察產品組合及成本改善能否延續至新年度；虧損收斂不等於已轉為獲利。",
+            "source_urls": [
+              "https://www.mxic.com.tw/Lists/QuarterlyResults/Attachments/646/2025q4_release_en.pdf"
+            ],
+            "published_on": "2026-01-27",
+            "reviewed_on": "2026-10-17",
+            "fact_period": "2025Q4",
+            "review_type": "sourced_research"
+          }
+        },
+        "2026Q2": {
+          "2337": {
+            "text": "官方事實：旺宏公告三月合併營收約44.22億元，年增96%；二月約30.30億元，年增60%。研究觀察：進入第二季前的營收動能提高，需用後續季度毛利率及存貨資料辨別成長品質；月營收本身無法拆解售價、出貨量與產品組合，也不能直接推算獲利。",
+            "source_urls": [
+              "https://www.mxic.com.tw/en-us/about/investor-relations/Pages/monthly-sales.aspx?ViewType=print"
+            ],
+            "published_on": "2026-04-07",
+            "reviewed_on": "2026-10-17",
+            "fact_period": "2026年3月",
+            "review_type": "sourced_research"
+          }
+        },
+        "2026Q3": {
+          "2337": {
+            "text": "官方事實：旺宏六月合併營收約69.56億元，年增216%，高於五月約62.56億元。研究觀察：第三季的研究重點是第二季收入擴張能否轉化為持續獲利與現金流；基期與產品組合均可能影響年增幅度，不能把營收年增率當成出貨量增幅。",
+            "source_urls": [
+              "https://www.mxic.com.tw/en-us/about/investor-relations/Pages/monthly-sales.aspx?ViewType=print"
+            ],
+            "published_on": "2026-07-07",
+            "reviewed_on": "2026-10-17",
+            "fact_period": "2026年6月",
+            "review_type": "sourced_research"
+          }
+        },
+        "2026Q4": {
+          "2337": {
+            "text": "官方事實：旺宏九月合併營收約83.67億元，年增188%，高於八月約81.45億元；這是第三季月份資料。研究觀察：第四季應核對營收續航、毛利率與庫存周轉的變化，區分成長速度和獲利品質；截至核對日不能把第三季月營收當作第四季已實現業績。",
+            "source_urls": [
+              "https://www.mxic.com.tw/en-us/about/investor-relations/Pages/monthly-sales.aspx?ViewType=print"
+            ],
+            "published_on": "2026-10-07",
+            "reviewed_on": "2026-10-17",
+            "fact_period": "2026年9月",
+            "review_type": "sourced_research"
+          }
+        }
+      }
     },
     {
       "order": 11,
@@ -1655,7 +2040,69 @@
         }
       ],
       "thesis": "四寶本業受石化景氣壓抑時，集團作帳常直接轉向電子材料與載板子公司南電與南亞科。",
-      "focus": "南電：IC 載板需求彈性大，且外資、投信持有部位重，為台塑集團帳面最主要的損益拉抬來源。"
+      "focus": "南電：IC 載板需求彈性大，且外資、投信持有部位重，為台塑集團帳面最主要的損益拉抬來源。",
+      "quarterlyReasons": {
+        "2025Q4": {
+          "2408": {
+            "text": "官方事實：第三季平均售價較前季增加約四成，位元出貨增加約二成中段；公司表示DDR5產品出貨及新製程開發持續推進。研究觀察：追蹤DRAM價格、位元出貨與DDR5導入的不同貢獻，不能把仍在開發的TSV或客製HBM項目當成已實現的營收。",
+            "source_urls": [
+              "https://www.nanya.com/en/IR/16/Press%20Release?IRId=10046"
+            ],
+            "published_on": "2025-10-13",
+            "reviewed_on": "2026-10-17",
+            "fact_period": "於2025-10-13公布的前季營運資料／2025Q4研究",
+            "review_type": "sourced_research"
+          }
+        },
+        "2026Q1": {
+          "2408": {
+            "text": "官方事實：第四季平均售價增加超過三成，位元出貨增加約一成出頭，營收季增60.3%。研究觀察：研究主軸是價格與出貨共同推升營運能否延續，並關注新製程及資本支出；高成長基期不代表後續每季能維持相同增幅。",
+            "source_urls": [
+              "https://www.nanya.com/en/IR/16/Press%20Release?IRId=11068"
+            ],
+            "published_on": "2026-01-19",
+            "reviewed_on": "2026-10-17",
+            "fact_period": "於2026-01-19公布的前季營運資料／2026Q1研究",
+            "review_type": "sourced_research"
+          }
+        },
+        "2026Q2": {
+          "2408": {
+            "text": "官方事實：第一季平均售價季增超過七成，但位元出貨季減中個位數百分比；營收仍季增63.1%。研究觀察：本季必須區分價格驅動與實際出貨需求，避免將報價上漲等同終端需求同步增加；並追蹤新產品、產能與價格反轉風險。",
+            "source_urls": [
+              "https://www.nanya.com/en/IR/16/Press%20Release?IRId=12105"
+            ],
+            "published_on": "2026-04-13",
+            "reviewed_on": "2026-10-17",
+            "fact_period": "於2026-04-13公布的前季營運資料／2026Q2研究",
+            "review_type": "sourced_research"
+          }
+        },
+        "2026Q3": {
+          "2408": {
+            "text": "官方事實：第二季平均售價季增超過六成，位元出貨持平，營收季增68.2%。研究觀察：本季重點是價格上漲對獲利的貢獻及其可持續性；位元出貨持平時，不能只用營收成長推論銷量擴大，仍需關注供需與製程轉進。",
+            "source_urls": [
+              "https://www.nanya.com/en/IR/16/Press%20Release?IRId=13150"
+            ],
+            "published_on": "2026-07-10",
+            "reviewed_on": "2026-10-17",
+            "fact_period": "於2026-07-10公布的前季營運資料／2026Q3研究",
+            "review_type": "sourced_research"
+          }
+        },
+        "2026Q4": {
+          "2408": {
+            "text": "官方事實：第三季平均售價季增超過六成，但位元出貨季減中個位數百分比，營收季增61.9%。研究觀察：本季研究需把價格上升與位元出貨下降拆開判讀，追蹤需求和產品結構是否支撐高獲利；第三季已公布毛利率不直接外推第四季。",
+            "source_urls": [
+              "https://www.nanya.com/en/IR/16/Press%20Release?IRId=14188"
+            ],
+            "published_on": "2026-10-12",
+            "reviewed_on": "2026-10-17",
+            "fact_period": "於2026-10-12公布的前季營運資料／2026Q4研究",
+            "review_type": "sourced_research"
+          }
+        }
+      }
     },
     {
       "order": 25,
@@ -2409,7 +2856,11 @@
         }
       ],
       "thesis": "製鞋龍頭與運動品牌代工，受惠第四季運動品傳統採購出貨旺季及轉投資金融評價。",
-      "focus": "寶成：產能利用率回升與奧運等體育賽事年換代效益。"
+      "focus": "寶成：產能利用率回升與奧運等體育賽事年換代效益。",
+      "relationshipNotes": [
+        "南山人壽（持股轉投資）",
+        "精英（部分股權）"
+      ]
     },
     {
       "order": 38,
@@ -2427,7 +2878,10 @@
         }
       ],
       "thesis": "輪胎大廠，年底原物料橡膠價格穩定時，易吸引價值型投資資金回補。",
-      "focus": "正新：原廠輪胎（OE）市占高，外資持股部位大，多走穩健反彈作帳。"
+      "focus": "正新：原廠輪胎（OE）市占高，外資持股部位大，多走穩健反彈作帳。",
+      "relationshipNotes": [
+        "建大（產業同盟）"
+      ]
     },
     {
       "order": 39,
@@ -2469,7 +2923,10 @@
         }
       ],
       "thesis": "本質為生技創投，旗下轉投資股價直接影響母公司每季損益，每年底力推具藥證或授權金進展之子公司。",
-      "focus": "順藥、永昕：順藥具備中風新藥國際臨床授權題材；永昕是生物藥 CDMO 重要代工基地。"
+      "focus": "順藥、永昕：順藥具備中風新藥國際臨床授權題材；永昕是生物藥 CDMO 重要代工基地。",
+      "relationshipNotes": [
+        "東曜藥業"
+      ]
     },
     {
       "order": 40,
@@ -2588,7 +3045,10 @@
         }
       ],
       "thesis": "呼吸道鼻噴劑型專利整合，多藉由技術授權金里程碑認列推升轉投資子公司評價。",
-      "focus": "益得：具備定量噴霧吸入劑（MDI）CDMO 產能與美國 FDA 藥證送件預期。"
+      "focus": "益得：具備定量噴霧吸入劑（MDI）CDMO 產能與美國 FDA 藥證送件預期。",
+      "relationshipNotes": [
+        "優良（興櫃）"
+      ]
     },
     {
       "order": 44,
@@ -2607,7 +3067,7 @@
         {
           "code": "8443",
           "name": "阿瘦",
-          "relation": "集團核心成員",
+          "relation": "策略聯盟（Word 記載）",
           "market": "上市",
           "verified": true,
           "officialSite": "www.asogroup.com.tw"
@@ -2852,7 +3312,10 @@
         }
       ],
       "thesis": "自行車與電動自行車（E-Bike）龍頭，第四季常逢歐美經銷商次年新車款鋪貨與去庫存結算。",
-      "focus": ""
+      "focus": "",
+      "relationshipNotes": [
+        "愛地雅"
+      ]
     },
     {
       "order": 52,
@@ -2905,7 +3368,11 @@
       "section": "六、 機械精密、車用零組件、工具機與重工（集團 50 ～ 66）",
       "members": [],
       "thesis": "全球前三大工具機集團，旗下海內外併購事業多，常藉由特定工具機掛牌標的發動波段。",
-      "focus": ""
+      "focus": "",
+      "relationshipNotes": [
+        "友嘉實業",
+        "眾程科技等機床體系"
+      ]
     },
     {
       "order": 55,
@@ -3329,7 +3796,10 @@
         }
       ],
       "thesis": "結合房地產開發與頂級百貨飯店，常在第四季百貨週年慶與資產題材發酵時聯動。",
-      "focus": ""
+      "focus": "",
+      "relationshipNotes": [
+        "漢來大飯店"
+      ]
     },
     {
       "order": 75,
@@ -3511,7 +3981,11 @@
         }
       ],
       "thesis": "捷運土木公工、高階住宅與水務工程控股，第四季重視合併報表營收與獲利結算。",
-      "focus": ""
+      "focus": "",
+      "relationshipNotes": [
+        "大陸工程",
+        "大陸建設"
+      ]
     },
     {
       "order": 82,
@@ -3937,7 +4411,10 @@
         }
       ],
       "thesis": "農藥、特用化學品與中部連鎖超市，營收抗跌，為傳統傳產防禦標的。",
-      "focus": ""
+      "focus": "",
+      "relationshipNotes": [
+        "楓康超市"
+      ]
     },
     {
       "order": 99,

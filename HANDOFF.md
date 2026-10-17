@@ -275,3 +275,98 @@ page_cache 是 **uat 與 prod 共用**同一個 Supabase。若推盤中到原 ki
 ### 待辦 / 注意
 - 已上 **uat**；**未上 prod**，推 prod 時連同第六~九節一起。
 - 當時工作目錄被另一並行 session 切到合夥人分支 `codex/member-system`（內容＝當時 uat），本功能 commit 落在那條再乾淨 merge 進 uat（只有這一個 commit）。合夥人會員系統已在 uat。
+
+
+## 十一、2026-10-16 ～ 10-17 本期新增與修正（全部在 uat，尚未上 prod）
+
+> 注意：這段期間**合夥人的 login agent 持續在推 uat**（會員系統/交易紀錄/3D 角色等），且**共用同一個工作目錄**，工作樹常有未提交檔。動 uat 前務必 `git fetch`；本地 Andrew 有時沒 ff 對齊（不影響 uat 已部署內容）。uat↔prod **共用同一個 Supabase**。
+
+### A. 指標卡走勢圖：新增「疊加大盤」「一年新高」開關（`index.html` `_openSeriesChart`）
+- **疊加大盤**：五張卡 dialog 皆可切，加權(^TWII 2年, /api/chart)以藍色虛線疊在**左軸**(獨立刻度)，十字線同顯指標值＋加權。
+- **一年新高**：僅 VIX，標記可開關；每段突破只標首日（修掉「一年新高」字樣重疊）。
+
+### B. 盤中即時：價格修正＋產業改市值加權＋掃盤穩定性（`scripts/intraday_push.py`、`api/screen.py`）
+- **價格 bug（關鍵）**：盤中 mis `getStockInfo` 的 top-level `z/pz/tv` 多為 `-`，真正最近成交價在**巢狀 `trade.z`**。舊碼退回昨收→全市場幾乎平盤（產業漲0跌0、%偏低）。`_cur_price` 改為 `z → trade.z → 最佳買賣中價(b/a) → 今開o → 昨收y`。
+- **產業地圖改市值加權（貼三竹官方類指數）**：新增 `_get_shares_map()`（TWSE `t187ap03_L` 上市＋TPEx `mopsfin_t187ap03_O` 上櫃發行股數，快取 24h，SSL 清 `VERIFY_X509_STRICT`）。`_sectors_from(items, date, shares)` 產業漲跌幅改 **Σ(漲跌×市值)/Σ市值**（市值＝收盤×發行股數）；方塊大小仍用成交金額；整產業無股數才退回算術平均。**實測：半導體 0.52 vs 三竹 0.26、電機 2.00 vs 2.20、金融 1.90 vs 1.89、玻璃 6.40 vs 6.24，貼。**（成交金額加權實測不準，已否決。）發行股數抓取 ~20 秒、偶爾 timeout→空→退回等權，屬正常。
+- **掃盤穩定性**：mis 一批上限 ~150（200 報 rtcode 9999）；盤中單請求 ~6 秒（payload 大）；並行 `CONC=12` 最快 ~28 秒/全市場（16 併反被節流）。`BATCH=150`、`INTERVAL=35` 秒、前端輪詢 35 秒（**5 秒全市場不可行**）。並行偶有整批失敗被靜默丟 → 漏大權值股(如大立光8100億市值)→市值加權劇烈跳動；修法：每批**重試 4 次**、`MIN_LISTED` 500→**950**（少一批剩~890 會擋下不覆寫）。
+- 盤中 pusher 當天用新碼手動重啟過（`schtasks /Run /TN "AI_stock_Intraday"`）；排程任務隔天 08:55 自動吃新碼。
+
+### C. 會員中心資料後端盤點（`docs/member-db-status.md`，給 login agent 追）
+- **登入/個資/頭像**＝Supabase Auth（已接）；**自選/目標價/回測/分點追蹤**＝`watchlist`/`backtest_positions`/`broker_watchlist` 表（已接、跨裝置同步）。
+- **會員中心新面板/交易紀錄/我的目標/研究筆記/自訂策略**＝**只存 localStorage**（不跨裝置）。
+- **獎勵/點數/優惠券/推薦/回饋/活動**＝程式有接但 **Supabase 表/RPC 全 404 未建**；遷移檔 `docs/database/member-services.sql` 已寫未套用，且前端查的 `member_point_ledger`/`member_referral_summary`/`academy_events` **連 SQL 都沒有**。
+
+### D. Vercel 部署失敗（已解）＋ 12 函式硬限制
+- 失敗根因：合夥人加 `api/site_search.py`＝**第 13 個 Serverless Function**，超過 **Hobby 12 上限**→全線 build 失敗（uat/justy-layout 都中）。**合夥人已自行移除 site_search.py**，回到 12、build 恢復。見 [[vercel-hobby-12-function-limit]]。
+- 長期：Hobby 不能邀成員、不能給合夥人看 build log。**升 Pro（~US$20/月/seat，viewer 免費）**可一次解：函式上限、合夥人收部署信、他的 AI 看 log。用戶暫不升。
+- **任何新 api 功能都要併進現有 `.py`（如 `?stat=xxx`）、不能新增檔**，否則又爆 12。
+
+### E. Vercel 部署失敗轉寄給合夥人（Gmail，待用戶自己設定）
+- 用戶要「Vercel 失敗信也寄合夥人 qa5518556130@gmail.com」。Hobby 不能加 Vercel 成員→走 **Gmail 原生轉寄**：用戶 Gmail 設定→轉寄→加 `qa5518556130@gmail.com`→合夥人點驗證。**驗證通知信草稿已用 Gmail 連接器存進用戶草稿匣**（主旨「請協助點一下 Gmail 轉寄驗證信…」）。Gmail 設定那兩個鈕我的工具碰不到，要用戶自己按。
+
+### F. K 圖「法說會/除權息」標記改預設關閉（`index.html`）
+- `_mkShow` 的 `div`(除權息)、`catalyst`(法說會) 由預設 true→**false**，比照葛蘭碧用 `_kPref` 記住(`mk_div`/`mk_catalyst`)。
+
+### G. 葛蘭碧買點大改（`index.html _sma20Scan` ＋ `api/screen.py sma20_stage_scan`，兩邊同步、參數對齊）
+- **動態組數＋各組 checkbox**：每個「買1」開啟新的一組；點葛蘭碧按鈕下方 `#sma20GroupPanel` 列「共 N 組／全部／第1組…(帶買1起始日)」checkbox，可單獨顯示/隱藏某組。`_sma20GroupsOn`(null=全顯)、換股票重置。
+- **買2 修正**：由「月線嚴格上彎(m>m1&&m>m3)＋最低≤月線＋收盤>月線」改為 **「最低≤月線＋收盤>月線」(回測不破)**（拿掉月線上彎要求）。
+- **重置修正**：MA 下彎「1 天」→ **連續 `SMA20_RESET_N=3` 天** 才重置（健康回測壓 1~2 天不殺輪）。
+- **買3 修正**：由「整根在月線下(h<m)」改為 **「收盤跌破月線(c<m)」** ＋止跌K(長紅≥3%/長下影≥3%/十字開=收，不變)，與買2「收盤站回」對稱。
+- 買1 未動。實測國巨 2327 序列乾淨：買1(收上月線)→買2(回測不破)→買3(收破月線)。**規則參數初版，可再依個案調。**
+
+### H. ✨ AI 判定買點（骨架已上，真 AI 後端**未完成＝下一步**）
+- **骨架已上 uat**：`api/screen.py` 新增 `?stat=aibuy&code=XXX`（**沒新增函式、仍 12 個**），目前回**假資料(stub)**＋CDN 快取一天。前端 K 圖工具列加「✨ AI 判定」按鈕(`_aiBuyToggle`)＋面板 `#aiBuyPanel`(判讀/評分/摘要/型態量能葛蘭碧三點/免責)＋localStorage 當日快取。前端 host-aware，uat 打同源。
+- **架構方向（已與用戶定）**：按需(用戶點才算)、不掃全市場；省錢靠「同檔當天快取」。金鑰放**後端 env**(Vercel)，絕不放前端。模型建議 Haiku 5.5(~$0.001/次)或 GPT-4.1 mini(可 temperature=0 更穩，Claude 5 系列已無 temperature)。
+- **下一步（用戶指示「先寫好後端、用環境變數開關，有 key 就走真的」）＝未完成**：把 `?stat=aibuy` 改為：
+  1. 讀 env `AI_PROVIDER`(anthropic/openai)、`ANTHROPIC_API_KEY`/`OPENAI_API_KEY`、`AI_MODEL`。**無 key→回現有 stub**；有 key→走真的。
+  2. 抓該股近 1 年日線（`price_window` via `_cache_sb`，code eq）＋算 `sma20_stage_scan` 買點。
+  3. 組精簡 prompt（近 ~60 根 OHLC＋MA20＋最近買點），urllib 呼叫 Anthropic Messages API(`x-api-key`,`anthropic-version:2023-06-01`) 或 OpenAI chat/completions(`temperature:0`,`response_format json_object`)，要求**只回 JSON**(verdict/score/summary/points/disclaimer)，容錯解析。
+  4. 回傳**同 stub 格式**(stub:false)，前端不用動。任何錯誤→退回 stub（功能不壞）。
+  5. (選)有 `SUPABASE_SERVICE_KEY` env 才加 Supabase 共享快取(kind `aibuy_<code>`)。
+- 參考：Claude API 技能給的定價/模型 ID（Haiku 5.5 `claude-haiku-5-5` $0.10/$0.50、Sonnet 5.5 `claude-sonnet-5-5` $2/$10、Opus 5.5 `claude-opus-5-5` $4/$20，皆 per 1M token）。見 [[index-chart-dialogs]] 無關，另記。
+
+### I. Supabase 合夥人權限（已開）
+- 已邀 `qa5518556130@gmail.com` 為 **Developer**（組織層級＝Taiwan stock2 ＋ LINE 貼身秘書**兩個專案**，用戶確認過）。開之前**全量備份**在 `D:\stock_data\supabase_backup\2026-10-15\`（67 表 148MB）。
+
+### 待辦 / 等回覆
+- **接真 AI 後端**（H 的下一步）＝**當前未完成任務**，用戶切帳號前交代「先寫好後端、用環境變數開關」。
+- **推 prod**：第六~十一節全部累積在 uat，等用戶說「推 prod」；推完依鐵則把 justy-layout 對齊 uat（`git push origin origin/uat:justy-layout`）。見 [[deploy-prod-sync-justy]]。
+- Gmail 轉寄：用戶自己在 Gmail 設定加轉寄地址＋請合夥人點驗證（草稿已在草稿匣）。
+- 葛蘭碧規則參數（RESET_N=3 等）、產業市值加權、AI 判讀口徑，皆初版可再調。
+
+## 十二、2026-10-17 晚：AI 判定真後端（已上 uat，未上 prod）＋葛蘭碧說明補正
+
+### A. AI 判定（`api/screen.py` `_aibuy*`、`?stat=aibuy&code=`，仍 12 個函式）
+- **開關全在 Vercel 環境變數**（Settings → Environment Variables，改完要 Redeploy 才生效）：
+  `ANTHROPIC_API_KEY`／`OPENAI_API_KEY`（沒有任何一把＝回假資料）、`AI_PROVIDER`（anthropic｜openai，不設＝有哪把用哪把、都有優先 anthropic）、`AI_MODEL`（不設＝`claude-haiku-5-5`／`gpt-4.1-mini`）、`AI_DAILY_LIMIT`（預設 300）、`SUPABASE_SERVICE_KEY`（有才寫共享快取與每日計數）。
+- 流程：驗代號（4～6 碼英數）→ 讀 `price_window` 日線（<80 根回假資料）→ 查共享快取 `page_cache` kind=`aibuy_<代號>`（同資料日＋同模型才用）→ 檢查每日計數 `aibuy__count` → 程式先算好均線／量比／漲跌／區間／葛蘭碧紀錄＋近 40 根日線 → 呼叫 AI（Anthropic 用 `output_config.format` json_schema＋effort low；OpenAI 用 json_object＋temperature 0）→ 驗格式、夾分數 0～100 → 寫回快取與計數 → 回傳（含 usage token 數）。
+- 任何錯誤（金鑰錯、逾時、格式不符、拒答）都退回假資料並附 `stub_reason`，前端照常顯示「假資料示意」。
+- 只用 Python 標準庫 urllib（`requirements.txt` 規定不裝外部套件），沒裝 Anthropic SDK。
+- 成本估算（Haiku 5.5 $0.10/$0.50 每百萬 token）：輸入約 2,000 token、輸出含思考約 500～1,500 token → **約 US$0.001／次**；同檔同資料日只算一次，加上每日上限 300 次，**最壞約 US$0.3／日**。
+- 共享快取容量：每檔 1 列（約 2～3 KB），全市場約 2,000 檔上限 ≈ 6 MB。
+- ⚠️ `screen.py` 註解提到 Vercel 上的 service key 可能過期；若過期，快取與計數寫不進去 → 每日上限失效、只剩 CDN 快取（成功結果 1 小時）擋重複呼叫。設金鑰時一併確認 `SUPABASE_SERVICE_KEY` 有效。
+- 前端 `_aiBuyLoad/_aiBuyRender`：只有真的判讀結果才存 localStorage（假資料、錯誤、舊版後端回 `{status:ok}` 都不存），金鑰設好後不會被當天舊假資料卡住。
+- **還沒用真金鑰跑過**（目前沒有金鑰）；已用 Python 測：無金鑰→假資料、假金鑰→退回假資料（HTTPError）、模擬 AI 回應→正確解析與夾分數。
+
+### B. 葛蘭碧說明補正
+- 程式（前後端）已是 10-17 修正版，但篩選器說明仍寫舊規則 → 已改：買點 2 不要求均線上彎、買點 3 改「收盤 < 均線」、重置改「連續 3 天下彎」，並附全市場試算（上市櫃 1,964 檔、2024 年至今：買1 13,362／買2 9,425／買3 4,136 次；買1→2 中位 8 日、2→3 中位 7 日）。前後端用 8 檔比對訊號完全一致。
+
+### 待辦
+- 用戶在 Vercel 設 `ANTHROPIC_API_KEY`（或 OpenAI）後 Redeploy uat，實測一檔看真判讀；確認 `SUPABASE_SERVICE_KEY` 有效。
+- 推 prod 時這節一起上（前端呼叫正式站的 `?stat=aibuy`，prod 未更新前面板顯示「暫時無法取得」）。
+
+### C.（10-17 晚）AI 判定加入「形態判定」（AI 看圖）
+- 用戶決定形態由 **AI 看圖判斷**（不用程式規則，避免死板）。後端 `_aibuy_png()` 用純標準庫把最近 160 根日 K 畫成 PNG（紅漲綠跌、20 日均線、成交量、每 20 根一條垂直格線），連同格線對應日期與價格刻度文字說明一起送給 AI（Anthropic 用 image content block；OpenAI 用 image_url data URI）。
+- 形態只能從 10 種擇用（`AIBUY_PATTERNS`：圓形底、頭肩頂、頭肩底、M頭、W底、箱型、上升／下降趨勢線、上升／下降軌道），輸出 `patterns[{name,status(形成中/已確認),confidence(高/中/低),detail}]`，不給目標價；後端會丟掉清單外名稱、修正不合法的狀態／信心。
+- 「頭尖頂」依用戶描述當作頭肩頂。
+- `AIBUY_VER=2`：共享快取要版本相符才用，舊版結果自動重算。
+- 核對 AI 看到的圖：`/api/screen?stat=aibuy&code=2327&img=1`（需推到該環境後才有）。
+- 成本：圖片約 1,000～1,500 token，每次約多 US$0.0002（Haiku 5.5）。Haiku 看圖辨形態的能力有限，若判讀品質不夠，在 Vercel 設 `AI_MODEL=claude-sonnet-5-5`（約貴 20 倍、仍約 US$0.02／次）。
+- 逾時由 25 秒改 40 秒（看圖較慢）；Vercel 函式本身的時間上限需留意。
+
+### D.（10-17 晚）改用 OpenAI GPT-6.1（用戶指定）
+- OpenAI 分支改走 **Responses API**（`POST /v1/responses`）：`instructions`＋`input`（`input_image` data URI＋`input_text`）、`text.format` json_schema strict、`reasoning.effort`（`AI_EFFORT`，預設 low；回 400 時自動拿掉 reasoning 重送一次）；解析 `output[].content[].output_text`，`refusal` 視為拒答。
+- 預設 OpenAI 模型改 `gpt-6.1-sol`（GPT-6.1 Sol；型號與價格查自第三方整理：約 US$2／US$10 每百萬 token，**未對照 OpenAI 官方頁**）。
+- 估算約 US$0.02～0.03／次；建議 `AI_DAILY_LIMIT=100`（最壞約 US$3／日）。
+- Vercel 只要設 `OPENAI_API_KEY`（沒有 Anthropic 金鑰時自動用 OpenAI）；兩把都設時用 `AI_PROVIDER=openai` 指定。
+- 仍未用真金鑰測過。

@@ -26,3 +26,17 @@
 - 公開 groupbook API 僅讀 page_cache，不提供訪客現算 fallback。payload.date 為行情資料日，updatedAt 為預算產生時間。
 - 初次執行：python scripts/groupbook_precompute.py --env-file <既有環境檔路徑>。可加 --dry-run 驗證而不寫入；金鑰不送至前端。
 - 本機每日排程使用主 checkout 的程式碼；需要將此版 scripts/page_cache_push.py、scripts/groupbook_precompute.py、api/screen.py 與 group-catalog.json 同步到實際排程執行的 checkout。worktree 或 UAT push 本身不會更新另一個 checkout。
+
+## 首批有來源的季度研究（2026-10-17）
+台積電生態系：2026Q4 收錄 2330 公司展望、3374 第三季月營收追蹤背景、3443 預定財報事件；2026Q3 收錄 3583 法說紀錄。資料核對日、公告／活動日及實際涵蓋期間各自記錄。事件僅記錄已公開時程，未將未發生的活動當成已公布業績。其餘股票仍待逐筆核對；沒有自動生成或自動更新內容。
+
+## 官方數據每日更新（2026-10-17）
+每日 page_cache_push 透過 groupbook_research_push 從 TWSE、TPEx 月營收官方 OpenAPI 建立本季背景摘要；保存至既有 page_cache 的 groupbook_research_YYYYQn。前端透過 groupresearch API 只讀取資料庫，不即時下載全市場資料。摘要與人工附來源研究分區，不將營收變化說成接單或季底上漲原因。人工核對的當季 editorial 一併存入快照；未有人新增的研究理由不會自動編寫。第一批 558/563 檔、191/192 集團，缺 1271、3454、4544、910322、911622。來源失敗保留前次快照；逾3個月或未來月份不冒充當期資料。這版自動化先含月營收，逐季財報與完整人工題材研究仍待擴充。
+
+財報擴充：每日另讀上市櫃一般業、保險、銀行、證券與金控損益表，呈現官方年初至該季累計基本EPS，不誤標為單季EPS；第一批涵蓋556/563檔。未結束季度財報不採用。各公司實際財報期別與來源連結逐筆顯示。
+
+## 歷史保存更新（取代前述覆寫規則）
+集團排名、今日焦點榜單、季度研究的 publish 共用寫入器已改成只新增。kind=原識別值__UTC時間戳_隨機唯一編號，payload 同步帶 snapshotId 與 generatedAt。同日重跑產生不同版本；POST 不帶 on_conflict 或 merge-duplicates，沒有刪除舊版本。前端依原識別前綴查詢，按 updated_at.desc,kind.desc 取最新一筆，並相容舊的單筆快照。目前不設自動刪除期限。之前已覆寫的歷史無法重建，既有單筆資料原樣保留。官方來源讀取針對 Python3.14 嚴格RFC延伸憑證鏈相容性，保留CA/主機名稱/效期/簽章檢查。
+
+## 全季度人工研究核對（2026-10-17）
+範圍暫依網站現有歷史：2025Q4～2026Q4（五季），563個不重複代號，共2815筆股票季度紀錄，集團關係層級為2890筆。audit_groupbook_research.py --require-complete 在未全數具備有來源的理由時會失敗，不把官方營收摘要計入完成。新增台積電2025Q4、2026Q1、2026Q2、2026Q3官方當時展望與研究觀察；台積電五季已有紀錄，全名錄仍僅8/2815筆。來源公布日期不得晚於所選季末。publish_groupbook_editorial.py 將各季人工理由新增存入歷史快照，合併既有資料而不刪除原先數據或其他已核對內容。這是後來核對整理的歷史研究，不宣稱當時已建立研究版本。

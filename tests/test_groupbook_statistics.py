@@ -7,7 +7,7 @@ from statistics import median
 
 source = Path('api/screen.py').read_text(encoding='utf-8')
 tree = ast.parse(source)
-functions = [n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name in ('_fetch_groupbook', '_load_groupbook_prices', '_read_groupbook_snapshot')]
+functions = [n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name in ('_fetch_groupbook', '_load_groupbook_prices', '_read_groupbook_snapshot', '_snapshot_params')]
 
 class GroupBookTests(unittest.TestCase):
     def run_model(self, fetch):
