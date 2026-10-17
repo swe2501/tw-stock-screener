@@ -1,0 +1,32 @@
+# 策略創作助手：資料邊界與尚未啟用項目
+
+2026-10-17 使用者決定：先設計串接，不啟用付費呼叫。未讀取／改寫密鑰檔，未設定供應商帳號，未進行真實模型請求。測試的模型及會員身份均為隔離 fixture。
+
+## 頁面與功能
+
+策略創作頁改為討論助手、手動策略編輯、圖表及回測工作區。建議先顯示為待確認草稿，使用者主動套用到新草稿後，才可自行保存或回測。修改過草稿後，舊建議及復原不得直接覆蓋新內容。討論只存在本次頁面的記憶體，切換會員／離開頁面時取消請求；不寫入共享對話資料庫。
+
+助手目前只能產生現有引擎可驗證的公開指標條件。任意程式、自訂公式語言、巢狀條件、布林及 ATR 尚未加入執行引擎，不能描述為已支援。真正績效只由既有確定性引擎計算，不接受模型回傳績效。
+
+## 存取與保密
+
+- 私人會員分支放在既有 POST `/api/auth` 的 `action=strategy_assistant`，在 email/password 流程前獨立分派；部署 Function 保持 12 支。
+- Bearer token 透過 Supabase `/auth/v1/user` 查證。不採信請求中的會員 ID，不查詢其他會員、自選、筆記或策略資料表。回應一律 `Cache-Control: no-store`。
+- 僅接收限長討論及使用者明確勾選的當前草稿。拒絕未知 context 欄位、system/developer 角色、未支援條件及常見憑證格式。這不是能辨認所有秘密的內容分類器；使用者仍不應貼上機密。
+- 模型只能看到伺服器的公開指標能力定義、這段討論與勾選的草稿。不提供讀檔、網頁抓取、SQL、程式執行、搜尋、RAG、會員資料或其他工具。會員 token、模型 API key、完整環境及原始碼不進入模型輸入。
+- 討論記錄整體被視為使用者輸入，不提升成模型的 system/developer 訊息。模型輸出採結構化格式並再次驗證；提案不執行任意程式。文字只以 `textContent` 顯示，供應商錯誤不原樣回傳。
+- 這些措施限制真正資料來源，不能保證模型永不胡說或永不受提示注入影響。保護的關鍵是它沒有取得秘密的能力，而非宣稱提示詞不可破解。
+
+已經送到瀏覽器的網站 JavaScript、HTML 及可公開存取的內容可由訪客查看，無法靠 Agent 隱藏。真正的私有算法應另行盤點並移到需授權的伺服器運算；本次沒有宣稱已完成全站機密盤點或遷移。一般會員自己的策略與公開 SMA/RSI 等公式不應被混稱為網站機密。
+
+## 供應商接線與啟用門檻
+
+伺服器端預留 OpenAI Responses 適配器，固定官方目的地、`tools: []`、`store: false`、限制輸出 token 及逾時；模型由管理員明確設定，不自動選用型號。介面依照 [Responses 結構化輸出文件](https://developers.openai.com/api/docs/guides/structured-outputs?api-mode=responses)。`store: false` 不代表所有供應商處理／留存皆為零；啟用前須另行核對資料政策及告知使用者。
+
+以下條件全部完成後才考慮啟用：
+
+1. 管理員選定可用的模型與預算，在部署平台設定 `OPENAI_API_KEY`、`STRATEGY_AI_MODEL`，最後才設定 `STRATEGY_AI_ENABLED=1`。密鑰不得放在前端或聊天。未配置時返回未啟用，前端禁用送出，不以罐頭回覆冒充 AI。
+2. 配置跨執行個體的會員限流／WAF 和供應商專案支出限制。現有每暖機程序每會員 6 次／分鐘僅為突發保護，不是部署整體配額。
+3. 以測試會員驗證真正身份服務與模型相容性、確認 Vercel 打包 server-only `lib`；跑供應商實際提示注入評估、隱私與費用檢查。這一輪未做真實帳號／模型測試，沒有模型安全通過的宣稱。
+
+本機測試：`python -m unittest discover -s tests -p test_strategy_assistant.py`、`node tests/strategy-assistant.browser.cjs`（Playwright fixtures）、既有 `node --test tests/member-strategy-engine.test.cjs` 及 `python scripts/check_api_budget.py`。測試涵蓋登入與關閉開關、來源白名單、輸入／輸出驗證、無工具與無自動執行、草稿衝突、HTML 顯示與手機排版。
