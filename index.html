@@ -10652,14 +10652,15 @@
     let _sma20GroupCount = 0, _sma20GroupStart = {};   // 動態組數（每個買1開啟一組）＋各組起始日
     // 20 日 SMA 三階段買點（2026-10-12；與後端 api/screen.py sma20_stage_scan 同一套規則，改參數兩邊要一起改）
     function _sma20Scan(cs) {
-      const N = 20, n = cs.length, out = [];
+      const N = 20, RESET_N = 3, n = cs.length, out = [];          // RESET_N＝連續幾天月線下彎才重置（與後端 SMA20_RESET_N 對齊）
       if (n < N + 7) return out;
       const ma = new Array(n).fill(null); let run = 0;
       for (let i = 0; i < n; i++) { run += cs[i].close; if (i >= N) run -= cs[i - N].close; if (i >= N - 1) ma[i] = Math.round(run / N * 1e6) / 1e6; }
-      let stage = 0, known = false, grp = 0;                        // grp＝第幾組（每個買1開啟新的一組）
+      let stage = 0, known = false, grp = 0, down = 0;             // grp＝第幾組（每個買1開啟新的一組）；down＝連續下彎天數
       for (let i = N + 5; i < n; i++) {
         const m = ma[i], m1 = ma[i - 1], m3 = ma[i - 3];
-        if (m < m1) { stage = 0; known = true; continue; }          // 下彎第一天即重置，當天不觸發
+        if (m < m1) { down++; known = true; } else { down = 0; }    // 累計連續下彎；見到下彎即已知輪起點
+        if (down >= RESET_N) { stage = 0; continue; }               // 連續 N 天下彎＝趨勢壞 → 重置（1~2 天回測不重置）
         if (!known || stage >= 3) continue;
         const o = cs[i].open, h = cs[i].high, l = cs[i].low, c = cs[i].close, v = cs[i].volume || 0;
         if (o == null || h == null || l == null || !c) continue;
@@ -10670,7 +10671,7 @@
           const base = Math.max(s5 / 5, s10 / 10);
           if (base > 0 && v >= 1.3 * base) { stage = 1; grp++; out.push({ i, stage: 1, g: grp }); }
         } else if (stage === 1) {
-          if (m > m1 && m > m3 && l <= m && c > m) { stage = 2; out.push({ i, stage: 2, g: grp }); }
+          if (l <= m && c > m) { stage = 2; out.push({ i, stage: 2, g: grp }); }   // 買2 回測不破：盤中碰月線、收盤站回（不再要求月線嚴格上彎）
         } else if (stage === 2) {
           if (h < m && ((c - o) / c >= 0.03 || (Math.min(o, c) - l) / c >= 0.03 || o === c)) { stage = 3; out.push({ i, stage: 3, g: grp }); }
         }
