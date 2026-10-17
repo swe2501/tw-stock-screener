@@ -1,4 +1,4 @@
-"""Original Blender-authored scallion candidate. Not production-approved art.
+"""Original Blender-authored chive candidate. Not production-approved art.
 Run: blender -b -t 6 --python scripts/create_blender_leek_candidate.py -- <output-dir>
 All mesh, vertex colors, rig and clips are authored here; no paid service.
 """
@@ -31,15 +31,20 @@ pink=mat('Petal pink',(.94,.25,.31),.43,vertex=True)
 jade=mat('Jade watering can',(.035,.27,.22),.29,.35)
 gold=mat('Soft gold',(.78,.43,.10),.28,.68)
 water=mat('Water crystal',(.20,.68,.91),.18,.15)
-rigdata=bpy.data.armatures.new('Scallion gesture rig');rig=bpy.data.objects.new('SCALLION_RIG',rigdata);scene.collection.objects.link(rig);bpy.context.view_layer.objects.active=rig;rig.select_set(True)
+rigdata=bpy.data.armatures.new('Chive gesture rig');rig=bpy.data.objects.new('SCALLION_RIG',rigdata);scene.collection.objects.link(rig);bpy.context.view_layer.objects.active=rig;rig.select_set(True)
 bpy.ops.object.mode_set(mode='EDIT')
 def bone(name,head,tail,parent=None):
  b=rigdata.edit_bones.new(name);b.head=head;b.tail=tail
  if parent:b.parent=rigdata.edit_bones[parent]
  return b
-bone('body',(0,0,.25),(0,0,1.15));bone('leaf_c',(0,0,1.22),(0,0,2.8),'body');bone('leaf_l',(-.08,0,1.2),(-.8,0,2.5),'body');bone('leaf_r',(.08,0,1.2),(.8,0,2.5),'body')
-for side in [-1,1]:bone('eye_'+str(side),(side*.255,-.37,.89),(side*.255,-.37,1.1),'body')
-for name,pos in [('can',(.95,-.1,1.85)),('sun',(-.85,.1,2.5)),('heart',(.82,0,1.55)),('note',(-.85,0,1.65)),('water',(.35,-.1,1.4))]:bone(name,pos,(pos[0],pos[1],pos[2]+.35))
+# Bone local axes deliberately match world axes: local Y is the bone direction.
+# The old Z-aligned rig made an apparent upward movement travel in depth.
+bone('body',(0,0,.25),(0,.3,.25))
+blades=[('leaf_c',-.10,2.35,.035,.070),('leaf_l',-.52,2.10,.035,.070),('leaf_r',.57,2.16,.07,.075),('leaf_ll',-.88,1.77,.12,.080),('leaf_rr',.87,1.71,.14,.080),('leaf_back_l',-.31,1.99,.22,.064),('leaf_back_r',.32,2.04,.25,.064)]
+for name,*_ in blades:bone(name,(0,0,.82),(0,.3,.82),'body')
+for side in [-1,1]:bone('eye_'+str(side),(side*.133,-.214,.57),(side*.133,.086,.57),'body')
+for name,pos in [('can',(0,0,0)),('sun',(0,0,0)),('heart',(0,0,0)),('note',(0,0,0)),('hand',(0,0,0)),('beam',(0,0,0))]:bone(name,pos,(pos[0],pos[1]+.3,pos[2]))
+for i in range(10):bone('drop_'+str(i),(0,0,0),(0,.15,0))
 bpy.ops.object.mode_set(mode='OBJECT');rig.select_set(False)
 meshes=[]
 def finish(obj,name,material,b='body',colors=None):
@@ -69,119 +74,161 @@ def curve(name,pts,radius,material,b='body'):
  sp=data.splines.new('BEZIER');sp.bezier_points.add(len(pts)-1)
  for q,p in zip(sp.bezier_points,pts):q.co=p;q.handle_left_type='AUTO';q.handle_right_type='AUTO'
  o=bpy.data.objects.new(name,data);scene.collection.objects.link(o);bpy.ops.object.select_all(action='DESELECT');bpy.context.view_layer.objects.active=o;o.select_set(True);bpy.ops.object.convert(target='MESH');o.select_set(False);return finish(o,name,material,b)
-# Pear silhouette: continuous sculpted surface, tapered neck, no primitive seams.
-profile=[(.19,.07),(.24,.16),(.30,.21),(.37,.32),(.46,.43),(.57,.50),(.70,.535),(.84,.515),(.98,.45),(1.10,.34),(1.22,.22),(1.32,.16),(1.43,.14)]
+# A small bundled leaf sheath rather than an onion/scallion bulb. The flat,
+# long chive blades, not the pale base, make up most of the silhouette.
+profile=[(.19,.065),(.24,.10),(.31,.17),(.40,.24),(.51,.27),(.62,.265),(.73,.23),(.83,.19),(.94,.17),(1.04,.175)]
 vs=[];cols=[];faces=[]
 for j,(z,r) in enumerate(profile):
  for i in range(64):
-  a=i*math.tau/64;vs.append((r*math.cos(a),r*.78*math.sin(a),z));g=max(0,min(1,(z-1.07)/.46));base=(.99-.25*g,.93+.02*g,.78-.42*g);x=r*math.cos(a);y=r*.78*math.sin(a);blush=.62*sum(math.exp(-((x-side*.37)/.10)**2-((z-.70)/.085)**2) for side in [-1,1]) if y<-.12 else 0;cols.append(tuple(base[k]*(1-blush)+(.96,.30,.36)[k]*blush for k in range(3)))
+  a=i*math.tau/64;vs.append((r*math.cos(a),r*.78*math.sin(a),z));g=max(0,min(1,(z-.60)/.49));base=(.96-.66*g,.95-.34*g,.79-.64*g);x=r*math.cos(a);y=r*.78*math.sin(a);blush=.45*sum(math.exp(-((x-side*.215)/.06)**2-((z-.45)/.06)**2) for side in [-1,1]) if y<-.10 else 0;cols.append(tuple(base[k]*(1-blush)+(.96,.30,.36)[k]*blush for k in range(3)))
   if j:
    a0=(j-1)*64+i;b0=(j-1)*64+(i+1)%64;faces.append((a0,b0,j*64+(i+1)%64,j*64+i))
 faces.extend([tuple(range(63,-1,-1)),tuple((len(profile)-1)*64+i for i in range(64))])
-body=mesh('Sculpted pearl bulb',vs,faces,skin,colors=cols)
+body=mesh('Bundled pale chive sheath',vs,faces,skin,colors=cols)
 sub=body.modifiers.new('Silhouette polish','SUBSURF');sub.levels=1;sub.render_levels=1
 bpy.context.view_layer.objects.active=body;bpy.ops.object.modifier_move_up(modifier=sub.name);bpy.ops.object.modifier_apply(modifier=sub.name)
-# Three closed curved fleshy blades with longitudinal highlight ridges and vertex gradients.
-for n,(name,dx,height,depth,width) in enumerate([('leaf_c',-.10,1.76,.035,.135),('leaf_l',-.88,1.35,.04,.16),('leaf_r',.86,1.37,.09,.16)]):
- vs=[];cols=[];faces=[];N=48;K=12
+# Seven flattened, narrow blades with fine parallel veins and gently bent tips.
+for n,(name,dx,height,depth,width) in enumerate(blades):
+ vs=[];cols=[];faces=[];N=48;K=8
  for j in range(N+1):
-  t=j/N;cx=dx*t**1.6;z=1.24+height*(t if n==0 else math.sin(t*math.pi/2));cy=depth*t+.035*math.sin(t*math.pi);w=max(.002,width*(.45+.60*math.sin(math.pi*t))*math.sqrt(max(0,math.sin(math.pi*(.1+.9*t)))));th=max(.003,.058*(1-t)**.45)
+  t=j/N;cx=dx*t**1.6;z=.82+height*(t-.10*t**6);cy=depth*t+.035*math.sin(t*math.pi);w=max(.001,width*(.72+.28*math.sin(math.pi*t))*(1-t**5));th=max(.001,.012*(1-t)**.4)
   for k in range(K):
    a=k*math.tau/K;x=cx+math.cos(a)*w;y=cy+math.sin(a)*th;vs.append((x,y,z))
-   green=max(0,min(1,t*3.7));ridge=.035*max(0,math.cos(a))
-   cols.append((.82*(1-green)+(.065+ridge)*green,.90*(1-green)+(.20+ridge)*green,.39*(1-green)+.008*green))
+   green=max(0,min(1,t*4.7));ridge=.035*max(0,math.cos(a))
+   cols.append((.36*(1-green)+(.055+ridge)*green,.62*(1-green)+(.27+ridge)*green,.12*(1-green)+.025*green))
    if j:faces.append(((j-1)*K+k,(j-1)*K+(k+1)%K,j*K+(k+1)%K,j*K+k))
  faces.extend([tuple(range(K-1,-1,-1)),tuple(N*K+k for k in range(K))]);mesh('Blade '+name,vs,faces,leafmat,name,cols)
  # Subtle raised, tapered midrib.
  pts=[]
  for j in range(8):
-  t=.05+.88*j/7;pts.append((dx*t**1.6,depth*t+.035*math.sin(t*math.pi)-.058*(1-t)**.45-.001,1.24+height*(t if n==0 else math.sin(t*math.pi/2))))
- curve('Midrib '+name,pts,.0045,leafmat,name)
+  t=.05+.88*j/7;pts.append((dx*t**1.6,depth*t+.035*math.sin(t*math.pi)-.012*(1-t)**.4-.001,.82+height*(t-.10*t**6)))
+ curve('Fine parallel vein '+name,pts,.0017,leafmat,name)
 # Eyes contain actual volumes; no painted flat character plane.
 for side in [-1,1]:
- x=side*.255;b='eye_'+str(side)
- ell('Ivory eye rim',(x,-.354,.88),(.123,.080,.157),white,b)
- ell('Amber iris',(x,-.410,.883),(.105,.058,.139),iris,b)
- ell('Espresso pupil',(x,-.447,.898),(.080,.036,.108),eye,b)
- ell('Main softbox reflection',(x-.031,-.480,.949),(.029,.011,.038),white,b,20,12)
- ell('Tiny eye glint',(x+.027,-.480,.863),(.012,.008,.014),white,b,16,10)
- curve('Expressive eyebrow '+str(side),[(x-side*.072,-.34,1.098),(x,-.369,1.133),(x+side*.057,-.337,1.108)],.014,rootmat)
-ell('Open happy mouth',(0,-.406,.711),(.099,.027,.09),mouthmat)
-ell('Tongue',(0,-.429,.676),(.061,.012,.026),pink)
-ell('Little upper teeth',(0,-.434,.749),(.062,.009,.011),white)
+ x=side*.133;b='eye_'+str(side)
+ ell('Ivory eye rim',(x,-.186,.57),(.077,.051,.100),white,b)
+ ell('Amber iris',(x,-.223,.572),(.065,.036,.087),iris,b)
+ ell('Espresso pupil',(x,-.249,.582),(.050,.023,.068),eye,b)
+ ell('Main softbox reflection',(x-.019,-.271,.614),(.018,.007,.024),white,b,20,12)
+ ell('Tiny eye glint',(x+.017,-.271,.560),(.008,.005,.009),white,b,16,10)
+ curve('Expressive eyebrow '+str(side),[(x-side*.045,-.175,.710),(x,-.196,.731),(x+side*.036,-.176,.714)],.008,rootmat)
+ell('Open happy mouth',(0,-.211,.435),(.061,.018,.055),mouthmat)
+ell('Tongue',(0,-.227,.413),(.038,.008,.017),pink)
+ell('Little upper teeth',(0,-.230,.458),(.038,.006,.007),white)
 # Distinct fine root tendrils, with irregular bends and taper in the filament tips.
-for i in range(17):
- a=i*2.4;reach=random.uniform(.12,.37);x=math.cos(a)*reach;y=math.sin(a)*reach*.62
+for i in range(11):
+ a=i*2.4;reach=random.uniform(.10,.24);x=math.cos(a)*reach;y=math.sin(a)*reach*.62
  pts=[(.02*math.cos(a),.02*math.sin(a),.235),(x*.25,y*.25,.11),(x*.72,y*.72,.055),(x,y,.04+random.random()*.025)]
  curve('Root filament %02d'%i,pts,.0065 if i%3 else .009,rootmat)
  for j in range(2):
   q=pts[-2];curve('Root hair %02d_%d'%(i,j),[q,(q[0]+.025*math.cos(a+j),q[1]+.018*math.sin(a+j),q[2]-.015),(q[0]+.055*math.cos(a+j),q[1]+.035*math.sin(a+j),.028)],.0028,rootmat)
-# Interaction props. Each has its own rig bone, not a whole-model wobble.
-ell('Watering can body',(.98,0,1.88),(.21,.15,.18),jade,'can')
-curve('Can handle',[(1.1,0,1.99),(1.32,0,2.12),(1.34,0,1.83),(1.12,0,1.79)],.028,gold,'can')
-curve('Can spout',[(.84,0,1.82),(.68,0,1.94),(.59,0,2.05)],.034,jade,'can')
-ell('Can rose',(.58,0,2.06),(.065,.06,.028),gold,'can')
-ell('Sun center',(-.85,.1,2.5),(.13,.05,.13),gold,'sun')
-for i in range(12):
- a=i*math.tau/12;curve('Sun ray '+str(i),[(-.85+.19*math.cos(a),.1,2.5+.19*math.sin(a)),(-.85+.25*math.cos(a),.1,2.5+.25*math.sin(a))],.009,gold,'sun')
-for i in range(7):ell('Water droplet '+str(i),(.36+random.random()*.12,-.05,1.46+i*.08),(.018,.018,.034),water,'water',16,12)
-# A softly puffed heart mesh from a sampled heart outline.
-vs=[];faces=[];K=64
-for depth in [-.045,0,.045]:
+# Interaction tools are actual weighted meshes. All prop bones start at the
+# origin; their poses can be placed with predictable world-space anchors.
+ell('Watering can body',(0,0,0),(.19,.14,.17),jade,'can')
+curve('Can handle',[(.13,0,.12),(.31,0,.21),(.32,0,-.10),(.13,0,-.12)],.025,gold,'can')
+curve('Can spout',[(-.13,0,-.06),(-.27,0,.02),(-.36,0,.12)],.028,jade,'can')
+ell('Can rose',(-.36,0,.12),(.058,.052,.025),gold,'can')
+for i in range(10):ell('Water droplet '+str(i),(0,0,0),(.014,.014,.029),water,'drop_'+str(i),12,8)
+# A soft mitten with a thumb and four rounded fingertips, contacting the leaf.
+ell('Visitor palm',(0,0,0),(.15,.075,.07),white,'hand',24,16)
+for i in range(4):ell('Visitor finger '+str(i),(-.095+i*.063,0,-.035),(.036,.069,.047),white,'hand',16,10)
+ell('Visitor thumb',(.15,0,-.01),(.055,.06,.042),white,'hand',16,10)
+ell('Sun center',(0,0,0),(.115,.045,.115),gold,'sun')
+for i in range(10):
+ a=i*math.tau/10;curve('Sun ray '+str(i),[(.17*math.cos(a),0,.17*math.sin(a)),(.22*math.cos(a),0,.22*math.sin(a))],.008,gold,'sun')
+for j in range(3):curve('Light reaching leaf '+str(j),[(-.76,.025,2.72-j*.09),(-.42,.015,2.59-j*.12),(-.17,.01,2.45-j*.15)],.004,gold,'beam')
+# Heart is a reaction emitted at the contact site after the greeting.
+vs=[];faces=[];K=48
+for depth in [-.03,0,.03]:
  for i in range(K):
-  t=i*math.tau/K;x=16*math.sin(t)**3/80;z=(13*math.cos(t)-5*math.cos(2*t)-2*math.cos(3*t)-math.cos(4*t))/80
-  scale=.82 if depth else 1;vs.append((.82+x*scale,depth,1.55+z*scale))
+  t=i*math.tau/K;x=16*math.sin(t)**3/110;z=(13*math.cos(t)-5*math.cos(2*t)-2*math.cos(3*t)-math.cos(4*t))/110
+  scale=.82 if depth else 1;vs.append((x*scale,depth,z*scale))
 for j in range(2):
  for i in range(K):faces.append((j*K+i,j*K+(i+1)%K,(j+1)*K+(i+1)%K,(j+1)*K+i))
-faces.extend([tuple(range(K-1,-1,-1)),tuple(2*K+i for i in range(K))]);mesh('Puffed encouragement heart',vs,faces,pink,'heart')
-ell('Music note head',(-.89,0,1.66),(.08,.035,.045),gold,'note')
-curve('Music note stem',[(-.82,0,1.66),(-.82,0,1.95),(-.68,0,1.88)],.014,gold,'note')
-# Build distinct NLA actions suitable for GLB export.
-rig.animation_data_create();props=['can','sun','heart','note','water'];fps=24;scene.render.fps=fps
+faces.extend([tuple(range(K-1,-1,-1)),tuple(2*K+i for i in range(K))]);mesh('Contact response heart',vs,faces,pink,'heart')
+ell('Music note head',(0,0,0),(.06,.025,.035),gold,'note')
+curve('Music note stem',[(.05,0,0),(.05,0,.22),(.15,0,.17)],.012,gold,'note')
+rig.animation_data_create();props=['can','sun','heart','note','hand','beam']+['drop_'+str(i) for i in range(10)];fps=24;scene.render.fps=fps
 names=['enter','idle','interact','evolve','celebrate','interact_pat','interact_offer','interact_play','interact_care','interact_cheer']
+contact_checks=[]
+def leaf_surface(name,t):
+ _,dx,height,depth,_=next(b for b in blades if b[0]==name)
+ return (dx*t**1.6,depth*t+.035*math.sin(math.pi*t)-.012*(1-t)**.4,.82+height*(t-.10*t**6))
+def smooth(v):
+ v=max(0,min(1,v));return v*v*(3-2*v)
+def envelope(t,a=.08,b=.87):return smooth((t-a)/.10)*smooth((b-t)/.10)
+def anchor(bone_name,point):
+ bpy.context.view_layer.update()
+ return rig.pose.bones[bone_name].matrix @ rigdata.bones[bone_name].matrix_local.inverted() @ Vector(point)
+def show(name,pos,scale=1):
+ p=rig.pose.bones[name];p.location=pos;p.scale=(max(.0001,scale),)*3;return p
 for name in names:
  action=bpy.data.actions.new(name);rig.animation_data.action=action
  duration=4 if name=='idle' else 3;end=duration*fps
- for frame in range(1,end+1,3):
+ # Include exact contact/impact phases; these are geometry checks, not art approval.
+ frames=sorted(set(range(1,end+1,2))|{end,round(1+(end-1)*.45),round(1+(end-1)*.60)})
+ for frame in frames:
   t=(frame-1)/(end-1);wave=math.sin(t*math.pi);phase=t*math.tau
-  for p in rig.pose.bones:p.location=(0,0,0);p.rotation_mode='XYZ';p.rotation_euler=(0,0,0);p.scale=(1,1,1)
-  b=rig.pose.bones['body'];b.location.z=.018*math.sin(phase);b.rotation_euler.y=.018*math.sin(phase)
-  for i,k in enumerate(['leaf_c','leaf_l','leaf_r']):rig.pose.bones[k].rotation_euler.y=.035*math.sin(phase+i*.8)
+  for p in rig.pose.bones:p.location=(0,0,0);p.rotation_mode='XYZ';p.rotation_euler=(0,0,0);p.scale=(.0001,)*3 if p.name in props else (1,1,1)
+  b=rig.pose.bones['body'];b.location.z=.009*math.sin(phase);b.rotation_euler.y=.009*math.sin(phase)
+  for i,(k,*_) in enumerate(blades):rig.pose.bones[k].rotation_euler.y=.018*math.sin(phase+i*.8)
   blink=1-.93*max(0,1-abs(t-.66)/.025)
   for side in [-1,1]:rig.pose.bones['eye_'+str(side)].scale.z=blink
-  for k in props:rig.pose.bones[k].scale=(.0001,)*3
-  if name=='enter':b.location.z+=.30*(1-t)**2;b.scale=(.85+.15*t,)*3
+  if name=='enter':b.location.z+=.20*(1-t)**2;b.scale=(.86+.14*t,)*3
   if name in ['interact','interact_pat']:
-   b.scale=(1+.07*wave,1+.04*wave,1-.09*wave);b.rotation_euler.y=.12*wave
-   rig.pose.bones['leaf_c'].rotation_euler.y=.22*wave
-   for side in [-1,1]:rig.pose.bones['eye_'+str(side)].scale.z=1-.75*wave
+   touch=envelope(t,.26,.71)
+   rig.pose.bones['leaf_c'].rotation_euler.y=.12*touch
+   for side in [-1,1]:rig.pose.bones['eye_'+str(side)].scale.z=1-.60*touch
+   # Follow the posed leaf, so the finger never pats an empty location.
+   target=anchor('leaf_c',leaf_surface('leaf_c',.82))
+   approach=smooth((t-.08)/.22);withdraw=smooth((t-.71)/.18)
+   offset=(1-approach)+withdraw
+   p=show('hand',target+Vector((.58*offset,-.01,.078+.28*offset)),envelope(t))
+   if .34<t<.65:contact_checks.append({'clip':name,'frame':frame,'kind':'fingertip_to_posed_leaf','distance':round((Vector(p.location)-Vector((0,-.01,.078))-target).length,5)})
   if name=='interact_offer':
-   rig.pose.bones['can'].scale=(wave,)*3;rig.pose.bones['can'].rotation_euler.y=-.38*wave
-   wet=max(0,math.sin(math.pi*max(0,min(1,(t-.16)/.65))))
-   rig.pose.bones['water'].scale=(wet,)*3;rig.pose.bones['water'].location.z=-.22*t;b.location.z+=.045*wave
+   # Tilt first, then emit ten individually rigged droplets from the transformed
+   # spout to the leaf-sheath surface. Reactions begin after the first impact.
+   can=show('can',(.79,-.12,1.90),envelope(t,.04,.92));can.rotation_euler.y=.72*smooth((t-.10)/.16)
+   rotation=can.rotation_euler.to_matrix();spout=Vector(can.location)+rotation@Vector((-.36,0,.12))
+   target=anchor('body',(0,-.145,.875))
+   wet=smooth((t-.35)/.14)*smooth((.92-t)/.18)
+   for i,(k,*_) in enumerate(blades):rig.pose.bones[k].rotation_euler.y+=.075*math.sin((t-.35)*22+i*.6)*wet
+   target=anchor('body',(0,-.145,.875))
+   for i in range(10):
+    u=(t-.22-i*.032)/.22
+    if 0<=u<=1:
+     pos=spout.lerp(target,u);pos.z+=.06*math.sin(math.pi*u)
+     show('drop_'+str(i),pos)
+    if .98<=u<=1:contact_checks.append({'clip':name,'frame':frame,'kind':'water_to_sheath','distance':round((pos-target).length,5)})
+   for side in [-1,1]:rig.pose.bones['eye_'+str(side)].scale.z=1-.35*wet
   if name=='interact_play':
-   b.location.x=.11*math.sin(phase*2)*wave;b.location.z+=.11*abs(math.sin(phase*2))*wave;b.rotation_euler.y=.18*math.sin(phase*2)*wave
-   rig.pose.bones['leaf_l'].rotation_euler.y=-.28*math.sin(phase*2)*wave;rig.pose.bones['leaf_r'].rotation_euler.y=.28*math.sin(phase*2)*wave
-   rig.pose.bones['note'].scale=(wave,)*3;rig.pose.bones['note'].location.z=.2*t
+   step=math.sin(phase*2)*wave;b.location.x=.055*step;b.location.z+=.055*abs(math.sin(phase*2))*wave;b.rotation_euler.y=.06*step
+   for i,(k,*_) in enumerate(blades):rig.pose.bones[k].rotation_euler.y+=.13*math.sin(phase*2+i*.35)*wave
+   p=show('note',(.65,-.03,1.45+.25*t),wave);p.rotation_euler.y=.15*step
   if name=='interact_care':
-   rig.pose.bones['sun'].scale=(wave,)*3;rig.pose.bones['sun'].rotation_euler.y=.4*wave;rig.pose.bones['leaf_c'].rotation_euler.y=-.10*wave
-   b.rotation_euler.y=-.1*wave
+   light=envelope(t,.10,.90);show('sun',(-.96,.03,2.85),light);show('beam',(0,0,0),light)
+   turn=smooth((t-.26)/.25)*smooth((.92-t)/.22)
+   for k,*_ in blades:rig.pose.bones[k].rotation_euler.y=-.09*turn
+   for side in [-1,1]:rig.pose.bones['eye_'+str(side)].scale.z=1-.55*turn
   if name in ['interact_cheer','celebrate','evolve']:
-   rig.pose.bones['heart'].scale=(wave,)*3;rig.pose.bones['heart'].location.z=.45*t;b.location.z+=.18*math.sin(phase*2)**2*wave
-   b.rotation_euler.z=.12*math.sin(phase)*wave
+   greeting=envelope(t,.28,.68);rig.pose.bones['leaf_r'].rotation_euler.y=.15*greeting
+   target=anchor('leaf_r',leaf_surface('leaf_r',.81));off=1-smooth((t-.08)/.24)+smooth((t-.68)/.22)
+   show('hand',target+Vector((.53*off,-.01,.078+.20*off)),envelope(t))
+   if t>.46:show('heart',target+Vector((0,-.05,(t-.46)*1.1)),math.sin(math.pi*max(0,min(1,(t-.46)/.54))))
+   if .35<t<.63:contact_checks.append({'clip':name,'frame':frame,'kind':'leaf_greeting_contact','distance':round((Vector(rig.pose.bones['hand'].location)-Vector((0,-.01,.078))-target).length,5)})
   for p in rig.pose.bones:
    for prop in ['location','rotation_euler','scale']:p.keyframe_insert(prop,frame=frame,group=p.name)
- # Last key uses the exact rest pose for stable return to idle.
+ # Exact rest pose, with all temporary tools hidden, to avoid a snap on returning.
  for p in rig.pose.bones:
   p.location=(0,0,0);p.rotation_euler=(0,0,0);p.scale=(.0001,)*3 if p.name in props else (1,1,1)
   for prop in ['location','rotation_euler','scale']:p.keyframe_insert(prop,frame=end,group=p.name)
- track=rig.animation_data.nla_tracks.new();track.name=name;strip=track.strips.new(name,1,action);track.mute=True
+ track=rig.animation_data.nla_tracks.new();track.name=name;track.strips.new(name,1,action);track.mute=True
 rig.animation_data.action=None
 for p in rig.pose.bones:p.location=(0,0,0);p.rotation_euler=(0,0,0);p.scale=(.0001,)*3 if p.name in props else (1,1,1)
 # Consolidate all meshes; vertex groups preserve the separate gesture bones.
 bpy.ops.object.select_all(action='DESELECT')
 for o in meshes:o.select_set(True)
-bpy.context.view_layer.objects.active=body;bpy.ops.object.join();body.name='Scallion and interaction props';meshes=[body]
+bpy.context.view_layer.objects.active=body;bpy.ops.object.join();body.name='Chive and contact interaction props';meshes=[body]
 # Export just the character and rig, separate from the studio lighting and scenery.
 bpy.ops.object.select_all(action='DESELECT');rig.select_set(True)
 for o in meshes:o.select_set(True)
@@ -202,5 +249,5 @@ def area(name,pos,power,size,color):
 area('Warm softbox',(-3,-4,6),650,4,(1,.89,.70));area('Blue fill',(3,-2,3),330,3,(.70,.83,1));area('Golden rim',(1,3,4),850,2,(1,.79,.40))
 camdata=bpy.data.cameras.new('Portrait camera');cam=bpy.data.objects.new('Portrait camera',camdata);scene.collection.objects.link(cam);cam.location=(3.1,-7.8,3.1);cam.rotation_euler=(Vector((0,0,1.47))-cam.location).to_track_quat('-Z','Y').to_euler();camdata.type='ORTHO';camdata.ortho_scale=3.85;scene.camera=cam
 scene.frame_set(1);bpy.ops.wm.save_as_mainfile(filepath=str(out/'scallion-candidate.blend'));scene.render.filepath=str(out/'scallion-front.png');bpy.ops.render.render(write_still=True)
-report={'status':'candidate_not_approved','tool':bpy.app.version_string,'source':'original authored Blender geometry; reference: immortal neutral stage 0','model':'scallion-neutral-stage0.glb','requiredClips':names,'meshObjects':len(meshes),'bytes':(out/'scallion-neutral-stage0.glb').stat().st_size,'note':'Only one neutral initial stage. Other stages/themes remain unfinished. No paid requests.'}
+report={'status':'candidate_not_approved','tool':bpy.app.version_string,'source':'original authored Blender chive geometry; narrow sheath and seven flat blades; neutral stage 0','model':'scallion-neutral-stage0.glb','requiredClips':names,'contactChecks':contact_checks,'meshObjects':len(meshes),'bytes':(out/'scallion-neutral-stage0.glb').stat().st_size,'note':'Only one neutral initial stage. Other stages/themes remain unfinished. No paid requests.'}
 (out/'report.json').write_text(json.dumps(report,indent=2));print('CANDIDATE_READY',json.dumps(report))
