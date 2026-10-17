@@ -2140,6 +2140,7 @@
   }
 </style>
 <link rel="stylesheet" href="assets/member-center.css">
+<link rel="stylesheet" href="assets/member-signin.css">
 <link rel="stylesheet" href="assets/member-strategy.css">
 <link rel="stylesheet" href="assets/member-trade.css">
 <link rel="stylesheet" href="assets/site-search.css">
@@ -8956,16 +8957,17 @@
   </div>
 
   <!-- Auth modal -->
-  <div id="authModal">
+  <div id="authModal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
     <div class="auth-box">
-      <button class="auth-close" onclick="closeAuthModal()">✕</button>
+      <button class="auth-close" type="button" aria-label="關閉登入視窗" onclick="closeAuthModal()">✕</button>
+      <div class="auth-brand" data-auth-brand></div>
       <div class="auth-tabs">
         <button class="auth-tab active" id="tabLogin"    onclick="switchAuthTab('login')">登入</button>
         <button class="auth-tab"        id="tabRegister" onclick="switchAuthTab('register')">註冊</button>
       </div>
       <h2 id="authTitle">歡迎回來</h2>
-      <div class="auth-field"><label>Email</label><input type="email" id="authEmail" placeholder="your@email.com"></div>
-      <div class="auth-field"><label>密碼</label><div class="pw-wrap"><input type="password" id="authPassword" placeholder="至少 6 個字元"><button class="pw-eye" type="button" onclick="togglePwEye()" id="pwEyeBtn"></button></div></div>
+      <div class="auth-field"><label>Email</label><input type="email" id="authEmail" autocomplete="username" aria-label="電子信箱" placeholder="請輸入電子信箱"></div>
+      <div class="auth-field"><label>密碼</label><div class="pw-wrap"><input type="password" id="authPassword" autocomplete="current-password" aria-label="密碼" placeholder="請輸入密碼（至少 6 個字元）"><button class="pw-eye" type="button" onclick="togglePwEye()" id="pwEyeBtn"></button></div></div>
       <button class="auth-submit" id="authSubmit" onclick="doAuth()">登入</button>
       <div id="authForgotRow" style="text-align:right;margin-top:8px">
         <a href="javascript:void(0)" onclick="sendPasswordReset()"
@@ -16727,6 +16729,7 @@
 
 </script>
 <script src="assets/member-identity.js" defer></script>
+<script src="assets/member-provider-icons.js" defer></script>
 <script src="assets/member-cloud.js" defer></script>
 <script src="assets/member-features.js" defer></script>
 <script src="assets/member-strategy-engine.js" defer></script>
