@@ -5,6 +5,7 @@ import io
 import os
 import urllib.request
 import urllib.parse
+import urllib.error
 import math
 import time
 from datetime import datetime, timezone, timedelta
@@ -1648,7 +1649,8 @@ def sma20_stage_scan(bars):
 # 開關全靠 Vercel 環境變數，程式不放任何金鑰：
 #   AI_PROVIDER        anthropic｜openai（不設＝有哪把金鑰就用哪家，兩把都有優先 anthropic）
 #   ANTHROPIC_API_KEY  / OPENAI_API_KEY   沒有金鑰 → 回假資料（stub），功能不壞
-#   AI_MODEL           不設＝anthropic 用 claude-haiku-5-5、openai 用 gpt-4.1-mini
+#   AI_MODEL           不設＝anthropic 用 claude-haiku-5-5、openai 用 gpt-6.1-sol（Responses API）
+#   AI_EFFORT          OpenAI 推理強度（預設 low；模型不支援會自動拿掉）
 #   AI_DAILY_LIMIT     每日最多真的呼叫幾次 AI（預設 300；需 SUPABASE_SERVICE_KEY 才能計數）
 #   SUPABASE_SERVICE_KEY  有才寫共享快取（page_cache kind=aibuy_<代號>）與每日計數
 # 流程：驗代號 → 讀該股 price_window 日線 → 先查共享快取（同資料日＋同模型）→ 沒有才呼叫 AI
@@ -1795,7 +1797,7 @@ def _aibuy_provider():
     key = akey if prov == "anthropic" else (okey if prov == "openai" else "")
     if not key:
         return None, None, None
-    model = (os.environ.get("AI_MODEL") or "").strip() or ("claude-haiku-5-5" if prov == "anthropic" else "gpt-4.1-mini")
+    model = (os.environ.get("AI_MODEL") or "").strip() or ("claude-haiku-5-5" if prov == "anthropic" else "gpt-6.1-sol")
     return prov, key, model
 
 
@@ -1881,17 +1883,37 @@ def _aibuy_call(prov, key, model, facts, png=None):
         u = resp.get("usage") or {}
         usage = {"input": u.get("input_tokens"), "output": u.get("output_tokens")}
     else:
-        body = {"model": model, "temperature": 0, "response_format": {"type": "json_object"},
-                "messages": [{"role": "system", "content": _AIBUY_SYSTEM + "\n只回傳 JSON 物件，欄位：verdict, score, summary, points[{label,text}], patterns[{name,status,confidence,detail}]。"},
-                             {"role": "user", "content": ([{"type": "image_url", "image_url": {"url": "data:image/png;base64," + b64}}] if b64 else [])
-                              + [{"type": "text", "text": facts}]}]}
-        req = urllib.request.Request("https://api.openai.com/v1/chat/completions", data=json.dumps(body).encode(), method="POST",
-                                     headers={"content-type": "application/json", "authorization": f"Bearer {key}"})
-        with urllib.request.urlopen(req, timeout=40) as r:
-            resp = json.loads(r.read())
-        text = resp["choices"][0]["message"]["content"]
+        # OpenAI：GPT-6 系列走 Responses API（/v1/responses）；看圖用 input_image、固定格式用 json_schema（strict）2026-10-17
+        body = {"model": model, "instructions": _AIBUY_SYSTEM,
+                "input": [{"role": "user", "content": ([{"type": "input_image", "image_url": "data:image/png;base64," + b64}] if b64 else [])
+                           + [{"type": "input_text", "text": facts}]}],
+                "text": {"format": {"type": "json_schema", "name": "aibuy", "schema": _AIBUY_SCHEMA, "strict": True}},
+                "reasoning": {"effort": (os.environ.get("AI_EFFORT") or "low").strip()}}
+
+        def _post(b):
+            rq = urllib.request.Request("https://api.openai.com/v1/responses", data=json.dumps(b).encode(), method="POST",
+                                        headers={"content-type": "application/json", "authorization": f"Bearer {key}"})
+            with urllib.request.urlopen(rq, timeout=40) as r:
+                return json.loads(r.read())
+        try:
+            resp = _post(body)
+        except urllib.error.HTTPError as e:                 # 非推理型模型不吃 reasoning 參數 → 拿掉重送一次
+            if e.code != 400:
+                raise
+            body.pop("reasoning", None)
+            resp = _post(body)
+        parts = []
+        for it in resp.get("output") or []:
+            if it.get("type") != "message":
+                continue
+            for c in it.get("content") or []:
+                if c.get("type") == "refusal":
+                    raise ValueError("模型拒答")
+                if c.get("type") == "output_text":
+                    parts.append(c.get("text", ""))
+        text = "".join(parts) or resp.get("output_text", "")
         u = resp.get("usage") or {}
-        usage = {"input": u.get("prompt_tokens"), "output": u.get("completion_tokens")}
+        usage = {"input": u.get("input_tokens"), "output": u.get("output_tokens")}
     out = json.loads(text)
     if out.get("verdict") not in ("偏多", "觀望", "偏空") or not isinstance(out.get("points"), list) or not out.get("summary"):
         raise ValueError("AI 回傳格式不符")
