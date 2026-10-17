@@ -33,3 +33,11 @@ OAuth 手動綁定還需要 Supabase Auth 開啟 **Allow manual linking**。未�
 - https://developers.line.biz/en/docs/line-login/login-button/
 
 手機登入與強制綁定的啟用狀態、API guard 與必要的資料庫權限部署見 [member-phone-rollout.md](member-phone-rollout.md)。目前正式強制尚未啟用。
+
+## 聯絡資料更改與手機入口（2026-10-17）
+
+已綁 Email／手機提供「更改 Email」／「更改手機」，沿用同帳號 authenticated contact-change 與驗證流程，不解除其他登入方式，不建立新會員。拒絕填入原本相同的聯絡方式；既有資料只在伺服器確認新聯絡方式後更新。
+
+手機登入入口即使 SMS 尚未開通也可開啟獨立頁面，只顯示手機與傳送驗證碼步驟；發送按鈕依真實服務狀態停用並說明原因，不發假驗證碼。登入與安全也能預覽手機綁定／更改頁。
+
+底部偶發橫向捲軸已重現：ma-auth-light 的 translateX(170%) 把裝飾 pseudo-element 推出卡片，438px 可視寬度變成 478px scrollWidth。動畫端點調整為 -20%～130%，滑光整段都在卡片範圍內；沒有以隱藏捲軸裁掉表單。測試涵蓋桌面、390px、320px 與動畫各時點。

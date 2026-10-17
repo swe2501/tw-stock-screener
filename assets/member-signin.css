@@ -6,7 +6,7 @@
 #authModal.open .auth-box::after{animation:ma-auth-light 6.8s ease-in-out infinite}
 @keyframes ma-auth-reveal{from{opacity:0;transform:translateY(9px) scale(.99)}to{opacity:1;transform:none}}
 @keyframes ma-auth-glow{0%,100%{box-shadow:0 28px 90px #12283c36,0 0 0 0 transparent}50%{box-shadow:0 28px 90px #12283c36,0 0 28px color-mix(in srgb,var(--accent) 13%,transparent)}}
-@keyframes ma-auth-light{0%,12%{transform:translateX(-80%);opacity:0}25%{opacity:.85}48%{transform:translateX(170%);opacity:0}100%{transform:translateX(170%);opacity:0}}
+@keyframes ma-auth-light{0%,12%{transform:translateX(-20%);opacity:0}25%{opacity:.85}48%{transform:translateX(130%);opacity:0}100%{transform:translateX(130%);opacity:0}}
 #authModal .auth-brand{display:flex;justify-content:center;margin:5px 0 24px}
 #authModal .auth-brand .gs-brand{display:flex;align-items:center;gap:12px;cursor:default;color:var(--text)}
 #authModal .auth-brand .gs-mark{width:56px;height:56px;border-radius:17px;box-shadow:0 6px 20px #163c4d0d}
@@ -125,3 +125,5 @@
 @media(max-height:860px){#authModal .auth-box{padding:16px 24px 14px}#authModal .auth-brand{margin-bottom:10px}#authModal .auth-brand .gs-mark{width:56px!important;height:56px!important;border-radius:17px!important}#authModal .auth-brand .gs-name b{font-size:25px!important}#authModal .auth-tabs{margin-bottom:9px}#authModal .auth-box h2{font-size:18px;margin-bottom:9px}#authModal .auth-field{margin-bottom:7px}#authModal .auth-field input{min-height:40px;padding:8px 13px}#authModal .auth-account-switch{margin:6px 0 9px}#authModal .academy-social-grid{gap:6px}#authModal .academy-social-grid button{min-height:40px}#authModal #authForgotRow{margin-top:6px!important}}
 
 @media(max-height:700px){#authModal .auth-box{padding:12px 22px 10px}#authModal .auth-box h2{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);margin:0}#authModal .auth-brand .gs-mark{width:50px!important;height:50px!important}#authModal .auth-brand{margin-bottom:8px}#authModal .auth-tabs{margin-bottom:8px}#authModal .academy-social-grid button{min-height:38px}#authModal .academy-social-status{font-size:10px;margin-top:5px}#authModal .auth-account-switch{margin:4px 0 7px}}
+
+#authModal.is-phone-view .auth-box h2{position:static;width:auto;height:auto;clip-path:none;margin:0 0 13px}
