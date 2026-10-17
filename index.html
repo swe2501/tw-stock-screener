@@ -12761,7 +12761,7 @@
       if (_refreshing) return _refreshing;
       _refreshing = (async () => {
         try {
-          const r = await fetch('https://tw-stock-screener-neon.vercel.app/api/auth', {
+          const r = await fetch('/api/auth', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: 'refresh', refresh_token: _authRefresh }),
@@ -12987,7 +12987,7 @@
       if (_authTab === 'register' && password !== confirmation) { errEl.textContent = '兩次輸入的密碼不一致，請重新確認'; document.getElementById('authPasswordConfirm').focus(); return; }
       btn.disabled = true; btn.textContent = '處理中...';
       try {
-        const r = await fetch('https://tw-stock-screener-neon.vercel.app/api/auth', {
+        const r = await fetch('/api/auth', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: _authTab, email, password, ...(_authTab === 'register' ? { password_confirm: confirmation } : {}) }),
@@ -13013,12 +13013,13 @@
     }
     async function doLogout() {
       try {
-        await fetch('https://tw-stock-screener-neon.vercel.app/api/auth', {
+        const response = await fetch('/api/auth', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_authToken}` },
           body: JSON.stringify({ action: 'logout', email: '', password: '' }),
         });
-      } catch(_) {}
+        if (!response.ok) { showToast('登出尚未完成，請稍後重試；裝置名額尚未釋放'); return; }
+      } catch(_) { showToast('無法連線完成登出，請恢復網路後重試'); return; }
       _authToken = null; _authRefresh = null; _authUser = null;
       localStorage.removeItem('sb_token');
       localStorage.removeItem('sb_refresh');
