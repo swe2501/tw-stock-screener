@@ -1568,6 +1568,7 @@ SMA20_DOJI_RANGE = 0.02  # 十字線另需當日振幅 (高−低) ≥ 收盤 2%
 SMA20_FROM_BELOW_N = 3   # 買1「從月線下突破」：前 3 根內至少一根收盤在當天月線下（剛從下面站上來；早已站上月線的不算）2026-10-17 用戶指定
 SMA20_AWAY = 0.03        # 買2 前股價需先「離開月線」：買1 之後至少一天收盤 ≥ 月線×(1+3%)，之後第一次回測不破才算（買1 隔天還貼著月線不算回測）2026-10-17
 SMA20_B2_NO_BLACK = 0.03  # 買2 當天不能是長黑：(開−收)/收 ≥ 3% 不算回測不破（大跌當天碰線不算止穩）
+SMA20_B3_MAX_DEPTH = 0.05  # 買3 收盤跌破月線不能太深：收盤 ≥ 月線×(1−5%)（暴跌後的止跌 K 不算）2026-10-17 用戶指定
 SMA20_RESET_N = 3       # 連續 N 天 MA 下彎才重置該輪（健康回測只壓 1~2 天 MA，不該殺掉整輪）2026-10-17
 
 
@@ -1635,7 +1636,7 @@ def sma20_stage_scan(bars):
                 out.append((i, 2))
         elif stage == 2:
             doji = abs(c - o) / c <= SMA20_DOJI_BODY and (h - l) / c >= SMA20_DOJI_RANGE   # 2026-10-17 十字線放寬
-            if b2_gain and c < m and ((c - o) / c >= SMA20_LONG_RED or (min(o, c) - l) / c >= SMA20_LONG_TAIL or doji):   # 買3：收盤跌破月線＋止跌K(長紅/長下影/十字)；不再要求整根都在月線下
+            if b2_gain and m * (1 - SMA20_B3_MAX_DEPTH) <= c < m and ((c - o) / c >= SMA20_LONG_RED or (min(o, c) - l) / c >= SMA20_LONG_TAIL or doji):   # 買3：收盤跌破月線＋止跌K(長紅/長下影/十字)；不再要求整根都在月線下
                 stage = 3
                 out.append((i, 3))
             elif c > b2_close:                     # 2026-10-17 用戶指定：買2 之後從沒賺過（收盤都沒高於買2 收盤）就不標買3
