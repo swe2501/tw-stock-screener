@@ -1561,6 +1561,10 @@ SMA20_VOL_MULT = 1.3    # 帶量：今日量 ≥ 1.3 × max(截至昨日 5 日�
 SMA20_LONG_RED = 0.03   # 長紅棒：(收−開)/收 ≥ 3%
 SMA20_LONG_TAIL = 0.03  # 長下影線：(min(開,收)−低)/收 ≥ 3%
 SMA20_PREV_DOWN_N = 5   # 原本下彎：前 5 個交易日內至少一天 MA 低於前一天
+SMA20_TOUCH_TOL = 0.005  # 買2「碰到月線」：最低 ≤ 月線×(1+0.5%)（差一點點沒碰到也算）2026-10-17 用戶指定
+SMA20_BREAK_TOL = 0.01   # 買2「不破」：最低 ≥ 月線×(1−1%)（盤中只能破一點點，破太深不算回測不破）
+SMA20_DOJI_BODY = 0.005  # 買3 十字線放寬：實體 |收−開| ≤ 收盤 0.5%（原本要開＝收）
+SMA20_DOJI_RANGE = 0.02  # 十字線另需當日振幅 (高−低) ≥ 收盤 2%，排除幾乎不動的小 K
 SMA20_RESET_N = 3       # 連續 N 天 MA 下彎才重置該輪（健康回測只壓 1~2 天 MA，不該殺掉整輪）2026-10-17
 
 
@@ -1614,11 +1618,12 @@ def sma20_stage_scan(bars):
                 stage = 1
                 out.append((i, 1))
         elif stage == 1:
-            if l <= m and c > m:                   # 買2 回測不破：盤中碰月線、收盤站回（不再要求月線嚴格上彎）
+            if m * (1 - SMA20_BREAK_TOL) <= l <= m * (1 + SMA20_TOUCH_TOL) and c > m:   # 2026-10-17 回測月線不破：最低碰到月線（差 0.5% 內也算）、最多破 1%、收盤站回；原註解： 買2 回測不破：盤中碰月線、收盤站回（不再要求月線嚴格上彎）
                 stage = 2
                 out.append((i, 2))
         elif stage == 2:
-            if c < m and ((c - o) / c >= SMA20_LONG_RED or (min(o, c) - l) / c >= SMA20_LONG_TAIL or o == c):   # 買3：收盤跌破月線＋止跌K(長紅/長下影/十字)；不再要求整根都在月線下
+            doji = abs(c - o) / c <= SMA20_DOJI_BODY and (h - l) / c >= SMA20_DOJI_RANGE   # 2026-10-17 十字線放寬
+            if c < m and ((c - o) / c >= SMA20_LONG_RED or (min(o, c) - l) / c >= SMA20_LONG_TAIL or doji):   # 買3：收盤跌破月線＋止跌K(長紅/長下影/十字)；不再要求整根都在月線下
                 stage = 3
                 out.append((i, 3))
     return out
