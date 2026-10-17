@@ -79,3 +79,7 @@ body .member-page .mc-muted{font-size:16px!important;line-height:1.8}
 @keyframes gb-bookmark-sweep{0%,18%{transform:translateX(-130%)}48%,100%{transform:translateX(130%)}}
 @media(max-width:620px){#gbDetail .gb-detail-nav{gap:6px}#gbDetail .gb-detail-nav button{padding:9px 10px;gap:5px}}
 @media(prefers-reduced-motion:reduce){#gbDetail .gb-detail-nav button,#gbDetail .gb-bookmark-mark{transition:none}#gbDetail .gb-detail-nav button:is(:hover,:focus-visible,[aria-current=true]){transform:none}#gbDetail .gb-detail-nav button:before{animation:none!important}}
+
+/* Theme controls use live theme tokens, never a cached foreground classification. */
+#groupBookView .gb-seg button{color:var(--text-muted);-webkit-text-fill-color:currentColor}
+#groupBookView .gb-seg button.on{color:var(--text-primary);-webkit-text-fill-color:currentColor}
