@@ -1,5 +1,7 @@
 -- APPLIED 2026-10-18 to bruqrbvbjxntgoljxsne after explicit shared-site approval.
--- Custom Access Token Hook enabled. Initial migration: do not rerun.
+-- INCIDENT 2026-10-18: Hook DISABLED after existing users were locked out.
+-- Bootstrap below is defective: oldest historical sessions are not current devices.
+-- Historical migration only: do not rerun or re-enable without recovery validation.
 begin;
 create table public.member_device_sessions (
   user_id uuid not null references auth.users(id) on delete cascade,

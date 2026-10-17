@@ -1,6 +1,12 @@
 # 兩個登入工作階段上限
 
-狀態：2026-10-18 已取得使用者明確同意，SQL 套用至共用專案 bruqrbvbjxntgoljxsne，Custom Access Token Hook 已顯示 Enabled，指向 public.member_device_limit_hook。限制適用 UAT 與正式站。
+目前狀態（2026-10-18 事故處置）：共用專案 bruqrbvbjxntgoljxsne 的 Custom Access Token Hook 已停用，管理頁確認 Disabled；使用者已在原先被擋的裝置重試並明確回覆「已可以登入」。UAT 與正式站目前均不執行兩台限制。不要重新啟用原函式。
+
+原因與證據：初次遷移依 created_at 選每個帳號最早兩筆 auth.sessions 直接占名額，無法代表目前使用的兩個瀏覽器。線上僅讀彙總確認 14 筆保留名額皆對應一天以前仍存在的 Auth session，沒有讀取或輸出 token。若使用者登出的是另一筆較新的 session，這些舊名額不受影響。這是可重現的啟用設計缺陷；尚未取得各裝置請求紀錄，不能斷言每次登出都因同一原因失敗。
+
+修復候選（尚未套用）：database/member-device-limit-recovery.sql 保留舊名額歷史、增加 policy_epoch 與預設 false 的政策開關。新政策只計實際核發時登記到該 epoch 的 session，不從歷史 Auth sessions 預占名額；停用不分配名額。需要 Dashboard Hook 與資料庫政策雙重明確啟用。tests/member-device-limit.test.cjs 已加入兩筆舊 Auth session 的既有帳號 fixture，驗證舊版 bootstrap 的占位、修正版預設不阻擋、不新增名額、前兩筆實際登入可用、第三筆拒絕、登出釋放後可重試、權限隔離。這仍不是三個獨立瀏覽器的真實 Auth 驗收，不可因此重新啟用。
+
+前次啟用紀錄：2026-10-18 使用者明確同意後，初次 SQL 套用至共用專案並啟用 Hook。以下為當時驗證紀錄，保留供追查，不代表目前仍啟用。
 
 線上驗證：既有物件預檢為 NULL，確認沒有既有 Auth Hook 後才建立。可回滾 SQL 測試通過前兩名額放行、第三名額拒絕、原 session 重用、刪除測試 Auth session 後釋放名額；所有測試資料 ROLLBACK。SQL Editor 不允許 SET ROLE supabase_auth_admin，因此未假稱完成此角色的實際執行測試。Catalog 確認 RLS 已啟用、Auth 角色具有函式與表權限、authenticated/anon 無直接執行權限、所有帳號名額均未超過二個。驗證查詢：https://supabase.com/dashboard/project/bruqrbvbjxntgoljxsne/sql/460934de-d330-4ddb-b886-c7608333e03a 。啟用後以既有瀏覽器登入進入 UAT 會員總覽，會員資料仍可讀取。
 
