@@ -2,7 +2,7 @@
 
 > **2026-10-16 會員／自選／策略最新交接**：請先讀 [HANDOFF_MEMBER_2026-10-16.md](HANDOFF_MEMBER_2026-10-16.md)。包含本機 justy-layout／UAT 最新狀態、分類溢位、拖曳排序、私房篩選器與尚未啟用的會員服務；舊的部署範例仍須遵守目前 AGENTS.md。
 
-# 交接文件 — AI_stock 盤後研究院（2026-10-05；最後更新 2026-10-13）
+# 交接文件 — AI_stock 盤後研究院（2026-10-05；最後更新 2026-10-18）
 
 本文件記錄近期 session 新增/修改的功能、資料來源、部署流程與待辦，供合夥人與後續開發者接手。
 
@@ -370,3 +370,34 @@ page_cache 是 **uat 與 prod 共用**同一個 Supabase。若推盤中到原 ki
 - 估算約 US$0.02～0.03／次；建議 `AI_DAILY_LIMIT=100`（最壞約 US$3／日）。
 - Vercel 只要設 `OPENAI_API_KEY`（沒有 Anthropic 金鑰時自動用 OpenAI）；兩把都設時用 `AI_PROVIDER=openai` 指定。
 - 仍未用真金鑰測過。
+
+## 十三、2026-10-18 台指期／富台指 K 棒＋外資結算成本 改用官方源（已上 uat，未上 prod）
+
+合夥人回報：富台指期 K 棒、台指期 K 棒、以及外資結算成本的「日盤／夜盤」數字是錯的。改用期交所官方源修正，分三處 A／B／C，同一次 commit（Andrew `a5361c7` → uat merge `f877daa`）。**只動 `api/chart.py`、`scripts/index_history.py` 兩檔，未新增 api 函式（維持 12 個上限）。**
+
+### A. 台指期（`wtx&`）日盤 — `scripts/index_history.py`
+- 原本四檔都走玩股網 Playwright 抓 `historical-daily-candlesticks`，但 `wtx&` 頁面每跑必因導頁 race（Execution context destroyed…navigation）失敗；且日盤本就該對齊期交所官方價。
+- 改法：`wtx&` **不經瀏覽器**，走 `_taifex_tx_ohlc(days=15)` → 期交所 `futDataDown`（`down_type=1`，POST，`commodity_id=TX`），取近月 TX「**一般（日盤）**」OHLC。近月＝每日**成交量最大的單月份合約**（`\d{6}`，排除含「/」價差與已到期月），與 `api/chart.py fetch_tx_sessions` 同口徑。
+- cookie 重用 `api/chart.py` 的 `_taifex_cookie_str()`（script 內 `sys.path` 插入 `api/` 後 `import chart`）。
+- 尺度驗證：10/06 50060、10/07 49979、10/08 49349 與玩股網 `wtx&` **逐日完全一致** → 同一標的同尺度，可安全銜接表內既有 2 年玩股網歷史；市場是真的從 ~49k 跌到 ~47k。
+- 表內歷史 2 年已在，每晚只補最近約 15 天；防呆改為 `<3 筆` 才略過（TAIFEX 僅回最近十幾天）。
+
+### B. 富台指（`stwn&`）／台指VIX（`vixtwn`）／櫃買（`two`）— `scripts/index_history.py`
+- 問題：玩股網 `historical-daily-candlesticks` 端點**落後約 6 天**（卡在 10/12），所以 K 棒最新幾天是舊的。
+- 改法：historical（2 年 backfill）之外，再讀**頁面自身打出**的 `daily-candlesticks?after=<近幾天>`（`_recent_url(page)`，正則 `[^-]daily-candlesticks\?after=` 以排除 historical-），兩者合併，`_to_rows(code, raw + recent)`（recent 在後 → 同日後者勝）。
+- ⚠️ 關鍵雷點：**不要自己回推 `after` 值**（回推 30 天會被端點拒回 null），該端點只接受靠近最新交易日的 after，所以**原樣沿用頁面打出的 after**。
+- 結果：stwn& 補到最新交易日（10/19 為玩股網自己的成形中夜盤 bar，open＝前收，與其官網一致，照收不動）、VIX／櫃買補到 10/16。
+
+### C. 外資結算成本 日盤／夜盤 — `api/chart.py`
+- `fetch_tx_sessions()` 改以 **期交所 `futDataDown`（同日可得）為主**、`_tx_sessions_from_taifex()`；openapi 為備援（先前錯誤數字來自 openapi 路徑，T+1／Vercel 封鎖）。
+- 回傳 `/api/chart?code=TX=F&session=split` → `sessions.day/night`：各含 `price／date／contractMonth／session`，`source_url` 指向 `futDataDown`，近月日／夜盤收盤取自官方。
+- 驗證（本機跑 `a5361c7` 同一份程式、冷啟直連官方）：日盤 **47242**、夜盤 **47366**，近月 **202610**、日期 **2026-10-16**；日盤 47242 與 `index_history` 的 `wtx&` 10-16 收盤一致，兩條管線對得起來。
+
+### 驗證與界限
+- A/B 資料直接寫 uat/prod **共用的 Supabase `index_history`**，前端不等 build 即生效；四檔 REST 查詢皆已到最新交易日、OHLC 尺度正確（wtx& ~47k、stwn& ~4000、VIX ~26、櫃買 ~400）。
+- C 需 uat Vercel build 後生效；uat 的 `/api/chart` 擋在 **Vercel 登入牆**（302 Protected），未登入無法直接 curl，故 C 用「相同 commit 本機直打官方源」取證，JSON 如上。要打到 uat 那台需先在瀏覽器登入 Vercel 再開圖。
+- 偶發雷：B 的三檔走 Playwright，單檔偶爾抓不到 historical（如 10-18 這次 `two` 中一次），被 `<100 筆` 防呆擋下不寫壞資料，`python scripts/index_history.py --code two` 重跑即補回；`wtx&`（期交所）無此問題、穩定。
+
+### 待辦
+- 推 prod 時這節一起上，並照鐵則把 `justy-layout` 對齊 uat（`git push origin origin/uat:justy-layout`）。
+- 夜間排程若遇玩股網單檔 flake，隔晚自動補；如要更穩可對 B 三檔加重試。
