@@ -47,3 +47,10 @@ body.mc-chart-open :is(#greedPopup,#strengthPopup,#btAddPopup,#btSellPopup,#_stF
 .ms-chat-dialog [data-ai-status]{margin:2px 0}.ms-chat-dialog .ms-guide-choices button{margin:0;min-height:32px;line-height:1.4;font-size:11px;padding:7px 10px}
 
 @media(max-height:650px){.ms-chat-dialog .ms-assistant{display:block;overflow:auto}.ms-chat-dialog .ms-ai-conversation{max-height:140px;min-height:60px}.ms-chat-dialog [data-ai-proposal]{max-height:none}.ms-chat-dialog .ms-guide-choices{max-height:110px}}
+
+/* The launcher can be placed anywhere; hover changes its expression. */
+.ms-chat-launcher{touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab}.ms-chat-launcher.is-dragging{cursor:grabbing;transform:none;animation:none;transition:none}.ms-chat-launcher.is-dragging svg{transform:none}.ms-mascot-eyes-happy,.ms-mascot-smile{opacity:0}.ms-mascot-eyes-rest,.ms-mascot-eyes-happy,.ms-mascot-smile{transition:opacity .16s ease}.ms-chat-launcher:is(:hover,:focus-visible):not(.is-dragging) .ms-mascot-eyes-rest{opacity:0}.ms-chat-launcher:is(:hover,:focus-visible):not(.is-dragging) .ms-mascot-eyes-happy,.ms-chat-launcher:is(:hover,:focus-visible):not(.is-dragging) .ms-mascot-smile{opacity:1}.ms-chat-launcher.ms-hint-below .ms-chat-question{bottom:auto;top:calc(100% + 7px);border-radius:6px 50% 50% 50%}@media(prefers-reduced-motion:reduce){.ms-mascot-eyes-rest,.ms-mascot-eyes-happy,.ms-mascot-smile{transition:none}}
+
+.ms-chat-launcher.is-docking{transition:left .22s ease,top .22s ease,transform .2s ease,box-shadow .2s ease}@media(prefers-reduced-motion:reduce){.ms-chat-launcher.is-docking{transition:none}}
+
+.ms-chat-launcher:active{transform:none}

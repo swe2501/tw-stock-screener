@@ -22,6 +22,7 @@ const root=path.resolve(__dirname,'..'),output=process.env.QA_OUTPUT;
  });
  await p.goto('https://strategy.fixture.test/#member/strategy');
  await p.locator('.ms-creation-workspace').waitFor({timeout:20000});
+ await p.locator('.ms-chat-launcher').hover();await p.waitForFunction(()=>getComputedStyle(document.querySelector('.ms-chat-launcher .ms-mascot-smile')).opacity==='1');if(output){fs.mkdirSync(output,{recursive:true});await p.locator('.ms-chat-launcher').screenshot({path:path.join(output,'launcher-smile.png')});}
  assert.equal(await p.locator('.ms-chat-dialog').isVisible(),false);await p.getByRole('button',{name:'開啟策略小書靈聊天室',exact:true}).click();await p.getByText('本機引導可用 · AI 自由討論尚未啟用',{exact:true}).waitFor();
  assert.equal(await p.locator('[data-ai-form] button').isDisabled(),false);assert.equal(await p.locator('[data-assistant-mode] [value=ai]').evaluate(e=>e.disabled),true);
  assert.equal(await p.locator('[data-rule-param=fast]').first().inputValue(),'5');
