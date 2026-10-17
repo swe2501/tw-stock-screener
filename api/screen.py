@@ -596,13 +596,17 @@ def _load_groupbook_prices(codes):
         off += 1000
 
 
+def _snapshot_params(kind):
+    # Legacy single rows remain readable; all new versions are append-only.
+    return [("or", "(kind.eq." + kind + ",kind.like." + kind + "__*)"),
+            ("select", "payload,updated_at"), ("order", "updated_at.desc,kind.desc"), ("limit", "1")]
+
+
 def _read_groupbook_research(quarter):
     import re
     if not re.fullmatch(r"20[0-9]{2}Q[1-4]", quarter):
         return {"error": "invalid research quarter"}
-    status, rows = _cache_sb("/page_cache", params=[
-        ("kind", "eq.groupbook_research_" + quarter), ("select", "payload,updated_at"), ("limit", "1")
-    ])
+    status, rows = _cache_sb("/page_cache", params=_snapshot_params("groupbook_research_" + quarter))
     if status != 200 or not isinstance(rows, list) or not rows:
         return {"error": "research snapshot unavailable"}
     data = rows[0].get("payload")
@@ -613,9 +617,7 @@ def _read_groupbook_research(quarter):
 
 def _read_groupbook_snapshot(window=10):
     window = 5 if window <= 5 else (20 if window >= 20 else 10)
-    status, rows = _cache_sb("/page_cache", params=[
-        ("kind", "eq.groupbook_" + str(window)), ("select", "payload,updated_at"), ("limit", "1")
-    ])
+    status, rows = _cache_sb("/page_cache", params=_snapshot_params("groupbook_" + str(window)))
     if status != 200 or not isinstance(rows, list) or not rows:
         return {"error": "group snapshot unavailable"}
     data = rows[0].get("payload")
@@ -720,9 +722,7 @@ def _fetch_groupbook(window=10, price_rows=None):
 
 
 def _read_focus_snapshot(top_n=30):
-    status, rows = _cache_sb("/page_cache", params=[
-        ("kind", "eq.focus"), ("select", "payload,updated_at"), ("limit", "1")
-    ])
+    status, rows = _cache_sb("/page_cache", params=_snapshot_params("focus"))
     if status != 200 or not isinstance(rows, list) or not rows:
         return {"error": "focus snapshot unavailable"}
     data = rows[0].get("payload")

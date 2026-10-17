@@ -8,6 +8,7 @@ import json
 import os
 from pathlib import Path
 import urllib.request
+import uuid
 
 ROOT = Path(__file__).resolve().parent.parent
 WINDOWS = (5, 10, 20)
@@ -37,11 +38,18 @@ def publish(env, rows):
     key = env.get("SUPABASE_SERVICE_KEY")
     if not key:
         raise ValueError("SUPABASE_SERVICE_KEY is required for snapshot publication")
+    stamp = datetime.datetime.now(datetime.timezone.utc)
+    version = stamp.strftime("%Y%m%dT%H%M%S%fZ") + "_" + uuid.uuid4().hex
+    history = []
+    for row in rows:
+        snapshot_id = row["kind"] + "__" + version
+        history.append(dict(row, kind=snapshot_id, updated_at=stamp.isoformat(),
+                            payload=dict(row["payload"], snapshotId=snapshot_id, generatedAt=stamp.isoformat())))
     request = urllib.request.Request(
-        env["SUPABASE_URL"] + "/rest/v1/page_cache?on_conflict=kind",
-        data=json.dumps(rows, ensure_ascii=False).encode("utf-8"), method="POST",
+        env["SUPABASE_URL"] + "/rest/v1/page_cache",
+        data=json.dumps(history, ensure_ascii=False).encode("utf-8"), method="POST",
         headers={"Content-Type": "application/json", "apikey": key, "Authorization": "Bearer " + key,
-                 "Prefer": "resolution=merge-duplicates,return=minimal"})
+                 "Prefer": "return=minimal"})
     with urllib.request.urlopen(request, timeout=60) as response:
         if response.status not in (200, 201, 204):
             raise RuntimeError("Snapshot publication failed")

@@ -2,6 +2,7 @@
 import datetime
 import json
 import math
+import ssl
 from pathlib import Path
 import urllib.request
 from groupbook_precompute import publish
@@ -10,6 +11,15 @@ SOURCES = (
     ("上市", "https://openapi.twse.com.tw/v1/opendata/t187ap05_L"),
     ("上櫃", "https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap05_O"),
 )
+
+def official_response(url):
+    context=ssl.create_default_context()
+    # Python 3.13+ strict RFC extensions reject a legacy official-site chain.
+    # Keep CA, hostname, validity and signature verification enabled.
+    context.verify_flags &= ~ssl.VERIFY_X509_STRICT
+    request=urllib.request.Request(url,headers={"User-Agent":"groupbook-research/1.0"})
+    return urllib.request.urlopen(request,timeout=60,context=context)
+
 
 def number(value):
     try:
@@ -95,8 +105,7 @@ def run(env):
     if not env.get("SUPABASE_SERVICE_KEY"): raise ValueError("Service key required")
     datasets=[]
     for _, source in SOURCES:
-        req=urllib.request.Request(source, headers={"User-Agent":"groupbook-research/1.0"})
-        with urllib.request.urlopen(req, timeout=60) as response: rows=json.load(response)
+        with official_response(source) as response: rows=json.load(response)
         datasets.append((source,rows))
     groups=json.loads((ROOT/"group-catalog.json").read_text(encoding="utf-8"))["groups"]
     today=datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8))).date()
@@ -105,7 +114,7 @@ def run(env):
     urls=["https://openapi.twse.com.tw/v1/opendata/t187ap06_L_"+kind for kind in ("ci","ins","basi","bd","mim","fh")]
     urls += ["https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap06_O_"+kind for kind in ("ci","ins","basi","bd","mim")]
     def fetch_financial(url):
-        with urllib.request.urlopen(urllib.request.Request(url,headers={"User-Agent":"groupbook-research/1.0"}),timeout=60) as response:
+        with official_response(url) as response:
             return url,json.load(response)
     with ThreadPoolExecutor(max_workers=4) as pool:
         financial_data=list(pool.map(fetch_financial,urls))
