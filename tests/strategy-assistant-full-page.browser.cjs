@@ -27,7 +27,7 @@ const root=path.resolve(__dirname,'..'),output=process.env.QA_OUTPUT;
  assert.equal(await launch.locator('.ms-owl-network circle').count(),4);
  for(const theme of ['light','dark']){
   await p.evaluate(theme=>document.documentElement.dataset.theme=theme,theme);
-  assert.equal(await launch.locator('.ms-brand-owl').evaluate(e=>getComputedStyle(e).getPropertyValue('--owl-ink').trim()),theme==='light'?'#343a40':'#eef1f4');
+  assert.equal(await launch.locator('.ms-brand-owl').evaluate(e=>getComputedStyle(e).getPropertyValue('--owl-ink').trim()),theme==='light'?'#29313a':'#eef1f4');
   await launch.hover();await p.waitForTimeout(220);
   assert.equal(await launch.locator('.ms-mascot-smile').evaluate(e=>getComputedStyle(e).opacity),'1');
   assert.notEqual(await launch.locator('.ms-owl-wing-left').evaluate(e=>getComputedStyle(e).transform),'none');
@@ -46,8 +46,8 @@ const root=path.resolve(__dirname,'..'),output=process.env.QA_OUTPUT;
  await p.setViewportSize({width:1512,height:1050});
  const start=await launch.boundingBox();await p.mouse.move(start.x+start.width/2,start.y+start.height/2);await p.mouse.down();await p.mouse.move(600,350,{steps:12});await p.mouse.up();assert.equal(await p.locator('.ms-chat-dialog').isVisible(),false);assert.ok(await launch.evaluate(e=>getComputedStyle(e).transitionTimingFunction.includes('cubic-bezier')));assert.ok(await launch.evaluate(e=>parseInt(e.style.getPropertyValue('--ms-dock-duration'))>=600));await p.waitForFunction(()=>document.querySelector('.ms-chat-launcher').getBoundingClientRect().left<=14);
 
- await launch.evaluate(e=>{window.hintTimes=[];let on=false;new MutationObserver(()=>{const next=e.classList.contains('ms-hint-visible');if(next&&!on)window.hintTimes.push(performance.now());on=next;}).observe(e,{attributes:true,attributeFilter:['class']});});
- await p.waitForFunction(()=>window.hintTimes.length>=2,{},{timeout:7500});const hintTimes=await p.evaluate(()=>window.hintTimes);assert.ok(hintTimes[1]-hintTimes[0]>=2800&&hintTimes[1]-hintTimes[0]<3400);assert.equal(await launch.locator('>svg').evaluate(e=>getComputedStyle(e).animationName),'ms-mascot-glimmer');
+ await launch.evaluate(e=>{window.hintTimes=[];let on=e.classList.contains('ms-hint-visible');new MutationObserver(()=>{const next=e.classList.contains('ms-hint-visible');if(next&&!on)window.hintTimes.push(performance.now());on=next;}).observe(e,{attributes:true,attributeFilter:['class']});});
+ await p.waitForFunction(()=>window.hintTimes.length>=2,{},{timeout:7500});const hintTimes=await p.evaluate(()=>window.hintTimes);assert.ok(hintTimes[1]-hintTimes[0]>=2800&&hintTimes[1]-hintTimes[0]<3400,JSON.stringify(hintTimes));assert.equal(await launch.locator('>svg').evaluate(e=>getComputedStyle(e).animationName),'ms-mascot-glimmer');
  await p.locator('.ms-chat-launcher').hover();await p.waitForFunction(()=>getComputedStyle(document.querySelector('.ms-chat-launcher .ms-mascot-smile')).opacity==='1');if(output){fs.mkdirSync(output,{recursive:true});await p.locator('.ms-chat-launcher').screenshot({path:path.join(output,'launcher-smile.png')});}
  assert.equal(await p.locator('.ms-chat-dialog').isVisible(),false);await p.getByRole('button',{name:'開啟策略小書靈聊天室',exact:true}).click();await p.getByText('本機引導可用 · AI 自由討論尚未啟用',{exact:true}).waitFor();
  assert.equal(await p.locator('.ms-chat-head>svg.ms-brand-owl').count(),1);assert.ok(await p.locator('.ms-ai-message.assistant svg.ms-brand-owl').count()>0);assert.equal(await p.locator('[data-ai-form] button').isDisabled(),false);assert.equal(await p.locator('[data-assistant-mode] [value=ai]').evaluate(e=>e.disabled),true);
