@@ -24,3 +24,8 @@
 Codex heartbeat「Vercel 部署權杖到期提醒」每天台北 09:00 檢查非敏感到期變數，距到期 7、3、1 天各提醒，更新變數後按新期限；電腦與 Codex 必須可執行，非雲端 email 保證。部署前 verify_vercel_credential.py 以固定 GET 檢查兩個專案，不建立部署、不列印 token；7 天內警告，到期或 401/403 明確失敗。
 
 更換步驟：Vercel account/settings/tokens 建立新權杖 → GitHub repository Settings / Secrets and variables / Actions 更新 VERCEL_DEPLOY_TOKEN → Variables 更新 VERCEL_DEPLOY_TOKEN_EXPIRES_AT → 先 verify，成功後重跑部署；舊權杖撤銷須使用者確認。到期不影響已上線服務。
+
+## 雲端實測狀態（台北 2026-10-19）
+GitHub run 39146428198：scope 與 verify 成功；兩個 CLI 部署均收到 api-deployments-free-per-day（超過 100 次，約 24 小時後重試）。沒有繼續重試，也未停用原 UAT Git 自動部署。VERCEL_FILTERED_UAT_ENABLED 已退回 verify，僅執行事前範圍及唯讀權杖檢查。新入口實際建置、固定網址與 App-only UAT 零部署驗收尚未完成；不可宣稱已完全解決額度。
+
+待額度恢復後：將開關設為 true → 重跑上述工作流（整個範圍與 verify 一起驗證）→ 確認兩個部署 ready 且固定 UAT/測試後端網址、登入與 API 正常 → 以新提交設定兩份 vercel.json 的 git.deploymentEnabled.uat=false 關閉重複 Git 入口 → 觀察純 App UAT push 沒有 Vercel 部署。不要在新入口未成功時先關舊入口；正式 prod 保持不變。若後續程式已更新，先同步並測試最新 UAT，勿拿舊提交蓋過新版本。
