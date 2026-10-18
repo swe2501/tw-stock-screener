@@ -1,4 +1,4 @@
-> **2026-10-18 網站＋App 共同開發**：合夥人接手先看 [docs/collaboration/README.md](docs/collaboration/README.md)。App 位於 `apps/mobile`，會員與資料服務規格共用；各自使用功能分支與獨立工作目錄。新增安全同步／整合工具與 GitHub 檢查，不改現有正式站、資料庫或登入設定。
+> **2026-10-18 最新分工與本機入口修復**：使用者已取消本對話／JUSTY 的 App 開發，交由合夥人接續；網站工作照常。保留合夥人 `apps/mobile` 與共用架構，勿整批回退。網站唯一主程式為 `apps/web/index.html`；根目錄補上相容轉接 `index.html`，讓原本本機書籤／雙擊入口繼續使用，且保留 query／hash。合夥人接手先看 [docs/collaboration/README.md](docs/collaboration/README.md)。
 
 最新交易紀錄與目標：[HANDOFF_TRADING_2026-10-16.md](HANDOFF_TRADING_2026-10-16.md)
 

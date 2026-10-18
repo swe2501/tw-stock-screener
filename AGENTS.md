@@ -1,5 +1,7 @@
 # AGENTS.md — 本 repo 的 AI agent 分工規範
 
+> **2026-10-18 使用者最新分工**：JUSTY 已取消本對話的手機 App 開發，交由合夥人接手。本網站工作區後續專注網站修正，不繼續建立／建置／發布 JUSTY 的 App。保留合夥人已有的 `apps/mobile`、共用規格與分支；取消個人任務不等於回退共同專案或刪除合夥人成果。原根目錄 `index.html` 僅作本機相容轉接，網站唯一原始碼仍在 `apps/web/index.html`。
+
 > **2026-10-18 人工指定的網站／App 協作設定**：先讀 [docs/collaboration/README.md](docs/collaboration/README.md)。使用者已要求在同一專案建立 App 協作骨架；App 位於 `apps/mobile`，使用獨立工作分支／worktree。此規則適用人工指定開發，**不擴張 hot_topics 自動排程的權限**。保留既有網站分支；整合前先合併最新 uat，禁止 force、整份覆蓋、清空未完成工作或動另一人的工作區。新工具見 `scripts/collab.py`；不自行推 prod、變更 Auth／資料庫或啟用付費服務。
 
 > **先判斷你在做哪一種任務：**

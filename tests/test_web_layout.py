@@ -42,6 +42,14 @@ class AssetParser(HTMLParser):
 
 
 class WebLayoutTests(unittest.TestCase):
+    def test_original_local_entry_is_a_small_compatibility_launcher(self):
+        entry = (ROOT / 'index.html').read_text(encoding='utf-8')
+        self.assertLess(len(entry), 2500)
+        self.assertIn("new URL('apps/web/index.html', location.href)", entry)
+        self.assertIn('destination.search = location.search', entry)
+        self.assertIn('destination.hash = location.hash', entry)
+        self.assertNotIn('index.html', BUILT)
+
     def test_pages_keep_public_urls(self):
         for url in ['/', '/index.html', '/member/security', '/research/groupbook']:
             self.assertEqual(destination(url), '/apps/web/index.html')

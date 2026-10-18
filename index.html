@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>跟誰學 · 開啟網站</title>
+  <script>
+    // Keep the original local bookmark working after the website directory move.
+    // Maintain a single website source; preserve invitations and member callbacks.
+    const destination = new URL('apps/web/index.html', location.href);
+    destination.search = location.search;
+    destination.hash = location.hash;
+    location.replace(destination.href);
+  </script>
+  <style>
+    body{margin:0;min-height:100vh;display:grid;place-items:center;font:16px/1.8 system-ui,sans-serif;background:#f4f7fa;color:#24364b}
+    main{max-width:460px;margin:24px;padding:28px;border:1px solid #d9e3ed;border-radius:20px;background:#fff}
+    h1{font-size:24px;margin:0 0 12px}p{margin:10px 0}a{color:#287ab8}
+  </style>
+</head>
+<body><main><h1>正在開啟跟誰學</h1><p>網站內容已整理至新的資料夾。</p><p>若未自動開啟，請點選<a href="apps/web/index.html">進入網站 →</a>。</p></main></body>
+</html>
