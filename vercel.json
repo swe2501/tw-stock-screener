@@ -73,5 +73,10 @@
       "schedule": "0 13 * * 1-5"
     }
   ],
-  "ignoreCommand": "node scripts/should_build_web.cjs"
+  "ignoreCommand": "node scripts/should_build_web.cjs",
+  "git": {
+    "deploymentEnabled": {
+      "app/**": false
+    }
+  }
 }
