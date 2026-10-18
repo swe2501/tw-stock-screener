@@ -30,9 +30,11 @@
 
 ## 驗證方式與限制
 
-- 34 項 App 自動測試通過，涵蓋切色保存／重開／保留草稿、放大字體導覽、獨立市場區塊、原生返回、條件選股與既有回測／備份流程。
+- 35 項 App 自動測試通過，涵蓋切色保存／重開／保留草稿、放大字體導覽、獨立市場區塊、原生返回、條件選股與既有回測／備份流程。
 - TypeScript、Expo Doctor 21/21、網站公式引擎一致性、iOS／Android Hermes 匯出通過。
-- `npm run review:layout` 僅開本機 8087 元件驗收。`tests/mobile/layout.browser.cjs` 使用相同 TSX 的 RN Web 渲染及明示測試行情 fixture，測 320×568、390×844、768×1024、1024×768、844×390 深／淺共 110 個視窗／導覽情境，無橫向溢出、切色或 JS error；檢查稿在 dist/layout-review（忽略版控）。測試行情不進 App 產品資料。
+- `npm run review:layout` 僅開本機 8087 元件驗收。`tests/mobile/layout.browser.cjs` 使用相同 TSX 的 RN Web 渲染及明示測試行情 fixture，測 320×568、390×844、768×1024、1024×768、844×390 深／淺共 110 個視窗／導覽情境，無橫向溢出、切色、JS exception 或 console error；檢查稿在 dist/layout-review（忽略版控）。測試行情不進 App 產品資料。
 - React Native Web／react-dom／metro-runtime 僅開發驗收依賴；原生發行平台仍 ios/android。本機驗收不是把 App 改成網頁，也不代替 iPhone／Android 實際 Yoga、鍵盤與原生手勢驗收。舊 iPhone 原生模組錯誤不能據此宣稱已解決。
 
 本輪只修改自己的 App worktree／app 分支，無網站、共用 API、Auth、正式資料庫、UAT、prod 或 Andrew 分支修改。SDK57 保持隔離。
+
+補強驗收時修正原生 View 多餘空白文字節點，以及行情提示條件回傳空字串造成的容器錯誤；流程測試每次點擊均檢查容器子節點。驗收用 SVG 的 accessible 屬性只在原生平台輸出，避免 Web 檢查的非布林屬性警告。

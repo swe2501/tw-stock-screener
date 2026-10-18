@@ -34,7 +34,7 @@ export default function MarketOverview({dark,onReport,active=true,section='summa
     <Text style={[s.price,text]}>{fmt(data.latest.close)}<Text style={[s.unit,muted]}> 點</Text></Text>
     <Text style={[s.change,{color:changeColor}]}>{signed(data.latest.change)} 點　{signed(data.latest.change_percent)}%</Text>
     <Text style={[s.meta,muted]}>資料日 {data.as_of} · 非即時報價</Text>
-    {(data.stale||error)&&<Text style={[s.warning,{color:dark?'#efd17b':'#8c621b',backgroundColor:c.soft}]}>資料尚待更新，請以標示日期為準。</Text>}
+    {!!(data.stale||error)&&<Text style={[s.warning,{color:dark?'#efd17b':'#8c621b',backgroundColor:c.soft}]}>資料尚待更新，請以標示日期為準。</Text>}
     <Text style={{color:c.accent,fontSize:15,fontWeight:'700'}}>點入查看 K 圖與均線 →</Text>
    </InteractiveCard>
    <View style={[s.grid,(fontScale>=1.2||width<380)&&{flexDirection:'column'}]}>

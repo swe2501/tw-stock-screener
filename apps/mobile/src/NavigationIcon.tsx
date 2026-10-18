@@ -1,7 +1,8 @@
+import {Platform} from 'react-native';
 import Svg,{Circle,Path} from 'react-native-svg';
 export default function NavigationIcon({name,color}:{name:string;color:string}){
  const common={fill:'none',stroke:color,strokeWidth:1.8,strokeLinecap:'round' as const,strokeLinejoin:'round' as const};
- return <Svg width={23} height={23} viewBox="0 0 24 24" accessible={false}>
+ return <Svg width={23} height={23} viewBox="0 0 24 24" accessible={Platform.OS==='web'?undefined:false}>
   {name==='大盤'&&<><Path {...common} d="M3 4v16h18M6 14l4-4 4 3 6-7"/><Path {...common} d="M16 6h4v4"/></>}
   {name==='探索'&&<><Circle {...common} cx={12} cy={12} r={9}/><Path {...common} d="m16 8-3 5-5 3 3-5 5-3Z"/></>}
   {name==='自選'&&<Path {...common} d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3Z"/>}

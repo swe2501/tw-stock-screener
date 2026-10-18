@@ -5,7 +5,7 @@ const latest={date:'2026-10-16',close:46063.28,change:1178.72,change_percent:117
 const summary={schema_version:1,available:true,symbol:'TAIEX',frequency:'daily',session:'day',as_of:latest.date,latest,history:[latest],stale:false,cached:false,source:{name:'TWSE',url:'https://openapi.twse.com.tw/v1/exchangeReport/FMTQIK'},retrieved_at:'2026-10-18T00:00:00Z',notice:'layout test fixture'};
 const stock={...latest,close:2420,change:0,change_percent:0,code:'2330',name:'台積電研究測試長名稱',kind:'stock',market:'TWSE'};
 async function main(){const browser=await chromium.launch({channel:'msedge',headless:true});let count=0;try{for(const [width,height] of [[320,568],[390,844],[768,1024],[1024,768],[844,390]])for(const dark of [false,true]){
- const page=await browser.newPage({viewport:{width,height}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
+ const page=await browser.newPage({viewport:{width,height}}),errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  await page.route('**/api/prices?**',async route=>{const action=new URL(route.request().url()).searchParams.get('action');await route.fulfill({json:action==='stock_catalog'?{...summary,market:'TWSE',items:[stock],source:{name:'TWSE',url:'https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL'}}:action==='market_context'?{available:false}:summary,headers:{'Access-Control-Allow-Origin':'*'}});});
  await page.goto('http://localhost:8087');await page.getByRole('button',{name:'今日摘要',exact:true}).waitFor();
  if(dark)await page.getByRole('button',{name:'外觀：淺色，切換為深色',exact:true}).click();

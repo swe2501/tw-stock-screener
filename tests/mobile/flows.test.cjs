@@ -25,7 +25,7 @@ function setup({width=390,fontScale=1}={}){
 const settle=()=>new Promise(resolve=>setImmediate(resolve));
 function text(node){return node.findAll(n=>n.type==='Text').flatMap(n=>n.children.filter(v=>typeof v==='string'||typeof v==='number')).join('');}
 function visible(node){for(let at=node;at;at=at.parent){const styles=[at.props.style].flat(Infinity);if(styles.some(s=>s&&s.display==='none'))return false;}return true;}
-async function press(renderer,label){const matches=renderer.root.findAll(n=>visible(n)&&n.type==='Pressable'&&(n.props.accessibilityLabel===label||text(n)===label));assert.ok(matches.length,'button '+label);const node=matches[0];assert.ok(!node.props.disabled,'enabled '+label);await Renderer.act(async()=>{node.props.onPress();await settle();});}
+async function press(renderer,label){const matches=renderer.root.findAll(n=>visible(n)&&n.type==='Pressable'&&(n.props.accessibilityLabel===label||text(n)===label));assert.ok(matches.length,'button '+label);const node=matches[0];assert.ok(!node.props.disabled,'enabled '+label);await Renderer.act(async()=>{node.props.onPress();await settle();});for(const host of renderer.root.findAll(n=>['View','AnimatedView','SafeAreaView','KeyboardAvoidingView'].includes(n.type)))assert.ok(host.children.every(c=>typeof c!=='string'&&typeof c!=='number'),label+' has raw child '+JSON.stringify(host.children.filter(c=>typeof c==='string'||typeof c==='number')));}
 test('real App flow: explore → save watch → edit note → save strategy → reopen local data',async()=>{
  const context=setup();let app;
  await Renderer.act(async()=>{app=Renderer.create(context.element);await settle();});
@@ -67,4 +67,8 @@ test('appearance is a two-way switch, persists, updates hidden editors and survi
 });
 test('market feature buttons open separate native sections, with clear back and no website reader',async()=>{
  const context=setup({width:320,fontScale:1.8});let app;await Renderer.act(async()=>{app=Renderer.create(context.element);await settle();});await press(app,'三大法人');assert.ok(app.root.findAll(n=>n.type==='Text'&&text(n)==='三大法人現貨').length);assert.equal(app.root.findAll(n=>n.type==='Text'&&text(n)==='融資融券餘額').length,0);await press(app,'返回功能總覽');await press(app,'期貨籌碼');assert.ok(app.root.findAll(n=>n.type==='Text'&&text(n).includes('這個模組尚在規劃中')).length);assert.equal(app.root.findAll(n=>n.type==='WebView').length,0);await press(app,'返回功能總覽');await press(app,'探索');await press(app,'條件選股');await Renderer.act(async()=>{app.root.findAll(n=>n.type==='TextInput'&&n.props.accessibilityLabel==='最低收盤價（元）')[0].props.onChangeText('102');});assert.equal(app.root.findAll(n=>n.type==='Pressable'&&n.props.accessibilityLabel==='2330 台積電，查看盤後資料').length,0);await Renderer.act(async()=>{app.root.findAll(n=>n.type==='TextInput'&&n.props.accessibilityLabel==='最低收盤價（元）')[0].props.onChangeText('bad');});assert.ok(app.root.findAll(n=>n.type==='Text'&&text(n).includes('篩選數值請填非負數')).length);await Renderer.act(async()=>app.unmount());
+});
+
+test('all feature hubs have no raw text children in native View containers',async()=>{
+ const context=setup();let app;await Renderer.act(async()=>{app=Renderer.create(context.element);await settle();});for(const tab of ['大盤','探索','研究','策略','我的']){await press(app,tab);for(const host of app.root.findAll(n=>['View','AnimatedView','SafeAreaView'].includes(n.type)))assert.ok(host.children.every(c=>typeof c!=='string'&&typeof c!=='number'),'native containers must not render raw text');}await Renderer.act(async()=>app.unmount());
 });
