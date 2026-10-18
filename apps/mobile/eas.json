@@ -5,6 +5,7 @@
       "distribution": "internal",
       "environment": "preview",
       "env": {
+        "APP_VARIANT": "staging",
         "EXPO_PUBLIC_API_BASE_URL": "https://tw-stock-mobile-preview.vercel.app",
         "EXPO_PUBLIC_STAGING_SUPABASE_KEY": "sb_publishable_NdmITIkq7SbGu03CoD9cjA_DsGkwNCH"
       },
