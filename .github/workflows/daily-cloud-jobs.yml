@@ -37,3 +37,17 @@ jobs:
       - name: 除權息還原因子（upload_exdiv_factor）
         if: ${{ !cancelled() }}      # 前一步失敗也照跑，彼此獨立
         run: python scripts/upload_exdiv_factor.py
+
+      # --- Phase 1 第一小批（2026-10-18）：純官方源→Supabase，測 GitHub IP 抓 TWSE/TPEX/TAIFEX 是否被限流 ---
+      # 這 3 支不碰 wantgoo、不讀本機 SQLite，import broker_signals 僅取 env(雲端走 Secrets)。
+      - name: 三大法人大盤（inst_market · TWSE）
+        if: ${{ !cancelled() }}
+        run: python scripts/inst_market.py
+
+      - name: 櫃買指數（fetch_otc_index · TPEX）
+        if: ${{ !cancelled() }}
+        run: python scripts/fetch_otc_index.py --daily
+
+      - name: 選擇權大盤（options_market · TAIFEX）
+        if: ${{ !cancelled() }}
+        run: python scripts/options_market.py
