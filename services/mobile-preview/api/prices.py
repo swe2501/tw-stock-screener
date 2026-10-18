@@ -4,15 +4,146 @@ import os
 import math
 import time
 import threading
+import re
 from datetime import date, datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlsplit
 from urllib.request import Request, build_opener, HTTPRedirectHandler
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 STAGING_ORIGIN = 'https://ebwtkcsmpvgyjvosbofx.supabase.co'
 MARKET_SOURCE = 'https://openapi.twse.com.tw/v1/exchangeReport/FMTQIK'
 _market_lock = threading.Lock()
 _market_cache = None
+_candle_cache = None
+_candle_lock = threading.Lock()
+_stock_cache = None
+_stock_lock = threading.Lock()
+STOCK_SOURCE = 'https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL'
+
+
+def stock_catalog():
+    global _stock_cache
+    with _stock_lock:
+        now = time.monotonic()
+        if _stock_cache and now-_stock_cache[0] < 600:
+            return 200, {**_stock_cache[1], 'cached': True}
+        try:
+            raw = public_json(STOCK_SOURCE)
+            if not isinstance(raw, list) or len(raw) > 5000:
+                raise ValueError('invalid catalog')
+            rows, rejected = [], 0
+            for item in raw:
+                try:
+                    code = str(item['Code'])
+                    if not re.fullmatch(r'[0-9]{4,6}[A-Z]?', code) or not (code.startswith('00') or re.fullmatch(r'[1-9][0-9]{3}[A-Z]?', code)):
+                        raise ValueError('invalid code')
+                    row = market_rows([{'Date': item['Date'], 'TAIEX': item['ClosingPrice'], 'Change': item['Change'],
+                                       'TradeValue': item['TradeValue'], 'TradeVolume': item['TradeVolume']}])[0]
+                    name = str(item['Name']).strip()
+                    if not name or len(name) > 80 or '\ufffd' in name:
+                        name = code
+                    rows.append({**row, 'code': code, 'name': name, 'market': 'TWSE', 'kind': 'etf' if code.startswith('00') else 'stock'})
+                except (ValueError, KeyError, TypeError):
+                    rejected += 1
+            if not rows:
+                raise ValueError('empty catalog')
+            rows.sort(key=lambda row: row['code'])
+            newest = max(row['date'] for row in rows)
+            payload = {'schema_version': 1, 'available': True, 'market': 'TWSE', 'frequency': 'daily',
+                       'as_of': newest, 'items': rows, 'partial': bool(rejected), 'excluded_rows': rejected,
+                       'cached': False, 'stale': (datetime.now(timezone(timedelta(hours=8))).date()-date.fromisoformat(newest)).days > 7,
+                       'retrieved_at': datetime.now(timezone.utc).isoformat(),
+                       'source': {'name': '臺灣證券交易所 STOCK_DAY_ALL', 'url': STOCK_SOURCE},
+                       'notice': '目前為上市股票及 ETF 盤後資料；未含上櫃、盤中報價或網站私人研究。個別資料日期請逐筆核對。'}
+            _stock_cache = (time.monotonic(), payload)
+            return 200, payload
+        except Exception:
+            if _stock_cache and now-_stock_cache[0] < 86400:
+                return 200, {**_stock_cache[1], 'stale': True, 'cached': True}
+            return 503, {'available': False, 'error': '官方上市股票資料暫時無法取得。'}
+
+
+def candle_rows(data, today=None):
+    today = today or datetime.now(timezone(timedelta(hours=8))).date()
+    result = {}
+    for raw in data:
+        if isinstance(raw, list):
+            stamp, opening, high, low, close = raw[:5]
+        else:
+            stamp, opening, high, low, close = (raw[k] for k in ('Date', 'OpeningIndex', 'HighestIndex', 'LowestIndex', 'ClosingIndex'))
+        stamp = str(stamp).replace('/', '')
+        if len(stamp) != 7 or not stamp.isdecimal():
+            raise ValueError('invalid candle date')
+        day = date(int(stamp[:3])+1911, int(stamp[3:5]), int(stamp[5:]))
+        values = [float(str(v).replace(',', '')) for v in (opening, high, low, close)]
+        o, h, l, c = values
+        if day > today or not all(math.isfinite(v) and v > 0 for v in values) or not l <= min(o, c) <= max(o, c) <= h:
+            raise ValueError('invalid OHLC')
+        row = {'date': day.isoformat(), 'open': o, 'high': h, 'low': l, 'close': c}
+        if row['date'] in result and result[row['date']] != row:
+            raise ValueError('conflicting candle')
+        result[row['date']] = row
+    return sorted(result.values(), key=lambda r: r['date'])
+
+
+def public_json(url):
+    # Only callers construct fixed official source URLs, never client input.
+    request = Request(url, headers={'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0 MarketAcademy-Mobile/0.1'})
+    with build_opener(NoRedirect()).open(request, timeout=8) as response:
+        if response.status != 200 or 'json' not in response.headers.get('Content-Type', ''):
+            raise ValueError('invalid official response')
+        body = response.read(2097153)
+        if len(body) > 2097152:
+            raise ValueError('oversized official response')
+        return json.loads(body)
+
+
+def market_candles():
+    global _candle_cache
+    with _candle_lock:
+        now = time.monotonic()
+        if _candle_cache and now-_candle_cache[0] < 900:
+            return 200, {**_candle_cache[1], 'cached': True}
+        today = datetime.now(timezone(timedelta(hours=8))).date()
+        first = today.replace(day=1)
+        months = []
+        for _ in range(6):
+            months.append(first.strftime('%Y%m01'))
+            first = (first-timedelta(days=1)).replace(day=1)
+        def read_month(month):
+            url = 'https://www.twse.com.tw/rwd/zh/TAIEX/MI_5MINS_HIST?date='+month+'&response=json'
+            data = public_json(url)
+            if data.get('stat') != 'OK' or not isinstance(data.get('data'), list) or not data['data']:
+                raise ValueError('no official month')
+            rows = candle_rows(data['data'], today)
+            if any(row['date'][:7] != month[:4]+'-'+month[4:6] for row in rows):
+                raise ValueError('wrong official month')
+            return rows, url
+        rows, sources, failed = [], [], 0
+        with ThreadPoolExecutor(max_workers=3) as pool:
+            jobs = [pool.submit(read_month, m) for m in months]
+            for job in as_completed(jobs):
+                try:
+                    part, url = job.result()
+                    rows.extend(part)
+                    sources.append(url)
+                except Exception:
+                    failed += 1
+        if not rows:
+            if _candle_cache and now-_candle_cache[0] < 86400:
+                return 200, {**_candle_cache[1], 'cached': True, 'stale': True, 'partial': True}
+            return 503, {'available': False, 'error': '官方 K 線資料暫時無法取得。'}
+        unique = {r['date']: r for r in rows}
+        rows = sorted(unique.values(), key=lambda r: r['date'])
+        payload = {'schema_version': 1, 'available': True, 'symbol': 'TAIEX', 'frequency': 'daily',
+                   'as_of': rows[-1]['date'], 'candles': rows, 'partial': bool(failed), 'cached': False,
+                   'stale': (today-date.fromisoformat(rows[-1]['date'])).days > 7,
+                   'retrieved_at': datetime.now(timezone.utc).isoformat(),
+                   'source': {'name': '臺灣證券交易所 MI_5MINS_HIST', 'urls': sorted(sources)},
+                   'notice': '官方日 K；週 K、月 K 由已取得的日資料彙整，首尾可能為未完整週／月。不補造缺少的交易日。'}
+        _candle_cache = (time.monotonic(), payload)
+        return 200, payload
 
 
 def market_rows(data, today=None):
@@ -131,6 +262,12 @@ class handler(BaseHTTPRequestHandler):
             return self.reply(200, {'service': 'mobile-preview', 'status': 'ok',
                                     **state, 'member_login_enabled': False, 'research_ready': False})
         params = parse_qs(parsed.query)
+        if parsed.path in ('/api/prices', '/api/prices.py') and params.get('action') == ['stock_catalog']:
+            status, payload = stock_catalog()
+            return self.reply(status, payload)
+        if parsed.path in ('/api/prices', '/api/prices.py') and params.get('action') == ['market_candles']:
+            status, payload = market_candles()
+            return self.reply(status, payload)
         if parsed.path in ('/api/prices', '/api/prices.py') and params.get('action') == ['market_summary']:
             status, payload = market_summary()
             return self.reply(status, payload)

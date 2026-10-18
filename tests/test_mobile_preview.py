@@ -16,6 +16,23 @@ spec.loader.exec_module(preview)
 
 
 class PreviewTests(unittest.TestCase):
+    def test_public_stock_catalog_excludes_nonstock_and_invalid_prices(self):
+        row={'Date':'1151016','Code':'2330','Name':'台積電','ClosingPrice':'101','Change':'1','TradeValue':'1000','TradeVolume':'20'}
+        with patch.object(preview,'_stock_cache',None),patch.object(preview,'public_json',return_value=[row,{**row,'Code':'020000'},{**row,'Code':'2317','ClosingPrice':'--'}]):
+            status,data=preview.stock_catalog()
+            self.assertEqual(status,200)
+            self.assertEqual(len(data['items']),1)
+            self.assertEqual(data['items'][0]['name'],'台積電')
+            self.assertTrue(data['partial'])
+            self.assertEqual(data['excluded_rows'],2)
+
+    def test_official_candle_dates_and_ohlc_are_validated(self):
+        rows = preview.candle_rows([['115/10/16', '100', '120', '99', '110']], today=date(2026, 10, 18))
+        self.assertEqual(rows, [{'date': '2026-10-16', 'open': 100, 'high': 120, 'low': 99, 'close': 110}])
+        for raw in [['115/10/16','100','98','99','110'], ['115/10/19','100','120','99','110'], ['115/10/16','NaN','120','99','110']]:
+            with self.assertRaises(ValueError):
+                preview.candle_rows([raw], today=date(2026,10,18))
+
     def test_daily_market_normalization_dates_percent_and_activity(self):
         def row(day='1151016', **extra):
             return {'Date': day, 'TAIEX': '101', 'Change': '1', 'TradeValue': '1,234', 'TradeVolume': '567', **extra}
