@@ -12,3 +12,17 @@ scripts/daily_job_stdout.log
 # Reviewed quarterly research; raw source downloads remain outside the repository.
 !data/groupbook-quarterly-research.json
 !data/groupbook-research-sources.json
+
+# App collaboration: commit explicit project configs, never local runtime/keys.
+!apps/mobile/package.json
+!apps/mobile/package-lock.json
+!apps/mobile/app.json
+!apps/mobile/tsconfig.json
+!apps/mobile/eas.json
+!packages/shared/package.json
+!packages/shared/tsconfig.json
+apps/mobile/node_modules/
+apps/mobile/.expo/
+apps/mobile/dist/
+apps/mobile/.env*
+!apps/mobile/.env.example

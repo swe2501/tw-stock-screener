@@ -1,0 +1,38 @@
+name: Web and App collaboration
+
+on:
+  pull_request:
+    branches: [uat]
+  push:
+    branches: [uat]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: collaboration-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  collaboration-checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: API budget
+        run: python scripts/check_api_budget.py
+      - name: Safe collaboration tool regression
+        run: python -m unittest discover -s tests -p 'test_collaboration.py'
+      - name: Feature lane boundaries
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          FEATURE_BRANCH: ${{ github.head_ref }}
+        run: python scripts/check_collaboration.py --base "$BASE_SHA" --head "$HEAD_SHA" --branch "$FEATURE_BRANCH"

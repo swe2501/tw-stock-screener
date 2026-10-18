@@ -1,3 +1,5 @@
+> **2026-10-18 網站＋App 共同開發**：合夥人接手先看 [docs/collaboration/README.md](docs/collaboration/README.md)。App 位於 `apps/mobile`，會員與資料服務規格共用；各自使用功能分支與獨立工作目錄。新增安全同步／整合工具與 GitHub 檢查，不改現有正式站、資料庫或登入設定。
+
 最新交易紀錄與目標：[HANDOFF_TRADING_2026-10-16.md](HANDOFF_TRADING_2026-10-16.md)
 
 > **2026-10-16 會員／自選／策略最新交接**：請先讀 [HANDOFF_MEMBER_2026-10-16.md](HANDOFF_MEMBER_2026-10-16.md)。包含本機 justy-layout／UAT 最新狀態、分類溢位、拖曳排序、私房篩選器與尚未啟用的會員服務；舊的部署範例仍須遵守目前 AGENTS.md。
