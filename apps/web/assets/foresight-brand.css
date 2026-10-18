@@ -2,18 +2,18 @@
 :root{--fqi-ink:#edf0ed;--fqi-gold:#cabb85;--fqi-mark-bg:#14212b;--fqi-ring:var(--border,#30404a);--fqi-halo:#8bbbe01a;--fqi-logo-filter:url(#fqiHeritageDark);--fqi-accent-filter:url(#fqiAccentDark)}
 :root[data-theme=light]{--fqi-ink:#141e36;--fqi-gold:#b69b48;--fqi-mark-bg:#fff;--fqi-ring:#dbe4ec;--fqi-halo:#347fc412;--fqi-logo-filter:url(#fqiHeritageLight);--fqi-accent-filter:url(#fqiAccentLight)}
 .gs-brand.fqi-brand{display:inline-flex!important;align-items:center!important;gap:12px!important;min-width:0;text-decoration:none!important;isolation:isolate;border-radius:12px;color:var(--fqi-ink)!important;outline-offset:5px;-webkit-tap-highlight-color:transparent}
-.fqi-brand .gs-mark{position:relative;display:grid;place-items:center;flex:0 0 auto;width:88px!important;height:88px!important;aspect-ratio:1;padding:0!important;border:0!important;border-radius:0!important;overflow:hidden;background:transparent!important;box-shadow:none!important;transition:transform .3s cubic-bezier(.2,.8,.2,1),border-color .3s,box-shadow .3s}
+.fqi-brand .gs-mark{position:relative;display:grid;place-items:center;flex:0 0 auto;width:96px!important;height:96px!important;aspect-ratio:1;padding:0!important;border:0!important;border-radius:0!important;overflow:hidden;background:transparent!important;box-shadow:none!important;transition:transform .16s cubic-bezier(.16,1,.3,1),filter .16s}
 .fqi-brand .gs-mark img{position:relative;z-index:1;width:100%!important;height:100%!important;object-fit:contain!important;display:block;padding:0!important;background:transparent!important;border-radius:0!important;filter:var(--fqi-logo-filter)!important}
-.fqi-brand .gs-mark::before{content:"";position:absolute;z-index:2;inset:-80%;pointer-events:none;background:linear-gradient(110deg,transparent 40%,#ffffff06 46%,#ffffff35 50%,#ffffff06 54%,transparent 60%)!important;transform:translateX(-125%);animation:fqi-sheen 8s ease-in-out infinite!important;animation-play-state:paused!important}
-.fqi-brand .gs-mark::after{content:"";position:absolute;z-index:0;inset:0;background:radial-gradient(ellipse at 65% 22%,var(--fqi-halo),transparent 75%);opacity:.15;animation:fqi-breathe 5.2s ease-in-out infinite;animation-play-state:paused}
+.fqi-brand .gs-mark::before{content:"";position:absolute;z-index:2;inset:-80%;pointer-events:none;background:linear-gradient(110deg,transparent 40%,#ffffff06 46%,#ffffff35 50%,#ffffff06 54%,transparent 60%)!important;transform:translateX(-125%);animation:none!important;animation-play-state:paused!important}
+.fqi-brand .gs-mark::after{content:none!important}
 .fqi-brand.fqi-brand-inview .gs-mark::before,.fqi-brand.fqi-brand-inview .gs-mark::after{animation-play-state:running!important}
 .fqi-brand .gs-name{display:flex!important;flex-direction:column!important;gap:4px;min-width:0;line-height:1.1!important;background:transparent!important;padding:0!important;color:var(--fqi-ink)!important}
 .fqi-brand .gs-name b{font-family:"Noto Serif TC",Georgia,"Times New Roman",serif!important;font-size:24px!important;font-weight:800!important;letter-spacing:.045em!important;line-height:1.25!important;color:var(--fqi-ink)!important;white-space:nowrap;text-shadow:none!important}
 .fqi-brand .gs-name small{font-family:Georgia,"Noto Serif TC",serif!important;font-size:10px!important;font-weight:600!important;letter-spacing:.09em!important;line-height:1.5!important;color:var(--text-muted,#81958f)!important;display:block!important;margin:0!important;white-space:nowrap!important}
 .fqi-brand .gs-name :is(.fqi-tagline,.fqi-english){display:inline!important;background:transparent!important;color:inherit!important;padding:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;font:inherit!important;letter-spacing:inherit!important}
 .fqi-brand:focus-visible{outline:2px solid var(--accent,#3b82c4)}
-.fqi-brand:hover .gs-mark,.fqi-brand:focus-visible .gs-mark{transform:translateY(-1px) scale(1.025);filter:drop-shadow(0 2px 5px var(--fqi-halo));box-shadow:none!important}
-.fqi-brand:hover .gs-mark::before,.fqi-brand:focus-visible .gs-mark::before{animation:fqi-hover-sheen 1.1s ease-out 1!important}
+.fqi-brand:hover .gs-mark,.fqi-brand:focus-visible .gs-mark{transform:translateY(-1px) scale(1.04);filter:drop-shadow(0 2px 5px var(--fqi-halo));box-shadow:none!important}
+.fqi-brand:hover .gs-mark::before,.fqi-brand:focus-visible .gs-mark::before{animation:fqi-hover-sheen .34s ease-out 1!important}
 .fqi-brand:active .gs-mark{transform:scale(.98)}
 .fqi-brand-paused .fqi-brand .gs-mark::before,.fqi-brand-paused .fqi-brand .gs-mark::after{animation-play-state:paused!important}
 body>header:has(.fqi-brand){gap:16px;min-height:78px}
@@ -21,7 +21,7 @@ body>header .gs-edition,.mc-brandbar .gs-edition{display:block!important;backgro
 body>header .gs-edition b,.mc-brandbar .gs-edition b{font:800 15px/1.3 Inter,Arial,sans-serif!important;letter-spacing:.065em!important;color:inherit!important}
 .mc-brandbar:has(.fqi-brand){min-height:78px}
 #authModal .auth-brand .gs-brand.fqi-brand{flex-direction:row!important;gap:13px!important;max-width:100%;text-align:left!important}
-#authModal .auth-brand .fqi-brand .gs-mark{width:74px!important;height:74px!important;border-radius:0!important}
+#authModal .auth-brand .fqi-brand .gs-mark{width:80px!important;height:80px!important;border-radius:0!important}
 #authModal .auth-brand .fqi-brand .gs-name b{font-size:25px!important;letter-spacing:.025em!important}
 #authModal .auth-brand .fqi-brand .gs-name small{font-size:10px!important;letter-spacing:.07em!important}
 
@@ -32,10 +32,10 @@ body>header .gs-edition b,.mc-brandbar .gs-edition b{font:800 15px/1.3 Inter,Ari
 body.mc-open>header .fqi-brand .gs-mark::before,body.mc-open>header .fqi-brand .gs-mark::after{animation-play-state:paused!important}
 @keyframes fqi-sheen{0%,72%{transform:translateX(-125%)}88%,100%{transform:translateX(125%)}}
 @keyframes fqi-hover-sheen{from{transform:translateX(-125%)}to{transform:translateX(125%)}}
-@keyframes fqi-breathe{0%,100%{opacity:.1}50%{opacity:.4}}
+
 @media(max-width:700px){
  .gs-brand.fqi-brand{gap:10px!important}
- .fqi-brand .gs-mark{width:68px!important;height:68px!important;border-radius:0!important}
+ .fqi-brand .gs-mark{width:72px!important;height:72px!important;border-radius:0!important}
  .fqi-brand .gs-name b{font-size:22px!important;letter-spacing:.035em!important}
  .fqi-brand .gs-name small{font-size:10px!important;letter-spacing:.12em!important}
  body>header .gs-edition,.mc-brandbar .gs-edition{display:none!important}
@@ -67,15 +67,17 @@ body.mc-open>header .fqi-brand .gs-mark::before,body.mc-open>header .fqi-brand .
 .fqi-brand .fqi-owl-art{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
 .fqi-owl-base{filter:var(--fqi-logo-filter)}
 .fqi-eye image,.fqi-book-trim{filter:var(--fqi-accent-filter)}
-.fqi-eye{transition:transform .42s cubic-bezier(.2,.8,.2,1),filter .42s;transform:scale(1);transform-box:view-box}
+.fqi-eye{transition:transform .16s cubic-bezier(.16,1,.3,1),filter .16s;transform:scale(1);transform-box:view-box}
 .fqi-eye-left{transform-origin:300px 140px}
 .fqi-eye-right{transform-origin:420px 140px}
 .fqi-brand:is(:hover,:focus-visible) .fqi-eye{transform:scale(1.16);filter:drop-shadow(0 0 4px #e6bc6266)}
-.fqi-brand:is(:hover,:focus-visible) .fqi-geometry{filter:drop-shadow(0 0 3px #e6bc6280);transition:filter .4s}
+.fqi-brand:is(:hover,:focus-visible) .fqi-geometry{filter:drop-shadow(0 0 3px #e6bc6280);transition:filter .16s}
 @media(prefers-reduced-motion:reduce){.fqi-brand .fqi-eye{transition:none!important;transform:none!important;filter:none!important}.fqi-brand .fqi-geometry{transition:none!important;filter:none!important}}
 
 /* The complete identity shares one pulse, including the edition block. */
-.gs-brand.fqi-brand,body>header .gs-edition,.mc-brandbar .gs-edition{animation:fqi-identity-pulse 2.8s ease-in-out var(--fqi-pulse-delay,0ms) infinite both}
-@keyframes fqi-identity-pulse{0%,100%{filter:brightness(1) drop-shadow(0 0 0 transparent)}50%{filter:brightness(1.14) drop-shadow(0 0 2px #c6a04a35)}}
+.gs-brand.fqi-brand,body>header .gs-edition,.mc-brandbar .gs-edition{animation:fqi-identity-signal 5.6s linear var(--fqi-pulse-delay,0ms) infinite both}
+@keyframes fqi-identity-signal{0%,87%,96%,100%{opacity:1;filter:brightness(1) drop-shadow(0 0 0 transparent)}89%,92%{opacity:1;filter:brightness(1.26) drop-shadow(0 0 3px #e6bc6270)}}
+.gs-brand.fqi-brand:is(:hover,:focus-visible),body>header:has(.fqi-brand:is(:hover,:focus-visible)) .gs-edition,.mc-brandbar:has(.fqi-brand:is(:hover,:focus-visible)) .gs-edition{animation:fqi-identity-strike .38s ease-out 1 both}
+@keyframes fqi-identity-strike{0%{filter:brightness(1)}18%,38%{filter:brightness(1.35) drop-shadow(0 0 4px #e6bc6290)}100%{filter:brightness(1.06) drop-shadow(0 0 1px #e6bc6230)}}
 .fqi-brand-paused .gs-brand.fqi-brand,.fqi-brand-paused .gs-edition{animation-play-state:paused!important}
-@media(prefers-reduced-motion:reduce){.gs-brand.fqi-brand,body>header .gs-edition,.mc-brandbar .gs-edition{animation:none!important;filter:none!important}}
+@media(prefers-reduced-motion:reduce){.gs-brand.fqi-brand,.gs-brand.fqi-brand:is(:hover,:focus-visible),body>header .gs-edition,.mc-brandbar .gs-edition{animation:none!important;filter:none!important;opacity:1!important}}

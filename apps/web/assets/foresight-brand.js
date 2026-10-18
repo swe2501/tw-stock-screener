@@ -37,7 +37,7 @@
     if(root.nodeType===1&&root.matches('.fqi-brand'))nodes.push(root);
     root.querySelectorAll?.('.fqi-brand').forEach(node=>nodes.push(node));
     nodes.forEach(node=>{if(seen.has(node))return;seen.add(node);artwork(node);
-      const delay=(-(document.timeline.currentTime||0)%2800)+'ms';
+      const delay=(-(document.timeline.currentTime||0)%5600)+'ms';
       node.style.setProperty('--fqi-pulse-delay',delay);
       node.parentElement?.querySelector('.gs-edition')?.style.setProperty('--fqi-pulse-delay',delay);
       if(observer)observer.observe(node);else node.classList.add('fqi-brand-inview');});
