@@ -1,5 +1,5 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs'),path=require('node:path');
-const scope={window:{},crypto:require('node:crypto').webcrypto};vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../assets/member-strategy-engine.js'),'utf8'),scope);const E=scope.window.AcademyStrategyEngine;
+const scope={window:{},crypto:require('node:crypto').webcrypto};vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../apps/web/assets/member-strategy-engine.js'),'utf8'),scope);const E=scope.window.AcademyStrategyEngine;
 const bars=values=>values.map((close,i)=>({time:new Date(Date.UTC(2026,0,i+1)).toISOString().slice(0,10),open:close,high:close,low:close,close,volume:100}));
 const params={capital:1000,fee:0,tax:0,slip:0,allocation:1,sizing:'ratio',amount:100,start:'2026-01-01',end:'2026-01-06'};
 test('SMA, seeded EMA, Wilder RSI and neutral KD use documented calculations',()=>{

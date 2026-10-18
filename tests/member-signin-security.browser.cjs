@@ -7,8 +7,8 @@ const root=path.resolve(__dirname,'..'),output=process.env.QA_OUTPUT||require('n
  page.on('pageerror',e=>errors.push(e.message));await page.addInitScript(()=>{localStorage.setItem('sb_token','fixture-token');localStorage.setItem('sb_user',JSON.stringify({id:'auth-ui-fixture'}));});
  await page.route('**/*',r=>{const u=new URL(r.request().url()),method=r.request().method();
   if(u.origin==='https://auth-ui.fixture.test'){
-   const file=path.resolve(root,'.'+decodeURIComponent(u.pathname));if(file.startsWith(root+path.sep)&&fs.existsSync(file)&&fs.statSync(file).isFile())return r.fulfill({path:file});
-   if(u.pathname==='/')return r.fulfill({path:path.join(root,'index.html'),contentType:'text/html; charset=utf-8'});return r.fulfill({json:{}});
+   const file=path.resolve(root,'apps/web','.'+decodeURIComponent(u.pathname));if(file.startsWith(root+path.sep)&&fs.existsSync(file)&&fs.statSync(file).isFile())return r.fulfill({path:file});
+   if(u.pathname==='/')return r.fulfill({path:path.join(root,'apps/web/index.html'),contentType:'text/html; charset=utf-8'});return r.fulfill({json:{}});
   }
   if(u.hostname==='provider.fixture.test')return r.fulfill({contentType:'text/html',body:'<h1>隔離 OAuth 授權頁</h1>'});
   if(u.hostname.endsWith('.supabase.co')){calls.push({path:u.pathname,query:u.search,method,body:r.request().postData(),headers:r.request().headers()});

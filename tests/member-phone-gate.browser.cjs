@@ -7,7 +7,7 @@ const {chromium}=require('playwright'),root=path.resolve(__dirname,'..');
  const p=await browser.newPage({viewport:{width:1366,height:768},reducedMotion:'reduce'});p.on('pageerror',e=>errors.push(e.message));
  await p.route('**/*',r=>{const u=new URL(r.request().url()),body=r.request().postDataJSON?.bind(r.request());
  if(u.pathname==='/api/auth')return r.fulfill({json:{required,version:1}});
- if(u.origin==='https://phone.fixture.test'){const f=path.resolve(root,'.'+decodeURIComponent(u.pathname==='/'?'/index.html':u.pathname));if(f.startsWith(root+path.sep)&&fs.existsSync(f)&&fs.statSync(f).isFile())return r.fulfill({path:f});return r.fulfill({json:{}});}
+ if(u.origin==='https://phone.fixture.test'){const f=path.resolve(root,'apps/web','.'+decodeURIComponent(u.pathname==='/'?'/index.html':u.pathname));if(f.startsWith(root+path.sep)&&fs.existsSync(f)&&fs.statSync(f).isFile())return r.fulfill({path:f});return r.fulfill({json:{}});}
  if(u.hostname.endsWith('.supabase.co')){let data={};try{data=body()||{};}catch{}calls.push({path:u.pathname,method:r.request().method(),body:data});
  if(u.pathname==='/auth/v1/settings')return r.fulfill({json:{external:{phone:smsEnabled,google:true}}});
  if(u.pathname==='/auth/v1/user'){if(r.request().method()==='PUT')pending=data.phone;return r.fulfill({json:user()});}

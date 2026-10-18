@@ -9,8 +9,8 @@ const root=path.resolve(__dirname,'..'),output=process.env.QA_OUTPUT;
  await p.route('**/*',r=>{const u=new URL(r.request().url());
   if(u.origin==='https://strategy.fixture.test'){
    if(u.pathname==='/api/auth')return r.fulfill({json:{enabled:false}});
-   if(u.pathname==='/')return r.fulfill({path:path.join(root,'index.html'),contentType:'text/html; charset=utf-8'});
-   const file=path.resolve(root,'.'+decodeURIComponent(u.pathname));
+   if(u.pathname==='/')return r.fulfill({path:path.join(root,'apps/web/index.html'),contentType:'text/html; charset=utf-8'});
+   const file=path.resolve(root,'apps/web','.'+decodeURIComponent(u.pathname));
    if(file.startsWith(root+path.sep)&&fs.existsSync(file)&&fs.statSync(file).isFile())return r.fulfill({path:file});
    return r.fulfill({json:{}});
   }

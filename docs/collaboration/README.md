@@ -6,7 +6,7 @@
 
 | 範圍 | 位置 | 分支慣例 |
 |---|---|---|
-| 網站 | 原有網站檔案 | `web/<owner>/<task>`；既有 `justy-layout`、Andrew 工作流可繼續 |
+| 網站 | `apps/web/` | `web/<owner>/<task>`；既有 `justy-layout`、Andrew 工作流可繼續 |
 | App | `apps/mobile/`、`tests/mobile/`、`docs/app/` | `app/<owner>/<task>` |
 | 共用規則、API、資料格式 | `packages/shared/`、`api/`、`lib/` | `shared/<owner>/<task>` |
 

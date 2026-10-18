@@ -4,7 +4,7 @@ const {chromium}=require('playwright');
 const root=path.resolve(__dirname,'..'),output=process.env.QA_OUTPUT;
 const source=JSON.parse(fs.readFileSync(path.join(root,'data/groupbook-quarterly-research.json'),'utf8'));
 for(const [quarter,records] of Object.entries(source.quarters)){
- const text=fs.readFileSync(path.join(root,'assets/groupbook-research',quarter+'.js'),'utf8');
+ const text=fs.readFileSync(path.join(root,'apps/web/assets/groupbook-research',quarter+'.js'),'utf8');
  const bundle=JSON.parse(text.slice(text.indexOf(']=')+2).replace(/;\s*$/,''));
  assert.deepEqual(bundle.records,records,'Bundled source must not truncate or drop research: '+quarter);
 }
@@ -31,7 +31,7 @@ for(const [quarter,records] of Object.entries(source.quarters)){
    return route.fulfill({json:[{payload,updated_at:'2026-10-17T00:00:00Z'}]});
   }
   if(u.hostname==='127.0.0.1'){
-   const file=path.resolve(root,'.'+(u.pathname==='/'?'/index.html':decodeURIComponent(u.pathname)));
+   const file=path.resolve(root,'apps/web','.'+(u.pathname==='/'?'/index.html':decodeURIComponent(u.pathname)));
    if(file.startsWith(root+path.sep)&&fs.existsSync(file)&&fs.statSync(file).isFile())return route.fulfill({path:file});
   }
   return route.fulfill({json:[]});

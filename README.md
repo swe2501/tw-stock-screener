@@ -4,7 +4,7 @@
 
 **合夥人／開發 AI 接手：先讀 [共同開發入口](docs/collaboration/README.md)，再讀自己的工作範圍。**
 
-- 網站：既有 `index.html`、`assets/`、`api/`、`lib/`。
+- 網站：`apps/web/`；共用後端仍在根目錄 `api/`、`lib/`。
 - App：[apps/mobile](apps/mobile/README.md)，規劃 iPhone、Android、iPad；目前是協作架構，尚未建立可安裝 App。
 - 共用規格：[packages/shared](packages/shared/README.md)。
 - 現有網站交接：[HANDOFF.md](HANDOFF.md)。
