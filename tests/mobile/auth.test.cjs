@@ -13,7 +13,8 @@ function setup(existingStore){
  const context={exports:{},require:n=>modules[n],process:{env:{EXPO_PUBLIC_STAGING_SUPABASE_KEY:'sb_publishable_test'}},URL,URLSearchParams,AbortController,setTimeout,clearTimeout,
  fetch:async(url,options)=>{calls.push({url,options});let status=200,data={};
   if(url.endsWith('/settings'))data={external:{google:state.enabled}};
-  else if(url.endsWith('/signup')||url.endsWith('/resend'))data={};
+  else if(url.endsWith('/signup')){if(state.signupError){status=422;data={error_code:state.signupError};}else data={identities:state.duplicate?[]:[{provider:'email'}]};}
+  else if(url.endsWith('/resend'))data={};
   else if(url.endsWith('/verify')){if(state.verifyError){status=state.verifyError==='server'?503:403;data={error_code:state.verifyError==='server'?'unexpected_failure':'otp_expired'};}else data={access_token:'access',refresh_token:'refresh',expires_in:3600};}
   else if(url.includes('grant_type=password')&&state.passwordError){status=400;data={error_code:state.passwordError};}
   else if(url.includes('/token?'))data={access_token:'access',refresh_token:'refresh',expires_in:3600};
@@ -102,4 +103,15 @@ test('verification server outage is not reported as consumed link and remains re
  const {auth,state,store}=setup(),link='https://ebwtkcsmpvgyjvosbofx.supabase.co/auth/v1/verify?token='+'a'.repeat(64)+'&type=signup';
  state.verifyError='server';await assert.rejects(auth.confirmRegistration(link),e=>e.code==='unexpected_failure'&&/驗證服務未完成/.test(e.message));
  assert.equal(store.size,0);state.verifyError=false;assert.equal((await auth.confirmRegistration(link)).id,'test-user');
+});
+test('real sanitized duplicate response shows exact already-registered error without session',async()=>{
+ const {auth,state,calls,store}=setup();state.duplicate=true;
+ await assert.rejects(auth.register('test@example.test','long-password'),e=>e.message==='User already registered'&&e.code==='user_already_exists');
+ assert.equal(store.size,0);assert.equal(calls.length,1);assert.equal(await auth.restore(),null);
+});
+test('native Supabase duplicate error codes produce the same exact message',async()=>{
+ for(const code of ['user_already_exists','email_exists']){
+  const {auth,state,store}=setup();state.signupError=code;
+  await assert.rejects(auth.register('test@example.test','long-password'),e=>e.message==='User already registered');assert.equal(store.size,0);
+ }
 });

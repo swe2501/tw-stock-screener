@@ -25,3 +25,7 @@ App 可直接對獨立測試 Supabase Auth 進行 Email／密碼登入、驗證 
 
 ### 驗證失敗的處理修正
 2026-10-18 真機回報：使用者信箱在測試後台已有 Confirmed at 與 Last signed in（23:10），因此再次使用驗證連結不能視為未驗證。未讀取或重試使用者 token。App 現在只對 otp_expired 提示已使用／失效並切回 Email 登入；其他驗證服務錯誤保留重試連結且顯示不同訊息，以對話框讓錯誤不被捲動位置掩蓋。驗證請求保留信件 signup/email 類型，新增已驗證轉登入入口。十一項 auth 測試及 TypeScript 通過。實際 App 密碼登入仍待使用者自行完成。
+
+### 重複註冊提示（2026-10-18）
+依使用者要求顯示精確 User already registered。沿用 Supabase Auth 的伺服器 auth.users 重複檢查：處理 user_already_exists/email_exists 錯誤，以及 HTTP 200、無 session、identities=[] 的 sanitized duplicate 回應；不把它當註冊成功。App 顯示對話框並切回登入。沒有新增公開查帳 RPC、管理金鑰、關閉信箱驗證或開放 auth.users 給客戶端。
+已用後台確認存在且已驗證的測試帳號實測一次：HTTP 200、identities=0、無 session。依上游 signup.go，已驗證重複帳號不更新密碼；本輪未取得或更改使用者密碼。十三項單元測試及 TypeScript 通過。此偵測針對已驗證重複帳號；未驗證既有帳號仍由 Supabase 原有重寄確認流程處理，不能宣稱涵蓋所有 auth.users 既有列。

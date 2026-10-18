@@ -23,7 +23,7 @@ async function request(path:string,body?:unknown,token?:string){
   const data=r.status===204?{}:await r.json();
   if(!r.ok){
    const code=typeof data.error_code==='string'?data.error_code:typeof data.code==='string'?data.code:'';
-   const message=code==='email_not_confirmed'?'請先完成信箱驗證，再回來登入':r.status===429?'嘗試次數過多，請稍後再試':path==='/verify'&&code==='otp_expired'?'此驗證連結已使用或失效。若已點過信件，請用 Email 與密碼登入；只有尚未驗證時才需要重寄。':path==='/verify'?'驗證服務未完成請求，請稍後再試；目前無法判定連結是否失效':path==='/signup'?'無法建立帳號，請確認 Email、密碼及寄信限制後重試':path.includes('grant_type=password')&&(r.status===400||r.status===401)?'Email 或密碼不正確':r.status===400||r.status===401?'登入已過期，請重新登入':'登入服務暫時無法使用';
+   const message=code==='user_already_exists'||code==='email_exists'?'User already registered':code==='email_not_confirmed'?'請先完成信箱驗證，再回來登入':r.status===429?'嘗試次數過多，請稍後再試':path==='/verify'&&code==='otp_expired'?'此驗證連結已使用或失效。若已點過信件，請用 Email 與密碼登入；只有尚未驗證時才需要重寄。':path==='/verify'?'驗證服務未完成請求，請稍後再試；目前無法判定連結是否失效':path==='/signup'?'無法建立帳號，請確認 Email、密碼及寄信限制後重試':path.includes('grant_type=password')&&(r.status===400||r.status===401)?'Email 或密碼不正確':r.status===400||r.status===401?'登入已過期，請重新登入':'登入服務暫時無法使用';
    const e=Error(message) as Error&{status:number;code:string};e.status=r.status;e.code=code;throw e;
   }
   return data;
@@ -68,6 +68,11 @@ export async function register(email:string,password:string):Promise<Member|null
  pending=true;const run=++epoch;
  try{
   const data=await request('/signup',{email:address,password});
+  // Auth checks its own user table; with confirmations enabled it may return
+  // a sanitized duplicate response instead of HTTP 422. It is not a new user.
+  if(!data.access_token&&Array.isArray(data.identities)&&data.identities.length===0){
+   const error=Error('User already registered') as Error&{code:string};error.code='user_already_exists';throw error;
+  }
   return data.access_token?await accept(data,run):null;
  }finally{pending=false;}
 }
