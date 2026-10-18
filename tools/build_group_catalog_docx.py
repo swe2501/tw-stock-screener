@@ -95,6 +95,6 @@ for g in groups:
 
 payload={'version':2,'source':SOURCE.name,'sourceType':'user-supplied research specification; memberships require official-source verification','groups':sorted(groups,key=lambda x:x['order'])}
 (ROOT/'group-catalog.json').write_text(json.dumps(payload,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
-(ROOT/'group-catalog.js').write_text('window.GROUP_BOOK_CATALOG='+json.dumps(payload['groups'],ensure_ascii=False,separators=(',',':'))+';\n',encoding='utf-8')
+(ROOT/'apps/web/group-catalog.js').write_text('window.GROUP_BOOK_CATALOG='+json.dumps(payload['groups'],ensure_ascii=False,separators=(',',':'))+';\n',encoding='utf-8')
 (ROOT/'group-catalog-audit.json').write_text(json.dumps({'source':SOURCE.name,'marketRows':len(market),'issues':audit},ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
 print(f"Generated {len(groups)} groups / {sum(len(g['members']) for g in groups)} relations; official rows={len(market)}; audit issues={len(audit)}")

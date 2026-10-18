@@ -1,6 +1,6 @@
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
-const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
+const html=fs.readFileSync(path.join(__dirname,'..','apps/web/index.html'),'utf8');
 const nav=html.match(/<nav id="mainNav">[\s\S]*?<\/nav>/)[0];
 const sticky=html.match(/  function stickyNavigation\(\)\{[\s\S]*?(?=  function resetViewScroll)/)[0];
 const reset=html.match(/  function resetViewScroll\(\)\{[\s\S]*?(?=  function markPrimaryButtons)/)[0];

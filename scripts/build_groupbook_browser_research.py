@@ -13,7 +13,7 @@ def build():
     source = json.loads((ROOT / 'data/groupbook-quarterly-research.json').read_text(encoding='utf-8'))
     if source.get('schemaVersion') != 1 or not source.get('complete'):
         raise ValueError('Only a complete reviewed research catalog may be packaged')
-    destination = ROOT / 'assets/groupbook-research'
+    destination = ROOT / 'apps/web/assets/groupbook-research'
     destination.mkdir(exist_ok=True)
     for quarter, records in source['quarters'].items():
         payload = dict(schemaVersion=1, quarter=quarter, asOf=source['asOf'],

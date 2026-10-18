@@ -2,12 +2,12 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
-const html=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
+const html=fs.readFileSync(path.join(__dirname,'../apps/web/index.html'),'utf8');
 const start=html.indexOf(' var verifiedSettlement=');
 assert.ok(start>0);
 const script=html.slice(start,html.indexOf('</script>',start));
 const cssStart=html.lastIndexOf('<style>',start);
-const css=process.env.FULL_STYLE?Array.from(html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g),m=>m[1]).join('\n')+fs.readFileSync(path.join(__dirname,'../assets/site-readability.css'),'utf8'):html.slice(cssStart+7,html.indexOf('</style>',cssStart));
+const css=process.env.FULL_STYLE?Array.from(html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g),m=>m[1]).join('\n')+fs.readFileSync(path.join(__dirname,'../apps/web/assets/site-readability.css'),'utf8'):html.slice(cssStart+7,html.indexOf('</style>',cssStart));
 let mode='normal';
 (async()=>{
  const browser=await chromium.launch({channel:'msedge',headless:true});

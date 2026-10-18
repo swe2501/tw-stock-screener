@@ -12,7 +12,7 @@ function setup(settings={external:{google:true,apple:true,'custom:line-web':true
     history:{replaceState(){}},localStorage:storage,sessionStorage:storage,
     window:{_acceptMemberSession:s=>accepted.push(s),dispatchEvent(){}},
     fetch:async(url,options)=>{calls.push({url,...options});let data=url.endsWith('/settings')?settings:url.endsWith('/user')?{id:'verified-user',phone:'+886912345678',phone_confirmed_at:'2026-10-17'}:{access_token:'access',refresh_token:'refresh'};if(url.includes('/authorize?'))data={url:'https://provider.example/authorize'};return {ok:true,status:200,json:async()=>data};}};
-  vm.runInNewContext(fs.readFileSync('assets/member-identity.js','utf8'),context);
+  vm.runInNewContext(fs.readFileSync('apps/web/assets/member-identity.js','utf8'),context);
   return {api:context.window.AcademyIdentity,calls,saved,accepted,context};
 }
 

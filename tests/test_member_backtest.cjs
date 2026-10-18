@@ -1,7 +1,7 @@
 // Run with: node tests/test_member_backtest.cjs. No network or browser needed.
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const scope={window:{},document:{body:{},querySelectorAll:()=>[],getElementById:()=>null},localStorage:{getItem:()=>null},MutationObserver:class{observe(){}},addEventListener(){},requestAnimationFrame(){},CustomEvent:class{},dispatchEvent(){}};
-vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname,'../assets/member-research.js'),'utf8'),scope);
+vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname,'../apps/web/assets/member-research.js'),'utf8'),scope);
 const run=scope.window.AcademyResearch.backtest;
 const rows=values=>values.map((price,i)=>({time:'2026-01-0'+(i+1),open:price,close:price}));
 const parameters={capital:1000,fee:0,tax:0,slip:0,fast:2,slow:3,strategy:'hold',start:'2026-01-01',end:'2026-01-06'};
