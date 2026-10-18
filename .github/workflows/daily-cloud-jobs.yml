@@ -51,3 +51,20 @@ jobs:
       - name: 選擇權大盤（options_market · TAIFEX）
         if: ${{ !cancelled() }}
         run: python scripts/options_market.py
+
+      # --- Phase 1 第二小批（2026-10-18）：同為純官方源→Supabase，0 本機依賴 ---
+      - name: 類股成交（sector_turnover · TWSE）
+        if: ${{ !cancelled() }}
+        run: python scripts/sector_turnover.py
+
+      - name: 融資融券大盤（margin_market · TWSE）
+        if: ${{ !cancelled() }}
+        run: python scripts/margin_market.py
+
+      - name: 期貨大盤（futures_market · TAIFEX）
+        if: ${{ !cancelled() }}
+        run: python scripts/futures_market.py
+
+      - name: 基本面（fundamentals · TWSE/TPEX）
+        if: ${{ !cancelled() }}
+        run: python scripts/fundamentals.py
