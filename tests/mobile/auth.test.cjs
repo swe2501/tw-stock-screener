@@ -14,7 +14,7 @@ function setup(existingStore){
  fetch:async(url,options)=>{calls.push({url,options});let status=200,data={};
   if(url.endsWith('/settings'))data={external:{google:state.enabled}};
   else if(url.endsWith('/signup')||url.endsWith('/resend'))data={};
-  else if(url.endsWith('/verify')){if(state.verifyError){status=403;data={error_code:'otp_expired'};}else data={access_token:'access',refresh_token:'refresh',expires_in:3600};}
+  else if(url.endsWith('/verify')){if(state.verifyError){status=state.verifyError==='server'?503:403;data={error_code:state.verifyError==='server'?'unexpected_failure':'otp_expired'};}else data={access_token:'access',refresh_token:'refresh',expires_in:3600};}
   else if(url.includes('grant_type=password')&&state.passwordError){status=400;data={error_code:state.passwordError};}
   else if(url.includes('/token?'))data={access_token:'access',refresh_token:'refresh',expires_in:3600};
   else if(url.endsWith('/user')){if(state.userRevoked){status=401;data={};}else data={id:'test-user',email:'test@example.test'};}
@@ -75,7 +75,7 @@ test('copied confirmation link exchanges only its hash at fixed test origin',asy
  const {auth,calls,store}=setup(),token='a'.repeat(64);
  const result=await auth.confirmRegistration('https://ebwtkcsmpvgyjvosbofx.supabase.co/auth/v1/verify?token='+token+'&type=signup&redirect_to=https://unused.test');
  assert.equal(result.id,'test-user');assert.deepEqual([...store.values()],['refresh']);
- assert.deepEqual(JSON.parse(calls[0].options.body),{token_hash:token,type:'email'});
+ assert.deepEqual(JSON.parse(calls[0].options.body),{token_hash:token,type:'signup'});
  assert.equal(calls[0].url,'https://ebwtkcsmpvgyjvosbofx.supabase.co/auth/v1/verify');
  assert.ok(calls.every(c=>!c.url.includes(token)&&!c.url.includes('unused.test')));
 });
@@ -85,7 +85,7 @@ test('foreign links, recovery links, duplicate hashes and expired links cannot c
   const {auth,calls,store}=setup();await assert.rejects(auth.confirmRegistration(link));assert.equal(calls.length,0);assert.equal(store.size,0);
  }
  const {auth,state,store}=setup();state.verifyError=true;
- await assert.rejects(auth.confirmRegistration(base+'?token='+token+'&type=signup'),/驗證連結已失效/);assert.equal(store.size,0);
+ await assert.rejects(auth.confirmRegistration(base+'?token='+token+'&type=signup'),e=>e.code==='otp_expired'&&/Email 與密碼登入/.test(e.message));assert.equal(store.size,0);
 });
 test('server-revoked session clears secure credential and signed-in state',async()=>{
  const {auth,state,store}=setup();await auth.emailLogin('test@example.test','long-password');
@@ -97,4 +97,9 @@ test('fresh App runtime restores only through stored refresh and server user val
  assert.ok(reopened.calls[0].url.endsWith('grant_type=refresh_token'));
  assert.equal(JSON.parse(reopened.calls[0].options.body).refresh_token,'refresh');
  assert.ok(reopened.calls[1].url.endsWith('/user'));
+});
+test('verification server outage is not reported as consumed link and remains retryable',async()=>{
+ const {auth,state,store}=setup(),link='https://ebwtkcsmpvgyjvosbofx.supabase.co/auth/v1/verify?token='+'a'.repeat(64)+'&type=signup';
+ state.verifyError='server';await assert.rejects(auth.confirmRegistration(link),e=>e.code==='unexpected_failure'&&/驗證服務未完成/.test(e.message));
+ assert.equal(store.size,0);state.verifyError=false;assert.equal((await auth.confirmRegistration(link)).id,'test-user');
 });
