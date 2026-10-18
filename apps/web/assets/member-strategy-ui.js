@@ -190,7 +190,23 @@
       if(!r.ok)throw Error(data.error||'AI 服務暫時無法使用');return data;
     }
     function addMessage(role,text){const item=document.createElement('div');item.className='ms-ai-message '+role;const label=document.createElement('b'),body=document.createElement('p');if(role==='assistant'){label.innerHTML=mascot;const name=document.createElement('span');name.textContent='小書靈';label.append(name);}else label.textContent='你';body.textContent=text;item.append(label,body);log.append(item);while(log.children.length>60)log.firstElementChild.remove();log.scrollTop=log.scrollHeight;}
-    const mascot='<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="30" r="25" fill="#e9f3fa"/><path d="M14 40Q12 17 24 17L32 22L40 17Q53 18 50 40Q45 51 32 51Q19 51 14 40" fill="#fff" stroke="#3b7fa5" stroke-width="2"/><ellipse cx="24" cy="31" rx="7" ry="8" fill="#e7f0ef"/><ellipse cx="40" cy="31" rx="7" ry="8" fill="#e7f0ef"/><g class="ms-mascot-eyes-rest"><circle cx="25" cy="31" r="2.6" fill="#285950"/><circle cx="39" cy="31" r="2.6" fill="#285950"/><circle cx="26" cy="30" r="1" fill="white"/><circle cx="40" cy="30" r="1" fill="white"/></g><g class="ms-mascot-eyes-happy" fill="none" stroke="#285950" stroke-width="2.5" stroke-linecap="round"><path d="M21 32Q25 26 29 32M35 32Q39 26 43 32"/></g><path d="M29 37L32 40L35 37" fill="#cfaa48"/><path class="ms-mascot-smile" d="M27 41Q32 47 37 41" fill="#eeb9a8" stroke="#285950" stroke-width="1.4" stroke-linecap="round"/><ellipse cx="19" cy="38" rx="3" ry="1.5" fill="#efd2c8"/><ellipse cx="45" cy="38" rx="3" ry="1.5" fill="#efd2c8"/><path d="M15 46Q24 42 32 48Q41 42 49 46V55Q40 51 32 57Q24 51 15 55Z" fill="#e3eee7" stroke="#285950" stroke-width="2"/><path d="M32 48V56M25 13Q31 3 40 7Q38 15 29 15" fill="#82b29a" stroke="#285950" stroke-width="1.6"/><path d="M23 11Q31 4 42 10" fill="none" stroke="#d5b257" stroke-width="2" stroke-linecap="round"/></svg>';
+    const mascot=`<svg class="ms-brand-owl" viewBox="0 0 80 72" aria-hidden="true" focusable="false">
+<g stroke-linecap="round" stroke-linejoin="round">
+<g class="ms-owl-wing ms-owl-wing-left"><path d="M25 35Q16 35 7 28Q8 44 25 51L30 43Z" class="ms-owl-body"/><path d="M12 35Q17 41 25 42M15 41Q20 46 27 46" class="ms-owl-feather"/></g>
+<g class="ms-owl-wing ms-owl-wing-right"><path d="M55 35Q64 35 73 28Q72 44 55 51L50 43Z" class="ms-owl-body"/><path d="M68 35Q63 41 55 42M65 41Q60 46 53 46" class="ms-owl-feather"/></g>
+<path d="M24 24L22 11Q30 12 34 18Q40 15 46 18Q50 12 58 11L56 24Q64 33 59 48Q54 59 40 59Q26 59 21 48Q16 33 24 24Z" class="ms-owl-body"/>
+<path d="M29 18Q40 11 51 18" class="ms-owl-crown"/>
+<ellipse cx="31" cy="33" rx="10" ry="11" class="ms-owl-face"/><ellipse cx="49" cy="33" rx="10" ry="11" class="ms-owl-face"/>
+<g class="ms-mascot-eyes-rest"><circle cx="32" cy="33" r="5" class="ms-owl-iris"/><circle cx="48" cy="33" r="5" class="ms-owl-iris"/><circle cx="32.5" cy="33" r="3" class="ms-owl-pupil"/><circle cx="47.5" cy="33" r="3" class="ms-owl-pupil"/><circle cx="33.5" cy="31.7" r="1.3" fill="#fff"/><circle cx="48.5" cy="31.7" r="1.3" fill="#fff"/></g>
+<g class="ms-mascot-eyes-happy"><path d="M27 34Q32 27 37 34M43 34Q48 27 53 34" class="ms-owl-happy"/></g>
+<path d="M37 41L40 45L43 41Z" class="ms-owl-iris"/>
+<ellipse cx="26" cy="42" rx="3" ry="1.7" class="ms-owl-cheek"/><ellipse cx="54" cy="42" rx="3" ry="1.7" class="ms-owl-cheek"/>
+<path class="ms-mascot-smile ms-owl-happy" d="M36 47Q40 51 44 47"/>
+<g class="ms-owl-network"><path d="M56 48L60 33L70 36L65 43Z M60 33L65 43M56 48L70 36"/><circle cx="60" cy="33" r="1.5"/><circle cx="70" cy="36" r="1.5"/><circle cx="65" cy="43" r="1.5"/><circle cx="56" cy="48" r="1.5"/></g>
+<path d="M20 55Q29 51 40 57Q51 51 60 55L61 65Q50 61 40 67Q30 61 19 65Z" class="ms-owl-book"/>
+<path d="M40 57V67M24 58Q31 56 36 59M44 59Q49 56 56 58" class="ms-owl-page-line"/>
+<path d="M19 65Q29 62 40 68Q51 62 61 65" class="ms-owl-crown"/>
+</g></svg>`;
     const chat=document.createElement('dialog');chat.className='ms-chat-dialog';chat.setAttribute('aria-label','策略小書靈聊天室');
     const chatHead=document.createElement('header');chatHead.className='ms-chat-head';chatHead.innerHTML=mascot+'<div><b>策略小書靈</b><small>陪你把想法寫成可驗證的規則</small></div><div class="ms-chat-controls"><button type="button" data-chat-minimize aria-label="縮小策略聊天室" title="縮小收起">−</button><button type="button" data-chat-size aria-label="放大策略聊天室" aria-pressed="false" title="放大視窗">⛶</button><button type="button" data-chat-close aria-label="關閉策略聊天室" title="關閉">×</button></div>';chat.append(chatHead,assistant);
     const launcher=document.createElement('button');launcher.type='button';launcher.className='ms-chat-launcher';launcher.setAttribute('aria-label','開啟策略小書靈聊天室');launcher.setAttribute('aria-haspopup','dialog');launcher.setAttribute('aria-expanded','false');launcher.innerHTML=mascot+'<span>聊聊策略</span><span class="ms-chat-question" aria-hidden="true">?</span>';document.body.append(chat,launcher);
