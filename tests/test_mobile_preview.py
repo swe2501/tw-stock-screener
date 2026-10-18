@@ -7,6 +7,7 @@ import unittest
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 from unittest.mock import patch, MagicMock
+from datetime import date
 
 ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location('mobile_preview', ROOT / 'services/mobile-preview/api/prices.py')
@@ -15,6 +16,42 @@ spec.loader.exec_module(preview)
 
 
 class PreviewTests(unittest.TestCase):
+    def test_daily_market_normalization_dates_percent_and_activity(self):
+        def row(day='1151016', **extra):
+            return {'Date': day, 'TAIEX': '101', 'Change': '1', 'TradeValue': '1,234', 'TradeVolume': '567', **extra}
+        rows = preview.market_rows([row(), row('1151015', TAIEX='100', Change='0')], today=date(2026, 10, 18))
+        self.assertEqual([r['date'] for r in rows], ['2026-10-15', '2026-10-16'])
+        self.assertEqual(rows[-1]['change_percent'], 1)
+        self.assertEqual(rows[-1]['trade_value_twd'], 1234)
+        for data in [[], [row('1151032')], [row('1151019')], [row(TAIEX='NaN')], [row(TradeValue='-1')], [row(Change='101')], [row(), row(TAIEX='102')]]:
+            with self.assertRaises((ValueError, KeyError)):
+                preview.market_rows(data, today=date(2026, 10, 18))
+
+    def test_market_cache_and_upstream_failure_do_not_create_fresh_data(self):
+        response = MagicMock(status=200, headers={'Content-Type': 'application/json'})
+        response.read.return_value = json.dumps([{'Date': '1151016', 'TAIEX': '101', 'Change': '1', 'TradeValue': '1000', 'TradeVolume': '50'}]).encode()
+        with patch.object(preview, '_market_cache', None), patch.object(preview, 'build_opener') as opener:
+            opener.return_value.open.return_value.__enter__.return_value = response
+            status, data = preview.market_summary()
+            self.assertEqual(status, 200)
+            self.assertFalse(data['cached'])
+            self.assertEqual(opener.return_value.open.call_args.args[0].full_url, preview.MARKET_SOURCE)
+            original_time = data['retrieved_at']
+            status, cached = preview.market_summary()
+            self.assertTrue(cached['cached'])
+            self.assertEqual(opener.return_value.open.call_count, 1)
+            preview._market_cache = (preview.time.monotonic() - 400, data)
+            opener.return_value.open.side_effect = RuntimeError('secret failure')
+            status, stale = preview.market_summary()
+            self.assertEqual(status, 200)
+            self.assertTrue(stale['stale'])
+            self.assertEqual(stale['retrieved_at'], original_time)
+            preview._market_cache = None
+            status, failed = preview.market_summary()
+            self.assertEqual(status, 503)
+            self.assertFalse(failed['available'])
+            self.assertNotIn('secret', json.dumps(failed))
+
     def test_rejects_production_and_privileged_keys_without_request(self):
         for base, key in [
             ('https://bruqrbvbjxntgoljxsne.supabase.co', 'sb_publishable_test'),
