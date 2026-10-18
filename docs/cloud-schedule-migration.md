@@ -20,7 +20,10 @@ wantgoo 爬蟲(需登入瀏覽器, 過 Cloudflare)  ─┐
 ### ✅ 可立即上雲 — 28 支（純官方源／Supabase，不碰資料湖與 wantgoo）
 `upload_hot_topics`、`upload_exdiv_factor`、`gen_listed_codes`、`catalyst_lawshow`、`ust_yields_push`、`fetch_otc_index`、`upload_etf`、`upload_institutional`、`upload_etf_div`、`upload_etf_holders`、`sector_turnover`、`margin_market`、`inst_market`、`futures_market`、`chip_brief`、`options_market`、`daily_slogan_rotate`、`gov_broker_moneylink`、`active_etf_flow`、`upload_active_etf_holdings`、`foreign_hedge`、`breadth_daily`、`fundamentals`、`mops_announce`、`liquidity_top`、`page_cache_push`、`job_health`、`news_feed`
 
-> 其中 `catalyst_lawshow`、`upload_exdiv_factor` 已在 `daily-cloud-jobs.yml`（GitHub Actions）跑；其餘官方源同類，理論可加入，但**須實測 GitHub IP 抓 TWSE/TPEX/TAIFEX 不被限流**（wantgoo 之外的官方源一般可通，但未逐一實跑）。
+> 其中 `catalyst_lawshow`、`upload_exdiv_factor` 已在 `daily-cloud-jobs.yml`（GitHub Actions）跑；其餘官方源同類可加入。
+>
+> **✅ 2026-10-18 實測通過（Phase 1 第一小批）**：把 `inst_market`(TWSE)、`fetch_otc_index --daily`(TPEX)、`options_market`(TAIFEX) 加進 workflow，用 `gh workflow run daily-cloud-jobs.yml --ref uat` 觸發，GitHub Actions run 29 秒全綠，三支都**實際抓到資料並 upsert Supabase（status 200）**，連同原本 2 支共 5 步全過 → **TWSE / TPEX / TAIFEX 從 GitHub 雲端 IP 都不被限流**。其餘官方源同源同模式，風險大幅降低（仍建議各源至少實測一支）。
+> **操作重點**：workflow 只要**推到任一分支就會在 GitHub 註冊**，之後 `gh workflow run --ref <branch>` 即可觸發，**不必等推 prod**（schedule 定時觸發才需在預設分支 prod）。
 > 注意：部分「源:僅 Supabase」者（如 `breadth_daily`、`page_cache_push`）吃的是 Supabase 裡的資料，而那些資料若上游來自資料湖類腳本，仍要等第二層一起上雲才會新鮮。
 
 ### ⚠️ 需先把「本機資料湖」上雲 — 25 支（只讀本機 SQLite，不自己爬 wantgoo）
@@ -45,11 +48,11 @@ wantgoo 爬蟲(需登入瀏覽器, 過 Cloudflare)  ─┐
 | wantgoo 403＋Cloudflare 登入 | 10 支爬蟲 | 高（結構性） |
 | 12GB 本機 SQLite 資料湖 | 25 支讀取者 | 中（重構＋代管成本） |
 | 盤中常駐迴圈 | 1 支 | 低～中（改 cron 無狀態） |
-| GitHub IP 抓官方源是否被限流 | 28 支（風險） | 低（須實測） |
+| GitHub IP 抓官方源是否被限流 | 28 支（風險） | 低 — **TWSE/TPEX/TAIFEX 已於 2026-10-18 實測通過** |
 
 ## 四、建議路線（分階段，務實混合）
 
-1. **Phase 1（現在就能做）**：把 28 支純官方源腳本陸續加進 `daily-cloud-jobs.yml`（先小批、用 `workflow_dispatch` 實測不被限流）。本機沒開也能更新這部分。
+1. **Phase 1（進行中）**：把 28 支純官方源腳本陸續加進 `daily-cloud-jobs.yml`。**第一小批（inst_market/fetch_otc_index/options_market）已於 2026-10-18 實測在 GitHub Actions 跑通**（見上）。觸發用 `gh workflow run daily-cloud-jobs.yml --ref uat`，不必等推 prod；要「每日自動定時」才需把 workflow 推上 prod（預設分支）。可依此法分批加入其餘 25 支並各自驗一次。
 2. **Phase 2**：把 `D:\stock_data\wantgoo_full.db` 資料湖搬上雲（改用雲端 Postgres 或直接讀寫 Supabase），25 支讀取者隨之上雲。需評估 12GB 的代管方案與成本。
 3. **Phase 3（硬核 wantgoo）**：三選一
    - **(a) 混合（建議）**：保留一台小型常開機器（現有 PC／迷你主機／台灣住宅 IP 的小 VPS）**只跑那 10 支 wantgoo 爬蟲**，把結果寫進雲端資料湖；其餘全上雲。
@@ -62,4 +65,4 @@ wantgoo 爬蟲(需登入瀏覽器, 過 Cloudflare)  ─┐
 - **真正無法「純雲端」的是那 10 支 wantgoo 爬蟲**（403＋登入＋Cloudflare）。
 - 因此實際可達的終局是 **混合式**：一台小機器專跑 wantgoo 餵雲端資料湖，其餘排程全部雲端化。要做到「完全不用本機」，前提是放棄 wantgoo 或接受 (c) 的脆弱代理方案。
 
-> 盤點依據：`scripts/run_*.bat` 與 `.github/workflows/daily-cloud-jobs.yml`；分類腳本見當次 session 的 scratchpad `cloud_audit.py`。源判斷為靜態掃描（import／URL／`sqlite3`），上雲前仍須對官方源做實跑驗證。
+> 盤點依據：`scripts/run_*.bat` 與 `.github/workflows/daily-cloud-jobs.yml`；分類腳本見當次 session 的 scratchpad `cloud_audit.py`。源判斷為靜態掃描（import／URL／`sqlite3`）；TWSE/TPEX/TAIFEX 三源已於 2026-10-18 用 Phase 1 第一小批實跑驗證，其餘同源同模式風險低，加入前仍建議各源抽一支實測。
