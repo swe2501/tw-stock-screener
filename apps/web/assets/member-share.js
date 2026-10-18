@@ -68,7 +68,7 @@
   el('[data-share-refresh]').onclick=()=>refresh();
   async function copy(){const link=inviteLink();if(!link)return;try{await navigator.clipboard.writeText(link);message('邀請連結已複製！可貼到 IG 私訊或動態連結貼紙。分享動作不會直接增加有效邀請人數。');}catch{const input=el('[data-share-link]');input.hidden=false;input.value=link;input.focus();input.select();message('請手動複製下方邀請連結，貼到 IG 私訊或動態。');}}
   el('[data-share-copy]').onclick=copy;
-  el('[data-share-send]').onclick=async()=>{const link=inviteLink();if(!link)return;if(!navigator.share)return copy();try{await navigator.share({title:'跟誰學 · 一起研究市場',text:'這些研究工具分享給你，一起來試試！',url:link});message('請確認分享對象；邀請人數以朋友完成註冊驗證為準。');}catch(e){if(e.name!=='AbortError')await copy();}};
+  el('[data-share-send]').onclick=async()=>{const link=inviteLink();if(!link)return;if(!navigator.share)return copy();try{await navigator.share({title:'先見量化智能 · 一起研究市場',text:'這些研究工具分享給你，一起來試試！',url:link});message('請確認分享對象；邀請人數以朋友完成註冊驗證為準。');}catch(e){if(e.name!=='AbortError')await copy();}};
   document.addEventListener('click',e=>{const target=e.target.closest('[data-share-unlock]');if(target){e.preventDefault();open();}});
   function sessionChanged(){snapshot=null;ownerToken='';clearTimeout(expiryTimer);paint();notify();if(token())refresh();}
   addEventListener('academy-auth-changed',sessionChanged);

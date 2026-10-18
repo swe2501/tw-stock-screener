@@ -14,7 +14,7 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
   let profile = null, current = 'overview', returnFocus = null, oldOverflow = '', request = 0, returnScroll={x:0,y:0};
   const page = document.createElement('section');
   page.className = 'member-page'; page.hidden = true; page.setAttribute('aria-label','會員中心');
-  page.innerHTML = `<div class="mc-shell"><div class="mc-top"><div><span class="mc-kicker">MARKET ACADEMY · MEMBER</span><h1>會員中心</h1><div class="mc-muted">你的研究工作區，從這裡開始。</div></div><div class="mc-top-actions"><button type="button" data-member-theme></button><button type="button" data-back>← 返回原頁</button><button type="button" data-member-logout>登出</button><span class="mc-action-status" role="status"></span></div></div><div class="mc-layout"><nav class="mc-nav" aria-label="會員功能"></nav><main class="mc-main" tabindex="-1"></main></div></div>`;
+  page.innerHTML = `<div class="mc-shell"><div class="mc-top"><div><span class="mc-kicker">FORESIGHT QUANT INTELLIGENCE · MEMBER</span><h1>會員中心</h1><div class="mc-muted">你的研究工作區，從這裡開始。</div></div><div class="mc-top-actions"><button type="button" data-member-theme></button><button type="button" data-back>← 返回原頁</button><button type="button" data-member-logout>登出</button><span class="mc-action-status" role="status"></span></div></div><div class="mc-layout"><nav class="mc-nav" aria-label="會員功能"></nav><main class="mc-main" tabindex="-1"></main></div></div>`;
   document.body.append(page);
   const brandbar=document.createElement('div');brandbar.className='mc-brandbar';
   for(const selector of ['body>header .gs-brand','body>header .gs-edition']){const original=document.querySelector(selector);if(original){const clone=original.cloneNode(true);clone.removeAttribute('onclick');clone.removeAttribute('id');clone.querySelectorAll('[id],[onclick]').forEach(el=>{el.removeAttribute('id');el.removeAttribute('onclick');});if(clone.matches('a'))clone.addEventListener('click',e=>{e.preventDefault();page.querySelector('[data-back]').click();});brandbar.append(clone);}}
@@ -94,7 +94,7 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
     main.onclick=null;main.onsubmit=null;main.oninput=null;main.onchange=null;
     nav.querySelectorAll('button').forEach(b=>{if(b.dataset.tab===current)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
     const signed=!!localStorage.getItem('sb_token');
-    if(!signed){main.innerHTML='<div class="mc-card"><h2>歡迎加入跟誰學</h2><p class="mc-muted">登入後即可管理會員資料。你也可以先在此裝置整理回饋草稿。</p><button data-login>登入會員</button></div>';if(current!=='feedback')return;}
+    if(!signed){main.innerHTML='<div class="mc-card"><h2>歡迎加入先見量化智能</h2><p class="mc-muted">登入後即可管理會員資料。你也可以先在此裝置整理回饋草稿。</p><button data-login>登入會員</button></div>';if(current!=='feedback')return;}
     else main.innerHTML='';
     if(profile&&window.AcademyCloud?.status().owner===profile.id&&window.AcademyCloud.status().state==='loading'){main.innerHTML='<section class="mc-card"><p>正在讀取帳號研究資料…</p></section>';return;}
     if(profile&&window.AcademyCloud?.status().state==='expired'){main.innerHTML='<section class="mc-card"><p>登入帳號已變更，請重新登入後繼續。本機資料已保留。</p><button data-login>重新登入</button></section>';return;}
