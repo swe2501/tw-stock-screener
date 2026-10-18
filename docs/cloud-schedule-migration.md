@@ -30,6 +30,8 @@ wantgoo 爬蟲(需登入瀏覽器, 過 Cloudflare)  ─┐
 > **✅ 2026-10-18 第二小批通過**：`sector_turnover`、`margin_market`、`futures_market`(TAIFEX openapi，資料已最新→冪等略過)、`fundamentals`(1967 檔+1977 財報列全 upsert 200) 皆雲端跑通。
 > **✅ 2026-10-18 第三批（剩餘）完整 run 實測**：一次把剩餘 19 支加入後觸發，**28 步中 26 支成功**（含 gen_listed_codes、ust_yields_push/美財政部、全部 upload_etf*、chip_brief、foreign_hedge、liquidity_top、mops_announce、breadth_daily、news_feed、job_health…）。**2 支失敗且已移除**（upload_hot_topics 缺本機 json、page_cache_push 需完整管線，見上）。至此 **26 支「可直接上雲」全部掛進 workflow 且實測通過**。
 > → `futures_market` 用 TAIFEX **openapi(T+1 延遲)**，要當日值須改走 `futDataDown`（同 `api/chart`）—— 屬資料新鮮度，不影響雲端可跑性。
+> **✅ 移除 2 支後重跑全綠（26/26，conclusion=success）。**
+> **⚠️ 效能註記**：`breadth_daily`（大盤廣度）單支約 **3 分鐘**，是整個 run 的主要時間瓶頸（疑似對 Supabase 大量查詢）；目前總時長約 10 分、workflow `timeout-minutes: 15` 尚有餘裕，但後續再加腳本或它變更慢時要留意逾時，值得優化其查詢。
 > **操作重點**：workflow 只要**推到任一分支就會在 GitHub 註冊**，之後 `gh workflow run --ref <branch>` 即可觸發，**不必等推 prod**（schedule 定時觸發才需在預設分支 prod）。
 > 注意：部分「源:僅 Supabase」者（如 `breadth_daily`、`page_cache_push`）吃的是 Supabase 裡的資料，而那些資料若上游來自資料湖類腳本，仍要等第二層一起上雲才會新鮮。
 
