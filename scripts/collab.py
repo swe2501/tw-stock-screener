@@ -83,6 +83,64 @@ def integrate(root, publish=False):
     return branch
 
 
+def justy_checkout(root):
+    """Find the registered local JUSTY checkout; never guess a user directory."""
+    records = []
+    for field in git(root, 'worktree', 'list', '--porcelain', '-z').split('\0'):
+        if field.startswith('worktree '):
+            records.append({'path': Path(field[9:]).resolve()})
+        elif field.startswith('branch ') and records:
+            records[-1]['branch'] = field[7:]
+    matches = [r['path'] for r in records if r.get('branch') == 'refs/heads/justy-layout']
+    if len(matches) != 1:
+        raise CollaborationError('Exactly one registered local justy-layout checkout is required. No checkout was changed.')
+    target = matches[0]
+    if git(target, 'branch', '--show-current') != 'justy-layout':
+        raise CollaborationError('The local JUSTY checkout changed branch. Stopped without switching it.')
+    clean(target)
+    return target
+
+
+def publish_justy(root):
+    """Publish JUSTY's website work and then fast-forward its clean local checkout."""
+    root = root.resolve()
+    clean(root)
+    branch = branch_name(root)
+    if not branch.startswith(('web/justy/', 'shared/justy/')):
+        raise CollaborationError('publish-justy is only for JUSTY website/shared work, never App or another owner.')
+    target = justy_checkout(root)
+    local_head = git(target, 'rev-parse', 'HEAD')
+    git(root, 'fetch', 'origin')
+    if target != root:
+        try:
+            git(root, 'merge-base', '--is-ancestor', local_head, 'origin/justy-layout')
+        except CollaborationError as error:
+            raise CollaborationError('Local JUSTY has unpublished or divergent commits. Publish/resolve them explicitly first; nothing was pushed.') from error
+    git(root, 'merge', '--no-edit', 'origin/uat')
+    git(root, 'merge', '--no-edit', 'origin/justy-layout')
+    run_checks(root)
+    clean(root)
+    # Recheck after slow checks: do not publish while a user starts local work.
+    if justy_checkout(root) != target or git(target, 'rev-parse', 'HEAD') != local_head:
+        raise CollaborationError('The local JUSTY checkout changed during checks. Retry after reviewing it; nothing was pushed.')
+    for ref in ('origin/uat', 'origin/justy-layout', local_head):
+        git(root, 'merge-base', '--is-ancestor', ref, 'HEAD')
+    commit = git(root, 'rev-parse', 'HEAD')
+    refs = list(dict.fromkeys((branch, 'uat', 'justy-layout')))
+    git(root, 'push', '--atomic', 'origin', *['HEAD:refs/heads/' + ref for ref in refs])
+    try:
+        if justy_checkout(root) != target or git(target, 'rev-parse', 'HEAD') != local_head:
+            raise CollaborationError('The local JUSTY checkout changed after publication.')
+        git(target, 'merge', '--ff-only', commit)
+        clean(target)
+        if git(target, 'rev-parse', 'HEAD') != commit:
+            raise CollaborationError('Local JUSTY did not reach the published commit.')
+    except CollaborationError as error:
+        raise CollaborationError('Remote UAT + JUSTY were published at ' + commit +
+                                 ', but local synchronization did not complete. Local work was preserved. ' + str(error)) from error
+    return branch, target, commit
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--repo', type=Path, default=ROOT)
@@ -94,6 +152,7 @@ def main():
     commands.add_parser('sync', help='Merge latest UAT into the current clean feature branch')
     integration = commands.add_parser('integrate', help='Merge latest UAT and check before publishing')
     integration.add_argument('--publish-uat', action='store_true', help='Atomically publish own branch and UAT after checks')
+    commands.add_parser('publish-justy', help='Publish own branch + UAT + JUSTY atomically, then fast-forward the clean local JUSTY checkout')
     commands.add_parser('status', help='Read current branch/workspace status without fetching')
     args = parser.parse_args()
     root = args.repo.resolve()
@@ -107,6 +166,10 @@ def main():
         elif args.command == 'integrate':
             branch = integrate(root, args.publish_uat)
             print(('Published to UAT: ' if args.publish_uat else 'Ready for UAT: ') + branch)
+        elif args.command == 'publish-justy':
+            branch, target, commit = publish_justy(root)
+            print('Published own branch + UAT + justy-layout:', commit)
+            print('Updated local checkout:', target)
         else:
             print(git(root, 'status', '-sb'))
     except CollaborationError as error:

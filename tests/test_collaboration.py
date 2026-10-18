@@ -121,6 +121,105 @@ class CollaborationTests(unittest.TestCase):
         self.assertFalse(check.violations(['api/chart.py', 'docs/collaboration/changes/chart.md'], 'shared/justy/chart'))
         self.assertTrue(check.violations(['.env.local'], 'justy-layout'))
 
+    def prepare_justy(self):
+        self.g(self.root, 'branch', '-m', 'web/justy/fixture')
+        target = self.area / 'JUSTY local checkout'
+        self.g(self.root, 'worktree', 'add', '-b', 'justy-layout', str(target), 'origin/uat')
+        self.g(self.root, 'push', 'origin', 'justy-layout')
+        return target
+
+    def test_justy_publication_updates_three_remote_refs_and_local_files(self):
+        target = self.prepare_justy()
+        self.commit(self.root, 'apps/web/fixture.html', 'new website\n')
+        self.commit(self.partner, 'partner.md', 'keep partner update\n')
+        self.g(self.partner, 'push', 'origin', 'uat')
+        branch, actual, commit = collab.publish_justy(self.root)
+        self.assertEqual(actual, target)
+        for ref in (branch, 'uat', 'justy-layout'):
+            self.assertEqual(self.g(self.remote, 'rev-parse', ref), commit)
+        self.assertEqual(self.g(target, 'rev-parse', 'HEAD'), commit)
+        self.assertEqual(self.g(target, 'branch', '--show-current'), 'justy-layout')
+        self.assertEqual((target / 'apps/web/fixture.html').read_text(), 'new website\n')
+        self.assertEqual((target / 'partner.md').read_text(), 'keep partner update\n')
+        self.assertEqual(collab.publish_justy(self.root)[2], commit)
+
+    def test_justy_dirty_local_checkout_stops_before_push(self):
+        target = self.prepare_justy()
+        before = self.g(self.remote, 'rev-parse', 'uat')
+        self.commit(self.root, 'apps/web/fixture.html', 'website\n')
+        (target / 'draft.txt').write_text('keep my draft')
+        with self.assertRaises(collab.CollaborationError):
+            collab.publish_justy(self.root)
+        self.assertEqual(self.g(self.remote, 'rev-parse', 'uat'), before)
+        self.assertEqual((target / 'draft.txt').read_text(), 'keep my draft')
+
+    def test_justy_local_unpublished_commits_are_not_published_implicitly(self):
+        target = self.prepare_justy()
+        self.commit(target, 'private-draft.md', 'unpublished local work\n')
+        local = self.g(target, 'rev-parse', 'HEAD')
+        before = self.g(self.remote, 'rev-parse', 'uat')
+        with self.assertRaisesRegex(collab.CollaborationError, 'unpublished'):
+            collab.publish_justy(self.root)
+        self.assertEqual(self.g(target, 'rev-parse', 'HEAD'), local)
+        self.assertEqual(self.g(self.remote, 'rev-parse', 'uat'), before)
+
+    def test_justy_command_rejects_app_and_other_owners(self):
+        self.prepare_justy()
+        for branch in ('app/justy/preview', 'web/andrew/website'):
+            self.g(self.root, 'branch', '-m', branch)
+            with self.assertRaisesRegex(collab.CollaborationError, 'never App or another owner'):
+                collab.publish_justy(self.root)
+
+    def test_justy_rechecks_local_changes_after_checks(self):
+        target = self.prepare_justy()
+        self.commit(self.root, 'apps/web/fixture.html', 'website\n')
+        before = self.g(self.remote, 'rev-parse', 'uat')
+        checks = collab.run_checks
+        def local_edit(root):
+            checks(root)
+            (target / 'draft.txt').write_text('started while checking')
+        with patch.object(collab, 'run_checks', local_edit):
+            with self.assertRaises(collab.CollaborationError):
+                collab.publish_justy(self.root)
+        self.assertEqual(self.g(self.remote, 'rev-parse', 'uat'), before)
+        self.assertTrue((target / 'draft.txt').exists())
+
+    def test_justy_race_rejects_all_remote_updates_then_retry_preserves_both(self):
+        target = self.prepare_justy()
+        self.commit(self.root, 'apps/web/fixture.html', 'website\n')
+        before = self.g(self.remote, 'rev-parse', 'uat')
+        self.g(self.partner, 'fetch', 'origin')
+        self.g(self.partner, 'checkout', '-b', 'justy-layout', 'origin/justy-layout')
+        checks = collab.run_checks
+        def concurrent_update(root):
+            checks(root)
+            self.commit(self.partner, 'partner-justy.md', 'parallel update\n')
+            self.g(self.partner, 'push', 'origin', 'justy-layout')
+        with patch.object(collab, 'run_checks', concurrent_update):
+            with self.assertRaises(collab.CollaborationError):
+                collab.publish_justy(self.root)
+        self.assertEqual(self.g(self.remote, 'rev-parse', 'uat'), before)
+        self.assertEqual(self.g(target, 'rev-parse', 'HEAD'), before)
+        collab.publish_justy(self.root)
+        self.assertEqual((target / 'partner-justy.md').read_text(), 'parallel update\n')
+        self.assertEqual((target / 'apps/web/fixture.html').read_text(), 'website\n')
+
+    def test_justy_reports_when_remote_publish_succeeds_but_local_edit_blocks_sync(self):
+        target = self.prepare_justy()
+        self.commit(self.root, 'apps/web/fixture.html', 'website\n')
+        original = collab.git
+        def edit_after_push(root, *args):
+            result = original(root, *args)
+            if args[:2] == ('push', '--atomic'):
+                (target / 'draft.txt').write_text('keep new local work')
+            return result
+        with patch.object(collab, 'git', edit_after_push):
+            with self.assertRaisesRegex(collab.CollaborationError, 'Remote UAT.*local synchronization did not complete'):
+                collab.publish_justy(self.root)
+        self.assertEqual(self.g(self.remote, 'rev-parse', 'uat'), self.g(self.root, 'rev-parse', 'HEAD'))
+        self.assertNotEqual(self.g(target, 'rev-parse', 'HEAD'), self.g(self.root, 'rev-parse', 'HEAD'))
+        self.assertEqual((target / 'draft.txt').read_text(), 'keep new local work')
+
 
 if __name__ == '__main__':
     unittest.main()
