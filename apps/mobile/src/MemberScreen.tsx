@@ -1,5 +1,5 @@
 import {useEffect,useRef,useState} from 'react';
-import {ActivityIndicator,AppState,Pressable,Text,TextInput,View} from 'react-native';
+import {ActivityIndicator,Alert,AppState,Pressable,Text,TextInput,View} from 'react-native';
 import {configured,emailLogin,register,resendConfirmation,confirmRegistration,googleLogin,logout,restore,type Member} from './auth';
 
 const oauthAvailable=process.env.EXPO_PUBLIC_EXPO_GO_PREVIEW!=='1';
@@ -12,13 +12,13 @@ export default function MemberScreen({dark}:{dark:boolean}){
  async function run(work:()=>Promise<Member|null>){
   if(running.current)return;running.current=true;setBusy(true);setMessage('');
   try{const result=await work();if(mounted.current)setMember(result);}
-  catch(e){if(mounted.current)setMessage(e instanceof Error?e.message:'登入暫時無法完成');}
+  catch(e){if(mounted.current){const detail=e instanceof Error?e.message:'登入暫時無法完成';setMessage(detail);if((e as {code?:string}).code==='otp_expired'){setCreating(false);setConfirmation(false);setLink('');}Alert.alert('操作未完成',detail);}}
   finally{running.current=false;if(mounted.current)setBusy(false);}
  }
  async function signIn(){const value=password;setPassword('');await run(()=>emailLogin(email,value));}
  async function signUp(){const value=password;setPassword('');await run(async()=>{const result=await register(email,value);if(!result&&mounted.current){setConfirmation(true);setCooldown(true);setMessage('若此信箱可註冊，將收到驗證信。請查看收件匣與垃圾郵件。');}return result;});}
  async function resend(){await run(async()=>{await resendConfirmation(email);if(mounted.current){setCooldown(true);setMessage('若帳號仍待驗證，將收到新的驗證信，請使用最新一封。');}return null;});}
- async function verify(){const value=link;setLink('');await run(()=>confirmRegistration(value));}
+ async function verify(){const value=link;await run(async()=>{const result=await confirmRegistration(value);if(mounted.current)setLink('');return result;});}
  useEffect(()=>{if(!cooldown)return;const timer=setTimeout(()=>setCooldown(false),60000);return()=>clearTimeout(timer);},[cooldown]);
  useEffect(()=>{mounted.current=true;void run(restore);const listener=AppState.addEventListener('change',state=>{if(state==='active')void run(restore);});return()=>{mounted.current=false;listener.remove();};},[]);
  const button={padding:16,backgroundColor:busy||!configured?'#697c8b':'#087fb9',borderRadius:12};
@@ -33,7 +33,8 @@ export default function MemberScreen({dark}:{dark:boolean}){
    <Pressable disabled={busy} accessibilityRole="button" onPress={()=>{setCreating(!creating);setPassword('');setMessage('');}}><Text style={{color:'#087fb9',padding:12}}>{creating?'已有帳號？回到登入':'還沒有測試帳號？註冊'}</Text></Pressable>
    <Pressable disabled={busy} accessibilityRole="button" onPress={()=>setConfirmation(!confirmation)}><Text style={{color:'#087fb9',padding:12}}>已收到驗證信／尚未完成信箱驗證</Text></Pressable>
    {confirmation&&<View style={{gap:12}}>
-    <Text style={{color,lineHeight:24}}>到信箱長按驗證按鈕，複製連結並貼在下方，即可在 App 完成驗證。若已點過信件連結，請回到 Email 登入。</Text>
+    <Text style={{color,lineHeight:24}}>若已點過信件連結，信箱可能已完成驗證，請先回到 Email 登入。尚未點過時，才長按信件驗證按鈕、複製連結並貼在下方。</Text>
+    <Pressable disabled={busy} accessibilityRole="button" onPress={()=>{setCreating(false);setConfirmation(false);setLink('');setPassword('');setMessage('請輸入註冊時設定的密碼登入。');}}><Text style={{color:'#087fb9',padding:12}}>已驗證？改用 Email 與密碼登入</Text></Pressable>
     <TextInput accessibilityLabel="註冊驗證連結" placeholder="貼上信件中的驗證連結" placeholderTextColor={dark?'#a5b8cc':'#536b82'} secureTextEntry autoCapitalize="none" autoCorrect={false} value={link} onChangeText={setLink} editable={!busy} maxLength={4096} style={input}/>
     <Pressable disabled={busy||!configured||!link.trim()} accessibilityRole="button" onPress={()=>void verify()} style={button}><Text style={{color:'#fff'}}>驗證信箱並登入</Text></Pressable>
     <Pressable disabled={busy||!configured||cooldown} accessibilityRole="button" onPress={()=>void resend()}><Text style={{color:'#087fb9',padding:12}}>{cooldown?'請稍候 60 秒再寄送':'重寄驗證信到上方 Email'}</Text></Pressable>

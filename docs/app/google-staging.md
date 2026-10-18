@@ -22,3 +22,6 @@ App 可直接對獨立測試 Supabase Auth 進行 Email／密碼登入、驗證 
 - 不修改信件範本或 redirect allowlist。預設驗證信可長按按鈕複製連結，貼回 App 完成驗證；僅接受測試專案 /auth/v1/verify 的 signup/email 連結，擷取 token hash 後 POST 固定測試 /verify。從不開啟使用者貼入的 URL，忽略 redirect_to、不接受 recovery、其他專案、重複 token、fragment。已點過信件者直接用 Email 登入。
 - 註冊未回 session 時不建立本機登入；憑證只在伺服器驗證 user 後存安全儲存。伺服器撤銷 session 時清除本機登入；網路故障不刪 refresh。
 - 十項 auth 單元測試（含重新啟動、撤銷、過期／錯誤來源連結）與 TypeScript 驗證通過。尚待使用者在 iPhone 自行輸入信箱與密碼、收信完成實際驗收；未代建帳號、未讀取密碼／驗證信／token。
+
+### 驗證失敗的處理修正
+2026-10-18 真機回報：使用者信箱在測試後台已有 Confirmed at 與 Last signed in（23:10），因此再次使用驗證連結不能視為未驗證。未讀取或重試使用者 token。App 現在只對 otp_expired 提示已使用／失效並切回 Email 登入；其他驗證服務錯誤保留重試連結且顯示不同訊息，以對話框讓錯誤不被捲動位置掩蓋。驗證請求保留信件 signup/email 類型，新增已驗證轉登入入口。十一項 auth 測試及 TypeScript 通過。實際 App 密碼登入仍待使用者自行完成。

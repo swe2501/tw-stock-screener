@@ -21,7 +21,11 @@ async function request(path:string,body?:unknown,token?:string){
    headers:{apikey:KEY,'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},
    ...(body===undefined?{}:{body:JSON.stringify(body)})});
   const data=r.status===204?{}:await r.json();
-  if(!r.ok){const message=data.error_code==='email_not_confirmed'?'請先完成信箱驗證，再回來登入':r.status===429?'嘗試次數過多，請稍後再試':path==='/verify'?'驗證連結已失效或已使用，請重新登入或重寄驗證信':path==='/signup'?'無法建立帳號，請確認 Email、密碼及寄信限制後重試':path.includes('grant_type=password')&&(r.status===400||r.status===401)?'Email 或密碼不正確':r.status===400||r.status===401?'登入已過期，請重新登入':'登入服務暫時無法使用';const e=Error(message) as Error&{status:number};e.status=r.status;throw e;}
+  if(!r.ok){
+   const code=typeof data.error_code==='string'?data.error_code:typeof data.code==='string'?data.code:'';
+   const message=code==='email_not_confirmed'?'請先完成信箱驗證，再回來登入':r.status===429?'嘗試次數過多，請稍後再試':path==='/verify'&&code==='otp_expired'?'此驗證連結已使用或失效。若已點過信件，請用 Email 與密碼登入；只有尚未驗證時才需要重寄。':path==='/verify'?'驗證服務未完成請求，請稍後再試；目前無法判定連結是否失效':path==='/signup'?'無法建立帳號，請確認 Email、密碼及寄信限制後重試':path.includes('grant_type=password')&&(r.status===400||r.status===401)?'Email 或密碼不正確':r.status===400||r.status===401?'登入已過期，請重新登入':'登入服務暫時無法使用';
+   const e=Error(message) as Error&{status:number;code:string};e.status=r.status;e.code=code;throw e;
+  }
   return data;
  }catch(e){if(e instanceof Error&&e.name==='AbortError')throw Error('登入連線逾時，請重試');throw e;}
  finally{clearTimeout(timer);}
@@ -78,16 +82,16 @@ export async function resendConfirmation(email:string):Promise<void>{
 // token directly on its issuing server; never navigate to the pasted URL.
 export async function confirmRegistration(link:string):Promise<Member>{
  if(pending)throw Error('登入處理中，請稍候');
- let token='';
+ let token='',type='';
  try{
   if(link.length>4096)throw Error();
   const url=new URL(link.trim());
   const tokens=url.searchParams.getAll('token'),types=url.searchParams.getAll('type');
   if(url.origin!==BASE||url.pathname!=='/auth/v1/verify'||url.username||url.password||url.hash||tokens.length!==1||types.length!==1||!['signup','email'].includes(types[0])||! /^[a-zA-Z0-9_-]{32,256}$/.test(tokens[0]))throw Error();
-  token=tokens[0];
+  token=tokens[0];type=types[0];
  }catch{throw Error('請貼上這個測試環境寄出的完整註冊驗證連結');}
  pending=true;const run=++epoch;
- try{return await accept(await request('/verify',{token_hash:token,type:'email'}),run);}
+ try{return await accept(await request('/verify',{token_hash:token,type}),run);}
  finally{pending=false;}
 }
 
