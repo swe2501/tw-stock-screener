@@ -1,5 +1,5 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
-const ctx={};vm.runInNewContext(fs.readFileSync('assets/groupbook-cache.js','utf8'),ctx);
+const ctx={};vm.runInNewContext(fs.readFileSync('apps/web/assets/groupbook-cache.js','utf8'),ctx);
 test('repeated visits reuse result and concurrent requests share one download',async()=>{let calls=0;const get=ctx.createGroupBookCache(async()=>{calls++;return {groups:[]}});const a=get(10),b=get(10);assert.equal(a,b);await a;await get(10);assert.equal(calls,1)});
 test('windows are isolated and expire after five minutes',async()=>{let clock=0,calls=0;const get=ctx.createGroupBookCache(async w=>{calls++;return {groups:[],window:w}},()=>clock);assert.equal((await get(5)).window,5);assert.equal((await get(20)).window,20);await get(5);assert.equal(calls,2);clock=300001;await get(5);assert.equal(calls,3)});
 test('failure and invalid responses can retry without poisoning cache',async()=>{let calls=0;const get=ctx.createGroupBookCache(async()=>{calls++;if(calls===1)throw Error('offline');if(calls===2)return {error:'unavailable'};return {groups:[]}});await assert.rejects(get(10));await assert.rejects(get(10));await get(10);assert.equal(calls,3)});

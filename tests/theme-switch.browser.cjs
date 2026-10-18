@@ -8,7 +8,7 @@ const root=path.resolve(__dirname,'..'),output=process.env.QA_OUTPUT;
   if(u.hostname==='unpkg.com'&&process.env.LIGHTWEIGHT_FIXTURE)return r.fulfill({path:process.env.LIGHTWEIGHT_FIXTURE,contentType:'text/javascript'});
   if(u.pathname.startsWith('/api/')||u.pathname.startsWith('/rest/'))return r.fulfill({json:[]});
   if(u.hostname==='127.0.0.1'){
-   const file=path.resolve(root,'.'+(u.pathname==='/'?'/index.html':decodeURIComponent(u.pathname)));
+   const file=path.resolve(root,'apps/web','.'+(u.pathname==='/'?'/index.html':decodeURIComponent(u.pathname)));
    if(file.startsWith(root+path.sep)&&fs.existsSync(file)&&fs.statSync(file).isFile())return r.fulfill({path:file});
   }
   return r.fulfill({json:[]});

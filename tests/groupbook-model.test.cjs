@@ -1,5 +1,5 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
-const context={URL};vm.runInNewContext(fs.readFileSync('assets/groupbook-model.js','utf8'),context);const M=context.GroupBookModel;
+const context={URL};vm.runInNewContext(fs.readFileSync('apps/web/assets/groupbook-model.js','utf8'),context);const M=context.GroupBookModel;
 const catalog=JSON.parse(fs.readFileSync('group-catalog.json','utf8')).groups;
 test('all 192 groups and 578 membership records survive partial statistics',()=>{const groups=catalog.map(g=>M.merge(M.create(g),{samples:5,score:60,members:g.members.slice(0,1).map(m=>({code:m.code,samples:5,medianReturn:2,winRate:60}))}));assert.equal(groups.length,192);assert.equal(groups.reduce((n,g)=>n+g.members.length,0),578);for(let i=0;i<groups.length;i++)assert.deepEqual(Array.from(groups[i].members,m=>m.code),catalog[i].members.map(m=>m.code));});
 test('TSMC preserves all three relationships and metadata',()=>{const g=M.create(catalog[0]);assert.equal(g.members.length,19);const sizes={};for(const m of g.members){sizes[m.relation]=(sizes[m.relation]||0)+1;assert.ok(m.market);assert.ok(m.officialSite)}assert.deepEqual(Object.values(sizes),[5,9,5]);});
@@ -7,8 +7,8 @@ test('statistics join on code and cannot replace catalog identity or text',()=>{
 test('changing time window clears stale per-stock statistics',()=>{const g=M.create(catalog[0]),a=M.merge(g,{samples:5,score:60,members:[{code:'2330',samples:5,winRate:100,medianReturn:2}]}),b=M.merge(a,{samples:3,score:50,members:[{code:'3443',samples:3,winRate:60,medianReturn:1}]});assert.equal(b.members.find(m=>m.code==='2330').winRate,null);assert.equal(b.members.find(m=>m.code==='3443').winRate,60);});
 test('zero sample groups retain members and have no rank metrics',()=>{const g=M.merge(M.create(catalog[0]),{samples:0,score:20,doubleWinRate:0,members:[],events:[]});assert.equal(g.score,null);assert.equal(g.doubleWinRate,null);assert.equal(g.members.length,19);assert.equal(g.coveredMembers,0);});
 test('quarter reasons are isolated by quarter and missing content stays empty',()=>{const g=M.create(catalog[0]);g.quarterlyReasons={'2026Q4':{'2330':{text:'已核對研究內容',source_urls:['https://example.com/source']}}};assert.equal(M.reasons(g,'2026 Q4')[0].text,'已核對研究內容');assert.equal(M.reasons(g,'2026Q3')[0].text,'');});
-test('JS and JSON catalogs match',()=>{const c={window:{}};vm.runInNewContext(fs.readFileSync('group-catalog.js','utf8'),c);assert.equal(JSON.stringify(c.window.GROUP_BOOK_CATALOG),JSON.stringify(catalog));});
-test('all inline scripts parse',()=>{const html=fs.readFileSync('index.html','utf8');for(const match of html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g))new vm.Script(match[1]);});
+test('JS and JSON catalogs match',()=>{const c={window:{}};vm.runInNewContext(fs.readFileSync('apps/web/group-catalog.js','utf8'),c);assert.equal(JSON.stringify(c.window.GROUP_BOOK_CATALOG),JSON.stringify(catalog));});
+test('all inline scripts parse',()=>{const html=fs.readFileSync('apps/web/index.html','utf8');for(const match of html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g))new vm.Script(match[1]);});
 
 test('official data endpoints open human-readable company-period lookup pages',()=>{
  const revenue=new URL(M.sourceUrl('https://openapi.twse.com.tw/v1/opendata/t187ap05_L',{code:'2330',revenue_month:'2026-09'}));
