@@ -17,3 +17,10 @@
 回復：先關 VERCEL_FILTERED_UAT_ENABLED，再恢復 uat 原生 Git 部署，保留網站原網址與目前已上線版本。工作流目前只觀察 scope，部署開關預設未設，原 UAT 自動部署仍保留，避免未有憑證就中斷更新。
 
 測試：test_deployment_scope.py 驗證獨立服務、全 push、刪除/改名、未知檔案、缺少基準、禁止 feature/prod 與比較失敗；真正遠端部署待憑證授權。
+
+## 2026-10-19 權杖與提醒
+已建立 Andrew 團隊 30 天權杖並保存 GitHub Secret（不記錄值）。Vercel 表單顯示台北日期 11/18、列表顯示 UTC 日期 11/17；提醒採 2026-11-17T16:00:00Z（台北 11/18 零時的保守邊界），存於 VERCEL_DEPLOY_TOKEN_EXPIRES_AT。實際到期可能較此邊界稍晚，不可推遲提醒。
+
+Codex heartbeat「Vercel 部署權杖到期提醒」每天台北 09:00 檢查非敏感到期變數，距到期 7、3、1 天各提醒，更新變數後按新期限；電腦與 Codex 必須可執行，非雲端 email 保證。部署前 verify_vercel_credential.py 以固定 GET 檢查兩個專案，不建立部署、不列印 token；7 天內警告，到期或 401/403 明確失敗。
+
+更換步驟：Vercel account/settings/tokens 建立新權杖 → GitHub repository Settings / Secrets and variables / Actions 更新 VERCEL_DEPLOY_TOKEN → Variables 更新 VERCEL_DEPLOY_TOKEN_EXPIRES_AT → 先 verify，成功後重跑部署；舊權杖撤銷須使用者確認。到期不影響已上線服務。
