@@ -1,0 +1,23 @@
+# EAS archives start at the Git root. Ship only the native app and public shared code.
+/*
+!/apps/
+/apps/*
+!/apps/mobile/
+!/packages/
+/packages/*
+!/packages/shared/
+**/node_modules/
+**/dist/
+**/.expo/
+**/android/
+**/ios/
+**/.env*
+**/credentials.json
+**/*.jks
+**/*.p8
+**/*.p12
+**/*.pem
+**/*.key
+**/*.mobileprovision
+**/*.log
+**/*.tsbuildinfo
