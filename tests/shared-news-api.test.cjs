@@ -10,3 +10,7 @@ test('invalid config, queries and response shapes fail explicitly',async()=>{
  await assert.rejects(searchNews('https://fixture.test','有效',{fetcher:async()=>({ok:true,json:async()=>({})})}),/格式/);
  assert.equal(articleUrl('https://news.test/report'),'https://news.test/report');assert.equal(articleUrl('file:///private'),null);
 });
+test('protected deployment HTML and unavailable sources are not presented as empty results',async()=>{
+ await assert.rejects(searchNews('https://fixture.test','研究',{fetcher:async()=>({ok:true,headers:{get:()=> 'text/html'},json:async()=>{throw Error('must not parse')}})}),/尚未開放/);
+ await assert.rejects(searchNews('https://fixture.test','研究',{fetcher:async()=>({ok:true,json:async()=>({items:[],available:false})})}),/來源暫時/);
+});
