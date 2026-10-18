@@ -9,3 +9,5 @@ Tests and browser research generators use the new source paths. Validate test_we
 Rollback by reverting this migration commit as a whole (files plus vercel.json). Never revert only routing or only files. Existing deployed websites remain unchanged until a successful deployment.
 
 packages/shared/news-api.js defines a public read-only search contract for mobile. It validates HTTPS origins, encodes queries and permits only safe HTTPS article URLs, without member tokens. Existing website/API code does not depend on this new module. No backend response fields were changed.
+
+Vercel ignoreCommand skips App/docs-only changes compared with VERCEL_GIT_PREVIOUS_SHA (previous deployed commit), never merely HEAD parent. Missing history, git failure or VERCEL_FORCE_WEB_BUILD=1 builds conservatively. Shared/backend/unknown file changes build. This prevents App-only releases from needlessly rebuilding the website, without skipping web changes whose prior deployment failed.

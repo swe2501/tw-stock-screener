@@ -72,5 +72,6 @@
       "path": "/api/alert?kind=sell",
       "schedule": "0 13 * * 1-5"
     }
-  ]
+  ],
+  "ignoreCommand": "node scripts/should_build_web.cjs"
 }
