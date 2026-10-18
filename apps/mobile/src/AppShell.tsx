@@ -3,7 +3,7 @@ import {ActivityIndicator,Alert,Image,Linking,Pressable,ScrollView,StyleSheet,Te
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {StatusBar} from 'expo-status-bar';
 import MemberScreen from './MemberScreen';
-import MarketHome from './MarketHome';
+import MarketHub from './MarketHub';
 import {palettes} from './appearance';
 import {searchNews,type NewsItem} from '../../../packages/shared/news-api';
 
@@ -37,7 +37,7 @@ export default function AppShell(){
    <View style={s.brandRow}><Image source={require('../assets/academy-mark.png')} style={s.logo} resizeMode="contain" accessibilityLabel="跟誰學標誌"/><View style={s.brandCopy}><Text style={[s.brand,text]}>跟誰學</Text><Text style={[s.caption,muted]}>盤後研究院 · MARKET ACADEMY</Text></View></View>
    <Pressable accessibilityRole="button" accessibilityLabel={`外觀：${mode==='auto'?'跟隨系統':dark?'深色':'淺色'}，點擊切換`} onPress={()=>setMode(modes[(modes.indexOf(mode)+1)%modes.length])} style={[s.theme,{backgroundColor:c.soft}]}><Text style={[s.themeIcon,accent]}>{mode==='auto'?'◐':dark?'☾':'☀'}</Text></Pressable>
   </View>
-  <View style={{flex:tab==='大盤'?1:0,display:tab==='大盤'?'flex':'none'}}><MarketHome dark={dark} active={tab==='大盤'}/></View>
+  <View style={{flex:tab==='大盤'?1:0,display:tab==='大盤'?'flex':'none'}}><MarketHub dark={dark} active={tab==='大盤'}/></View>
   {tab!=='大盤'&&<ScrollView ref={scroll} contentContainerStyle={[s.content,wide&&s.wide]} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
    <View style={s.pageHeading}><View style={{flex:1}}><Text style={[s.eyebrow,accent]}>YOUR RESEARCH SPACE</Text><Text accessibilityRole="header" style={[s.title,text]}>{tab}</Text></View><View style={[s.badge,{backgroundColor:c.soft}]}><Text style={[s.caption,muted]}>介面預覽</Text></View></View>
    {tab==='研究搜尋'&&<>
