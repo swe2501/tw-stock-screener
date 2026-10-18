@@ -1,6 +1,8 @@
 # App connectivity preview
 
-Independent Vercel root: `services/mobile-preview`. Suggested name: `tw-stock-mobile-preview`. Framework Other. No install/build override, environment variables, outside-root files or cron. Import the shared Git repository using uat for this new project's deployment branch; do not change the existing website project.
+Independent Vercel root: `services/mobile-preview`. Project: `tw-stock-mobile-preview`. Framework Other. No install/build override, outside-root files or cron. Shared repository, uat deployment branch; existing website project unchanged.
+
+Staging project created by user: ebwtkcsmpvgyjvosbofx. Set STAGING_SUPABASE_URL to its HTTPS origin and STAGING_SUPABASE_PUBLISHABLE_KEY to its public publishable key, only in this preview Vercel project. Health checks public Data API metadata with redirects forbidden; production origin and privileged keys are rejected before network access. database_connected means Data API reachability only; research_ready and member_login_enabled remain false. No table/schema/identity changes are included.
 
 Only /health is ready. Search returns 503 until an isolated data source is implemented; no invented research results. Writes return 405 and unknown routes 404. Exactly one standard-library Python function.
 

@@ -6,6 +6,7 @@ import threading
 import unittest
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
+from unittest.mock import patch, MagicMock
 
 ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location('mobile_preview', ROOT / 'services/mobile-preview/api/prices.py')
@@ -14,6 +15,30 @@ spec.loader.exec_module(preview)
 
 
 class PreviewTests(unittest.TestCase):
+    def test_rejects_production_and_privileged_keys_without_request(self):
+        for base, key in [
+            ('https://bruqrbvbjxntgoljxsne.supabase.co', 'sb_publishable_test'),
+            (preview.STAGING_ORIGIN, 'sb_secret_test'),
+            (preview.STAGING_ORIGIN + '.evil.test', 'sb_publishable_test'),
+        ]:
+            with patch.dict(preview.os.environ, {'STAGING_SUPABASE_URL': base,
+                    'STAGING_SUPABASE_PUBLISHABLE_KEY': key}, clear=True), patch.object(preview, 'build_opener') as opener:
+                self.assertEqual(preview.connectivity()['connection_state'], 'configuration_rejected')
+                opener.assert_not_called()
+
+    def test_staging_metadata_only_and_failure_does_not_leak(self):
+        with patch.dict(preview.os.environ, {'STAGING_SUPABASE_URL': preview.STAGING_ORIGIN,
+                'STAGING_SUPABASE_PUBLISHABLE_KEY': 'sb_publishable_test'}, clear=True), patch.object(preview, 'build_opener') as opener:
+            response = MagicMock(status=200, headers={'Content-Type': 'application/openapi+json'})
+            opener.return_value.open.return_value.__enter__.return_value = response
+            self.assertTrue(preview.connectivity()['database_connected'])
+            req = opener.return_value.open.call_args.args[0]
+            self.assertEqual(req.full_url, preview.STAGING_ORIGIN + '/rest/v1/')
+            self.assertEqual(req.get_method(), 'GET')
+            response.read.assert_called_once_with(1)
+            opener.return_value.open.side_effect = RuntimeError('secret details')
+            self.assertEqual(preview.connectivity(), {'database_connected': False, 'connection_state': 'unavailable'})
+
     def test_no_database_and_no_writes(self):
         server = HTTPServer(('127.0.0.1', 0), preview.handler)
         worker = threading.Thread(target=server.serve_forever, daemon=True)

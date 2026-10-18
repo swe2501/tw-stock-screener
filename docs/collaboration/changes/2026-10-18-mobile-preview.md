@@ -5,3 +5,5 @@ Adds separate deployable root services/mobile-preview with one Python function, 
 New Vercel project must use this root only, with no production environment import or outside-root files. Public access needs a separate setting decision; existing UAT protection stays on. Independent Supabase testing and native sign-in remain pending authorization/provisioning.
 
 Validate local HTTP boundaries and both API budgets (website 12, preview 1). Rollback: remove new project; existing website unchanged.
+
+User created isolated staging project ebwtkcsmpvgyjvosbofx. Bootstrap health now probes only its Data API metadata with a public publishable key, never production, never redirects, never table rows. Environment configuration is scoped to tw-stock-mobile-preview. No database/schema/Auth writes. Search/login remain unavailable until separately implemented. Tests cover production/privileged-key rejection, correct staging request and failed connection without detail leakage.
