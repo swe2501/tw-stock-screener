@@ -20,7 +20,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "export:native": "expo export --platform ios --platform android --output-dir dist/native"
+    "export:native": "expo export --platform all --output-dir dist/native --max-workers 2"
   },
   "private": true
 }
