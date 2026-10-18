@@ -67,14 +67,21 @@ def _tx_session_quotes(rows):
 
 
 def _tx_sessions_from_taifex():
-    """外資結算成本用：期交所 futDataDown(同日) 取近月 TX 的 日盤(一般)/夜盤(盤後) 收盤。
-    取代 openapi DailyMarketReportFut(T+1 延遲、Vercel 常被擋)。回 {day, night}。"""
+    """外資結算成本用：期交所 futDataDown 取近月 TX 的 日盤(一般)/夜盤(盤後) 收盤。
+    取代 openapi DailyMarketReportFut(T+1 延遲、Vercel 常被擋)。回 {day, night}。
+
+    夜盤歸屬日很關鍵：期交所把盤後時段(前一晚 15:00→當日凌晨 05:00)**歸到次一營業日**日期。
+    所以『某日日盤之後的夜盤』會標記在「下一個營業日」的盤後列（例：10/16 週五晚的夜盤→標 10/19）。
+    因此：日盤＝最新一般列(D)；夜盤＝第一個日期 > D 的盤後列（＝D 當晚開、次營業日凌晨收）。
+    該夜盤要等隔天凌晨盤後收盤後才公布，未出來前回 night=None（前端顯示待更新），不拿前一晚的盤後誤充。
+    queryEndDate 往後延幾天才抓得到這個次營業日標記的夜盤。"""
     cookie = _taifex_cookie_str()
     end = datetime.now(timezone(timedelta(hours=8)))
     start = end - timedelta(days=10)
     post_data = urllib.parse.urlencode({
         "down_type": "1", "commodity_id": "TX", "commodity_id2": "",
-        "queryStartDate": start.strftime("%Y/%m/%d"), "queryEndDate": end.strftime("%Y/%m/%d"),
+        "queryStartDate": start.strftime("%Y/%m/%d"),
+        "queryEndDate": (end + timedelta(days=4)).strftime("%Y/%m/%d"),  # 含次營業日標記的夜盤
     }).encode()
     req = urllib.request.Request(
         "https://www.taifex.com.tw/cht/3/futDataDown", data=post_data,
@@ -116,11 +123,21 @@ def _tx_sessions_from_taifex():
             best[key] = (vol, close, month)
     if not best:
         return {"day": None, "night": None}
-    latest = max(k[0] for k in best)
     res = {"day": None, "night": None}
-    for (date, sess), (vol, close, month) in best.items():
-        if date == latest:
-            res[sess] = {"price": close, "date": date, "contractMonth": month, "session": sess}
+    # 日盤＝最新『一般』列
+    day_dates = sorted(d for (d, s) in best if s == "day")
+    if not day_dates:
+        return res
+    dmax = day_dates[-1]
+    vol, close, month = best[(dmax, "day")]
+    res["day"] = {"price": close, "date": dmax, "contractMonth": month, "session": "day"}
+    # 夜盤＝第一個日期 > dmax 的『盤後』列（＝dmax 當晚開、次營業日凌晨收）；未公布則留 None
+    nd = sorted(d for (d, s) in best if s == "night" and d > dmax)
+    if nd:
+        vol, close, month = best[(nd[0], "night")]
+        # date 顯示為該夜盤所屬的交易日(dmax 當晚)，taifexDate 保留期交所原始標記供追溯
+        res["night"] = {"price": close, "date": dmax, "contractMonth": month,
+                        "session": "night", "taifexDate": nd[0]}
     return res
 
 
