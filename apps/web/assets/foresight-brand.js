@@ -2,6 +2,17 @@
 (() => {
   'use strict';
   const seen=new WeakSet();
+  // Auth/member clones become visible later; keep their idle flash on the same clock.
+  function alignSignal(node){
+    node.getAnimations().forEach(animation=>{
+      if(animation.animationName==='fqi-identity-signal'&&animation.playState==='running'){
+        animation.startTime=-Number(animation.effect.getTiming().delay||0);
+      }
+    });
+  }
+  document.addEventListener('animationstart',event=>{
+    if(event.animationName==='fqi-identity-signal')alignSignal(event.target);
+  },true);
   let artworkId=0;
   function sourceFor(theme,body=false){return 'assets/brand/foresight-owl-'+theme+(body?'-body':'')+'.png?v=fqi16';}
   function applyArtworkTheme(node){
@@ -45,7 +56,10 @@
       node.parentElement?.querySelector('.gs-edition')?.style.setProperty('--fqi-pulse-delay',delay);
       if(observer)observer.observe(node);else node.classList.add('fqi-brand-inview');});
   }
-  function visibility(){document.documentElement.classList.toggle('fqi-brand-paused',document.hidden);}
+  function visibility(){
+    document.documentElement.classList.toggle('fqi-brand-paused',document.hidden);
+    if(!document.hidden)requestAnimationFrame(()=>document.querySelectorAll('.fqi-brand,.gs-edition').forEach(alignSignal));
+  }
   register(document);visibility();
   new MutationObserver(()=>document.querySelectorAll('.fqi-brand').forEach(applyArtworkTheme)).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
   const header=document.querySelector('body>header:has(.fqi-brand)');
