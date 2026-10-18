@@ -2150,6 +2150,7 @@
   }
 </style>
 <link rel="stylesheet" href="assets/member-center.css">
+<link rel="stylesheet" href="assets/member-share.css">
 <link rel="stylesheet" href="assets/member-signin.css">
 <link rel="stylesheet" href="assets/member-strategy.css">
 <link rel="stylesheet" href="assets/member-trade.css">
@@ -4338,10 +4339,10 @@
 
     <div id="fhLock" class="pf-glass pf-lock" style="display:none">
       <div style="font-size:34px"></div>
-      <h3>付費解鎖更多</h3>
+      <h3>分享解鎖，立即使用</h3>
       <p>外資期貨淨空名目 ÷ 外資持股市值＝相對規模指標（非單一法人避險比率；分母多為被動/長線持股，分子多為造市/套利部位，法律主體不同），搭配 2 年歷史百分位分級、今日現期貨象限與情境模擬。此為進階籌碼分析。</p>
-      <p style="margin-top:6px">已開通「主力籌碼」的帳號可直接瀏覽。請登入你的授權帳號。</p>
-      <button class="cta" onclick="try{document.getElementById('loginBtn').click()}catch(e){}">登入 / 解鎖</button>
+      <p style="margin-top:6px">分享給 3 位 IG 好友領 3 天體驗；邀請碼每滿 3 位有效新會員，再獲得 7 天。活動資格與開放狀態請見分享規則。</p>
+      <button class="cta" type="button" data-share-unlock>分享解鎖，立即使用 →</button>
     </div>
 
     <div id="fhBody">
@@ -4550,7 +4551,7 @@
     window._fhPageBg=function(on){ if(!on){ document.body.classList.remove('pf-page-dark','pf-page-light'); } else applyTheme(); };
 
     function applyGate(){
-      var owner = !!window._isOwner;
+      var owner = !!window._isOwner || !!window.AcademyShareUnlock?.hasAccess('fhedge');
       if(el('fhLock')) el('fhLock').style.display = owner? 'none':'';
       if(el('fhBody')) el('fhBody').style.display = owner? '':'none';
       return owner;
@@ -4958,7 +4959,7 @@
 
     window._fhedgeShow=function(){
       applyGate(); applyTheme();
-      if(loaded){ if(window._isOwner) render(); return; }
+      if(loaded){ if(applyGate()) render(); return; }
       var SB=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'', AK=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';
       var H={apikey:AK,Authorization:'Bearer '+AK}; SBx=SB; Hx=H;
       el('fhModeSeg').querySelectorAll('button').forEach(function(b){ b.onclick=function(){ el('fhModeSeg').querySelectorAll('button').forEach(function(x){x.classList.remove('on');}); b.classList.add('on'); mode=b.dataset.m; render(); }; });
@@ -4975,15 +4976,15 @@
         DATA.forEach(function(r){ if(FX[r.trade_date]==null&&r.usdtwd!=null) FX[r.trade_date]=+r.usdtwd; });   // Yahoo 缺日以自有匯率補
         loaded=true;
         buildEvents([]);
-        if(window._isOwner){ render(); renderEvents(SB,H); renderEvCards(SB,H); }
-        if(window._loadTwHol) window._loadTwHol().then(function(){ buildEvents(EVX); if(window._isOwner){ render(); renderEvCards(SB,H); } });
+        if(applyGate()){ render(); renderEvents(SB,H); renderEvCards(SB,H); }
+        if(window._loadTwHol) window._loadTwHol().then(function(){ buildEvents(EVX); if(applyGate()){ render(); renderEvCards(SB,H); } });
         Promise.all([
           fetch(SB+'/rest/v1/catalyst_events?select=start_date&code=eq.2330&event_type=eq.'+encodeURIComponent('法說會')+'&order=start_date.asc&limit=100',{headers:H}).then(function(r){return r.json();}).catch(function(){return [];}),
           fetch(SB+'/rest/v1/macro_events?select=*&or=(importance.eq.high,pinned.eq.true)&order=occ_time.asc&limit=1000',{headers:H}).then(function(r){return r.json();}).catch(function(){return [];})
         ]).then(function(ev){
           var ex=[]; (Array.isArray(ev[0])?ev[0]:[]).forEach(function(e){ if(e.start_date) ex.push({d:e.start_date.slice(0,10),n:'台積電法說會'}); });
           (Array.isArray(ev[1])?ev[1]:[]).forEach(function(e){ if(!e.occ_time||e.hidden) return; var t=new Date(new Date(e.occ_time).getTime()+8*3600e3); ex.push({d:iso(t),n:e.title}); });
-          EVX=ex; buildEvents(ex); if(window._isOwner) render();
+          EVX=ex; buildEvents(ex); if(applyGate()) render();
         });
       }).catch(function(){ if(el('fhNarrative'))el('fhNarrative').textContent='資料讀取失敗'; });
     };
@@ -5113,10 +5114,10 @@
   <div id="breadthView" style="display:none">
     <div class="tm-head"><h2> 大盤多空廣度</h2><span class="sub" id="bdSub"></span></div>
     <div id="bdLock" class="bd-lock" style="display:none">
-      <div class="ic"></div><h3>付費解鎖更多</h3>
+      <div class="ic"></div><h3>分享解鎖，立即使用</h3>
       <p>整合上市/上櫃家數體溫、漲跌停滲透率極值、站上均線廣度（5階週期）與部位 SOP 的大盤多空判讀系統。</p>
-      <p style="margin-top:6px">已開通「主力籌碼」的帳號可直接瀏覽。請登入你的授權帳號。</p>
-      <button class="cta" onclick="try{document.getElementById('loginBtn').click()}catch(e){}">登入 / 解鎖</button>
+      <p style="margin-top:6px">分享給 3 位 IG 好友領 3 天體驗；邀請碼每滿 3 位有效新會員，再獲得 7 天。活動資格與開放狀態請見分享規則。</p>
+      <button class="cta" type="button" data-share-unlock>分享解鎖，立即使用 →</button>
     </div>
     <div id="bdBody">
       <div class="bd-topbar">
@@ -5187,7 +5188,7 @@
     function _cssv(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
     function pct(a,p){ a=a.slice().sort(function(x,y){return x-y;}); var i=(a.length-1)*p/100,lo=Math.floor(i); return lo+1>=a.length?a[lo]:a[lo]+(a[lo+1]-a[lo])*(i-lo); }
 
-    function applyGate(){ var o=!!window._isOwner; if(el('bdLock'))el('bdLock').style.display=o?'none':''; if(el('bdBody'))el('bdBody').style.display=o?'':'none'; return o; }
+    function applyGate(){ var o=!!window._isOwner || !!window.AcademyShareUnlock?.hasAccess('breadth'); if(el('bdLock'))el('bdLock').style.display=o?'none':''; if(el('bdBody'))el('bdBody').style.display=o?'':'none'; return o; }
     window._breadthApplyGate=applyGate;
 
     // 手冊§6 情緒門檻（滲透率 %）
@@ -5355,8 +5356,8 @@
     }
     window._breadthShow=function(){
       applyGate();
-      if(window._isOwner&&window._bxShow) setTimeout(window._bxShow,0);
-      if(loaded){ if(window._isOwner) render(); return; }
+      if(applyGate()&&window._bxShow) setTimeout(window._bxShow,0);
+      if(loaded){ if(applyGate()) render(); return; }
       var SB=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'', AK=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';
       var H={apikey:AK,Authorization:'Bearer '+AK};
       el('bdModeSeg').querySelectorAll('button').forEach(function(b){b.onclick=function(){el('bdModeSeg').querySelectorAll('button').forEach(function(x){x.classList.remove('on');});b.classList.add('on');mode=b.dataset.m;render();};});
@@ -5366,7 +5367,7 @@
       ]).then(function(res){
         (res[0]||[]).forEach(function(r){(BY[r.market]=BY[r.market]||[]).push(r);});
         (res[1]||[]).forEach(function(r){TX[r.trade_date]=+r.close;});
-        loaded=true; if(window._isOwner) render();
+        loaded=true; if(applyGate()) render();
       }).catch(function(){ if(el('bdNarrative'))el('bdNarrative').textContent='資料讀取失敗'; });
     };
     window._VIEWS=window._VIEWS||{}; window._VIEWS.breadth={el:'breadthView',show:'_breadthShow'};
@@ -8232,7 +8233,7 @@
           +'<div class="gs-ststat"><em class="st-'+st[2]+'">'+st[0]+'</em><p>'+st[1]+(idx!=null?'（加權 '+(idx>=0?'+':'')+idx.toFixed(2)+'%）':'')+'</p></div>'+risk
           +'<div class="gs-shgrid">'+row('電子',e,'55% 防線',e)+row('金融',f,'10% 警戒',f)+row('其他傳產',tr,s.top_trad_name?(s.top_trad_name+' '+mx.toFixed(1)+'%'):'產業合計',trBar)+'</div>'
           +'<div class="gs-otc"><div class="gs-otc-h">(櫃買 − 集中) 強弱勢　<small>千分點 ‰：+5.00 ≈ 櫃買比加權多漲 0.5%</small></div>'+otcHtml+'</div>'
-          +'<a class="gs-more" onclick="_showView(&quot;breadth&quot;)"> 付費解鎖更多：騰落線／多空頭排列／市場寬度／新高-新低／站上均線家數 →</a>'
+          +'<a class="gs-more" onclick="_showView(&quot;breadth&quot;)"> 分享解鎖，立即使用：查看市場廣度研究工具 →</a>'
           +'<details class="gs-shdet"><summary>查看研究判讀門檻</summary><div>'
           +'<p><b>一、上市成交比重（規格書 多空雙向定案版，嚴格由上往下、符合即停；指數以 ±0.2% 過濾微幅雜訊）</b></p>'
           +'<p>0 資料異常：任一欄 &lt;0 或 &gt;100、單一傳產 &gt; 傳產總額、三類加總偏離 95%~105%。<br>'
@@ -8813,11 +8814,11 @@
     @media(max-width:760px){#mingdengView .md-frm{grid-template-columns:1fr 1fr;}#mingdengView .md-ladders{grid-template-columns:1fr;}}
   </style>
   <div id="mingdengView" style="display:none">
-    <div class="tm-head"><h2> 明燈與冥燈</h2><span class="sub">真人點名回測 · 神燈跟單／冥燈避雷（付費）</span></div>
+    <div class="tm-head"><h2> 明燈與冥燈</h2><span class="sub">公開點名歷史紀錄 · 回測與風險回顧</span></div>
     <div id="mdLock" style="display:none;text-align:center;padding:60px 20px;color:var(--text-muted)">
       <div style="font-size:40px;margin-bottom:10px"></div>
-      <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px">明燈與冥燈 為付費功能</div>
-      <div style="font-size:13px">追蹤真人點名的歷史勝率／最大回撤，分出「神燈（跟單）」與「冥燈（反著做）」。開通主力籌碼權限後可見。</div>
+      <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px">明燈與冥燈 · 專項授權功能</div>
+      <div style="font-size:13px">回顧公開點名的歷史表現與最大回撤。依原有專項權限提供，不包含在分享體驗範圍。</div>
     </div>
     <div id="mdBody" style="display:none">
       <div class="md-card" id="mdFormCard">
@@ -12895,6 +12896,7 @@
       emailEl.style.display = loggedIn ? '' : 'none';
       if (loggedIn && _authUser) emailEl.textContent = _authUser.email;
       window._loggedIn = loggedIn;
+      window.AcademyShareUnlock?.syncSession();
       // 右側面板永遠顯示（基本面/相關新聞不需登入）；「觀察備註」分頁僅登入顯示
       try {
         var _nt = document.getElementById('cnpTabNote');
@@ -16991,6 +16993,7 @@
 
 </script>
 <script src="assets/member-identity.js" defer></script>
+<script src="assets/member-share.js" defer></script>
 <script src="assets/member-provider-icons.js" defer></script>
 <script src="assets/member-cloud.js" defer></script>
 <script src="assets/member-features.js" defer></script>

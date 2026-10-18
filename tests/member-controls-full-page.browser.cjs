@@ -21,6 +21,15 @@ const root=path.resolve(__dirname,'..'),output=process.env.QA_OUTPUT||require('n
  assert.equal(await logout.isVisible(),true);await theme.click();
  const first=await page.locator('html').getAttribute('data-theme');assert.equal(await page.evaluate(()=>localStorage.getItem('theme')),first==='light'?'light':'dark');
  await theme.click();await page.waitForTimeout(400);assert.notEqual(await page.locator('html').getAttribute('data-theme'),first);
+ // The real membership renderer opens the new share dialog; unavailable rewards fail closed.
+ await member.locator('[data-tab=referrals]').click();await member.locator('[data-share-unlock]').click();
+ const share=page.locator('dialog.share-unlock');await share.waitFor({state:'visible'});
+ assert.equal(await share.locator('[data-share-claim]').isDisabled(),true);
+ assert.equal(await share.locator('h2').textContent(),'分享解鎖，立即使用');
+ assert.equal(await share.locator('.share-eyebrow').evaluate(e=>getComputedStyle(e).backgroundColor),'rgba(0, 0, 0, 0)');
+ assert.ok(await share.evaluate(e=>e.scrollWidth<=e.clientWidth+1));
+ await page.keyboard.press('Escape');await share.waitFor({state:'hidden'});
+ await member.locator('[data-tab=overview]').click();await page.locator('.mc-identity').waitFor();
  assert.equal(await member.locator('.mc-nav .pro-primary').count(),0);
  await member.locator('[data-tab=security]').hover();
  assert.equal(await member.locator('[data-tab=security]').evaluate(e=>getComputedStyle(e,'::after').animationName),'mc-nav-sweep');
