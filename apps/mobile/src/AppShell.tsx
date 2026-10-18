@@ -3,12 +3,13 @@ import {ActivityIndicator,Alert,Image,Linking,Pressable,ScrollView,StyleSheet,Te
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {StatusBar} from 'expo-status-bar';
 import MemberScreen from './MemberScreen';
+import MarketHome from './MarketHome';
 import {palettes} from './appearance';
 import {searchNews,type NewsItem} from '../../../packages/shared/news-api';
 
 const SITE=process.env.EXPO_PUBLIC_API_BASE_URL||'https://tw-stock-mobile-preview.vercel.app';
 const WEBSITE='https://tw-stock-screener-git-uat-andrew250165s-projects.vercel.app';
-const tabs=['總覽','研究搜尋','我的觀察','會員'] as const;
+const tabs=['大盤','研究搜尋','我的觀察','會員'] as const;
 const symbols=['⌂','⌕','☆','♙'];
 const modes=['auto','light','dark'] as const;
 export default function AppShell(){
@@ -16,7 +17,7 @@ export default function AppShell(){
  const [mode,setMode]=useState<typeof modes[number]>('auto');
  const dark=mode==='auto'?system==='dark':mode==='dark',wide=width>=768&&fontScale<1.5;
  const c=palettes[dark?'dark':'light'];
- const [tab,setTab]=useState<typeof tabs[number]>('總覽'),[query,setQuery]=useState(''),[items,setItems]=useState<NewsItem[]>([]),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[searched,setSearched]=useState(false);
+ const [tab,setTab]=useState<typeof tabs[number]>('大盤'),[query,setQuery]=useState(''),[items,setItems]=useState<NewsItem[]>([]),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[searched,setSearched]=useState(false);
  const sequence=useRef(0),active=useRef<AbortController|null>(null),scroll=useRef<ScrollView>(null);
  useEffect(()=>()=>{++sequence.current;active.current?.abort();},[]);
  const text={color:c.text},muted={color:c.muted},card={backgroundColor:c.card,borderColor:c.border},accent={color:c.accent};
@@ -36,17 +37,9 @@ export default function AppShell(){
    <View style={s.brandRow}><Image source={require('../assets/academy-mark.png')} style={s.logo} resizeMode="contain" accessibilityLabel="跟誰學標誌"/><View style={s.brandCopy}><Text style={[s.brand,text]}>跟誰學</Text><Text style={[s.caption,muted]}>盤後研究院 · MARKET ACADEMY</Text></View></View>
    <Pressable accessibilityRole="button" accessibilityLabel={`外觀：${mode==='auto'?'跟隨系統':dark?'深色':'淺色'}，點擊切換`} onPress={()=>setMode(modes[(modes.indexOf(mode)+1)%modes.length])} style={[s.theme,{backgroundColor:c.soft}]}><Text style={[s.themeIcon,accent]}>{mode==='auto'?'◐':dark?'☾':'☀'}</Text></Pressable>
   </View>
-  <ScrollView ref={scroll} contentContainerStyle={[s.content,wide&&s.wide]} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
-   <View style={s.pageHeading}><View style={{flex:1}}><Text style={[s.eyebrow,accent]}>YOUR RESEARCH SPACE</Text><Text accessibilityRole="header" style={[s.title,text]}>{tab==='總覽'?'研究，從好奇開始。':tab}</Text></View><View style={[s.badge,{backgroundColor:c.soft}]}><Text style={[s.caption,muted]}>介面預覽</Text></View></View>
-   {tab==='總覽'&&<>
-    <View style={[s.hero,{backgroundColor:c.hero}]}><View pointerEvents="none" style={s.orbit}/><Text style={[s.eyebrow,{color:c.gold}]}>觀察 · 理解 · 驗證</Text><Text style={s.heroTitle}>把市場脈絡，{wide?'':'\n'}留在手邊。</Text><Text style={s.heroBody}>從產業事件到研究線索，慢慢建立自己的觀點。</Text>{button('探索研究線索  →',()=>select('研究搜尋'),true)}</View>
-    <Text accessibilityRole="header" style={[s.sectionTitle,text]}>今天，從哪裡開始？</Text>
-    <View style={[s.grid,wide&&s.columns]}>
-     <Pressable accessibilityRole="button" accessibilityLabel="前往新聞與題材搜尋" onPress={()=>select('研究搜尋')} style={({pressed})=>[s.card,card,wide&&s.half,pressed&&s.pressed]}><Text style={[s.tileIcon,accent]}>⌕</Text><Text style={[s.subtitle,text]}>新聞與題材</Text><Text style={[s.body,muted]}>找公司、產業與事件，沿著來源繼續閱讀。</Text><Text style={[s.action,accent]}>開始搜尋  →</Text></Pressable>
-     <Pressable accessibilityRole="link" accessibilityLabel="在瀏覽器開啟網站集團研究台" onPress={()=>void open(WEBSITE+'/#groupbook')} style={({pressed})=>[s.card,card,wide&&s.half,pressed&&s.pressed]}><Text style={[s.tileIcon,accent]}>▤</Text><Text style={[s.subtitle,text]}>集團研究台</Text><Text style={[s.body,muted]}>查看集團關係與季度研究；目前於網站開啟。</Text><Text style={[s.action,accent]}>開啟網站  ↗</Text></Pressable>
-    </View>
-    <View style={[s.card,card]}><Text style={[s.subtitle,text]}>讓每一個想法，都有依據</Text>{['找到感興趣的事件與公司','核對來源、日期與資料範圍','留下問題，再逐步驗證'].map((v,i)=><View key={v} style={s.step}><Text style={[s.stepNumber,{color:c.accent,backgroundColor:c.soft}]}>{'0'+(i+1)}</Text><Text style={[s.stepText,text]}>{v}</Text></View>)}</View>
-   </>}
+  <View style={{flex:tab==='大盤'?1:0,display:tab==='大盤'?'flex':'none'}}><MarketHome dark={dark} active={tab==='大盤'}/></View>
+  {tab!=='大盤'&&<ScrollView ref={scroll} contentContainerStyle={[s.content,wide&&s.wide]} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
+   <View style={s.pageHeading}><View style={{flex:1}}><Text style={[s.eyebrow,accent]}>YOUR RESEARCH SPACE</Text><Text accessibilityRole="header" style={[s.title,text]}>{tab}</Text></View><View style={[s.badge,{backgroundColor:c.soft}]}><Text style={[s.caption,muted]}>介面預覽</Text></View></View>
    {tab==='研究搜尋'&&<>
     <View style={[s.card,card]}><Text style={[s.subtitle,text]}>你想了解什麼？</Text><Text style={[s.body,muted]}>輸入公司、產業或事件。搜尋結果會保留來源與日期。</Text><TextInput accessibilityLabel="研究關鍵字" placeholder="例如：半導體、ETF" placeholderTextColor={c.muted} value={query} onChangeText={setQuery} returnKeyType="search" onSubmitEditing={()=>void search()} maxLength={80} style={[s.input,{backgroundColor:c.bg,borderColor:c.border},text]}/><View style={s.chips}>{['半導體','ETF','AI 伺服器'].map(v=><Pressable key={v} accessibilityRole="button" onPress={()=>{setQuery(v);void search(v);}} style={[s.chip,{backgroundColor:c.soft}]}><Text style={[s.chipText,muted]}>{v}</Text></Pressable>)}</View>{button(busy?'重新搜尋':'搜尋研究資料',()=>void search(),true)}</View>
     {busy&&<View style={s.loading}><ActivityIndicator color={c.accent}/><Text style={muted}>正在整理研究線索…</Text></View>}
@@ -58,7 +51,7 @@ export default function AppShell(){
    {tab==='我的觀察'&&<View style={[s.card,card]}><Text style={[s.tileIcon,accent]}>☆</Text><Text style={[s.subtitle,text]}>把值得追蹤的想法留下來</Text><Text style={[s.body,muted]}>App 自選與同步尚在開發。現有收藏與交易紀錄請先至網站會員中心查看。</Text>{button('先找研究線索',()=>select('研究搜尋'),true)}<View style={{height:12}}/>{button('開啟網站會員中心  ↗',()=>void open(WEBSITE+'/#member/overview'))}</View>}
    {tab==='會員'&&<MemberScreen dark={dark}/>}
    <Text style={[s.footer,muted]}>研究資訊僅供參考。請核對來源與資料日期。</Text>
-  </ScrollView>
+  </ScrollView>}
   <View accessibilityRole="tablist" style={[s.nav,{backgroundColor:c.card,borderColor:c.border}]}>{tabs.map((item,i)=><Pressable key={item} accessibilityRole="tab" accessibilityState={{selected:tab===item}} onPress={()=>select(item)} style={({pressed})=>[s.tab,{backgroundColor:tab===item?c.soft:'transparent',opacity:pressed?.7:1}]}><Text accessible={false} style={[s.navIcon,{color:tab===item?c.accent:c.muted}]}>{symbols[i]}</Text><Text style={[s.navText,{color:tab===item?c.accent:c.muted}]}>{item}</Text></Pressable>)}</View>
  </SafeAreaView>;
 }
