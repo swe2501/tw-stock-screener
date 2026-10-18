@@ -2,6 +2,10 @@
   "expo": {
     "name": "跟誰學",
     "slug": "academy-mobile",
+    "owner": "market-academy-tw",
+    "extra": {
+      "eas": {"projectId": "ad786c12-a9c9-4415-aa2a-bb4038878e3f"}
+    },
     "version": "0.1.0",
     "orientation": "default",
     "icon": "./assets/icon.png",

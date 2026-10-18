@@ -5,6 +5,7 @@ import MemberScreen from './MemberScreen';
 import {searchNews,type NewsItem} from '../../../packages/shared/news-api';
 
 const SITE=process.env.EXPO_PUBLIC_API_BASE_URL||'https://tw-stock-screener-git-uat-andrew250165s-projects.vercel.app';
+const WEBSITE='https://tw-stock-screener-git-uat-andrew250165s-projects.vercel.app';
 const tabs=['總覽','研究搜尋','我的觀察','會員'] as const;
 export default function AppShell(){
  const dark=useColorScheme()==='dark',wide=useWindowDimensions().width>=768;
@@ -24,13 +25,13 @@ export default function AppShell(){
    <Text style={[s.body,muted]}>從新聞與產業事件開始，整理自己的研究方向。</Text>
    {tab==='總覽'&&<View style={[s.grid,wide&&s.columns]}>
     <Pressable accessibilityRole="button" accessibilityLabel="前往研究搜尋" onPress={()=>setTab('研究搜尋')} style={[s.card,card,wide&&s.half]}><Text style={s.eyebrow}>RESEARCH</Text><Text style={[s.subtitle,text]}>找到下一個研究問題</Text><Text style={[s.body,muted]}>搜尋站內已收錄的新聞與題材，查看來源與資料日期。</Text><Text style={s.action}>開始研究 →</Text></Pressable>
-    <Pressable accessibilityRole="button" accessibilityLabel="在瀏覽器開啟集團研究" onPress={()=>void open(SITE+'/#groupbook')} style={[s.card,card,wide&&s.half]}><Text style={s.eyebrow}>GROUP INSIGHTS</Text><Text style={[s.subtitle,text]}>集團作帳研究</Text><Text style={[s.body,muted]}>先在網站研究台查看完整資料。原生集團頁將另行開發。</Text><Text style={s.action}>開啟網站研究台 ↗</Text></Pressable>
+    <Pressable accessibilityRole="button" accessibilityLabel="在瀏覽器開啟集團研究" onPress={()=>void open(WEBSITE+'/#groupbook')} style={[s.card,card,wide&&s.half]}><Text style={s.eyebrow}>GROUP INSIGHTS</Text><Text style={[s.subtitle,text]}>集團作帳研究</Text><Text style={[s.body,muted]}>先在網站研究台查看完整資料。原生集團頁將另行開發。</Text><Text style={s.action}>開啟網站研究台 ↗</Text></Pressable>
    </View>}
    {tab==='研究搜尋'&&<View><Text style={[s.subtitle,text]}>新聞與題材</Text><View style={s.search}><TextInput accessibilityLabel="研究關鍵字" placeholder="公司、產業或事件" placeholderTextColor={c.muted} value={query} onChangeText={setQuery} returnKeyType="search" onSubmitEditing={()=>void search()} maxLength={80} style={[s.input,card,text]}/><Pressable accessibilityRole="button" onPress={()=>void search()} disabled={busy} style={s.button}><Text style={s.white}>搜尋</Text></Pressable></View>
     {busy&&<ActivityIndicator accessibilityLabel="搜尋中" color="#087fb9"/>}{!!message&&<Text accessibilityRole="alert" style={[s.body,muted]}>{message}</Text>}
     {items.map((item,i)=><View key={item.url||item.title+i} style={[s.card,card]}><Text style={[s.caption,muted]}>{item.source} · {item.date}</Text><Text style={[s.subtitle,text]}>{item.title}</Text><Text style={[s.body,muted]}>{item.snippet}</Text>{item.url&&<Pressable accessibilityRole="link" onPress={()=>void open(item.url!)}><Text style={s.action}>閱讀原始來源 ↗</Text></Pressable>}</View>)}
    </View>}
-   {tab==='我的觀察'&&<View style={[s.card,card]}><Text style={[s.subtitle,text]}>建立你的觀察清單</Text><Text style={[s.body,muted]}>原生自選與同步尚在開發。現有收藏與交易紀錄請先在網站使用。</Text><Pressable accessibilityRole="link" onPress={()=>void open(SITE+'/#member/overview')}><Text style={s.action}>前往網站會員中心 ↗</Text></Pressable></View>}
+   {tab==='我的觀察'&&<View style={[s.card,card]}><Text style={[s.subtitle,text]}>建立你的觀察清單</Text><Text style={[s.body,muted]}>原生自選與同步尚在開發。現有收藏與交易紀錄請先在網站使用。</Text><Pressable accessibilityRole="link" onPress={()=>void open(WEBSITE+'/#member/overview')}><Text style={s.action}>前往網站會員中心 ↗</Text></Pressable></View>}
    {tab==='會員'&&<MemberScreen dark={dark}/>}
    <Text style={[s.caption,muted]}>研究資訊僅供參考，不構成投資建議。請留意資料日期。</Text>
   </ScrollView>
