@@ -12,7 +12,7 @@ export default function MemberScreen({dark}:{dark:boolean}){
  async function run(work:()=>Promise<Member|null>){
   if(running.current)return;running.current=true;setBusy(true);setMessage('');
   try{const result=await work();if(mounted.current)setMember(result);}
-  catch(e){if(mounted.current){const detail=e instanceof Error?e.message:'登入暫時無法完成';setMessage(detail);if((e as {code?:string}).code==='otp_expired'){setCreating(false);setConfirmation(false);setLink('');}Alert.alert('操作未完成',detail);}}
+  catch(e){if(mounted.current){const detail=e instanceof Error?e.message:'登入暫時無法完成';setMessage(detail);const code=(e as {code?:string}).code;if(code==='otp_expired'||code==='user_already_exists'||code==='email_exists'){setCreating(false);setConfirmation(false);setLink('');}Alert.alert('操作未完成',detail);}}
   finally{running.current=false;if(mounted.current)setBusy(false);}
  }
  async function signIn(){const value=password;setPassword('');await run(()=>emailLogin(email,value));}
