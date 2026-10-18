@@ -26,3 +26,13 @@ apps/mobile/.expo/
 apps/mobile/dist/
 apps/mobile/.env*
 !apps/mobile/.env.example
+
+# 本機執行期雜物，不入庫（2026-10-18 整理）
+# 期交所 Playwright 瀏覽器設定檔（含 cookie／快取，會自動再生）
+scripts/.taifex_profile/
+# 所有執行 log（涵蓋既有 scripts/daily_job*.log）
+*.log
+# Windows 捷徑
+*.lnk
+# 根目錄除錯暫存腳本
+/debug_*.py
