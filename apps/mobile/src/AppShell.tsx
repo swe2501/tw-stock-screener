@@ -1,6 +1,7 @@
 import {useRef,useState} from 'react';
 import {ActivityIndicator,Alert,Linking,Pressable,SafeAreaView,ScrollView,StyleSheet,Text,TextInput,useColorScheme,useWindowDimensions,View} from 'react-native';
 import {StatusBar} from 'expo-status-bar';
+import MemberScreen from './MemberScreen';
 import {searchNews,type NewsItem} from '../../../packages/shared/news-api';
 
 const SITE=process.env.EXPO_PUBLIC_API_BASE_URL||'https://tw-stock-screener-git-uat-andrew250165s-projects.vercel.app';
@@ -30,7 +31,7 @@ export default function AppShell(){
     {items.map((item,i)=><View key={item.url||item.title+i} style={[s.card,card]}><Text style={[s.caption,muted]}>{item.source} · {item.date}</Text><Text style={[s.subtitle,text]}>{item.title}</Text><Text style={[s.body,muted]}>{item.snippet}</Text>{item.url&&<Pressable accessibilityRole="link" onPress={()=>void open(item.url!)}><Text style={s.action}>閱讀原始來源 ↗</Text></Pressable>}</View>)}
    </View>}
    {tab==='我的觀察'&&<View style={[s.card,card]}><Text style={[s.subtitle,text]}>建立你的觀察清單</Text><Text style={[s.body,muted]}>原生自選與同步尚在開發。現有收藏與交易紀錄請先在網站使用。</Text><Pressable accessibilityRole="link" onPress={()=>void open(SITE+'/#member/overview')}><Text style={s.action}>前往網站會員中心 ↗</Text></Pressable></View>}
-   {tab==='會員'&&<View style={[s.card,card]}><Text style={[s.subtitle,text]}>沿用你的會員帳號</Text><Text style={[s.body,muted]}>原生登入尚未接通。完成安全憑證保存與 Google／LINE 回呼驗證後，再開放 App 登入。</Text></View>}
+   {tab==='會員'&&<MemberScreen dark={dark}/>}
    <Text style={[s.caption,muted]}>研究資訊僅供參考，不構成投資建議。請留意資料日期。</Text>
   </ScrollView>
   <View accessibilityRole="tablist" style={[s.nav,{backgroundColor:c.card,borderColor:c.border}]}>{tabs.map(item=><Pressable key={item} accessibilityRole="tab" accessibilityState={{selected:tab===item}} onPress={()=>setTab(item)} style={s.tab}><Text style={{color:tab===item?'#087fb9':c.muted,fontWeight:'700'}}>{item}</Text></Pressable>)}</View>

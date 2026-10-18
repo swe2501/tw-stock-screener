@@ -25,6 +25,10 @@
     "platforms": [
       "ios",
       "android"
+    ],
+    "plugins": [
+      "expo-secure-store",
+      "expo-web-browser"
     ]
   }
 }

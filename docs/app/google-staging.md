@@ -1,0 +1,11 @@
+# Google login: native staging
+
+App membership page now uses a browser authorization-code PKCE flow against isolated staging Supabase ebwtkcsmpvgyjvosbofx. Exact App callback: academy-mobile://auth/callback. Google OAuth client redirect: https://ebwtkcsmpvgyjvosbofx.supabase.co/auth/v1/callback. These are different URLs for different legs of the flow.
+
+Required external setup (not applied by this code): configure a Google Web OAuth client for staging, paste its Client ID/Secret into the staging Google provider, enable that provider, and allow the exact App callback in staging Supabase Auth redirect URLs. Never change production provider configuration. Credentials are entered by the user in provider dashboards; never commit a Google secret. Configure EXPO_PUBLIC_STAGING_SUPABASE_KEY with the staging public publishable key when building the App.
+
+Access token stays in memory; only the refresh token is stored in Expo SecureStore with WHEN_UNLOCKED_THIS_DEVICE_ONLY. No provider tokens or user profiles persist. Launch/foreground restore rotates the refresh token, validates /user and saves the replacement. Network failures retain credentials for retry. Logout requests scope=local and deletes the local credential only after successful revocation; errors remain visible. No two-device policy changes.
+
+The PKCE verifier lives only in the running login attempt. A terminated process cannot resume its OAuth callback: restart login instead. Callback scheme/host/path, code multiplicity and absence of token fragments are checked. Use a native development build; Expo Go cannot establish this custom scheme flow. Changing native plugins requires rebuilding. iOS/Android real-device cancellation, cold start, restore, refresh and logout remain required acceptance checks. Compilation is not an actual Google login test.
+
+Validation: TypeScript, both platform exports and three isolated OAuth/session boundary tests passed. npm audit currently reports 22 dependency findings (15 high, 7 moderate), including Expo/React Native tooling chains; suggested force fixes downgrade core frameworks and were not applied. Dependency remediation and impact assessment remain a release gate before distributing this build. No cloud build or store submission performed.
