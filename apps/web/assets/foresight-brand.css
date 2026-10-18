@@ -2,7 +2,7 @@
 :root{--fqi-ink:#edf0ed;--fqi-gold:#cabb85;--fqi-mark-bg:#14212b;--fqi-ring:var(--border,#30404a);--fqi-halo:#8bbbe01a;--fqi-logo-filter:url(#fqiHeritageDark);--fqi-accent-filter:url(#fqiAccentDark)}
 :root[data-theme=light]{--fqi-ink:#141e36;--fqi-gold:#b69b48;--fqi-mark-bg:#fff;--fqi-ring:#dbe4ec;--fqi-halo:#347fc412;--fqi-logo-filter:url(#fqiHeritageLight);--fqi-accent-filter:url(#fqiAccentLight)}
 .gs-brand.fqi-brand{display:inline-flex!important;align-items:center!important;gap:12px!important;min-width:0;text-decoration:none!important;isolation:isolate;border-radius:12px;color:var(--fqi-ink)!important;outline-offset:5px;-webkit-tap-highlight-color:transparent}
-.fqi-brand .gs-mark{position:relative;display:grid;place-items:center;flex:0 0 auto;width:96px!important;height:96px!important;aspect-ratio:1;padding:0!important;border:0!important;border-radius:0!important;overflow:hidden;background:transparent!important;box-shadow:none!important;transition:transform .16s cubic-bezier(.16,1,.3,1),filter .16s}
+.fqi-brand .gs-mark{position:relative;display:grid;place-items:center;flex:0 0 auto;width:84px!important;height:56px!important;aspect-ratio:auto;padding:0!important;border:0!important;border-radius:0!important;overflow:hidden;background:transparent!important;box-shadow:none!important;transition:transform .16s cubic-bezier(.16,1,.3,1),filter .16s}
 .fqi-brand .gs-mark img{position:relative;z-index:1;width:100%!important;height:100%!important;object-fit:contain!important;display:block;padding:0!important;background:transparent!important;border-radius:0!important;filter:var(--fqi-logo-filter)!important}
 .fqi-brand .gs-mark::before{content:"";position:absolute;z-index:2;inset:-80%;pointer-events:none;background:linear-gradient(110deg,transparent 40%,#ffffff06 46%,#ffffff35 50%,#ffffff06 54%,transparent 60%)!important;transform:translateX(-125%);animation:none!important;animation-play-state:paused!important}
 .fqi-brand .gs-mark::after{content:none!important}
@@ -84,8 +84,11 @@ body.mc-open>header .fqi-brand .gs-mark::before,body.mc-open>header .fqi-brand .
 
 /* Keep the artwork width, remove its unused vertical canvas spacing. */
 body>header:has(.fqi-brand){min-height:0;padding-block:8px!important;align-items:center}
-body>header .fqi-brand .gs-mark,.mc-brandbar .fqi-brand .gs-mark{width:96px!important;height:72px!important;aspect-ratio:auto}
+body>header .fqi-brand .gs-mark,.mc-brandbar .fqi-brand .gs-mark{width:84px!important;height:56px!important;aspect-ratio:auto}
 .mc-brandbar:has(.fqi-brand){min-height:0;padding-block:8px}
-body:not(.pro-nav-compact)>#mainNav{top:var(--fqi-header-height,89px)}
-@media(max-width:700px){body>header .fqi-brand .gs-mark,.mc-brandbar .fqi-brand .gs-mark{width:72px!important;height:56px!important}.mc-brandbar:has(.fqi-brand){padding-block:8px}}
+body:not(.pro-nav-compact)>#mainNav{top:var(--fqi-header-height,73px)}
+@media(max-width:700px){body>header .fqi-brand .gs-mark,.mc-brandbar .fqi-brand .gs-mark{width:72px!important;height:48px!important}.mc-brandbar:has(.fqi-brand){padding-block:8px}}
 @media(max-width:430px){body>header:has(.fqi-brand){padding-block:6px!important;row-gap:8px}}
+
+/* Align the visible book edge with the subtitle, rather than centering the square canvas. */
+body>header .gs-brand.fqi-brand,.mc-brandbar .gs-brand.fqi-brand,.fqi-standalone .gs-brand.fqi-brand{align-items:flex-end!important}
