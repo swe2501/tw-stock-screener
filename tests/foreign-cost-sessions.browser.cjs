@@ -2,12 +2,12 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
-const html=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
+const html=fs.readFileSync(path.join(__dirname,'../apps/web/index.html'),'utf8');
 const start=html.indexOf(' var verifiedSettlement=');
 assert.ok(start>0);
 const script=html.slice(start,html.indexOf('</script>',start));
 const cssStart=html.lastIndexOf('<style>',start);
-const css=process.env.FULL_STYLE?Array.from(html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g),m=>m[1]).join('\n'):html.slice(cssStart+7,html.indexOf('</style>',cssStart));
+const css=process.env.FULL_STYLE?Array.from(html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g),m=>m[1]).join('\n')+fs.readFileSync(path.join(__dirname,'../apps/web/assets/site-readability.css'),'utf8'):html.slice(cssStart+7,html.indexOf('</style>',cssStart));
 let mode='normal';
 (async()=>{
  const browser=await chromium.launch({channel:'msedge',headless:true});
@@ -21,12 +21,13 @@ let mode='normal';
    if(mode==='error')return route.fulfill({status:502,json:{error:'unavailable'}});
    return route.fulfill({json:{quoteType:'published_daily',sessions:{day:{session:'day',price:mode==='bear'?45000:mode==='flat'?46163.28:mode==='upper'?46563.28:mode==='lower'?45563.28:47242,date:'2026-10-16',contractMonth:'202610'},night:mode==='missing'?null:{session:'night',price:47366,date:'2026-10-16',contractMonth:'202610'}}}});
   }
-  return route.fulfill({contentType:'text/html',body:'<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>:root{--surface:#fff;--text:#263448;--text-muted:#607087;--border:#d6deea;--accent:#347fc4}body{margin:0;font-family:Arial}*{box-sizing:border-box}'+css+'</style><div id="hpFut"></div><div id="hpForeignCost"></div><div id="fhCards"></div><div id="fhForeignCost"></div><script>(function(){'+script+'</script>'});
+  return route.fulfill({contentType:'text/html',body:'<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>:root{--surface:#fff;--text:#263448;--text-muted:#607087;--border:#d6deea;--accent:#347fc4}body{margin:0;font-family:Arial}*{box-sizing:border-box}'+css+'</style><div id="hpFut" class="hp-grid"><article class="hp-mc"><h3>外資部位摘要</h3><p>摘要測試內容</p></article><article class="hp-mc"><h3>小台多空摘要</h3><p>摘要測試內容</p></article><article class="hp-mc"><h3>微台多空摘要</h3><p>摘要測試內容</p></article></div><div id="hpForeignCost"></div><div id="fhCards"></div><div id="fhForeignCost"></div><script>(function(){'+script+'</script>'});
  });
  await page.goto('http://session.test/');
  const detail=page.locator('#fhForeignCost');
  await detail.getByText('47,242 點',{exact:true}).waitFor({timeout:5000});
  assert.match(await detail.textContent(),/1,178.72 點/);
+ assert.equal(await page.locator('#hpForeignCost .fx-position-lots').count(),0);assert.equal(await page.locator('#hpForeignCost .fx-session-note').count(),0);assert.equal(await detail.locator('.fx-position-lots').count(),1);
  await detail.getByRole('button',{name:'夜盤',exact:true}).click();
  assert.match(await detail.textContent(),/47,366 點/);
  assert.match(await detail.textContent(),/1,302.72 點/);
@@ -38,7 +39,21 @@ let mode='normal';
  assert.equal(await detail.evaluate(e=>e.scrollWidth<=e.clientWidth),true);
  const output=process.env.QA_OUTPUT;
  if(output){fs.mkdirSync(output,{recursive:true});await detail.screenshot({path:path.join(output,'day-mobile.png')});}
+ await page.setViewportSize({width:1512,height:1000});assert.ok(await page.locator('#hpFut .hp-mc').first().evaluate(e=>e.getBoundingClientRect().height<280),'summary cards must not stretch with detailed content');assert.ok(await page.locator('#hpForeignCost .fx-session-switch').evaluate(e=>{const last=e.lastElementChild.getBoundingClientRect(),r=e.getBoundingClientRect();return r.right-last.right<=7;}),'session segments must fit content');assert.ok(await page.locator('#hpFut').evaluate(e=>{const heights=[...e.children].map(c=>c.getBoundingClientRect().height);return Math.max(...heights)-Math.min(...heights)<2;}),'summary cards must share row height');if(output)await page.locator('#hpFut').screenshot({path:path.join(output,'home-cost-summary.png')});
 
+ await page.setViewportSize({width:1512,height:1000});
+
+ for(const theme of ['light','dark']){
+ await page.evaluate(theme=>document.documentElement.dataset.theme=theme,theme);
+ for(const width of [1512,1220,390,320]){await page.setViewportSize({width,height:1000});assert.ok(await page.locator('#hpForeignCost').evaluate(e=>{const number=e.querySelector('.fx-cost-number'),n=number.getBoundingClientRect(),s=e.querySelector('.fx-session-switch').getBoundingClientRect();return n.right<=s.left+1&&number.scrollWidth<=number.clientWidth+1&&e.scrollWidth<=e.clientWidth+1;}),'cost and session controls must not overlap '+width);
+  assert.ok(await page.locator('#hpForeignCost').evaluate(e=>{
+   const box=selector=>e.querySelector(selector).getBoundingClientRect();
+   const state=box('.fx-cost-state'),plot=box('.fx-ecg-plot'),label=box('.fx-ecg-cost-label'),caption=box('.fx-cost-caption'),card=box('.fx-cost');
+   return state.bottom+6<=plot.top&&label.bottom+10<=caption.top&&caption.bottom+12<=card.bottom;
+  }),'home chart labels and baseline caption need separate breathing room '+width);
+  if(output)await page.locator('#hpForeignCost').screenshot({path:path.join(output,'home-cost-'+theme+'-'+width+'.png')});
+ }
+ }
  await page.setViewportSize({width:1512,height:1000});
  await page.emulateMedia({reducedMotion:'no-preference'});
  async function freeze(ms){await page.waitForTimeout(80);await detail.evaluate((e,t)=>e.getAnimations({subtree:true}).forEach(a=>{a.pause();a.currentTime=t;}),ms);}

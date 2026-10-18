@@ -7,9 +7,9 @@ const root=path.resolve(__dirname,'..'),output=process.env.QA_OUTPUT||require('n
  page.on('pageerror',e=>errors.push(e.stack||e.message));
  await page.addInitScript(()=>{localStorage.setItem('sb_token','fixture');localStorage.setItem('sb_user',JSON.stringify({id:'full-page-fixture',email:'fixture@example.test'}));});
  await page.route('**/*',r=>{const u=new URL(r.request().url());if(u.origin==='https://full-page.fixture.test'){
-  const file=path.resolve(root,'.'+decodeURIComponent(u.pathname));
+  const file=path.resolve(root,'apps/web','.'+decodeURIComponent(u.pathname));
   if(file.startsWith(root+path.sep)&&fs.existsSync(file)&&fs.statSync(file).isFile())return r.fulfill({path:file});
-  if(u.pathname==='/')return r.fulfill({path:path.join(root,'index.html'),contentType:'text/html; charset=utf-8'});
+  if(u.pathname==='/')return r.fulfill({path:path.join(root,'apps/web/index.html'),contentType:'text/html; charset=utf-8'});
   return r.fulfill({json:{}});
  }
  if(u.hostname.endsWith('.supabase.co')){if(u.pathname==='/auth/v1/user')return r.fulfill({json:{id:'full-page-fixture',email:'fixture@example.test',user_metadata:{display_name:'隔離測試'},email_confirmed_at:'2026-01-01'}});if(u.pathname.endsWith('/save_member_research_document')){const v=r.request().postDataJSON();return r.fulfill({json:{kind:v.p_kind,revision:v.p_expected_revision+1,payload:v.p_payload}});}return r.fulfill({json:[]});}
@@ -21,6 +21,15 @@ const root=path.resolve(__dirname,'..'),output=process.env.QA_OUTPUT||require('n
  assert.equal(await logout.isVisible(),true);await theme.click();
  const first=await page.locator('html').getAttribute('data-theme');assert.equal(await page.evaluate(()=>localStorage.getItem('theme')),first==='light'?'light':'dark');
  await theme.click();await page.waitForTimeout(400);assert.notEqual(await page.locator('html').getAttribute('data-theme'),first);
+ // The real membership renderer opens the new share dialog; unavailable rewards fail closed.
+ await member.locator('[data-tab=referrals]').click();await member.locator('[data-share-unlock]').click();
+ const share=page.locator('dialog.share-unlock');await share.waitFor({state:'visible'});
+ assert.equal(await share.locator('[data-share-claim]').isDisabled(),true);
+ assert.equal(await share.locator('h2').textContent(),'分享解鎖，立即使用');
+ assert.equal(await share.locator('.share-eyebrow').evaluate(e=>getComputedStyle(e).backgroundColor),'rgba(0, 0, 0, 0)');
+ assert.ok(await share.evaluate(e=>e.scrollWidth<=e.clientWidth+1));
+ await page.keyboard.press('Escape');await share.waitFor({state:'hidden'});
+ await member.locator('[data-tab=overview]').click();await page.locator('.mc-identity').waitFor();
  assert.equal(await member.locator('.mc-nav .pro-primary').count(),0);
  await member.locator('[data-tab=security]').hover();
  assert.equal(await member.locator('[data-tab=security]').evaluate(e=>getComputedStyle(e,'::after').animationName),'mc-nav-sweep');

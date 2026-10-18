@@ -1,0 +1,135 @@
+/* Market Academy sign-in. Vendor marks remain static and unmodified. */
+#authModal{padding:20px 12px;box-sizing:border-box;backdrop-filter:blur(9px);background:rgba(17,30,45,.48)}
+#authModal .auth-box{position:relative;isolation:isolate;width:440px;max-width:100%;max-height:calc(100dvh - 40px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;padding:30px 34px 26px;border-radius:30px;background:var(--surface);border:1px solid color-mix(in srgb,var(--accent) 18%,var(--border));box-shadow:0 28px 90px #12283c36,0 4px 18px #12283c12}
+#authModal.open .auth-box{animation:ma-auth-reveal .35s ease-out both,ma-auth-glow 7s ease-in-out .4s infinite}
+#authModal .auth-box::after{content:"";position:absolute;top:0;left:12%;width:36%;height:2px;pointer-events:none;background:linear-gradient(90deg,transparent,var(--accent),#d5bd7c,transparent);opacity:0}
+#authModal.open .auth-box::after{animation:ma-auth-light 6.8s ease-in-out infinite}
+@keyframes ma-auth-reveal{from{opacity:0;transform:translateY(9px) scale(.99)}to{opacity:1;transform:none}}
+@keyframes ma-auth-glow{0%,100%{box-shadow:0 28px 90px #12283c36,0 0 0 0 transparent}50%{box-shadow:0 28px 90px #12283c36,0 0 28px color-mix(in srgb,var(--accent) 13%,transparent)}}
+@keyframes ma-auth-light{0%,12%{transform:translateX(-20%);opacity:0}25%{opacity:.85}48%{transform:translateX(130%);opacity:0}100%{transform:translateX(130%);opacity:0}}
+#authModal .auth-brand{display:flex;justify-content:center;margin:5px 0 24px}
+#authModal .auth-brand .gs-brand{display:flex;align-items:center;gap:12px;cursor:default;color:var(--text)}
+#authModal .auth-brand .gs-mark{width:56px;height:56px;border-radius:17px;box-shadow:0 6px 20px #163c4d0d}
+#authModal .auth-brand .gs-mark img{width:100%;height:100%;object-fit:contain}
+#authModal .auth-brand .gs-name b{font-size:25px}
+#authModal .auth-brand .gs-name small{font-size:10px}
+#authModal .auth-tabs{gap:5px;border:1px solid var(--border);border-radius:999px;padding:4px;background:var(--bg);margin-bottom:22px}
+#authModal .auth-tab{border:0;border-radius:999px;min-height:36px;background:transparent;color:var(--text-muted);padding:7px 14px;box-shadow:none!important;animation:none!important;transform:none!important}
+#authModal .auth-tab.active{background:var(--surface);color:var(--text);box-shadow:0 2px 8px #15354b0c!important}
+#authModal .auth-tab::before,#authModal .auth-tab::after{display:none!important}
+#authModal .auth-box h2{text-align:center;font-size:21px;margin:0 0 22px;font-weight:700}
+#authModal .auth-field{margin-bottom:15px}
+#authModal .auth-field label{font-size:12px;margin-bottom:7px}
+#authModal .auth-field input{min-height:50px;border-radius:18px;padding:13px 16px;background:var(--bg);font-size:14px;border-color:var(--border)}
+#authModal .auth-field .pw-wrap input{padding-right:48px}
+#authModal .pw-eye{width:30px;height:30px;right:10px;padding:6px;border:0!important;background:transparent!important;color:var(--text-muted)!important;box-shadow:none!important;transform:translateY(-50%)!important;animation:none!important}
+#authModal .pw-eye svg{width:18px;height:18px;display:block}
+#authModal .pw-eye::before,#authModal .pw-eye::after{display:none!important}
+#authModal .auth-submit{min-height:49px;border-radius:999px;font-size:15px;margin-top:4px;letter-spacing:.06em}
+#authModal .auth-error:empty{display:none}#authModal .auth-error{font-size:12px;line-height:1.7;margin-top:12px}
+#authModal #authForgotRow{margin-top:12px!important}
+#authModal #authForgotRow a{color:var(--accent)!important;text-decoration:none!important;font-size:12px!important}
+#authModal .auth-account-switch{text-align:center;font-size:12px;color:var(--text-muted);margin:16px 0 20px}
+#authModal .auth-account-switch button{display:inline;padding:2px 3px;border:0;background:transparent;color:var(--accent);font:inherit;cursor:pointer;box-shadow:none!important;animation:none!important;transform:none!important}
+#authModal .auth-account-switch button::before,#authModal .auth-account-switch button::after{display:none!important}
+#authModal .academy-social{border:0;padding:0;margin:0}
+#authModal .academy-social-title{display:flex;align-items:center;gap:12px;margin:0 0 18px;color:var(--text-muted);font-size:11px}
+#authModal .academy-social-title::before,#authModal .academy-social-title::after{content:"";height:1px;flex:1;background:var(--border)}
+#authModal .academy-social-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
+#authModal .academy-social-grid button{display:grid;grid-template-columns:40px minmax(0,1fr) 40px;gap:7px;align-items:center;text-align:center;width:100%;min-height:52px;border-radius:999px;border:1px solid var(--border);font-size:14px;font-weight:500;line-height:1.4;padding:5px 13px 5px 7px;box-shadow:none!important;animation:none!important;transform:none!important;background:var(--surface);color:var(--text)}
+#authModal .academy-social-grid button::before,#authModal .academy-social-grid button::after{display:none!important}
+#authModal .academy-social-grid button[data-provider=google]{background:#fff!important;color:#1f1f1f!important;border-color:#747775!important}
+#authModal .academy-social-grid button[data-provider=apple]{background:#000!important;color:#fff!important;border-color:#000!important}
+#authModal .academy-social-grid button[data-provider=facebook]{background:#1877f2!important;color:#fff!important;border-color:#1877f2!important}
+#authModal .academy-social-grid button[data-provider=line]{background:#06c755!important;color:#fff!important;border-color:#06c755!important}
+#authModal .academy-social-grid button[data-provider=phone]{background:var(--bg)!important;color:var(--text)!important}
+#authModal .academy-social-grid button:not(:disabled):hover{filter:brightness(.96)}
+#authModal .academy-social-grid button:disabled{opacity:.48;cursor:not-allowed}
+#authModal .academy-social-grid button small{font-size:10px;color:inherit;white-space:nowrap;opacity:.85}
+#authModal .academy-social-grid button small:empty{display:none}
+#authModal .academy-social-grid button small:empty+*{display:none}
+#authModal .academy-social-status{font-size:11px;line-height:1.8;margin-top:14px}
+.academy-provider-icon{width:40px;height:40px;flex:none;display:inline-grid;place-items:center;border-radius:50%;overflow:hidden;background:var(--bg);color:var(--text);box-sizing:border-box}
+.academy-provider-icon img{width:40px;height:40px;object-fit:contain;display:block;flex:none}
+.academy-provider-icon svg{width:21px;height:21px;display:block}
+.academy-provider-icon.api-google,.academy-provider-icon.api-apple{background:#fff}
+.academy-provider-icon.api-line{background:#06c755}
+.academy-provider-icon.api-facebook{background:#1877f2}
+#authModal [data-provider=apple] .academy-provider-icon{background:#000}
+#authModal [data-provider=facebook] .academy-provider-icon img{width:25px;height:25px}
+.mc-security-row{display:flex;align-items:center;gap:16px;padding:17px 0;border-bottom:1px solid var(--border)}
+.mc-security-row:last-of-type{border-bottom:0}
+.mc-security-provider{display:flex;align-items:center;gap:13px;flex:1;min-width:0}.mc-security-provider strong{font-size:14px;font-weight:600}.mc-security-provider small{font-size:11px;margin-top:2px;overflow-wrap:anywhere}
+.mc-security-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.member-page .mc-security-actions button{padding:8px 14px;min-height:37px;border-radius:999px;font-size:12px;box-shadow:none!important;transform:none!important;animation:none!important;background:var(--surface)!important;color:var(--accent)!important;border-color:var(--border)!important}
+.member-page .mc-security-actions button:disabled{opacity:.5;cursor:not-allowed;color:var(--text-muted)!important}
+.member-page .mc-security-actions button::before,.member-page .mc-security-actions button::after{display:none!important}
+.mc-security-state{font-size:11px;color:var(--text-muted);white-space:nowrap}.mc-security-state[data-linked=true]{color:var(--accent)}
+.mc-contact-dialog{width:min(430px,calc(100vw - 28px));box-sizing:border-box;padding:25px;border-radius:24px;border:1px solid var(--border);background:var(--surface);color:var(--text);max-height:calc(100dvh - 32px);overflow:auto}
+.mc-contact-dialog::backdrop{background:#10243c75;backdrop-filter:blur(6px)}.mc-contact-dialog h2{font-size:20px;margin:0 0 10px}.mc-contact-dialog p{font-size:13px;color:var(--text-muted);line-height:1.8}.mc-contact-dialog label{display:block;font-size:12px;margin:14px 0 7px}.mc-contact-dialog input{width:100%;box-sizing:border-box;padding:13px;border:1px solid var(--border);border-radius:15px;background:var(--bg);color:var(--text);font:inherit}.mc-contact-buttons{display:flex;gap:8px;flex-wrap:wrap;margin-top:15px}.member-page .mc-contact-buttons button{border-radius:999px;font-size:13px}.mc-contact-dialog [role=status]{font-size:12px;line-height:1.8;margin-top:12px;color:var(--text-muted)}
+@media(max-width:600px){#authModal{padding:12px;z-index:20000}#authModal .auth-box{max-height:calc(100dvh - 24px);padding:26px 23px 22px;border-radius:26px}#authModal .auth-brand{margin:4px 0 21px}#authModal .academy-social-grid button{font-size:13px}.mc-security-row{gap:10px;flex-wrap:wrap}.mc-security-actions{margin-left:53px;justify-content:flex-start}.mc-security-provider{min-width:100%}}
+@media(prefers-reduced-motion:reduce){#authModal.open .auth-box,#authModal.open .auth-box::after{animation:none!important}}
+
+/* Keep the rounded auth design independent of broad legacy control overrides. */
+#authModal .auth-field input{border-radius:18px!important}
+#authModal .auth-brand .gs-mark{width:56px!important;height:56px!important;border-radius:17px!important}
+#authModal .auth-brand .gs-name b{font-size:25px!important}
+#authModal .auth-brand .gs-name small{font-size:10px!important}
+#authModal .auth-tab.active{background:var(--surface)!important;color:var(--text)!important;border-radius:999px!important}
+
+.member-page .mc-main:focus{outline:none}
+
+.academy-provider-icon.api-apple{border:1px solid var(--border)}
+#authModal [data-provider=apple] .academy-provider-icon{border:0}
+
+/* Login and registration own the active styling; neither is a global CTA. */
+#authModal .auth-tabs .auth-tab{background:transparent!important;background-image:none!important;border:1px solid transparent!important;color:var(--text-muted)!important;box-shadow:none!important;animation:none!important}
+#authModal .auth-tabs .auth-tab.active{background:linear-gradient(110deg,var(--cta-start),var(--cta-end))!important;border-color:transparent!important;color:var(--on-accent,#fff)!important;box-shadow:0 3px 10px color-mix(in srgb,var(--accent) 15%,transparent)!important}
+#authModal .auth-brand{margin:8px 0 28px}
+#authModal .auth-brand .gs-brand{flex-direction:column;gap:12px;text-align:center}
+#authModal .auth-brand .gs-mark{width:92px!important;height:92px!important;border-radius:25px!important}
+#authModal .auth-brand .gs-name b{font-size:30px!important;line-height:1.25}
+#authModal .auth-brand .gs-name small{display:block!important;font-size:10px!important;line-height:1.6;margin-top:5px}
+@media(max-width:600px){#authModal .auth-brand .gs-mark{width:82px!important;height:82px!important;border-radius:23px!important}#authModal .auth-brand .gs-name b{font-size:28px!important}}
+
+/* Fit the primary choices in a viewport; phone verification replaces the form. */
+#authModal{padding:12px}
+#authModal .auth-box{width:440px;max-height:calc(100dvh - 24px);padding:22px 28px 18px}
+#authModal .auth-brand{margin:0 0 15px}
+#authModal .auth-brand .gs-brand{flex-direction:row;gap:14px;text-align:left}
+#authModal .auth-brand .gs-mark{width:76px!important;height:76px!important;border-radius:22px!important}
+#authModal .auth-brand .gs-name b{font-size:29px!important}
+#authModal .auth-brand .gs-name small{font-size:9px!important;max-width:240px}
+#authModal .auth-tabs{margin-bottom:13px}
+#authModal .auth-box h2{margin-bottom:13px;font-size:20px}
+#authModal .auth-field{margin-bottom:10px}
+#authModal .auth-field label{margin-bottom:4px}
+#authModal .auth-field input{min-height:44px;padding:10px 14px}
+#authModal .auth-submit{min-height:44px}
+#authModal .auth-account-switch{margin:9px 0 12px}
+#authModal .academy-social-title{margin-bottom:10px}
+#authModal .academy-social-grid{gap:8px}
+#authModal .academy-social-grid button{min-height:44px;padding:3px 12px 3px 6px;font-size:13px;grid-template-columns:34px minmax(0,1fr) 34px}
+#authModal .academy-social-grid .academy-provider-icon,#authModal .academy-social-grid .academy-provider-icon img{width:32px;height:32px}
+#authModal .academy-social-status{margin-top:8px;font-size:10px;line-height:1.5}
+#authModal .academy-invitation{margin-top:8px;font-size:11px}
+#authModal [hidden]{display:none!important}
+#authModal.is-phone-view .auth-tabs,#authModal.is-phone-view .auth-field,#authModal.is-phone-view #authSubmit,#authModal.is-phone-view #authForgotRow,#authModal.is-phone-view .auth-account-switch,#authModal.is-phone-view .academy-social-title,#authModal.is-phone-view .academy-social-grid,#authModal.is-phone-view .academy-invitation{display:none!important}
+#authModal.is-phone-gate .auth-close{display:none!important}
+#authModal .academy-phone{padding-top:0}
+#authModal .academy-phone p{font-size:12px;line-height:1.7;color:var(--text-muted);margin:8px 0}
+#authModal .academy-phone input{border-radius:16px;min-height:44px;padding:10px 13px;font:inherit;font-size:14px}
+#authModal .academy-phone button{border:1px solid var(--border);border-radius:999px;background:var(--bg);color:var(--text);font:inherit;font-size:13px;min-height:40px;cursor:pointer;padding:8px 15px}
+#authModal .academy-phone button[type=submit]{width:100%;background:linear-gradient(110deg,var(--cta-start),var(--cta-end));color:var(--on-accent,#fff)}
+#authModal .academy-phone [data-phone-back]{min-height:30px;font-size:11px;padding:4px 10px}
+@media(max-height:860px){#authModal .auth-box{padding:16px 24px 14px}#authModal .auth-brand{margin-bottom:10px}#authModal .auth-brand .gs-mark{width:56px!important;height:56px!important;border-radius:17px!important}#authModal .auth-brand .gs-name b{font-size:25px!important}#authModal .auth-tabs{margin-bottom:9px}#authModal .auth-box h2{font-size:18px;margin-bottom:9px}#authModal .auth-field{margin-bottom:7px}#authModal .auth-field input{min-height:40px;padding:8px 13px}#authModal .auth-account-switch{margin:6px 0 9px}#authModal .academy-social-grid{gap:6px}#authModal .academy-social-grid button{min-height:40px}#authModal #authForgotRow{margin-top:6px!important}}
+
+@media(max-height:700px){#authModal .auth-box{padding:12px 22px 10px}#authModal .auth-box h2{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);margin:0}#authModal .auth-brand .gs-mark{width:50px!important;height:50px!important}#authModal .auth-brand{margin-bottom:8px}#authModal .auth-tabs{margin-bottom:8px}#authModal .academy-social-grid button{min-height:38px}#authModal .academy-social-status{font-size:10px;margin-top:5px}#authModal .auth-account-switch{margin:4px 0 7px}}
+
+#authModal.is-phone-view .auth-box h2{position:static;width:auto;height:auto;clip-path:none;margin:0 0 13px}
+
+#authModal .academy-phone button:disabled{opacity:.5;cursor:not-allowed}
+
+.academy-session-notice{position:fixed;z-index:21000;right:16px;bottom:16px;width:min(360px,calc(100vw - 32px));box-sizing:border-box;padding:16px;border:1px solid var(--border);border-radius:20px;background:var(--surface);color:var(--text);box-shadow:0 8px 30px #102c4a30;font-size:13px;line-height:1.7}.academy-session-notice[hidden]{display:none}.academy-session-notice p{margin:0 0 10px}.academy-session-notice button{border:1px solid var(--border);border-radius:999px;padding:7px 12px;margin-right:6px;background:var(--bg);color:var(--text);font:inherit;cursor:pointer}
+@media(max-height:860px){#authModal:has(#tabRegister.active) .auth-box{padding-top:12px;padding-bottom:10px}#authModal:has(#tabRegister.active) .auth-brand{margin-bottom:8px}#authModal:has(#tabRegister.active) .auth-field{margin-bottom:6px}}
+@media(max-height:700px){#authModal:has(#tabRegister.active) .auth-brand .gs-mark{width:44px!important;height:44px!important}#authModal:has(#tabRegister.active) .auth-field input{min-height:36px;padding:6px 12px}#authModal:has(#tabRegister.active) .academy-social-grid button{min-height:36px}#authModal:has(#tabRegister.active) .academy-social-grid{gap:4px}#authModal:has(#tabRegister.active) .academy-social-status{margin-top:3px}#authModal:has(#tabRegister.active) .auth-account-switch{margin:3px 0 5px}}

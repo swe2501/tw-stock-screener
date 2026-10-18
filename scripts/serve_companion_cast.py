@@ -14,7 +14,7 @@ from urllib.parse import unquote, urlparse
 def main():
  parser=argparse.ArgumentParser();parser.add_argument('--models',required=True);parser.add_argument('--references',required=True);parser.add_argument('--port',type=int,default=51763)
  args=parser.parse_args();models=Path(args.models).resolve();references=Path(args.references).resolve()
- assets=Path(__file__).resolve().parent.parent/'assets';vendor=assets/'vendor/three-0.180.0'
+ assets=Path(__file__).resolve().parent.parent/'apps/web/assets';vendor=assets/'vendor/three-0.180.0'
  model_pattern=re.compile(r'^/(models|references)/(immortal|garden|mountain|space|castle|pet|ocean|gem|train)/(female|male|neutral)/([0-4])\.(glb|png)$')
  class Handler(BaseHTTPRequestHandler):
   def do_GET(self):

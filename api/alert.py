@@ -557,6 +557,12 @@ class handler(BaseHTTPRequestHandler):
         else:
             return self._json(401, {"error": "Unauthorized"})
 
+        if not is_cron and token != SUPABASE_SERVICE_KEY:
+            from lib.member_phone import check
+            blocked = check(token)
+            if blocked:
+                return self._json(*blocked)
+
         # Parse body params
         body = {}
         try:

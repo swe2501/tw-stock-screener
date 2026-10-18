@@ -1,3 +1,7 @@
+> **2026-10-18 最新分工與本機入口修復**：使用者已取消本對話／JUSTY 的 App 開發，交由合夥人接續；網站工作照常。保留合夥人 `apps/mobile` 與共用架構，勿整批回退。網站唯一主程式為 `apps/web/index.html`；根目錄補上相容轉接 `index.html`，讓原本本機書籤／雙擊入口繼續使用，且保留 query／hash。合夥人接手先看 [docs/collaboration/README.md](docs/collaboration/README.md)。
+
+> **2026-10-18 成交比重儀表新版**：見 [docs/sector-dashboard.md](docs/sector-dashboard.md)。保留三類儀表與原研究參考／櫃買區塊；新增單一下拉六週期、等長前後期金額加權、可點選明細與歷史圖。新判讀由 `assets/sector-dashboard-model.js`／`sector-dashboard.js` 處理，舊 evalStruct 不再產生主結論。現有公開成交資料只有 23 筆且有缺日，20／60 日等不足期間不得補造歷史。未動 App／Auth／資料庫／排程。
+
 最新交易紀錄與目標：[HANDOFF_TRADING_2026-10-16.md](HANDOFF_TRADING_2026-10-16.md)
 
 > **2026-10-16 會員／自選／策略最新交接**：請先讀 [HANDOFF_MEMBER_2026-10-16.md](HANDOFF_MEMBER_2026-10-16.md)。包含本機 justy-layout／UAT 最新狀態、分類溢位、拖曳排序、私房篩選器與尚未啟用的會員服務；舊的部署範例仍須遵守目前 AGENTS.md。

@@ -11,10 +11,17 @@ function setup(settings={external:{google:true,apple:true,'custom:line-web':true
     location:{protocol:'https:',origin:'https://site.example',pathname:'/',search:'',hash:'',assign:url=>calls.push({redirect:url})},
     history:{replaceState(){}},localStorage:storage,sessionStorage:storage,
     window:{_acceptMemberSession:s=>accepted.push(s),dispatchEvent(){}},
-    fetch:async(url,options)=>{calls.push({url,...options});let data=url.endsWith('/settings')?settings:url.endsWith('/user')?{id:'verified-user'}:{access_token:'access',refresh_token:'refresh'};if(url.includes('/authorize?'))data={url:'https://provider.example/authorize'};return {ok:true,status:200,json:async()=>data};}};
-  vm.runInNewContext(fs.readFileSync('assets/member-identity.js','utf8'),context);
+    fetch:async(url,options)=>{calls.push({url,...options});let data=url.endsWith('/settings')?settings:url.endsWith('/user')?{id:'verified-user',phone:'+886912345678',phone_confirmed_at:'2026-10-17'}:{access_token:'access',refresh_token:'refresh'};if(url.includes('/authorize?'))data={url:'https://provider.example/authorize'};return {ok:true,status:200,json:async()=>data};}};
+  vm.runInNewContext(fs.readFileSync('apps/web/assets/member-identity.js','utf8'),context);
   return {api:context.window.AcademyIdentity,calls,saved,accepted,context};
 }
+
+test('device limit from Auth preserves current local session and exposes actionable message',async()=>{
+  const {api,context,saved,accepted}=setup();saved.set('sb_token','original-token');
+  context.fetch=async()=>({ok:false,status:403,json:async()=>({message:'MEMBER_DEVICE_LIMIT: limit reached'})});
+  await assert.rejects(api.verifyPhone('0912345678','123456'),/已有 2 台裝置登入/);
+  assert.equal(saved.get('sb_token'),'original-token');assert.equal(accepted.length,0);
+});
 test('Taiwan and international numbers normalize; invalid numbers rejected',()=>{
   const {api}=setup();assert.equal(api.normalizePhone('0912-345-678'),'+886912345678');assert.equal(api.normalizePhone('+1 (202) 555-0123'),'+12025550123');assert.throws(()=>api.normalizePhone('123'));
 });
@@ -63,7 +70,18 @@ test('phone linking updates authenticated user, never creates a new OTP member',
  const {api,saved,calls}=setup();saved.set('sb_token','original-token');const pending=await api.sendContactLink('phone','0912345678');assert.equal(pending.userId,'verified-user');assert.equal(pending.value,'+886912345678');const call=calls.find(c=>c.method==='PUT');assert.ok(call.url.endsWith('/auth/v1/user'));assert.equal(call.headers.Authorization,'Bearer original-token');assert.equal(JSON.parse(call.body).phone,'+886912345678');assert.equal(calls.some(c=>c.url?.includes('/otp')),false);
 });
 test('contact verification cannot claim success until the server reports the same member and verified contact',async()=>{
- const {api,saved,context}=setup();saved.set('sb_token','original-token');await assert.rejects(api.verifyContactLink({userId:'verified-user',kind:'phone',value:'+886912345678'},'123456'),/尚未完成驗證/);
+ const {api,saved,context}=setup();saved.set('sb_token','original-token');const original=context.fetch;context.fetch=async(url,options)=>url.endsWith('/user')?{ok:true,status:200,json:async()=>({id:'verified-user'})}:original(url,options);await assert.rejects(api.verifyContactLink({userId:'verified-user',kind:'phone',value:'+886912345678'},'123456'),/尚未完成驗證/);
  const base=context.fetch;context.fetch=async(url,options)=>url.endsWith('/user')?{ok:true,status:200,json:async()=>({id:'verified-user',phone:'+886912345678',phone_confirmed_at:'2026-10-17'})}:base(url,options);
  const profile=await api.verifyContactLink({userId:'verified-user',kind:'phone',value:'+886912345678'},'123456');assert.equal(profile.phone_verified,true);
+});
+
+test('phone login rejects unverified or mismatched server phone, ignoring metadata claims',async()=>{for(const user of [{id:'verified-user',phone:'+886912345678',user_metadata:{phone_verified:true}},{id:'verified-user',phone:'+886998765432',phone_confirmed_at:'2026-10-17'}]){const {api,context,accepted}=setup();const base=context.fetch;context.fetch=async(url,options)=>url.endsWith('/user')?{ok:true,status:200,json:async()=>user}:base(url,options);await assert.rejects(api.verifyPhone('0912345678','123456'),/手機驗證/);assert.equal(accepted.length,0);}});
+
+test('replacement preflights linking and retains another verified identity before deleting',async()=>{
+ const {api,saved,context,calls}=setup();saved.set('sb_token','original-token');let phase='before';const base=context.fetch;
+ context.fetch=async(url,options)=>{if(url.endsWith('/user')){calls.push({url,...options});return{ok:true,status:200,json:async()=>({id:'original-user',email_confirmed_at:'2026-10-17',identities:[{identity_id:'google-old',provider:'google'},{identity_id:'email-id',provider:'email'}]})};}if(options?.method==='DELETE'){calls.push({url,...options});phase='deleted';return{ok:true,status:204};}return base(url,options);};
+ await api.replaceOAuth('google');const pre=calls.findIndex(c=>c.url?.includes('/identities/authorize?')),del=calls.findIndex(c=>c.method==='DELETE');assert.ok(pre>=0&&del>pre);assert.equal(phase,'deleted');assert.ok(calls[del].url.endsWith('/identities/google-old'));assert.equal(JSON.parse(saved.get('academy.oauth')).userId,'original-user');assert.equal(JSON.parse(saved.get('academy.oauth')).replacement,'google');
+});
+test('replacement cannot remove the only login or unlink before manual linking is available',async()=>{
+ for(const manual of [false,true]){const {api,saved,context,calls}=setup();saved.set('sb_token','original-token');const base=context.fetch;context.fetch=async(url,options)=>{if(url.endsWith('/user'))return{ok:true,status:200,json:async()=>({id:'original-user',email_confirmed_at:manual?'2026-10-17':null,identities:[{identity_id:'old',provider:'google'},...(manual?[{provider:'email'}]:[])]})};if(url.includes('/identities/authorize?'))return{ok:false,status:400,json:async()=>({error_code:'manual_linking_disabled'})};return base(url,options);};await assert.rejects(api.replaceOAuth('google'),manual?/尚未開啟帳號綁定/:/另一種登入方式/);assert.equal(calls.some(c=>c.method==='DELETE'),false);}
 });

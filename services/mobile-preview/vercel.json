@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "builds": [{"src": "api/prices.py", "use": "@vercel/python"}],
+  "routes": [
+    {"src": "/health$", "dest": "/api/prices.py"},
+    {"src": "/api/prices(?:\\.py)?$", "dest": "/api/prices.py"},
+    {"src": "/(.*)", "status": 404}
+  ]
+}

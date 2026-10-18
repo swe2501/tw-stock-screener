@@ -6,15 +6,15 @@
       "use": "@vercel/python"
     },
     {
-      "src": "index.html",
+      "src": "apps/web/index.html",
       "use": "@vercel/static"
     },
     {
-      "src": "logo.png",
+      "src": "apps/web/logo.png",
       "use": "@vercel/static"
     },
     {
-      "src": "group-catalog.js",
+      "src": "apps/web/group-catalog.js",
       "use": "@vercel/static"
     },
     {
@@ -22,11 +22,15 @@
       "use": "@vercel/static"
     },
     {
-      "src": "group-logos.js",
+      "src": "apps/web/group-logos.js",
       "use": "@vercel/static"
     },
     {
-      "src": "assets/**",
+      "src": "apps/web/assets/**",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "apps/web/treasury-research.html",
       "use": "@vercel/static"
     }
   ],
@@ -36,15 +40,27 @@
       "dest": "/api/prices.py?action=site_search"
     },
     {
-      "src": "/api/(.*)",
+      "src": "/api/([^/.]+)(?:\\.py)?$",
       "dest": "/api/$1.py"
+    },
+    {
+      "src": "/api/(.*)",
+      "status": 404
+    },
+    {
+      "src": "/assets/(.*)",
+      "dest": "/apps/web/assets/$1"
+    },
+    {
+      "src": "/(logo\\.png|group-catalog\\.js|group-logos\\.js|treasury-research\\.html)$",
+      "dest": "/apps/web/$1"
     },
     {
       "handle": "filesystem"
     },
     {
       "src": "/(.*)",
-      "dest": "/index.html"
+      "dest": "/apps/web/index.html"
     }
   ],
   "crons": [
@@ -56,5 +72,6 @@
       "path": "/api/alert?kind=sell",
       "schedule": "0 13 * * 1-5"
     }
-  ]
+  ],
+  "ignoreCommand": "node scripts/should_build_web.cjs"
 }
