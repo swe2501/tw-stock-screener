@@ -2150,6 +2150,7 @@
   }
 </style>
 <link rel="stylesheet" href="assets/member-center.css">
+<link rel="stylesheet" href="assets/sector-dashboard.css">
 <link rel="stylesheet" href="assets/member-share.css">
 <link rel="stylesheet" href="assets/member-signin.css">
 <link rel="stylesheet" href="assets/member-strategy.css">
@@ -8196,20 +8197,20 @@
     }
     function loadStruct(){
       Promise.all([
-        sb('sector_turnover?select=date,elec_pct,fin_pct,trad_pct,top_trad_name,top_trad_pct&order=date.desc&limit=1'),
-        sb('taiex_daily?select=trade_date,close&order=trade_date.desc&limit=15'),
-        sb('otc_index_daily?select=trade_date,close&order=trade_date.desc&limit=15')
+        sb('sector_turnover?select=*&order=date.desc&limit=520'),
+        sb('taiex_daily?select=trade_date,close&order=trade_date.desc&limit=650'),
+        sb('otc_index_daily?select=trade_date,close&order=trade_date.desc&limit=650')
       ]).then(function(res){
         var box=el('hpStruct'); if(!box)return;
-        var s=(res[0]||[])[0], tx=(res[1]||[]).slice().reverse(), ox=(res[2]||[]).slice().reverse();
-        if(!s){box.innerHTML='<div class="fc-empty">今日無資料</div>';return;}
+        var rows=Array.isArray(res[0])?res[0]:[],s=rows[0],tx=(Array.isArray(res[1])?res[1]:[]).slice().reverse(),ox=(Array.isArray(res[2])?res[2]:[]).slice().reverse();
+        if(!s){box.innerHTML=window.AcademySectorDashboard?'':'<div class="fc-empty">成交占比資料暫不可用</div>';window.AcademySectorDashboard?.mount(box,{rows:rows,taiex:tx,otc:ox,retry:loadStruct});return;}
         // 加權／櫃買每日漲跌幅（兩市共同交易日才計算，避免缺日造成跨日誤差）
         var tm={}, om={}; tx.forEach(function(r){tm[r.trade_date]=+r.close;}); ox.forEach(function(r){om[r.trade_date]=+r.close;});
         var days=tx.map(function(r){return r.trade_date;}).filter(function(d){return om[d]!=null;});
         var ser=[]; for(var i=1;i<days.length;i++){ var a=days[i-1], b=days[i], tp=(tm[b]/tm[a]-1)*100, op=(om[b]/om[a]-1)*100; ser.push({d:b,t:tp,o:op,diff:Math.round((op-tp)*10*100)/100}); }
         var tpct={}; for(var j=1;j<tx.length;j++){ tpct[tx[j].trade_date]=(+tx[j].close/+tx[j-1].close-1)*100; }
         var e=+s.elec_pct, f=+s.fin_pct, tr=+s.trad_pct, mx=s.top_trad_pct!=null?+s.top_trad_pct:0, idx=tpct[s.date]!=null?tpct[s.date]:null;
-        var st=evalStruct(e,f,tr,mx,idx);
+        var st=['成交比重變化','正在對齊完整前後期資料。','n'];
         var trBar=Math.max(0,100-e-f);   // 殘差配平：進度條由其他傳產吸收四捨五入差
         function row(lab,val,note,bar){return '<div class="gs-shrow"><span>'+lab+'<small>'+note+'</small></span><i><u style="width:'+Math.min(100,Math.max(0,bar))+'%"></u></i><b>'+val.toFixed(1)+'%</b></div>';}
         var risk=(st[0]==='非電主導 / 結構背離')?'<div class="gs-strisk"> 風控提示：指數上漲但電子失速，勿盲目追價；需觀察非電族群是否具連續性。</div>'
@@ -8234,7 +8235,7 @@
           +'<div class="gs-shgrid">'+row('電子',e,'55% 防線',e)+row('金融',f,'10% 警戒',f)+row('其他傳產',tr,s.top_trad_name?(s.top_trad_name+' '+mx.toFixed(1)+'%'):'產業合計',trBar)+'</div>'
           +'<div class="gs-otc"><div class="gs-otc-h">(櫃買 − 集中) 強弱勢　<small>千分點 ‰：+5.00 ≈ 櫃買比加權多漲 0.5%</small></div>'+otcHtml+'</div>'
           +'<a class="gs-more" onclick="_showView(&quot;breadth&quot;)"> 分享解鎖，立即使用：查看市場廣度研究工具 →</a>'
-          +'<details class="gs-shdet"><summary>查看研究判讀門檻</summary><div>'
+          +'<details class="gs-shdet"><summary>原研究參考門檻與櫃買比較規則</summary><div><p>以下保留原規格供查閱，不再用於上方成交比重的新結論；固定占比不能單獨證明主攻、多頭、殺盤或資金流向。</p>'
           +'<p><b>一、上市成交比重（規格書 多空雙向定案版，嚴格由上往下、符合即停；指數以 ±0.2% 過濾微幅雜訊）</b></p>'
           +'<p>0 資料異常：任一欄 &lt;0 或 &gt;100、單一傳產 &gt; 傳產總額、三類加總偏離 95%~105%。<br>'
           +'1 電子 ≥85% 且 指數 ≤−0.2% → 電子爆量殺盤　2 電子 ≥85% → 電子過熱失衡<br>'
@@ -8249,6 +8250,7 @@
           +'兩市一漲一跌 → 型態四 逆向背離；差額 &gt;0 → 型態一 櫃買強於集中；差額 &lt;0 → 型態二 集中強於櫃買。'
           +'&gt;+15 強多噴出臨界、&lt;−15 恐慌出逃臨界；歷史常態約 −10~+10。連續 3 日以上遞增／遞減標示為連續擴大／收斂（斜率勝於絕對值）。資料：櫃買指數（櫃買中心）、加權指數。</p>'
           +'<p>門檻來自研究規格書與手冊，非交易所官方買賣訊號。</p></div></details></div>';
+        window.AcademySectorDashboard?.mount(box,{rows:rows,taiex:tx,otc:ox,retry:loadStruct});
       });
     }
 
@@ -16992,6 +16994,8 @@
 })();
 
 </script>
+<script src="assets/sector-dashboard-model.js" defer></script>
+<script src="assets/sector-dashboard.js" defer></script>
 <script src="assets/member-identity.js" defer></script>
 <script src="assets/member-share.js" defer></script>
 <script src="assets/member-provider-icons.js" defer></script>
