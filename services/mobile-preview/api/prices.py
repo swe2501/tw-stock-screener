@@ -20,6 +20,100 @@ _candle_lock = threading.Lock()
 _stock_cache = None
 _stock_lock = threading.Lock()
 STOCK_SOURCE = 'https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL'
+_context_cache = None
+_context_lock = threading.Lock()
+
+
+def integer(value):
+    text = str(value).replace(',', '').strip()
+    if not re.fullmatch(r'-?[0-9]+', text):
+        raise ValueError('invalid integer')
+    return int(text)
+
+
+def institution_rows(data, day):
+    if data.get('stat') != 'OK' or data.get('date') != day.replace('-', ''):
+        raise ValueError('institution date mismatch')
+    values = {'foreign': None, 'trust': None, 'dealer': 0, 'total': None}
+    dealer_rows = 0
+    for row in data.get('data', []):
+        name, buy, sell, net = str(row[0]), integer(row[1]), integer(row[2]), integer(row[3])
+        if buy < 0 or sell < 0 or buy-sell != net:
+            raise ValueError('institution values mismatch')
+        if '合計' in name:
+            values['total'] = net
+        elif '外資' in name and '不含' in name:
+            values['foreign'] = net
+        elif '外資' in name:
+            continue  # Foreign dealer already included in official dealer total.
+        elif '投信' in name:
+            values['trust'] = net
+        elif '自營商' in name:
+            values['dealer'] += net
+            dealer_rows += 1
+    if dealer_rows != 2 or any(value is None for value in values.values()) or values['foreign']+values['trust']+values['dealer'] != values['total']:
+        raise ValueError('institution categories mismatch')
+    return values
+
+
+def margin_rows(data, day):
+    if data.get('stat') != 'OK' or data.get('date') != day.replace('-', ''):
+        raise ValueError('margin date mismatch')
+    tables = data.get('tables', [])
+    rows = next((t.get('data') for t in tables if t.get('data')), [])
+    finance = next(r for r in rows if '融資金額' in str(r[0]) and '仟元' in str(r[0]))
+    short = next(r for r in rows if '融券' in str(r[0]))
+    balance, previous = integer(finance[5])*1000, integer(finance[4])*1000
+    shorts, short_previous = integer(short[5]), integer(short[4])
+    if min(balance, previous, shorts, short_previous) < 0:
+        raise ValueError('negative balance')
+    return {'finance_balance_twd': balance, 'finance_change_twd': balance-previous,
+            'short_balance_units': shorts, 'short_change_units': shorts-short_previous}
+
+
+def market_context():
+    global _context_cache
+    with _context_lock:
+        if _context_cache and time.monotonic()-_context_cache[0] < 300:
+            return 200, {**_context_cache[1], 'cached': True}
+        status, market = market_summary()
+        if status != 200:
+            return 503, {'available': False, 'error': '大盤資料日期暫時無法核對。'}
+        day = market['as_of']
+        compact = day.replace('-', '')
+        sources = {
+            'institutions': 'https://www.twse.com.tw/fund/BFI82U?response=json&dayDate='+compact+'&type=day',
+            'margin': 'https://www.twse.com.tw/rwd/zh/marginTrading/MI_MARGN?date='+compact+'&selectType=MS&response=json',
+            'breadth': STOCK_SOURCE,
+        }
+        def read(key):
+            if key == 'breadth':
+                code, catalog = stock_catalog()
+                if code != 200:
+                    raise ValueError('no stock sample')
+                rows = [r for r in catalog['items'] if r['date'] == day and r['kind'] == 'stock']
+                if not rows:
+                    raise ValueError('empty aligned sample')
+                return {'up': sum(r['change'] > 0 for r in rows), 'down': sum(r['change'] < 0 for r in rows),
+                        'flat': sum(r['change'] == 0 for r in rows), 'total': len(rows),
+                        'scope': '同資料日上市股票樣本，包含特別股，不含 ETF、上櫃及缺少有效價格的商品。'}
+            raw = public_json(sources[key])
+            return institution_rows(raw, day) if key == 'institutions' else margin_rows(raw, day)
+        parts = {}
+        with ThreadPoolExecutor(max_workers=3) as pool:
+            jobs = {pool.submit(read, key): key for key in sources}
+            for job in as_completed(jobs):
+                key = jobs[job]
+                try:
+                    parts[key] = {'available': True, 'data': job.result(), 'date': day, 'source_url': sources[key]}
+                except Exception:
+                    parts[key] = {'available': False, 'data': None, 'date': day, 'source_url': sources[key]}
+        payload = {'schema_version': 1, 'available': True, 'as_of': day, 'market': 'TWSE', 'frequency': 'daily',
+                   'parts': parts, 'partial': any(not p['available'] for p in parts.values()),
+                   'cached': False, 'stale': market['stale'], 'retrieved_at': datetime.now(timezone.utc).isoformat(),
+                   'notice': '各區均核對同一資料日。法人為上市現貨金額，外資不含已計入自營商的外資自營；融資金額由仟元轉為元。'}
+        _context_cache = (time.monotonic(), payload)
+        return 200, payload
 
 
 def stock_catalog():
@@ -262,6 +356,9 @@ class handler(BaseHTTPRequestHandler):
             return self.reply(200, {'service': 'mobile-preview', 'status': 'ok',
                                     **state, 'member_login_enabled': False, 'research_ready': False})
         params = parse_qs(parsed.query)
+        if parsed.path in ('/api/prices', '/api/prices.py') and params.get('action') == ['market_context']:
+            status, payload = market_context()
+            return self.reply(status, payload)
         if parsed.path in ('/api/prices', '/api/prices.py') and params.get('action') == ['stock_catalog']:
             status, payload = stock_catalog()
             return self.reply(status, payload)

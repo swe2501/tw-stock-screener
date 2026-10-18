@@ -16,6 +16,16 @@ spec.loader.exec_module(preview)
 
 
 class PreviewTests(unittest.TestCase):
+    def test_institutions_excludes_foreign_dealer_double_count_and_margin_units(self):
+        institutions={'stat':'OK','date':'20261016','data':[['自營商(自行買賣)','50','70','-20'],['自營商(避險)','20','30','-10'],['投信','40','10','30'],['外資及陸資(不含外資自營商)','20','50','-30'],['外資自營商','8','3','5'],['合計','130','160','-30']]}
+        values=preview.institution_rows(institutions,'2026-10-16')
+        self.assertEqual(values,{'foreign':-30,'trust':30,'dealer':-30,'total':-30})
+        with self.assertRaises(ValueError):preview.institution_rows(institutions,'2026-10-15')
+        institutions['data'][-1][3]='99'
+        with self.assertRaises(ValueError):preview.institution_rows(institutions,'2026-10-16')
+        margin={'stat':'OK','date':'20261016','tables':[{'data':[['融券(交易單位)','0','0','0','20','25'],['融資金額(仟元)','0','0','0','100','90']]}]}
+        self.assertEqual(preview.margin_rows(margin,'2026-10-16'),{'finance_balance_twd':90000,'finance_change_twd':-10000,'short_balance_units':25,'short_change_units':5})
+
     def test_public_stock_catalog_excludes_nonstock_and_invalid_prices(self):
         row={'Date':'1151016','Code':'2330','Name':'台積電','ClosingPrice':'101','Change':'1','TradeValue':'1000','TradeVolume':'20'}
         with patch.object(preview,'_stock_cache',None),patch.object(preview,'public_json',return_value=[row,{**row,'Code':'020000'},{**row,'Code':'2317','ClosingPrice':'--'}]):

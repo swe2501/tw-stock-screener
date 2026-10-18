@@ -15,3 +15,7 @@ services/mobile-preview 原有單一 prices Function 增加 GET action=market_su
 本機 serve_local.py 以明確 LAN host:8788 啟動供同 Wi-Fi App 使用；本機模式只在開發時使用，不是永久上線。遠端版本仍需將此 shared 變更經相容性審閱部署到既有隔離 preview 專案；不自動合併 UAT、不推 prod/Andrew。回復方式：App 關閉本機覆寫、回復此新增 action；舊版 App 不受影響。
 
 本次依使用者繼續完成資料接入及既有 UAT 整合授權，準備經 collab integrate 發布 **shared 服務變更**到 UAT，以觸發既有隔離預覽服務部署；不整合任何 SDK 57 App 提交，不推 prod／Andrew。若雲端自動部署未觸發，需以實測狀態報告，不把 Git push 等同部署成功。
+
+實際後續：shared 服務已整合 UAT，但原隔離站仍回應舊版本。Vercel 登入成功為 qa5518556130-dot，沒有原測試專案權限。為繼續使用者授權的公開 App 資料服務，另建獨立 academy-mobile-data-justy Hobby 專案，不動其 genzuixue 或 Andrew 原站；固定 HTTPS 已實測三項行情 API HTTP 200，無授權 cookie。初次部署自動成為該新測試專案的 production alias，沒有推 Git prod 或發布網站正式專案。
+
+market_context 新增上市官方法人／資券與股票樣本廣度，逐區驗證相同資料日、官方合計與財務單位；部分失敗回報 available=false，不填零。外資不含外資自營，避免與自營商重複相加；不同於把外資自營再加回外資的呈現口徑，App 明確標示，**未改網站原算法**。融資維持率／期權／完整資金占比歷史尚未接入，不能以現有數據推定或替代。
