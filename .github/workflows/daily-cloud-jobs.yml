@@ -68,3 +68,63 @@ jobs:
       - name: 基本面（fundamentals · TWSE/TPEX）
         if: ${{ !cancelled() }}
         run: python scripts/fundamentals.py
+
+      # --- Phase 1 第三批（2026-10-18）：剩餘純官方源/Supabase，0 本機依賴 ---
+      # 註：page_cache_push、job_health 吃 Supabase 既有資料；在雲端僅跑部分管線時其輸入可能偏舊，屬資料新鮮度（非雲端可跑性）議題。
+      - name: 上市櫃代碼（gen_listed_codes）
+        if: ${{ !cancelled() }}
+        run: python scripts/gen_listed_codes.py
+      - name: 美債殖利率（ust_yields_push · 美財政部）
+        if: ${{ !cancelled() }}
+        run: python scripts/ust_yields_push.py
+      - name: ETF 清單（upload_etf · TWSE/TPEX）
+        if: ${{ !cancelled() }}
+        run: python scripts/upload_etf.py
+      - name: ETF 配息（upload_etf_div · TWSE）
+        if: ${{ !cancelled() }}
+        run: python scripts/upload_etf_div.py
+      - name: ETF 持有人（upload_etf_holders）
+        if: ${{ !cancelled() }}
+        run: python scripts/upload_etf_holders.py
+      - name: 主動式 ETF 持股（upload_active_etf_holdings）
+        if: ${{ !cancelled() }}
+        run: python scripts/upload_active_etf_holdings.py
+      - name: 主動式 ETF 流（active_etf_flow）
+        if: ${{ !cancelled() }}
+        run: python scripts/active_etf_flow.py
+      - name: 機構法人（upload_institutional · TWSE）
+        if: ${{ !cancelled() }}
+        run: python scripts/upload_institutional.py
+      - name: 籌碼摘要（chip_brief · TWSE/TPEX/TAIFEX）
+        if: ${{ !cancelled() }}
+        run: python scripts/chip_brief.py
+      - name: 外資避險（foreign_hedge · TWSE/TAIFEX）
+        if: ${{ !cancelled() }}
+        run: python scripts/foreign_hedge.py
+      - name: 流動性排行（liquidity_top · TWSE/TAIFEX）
+        if: ${{ !cancelled() }}
+        run: python scripts/liquidity_top.py
+      - name: MOPS 公告（mops_announce · TWSE/TPEX）
+        if: ${{ !cancelled() }}
+        run: python scripts/mops_announce.py
+      - name: 大盤廣度（breadth_daily）
+        if: ${{ !cancelled() }}
+        run: python scripts/breadth_daily.py
+      - name: 政府基金分點（gov_broker_moneylink）
+        if: ${{ !cancelled() }}
+        run: python scripts/gov_broker_moneylink.py
+      - name: 新聞（news_feed · TWSE/TPEX）
+        if: ${{ !cancelled() }}
+        run: python scripts/news_feed.py
+      - name: 熱門話題（upload_hot_topics）
+        if: ${{ !cancelled() }}
+        run: python scripts/upload_hot_topics.py
+      - name: 每日標語（daily_slogan_rotate）
+        if: ${{ !cancelled() }}
+        run: python scripts/daily_slogan_rotate.py
+      - name: 頁面快取（page_cache_push）
+        if: ${{ !cancelled() }}
+        run: python scripts/page_cache_push.py
+      - name: 排程健康檢查（job_health）
+        if: ${{ !cancelled() }}
+        run: python scripts/job_health.py
