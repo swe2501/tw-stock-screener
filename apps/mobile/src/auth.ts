@@ -21,7 +21,7 @@ async function request(path:string,body?:unknown,token?:string){
    headers:{apikey:KEY,'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},
    ...(body===undefined?{}:{body:JSON.stringify(body)})});
   const data=r.status===204?{}:await r.json();
-  if(!r.ok){const e=Error(r.status===400||r.status===401?'登入已過期，請重新登入':'登入服務暫時無法使用') as Error&{status:number};e.status=r.status;throw e;}
+  if(!r.ok){const message=data.error_code==='email_not_confirmed'?'請先完成信箱驗證，再回來登入':r.status===429?'嘗試次數過多，請稍後再試':path.includes('grant_type=password')&&(r.status===400||r.status===401)?'Email 或密碼不正確':r.status===400||r.status===401?'登入已過期，請重新登入':'登入服務暫時無法使用';const e=Error(message) as Error&{status:number};e.status=r.status;throw e;}
   return data;
  }catch(e){if(e instanceof Error&&e.name==='AbortError')throw Error('登入連線逾時，請重試');throw e;}
  finally{clearTimeout(timer);}
@@ -47,6 +47,15 @@ export async function restore():Promise<Member|null>{
   try{return await accept(await request('/token?grant_type=refresh_token',{refresh_token:refresh}),run);}
   catch(e){if((e as {status?:number}).status===400||(e as {status?:number}).status===401){access='';currentMember=null;await SecureStore.deleteItemAsync(STORE,options);}throw e;}
  }finally{pending=false;}
+}
+
+export async function emailLogin(email:string,password:string):Promise<Member>{
+ if(pending)throw Error('登入處理中，請稍候');
+ const address=email.trim();
+ if(address.length>254||! /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)||!password||password.length>4096)throw Error('請輸入有效的 Email 與密碼');
+ pending=true;const run=++epoch;
+ try{return await accept(await request('/token?grant_type=password',{email:address,password}),run);}
+ finally{pending=false;}
 }
 
 export async function googleLogin():Promise<Member|null>{
