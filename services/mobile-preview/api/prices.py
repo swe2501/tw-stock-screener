@@ -1,17 +1,23 @@
 """Isolated connectivity bootstrap: allowlisted staging project, no writes."""
 import json
 import os
+import re
+from html import unescape
 import math
 import time
 import threading
-import re
 from datetime import date, datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler
-from urllib.parse import parse_qs, urlsplit
+from urllib.parse import parse_qs, urlsplit, urlencode
 from urllib.request import Request, build_opener, HTTPRedirectHandler
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 STAGING_ORIGIN = 'https://ebwtkcsmpvgyjvosbofx.supabase.co'
+PUBLIC_RESEARCH_ORIGIN = 'https://bruqrbvbjxntgoljxsne.supabase.co'
+PUBLIC_SOURCES = {
+    'news_feed': ('title,link,published_at,description,source,news_date', ('title', 'description')),
+    'hot_topics': ('topic,summary,source_urls,published_at,sector', ('topic', 'summary')),
+}
 MARKET_SOURCE = 'https://openapi.twse.com.tw/v1/exchangeReport/FMTQIK'
 _market_lock = threading.Lock()
 _market_cache = None
@@ -379,6 +385,95 @@ class NoRedirect(HTTPRedirectHandler):
         return None
 
 
+def public_source(source, query, limit=8):
+    # Fixed public tables/columns only. Never proxy a caller's token, URL or table.
+    if source not in PUBLIC_SOURCES:
+        raise ValueError('unsupported source')
+    key = os.environ.get('PUBLIC_RESEARCH_PUBLISHABLE_KEY', '')
+    if not key.startswith('sb_publishable_'):
+        raise RuntimeError('research_not_configured')
+    columns, fields = PUBLIC_SOURCES[source]
+    pattern = '%' + query.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_').replace('*', '\\*') + '%'
+    quoted = json.dumps(pattern, ensure_ascii=False)
+    params = {'select': columns, 'or': '(' + ','.join(f'{field}.ilike.{quoted}' for field in fields) + ')',
+              'order': 'published_at.desc', 'limit': str(limit)}
+    req = Request(PUBLIC_RESEARCH_ORIGIN + '/rest/v1/' + source + '?' + urlencode(params),
+                  headers={'apikey': key, 'Accept': 'application/json'})
+    with build_opener(NoRedirect()).open(req, timeout=5) as response:
+        raw = response.read(500001)
+        if response.status != 200 or len(raw) > 500000:
+            raise ValueError('invalid source response')
+        rows = json.loads(raw)
+    if not isinstance(rows, list):
+        raise ValueError('invalid source response')
+    return rows[:limit]
+
+
+def plain(value, limit):
+    return re.sub(r'\s+', ' ', unescape(re.sub(r'<[^>]*>', ' ', str(value or '')))).strip()[:limit]
+
+
+def safe_link(value):
+    if not isinstance(value, str):
+        return None
+    try:
+        u = urlsplit(value.strip())
+        return value.strip() if u.scheme == 'https' and u.hostname and not u.username and not u.password else None
+    except ValueError:
+        return None
+
+
+def item(source, row):
+    if not isinstance(row, dict):
+        return None
+    news = source == 'news_feed'
+    title = plain(row.get('title' if news else 'topic'), 250)
+    published = str(row.get('news_date') or row.get('published_at') or '')[:10]
+    try:
+        date.fromisoformat(published)
+    except ValueError:
+        return None
+    if not title:
+        return None
+    links = row.get('source_urls', [])
+    if isinstance(links, str):
+        try:
+            links = json.loads(links)
+        except ValueError:
+            links = re.findall(r'https://[^\s\]\"\',]+', links)
+    link = safe_link(row.get('link')) if news else next((safe_link(u) for u in links if safe_link(u)), None) if isinstance(links, list) else None
+    if not link:
+        return None
+    return {'title': title, 'date': published, 'url': link,
+            'snippet': plain(row.get('description' if news else 'summary'), 200),
+            'source': plain(row.get('source'), 50) or '每日新聞' if news else '焦點題材' + (' · ' + plain(row['sector'], 40) if row.get('sector') else ''),
+            'kind': 'news' if news else 'topic'}
+
+
+def search(query, fetcher=None):
+    if not isinstance(query, str) or not 2 <= len(query.strip()) <= 80 or not any(c.isalnum() for c in query):
+        raise ValueError('請輸入 2～80 個字的關鍵字')
+    fetcher = fetcher or public_source
+    rows, failed = [], []
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        jobs = {source: pool.submit(fetcher, source, query.strip(), 8) for source in PUBLIC_SOURCES}
+        for source, future in jobs.items():
+            try:
+                values = future.result()
+                if not isinstance(values, list):
+                    raise ValueError('invalid source')
+                rows.extend(value for row in values[:8] if (value := item(source, row)))
+            except Exception:
+                failed.append(source)
+    seen, result = set(), []
+    for row in sorted(rows, key=lambda row: (row['date'], row['title']), reverse=True):
+        if row['url'] not in seen:
+            seen.add(row['url'])
+            result.append(row)
+    return {'items': result[:8], 'available': len(failed) < len(PUBLIC_SOURCES), 'partial': bool(failed),
+            'limit': 8, 'scope': 'saved_public_news', 'source': 'website_public_archive'}
+
+
 def connectivity():
     """Probe public Auth settings only. Never send credentials elsewhere."""
     base = os.environ.get('STAGING_SUPABASE_URL', '').rstrip('/')
@@ -421,7 +516,8 @@ class handler(BaseHTTPRequestHandler):
         if parsed.path == '/health':
             state = connectivity()
             return self.reply(200, {'service': 'mobile-preview', 'status': 'ok',
-                                    **state, 'member_login_enabled': False, 'research_ready': False})
+                                    **state, 'member_login_enabled': False,
+                                    'research_configured': os.environ.get('PUBLIC_RESEARCH_PUBLISHABLE_KEY', '').startswith('sb_publishable_')})
         params = parse_qs(parsed.query)
         if parsed.path in ('/api/prices', '/api/prices.py') and params.get('action') == ['stock_candles']:
             codes = params.get('code', [])
@@ -440,8 +536,14 @@ class handler(BaseHTTPRequestHandler):
             status, payload = market_summary()
             return self.reply(status, payload)
         if parsed.path in ('/api/prices', '/api/prices.py') and params.get('action') == ['site_search']:
-            return self.reply(503, {'items': [], 'available': False, 'partial': False,
-                                    'error': 'App 測試資料來源尚未設定', 'scope': 'saved_public_news'})
+            try:
+                values = params.get('q', [])
+                if len(values) != 1:
+                    raise ValueError('請輸入一組研究關鍵字')
+                data = search(values[0])
+            except ValueError as error:
+                return self.reply(400, {'error': str(error)})
+            return self.reply(200 if data['available'] else 503, data)
         return self.reply(404, {'error': 'not_found'})
 
     def do_POST(self):

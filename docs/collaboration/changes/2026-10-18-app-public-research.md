@@ -1,0 +1,7 @@
+# App public research search
+
+Connects services/mobile-preview's existing GET /api/prices?action=site_search&q=... to the website's public news_feed/hot_topics archive. Only fixed tables/columns, HTTPS GET, public publishable key in apikey header, no member Authorization forwarding or service-role key. No redirect following, bounded responses, escaped PostgREST queries, 2–80 character validation, 8 results, date/source attribution and safe HTTPS source links. Partial failure is explicit; total failure returns 503 rather than empty success.
+
+PUBLIC_RESEARCH_PUBLISHABLE_KEY is configured only on tw-stock-mobile-preview. The public archive origin is fixed to the existing website Supabase; STAGING_SUPABASE_* remains separately scoped to test Auth. This intentionally shares already-public research reads while keeping test identities separate. No table, RLS, data, schema, production deployment, schedule or Auth changes. Uses existing website pipeline updates; no duplicate ingestion job or history overwrite.
+
+Existing web/API contracts unchanged, website functions 12/12, preview 1/12. Android/iOS shared news client accepts this existing response shape. research_configured in health means configuration exists; only successful search proves source availability. database_connected remains false because staging research tables are not created. Validate local query/error/security tests and live preview query through actual App client. Rollback: remove preview public key or revert this reader; website is unaffected.
