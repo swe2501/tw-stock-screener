@@ -116,15 +116,11 @@ jobs:
       - name: 新聞（news_feed · TWSE/TPEX）
         if: ${{ !cancelled() }}
         run: python scripts/news_feed.py
-      - name: 熱門話題（upload_hot_topics）
-        if: ${{ !cancelled() }}
-        run: python scripts/upload_hot_topics.py
       - name: 每日標語（daily_slogan_rotate）
         if: ${{ !cancelled() }}
         run: python scripts/daily_slogan_rotate.py
-      - name: 頁面快取（page_cache_push）
-        if: ${{ !cancelled() }}
-        run: python scripts/page_cache_push.py
+      # page_cache_push：末端聚合，需完整管線資料；資料湖未上雲前不在雲端跑（Phase 2）。
+      # upload_hot_topics：需本機產生的 scripts/hot_topics.json（有本機相依）→ 留本機。
       - name: 排程健康檢查（job_health）
         if: ${{ !cancelled() }}
         run: python scripts/job_health.py
