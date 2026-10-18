@@ -22,7 +22,10 @@ wantgoo 爬蟲(需登入瀏覽器, 過 Cloudflare)  ─┐
 
 > 其中 `catalyst_lawshow`、`upload_exdiv_factor` 已在 `daily-cloud-jobs.yml`（GitHub Actions）跑；其餘官方源同類可加入。
 >
-> **✅ 2026-10-18 實測通過（Phase 1 第一小批）**：把 `inst_market`(TWSE)、`fetch_otc_index --daily`(TPEX)、`options_market`(TAIFEX) 加進 workflow，用 `gh workflow run daily-cloud-jobs.yml --ref uat` 觸發，GitHub Actions run 29 秒全綠，三支都**實際抓到資料並 upsert Supabase（status 200）**，連同原本 2 支共 5 步全過 → **TWSE / TPEX / TAIFEX 從 GitHub 雲端 IP 都不被限流**。其餘官方源同源同模式，風險大幅降低（仍建議各源至少實測一支）。
+> **✅ 2026-10-18 實測通過（Phase 1 第一小批）**：把 `inst_market`(TWSE)、`fetch_otc_index --daily`(TPEX)、`options_market`(TAIFEX) 加進 workflow，用 `gh workflow run daily-cloud-jobs.yml --ref uat` 觸發，GitHub Actions run 29 秒全綠，三支都**實際抓到資料並 upsert Supabase（status 200）**，連同原本 2 支共 5 步全過 → **TWSE / TPEX / TAIFEX 從 GitHub 雲端 IP 都不被限流**。
+> **✅ 2026-10-18 第二小批通過**：`sector_turnover`、`margin_market`、`futures_market`(TAIFEX openapi，資料已最新→冪等略過)、`fundamentals`(1967 檔+1977 財報列全 upsert 200) 皆雲端跑通。
+> **第三批（剩餘 19 支，2026-10-18 已加入 workflow）**：`gen_listed_codes`/`ust_yields_push`/`upload_etf`/`upload_etf_div`/`upload_etf_holders`/`upload_active_etf_holdings`/`active_etf_flow`/`upload_institutional`/`chip_brief`/`foreign_hedge`/`liquidity_top`/`mops_announce`/`breadth_daily`/`gov_broker_moneylink`/`news_feed`/`upload_hot_topics`/`daily_slogan_rotate`/`page_cache_push`/`job_health` → 28 支「可直接上雲」全部掛進 workflow。
+> → 累計實測/掛載結果見各 run；`futures_market` 用 TAIFEX **openapi(T+1 延遲)**，要當日值須改走 `futDataDown`（同 `api/chart`）—— 屬資料新鮮度，不影響雲端可跑性。
 > **操作重點**：workflow 只要**推到任一分支就會在 GitHub 註冊**，之後 `gh workflow run --ref <branch>` 即可觸發，**不必等推 prod**（schedule 定時觸發才需在預設分支 prod）。
 > 注意：部分「源:僅 Supabase」者（如 `breadth_daily`、`page_cache_push`）吃的是 Supabase 裡的資料，而那些資料若上游來自資料湖類腳本，仍要等第二層一起上雲才會新鮮。
 
