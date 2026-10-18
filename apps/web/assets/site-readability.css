@@ -26,14 +26,14 @@ body .member-page .mc-muted{font-size:16px!important;line-height:1.8}
 #cbGov .gs-pdtabs{display:inline-flex;width:fit-content;max-width:100%;flex-wrap:wrap;align-self:flex-start;gap:4px}
 #cbGov .gs-pdtabs .gs-pd{flex:0 0 auto;min-height:32px;padding:4px 11px;font-size:14px;line-height:1.4}
 #hpFut{align-items:stretch!important}#hpForeignCost{align-self:stretch!important}
-#hpForeignCost .fx-cost{display:grid!important;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;align-content:start;padding:12px 14px;height:100%}
-#hpForeignCost .fx-cost-top{grid-column:1/-1;grid-row:1;margin-bottom:3px}
+#hpForeignCost .fx-cost{display:grid!important;grid-template-columns:minmax(0,1fr) auto;gap:7px 10px;align-content:start;padding:15px 16px;height:100%}
+#hpForeignCost .fx-cost-top{grid-column:1/-1;grid-row:1;margin-bottom:4px}
 #hpForeignCost .fx-cost-number{grid-column:1;grid-row:2;align-self:center;font-size:26px;line-height:1.3;margin:0}
 #hpForeignCost .fx-session-switch{grid-column:2;grid-row:2;justify-self:end;align-self:center;margin:0;padding:2px;gap:2px}
 #hpForeignCost .fx-session-switch button{min-height:28px;font-size:13px;line-height:1.4;padding:3px 9px}
 #hpForeignCost .fx-cost-state{grid-column:1/-1;grid-row:3;line-height:1.5;margin-top:2px}
 #hpForeignCost .fx-ecg{grid-column:1/-1;grid-row:4;margin:0}
-#hpForeignCost .fx-ecg-plot{height:53px;margin:0}
+#hpForeignCost .fx-ecg-plot{height:70px;margin:0}
 #hpForeignCost .fx-cost-caption{grid-column:1/-1;grid-row:5;margin:0;padding:0;font-size:12px!important;line-height:1.5!important}
 @media(max-width:400px),(min-width:1101px) and (max-width:1280px){#hpForeignCost .fx-cost-number{font-size:23px}#hpForeignCost .fx-session-switch button{padding-inline:7px}}
 

@@ -43,7 +43,17 @@ let mode='normal';
 
  await page.setViewportSize({width:1512,height:1000});
 
- for(const width of [1512,1220,390,320]){await page.setViewportSize({width,height:1000});assert.ok(await page.locator('#hpForeignCost').evaluate(e=>{const number=e.querySelector('.fx-cost-number'),n=number.getBoundingClientRect(),s=e.querySelector('.fx-session-switch').getBoundingClientRect();return n.right<=s.left+1&&number.scrollWidth<=number.clientWidth+1&&e.scrollWidth<=e.clientWidth+1;}),'cost and session controls must not overlap '+width);}
+ for(const theme of ['light','dark']){
+ await page.evaluate(theme=>document.documentElement.dataset.theme=theme,theme);
+ for(const width of [1512,1220,390,320]){await page.setViewportSize({width,height:1000});assert.ok(await page.locator('#hpForeignCost').evaluate(e=>{const number=e.querySelector('.fx-cost-number'),n=number.getBoundingClientRect(),s=e.querySelector('.fx-session-switch').getBoundingClientRect();return n.right<=s.left+1&&number.scrollWidth<=number.clientWidth+1&&e.scrollWidth<=e.clientWidth+1;}),'cost and session controls must not overlap '+width);
+  assert.ok(await page.locator('#hpForeignCost').evaluate(e=>{
+   const box=selector=>e.querySelector(selector).getBoundingClientRect();
+   const state=box('.fx-cost-state'),plot=box('.fx-ecg-plot'),label=box('.fx-ecg-cost-label'),caption=box('.fx-cost-caption'),card=box('.fx-cost');
+   return state.bottom+6<=plot.top&&label.bottom+10<=caption.top&&caption.bottom+12<=card.bottom;
+  }),'home chart labels and baseline caption need separate breathing room '+width);
+  if(output)await page.locator('#hpForeignCost').screenshot({path:path.join(output,'home-cost-'+theme+'-'+width+'.png')});
+ }
+ }
  await page.setViewportSize({width:1512,height:1000});
  await page.emulateMedia({reducedMotion:'no-preference'});
  async function freeze(ms){await page.waitForTimeout(80);await detail.evaluate((e,t)=>e.getAnimations({subtree:true}).forEach(a=>{a.pause();a.currentTime=t;}),ms);}
