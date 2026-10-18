@@ -1,0 +1,70 @@
+name: Filtered UAT deployment
+on:
+  push:
+    branches: [uat]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: filtered-uat-deployment
+  cancel-in-progress: false
+jobs:
+  scope:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      web: ${{ steps.plan.outputs.web }}
+      mobile: ${{ steps.plan.outputs.mobile }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - id: plan
+        env:
+          BEFORE: ${{ github.event.before || '0000000000000000000000000000000000000000' }}
+          AFTER: ${{ github.sha }}
+          BRANCH: ${{ github.ref_name }}
+        run: python scripts/deployment_scope.py --before "$BEFORE" --after "$AFTER" --branch "$BRANCH"
+  deploy:
+    # Remains dormant until credentials and native Git deployment cutover are verified.
+    if: vars.VERCEL_FILTERED_UAT_ENABLED == 'true'
+    needs: scope
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: web
+            project_variable: VERCEL_WEB_PROJECT_ID
+          - service: mobile
+            project_variable: VERCEL_MOBILE_PROJECT_ID
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        if: needs.scope.outputs[matrix.service] == 'true'
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        if: needs.scope.outputs[matrix.service] == 'true'
+        with:
+          node-version: '22'
+      - name: Deploy only selected service
+        if: needs.scope.outputs[matrix.service] == 'true'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_DEPLOY_TOKEN }}
+          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ vars[matrix.project_variable] }}
+          SERVICE: ${{ matrix.service }}
+          REF: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          test -n "$VERCEL_TOKEN" && test -n "$VERCEL_ORG_ID" && test -n "$VERCEL_PROJECT_ID" || { echo 'Deployment credentials/configuration missing'; exit 1; }
+          # Website UAT is preview; the dedicated mobile-test project uses its production URL.
+          flags=()
+          if [ "$SERVICE" = mobile ]; then flags+=(--prod); fi
+          npx --yes vercel@64.5.0 deploy --yes --token "$VERCEL_TOKEN" "${flags[@]}" --meta "githubCommitRef=$REF" --meta "githubCommitSha=$SHA"
