@@ -16,9 +16,11 @@
       <clipPath id="${id}-right"><path d="${right}"/></clipPath>
       <mask id="${id}-body" maskUnits="userSpaceOnUse" x="0" y="0" width="720" height="480"><rect width="720" height="480" fill="white"/><path d="${left}" fill="black"/><path d="${right}" fill="black"/></mask>
       <clipPath id="${id}-geometry"><path d="M361 396 L401 272 L481 224 L530 154 L642 146 L650 252 L565 286 L527 336 L443 313 Z"/></clipPath>
-      <filter id="${id}-gold" color-interpolation-filters="sRGB"><feFlood flood-color="#d6a43d"/><feComposite in2="SourceGraphic" operator="in"/></filter>
+      <clipPath id="${id}-book"><rect x="100" y="416" width="520" height="64"/></clipPath>
+      <filter id="${id}-gold" color-interpolation-filters="sRGB"><feColorMatrix in="SourceGraphic" type="matrix" values="0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 4 0 -2.2" result="whiteParts"/><feComposite in="whiteParts" in2="SourceAlpha" operator="in" result="lineMask"/><feFlood flood-color="#d6a43d"/><feComposite in2="lineMask" operator="in"/></filter>
     </defs>
     <image class="fqi-owl-base" width="720" height="480" mask="url(#${id}-body)"/>
+    <image class="fqi-book-trim" width="720" height="480" clip-path="url(#${id}-book)"/>
     <g class="fqi-geometry" clip-path="url(#${id}-geometry)"><image width="720" height="480" filter="url(#${id}-gold)"/></g>
     <g class="fqi-eye fqi-eye-left"><image width="720" height="480" clip-path="url(#${id}-left)"/></g>
     <g class="fqi-eye fqi-eye-right"><image width="720" height="480" clip-path="url(#${id}-right)"/></g>`;
