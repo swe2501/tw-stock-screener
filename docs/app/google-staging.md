@@ -16,3 +16,9 @@ Validation: TypeScript, both platform exports and three isolated OAuth/session b
 App 可直接對獨立測試 Supabase Auth 進行 Email／密碼登入、驗證 user、保留裝置安全儲存的 refresh token、恢復登入與只登出本裝置。密碼不持久保存，送出後清空輸入欄；錯誤密碼、未驗證信箱及頻率限制分別顯示訊息。Expo Go 預覽須設 EXPO_PUBLIC_EXPO_GO_PREVIEW=1 隱藏 Google 按鈕，因其無法測試自訂 scheme OAuth。測試環境 EXPO_PUBLIC_STAGING_SUPABASE_KEY 使用既有公開 key；不修改正式會員、資料表或 Vercel。
 
 驗證：五項 auth 測試與 TypeScript 通過；公開 Auth settings 已確認 email=true、mailer_autoconfirm=false。尚待使用者在 iPhone 輸入已驗證的測試帳號完成真機登入／重開／登出驗收，不能以 mock 測試宣稱真機登入成功。網站既有會員尚未接入。
+
+## Email 註冊與 Expo Go 驗證（2026-10-18）
+- 會員頁提供建立測試帳號、重寄驗證信、Email 登入。註冊密碼至少八字元，後端規則仍以 Supabase 為準；寄信按鈕有 60 秒冷卻，不保證寄件服務可用或信件必達。
+- 不修改信件範本或 redirect allowlist。預設驗證信可長按按鈕複製連結，貼回 App 完成驗證；僅接受測試專案 /auth/v1/verify 的 signup/email 連結，擷取 token hash 後 POST 固定測試 /verify。從不開啟使用者貼入的 URL，忽略 redirect_to、不接受 recovery、其他專案、重複 token、fragment。已點過信件者直接用 Email 登入。
+- 註冊未回 session 時不建立本機登入；憑證只在伺服器驗證 user 後存安全儲存。伺服器撤銷 session 時清除本機登入；網路故障不刪 refresh。
+- 十項 auth 單元測試（含重新啟動、撤銷、過期／錯誤來源連結）與 TypeScript 驗證通過。尚待使用者在 iPhone 自行輸入信箱與密碼、收信完成實際驗收；未代建帳號、未讀取密碼／驗證信／token。
