@@ -1,11 +1,12 @@
+import {WEBSITE_BASE} from './config';
 import {useEffect,useRef,useState} from 'react';
 import {ActivityIndicator,Alert,BackHandler,Linking,Modal,Platform,Pressable,ScrollView,StyleSheet,Text,View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {WebView} from 'react-native-webview';
-import {bridgeScript,chapters,routeKind,websiteOrigin} from './market-home';
+import {bridgeScript,chapters,routeKind} from './market-home';
 import {palettes} from './appearance';
 
-const WEBSITE=websiteOrigin(process.env.EXPO_PUBLIC_WEBSITE_URL||'https://tw-stock-screener-git-uat-andrew250165s-projects.vercel.app');
+const WEBSITE=WEBSITE_BASE;
 const HOME=WEBSITE+'/?view=home';
 export default function MarketHome({dark,active}:{dark:boolean;active:boolean}){
  const c=palettes[dark?'dark':'light'],web=useRef<WebView>(null);

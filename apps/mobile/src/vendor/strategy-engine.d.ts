@@ -1,0 +1,7 @@
+export type GuideAnswer={message:string;choices:string[];proposal:null|{name:string;entry:{type:string;code?:string}[];exit:{type:string;code?:string}[];risk:{stop:number;take:number;maxBars:number}};references:unknown[]};
+export const VERSION:string;
+export type Strategy={name:string;entryMode:'all'|'any';exitMode:'all'|'any';entry:{type:string;op:string;code:string;params:Record<string,number>}[];exit:{type:string;op:string;code:string;params:Record<string,number>}[];risk:{stop:number;take:number;maxBars:number}};
+export type RunParameters={capital:number;fee:number;tax:number;slip:number;allocation:number;sizing:'ratio';start:string;end:string};
+export type RunResult={engineVersion:string;curve:{date:string;equity:number;benchmark:number}[];trades:{date:string;side:string;price:number;rawPrice:number;shares:number;cost:number;reason:string;pnl?:number;signal:unknown}[];returnPct:number;benchmarkPct:number;drawdown:number;closed:number;winRate:number|null;openShares:number;fees:number;first:string;last:string;strategy:Strategy;parameters:RunParameters};
+export function run(rows:{time:string;open:number;high:number;low:number;close:number;volume:number}[],strategy:Strategy,parameters:RunParameters):RunResult;
+export const formula:{compile:(code:string,params?:Record<string,number>)=>unknown;fromChinese:(text:string)=>string;evaluate:(data:unknown[],rule:{code:string;params?:Record<string,number>})=>{left:(number|null)[]};createGuide:()=>{start:()=>GuideAnswer;send:(text:string)=>GuideAnswer}};

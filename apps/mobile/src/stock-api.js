@@ -1,0 +1,8 @@
+const {marketOrigin}=require('./market-api');
+function validateStocks(data){
+ if(!data||data.available!==true||data.schema_version!==1||data.market!=='TWSE'||data.frequency!=='daily'||data.source?.url!=='https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL'||!Array.isArray(data.items)||!data.items.length||data.items.length>5000)throw Error('上市股票資料格式無效。');
+ const seen=new Set();for(const r of data.items){if(!/^[0-9]{4,6}[A-Z]?$/.test(r.code)||seen.has(r.code)||typeof r.name!=='string'||r.name.length>80||!/^\d{4}-\d{2}-\d{2}$/.test(r.date)||!['close','change','change_percent','trade_value_twd','trade_volume_shares'].every(k=>typeof r[k]==='number'&&Number.isFinite(r[k]))||r.close<=0||r.close-r.change<=0||r.trade_value_twd<0||r.trade_volume_shares<0||Math.abs(r.change_percent-r.change/(r.close-r.change)*100)>.001||!['stock','etf'].includes(r.kind))throw Error('上市股票數值驗證失敗。');seen.add(r.code);}return data;
+}
+async function loadStocks(base,{development=false,signal,fetcher=fetch}={}){const r=await fetcher(marketOrigin(base,development)+'/api/prices?action=stock_catalog',{signal,credentials:'omit',redirect:'error',headers:{Accept:'application/json'}});if(!r.ok||!r.headers.get('content-type')?.includes('application/json'))throw Error('上市股票資料暫時無法取得。');return validateStocks(await r.json());}
+function filterStocks(rows,query='',kind='all'){const q=query.trim().toLocaleLowerCase();return rows.filter(r=>(kind==='all'||r.kind===kind)&&(!q||r.code.toLowerCase().includes(q)||r.name.toLocaleLowerCase().includes(q))).sort((a,b)=>Number(b.code===q)-Number(a.code===q)||a.code.localeCompare(b.code));}
+module.exports={loadStocks,filterStocks,validateStocks};

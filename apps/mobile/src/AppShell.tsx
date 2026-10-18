@@ -1,61 +1,36 @@
-import {useEffect,useRef,useState} from 'react';
-import {ActivityIndicator,Alert,Image,Linking,Pressable,ScrollView,StyleSheet,Text,TextInput,useColorScheme,useWindowDimensions,View} from 'react-native';
+import {useEffect,useState} from 'react';
+import {Alert,Image,Pressable,ScrollView,StyleSheet,Text,useColorScheme,View} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {StatusBar} from 'expo-status-bar';
-import MemberScreen from './MemberScreen';
 import MarketHub from './MarketHub';
+import ExploreScreen from './ExploreScreen';
+import WatchlistScreen from './WatchlistScreen';
+import StrategyScreen from './StrategyScreen';
+import LocalBackup from './LocalBackup';
+import MemberScreen from './MemberScreen';
+import FeatureDirectory from './FeatureDirectory';
+import NavigationIcon from './NavigationIcon';
 import {palettes} from './appearance';
-import {searchNews,type NewsItem} from '../../../packages/shared/news-api';
-
-const SITE=process.env.EXPO_PUBLIC_API_BASE_URL||'https://tw-stock-mobile-preview.vercel.app';
-const WEBSITE='https://tw-stock-screener-git-uat-andrew250165s-projects.vercel.app';
-const tabs=['大盤','研究搜尋','我的觀察','會員'] as const;
-const symbols=['⌂','⌕','☆','♙'];
+const tabs=['大盤','探索','自選','策略','我的'] as const;
 const modes=['auto','light','dark'] as const;
 export default function AppShell(){
- const system=useColorScheme(),{width,fontScale}=useWindowDimensions();
- const [mode,setMode]=useState<typeof modes[number]>('auto');
- const dark=mode==='auto'?system==='dark':mode==='dark',wide=width>=768&&fontScale<1.5;
- const c=palettes[dark?'dark':'light'];
- const [tab,setTab]=useState<typeof tabs[number]>('大盤'),[query,setQuery]=useState(''),[items,setItems]=useState<NewsItem[]>([]),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[searched,setSearched]=useState(false);
- const sequence=useRef(0),active=useRef<AbortController|null>(null),scroll=useRef<ScrollView>(null);
- useEffect(()=>()=>{++sequence.current;active.current?.abort();},[]);
- const text={color:c.text},muted={color:c.muted},card={backgroundColor:c.card,borderColor:c.border},accent={color:c.accent};
- function select(next:typeof tabs[number]){setTab(next);scroll.current?.scrollTo({y:0,animated:false});}
- async function open(url:string){try{await Linking.openURL(url);}catch{Alert.alert('無法開啟連結','請稍後再試。');}}
- async function search(value=query){
-  if(value.trim().length<2){++sequence.current;active.current?.abort();setBusy(false);setItems([]);setMessage('請輸入至少兩個字，例如「半導體」。');return;}
-  const id=++sequence.current;active.current?.abort();const controller=new AbortController();active.current=controller;setBusy(true);setSearched(true);setMessage('');setItems([]);
-  const timeout=setTimeout(()=>controller.abort(),15000);
-  try{const r=await searchNews(SITE,value,{signal:controller.signal});if(id!==sequence.current)return;setItems(r.items);setMessage(r.partial?'部分來源暫時無法取得，下方僅呈現已取得的資料。':r.items.length?'':'沒有找到符合的資料，試試公司名稱或其他關鍵字。');}
-  catch(e){if(id===sequence.current)setMessage(e instanceof Error&&e.name==='AbortError'?'連線逾時，請再試一次。':e instanceof Error?e.message:'搜尋暫時無法使用，請稍後重試。');}
-  finally{clearTimeout(timeout);if(id===sequence.current)setBusy(false);}
- }
- const button=(label:string,onPress:()=>void,primary=false)=><Pressable accessibilityRole="button" onPress={onPress} style={({pressed})=>[s.button,{backgroundColor:primary?c.accent:c.soft,opacity:pressed?.75:1}]}><Text style={[s.buttonText,{color:primary?(dark?'#142331':'#fff'):c.text}]}>{label}</Text></Pressable>;
- return <SafeAreaView style={[s.safe,{backgroundColor:c.bg}]}><StatusBar style={dark?'light':'dark'}/>
-  <View style={[s.header,{backgroundColor:c.card,borderColor:c.border}]}>
-   <View style={s.brandRow}><Image source={require('../assets/academy-mark.png')} style={s.logo} resizeMode="contain" accessibilityLabel="跟誰學標誌"/><View style={s.brandCopy}><Text style={[s.brand,text]}>跟誰學</Text><Text style={[s.caption,muted]}>盤後研究院 · MARKET ACADEMY</Text></View></View>
-   <Pressable accessibilityRole="button" accessibilityLabel={`外觀：${mode==='auto'?'跟隨系統':dark?'深色':'淺色'}，點擊切換`} onPress={()=>setMode(modes[(modes.indexOf(mode)+1)%modes.length])} style={[s.theme,{backgroundColor:c.soft}]}><Text style={[s.themeIcon,accent]}>{mode==='auto'?'◐':dark?'☾':'☀'}</Text></Pressable>
-  </View>
-  <View style={{flex:tab==='大盤'?1:0,display:tab==='大盤'?'flex':'none'}}><MarketHub dark={dark} active={tab==='大盤'}/></View>
-  {tab!=='大盤'&&<ScrollView ref={scroll} contentContainerStyle={[s.content,wide&&s.wide]} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
-   <View style={s.pageHeading}><View style={{flex:1}}><Text style={[s.eyebrow,accent]}>YOUR RESEARCH SPACE</Text><Text accessibilityRole="header" style={[s.title,text]}>{tab}</Text></View><View style={[s.badge,{backgroundColor:c.soft}]}><Text style={[s.caption,muted]}>介面預覽</Text></View></View>
-   {tab==='研究搜尋'&&<>
-    <View style={[s.card,card]}><Text style={[s.subtitle,text]}>你想了解什麼？</Text><Text style={[s.body,muted]}>輸入公司、產業或事件。搜尋結果會保留來源與日期。</Text><TextInput accessibilityLabel="研究關鍵字" placeholder="例如：半導體、ETF" placeholderTextColor={c.muted} value={query} onChangeText={setQuery} returnKeyType="search" onSubmitEditing={()=>void search()} maxLength={80} style={[s.input,{backgroundColor:c.bg,borderColor:c.border},text]}/><View style={s.chips}>{['半導體','ETF','AI 伺服器'].map(v=><Pressable key={v} accessibilityRole="button" onPress={()=>{setQuery(v);void search(v);}} style={[s.chip,{backgroundColor:c.soft}]}><Text style={[s.chipText,muted]}>{v}</Text></Pressable>)}</View>{button(busy?'重新搜尋':'搜尋研究資料',()=>void search(),true)}</View>
-    {busy&&<View style={s.loading}><ActivityIndicator color={c.accent}/><Text style={muted}>正在整理研究線索…</Text></View>}
-    {!!message&&<View style={[s.card,card]}><Text accessibilityRole="alert" style={[s.body,muted]}>{message}</Text>{searched&&!busy&&button('再試一次',()=>void search())}</View>}
-    {!busy&&items.length>0&&<Text style={[s.sectionTitle,text]}>{items.length} 筆研究線索</Text>}
-    {items.map((item,i)=><View key={item.url||item.title+i} style={[s.card,card]}><Text style={[s.caption,muted]}>{[item.source,item.date].filter(Boolean).join(' · ')}</Text><Text style={[s.subtitle,text]}>{item.title}</Text><Text style={[s.body,muted]}>{item.snippet}</Text>{item.url&&button('閱讀原始來源  ↗',()=>void open(item.url!))}</View>)}
-    {!searched&&<Text style={[s.body,muted]}>先從一個關鍵字開始。預覽環境資料尚在建置，服務未就緒時會顯示實際狀態。</Text>}
-   </>}
-   {tab==='我的觀察'&&<View style={[s.card,card]}><Text style={[s.tileIcon,accent]}>☆</Text><Text style={[s.subtitle,text]}>把值得追蹤的想法留下來</Text><Text style={[s.body,muted]}>App 自選與同步尚在開發。現有收藏與交易紀錄請先至網站會員中心查看。</Text>{button('先找研究線索',()=>select('研究搜尋'),true)}<View style={{height:12}}/>{button('開啟網站會員中心  ↗',()=>void open(WEBSITE+'/#member/overview'))}</View>}
-   {tab==='會員'&&<MemberScreen dark={dark}/>}
-   <Text style={[s.footer,muted]}>研究資訊僅供參考。請核對來源與資料日期。</Text>
-  </ScrollView>}
-  <View accessibilityRole="tablist" style={[s.nav,{backgroundColor:c.card,borderColor:c.border}]}>{tabs.map((item,i)=><Pressable key={item} accessibilityRole="tab" accessibilityState={{selected:tab===item}} onPress={()=>select(item)} style={({pressed})=>[s.tab,{backgroundColor:tab===item?c.soft:'transparent',opacity:pressed?.7:1}]}><Text accessible={false} style={[s.navIcon,{color:tab===item?c.accent:c.muted}]}>{symbols[i]}</Text><Text style={[s.navText,{color:tab===item?c.accent:c.muted}]}>{item}</Text></Pressable>)}</View>
+ const system=useColorScheme(),[mode,setMode]=useState<typeof modes[number]>('auto'),[themeReady,setThemeReady]=useState(false),[tab,setTab]=useState<typeof tabs[number]>('大盤'),[tools,setTools]=useState(false),[focusCode,setFocusCode]=useState<string|null>(null),[visited,setVisited]=useState<string[]>(['大盤']);
+ const dark=mode==='auto'?system==='dark':mode==='dark',c=palettes[dark?'dark':'light'];
+ useEffect(()=>{let alive=true;void AsyncStorage.getItem('academy.mobile.appearance').then(value=>{if(alive&&modes.includes(value as typeof modes[number]))setMode(value as typeof modes[number]);}).catch(()=>{}).finally(()=>{if(alive)setThemeReady(true);});return()=>{alive=false;};},[]);
+ function select(next:typeof tabs[number]){setVisited(current=>current.includes(next)?current:[...current,next]);setTab(next);}
+ function explore(code?:string){setFocusCode(code||null);select('探索');}
+ function theme(){if(!themeReady)return;const value=modes[(modes.indexOf(mode)+1)%modes.length];setMode(value);void AsyncStorage.setItem('academy.mobile.appearance',value).catch(()=>Alert.alert('外觀設定尚未儲存','本次仍可切換，重開 App 後可能回到先前設定。'));}
+ const pane=(name:typeof tabs[number])=>({flex:tab===name?1:0,display:tab===name?'flex' as const:'none' as const});
+ return <SafeAreaView style={{flex:1,backgroundColor:c.bg}}><StatusBar style={dark?'light':'dark'}/>
+  <View style={[s.header,{backgroundColor:c.card,borderColor:c.border}]}><Image source={require('../assets/academy-mark.png')} style={s.logo} resizeMode="contain" accessibilityLabel="跟誰學標誌"/><View style={{flex:1}}><Text style={[s.brand,{color:c.text}]}>跟誰學</Text><Text style={[s.caption,{color:c.muted}]}>盤後研究院 · 手機研究工作台</Text></View><Pressable accessibilityRole="button" accessibilityLabel="開啟研究工具箱" onPress={()=>setTools(true)} style={[s.control,{backgroundColor:c.soft}]}><Text style={{color:c.accent,fontSize:20}}>⋮</Text></Pressable><Pressable accessibilityRole="button" accessibilityLabel={`外觀：${mode==='auto'?'跟隨系統':dark?'深色':'淺色'}，點擊切換`} onPress={theme} style={[s.control,{backgroundColor:c.soft}]}><Text style={{color:c.accent,fontSize:22}}>{mode==='auto'?'◐':dark?'☾':'☀'}</Text></Pressable></View>
+  <View style={pane('大盤')}><MarketHub dark={dark} active={tab==='大盤'}/></View>
+  {visited.includes('探索')&&<View style={pane('探索')}><ExploreScreen dark={dark} focusCode={focusCode} onFocusHandled={()=>setFocusCode(null)}/></View>}
+  {visited.includes('自選')&&<View style={pane('自選')}><WatchlistScreen dark={dark} onExplore={explore}/></View>}
+  {visited.includes('策略')&&<View style={pane('策略')}><StrategyScreen dark={dark} active={tab==='策略'}/></View>}
+  {visited.includes('我的')&&<ScrollView style={pane('我的')} contentContainerStyle={s.member}><Text accessibilityRole="header" style={[s.heading,{color:c.text}]}>我的研究空間</Text><MemberScreen dark={dark}/><LocalBackup dark={dark}/><View style={[s.notice,{backgroundColor:c.card,borderColor:c.border}]}><Text style={[s.noticeTitle,{color:c.text}]}>本機資料與會員資料</Text><Text style={{color:c.muted,fontSize:15,lineHeight:27}}>自選、筆記與策略草稿已可保存在這台裝置；尚未與網站會員同步。原生會員登入、雲端備份與權限會在獨立測試環境完成驗證後接入。</Text><Pressable accessibilityRole="button" onPress={()=>setTools(true)} style={[s.toolsButton,{backgroundColor:c.soft}]}><Text style={{color:c.accent,fontWeight:'700'}}>瀏覽完整研究工具箱 →</Text></Pressable></View></ScrollView>}
+  <View accessibilityRole="tablist" style={[s.nav,{backgroundColor:c.card,borderColor:c.border}]}>{tabs.map(name=><Pressable key={name} accessibilityRole="tab" accessibilityState={{selected:tab===name}} onPress={()=>select(name)} style={({pressed})=>[s.tab,{backgroundColor:tab===name?c.soft:'transparent',opacity:pressed?.65:1}]}><NavigationIcon name={name} color={tab===name?c.accent:c.muted}/><Text style={{fontSize:12,fontWeight:'700',color:tab===name?c.accent:c.muted}}>{name}</Text></Pressable>)}</View>
+  <FeatureDirectory dark={dark} visible={tools} onClose={()=>setTools(false)}/>
  </SafeAreaView>;
 }
-const s=StyleSheet.create({
- safe:{flex:1},header:{paddingHorizontal:20,paddingVertical:12,borderBottomWidth:1,flexDirection:'row',alignItems:'center',gap:12},brandRow:{flex:1,flexDirection:'row',alignItems:'center',gap:12},brandCopy:{flex:1},logo:{width:44,height:48,borderRadius:12,backgroundColor:'#fff'},brand:{fontSize:22,fontWeight:'800',letterSpacing:2},caption:{fontSize:11,lineHeight:18},theme:{minWidth:46,minHeight:46,borderRadius:16,alignItems:'center',justifyContent:'center'},themeIcon:{fontSize:25},
- content:{padding:20,paddingBottom:24,gap:16},wide:{width:'100%',maxWidth:1080,alignSelf:'center',padding:32},pageHeading:{flexDirection:'row',gap:10,alignItems:'center',marginBottom:4},eyebrow:{fontSize:10,fontWeight:'800',letterSpacing:1.6,marginBottom:8},title:{fontSize:27,lineHeight:38,fontWeight:'800'},badge:{paddingHorizontal:10,paddingVertical:7,borderRadius:10},hero:{padding:26,borderRadius:26,overflow:'hidden',gap:10},orbit:{position:'absolute',width:250,height:250,borderRadius:125,borderWidth:35,borderColor:'#ffffff09',right:-70,top:-50},heroTitle:{fontSize:32,lineHeight:46,fontWeight:'800',color:'#fff'},heroBody:{fontSize:16,lineHeight:27,color:'#dae7f1',maxWidth:460,marginBottom:8},grid:{gap:16},columns:{flexDirection:'row',flexWrap:'wrap'},half:{flexGrow:1,flexBasis:'45%'},card:{borderWidth:1,borderRadius:24,padding:22},pressed:{opacity:.75},tileIcon:{fontSize:32,marginBottom:12},sectionTitle:{fontSize:20,lineHeight:30,fontWeight:'700',marginTop:4},subtitle:{fontSize:21,lineHeight:31,fontWeight:'700',marginBottom:10},body:{fontSize:16,lineHeight:27,marginBottom:16},action:{fontSize:15,fontWeight:'700',paddingVertical:8},button:{minHeight:48,borderRadius:15,paddingHorizontal:18,paddingVertical:14,alignItems:'center',justifyContent:'center'},buttonText:{fontSize:16,fontWeight:'700',lineHeight:23},step:{flexDirection:'row',alignItems:'center',gap:12,marginTop:14},stepNumber:{fontSize:13,fontWeight:'800',padding:10,borderRadius:12,overflow:'hidden'},stepText:{flex:1,fontSize:15,lineHeight:25},input:{borderWidth:1,borderRadius:16,padding:16,fontSize:17,minHeight:54},chips:{flexDirection:'row',flexWrap:'wrap',gap:8,marginVertical:14},chip:{minHeight:44,paddingHorizontal:14,paddingVertical:12,borderRadius:14},chipText:{fontSize:14},loading:{flexDirection:'row',justifyContent:'center',gap:12,padding:16},footer:{fontSize:12,lineHeight:21,textAlign:'center',marginTop:10},nav:{flexDirection:'row',borderTopWidth:1,paddingHorizontal:12,paddingVertical:8,gap:6},tab:{flex:1,minHeight:60,alignItems:'center',justifyContent:'center',padding:6,borderRadius:16,gap:4},navIcon:{fontSize:24},navText:{fontSize:12,fontWeight:'700',textAlign:'center'},
-});
+const s=StyleSheet.create({header:{paddingHorizontal:16,paddingVertical:10,flexDirection:'row',gap:10,alignItems:'center',borderBottomWidth:1},logo:{width:36,height:43,borderRadius:10,backgroundColor:'#fff'},brand:{fontSize:22,fontWeight:'800',letterSpacing:2},caption:{fontSize:11,lineHeight:18},control:{minWidth:44,minHeight:44,borderRadius:14,alignItems:'center',justifyContent:'center'},nav:{flexDirection:'row',gap:5,paddingHorizontal:10,paddingVertical:8,borderTopWidth:1},tab:{flex:1,minHeight:62,paddingVertical:8,borderRadius:16,alignItems:'center',justifyContent:'center',gap:5},member:{padding:20,gap:20,paddingBottom:36,maxWidth:1000,width:'100%',alignSelf:'center'},heading:{fontSize:27,fontWeight:'800',lineHeight:39},notice:{padding:22,borderWidth:1,borderRadius:24,gap:14},noticeTitle:{fontSize:20,fontWeight:'700',lineHeight:30},toolsButton:{minHeight:48,padding:14,borderRadius:14,alignItems:'center',justifyContent:'center'}});

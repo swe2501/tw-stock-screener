@@ -1,0 +1,18 @@
+import {WEBSITE_BASE} from './config';
+import {useState} from 'react';
+import {Alert,Linking,Modal,Pressable,ScrollView,StyleSheet,Text,TextInput,View} from 'react-native';
+import {SafeAreaView} from 'react-native-safe-area-context';
+import {palettes} from './appearance';
+const WEBSITE=WEBSITE_BASE;
+const groups=[
+ {title:'先讀市場',hint:'價格、參與度與資金位置',items:[['breadth','市場廣度'],['fhedge','外資空單溫度計'],['inst','法人買賣超'],['greed','市場情緒'],['usty','美債對標'],['disposal','處置股']]},
+ {title:'找研究方向',hint:'篩選條件與價格結構',items:[['screen','掏金篩選器'],['box','箱型'],['limitup','上漲下跌亮燈區'],['liq','流動性排行'],['sr','支撐壓力逼近']]},
+ {title:'理解題材脈絡',hint:'產業與集團的關係',items:[['hottopics','話題'],['themes','題材列表'],['sectors','產業地圖'],['groupbook','集團研究台'],['news','每日新聞']]},
+ {title:'深入 ETF',hint:'從成分、成本到持有結構',items:[['etfx','ETF 探索'],['etf','規模排行'],['etfcons','成分股'],['etfrev','股票反查 ETF'],['etfdiv','配息行事曆'],['etfhold','持有人結構'],['etfsim','ETF 相似度'],['etfheavy','重倉股排行'],['etfprem','折溢價'],['etfflow','資金流'],['etfperf','績效比較']]},
+];
+export default function FeatureDirectory({dark,visible,onClose}:{dark:boolean;visible:boolean;onClose:()=>void}){
+ const c=palettes[dark?'dark':'light'],[query,setQuery]=useState('');
+ async function open(view:string){try{await Linking.openURL(WEBSITE+'/?view='+encodeURIComponent(view));}catch{Alert.alert('無法開啟網站','請檢查網路後再試。');}}
+ return <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}><SafeAreaView style={{flex:1,backgroundColor:c.bg}}><View style={s.header}><View style={{flex:1}}><Text accessibilityRole="header" style={[s.title,{color:c.text}]}>研究工具箱</Text><Text style={[s.meta,{color:c.muted}]}>網站功能地圖 · 點擊後於瀏覽器開啟</Text></View><Pressable accessibilityRole="button" onPress={onClose} style={s.close}><Text style={{color:c.accent,fontSize:15}}>完成</Text></Pressable></View><TextInput accessibilityLabel="搜尋研究工具" value={query} onChangeText={setQuery} placeholder="想找什麼？例如 ETF、法人、集團" placeholderTextColor={c.muted} style={[s.search,{color:c.text,backgroundColor:c.card,borderColor:c.border}]}/><ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled"><Text style={[s.body,{color:c.muted}]}>App 已有原生大盤、上市探索、自選與公式研究。下列完整工具目前仍於網站使用；測試網站可能需要 Vercel 授權，原有會員權限也會保留。</Text>{groups.map(g=>{const items=g.items.filter(([,title])=>(title+g.title).toLowerCase().includes(query.trim().toLowerCase()));return items.length?<View key={g.title} style={s.group}><Text style={[s.subtitle,{color:c.text}]}>{g.title}</Text><Text style={[s.meta,{color:c.muted}]}>{g.hint}</Text>{items.map(([view,title])=><Pressable key={view} accessibilityRole="link" accessibilityLabel={`${title}，在網站開啟`} onPress={()=>void open(view)} style={({pressed})=>[s.tool,{backgroundColor:c.card,borderColor:c.border,opacity:pressed?.7:1}]}><Text style={{color:c.text,fontSize:16,flex:1}}>{title}</Text><Text style={{color:c.accent,fontSize:12}}>網站 ↗</Text></Pressable>)}</View>:null;})}{!groups.some(g=>g.items.some(([,title])=>(title+g.title).toLowerCase().includes(query.trim().toLowerCase())))&&<Text style={[s.body,{color:c.muted}]}>沒有符合的工具，試試其他關鍵字。</Text>}</ScrollView></SafeAreaView></Modal>;
+}
+const s=StyleSheet.create({header:{padding:20,flexDirection:'row',alignItems:'center',gap:12},title:{fontSize:25,lineHeight:36,fontWeight:'800'},subtitle:{fontSize:20,lineHeight:30,fontWeight:'700'},meta:{fontSize:12,lineHeight:22},close:{minHeight:44,minWidth:44,justifyContent:'center',alignItems:'center'},search:{marginHorizontal:20,padding:16,minHeight:54,borderWidth:1,borderRadius:16,fontSize:16},content:{padding:20,gap:24,paddingBottom:40},body:{fontSize:15,lineHeight:27},group:{gap:10},tool:{borderWidth:1,borderRadius:16,minHeight:56,padding:17,flexDirection:'row',alignItems:'center',gap:12}});

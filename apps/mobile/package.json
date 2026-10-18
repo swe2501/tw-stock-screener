@@ -5,6 +5,7 @@
   "version": "0.1.0",
   "main": "index.ts",
   "dependencies": {
+    "@react-native-async-storage/async-storage": "^2.2.0",
     "expo": "~57.0.30",
     "expo-crypto": "~57.0.0",
     "expo-secure-store": "~57.0.0",
@@ -13,10 +14,12 @@
     "react": "^19.2.3",
     "react-native": "^0.86.3",
     "react-native-safe-area-context": "~5.7.0",
+    "react-native-svg": "^15.15.4",
     "react-native-webview": "^13.16.1"
   },
   "devDependencies": {
     "@types/react": "~19.2.0",
+    "react-test-renderer": "^19.2.3",
     "typescript": "~6.0.3"
   },
   "scripts": {
@@ -26,6 +29,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
+    "check:website": "node scripts/check-website-parity.cjs",
     "export:native": "expo export --platform all --output-dir dist/native --max-workers 2"
   },
   "private": true
