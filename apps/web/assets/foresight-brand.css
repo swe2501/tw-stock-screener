@@ -81,3 +81,11 @@ body.mc-open>header .fqi-brand .gs-mark::before,body.mc-open>header .fqi-brand .
 @keyframes fqi-identity-strike{0%{filter:brightness(1)}18%,38%{filter:brightness(1.35) drop-shadow(0 0 4px #e6bc6290)}100%{filter:brightness(1.06) drop-shadow(0 0 1px #e6bc6230)}}
 .fqi-brand-paused .gs-brand.fqi-brand,.fqi-brand-paused .gs-edition{animation-play-state:paused!important}
 @media(prefers-reduced-motion:reduce){.gs-brand.fqi-brand,.gs-brand.fqi-brand:is(:hover,:focus-visible),body>header .gs-edition,.mc-brandbar .gs-edition{animation:none!important;filter:none!important;opacity:1!important}}
+
+/* Keep the artwork width, remove its unused vertical canvas spacing. */
+body>header:has(.fqi-brand){min-height:0;padding-block:8px!important;align-items:center}
+body>header .fqi-brand .gs-mark,.mc-brandbar .fqi-brand .gs-mark{width:96px!important;height:72px!important;aspect-ratio:auto}
+.mc-brandbar:has(.fqi-brand){min-height:0;padding-block:8px}
+body:not(.pro-nav-compact)>#mainNav{top:var(--fqi-header-height,89px)}
+@media(max-width:700px){body>header .fqi-brand .gs-mark,.mc-brandbar .fqi-brand .gs-mark{width:72px!important;height:56px!important}.mc-brandbar:has(.fqi-brand){padding-block:8px}}
+@media(max-width:430px){body>header:has(.fqi-brand){padding-block:6px!important;row-gap:8px}}

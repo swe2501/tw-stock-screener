@@ -44,6 +44,13 @@
   }
   function visibility(){document.documentElement.classList.toggle('fqi-brand-paused',document.hidden);}
   register(document);visibility();
+  const header=document.querySelector('body>header:has(.fqi-brand)');
+  if(header){
+    const measureHeader=()=>document.documentElement.style.setProperty('--fqi-header-height',header.offsetHeight+'px');
+    measureHeader();
+    if('ResizeObserver' in window)new ResizeObserver(measureHeader).observe(header);
+    else window.addEventListener('resize',measureHeader,{passive:true});
+  }
   new MutationObserver(records=>records.forEach(record=>record.addedNodes.forEach(register))).observe(document.body,{childList:true,subtree:true});
   document.addEventListener('visibilitychange',visibility);
   const switcher=document.querySelector('.fqi-standalone [data-fqi-theme]');
