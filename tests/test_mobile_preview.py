@@ -29,15 +29,18 @@ class PreviewTests(unittest.TestCase):
     def test_staging_metadata_only_and_failure_does_not_leak(self):
         with patch.dict(preview.os.environ, {'STAGING_SUPABASE_URL': preview.STAGING_ORIGIN,
                 'STAGING_SUPABASE_PUBLISHABLE_KEY': 'sb_publishable_test'}, clear=True), patch.object(preview, 'build_opener') as opener:
-            response = MagicMock(status=200, headers={'Content-Type': 'application/openapi+json'})
+            response = MagicMock(status=200, headers={'Content-Type': 'application/json'})
+            response.read.return_value = b'{"external": {"google": false}}'
             opener.return_value.open.return_value.__enter__.return_value = response
-            self.assertTrue(preview.connectivity()['database_connected'])
+            result = preview.connectivity()
+            self.assertTrue(result['supabase_connected'])
+            self.assertFalse(result['database_connected'])
             req = opener.return_value.open.call_args.args[0]
-            self.assertEqual(req.full_url, preview.STAGING_ORIGIN + '/rest/v1/')
+            self.assertEqual(req.full_url, preview.STAGING_ORIGIN + '/auth/v1/settings')
             self.assertEqual(req.get_method(), 'GET')
-            response.read.assert_called_once_with(1)
+            response.read.assert_called_once_with(65536)
             opener.return_value.open.side_effect = RuntimeError('secret details')
-            self.assertEqual(preview.connectivity(), {'database_connected': False, 'connection_state': 'unavailable'})
+            self.assertEqual(preview.connectivity(), {'database_connected': False, 'supabase_connected': False, 'connection_state': 'unavailable'})
 
     def test_no_database_and_no_writes(self):
         server = HTTPServer(('127.0.0.1', 0), preview.handler)

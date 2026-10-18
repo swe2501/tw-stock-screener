@@ -14,22 +14,24 @@ class NoRedirect(HTTPRedirectHandler):
 
 
 def connectivity():
-    """Probe public Data API metadata only. Never send credentials elsewhere."""
+    """Probe public Auth settings only. Never send credentials elsewhere."""
     base = os.environ.get('STAGING_SUPABASE_URL', '').rstrip('/')
     key = os.environ.get('STAGING_SUPABASE_PUBLISHABLE_KEY', '')
-    result = {'database_connected': False, 'connection_state': 'not_configured'}
+    result = {'database_connected': False, 'supabase_connected': False, 'connection_state': 'not_configured'}
     if not base and not key:
         return result
     if base != STAGING_ORIGIN or not key.startswith('sb_publishable_'):
         return {**result, 'connection_state': 'configuration_rejected'}
     try:
-        req = Request(base + '/rest/v1/', headers={'apikey': key, 'Accept': 'application/openapi+json'})
+        req = Request(base + '/auth/v1/settings', headers={'apikey': key, 'Accept': 'application/json'})
         with build_opener(NoRedirect()).open(req, timeout=5) as response:
             if response.status != 200 or 'json' not in response.headers.get('Content-Type', ''):
                 raise ValueError('invalid response')
-            # Inspect no table contents; connectivity does not imply schema readiness.
-            response.read(1)
-        return {'database_connected': True, 'connection_state': 'ready'}
+            data = json.loads(response.read(65536))
+            if not isinstance(data, dict) or not isinstance(data.get('external'), dict):
+                raise ValueError('invalid settings')
+        # Auth reachability alone does not verify a research schema/database query.
+        return {**result, 'supabase_connected': True, 'connection_state': 'ready'}
     except Exception:
         return {**result, 'connection_state': 'unavailable'}
 
