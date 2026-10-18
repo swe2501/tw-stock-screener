@@ -2,7 +2,7 @@
 :root{--fqi-ink:#edf0ed;--fqi-gold:#cabb85;--fqi-mark-bg:#14212b;--fqi-ring:var(--border,#30404a);--fqi-halo:#8bbbe01a;--fqi-logo-filter:url(#fqiHeritageDark)}
 :root[data-theme=light]{--fqi-ink:#141e36;--fqi-gold:#b69b48;--fqi-mark-bg:#fff;--fqi-ring:#dbe4ec;--fqi-halo:#347fc412;--fqi-logo-filter:url(#fqiHeritageLight)}
 .gs-brand.fqi-brand{display:inline-flex!important;align-items:center!important;gap:12px!important;min-width:0;text-decoration:none!important;isolation:isolate;border-radius:12px;color:var(--fqi-ink)!important;outline-offset:5px;-webkit-tap-highlight-color:transparent}
-.fqi-brand .gs-mark{position:relative;display:grid;place-items:center;flex:0 0 auto;width:64px!important;height:64px!important;aspect-ratio:1;padding:0!important;border:0!important;border-radius:0!important;overflow:hidden;background:transparent!important;box-shadow:none!important;transition:transform .3s cubic-bezier(.2,.8,.2,1),border-color .3s,box-shadow .3s}
+.fqi-brand .gs-mark{position:relative;display:grid;place-items:center;flex:0 0 auto;width:72px!important;height:72px!important;aspect-ratio:1;padding:0!important;border:0!important;border-radius:0!important;overflow:hidden;background:transparent!important;box-shadow:none!important;transition:transform .3s cubic-bezier(.2,.8,.2,1),border-color .3s,box-shadow .3s}
 .fqi-brand .gs-mark img{position:relative;z-index:1;width:100%!important;height:100%!important;object-fit:contain!important;display:block;padding:0!important;background:transparent!important;border-radius:0!important;filter:var(--fqi-logo-filter)!important}
 .fqi-brand .gs-mark::before{content:"";position:absolute;z-index:2;inset:-80%;pointer-events:none;background:linear-gradient(110deg,transparent 40%,#ffffff06 46%,#ffffff35 50%,#ffffff06 54%,transparent 60%)!important;transform:translateX(-125%);animation:fqi-sheen 8s ease-in-out infinite!important;animation-play-state:paused!important}
 .fqi-brand .gs-mark::after{content:"";position:absolute;z-index:0;inset:0;background:radial-gradient(ellipse at 65% 22%,var(--fqi-halo),transparent 75%);opacity:.15;animation:fqi-breathe 5.2s ease-in-out infinite;animation-play-state:paused}
@@ -21,7 +21,7 @@ body>header .gs-edition,.mc-brandbar .gs-edition{display:block!important;backgro
 body>header .gs-edition b,.mc-brandbar .gs-edition b{font:800 15px/1.3 Inter,Arial,sans-serif!important;letter-spacing:.065em!important;color:inherit!important}
 .mc-brandbar:has(.fqi-brand){min-height:78px}
 #authModal .auth-brand .gs-brand.fqi-brand{flex-direction:row!important;gap:13px!important;max-width:100%;text-align:left!important}
-#authModal .auth-brand .fqi-brand .gs-mark{width:60px!important;height:60px!important;border-radius:0!important}
+#authModal .auth-brand .fqi-brand .gs-mark{width:66px!important;height:66px!important;border-radius:0!important}
 #authModal .auth-brand .fqi-brand .gs-name b{font-size:25px!important;letter-spacing:.025em!important}
 #authModal .auth-brand .fqi-brand .gs-name small{font-size:10px!important;letter-spacing:.07em!important}
 
@@ -35,7 +35,7 @@ body.mc-open>header .fqi-brand .gs-mark::before,body.mc-open>header .fqi-brand .
 @keyframes fqi-breathe{0%,100%{opacity:.1}50%{opacity:.4}}
 @media(max-width:700px){
  .gs-brand.fqi-brand{gap:10px!important}
- .fqi-brand .gs-mark{width:52px!important;height:52px!important;border-radius:0!important}
+ .fqi-brand .gs-mark{width:58px!important;height:58px!important;border-radius:0!important}
  .fqi-brand .gs-name b{font-size:22px!important;letter-spacing:.035em!important}
  .fqi-brand .gs-name small{font-size:10px!important;letter-spacing:.12em!important}
  body>header .gs-edition,.mc-brandbar .gs-edition{display:none!important}
@@ -47,7 +47,7 @@ body.mc-open>header .fqi-brand .gs-mark::before,body.mc-open>header .fqi-brand .
  body>header .fqi-brand{flex:1 1 100%}
  body>header #authArea{margin-left:0;width:100%;justify-content:flex-end;flex-wrap:wrap}
  .fqi-brand .gs-name b{font-size:21px!important}
- #authModal .auth-brand .fqi-brand .gs-mark{width:50px!important;height:50px!important;border-radius:0!important}
+ #authModal .auth-brand .fqi-brand .gs-mark{width:54px!important;height:54px!important;border-radius:0!important}
  #authModal .auth-brand .fqi-brand .gs-name b{font-size:21px!important}
  #authModal .auth-brand .fqi-brand .gs-name small{font-size:10px!important}
 }
@@ -61,3 +61,20 @@ body.mc-open>header .fqi-brand .gs-mark::before,body.mc-open>header .fqi-brand .
  .gs-brand.fqi-brand .gs-mark::before,.gs-brand.fqi-brand .gs-mark::after,
  .gs-brand.fqi-brand:is(:hover,:focus-visible) .gs-mark::before{animation:none!important}
 }
+
+/* Original gold artwork with independently animated eye regions. */
+.fqi-art-ready>img{opacity:0}
+.fqi-brand .fqi-owl-art{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+.fqi-owl-base,.fqi-eye image{filter:var(--fqi-logo-filter)}
+.fqi-eye{transition:transform .42s cubic-bezier(.2,.8,.2,1),filter .42s;transform:scale(1);transform-box:view-box}
+.fqi-eye-left{transform-origin:300px 140px}
+.fqi-eye-right{transform-origin:420px 140px}
+.fqi-brand:is(:hover,:focus-visible) .fqi-eye{transform:scale(1.16);filter:drop-shadow(0 0 4px #dba82a55)}
+.fqi-brand:is(:hover,:focus-visible) .fqi-geometry{filter:drop-shadow(0 0 3px #dba82a66);transition:filter .4s}
+@media(prefers-reduced-motion:reduce){.fqi-brand .fqi-eye{transition:none!important;transform:none!important;filter:none!important}.fqi-brand .fqi-geometry{transition:none!important;filter:none!important}}
+
+/* The complete identity shares one pulse, including the edition block. */
+.gs-brand.fqi-brand,body>header .gs-edition,.mc-brandbar .gs-edition{animation:fqi-identity-pulse 2.8s ease-in-out var(--fqi-pulse-delay,0ms) infinite both}
+@keyframes fqi-identity-pulse{0%,100%{filter:brightness(1) drop-shadow(0 0 0 transparent)}50%{filter:brightness(1.14) drop-shadow(0 0 2px #c6a04a35)}}
+.fqi-brand-paused .gs-brand.fqi-brand,.fqi-brand-paused .gs-edition{animation-play-state:paused!important}
+@media(prefers-reduced-motion:reduce){.gs-brand.fqi-brand,body>header .gs-edition,.mc-brandbar .gs-edition{animation:none!important;filter:none!important}}
