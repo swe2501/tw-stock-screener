@@ -3,8 +3,8 @@ const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const root=path.resolve(__dirname,'../..');
 const ts=require(path.join(root,'apps/mobile/node_modules/typescript'));
 const source=ts.transpileModule(fs.readFileSync(path.join(root,'apps/mobile/src/auth.ts'),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
-function setup(){
- const store=new Map(),calls=[],state={url:'academy-mobile://auth/callback?code=one',logoutFail:false,enabled:true,cancel:false,passwordError:null};
+function setup(existingStore){
+ const store=existingStore||new Map(),calls=[],state={url:'academy-mobile://auth/callback?code=one',logoutFail:false,enabled:true,cancel:false,passwordError:null,verifyError:false,userRevoked:false};
  const modules={
   'expo-secure-store':{WHEN_UNLOCKED_THIS_DEVICE_ONLY:'device-only',getItemAsync:async k=>store.get(k)||null,setItemAsync:async(k,v)=>store.set(k,v),deleteItemAsync:async k=>store.delete(k)},
   'expo-crypto':{getRandomBytes:()=>new Uint8Array(32).fill(3),digestStringAsync:async()=>'+/abc=',CryptoDigestAlgorithm:{SHA256:'SHA256'},CryptoEncoding:{BASE64:'BASE64'}},
@@ -13,9 +13,11 @@ function setup(){
  const context={exports:{},require:n=>modules[n],process:{env:{EXPO_PUBLIC_STAGING_SUPABASE_KEY:'sb_publishable_test'}},URL,URLSearchParams,AbortController,setTimeout,clearTimeout,
  fetch:async(url,options)=>{calls.push({url,options});let status=200,data={};
   if(url.endsWith('/settings'))data={external:{google:state.enabled}};
+  else if(url.endsWith('/signup')||url.endsWith('/resend'))data={};
+  else if(url.endsWith('/verify')){if(state.verifyError){status=403;data={error_code:'otp_expired'};}else data={access_token:'access',refresh_token:'refresh',expires_in:3600};}
   else if(url.includes('grant_type=password')&&state.passwordError){status=400;data={error_code:state.passwordError};}
   else if(url.includes('/token?'))data={access_token:'access',refresh_token:'refresh',expires_in:3600};
-  else if(url.endsWith('/user'))data={id:'test-user',email:'test@example.test'};
+  else if(url.endsWith('/user')){if(state.userRevoked){status=401;data={};}else data={id:'test-user',email:'test@example.test'};}
   else if(url.includes('/logout')){if(state.logoutFail)status=503;}
   else throw Error('unexpected request');
   return {status,ok:status===200,json:async()=>data};
@@ -60,4 +62,39 @@ test('bad credentials and unconfirmed emails never save a session or echo secret
   assert.equal(store.size,0);
  }
  const {auth,calls}=setup();await assert.rejects(auth.emailLogin('invalid','secret-value'));assert.equal(calls.length,0);
+});
+test('signup and resend wait for email ownership without persisting password or session',async()=>{
+ const {auth,calls,store}=setup();
+ await assert.rejects(auth.register('test@example.test','short'));assert.equal(calls.length,0);
+ assert.equal(await auth.register('test@example.test','long-password'),null);
+ await auth.resendConfirmation('test@example.test');
+ assert.equal(store.size,0);assert.equal(await auth.restore(),null);
+ assert.equal(JSON.parse(calls.find(c=>c.url.endsWith('/resend')).options.body).type,'signup');
+});
+test('copied confirmation link exchanges only its hash at fixed test origin',async()=>{
+ const {auth,calls,store}=setup(),token='a'.repeat(64);
+ const result=await auth.confirmRegistration('https://ebwtkcsmpvgyjvosbofx.supabase.co/auth/v1/verify?token='+token+'&type=signup&redirect_to=https://unused.test');
+ assert.equal(result.id,'test-user');assert.deepEqual([...store.values()],['refresh']);
+ assert.deepEqual(JSON.parse(calls[0].options.body),{token_hash:token,type:'email'});
+ assert.equal(calls[0].url,'https://ebwtkcsmpvgyjvosbofx.supabase.co/auth/v1/verify');
+ assert.ok(calls.every(c=>!c.url.includes(token)&&!c.url.includes('unused.test')));
+});
+test('foreign links, recovery links, duplicate hashes and expired links cannot create session',async()=>{
+ const token='a'.repeat(64),base='https://ebwtkcsmpvgyjvosbofx.supabase.co/auth/v1/verify';
+ for(const link of ['https://evil.test/auth/v1/verify?token='+token+'&type=signup',base+'?token='+token+'&type=recovery',base+'?token='+token+'&token='+token+'&type=signup',base+'?token='+token+'&type=signup#access_token=x']){
+  const {auth,calls,store}=setup();await assert.rejects(auth.confirmRegistration(link));assert.equal(calls.length,0);assert.equal(store.size,0);
+ }
+ const {auth,state,store}=setup();state.verifyError=true;
+ await assert.rejects(auth.confirmRegistration(base+'?token='+token+'&type=signup'),/驗證連結已失效/);assert.equal(store.size,0);
+});
+test('server-revoked session clears secure credential and signed-in state',async()=>{
+ const {auth,state,store}=setup();await auth.emailLogin('test@example.test','long-password');
+ state.userRevoked=true;assert.equal(await auth.restore(),null);assert.equal(store.size,0);
+});
+test('fresh App runtime restores only through stored refresh and server user validation',async()=>{
+ const first=setup();await first.auth.emailLogin('test@example.test','long-password');
+ const reopened=setup(first.store);assert.equal((await reopened.auth.restore()).id,'test-user');
+ assert.ok(reopened.calls[0].url.endsWith('grant_type=refresh_token'));
+ assert.equal(JSON.parse(reopened.calls[0].options.body).refresh_token,'refresh');
+ assert.ok(reopened.calls[1].url.endsWith('/user'));
 });
