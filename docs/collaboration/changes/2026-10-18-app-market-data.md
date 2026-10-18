@@ -19,3 +19,6 @@ services/mobile-preview 原有單一 prices Function 增加 GET action=market_su
 實際後續：shared 服務已整合 UAT，但原隔離站仍回應舊版本。Vercel 登入成功為 qa5518556130-dot，沒有原測試專案權限。為繼續使用者授權的公開 App 資料服務，另建獨立 academy-mobile-data-justy Hobby 專案，不動其 genzuixue 或 Andrew 原站；固定 HTTPS 已實測三項行情 API HTTP 200，無授權 cookie。初次部署自動成為該新測試專案的 production alias，沒有推 Git prod 或發布網站正式專案。
 
 market_context 新增上市官方法人／資券與股票樣本廣度，逐區驗證相同資料日、官方合計與財務單位；部分失敗回報 available=false，不填零。外資不含外資自營，避免與自營商重複相加；不同於把外資自營再加回外資的呈現口徑，App 明確標示，**未改網站原算法**。融資維持率／期權／完整資金占比歷史尚未接入，不能以現有數據推定或替代。
+
+
+新增 `stock_candles` 同入口查詢；App 以個股價格與成交股數進行既有公開策略引擎的成本模擬，遇 partial/stale 暫停績效計算。官方標題必須對應所查代號；上游固定 TWSE，不開放代理網址。網站 API／Auth／DB 未更動；測試站仍 1 Function。

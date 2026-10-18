@@ -134,6 +134,26 @@ class PreviewTests(unittest.TestCase):
             server.server_close()
             worker.join()
 
+    def test_stock_candles_bind_code_month_and_actual_volume(self):
+        catalog = {'items': [{'code': '2330', 'name': '台積電', 'kind': 'stock'}]}
+        def source(url):
+            month = url.split('date=')[1][:8]
+            roc = str(int(month[:4])-1911)+'/'+month[4:6]+'/01'
+            return {'stat': 'OK', 'title': '個股日成交資訊 2330 台積電', 'data': [[roc, '1,234', '12345', '100', '110', '99', '105']]}
+        with patch.object(preview, '_stock_candle_cache', {}), patch.object(preview, 'stock_catalog', return_value=(200, catalog)), patch.object(preview, 'public_json', side_effect=source) as fetch:
+            for code in ['https://evil.test', '2330&stockNo=2317', '2330/../']:
+                self.assertEqual(preview.stock_candles(code)[0], 400)
+            self.assertEqual(preview.stock_candles('2317')[0], 404)
+            fetch.assert_not_called()
+            status, data = preview.stock_candles('2330')
+            self.assertEqual(status, 200)
+            self.assertEqual(len(data['candles']), 6)
+            self.assertEqual(data['candles'][0]['volume'], 1234)
+            self.assertFalse(data['partial'])
+            self.assertTrue(all('stockNo=2330&' in url for url in data['source']['urls']))
+        with patch.object(preview, '_stock_candle_cache', {}), patch.object(preview, 'stock_catalog', return_value=(200, catalog)), patch.object(preview, 'public_json', return_value={'stat': 'OK', 'title': '2317 鴻海', 'data': [['115/10/01', '1234', '12345', '100', '110', '99', '105']]}):
+            self.assertEqual(preview.stock_candles('2330')[0], 503)
+
     def test_single_function_and_no_cron(self):
         config = json.loads((ROOT / 'services/mobile-preview/vercel.json').read_text())
         self.assertNotIn('crons', config)

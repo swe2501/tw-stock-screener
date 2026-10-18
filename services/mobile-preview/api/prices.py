@@ -22,6 +22,73 @@ _stock_lock = threading.Lock()
 STOCK_SOURCE = 'https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL'
 _context_cache = None
 _context_lock = threading.Lock()
+_stock_candle_cache = {}
+_stock_candle_lock = threading.Lock()
+
+
+def stock_candles(code):
+    if not isinstance(code, str) or not re.fullmatch(r'[0-9]{4,6}[A-Z]?', code):
+        return 400, {'available': False, 'error': '股票代號格式無效。'}
+    with _stock_candle_lock:
+        now = time.monotonic()
+        cached = _stock_candle_cache.get(code)
+        if cached and now-cached[0] < 900:
+            return 200, {**cached[1], 'cached': True}
+        status, catalog = stock_catalog()
+        instrument = next((item for item in catalog.get('items', []) if item['code'] == code), None) if status == 200 else None
+        if not instrument:
+            return (404 if status == 200 else 503), {'available': False, 'error': '目前僅支援名錄內的上市股票與 ETF。'}
+        today = datetime.now(timezone(timedelta(hours=8))).date()
+        first, months = today.replace(day=1), []
+        for _ in range(6):
+            months.append(first.strftime('%Y%m01'))
+            first = (first-timedelta(days=1)).replace(day=1)
+        def read_month(month):
+            url = 'https://www.twse.com.tw/rwd/zh/afterTrading/STOCK_DAY?date='+month+'&stockNo='+code+'&response=json'
+            raw = public_json(url)
+            if raw.get('stat') != 'OK' or not isinstance(raw.get('data'), list):
+                raise ValueError('month unavailable')
+            if not re.search(r'(?<![0-9A-Z])'+re.escape(code)+r'(?![0-9A-Z])', str(raw.get('title', ''))):
+                raise ValueError('instrument mismatch')
+            rows, skipped = [], 0
+            for item in raw['data']:
+                try:
+                    row = candle_rows([[item[0], item[3], item[4], item[5], item[6]]], today)[0]
+                    if row['date'][:7] != month[:4]+'-'+month[4:6]:
+                        raise ValueError('wrong month')
+                    row['volume'] = integer(item[1])
+                    if row['volume'] < 0:
+                        raise ValueError('invalid volume')
+                    rows.append(row)
+                except (ValueError, KeyError, IndexError, TypeError):
+                    skipped += 1
+            if not rows:
+                raise ValueError('no valid candle')
+            return rows, url, skipped
+        rows, sources, incomplete = [], [], False
+        with ThreadPoolExecutor(max_workers=3) as pool:
+            for job in as_completed([pool.submit(read_month, month) for month in months]):
+                try:
+                    part, url, skipped = job.result()
+                    rows.extend(part)
+                    sources.append(url)
+                    incomplete = incomplete or bool(skipped)
+                except Exception:
+                    incomplete = True
+        if not rows:
+            if cached and now-cached[0] < 86400:
+                return 200, {**cached[1], 'stale': True, 'cached': True, 'partial': True}
+            return 503, {'available': False, 'error': '官方個股 K 線暫時無法取得。'}
+        rows = sorted({row['date']: row for row in rows}.values(), key=lambda row: row['date'])
+        data = {'schema_version': 1, 'available': True, 'symbol': code, 'name': instrument['name'], 'kind': instrument['kind'],
+                'frequency': 'daily', 'as_of': rows[-1]['date'], 'candles': rows, 'partial': incomplete, 'cached': False,
+                'stale': (today-date.fromisoformat(rows[-1]['date'])).days > 7, 'retrieved_at': datetime.now(timezone.utc).isoformat(),
+                'source': {'name': '臺灣證券交易所 STOCK_DAY', 'urls': sorted(sources)},
+                'notice': '官方未還原日 K 與成交股數，未調整除權息、分割或減資；跨此類事件的策略結果可能失真。週月 K 由已取得日資料彙整，首尾可能不完整。'}
+        if len(_stock_candle_cache) >= 32:
+            _stock_candle_cache.pop(next(iter(_stock_candle_cache)))
+        _stock_candle_cache[code] = (time.monotonic(), data)
+        return 200, data
 
 
 def integer(value):
@@ -356,6 +423,10 @@ class handler(BaseHTTPRequestHandler):
             return self.reply(200, {'service': 'mobile-preview', 'status': 'ok',
                                     **state, 'member_login_enabled': False, 'research_ready': False})
         params = parse_qs(parsed.query)
+        if parsed.path in ('/api/prices', '/api/prices.py') and params.get('action') == ['stock_candles']:
+            codes = params.get('code', [])
+            status, payload = stock_candles(codes[0] if len(codes) == 1 else '')
+            return self.reply(status, payload)
         if parsed.path in ('/api/prices', '/api/prices.py') and params.get('action') == ['market_context']:
             status, payload = market_context()
             return self.reply(status, payload)

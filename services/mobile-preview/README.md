@@ -21,3 +21,7 @@ Trusted-LAN development: `python services/mobile-preview/serve_local.py --host <
 Do not copy production environment variables, service keys or Auth configuration. Do not change the App URL as though research/login were complete. Verify connectivity without a Vercel cookie. Public access is a separate explicit decision limited to this new project; keep existing UAT protected.
 
 Next: authorize isolated Supabase testing, configure schema and test fixtures, implement search, then native OAuth with secure credential storage. Shared Supabase and two-device policy stay unchanged.
+
+
+### 個股 K 線（2026-10-18）
+`GET /api/prices?action=stock_candles&code=2330` 回傳最近六個月上市股票／ETF 未還原日 OHLC 與成交股數。代號須在官方名錄內；逐月檢查官方標題代號、日期、OHLC 與整數成交股數。錯誤代號 400／404，不接受自訂上游 URL。缺少月份或無有效成交資料標記 partial，不製造 K 棒；官方失效最多保留 24 小時快照並標示 stale。最多快取 32 商品。未計除權息、分割、減資，不可宣稱含息還原績效。
