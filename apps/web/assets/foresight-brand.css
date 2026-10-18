@@ -1,6 +1,6 @@
 /* Heritage identity: original owl geometry, academic typography and square mark. */
-:root{--fqi-ink:#edf0ed;--fqi-gold:#cabb85;--fqi-mark-bg:#14212b;--fqi-ring:var(--border,#30404a);--fqi-halo:#a4c6b51a;--fqi-logo-filter:url(#fqiHeritageDark)}
-:root[data-theme=light]{--fqi-ink:#141e36;--fqi-gold:#b69b48;--fqi-mark-bg:#fff;--fqi-ring:#dbe4ec;--fqi-halo:#316a6112;--fqi-logo-filter:url(#fqiHeritageLight)}
+:root{--fqi-ink:#edf0ed;--fqi-gold:#cabb85;--fqi-mark-bg:#14212b;--fqi-ring:var(--border,#30404a);--fqi-halo:#8bbbe01a;--fqi-logo-filter:url(#fqiHeritageDark)}
+:root[data-theme=light]{--fqi-ink:#141e36;--fqi-gold:#b69b48;--fqi-mark-bg:#fff;--fqi-ring:#dbe4ec;--fqi-halo:#347fc412;--fqi-logo-filter:url(#fqiHeritageLight)}
 .gs-brand.fqi-brand{display:inline-flex!important;align-items:center!important;gap:12px!important;min-width:0;text-decoration:none!important;isolation:isolate;border-radius:12px;color:var(--fqi-ink)!important;outline-offset:5px;-webkit-tap-highlight-color:transparent}
 .fqi-brand .gs-mark{position:relative;display:grid;place-items:center;flex:0 0 auto;width:56px!important;height:56px!important;aspect-ratio:1;padding:4px!important;border:1px solid var(--fqi-ring)!important;border-radius:14px!important;overflow:hidden;background:var(--fqi-mark-bg)!important;box-shadow:0 3px 12px #132c3c09!important;transition:transform .3s cubic-bezier(.2,.8,.2,1),border-color .3s,box-shadow .3s}
 .fqi-brand .gs-mark img{position:relative;z-index:1;width:100%!important;height:100%!important;object-fit:contain!important;display:block;padding:0!important;background:transparent!important;border-radius:0!important;filter:var(--fqi-logo-filter)!important}
