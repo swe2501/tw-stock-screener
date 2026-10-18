@@ -16,6 +16,58 @@ spec.loader.exec_module(preview)
 
 
 class PreviewTests(unittest.TestCase):
+    def test_public_research_uses_only_fixed_public_columns_and_apikey(self):
+        with patch.dict(preview.os.environ, {'PUBLIC_RESEARCH_PUBLISHABLE_KEY': 'sb_publishable_test'}, clear=True), patch.object(preview, 'build_opener') as opener:
+            response = MagicMock(status=200)
+            response.read.return_value = b'[]'
+            opener.return_value.open.return_value.__enter__.return_value = response
+            self.assertEqual(preview.public_source('news_feed', 'chip,topic.eq.x_%'), [])
+            req = opener.return_value.open.call_args.args[0]
+            self.assertTrue(req.full_url.startswith(preview.PUBLIC_RESEARCH_ORIGIN + '/rest/v1/news_feed?'))
+            self.assertEqual(req.get_method(), 'GET')
+            self.assertIsNone(req.get_header('Authorization'))
+            self.assertEqual(req.get_header('Apikey'), 'sb_publishable_test')
+            with self.assertRaises(ValueError):
+                preview.public_source('member_profiles', 'test')
+            response.read.return_value = b'x' * 500001
+            with self.assertRaises(ValueError):
+                preview.public_source('news_feed', 'test')
+
+    def test_search_normalizes_deduplicates_and_preserves_dates(self):
+        def fetcher(source, query, limit):
+            if source == 'news_feed':
+                return [{'title': '<b>晶片新聞</b>', 'description': 'a &amp; b', 'published_at': '2026-10-18T10:00:00Z', 'link': 'https://example.test/a', 'source': '公開新聞'},
+                        {'title': 'invalid', 'published_at': '2026-99-99', 'link': 'https://example.test/b'},
+                        {'title': 'unsafe', 'published_at': '2026-10-18', 'link': 'javascript:alert(1)'}]
+            return [{'topic': '晶片題材', 'summary': 'summary', 'published_at': '2026-10-17', 'source_urls': ['https://example.test/a'], 'sector': '半導體'},
+                    {'topic': '產業題材', 'published_at': '2026-10-16', 'source_urls': '["https://example.test/c"]'}]
+        data = preview.search('晶片', fetcher)
+        self.assertTrue(data['available'])
+        self.assertFalse(data['partial'])
+        self.assertEqual(len(data['items']), 2)
+        self.assertEqual(data['items'][0]['title'], '晶片新聞')
+        self.assertEqual(data['items'][0]['snippet'], 'a & b')
+        self.assertEqual(data['items'][0]['date'], '2026-10-18')
+
+    def test_partial_outage_is_not_empty_success_and_invalid_query_never_fetches(self):
+        def failed(*args):
+            raise RuntimeError('internal connection details')
+        data = preview.search('台積電', failed)
+        self.assertFalse(data['available'])
+        self.assertTrue(data['partial'])
+        def partial(source, *args):
+            if source == 'news_feed':
+                return []
+            raise RuntimeError()
+        data = preview.search('台積電', partial)
+        self.assertTrue(data['available'])
+        self.assertTrue(data['partial'])
+        fetcher = MagicMock()
+        for query in ['', 'a', ' ' * 5, '*' * 4, 'a' * 81]:
+            with self.assertRaises(ValueError):
+                preview.search(query, fetcher)
+        fetcher.assert_not_called()
+
     def test_institutions_excludes_foreign_dealer_double_count_and_margin_units(self):
         institutions={'stat':'OK','date':'20261016','data':[['自營商(自行買賣)','50','70','-20'],['自營商(避險)','20','30','-10'],['投信','40','10','30'],['外資及陸資(不含外資自營商)','20','50','-30'],['外資自營商','8','3','5'],['合計','130','160','-30']]}
         values=preview.institution_rows(institutions,'2026-10-16')
@@ -120,6 +172,8 @@ class PreviewTests(unittest.TestCase):
                 ('/api/prices?action=site_search&q=hello', 'GET', 503),
                 ('/api/auth', 'GET', 404),
                 ('/api/prices?action=other', 'GET', 404),
+                ('/api/prices?action=site_search&q=x', 'GET', 400),
+                ('/api/prices?action=site_search&q=hello&q=world', 'GET', 400),
                 ('/api/watchlist', 'DELETE', 405),
                 ('/api/auth', 'POST', 405),
             ]:
@@ -129,6 +183,9 @@ class PreviewTests(unittest.TestCase):
                 payload = json.load(caught.exception)
                 if status == 503:
                     self.assertFalse(payload['available'])
+            with patch.object(preview, 'search', return_value={'available': True, 'partial': False, 'items': []}):
+                with urlopen(base + '/api/prices?action=site_search&q=test') as response:
+                    self.assertEqual(response.status, 200)
         finally:
             server.shutdown()
             server.server_close()

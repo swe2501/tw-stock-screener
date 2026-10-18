@@ -25,3 +25,7 @@ Next: authorize isolated Supabase testing, configure schema and test fixtures, i
 
 ### 個股 K 線（2026-10-18）
 `GET /api/prices?action=stock_candles&code=2330` 回傳最近六個月上市股票／ETF 未還原日 OHLC 與成交股數。代號須在官方名錄內；逐月檢查官方標題代號、日期、OHLC 與整數成交股數。錯誤代號 400／404，不接受自訂上游 URL。缺少月份或無有效成交資料標記 partial，不製造 K 棒；官方失效最多保留 24 小時快照並標示 stale。最多快取 32 商品。未計除權息、分割、減資，不可宣稱含息還原績效。
+
+### App 公開研究搜尋（2026-10-18）
+
+`GET /api/prices?action=site_search&q=台積電` 讀取網站現有的公開 `news_feed`、`hot_topics`，回傳最多八筆標題、日期、摘要與 HTTPS 原始來源。關鍵字限 2～80 字；來源部分失敗明示 partial，全部失敗回 503。設定 `PUBLIC_RESEARCH_PUBLISHABLE_KEY` 為網站已公開的 publishable key；只發出固定欄位的 GET，不使用會員 token 或服務密鑰，不新增資料表或寫入資料。更新沿用既有新聞／題材管線。此節取代上文搜尋尚未實作的狀態；獨立測試會員與公開研究資料來源分開。health 的 research_configured 只表示設定存在，實際可用性以搜尋回應為準。
