@@ -11,7 +11,7 @@
  document.body.append(panel);avatar.title='會員快捷選單';avatar.setAttribute('aria-label','開啟會員快捷選單');avatar.setAttribute('aria-haspopup','dialog');avatar.setAttribute('aria-controls',panel.id);avatar.setAttribute('aria-expanded','false');
  let timer,request=0,loadedFor='',hideAnimation;
  const signed=()=>localStorage.getItem('sb_token')||'';
- function position(){const r=avatar.getBoundingClientRect();panel.style.top=Math.max(8,Math.min(r.bottom+10,innerHeight-140))+'px';const width=Math.min(334,document.documentElement.clientWidth-24);panel.style.right=Math.max(12,Math.min(document.documentElement.clientWidth-width-12,innerWidth-r.right))+'px';panel.style.maxHeight=Math.max(120,innerHeight-r.bottom-24)+'px';}
+ function position(){const r=avatar.getBoundingClientRect();panel.style.top=Math.max(8,Math.min(r.bottom+10,innerHeight-140))+'px';const width=Math.min(286,document.documentElement.clientWidth-24);panel.style.right=Math.max(12,Math.min(document.documentElement.clientWidth-width-12,innerWidth-r.right))+'px';panel.style.maxHeight=Math.max(120,innerHeight-r.bottom-24)+'px';}
  function close(restore=false){clearTimeout(timer);request++;avatar.setAttribute('aria-expanded','false');if(panel.hidden)return;hideAnimation?.cancel();panel.hidden=true;if(restore)avatar.focus({preventScroll:true});}
  async function hydrate(){const owner=signed(),id=++request;if(!owner)return;
   panel.querySelector('[data-mq-name]').textContent='讀取會員資料…';panel.querySelector('[data-mq-level]').textContent='正在確認權益';panel.querySelector('[data-mq-task]').textContent=panel.querySelector('[data-mq-stored]').textContent='服務準備中';const visual=avatar.querySelector('img,svg')?.cloneNode(true);panel.querySelector('.mq-portrait').replaceChildren(...(visual?[visual]:[]));
