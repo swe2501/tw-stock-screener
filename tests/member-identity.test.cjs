@@ -85,3 +85,8 @@ test('replacement preflights linking and retains another verified identity befor
 test('replacement cannot remove the only login or unlink before manual linking is available',async()=>{
  for(const manual of [false,true]){const {api,saved,context,calls}=setup();saved.set('sb_token','original-token');const base=context.fetch;context.fetch=async(url,options)=>{if(url.endsWith('/user'))return{ok:true,status:200,json:async()=>({id:'original-user',email_confirmed_at:manual?'2026-10-17':null,identities:[{identity_id:'old',provider:'google'},...(manual?[{provider:'email'}]:[])]})};if(url.includes('/identities/authorize?'))return{ok:false,status:400,json:async()=>({error_code:'manual_linking_disabled'})};return base(url,options);};await assert.rejects(api.replaceOAuth('google'),manual?/尚未開啟帳號綁定/:/另一種登入方式/);assert.equal(calls.some(c=>c.method==='DELETE'),false);}
 });
+test('personal invitation provisioning is deduplicated per login and retries after service failure',async()=>{
+ const {api,context,saved}=setup();saved.set('sb_token','member-a');let count=0,fail=true;
+ context.fetch=async(url,o)=>{count++;assert.equal(o.headers.Authorization,'Bearer '+saved.get('sb_token'));return {ok:!fail,status:fail?503:200,json:async()=>fail?{message:'unavailable'}:{code:'GS123456ABCDEF'}};};
+ await assert.rejects(api.ensureReferralCode());fail=false;const a=api.ensureReferralCode(),b=api.ensureReferralCode();assert.equal(a,b);assert.equal((await a).code,'GS123456ABCDEF');assert.equal(count,2);saved.set('sb_token','member-b');await api.ensureReferralCode();assert.equal(count,3);
+});
