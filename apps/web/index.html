@@ -3450,7 +3450,7 @@
     function nm(code){return nameMap[code]||(window._names&&window._names[code])||'';}
     function rowsHTML(list, valfn){
       if(!list||!list.length) return '<div class="fc-empty">今日無資料</div>';
-      return list.map(function(x,i){return '<div class="fc-row clk" onclick="_openStock(\''+x.code+'\',\''+(x.name||nm(x.code)||'')+'\')"><span class="n">'+(i+1)+'</span><span class="s"><b>'+x.code+'</b> '+(x.name||nm(x.code)||'')+'</span>'+valfn(x)+'</div>';}).join('');
+      return list.map(function(x,i){var dn=nm(x.code)||(x.name&&x.name!==x.code?x.name:'')||x.code;return '<div class="fc-row clk" onclick="_openStock(\''+x.code+'\',\''+dn+'\')"><span class="n">'+(i+1)+'</span><span class="s"><b>'+x.code+'</b> '+dn+'</span>'+valfn(x)+'</div>';}).join('');
     }
     function pct(v){return (v>0?'+':'')+Number(v).toFixed(2)+'%';}
     function cls(v){return v>0?'fc-up':(v<0?'fc-dn':'');}
@@ -3461,12 +3461,16 @@
         if(!j||j.error){['fcGainers','fcLosers','fcSurge'].forEach(function(id){if(el(id))el(id).innerHTML='<div class="fc-empty">讀取失敗</div>';});return;}
         focusFetchedAt=Date.now();
         if(el('fcSnapshotDate'))el('fcSnapshotDate').textContent='排行榜行情日 '+j.date+' · 每日盤後預算';
-        (j.gainers||[]).forEach(function(x){nameMap[x.code]=x.name;});
-        (j.losers||[]).forEach(function(x){nameMap[x.code]=x.name;});
-        (j.volume_surge||[]).forEach(function(x){nameMap[x.code]=x.name;});
-        if(el('fcGainers'))el('fcGainers').innerHTML=rowsHTML(j.gainers,function(x){return '<span class="val '+cls(x.chg)+'">'+pct(x.chg)+'</span>';});
-        if(el('fcLosers'))el('fcLosers').innerHTML=rowsHTML(j.losers,function(x){return '<span class="val '+cls(x.chg)+'">'+pct(x.chg)+'</span>';});
-        if(el('fcSurge'))el('fcSurge').innerHTML=rowsHTML(j.volume_surge,function(x){return '<span class="val">'+Number(x.ratio).toFixed(2)+'x</span>'+(x.chg!=null?'<span class="val2 '+cls(x.chg)+'">'+pct(x.chg)+'</span>':'');});
+        var paint=function(){
+          (j.gainers||[]).forEach(function(x){if(x.name&&x.name!==x.code)nameMap[x.code]=x.name;});
+          (j.losers||[]).forEach(function(x){if(x.name&&x.name!==x.code)nameMap[x.code]=x.name;});
+          (j.volume_surge||[]).forEach(function(x){if(x.name&&x.name!==x.code)nameMap[x.code]=x.name;});
+          if(el('fcGainers'))el('fcGainers').innerHTML=rowsHTML(j.gainers,function(x){return '<span class="val '+cls(x.chg)+'">'+pct(x.chg)+'</span>';});
+          if(el('fcLosers'))el('fcLosers').innerHTML=rowsHTML(j.losers,function(x){return '<span class="val '+cls(x.chg)+'">'+pct(x.chg)+'</span>';});
+          if(el('fcSurge'))el('fcSurge').innerHTML=rowsHTML(j.volume_surge,function(x){return '<span class="val">'+Number(x.ratio).toFixed(2)+'x</span>'+(x.chg!=null?'<span class="val2 '+cls(x.chg)+'">'+pct(x.chg)+'</span>':'');});
+        };
+        // 先確保完整名稱表(含上櫃 otc_names / ETF)載入，上櫃股(如 5205)才有名字
+        if(window._namesFull||typeof window._loadNames!=='function'){paint();}else{window._loadNames(paint);}
       }).catch(function(){['fcGainers','fcLosers','fcSurge'].forEach(function(id){if(el(id))el(id).innerHTML='<div class="fc-empty">預算資料暫不可用</div>';});}).finally(function(){focusRequest=null});
     }
     function loadSummary(){
@@ -5668,7 +5672,7 @@
   </style>
   <div id="liqView" style="display:none">
     <div class="tm-head"><h2> 流動性排行</h2><span class="sub" id="liqSub"></span></div>
-    <div class="liq-tip">挑選成交熱絡的標的，<b>規避流動性風險、避免進出場滑價</b>。現貨＝上市普通股當日成交金額前 50；個股期貨＝期交所個股期貨當日成交量前 50（不含大台、小台等指數類期貨）。</div>
+    <div class="liq-tip">挑選成交熱絡的標的，<b>規避流動性風險、避免進出場滑價</b>。現貨＝上市普通股當日成交金額前 100；個股期貨＝期交所個股期貨當日成交量前 100（不含大台、小台等指數類期貨）。</div>
     <div class="liq-seg" id="liqSeg">
       <button data-m="spot" class="on">現貨（成交金額）</button>
       <button data-m="fut">個股期貨（成交量）</button>
@@ -5702,14 +5706,14 @@
       if(loaded){ render(); return; }
       var SB=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'', AK=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';
       var H={apikey:AK,Authorization:'Bearer '+AK};
-      fetch(SB+'/rest/v1/liquidity_top?select=*&order=trade_date.desc,market.asc,rank.asc&limit=120',{headers:H}).then(function(r){return r.json();}).then(function(a){
+      fetch(SB+'/rest/v1/liquidity_top?select=*&order=trade_date.desc,market.asc,rank.asc&limit=240',{headers:H}).then(function(r){return r.json();}).then(function(a){
         a=Array.isArray(a)?a:[]; if(!a.length){el('liqTbl').innerHTML='<div class="fc-empty">暫無資料</div>';return;}
         var latest=a[0].trade_date;
         DATA={spot:[],fut:[]};
         a.filter(function(r){return r.trade_date===latest;}).forEach(function(r){ if(DATA[r.market])DATA[r.market].push(r); });
         DATA.spot.sort(function(x,y){return x.rank-y.rank;}); DATA.fut.sort(function(x,y){return x.rank-y.rank;});
         loaded=true;
-        if(el('liqSub'))el('liqSub').textContent='資料日 '+latest+' · 現貨、個股期貨各前 50';
+        if(el('liqSub'))el('liqSub').textContent='資料日 '+latest+' · 現貨、個股期貨各前 100';
         if(el('liqNote'))el('liqNote').innerHTML='<b>學院導讀</b> 先找交易活絡、進出較順暢的標的，再看趨勢與價格位置。成交熱絡不代表值得追價；比較期貨時也要留意契約大小、到期日與實際掛單深度。';
         render();
       }).catch(function(){ el('liqTbl').innerHTML='<div class="fc-empty">讀取失敗</div>'; });

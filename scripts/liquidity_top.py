@@ -1,5 +1,5 @@
 """
-liquidity_top.py — 流動性排行：現貨(上市)成交值前50、個股期貨成交量前50（2026-09-28 起兩者皆前 50）（2026-09-28 起不含指數類期貨）。
+liquidity_top.py — 流動性排行：現貨(上市)成交值前100、個股期貨成交量前100（2026-10-19 起兩者皆前 100；不含指數類期貨）。
 旨在規避流動性風險/避免滑價：優先挑成交熱絡的標的。供「選股 → 流動性排行」分頁。
 
 資料源（皆免費官方、urllib 可讀）：
@@ -48,7 +48,7 @@ def spot_top():
             and not str(r.get("Code")).startswith("00")]      # 上市普通股(排除ETF)
     rows.sort(key=lambda r: -_num(r.get("TradeValue")))
     out = []
-    for i, r in enumerate(rows[:50], 1):
+    for i, r in enumerate(rows[:100], 1):
         out.append({"trade_date": iso, "market": "spot", "rank": i,
                     "code": str(r["Code"]).strip(), "name": r.get("Name", ""),
                     "turnover": round(_num(r.get("TradeValue"))), "volume": round(_num(r.get("TradeVolume")) / 1000)})
@@ -84,7 +84,7 @@ def _contract_shares():
     return out
 
 
-def fut_top(n=50):
+def fut_top(n=100):
     d = _get_json("https://openapi.taifex.com.tw/v1/DailyMarketReportFut")
     iso = _iso(d[0].get("Date"))
     ssf = _ssf_map()
