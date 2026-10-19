@@ -12193,6 +12193,7 @@
     window._VIEWS.sig = { el: 'sigView', show: 'openBrokerSignals' };
     window._VIEWS.brank = { el: 'brankView', show: 'openBrokerRankings' };
     async function openBrokerSignals() {
+      try { if (!window._namesFull && window._loadNames) window._loadNames(function(){ if (_sigRows) _renderSignals(); }); } catch (e) {}
       if (_sigRows) { _renderSignals(); return; }
       try {
         const H = { apikey: SIG_SB_ANON, Authorization: `Bearer ${_authToken}` };
@@ -12292,18 +12293,18 @@
       const section = (method, rsOverride) => {
         const rs = rsOverride || rows.filter(x => x.method === method);
         if (!rs.length) return `<div style="padding:16px 0">當日無買超訊號</div>`;
-        const tr = rs.map(x => `
-          <tr onclick="_sigOpenChart('${x.code}','${(x.broker_name||'').replace(/'/g,'')} 買')"
+        const tr = rs.map(x => { const _nm=(window._names&&window._names[x.code])||''; return `
+          <tr onclick="_sigOpenChart('${x.code}','${((x.name||_nm||'')).replace(/'/g,'')} 買')"
               style="cursor:pointer;border-bottom:1px solid var(--border)">
             <td style="padding:4px 8px;text-align:center">${x.rank_amt != null ? `${x.rank}／${x.rank_amt}` : x.rank}</td>
             <td style="padding:4px 8px">${x.broker_name}</td>
-            <td style="padding:4px 8px;color:var(--accent)">${x.code}</td>
+            <td style="padding:4px 8px"><b style="color:var(--accent)">${x.code}</b> ${x.name||_nm||''}</td>
             <td style="padding:4px 8px;text-align:right">${Number(x.net_lots).toLocaleString()}</td>
             <td style="padding:4px 8px;text-align:right">${x.net_amount_wan != null ? Number(x.net_amount_wan).toLocaleString() : '–'}</td>
             <td style="padding:4px 8px;text-align:right">${x.buy_avg_price ?? '–'}</td>
             <td style="padding:4px 8px;text-align:right;color:#e6a23c">${x.win20 ?? '–'}%</td>
             <td style="padding:4px 8px;text-align:right">${x.year_events ?? '–'}</td>
-          </tr>`).join('');
+          </tr>`; }).join('');
         return `
           <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px">
             <thead><tr style="color:var(--text-muted);border-bottom:1px solid var(--border)">
