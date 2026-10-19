@@ -1,0 +1,179 @@
+(() => {
+  'use strict';
+  // A backdrop click dismisses only the top native modal. Dragging out of a form does not.
+  let backdropPress=null;
+  const topDialog=()=>[...document.querySelectorAll('dialog[open]')].filter(d=>d.matches(':modal')).at(-1);
+  const outsideDialog=(d,e)=>{const r=d.getBoundingClientRect();return e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom;};
+  document.addEventListener('pointerdown',e=>{const d=topDialog();backdropPress=e.button===0&&d&&e.target===d&&outsideDialog(d,e)?d:null;},true);
+  document.addEventListener('pointercancel',()=>backdropPress=null,true);
+  document.addEventListener('click',e=>{const d=backdropPress;backdropPress=null;if(!d||topDialog()!==d||e.target!==d||!outsideDialog(d,e))return;e.preventDefault();e.stopPropagation();if(d.requestClose)d.requestClose();else d.close();},true);
+const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,value):localStorage.setItem(key,value),removeLocal=key=>window.AcademyCloud?window.AcademyCloud.removeItem(key):localStorage.removeItem(key);
+
+  const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const read = key => { try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch { return null; } };
+  let profile = null, current = 'overview', returnFocus = null, oldOverflow = '', request = 0, returnScroll={x:0,y:0};
+  const page = document.createElement('section');
+  page.className = 'member-page'; page.hidden = true; page.setAttribute('aria-label','會員中心');
+  page.innerHTML = `<div class="mc-shell"><div class="mc-top"><div><span class="mc-kicker">FORESIGHT QUANT · MEMBER</span><h1>會員中心</h1><div class="mc-muted">你的研究工作區，從這裡開始。</div></div><div class="mc-top-actions"><button type="button" data-member-theme></button><button type="button" data-back>← 返回原頁</button><button type="button" data-member-logout>登出</button><span class="mc-action-status" role="status"></span></div></div><div class="mc-layout"><nav class="mc-nav" aria-label="會員功能"></nav><main class="mc-main" tabindex="-1"></main></div></div>`;
+  document.body.append(page);
+  const brandbar=document.createElement('div');brandbar.className='mc-brandbar';
+  for(const selector of ['body>header .gs-brand','body>header .gs-edition']){const original=document.querySelector(selector);if(original){const clone=original.cloneNode(true);clone.removeAttribute('onclick');clone.removeAttribute('id');clone.querySelectorAll('[id],[onclick]').forEach(el=>{el.removeAttribute('id');el.removeAttribute('onclick');});if(clone.matches('a'))clone.addEventListener('click',e=>{e.preventDefault();page.querySelector('[data-back]').click();});brandbar.append(clone);}}
+  page.prepend(brandbar);
+  const groups = [
+    ['帳號與服務', [['overview','會員總覽'],['profile','個人資料'],['security','登入與安全'],['notifications','通知與偏好'],['feedback','我的回饋'],['privacy','資料與隱私']]],
+    ['會員禮遇', [['benefits','會員權益'],['gifts','禮遇與優惠券'],['redeem','兌換優惠碼'],['referrals','邀請好友'],['tasks','任務與點數'],['events','學院活動']]],
+    ['研究與學習', [['favorites','我的自選'],['trades','交易紀錄'],['goals','我的目標'],['workspace','研究工作區'],['strategy','策略回測'],['weekly','我的研究週報'],['learning','學習中心']]]
+  ];
+  const items = groups.flatMap(([,rows])=>rows);
+  const nav = page.querySelector('nav'), main = page.querySelector('main');
+  const cloudHost=document.createElement('section');cloudHost.className='mc-cloud-host';cloudHost.hidden=true;page.querySelector('.mc-layout').before(cloudHost);let cloudCleanup=()=>{};
+  window.addEventListener('academy-cloud-before-pull',e=>{if(e.detail?.owner===profile?.id&&e.detail.kind.startsWith('journal'))window.AcademyTradeUI?.cleanup();});
+  window.addEventListener('academy-cloud-pulled',e=>{if(e.detail?.owner===profile?.id&&!page.hidden)render();});
+  nav.innerHTML = groups.map(([title,rows])=>`<span class="mc-nav-group">${title}</span>`+rows.map(([id,label])=>`<button type="button" data-tab="${id}"><span class="mc-nav-label">${label}</span><span class="mc-nav-chevron" aria-hidden="true">›</span></button>`).join('')).join('');
+  const avatar = document.createElement('button'); avatar.type='button'; avatar.className='member-avatar'; avatar.title='開啟會員中心'; avatar.setAttribute('aria-label','開啟會員中心');
+  const theme = document.getElementById('themeToggle'); if(theme) theme.before(avatar);
+  const feedback = document.createElement('a'); feedback.className='member-feedback-link';feedback.href='#member/feedback';feedback.textContent='意見回饋'; feedback.addEventListener('click',e=>{e.preventDefault();open('feedback');});
+  const logout=document.getElementById('logoutBtn'),authArea=document.getElementById('authArea');if(authArea)authArea.append(feedback);
+  function name(){return profile?.display_name || '學院會員';}
+  const personIcon='<svg viewBox="0 0 32 32" aria-hidden="true" fill="none"><circle cx="16" cy="11" r="5"/><path d="M6 28v-3a10 10 0 0 1 20 0v3"/></svg>';
+  function portrait(cls){return `<div class="${cls}">${personIcon}</div>`;}
+  function hydrateImages(){
+    const url=profile?.avatar_url;if(!url)return;
+    try{if(new URL(url).protocol!=='https:')return;}catch{return;}
+    [avatar,...page.querySelectorAll('.mc-portrait')].forEach(el=>{const img=new Image();img.alt='會員頭像';img.referrerPolicy='no-referrer';img.addEventListener('error',()=>{el.innerHTML=personIcon;});img.src=url;el.replaceChildren(img);});
+  }
+  function sync(){const logged=!!localStorage.getItem('sb_token');avatar.hidden=!logged;avatar.style.display=logged?'grid':'none';if(!logged){cloudCleanup();cloudHost.hidden=true;window.AcademyCloud?.cancel();profile=null;if(!page.hidden)goHome();}page.querySelector("[data-member-logout]").hidden=!logged;avatar.innerHTML=personIcon;hydrateImages();}
+  async function api(method='GET',body){
+    if(window.AcademyIdentity)return method==='GET'?AcademyIdentity.getProfile():AcademyIdentity.updateProfile(body);
+    throw new Error('會員元件載入未完成，請重新整理頁面');
+  }
+  const draftKey=()=> 'academy.feedback.draft.'+(profile?.id||read('sb_user')?.id||'guest');
+  const todayLocal=()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');};
+  function positionUnderHeader(){document.documentElement.style.setProperty('--mc-header-offset','0px');}
+  const cities=['臺北市','新北市','基隆市','桃園市','新竹市','新竹縣','苗栗縣','臺中市','彰化縣','南投縣','雲林縣','嘉義市','嘉義縣','臺南市','高雄市','屏東縣','宜蘭縣','花蓮縣','臺東縣','澎湖縣','金門縣','連江縣','海外'];
+  const experiences=['剛開始接觸','未滿 1 年','1～3 年','3～5 年','5～10 年','10 年以上'];
+  const options=(arr,value)=>'<option value="">暫不提供</option>'+arr.map(x=>`<option ${x===value?'selected':''}>${esc(x)}</option>`).join('');
+  function profileForm(){return `<form class="mc-card" id="mc-profile"><h2>個人資料</h2><p class="mc-muted">建立專屬於你的研究檔案。除暱稱外皆為選填，不影響會員權益。</p><div class="mc-avatar-editor"><div>${portrait('mc-portrait')}<span class="mc-avatar-caption">圓形頭像</span></div><div><label class="mc-upload-label" for="mc-avatar-file">更換頭像</label><input id="mc-avatar-file" type="file" accept="image/jpeg,image/png,image/webp"><small>JPG、PNG、WebP，最大 5 MB。選擇後可調整大小，預覽不會自動儲存。</small></div></div><div class="mc-avatar-crop" hidden><canvas width="256" height="256" aria-label="頭像裁切預覽"></canvas><label for="mc-avatar-zoom">調整圖片大小</label><input id="mc-avatar-zoom" type="range" min="1" max="3" step="0.01" value="1"><div class="mc-avatar-actions"><button type="button" data-save-avatar>儲存頭像</button><button type="button" data-cancel-avatar>取消</button></div><div role="status" class="mc-avatar-status"></div></div><div class="mc-grid"><div><label for="mc-name">會員暱稱</label><input id="mc-name" name="display_name" maxlength="40" required value="${esc(profile?.display_name||'')}"></div><div><label for="mc-full-name">姓名 <small class="mc-inline">選填</small></label><input id="mc-full-name" name="full_name" autocomplete="name" maxlength="60" value="${esc(profile?.full_name||'')}"></div><div><label for="mc-gender">性別 <small class="mc-inline">選填</small></label><select id="mc-gender" name="gender">${options(['女性','男性','非二元','不透露'],profile?.gender)}</select><small>不公開顯示；目標角色外觀可另外選擇。</small></div><div><label for="mc-city">居住縣市 <small class="mc-inline">選填</small></label><select id="mc-city" name="city">${options(cities,profile?.city)}</select></div><div><label for="mc-birth-date">出生年月日 <small class="mc-inline">選填</small></label><input id="mc-birth-date" name="birth_date" type="date" min="1900-01-01" max="${todayLocal()}" autocomplete="bday" value="${esc(profile?.birth_date||'')}"><small>用於未來生日禮遇，不會公開顯示；活動內容以當期公告為準。</small></div><div><label for="mc-experience">投資經驗 <small class="mc-inline">選填</small></label><select id="mc-experience" name="experience">${options(experiences,profile?.experience)}</select></div><div><label for="mc-purpose">使用目的 <small class="mc-inline">選填</small></label><select id="mc-purpose" name="purpose">${options(['學習市場知識','盤後研究','建立觀察清單','追蹤市場結構','其他'],profile?.purpose)}</select></div></div><fieldset class="mc-markets"><legend>關注市場 <small class="mc-inline">選填，可複選</small></legend>${['台灣股票','ETF','期貨','選擇權','海外市場'].map(x=>`<label><input type="checkbox" name="markets" value="${x}" ${Array.isArray(profile?.markets)&&profile.markets.includes(x)?'checked':''}>${x}</label>`).join('')}</fieldset><div class="mc-readonly"><div><span>登入信箱</span><strong>${esc(profile?.email||'尚未取得')}</strong><small>${profile?.email_verified?'已驗證':'驗證狀態尚未取得'}</small></div><div><span>手機</span><strong>${esc(profile?.phone||'尚未綁定')}</strong><small>${profile?.phone_verified?'已驗證':'需透過簡訊驗證綁定'}</small></div><div><span>會員識別碼</span><small>${esc(profile?.id||'載入後顯示')}</small></div></div><p class="mc-muted">這些資料用於個人化研究體驗，不公開顯示；不需要填寫身分證、地址或資產金額。</p><button class="mc-primary" type="submit" ${profile?'':'disabled'}>儲存個人資料</button><div class="mc-status" role="status"></div></form>`;}
+  function renderSecurity(){
+    if(!profile){main.innerHTML='<section class="mc-card"><h2>登入與安全</h2><p class="mc-muted">正在確認帳號的登入方式…</p></section>';return;}
+    const labels={email:'Email',google:'Google',apple:'Apple',facebook:'Facebook',line:'LINE',phone:'手機簡訊'};
+    const linked=id=>id==='email'?!!profile?.email_verified:id==='phone'?!!profile?.phone_verified:(profile?.providers||[]).some(p=>p===id||(id==='line'&&['custom:line','custom:line-web'].includes(p)));
+    const card=document.createElement('section');card.className='mc-card mc-security';
+    card.innerHTML='<h2>登入與安全</h2><p class="mc-muted">管理同一個會員帳號的登入方式。綁定完成後，研究資料與交易紀錄仍保留在原帳號。</p>'+Object.entries(labels).map(([id,label])=>{
+      const on=linked(id),contact=id==='email'?profile?.email:id==='phone'?profile?.phone:'',action=id==='email'&&contact?'<button type="button" data-change-contact="email">更改 Email</button><button type="button" data-member-email="'+(on?'password':'verify')+'">'+(on?'設定登入密碼':'寄送驗證信')+'</button>':id==='phone'&&contact?'<button type="button" data-change-contact="phone">更改手機</button>':on?'<button type="button" data-replace-provider="'+id+'">更改綁定</button>':'<button type="button" data-bind-provider="'+id+'" disabled>確認中</button>';
+      return '<div class="mc-security-row" data-security-provider="'+id+'"><div class="mc-security-provider">'+(window.AcademyProviderUI?.icon(id)||'')+'<div><strong>'+label+'</strong>'+(contact?'<small>'+esc(contact)+'</small>':'')+'</div></div><div class="mc-security-actions"><span class="mc-security-state" data-linked="'+on+'">'+(on?'已綁定':contact?'待驗證':'尚未綁定')+'</span>'+action+'</div></div>';
+    }).join('')+'<div class="mc-status" role="status"></div>';
+    main.replaceChildren(card);const status=card.querySelector('[role=status]'),owner=profile?.id;
+    AcademyIdentity.settings().then(settings=>{if(!card.isConnected||profile?.id!==owner)return;card.querySelectorAll('[data-bind-provider]').forEach(b=>{const id=b.dataset.bindProvider,enabled=id==='email'?true:AcademyIdentity.providerEnabled(settings,id);b.disabled=false;b.dataset.available=String(enabled);b.textContent=id==='phone'?'綁定手機':id==='email'?'綁定信箱':'綁定';});}).catch(e=>{if(card.isConnected){status.textContent=e.message;card.querySelectorAll('[data-bind-provider]').forEach(b=>b.textContent='暫不可用');}});
+    card.addEventListener('click',async e=>{
+      const b=e.target.closest('button');if(!b||b.disabled)return;status.textContent='';
+      if(b.dataset.replaceProvider){openProviderBinding(b.dataset.replaceProvider,true);return;}
+      if(b.dataset.changeContact){openContactLink(b.dataset.changeContact,true);return;}
+      if(b.dataset.bindProvider){const id=b.dataset.bindProvider;if(['email','phone'].includes(id)){openContactLink(id);return;}if(b.dataset.available==='false'){openProviderBinding(id,false);return;}b.disabled=true;const text=b.textContent;b.textContent='開啟授權中…';try{await AcademyIdentity.linkOAuth(id);}catch(err){if(card.isConnected){status.textContent=err.message;b.disabled=false;b.textContent=text;}}}
+      if(b.dataset.memberEmail){b.disabled=true;try{await AcademyIdentity.sendMemberEmail(b.dataset.memberEmail);status.textContent=b.dataset.memberEmail==='password'?'密碼設定信已寄出，請至信箱開啟連結。':'驗證信已寄出，請至信箱完成驗證。';}catch(err){status.textContent=err.message;}finally{b.disabled=false;}}
+    });
+  }
+  function openProviderBinding(provider,changing){
+    const label={google:'Google',line:'LINE',apple:'Apple',facebook:'Facebook'}[provider],d=document.createElement('dialog');d.className='mc-contact-dialog';d.setAttribute('aria-label',(changing?'更改':'新增')+label+'綁定');
+    d.innerHTML='<h2>'+ (changing?'更改':'新增')+label+'綁定</h2><p>'+(changing?'請先確認另一種登入方式可正常使用。繼續後會移除目前的'+label+'綁定，再授權新帳號；若中途取消，請用其他已綁定方式登入，會員資料仍在原帳號。':'此登入服務尚未開通，開通後即可在此綁定原會員帳號。')+'</p><div role="status"></div><div class="mc-contact-buttons">'+(changing?'<button type="button" data-confirm-replace>確認更換並開啟授權</button>':'')+'<button type="button" data-cancel-link>返回</button></div>';
+    page.append(d);d.querySelector('[data-cancel-link]').onclick=()=>d.close();d.addEventListener('close',()=>d.remove(),{once:true});const confirm=d.querySelector('[data-confirm-replace]');if(confirm)confirm.onclick=async()=>{confirm.disabled=true;try{await AcademyIdentity.replaceOAuth(provider);}catch(e){d.querySelector('[role=status]').textContent=e.message;confirm.disabled=false;}};d.showModal();
+  }
+  function openContactLink(kind,changing=false){
+    const title=(changing?'更改':'綁定')+(kind==='phone'?'手機':'電子信箱'),initialId=profile?.id,oldContact=kind==='phone'?profile?.phone:profile?.email;
+    const d=document.createElement('dialog');d.className='mc-contact-dialog';d.setAttribute('aria-label',title);
+    d.innerHTML='<form><h2>'+ title+'</h2><p>'+ (changing?'請驗證新的'+(kind==='phone'?'手機號碼':'電子信箱')+'；完成前保留原登入方式，會員資料仍在原帳號。':'驗證完成後，這個登入方式會連結到目前的會員帳號。')+'</p><label for="mc-link-value">'+(kind==='phone'?'手機號碼':'電子信箱')+'</label><input id="mc-link-value" type="'+(kind==='phone'?'tel':'email')+'" autocomplete="'+(kind==='phone'?'tel':'email')+'" required value="'+esc(changing?'':oldContact||'')+'"><div class="mc-contact-buttons"><button type="button" data-send-link>傳送驗證碼</button></div><div data-code-fields hidden><label for="mc-link-code">6 位數驗證碼</label><input id="mc-link-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6"><div class="mc-contact-buttons"><button type="submit">'+(changing?'驗證並更改':'驗證並綁定')+'</button></div></div><div role="status"></div><div class="mc-contact-buttons"><button type="button" data-cancel-link>取消</button></div></form>';
+    page.append(d);let pending=null,timer=0,cooldown=0;const value=d.querySelector('#mc-link-value'),code=d.querySelector('#mc-link-code'),send=d.querySelector('[data-send-link]'),status=d.querySelector('[role=status]');
+    d.addEventListener('close',()=>{clearInterval(timer);d.remove();},{once:true});d.querySelector('[data-cancel-link]').onclick=()=>d.close();
+    send.onclick=async()=>{if(!value.reportValidity())return;send.disabled=true;status.textContent='正在傳送驗證碼…';try{if(read('sb_user')?.id!==initialId)throw Error('登入帳號已變更，請重新開啟設定');const normalized=kind==='phone'?AcademyIdentity.normalizePhone(value.value):value.value.trim();if(changing&&normalized===oldContact)throw Error('請輸入不同於目前的'+(kind==='phone'?'手機號碼':'電子信箱'));pending=await AcademyIdentity.sendContactLink(kind,normalized);if(!d.open)return;value.readOnly=true;d.querySelector('[data-code-fields]').hidden=false;code.required=true;code.focus();status.textContent=kind==='phone'?'驗證碼已送出，請查看手機簡訊。':'請查看新信箱的驗證碼；變更信箱時可能需要一併確認舊信箱。';cooldown=60;send.textContent='60 秒後可重送';timer=setInterval(()=>{send.textContent=--cooldown?cooldown+' 秒後可重送':'重新傳送驗證碼';if(!cooldown){clearInterval(timer);send.disabled=false;}},1000);}catch(err){if(d.open){status.textContent=err.message;send.disabled=false;}}};
+    d.querySelector('form').onsubmit=async e=>{e.preventDefault();const b=d.querySelector('[type=submit]');b.disabled=true;try{await AcademyIdentity.verifyContactLink(pending,code.value.trim());if(d.open)d.close();}catch(err){if(d.open)status.textContent=err.message;}finally{if(d.open)b.disabled=false;}};
+    if(kind==='phone'){send.disabled=true;AcademyIdentity.settings().then(s=>{if(!d.open)return;send.disabled=!s.external?.phone;if(send.disabled)status.textContent='簡訊服務尚未開通，目前無法傳送驗證碼。';}).catch(e=>{if(d.open)status.textContent=e.message;});}
+    d.showModal();value.focus();
+  }
+  function render(){
+    window.AcademyTradeUI?.cleanup();
+    main.onclick=null;main.onsubmit=null;main.oninput=null;main.onchange=null;
+    nav.querySelectorAll('button').forEach(b=>{if(b.dataset.tab===current)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
+    const signed=!!localStorage.getItem('sb_token');
+    if(!signed){main.innerHTML='<div class="mc-card"><h2>歡迎加入先見量化智能</h2><p class="mc-muted">登入後即可管理會員資料。你也可以先在此裝置整理回饋草稿。</p><button data-login>登入會員</button></div>';if(current!=='feedback')return;}
+    else main.innerHTML='';
+    if(profile&&window.AcademyCloud?.status().owner===profile.id&&window.AcademyCloud.status().state==='loading'){main.innerHTML='<section class="mc-card"><p>正在讀取帳號研究資料…</p></section>';return;}
+    if(profile&&window.AcademyCloud?.status().state==='expired'){main.innerHTML='<section class="mc-card"><p>登入帳號已變更，請重新登入後繼續。本機資料已保留。</p><button data-login>重新登入</button></section>';return;}
+    if(window.AcademyResearch?.render(current,{main,profile,onProfileChanged:p=>{profile=p;sync();},go:open}))return;
+    if(window.AcademyTradeUI?.render(current,{main,profile,onProfileChanged:p=>{profile=p;sync();},go:open}))return;
+    if(window.AcademyMemberFeatures?.render(current,{main,profile,onProfileChanged:p=>{profile=p;sync();},go:open}))return;
+    if(current==='overview')main.innerHTML=`<div class="mc-card"><div class="mc-identity">${portrait('mc-portrait')}<div><h2>${esc(name())}</h2><span class="mc-muted">分享工具、邀請朋友；使用權與到期日由會員帳號確認。</span></div></div></div><div class="mc-grid"><div class="mc-card"><h2>你的帳號</h2><p class="mc-muted">管理暱稱、通知信箱與登入方式。</p><button data-go="profile">查看個人資料 →</button></div><div class="mc-card"><h2>你的聲音</h2><p class="mc-muted">提出使用問題、資料疑問與功能建議。</p><button data-go="feedback">前往回饋 →</button></div></div><div class="mc-note">網站與未來 App 將共用會員識別。收藏與觀察紀錄沿用原帳號，不另外建立新身分。</div>`;
+    if(current==='profile')main.innerHTML=profileForm();
+    if(current==='benefits')main.innerHTML=`<div class="mc-card"><span class="mc-kicker">MEMBERSHIP</span><h2>會員權益</h2><div class="mc-plan"><div><span class="mc-muted">目前方案</span><h3>${profile?(profile.membership?.plan&&profile.membership.plan!=='general'?'已授權方案':'一般會員'):'正在確認會員身分'}</h3></div><span class="mc-pill">由系統授權 · 無法自行修改</span></div><div class="mc-row"><span>會員個人檔案</span><span>一般會員功能</span></div><div class="mc-row"><span>自選股與觀察筆記</span><span>沿用既有功能</span></div><div class="mc-row"><span>我的回饋與回覆通知</span><span>服務串接中</span></div>${profile?.membership?.expires_at?`<div class="mc-row"><span>授權到期日</span><span>${esc(profile.membership.expires_at)}</span></div>`:''}<div class="mc-note">工具使用權與有效期限由系統核發，分享獎勵不會改變你的個人資料或原有專項權限。</div></div><div class="mc-card"><h2>分享解鎖，立即使用</h2><p class="mc-muted">分享給 3 位 IG 好友領 3 天體驗；邀請碼每滿 3 位有效新會員，再獲得 7 天使用權。點開查看活動狀態、進度與到期日。</p><button type="button" class="share-entry" data-share-unlock>分享解鎖，立即使用 →</button></div>`;
+    if(current==='security')renderSecurity();
+    if(current==='security'){
+      const device=document.createElement('section');device.className='mc-card';device.innerHTML='<h2>登入裝置</h2><p class="mc-muted">目前使用的瀏覽器登入。完整裝置清單尚未接通，不會顯示推測的裝置或位置。</p><details class="mc-lesson"><summary><b>登出其他裝置</b></summary><p>保留目前裝置，撤銷其他登入的續期資格。其他裝置目前尚未到期的登入可能短暫有效。</p><button type="button" data-revoke-sessions>確認登出其他裝置</button><div class="mc-status" role="status"></div></details>';main.append(device);
+      device.querySelector('button').addEventListener('click',async e=>{e.target.disabled=true;const status=device.querySelector('[role=status]');try{await AcademyIdentity.revokeOtherSessions();status.textContent='已撤銷其他登入的續期資格，目前裝置保持登入。';}catch(err){status.textContent=err.message;}finally{e.target.disabled=false;}});
+    }
+    if(current==='feedback')main.innerHTML+=`<div class="mc-card"><h2>我的回饋</h2><p class="mc-muted">提出問題、補充想法，讓研究工具更貼近你的使用方式。</p><div class="mc-note">填寫內容會自動保留草稿；送出成功後將顯示案件編號。</div><form id="mc-feedback"><label for="mc-kind">回饋類型</label><select id="mc-kind" name="kind">${['操作問題','資料疑問','功能許願','閱讀與排版','其他'].map(x=>`<option>${x}</option>`).join('')}</select><label for="mc-subject">回饋標題</label><input id="mc-subject" name="subject" maxlength="100" required placeholder="一句話描述你的問題或想法"><label for="mc-body">詳細內容</label><textarea id="mc-body" name="body" maxlength="5000" required placeholder="你在哪一頁、進行了什麼操作，希望有什麼調整？"></textarea><small>草稿只保存在目前瀏覽器；共用裝置請在離開前清除。</small><div class="mc-form-actions"><button type="submit" class="mc-primary">送出回饋</button><button type="button" class="mc-secondary-text" data-clear>清除草稿</button></div><div class="mc-status" role="status"></div></form></div><div class="mc-card"><h2>案件紀錄</h2><div data-feedback-history class="mc-muted">正在讀取案件紀錄…</div></div>`;
+    if(current==='notifications')main.innerHTML=`<div class="mc-card"><h2>通知中心</h2><div class="mc-empty"><h3>通知服務尚未接通</h3><p class="mc-muted">之後可以在這裡閱讀案件回覆與系統公告，並設定 Email、站內與 App 推播偏好。</p></div></div>`;
+    hydrateImages();if(current==='feedback')loadFeedbackHistory();const form=main.querySelector('#mc-feedback');if(form){const d=read(draftKey())||{};['kind','subject','body'].forEach(k=>{if(d[k])form.elements[k].value=d[k];});form.addEventListener('input',()=>{try{setLocal(draftKey(),JSON.stringify(Object.fromEntries(new FormData(form))));form.querySelector('[role=status]').textContent='草稿已保存在此裝置';}catch{form.querySelector('[role=status]').textContent='瀏覽器無法儲存草稿，請先複製內容';}});}
+  }
+  async function loadFeedbackHistory(){
+    const target=main.querySelector('[data-feedback-history]');if(!target)return;
+    if(!localStorage.getItem('sb_token')){target.textContent='登入後即可查看自己的回饋紀錄';return;}
+    try{const result=await AcademyIdentity.memberResource('feedback');if(!target.isConnected)return;if(!result.ready){target.textContent='案件服務尚未啟用，填寫內容會保留為草稿。';return;}target.innerHTML=result.rows.length?result.rows.map(r=>'<div class="mc-row"><div><b>'+esc(r.subject)+'</b><small>'+esc(r.ticket_number)+'</small></div><span class="mc-pill">'+esc(({received:'已收到',in_progress:'處理中',waiting:'等待補充',completed:'已完成'})[r.status]||r.status)+'</span></div>').join(''):'目前還沒有已送出的回饋';}catch(e){if(target.isConnected)target.textContent=e.message;}
+  }
+  async function load(){const id=++request;try{const data=await api();if(id!==request)return;if(window.AcademyPhoneGate&&!await AcademyPhoneGate.ensure()){window.AcademyCloud?.cancel();return;}profile=data;sync();if(window.AcademyCloud){window.AcademyTradeUI?.cleanup();if(!page.hidden)main.innerHTML='<section class="mc-card"><p>正在讀取帳號研究資料…</p></section>';await AcademyCloud.prepare(data.id,true);if(id!==request)return;cloudCleanup();cloudHost.hidden=false;cloudCleanup=AcademyCloud.mountStatus(cloudHost,data.id);}if(!page.hidden)render();}catch(e){if(id!==request||page.hidden)return;const notice=document.createElement('div');notice.className='mc-note';notice.setAttribute('role','status');notice.textContent=e.message==='Failed to fetch'?'無法連上會員服務，請確認網路後重試':e.message;const retry=document.createElement('button');retry.type='button';retry.textContent='重新載入';retry.addEventListener('click',()=>{notice.remove();load();});notice.append(' ',retry);main.prepend(notice);}}
+  async function open(tab='overview'){if(window.AcademyPhoneGate&&!await AcademyPhoneGate.ensure())return;const reopened=page.hidden;
+    current=items.some(i=>i[0]===tab)?tab:'overview';
+    if(page.hidden){returnFocus=document.activeElement;returnScroll={x:scrollX,y:scrollY};oldOverflow=document.body.style.overflow;document.body.style.overflow='hidden';document.body.classList.add('mc-open');positionUnderHeader();page.hidden=false;history.pushState({...history.state,academyMember:true},'',location.pathname+location.search+'#member/'+current);}
+    else history.replaceState({...history.state,academyMember:true},'',location.pathname+location.search+'#member/'+current);
+    render();main.focus({preventScroll:true});page.scrollTop=0;if(localStorage.getItem('sb_token')&&(!profile||reopened))load();
+  }
+  function close(){if(document.body.classList.contains('mc-chart-open'))window.closeChart?.();document.body.classList.remove('mc-chart-open');dispatchEvent(new Event('academy-member-closed'));page.querySelectorAll('dialog[open]').forEach(d=>d.close());request++;page.hidden=true;document.body.classList.remove('mc-open');document.body.style.overflow=oldOverflow;returnFocus?.focus?.({preventScroll:true});requestAnimationFrame(()=>scrollTo(returnScroll.x,returnScroll.y));}
+  function goHome(){
+    returnScroll={x:0,y:0};
+    if(!page.hidden)close();
+    const params=new URLSearchParams(location.search);params.delete('view');const query=params.toString();
+    history.replaceState({v:'home'},'',location.pathname+(query?'?'+query:''));
+    window._showView?.('home');
+    requestAnimationFrame(()=>scrollTo({top:0,left:0,behavior:'instant'}));
+  }
+  const memberTheme=page.querySelector('[data-member-theme]');
+  function syncTheme(){const dark=document.documentElement.getAttribute('data-theme')!=='light';memberTheme.textContent=dark?'☀ 淺色模式':'☾ 深色模式';memberTheme.setAttribute('aria-label',dark?'切換淺色模式':'切換深色模式');}
+  memberTheme.addEventListener('click',()=>{if(typeof window._toggleTheme==='function')window._toggleTheme();else theme?.click();syncTheme();});
+  new MutationObserver(syncTheme).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});syncTheme();
+  page.querySelector('[data-member-logout]').addEventListener('click',async e=>{
+    const b=e.currentTarget,status=page.querySelector('.mc-action-status');b.disabled=true;b.textContent='登出中…';status.textContent='';
+    try{
+      if(typeof window.doLogout!=='function')throw Error('登出服務尚未載入，請重新整理後重試');
+      await window.doLogout();
+      if(localStorage.getItem('sb_token'))throw Error('尚未完成登出，請再試一次');
+      dispatchEvent(new Event('academy-auth-changed'));sync();
+    }catch(err){status.textContent=err.message;}finally{b.disabled=false;b.textContent='登出';}
+  });
+  page.querySelector('[data-back]').addEventListener('click',()=>{if(history.state?.academyMember)history.back();else close();});
+  document.querySelector('body>header .gs-brand')?.addEventListener('click',()=>{if(!page.hidden){returnScroll={x:0,y:0};close();history.replaceState({...history.state,academyMember:false},'',location.pathname+location.search);}},true);
+  addEventListener('resize',()=>{if(!page.hidden)positionUnderHeader();});
+  addEventListener('academy-identity-linked',()=>{if(localStorage.getItem('sb_token')){profile=null;open('security');}});
+  addEventListener('popstate',()=>{if(location.hash.startsWith('#member/')){if(page.hidden){oldOverflow=document.body.style.overflow;document.body.style.overflow='hidden';document.body.classList.add('mc-open');positionUnderHeader();page.hidden=false;}current=location.hash.split('/')[1]||'overview';render();}else if(!page.hidden)close();});
+  page.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.tab||b.dataset.go)open(b.dataset.tab||b.dataset.go);if(b.hasAttribute('data-login')){if(history.state?.academyMember)history.back();else close();setTimeout(()=>window.openAuthModal?.('login'),0);}if(b.hasAttribute('data-clear')){removeLocal(draftKey());render();}});
+  page.addEventListener('submit',async e=>{e.preventDefault();if(e.target.id!=='mc-profile')return;const button=e.target.querySelector('button[type=submit]'),status=e.target.querySelector('.mc-status');button.disabled=true;try{const body=Object.fromEntries(new FormData(e.target));body.markets=new FormData(e.target).getAll('markets');delete body['mc-avatar-file'];profile=await api('POST',body);sync();status.textContent='個人資料已儲存至會員帳號';}catch(err){status.textContent=err.message;}finally{button.disabled=false;}});
+  page.addEventListener('submit',async e=>{
+    if(e.target.id!=='mc-feedback')return;e.preventDefault();
+    const form=e.target,button=form.querySelector('[type=submit]'),status=form.querySelector('[role=status]'),data=new FormData(form);
+    const payload={p_category:String(data.get('kind')||''),p_subject:String(data.get('subject')||'').trim(),p_body:String(data.get('body')||'').trim(),p_source_path:location.pathname};
+    if(!payload.p_subject||!payload.p_body){status.textContent='請填寫回饋標題與詳細內容';return;}
+    button.disabled=true;status.textContent='正在送出回饋…';
+    try{
+      const signature=JSON.stringify(payload),draft=read(draftKey())||{},id=draft._pending_signature===signature&&draft._request_id?draft._request_id:crypto.randomUUID();
+      setLocal(draftKey(),JSON.stringify({...Object.fromEntries(data),_pending_signature:signature,_request_id:id}));
+      const result=await AcademyIdentity.submitFeedback({...payload,p_request_id:id});
+      if(!result?.ticket_number)throw Error('尚未收到案件編號，內容已保留，請稍後重試');
+      removeLocal(draftKey());form.reset();loadFeedbackHistory();status.textContent='回饋已送出，案件編號 '+result.ticket_number+(result.email_queued?'。確認通知待寄送。':'。你可以在會員中心查看後續回覆。');
+    }catch(err){status.textContent=err.message;}finally{button.disabled=false;}
+  });
+  let cropImage=null,cropScale=1;
+  function drawCrop(){const canvas=main.querySelector('.mc-avatar-crop canvas');if(!canvas||!cropImage)return;const ctx=canvas.getContext('2d'),scale=Math.max(256/cropImage.width,256/cropImage.height)*cropScale;ctx.clearRect(0,0,256,256);ctx.fillStyle='#f3f6f9';ctx.fillRect(0,0,256,256);ctx.drawImage(cropImage,(256-cropImage.width*scale)/2,(256-cropImage.height*scale)/2,cropImage.width*scale,cropImage.height*scale);}
+  page.addEventListener('change',async e=>{if(e.target.id!=='mc-avatar-file')return;const file=e.target.files[0],status=main.querySelector('.mc-status');if(!file)return;if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>5*1024*1024){status.textContent='請選擇 5 MB 以內的 JPG、PNG 或 WebP 圖片';e.target.value='';return;}try{cropImage?.close?.();cropImage=await createImageBitmap(file);cropScale=1;main.querySelector('#mc-avatar-zoom').value='1';main.querySelector('.mc-avatar-crop').hidden=false;drawCrop();}catch{status.textContent='無法讀取這張圖片，請換一張再試';}});
+  page.addEventListener('input',e=>{if(e.target.id==='mc-avatar-zoom'){cropScale=Number(e.target.value);drawCrop();}});
+  page.addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;if(b.hasAttribute('data-cancel-avatar')){cropImage?.close?.();cropImage=null;main.querySelector('.mc-avatar-crop').hidden=true;main.querySelector('#mc-avatar-file').value='';}if(b.hasAttribute('data-save-avatar')){const status=main.querySelector('.mc-avatar-status');b.disabled=true;try{if(!profile)throw Error('請先載入會員資料');const blob=await new Promise(resolve=>main.querySelector('.mc-avatar-crop canvas').toBlob(resolve,'image/webp',.85));if(!blob)throw Error('圖片處理失敗，請重試');profile=await AcademyIdentity.saveAvatar(blob);sync();hydrateImages();main.querySelector('.mc-avatar-crop').hidden=true;main.querySelector('.mc-status').textContent='頭像已儲存，網站右上角與會員中心已同步更新';}catch(err){status.textContent=err.message;}finally{b.disabled=false;}}});
+  avatar.addEventListener('click',()=>open());window.openMemberCenter=open;
+  if(logout)new MutationObserver(sync).observe(logout,{attributes:true,attributeFilter:['style']});addEventListener('storage',e=>{if(!['sb_token','sb_user'].includes(e.key)&&!window.AcademyCloud?.ownsKey(e.key))return;profile=null;sync();if(localStorage.getItem('sb_token'))load();});addEventListener('academy-auth-changed',()=>{profile=null;sync();if(!page.hidden)render();if(localStorage.getItem('sb_token'))load();});sync();if(localStorage.getItem('sb_token'))load();
+  if(location.hash.startsWith('#member/')){const tab=location.hash.split('/')[1];history.replaceState({...history.state,academyMember:false},'',location.pathname+location.search);open(tab);}
+})();

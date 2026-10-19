@@ -103,6 +103,10 @@ class handler(BaseHTTPRequestHandler):
         token = self.headers.get("Authorization", "").replace("Bearer ", "").strip()
         if not token:
             return self._json(401, {"error": "unauthorized"})
+        from lib.member_phone import check
+        blocked = check(token)
+        if blocked:
+            return self._json(*blocked)
 
         length = int(self.headers.get("Content-Length", 0))
         body = json.loads(self.rfile.read(length) or b"{}")

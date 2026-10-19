@@ -1,0 +1,40 @@
+/* Optional isolated PostgreSQL test: set PGLITE_MODULE to a verified @electric-sql/pglite module. Never connects to Supabase. */
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const {PGlite}=require(process.env.PGLITE_MODULE||'@electric-sql/pglite');
+(async()=>{const db=new PGlite();try{
+await db.exec(`create role anon;create role authenticated;create role service_role bypassrls;
+create schema auth;create table auth.users(id uuid primary key,email text,created_at timestamptz default now(),email_confirmed_at timestamptz,phone_confirmed_at timestamptz);
+create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
+grant usage on schema auth to public;grant execute on function auth.uid() to public;
+create schema storage;create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
+create table storage.objects(id uuid default gen_random_uuid(),bucket_id text references storage.buckets(id),name text,primary key(bucket_id,name));
+alter table storage.objects enable row level security;grant usage on schema storage to authenticated;grant select,insert,update,delete on storage.objects to authenticated;
+create function storage.foldername(name text) returns text[] language sql immutable as $$select (string_to_array(name,'/'))[1:array_length(string_to_array(name,'/'),1)-1]$$;`);
+for(const file of ['member-services.sql','member-services-supplement.sql','member-research-documents.sql','member-storage.sql']){await db.exec(fs.readFileSync(path.join(__dirname,'../docs/database',file),'utf8'));console.log('Applied in isolated PostgreSQL:',file);}
+const A='11111111-1111-4111-8111-111111111111',B='22222222-2222-4222-8222-222222222222';
+await db.query('insert into auth.users(id,email,email_confirmed_at) values ($1,$3,now()),($2,$4,now())',[A,B,'a@example.test','b@example.test']);
+const as=async id=>{await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[id]);await db.exec('set role authenticated');};
+const denied=async (sql,values=[])=>{await assert.rejects(db.query(sql,values));};
+await as(A);const save=async(kind,rev,value)=> (await db.query('select public.save_member_research_document($1,$2,$3::jsonb) value',[kind,rev,JSON.stringify({version:1,value})])).rows[0].value;
+assert.equal((await save('journal',0,{fills:[]})).revision,1);await denied("select public.save_member_research_document('journal',0,'{}')");
+await denied("insert into public.member_research_documents(user_id,kind,payload) values ($1,'research','{}')",[B]);
+await denied("update public.member_research_documents set revision=99");await denied('delete from public.member_research_documents');
+assert.equal((await save('journal',1,null)).revision,2);assert.equal((await save('journal',2,{fills:[]})).revision,3);
+for(const kind of ['journal_draft','research','workspace','workspace_draft','workspace_trash','feedback_draft','private_screen'])assert.equal((await save(kind,0,[])).revision,1);
+await as(B);assert.equal((await db.query('select * from public.member_research_documents')).rows.length,0);assert.equal((await save('journal',0,{secret:'B'})).revision,1);
+await denied("select public.save_member_research_document('invalid',0,'{}')");await denied("select public.save_member_research_document('research',-1,'{}')");
+await db.query("insert into storage.objects(bucket_id,name) values ('member-trade-images',$1)",[B+'/shot']);
+await denied("insert into storage.objects(bucket_id,name) values ('member-trade-images',$1)",[A+'/shot']);
+await denied("insert into storage.objects(bucket_id,name) values ('member-avatars',$1)",[B+'/other.webp']);
+await db.query("insert into storage.objects(bucket_id,name) values ('member-avatars',$1)",[B+'/avatar.webp']);
+await as(A);assert.equal((await db.query('select * from storage.objects')).rows.length,0);
+assert.equal((await db.query("delete from storage.objects where name=$1 returning *",[B+'/shot'])).rows.length,0);
+await db.query("insert into storage.objects(bucket_id,name) values ('member-trade-images',$1)",[A+'/shot']);
+await denied("update storage.objects set name=$1 where name=$2",[B+'/stolen',A+'/shot']);
+const ticket=(await db.query("select public.submit_member_feedback('操作問題','測試','隔離測試','/',$1) value",[A])).rows[0].value;
+assert.equal((await db.query("select public.submit_member_feedback('操作問題','測試','隔離測試','/',$1) value",[A])).rows[0].value.ticket_id,ticket.ticket_id);
+await as(B);assert.equal((await db.query('select * from public.member_feedback_tickets')).rows.length,0);assert.equal((await db.query('select * from public.member_referral_summary')).rows.length,1);
+await db.exec('reset role');assert.equal((await db.query('select count(*) n from public.member_rewards')).rows[0].n,0);assert.equal((await db.query('select count(*) n from public.member_notification_outbox')).rows[0].n,1);
+await db.exec('set role anon');await denied('select * from public.member_research_documents');await denied("select public.save_member_research_document('journal',0,'{}')");
+console.log('PASS isolated SQL: migration syntax, document CAS/tombstones, all 8 kinds, two-owner RLS, no client direct mutation, private storage paths, feedback idempotency, referral privacy, anonymous access denied.');
+}finally{await db.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

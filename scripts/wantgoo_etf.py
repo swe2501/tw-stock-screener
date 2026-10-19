@@ -19,6 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import wantgoo_scraper as ws          # noqa: E402  PROFILE_DIR / is_logged_in
 import broker_signals as bs           # noqa: E402  _sb / _load_env
+from etf_move_rows import build_holdings_rows  # noqa: E402
 from playwright.async_api import async_playwright  # noqa: E402
 
 if sys.stdout and hasattr(sys.stdout, "reconfigure"):
@@ -84,7 +85,7 @@ async def main():
             if i % RESTART_EVERY == 0:
                 await ctx.close(); await asyncio.sleep(3); ctx, page = await _open(p)
             d = await _fetch_combine(page, code)
-            if not d or not (d.get("nav") or d.get("stockHoldings")):
+            if not d or not d.get("stockHoldings"):
                 warn += 1
                 await asyncio.sleep(0.5)
                 continue
@@ -97,18 +98,7 @@ async def main():
                 "nav": nav.get("navPerUnit"),
                 "holdings_date": hd,
             })
-            prev = {h.get("stockCode"): h.get("shares") for h in (d.get("previousStockHoldings") or [])}
-            for h in (d.get("stockHoldings") or []):
-                sc = str(h.get("stockCode", "")).strip()
-                if not sc:
-                    continue
-                sh = h.get("shares")
-                holdings.append({
-                    "code": code, "stock_code": sc, "stock_name": h.get("stockName"),
-                    "shares": sh, "weight": h.get("weight"),
-                    "delta_shares": (sh - prev[sc]) if (sc in prev and sh is not None and prev[sc] is not None) else None,
-                    "seq": h.get("seq"), "data_date": hd,
-                })
+            holdings.extend(build_holdings_rows(code, d, hd))
             done += 1
             if i % 30 == 0:
                 print(f"  …{i}/{len(codes)}（成功{done} 空{warn} 持股累計{len(holdings)}）", flush=True)

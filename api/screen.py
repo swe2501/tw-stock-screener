@@ -5,6 +5,7 @@ import io
 import os
 import urllib.request
 import urllib.parse
+import urllib.error
 import math
 import time
 from datetime import datetime, timezone, timedelta
@@ -58,6 +59,26 @@ THEME_MEMBERS = {
 # service key 是否過期影響）
 SUPABASE_URL     = os.environ.get("SUPABASE_URL", "")
 SUPABASE_KEY     = os.environ.get("SUPABASE_ANON_KEY", "")
+
+# ── 盤中即時注入點（第3層）──────────────────────────────────────────────
+# 本機盤中腳本(scripts/intraday_push.py)掃 mis.twse.com.tw 全市場後，直接把這個
+# 模組的 _INTRADAY 設成當下快照，再呼叫 _fetch_theme_all/_fetch_sector_all/
+# _fetch_overview 現算盤中版，推進 page_cache。prod/Vercel 永不設定它 → 下列
+# 分支完全不觸發，盤後行為與現狀 100% 相同（零風險）。
+# 結構：{"listed":{code:{"price","prev","vol","name"}}, "otc":{...}, "date":"YYYYMMDD"}
+_INTRADAY = {"listed": {}, "otc": {}, "date": None}
+
+
+def _intraday_stocks():
+    """_INTRADAY.listed → 與 fetch_all_stocks_latest 相同結構的 stocks dict。"""
+    out = {}
+    for c, q in (_INTRADAY.get("listed") or {}).items():
+        px = q.get("price"); vol = q.get("vol") or 0
+        out[c] = {"code": c, "name": q.get("name") or _STOCK_NAMES.get(c, c),
+                  "volume": vol, "value": (px * vol) if px else 0,
+                  "open": None, "high": None, "low": None,
+                  "close": px, "prev_close": q.get("prev")}
+    return out
 
 # code→公司名（內嵌；供 price_window 雲端備援時填股名。放 api/*.py 的獨立模組會被 Vercel 當函式而 build 失敗，故內嵌）
 _STOCK_NAMES = {"1101": "台泥", "1102": "亞泥", "1103": "嘉泥", "1104": "環泥", "1108": "幸福", "1109": "信大", "1110": "東泥", "1201": "味全", "1203": "味王", "1210": "大成", "1213": "大飲", "1215": "卜蜂", "1216": "統一", "1217": "愛之味", "1218": "泰山", "1219": "福壽", "1220": "台榮", "1225": "福懋油", "1227": "佳格", "1229": "聯華", "1231": "聯華食", "1232": "大統益", "1233": "天仁", "1234": "黑松", "1235": "興泰", "1236": "宏亞", "1256": "鮮活果汁-KY", "1301": "台塑", "1303": "南亞", "1304": "台聚", "1305": "華夏", "1307": "三芳", "1308": "亞聚", "1309": "台達化", "1310": "台苯", "1312": "國喬", "1313": "聯成", "1314": "中石化", "1315": "達新", "1316": "上曜", "1319": "東陽", "1321": "大洋", "1323": "永裕", "1324": "地球", "1325": "恆大", "1326": "台化", "1337": "再生-KY", "1338": "廣華-KY", "1339": "昭輝", "1340": "勝悅-KY", "1341": "富林-KY", "1342": "八貫", "1402": "遠東新", "1409": "新纖", "1410": "南染", "1413": "宏洲", "1414": "東和", "1416": "廣豐", "1417": "嘉裕", "1418": "東華", "1419": "新紡", "1423": "利華", "1432": "大魯閣", "1434": "福懋", "1435": "中福", "1436": "華友聯", "1437": "勤益控", "1438": "三地開發", "1439": "雋揚", "1440": "南紡", "1441": "大東", "1442": "名軒", "1443": "立益物流", "1444": "力麗", "1445": "大宇", "1446": "宏和", "1447": "力鵬", "1449": "佳和", "1451": "年興", "1452": "宏益", "1453": "大將", "1454": "台富", "1455": "集盛", "1456": "怡華", "1457": "宜進", "1459": "聯發", "1460": "宏遠", "1463": "強盛新", "1464": "得力", "1465": "偉全", "1466": "聚隆", "1467": "南緯", "1468": "昶和", "1470": "大統新創", "1471": "首利", "1472": "三洋實業", "1473": "台南", "1474": "弘裕", "1475": "業旺", "1476": "儒鴻", "1477": "聚陽", "1503": "士電", "1504": "東元", "1506": "正道", "1512": "瑞利", "1513": "中興電", "1514": "亞力", "1515": "力山", "1516": "川飛", "1517": "利奇", "1519": "華城", "1521": "大億", "1522": "堤維西", "1524": "耿鼎", "1525": "江申", "1526": "日馳", "1527": "鑽全", "1528": "恩德", "1529": "樂事綠能", "1530": "亞崴", "1531": "高林股", "1532": "勤美", "1533": "車王電", "1535": "中宇", "1536": "和大", "1537": "廣隆", "1538": "正峰", "1539": "巨庭", "1540": "喬福", "1541": "錩泰", "1558": "伸興", "1560": "中砂", "1563": "巧新", "1568": "倉佑", "1582": "信錦", "1583": "程泰", "1587": "吉茂", "1589": "永冠-KY", "1590": "亞德客-KY", "1597": "直得", "1598": "岱宇", "1603": "華電", "1604": "聲寶", "1605": "華新", "1608": "華榮", "1609": "大亞", "1611": "中電", "1612": "宏泰", "1614": "三洋電", "1615": "大山", "1616": "億泰", "1617": "榮星", "1618": "合機", "1623": "大東電", "1626": "艾美特-KY", "1702": "南僑", "1707": "葡萄王", "1708": "東鹼", "1709": "和益", "1710": "東聯", "1711": "永光", "1712": "興農", "1713": "國化", "1714": "和桐", "1717": "長興", "1718": "中纖", "1720": "生達", "1721": "三晃", "1722": "台肥", "1723": "中碳", "1725": "元禎", "1726": "永記", "1727": "中華化", "1730": "花仙子", "1731": "美吾華", "1732": "毛寶", "1733": "五鼎", "1734": "杏輝", "1735": "日勝化", "1736": "喬山", "1737": "臺鹽", "1752": "南光", "1760": "寶齡富錦", "1762": "中化生", "1773": "勝一", "1776": "展宇", "1783": "和康生", "1786": "科妍", "1789": "神隆", "1795": "美時", "1802": "台玻", "1805": "寶徠", "1806": "冠軍", "1808": "潤隆", "1809": "中釉", "1810": "和成", "1817": "凱撒衛", "1903": "士紙", "1904": "正隆", "1905": "華紙", "1906": "寶隆", "1907": "永豐餘", "1909": "榮成", "2002": "中鋼", "2006": "東和鋼鐵", "2007": "燁興", "2008": "高興昌", "2009": "第一銅", "2010": "春源", "2012": "春雨", "2013": "中鋼構", "2014": "中鴻", "2015": "豐興", "2017": "官田鋼", "2020": "美亞", "2022": "聚亨", "2023": "燁輝", "2024": "志聯", "2025": "千興", "2027": "大成鋼", "2028": "威致", "2029": "盛餘", "2030": "彰源", "2031": "新光鋼", "2032": "新鋼", "2033": "佳大", "2034": "允強", "2038": "海光", "2049": "上銀", "2059": "川湖", "2062": "橋椿", "2069": "運錩", "2072": "世紀風電", "2101": "南港", "2102": "泰豐", "2103": "台橡", "2104": "國際中橡", "2105": "正新", "2106": "建大", "2107": "厚生", "2108": "南帝", "2109": "華豐", "2114": "鑫永銓", "2115": "六暉-KY", "2201": "裕隆", "2204": "中華", "2206": "三陽工業", "2207": "和泰車", "2208": "台船", "2211": "長榮鋼", "2227": "裕日車", "2228": "劍麟", "2231": "為升", "2233": "宇隆", "2236": "百達-KY", "2237": "華德動能-創", "2239": "英利-KY", "2241": "艾姆勒", "2243": "宏旭-KY", "2247": "汎德永業", "2248": "華勝-KY", "2250": "IKKA-KY", "2254": "巨鎧精密-創", "2258": "鴻華先進-創", "2301": "光寶科", "2302": "麗正", "2303": "聯電", "2305": "全友", "2308": "台達電", "2312": "金寶", "2313": "華通", "2314": "台揚", "2316": "楠梓電", "2317": "鴻海", "2321": "東訊", "2323": "中環", "2324": "仁寶", "2327": "國巨*", "2328": "廣宇", "2329": "華泰", "2330": "台積電", "2331": "精英", "2332": "友訊", "2337": "旺宏", "2338": "光罩", "2340": "台亞", "2342": "茂矽", "2344": "華邦電", "2345": "智邦", "2347": "聯強", "2348": "海悅", "2349": "錸德", "2351": "順德", "2352": "佳世達", "2353": "宏碁", "2354": "鴻準", "2355": "敬鵬", "2356": "英業達", "2357": "華碩", "2359": "所羅門", "2360": "致茂", "2362": "藍天", "2363": "矽統", "2364": "倫飛", "2365": "昆盈", "2367": "燿華", "2368": "金像電", "2369": "菱生", "2371": "大同", "2373": "震旦行", "2374": "佳能", "2375": "凱美", "2376": "技嘉", "2377": "微星", "2379": "瑞昱", "2380": "虹光", "2382": "廣達", "2383": "台光電", "2385": "群光", "2387": "精元", "2388": "威盛", "2390": "云辰", "2392": "正崴", "2393": "億光", "2395": "研華", "2397": "友通", "2399": "映泰", "2401": "凌陽", "2402": "毅嘉", "2404": "漢唐", "2405": "輔信", "2406": "國碩", "2408": "南亞科", "2409": "友達", "2412": "中華電", "2413": "環科", "2414": "精技", "2415": "錩新", "2417": "圓剛", "2419": "仲琦", "2420": "新巨", "2421": "建準", "2423": "固緯", "2424": "隴華", "2425": "承啟", "2426": "鼎元", "2427": "三商電", "2428": "興勤", "2429": "銘旺科", "2430": "燦坤", "2431": "聯昌", "2432": "倚天酷碁-創", "2433": "互盛電", "2434": "統懋", "2436": "偉詮電", "2438": "翔耀", "2439": "美律", "2440": "太空梭", "2441": "超豐", "2442": "新美齊", "2444": "兆勁", "2449": "京元電子", "2450": "神腦", "2451": "創見", "2453": "凌群", "2454": "聯發科", "2455": "全新", "2457": "飛宏", "2458": "義隆", "2459": "敦吉", "2460": "建通", "2461": "光群雷", "2462": "良得電", "2464": "盟立", "2465": "麗臺", "2466": "冠西電", "2467": "志聖", "2468": "華經", "2471": "資通", "2472": "立隆電", "2474": "可成", "2476": "鉅祥", "2477": "美隆電", "2478": "大毅", "2480": "敦陽科", "2481": "強茂", "2482": "連宇", "2483": "百容", "2484": "希華", "2485": "兆赫", "2486": "一詮", "2488": "漢平", "2489": "瑞軒", "2491": "吉祥全", "2492": "華新科", "2493": "揚博", "2495": "普安", "2496": "卓越", "2497": "怡利電", "2498": "宏達電", "2501": "國建", "2504": "國產", "2505": "國揚", "2506": "太設", "2509": "全坤建", "2511": "太子", "2514": "龍邦", "2515": "中工", "2516": "新建", "2520": "冠德", "2524": "京城", "2527": "宏璟", "2528": "皇普", "2530": "華建", "2534": "宏盛", "2535": "達欣工", "2536": "宏普", "2537": "聯上發", "2538": "基泰", "2539": "櫻花建", "2540": "愛山林", "2542": "興富發", "2543": "皇昌", "2545": "皇翔", "2546": "根基", "2547": "日勝生", "2548": "華固", "2597": "潤弘", "2601": "益航", "2603": "長榮", "2605": "新興", "2606": "裕民", "2607": "榮運", "2608": "嘉里大榮", "2609": "陽明", "2610": "華航", "2611": "志信", "2612": "中航", "2613": "中櫃", "2614": "東森", "2615": "萬海", "2616": "山隆", "2617": "台航", "2618": "長榮航", "2630": "亞航", "2633": "台灣高鐵", "2634": "漢翔", "2636": "台驊控股", "2637": "慧洋-KY", "2642": "宅配通", "2645": "長榮航太", "2646": "星宇航空", "2701": "萬企", "2702": "華園", "2704": "國賓", "2705": "六福", "2706": "第一店", "2707": "晶華", "2712": "遠雄來", "2722": "夏都", "2723": "美食-KY", "2727": "王品", "2731": "雄獅", "2739": "寒舍", "2748": "雲品", "2753": "八方雲集", "2762": "世界健身-KY", "2801": "彰銀", "2812": "台中銀", "2816": "旺旺保", "2820": "華票", "2832": "台產", "2834": "臺企銀", "2836": "高雄銀", "2838": "聯邦銀", "2845": "遠東銀", "2849": "安泰銀", "2850": "新產", "2851": "中再保", "2852": "第一保", "2855": "統一證", "2880": "華南金", "2881": "富邦金", "2882": "國泰金", "2883": "凱基金", "2884": "玉山金", "2885": "元大金", "2886": "兆豐金", "2887": "台新新光金", "2889": "國票金", "2890": "永豐金", "2891": "中信金", "2892": "第一金", "2897": "王道銀行", "2901": "欣欣", "2903": "遠百", "2904": "匯僑", "2905": "三商", "2906": "高林", "2908": "特力", "2910": "統領", "2911": "麗嬰房", "2912": "統一超", "2913": "農林", "2915": "潤泰全", "2923": "鼎固-KY", "2929": "淘帝-KY", "2939": "永邑-KY", "2945": "三商家購", "3002": "歐格", "3003": "健和興", "3004": "豐達科", "3005": "神基", "3006": "晶豪科", "3008": "大立光", "3010": "華立", "3011": "今皓", "3013": "晟銘電", "3014": "聯陽", "3015": "全漢", "3016": "嘉晶", "3017": "奇鋐", "3018": "隆銘綠能", "3019": "亞光", "3021": "鴻名", "3022": "威強電", "3023": "信邦", "3024": "憶聲", "3025": "星通", "3026": "禾伸堂", "3027": "盛達", "3028": "增你強", "3029": "零壹", "3030": "德律", "3031": "佰鴻", "3032": "偉訓", "3033": "威健", "3034": "聯詠", "3035": "智原", "3036": "文曄", "3037": "欣興", "3038": "全台", "3040": "遠見", "3041": "揚智", "3042": "晶技", "3043": "科風", "3044": "健鼎", "3045": "台灣大", "3046": "建碁", "3047": "訊舟", "3048": "益登", "3049": "精金", "3050": "鈺德", "3051": "力特", "3052": "夆典", "3054": "立萬利", "3055": "蔚華科", "3056": "富華新", "3057": "喬鼎", "3058": "立德", "3059": "華晶科", "3060": "銘異", "3062": "建漢", "3090": "日電貿", "3092": "鴻碩", "3094": "聯傑", "3130": "一零四", "3135": "凌航", "3138": "耀登", "3149": "正達", "3150": "鈺寶-創", "3164": "景岳", "3167": "大量", "3168": "眾福科", "3189": "景碩", "3209": "全科", "3229": "晟鈦", "3231": "緯創", "3257": "虹冠電", "3266": "昇陽", "3296": "勝德", "3305": "昇貿", "3308": "聯德", "3311": "閎暉", "3312": "弘憶股", "3321": "同泰", "3338": "泰碩", "3346": "麗清", "3356": "奇偶", "3376": "新日興", "3380": "明泰", "3406": "玉晶光", "3413": "京鼎", "3416": "融程電", "3419": "譁裕", "3432": "台端", "3437": "榮創", "3443": "創意", "3447": "展達", "3450": "聯鈞", "3481": "群創", "3494": "誠研", "3501": "維熹", "3504": "揚明光", "3515": "華擎", "3518": "柏騰", "3528": "安馳", "3530": "晶相光", "3532": "台勝科", "3533": "嘉澤", "3535": "晶彩科", "3543": "州巧", "3545": "敦泰", "3550": "聯穎", "3557": "嘉威", "3563": "牧德", "3576": "聯合再生", "3583": "辛耘", "3588": "通嘉", "3591": "艾笛森", "3592": "瑞鼎", "3593": "力銘", "3596": "智易", "3605": "宏致", "3607": "谷崧", "3617": "碩天", "3622": "洋華", "3645": "達邁", "3652": "精聯", "3653": "健策", "3661": "世芯-KY", "3665": "貿聯-KY", "3669": "圓展", "3673": "TPK-KY", "3679": "新至陞", "3686": "達能", "3694": "海華", "3701": "大眾控", "3702": "大聯大", "3703": "欣陸", "3704": "合勤控", "3705": "永信", "3706": "神達", "3708": "上緯投控", "3711": "日月光投控", "3712": "永崴投控", "3714": "富采", "3715": "定穎投控", "3716": "中化控股", "3717": "聯嘉投控", "4104": "佳醫", "4106": "雃博", "4108": "懷特", "4119": "旭富", "4133": "亞諾法", "4137": "麗豐-KY", "4142": "國光生", "4148": "全宇生技-KY", "4155": "訊映", "4164": "承業醫", "4169": "泰宗", "4178": "永笙-KY", "4190": "佐登-KY", "4195": "基米-創", "4306": "炎洲", "4414": "如興", "4426": "利勤", "4438": "廣越", "4439": "冠星-KY", "4440": "宜新實業", "4441": "振大環球", "4526": "東台", "4532": "瑞智", "4536": "拓凱", "4540": "全球傳動", "4545": "銘鈺", "4551": "智伸科", "4552": "力達-KY", "4555": "氣立", "4557": "永新-KY", "4560": "強信-KY", "4562": "穎漢", "4564": "元翎", "4566": "時碩工業", "4569": "六方科-KY", "4571": "鈞興-KY", "4572": "駐龍", "4576": "大銀微系統", "4581": "光隆精密-KY", "4582": "聚恆-創", "4583": "台灣精銳", "4585": "達明", "4588": "玖鼎電力", "4590": "富田-創", "4720": "德淵", "4722": "國精化", "4736": "泰博", "4737": "華廣", "4739": "康普", "4746": "台耀", "4755": "三福化", "4763": "材料*-KY", "4764": "雙鍵", "4766": "南寶", "4770": "上品", "4771": "望隼", "4807": "日成-KY", "4904": "遠傳", "4906": "正文", "4912": "聯德控股-KY", "4915": "致伸", "4916": "事欣科", "4919": "新唐", "4927": "泰鼎-KY", "4930": "燦星網", "4934": "太極", "4935": "茂林-KY", "4938": "和碩", "4942": "嘉彰", "4943": "康控-KY", "4949": "有成精密", "4952": "凌通", "4956": "光鋐", "4958": "臻鼎-KY", "4960": "誠美材", "4961": "天鈺", "4967": "十銓", "4968": "立積", "4976": "佳凌", "4977": "眾達-KY", "4989": "榮科", "4994": "傳奇", "4999": "鑫禾", "5007": "三星", "5203": "訊連", "5215": "科嘉-KY", "5222": "全訊", "5225": "東科-KY", "5234": "達興材料", "5236": "凌陽創新", "5243": "乙盛-KY", "5244": "弘凱", "5258": "虹堡", "5269": "祥碩", "5283": "禾聯碩", "5284": "jpp-KY", "5285": "界霖", "5288": "豐祥-KY", "5292": "華懋", "5306": "桂盟", "5388": "中磊", "5434": "崇越", "5469": "瀚宇博", "5471": "松翰", "5484": "慧友", "5515": "建國", "5519": "隆大", "5521": "工信", "5522": "遠雄", "5525": "順天", "5531": "鄉林", "5533": "皇鼎", "5534": "長虹", "5538": "東明-KY", "5546": "永固-KY", "5607": "遠雄港", "5608": "四維航", "5706": "鳳凰", "5871": "中租-KY", "5876": "上海商銀", "5880": "合庫金", "5906": "台南-KY", "5907": "大洋-KY", "6005": "群益證", "6024": "群益期", "6108": "競國", "6112": "邁達特", "6115": "鎰勝", "6116": "彩晶", "6117": "迎廣", "6120": "達運", "6128": "上福", "6133": "金橋", "6136": "富爾特", "6139": "亞翔", "6141": "柏承", "6142": "友勁", "6152": "百一", "6153": "嘉聯益", "6155": "鈞寶", "6164": "華興", "6165": "浪凡", "6166": "凌華", "6168": "宏齊", "6176": "瑞儀", "6177": "達麗", "6183": "關貿", "6184": "大豐電", "6189": "豐藝", "6191": "精成科", "6192": "巨路", "6196": "帆宣", "6197": "佳必琪", "6201": "亞弘電", "6202": "盛群", "6205": "詮欣", "6206": "飛捷", "6209": "今國光", "6213": "聯茂", "6214": "精誠", "6215": "和椿", "6216": "居易", "6224": "聚鼎", "6225": "天瀚", "6226": "光鼎", "6230": "尼得科超眾", "6235": "華孚", "6239": "力成", "6243": "迅杰", "6257": "矽格", "6269": "台郡", "6271": "同欣電", "6272": "驊陞", "6277": "宏正", "6278": "台表科", "6281": "全國電", "6282": "康舒", "6283": "淳安", "6285": "啟碁", "6405": "悅城", "6409": "旭隼", "6412": "群電", "6414": "樺漢", "6415": "矽力*-KY", "6416": "瑞祺電通", "6426": "統新", "6431": "光麗-KY", "6438": "迅得", "6442": "光聖", "6443": "元晶", "6446": "藥華藥", "6449": "鈺邦", "6451": "訊芯-KY", "6456": "GIS-KY", "6464": "台數科", "6472": "保瑞", "6477": "安集", "6491": "晶碩", "6504": "南六", "6505": "台塑化", "6515": "穎崴", "6525": "捷敏-KY", "6526": "達發", "6531": "愛普*", "6533": "晶心科", "6534": "正瀚-創", "6541": "泰福-KY", "6550": "北極星藥業-KY", "6552": "易華電", "6558": "興能高", "6573": "虹揚-KY", "6579": "研揚", "6581": "鋼聯", "6582": "申豐", "6585": "鼎基", "6589": "台康生技", "6591": "動力-KY", "6592": "和潤企業", "6598": "ABC-KY", "6605": "帝寶", "6606": "建德工業", "6614": "資拓宏宇", "6625": "必應", "6641": "基士德-KY", "6645": "金萬林-創", "6655": "科定", "6657": "華安", "6658": "聯策", "6666": "羅麗芬-KY", "6668": "中揚光", "6669": "緯穎", "6670": "復盛應用", "6671": "三能-KY", "6672": "騰輝電子-KY", "6674": "鋐寶科技", "6689": "伊雲谷", "6691": "洋基工程", "6695": "芯鼎", "6698": "旭暉應材", "6706": "惠特", "6715": "嘉基", "6719": "力智", "6722": "輝創", "6742": "澤米", "6743": "安普新", "6753": "龍德造船", "6754": "匯僑設計", "6756": "威鋒電子", "6757": "台灣虎航", "6768": "志強-KY", "6770": "力積電", "6771": "平和環保-創", "6776": "展碁國際", "6781": "AES-KY", "6782": "視陽", "6789": "采鈺", "6790": "永豐實", "6792": "詠業", "6794": "向榮生技", "6796": "晉弘", "6799": "來頡", "6805": "富世達", "6807": "峰源-KY", "6830": "汎銓", "6831": "邁科", "6834": "天二科技", "6835": "圓裕", "6838": "台新藥", "6854": "錼創科技-KY創", "6861": "睿生光電", "6862": "三集瑞-KY", "6863": "永道-KY", "6869": "雲豹能源", "6873": "泓德能源", "6885": "全福生技", "6887": "寶綠特-KY", "6890": "來億-KY", "6901": "鑽石投資", "6902": "GOGOLOOK", "6906": "現觀科", "6908": "宏碁遊戲-創", "6909": "創控", "6914": "阜爾運通", "6916": "華凌", "6918": "愛派司", "6919": "康霈*", "6921": "嘉雨思-創", "6923": "中台", "6924": "榮惠-KY創", "6928": "攸泰科技", "6931": "青松健康", "6933": "AMAX-KY", "6934": "心誠鎂", "6936": "永鴻生技", "6937": "天虹", "6944": "兆聯實業", "6947": "台鎔科技", "6949": "沛爾生醫-創", "6951": "青新-創", "6952": "大武山", "6955": "邦睿生技-創", "6957": "裕慶-KY", "6958": "日盛台駿", "6962": "奕力-KY", "6965": "中傑-KY", "6969": "成信實業*-創", "6988": "威力暘-創", "6994": "富威電力", "7610": "聯友金屬-創", "7631": "聚賢研發-創", "7689": "大鵬科CLMX", "7705": "三商餐飲", "7711": "永擎", "7721": "微程式", "7722": "LINEPAY", "7730": "暉盛-創", "7732": "金興精密", "7736": "虎山", "7740": "熙特爾-創", "7749": "意騰-KY", "7750": "新代", "7760": "享溫馨", "7765": "中華資安", "7768": "頌勝科技", "7769": "鴻勁", "7780": "大研生醫*", "7786": "東方風能", "7788": "松川精密", "7791": "皇家可口", "7795": "長廣", "7799": "禾榮科", "7803": "雲象科技-創", "7818": "溢泰實業", "7821": "神數", "7822": "倍利科", "7823": "奧義賽博-KY創", "7827": "漢康-KY創", "7835": "永悅健康-創", "7855": "和運租車", "8011": "台通", "8016": "矽創", "8021": "尖點", "8028": "昇陽半導體", "8033": "雷虎", "8039": "台虹", "8045": "達運光電", "8046": "南電", "8070": "長華*", "8072": "陞泰", "8081": "致新", "8101": "華冠", "8103": "瀚荃", "8104": "錸寶", "8105": "凌巨", "8110": "華東", "8112": "至上", "8114": "振樺電", "8131": "福懋科", "8150": "南茂", "8162": "微矽電子-創", "8163": "達方", "8201": "無敵", "8210": "勤誠", "8213": "志超", "8215": "明基材", "8222": "寶一", "8249": "菱光", "8261": "富鼎", "8271": "宇瞻", "8341": "日友", "8367": "建新國際", "8374": "羅昇", "8404": "百和興業-KY", "8411": "福貞-KY", "8422": "可寧衛*", "8429": "金麗-KY", "8438": "昶昕", "8442": "威宏-KY", "8443": "阿瘦", "8454": "富邦媒", "8462": "柏文", "8463": "潤泰材", "8464": "億豐", "8466": "美吉吉-KY", "8467": "波力-KY", "8473": "山林水", "8476": "台境*", "8478": "東哥遊艇", "8481": "政伸", "8482": "商億-KY", "8487": "愛爾達-創", "8488": "吉源-KY", "8499": "鼎炫-KY", "8926": "台汽電", "8940": "新天地", "8996": "高力", "9103": "美德醫療-DR", "910322": "康師傅-DR", "9105": "泰金寶-DR", "910861": "神州-DR", "9110": "越南控-DR", "911608": "明輝-DR", "911622": "泰聚亨-DR", "911868": "同方友友-DR", "912000": "晨訊科-DR", "9136": "巨騰-DR", "9802": "鈺齊-KY", "9902": "台火", "9904": "寶成", "9905": "大華", "9906": "欣巴巴", "9907": "統一實", "9908": "大台北", "9910": "豐泰", "9911": "櫻花", "9912": "偉聯", "9914": "美利達", "9917": "中保科", "9918": "欣天然", "9919": "康那香", "9921": "巨大", "9924": "福興", "9925": "新保", "9926": "新海", "9927": "泰銘", "9928": "中視", "9929": "秋雨", "9930": "中聯資源", "9931": "欣高", "9933": "中鼎", "9934": "成霖", "9935": "慶豐富", "9937": "全國", "9938": "百和", "9939": "宏全", "9940": "信義", "9941": "裕融", "9942": "茂順", "9943": "好樂迪", "9944": "新麗", "9945": "潤泰新", "9946": "三發地產", "9955": "佳龍", "9958": "世紀鋼"}
@@ -172,6 +193,48 @@ def _get_industry_map() -> dict:
         except Exception:
             pass
     return {k: v for k, v in _industry_cache.items() if k != "__otc_loaded"}
+
+
+_shares_cache: dict = {}
+_shares_cache_ts: float = 0.0
+
+
+def _get_shares_map() -> dict:
+    """code → 發行股數（上市 t187ap03_L + 上櫃 mopsfin_t187ap03_O）。供產業『市值加權』漲跌幅用。
+    市值＝收盤 × 發行股數，貼近官方類指數口徑。快取 24h；抓不到回 {}（呼叫端退回等權）。"""
+    global _shares_cache, _shares_cache_ts
+    if _shares_cache and time.time() - _shares_cache_ts < 86400:
+        return _shares_cache
+    import ssl as _ssl
+    ctx = _ssl.create_default_context()
+    ctx.verify_flags &= ~_ssl.VERIFY_X509_STRICT       # TWSE/TPEx 憑證缺 SKI，仍驗鏈與主機名
+    out = {}
+    try:
+        req = urllib.request.Request("https://openapi.twse.com.tw/v1/opendata/t187ap03_L",
+                                     headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"})
+        with urllib.request.urlopen(req, timeout=8, context=ctx) as r:
+            for row in json.loads(r.read()):
+                code = str(row.get("公司代號", "")).strip()
+                sh = _pf(row.get("已發行普通股數或TDR原股發行股數"))
+                if code and sh:
+                    out[code] = sh
+    except Exception:
+        pass
+    try:
+        req = urllib.request.Request("https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap03_O",
+                                     headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"})
+        with urllib.request.urlopen(req, timeout=8, context=ctx) as r:
+            for row in json.loads(r.read().decode("utf-8-sig")):
+                code = str(row.get("SecuritiesCompanyCode", "")).strip()
+                sh = _pf(row.get("IssueShares"))
+                if code and sh and code not in out:
+                    out[code] = sh
+    except Exception:
+        pass
+    if out:
+        _shares_cache = out
+        _shares_cache_ts = time.time()
+    return _shares_cache
 
 
 def _get_json(url, headers=TWSE_HEADERS, timeout=20):
@@ -519,25 +582,64 @@ def _median(values):
     return vals[n // 2] if n % 2 else (vals[n // 2 - 1] + vals[n // 2]) / 2.0
 
 
-def _fetch_groupbook(window=10):
+def _load_groupbook_prices(codes):
+    rows, off = [], 0
+    while True:
+        status, page = _cache_sb("/price_window", params=[
+            ("select", "code,trade_date,close"), ("code", "in.(" + ",".join(codes) + ")"),
+            ("order", "code.asc,trade_date.asc"), ("offset", str(off)), ("limit", "1000")
+        ])
+        if status != 200 or not isinstance(page, list):
+            return None
+        rows.extend(page)
+        if len(page) < 1000:
+            return rows
+        off += 1000
+
+
+def _snapshot_params(kind):
+    # Legacy single rows remain readable; all new versions are append-only.
+    return [("or", "(kind.eq." + kind + ",kind.like." + kind + "__*)"),
+            ("select", "payload,updated_at"), ("order", "updated_at.desc,kind.desc"), ("limit", "1")]
+
+
+def _read_groupbook_research(quarter):
+    import re
+    if not re.fullmatch(r"20[0-9]{2}Q[1-4]", quarter):
+        return {"error": "invalid research quarter"}
+    status, rows = _cache_sb("/page_cache", params=_snapshot_params("groupbook_research_" + quarter))
+    if status != 200 or not isinstance(rows, list) or not rows:
+        return {"error": "research snapshot unavailable"}
+    data = rows[0].get("payload")
+    if not isinstance(data, dict) or data.get("quarter") != quarter or not isinstance(data.get("stocks"), dict):
+        return {"error": "invalid research snapshot"}
+    return dict(data, updatedAt=rows[0].get("updated_at"))
+
+
+def _read_groupbook_snapshot(window=10):
+    window = 5 if window <= 5 else (20 if window >= 20 else 10)
+    status, rows = _cache_sb("/page_cache", params=_snapshot_params("groupbook_" + str(window)))
+    if status != 200 or not isinstance(rows, list) or not rows:
+        return {"error": "group snapshot unavailable"}
+    data = rows[0].get("payload")
+    if not isinstance(data, dict) or data.get("error") or data.get("window") != window or not isinstance(data.get("groups"), list) or not data["groups"]:
+        return {"error": "invalid group snapshot"}
+    return dict(data, updatedAt=rows[0].get("updated_at"), precomputed=True)
+
+
+def _fetch_groupbook(window=10, price_rows=None):
     """依 price_window 計算各集團季底前 N 個交易日的歷史表現與排名。"""
     window = 5 if window <= 5 else (20 if window >= 20 else 10)
     codes = sorted({c for members in _GROUP_BOOK_MEMBERS.values() for c in members})
     if not (SUPABASE_URL and SUPABASE_KEY):
         return {"error": "price data unavailable"}
-    rows, off = [], 0
-    code_filter = "in.(" + ",".join(codes) + ")"
-    while True:
-        page = _cache_sb("/price_window", params=[
-            ("select", "code,trade_date,close,volume"), ("code", code_filter),
-            ("order", "code.asc,trade_date.asc"), ("offset", str(off)), ("limit", "1000")
-        ])[1] or []
-        rows.extend(page)
-        if len(page) < 1000:
-            break
-        off += 1000
-        if off >= 60000:
-            break
+    today = datetime.now(timezone(timedelta(hours=8))).date()
+    current_quarter = (today.year, (today.month - 1) // 3 + 1)
+    rows = price_rows
+    if rows is None:
+        rows = _load_groupbook_prices(codes)
+    if rows is None:
+        return {"error": "incomplete group price data"}
     by_code = {}
     for r in rows:
         c, d, px = str(r.get("code", "")), str(r.get("trade_date", "")), r.get("close")
@@ -556,6 +658,9 @@ def _fetch_groupbook(window=10):
             quarters.setdefault((y, (m - 1) // 3 + 1), []).append(i)
         evs = {}
         for q, idxs in quarters.items():
+            # Only completed calendar quarters belong in historical season-end statistics.
+            if q >= current_quarter:
+                continue
             end, start = idxs[-1], idxs[-1] - window
             if start < idxs[0] or not arr[start]["close"]:
                 continue
@@ -614,6 +719,21 @@ def _fetch_groupbook(window=10):
     earliest = min(r["date"] for arr in by_code.values() for r in arr)
     return {"date": latest, "from": earliest, "window": window, "benchmark": "集團股觀察池同期等權中位數", "groups": groups,
             "disclaimer": "本頁為季底行情統計觀察，不代表企業存在作價或操縱行為；歷史統計不保證未來績效。"}
+
+
+
+def _read_focus_snapshot(top_n=30):
+    status, rows = _cache_sb("/page_cache", params=_snapshot_params("focus"))
+    if status != 200 or not isinstance(rows, list) or not rows:
+        return {"error": "focus snapshot unavailable"}
+    data = rows[0].get("payload")
+    keys = ("gainers", "losers", "volume_surge")
+    if not isinstance(data, dict) or data.get("error") or not data.get("date") or not all(isinstance(data.get(k), list) for k in keys):
+        return {"error": "invalid focus snapshot"}
+    result = dict(data, updatedAt=rows[0].get("updated_at"), precomputed=True)
+    for key in keys:
+        result[key] = data[key][:max(1, min(top_n, 50))]
+    return result
 
 
 def _fetch_focus(top_n=30):
@@ -796,48 +916,71 @@ def _fetch_disposal():
 
 def _fetch_sectors():
     """產業地圖：以產業別彙整當日表現。
-      個股漲跌幅 = 今收/前收-1；產業平均漲跌幅 = 該產業成分股漲跌幅算術平均。
+      個股漲跌幅 = 今收/前收-1；產業漲跌幅 = 成分股『市值加權』(收盤×發行股數)。
     回每個產業：檔數、平均漲跌幅、上漲/下跌家數、漲最多/跌最多代表股。
     產業對照 _get_industry_map()（Vercel 用內嵌 _STOCK_INDUSTRY）。"""
+    shares = _get_shares_map()
+    if _INTRADAY.get("listed"):                      # 盤中：用 mis 即時快照
+        items = ((c, q.get("price"), q.get("prev"), q.get("vol") or 0)
+                 for c, q in _INTRADAY["listed"].items())
+        return _sectors_from(items, _INTRADAY.get("date") or "", shares)
     latest, by_code = _load_pw_window(3)
     if not by_code:
         return {"error": "no data"}
+
+    def _rows():
+        for c, arr in by_code.items():
+            if not arr or arr[0]["trade_date"] != latest or len(arr) < 2:
+                continue
+            yield c, arr[0].get("close"), arr[1].get("close"), (arr[0].get("volume") or 0)
+    return _sectors_from(_rows(), latest, shares)
+
+
+def _sectors_from(items, date_str, shares=None):
+    """產業彙整共用核心。items 產生 (code, close, prev, volume)。盤後/盤中同一套算法。
+    產業漲跌幅＝成分股漲跌幅以『市值加權』(收盤×發行股數，貼近官方類指數口徑，2026-10-16 用戶定案)；
+    無發行股數(整個產業市值=0，極少數)才退回算術平均。方塊大小仍用成交金額。"""
     ind = _get_industry_map() or {}
+    shares = shares or {}
     agg = {}
-    for c, arr in by_code.items():
-        if not arr or arr[0]["trade_date"] != latest or len(arr) < 2:
-            continue
-        a, b = arr[0].get("close"), arr[1].get("close")
+    for c, a, b, vol in items:
         if a is None or not b:
             continue
         chg = (a / b - 1) * 100
+        turnover = a * (vol or 0)                   # 成交金額(元)＝收盤×成交股數（方塊大小用）
+        mcap = a * (shares.get(c) or 0)             # 市值(元)＝收盤×發行股數（加權用）
         sec = ind.get(c) or "未分類"
-        d = agg.setdefault(sec, {"sector": sec, "count": 0, "sum": 0.0,
+        d = agg.setdefault(sec, {"sector": sec, "count": 0, "sum": 0.0, "msum": 0.0, "mtot": 0.0,
                                  "up": 0, "down": 0, "top": None, "bot": None, "stocks": []})
         d["count"] += 1
         d["sum"] += chg
+        d["msum"] += chg * mcap
+        d["mtot"] += mcap
         if chg > 0: d["up"] += 1
         elif chg < 0: d["down"] += 1
         name = _STOCK_NAMES.get(c, c)
         # 成分股明細（產業地圖點磚塊展開用）：[代號, 名稱, 收盤, 漲跌幅%, 成交值(億)] 2026-09-28
-        d["stocks"].append([c, name, a, round(chg, 2), round(a * (arr[0].get("volume") or 0) / 1e8, 2)])
+        d["stocks"].append([c, name, a, round(chg, 2), round(turnover / 1e8, 2)])
         if d["top"] is None or chg > d["top"]["chg"]:
             d["top"] = {"code": c, "name": name, "chg": round(chg, 2)}
         if d["bot"] is None or chg < d["bot"]["chg"]:
             d["bot"] = {"code": c, "name": name, "chg": round(chg, 2)}
     out = []
     for d in agg.values():
-        d["avg_chg"] = round(d["sum"] / d["count"], 2) if d["count"] else 0
-        del d["sum"]
+        # 市值加權；整個產業無發行股數資料(極少數)才退回算術平均
+        d["avg_chg"] = round(d["msum"] / d["mtot"], 2) if d["mtot"] > 0 else (round(d["sum"] / d["count"], 2) if d["count"] else 0)
+        del d["sum"], d["msum"], d["mtot"]
         d["stocks"].sort(key=lambda x: x[3], reverse=True)
         out.append(d)
     out.sort(key=lambda x: x["count"], reverse=True)
-    return {"date": latest, "sectors": out, "total": sum(x["count"] for x in out)}
+    return {"date": date_str, "sectors": out, "total": sum(x["count"] for x in out)}
 
 
 def fetch_all_stocks_latest():
     """Returns (stocks_dict, YYYYMMDD_str) for the most recent trading day.
-    來源順序：TWSE 主站 CSV → TWSE OpenAPI → Supabase price_window（雲端備援）。"""
+    來源順序：盤中注入(_INTRADAY) → TWSE 主站 CSV → TWSE OpenAPI → Supabase price_window。"""
+    if _INTRADAY.get("listed"):                      # 盤中：用 mis 即時快照
+        return _intraday_stocks(), (_INTRADAY.get("date") or "")
     # Primary: TWSE 主站全市場（2026 起回傳 CSV）
     txt = _get_text("https://www.twse.com.tw/exchangeReport/STOCK_DAY_ALL?response=csv")
     if txt and "," in txt:
@@ -865,6 +1008,15 @@ _THEMES_TTL = 300
 
 def _fetch_tpex_quotes():
     """上櫃每日收盤 → {code:{close,pct,value,name}}(只取 4 碼上櫃股票)。"""
+    if _INTRADAY.get("otc"):                          # 盤中：用 mis 即時快照
+        out = {}
+        for c, q in _INTRADAY["otc"].items():
+            px = q.get("price"); pv = q.get("prev"); vol = q.get("vol") or 0
+            if px is None:
+                continue
+            out[c] = {"close": px, "pct": ((px / pv - 1) * 100) if pv else 0,
+                      "value": px * vol, "name": q.get("name") or c}
+        return out
     import http.client
     url = "https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes"
     try:
@@ -1064,6 +1216,92 @@ def _fetch_theme(name):
     return {"date": mdate, "name": name,
             "listed": _theme_detail_one(codes, lmap, "listed"),
             "otc": _theme_detail_one(codes, otc, "otc")}
+
+
+def _fetch_theme_all():
+    """所有題材的詳情（一次抓全市場，供夜間 page_cache 預算；前端讀快取秒開，取代每點一題材就現抓全市場）。
+    回 {date, themes: {name: {listed, otc}}}，格式與 _fetch_theme 單一題材的 listed/otc 一致。"""
+    stocks, mdate = fetch_all_stocks_latest()
+    lmap = {}
+    for c, s in stocks.items():
+        cl = s.get("close"); pv = s.get("prev_close")
+        if cl is None:
+            continue
+        lmap[c] = {"close": cl, "pct": ((cl / pv - 1) * 100) if pv else 0,
+                   "value": s.get("value") or 0, "name": s.get("name") or c}
+    otc = _fetch_tpex_quotes()
+    themes = {}
+    for name, codes in THEME_MEMBERS.items():
+        listed = _theme_detail_one(codes, lmap, "listed")
+        o = _theme_detail_one(codes, otc, "otc")
+        if listed or o:
+            themes[name] = {"listed": listed, "otc": o}
+    return {"date": mdate, "themes": themes}
+
+
+# 官方產業類指數名 → 本站個股產業別(_STOCK_INDUSTRY 值)；複合指數取聯集。未列者以字尾/子字串 fallback 比對。
+SECTOR_INDEX_MAP = {
+    "水泥": ["水泥工業"], "食品": ["食品工業"], "塑膠": ["塑膠工業"], "紡織纖維": ["紡織纖維"],
+    "電機機械": ["電機機械"], "機電": ["電機機械"], "電器電纜": ["電器電纜"], "化學": ["化學工業"],
+    "生技醫療": ["生技醫療業"], "玻璃陶瓷": ["玻璃陶瓷"], "造紙": ["造紙工業"], "鋼鐵": ["鋼鐵工業"],
+    "橡膠": ["橡膠工業"], "汽車": ["汽車工業"], "半導體": ["半導體業"], "電腦及週邊設備": ["電腦及週邊設備業"],
+    "光電": ["光電業"], "通信網路": ["通信網路業"], "電子零組件": ["電子零組件業"], "電子通路": ["電子通路業"],
+    "資訊服務": ["資訊服務業"], "其他電子": ["其他電子業"], "建材營造": ["建材營造"], "航運": ["航運業"],
+    "觀光餐旅": ["觀光餐旅"], "觀光": ["觀光餐旅"], "金融保險": ["金融保險"], "金融": ["金融保險"],
+    "貿易百貨": ["貿易百貨"], "油電燃氣": ["油電燃氣業"], "居家生活": ["居家生活"], "運動休閒": ["運動休閒"],
+    "綠能環保": ["綠能環保"], "數位雲端": ["數位雲端"], "其他": ["其他"],
+    # 複合指數（取聯集）
+    "塑膠化工": ["塑膠工業", "化學工業"],
+    "化學生技醫療": ["化學工業", "生技醫療業"],
+    "水泥窯製": ["水泥工業", "玻璃陶瓷"],
+    "電子工業": ["半導體業", "電腦及週邊設備業", "光電業", "通信網路業", "電子零組件業",
+                "電子通路業", "資訊服務業", "其他電子業"],
+}
+
+
+def _industries_for_sector(name, all_inds):
+    """官方類指數名 → 對應的個股產業別清單。先查 SECTOR_INDEX_MAP，否則用字尾/子字串 fallback。"""
+    if name in SECTOR_INDEX_MAP:
+        return [i for i in SECTOR_INDEX_MAP[name] if i in all_inds]
+    hits = [i for i in all_inds if i == name or i.replace("工業", "").replace("業", "") == name or (name and name in i)]
+    return hits
+
+
+def _fetch_sector_all():
+    """所有官方產業類指數的成分股（複用 _fetch_sectors 已算好的細產業成分，依對照表聚合；複合取聯集）。
+    回 {date, sectors: {name: {listed}}}，格式比照題材抽屜。產業類指數為上市，otc 從缺。"""
+    sd = _fetch_sectors()
+    if not isinstance(sd, dict) or sd.get("error"):
+        return {"error": "no sector data"}
+    by_ind = {}
+    for d in sd.get("sectors", []):
+        by_ind[d.get("sector")] = [
+            {"code": s[0], "name": s[1], "change": s[3], "price": s[2], "tradeValue": int((s[4] or 0) * 1e8)}
+            for s in d.get("stocks", [])]
+    all_inds = set(by_ind.keys())
+    out = {}
+    for name in SECTOR_INDEX_MAP:
+        mem = []
+        for i in _industries_for_sector(name, all_inds):
+            mem += by_ind.get(i, [])
+        if not mem:
+            continue
+        seen, mm = set(), []
+        for x in sorted(mem, key=lambda z: -(z["tradeValue"] or 0)):
+            if x["code"] in seen:
+                continue
+            seen.add(x["code"]); mm.append(x)
+        tv = sum(x["tradeValue"] or 0 for x in mm)
+        chgs = [x["change"] for x in mm if x["change"] is not None]
+        detail = {"market": "listed", "memberCount": len(mm),
+                  "today": round(sum(chgs) / len(chgs), 2) if chgs else 0,
+                  "weightedToday": round(sum((x["change"] or 0) * (x["tradeValue"] or 0) for x in mm) / tv, 2) if tv else 0,
+                  "tradeValue": tv,
+                  "limitUps": sum(1 for x in mm if (x["change"] or 0) >= 9.5),
+                  "limitDowns": sum(1 for x in mm if (x["change"] or 0) <= -9.5),
+                  "members": mm}
+        out[name] = {"listed": detail, "otc": None}
+    return {"date": sd.get("date"), "sectors": out}
 
 
 _monthly_cache: dict = {}   # key: "{code}_{yyyymm}" -> (timestamp, rows)
@@ -1316,6 +1554,430 @@ def fetch_pw_one(code, date_str, s):
         "bars": [(r["trade_date"], r.get("open"), r.get("high"), r.get("low"), r["close"], r.get("volume") or 0)
                  for r in rows if r.get("close") is not None],      # 真名三式用
     }
+
+
+# ── 20 日 SMA 三階段買點（2026-10-12 依合夥人規格；參數為初版，待以歷史圖表對照肉眼判斷後調整）────────
+SMA20_N = 20            # 均線週期（簡單移動平均，含當日收盤）
+SMA20_VOL_MULT = 1.3    # 帶量：今日量 ≥ 1.3 × max(截至昨日 5 日均量, 截至昨日 10 日均量)
+SMA20_LONG_RED = 0.03   # 長紅棒：(收−開)/收 ≥ 3%
+SMA20_LONG_TAIL = 0.03  # 長下影線：(min(開,收)−低)/收 ≥ 3%
+SMA20_PREV_DOWN_N = 5   # 原本下彎：前 5 個交易日內至少一天 MA 低於前一天
+SMA20_TOUCH_TOL = 0.01   # 買2「碰到月線」：最低 ≤ 月線×(1+1%)（接近月線、差一點點沒碰到也算）2026-10-17 0.5%→1%（國巨 2026-04-24 最低離月線 1.0%）
+SMA20_BREAK_TOL = 0.01   # 買2「不破」：最低 ≥ 月線×(1−1%)（盤中只能破一點點，破太深不算回測不破）
+SMA20_DOJI_BODY = 0.005  # 買3 十字線放寬：實體 |收−開| ≤ 收盤 0.5%（原本要開＝收）
+SMA20_DOJI_RANGE = 0.02  # 十字線另需當日振幅 (高−低) ≥ 收盤 2%，排除幾乎不動的小 K
+SMA20_FROM_BELOW_N = 3   # 買1「從月線下突破」：前 3 根內至少一根收盤在當天月線下（剛從下面站上來；早已站上月線的不算）2026-10-17 用戶指定
+SMA20_AWAY = 0.03        # 買2 前股價需先「離開月線」：買1 之後至少一天收盤 ≥ 月線×(1+3%)，之後第一次回測不破才算（買1 隔天還貼著月線不算回測）2026-10-17
+SMA20_B2_NO_BLACK = 0.03  # 買2 當天不能是長黑：(開−收)/收 ≥ 3% 不算回測不破（大跌當天碰線不算止穩）
+SMA20_B3_MAX_DEPTH = 0.05  # 買3 收盤跌破月線不能太深：收盤 ≥ 月線×(1−5%)（暴跌後的止跌 K 不算）2026-10-17 用戶指定
+SMA20_RESET_N = 3       # 連續 N 天 MA 下彎才重置該輪（健康回測只壓 1~2 天 MA，不該殺掉整輪）2026-10-17
+
+
+def sma20_stage_scan(bars):
+    """bars＝[(date, o, h, l, c, v), ...] 由舊到新。回 [(index, stage), ...]（stage＝1/2/3，各輪各階段只記首次）。
+    重置：MA 連續 SMA20_RESET_N(=3) 天下彎才清除該輪（健康回測只壓 1~2 天 MA，不重置）。
+      買點1（尚未記錄 1）：均線原本下彎（前 5 日內至少一天 MA 低於前一天）且目前走平或上彎（MA[t]≥MA[t-1] 且 MA[t]≥MA[t-3]）、
+                         紅 K、收盤 > MA、帶量 1.3 倍。
+      買點2（已記 1）：回測不破——最低 ≤ MA（盤中碰到/跌破月線）、收盤 > MA（站回月線上）。不要求月線仍上彎。
+      買點3（已記 1、2）：收盤 < MA（跌破月線），且 長紅 3%／長下影 3%／十字線（開＝收）任一。成立後該輪完成。
+    同一天不跨階段。資料窗內還沒出現過重置日之前，無法確定該輪從哪開始 → 不產生訊號。"""
+    n = len(bars)
+    out = []
+    N = SMA20_N
+    if n < N + SMA20_PREV_DOWN_N + 2:
+        return out
+    closes = [b[4] for b in bars]
+    if any(x is None for x in closes):
+        return out
+    ma = [None] * n
+    run = 0.0
+    for i in range(n):
+        run += closes[i]
+        if i >= N:
+            run -= closes[i - N]
+        if i >= N - 1:
+            ma[i] = round(run / N, 6)
+    stage, known, down, away = 0, False, 0, False
+    b2_close, b2_gain = None, False                # 買2 當天收盤；買2 之後是否曾「賺過」（某天收盤 > 買2 收盤）
+    for i in range(N + SMA20_PREV_DOWN_N, n):      # 需要 MA[i-6]（判斷前 5 日每天是否低於其前一天）
+        m, m1, m3 = ma[i], ma[i - 1], ma[i - 3]
+        if m < m1:                                 # 累計連續下彎天數；見到下彎即「已知輪起點」
+            down += 1
+            known = True
+        else:
+            down = 0
+        if down >= SMA20_RESET_N:                  # 連續 N 天下彎＝趨勢壞 → 重置該輪（1~2 天回測不重置）
+            stage = 0
+            continue
+        if not known or stage >= 3:
+            continue
+        _, o, h, l, c, v = bars[i]
+        if o is None or h is None or l is None or not c:
+            continue
+        if stage == 0:
+            was_down = any(ma[d] < ma[d - 1] for d in range(i - SMA20_PREV_DOWN_N, i))
+            if not (was_down and m >= m1 and m >= m3 and c > o and c > m):
+                continue
+            if not any(closes[d] < ma[d] for d in range(i - SMA20_FROM_BELOW_N, i)):   # 前 3 根都已在月線上＝早就站上，不算突破
+                continue
+            vs = [bars[d][5] or 0 for d in range(i - 10, i)]
+            base = max(sum(vs[-5:]) / 5.0, sum(vs) / 10.0)
+            if base > 0 and (v or 0) >= SMA20_VOL_MULT * base:
+                stage, away = 1, False
+                out.append((i, 1))
+        elif stage == 1:
+            if not away:                           # 還沒離開月線 → 先等收盤離月線 3% 以上（當天不算回測）
+                if c >= m * (1 + SMA20_AWAY):
+                    away = True
+                continue
+            if (o - c) / c >= SMA20_B2_NO_BLACK:   # 當天長黑 → 不算回測不破
+                continue
+            if m * (1 - SMA20_BREAK_TOL) <= l <= m * (1 + SMA20_TOUCH_TOL) and c > m:   # 2026-10-17 回測月線不破：最低碰到月線（差 0.5% 內也算）、最多破 1%、收盤站回；原註解： 買2 回測不破：盤中碰月線、收盤站回（不再要求月線嚴格上彎）
+                stage, b2_close, b2_gain = 2, c, False
+                out.append((i, 2))
+        elif stage == 2:
+            doji = abs(c - o) / c <= SMA20_DOJI_BODY and (h - l) / c >= SMA20_DOJI_RANGE   # 2026-10-17 十字線放寬
+            if b2_gain and m * (1 - SMA20_B3_MAX_DEPTH) <= c < m and ((c - o) / c >= SMA20_LONG_RED or (min(o, c) - l) / c >= SMA20_LONG_TAIL or doji):   # 買3：收盤跌破月線＋止跌K(長紅/長下影/十字)；不再要求整根都在月線下
+                stage = 3
+                out.append((i, 3))
+            elif c > b2_close:                     # 2026-10-17 用戶指定：買2 之後從沒賺過（收盤都沒高於買2 收盤）就不標買3
+                b2_gain = True
+    return out
+
+
+# ── AI 判定買點（2026-10-17）────────────────────────────────────────────────
+# 開關全靠 Vercel 環境變數，程式不放任何金鑰：
+#   AI_PROVIDER        anthropic｜openai（不設＝有哪把金鑰就用哪家，兩把都有優先 anthropic）
+#   ANTHROPIC_API_KEY  / OPENAI_API_KEY   沒有金鑰 → 回假資料（stub），功能不壞
+#   AI_MODEL           不設＝anthropic 用 claude-haiku-5-5、openai 用 gpt-6.1-sol（Responses API）
+#   AI_EFFORT          OpenAI 推理強度（預設 low；模型不支援會自動拿掉）
+#   AI_DAILY_LIMIT     每日最多真的呼叫幾次 AI（預設 300；需 SUPABASE_SERVICE_KEY 才能計數）
+#   SUPABASE_SERVICE_KEY  有才寫共享快取（page_cache kind=aibuy_<代號>）與每日計數
+# 流程：驗代號 → 讀該股 price_window 日線 → 先查共享快取（同資料日＋同模型）→ 沒有才呼叫 AI
+#       → 寫回快取 → 回傳；任何錯誤都退回假資料並附原因，前端照常顯示。
+AIBUY_DISCLAIMER = "AI 依本站日線圖與葛蘭碧規則自動判讀（形態為 AI 看圖判斷，可能誤判），僅供研究參考，非投資建議；技術面不含基本面與消息面。"
+AIBUY_VER = 2            # 輸出格式版本；改了就讓舊的共享快取失效（v2：加入 AI 看圖的形態判定）2026-10-17
+AIBUY_CHART_N = 160      # 給 AI 看的 K 線根數（約 8 個月，圓形底／頭肩等中期形態看得到）
+AIBUY_PATTERNS = ["圓形底", "頭肩頂", "頭肩底", "M頭", "W底", "箱型", "上升趨勢線", "下降趨勢線", "上升軌道", "下降軌道"]
+
+
+def _aibuy_png(bars, n=AIBUY_CHART_N, W=1100, H=620):
+    """把最近 n 根日 K 畫成 PNG（紅漲綠跌 K 棒＋20 日均線＋成交量），給 AI 用「看圖」方式判讀形態。
+    Vercel 只能用標準庫，所以自己在 bytearray 上畫像素、用 zlib 編成 PNG。回 (png_bytes, 說明文字)。"""
+    import zlib, struct
+    closes_all = [b[4] for b in bars]
+    st = max(0, len(bars) - n)
+    seg = bars[st:]
+    k = len(seg)
+    ma = []
+    for i in range(st, len(bars)):
+        ma.append(sum(closes_all[i - 19:i + 1]) / 20 if i >= 19 else None)
+    buf = bytearray(b"\xff" * (W * H * 3))
+    WHITE, GRID, RED, GREEN, MAC = (255, 255, 255), (228, 232, 238), (220, 58, 50), (22, 150, 110), (255, 64, 129)
+
+    def rect(x0, y0, x1, y1, col):
+        x0, x1 = max(0, min(x0, x1)), min(W - 1, max(x0, x1))
+        y0, y1 = max(0, min(y0, y1)), min(H - 1, max(y0, y1))
+        row = bytes(col) * (x1 - x0 + 1)
+        for y in range(y0, y1 + 1):
+            o = (y * W + x0) * 3
+            buf[o:o + len(row)] = row
+
+    def line(x0, y0, x1, y1, col, th=1):
+        dx, dy = abs(x1 - x0), -abs(y1 - y0)
+        sx, sy = (1 if x0 < x1 else -1), (1 if y0 < y1 else -1)
+        err = dx + dy
+        while True:
+            rect(x0, y0, x0 + th - 1, y0 + th - 1, col)
+            if x0 == x1 and y0 == y1:
+                break
+            e2 = 2 * err
+            if e2 >= dy:
+                err += dy; x0 += sx
+            if e2 <= dx:
+                err += dx; y0 += sy
+    L, R, PT, PB, VT, VB = 16, W - 16, 16, 470, 492, H - 12
+    hi = max(max(b[2] for b in seg), max(m for m in ma if m is not None))
+    lo = min(min(b[3] for b in seg), min(m for m in ma if m is not None))
+    span = (hi - lo) or 1
+    py = lambda p: int(PT + (hi - p) / span * (PB - PT))
+    slot = (R - L) / k
+    px = lambda i: int(L + (i + 0.5) * slot)
+    bw = max(1, int(slot * 0.62))
+    for g in range(5):                                   # 水平格線（5 等分價格）
+        y = int(PT + g * (PB - PT) / 4)
+        rect(L, y, R, y, GRID)
+    for i in range(0, k, 20):                            # 垂直格線：每 20 根一條
+        x = int(L + i * slot)
+        rect(x, PT, x, VB, GRID)
+    rect(L, VT - 6, R, VT - 6, GRID)
+    vmax = max(b[5] or 0 for b in seg) or 1
+    for i, (d, o, h, l, c, v) in enumerate(seg):
+        col = RED if c >= o else GREEN
+        x = px(i)
+        rect(x, py(h), x, py(l), col)                    # 影線
+        rect(x - bw // 2, py(max(o, c)), x - bw // 2 + bw - 1, py(min(o, c)), col)   # 實體
+        vh = int((v or 0) / vmax * (VB - VT))
+        rect(x - bw // 2, VB - vh, x - bw // 2 + bw - 1, VB, col)                   # 成交量
+    prev = None
+    for i, m in enumerate(ma):                           # 20 日均線（2px）
+        if m is None:
+            prev = None; continue
+        pt = (px(i), py(m))
+        if prev:
+            line(prev[0], prev[1], pt[0], pt[1], MAC, 2)
+        prev = pt
+    raw = b"".join(b"\x00" + bytes(buf[y * W * 3:(y + 1) * W * 3]) for y in range(H))
+
+    def chunk(t, data):
+        return struct.pack(">I", len(data)) + t + data + struct.pack(">I", zlib.crc32(t + data) & 0xffffffff)
+    png = (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", W, H, 8, 2, 0, 0, 0))
+           + chunk(b"IDAT", zlib.compress(raw, 9)) + chunk(b"IEND", b""))
+    marks = "、".join(f"第 {i + 1} 根＝{seg[i][0]}" for i in range(0, k, 20))
+    desc = (f"附圖為最近 {k} 根日 K（由左到右，最左 {seg[0][0]}、最右 {seg[-1][0]}）。紅 K＝收漲、綠 K＝收跌；粉紅線＝20 日均線；"
+            f"下方柱狀＝成交量。淺灰直線每 20 根一條（{marks}）；淺灰橫線把價格 {lo:.2f}～{hi:.2f} 等分成 4 段（由上到下 "
+            + "、".join(f"{hi - g * span / 4:.2f}" for g in range(5)) + "）。")
+    return png, desc
+_AIBUY_SCHEMA = {
+    "type": "object", "additionalProperties": False,
+    "required": ["verdict", "score", "summary", "points", "patterns"],
+    "properties": {
+        "verdict": {"type": "string", "enum": ["偏多", "觀望", "偏空"]},
+        "score": {"type": "integer"},
+        "summary": {"type": "string"},
+        "points": {"type": "array", "items": {
+            "type": "object", "additionalProperties": False, "required": ["label", "text"],
+            "properties": {"label": {"type": "string"}, "text": {"type": "string"}}}},
+        "patterns": {"type": "array", "items": {
+            "type": "object", "additionalProperties": False, "required": ["name", "status", "confidence", "detail"],
+            "properties": {"name": {"type": "string", "enum": AIBUY_PATTERNS},
+                           "status": {"type": "string", "enum": ["形成中", "已確認"]},
+                           "confidence": {"type": "string", "enum": ["高", "中", "低"]},
+                           "detail": {"type": "string"}}}},
+    },
+}
+_AIBUY_SYSTEM = (
+    "你是台股技術面的判讀助手，讀者是盤後研究網站的會員。只能根據使用者提供的日線數據與已算好的指標判讀，"
+    "不得引用數據以外的新聞、基本面或你自己記得的股價；數據沒有的事就說沒有。用繁體中文、台灣用語。\n"
+    "輸出規則：verdict 只能是「偏多」「觀望」「偏空」三選一，代表目前技術面位置，不是買賣指令；"
+    "score 為 0～100 的整數，50 為中性，越高代表技術面越強；summary 為 2～3 句、80 字以內的白話結論；"
+    "points 固定 4 點，label 依序為「型態」「量能」「葛蘭碧」「風險」，每點 50 字以內，盡量引用具體數字（價位、均線、量比、日期）。"
+    "不要寫「建議買進／賣出」、目標價或保證性字眼。\n"
+    "形態判定（patterns）：請像有經驗的看盤者用眼睛看附圖，判斷圖中是否出現以下形態，只能從這 10 種擇用："
+    + "、".join(AIBUY_PATTERNS) + "。"
+    "只列出圖上明顯看得出來的形態，沒有就回空陣列，不要為了湊數硬套；同一段走勢可同時有多種（例如上升軌道中的箱型）。"
+    "status：「已確認」＝已突破或跌破關鍵價（頸線、箱緣、趨勢線），否則「形成中」；confidence 依形狀清楚程度給高／中／低。"
+    "detail 寫 60 字以內，說明大約發生在哪段日期、關鍵價位（頸線、箱頂箱底、趨勢線目前大約位置）與目前位置；價位以數據表為準，不要寫目標價。"
+    "points 的「型態」一點可綜合形態判定來寫。"
+)
+
+
+def _aibuy_stub(code, reason=""):
+    today = datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m-%d")
+    return {
+        "code": code, "date": today, "model": "placeholder", "stub": True, "stub_reason": reason,
+        "verdict": "觀望", "score": 55,
+        "summary": "（假資料示意）" + code + " 目前站在月線上方整理，量能未明顯放大，"
+                   "等待『帶量突破(買1)』或『回測不破(買2)』的進場點。接入 AI 後此段改為即時判讀。",
+        "points": [
+            {"label": "型態", "text": "站上月線、短均線走平，尚未出現帶量突破"},
+            {"label": "量能", "text": "成交量低於 20 日均量，追價意願不足"},
+            {"label": "葛蘭碧", "text": "最近一組為買2 回測不破，尚未見買3"},
+        ],
+        "patterns": [{"name": "W底", "status": "形成中", "confidence": "中", "detail": "（假資料示意）接上 AI 後，這裡會列出 AI 看圖判斷的形態與關鍵價位。"}],
+        "disclaimer": "AI 輔助判讀、非投資建議。目前為假資料" + ("（" + reason + "）" if reason else "") + "。",
+    }
+
+
+def _aibuy_provider():
+    prov = (os.environ.get("AI_PROVIDER") or "").strip().lower()
+    akey, okey = os.environ.get("ANTHROPIC_API_KEY", ""), os.environ.get("OPENAI_API_KEY", "")
+    if not prov:
+        prov = "anthropic" if akey else ("openai" if okey else "")
+    key = akey if prov == "anthropic" else (okey if prov == "openai" else "")
+    if not key:
+        return None, None, None
+    model = (os.environ.get("AI_MODEL") or "").strip() or ("claude-haiku-5-5" if prov == "anthropic" else "gpt-6.1-sol")
+    return prov, key, model
+
+
+def _sb_service(path, method="GET", body=None, params=None, prefer="return=minimal"):
+    """用 service key 寫 Supabase（只給 AI 共享快取／計數用）；沒設金鑰或失敗回 (0, None)。"""
+    skey = os.environ.get("SUPABASE_SERVICE_KEY", "")
+    if not (SUPABASE_URL and skey):
+        return 0, None
+    url = f"{SUPABASE_URL}/rest/v1{path}" + ("?" + urllib.parse.urlencode(params) if params else "")
+    req = urllib.request.Request(url, data=json.dumps(body).encode() if body is not None else None, method=method, headers={
+        "Content-Type": "application/json", "apikey": skey, "Authorization": f"Bearer {skey}", "Prefer": prefer})
+    try:
+        with urllib.request.urlopen(req, timeout=8) as r:
+            raw = r.read()
+            return r.status, (json.loads(raw) if raw else None)
+    except Exception:
+        return 0, None
+
+
+def _aibuy_bars(code):
+    st, rows = _cache_sb("/price_window", params=[
+        ("select", "trade_date,open,high,low,close,volume"), ("code", f"eq.{code}"),
+        ("order", "trade_date.asc"), ("limit", "1000")])
+    rows = rows if (st == 200 and isinstance(rows, list)) else []
+    return [(r["trade_date"], r.get("open"), r.get("high"), r.get("low"), r["close"], r.get("volume") or 0)
+            for r in rows if r.get("close") is not None and r.get("open") is not None]
+
+
+def _aibuy_facts(code, bars):
+    """把日線整理成精簡、可驗證的數據給 AI（指標由程式算好，不讓模型自己算）。"""
+    n = len(bars)
+    closes = [b[4] for b in bars]
+
+    def ma(k, i):
+        return sum(closes[i - k + 1:i + 1]) / k if i - k + 1 >= 0 else None
+    t = n - 1
+    d, o, h, l, c, v = bars[t]
+    vol5 = sum(b[5] for b in bars[t - 5:t]) / 5 if t >= 5 else None
+    vol20 = sum(b[5] for b in bars[t - 20:t]) / 20 if t >= 20 else None
+    f = lambda x, k=2: "—" if x is None else f"{x:.{k}f}"
+    pct = lambda a, b: "—" if not a or not b else f"{(a / b - 1) * 100:+.2f}%"
+    m20, m20_3 = ma(20, t), ma(20, t - 3)
+    lines = [
+        f"股票：{code} {_STOCK_NAMES.get(code, '')}　資料日：{d}（共 {n} 根日線）",
+        f"最新一根：開 {o} 高 {h} 低 {l} 收 {c}，成交 {round(v / 1000)} 張",
+        f"均線（簡單平均）：MA5 {f(ma(5, t))}｜MA10 {f(ma(10, t))}｜MA20 {f(m20)}｜MA60 {f(ma(60, t))}｜MA120 {f(ma(120, t))}",
+        f"MA20 斜率：今日 vs 3 日前 {f(m20)} vs {f(m20_3)}（{'上彎' if m20 and m20_3 and m20 > m20_3 else '走平或下彎'}）",
+        f"量比：今日量 ÷ 前 5 日均量 = {f(v / vol5 if vol5 else None)}；÷ 前 20 日均量 = {f(v / vol20 if vol20 else None)}",
+        f"漲跌：近 5 日 {pct(c, closes[t - 5] if t >= 5 else None)}、近 20 日 {pct(c, closes[t - 20] if t >= 20 else None)}、近 60 日 {pct(c, closes[t - 60] if t >= 60 else None)}",
+        f"區間：近 20 日高 {max(b[2] for b in bars[-20:])} 低 {min(b[3] for b in bars[-20:])}；近 60 日高 {max(b[2] for b in bars[-60:])} 低 {min(b[3] for b in bars[-60:])}",
+    ]
+    sig = sma20_stage_scan(bars)
+    if sig:
+        last = sig[-1]
+        lines.append("葛蘭碧買點（本站規則：買1 均線翻揚帶量站上、買2 回測月線不破、買3 跌破月線出現止跌K；月線連續 3 天下彎才重置）最近紀錄："
+                     + "、".join(f"{bars[i][0]} 買{st}" for i, st in sig[-6:])
+                     + f"；距最近一次（買{last[1]}）{t - last[0]} 個交易日。")
+    else:
+        lines.append("葛蘭碧買點：資料期間內沒有出現。")
+    lines.append("近 40 根日線（日期,開,高,低,收,量(張),MA20）：")
+    for i in range(max(0, n - 40), n):
+        b = bars[i]
+        lines.append(f"{b[0]},{b[1]},{b[2]},{b[3]},{b[4]},{round((b[5] or 0) / 1000)},{f(ma(20, i))}")
+    return "\n".join(lines), (sig[-1] if sig else None)
+
+
+def _aibuy_call(prov, key, model, facts, png=None):
+    """呼叫 AI，回 (dict, usage)。png＝K 線圖（給 AI 看圖判形態）。只接受符合格式的 JSON，其餘一律丟例外交給上層退回假資料。"""
+    import base64
+    b64 = base64.b64encode(png).decode() if png else None
+    if prov == "anthropic":
+        body = {"model": model, "max_tokens": 4000, "system": _AIBUY_SYSTEM,
+                "messages": [{"role": "user", "content": ([{"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": b64}}] if b64 else [])
+                              + [{"type": "text", "text": facts}]}],
+                "output_config": {"effort": "low", "format": {"type": "json_schema", "schema": _AIBUY_SCHEMA}}}
+        req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=json.dumps(body).encode(), method="POST",
+                                     headers={"content-type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01"})
+        with urllib.request.urlopen(req, timeout=40) as r:
+            resp = json.loads(r.read())
+        if resp.get("stop_reason") == "refusal":
+            raise ValueError("模型拒答")
+        text = "".join(b.get("text", "") for b in resp.get("content", []) if b.get("type") == "text")
+        u = resp.get("usage") or {}
+        usage = {"input": u.get("input_tokens"), "output": u.get("output_tokens")}
+    else:
+        # OpenAI：GPT-6 系列走 Responses API（/v1/responses）；看圖用 input_image、固定格式用 json_schema（strict）2026-10-17
+        body = {"model": model, "instructions": _AIBUY_SYSTEM,
+                "input": [{"role": "user", "content": ([{"type": "input_image", "image_url": "data:image/png;base64," + b64}] if b64 else [])
+                           + [{"type": "input_text", "text": facts}]}],
+                "text": {"format": {"type": "json_schema", "name": "aibuy", "schema": _AIBUY_SCHEMA, "strict": True}},
+                "reasoning": {"effort": (os.environ.get("AI_EFFORT") or "low").strip()}}
+
+        def _post(b):
+            rq = urllib.request.Request("https://api.openai.com/v1/responses", data=json.dumps(b).encode(), method="POST",
+                                        headers={"content-type": "application/json", "authorization": f"Bearer {key}"})
+            with urllib.request.urlopen(rq, timeout=40) as r:
+                return json.loads(r.read())
+        try:
+            resp = _post(body)
+        except urllib.error.HTTPError as e:                 # 非推理型模型不吃 reasoning 參數 → 拿掉重送一次
+            if e.code != 400:
+                raise
+            body.pop("reasoning", None)
+            resp = _post(body)
+        parts = []
+        for it in resp.get("output") or []:
+            if it.get("type") != "message":
+                continue
+            for c in it.get("content") or []:
+                if c.get("type") == "refusal":
+                    raise ValueError("模型拒答")
+                if c.get("type") == "output_text":
+                    parts.append(c.get("text", ""))
+        text = "".join(parts) or resp.get("output_text", "")
+        u = resp.get("usage") or {}
+        usage = {"input": u.get("input_tokens"), "output": u.get("output_tokens")}
+    out = json.loads(text)
+    if out.get("verdict") not in ("偏多", "觀望", "偏空") or not isinstance(out.get("points"), list) or not out.get("summary"):
+        raise ValueError("AI 回傳格式不符")
+    out["score"] = max(0, min(100, int(out.get("score") or 50)))
+    out["points"] = [{"label": str(x.get("label", ""))[:12], "text": str(x.get("text", ""))[:200]}
+                     for x in out["points"] if isinstance(x, dict)][:6]
+    out["summary"] = str(out["summary"])[:400]
+    pats = []
+    for x in (out.get("patterns") or []):
+        if isinstance(x, dict) and x.get("name") in AIBUY_PATTERNS:
+            pats.append({"name": x["name"], "status": x.get("status") if x.get("status") in ("形成中", "已確認") else "形成中",
+                         "confidence": x.get("confidence") if x.get("confidence") in ("高", "中", "低") else "低",
+                         "detail": str(x.get("detail", ""))[:160]})
+    out["patterns"] = pats[:6]
+    return out, usage
+
+
+def _aibuy(code):
+    """回 (payload, cache_control)。"""
+    prov, key, model = _aibuy_provider()
+    if not prov:
+        return _aibuy_stub(code, "尚未設定 AI 金鑰"), "public, s-maxage=300, max-age=60"
+    bars = _aibuy_bars(code)
+    if len(bars) < 80:
+        return _aibuy_stub(code, "日線資料不足"), "public, s-maxage=600, max-age=60"
+    data_date = bars[-1][0]
+    kind = f"aibuy_{code}"
+    st, rows = _cache_sb("/page_cache", params=[("kind", f"eq.{kind}"), ("select", "payload"), ("limit", "1")])
+    if st == 200 and rows:
+        pl = rows[0].get("payload") or {}
+        if pl.get("date") == data_date and pl.get("model") == model and pl.get("v") == AIBUY_VER and not pl.get("stub"):
+            return dict(pl, cached=True), "public, s-maxage=3600, max-age=600"
+    # 每日上限（有 service key 才計數；沒有就只靠 CDN 與共享快取擋重複呼叫）
+    today = datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m-%d")
+    limit = int(os.environ.get("AI_DAILY_LIMIT") or 300)
+    cst, crow = _cache_sb("/page_cache", params=[("kind", "eq.aibuy__count"), ("select", "payload"), ("limit", "1")])
+    cnt = (crow[0].get("payload") or {}) if (cst == 200 and crow) else {}
+    used = int(cnt.get("n") or 0) if cnt.get("date") == today else 0
+    if used >= limit:
+        return _aibuy_stub(code, f"今日 AI 判讀已達上限 {limit} 次"), "public, s-maxage=600, max-age=60"
+    facts, last_sig = _aibuy_facts(code, bars)
+    png, chart_desc = _aibuy_png(bars)
+    try:
+        out, usage = _aibuy_call(prov, key, model, chart_desc + "\n\n" + facts, png)
+    except Exception as e:                                  # noqa: BLE001
+        return _aibuy_stub(code, "AI 暫時無法回應：" + type(e).__name__), "public, s-maxage=120, max-age=30"
+    payload = dict(out, v=AIBUY_VER, code=code, date=data_date, model=model, provider=prov, stub=False, usage=usage,
+                   disclaimer=AIBUY_DISCLAIMER,
+                   generated_at=datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m-%d %H:%M"),
+                   last_signal=({"date": bars[last_sig[0]][0], "stage": last_sig[1]} if last_sig else None))
+    up = "resolution=merge-duplicates,return=minimal"
+    _sb_service("/page_cache", "POST", body=[{"kind": kind, "trade_date": data_date, "payload": payload,
+                                              "updated_at": datetime.now(timezone.utc).isoformat()}],
+                params=[("on_conflict", "kind")], prefer=up)
+    _sb_service("/page_cache", "POST", body=[{"kind": "aibuy__count", "trade_date": today, "payload": {"date": today, "n": used + 1},
+                                              "updated_at": datetime.now(timezone.utc).isoformat()}],
+                params=[("on_conflict", "kind")], prefer=up)
+    return payload, "public, s-maxage=3600, max-age=600"
+
+
+def sma20_stage_at(bars):
+    """最後一根 K 棒當天觸發的階段（1/2/3），沒有回 0。"""
+    sig = sma20_stage_scan(bars)
+    return sig[-1][1] if sig and sig[-1][0] == len(bars) - 1 else 0
 
 
 # ── 真名三式（2026-09-29 依合夥人《真名三式交易戰法核心定義與實戰指南》，參數經用戶定案）────────
@@ -1604,6 +2266,12 @@ def calc_limit_up(prev_close):
     tick = get_tick_size(raw)
     return round(math.floor(raw / tick) * tick, 10)
 
+def calc_limit_down(prev_close):
+    # 跌停價＝前收×0.9，依升降單位無條件進位（跌幅不得超過 10%）
+    raw = prev_close * 0.9
+    tick = get_tick_size(raw)
+    return round(math.ceil(round(raw / tick, 8)) * tick, 10)
+
 def _ma(closes, n):
     return sum(closes[-n:]) / n if len(closes) >= n else None
 
@@ -1731,6 +2399,7 @@ def screen(params):
     vol_mult         = float(params.get("volume_multiplier") or 0)
     shrink_mult      = float(params.get("shrink_multiplier") or 0)
     check_limit_up   = bool(params.get("limit_up", False))
+    check_limit_down = bool(params.get("limit_down", False))
     check_doji       = bool(params.get("doji", False))
     doji_range_min   = float(params.get("doji_range_min") or 1.0)  # 十字線最小振幅 %
     check_hanging    = bool(params.get("hanging_man", False))  # 吊人線：收=開=高、低<收
@@ -1756,6 +2425,10 @@ def screen(params):
     check_zhenming1  = bool(params.get("zhenming1", False))
     check_zhenming2  = bool(params.get("zhenming2", False))
     check_zhenming3  = bool(params.get("zhenming3", False))
+    try:
+        sma20_stages = {int(x) for x in (params.get("sma20_stages") or []) if int(x) in (1, 2, 3)}
+    except (TypeError, ValueError):
+        sma20_stages = set()
     no_black_months  = min(int(params.get("no_black_months") or 0), 120)
     no_black_years   = no_black_months / 12  # 轉換為年（可為小數）傳給 YF API
     no_black_mult    = float(params.get("no_black_mult") or 0)
@@ -1821,6 +2494,12 @@ def screen(params):
             pc = s.get("prev_close")
             if not pc or pc <= 0: continue
             if c < calc_limit_up(pc) * 0.999: continue
+
+        # 跌停板
+        if check_limit_down:
+            pc = s.get("prev_close")
+            if not pc or pc <= 0: continue
+            if c > calc_limit_down(pc) * 1.001: continue
 
         # 十字線：開盤 = 收盤（零誤差），且當日振幅 ≥ doji_range_min%（排除一字線/冷門股）
         if check_doji:
@@ -1889,7 +2568,7 @@ def screen(params):
 
     # ── price_window 逐股讀（真名/MACD/放量;涵蓋歷史日 → 修正「回搜近期日期漏股」如 3443/8-11）──
     need_pw = (vol_mult > 0 or shrink_mult > 0 or bool(macd_mode)
-               or check_zhenming1 or check_zhenming2 or check_zhenming3
+               or check_zhenming1 or check_zhenming2 or check_zhenming3 or bool(sma20_stages)
                or check_harami_bull or check_harami_bear)   # 母子線需 MA20 判趨勢 → 抓歷史
     pw_data = {}
     if need_pw:
@@ -2166,6 +2845,13 @@ def screen(params):
             if not zm3:
                 continue
 
+        sma20_hit = 0
+        if sma20_stages:
+            bars = (pw_data.get(code) or {}).get("bars") or []
+            sma20_hit = sma20_stage_at(bars) if bars else 0
+            if sma20_hit not in sma20_stages:
+                continue
+
         pc = s.get("prev_close")
         change_pct = round((c - pc) / pc * 100, 2) if pc and pc > 0 else None
 
@@ -2186,6 +2872,8 @@ def screen(params):
             item.setdefault("data_missing", []).append("gap_unverified")
         if zm3:
             item["zm3"] = zm3
+        if sma20_hit:
+            item["sma20_stage"] = sma20_hit
 
         results.append(item)
 
@@ -2269,6 +2957,114 @@ class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         # 領取非同步篩選結果：?job_id=xxx → 有結果回結果，沒好回 {pending:true}
         qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+        if (qs.get("stat") or [""])[0] == "foreign_settlement_cost":
+            import re
+            import html as html_lib
+            day = (qs.get("date") or [""])[0]
+            try:
+                parsed = datetime.strptime(day, "%Y-%m-%d").date()
+                if parsed > datetime.now(timezone(timedelta(hours=8))).date():
+                    raise ValueError("Future date")
+            except ValueError:
+                return self._send_json(400, {"error": "Invalid historical date"})
+            url = "https://www.taifex.com.tw/cht/3/futContractsDate?" + urllib.parse.urlencode({"queryType": "1", "doQuery": "1", "queryDate": day.replace("-", "/")})
+            try:
+                req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+                raw = urllib.request.urlopen(req, timeout=15).read().decode("utf-8")
+                def plain(x):
+                    return re.sub(r"\s+", " ", html_lib.unescape(re.sub(r"<[^>]+>", " ", x))).strip()
+                dates = re.findall(r"日期\s*[:：]?\s*(\d{4}/\d{2}/\d{2})", plain(raw))
+                if day.replace("-", "/") not in dates:
+                    raise ValueError("Source observation date mismatch")
+                rows = [[plain(c) for c in re.findall(r"<t[dh][^>]*>([\s\S]*?)</t[dh]>", tr, re.I)] for tr in re.findall(r"<tr[^>]*>([\s\S]*?)</tr>", raw, re.I)]
+                product = ""
+                found = None
+                for cells in rows:
+                    if cells and re.fullmatch(r"\d+", cells[0]) and len(cells) > 1:
+                        product = cells[1]
+                    if product not in ("臺股期貨", "台股期貨"):
+                        continue
+                    ix = next((i for i, x in enumerate(cells) if "外資" in x), None)
+                    if ix is None:
+                        continue
+                    vals = [float(x.replace(",", "")) for x in cells[ix+1:] if re.fullmatch(r"-?[\d,]+(?:\.\d+)?", x)]
+                    if len(vals) < 12:
+                        continue
+                    found = {}
+                    for key, a, b in [("long", 6, 7), ("short", 8, 9), ("net", 10, 11)]:
+                        lots, amount = vals[a], vals[b]
+                        point = amount * 1000 / 200 / lots if lots != 0 else None
+                        found[key] = {"lots": lots, "amount_thousand": amount, "point": point if point is not None and point > 0 and math.isfinite(point) else None}
+                    break
+                if found is None:
+                    raise ValueError("No paired foreign TX fields")
+                return self._send_json(200, {"date": day, "product": "TX", "basis": found, "unit": "TWD thousand", "source_url": url, "scope": "All listed TX delivery months; settlement-value proxy, not entry cost"}, cache="public, s-maxage=1800, max-age=300")
+            except Exception:
+                return self._send_json(502, {"error": "Exact-date TAIFEX data unavailable", "date": day})
+        if (qs.get("stat") or [""])[0] == "macro_environment":
+            from datetime import datetime, timezone, timedelta
+            start = (datetime.now(timezone.utc) - timedelta(days=850)).date().isoformat()
+            today = datetime.now(timezone.utc).date().isoformat()
+            def load_series(series):
+                url = "https://fred.stlouisfed.org/graph/" + "fredgraph.csv?" + urllib.parse.urlencode({"id": series, "cosd": start, "coed": today})
+                try:
+                    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+                    raw = urllib.request.urlopen(req, timeout=8).read().decode("utf-8-sig")
+                    observations = []
+                    for row in csv.DictReader(io.StringIO(raw)):
+                        day = row.get("observation_date") or row.get("DATE") or ""
+                        try:
+                            value = float(row.get(series, ""))
+                            if day and day <= today and math.isfinite(value):
+                                observations.append({"date": day, "value": value})
+                        except (TypeError, ValueError):
+                            pass
+                    return series, sorted(observations, key=lambda r: r["date"])
+                except Exception:
+                    return series, []
+            with ThreadPoolExecutor(max_workers=3) as pool:
+                data = dict(pool.map(load_series, ["CPIAUCSL", "UNRATE", "DTWEXBGS"]))
+            return self._send_json(200, {"series": data, "source": "FRED / BLS / Federal Reserve", "scope": "US macro and broad dollar; not complete global coverage"}, cache="public, s-maxage=1800, max-age=300")
+        if (qs.get("stat") or [""])[0] == "treasury":
+            try:
+                from datetime import datetime, timezone
+                import xml.etree.ElementTree as ET
+                now = datetime.now(timezone.utc)
+                url = "https://home.treasury.gov/sites/default/files/interest-rates/yield.xml"
+                req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+                root = ET.fromstring(urllib.request.urlopen(req, timeout=15).read())
+                rows = []
+                fields = {"BC_3MONTH": "3m", "BC_6MONTH": "6m", "BC_1YEAR": "1y", "BC_2YEAR": "2y", "BC_10YEAR": "10y", "BC_20YEAR": "20y", "BC_30YEAR": "30y"}
+                for entry in root.iter():
+                    if entry.tag.rsplit("}", 1)[-1] not in ("properties", "G_NEW_DATE"):
+                        continue
+                    values = {e.tag.rsplit("}", 1)[-1]: e.text for e in entry.iter()}
+                    raw_date = values.get("NEW_DATE") or ""
+                    try:
+                        date = datetime.strptime(raw_date[:10], "%m-%d-%Y").date().isoformat() if "T" not in raw_date else raw_date[:10]
+                    except ValueError:
+                        continue
+                    if not date or date > now.date().isoformat():
+                        continue
+                    rates = {}
+                    for field, key in fields.items():
+                        try:
+                            value = float(values.get(field))
+                            if 0 <= value <= 100:
+                                rates[key] = value
+                        except (TypeError, ValueError):
+                            pass
+                    if "10y" in rates:
+                        rows.append({"date": date, "rates": rates})
+                if not rows:
+                    raise ValueError("No valid Treasury observations")
+                rows = sorted({r["date"]: r for r in rows}.values(), key=lambda r: r["date"])
+                result = dict(rows[-1])
+                result["history"] = rows[-260:]
+                result["source"] = "U.S. Department of the Treasury"
+                return self._send_json(200, result, cache="public, s-maxage=1800, max-age=300")
+            except Exception:
+                return self._send_json(502, {"error": "Treasury data unavailable"})
         job_id = (qs.get("job_id") or [""])[0].strip()
         if job_id:
             cached = _cache_get(job_id)
@@ -2313,7 +3109,7 @@ class handler(BaseHTTPRequestHandler):
             except Exception:
                 n = 30
             try:
-                return self._send_json(200, _fetch_focus(max(1, min(n, 50))))
+                return self._send_json(200, _read_focus_snapshot(n), cache="public, s-maxage=300, max-age=60")
             except Exception as e:
                 import traceback
                 return self._send_json(200, {"error": str(e), "traceback": traceback.format_exc()})
@@ -2327,22 +3123,31 @@ class handler(BaseHTTPRequestHandler):
         # 產業地圖：各產業當日彙整
         if (qs.get("stat") or [""])[0] == "sectors":
             try:
-                return self._send_json(200, _fetch_sectors())
+                _d = _fetch_sectors()
+                # 2026-10-12 每日更新一次的彙整：讓 CDN 快取 5 分鐘、過期先回舊的再背景更新（有錯不快取）
+                _ok = isinstance(_d, dict) and not _d.get("error")
+                return self._send_json(200, _d, cache="public, max-age=60, s-maxage=300, stale-while-revalidate=86400" if _ok else None)
             except Exception as e:
                 import traceback
                 return self._send_json(200, {"error": str(e), "traceback": traceback.format_exc()})
         # 題材族群熱力圖(固定分類,照合夥人):上市/上櫃各族群 成交額/漲跌/成分
         if (qs.get("stat") or [""])[0] == "themes":
             try:
-                return self._send_json(200, _fetch_themes())
+                _d = _fetch_themes()
+                # 2026-10-12 每日更新一次的彙整：讓 CDN 快取 5 分鐘、過期先回舊的再背景更新（有錯不快取）
+                _ok = isinstance(_d, dict) and not _d.get("error")
+                return self._send_json(200, _d, cache="public, max-age=60, s-maxage=300, stale-while-revalidate=86400" if _ok else None)
             except Exception as e:
                 import traceback
                 return self._send_json(200, {"error": str(e), "traceback": traceback.format_exc()})
+        if (qs.get("stat") or [""])[0] == "groupresearch":
+            quarter = (qs.get("quarter") or [""])[0]
+            return self._send_json(200, _read_groupbook_research(quarter), cache="public, s-maxage=300, max-age=60")
         # 集團季底行情：公開關係企業觀察池的 N 日統計、勝率與風險調整排名
         if (qs.get("stat") or [""])[0] == "groupbook":
             try:
                 window = int((qs.get("window") or ["10"])[0])
-                return self._send_json(200, _fetch_groupbook(window), cache="public, s-maxage=3600, max-age=300")
+                return self._send_json(200, _read_groupbook_snapshot(window), cache="public, s-maxage=300, max-age=60")
             except Exception as e:
                 import traceback
                 return self._send_json(200, {"error": str(e), "traceback": traceback.format_exc()})
@@ -2422,6 +3227,43 @@ class handler(BaseHTTPRequestHandler):
             except Exception as e:
                 import traceback
                 return self._send_json(200, {"error": str(e), "traceback": traceback.format_exc()})
+        # 所有題材詳情一次算（供夜間 page_cache 預算／前端快取，取代每點一題材就現抓全市場）
+        if (qs.get("stat") or [""])[0] == "themeall":
+            try:
+                return self._send_json(200, _fetch_theme_all(), cache="public, s-maxage=600, max-age=300")
+            except Exception as e:
+                import traceback
+                return self._send_json(200, {"error": str(e), "traceback": traceback.format_exc()})
+        # 所有官方產業類指數的成分股（複用產業地圖已算好的細產業成分，依對照表聚合）
+        if (qs.get("stat") or [""])[0] == "sectorall":
+            try:
+                return self._send_json(200, _fetch_sector_all(), cache="public, s-maxage=600, max-age=300")
+            except Exception as e:
+                import traceback
+                return self._send_json(200, {"error": str(e), "traceback": traceback.format_exc()})
+        # AI 判定買點：有 AI 金鑰（Vercel 環境變數）就走真的，沒有就回假資料；實作見 _aibuy()
+        if (qs.get("stat") or [""])[0] == "aibuy":
+            import re as _re
+            code = (qs.get("code") or [""])[0].strip().upper()[:8]
+            if not _re.fullmatch(r"[0-9A-Z]{4,6}", code):
+                return self._send_json(200, {"error": "代號格式不正確"})
+            if (qs.get("img") or [""])[0] == "1":       # 看 AI 實際看到的 K 線圖（除錯／核對用）
+                bars = _aibuy_bars(code)
+                if len(bars) < 80:
+                    return self._send_json(200, {"error": "日線資料不足"})
+                png, _ = _aibuy_png(bars)
+                self.send_response(200)
+                self.send_header("Content-Type", "image/png")
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.send_header("Cache-Control", "public, s-maxage=3600, max-age=600")
+                self.end_headers()
+                self.wfile.write(png)
+                return
+            try:
+                payload, cc = _aibuy(code)
+            except Exception as e:                      # noqa: BLE001
+                payload, cc = _aibuy_stub(code, "伺服器錯誤：" + type(e).__name__), "public, s-maxage=60, max-age=30"
+            return self._send_json(200, payload, cache=cc)
         self._send_json(200, {"status": "ok"})
 
     def do_POST(self):
@@ -2438,3 +3280,4 @@ class handler(BaseHTTPRequestHandler):
             self._send_json(200, result)
         except Exception as e:
             self._send_json(500, {"error": str(e), "traceback": traceback.format_exc(), "results": []})
+

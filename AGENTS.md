@@ -1,5 +1,11 @@
 # AGENTS.md — 本 repo 的 AI agent 分工規範
 
+> **JUSTY 網站發布與本機連動（2026-10-18，使用者持續要求）**：JUSTY 的網站改動完成並通過檢查後，預設一併同步 UAT、遠端 `justy-layout` 和本機登記為 `justy-layout` 的工作區；不能只 push 後宣稱本機已更新。「2、3」即指這整個發布流程。從乾淨的 JUSTY 網站／shared 功能分支執行 `python scripts/collab.py publish-justy`，依 [協作說明](docs/collaboration/README.md) 驗證遠端及本機相同版本。本機有未提交修改、未發布提交、分支變動或衝突時停止並說明，禁止 stash/reset/覆蓋。此持續要求不適用 App、hot_topics 排程、prod 或其他人的工作區；使用者後續要求只討論／不發布時以後續指示為準。
+
+> **2026-10-18 使用者最新分工**：JUSTY 已取消本對話的手機 App 開發，交由合夥人接手。本網站工作區後續專注網站修正，不繼續建立／建置／發布 JUSTY 的 App。保留合夥人已有的 `apps/mobile`、共用規格與分支；取消個人任務不等於回退共同專案或刪除合夥人成果。原根目錄 `index.html` 僅作本機相容轉接，網站唯一原始碼仍在 `apps/web/index.html`。
+
+> **2026-10-18 人工指定的網站／App 協作設定**：先讀 [docs/collaboration/README.md](docs/collaboration/README.md)。使用者已要求在同一專案建立 App 協作骨架；App 位於 `apps/mobile`，使用獨立工作分支／worktree。此規則適用人工指定開發，**不擴張 hot_topics 自動排程的權限**。保留既有網站分支；整合前先合併最新 uat，禁止 force、整份覆蓋、清空未完成工作或動另一人的工作區。新工具見 `scripts/collab.py`；不自行推 prod、變更 Auth／資料庫或啟用付費服務。
+
 > **先判斷你在做哪一種任務：**
 > - 若你正在執行「**話題族群 hot_topics 排程**」（網搜新聞 → 產 `scripts/hot_topics.json`）→ 適用下方「Codex 的唯一任務」，**禁止任何 Git 操作**。
 > - 若你是在**合夥人的電腦**、由合夥人本人要求**修改版面／開自己的分支** → 下方 Git 禁令**不適用**，改依本檔最後的「**合夥人協作規範**」：可以從 uat 開自己的分支、commit、push 自己的分支，**也可以把自己的分支合併並推送到 `uat`**（但仍不可碰 `prod`／`Andrew`）。
@@ -52,8 +58,8 @@
 - 推送到**自己的分支**：`git push origin <合夥人名字>-layout`，並告知使用者分支名稱。
 - **（2026-10-08 更新：開放合併／推送到 `uat`）** 可以把自己的分支合併並推送到 `uat`：
   **務必先對齊最新 uat**，否則會覆蓋別人剛推的 commit 或被遠端拒絕。步驟：
-  `git fetch origin` → `git checkout uat && git reset --hard origin/uat` → `git merge <合夥人名字>-layout`
-  →（有衝突就解；index.html 多半只在同區塊）→ `git push origin uat`。推完告知使用者。
+  在自己的乾淨功能分支執行 `python scripts/collab.py integrate --publish-uat`：先 fetch、merge 最新 origin/uat、檢查，再以非 force 的 atomic push 更新自己的分支與 uat。
+  有衝突就保留雙方內容逐段處理，不切換或 reset 另一人的工作區。推完告知使用者。
 
 ### ⛔ 仍然禁止
 - **不可推送或合併到 `prod`、`Andrew`**，也不可 force push 任何分支。prod 部署一律由使用者（Claude Code）處理。
@@ -61,3 +67,10 @@
 - 不可修改 `.env.local`、排程（`.bat`／Task Scheduler）、Supabase 資料或 schema。
 - 不可動遠端 `Duke` 分支（來源不明，非合夥人分支）。
 - 改版面前先跟使用者說會動哪幾頁，避免與 Claude Code 同時改同一區塊造成衝突。
+
+## API 數量規範（2026-10-16 使用者指示）
+
+- 新增 API 前依 `vercel.json` 盤點部署 Function 入口，最多 **12 支**；超過必須先合併，不能先部署第 13 支。
+- 修改 API／部署設定後、提交與部署前執行 `python scripts/check_api_budget.py`。未知 runtime／部署模式不得略過，先更新盤點程式。
+- 合併時維持原網址相容、參數驗證、授權與快取邊界，優先合併同類公開入口，不混淆私人會員權限。
+- 站內搜尋已合併至 `api/prices.py`；抽離步驟見 `docs/api-budget.md`。升級方案不自動解除使用者上限。

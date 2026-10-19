@@ -1,5 +1,7 @@
 # AI Stock Screener — Claude 工作規則
 
+> **網站／App 接手入口（2026-10-18）**：[docs/collaboration/README.md](docs/collaboration/README.md)。先確認目前工作目錄與分支。原網站可保留 Andrew 工作流程；新 App 放 `apps/mobile`，在自己的 `app/<owner>/<task>` 分支與 worktree 開發。App 分支不要套用下方 Andrew 的自動部署指令，也不要切換原網站工作區。共用 API／規則另開 shared 分支並附相容性紀錄。uat 整合先取得並 merge 最新遠端；不 force、不整份覆蓋、不清空未提交工作。此協作設定不授權修改共享資料庫、登入設定、排程、付費服務或 prod。
+
 ## 部署流程（每次修改完畢後強制執行）
 
 每當完成一次程式修改並 commit 到 Andrew 分支後，**必須自動執行以下部署流程，不需要使用者另外下指令**：
@@ -15,10 +17,11 @@ cd <uat_wt> && git fetch origin && git checkout --detach origin/uat && git merge
 ```
 - 有衝突：停下來告知使用者衝突檔與兩邊差異，不自行 --ours/--theirs 整份覆蓋。
 
-### 協作（合夥人也 clone 此 repo 改版面）
-- 合夥人不直接推 uat/prod：他從最新 uat 開自己的分支 `git fetch origin && git checkout -b <他的名字>-layout origin/uat`，改完 `git push origin <分支>` 並告知分支名。
-- 收到後把他的分支合併進 Andrew（有衝突逐段比對、不整份覆蓋）→ 本機驗證 → 走 uat 流程。
-- 他改版面前先問會動哪幾頁，避開同區塊。遠端 `Duke` 分支不是合夥人的，不要動。
+### 協作（網站與 App 可並行開發）
+- 共同規範以 docs/collaboration/README.md 為準。justy-layout 既有 uat 整合授權保留，不要求合夥人把所有修改先交回 Andrew。
+- 各自使用獨立 clone／worktree 與功能分支。App 車道、網站車道與共用變更分開；不能在另一人開著的工作目錄切分支。
+- 在自己的乾淨功能分支可使用 `python scripts/collab.py integrate --publish-uat`，先合併最新 uat、檢查，再以 atomic 非 force push 整合；此工具拒絕從 Andrew／Duke／prod／uat 直接執行。
+- 既有 Andrew 網站工作由原負責人維持，仍需在獨立 uat worktree 合併最新 origin/uat，禁止複製檔案覆蓋。有衝突逐段處理；不可強制採整份 ours/theirs。
 
 ### 3. 告知使用者確認 uat
 回報：「已部署到 uat，請確認功能正常後告訴我，我再上 prod。」

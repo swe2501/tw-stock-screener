@@ -6,6 +6,8 @@ import urllib.parse
 import http.cookiejar
 import zipfile
 import io
+import math
+import re
 from datetime import datetime, timezone, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -22,6 +24,144 @@ TWSE_HEADERS = {
 
 RANGE_DAYS = {"1mo": 35, "3mo": 95, "6mo": 185, "1y": 370, "2y": 730, "3y": 1100}
 YF_HOSTS = ["query1.finance.yahoo.com", "query2.finance.yahoo.com"]
+
+TX_SESSION_SOURCE = "https://openapi.taifex.com.tw/v1/DailyMarketReportFut"
+
+
+def _tx_session_quotes(rows):
+    """Latest official daily quotes, with day/night kept separate on one contract.
+
+    TAIFEX's Date is the trading date (also for the overnight session), not
+    necessarily the calendar date on which an overnight trade occurred.
+    """
+    candidates = []
+    for row in rows:
+        if not isinstance(row, dict) or row.get("Contract") != "TX":
+            continue
+        day = str(row.get("Date", ""))
+        month = str(row.get("ContractMonth(Week)", ""))
+        session = {"一般": "day", "盤後": "night", "夜盤": "night"}.get(row.get("TradingSession"))
+        if not session or not re.fullmatch(r"\d{8}", day) or not re.fullmatch(r"\d{6}", month):
+            continue
+        try:
+            date = datetime.strptime(day, "%Y%m%d").strftime("%Y-%m-%d")
+            datetime.strptime(month, "%Y%m")
+            price = float(str(row.get("Last", "")).replace(",", ""))
+        except (ValueError, TypeError):
+            continue
+        if not math.isfinite(price) or price <= 0 or month < day[:6]:
+            continue
+        candidates.append((date, month, session, price))
+    # Use the latest published trading date. Do not fill a missing session
+    # with an older quote or another contract, which would hide stale data.
+    if not candidates:
+        return {"day": None, "night": None}
+    latest = max(item[0] for item in candidates)
+    contract = min(item[1] for item in candidates if item[0] == latest)
+    result = {"day": None, "night": None}
+    for date, month, session, price in candidates:
+        if date == latest and month == contract:
+            result[session] = {"price": price, "date": date, "contractMonth": month,
+                               "session": session}
+    return result
+
+
+def _tx_sessions_from_taifex():
+    """外資結算成本用：期交所 futDataDown 取近月 TX 的 日盤(一般)/夜盤(盤後) 收盤。
+    取代 openapi DailyMarketReportFut(T+1 延遲、Vercel 常被擋)。回 {day, night}。
+
+    夜盤歸屬日很關鍵：期交所把盤後時段(前一晚 15:00→當日凌晨 05:00)**歸到次一營業日**日期。
+    所以『某日日盤之後的夜盤』會標記在「下一個營業日」的盤後列（例：10/16 週五晚的夜盤→標 10/19）。
+    因此：日盤＝最新一般列(D)；夜盤＝第一個日期 > D 的盤後列（＝D 當晚開、次營業日凌晨收）。
+    該夜盤要等隔天凌晨盤後收盤後才公布，未出來前回 night=None（前端顯示待更新），不拿前一晚的盤後誤充。
+    queryEndDate 往後延幾天才抓得到這個次營業日標記的夜盤。"""
+    cookie = _taifex_cookie_str()
+    end = datetime.now(timezone(timedelta(hours=8)))
+    start = end - timedelta(days=10)
+    post_data = urllib.parse.urlencode({
+        "down_type": "1", "commodity_id": "TX", "commodity_id2": "",
+        "queryStartDate": start.strftime("%Y/%m/%d"),
+        "queryEndDate": (end + timedelta(days=4)).strftime("%Y/%m/%d"),  # 含次營業日標記的夜盤
+    }).encode()
+    req = urllib.request.Request(
+        "https://www.taifex.com.tw/cht/3/futDataDown", data=post_data,
+        headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                 "Referer": "https://www.taifex.com.tw/cht/3/dlFutDailyMarketView",
+                 "Origin": "https://www.taifex.com.tw",
+                 "Content-Type": "application/x-www-form-urlencoded", "Cookie": cookie})
+    with urllib.request.urlopen(req, timeout=10) as r:
+        raw = r.read()
+    content = None
+    for enc in ("utf-8-sig", "utf-8", "ms950", "big5"):
+        try:
+            content = raw.decode(enc); break
+        except Exception:
+            pass
+    if not content:
+        return {"day": None, "night": None}
+    best = {}  # (date, session) → (vol, close, month)；挑成交量最大＝近月
+    for line in content.split("\n"):
+        if not line or not line[0].isdigit():
+            continue
+        c = line.split(",")
+        if len(c) < 18 or c[1].strip() != "TX":
+            continue
+        sess = {"一般": "day", "夜盤": "night", "盤後": "night"}.get(c[17].strip())
+        month = c[2].strip()
+        if not sess or not re.fullmatch(r"\d{6}", month):   # \d{6} 排除價差組合(202610/202611)
+            continue
+        date = c[0].strip().replace("/", "-")
+        try:
+            close = float(c[6].replace(",", "").strip())
+            vol = int(c[9].replace(",", "").strip() or "0")
+        except Exception:
+            continue
+        if not math.isfinite(close) or close <= 0 or month < date[:4] + date[5:7]:
+            continue
+        key = (date, sess)
+        if key not in best or vol > best[key][0]:
+            best[key] = (vol, close, month)
+    if not best:
+        return {"day": None, "night": None}
+    res = {"day": None, "night": None}
+    # 日盤＝最新『一般』列
+    day_dates = sorted(d for (d, s) in best if s == "day")
+    if not day_dates:
+        return res
+    dmax = day_dates[-1]
+    vol, close, month = best[(dmax, "day")]
+    res["day"] = {"price": close, "date": dmax, "contractMonth": month, "session": "day"}
+    # 夜盤＝第一個日期 > dmax 的『盤後』列（＝dmax 當晚開、次營業日凌晨收）；未公布則留 None
+    nd = sorted(d for (d, s) in best if s == "night" and d > dmax)
+    if nd:
+        vol, close, month = best[(nd[0], "night")]
+        # date 顯示為該夜盤所屬的交易日(dmax 當晚)，taifexDate 保留期交所原始標記供追溯
+        res["night"] = {"price": close, "date": dmax, "contractMonth": month,
+                        "session": "night", "taifexDate": nd[0]}
+    return res
+
+
+def fetch_tx_sessions():
+    # 主來源：futDataDown(同日)；失敗才退回 openapi(T+1、常被擋)
+    sessions, src = None, "https://www.taifex.com.tw/cht/3/futDataDown"
+    try:
+        sessions = _tx_sessions_from_taifex()
+    except Exception:
+        sessions = None
+    if not sessions or not (sessions.get("day") or sessions.get("night")):
+        try:
+            req = urllib.request.Request(TX_SESSION_SOURCE, headers=YF_HEADERS)
+            with urllib.request.urlopen(req, timeout=10) as response:
+                rows = json.loads(response.read(4_000_001))
+            if isinstance(rows, list):
+                sessions, src = _tx_session_quotes(rows), TX_SESSION_SOURCE
+        except Exception:
+            pass
+    if not sessions:
+        sessions = {"day": None, "night": None}
+    return {"code": "TX=F", "sessions": sessions,
+            "source_url": src, "quoteType": "published_daily",
+            "dateBasis": "TAIFEX trading date", "currency": "TWD"}
 
 # ── 上櫃(OTC)代號集：讀 Supabase otc_names（快取）；上櫃個股 Yahoo 尾碼用 .TWO（上市為 .TW）──
 _SB_URL = "https://bruqrbvbjxntgoljxsne.supabase.co"
@@ -1074,6 +1214,16 @@ class handler(BaseHTTPRequestHandler):
 
         if not code:
             self._json(400, {"error": "missing code parameter"})
+            return
+
+        if "session" in params:
+            if code != "TX=F" or interval != "1d" or params["session"] != ["split"]:
+                self._json(400, {"error": "session=split requires TX=F daily quotes"})
+                return
+            try:
+                self._json(200, fetch_tx_sessions(), cache="public, s-maxage=300, stale-while-revalidate=300")
+            except Exception:
+                self._json(502, {"error": "TAIFEX session quotes unavailable"})
             return
 
         try:
