@@ -14,31 +14,37 @@
     if(event.animationName==='fqi-identity-signal')alignSignal(event.target);
   },true);
   let artworkId=0;
-  function sourceFor(theme,body=false){return 'assets/brand/foresight-owl-'+theme+(body?'-body':'')+'.png?v=fqi16';}
+  function sourceFor(theme){return 'assets/brand/foresight-owl-'+theme+'-book-light.png?v=fqi33';}
   function applyArtworkTheme(node){
     const theme=document.documentElement.dataset.theme==='light'?'light':'dark';
     const img=node.querySelector('.gs-mark>img'),svg=node.querySelector('.fqi-owl-art');
     if(img&&img.getAttribute('src')!==sourceFor(theme))img.setAttribute('src',sourceFor(theme));
-    if(svg){svg.dataset.theme=theme;svg.querySelectorAll('image').forEach(image=>image.setAttribute('href',sourceFor(theme,image.classList.contains('fqi-owl-base'))));}
+    if(svg){
+      svg.dataset.theme=theme;
+      svg.style.setProperty('--fqi-art-bg',theme==='light'?'#fff':'#08121f');
+      svg.querySelectorAll('image').forEach(image=>image.setAttribute('href',sourceFor(theme)));
+    }
   }
   function artwork(node){
     const mark=node.querySelector('.gs-mark'),img=mark?.querySelector('img');
     if(!img)return;
     mark.querySelector('.fqi-owl-art')?.remove();
     const id='fqi-owl-'+(++artworkId);
-    const left='M256 103 Q291 120 339 151 Q318 185 281 172 Q244 159 251 122 Z';
-    const right='M464 103 Q429 120 381 151 Q402 185 439 172 Q476 159 469 122 Z';
+    const left='M760 150 Q900 180 1008 300 Q960 390 845 354 Q755 320 770 205 Z';
+    const right='M1288 150 Q1148 180 1038 300 Q1088 390 1203 354 Q1293 320 1278 205 Z';
     const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
-    svg.setAttribute('viewBox','0 0 720 480');svg.setAttribute('aria-hidden','true');svg.classList.add('fqi-owl-art');
+    svg.setAttribute('viewBox','0 0 1789 879');svg.setAttribute('aria-hidden','true');svg.classList.add('fqi-owl-art');
     svg.innerHTML=`<defs>
       <clipPath id="${id}-left"><path d="${left}"/></clipPath>
       <clipPath id="${id}-right"><path d="${right}"/></clipPath>
-      <clipPath id="${id}-geometry"><path d="M361 396 L401 272 L481 224 L530 154 L642 146 L650 252 L565 286 L527 336 L443 313 Z"/></clipPath>
+      <clipPath id="${id}-geometry"><path d="M1015 735 L1085 505 L1260 415 L1365 285 L1570 275 L1605 505 L1450 560 L1360 655 L1190 610 Z"/></clipPath>
     </defs>
-    <image class="fqi-owl-base" width="720" height="480"/>
-    <g class="fqi-geometry" clip-path="url(#${id}-geometry)"><image width="720" height="480"/></g>
-    <g class="fqi-eye fqi-eye-left"><image width="720" height="480" clip-path="url(#${id}-left)"/></g>
-    <g class="fqi-eye fqi-eye-right"><image width="720" height="480" clip-path="url(#${id}-right)"/></g>`;
+    <image class="fqi-owl-base" width="1789" height="879"/>
+    <path d="${left}" fill="var(--fqi-art-bg)"/>
+    <path d="${right}" fill="var(--fqi-art-bg)"/>
+    <g class="fqi-geometry" clip-path="url(#${id}-geometry)"><image width="1789" height="879"/></g>
+    <g class="fqi-eye fqi-eye-left"><image width="1789" height="879" clip-path="url(#${id}-left)"/></g>
+    <g class="fqi-eye fqi-eye-right"><image width="1789" height="879" clip-path="url(#${id}-right)"/></g>`;
     mark.append(svg);applyArtworkTheme(node);
     const ready=()=>mark.classList.add('fqi-art-ready');
     if(img.complete&&img.naturalWidth)ready();else img.addEventListener('load',ready,{once:true});

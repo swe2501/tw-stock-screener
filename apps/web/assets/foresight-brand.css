@@ -66,8 +66,8 @@ body.mc-open>header .fqi-brand .gs-mark::before,body.mc-open>header .fqi-brand .
 .fqi-art-ready>img{opacity:0}
 .fqi-brand .fqi-owl-art{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
 .fqi-eye{transition:transform .16s cubic-bezier(.16,1,.3,1),filter .16s;transform:scale(1);transform-box:view-box}
-.fqi-eye-left{transform-origin:300px 140px}
-.fqi-eye-right{transform-origin:420px 140px}
+.fqi-eye-left{transform-origin:890px 270px}
+.fqi-eye-right{transform-origin:1160px 270px}
 .fqi-brand:is(:hover,:focus-visible) .fqi-eye{transform:scale(1.16);filter:drop-shadow(0 0 4px #e6bc6266)}
 .fqi-brand:is(:hover,:focus-visible) .fqi-geometry{filter:drop-shadow(0 0 3px #e6bc6280);transition:filter .16s}
 @media(prefers-reduced-motion:reduce){.fqi-brand .fqi-eye{transition:none!important;transform:none!important;filter:none!important}.fqi-brand .fqi-geometry{transition:none!important;filter:none!important}}
