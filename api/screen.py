@@ -976,30 +976,48 @@ def _sectors_from(items, date_str, shares=None):
     return {"date": date_str, "sectors": out, "total": sum(x["count"] for x in out)}
 
 
+def _price_window_latest_date():
+    """便宜探測：Supabase price_window 的最新 trade_date（YYYY-MM-DD），無則 None。"""
+    if not (SUPABASE_URL and SUPABASE_KEY):
+        return None
+    rows = _cache_sb("/price_window", params=[("select", "trade_date"),
+                                              ("order", "trade_date.desc"), ("limit", "1")])[1] or []
+    return rows[0]["trade_date"] if rows else None
+
+
 def fetch_all_stocks_latest():
     """Returns (stocks_dict, YYYYMMDD_str) for the most recent trading day.
-    來源順序：盤中注入(_INTRADAY) → TWSE 主站 CSV → TWSE OpenAPI → Supabase price_window。"""
+    來源：盤中注入(_INTRADAY) → TWSE 主站 CSV / OpenAPI。TWSE openapi 盤後常落後一天，
+    故再比對本站 price_window（每日上傳、不落後）的最新日，若 price_window 較新就改用它，
+    避免題材/產業頁顯示到舊一天的漲跌（例：大眾控週五漲停被當成當日）。"""
     if _INTRADAY.get("listed"):                      # 盤中：用 mis 即時快照
         return _intraday_stocks(), (_INTRADAY.get("date") or "")
-    # Primary: TWSE 主站全市場（2026 起回傳 CSV）
+    # Primary: TWSE 主站全市場（2026 起回傳 CSV），失敗退 OpenAPI
+    twse = None
     txt = _get_text("https://www.twse.com.tw/exchangeReport/STOCK_DAY_ALL?response=csv")
     if txt and "," in txt:
         stocks, d = _parse_stocks_csv(txt)
         if stocks:
-            return stocks, d
+            twse = (stocks, d)
+    if twse is None:
+        rows = _get_json(
+            "https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL",
+            headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"},
+            timeout=20,
+        )
+        if rows and isinstance(rows, list):
+            stocks, d = _parse_stocks_openapi(rows)
+            if stocks:
+                twse = (stocks, d)
 
-    # Fallback 1: TWSE OpenAPI（Vercel 常被擋/逾時，但本機可用）
-    rows = _get_json(
-        "https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL",
-        headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"},
-        timeout=20,
-    )
-    if rows and isinstance(rows, list):
-        stocks, d = _parse_stocks_openapi(rows)
-        if stocks:
-            return stocks, d
-
-    # Fallback 2: Supabase price_window（TWSE 全擋時仍可運作）
+    # price_window 不落後：其最新日比 TWSE 新時改用它（TWSE 全擋時也走這）
+    pw_date = _price_window_latest_date()
+    if pw_date and (twse is None or pw_date.replace("-", "") > twse[1]):
+        pw = _fetch_stocks_from_price_window()
+        if pw[0]:
+            return pw
+    if twse is not None:
+        return twse
     return _fetch_stocks_from_price_window()
 
 
