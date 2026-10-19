@@ -4,10 +4,18 @@
 #authModal.open .auth-box{animation:ma-auth-reveal .35s ease-out both,ma-auth-glow 7s ease-in-out .4s infinite}
 #authModal .auth-box::after{content:"";position:absolute;top:0;left:12%;width:36%;height:2px;pointer-events:none;background:linear-gradient(90deg,transparent,var(--accent),#d5bd7c,transparent);opacity:0}
 #authModal.open .auth-box::after{animation:ma-auth-light 6.8s ease-in-out infinite}
+#authModal .auth-close{position:absolute;top:18px;right:18px;z-index:3;float:none;width:38px;height:38px;margin:0;padding:0;border:0!important;border-radius:50%;background:transparent!important;color:var(--text-muted)!important;font-size:0;line-height:1;display:grid;place-items:center;box-shadow:none!important;transform:none;transition:color .16s ease,transform .16s ease}
+#authModal .auth-close::before,#authModal .auth-close::after{content:""!important;position:absolute;width:19px;height:1.5px;border-radius:999px;background:currentColor!important;box-shadow:none!important;inset:auto!important}
+#authModal .auth-close::before{transform:rotate(45deg)!important}
+#authModal .auth-close::after{transform:rotate(-45deg)!important}
+#authModal .auth-close:is(:hover,:focus-visible){background:transparent!important;color:var(--accent)!important;transform:scale(1.08)}
+#authModal .auth-close:focus-visible{outline:2px solid color-mix(in srgb,var(--accent) 50%,transparent);outline-offset:2px}
 @keyframes ma-auth-reveal{from{opacity:0;transform:translateY(9px) scale(.99)}to{opacity:1;transform:none}}
 @keyframes ma-auth-glow{0%,100%{box-shadow:0 28px 90px #12283c36,0 0 0 0 transparent}50%{box-shadow:0 28px 90px #12283c36,0 0 28px color-mix(in srgb,var(--accent) 13%,transparent)}}
 @keyframes ma-auth-light{0%,12%{transform:translateX(-20%);opacity:0}25%{opacity:.85}48%{transform:translateX(130%);opacity:0}100%{transform:translateX(130%);opacity:0}}
-#authModal .auth-brand{display:flex;justify-content:center;margin:5px 0 24px}
+#authModal .auth-brand{display:flex;justify-content:center;margin:5px 0 24px;padding-right:44px;box-sizing:border-box}
+@media(max-width:700px){#authModal .auth-brand{padding-right:28px}}
+@media(max-width:430px){#authModal .auth-close{right:14px}}
 #authModal .auth-brand .gs-brand{display:flex;align-items:center;gap:12px;cursor:default;color:var(--text)}
 #authModal .auth-brand .gs-mark{width:56px;height:56px;border-radius:17px;box-shadow:0 6px 20px #163c4d0d}
 #authModal .auth-brand .gs-mark img{width:100%;height:100%;object-fit:contain}
