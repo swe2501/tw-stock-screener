@@ -11,6 +11,11 @@
 .ov-card.ov-weakness>header{background:linear-gradient(110deg,color-mix(in srgb,#459970 16%,var(--surface)),var(--surface) 85%);border-bottom:1px solid color-mix(in srgb,#459970 25%,var(--border))}
 .ov-strength>header h3:before,.ov-weakness>header h3:before{content:'';display:inline-block;width:4px;height:16px;margin-right:9px;border-radius:3px;background:#d95858;vertical-align:-2px}
 .ov-weakness>header h3:before{background:#459970}
+.ov-card.ov-strength{--strength-ink:#f4a3a6}.ov-card.ov-weakness{--strength-ink:#91d5b1}
+:root[data-theme=light] .ov-card.ov-strength{--strength-ink:#a13940}:root[data-theme=light] .ov-card.ov-weakness{--strength-ink:#286d4b}
+.ov-card:is(.ov-strength,.ov-weakness)>header h3{color:var(--strength-ink)}
+.ov-card:is(.ov-strength,.ov-weakness)>header h3:before{background:var(--strength-ink)}
+.ov-card:is(.ov-strength,.ov-weakness)>header .tag{color:var(--strength-ink);background:var(--surface);border:1px solid color-mix(in srgb,var(--strength-ink) 30%,var(--border))}
 .pro-heat-workspace>.tmx-detail,.pro-heat-workspace>.sm-list{overflow-anchor:none}
 .pro-heat-detail-head:focus,.sm-list>.hd:focus{outline:none}
 .fc-pattern-card{align-self:start;min-width:0}
