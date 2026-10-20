@@ -48,3 +48,5 @@ Reference alignment revision: the user chose the original generated screener ima
 2026-10-21 final crown selection: user switched back to option two, 俐落線冠. Crown is unfilled with a 1.55px outline; bright gold palette is retained. Cache versions updated.
 
 2026-10-21 category icon proportions: all category header icons use identical 20px slots, 1.7px strokes and centered alignment. The selected outline crown no longer has a larger box. Private screener's text glyph is replaced with the existing native sparkle icon in the same slot. Full-site light/dark and scaling regression passes.
+
+2026-10-21 result utility spacing and save CTA: widened viewed/backtest headers to 64/56px with 8px padding and centered labels; table minimum grows by 40px while keeping contained horizontal scrolling. Save-today button now fits its label instead of occupying half the toolbar, including mobile. A brief 4.8-second recurring shine and icon glint draws attention without moving/fading text; reduced-motion disables both. Full-site light/dark responsive regression and visual review passed.
