@@ -2173,6 +2173,8 @@
   }
 </style>
 <link rel="stylesheet" href="assets/member-center.css?v=benefits19">
+<link rel="stylesheet" href="assets/member-wallet.css?v=ledger1">
+<link rel="stylesheet" href="assets/futures-summary.css?v=history1">
 <link rel="stylesheet" href="assets/sector-dashboard.css">
 <link rel="stylesheet" href="assets/member-share.css">
 <link rel="stylesheet" href="assets/member-signin.css?v=fqi21">
@@ -7954,6 +7956,7 @@
   })();
   </script>
 
+  <script src="assets/futures-summary.js?v=history1"></script>
   <script>
   /* 首頁「一頁研究手札」報告區（參考合夥人 genshuei 首頁版型，資料走自有管線）*/
   (function(){
@@ -8460,31 +8463,32 @@
 
     /* §5 台股期貨未平倉（外資/投信/自營）+ 小台/微台散戶多空比（玩股網現成口徑）*/
     function loadFut(){
-      sb('futures_daily?select=*&order=trade_date.desc&limit=1').then(function(a){
+      sb('futures_daily?select=*&order=trade_date.desc&limit=5').then(function(a){
         var box=el('hpFut'); if(!box)return;
-        var d=(Array.isArray(a)&&a[0])||null;
-        if(!d){box.innerHTML='<div class="fc-empty">今日無資料</div>';return;}
+        var history=(Array.isArray(a)?a:[]).filter(function(r){return r&&/^\d{4}-\d{2}-\d{2}$/.test(r.trade_date);}).sort(function(a,b){return b.trade_date.localeCompare(a.trade_date);}).filter(function(r,i,rows){return !i||r.trade_date!==rows[i-1].trade_date;}).slice(0,5);
+        var d=history[0]||null;
+        if(!d){box.innerHTML='<div class="fc-empty">期貨資料暫時無法讀取，請稍後重試</div>';return;}
         function sub2(lab,v){if(v==null)return '';return '<span style="margin-right:14px">'+lab+' <b class="'+(v>=0?'hp-up':'hp-dn')+'">'+(v>0?'+':'')+(+v).toLocaleString()+'</b></span>';}
         var html='';
         // 卡1：法人台指期未平倉（外資為主）
-        if(d.foreign_oi!=null){var oi=+d.foreign_oi;
+        {var oi=typeof d.foreign_oi==='number'&&isFinite(d.foreign_oi)?d.foreign_oi:null;
           html+='<div class="gs-futcard"><div class="h">外資 臺股期貨未平倉淨額</div>'
-            +'<div class="big '+(oi>=0?'hp-up':'hp-dn')+'">'+(oi>0?'+':'')+oi.toLocaleString()+' <span style="font-size:13px;font-weight:600;color:var(--text-muted)">口</span></div>'
-            +'<div class="sub">'+sub2('投信',d.trust_oi)+sub2('自營',d.dealer_oi)+'</div>'
-            +'<div class="sub">正值＝淨多、負值＝淨空。外資期貨部位常領先現貨方向。</div></div>';}
+            +'<div class="big '+(oi==null?'':oi>=0?'hp-up':'hp-dn')+'">'+(oi==null?'—':(oi>0?'+':'')+oi.toLocaleString())+' <span style="font-size:13px;font-weight:600;color:var(--text-muted)">口</span></div>'
+            +'<div class="fs-context"><div class="sub">'+sub2('投信',d.trust_oi)+sub2('自營',d.dealer_oi)+'</div>'
+            +'<div class="sub">正值＝淨多、負值＝淨空。外資期貨部位常領先現貨方向。</div></div><div data-futures-history="foreign_oi"></div></div>';}
         // 卡2/3：小台、微台散戶多空比（反向指標）
         function retail(name,ls,lg,sh){
-          if(ls==null)return '';
-          var tot=(lg||0)+(sh||0)||1,lw=(lg||0)/tot*100;
+          var valid=typeof ls==='number'&&isFinite(ls),counts=typeof lg==='number'&&isFinite(lg)&&lg>=0&&typeof sh==='number'&&isFinite(sh)&&sh>=0,tot=counts?lg+sh:0,lw=tot?lg/tot*100:0;
           return '<div class="gs-futcard"><div class="h">'+name+'散戶多空比</div>'
-            +'<div class="big '+(ls>=0?'hp-up':'hp-dn')+'">'+(ls>0?'+':'')+(+ls).toFixed(2)+'%</div>'
-            +'<div class="gs-lsbar"><span class="lo" style="width:'+lw+'%"></span><span class="sh" style="width:'+(100-lw)+'%"></span></div>'
-            +'<div class="sub"><span class="hp-up">散戶做多 '+(lg!=null?(+lg).toLocaleString():'—')+'</span> · <span class="hp-dn">散戶做空 '+(sh!=null?(+sh).toLocaleString():'—')+'</span> 口</div></div>';
+            +'<div class="big '+(valid?(ls>=0?'hp-up':'hp-dn'):'')+'">'+(valid?(ls>0?'+':'')+ls.toFixed(2)+'%':'—')+'</div>'
+            +'<div class="fs-context"><div class="gs-lsbar"><span class="lo" style="width:'+lw+'%"></span><span class="sh" style="width:'+(tot?100-lw:0)+'%"></span></div>'
+            +'<div class="sub"><span class="hp-up">散戶做多 '+(counts?lg.toLocaleString():'—')+'</span> · <span class="hp-dn">散戶做空 '+(counts?sh.toLocaleString():'—')+'</span> 口</div></div><div data-futures-history="'+(name.indexOf('小台')===0?'mtx_ls':'tmf_ls')+'"></div></div>';
         }
         html+=retail('小台 ',d.mtx_ls,d.mtx_long,d.mtx_short);
         html+=retail('微台 ',d.tmf_ls,d.tmf_long,d.tmf_short);
         box.innerHTML=(html||'<div class="fc-empty">期貨資料整備中</div>')
           +'<div class="gs-tip" style="grid-column:1/-1"><span class="ic"></span><div><b>學院導讀</b>散戶多空比先用來觀察情緒是否集中，再與外資部位及價格趨勢比較。結算成本提供價格位置參考，站在上方或下方都需要趨勢與量能確認，不能單靠一項數字定性。</div></div>';
+        if(window.AcademyFuturesSummary)window.AcademyFuturesSummary.paint(box,history);
       });
     }
 
@@ -17054,6 +17058,7 @@
 .fx-session-note{font-size:10px;line-height:1.8;color:var(--text-muted);margin:7px 0 0;overflow-wrap:anywhere}
 #fhForeignCost .fx-session-switch{grid-column:1}#fhForeignCost .fx-cost-price{grid-column:1}#fhForeignCost .fx-session-note{grid-column:1/-1}#fhForeignCost .fx-ecg{grid-row:1/7}
 </style>
+<script src="assets/foreign-cost-card.js?v=premium2"></script>
 <script>
 (function(){
  var verifiedSettlement={"date":"2026-09-16","product":"TX","basis":{"long":{"lots":7805.0,"amount_thousand":71902338.0,"point":46061.715566944265},"short":{"lots":84156.0,"amount_thousand":775297770.0,"point":46063.13097105376},"net":{"lots":-76351.0,"amount_thousand":-703395432.0,"point":46063.27566109154}},"unit":"TWD thousand","source_url":"https://www.taifex.com.tw/cht/3/futContractsDate?queryType=1&doQuery=1&queryDate=2026%2F09%2F16","scope":"All listed TX delivery months; settlement-value proxy, not entry cost"};
@@ -17076,12 +17081,12 @@
    if(!ready||tone==='flat')icon='<span class="fx-tug-meet" aria-hidden="true"><i class="fx-tug-ray left"></i><i class="fx-tug-ray right"></i><span class="fx-tug-firework">'+Array.from({length:12},function(_,i){return i*30;}).map(function(angle){return '<i style="--spark-angle:'+angle+'deg"></i>';}).join('')+'</span></span>';
    else icon='<span class="fx-flight '+(tone==='up'?'rocket':'meteor')+'" style="left:'+position+'%" aria-hidden="true">'+(tone==='up'?'<svg viewBox="0 0 24 24"><path d="M8 15 C7 9 12 4 20 3 C19 11 14 16 9 16 Z M8 11 L4 12 L3 17 L8 15 M12 16 L12 21 L17 20 L17 15 M7 17 L3 21"/><circle cx="15" cy="8" r="2"/></svg>':'<svg viewBox="0 0 24 24"><circle cx="7" cy="17" r="4"/><path d="M9 12 L19 2 M12 15 L22 5 M6 10 L13 3 M14 18 L20 12"/></svg>')+'</span>';
   }
-  return '<div class="fx-ecg '+(tone||'pending')+'" data-fx-effect="'+(!detailed||!valid?'none':!ready?'basis-demo':tone==='flat'?'tug':tone==='up'?'rocket':'meteor')+'"><div class="fx-ecg-plot" style="background:none">'+(valid?'<div class="fx-cost-zone" style="left:'+(costPos-500/(max-min)*84)+'%;width:'+(1000/(max-min)*84)+'%"><span>±500</span></div>':'')+'<svg viewBox="0 0 300 52" preserveAspectRatio="none" aria-hidden="true"><path class="fx-ecg-axis" d="M0 26 H300"/><path class="fx-ecg-white-lead" pathLength="100" d="'+lead+path.replace(/^M[^ ]+ 26/,'')+'"/><path class="fx-ecg-base" d="'+path+'"/>'+'</svg><i class="fx-ecg-threshold center" style="left:'+costPos+'%"></i><span class="fx-ecg-cost-label" style="left:'+costPos+'%">成本 '+integer(v)+'</span>'+(ready?'<i class="fx-ecg-dot" style="left:'+position+'%"></i><b class="fx-ecg-current-label" style="left:'+position+'%">'+integer(price)+'</b>':'<span class="fx-ecg-pending">目前價格待更新'+(detailed&&valid?' · 光效為結算基準示意':'')+'</span>')+icon+'</div></div>';
+  return '<div class="fx-ecg '+(tone||'pending')+'" data-fx-effect="'+(!detailed?(ready?'trace':'waiting'):!valid?'none':!ready?'basis-demo':tone==='flat'?'tug':tone==='up'?'rocket':'meteor')+'"><div class="fx-ecg-plot" style="background:none">'+(valid?'<div class="fx-cost-zone" style="left:'+(costPos-500/(max-min)*84)+'%;width:'+(1000/(max-min)*84)+'%"><span>±500</span></div>':'')+'<svg viewBox="0 0 300 52" preserveAspectRatio="none" aria-hidden="true"><path class="fx-ecg-axis" d="M0 26 H300"/><path class="fx-ecg-white-lead" pathLength="100" d="'+lead+path.replace(/^M[^ ]+ 26/,'')+'"/><path class="fx-ecg-base" d="'+path+'"/>'+'</svg><i class="fx-ecg-threshold center" style="left:'+costPos+'%"></i><span class="fx-ecg-cost-label" style="left:'+costPos+'%">成本 '+integer(v)+'</span>'+(ready?'<i class="fx-ecg-dot" style="left:'+position+'%"></i><b class="fx-ecg-current-label" style="left:'+position+'%">'+integer(price)+'</b>':'<span class="fx-ecg-pending">目前價格待更新'+(detailed&&valid?' · 光效為結算基準示意':'')+'</span>')+icon+'</div></div>';
  }
  function positionLots(){var b=snapshot&&snapshot.basis||{},count=function(key){var n=b[key]&&b[key].lots;return Number.isInteger(n)&&(key==='net'||n>=0)?n:null;},long=count('long'),short=count('short'),net=count('net'),label=net==null?'多空淨額':net<0?'淨空':net>0?'淨多':'多空持平',source=snapshot?'https://www.taifex.com.tw/cht/3/futContractsDate?queryType=1&doQuery=1&queryDate='+encodeURIComponent(snapshot.date.replace(/-/g,'/')):null;
  return '<section class="fx-position-lots" aria-label="結算基準日外資未平倉口數"><div class="fx-lots-heading">結算基準日外資未平倉口數</div><div class="fx-lots-grid"><div><span>多單</span><b>'+fmt(long)+'<small>口</small></b></div><div><span>空單</span><b>'+fmt(short)+'<small>口</small></b></div><div><span>'+label+'</span><b>'+fmt(net==null?null:Math.abs(net))+'<small>口</small></b></div></div><p>臺股期貨 TX・所有到期月份合計'+(source?' · <a href="'+source+'" target="_blank" rel="noopener noreferrer">期交所來源</a>':' · 口數待更新')+'<br>口數固定於基準日；日／夜盤僅切換價格。非當月到期實際結算口數。</p></section>';}
- function render(error){var current=quotes[marketSession],sessionLabel=marketSession==='night'?'夜盤':'日盤';hosts.forEach(function(host){if(!host)return;var b=snapshot&&snapshot.basis.net,v=b&&b.point,price=current&&current.price,diff=Number.isFinite(price)&&Number.isFinite(v)?price-v:null,tone=diff==null?'':diff>500?'up':diff< -500?'down':'flat',status=diff==null?'價格資料待更新':diff>500?'外資籌碼樂觀':diff< -500?'外資籌碼悲觀':'多空拉鋸';var month=period?+period.month.slice(5)+'月':'';
- host.innerHTML='<article class="fx-cost"><div class="fx-cost-top"><h3>外資結算成本</h3><span class="fx-cost-month">'+month+' · 估算</span></div><div class="fx-session-switch" role="group" aria-label="臺指期行情盤別">'+['day','night'].map(function(key){return '<button type="button" data-fx-session="'+key+'" aria-pressed="'+(marketSession===key)+'">'+(key==='day'?'日盤':'夜盤')+'</button>';}).join('')+'</div><div class="fx-cost-price"><small>'+sessionLabel+'收盤</small>'+(Number.isFinite(price)?'<b>'+fmt(price)+'</b><span>點</span>':'<b class="pending">待更新</b>')+'</div><div class="fx-cost-number"><small class="fx-cost-tag">外資結算成本</small>'+fmt(v)+'<span>點</span></div><div class="fx-cost-state '+tone+'">'+(!Number.isFinite(v)?'結算資料待更新':diff==null?status:'<span>'+(diff>0?'在成本之上 ':diff<0?'在成本之下 ':'與成本相同 ')+fmt(Math.abs(diff))+'點</span><b>'+status+'</b>')+'</div>'+ecg(v,price,diff,tone,host.id==='fhForeignCost')+'<p class="fx-cost-caption">基準 '+(snapshot?snapshot.date.slice(5):period?period.date.slice(5):'—')+' · 下次 '+(period?period.next.slice(5):'—')+' 盤後</p>'+(host.id==='fhForeignCost'?positionLots():'')+'<p class="fx-cost-rule">高於成本500點偏多、低於500點偏空；其餘多空拉鋸。僅依價格位置判讀。</p>'+ (host.id==='fhForeignCost'?'<div class="fx-analysis-metrics"><div><small>臺指期 · '+sessionLabel+'收盤</small><b>'+fmt(price)+' 點</b><span>'+(current?'交易日 '+current.date+' · '+current.contractMonth+' 近月合約':quotesLoading?'行情載入中…':sessionLabel+'資料待更新')+'</span></div><div><small>距估算成本</small><b>'+(diff==null?'—':(diff>=0?'+':'')+fmt(diff))+' 點</b><span>'+sessionLabel+'收盤與固定結算基準比較</span></div><div><small>上／下方向門檻</small><b>'+fmt(Number.isFinite(v)?v+500:null)+'／'+fmt(Number.isFinite(v)?v-500:null)+'</b><span>成本上下500點</span></div><div><small>觀察月份</small><b>'+month+'</b><span>基準取自結算日，盤後公布才更新</span></div></div>':'')+(host.id==='fhForeignCost'?'<p class="fx-session-note" aria-live="polite">'+sessionLabel+' · '+(current?'交易日 '+current.date+' · 近月 '+current.contractMonth:quotesLoading?'行情載入中…':'資料待更新')+' · 期交所公布行情，非即時報價</p>':'')+'</article>';if(host.id==='fhForeignCost'){var chart=host.querySelector('.fx-ecg');function play(){if(!chart)return;chart.classList.remove('fx-play');var burst=chart.querySelector('.fx-tug-firework');if(burst)burst.style.display='none';chart.querySelectorAll('.fx-ecg-white-lead,.fx-tug-ray,.fx-tug-firework i,.fx-flight').forEach(function(n){n.style.animation='none';});void chart.offsetWidth;if(burst)burst.style.display='';chart.classList.add('fx-play');chart.querySelectorAll('.fx-ecg-white-lead,.fx-tug-ray,.fx-tug-firework i,.fx-flight').forEach(function(n){n.style.animation='';});}host.onpointerenter=play;host.dataset.lastTone=tone;requestAnimationFrame(play);}});mount();}
+ function render(error){var current=quotes[marketSession],sessionLabel=marketSession==='night'?'夜盤':'日盤';hosts.forEach(function(host){if(!host)return;if(host.id==='hpForeignCost'&&window.AcademyForeignCostCard){window.AcademyForeignCostCard.render(host,{snapshot:snapshot,current:current,marketSession:marketSession,period:period,quotesLoading:quotesLoading});return;}var b=snapshot&&snapshot.basis.net,v=b&&b.point,price=current&&current.price,diff=Number.isFinite(price)&&Number.isFinite(v)?price-v:null,tone=diff==null?'':diff>500?'up':diff< -500?'down':'flat',status=diff==null?'價格資料待更新':diff>500?'外資籌碼樂觀':diff< -500?'外資籌碼悲觀':'多空拉鋸';var month=period?+period.month.slice(5)+'月':'';
+ host.innerHTML='<article class="fx-cost"><div class="fx-cost-top"><h3>外資結算成本</h3><span class="fx-cost-month">'+month+' · 估算</span></div><div class="fx-session-switch" role="group" aria-label="臺指期行情盤別">'+['day','night'].map(function(key){return '<button type="button" data-fx-session="'+key+'" aria-pressed="'+(marketSession===key)+'">'+(key==='day'?'日盤':'夜盤')+'</button>';}).join('')+'</div><div class="fx-cost-price"><small>'+sessionLabel+'收盤</small>'+(Number.isFinite(price)?'<b>'+fmt(price)+'</b><span>點</span>':'<b class="pending">待更新</b>')+'</div><div class="fx-cost-number"><small class="fx-cost-tag">外資結算成本</small>'+fmt(v)+'<span>點</span></div><div class="fx-cost-state '+tone+'">'+(!Number.isFinite(v)?'結算資料待更新':diff==null?status:'<span>'+(diff>0?'在成本之上 ':diff<0?'在成本之下 ':'與成本相同 ')+fmt(Math.abs(diff))+'點</span><b>'+status+'</b>')+'</div>'+ecg(v,price,diff,tone,host.id==='fhForeignCost')+(host.id==='fhForeignCost'?'<p class="fx-cost-caption">基準 '+(snapshot?snapshot.date.slice(5):period?period.date.slice(5):'—')+' · 下次 '+(period?period.next.slice(5):'—')+' 盤後</p>':'')+(host.id==='fhForeignCost'?positionLots():'')+'<p class="fx-cost-rule">高於成本500點偏多、低於500點偏空；其餘多空拉鋸。僅依價格位置判讀。</p>'+ (host.id==='fhForeignCost'?'<div class="fx-analysis-metrics"><div><small>臺指期 · '+sessionLabel+'收盤</small><b>'+fmt(price)+' 點</b><span>'+(current?'交易日 '+current.date+' · '+current.contractMonth+' 近月合約':quotesLoading?'行情載入中…':sessionLabel+'資料待更新')+'</span></div><div><small>距估算成本</small><b>'+(diff==null?'—':(diff>=0?'+':'')+fmt(diff))+' 點</b><span>'+sessionLabel+'收盤與固定結算基準比較</span></div><div><small>上／下方向門檻</small><b>'+fmt(Number.isFinite(v)?v+500:null)+'／'+fmt(Number.isFinite(v)?v-500:null)+'</b><span>成本上下500點</span></div><div><small>觀察月份</small><b>'+month+'</b><span>基準取自結算日，盤後公布才更新</span></div></div>':'')+(host.id==='fhForeignCost'?'<p class="fx-session-note" aria-live="polite">'+sessionLabel+' · '+(current?'交易日 '+current.date+' · 近月 '+current.contractMonth:quotesLoading?'行情載入中…':'資料待更新')+' · 期交所公布行情，非即時報價</p>':'')+'</article>';if(host.id==='fhForeignCost'){var chart=host.querySelector('.fx-ecg');function play(){if(!chart)return;chart.classList.remove('fx-play');var burst=chart.querySelector('.fx-tug-firework');if(burst)burst.style.display='none';chart.querySelectorAll('.fx-ecg-white-lead,.fx-tug-ray,.fx-tug-firework i,.fx-flight').forEach(function(n){n.style.animation='none';});void chart.offsetWidth;if(burst)burst.style.display='';chart.classList.add('fx-play');chart.querySelectorAll('.fx-ecg-white-lead,.fx-tug-ray,.fx-tug-firework i,.fx-flight').forEach(function(n){n.style.animation='';});}host.onpointerenter=play;host.dataset.lastTone=tone;requestAnimationFrame(play);}});mount();}
  async function load(){if(busy)return;busy=true;if(window._loadTwHol){try{await window._loadTwHol();}catch(e){}}period=getPeriod();if(verifiedSettlement.date===period.date)snapshot=verifiedSettlement;render();
  try{var r=await fetch(api+'/api/screen?stat=foreign_settlement_cost&date='+period.date);if(!r.ok)throw Error();snapshot=await r.json();if(snapshot.date!==period.date)throw Error();}catch(e){snapshot=null;var today=new Date(Date.now()+8*3600e3).toISOString().slice(0,10);if(period.date===today){var d=new Date(period.date+'T00:00:00Z'),previous=monthly(d.getUTCFullYear(),d.getUTCMonth()-1);try{var r2=await fetch(api+'/api/screen?stat=foreign_settlement_cost&date='+previous);if(!r2.ok)throw Error();var old=await r2.json();if(old.date!==previous)throw Error();snapshot=old;period={date:previous,month:period.date.slice(0,7),next:period.date};}catch(e){}}}
  if(!snapshot&&verifiedSettlement.date===period.date)snapshot=verifiedSettlement;
@@ -17194,12 +17199,13 @@
 <script src="assets/sector-dashboard-model.js" defer></script>
 <script src="assets/sector-dashboard.js" defer></script>
 <script src="assets/member-invitation.js?v=1" defer></script>
-<script src="assets/member-identity.js?v=perks2a" defer></script>
+<script src="assets/member-identity.js?v=wallet-ledger1" defer></script>
 <script src="assets/member-missions.js?v=perks2a" defer></script>
 <script src="assets/member-share.js?v=invite2" defer></script>
 <script src="assets/member-provider-icons.js" defer></script>
 <script src="assets/member-cloud.js" defer></script>
-<script src="assets/member-features.js?v=invite2" defer></script>
+<script src="assets/member-wallet.js?v=ledger1" defer></script>
+<script src="assets/member-features.js?v=wallet-ledger1" defer></script>
 <script src="assets/member-strategy-engine.js" defer></script>
 <script src="assets/member-strategy-ui.js?v=owl2" defer></script>
 <script src="assets/member-research.js" defer></script>
@@ -17217,7 +17223,8 @@
 <script src="assets/member-center.js?v=logo-home19" defer></script>
 <script src="assets/member-signin.js?v=invite2" defer></script>
 <script src="assets/member-private-screen.js" defer></script>
-<link rel="stylesheet" href="assets/site-readability.css">
+<link rel="stylesheet" href="assets/site-readability.css?v=futures-history3">
+<link rel="stylesheet" href="assets/foreign-cost-card.css?v=premium2">
 <script src="assets/foresight-brand.js?v=fqi28" defer></script>
 <link rel="stylesheet" href="assets/research-polish.css?v=11">
 <link rel="stylesheet" href="assets/focus-rankings.css?v=4">

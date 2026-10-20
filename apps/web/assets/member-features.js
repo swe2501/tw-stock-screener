@@ -60,6 +60,7 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
       main.querySelector('[data-delete-request]').addEventListener('click',()=>{try{setLocal('academy.feedback.draft.'+profile.id,JSON.stringify({kind:'其他',subject:'帳號刪除與個人資料處理申請',body:'我希望了解帳號刪除及個人資料處理流程，請協助確認。'}));go('feedback');}catch{status(main).textContent='無法保存草稿，請到我的回饋填寫申請';}});
     }
     if(view==='wallet'){
+      if(window.AcademyWallet){window.AcademyWallet.render(ctx);return true;}
       main.innerHTML=card('點數帳戶','<p class="mc-muted">任務點數和儲值點數分開記錄，使用條件各自顯示。</p><div class="mc-row"><span>任務點數</span><strong data-wallet-task>正在確認…</strong></div><div class="mc-row"><span>儲值點數</span><strong data-wallet-stored>正在確認…</strong></div><div class="mc-note">儲值服務尚未開放。目前不收取款項；此頁不會把任務點數當作儲值餘額。</div><div class="mc-gift-actions"><button type="button" data-wallet-tasks>查看任務與紀錄 →</button></div>');
       main.querySelector('[data-wallet-tasks]').onclick=()=>go('tasks');
       const taskNode=main.querySelector('[data-wallet-task]'),storedNode=main.querySelector('[data-wallet-stored]');

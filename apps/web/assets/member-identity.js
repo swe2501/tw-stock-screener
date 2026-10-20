@@ -121,11 +121,27 @@
   const activateVoucher=(id,features=[])=>rpc('activate_member_voucher',{p_reward_id:id,p_features:features});
   const usageVouchers=()=>rpc('member_usage_vouchers',{});
   const walletSummary=()=>rpc('member_wallet_summary',{});
+  async function walletHistory({start='',end='',kind='all',before=null,until}={}){
+    const owner=localStorage.getItem('sb_token'),user=await getProfile();
+    const validDate=v=>/^\d{4}-\d{2}-\d{2}$/.test(v)&&Number.isFinite(Date.parse(v))&&new Date(v).toISOString().slice(0,10)===v;
+    if((start&&!validDate(start))||(end&&!validDate(end))||(start&&end&&start>end)||!['all','earned','used'].includes(kind)||!Number.isFinite(Date.parse(until)))throw Error('請確認查詢日期與類型');
+    const q=new URLSearchParams({select:'id,description,points,source_event_key,created_at',user_id:'eq.'+user.id,order:'created_at.desc,id.desc',limit:'51'});
+    q.append('created_at','lte.'+until);
+    if(start)q.append('created_at','gte.'+start+'T00:00:00+08:00');
+    if(end)q.append('created_at','lt.'+new Date(Date.parse(end+'T00:00:00+08:00')+86400000).toISOString());
+    if(kind!=='all')q.set('points',kind==='earned'?'gt.0':'lt.0');
+    if(before){if(!/^[0-9a-f-]{36}$/i.test(before.id)||!/^\d{4}-\d{2}-\d{2}T[\d:.]+(?:Z|[+-]\d{2}:\d{2})$/.test(before.created_at)||!Number.isFinite(Date.parse(before.created_at)))throw Error('紀錄游標不正確，請重新查詢');const t=before.created_at;q.set('or','(created_at.lt.'+t+',and(created_at.eq.'+t+',id.lt.'+before.id+'))');}
+    if(!owner||owner!==localStorage.getItem('sb_token'))throw Error('帳號已切換，請重新開啟點數帳戶');
+    const rows=await request('/rest/v1/member_point_ledger?'+q);
+    if(owner!==localStorage.getItem('sb_token'))throw Error('帳號已切換，請重新開啟點數帳戶');
+    if(!Array.isArray(rows)||rows.some(r=>!r.id||!Number.isSafeInteger(r.points)||!r.points||!Number.isFinite(Date.parse(r.created_at))))throw Error('點數紀錄格式異常，請稍後重試');
+    return {rows:rows.slice(0,50),has_more:rows.length>50};
+  }
   const taskStatus=()=>rpc('member_task_status',{});
   const claimTask=id=>rpc('claim_member_task',{p_task_id:id});
   const exchangeOptions=()=>rpc('member_point_exchange_options',{});
   const exchangePoints=(id,request)=>rpc('exchange_member_points',{p_exchange_id:id,p_request_id:request});
   const shareUnlockStatus=()=>rpc('member_share_unlock',{});
   const claimShareTrial=confirmed=>{if(confirmed!==true)return Promise.reject(Error('請先確認已分享給 3 位不同好友'));return rpc('member_share_unlock',{p_claim_trial:true,p_confirm_shared:true});};
-  window.AcademyIdentity={normalizePhone,getProfile,updateProfile,saveAvatar,settings,providerEnabled,startOAuth,linkOAuth,replaceOAuth,sendContactLink,verifyContactLink,sendMemberEmail,sendPhone,verifyPhone,consumeCallback,memberResource,revokeOtherSessions,ensureReferralCode,redeemCode,bindReferral,submitFeedback,claimReward,activateVoucher,usageVouchers,walletSummary,taskStatus,claimTask,exchangeOptions,exchangePoints,shareUnlockStatus,claimShareTrial};
+  window.AcademyIdentity={normalizePhone,getProfile,updateProfile,saveAvatar,settings,providerEnabled,startOAuth,linkOAuth,replaceOAuth,sendContactLink,verifyContactLink,sendMemberEmail,sendPhone,verifyPhone,consumeCallback,memberResource,revokeOtherSessions,ensureReferralCode,redeemCode,bindReferral,submitFeedback,claimReward,activateVoucher,usageVouchers,walletSummary,walletHistory,taskStatus,claimTask,exchangeOptions,exchangePoints,shareUnlockStatus,claimShareTrial};
 })();
