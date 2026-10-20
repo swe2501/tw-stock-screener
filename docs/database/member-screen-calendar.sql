@@ -3,13 +3,13 @@ begin;
 create table public.member_screen_records (
  id uuid primary key default gen_random_uuid(), user_id uuid not null references auth.users(id) on delete cascade,
  request_id uuid not null, record_date date not null, recorded_at timestamptz not null default clock_timestamp(),
- strategies jsonb not null, conditions jsonb not null, stocks jsonb not null, note text not null default '',
+ strategies jsonb not null, conditions jsonb not null, stocks jsonb not null, note text not null default '', deleted_at timestamptz,
  unique(user_id,request_id)
 );
 alter table public.member_screen_records enable row level security;
 revoke all on public.member_screen_records from public,anon,authenticated;
 grant select on public.member_screen_records to authenticated;
-create policy member_screen_records_own_read on public.member_screen_records for select to authenticated using(user_id=(select auth.uid()));
+create policy member_screen_records_own_read on public.member_screen_records for select to authenticated using(user_id=(select auth.uid()) and deleted_at is null);
 create function public.member_screen_calendar(p_month date default null) returns jsonb
 language plpgsql security definer set search_path='' as $$
 declare u uuid:=auth.uid(); today date:=(clock_timestamp() at time zone 'Asia/Taipei')::date; m date; rows jsonb;
@@ -17,7 +17,7 @@ begin
  if u is null then raise exception 'MEMBER_VERIFY_REQUIRED'; end if;
  m:=date_trunc('month',coalesce(p_month,today))::date;
  select coalesce(jsonb_agg(to_jsonb(r)-'user_id'-'request_id' order by recorded_at desc),'[]'::jsonb) into rows
- from public.member_screen_records r where user_id=u and record_date>=m and record_date<(m+interval '1 month')::date;
+ from public.member_screen_records r where user_id=u and deleted_at is null and record_date>=m and record_date<(m+interval '1 month')::date;
  return jsonb_build_object('server_time',clock_timestamp(),'today',today,'month',m,'rows',rows);
 end $$;
 create function public.save_member_screen_record(p_request_id uuid,p_market_date date,p_strategies jsonb,p_conditions jsonb,p_stocks jsonb,p_note text default '') returns jsonb
@@ -28,7 +28,10 @@ begin
  if p_request_id is null then raise exception 'SCREEN_INPUT_INVALID'; end if;
  perform pg_advisory_xact_lock(hashtextextended('screen-record:'||u::text,0));
  select * into r from public.member_screen_records where user_id=u and request_id=p_request_id;
- if found then return jsonb_build_object('row',to_jsonb(r)-'user_id'-'request_id','duplicate',true); end if;
+ if found then
+  if r.deleted_at is not null then raise exception 'SCREEN_RECORD_DELETED'; end if;
+  return jsonb_build_object('row',to_jsonb(r)-'user_id'-'request_id','duplicate',true);
+ end if;
  if p_market_date is distinct from today then raise exception 'SCREEN_TODAY_ONLY'; end if;
  if jsonb_typeof(p_strategies) is distinct from 'array' or jsonb_array_length(p_strategies) not between 1 and 40
  or jsonb_typeof(p_conditions) is distinct from 'array' or jsonb_array_length(p_conditions)>200
@@ -43,6 +46,19 @@ begin
  values(u,p_request_id,today,p_strategies,p_conditions,p_stocks,coalesce(p_note,'')) returning * into r;
  return jsonb_build_object('row',to_jsonb(r)-'user_id'-'request_id','duplicate',false);
 end $$;
-revoke all on function public.member_screen_calendar(date),public.save_member_screen_record(uuid,date,jsonb,jsonb,jsonb,text) from public,anon,authenticated;
-grant execute on function public.member_screen_calendar(date),public.save_member_screen_record(uuid,date,jsonb,jsonb,jsonb,text) to authenticated;
+-- Keep only a request tombstone after deletion to prevent a delayed save retry resurrecting it.
+create function public.delete_member_screen_record(p_record_id uuid) returns jsonb
+language plpgsql security definer set search_path='' as $$
+declare u uuid:=auth.uid();
+begin
+ if u is null then raise exception 'MEMBER_VERIFY_REQUIRED'; end if;
+ if p_record_id is null then raise exception 'SCREEN_INPUT_INVALID'; end if;
+ perform pg_advisory_xact_lock(hashtextextended('screen-record:'||u::text,0));
+ update public.member_screen_records set deleted_at=clock_timestamp(),strategies='[]',conditions='[]',stocks='[]',note=''
+ where id=p_record_id and user_id=u and deleted_at is null;
+ -- Idempotent and non-enumerating: unknown, other-user and already-deleted ids return the same receipt.
+ return jsonb_build_object('deleted',true);
+end $$;
+revoke all on function public.member_screen_calendar(date),public.save_member_screen_record(uuid,date,jsonb,jsonb,jsonb,text),public.delete_member_screen_record(uuid) from public,anon,authenticated;
+grant execute on function public.member_screen_calendar(date),public.save_member_screen_record(uuid,date,jsonb,jsonb,jsonb,text),public.delete_member_screen_record(uuid) to authenticated;
 commit;
