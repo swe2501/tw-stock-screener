@@ -9072,6 +9072,18 @@
   </div>
 
   <!-- Auth modal -->
+  <!-- 封閉測試全站門檻（僅 VIEWER_EMAILS 授權帳號進入；上線時把 window.SITE_GATE_ON 設 false 即開放）-->
+  <div id="siteGate" style="position:fixed;inset:0;z-index:11000;background:var(--surface,#0f1826);color:var(--text,#e7edf5);display:flex;align-items:center;justify-content:center;padding:24px;text-align:center">
+    <div style="max-width:440px">
+      <div style="font-size:12px;letter-spacing:.3em;color:var(--text-muted,#8a97a8);margin-bottom:10px">MARKET ACADEMY · 封閉測試</div>
+      <h1 style="font-size:24px;margin:0 0 14px;color:var(--text,#e7edf5)">跟誰學｜盤後研究院</h1>
+      <p id="siteGateMsg" style="color:var(--text-muted,#8a97a8);line-height:1.9;margin:0 0 22px">本站目前為封閉測試，僅限授權帳號進入。<br>請以授權的 Email 登入。</p>
+      <button type="button" onclick="try{openAuthModal('login')}catch(e){}" style="padding:10px 26px;border:none;border-radius:8px;background:var(--accent,#2f6fed);color:#fff;font-size:15px;font-weight:700;cursor:pointer">登入</button>
+      <button type="button" id="siteGateLogout" onclick="try{doLogout()}catch(e){}" style="display:none;margin-left:10px;padding:10px 20px;border:1px solid var(--border,#2a3850);border-radius:8px;background:transparent;color:var(--text-muted,#8a97a8);font-size:14px;cursor:pointer">登出換帳號</button>
+    </div>
+  </div>
+  <script>window.SITE_GATE_ON = true;  /* 上線開放時改 false */</script>
+
   <div id="authModal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
     <div class="auth-box">
       <button class="auth-close" type="button" aria-label="關閉登入視窗" onclick="closeAuthModal()">✕</button>
@@ -12898,6 +12910,19 @@
       // 主力訊號／分點回測：僅授權帳號可見（資料端另有 RLS 保護；加人改此陣列＋DB allowed_viewers）
       const VIEWER_EMAILS = ['swe250165@gmail.com', 'qa5518556130@gmail.com', 'wenpin0617@gmail.com'];
       const _owner = loggedIn && VIEWER_EMAILS.includes(_authUser?.email);
+      // 封閉測試全站門檻：非授權帳號看到封鎖罩（window.SITE_GATE_ON=false 時整個關閉開放全站）
+      try {
+        const _gate = document.getElementById('siteGate');
+        if (_gate) {
+          if (window.SITE_GATE_ON === false || _owner) { _gate.style.display = 'none'; }
+          else {
+            _gate.style.display = 'flex';
+            const _gm = document.getElementById('siteGateMsg'), _gl = document.getElementById('siteGateLogout');
+            if (loggedIn) { if (_gm) _gm.innerHTML = '此帳號尚未獲授權觀看封測。<br>請改用授權的 Email 登入。'; if (_gl) _gl.style.display = ''; }
+            else { if (_gm) _gm.innerHTML = '本站目前為封閉測試，僅限授權帳號進入。<br>請以授權的 Email 登入。'; if (_gl) _gl.style.display = 'none'; }
+          }
+        }
+      } catch (e) {}
       document.getElementById('brokerSigBtn').style.display = _owner ? '' : 'none';
       document.getElementById('brokerRankBtn').style.display = _owner ? '' : 'none';
       document.getElementById('sellTrackBtn').style.display = _owner ? '' : 'none';
