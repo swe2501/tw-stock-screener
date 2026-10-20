@@ -723,6 +723,58 @@ def _fetch_groupbook(window=10, price_rows=None):
 
 
 _focus_detail_cache = {}
+_themes_cache: dict = {}
+_themes_cache_ts: float = 0.0
+
+
+def _load_stock_themes() -> dict:
+    """code → [{id, name}]（今日排行題材顯示用）。
+    優先讀 Supabase stock_themes（scripts/themes_push.py 建：合夥人精選題材 THEME_MEMBERS + 官方產業別補齊）；
+    表不存在/空時，即時以 THEME_MEMBERS（小題材優先）+ _get_industry_map()（上市 TWSE＋上櫃 TPEx）組出同樣結果。"""
+    global _themes_cache, _themes_cache_ts
+    if _themes_cache and time.time() - _themes_cache_ts < 86400:
+        return _themes_cache
+    out = {}
+    # 1) 優先讀表
+    if SUPABASE_URL and SUPABASE_KEY:
+        try:
+            off = 0
+            while True:
+                page = _cache_sb("/stock_themes",
+                                 params=[("select", "code,themes"), ("order", "code.asc"),
+                                         ("offset", str(off)), ("limit", "1000")])[1] or []
+                for r in page:
+                    c = str(r.get("code", "")).strip()
+                    th = r.get("themes")
+                    if c and isinstance(th, list) and th:
+                        out[c] = [{"id": t.get("id") or t.get("name"), "name": t.get("name")}
+                                  for t in th if isinstance(t, dict) and t.get("name")]
+                if len(page) < 1000:
+                    break
+                off += 1000
+        except Exception:
+            out = {}
+    # 2) 退回即時組（表沒資料時仍不「未分類」）
+    if not out:
+        tm = THEME_MEMBERS
+        order = sorted(tm.keys(), key=lambda n: len(tm[n]))     # 小題材優先（較精準）
+        for name in order:
+            for code in tm[name]:
+                out.setdefault(str(code), [])
+                if not any(t["name"] == name for t in out[str(code)]):
+                    out[str(code)].append({"id": name, "name": name})
+        try:
+            ind = _get_industry_map()
+        except Exception:
+            ind = {}
+        for code, iname in ind.items():
+            if iname and iname not in ("其他", ""):
+                out.setdefault(str(code), [])
+                if not any(t["name"] == iname for t in out[str(code)]):
+                    out[str(code)].append({"id": "產業:" + iname, "name": iname})
+    _themes_cache = out
+    _themes_cache_ts = time.time()
+    return out
 
 
 def _focus_details(data, by_code=None):
@@ -759,10 +811,10 @@ def _focus_details(data, by_code=None):
             if len(_focus_detail_cache) >= 8:
                 _focus_detail_cache.clear()
             _focus_detail_cache[cache_key] = (time.time(), base_date, prices, 300 if prices else 30)
-    memberships = {}
-    for name, members in THEME_MEMBERS.items():
-        for code in members:
-            memberships.setdefault(str(code), []).append({'id': name, 'name': name})
+    try:
+        memberships = _load_stock_themes()      # 精選題材(THEME_MEMBERS) + 官方產業別補齊，消除「未分類」
+    except Exception:
+        memberships = {}
 
     def finite(value):
         return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
@@ -778,7 +830,7 @@ def _focus_details(data, by_code=None):
             r['volume_lots'] = round(volume/1000, 3) if finite(volume) and volume >= 0 else None
             enriched.append(r)
         result[key] = enriched
-    result.update(fields_version=2, five_day_base_date=base_date, volume_unit='shares', volume_lots_unit='lots', theme_source='THEME_MEMBERS')
+    result.update(fields_version=3, five_day_base_date=base_date, volume_unit='shares', volume_lots_unit='lots', theme_source='stock_themes(精選題材+官方產業別)')
     return result
 
 
@@ -793,7 +845,7 @@ def _read_focus_snapshot(top_n=30):
     result = dict(data, updatedAt=rows[0].get("updated_at"), precomputed=True)
     for key in keys:
         result[key] = data[key][:max(1, min(top_n, 50))]
-    if result.get('fields_version') != 2:
+    if result.get('fields_version') != 3:   # 版本升級→舊快照(含合夥人v2僅THEME_MEMBERS)在讀取時重算補全題材，部署後即時生效
         result = _focus_details(result)
     return result
 
