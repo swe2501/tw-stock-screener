@@ -11315,8 +11315,6 @@
         if (p.key === 'k') {
           s = ch.addCandlestickSeries({ upColor: '#ef5350', downColor: '#26a69a', wickUpColor: '#ef5350', wickDownColor: '#26a69a', borderVisible: false, priceLineVisible: window._priceLineOn !== false, priceFormat: { type: 'price', precision: 0, minMove: 1 } });
           s.setData(dates.map(d => { const c = kmap[d]; return c ? { time: d, open: +c.open, high: +c.high, low: +c.low, close: +c.close } : { time: d }; }));
-          window._mainCandleSeries = s;
-          var _plb = document.querySelector('.chart-layer-tab[data-layer="pl"]'); if (_plb) _plb.classList.toggle('is-open', window._priceLineOn !== false);
         } else {
           s = ch.addLineSeries({ color: p.color, lineWidth: 2, priceFormat: { type: 'custom', minMove: 0.01, formatter: p.fmt } });
           const f = field[p.key];
@@ -14219,8 +14217,11 @@
         upColor: '#e74c3c', downColor: '#26c281',
         borderUpColor: '#e74c3c', borderDownColor: '#26c281',
         wickUpColor: '#e74c3c', wickDownColor: '#26c281',
+        priceLineVisible: window._priceLineOn !== false,   // 現價虛線開關
       });
       candleSeriesRef.setData(candles);
+      window._mainCandleSeries = candleSeriesRef;   // 供現價線開關 _togglePriceLine 使用
+      try { var _plb = document.querySelector('.chart-layer-tab[data-layer="pl"]'); if (_plb) _plb.classList.toggle('is-open', window._priceLineOn !== false); } catch (e) {}
       chartInstance._xhairSeries = candleSeriesRef;
       window._chartCloseByTime = {}; candles.forEach(c => { window._chartCloseByTime[c.time] = c.close; });
       _wireXhair(chartInstance);
