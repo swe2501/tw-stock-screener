@@ -192,3 +192,22 @@ body.scal-calendar-chart #chartModal.open:not(.etx-embedded){display:flex!import
  .sic-selected,.sic-selected strong{font-size:12px!important;line-height:1.6}.sic-selected small{font-size:11px}
  .sic-card .sic-size,.sic-status{font-size:11px!important;line-height:1.5}
 }
+
+/* A separate sizing row keeps collapse actions clear of form borders. */
+.scal-filter-sizing{display:none}
+#proScreenLayout.scal-workspace .scal-filter-head{padding:12px 12px 10px;gap:12px;align-items:center;min-width:0;background:var(--surface);border-bottom:1px solid var(--border)}
+#proScreenLayout.scal-workspace .scal-filter-head h2{margin:0;min-width:0}
+#proScreenLayout.scal-workspace .scal-filter-head .pro-filter-toggle{position:static;flex:none;width:auto;margin:0;align-self:center;line-height:1.5;box-shadow:none!important}
+#proScreenLayout.scal-workspace.collapsed .scal-filter-head{padding:10px 5px;justify-content:center}
+#proScreenLayout.scal-workspace.collapsed .pro-filter-toggle{width:32px;min-width:0;padding:6px}
+#proScreenLayout.scal-workspace.collapsed .pro-filter-toggle span{display:none}
+#proScreenLayout.scal-workspace.collapsed .form-wrap>.card,#proScreenLayout.scal-workspace.collapsed .scal-filter-sizing{display:none}
+@media(min-width:761px){
+ #proScreenLayout.scal-workspace .form-wrap>.card{zoom:var(--scal-filter-scale,1)}
+ .scal-filter-sizing{display:flex;align-items:center;gap:10px;margin:10px 12px 2px;padding:7px 10px;border:1px solid var(--border);border-radius:7px;background:var(--surface2);color:var(--text-muted);font-size:12px;line-height:1.5}
+ .scal-filter-sizing label{display:flex;align-items:center;gap:10px;margin:0;min-width:0;font:inherit;color:inherit}
+ .scal-filter-sizing input{width:110px;max-width:100%;height:16px;accent-color:var(--accent);cursor:pointer}
+ .scal-filter-sizing output{font-variant-numeric:tabular-nums;min-width:35px;font-size:12px}
+ .scal-filter-sizing button{margin-left:auto;border:0;background:transparent;color:var(--accent);font:inherit;padding:3px 6px;cursor:pointer;box-shadow:none!important}
+ .scal-filter-sizing :is(input,button):focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+}
