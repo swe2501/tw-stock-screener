@@ -9717,11 +9717,22 @@
         <div class="chart-layer-toolbar" role="tablist" aria-label="圖表圖層工具">
           <button class="chart-layer-tab" data-layer="mk" type="button" onclick="_mkTogglePanel()"><span class="layer-dot"></span>大盤K<span class="layer-count"></span></button>
           <button class="chart-layer-tab" data-layer="sr" type="button" onclick="_srTogglePanel()"><span class="layer-dot"></span>支撐壓力<span class="layer-count"></span></button>
+          <button class="chart-layer-tab" data-layer="pl" type="button" onclick="_togglePriceLine()" title="顯示／隱藏現價虛線"><span class="layer-dot"></span>現價線<span class="layer-count"></span></button>
           <button class="chart-layer-tab" data-layer="vp" type="button" onclick="_vpTogglePanel()"><span class="layer-dot"></span>價量分析<span class="layer-count"></span></button>
           <button class="chart-layer-tab" data-layer="broker" type="button" onclick="_toggleBrokerPanel()"><span class="layer-dot"></span>主力分點<span class="layer-count"></span></button>
           <button class="chart-layer-tab" data-layer="ai" type="button" onclick="_aiBuyToggle()"><span class="layer-dot"></span>✨ AI 判定<span class="layer-count"></span></button>
           <div class="label-row" id="markerToggles" style="display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;white-space:nowrap"></div>
         </div>
+        <script>
+        /* 現價虛線顯示開關（比照 K 圖其他設定「記住上一次」，存各自瀏覽器）*/
+        window._priceLineOn = (function(){ try { return localStorage.getItem('kv_priceLine') !== '0'; } catch(e){ return true; } })();
+        window._togglePriceLine = function(){
+          window._priceLineOn = !window._priceLineOn;
+          try { localStorage.setItem('kv_priceLine', window._priceLineOn ? '1' : '0'); } catch(e){}
+          if (window._mainCandleSeries) { try { window._mainCandleSeries.applyOptions({ priceLineVisible: window._priceLineOn }); } catch(e){} }
+          var b = document.querySelector('.chart-layer-tab[data-layer="pl"]'); if (b) b.classList.toggle('is-open', window._priceLineOn);
+        };
+        </script>
         <div id="sma20GroupPanel" class="chart-feature-panel" style="display:none;padding:7px 12px;border-top:1px solid var(--border);font-size:12px;color:var(--text);flex-wrap:wrap;gap:6px;align-items:center"></div>
         <div id="aiBuyPanel" class="chart-feature-panel" style="display:none;padding:12px 14px;border-top:1px solid var(--border);font-size:12.5px;color:var(--text)"></div>
         <div id="brokerFilterPanel" class="chart-feature-panel" style="display:none;padding:12px 14px 10px;border-top:1px solid var(--border);font-size:12px;color:var(--text)"></div>
@@ -11204,8 +11215,10 @@
         });
         let s;
         if (p.key === 'k') {
-          s = ch.addCandlestickSeries({ upColor: '#ef5350', downColor: '#26a69a', wickUpColor: '#ef5350', wickDownColor: '#26a69a', borderVisible: false, priceFormat: { type: 'price', precision: 0, minMove: 1 } });
+          s = ch.addCandlestickSeries({ upColor: '#ef5350', downColor: '#26a69a', wickUpColor: '#ef5350', wickDownColor: '#26a69a', borderVisible: false, priceLineVisible: window._priceLineOn !== false, priceFormat: { type: 'price', precision: 0, minMove: 1 } });
           s.setData(dates.map(d => { const c = kmap[d]; return c ? { time: d, open: +c.open, high: +c.high, low: +c.low, close: +c.close } : { time: d }; }));
+          window._mainCandleSeries = s;
+          var _plb = document.querySelector('.chart-layer-tab[data-layer="pl"]'); if (_plb) _plb.classList.toggle('is-open', window._priceLineOn !== false);
         } else {
           s = ch.addLineSeries({ color: p.color, lineWidth: 2, priceFormat: { type: 'custom', minMove: 0.01, formatter: p.fmt } });
           const f = field[p.key];
@@ -12346,7 +12359,7 @@
 
     // ── 主力進場標記：分點大單買超(≥300張)的日子，標在 K 棒下方＋分點名 ──
     async function _ensureBrokerMeta() {
-      if (_brokerMeta) return _brokerMeta;
+      if (_brokerMeta && Object.keys(_brokerMeta).length) return _brokerMeta;  // 空的(抓取失敗/早於登入)就重試，不永久快取空 meta
       _brokerMeta = {};
       try {
         const r = await fetch(`${SIG_SB_URL}/rest/v1/broker_rankings?select=broker_id,broker_name,view`,
@@ -15283,7 +15296,8 @@
     }
     function _distToShape(s, px, py, X, Y) {
       const p = s.pts;
-      if (s.type === 'seg' || s.type === 'parallel') { const a = X(p[0]), b = Y(p[0].price), c = X(p[1]), e = Y(p[1].price); if ([a, b, c, e].some(v => v == null)) return 1e9; return _ptSegDist(px, py, a, b, c, e); }
+      if (s.type === 'seg') { const a = X(p[0]), b = Y(p[0].price), c = X(p[1]), e = Y(p[1].price); if ([a, b, c, e].some(v => v == null)) return 1e9; return _ptSegDist(px, py, a, b, c, e); }
+      if (s.type === 'parallel') { const a = X(p[0]), b = Y(p[0].price), c = X(p[1]), e = Y(p[1].price), f = X(p[2]), g = Y(p[2].price); if ([a, b, c, e, f, g].some(v => v == null)) return 1e9; const ox = f - a, oy = g - b; return Math.min(_ptSegDist(px, py, a, b, c, e), _ptSegDist(px, py, a + ox, b + oy, c + ox, e + oy)); }   // 兩條線都算距離，命中任一條即刪整個通道
       if (s.type === 'hline') { const y = Y(p[0].price); return y == null ? 1e9 : Math.abs(py - y); }
       if (s.type === 'vline') { const x = X(p[0]); return x == null ? 1e9 : Math.abs(px - x); }
       if (s.type === 'rect') { const a = X(p[0]), b = Y(p[0].price), c = X(p[1]), e = Y(p[1].price); if ([a, b, c, e].some(v => v == null)) return 1e9; const l = Math.min(a, c), r = Math.max(a, c), t = Math.min(b, e), bo = Math.max(b, e); const inside = px >= l && px <= r && py >= t && py <= bo; return inside ? Math.min(px - l, r - px, py - t, bo - py) : Math.hypot(Math.max(l - px, 0, px - r), Math.max(t - py, 0, py - bo)); }
