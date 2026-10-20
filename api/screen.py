@@ -722,6 +722,66 @@ def _fetch_groupbook(window=10, price_rows=None):
 
 
 
+_focus_detail_cache = {}
+
+
+def _focus_details(data, by_code=None):
+    """Add display-only fields; never rerank or change the snapshot's price/date.
+
+    Five-day return uses the fifth preceding MARKET session, not the fifth
+    available row of a suspended stock. Legacy snapshots need only two batched
+    price_window reads, cached per worker; new daily snapshots need no extra I/O.
+    """
+    result = dict(data)
+    keys = ('gainers', 'losers', 'volume_surge')
+    codes = sorted({str(r.get('code', '')) for k in keys for r in data.get(k, [])
+                    if str(r.get('code', '')).isdigit() and 4 <= len(str(r.get('code', ''))) <= 6})
+    base_date, prices = None, {}
+    if by_code is not None:
+        dates = sorted({r['trade_date'] for arr in by_code.values() for r in arr if r['trade_date'] <= data['date']}, reverse=True)
+        base_date = dates[5] if len(dates) >= 6 else None
+        prices = {str(c): next((r.get('close') for r in arr if r['trade_date'] == base_date), None) for c, arr in by_code.items()}
+    elif codes:
+        cache_key = (data['date'], tuple(codes))
+        cached = _focus_detail_cache.get(cache_key)
+        if cached and time.time()-cached[0] < cached[3]:
+            _, base_date, prices, _ = cached
+        else:
+            status, rows = _cache_sb('/price_window', params=[('select', 'trade_date'), ('code', 'eq.2330'),
+                ('trade_date', 'lte.'+data['date']), ('order', 'trade_date.desc'), ('limit', '6')])
+            dates = sorted({r.get('trade_date') for r in rows or [] if isinstance(r, dict) and isinstance(r.get('trade_date'), str) and r['trade_date'] <= data['date']}, reverse=True) if status == 200 else []
+            base_date = dates[5] if len(dates) >= 6 else None
+            if base_date:
+                status, rows = _cache_sb('/price_window', params=[('select', 'code,close'), ('trade_date', 'eq.'+base_date),
+                    ('code', 'in.('+','.join(codes)+')'), ('limit', str(len(codes)))])
+                if status == 200 and isinstance(rows, list):
+                    prices = {str(r.get('code')): r.get('close') for r in rows if isinstance(r, dict)}
+            if len(_focus_detail_cache) >= 8:
+                _focus_detail_cache.clear()
+            _focus_detail_cache[cache_key] = (time.time(), base_date, prices, 300 if prices else 30)
+    memberships = {}
+    for name, members in THEME_MEMBERS.items():
+        for code in members:
+            memberships.setdefault(str(code), []).append({'id': name, 'name': name})
+
+    def finite(value):
+        return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
+
+    for key in keys:
+        enriched = []
+        for row in data.get(key, []):
+            r = dict(row)
+            base, close, volume = prices.get(str(r.get('code'))), r.get('close'), r.get('vol')
+            r['chg_5d'] = round((close/base-1)*100, 2) if finite(base) and base > 0 and finite(close) and close > 0 else None
+            r['themes'] = memberships.get(str(r.get('code')), [])
+            # fetch_prices -> stock_daily -> upload_price_window preserves shares.
+            r['volume_lots'] = round(volume/1000, 3) if finite(volume) and volume >= 0 else None
+            enriched.append(r)
+        result[key] = enriched
+    result.update(fields_version=2, five_day_base_date=base_date, volume_unit='shares', volume_lots_unit='lots', theme_source='THEME_MEMBERS')
+    return result
+
+
 def _read_focus_snapshot(top_n=30):
     status, rows = _cache_sb("/page_cache", params=_snapshot_params("focus"))
     if status != 200 or not isinstance(rows, list) or not rows:
@@ -733,6 +793,8 @@ def _read_focus_snapshot(top_n=30):
     result = dict(data, updatedAt=rows[0].get("updated_at"), precomputed=True)
     for key in keys:
         result[key] = data[key][:max(1, min(top_n, 50))]
+    if result.get('fields_version') != 2:
+        result = _focus_details(result)
     return result
 
 
@@ -780,12 +842,12 @@ def _fetch_focus(top_n=30):
     gainers.sort(key=lambda x: x["chg"], reverse=True)
     losers.sort(key=lambda x: x["chg"])
     surges.sort(key=lambda x: x["ratio"], reverse=True)
-    return {
+    return _focus_details({
         "date": latest,
         "gainers": gainers[:top_n],
         "losers": losers[:top_n],
         "volume_surge": surges[:top_n],
-    }
+    }, by_code)
 
 
 def _fetch_limitup():

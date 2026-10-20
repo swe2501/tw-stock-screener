@@ -6,7 +6,7 @@ const styles=[...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map(m=>m[1])
 for(const [i,m] of [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].entries())if(m[1].trim())new vm.Script(m[1],{filename:'index-inline-'+i});
 assert.ok(html.includes("!!window.AcademyShareUnlock?.hasAccess('fhedge')"));assert.ok(html.includes("!!window.AcademyShareUnlock?.hasAccess('breadth')"));
 assert.equal(html.includes('<h3>付費解鎖更多</h3>'),false);
-let mode='normal',claims=0,statusCalls=0,trial=false,confirmed=2,copyFail=false;
+let mode='normal',claims=0,statusCalls=0,trial=false,activated=false,confirmed=2,copyFail=false;
 (async()=>{
  const browser=await chromium.launch({channel:'msedge',headless:true});
  try{
@@ -22,7 +22,10 @@ let mode='normal',claims=0,statusCalls=0,trial=false,confirmed=2,copyFail=false;
     if(mode==='error')return route.fulfill({status:503,json:{message:'unavailable'}});
     if(body.p_claim_trial){assert.equal(body.p_confirm_shared,true);claims++;trial=true;}
     const now=Date.now(),days=(trial?3:0)+Math.floor(confirmed/3)*7;
-    const data={campaign:'share-v1',feature:'research_tools',code:'GS123456ABCDEF',campaign_active:mode!=='paused',verified:mode!=='unverified',requires_phone:true,confirmed_count:confirmed,rewarded_groups:Math.floor(confirmed/3),trial_claimed:trial,has_access:days>0,expires_at:days?new Date(now+(mode==='expire'?120:days*86400000)).toISOString():null,server_time:new Date(now).toISOString()};
+    const data={reward_delivery:'voucher',pending_vouchers:(trial?1:0)+Math.floor(confirmed/3),campaign:'share-v1',feature:'research_tools',code:'GS123456ABCDEF',campaign_active:mode!=='paused',verified:mode!=='unverified',requires_phone:true,confirmed_count:confirmed,rewarded_groups:Math.floor(confirmed/3),trial_claimed:trial,has_access:activated&&days>0,expires_at:activated&&days?new Date(now+(mode==='expire'?120:days*86400000)).toISOString():null,server_time:new Date(now).toISOString()};
+    if(mode==='choice')data.feature_access={fhedge:new Date(now+3600000).toISOString()};
+    if(mode==='choice-expire')data.feature_access={fhedge:new Date(now+120).toISOString()};
+    if(mode==='vip'){data.membership_tier='vip';data.feature_access=Object.fromEntries(['fhedge','breadth','hottopics','selltrack','sig','brank','mingdeng'].map(f=>[f,new Date(now+3600000).toISOString()]));}
     return route.fulfill({json:mode==='malformed'?{...data,has_access:'true'}:data});
    }
    if(url.pathname.startsWith('/assets/'))return route.fulfill({contentType:'text/javascript',body:fs.readFileSync(path.join(web,url.pathname),'utf8')});
@@ -42,11 +45,16 @@ let mode='normal',claims=0,statusCalls=0,trial=false,confirmed=2,copyFail=false;
   await d.locator('[data-share-copy]').click();assert.match(await page.evaluate(()=>window.copied),/^https:\/\/share.test\/\?ref=GS123456ABCDEF$/);
   assert.equal(await d.locator('[data-share-progress]').textContent(),'2／3 位');assert.equal(claims,0);
   await d.locator('[data-share-confirm]').check();await d.locator('[data-share-claim]').click();
-  await page.waitForFunction(()=>document.querySelector('[data-share-claim]').textContent==='3 天體驗已領取');
+  await page.waitForFunction(()=>document.querySelector('[data-share-claim]').textContent==='3 天使用券已領取');
   assert.equal(claims,1);assert.equal(await d.locator('[data-share-claim]').isDisabled(),true);
-  assert.equal(await page.evaluate(()=>AcademyShareUnlock.hasAccess('breadth')),true);
+  assert.equal(await page.evaluate(()=>AcademyShareUnlock.hasAccess('breadth')),false,'receiving a voucher must not activate access');
+  activated=true;await page.evaluate(()=>AcademyShareUnlock.refresh());assert.equal(await page.evaluate(()=>AcademyShareUnlock.hasAccess('breadth')),true);
   assert.equal(await page.evaluate(()=>AcademyShareUnlock.hasAccess('admin')),false);
   assert.equal(await page.evaluate(()=>window._isOwner),false);
+  mode='choice';await page.evaluate(()=>AcademyShareUnlock.refresh());assert.equal(await page.evaluate(()=>AcademyShareUnlock.hasAccess('fhedge')),true);assert.equal(await page.evaluate(()=>AcademyShareUnlock.hasAccess('breadth')),false,'one-tool coupon must not open another tool');
+  mode='choice-expire';await page.evaluate(()=>AcademyShareUnlock.refresh());await page.waitForTimeout(250);assert.equal(await page.evaluate(()=>AcademyShareUnlock.hasAccess('fhedge')),false);
+  mode='normal';await page.evaluate(()=>AcademyShareUnlock.refresh());
+  mode='vip';await page.evaluate(()=>AcademyShareUnlock.refresh());assert.equal(await page.evaluate(()=>AcademyShareUnlock.membershipTier()),'vip');for(const feature of ['sig','brank','mingdeng'])assert.equal(await page.evaluate(f=>AcademyShareUnlock.hasAccess(f),feature),false,'admin-only '+feature+' is never granted by a coupon');assert.equal(await page.evaluate(()=>window._isOwner),false);assert.equal(await page.evaluate(()=>AcademyShareUnlock.hasAccess('hottopics')),true);mode='normal';await page.evaluate(()=>AcademyShareUnlock.refresh());
   confirmed=3;await d.locator('[data-share-refresh]').click();await page.waitForFunction(()=>document.querySelector('[data-share-total]').textContent.includes('7 天'));
   assert.equal(await d.locator('[data-share-progress]').textContent(),'0／3 位');
   // Clipboard fallback gives a selectable link without claiming or changing progress.
