@@ -217,3 +217,19 @@ body.scal-calendar-chart #chartModal.open:not(.etx-embedded){display:flex!import
  .scal-filter-sizing button{margin-left:auto;border:0;background:transparent;color:var(--text-muted);font:inherit;font-size:11px;min-height:24px;padding:2px 4px;cursor:pointer;box-shadow:none!important}.scal-filter-sizing button:hover{color:var(--accent)}
  .scal-filter-sizing :is(input,button):focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 }
+
+/* Quiet, precision calendar sizing controls. */
+.sic-card .sic-resize{background:transparent;border-radius:5px;height:14px;margin:2px 12px 0}
+.sic-card .sic-resize>span{width:28px;height:3px;background:color-mix(in srgb,var(--text-muted) 30%,var(--surface));transition:background .15s,width .15s}
+.sic-card .sic-resize:hover>span,.sic-card .sic-resize:focus-visible>span{width:36px;background:var(--accent)}
+.sic-card .sic-size{display:flex;align-items:center;gap:10px;min-height:28px;padding:5px 0 2px;margin:3px 0 0;border-top:1px solid color-mix(in srgb,var(--border) 55%,transparent);font-size:11px!important;font-weight:400;line-height:1.5;color:var(--text-muted)}
+.sic-card .sic-size input{appearance:none;-webkit-appearance:none;--sic-fill:25%;width:100px;max-width:35%;height:20px;min-height:0;margin:0;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;cursor:pointer}
+.sic-size input::-webkit-slider-runnable-track{height:3px;border-radius:4px;background:linear-gradient(to right,color-mix(in srgb,var(--accent) 70%,var(--surface)) var(--sic-fill),var(--border) var(--sic-fill))}
+.sic-size input::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;margin-top:-4px;border:1.5px solid var(--accent);border-radius:50%;background:var(--surface);box-shadow:0 1px 3px #0002;transition:box-shadow .15s}
+.sic-size input::-moz-range-track{height:3px;border-radius:4px;background:var(--border)}
+.sic-size input::-moz-range-progress{height:3px;border-radius:4px;background:var(--accent)}
+.sic-size input::-moz-range-thumb{width:9px;height:9px;border:1.5px solid var(--accent);border-radius:50%;background:var(--surface)}
+.sic-size input:hover::-webkit-slider-thumb{box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 10%,transparent)}
+.sic-card .sic-size output{font-size:10px;min-width:35px;font-variant-numeric:tabular-nums;letter-spacing:.02em;color:var(--text-muted)}
+.sic-size output span{font-size:9px;opacity:.75}
+@media(prefers-reduced-motion:reduce){.sic-card .sic-resize>span,.sic-size input::-webkit-slider-thumb{transition:none}}
