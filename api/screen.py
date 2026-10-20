@@ -2468,6 +2468,68 @@ def has_vol_black_event(rows, mult):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# 企業價值投資法（存股 357）：連續 5 年配息 + 近 5 年平均現金股利 D → 現金殖利率分級
+#   便宜(買)   殖利率 ≥ 7%  → 便宜價 = D / 0.07
+#   合理(賣)   3% < 殖利率 < 7%  → 合理價 = D / 0.05
+#   昂貴(賣光) 殖利率 ≤ 3%  → 昂貴價 = D / 0.03
+# 資料來源：stock_dividends（scripts/dividends_push.py 由玩股網歷年股利建置）。
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _load_dividends_357():
+    """讀 stock_dividends 全表 → {code: {"d": 近5年均現金股利, "cont5": 連續5年配息}}。
+    以除息年(ex_year)由新到舊取最近 5 年；5 年皆 > 0 才算連續配息(方法才適用)。"""
+    if not (SUPABASE_URL and SUPABASE_KEY):
+        return {}
+    rows, off = [], 0
+    while True:                                        # PostgREST 單頁上限 1000，需分頁
+        page = _cache_sb("/stock_dividends",
+                         params=[("select", "code,ex_year,cash_dividend"),
+                                 ("order", "code.asc,ex_year.desc"),
+                                 ("offset", str(off)), ("limit", "1000")])[1] or []
+        rows.extend(page)
+        if len(page) < 1000:
+            break
+        off += 1000
+    by_code = {}
+    for r in rows:
+        c = str(r.get("code", "")).strip()
+        if not c:
+            continue
+        by_code.setdefault(c, []).append((r.get("ex_year"), r.get("cash_dividend")))
+    out = {}
+    for c, lst in by_code.items():
+        # 已依 ex_year.desc 排序；同年多列理論上已於 ETL 彙整，這裡仍以年份去重取最新
+        seen, recent = set(), []
+        for yr, cash in lst:
+            if yr in seen:
+                continue
+            seen.add(yr)
+            recent.append(float(cash or 0))
+            if len(recent) >= 5:
+                break
+        cont5 = len(recent) == 5 and all(x > 0 for x in recent)
+        d = round(sum(recent) / len(recent), 4) if recent else 0.0
+        out[c] = {"d": d, "cont5": cont5}
+    return out
+
+
+def _classify_357(d, price):
+    """以 D 與現價算現金殖利率並分級。回 dict 或 None（資料不足）。"""
+    if not (d and d > 0 and price and price > 0):
+        return None
+    y = d / price * 100.0
+    band = "cheap" if y >= 7 else ("expensive" if y <= 3 else "fair")
+    return {
+        "d": round(d, 3),
+        "yield": round(y, 2),
+        "band": band,                       # cheap=便宜(買) / fair=合理(賣) / expensive=昂貴(賣光)
+        "cheap_price": round(d / 0.07, 2),  # 殖利率 7%
+        "fair_price": round(d / 0.05, 2),   # 殖利率 5%
+        "exp_price": round(d / 0.03, 2),    # 殖利率 3%
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Main screener
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -2505,6 +2567,13 @@ def screen(params):
     check_zhenming1  = bool(params.get("zhenming1", False))
     check_zhenming2  = bool(params.get("zhenming2", False))
     check_zhenming3  = bool(params.get("zhenming3", False))
+    # 企業價值投資法（存股 357）：3 個分級 checkbox（可複選）
+    want_357_cheap     = bool(params.get("ev357_cheap", False))
+    want_357_fair      = bool(params.get("ev357_fair", False))
+    want_357_expensive = bool(params.get("ev357_expensive", False))
+    sel_357 = {b for b, on in (("cheap", want_357_cheap), ("fair", want_357_fair),
+                               ("expensive", want_357_expensive)) if on}
+    need_357 = bool(sel_357)
     try:
         sma20_stages = {int(x) for x in (params.get("sma20_stages") or []) if int(x) in (1, 2, 3)}
     except (TypeError, ValueError):
@@ -2521,6 +2590,7 @@ def screen(params):
     except Exception: _industry_map = {}
     latest_stocks, latest_date = fetch_all_stocks_latest()
     print(f"[TIMING] step1_twse: {time.time()-_t0:.2f}s  stocks={len(latest_stocks)}", file=sys.stderr)
+    _div357 = _load_dividends_357() if need_357 else {}
     if not latest_stocks:
         return {"error": "無法取得證交所資料，請稍後再試", "results": []}
 
@@ -2688,6 +2758,16 @@ def screen(params):
     results = []
     for code, s in candidates.items():
         o, c, h, l, v = s["open"], s["close"], s["high"], s["low"], s["volume"]
+
+        # 企業價值投資法（存股 357）：連續 5 年配息 + 現金殖利率分級，只留選中的分級
+        _ev357 = None
+        if need_357:
+            _dv = _div357.get(code)
+            if not _dv or not _dv.get("cont5"):
+                continue                        # 未連續 5 年配息 → 方法不適用，排除
+            _ev357 = _classify_357(_dv["d"], c)
+            if not _ev357 or _ev357["band"] not in sel_357:
+                continue
 
         # prev_high/prev_low/prev_vols: historical path from YF in all_stocks,
         # non-historical path from monthly_yf (also YF, fetched above with 30 workers)
@@ -2954,6 +3034,8 @@ def screen(params):
             item["zm3"] = zm3
         if sma20_hit:
             item["sma20_stage"] = sma20_hit
+        if _ev357:
+            item["ev357"] = _ev357
 
         results.append(item)
 

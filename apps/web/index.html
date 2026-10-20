@@ -9558,6 +9558,36 @@
           </div>
           </div>
         </div>
+        <div class="sc-panel" data-cat="ev357">
+          <div class="sc-hd"><a onclick="_scToggle('ev357')"><span class="sc-ar">▸</span><b style="color:#b8860b">企業價值投資法（存股 357）</b></a><span class="sc-sum"></span></div>
+          <div class="sc-body" style="display:none">
+          <div class="sc-note">以「連續 5 年配息 + 近 5 年平均現金股利 D」算現金殖利率分級：殖利率＝D ÷ 現價。只列出連續 5 年配息者（未連續配息＝方法不適用）。三個可複選。</div>
+          <div class="checkbox-grid sc-cbs">
+        <label class="checkbox-row">
+          <input type="checkbox" id="ev357_cheap" />
+          <div>
+            <div class="cb-label" style="color:#c0392b">便宜（買）· 殖利率 ≥ 7%</div>
+            <div class="cb-hint">現價 ≤ 便宜價（＝D ÷ 0.07）。現金殖利率達 7% 以上，進入買進區。</div>
+          </div>
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="ev357_fair" />
+          <div>
+            <div class="cb-label">合理（賣）· 殖利率 3%～7%</div>
+            <div class="cb-hint">現價介於合理價（＝D ÷ 0.05）附近，殖利率落在 3%～7% 之間，進入減碼區。</div>
+          </div>
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="ev357_expensive" />
+          <div>
+            <div class="cb-label" style="color:#148f77">昂貴（賣光）· 殖利率 ≤ 3%</div>
+            <div class="cb-hint">現價 ≥ 昂貴價（＝D ÷ 0.03）。現金殖利率低於 3%，進入出清區。</div>
+          </div>
+        </label>
+          </div>
+          <div class="cb-hint" style="margin-top:6px">資料來源：玩股網歷年除息現金股利（本站 stock_dividends），每週更新。D＝近 5 個除息年現金股利平均。僅供研究參考，非投資建議。</div>
+          </div>
+        </div>
       </div>
       <div style="display:flex;justify-content:flex-end;margin-top:16px"><button class="btn-submit" id="submitBtn" onclick="doScreen()">開始篩選</button></div>
       <div id="dataDateDisplay" style="margin-top:12px;font-size:0.78rem;color:var(--text-muted);"></div>
@@ -10360,6 +10390,9 @@
       const zhenming2 = document.getElementById('zhenming2').checked;
       const zhenming3 = document.getElementById('zhenming3').checked;
       const sma20Stages = Array.from(document.querySelectorAll('.sma20-cb:checked')).map(e => +e.value);
+      const ev357Cheap     = !!document.getElementById('ev357_cheap')?.checked;
+      const ev357Fair      = !!document.getElementById('ev357_fair')?.checked;
+      const ev357Expensive = !!document.getElementById('ev357_expensive')?.checked;
       const noBlackMonths = parseInt(document.getElementById('no_black_years').value) || 0;
       const noBlackMult  = parseFloat(document.getElementById('no_black_mult').value) || 0;
       const noBlackTol   = parseInt(document.getElementById('no_black_tolerance').value) || 0;
@@ -10407,6 +10440,9 @@
         zhenming2: zhenming2,
         zhenming3: zhenming3,
         sma20_stages: sma20Stages,
+        ev357_cheap:     ev357Cheap,
+        ev357_fair:      ev357Fair,
+        ev357_expensive: ev357Expensive,
         no_black_months:     noBlackMonths,
         no_black_mult:       noBlackMult,
         no_black_tolerance:  noBlackTol,
@@ -10650,7 +10686,7 @@
                   ? `<span class="data-missing-badge" title="部分篩選條件無法確認（${s.data_missing.map(k=>({'no_black':'無放量黑棒篩選','gap_unverified':'跳空前日資料缺失，請手動排查'}[k]||k)).join('、')}），已放行"></span>`
                   : ''
               }</td>
-            <td class="name-cell">${s.name}${s.sma20_stage ? `<div class="zm3-info">葛蘭碧買點 ${s.sma20_stage}</div>` : ''}${s.zm3 ? `<div class="zm3-info" title="真名三式：長黑 ${s.zm3.black_date}（−${s.zm3.black_pct}%）後第 ${s.zm3.day_n} 天反包；停損參考 ${s.zm3.stop}（長紅低與洗盤最低取低者）；第一目標 ${s.zm3.target}（長黑前 20 日最高）">三式・長黑 ${s.zm3.black_date.slice(5).replace('-','/')}・½ ${s.zm3.mid}・第${s.zm3.day_n}天${s.zm3.vol ? '・<b>帶量</b>' : ''}<br>停損 ${s.zm3.stop}・目標 ${s.zm3.target}</div>` : ''}</td>
+            <td class="name-cell">${s.name}${s.sma20_stage ? `<div class="zm3-info">葛蘭碧買點 ${s.sma20_stage}</div>` : ''}${s.zm3 ? `<div class="zm3-info" title="真名三式：長黑 ${s.zm3.black_date}（−${s.zm3.black_pct}%）後第 ${s.zm3.day_n} 天反包；停損參考 ${s.zm3.stop}（長紅低與洗盤最低取低者）；第一目標 ${s.zm3.target}（長黑前 20 日最高）">三式・長黑 ${s.zm3.black_date.slice(5).replace('-','/')}・½ ${s.zm3.mid}・第${s.zm3.day_n}天${s.zm3.vol ? '・<b>帶量</b>' : ''}<br>停損 ${s.zm3.stop}・目標 ${s.zm3.target}</div>` : ''}${s.ev357 ? `<div class="zm3-info" style="color:${s.ev357.band==='cheap'?'#c0392b':(s.ev357.band==='expensive'?'#148f77':'var(--text-muted)')}" title="連續5年配息；D=近5年均現金股利 ${s.ev357.d}｜現金殖利率=D÷現價｜便宜價(7%)=${s.ev357.cheap_price} 合理價(5%)=${s.ev357.fair_price} 昂貴價(3%)=${s.ev357.exp_price}"><b>${s.ev357.band==='cheap'?'便宜·買':(s.ev357.band==='expensive'?'昂貴·賣光':'合理·賣')}</b> 殖利率 ${s.ev357.yield}%｜D ${s.ev357.d}（便宜 ${s.ev357.cheap_price}／合理 ${s.ev357.fair_price}／昂貴 ${s.ev357.exp_price}）</div>` : ''}</td>
             <td class="neutral col-open">${s.open}</td>
             <td class="neutral col-high">${s.high}</td>
             <td class="neutral col-low">${s.low}</td>
