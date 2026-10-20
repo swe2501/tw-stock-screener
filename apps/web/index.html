@@ -16318,6 +16318,7 @@
     var origShow=window._showView, origOpen=window.openChart, origClose=window.closeChart;
     function chartOpen(){ var m=document.getElementById('chartModal'); return !!(m&&m.classList.contains('open')); }
     window._showView=function(v){
+      if(!popping&&!(cur===null&&initHash.startsWith('member/')))window.AcademyNavigationLayers?.clear();
       var r=origShow.apply(this,arguments);
       if(!popping&&!(cur===null&&initHash.startsWith('member/'))){
         window.dispatchEvent(new Event('academy-public-navigation'));
@@ -17213,7 +17214,7 @@
 <script src="assets/member-derivatives-catalog.js" defer></script>
 <script src="assets/member-trade-ui.js" defer></script>
 <script src="assets/member-journey.js?v=calendar2" defer></script>
-<script src="assets/member-center.js?v=nav-layers8" defer></script>
+<script src="assets/member-center.js?v=logo-home19" defer></script>
 <script src="assets/member-signin.js?v=invite2" defer></script>
 <script src="assets/member-private-screen.js" defer></script>
 <link rel="stylesheet" href="assets/site-readability.css">
@@ -17226,6 +17227,6 @@
 <script src="assets/screen-log.js?v=category-icons17" defer></script>
 <script src="assets/pattern-focus.js?v=2" defer></script>
 <script src="assets/member-quick-menu.js?v=3" defer></script>
-<script src="assets/navigation-layers.js?v=1" defer></script>
+<script src="assets/navigation-layers.js?v=logo-home19" defer></script>
 </body>
 </html>

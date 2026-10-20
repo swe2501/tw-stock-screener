@@ -2,7 +2,7 @@
 (() => {
  'use strict';
  const records=new Map();let stack=[],sequence=0,restoring=false,pending=false,baseURL=location.href;
- window.AcademyNavigationLayers={handlesPop:()=>location.href===baseURL&&(stack.length>0||(history.state?.academyLayers||[]).some(id=>records.has(id)))};
+ window.AcademyNavigationLayers={clear,handlesPop:()=>location.href===baseURL&&(stack.length>0||(history.state?.academyLayers||[]).some(id=>records.has(id)))};
  const state=()=>({...history.state,academyLayers:stack.slice()});
  function enter(key,open,close,isOpen,origin){
   if(restoring||!isOpen())return;

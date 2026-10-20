@@ -17,7 +17,7 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
   page.innerHTML = `<div class="mc-shell"><div class="mc-top"><div><span class="mc-kicker">FORESIGHT QUANT · MEMBER</span><h1>會員中心</h1><div class="mc-muted">你的研究工作區，從這裡開始。</div></div><div class="mc-top-actions"><button type="button" data-member-theme></button><button type="button" data-back>← 返回原頁</button><button type="button" data-member-logout>登出</button><span class="mc-action-status" role="status"></span></div></div><div class="mc-layout"><nav class="mc-nav" aria-label="會員功能"></nav><main class="mc-main" tabindex="-1"></main></div></div>`;
   document.body.append(page);
   const brandbar=document.createElement('div');brandbar.className='mc-brandbar';
-  for(const selector of ['body>header .gs-brand','body>header .gs-edition']){const original=document.querySelector(selector);if(original){const clone=original.cloneNode(true);clone.removeAttribute('onclick');clone.removeAttribute('id');clone.querySelectorAll('[id],[onclick]').forEach(el=>{el.removeAttribute('id');el.removeAttribute('onclick');});if(clone.matches('a'))clone.addEventListener('click',e=>{e.preventDefault();page.querySelector('[data-back]').click();});brandbar.append(clone);}}
+  for(const selector of ['body>header .gs-brand','body>header .gs-edition']){const original=document.querySelector(selector);if(original){const clone=original.cloneNode(true);clone.removeAttribute('onclick');clone.removeAttribute('id');clone.querySelectorAll('[id],[onclick]').forEach(el=>{el.removeAttribute('id');el.removeAttribute('onclick');});if(clone.matches('a'))clone.addEventListener('click',e=>{e.preventDefault();goHome();});brandbar.append(clone);}}
   page.prepend(brandbar);
   const groups = [
     ['帳號與服務', [['overview','會員總覽'],['profile','個人資料'],['security','登入與安全'],['notifications','通知與偏好'],['feedback','我的回饋'],['privacy','資料與隱私']]],
@@ -131,7 +131,6 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
   function close(){if(document.body.classList.contains('mc-chart-open'))window.closeChart?.();document.body.classList.remove('mc-chart-open');dispatchEvent(new Event('academy-member-closed'));page.querySelectorAll('dialog[open]').forEach(d=>d.close());request++;page.hidden=true;document.body.classList.remove('mc-open');document.body.style.overflow=oldOverflow;returnFocus?.focus?.({preventScroll:true});requestAnimationFrame(()=>scrollTo(returnScroll.x,returnScroll.y));}
   function goHome(){
     returnScroll={x:0,y:0};
-    if(!page.hidden)close();
     window._showView?.('home');
     requestAnimationFrame(()=>scrollTo({top:0,left:0,behavior:'instant'}));
   }
@@ -149,7 +148,6 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
     }catch(err){status.textContent=err.message;}finally{b.disabled=false;b.textContent='登出';}
   });
   page.querySelector('[data-back]').addEventListener('click',()=>{if(history.state?.academyMember)history.back();else close();});
-  document.querySelector('body>header .gs-brand')?.addEventListener('click',()=>{if(!page.hidden){returnScroll={x:0,y:0};close();}},true);
   addEventListener('resize',()=>{if(!page.hidden)positionUnderHeader();});
   addEventListener('academy-identity-linked',()=>{if(localStorage.getItem('sb_token')){profile=null;open('security');}});
   addEventListener('academy-public-navigation',()=>{if(!page.hidden)close();});
