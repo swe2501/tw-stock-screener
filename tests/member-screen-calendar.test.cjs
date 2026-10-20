@@ -1,0 +1,13 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),{PGlite}=require(process.env.PGLITE_MODULE||'@electric-sql/pglite');
+(async()=>{const db=new PGlite();try{
+await db.exec(`create role anon;create role authenticated;create schema auth;create table auth.users(id uuid primary key);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;grant usage on schema auth to public;grant execute on function auth.uid() to public;insert into auth.users values('11111111-1111-4111-8111-111111111111'),('22222222-2222-4222-8222-222222222222');`);
+await db.exec(fs.readFileSync(path.join(__dirname,'../docs/database/member-screen-calendar.sql'),'utf8').replace(/^\uFEFF/,''));
+const as=async id=>{await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[id]);await db.exec('set role authenticated');};
+const owner='11111111-1111-4111-8111-111111111111',other='22222222-2222-4222-8222-222222222222';await as(owner);
+const read=async()=>(await db.query('select public.member_screen_calendar() v')).rows[0].v,today=(await read()).today;
+const save=(request,date=today)=>db.query('select public.save_member_screen_record($1,$2,$3,$4,$5,$6) v',[request,date,JSON.stringify(['真名二式','Golden Cross式']),JSON.stringify(['測試條件']),JSON.stringify([{code:'2330',name:'測試',close:100}]),'備註']);
+const req='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';await save(req);assert.equal((await read()).rows.length,1);assert.deepEqual((await read()).rows[0].strategies,['真名二式','Golden Cross式']);await save(req);assert.equal((await read()).rows.length,1);
+await assert.rejects(save('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','2000-01-01'),/SCREEN_TODAY_ONLY/);await assert.rejects(save('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','2099-01-01'),/SCREEN_TODAY_ONLY/);
+await assert.rejects(db.query("update public.member_screen_records set strategies='[]'"),/permission denied/);await assert.rejects(db.query('delete from public.member_screen_records'),/permission denied/);await assert.rejects(db.query("insert into public.member_screen_records(user_id,request_id,record_date,strategies,conditions,stocks) values($1,$2,$3,'[]','[]','[]')",[owner,req,today]),/permission denied/);
+await as(other);assert.equal((await read()).rows.length,0);assert.equal((await db.query('select * from public.member_screen_records')).rows.length,0);await db.exec('reset role;set role anon');await assert.rejects(read(),/permission denied/);console.log('PASS server-day date, past/future rejection, all strategies, immutable direct writes, same-request retry, own-user RLS and anonymous denial.');
+}finally{await db.close();}})().catch(e=>{console.error(e);process.exitCode=1;});
