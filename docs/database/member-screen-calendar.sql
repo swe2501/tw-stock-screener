@@ -1,4 +1,5 @@
--- PREPARED ONLY: explicit approval required before live deployment. No existing research data is changed.
+-- DEPLOYED 2026-10-20 to Taiwan stock2 (bruqrbvbjxntgoljxsne), explicitly approved by user.
+-- Initial migration: do not rerun against existing objects. No existing research data was changed.
 begin;
 create table public.member_screen_records (
  id uuid primary key default gen_random_uuid(), user_id uuid not null references auth.users(id) on delete cascade,

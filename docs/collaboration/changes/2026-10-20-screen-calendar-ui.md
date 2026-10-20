@@ -1,6 +1,6 @@
 # Screen workspace and member calendar
 
-Website implementation is local only; server SQL remains prepared and is not applied. See 2026-10-20-screen-calendar.md for the immutable account contract and its provenance limits.
+Website implementation is local only; approved server SQL was applied to shared Taiwan stock2 on 2026-10-20. See 2026-10-20-screen-calendar.md for the immutable account contract and its provenance limits.
 
 - Summary of every selected condition is moved above the form; the basic date/price/industry controls can collapse. Existing split-pane controls remain, with a 60% default and consistent saved-size key.
 - Distinct repository-native SVG icons for pattern, candle, gap, limits, indicator, strategy, record, calendar and disclosure. Existing theme tokens and reduced motion are respected.
@@ -11,4 +11,4 @@ Website implementation is local only; server SQL remains prepared and is not app
 
 Validation: PGlite server-day/past/future/immutable/RLS/idempotency tests; isolated UI snapshot and retry/error tests; complete-site screener/member route integration; 320/375/768/1366 light/dark calendar and 1440/375/320 workspace screenshots. Existing member task-wallet browser regression passes. There is no npm build target; script syntax, inline syntax and API budget checks are used.
 
-User approved live calendar SQL and then corrected the contract to allow own-record deletion. Website deletion UX and isolated tests are complete. Live migration remains pending: Work reports local browser use disabled; no actual member rows have been created or deleted.
+User approved live calendar SQL and then corrected the contract to allow own-record deletion. Website deletion UX and isolated tests are complete. Browser access was restored and the approved migration was applied successfully on 2026-10-20; security and owner read-only checks passed with zero actual member rows created or deleted. Frontend remains unpublished until the user requests steps 2/3.
