@@ -82,3 +82,19 @@
 - 本機：`node tools/serve.mjs` → `http://127.0.0.1:4173` → 今日焦點 → 今日排行。（本機排行讀正式站 API，正式站未更新前題材仍是舊資料。）
 - UAT：三張卡片每檔應有題材；「展開 ↗」完整表每檔最多直接顯示 4 個，多的有「+N 更多」，展開後「收起」在最後。
 - 抽查：威鋒電子 6756、富喬 1815、西勝 3625（上櫃）、律勝 3354 的題材是否合理且有來源。
+
+---
+
+## 7. 接手完成紀錄（2026-10-20，Claude 代工，已上 uat 未上 prod）
+
+**狀態：後端題材補齊「已完成並上 uat」，等 JUSTY 檢查 uat 後才上 prod。** 詳見 `HANDOFF.md` 第十四節 C。
+
+**實際做法（與原建議的差異）：**
+1. **題材來源**：玩股網**沒有公開的概念股／題材 API** — 實測 `/stock/{code}/concept`、`concept-stock(s)`、`relative-concept` 等皆 404，個股頁網路側也抓不到 concept 端點，只有 `/index/listed/industry`（＝產業別）。所以**無法**用「合夥人之前爬的玩股網題材列表」自動補（那份不在 repo，且來源端點已不存在）。
+2. 依用戶 2026-10-20 指示「用他那份（＝現有 `THEME_MEMBERS`，39 題材/406 檔）＋缺的爬玩股網或 TWSE 補」→ 最終用：**合夥人精選題材 `THEME_MEMBERS`（精準，排前）＋ 官方產業別保底**（TWSE `t187ap03_L` 上市＋TPEx `mopsfin_t187ap03_O` 上櫃，涵蓋全市場）。皆真實可追溯、不由 AI 自編。
+3. **存放**：依用戶選定，新建 Supabase 表 **`stock_themes`**（`code` pk, `themes` jsonb=[{id,name,src}], `updated_at`；RLS anon 讀），由 `scripts/themes_push.py` 建置、排進 `run_daily_job.bat`（在 `page_cache_push` 之前）每日更新。
+4. **後端接法**（取代原文 §4 的「改 `_focus_details` 用同一份題材」）：新增 `api/screen.py _load_stock_themes()`（讀 `stock_themes`，表空時即時 `THEME_MEMBERS`+產業別組同結果保底）；`_focus_details()` 的 `themes` 改讀它（保留你的 `chg_5d`／`volume_lots`）；`fields_version` 2→3 讓舊快照即時重算。前端 `focus-rankings.js/css` **不需再改**。
+
+**成果**：全市場 **1,903 檔**（**406 有精選題材、1,497 以產業別保底、94 無分類**）。uat API `?stat=focus` 實測三榜每列皆帶題材、零未分類（AMAX-KY→資料中心+電腦週邊、台郡→CPO+電子零組件、5205→綠能環保）。§6 抽查股（6756/1815/3625/3354）在表中皆有題材或產業別。
+
+**仍待 JUSTY 定案（原 §4.5，先不動）：** 題材粒度是否合併同義（伺服器 vs AI伺服器）、題材族群頁與強弱勢統計是否維持「精選主要題材」口徑（目前**維持** THEME_MEMBERS 精選口徑，排行榜才用完整 `stock_themes`）、要不要再找更細的概念股來源補非科技股的「真題材」（目前非精選股只有產業別）。確認後我再調。
