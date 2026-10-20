@@ -10,9 +10,9 @@
     <div class="share-unlock-content"><div class="share-account" data-share-account role="status">正在確認分享資格…</div>
     <div class="share-rewards"><section class="share-reward"><span class="share-tag">分享體驗券 · 每人一次</span><h3>分享給 3 位 IG 好友</h3><div class="share-days"><strong>3</strong><span>天使用券</span></div><p>私訊分享給 3 位不同朋友，回來確認後取得使用券，啟用才開始計時。</p><label class="share-confirm"><input type="checkbox" data-share-confirm>我已分享給 3 位不同的 IG 好友</label><button type="button" class="share-primary" data-share-claim disabled>確認分享，領取 3 天券</button><small>採誠信確認；網站不讀取你的 IG 私訊。</small></section>
     <section class="share-reward share-reward-invite"><span class="share-tag">邀請使用券 · 每滿 3 人可再領 VIP</span><h3>發動態，邀請朋友加入</h3><div class="share-days"><strong>7</strong><span>天 VIP 使用券</span></div><p>在動態放上專屬邀請連結，每邀請 3 位新朋友完成註冊驗證，即可獲得一張 VIP 7 天使用券。</p><div class="share-progress-label"><span>本輪有效邀請</span><b data-share-progress>—／3 位</b></div><progress data-share-meter max="3" value="0" aria-label="本輪有效邀請進度"></progress><small data-share-total>邀請碼由會員帳號核發，跨裝置保留同一組。</small><button type="button" class="share-secondary" data-share-refresh>更新邀請進度</button></section></div>
-    <section class="share-link-box" aria-label="你的專屬邀請"><div><span>你的專屬邀請碼</span><strong data-share-code>登入後取得</strong></div><div class="share-link-actions"><button type="button" data-share-copy disabled>複製邀請連結</button><button type="button" data-share-send disabled>分享邀請</button></div><input data-share-link aria-label="專屬邀請連結，可手動複製" readonly hidden></section>
+    <section class="share-link-box" aria-label="你的專屬邀請"><div><span>你的專屬邀請碼</span><div class="share-code-row"><strong data-share-code>登入後取得</strong><button type="button" class="mc-copy-code" data-share-copy-code aria-label="複製邀請碼" title="複製邀請碼" disabled>${window.AcademyInvitation.copyIcon}</button></div></div><div class="share-link-actions"><button type="button" data-share-copy disabled>分享邀請連結</button></div><input data-share-link aria-label="邀請內容，可手動複製" readonly hidden></section>
     <div class="share-voucher-actions"><button type="button" class="share-secondary" data-share-vouchers>前往我的使用券 →</button><small>使用券核發後一個月內啟用；啟用後保留完整天數。</small></div><p class="share-action-status" role="status" aria-live="polite" data-share-status></p>
-    <details class="share-rules"><summary>分享規則與使用範圍</summary><ul><li>3 天體驗券使用範圍：外資空單溫度計、大盤多空廣度。邀請滿 3 位的 7 天獎勵為 VIP 券，可使用會員研究功能；主力訊號、分點回測、神燈與冥燈只限管理員，不包含在任何使用券。</li><li>3 天體驗每個會員限領一次，以本人確認已私訊分享給 3 位不同 IG 好友為依據。</li><li>7 天獎勵以邀請碼與有效新會員紀錄判定，不驗證動態發布，也不要求正面評價。</li><li>新朋友須在活動開始後註冊，並於註冊後 7 天內綁定邀請碼及完成活動要求的帳號驗證。每人只歸屬一位邀請人；自己邀請自己、重複帳號不計入。</li><li>每累積 3 位有效新會員，取得 VIP 7 天券；同一位朋友只計算一次，未滿 3 位的進度會保留。</li><li>達標先核發待啟用券，核發後一個日曆月內可按「開始使用」；從啟用時起算完整 3／7 天。每張券獨立計時，同時啟用會重疊；未啟用可先保留。期限屆滿後，原有研究紀錄仍保留。</li><li>邀請進度於開啟、更新或重新登入時核對；活動暫停時停止新獎勵核發，已核發的使用期限不變。</li></ul></details></div>`;
+    <details class="share-rules"><summary>分享規則與使用範圍</summary><ul><li>3 天體驗券使用範圍：外資空單溫度計、大盤多空廣度。邀請滿 3 位的 7 天獎勵為 VIP 券，可使用會員研究功能；主力訊號、分點回測、神燈與冥燈只限管理員，不包含在任何使用券。</li><li>3 天體驗每個會員限領一次，以本人確認已私訊分享給 3 位不同 IG 好友為依據。</li><li>7 天獎勵以邀請碼與有效新會員紀錄判定，不驗證動態發布，也不要求正面評價。</li><li>新朋友須在活動開始後註冊，並於註冊後 7 天內綁定邀請碼及完成活動要求的帳號驗證。每個受邀帳號只能綁定一位邀請人；註冊、驗證、補填邀請碼是同一筆邀請流程，不會各算一次。自己邀請自己、同一帳號重複登入或補填不重複計數或發獎。</li><li>每累積 3 位有效新會員，取得 VIP 7 天券；同一位朋友只計算一次，未滿 3 位的進度會保留。</li><li>達標先核發待啟用券，核發後一個日曆月內可按「開始使用」；從啟用時起算完整 3／7 天。每張券獨立計時，同時啟用會重疊；未啟用可先保留。期限屆滿後，原有研究紀錄仍保留。</li><li>邀請進度於開啟、更新或重新登入時核對；活動暫停時停止新獎勵核發，已核發的使用期限不變。</li></ul></details></div>`;
   document.body.append(dialog);
   const el=s=>dialog.querySelector(s),message=text=>{el('[data-share-status]').textContent=text;};
   function remaining(){return snapshot?Date.parse(snapshot.expires_at)-Date.parse(snapshot.server_time)-(performance.now()-received):0;}
@@ -28,7 +28,7 @@
     window.dispatchEvent(new Event('academy-share-access-changed'));
   }
   function armExpiry(){clearTimeout(expiryTimer);const times=[...FEATURES].map(featureRemaining).filter(n=>n>0);if(times.length)expiryTimer=setTimeout(()=>{notify();paint();armExpiry();},Math.min(...times.map(n=>n+30),2147483647));}
-  function inviteLink(){if(!snapshot?.code||ownerToken!==token())return '';if(!['https:','http:'].includes(location.protocol))return '';const url=new URL(location.pathname,location.origin);url.searchParams.set('ref',snapshot.code);return url.href;}
+  function inviteLink(){return snapshot?.code&&ownerToken===token()?window.AcademyInvitation.link(snapshot.code):'';}
   function paint(){
     const signed=!!token(),ready=!!snapshot&&ownerToken===token(),active=ready&&snapshot.campaign_active,verified=ready&&snapshot.verified;
     const account=el('[data-share-account]');account.replaceChildren();
@@ -41,7 +41,7 @@
     const count=ready?snapshot.confirmed_count:0,progress=ready?Math.min(3,Math.max(0,count-snapshot.rewarded_groups*3)):0;
     el('[data-share-progress]').textContent=ready?progress+'／3 位':'—／3 位';el('[data-share-meter]').value=progress;
     el('[data-share-total]').textContent=ready?'累積有效邀請 '+count+' 位 · 已獲得 '+snapshot.rewarded_groups*7+' 天使用券（啟用後起算）':'邀請進度由伺服器確認，不會因為按分享就增加。';
-    el('[data-share-copy]').disabled=el('[data-share-send]').disabled=!ready||!active||!inviteLink();
+    el('[data-share-copy]').disabled=el('[data-share-copy-code]').disabled=!ready||!inviteLink();
     el('[data-share-refresh]').disabled=!signed||!!inflight;
   }
   function validate(s){return s&&s.campaign==='share-v1'&&s.feature==='research_tools'&&/^[A-Z0-9]{6,20}$/.test(s.code)&&Number.isSafeInteger(s.confirmed_count)&&s.confirmed_count>=0&&Number.isSafeInteger(s.rewarded_groups)&&s.rewarded_groups>=0&&['campaign_active','requires_phone','verified','trial_claimed','has_access'].every(k=>typeof s[k]==='boolean')&&Number.isFinite(Date.parse(s.server_time))&&(s.expires_at===null||Number.isFinite(Date.parse(s.expires_at)))&&(s.feature_access===undefined||(s.feature_access&&typeof s.feature_access==='object'&&!Array.isArray(s.feature_access)&&Object.values(s.feature_access).every(v=>typeof v==='string'&&Number.isFinite(Date.parse(v)))));}
@@ -70,9 +70,9 @@
   el('[data-share-claim]').onclick=()=>refresh(true);
   el('[data-share-refresh]').onclick=()=>refresh();
   el('[data-share-vouchers]').onclick=()=>{dialog.close();if(token())window.openMemberCenter?.('gifts');else window.openAuthModal?.('login');};
-  async function copy(){const link=inviteLink();if(!link)return;try{await navigator.clipboard.writeText(link);message('邀請連結已複製！可貼到 IG 私訊或動態連結貼紙。分享動作不會直接增加有效邀請人數。');}catch{const input=el('[data-share-link]');input.hidden=false;input.value=link;input.focus();input.select();message('請手動複製下方邀請連結，貼到 IG 私訊或動態。');}}
-  el('[data-share-copy]').onclick=copy;
-  el('[data-share-send]').onclick=async()=>{const link=inviteLink();if(!link)return;if(!navigator.share)return copy();try{await navigator.share({title:'先見量化智能 · 一起研究市場',text:'這些研究工具分享給你，一起來試試！',url:link});message('請確認分享對象；邀請人數以朋友完成註冊驗證為準。');}catch(e){if(e.name!=='AbortError')await copy();}};
+  async function copy(){const link=inviteLink(),owner=token();if(!link)return;try{await navigator.clipboard.writeText(link);if(owner!==token())return;message('邀請連結已複製，內含你的邀請碼。朋友確認介紹人並完成驗證後才計數；分享本身不會發點。');}catch{if(owner!==token())return;const input=el('[data-share-link]');input.hidden=false;input.value=link;input.focus();input.select();message('請手動複製邀請連結；分享本身不會發點。');}}
+  el('[data-share-copy-code]').onclick=async()=>{const owner=token();if(ownerToken!==owner||!snapshot)return;const code=snapshot.code;try{await navigator.clipboard.writeText(code);if(owner===token())message('邀請碼已複製：'+code+'。只有代碼，不含網址。');}catch{if(owner!==token())return;const input=el('[data-share-link]');input.hidden=false;input.value=code;input.focus();input.select();message('請手動複製這組邀請碼，供朋友填入。');}};
+  el('[data-share-copy]').onclick=async()=>{const link=inviteLink(),owner=token();if(!link)return;if(!navigator.share)return copy();try{await navigator.share({title:'先見量化智能 · 一起研究市場',text:'邀請你一起研究市場，邀請碼 '+snapshot.code,url:link});if(owner===token())message('請確認分享對象；朋友完成驗證並確認介紹人後才計數，重複登入或補填不會重複發獎。');}catch(e){if(e.name!=='AbortError'&&owner===token())await copy();}};
   document.addEventListener('click',e=>{const target=e.target.closest('[data-share-unlock]');if(target){e.preventDefault();open();}});
   function sessionChanged(){snapshot=null;ownerToken='';clearTimeout(expiryTimer);paint();notify();if(token())refresh();}
   addEventListener('academy-auth-changed',sessionChanged);
