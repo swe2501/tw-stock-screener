@@ -24,6 +24,7 @@
  function render(view,{main,profile,go}){
   if(!['overview','tasks','benefits'].includes(view)||!profile)return false;
   const state=localState(profile);main.innerHTML='<div class="member-journey">'+(view==='overview'?overview(profile,state):view==='tasks'?taskView(profile,state):benefits(profile))+'</div>';const root=main.querySelector('.member-journey'),owner=localStorage.getItem('sb_token');
+  if(view==='tasks'||view==='benefits')window.AcademyMemberMissions?.mount(root,{profile,go});
   root.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled)return;if(b.dataset.mjGo)go(b.dataset.mjGo);if(b.dataset.mjFilter){root.querySelectorAll('[data-mj-filter]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));root.querySelector('.mj-tasks').innerHTML=tasks.filter(t=>t[1]===b.dataset.mjFilter).map(t=>taskCard(t,profile,state)).join('');}});
   if(view==='overview'){
    const current=()=>root.isConnected&&owner===localStorage.getItem('sb_token');

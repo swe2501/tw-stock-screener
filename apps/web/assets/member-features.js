@@ -68,7 +68,7 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
     if(view==='gifts'){
       main.innerHTML=card('禮遇與優惠券',`<div class="mc-gift-hero"><span class="mc-kicker">A GIFT FOR YOUR JOURNEY</span><button type="button" class="mc-envelope" data-gift-open aria-label="開啟我的禮遇"><i></i><span>先見</span></button><h3>每一份禮遇，都屬於你的學院旅程。</h3><p class="mc-muted">生日禮、推薦禮與優惠券，集中管理、清楚記錄。</p></div><div class="mc-note">${profile.birth_date?'你的生日資料已填寫，生日活動開放時依規則確認資格。':'可以到個人資料填寫生日，為未來的生日禮遇做好準備。'}每份禮遇的內容與期限，依當期活動公告。</div>`)+card('研究使用券','<p class="mc-muted">達標後先存券，點「開始使用」才起算。核發後一個月內啟用，可使用完整天數。</p><div data-vouchers-body class="mc-muted">正在讀取使用券…</div>')+card('我的禮遇','<div data-rewards-body class="mc-muted">正在讀取…</div>')+card('我的優惠券','<div data-coupons-body class="mc-muted">正在讀取…</div>');
       populateVouchers(main.querySelector('[data-vouchers-body]')).then(ids=>populate('rewards',main.querySelector('[data-rewards-body]'),'禮遇活動準備中','活動正式開放後，符合資格的禮遇會出現在這裡。',ids));populate('coupons',main.querySelector('[data-coupons-body]'),'優惠券活動準備中','新優惠推出時，這裡會顯示使用條件與有效期限。');
-      const redeem=document.createElement('button');redeem.type='button';redeem.textContent='有優惠碼？前往兌換 →';redeem.addEventListener('click',()=>go('redeem'));const actions=document.createElement('div');actions.className='mc-gift-actions';actions.append(redeem);main.querySelector('.mc-card').append(actions);const gift=main.querySelector('[data-gift-open]');gift.addEventListener('click',()=>{gift.classList.add('is-open');const target=main.querySelector('[data-rewards-body]');target.closest('.mc-card').scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'instant':'smooth'});});
+      const redeem=document.createElement('button');redeem.type='button';redeem.textContent='有優惠碼？前往兌換 →';redeem.addEventListener('click',()=>go('redeem'));const actions=document.createElement('div');actions.className='mc-gift-actions';actions.append(redeem);main.querySelector('.mc-card').append(actions);const gift=main.querySelector('[data-gift-open]');gift.addEventListener('click',()=>{gift.classList.add('is-open');const target=main.querySelector('[data-vouchers-body]');target.closest('.mc-card').scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'instant':'smooth'});});
     }
     if(view==='redeem'){
       main.innerHTML=card('兌換優惠碼',`<span class="mc-kicker">REDEEM YOUR BENEFIT</span><p class="mc-muted">輸入學院提供的活動代碼。確認兌換成功後，優惠券或禮遇就會加入你的會員帳號。</p><form class="mc-code-form"><label for="mc-promo-code">優惠／禮遇碼</label><input id="mc-promo-code" name="code" required minlength="4" maxlength="32" pattern="[A-Za-z0-9-]{4,32}" autocomplete="off" spellcheck="false" placeholder="輸入活動代碼"><button type="submit" class="mc-primary">確認兌換</button></form><p class="mc-code-tip">這裡用於兌換活動代碼。朋友分享的邀請碼，請到「邀請好友」填寫。</p><div class="mc-status" role="status" data-feature-status></div><div data-redemption-result></div>`);
@@ -91,19 +91,43 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
     return true;
   }
   async function populateVouchers(target){
-    const ids=new Set();
+    const ids=new Set(),owner=localStorage.getItem('sb_token'),current=()=>target.isConnected&&owner===localStorage.getItem('sb_token');
     try{
-      const data=await AcademyIdentity.usageVouchers();if(!target.isConnected)return ids;
+      const data=await AcademyIdentity.usageVouchers();if(!current())return ids;
       if(data?.mode!=='voucher'||!Array.isArray(data.rows)||!Number.isFinite(Date.parse(data.server_time)))throw Error('使用券服務尚未就緒');
       const now=Date.parse(data.server_time);data.rows.forEach(r=>ids.add(r.id));
       if(!data.rows.length){target.innerHTML=empty('目前沒有使用券','分享或邀請達標後，使用券會保存在這個帳號。');return ids;}
-      const active=data.rows.find(r=>r.status==='claimed'&&Date.parse(r.expires_at)>now);
+      const catalog=new Map((data.feature_catalog||[]).map(f=>[f.id,f.title]));
+      if(!catalog.size){catalog.set('fhedge','外資空單溫度計');catalog.set('breadth','大盤多空廣度');}
+      const tiers={observation:'觀察券',research:'研究券',advanced:'進階券',vip:'VIP 券',choice:'自選券'};
+      const active=data.rows.filter(r=>r.status==='claimed'&&Date.parse(r.expires_at)>now);
       target.innerHTML=data.rows.map(r=>{
         const ready=r.status==='ready'&&Date.parse(r.activation_deadline)>now,used=r.status==='claimed'&&Date.parse(r.expires_at)>now;
-        return '<article class="mc-voucher"><div><span class="mc-kicker">'+(ready?'待啟用':used?'使用中':r.status==='cancelled'?'已取消':'已到期')+'</span><h3>'+esc(r.title)+'</h3><p>'+Number(r.duration_days)+' 天使用券 · '+(ready?'最晚 '+date(r.activation_deadline)+' 啟用':used?'使用至 '+date(r.expires_at):'此券目前無法啟用')+'</p></div>'+(ready?'<details><summary>開始使用 →</summary><p>確認後立即起算 '+Number(r.duration_days)+' 天。'+(active?'你已有使用中的券（至 '+date(active.expires_at)+'），現在啟用會重疊計時，建議先保留此券。':'')+'</p><button type="button" data-activate-voucher="'+esc(r.id)+'">確認啟用 '+Number(r.duration_days)+' 天</button><div role="status"></div></details>':'')+'</article>';
+          const allowed=(Array.isArray(r.allowed_features)?r.allowed_features:['fhedge','breadth']).filter(f=>catalog.has(f));
+          const features=used&&Array.isArray(r.selected_features)?r.selected_features:allowed;
+          const overlap=active.find(a=>(a.selected_features||a.allowed_features||['fhedge','breadth']).some(f=>allowed.includes(f)));
+          const choices=r.tier==='choice'?'<fieldset class="mc-voucher-choices"><legend>選擇 1 項工具，啟用後即固定</legend>'+allowed.map(f=>'<label><input type="radio" name="voucher-'+esc(r.id)+'" value="'+esc(f)+'"><span>'+esc(catalog.get(f))+'</span></label>').join('')+'</fieldset>':'';
+          return '<article class="mc-voucher" data-tier="'+esc(r.tier||'observation')+'"><div><span class="mc-kicker">'+(ready?'待啟用':used?'使用中':r.status==='cancelled'?'已取消':'已到期')+' · '+(tiers[r.tier]||'研究使用券')+'</span><h3>'+esc(r.title)+'</h3><p>'+Number(r.duration_days)+' 天使用券 · '+(ready?'最晚 '+date(r.activation_deadline)+' 啟用':used?'使用至 '+date(r.expires_at):'此券目前無法啟用')+'</p><div class="mc-voucher-tools">'+features.map(f=>'<span>'+esc(catalog.get(f)||f)+'</span>').join('')+'</div></div>'+(ready?'<details><summary>開始使用 →</summary>'+choices+'<p>確認後立即起算 '+Number(r.duration_days)+' 天。'+(overlap?'你已有相同工具的使用權（至 '+date(overlap.expires_at)+'），現在啟用會重疊計時，建議先保留此券。':'')+'</p><button type="button" data-activate-voucher="'+esc(r.id)+'"'+(r.tier==='choice'?' disabled':'')+'>確認啟用 '+Number(r.duration_days)+' 天</button><div role="status" aria-live="polite"></div></details>':'')+'</article>';
       }).join('');
-      target.querySelectorAll('[data-activate-voucher]').forEach(b=>b.onclick=async()=>{const message=b.parentElement.querySelector('[role=status]');b.disabled=true;try{const result=await AcademyIdentity.claimReward(b.dataset.activateVoucher);if(!result?.id||result.status!=='claimed')throw Error('尚未收到啟用結果，請重新確認');message.textContent='已啟用，使用至 '+date(result.expires_at);await window.AcademyShareUnlock?.refresh();window.dispatchEvent(new Event('academy-entitlements-changed'));await populateVouchers(target);}catch(error){message.textContent=error.message;b.disabled=false;}});
-    }catch(error){if(target.isConnected){target.textContent='使用券服務準備中；尚未開放核發或啟用。';}}
+      target.querySelectorAll('[data-activate-voucher]').forEach(b=>{
+        const row=data.rows.find(r=>r.id===b.dataset.activateVoucher),panel=b.parentElement;
+        panel.querySelectorAll('input[type=radio]').forEach(input=>input.addEventListener('change',()=>{b.disabled=false;}));
+        b.onclick=async()=>{
+          if(!current())return;
+          const message=panel.querySelector('[role=status]'),selected=panel.querySelector('input:checked'),inputs=[...panel.querySelectorAll('input')];
+          if(row.tier==='choice'&&!selected){message.textContent='請先選擇 1 項工具。';return;}
+          b.disabled=true;inputs.forEach(input=>input.disabled=true);message.textContent='正在確認使用權，請稍候…';
+          try{
+            const result=row.tier?await AcademyIdentity.activateVoucher(row.id,selected?[selected.value]:[]):await AcademyIdentity.claimReward(row.id);
+            if(!current())return;
+            if(!result?.id||result.status!=='claimed')throw Error('尚未收到啟用結果，請重新確認');
+            message.textContent='已啟用，使用至 '+date(result.expires_at);
+            await window.AcademyShareUnlock?.refresh();if(!current())return;
+            window.dispatchEvent(new Event('academy-entitlements-changed'));await populateVouchers(target);
+          }catch(error){if(current()){message.textContent=error.message;b.disabled=false;inputs.forEach(input=>input.disabled=false);}}
+        };
+      });
+    }catch(error){if(current()){target.textContent='使用券服務準備中；尚未開放核發或啟用。';}}
     return ids;
   }
   async function populate(resource,target,title,message,exclude=new Set()){ try{const r=await AcademyIdentity.memberResource(resource);if(!target.isConnected)return;if(!r.ready){target.innerHTML=empty(title,message);return;}r.rows=r.rows.filter(x=>!exclude.has(x.id));if(!r.rows.length){target.innerHTML=empty('目前沒有紀錄','有新的正式紀錄時會顯示在這裡。');return;}target.innerHTML=r.rows.map(x=>`<details class="mc-note-item"><summary><b>${esc(x.title||x.description||'會員紀錄')}</b><small>${esc(x.status||'')}${x.expires_at?' · '+date(x.expires_at):''}</small></summary><p>${esc(x.description||'')}</p>${resource==='points'?`<b>${Number(x.points)||0} 點</b>`:''}${resource==='rewards'&&x.status==='ready'?`<button type="button" data-claim-reward="${esc(x.id)}">領取禮遇</button><div role="status" class="mc-status"></div>`:''}<small>${x.starts_at?'活動時間：'+date(x.starts_at):''}</small></details>`).join('');target.querySelectorAll('[data-claim-reward]').forEach(b=>b.addEventListener('click',async()=>{const message=b.parentElement.querySelector('[role=status]');b.disabled=true;message.textContent='正在確認領取資格…';try{const r=await AcademyIdentity.claimReward(b.dataset.claimReward);if(!r?.id||r.status!=='claimed')throw Error('尚未收到領取結果，請稍後重試');message.textContent='禮遇已領取，有效期限至 '+date(r.expires_at);b.textContent='已領取';window.dispatchEvent(new Event('academy-entitlements-changed'));window.AcademyShareUnlock?.refresh();}catch(e){message.textContent=e.message;b.disabled=false;}}));}catch(e){if(target.isConnected)target.textContent=e.message;}}

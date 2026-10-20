@@ -2333,14 +2333,14 @@
     <div class="mn-grp"><span class="mn-item">選股 <i>▾</i></span><div class="mn-menu">
       <a onclick="_showView('screen')"> 掏金篩選器</a><a onclick="_showView('box')">箱型</a><a onclick="_showView('limitup')">上漲下跌亮燈區</a><a onclick="_showView('liq')"> 流動性排行</a><a onclick="_showView('sr')"> 壓力支撐逼近</a></div></div>
     <div class="mn-grp"><span class="mn-item">題材族群 <i>▾</i></span><div class="mn-menu">
-      <a class="nav-owner" onclick="_showView('hottopics')"> 話題</a><a onclick="_showView('themes')">題材列表</a><a onclick="_showView('sectors')">產業地圖</a><a onclick="_showView('groupbook')">集團作帳</a></div></div>
+      <a class="nav-owner" data-member-feature="hottopics" onclick="_showView('hottopics')"> 話題</a><a onclick="_showView('themes')">題材列表</a><a onclick="_showView('sectors')">產業地圖</a><a onclick="_showView('groupbook')">集團作帳</a></div></div>
     <div class="mn-grp"><span class="mn-item">市場觀察 <i>▾</i></span><div class="mn-menu">
-      <a class="nav-owner" onclick="_showView('sig')"> 主力訊號</a><a class="nav-owner" onclick="_showView('brank')"> 分點回測</a><a class="nav-owner" onclick="_showView('mingdeng')"> 明燈冥燈</a><a onclick="_showView('greed')"> 貪婪指標</a><a onclick="_showView('inst')"> 三大法人個股買賣超</a><a onclick="_showView('fhedge')"> 外資空單溫度計</a><a onclick="_showView('breadth')"> 大盤多空廣度</a><a onclick="_showView('usty')"> 美債對標</a><a onclick="_showView('disposal')"> 處置股</a></div></div>
+      <a class="nav-owner" onclick="_showView('sig')"> 主力訊號</a><a class="nav-owner" onclick="_showView('brank')"> 分點回測</a><a class="nav-owner" onclick="_showView('mingdeng')"> 神燈與冥燈</a><a onclick="_showView('greed')"> 貪婪指標</a><a onclick="_showView('inst')"> 三大法人個股買賣超</a><a onclick="_showView('fhedge')"> 外資空單溫度計</a><a onclick="_showView('breadth')"> 大盤多空廣度</a><a onclick="_showView('usty')"> 美債對標</a><a onclick="_showView('disposal')"> 處置股</a></div></div>
     <div class="mn-grp"><span class="mn-item">ETF 分析 <i>▾</i></span><div class="mn-menu">
       <a onclick="_showView('etfx')" style="font-weight:800;color:var(--brand-green)"> ETF 探索</a><a onclick="_showView('etf')">總覽 · 規模排行</a><a onclick="_showView('etfcons')">成分股</a><a onclick="_showView('etfrev')">股票反查 ETF</a><a onclick="_showView('etfdiv')">配息行事曆</a><a onclick="_showView('etfhold')">持有人結構</a><a onclick="_showView('etfsim')">ETF 相似度</a><a onclick="_showView('etfheavy')">重倉股排行</a><a onclick="_showView('etfprem')">折溢價</a><a onclick="_showView('etfflow')">資金流</a><a onclick="_showView('etfperf')">績效比較</a></div></div>
     <a class="mn-item" onclick="_showView('news')">每日新聞</a>
     <div class="mn-grp" id="navWatchGrp"><span class="mn-item">我的觀察 <i>▾</i></span><div class="mn-menu">
-      <a class="nav-auth" onclick="openWatchlist()"> 觀察清單</a><a class="nav-auth" onclick="openBacktest()"> 回測</a><a class="nav-owner" onclick="openSellTrack()"> 出場追蹤</a><a class="nav-auth" onclick="openAlertMgr()"> 我的警示</a></div></div>
+      <a class="nav-auth" onclick="openWatchlist()"> 觀察清單</a><a class="nav-auth" onclick="openBacktest()"> 回測</a><a class="nav-owner" data-member-feature="selltrack" onclick="openSellTrack()"> 出場追蹤</a><a class="nav-auth" onclick="openAlertMgr()"> 我的警示</a></div></div>
   </div></nav>
 
   <style>
@@ -2807,7 +2807,7 @@
       /* 會員分級：一般會員隱藏專有算法細節(#7，2026-10-08)；開通/擁有者帳號才看得到公式 */
       body .algo-gated{display:none !important;}
       body:not(.is-owner) .cb-hint{display:none !important;}   /* 選股各篩選的型態/算法定義 */
-      body:not(.is-owner) .nav-owner{display:none !important;}   /* 未開通會員不顯示主力訊號/分點回測/明燈冥燈等籌碼入口 */
+      body:not(.is-owner) .nav-owner{display:none !important;}   /* 未開通會員不顯示主力訊號/分點回測/神燈與冥燈等籌碼入口 */
       /* §4 融資維持率圖解（我們 vs 玩股網 vs CMoney，供合夥人複查；2026-10-07）*/
       .mm-explain{margin-top:12px;border:1px solid var(--border);border-radius:10px;background:linear-gradient(135deg,color-mix(in srgb,var(--surface) 95%,#fff 5%),var(--surface2));overflow:hidden;}
       .mm-ex-h{padding:9px 14px;font-size:12.5px;font-weight:800;color:var(--text);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;}
@@ -2958,9 +2958,9 @@
     <div class="fc-summary" id="fcSummary"></div>
     <div class="fc-grid3">
       <div id="fcSnapshotDate" style="grid-column:1 / -1;font-size:12px;color:var(--text-muted)"></div>
-      <div class="fc-card"><div class="fc-h"> 漲幅榜 <span class="fc-sub">TOP30</span></div><div class="fc-tbl" id="fcGainers"><div class="fc-empty">載入中…</div></div></div>
-      <div class="fc-card"><div class="fc-h"> 跌幅榜 <span class="fc-sub">TOP30</span></div><div class="fc-tbl" id="fcLosers"><div class="fc-empty">載入中…</div></div></div>
-      <div class="fc-card"><div class="fc-h"> 爆量榜 <span class="fc-sub">量比≥1.3</span></div><div class="fc-tbl" id="fcSurge"><div class="fc-empty">載入中…</div></div></div>
+      <div class="fc-card fc-ranking fc-ranking-gainers"><div class="fc-h"> 漲幅榜 <span class="fc-sub">TOP30</span></div><div class="fc-tbl" id="fcGainers"><div class="fc-empty">載入中…</div></div></div>
+      <div class="fc-card fc-ranking fc-ranking-losers"><div class="fc-h"> 跌幅榜 <span class="fc-sub">TOP30</span></div><div class="fc-tbl" id="fcLosers"><div class="fc-empty">載入中…</div></div></div>
+      <div class="fc-card fc-ranking fc-ranking-surge"><div class="fc-h"> 爆量榜 <span class="fc-sub">量比≥1.3</span></div><div class="fc-tbl" id="fcSurge"><div class="fc-empty">載入中…</div></div></div>
     </div>
     <div class="fc-grid3">
       <div class="fc-card"><div class="fc-h"> 今日題材焦點</div><div id="fcTopics"><div class="fc-empty">載入中…</div></div></div>
@@ -3156,10 +3156,10 @@
     <section class="ov-sec">
       <div class="ov-head"><h2>細分題材強弱</h2><span>題材成分股取自固定分類映射，漲跌與成交額以證交所最新行情重新計算</span></div>
       <div class="ov-grid2">
-        <div class="ov-card"><header><h3>今日強勢題材</h3><span class="tag">▲ 當日</span></header>
+        <div class="ov-card ov-strength"><header><h3>今日強勢題材</h3><span class="tag">▲ 當日</span></header>
           <div class="ov-thead t-theme"><span>題材</span><span>今日</span><span>資金</span><span>漲／跌停</span></div>
           <div id="ovThemeStrong"><div class="ov-empty">載入中…</div></div></div>
-        <div class="ov-card"><header><h3>今日弱勢題材</h3><span class="tag">▼ 當日</span></header>
+        <div class="ov-card ov-weakness"><header><h3>今日弱勢題材</h3><span class="tag">▼ 當日</span></header>
           <div class="ov-thead t-theme"><span>題材</span><span>今日</span><span>資金</span><span>漲／跌停</span></div>
           <div id="ovThemeWeak"><div class="ov-empty">載入中…</div></div></div>
       </div>
@@ -3460,18 +3460,19 @@
       focusRequest=fetch('/api/screen?stat=focus&n=30').then(function(r){return r.json();}).then(function(j){
         if(!j||j.error){['fcGainers','fcLosers','fcSurge'].forEach(function(id){if(el(id))el(id).innerHTML='<div class="fc-empty">讀取失敗</div>';});return;}
         focusFetchedAt=Date.now();
-        if(el('fcSnapshotDate'))el('fcSnapshotDate').textContent='排行榜行情日 '+j.date+' · 每日盤後預算';
+        if(el('fcSnapshotDate'))el('fcSnapshotDate').textContent='排行榜行情日 '+j.date+' · 每日盤後更新';
         var paint=function(){
           (j.gainers||[]).forEach(function(x){if(x.name&&x.name!==x.code)nameMap[x.code]=x.name;});
           (j.losers||[]).forEach(function(x){if(x.name&&x.name!==x.code)nameMap[x.code]=x.name;});
           (j.volume_surge||[]).forEach(function(x){if(x.name&&x.name!==x.code)nameMap[x.code]=x.name;});
+          if(window.AcademyFocusRankings){window.AcademyFocusRankings.render(j,{name:nm});return;}
           if(el('fcGainers'))el('fcGainers').innerHTML=rowsHTML(j.gainers,function(x){return '<span class="val '+cls(x.chg)+'">'+pct(x.chg)+'</span>';});
           if(el('fcLosers'))el('fcLosers').innerHTML=rowsHTML(j.losers,function(x){return '<span class="val '+cls(x.chg)+'">'+pct(x.chg)+'</span>';});
           if(el('fcSurge'))el('fcSurge').innerHTML=rowsHTML(j.volume_surge,function(x){return '<span class="val">'+Number(x.ratio).toFixed(2)+'x</span>'+(x.chg!=null?'<span class="val2 '+cls(x.chg)+'">'+pct(x.chg)+'</span>':'');});
         };
         // 先確保完整名稱表(含上櫃 otc_names / ETF)載入，上櫃股(如 5205)才有名字
         if(window._namesFull||typeof window._loadNames!=='function'){paint();}else{window._loadNames(paint);}
-      }).catch(function(){['fcGainers','fcLosers','fcSurge'].forEach(function(id){if(el(id))el(id).innerHTML='<div class="fc-empty">預算資料暫不可用</div>';});}).finally(function(){focusRequest=null});
+      }).catch(function(){['fcGainers','fcLosers','fcSurge'].forEach(function(id){if(el(id))el(id).innerHTML='<div class="fc-empty">排行資料暫時無法讀取，請稍後再試</div>';});}).finally(function(){focusRequest=null});
     }
     function loadSummary(){
       var SB=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'', AK=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';
@@ -7927,8 +7928,8 @@
         var on=!!label && t.indexOf(label.replace(/\s/g,''))===0; items[i].classList.toggle('mn-active',on); }
     }
     window._showView=function(v){
-      // 未開通會員不可開啟主力訊號/分點回測/明燈冥燈/話題（籌碼功能）；導回首頁
-      if((v==='sig'||v==='brank'||v==='mingdeng'||v==='hottopics') && !window._isOwner){
+      // 未開通會員不可開啟主力訊號/分點回測/神燈與冥燈/話題（籌碼功能）；導回首頁
+      if((v==='sig'||v==='brank'||v==='mingdeng'||(v==='hottopics'&&!window.AcademyShareUnlock?.hasAccess('hottopics'))) && !window._isOwner){
         try{ showToast('此功能為開通會員專屬，請先登入'); }catch(_){}
         v='home';
       }
@@ -8896,7 +8897,7 @@
     </div>
   </div>
 
-  <!-- 明燈與冥燈（市場觀察大項 view；付費/擁有者可見；2026-10-01 Phase 1）-->
+  <!-- 神燈與冥燈（市場觀察大項 view；付費/擁有者可見；2026-10-01 Phase 1）-->
   <style>
     #mingdengView{max-width:1100px;margin:0 auto;}
     #mingdengView .md-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:16px;box-shadow:var(--shadow-sm);}
@@ -8918,10 +8919,10 @@
     @media(max-width:760px){#mingdengView .md-frm{grid-template-columns:1fr 1fr;}#mingdengView .md-ladders{grid-template-columns:1fr;}}
   </style>
   <div id="mingdengView" style="display:none">
-    <div class="tm-head"><h2> 明燈與冥燈</h2><span class="sub">公開點名歷史紀錄 · 回測與風險回顧</span></div>
+    <div class="tm-head"><h2> 神燈與冥燈</h2><span class="sub">公開點名歷史紀錄 · 回測與風險回顧</span></div>
     <div id="mdLock" style="display:none;text-align:center;padding:60px 20px;color:var(--text-muted)">
       <div style="font-size:40px;margin-bottom:10px"></div>
-      <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px">明燈與冥燈 · 專項授權功能</div>
+      <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px">神燈與冥燈 · 專項授權功能</div>
       <div style="font-size:13px">回顧公開點名的歷史表現與最大回撤。依原有專項權限提供，不包含在分享體驗範圍。</div>
     </div>
     <div id="mdBody" style="display:none">
@@ -8983,7 +8984,7 @@
     function _mdLoadScores(){
       fetch(SB()+'/rest/v1/mingdeng_scores?select=*&order=win_rate.desc',{headers:H()}).then(function(r){return r.ok?r.json():[];}).then(function(a){
         a=Array.isArray(a)?a:[];
-        var g=a.filter(function(x){return x.label==='明燈';}), rd=a.filter(function(x){return x.label==='冥燈';});
+        var g=a.filter(function(x){return x.label==='明燈'||x.label==='神燈';}), rd=a.filter(function(x){return x.label==='冥燈';});
         function card(x,rk,green){ return '<div class="md-row md-'+(green?'green':'red')+'"><div class="rk">'+rk+'</div>'
           +'<div><div class="nm">'+esc(x.person)+' <span class="meta">'+esc(x.platform||'')+' · '+(x.direction==='short'?'看空':'看多')+'</span></div>'
           +'<div class="meta">樣本 '+(x.n||0)+' · 平均報酬 '+pct(x.avg_follow_ret)+' · MDD '+pct(x.avg_mdd)+' · 一買即跌 '+pct(x.buy_drop_rate)+'</div></div>'
@@ -12111,6 +12112,7 @@
     }
 
     async function openSellTrack() {
+      if(!window._isOwner&&!window.AcademyShareUnlock?.hasAccess('selltrack')){window.AcademyShareUnlock?.open();return;}
       const modal = document.getElementById('sellTrackModal');
       document.getElementById('sellTrackBody').innerHTML = '載入中...';
       modal.style.display = 'flex';
@@ -17159,11 +17161,12 @@
 </script>
 <script src="assets/sector-dashboard-model.js" defer></script>
 <script src="assets/sector-dashboard.js" defer></script>
-<script src="assets/member-identity.js?v=vouchers19" defer></script>
-<script src="assets/member-share.js?v=vouchers19" defer></script>
+<script src="assets/member-identity.js?v=levels20" defer></script>
+<script src="assets/member-missions.js?v=1" defer></script>
+<script src="assets/member-share.js?v=levels20" defer></script>
 <script src="assets/member-provider-icons.js" defer></script>
 <script src="assets/member-cloud.js" defer></script>
-<script src="assets/member-features.js?v=benefits19" defer></script>
+<script src="assets/member-features.js?v=levels20" defer></script>
 <script src="assets/member-strategy-engine.js" defer></script>
 <script src="assets/member-strategy-ui.js?v=owl2" defer></script>
 <script src="assets/member-research.js" defer></script>
@@ -17177,14 +17180,16 @@
 <script src="assets/site-search.js" defer></script>
 <script src="assets/member-derivatives-catalog.js" defer></script>
 <script src="assets/member-trade-ui.js" defer></script>
-<script src="assets/member-journey.js?v=1" defer></script>
+<script src="assets/member-journey.js?v=2" defer></script>
 <script src="assets/member-center.js?v=journey20" defer></script>
 <script src="assets/member-signin.js?v=vouchers19" defer></script>
 <script src="assets/member-private-screen.js" defer></script>
 <link rel="stylesheet" href="assets/site-readability.css">
 <script src="assets/foresight-brand.js?v=fqi28" defer></script>
-<link rel="stylesheet" href="assets/research-polish.css?v=3">
-<script src="assets/pattern-focus.js?v=1" defer></script>
-<script src="assets/member-quick-menu.js?v=2" defer></script>
+<link rel="stylesheet" href="assets/research-polish.css?v=6">
+<link rel="stylesheet" href="assets/focus-rankings.css?v=1">
+<script src="assets/focus-rankings.js?v=1" defer></script>
+<script src="assets/pattern-focus.js?v=2" defer></script>
+<script src="assets/member-quick-menu.js?v=3" defer></script>
 </body>
 </html>
