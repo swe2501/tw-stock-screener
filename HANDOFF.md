@@ -1,3 +1,5 @@
+> **2026-10-20 會員禮遇完整方案＋掏金「每日選股紀錄」**：任務點數、配發、全年禮遇與正式開放所需資料庫變更見 [docs/member-perks-program-2026-10-20.md](docs/member-perks-program-2026-10-20.md)（發點／兌換仍關閉，資料庫變更待 JUSTY 批准）。掏金篩選器結果列新增「記錄今日選股／我的紀錄」（`apps/web/assets/screen-log.js`），存在會員研究資料 `screen_logs`，不新增資料表、不作發點依據。另修正會員登入後「目前組合」摘要因私房篩選面板中斷。
+
 > **2026-10-20 今日排行「所屬題材」補齊（請合夥人接手）**：前端（卡片 3 個、完整表 4 個、「+N 更多／收起」固定在最後、完整排行視窗置中、本機排行改抓正式站 API）已改好；題材資料目前只有 THEME_MEMBERS 39 個題材／406 檔，請用合夥人之前爬的題材列表補齊。詳見 [HANDOFF_FOCUS_THEMES_2026-10-20.md](HANDOFF_FOCUS_THEMES_2026-10-20.md)。
 
 > **2026-10-18 最新分工與本機入口修復**：使用者已取消本對話／JUSTY 的 App 開發，交由合夥人接續；網站工作照常。保留合夥人 `apps/mobile` 與共用架構，勿整批回退。網站唯一主程式為 `apps/web/index.html`；根目錄補上相容轉接 `index.html`，讓原本本機書籤／雙擊入口繼續使用，且保留 query／hash。合夥人接手先看 [docs/collaboration/README.md](docs/collaboration/README.md)。

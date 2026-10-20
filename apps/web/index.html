@@ -9617,8 +9617,8 @@
       if(ind&&ind.value) a.push(ind.value); return a; }
     function refresh(){
       var all=base();
-      cat.querySelectorAll('.sc-panel').forEach(function(p){ var a=picked(p), col=p.querySelector('.sc-hd b').style.color;
-        p.querySelector('.sc-sum').innerHTML=a.map(function(t){return '<span class="sc-chip" style="color:'+col+'">'+esc(t)+'</span>';}).join('');
+      cat.querySelectorAll('.sc-panel').forEach(function(p){ var hb=p.querySelector('.sc-hd b'), sum=p.querySelector('.sc-sum'); if(!hb||!sum) return; /* 2026-10-20 會員私房篩選面板沒有 .sc-hd，略過以免整個摘要中斷 */ var a=picked(p), col=hb.style.color;
+        sum.innerHTML=a.map(function(t){return '<span class="sc-chip" style="color:'+col+'">'+esc(t)+'</span>';}).join('');
         all=all.concat(a); });
       $('scCombo').innerHTML=all.length?all.map(function(t){return '<span class="sc-chip">'+esc(t)+'</span>';}).join(''):'尚未設定任何條件';
     }
@@ -17216,15 +17216,17 @@
 <script src="assets/site-search.js" defer></script>
 <script src="assets/member-derivatives-catalog.js" defer></script>
 <script src="assets/member-trade-ui.js" defer></script>
-<script src="assets/member-journey.js?v=2" defer></script>
+<script src="assets/member-journey.js?v=5" defer></script>
 <script src="assets/member-center.js?v=journey20" defer></script>
 <script src="assets/member-signin.js?v=vouchers19" defer></script>
 <script src="assets/member-private-screen.js" defer></script>
 <link rel="stylesheet" href="assets/site-readability.css">
 <script src="assets/foresight-brand.js?v=fqi28" defer></script>
-<link rel="stylesheet" href="assets/research-polish.css?v=6">
+<link rel="stylesheet" href="assets/research-polish.css?v=9">
 <link rel="stylesheet" href="assets/focus-rankings.css?v=4">
 <script src="assets/focus-rankings.js?v=4" defer></script>
+<link rel="stylesheet" href="assets/screen-log.css?v=1">
+<script src="assets/screen-log.js?v=1" defer></script>
 <script src="assets/pattern-focus.js?v=2" defer></script>
 <script src="assets/member-quick-menu.js?v=3" defer></script>
 </body>
