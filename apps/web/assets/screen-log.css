@@ -235,17 +235,17 @@ body.scal-calendar-chart #chartModal.open:not(.etx-embedded){display:flex!import
 @media(prefers-reduced-motion:reduce){.sic-card .sic-resize>span,.sic-size input::-webkit-slider-thumb{transition:none}}
 
 /* Coordinated category accents: neutral reading surfaces, distinct identities. */
-.scal-workspace .sc-panel[data-cat=shape]{--panel-tone:#4d89ce}
-.scal-workspace .sc-panel[data-cat=kbar]{--panel-tone:#cb718e}
-.scal-workspace .sc-panel[data-cat=gap]{--panel-tone:#3f9b88}
-.scal-workspace .sc-panel[data-cat=limit]{--panel-tone:#c7854c}
-.scal-workspace .sc-panel[data-cat=ind]{--panel-tone:#9777be}
-.scal-workspace .sc-panel[data-cat=zm]{--panel-tone:#ba9443}
-.scal-workspace .sc-panel[data-cat=granville]{--panel-tone:#697cba}
-.scal-workspace .sc-panel[data-cat=ev357]{--panel-tone:#85974e}
-.scal-workspace .sc-panel[data-cat=private]{--panel-tone:#469cad}
-.scal-workspace .sc-panel{--sc-accent:var(--panel-tone);--panel-ink:color-mix(in srgb,var(--panel-tone) 82%,var(--text));}
-.scal-workspace .sc-panel:before{opacity:.8}
+.scal-workspace .sc-panel[data-cat=shape]{--panel-tone:#438ff0}
+.scal-workspace .sc-panel[data-cat=kbar]{--panel-tone:#ec7da5}
+.scal-workspace .sc-panel[data-cat=gap]{--panel-tone:#3dbb9b}
+.scal-workspace .sc-panel[data-cat=limit]{--panel-tone:#e89a4f}
+.scal-workspace .sc-panel[data-cat=ind]{--panel-tone:#ab83eb}
+.scal-workspace .sc-panel[data-cat=zm]{--panel-tone:#c69d36}
+.scal-workspace .sc-panel[data-cat=granville]{--panel-tone:#7e8fe9}
+.scal-workspace .sc-panel[data-cat=ev357]{--panel-tone:#9bb745}
+.scal-workspace .sc-panel[data-cat=private]{--panel-tone:#37b4cb}
+.scal-workspace .sc-panel{--sc-accent:var(--panel-tone);--panel-ink:var(--panel-tone);}
+.scal-workspace .sc-panel:before{opacity:.95}
 .scal-workspace .sc-panel .scal-panel-icon{color:var(--panel-ink)}
 .scal-workspace .sc-panel .sc-hd:hover,.scal-workspace .ms-private-panel>details>summary:hover{background:color-mix(in srgb,var(--panel-tone) 5%,var(--surface))!important}
 .scal-workspace .sc-panel.is-open>.sc-hd,.scal-workspace .ms-private-panel>details[open]>summary{background:color-mix(in srgb,var(--panel-tone) 4%,var(--surface))!important}
@@ -253,12 +253,22 @@ body.scal-calendar-chart #chartModal.open:not(.etx-embedded){display:flex!import
 .scal-workspace .ms-private-panel>details>summary>span{color:var(--text)}
 .scal-value-note{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;margin:4px 0 12px;padding:9px 12px;border-left:2px solid var(--panel-tone);border-radius:0 6px 6px 0;background:color-mix(in srgb,var(--panel-tone) 6%,var(--surface));color:var(--text-muted);font-size:12px;line-height:1.7}
 .scal-value-note strong{color:var(--text);font-weight:600}
-html:not([data-theme=light]) .scal-workspace .sc-panel[data-cat=shape]{--panel-tone:#79a8e3}
-html:not([data-theme=light]) .scal-workspace .sc-panel[data-cat=kbar]{--panel-tone:#df93aa}
-html:not([data-theme=light]) .scal-workspace .sc-panel[data-cat=gap]{--panel-tone:#73baa7}
-html:not([data-theme=light]) .scal-workspace .sc-panel[data-cat=limit]{--panel-tone:#d9a275}
-html:not([data-theme=light]) .scal-workspace .sc-panel[data-cat=ind]{--panel-tone:#b49bd4}
-html:not([data-theme=light]) .scal-workspace .sc-panel[data-cat=zm]{--panel-tone:#d5b660}
-html:not([data-theme=light]) .scal-workspace .sc-panel[data-cat=granville]{--panel-tone:#96a3d4}
-html:not([data-theme=light]) .scal-workspace .sc-panel[data-cat=ev357]{--panel-tone:#a8b77f}
-html:not([data-theme=light]) .scal-workspace .sc-panel[data-cat=private]{--panel-tone:#7cbcc8}
+html:not([data-theme=light]) .scal-workspace .sc-panel[data-cat=shape]{--panel-tone:#75b4ff}
+html:not([data-theme=light]) .scal-workspace .sc-panel[data-cat=kbar]{--panel-tone:#ff9fc3}
+html:not([data-theme=light]) .scal-workspace .sc-panel[data-cat=gap]{--panel-tone:#73ddba}
+html:not([data-theme=light]) .scal-workspace .sc-panel[data-cat=limit]{--panel-tone:#ffba79}
+html:not([data-theme=light]) .scal-workspace .sc-panel[data-cat=ind]{--panel-tone:#c2a2ff}
+html:not([data-theme=light]) .scal-workspace .sc-panel[data-cat=zm]{--panel-tone:#f1cf69}
+html:not([data-theme=light]) .scal-workspace .sc-panel[data-cat=granville]{--panel-tone:#a8b3ff}
+html:not([data-theme=light]) .scal-workspace .sc-panel[data-cat=ev357]{--panel-tone:#c2d976}
+html:not([data-theme=light]) .scal-workspace .sc-panel[data-cat=private]{--panel-tone:#78dfeb}
+
+/* Brief staggered glints on the accent rail; text stays still. */
+.scal-workspace .sc-panel:before{animation:scalRailGlint 7.2s ease-out infinite;animation-delay:var(--rail-delay,0s)}
+.scal-workspace [data-cat=kbar]{--rail-delay:.45s}.scal-workspace [data-cat=gap]{--rail-delay:.9s}.scal-workspace [data-cat=limit]{--rail-delay:1.35s}.scal-workspace [data-cat=ind]{--rail-delay:1.8s}.scal-workspace [data-cat=zm]{--rail-delay:2.25s}.scal-workspace [data-cat=granville]{--rail-delay:2.7s}.scal-workspace [data-cat=ev357]{--rail-delay:3.15s}.scal-workspace [data-cat=private]{--rail-delay:3.6s}
+@keyframes scalRailGlint{0%,82%,100%{opacity:.85;filter:brightness(1)}85%{opacity:1;filter:brightness(1.35)}89%{opacity:.95;filter:brightness(1.08)}92%{opacity:1;filter:brightness(1.25)}}
+.scal-workspace .sc-panel .scal-panel-icon{transition:filter .16s ease}
+.scal-workspace .sc-panel:hover .scal-panel-icon{filter:drop-shadow(0 0 3px color-mix(in srgb,var(--panel-tone) 45%,transparent))}
+@media(prefers-reduced-motion:reduce){.scal-workspace .sc-panel:before{animation:none}.scal-workspace .sc-panel .scal-panel-icon{transition:none}}
+
+html[data-theme=light] .scal-workspace [data-cat=zm] .sc-hd b{color:#95701d!important}
