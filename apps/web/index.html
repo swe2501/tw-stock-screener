@@ -9505,24 +9505,20 @@
           <input type="checkbox" id="zhenming1"
                  onchange="if(this.checked)document.getElementById('zhenming2').checked=false" />
           <div>
-            <div class="cb-label">真名一式</div>
-            <div class="cb-hint">長紅棒 3%＋放量 1.5倍＋收盤站上 MA5＞MA10＞MA20</div>
+            <div class="cb-label">真名一式（多頭啟動）</div>
           </div>
         </label>
         <label class="checkbox-row">
           <input type="checkbox" id="zhenming2"
                  onchange="if(this.checked)document.getElementById('zhenming1').checked=false" />
           <div>
-            <div class="cb-label">真名二式</div>
-            <div class="cb-hint">長紅棒 3%＋放量 1.5倍＋任一較短均線當日新上穿較長均線（5/10/20/60/120/240 全配對）</div>
+            <div class="cb-label">真名二式（動能再起）</div>
           </div>
         </label>
         <label class="checkbox-row">
           <input type="checkbox" id="zhenming3" />
           <div>
             <div class="cb-label">真名三式（多頭回洗反包）</div>
-            <div class="cb-hint">多頭排列（長黑前一日收盤＞MA20 且 MA5＞MA10＞MA20）中出現長黑 3%，12 個交易日內長紅 3% 收盤站上長黑實體 1/2（同一根長黑只取第一次）；帶量＝長紅量 ≥ max(5日,10日均量)×1.5，另加標籤。<br>
-            <b>歷史回測</b>（2024-07～2026-09 上市櫃約 7,000 筆，訊號日收盤進場、突破前高賣半、剩餘跌破 10MA 出、跌破停損全出、扣成本 0.585%）：勝率 42.5%、平均 +0.47%；帶量 41.7%、不帶量 42.9%。持有 20 日平均 +1.10%（對照任意多頭排列日 +0.23%）。<br>＊進場採「訊號日收盤」（真名三式以收盤定義，收盤確認即以該收盤價買進）；先前「次日開盤進場」因長紅後常跳空追高，勝率僅 35.6%、平均 −0.44%（2026-09-30 依合夥人回饋修正）。此法多一個「當根收盤即成交」假設，數字略樂觀但非前視偏誤；仍未達原文件宣稱之 50%～60%，僅供參考、不代表未來績效。</div>
           </div>
         </label>
           </div>
@@ -10597,9 +10593,9 @@
 
       showStatus(`
         <div class="results-header">
-          <div class="results-title">篩選結果 — ${data.date}</div>
+          <div class="results-title">篩選結果 <strong>${data.count} 檔</strong></div>
           <div class="results-meta">
-            符合條件 <strong>${data.count}</strong> 檔 ／ 全市場上市 ${data.total} 檔
+            行情日期 ${data.date} · 市場 ${data.total} 檔
           </div>
         </div>
       `);
@@ -16515,15 +16511,15 @@
     w.append(f,grip,stage);stage.append(empty,r);
     const b=document.createElement('button');b.className='pro-filter-toggle';b.type='button';b.innerHTML=icons.chevron+'<span>收合篩選條件</span>';f.prepend(b);
     const saved=localStorage.getItem('pro-filter-collapsed-v2')==='1';w.classList.toggle('collapsed',saved);
-    const savedWidth=parseFloat(localStorage.getItem('pro-screen-left-v3')||'60');if(Number.isFinite(savedWidth))w.style.setProperty('--screen-left',Math.max(42,Math.min(78,savedWidth))+'%');
+    const savedWidth=parseFloat(localStorage.getItem('pro-screen-left-v4')||'51');if(Number.isFinite(savedWidth))w.style.setProperty('--screen-left',Math.max(42,Math.min(78,savedWidth))+'%');
     b.onclick=()=>{w.classList.toggle('collapsed');localStorage.setItem('pro-filter-collapsed-v2',w.classList.contains('collapsed')?'1':'0');};
     const setSplit=x=>{const box=w.getBoundingClientRect(),pct=(x-box.left)/box.width*100,clamped=Math.max(42,Math.min(78,pct));w.style.setProperty('--screen-left',clamped+'%');grip.setAttribute('aria-valuenow',Math.round(clamped));return clamped;};
     grip.addEventListener('pointerdown',e=>{if(matchMedia('(max-width:760px)').matches)return;w.classList.remove('collapsed');grip.setPointerCapture(e.pointerId);grip.classList.add('dragging');document.body.classList.add('pro-resizing');e.preventDefault();});
     grip.addEventListener('pointermove',e=>{if(grip.hasPointerCapture(e.pointerId))setSplit(e.clientX);});
-    const finish=e=>{if(!grip.hasPointerCapture(e.pointerId))return;const val=setSplit(e.clientX);grip.releasePointerCapture(e.pointerId);grip.classList.remove('dragging');document.body.classList.remove('pro-resizing');localStorage.setItem('pro-screen-left-v3',val.toFixed(1));};
+    const finish=e=>{if(!grip.hasPointerCapture(e.pointerId))return;const val=setSplit(e.clientX);grip.releasePointerCapture(e.pointerId);grip.classList.remove('dragging');document.body.classList.remove('pro-resizing');localStorage.setItem('pro-screen-left-v4',val.toFixed(1));};
     grip.addEventListener('pointerup',finish);grip.addEventListener('pointercancel',finish);
-    grip.addEventListener('dblclick',()=>{w.style.setProperty('--screen-left','66%');localStorage.setItem('pro-screen-left-v3','66');grip.setAttribute('aria-valuenow','66');});
-    grip.addEventListener('keydown',e=>{if(e.key!=='ArrowLeft'&&e.key!=='ArrowRight')return;const cur=parseFloat(getComputedStyle(w).getPropertyValue('--screen-left'))||66,next=Math.max(42,Math.min(78,cur+(e.key==='ArrowRight'?2:-2)));w.style.setProperty('--screen-left',next+'%');localStorage.setItem('pro-screen-left-v3',String(next));grip.setAttribute('aria-valuenow',String(next));e.preventDefault();});
+    grip.addEventListener('dblclick',()=>{w.style.setProperty('--screen-left','51%');localStorage.setItem('pro-screen-left-v4','51');grip.setAttribute('aria-valuenow','51');});
+    grip.addEventListener('keydown',e=>{if(e.key!=='ArrowLeft'&&e.key!=='ArrowRight')return;const cur=parseFloat(getComputedStyle(w).getPropertyValue('--screen-left'))||66,next=Math.max(42,Math.min(78,cur+(e.key==='ArrowRight'?2:-2)));w.style.setProperty('--screen-left',next+'%');localStorage.setItem('pro-screen-left-v4',String(next));grip.setAttribute('aria-valuenow',String(next));e.preventDefault();});
     const mo=new MutationObserver(()=>{
       const modal=document.getElementById('chartModal');if(!modal)return;
       if(modal.classList.contains('open')){w.dataset.wasCollapsed=w.classList.contains('collapsed')?'1':'0';w.classList.add('collapsed');}
@@ -17228,8 +17224,9 @@
 <link rel="stylesheet" href="assets/research-polish.css?v=11">
 <link rel="stylesheet" href="assets/focus-rankings.css?v=4">
 <script src="assets/focus-rankings.js?v=4" defer></script>
-<link rel="stylesheet" href="assets/screen-log.css?v=calendar3">
-<script src="assets/screen-log.js?v=calendar3" defer></script>
+<link rel="stylesheet" href="assets/screen-log.css?v=atelier1">
+<script src="assets/screen-inline-calendar.js?v=atelier1" defer></script>
+<script src="assets/screen-log.js?v=atelier1" defer></script>
 <script src="assets/pattern-focus.js?v=2" defer></script>
 <script src="assets/member-quick-menu.js?v=3" defer></script>
 </body>
