@@ -272,3 +272,15 @@ html:not([data-theme=light]) .scal-workspace .sc-panel[data-cat=private]{--panel
 @media(prefers-reduced-motion:reduce){.scal-workspace .sc-panel:before{animation:none}.scal-workspace .sc-panel .scal-panel-icon{transition:none}}
 
 html[data-theme=light] .scal-workspace [data-cat=zm] .sc-hd b{color:#95701d!important}
+
+/* Full quote fields scroll inside results instead of compressing column text. */
+#proScreenLayout.scal-full-columns #resultsArea{min-width:0;max-width:100%}
+#proScreenLayout.scal-full-columns #resultsArea .table-wrap{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin}
+#proScreenLayout.scal-full-columns #resultsArea table{min-width:1120px;table-layout:auto}
+#proScreenLayout.scal-full-columns #resultsArea [data-screen-column]{display:table-cell!important}
+#proScreenLayout.scal-full-columns #resultsArea :is(th,td){padding:10px 12px!important;white-space:nowrap;line-height:1.6;font-variant-numeric:tabular-nums}
+#proScreenLayout.scal-full-columns #resultsArea th{font-size:12px}
+#proScreenLayout.scal-full-columns #resultsArea td{font-size:14px}
+#proScreenLayout.scal-full-columns #resultsArea td:not(.code-cell):not(.name-cell){text-align:right}
+#proScreenLayout.scal-full-columns #resultsArea .name-cell{min-width:112px}
+#proScreenLayout.scal-full-columns #resultsArea .code-cell{min-width:80px}
