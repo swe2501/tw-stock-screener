@@ -9729,7 +9729,7 @@
         window._togglePriceLine = function(){
           window._priceLineOn = !window._priceLineOn;
           try { localStorage.setItem('kv_priceLine', window._priceLineOn ? '1' : '0'); } catch(e){}
-          if (window._mainCandleSeries) { try { window._mainCandleSeries.applyOptions({ priceLineVisible: window._priceLineOn }); } catch(e){} }
+          if (window._mainCandleSeries) { try { window._mainCandleSeries.applyOptions({ priceLineVisible: window._priceLineOn, lastValueVisible: window._priceLineOn }); } catch(e){} }
           var b = document.querySelector('.chart-layer-tab[data-layer="pl"]'); if (b) b.classList.toggle('is-open', window._priceLineOn);
         };
         </script>
@@ -14119,7 +14119,8 @@
         upColor: '#e74c3c', downColor: '#26c281',
         borderUpColor: '#e74c3c', borderDownColor: '#26c281',
         wickUpColor: '#e74c3c', wickDownColor: '#26c281',
-        priceLineVisible: window._priceLineOn !== false,   // 現價虛線開關
+        priceLineVisible: window._priceLineOn !== false,    // 現價虛線
+        lastValueVisible: window._priceLineOn !== false,    // 右軸紅底現價標籤
       });
       candleSeriesRef.setData(candles);
       window._mainCandleSeries = candleSeriesRef;   // 供現價線開關 _togglePriceLine 使用
