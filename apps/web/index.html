@@ -16511,15 +16511,15 @@
     w.append(f,grip,stage);stage.append(empty,r);
     const b=document.createElement('button');b.className='pro-filter-toggle';b.type='button';b.innerHTML=icons.chevron+'<span>收合篩選條件</span>';f.prepend(b);
     const saved=localStorage.getItem('pro-filter-collapsed-v2')==='1';w.classList.toggle('collapsed',saved);
-    const savedWidth=parseFloat(localStorage.getItem('pro-screen-left-v4')||'51');if(Number.isFinite(savedWidth))w.style.setProperty('--screen-left',Math.max(42,Math.min(78,savedWidth))+'%');
+    const savedWidth=parseFloat(localStorage.getItem('pro-screen-left-v5')||'52');if(Number.isFinite(savedWidth))w.style.setProperty('--screen-left',Math.max(42,Math.min(78,savedWidth))+'%');
     b.onclick=()=>{w.classList.toggle('collapsed');localStorage.setItem('pro-filter-collapsed-v2',w.classList.contains('collapsed')?'1':'0');};
     const setSplit=x=>{const box=w.getBoundingClientRect(),pct=(x-box.left)/box.width*100,clamped=Math.max(42,Math.min(78,pct));w.style.setProperty('--screen-left',clamped+'%');grip.setAttribute('aria-valuenow',Math.round(clamped));return clamped;};
     grip.addEventListener('pointerdown',e=>{if(matchMedia('(max-width:760px)').matches)return;w.classList.remove('collapsed');grip.setPointerCapture(e.pointerId);grip.classList.add('dragging');document.body.classList.add('pro-resizing');e.preventDefault();});
     grip.addEventListener('pointermove',e=>{if(grip.hasPointerCapture(e.pointerId))setSplit(e.clientX);});
-    const finish=e=>{if(!grip.hasPointerCapture(e.pointerId))return;const val=setSplit(e.clientX);grip.releasePointerCapture(e.pointerId);grip.classList.remove('dragging');document.body.classList.remove('pro-resizing');localStorage.setItem('pro-screen-left-v4',val.toFixed(1));};
+    const finish=e=>{if(!grip.hasPointerCapture(e.pointerId))return;const val=setSplit(e.clientX);grip.releasePointerCapture(e.pointerId);grip.classList.remove('dragging');document.body.classList.remove('pro-resizing');localStorage.setItem('pro-screen-left-v5',val.toFixed(1));};
     grip.addEventListener('pointerup',finish);grip.addEventListener('pointercancel',finish);
-    grip.addEventListener('dblclick',()=>{w.style.setProperty('--screen-left','51%');localStorage.setItem('pro-screen-left-v4','51');grip.setAttribute('aria-valuenow','51');});
-    grip.addEventListener('keydown',e=>{if(e.key!=='ArrowLeft'&&e.key!=='ArrowRight')return;const cur=parseFloat(getComputedStyle(w).getPropertyValue('--screen-left'))||66,next=Math.max(42,Math.min(78,cur+(e.key==='ArrowRight'?2:-2)));w.style.setProperty('--screen-left',next+'%');localStorage.setItem('pro-screen-left-v4',String(next));grip.setAttribute('aria-valuenow',String(next));e.preventDefault();});
+    grip.addEventListener('dblclick',()=>{w.style.setProperty('--screen-left','52%');localStorage.setItem('pro-screen-left-v5','52');grip.setAttribute('aria-valuenow','52');});
+    grip.addEventListener('keydown',e=>{if(e.key!=='ArrowLeft'&&e.key!=='ArrowRight')return;const cur=parseFloat(getComputedStyle(w).getPropertyValue('--screen-left'))||66,next=Math.max(42,Math.min(78,cur+(e.key==='ArrowRight'?2:-2)));w.style.setProperty('--screen-left',next+'%');localStorage.setItem('pro-screen-left-v5',String(next));grip.setAttribute('aria-valuenow',String(next));e.preventDefault();});
     const mo=new MutationObserver(()=>{
       const modal=document.getElementById('chartModal');if(!modal)return;
       if(modal.classList.contains('open')){w.dataset.wasCollapsed=w.classList.contains('collapsed')?'1':'0';w.classList.add('collapsed');}
@@ -17224,9 +17224,9 @@
 <link rel="stylesheet" href="assets/research-polish.css?v=11">
 <link rel="stylesheet" href="assets/focus-rankings.css?v=4">
 <script src="assets/focus-rankings.js?v=4" defer></script>
-<link rel="stylesheet" href="assets/screen-log.css?v=atelier1">
-<script src="assets/screen-inline-calendar.js?v=atelier1" defer></script>
-<script src="assets/screen-log.js?v=atelier1" defer></script>
+<link rel="stylesheet" href="assets/screen-log.css?v=compact2">
+<script src="assets/screen-inline-calendar.js?v=compact2" defer></script>
+<script src="assets/screen-log.js?v=compact2" defer></script>
 <script src="assets/pattern-focus.js?v=2" defer></script>
 <script src="assets/member-quick-menu.js?v=3" defer></script>
 </body>
