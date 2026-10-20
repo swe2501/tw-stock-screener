@@ -16326,11 +16326,12 @@
       return r;
     };
     if(typeof origOpen==='function') window.openChart=function(){
-      if(!chartOpen()&&!popping) history.pushState({v:cur,modal:1},'',location.href);
+      // Member charts are overlays within the current account page, not navigation entries.
+      if(!chartOpen()&&!popping&&!document.body.classList.contains('mc-chart-open')) history.pushState({v:cur,modal:1},'',location.href);
       return origOpen.apply(this,arguments);
     };
     if(typeof origClose==='function') window.closeChart=function(){
-      if(!popping&&history.state&&history.state.modal){ history.back(); return; }   // 由 popstate 實際關閉
+      if(!popping&&!document.body.classList.contains('mc-chart-open')&&history.state&&history.state.modal){ history.back(); return; }   // 由 popstate 實際關閉
       return origClose.apply(this,arguments);
     };
     window.addEventListener('popstate',function(e){
