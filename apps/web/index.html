@@ -3457,7 +3457,7 @@
     var focusRequest=null,focusFetchedAt=0;
     function loadFocus(){
       if(focusRequest||Date.now()-focusFetchedAt<300000)return;
-      focusRequest=fetch('/api/screen?stat=focus&n=30').then(function(r){return r.json();}).then(function(j){
+      focusRequest=fetch((location.protocol==='file:'||['localhost','127.0.0.1','::1','[::1]'].includes(location.hostname)?'https://tw-stock-screener-neon.vercel.app':'')+'/api/screen?stat=focus&n=30').then(function(r){return r.json();}).then(function(j){
         if(!j||j.error){['fcGainers','fcLosers','fcSurge'].forEach(function(id){if(el(id))el(id).innerHTML='<div class="fc-empty">讀取失敗</div>';});return;}
         focusFetchedAt=Date.now();
         if(el('fcSnapshotDate'))el('fcSnapshotDate').textContent='排行榜行情日 '+j.date+' · 每日盤後更新';
@@ -17223,8 +17223,8 @@
 <link rel="stylesheet" href="assets/site-readability.css">
 <script src="assets/foresight-brand.js?v=fqi28" defer></script>
 <link rel="stylesheet" href="assets/research-polish.css?v=6">
-<link rel="stylesheet" href="assets/focus-rankings.css?v=1">
-<script src="assets/focus-rankings.js?v=1" defer></script>
+<link rel="stylesheet" href="assets/focus-rankings.css?v=4">
+<script src="assets/focus-rankings.js?v=4" defer></script>
 <script src="assets/pattern-focus.js?v=2" defer></script>
 <script src="assets/member-quick-menu.js?v=3" defer></script>
 </body>
