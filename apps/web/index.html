@@ -2172,7 +2172,7 @@
     #greedGauge .pro-greed-copy span:first-child { font-size:24px !important; }
   }
 </style>
-<link rel="stylesheet" href="assets/member-center.css">
+<link rel="stylesheet" href="assets/member-center.css?v=benefits19">
 <link rel="stylesheet" href="assets/sector-dashboard.css">
 <link rel="stylesheet" href="assets/member-share.css">
 <link rel="stylesheet" href="assets/member-signin.css?v=fqi21">
@@ -2964,7 +2964,7 @@
     </div>
     <div class="fc-grid3">
       <div class="fc-card"><div class="fc-h"> 今日題材焦點</div><div id="fcTopics"><div class="fc-empty">載入中…</div></div></div>
-      <div class="fc-card"><div class="fc-h">今日箱型突破 <span class="fc-sub">型態觀察</span></div><div id="fcBox"><div class="fc-empty">載入中…</div></div></div>
+      <div class="fc-card fc-pattern-card"><div class="fc-h">今日型態觀察 <span class="fc-sub">確認訊號</span></div><div class="fc-pattern-controls"><div class="fc-pattern-direction" role="group" aria-label="突破方向"><button type="button" data-pattern-direction="up" aria-pressed="true">向上突破 ↑</button><button type="button" data-pattern-direction="down" aria-pressed="false">向下跌破 ↓</button></div><label for="fcPatternType">型態<select id="fcPatternType" aria-describedby="fcPatternNote"></select></label></div><p id="fcPatternNote" class="fc-pattern-note" role="status"></p><div id="fcBox" aria-live="polite"><div class="fc-empty">載入中…</div></div></div>
       <div class="fc-card"><div class="fc-h"> 貪婪 / 恐懼榜</div><div id="fcGreed"><div class="fc-empty">載入中…</div></div></div>
     </div>
     <div class="fc-card" id="fcSigCard"><div class="fc-h"> 今日主力焦點 <span class="fc-sub">擁有者限定</span></div><div id="fcSig"><div class="fc-empty">—</div></div></div>
@@ -3177,10 +3177,10 @@
     <section class="ov-sec">
       <div class="ov-head"><h2>官方產業類股</h2><span>依證交所產業類指數當日漲跌幅排序</span></div>
       <div class="ov-grid2">
-        <div class="ov-card"><header><h3>強勢產業</h3><span class="tag">當日</span></header>
+        <div class="ov-card ov-strength"><header><h3>強勢產業</h3><span class="tag">當日</span></header>
           <div class="ov-thead t-sector"><span>族群</span><span>漲跌</span><span>指數</span></div>
           <div id="ovSectorStrong"><div class="ov-empty">載入中…</div></div></div>
-        <div class="ov-card"><header><h3>弱勢產業</h3><span class="tag">當日</span></header>
+        <div class="ov-card ov-weakness"><header><h3>弱勢產業</h3><span class="tag">當日</span></header>
           <div class="ov-thead t-sector"><span>族群</span><span>漲跌</span><span>指數</span></div>
           <div id="ovSectorWeak"><div class="ov-empty">載入中…</div></div></div>
       </div>
@@ -3503,13 +3503,7 @@
         el('fcTopics').innerHTML=a.map(function(t){var cs=Array.isArray(t.codes)?t.codes.slice(0,4).map(function(c){return (c&&(c.name||c.code))||'';}).filter(Boolean).join('、'):'';return '<div class="fc-row"><span class="s"><b>'+String(t.topic||'').slice(0,18)+'</b>'+(cs?' <span style="color:var(--text-muted)">'+cs+'</span>':'')+'</span><span class="val">'+(t.heat!=null?t.heat:'')+'</span></div>';}).join('');
       }).catch(function(){el('fcTopics').innerHTML='<div class="fc-empty">讀取失敗</div>';});
     }
-    function loadBox(){
-      var SB=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'', AK=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';
-      fetch(SB+'/rest/v1/box_patterns?select=code,status,breakout_date,breakout_reason&status=eq.CONFIRMED_UP&order=breakout_date.desc&limit=30',{headers:{apikey:AK,Authorization:'Bearer '+AK}}).then(function(r){return r.json();}).then(function(a){
-        if(!Array.isArray(a)||!a.length){el('fcBox').innerHTML='<div class="fc-empty">今日無向上突破</div>';return;}
-        el('fcBox').innerHTML='<div class="fc-box-list">'+a.slice(0,8).map(function(x){return '<button type="button" class="fc-box-stock" onclick="_openStock(\''+x.code+'\',\''+String(nm(x.code)||'').replace(/'/g,"\\'")+'\')"><b><small>'+x.code+'</small>'+nm(x.code)+'</b><span>向上突破 · '+(x.breakout_date||'日期待確認')+'</span></button>';}).join('')+'</div>';
-      }).catch(function(){el('fcBox').innerHTML='<div class="fc-empty">讀取失敗</div>';});
-    }
+    function loadBox(){window.AcademyPatternFocus?.load();}
     function loadGreed(){
       var SB=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'', AK=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';
       var H={apikey:AK,Authorization:'Bearer '+AK};
@@ -3691,7 +3685,7 @@
     document.addEventListener('click',function(e){
       var m=e.target.closest('#tmxMarket button'); if(m){_market=m.dataset.m;_sel=null;[].forEach.call(el('tmxMarket').children,function(b){b.classList.toggle('on',b===m);});renderHeat();renderDetail();return;}
       var o=e.target.closest('#tmxMode button'); if(o){_mode=o.dataset.o;[].forEach.call(el('tmxMode').children,function(b){b.classList.toggle('on',b===o);});renderHeat();return;}
-      var c=e.target.closest('#tmxHeat .tmx-cell'); if(c){var t=rows()[+c.dataset.i]; if(t){_sel=t.name;[].forEach.call(el('tmxHeat').querySelectorAll('.tmx-cell'),function(x){x.classList.toggle('on',x===c);});renderDetail();el('tmxDetail').scrollIntoView({block:'nearest'});}return;}
+      var c=e.target.closest('#tmxHeat .tmx-cell'); if(c){var t=rows()[+c.dataset.i]; if(t){_sel=t.name;[].forEach.call(el('tmxHeat').querySelectorAll('.tmx-cell'),function(x){x.classList.toggle('on',x===c);});renderDetail();window._heatDetailStart(el('tmxDetail'));}return;}
     });
     document.addEventListener('keydown',function(e){if(e.key==='Escape'&&_sel)window._closeThemeDetail();});
     window._VIEWS=window._VIEWS||{}; window._VIEWS.themes={el:'themesView',show:'_themesShow'};
@@ -5863,7 +5857,7 @@
       box.style.display='';
       box.querySelectorAll('.sm-sort button,.sm-panel-close').forEach(function(b){ b.onclick=function(){ if(b.dataset.x){ pick(sec,true); return; } SORT=b.dataset.s; pick(sec,false); }; });
       box.querySelectorAll('tbody tr').forEach(function(tr){ tr.onclick=function(){ if(typeof openChart==='function') openChart(tr.dataset.c, tr.dataset.n); }; });
-      if(scroll) box.scrollIntoView({behavior:'smooth',block:'start'});
+      if(scroll) window._heatDetailStart(box);
     }
     window._sectorShow=function(){
       if(window._loadNames && !window._names) try{ window._loadNames(function(){ if(CUR) pick(CUR,false); }); }catch(e){}
@@ -12193,6 +12187,7 @@
     window._VIEWS.sig = { el: 'sigView', show: 'openBrokerSignals' };
     window._VIEWS.brank = { el: 'brankView', show: 'openBrokerRankings' };
     async function openBrokerSignals() {
+      try { if (!window._namesFull && window._loadNames) window._loadNames(function(){ if (_sigRows) _renderSignals(); }); } catch (e) {}
       if (_sigRows) { _renderSignals(); return; }
       try {
         const H = { apikey: SIG_SB_ANON, Authorization: `Bearer ${_authToken}` };
@@ -12292,18 +12287,18 @@
       const section = (method, rsOverride) => {
         const rs = rsOverride || rows.filter(x => x.method === method);
         if (!rs.length) return `<div style="padding:16px 0">當日無買超訊號</div>`;
-        const tr = rs.map(x => `
-          <tr onclick="_sigOpenChart('${x.code}','${(x.broker_name||'').replace(/'/g,'')} 買')"
+        const tr = rs.map(x => { const _nm=(window._names&&window._names[x.code])||''; return `
+          <tr onclick="_sigOpenChart('${x.code}','${((x.name||_nm||'')).replace(/'/g,'')} 買')"
               style="cursor:pointer;border-bottom:1px solid var(--border)">
             <td style="padding:4px 8px;text-align:center">${x.rank_amt != null ? `${x.rank}／${x.rank_amt}` : x.rank}</td>
             <td style="padding:4px 8px">${x.broker_name}</td>
-            <td style="padding:4px 8px;color:var(--accent)">${x.code}</td>
+            <td style="padding:4px 8px"><b style="color:var(--accent)">${x.code}</b> ${x.name||_nm||''}</td>
             <td style="padding:4px 8px;text-align:right">${Number(x.net_lots).toLocaleString()}</td>
             <td style="padding:4px 8px;text-align:right">${x.net_amount_wan != null ? Number(x.net_amount_wan).toLocaleString() : '–'}</td>
             <td style="padding:4px 8px;text-align:right">${x.buy_avg_price ?? '–'}</td>
             <td style="padding:4px 8px;text-align:right;color:#e6a23c">${x.win20 ?? '–'}%</td>
             <td style="padding:4px 8px;text-align:right">${x.year_events ?? '–'}</td>
-          </tr>`).join('');
+          </tr>`; }).join('');
         return `
           <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px">
             <thead><tr style="color:var(--text-muted);border-bottom:1px solid var(--border)">
@@ -16600,6 +16595,14 @@
     let h=0;for(const c of name)h=(h*31+c.charCodeAt(0))>>>0;const pts=[0,1,2,3].map(i=>{const x=4+((h>>(i*4))&15),y=4+((h>>(i*4+2))&15);return[(x%17)+3,(y%17)+3]}),p=pts.map(x=>x.join(',')).join(' ');
     return '<svg '+common+'><polyline points="'+p+'"/><circle cx="'+pts[0][0]+'" cy="'+pts[0][1]+'" r="2"/><circle cx="'+pts[3][0]+'" cy="'+pts[3][1]+'" r="2"/></svg>';
   }
+  window._heatDetailStart=function(detail){
+    // The desktop inspector is beside the map; scrolling the document hides its heading.
+    detail.scrollTop=0;
+    detail.querySelectorAll('div').forEach(node=>{if(node.scrollHeight>node.clientHeight)node.scrollTop=0;});
+    const ws=detail.closest('.pro-heat-workspace');if(ws)ws.classList.add('open');
+    const heading=detail.querySelector('.dh,.hd');
+    if(heading){heading.tabIndex=-1;heading.focus({preventScroll:true});}
+  };
   function setupHeatRoot(root,type){
     if(!root)return;
     const view=root.closest(type==='theme'?'#themesView':'#sectorView');if(!view)return;
@@ -17115,11 +17118,11 @@
 </script>
 <script src="assets/sector-dashboard-model.js" defer></script>
 <script src="assets/sector-dashboard.js" defer></script>
-<script src="assets/member-identity.js" defer></script>
-<script src="assets/member-share.js" defer></script>
+<script src="assets/member-identity.js?v=vouchers19" defer></script>
+<script src="assets/member-share.js?v=vouchers19" defer></script>
 <script src="assets/member-provider-icons.js" defer></script>
 <script src="assets/member-cloud.js" defer></script>
-<script src="assets/member-features.js" defer></script>
+<script src="assets/member-features.js?v=benefits19" defer></script>
 <script src="assets/member-strategy-engine.js" defer></script>
 <script src="assets/member-strategy-ui.js?v=owl2" defer></script>
 <script src="assets/member-research.js" defer></script>
@@ -17129,13 +17132,18 @@
 <script src="assets/member-companion-rig.js" defer></script>
 <script src="assets/member-leek-3d.js" defer></script>
 <script src="assets/member-goal-art.js" defer></script>
+<script src="assets/search-discovery.js" defer></script>
 <script src="assets/site-search.js" defer></script>
 <script src="assets/member-derivatives-catalog.js" defer></script>
 <script src="assets/member-trade-ui.js" defer></script>
-<script src="assets/member-center.js" defer></script>
-<script src="assets/member-signin.js?v=fqi17" defer></script>
+<script src="assets/member-journey.js?v=1" defer></script>
+<script src="assets/member-center.js?v=journey20" defer></script>
+<script src="assets/member-signin.js?v=vouchers19" defer></script>
 <script src="assets/member-private-screen.js" defer></script>
 <link rel="stylesheet" href="assets/site-readability.css">
 <script src="assets/foresight-brand.js?v=fqi28" defer></script>
+<link rel="stylesheet" href="assets/research-polish.css?v=3">
+<script src="assets/pattern-focus.js?v=1" defer></script>
+<script src="assets/member-quick-menu.js?v=2" defer></script>
 </body>
 </html>
