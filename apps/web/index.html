@@ -3852,7 +3852,9 @@
     window._groupBookShow=function(){loadFinancialResearch(currentResearchQuarter());cats();render();if(window._loadNames)window._loadNames(function(){hydrateNames();render()});load()};
     document.addEventListener('input',function(e){if(e.target.id==='gbSearch'){query=e.target.value;selected='';renderSearch();render()}});
     document.addEventListener('click',function(e){if(!e.target.closest('#gbSearchGo'))return;renderSearch();var first=el('gbSearchDrop')&&el('gbSearchDrop').querySelector('.gb-result');if(first)first.click()});
-    document.addEventListener('click',function(e){var sr=e.target.closest('#gbSearchDrop .gb-result');if(sr){query='';el('gbSearch').value='';el('gbSearchDrop').hidden=true;if(sr.dataset.sg){selected=sr.dataset.sg;render()}else _openStock(sr.dataset.sc,sr.dataset.sn);return}var w=e.target.closest('#gbWindow button');if(w){win=+w.dataset.w;selected='';[].forEach.call(el('gbWindow').children,function(x){x.classList.toggle('on',x===w)});load();return}var m=e.target.closest('#gbMode button');if(m){mode=m.dataset.m;[].forEach.call(el('gbMode').children,function(x){x.classList.toggle('on',x===m)});render();return}var t=e.target.closest('#gbMainTabs button');if(t){tab=t.dataset.tab;selected='';[].forEach.call(el('gbMainTabs').children,function(x){x.classList.toggle('on',x===t)});render();return}var c=e.target.closest('#gbCats button');if(c){cat=c.dataset.cat;selected='';render();return}var g=e.target.closest('#gbBoard [data-g]');if(g){selected=selected===g.dataset.g?'':g.dataset.g;activeGroupSection='gbSectionResearch';render();return}var s=e.target.closest('#gbDetail .gb-member');if(s){_openStock(s.dataset.c,s.dataset.n);return}if(e.target.closest('#gbDetail .gb-close')||e.target===el('gbDetail')){selected='';render();return}if(!e.target.closest('.gb-searchwrap')){var d=el('gbSearchDrop');if(d)d.hidden=true}});
+    document.addEventListener('click',function(e){var sr=e.target.closest('#gbSearchDrop .gb-result');if(sr){query='';el('gbSearch').value='';el('gbSearchDrop').hidden=true;if(sr.dataset.sg){window._openGroupDrawer(sr.dataset.sg)}else _openStock(sr.dataset.sc,sr.dataset.sn);return}var w=e.target.closest('#gbWindow button');if(w){win=+w.dataset.w;selected='';[].forEach.call(el('gbWindow').children,function(x){x.classList.toggle('on',x===w)});load();return}var m=e.target.closest('#gbMode button');if(m){mode=m.dataset.m;[].forEach.call(el('gbMode').children,function(x){x.classList.toggle('on',x===m)});render();return}var t=e.target.closest('#gbMainTabs button');if(t){tab=t.dataset.tab;selected='';[].forEach.call(el('gbMainTabs').children,function(x){x.classList.toggle('on',x===t)});render();return}var c=e.target.closest('#gbCats button');if(c){cat=c.dataset.cat;selected='';render();return}var g=e.target.closest('#gbBoard [data-g]');if(g){if(selected===g.dataset.g)window._closeGroupDrawer();else window._openGroupDrawer(g.dataset.g);return}var s=e.target.closest('#gbDetail .gb-member');if(s){_openStock(s.dataset.c,s.dataset.n);return}if(e.target.closest('#gbDetail .gb-close')||e.target===el('gbDetail')){window._closeGroupDrawer();return}if(!e.target.closest('.gb-searchwrap')){var d=el('gbSearchDrop');if(d)d.hidden=true}});
+    window._openGroupDrawer=function(name){selected=name;activeGroupSection='gbSectionResearch';render();};
+    window._closeGroupDrawer=function(){selected='';render();};
     window._VIEWS=window._VIEWS||{};window._VIEWS.groupbook={el:'groupBookView',show:'_groupBookShow'};
   })();
   </script>
@@ -16321,21 +16323,13 @@
         var params=new URLSearchParams(location.search);params.delete('view');var query=params.toString();
         var url=location.pathname+(query?'?'+query:'')+(v&&v!=='home'?'#'+v:'');
         if(cur===null) history.replaceState({v:v},'',url);
-        else if(v!==cur||(history.state&&history.state.academyMember)) history.pushState({v:v},'',url);
+        else if(v!==cur||(history.state&&(history.state.academyMember||history.state.academyLayers?.length))) history.pushState({v:v},'',url);
       }
       cur=v; try{ window._fhPageBg && window._fhPageBg(v==='fhedge'); }catch(e){}
       return r;
     };
-    if(typeof origOpen==='function') window.openChart=function(){
-      // Member charts are overlays within the current account page, not navigation entries.
-      if(!chartOpen()&&!popping&&!document.body.classList.contains('mc-chart-open')) history.pushState({v:cur,modal:1},'',location.href);
-      return origOpen.apply(this,arguments);
-    };
-    if(typeof origClose==='function') window.closeChart=function(){
-      if(!popping&&!document.body.classList.contains('mc-chart-open')&&history.state&&history.state.modal){ history.back(); return; }   // 由 popstate 實際關閉
-      return origClose.apply(this,arguments);
-    };
     window.addEventListener('popstate',function(e){
+      if(window.AcademyNavigationLayers?.handlesPop())return;
       if(e.state&&e.state.academyMember){if(chartOpen()&&typeof origClose==='function')origClose();return;}
       popping=true;
       try{
@@ -17218,7 +17212,7 @@
 <script src="assets/member-derivatives-catalog.js" defer></script>
 <script src="assets/member-trade-ui.js" defer></script>
 <script src="assets/member-journey.js?v=calendar2" defer></script>
-<script src="assets/member-center.js?v=nav6-calendar2-journey20" defer></script>
+<script src="assets/member-center.js?v=nav-layers8" defer></script>
 <script src="assets/member-signin.js?v=invite2" defer></script>
 <script src="assets/member-private-screen.js" defer></script>
 <link rel="stylesheet" href="assets/site-readability.css">
@@ -17231,5 +17225,6 @@
 <script src="assets/screen-log.js?v=filter-size70" defer></script>
 <script src="assets/pattern-focus.js?v=2" defer></script>
 <script src="assets/member-quick-menu.js?v=3" defer></script>
+<script src="assets/navigation-layers.js?v=1" defer></script>
 </body>
 </html>
