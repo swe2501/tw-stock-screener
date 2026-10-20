@@ -302,7 +302,12 @@ html[data-theme=light] .scal-workspace [data-cat=zm] .sc-hd b{color:#95701d!impo
 /* Selected crown: fine gold outline with readable headings in both themes. */
 .scal-workspace .sc-panel[data-cat=zm]{--panel-tone:#eab520}
 html:not([data-theme=light]) .scal-workspace .sc-panel[data-cat=zm]{--panel-tone:#ffcf43}
-.scal-workspace [data-cat=zm]>.sc-hd .scal-panel-icon svg{fill:none;stroke-width:1.55;width:21px;height:21px}
+.scal-workspace [data-cat=zm]>.sc-hd .scal-panel-icon svg{fill:none;stroke-width:1.7;width:20px;height:20px}
 .scal-workspace .sc-panel[data-cat=zm]:before{background:linear-gradient(165deg,#ffe889,var(--panel-tone),#f3ca5b)}
 html[data-theme=light] .scal-workspace [data-cat=zm] .sc-hd b{color:#a37108!important}
 html:not([data-theme=light]) .scal-workspace [data-cat=zm] .sc-hd b{color:#ffda62!important}
+
+/* Equal category icon slots and stroke weight, including the private screener. */
+.scal-workspace .sc-panel .scal-panel-icon{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;min-width:20px;flex:0 0 20px;margin-right:0}
+.scal-workspace .sc-panel .scal-panel-icon svg{display:block;width:20px;height:20px;stroke-width:1.7}
+.scal-workspace .ms-private-panel>details>summary>span{display:inline-flex;align-items:center;gap:8px}

@@ -46,3 +46,5 @@ Reference alignment revision: the user chose the original generated screener ima
 2026-10-21 selected crown: user chose the first option, 曜金王冠. True-name category now uses a solid native vector crown, bright yellow-gold rail/icon, warm readable light-theme heading and luminous dark-theme heading. Existing strategy-card icons and screening logic stay unchanged. Full-site light/dark regression passes.
 
 2026-10-21 final crown selection: user switched back to option two, 俐落線冠. Crown is unfilled with a 1.55px outline; bright gold palette is retained. Cache versions updated.
+
+2026-10-21 category icon proportions: all category header icons use identical 20px slots, 1.7px strokes and centered alignment. The selected outline crown no longer has a larger box. Private screener's text glyph is replaced with the existing native sparkle icon in the same slot. Full-site light/dark and scaling regression passes.
