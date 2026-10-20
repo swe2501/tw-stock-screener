@@ -722,6 +722,73 @@ def _fetch_groupbook(window=10, price_rows=None):
 
 
 
+_themes_cache: dict = {}
+_themes_cache_ts: float = 0.0
+
+
+def _load_stock_themes() -> dict:
+    """code → [{id, name}]（今日排行題材顯示用）。
+    優先讀 Supabase stock_themes（scripts/themes_push.py 建：合夥人精選題材 THEME_MEMBERS + 官方產業別補齊）；
+    表不存在/空時，即時以 THEME_MEMBERS（小題材優先）+ _get_industry_map()（上市 TWSE＋上櫃 TPEx）組出同樣結果。"""
+    global _themes_cache, _themes_cache_ts
+    if _themes_cache and time.time() - _themes_cache_ts < 86400:
+        return _themes_cache
+    out = {}
+    # 1) 優先讀表
+    if SUPABASE_URL and SUPABASE_KEY:
+        try:
+            off = 0
+            while True:
+                page = _cache_sb("/stock_themes",
+                                 params=[("select", "code,themes"), ("order", "code.asc"),
+                                         ("offset", str(off)), ("limit", "1000")])[1] or []
+                for r in page:
+                    c = str(r.get("code", "")).strip()
+                    th = r.get("themes")
+                    if c and isinstance(th, list) and th:
+                        out[c] = [{"id": t.get("id") or t.get("name"), "name": t.get("name")}
+                                  for t in th if isinstance(t, dict) and t.get("name")]
+                if len(page) < 1000:
+                    break
+                off += 1000
+        except Exception:
+            out = {}
+    # 2) 退回即時組（表沒資料時仍不「未分類」）
+    if not out:
+        tm = THEME_MEMBERS
+        order = sorted(tm.keys(), key=lambda n: len(tm[n]))     # 小題材優先（較精準）
+        for name in order:
+            for code in tm[name]:
+                out.setdefault(str(code), [])
+                if not any(t["name"] == name for t in out[str(code)]):
+                    out[str(code)].append({"id": name, "name": name})
+        try:
+            ind = _get_industry_map()
+        except Exception:
+            ind = {}
+        for code, iname in ind.items():
+            if iname and iname not in ("其他", ""):
+                out.setdefault(str(code), [])
+                if not any(t["name"] == iname for t in out[str(code)]):
+                    out[str(code)].append({"id": "產業:" + iname, "name": iname})
+    _themes_cache = out
+    _themes_cache_ts = time.time()
+    return out
+
+
+def _attach_focus_themes(result):
+    """把題材掛到三榜每一列（前端 row.themes 用）。就地修改並回傳。"""
+    try:
+        tmap = _load_stock_themes()
+    except Exception:
+        return result
+    for key in ("gainers", "losers", "volume_surge"):
+        for row in result.get(key) or []:
+            if isinstance(row, dict) and not row.get("themes"):
+                row["themes"] = tmap.get(str(row.get("code")), [])
+    return result
+
+
 def _read_focus_snapshot(top_n=30):
     status, rows = _cache_sb("/page_cache", params=_snapshot_params("focus"))
     if status != 200 or not isinstance(rows, list) or not rows:
@@ -733,7 +800,7 @@ def _read_focus_snapshot(top_n=30):
     result = dict(data, updatedAt=rows[0].get("updated_at"), precomputed=True)
     for key in keys:
         result[key] = data[key][:max(1, min(top_n, 50))]
-    return result
+    return _attach_focus_themes(result)   # 舊快照無題材也能在讀取時補上，部署後即時生效
 
 
 def _fetch_focus(top_n=30):
@@ -780,12 +847,12 @@ def _fetch_focus(top_n=30):
     gainers.sort(key=lambda x: x["chg"], reverse=True)
     losers.sort(key=lambda x: x["chg"])
     surges.sort(key=lambda x: x["ratio"], reverse=True)
-    return {
+    return _attach_focus_themes({
         "date": latest,
         "gainers": gainers[:top_n],
         "losers": losers[:top_n],
         "volume_surge": surges[:top_n],
-    }
+    })
 
 
 def _fetch_limitup():
