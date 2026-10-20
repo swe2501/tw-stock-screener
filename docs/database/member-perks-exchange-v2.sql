@@ -2,7 +2,6 @@
 -- 尚未套用。需 JUSTY 明確批准、由有 Supabase 權限者先在隔離環境驗證，再套用到 Taiwan stock2（bruqrbvbjxntgoljxsne）。
 -- 前提：已套用 member-voucher-levels.sql、member-task-wallet.sql（2026-10-20 已部署，見 member-rewards-db-status.md）。
 -- 所有定義維持 active=false：套用後不會開放兌換、不會發點、不會改變任何既有免費功能。
--- 套用前請確認 vip tier 在 _member_issue_voucher／access 計算中是否另有「展開全部 feature」邏輯；若有，vip-v1 的 allowed_features 以該邏輯為準。
 begin;
 
 -- 1. 話題研究、出場追蹤允許由券開通（主力訊號／分點回測／神燈冥燈不在目錄中，仍只限管理員）
@@ -12,7 +11,8 @@ update public.member_feature_catalog set voucher_enabled=true where feature in (
 update public.member_voucher_definitions set title='盤勢雙指標券',allowed_features=array['fhedge','breadth'],version=version+1 where id='observation-v1';
 update public.member_voucher_definitions set title='題材雷達券',allowed_features=array['hottopics','breadth'],version=version+1 where id='research-v1';
 update public.member_voucher_definitions set title='進出場追蹤券',allowed_features=array['selltrack','fhedge'],version=version+1 where id='advanced-v1';
-update public.member_voucher_definitions set title='全工具通行券',allowed_features=array['fhedge','breadth','hottopics','selltrack'],version=version+1 where id='vip-v1';
+-- vip-v1 由 _member_issue_voucher 自動展開為「所有 voucher_enabled 的會員研究工具」，第 1 步開通後即為四項全開，只改名稱。
+update public.member_voucher_definitions set title='全工具通行券',version=version+1 where id='vip-v1';
 update public.member_voucher_definitions set title='自選單品券',allowed_features=array['fhedge','breadth','hottopics','selltrack'],version=version+1 where id='choice-v1';
 
 -- 3. 兌換商品與點數

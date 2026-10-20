@@ -110,7 +110,14 @@
 - 只能「看完影片給獎勵」，**絕對不能**「點擊廣告給獎勵」，違反會被停權。
 - 網頁版獎勵廣告沒有伺服器端驗證，只能靠「每日 3 支、每支 5 點」上限控制濫用風險。
 
-## 6. 正式開放需要的資料庫變更（**尚未套用，需 JUSTY 批准**）
+## 6. 正式開放需要的資料庫變更（JUSTY 已批准；SQL 已寫好並通過隔離測試，待有權限者在 SQL Editor 貼上套用）
+
+- 兌換商品：[database/member-perks-exchange-v2.sql](database/member-perks-exchange-v2.sql)
+- 任務 v2：[database/member-perks-tasks-v2.sql](database/member-perks-tasks-v2.sql)
+- 測試：`tests/member-perks-v2.test.cjs`（PGlite；涵蓋套用後全部關閉、伺服器驗證、每日／每週上限、期間唯一、換日、審核制、生日券、週年、每日 3 支影片、7 天全工具兌換、隔離與匿名拒絕）
+- 套用時兩份依序執行一次；套用後新任務 32 個、兌換 7 個全部維持關閉，開放另行 `update ... set active=true`。
+
+以下為設計說明：
 
 既有 `member_task_definitions` 只支援 `verified_contact`、`qualified_invite` 兩種一次性驗證。要開放上面的任務，需要：
 
