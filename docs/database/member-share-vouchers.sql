@@ -70,15 +70,6 @@ end $$;
 revoke all on function public.member_usage_vouchers() from public,anon,authenticated;
 grant execute on function public.member_usage_vouchers() to authenticated;
 
--- New accounts receive their own random code in the same signup transaction.
--- Existing unrelated auth triggers are preserved; existing users are provisioned lazily by self-only RPC.
-create function public._member_provision_invite_code() returns trigger
-language plpgsql security definer set search_path='' as $$
-begin
- perform public._member_ensure_code(new.id);
- return new;
-end $$;
-revoke all on function public._member_provision_invite_code() from public,anon,authenticated;
-create trigger academy_provision_invite_code after insert on auth.users
- for each row execute function public._member_provision_invite_code();
+-- member-services.sql already provisions a random unique code in member_auth_insert.
+-- Keep that existing signup trigger; do not install a duplicate Auth trigger.
 commit;

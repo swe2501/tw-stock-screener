@@ -1,6 +1,6 @@
 # 會員快捷面板／雙點數帳戶後端需求（未部署）
 
-任務點數與儲值點數必須分帳，前端已預留本人 RPC member_wallet_summary，尚未建立線上服務。未接通顯示「尚未接通」，不以零餘額冒充讀取成功。
+任務點數與儲值點數必須分帳。2026-10-20 已經批准建立 member_wallet_summary、伺服器任務核對及點數兌券交易 RPC，詳見 member-rewards-db-status.md；任務與兌換目前仍關閉，儲值不開通。未接通顯示「尚未接通」，不以零餘額冒充讀取成功。
 
 預期回應：task_points（非負安全整數）、stored_points（非負安全整數）、stored_enabled（布林）、server_time。主體只能來自 auth.uid()，不接受前端 user_id 或手動餘額。餘額應從完整不可變 ledger／帳戶統計讀取，不能只加總最新 100 筆流水。
 
