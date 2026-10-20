@@ -1,5 +1,7 @@
 # 會員使用券與任務資料庫：2026-10-20 套用完成
 
+> **2026-10-20 21:06 追加**：JUSTY 批准並親自在 SQL Editor 套用 `member-perks-exchange-v2.sql`＋`member-perks-tasks-v2.sql`，回報 Success。新增任務 32 個、兌換 7 個、hottopics／selltrack 可由券開通；全部仍 active=false。開放步驟見 [../HANDOFF_MEMBER_PERKS_2026-10-20.md](../HANDOFF_MEMBER_PERKS_2026-10-20.md)。
+
 使用者本回合明確批准套用到 UAT／正式站共用的 Supabase「Taiwan stock2」／bruqrbvbjxntgoljxsne，**活動、券定義、發點與兌換先保持關閉，不啟用儲值**。OpenAI 裝置登入由使用者在 iPhone 本人核准；授權已完成，不再重問相同批准。
 
 ## 已執行
