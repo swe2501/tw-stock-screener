@@ -153,3 +153,42 @@ body.scal-calendar-chart #chartModal.open:not(.etx-embedded){display:flex!import
 }
 
 .sic-grid>button[data-sic-date]{font-size:13px!important}.sic-grid>button[data-sic-date]>span{font:inherit!important;line-height:1.2!important}
+
+/* Readable screener typography with matching control spacing. */
+@media(min-width:761px){
+ .scal-combo .sc-combo>b,.scal-combo .sc-combo>span{font-size:14px;line-height:1.6}
+ .scal-combo .sc-chip{font-size:13px;padding:5px 9px;line-height:1.5}
+ .scal-combo-count,.scal-combo .sc-combo a{font-size:12px}
+ .scal-filter-head h2{font-size:21px;line-height:1.5}
+ .scal-filter-head .pro-filter-toggle{font-size:12px;min-height:33px;height:auto;padding:5px 10px}
+ .scal-quick>.field,.scal-date-card{padding:9px 12px;min-height:64px}
+ .scal-quick .field>label,.scal-date-card>span{font-size:12px!important;line-height:1.5;margin-bottom:5px!important}
+ .scal-date-card b,.scal-quick .industry-picker>summary{font-size:14px!important;line-height:1.6;min-height:24px}
+ .scal-base{padding:10px 12px}.scal-base>summary{font-size:14px;line-height:1.6;flex-wrap:wrap}
+ .scal-base>summary span{font-size:12px}
+ #proScreenLayout.scal-workspace .form-grid .field>label{font-size:14px!important;line-height:1.5}
+ .scal-base .label-hint{font-size:12px;line-height:1.6}.scal-base input{font-size:14px!important;height:38px}
+ .scal-workspace .sc-hd{min-height:45px;padding:10px 12px}
+ .scal-workspace .sc-hd b{font-size:15px;line-height:1.5}.scal-workspace .sc-sum{font-size:12px}
+ .scal-workspace .cb-label,.scal-workspace [data-cat=zm] .cb-label{font-size:14px;line-height:1.6;white-space:normal}
+ .scal-workspace .cb-hint{font-size:12px;line-height:1.7}
+ .scal-workspace [data-cat=zm] .checkbox-row{padding:12px;min-height:60px;align-items:center}
+ .scal-workspace .ms-private-panel>details>summary{font-size:15px;min-height:44px;line-height:1.6}
+ .scal-workspace .ms-private-panel>details>summary small{font-size:12px}
+ .scal-submit-bar .btn-submit{font-size:14px;min-height:38px;line-height:1.5}
+ .scal-workspace #dataDateDisplay{font-size:12px!important;line-height:1.6}
+ .scal-workspace .results-meta{font-size:12px;line-height:1.6}
+ .scal-workspace .sl-bar button,.scal-workspace .sl-bar .sl-record,.scal-workspace .sl-bar .sl-open{font-size:13px;min-height:36px;padding:7px 10px;line-height:1.5}
+ .scal-workspace .sl-bar .sl-columns{font-size:12px}
+ #proScreenLayout.scal-workspace:not(.scal-full-columns) #resultsArea td,#proScreenLayout.scal-workspace:not(.scal-full-columns) #resultsArea .code-cell a,#proScreenLayout.scal-workspace:not(.scal-full-columns) #resultsArea .scal-stock-name{font-size:15px;line-height:1.6}
+ #proScreenLayout.scal-workspace:not(.scal-full-columns) #resultsArea th{font-size:13px}
+ #proScreenLayout.scal-workspace:not(.scal-full-columns) th[data-screen-kind=stock]:before{font-size:13px}
+ #proScreenLayout.scal-workspace #resultsArea:empty:before{font-size:15px}
+ .sl-today-summary summary b{font-size:13px;line-height:1.6}.sl-today-summary summary>span{font-size:12px}
+ .sl-today-summary[open] [data-today-lines]{font-size:13px;line-height:1.7}
+ .sic-head h3{font-size:15px;line-height:1.5}.sic-head h3 span{font-size:12px!important}
+ .sic-week{font-size:12px;line-height:1.5}
+ .sic-grid>button[data-sic-date]{font-size:15px!important}
+ .sic-selected,.sic-selected strong{font-size:12px!important;line-height:1.6}.sic-selected small{font-size:11px}
+ .sic-card .sic-size,.sic-status{font-size:11px!important;line-height:1.5}
+}
