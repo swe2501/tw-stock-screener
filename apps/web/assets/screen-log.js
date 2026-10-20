@@ -1,118 +1,9 @@
-/* 掏金篩選器「每日選股紀錄」：把當次篩選結果（日期、策略名稱、條件、個股與當時收盤）存進會員本人的研究資料，
- * 之後可依日期／策略回看，並以最新收盤計算至今漲跌。
- * 保存位置：academy.research.v1.<uid> 的 screen_logs（沿用既有研究資料同步，不新增資料表）。
- * 這是會員個人研究紀錄，不作為發點或權益依據。 */
+/* Account calendar. New writes require server-day RPC; legacy browser records are read-only and labelled. */
 (() => {
-  'use strict';
-  const MAX_LOGS = 400, MAX_CODES = 300, PRESETS = ['真名一式', '真名二式', '真名三式', 'Golden Cross式'];
-  const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
-  const num = v => typeof v === 'number' && Number.isFinite(v);
-  const pct = v => num(v) ? (v > 0 ? '+' : '') + v.toFixed(2) + '%' : '—';
-  const tone = v => num(v) ? (v > 0 ? 'sl-up' : v < 0 ? 'sl-down' : '') : '';
-  // crypto.randomUUID 只在 https／localhost 可用，其他情況退回隨機字串
-  const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : 'sl-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10));
-  const el = (tag, cls, html) => { const n = document.createElement(tag); if (cls) n.className = cls; if (html !== undefined) n.innerHTML = html; return n; };
-
-  // ── 會員與保存 ─────────────────────────────────────────────
-  function user() { try { const u = JSON.parse(localStorage.getItem('sb_user') || '{}'); return localStorage.getItem('sb_token') && u.id ? u : null; } catch { return null; } }
-  const key = id => 'academy.research.v1.' + id;
-  function readResearch(id) {
-    try {
-      const d = JSON.parse(localStorage.getItem(key(id)) || 'null');
-      if (d && Array.isArray(d.groups) && Array.isArray(d.observations) && Array.isArray(d.runs)) return d;
-    } catch {}
-    // 與 member-research.js 相同的預設結構，避免覆蓋成研究工具讀不懂的格式
-    return {groups: ['長期關注', '等待機會', 'ETF'].map(name => ({id: uuid(), name})), labels: {}, observations: [], runs: []};
-  }
-  function logs(id) { const l = readResearch(id).screen_logs; return Array.isArray(l) ? l.filter(x => x && x.id && x.date && Array.isArray(x.stocks)) : []; }
-  function saveLogs(id, list) {
-    const data = readResearch(id); data.screen_logs = list.slice(0, MAX_LOGS);
-    const value = JSON.stringify(data);
-    if (window.AcademyCloud?.setItem) window.AcademyCloud.setItem(key(id), value); else localStorage.setItem(key(id), value);
-  }
-
-  // ── 讀取目前篩選畫面 ───────────────────────────────────────
-  function screenDate() {
-    try { if (typeof _lastScreenDate !== 'undefined' && _lastScreenDate) return String(_lastScreenDate); } catch {}
-    const t = document.querySelector('#statusArea .results-title')?.textContent || '';
-    const m = t.match(/(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/);
-    return m ? m[1] + '-' + m[2].padStart(2, '0') + '-' + m[3].padStart(2, '0') : null;
-  }
-  function currentStocks() {
-    let all = [];
-    try { if (typeof lastResults !== 'undefined' && Array.isArray(lastResults)) all = lastResults; } catch {}
-    const byCode = new Map(all.map(r => [String(r.code), r]));
-    // 依畫面目前顯示（含產業／箱型過濾與排序）的順序
-    const seen = new Set(), out = [];
-    document.querySelectorAll('#resultsArea td[data-viewed-code]').forEach(td => {
-      const code = td.dataset.viewedCode; if (!code || seen.has(code)) return; seen.add(code);
-      const r = byCode.get(code) || {};
-      out.push({code, name: r.name || (window._names && window._names[code]) || '', close: num(+r.close) ? +r.close : null, chg: num(+r.change_pct) ? +r.change_pct : null});
-    });
-    return out;
-  }
-  function conditions() { return [...document.querySelectorAll('#scCombo .sc-chip')].map(c => c.textContent.trim()).filter(Boolean); }
-
-  // ── 對話框 ───────────────────────────────────────────────
-  const dialog = el('dialog', 'sl-dialog'); dialog.setAttribute('aria-labelledby', 'sl-title');
-  document.body.append(dialog);
-  dialog.addEventListener('click', e => { if (e.target === dialog) dialog.close(); });
-  function shell(title, body) {
-    dialog.innerHTML = '<header class="sl-head"><h2 id="sl-title">' + esc(title) + '</h2><button type="button" class="sl-close" aria-label="關閉">×</button></header><div class="sl-body"></div>';
-    dialog.querySelector('.sl-close').onclick = () => dialog.close();
-    const b = dialog.querySelector('.sl-body'); if (typeof body === 'string') b.innerHTML = body; else b.append(body);
-    if (!dialog.open) dialog.showModal();
-    return b;
-  }
-  function needLogin() {
-    const b = shell('每日選股紀錄', '<p class="sl-copy">登入會員後即可記錄每天的選股結果，紀錄會跟著你的帳號同步到其他裝置。</p><div class="sl-actions"><button type="button" class="sl-primary" data-login>登入會員</button></div>');
-    b.querySelector('[data-login]').onclick = () => { dialog.close(); window.openMemberCenter?.(); };
-  }
-
-  function openRecord() {
-    const u = user(); if (!u) return needLogin();
-    const date = screenDate(), stocks = currentStocks().slice(0, MAX_CODES), cond = conditions();
-    if (!date || !stocks.length) { shell('記錄今日選股', '<p class="sl-copy">請先按「開始篩選」，有篩選結果後再記錄。</p>'); return; }
-    const used = [...new Set(logs(u.id).map(l => l.strategy).filter(Boolean))];
-    const names = [...new Set(PRESETS.concat(used))];
-    const b = shell('記錄今日選股',
-      '<form class="sl-form">' +
-      '<div class="sl-meta"><span>篩選日期 <b>' + esc(date) + '</b></span><span>共 <b>' + stocks.length + '</b> 檔</span></div>' +
-      '<label class="sl-field"><span>招式／策略名稱</span><input name="strategy" list="sl-strategies" maxlength="40" required placeholder="例如：真名一式"><datalist id="sl-strategies">' + names.map(n => '<option value="' + esc(n) + '">').join('') + '</datalist></label>' +
-      '<div class="sl-presets">' + names.slice(0, 8).map(n => '<button type="button" data-preset="' + esc(n) + '">' + esc(n) + '</button>').join('') + '</div>' +
-      '<div class="sl-field"><span>本次條件</span><div class="sl-chips">' + (cond.length ? cond.map(c => '<span class="sl-chip">' + esc(c) + '</span>').join('') : '<span class="sl-muted">未設定條件</span>') + '</div></div>' +
-      '<label class="sl-field"><span>備註（選填）</span><textarea name="note" rows="2" maxlength="300" placeholder="例如：大盤偏多，挑量能放大的"></textarea></label>' +
-      '<div class="sl-field"><span>個股</span><div class="sl-codes">' + stocks.map(s => '<span>' + esc(s.code) + ' ' + esc(s.name) + '</span>').join('') + '</div></div>' +
-      '<p class="sl-status" role="status" aria-live="polite"></p>' +
-      '<div class="sl-actions"><button type="button" data-view>查看我的紀錄</button><button type="submit" class="sl-primary">儲存紀錄</button></div>' +
-      '</form>');
-    const form = b.querySelector('form'), input = form.strategy, status = b.querySelector('.sl-status');
-    const last = used[0]; if (last) input.value = last;
-    b.querySelectorAll('[data-preset]').forEach(x => x.onclick = () => { input.value = x.dataset.preset; input.focus(); });
-    b.querySelector('[data-view]').onclick = () => openLogs();
-    form.onsubmit = e => {
-      e.preventDefault();
-      const strategy = input.value.trim(); if (!strategy) { input.focus(); return; }
-      const list = logs(u.id), dup = list.findIndex(l => l.date === date && l.strategy === strategy);
-      if (dup >= 0 && !confirmReplace(status, form)) return;
-      const entry = {id: dup >= 0 ? list[dup].id : uuid(), date, strategy, conditions: cond, note: form.note.value.trim().slice(0, 300), stocks, saved_at: new Date().toISOString()};
-      if (dup >= 0) list.splice(dup, 1);
-      list.unshift(entry); list.sort((a, b) => b.date.localeCompare(a.date) || String(b.saved_at).localeCompare(String(a.saved_at)));
-      try { saveLogs(u.id, list); } catch { status.textContent = '儲存失敗，請稍後再試。'; return; }
-      window.dispatchEvent(new CustomEvent('academy-screen-log-saved', {detail: {date, strategy, count: stocks.length}}));
-      status.innerHTML = '已記錄 <b>' + esc(date) + ' · ' + esc(strategy) + '</b>（' + stocks.length + ' 檔）。';
-      form.querySelector('[type=submit]').disabled = true;
-    };
-  }
-  // 同日同招式已存在：第一次按下先提示，再按一次才覆蓋
-  function confirmReplace(status, form) {
-    if (form.dataset.replace === '1') return true;
-    form.dataset.replace = '1';
-    status.textContent = '這一天已經有同名招式的紀錄，再按一次「儲存紀錄」會用這次結果取代。';
-    return false;
-  }
-
-  // ── 最新收盤（price_window，公開讀取） ──────────────────────
+'use strict';
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const icon=name=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+({shape:'<path d="M3 17 8 7l5 10 8-10M3 21h18"/>',candle:'<path d="M7 3v18m10-16v14"/><rect x="4" y="7" width="6" height="8"/><rect x="14" y="9" width="6" height="6"/>',gap:'<path d="M3 5h6v14H3zm12 0h6v14h-6M11 12h2"/>',limit:'<path d="M4 19V9m6 10V5m6 14V9m5-5-5 5-4-4"/>',indicator:'<circle cx="12" cy="12" r="9"/><path d="m6 15 4-5 4 3 4-5"/>',calendar:'<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4m10-4v4M3 11h18m4 4h2m4 0h2m-8 3h2"/>',save:'<path d="M4 3h13l4 4v14H3V3Zm3 0v6h10V3M7 21v-8h10v8"/>',chevron:'<path d="m8 10 4 4 4-4"/>',arrow:'<path d="m14 6-6 6 6 6"/>',filter:'<path d="M3 5h18M6 12h12M10 19h4"/>',layers:'<path d="m12 3 9 5-9 5-9-5 9-5Zm-9 9 9 5 9-5m-18 5 9 5 9-5"/>'}[name]||'<path d="m3 16 5-7 5 4 8-9"/>')+'</svg>';
+const num=v=>typeof v==='number'&&Number.isFinite(v);
   const quoteCache = new Map();
   async function latestCloses(codes) {
     const need = codes.filter(c => !quoteCache.has(c));
@@ -131,80 +22,59 @@
     return new Map(codes.map(c => [c, quoteCache.get(c) || null]));
   }
 
-  // ── 紀錄列表 ───────────────────────────────────────────────
-  let filter = '';
-  function openLogs() {
-    const u = user(); if (!u) return needLogin();
-    const list = logs(u.id);
-    const names = [...new Set(list.map(l => l.strategy))];
-    if (filter && !names.includes(filter)) filter = '';
-    const shown = filter ? list.filter(l => l.strategy === filter) : list;
-    const b = shell('我的選股紀錄',
-      '<div class="sl-toolbar"><label><span>招式</span><select data-filter><option value="">全部招式（' + list.length + '）</option>' + names.map(n => '<option value="' + esc(n) + '"' + (n === filter ? ' selected' : '') + '>' + esc(n) + '（' + list.filter(l => l.strategy === n).length + '）</option>').join('') + '</select></label>' +
-      (list.length ? '<button type="button" data-export>匯出 CSV</button>' : '') + '</div>' +
-      (shown.length ? '<div class="sl-list">' + shown.map(card).join('') + '</div>' : '<div class="sl-empty"><p>還沒有選股紀錄。</p><p class="sl-muted">在掏金篩選器篩出結果後，按「記錄今日選股」就會出現在這裡。</p></div>'));
-    b.querySelector('[data-filter]').onchange = e => { filter = e.target.value; openLogs(); };
-    b.querySelector('[data-export]')?.addEventListener('click', () => exportCsv(shown));
-    b.querySelectorAll('[data-delete]').forEach(x => x.onclick = () => {
-      if (x.dataset.armed !== '1') { x.dataset.armed = '1'; x.textContent = '再按一次刪除'; return; }
-      saveLogs(u.id, logs(u.id).filter(l => l.id !== x.dataset.delete)); openLogs();
-    });
-    b.querySelectorAll('[data-stock]').forEach(x => x.onclick = () => { const [code, name] = x.dataset.stock.split('|'); dialog.close(); window._openStock?.(code, name); });
-    b.querySelectorAll('details.sl-log').forEach(d => d.addEventListener('toggle', () => { if (d.open) fillPerformance(d, list.find(l => l.id === d.dataset.id)); }, {once: true}));
-  }
-  function card(l) {
-    return '<details class="sl-log" data-id="' + esc(l.id) + '"><summary>' +
-      '<span class="sl-date">' + esc(l.date) + '</span><span class="sl-strategy">' + esc(l.strategy) + '</span>' +
-      '<span class="sl-count">' + l.stocks.length + ' 檔</span><span class="sl-avg" data-avg>展開看至今表現</span></summary>' +
-      '<div class="sl-log-body">' +
-      (l.conditions?.length ? '<div class="sl-chips">' + l.conditions.map(c => '<span class="sl-chip">' + esc(c) + '</span>').join('') + '</div>' : '') +
-      (l.note ? '<p class="sl-note">' + esc(l.note) + '</p>' : '') +
-      '<div class="sl-table-wrap"><table class="sl-table"><thead><tr><th>股票</th><th>紀錄價</th><th>最新價</th><th>至今漲跌</th></tr></thead><tbody>' +
-      l.stocks.map(s => '<tr data-code="' + esc(s.code) + '"><td><button type="button" class="sl-stock" data-stock="' + esc(s.code + '|' + (s.name || '')) + '"><b>' + esc(s.code) + '</b> ' + esc(s.name || '') + '</button></td><td>' + (num(s.close) ? s.close.toLocaleString('zh-TW', {maximumFractionDigits: 2}) : '—') + '</td><td data-latest>…</td><td data-ret>…</td></tr>').join('') +
-      '</tbody></table></div><div class="sl-log-foot"><small class="sl-muted" data-asof></small><button type="button" class="sl-delete" data-delete="' + esc(l.id) + '">刪除這筆</button></div></div></details>';
-  }
-  async function fillPerformance(d, l) {
-    if (!l) return;
-    const q = await latestCloses(l.stocks.map(s => s.code));
-    const rets = []; let asof = '';
-    l.stocks.forEach(s => {
-      const tr = d.querySelector('tr[data-code="' + CSS.escape(s.code) + '"]'), cur = q.get(s.code); if (!tr) return;
-      const r = cur && num(s.close) && s.close > 0 ? (cur.close / s.close - 1) * 100 : null;
-      if (num(r)) rets.push(r); if (cur?.date && cur.date > asof) asof = cur.date;
-      tr.querySelector('[data-latest]').textContent = cur ? cur.close.toLocaleString('zh-TW', {maximumFractionDigits: 2}) : '—';
-      const rc = tr.querySelector('[data-ret]'); rc.textContent = pct(r); rc.className = tone(r);
-    });
-    const avg = rets.length ? rets.reduce((a, b) => a + b, 0) / rets.length : null, win = rets.filter(r => r > 0).length;
-    const s = d.querySelector('[data-avg]');
-    s.innerHTML = rets.length ? '平均 <b class="' + tone(avg) + '">' + pct(avg) + '</b> · 上漲 ' + win + '/' + rets.length : '暫無最新報價';
-    d.querySelector('[data-asof]').textContent = asof ? '最新收盤日 ' + asof + '；至今漲跌＝最新收盤 ÷ 紀錄日收盤 − 1，未含除權息與交易成本。' : '';
-  }
-  function exportCsv(list) {
-    const rows = [['日期', '招式', '代號', '名稱', '紀錄日收盤', '當日漲跌%', '條件', '備註']];
-    list.forEach(l => l.stocks.forEach(s => rows.push([l.date, l.strategy, s.code, s.name || '', num(s.close) ? s.close : '', num(s.chg) ? s.chg : '', (l.conditions || []).join('；'), l.note || ''])));
-    const csv = '﻿' + rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\r\n');
-    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], {type: 'text/csv;charset=utf-8'}));
-    a.download = '選股紀錄_' + new Date().toISOString().slice(0, 10) + '.csv'; document.body.append(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
-  }
 
-  // ── 按鈕：結果標題列＋條件列 ────────────────────────────────
-  function addButtons() {
-    const head = document.querySelector('#statusArea .results-header');
-    if (head && !head.querySelector('.sl-bar')) {
-      const bar = el('div', 'sl-bar');
-      bar.innerHTML = '<button type="button" class="sl-record">記錄今日選股</button><button type="button" class="sl-open">我的紀錄</button>';
-      bar.querySelector('.sl-record').onclick = openRecord; bar.querySelector('.sl-open').onclick = openLogs;
-      head.append(bar);
-    }
-    const combo = document.getElementById('scCombo')?.parentElement;
-    if (combo && !combo.querySelector('.sl-combo-open')) {
-      const b = el('button', 'sl-combo-open', '我的選股紀錄'); b.type = 'button'; b.onclick = openLogs; combo.append(b);
-    }
-  }
-  function boot() {
-    addButtons();
-    const s = document.getElementById('statusArea'); if (s) new MutationObserver(addButtons).observe(s, {childList: true, subtree: true});
-  }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
-  window.AcademyScreenLog = {openRecord, openLogs, logs: () => { const u = user(); return u ? logs(u.id) : []; }};
+const token=()=>localStorage.getItem('sb_token'),uid=()=>{try{return token()?JSON.parse(localStorage.getItem('sb_user')||'{}').id:null;}catch{return null;}};
+const day=d=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(d));
+const monthNow=()=>day(Date.now()).slice(0,7),clone=v=>JSON.parse(JSON.stringify(v));
+function legacy(){try{return(JSON.parse(localStorage.getItem('academy.research.v1.'+uid())||'{}').screen_logs||[]).filter(x=>x&&x.version!==2&&/^\d{4}-\d{2}-\d{2}$/.test(x.date)&&Array.isArray(x.stocks)).map(x=>({...x,strategies:[x.strategy||'未命名舊紀錄'],legacy:true}));}catch{return[];}}
+async function rpc(name,args){const owner=token();if(!owner)throw Error('請先登入會員。');const response=await fetch(SIG_SB_URL+'/rest/v1/rpc/'+name,{method:'POST',headers:{apikey:SIG_SB_ANON,Authorization:'Bearer '+owner,'Content-Type':'application/json'},body:JSON.stringify(args)});let d;try{d=await response.json();}catch{throw Error('帳號服務回應異常。');}if(owner!==token())throw Error('帳號已變更，請重新開啟。');if(!response.ok){const e=Error(response.status===404||d.code==='PGRST202'?'選股日曆尚待伺服器啟用，目前不能保存新紀錄。':d.message==='SCREEN_TODAY_ONLY'?'已跨日或行情不是今天，只能儲存台灣當天的篩選結果。':'無法確認選股紀錄，請稍後再試。');e.code=d.code;throw e;}return d;}
+async function read(month=monthNow()){const d=await rpc('member_screen_calendar',{p_month:month+'-01'});if(!Array.isArray(d.rows)||!/^\d{4}-\d{2}-\d{2}$/.test(d.today)||!Number.isFinite(Date.parse(d.server_time)))throw Error('日曆資料不完整，暫停保存。');return d;}
+let scan=null,result=null,invalid=false;
+function formState(){return JSON.stringify([...document.querySelectorAll('.form-wrap input,.form-wrap select')].map(e=>[e.id,e.type==='checkbox'?e.checked:e.value]));}
+function selected(){return [...new Set([...document.querySelectorAll('.sc-panel input[type=checkbox]:checked')].map(e=>{const text=e.closest('label')?.querySelector('.cb-label')?.textContent||e.closest('label')?.textContent||e.id;return text.trim().replace(/（.*$/,'').replace(/\s+/g,' ').slice(0,100);}).filter(Boolean))];}
+function beforeScan(){scan={signature:formState(),strategies:selected(),conditions:[...document.querySelectorAll('#scCombo .sc-chip')].map(e=>e.textContent.trim())};invalid=false;result=null;}
+function capture(data){if(!scan)return;const date=String(data.date||'').replaceAll('/','-');result={...clone(scan),date,stocks:(data.results||[]).map(r=>({code:String(r.code),name:String(r.name||''),close:typeof r.close==='number'?r.close:null,chg:typeof r.change_pct==='number'?r.change_pct:null}))};invalid=scan.signature!==formState();refreshMini();}
+const dialog=document.createElement('dialog');dialog.className='sl-dialog';document.body.append(dialog);let returnFocus;
+function shell(title,html){returnFocus=document.activeElement;dialog.innerHTML='<header class="sl-head"><h2 id="sl-title">'+title+'</h2><button type="button" class="sl-close" aria-label="關閉">×</button></header><div class="sl-body">'+html+'</div>';dialog.setAttribute('aria-labelledby','sl-title');dialog.querySelector('.sl-close').onclick=()=>dialog.close();if(!dialog.open)dialog.showModal();return dialog.querySelector('.sl-body');}
+dialog.addEventListener('close',()=>returnFocus?.isConnected&&returnFocus.focus());
+function openLogs(){dialog.close();if(!token())return window.openAuthModal?.('login');window.openMemberCenter?.('screen-calendar');}
+function visibleSnapshot(){if(!result)return null;const codes=new Set([...document.querySelectorAll('#resultsArea td[data-viewed-code]')].map(e=>e.dataset.viewedCode));return {...clone(result),stocks:result.stocks.filter(r=>codes.has(r.code)),strategies:result.strategies.length?result.strategies:['自訂組合']};}
+async function openRecord(){
+ if(!uid())return window.openAuthModal?.('login');
+ const snap=visibleSnapshot();if(!snap||invalid||snap.signature!==formState()||!snap.stocks.length){shell('記錄今日選股','<p class="sl-copy">請先完成篩選。調整條件後需重新篩選，才能記錄一致的策略與結果。</p>');return;}
+ if(snap.stocks.length>300){shell('記錄今日選股','<p>本次超過 300 檔，請縮小篩選範圍後重新篩選；不會截斷保存。</p>');return;}
+ const owner=token(),b=shell('記錄今日選股','<p role="status">正在確認伺服器日期…</p>');let d;try{d=await read();}catch(e){if(owner===token()&&dialog.open)b.querySelector('[role=status]').textContent=e.message;return;}
+ if(owner!==token()||!dialog.open)return;
+ if(snap.date!==d.today){b.innerHTML='<p class="sl-copy">此份行情日期為 '+esc(snap.date)+'；台灣今天是 '+esc(d.today)+'。歷史資料可研究，但不能補登到選股日曆。</p>';return;}
+ b.innerHTML='<form class="sl-form"><div class="sl-meta"><span>'+esc(d.today)+'</span><span>'+snap.stocks.length+' 檔</span><span>伺服器確認日期</span></div><div class="sl-field"><span>本次策略 · 自動帶入，不可變更</span><div class="sl-chips">'+snap.strategies.map(s=>'<span class="sl-chip">'+esc(s)+'</span>').join('')+'</div></div><details><summary>查看完整篩選條件</summary><p class="sl-copy">'+esc(snap.conditions.join(' · ')||'自訂條件')+'</p></details><label class="sl-field"><span>額外備註（選填，與本次紀錄一併保存）</span><textarea name="note" rows="3" maxlength="300" placeholder="留下額外觀察，不改變策略或入選股票"></textarea></label><div class="sl-codes">'+snap.stocks.map(s=>'<span>'+esc(s.code)+' '+esc(s.name)+'</span>').join('')+'</div><p class="sl-muted">只准當天記錄。保存後日期、策略、條件、股票與備註固定；同策略再次保存會新增一筆，不覆蓋舊紀錄。</p><p role="status" aria-live="polite"></p><div class="sl-actions"><button type="submit" class="sl-primary">儲存到選股日曆</button></div></form>';
+ const form=b.querySelector('form'),status=b.querySelector('[role=status]'),button=b.querySelector('[type=submit]');let pending=null,busy=false;
+ form.onsubmit=async e=>{e.preventDefault();if(busy||owner!==token()||!dialog.open)return;if(invalid||snap.signature!==formState()){status.textContent='條件已變動，請關閉並重新篩選。';return;}busy=true;button.disabled=true;status.textContent='正在保存，請稍候…';
+ try{if(!pending)pending={p_request_id:crypto.randomUUID(),p_market_date:snap.date,p_strategies:snap.strategies,p_conditions:snap.conditions,p_stocks:snap.stocks,p_note:form.note.value.trim()};form.note.disabled=true;const response=await rpc('save_member_screen_record',pending);if(owner!==token()||!dialog.open)return;if(!response.row?.id)throw Error('尚未確認保存結果；重試沿用原單號。');try{const k='academy.research.v1.'+uid(),data=JSON.parse(localStorage.getItem(k)||'{}');data.screen_logs=Array.isArray(data.screen_logs)?data.screen_logs:[];if(!data.screen_logs.some(x=>x.id===response.row.id))data.screen_logs.unshift({...response.row,version:2,date:response.row.record_date,saved_at:response.row.recorded_at,strategy:response.row.strategies.join(' ＋ ')});const text=JSON.stringify(data);if(window.AcademyCloud?.setItem)window.AcademyCloud.setItem(k,text);else localStorage.setItem(k,text);}catch{}status.textContent='已保存，時間由伺服器記錄。';button.textContent='已存入選股日曆';window.dispatchEvent(new CustomEvent('academy-screen-log-saved',{detail:{date:snap.date,strategies:snap.strategies,count:snap.stocks.length}}));refreshMini();const link=document.createElement('button');link.type='button';link.textContent='查看選股日曆';link.onclick=openLogs;form.querySelector('.sl-actions').append(link);}
+ catch(err){if(owner===token()&&dialog.open){status.textContent=err.message+' 重試將沿用原單號與內容。';button.disabled=false;}}finally{busy=false;}};
+}
+function rowCard(row){return '<details class="sl-log" data-record="'+esc(row.id)+'"><summary><span class="sl-strategy">'+esc(row.strategies.join(' ＋ '))+'</span><span class="sl-count">'+row.stocks.length+' 檔</span><span class="sl-time">'+(row.legacy?'舊制紀錄':esc(new Date(row.recorded_at).toLocaleTimeString('zh-TW',{timeZone:'Asia/Taipei',hour:'2-digit',minute:'2-digit'})))+'</span></summary><div class="sl-log-body"><small class="sl-muted">'+(row.legacy?'舊制資料可曾被修改，不具有新制鎖定保證。':'策略與當時內容已固定保存；伺服器記錄日期。')+'</small><div class="sl-chips">'+(row.conditions||[]).map(s=>'<span class="sl-chip">'+esc(s)+'</span>').join('')+'</div>'+(row.note?'<p class="sl-note">'+esc(row.note)+'</p>':'')+'<div class="sl-stock-list">'+row.stocks.map(s=>'<button type="button" data-calendar-stock="'+esc(s.code)+'" data-name="'+esc(s.name||'')+'"><span><b>'+esc(s.code)+'</b> '+esc(s.name||'')+'</span><span class="sl-record-prices"><span>紀錄價 '+esc(typeof s.close==='number'?s.close.toLocaleString('zh-TW'):'—')+'</span><small data-return-code="'+esc(s.code)+'">展開後確認最新收盤</small></span></button>').join('')+'</div></div></details>';}
+function mount(main,{profile}){
+ const owner=token();let month=monthNow(),chosen='',today=day(Date.now()),rows=[],failure='',sequence=0;
+ const current=()=>main.isConnected&&owner===token();
+ main.innerHTML='<section class="scal-page"><header class="scal-hero"><div><span class="mc-kicker">SCREENING JOURNAL</span><h2>'+icon('calendar')+' 選股日曆</h2><p>當天留下紀錄，往後有據可查。歷史留白不可補登。</p></div><button type="button" data-screen-go>'+icon('filter')+' 前往選股</button></header><div class="scal-notice" role="status">正在讀取帳號紀錄…</div><div class="scal-layout"><section class="scal-month"><div class="scal-controls"><button type="button" data-month="-1" aria-label="上一個月">'+icon('arrow')+'</button><h3 data-month-title></h3><button type="button" data-month="1" aria-label="下一個月">'+icon('arrow')+'</button><button type="button" data-today>本月</button></div><div class="scal-week">'+['一','二','三','四','五','六','日'].map(d=>'<span>'+d+'</span>').join('')+'</div><div class="scal-grid" role="group" aria-label="選擇紀錄日期"></div><p class="sl-muted">藍圈為今天 · 點日期查看 · 空白日期不提供補登</p></section><section class="scal-day" aria-live="polite"></section></div></section>';
+ const host=main.querySelector('.scal-page');host.addEventListener('toggle',async e=>{const detail=e.target.closest('details[data-record]');if(!detail?.open)return;const row=rows.find(r=>r.id===detail.dataset.record);if(!row)return;const quotes=await latestCloses(row.stocks.map(s=>s.code));if(!current()||!detail.isConnected)return;detail.querySelectorAll('[data-return-code]').forEach(n=>{const stock=row.stocks.find(s=>s.code===n.dataset.returnCode),q=quotes.get(n.dataset.returnCode);const ret=q&&num(stock.close)&&stock.close>0?(q.close/stock.close-1)*100:null;n.textContent=ret===null?'最新收盤待更新':q.date+' · 最新 '+q.close+' · '+(ret>0?'+':'')+ret.toFixed(2)+'%';n.className=ret>0?'sl-up':ret<0?'sl-down':'';});},true);
+ function paint(){if(!current()||!host.isConnected)return;host.querySelector('[data-month-title]').textContent=month.replace('-',' 年 ')+' 月';const first=new Date(month+'-01T00:00:00Z'),offset=(first.getUTCDay()+6)%7,count=new Date(Date.UTC(first.getUTCFullYear(),first.getUTCMonth()+1,0)).getUTCDate();let html='<span class="scal-pad" aria-hidden="true"></span>'.repeat(offset);
+ for(let n=1;n<=count;n++){const date=month+'-'+String(n).padStart(2,'0'),list=rows.filter(r=>r.date===date),selected=date===chosen;html+='<button type="button" class="scal-date'+(date===today?' is-today':'')+(selected?' is-selected':'')+'" data-day="'+date+'" aria-pressed="'+selected+'" aria-label="'+date+'，'+list.length+' 筆紀錄"><span class="scal-number">'+n+'</span><span class="scal-day-count">'+(list.length?list.length+' 筆':'')+'</span><span class="scal-labels">'+list.slice(0,2).map(r=>'<span>'+esc(r.strategies.join('＋'))+'</span>').join('')+(list.length>2?'<small>＋'+(list.length-2)+' 筆</small>':'')+'</span></button>';}
+ host.querySelector('.scal-grid').innerHTML=html;const list=rows.filter(r=>r.date===chosen);host.querySelector('.scal-day').innerHTML='<h3>'+esc(chosen||'選擇日期')+'</h3><p class="sl-muted">'+list.length+' 筆 · '+(chosen===today?'今天可從篩選結果保存':'歷史只能查看，不能補登')+'</p>'+(list.length?list.map(rowCard).join(''):'<div class="scal-empty">'+icon('calendar')+'<h4>這一天沒有紀錄</h4><p>'+(chosen===today?'完成今日篩選後，按「記錄今日選股」。':'當天未記錄，現在不提供補登。')+'</p></div>');
+ host.querySelector('.scal-notice').textContent=failure||'帳號日曆已同步。日期由伺服器決定，紀錄保存後不能覆蓋。';}
+ async function load(){const seq=++sequence;failure='';try{const d=await read(month);if(!current()||seq!==sequence)return;today=d.today;rows=d.rows.map(r=>({...r,date:r.record_date})).concat(legacy().filter(r=>r.date.startsWith(month)));}catch(e){if(!current()||seq!==sequence)return;failure=e.message+' 下方僅顯示可讀取的舊制紀錄。';rows=legacy().filter(r=>r.date.startsWith(month));}if(!chosen.startsWith(month))chosen=today.startsWith(month)?today:month+'-01';paint();}
+ host.onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.day){chosen=b.dataset.day;paint();}else if(b.dataset.month){const d=new Date(month+'-01T00:00:00Z');d.setUTCMonth(d.getUTCMonth()+Number(b.dataset.month));month=d.toISOString().slice(0,7);load();}else if(b.hasAttribute('data-today')){month=today.slice(0,7);chosen=today;load();}else if(b.hasAttribute('data-screen-go')){document.querySelector('.member-page [data-back]')?.click();window._showView?.('screen');}else if(b.dataset.calendarStock)window._openStock?.(b.dataset.calendarStock,b.dataset.name);};load();return true;
+}
+let miniGeneration=0;
+async function refreshMini(){const box=document.querySelector('.sl-today-summary');if(!box)return;const id=++miniGeneration,owner=token();if(!owner){box.querySelector('[data-today-lines]').textContent='登入後查看今日紀錄。';return;}try{const d=await read();if(id!==miniGeneration||owner!==token()||!box.isConnected)return;const rows=d.rows.filter(r=>r.record_date===d.today);box.querySelector('[data-today-lines]').textContent=rows.length?rows.length+' 筆 · '+rows.slice(0,2).map(r=>r.strategies.join('＋')).join('／'):'今天尚未記錄；只准當天保存。';}catch(e){if(id===miniGeneration&&owner===token()&&box.isConnected)box.querySelector('[data-today-lines]').textContent=e.message;}}
+let bootWatcher;function boot(){const wrap=document.getElementById('proScreenLayout');if(!wrap){if(!bootWatcher){bootWatcher=new MutationObserver(()=>{if(document.getElementById('proScreenLayout')){bootWatcher.disconnect();boot();}});bootWatcher.observe(document.body,{childList:true,subtree:true});}return;}if(wrap.dataset.calendarBoot)return;wrap.dataset.calendarBoot='1';wrap.classList.add('scal-workspace');const f=wrap.querySelector('.form-wrap'),combo=document.querySelector('.sc-combo');if(combo){const summary=document.createElement('div');summary.className='scal-combo';summary.append(combo);f.prepend(summary);}
+ const top=document.createElement('div');top.className='scal-filter-head';top.innerHTML='<h2>'+icon('filter')+' 篩選條件</h2>';const toggle=f.querySelector('.pro-filter-toggle');if(toggle)top.append(toggle);f.prepend(top);const grid=f.querySelector('.form-grid');if(grid){const base=document.createElement('details');base.className='scal-base';base.innerHTML='<summary>'+icon('filter')+' 基本條件與行情日期 <span>展開設定</span>'+icon('chevron')+'</summary>';grid.before(base);base.append(grid);}
+ document.querySelectorAll('.sc-panel .sc-hd').forEach(h=>{const marker=document.createElement('span');marker.className='scal-panel-icon';marker.innerHTML=icon(({shape:'shape',kbar:'candle',gap:'gap',limit:'limit',ind:'indicator',zm:'layers',granville:'trend'})[h.closest('[data-cat]').dataset.cat]||'filter');h.prepend(marker);});
+ const tabs=document.createElement('div');tabs.className='scal-mobile-tabs';tabs.innerHTML='<button type="button" data-pane="filters" aria-pressed="true">'+icon('filter')+' 篩選條件</button><button type="button" data-pane="results" aria-pressed="false">'+icon('layers')+' 篩選結果</button>';wrap.before(tabs);const syncTabs=()=>{tabs.hidden=f.style.display==='none'||!!document.body.classList.contains('mc-open');};new MutationObserver(syncTabs).observe(f,{attributes:true,attributeFilter:['style']});new MutationObserver(syncTabs).observe(document.body,{attributes:true,attributeFilter:['class']});syncTabs();tabs.onclick=e=>{const b=e.target.closest('[data-pane]');if(!b)return;wrap.dataset.pane=b.dataset.pane;tabs.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));};
+ function buttons(){const head=document.querySelector('#statusArea .results-header');if(head&&!head.querySelector('.sl-bar')){const bar=document.createElement('div');bar.className='sl-bar';bar.innerHTML='<button type="button" class="sl-record">'+icon('save')+' 記錄今日選股</button><button type="button" class="sl-open">'+icon('calendar')+' 選股日曆</button><button type="button" class="sl-columns" aria-pressed="false">完整欄位</button>';bar.querySelector('.sl-record').onclick=openRecord;bar.querySelector('.sl-open').onclick=openLogs;bar.querySelector('.sl-columns').onclick=e=>{const full=wrap.classList.toggle('scal-full-columns');e.currentTarget.setAttribute('aria-pressed',String(full));e.currentTarget.textContent=full?'精簡欄位':'完整欄位';};head.append(bar);}
+ const results=wrap.querySelector('.results-wrap');if(results&&!results.querySelector('.sl-today-summary')){const d=document.createElement('details');d.className='sl-today-summary';d.innerHTML='<summary>'+icon('calendar')+' 今日紀錄 <span>展開／收合</span>'+icon('chevron')+'</summary><div data-today-lines>讀取今日紀錄…</div><button type="button">開啟完整日曆 ↗</button>';d.querySelector('button').onclick=openLogs;document.getElementById('resultsArea').before(d);refreshMini();}}
+ const decorate=()=>{const table=document.querySelector('#resultsArea table');if(!table)return;const heads=[...table.querySelectorAll('thead th')];table.querySelectorAll('tr').forEach(row=>[...row.children].forEach((cell,i)=>{const label=heads[i]?.textContent.replace(/[▲▼]/g,'').trim();cell.dataset.screenColumn=['代號','名稱','收盤','漲跌幅'].includes(label)?'main':'extra';}));};buttons();decorate();new MutationObserver(decorate).observe(document.getElementById('resultsArea'),{childList:true,subtree:true});new MutationObserver(buttons).observe(document.getElementById('statusArea'),{childList:true,subtree:true});f.addEventListener('change',()=>{if(result)invalid=true;});f.addEventListener('input',()=>{if(result)invalid=true;});
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
+window.AcademyScreenLog={beforeScan,capture,openRecord,openLogs,render:(view,ctx)=>view==='screen-calendar'?(mount(ctx.main,ctx),true):false,logs:legacy};
 })();

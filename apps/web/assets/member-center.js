@@ -22,7 +22,7 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
   const groups = [
     ['帳號與服務', [['overview','會員總覽'],['profile','個人資料'],['security','登入與安全'],['notifications','通知與偏好'],['feedback','我的回饋'],['privacy','資料與隱私']]],
     ['會員禮遇', [['benefits','會員權益'],['gifts','禮遇與優惠券'],['redeem','兌換優惠碼'],['referrals','邀請好友'],['tasks','任務與點數'],['wallet','點數帳戶'],['events','學院活動']]],
-    ['研究與學習', [['favorites','我的自選'],['trades','交易紀錄'],['goals','我的目標'],['workspace','研究工作區'],['strategy','策略回測'],['weekly','我的研究週報'],['learning','學習中心']]]
+    ['研究與學習', [['favorites','我的自選'],['screen-calendar','選股日曆'],['trades','交易紀錄'],['goals','我的目標'],['workspace','研究工作區'],['strategy','策略回測'],['weekly','我的研究週報'],['learning','學習中心']]]
   ];
   const items = groups.flatMap(([,rows])=>rows);
   const nav = page.querySelector('nav'), main = page.querySelector('main');
@@ -100,6 +100,7 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
     if(profile&&window.AcademyCloud?.status().state==='expired'){main.innerHTML='<section class="mc-card"><p>登入帳號已變更，請重新登入後繼續。本機資料已保留。</p><button data-login>重新登入</button></section>';return;}
     if(window.AcademyResearch?.render(current,{main,profile,onProfileChanged:p=>{profile=p;sync();},go:open}))return;
     if(window.AcademyTradeUI?.render(current,{main,profile,onProfileChanged:p=>{profile=p;sync();},go:open}))return;
+    if(window.AcademyScreenLog?.render(current,{main,profile,go:open}))return;
     if(window.AcademyMemberJourney?.render(current,{main,profile,go:open}))return;
     if(window.AcademyMemberFeatures?.render(current,{main,profile,onProfileChanged:p=>{profile=p;sync();},go:open}))return;
     if(current==='overview')main.innerHTML=`<div class="mc-card"><div class="mc-identity">${portrait('mc-portrait')}<div><h2>${esc(name())}</h2><span class="mc-muted">分享工具、邀請朋友；使用權與到期日由會員帳號確認。</span></div></div></div><div class="mc-grid"><div class="mc-card"><h2>你的帳號</h2><p class="mc-muted">管理暱稱、通知信箱與登入方式。</p><button data-go="profile">查看個人資料 →</button></div><div class="mc-card"><h2>你的聲音</h2><p class="mc-muted">提出使用問題、資料疑問與功能建議。</p><button data-go="feedback">前往回饋 →</button></div></div><div class="mc-note">網站與未來 App 將共用會員識別。收藏與觀察紀錄沿用原帳號，不另外建立新身分。</div>`;

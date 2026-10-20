@@ -10364,6 +10364,7 @@
     document.addEventListener('click', function (e) { const d = document.getElementById('funcDropdown'); if (d && d.style.display !== 'none' && !d.contains(e.target)) _closeFuncMenu(); });
 
     function doScreen() {
+      window.AcademyScreenLog?.beforeScan();
       const dateVal = document.getElementById('date').value;
       const minPrice  = parseFloat(document.getElementById('min_price').value) || 0;
       const redPct    = parseFloat(document.getElementById('red_candle_pct').value) || 0;
@@ -10615,6 +10616,7 @@
       }
 
       filterAndRender();
+      window.AcademyScreenLog?.capture(data);
     }
 
     // ── 已看過標記（localStorage，當天有效） ──────────────
@@ -16513,15 +16515,15 @@
     w.append(f,grip,stage);stage.append(empty,r);
     const b=document.createElement('button');b.className='pro-filter-toggle';b.type='button';b.innerHTML=icons.chevron+'<span>收合篩選條件</span>';f.prepend(b);
     const saved=localStorage.getItem('pro-filter-collapsed-v2')==='1';w.classList.toggle('collapsed',saved);
-    const savedWidth=parseFloat(localStorage.getItem('pro-screen-left-v2')||'76');if(Number.isFinite(savedWidth))w.style.setProperty('--screen-left',Math.max(42,Math.min(78,savedWidth))+'%');
+    const savedWidth=parseFloat(localStorage.getItem('pro-screen-left-v3')||'60');if(Number.isFinite(savedWidth))w.style.setProperty('--screen-left',Math.max(42,Math.min(78,savedWidth))+'%');
     b.onclick=()=>{w.classList.toggle('collapsed');localStorage.setItem('pro-filter-collapsed-v2',w.classList.contains('collapsed')?'1':'0');};
     const setSplit=x=>{const box=w.getBoundingClientRect(),pct=(x-box.left)/box.width*100,clamped=Math.max(42,Math.min(78,pct));w.style.setProperty('--screen-left',clamped+'%');grip.setAttribute('aria-valuenow',Math.round(clamped));return clamped;};
     grip.addEventListener('pointerdown',e=>{if(matchMedia('(max-width:760px)').matches)return;w.classList.remove('collapsed');grip.setPointerCapture(e.pointerId);grip.classList.add('dragging');document.body.classList.add('pro-resizing');e.preventDefault();});
     grip.addEventListener('pointermove',e=>{if(grip.hasPointerCapture(e.pointerId))setSplit(e.clientX);});
-    const finish=e=>{if(!grip.hasPointerCapture(e.pointerId))return;const val=setSplit(e.clientX);grip.releasePointerCapture(e.pointerId);grip.classList.remove('dragging');document.body.classList.remove('pro-resizing');localStorage.setItem('pro-screen-left-v2',val.toFixed(1));};
+    const finish=e=>{if(!grip.hasPointerCapture(e.pointerId))return;const val=setSplit(e.clientX);grip.releasePointerCapture(e.pointerId);grip.classList.remove('dragging');document.body.classList.remove('pro-resizing');localStorage.setItem('pro-screen-left-v3',val.toFixed(1));};
     grip.addEventListener('pointerup',finish);grip.addEventListener('pointercancel',finish);
-    grip.addEventListener('dblclick',()=>{w.style.setProperty('--screen-left','66%');localStorage.setItem('pro-screen-left','66');grip.setAttribute('aria-valuenow','66');});
-    grip.addEventListener('keydown',e=>{if(e.key!=='ArrowLeft'&&e.key!=='ArrowRight')return;const cur=parseFloat(getComputedStyle(w).getPropertyValue('--screen-left'))||66,next=Math.max(42,Math.min(78,cur+(e.key==='ArrowRight'?2:-2)));w.style.setProperty('--screen-left',next+'%');localStorage.setItem('pro-screen-left',String(next));grip.setAttribute('aria-valuenow',String(next));e.preventDefault();});
+    grip.addEventListener('dblclick',()=>{w.style.setProperty('--screen-left','66%');localStorage.setItem('pro-screen-left-v3','66');grip.setAttribute('aria-valuenow','66');});
+    grip.addEventListener('keydown',e=>{if(e.key!=='ArrowLeft'&&e.key!=='ArrowRight')return;const cur=parseFloat(getComputedStyle(w).getPropertyValue('--screen-left'))||66,next=Math.max(42,Math.min(78,cur+(e.key==='ArrowRight'?2:-2)));w.style.setProperty('--screen-left',next+'%');localStorage.setItem('pro-screen-left-v3',String(next));grip.setAttribute('aria-valuenow',String(next));e.preventDefault();});
     const mo=new MutationObserver(()=>{
       const modal=document.getElementById('chartModal');if(!modal)return;
       if(modal.classList.contains('open')){w.dataset.wasCollapsed=w.classList.contains('collapsed')?'1':'0';w.classList.add('collapsed');}
@@ -17217,8 +17219,8 @@
 <script src="assets/site-search.js" defer></script>
 <script src="assets/member-derivatives-catalog.js" defer></script>
 <script src="assets/member-trade-ui.js" defer></script>
-<script src="assets/member-journey.js?v=perks2a" defer></script>
-<script src="assets/member-center.js?v=journey20" defer></script>
+<script src="assets/member-journey.js?v=calendar2" defer></script>
+<script src="assets/member-center.js?v=calendar2-journey20" defer></script>
 <script src="assets/member-signin.js?v=invite2" defer></script>
 <script src="assets/member-private-screen.js" defer></script>
 <link rel="stylesheet" href="assets/site-readability.css">
@@ -17226,8 +17228,8 @@
 <link rel="stylesheet" href="assets/research-polish.css?v=11">
 <link rel="stylesheet" href="assets/focus-rankings.css?v=4">
 <script src="assets/focus-rankings.js?v=4" defer></script>
-<link rel="stylesheet" href="assets/screen-log.css?v=1">
-<script src="assets/screen-log.js?v=1" defer></script>
+<link rel="stylesheet" href="assets/screen-log.css?v=calendar2">
+<script src="assets/screen-log.js?v=calendar2" defer></script>
 <script src="assets/pattern-focus.js?v=2" defer></script>
 <script src="assets/member-quick-menu.js?v=3" defer></script>
 </body>

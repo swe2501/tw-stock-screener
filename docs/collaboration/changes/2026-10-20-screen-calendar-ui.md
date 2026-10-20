@@ -1,0 +1,12 @@
+# Screen workspace and member calendar
+
+Website implementation is local only; server SQL remains prepared and is not applied. See 2026-10-20-screen-calendar.md for the immutable account contract and its provenance limits.
+
+- Summary of every selected condition is moved above the form; the basic date/price/industry controls can collapse. Existing split-pane controls remain, with a 60% default and consistent saved-size key.
+- Distinct repository-native SVG icons for pattern, candle, gap, limits, indicator, strategy, record, calendar and disclosure. Existing theme tokens and reduced motion are respected.
+- Results default to code/name/close/change, with full columns available; mobile conditions/results tabs preserve state. A compact today-record disclosure above the stock table frees vertical space when collapsed. No duplicate calendar button beside the combination summary.
+- The screening run captures selected labels and conditions before the request, and binds its returned stocks/date after render. Editing form state invalidates saving until rerun. All selected strategies are read-only; blank selection is labelled custom combination. Snapshot fields cannot be changed in the save form, only an optional note is accepted.
+- Account calendar lives in research/learning navigation and member-overview shortcuts. Month navigation and read-only day details show exact selected strategies, timestamps, conditions, note and recorded prices; latest close comparison is read-only and missing prices stay unavailable. Past blank dates have no backfill action. Legacy JSON records are labelled old-format and never upgraded to server-locked claims.
+- Same-day repeated runs append, never overwrite. No delete/update actions. Notes are frozen with the snapshot for now. New saves fail closed when the RPC is missing; no local-only write masquerades as a server save. Successful server records are mirrored into existing research JSON only for compatibility with local completion hints; calendar truth comes from RPC.
+
+Validation: PGlite server-day/past/future/immutable/RLS/idempotency tests; isolated UI snapshot and retry/error tests; complete-site screener/member route integration; 320/375/768/1366 light/dark calendar and 1440/375/320 workspace screenshots. Existing member task-wallet browser regression passes. There is no npm build target; script syntax, inline syntax and API budget checks are used.
