@@ -133,3 +133,23 @@ html:has(.sl-dialog[open]){overflow:hidden}
 @container(max-width:390px){.scal-page .sl-stock-list>button{grid-template-columns:minmax(0,1fr);gap:8px;padding:12px}.sl-stock-identity{gap:10px}.sl-stock-name{font-size:14px}.scal-day .sl-record-prices{flex-direction:row;justify-content:space-between;align-items:center;gap:10px}.sl-record-prices>span{flex:none}.sl-record-prices>small{max-width:62%;text-align:right;font-size:10px}.sl-log-tools{align-items:flex-start}.sl-log-tools>.sl-muted{max-width:60%}.scal-day .sl-log>summary{gap:7px;font-size:13px;padding:13px 12px}.scal-day .sl-strategy{font-size:15px}.scal-day .sl-count{font-size:11px}.scal-day .sl-time{font-size:9px;padding:2px 5px}.scal-day .sl-log-body{padding:12px}}
 body.scal-calendar-chart #chartModal.open:not(.etx-embedded){display:flex!important;align-items:center!important;justify-content:center!important;padding:24px!important;z-index:14000!important;background:rgba(5,13,24,.7)!important;backdrop-filter:blur(5px)}body.scal-calendar-chart #chartModal:not(.kfull)>.modal-box{width:min(1120px,calc(100vw - 48px))!important;max-width:1120px!important;height:min(800px,calc(100dvh - 48px))!important;max-height:calc(100dvh - 48px)!important;margin:0!important;inset:auto!important;position:relative!important;transform:none!important;border:1px solid color-mix(in srgb,var(--accent) 22%,var(--border))!important;border-radius:16px!important;box-shadow:0 30px 100px #0006!important}body.scal-calendar-chart .member-page{pointer-events:none}
 @media(max-width:600px){body.scal-calendar-chart #chartModal.open:not(.etx-embedded){padding:12px!important}body.scal-calendar-chart #chartModal:not(.kfull)>.modal-box{width:calc(100vw - 24px)!important;height:calc(100dvh - 24px)!important;max-height:calc(100dvh - 24px)!important;border-radius:12px!important}}
+
+/* Keep scrolling inside the work panes; calendar rows retain readable height. */
+@media(min-width:761px){
+ #proScreenLayout.scal-workspace .results-wrap{overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-gutter:stable}
+ #proScreenLayout.scal-workspace #resultsArea{min-height:110px;flex:1 0 110px}
+ #proScreenLayout.scal-workspace #resultsArea:empty{flex:1 0 110px}
+ #proScreenLayout.scal-workspace #resultsArea:empty:before{min-height:110px}
+ .scal-workspace .sic-card{min-height:260px;flex-shrink:0}
+ .scal-workspace .sic-card.is-collapsed{min-height:0}
+ .sic-grid button{min-height:24px;font-size:13px}
+ .sic-grid button>span{width:24px;height:24px}
+ .sic-week{padding:5px 0;font-size:10px}
+ .sic-resize{height:16px;margin:0 10px;border-radius:5px;background:color-mix(in srgb,var(--accent) 3%,var(--surface))}
+ .sic-resize>span{width:42px;height:4px}
+ .sic-card .sic-size{padding:5px 0;font-size:10px!important}
+ .sic-size input{width:110px;height:14px}
+ .sic-head{padding-top:10px}.sic-head h3{font-size:13px}
+}
+
+.sic-grid>button[data-sic-date]{font-size:13px!important}.sic-grid>button[data-sic-date]>span{font:inherit!important;line-height:1.2!important}
