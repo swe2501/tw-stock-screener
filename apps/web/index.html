@@ -16316,11 +16316,12 @@
     function chartOpen(){ var m=document.getElementById('chartModal'); return !!(m&&m.classList.contains('open')); }
     window._showView=function(v){
       var r=origShow.apply(this,arguments);
-      if(!popping&&!(history.state&&history.state.academyMember)){
+      if(!popping&&!(cur===null&&initHash.startsWith('member/'))){
+        window.dispatchEvent(new Event('academy-public-navigation'));
         var params=new URLSearchParams(location.search);params.delete('view');var query=params.toString();
         var url=location.pathname+(query?'?'+query:'')+(v&&v!=='home'?'#'+v:'');
         if(cur===null) history.replaceState({v:v},'',url);
-        else if(v!==cur) history.pushState({v:v},'',url);
+        else if(v!==cur||(history.state&&history.state.academyMember)) history.pushState({v:v},'',url);
       }
       cur=v; try{ window._fhPageBg && window._fhPageBg(v==='fhedge'); }catch(e){}
       return r;
@@ -16335,12 +16336,12 @@
       return origClose.apply(this,arguments);
     };
     window.addEventListener('popstate',function(e){
-      if(e.state&&e.state.academyMember) return;
+      if(e.state&&e.state.academyMember){if(chartOpen()&&typeof origClose==='function')origClose();return;}
       popping=true;
       try{
-        if(chartOpen()&&typeof origClose==='function'){ origClose(); return; }
+        if(chartOpen()&&typeof origClose==='function')origClose();
         var v=(e.state&&e.state.v)||(location.hash.slice(1)||'home');
-        if(!window._VIEWS||!window._VIEWS[v]) v='home';
+        if(v!=='screen'&&(!window._VIEWS||!window._VIEWS[v])) v='home';
         if(v!==cur) window._showView(v);
       } finally { popping=false; }
     });
@@ -17217,7 +17218,7 @@
 <script src="assets/member-derivatives-catalog.js" defer></script>
 <script src="assets/member-trade-ui.js" defer></script>
 <script src="assets/member-journey.js?v=calendar2" defer></script>
-<script src="assets/member-center.js?v=calendar2-journey20" defer></script>
+<script src="assets/member-center.js?v=nav6-calendar2-journey20" defer></script>
 <script src="assets/member-signin.js?v=invite2" defer></script>
 <script src="assets/member-private-screen.js" defer></script>
 <link rel="stylesheet" href="assets/site-readability.css">

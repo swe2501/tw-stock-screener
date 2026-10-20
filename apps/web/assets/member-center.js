@@ -121,18 +121,16 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
     try{const result=await AcademyIdentity.memberResource('feedback');if(!target.isConnected)return;if(!result.ready){target.textContent='案件服務尚未啟用，填寫內容會保留為草稿。';return;}target.innerHTML=result.rows.length?result.rows.map(r=>'<div class="mc-row"><div><b>'+esc(r.subject)+'</b><small>'+esc(r.ticket_number)+'</small></div><span class="mc-pill">'+esc(({received:'已收到',in_progress:'處理中',waiting:'等待補充',completed:'已完成'})[r.status]||r.status)+'</span></div>').join(''):'目前還沒有已送出的回饋';}catch(e){if(target.isConnected)target.textContent=e.message;}
   }
   async function load(){const id=++request;try{const data=await api();if(id!==request)return;if(window.AcademyPhoneGate&&!await AcademyPhoneGate.ensure()){window.AcademyCloud?.cancel();return;}profile=data;sync();if(window.AcademyCloud){window.AcademyTradeUI?.cleanup();if(!page.hidden)main.innerHTML='<section class="mc-card"><p>正在讀取帳號研究資料…</p></section>';await AcademyCloud.prepare(data.id,true);if(id!==request)return;cloudCleanup();cloudHost.hidden=false;cloudCleanup=AcademyCloud.mountStatus(cloudHost,data.id);}if(!page.hidden)render();}catch(e){if(id!==request||page.hidden)return;const notice=document.createElement('div');notice.className='mc-note';notice.setAttribute('role','status');notice.textContent=e.message==='Failed to fetch'?'無法連上會員服務，請確認網路後重試':e.message;const retry=document.createElement('button');retry.type='button';retry.textContent='重新載入';retry.addEventListener('click',()=>{notice.remove();load();});notice.append(' ',retry);main.prepend(notice);}}
-  async function open(tab='overview'){if(window.AcademyPhoneGate&&!await AcademyPhoneGate.ensure())return;const reopened=page.hidden;
+  async function open(tab='overview',replaceHistory=false){if(window.AcademyPhoneGate&&!await AcademyPhoneGate.ensure())return;const reopened=page.hidden;
     current=items.some(i=>i[0]===tab)?tab:'overview';
-    if(page.hidden){returnFocus=document.activeElement;returnScroll={x:scrollX,y:scrollY};oldOverflow=document.body.style.overflow;document.body.style.overflow='hidden';document.body.classList.add('mc-open');positionUnderHeader();page.hidden=false;history.pushState({...history.state,academyMember:true},'',location.pathname+location.search+'#member/'+current);}
-    else history.replaceState({...history.state,academyMember:true},'',location.pathname+location.search+'#member/'+current);
+    if(page.hidden){returnFocus=document.activeElement;returnScroll={x:scrollX,y:scrollY};oldOverflow=document.body.style.overflow;document.body.style.overflow='hidden';document.body.classList.add('mc-open');positionUnderHeader();page.hidden=false;history[replaceHistory?'replaceState':'pushState']({...history.state,academyMember:true},'',location.pathname+location.search+'#member/'+current);}
+    else if(location.hash!=='#member/'+current)history.pushState({...history.state,academyMember:true},'',location.pathname+location.search+'#member/'+current);
     render();main.focus({preventScroll:true});page.scrollTop=0;if(localStorage.getItem('sb_token')&&(!profile||reopened))load();
   }
   function close(){if(document.body.classList.contains('mc-chart-open'))window.closeChart?.();document.body.classList.remove('mc-chart-open');dispatchEvent(new Event('academy-member-closed'));page.querySelectorAll('dialog[open]').forEach(d=>d.close());request++;page.hidden=true;document.body.classList.remove('mc-open');document.body.style.overflow=oldOverflow;returnFocus?.focus?.({preventScroll:true});requestAnimationFrame(()=>scrollTo(returnScroll.x,returnScroll.y));}
   function goHome(){
     returnScroll={x:0,y:0};
     if(!page.hidden)close();
-    const params=new URLSearchParams(location.search);params.delete('view');const query=params.toString();
-    history.replaceState({v:'home'},'',location.pathname+(query?'?'+query:''));
     window._showView?.('home');
     requestAnimationFrame(()=>scrollTo({top:0,left:0,behavior:'instant'}));
   }
@@ -150,9 +148,10 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
     }catch(err){status.textContent=err.message;}finally{b.disabled=false;b.textContent='登出';}
   });
   page.querySelector('[data-back]').addEventListener('click',()=>{if(history.state?.academyMember)history.back();else close();});
-  document.querySelector('body>header .gs-brand')?.addEventListener('click',()=>{if(!page.hidden){returnScroll={x:0,y:0};close();history.replaceState({...history.state,academyMember:false},'',location.pathname+location.search);}},true);
+  document.querySelector('body>header .gs-brand')?.addEventListener('click',()=>{if(!page.hidden){returnScroll={x:0,y:0};close();}},true);
   addEventListener('resize',()=>{if(!page.hidden)positionUnderHeader();});
   addEventListener('academy-identity-linked',()=>{if(localStorage.getItem('sb_token')){profile=null;open('security');}});
+  addEventListener('academy-public-navigation',()=>{if(!page.hidden)close();});
   addEventListener('popstate',()=>{if(location.hash.startsWith('#member/')){if(page.hidden){oldOverflow=document.body.style.overflow;document.body.style.overflow='hidden';document.body.classList.add('mc-open');positionUnderHeader();page.hidden=false;}current=location.hash.split('/')[1]||'overview';render();}else if(!page.hidden)close();});
   page.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.tab||b.dataset.go)open(b.dataset.tab||b.dataset.go);if(b.hasAttribute('data-login')){if(history.state?.academyMember)history.back();else close();setTimeout(()=>window.openAuthModal?.('login'),0);}if(b.hasAttribute('data-clear')){removeLocal(draftKey());render();}});
   page.addEventListener('submit',async e=>{e.preventDefault();if(e.target.id!=='mc-profile')return;const button=e.target.querySelector('button[type=submit]'),status=e.target.querySelector('.mc-status');button.disabled=true;try{const body=Object.fromEntries(new FormData(e.target));body.markets=new FormData(e.target).getAll('markets');delete body['mc-avatar-file'];profile=await api('POST',body);sync();status.textContent='個人資料已儲存至會員帳號';}catch(err){status.textContent=err.message;}finally{button.disabled=false;}});
@@ -177,5 +176,5 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
   page.addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;if(b.hasAttribute('data-cancel-avatar')){cropImage?.close?.();cropImage=null;main.querySelector('.mc-avatar-crop').hidden=true;main.querySelector('#mc-avatar-file').value='';}if(b.hasAttribute('data-save-avatar')){const status=main.querySelector('.mc-avatar-status');b.disabled=true;try{if(!profile)throw Error('請先載入會員資料');const blob=await new Promise(resolve=>main.querySelector('.mc-avatar-crop canvas').toBlob(resolve,'image/webp',.85));if(!blob)throw Error('圖片處理失敗，請重試');profile=await AcademyIdentity.saveAvatar(blob);sync();hydrateImages();main.querySelector('.mc-avatar-crop').hidden=true;main.querySelector('.mc-status').textContent='頭像已儲存，網站右上角與會員中心已同步更新';}catch(err){status.textContent=err.message;}finally{b.disabled=false;}}});
   avatar.addEventListener('click',()=>window.AcademyMemberMenu?window.AcademyMemberMenu.toggle():open());window.openMemberCenter=open;
   if(logout)new MutationObserver(sync).observe(logout,{attributes:true,attributeFilter:['style']});addEventListener('storage',e=>{if(!['sb_token','sb_user'].includes(e.key)&&!window.AcademyCloud?.ownsKey(e.key))return;profile=null;sync();if(localStorage.getItem('sb_token'))load();});addEventListener('academy-auth-changed',()=>{profile=null;sync();if(!page.hidden)render();if(localStorage.getItem('sb_token'))load();});sync();if(localStorage.getItem('sb_token'))load();
-  if(location.hash.startsWith('#member/')){const tab=location.hash.split('/')[1];history.replaceState({...history.state,academyMember:false},'',location.pathname+location.search);open(tab);}
+  if(location.hash.startsWith('#member/')){const tab=location.hash.split('/')[1];open(tab,true);}
 })();
