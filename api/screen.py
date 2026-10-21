@@ -862,6 +862,35 @@ def _fetch_focus(top_n=30):
         return {"error": "no data"}
 
     gainers, losers, surges = [], [], []
+    # 2026-10-21 修正：停牌後恢復交易（多為減資換發新股）的股票，前一筆收盤是停牌前的舊價，
+    # 直接相比會算出 +98% 這種錯誤漲幅。前一筆不是「市場前一交易日」時，改用官方漲跌（已含減資後參考價），
+    # 且官方收盤要與 price_window 當日收盤一致才採用；拿不到就不列入漲跌幅榜（寧缺勿錯）。
+    mkt_dates = sorted({x["trade_date"] for arr in by_code.values() for x in arr}, reverse=True)
+    prev_mkt = mkt_dates[1] if len(mkt_dates) > 1 else None
+    _official = {}
+
+    def _official_prev(code, close):
+        if "_loaded" not in _official:
+            _official["_loaded"] = True
+            try:
+                txt = _get_text("https://www.twse.com.tw/exchangeReport/STOCK_DAY_ALL?response=csv")
+                if txt and "," in txt:
+                    for k, v in (_parse_stocks_csv(txt)[0] or {}).items():
+                        if v.get("close") and v.get("prev_close"):
+                            _official[k] = (v["close"], v["prev_close"])
+            except Exception:
+                pass
+            try:
+                for k, v in (_fetch_tpex_quotes() or {}).items():
+                    if v.get("close") and v.get("pct") is not None and v["pct"] > -100:
+                        _official.setdefault(k, (v["close"], v["close"] / (1 + v["pct"] / 100)))
+            except Exception:
+                pass
+        o = _official.get(code)
+        if o and close is not None and abs(o[0] - close) < 1e-6 and o[1]:
+            return o[1]
+        return None
+
     for c, arr in by_code.items():
         arr.sort(key=lambda x: x["trade_date"], reverse=True)   # 新→舊
         if arr[0]["trade_date"] != latest:
@@ -871,8 +900,12 @@ def _fetch_focus(top_n=30):
         vol = cur.get("volume") or 0
         name = _STOCK_NAMES.get(c, c)
         # 漲跌幅
-        if len(arr) >= 2 and arr[1].get("close"):
-            chg = (close / arr[1]["close"] - 1) * 100 if close is not None else None
+        if len(arr) >= 2 and arr[1].get("close") and close is not None:
+            if prev_mkt and arr[1]["trade_date"] != prev_mkt:   # 中間停牌過 → 用官方參考價
+                ref = _official_prev(c, close)
+                chg = (close / ref - 1) * 100 if ref else None
+            else:
+                chg = (close / arr[1]["close"] - 1) * 100
         else:
             chg = None
         if chg is not None:
