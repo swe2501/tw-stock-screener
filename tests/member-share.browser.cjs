@@ -30,7 +30,7 @@ let mode='normal',claims=0,statusCalls=0,trial=false,activated=false,confirmed=2
    }
    if(url.pathname.startsWith('/assets/'))return route.fulfill({contentType:'text/javascript',body:fs.readFileSync(path.join(web,url.pathname),'utf8')});
    if(url.hostname!=='share.test')throw Error('Unexpected external network: '+url);
-   return route.fulfill({contentType:'text/html',body:`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><html data-theme="light"><style>${styles}</style><body><button data-share-unlock>分享解鎖，立即使用 →</button><div id="fhedgeView" style="display:none"></div><div id="breadthView" style="display:none"></div><script>const SIG_SB_URL='https://share.test',SIG_SB_ANON='public-key';window._isOwner=false;window.openAuthModal=()=>window.loginOpened=true;window._fhedgeApplyGate=()=>window.gateUpdates=(window.gateUpdates||0)+1;window._breadthApplyGate=()=>{};window.copyFail=false;Object.defineProperty(navigator,'clipboard',{value:{writeText:async value=>{if(window.copyFail)throw Error('denied');window.copied=value;}}});</script><script src="assets/member-identity.js"></script><script src="assets/member-share.js"></script></body></html>`});
+   return route.fulfill({contentType:'text/html',body:`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><html data-theme="light"><style>${styles}</style><body><button data-share-unlock>分享解鎖，立即使用 →</button><div id="fhedgeView" style="display:none"></div><div id="breadthView" style="display:none"></div><script>const SIG_SB_URL='https://share.test',SIG_SB_ANON='public-key';window._isOwner=false;window.openAuthModal=()=>window.loginOpened=true;window._fhedgeApplyGate=()=>window.gateUpdates=(window.gateUpdates||0)+1;window._breadthApplyGate=()=>{};window.copyFail=false;Object.defineProperty(navigator,'share',{configurable:true,value:undefined});Object.defineProperty(navigator,'clipboard',{value:{writeText:async value=>{if(window.copyFail)throw Error('denied');window.copied=value;}}});</script><script src="assets/member-invitation.js"></script><script src="assets/member-identity.js"></script><script src="assets/member-share.js"></script></body></html>`});
   });
   await page.goto('https://share.test/');
   await page.getByRole('button',{name:'分享解鎖，立即使用 →',exact:true}).click();
@@ -42,7 +42,7 @@ let mode='normal',claims=0,statusCalls=0,trial=false,activated=false,confirmed=2
   await page.waitForFunction(()=>!document.querySelector('[data-share-confirm]').disabled);
   assert.equal(await d.locator('[data-share-progress]').textContent(),'2／3 位');
   assert.equal(await d.locator('[data-share-claim]').isDisabled(),true);
-  await d.locator('[data-share-copy]').click();assert.match(await page.evaluate(()=>window.copied),/^https:\/\/share.test\/\?ref=GS123456ABCDEF$/);
+  await d.locator('[data-share-copy-code]').click();assert.equal(await page.evaluate(()=>window.copied),'GS123456ABCDEF');await d.locator('[data-share-copy]').click();assert.match(await page.evaluate(()=>window.copied),/^https:\/\/share.test\/\?ref=GS123456ABCDEF$/);
   assert.equal(await d.locator('[data-share-progress]').textContent(),'2／3 位');assert.equal(claims,0);
   await d.locator('[data-share-confirm]').check();await d.locator('[data-share-claim]').click();
   await page.waitForFunction(()=>document.querySelector('[data-share-claim]').textContent==='3 天使用券已領取');
@@ -60,7 +60,7 @@ let mode='normal',claims=0,statusCalls=0,trial=false,activated=false,confirmed=2
   // Clipboard fallback gives a selectable link without claiming or changing progress.
   await page.evaluate(()=>window.copyFail=true);await d.locator('[data-share-copy]').click();assert.equal(await d.locator('[data-share-link]').isVisible(),true);
   const output=process.env.QA_OUTPUT;if(output)fs.mkdirSync(output,{recursive:true});
-  for(const theme of ['light','dark'])for(const width of [1200,390,320]){
+  for(const theme of ['light','dark'])for(const width of [1200,390,375,320]){
    await page.setViewportSize({width,height:900});await page.evaluate(theme=>document.documentElement.dataset.theme=theme,theme);
    assert.ok(await d.evaluate(e=>e.scrollWidth<=e.clientWidth+1),'dialog must not overflow '+theme+' '+width);
    assert.ok(await d.locator('.share-rewards').evaluate(e=>[...e.children].every(c=>c.getBoundingClientRect().right<=e.getBoundingClientRect().right+1)));

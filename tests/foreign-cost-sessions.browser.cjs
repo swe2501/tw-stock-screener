@@ -7,7 +7,7 @@ const start=html.indexOf(' var verifiedSettlement=');
 assert.ok(start>0);
 const script=html.slice(start,html.indexOf('</script>',start));
 const cssStart=html.lastIndexOf('<style>',start);
-const css=process.env.FULL_STYLE?Array.from(html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g),m=>m[1]).join('\n')+fs.readFileSync(path.join(__dirname,'../apps/web/assets/site-readability.css'),'utf8'):html.slice(cssStart+7,html.indexOf('</style>',cssStart));
+const css=process.env.FULL_STYLE?Array.from(html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g),m=>m[1]).join('\n')+fs.readFileSync(path.join(__dirname,'../apps/web/assets/site-readability.css'),'utf8'):html.slice(cssStart+7,html.indexOf('</style>',cssStart))+fs.readFileSync(path.join(__dirname,'../apps/web/assets/site-readability.css'),'utf8');
 let mode='normal';
 (async()=>{
  const browser=await chromium.launch({channel:'msedge',headless:true});
@@ -16,12 +16,13 @@ let mode='normal';
  page.on('pageerror',e=>{errors.push(e.message);console.error('PAGE',e.message);});
  await page.route('http://session.test/**',async route=>{
   const url=route.request().url();
+  if(url.includes('/api/screen')&&mode==='nocost')return route.fulfill({status:503,json:{error:'unavailable'}});
   if(url.includes('/api/screen'))return route.fulfill({json:{date:'2026-09-16',basis:{long:{lots:10},short:{lots:40},net:{point:46063.28,lots:mode==='zero'?0:mode==='nolots'?null:-30}}}});
   if(url.includes('/api/chart')){
    if(mode==='error')return route.fulfill({status:502,json:{error:'unavailable'}});
    return route.fulfill({json:{quoteType:'published_daily',sessions:{day:{session:'day',price:mode==='bear'?45000:mode==='flat'?46163.28:mode==='upper'?46563.28:mode==='lower'?45563.28:47242,date:'2026-10-16',contractMonth:'202610'},night:mode==='missing'?null:{session:'night',price:47366,date:'2026-10-16',contractMonth:'202610'}}}});
   }
-  return route.fulfill({contentType:'text/html',body:'<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>:root{--surface:#fff;--text:#263448;--text-muted:#607087;--border:#d6deea;--accent:#347fc4}body{margin:0;font-family:Arial}*{box-sizing:border-box}'+css+'</style><div id="hpFut" class="hp-grid"><article class="hp-mc"><h3>外資部位摘要</h3><p>摘要測試內容</p></article><article class="hp-mc"><h3>小台多空摘要</h3><p>摘要測試內容</p></article><article class="hp-mc"><h3>微台多空摘要</h3><p>摘要測試內容</p></article></div><div id="hpForeignCost"></div><div id="fhCards"></div><div id="fhForeignCost"></div><script>(function(){'+script+'</script>'});
+  return route.fulfill({contentType:'text/html',body:'<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>:root{--surface:#fff;--text:#263448;--text-muted:#607087;--border:#d6deea;--accent:#347fc4}body{margin:0;font-family:Arial}*{box-sizing:border-box}'+css+'</style><div id="hpFut" class="hp-grid"><article class="gs-futcard"><div class="h">外資 臺股期貨未平倉淨額</div><div class="big hp-dn">-89,748 <small>口</small></div><div class="sub">投信 +84,389　自營 +2,700</div><div class="sub">正值＝淨多、負值＝淨空。外資期貨部位常領先現貨方向。</div></article><article class="gs-futcard"><div class="h">小台 散戶多空比</div><div class="big hp-up">+20.87%</div><div class="gs-lsbar"><span class="lo" style="width:57%"></span><span class="sh" style="width:43%"></span></div><div class="sub">散戶做多 38,754 · 散戶做空 29,612 口</div></article><article class="gs-futcard"><div class="h">微台 散戶多空比</div><div class="big hp-up">+30.34%</div><div class="gs-lsbar"><span class="lo" style="width:61%"></span><span class="sh" style="width:39%"></span></div><div class="sub">散戶做多 118,310 · 散戶做空 75,862 口</div></article></div><div id="hpForeignCost"></div><div id="fhCards"></div><div id="fhForeignCost"></div><script>(function(){'+script+'</script>'});
  });
  await page.goto('http://session.test/');
  const detail=page.locator('#fhForeignCost');
@@ -39,18 +40,19 @@ let mode='normal';
  assert.equal(await detail.evaluate(e=>e.scrollWidth<=e.clientWidth),true);
  const output=process.env.QA_OUTPUT;
  if(output){fs.mkdirSync(output,{recursive:true});await detail.screenshot({path:path.join(output,'day-mobile.png')});}
- await page.setViewportSize({width:1512,height:1000});assert.ok(await page.locator('#hpFut .hp-mc').first().evaluate(e=>e.getBoundingClientRect().height<280),'summary cards must not stretch with detailed content');assert.ok(await page.locator('#hpForeignCost .fx-session-switch').evaluate(e=>{const last=e.lastElementChild.getBoundingClientRect(),r=e.getBoundingClientRect();return r.right-last.right<=7;}),'session segments must fit content');assert.ok(await page.locator('#hpFut').evaluate(e=>{const heights=[...e.children].map(c=>c.getBoundingClientRect().height);return Math.max(...heights)-Math.min(...heights)<2;}),'summary cards must share row height');if(output)await page.locator('#hpFut').screenshot({path:path.join(output,'home-cost-summary.png')});
+ await page.setViewportSize({width:1512,height:1000});assert.ok(await page.locator('#hpFut .gs-futcard').first().evaluate(e=>e.getBoundingClientRect().height<280),'summary cards must not stretch with detailed content');assert.ok(await page.locator('#hpForeignCost .fx-session-switch').evaluate(e=>{const last=e.lastElementChild.getBoundingClientRect(),r=e.getBoundingClientRect();return r.right-last.right<=7;}),'session segments must fit content');assert.ok(await page.locator('#hpFut').evaluate(e=>{const heights=[...e.children].map(c=>c.getBoundingClientRect().height);return Math.max(...heights)-Math.min(...heights)<2;}),'summary cards must share row height');if(output)await page.locator('#hpFut').screenshot({path:path.join(output,'home-cost-summary.png')});
 
  await page.setViewportSize({width:1512,height:1000});
 
  for(const theme of ['light','dark']){
  await page.evaluate(theme=>document.documentElement.dataset.theme=theme,theme);
- for(const width of [1512,1220,390,320]){await page.setViewportSize({width,height:1000});assert.ok(await page.locator('#hpForeignCost').evaluate(e=>{const number=e.querySelector('.fx-cost-number'),n=number.getBoundingClientRect(),s=e.querySelector('.fx-session-switch').getBoundingClientRect();return n.right<=s.left+1&&number.scrollWidth<=number.clientWidth+1&&e.scrollWidth<=e.clientWidth+1;}),'cost and session controls must not overlap '+width);
+ for(const width of [1512,1220,390,320]){await page.setViewportSize({width,height:1000});assert.ok(await page.locator('#hpForeignCost').evaluate(e=>{const number=e.querySelector('.fx-cost-number'),n=number.getBoundingClientRect(),s=e.querySelector('.fx-session-switch').getBoundingClientRect();const p=e.querySelector('.fx-cost-price').getBoundingClientRect();return n.bottom<=s.top+1&&p.right<=s.left+1&&number.scrollWidth<=number.clientWidth+1&&e.scrollWidth<=e.clientWidth+1;}),'cost and session controls must not overlap '+width);
   assert.ok(await page.locator('#hpForeignCost').evaluate(e=>{
    const box=selector=>e.querySelector(selector).getBoundingClientRect();
-   const state=box('.fx-cost-state'),plot=box('.fx-ecg-plot'),label=box('.fx-ecg-cost-label'),caption=box('.fx-cost-caption'),card=box('.fx-cost');
-   return state.bottom+6<=plot.top&&label.bottom+10<=caption.top&&caption.bottom+12<=card.bottom;
-  }),'home chart labels and baseline caption need separate breathing room '+width);
+   const state=box('.fx-cost-state'),plot=box('.fx-ecg-plot'),label=box('.fx-ecg-cost-label'),price=box('.fx-cost-price'),card=box('.fx-cost');
+   return state.bottom+4<=plot.top&&label.bottom+6<=price.top&&price.bottom+12<=card.bottom&&card.height<310&&!e.querySelector('.fx-cost-caption');
+  }),'compact summary labels and price footer need separate breathing room '+width);
+  if(output&&width===1512)await page.locator('#hpFut').screenshot({path:path.join(output,'summary-'+theme+'.png')});
   if(output)await page.locator('#hpForeignCost').screenshot({path:path.join(output,'home-cost-'+theme+'-'+width+'.png')});
  }
  }
@@ -93,8 +95,12 @@ let mode='normal';
  assert.match(await detail.textContent(),/光效為結算基準示意/);
  assert.equal(await detail.locator('.fx-flight').count(),0);
  if(output){await detail.screenshot({path:path.join(output,'pending.png')});await page.setViewportSize({width:390,height:844});assert.equal(await detail.evaluate(e=>e.scrollWidth<=e.clientWidth),true);await detail.screenshot({path:path.join(output,'pending-mobile.png')});}
+ assert.equal(await page.locator('#hpForeignCost .fx-ecg-plot').evaluate(e=>getComputedStyle(e,'::after').animationName),'hpCostScan');
+ await reload('nocost');assert.equal(await page.locator('#hpForeignCost .fx-ecg').getAttribute('data-fx-effect'),'waiting');assert.equal(await page.locator('#hpForeignCost .fx-ecg-plot').evaluate(e=>getComputedStyle(e,'::after').animationName),'hpCostScan');assert.equal(await page.locator('#hpForeignCost .fx-flight').count(),0);
+ await reload('missing');
  await page.emulateMedia({reducedMotion:'reduce'});
  assert.equal(await detail.locator('.fx-tug-ray').first().evaluate(e=>getComputedStyle(e).display),'none');
+ assert.equal(await page.locator('#hpForeignCost .fx-ecg-plot').evaluate(e=>getComputedStyle(e,'::after').display),'none');
  mode='error';await page.evaluate(()=>window._loadForeignSettlementCost());
  await detail.getByRole('button',{name:'日盤',exact:true}).click();
  assert.match(await detail.textContent(),/日盤資料待更新|日盤 · 資料待更新/);

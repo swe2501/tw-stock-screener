@@ -15,6 +15,26 @@
  dialog.addEventListener('close',()=>{returnFocus?.isConnected&&returnFocus.focus({preventScroll:true});currentKind=null;});
  dialog.addEventListener('click',e=>{if(e.target===dialog){const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)dialog.close();}});
  function leave(action){if(dialog.open){returnFocus=null;dialog.close();}action();}
+ // 從完整排行點題材：把題材抽屜暫時搬進完整排行視窗裡打開（疊在上面），完整排行不關閉；
+ // 抽屜關掉就搬回原位，使用者可直接再點下一個題材。抽屜裡點個股時，先關完整排行再開 K 線。
+ let drawerHome=null;
+ function drawer(){return document.getElementById('themeDrawer');}
+ function restoreDrawer(){const dr=drawer();if(drawerHome&&dr){drawerHome.parent.insertBefore(dr,drawerHome.next&&drawerHome.next.parentNode===drawerHome.parent?drawerHome.next:null);}drawerHome=null;}
+ function openTheme(name){
+  const dr=drawer();
+  if(dialog.open&&dr){if(!drawerHome)drawerHome={parent:dr.parentNode,next:dr.nextSibling};dialog.append(dr);}
+  window._openThemeDrawer?.(name);
+ }
+ (function watchDrawer(){const dr=drawer();if(!dr){document.addEventListener('DOMContentLoaded',watchDrawer,{once:true});return;}
+  new MutationObserver(()=>{if(drawerHome&&!dr.classList.contains('open'))restoreDrawer();}).observe(dr,{attributes:true,attributeFilter:['class']});
+  const wrapStock=()=>{const o=window._openStock;if(typeof o!=='function'||o._frWrapped)return;const w=function(){if(drawerHome){window._closeTheme?.();restoreDrawer();if(dialog.open){returnFocus=null;dialog.close();}}return o.apply(this,arguments);};w._frWrapped=true;window._openStock=w;};
+  wrapStock();window.addEventListener('load',wrapStock);dialog.addEventListener('click',wrapStock,true);
+ })();
+ // 抽屜開著時按 Esc：只關抽屜，留在完整排行
+ let escGuard=false;
+ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&drawerHome&&drawer()?.classList.contains('open')){escGuard=true;setTimeout(()=>{escGuard=false;},0);}},true);
+ dialog.addEventListener('cancel',e=>{if(escGuard||(drawerHome&&drawer()?.classList.contains('open'))){e.preventDefault();escGuard=false;window._closeTheme?.();}});
+ dialog.addEventListener('close',()=>{if(drawerHome){window._closeTheme?.();restoreDrawer();}});
  function stockName(row){return (nameLookup?.(row.code)||row.name||row.code);}
  function stock(row){const b=el('button','fr-stock');b.type='button';b.append(el('span','fr-code',row.code),el('b','fr-name',stockName(row)));b.title=row.code+' '+stockName(row);b.setAttribute('aria-label','查看 '+b.title+' K 線');b.onclick=()=>leave(()=>window._openStock?.(row.code,stockName(row)));return b;}
  function medal(rank){
@@ -27,13 +47,18 @@
  function themes(row){
   const seen=new Set();return (Array.isArray(row.themes)?row.themes:[]).map(t=>typeof t==='string'?{id:t,name:t}:t).filter(t=>t&&typeof t.name==='string'&&t.name.trim()&&!seen.has(t.name)&&seen.add(t.name));
  }
- function tags(row){
+ function tags(row,limit=3){
   const wrap=el('div','fr-tags'),items=themes(row);
   if(!Array.isArray(row.themes)){wrap.append(el('span','fr-no-theme','題材待更新'));return wrap;}
   if(!items.length){wrap.append(el('span','fr-no-theme','未分類'));return wrap;}
-  const button=t=>{const b=el('button','fr-theme',t.name);b.type='button';b.title='查看 '+t.name+' 族群';b.onclick=()=>leave(()=>window._openThemeDrawer?.(t.name));return b;};
-  wrap.append(button(items[0]));
-  if(items.length>1){const more=el('button','fr-more','+'+(items.length-1));more.type='button';more.setAttribute('aria-label','展開其餘 '+(items.length-1)+' 個題材');more.setAttribute('aria-expanded','false');const extra=el('span','fr-extra-tags');extra.hidden=true;items.slice(1).forEach(t=>extra.append(button(t)));more.onclick=()=>{const open=extra.hidden;extra.hidden=!open;more.setAttribute('aria-expanded',String(open));more.textContent=open?'收合':'+'+(items.length-1);wrap.classList.toggle('is-expanded',open);};wrap.append(more,extra);}
+  const button=t=>{const b=el('button','fr-theme',t.name);b.type='button';b.title='查看 '+t.name+' 族群';b.onclick=e=>{e.stopPropagation();openTheme(t.name);};return b;};
+  // 先完整列出前 limit 個；其餘收起，「+N 更多／收起」一律固定在最後面
+  items.slice(0,limit).forEach(t=>wrap.append(button(t)));
+  const rest=items.length-limit;
+  if(rest>0){const extra=el('span','fr-extra-tags');extra.hidden=true;items.slice(limit).forEach(t=>extra.append(button(t)));
+   const more=el('button','fr-more','+'+rest+' 更多');more.type='button';more.setAttribute('aria-label','展開其餘 '+rest+' 個題材');more.setAttribute('aria-expanded','false');
+   more.onclick=e=>{e.stopPropagation();const open=extra.hidden;extra.hidden=!open;more.setAttribute('aria-expanded',String(open));more.textContent=open?'收起':'+'+rest+' 更多';more.setAttribute('aria-label',open?'收起題材':'展開其餘 '+rest+' 個題材');wrap.classList.toggle('is-expanded',open);};
+   wrap.append(extra,more);}
   return wrap;
  }
  function dayChange(row){return el('strong','fr-change '+tone(row.chg),percent(row.chg));}
@@ -58,7 +83,7 @@
   const value=r=>sortKey==='stock'?r.code:sortKey==='themes'?themes(r).map(t=>t.name).join('、'):number(r[sortKey])?r[sortKey]:null;
   if(sortKey)rows.sort((a,b)=>{const av=value(a.row),bv=value(b.row);if(av===null||bv===null)return av===bv?a.index-b.index:av===null?1:-1;return sortDirection*(typeof av==='number'?av-bv:String(av).localeCompare(String(bv),'zh-TW',{numeric:true}))||a.index-b.index;});
   for(const {row,index} of rows){const tr=el('tr');const first=el('td','fr-table-stock');first.dataset.label='股票';first.append(medal(index+1),stock(row));if(currentKind==='volume_surge')first.append(el('span','fr-table-ratio',fmt(row.ratio)+'× · '+fmt(row.volume_lots)+' 張'));tr.append(first);
-   for(const [key,label] of columns.slice(1)){const td=el('td',key==='themes'?'fr-table-themes':'fr-number '+(key==='close'?'':tone(row[key])));td.dataset.label=label;if(key==='themes')td.append(tags(row));else td.textContent=key==='close'?fmt(row.close):percent(row[key]);tr.append(td);}body.append(tr);
+   for(const [key,label] of columns.slice(1)){const td=el('td',key==='themes'?'fr-table-themes':'fr-number '+(key==='close'?'':tone(row[key])));td.dataset.label=label;if(key==='themes')td.append(tags(row,4));else td.textContent=key==='close'?fmt(row.close):percent(row[key]);tr.append(td);}body.append(tr);
   }
   if(!rows.length){const tr=el('tr'),td=el('td','','今日無排行資料');td.colSpan=5;tr.append(td);body.append(tr);}
   head.append(headRow);table.append(head,body);content.append(table);

@@ -1,7 +1,8 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
+<script>/* 2026-10-21 後端網址依環境：本機開檔（file:／localhost）才打正式站；部署在任何網址（uat、正式站、預覽）都打自己的後端，uat 才看得到 uat 後端的修改 */window.__API=(location.protocol==='file:'||/^(localhost|127\.0\.0\.1|\[::1\]|::1)$/.test(location.hostname)||/\.localhost$/.test(location.hostname))?'https://tw-stock-screener-neon.vercel.app':'';</script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>先見量化智能｜市場研究與策略驗證</title>
   <meta name="application-name" content="先見量化智能">
@@ -1627,6 +1628,18 @@
   body.pro-nav-compact>header { transform:translateY(-110%);opacity:0;pointer-events:none; }
   body.pro-nav-compact #mainNav { position:fixed !important;top:0;left:0;right:0;width:100% !important;box-sizing:border-box;margin:0 !important;box-shadow:0 10px 30px rgba(4,10,18,.18); }
   body.pro-nav-compact #mainNav .mn-inner { margin-inline:auto; }
+  /* 2026-10-21 頁首捲走、導覽列釘在最上方時，首頁前面補上網站 logo（平常頁首已有 logo 就不顯示） */
+  /* 10-21 修正：logo 改為「浮在左側留白」不佔排版位置，導覽選項不再被擠右移；淡入＋微滑出現。左側留白不夠的窄螢幕縮小或不顯示 */
+  #mainNav .mn-inner { position:relative; }
+  #mainNav .mn-brand { position:absolute;top:50%;left:calc(max(18px,calc((100vw - 1420px)/2)) - 86px);display:flex;align-items:center;text-decoration:none;
+    opacity:0;visibility:hidden;pointer-events:none;transform:translate(-10px,-50%);transition:opacity .3s ease,transform .3s ease,visibility 0s linear .3s; }
+  body.pro-nav-compact #mainNav .mn-brand { opacity:1;visibility:visible;pointer-events:auto;transform:translate(0,-50%);transition:opacity .3s ease,transform .3s ease; }
+  #mainNav .mn-brand .gs-mark { display:block;width:72px;height:34px;padding:0;border:0;background:transparent;transition:transform .2s ease; }
+  @media (max-width:1599px) { #mainNav .mn-brand { left:6px; } #mainNav .mn-brand .gs-mark { width:calc(max(18px,calc((100vw - 1420px)/2)) - 14px); } }
+  @media (max-width:1499px) { #mainNav .mn-brand { display:none; } }
+  @media (prefers-reduced-motion:reduce) { #mainNav .mn-brand { transition:none; } }
+  #mainNav .mn-brand .gs-mark img { width:100%;height:100%;object-fit:contain;object-position:center;display:block; }
+  #mainNav .mn-brand:hover .gs-mark { transform:scale(1.04); }
   :root:not([data-theme="light"]) #mainNav .mn-item:not(.mn-active):hover { color:#E7EDF4 !important;background:rgba(42,112,168,.13) !important;box-shadow:inset 0 -2px rgba(63,143,201,.55) !important; }
   .mn-menu { border:1px solid var(--border) !important;border-radius:10px !important;padding:7px !important;background:var(--surface) !important;box-shadow:var(--shadow) !important; }
   .mn-menu a { border-radius:7px !important;padding:9px 10px !important;display:flex !important;align-items:center;gap:8px;font-weight:540 !important;color:var(--text) !important; }
@@ -2173,6 +2186,8 @@
   }
 </style>
 <link rel="stylesheet" href="assets/member-center.css?v=benefits19">
+<link rel="stylesheet" href="assets/member-wallet.css?v=ledger1">
+<link rel="stylesheet" href="assets/futures-summary.css?v=history1">
 <link rel="stylesheet" href="assets/sector-dashboard.css">
 <link rel="stylesheet" href="assets/member-share.css">
 <link rel="stylesheet" href="assets/member-signin.css?v=fqi21">
@@ -2217,7 +2232,7 @@
     </div>
   </header>
   <!-- 頂部個股搜尋＋指數快覽（全站可見；下拉帶代號/股名/產業/市場，含上市與上櫃）-->
-  <div class="topsearch">
+  <div class="topsearch" hidden>   <!-- 2026-10-21 用戶指示拿掉頁首「個股搜尋＋指數快覽」；指數改到右上搜尋下拉的「國際指數」 -->
     <span class="ts-label">個股搜尋</span>
     <div class="ts-box">
       <input id="topStockSearch" type="search" name="tw-stock-q" placeholder="輸入代號或股名（含上市／上櫃，支援模糊）" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="topSearchDrop">
@@ -2316,7 +2331,7 @@
     // 台股休市判定（全站共用）：證交所休市日期表（/api/screen?stat=holidays）＋週末；結算日遇休市順延至次一交易日 2026-09-28
     window._twHol=null; window._twHolP=null;
     window._loadTwHol=function(){ if(window._twHolP) return window._twHolP;
-      window._twHolP=fetch('https://tw-stock-screener-neon.vercel.app/api/screen?stat=holidays').then(function(r){return r.json();}).then(function(j){ var o={}; ((j&&j.closed)||[]).forEach(function(d){o[d]=1;}); window._twHol=o; return o; })
+      window._twHolP=fetch(window.__API+'/api/screen?stat=holidays').then(function(r){return r.json();}).then(function(j){ var o={}; ((j&&j.closed)||[]).forEach(function(d){o[d]=1;}); window._twHol=o; return o; })
         .catch(function(){ window._twHol={}; return {}; }); return window._twHolP; };
     window._twIsTrading=function(iso){ var w=new Date(iso+'T00:00:00Z').getUTCDay(); return w>0&&w<6&&!(window._twHol&&window._twHol[iso]); };
     window._twAdj=function(iso){ var d=new Date(iso+'T00:00:00Z'); for(var i=0;i<15;i++){ var s=d.toISOString().slice(0,10); if(window._twIsTrading(s)) return s; d=new Date(d.getTime()+864e5); } return iso; };
@@ -2328,6 +2343,7 @@
     document.addEventListener('click',function(e){var a=e.target.closest('#mainNav .mn-menu a');if(!a)return;var menu=a.closest('.mn-menu');if(!menu)return;menu.classList.add('mn-hide');var grp=menu.closest('.mn-grp');function clr(){menu.classList.remove('mn-hide');if(grp)grp.removeEventListener('mouseleave',clr);}if(grp)grp.addEventListener('mouseleave',clr,{once:true});setTimeout(function(){document.addEventListener('pointerdown',clr,{once:true});},50);});
   </script>
   <nav id="mainNav"><div class="mn-inner">
+    <a class="mn-brand" href="?view=home" aria-label="先見量化智能，返回首頁" onclick="if(window._showView){window._showView('home');return false;}"><span class="gs-mark"><img class="owl-light-v2" src="assets/brand/foresight-owl-light-book-light.png?v=fqi33" width="1789" height="879" alt="先見量化智能" decoding="async"><img class="owl-dark-v2" src="assets/brand/foresight-owl-dark-book-light.png?v=fqi33" width="1789" height="879" alt="" aria-hidden="true" decoding="async"></span></a>
     <a class="mn-item" href="?view=home" onclick="if(window._showView){window._showView('home');return false;}">首頁</a>
     <a class="mn-item" onclick="_focusTab('overview')">今日焦點</a>
     <div class="mn-grp"><span class="mn-item">選股 <i>▾</i></span><div class="mn-menu">
@@ -2431,6 +2447,7 @@
     /* 頁首橫條：個股搜尋＋指數快覽（紅框位置）*/
     .topsearch{display:flex;align-items:center;flex-wrap:wrap;gap:8px;max-width:1200px;margin:0 auto;padding:8px 16px;border-bottom:1px solid var(--border);}
     .topsearch[hidden]{display:none;}
+    body>.topsearch{display:none !important;}   /* 2026-10-21 全站拿掉頁首搜尋列（保險：不論程式怎麼切換都不顯示） */
     .topsearch .ts-label{font-size:12.5px;font-weight:800;color:var(--brand-green);white-space:nowrap;}
     .topsearch .ts-box{position:relative;display:flex;align-items:center;gap:6px;flex:0 1 360px;min-width:220px;}
     .topsearch .ts-box>input{flex:1;padding:6px 10px;font-size:14px;border:1.5px solid var(--brand-green);border-radius:8px;background:var(--surface);color:var(--text);outline:none;}
@@ -2869,7 +2886,7 @@
     <div class="fc-note" id="hpNote"></div>
     </div><!-- /cb-sheet 每日台股籌碼報告 -->
     <div style="max-width:1200px;margin:14px auto 0;padding:10px 14px;font-size:11.5px;line-height:1.7;color:var(--text-muted);border-top:1px dashed var(--border);">
-      <b>改動紀錄（供合夥人複查）</b>：2026-09-30 全站版面採用合夥人 redesign 版；同日輕更新（ETF 甜甜圈互動、市場廣度分頁與篩選分離、選擇權支撐壓力 OI 峰值前端、結算日遇休市順延、多空排列配色、行動版表格）。掏金篩選器含「真名三式（多頭回洗反包）」（演算法與歷史回測見該勾選框）。2026-10-04 個股K圖量能面板新增「籌碼」分頁：三大法人每日淨買賣超堆疊柱（外資/投信/自營，紅買綠賣以0為基準，單位張，含合計線；滑鼠移至柱上顯示當日數值），對齊日K日期（僅日K、近120交易日）；資料源＝本站 institutional_trades（TWSE／TPEx T86 三大法人日報）每日推送至 Supabase inst_daily（scripts/inst_daily_push.py）。同日籌碼頁改為最上層分頁（點「籌碼」隱藏技術指標 VOL/MACD/RSI），並拆出「大戶 vs 散戶（週）」：資料源＝TDCC 集保股權分散表（每週五）＋當週收盤換算市值；大戶＝持股≥300張 或 市值≥3000萬、散戶＝持股<20張 或 市值<100萬（跨 TDCC 級距用均勻分布內插，為近似值），畫週增減（大戶紅綠柱／散戶藍線，單位張）；覆蓋熱門前500檔、每週更新（scripts/holder_flow_push.py → Supabase holder_flow）。籌碼頁最終版：單一「籌碼」分頁內拆成外資(日)／投信(日)／自營(日)／大戶(週)／散戶(週) 五張獨立柱狀圖（紅買綠賣）。另：K圖新增標記分類顯示開關（法說會／除權息，比照均線顯示隱藏，動態偵測）；修正指數與外國大盤相關新聞殘留前一檔個股的 bug（指數改載市場新聞 macro_news）；外資空單避險歷史圖右上新增「事件避險／連假避險」標記開關；§4 融資動能背離加入「今日／3 日」週期；富台指期（SGX FTSE Taiwan）新增最後交易日倒數（每月倒數第二個營業日，依證交所休市表）。2026-10-06「市場觀察」新增「美債對標」：以 US10Y 為錨，切換公債天期與熱門對標資產（高股息/科技成長/投等債/定存），呈現收益率利差、存續期敏感度與合規機會／風險定性；US10Y／US2Y 預填自美國財政部官方 Daily Treasury Par Yield Curve Rates（scripts/ust_yields_push.py → Supabase ust_yields，每日更新，可手動調整為示意假設）。資料與演算法沿用本站真實資料源（TWSE／TPEx／TAIFEX／TDCC／US Treasury／Supabase），未更動後端。2026-10-11 K 圖右上角新增「⛶ 全視窗」按鈕（直播／簡報用）：K 圖彈窗撐滿整個視窗並嘗試進入瀏覽器全螢幕，主圖高度隨視窗加大；再按一次或按 Esc 還原（Esc 先還原、不關閉 K 圖），手機版不顯示（本來就是整頁）。純版面功能，未更動資料與演算法。同日 K 圖顯示設定改為「記住上一次」：均線（MA5～MA240、全部均線）、BBAND、量均線、MACD／RSI 線、大盤K、支撐壓力勾選的週期、價量分析、箱型的開關，換股票（含右上角搜尋）、切換日／週／月／小時、關掉再開、重新整理後都沿用上一次的設定，不再還原成預設（設定存在各自瀏覽器，不跨裝置；主力分點因每檔分點不同，仍是每檔各自勾選）。純顯示設定，未更動資料與演算法。同日修正：全螢幕時「畫線工具／圖形註解」下拉選單點不出來（選單原本掛在網頁最外層，瀏覽器全螢幕只顯示 K 圖彈窗內的內容），改為全螢幕時掛在 K 圖彈窗內。2026-10-12 ①外資空單溫度計新增「第三層之二：匯率 × 現貨 × 期貨 三維交叉矩陣」：原四象限保留，各象限再交叉台幣升／貶共 8 格（匯率門檻：USD/TWD 日變動 ±0.10%，其間視為持平、兩列都不命中），並附五邊形雷達（現貨買賣超、期貨部位增減、台幣升貶、指數漲跌四項取近 60 個交易日百分位，避險水位＝100−近 2 年 PR；外圈偏多、內圈偏空，不合成單一分數）；原象限 III 單獨提到匯率的文字移除，匯率一律在此層交叉。②掏金篩選器新增「跌停板」（收盤 ≤ 跌停價；跌停價＝前收×0.9 依升降單位無條件進位）。③K 圖畫線套件：最後一根 K 棒右側空白區也能落點（改記邏輯索引）；右鍵取消目前工具；輔助線與圖形改虛線；橡皮擦可按住左鍵拖曳連續清除（判定距離 10→14px）；線條只畫在繪圖區內不蓋到價格軸；縮放／平移／拖價格軸時線條跟著重畫。同日修正：選了畫線工具後換另一檔股票，按鈕仍反藍但實際不能畫——改為換股票／換週期後工具維持啟用可直接畫，關閉 K 圖時才取消。同日：K 圖畫的線與圖形改為「每檔股票各自記住」——換到別檔不會帶過去，切回來還在，重新整理後也保留（存在各自瀏覽器，最多留最近 150 檔）。題材列表／產業地圖載入加速：先顯示瀏覽器裡上一次的資料、背景再更新，進站閒置時預先抓好；後端這兩支改為可由 CDN 快取 5 分鐘（資料本身每日更新一次，內容與算法不變）。再改為「前一晚先算好」：每日排程尾端把兩頁的彙整結果存進 Supabase page_cache（scripts/page_cache_push.py，每頁 1 列每日覆寫），前端直接讀表；表內沒有或超過 4 天未更新才退回後端現算。同日新增「20 日 SMA 三階段買點」：掏金篩選器三個勾選框（買點 1／2／3，可複選）＋個股日 K「20MA買點」標記開關（預設關，顯示歷史上每一輪的買 1／買 2／買 3）。規則依合夥人規格（均線＝20 日簡單平均含當日；帶量 1.3 倍；長紅／長下影 3%；十字線＝開等於收；均線一下彎即重置），詳見篩選器該項說明；另加一條保守處理：資料窗內尚未出現過重置日之前不產生訊號（無法確定該輪起點）。參數為初版待調整。2026-10-13 上述功能改名為「葛蘭碧買點」，並在掏金篩選器獨立成一個分類（原放在「真名絕招」內）；規則未變。2026-10-17 葛蘭碧規則修正（前後端同步）：①重置由「均線下彎 1 天」改為「連續 3 天下彎」②買點 2 拿掉「均線上彎」要求，只要最低 ≤ 均線且收盤 ＞ 均線 ③買點 3 由「整根在均線下（最高 ＜ 均線）」改為「收盤 ＜ 均線」＋止跌 K；K 圖標記改為依「組」（每個買點 1 開一組）可分組顯示。同日依用戶指示再修：①買點 2 改為「回測月線不破」——最低介於月線 ×0.99～×1.005（碰到月線，差 0.5% 內也算；最多破 1%）且收盤 ＞ 月線，原本最低跌破多深都算 ②買點 3 十字線放寬為實體 ≤ 0.5% 且振幅 ≥ 2%（原為開盤＝收盤）。③買點 2 前股價需先離開月線（買點 1 後至少一天收盤 ≥ 月線 ×1.03），避免買點 1 隔天還貼著月線就被記成回測。④買點 1 須「從月線下突破」：前 3 根內至少一根收盤在月線下（早已站上月線再拉的紅 K 不算），紅 K 不設長紅門檻。⑤買點 2 之後若從沒賺過（之後每天收盤都沒高於買點 2 當天收盤），就不標買點 3。⑥買點 2「碰到月線」範圍由 0.5% 放寬為 1%，並排除回測當天為長黑（黑 K 實體 ≥ 3%）的情況。⑦買點 3 收盤跌破月線超過 5% 不算（暴跌後的止跌 K 不標）。同日「✨ AI 判定」接上真 AI 後端：後端讀該股本站日線，程式先算好均線、量比、漲跌、區間高低與葛蘭碧買點紀錄，再交給 AI 依固定格式輸出「偏多／觀望／偏空」、0～100 技術面分數、摘要與四點說明（型態／量能／葛蘭碧／風險）；AI 只能用提供的數據，不含基本面與消息面。同一檔同一資料日只算一次（共享快取），每日呼叫次數有上限；未設定 AI 金鑰時顯示假資料示意。非投資建議。同日加入「形態判定」：後端把該股最近 160 根日 K（含 20 日均線與成交量）畫成圖片交給 AI 看圖判斷，只從圓形底、頭肩頂、頭肩底、M頭、W底、箱型、上升／下降趨勢線、上升／下降軌道 10 種中列出圖上明顯的形態，標示形成中／已確認、信心高中低與關鍵價位，不給目標價；屬 AI 看圖判斷，可能誤判。AI 供應商可在後端切換（Anthropic 或 OpenAI；目前規劃用 OpenAI GPT-6.1 Sol）。2026-10-17 補正篩選器說明文字（原說明仍為舊規則）。
+      <b>改動紀錄（供合夥人複查）</b>：2026-09-30 全站版面採用合夥人 redesign 版；同日輕更新（ETF 甜甜圈互動、市場廣度分頁與篩選分離、選擇權支撐壓力 OI 峰值前端、結算日遇休市順延、多空排列配色、行動版表格）。掏金篩選器含「真名三式（多頭回洗反包）」（演算法與歷史回測見該勾選框）。2026-10-04 個股K圖量能面板新增「籌碼」分頁：三大法人每日淨買賣超堆疊柱（外資/投信/自營，紅買綠賣以0為基準，單位張，含合計線；滑鼠移至柱上顯示當日數值），對齊日K日期（僅日K、近120交易日）；資料源＝本站 institutional_trades（TWSE／TPEx T86 三大法人日報）每日推送至 Supabase inst_daily（scripts/inst_daily_push.py）。同日籌碼頁改為最上層分頁（點「籌碼」隱藏技術指標 VOL/MACD/RSI），並拆出「大戶 vs 散戶（週）」：資料源＝TDCC 集保股權分散表（每週五）＋當週收盤換算市值；大戶＝持股≥300張 或 市值≥3000萬、散戶＝持股<20張 或 市值<100萬（跨 TDCC 級距用均勻分布內插，為近似值），畫週增減（大戶紅綠柱／散戶藍線，單位張）；覆蓋熱門前500檔、每週更新（scripts/holder_flow_push.py → Supabase holder_flow）。籌碼頁最終版：單一「籌碼」分頁內拆成外資(日)／投信(日)／自營(日)／大戶(週)／散戶(週) 五張獨立柱狀圖（紅買綠賣）。另：K圖新增標記分類顯示開關（法說會／除權息，比照均線顯示隱藏，動態偵測）；修正指數與外國大盤相關新聞殘留前一檔個股的 bug（指數改載市場新聞 macro_news）；外資空單避險歷史圖右上新增「事件避險／連假避險」標記開關；§4 融資動能背離加入「今日／3 日」週期；富台指期（SGX FTSE Taiwan）新增最後交易日倒數（每月倒數第二個營業日，依證交所休市表）。2026-10-06「市場觀察」新增「美債對標」：以 US10Y 為錨，切換公債天期與熱門對標資產（高股息/科技成長/投等債/定存），呈現收益率利差、存續期敏感度與合規機會／風險定性；US10Y／US2Y 預填自美國財政部官方 Daily Treasury Par Yield Curve Rates（scripts/ust_yields_push.py → Supabase ust_yields，每日更新，可手動調整為示意假設）。資料與演算法沿用本站真實資料源（TWSE／TPEx／TAIFEX／TDCC／US Treasury／Supabase），未更動後端。2026-10-11 K 圖右上角新增「⛶ 全視窗」按鈕（直播／簡報用）：K 圖彈窗撐滿整個視窗並嘗試進入瀏覽器全螢幕，主圖高度隨視窗加大；再按一次或按 Esc 還原（Esc 先還原、不關閉 K 圖），手機版不顯示（本來就是整頁）。純版面功能，未更動資料與演算法。同日 K 圖顯示設定改為「記住上一次」：均線（MA5～MA240、全部均線）、BBAND、量均線、MACD／RSI 線、大盤K、支撐壓力勾選的週期、價量分析、箱型的開關，換股票（含右上角搜尋）、切換日／週／月／小時、關掉再開、重新整理後都沿用上一次的設定，不再還原成預設（設定存在各自瀏覽器，不跨裝置；主力分點因每檔分點不同，仍是每檔各自勾選）。純顯示設定，未更動資料與演算法。同日修正：全螢幕時「畫線工具／圖形註解」下拉選單點不出來（選單原本掛在網頁最外層，瀏覽器全螢幕只顯示 K 圖彈窗內的內容），改為全螢幕時掛在 K 圖彈窗內。2026-10-12 ①外資空單溫度計新增「第三層之二：匯率 × 現貨 × 期貨 三維交叉矩陣」：原四象限保留，各象限再交叉台幣升／貶共 8 格（匯率門檻：USD/TWD 日變動 ±0.10%，其間視為持平、兩列都不命中），並附五邊形雷達（現貨買賣超、期貨部位增減、台幣升貶、指數漲跌四項取近 60 個交易日百分位，避險水位＝100−近 2 年 PR；外圈偏多、內圈偏空，不合成單一分數）；原象限 III 單獨提到匯率的文字移除，匯率一律在此層交叉。②掏金篩選器新增「跌停板」（收盤 ≤ 跌停價；跌停價＝前收×0.9 依升降單位無條件進位）。③K 圖畫線套件：最後一根 K 棒右側空白區也能落點（改記邏輯索引）；右鍵取消目前工具；輔助線與圖形改虛線；橡皮擦可按住左鍵拖曳連續清除（判定距離 10→14px）；線條只畫在繪圖區內不蓋到價格軸；縮放／平移／拖價格軸時線條跟著重畫。同日修正：選了畫線工具後換另一檔股票，按鈕仍反藍但實際不能畫——改為換股票／換週期後工具維持啟用可直接畫，關閉 K 圖時才取消。同日：K 圖畫的線與圖形改為「每檔股票各自記住」——換到別檔不會帶過去，切回來還在，重新整理後也保留（存在各自瀏覽器，最多留最近 150 檔）。題材列表／產業地圖載入加速：先顯示瀏覽器裡上一次的資料、背景再更新，進站閒置時預先抓好；後端這兩支改為可由 CDN 快取 5 分鐘（資料本身每日更新一次，內容與算法不變）。再改為「前一晚先算好」：每日排程尾端把兩頁的彙整結果存進 Supabase page_cache（scripts/page_cache_push.py，每頁 1 列每日覆寫），前端直接讀表；表內沒有或超過 4 天未更新才退回後端現算。同日新增「20 日 SMA 三階段買點」：掏金篩選器三個勾選框（買點 1／2／3，可複選）＋個股日 K「20MA買點」標記開關（預設關，顯示歷史上每一輪的買 1／買 2／買 3）。規則依合夥人規格（均線＝20 日簡單平均含當日；帶量 1.3 倍；長紅／長下影 3%；十字線＝開等於收；均線一下彎即重置），詳見篩選器該項說明；另加一條保守處理：資料窗內尚未出現過重置日之前不產生訊號（無法確定該輪起點）。參數為初版待調整。2026-10-13 上述功能改名為「葛蘭碧買點」，並在掏金篩選器獨立成一個分類（原放在「真名絕招」內）；規則未變。2026-10-17 葛蘭碧規則修正（前後端同步）：①重置由「均線下彎 1 天」改為「連續 3 天下彎」②買點 2 拿掉「均線上彎」要求，只要最低 ≤ 均線且收盤 ＞ 均線 ③買點 3 由「整根在均線下（最高 ＜ 均線）」改為「收盤 ＜ 均線」＋止跌 K；K 圖標記改為依「組」（每個買點 1 開一組）可分組顯示。同日依用戶指示再修：①買點 2 改為「回測月線不破」——最低介於月線 ×0.99～×1.005（碰到月線，差 0.5% 內也算；最多破 1%）且收盤 ＞ 月線，原本最低跌破多深都算 ②買點 3 十字線放寬為實體 ≤ 0.5% 且振幅 ≥ 2%（原為開盤＝收盤）。③買點 2 前股價需先離開月線（買點 1 後至少一天收盤 ≥ 月線 ×1.03），避免買點 1 隔天還貼著月線就被記成回測。④買點 1 須「從月線下突破」：前 3 根內至少一根收盤在月線下（早已站上月線再拉的紅 K 不算），紅 K 不設長紅門檻。⑤買點 2 之後若從沒賺過（之後每天收盤都沒高於買點 2 當天收盤），就不標買點 3。⑥買點 2「碰到月線」範圍由 0.5% 放寬為 1%，並排除回測當天為長黑（黑 K 實體 ≥ 3%）的情況。⑦買點 3 收盤跌破月線超過 5% 不算（暴跌後的止跌 K 不標）。同日「✨ AI 判定」接上真 AI 後端：後端讀該股本站日線，程式先算好均線、量比、漲跌、區間高低與葛蘭碧買點紀錄，再交給 AI 依固定格式輸出「偏多／觀望／偏空」、0～100 技術面分數、摘要與四點說明（型態／量能／葛蘭碧／風險）；AI 只能用提供的數據，不含基本面與消息面。同一檔同一資料日只算一次（共享快取），每日呼叫次數有上限；未設定 AI 金鑰時顯示假資料示意。非投資建議。同日加入「形態判定」：後端把該股最近 160 根日 K（含 20 日均線與成交量）畫成圖片交給 AI 看圖判斷，只從圓形底、頭肩頂、頭肩底、M頭、W底、箱型、上升／下降趨勢線、上升／下降軌道 10 種中列出圖上明顯的形態，標示形成中／已確認、信心高中低與關鍵價位，不給目標價；屬 AI 看圖判斷，可能誤判。AI 供應商可在後端切換（Anthropic 或 OpenAI；目前規劃用 OpenAI GPT-6.1 Sol）。2026-10-21 修正：閒置 1 小時自動登出後，從外層封測登入殼重新登入，「閒置超過 1 小時」提示框仍殘留在畫面上——改為登入成功即關閉；另加同一瀏覽器多分頁的登入／登出同步。同日 K 圖葛蘭碧買點分組標籤的起始日加上年份（原只顯示月/日）。同日修正站內搜尋紀錄：輸入代號片段（如「1」）按 Enter 開了台泥 K 圖，紀錄原本存成打的「1」，改為存「台泥(1101)」；點這類紀錄直接開該股 K 圖。同日：捲動後上方導覽列釘在頂端時，「首頁」前面顯示網站 logo（點了回首頁）。同日拿掉頁首下方的「個股搜尋＋指數快覽」橫條（個股搜尋統一用右上搜尋欄），六個指數改到右上搜尋下拉選單的「國際指數」（滑鼠移入展開）。導覽列 logo 改為浮在左側留白、淡入出現，不再把導覽選項往右擠（左側留白不足的窄螢幕縮小或不顯示）。補修：頁首搜尋列原本在首頁以外的頁面會被程式重新打開，改為所有頁面都不顯示。同日修正今日焦點漲跌幅榜：停牌後恢復交易（多為減資換發新股）的股票，原本拿停牌前的舊收盤比較，算出 +98% 等錯誤漲幅；改為前一筆不是市場前一交易日時，採證交所／櫃買中心官方漲跌（含減資後參考價），官方收盤需與本站當日收盤一致才用，否則當天不列入漲跌幅榜。同日修正「外資結算成本估算」抓不到資料：後端結算成本端點因同一支程式內另一功能在函式中重複匯入 datetime，導致整支端點當機（FUNCTION_INVOCATION_FAILED），已移除該重複匯入。同日今日排行的題材標籤：官方產業別為「其他」的個股（如裕慶-KY，全市場約 90 檔）原本顯示「未分類」，改為照官方歸類顯示「其他業」。同日前端呼叫後端改為依環境：本機開檔才打正式站，部署在任何網址（uat、正式站）都打自己的後端（原本寫死正式站 77 處），uat 從此能直接測到後端修改。2026-10-17 補正篩選器說明文字（原說明仍為舊規則）。
     </div>
   </div>
 
@@ -3359,7 +3376,7 @@
       TD.data=j; TD.market=j.listed?'listed':'otc'; tdRender(); tdLoadNews();
     }
     function _tdSingle(name){   // 退回：單一題材現算（themeall 快取沒有時）
-      fetch('https://tw-stock-screener-neon.vercel.app/api/screen?stat=theme&name='+encodeURIComponent(name)).then(function(r){return r.json();}).then(function(j){_tdUse(j,name);})
+      fetch(window.__API+'/api/screen?stat=theme&name='+encodeURIComponent(name)).then(function(r){return r.json();}).then(function(j){_tdUse(j,name);})
         .catch(function(){el('tdMembers').innerHTML='<tr><td colspan="6"><div class="ov-empty">讀取失敗</div></td></tr>';el('tdNews').innerHTML='<div class="ov-empty">讀取失敗</div>';});
     }
     window._openThemeDrawer=function(name){
@@ -3371,7 +3388,7 @@
       // 2026-10-14 優化：所有題材詳情一次預算好(themeall，page_cache/SWR)，點題材直接讀快取秒開；缺快取才退回單一題材現算
       var TA=window._themeAll, _rt=(window._twSession&&window._twSession());
       if(!_rt&&TA&&TA.themes&&TA.themes[name]){var t=TA.themes[name];_tdUse({date:TA.date,name:name,listed:t.listed,otc:t.otc},name);return;}
-      var url=(location.hostname.indexOf('git-uat')>=0?'':'https://tw-stock-screener-neon.vercel.app')+'/api/screen?stat=themeall';
+      var url=window.__API+'/api/screen?stat=themeall';
       window._swrRT('themeall',url,function(d){
         if(!d||!d.themes)return;
         window._themeAll=d;
@@ -3393,7 +3410,7 @@
       el('tdNews').innerHTML='<div class="ov-empty">載入中…</div>';
       var SA=window._sectorAll, _rt=(window._twSession&&window._twSession());
       if(!_rt&&SA&&SA.sectors&&SA.sectors[name]){var t=SA.sectors[name];_secUse({date:SA.date,name:name,listed:t.listed,otc:t.otc},name);return;}
-      var url=(location.hostname.indexOf('git-uat')>=0?'':'https://tw-stock-screener-neon.vercel.app')+'/api/screen?stat=sectorall';
+      var url=window.__API+'/api/screen?stat=sectorall';
       window._swrRT('sectorall',url,function(d){
         if(!d||!d.sectors)return;
         window._sectorAll=d;
@@ -3432,10 +3449,10 @@
       loaded=true;
       // 2026-10-14 改走 page_cache（夜間預算）+ localStorage SWR：秒出上次結果、背景更新；缺快取才退回後端現算
       // 2026-10-15 盤中改走 _swrRT（優先 overview_rt），並每 90 秒自動刷新
-      window._swrRT('overview','https://tw-stock-screener-neon.vercel.app/api/screen?stat=overview', _ovPaint, _ovFail);
-      window._rtStart(function(){ window._swrRT('overview','https://tw-stock-screener-neon.vercel.app/api/screen?stat=overview', _ovPaint, _ovFail); });
+      window._swrRT('overview',window.__API+'/api/screen?stat=overview', _ovPaint, _ovFail);
+      window._rtStart(function(){ window._swrRT('overview',window.__API+'/api/screen?stat=overview', _ovPaint, _ovFail); });
       // 看總覽的同時，背景把所有題材詳情(themeall)＋官方產業成分股(sectorall)預載好，點進去即秒開（host-aware：uat 同源、prod neon）
-      var _hb=(location.hostname.indexOf('git-uat')>=0?'':'https://tw-stock-screener-neon.vercel.app');
+      var _hb=window.__API;
       setTimeout(function(){ try{ var c=JSON.parse(localStorage.getItem('swr_themeall')||'null'); if(!(window._themeAll||(c&&c.t&&Date.now()-c.t<600000)))
           window._swrRT('themeall',_hb+'/api/screen?stat=themeall',function(d){ if(d&&d.themes) window._themeAll=d; },function(){}); }catch(e){}
         try{ var c2=JSON.parse(localStorage.getItem('swr_sectorall')||'null'); if(!(window._sectorAll||(c2&&c2.t&&Date.now()-c2.t<600000)))
@@ -3457,7 +3474,7 @@
     var focusRequest=null,focusFetchedAt=0;
     function loadFocus(){
       if(focusRequest||Date.now()-focusFetchedAt<300000)return;
-      focusRequest=fetch('/api/screen?stat=focus&n=30').then(function(r){return r.json();}).then(function(j){
+      focusRequest=fetch(window.__API+'/api/screen?stat=focus&n=30').then(function(r){return r.json();}).then(function(j){
         if(!j||j.error){['fcGainers','fcLosers','fcSurge'].forEach(function(id){if(el(id))el(id).innerHTML='<div class="fc-empty">讀取失敗</div>';});return;}
         focusFetchedAt=Date.now();
         if(el('fcSnapshotDate'))el('fcSnapshotDate').textContent='排行榜行情日 '+j.date+' · 每日盤後更新';
@@ -3488,7 +3505,7 @@
         render();
       }).catch(function(){});
       // 漲停/跌停 + 漲跌家數
-      fetch('https://tw-stock-screener-neon.vercel.app/api/screen?stat=market').then(function(r){return r.json();}).then(function(j){
+      fetch(window.__API+'/api/screen?stat=market').then(function(r){return r.json();}).then(function(j){
         if(!j||j.error)return;
         parts.market='<div class="fc-chip"><div class="k">漲停 / 跌停</div><div class="v"><span class="fc-up">'+j.up_limit+'</span> / <span class="fc-dn">'+j.down_limit+'</span></div><div class="r">上漲 '+j.up+' · 下跌 '+j.down+'</div></div>';
         render();
@@ -3671,7 +3688,7 @@
         if(window._twSession&&window._twSession()){ try{fn();}catch(e){} } else { window._rtStop(); } }, 35000); } };
     // 進站後閒置時先把題材列表／產業地圖的資料抓好放著（10 分鐘內抓過就不重抓），點開就不用等
     setTimeout(function(){ ['themes','sectors','overview'].forEach(function(k){ try{ var c=JSON.parse(localStorage.getItem('swr_'+k)||'null'); if(c&&c.t&&Date.now()-c.t<600000) return; }catch(e){}
-      window._swrJson(k,'https://tw-stock-screener-neon.vercel.app/api/screen?stat='+k,function(){}); }); }, 4000);
+      window._swrJson(k,window.__API+'/api/screen?stat='+k,function(){}); }); }, 4000);
     window._themesShow=function(){
       if(_data&&!(window._twSession&&window._twSession())){renderHeat();renderDetail();return;}
       var _tpaint=function(d){
@@ -3679,8 +3696,8 @@
         if(el('tmSub'))el('tmSub').textContent='固定題材分類（合夥人口徑）· '+(d.date||'')+' · 共 '+((d.listed||[]).length)+' 個上市族群';
         renderHeat();renderDetail();
       };
-      window._swrRT('themes','https://tw-stock-screener-neon.vercel.app/api/screen?stat=themes',_tpaint,function(){el('tmxHeat').innerHTML='<div class="fc-empty">讀取失敗</div>';});
-      window._rtStart(function(){ window._swrRT('themes','https://tw-stock-screener-neon.vercel.app/api/screen?stat=themes',_tpaint,function(){}); });
+      window._swrRT('themes',window.__API+'/api/screen?stat=themes',_tpaint,function(){el('tmxHeat').innerHTML='<div class="fc-empty">讀取失敗</div>';});
+      window._rtStart(function(){ window._swrRT('themes',window.__API+'/api/screen?stat=themes',_tpaint,function(){}); });
       if(el('tmNote'))el('tmNote').innerHTML='<b>學院導讀</b> 先找多數成分股一起走強的題材，再確認成交是否集中於少數股票。題材熱度不代表行情一定延續，請搭配族群持續性和個股趨勢。';
     };
     document.addEventListener('click',function(e){
@@ -3758,7 +3775,7 @@
     if(Array.isArray(window.GROUP_BOOK_CATALOG)&&window.GROUP_BOOK_CATALOG.length){C=window.GROUP_BOOK_CATALOG.map(function(g){return[g.name,g.category,g.members.map(function(m){return m.code}).join(','),g]})}
     var groups=C.map(function(x){return GroupBookModel.create(Object.assign({},x[3]||{},{name:x[0],category:x[1],members:(x[3]&&x[3].members)||x[2].split(',').map(function(code){return{code:code,name:code}})}))});
     var researchQuarter='',statisticsState='idle',activeGroupSection='gbSectionResearch';
-    var groupApi=location.protocol==='file:'||['localhost','127.0.0.1','::1','[::1]'].includes(location.hostname)?'https://tw-stock-screener-neon.vercel.app':'';
+    var groupApi=window.__API;
 
     function esc(s){return GroupBookModel.publicText(s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
     function val(v,d,suf){return v==null?'—':Number(v).toFixed(d==null?1:d)+(suf||'')}
@@ -3852,7 +3869,9 @@
     window._groupBookShow=function(){loadFinancialResearch(currentResearchQuarter());cats();render();if(window._loadNames)window._loadNames(function(){hydrateNames();render()});load()};
     document.addEventListener('input',function(e){if(e.target.id==='gbSearch'){query=e.target.value;selected='';renderSearch();render()}});
     document.addEventListener('click',function(e){if(!e.target.closest('#gbSearchGo'))return;renderSearch();var first=el('gbSearchDrop')&&el('gbSearchDrop').querySelector('.gb-result');if(first)first.click()});
-    document.addEventListener('click',function(e){var sr=e.target.closest('#gbSearchDrop .gb-result');if(sr){query='';el('gbSearch').value='';el('gbSearchDrop').hidden=true;if(sr.dataset.sg){selected=sr.dataset.sg;render()}else _openStock(sr.dataset.sc,sr.dataset.sn);return}var w=e.target.closest('#gbWindow button');if(w){win=+w.dataset.w;selected='';[].forEach.call(el('gbWindow').children,function(x){x.classList.toggle('on',x===w)});load();return}var m=e.target.closest('#gbMode button');if(m){mode=m.dataset.m;[].forEach.call(el('gbMode').children,function(x){x.classList.toggle('on',x===m)});render();return}var t=e.target.closest('#gbMainTabs button');if(t){tab=t.dataset.tab;selected='';[].forEach.call(el('gbMainTabs').children,function(x){x.classList.toggle('on',x===t)});render();return}var c=e.target.closest('#gbCats button');if(c){cat=c.dataset.cat;selected='';render();return}var g=e.target.closest('#gbBoard [data-g]');if(g){selected=selected===g.dataset.g?'':g.dataset.g;activeGroupSection='gbSectionResearch';render();return}var s=e.target.closest('#gbDetail .gb-member');if(s){_openStock(s.dataset.c,s.dataset.n);return}if(e.target.closest('#gbDetail .gb-close')||e.target===el('gbDetail')){selected='';render();return}if(!e.target.closest('.gb-searchwrap')){var d=el('gbSearchDrop');if(d)d.hidden=true}});
+    document.addEventListener('click',function(e){var sr=e.target.closest('#gbSearchDrop .gb-result');if(sr){query='';el('gbSearch').value='';el('gbSearchDrop').hidden=true;if(sr.dataset.sg){window._openGroupDrawer(sr.dataset.sg)}else _openStock(sr.dataset.sc,sr.dataset.sn);return}var w=e.target.closest('#gbWindow button');if(w){win=+w.dataset.w;selected='';[].forEach.call(el('gbWindow').children,function(x){x.classList.toggle('on',x===w)});load();return}var m=e.target.closest('#gbMode button');if(m){mode=m.dataset.m;[].forEach.call(el('gbMode').children,function(x){x.classList.toggle('on',x===m)});render();return}var t=e.target.closest('#gbMainTabs button');if(t){tab=t.dataset.tab;selected='';[].forEach.call(el('gbMainTabs').children,function(x){x.classList.toggle('on',x===t)});render();return}var c=e.target.closest('#gbCats button');if(c){cat=c.dataset.cat;selected='';render();return}var g=e.target.closest('#gbBoard [data-g]');if(g){if(selected===g.dataset.g)window._closeGroupDrawer();else window._openGroupDrawer(g.dataset.g);return}var s=e.target.closest('#gbDetail .gb-member');if(s){_openStock(s.dataset.c,s.dataset.n);return}if(e.target.closest('#gbDetail .gb-close')||e.target===el('gbDetail')){window._closeGroupDrawer();return}if(!e.target.closest('.gb-searchwrap')){var d=el('gbSearchDrop');if(d)d.hidden=true}});
+    window._openGroupDrawer=function(name){selected=name;activeGroupSection='gbSectionResearch';render();};
+    window._closeGroupDrawer=function(){selected='';render();};
     window._VIEWS=window._VIEWS||{};window._VIEWS.groupbook={el:'groupBookView',show:'_groupBookShow'};
   })();
   </script>
@@ -3867,11 +3886,11 @@
     // 完整合併(含 ETF)永遠不會跑 → ETF 搜不到。改用 _namesFull 旗標：完整版載過才短路。
     if(window._namesFull){ if(cb)cb(window._names); return; }
     var SB='https://bruqrbvbjxntgoljxsne.supabase.co', AK='sb_publishable_KgYlaR-mqtx4uVre6kPD2A_qO6tdT1y';
-    var pNames=fetch('https://tw-stock-screener-neon.vercel.app/api/screen?stat=names').then(function(r){return r.json();}).catch(function(){return {};});
+    var pNames=fetch(window.__API+'/api/screen?stat=names').then(function(r){return r.json();}).catch(function(){return {};});
     var pOtc=fetch(SB+'/rest/v1/otc_names?select=code,name',{headers:{apikey:AK,Authorization:'Bearer '+AK}}).then(function(r){return r.ok?r.json():[];}).catch(function(){return [];});
-    var pInd=fetch('https://tw-stock-screener-neon.vercel.app/api/screen?stat=industries').then(function(r){return r.json();}).catch(function(){return {};});
+    var pInd=fetch(window.__API+'/api/screen?stat=industries').then(function(r){return r.json();}).catch(function(){return {};});
     var pEtf=fetch(SB+'/rest/v1/etf_products?select=code,name,category',{headers:{apikey:AK,Authorization:'Bearer '+AK}}).then(function(r){return r.ok?r.json():[];}).catch(function(){return [];});   // 2026-09-28 ETF 也可搜尋
-    var pOtcEtf=fetch('https://tw-stock-screener-neon.vercel.app/api/screen?stat=otcetf').then(function(r){return r.json();}).catch(function(){return {};});   // 上櫃 ETF（債券型等，etf_products 沒有）
+    var pOtcEtf=fetch(window.__API+'/api/screen?stat=otcetf').then(function(r){return r.json();}).catch(function(){return {};});   // 上櫃 ETF（債券型等，etf_products 沒有）
     Promise.all([pNames,pOtc,pInd,pEtf,pOtcEtf]).then(function(res){
       var m=Object.assign({}, window._names||{}, res[0]||{}), otc=res[1]||[], ind=res[2]||{}, etf=res[3]||[], oe=res[4]||{};  // 保留內嵌股票字典，stat=names 失敗也不清空
       for(var c in m){ window._mkt[c]='twse'; }
@@ -4022,7 +4041,7 @@
     }
     window._limitupShow=function(){
       el('luUp').innerHTML='<div class="fc-empty">載入中…</div>';el('luDn').innerHTML='<div class="fc-empty">載入中…</div>';
-      fetch('https://tw-stock-screener-neon.vercel.app/api/screen?stat=limitup').then(function(r){return r.json();}).then(function(j){
+      fetch(window.__API+'/api/screen?stat=limitup').then(function(r){return r.json();}).then(function(j){
         if(!j||j.error){el('luUp').innerHTML=el('luDn').innerHTML='<div class="fc-empty">讀取失敗</div>';return;}
         if(el('luSub'))el('luSub').textContent=(j.date||'')+' · 漲停 '+j.up_count+' 檔 · 跌停 '+j.down_count+' 檔';
         if(el('luUpCnt'))el('luUpCnt').textContent=j.up_count+' 檔';
@@ -4204,7 +4223,7 @@
       el('dpSeg').querySelectorAll('button').forEach(function(b){ b.onclick=function(){ MK=b.dataset.m; el('dpSeg').querySelectorAll('button').forEach(function(x){x.classList.toggle('on',x===b);}); render(); }; });
       el('dpCb').onchange=render;
       if(window._loadNames && !window._names) try{ window._loadNames(render); }catch(e){}
-      fetch('https://tw-stock-screener-neon.vercel.app/api/screen?stat=disposal').then(function(r){return r.json();}).then(function(j){
+      fetch(window.__API+'/api/screen?stat=disposal').then(function(r){return r.json();}).then(function(j){
         if(!j||j.error||!Array.isArray(j.items)){ el('dpBody').innerHTML='<tr><td colspan="8" class="fc-empty">讀取失敗'+(j&&j.error?'：'+esc(j.error):'')+'</td></tr>'; return; }
         D=j; el('dpSub').textContent='更新 '+j.today+(j.px_date?' · 股價 '+j.px_date:'')+((j.errors&&j.errors.length)?' ·  '+j.errors.join('；'):'');
         render();
@@ -5067,7 +5086,7 @@
       el('fhResetBtn').onclick=function(){ showBand=true; showEv=true; showHol=true; el('fhBandDot').style.background='#f59e0b'; el('fhEvDot').style.background='#f59e0b'; el('fhHolDot').style.background='#f59e0b'; renderChart(); };
       Promise.all([
         fetch(SB+'/rest/v1/foreign_hedge_daily?select=*&order=trade_date.desc&limit=1000',{headers:H}).then(function(r){return r.json();}),   /* 取最新 1000 筆再轉回舊→新（單次上限 1000）*/
-        fetch('https://tw-stock-screener-neon.vercel.app/api/chart?code=TWD%3DX&range=1y&interval=1d').then(function(r){return r.json();}).catch(function(){return null;})
+        fetch(window.__API+'/api/chart?code=TWD%3DX&range=1y&interval=1d').then(function(r){return r.json();}).catch(function(){return null;})
       ]).then(function(res){
         var a=res[0]; DATA=Array.isArray(a)?a.reverse():[];
         FX={}; ((res[1]&&res[1].data)||[]).forEach(function(c){ if(c&&c.close) FX[typeof c.time==='number'?new Date(c.time*1000).toISOString().slice(0,10):c.time]=+c.close; });
@@ -5882,8 +5901,8 @@
         el('smMap').querySelectorAll('.sm-tile').forEach(function(t){ t.onclick=function(){ pick(t.dataset.sec, true); }; });
         if(CUR) pick(CUR, false);
       };
-      window._swrRT('sectors','https://tw-stock-screener-neon.vercel.app/api/screen?stat=sectors',_paint,function(j){el('smMap').innerHTML='<div class="fc-empty">讀取失敗'+((j&&j.error)?'：'+j.error:'')+'</div>';},function(){el('smMap').innerHTML='<div class="fc-empty">載入中…</div>';});
-      window._rtStart(function(){ window._swrRT('sectors','https://tw-stock-screener-neon.vercel.app/api/screen?stat=sectors',_paint,function(){}); });
+      window._swrRT('sectors',window.__API+'/api/screen?stat=sectors',_paint,function(j){el('smMap').innerHTML='<div class="fc-empty">讀取失敗'+((j&&j.error)?'：'+j.error:'')+'</div>';},function(){el('smMap').innerHTML='<div class="fc-empty">載入中…</div>';});
+      window._rtStart(function(){ window._swrRT('sectors',window.__API+'/api/screen?stat=sectors',_paint,function(){}); });
       if(el('smNote'))el('smNote').innerHTML='<b>學院導讀</b> 先看哪個產業有多數股票一起走強，再點開成分股確認。只有少數股票上漲，與整個族群同步擴散的意義不同；搭配成交活躍度與持續天數，比只看顏色更完整。';
     };
     window._VIEWS=window._VIEWS||{}; window._VIEWS.sectors={el:'sectorView',show:'_sectorShow'};
@@ -6612,7 +6631,7 @@
           +'<div style="font-size:11px;color:var(--text-muted);margin-top:6px">發行投信由基金名稱推定；基金經理人為 TWSE 公告之經理人。缺漏欄位顯示「—」。</div>';
       } else if(drawerTab==='perf'){
         body.innerHTML='<div class="fc-empty">載入績效中…</div>';
-        var _pcode=drawerCode, _ptok=(window._perfTok=(window._perfTok||0)+1), _API='https://tw-stock-screener-neon.vercel.app';
+        var _pcode=drawerCode, _ptok=(window._perfTok=(window._perfTok||0)+1), _API=window.__API+'';
         Promise.all([
           fetch(_API+'/api/chart?code='+encodeURIComponent(_pcode)+'&range=3y&interval=1d&raw=1').then(function(r){return r.json();}).catch(function(){return null;}),
           fetch(_API+'/api/chart?code='+encodeURIComponent(_pcode)+'&range=3y&interval=1d&adj=1').then(function(r){return r.json();}).catch(function(){return null;}),
@@ -7496,7 +7515,7 @@
     function cssv(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
     function fetchAdj(code){
       if(CACHE[code])return Promise.resolve(CACHE[code]);
-      return fetch('https://tw-stock-screener-neon.vercel.app/api/chart?code='+encodeURIComponent(code)+'&range=3y&interval=1d&adj=1').then(function(r){return r.json();}).then(function(j){CACHE[code]=(j&&j.data)||[];return CACHE[code];});
+      return fetch(window.__API+'/api/chart?code='+encodeURIComponent(code)+'&range=3y&interval=1d&adj=1').then(function(r){return r.json();}).then(function(j){CACHE[code]=(j&&j.data)||[];return CACHE[code];});
     }
     function periodStart(data){
       if(!data.length)return 0;
@@ -7713,7 +7732,7 @@
     var el=function(id){return document.getElementById(id);};
     var SB=function(){return (typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'';},AK=function(){return (typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';};
     var built=false, rates={}, rateDate='', rateHistory=[], selected=null, token=0, suggestToken=0, suggestTimer, products=[];
-    var API=location.protocol==='file:'?'https://tw-stock-screener-neon.vercel.app':'';
+    var API=window.__API;
     var crossCatalog=[["^TWII", "台股加權指數", "指數", "台灣 加權 TWII"], ["^TWOII", "櫃買指數", "指數", "台灣 OTC"], ["^GSPC", "S&P 500", "指數", "標普 美國 SP500"], ["^IXIC", "那斯達克綜合", "指數", "NASDAQ 美國"], ["^NDX", "Nasdaq 100", "指數", "科技 那斯達克"], ["^SOX", "費城半導體", "指數", "費半 SOX"], ["^DJI", "道瓊工業", "指數", "Dow 美國"], ["^N225", "日經225", "指數", "日本 Nikkei"], ["^KS11", "韓國綜合", "指數", "韓股 KOSPI"], ["^HSI", "香港恆生", "指數", "港股 恒生"], ["000001.SS", "上海綜合", "指數", "上證 中國"], ["^STOXX50E", "歐洲50", "指數", "歐股 Euro"], ["GC=F", "黃金期貨", "商品", "黃金 gold"], ["SI=F", "白銀期貨", "商品", "白銀 silver"], ["CL=F", "WTI 原油期貨", "商品", "石油 原油 oil"], ["BZ=F", "Brent 原油期貨", "商品", "布蘭特 布倫特 石油"], ["HG=F", "銅期貨", "商品", "銅 copper"], ["NG=F", "天然氣期貨", "商品", "天然氣 natural gas"], ["ZC=F", "玉米期貨", "商品", "玉米 corn"], ["ZW=F", "小麥期貨", "商品", "小麥 wheat"], ["ZS=F", "黃豆期貨", "商品", "黃豆 大豆 soybean"], ["QQQ", "Invesco Nasdaq 100 ETF", "海外ETF", "科技 成長"], ["VNQ", "Vanguard 房地產 ETF", "海外ETF", "REITs 房地產"], ["LQD", "iShares 投資級公司債 ETF", "海外ETF", "公司債 信用"], ["IEF", "iShares 7–10年美債 ETF", "海外ETF", "中天期 公債"], ["TLT", "iShares 20年以上美債 ETF", "海外ETF", "長天期 公債"], ["SGOV", "iShares 0–3月美債 ETF", "海外ETF", "短天期 國庫券"], ["MMF", "美元貨幣市場基金", "現金", "貨幣市場 美元"], ["USD-DEPOSIT", "美元定存", "現金", "銀行 定存"]];
     var scenarios=[{"title": "超短天期", "sub": "1–3M · 高股息／REITs", "assets": "0056 · 00878 · 00919 · VNQ", "bond": "SGOV · 00865B · 3個月美債", "tenor": "3m", "core": "股息收益差與權益價格波動", "risk": "股息不固定；權益價格與匯率波動", "dur": 0.25, "phrases": ["息差尚存，波動並存", "息差收窄，回撤防範"], "opp": ["短端收益率下降時，固定的股息收益差可能擴大。", "持續現金流可提供部分息收來源，須確認分配組成。"], "risks": ["歷史股息不保證延續，價格下跌可能超過配息。", "跨幣別比較尚未調整匯率、稅費及避險成本。"]}, {"title": "短天期", "sub": "1–3Y · 定存／貨幣市場", "assets": "美元定存 · MMF", "bond": "2年美債 · 短天期公債", "tenor": "2y", "core": "到期再投資與流動性差異", "risk": "再投資收益變化；MMF 非定存保證", "dur": 1.9, "phrases": ["息收具備，再投受限", "定價分水，續期觀察"], "opp": ["約定期間的定存利率可提供名目收益的可見度。", "短天期資產通常較低的價格敏感度有助流動性管理。"], "risks": ["到期續存與 MMF 收益率會隨短期市場利率調整。", "定存提領限制與 MMF 信用、流動性風險需分別確認。"]}, {"title": "中天期", "sub": "7–10Y · 科技成長", "assets": "QQQ · 00662 · 科技成長股", "bond": "IEF · 00697B · 10年美債", "tenor": "10y", "core": "折現率與遠期盈餘估值", "risk": "股息率不代表成長價值；盈餘預期敏感", "dur": 7.6, "phrases": ["定價分水，波動拉鋸", "估值重估，折現加劇"], "opp": ["其他条件不變時，折現率下降可提高遠期現金流現值。", "獲利成長若實現，可部分抵銷折現率變化的影響。"], "risks": ["股息收益差無法衡量科技股完整估值與總報酬。", "折現率與盈餘預期同時變化時，估值波動可能放大。"]}, {"title": "超長天期", "sub": "20Y+ · 投資級公司債", "assets": "LQD · 00720B · 00937B", "bond": "TLT · 00679B · 20年美債", "tenor": "20y", "core": "收益率差、信用與久期風險", "risk": "利率與信用利差雙重敏感度", "dur": 16.8, "phrases": ["利差墊高，信用分化", "息收具備，留意違約"], "opp": ["其他條件不變時，利率下降可帶來債券價格回升。", "正收益率差提供額外名目補償，需評估其風險來源。"], "risks": ["景氣轉弱時信用利差擴大，可能抵銷公債利率下降效應。", "長久期對利率變化敏感，線性試算忽略凸性與信用變動。"]}];
     var scenarioIndex=0;
@@ -7891,7 +7910,7 @@
       var idx=IDX[i], rm=RMAP[rng], key=idx.s+rm.range+rm.interval;
       el('hxMsg').textContent='載入中…';
       if(cache[key]){ drawChart(cache[key], idx); return; }
-      fetch('https://tw-stock-screener-neon.vercel.app/api/chart?code='+encodeURIComponent(idx.s)+'&range='+rm.range+'&interval='+rm.interval)
+      fetch(window.__API+'/api/chart?code='+encodeURIComponent(idx.s)+'&range='+rm.range+'&interval='+rm.interval)
         .then(function(r){return r.json();})
         .then(function(j){ var d=(j&&j.data)||[]; cache[key]=d; drawChart(d, idx); })
         .catch(function(){ el('hxMsg').textContent='資料載入失敗，稍後再試'; });
@@ -7904,8 +7923,8 @@
         +'<div class="hx-tile"><div class="k">箱型突破 · 今日</div><div class="v" id="tvBox">—</div><div class="r">CONFIRMED_UP 檔數</div></div>'
         +'<div class="hx-tile"><div class="k"> 主力訊號 TOP</div><div id="tvSig" class="r">—</div></div>'
         +'<div class="hx-tile"><div class="k"> 話題族群 TOP</div><div id="tvTopics" class="r">載入中…</div></div>';
-      fetch('https://tw-stock-screener-neon.vercel.app/api/chart?code=%5ETWII&range=5d&interval=1d').then(function(r){return r.json();}).then(function(j){var d=(j&&j.data)||[];if(d.length<2)return;var a=d[d.length-1],b=d[d.length-2],chg=a.close-b.close,pct=chg/b.close*100,up=chg>=0;var v=el('tvTwii');if(v){v.textContent=Number(a.close).toLocaleString();v.className='v '+(up?'hx-up':'hx-dn');}var rr=el('tvTwiiR');if(rr){rr.textContent=(up?'▲ +':'▼ ')+pct.toFixed(2)+'%';rr.className='r '+(up?'hx-up':'hx-dn');}}).catch(function(){});
-      fetch('https://tw-stock-screener-neon.vercel.app/api/screen?stat=market').then(function(r){return r.json();}).then(function(j){if(!j||j.error)return;if(el('tvUpL'))el('tvUpL').textContent=j.up_limit;if(el('tvDnL'))el('tvDnL').textContent=j.down_limit;if(el('tvUD'))el('tvUD').textContent='上漲 '+j.up+' · 下跌 '+j.down;}).catch(function(){});
+      fetch(window.__API+'/api/chart?code=%5ETWII&range=5d&interval=1d').then(function(r){return r.json();}).then(function(j){var d=(j&&j.data)||[];if(d.length<2)return;var a=d[d.length-1],b=d[d.length-2],chg=a.close-b.close,pct=chg/b.close*100,up=chg>=0;var v=el('tvTwii');if(v){v.textContent=Number(a.close).toLocaleString();v.className='v '+(up?'hx-up':'hx-dn');}var rr=el('tvTwiiR');if(rr){rr.textContent=(up?'▲ +':'▼ ')+pct.toFixed(2)+'%';rr.className='r '+(up?'hx-up':'hx-dn');}}).catch(function(){});
+      fetch(window.__API+'/api/screen?stat=market').then(function(r){return r.json();}).then(function(j){if(!j||j.error)return;if(el('tvUpL'))el('tvUpL').textContent=j.up_limit;if(el('tvDnL'))el('tvDnL').textContent=j.down_limit;if(el('tvUD'))el('tvUD').textContent='上漲 '+j.up+' · 下跌 '+j.down;}).catch(function(){});
       try{ var _tk=localStorage.getItem('sb_token')||null; var _u=null; try{_u=JSON.parse(localStorage.getItem('sb_user')||'null');}catch(_){}
         var owner=!!_tk && ['swe250165@gmail.com','qa5518556130@gmail.com','wenpin0617@gmail.com'].indexOf((_u&&_u.email)||'')>=0;
         if(!owner){ if(el('tvSig'))el('tvSig').textContent='（擁有者登入後顯示）'; }
@@ -7939,7 +7958,7 @@
       else { if(fw)fw.style.display=''; if(ra)ra.style.display=''; }
       try{ _setNav(v); }catch(_){}
       // 首頁已有 hero 搜尋 → 隱藏頁首搜尋列；其他視圖才顯示
-      try{ var ts=document.querySelector('.topsearch'); if(ts)ts.hidden=(v==='home'); }catch(_){}
+      try{ var ts=document.querySelector('.topsearch'); if(ts)ts.hidden=true; }catch(_){}   // 2026-10-21 頁首「個股搜尋＋指數快覽」已拿掉：任何頁面都不顯示（原本只在首頁隱藏）
     };
     document.addEventListener('click',function(e){
       var o=e.target.closest('[data-hxo]'); if(o){var k=o.dataset.hxo;open=open===k?null:k;renderCtl();return;}
@@ -7952,6 +7971,7 @@
   })();
   </script>
 
+  <script src="assets/futures-summary.js?v=history1"></script>
   <script>
   /* 首頁「一頁研究手札」報告區（參考合夥人 genshuei 首頁版型，資料走自有管線）*/
   (function(){
@@ -7984,8 +8004,8 @@
     function loadToday(){
       var today=new Date().toISOString().slice(0,10);
       Promise.all([
-        fetch('https://tw-stock-screener-neon.vercel.app/api/chart?code=%5ETWII&range=1mo&interval=1d').then(function(r){return r.json();}).then(function(j){return (j&&j.data)||[];}).catch(function(){return [];}),
-        fetch('https://tw-stock-screener-neon.vercel.app/api/screen?stat=market').then(function(r){return r.json();}).catch(function(){return null;}),
+        fetch(window.__API+'/api/chart?code=%5ETWII&range=1mo&interval=1d').then(function(r){return r.json();}).then(function(j){return (j&&j.data)||[];}).catch(function(){return [];}),
+        fetch(window.__API+'/api/screen?stat=market').then(function(r){return r.json();}).catch(function(){return null;}),
         sb('inst_market_daily?select=trade_date,foreign_net,trust_net,dealer_net,total_net&order=trade_date.desc&limit=20'),
         sb('margin_market?select=date,fin_bal_k&order=date.desc&limit=6'),
         sb('sector_turnover?select=date,total_amt&order=date.desc&limit=20')
@@ -8103,7 +8123,7 @@
         }
         var pcData=null,pcPending=false,pcFailed=false;
         function paintPC(){var v=el('officialPCRatio'),d=el('officialPCDate');if(!v||!d)return;v.textContent=pcData?Number(pcData.ratio_pct).toFixed(2)+'%':(pcFailed?'暫無資料':'載入中…');d.textContent=pcData?'資料日 '+pcData.trade_date+(pcFailed?' · 更新失敗，保留前值':''):(pcFailed?'官方資料讀取失敗':'期交所每日未平倉量比率');}
-        function refreshPC(){if(pcPending)return;pcPending=true;fetch('/api/pc_ratio',{cache:'no-store'}).then(function(r){if(!r.ok)throw Error('official data');return r.json();}).then(function(d){if(typeof d.ratio_pct!=='number'||!d.trade_date)throw Error('invalid ratio');pcData=d;pcFailed=false;paintPC();}).catch(function(){pcFailed=true;paintPC();}).finally(function(){pcPending=false;});}
+        function refreshPC(){if(pcPending)return;pcPending=true;fetch(window.__API+'/api/pc_ratio',{cache:'no-store'}).then(function(r){if(!r.ok)throw Error('official data');return r.json();}).then(function(d){if(typeof d.ratio_pct!=='number'||!d.trade_date)throw Error('invalid ratio');pcData=d;pcFailed=false;paintPC();}).catch(function(){pcFailed=true;paintPC();}).finally(function(){pcPending=false;});}
         var drawOption=render;render=function(){drawOption();paintPC();};
         if(window._officialPCTimer)clearInterval(window._officialPCTimer);
         if(window._officialPCVisible)document.removeEventListener('visibilitychange',window._officialPCVisible);
@@ -8251,7 +8271,7 @@
     /* §3 市場廣度:上市/上櫃兩欄 */
     function loadBreadth(){
       Promise.all([
-        fetch('https://tw-stock-screener-neon.vercel.app/api/screen?stat=market').then(function(r){return r.json();}).catch(function(){return null;}),
+        fetch(window.__API+'/api/screen?stat=market').then(function(r){return r.json();}).catch(function(){return null;}),
         sb('otc_market_daily?select=up,down,flat,up_limit,down_limit&order=trade_date.desc&limit=1')
       ]).then(function(res){
         var box=el('hpBreadth'); if(!box)return;
@@ -8458,31 +8478,32 @@
 
     /* §5 台股期貨未平倉（外資/投信/自營）+ 小台/微台散戶多空比（玩股網現成口徑）*/
     function loadFut(){
-      sb('futures_daily?select=*&order=trade_date.desc&limit=1').then(function(a){
+      sb('futures_daily?select=*&order=trade_date.desc&limit=5').then(function(a){
         var box=el('hpFut'); if(!box)return;
-        var d=(Array.isArray(a)&&a[0])||null;
-        if(!d){box.innerHTML='<div class="fc-empty">今日無資料</div>';return;}
+        var history=(Array.isArray(a)?a:[]).filter(function(r){return r&&/^\d{4}-\d{2}-\d{2}$/.test(r.trade_date);}).sort(function(a,b){return b.trade_date.localeCompare(a.trade_date);}).filter(function(r,i,rows){return !i||r.trade_date!==rows[i-1].trade_date;}).slice(0,5);
+        var d=history[0]||null;
+        if(!d){box.innerHTML='<div class="fc-empty">期貨資料暫時無法讀取，請稍後重試</div>';return;}
         function sub2(lab,v){if(v==null)return '';return '<span style="margin-right:14px">'+lab+' <b class="'+(v>=0?'hp-up':'hp-dn')+'">'+(v>0?'+':'')+(+v).toLocaleString()+'</b></span>';}
         var html='';
         // 卡1：法人台指期未平倉（外資為主）
-        if(d.foreign_oi!=null){var oi=+d.foreign_oi;
+        {var oi=typeof d.foreign_oi==='number'&&isFinite(d.foreign_oi)?d.foreign_oi:null;
           html+='<div class="gs-futcard"><div class="h">外資 臺股期貨未平倉淨額</div>'
-            +'<div class="big '+(oi>=0?'hp-up':'hp-dn')+'">'+(oi>0?'+':'')+oi.toLocaleString()+' <span style="font-size:13px;font-weight:600;color:var(--text-muted)">口</span></div>'
-            +'<div class="sub">'+sub2('投信',d.trust_oi)+sub2('自營',d.dealer_oi)+'</div>'
-            +'<div class="sub">正值＝淨多、負值＝淨空。外資期貨部位常領先現貨方向。</div></div>';}
+            +'<div class="big '+(oi==null?'':oi>=0?'hp-up':'hp-dn')+'">'+(oi==null?'—':(oi>0?'+':'')+oi.toLocaleString())+' <span style="font-size:13px;font-weight:600;color:var(--text-muted)">口</span></div>'
+            +'<div class="fs-context"><div class="sub">'+sub2('投信',d.trust_oi)+sub2('自營',d.dealer_oi)+'</div>'
+            +'<div class="sub">正值＝淨多、負值＝淨空。外資期貨部位常領先現貨方向。</div></div><div data-futures-history="foreign_oi"></div></div>';}
         // 卡2/3：小台、微台散戶多空比（反向指標）
         function retail(name,ls,lg,sh){
-          if(ls==null)return '';
-          var tot=(lg||0)+(sh||0)||1,lw=(lg||0)/tot*100;
+          var valid=typeof ls==='number'&&isFinite(ls),counts=typeof lg==='number'&&isFinite(lg)&&lg>=0&&typeof sh==='number'&&isFinite(sh)&&sh>=0,tot=counts?lg+sh:0,lw=tot?lg/tot*100:0;
           return '<div class="gs-futcard"><div class="h">'+name+'散戶多空比</div>'
-            +'<div class="big '+(ls>=0?'hp-up':'hp-dn')+'">'+(ls>0?'+':'')+(+ls).toFixed(2)+'%</div>'
-            +'<div class="gs-lsbar"><span class="lo" style="width:'+lw+'%"></span><span class="sh" style="width:'+(100-lw)+'%"></span></div>'
-            +'<div class="sub"><span class="hp-up">散戶做多 '+(lg!=null?(+lg).toLocaleString():'—')+'</span> · <span class="hp-dn">散戶做空 '+(sh!=null?(+sh).toLocaleString():'—')+'</span> 口</div></div>';
+            +'<div class="big '+(valid?(ls>=0?'hp-up':'hp-dn'):'')+'">'+(valid?(ls>0?'+':'')+ls.toFixed(2)+'%':'—')+'</div>'
+            +'<div class="fs-context"><div class="gs-lsbar"><span class="lo" style="width:'+lw+'%"></span><span class="sh" style="width:'+(tot?100-lw:0)+'%"></span></div>'
+            +'<div class="sub"><span class="hp-up">散戶做多 '+(counts?lg.toLocaleString():'—')+'</span> · <span class="hp-dn">散戶做空 '+(counts?sh.toLocaleString():'—')+'</span> 口</div></div><div data-futures-history="'+(name.indexOf('小台')===0?'mtx_ls':'tmf_ls')+'"></div></div>';
         }
         html+=retail('小台 ',d.mtx_ls,d.mtx_long,d.mtx_short);
         html+=retail('微台 ',d.tmf_ls,d.tmf_long,d.tmf_short);
         box.innerHTML=(html||'<div class="fc-empty">期貨資料整備中</div>')
           +'<div class="gs-tip" style="grid-column:1/-1"><span class="ic"></span><div><b>學院導讀</b>散戶多空比先用來觀察情緒是否集中，再與外資部位及價格趨勢比較。結算成本提供價格位置參考，站在上方或下方都需要趨勢與量能確認，不能單靠一項數字定性。</div></div>';
+        if(window.AcademyFuturesSummary)window.AcademyFuturesSummary.paint(box,history);
       });
     }
 
@@ -8530,7 +8551,7 @@
       var prec=cfg.precision==null?2:cfg.precision;
       var SB=(typeof SIG_SB_URL!=='undefined'&&SIG_SB_URL)?SIG_SB_URL:'https://bruqrbvbjxntgoljxsne.supabase.co',
           AK=(typeof SIG_SB_ANON!=='undefined'&&SIG_SB_ANON)?SIG_SB_ANON:'sb_publishable_KgYlaR-mqtx4uVre6kPD2A_qO6tdT1y',
-          hb=(location.hostname.indexOf('git-uat')>=0?'':'https://tw-stock-screener-neon.vercel.app');
+          hb=window.__API;
       var fetchData;
       if(cfg.source==='apichart'){
         fetchData=fetch(hb+'/api/chart?code='+encodeURIComponent(cfg.apiCode)+'&range=2y&interval=1d').then(function(r){return r.json();}).then(function(j){
@@ -8591,7 +8612,7 @@
         sb('chip_brief_daily?select=*&order=trade_date.desc&limit=1'),
         sb('market_indicators?select=*&order=date.desc&limit=300'),
         sb('gov_broker_daily?select=date,net_amt,buy_amt,sell_amt,net5,net20,net60&order=date.desc&limit=60'),
-        fetch('https://tw-stock-screener-neon.vercel.app/api/chart?code=%5ETWII&range=6mo&interval=1d').then(function(r){return r.json();}).then(function(j){return (j&&j.data)||[];}).catch(function(){return [];})
+        fetch(window.__API+'/api/chart?code=%5ETWII&range=6mo&interval=1d').then(function(r){return r.json();}).then(function(j){return (j&&j.data)||[];}).catch(function(){return [];})
       ]).then(function(res){
         var cb=(res[0]||[])[0]||{},mi=(res[1]||[])[0]||{},vixYear=vixAnnualState(res[1]),gov=res[2]||[],tx=(res[3]||[]).slice().reverse();
         if(el('cbDate')&&cb.trade_date)el('cbDate').textContent=cb.trade_date;
@@ -8837,7 +8858,7 @@
       '重電':'電機機械','電機':'電機機械','機械':'電機機械','電線電纜':'電器電纜','電纜':'電器電纜','汽車':'汽車工業','電動車':'汽車工業','車電':'汽車工業',
       '綠能':'綠能環保','太陽能':'綠能環保','風電':'綠能環保','儲能':'綠能環保','觀光':'觀光餐旅','餐飲':'觀光餐旅','食品':'食品工業','紡織':'紡織纖維','水泥':'水泥工業','營建':'建材營造','油電':'油電燃氣業'};
     var _indmap=null;
-    function loadInd(cb){ if(_indmap){cb();return;} fetch('https://tw-stock-screener-neon.vercel.app/api/screen?stat=industry').then(function(r){return r.json();}).then(function(m){_indmap=m||{};cb();}).catch(function(){_indmap={};cb();}); }
+    function loadInd(cb){ if(_indmap){cb();return;} fetch(window.__API+'/api/screen?stat=industry').then(function(r){return r.json();}).then(function(m){_indmap=m||{};cb();}).catch(function(){_indmap={};cb();}); }
     function chip(code,name){return '<div class="ti-stk" onclick="_openStock(\''+esc(code)+'\',\''+esc(name)+'\')"><span><b>'+esc(code)+'</b> '+esc(name)+'</span><span style="color:var(--text-muted)">K線›</span></div>';}
     function renderDetail(g){
       var box=el('tiBody');if(!box)return;
@@ -9505,24 +9526,20 @@
           <input type="checkbox" id="zhenming1"
                  onchange="if(this.checked)document.getElementById('zhenming2').checked=false" />
           <div>
-            <div class="cb-label">真名一式</div>
-            <div class="cb-hint">長紅棒 3%＋放量 1.5倍＋收盤站上 MA5＞MA10＞MA20</div>
+            <div class="cb-label">真名一式（多頭啟動）</div>
           </div>
         </label>
         <label class="checkbox-row">
           <input type="checkbox" id="zhenming2"
                  onchange="if(this.checked)document.getElementById('zhenming1').checked=false" />
           <div>
-            <div class="cb-label">真名二式</div>
-            <div class="cb-hint">長紅棒 3%＋放量 1.5倍＋任一較短均線當日新上穿較長均線（5/10/20/60/120/240 全配對）</div>
+            <div class="cb-label">真名二式（動能再起）</div>
           </div>
         </label>
         <label class="checkbox-row">
           <input type="checkbox" id="zhenming3" />
           <div>
             <div class="cb-label">真名三式（多頭回洗反包）</div>
-            <div class="cb-hint">多頭排列（長黑前一日收盤＞MA20 且 MA5＞MA10＞MA20）中出現長黑 3%，12 個交易日內長紅 3% 收盤站上長黑實體 1/2（同一根長黑只取第一次）；帶量＝長紅量 ≥ max(5日,10日均量)×1.5，另加標籤。<br>
-            <b>歷史回測</b>（2024-07～2026-09 上市櫃約 7,000 筆，訊號日收盤進場、突破前高賣半、剩餘跌破 10MA 出、跌破停損全出、扣成本 0.585%）：勝率 42.5%、平均 +0.47%；帶量 41.7%、不帶量 42.9%。持有 20 日平均 +1.10%（對照任意多頭排列日 +0.23%）。<br>＊進場採「訊號日收盤」（真名三式以收盤定義，收盤確認即以該收盤價買進）；先前「次日開盤進場」因長紅後常跳空追高，勝率僅 35.6%、平均 −0.44%（2026-09-30 依合夥人回饋修正）。此法多一個「當根收盤即成交」假設，數字略樂觀但非前視偏誤；仍未達原文件宣稱之 50%～60%，僅供參考、不代表未來績效。</div>
           </div>
         </label>
           </div>
@@ -9558,6 +9575,37 @@
           </div>
           </div>
         </div>
+        <div class="sc-panel" data-cat="ev357">
+          <div class="sc-hd"><a onclick="_scToggle('ev357')"><span class="sc-ar">▸</span><b>企業價值</b></a><span class="sc-sum"></span></div>
+          <div class="sc-body" style="display:none">
+          <p class="scal-value-note"><strong>非技術面篩選</strong><span>中長線策略，著重企業價值與配息條件。</span></p>
+          <div class="sc-note">以「連續 5 年配息 + 近 5 年平均現金股利 D」算現金殖利率分級：殖利率＝D ÷ 現價。只列出連續 5 年配息者（未連續配息＝方法不適用）。三個可複選。</div>
+          <div class="checkbox-grid sc-cbs">
+        <label class="checkbox-row">
+          <input type="checkbox" id="ev357_cheap" />
+          <div>
+            <div class="cb-label" style="color:#c0392b">便宜（買）· 殖利率 ≥ 7%</div>
+            <div class="cb-hint">現價 ≤ 便宜價（＝D ÷ 0.07）。現金殖利率達 7% 以上，進入買進區。</div>
+          </div>
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="ev357_fair" />
+          <div>
+            <div class="cb-label">合理（賣）· 殖利率 3%～7%</div>
+            <div class="cb-hint">現價介於合理價（＝D ÷ 0.05）附近，殖利率落在 3%～7% 之間，進入減碼區。</div>
+          </div>
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="ev357_expensive" />
+          <div>
+            <div class="cb-label" style="color:#148f77">昂貴（賣光）· 殖利率 ≤ 3%</div>
+            <div class="cb-hint">現價 ≥ 昂貴價（＝D ÷ 0.03）。現金殖利率低於 3%，進入出清區。</div>
+          </div>
+        </label>
+          </div>
+          <div class="cb-hint" style="margin-top:6px">資料來源：玩股網歷年除息現金股利（本站 stock_dividends），每週更新。D＝近 5 個除息年現金股利平均。僅供研究參考，非投資建議。</div>
+          </div>
+        </div>
       </div>
       <div style="display:flex;justify-content:flex-end;margin-top:16px"><button class="btn-submit" id="submitBtn" onclick="doScreen()">開始篩選</button></div>
       <div id="dataDateDisplay" style="margin-top:12px;font-size:0.78rem;color:var(--text-muted);"></div>
@@ -9587,8 +9635,8 @@
       if(ind&&ind.value) a.push(ind.value); return a; }
     function refresh(){
       var all=base();
-      cat.querySelectorAll('.sc-panel').forEach(function(p){ var a=picked(p), col=p.querySelector('.sc-hd b').style.color;
-        p.querySelector('.sc-sum').innerHTML=a.map(function(t){return '<span class="sc-chip" style="color:'+col+'">'+esc(t)+'</span>';}).join('');
+      cat.querySelectorAll('.sc-panel').forEach(function(p){ var hb=p.querySelector('.sc-hd b'), sum=p.querySelector('.sc-sum'); if(!hb||!sum) return; /* 2026-10-20 會員私房篩選面板沒有 .sc-hd，略過以免整個摘要中斷 */ var a=picked(p), col=hb.style.color;
+        sum.innerHTML=a.map(function(t){return '<span class="sc-chip" style="color:'+col+'">'+esc(t)+'</span>';}).join('');
         all=all.concat(a); });
       $('scCombo').innerHTML=all.length?all.map(function(t){return '<span class="sc-chip">'+esc(t)+'</span>';}).join(''):'尚未設定任何條件';
     }
@@ -10124,7 +10172,7 @@
               }).join('') : '<div class="fc-empty">近期無重大訊息</div>');
             }).catch(function(){ fill('cnpNsAnn','<div class="fc-empty">讀取失敗</div>'); });
             //  個股新聞
-            fetch('https://tw-stock-screener-neon.vercel.app/api/screen?stat=stocknews&code='+encodeURIComponent(code)+'&name='+encodeURIComponent(name)).then(function(r){return r.json();}).then(function(j){
+            fetch(window.__API+'/api/screen?stat=stocknews&code='+encodeURIComponent(code)+'&name='+encodeURIComponent(name)).then(function(r){return r.json();}).then(function(j){
               if(cur!==code)return;
               var a=(j&&j.items)||[];
               fill('cnpNsStock', a.length? a.slice(0,12).map(function(t){
@@ -10334,6 +10382,7 @@
     document.addEventListener('click', function (e) { const d = document.getElementById('funcDropdown'); if (d && d.style.display !== 'none' && !d.contains(e.target)) _closeFuncMenu(); });
 
     function doScreen() {
+      window.AcademyScreenLog?.beforeScan();
       const dateVal = document.getElementById('date').value;
       const minPrice  = parseFloat(document.getElementById('min_price').value) || 0;
       const redPct    = parseFloat(document.getElementById('red_candle_pct').value) || 0;
@@ -10360,6 +10409,9 @@
       const zhenming2 = document.getElementById('zhenming2').checked;
       const zhenming3 = document.getElementById('zhenming3').checked;
       const sma20Stages = Array.from(document.querySelectorAll('.sma20-cb:checked')).map(e => +e.value);
+      const ev357Cheap     = !!document.getElementById('ev357_cheap')?.checked;
+      const ev357Fair      = !!document.getElementById('ev357_fair')?.checked;
+      const ev357Expensive = !!document.getElementById('ev357_expensive')?.checked;
       const noBlackMonths = parseInt(document.getElementById('no_black_years').value) || 0;
       const noBlackMult  = parseFloat(document.getElementById('no_black_mult').value) || 0;
       const noBlackTol   = parseInt(document.getElementById('no_black_tolerance').value) || 0;
@@ -10407,6 +10459,9 @@
         zhenming2: zhenming2,
         zhenming3: zhenming3,
         sma20_stages: sma20Stages,
+        ev357_cheap:     ev357Cheap,
+        ev357_fair:      ev357Fair,
+        ev357_expensive: ev357Expensive,
         no_black_months:     noBlackMonths,
         no_black_mult:       noBlackMult,
         no_black_tolerance:  noBlackTol,
@@ -10420,7 +10475,7 @@
       _screenJob = { id: jobId, active: true };
 
       // uat 分支別名(含 git-uat)打自己的同源後端，以便測試尚未上 prod 的篩選規則；其餘(prod/preview/local)維持 prod
-      fetch((location.hostname.indexOf('git-uat')>=0?'':'https://tw-stock-screener-neon.vercel.app')+'/api/screen', {
+      fetch(window.__API+'/api/screen', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -10472,7 +10527,7 @@
         return;
       }
       try {
-        const r = await fetch(`${location.hostname.indexOf('git-uat')>=0?'':'https://tw-stock-screener-neon.vercel.app'}/api/screen?job_id=${encodeURIComponent(jobId)}&_=${Date.now()}`, { cache: 'no-store' });
+        const r = await fetch(`${window.__API}/api/screen?job_id=${encodeURIComponent(jobId)}&_=${Date.now()}`, { cache: 'no-store' });
         const data = await r.json();
         if (!_screenJob || _screenJob.id !== jobId) return;
         if (!data.pending) {                                  // 結果到手
@@ -10560,9 +10615,9 @@
 
       showStatus(`
         <div class="results-header">
-          <div class="results-title">篩選結果 — ${data.date}</div>
+          <div class="results-title">篩選結果 <strong>${data.count} 檔</strong></div>
           <div class="results-meta">
-            符合條件 <strong>${data.count}</strong> 檔 ／ 全市場上市 ${data.total} 檔
+            行情日期 ${data.date} · 市場 ${data.total} 檔
           </div>
         </div>
       `);
@@ -10579,6 +10634,7 @@
       }
 
       filterAndRender();
+      window.AcademyScreenLog?.capture(data);
     }
 
     // ── 已看過標記（localStorage，當天有效） ──────────────
@@ -10650,7 +10706,7 @@
                   ? `<span class="data-missing-badge" title="部分篩選條件無法確認（${s.data_missing.map(k=>({'no_black':'無放量黑棒篩選','gap_unverified':'跳空前日資料缺失，請手動排查'}[k]||k)).join('、')}），已放行"></span>`
                   : ''
               }</td>
-            <td class="name-cell">${s.name}${s.sma20_stage ? `<div class="zm3-info">葛蘭碧買點 ${s.sma20_stage}</div>` : ''}${s.zm3 ? `<div class="zm3-info" title="真名三式：長黑 ${s.zm3.black_date}（−${s.zm3.black_pct}%）後第 ${s.zm3.day_n} 天反包；停損參考 ${s.zm3.stop}（長紅低與洗盤最低取低者）；第一目標 ${s.zm3.target}（長黑前 20 日最高）">三式・長黑 ${s.zm3.black_date.slice(5).replace('-','/')}・½ ${s.zm3.mid}・第${s.zm3.day_n}天${s.zm3.vol ? '・<b>帶量</b>' : ''}<br>停損 ${s.zm3.stop}・目標 ${s.zm3.target}</div>` : ''}</td>
+            <td class="name-cell">${s.name}${s.sma20_stage ? `<div class="zm3-info">葛蘭碧買點 ${s.sma20_stage}</div>` : ''}${s.zm3 ? `<div class="zm3-info" title="真名三式：長黑 ${s.zm3.black_date}（−${s.zm3.black_pct}%）後第 ${s.zm3.day_n} 天反包；停損參考 ${s.zm3.stop}（長紅低與洗盤最低取低者）；第一目標 ${s.zm3.target}（長黑前 20 日最高）">三式・長黑 ${s.zm3.black_date.slice(5).replace('-','/')}・½ ${s.zm3.mid}・第${s.zm3.day_n}天${s.zm3.vol ? '・<b>帶量</b>' : ''}<br>停損 ${s.zm3.stop}・目標 ${s.zm3.target}</div>` : ''}${s.ev357 ? `<div class="zm3-info" style="color:${s.ev357.band==='cheap'?'#c0392b':(s.ev357.band==='expensive'?'#148f77':'var(--text-muted)')}" title="連續5年配息；D=近5年均現金股利 ${s.ev357.d}｜現金殖利率=D÷現價｜便宜價(7%)=${s.ev357.cheap_price} 合理價(5%)=${s.ev357.fair_price} 昂貴價(3%)=${s.ev357.exp_price}"><b>${s.ev357.band==='cheap'?'便宜·買':(s.ev357.band==='expensive'?'昂貴·賣光':'合理·賣')}</b> 殖利率 ${s.ev357.yield}%｜D ${s.ev357.d}（便宜 ${s.ev357.cheap_price}／合理 ${s.ev357.fair_price}／昂貴 ${s.ev357.exp_price}）</div>` : ''}</td>
             <td class="neutral col-open">${s.open}</td>
             <td class="neutral col-high">${s.high}</td>
             <td class="neutral col-low">${s.low}</td>
@@ -10767,7 +10823,7 @@
     function _loadShares() {
       if (_shares) return Promise.resolve(_shares);
       if (_sharesLoading) return _sharesLoading;
-      _sharesLoading = fetch('https://tw-stock-screener-neon.vercel.app/api/screen?stat=shares').then(r => r.json()).catch(() => ({}))
+      _sharesLoading = fetch(window.__API+'/api/screen?stat=shares').then(r => r.json()).catch(() => ({}))
         .then(j => (_shares = (j && !j.error) ? j : {}));
       return _sharesLoading;
     }
@@ -11008,7 +11064,7 @@
       let boxes = '';
       for (let g = 1; g <= _sma20GroupCount; g++) {
         const on = !window._sma20GroupsOn || window._sma20GroupsOn.has(g);
-        const d = _sma20GroupStart[g] ? _sma20GroupStart[g].slice(5).replace('-', '/') : '';
+        const d = _sma20GroupStart[g] ? String(_sma20GroupStart[g]).slice(0, 10).replace(/-/g, '/') : '';   // 2026-10-21 加上年份（YYYY/MM/DD）
         boxes += `<label class="sma20-grp${on ? ' is-on' : ''}"><input type="checkbox" ${on ? 'checked' : ''} onchange="_toggleSma20Group(${g})">第${g}組${d ? `<span class="sma20-grp-d">${d}</span>` : ''}</label>`;
       }
       panel.innerHTML = `<b style="color:#1e88e5">葛蘭碧買點 · 共 ${_sma20GroupCount} 組</b>`
@@ -11040,7 +11096,7 @@
         try { const c = JSON.parse(localStorage.getItem(key) || 'null'); if (c && c.verdict && !c.stub) { _aiBuyRender(c); return; } } catch (e) {}
       }
       panel.innerHTML = '<div class="ov-empty">AI 判讀中…</div>';
-      const hb = (location.hostname.indexOf('git-uat') >= 0 ? '' : 'https://tw-stock-screener-neon.vercel.app');
+      const hb = window.__API;
       fetch(hb + '/api/screen?stat=aibuy&code=' + encodeURIComponent(code))
         .then(r => r.json())
         .then(d => { if (d && d.verdict && !d.stub && !d.error) { try { localStorage.setItem(key, JSON.stringify(d)); } catch (e) {} } _aiBuyRender(d); })   // 假資料／錯誤不快取，金鑰設好後立刻生效
@@ -12045,7 +12101,7 @@
     async function _ensureWatchSet(force) {
       if (_stWatchSet && _stWatchList && !force) return;
       try {
-        const r = await _authFetch('https://tw-stock-screener-neon.vercel.app/api/broker_watch');
+        const r = await _authFetch(window.__API+'/api/broker_watch');
         _stWatchList = r.ok ? await r.json() : (_stWatchList || []);
       } catch (_) { _stWatchList = _stWatchList || []; }
       _stWatchSet = new Set((_stWatchList || []).map(w => w.broker_id + '|' + w.code));
@@ -12056,7 +12112,7 @@
       cb.disabled = true;
       try {
         if (cb.checked) {
-          const r = await _authFetch('https://tw-stock-screener-neon.vercel.app/api/broker_watch', {
+          const r = await _authFetch(window.__API+'/api/broker_watch', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ broker_id: brokerId, broker_name: brokerName, code, stock_name: stockName }),
           });
@@ -12064,7 +12120,7 @@
           if (_stWatchSet) _stWatchSet.add(key);
           _stFlash(`已追蹤 ${code} ${stockName}，今晚 19:00 起更新出場狀態`);
         } else {
-          const r = await _authFetch(`https://tw-stock-screener-neon.vercel.app/api/broker_watch?broker_id=${encodeURIComponent(brokerId)}&code=${encodeURIComponent(code)}`, { method: 'DELETE' });
+          const r = await _authFetch(`${window.__API}/api/broker_watch?broker_id=${encodeURIComponent(brokerId)}&code=${encodeURIComponent(code)}`, { method: 'DELETE' });
           if (!r.ok) throw new Error('HTTP ' + r.status);
           if (_stWatchSet) _stWatchSet.delete(key);
           _stFlash(`已取消追蹤 ${code}`);
@@ -12199,7 +12255,7 @@
 
     async function _stRemove(brokerId, code) {
       try {
-        const r = await _authFetch(`https://tw-stock-screener-neon.vercel.app/api/broker_watch?broker_id=${encodeURIComponent(brokerId)}&code=${encodeURIComponent(code)}`, { method: 'DELETE' });
+        const r = await _authFetch(`${window.__API}/api/broker_watch?broker_id=${encodeURIComponent(brokerId)}&code=${encodeURIComponent(code)}`, { method: 'DELETE' });
         if (!r.ok) throw new Error('HTTP ' + r.status);
         if (_stWatchSet) _stWatchSet.delete(brokerId + '|' + code);
         await _ensureWatchSet(true);
@@ -12407,7 +12463,7 @@
       if (!_isStock(code)) return;
       try {
         if (!(code in _divCache)) {
-          const r = await fetch(`https://tw-stock-screener-neon.vercel.app/api/dividend?code=${encodeURIComponent(code)}`);
+          const r = await fetch(`${window.__API}/api/dividend?code=${encodeURIComponent(code)}`);
           if (!r.ok) return;
           _divCache[code] = (await r.json()).events || [];
         }
@@ -12738,7 +12794,7 @@
         } catch (_) { }
       }));
       try {
-        const rt = await fetch(`https://tw-stock-screener-neon.vercel.app/api/realtime_batch?codes=${codes.join(',')}&_=${Date.now()}`, { cache: 'no-store' });
+        const rt = await fetch(`${window.__API}/api/realtime_batch?codes=${codes.join(',')}&_=${Date.now()}`, { cache: 'no-store' });
         if (rt.ok) { const j = await rt.json(); if (j && j.results) for (const [c, d] of Object.entries(j.results)) if (_btPrices[c] && d.close > 0) _btPrices[c].current = d.close; }
       } catch (_) { }
     }
@@ -12910,7 +12966,7 @@
     }
 
     // ── Auth ──────────────────────────────────────────────
-    const _authEndpoint = location.protocol === 'file:' || ['localhost', '127.0.0.1', '::1', '[::1]'].includes(location.hostname) ? 'https://tw-stock-screener-neon.vercel.app/api/auth' : '/api/auth';
+    const _authEndpoint = location.protocol === 'file:' || ['localhost', '127.0.0.1', '::1', '[::1]'].includes(location.hostname) ? window.__API+'/api/auth' : '/api/auth';
     let _authToken   = localStorage.getItem('sb_token')   || null;
     let _authRefresh = localStorage.getItem('sb_refresh')  || null;
     let _authUser    = JSON.parse(localStorage.getItem('sb_user') || 'null');
@@ -13052,8 +13108,23 @@
         clearTimeout(_idleTimer); _idleTimer = null;  // 登出時清除閒置計時器
       } else {
         _resetIdleTimer();  // 登入時啟動閒置計時器
+        // 2026-10-21 修正：閒置登出後從外層登入殼重新登入，舊的「閒置超過 1 小時」提示框原本被登入殼蓋住、登入後才露出來 → 登入成功一律關掉
+        const _idm = document.getElementById('idleLogoutModal'); if (_idm) _idm.style.display = 'none';
       }
     }
+
+    // 2026-10-21：同一瀏覽器其他分頁登入／登出時同步本分頁（避免這頁還卡在登入殼或閒置提示）
+    window.addEventListener('storage', function (e) {
+      if (e.key !== 'sb_token') return;
+      try {
+        if (e.newValue && e.newValue !== _authToken) {
+          _authToken = e.newValue; _authRefresh = localStorage.getItem('sb_refresh'); _authUser = JSON.parse(localStorage.getItem('sb_user') || 'null');
+          _applyAuthState();
+        } else if (!e.newValue && _authToken) {
+          _authToken = null; _authRefresh = null; _authUser = null; _applyAuthState();
+        }
+      } catch (_) {}
+    });
 
     function togglePwEye() {
       const inp = document.getElementById('authPassword');
@@ -13233,7 +13304,7 @@
       statusEl.style.display = 'block';
       statusEl.innerHTML = ' 寄送中…';
       try {
-        const res = await fetch('https://tw-stock-screener-neon.vercel.app/api/alert', {
+        const res = await fetch(window.__API+'/api/alert', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_authToken}` },
           body: JSON.stringify({ test: true, subject, email }),
@@ -13262,7 +13333,7 @@
       box.innerHTML = '正在抓取今日股價並掃描觀察清單…';
       try {
         const token = _authToken;
-        const res = await fetch('https://tw-stock-screener-neon.vercel.app/api/alert', {
+        const res = await fetch(window.__API+'/api/alert', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({ email, streak_days }),
@@ -13421,7 +13492,7 @@
       if (!allCodes.length) return;
       _unifiedFetching = true;
       try {
-        const r = await fetch(`https://tw-stock-screener-neon.vercel.app/api/realtime_batch?codes=${allCodes.join(',')}&_=${Date.now()}`, { cache: 'no-store' });
+        const r = await fetch(`${window.__API}/api/realtime_batch?codes=${allCodes.join(',')}&_=${Date.now()}`, { cache: 'no-store' });
         const ct = r.headers.get('content-type') || '';
         if (!ct.includes('json')) { console.warn('[RT batch] 回傳非 JSON:', ct, r.status); return; }
         const json = await r.json();
@@ -13511,7 +13582,7 @@
           const email = _authUser?.email;
           if (!email) continue;
           try {
-            await _authFetch('https://tw-stock-screener-neon.vercel.app/api/vol_notify', {
+            await _authFetch(window.__API+'/api/vol_notify', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ code, name: w.name || code, vol: Math.round(vol), vol_target: volTarget, email }),
@@ -13525,7 +13596,7 @@
       if (!currentCode || !candleSeriesRef || _rtFetching) return;
       _rtFetching = true;
       try {
-        const r = await fetch(`https://tw-stock-screener-neon.vercel.app/api/realtime?code=${encodeURIComponent(currentCode)}&_=${Date.now()}`, { cache: 'no-store' });
+        const r = await fetch(`${window.__API}/api/realtime?code=${encodeURIComponent(currentCode)}&_=${Date.now()}`, { cache: 'no-store' });
         const d = await r.json();
         if (d && !d.error && d.close) {
           console.log('[RT kline]', currentCode, d.close, d.hms, d.source);
@@ -13795,35 +13866,35 @@
     function loadDailyChart() {
       window._chartMode = 'candle'; _setKlineChromeVisible(true);
       _setDailyBtnActive(document.getElementById('dailyBtn'));
-      _loadChartUrl(`https://tw-stock-screener-neon.vercel.app/api/chart?code=${encodeURIComponent(currentCode)}&range=3y&interval=1d&raw=1`, '日K');
+      _loadChartUrl(`${window.__API}/api/chart?code=${encodeURIComponent(currentCode)}&range=3y&interval=1d&raw=1`, '日K');
     }
 
     function loadHourlyChart() {   // 60 分鐘K，近 1 年（2026-09-28）
       window._chartMode = 'candle'; _setKlineChromeVisible(true);
       _setDailyBtnActive(document.getElementById('hourlyBtn'));
-      _loadChartUrl(`https://tw-stock-screener-neon.vercel.app/api/chart?code=${encodeURIComponent(currentCode)}&range=1y&interval=60m`, '小時K');
+      _loadChartUrl(`${window.__API}/api/chart?code=${encodeURIComponent(currentCode)}&range=1y&interval=60m`, '小時K');
     }
 
     function loadAdjDailyChart() {
       window._chartMode = 'candle'; _setKlineChromeVisible(true);
       _setDailyBtnActive(document.getElementById('adjDailyBtn'));
-      _loadChartUrl(`https://tw-stock-screener-neon.vercel.app/api/chart?code=${encodeURIComponent(currentCode)}&range=3y&interval=1d&adj=1`, '還原日K');
+      _loadChartUrl(`${window.__API}/api/chart?code=${encodeURIComponent(currentCode)}&range=3y&interval=1d&adj=1`, '還原日K');
     }
     // 週/月/年K 皆由 3y 日K前端聚合（api/chart 目前最長穩定支援 3y；更長年K歷史待後端擴充）2026-10-09
     function loadWeeklyChart() {
       window._chartMode = 'candle'; _setKlineChromeVisible(true);
       _setDailyBtnActive(document.getElementById('weeklyBtn'));
-      _loadChartUrl(`https://tw-stock-screener-neon.vercel.app/api/chart?code=${encodeURIComponent(currentCode)}&range=3y&interval=1d&raw=1`, '週K', d => _aggCandles(d, _wkKey));
+      _loadChartUrl(`${window.__API}/api/chart?code=${encodeURIComponent(currentCode)}&range=3y&interval=1d&raw=1`, '週K', d => _aggCandles(d, _wkKey));
     }
     function loadMonthlyChart() {
       window._chartMode = 'candle'; _setKlineChromeVisible(true);
       _setDailyBtnActive(document.getElementById('monthlyBtn'));
-      _loadChartUrl(`https://tw-stock-screener-neon.vercel.app/api/chart?code=${encodeURIComponent(currentCode)}&range=3y&interval=1d&raw=1`, '月K', d => _aggCandles(d, t => String(t).slice(0, 7)));
+      _loadChartUrl(`${window.__API}/api/chart?code=${encodeURIComponent(currentCode)}&range=3y&interval=1d&raw=1`, '月K', d => _aggCandles(d, t => String(t).slice(0, 7)));
     }
     function loadYearlyChart() {
       window._chartMode = 'candle'; _setKlineChromeVisible(true);
       _setDailyBtnActive(document.getElementById('yearlyBtn'));
-      _loadChartUrl(`https://tw-stock-screener-neon.vercel.app/api/chart?code=${encodeURIComponent(currentCode)}&range=3y&interval=1d&raw=1`, '年K', d => _aggCandles(d, t => String(t).slice(0, 4)));
+      _loadChartUrl(`${window.__API}/api/chart?code=${encodeURIComponent(currentCode)}&range=3y&interval=1d&raw=1`, '年K', d => _aggCandles(d, t => String(t).slice(0, 4)));
     }
 
     // ── 江波圖（當日分時走勢）：前收基線(紅上綠下)＋均價線(VWAP)＋量柱；盤中沿用既有 5 秒即時輪詢 ──
@@ -13850,8 +13921,8 @@
       _chartLoading();
       document.getElementById('modalSubtitle').textContent = '分時走勢 ・ 載入中…';
       Promise.all([
-        fetch(`https://tw-stock-screener-neon.vercel.app/api/chart?code=${encodeURIComponent(currentCode)}&range=1d&interval=1m`).then(r => r.json()).catch(() => ({})),
-        fetch(`https://tw-stock-screener-neon.vercel.app/api/realtime?code=${encodeURIComponent(currentCode)}&_=${Date.now()}`, { cache: 'no-store' }).then(r => r.json()).catch(() => ({})),
+        fetch(`${window.__API}/api/chart?code=${encodeURIComponent(currentCode)}&range=1d&interval=1m`).then(r => r.json()).catch(() => ({})),
+        fetch(`${window.__API}/api/realtime?code=${encodeURIComponent(currentCode)}&_=${Date.now()}`, { cache: 'no-store' }).then(r => r.json()).catch(() => ({})),
       ]).then(([ch, rt]) => {
         if (window._chartMode !== 'trend'||requestId!==_chartRequestId||!document.getElementById('chartModal').classList.contains('open')) return;   // 使用者已切走
         const bars = (((ch && ch.data) || []).filter(b => typeof b.time === 'number' && b.close > 0)
@@ -15667,7 +15738,7 @@
     async function _loadWatchCodes() {
       if (!_authToken) return;
       try {
-        const r = await _authFetch('https://tw-stock-screener-neon.vercel.app/api/watchlist');
+        const r = await _authFetch(window.__API+'/api/watchlist');
         if (!r.ok) return;
         const data = await r.json();
         _watchData = Array.isArray(data) ? data : [];
@@ -15760,7 +15831,7 @@
         if (item) {
           item.note = note; item.target_price = target_price; item.rt_target_price = rt_target_price; item.vol_target = vol_target;
           try {
-            await _authFetch('https://tw-stock-screener-neon.vercel.app/api/watchlist', {
+            await _authFetch(window.__API+'/api/watchlist', {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ id: item.id, note, target_price, rt_target_price, vol_target })
@@ -15776,11 +15847,11 @@
       // 新增
       let price_at_add = currentPrice;
       try {
-        const pr = await fetch(`https://tw-stock-screener-neon.vercel.app/api/prices?codes=${encodeURIComponent(code)}`);
+        const pr = await fetch(`${window.__API}/api/prices?codes=${encodeURIComponent(code)}`);
         if (pr.ok) { const pm = await pr.json(); if (pm[code] != null) price_at_add = pm[code]; }
       } catch(_) {}
       try {
-        const r = await _authFetch('https://tw-stock-screener-neon.vercel.app/api/watchlist', {
+        const r = await _authFetch(window.__API+'/api/watchlist', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ code, name, industry, price_at_add, note, target_price, rt_target_price, vol_target })
@@ -15823,7 +15894,7 @@
 
     async function _removeWatch(code) {
       try {
-        await _authFetch(`https://tw-stock-screener-neon.vercel.app/api/watchlist?code=${encodeURIComponent(code)}`, { method: 'DELETE' });
+        await _authFetch(`${window.__API}/api/watchlist?code=${encodeURIComponent(code)}`, { method: 'DELETE' });
         _watchData = _watchData.filter(w => w.code !== code);
         _watchCodes.delete(code);
         _refreshWatchBtns();
@@ -15839,11 +15910,11 @@
       // 即時抓最新市價作為加入時股價，避免用篩選日期的舊收盤價
       let price_at_add = _watchAddTarget.price;
       try {
-        const pr = await fetch(`https://tw-stock-screener-neon.vercel.app/api/prices?codes=${encodeURIComponent(code)}`);
+        const pr = await fetch(`${window.__API}/api/prices?codes=${encodeURIComponent(code)}`);
         if (pr.ok) { const pm = await pr.json(); if (pm[code] != null) price_at_add = pm[code]; }
       } catch(_) {}
       try {
-        const r = await _authFetch('https://tw-stock-screener-neon.vercel.app/api/watchlist', {
+        const r = await _authFetch(window.__API+'/api/watchlist', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ code, name, industry, price_at_add, note })
@@ -15877,7 +15948,7 @@
       if (_watchData.length) {
         const codes = _watchData.map(w => w.code).join(',');
         try {
-          const r = await fetch(`https://tw-stock-screener-neon.vercel.app/api/prices?codes=${encodeURIComponent(codes)}`);
+          const r = await fetch(`${window.__API}/api/prices?codes=${encodeURIComponent(codes)}`);
           const prices = await r.json();
           _watchData.forEach(w => { w._cur = prices[w.code] ?? null; });
         } catch (_) {}
@@ -15981,7 +16052,7 @@
       const item = _watchData.find(w => w.id === id);
       if (item) item.note = note;
       try {
-        await _authFetch('https://tw-stock-screener-neon.vercel.app/api/watchlist', {
+        await _authFetch(window.__API+'/api/watchlist', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id, note })
@@ -16008,7 +16079,7 @@
       const item   = _watchData.find(w => w.id === id);
       if (item) item[field] = target;
       try {
-        await _authFetch('https://tw-stock-screener-neon.vercel.app/api/watchlist', {
+        await _authFetch(window.__API+'/api/watchlist', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id, [field]: target }),
@@ -16112,7 +16183,7 @@
     function el(id){ return document.getElementById(id); }
     function fetchIdx(hourly){
       var k=hourly?'h':'d'; if(MK.cache[k]) return MK.cache[k];
-      var url='https://tw-stock-screener-neon.vercel.app/api/chart?code=%5ETWII&'+(hourly?'range=1y&interval=60m':'range=3y&interval=1d');
+      var url=window.__API+'/api/chart?code=%5ETWII&'+(hourly?'range=1y&interval=60m':'range=3y&interval=1d');
       MK.cache[k]=fetch(url).then(function(r){return r.json();}).then(function(d){
         var a=(d&&d.data)||[]; if(hourly) a.forEach(function(c){ if(typeof c.time==='number') c.time+=8*3600; });
         return a.filter(function(c){ return c&&c.open>0&&c.close>0; });
@@ -16192,8 +16263,8 @@
     function fetchBars(kind){
       var code=(typeof currentCode!=='undefined')?currentCode:''; var k=code+'|'+kind;
       if(VP.cache[k]) return VP.cache[k];
-      var url=kind==='day' ? 'https://tw-stock-screener-neon.vercel.app/api/chart?code='+encodeURIComponent(code)+'&range=3y&interval=1d&raw=1'
-                           : 'https://tw-stock-screener-neon.vercel.app/api/chart?code='+encodeURIComponent(code)+'&range=2y&interval=60m';
+      var url=kind==='day' ? window.__API+'/api/chart?code='+encodeURIComponent(code)+'&range=3y&interval=1d&raw=1'
+                           : window.__API+'/api/chart?code='+encodeURIComponent(code)+'&range=2y&interval=60m';
       VP.cache[k]=fetch(url).then(function(r){return r.json();}).then(function(d){
         var a=(d&&d.data)||[]; if(kind==='hour') a.forEach(function(c){ if(typeof c.time==='number') c.time+=8*3600; });
         return a;
@@ -16281,31 +16352,26 @@
     var origShow=window._showView, origOpen=window.openChart, origClose=window.closeChart;
     function chartOpen(){ var m=document.getElementById('chartModal'); return !!(m&&m.classList.contains('open')); }
     window._showView=function(v){
+      if(!popping&&!(cur===null&&initHash.startsWith('member/')))window.AcademyNavigationLayers?.clear();
       var r=origShow.apply(this,arguments);
-      if(!popping&&!(history.state&&history.state.academyMember)){
+      if(!popping&&!(cur===null&&initHash.startsWith('member/'))){
+        window.dispatchEvent(new Event('academy-public-navigation'));
         var params=new URLSearchParams(location.search);params.delete('view');var query=params.toString();
         var url=location.pathname+(query?'?'+query:'')+(v&&v!=='home'?'#'+v:'');
         if(cur===null) history.replaceState({v:v},'',url);
-        else if(v!==cur) history.pushState({v:v},'',url);
+        else if(v!==cur||(history.state&&(history.state.academyMember||history.state.academyLayers?.length))) history.pushState({v:v},'',url);
       }
       cur=v; try{ window._fhPageBg && window._fhPageBg(v==='fhedge'); }catch(e){}
       return r;
     };
-    if(typeof origOpen==='function') window.openChart=function(){
-      if(!chartOpen()&&!popping) history.pushState({v:cur,modal:1},'',location.href);
-      return origOpen.apply(this,arguments);
-    };
-    if(typeof origClose==='function') window.closeChart=function(){
-      if(!popping&&history.state&&history.state.modal){ history.back(); return; }   // 由 popstate 實際關閉
-      return origClose.apply(this,arguments);
-    };
     window.addEventListener('popstate',function(e){
-      if(e.state&&e.state.academyMember) return;
+      if(window.AcademyNavigationLayers?.handlesPop())return;
+      if(e.state&&e.state.academyMember){if(chartOpen()&&typeof origClose==='function')origClose();return;}
       popping=true;
       try{
-        if(chartOpen()&&typeof origClose==='function'){ origClose(); return; }
+        if(chartOpen()&&typeof origClose==='function')origClose();
         var v=(e.state&&e.state.v)||(location.hash.slice(1)||'home');
-        if(!window._VIEWS||!window._VIEWS[v]) v='home';
+        if(v!=='screen'&&(!window._VIEWS||!window._VIEWS[v])) v='home';
         if(v!==cur) window._showView(v);
       } finally { popping=false; }
     });
@@ -16477,15 +16543,15 @@
     w.append(f,grip,stage);stage.append(empty,r);
     const b=document.createElement('button');b.className='pro-filter-toggle';b.type='button';b.innerHTML=icons.chevron+'<span>收合篩選條件</span>';f.prepend(b);
     const saved=localStorage.getItem('pro-filter-collapsed-v2')==='1';w.classList.toggle('collapsed',saved);
-    const savedWidth=parseFloat(localStorage.getItem('pro-screen-left-v2')||'76');if(Number.isFinite(savedWidth))w.style.setProperty('--screen-left',Math.max(42,Math.min(78,savedWidth))+'%');
+    const savedWidth=parseFloat(localStorage.getItem('pro-screen-left-v5')||'52');if(Number.isFinite(savedWidth))w.style.setProperty('--screen-left',Math.max(42,Math.min(78,savedWidth))+'%');
     b.onclick=()=>{w.classList.toggle('collapsed');localStorage.setItem('pro-filter-collapsed-v2',w.classList.contains('collapsed')?'1':'0');};
     const setSplit=x=>{const box=w.getBoundingClientRect(),pct=(x-box.left)/box.width*100,clamped=Math.max(42,Math.min(78,pct));w.style.setProperty('--screen-left',clamped+'%');grip.setAttribute('aria-valuenow',Math.round(clamped));return clamped;};
     grip.addEventListener('pointerdown',e=>{if(matchMedia('(max-width:760px)').matches)return;w.classList.remove('collapsed');grip.setPointerCapture(e.pointerId);grip.classList.add('dragging');document.body.classList.add('pro-resizing');e.preventDefault();});
     grip.addEventListener('pointermove',e=>{if(grip.hasPointerCapture(e.pointerId))setSplit(e.clientX);});
-    const finish=e=>{if(!grip.hasPointerCapture(e.pointerId))return;const val=setSplit(e.clientX);grip.releasePointerCapture(e.pointerId);grip.classList.remove('dragging');document.body.classList.remove('pro-resizing');localStorage.setItem('pro-screen-left-v2',val.toFixed(1));};
+    const finish=e=>{if(!grip.hasPointerCapture(e.pointerId))return;const val=setSplit(e.clientX);grip.releasePointerCapture(e.pointerId);grip.classList.remove('dragging');document.body.classList.remove('pro-resizing');localStorage.setItem('pro-screen-left-v5',val.toFixed(1));};
     grip.addEventListener('pointerup',finish);grip.addEventListener('pointercancel',finish);
-    grip.addEventListener('dblclick',()=>{w.style.setProperty('--screen-left','66%');localStorage.setItem('pro-screen-left','66');grip.setAttribute('aria-valuenow','66');});
-    grip.addEventListener('keydown',e=>{if(e.key!=='ArrowLeft'&&e.key!=='ArrowRight')return;const cur=parseFloat(getComputedStyle(w).getPropertyValue('--screen-left'))||66,next=Math.max(42,Math.min(78,cur+(e.key==='ArrowRight'?2:-2)));w.style.setProperty('--screen-left',next+'%');localStorage.setItem('pro-screen-left',String(next));grip.setAttribute('aria-valuenow',String(next));e.preventDefault();});
+    grip.addEventListener('dblclick',()=>{w.style.setProperty('--screen-left','52%');localStorage.setItem('pro-screen-left-v5','52');grip.setAttribute('aria-valuenow','52');});
+    grip.addEventListener('keydown',e=>{if(e.key!=='ArrowLeft'&&e.key!=='ArrowRight')return;const cur=parseFloat(getComputedStyle(w).getPropertyValue('--screen-left'))||66,next=Math.max(42,Math.min(78,cur+(e.key==='ArrowRight'?2:-2)));w.style.setProperty('--screen-left',next+'%');localStorage.setItem('pro-screen-left-v5',String(next));grip.setAttribute('aria-valuenow',String(next));e.preventDefault();});
     const mo=new MutationObserver(()=>{
       const modal=document.getElementById('chartModal');if(!modal)return;
       if(modal.classList.contains('open')){w.dataset.wasCollapsed=w.classList.contains('collapsed')?'1':'0';w.classList.add('collapsed');}
@@ -17022,10 +17088,11 @@
 .fx-session-note{font-size:10px;line-height:1.8;color:var(--text-muted);margin:7px 0 0;overflow-wrap:anywhere}
 #fhForeignCost .fx-session-switch{grid-column:1}#fhForeignCost .fx-cost-price{grid-column:1}#fhForeignCost .fx-session-note{grid-column:1/-1}#fhForeignCost .fx-ecg{grid-row:1/7}
 </style>
+<script src="assets/foreign-cost-card.js?v=direction4"></script>
 <script>
 (function(){
  var verifiedSettlement={"date":"2026-09-16","product":"TX","basis":{"long":{"lots":7805.0,"amount_thousand":71902338.0,"point":46061.715566944265},"short":{"lots":84156.0,"amount_thousand":775297770.0,"point":46063.13097105376},"net":{"lots":-76351.0,"amount_thousand":-703395432.0,"point":46063.27566109154}},"unit":"TWD thousand","source_url":"https://www.taifex.com.tw/cht/3/futContractsDate?queryType=1&doQuery=1&queryDate=2026%2F09%2F16","scope":"All listed TX delivery months; settlement-value proxy, not entry cost"};
- var basis='net',snapshot=null,quotes={day:null,night:null},marketSession='day',quotesLoading=true,period=null,api=location.protocol==='file:'?'https://tw-stock-screener-neon.vercel.app':'',busy=false;
+ var basis='net',snapshot=null,quotes={day:null,night:null},marketSession='day',quotesLoading=true,period=null,api=window.__API,busy=false;
  function fmt(v){return Number.isFinite(v)?v.toLocaleString('zh-TW',{maximumFractionDigits:2}):'—';}
  function monthly(y,m){var d=new Date(Date.UTC(y,m,1)),day=1+(3-d.getUTCDay()+7)%7+14,iso=new Date(Date.UTC(y,m,day)).toISOString().slice(0,10);return window._twAdj?window._twAdj(iso):iso;}
  function getPeriod(){var now=new Date(Date.now()+8*3600e3),today=now.toISOString().slice(0,10),y=now.getUTCFullYear(),m=now.getUTCMonth(),date=monthly(y,m);if(date>today){m--;date=monthly(y,m);}var following=new Date(Date.UTC(y,m+1,1));return {date:date,month:following.toISOString().slice(0,7),next:monthly(following.getUTCFullYear(),following.getUTCMonth())};}
@@ -17044,12 +17111,12 @@
    if(!ready||tone==='flat')icon='<span class="fx-tug-meet" aria-hidden="true"><i class="fx-tug-ray left"></i><i class="fx-tug-ray right"></i><span class="fx-tug-firework">'+Array.from({length:12},function(_,i){return i*30;}).map(function(angle){return '<i style="--spark-angle:'+angle+'deg"></i>';}).join('')+'</span></span>';
    else icon='<span class="fx-flight '+(tone==='up'?'rocket':'meteor')+'" style="left:'+position+'%" aria-hidden="true">'+(tone==='up'?'<svg viewBox="0 0 24 24"><path d="M8 15 C7 9 12 4 20 3 C19 11 14 16 9 16 Z M8 11 L4 12 L3 17 L8 15 M12 16 L12 21 L17 20 L17 15 M7 17 L3 21"/><circle cx="15" cy="8" r="2"/></svg>':'<svg viewBox="0 0 24 24"><circle cx="7" cy="17" r="4"/><path d="M9 12 L19 2 M12 15 L22 5 M6 10 L13 3 M14 18 L20 12"/></svg>')+'</span>';
   }
-  return '<div class="fx-ecg '+(tone||'pending')+'" data-fx-effect="'+(!detailed||!valid?'none':!ready?'basis-demo':tone==='flat'?'tug':tone==='up'?'rocket':'meteor')+'"><div class="fx-ecg-plot" style="background:none">'+(valid?'<div class="fx-cost-zone" style="left:'+(costPos-500/(max-min)*84)+'%;width:'+(1000/(max-min)*84)+'%"><span>±500</span></div>':'')+'<svg viewBox="0 0 300 52" preserveAspectRatio="none" aria-hidden="true"><path class="fx-ecg-axis" d="M0 26 H300"/><path class="fx-ecg-white-lead" pathLength="100" d="'+lead+path.replace(/^M[^ ]+ 26/,'')+'"/><path class="fx-ecg-base" d="'+path+'"/>'+'</svg><i class="fx-ecg-threshold center" style="left:'+costPos+'%"></i><span class="fx-ecg-cost-label" style="left:'+costPos+'%">成本 '+integer(v)+'</span>'+(ready?'<i class="fx-ecg-dot" style="left:'+position+'%"></i><b class="fx-ecg-current-label" style="left:'+position+'%">'+integer(price)+'</b>':'<span class="fx-ecg-pending">目前價格待更新'+(detailed&&valid?' · 光效為結算基準示意':'')+'</span>')+icon+'</div></div>';
+  return '<div class="fx-ecg '+(tone||'pending')+'" data-fx-effect="'+(!detailed?(ready?'trace':'waiting'):!valid?'none':!ready?'basis-demo':tone==='flat'?'tug':tone==='up'?'rocket':'meteor')+'"><div class="fx-ecg-plot" style="background:none">'+(valid?'<div class="fx-cost-zone" style="left:'+(costPos-500/(max-min)*84)+'%;width:'+(1000/(max-min)*84)+'%"><span>±500</span></div>':'')+'<svg viewBox="0 0 300 52" preserveAspectRatio="none" aria-hidden="true"><path class="fx-ecg-axis" d="M0 26 H300"/><path class="fx-ecg-white-lead" pathLength="100" d="'+lead+path.replace(/^M[^ ]+ 26/,'')+'"/><path class="fx-ecg-base" d="'+path+'"/>'+'</svg><i class="fx-ecg-threshold center" style="left:'+costPos+'%"></i><span class="fx-ecg-cost-label" style="left:'+costPos+'%">成本 '+integer(v)+'</span>'+(ready?'<i class="fx-ecg-dot" style="left:'+position+'%"></i><b class="fx-ecg-current-label" style="left:'+position+'%">'+integer(price)+'</b>':'<span class="fx-ecg-pending">目前價格待更新'+(detailed&&valid?' · 光效為結算基準示意':'')+'</span>')+icon+'</div></div>';
  }
  function positionLots(){var b=snapshot&&snapshot.basis||{},count=function(key){var n=b[key]&&b[key].lots;return Number.isInteger(n)&&(key==='net'||n>=0)?n:null;},long=count('long'),short=count('short'),net=count('net'),label=net==null?'多空淨額':net<0?'淨空':net>0?'淨多':'多空持平',source=snapshot?'https://www.taifex.com.tw/cht/3/futContractsDate?queryType=1&doQuery=1&queryDate='+encodeURIComponent(snapshot.date.replace(/-/g,'/')):null;
  return '<section class="fx-position-lots" aria-label="結算基準日外資未平倉口數"><div class="fx-lots-heading">結算基準日外資未平倉口數</div><div class="fx-lots-grid"><div><span>多單</span><b>'+fmt(long)+'<small>口</small></b></div><div><span>空單</span><b>'+fmt(short)+'<small>口</small></b></div><div><span>'+label+'</span><b>'+fmt(net==null?null:Math.abs(net))+'<small>口</small></b></div></div><p>臺股期貨 TX・所有到期月份合計'+(source?' · <a href="'+source+'" target="_blank" rel="noopener noreferrer">期交所來源</a>':' · 口數待更新')+'<br>口數固定於基準日；日／夜盤僅切換價格。非當月到期實際結算口數。</p></section>';}
- function render(error){var current=quotes[marketSession],sessionLabel=marketSession==='night'?'夜盤':'日盤';hosts.forEach(function(host){if(!host)return;var b=snapshot&&snapshot.basis.net,v=b&&b.point,price=current&&current.price,diff=Number.isFinite(price)&&Number.isFinite(v)?price-v:null,tone=diff==null?'':diff>500?'up':diff< -500?'down':'flat',status=diff==null?'價格資料待更新':diff>500?'外資籌碼樂觀':diff< -500?'外資籌碼悲觀':'多空拉鋸';var month=period?+period.month.slice(5)+'月':'';
- host.innerHTML='<article class="fx-cost"><div class="fx-cost-top"><h3>外資結算成本</h3><span class="fx-cost-month">'+month+' · 估算</span></div><div class="fx-session-switch" role="group" aria-label="臺指期行情盤別">'+['day','night'].map(function(key){return '<button type="button" data-fx-session="'+key+'" aria-pressed="'+(marketSession===key)+'">'+(key==='day'?'日盤':'夜盤')+'</button>';}).join('')+'</div><div class="fx-cost-price"><small>'+sessionLabel+'收盤</small>'+(Number.isFinite(price)?'<b>'+fmt(price)+'</b><span>點</span>':'<b class="pending">待更新</b>')+'</div><div class="fx-cost-number"><small class="fx-cost-tag">外資結算成本</small>'+fmt(v)+'<span>點</span></div><div class="fx-cost-state '+tone+'">'+(!Number.isFinite(v)?'結算資料待更新':diff==null?status:'<span>'+(diff>0?'在成本之上 ':diff<0?'在成本之下 ':'與成本相同 ')+fmt(Math.abs(diff))+'點</span><b>'+status+'</b>')+'</div>'+ecg(v,price,diff,tone,host.id==='fhForeignCost')+'<p class="fx-cost-caption">基準 '+(snapshot?snapshot.date.slice(5):period?period.date.slice(5):'—')+' · 下次 '+(period?period.next.slice(5):'—')+' 盤後</p>'+(host.id==='fhForeignCost'?positionLots():'')+'<p class="fx-cost-rule">高於成本500點偏多、低於500點偏空；其餘多空拉鋸。僅依價格位置判讀。</p>'+ (host.id==='fhForeignCost'?'<div class="fx-analysis-metrics"><div><small>臺指期 · '+sessionLabel+'收盤</small><b>'+fmt(price)+' 點</b><span>'+(current?'交易日 '+current.date+' · '+current.contractMonth+' 近月合約':quotesLoading?'行情載入中…':sessionLabel+'資料待更新')+'</span></div><div><small>距估算成本</small><b>'+(diff==null?'—':(diff>=0?'+':'')+fmt(diff))+' 點</b><span>'+sessionLabel+'收盤與固定結算基準比較</span></div><div><small>上／下方向門檻</small><b>'+fmt(Number.isFinite(v)?v+500:null)+'／'+fmt(Number.isFinite(v)?v-500:null)+'</b><span>成本上下500點</span></div><div><small>觀察月份</small><b>'+month+'</b><span>基準取自結算日，盤後公布才更新</span></div></div>':'')+(host.id==='fhForeignCost'?'<p class="fx-session-note" aria-live="polite">'+sessionLabel+' · '+(current?'交易日 '+current.date+' · 近月 '+current.contractMonth:quotesLoading?'行情載入中…':'資料待更新')+' · 期交所公布行情，非即時報價</p>':'')+'</article>';if(host.id==='fhForeignCost'){var chart=host.querySelector('.fx-ecg');function play(){if(!chart)return;chart.classList.remove('fx-play');var burst=chart.querySelector('.fx-tug-firework');if(burst)burst.style.display='none';chart.querySelectorAll('.fx-ecg-white-lead,.fx-tug-ray,.fx-tug-firework i,.fx-flight').forEach(function(n){n.style.animation='none';});void chart.offsetWidth;if(burst)burst.style.display='';chart.classList.add('fx-play');chart.querySelectorAll('.fx-ecg-white-lead,.fx-tug-ray,.fx-tug-firework i,.fx-flight').forEach(function(n){n.style.animation='';});}host.onpointerenter=play;host.dataset.lastTone=tone;requestAnimationFrame(play);}});mount();}
+ function render(error){var current=quotes[marketSession],sessionLabel=marketSession==='night'?'夜盤':'日盤';hosts.forEach(function(host){if(!host)return;if(host.id==='hpForeignCost'&&window.AcademyForeignCostCard){window.AcademyForeignCostCard.render(host,{snapshot:snapshot,current:current,marketSession:marketSession,period:period,quotesLoading:quotesLoading});return;}var b=snapshot&&snapshot.basis.net,v=b&&b.point,price=current&&current.price,diff=Number.isFinite(price)&&Number.isFinite(v)?price-v:null,tone=diff==null?'':diff>500?'up':diff< -500?'down':'flat',status=diff==null?'價格資料待更新':diff>500?'外資籌碼樂觀':diff< -500?'外資籌碼悲觀':'多空拉鋸';var month=period?+period.month.slice(5)+'月':'';
+ host.innerHTML='<article class="fx-cost"><div class="fx-cost-top"><h3>外資結算成本</h3><span class="fx-cost-month">'+month+' · 估算</span></div><div class="fx-session-switch" role="group" aria-label="臺指期行情盤別">'+['day','night'].map(function(key){return '<button type="button" data-fx-session="'+key+'" aria-pressed="'+(marketSession===key)+'">'+(key==='day'?'日盤':'夜盤')+'</button>';}).join('')+'</div><div class="fx-cost-price"><small>'+sessionLabel+'收盤</small>'+(Number.isFinite(price)?'<b>'+fmt(price)+'</b><span>點</span>':'<b class="pending">待更新</b>')+'</div><div class="fx-cost-number"><small class="fx-cost-tag">外資結算成本</small>'+fmt(v)+'<span>點</span></div><div class="fx-cost-state '+tone+'">'+(!Number.isFinite(v)?'結算資料待更新':diff==null?status:'<span>'+(diff>0?'在成本之上 ':diff<0?'在成本之下 ':'與成本相同 ')+fmt(Math.abs(diff))+'點</span><b>'+status+'</b>')+'</div>'+ecg(v,price,diff,tone,host.id==='fhForeignCost')+(host.id==='fhForeignCost'?'<p class="fx-cost-caption">基準 '+(snapshot?snapshot.date.slice(5):period?period.date.slice(5):'—')+' · 下次 '+(period?period.next.slice(5):'—')+' 盤後</p>':'')+(host.id==='fhForeignCost'?positionLots():'')+'<p class="fx-cost-rule">高於成本500點偏多、低於500點偏空；其餘多空拉鋸。僅依價格位置判讀。</p>'+ (host.id==='fhForeignCost'?'<div class="fx-analysis-metrics"><div><small>臺指期 · '+sessionLabel+'收盤</small><b>'+fmt(price)+' 點</b><span>'+(current?'交易日 '+current.date+' · '+current.contractMonth+' 近月合約':quotesLoading?'行情載入中…':sessionLabel+'資料待更新')+'</span></div><div><small>距估算成本</small><b>'+(diff==null?'—':(diff>=0?'+':'')+fmt(diff))+' 點</b><span>'+sessionLabel+'收盤與固定結算基準比較</span></div><div><small>上／下方向門檻</small><b>'+fmt(Number.isFinite(v)?v+500:null)+'／'+fmt(Number.isFinite(v)?v-500:null)+'</b><span>成本上下500點</span></div><div><small>觀察月份</small><b>'+month+'</b><span>基準取自結算日，盤後公布才更新</span></div></div>':'')+(host.id==='fhForeignCost'?'<p class="fx-session-note" aria-live="polite">'+sessionLabel+' · '+(current?'交易日 '+current.date+' · 近月 '+current.contractMonth:quotesLoading?'行情載入中…':'資料待更新')+' · 期交所公布行情，非即時報價</p>':'')+'</article>';if(host.id==='fhForeignCost'){var chart=host.querySelector('.fx-ecg');function play(){if(!chart)return;chart.classList.remove('fx-play');var burst=chart.querySelector('.fx-tug-firework');if(burst)burst.style.display='none';chart.querySelectorAll('.fx-ecg-white-lead,.fx-tug-ray,.fx-tug-firework i,.fx-flight').forEach(function(n){n.style.animation='none';});void chart.offsetWidth;if(burst)burst.style.display='';chart.classList.add('fx-play');chart.querySelectorAll('.fx-ecg-white-lead,.fx-tug-ray,.fx-tug-firework i,.fx-flight').forEach(function(n){n.style.animation='';});}host.onpointerenter=play;host.dataset.lastTone=tone;requestAnimationFrame(play);}});mount();}
  async function load(){if(busy)return;busy=true;if(window._loadTwHol){try{await window._loadTwHol();}catch(e){}}period=getPeriod();if(verifiedSettlement.date===period.date)snapshot=verifiedSettlement;render();
  try{var r=await fetch(api+'/api/screen?stat=foreign_settlement_cost&date='+period.date);if(!r.ok)throw Error();snapshot=await r.json();if(snapshot.date!==period.date)throw Error();}catch(e){snapshot=null;var today=new Date(Date.now()+8*3600e3).toISOString().slice(0,10);if(period.date===today){var d=new Date(period.date+'T00:00:00Z'),previous=monthly(d.getUTCFullYear(),d.getUTCMonth()-1);try{var r2=await fetch(api+'/api/screen?stat=foreign_settlement_cost&date='+previous);if(!r2.ok)throw Error();var old=await r2.json();if(old.date!==previous)throw Error();snapshot=old;period={date:previous,month:period.date.slice(0,7),next:period.date};}catch(e){}}}
  if(!snapshot&&verifiedSettlement.date===period.date)snapshot=verifiedSettlement;
@@ -17161,12 +17228,14 @@
 </script>
 <script src="assets/sector-dashboard-model.js" defer></script>
 <script src="assets/sector-dashboard.js" defer></script>
-<script src="assets/member-identity.js?v=levels20" defer></script>
-<script src="assets/member-missions.js?v=1" defer></script>
-<script src="assets/member-share.js?v=levels20" defer></script>
+<script src="assets/member-invitation.js?v=1" defer></script>
+<script src="assets/member-identity.js?v=wallet-ledger1" defer></script>
+<script src="assets/member-missions.js?v=perks2a" defer></script>
+<script src="assets/member-share.js?v=invite2" defer></script>
 <script src="assets/member-provider-icons.js" defer></script>
 <script src="assets/member-cloud.js" defer></script>
-<script src="assets/member-features.js?v=levels20" defer></script>
+<script src="assets/member-wallet.js?v=ledger1" defer></script>
+<script src="assets/member-features.js?v=wallet-ledger1" defer></script>
 <script src="assets/member-strategy-engine.js" defer></script>
 <script src="assets/member-strategy-ui.js?v=owl2" defer></script>
 <script src="assets/member-research.js" defer></script>
@@ -17180,16 +17249,21 @@
 <script src="assets/site-search.js" defer></script>
 <script src="assets/member-derivatives-catalog.js" defer></script>
 <script src="assets/member-trade-ui.js" defer></script>
-<script src="assets/member-journey.js?v=2" defer></script>
-<script src="assets/member-center.js?v=journey20" defer></script>
-<script src="assets/member-signin.js?v=vouchers19" defer></script>
+<script src="assets/member-journey.js?v=calendar2" defer></script>
+<script src="assets/member-center.js?v=logo-home19" defer></script>
+<script src="assets/member-signin.js?v=invite2" defer></script>
 <script src="assets/member-private-screen.js" defer></script>
-<link rel="stylesheet" href="assets/site-readability.css">
+<link rel="stylesheet" href="assets/site-readability.css?v=futures-history3">
+<link rel="stylesheet" href="assets/foreign-cost-card.css?v=direction4">
 <script src="assets/foresight-brand.js?v=fqi28" defer></script>
-<link rel="stylesheet" href="assets/research-polish.css?v=6">
-<link rel="stylesheet" href="assets/focus-rankings.css?v=1">
-<script src="assets/focus-rankings.js?v=1" defer></script>
+<link rel="stylesheet" href="assets/research-polish.css?v=11">
+<link rel="stylesheet" href="assets/focus-rankings.css?v=4">
+<script src="assets/focus-rankings.js?v=4" defer></script>
+<link rel="stylesheet" href="assets/screen-log.css?v=save-compact18">
+<script src="assets/screen-inline-calendar.js?v=precision9" defer></script>
+<script src="assets/screen-log.js?v=calendar-compat22" defer></script>
 <script src="assets/pattern-focus.js?v=2" defer></script>
 <script src="assets/member-quick-menu.js?v=3" defer></script>
+<script src="assets/navigation-layers.js?v=logo-home19" defer></script>
 </body>
 </html>

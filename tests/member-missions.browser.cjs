@@ -1,32 +1,49 @@
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),{chromium}=require('playwright');
-const root=path.resolve(__dirname,'..'),web=path.join(root,'apps/web'),out='C:/Users/JUSTY LIN/Documents/Codex/2026-10-08/new-chat/member-missions-review';fs.mkdirSync(out,{recursive:true});
+const root=path.resolve(__dirname,'..'),web=path.join(root,'apps/web'),out='C:/Users/JUSTY LIN/Documents/Codex/2026-10-08/new-chat/member-perks-2a-review';fs.mkdirSync(out,{recursive:true});
 const html=fs.readFileSync(path.join(web,'index.html'),'utf8'),css=[...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map(m=>m[1]).join('\n')+fs.readFileSync(path.join(web,'assets/member-center.css'),'utf8')+fs.readFileSync(path.join(web,'assets/research-polish.css'),'utf8');
 (async()=>{const browser=await chromium.launch({channel:'msedge',headless:true});try{
  for(const theme of ['light','dark']){
-  const page=await browser.newPage({viewport:{width:1366,height:900}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
-  await page.route('**/*',route=>route.fulfill({contentType:'text/html; charset=utf-8',body:'<!doctype html><html><head><meta charset="utf-8"></head><body><main class="member-page"><div class="member-journey"><section class="mj-hero"><h2>會員任務與禮遇</h2></section></div></main></body></html>'}));
-  await page.goto('https://missions.fixture.test/');await page.addStyleTag({content:css});await page.addScriptTag({path:path.join(web,'assets/member-missions.js')});
-  await page.evaluate(theme=>{
-   document.documentElement.dataset.theme=theme;localStorage.setItem('sb_token','member-a');window.testPoints=180;window.claims=0;window.exchanges=0;window.requests=[];window.receipt=null;window.failFirst=true;window.claimed=false;
-   const time=()=>new Date().toISOString();
-   window.AcademyIdentity={
-    walletSummary:async()=>({task_points:window.testPoints,stored_enabled:false,stored_points:null,server_time:time()}),
-    taskStatus:async()=>({server_time:time(),rows:[{id:'verify-contact-v1',title:'完成信箱或手機驗證',points:20,eligible:true,claimed:window.claimed}]}),
-    exchangeOptions:async()=>({server_time:time(),rows:[{id:'choice-3d-v1',title:'自選券 · 3 天',points:180,duration_days:3,tier:'choice'}]}),
-    claimTask:async id=>{window.claims++;window.claimed=true;window.testPoints+=20;return{id:'task-entry',points:20};},
-    exchangePoints:async(id,request)=>{window.requests.push(request);if(!window.receipt){window.exchanges++;window.testPoints-=180;window.receipt={reward_id:'voucher-issued',points:180};}if(window.failFirst){window.failFirst=false;throw Error('回應中斷，請重試；相同單號不重複扣點。');}return window.receipt;}
-   };
-   window.mountFixture=()=>AcademyMemberMissions.mount(document.querySelector('.member-journey'),{profile:{id:'member-a'},go:view=>window.destination=view});window.mountFixture();
-  },theme);
-  await page.locator('[data-task-claim]').waitFor();await page.locator('[data-task-claim]').click();await page.waitForFunction(()=>document.querySelector('[data-task-claim]').textContent==='已領取');assert.equal(await page.evaluate(()=>window.claims),1);assert.equal(await page.evaluate(()=>window.testPoints),200);
-  await page.locator('.mj-live-exchanges summary').click();
-  for(const width of [1366,375,320]){await page.setViewportSize({width,height:900});assert.ok(await page.locator('.member-page').evaluate(e=>e.scrollWidth<=e.clientWidth+1),'missions must fit '+theme+' '+width);await page.screenshot({path:path.join(out,'missions-'+theme+'-'+width+'.png')});}
-  await page.locator('[data-points-exchange]').click();await page.waitForFunction(()=>document.querySelector('[data-mission-status]').textContent.includes('回應中斷'));await page.locator('[data-points-exchange]').click();await page.waitForFunction(()=>document.querySelector('[data-mission-status]').textContent.includes('使用券已存入'));
-  assert.equal(await page.evaluate(()=>window.exchanges),1);assert.equal(await page.evaluate(()=>window.testPoints),20);const requests=await page.evaluate(()=>window.requests);assert.equal(requests.length,2);assert.equal(requests[0],requests[1],'network retry uses the original idempotency key');assert.equal(await page.locator('[data-points-exchange]').isDisabled(),true);
-  await page.getByRole('button',{name:'查看我的使用券 →'}).click();assert.equal(await page.evaluate(()=>window.destination),'gifts');
-  // An old member's in-flight response must not paint after switching accounts.
-  await page.evaluate(()=>{document.querySelector('.mj-live-missions').remove();window.AcademyIdentity.taskStatus=()=>new Promise(resolve=>window.finishOldTask=resolve);window.mountFixture();localStorage.setItem('sb_token','member-b');window.finishOldTask({server_time:new Date().toISOString(),rows:[{id:'old-member',title:'OLD PRIVATE TASK',points:999,eligible:true}]});});await page.waitForTimeout(50);assert.equal(await page.locator('[data-task-claim]').count(),0);assert.equal((await page.locator('.mj-live-missions').innerText()).includes('OLD PRIVATE TASK'),false);
-  assert.deepEqual(errors,[]);await page.close();
+ const page=await browser.newPage({viewport:{width:1366,height:900}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.route('**/*',r=>r.fulfill({contentType:'text/html; charset=utf-8',body:'<!doctype html><html><head><meta charset="utf-8"></head><body><main class="member-page" id="main"></main></body></html>'}));
+ await page.goto('https://perks.fixture.test/');await page.addStyleTag({content:css});
+ for(const name of ['member-missions.js','member-journey.js'])await page.addScriptTag({path:path.join(web,'assets',name)});
+ await page.evaluate(theme=>{
+  document.documentElement.dataset.theme=theme;localStorage.setItem('sb_token','member-a');window.points=120;window.calls=0;window.claims=0;window.exchanges=0;window.requests=[];window.receipt=null;window.failFirst=true;window.perksClosed=true;window.claimed=false;window.capped=false;window.rejectTask='';
+  const now=()=>new Date().toISOString();window.now=now;
+  window.profile={id:'member-a',display_name:'研究會員',member_preferences:{}};
+  window.AcademyIdentity={walletSummary:async()=>({task_points:window.points}),taskStatus:async()=>{window.calls++;return {server_time:now(),caps:{daily_research:{used:window.capped?30:window.claimed?5:0,limit:30},weekly_research:{used:0,limit:150}},rows:window.perksClosed?[]:[{id:'name-v1',title:'設定研究暱稱',points:25,period:'once',eligible:true,claimed:false},{id:'daily-screen-v1',title:'記錄今日選股',points:5,period:'daily',cap_group:'daily_research',eligible:true,claimed:window.claimed},{id:'birthday-v1',title:'生日當月禮',points:100,period:'yearly',eligible:true,claimed:false,voucher_days:3},{id:'feedback-v1',title:'回饋',points:40,eligible:true,review_only:true},{id:'verify-contact-v1',title:'完成驗證',points:20,eligible:true,claimed:false},{id:'invite-first-v1',title:'首位有效邀請',points:60,eligible:true,claimed:false}]};},exchangeOptions:async()=>({server_time:now(),rows:window.perksClosed?[]:[{id:'choice-3d-v1',title:'自選單品券',points:150,duration_days:3,tier:'choice'}]}),claimTask:async id=>{window.claims++;if(window.rejectTask)throw Object.assign(Error(window.rejectTask),{code:window.rejectTask});if(id==='daily-screen-v1')window.claimed=true;window.points+=id==='daily-screen-v1'?5:100;return{id:'award',reward_id:id==='birthday-v1'?'birthday-voucher':null};},exchangePoints:async(id,key)=>{window.requests.push(key);if(!window.receipt){window.points-=150;window.exchanges++;window.receipt={reward_id:'new-voucher'};}if(window.failFirst){window.failFirst=false;throw Error('網路中斷，請重試');}return window.receipt;}};
+  window.renderFixture=(view='tasks')=>AcademyMemberJourney.render(view,{main:document.getElementById('main'),profile:window.profile,go:view=>window.destination=view});window.renderFixture();
+ },theme);
+ await page.waitForFunction(()=>document.querySelector('[data-reward-balance]').textContent.includes('120'));
+ assert.equal(await page.locator('.mj-live-tasks,.mj-live-exchanges').count(),0,'no duplicate catalogs');
+ assert.equal(await page.getByRole('button',{name:'尚未開放兌換',exact:true}).count(),7);
+ assert.equal(await page.locator('[data-task-id=name] [data-task-claim]').isDisabled(),true,'closed tasks cannot claim');
+ await page.evaluate(()=>{window.perksClosed=false;document.querySelector('[data-rewards-refresh]').click();});
+ await page.waitForFunction(()=>document.querySelector('[data-task-id=name] [data-task-claim]').textContent==='領取 +25 點');
+ assert.equal(await page.locator('[data-task-id=name] .mj-task-bottom strong').innerText(),'+25 點','points come from server');
+ assert.match(await page.locator('[data-reward-caps]').innerText(),/今日 0\/30.*本週 0\/150/);
+ const ticket=page.locator('[data-exchange-id=choice-3d-v1]');assert.match(await ticket.locator('button').innerText(),/還差 30 點/);assert.equal(await ticket.locator('button').isDisabled(),true);
+ await page.locator('[data-mj-filter=daily]').click();const daily=page.locator('[data-task-id=daily-screen] [data-task-claim]');
+ assert.equal(await daily.isDisabled(),true,'server eligible true must still require local activity');
+ await page.evaluate(()=>{const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());localStorage.setItem('academy.research.v1.member-a',JSON.stringify({screen_logs:[{date:parts,saved_at:new Date().toISOString(),strategy:'strategy1',stocks:[{code:'2330'}]}]}));document.querySelector('[data-rewards-refresh]').click();});
+ await page.waitForFunction(()=>document.querySelector('[data-task-id=daily-screen] [data-task-claim]').disabled===false);
+ await daily.click();await page.waitForFunction(()=>document.querySelector('[data-task-id=daily-screen] [data-task-claim]').textContent==='本期已領');assert.equal(await page.evaluate(()=>window.points),125);assert.equal(await page.evaluate(()=>window.claims),1);
+ await page.evaluate(()=>{window.claimed=false;window.capped=true;document.querySelector('[data-rewards-refresh]').click();});await page.waitForFunction(()=>document.querySelector('[data-reward-caps]').textContent.includes('30/30'));assert.equal(await daily.isDisabled(),true);assert.match(await page.locator('[data-task-id=daily-screen] [data-task-state]').innerText(),/上限/);
+ await page.evaluate(()=>{window.capped=false;window.rejectTask='MEMBER_TASK_LIMIT_REACHED';document.querySelector('[data-rewards-refresh]').click();});await page.waitForFunction(()=>!document.querySelector('[data-task-id=daily-screen] [data-task-claim]').disabled);await daily.click();await page.waitForFunction(()=>document.querySelector('[data-mission-status]').textContent.includes('上限'));assert.equal(await page.evaluate(()=>window.points),125);
+ await page.locator('[data-mj-filter=share]').click();assert.equal(await page.locator('[data-task-id=feedback] [data-task-claim]').innerText(),'由管理端審核');assert.equal(await page.locator('[data-task-id=invite1] [data-task-claim]').isDisabled(),false,'invite alias maps to server task');assert.equal(await page.locator('[data-task-id=invite3] [data-task-claim]').count(),0);
+ await page.locator('[data-mj-filter=bonus]').click();await page.evaluate(()=>window.rejectTask='');await page.locator('[data-task-id=birthday] [data-task-claim]').click();await page.waitForFunction(()=>document.querySelector('[data-mission-status]').textContent.includes('附贈使用券'));assert.equal(await page.evaluate(()=>window.points),225);assert.equal(await page.locator('[data-task-id=ad-video] [data-task-claim]').isDisabled(),true);
+ for(const width of [1366,375,320]){await page.setViewportSize({width,height:900});assert.ok(await page.locator('.member-page').evaluate(e=>e.scrollWidth<=e.clientWidth+1),'no overflow '+theme+width);await page.screenshot({path:path.join(out,'tasks-'+theme+'-'+width+'.png')});}
+ await ticket.locator('button').click();assert.equal(await page.evaluate(()=>window.exchanges),0,'opening confirmation must not spend points');assert.match(await page.locator('.mj-exchange-dialog').innerText(),/150 點/);assert.match(await page.locator('.mj-exchange-dialog').innerText(),/一個日曆月/);assert.match(await page.locator('.mj-exchange-dialog').innerText(),/完整 3 天/);
+ const bounds=await page.locator('.mj-exchange-dialog').boundingBox();assert.ok(bounds.x>=14&&bounds.y>20,'confirmation centered with viewport breathing room');assert.ok(bounds.x+bounds.width<=320);await page.screenshot({path:path.join(out,'confirm-'+theme+'.png')});await page.locator('[data-cancel]').click();assert.equal(await page.evaluate(()=>window.exchanges),0);await ticket.locator('button').click();await page.locator('[data-confirm]').click();await page.waitForFunction(()=>document.querySelector('[data-exchange-message]').textContent.includes('網路中斷'));assert.equal(await page.evaluate(()=>window.exchanges),1);
+ // Render again as if navigating/reloading; persisted request must remain retryable despite reduced balance.
+ await page.evaluate(()=>window.renderFixture());await page.waitForFunction(()=>document.querySelector('[data-reward-balance]').textContent.includes('75'));
+ assert.match(await ticket.locator('button').innerText(),/上次兌換結果/);assert.equal(await ticket.locator('button').isDisabled(),false);
+ await ticket.locator('button').click();await page.locator('[data-confirm]').click();await page.waitForFunction(()=>window.destination==='gifts');assert.equal(await page.evaluate(()=>window.exchanges),1);assert.equal(await page.evaluate(()=>window.points),75);const requests=await page.evaluate(()=>window.requests);assert.equal(requests[0],requests[1]);
+ // In-flight old-account data must never repaint after account switch.
+ await page.evaluate(()=>{window.AcademyIdentity.taskStatus=()=>new Promise(resolve=>window.finishOld=resolve);window.renderFixture();localStorage.setItem('sb_token','member-b');window.finishOld({server_time:window.now(),rows:[{id:'private',points:900,eligible:true}]});});await page.waitForTimeout(50);assert.equal((await page.locator('[data-reward-balance]').innerText()).includes('75'),false);
+ // Signed-out view has no claims/exchanges and makes no account RPC calls.
+ await page.evaluate(()=>{localStorage.removeItem('sb_token');window.calls=0;window.renderFixture();});await page.waitForTimeout(30);assert.equal(await page.evaluate(()=>window.calls),0);assert.equal(await page.locator('[data-task-claim]:enabled,[data-points-exchange]:enabled').count(),0);
+ assert.deepEqual(errors,[]);await page.close();
  }
- console.log('PASS server task claims, disabled insufficient exchange, explicit confirmation, network-retry idempotency, account-switch isolation and light/dark 1366/375/320 layouts.');
-}finally{await browser.close();}})().catch(error=>{console.error(error);process.exitCode=1;});
+ console.log('PASS perks 2A: closed-state, server prices, local report gate, period claims/caps/errors, birthday voucher, aliases, review-only, explicit confirmation, persisted retry idempotency, gifts route, account isolation, signed-out and light/dark mobile layouts.');
+}finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

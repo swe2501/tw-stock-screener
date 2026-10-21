@@ -35,6 +35,34 @@ body .member-page .mc-muted{font-size:16px!important;line-height:1.8}
 #hpForeignCost .fx-ecg{grid-column:1/-1;grid-row:4;margin:0}
 #hpForeignCost .fx-ecg-plot{height:70px;margin:0}
 #hpForeignCost .fx-cost-caption{grid-column:1/-1;grid-row:5;margin:0;padding:0;font-size:12px!important;line-height:1.5!important}
+/* Compact futures summaries: the price and session share a small footer. */
+#hpFut>.gs-futcard{min-width:0;padding:16px 17px}
+#hpFut>.gs-futcard .h{font-size:14px;line-height:1.6}
+#hpFut>.gs-futcard .big{font-size:27px;margin:9px 0 0}
+#hpFut>.gs-futcard .sub{font-size:12.5px;line-height:1.8}
+#hpForeignCost .fx-cost{grid-template-columns:minmax(0,1fr) auto;gap:6px 10px;padding:16px 17px;align-content:start}
+#hpForeignCost .fx-cost-top{margin:0 0 3px}
+#hpForeignCost .fx-cost-number{grid-column:1/-1;grid-row:2;display:flex;align-items:baseline;gap:5px 7px;flex-wrap:wrap;font-size:23px;line-height:1.4;min-width:0;color:var(--text);font-variant-numeric:tabular-nums}
+#hpForeignCost .fx-cost-number .fx-cost-tag{font-size:12px!important;line-height:1.5;margin:0;color:var(--text-muted);font-weight:500}
+#hpForeignCost .fx-cost-number>span{font-size:11px;margin:0}
+#hpForeignCost .fx-cost-state{font-size:12px;min-height:20px;line-height:1.6;margin:0}
+#hpForeignCost .fx-cost-state b{font-size:11px}
+#hpForeignCost .fx-ecg{margin:5px 0 6px}
+#hpForeignCost .fx-ecg-plot{height:68px;padding-top:8px;overflow:hidden}
+#hpForeignCost .fx-ecg-pending{font-size:10px;top:0}
+#hpForeignCost .fx-ecg-cost-label{top:48px;font-size:11px}
+#hpForeignCost .fx-cost-price{grid-column:1;grid-row:5;display:flex;align-items:baseline;gap:4px 6px;margin:0;min-width:0;flex-wrap:wrap}
+#hpForeignCost .fx-cost-price small{flex-basis:100%;font-size:11px!important;line-height:1.4}
+#hpForeignCost .fx-cost-price b{font-size:22px;line-height:1.3;white-space:nowrap}
+#hpForeignCost .fx-cost-price b.pending{font-size:14px}
+#hpForeignCost .fx-cost-price>span{font-size:10px}
+#hpForeignCost .fx-session-switch{grid-column:2;grid-row:5;align-self:center;margin:0;padding:2px;gap:2px}
+#hpForeignCost .fx-session-switch button{font-size:12px!important;min-height:27px;line-height:1.4;padding:4px 9px}
+#hpForeignCost .fx-ecg[data-fx-effect=waiting]{--ecg-color:var(--accent)}
+#hpForeignCost .fx-ecg[data-fx-effect=waiting] .fx-ecg-white-lead{display:none}
+#hpForeignCost .fx-ecg-plot:after{content:'';position:absolute;left:0;top:29px;height:2px;width:32px;border-radius:2px;background:linear-gradient(90deg,transparent,var(--ecg-color));box-shadow:0 0 7px color-mix(in srgb,var(--ecg-color) 70%,transparent);animation:hpCostScan 4.8s ease-in-out infinite;pointer-events:none}
+@keyframes hpCostScan{0%{left:0;opacity:0}12%{opacity:.85}78%{opacity:.85}100%{left:calc(100% - 32px);opacity:0}}
+@media(prefers-reduced-motion:reduce){#hpForeignCost .fx-ecg-plot:after{animation:none;display:none}}
 @media(max-width:400px),(min-width:1101px) and (max-width:1280px){#hpForeignCost .fx-cost-number{font-size:23px}#hpForeignCost .fx-session-switch button{padding-inline:7px}}
 
 /* Group research: a clear reading order without reducing the source content. */

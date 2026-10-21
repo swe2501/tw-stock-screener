@@ -1,0 +1,22 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),{PGlite}=require(process.env.PGLITE_MODULE||'@electric-sql/pglite');
+(async()=>{const db=new PGlite();try{
+await db.exec(`create role anon;create role authenticated;create schema auth;create table auth.users(id uuid primary key);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;grant usage on schema auth to public;grant execute on function auth.uid() to public;insert into auth.users values('11111111-1111-4111-8111-111111111111'),('22222222-2222-4222-8222-222222222222');create table public.price_window(trade_date date);`);
+for(const f of ['member-screen-calendar.sql','member-screen-latest-market.sql'])await db.exec(fs.readFileSync(path.join(__dirname,'../docs/database',f),'utf8'));
+const owner='11111111-1111-4111-8111-111111111111',other='22222222-2222-4222-8222-222222222222';
+const as=async id=>{await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[id]);await db.exec('set role authenticated');};
+await as(owner);const read=async()=>(await db.query('select public.member_screen_calendar() v')).rows[0].v,today=(await read()).today;
+const offset=n=>new Date(Date.parse(today+'T00:00:00Z')+n*86400000).toISOString().slice(0,10),latest=offset(-3),id=n=>String(n).padStart(8,'0')+'-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+const save=(n,market=latest,record=today)=>db.query('select public.save_member_screen_record_v2($1,$2,$3,$4,$5,$6,$7) v',[id(n),record,market,JSON.stringify(['策略A','策略B']),JSON.stringify(['條件']),JSON.stringify([{code:'2330',name:'測試',close:100}]),'備註']);
+await assert.rejects(save(1),/SCREEN_MARKET_UNAVAILABLE/);
+await db.exec('reset role');await db.query('insert into public.price_window values($1),($2)',[latest,offset(1)]);await as(owner);
+assert.equal((await read()).latest_market_date,latest,'future market rows excluded');assert.equal((await read()).save_policy,'latest-market-v2');
+const saved=(await save(1)).rows[0].v.row;assert.equal(saved.record_date,today);assert.equal(saved.market_date,latest);assert.ok(saved.recorded_at);assert.deepEqual(saved.strategies,['策略A','策略B']);
+await assert.rejects(save(2,offset(-4)),/SCREEN_LATEST_MARKET_ONLY/);await assert.rejects(save(2,offset(1)),/SCREEN_LATEST_MARKET_ONLY/);await assert.rejects(save(2,latest,offset(-1)),/SCREEN_DAY_CHANGED/);await assert.rejects(save(2,latest,offset(1)),/SCREEN_DAY_CHANGED/);
+await db.exec('reset role');await db.query('insert into public.price_window values($1)',[today]);await as(owner);
+assert.equal((await save(1,latest,offset(-1))).rows[0].v.duplicate,true,'confirmed retry remains same receipt even when market/day changed');await assert.rejects(save(2),/SCREEN_LATEST_MARKET_ONLY/);await save(2,today);
+await assert.rejects(db.query("update public.member_screen_records set market_date=$1",[latest]),/permission denied/);await assert.rejects(db.query('delete from public.member_screen_records'),/permission denied/);
+await as(other);assert.equal((await read()).rows.length,0);await db.query('select public.delete_member_screen_record($1)',[saved.id]);await as(owner);assert.equal((await read()).rows.length,2);
+await db.query('select public.delete_member_screen_record($1)',[saved.id]);await assert.rejects(save(1),/SCREEN_RECORD_DELETED/);assert.equal((await read()).rows.length,1);
+await db.exec('reset role;set role anon');await assert.rejects(save(3,today),/permission denied/);await assert.rejects(read(),/permission denied/);
+console.log('PASS latest published market across weekends/delays, separate dates, midnight stale form rejection, market-update race, duplicate receipt, immutable fields, delete tombstone, owner isolation, future market excluded and anonymous denial.');
+}finally{await db.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

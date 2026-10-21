@@ -17,12 +17,12 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
   page.innerHTML = `<div class="mc-shell"><div class="mc-top"><div><span class="mc-kicker">FORESIGHT QUANT · MEMBER</span><h1>會員中心</h1><div class="mc-muted">你的研究工作區，從這裡開始。</div></div><div class="mc-top-actions"><button type="button" data-member-theme></button><button type="button" data-back>← 返回原頁</button><button type="button" data-member-logout>登出</button><span class="mc-action-status" role="status"></span></div></div><div class="mc-layout"><nav class="mc-nav" aria-label="會員功能"></nav><main class="mc-main" tabindex="-1"></main></div></div>`;
   document.body.append(page);
   const brandbar=document.createElement('div');brandbar.className='mc-brandbar';
-  for(const selector of ['body>header .gs-brand','body>header .gs-edition']){const original=document.querySelector(selector);if(original){const clone=original.cloneNode(true);clone.removeAttribute('onclick');clone.removeAttribute('id');clone.querySelectorAll('[id],[onclick]').forEach(el=>{el.removeAttribute('id');el.removeAttribute('onclick');});if(clone.matches('a'))clone.addEventListener('click',e=>{e.preventDefault();page.querySelector('[data-back]').click();});brandbar.append(clone);}}
+  for(const selector of ['body>header .gs-brand','body>header .gs-edition']){const original=document.querySelector(selector);if(original){const clone=original.cloneNode(true);clone.removeAttribute('onclick');clone.removeAttribute('id');clone.querySelectorAll('[id],[onclick]').forEach(el=>{el.removeAttribute('id');el.removeAttribute('onclick');});if(clone.matches('a'))clone.addEventListener('click',e=>{e.preventDefault();goHome();});brandbar.append(clone);}}
   page.prepend(brandbar);
   const groups = [
     ['帳號與服務', [['overview','會員總覽'],['profile','個人資料'],['security','登入與安全'],['notifications','通知與偏好'],['feedback','我的回饋'],['privacy','資料與隱私']]],
     ['會員禮遇', [['benefits','會員權益'],['gifts','禮遇與優惠券'],['redeem','兌換優惠碼'],['referrals','邀請好友'],['tasks','任務與點數'],['wallet','點數帳戶'],['events','學院活動']]],
-    ['研究與學習', [['favorites','我的自選'],['trades','交易紀錄'],['goals','我的目標'],['workspace','研究工作區'],['strategy','策略回測'],['weekly','我的研究週報'],['learning','學習中心']]]
+    ['研究與學習', [['favorites','我的自選'],['screen-calendar','選股日曆'],['trades','交易紀錄'],['goals','我的目標'],['workspace','研究工作區'],['strategy','策略回測'],['weekly','我的研究週報'],['learning','學習中心']]]
   ];
   const items = groups.flatMap(([,rows])=>rows);
   const nav = page.querySelector('nav'), main = page.querySelector('main');
@@ -100,6 +100,7 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
     if(profile&&window.AcademyCloud?.status().state==='expired'){main.innerHTML='<section class="mc-card"><p>登入帳號已變更，請重新登入後繼續。本機資料已保留。</p><button data-login>重新登入</button></section>';return;}
     if(window.AcademyResearch?.render(current,{main,profile,onProfileChanged:p=>{profile=p;sync();},go:open}))return;
     if(window.AcademyTradeUI?.render(current,{main,profile,onProfileChanged:p=>{profile=p;sync();},go:open}))return;
+    if(window.AcademyScreenLog?.render(current,{main,profile,go:open}))return;
     if(window.AcademyMemberJourney?.render(current,{main,profile,go:open}))return;
     if(window.AcademyMemberFeatures?.render(current,{main,profile,onProfileChanged:p=>{profile=p;sync();},go:open}))return;
     if(current==='overview')main.innerHTML=`<div class="mc-card"><div class="mc-identity">${portrait('mc-portrait')}<div><h2>${esc(name())}</h2><span class="mc-muted">分享工具、邀請朋友；使用權與到期日由會員帳號確認。</span></div></div></div><div class="mc-grid"><div class="mc-card"><h2>你的帳號</h2><p class="mc-muted">管理暱稱、通知信箱與登入方式。</p><button data-go="profile">查看個人資料 →</button></div><div class="mc-card"><h2>你的聲音</h2><p class="mc-muted">提出使用問題、資料疑問與功能建議。</p><button data-go="feedback">前往回饋 →</button></div></div><div class="mc-note">網站與未來 App 將共用會員識別。收藏與觀察紀錄沿用原帳號，不另外建立新身分。</div>`;
@@ -120,18 +121,16 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
     try{const result=await AcademyIdentity.memberResource('feedback');if(!target.isConnected)return;if(!result.ready){target.textContent='案件服務尚未啟用，填寫內容會保留為草稿。';return;}target.innerHTML=result.rows.length?result.rows.map(r=>'<div class="mc-row"><div><b>'+esc(r.subject)+'</b><small>'+esc(r.ticket_number)+'</small></div><span class="mc-pill">'+esc(({received:'已收到',in_progress:'處理中',waiting:'等待補充',completed:'已完成'})[r.status]||r.status)+'</span></div>').join(''):'目前還沒有已送出的回饋';}catch(e){if(target.isConnected)target.textContent=e.message;}
   }
   async function load(){const id=++request;try{const data=await api();if(id!==request)return;if(window.AcademyPhoneGate&&!await AcademyPhoneGate.ensure()){window.AcademyCloud?.cancel();return;}profile=data;sync();if(window.AcademyCloud){window.AcademyTradeUI?.cleanup();if(!page.hidden)main.innerHTML='<section class="mc-card"><p>正在讀取帳號研究資料…</p></section>';await AcademyCloud.prepare(data.id,true);if(id!==request)return;cloudCleanup();cloudHost.hidden=false;cloudCleanup=AcademyCloud.mountStatus(cloudHost,data.id);}if(!page.hidden)render();}catch(e){if(id!==request||page.hidden)return;const notice=document.createElement('div');notice.className='mc-note';notice.setAttribute('role','status');notice.textContent=e.message==='Failed to fetch'?'無法連上會員服務，請確認網路後重試':e.message;const retry=document.createElement('button');retry.type='button';retry.textContent='重新載入';retry.addEventListener('click',()=>{notice.remove();load();});notice.append(' ',retry);main.prepend(notice);}}
-  async function open(tab='overview'){if(window.AcademyPhoneGate&&!await AcademyPhoneGate.ensure())return;const reopened=page.hidden;
+  async function open(tab='overview',replaceHistory=false){if(window.AcademyPhoneGate&&!await AcademyPhoneGate.ensure())return;const reopened=page.hidden;
+    if(location.hash!=='#member/'+tab)dispatchEvent(new Event('academy-member-navigation'));
     current=items.some(i=>i[0]===tab)?tab:'overview';
-    if(page.hidden){returnFocus=document.activeElement;returnScroll={x:scrollX,y:scrollY};oldOverflow=document.body.style.overflow;document.body.style.overflow='hidden';document.body.classList.add('mc-open');positionUnderHeader();page.hidden=false;history.pushState({...history.state,academyMember:true},'',location.pathname+location.search+'#member/'+current);}
-    else history.replaceState({...history.state,academyMember:true},'',location.pathname+location.search+'#member/'+current);
+    if(page.hidden){returnFocus=document.activeElement;returnScroll={x:scrollX,y:scrollY};oldOverflow=document.body.style.overflow;document.body.style.overflow='hidden';document.body.classList.add('mc-open');positionUnderHeader();page.hidden=false;history[replaceHistory?'replaceState':'pushState']({...history.state,academyLayers:[],academyMember:true},'',location.pathname+location.search+'#member/'+current);}
+    else if(location.hash!=='#member/'+current)history.pushState({...history.state,academyLayers:[],academyMember:true},'',location.pathname+location.search+'#member/'+current);
     render();main.focus({preventScroll:true});page.scrollTop=0;if(localStorage.getItem('sb_token')&&(!profile||reopened))load();
   }
   function close(){if(document.body.classList.contains('mc-chart-open'))window.closeChart?.();document.body.classList.remove('mc-chart-open');dispatchEvent(new Event('academy-member-closed'));page.querySelectorAll('dialog[open]').forEach(d=>d.close());request++;page.hidden=true;document.body.classList.remove('mc-open');document.body.style.overflow=oldOverflow;returnFocus?.focus?.({preventScroll:true});requestAnimationFrame(()=>scrollTo(returnScroll.x,returnScroll.y));}
   function goHome(){
     returnScroll={x:0,y:0};
-    if(!page.hidden)close();
-    const params=new URLSearchParams(location.search);params.delete('view');const query=params.toString();
-    history.replaceState({v:'home'},'',location.pathname+(query?'?'+query:''));
     window._showView?.('home');
     requestAnimationFrame(()=>scrollTo({top:0,left:0,behavior:'instant'}));
   }
@@ -149,10 +148,10 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
     }catch(err){status.textContent=err.message;}finally{b.disabled=false;b.textContent='登出';}
   });
   page.querySelector('[data-back]').addEventListener('click',()=>{if(history.state?.academyMember)history.back();else close();});
-  document.querySelector('body>header .gs-brand')?.addEventListener('click',()=>{if(!page.hidden){returnScroll={x:0,y:0};close();history.replaceState({...history.state,academyMember:false},'',location.pathname+location.search);}},true);
   addEventListener('resize',()=>{if(!page.hidden)positionUnderHeader();});
   addEventListener('academy-identity-linked',()=>{if(localStorage.getItem('sb_token')){profile=null;open('security');}});
-  addEventListener('popstate',()=>{if(location.hash.startsWith('#member/')){if(page.hidden){oldOverflow=document.body.style.overflow;document.body.style.overflow='hidden';document.body.classList.add('mc-open');positionUnderHeader();page.hidden=false;}current=location.hash.split('/')[1]||'overview';render();}else if(!page.hidden)close();});
+  addEventListener('academy-public-navigation',()=>{if(!page.hidden)close();});
+  addEventListener('popstate',()=>{if(window.AcademyNavigationLayers?.handlesPop())return;if(location.hash.startsWith('#member/')){if(page.hidden){oldOverflow=document.body.style.overflow;document.body.style.overflow='hidden';document.body.classList.add('mc-open');positionUnderHeader();page.hidden=false;}current=location.hash.split('/')[1]||'overview';render();}else if(!page.hidden)close();});
   page.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.tab||b.dataset.go)open(b.dataset.tab||b.dataset.go);if(b.hasAttribute('data-login')){if(history.state?.academyMember)history.back();else close();setTimeout(()=>window.openAuthModal?.('login'),0);}if(b.hasAttribute('data-clear')){removeLocal(draftKey());render();}});
   page.addEventListener('submit',async e=>{e.preventDefault();if(e.target.id!=='mc-profile')return;const button=e.target.querySelector('button[type=submit]'),status=e.target.querySelector('.mc-status');button.disabled=true;try{const body=Object.fromEntries(new FormData(e.target));body.markets=new FormData(e.target).getAll('markets');delete body['mc-avatar-file'];profile=await api('POST',body);sync();status.textContent='個人資料已儲存至會員帳號';}catch(err){status.textContent=err.message;}finally{button.disabled=false;}});
   page.addEventListener('submit',async e=>{
@@ -176,5 +175,5 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
   page.addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;if(b.hasAttribute('data-cancel-avatar')){cropImage?.close?.();cropImage=null;main.querySelector('.mc-avatar-crop').hidden=true;main.querySelector('#mc-avatar-file').value='';}if(b.hasAttribute('data-save-avatar')){const status=main.querySelector('.mc-avatar-status');b.disabled=true;try{if(!profile)throw Error('請先載入會員資料');const blob=await new Promise(resolve=>main.querySelector('.mc-avatar-crop canvas').toBlob(resolve,'image/webp',.85));if(!blob)throw Error('圖片處理失敗，請重試');profile=await AcademyIdentity.saveAvatar(blob);sync();hydrateImages();main.querySelector('.mc-avatar-crop').hidden=true;main.querySelector('.mc-status').textContent='頭像已儲存，網站右上角與會員中心已同步更新';}catch(err){status.textContent=err.message;}finally{b.disabled=false;}}});
   avatar.addEventListener('click',()=>window.AcademyMemberMenu?window.AcademyMemberMenu.toggle():open());window.openMemberCenter=open;
   if(logout)new MutationObserver(sync).observe(logout,{attributes:true,attributeFilter:['style']});addEventListener('storage',e=>{if(!['sb_token','sb_user'].includes(e.key)&&!window.AcademyCloud?.ownsKey(e.key))return;profile=null;sync();if(localStorage.getItem('sb_token'))load();});addEventListener('academy-auth-changed',()=>{profile=null;sync();if(!page.hidden)render();if(localStorage.getItem('sb_token'))load();});sync();if(localStorage.getItem('sb_token'))load();
-  if(location.hash.startsWith('#member/')){const tab=location.hash.split('/')[1];history.replaceState({...history.state,academyMember:false},'',location.pathname+location.search);open(tab);}
+  if(location.hash.startsWith('#member/')){const tab=location.hash.split('/')[1];open(tab,true);}
 })();

@@ -723,6 +723,60 @@ def _fetch_groupbook(window=10, price_rows=None):
 
 
 _focus_detail_cache = {}
+_themes_cache: dict = {}
+_themes_cache_ts: float = 0.0
+
+
+def _load_stock_themes() -> dict:
+    """code → [{id, name}]（今日排行題材顯示用）。
+    優先讀 Supabase stock_themes（scripts/themes_push.py 建：合夥人精選題材 THEME_MEMBERS + 官方產業別補齊）；
+    表不存在/空時，即時以 THEME_MEMBERS（小題材優先）+ _get_industry_map()（上市 TWSE＋上櫃 TPEx）組出同樣結果。"""
+    global _themes_cache, _themes_cache_ts
+    if _themes_cache and time.time() - _themes_cache_ts < 86400:
+        return _themes_cache
+    out = {}
+    # 1) 優先讀表
+    if SUPABASE_URL and SUPABASE_KEY:
+        try:
+            off = 0
+            while True:
+                page = _cache_sb("/stock_themes",
+                                 params=[("select", "code,themes"), ("order", "code.asc"),
+                                         ("offset", str(off)), ("limit", "1000")])[1] or []
+                for r in page:
+                    c = str(r.get("code", "")).strip()
+                    th = r.get("themes")
+                    if c and isinstance(th, list) and th:
+                        out[c] = [{"id": t.get("id") or t.get("name"), "name": t.get("name")}
+                                  for t in th if isinstance(t, dict) and t.get("name")]
+                if len(page) < 1000:
+                    break
+                off += 1000
+        except Exception:
+            out = {}
+    # 2) 退回即時組（表沒資料時仍不「未分類」）
+    if not out:
+        tm = THEME_MEMBERS
+        order = sorted(tm.keys(), key=lambda n: len(tm[n]))     # 小題材優先（較精準）
+        for name in order:
+            for code in tm[name]:
+                out.setdefault(str(code), [])
+                if not any(t["name"] == name for t in out[str(code)]):
+                    out[str(code)].append({"id": name, "name": name})
+        try:
+            ind = _get_industry_map()
+        except Exception:
+            ind = {}
+        for code, iname in ind.items():
+            if iname == "其他":
+                iname = "其他業"          # 2026-10-21 官方產業別「其他」照實標示，不再顯示成「未分類」
+            if iname:
+                out.setdefault(str(code), [])
+                if not any(t["name"] == iname for t in out[str(code)]):
+                    out[str(code)].append({"id": "產業:" + iname, "name": iname})
+    _themes_cache = out
+    _themes_cache_ts = time.time()
+    return out
 
 
 def _focus_details(data, by_code=None):
@@ -759,10 +813,10 @@ def _focus_details(data, by_code=None):
             if len(_focus_detail_cache) >= 8:
                 _focus_detail_cache.clear()
             _focus_detail_cache[cache_key] = (time.time(), base_date, prices, 300 if prices else 30)
-    memberships = {}
-    for name, members in THEME_MEMBERS.items():
-        for code in members:
-            memberships.setdefault(str(code), []).append({'id': name, 'name': name})
+    try:
+        memberships = _load_stock_themes()      # 精選題材(THEME_MEMBERS) + 官方產業別補齊，消除「未分類」
+    except Exception:
+        memberships = {}
 
     def finite(value):
         return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
@@ -778,7 +832,7 @@ def _focus_details(data, by_code=None):
             r['volume_lots'] = round(volume/1000, 3) if finite(volume) and volume >= 0 else None
             enriched.append(r)
         result[key] = enriched
-    result.update(fields_version=2, five_day_base_date=base_date, volume_unit='shares', volume_lots_unit='lots', theme_source='THEME_MEMBERS')
+    result.update(fields_version=3, five_day_base_date=base_date, volume_unit='shares', volume_lots_unit='lots', theme_source='stock_themes(精選題材+官方產業別)')
     return result
 
 
@@ -793,7 +847,7 @@ def _read_focus_snapshot(top_n=30):
     result = dict(data, updatedAt=rows[0].get("updated_at"), precomputed=True)
     for key in keys:
         result[key] = data[key][:max(1, min(top_n, 50))]
-    if result.get('fields_version') != 2:
+    if result.get('fields_version') != 3:   # 版本升級→舊快照(含合夥人v2僅THEME_MEMBERS)在讀取時重算補全題材，部署後即時生效
         result = _focus_details(result)
     return result
 
@@ -810,6 +864,35 @@ def _fetch_focus(top_n=30):
         return {"error": "no data"}
 
     gainers, losers, surges = [], [], []
+    # 2026-10-21 修正：停牌後恢復交易（多為減資換發新股）的股票，前一筆收盤是停牌前的舊價，
+    # 直接相比會算出 +98% 這種錯誤漲幅。前一筆不是「市場前一交易日」時，改用官方漲跌（已含減資後參考價），
+    # 且官方收盤要與 price_window 當日收盤一致才採用；拿不到就不列入漲跌幅榜（寧缺勿錯）。
+    mkt_dates = sorted({x["trade_date"] for arr in by_code.values() for x in arr}, reverse=True)
+    prev_mkt = mkt_dates[1] if len(mkt_dates) > 1 else None
+    _official = {}
+
+    def _official_prev(code, close):
+        if "_loaded" not in _official:
+            _official["_loaded"] = True
+            try:
+                txt = _get_text("https://www.twse.com.tw/exchangeReport/STOCK_DAY_ALL?response=csv")
+                if txt and "," in txt:
+                    for k, v in (_parse_stocks_csv(txt)[0] or {}).items():
+                        if v.get("close") and v.get("prev_close"):
+                            _official[k] = (v["close"], v["prev_close"])
+            except Exception:
+                pass
+            try:
+                for k, v in (_fetch_tpex_quotes() or {}).items():
+                    if v.get("close") and v.get("pct") is not None and v["pct"] > -100:
+                        _official.setdefault(k, (v["close"], v["close"] / (1 + v["pct"] / 100)))
+            except Exception:
+                pass
+        o = _official.get(code)
+        if o and close is not None and abs(o[0] - close) < 1e-6 and o[1]:
+            return o[1]
+        return None
+
     for c, arr in by_code.items():
         arr.sort(key=lambda x: x["trade_date"], reverse=True)   # 新→舊
         if arr[0]["trade_date"] != latest:
@@ -819,8 +902,12 @@ def _fetch_focus(top_n=30):
         vol = cur.get("volume") or 0
         name = _STOCK_NAMES.get(c, c)
         # 漲跌幅
-        if len(arr) >= 2 and arr[1].get("close"):
-            chg = (close / arr[1]["close"] - 1) * 100 if close is not None else None
+        if len(arr) >= 2 and arr[1].get("close") and close is not None:
+            if prev_mkt and arr[1]["trade_date"] != prev_mkt:   # 中間停牌過 → 用官方參考價
+                ref = _official_prev(c, close)
+                chg = (close / ref - 1) * 100 if ref else None
+            else:
+                chg = (close / arr[1]["close"] - 1) * 100
         else:
             chg = None
         if chg is not None:
@@ -2468,6 +2555,68 @@ def has_vol_black_event(rows, mult):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# 企業價值投資法（存股 357）：連續 5 年配息 + 近 5 年平均現金股利 D → 現金殖利率分級
+#   便宜(買)   殖利率 ≥ 7%  → 便宜價 = D / 0.07
+#   合理(賣)   3% < 殖利率 < 7%  → 合理價 = D / 0.05
+#   昂貴(賣光) 殖利率 ≤ 3%  → 昂貴價 = D / 0.03
+# 資料來源：stock_dividends（scripts/dividends_push.py 由玩股網歷年股利建置）。
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _load_dividends_357():
+    """讀 stock_dividends 全表 → {code: {"d": 近5年均現金股利, "cont5": 連續5年配息}}。
+    以除息年(ex_year)由新到舊取最近 5 年；5 年皆 > 0 才算連續配息(方法才適用)。"""
+    if not (SUPABASE_URL and SUPABASE_KEY):
+        return {}
+    rows, off = [], 0
+    while True:                                        # PostgREST 單頁上限 1000，需分頁
+        page = _cache_sb("/stock_dividends",
+                         params=[("select", "code,ex_year,cash_dividend"),
+                                 ("order", "code.asc,ex_year.desc"),
+                                 ("offset", str(off)), ("limit", "1000")])[1] or []
+        rows.extend(page)
+        if len(page) < 1000:
+            break
+        off += 1000
+    by_code = {}
+    for r in rows:
+        c = str(r.get("code", "")).strip()
+        if not c:
+            continue
+        by_code.setdefault(c, []).append((r.get("ex_year"), r.get("cash_dividend")))
+    out = {}
+    for c, lst in by_code.items():
+        # 已依 ex_year.desc 排序；同年多列理論上已於 ETL 彙整，這裡仍以年份去重取最新
+        seen, recent = set(), []
+        for yr, cash in lst:
+            if yr in seen:
+                continue
+            seen.add(yr)
+            recent.append(float(cash or 0))
+            if len(recent) >= 5:
+                break
+        cont5 = len(recent) == 5 and all(x > 0 for x in recent)
+        d = round(sum(recent) / len(recent), 4) if recent else 0.0
+        out[c] = {"d": d, "cont5": cont5}
+    return out
+
+
+def _classify_357(d, price):
+    """以 D 與現價算現金殖利率並分級。回 dict 或 None（資料不足）。"""
+    if not (d and d > 0 and price and price > 0):
+        return None
+    y = d / price * 100.0
+    band = "cheap" if y >= 7 else ("expensive" if y <= 3 else "fair")
+    return {
+        "d": round(d, 3),
+        "yield": round(y, 2),
+        "band": band,                       # cheap=便宜(買) / fair=合理(賣) / expensive=昂貴(賣光)
+        "cheap_price": round(d / 0.07, 2),  # 殖利率 7%
+        "fair_price": round(d / 0.05, 2),   # 殖利率 5%
+        "exp_price": round(d / 0.03, 2),    # 殖利率 3%
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Main screener
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -2505,6 +2654,13 @@ def screen(params):
     check_zhenming1  = bool(params.get("zhenming1", False))
     check_zhenming2  = bool(params.get("zhenming2", False))
     check_zhenming3  = bool(params.get("zhenming3", False))
+    # 企業價值投資法（存股 357）：3 個分級 checkbox（可複選）
+    want_357_cheap     = bool(params.get("ev357_cheap", False))
+    want_357_fair      = bool(params.get("ev357_fair", False))
+    want_357_expensive = bool(params.get("ev357_expensive", False))
+    sel_357 = {b for b, on in (("cheap", want_357_cheap), ("fair", want_357_fair),
+                               ("expensive", want_357_expensive)) if on}
+    need_357 = bool(sel_357)
     try:
         sma20_stages = {int(x) for x in (params.get("sma20_stages") or []) if int(x) in (1, 2, 3)}
     except (TypeError, ValueError):
@@ -2521,6 +2677,7 @@ def screen(params):
     except Exception: _industry_map = {}
     latest_stocks, latest_date = fetch_all_stocks_latest()
     print(f"[TIMING] step1_twse: {time.time()-_t0:.2f}s  stocks={len(latest_stocks)}", file=sys.stderr)
+    _div357 = _load_dividends_357() if need_357 else {}
     if not latest_stocks:
         return {"error": "無法取得證交所資料，請稍後再試", "results": []}
 
@@ -2688,6 +2845,16 @@ def screen(params):
     results = []
     for code, s in candidates.items():
         o, c, h, l, v = s["open"], s["close"], s["high"], s["low"], s["volume"]
+
+        # 企業價值投資法（存股 357）：連續 5 年配息 + 現金殖利率分級，只留選中的分級
+        _ev357 = None
+        if need_357:
+            _dv = _div357.get(code)
+            if not _dv or not _dv.get("cont5"):
+                continue                        # 未連續 5 年配息 → 方法不適用，排除
+            _ev357 = _classify_357(_dv["d"], c)
+            if not _ev357 or _ev357["band"] not in sel_357:
+                continue
 
         # prev_high/prev_low/prev_vols: historical path from YF in all_stocks,
         # non-historical path from monthly_yf (also YF, fetched above with 30 workers)
@@ -2954,6 +3121,8 @@ def screen(params):
             item["zm3"] = zm3
         if sma20_hit:
             item["sma20_stage"] = sma20_hit
+        if _ev357:
+            item["ev357"] = _ev357
 
         results.append(item)
 
@@ -3082,7 +3251,7 @@ class handler(BaseHTTPRequestHandler):
             except Exception:
                 return self._send_json(502, {"error": "Exact-date TAIFEX data unavailable", "date": day})
         if (qs.get("stat") or [""])[0] == "macro_environment":
-            from datetime import datetime, timezone, timedelta
+            pass   # 2026-10-21 移除函式內的 from datetime import（會讓整個 do_GET 的 datetime 變區域變數，導致 foreign_settlement_cost 等分支 UnboundLocalError 當機）；模組頂端已匯入
             start = (datetime.now(timezone.utc) - timedelta(days=850)).date().isoformat()
             today = datetime.now(timezone.utc).date().isoformat()
             def load_series(series):
@@ -3107,7 +3276,7 @@ class handler(BaseHTTPRequestHandler):
             return self._send_json(200, {"series": data, "source": "FRED / BLS / Federal Reserve", "scope": "US macro and broad dollar; not complete global coverage"}, cache="public, s-maxage=1800, max-age=300")
         if (qs.get("stat") or [""])[0] == "treasury":
             try:
-                from datetime import datetime, timezone
+                pass   # 2026-10-21 移除函式內的 from datetime import（會讓整個 do_GET 的 datetime 變區域變數，導致 foreign_settlement_cost 等分支 UnboundLocalError 當機）；模組頂端已匯入
                 import xml.etree.ElementTree as ET
                 now = datetime.now(timezone.utc)
                 url = "https://home.treasury.gov/sites/default/files/interest-rates/yield.xml"

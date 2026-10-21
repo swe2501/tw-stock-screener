@@ -1,5 +1,12 @@
 # 會員使用券與任務資料庫：2026-10-20 套用完成
 
+> **最新狀態：第 2B 節已依 JUSTY「第 2B 節 可以處理了ok」批准執行。** 共用資料庫 Taiwan stock2 已開放 31/34 任務、5/5 券定義、7/7 兌換商品。人工審核 2 項與獎勵影片仍關閉；分享活動仍關閉、推薦活動定義為 0。下方「全部關閉」為開放前歷史狀態，不代表現況。沒有啟用儲值、修改 schema／權限或直接發點。
+>
+> 會員角色唯讀驗證：taskStatus 31 項、exchangeOptions 7 項、每日 30／每週 150 點、餘額可讀。匿名領點／兌換仍被拒絕；主力訊號、分點回測、神燈與冥燈仍不在券可開通工具。沒有用真實帳號領點、扣點或啟用券做驗收。邀請分享 UI 改版目前僅本機 80cf15c，UAT 2A 為 6be82e4；資料庫開放已直接生效，不依賴下一次 Git 部署。
+
+
+> **2026-10-20 21:06 追加**：JUSTY 批准並親自在 SQL Editor 套用 `member-perks-exchange-v2.sql`＋`member-perks-tasks-v2.sql`，回報 Success。新增任務 32 個、兌換 7 個、hottopics／selltrack 可由券開通；全部仍 active=false。開放步驟見 [../HANDOFF_MEMBER_PERKS_2026-10-20.md](../HANDOFF_MEMBER_PERKS_2026-10-20.md)。
+
 使用者本回合明確批准套用到 UAT／正式站共用的 Supabase「Taiwan stock2」／bruqrbvbjxntgoljxsne，**活動、券定義、發點與兌換先保持關閉，不啟用儲值**。OpenAI 裝置登入由使用者在 iPhone 本人核准；授權已完成，不再重問相同批准。
 
 ## 已執行

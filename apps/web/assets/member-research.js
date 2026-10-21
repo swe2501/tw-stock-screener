@@ -3,7 +3,7 @@
   'use strict';
 const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,value):localStorage.setItem(key,value),removeLocal=key=>window.AcademyCloud?window.AcademyCloud.removeItem(key):localStorage.removeItem(key);
 
-  const API='https://tw-stock-screener-neon.vercel.app/api';
+  const API=window.__API+'/api';
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const card=(title,body)=>`<section class="mc-card"><h2>${title}</h2>${body}</section>`;
   const orderIcon='<svg viewBox="0 0 18 18" aria-hidden="true"><path d="M3 4h9M3 9h7M3 14h5M14 8v7m-2-2 2 2 2-2"/></svg>';

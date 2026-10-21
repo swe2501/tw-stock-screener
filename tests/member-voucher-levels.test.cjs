@@ -49,6 +49,10 @@ const {PGlite}=require(process.env.PGLITE_MODULE||'@electric-sql/pglite');
  const earned=(await db.query("select * from public.member_rewards where source_event_key like '%:round:%'")).rows;
  assert.equal(earned.length,1);assert.equal(earned[0].voucher_tier,'vip');assert.equal(earned[0].duration_days,7);assert.equal(earned[0].status,'ready');assert.ok(earned[0].allowed_features.every(f=>!['sig','brank','mingdeng'].includes(f)));
  await value('select public.member_share_unlock() value');assert.equal((await db.query("select * from public.member_rewards where source_event_key like '%:round:%'")).rows.length,1);
+ // Re-submit the invite after verification and re-read progress: this is still the same invitation, not another reward event.
+ for(let repeat=0;repeat<3;repeat++){await as(3);await db.query('select public.bind_member_referral($1)',[code]);await as(1);const progress=await value('select public.member_share_unlock() value');assert.equal(progress.confirmed_count,3);assert.equal(progress.rewarded_groups,1);}
+ assert.equal((await db.query("select * from public.member_rewards where source_event_key like '%:round:%'")).rows.length,1,'signup, verification and supplemental binding must not deliver multiple referral vouchers');
+
  await admin();await db.exec("update public.member_entitlements set starts_at=now()-interval '9 days',expires_at=now()-interval '2 days'");await as(1);assert.deepEqual((await access()).features,{});assert.equal((await access()).tier,null);
  await admin();await db.exec('set role anon');await assert.rejects(access());await assert.rejects(activate(choice,['breadth']));
  console.log('PASS typed voucher snapshots, exact one selection, own-account RLS, issuer denial, inactive definitions, VIP admin exclusion, immutable retries, full duration, expiry and per-feature access.');

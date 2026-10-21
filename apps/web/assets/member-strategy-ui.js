@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const API='https://tw-stock-screener-neon.vercel.app/api',E=window.AcademyStrategyEngine;
+  const API=window.__API+'/api',E=window.AcademyStrategyEngine;
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const copy=v=>JSON.parse(JSON.stringify(v));
   const today=()=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Taipei'}).format(new Date());
