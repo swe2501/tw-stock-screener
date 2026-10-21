@@ -14352,7 +14352,7 @@
         wickUpColor: '#e74c3c', wickDownColor: '#26c281',
         priceLineVisible: window._priceLineOn !== false,    // 現價虛線
         lastValueVisible: window._priceLineOn !== false,    // 右軸紅底現價標籤
-        title:'現價',priceLineWidth:1,priceLineStyle:LightweightCharts.LineStyle.Dotted,
+        title:'',   /* 2026-10-22 不在圖內寫「現價」，避免蓋住最新 K 棒；右軸價格標籤與虛線保留 */priceLineWidth:1,priceLineStyle:LightweightCharts.LineStyle.Dotted,
       });
       candleSeriesRef.setData(candles);
       window._mainCandleSeries = candleSeriesRef;   // 供現價線開關 _togglePriceLine 使用
