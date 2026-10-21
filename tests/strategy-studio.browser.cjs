@@ -34,6 +34,19 @@ async function page(b,width,theme,init){
   await p.locator('[data-publish]').click();await p.waitForFunction(()=>document.querySelector('.ms-publish-state')?.textContent==='已上架');
   const stored=await p.evaluate(()=>JSON.parse(localStorage.getItem('academy.research.v1.fx')).strategies);assert.equal(stored[0].published,true);assert.deepEqual(stored[0].dimensions,['tech']);
   assert.match(await p.locator('.ms-library-item').first().innerText(),/已上架/);
+  // 做空：切換方向、標題改為放空／回補、回測產生放空交易
+  await p.locator('[data-trade=short]').click();assert.match(await p.locator('.ms-rule-section h3').first().innerText(),/放空條件/);assert.match(await p.locator('.ms-steps li').first().innerText(),/做空/);
+  await p.locator('[data-save-strategy]').click();await p.waitForFunction(()=>JSON.parse(localStorage.getItem('academy.research.v1.fx')).strategies[0].direction==='short');
+  await p.locator('[data-run-strategy] [name=start]').fill(rows[200].time);await p.locator('[data-run-strategy] [name=end]').fill(rows.at(-2).time);await p.locator('[data-run-strategy] button[type=submit]').click();await p.waitForFunction(()=>/回測完成|請|無效|不足/.test(document.querySelector('[data-strategy-status]').textContent));
+  const runText=await p.locator('[data-strategy-status]').innerText();assert.match(runText,/回測完成/,runText);assert.match(await p.locator('[data-strategy-result]').innerText(),/放空|回補|0 筆|沒有/);
+  await p.locator('[data-dim-card]').scrollIntoViewIfNeeded();await p.screenshot({path:out+`/studio-${theme}-short.png`});
+  // 垃圾桶：刪除 → 復原 → 再刪除 → 永久刪除
+  await p.locator('[data-library-trash]').first().click();assert.equal(await p.locator('[data-library-list] .ms-library-item').count(),0);assert.equal(await p.locator('[data-trash-count]').innerText(),'1');
+  assert.equal((await p.evaluate(()=>JSON.parse(localStorage.getItem('academy.research.v1.fx')))).strategy_trash.length,1);
+  await p.locator('[data-trash] summary').click();await p.screenshot({path:out+`/studio-${theme}-trash.png`});
+  await p.locator('[data-trash-restore]').click();assert.equal(await p.locator('[data-library-list] .ms-library-item').count(),1);assert.match(await p.locator('[data-library-status]').innerText(),/已復原/);
+  await p.locator('[data-library-trash]').first().click();await p.locator('[data-trash-purge]').click();assert.match(await p.locator('[data-trash-purge]').innerText(),/確定/);await p.locator('[data-trash-purge]').click();assert.equal(await p.locator('[data-trash-count]').innerText(),'0');
+  assert.deepEqual((await p.evaluate(()=>JSON.parse(localStorage.getItem('academy.research.v1.fx')))).strategies,[]);
   await p.locator('[data-dim-card]').scrollIntoViewIfNeeded();await p.screenshot({path:out+`/studio-${theme}-dims.png`});
   await p.locator('[data-publish-card]').scrollIntoViewIfNeeded();await p.screenshot({path:out+`/studio-${theme}-publish.png`});
   // 步驟按鈕可捲動
@@ -66,14 +79,16 @@ async function page(b,width,theme,init){
   {id:'s1',name:'均線多頭',entryMode:'all',exitMode:'any',entry:[{id:'a',type:'maPair',op:'above',fast:5,slow:20}],exit:[],risk:{stop:5,take:0,maxBars:0},dimensions:['tech'],published:true},
   {id:'s2',name:'舊版策略（未標示）',entryMode:'all',exitMode:'any',entry:[{id:'b',type:'ma',op:'above',period:60}],exit:[],risk:{stop:0,take:0,maxBars:0}},
   {id:'s3',name:'草稿策略',entryMode:'all',exitMode:'any',entry:[{id:'c',type:'ma',op:'below',period:5}],exit:[],risk:{stop:3,take:0,maxBars:0},published:false},
+  {id:'s5',name:'空方突破',direction:'short',entryMode:'all',exitMode:'any',entry:[{id:'e',type:'maPair',op:'below',fast:5,slow:20}],exit:[],risk:{stop:5,take:0,maxBars:0},published:true},
   {id:'s4',name:'均線空頭',entryMode:'all',exitMode:'any',entry:[{id:'d',type:'maPair',op:'below',fast:5,slow:20}],exit:[],risk:{stop:5,take:0,maxBars:0},published:true}]};
  for(const theme of ['light','dark']){
   const p=await page(b,1440,theme,{'academy.research.v1.fx':JSON.stringify(research)});await p.goto('https://studio.fixture.test/');await p.addStyleTag({content:'#siteGate{display:none!important}'});await p.evaluate(t=>document.documentElement.dataset.theme=t,theme);
   await p.evaluate(()=>window._showView?.('screen'));await p.waitForTimeout(1500);
   const panel=p.locator('.ms-private-panel');await panel.scrollIntoViewIfNeeded();await panel.locator('summary').first().click();await p.waitForTimeout(400);
-  const names=await panel.locator('.ms-private-item b').allInnerTexts();assert.deepEqual(names,['均線多頭','舊版策略（未標示）','均線空頭'],'draft hidden, legacy kept');
+  const names=await panel.locator('.ms-private-item b').allInnerTexts();assert.deepEqual(names,['均線多頭','舊版策略（未標示）','空方突破','均線空頭'],'draft hidden, legacy kept');
   assert.match(await panel.locator('[data-private-foot]').innerText(),/另有 1 個未上架/);
   await panel.locator('[data-private-pick=s1]').check();await panel.locator('[data-private-pick=s4]').check();
+  assert.equal(await panel.locator('[data-private-pick=s5]').isDisabled(),true,'short disabled after picking long');assert.match(await panel.locator('.ms-private-list').innerText(),/做空策略請另外篩選/);
   assert.match(await panel.locator('[data-private-run]').innerText(),/2 個策略/);
   await panel.screenshot({path:out+`/private-${theme}-pick.png`});
   await panel.locator('[data-private-run]').click();await p.waitForFunction(()=>!document.querySelector('[data-private-run]').disabled,null,{timeout:60000});

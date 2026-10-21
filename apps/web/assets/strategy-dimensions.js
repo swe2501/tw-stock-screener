@@ -19,8 +19,10 @@
   /** 舊策略沒有上架欄位：沿用原本「儲存即可在私房篩選器使用」的行為，視為已上架。 */
   const isPublished = strategy => strategy?.published !== false;
   const main = strategy => of(strategy)[0];
+  const direction = strategy => strategy?.direction === 'short' ? 'short' : 'long';
   function tags(strategy) {
-    return of(strategy).map((id, i) => `<span class="ms-dim ms-dim-${id}${i ? '' : ' is-main'}">${esc(byId[id].name)}</span>`).join('');
+    const d = direction(strategy);
+    return `<span class="ms-dir ms-dir-${d}">${d === 'short' ? '做空' : '做多'}</span>` + of(strategy).map((id, i) => `<span class="ms-dim ms-dim-${id}${i ? '' : ' is-main'}">${esc(byId[id].name)}</span>`).join('');
   }
-  window.AcademyStrategyDims = { list, byId, of, main, isPublished, tags, available: () => list.filter(d => d.ready) };
+  window.AcademyStrategyDims = { list, byId, of, main, isPublished, tags, direction, available: () => list.filter(d => d.ready) };
 })();
