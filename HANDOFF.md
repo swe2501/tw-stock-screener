@@ -446,3 +446,11 @@ page_cache 是 **uat 與 prod 共用**同一個 Supabase。若推盤中到原 ki
 - 推 prod 的兩張新表 `stock_dividends`、`stock_themes` 是 uat/prod **共用同一個 Supabase**，推 prod 不需再建表。
 - 題材 §4.5 JUSTY 未定案細節：題材粒度要不要合併同義（伺服器 vs AI伺服器）、題材族群頁統計是否維持「精選主要題材」口徑避免小題材洗版——待 JUSTY 決定再調。
 - 分類器擋 branch→branch push：justy-layout 對齊需 owner 本人跑 `git push origin origin/uat:justy-layout`，或請 codex 代跑。
+
+
+## 十四、2026-10-21 前端改為「依環境呼叫後端」
+
+- 原本前端有 77 處寫死 `https://tw-stock-screener-neon.vercel.app/api/...`，uat 頁面也打正式站後端 → 後端修改在 uat 測不到。
+- 現在 `apps/web/index.html`、`treasury-research.html` 在 `<meta charset>` 後定義 `window.__API`：`file:` 或 localhost 開檔＝正式站網址；部署在任何網址（uat、正式站、預覽）＝`''`（同網域自己的後端）。所有呼叫改成 `window.__API+'/api/...'`（含原本各自判斷 git-uat／file: 的寫法、`/api/pc_ratio`）。會員模組 assets 內原本寫死的 4 處也改用 `window.__API`；assets 內原本就用相對路徑 `/api/...` 的不動（部署時本來就打自己）。
+- uat 後端需要的環境變數：`SUPABASE_URL`／`SUPABASE_ANON_KEY`（screen/auth/watchlist/broker_watch/prices）已確認在 uat 可用（今日排行題材標籤只存在 uat 程式且能顯示）；`RESEND_API_KEY` 等寄信用變數若 Preview 沒設，uat 上寄通知信會失敗，正式站不受影響。
+- 之後新增前端 API 呼叫一律寫 `window.__API+'/api/...'`，不要再寫死正式站網址。
