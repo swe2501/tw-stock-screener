@@ -17,13 +17,26 @@
 #hpForeignCost .fcp-primary>span{font-size:11px;line-height:1.4;color:var(--text-muted);white-space:nowrap}
 #hpForeignCost .fcp-info{color:var(--text-muted);font-size:12px;cursor:help}
 #hpForeignCost .fcp-wave{position:relative;align-self:stretch;min-width:0;color:var(--fcp-blue);overflow:hidden}
-#hpForeignCost .fcp-wave>span{position:absolute;right:0;top:0;font-size:11px;line-height:1.5;color:var(--text-muted);opacity:1;z-index:1}
 #hpForeignCost .fcp-wave svg{width:100%;height:100%;display:block;overflow:visible}
 #hpForeignCost .fcp-wave-fill{fill:url(#fcpWaveFill);stroke:currentColor;stroke-width:.7;stroke-opacity:.18}
 #hpForeignCost .fcp-wave-back{animation:fcpWaveFloat 8s ease-in-out infinite;transform-origin:center}
 #hpForeignCost .fcp-wave-line{fill:none;stroke:currentColor;stroke-width:1.5;vector-effect:non-scaling-stroke;opacity:.8}
 #hpForeignCost .fcp-wave-sweep{fill:none;stroke:currentColor;stroke-width:2;vector-effect:non-scaling-stroke;stroke-dasharray:9 91;filter:drop-shadow(0 0 3px currentColor);animation:fcpWaveSweep 6.5s linear infinite}
-#hpForeignCost .fcp-wave-beacon{position:absolute;width:5px;height:5px;left:50%;top:46%;border:1px solid var(--surface);border-radius:50%;background:var(--fcp-gold);box-shadow:0 0 8px var(--fcp-gold);animation:fcpBeacon 4s ease-in-out infinite}
+#hpForeignCost .fcp-wave{--fcp-wave-tone:#647d98;--fcp-wave-glow:#8298af80;color:var(--fcp-wave-tone)}
+#hpForeignCost .fcp-wave[data-wave-state=up]{--fcp-wave-tone:var(--fcp-up);--fcp-wave-glow:color-mix(in srgb,var(--fcp-up) 60%,transparent)}
+#hpForeignCost .fcp-wave[data-wave-state=down]{--fcp-wave-tone:var(--fcp-down);--fcp-wave-glow:color-mix(in srgb,var(--fcp-down) 60%,transparent)}
+#hpForeignCost .fcp-wave[data-wave-state=flat]{--fcp-wave-tone:var(--fcp-gold);--fcp-wave-glow:color-mix(in srgb,var(--fcp-gold) 65%,transparent)}
+:root:not([data-theme=light]) #hpForeignCost .fcp-wave[data-wave-state=pending]{--fcp-wave-tone:#94a8bf}
+#hpForeignCost .fcp-wave-status{position:absolute;right:0;top:0;font-size:11px;line-height:1.5;color:var(--fcp-wave-tone);z-index:1}
+#hpForeignCost .fcp-wave-beacon{position:absolute;width:8px;height:8px;left:50%;top:55%;transform:translate(-50%,-50%);border:1px solid color-mix(in srgb,var(--fcp-wave-tone) 20%,#fff);border-radius:50%;background:radial-gradient(circle at 38% 32%,#fff 0 24%,color-mix(in srgb,var(--fcp-wave-tone) 30%,#fff) 42%,var(--fcp-wave-tone) 78%);box-shadow:0 0 5px #ffffffb0,0 0 13px var(--fcp-wave-tone),0 0 25px var(--fcp-wave-glow);animation:fcpBeacon 4s ease-in-out infinite;pointer-events:none}
+#hpForeignCost .fcp-wave-beacon:after{content:'';position:absolute;inset:-4px;border:1px solid var(--fcp-wave-glow);border-radius:50%;box-shadow:0 0 9px var(--fcp-wave-glow);pointer-events:none}
+#hpForeignCost .fcp-wave[data-wave-state=up] .fcp-wave-beacon{animation:fcpBeacon 4s ease-in-out infinite,fcpBeaconUp 6.5s linear infinite}
+#hpForeignCost .fcp-wave[data-wave-state=down] .fcp-wave-beacon{animation:fcpBeacon 4s ease-in-out infinite,fcpBeaconDown 6.5s linear infinite}
+#hpForeignCost .fcp-wave[data-wave-state=flat] .fcp-wave-beacon{animation:fcpBeacon 4s ease-in-out infinite,fcpBeaconFlat 6.5s ease-in-out infinite}
+@keyframes fcpBeaconUp{0%{left:6%;top:71%;opacity:0}8%{opacity:1}33%{left:33%;top:54%}66%{left:66%;top:34%;opacity:1}92%{opacity:1}100%{left:94%;top:21%;opacity:0}}
+@keyframes fcpBeaconDown{0%{left:6%;top:24%;opacity:0}8%{opacity:1}33%{left:33%;top:40%}66%{left:66%;top:63%;opacity:1}92%{opacity:1}100%{left:94%;top:80%;opacity:0}}
+@keyframes fcpBeaconFlat{0%,100%{left:30%;top:55%}50%{left:70%;top:55%}}
+
 #hpForeignCost .fcp-position{border-top:1px solid var(--border);padding-top:10px;min-width:0;display:grid;grid-template-rows:26px 74px 30px minmax(16px,auto);align-content:start}
 #hpForeignCost .fcp-distance{display:flex;align-items:baseline;gap:6px;min-width:0;white-space:nowrap;color:var(--text-muted)}
 #hpForeignCost .fcp-distance>span:first-child{font-size:11px;flex:none}
@@ -61,6 +74,8 @@
 @container(max-width:290px){#hpForeignCost .fcp-position-label{display:none}#hpForeignCost .fcp-heading{gap:5px}#hpForeignCost .fcp-heading h3{font-size:13px}#hpForeignCost .fcp-heading>svg{width:17px}#hpForeignCost .fcp-current svg{display:none}#hpForeignCost .fcp-primary>strong{font-size:27px}#hpForeignCost .fcp-primary>span{font-size:11px}}
 @keyframes fcpWaveSweep{from{stroke-dashoffset:100}to{stroke-dashoffset:0}}
 @keyframes fcpWaveFloat{0%,100%{transform:translateY(0);opacity:.7}50%{transform:translateY(-4px);opacity:1}}
-@keyframes fcpBeacon{0%,100%{opacity:.65;box-shadow:0 0 5px var(--fcp-gold)}50%{opacity:1;box-shadow:0 0 11px var(--fcp-gold)}}
+@keyframes fcpBeacon{0%,100%{box-shadow:0 0 5px #ffffffb0,0 0 13px var(--fcp-wave-tone),0 0 25px var(--fcp-wave-glow)}50%{box-shadow:0 0 7px #fff,0 0 18px var(--fcp-wave-tone),0 0 30px var(--fcp-wave-glow)}}
 @keyframes fcpMarkerGlow{0%{transform:scale(.65);opacity:.7}90%,100%{transform:scale(1.7);opacity:0}}
 @media(prefers-reduced-motion:reduce){#hpForeignCost .fcp-wave-back,#hpForeignCost .fcp-wave-sweep,#hpForeignCost .fcp-wave-beacon,#hpForeignCost .fcp-price-marker>i{animation:none}#hpForeignCost .fcp-price-marker>i{display:none}#hpForeignCost .fcp-session button{transition:none}}
+
+@media(prefers-reduced-motion:reduce){#hpForeignCost .fcp-wave[data-wave-state] .fcp-wave-beacon{animation:none;left:50%;top:55%}}
