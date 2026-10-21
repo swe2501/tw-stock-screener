@@ -76,7 +76,9 @@ def _build_rows():
         for name in themes.get(code, []):
             lst.append({"id": name, "name": name, "src": "題材"})
         ind = industry.get(code)
-        if ind and ind not in ("其他", ""):
+        if ind == "其他":
+            ind = "其他業"           # 2026-10-21 官方產業別「其他」照實標示（例：裕慶-KY），不再落成「未分類」
+        if ind:
             lst.append({"id": "產業:" + ind, "name": ind, "src": "產業"})
         if not lst:
             stat["empty"] += 1
