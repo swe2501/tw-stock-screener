@@ -11034,13 +11034,16 @@
         const t = _snapMarkerDate(e.date); if (!t) return;             // 非交易日吸附到最近 K 棒
         (bmap[t] = bmap[t] || []).push(e.broker);
       });
+      // 2026-10-22 圖上只放小圓點（每家分點固定一色），同一天多家合併成數字；名稱改在滑過 K 棒的小卡顯示，避免文字壓到 K 線
+      window._brokerByTime = bmap;
+      _brokerColors(); const bcol = window._brokerColor || {};
       const broker = Object.entries(bmap).map(([date, arr]) => ({
         time: date,
         position: 'belowBar',
-        color: '#c678dd',
-        shape: 'arrowUp',
-        text: arr[0] + (arr.length > 1 ? `+${arr.length - 1}` : ''),
-        size: 1,
+        color: arr.length > 1 ? '#9a7bc4' : (bcol[arr[0]] || '#b07fd0'),
+        shape: 'circle',
+        text: arr.length > 1 ? String(arr.length) : '',
+        size: arr.length > 1 ? 1 : 0.8,
       }));
       const div = _lastDivMarkers || [];
       const present = { div: div.length > 0, catalyst: catalyst.length > 0, broker: broker.length > 0, user: user.length > 0, sma20: _sma20Markers.length > 0 };
@@ -12588,19 +12591,28 @@
       if (!list.length) { panel.style.display = window._brokerPanelOpen?'block':'none'; panel.innerHTML = '<div class="ov-empty">此區間尚無符合條件的分點資料。</div>'; if(window._chartLayerStatus)window._chartLayerStatus('broker',false,0); return; }
       const groups = {};
       list.forEach(d => (groups[d.cat] = groups[d.cat] || []).push(d.name));
+      _brokerColors();
       const cb = b => {
         const bb = b.replace(/'/g, "\\'");
-        return `<label title="${b}">
-          <input type="checkbox"${_brokerChecked && _brokerChecked.has(b) ? ' checked' : ''} onchange="_toggleBroker('${bb}',this.checked)">${b}</label>`;
+        return `<label title="${b}" style="--bc:${window._brokerColor[b] || '#b07fd0'}">
+          <input type="checkbox"${_brokerChecked && _brokerChecked.has(b) ? ' checked' : ''} onchange="_toggleBroker('${bb}',this.checked)"><i class="bk-dot" aria-hidden="true"></i>${b}</label>`;
       };
-      const sections = ['大單前20', '小單前20', '其他'].filter(c => groups[c]).map(cat =>
-        `<div class="broker-panel-group"><div class="broker-panel-title">${cat}<small>${groups[cat].length} 家</small></div>
+      // 2026-10-22 全選／清除併進第一組標題列，不再單獨佔一列留白；旁邊顯示已勾數
+      const head = `<span class="broker-panel-head"><em id="brokerPickCount">${_brokerChecked && _brokerChecked.size ? '已勾 ' + _brokerChecked.size + ' 家' : ''}</em><a onclick="_setAllBrokers(true)">全選</a><a onclick="_setAllBrokers(false)">清除</a></span>`;
+      const sections = ['大單前20', '小單前20', '其他'].filter(c => groups[c]).map((cat, i) =>
+        `<div class="broker-panel-group"><div class="broker-panel-title">${cat}<small>${groups[cat].length} 家</small>${i ? '' : head}</div>
           <div class="broker-panel-grid">${groups[cat].sort().map(cb).join('')}</div></div>`).join('');
       const open = !!window._brokerPanelOpen;
-      panel.innerHTML = `<div class="broker-panel-head"><a onclick="_setAllBrokers(true)">全選</a><a onclick="_setAllBrokers(false)">清除</a></div>
-        <div id="brokerPanelList" class="broker-panel-list">${sections}</div>`;
+      panel.innerHTML = `<div id="brokerPanelList" class="broker-panel-list">${sections}</div>`;
       panel.style.display = open ? 'block' : 'none';
       if(window._chartLayerStatus)window._chartLayerStatus('broker',false,0);
+    }
+    // 2026-10-22 依勾選順序配色：前 10 家一定不同色，K 圖圓點、面板小圓點、滑過小卡同色
+    function _brokerColors() {
+      const PAL = ['#c0587a','#3f8fd2','#d08a2e','#2f9e8f','#8e6bd0','#c46a3a','#5b8f3a','#d0559f','#4c6fd1','#a08a2a'];
+      window._brokerColor = {};
+      [...(_brokerChecked || [])].forEach((n, i) => { window._brokerColor[n] = PAL[i % PAL.length]; });
+      document.querySelectorAll('#brokerFilterPanel .broker-panel-grid label').forEach(l => { const c = window._brokerColor[l.title]; if (c) l.style.setProperty('--bc', c); });
     }
     function _toggleBrokerPanel() {   // 主力分點清單展開／收合（記住狀態，換股票時沿用）
       const panel = document.getElementById('brokerFilterPanel'), l = document.getElementById('brokerPanelList');
@@ -12614,6 +12626,7 @@
       if (!_brokerChecked) return;
       if (on) _brokerChecked.add(b); else _brokerChecked.delete(b);
       if(window._chartLayerStatus)window._chartLayerStatus('broker',_brokerChecked.size>0,_brokerChecked.size);
+      { const c=document.getElementById('brokerPickCount'); if(c) c.textContent=_brokerChecked.size?'已勾 '+_brokerChecked.size+' 家':''; }
       _refreshChartMarkers();
     }
     function _setAllBrokers(on) {
@@ -12621,6 +12634,7 @@
       _brokerChecked = on ? new Set(_brokerEntriesRaw.map(e => e.broker)) : new Set();
       document.querySelectorAll('#brokerFilterPanel input[type=checkbox]').forEach(cb => { cb.checked = on; });
       if(window._chartLayerStatus)window._chartLayerStatus('broker',_brokerChecked.size>0,_brokerChecked.size);
+      { const c=document.getElementById('brokerPickCount'); if(c) c.textContent=_brokerChecked.size?'已勾 '+_brokerChecked.size+' 家':''; }
       _refreshChartMarkers();
     }
 
@@ -14191,6 +14205,8 @@
           `　高 <span style="color:${color}">${fmt(c.high)}</span>` +
           `　低 <span style="color:${color}">${fmt(c.low)}</span>` +
           `　收 <span style="color:${color}">${fmt(c.close)}</span>`;
+        const bks = window._mkShow && window._mkShow.broker && window._brokerByTime && window._brokerByTime[param.time];
+        if (bks && bks.length) _ohlcTip.innerHTML += `<div class="ohlc-broker"><span>主力進場</span>${[...new Set(bks)].map(n => `<b><i style="background:${(window._brokerColor||{})[n]||'#b07fd0'}"></i>${n}</b>`).join('')}</div>`;
         _ohlcTip.style.display = 'block';
         window.AcademyChartViewport?.placeTooltip(param,c,candles,chartInstance,candleSeriesRef);
       });
@@ -17293,7 +17309,7 @@
 <link rel="stylesheet" href="assets/screen-log.css?v=calendar-clean22">
 <link rel="stylesheet" href="assets/strategy-studio.css?v=3">
 <link rel="stylesheet" href="assets/learning-center.css?v=1">
-<link rel="stylesheet" href="assets/research-layout.css?v=7">
+<link rel="stylesheet" href="assets/research-layout.css?v=9">
 <script src="assets/chart-viewport-fit.js?v=6" defer></script>
 <script src="assets/screen-inline-calendar.js?v=precision9" defer></script>
 <script src="assets/screen-log.js?v=calendar-direct30" defer></script>

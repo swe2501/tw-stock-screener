@@ -176,3 +176,31 @@
 /* 2026-10-22 參考價位標籤只顯示價格，用淡紅（下方）／淡綠（上方）區分，不寫文字判斷 */
 #chartModal .chart-level-rail span.lv-below{color:color-mix(in srgb,var(--red,#e5484d) 82%,var(--text));background:color-mix(in srgb,var(--red,#e5484d) 12%,var(--surface))}
 #chartModal .chart-level-rail span.lv-above{color:color-mix(in srgb,var(--green,#2ea043) 82%,var(--text));background:color-mix(in srgb,var(--green,#2ea043) 12%,var(--surface))}
+
+/* 2026-10-22 圖層面板：低彩度霧面金屬漸層（頂部一道細高光＋斜向冷灰，主題色只帶一點點） */
+#chartModal .chart-fit-layer-panels .chart-feature-panel{
+ background:
+  linear-gradient(180deg,rgba(255,255,255,.62) 0,rgba(255,255,255,0) 46%),
+  linear-gradient(112deg,color-mix(in srgb,var(--feature-accent,#7085a3) 6%,#fbfcfd) 0%,#f3f5f8 42%,#e9edf2 78%,color-mix(in srgb,var(--feature-accent,#7085a3) 5%,#e4e9ef) 100%);
+ border-color:color-mix(in srgb,#cfd6df 82%,var(--feature-accent,#7085a3) 18%)!important;
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.85),inset 0 -1px 0 rgba(120,134,156,.10),0 1px 2px rgba(15,23,42,.04)}
+:root[data-theme="dark"] #chartModal .chart-fit-layer-panels .chart-feature-panel{
+ background:
+  linear-gradient(180deg,rgba(255,255,255,.05) 0,rgba(255,255,255,0) 46%),
+  linear-gradient(112deg,color-mix(in srgb,var(--feature-accent,#7085a3) 9%,var(--surface)) 0%,var(--surface2) 48%,color-mix(in srgb,#8a97ab 7%,var(--surface2)) 100%);
+ border-color:color-mix(in srgb,var(--border) 80%,var(--feature-accent,#7085a3) 20%)!important;
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 1px 2px rgba(0,0,0,.25)}
+#chartModal .broker-panel-title .broker-panel-head{margin:0 0 0 auto;display:inline-flex;align-items:center;gap:6px}
+#chartModal .broker-panel-head em{font-style:normal;font-size:11px;font-weight:700;color:var(--text-muted);margin-right:2px}
+#chartModal .broker-panel-head a{min-width:0;padding:4px 10px;border-radius:999px}
+#chartModal .broker-panel-list{padding-top:8px}
+
+/* 2026-10-22 主力分點：每家固定色小圓點（只在勾選時出現），K 圖滑過顯示名稱 */
+#chartModal .broker-panel-grid label .bk-dot{display:none;width:7px;height:7px;border-radius:50%;background:var(--bc);flex:none}
+#chartModal .broker-panel-grid label:has(input:checked) .bk-dot{display:inline-block}
+#chartModal .broker-panel-grid label:has(input:checked){border-color:color-mix(in srgb,var(--bc) 45%,var(--border));background:color-mix(in srgb,var(--bc) 8%,var(--surface))}
+.ohlc-broker{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;margin-top:4px;padding-top:4px;border-top:1px solid var(--border);white-space:normal}
+.ohlc-broker span{color:var(--text-muted)}
+.ohlc-broker b{display:inline-flex;align-items:center;gap:4px;font-weight:700;color:var(--text)}
+.ohlc-broker i{width:7px;height:7px;border-radius:50%;display:inline-block}
+#chartModal .broker-panel-head a:first-of-type{color:#9556aa;border-color:color-mix(in srgb,#a45fba 30%,var(--border));background:color-mix(in srgb,#a45fba 7%,var(--surface))}
