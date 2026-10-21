@@ -1,5 +1,5 @@
 /* 掏金篩選器「每日選股紀錄」：沿用網站 --accent／--surface／--border，深淺色自動跟隨 */
-.sl-up{color:var(--fr-up,#e05252)!important}.sl-down{color:var(--fr-down,#2ea043)!important}
+.sl-up{color:var(--red,#e05252)!important;font-weight:600}.sl-down{color:var(--green,#2ea043)!important;font-weight:600}
 .sl-muted{color:var(--text-muted);font-size:12px}
 .results-header:has(.sl-bar){flex-wrap:wrap}
 .sl-bar{display:flex;gap:8px;flex-wrap:wrap;flex-basis:100%;margin-top:8px}
@@ -382,3 +382,7 @@ html:not([data-theme=light]) .scal-workspace [data-cat=zm] .sc-hd b{color:#ffda6
  .scal-grid .scal-day-count small{display:none}
  .scal-grid .scal-day-count{font-size:11px!important}
 }
+
+.sl-ret .sl-ret-date{color:var(--text-muted);font-weight:400}
+.sl-log-tools .sl-muted:empty{display:none}
+.sl-log-tools:has(.sl-muted:empty){justify-content:flex-end}
