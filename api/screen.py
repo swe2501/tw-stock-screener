@@ -768,7 +768,9 @@ def _load_stock_themes() -> dict:
         except Exception:
             ind = {}
         for code, iname in ind.items():
-            if iname and iname not in ("其他", ""):
+            if iname == "其他":
+                iname = "其他業"          # 2026-10-21 官方產業別「其他」照實標示，不再顯示成「未分類」
+            if iname:
                 out.setdefault(str(code), [])
                 if not any(t["name"] == iname for t in out[str(code)]):
                     out[str(code)].append({"id": "產業:" + iname, "name": iname})
