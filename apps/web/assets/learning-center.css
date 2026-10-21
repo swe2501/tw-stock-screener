@@ -1,0 +1,82 @@
+/* 學習中心（2026-10-21）：沿用網站色票，深淺色自動跟隨。 */
+.lc-hero{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(260px,1fr);gap:24px;align-items:center}
+.lc-hero h2{margin:6px 0 8px}
+.lc-hero .mc-muted{margin:0;line-height:1.8}
+.lc-progress{padding:16px 18px;border:1px solid var(--border);border-radius:14px;background:color-mix(in srgb,var(--accent) 5%,var(--surface))}
+.lc-progress-head{display:flex;align-items:baseline;justify-content:space-between;font-size:12.5px;color:var(--text-muted)}
+.lc-progress-head b{font-size:22px;color:var(--text);font-variant-numeric:tabular-nums}
+.lc-progress-head b small{font-size:12px;color:var(--text-muted);font-weight:500}
+.lc-bar{height:8px;border-radius:999px;background:color-mix(in srgb,var(--text-muted) 16%,transparent);overflow:hidden;margin:10px 0 14px}
+.lc-bar i{display:block;height:100%;border-radius:inherit;background:var(--accent);transition:width .4s}
+.lc-all-done{margin:0;font-size:13px;color:var(--accent)}
+.member-page .lc-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;margin:0;padding:8px 16px;min-height:38px;border:1px solid var(--border);border-radius:999px;background:var(--surface);color:var(--text);font:inherit;font-size:13px;font-weight:600;line-height:1.3;box-shadow:none;cursor:pointer;white-space:nowrap;transition:border-color .15s,color .15s,background .15s}
+.member-page .lc-btn:hover{border-color:var(--accent);color:var(--accent)}
+.member-page .lc-btn:disabled{opacity:.55;cursor:wait}
+.member-page .lc-btn.lc-primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#fff)}
+.member-page .lc-btn.lc-primary:hover{color:var(--on-accent,#fff);filter:brightness(1.06)}
+.member-page .lc-btn[aria-pressed="true"]{border-color:var(--accent);color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,var(--surface))}
+.member-page .lc-next{width:100%;white-space:normal;text-align:left;justify-content:space-between}
+.lc-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 14px}
+.member-page .lc-tabs button{display:inline-flex;align-items:center;gap:8px;margin:0;padding:8px 14px;min-height:38px;border:1px solid var(--border);border-radius:999px;background:var(--surface);color:var(--text);font:inherit;font-size:13px;font-weight:600;box-shadow:none;cursor:pointer}
+.lc-tabs button small{font-size:11px;font-weight:600;color:var(--text-muted);font-variant-numeric:tabular-nums}
+.member-page .lc-tabs button[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#fff)}
+.lc-tabs button[aria-selected="true"] small{color:inherit;opacity:.8}
+.lc-list-head{margin:0 0 6px}
+.lc-list-head h3{margin:0 0 4px;font-size:18px}
+.lc-list-head p{margin:0;font-size:13px;color:var(--text-muted)}
+.lc-lesson{border:1px solid var(--border);border-radius:14px;margin:12px 0;background:var(--surface);transition:border-color .15s,box-shadow .15s}
+.lc-lesson[open]{border-color:color-mix(in srgb,var(--accent) 45%,var(--border));box-shadow:0 10px 26px color-mix(in srgb,var(--accent) 10%,transparent)}
+.lc-lesson>summary{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:14px;align-items:center;padding:16px 18px;cursor:pointer;list-style:none}
+.lc-lesson>summary::-webkit-details-marker{display:none}
+.lc-mark{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700;color:var(--text-muted);border:1px solid var(--border);font-variant-numeric:tabular-nums}
+.lc-lesson.is-done .lc-mark{background:color-mix(in srgb,var(--green,#2EA043) 15%,transparent);border-color:transparent;color:var(--green,#2EA043)}
+.lc-sum{display:flex;flex-direction:column;gap:4px;min-width:0}
+.lc-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:11.5px;color:var(--text-muted)}
+.lc-meta>span{display:inline-flex;align-items:center;gap:4px}
+.lc-level{padding:1px 8px;border-radius:6px;font-weight:700}
+.lc-level-a{color:var(--green,#2EA043);background:color-mix(in srgb,var(--green,#2EA043) 13%,transparent)}
+.lc-level-b{color:var(--accent);background:color-mix(in srgb,var(--accent) 13%,transparent)}
+.lc-level-c{color:#B4570C;background:rgba(232,147,12,.14)}
+:root:not([data-theme="light"]) .lc-level-c{color:#FFB35C}
+.lc-track-name{color:var(--text-muted)}
+.lc-sum b{font-size:15.5px;color:var(--text);line-height:1.5}
+.lc-sum small{font-size:12.5px;color:var(--text-muted);line-height:1.6}
+.lc-state{font-size:12px;font-weight:700;color:var(--accent);padding:4px 12px;border-radius:999px;background:color-mix(in srgb,var(--accent) 9%,transparent);white-space:nowrap}
+.lc-lesson.is-done .lc-state{color:var(--green,#2EA043);background:color-mix(in srgb,var(--green,#2EA043) 11%,transparent)}
+.lc-body{padding:0 18px 18px 66px;border-top:1px solid var(--border)}
+.lc-body section h4{margin:16px 0 4px;font-size:14px;color:var(--text)}
+.lc-body section p{margin:0;font-size:13.5px;line-height:1.9;color:var(--text)}
+.lc-points{margin:16px 0 0;padding:12px 16px;border-radius:12px;background:color-mix(in srgb,var(--accent) 6%,var(--surface));border:1px solid color-mix(in srgb,var(--accent) 20%,var(--border))}
+.lc-points b{font-size:12.5px;color:var(--accent);letter-spacing:.06em}
+.lc-points ul{margin:6px 0 0;padding-left:18px;display:grid;gap:3px;font-size:13px;line-height:1.7;color:var(--text)}
+.lc-quiz{margin:16px 0 0;padding:14px 16px;border:1px dashed var(--border);border-radius:12px}
+.lc-quiz legend{padding:0 6px;font-size:12.5px;font-weight:700;color:var(--accent)}
+.lc-quiz>p{margin:0 0 10px;font-size:13.5px;color:var(--text);line-height:1.7}
+.lc-options{display:grid;gap:6px;margin:0 0 12px}
+.lc-options label{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--border);border-radius:10px;font-size:13px;cursor:pointer;color:var(--text)}
+.lc-options label:has(input:checked){border-color:var(--accent);background:color-mix(in srgb,var(--accent) 6%,var(--surface))}
+.lc-options label.is-answer{border-color:var(--green,#2EA043);background:color-mix(in srgb,var(--green,#2EA043) 10%,var(--surface))}
+.lc-options label.is-wrong{border-color:#D64545;background:rgba(214,69,69,.08)}
+.lc-options input{width:auto;margin:0;accent-color:var(--accent)}
+.lc-result{margin:10px 0 0;font-size:13px;line-height:1.7}
+.lc-result:empty{display:none}
+.lc-result.is-ok{color:var(--green,#2EA043)}
+.lc-result.is-no{color:#D64545}
+.lc-actions{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0 0}
+.lc-practice h3{margin:0 0 6px}
+.lc-practice-actions{display:flex;flex-wrap:wrap;gap:10px 12px;margin-top:14px}
+.lc-disclaimer{font-size:11.5px;color:var(--text-muted);margin:4px 2px 0;line-height:1.7}
+@media(max-width:760px){
+  .lc-hero{grid-template-columns:1fr;gap:16px}
+  .lc-tabs{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
+  .member-page .lc-tabs button{flex:none}
+  .lc-lesson>summary{grid-template-columns:28px minmax(0,1fr);gap:10px;padding:14px}
+  .lc-state{display:none}
+  .lc-mark{width:28px;height:28px;font-size:12px}
+  .lc-body{padding:0 14px 16px}
+  .member-page .lc-btn{white-space:normal}
+}
+.lc-progress-head b{display:inline-flex!important;align-items:baseline;gap:4px;white-space:nowrap}
+.member-page .lc-options label{margin:0!important;min-height:0!important;padding:9px 12px!important;font-weight:500!important;line-height:1.5}
+.member-page .lc-options label span{font-size:13px}
+.member-page .lc-quiz{margin-left:0;margin-right:0}
