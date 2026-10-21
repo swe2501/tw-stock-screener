@@ -54,7 +54,7 @@
   const close=window._chartMainCandles?.at(-1)?.close,levels=(window._chartSupportLevels||[]).filter(l=>Number.isFinite(l.price));
   const below=levels.filter(l=>l.price<=close).sort((a,b)=>b.price-a.price)[0],above=levels.filter(l=>l.price>close).sort((a,b)=>a.price-b.price)[0];
   const levelNodes=[];let previousY=-50;
-  for(const [label,l] of [['壓力',above],['支撐',below]]){if(!l)continue;const y=series.priceToCoordinate(l.price);if(y==null||y<12||y>byId('chartContainer').clientHeight-50)continue;const tag=document.createElement('span');tag.textContent=label+' '+Number(l.price.toFixed(2));tag.style.top=Math.max(y-9,previousY+22)+'px';previousY=Math.max(y-9,previousY+22);levelNodes.push(tag);}
+  for(const [kind,l] of [['above',above],['below',below]]){if(!l)continue;const y=series.priceToCoordinate(l.price);if(y==null||y<12||y>byId('chartContainer').clientHeight-50)continue;const tag=document.createElement('span');tag.className='lv-'+kind;tag.textContent=String(Number(l.price.toFixed(2)));tag.style.top=Math.max(y-9,previousY+22)+'px';previousY=Math.max(y-9,previousY+22);levelNodes.push(tag);}
   const levelKey=levelNodes.map(e=>e.outerHTML).join('');if(levelRail.innerHTML!==levelKey)levelRail.replaceChildren(...levelNodes);
  }
  function hidden(el,on){if(el?.hasAttribute('data-fit-hidden')!==on)el?.toggleAttribute('data-fit-hidden',on);}

@@ -16212,6 +16212,12 @@
       MK.series=null; MK.data=null;
       try{ chartInstance&&chartInstance.applyOptions({leftPriceScale:{visible:false}}); }catch(e){}
       if(el('mkCmp')) el('mkCmp').innerHTML='';
+      legendOffset();
+    }
+    function legendOffset(){   // 2026-10-22 大盤左軸出現時，均線／指標標籤往右讓出左軸，避免和左軸數字、加權價格標籤重疊
+      var lab=el('maLabel'); if(!lab) return; var w=0;
+      try{ if(MK.series&&chartInstance) w=chartInstance.priceScale('left').width()||0; }catch(e){}
+      lab.style.left=(8+w)+'px';
     }
     function syncChk(){   // 勾選框跟著目前圖表週期（一次只勾一個）
       var h=!!window._chartIsHourly;
@@ -16221,19 +16227,22 @@
     window._mkTogglePanel=function(){
       var o=el('mkOpts'), open=o.style.display==='none';
       o.style.display=open?'block':'none'; window._chartLayerPanel('mk',open); el('mkArrow').textContent=open?'▾':'▸';
+      if(open){ fetchIdx(!!window._chartIsHourly); }   // 2026-10-22 展開就先抓大盤資料，勾選時不用再等
     };
     window._mkPick=function(tf,on){
       if(window._kPref) window._kPref.set('mk',!!on);
       if(!on){ MK.on=false; window._chartLayerStatus('mk',false,0);syncChk(); window._mkApply(false); return; }
       MK.on=true; var h=!!window._chartIsHourly;
       window._chartLayerStatus('mk',true,0);
+      fetchIdx(tf==='hour');   // 和主圖重繪同時抓資料
+      if(((tf==='hour'&&!h)||(tf==='day'&&h))&&el('mkCmp')) el('mkCmp').textContent='切換週期並載入大盤中…';
       if(tf==='hour'&&!h){ syncChk(); if(typeof loadHourlyChart==='function') loadHourlyChart(); return; }   // 圖表重繪後自動疊加
       if(tf==='day'&&h){ syncChk(); if(typeof loadDailyChart==='function') loadDailyChart(); return; }
       syncChk(); window._mkApply(false);
     };
     window._mkSyncUI=function(){ syncChk(); window._chartLayerStatus('mk',MK.on,0); };
     window._mkApply=function(rebuilt){
-      if(rebuilt) MK.series=null;                     // 主圖重建後舊 series 已隨舊圖銷毀
+      if(rebuilt){ MK.series=null; legendOffset(); }  // 主圖重建後舊 series 已隨舊圖銷毀
       syncChk();
       if(!MK.on||typeof currentCode==='undefined'||currentCode==='^TWII'){ off(); return; }
       if(typeof chartInstance==='undefined'||!chartInstance||!window._vpCandles||!window._vpCandles.length) return;
@@ -16245,12 +16254,12 @@
         if(!d.length){ if(el('mkCmp')) el('mkCmp').textContent='大盤資料取得失敗'; return; }
         if(MK.series){ try{ chartInstance.removeSeries(MK.series); }catch(e){} }
         chartInstance.applyOptions({leftPriceScale:{visible:true, borderColor:'rgba(128,128,128,.3)', scaleMargins:{top:0.04,bottom:0.02}}});
-        MK.series=chartInstance.addCandlestickSeries({priceScaleId:'left', title:'加權',
+        MK.series=chartInstance.addCandlestickSeries({priceScaleId:'left', title:'',   // 2026-10-22 不在圖內寫「加權」，避免壓到左上角標籤；左軸本身就是大盤
           upColor:'rgba(0,0,0,0)', downColor:'rgba(90,120,170,.35)', borderUpColor:'#5a78aa', borderDownColor:'#5a78aa',
           wickUpColor:'#5a78aa', wickDownColor:'#5a78aa', priceLineVisible:false, lastValueVisible:true,
           priceFormat:{type:'price', precision:0, minMove:1}});
         MK.series.setData(d.map(function(c){ return {time:c.time, open:c.open, high:c.high, low:c.low, close:c.close}; }));
-        MK.data=d; window._mkCmpSchedule();
+        MK.data=d; window._mkCmpSchedule(); requestAnimationFrame(function(){ requestAnimationFrame(legendOffset); });
       });
     };
     window._mkCmpSchedule=function(){ clearTimeout(MK.t); MK.t=setTimeout(cmp, 60); };
@@ -17284,8 +17293,8 @@
 <link rel="stylesheet" href="assets/screen-log.css?v=calendar-clean22">
 <link rel="stylesheet" href="assets/strategy-studio.css?v=3">
 <link rel="stylesheet" href="assets/learning-center.css?v=1">
-<link rel="stylesheet" href="assets/research-layout.css?v=6">
-<script src="assets/chart-viewport-fit.js?v=5" defer></script>
+<link rel="stylesheet" href="assets/research-layout.css?v=7">
+<script src="assets/chart-viewport-fit.js?v=6" defer></script>
 <script src="assets/screen-inline-calendar.js?v=precision9" defer></script>
 <script src="assets/screen-log.js?v=calendar-direct30" defer></script>
 <script src="assets/pattern-focus.js?v=2" defer></script>

@@ -165,3 +165,14 @@
 .ms-dim-explainer small{font-size:11px;color:var(--text-muted)}
 .ms-direction-label{padding-top:12px;margin-top:12px;border-top:1px solid var(--border)}
 @media(max-width:420px){.member-page .ms-dim-option{min-height:44px}.ms-dim-option-head{gap:5px;flex-wrap:wrap}.ms-dim-option-head em{margin-left:0}}
+/* 2026-10-22（JUSTY）：功能面板恢復原本的淡色漸層；主力分點按鈕依文字寬度排列，不再撐滿大格 */
+#chartModal .chart-fit-layer-panels .chart-feature-panel{background:linear-gradient(120deg,color-mix(in srgb,var(--feature-accent,#7085a3) 10%,var(--surface)) 0%,color-mix(in srgb,var(--surface2) 94%,var(--feature-accent,#7085a3) 6%) 100%);border-color:color-mix(in srgb,var(--border) 68%,var(--feature-accent,#7085a3) 32%)!important}
+#brokerFilterPanel{--feature-accent:#a45fba}#aiBuyPanel{--feature-accent:#3f8fd2}#sma20GroupPanel{--feature-accent:#c0862b}
+#chartModal .broker-panel-grid{display:flex;flex-wrap:wrap;gap:6px 6px}
+#chartModal .broker-panel-grid label{flex:0 0 auto;margin:0;padding:5px 11px 5px 8px;gap:6px;border-radius:999px;font-size:12px;line-height:1.4;white-space:nowrap}
+#chartModal .broker-panel-group+.broker-panel-group{margin-top:8px;padding-top:8px}
+#chartModal .broker-panel-title{margin-bottom:6px}
+
+/* 2026-10-22 參考價位標籤只顯示價格，用淡紅（下方）／淡綠（上方）區分，不寫文字判斷 */
+#chartModal .chart-level-rail span.lv-below{color:color-mix(in srgb,var(--red,#e5484d) 82%,var(--text));background:color-mix(in srgb,var(--red,#e5484d) 12%,var(--surface))}
+#chartModal .chart-level-rail span.lv-above{color:color-mix(in srgb,var(--green,#2ea043) 82%,var(--text));background:color-mix(in srgb,var(--green,#2ea043) 12%,var(--surface))}
