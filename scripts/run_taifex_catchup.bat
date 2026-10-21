@@ -1,11 +1,11 @@
 @echo off
 REM ============================================================
-REM  TAIFEX openapi 補跑（2026-09-30 新增）
-REM  原因：這幾支讀 TAIFEX openapi DailyMarketReportOpt/Fut，
-REM        主排程 19:00 常在來源更新前跑到 → 資料日落後一天。
-REM  作法：隔天早上再跑一次；三支腳本內建新鮮度防呆（來源沒比
-REM        既有最新日新就自動 [skip]），故重複跑安全、冪等。
-REM  排程：Windows 工作排程器 AI_stock_taifex_catchup，週二~六 08:30。
+REM  TAIFEX openapi catch-up run (added 2026-09-30)
+REM  Why: these scripts read TAIFEX openapi DailyMarketReportOpt/Fut,
+REM       and the 19:00 main job often runs before the source updates -> data one day behind.
+REM  How: run again the next morning; the scripts skip when the source is not newer,
+REM       so re-running is safe and idempotent.
+REM  Schedule: Task Scheduler AI_stock_taifex_catchup, Tue-Sat 08:30. Keep this file ASCII-only.
 REM ============================================================
 set PY=C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe
 set DIR=C:\Users\User\Desktop\AI_stock\scripts
