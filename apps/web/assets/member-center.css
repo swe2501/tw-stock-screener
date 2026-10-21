@@ -83,3 +83,5 @@ body.academy-research-ready #chartWatchBtn,body.academy-research-ready #chartBac
 .member-page .mc-top-actions button:hover{background:color-mix(in srgb,var(--accent) 6%,var(--surface))!important;border-color:color-mix(in srgb,var(--accent) 35%,var(--border))!important;box-shadow:0 3px 12px #183e5810!important}
 .member-page .mc-top-actions button::after{display:none!important}
 @media(prefers-reduced-motion:reduce){.member-page .mc-nav button::after{animation:none!important}}
+/* 網站頁首的 header span 徽章樣式會套到會員頁標題上方的小標，造成同色底蓋字；會員頁小標一律不加底 */
+.member-page header .mc-kicker{background:none!important;padding:0!important;border-radius:0!important;font-weight:700}
