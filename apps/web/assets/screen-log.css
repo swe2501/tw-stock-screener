@@ -323,3 +323,6 @@ html:not([data-theme=light]) .scal-workspace [data-cat=zm] .sc-hd b{color:#ffda6
 @keyframes slRecordGlint{0%,72%{transform:translateX(-140%)}91%,100%{transform:translateX(140%)}}
 @keyframes slRecordIconGlint{0%,72%,100%{opacity:1;filter:brightness(1)}79%{opacity:.75;filter:brightness(1.35)}86%{opacity:1;filter:brightness(1.15)}}
 @media(prefers-reduced-motion:reduce){#proScreenLayout.scal-workspace .sl-bar .sl-record:after,#proScreenLayout.scal-workspace .sl-record svg{animation:none}}
+
+/* Saved records need only strategy, count, disclosure and their saved timestamp. */
+.scal-day .sl-log>summary:not(:has(.sl-time)){grid-template-columns:minmax(0,1fr) auto 15px}
