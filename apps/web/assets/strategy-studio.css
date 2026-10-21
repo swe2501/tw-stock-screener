@@ -138,3 +138,5 @@
 .ms-step-text small{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .ms-publish-checks li b{font-size:13px}
 .ms-chat-dialog .ms-assistant .mc-primary{background:var(--accent)!important;border-color:var(--accent)!important;color:var(--on-accent,#fff)!important}
+.ms-private-moved{font-size:12.5px;color:var(--accent);margin:6px 0 0}
+.private-screen-label{color:var(--accent);font-weight:600}

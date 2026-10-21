@@ -61,7 +61,7 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
     for(const code of batch){if(unavailable){failed++;continue;}const rows=byCode.get(code);if(!rows.length){short++;continue;}if(rows.at(-1).time!==date){stale++;continue;}
      const outcomes=picks.map(s=>{try{return {s,r:E.scan(rows,s)};}catch{return {s,r:{ready:false,matched:false,checks:[]}};}}),ready=outcomes.filter(o=>o.r.ready),hits=ready.filter(o=>o.r.matched);
      if(runMode==='all'?ready.length<outcomes.length:!ready.length){short++;continue;}
-     if(runMode==='all'?hits.length===outcomes.length:hits.length>0){matched++;found.push({code,close:rows.at(-1).close,hits});}else miss++;}
+     if(runMode==='all'?hits.length===outcomes.length:hits.length>0){matched++;const last=rows.at(-1),prev=rows.at(-2),r2=v=>Number.isFinite(+v)?Math.round(+v*100)/100:null,pct=(a,b)=>Number.isFinite(a)&&Number.isFinite(b)&&b>0?Math.round((a-b)/b*10000)/100:null;found.push({code,close:last.close,hits,bar:{code,name:window._names?.[code]||code,industry:'',open:r2(last.open),high:r2(last.high),low:r2(last.low),close:r2(last.close),change_pct:prev?pct(+last.close,+prev.close):null,candle_pct:pct(+last.close,+last.open)??0,volume_lots:Number.isFinite(+last.volume)?Math.round(+last.volume/1000):0}});}else miss++;}
     done+=batch.length;report();
    }}
    await Promise.all([worker(),worker(),worker()]);if(run!==job||memberId()!==owner)return;
@@ -69,7 +69,12 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
    const names=picks.map(s=>'「'+esc(s.name)+'」').join('、'),multi=picks.length>1,showHits=multi&&runMode==='any';
    const head=`<p class="ms-private-note">${names}${multi?' · '+(runMode==='all'?'全部符合':'任一符合'):''} · ${date} 日線 · 以台積電最近日線日為共同資料日，只檢查買進條件。無資料與非同日股票不列為不符合。</p>`;
    const cell=r=>multi?(showHits?`<td><span class="ms-private-hits">${r.hits.map(h=>`<span class="ms-dim ms-dim-${esc(D.main(h.s))} is-main">${esc(h.s.name)}</span>`).join('')}</span></td>`:''):`<td>${r.hits[0].r.checks.filter(c=>c.matched).map(c=>esc(c.rule)).join('<br>')}</td>`;
-   results.innerHTML=head+(found.length?'<div class="ms-private-table"><table><thead><tr><th>股票</th><th>收盤</th>'+(multi?(showHits?'<th>符合策略</th>':''):'<th>符合條件</th>')+'<th>下一步</th></tr></thead><tbody>'+found.map(r=>`<tr><td>${esc(r.code)} ${esc(window._names[r.code])}</td><td>${Number(r.close).toLocaleString()}</td>${cell(r)}<td><button type="button" data-private-chart="${esc(r.code)}">K 圖</button><button type="button" data-private-test="${esc(r.code)}" data-private-strategy="${esc(r.hits[0].s.id)}">用此策略回測</button></td></tr>`).join('')+'</tbody></table></div>':(multi&&runMode==='all'?'<div class="ms-private-hint"><span>沒有股票同時符合全部 '+picks.length+' 個策略。</span><button type="button" data-private-any>改成任一符合再篩一次</button></div>':'<p>本次可判斷的股票沒有符合條件者。</p>'));
+   const zeroHint=multi&&runMode==='all'?'<div class="ms-private-hint"><span>沒有股票同時符合全部 '+picks.length+' 個策略。</span><button type="button" data-private-any>改成任一符合再篩一次</button></div>':'<p>本次可判斷的股票沒有符合條件者。</p>';
+   if(typeof window._showPrivateScreen==='function'){
+    window._showPrivateScreen({date,count:found.length,total:codes.length,results:found.map(r=>r.bar)},{strategies:picks.map(s=>'私房：'+s.name),conditions:[multi?(runMode==='all'?'私房策略全部符合':'私房策略任一符合'):'私房策略'],label:'私房策略 '+picks.length+' 個'+(multi?'・'+(runMode==='all'?'全部符合':'任一符合'):'')});
+    results.innerHTML=head+(found.length?'<p class="ms-private-moved">結果已顯示在右側「篩選結果」，可按「記錄今日選股」存進選股日曆。</p>':zeroHint);
+    if(found.length){const tab=document.querySelector('.scal-mobile-tabs [data-pane="results"]');if(tab&&tab.offsetParent)tab.click();}
+   }else results.innerHTML=head+(found.length?'<div class="ms-private-table"><table><thead><tr><th>股票</th><th>收盤</th>'+(multi?(showHits?'<th>符合策略</th>':''):'<th>符合條件</th>')+'<th>下一步</th></tr></thead><tbody>'+found.map(r=>`<tr><td>${esc(r.code)} ${esc(window._names[r.code])}</td><td>${Number(r.close).toLocaleString()}</td>${cell(r)}<td><button type="button" data-private-chart="${esc(r.code)}">K 圖</button><button type="button" data-private-test="${esc(r.code)}" data-private-strategy="${esc(r.hits[0].s.id)}">用此策略回測</button></td></tr>`).join('')+'</tbody></table></div>':zeroHint);
   }catch(e){if(run===job)status.textContent=signal.aborted?'已停止，本次未產生完整結果。':e.message;}finally{if(run===job){runButton.disabled=false;cancelButton.hidden=true;}}
  };
  refresh();

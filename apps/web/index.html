@@ -10659,6 +10659,16 @@
       });
     }
 
+    // 私房篩選器：結果顯示在右側「篩選結果」，並可用「記錄今日選股」存進選股日曆（meta 由私房篩選器提供策略名稱）
+    window._showPrivateScreen = function (data, meta) {
+      window.AcademyScreenLog?.beforeScan(meta);
+      _scanT0 = 0;
+      lastResults = data.results || [];
+      renderResults(data);
+      const m = document.querySelector('#statusArea .results-meta');
+      if (m && meta && meta.label) { const s = document.createElement('span'); s.className = 'private-screen-label'; s.textContent = ' · ' + meta.label; m.append(s); }
+    };
+
     function renderTable(results) {
       const viewedSnapshot=_viewedMap(), viewedToday=_todayStr();
       const viewed=function(code){return viewedSnapshot[code]===viewedToday;};
@@ -17253,7 +17263,7 @@
 <script src="assets/member-journey.js?v=calendar2" defer></script>
 <script src="assets/member-center.js?v=logo-home19" defer></script>
 <script src="assets/member-signin.js?v=invite2" defer></script>
-<script src="assets/member-private-screen.js?v=multi1" defer></script>
+<script src="assets/member-private-screen.js?v=multi2" defer></script>
 <link rel="stylesheet" href="assets/site-readability.css?v=futures-history3">
 <link rel="stylesheet" href="assets/foreign-cost-card.css?v=direction4">
 <script src="assets/foresight-brand.js?v=fqi28" defer></script>
@@ -17261,9 +17271,9 @@
 <link rel="stylesheet" href="assets/focus-rankings.css?v=4">
 <script src="assets/focus-rankings.js?v=4" defer></script>
 <link rel="stylesheet" href="assets/screen-log.css?v=calendar-clean19">
-<link rel="stylesheet" href="assets/strategy-studio.css?v=1">
+<link rel="stylesheet" href="assets/strategy-studio.css?v=2">
 <script src="assets/screen-inline-calendar.js?v=precision9" defer></script>
-<script src="assets/screen-log.js?v=calendar-direct23" defer></script>
+<script src="assets/screen-log.js?v=calendar-direct24" defer></script>
 <script src="assets/pattern-focus.js?v=2" defer></script>
 <script src="assets/member-quick-menu.js?v=3" defer></script>
 <script src="assets/navigation-layers.js?v=logo-home19" defer></script>

@@ -11,6 +11,8 @@ async function page(b,width,theme,init){
   if(u.origin==='https://studio.fixture.test'){if(u.pathname==='/api/auth')return r.fulfill({json:{enabled:false}});if(u.pathname==='/')return r.fulfill({path:path.join(root,'apps/web/index.html'),contentType:'text/html; charset=utf-8'});const f=path.resolve(root,'apps/web','.'+decodeURIComponent(u.pathname));if(fs.existsSync(f)&&fs.statSync(f).isFile())return r.fulfill({path:f});return r.fulfill({json:{}});}
   if(u.hostname.endsWith('.supabase.co')){
    if(u.pathname==='/auth/v1/user')return r.fulfill({json:{id:'fx',email:'fx@example.test',user_metadata:{display_name:'測試'}}});
+   if(u.pathname.endsWith('/rpc/member_screen_calendar')){const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei'}).format(new Date());return r.fulfill({json:{today,save_policy:'latest-market-v2',latest_market_date:rows.at(-1).time,server_time:new Date().toISOString(),month:today.slice(0,7)+'-01',rows:[]}});}
+   if(u.pathname.endsWith('/rpc/save_member_screen_record_v2')){const d=r.request().postDataJSON();(globalThis.savedScreens=globalThis.savedScreens||[]).push(d);return r.fulfill({json:{row:{id:'rec-'+globalThis.savedScreens.length,record_date:d.p_record_date,market_date:d.p_market_date,recorded_at:new Date().toISOString(),strategies:d.p_strategies,conditions:d.p_conditions,stocks:d.p_stocks,note:d.p_note}}});}
    if(u.pathname.endsWith('/price_window')){const q=u.searchParams;if(q.get('select')==='trade_date')return r.fulfill({json:rows.slice(-400).reverse().map(x=>({trade_date:x.time}))});const codes=(q.get('code')||'').replace(/^in\.\(|\)$/g,'').split(',').filter(Boolean);if(+q.get('offset')>0)return r.fulfill({json:[]});
     const out=[];for(const c of codes.slice(0,2)){const k=+c%3;for(const x of rows.slice(-120))out.push({code:c,trade_date:x.time,open:x.open+k,high:x.high+k,low:x.low+k,close:x.close+k,volume:x.volume});}return r.fulfill({json:out});}
    return r.fulfill({json:[]});}
@@ -77,9 +79,16 @@ async function page(b,width,theme,init){
   await panel.locator('[data-private-run]').click();await p.waitForFunction(()=>!document.querySelector('[data-private-run]').disabled,null,{timeout:60000});
   const t1=await panel.locator('[data-private-results]').innerText();console.log(theme,'AND:',t1.slice(0,160).replace(/\n/g,' | '));
   assert.match(t1,/沒有股票同時符合全部 2 個策略/,'opposite strategies cannot both match');
-  await panel.locator('[data-private-any]').click();await p.waitForFunction(()=>!document.querySelector('[data-private-run]').disabled&&document.querySelector('[data-private-results] table'),null,{timeout:60000});
-  assert.equal(await panel.locator('thead th').count(),4,'any mode shows hits column');assert.equal(await panel.locator('[data-private-mode=any]').getAttribute('aria-pressed'),'true');
+  await panel.locator('[data-private-any]').click();await p.waitForFunction(()=>!document.querySelector('[data-private-run]').disabled&&document.querySelector('#resultsArea td[data-viewed-code]'),null,{timeout:60000});
+  assert.equal(await panel.locator('[data-private-mode=any]').getAttribute('aria-pressed'),'true');
   await panel.locator('[data-private-results]').scrollIntoViewIfNeeded();await p.screenshot({path:out+`/private-${theme}-any.png`});
+  // 結果顯示在右側篩選結果，並可記錄到選股日曆
+  assert.ok(await p.locator('#resultsArea td[data-viewed-code]').count()>0,'private results on right panel');assert.match(await p.locator('#statusArea .results-meta').innerText(),/私房策略 2 個・任一符合/);
+  assert.match(await panel.locator('[data-private-results]').innerText(),/結果已顯示在右側/);
+  await p.locator('.sl-record').first().click();await p.getByRole('button',{name:'儲存到選股日曆',exact:true}).waitFor({timeout:15000});
+  assert.deepEqual(await p.locator('.sl-dialog .sl-chip').allInnerTexts(),['私房：均線多頭','私房：均線空頭']);await p.screenshot({path:out+`/private-${theme}-record.png`});
+  await p.getByRole('button',{name:'儲存到選股日曆',exact:true}).click();await p.waitForFunction(()=>document.querySelector('.sl-dialog [role=status]')?.textContent.includes('已保存'),null,{timeout:15000});
+  const saved=globalThis.savedScreens.at(-1);assert.deepEqual(saved.p_strategies,['私房：均線多頭','私房：均線空頭']);assert.ok(saved.p_stocks.length>0);await p.keyboard.press('Escape');
   const prefs=await p.evaluate(()=>JSON.parse(localStorage.getItem('academy.private-screen.v1.fx')));assert.deepEqual(prefs,{selected:['s1','s4'],mode:'any'});
   assert.deepEqual(p.errors,[]);
   await p.setViewportSize({width:375,height:900});await p.waitForTimeout(300);await panel.scrollIntoViewIfNeeded();await p.screenshot({path:out+`/private-${theme}-375.png`});
