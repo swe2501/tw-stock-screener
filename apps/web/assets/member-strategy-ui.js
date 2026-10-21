@@ -280,7 +280,16 @@
       launcher.hidden=false;launcher.style.visibility='hidden';placeLauncher();
       const anchor=launcher.getBoundingClientRect(),rect=chat.getBoundingClientRect();
       launcher.hidden=true;launcher.style.visibility='';chat.classList.add('is-closing');
-      closeAnimation=chat.animate([{transform:'translate(0,0) scale(1)',opacity:1},{transform:`translate(${anchor.left-rect.left}px,${anchor.top-rect.top}px) scale(${anchor.width/rect.width},${anchor.height/rect.height})`,opacity:0}],{duration:260,easing:'cubic-bezier(.4,0,.2,1)',fill:'forwards'});
+      // The translation is measured from the top-left corner. Scaling around the
+      // default center would miss the launcher, particularly for the tall dialog.
+      const dx=anchor.left-rect.left,dy=anchor.top-rect.top,sx=anchor.width/rect.width,sy=anchor.height/rect.height;
+      const frame=(x,y,w,h,opacity,radius)=>({transformOrigin:'0 0',transform:`translate(${x}px,${y}px) scale(${w},${h})`,opacity,borderRadius:radius});
+      closeAnimation=chat.animate([
+        frame(0,0,1,1,1,'22px'),
+        {...frame(dx*.18,dy*.18,.86,.76,1,'30px'),offset:.38},
+        {...frame(dx*.86,dy*.86,sx+(1-sx)*.12,sy+(1-sy)*.1,.92,'42px'),offset:.84},
+        frame(dx,dy,sx,sy,0,'48px')
+      ],{duration:520,easing:'cubic-bezier(.4,0,.2,1)',fill:'forwards'});
       closeAnimation.onfinish=()=>{if(chat.open)chat.close();};
     }
     chat.addEventListener('close',()=>{if(closeAnimation){closeAnimation.cancel();closeAnimation=null;}chat.classList.remove('is-closing');});
