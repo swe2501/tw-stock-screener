@@ -3249,7 +3249,7 @@ class handler(BaseHTTPRequestHandler):
             except Exception:
                 return self._send_json(502, {"error": "Exact-date TAIFEX data unavailable", "date": day})
         if (qs.get("stat") or [""])[0] == "macro_environment":
-            from datetime import datetime, timezone, timedelta
+            pass   # 2026-10-21 移除函式內的 from datetime import（會讓整個 do_GET 的 datetime 變區域變數，導致 foreign_settlement_cost 等分支 UnboundLocalError 當機）；模組頂端已匯入
             start = (datetime.now(timezone.utc) - timedelta(days=850)).date().isoformat()
             today = datetime.now(timezone.utc).date().isoformat()
             def load_series(series):
@@ -3274,7 +3274,7 @@ class handler(BaseHTTPRequestHandler):
             return self._send_json(200, {"series": data, "source": "FRED / BLS / Federal Reserve", "scope": "US macro and broad dollar; not complete global coverage"}, cache="public, s-maxage=1800, max-age=300")
         if (qs.get("stat") or [""])[0] == "treasury":
             try:
-                from datetime import datetime, timezone
+                pass   # 2026-10-21 移除函式內的 from datetime import（會讓整個 do_GET 的 datetime 變區域變數，導致 foreign_settlement_cost 等分支 UnboundLocalError 當機）；模組頂端已匯入
                 import xml.etree.ElementTree as ET
                 now = datetime.now(timezone.utc)
                 url = "https://home.treasury.gov/sites/default/files/interest-rates/yield.xml"
