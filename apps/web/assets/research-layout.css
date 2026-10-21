@@ -97,16 +97,43 @@
 #chartModal .chart-fit-tools .chart-layer-tab{--layer-accent:var(--accent);border:1px solid transparent;background:var(--surface2);font-weight:500;gap:6px}
 #chartModal .chart-fit-tools .chart-layer-tab.is-open{background:var(--accent);border-color:var(--accent);color:var(--on-accent);box-shadow:0 2px 6px color-mix(in srgb,var(--accent) 16%,transparent)}
 #chartModal .chart-fit-tools .chart-layer-tab.is-open .layer-dot{background:var(--on-accent);box-shadow:none}
+#chartModal .chart-fit-tools .chart-layer-tab.is-enabled .layer-dot{box-shadow:none;transform:none}
 #chartModal .chart-fit-tools .chart-draw-console{padding:7px 0 3px;margin:3px 10px 8px;border:0;border-radius:0;background:transparent;box-shadow:none;flex-wrap:wrap;overflow:visible}
 #chartModal .chart-fit-tools .chart-draw-console .tool-btn{border:1px solid var(--border);background:var(--surface);box-shadow:none}
-@media(pointer:coarse){#chartModal .chart-fit-tools :is(.tool-btn,.chart-layer-tab){min-height:44px}}
+#chartModal .chart-fit-layer-panels .chart-feature-panel{margin:7px 10px 0;border:1px solid var(--border)!important;border-radius:12px;background:var(--surface2);box-shadow:none;transform:none}
+#chartModal .chart-fit-layer-panels .chart-feature-panel:not(.is-open){display:none!important}
+#chartModal .chart-fit-layer-panels .chart-feature-panel>span[id$="Opts"]{padding:10px 12px;line-height:1.8}
+#chartModal .chart-fit-layer-panels :is(#aiBuyPanel,#brokerFilterPanel,#sma20GroupPanel).is-open{padding:10px 12px!important}
+#chartModal .chart-fit-tools .chart-event-toggles{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0}
+#chartModal .chart-fit-tools .chart-marker-control[aria-pressed=true]{background:color-mix(in srgb,var(--accent) 8%,var(--surface));border-color:color-mix(in srgb,var(--accent) 32%,var(--border));color:var(--accent)}
+#chartModal .chart-fit-tools .chart-marker-control[aria-pressed=true]:hover{background:color-mix(in srgb,var(--accent) 13%,var(--surface))}
+#chartModal .chart-fit-tools #eraserBtn{min-height:30px;padding:4px 9px;font-size:11px;gap:5px;border-radius:10px}
+#chartModal .chart-fit-tools #eraserBtn .eraser-icon{width:15px;height:15px;stroke-width:1.4}
+#chartModal .granville-heading{color:var(--accent)}
+#chartModal .granville-legend{color:var(--text-muted);font-size:11px;line-height:1.7;flex-basis:100%}
+#chartModal #sma20GroupPanel .sma20-grp{color:var(--text-muted);border-color:var(--border);font-weight:500;background:var(--surface)}
+#chartModal #sma20GroupPanel .sma20-grp.is-on{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 35%,var(--border));background:color-mix(in srgb,var(--accent) 7%,var(--surface))}
+#chartModal #sma20GroupPanel .sma20-grp input{accent-color:var(--accent)}
+@media(pointer:coarse){#chartModal .chart-fit-tools :is(.tool-btn,.chart-layer-tab),#chartModal .chart-fit-tools #eraserBtn{min-height:44px}}
 @media(prefers-reduced-motion:reduce){#chartModal .chart-fit-tools :is(.tool-btn,.chart-layer-tab){transition:none;transform:none!important}}
 #chartModal .chart-fit-indicator{margin-left:auto;display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-muted)}
+#chartModal .chart-fit-indicator[hidden]{display:none!important}
+#chartModal #ohlcTooltip{max-width:calc(100% - 80px);white-space:normal;font-variant-numeric:tabular-nums;line-height:1.7;pointer-events:none}
+#chartModal .chart-event-rail{position:absolute;bottom:32px;left:0;right:68px;height:19px;pointer-events:none;z-index:9}
+#chartModal .chart-event-rail button{position:absolute;transform:translateX(-50%);height:18px;min-height:0;padding:0 4px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text-muted);font-family:inherit;font-weight:500;font-size:10px;line-height:16px;pointer-events:auto;cursor:pointer;box-shadow:none;white-space:nowrap}
+#chartModal .chart-event-rail button:hover,#chartModal .chart-event-rail button[aria-expanded=true]{color:var(--accent);border-color:var(--accent)}
+#chartModal .chart-event-rail button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#chartModal .chart-event-detail{position:absolute;right:8px;bottom:25px;max-width:min(360px,95%);padding:9px 12px;border:1px solid var(--border);border-radius:9px;background:var(--surface);color:var(--text);font-size:12px;line-height:1.7;white-space:pre-line;box-shadow:var(--shadow-sm);pointer-events:auto}
+#chartModal .chart-level-rail{position:absolute;top:0;right:70px;bottom:32px;pointer-events:none;z-index:6}
+#chartModal .chart-level-rail span{position:absolute;right:0;white-space:nowrap;color:var(--text-muted);background:var(--surface);border-radius:4px;padding:1px 4px;font-size:10px;line-height:16px;font-variant-numeric:tabular-nums}
 #chartModal .chart-fit-indicator select{width:auto;padding:2px 7px;margin:0;min-height:26px;font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:6px}
 #chartModal.chart-fit .modal-body{min-height:0}
 #chartModal.chart-fit .chart-content{min-height:0;padding:7px 12px 10px}
 @media(max-width:1100px){#chartModal.chart-fit .chart-content{flex:none;height:auto}}
 #chartModal.chart-fit #chartWrapper{display:grid!important;height:var(--chart-fit-height);grid-template-rows:minmax(0,var(--chart-main-ratio,70fr)) 30px minmax(0,var(--chart-vol-ratio,15fr)) minmax(0,var(--chart-tech-ratio,15fr));overflow:hidden}
+#chartModal.chart-fit-chip #chartWrapper{grid-template-rows:minmax(0,var(--chart-main-ratio,70fr)) 30px minmax(0,var(--chart-sub-ratio,30fr))}
+#chartModal.chart-fit-chip #chipPage{grid-row:3;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+#chartModal.chart-fit-chip #chipPage .chip-c{height:108px}
 #chartModal.chart-fit #mainChartPanel{min-height:0;overflow:hidden;grid-row:1}
 #chartModal.chart-fit #subTabs{grid-row:2;display:flex;align-items:center;gap:6px;padding:2px 7px;margin:0;min-height:0}
 #chartModal.chart-fit #subTabs .chip-tab{font-size:12px;padding:3px 8px;line-height:1.5}

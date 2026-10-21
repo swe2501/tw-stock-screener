@@ -9546,30 +9546,30 @@
           </div>
         </div>
         <div class="sc-panel" data-cat="granville">
-          <div class="sc-hd"><a onclick="_scToggle('granville')"><span class="sc-ar">▸</span><b style="color:#1e88e5">葛蘭碧買點</b></a><span class="sc-sum"></span></div>
+          <div class="sc-hd"><a onclick="_scToggle('granville')"><span class="sc-ar">▸</span><b style="color:#1e88e5">葛蘭碧</b></a><span class="sc-sum"></span></div>
           <div class="sc-body" style="display:none">
-          <div class="sc-note">以 20 日均線（簡單移動平均）為基準的三階段買點，依序 1→2→3；均線連續 3 天下彎才重置。</div>
+          <div class="sc-note">以 20 日均線（簡單移動平均）為基準的三階段型態，依序 1→2→3；均線連續 3 天下彎才重置。</div>
           <div class="checkbox-grid sc-cbs">
         <label class="checkbox-row">
           <input type="checkbox" class="sma20-cb" id="sma20_b1" value="1" />
           <div>
-            <div class="cb-label">葛蘭碧買點 1（均線翻揚帶量站上）</div>
+            <div class="cb-label">葛蘭碧 階段1（均線翻揚帶量站上）</div>
             <div class="cb-hint">20 日均線（SMA）原本下彎（前 5 個交易日內至少一天低於前一天）、當日走平或上彎（≥ 前 1 日且 ≥ 前 3 日）；股價<b>從月線下突破</b>（前 3 根內至少一根收盤在月線下，早已站上月線的不算）；紅 K（不設長紅門檻）、收盤 ＞ 均線、成交量 ≥ max(昨日止 5 日均量, 10 日均量)×1.3。</div>
           </div>
         </label>
         <label class="checkbox-row">
           <input type="checkbox" class="sma20-cb" id="sma20_b2" value="2" />
           <div>
-            <div class="cb-label">葛蘭碧買點 2（回測月線不破）</div>
-            <div class="cb-hint">已出現買點 1、且股價<b>先離開月線</b>（買點 1 之後至少一天收盤 ≥ 月線 ×1.03）之後，第一次回測月線不破：當日最低碰到月線（最低 ≤ 月線 ×1.01，接近月線、差 1% 內沒碰到也算）、但最多只能跌破一點點（最低 ≥ 月線 ×0.99，破超過 1% 不算），且收盤 ＞ 月線站回；當天不能是長黑（黑 K 實體 ≥ 3% 不算）。實體或下影線碰線皆可；不要求均線上彎、紅 K 與帶量。</div>
+            <div class="cb-label">葛蘭碧 階段2（回測月線不破）</div>
+            <div class="cb-hint">已出現階段 1、且股價<b>先離開月線</b>（階段 1 之後至少一天收盤 ≥ 月線 ×1.03）之後，第一次回測月線不破：當日最低碰到月線（最低 ≤ 月線 ×1.01，接近月線、差 1% 內沒碰到也算）、但最多只能跌破一點點（最低 ≥ 月線 ×0.99，破超過 1% 不算），且收盤 ＞ 月線站回；當天不能是長黑（黑 K 實體 ≥ 3% 不算）。實體或下影線碰線皆可；不要求均線上彎、紅 K 與帶量。</div>
           </div>
         </label>
         <label class="checkbox-row">
           <input type="checkbox" class="sma20-cb" id="sma20_b3" value="3" />
           <div>
-            <div class="cb-label">葛蘭碧買點 3（跌破月線止跌 K）</div>
-            <div class="cb-hint">已依序出現買點 1、2，且<b>買點 2 之後曾經賺過</b>（至少一天收盤高於買點 2 當天收盤；從沒賺過就不標買點 3）之後：收盤 ＜ 均線（收盤跌破月線），但不能跌太深（收盤 ≥ 月線 ×0.95，跌破超過 5% 不算），且長紅 3%／長下影線 3%／十字線任一成立；十字線＝實體 |收−開| ≤ 收盤 0.5%，且當日振幅 (高−低) ≥ 收盤 2%（排除幾乎不動的小 K）。收盤即觸發。<br>
-            <b>共同規則</b>：依序 1→2→3、同一天不跨階段、每階段只記首次；每天先檢查重置——均線<b>連續 3 個交易日</b>比前一天低才清除所有階段、當天不觸發（只壓 1～2 天視為健康回測，不重置）；買點 3 後該輪結束。三個可複選（符合任一即列出）。<span class="algo-gated">參數為初版（2026-10-12 訂、10-17 修正重置與買點 2／3），待以歷史 K 圖對照肉眼判斷後調整。全市場試算（上市櫃 1,964 檔、2024 年至今）：買點 1 共 8,002 次、買點 2 共 4,405 次、買點 3 共 1,275 次；買點 1→2 中位 10 個交易日、2→3 中位 12 個交易日（10-17 晚修正版）。個股 K 圖「葛蘭碧買點」標記可檢視歷史訊號（日 K）。</span></div>
+            <div class="cb-label">葛蘭碧 階段3（跌破月線止跌 K）</div>
+            <div class="cb-hint">已依序出現階段 1、2，且<b>階段 2 之後曾經賺過</b>（至少一天收盤高於階段 2 當天收盤；從沒賺過就不標階段 3）之後：收盤 ＜ 均線（收盤跌破月線），但不能跌太深（收盤 ≥ 月線 ×0.95，跌破超過 5% 不算），且長紅 3%／長下影線 3%／十字線任一成立；十字線＝實體 |收−開| ≤ 收盤 0.5%，且當日振幅 (高−低) ≥ 收盤 2%（排除幾乎不動的小 K）。收盤即觸發。<br>
+            <b>共同規則</b>：依序 1→2→3、同一天不跨階段、每階段只記首次；每天先檢查重置——均線<b>連續 3 個交易日</b>比前一天低才清除所有階段、當天不觸發（只壓 1～2 天視為健康回測，不重置）；階段 3 後該輪結束。三個可複選（符合任一即列出）。<span class="algo-gated">參數為初版（2026-10-12 訂、10-17 修正重置與階段 2／3），待以歷史 K 圖對照肉眼判斷後調整。全市場試算（上市櫃 1,964 檔、2024 年至今）：階段 1 共 8,002 次、階段 2 共 4,405 次、階段 3 共 1,275 次；階段 1→2 中位 10 個交易日、2→3 中位 12 個交易日（10-17 晚修正版）。個股 K 圖「葛蘭碧」標記可檢視歷史訊號（日 K）。</span></div>
           </div>
         </label>
           </div>
@@ -9876,10 +9876,9 @@
         <div class="chart-layer-toolbar" role="tablist" aria-label="圖表圖層工具">
           <button class="chart-layer-tab" data-layer="mk" type="button" onclick="_mkTogglePanel()"><span class="layer-dot"></span>大盤K<span class="layer-count"></span></button>
           <button class="chart-layer-tab" data-layer="sr" type="button" onclick="_srTogglePanel()"><span class="layer-dot"></span>支撐壓力<span class="layer-count"></span></button>
-          <button class="chart-layer-tab" data-layer="pl" type="button" onclick="_togglePriceLine()" title="顯示／隱藏現價虛線"><span class="layer-dot"></span>現價線<span class="layer-count"></span></button>
           <button class="chart-layer-tab" data-layer="vp" type="button" onclick="_vpTogglePanel()"><span class="layer-dot"></span>價量分析<span class="layer-count"></span></button>
           <button class="chart-layer-tab" data-layer="broker" type="button" onclick="_toggleBrokerPanel()"><span class="layer-dot"></span>主力分點<span class="layer-count"></span></button>
-          <button class="chart-layer-tab" data-layer="ai" type="button" onclick="_aiBuyToggle()"><span class="layer-dot"></span>✨ AI 判定<span class="layer-count"></span></button>
+          <button class="chart-layer-tab" data-layer="ai" type="button" onclick="_aiBuyToggle()"><span class="layer-dot"></span>AI 判定<span class="layer-count"></span></button>
           <div class="label-row" id="markerToggles" style="display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;white-space:nowrap"></div>
         </div>
         <script>
@@ -9889,7 +9888,7 @@
           window._priceLineOn = !window._priceLineOn;
           try { localStorage.setItem('kv_priceLine', window._priceLineOn ? '1' : '0'); } catch(e){}
           if (window._mainCandleSeries) { try { window._mainCandleSeries.applyOptions({ priceLineVisible: window._priceLineOn, lastValueVisible: window._priceLineOn }); } catch(e){} }
-          var b = document.querySelector('.chart-layer-tab[data-layer="pl"]'); if (b) b.classList.toggle('is-open', window._priceLineOn);
+          var b = document.querySelector('[data-layer="pl"]'); if (b) b.setAttribute('aria-pressed',String(window._priceLineOn));
         };
         </script>
         <div id="sma20GroupPanel" class="chart-feature-panel" style="display:none;padding:7px 12px;border-top:1px solid var(--border);font-size:12px;color:var(--text);flex-wrap:wrap;gap:6px;align-items:center"></div>
@@ -9965,6 +9964,8 @@
               <button type="button" onclick="_pickDraw('text')">文字</button>
             </div>
           </span>
+          <button class="tool-btn chart-marker-control" data-layer="pl" type="button" onclick="_togglePriceLine()" aria-pressed="true" title="顯示或隱藏最新價位的水平參考線">現價線</button>
+          <span id="chartEventToggles" class="chart-event-toggles" role="group" aria-label="圖表事件標記"></span>
           <span class="draw-console-divider" aria-hidden="true"></span>
           <button class="tool-btn" id="eraserBtn" data-drawtool="eraser" onclick="_setDrawTool('eraser')" title="橡皮擦" aria-label="橡皮擦" style="flex:0 0 auto"><svg class="eraser-icon" aria-hidden="true" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.2 13.1 12.4 4.9a2.2 2.2 0 0 1 3.1 0l4.1 4.1a2.2 2.2 0 0 1 0 3.1l-7.8 7.8H8.1l-3.9-3.7a2.2 2.2 0 0 1 0-3.1Z" fill="currentColor" fill-opacity=".08"/><path d="m8.5 8.8 7.1 7.1 4-3.8a2.2 2.2 0 0 0 0-3.1l-4.1-4.1a2.2 2.2 0 0 0-3.1 0Z" fill="currentColor" fill-opacity=".2" stroke="none"/><path d="m8.5 8.8 7.1 7.1M12.5 6.9l3.9 3.9"/><path d="M15.6 20h4.2" opacity=".45"/></svg> 橡皮擦</button>
           <button class="tool-btn draw-clear" onclick="clearAllDrawings()" style="flex:0 0 auto">✕ 清除標記</button>
@@ -10265,17 +10266,18 @@
           window._srDraw=function(){
             if(typeof candleSeriesRef==='undefined'||!candleSeriesRef)return;
             SR.lines.forEach(function(l){ try{ l.s.removePriceLine(l.p); }catch(e){} }); SR.lines=[];
-            if(SR.code!==currentCode) return;
+            window._chartSupportLevels=[];if(SR.code!==currentCode){window.AcademyChartViewport?.refresh();return;}
             var tag=SR.src==='hour'?'(時)':'';
             SR.rows.forEach(function(r){ if(!r.n||r.h==null||!window._srPeriods[r.n]) return;
               var cl=srClassify(+r.close,+r.h,+r.m,+r.l)[1];
               [['h','高','H'],['m','中','M'],['l','低','L']].forEach(function(p){ var v=+r[p[0]], isS=cl[p[2]]==='S';
-                SR.lines.push({s:candleSeriesRef, p:candleSeriesRef.createPriceLine({price:v, color:isS?'#e74c3c':'#26c281', lineWidth:1   /* 2026-09-29：支撐紅、壓力綠 */, lineStyle:LightweightCharts.LineStyle.Dashed, axisLabelVisible:true, title:r.n+'日'+p[1]+tag})});
+                SR.lines.push({s:candleSeriesRef, p:candleSeriesRef.createPriceLine({price:v, color:isS?'#e74c3c':'#26c281', lineWidth:1   /* 2026-09-29：支撐紅、壓力綠 */, lineStyle:LightweightCharts.LineStyle.Dotted, axisLabelVisible:false, title:''})});
               }); });
+            window._chartSupportLevels=SR.lines.map(function(l){return l.p.options();});window.AcademyChartViewport?.refresh();
           };
           window._chartLayerPanel=function(kind,open){
-            var map={mk:['mkPanel','mkOpts'],sr:['srLinePanel','srLineOpts'],vp:['vpPanel','vpOpts'],broker:['brokerFilterPanel','brokerFilterPanel']};
-            Object.keys(map).forEach(function(k){var p=el(map[k][0]),o=el(map[k][1]),active=k===kind&&open;if(p)p.classList.toggle('is-open',active);if(o&&!active)o.style.display='none';var b=document.querySelector('.chart-layer-tab[data-layer="'+k+'"]');if(b)b.classList.toggle('is-open',active);if(k==='broker'&&!active){window._brokerPanelOpen=false;var a=el('brokerPanelArrow'),x=el('brokerPanelActs');if(a)a.textContent='▸';if(x)x.style.display='none';}});
+            var map={mk:['mkPanel','mkOpts'],sr:['srLinePanel','srLineOpts'],vp:['vpPanel','vpOpts'],broker:['brokerFilterPanel','brokerFilterPanel'],ai:['aiBuyPanel','aiBuyPanel'],sma20:['sma20GroupPanel','sma20GroupPanel']};
+            Object.keys(map).forEach(function(k){var p=el(map[k][0]),o=el(map[k][1]),active=k===kind&&open;if(p){p.classList.toggle('is-open',active);p.style.display=active?(k==='sma20'?'flex':'block'):'none';}if(o)o.style.display=active?'block':'none';var b=document.querySelector('.chart-layer-tab[data-layer="'+k+'"]');if(b){b.classList.toggle('is-open',active);b.setAttribute('aria-expanded',String(active));b.setAttribute('aria-controls',map[k][0]);}if(k==='ai')window._aiBuyOpen=active;if(k==='broker'&&!active){window._brokerPanelOpen=false;var a=el('brokerPanelArrow'),x=el('brokerPanelActs');if(a)a.textContent='▸';if(x)x.style.display='none';}});
           };
           window._chartLayerStatus=function(kind,on,count){var b=document.querySelector('.chart-layer-tab[data-layer="'+kind+'"]');if(!b)return;b.classList.toggle('is-enabled',!!on);var n=b.querySelector('.layer-count');if(n){n.textContent=count||'';n.classList.toggle('show',!!count);}};
           window._srTogglePanel=function(){ var o=el('srLineOpts'), open=o.style.display==='none'; o.style.display=open?'block':'none'; window._chartLayerPanel('sr',open); el('srLineArrow').textContent=open?'▾':'▸'; };
@@ -10716,7 +10718,7 @@
                   ? `<span class="data-missing-badge" title="部分篩選條件無法確認（${s.data_missing.map(k=>({'no_black':'無放量黑棒篩選','gap_unverified':'跳空前日資料缺失，請手動排查'}[k]||k)).join('、')}），已放行"></span>`
                   : ''
               }</td>
-            <td class="name-cell">${s.name}${s.sma20_stage ? `<div class="zm3-info">葛蘭碧買點 ${s.sma20_stage}</div>` : ''}${s.zm3 ? `<div class="zm3-info" title="真名三式：長黑 ${s.zm3.black_date}（−${s.zm3.black_pct}%）後第 ${s.zm3.day_n} 天反包；停損參考 ${s.zm3.stop}（長紅低與洗盤最低取低者）；第一目標 ${s.zm3.target}（長黑前 20 日最高）">三式・長黑 ${s.zm3.black_date.slice(5).replace('-','/')}・½ ${s.zm3.mid}・第${s.zm3.day_n}天${s.zm3.vol ? '・<b>帶量</b>' : ''}<br>停損 ${s.zm3.stop}・目標 ${s.zm3.target}</div>` : ''}${s.ev357 ? `<div class="zm3-info" style="color:${s.ev357.band==='cheap'?'#c0392b':(s.ev357.band==='expensive'?'#148f77':'var(--text-muted)')}" title="連續5年配息；D=近5年均現金股利 ${s.ev357.d}｜現金殖利率=D÷現價｜便宜價(7%)=${s.ev357.cheap_price} 合理價(5%)=${s.ev357.fair_price} 昂貴價(3%)=${s.ev357.exp_price}"><b>${s.ev357.band==='cheap'?'便宜·買':(s.ev357.band==='expensive'?'昂貴·賣光':'合理·賣')}</b> 殖利率 ${s.ev357.yield}%｜D ${s.ev357.d}（便宜 ${s.ev357.cheap_price}／合理 ${s.ev357.fair_price}／昂貴 ${s.ev357.exp_price}）</div>` : ''}</td>
+            <td class="name-cell">${s.name}${s.sma20_stage ? `<div class="zm3-info">葛蘭碧・階段 ${s.sma20_stage}</div>` : ''}${s.zm3 ? `<div class="zm3-info" title="真名三式：長黑 ${s.zm3.black_date}（−${s.zm3.black_pct}%）後第 ${s.zm3.day_n} 天反包；停損參考 ${s.zm3.stop}（長紅低與洗盤最低取低者）；第一目標 ${s.zm3.target}（長黑前 20 日最高）">三式・長黑 ${s.zm3.black_date.slice(5).replace('-','/')}・½ ${s.zm3.mid}・第${s.zm3.day_n}天${s.zm3.vol ? '・<b>帶量</b>' : ''}<br>停損 ${s.zm3.stop}・目標 ${s.zm3.target}</div>` : ''}${s.ev357 ? `<div class="zm3-info" style="color:${s.ev357.band==='cheap'?'#c0392b':(s.ev357.band==='expensive'?'#148f77':'var(--text-muted)')}" title="連續5年配息；D=近5年均現金股利 ${s.ev357.d}｜現金殖利率=D÷現價｜便宜價(7%)=${s.ev357.cheap_price} 合理價(5%)=${s.ev357.fair_price} 昂貴價(3%)=${s.ev357.exp_price}"><b>${s.ev357.band==='cheap'?'便宜·買':(s.ev357.band==='expensive'?'昂貴·賣光':'合理·賣')}</b> 殖利率 ${s.ev357.yield}%｜D ${s.ev357.d}（便宜 ${s.ev357.cheap_price}／合理 ${s.ev357.fair_price}／昂貴 ${s.ev357.exp_price}）</div>` : ''}</td>
             <td class="neutral col-open">${s.open}</td>
             <td class="neutral col-high">${s.high}</td>
             <td class="neutral col-low">${s.low}</td>
@@ -10983,7 +10985,7 @@
         const col = { 1: '#00acc1', 2: '#1e88e5', 3: '#8e24aa' };
         const sc = _sma20Scan(candles);
         sc.forEach(x => { if (x.g > _sma20GroupCount) _sma20GroupCount = x.g; if (x.stage === 1) _sma20GroupStart[x.g] = candles[x.i].time; });
-        _sma20Markers = sc.map(x => ({ time: candles[x.i].time, position: 'belowBar', color: col[x.stage], shape: 'arrowUp', text: '買' + x.stage, size: 1, group: x.g }));
+        _sma20Markers = sc.map(x => ({ time: candles[x.i].time, position: 'belowBar', color: col[x.stage], shape: 'circle', text: '階段' + x.stage, size: 1, group: x.g }));
       } catch (_) { _sma20Markers = []; _sma20GroupCount = 0; }
     }
     const _MK_DEFS = [
@@ -10991,15 +10993,16 @@
       ['div',      '除權息', '#f39c12'],
       ['broker',   '主力進場', '#c678dd'],
       ['user',     '標記',   '#ff1744'],
-      ['sma20',    '葛蘭碧買點', '#1e88e5'],
+      ['sma20',    '葛蘭碧', '#1e88e5'],
     ];
-    function _toggleMarker(k) { window._mkShow[k] = !window._mkShow[k]; if ((k === 'sma20' || k === 'div' || k === 'catalyst') && window._kPref) window._kPref.set('mk_' + k, window._mkShow[k]); _refreshChartMarkers(); }
+    function _toggleMarker(k) { window._mkShow[k] = !window._mkShow[k]; if ((k === 'sma20' || k === 'div' || k === 'catalyst') && window._kPref) window._kPref.set('mk_' + k, window._mkShow[k]); if(k==='sma20')window._chartLayerPanel('sma20',window._mkShow[k]); _refreshChartMarkers(); }
+    function _toggleGranvillePanel(){const open=!document.getElementById('sma20GroupPanel')?.classList.contains('is-open');if(open){window._mkShow.sma20=true;window._kPref?.set('mk_sma20',true);}window._chartLayerPanel('sma20',open);_refreshChartMarkers();}
     function _renderMarkerToggles(present) {
       const host = document.getElementById('markerToggles'); if (!host) return;
-      const S = window._mkShow;
-      const chips = _MK_DEFS.filter(d => present[d[0]]).map(([k, label, color]) =>
-        `<button type="button" class="chart-layer-tab${S[k] ? ' is-enabled' : ''}" onclick="_toggleMarker('${k}')"><span class="layer-dot"></span>${label}</button>`);
-      host.innerHTML = chips.join('');
+      const S = window._mkShow,events=document.getElementById('chartEventToggles');
+      const granvilleOpen=document.getElementById('sma20GroupPanel')?.classList.contains('is-open');
+      host.innerHTML=_MK_DEFS.filter(d=>d[0]==='sma20'&&present[d[0]]).map(([k,label])=>`<button type="button" data-layer="sma20" class="chart-layer-tab${S[k]?' is-enabled':''}${granvilleOpen?' is-open':''}" aria-controls="sma20GroupPanel" aria-expanded="${!!granvilleOpen}" onclick="_toggleGranvillePanel()"><span class="layer-dot"></span>${label}</button>`).join('');
+      if(events)events.innerHTML=_MK_DEFS.filter(d=>d[0]!=='sma20'&&(present[d[0]]||d[0]==='div'||d[0]==='catalyst')).map(([k,label])=>`<button type="button" class="tool-btn chart-marker-control" data-marker="${k}" aria-pressed="${!!S[k]}" ${present[k]?'':'disabled title="目前圖表區間無此類事件"'} onclick="_toggleMarker('${k}')">${label}</button>`).join('');
     }
 
     function _refreshChartMarkers() {
@@ -11022,7 +11025,7 @@
           position: 'belowBar',
           color: '#f5c84b',
           shape: 'arrowUp',
-          text: e.event_type,
+          text: [e.event_type,e.title,e.note].filter(Boolean).join(' · '),
           size: 1,
         }));
       const bmap = {};
@@ -11042,8 +11045,8 @@
       const div = _lastDivMarkers || [];
       const present = { div: div.length > 0, catalyst: catalyst.length > 0, broker: broker.length > 0, user: user.length > 0, sma20: _sma20Markers.length > 0 };
       const sel = [];
-      if (S.div) sel.push(...div);
-      if (S.catalyst) sel.push(...catalyst);
+      window._chartTimelineEvents=[...(S.div?div.map(m=>({time:m.time,label:'息',detail:m.text})):[]),...(S.catalyst?catalyst.map(m=>({time:m.time,label:'法',detail:m.text})):[])];
+      window.AcademyChartViewport?.refresh();
       if (S.broker) sel.push(...broker);
       if (S.user) sel.push(...user);
       if (S.sma20) sel.push(..._sma20Markers.filter(m => !window._sma20GroupsOn || window._sma20GroupsOn.has(m.group)));
@@ -11069,7 +11072,7 @@
     // 點葛蘭碧按鈕(開啟時)在下方列出各組買點 checkbox，可單獨顯示/隱藏某一組
     function _renderSma20Groups() {
       const panel = document.getElementById('sma20GroupPanel'); if (!panel) return;
-      if (!(window._mkShow && window._mkShow.sma20 && _sma20GroupCount > 0)) { panel.style.display = 'none'; panel.innerHTML = ''; return; }
+      if (!(window._mkShow && window._mkShow.sma20 && _sma20GroupCount > 0 && panel.classList.contains('is-open'))) { panel.style.display = 'none'; panel.innerHTML = ''; return; }
       const allOn = !window._sma20GroupsOn || window._sma20GroupsOn.size === _sma20GroupCount;
       let boxes = '';
       for (let g = 1; g <= _sma20GroupCount; g++) {
@@ -11077,7 +11080,7 @@
         const d = _sma20GroupStart[g] ? String(_sma20GroupStart[g]).slice(0, 10).replace(/-/g, '/') : '';   // 2026-10-21 加上年份（YYYY/MM/DD）
         boxes += `<label class="sma20-grp${on ? ' is-on' : ''}"><input type="checkbox" ${on ? 'checked' : ''} onchange="_toggleSma20Group(${g})">第${g}組${d ? `<span class="sma20-grp-d">${d}</span>` : ''}</label>`;
       }
-      panel.innerHTML = `<b style="color:#1e88e5">葛蘭碧買點 · 共 ${_sma20GroupCount} 組</b>`
+      panel.innerHTML = `<b class="granville-heading">葛蘭碧 · 共 ${_sma20GroupCount} 組</b><span class="granville-legend">階段1 翻揚突破 · 階段2 回測均線 · 階段3 均線下止穩</span>`
         + `<label class="sma20-grp sma20-grp-all${allOn ? ' is-on' : ''}"><input type="checkbox" ${allOn ? 'checked' : ''} onchange="_toggleSma20AllGroups(this.checked)">全部</label>`
         + `<span class="sma20-grp-sep">|</span>${boxes}`;
       panel.style.display = 'flex';
@@ -11089,8 +11092,9 @@
     window._aiBuyOpen = false;
     window._aiBuyToggle = function () {
       window._aiBuyOpen = !window._aiBuyOpen;
+      window._chartLayerPanel('ai',window._aiBuyOpen);
       const btn = document.querySelector('.chart-layer-tab[data-layer="ai"]');
-      if (btn) btn.classList.toggle('is-enabled', window._aiBuyOpen);
+      if (btn) btn.classList.toggle('is-open', window._aiBuyOpen);
       const panel = document.getElementById('aiBuyPanel');
       if (!panel) return;
       if (!window._aiBuyOpen) { panel.style.display = 'none'; return; }
@@ -12581,7 +12585,7 @@
     function _renderBrokerFilter(list) {
       const panel = document.getElementById('brokerFilterPanel');
       if (!panel) return;
-      if (!list.length) { panel.style.display = 'none'; panel.innerHTML = ''; if(window._chartLayerStatus)window._chartLayerStatus('broker',false,0); return; }
+      if (!list.length) { panel.style.display = window._brokerPanelOpen?'block':'none'; panel.innerHTML = '<div class="ov-empty">此區間尚無符合條件的分點資料。</div>'; if(window._chartLayerStatus)window._chartLayerStatus('broker',false,0); return; }
       const groups = {};
       list.forEach(d => (groups[d.cat] = groups[d.cat] || []).push(d.name));
       const cb = b => {
@@ -12600,7 +12604,8 @@
     }
     function _toggleBrokerPanel() {   // 主力分點清單展開／收合（記住狀態，換股票時沿用）
       const panel = document.getElementById('brokerFilterPanel'), l = document.getElementById('brokerPanelList');
-      if(!panel||!l)return;
+      if(!panel)return;
+      if(!l&&!panel.textContent.trim())panel.innerHTML='<div class="ov-empty">此區間尚無符合條件的分點資料。</div>';
       window._brokerPanelOpen = panel.style.display === 'none';
       panel.style.display = window._brokerPanelOpen ? 'block' : 'none';
       if(window._chartLayerPanel)window._chartLayerPanel('broker',window._brokerPanelOpen);
@@ -14177,7 +14182,7 @@
         }
         const c = _candleMap[param.time];
         if (!c) { _ohlcTip.style.display = 'none'; return; }
-        const date = c.time.replace(/-/g, '/');
+        const date = typeof c.time==='number'?new Date(c.time*1000).toISOString().slice(0,16).replace('T',' ').replace(/-/g,'/'):c.time.replace(/-/g, '/');
         const color = c.close >= c.open ? '#e74c3c' : '#26c281';
         const fmt = v => Number(v).toFixed(2);
         _ohlcTip.innerHTML =
@@ -14187,6 +14192,7 @@
           `　低 <span style="color:${color}">${fmt(c.low)}</span>` +
           `　收 <span style="color:${color}">${fmt(c.close)}</span>`;
         _ohlcTip.style.display = 'block';
+        window.AcademyChartViewport?.placeTooltip(param,c,candles,chartInstance,candleSeriesRef);
       });
 
       resizeFibCanvas();
@@ -14327,10 +14333,11 @@
         wickUpColor: '#e74c3c', wickDownColor: '#26c281',
         priceLineVisible: window._priceLineOn !== false,    // 現價虛線
         lastValueVisible: window._priceLineOn !== false,    // 右軸紅底現價標籤
+        title:'現價',priceLineWidth:1,priceLineStyle:LightweightCharts.LineStyle.Dotted,
       });
       candleSeriesRef.setData(candles);
       window._mainCandleSeries = candleSeriesRef;   // 供現價線開關 _togglePriceLine 使用
-      try { var _plb = document.querySelector('.chart-layer-tab[data-layer="pl"]'); if (_plb) _plb.classList.toggle('is-open', window._priceLineOn !== false); } catch (e) {}
+      try { var _plb = document.querySelector('[data-layer="pl"]'); if (_plb) _plb.setAttribute('aria-pressed',String(window._priceLineOn !== false)); } catch (e) {}
       chartInstance._xhairSeries = candleSeriesRef;
       window._chartCloseByTime = {}; candles.forEach(c => { window._chartCloseByTime[c.time] = c.close; });
       _wireXhair(chartInstance);
@@ -17277,8 +17284,8 @@
 <link rel="stylesheet" href="assets/screen-log.css?v=calendar-clean22">
 <link rel="stylesheet" href="assets/strategy-studio.css?v=3">
 <link rel="stylesheet" href="assets/learning-center.css?v=1">
-<link rel="stylesheet" href="assets/research-layout.css?v=4">
-<script src="assets/chart-viewport-fit.js?v=3" defer></script>
+<link rel="stylesheet" href="assets/research-layout.css?v=6">
+<script src="assets/chart-viewport-fit.js?v=5" defer></script>
 <script src="assets/screen-inline-calendar.js?v=precision9" defer></script>
 <script src="assets/screen-log.js?v=calendar-direct30" defer></script>
 <script src="assets/pattern-focus.js?v=2" defer></script>
