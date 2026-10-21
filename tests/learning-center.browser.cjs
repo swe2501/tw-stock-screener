@@ -21,8 +21,11 @@ async function page(b,width,theme,init){
 (async()=>{const b=await chromium.launch({channel:'msedge',headless:true});try{
  for(const theme of ['light','dark'])for(const w of [1440,375]){const p=await page(b,w,theme);await p.goto('https://studio.fixture.test/#member/learning');await p.evaluate(t=>document.documentElement.dataset.theme=t,theme);await p.waitForSelector('.lc-hero',{timeout:20000});await p.waitForTimeout(800);
   await p.locator('.lc-hero').scrollIntoViewIfNeeded();await p.screenshot({path:out+`/learn-${theme}-${w}-top.png`});
-  await p.locator('.lc-lesson summary').first().click();await p.locator('.lc-lesson[open] input[type=radio]').nth(2).check();await p.locator('.lc-lesson[open] [data-check]').click();
-  assert.match(await p.locator('.lc-lesson[open] .lc-result').innerText(),/答對了/);
+  await p.locator('.lc-lesson summary').first().click();await p.locator('.lc-lesson[open] input[type=radio]').nth(2).check();await p.locator('.lc-lesson[open] [data-check]').first().click();
+  assert.match(await p.locator('.lc-lesson[open] .lc-result').first().innerText(),/答對了/);
+  assert.ok(await p.locator('.lc-lesson[open] .lc-fig svg').count()===1,'figure rendered');assert.ok(await p.locator('.lc-lesson[open] .lc-ex li').count()>=3,'worked example');assert.ok(await p.locator('.lc-lesson[open] .lc-quiz').count()>=2,'multi quiz');
+  assert.match(await p.locator('.lc-lesson[open] .lc-calc .is-key dd').innerText(),/80,114/);await p.locator('.lc-lesson[open] .lc-calc input[data-k=price]').fill('50');assert.match(await p.locator('.lc-lesson[open] .lc-calc .is-key dd').innerText(),/50,071/);
+  assert.equal(await p.locator('.lc-week').count(),4);
   await p.locator('.lc-lesson[open]').scrollIntoViewIfNeeded();await p.screenshot({path:out+`/learn-${theme}-${w}-lesson.png`});
   await p.locator('[data-track=strategy]').click();await p.waitForTimeout(200);assert.equal(await p.locator('.lc-lesson').count(),5);
   await p.locator('[data-save]').first().click().catch(()=>{});await p.locator('[data-lesson-id]').first().locator('summary').click();await p.locator('[data-save]').first().click();await p.waitForTimeout(200);assert.equal(await p.locator('[data-track=saved]').count(),1);

@@ -80,3 +80,115 @@
 .member-page .lc-options label{margin:0!important;min-height:0!important;padding:9px 12px!important;font-weight:500!important;line-height:1.5}
 .member-page .lc-options label span{font-size:13px}
 .member-page .lc-quiz{margin-left:0;margin-right:0}
+/* ── 2026-10-22 改版：四週計畫、圖解、實際算一次、常犯的錯、動手做、小算盤 ── */
+.lc-plan-head h3{margin:0 0 4px;font-size:18px}
+.lc-plan-head p{margin:0;font-size:13px;color:var(--text-muted);line-height:1.7}
+.lc-weeks{list-style:none;margin:14px 0 0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.lc-week{padding:14px 14px 12px;border:1px solid var(--border);border-radius:14px;background:var(--surface);display:flex;flex-direction:column;gap:6px;min-width:0}
+.lc-week.is-current{border-color:color-mix(in srgb,var(--accent) 55%,var(--border));box-shadow:0 8px 22px color-mix(in srgb,var(--accent) 10%,transparent);background:color-mix(in srgb,var(--accent) 4%,var(--surface))}
+.lc-week.is-done{background:color-mix(in srgb,var(--green,#2EA043) 5%,var(--surface))}
+.lc-week-top{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.lc-week-no{font-size:11.5px;font-weight:700;letter-spacing:.04em;color:var(--text-muted)}
+.lc-week-badge{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;color:var(--green,#2EA043);background:color-mix(in srgb,var(--green,#2EA043) 12%,transparent)}
+.lc-week-badge.is-now{color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent)}
+.lc-week b{font-size:15px;color:var(--text)}
+.lc-week p{margin:0;font-size:12px;line-height:1.65;color:var(--text-muted);flex:1}
+.lc-week small{font-size:11.5px;color:var(--text-muted);font-variant-numeric:tabular-nums}
+.lc-bar.lc-bar-sm{height:5px;margin:4px 0 0}
+.lc-week-todo{margin-top:14px;padding-top:12px;border-top:1px dashed var(--border);display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap}
+.lc-week-todo>span{font-size:12.5px;font-weight:700;color:var(--text-muted);padding-top:6px;white-space:nowrap}
+.lc-week-todo>div{display:flex;flex-wrap:wrap;gap:8px;flex:1;min-width:0}
+.member-page .lc-chip{margin:0;padding:6px 12px;min-height:32px;border:1px solid var(--border);border-radius:999px;background:var(--surface);color:var(--text);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;box-shadow:none;line-height:1.35;text-align:left}
+.member-page .lc-chip:hover{border-color:var(--accent);color:var(--accent)}
+.lc-fig{margin:16px 0 4px;padding:12px;border:1px solid var(--border);border-radius:14px;background:color-mix(in srgb,var(--surface2,var(--surface)) 60%,var(--surface))}
+.lc-ex{margin:16px 0 0;padding:14px 16px;border-radius:12px;border:1px solid color-mix(in srgb,var(--accent) 22%,var(--border));background:color-mix(in srgb,var(--accent) 4%,var(--surface))}
+.lc-ex h4,.lc-trap h4,.lc-drill h4,.lc-calc h4{display:flex;align-items:center;gap:7px;margin:0 0 8px!important;font-size:14px}
+.lc-ex h4 svg,.lc-calc h4 svg{color:var(--accent)}
+.lc-ex ol,.lc-drill ol{margin:0;padding-left:20px;display:grid;gap:4px;font-size:13.5px;line-height:1.75;color:var(--text);font-variant-numeric:tabular-nums}
+.lc-ex-result{margin:10px 0 0!important;padding-top:10px;border-top:1px dashed color-mix(in srgb,var(--accent) 25%,var(--border));font-weight:600}
+.lc-trap{margin:14px 0 0;padding:12px 16px;border-radius:12px;border-left:3px solid #D9822B;background:rgba(217,130,43,.08)}
+.lc-trap h4 svg{color:#D9822B}
+.lc-trap p{margin:0;font-size:13.5px;line-height:1.8;color:var(--text)}
+.lc-drill{margin:16px 0 0}
+.lc-drill h4 svg{color:var(--green,#2EA043)}
+.lc-calc{margin:16px 0 0;padding:14px 16px;border:1px solid var(--border);border-radius:12px;background:var(--surface)}
+.lc-calc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.lc-calc-grid label{display:flex;flex-direction:column;gap:4px;margin:0;font-size:12px;color:var(--text-muted);font-weight:500}
+.member-page .lc-calc-grid input{margin:0;padding:8px 10px;min-height:38px;border:1px solid var(--border);border-radius:9px;background:var(--surface2,var(--surface));color:var(--text);font:inherit;font-size:14px;font-variant-numeric:tabular-nums;width:100%;box-sizing:border-box}
+.lc-calc-grid input:focus{outline:2px solid color-mix(in srgb,var(--accent) 45%,transparent);outline-offset:1px}
+.lc-calc-out{margin:12px 0 0;display:grid;gap:6px}
+.lc-calc-out div{display:flex;justify-content:space-between;gap:12px;font-size:13px;padding:6px 0;border-bottom:1px dashed var(--border)}
+.lc-calc-out div:last-child{border-bottom:0}
+.lc-calc-out dt{color:var(--text-muted)}
+.lc-calc-out dd{margin:0;color:var(--text);font-weight:600;font-variant-numeric:tabular-nums;text-align:right}
+.lc-calc-out .is-key dd{color:var(--accent);font-size:15px;font-weight:800}
+.lc-quiz+.lc-quiz{margin-top:10px}
+/* SVG 圖解 */
+.lf{display:block;width:100%;height:auto;max-width:640px;margin:0 auto;font-family:inherit;overflow:visible}
+.lf .lf-t{fill:var(--text);font-size:13px}
+.lf .lf-small{font-size:11.5px}
+.lf .lf-strong{font-weight:700}
+.lf .lf-big{font-size:17px;font-weight:800;font-variant-numeric:tabular-nums}
+.lf .lf-muted{fill:var(--text-muted)}
+.lf .lf-up-t{fill:var(--red,#E5484D)}
+.lf .lf-down-t{fill:var(--green,#2EA043)}
+.lf .lf-accent-t{fill:var(--accent)}
+.lf .lf-on{fill:#fff;font-weight:700}
+.lf .lf-grid{stroke:var(--border);stroke-width:1}
+.lf .lf-axis{stroke:color-mix(in srgb,var(--text-muted) 55%,transparent);stroke-width:1.2}
+.lf .lf-dash{stroke:color-mix(in srgb,var(--text-muted) 60%,transparent);stroke-width:1;stroke-dasharray:4 4;fill:none}
+.lf .lf-dash-accent{stroke:var(--accent);stroke-width:1.2;stroke-dasharray:5 4;fill:none}
+.lf .lf-dash-up{stroke:var(--red,#E5484D);stroke-width:1.4;stroke-dasharray:5 4;fill:none}
+.lf .lf-dash-down{stroke:var(--green,#2EA043);stroke-width:1.4;stroke-dasharray:5 4;fill:none}
+.lf .lf-bracket{stroke:var(--text-muted);stroke-width:1.2}
+.lf .lf-frame{fill:var(--surface);stroke:var(--border);stroke-width:1.2}
+.lf .lf-box{fill:color-mix(in srgb,var(--text-muted) 8%,var(--surface));stroke:var(--border);stroke-width:1}
+.lf .lf-card{fill:var(--surface);stroke:var(--border);stroke-width:1}
+.lf .lf-soft{fill:color-mix(in srgb,var(--text-muted) 16%,transparent)}
+.lf .lf-accent-fill{fill:color-mix(in srgb,var(--accent) 22%,transparent);stroke:var(--accent);stroke-width:1}
+.lf .lf-accent-soft{fill:color-mix(in srgb,var(--accent) 10%,var(--surface));stroke:color-mix(in srgb,var(--accent) 45%,var(--border));stroke-width:1}
+.lf .lf-chip{fill:var(--surface);stroke:var(--border);stroke-width:1}
+.lf .lf-chip-on{fill:color-mix(in srgb,var(--accent) 16%,var(--surface));stroke:var(--accent);stroke-width:1}
+.lf .lf-btn{fill:var(--accent);stroke:none}
+.lf .lf-btn+text{fill:#fff;font-weight:700}
+.lf .lf-tag{fill:color-mix(in srgb,var(--surface) 85%,transparent);stroke:var(--border)}
+.lf .lf-pill{fill:var(--surface);stroke:var(--border);stroke-width:1.2}
+.lf .lf-orbit{fill:none;stroke:color-mix(in srgb,var(--accent) 40%,transparent);stroke-width:1.5;stroke-dasharray:6 5}
+.lf .lf-zone{fill:color-mix(in srgb,var(--text-muted) 9%,transparent)}
+.lf .lf-zone-up{fill:color-mix(in srgb,var(--red,#E5484D) 8%,transparent)}
+.lf .lf-zone-down{fill:color-mix(in srgb,var(--green,#2EA043) 8%,transparent)}
+.lf .lf-up .lf-wick{stroke:var(--red,#E5484D);stroke-width:1.3}.lf .lf-up .lf-body{fill:var(--red,#E5484D)}
+.lf .lf-down .lf-wick{stroke:var(--green,#2EA043);stroke-width:1.3}.lf .lf-down .lf-body{fill:var(--green,#2EA043)}
+.lf .lf-vol{fill:color-mix(in srgb,var(--text-muted) 32%,transparent)}
+.lf .lf-vol-hl{fill:var(--accent)}
+.lf .lf-bar-up{fill:color-mix(in srgb,var(--red,#E5484D) 78%,transparent)}
+.lf .lf-bar-down{fill:color-mix(in srgb,var(--green,#2EA043) 78%,transparent)}
+.lf .lf-price{fill:none;stroke:color-mix(in srgb,var(--text) 75%,transparent);stroke-width:1.6;stroke-linejoin:round}
+.lf .lf-ma5{fill:none;stroke:#D9A21B;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.lf .lf-ma20,.lf .lf-line{fill:none;stroke:var(--accent);stroke-width:2.2;stroke-linejoin:round;stroke-linecap:round}
+.lf .lf-dot{fill:var(--surface);stroke:var(--text);stroke-width:1.6}
+.lf .lf-dot-accent{fill:var(--accent)}
+.lf .lf-dot-up{fill:var(--red,#E5484D);stroke:var(--surface);stroke-width:1.5}
+.lf .lf-dot-down{fill:var(--green,#2EA043)}
+.lf .lf-ring-up{fill:none;stroke:var(--red,#E5484D);stroke-width:2}
+.lf .lf-ring-down{fill:none;stroke:var(--green,#2EA043);stroke-width:2}
+.lf .lf-arrow{stroke:var(--text-muted);stroke-width:1.6;fill:none;marker-end:none}
+.lf .lf-arrow-down{stroke:var(--green,#2EA043);stroke-width:1.8;fill:none}
+.lf .lf-num circle{fill:var(--accent)}.lf .lf-num text{fill:#fff;font-size:11px;font-weight:800}
+.lf .lf-seg1{fill:color-mix(in srgb,var(--accent) 65%,var(--surface))}.lf .lf-seg2{fill:color-mix(in srgb,var(--accent) 85%,var(--surface))}.lf .lf-seg3{fill:#D9822B}
+.lf .lf-heat-up{fill:color-mix(in srgb,var(--red,#E5484D) 55%,var(--surface))}.lf .lf-heat-up2{fill:color-mix(in srgb,var(--red,#E5484D) 28%,var(--surface))}
+.lf .lf-heat-down{fill:color-mix(in srgb,var(--green,#2EA043) 45%,var(--surface))}.lf .lf-heat-down2{fill:color-mix(in srgb,var(--green,#2EA043) 22%,var(--surface))}
+.lf .lf-cal0{fill:var(--surface);stroke:var(--border)}.lf .lf-cal1{fill:color-mix(in srgb,var(--accent) 14%,var(--surface))}.lf .lf-cal2{fill:color-mix(in srgb,var(--accent) 32%,var(--surface))}.lf .lf-cal3{fill:color-mix(in srgb,var(--accent) 55%,var(--surface))}
+@media(max-width:1020px){.lc-weeks{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){
+  .lc-weeks{grid-template-columns:1fr 1fr;gap:8px}
+  .lc-week{padding:12px}
+  .lc-week p{display:none}
+  .lc-fig{padding:8px;margin-left:-4px;margin-right:-4px}
+  .lf .lf-t{font-size:15px}.lf .lf-small{font-size:13.5px}.lf .lf-big{font-size:19px}
+  .lc-week-todo>span{padding-top:0}
+}
+:root:not([data-theme="light"]) .lf .lf-ma5{stroke:#6EA8FE}
+.member-page .lc-week p{margin:0;font-size:12.5px;line-height:1.65;color:var(--text-muted)}
+.member-page .lc-week b{font-size:15px}
+.member-page .lc-plan-head p{font-size:13px;margin:0}
