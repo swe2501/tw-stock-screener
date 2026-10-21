@@ -10996,7 +10996,10 @@
       ['sma20',    '葛蘭碧', '#1e88e5'],
     ];
     function _toggleMarker(k) { window._mkShow[k] = !window._mkShow[k]; if ((k === 'sma20' || k === 'div' || k === 'catalyst') && window._kPref) window._kPref.set('mk_' + k, window._mkShow[k]); if(k==='sma20')window._chartLayerPanel('sma20',window._mkShow[k]); _refreshChartMarkers(); }
-    function _toggleGranvillePanel(){const open=!document.getElementById('sma20GroupPanel')?.classList.contains('is-open');if(open){window._mkShow.sma20=true;window._kPref?.set('mk_sma20',true);}window._chartLayerPanel('sma20',open);_refreshChartMarkers();}
+    function _toggleGranvillePanel(){   // 2026-10-22 按一下開（面板＋買點），已開時再按一下全部關掉並記住，下次開 K 圖不會自己出現
+      const panelOpen=document.getElementById('sma20GroupPanel')?.classList.contains('is-open');
+      const next=!panelOpen;   // 被其他圖層分頁收起時再按＝重新打開
+      window._mkShow.sma20=next;window._kPref?.set('mk_sma20',next);window._chartLayerPanel('sma20',next);_refreshChartMarkers();}
     function _renderMarkerToggles(present) {
       const host = document.getElementById('markerToggles'); if (!host) return;
       const S = window._mkShow,events=document.getElementById('chartEventToggles');
