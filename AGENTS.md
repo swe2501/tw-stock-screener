@@ -1,5 +1,7 @@
 # AGENTS.md — 本 repo 的 AI agent 分工規範
 
+> **2026-10-21 新增數字 4（JUSTY 明確指定）**：4＝發布推送完成後，fetch／拉取最新 `origin/uat` 與 `origin/justy-layout`，安全合併對齊本機 `justy-layout`；需要同步遠端 `justy-layout` 時以非 force 推送，最後核對本機、`origin/justy-layout` 與 `origin/uat` 的提交。遇到分歧先保留雙方內容處理，不 reset/stash/覆蓋；不得因「4」自行再發布 UAT 或 prod。這是發布後對齊步驟；1、2、3、23 的既有含義保留。
+
 > **JUSTY 最新數字流程（使用者於 2026-10-18 明確更改）**：1＝在乾淨的本機 `justy-layout` 修改、預覽與測試，先不推送。2＝提交並先 push `justy-layout`。3＝取得最新 UAT、合併保留雙方內容、檢查後再 push UAT，最後確認本機一致。「23／2、3」依序執行 2 再 3，每一步成功才繼續。這取代舊 `publish-justy` 同時推 JUSTY/UAT 的流程；未收到發布指令時先做本機預覽。禁止 force/stash/reset/覆蓋未完成工作，不動 App、prod、Andrew、Duke 或其他人的工作區。共用 API／資料庫規則另走獨立 shared 工作分支，準備不等於批准修改共用正式資料庫。
 
 > **2026-10-18 使用者最新分工**：JUSTY 已取消本對話的手機 App 開發，交由合夥人接手。本網站工作區後續專注網站修正，不繼續建立／建置／發布 JUSTY 的 App。保留合夥人已有的 `apps/mobile`、共用規格與分支；取消個人任務不等於回退共同專案或刪除合夥人成果。原根目錄 `index.html` 僅作本機相容轉接，網站唯一原始碼仍在 `apps/web/index.html`。
