@@ -9967,7 +9967,7 @@
           <button class="tool-btn chart-marker-control" data-layer="pl" type="button" onclick="_togglePriceLine()" aria-pressed="true" title="顯示或隱藏最新價位的水平參考線">現價線</button>
           <span id="chartEventToggles" class="chart-event-toggles" role="group" aria-label="圖表事件標記"></span>
           <span class="draw-console-divider" aria-hidden="true"></span>
-          <button class="tool-btn" id="eraserBtn" data-drawtool="eraser" onclick="_setDrawTool('eraser')" title="橡皮擦" aria-label="橡皮擦" style="flex:0 0 auto"><svg class="eraser-icon" aria-hidden="true" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.2 13.1 12.4 4.9a2.2 2.2 0 0 1 3.1 0l4.1 4.1a2.2 2.2 0 0 1 0 3.1l-7.8 7.8H8.1l-3.9-3.7a2.2 2.2 0 0 1 0-3.1Z" fill="currentColor" fill-opacity=".08"/><path d="m8.5 8.8 7.1 7.1 4-3.8a2.2 2.2 0 0 0 0-3.1l-4.1-4.1a2.2 2.2 0 0 0-3.1 0Z" fill="currentColor" fill-opacity=".2" stroke="none"/><path d="m8.5 8.8 7.1 7.1M12.5 6.9l3.9 3.9"/><path d="M15.6 20h4.2" opacity=".45"/></svg> 橡皮擦</button>
+          <button class="tool-btn" id="eraserBtn" data-drawtool="eraser" onclick="_setDrawTool('eraser')" title="橡皮擦" aria-label="橡皮擦" style="flex:0 0 auto"><svg class="eraser-icon" aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(0 -1.6) rotate(-45 12 12)"><rect x="4.2" y="8.6" width="15.6" height="6.8" rx="2.1"/><path d="M4.2 10.7a2.1 2.1 0 0 1 2.1-2.1h4.2v6.8H6.3a2.1 2.1 0 0 1-2.1-2.1Z" fill="currentColor" fill-opacity=".22" stroke="none"/><path d="M10.5 8.6v6.8"/></g><path d="M12.6 20.4h7.2" stroke-width="1.4" opacity=".45"/></svg> 橡皮擦</button>
           <button class="tool-btn draw-clear" onclick="clearAllDrawings()" style="flex:0 0 auto">✕ 清除標記</button>
         </div>
         <div id="chartLoading"><div class="spinner"></div> 載入中...</div>
@@ -10937,7 +10937,7 @@
 
     // K 圖標記分類顯示開關（比照均線顯示/隱藏）；將來新增標記類別只要在 _MK_DEFS 加一行即可
     window._mkShow = window._mkShow || { broker: true, user: true };
-    if (window._mkShow.sma20 == null) window._mkShow.sma20 = !!(window._kPref && window._kPref.get('mk_sma20', false));   // 20MA 買點標記預設關，開關會記住
+    if (window._mkShow.sma20 == null) window._mkShow.sma20 = false;   // 2026-10-22 葛蘭碧每次開 K 圖一律先關，不沿用上次狀態；要看再按「葛蘭碧」
     if (window._mkShow.div == null) window._mkShow.div = !!(window._kPref && window._kPref.get('mk_div', false));         // 除權息標記預設關，開關會記住
     if (window._mkShow.catalyst == null) window._mkShow.catalyst = !!(window._kPref && window._kPref.get('mk_catalyst', false)); // 法說會標記預設關，開關會記住
     let _sma20Markers = [];   // 本次圖表的 20MA 三階段買點標記（僅日 K）
@@ -17312,7 +17312,7 @@
 <link rel="stylesheet" href="assets/screen-log.css?v=calendar-clean22">
 <link rel="stylesheet" href="assets/strategy-studio.css?v=3">
 <link rel="stylesheet" href="assets/learning-center.css?v=1">
-<link rel="stylesheet" href="assets/research-layout.css?v=9">
+<link rel="stylesheet" href="assets/research-layout.css?v=10">
 <script src="assets/chart-viewport-fit.js?v=6" defer></script>
 <script src="assets/screen-inline-calendar.js?v=precision9" defer></script>
 <script src="assets/screen-log.js?v=calendar-direct30" defer></script>

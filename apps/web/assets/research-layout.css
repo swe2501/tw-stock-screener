@@ -107,8 +107,8 @@
 #chartModal .chart-fit-tools .chart-event-toggles{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0}
 #chartModal .chart-fit-tools .chart-marker-control[aria-pressed=true]{background:color-mix(in srgb,var(--accent) 8%,var(--surface));border-color:color-mix(in srgb,var(--accent) 32%,var(--border));color:var(--accent)}
 #chartModal .chart-fit-tools .chart-marker-control[aria-pressed=true]:hover{background:color-mix(in srgb,var(--accent) 13%,var(--surface))}
-#chartModal .chart-fit-tools #eraserBtn{min-height:30px;padding:4px 9px;font-size:11px;gap:5px;border-radius:10px}
-#chartModal .chart-fit-tools #eraserBtn .eraser-icon{width:15px;height:15px;stroke-width:1.4}
+#chartModal .chart-fit-tools #eraserBtn{min-height:28px;padding:3px 9px 3px 8px;font-size:11px;gap:4px;border-radius:9px}
+#chartModal .chart-fit-tools #eraserBtn .eraser-icon{width:13px;height:13px;stroke-width:1.7;flex:none}
 #chartModal .granville-heading{color:var(--accent)}
 #chartModal .granville-legend{color:var(--text-muted);font-size:11px;line-height:1.7;flex-basis:100%}
 #chartModal #sma20GroupPanel .sma20-grp{color:var(--text-muted);border-color:var(--border);font-weight:500;background:var(--surface)}
