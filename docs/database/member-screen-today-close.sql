@@ -1,3 +1,4 @@
+-- 2026-10-21 19:29：JUSTY 已批准並在 Supabase「Taiwan stock2」SQL Editor 執行，結果 Success. No rows returned。不需重跑（重跑也無害）。
 -- PREPARED（2026-10-21）：修正「盤後已有今日行情，但 price_window 尚未上傳，記錄今日選股被擋」。
 -- 原因：latest_market_date 只看 price_window 最大日期；price_window 由每日排程較晚上傳，收盤後到上傳前這段時間，
 --       篩選器已顯示今天行情，伺服器卻只認昨天，於是出現「此份行情日期為今天；最新可用行情為昨天」。
