@@ -13815,7 +13815,7 @@
     function _setDailyBtnActive(btn) {
       ['hourlyBtn', 'dailyBtn', 'adjDailyBtn', 'weeklyBtn', 'monthlyBtn', 'yearlyBtn', 'trendBtn'].forEach(id => {
         const b = document.getElementById(id);
-        if (b) { b.style.background = ''; b.style.color = ''; b.style.borderColor = ''; }
+        if (b) { b.style.background = ''; b.style.color = ''; b.style.borderColor = ''; b.setAttribute('aria-pressed',String(b===btn)); }
       });
       if (btn) { btn.style.background = 'var(--accent)'; btn.style.color = 'var(--on-accent)'; btn.style.borderColor = 'var(--accent)'; }
     }
@@ -16552,25 +16552,26 @@
     const empty=document.createElement('div');empty.className='pro-results-empty';empty.innerHTML='<div class="pro-empty-inner"><div class="pro-empty-icon">'+icons.search+'</div><h2>設定條件，開始探索市場</h2><p>篩選結果會完整顯示在這個工作區。左側條件保持固定，方便隨時調整並重新比較。</p></div>';
     w.append(f,grip,stage);stage.append(empty,r);
     const b=document.createElement('button');b.className='pro-filter-toggle';b.type='button';b.innerHTML=icons.chevron+'<span>收合篩選條件</span>';f.prepend(b);
-    const saved=localStorage.getItem('pro-filter-collapsed-v2')==='1';w.classList.toggle('collapsed',saved);
-    const savedWidth=parseFloat(localStorage.getItem('pro-screen-left-v5')||'52');if(Number.isFinite(savedWidth))w.style.setProperty('--screen-left',Math.max(42,Math.min(78,savedWidth))+'%');
+    const resetSplit=()=>{w.classList.remove('collapsed');w.style.setProperty('--screen-left','50%');grip.setAttribute('aria-valuenow','50');};
+    resetSplit();
     b.onclick=()=>{w.classList.toggle('collapsed');localStorage.setItem('pro-filter-collapsed-v2',w.classList.contains('collapsed')?'1':'0');};
     const setSplit=x=>{const box=w.getBoundingClientRect(),pct=(x-box.left)/box.width*100,clamped=Math.max(42,Math.min(78,pct));w.style.setProperty('--screen-left',clamped+'%');grip.setAttribute('aria-valuenow',Math.round(clamped));return clamped;};
     grip.addEventListener('pointerdown',e=>{if(matchMedia('(max-width:760px)').matches)return;w.classList.remove('collapsed');grip.setPointerCapture(e.pointerId);grip.classList.add('dragging');document.body.classList.add('pro-resizing');e.preventDefault();});
     grip.addEventListener('pointermove',e=>{if(grip.hasPointerCapture(e.pointerId))setSplit(e.clientX);});
     const finish=e=>{if(!grip.hasPointerCapture(e.pointerId))return;const val=setSplit(e.clientX);grip.releasePointerCapture(e.pointerId);grip.classList.remove('dragging');document.body.classList.remove('pro-resizing');localStorage.setItem('pro-screen-left-v5',val.toFixed(1));};
     grip.addEventListener('pointerup',finish);grip.addEventListener('pointercancel',finish);
-    grip.addEventListener('dblclick',()=>{w.style.setProperty('--screen-left','52%');localStorage.setItem('pro-screen-left-v5','52');grip.setAttribute('aria-valuenow','52');});
+    grip.addEventListener('dblclick',resetSplit);
     grip.addEventListener('keydown',e=>{if(e.key!=='ArrowLeft'&&e.key!=='ArrowRight')return;const cur=parseFloat(getComputedStyle(w).getPropertyValue('--screen-left'))||66,next=Math.max(42,Math.min(78,cur+(e.key==='ArrowRight'?2:-2)));w.style.setProperty('--screen-left',next+'%');localStorage.setItem('pro-screen-left-v5',String(next));grip.setAttribute('aria-valuenow',String(next));e.preventDefault();});
-    const mo=new MutationObserver(()=>{
+    let chartWasOpen=false;const mo=new MutationObserver(()=>{
       const modal=document.getElementById('chartModal');if(!modal)return;
-      if(modal.classList.contains('open')){w.dataset.wasCollapsed=w.classList.contains('collapsed')?'1':'0';w.classList.add('collapsed');}
-      else if(w.dataset.wasCollapsed==='0'){w.classList.remove('collapsed');delete w.dataset.wasCollapsed;}
+      const open=modal.classList.contains('open');if(open===chartWasOpen)return;chartWasOpen=open;
+      if(open){w.dataset.wasCollapsed=w.classList.contains('collapsed')?'1':'0';w.classList.add('collapsed');}
+      else{if(w.dataset.wasCollapsed==='0')w.classList.remove('collapsed');delete w.dataset.wasCollapsed;}
     });
     const modal=document.getElementById('chartModal');if(modal)mo.observe(modal,{attributes:true,attributeFilter:['class']});
     const status=document.getElementById('statusArea'),results=document.getElementById('resultsArea');
-    const sync=()=>{
-      const screenVisible=f.style.display!=='none';w.style.display=screenVisible?'':'none';
+    let wasScreenVisible=false;const sync=()=>{
+      const screenVisible=f.style.display!=='none';if(screenVisible&&!wasScreenVisible)resetSplit();wasScreenVisible=screenVisible;w.style.display=screenVisible?'':'none';
       const busy=!!(status&&status.textContent.trim()),hasResults=!!(results&&results.children.length);
       empty.hidden=busy||hasResults;
     };
@@ -17276,10 +17277,10 @@
 <link rel="stylesheet" href="assets/screen-log.css?v=calendar-clean22">
 <link rel="stylesheet" href="assets/strategy-studio.css?v=3">
 <link rel="stylesheet" href="assets/learning-center.css?v=1">
-<link rel="stylesheet" href="assets/research-layout.css?v=2">
-<script src="assets/chart-viewport-fit.js?v=1" defer></script>
+<link rel="stylesheet" href="assets/research-layout.css?v=4">
+<script src="assets/chart-viewport-fit.js?v=3" defer></script>
 <script src="assets/screen-inline-calendar.js?v=precision9" defer></script>
-<script src="assets/screen-log.js?v=calendar-direct29" defer></script>
+<script src="assets/screen-log.js?v=calendar-direct30" defer></script>
 <script src="assets/pattern-focus.js?v=2" defer></script>
 <script src="assets/member-quick-menu.js?v=3" defer></script>
 <script src="assets/navigation-layers.js?v=logo-home19" defer></script>
