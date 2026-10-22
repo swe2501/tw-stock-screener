@@ -5,13 +5,13 @@
  const valid=d=>Array.isArray(d?.rows)&&Number.isFinite(Date.parse(d.server_time));
  const integer=n=>Number.isSafeInteger(n)&&n>=0;
  const serverOnly=new Set(['name-v1','preferences-v1','watch-v1','verify-contact-v1','invite-first-v1','birthday-v1','anniversary-v1']);
- const messages={MEMBER_TASK_LIMIT_REACHED:'今天（本週）的任務點數已達上限，請下期再來。',MEMBER_TASK_INCOMPLETE:'還沒完成這項任務，完成後再回來領取。',MEMBER_TASK_REVIEW_ONLY:'這項任務由管理端審核發點。',MEMBER_TASK_UNAVAILABLE:'這項任務尚未開放。',MEMBER_EXCHANGE_UNAVAILABLE:'這張使用券尚未開放兌換。',MEMBER_POINTS_INSUFFICIENT:'任務點數不足，請先確認最新餘額。'};
+ const messages={MEMBER_TASK_LIMIT_REACHED:'今天（本週）從任務獲得的點數已達上限，請下期再來。',MEMBER_TASK_INCOMPLETE:'還沒完成這項任務，完成後再回來領取。',MEMBER_TASK_REVIEW_ONLY:'這項任務由管理端審核發點。',MEMBER_TASK_UNAVAILABLE:'這項任務尚未開放。',MEMBER_EXCHANGE_UNAVAILABLE:'這張使用券尚未開放兌換。',MEMBER_POINTS_INSUFFICIENT:'任務點數不足，請先確認最新餘額。'};
  const errorText=e=>messages[e.code]||Object.entries(messages).find(([k])=>String(e.message).includes(k))?.[1]||e.message||'無法確認結果，請稍後重試。';
  function mount(root,{profile,go,ready=()=>false}){
   root.querySelector('.mj-live-missions')?.remove();
   const owner=localStorage.getItem('sb_token'),current=()=>root.isConnected&&!!owner&&owner===localStorage.getItem('sb_token');
   const section=document.createElement('section');section.className='mc-card mj-live-missions';
-  section.innerHTML='<div class="mj-section-head"><div><span class="mc-kicker">YOUR MEMBER REWARDS</span><h2>我的任務點數</h2></div><button type="button" data-rewards-refresh>更新狀態</button></div><div class="mj-reward-balance" data-reward-balance>確認餘額中…</div><div class="mj-reward-caps" data-reward-caps></div><div role="status" data-mission-status aria-live="polite">正在確認任務與兌換狀態…</div><div data-extra-tasks></div>';
+  section.innerHTML='<div class="mj-section-head"><div><span class="mc-kicker">YOUR MEMBER REWARDS</span><h2>我的點數</h2></div><button type="button" data-rewards-refresh>更新狀態</button></div><div class="mj-reward-balance" data-reward-balance>確認餘額中…</div><div class="mj-reward-caps" data-reward-caps></div><div role="status" data-mission-status aria-live="polite">正在確認任務與兌換狀態…</div><div data-extra-tasks></div>';
   root.querySelector('.mj-hero').after(section);
   const status=section.querySelector('[data-mission-status]'),balance=section.querySelector('[data-reward-balance]'),caps=section.querySelector('[data-reward-caps]');
   let state=null,busy=false,sequence=0,dialog=null;
@@ -62,7 +62,7 @@
     const [tasks,options,wallet]=await Promise.all([AcademyIdentity.taskStatus(),AcademyIdentity.exchangeOptions(),AcademyIdentity.walletSummary()]);
     if(!current()||ticket!==sequence)return false;
     if(!valid(tasks)||!valid(options)||!integer(wallet.task_points)||tasks.rows.some(t=>!t.id||!integer(t.points))||options.rows.some(o=>!o.id||!integer(o.points)||!Number.isSafeInteger(o.duration_days)||o.duration_days<=0))throw Error('帳號資料不完整，暫不開放領點或扣點。');
-    state={tasks,options,wallet};balance.textContent='可用任務點數 '+wallet.task_points.toLocaleString()+' 點';
+    state={tasks,options,wallet};balance.textContent='可用點數 '+wallet.task_points.toLocaleString()+' 點（約 NT$'+Math.floor(wallet.task_points/10).toLocaleString()+'）';
     caps.textContent=tasks.caps?['daily_research','weekly_research'].map((key,i)=>{const c=tasks.caps[key];return c&&integer(c.used)&&integer(c.limit)?(i?'本週 ':'今日 ')+c.used+'/'+c.limit+' 點':'';}).filter(Boolean).join(' · '):'任務上限以帳號服務確認';
     status.textContent='帳號狀態已更新。';extras();paint();return true;
    }catch(e){if(current()&&ticket===sequence){state=null;balance.textContent='餘額暫時無法確認';caps.textContent='';status.textContent=errorText(e);extras();paint();}return false;}

@@ -111,3 +111,15 @@ body.academy-research-ready #chartWatchBtn,body.academy-research-ready #chartBac
 .mc-week-todo li{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border:1px solid var(--border);border-radius:12px;font-size:13.5px}
 .member-page .mc-week-todo button,.member-page .mc-week-challenge button{flex:none;margin:0;padding:6px 12px;min-height:34px;border-radius:999px;font-size:12.5px;font-weight:700}
 .mc-week-allset{color:var(--green,#2EA043);font-weight:600}
+/* 2026-10-22 頭像：隱藏原生檔案欄位，按鈕即可選圖；狀態訊息就在按鈕旁 */
+.mc-visually-hidden{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+.mc-avatar-pick{display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-width:0}
+.mc-card .mc-avatar-pick .mc-upload-label{display:inline-flex;align-items:center;gap:7px;margin:0;padding:9px 16px;border:1px solid var(--border);border-radius:999px;background:var(--surface);font-weight:700;transition:border-color .15s,color .15s}
+.mc-card .mc-avatar-pick .mc-upload-label:hover{border-color:var(--accent);color:var(--accent)}
+.mc-avatar-pick:focus-within .mc-upload-label{outline:2px solid var(--accent);outline-offset:2px}
+.mc-avatar-pick small{color:var(--text-muted);line-height:1.6}
+.mc-avatar-pick-status:empty,.mc-avatar-status:empty{display:none}
+.mc-avatar-pick-status,.mc-avatar-status{font-size:13px;font-weight:600;color:var(--accent)}
+.mc-avatar-crop canvas{width:200px;height:200px;border-radius:50%;box-shadow:0 0 0 1px var(--border)}
+.mc-card .mc-avatar-save{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#fff)}
+.mj-ticket[hidden]{display:none!important}.mj-ticket-filter{margin:6px 0 14px}

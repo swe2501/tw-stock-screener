@@ -10,3 +10,14 @@
 .mw-delta small{display:inline!important}
 
 .mw-tabs small{font-size:12px!important;font-weight:400!important}@media(max-width:700px){.mw-tabs small{font-size:11px!important}}
+/* 2026-10-22 明細：改成按鈕＋整列展開，不再擠在第一欄 */
+.member-page .mw-more-btn{justify-self:end;margin:0;padding:4px 12px;min-height:30px;border:1px solid var(--border);border-radius:999px;background:transparent;color:var(--accent,#347cc0);font:inherit;font-size:12px;font-weight:700;cursor:pointer;box-shadow:none;white-space:nowrap}
+.member-page .mw-more-btn[aria-expanded="true"]{background:color-mix(in srgb,var(--accent,#347cc0) 9%,transparent)}
+.mw-entry .mw-more{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px 20px;margin:4px 0 0;padding:14px 16px;border:1px solid var(--border,#d8e2ed);border-radius:12px;background:var(--bg,#f5f8fc);font-size:12.5px;line-height:1.6}
+.mw-entry .mw-more[hidden]{display:none}
+.mw-more div{min-width:0}
+.mw-more dt{color:var(--text-muted,#65758c);font-size:11.5px;margin-bottom:2px}
+.mw-more dd{margin:0;overflow-wrap:anywhere;color:var(--text)}
+.mw-more code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
+.member-page .mw-copy{margin:0 0 0 6px;padding:1px 8px;min-height:0;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text-muted);font-size:11px;cursor:pointer;box-shadow:none}
+@media(max-width:700px){.member-page .mw-more-btn{grid-column:1/-1;justify-self:start}}

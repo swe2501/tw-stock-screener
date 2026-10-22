@@ -5,7 +5,7 @@ const {PGlite}=require(process.env.PGLITE_MODULE||'@electric-sql/pglite');
  await db.exec(`create role anon;create role authenticated;create role service_role bypassrls;create schema auth;create table auth.users(id uuid primary key,email text,phone text,created_at timestamptz default now(),email_confirmed_at timestamptz,phone_confirmed_at timestamptz,raw_user_meta_data jsonb default '{}');create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;grant usage on schema auth to public;grant execute on function auth.uid() to public;
   create table public.watchlist(id bigserial primary key,user_id uuid not null,code text not null);`);
 // member-vip-read-access.sql 依賴管理員研究表，隔離環境略過；它與 exchange-v2 第 1 步同樣開通 hottopics／selltrack。
- for(const f of ['member-services.sql','member-services-supplement.sql','member-share-unlock.sql','member-share-vouchers.sql','member-voucher-levels.sql','member-task-wallet.sql','member-perks-exchange-v2.sql','member-perks-tasks-v2.sql','member-perks-tasks-v3-points.sql'])
+ for(const f of ['member-services.sql','member-services-supplement.sql','member-share-unlock.sql','member-share-vouchers.sql','member-voucher-levels.sql','member-task-wallet.sql','member-perks-exchange-v2.sql','member-perks-tasks-v2.sql','member-perks-tasks-v3-points.sql','member-perks-exchange-v3.sql'])
   await db.exec(fs.readFileSync(path.join(__dirname,'../docs/database',f),'utf8').replace(/^﻿/,''));
  const uid=n=>`${String(n).padStart(8,'0')}-1111-4111-8111-111111111111`,admin=()=>db.exec('reset role');
  const as=async n=>{await admin();await db.query("select set_config('request.jwt.claim.sub',$1,false)",[uid(n)]);await db.exec('set role authenticated');};
@@ -33,6 +33,12 @@ const {PGlite}=require(process.env.PGLITE_MODULE||'@electric-sql/pglite');
  await assert.rejects(claim('weekly-plan-v1'),/LIMIT|CAP|上限/i);
  assert.equal((await claim('weekly-learn-v1')).points,30);
  assert.equal((await claim('learning10-v1')).points,50);
+ // 兌換商品 v3：14 項、價格依 1 元＝10 點，新商品可兌換
+ await admin();const ex=(await db.query("select id,points,duration_days,active from public.member_exchange_definitions order by points,id")).rows;
+ assert.equal(ex.length,14);assert.deepEqual(ex.filter(r=>['vip-1d-v1','choice-30d-v1','vip-90d-v1'].includes(r.id)).map(r=>r.id+':'+r.points+':'+r.duration_days),['vip-1d-v1:80:1','choice-30d-v1:900:30','vip-90d-v1:9000:90']);
+ await db.exec(fs.readFileSync(path.join(__dirname,'../docs/database/member-perks-exchange-v3.sql'),'utf8'));
+ await db.exec('update public.member_exchange_definitions set active=true;update public.member_voucher_definitions set active=true;');await as(1);
+ const trial=await value('select public.exchange_member_points($1,$2) value',['vip-1d-v1',uid(700)]);assert.equal(trial.points,80);
  const st=await status();assert.equal(st.caps.daily_research.limit,20);assert.equal(st.caps.weekly_research.limit,100);assert.equal(st.caps.weekly_research.used,90);
- console.log('PASS member perks v3: recalibrated points, caps 20/100, uncapped weekly challenge, learning milestones, idempotent');
+ console.log('PASS member perks v3: recalibrated points, caps 20/100, uncapped weekly challenge, learning milestones, 14 products at 1:10, trial exchange, idempotent');
 }finally{await db.close();}})().catch(e=>{console.error(e);process.exitCode=1;});
