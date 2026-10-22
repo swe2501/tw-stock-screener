@@ -8,7 +8,7 @@
  const source=r=>{const k=r.source_event_key||'';return k.startsWith('task:')?'任務獎勵':k.startsWith('points-exchange:')?'票券兌換':k.startsWith('referral:')?'邀請獎勵':'其他異動';};
  function render({main,go}){
   const token=localStorage.getItem('sb_token');
-  main.innerHTML=`<div class="mw-root"><header class="mw-heading"><div><span class="mc-kicker">YOUR POINTS, CLEARLY RECORDED</span><h2>點數帳戶</h2><p>每一份獲得與使用，都有跡可循。</p></div><button type="button" data-mw-refresh>重新整理</button></header><div class="mw-tabs" role="tablist" aria-label="點數帳戶類型">${['task','stored'].map((id,i)=>`<button type="button" role="tab" id="mw-tab-${id}" aria-controls="mw-panel" aria-selected="${!i}" tabindex="${i?-1:0}" data-mw-tab="${id}">${icon(id)}<span>${i?'儲值點數':'任務獲得'}<small>${i?'儲值與消費':'1 元＝10 點'}</small></span></button>`).join('')}</div><section class="mw-balance" aria-label="帳戶餘額"><div><span data-mw-balance-title>任務點數 · 可用餘額</span><strong data-mw-balance>確認中</strong><small data-mw-sync>正在向帳號服務核對</small></div><div class="mw-balance-note" data-mw-balance-note></div></section><section class="mc-card mw-panel" id="mw-panel" role="tabpanel" aria-labelledby="mw-tab-task"><div data-mw-panel></div></section><section class="mw-rights"><div><span class="mc-kicker">CLEAR & TRACEABLE</span><h3>核對紀錄，安心使用</h3><p>如有點數疑問，請提供紀錄編號、入帳時間與異動內容，透過「我的回饋」聯絡我們。</p></div><button type="button" data-mw-feedback>點數紀錄有疑問 →</button></section></div>`;
+  main.innerHTML=`<div class="mw-root"><header class="mw-heading"><div><span class="mc-kicker">YOUR POINTS, CLEARLY RECORDED</span><h2>點數帳戶</h2><p>每一份獲得與使用，都有跡可循。</p></div><button type="button" data-mw-refresh>重新整理</button></header><div class="mw-tabs" role="tablist" aria-label="點數帳戶類型">${['task','stored'].map((id,i)=>`<button type="button" role="tab" id="mw-tab-${id}" aria-controls="mw-panel" aria-selected="${!i}" tabindex="${i?-1:0}" data-mw-tab="${id}">${icon(id)}<span>${i?'儲值點數':'任務獲得'}<small>${i?'儲值與消費':'獲得與使用'}</small></span></button>`).join('')}</div><section class="mw-balance" aria-label="帳戶餘額"><div><span data-mw-balance-title>任務點數 · 可用餘額</span><strong data-mw-balance>確認中</strong><small data-mw-sync>正在向帳號服務核對</small></div><div class="mw-balance-note" data-mw-balance-note></div></section><section class="mc-card mw-panel" id="mw-panel" role="tabpanel" aria-labelledby="mw-tab-task"><div data-mw-panel></div></section><section class="mw-rights"><div><span class="mc-kicker">CLEAR & TRACEABLE</span><h3>核對紀錄，安心使用</h3><p>如有點數疑問，請提供紀錄編號、入帳時間與異動內容，透過「我的回饋」聯絡我們。</p></div><button type="button" data-mw-feedback>點數紀錄有疑問 →</button></section></div>`;
   const root=main.querySelector('.mw-root'),panel=root.querySelector('[data-mw-panel]'),balance=root.querySelector('[data-mw-balance]'),sync=root.querySelector('[data-mw-sync]');
   const current=()=>root.isConnected&&!!token&&token===localStorage.getItem('sb_token');
   let tab='task',summary=null,rows=[],more=false,busy=false,version=0,summaryVersion=0,filters={start:'',end:'',kind:'all'},until='';
@@ -16,9 +16,9 @@
   function balancePaint(){
    const task=tab==='task',value=task?summary?.task_points:summary?.stored_points;
    root.querySelector('[data-mw-balance-title]').textContent=(task?'任務獲得的點數':'儲值點數')+' · 可用餘額';
-   balance.textContent=!summary?'尚未取得':!task&&!summary.stored_enabled?'尚未開放':Number.isSafeInteger(value)?number(value)+' 點（約 NT$'+number(Math.floor(value/10))+'）':'尚未接通';
+   balance.textContent=!summary?'尚未取得':!task&&!summary.stored_enabled?'尚未開放':Number.isSafeInteger(value)?number(value)+' 點':'尚未接通';
    sync.textContent=summary?'核對時間 '+time(summary.server_time)+'（台灣時間）':'無法核對餘額，請重新整理';
-   root.querySelector('[data-mw-balance-note]').textContent=task?'和儲值點數同價值：1 元＝10 點，用來兌換研究使用券。\n台幣只是方便比較，點數不能換現金。':'儲值服務尚未開放，目前不收取款項。\n開放後同樣 1 元＝10 點。';
+   root.querySelector('[data-mw-balance-note]').textContent=task?'和儲值的點數是同一種，兌換價格一樣。\n點數不能換現金、不能轉讓。':'儲值服務尚未開放，目前不收取款項。\n開放後 NT$1＝10 點，和任務點數同一種。';
   }
   function draw(){
    balancePaint();root.querySelector('#mw-panel').setAttribute('aria-labelledby','mw-tab-'+tab);

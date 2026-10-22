@@ -62,7 +62,7 @@
     const [tasks,options,wallet]=await Promise.all([AcademyIdentity.taskStatus(),AcademyIdentity.exchangeOptions(),AcademyIdentity.walletSummary()]);
     if(!current()||ticket!==sequence)return false;
     if(!valid(tasks)||!valid(options)||!integer(wallet.task_points)||tasks.rows.some(t=>!t.id||!integer(t.points))||options.rows.some(o=>!o.id||!integer(o.points)||!Number.isSafeInteger(o.duration_days)||o.duration_days<=0))throw Error('帳號資料不完整，暫不開放領點或扣點。');
-    state={tasks,options,wallet};balance.textContent='可用點數 '+wallet.task_points.toLocaleString()+' 點（約 NT$'+Math.floor(wallet.task_points/10).toLocaleString()+'）';
+    state={tasks,options,wallet};balance.textContent='可用點數 '+wallet.task_points.toLocaleString()+' 點';
     caps.textContent=tasks.caps?['daily_research','weekly_research'].map((key,i)=>{const c=tasks.caps[key];return c&&integer(c.used)&&integer(c.limit)?(i?'本週 ':'今日 ')+c.used+'/'+c.limit+' 點':'';}).filter(Boolean).join(' · '):'任務上限以帳號服務確認';
     status.textContent='帳號狀態已更新。';extras();paint();return true;
    }catch(e){if(current()&&ticket===sequence){state=null;balance.textContent='餘額暫時無法確認';caps.textContent='';status.textContent=errorText(e);extras();paint();}return false;}

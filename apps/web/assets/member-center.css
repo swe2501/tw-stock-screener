@@ -123,3 +123,19 @@ body.academy-research-ready #chartWatchBtn,body.academy-research-ready #chartBac
 .mc-avatar-crop canvas{width:200px;height:200px;border-radius:50%;box-shadow:0 0 0 1px var(--border)}
 .mc-card .mc-avatar-save{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#fff)}
 .mj-ticket[hidden]{display:none!important}.mj-ticket-filter{margin:6px 0 14px}
+/* 2026-10-22 頭像按鈕：精緻膠囊，細邊漸層＋緩慢流光，深淺色跟隨網站 */
+.mc-card .mc-avatar-pick .mc-upload-label,.mc-card .mc-avatar-actions button{position:relative;isolation:isolate;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;gap:9px;margin:0;min-height:44px;padding:0 24px 0 20px;border-radius:999px;font-size:14px;font-weight:700;letter-spacing:.08em;line-height:1;white-space:nowrap;cursor:pointer;
+ color:var(--text);border:1px solid transparent;
+ background:linear-gradient(var(--surface),var(--surface)) padding-box,linear-gradient(135deg,color-mix(in srgb,var(--accent) 70%,#fff) 0%,color-mix(in srgb,var(--border) 90%,transparent) 45%,color-mix(in srgb,var(--accent) 55%,#C9A227) 100%) border-box;
+ box-shadow:0 1px 0 rgba(255,255,255,.7) inset,0 6px 18px color-mix(in srgb,var(--accent) 14%,transparent);transition:transform .18s ease,box-shadow .2s ease,color .15s}
+.mc-card .mc-avatar-pick .mc-upload-label svg{width:17px;height:17px;color:var(--accent)}
+.mc-card .mc-avatar-pick .mc-upload-label::after,.mc-card .mc-avatar-actions .mc-avatar-save::after{content:'';position:absolute;inset:-2px auto -2px -40%;width:36%;z-index:-1;background:linear-gradient(100deg,transparent,color-mix(in srgb,#fff 65%,transparent),transparent);transform:skewX(-18deg);animation:mcSheen 4.2s ease-in-out infinite}
+.mc-card .mc-avatar-pick .mc-upload-label:hover,.mc-card .mc-avatar-actions button:hover{transform:translateY(-1px);box-shadow:0 1px 0 rgba(255,255,255,.7) inset,0 10px 26px color-mix(in srgb,var(--accent) 24%,transparent);color:var(--accent)}
+.mc-card .mc-avatar-pick .mc-upload-label:active,.mc-card .mc-avatar-actions button:active{transform:translateY(0) scale(.98)}
+.mc-card .mc-avatar-actions .mc-avatar-save{color:var(--on-accent,#fff);background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 88%,#fff),var(--accent) 55%,color-mix(in srgb,var(--accent) 80%,#0b1d33)) padding-box,linear-gradient(135deg,color-mix(in srgb,var(--accent) 50%,#fff),color-mix(in srgb,var(--accent) 60%,#C9A227)) border-box}
+.mc-card .mc-avatar-actions .mc-avatar-save:hover{color:var(--on-accent,#fff)}
+.mc-avatar-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+:root:not([data-theme=light]) .mc-card .mc-avatar-pick .mc-upload-label,:root:not([data-theme=light]) .mc-card .mc-avatar-actions button:not(.mc-avatar-save){box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 6px 20px rgba(0,0,0,.35),0 0 0 1px color-mix(in srgb,var(--accent) 12%,transparent)}
+:root:not([data-theme=light]) .mc-card .mc-avatar-pick .mc-upload-label::after{background:linear-gradient(100deg,transparent,color-mix(in srgb,var(--accent) 35%,transparent),transparent)}
+@keyframes mcSheen{0%,62%{left:-40%}100%{left:120%}}
+@media(prefers-reduced-motion:reduce){.mc-card .mc-avatar-pick .mc-upload-label::after,.mc-card .mc-avatar-actions .mc-avatar-save::after{animation:none;display:none}}
