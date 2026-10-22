@@ -12,7 +12,9 @@
  let aiSheet=null,timer,request=0,loadedFor='',hideAnimation,profileLevel='見習研究生';
  // 研究身分：取伺服器回報的最高使用中券（全方位研究 > 研究進階 > 研究入門／觀察）；沒有使用中的券＝見習研究生
  const tierLabels={observation:'市場觀察員',choice:'市場觀察員',research:'趨勢研究員',advanced:'趨勢研究員',vip:'先見領航員'};
- function updateLevel(){panel.querySelector('[data-mq-level]').textContent=tierLabels[window.AcademyShareUnlock?.membershipTier?.()]||profileLevel;}
+ // 網站擁有者帳號不靠券：首領帳號顯示「首席領航員」，其他擁有者為永久「先見領航員」（不列在會員等級卡片中）
+ const special=()=>{let email='';try{email=JSON.parse(localStorage.getItem('sb_user')||'{}').email||'';}catch{}return !signed()?null:email==='qa5518556130@gmail.com'?'首席領航員':window._isOwner?'先見領航員':null;};window.AcademyResearchTitle=special;
+ function updateLevel(){panel.querySelector('[data-mq-level]').textContent=special()||tierLabels[window.AcademyShareUnlock?.membershipTier?.()]||profileLevel;}
  const signed=()=>localStorage.getItem('sb_token')||'';
  function position(){const r=avatar.getBoundingClientRect();panel.style.top=Math.max(8,Math.min(r.bottom+10,innerHeight-140))+'px';const width=Math.min(286,document.documentElement.clientWidth-24);panel.style.right=Math.max(12,Math.min(document.documentElement.clientWidth-width-12,innerWidth-r.right))+'px';panel.style.maxHeight=Math.max(120,innerHeight-r.bottom-24)+'px';}
  function close(restore=false){clearTimeout(timer);request++;avatar.setAttribute('aria-expanded','false');if(panel.hidden)return;panel.querySelector('.mq-ai').hidden=true;panel.querySelector('[data-mq-ai]').setAttribute('aria-expanded','false');hideAnimation?.cancel();panel.hidden=true;if(restore)avatar.focus({preventScroll:true});}
