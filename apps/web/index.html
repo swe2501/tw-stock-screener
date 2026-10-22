@@ -14659,7 +14659,7 @@
       el.innerHTML = '';
       const opts = _chartOpts(70, false);
       opts.width = el.clientWidth;
-      opts.rightPriceScale.scaleMargins = { top: 0.06, bottom: 0.02 };
+      opts.rightPriceScale.scaleMargins = { top: 0.1, bottom: 0.05 };
       volInstance = _createThemedChart(el, opts);
 
       const vols = candles.map(c => c.volume);
@@ -14678,7 +14678,7 @@
         ].filter(v => v > 0);
         return vals.length > 0 ? Math.max(...vals) : 1;
       }
-      const _autoScale = () => ({ priceRange: { minValue: 0, maxValue: _visibleVolMax() } });
+      const _autoScale = () => ({ priceRange: { minValue: 0, maxValue: _visibleVolMax() * 1.1 } });
 
       volSeriesRef = null;
       const volSeries = volInstance.addHistogramSeries({
@@ -14688,7 +14688,7 @@
       });
       volSeries.setData(candles.map(c => ({
         time: c.time, value: c.volume,
-        color: c.close >= c.open ? 'rgba(231,76,60,0.9)' : 'rgba(38,194,129,0.9)',
+        color: c.close >= c.open ? 'rgba(231,76,60,0.4)' : 'rgba(38,194,129,0.4)',
       })));
       volSeriesRef = volSeries;
 
@@ -14721,7 +14721,7 @@
 
       const opts = _chartOpts(100, false);
       opts.width = el.clientWidth;
-      opts.rightPriceScale.scaleMargins = { top: 0.06, bottom: 0.06 };
+      opts.rightPriceScale.scaleMargins = { top: 0.1, bottom: 0.1 };
       macdInstance = _createThemedChart(el, opts);
 
       // Anchor series: full K-line timestamps as an invisible overlay so that logical
@@ -14736,7 +14736,7 @@
       histSeries.setData(
         times.map((t, i) => hist[i] !== null ? {
           time: t, value: hist[i],
-          color: hist[i] >= 0 ? 'rgba(231,76,60,0.9)' : 'rgba(38,194,129,0.9)',
+          color: hist[i] >= 0 ? 'rgba(231,76,60,0.65)' : 'rgba(38,194,129,0.65)',
         } : null).filter(Boolean)
       );
       const macdSeries = macdInstance.addLineSeries({crosshairMarkerRadius:1.5,crosshairMarkerBorderWidth:0, color: '#e74c3c', lineWidth: 1, priceScaleId: 'right' });
