@@ -97,7 +97,7 @@
       if (!ch) return '';
       const passed = !!(rec && rec.passed), ready = chRead === ch.ids.length;
       return `<section class="mc-card lc-challenge${passed ? ' is-passed' : ''}" aria-labelledby="lcChTitle">
-        <div class="lc-ch-head"><div><span class="lc-ch-kicker">${icon.flag}本週學習挑戰 · ${esc(ch.key.replace('-W', ' 第 ') + ' 週')}</span><h3 id="lcChTitle">${esc(ch.name)}</h3><p>讀完 4 篇、通過 ${ch.quiz.length} 題週測驗（答對 ${ch.pass} 題以上），拿「${esc(ch.badge)}」徽章，並可到任務領 30 點。</p></div>
+        <div class="lc-ch-head"><div><span class="lc-ch-kicker">${icon.flag}本週學習挑戰 · ${esc(ch.key.replace('-W', ' 第 ') + ' 週')}</span><h3 id="lcChTitle">${esc(ch.name)}</h3><p>讀完 4 篇、通過 ${ch.quiz.length} 題週測驗（答對 ${ch.pass} 題以上），拿「${esc(ch.badge)}」徽章，並可到任務領 50 點。</p></div>
           <div class="lc-ch-time"><b data-countdown="${ch.end}">${left(ch.end - Date.now())}</b><small>週日 23:59 截止</small></div></div>
         <ol class="lc-ch-steps">${ch.lessons.map((l, i) => `<li class="${done.has(l.id) ? 'is-done' : ''}"><button type="button" data-open="${esc(l.id)}"><i>${done.has(l.id) ? icon.check : i + 1}</i><span>${esc(l.title.replace(/[：:].*$/, ''))}</span></button></li>`).join('')}</ol>
         <div class="lc-ch-foot">${passed ? `<div class="lc-ch-done">${medal(ch.badge)}<div><b>挑戰完成：${esc(ch.badge)}</b><small>答對 ${rec.score}／${rec.total} 題。記得到「任務與點數」領本週學習挑戰的點數。</small></div><button type="button" class="lc-btn" data-go="tasks">去領點數 ${icon.arrow}</button></div>`

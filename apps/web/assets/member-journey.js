@@ -2,11 +2,12 @@
 (() => {
  'use strict';
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
- const groups=[['start','初見啟程'],['daily','每日觀察'],['weekly','每週精進'],['milestone','研究里程碑'],['share','分享同行'],['bonus','禮遇加碼']];
+ const groups=[['start','初見啟程'],['daily','每日觀察'],['streak','連續打卡'],['weekly','每週精進'],['milestone','研究里程碑'],['share','分享同行'],['bonus','禮遇加碼']];
  const tasks=[
  ['name','start','設定研究暱稱','讓研究紀錄有自己的名字。',20,'profile','一次'],['preferences','start','設定通知偏好','選擇你需要的通知，隨時可以調整。',10,'notifications','一次'],['learn','start','讀完第一篇學習內容','從新手起步的第一篇開始。',20,'learning','一次'],['watch','start','建立第一份自選','加上自己的觀察理由。',30,'favorites','一次'],['note','start','寫下第一則筆記','留下現象、依據與下一個確認點。',30,'workspace','一次'],['screen-first','start','記錄第一筆選股','在掏金篩選器篩出結果後，按「記錄今日選股」。',30,'site:screen','一次'],['simulate','start','完成一次模擬檢討','用歷史案例練習，不要求真實交易。',50,'trades','一次'],
- ['daily-market','daily','記錄今日市場觀察','用自己的話寫一則盤後觀察。',10,'workspace','每日'],['daily-screen','daily','記錄今日選股','把今天用的招式和選到的股票留下紀錄。',5,'site:screen','每日'],['daily-check','daily','更新一個觀察理由','記錄判斷有沒有改變，以及為什麼。',5,'favorites','每日'],['daily-risk','daily','補上一項風險條件','想清楚什麼情況需要重新評估。',5,'workspace','每日'],['daily-learn','daily','讀完一篇學習內容','到學習中心讀一篇，標記讀完。',5,'learning','每日'],['daily-review','daily','回看一則舊筆記','把當時觀察與現在的結果分開看。',5,'workspace','每日'],
- ['weekly-notes','weekly','一週三篇有效筆記','不同日期的研究內容才列入檢核。',30,'workspace','每週'],['weekly-summary','weekly','完成本週研究回顧','整理一件學到的事與下一週重點。',20,'weekly','每週'],['weekly-simulation','weekly','檢討兩個歷史案例','回顧自己的流程，無須交易。',20,'trades','每週'],['weekly-learn','weekly','完成本週學習挑戰','讀完本週指定內容並通過週測驗，另得徽章；不占每週上限。',30,'learning','每週'],['weekly-plan','weekly','整理下週觀察清單','留下理由，不獎勵清單數量。',20,'favorites','每週'],['weekly-screen','weekly','一週記錄三天選股','不同日期的選股紀錄才列入。',20,'site:screen','每週'],['weekly-screen-review','weekly','回看上週選股表現','打開選股紀錄看至今漲跌，寫一則檢討。',20,'site:screenlog','每週'],
+ ['daily-market','daily','記錄今日市場觀察','用自己的話寫一則盤後觀察。',20,'workspace','每日'],['daily-screen','daily','記錄今日選股','把今天用的招式和選到的股票留下紀錄。',10,'site:screen','每日'],['daily-check','daily','更新一個觀察理由','記錄判斷有沒有改變，以及為什麼。',10,'favorites','每日'],['daily-risk','daily','補上一項風險條件','想清楚什麼情況需要重新評估。',10,'workspace','每日'],['daily-learn','daily','讀完一篇學習內容','到學習中心讀一篇，標記讀完。',10,'learning','每日'],['daily-review','daily','回看一則舊筆記','把當時觀察與現在的結果分開看。',10,'workspace','每日'],
+ ['streak7','streak','連續 7 天完成每日任務','每天至少領一項每日任務，連續 7 天送全工具 3 天券＋50 點。',50,'workspace','每週'],['streak15','streak','連續 15 天完成每日任務','連續 15 天送全工具 7 天券＋100 點。',100,'workspace','每月'],['streak30','streak','連續 30 天完成每日任務','連續 30 天送全工具 14 天券＋200 點。',200,'workspace','每月'],
+ ['weekly-notes','weekly','一週三篇有效筆記','不同日期的研究內容才列入檢核。',60,'workspace','每週'],['weekly-summary','weekly','完成本週研究回顧','整理一件學到的事與下一週重點。',40,'weekly','每週'],['weekly-simulation','weekly','檢討兩個歷史案例','回顧自己的流程，無須交易。',40,'trades','每週'],['weekly-learn','weekly','完成本週學習挑戰','讀完本週指定內容並通過週測驗，另得徽章；不占每週上限。',50,'learning','每週'],['weekly-plan','weekly','整理下週觀察清單','留下理由，不獎勵清單數量。',40,'favorites','每週'],['weekly-screen','weekly','一週記錄三天選股','不同日期的選股紀錄才列入。',40,'site:screen','每週'],['weekly-screen-review','weekly','回看上週選股表現','打開選股紀錄看至今漲跌，寫一則檢討。',40,'site:screenlog','每週'],
  ['notes5','milestone','累積五篇研究筆記','有內容、有日期，也能再次回顧。',50,'workspace','一次'],['notes20','milestone','累積二十篇有效筆記','建立自己的研究資料庫。',100,'workspace','一次'],['reviews5','milestone','完成五次模擬檢討','累積可回顧的學習紀錄。',80,'trades','一次'],['weekly4','milestone','完成四份週回顧','持續整理比單次大量操作更有意義。',100,'weekly','一次'],['learning3','milestone','讀完三篇學習內容','從新手起步開始讀。',30,'learning','一次'],['learning10','milestone','讀完十篇學習內容','累積基本觀念。',50,'learning','一次'],['learning30','milestone','讀完三十篇學習內容','技術、籌碼、策略都讀過一輪。',100,'learning','一次'],['challenge4','milestone','完成四次每週學習挑戰','連續學習的習慣比一次讀很多更重要。',100,'learning','一次'],['screen20','milestone','累積二十天選股紀錄','持續記錄，才看得出招式的真實表現。',100,'site:screen','一次'],['strategies3','milestone','用三種不同招式記錄選股','比較不同招式在同一段行情的表現。',50,'site:screen','一次'],
  ['invite1','share','邀請第一位有效新會員','對方完成註冊驗證並填入你的邀請碼。',60,'referrals','每位一次'],['invite3','share','邀請三位有效新會員','沿用活動核發使用券，點數不重複疊發。',null,'referrals','每滿三位'],['share3','share','分享給三位不同好友','誠信確認；不讀取 IG 私訊。',null,'referrals','帳號一次'],['feedback','share','協助改善一個問題','經確認有幫助的回饋，由管理端審核，依影響給 40～200 點。',40,'feedback','審核制'],['event','share','參加一場學院活動','以正式公告的活動為準，由管理端確認出席。',100,'events','審核制'],
  ['ad-video','bonus','觀看一支獎勵影片','每支 5 點，每日最多 3 支；只看影片，不需點擊廣告。',5,'soon','每日'],['birthday','bonus','生日當月禮','100 點加研究券 3 天，每年一次；生日修改不可重領同年度。',100,'profile','每年'],['anniversary','bonus','會員週年禮','註冊滿一年起，每年一次。',200,'overview','每年']
@@ -25,20 +26,20 @@
  const TOOLS=['外資空單溫度計','大盤多空廣度','話題研究','出場追蹤'];
  // 2026-10-22 任務點數與儲值點數同一種點數、同價格；商品只標點數（台幣只在儲值頁出現）。id 對應 docs/database/member-perks-exchange-v3.sql
  const catalog=[
-  {id:'vip-1d-v1',name:'全工具體驗券',art:'key',days:1,points:100,items:TOOLS,note:'第一次用？先花 100 點試一天',tag:'trial'},
-  {id:'choice-3d-v1',name:'自選單品券',art:'choice',days:3,points:300,items:TOOLS,note:'四項任選一項，開始使用時選定，選後不能更換'},
-  {id:'choice-7d-v1',name:'自選單品券',art:'choice',days:7,points:600,items:TOOLS,note:'四項任選一項，開始使用時選定'},
-  {id:'choice-30d-v1',name:'自選單品券',art:'choice',days:30,points:1500,items:TOOLS,note:'固定用一項工具的人最划算'},
-  {id:'observation-3d-v1',name:'盤勢雙指標券',art:'gauge',days:3,points:400,items:['外資空單溫度計','大盤多空廣度'],note:'看外資動向與多空廣度'},
-  {id:'observation-7d-v1',name:'盤勢雙指標券',art:'gauge',days:7,points:800,items:['外資空單溫度計','大盤多空廣度'],note:'看外資動向與多空廣度'},
-  {id:'research-3d-v1',name:'題材雷達券',art:'radar',days:3,points:400,items:['話題研究','大盤多空廣度'],note:'追每日新聞題材與資金輪動'},
-  {id:'research-7d-v1',name:'題材雷達券',art:'radar',days:7,points:800,items:['話題研究','大盤多空廣度'],note:'追每日新聞題材與資金輪動'},
-  {id:'advanced-3d-v1',name:'進出場追蹤券',art:'exit',days:3,points:400,items:['出場追蹤','外資空單溫度計'],note:'持股出場訊號與外資空單'},
-  {id:'advanced-7d-v1',name:'進出場追蹤券',art:'exit',days:7,points:800,items:['出場追蹤','外資空單溫度計'],note:'持股出場訊號與外資空單'},
-  {id:'vip-3d-v1',name:'全工具通行券',art:'key',days:3,points:700,items:TOOLS,note:'四項工具全部開放'},
-  {id:'vip-7d-v1',name:'全工具通行券',art:'key',days:7,points:1300,items:TOOLS,note:'四項工具全部開放'},
-  {id:'vip-30d-v1',name:'全工具通行券',art:'key',days:30,points:4000,items:TOOLS,note:'四項工具全部開放'},
-  {id:'vip-90d-v1',name:'全工具通行券',art:'key',days:90,points:10000,items:TOOLS,note:'一季份，平均每天最低',best:true}
+  {id:'vip-1d-v1',name:'全工具體驗券',art:'key',days:1,points:500,items:TOOLS,note:'第一次用？先試一天',tag:'trial'},
+  {id:'choice-3d-v1',name:'自選單品券',art:'choice',days:3,points:400,items:TOOLS,note:'四項任選一項，開始使用時選定，選後不能更換'},
+  {id:'choice-7d-v1',name:'自選單品券',art:'choice',days:7,points:800,items:TOOLS,note:'四項任選一項，開始使用時選定'},
+  {id:'choice-30d-v1',name:'自選單品券',art:'choice',days:30,points:3000,items:TOOLS,note:'固定用一項工具的人最划算'},
+  {id:'observation-3d-v1',name:'盤勢雙指標券',art:'gauge',days:3,points:700,items:['外資空單溫度計','大盤多空廣度'],note:'看外資動向與多空廣度'},
+  {id:'observation-7d-v1',name:'盤勢雙指標券',art:'gauge',days:7,points:1500,items:['外資空單溫度計','大盤多空廣度'],note:'看外資動向與多空廣度'},
+  {id:'research-3d-v1',name:'題材雷達券',art:'radar',days:3,points:700,items:['話題研究','大盤多空廣度'],note:'追每日新聞題材與資金輪動'},
+  {id:'research-7d-v1',name:'題材雷達券',art:'radar',days:7,points:1500,items:['話題研究','大盤多空廣度'],note:'追每日新聞題材與資金輪動'},
+  {id:'advanced-3d-v1',name:'進出場追蹤券',art:'exit',days:3,points:700,items:['出場追蹤','外資空單溫度計'],note:'持股出場訊號與外資空單'},
+  {id:'advanced-7d-v1',name:'進出場追蹤券',art:'exit',days:7,points:1500,items:['出場追蹤','外資空單溫度計'],note:'持股出場訊號與外資空單'},
+  {id:'vip-3d-v1',name:'全工具通行券',art:'key',days:3,points:1200,items:TOOLS,note:'四項工具全部開放'},
+  {id:'vip-7d-v1',name:'全工具通行券',art:'key',days:7,points:2500,items:TOOLS,note:'四項工具全部開放'},
+  {id:'vip-30d-v1',name:'全工具通行券',art:'key',days:30,points:10000,items:TOOLS,note:'四項工具全部開放'},
+  {id:'vip-90d-v1',name:'全工具通行券',art:'key',days:90,points:27000,items:TOOLS,note:'一季份，平均每天最低',best:true}
  ];
  // 商品圖樣：線條＋淡色填色，顏色取網站主色，深淺色自動跟隨（.mj-art-soft／.mj-art-line 見 research-polish.css）
  const art=kind=>'<svg class="mj-art" viewBox="0 0 64 64" aria-hidden="true">'+({
@@ -58,7 +59,7 @@
    '<p class="mj-copy mj-fineprint">點數不能換現金、不能轉讓。主力訊號、分點回測、神燈與冥燈為管理員工具，任何券都不包含。一般會員原本就能用的功能，不會因點數制度改成要券。</p>';
  }
  function taskView(p,s){return '<section class="mj-hero mj-plain-hero"><h2>任務與點數</h2><p>做研究任務累積點數，再用點數兌換研究工具的使用券。</p>'+
-  '<ol class="mj-steps"><li><b>1 做任務</b><span>例如記錄今日選股、寫盤後觀察、邀請好友</span></li><li><b>2 累積點數</b><span>和儲值的點數是同一種。每日最多 20 點、每週任務最多 100 點；每週學習挑戰與獎勵影片另計</span></li><li><b>3 兌換使用券</b><span>100 點起，可換 1～90 天的研究工具</span></li></ol>'+
+  '<ol class="mj-steps"><li><b>1 做任務</b><span>例如記錄今日選股、寫盤後觀察、邀請好友</span></li><li><b>2 累積點數</b><span>和儲值的點數是同一種。每日最多 40 點、每週任務最多 200 點；連續打卡另送全工具使用券</span></li><li><b>3 兌換使用券</b><span>連續打卡直接送全工具使用券；點數也能換 1～90 天的研究工具</span></li></ol>'+
   '<div class="mj-policy"><b>目前狀態</b><span><span data-rewards-policy>正在確認任務與兌換狀態；點數與開放項目以帳號服務為準。</span></span></div></section>'+
   '<section class="mc-card mj-task-zone"><div class="mj-section-head"><div><h2>全部任務</h2><p class="mj-copy">共 '+tasks.length+' 個任務，依類別切換。</p></div>'+goButton('wallet','點數帳戶')+'</div><div class="mj-filters" role="group" aria-label="任務分類">'+groups.map(([id,label],i)=>'<button type="button" data-mj-filter="'+id+'" aria-pressed="'+(i===0)+'">'+label+' <small>'+tasks.filter(t=>t[1]===id).length+'</small></button>').join('')+'</div><div class="mj-tasks">'+tasks.filter(t=>t[1]==='start').map(t=>taskCard(t,p,s)).join('')+'</div></section><section class="mc-card">'+exchange()+'</section>';}
  function overview(p,s){return '<section class="mj-hero mj-overview-hero mc-identity"><div><span class="mc-kicker">YOUR NEXT CHAPTER</span><h2>'+esc(p.display_name||'先見會員')+'，歡迎回到研究旅程。</h2><p>今天的觀察、待啟用的禮遇，以及下一步，集中在這裡。</p><div class="mj-hero-actions">'+goButton('tasks','展開任務旅程','mj-primary')+goButton('workspace','寫一則研究筆記')+'</div></div><span class="mj-hero-emblem">'+icon('route')+'</span></section><div class="mj-stats"><button type="button" data-mj-go="wallet"><span>任務點數</span><strong data-mj-points>確認中</strong><small>可用餘額由帳號服務確認</small></button><button type="button" data-mj-go="gifts"><span>待啟用使用券</span><strong data-mj-vouchers>確認中</strong><small>核發後一個月內啟用</small></button><button type="button" data-mj-go="referrals"><span>我的邀請碼</span><strong data-mj-code>確認中</strong><small>每位會員專屬，跨裝置保留</small></button></div><div class="mj-overview-grid"><section class="mc-card"><div class="mj-section-head"><h2>接下來，從這裡開始</h2>'+goButton('tasks','全部任務')+'</div><div class="mj-next-tasks">'+tasks.filter(t=>t[1]==='start').slice(0,3).map(t=>'<div><span class="mj-symbol">'+icon('book')+'</span><div><h3>'+t[2]+'</h3><small>'+(ready(t[0],p,s)?'已有紀錄，等待發點服務確認':'建議任務獎勵 +'+t[4]+' 點')+'</small></div>'+goButton(t[5],'查看')+'</div>').join('')+'</div></section><section class="mc-card mj-research-shelf"><span class="mc-kicker">RESEARCH SHELF</span><h2>你的研究足跡</h2><div class="mj-footprints"><span><b>'+s.notes.length+'</b>筆記草稿</span><span><b>'+s.observations.length+'</b>技術觀察</span><span><b>'+s.lessons.length+'</b>已讀導讀</span></div><p class="mj-copy">此裝置目前載入的紀錄；同步狀態請見頁首。</p>'+goButton('weekly','整理本週研究回顧')+'</section></div><section class="mc-card"><div class="mj-section-head"><div><span class="mc-kicker">MEMBER PRIVILEGES</span><h2>讓每一份禮遇，都有去處</h2></div>'+goButton('benefits','查看會員權益')+'</div><div class="mj-shortcuts">'+[['screen-calendar','選股日曆','當天記錄全部策略，歷史只能回顧'],['gifts','使用券夾','待啟用、使用中與已到期'],['referrals','邀請同行','專屬邀請碼與有效進度'],['redeem','活動兌換','輸入活動碼，核對入帳結果'],['events','學院活動','留意正式公告與報名資訊']].map(([id,title,body])=>'<button type="button" data-mj-go="'+id+'"><span class="mj-symbol">'+icon('gift')+'</span><h3>'+title+'</h3><small>'+body+'</small></button>').join('')+'</div></section><div class="mj-account-links">'+goButton('profile','個人資料')+goButton('security','登入與安全')+goButton('feedback','提出使用回饋')+'</div>';}
