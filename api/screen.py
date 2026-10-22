@@ -597,6 +597,19 @@ def _load_groupbook_prices(codes):
         off += 1000
 
 
+def _site_env():
+    """2026-10-21 依環境讀快照：Vercel 的 VERCEL_ENV=preview（uat 等非正式部署）→ uat；其餘 → prod。"""
+    return "uat" if os.environ.get("VERCEL_ENV") == "preview" else "prod"
+
+
+def _snapshot_rows(kind):
+    if _site_env() == "uat":
+        st, rows = _cache_sb("/page_cache", params=_snapshot_params(kind + "@uat"))
+        if st == 200 and rows:
+            return st, rows
+    return _cache_sb("/page_cache", params=_snapshot_params(kind))
+
+
 def _snapshot_params(kind):
     # Legacy single rows remain readable; all new versions are append-only.
     return [("or", "(kind.eq." + kind + ",kind.like." + kind + "__*)"),
@@ -607,7 +620,7 @@ def _read_groupbook_research(quarter):
     import re
     if not re.fullmatch(r"20[0-9]{2}Q[1-4]", quarter):
         return {"error": "invalid research quarter"}
-    status, rows = _cache_sb("/page_cache", params=_snapshot_params("groupbook_research_" + quarter))
+    status, rows = _snapshot_rows("groupbook_research_" + quarter)
     if status != 200 or not isinstance(rows, list) or not rows:
         return {"error": "research snapshot unavailable"}
     data = rows[0].get("payload")
@@ -618,7 +631,7 @@ def _read_groupbook_research(quarter):
 
 def _read_groupbook_snapshot(window=10):
     window = 5 if window <= 5 else (20 if window >= 20 else 10)
-    status, rows = _cache_sb("/page_cache", params=_snapshot_params("groupbook_" + str(window)))
+    status, rows = _snapshot_rows("groupbook_" + str(window))
     if status != 200 or not isinstance(rows, list) or not rows:
         return {"error": "group snapshot unavailable"}
     data = rows[0].get("payload")
@@ -837,7 +850,7 @@ def _focus_details(data, by_code=None):
 
 
 def _read_focus_snapshot(top_n=30):
-    status, rows = _cache_sb("/page_cache", params=_snapshot_params("focus"))
+    status, rows = _snapshot_rows("focus")
     if status != 200 or not isinstance(rows, list) or not rows:
         return {"error": "focus snapshot unavailable"}
     data = rows[0].get("payload")
