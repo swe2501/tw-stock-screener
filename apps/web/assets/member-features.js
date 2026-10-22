@@ -119,7 +119,7 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
       if(!data.rows.length){target.innerHTML=empty('目前沒有使用券','分享或邀請達標後，使用券會保存在這個帳號。');return ids;}
       const catalog=new Map((data.feature_catalog||[]).map(f=>[f.id,f.title]));
       if(!catalog.size){catalog.set('fhedge','外資空單溫度計');catalog.set('breadth','大盤多空廣度');}
-      const tiers={observation:'觀察券',research:'研究券',advanced:'進階券',vip:'VIP 券',choice:'自選券'};
+      const tiers={observation:'觀察券',research:'研究進階券',advanced:'進階券',vip:'全方位研究券',choice:'研究入門券'};
       const active=data.rows.filter(r=>r.status==='claimed'&&Date.parse(r.expires_at)>now);
       target.innerHTML=data.rows.map(r=>{
         const ready=r.status==='ready'&&Date.parse(r.activation_deadline)>now,used=r.status==='claimed'&&Date.parse(r.expires_at)>now;
