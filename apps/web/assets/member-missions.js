@@ -5,6 +5,7 @@
  const valid=d=>Array.isArray(d?.rows)&&Number.isFinite(Date.parse(d.server_time));
  const integer=n=>Number.isSafeInteger(n)&&n>=0;
  const serverOnly=new Set(['name-v1','preferences-v1','watch-v1','verify-contact-v1','invite-first-v1','birthday-v1','anniversary-v1']);
+ const learningTasks=new Set(['learn-v1','daily-learn-v1','learning3-v1','learning10-v1','learning30-v1','weekly-learn-v1','challenge4-v1']);
  const messages={MEMBER_TASK_LIMIT_REACHED:'今天（本週）從任務獲得的點數已達上限，請下期再來。',MEMBER_TASK_INCOMPLETE:'還沒完成這項任務，完成後再回來領取。',MEMBER_TASK_REVIEW_ONLY:'這項任務由管理端審核發點。',MEMBER_TASK_UNAVAILABLE:'這項任務尚未開放。',MEMBER_EXCHANGE_UNAVAILABLE:'這張使用券尚未開放兌換。',MEMBER_POINTS_INSUFFICIENT:'任務點數不足，請先確認最新餘額。'};
  const errorText=e=>messages[e.code]||Object.entries(messages).find(([k])=>String(e.message).includes(k))?.[1]||e.message||'無法確認結果，請稍後重試。';
  function mount(root,{profile,go,ready=()=>false}){
@@ -25,10 +26,11 @@
    if(t.review_only)return {text:'由管理端審核',note:'審核通過後，點數由管理端發送。',disabled:true};
    if(t.id==='ad-video-v1')return {text:'尚未完成',note:'獎勵影片尚未接通，不開放領點。',disabled:true};
    if(t.claimed)return {text:'本期已領',note:'獎勵已轉入，下期狀態由伺服器確認。',disabled:true};
+   if(learningTasks.has(t.id)&&state.tasks.learning_verification!==1)return {text:'核驗準備中',note:'閱讀與已讀進度照常保留；領點核驗服務準備中。',disabled:true};
    const cap=state.tasks.caps?.[t.cap_group];
    if(cap&&integer(cap.used)&&integer(cap.limit)&&cap.used+t.points>cap.limit)return {text:'尚未完成',note:t.period==='weekly'?'本週點數已達上限。':'今日點數已達上限。',disabled:true};
-   const eligible=t.eligible===true&&(serverOnly.has(t.id)||ready(id));
-   return {text:eligible?'領取 +'+t.points+' 點':'尚未完成',note:eligible?'確認完成後，由帳號服務核發獎勵。':'完成任務後再回來領取；回報類需在此裝置有紀錄。',disabled:!eligible};
+   const eligible=t.eligible===true&&(serverOnly.has(t.id)||learningTasks.has(t.id)||ready(id));
+   return {text:eligible?'領取 +'+t.points+' 點':'尚未完成',note:eligible?'確認完成後，由帳號服務核發獎勵。':learningTasks.has(t.id)?'到學習中心完成閱讀核驗或本週挑戰，由伺服器確認領點資格。':'完成任務後再回來領取；回報類需在此裝置有紀錄。',disabled:!eligible};
   }
   function paint(){
    root.querySelectorAll('[data-task-id]').forEach(card=>{

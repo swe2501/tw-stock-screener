@@ -77,10 +77,12 @@
           ${l.calc ? calcHTML(l.calc) : ''}
           ${quizHTML(l)}
           <div class="lc-actions">
+            <button type="button" class="lc-btn" data-verify-read="${esc(l.id)}">核驗閱讀進度</button>
             <button type="button" class="lc-btn${isDone ? '' : ' lc-primary'}" data-read="${esc(l.id)}">${isDone ? '標為未讀' : icon.check + ' 讀完了'}</button>
             <button type="button" class="lc-btn" data-save="${esc(l.id)}" aria-pressed="${saved.has(l.id)}">${icon.bookmark} ${saved.has(l.id) ? '已收藏' : '收藏'}</button>
             ${l.try ? `<button type="button" class="lc-btn lc-try" data-try="${esc(l.id)}">${esc(l.try.label)} ${icon.arrow}</button>` : ''}
           </div>
+          <p class="lc-result" data-verify-status role="status">個人已讀標記會保留；任務領點須閱讀至少 30 秒，並通過八成測驗，由伺服器確認。</p>
         </div></details>`;
     };
 
@@ -146,6 +148,7 @@
     if (!main.dataset.lcBound) {
       main.dataset.lcBound = '1';
       main.addEventListener('toggle', e => { const d = e.target.closest?.('.lc-lesson'); if (d && d.open) { sset(K.open, d.dataset.lessonId); main.querySelectorAll('.lc-content .lc-lesson[open]').forEach(x => { if (x !== d) x.open = false; }); main.querySelectorAll('.lc-toc button[data-open]').forEach(b => b.classList.toggle('is-current', b.dataset.open === d.dataset.lessonId)); } }, true);
+      main.addEventListener('toggle', async e => {const d=e.target.closest?.('.lc-lesson');if(!d?.open)return;const out=d.querySelector('[data-verify-status]');try{if(!window.AcademyLearningVerification)throw Error('學習核驗服務準備中');await AcademyLearningVerification.start(d.dataset.lessonId);if(out?.isConnected)out.textContent='已開始閱讀計時；至少 30 秒後，完成文章測驗並按「核驗閱讀進度」。';}catch(error){if(out?.isConnected)out.textContent=error.message;}},true);
       main.addEventListener('input', e => {
         const box = e.target.closest?.('.lc-calc'); if (box) { runCalc(box); return; }
         if (e.target.matches?.('[data-search]')) { clearTimeout(main._lcT); const v = e.target.value.trim(), inSheet = !!e.target.closest('.lc-sheet'); main._lcT = setTimeout(() => { main._lcQuery = v; render(main, opts); const inp = main.querySelector(inSheet ? '.lc-sheet [data-search]' : '.lc-side [data-search]'); if (inSheet) { main.querySelector('.lc-sheet').hidden = false; document.documentElement.classList.add('lc-sheet-open'); } if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); } }, 250); }
@@ -166,6 +169,13 @@
         box.querySelectorAll('label').forEach((x, i) => { x.classList.toggle('is-answer', ok && i === q.answer); x.classList.toggle('is-wrong', !ok && +pick.value === i); });
         return;
       }
+      if(b.dataset.verifyRead){
+        const box=b.closest('.lc-lesson'),id=b.dataset.verifyRead,l=byId(id),out=box.querySelector('[data-verify-status]');
+        const answers=l.quiz.map((_,i)=>{const pick=box.querySelector(`input[name="q-${CSS.escape(id)}-${i}"]:checked`);return pick?Number(pick.value):null;});
+        if(answers.includes(null)){out.textContent='請先回答文章的所有小測驗。';return;}
+        b.disabled=true;out.textContent='正在確認閱讀與測驗紀錄…';
+        (async()=>{try{if(!window.AcademyLearningVerification)throw Error('學習核驗服務準備中');const r=await AcademyLearningVerification.complete(id,answers);if(!r?.completed_at)throw Error('核驗結果尚未確認，請再試一次');if(out.isConnected)out.textContent='閱讀核驗完成，可到「任務與點數」查看可領獎勵。';}catch(error){if(out.isConnected)out.textContent=error.message;}finally{if(b.isConnected)b.disabled=false;}})();return;
+      }
       if (b.hasAttribute('data-ch-start')) {
         const box = main.querySelector('.lc-ch-quiz'); box.hidden = false;
         box.innerHTML = `<form class="lc-ch-form">${ch.quiz.map((q, qi) => `<fieldset class="lc-quiz"><legend>第 ${qi + 1} 題</legend><p>${esc(q.q)}</p><div class="lc-options">${q.options.map((o, i) => `<label><input type="radio" name="ch-${qi}" value="${i}" required><span>${esc(o)}</span></label>`).join('')}</div><p class="lc-result"></p></fieldset>`).join('')}<div class="lc-actions"><button type="submit" class="lc-btn lc-primary">交卷</button><span class="lc-ch-msg" role="status"></span></div></form>`;
@@ -177,7 +187,8 @@
           msg.textContent = passed ? `答對 ${score}／${ch.quiz.length} 題，通過！正在儲存…` : `答對 ${score}／${ch.quiz.length} 題，還差 ${ch.pass - score} 題。看完解析可以再挑戰一次。`;
           if (!passed) { btn.textContent = '再挑戰一次'; btn.type = 'button'; btn.onclick = () => { f.reset(); f.querySelectorAll('.lc-result').forEach(r => { r.textContent = ''; }); f.querySelectorAll('label').forEach(x => x.classList.remove('is-answer', 'is-wrong')); btn.type = 'submit'; btn.textContent = '交卷'; btn.onclick = null; msg.textContent = ''; }; return; }
           btn.disabled = true;
-          const prev = (opts.challenges || {})[ch.key]; const record = { id: ch.id, score: Math.max(score, prev?.score || 0), total: ch.quiz.length, passed: true, at: new Date().toISOString() };
+          let result;try{if(!window.AcademyLearningVerification)throw Error('學習核驗服務準備中');const answers=ch.quiz.map((_,i)=>Number(f.querySelector(`input[name="ch-${i}"]:checked`).value));result=await AcademyLearningVerification.challenge(ch.key,answers);if(!result?.passed||!result.completed_at)throw Error('挑戰核驗結果尚未確認，請重試');}catch(error){msg.textContent=error.message;btn.disabled=false;return;}
+          const record = { id: result.challenge_id, score: result.score, total: result.total, passed: true, at: result.completed_at };
           const ok = await opts.saveChallenge?.(ch.key, record); if (!ok) { msg.textContent = '答對 ' + score + ' 題，通過了，但紀錄沒有存成功，請稍後再交一次。'; btn.disabled = false; }
         };
         return;
