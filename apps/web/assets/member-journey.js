@@ -22,12 +22,13 @@
  // site:screen／site:screenlog：離開會員中心，打開網站的掏金篩選器（或直接打開選股紀錄）
  function goSite(route){document.querySelector('[data-back]')?.click();setTimeout(()=>{window._showView?.('screen');if(route==='site:screenlog')setTimeout(()=>window.openMemberCenter?.('screen-calendar'),250);},150);}
  function taskCard(t,p,s){const [id,group,title,body,points,route,frequency]=t,observed=ready(id,p,s);return '<article class="mj-task" data-task-id="'+id+'"><div class="mj-task-top"><span class="mj-symbol">'+icon(group==='share'||group==='bonus'?'gift':'book')+'</span><span class="mj-task-frequency">'+frequency+'</span></div><h3>'+title+'</h3><p>'+body+'</p><div class="mj-task-bottom"><strong>'+(points===null?'活動使用券':'+'+points+' 點')+'</strong>'+goButton(route,observed?'查看紀錄':'前往完成')+'</div><small data-task-state>正在確認任務狀態…</small><button type="button" data-task-claim="'+(id==='invite1'?'invite-first-v1':id+'-v1')+'" disabled>尚未完成</button></article>';}
- // 點數兌換商品（2026-10-22 JUSTY 重整：最多 8 項、價格只標點數、由小到大排列）。id 對應 docs/database/member-perks-exchange-v3.sql
+ // 點數兌換商品（2026-10-22 JUSTY 重整：共 8 項、價格只標點數、由小到大排列）。id 對應 docs/database/member-perks-exchange-v3.sql
  const TOOLS=['外資空單溫度計','大盤多空廣度','話題研究','持股觀察站'];
  const PRO=['外資空單溫度計','大盤多空廣度','話題研究'];
  const catalog=[
   {id:'vip-1d-v1',name:'全方位研究',art:'key',days:1,points:500,items:TOOLS,note:'第一次用？先體驗一天',tag:'trial'},
   {id:'choice-7d-v1',name:'研究入門',art:'choice',days:7,points:1000,items:TOOLS,note:'四項任選一項，開始使用時選定'},
+  {id:'research-7d-v1',name:'研究進階',art:'radar',days:7,points:1800,items:PRO,note:'三項一起看，先用一週試試'},
   {id:'vip-7d-v1',name:'全方位研究',art:'key',days:7,points:2500,items:TOOLS,note:'四項工具全部開放'},
   {id:'choice-30d-v1',name:'研究入門',art:'choice',days:30,points:3800,items:TOOLS,note:'固定用一項工具的人最適合'},
   {id:'research-30d-v1',name:'研究進階',art:'radar',days:30,points:6800,items:PRO,note:'盤勢、外資動向與題材三項一起看'},

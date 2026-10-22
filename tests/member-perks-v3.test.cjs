@@ -33,10 +33,10 @@ const {PGlite}=require(process.env.PGLITE_MODULE||'@electric-sql/pglite');
  await assert.rejects(claim('weekly-plan-v1'),/LIMIT|CAP|上限/i);
  assert.equal((await claim('weekly-learn-v1')).points,50);
  assert.equal((await claim('learning10-v1')).points,50);
- // 兌換商品 v3 方案重整：現行 7 項（點數依 1 元＝10 點）、退場商品保留但關閉、名稱不含進出場字眼、重跑不變
- await admin();const cur="('vip-1d-v1','choice-7d-v1','vip-7d-v1','choice-30d-v1','research-30d-v1','vip-30d-v1','vip-90d-v1')";
+ // 兌換商品 v3 方案重整：現行 8 項（點數依 1 元＝10 點）、退場商品保留但關閉、名稱不含進出場字眼、重跑不變
+ await admin();const cur="('vip-1d-v1','choice-7d-v1','research-7d-v1','vip-7d-v1','choice-30d-v1','research-30d-v1','vip-30d-v1','vip-90d-v1')";
  const ex=(await db.query("select id,points,duration_days from public.member_exchange_definitions where id in "+cur+" order by points,id")).rows;
- assert.deepEqual(ex.map(r=>r.id+':'+r.points+':'+r.duration_days),['vip-1d-v1:500:1','choice-7d-v1:1000:7','vip-7d-v1:2500:7','choice-30d-v1:3800:30','research-30d-v1:6800:30','vip-30d-v1:8800:30','vip-90d-v1:24000:90']);
+ assert.deepEqual(ex.map(r=>r.id+':'+r.points+':'+r.duration_days),['vip-1d-v1:500:1','choice-7d-v1:1000:7','research-7d-v1:1800:7','vip-7d-v1:2500:7','choice-30d-v1:3800:30','research-30d-v1:6800:30','vip-30d-v1:8800:30','vip-90d-v1:24000:90']);
  assert.equal((await db.query("select count(*)::int n from public.member_exchange_definitions where active or title ~ '進出場|出場'")).rows[0].n,0);
  assert.equal((await db.query("select title from public.member_feature_catalog where feature='selltrack'")).rows[0].title,'持股觀察站');
  assert.deepEqual((await db.query("select allowed_features from public.member_voucher_definitions where id='research-v1'")).rows[0].allowed_features,['fhedge','breadth','hottopics']);
@@ -57,5 +57,5 @@ const {PGlite}=require(process.env.PGLITE_MODULE||'@electric-sql/pglite');
  await admin();await seed(29);await as(1);const s30=await claim('streak30-v1');assert.equal(s30.points,200);
  await admin();const days=(await db.query('select duration_days from public.member_rewards where id = any($1) order by duration_days',[[s7.reward_id,s15.reward_id,s30.reward_id]])).rows.map(r=>r.duration_days);assert.deepEqual(days,[3,7,14],'streak vouchers 3/7/14 days');await as(1);
  const stp=(await status()).rows.find(r=>r.id==='streak30-v1');assert.equal(stp.period,'monthly');assert.equal(stp.claimed,true);
- console.log('PASS member perks v3: sticky points, caps 40/200, 7/15/30-day streaks with vouchers, uncapped weekly challenge, learning milestones, 7 current products (retired kept inactive), one point currency, trial exchange, idempotent');
+ console.log('PASS member perks v3: sticky points, caps 40/200, 7/15/30-day streaks with vouchers, uncapped weekly challenge, learning milestones, 8 current products (retired kept inactive), one point currency, trial exchange, idempotent');
 }finally{await db.close();}})().catch(e=>{console.error(e);process.exitCode=1;});
