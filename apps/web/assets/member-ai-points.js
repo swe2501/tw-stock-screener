@@ -11,11 +11,11 @@
  const notes={loading:'正在確認 AI point 狀態…',closed:'AI 功能開放後即可使用。',nostored:'儲值開放後即可轉換。',open:''};
  /* opts.compact：快捷選單用的精簡版（只有轉入與自動補充）；完整版另有轉回。 opts.onChange(summary)：轉換成功後通知。 */
  function mount(el,opts={}){
-  let w=null,busy=false;const compact=!!opts.compact;
+  let w=null,busy=false,pending=null;const compact=!!opts.compact,owner=localStorage.getItem('sb_token'),current=()=>el.isConnected&&!!owner&&owner===localStorage.getItem('sb_token');
   el.classList.add('ai-sheet');if(compact)el.classList.add('ai-sheet-compact');
   function paint(msg){
-   const st=state(w),open=st==='open',stored=Number.isSafeInteger(w?.stored_points)?w.stored_points:0,ai=format(w?.ai_points),back=whole(w?.ai_points);
-   el.innerHTML=(compact?'':'<div class="ai-sheet-head"><div><h3>轉換 AI point</h3><p>只能用儲值點數轉換，1 點＝1 AI point；任務點數不能轉。</p></div><span class="ai-badge">'+(open?'可轉換':st==='loading'?'確認中':'即將開放')+'</span></div>')+
+   const st=state(w),open=st==='open'&&current()&&!busy&&!pending,stored=Number.isSafeInteger(w?.stored_points)?w.stored_points:0,ai=format(w?.ai_points),back=whole(w?.ai_points);
+   el.innerHTML=(compact?'':'<div class="ai-sheet-head"><div><h3>轉換 AI point</h3><p>只能用儲值點數轉換，1 點＝1 AI point；任務點數不能轉。</p></div><span class="ai-badge">'+(pending?'結果待確認':st==='open'?'可轉換':st==='loading'?'確認中':'即將開放')+'</span></div>')+
     '<div class="ai-row"><span>可轉換的儲值點數</span><b>'+(st==='closed'||st==='nostored'?'—':stored.toLocaleString('zh-TW')+' 點')+'</b></div>'+
     '<form class="ai-form" data-ai-in><label class="ai-field"><span>轉入點數</span><input name="points" type="number" inputmode="numeric" min="1" max="100000" step="1" placeholder="輸入整數" '+(open?'':'disabled')+'></label>'+
     '<div class="ai-chips" role="group" aria-label="快速選擇">'+[100,500,1000].map(n=>'<button type="button" data-ai-chip="'+n+'" '+(open&&stored>=n?'':'disabled')+'>'+n.toLocaleString('zh-TW')+'</button>').join('')+'</div>'+
@@ -24,13 +24,14 @@
     '<form class="ai-auto" data-ai-auto><label class="ai-switch"><input type="checkbox" name="auto" '+(w?.ai_auto_topup?'checked':'')+' '+(open?'':'disabled')+'><span aria-hidden="true"></span>自動補充</label>'+
     '<div class="ai-auto-rule">'+(compact?'低於':'AI point 低於')+' <input name="below" type="number" min="0" max="10000" step="1" value="'+esc(Number.isFinite(Number(w?.ai_topup_below))&&w?.ai_topup_below!=null?Math.floor(Number(w.ai_topup_below)):5)+'" '+(open?'':'disabled')+' aria-label="低於多少時補充"> '+(compact?'時補':'時，從儲值點數補')+' <input name="points" type="number" min="10" max="10000" step="10" value="'+esc(w?.ai_topup_points||100)+'" '+(open?'':'disabled')+' aria-label="每次補充點數"> 點</div>'+
     '<button type="submit" '+(open&&!busy?'':'disabled')+'>儲存設定</button></form>'+
+    (pending?'<div class="ai-pending"><p>上次'+(pending.direction==='in'?'轉入':'轉回')+' '+pending.points.toLocaleString('zh-TW')+' 點的結果待確認。將沿用原單號，不會建立新轉換。</p><button type="button" data-ai-retry '+(busy?'disabled':'')+'>確認上次轉換結果</button></div>':'')+
     '<p class="ai-status" role="status" aria-live="polite">'+esc(msg||notes[st])+'</p>'+
     (compact?'':'<p class="ai-fine">AI 每次用多少扣多少，算到小數第 4 位且只捨不入；每次查詢都有明細，查詢前會先顯示預估上限，實際扣點不會超過上限。</p>');
    if(compact)el.querySelector('.ai-row').insertAdjacentHTML('beforebegin','<div class="ai-row ai-row-balance"><span>AI point 餘額</span><b>'+(st==='closed'?'即將開放':ai)+'</b></div>');
   }
-  async function load(){try{w=await window.AcademyIdentity.walletSummary();}catch{w={ai_enabled:false};}paint();}
-  async function run(task,ok){if(busy)return;busy=true;paint('處理中…');try{const r=await task();w=await window.AcademyIdentity.walletSummary().catch(()=>w);busy=false;paint(ok(r));dispatchEvent(new Event('academy-wallet-changed'));opts.onChange?.(w);}catch(e){busy=false;paint(e.message);}}
-  el.addEventListener('click',e=>{const c=e.target.closest('[data-ai-chip]');if(c){const i=el.querySelector('[data-ai-in] input');i.value=c.dataset.aiChip;i.focus();}});
+  async function load(){try{const [summary,transfer]=await Promise.all([window.AcademyIdentity.walletSummary(),window.AcademyIdentity.aiPending()]);if(!current())return;w=summary;pending=transfer;paint();}catch(e){if(current()){w=null;paint(e.message);}}}
+  async function run(task,ok){if(busy||!current())return;busy=true;paint('處理中…');try{const r=await task();if(!current())return;pending=await window.AcademyIdentity.aiPending();w=await window.AcademyIdentity.walletSummary().catch(()=>w);if(!current())return;busy=false;paint(ok(r));dispatchEvent(new Event('academy-wallet-changed'));opts.onChange?.(w);}catch(e){if(current()){try{pending=await window.AcademyIdentity.aiPending();}catch{}if(!current())return;busy=false;paint(e.message+(pending?'；請確認上次轉換結果。':''));}}finally{busy=false;}}
+  el.addEventListener('click',e=>{if(e.target.closest('[data-ai-retry]')){run(()=>window.AcademyIdentity.aiRetry(),r=>r.direction==='in'?'已確認轉入 '+format(r.converted)+' AI point。':'已確認轉回 '+format(r.returned)+' 點儲值點數。');return;}const c=e.target.closest('[data-ai-chip]');if(c){const i=el.querySelector('[data-ai-in] input');i.value=c.dataset.aiChip;i.focus();}});
   el.addEventListener('submit',e=>{e.preventDefault();const f=e.target;
    if(f.matches('[data-ai-in]'))run(()=>window.AcademyIdentity.aiConvert(f.elements.points.value),r=>'已轉入 '+format(r.converted)+' AI point，目前 '+format(r.ai_points)+'。');
    else if(f.matches('[data-ai-out]'))run(()=>window.AcademyIdentity.aiConvertBack(f.elements.points.value),r=>'已轉回 '+Number(r.returned).toLocaleString('zh-TW')+' 點儲值點數，AI point 剩 '+format(r.ai_points)+'。');
