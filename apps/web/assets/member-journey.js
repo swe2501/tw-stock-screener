@@ -45,7 +45,7 @@
  }[kind]||'')+'</svg>';
  function exchange(){
   const card=c=>'<article class="mj-ticket'+(c.best?' mj-ticket-best':'')+'" data-exchange-id="'+c.id+'" data-days="'+(c.days<=1?'1':c.days<=7?'7':'30')+'">'+
-   '<div class="mj-ticket-top"><span class="mj-ticket-art">'+art(c.art)+'</span><div><h3>'+c.name+'</h3><span class="mj-ticket-days">'+c.days+' 天</span>'+(c.best?'<span class="mj-ticket-flag">最划算</span>':'')+'</div></div>'+
+   '<div class="mj-ticket-top"><span class="mj-ticket-art">'+art(c.art)+'</span><div><h3>'+c.name+'</h3><span class="mj-ticket-days">'+c.days+' 天</span>'+(c.best?'<span class="mj-ticket-flag">最值得</span>':'')+'</div></div>'+
    '<ul class="mj-ticket-items">'+c.items.map(t=>'<li>'+t+'</li>').join('')+'</ul><p class="mj-ticket-note">'+c.note+'</p>'+
    '<div class="mj-ticket-foot"><div><strong>'+c.points.toLocaleString()+'</strong> 點</div><div class="mj-ticket-progress" data-need="'+c.points+'" hidden><span><i></i></span><small></small></div><button type="button" disabled>尚未開放兌換</button></div></article>';
   return '<div class="mj-section-head"><div><h2>點數兌換</h2><p class="mj-copy">做任務拿到的點數和儲值的點數是同一種，兌換價格一樣。兌換後先存進「使用券夾」，一個月內按「開始使用」才開始計算天數。</p></div><span class="mj-badge" data-exchange-state>確認開放狀態中</span></div>'+
