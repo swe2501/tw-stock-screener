@@ -1361,12 +1361,17 @@ def _fetch_overview():
     except Exception:
         tags = {}
 
-    def limit_groups_of(pred, key):
+    def limit_groups_of(pred, key, source):
+        """source='theme'＝合夥人精選題材（THEME_MEMBERS）；'industry'＝官方產業別（其他→其他業）。"""
         g = {}
         for c, m in sorted(allq.items(), key=lambda x: -(x[1]["value"] or 0)):
             if not pred(m["pct"]):
                 continue
-            names = [t["name"] for t in tags.get(c, [])] or stheme.get(c, []) or ["其他業"]
+            if source == "theme":
+                names = stheme.get(c, [])
+            else:
+                iname = ind.get(c) or next((t["name"] for t in tags.get(c, []) if str(t.get("id", "")).startswith("產業:")), "")
+                names = ["其他業" if iname in ("其他", "") else iname]
             for nm in names:
                 x = g.setdefault(nm, {"name": nm, key: 0, "tradeValue": 0, "leaders": []})
                 x[key] += 1
@@ -1374,8 +1379,9 @@ def _fetch_overview():
                 if len(x["leaders"]) < 3:
                     x["leaders"].append(m["name"])
         return sorted(g.values(), key=lambda x: (-x[key], -x["tradeValue"]))[:10]
-    limit_up_groups = limit_groups_of(lambda p: p >= 9.5, "limitUps")
-    limit_down_groups = limit_groups_of(lambda p: p <= -9.5, "limitDowns")
+    is_up, is_down = (lambda p: p >= 9.5), (lambda p: p <= -9.5)
+    limit_up_theme, limit_down_theme = limit_groups_of(is_up, "limitUps", "theme"), limit_groups_of(is_down, "limitDowns", "theme")
+    limit_up_ind, limit_down_ind = limit_groups_of(is_up, "limitUps", "industry"), limit_groups_of(is_down, "limitDowns", "industry")
 
     sectors = _fetch_twse_index_categories()
     sectors_strong = sorted(sectors, key=lambda x: -x["pct"])[:10]
@@ -1384,7 +1390,8 @@ def _fetch_overview():
     return {"date": mdate,
             "themeStrong": theme_strong, "themeWeak": theme_weak,
             "capital": capital, "limitGroups": limit_groups,
-            "limitUpGroups": limit_up_groups, "limitDownGroups": limit_down_groups,
+            "limitUpGroups": limit_up_theme, "limitDownGroups": limit_down_theme,          # 精選題材（預設）
+            "limitUpGroupsInd": limit_up_ind, "limitDownGroupsInd": limit_down_ind,    # 一般題材＝官方產業別
             "sectorsStrong": sectors_strong, "sectorsWeak": sectors_weak,
             "sectorSource": "official" if sectors else "none",
             "turnover": turnover, "winners": winners, "losers": losers}
