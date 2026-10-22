@@ -57,7 +57,7 @@
         if(token()!==current||inflight!==work)return null;
         if(!validate(result))throw Error('分享服務回應異常，未更動你的使用權。');
         snapshot=result;ownerToken=current;received=performance.now();armExpiry();
-        message(claim?'使用券已入帳；請到「禮遇與優惠券」選擇開始使用。':result.campaign_active?'邀請進度已更新。':'活動尚未開放，暫不核發新獎勵。');notify();return result;
+        message(claim?'使用券已存入券夾；請到「禮遇與優惠券」選擇開始使用。':result.campaign_active?'邀請進度已更新。':'活動尚未開放，暫不核發新獎勵。');notify();return result;
       }catch(error){if(token()===current&&inflight===work){snapshot=null;ownerToken='';message(error.message||'無法更新，請稍後再試。');notify();}return null;}
       finally{clearTimeout(timeout);if(inflight===work){inflight=null;paint();}}
     })();return work.promise;

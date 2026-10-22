@@ -22,7 +22,7 @@ const key=f=>[f.book,f.account,f.product,f.symbol,['futures','options'].includes
 function ledger(fills){
  const positions=new Map(),cycles=[],realizations=[],seen=new Set();let sequence=0;
  const sorted=fills.map((f,i)=>({...f,_seq:i})).sort((a,b)=>a.date.localeCompare(b.date)||a._seq-b._seq);
- for(const f of sorted){validate(f);if(seen.has(f.id))throw Error('成交編號重複，未重複入帳');seen.add(f.id);const k=key(f);let p=positions.get(k);
+ for(const f of sorted){validate(f);if(seen.has(f.id))throw Error('成交編號重複，未重複記錄');seen.add(f.id);const k=key(f);let p=positions.get(k);
  if(!p){p={key:k,...copy(f),qty:0,lots:[],cycles:[],realized:0};positions.set(k,p);}else if(+p.multiplier!==+f.multiplier)throw Error('同一合約的交易乘數不同，請使用核對合約乘數統一修正');
  const qty=+f.qty,price=+f.price,m=+f.multiplier,cost=+f.fee + +f.tax;
  if(f.action==='open'){if(p.qty&&p.lots.some(l=>l.multiplier!==m))throw Error('同一合約的交易乘數不同');
