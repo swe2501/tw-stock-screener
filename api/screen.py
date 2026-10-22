@@ -1331,6 +1331,52 @@ def _fetch_overview():
     winners  = [stk(cm) for cm in sorted(common, key=lambda x: -x[1]["pct"])[:20]]
     losers   = [stk(cm) for cm in sorted(common, key=lambda x:  x[1]["pct"])[:20]]
 
+    # 2026-10-21 漲停／跌停最多題材：改掃全市場（上市＋上櫃）每一檔漲跌停股，題材用今日排行同一套標籤
+    # （合夥人精選題材＋官方產業別，_load_stock_themes），不再只看漲跌幅前 20 名、也不再只限精選題材。
+    allq = {c: m for c, m in lmap.items() if len(c) == 4 and c.isdigit() and m["close"] and m["close"] > 0}
+    try:
+        for c, q in (_fetch_tpex_quotes() or {}).items():
+            if c not in allq and q.get("close"):
+                allq[c] = {"close": q["close"], "pct": q.get("pct") or 0, "value": q.get("value") or 0, "name": q.get("name") or c}
+            elif c in allq and allq[c]["name"] in ("", c) and q.get("name") and q["name"] != c:
+                allq[c] = dict(allq[c], name=q["name"])      # 行情改由 price_window 補時沒有股名 → 用櫃買股名
+    except Exception:
+        pass
+    otc_nm = None
+    for c, m in list(allq.items()):
+        if m["name"] not in ("", c):
+            continue
+        nm = _STOCK_NAMES.get(c)
+        if not nm:
+            if otc_nm is None:                           # 上櫃股名備援：本站 otc_names 表（每日更新）
+                try:
+                    otc_nm = {str(r.get("code")): r.get("name") for r in (_cache_sb("/otc_names", params=[("select", "code,name"), ("limit", "3000")])[1] or [])}
+                except Exception:
+                    otc_nm = {}
+            nm = otc_nm.get(c)
+        if nm:
+            allq[c] = dict(m, name=nm)
+    try:
+        tags = _load_stock_themes()
+    except Exception:
+        tags = {}
+
+    def limit_groups_of(pred, key):
+        g = {}
+        for c, m in sorted(allq.items(), key=lambda x: -(x[1]["value"] or 0)):
+            if not pred(m["pct"]):
+                continue
+            names = [t["name"] for t in tags.get(c, [])] or stheme.get(c, []) or ["其他業"]
+            for nm in names:
+                x = g.setdefault(nm, {"name": nm, key: 0, "tradeValue": 0, "leaders": []})
+                x[key] += 1
+                x["tradeValue"] += m["value"] or 0
+                if len(x["leaders"]) < 3:
+                    x["leaders"].append(m["name"])
+        return sorted(g.values(), key=lambda x: (-x[key], -x["tradeValue"]))[:10]
+    limit_up_groups = limit_groups_of(lambda p: p >= 9.5, "limitUps")
+    limit_down_groups = limit_groups_of(lambda p: p <= -9.5, "limitDowns")
+
     sectors = _fetch_twse_index_categories()
     sectors_strong = sorted(sectors, key=lambda x: -x["pct"])[:10]
     sectors_weak   = sorted(sectors, key=lambda x:  x["pct"])[:10]
@@ -1338,6 +1384,7 @@ def _fetch_overview():
     return {"date": mdate,
             "themeStrong": theme_strong, "themeWeak": theme_weak,
             "capital": capital, "limitGroups": limit_groups,
+            "limitUpGroups": limit_up_groups, "limitDownGroups": limit_down_groups,
             "sectorsStrong": sectors_strong, "sectorsWeak": sectors_weak,
             "sectorSource": "official" if sectors else "none",
             "turnover": turnover, "winners": winners, "losers": losers}
