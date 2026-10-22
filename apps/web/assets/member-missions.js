@@ -17,28 +17,35 @@
   root.querySelector('.mj-hero').after(section);
   const status=section.querySelector('[data-mission-status]'),balance=section.querySelector('[data-reward-balance]'),caps=section.querySelector('[data-reward-caps]');
   let state=null,busy=false,sequence=0,dialog=null;
+  const bulkKey='academy.task-bulk.'+profile.id;
+  const bulkPending=()=>{try{return localStorage.getItem(bulkKey);}catch{return null;}};
+  const taskId=id=>id==='invite-first-v1'?'invite1':id.replace(/-v1$/,'');
+  const claimable=()=>state?.tasks.rows.filter(t=>!taskState(t,taskId(t.id)).disabled)||[];
   const pendingKey=id=>'academy.point-exchange.'+profile.id+'.'+id;
   function pending(id){try{return sessionStorage.getItem(pendingKey(id));}catch{return null;}}
   function taskState(t,id){
    if(!current())return {text:'尚未完成',note:'請先登入會員帳號。',disabled:true};
    if(!state)return {text:'尚未完成',note:'尚未取得任務狀態，請更新狀態後再試。',disabled:true};
    if(/^(feedback|event)(-v1)?$/.test(id))return {text:'由管理端審核',note:'由管理端依案件審核發點，會員不能自行領取。',disabled:true};
-   if(!t)return {text:'尚未完成',note:'尚未開放領點。',disabled:true};
-   if(t.review_only)return {text:'由管理端審核',note:'審核通過後，點數由管理端發送。',disabled:true};
-   if(t.id==='ad-video-v1')return {text:'尚未完成',note:'獎勵影片尚未接通，不開放領點。',disabled:true};
+   if(!t)return {text:'尚未開放',note:'這項任務尚未開放領點，不代表你沒有完成。',disabled:true};
    if(t.claimed)return {text:'本期已領',note:'獎勵已轉入，下期狀態由伺服器確認。',disabled:true};
+   if(state.tasks.bulk_claim_version===1&&t.server_verified!==true&&!t.review_only&&t.id!=='ad-video-v1')return {text:'核驗準備中',note:t.verification_note||'這項任務尚未接通核驗，完成紀錄會保留。',disabled:true};
+   if(state.tasks.bulk_claim_version!==1&&window.AcademyTaskGuide?.rules[id]?.kind)return {text:'核驗準備中',note:'任務紀錄服務準備中，閱讀與原有資料仍會保留。',disabled:true};
+   if(t.review_only)return {text:'由管理端審核',note:'審核通過後，點數由管理端發送。',disabled:true};
+   if(t.id==='ad-video-v1')return {text:'服務尚未開放',note:'獎勵影片尚未接通，不開放領點。',disabled:true};
    if(learningTasks.has(t.id)&&state.tasks.learning_verification!==1)return {text:'核驗準備中',note:'閱讀與已讀進度照常保留；領點核驗服務準備中。',disabled:true};
    const cap=state.tasks.caps?.[t.cap_group];
-   if(cap&&integer(cap.used)&&integer(cap.limit)&&cap.used+t.points>cap.limit)return {text:'尚未完成',note:t.period==='weekly'?'本週點數已達上限。':'今日點數已達上限。',disabled:true};
-   const eligible=t.eligible===true&&(serverOnly.has(t.id)||learningTasks.has(t.id)||ready(id));
-   return {text:eligible?'領取 +'+t.points+' 點':'尚未完成',note:eligible?'確認完成後，由帳號服務核發獎勵。':learningTasks.has(t.id)?'到學習中心完成閱讀核驗或本週挑戰，由伺服器確認領點資格。':'完成任務後再回來領取；回報類需在此裝置有紀錄。',disabled:!eligible};
+   if(t.eligible===true&&cap&&integer(cap.used)&&integer(cap.limit)&&cap.used+t.points>cap.limit)return {text:t.period==='weekly'?'本週額度已滿':'今日額度已滿',note:t.period==='weekly'?'任務紀錄已確認，但本週點數已達上限。':'任務紀錄已確認，但今日點數已達上限。',disabled:true};
+   const eligible=t.eligible===true&&(state.tasks.bulk_claim_version===1?t.server_verified===true:(serverOnly.has(t.id)||learningTasks.has(t.id)||ready(id)));
+   return {text:eligible?'領取 +'+t.points+' 點':'尚未完成',note:eligible?'完成紀錄已確認，可以領取獎勵。':t.progress?.reason?t.progress.reason:learningTasks.has(t.id)?'到學習中心完成閱讀核驗或本週挑戰，由伺服器確認領點資格。':'完成任務後再回來領取；回報類需在此裝置有紀錄。',disabled:!eligible};
   }
   function paint(){
    root.querySelectorAll('[data-task-id]').forEach(card=>{
     const id=card.dataset.taskId,button=card.querySelector('[data-task-claim]');if(!button)return;
     if(id==='invite3'||id==='share3'){button.remove();card.querySelector('[data-task-state]').textContent='活動使用券請到邀請頁確認開放狀態。';return;}
     const t=state?.tasks.rows.find(t=>t.id===button.dataset.taskClaim),s=taskState(t,id);
-    button.textContent=s.text;button.disabled=s.disabled||busy;card.querySelector('[data-task-state]').textContent=s.note;
+    button.textContent=s.text;button.disabled=s.disabled||busy||!!bulkPending();card.classList.toggle('is-claimed',t?.claimed===true);
+    const progress=card.querySelector('[data-task-progress]');if(progress)progress.textContent=integer(t?.progress?.count)&&integer(t?.progress?.target)?'伺服器已確認 '+t.progress.count+'／'+t.progress.target+' '+(window.AcademyTaskGuide?.unit(id)||'項'):'完成條件以伺服器紀錄確認';card.querySelector('[data-task-state]').textContent=s.note;
     if(t)card.querySelector('.mj-task-bottom strong').textContent='+'+t.points+' 點';
    });
    root.querySelectorAll('[data-exchange-id]').forEach(card=>{
@@ -49,6 +56,8 @@
     if(o){const strong=card.querySelector('.mj-ticket-foot strong');strong.textContent=o.points.toLocaleString();card.querySelector('.mj-ticket-days').textContent=o.duration_days+' 天';const bar=card.querySelector('.mj-ticket-progress');if(bar)bar.dataset.need=o.points;}
    });
    root.querySelectorAll('[data-exchange-state]').forEach(e=>e.textContent=!current()?'登入後查看':!state?'狀態待確認':state.options.rows.length?'依帳號開放項目兌換':'尚未開放');
+   const all=root.querySelector('[data-task-bulk]'),summary=root.querySelector('[data-bulk-summary]');
+   if(all){const pending=bulkPending(),ready=claimable();all.textContent=pending?'確認上次領取結果':busy?'正在核對與領取…':'一鍵領取已完成獎勵';all.disabled=busy||!current()||(!pending&&(state?.tasks.bulk_claim_version!==1||!ready.length));if(summary)summary.textContent=!state?'目前無法確認，請更新狀態':state.tasks.bulk_claim_version!==1?'批次領取服務準備中':ready.length?'已找到 '+ready.length+' 項符合領取條件的任務':'目前沒有可領取的獎勵；可查看各卡片的完成進度';}
    const policy=root.querySelector('[data-rewards-policy]');if(policy)policy.textContent=!state?'點數與開放項目以帳號服務為準；目前無法確認。':state.tasks.rows.length?'已接通帳號服務；僅開放項目可領點，實際點數以伺服器確認。':'帳號服務已接通，目前尚未開放任務領點。';
   }
   function extras(){
@@ -78,6 +87,15 @@
    catch(e){if(current()){await load();if(current())status.textContent=errorText(e);}}
    finally{busy=false;if(current()){paint();extras();}}
   }
+  async function claimAll(){
+   if(busy||!current()||!state||(!bulkPending()&&state.tasks.bulk_claim_version!==1))return;busy=true;paint();extras();const out=root.querySelector('[data-bulk-result]');out.textContent='正在由伺服器重新核對所有分類，請稍候…';
+   try{let request=bulkPending();if(!request){request=crypto.randomUUID();localStorage.setItem(bulkKey,request);}const r=await AcademyIdentity.claimCompletedTasks(request);if(!current())return;
+    if(r?.request_id!==request||!integer(r.awarded_count)||!integer(r.awarded_points)||!integer(r.capped_count)||!Array.isArray(r.rows))throw Error('領取結果尚未確認，請沿用原單號重試');
+    localStorage.removeItem(bulkKey);await load();if(!current())return;
+    out.textContent=(r.duplicate?'已確認上次領取結果：':'本次領取完成：')+r.awarded_count+' 項，合計 '+r.awarded_points.toLocaleString()+' 點。'+(r.capped_count?'另有 '+r.capped_count+' 項因本期上限未發放，沒有標成已領取。':'')+'未完成、已領取與需人工審核的項目自動略過。';window.dispatchEvent(new Event('academy-wallet-changed'));
+   }catch(e){if(current())out.textContent=errorText(e)+' 請按「確認上次領取結果」，會沿用原單號，避免重複發點。';}
+   finally{busy=false;if(current()){paint();extras();}}
+  }
   function confirmExchange(button){
    if(busy||!current())return;const id=button.dataset.pointsExchange,o=state?.options.rows.find(o=>o.id===id);if(!o)return;
    const retry=!!pending(id);if(!retry&&availablePoints(state.wallet)<o.points)return;
@@ -100,7 +118,7 @@
    };
    thisDialog.showModal();thisDialog.querySelector('[data-cancel]').focus();
   }
-  root.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled)return;if(b.hasAttribute('data-task-claim'))claim(b);else if(b.hasAttribute('data-points-exchange'))confirmExchange(b);else if(b.hasAttribute('data-rewards-refresh')&&!busy)load();});
+  root.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled)return;if(b.hasAttribute('data-task-bulk'))claimAll();else if(b.hasAttribute('data-task-guide'))window.AcademyTaskGuide?.open(b.dataset.taskGuide,{profile,root,onDone:load});else if(b.hasAttribute('data-task-claim'))claim(b);else if(b.hasAttribute('data-points-exchange'))confirmExchange(b);else if(b.hasAttribute('data-rewards-refresh')&&!busy)load();});
   paint();load();return {paint,load};
  }
  window.AcademyMemberMissions={mount};

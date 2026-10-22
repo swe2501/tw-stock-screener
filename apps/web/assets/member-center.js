@@ -27,7 +27,7 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
   for(const selector of ['body>header .gs-brand','body>header .gs-edition']){const original=document.querySelector(selector);if(original){const clone=original.cloneNode(true);clone.removeAttribute('onclick');clone.removeAttribute('id');clone.querySelectorAll('[id],[onclick]').forEach(el=>{el.removeAttribute('id');el.removeAttribute('onclick');});if(clone.matches('a'))clone.addEventListener('click',e=>{e.preventDefault();goHome();});brandbar.append(clone);}}
   page.prepend(brandbar);
   const groups = [
-    ['帳號與服務', [['overview','會員總覽'],['profile','個人資料'],['security','登入與安全'],['notifications','通知與偏好'],['feedback','我的回饋'],['privacy','資料與隱私']]],
+    ['帳號與服務', [['overview','會員總覽'],['profile','個人資料'],['security','登入與安全'],['notifications','通知'],['feedback','我的回饋'],['privacy','資料與隱私']]],
     ['會員禮遇', [['benefits','會員權益'],['gifts','禮遇與優惠券'],['redeem','兌換優惠碼'],['referrals','邀請好友'],['tasks','任務與點數'],['wallet','點數帳戶'],['events','學院活動']]],
     ['研究與學習', [['learning','學習中心'],['favorites','我的自選'],['screen-calendar','選股日曆'],['strategy','策略工作台'],['workspace','研究筆記'],['trades','交易與目標'],['weekly','本週回顧']]]   // 2026-10-22 整理：交易紀錄＋我的目標合併成一個入口（頁內分頁切換）；研究週報改為本週回顧
   ];
@@ -39,6 +39,7 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
   nav.innerHTML = groups.map(([title,rows])=>`<span class="mc-nav-group">${title}</span>`+rows.map(([id,label])=>`<button type="button" data-tab="${id}"><span class="mc-nav-label">${label}</span><span class="mc-nav-chevron" aria-hidden="true">›</span></button>`).join('')).join('');
   const avatar = document.createElement('button'); avatar.type='button'; avatar.className='member-avatar'; avatar.title='開啟會員中心'; avatar.setAttribute('aria-label','開啟會員中心');
   const theme = document.getElementById('themeToggle'); if(theme) theme.before(avatar);
+  const notifications=document.createElement('button');notifications.type='button';notifications.className='mc-notification-entry';notifications.title='通知';notifications.setAttribute('aria-label','通知');notifications.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>';avatar.before(notifications);notifications.addEventListener('click',()=>{window.AcademyMemberMenu?.close();open('notifications');});
   const feedback = document.createElement('a'); feedback.className='member-feedback-link';feedback.href='#member/feedback';feedback.textContent='意見回饋'; feedback.addEventListener('click',e=>{e.preventDefault();open('feedback');});
   const logout=document.getElementById('logoutBtn'),authArea=document.getElementById('authArea');if(authArea)authArea.append(feedback);
   function name(){return profile?.display_name || '學院會員';}
@@ -49,7 +50,7 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
     try{if(new URL(url).protocol!=='https:')return;}catch{return;}
     [avatar,...page.querySelectorAll('.mc-portrait')].forEach(el=>{const img=new Image();img.alt='會員頭像';img.referrerPolicy='no-referrer';img.addEventListener('error',()=>{el.innerHTML=personIcon;});img.src=url;el.replaceChildren(img);});
   }
-  function sync(){const logged=!!localStorage.getItem('sb_token');avatar.hidden=!logged;avatar.style.display=logged?'grid':'none';if(!logged){cloudCleanup();cloudHost.hidden=true;window.AcademyCloud?.cancel();profile=null;if(!page.hidden)goHome();}page.querySelector("[data-member-logout]").hidden=!logged;avatar.innerHTML=personIcon;hydrateImages();}
+  function sync(){const logged=!!localStorage.getItem('sb_token');notifications.hidden=!logged;avatar.hidden=!logged;avatar.style.display=logged?'grid':'none';if(!logged){cloudCleanup();cloudHost.hidden=true;window.AcademyCloud?.cancel();profile=null;if(!page.hidden)goHome();}page.querySelector("[data-member-logout]").hidden=!logged;avatar.innerHTML=personIcon;hydrateImages();}
   async function api(method='GET',body){
     if(window.AcademyIdentity)return method==='GET'?AcademyIdentity.getProfile():AcademyIdentity.updateProfile(body);
     throw new Error('會員元件載入未完成，請重新整理頁面');

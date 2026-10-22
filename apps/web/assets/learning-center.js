@@ -78,7 +78,7 @@
           ${quizHTML(l)}
           <div class="lc-actions">
             <button type="button" class="lc-btn" data-verify-read="${esc(l.id)}">核驗閱讀進度</button>
-            <button type="button" class="lc-btn${isDone ? '' : ' lc-primary'}" data-read="${esc(l.id)}">${isDone ? '標為未讀' : icon.check + ' 讀完了'}</button>
+            <button type="button" class="lc-btn${isDone ? '' : ' lc-primary'}" data-read="${esc(l.id)}">${isDone ? '標為未讀' : icon.check + ' 核驗並標記已讀'}</button>
             <button type="button" class="lc-btn" data-save="${esc(l.id)}" aria-pressed="${saved.has(l.id)}">${icon.bookmark} ${saved.has(l.id) ? '已收藏' : '收藏'}</button>
             ${l.try ? `<button type="button" class="lc-btn lc-try" data-try="${esc(l.id)}">${esc(l.try.label)} ${icon.arrow}</button>` : ''}
           </div>
@@ -193,7 +193,8 @@
         };
         return;
       }
-      if (b.dataset.read) { b.disabled = true; sset(K.open, b.dataset.read); opts.toggleRead(b.dataset.read); return; }
+      if (b.dataset.read) {const id=b.dataset.read;if(done.has(id)){b.disabled=true;sset(K.open,id);opts.toggleRead(id);return;}const box=b.closest('.lc-lesson'),l=byId(id),out=box.querySelector('[data-verify-status]');const answers=l.quiz.map((_,i)=>{const pick=box.querySelector(`input[name="q-${CSS.escape(id)}-${i}"]:checked`);return pick?Number(pick.value):null;});if(answers.includes(null)){out.textContent='請先回答文章全部小測驗，再核驗並標記已讀。';return;}b.disabled=true;(async()=>{try{if(!window.AcademyLearningVerification)throw Error('學習核驗服務準備中');await AcademyLearningVerification.complete(id,answers);sset(K.open,id);await opts.toggleRead(id);}catch(error){if(out.isConnected)out.textContent=error.message;if(b.isConnected)b.disabled=false;}})();return; }
+
       if (b.dataset.save) { opts.toggleSave(b.dataset.save); return; }
       if (b.dataset.try) { const t = byId(b.dataset.try).try; if (t.member) opts.go(t.member); else if (t.site) { document.querySelector('[data-back]')?.click(); setTimeout(() => window._showView?.(t.site), 150); } return; }
       if (b.dataset.go) opts.go(b.dataset.go);
