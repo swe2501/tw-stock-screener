@@ -4,17 +4,19 @@
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const time=v=>new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).format(new Date(v));
  const number=v=>v.toLocaleString('zh-TW');
- const icon=name=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+({task:'<rect x="5" y="4" width="14" height="17" rx="3"/><path d="M9 4V2h6v2M9 12l2 2 4-4M9 18h6"/>',stored:'<path d="M20 8V5a2 2 0 0 0-2-2H6a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h14V8H6a2 2 0 0 1 0-4"/><path d="M20 12h-5v5h5M16 14.5h1"/>'}[name])+'</svg>';
+ const icon=name=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+({task:'<rect x="5" y="4" width="14" height="17" rx="3"/><path d="M9 4V2h6v2M9 12l2 2 4-4M9 18h6"/>',ai:'<path d="M12 3l1.8 4.6L18.5 9.4l-4.7 1.8L12 16l-1.8-4.8L5.5 9.4l4.7-1.8Z"/><path d="M18.5 15.5l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8Z"/>',stored:'<path d="M20 8V5a2 2 0 0 0-2-2H6a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h14V8H6a2 2 0 0 1 0-4"/><path d="M20 12h-5v5h5M16 14.5h1"/>'}[name])+'</svg>';
  const source=r=>{const k=r.source_event_key||'';return k.startsWith('task:')?'任務獎勵':k.startsWith('points-exchange:')?'票券兌換':k.startsWith('referral:')?'邀請獎勵':'其他異動';};
  function render({main,go}){
   const token=localStorage.getItem('sb_token');
-  main.innerHTML=`<div class="mw-root"><header class="mw-heading"><div><span class="mc-kicker">YOUR POINTS, CLEARLY RECORDED</span><h2>點數帳戶</h2><p>每一份獲得與使用，都有跡可循。</p></div><button type="button" data-mw-refresh>重新整理</button></header><div class="mw-tabs" role="tablist" aria-label="點數帳戶類型">${['task','stored'].map((id,i)=>`<button type="button" role="tab" id="mw-tab-${id}" aria-controls="mw-panel" aria-selected="${!i}" tabindex="${i?-1:0}" data-mw-tab="${id}">${icon(id)}<span>${i?'儲值點數':'任務獲得'}<small>${i?'儲值與消費':'獲得與使用'}</small></span></button>`).join('')}</div><section class="mw-balance" aria-label="帳戶餘額"><div><span data-mw-balance-title>任務點數 · 可用餘額</span><strong data-mw-balance>確認中</strong><small data-mw-sync>正在向帳號服務核對</small></div><div class="mw-balance-note" data-mw-balance-note></div></section><section class="mc-card mw-panel" id="mw-panel" role="tabpanel" aria-labelledby="mw-tab-task"><div data-mw-panel></div></section><section class="mw-rights"><div><span class="mc-kicker">CLEAR & TRACEABLE</span><h3>核對紀錄，安心使用</h3><p>如有點數疑問，請提供紀錄編號、時間與異動內容，透過「我的回饋」聯絡我們。</p></div><button type="button" data-mw-feedback>點數紀錄有疑問 →</button></section></div>`;
+  let tab='task';try{const t=sessionStorage.getItem('academy.wallet.tab')||'';if(/^ai:\d+$/.test(t)&&Date.now()-Number(t.slice(3))<4000)tab='ai';}catch{}
+  main.innerHTML=`<div class="mw-root"><header class="mw-heading"><div><span class="mc-kicker">YOUR POINTS, CLEARLY RECORDED</span><h2>點數帳戶</h2><p>每一份獲得與使用，都有跡可循。</p></div><button type="button" data-mw-refresh>重新整理</button></header><div class="mw-tabs" role="tablist" aria-label="點數帳戶類型">${[['task','任務獲得','獲得與使用'],['stored','儲值點數','儲值與消費'],['ai','AI point','轉換與使用明細']].map(([id,label,sub])=>`<button type="button" role="tab" id="mw-tab-${id}" aria-controls="mw-panel" aria-selected="${id===tab}" tabindex="${id===tab?0:-1}" data-mw-tab="${id}">${icon(id)}<span>${label}<small>${sub}</small></span></button>`).join('')}</div><section class="mw-balance" aria-label="帳戶餘額"><div><span data-mw-balance-title>任務點數 · 可用餘額</span><strong data-mw-balance>確認中</strong><small data-mw-sync>正在向帳號服務核對</small></div><div class="mw-balance-note" data-mw-balance-note></div></section><section class="mc-card mw-panel" id="mw-panel" role="tabpanel" aria-labelledby="mw-tab-task"><div data-mw-panel></div></section><section class="mw-rights"><div><span class="mc-kicker">CLEAR & TRACEABLE</span><h3>核對紀錄，安心使用</h3><p>如有點數疑問，請提供紀錄編號、時間與異動內容，透過「我的回饋」聯絡我們。</p></div><button type="button" data-mw-feedback>點數紀錄有疑問 →</button></section></div>`;
   const root=main.querySelector('.mw-root'),panel=root.querySelector('[data-mw-panel]'),balance=root.querySelector('[data-mw-balance]'),sync=root.querySelector('[data-mw-sync]');
   const current=()=>root.isConnected&&!!token&&token===localStorage.getItem('sb_token');
-  let tab='task',summary=null,rows=[],more=false,busy=false,version=0,summaryVersion=0,filters={start:'',end:'',kind:'all'},until='';
+  let summary=null,aiRows=null,aiError='',rows=[],more=false,busy=false,version=0,summaryVersion=0,filters={start:'',end:'',kind:'all'},until='';
   root.querySelector('[data-mw-feedback]').onclick=()=>go('feedback');
   function balancePaint(){
    const task=tab==='task',value=task?summary?.task_points:summary?.stored_points;
+   if(tab==='ai'){root.querySelector('[data-mw-balance-title]').textContent='AI point · 可用餘額';balance.textContent=!summary?'尚未取得':summary.ai_enabled!==true?'即將開放':window.AcademyAiPoints.format(summary.ai_points);sync.textContent=summary?'核對時間 '+time(summary.server_time)+'（台灣時間）':'無法核對餘額，請重新整理';root.querySelector('[data-mw-balance-note]').textContent='只能用儲值點數轉換，1 點＝1 AI point。\nAI 用多少扣多少，小數不進位；轉回只能整數。';return;}
    root.querySelector('[data-mw-balance-title]').textContent=(task?'任務獲得的點數':'儲值點數')+' · 可用餘額';
    balance.textContent=!summary?'尚未取得':!task&&!summary.stored_enabled?'尚未開放':Number.isSafeInteger(value)?number(value)+' 點':'尚未接通';
    sync.textContent=summary?'核對時間 '+time(summary.server_time)+'（台灣時間）':'無法核對餘額，請重新整理';
@@ -22,6 +24,11 @@
   }
   function draw(){
    balancePaint();root.querySelector('#mw-panel').setAttribute('aria-labelledby','mw-tab-'+tab);
+   if(tab==='ai'){
+    panel.innerHTML='<div data-mw-ai-sheet></div><div class="mw-section-head mw-ai-history-head"><div><h3>AI point 明細</h3><p>轉入、轉回、自動補充與每次使用，都有一筆紀錄。</p></div></div><div data-mw-ai-list><p class="mw-status">正在讀取…</p></div>';
+    window.AcademyAiPoints.mount(panel.querySelector('[data-mw-ai-sheet]'),{onChange:s=>{summary={...summary,...s};balancePaint();loadAi();}});
+    loadAi();return;
+   }
    if(tab==='stored'){
     panel.innerHTML=`<div class="mw-section-head"><div><h3>儲值紀錄</h3><p>付款、入點、使用與退款，應分別核對。</p></div><span class="mw-badge">尚未開放</span></div><div class="mw-empty">${icon('stored')}<h3>目前尚未提供儲值服務</h3><p>尚無可查詢的儲值交易；未建立付款訂單，也未收取款項。</p></div><details class="mw-disclosure"><summary>未來儲值紀錄需要包含哪些資訊？</summary><p>正式開放前，需接上訂單編號、付款日期時間、實付金額與幣別、點數換算、付款方式、付款狀態、入點時間、使用明細及退款／扣回紀錄。</p><p>點數使用範圍、效期與退款規則，會在開放前明確提供。目前沒有付款服務，這些欄位尚無伺服器資料。</p></details>`;
     return;
@@ -33,6 +40,15 @@
    panel.querySelector('[data-mw-more]').onclick=()=>load(false);
    panel.querySelector('[data-mw-export]').onclick=exportRows;
    paintRows();
+  }
+  const aiKind={convert_in:'由儲值點數轉入',convert_out:'轉回儲值點數',auto_topup:'自動補充',usage:'AI 使用'};
+  async function loadAi(){const n=version;try{aiRows=await AcademyIdentity.aiHistory();aiError='';}catch(e){aiRows=null;aiError=e.message;}if(!current()||tab!=='ai'||n!==version)return;paintAi();}
+  function paintAi(){
+   const list=panel.querySelector('[data-mw-ai-list]');if(!list)return;const f=window.AcademyAiPoints.format;
+   if(!aiRows){list.innerHTML='<div class="mw-empty"><h3>'+esc(aiError||'尚無法讀取紀錄')+'</h3><p>AI 功能開放後，這裡會列出每一筆轉換與使用。</p></div>';return;}
+   if(!aiRows.length){list.innerHTML='<div class="mw-empty"><h3>目前沒有 AI point 紀錄</h3><p>轉入 AI point 或使用 AI 後，紀錄會出現在這裡。</p></div>';return;}
+   list.innerHTML=aiRows.map(r=>{const d=r.detail||{},plus=Number(r.ai_delta)>0;return `<article class="mw-entry"><time datetime="${esc(r.created_at)}">${esc(time(r.created_at))}<small>台灣時間</small></time><div class="mw-entry-content"><span class="mw-source">${esc(aiKind[r.kind]||'其他')}</span><b>${esc(r.description)}</b></div><strong class="mw-delta ${plus?'mw-plus':'mw-minus'}">${plus?'+':''}${esc(f(r.ai_delta))}<small>AI</small></strong><button type="button" class="mw-more-btn" aria-expanded="false" data-mw-detail>明細</button><dl class="mw-more" hidden><div><dt>時間</dt><dd>${esc(time(r.created_at))}（台灣時間）</dd></div><div><dt>異動後餘額</dt><dd>${esc(f(r.balance_after))} AI point</dd></div>${r.points_delta?`<div><dt>儲值點數</dt><dd>${r.points_delta>0?'+':''}${number(Number(r.points_delta))} 點</dd></div>`:''}${d.model?`<div><dt>模型</dt><dd>${esc(d.model)}</dd></div>`:''}${d.input_tokens!=null?`<div><dt>用量</dt><dd>輸入 ${number(Number(d.input_tokens)||0)}・輸出 ${number(Number(d.output_tokens)||0)} tokens</dd></div>`:''}${d.cap&&d.cap!=='null'?`<div><dt>事前上限</dt><dd>${esc(f(d.cap))} AI point（實際扣點不超過）</dd></div>`:''}<div><dt>紀錄編號</dt><dd><code title="${esc(r.id)}">${esc(String(r.id).slice(0,8))}…</code></dd></div></dl></article>`;}).join('');
+   list.onclick=e=>{const t=e.target.closest('[data-mw-detail]');if(t){const d=t.nextElementSibling,open=t.getAttribute('aria-expanded')!=='true';t.setAttribute('aria-expanded',String(open));t.textContent=open?'收合':'明細';d.hidden=!open;}};
   }
   function paintRows(){
    if(tab!=='task')return;
@@ -60,7 +76,7 @@
   }
   root.querySelectorAll('[data-mw-tab]').forEach((b,i,buttons)=>{
    b.onclick=()=>{if(!current()||tab===b.dataset.mwTab)return;tab=b.dataset.mwTab;version++;busy=false;buttons.forEach(x=>{x.setAttribute('aria-selected',String(x===b));x.tabIndex=x===b?0:-1;});draw();if(tab==='task')load(true);};
-   b.onkeydown=e=>{if(['ArrowLeft','ArrowRight','Home','End'].includes(e.key)){e.preventDefault();const next=buttons[e.key==='Home'?0:e.key==='End'?1:1-i];next.focus();next.click();}};
+   b.onkeydown=e=>{if(['ArrowLeft','ArrowRight','Home','End'].includes(e.key)){e.preventDefault();const L=buttons.length,next=buttons[e.key==='Home'?0:e.key==='End'?L-1:(i+(e.key==='ArrowRight'?1:L-1))%L];next.focus();next.click();}};
   });
   async function refresh(){
    const n=++summaryVersion;version++;busy=false;summary=null;rows=[];more=false;draw();sync.textContent='正在向帳號服務核對…';
