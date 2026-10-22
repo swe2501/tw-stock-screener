@@ -2185,7 +2185,7 @@
     #greedGauge .pro-greed-copy span:first-child { font-size:24px !important; }
   }
 </style>
-<link rel="stylesheet" href="assets/member-center.css?v=avatar24">
+<link rel="stylesheet" href="assets/member-center.css?v=plans25">
 <link rel="stylesheet" href="assets/member-wallet.css?v=ledger2">
 <link rel="stylesheet" href="assets/futures-summary.css?v=history1">
 <link rel="stylesheet" href="assets/sector-dashboard.css">
@@ -2219,7 +2219,7 @@
         <div id="funcMenu" onclick="_closeFuncMenu()">
           <button id="brokerSigBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="_showView('sig')"> <span class="btn-label">主力訊號</span></button>
           <button id="brokerRankBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="_showView('brank')"> <span class="btn-label">分點回測</span></button>
-          <button id="sellTrackBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="openSellTrack()"> <span class="btn-label">出場追蹤</span></button>
+          <button id="sellTrackBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="openSellTrack()"> <span class="btn-label">持股觀察站</span></button>
           <button id="watchlistBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="openWatchlist()"> <span class="btn-label">觀察清單</span></button>
           <button id="alertMgrBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="openAlertMgr()"> <span class="btn-label">我的警示</span></button>
           <button id="hotTopicsBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="_showView('hottopics')"> <span class="btn-label">話題</span></button>
@@ -2356,7 +2356,7 @@
       <a onclick="_showView('etfx')" style="font-weight:800;color:var(--brand-green)"> ETF 探索</a><a onclick="_showView('etf')">總覽 · 規模排行</a><a onclick="_showView('etfcons')">成分股</a><a onclick="_showView('etfrev')">股票反查 ETF</a><a onclick="_showView('etfdiv')">配息行事曆</a><a onclick="_showView('etfhold')">持有人結構</a><a onclick="_showView('etfsim')">ETF 相似度</a><a onclick="_showView('etfheavy')">重倉股排行</a><a onclick="_showView('etfprem')">折溢價</a><a onclick="_showView('etfflow')">資金流</a><a onclick="_showView('etfperf')">績效比較</a></div></div>
     <a class="mn-item" onclick="_showView('news')">每日新聞</a>
     <div class="mn-grp" id="navWatchGrp"><span class="mn-item">我的觀察 <i>▾</i></span><div class="mn-menu">
-      <a class="nav-auth" onclick="openWatchlist()"> 觀察清單</a><a class="nav-auth" onclick="openBacktest()"> 回測</a><a class="nav-owner" data-member-feature="selltrack" onclick="openSellTrack()"> 出場追蹤</a><a class="nav-auth" onclick="openAlertMgr()"> 我的警示</a></div></div>
+      <a class="nav-auth" onclick="openWatchlist()"> 觀察清單</a><a class="nav-auth" onclick="openBacktest()"> 回測</a><a class="nav-owner" data-member-feature="selltrack" onclick="openSellTrack()"> 持股觀察站</a><a class="nav-auth" onclick="openAlertMgr()"> 我的警示</a></div></div>
   </div></nav>
 
   <style>
@@ -9150,13 +9150,13 @@
     </div>
   </div>
 
-  <!--  出場追蹤 modal（僅授權帳號） -->
+  <!--  持股觀察站 modal（原「出場追蹤」，僅授權帳號） -->
   <div id="sellTrackModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9992;align-items:flex-start;justify-content:center;overflow-y:auto;padding:4vh 12px">
     <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px 22px;max-width:820px;width:100%">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px">
         <div>
-          <h3 style="margin:0;font-size:1.05rem;color:var(--text-primary)"> 出場追蹤</h3>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">追蹤大戶何時出脫你勾選的股票（每日 19:00 更新）</div>
+          <h3 style="margin:0;font-size:1.05rem;color:var(--text-primary)"> 持股觀察站</h3>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">觀察你勾選的分點對該股的持倉變化（每日 19:00 更新）</div>
         </div>
         <button onclick="document.getElementById('sellTrackModal').style.display='none'"
           style="background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer">&#10005;</button>
@@ -12091,7 +12091,7 @@
             seen.add(x.code);
             const checked = _stWatchSet.has(brokerId + '|' + x.code) ? 'checked' : '';
             const nm = (x.name || '').replace(/'/g, '');
-            cb = `<input type="checkbox" ${checked} onclick="event.stopPropagation()" onchange="_stToggle(this,'${brokerId}','${bn}','${x.code}','${nm}')" title="追蹤此檔出場訊號" style="cursor:pointer">`;
+            cb = `<input type="checkbox" ${checked} onclick="event.stopPropagation()" onchange="_stToggle(this,'${brokerId}','${bn}','${x.code}','${nm}')" title="加入持股觀察站" style="cursor:pointer">`;
           }
           return `
           <tr onclick="openChart('${x.code}','${x.code} ${(x.name||'').replace(/'/g,'')}','',0,false,'${x.trade_date}','${brokerName} 買')"
@@ -12114,7 +12114,7 @@
       } catch (e) { body.innerHTML = '載入失敗：' + e.message; }
     }
 
-    // ──  出場追蹤 ──
+    // ──  持股觀察站（原出場追蹤） ──
     let _stWatchSet = null;    // Set("brokerId|code")：目前追蹤中
     let _stWatchList = null;   // 完整清單（含累積回吐統計）
 
@@ -12138,7 +12138,7 @@
           });
           if (!r.ok) throw new Error('HTTP ' + r.status);
           if (_stWatchSet) _stWatchSet.add(key);
-          _stFlash(`已追蹤 ${code} ${stockName}，今晚 19:00 起更新出場狀態`);
+          _stFlash(`已追蹤 ${code} ${stockName}，今晚 19:00 起更新持倉變化`);
         } else {
           const r = await _authFetch(`${window.__API}/api/broker_watch?broker_id=${encodeURIComponent(brokerId)}&code=${encodeURIComponent(code)}`, { method: 'DELETE' });
           if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -12165,24 +12165,25 @@
       clearTimeout(t._tmr); t._tmr = setTimeout(() => { t.style.opacity = '0'; }, 2800);
     }
 
-    const _ST_TIER = { none: ['持有中', '#888'], warn25: [' 減碼', '#e6a23c'], half50: [' 過半', '#ff9f43'], exit90: [' 出清', '#e74c3c'], churn: [' 當沖型', '#5aa9e6'] };
+    const _ST_TIER = { none: ['持倉中', '#888'], warn25: [' 回吐 25%↑', '#e6a23c'], half50: [' 回吐 50%↑', '#ff9f43'], exit90: [' 持倉近零', '#e74c3c'], churn: [' 當沖型', '#5aa9e6'] };
 
     function _stRuleHtml() {
       return `<details style="margin:2px 0 12px;border:1px solid var(--border);border-radius:8px;padding:8px 12px;background:rgba(255,255,255,.02)">
         <summary style="cursor:pointer;color:var(--text-muted);font-size:12px"> 追蹤規則說明（點開）</summary>
         <div style="font-size:11.5px;color:var(--text-muted);line-height:1.75;margin-top:8px">
-          <b>用途：</b>盯你勾選的股票，看原本買進的大戶（本尊）何時出脫、或其他分點是否大量賣超。每日 19:00 更新。<br>
+          <b>用途：</b>整理你勾選的分點（本尊）對該股的淨持倉變化，以及其他分點的大額賣超紀錄。每日 19:00 更新。<br>
           <b>回吐% ＝（峰值淨持倉 − 目前淨持倉）÷ 峰值淨持倉</b>（以「曾經最高持倉」為分母，賣一半又買回不會誤判）：<br>
-          &nbsp;&nbsp; <b>減碼</b>：回吐 ≥ 25% → 進面板<br>
-          &nbsp;&nbsp; <b>過半</b>：回吐 ≥ 50% → 面板＋Email<br>
-          &nbsp;&nbsp; <b>出清</b>：回吐 ≥ 90% 或 淨持倉 ≤ 0 → 面板＋Email<br>
+          &nbsp;&nbsp; <b>回吐 25%↑</b>：回吐 ≥ 25% → 進面板<br>
+          &nbsp;&nbsp; <b>回吐 50%↑</b>：回吐 ≥ 50% → 面板＋Email<br>
+          &nbsp;&nbsp; <b>持倉近零</b>：回吐 ≥ 90% 或 淨持倉 ≤ 0 → 面板＋Email<br>
           &nbsp;&nbsp; <b>當沖型</b>：峰值淨持倉 < 總買量的 10%（邊買邊賣、沒真的建倉）→ 回吐%不適用、顯示「—」<br>
           &nbsp;&nbsp;<span style="color:#888">※ 一切以「淨持倉<b>張數</b>的軌跡」判定，不看金額（高價股的金額會被放大，張數才是實際持倉）。</span><br>
           <b>賣超事件：</b><br>
           &nbsp;&nbsp;・<b>本尊</b>：單日淨賣超 ≥ 中位數買超日×1/3 <u>或</u> ≥ 峰值持倉×20%（符合其一即記）<br>
           &nbsp;&nbsp;・<b>其他分點</b>：單日淨賣超 ≥ 300 張 <u>或</u> ≥ 3000 萬（大單門檻）<br>
           <b>回溯：</b>從該分點對此檔「最早買超日」起算至今。<br>
-          <b>Email：</b>排程算完後由 Vercel 端就「最新交易日」的新賣超事件寄一封摘要（不寄歷史、避免洗信）。
+          <b>Email：</b>排程算完後由 Vercel 端就「最新交易日」的新賣超事件寄一封摘要（不寄歷史、避免洗信）。<br>
+          <b>說明：</b>本頁只整理公開的分點交易資料，描述分點自己的持倉變化，不代表對個股的看法，也不提供任何買賣建議；是否調整持股請自行判斷。
         </div>
       </details>`;
     }
@@ -12209,7 +12210,7 @@
         const gvTxt = isChurn ? '<span title="當沖型分點，回吐%不適用">—</span>'
                               : (w.giveback_pct != null ? `${w.giveback_pct}%` : '—');
         const upd = w.updated_at ? '' : '<span style="color:#e6a23c;font-size:10px" title="尚未經排程計算，今晚 19:00 更新"> (待更新)</span>';
-        // 本尊賣超標記（輔訊號）：本尊自己在賣才是最直接的出場訊號
+        // 本尊賣超標記：本尊自己的淨賣超次數（客觀紀錄）
         const anchorMark = (w.anchor_sell_ct > 0)
           ? `<div style="font-size:10px;color:#e74c3c" title="本尊自己的賣超事件次數">本尊賣超 ${w.anchor_sell_ct} 次${w.last_anchor_sell ? `・最近 ${w.last_anchor_sell}` : ''}</div>` : '';
         return `<tr style="border-bottom:1px solid var(--border)">
@@ -16479,7 +16480,7 @@
   function decorateIcons(){
     document.querySelectorAll('.mn-new').forEach(e=>e.remove());
     document.querySelectorAll('.mn-menu a').forEach(a=>{if(/ETF\s*探索/.test(a.textContent||''))a.childNodes.forEach(n=>{if(n.nodeType===3)n.textContent=n.textContent.replace(/ETF\s*探索\s*[（(]工作台[）)]/,'ETF 探索');});});
-    const navIcon=t=>/掏金篩選器/.test(t)?icons.filter:/箱型/.test(t)?icons.box:/上漲下跌亮燈區/.test(t)?icons.lights:/流動性排行/.test(t)?icons.droplet:/壓力支撐逼近/.test(t)?icons.levels:/集團作帳/.test(t)?icons.group:/題材列表/.test(t)?icons.list:/產業地圖/.test(t)?icons.map:/話題/.test(t)?icons.topic:/主力訊號/.test(t)?icons.signal:/分點回測|回測/.test(t)?icons.backtest:/貪婪指標/.test(t)?icons.gauge:/三大法人/.test(t)?icons.bank:/外資空單/.test(t)?icons.thermometer:/大盤多空廣度/.test(t)?icons.breadth:/處置股/.test(t)?icons.ban:/觀察清單/.test(t)?icons.watch:/出場追蹤/.test(t)?icons.exit:/我的警示/.test(t)?icons.bell:/總覽|探索/.test(t)?icons.grid:/排行/.test(t)?icons.ranking:/今日索引/.test(t)?icons.calendar:/成分股/.test(t)&&!/反查/.test(t)?icons.pie:/反查/.test(t)?icons.reverse:/配息/.test(t)?icons.dividend:/持有人/.test(t)?icons.holders:/相似/.test(t)?icons.similarity:/重倉/.test(t)?icons.stack:/折溢價/.test(t)?icons.discount:/資金流/.test(t)?icons.flow:/績效|比較/.test(t)?icons.compare:icons.chart;
+    const navIcon=t=>/掏金篩選器/.test(t)?icons.filter:/箱型/.test(t)?icons.box:/上漲下跌亮燈區/.test(t)?icons.lights:/流動性排行/.test(t)?icons.droplet:/壓力支撐逼近/.test(t)?icons.levels:/集團作帳/.test(t)?icons.group:/題材列表/.test(t)?icons.list:/產業地圖/.test(t)?icons.map:/話題/.test(t)?icons.topic:/主力訊號/.test(t)?icons.signal:/分點回測|回測/.test(t)?icons.backtest:/貪婪指標/.test(t)?icons.gauge:/三大法人/.test(t)?icons.bank:/外資空單/.test(t)?icons.thermometer:/大盤多空廣度/.test(t)?icons.breadth:/處置股/.test(t)?icons.ban:/觀察清單/.test(t)?icons.watch:/持股觀察站|出場追蹤/.test(t)?icons.exit:/我的警示/.test(t)?icons.bell:/總覽|探索/.test(t)?icons.grid:/排行/.test(t)?icons.ranking:/今日索引/.test(t)?icons.calendar:/成分股/.test(t)&&!/反查/.test(t)?icons.pie:/反查/.test(t)?icons.reverse:/配息/.test(t)?icons.dividend:/持有人/.test(t)?icons.holders:/相似/.test(t)?icons.similarity:/重倉/.test(t)?icons.stack:/折溢價/.test(t)?icons.discount:/資金流/.test(t)?icons.flow:/績效|比較/.test(t)?icons.compare:icons.chart;
     document.querySelectorAll('.mn-menu a,#funcMenu button').forEach((a,i)=>{
       if(a.querySelector('.pro-icon'))return;
       const s=document.createElement('span');s.className='pro-icon';
@@ -17301,7 +17302,7 @@
 <script src="assets/site-search.js?v=nav2" defer></script>
 <script src="assets/member-derivatives-catalog.js" defer></script>
 <script src="assets/member-trade-ui.js?v=tabs3" defer></script>
-<script src="assets/member-journey.js?v=streak9" defer></script>
+<script src="assets/member-journey.js?v=plans10" defer></script>
 <script src="assets/member-center.js?v=avatar21" defer></script>
 <script src="assets/member-signin.js?v=invite2" defer></script>
 <script src="assets/member-private-screen.js?v=multi3" defer></script>

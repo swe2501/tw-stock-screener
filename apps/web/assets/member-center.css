@@ -139,3 +139,11 @@ body.academy-research-ready #chartWatchBtn,body.academy-research-ready #chartBac
 :root:not([data-theme=light]) .mc-card .mc-avatar-pick .mc-upload-label::after{background:linear-gradient(100deg,transparent,color-mix(in srgb,var(--accent) 35%,transparent),transparent)}
 @keyframes mcSheen{0%,62%{left:-40%}100%{left:120%}}
 @media(prefers-reduced-motion:reduce){.mc-card .mc-avatar-pick .mc-upload-label::after,.mc-card .mc-avatar-actions .mc-avatar-save::after{animation:none;display:none}}
+/* 點數兌換：免費取得說明＋點數進度條（2026-10-22） */
+.mj-free-route{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;margin:2px 0 14px;padding:12px 16px;border:1px solid color-mix(in srgb,var(--accent) 35%,var(--border));border-radius:12px;background:color-mix(in srgb,var(--accent) 7%,transparent);font-size:13.5px;line-height:1.6}
+.mj-free-route b{color:var(--accent);font-weight:700}.mj-free-route span{color:var(--text)}
+.mj-ticket-progress{display:grid;gap:6px}.mj-ticket-progress[hidden]{display:none}
+.mj-ticket-progress>span{display:block;height:6px;border-radius:999px;background:var(--surface2);border:1px solid var(--border);overflow:hidden}
+.mj-ticket-progress i{display:block;height:100%;width:0;border-radius:inherit;background:linear-gradient(90deg,color-mix(in srgb,var(--accent) 65%,transparent),var(--accent));transition:width .5s ease}
+.mj-ticket-progress small{margin:0!important;font-size:11.5px;color:var(--mj-muted,var(--text-muted))}.mj-ticket-progress.is-full small{color:var(--accent)}
+@media(prefers-reduced-motion:reduce){.mj-ticket-progress i{transition:none}}

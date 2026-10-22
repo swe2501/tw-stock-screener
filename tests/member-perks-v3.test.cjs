@@ -33,11 +33,17 @@ const {PGlite}=require(process.env.PGLITE_MODULE||'@electric-sql/pglite');
  await assert.rejects(claim('weekly-plan-v1'),/LIMIT|CAP|上限/i);
  assert.equal((await claim('weekly-learn-v1')).points,50);
  assert.equal((await claim('learning10-v1')).points,50);
- // 兌換商品 v3：14 項、價格依 1 元＝10 點，新商品可兌換
- await admin();const ex=(await db.query("select id,points,duration_days,active from public.member_exchange_definitions order by points,id")).rows;
- assert.equal(ex.length,14);assert.deepEqual(ex.filter(r=>['vip-1d-v1','choice-30d-v1','vip-90d-v1'].includes(r.id)).map(r=>r.id+':'+r.points+':'+r.duration_days),['vip-1d-v1:500:1','choice-30d-v1:3000:30','vip-90d-v1:27000:90']);
+ // 兌換商品 v3 方案重整：現行 7 項（點數依 1 元＝10 點）、退場商品保留但關閉、名稱不含進出場字眼、重跑不變
+ await admin();const cur="('vip-1d-v1','choice-7d-v1','vip-7d-v1','choice-30d-v1','research-30d-v1','vip-30d-v1','vip-90d-v1')";
+ const ex=(await db.query("select id,points,duration_days from public.member_exchange_definitions where id in "+cur+" order by points,id")).rows;
+ assert.deepEqual(ex.map(r=>r.id+':'+r.points+':'+r.duration_days),['vip-1d-v1:500:1','choice-7d-v1:1000:7','vip-7d-v1:2500:7','choice-30d-v1:3800:30','research-30d-v1:6800:30','vip-30d-v1:8800:30','vip-90d-v1:24000:90']);
+ assert.equal((await db.query("select count(*)::int n from public.member_exchange_definitions where active or title ~ '進出場|出場'")).rows[0].n,0);
+ assert.equal((await db.query("select title from public.member_feature_catalog where feature='selltrack'")).rows[0].title,'持股觀察站');
+ assert.deepEqual((await db.query("select allowed_features from public.member_voucher_definitions where id='research-v1'")).rows[0].allowed_features,['fhedge','breadth','hottopics']);
+ const ver=(await db.query("select id,version from public.member_voucher_definitions order by id")).rows;
  await db.exec(fs.readFileSync(path.join(__dirname,'../docs/database/member-perks-exchange-v3.sql'),'utf8'));
- await db.exec('update public.member_exchange_definitions set active=true;update public.member_voucher_definitions set active=true;');await db.query("insert into public.member_point_ledger(user_id,description,points,source_event_key) values($1,'測試加點',600,'test-grant-v3')",[uid(1)]);await as(1);
+ assert.deepEqual((await db.query("select id,version from public.member_voucher_definitions order by id")).rows,ver,'re-running does not bump versions');
+ await db.exec("update public.member_exchange_definitions set active=true where id in "+cur+";update public.member_voucher_definitions set active=true;");await db.query("insert into public.member_point_ledger(user_id,description,points,source_event_key) values($1,'測試加點',600,'test-grant-v3')",[uid(1)]);await as(1);
  const trial=await value('select public.exchange_member_points($1,$2) value',['vip-1d-v1',uid(700)]);assert.equal(trial.points,500);
  const st=await status();assert.equal(st.caps.daily_research.limit,40);assert.equal(st.caps.weekly_research.limit,200);assert.equal(st.caps.weekly_research.used,180);
  // 連續打卡：只有今天 → 不能領；補齊前 5 天 → 6 天仍不能；補第 7 天 → 可領 100，同一週重領回傳 duplicate
@@ -51,5 +57,5 @@ const {PGlite}=require(process.env.PGLITE_MODULE||'@electric-sql/pglite');
  await admin();await seed(29);await as(1);const s30=await claim('streak30-v1');assert.equal(s30.points,200);
  await admin();const days=(await db.query('select duration_days from public.member_rewards where id = any($1) order by duration_days',[[s7.reward_id,s15.reward_id,s30.reward_id]])).rows.map(r=>r.duration_days);assert.deepEqual(days,[3,7,14],'streak vouchers 3/7/14 days');await as(1);
  const stp=(await status()).rows.find(r=>r.id==='streak30-v1');assert.equal(stp.period,'monthly');assert.equal(stp.claimed,true);
- console.log('PASS member perks v3: sticky points, caps 40/200, 7/15/30-day streaks with vouchers, uncapped weekly challenge, learning milestones, 14 products, one point currency, trial exchange, idempotent');
+ console.log('PASS member perks v3: sticky points, caps 40/200, 7/15/30-day streaks with vouchers, uncapped weekly challenge, learning milestones, 7 current products (retired kept inactive), one point currency, trial exchange, idempotent');
 }finally{await db.close();}})().catch(e=>{console.error(e);process.exitCode=1;});
