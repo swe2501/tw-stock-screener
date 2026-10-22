@@ -24,7 +24,7 @@
    if(!t)return {text:'尚未完成',note:'尚未開放領點。',disabled:true};
    if(t.review_only)return {text:'由管理端審核',note:'審核通過後，點數由管理端發送。',disabled:true};
    if(t.id==='ad-video-v1')return {text:'尚未完成',note:'獎勵影片尚未接通，不開放領點。',disabled:true};
-   if(t.claimed)return {text:'本期已領',note:'獎勵已入帳，下期狀態由伺服器確認。',disabled:true};
+   if(t.claimed)return {text:'本期已領',note:'獎勵已轉入，下期狀態由伺服器確認。',disabled:true};
    const cap=state.tasks.caps?.[t.cap_group];
    if(cap&&integer(cap.used)&&integer(cap.limit)&&cap.used+t.points>cap.limit)return {text:'尚未完成',note:t.period==='weekly'?'本週點數已達上限。':'今日點數已達上限。',disabled:true};
    const eligible=t.eligible===true&&(serverOnly.has(t.id)||ready(id));
@@ -71,7 +71,7 @@
    const id=button.dataset.taskClaim,t=state?.tasks.rows.find(t=>t.id===id),localId=button.closest('[data-task-id]')?.dataset.taskId||id;
    if(busy||!current()||!t||taskState(t,localId).disabled)return;
    busy=true;paint();extras();status.textContent='正在確認任務獎勵…';
-   try{const result=await AcademyIdentity.claimTask(id);if(!current())return;if(!result?.id)throw Error('尚未確認領取結果，請更新狀態後重試。');await load();if(current()){status.textContent=result.duplicate?'本期已領，不重複發點。':result.reward_id?'點數已入帳，附贈使用券已存入券夾，尚未開始計時。':'任務獎勵已入帳。';window.dispatchEvent(new Event('academy-wallet-changed'));}}
+   try{const result=await AcademyIdentity.claimTask(id);if(!current())return;if(!result?.id)throw Error('尚未確認領取結果，請更新狀態後重試。');await load();if(current()){status.textContent=result.duplicate?'本期已領，不重複發點。':result.reward_id?'點數已轉入，附贈使用券已存入券夾，尚未開始計時。':'任務獎勵已轉入。';window.dispatchEvent(new Event('academy-wallet-changed'));}}
    catch(e){if(current()){await load();if(current())status.textContent=errorText(e);}}
    finally{busy=false;if(current()){paint();extras();}}
   }
