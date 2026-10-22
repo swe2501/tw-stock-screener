@@ -7,14 +7,15 @@
  const tools=document.createElement('details');tools.className='chart-fit-tools';
  tools.innerHTML='<summary><span class="chart-fit-title">週期、圖層與畫線工具</span></summary>';
  const ratios=document.createElement('span');ratios.className='chart-fit-ratios';
- ratios.innerHTML='<label>K 圖比例<input type="range" min="50" max="80" step="2" value="70" aria-label="K 圖高度比例"><output>70%</output></label><button type="button" aria-label="還原圖表比例">還原</button>';
+ ratios.innerHTML='<label>K 圖比例<input type="range" min="50" max="80" step="2" value="60" aria-label="K 圖高度比例"><output>60%</output></label><button type="button" aria-label="還原圖表比例">還原</button>';
  tools.querySelector('summary').append(ratios);
- let mainRatio=70;
+ const defaultMainRatio=60;
+ let mainRatio=defaultMainRatio;
  function renderRatios(){const input=ratios.querySelector('input'),sub=(100-mainRatio)/2;input.value=mainRatio;ratios.querySelector('output').value=mainRatio+'%';input.setAttribute('aria-valuetext','K 圖 '+mainRatio+'%，下方資料區 '+(100-mainRatio)+'%');for(const [key,value] of [['main',mainRatio],['vol',sub],['tech',sub],['sub',100-mainRatio]])wrap.style.setProperty('--chart-'+key+'-ratio',value+'fr');schedule();}
  ratios.addEventListener('click',e=>{e.stopPropagation();if(!e.target.closest('input,button'))e.preventDefault();});
  ratios.addEventListener('keydown',e=>e.stopPropagation());
  ratios.addEventListener('input',e=>{if(e.target.tagName!=='INPUT')return;mainRatio=Number(e.target.value);renderRatios();});
- ratios.querySelector('button').addEventListener('click',()=>{mainRatio=70;renderRatios();});
+ ratios.querySelector('button').addEventListener('click',()=>{mainRatio=defaultMainRatio;renderRatios();});
  const first=content.querySelector('.chart-toolbar');
  const periods=document.createElement('div');periods.className='chart-period-segments';periods.setAttribute('role','group');periods.setAttribute('aria-label','圖表週期');
  const periodButtons=['hourlyBtn','dailyBtn','adjDailyBtn','weeklyBtn','monthlyBtn','yearlyBtn','trendBtn'].map(byId).filter(Boolean);
@@ -83,7 +84,7 @@
   if(active){const chart=typeof chartInstance==='undefined'?null:chartInstance,series=window._mainCandleSeries;renderChartDetails(chart,series);if(lastTooltip&&lastTooltip.chart===chart&&byId('ohlcTooltip').style.display!=='none')placeTooltip(lastTooltip.param,lastTooltip.c,lastTooltip.candles,chart,series);}
  }
  function schedule(){if(!frame)frame=requestAnimationFrame(fit);}
- select.addEventListener('change',schedule);tools.addEventListener('toggle',()=>{if(!tools.open){mainRatio=70;renderRatios();}schedule();});
+ select.addEventListener('change',schedule);tools.addEventListener('toggle',()=>{if(!tools.open){mainRatio=defaultMainRatio;renderRatios();}schedule();});
  new ResizeObserver(schedule).observe(content);
  new MutationObserver(schedule).observe(modal,{subtree:true,childList:true,attributes:true,attributeFilter:['style','class']});
  addEventListener('resize',schedule);document.addEventListener('fullscreenchange',schedule);
