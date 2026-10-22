@@ -70,9 +70,12 @@
   hidden(byId('volPanel'),active&&!tech);hidden(byId('macdPanel'),active&&(!tech||select.value!=='macd'));hidden(byId('rsiPanel'),active&&(!tech||select.value!=='rsi'));
   if(active){
    const offset=wrap.getBoundingClientRect().top-content.getBoundingClientRect().top+content.scrollTop;
-   // Very short screens keep a readable minimum and scroll inside the chart pane.
    const available=matchMedia('(max-width:1100px)').matches?modal.querySelector('.modal-body').clientHeight:content.clientHeight;
-   const height=Math.max(tools.open?500:360,Math.floor(available-offset-12));
+   // Technical plots retain a portrait-like geometry instead of flattening to fit one screen.
+   // Size from width only: scrolling must not change canvas heights or visible time ranges.
+   const plotWidth=Math.max(0,wrap.clientWidth-70);
+   const readableHeight=tech?Math.ceil((plotWidth*.88+32)/.60)+30:360;
+   const height=Math.max(tools.open?500:360,readableHeight,Math.floor(available-offset-12));
    if(wrap.style.getPropertyValue('--chart-fit-height')!==height+'px')wrap.style.setProperty('--chart-fit-height',height+'px');
   }
   const resized=[fitChart(typeof chartInstance==='undefined'?null:chartInstance,'chartContainer'),
