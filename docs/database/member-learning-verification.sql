@@ -1,4 +1,5 @@
--- PREPARED ONLY. Requires separate approval before applying to shared Supabase.
+-- APPROVED/APPLIED 2026-10-22 to shared Taiwan stock2 after explicit JUSTY approval.
+-- Future changes require separate approval; see docs/member-learning-release-2026-10-22.md.
 -- Requires member-perks-tasks-v3-points.sql. Apply catalog-v1 immediately after this transaction.
 -- No task is activated; existing task prices, caps, claims and balances are retained.
 begin;

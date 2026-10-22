@@ -1,4 +1,6 @@
-# 學習任務伺服器核驗（準備中，未發布／未套用）
+# 學習任務伺服器核驗（2026-10-22 已核准套用）
+
+發布狀態：前三步網站修正已發布 UAT（功能提交 `2c6fa7f`），JUSTY 明確批准後已套用共用資料庫；未推 prod 前端。實際驗收與限制見 [發布紀錄](../../member-learning-release-2026-10-22.md)。下列部署步驟保留供後續維護參考。
 
 目的：個人資料中的 member_learning、member_learning_challenges 可由會員編輯，不可作發點依據。這次以伺服器完成表判斷 7 項學習任務，不改其他 member_report 任務的既有規則。
 
@@ -14,7 +16,7 @@
 
 ## 共用資料庫：需另行批准
 
-UAT 與正式站共用 Taiwan stock2。本次沒有執行 migration，沒有新增 Vercel API，也沒有啟動任務或收費服務。
+UAT 與正式站共用 Taiwan stock2。本次 migration 已獲 JUSTY 明確批准並套用；沒有新增 Vercel API，也沒有啟動任務或收費服務。
 
 1. 先完成網站與所有仍使用中客戶端的相容驗收，安排短暫暫停學習領點的過渡。
 2. 經明確批准後依序套用 `docs/database/member-learning-verification.sql`、`docs/database/member-learning-catalog-v1.sql`。前者建立核驗與門檻，後者提供題庫。兩檔可重跑；不得在這之後重新套用舊 tasks-v2/v3 migration 以覆寫新 verifier。
