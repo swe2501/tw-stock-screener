@@ -192,3 +192,118 @@
 .member-page .lc-week p{margin:0;font-size:12.5px;line-height:1.65;color:var(--text-muted)}
 .member-page .lc-week b{font-size:15px}
 .member-page .lc-plan-head p{font-size:13px;margin:0}
+/* ── 2026-10-22 第三版：左側目錄、手機目錄、每週挑戰、徽章、主題卡 ── */
+.sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.lc-layout{container-type:inline-size;display:block}
+.lc-side{display:none}
+.lc-content{min-width:0;display:flex;flex-direction:column;gap:16px}
+.lc-content>.mc-card{margin:0}
+@container (min-width:740px){
+  .lc-grid{display:grid;grid-template-columns:232px minmax(0,1fr);gap:18px;align-items:start}
+  .lc-side{display:block;position:sticky;top:84px;max-height:calc(100vh - 104px);overflow:auto;padding:14px 12px;border:1px solid var(--border);border-radius:16px;background:var(--surface);scrollbar-width:thin}
+  .lc-mbar{display:none!important}
+}
+.lc-mbar{position:sticky;top:64px;z-index:5;display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border);border-radius:14px;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.lc-mbar>span{flex:1;min-width:0;font-size:13.5px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.member-page .lc-mbar .lc-btn{min-height:36px;padding:6px 12px}
+.lc-toc-inner{display:flex;flex-direction:column;gap:10px}
+.lc-search{display:flex;align-items:center;gap:8px;margin:0;padding:0 10px;min-height:38px;border:1px solid var(--border);border-radius:10px;background:var(--surface2,var(--surface));color:var(--text-muted)}
+.lc-search:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 16%,transparent)}
+.member-page .lc-search input{flex:1;min-width:0;margin:0;padding:8px 0;border:0;background:transparent;color:var(--text);font:inherit;font-size:13.5px;outline:none;box-shadow:none}
+.lc-seg{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;padding:3px;border-radius:10px;background:color-mix(in srgb,var(--text-muted) 10%,transparent)}
+.member-page .lc-seg button{margin:0;padding:5px 0;min-height:30px;border:0;border-radius:8px;background:transparent;color:var(--text-muted);font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;box-shadow:none}
+.member-page .lc-seg button[aria-checked="true"]{background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(15,23,42,.12)}
+.member-page .lc-toc-home{display:flex;align-items:center;gap:8px;margin:0;padding:8px 10px;min-height:36px;border:0;border-radius:9px;background:transparent;color:var(--text);font:inherit;font-size:13.5px;font-weight:700;text-align:left;cursor:pointer;box-shadow:none}
+.member-page .lc-toc-home:hover,.member-page .lc-toc-home.is-active{background:color-mix(in srgb,var(--accent) 9%,transparent);color:var(--accent)}
+.lc-toc{display:flex;flex-direction:column;gap:2px}
+.lc-toc-group>summary{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border-radius:9px;cursor:pointer;list-style:none;font-size:13.5px;font-weight:700;color:var(--text)}
+.lc-toc-group>summary::-webkit-details-marker{display:none}
+.lc-toc-group>summary::before{content:'';width:6px;height:6px;border-right:1.6px solid var(--text-muted);border-bottom:1.6px solid var(--text-muted);transform:rotate(-45deg);transition:transform .15s;flex:none;margin-right:2px}
+.lc-toc-group[open]>summary::before{transform:rotate(45deg)}
+.lc-toc-group>summary>span{flex:1}
+.lc-toc-group>summary small{font-size:11px;font-weight:600;color:var(--text-muted);font-variant-numeric:tabular-nums}
+.lc-toc-group>summary:hover{background:color-mix(in srgb,var(--text-muted) 8%,transparent)}
+.lc-toc-group.is-active>summary{color:var(--accent)}
+.lc-toc ol{list-style:none;margin:2px 0 8px;padding:0 0 0 12px;border-left:1px solid var(--border);margin-left:14px;display:flex;flex-direction:column;gap:1px}
+.member-page .lc-toc ol button{display:flex;align-items:flex-start;gap:6px;width:100%;margin:0;padding:5px 8px;min-height:30px;border:0;border-radius:7px;background:transparent;color:var(--text-muted);font:inherit;font-size:12.5px;font-weight:500;line-height:1.5;text-align:left;cursor:pointer;box-shadow:none}
+.member-page .lc-toc ol button:hover{color:var(--text);background:color-mix(in srgb,var(--text-muted) 8%,transparent)}
+.member-page .lc-toc ol button.is-current{color:var(--accent);background:color-mix(in srgb,var(--accent) 9%,transparent);font-weight:700}
+.lc-toc ol button i{flex:none;width:14px;height:14px;margin-top:3px;border-radius:50%;border:1.3px solid color-mix(in srgb,var(--text-muted) 55%,transparent);display:grid;place-items:center}
+.lc-toc ol button.is-done i{border-color:transparent;background:color-mix(in srgb,var(--green,#2EA043) 16%,transparent);color:var(--green,#2EA043)}
+.lc-toc ol button i svg{width:10px;height:10px}
+.lc-toc-empty{font-size:12px;color:var(--text-muted);padding:4px 8px}
+/* 手機目錄（底部滑出） */
+.lc-sheet{position:fixed;inset:0;z-index:1200}
+.lc-sheet[hidden]{display:none}
+.lc-sheet-back{position:absolute;inset:0;background:rgba(10,14,22,.42);animation:lcFade .18s ease}
+.lc-sheet-panel{position:absolute;left:0;right:0;bottom:0;max-height:82vh;overflow:auto;padding:12px 16px calc(18px + env(safe-area-inset-bottom));border-radius:18px 18px 0 0;background:var(--surface);box-shadow:0 -12px 40px rgba(0,0,0,.25);animation:lcUp .22s cubic-bezier(.2,.8,.2,1)}
+.lc-sheet-head{display:flex;align-items:center;justify-content:space-between;padding:4px 0 10px;position:sticky;top:-12px;background:var(--surface);z-index:1}
+.lc-sheet-head b{font-size:15px}
+.member-page .lc-icon-btn{display:grid;place-items:center;width:36px;height:36px;margin:0;padding:0;border:1px solid var(--border);border-radius:50%;background:var(--surface);color:var(--text);cursor:pointer;box-shadow:none}
+html.lc-sheet-open{overflow:hidden}
+@keyframes lcUp{from{transform:translateY(24px);opacity:.4}to{transform:none;opacity:1}}
+@keyframes lcFade{from{opacity:0}to{opacity:1}}
+@media(prefers-reduced-motion:reduce){.lc-sheet-panel,.lc-sheet-back{animation:none}}
+/* 文章列表頭 */
+.lc-list-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.lc-list-count{flex:none;font-size:12px;font-weight:700;color:var(--accent);padding:4px 10px;border-radius:999px;background:color-mix(in srgb,var(--accent) 9%,transparent)}
+.lc-saved-dot{color:var(--accent)}
+.lc-saved-dot svg{width:11px;height:11px}
+.member-page .lc-next{display:flex;align-items:center;gap:8px}
+.lc-next span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+/* 每週挑戰 */
+.lc-challenge{position:relative;overflow:hidden;border-color:color-mix(in srgb,var(--accent) 35%,var(--border))!important;background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 8%,var(--surface)) 0%,var(--surface) 55%,color-mix(in srgb,#C9A227 6%,var(--surface)) 100%)!important}
+.lc-ch-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}
+.lc-ch-kicker{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:800;letter-spacing:.04em;color:var(--accent)}
+.lc-ch-head h3{margin:6px 0 4px;font-size:20px}
+.member-page .lc-ch-head p{margin:0;font-size:13.5px;line-height:1.7;color:var(--text-muted)}
+.lc-ch-time{flex:none;text-align:right;padding:10px 14px;border-radius:12px;background:var(--surface);border:1px solid var(--border)}
+.lc-ch-time b{display:block;font-size:16px;color:var(--text);font-variant-numeric:tabular-nums;white-space:nowrap}
+.lc-ch-time small{font-size:11.5px;color:var(--text-muted)}
+.lc-ch-steps{list-style:none;margin:14px 0 0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.member-page .lc-ch-steps button{display:flex;align-items:center;gap:8px;width:100%;height:100%;margin:0;padding:10px 12px;min-height:46px;border:1px solid var(--border);border-radius:12px;background:var(--surface);color:var(--text);font:inherit;font-size:13px;font-weight:600;line-height:1.45;text-align:left;cursor:pointer;box-shadow:none}
+.member-page .lc-ch-steps button:hover{border-color:var(--accent)}
+.lc-ch-steps i{flex:none;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:11.5px;font-weight:800;color:var(--text-muted);border:1.4px solid var(--border)}
+.lc-ch-steps li.is-done i{border-color:transparent;background:color-mix(in srgb,var(--green,#2EA043) 15%,transparent);color:var(--green,#2EA043)}
+.lc-ch-foot{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:14px;flex-wrap:wrap}
+.lc-ch-progress{flex:1;min-width:200px}
+.lc-ch-progress span{font-size:12.5px;color:var(--text-muted)}
+.lc-ch-done{display:flex;align-items:center;gap:14px;flex:1;flex-wrap:wrap}
+.lc-ch-done>div{flex:1;min-width:180px;display:flex;flex-direction:column;gap:2px}
+.lc-ch-done b{font-size:15px}.lc-ch-done small{font-size:12.5px;color:var(--text-muted)}
+.lc-ch-quiz{margin-top:14px;padding-top:14px;border-top:1px dashed var(--border)}
+.lc-ch-msg{font-size:13.5px;font-weight:700;color:var(--text)}
+.lc-medal{width:42px;height:50px;flex:none}
+.lc-medal-rib{fill:color-mix(in srgb,var(--accent) 70%,#2c3e66)}
+.lc-medal-disc{fill:#D8B24A}
+.lc-medal-ring{fill:none;stroke:#FFF3C4;stroke-width:1.4;opacity:.8}
+.lc-medal-star{fill:#FFF8DE}
+.lc-medal.is-off .lc-medal-disc{fill:color-mix(in srgb,var(--text-muted) 35%,transparent)}
+.lc-badges h3{margin:0 0 10px;font-size:16px}
+.lc-badges h3 small{font-size:12px;color:var(--text-muted);font-weight:600}
+.lc-badges ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:12px}
+.lc-badges li{display:flex;flex-direction:column;align-items:center;gap:3px;width:88px;text-align:center}
+.lc-badges li b{font-size:12px;line-height:1.35}.lc-badges li small{font-size:10.5px;color:var(--text-muted)}
+/* 主題卡 */
+.lc-topics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.member-page .lc-topic{display:flex;flex-direction:column;align-items:stretch;gap:6px;margin:0;padding:16px;border:1px solid var(--border);border-radius:16px;background:var(--surface);color:var(--text);font:inherit;text-align:left;cursor:pointer;box-shadow:none;transition:border-color .15s,transform .15s,box-shadow .15s}
+.member-page .lc-topic:hover{border-color:color-mix(in srgb,var(--accent) 50%,var(--border));box-shadow:0 10px 24px color-mix(in srgb,var(--accent) 9%,transparent);transform:translateY(-1px)}
+.lc-topic-name{font-size:15.5px;font-weight:800}
+.lc-topic-desc{font-size:12.5px;line-height:1.65;color:var(--text-muted);flex:1}
+.lc-topic-foot{display:flex;align-items:center;gap:10px}
+.lc-topic-foot .lc-bar{flex:1;margin:0}
+.lc-topic-foot small{font-size:11.5px;color:var(--text-muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.lc-week-goal{font-size:12.5px;line-height:1.6;color:var(--text-muted);flex:1}
+.lc-more{font-size:12px;color:var(--text-muted);align-self:center}
+.lc-weeks{grid-template-columns:repeat(4,minmax(0,1fr))}
+@container (max-width:700px){
+  .lc-topics{grid-template-columns:1fr 1fr}
+  .lc-ch-steps{grid-template-columns:1fr 1fr}
+  .lc-weeks{grid-template-columns:1fr 1fr}
+  .lc-ch-head{flex-direction:column}
+  .lc-ch-time{text-align:left;display:flex;align-items:baseline;gap:8px}
+  .lc-week-goal{display:none}
+}
+@container (max-width:420px){.lc-topics{grid-template-columns:1fr}.lc-topic-desc{display:none}}
+.member-page header.lc-plan-head,.member-page header.lc-list-head{display:block}.member-page header.lc-list-head{display:flex}
+@media(max-width:760px){.member-page .lc-content .mc-card.lc-list{padding-left:10px;padding-right:10px}.lc-content .lc-body{padding:0 10px 14px}.lc-fig{margin:12px -6px 4px;padding:6px;border-radius:10px}}

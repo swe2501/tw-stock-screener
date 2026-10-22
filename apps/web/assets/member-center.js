@@ -14,6 +14,13 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
   let profile = null, current = 'overview', returnFocus = null, oldOverflow = '', request = 0, returnScroll={x:0,y:0};
   const page = document.createElement('section');
   page.className = 'member-page'; page.hidden = true; page.setAttribute('aria-label','會員中心');
+  // 2026-10-22 回到頂端：只在會員中心；往下捲超過一個畫面才出現，點了平滑捲回最上面；避開策略工作台右下角的聊天按鈕
+  const toTop=document.createElement('button');toTop.type='button';toTop.className='mc-to-top';toTop.setAttribute('aria-label','回到頂端');toTop.title='回到頂端';
+  toTop.innerHTML='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V6M6 11.5 12 5.5l6 6"/></svg>';
+  const syncTop=()=>{const show=page.scrollTop>Math.max(480,page.clientHeight*.8);toTop.classList.toggle('is-visible',show);toTop.tabIndex=show?0:-1;const chat=document.querySelector('.ms-chat-launcher');toTop.classList.toggle('is-raised',!!(chat&&!chat.hidden&&chat.offsetParent));};
+  page.addEventListener('scroll',()=>{if(!syncTop.r){syncTop.r=requestAnimationFrame(()=>{syncTop.r=0;syncTop();});}},{passive:true});
+  toTop.addEventListener('click',()=>{page.scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth'});page.querySelector('main')?.focus?.({preventScroll:true});});
+  queueMicrotask(()=>page.append(toTop));
   page.innerHTML = `<div class="mc-shell"><div class="mc-top"><div><span class="mc-kicker">FORESIGHT QUANT · MEMBER</span><h1>會員中心</h1><div class="mc-muted">你的研究工作區，從這裡開始。</div></div><div class="mc-top-actions"><button type="button" data-member-theme></button><button type="button" data-back>← 返回原頁</button><button type="button" data-member-logout>登出</button><span class="mc-action-status" role="status"></span></div></div><div class="mc-layout"><nav class="mc-nav" aria-label="會員功能"></nav><main class="mc-main" tabindex="-1"></main></div></div>`;
   document.body.append(page);
   const brandbar=document.createElement('div');brandbar.className='mc-brandbar';
@@ -22,7 +29,7 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
   const groups = [
     ['帳號與服務', [['overview','會員總覽'],['profile','個人資料'],['security','登入與安全'],['notifications','通知與偏好'],['feedback','我的回饋'],['privacy','資料與隱私']]],
     ['會員禮遇', [['benefits','會員權益'],['gifts','禮遇與優惠券'],['redeem','兌換優惠碼'],['referrals','邀請好友'],['tasks','任務與點數'],['wallet','點數帳戶'],['events','學院活動']]],
-    ['研究與學習', [['favorites','我的自選'],['screen-calendar','選股日曆'],['trades','交易紀錄'],['goals','我的目標'],['workspace','研究工作區'],['strategy','策略回測'],['weekly','我的研究週報'],['learning','學習中心']]]
+    ['研究與學習', [['learning','學習中心'],['favorites','我的自選'],['screen-calendar','選股日曆'],['strategy','策略工作台'],['workspace','研究筆記'],['trades','交易與目標'],['weekly','本週回顧']]]   // 2026-10-22 整理：交易紀錄＋我的目標合併成一個入口（頁內分頁切換）；研究週報改為本週回顧
   ];
   const items = groups.flatMap(([,rows])=>rows);
   const nav = page.querySelector('nav'), main = page.querySelector('main');
@@ -92,7 +99,7 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
   function render(){
     window.AcademyTradeUI?.cleanup();
     main.onclick=null;main.onsubmit=null;main.oninput=null;main.onchange=null;
-    nav.querySelectorAll('button').forEach(b=>{if(b.dataset.tab===current)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
+    nav.querySelectorAll('button').forEach(b=>{if(b.dataset.tab===(current==='goals'?'trades':current))b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
     const signed=!!localStorage.getItem('sb_token');
     if(!signed){main.innerHTML='<div class="mc-card"><h2>歡迎加入先見量化智能</h2><p class="mc-muted">登入後即可管理會員資料。你也可以先在此裝置整理回饋草稿。</p><button data-login>登入會員</button></div>';if(current!=='feedback')return;}
     else main.innerHTML='';

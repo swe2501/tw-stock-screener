@@ -2,7 +2,7 @@
 (() => {
   'use strict';
   const config=()=>({url:typeof SIG_SB_URL!=='undefined'?SIG_SB_URL:'',key:typeof SIG_SB_ANON!=='undefined'?SIG_SB_ANON:''});
-  const fields=['display_name','full_name','gender','city','birth_date','experience','markets','purpose','member_preferences','member_learning'];
+  const fields=['display_name','full_name','gender','city','birth_date','experience','markets','purpose','member_preferences','member_learning','member_learning_challenges'];   // 2026-10-22 每週學習挑戰紀錄 {週次:{id,score,total,passed,at}}
   const providerId=provider=>provider==='line'?'custom:line-web':provider;
   // Public /settings omits custom providers. LINE was verified against /authorize.
   // Keep this explicit deployment configuration separate from built-in provider flags.
