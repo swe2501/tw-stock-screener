@@ -4,9 +4,10 @@
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const valid=d=>Array.isArray(d?.rows)&&Number.isFinite(Date.parse(d.server_time));
  const integer=n=>Number.isSafeInteger(n)&&n>=0;
+ const availablePoints=wallet=>(integer(wallet?.task_points)?wallet.task_points:0)+(integer(wallet?.stored_points)?wallet.stored_points:0);
  const serverOnly=new Set(['name-v1','preferences-v1','watch-v1','verify-contact-v1','invite-first-v1','birthday-v1','anniversary-v1']);
  const learningTasks=new Set(['learn-v1','daily-learn-v1','learning3-v1','learning10-v1','learning30-v1','weekly-learn-v1','challenge4-v1']);
- const messages={MEMBER_TASK_LIMIT_REACHED:'今天（本週）從任務獲得的點數已達上限，請下期再來。',MEMBER_TASK_INCOMPLETE:'還沒完成這項任務，完成後再回來領取。',MEMBER_TASK_REVIEW_ONLY:'這項任務由管理端審核發點。',MEMBER_TASK_UNAVAILABLE:'這項任務尚未開放。',MEMBER_EXCHANGE_UNAVAILABLE:'這張使用券尚未開放兌換。',MEMBER_POINTS_INSUFFICIENT:'任務點數不足，請先確認最新餘額。'};
+ const messages={MEMBER_TASK_LIMIT_REACHED:'今天（本週）從任務獲得的點數已達上限，請下期再來。',MEMBER_TASK_INCOMPLETE:'還沒完成這項任務，完成後再回來領取。',MEMBER_TASK_REVIEW_ONLY:'這項任務由管理端審核發點。',MEMBER_TASK_UNAVAILABLE:'這項任務尚未開放。',MEMBER_EXCHANGE_UNAVAILABLE:'這張使用券尚未開放兌換。',MEMBER_POINTS_INSUFFICIENT:'可用點數不足，請先確認最新餘額。'};
  const errorText=e=>messages[e.code]||Object.entries(messages).find(([k])=>String(e.message).includes(k))?.[1]||e.message||'無法確認結果，請稍後重試。';
  function mount(root,{profile,go,ready=()=>false}){
   root.querySelector('.mj-live-missions')?.remove();
@@ -42,7 +43,7 @@
    });
    root.querySelectorAll('[data-exchange-id]').forEach(card=>{
     const o=state?.options.rows.find(o=>o.id===card.dataset.exchangeId),button=card.querySelector('.mj-ticket-foot button');
-    const retry=!!pending(card.dataset.exchangeId);const have=(state?.wallet?.task_points||0)+(Number.isSafeInteger(state?.wallet?.stored_points)&&state.wallet.stored_points>0?state.wallet.stored_points:0);button.dataset.pointsExchange=card.dataset.exchangeId;
+    const retry=!!pending(card.dataset.exchangeId);const have=availablePoints(state?.wallet);button.dataset.pointsExchange=card.dataset.exchangeId;
     button.textContent=!current()?'請先登入':!o?'尚未開放兌換':retry?'確認上次兌換結果':have<o.points?'點數不足（還差 '+(o.points-have).toLocaleString()+' 點）':'兌換';
     button.disabled=busy||!current()||!o||(!retry&&have<o.points);
     if(o){const strong=card.querySelector('.mj-ticket-foot strong');strong.textContent=o.points.toLocaleString();card.querySelector('.mj-ticket-days').textContent=o.duration_days+' 天';const bar=card.querySelector('.mj-ticket-progress');if(bar)bar.dataset.need=o.points;}
@@ -63,8 +64,8 @@
    try{
     const [tasks,options,wallet]=await Promise.all([AcademyIdentity.taskStatus(),AcademyIdentity.exchangeOptions(),AcademyIdentity.walletSummary()]);
     if(!current()||ticket!==sequence)return false;
-    if(!valid(tasks)||!valid(options)||!integer(wallet.task_points)||tasks.rows.some(t=>!t.id||!integer(t.points))||options.rows.some(o=>!o.id||!integer(o.points)||!Number.isSafeInteger(o.duration_days)||o.duration_days<=0))throw Error('帳號資料不完整，暫不開放領點或扣點。');
-    state={tasks,options,wallet};balance.textContent='可用點數 '+(wallet.task_points+(integer(wallet.stored_points)?wallet.stored_points:0)).toLocaleString()+' 點';
+    if(!valid(tasks)||!valid(options)||!integer(wallet?.task_points)||(wallet.stored_points!=null&&!integer(wallet.stored_points))||!integer(availablePoints(wallet))||tasks.rows.some(t=>!t.id||!integer(t.points))||options.rows.some(o=>!o.id||!integer(o.points)||!Number.isSafeInteger(o.duration_days)||o.duration_days<=0))throw Error('帳號資料不完整，暫不開放領點或扣點。');
+    state={tasks,options,wallet};balance.textContent='可用點數 '+availablePoints(wallet).toLocaleString()+' 點';
     caps.textContent=tasks.caps?['daily_research','weekly_research'].map((key,i)=>{const c=tasks.caps[key];return c&&integer(c.used)&&integer(c.limit)?(i?'本週 ':'今日 ')+c.used+'/'+c.limit+' 點':'';}).filter(Boolean).join(' · '):'任務上限以帳號服務確認';
     status.textContent='帳號狀態已更新。';extras();paint();return true;
    }catch(e){if(current()&&ticket===sequence){state=null;balance.textContent='餘額暫時無法確認';caps.textContent='';status.textContent=errorText(e);extras();paint();}return false;}
@@ -79,7 +80,7 @@
   }
   function confirmExchange(button){
    if(busy||!current())return;const id=button.dataset.pointsExchange,o=state?.options.rows.find(o=>o.id===id);if(!o)return;
-   const retry=!!pending(id);if(!retry&&state.wallet.task_points<o.points)return;
+   const retry=!!pending(id);if(!retry&&availablePoints(state.wallet)<o.points)return;
    dialog?.remove();dialog=document.createElement('dialog');dialog.className='mj-exchange-dialog';dialog.setAttribute('aria-labelledby','mj-confirm-title');
    dialog.innerHTML='<h2 id="mj-confirm-title">'+(retry?'確認上次兌換結果':'確認兌換使用券')+'</h2><p>'+esc(o.title)+' · '+o.duration_days+' 天</p><p>'+(retry?'將使用原單號確認結果，不重複扣點。':'扣除 <b>'+o.points.toLocaleString()+' 點</b>，取得使用券 '+o.duration_days+' 天。')+'</p><p>使用券存進本帳號券夾；核發後一個日曆月內按「開始使用」，才開始計時，啟用後享完整 '+o.duration_days+' 天。</p><div class="mj-confirm-actions"><button type="button" data-cancel>取消</button><button type="button" data-confirm>確認'+(retry?'結果':'扣點兌換')+'</button></div><div role="status" data-exchange-message aria-live="polite"></div>';
    root.append(dialog);const thisDialog=dialog;

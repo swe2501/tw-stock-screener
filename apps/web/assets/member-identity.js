@@ -16,8 +16,9 @@
   }
   let settingsPromise;
   function headers(auth=true){const c=config();if(!c.url||!c.key)throw Error('會員連線尚未設定，請重新整理頁面');const h={'apikey':c.key,'Content-Type':'application/json'};if(auth){const token=localStorage.getItem('sb_token');if(!token)throw Error('請先登入會員');h.Authorization='Bearer '+token;}return h;}
-  async function request(path,{method='GET',body,auth=true,...rest}={}){
+  async function request(path,{method='GET',body,auth=true,expectedOwner=null,...rest}={}){
     if(!path.startsWith('/auth/v1/')&&window.AcademyPhoneGate&&!await window.AcademyPhoneGate.ensure())throw Error('請先完成手機驗證');
+    if(expectedOwner&&expectedOwner!==localStorage.getItem('sb_token'))throw Error('帳號已切換，請重新開啟');
     let response;try{response=await fetch(config().url+path,{method,headers:headers(auth),...(body!==undefined?{body:JSON.stringify(body)}:{}),...rest});}catch(e){if(e.message.includes('尚未')||e.message.includes('請先'))throw e;throw Error('無法連上會員服務，請確認網路後重試');}
     if(response.status===204)return null;
     let d;try{d=await response.json();}catch{throw Error('會員服務回應異常，請稍後再試');}
@@ -144,11 +145,33 @@
   // AI point：只有儲值點數能轉入（1 點＝1 AI point）；轉回只能整數；扣點只在伺服器端（member_ai_charge）。見 docs/database/member-ai-points.sql
   const wholePoints=n=>{n=Number(n);if(!Number.isSafeInteger(n)||n<1||n>100000)throw Error('請輸入 1 到 100,000 的整數點數');return n;};
   const requestId=()=>crypto.randomUUID?crypto.randomUUID():'10000000-1000-4000-8000-100000000000'.replace(/[018]/g,c=>(c^crypto.getRandomValues(new Uint8Array(1))[0]&15>>c/4).toString(16));
-  async function aiConvert(points){return rpc('member_ai_convert',{p_points:wholePoints(points),p_request_id:requestId()});}
-  async function aiConvertBack(points){return rpc('member_ai_convert_back',{p_points:wholePoints(points),p_request_id:requestId()});}
+  // Keep an unresolved transfer across panel remounts/reloads. Never infer failure from a lost response.
+  const aiInFlight=new Set();
+  async function aiContext(){const owner=localStorage.getItem('sb_token');if(!owner)throw Error('請先登入會員');const user=await getProfile();if(owner!==localStorage.getItem('sb_token'))throw Error('帳號已切換，請重新開啟');return {owner,key:'academy.ai-transfer.'+user.id};}
+  function readAiPending(key){const raw=localStorage.getItem(key);if(!raw)return null;let p;try{p=JSON.parse(raw);}catch{throw Error('上次轉換紀錄異常，請聯絡客服確認，暫不建立新轉換');}if(!['in','out'].includes(p?.direction)||!Number.isSafeInteger(p.points)||p.points<1||p.points>100000||!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(p.id))throw Error('上次轉換紀錄異常，請聯絡客服確認，暫不建立新轉換');return p;}
+  async function aiPending(){const {key}=await aiContext();return readAiPending(key);}
+  async function aiTransfer(direction,points,retry=false){
+    const {key,owner}=await aiContext();if(!globalThis.navigator?.locks?.request)throw Error('此瀏覽器無法安全鎖定轉換，請改用最新版 Chrome 或 Edge');return navigator.locks.request('academy:'+key,{ifAvailable:true},async lock=>{if(!lock)throw Error('另一個分頁正在處理轉換，請稍候再確認');if(aiInFlight.has(key))throw Error('轉換處理中，請稍候');aiInFlight.add(key);
+    try{
+      let pending=readAiPending(key);
+      if(retry){if(!pending)throw Error('沒有待確認的轉換，請更新餘額');}
+      else {points=wholePoints(points);if(pending)throw Error('有一筆轉換尚待確認，請先確認上次轉換結果');pending={id:requestId(),direction,points};localStorage.setItem(key,JSON.stringify(pending));}
+      let r;try{r=await request('/rest/v1/rpc/'+(pending.direction==='in'?'member_ai_convert':'member_ai_convert_back'),{method:'POST',body:{p_points:pending.points,p_request_id:pending.id},expectedOwner:owner});}
+      catch(e){if(['MEMBER_INPUT_INVALID','MEMBER_STORED_POINTS_INSUFFICIENT','MEMBER_AI_POINTS_INSUFFICIENT','MEMBER_AI_UNAVAILABLE','MEMBER_VERIFY_REQUIRED'].includes(e.code))localStorage.removeItem(key);throw e;}
+      const amount=pending.direction==='in'?r?.converted:r?.returned;
+      if(Number(amount)!==pending.points||!/^\d+(\.\d+)?$/.test(String(r?.ai_points)))throw Error('尚未確認轉換結果，請沿用原單號重試');
+      localStorage.removeItem(key);
+      if(owner!==localStorage.getItem('sb_token'))throw Error('帳號已切換，請重新開啟');
+      return {...r,direction:pending.direction};
+    }finally{aiInFlight.delete(key);}
+    });
+  }
+  const aiConvert=points=>aiTransfer('in',points);
+  const aiConvertBack=points=>aiTransfer('out',points);
+  const aiRetry=()=>aiTransfer(null,null,true);
   const aiSettings=({auto,topupPoints,topupBelow})=>rpc('member_ai_update_settings',{p_auto_topup:!!auto,p_topup_points:wholePoints(topupPoints),p_topup_below:Number(topupBelow)||0});
   async function aiHistory(){const user=await getProfile(),owner=localStorage.getItem('sb_token');const q=new URLSearchParams({select:'id,kind,ai_delta,points_delta,balance_after,description,detail,created_at',user_id:'eq.'+user.id,order:'created_at.desc,id.desc',limit:'50'});let rows;try{rows=await request('/rest/v1/member_ai_ledger?'+q);}catch(e){if(e.status===404||/PGRST20[25]|42P01/.test(e.code||e.message||''))throw Error('AI point 服務尚未啟用');throw e;}if(owner!==localStorage.getItem('sb_token'))throw Error('帳號已切換，請重新開啟');if(!Array.isArray(rows))throw Error('AI point 紀錄格式異常');return rows;}
   const shareUnlockStatus=()=>rpc('member_share_unlock',{});
   const claimShareTrial=confirmed=>{if(confirmed!==true)return Promise.reject(Error('請先確認已分享給 3 位不同好友'));return rpc('member_share_unlock',{p_claim_trial:true,p_confirm_shared:true});};
-  window.AcademyIdentity={normalizePhone,getProfile,updateProfile,saveAvatar,settings,providerEnabled,startOAuth,linkOAuth,replaceOAuth,sendContactLink,verifyContactLink,sendMemberEmail,sendPhone,verifyPhone,consumeCallback,memberResource,revokeOtherSessions,ensureReferralCode,redeemCode,bindReferral,submitFeedback,claimReward,activateVoucher,usageVouchers,walletSummary,walletHistory,taskStatus,claimTask,exchangeOptions,exchangePoints,shareUnlockStatus,claimShareTrial,aiConvert,aiConvertBack,aiSettings,aiHistory};
+  window.AcademyIdentity={normalizePhone,getProfile,updateProfile,saveAvatar,settings,providerEnabled,startOAuth,linkOAuth,replaceOAuth,sendContactLink,verifyContactLink,sendMemberEmail,sendPhone,verifyPhone,consumeCallback,memberResource,revokeOtherSessions,ensureReferralCode,redeemCode,bindReferral,submitFeedback,claimReward,activateVoucher,usageVouchers,walletSummary,walletHistory,taskStatus,claimTask,exchangeOptions,exchangePoints,shareUnlockStatus,claimShareTrial,aiConvert,aiConvertBack,aiPending,aiRetry,aiSettings,aiHistory};
 })();

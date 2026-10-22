@@ -7,7 +7,7 @@ const {webcrypto}=require('node:crypto');
 function setup(settings={external:{google:true,apple:true,'custom:line-web':true,phone:true}}){
   const calls=[],saved=new Map(),accepted=[];
   const storage={getItem:k=>saved.get(k)||null,setItem:(k,v)=>saved.set(k,v),removeItem:k=>saved.delete(k)};
-  const context={SIG_SB_URL:'https://auth.example',SIG_SB_ANON:'public',URL,URLSearchParams,TextEncoder,crypto:webcrypto,btoa:s=>Buffer.from(s,'binary').toString('base64'),Date,Event,
+  const context={SIG_SB_URL:'https://auth.example',SIG_SB_ANON:'public',URL,URLSearchParams,TextEncoder,crypto:webcrypto,navigator:{locks:{request:async(name,options,run)=>run({name})}},btoa:s=>Buffer.from(s,'binary').toString('base64'),Date,Event,
     location:{protocol:'https:',origin:'https://site.example',pathname:'/',search:'',hash:'',assign:url=>calls.push({redirect:url})},
     history:{replaceState(){}},localStorage:storage,sessionStorage:storage,
     window:{_acceptMemberSession:s=>accepted.push(s),dispatchEvent(){}},
@@ -89,4 +89,41 @@ test('personal invitation provisioning is deduplicated per login and retries aft
  const {api,context,saved}=setup();saved.set('sb_token','member-a');let count=0,fail=true;
  context.fetch=async(url,o)=>{count++;assert.equal(o.headers.Authorization,'Bearer '+saved.get('sb_token'));return {ok:!fail,status:fail?503:200,json:async()=>fail?{message:'unavailable'}:{code:'GS123456ABCDEF'}};};
  await assert.rejects(api.ensureReferralCode());fail=false;const a=api.ensureReferralCode(),b=api.ensureReferralCode();assert.equal(a,b);assert.equal((await a).code,'GS123456ABCDEF');assert.equal(count,2);saved.set('sb_token','member-b');await api.ensureReferralCode();assert.equal(count,3);
+});
+
+
+test('AI transfer survives lost response and script reload; retry keeps amount, direction and request ID',async()=>{
+ const {api,context,saved,calls}=setup();saved.set('sb_token','member-a');let stored=1000,ai=0,lose=true;const receipts=new Map(),sent=[];
+ context.fetch=async(url,options)=>{if(url.endsWith('/user'))return {ok:true,status:200,json:async()=>({id:'member-a'})};const b=JSON.parse(options.body);sent.push({url,...b});let r=receipts.get(b.p_request_id);if(!r){stored-=b.p_points;ai+=b.p_points;r={converted:b.p_points,ai_points:String(ai)};receipts.set(b.p_request_id,r);}if(lose){lose=false;throw Error('connection lost after commit');}return {ok:true,status:200,json:async()=>r};};
+ await assert.rejects(api.aiConvert(100),/網路/);assert.equal(stored,900);assert.equal((await api.aiPending()).points,100);
+ await assert.rejects(api.aiConvertBack(20),/上次/);assert.equal(sent.length,1);
+ vm.runInNewContext(fs.readFileSync('apps/web/assets/member-identity.js','utf8'),context);
+ const reloaded=context.window.AcademyIdentity;const r=await reloaded.aiRetry();assert.equal(r.direction,'in');assert.equal(sent[0].p_request_id,sent[1].p_request_id);assert.equal(sent[1].p_points,100);assert.equal(stored,900);assert.equal(ai,100);assert.equal(await reloaded.aiPending(),null);
+});
+
+test('AI convert back retries the original transaction without crediting twice',async()=>{
+ const {api,context,saved}=setup();saved.set('sb_token','a');let credits=0,lose=true;const ids=[];
+ context.fetch=async(url,options)=>{if(url.endsWith('/user'))return {ok:true,status:200,json:async()=>({id:'a'})};const b=JSON.parse(options.body);ids.push(b.p_request_id);if(ids.length===1)credits+=b.p_points;if(lose){lose=false;throw Error('lost');}return {ok:true,status:200,json:async()=>({returned:35,ai_points:'0.1234'})};};
+ await assert.rejects(api.aiConvertBack(35));assert.equal((await api.aiPending()).direction,'out');await api.aiRetry();assert.equal(credits,35);assert.equal(ids[0],ids[1]);
+});
+
+test('AI pending transaction is isolated by verified member; account changes during phone gate send no transfer',async()=>{
+ const {api,context,saved}=setup();saved.set('sb_token','a');let transfers=0;
+ context.fetch=async(url)=>{if(url.endsWith('/user'))return {ok:true,status:200,json:async()=>({id:saved.get('sb_token')})};transfers++;throw Error('lost');};
+ await assert.rejects(api.aiConvert(10));saved.set('sb_token','b');assert.equal(await api.aiPending(),null);await assert.rejects(api.aiRetry(),/沒有待確認/);assert.equal(transfers,1);
+ saved.set('sb_token','a');assert.equal((await api.aiPending()).points,10);
+ context.window.AcademyPhoneGate={ensure:async()=>{saved.set('sb_token','b');return true;}};await assert.rejects(api.aiRetry(),/帳號已切換/);assert.equal(transfers,1);
+});
+
+test('AI blocks submission if pending storage fails; definite server rejection permits correction',async()=>{
+ const {api,context,saved}=setup();saved.set('sb_token','a');let posts=0;
+ context.fetch=async(url)=>{if(url.endsWith('/user'))return {ok:true,status:200,json:async()=>({id:'a'})};posts++;return {ok:false,status:400,json:async()=>({message:'MEMBER_STORED_POINTS_INSUFFICIENT'})};};
+ const set=context.localStorage.setItem;context.localStorage.setItem=()=>{throw Error('storage blocked');};await assert.rejects(api.aiConvert(10),/storage/);assert.equal(posts,0);context.localStorage.setItem=set;
+ await assert.rejects(api.aiConvert(10),/儲值點數不足/);assert.equal(await api.aiPending(),null);assert.equal(posts,1);
+});
+
+test('AI concurrent submissions send once and malformed receipt remains retryable',async()=>{
+ const {api,context,saved}=setup();saved.set('sb_token','a');let finish,posts=0;
+ context.fetch=async(url)=>{if(url.endsWith('/user'))return {ok:true,status:200,json:async()=>({id:'a'})};posts++;return new Promise(resolve=>finish=resolve);};
+ const first=api.aiConvert(100);await new Promise(resolve=>setImmediate(resolve));await assert.rejects(api.aiConvert(100),/處理中/);assert.equal(posts,1);finish({ok:true,status:200,json:async()=>({converted:200,ai_points:'200'})});await assert.rejects(first,/尚未確認/);assert.equal((await api.aiPending()).points,100);
 });
