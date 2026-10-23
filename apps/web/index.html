@@ -11225,7 +11225,8 @@
         .map(m => { const t = _snapMarkerDate(m.date); if (!t) return null;
           const lb = m.label || '', sell = /賣|出清/.test(lb), buy = !sell && /買/.test(lb);
           if (sell || buy) return { time: t, position: sell ? 'aboveBar' : 'belowBar', color: sell ? '#16a34a' : '#ef4444',
-            shape: sell ? 'arrowDown' : 'arrowUp', text: '', size: 1, _side: sell ? 's' : 'b' };   // 2026-10-23 主力買賣改紅綠箭頭、不寫字
+            shape: sell ? 'arrowDown' : 'arrowUp', size: 1, _side: sell ? 's' : 'b',
+            text: lb.replace(/主力買點|大單買|連買起|連買迄|出清|買|賣/g, '').trim() };   // 2026-10-23 紅綠箭頭＋分點名稱，不寫買賣字樣
           return { time: t, position: 'aboveBar', color: '#ff1744', shape: 'arrowDown', text: lb, size: 1 }; })
         .filter(Boolean);
       const catalyst = _catalystEvents
@@ -11251,12 +11252,15 @@
       _brokerColors(); const bcol = window._brokerColor || {};
       // 2026-10-23 用戶指定：不寫「買／賣」字樣，紅色向上箭頭＝買、綠色向下箭頭＝賣；同日多家只寫家數，分點名稱看滑過小卡
       window._brokerSellByTime = Object.fromEntries(Object.entries(smap).map(([t, s]) => [t, [...s.n]]));
-      const broker = Object.entries(bmap).map(([date, arr]) => {
-        const n = new Set(arr).size;
-        return { time: date, position: 'belowBar', color: '#ef4444', shape: 'arrowUp', text: n > 1 ? String(n) : '', size: 1 };
-      }).concat(Object.entries(smap).map(([date, s]) => ({
-        time: date, position: 'aboveBar', color: '#16a34a', shape: 'arrowDown', text: s.n.size > 1 ? String(s.n.size) : '', size: 1,
-      })));
+      // 2026-10-23 用戶指定：箭頭旁寫分點名稱（不寫買賣字樣）；同日多家用「、」隔開，超過 3 家寫前 2 家＋等 N 家，完整名單看滑過小卡
+      const _bkMarks = (date, names, sell) => {
+        const ns = [...new Set(names)];
+        const text = ns.length > 3 ? ns.slice(0, 2).join('、') + ' 等' + ns.length + '家' : ns.join('、');
+        return [{ time: date, position: sell ? 'aboveBar' : 'belowBar', color: sell ? '#16a34a' : '#ef4444',
+                  shape: sell ? 'arrowDown' : 'arrowUp', text, size: 1 }];
+      };
+      const broker = Object.entries(bmap).flatMap(([date, arr]) => _bkMarks(date, arr, false))
+        .concat(Object.entries(smap).flatMap(([date, s]) => _bkMarks(date, [...s.n], true)));
       const div = _lastDivMarkers || [];
       const present = { div: div.length > 0, catalyst: catalyst.length > 0, broker: broker.length > 0, user: user.length > 0, sma20: _sma20Markers.length > 0 };
       const sel = [];
@@ -11267,7 +11271,7 @@
         .map(({ _side, ...m }) => m));
       if (S.sma20) sel.push(..._sma20Markers.filter(m => !window._sma20GroupsOn || window._sma20GroupsOn.has(m.group)));
       sel.push(...(_boxMarkers || []));   // 箱型標記另有自己的開關，不納入此分類
-      const all = sel.sort((a, b) => a.time < b.time ? -1 : 1);
+      const all = sel.sort((a, b) => a.time < b.time ? -1 : a.time > b.time ? 1 : 0);
       try { candleSeriesRef.setMarkers(all); } catch (_) {}
       _renderMarkerToggles(present);
       _renderSma20Groups();
@@ -12871,10 +12875,10 @@
           const m = meta[t.broker_id] || { name: t.broker_id, cat: '其他' };
           _brokerEntriesRaw.push({ date: t.trade_date, broker: m.name, cat: m.cat, id: String(t.broker_id) });
         }
-        // 2026-10-23 主力賣出（賣掉之前買的）：broker_trades 的 _sell／_exit 列
+        // 2026-10-23 主力賣出：K 圖只標「出清」（broker_trades 的 _exit 列；用戶指定減碼不標，減碼只在主力訊號表／出手明細列出）
         try {
           const rs = await fetch(`${SIG_SB_URL}/rest/v1/broker_trades?select=broker_id,trade_date,view`
-            + `&code=eq.${encodeURIComponent(code)}&view=in.(year_large_lots_sell,year_large_amount_sell,year_large_lots_exit,year_large_amount_exit)&order=trade_date`,
+            + `&code=eq.${encodeURIComponent(code)}&view=in.(year_large_lots_exit,year_large_amount_exit)&order=trade_date`,
             { headers: { apikey: SIG_SB_ANON, Authorization: `Bearer ${_authToken}` } });
           if (rs.ok && currentCode === code) for (const t of await rs.json()) {
             const m = meta[t.broker_id] || { name: t.broker_id, cat: '其他' };
