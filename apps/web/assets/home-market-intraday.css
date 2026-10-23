@@ -179,13 +179,14 @@
 
 .home-fx-intraday .mini-neutral {color:var(--accent);}
 #cbOverview #cbGov>.cb-ovc {display:flex;flex-direction:column;}
-#cbOverview #cbGov .gs-pdtabs {margin-top:auto!important;padding-top:20px;width:100%;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;}
+#cbOverview #cbGov .gs-pdtabs {margin-top:auto!important;padding:3px;width:100%;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;}
 #cbOverview #cbGov .gs-pd {width:100%;font-size:14px;padding:9px 0;line-height:1.5;}
 #cbPulse .home-market-card .home-quote {align-self:start;padding-top:10px;}
 #cbPulse .home-fx-date,#cbPulse .vix-year-date {display:block;font-size:11px;line-height:1.7;margin-top:6px;}
 .vix-history-chart {position:relative;}
 .vix-flag-layer {position:absolute;inset:0;pointer-events:none;z-index:3;}
-.vix-high-flag {--flag-ink:#b28a43;--flag-cloth:#f8f0df;position:absolute;width:25px;height:30px;padding:2px 4px 3px 0!important;transform:translateY(-100%);display:grid;place-items:center;pointer-events:auto;border:0!important;border-radius:5px;background:transparent!important;box-shadow:none!important;cursor:pointer;color:var(--flag-ink);}
+.vix-high-flag {--flag-ink:#b28a43;--flag-cloth:#f8f0df;position:absolute;width:25px;height:30px;padding:2px 4px 3px 0!important;transform:translateY(-100%)!important;transition:none!important;display:grid;place-items:center;pointer-events:auto;border:0!important;border-radius:5px;background:transparent!important;box-shadow:none!important;cursor:pointer;color:var(--flag-ink);}
+.vix-high-flag:hover,.vix-high-flag:active,.vix-high-flag:focus-visible {transform:translateY(-100%)!important;}
 .vix-high-flag[hidden] {display:none!important;}
 .vix-high-flag svg {width:18px;height:25px;overflow:visible;filter:drop-shadow(0 1px 1px #73562312);transition:transform .16s ease;transform-origin:5px 22px;}
 .vix-flag-cloth {fill:var(--flag-cloth);stroke:var(--flag-ink);stroke-width:1.15;stroke-linejoin:round;}
@@ -202,14 +203,51 @@
 @media(max-width:600px){#cbOverview #cbGov .gs-pd{font-size:13px;padding:10px 0}}
 
 /* The five pulse cards share one information band and one aligned chart band. */
-#cbPulse .home-market-card>.k {height:30px;min-height:30px;margin-bottom:9px;}
-#cbPulse .home-fx-period {height:26px;box-sizing:border-box;line-height:18px;padding:3px 5px;}
-#cbPulse .home-market-card .home-quote-row {grid-template-columns:minmax(0,1fr);grid-template-rows:112px 154px;gap:0;min-height:0;align-items:stretch;}
+#cbPulse .home-market-card>.k {height:34px;min-height:34px;margin-bottom:10px;font-size:16px;}
+#cbPulse .home-fx-period {height:30px;box-sizing:border-box;line-height:20px;padding:4px 6px;font-size:14px;}
+#cbPulse .home-market-card .home-quote-row {grid-template-columns:minmax(0,1fr);grid-template-rows:126px 154px;gap:0;min-height:0;align-items:stretch;}
 #cbPulse .home-market-card .home-quote {align-self:stretch;padding-top:6px;min-height:0;}
 #cbPulse .home-market-card .home-intraday,
 #cbPulse .home-market-card .home-intraday.is-unavailable {box-sizing:border-box;display:block;align-self:stretch;min-height:0;height:154px;border-left:0;border-top:1px solid var(--border);padding:12px 0 0;margin:0;}
 #cbPulse .home-market-card .home-intraday.is-unavailable {display:flex;align-items:center;justify-content:center;}
 #cbPulse .home-market-card .home-intraday svg {height:112px;width:100%;max-height:none;}
-#cbPulse .home-market-card .home-intraday figcaption {font-size:10px;line-height:1.6;margin-top:5px;}
+#cbPulse .home-market-card .home-intraday figcaption {font-size:12px;line-height:1.6;margin-top:5px;}
 #cbPulse .home-market-card .home-fx-date,
-#cbPulse .home-market-card .vix-year-date {font-size:11px;line-height:1.6;margin-top:6px;}
+#cbPulse .home-market-card .vix-year-date {font-size:13px;line-height:1.6;margin-top:7px;}
+#cbPulse .home-market-card .v {font-size:32px!important;line-height:1.2;}
+#cbPulse .home-market-card .n {font-size:15px;line-height:1.6;}
+#cbPulse .home-market-card .home-change-percent {font-size:17px;line-height:1.5;margin-top:4px;}
+#cbPulse .home-market-card .home-fx-status {font-size:17px;line-height:1.6;}
+@container (max-width:180px) {
+  #cbPulse .home-market-card>.k {font-size:14px;gap:5px;}
+  #cbPulse .home-market-card .v {font-size:26px!important;}
+  #cbPulse .home-fx-period {font-size:13px;padding-inline:4px;min-width:52px;}
+}
+
+/* Overview titles and quote values use shared baselines across adjacent cards. */
+#cbOverview .cb-ovc>header {height:56px;min-height:56px;flex:0 0 56px;align-items:flex-start;align-content:flex-start;margin:0 0 14px;}
+#cbOverview .cb-ovc>header>span:first-child {font-size:16px;line-height:1.5;flex:1;}
+#cbOverview .cb-ovc>header small {display:block;font-size:12px;line-height:1.6;margin:3px 0 0;}
+#cbOverview .cb-ovc>header .cb-tag {font-size:12px;line-height:1.5;padding:4px 8px;}
+#cbOverview .home-market-card .home-quote-row {align-items:start;min-height:142px;}
+#cbOverview .home-market-card .home-quote {align-self:start;}
+#cbOverview .cb-ovc .big {font-size:32px!important;line-height:1.25;margin:0;}
+#cbOverview .cb-ovc .sub {font-size:15px;line-height:1.8;margin-top:10px;}
+#cbOverview .home-market-card .home-quote .sub>span {font-size:16px;line-height:1.6;}
+#cbOverview .home-market-card .home-quote .home-change-percent {font-size:17px;line-height:1.6;}
+#cbOverview .home-quote-context {font-size:15px;line-height:1.8;}
+#cbOverview .home-quote-context small {font-size:13px;line-height:1.7;}
+#cbOverview .home-market-card .cb-conv {font-size:14px;line-height:1.8;}
+#cbOverview .home-market-card .home-intraday figcaption {font-size:12px;line-height:1.6;}
+#cbOverview .cb-settle-details {font-size:14px;}
+#cbOverview .cb-settle-expand,#cbOverview .cb-settle-collapse {font-size:13px;}
+#cbOverview .cb-settle-body small {font-size:12px;}
+#cbOverview #cbGov .gs-pd {font-size:15px;}
+#cbOverview .calendar-month {font-size:13px;}
+#cbOverview .calendar-weekday {font-size:12px;}
+#cbOverview .home-settle-count small {font-size:14px;}
+#cbOverview .home-settle-count strong {font-size:32px;}
+#cbOverview .home-settle-count em {font-size:14px;}
+#cbOverview .home-settle-count>span {font-size:12px;}
+#cbOverview .home-settle-source {font-size:12px;line-height:1.8;}
+@media(max-width:1200px){#cbOverview .cb-ovc>header{height:60px;min-height:60px;flex-basis:60px}}

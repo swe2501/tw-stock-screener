@@ -21,6 +21,11 @@ assert.equal(means.length,6);for(const m of means){assert.equal(m.rows.length,32
 await d.locator('[data-ma-period="5"]').click();assert.equal(await p.evaluate(()=>testSeries.find(s=>s.options.title==='5日').series.options().visible),false);await d.locator('[data-ma-period="5"]').click();
 if(key==='台指VIX'){
  const flag=d.locator('.vix-high-flag:not([hidden])').first();await flag.waitFor();assert.equal(await flag.locator('svg .vix-flag-cloth').count(),1,'custom refined flag');
+ await p.emulateMedia({reducedMotion:'no-preference'});
+ const resting=await flag.boundingBox();await p.mouse.move(resting.x+resting.width/2,resting.y+resting.height/2);
+ for(let i=0;i<12;i++){await p.waitForTimeout(35);const hovering=await flag.boundingBox();assert.ok(Math.abs(hovering.y-resting.y)<.5,'hover preserves flag hit area');assert.equal(await flag.evaluate(e=>e.matches(':hover')),true,'pointer stays over flag without oscillating');assert.equal(await d.locator('.vix-flag-tooltip').isVisible(),true,'tooltip stays visible');}
+ await p.mouse.down();await p.waitForTimeout(180);assert.ok(Math.abs((await flag.boundingBox()).y-resting.y)<.5,'pressed flag preserves anchor');await p.mouse.up();await flag.click();
+ await p.emulateMedia({reducedMotion:'reduce'});
  await flag.hover();assert.match(await d.locator('.vix-flag-tooltip').innerText(),/一年新高/);assert.match(await d.locator('.vix-flag-tooltip').innerText(),/VIX 352.00/);
  await d.locator('[data-sc-marks]').click();await p.waitForFunction(()=>!document.querySelector('#seriesChartDialog .vix-high-flag:not([hidden])'));assert.equal(await d.locator('.vix-flag-tooltip').isVisible(),false);
  await d.locator('[data-sc-marks]').click();await flag.waitFor();
