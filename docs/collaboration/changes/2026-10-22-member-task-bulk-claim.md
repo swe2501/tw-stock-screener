@@ -8,7 +8,7 @@
 
 ## 共用資料庫與相容性
 
-**使用者於 2026-10-22 明確批准這兩份 SQL；已依序套用到 Taiwan stock2 (`bruqrbvbjxntgoljxsne`) 並驗收成功。新增五項任務仍未啟用，網站前端尚未發布。** 依 `docs/collaboration/README.md`，正式 migration 與活動啟用須另行明確批准；本次批准未包含新活動啟用。
+**使用者於 2026-10-22 明確批准這兩份 SQL；已依序套用到 Taiwan stock2 (`bruqrbvbjxntgoljxsne`) 並驗收成功。新增五項任務仍未啟用。網站前端納入 2026-10-23 這次 234 發布；Vercel 實際部署結果需另行核對。** 依 `docs/collaboration/README.md`，正式 migration 與活動啟用須另行明確批准；本次批准未包含新活動啟用。
 
 前置：現行任務點數／onboarding v3、已部署 learning verification 與 catalog、screen calendar。此次依序執行：
 
@@ -37,4 +37,4 @@ iPhone／Android／iPad 沒有程式變更；舊 App 可繼續讀既有帳本、
 
 使用者另報 ETF 抽屜蓋住後開的個股 K 圖。原因為兩者原本皆為 z-index 9995。只將獨立 `#chartModal:not(.etx-embedded)` 提升至 10000，保留 ETF 技術面內嵌 K 圖的 auto 層級，樣式快取升至 v13。
 
-`tests/etf-stock-chart-layer.browser.cjs` 使用實際成分股名稱點擊、真實網站 CSS 與視窗／歷史處理，僅替換行情圖繪製為確定性 fixture；驗證 K 圖位於上層且可點擊、Esc／關閉／前進後 ETF 頁籤仍保留、內嵌圖不受影響，通過深淺桌機／手機四種組合。`tests/navigation-history.browser.cjs` 原有整站歷史回歸亦通過。此修正尚未推送或部署。
+`tests/etf-stock-chart-layer.browser.cjs` 使用實際成分股名稱點擊、真實網站 CSS 與視窗／歷史處理，僅替換行情圖繪製為確定性 fixture；驗證 K 圖位於上層且可點擊、Esc／關閉／前進後 ETF 頁籤仍保留、內嵌圖不受影響，通過深淺桌機／手機四種組合。`tests/navigation-history.browser.cjs` 原有整站歷史回歸亦通過。此修正同樣納入 2026-10-23 這次 234；未完成的會員服務不包含在此次發布。
