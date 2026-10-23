@@ -2970,15 +2970,38 @@
     .fc-box-stock>span{display:block;color:var(--text-muted);font-size:10.5px;margin-top:5px;}
     @media(max-width:900px){.fc-grid3{grid-template-columns:1fr;}}
     @media(max-width:420px){.fc-box-list{grid-template-columns:1fr;}}
+    /* 產業類股 + 個股漲跌分布（取代原三張卡片；2026-10-23） */
+    .fc-grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+    @media(max-width:760px){.fc-grid2{grid-template-columns:1fr;}}
+    .fc-seg{display:inline-flex;gap:2px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:2px;margin-left:auto;}
+    .fc-seg button{border:0;background:transparent;color:var(--text-muted);font:700 11px/1 Inter,sans-serif;padding:4px 11px;border-radius:5px;cursor:pointer;}
+    .fc-seg button.on{background:var(--accent);color:var(--on-accent);}
+    .fc-secrow{display:grid;grid-template-columns:68px 1fr auto;align-items:center;gap:9px;padding:5px 0;font-size:12px;border-bottom:1px solid var(--border);}
+    .fc-secrow:last-child{border-bottom:0;}
+    .fc-secrow .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;}
+    .fc-secrow .nm:hover{color:var(--accent);}
+    .fc-secbar{height:13px;border-radius:3px;background:var(--surface2);position:relative;overflow:hidden;}
+    .fc-secbar i{position:absolute;top:0;bottom:0;left:0;border-radius:3px;}
+    .fc-secrow .vals{white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:800;text-align:right;}
+    .fc-rs{font-size:10px;color:var(--text-muted);font-weight:600;margin-left:6px;}
+    .fc-hist{display:flex;align-items:flex-end;gap:4px;height:132px;padding:8px 2px 0;}
+    .fc-hcol{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;min-width:0;}
+    .fc-hbar{width:82%;border-radius:3px 3px 0 0;min-height:2px;}
+    .fc-hval{font-size:10px;font-weight:800;margin-bottom:2px;font-variant-numeric:tabular-nums;}
+    .fc-hlbl{font-size:8.5px;color:var(--text-muted);margin-top:3px;text-align:center;line-height:1.15;white-space:nowrap;}
+    .fc-ratio{margin-top:9px;padding-top:8px;border-top:1px dashed var(--border);font-size:12.5px;text-align:center;font-weight:800;}
   </style>
   <div id="focusView" style="display:none">
     <div class="ov-tabs" aria-label="今日焦點分類" style="margin:0 0 16px"><button type="button" onclick="_focusTab('overview')">市場總覽</button><button class="on" type="button">今日排行榜</button><button type="button" onclick="_focusTab('todayindex')">題材索引</button></div>
-    <div class="fc-summary" id="fcSummary"></div>
     <div class="fc-grid3">
       <div id="fcSnapshotDate" style="grid-column:1 / -1;font-size:12px;color:var(--text-muted)"></div>
       <div class="fc-card fc-ranking fc-ranking-gainers"><div class="fc-h"> 漲幅榜 <span class="fc-sub">TOP30</span></div><div class="fc-tbl" id="fcGainers"><div class="fc-empty">載入中…</div></div></div>
       <div class="fc-card fc-ranking fc-ranking-losers"><div class="fc-h"> 跌幅榜 <span class="fc-sub">TOP30</span></div><div class="fc-tbl" id="fcLosers"><div class="fc-empty">載入中…</div></div></div>
       <div class="fc-card fc-ranking fc-ranking-surge"><div class="fc-h"> 爆量榜 <span class="fc-sub">量比≥1.3</span></div><div class="fc-tbl" id="fcSurge"><div class="fc-empty">載入中…</div></div></div>
+    </div>
+    <div class="fc-grid2">
+      <div class="fc-card"><div class="fc-h">產業類股<span class="fc-seg" role="group" aria-label="領漲領跌"><button type="button" class="on" data-sec="strong">領漲</button><button type="button" data-sec="weak">領跌</button></span></div><div id="fcSectors"><div class="fc-empty">載入中…</div></div></div>
+      <div class="fc-card"><div class="fc-h">個股漲跌分布 <span class="fc-sub">上市櫃 · 當日</span></div><div id="fcDist"><div class="fc-empty">載入中…</div></div></div>
     </div>
     <div class="fc-grid3">
       <div class="fc-card"><div class="fc-h"> 今日題材焦點</div><div id="fcTopics"><div class="fc-empty">載入中…</div></div></div>
@@ -3571,8 +3594,56 @@
     function note(){
       el('fcNote').innerHTML='<b>學院導讀</b> 先比較個股與大盤的趨勢，再確認量能是否配合。單日強弱容易受事件影響，持續觀察同一組股票，比只看今天排名更有意義。';
     }
+    function loadMarketCards(){
+      var SB=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'', AK=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';
+      function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+      var taiexPct=null, ovData=null, secMode='strong';
+      function renderSectors(){
+        if(!el('fcSectors'))return;
+        if(!ovData){el('fcSectors').innerHTML='<div class="fc-empty">讀取失敗</div>';return;}
+        var list=((secMode==='strong')?ovData.sectorsStrong:ovData.sectorsWeak)||[];
+        if(!list.length){el('fcSectors').innerHTML='<div class="fc-empty">今日無資料</div>';return;}
+        list=list.slice(0,6);
+        var maxAbs=Math.max.apply(null,list.map(function(s){return Math.abs(s.pct||0);}).concat([1]));
+        el('fcSectors').innerHTML=list.map(function(s){
+          var p=Number(s.pct||0), up=p>0, w=Math.min(100,Math.abs(p)/maxAbs*100);
+          var col=up?'var(--red)':(p<0?'var(--green)':'var(--text-muted)');
+          var rs=(taiexPct!=null)?(p-taiexPct):null;
+          return '<div class="fc-secrow"><span class="nm" title="'+esc(s.name)+'" onclick="try{window._openTheme&&window._openTheme(\''+esc(s.name)+'\')}catch(e){}">'+esc(s.name)+'</span>'
+            +'<span class="fc-secbar"><i style="width:'+w+'%;background:'+col+'"></i></span>'
+            +'<span class="vals" style="color:'+col+'">'+(up?'+':'')+p.toFixed(2)+'%'
+            +(rs!=null?'<span class="fc-rs">相對 '+(rs>0?'+':'')+rs.toFixed(2)+'</span>':'')+'</span></div>';
+        }).join('');
+      }
+      function renderDist(j){
+        if(!el('fcDist'))return;
+        if(!j||j.error||!j.dist){el('fcDist').innerHTML='<div class="fc-empty">讀取失敗</div>';return;}
+        var d=j.dist;
+        var cols=[{k:'limit_up',l:'漲停'},{k:'up5',l:'+5%↑'},{k:'up2',l:'2~5%'},{k:'up0',l:'0~2%'},
+          {k:'flat',l:'平盤'},{k:'dn0',l:'0~2%'},{k:'dn2',l:'2~5%'},{k:'dn5',l:'5%↓'},{k:'limit_down',l:'跌停'}];
+        var max=Math.max.apply(null,cols.map(function(c){return d[c.k]||0;}).concat([1]));
+        var bars=cols.map(function(c){
+          var v=d[c.k]||0, h=Math.round(v/max*100), col=c.k==='flat'?'var(--text-muted)':(c.k.indexOf('up')===0||c.k==='limit_up'?'var(--red)':'var(--green)');
+          return '<div class="fc-hcol"><div class="fc-hval">'+v+'</div><div class="fc-hbar" style="height:'+h+'%;background:'+col+'"></div><div class="fc-hlbl">'+c.l+'</div></div>';
+        }).join('');
+        var total=j.total||((j.up||0)+(j.down||0)+(j.flat||0))||1;
+        var upp=(j.up/total*100).toFixed(1), dnp=(j.down/total*100).toFixed(1);
+        el('fcDist').innerHTML='<div class="fc-hist">'+bars+'</div>'
+          +'<div class="fc-ratio"><span style="color:var(--red)">上漲 '+(j.up||0)+' ('+upp+'%)</span>　：　<span style="color:var(--green)">下跌 '+(j.down||0)+' ('+dnp+'%)</span></div>';
+      }
+      // 大盤漲跌幅（相對強弱基準）→ 再抓產業(overview)
+      fetch(SB+'/rest/v1/taiex_daily?select=close&order=trade_date.desc&limit=2',{headers:{apikey:AK,Authorization:'Bearer '+AK}}).then(function(r){return r.json();}).then(function(a){
+        if(Array.isArray(a)&&a.length>=2&&a[1].close)taiexPct=(a[0].close/a[1].close-1)*100;
+      }).catch(function(){}).finally(function(){
+        fetch(window.__API+'/api/screen?stat=overview').then(function(r){return r.json();}).then(function(j){ovData=j;renderSectors();}).catch(function(){if(el('fcSectors'))el('fcSectors').innerHTML='<div class="fc-empty">讀取失敗</div>';});
+      });
+      fetch(window.__API+'/api/screen?stat=market').then(function(r){return r.json();}).then(renderDist).catch(function(){if(el('fcDist'))el('fcDist').innerHTML='<div class="fc-empty">讀取失敗</div>';});
+      // 領漲/領跌 切換
+      var card=el('fcSectors')&&el('fcSectors').closest('.fc-card');
+      if(card)card.querySelectorAll('.fc-seg button').forEach(function(b){b.onclick=function(){card.querySelectorAll('.fc-seg button').forEach(function(x){x.classList.remove('on');});b.classList.add('on');secMode=b.dataset.sec;renderSectors();};});
+    }
     window._focusShow=function(){
-      loadFocus(); loadSummary(); loadTopics(); note();
+      loadFocus(); loadMarketCards(); loadTopics(); note();
       if(window._loadNames){ window._loadNames(function(){ loadBox(); loadGreed(); loadSig(); }); }
       else { loadBox(); loadGreed(); loadSig(); }
       loaded=true;
@@ -10144,18 +10215,30 @@
             var box=el('cnpFund'); if(!box)return; box.innerHTML='<div class="fc-empty">載入中…</div>';
             var SB=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'', AK=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';
             var H={apikey:AK,Authorization:'Bearer '+AK};
+            function escF(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
             Promise.all([
               fetch(SB+'/rest/v1/stock_fundamentals?select=*&code=eq.'+code,{headers:H}).then(function(r){return r.json();}),
-              fetch(SB+'/rest/v1/stock_financials?select=*&code=eq.'+code+'&order=year.desc,season.desc&limit=8',{headers:H}).then(function(r){return r.json();})
+              fetch(SB+'/rest/v1/stock_financials?select=*&code=eq.'+code+'&order=year.desc,season.desc&limit=8',{headers:H}).then(function(r){return r.json();}),
+              fetch(SB+'/rest/v1/stock_themes?select=themes&code=eq.'+code,{headers:H}).then(function(r){return r.json();}).catch(function(){return [];})
             ]).then(function(res){
-              var f=(res[0]||[])[0], fins=res[1]||[];
-              if(!f && !fins.length){ box.innerHTML='<div class="fc-empty">暫無基本面資料（金融股財報格式不同，後續補）</div>'; return; }
+              var f=(res[0]||[])[0], fins=res[1]||[], themes=((res[2]||[])[0]||{}).themes||[];
+              if(!f && !fins.length && !themes.length){ box.innerHTML='<div class="fc-empty">暫無基本面資料（金融股財報格式不同，後續補）</div>'; return; }
               f=f||{};
               var ym=f.rev_ym?(String(f.rev_ym).slice(0,3)+'/'+String(f.rev_ym).slice(3)):'';
               var h='<div class="cnp-fcard"><div class="cnp-fgrid">'
                 +kv('產業',f.industry||'—')+kv('殖利率',f.dividend_yield!=null?f.dividend_yield+'%':'—')
                 +kv('本益比 PE',f.pe!=null?f.pe:'—')+kv('股價淨值比 PB',f.pb!=null?f.pb:'—')
                 +'</div></div>';
+              // 所屬題材（stock_themes：合夥人精選題材 + Goodinfo 概念 + 官方產業別；題材/概念藍、產業別灰）
+              if(themes.length){
+                var chips=themes.map(function(t){
+                  var isInd=(t&&t.src==='產業');
+                  return '<span style="display:inline-block;margin:3px 5px 0 0;padding:2px 9px;border-radius:11px;font-size:12px;line-height:1.6;'
+                    +(isInd?'background:rgba(148,163,184,.18);color:var(--text-muted)':'background:rgba(37,99,235,.14);color:var(--accent)')
+                    +'">'+escF(t&&(t.name||t.id))+'</span>';
+                }).join('');
+                h+='<div class="cnp-fcard"><div class="cnp-fk" style="margin-bottom:2px">所屬題材 <span style="opacity:.6;font-weight:400">（'+themes.length+'）</span></div><div>'+chips+'</div></div>';
+              }
               // 月營收
               if(f.rev_month!=null){
                 h+='<div class="cnp-fcard"><div class="cnp-fk" style="margin-bottom:4px">月營收（'+ym+'）</div>'

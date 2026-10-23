@@ -3392,6 +3392,9 @@ class handler(BaseHTTPRequestHandler):
             try:
                 stocks, mdate = fetch_all_stocks_latest()
                 up = dn = fl = up_lim = dn_lim = 0
+                # 個股漲跌分布（9 格直方圖）：漲停 / +5%↑ / +2~5% / +0~2% / 平盤 / -0~2% / -2~5% / -5%↓ / 跌停
+                dist = {"limit_up": 0, "up5": 0, "up2": 0, "up0": 0, "flat": 0,
+                        "dn0": 0, "dn2": 0, "dn5": 0, "limit_down": 0}
                 for s in stocks.values():
                     c = s.get("close"); p = s.get("prev_close")
                     if c is None or not p:
@@ -3402,8 +3405,19 @@ class handler(BaseHTTPRequestHandler):
                     else: fl += 1
                     if chg >= 9.5: up_lim += 1
                     elif chg <= -9.5: dn_lim += 1
+                    # 分布分格（漲停/跌停優先，其餘依幅度）
+                    if chg >= 9.5: dist["limit_up"] += 1
+                    elif chg >= 5: dist["up5"] += 1
+                    elif chg >= 2: dist["up2"] += 1
+                    elif chg > 0: dist["up0"] += 1
+                    elif chg == 0: dist["flat"] += 1
+                    elif chg > -2: dist["dn0"] += 1
+                    elif chg > -5: dist["dn2"] += 1
+                    elif chg > -9.5: dist["dn5"] += 1
+                    else: dist["limit_down"] += 1
                 return self._send_json(200, {"date": mdate, "up": up, "down": dn, "flat": fl,
-                                             "up_limit": up_lim, "down_limit": dn_lim, "total": len(stocks)})
+                                             "up_limit": up_lim, "down_limit": dn_lim,
+                                             "total": len(stocks), "dist": dist})
             except Exception as e:
                 return self._send_json(200, {"error": str(e)})
         # 股票代號→名稱對照（前端各視圖共用；純靜態，不查 DB）
