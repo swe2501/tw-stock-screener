@@ -3743,12 +3743,13 @@
     // 2026-10-12 載入加速：先用瀏覽器裡上一次的資料立刻畫出來，再背景抓最新的，有變才重畫（資料每日更新一次，先看到舊的幾乎不會差）。
     window._swrJson=window._swrJson||function(key,url,paint,fail,loading){
       var K='swr_'+key, c=null, had=false;
-      try{ c=JSON.parse(localStorage.getItem(K)||'null'); if(c&&c.d){ had=true; paint(c.d); } }catch(e){ had=false; }
+      function compatible(d){return !/^(themes|sectors)$/.test(key)||(d&&d.category_version>=2);}
+      try{ c=JSON.parse(localStorage.getItem(K)||'null'); if(c&&c.d&&compatible(c.d)){ had=true; paint(c.d); } }catch(e){ had=false; }
       if(!had&&loading) loading();
       // 2026-10-12 先讀前一晚算好存進 Supabase page_cache 的整頁資料（快）；表裡沒有、或超過 4 天沒更新，才退回請後端現算
       var SB=(typeof SIG_SB_URL!=='undefined'&&SIG_SB_URL)?SIG_SB_URL:'https://bruqrbvbjxntgoljxsne.supabase.co', AK=(typeof SIG_SB_ANON!=='undefined'&&SIG_SB_ANON)?SIG_SB_ANON:'sb_publishable_KgYlaR-mqtx4uVre6kPD2A_qO6tdT1y';
       var fresh=fetch(SB+'/rest/v1/page_cache?kind='+window.__pcQ(key)+'&select=kind,payload,updated_at',{headers:{apikey:AK,Authorization:'Bearer '+AK}}).then(function(r){return r.json();}).then(function(a){
-        var x=window.__pcPick(a,key); if(!x||!x.payload||x.payload.error||(Date.now()-new Date(x.updated_at).getTime())>4*86400000) throw new Error('no table row'); return x.payload;
+        var x=window.__pcPick(a,key); if(!x||!x.payload||!compatible(x.payload)||x.payload.error||(Date.now()-new Date(x.updated_at).getTime())>4*86400000) throw new Error('no table row'); return x.payload;
       }).catch(function(){ return fetch(url).then(function(r){return r.json();}); });
       return fresh.then(function(d){
         if(!d||d.error){ if(!had&&fail) fail(d); return; }
@@ -3767,14 +3768,14 @@
     window._swrRT=window._swrRT||function(key,url,paint,fail,loading){
       if(!(window._twSession&&window._twSession())) return window._swrJson(key,url,paint,fail,loading);
       var K='swr_'+key, had=false;
-      try{ var c=JSON.parse(localStorage.getItem(K)||'null'); if(c&&c.d){ had=true; paint(c.d); } }catch(e){}
+      try{ var c=JSON.parse(localStorage.getItem(K)||'null'); if(c&&c.d&&(!/^(themes|sectors)$/.test(key)||c.d.category_version>=2)){ had=true; paint(c.d); } }catch(e){}
       if(!had&&loading) loading();
       var SB=(typeof SIG_SB_URL!=='undefined'&&SIG_SB_URL)?SIG_SB_URL:'https://bruqrbvbjxntgoljxsne.supabase.co',
           AK=(typeof SIG_SB_ANON!=='undefined'&&SIG_SB_ANON)?SIG_SB_ANON:'sb_publishable_KgYlaR-mqtx4uVre6kPD2A_qO6tdT1y';
       return fetch(SB+'/rest/v1/page_cache?kind='+window.__pcQ(key+'_rt')+'&select=kind,payload,updated_at',{headers:{apikey:AK,Authorization:'Bearer '+AK}})
         .then(function(r){return r.json();}).then(function(a){
           var x=window.__pcPick(a,key+'_rt');
-          if(!x||!x.payload||x.payload.error||(Date.now()-new Date(x.updated_at).getTime())>360000) throw 0;
+          if(!x||!x.payload||(/^(themes|sectors)$/.test(key)&&!(x.payload.category_version>=2))||x.payload.error||(Date.now()-new Date(x.updated_at).getTime())>360000) throw 0;
           try{ localStorage.setItem(K,JSON.stringify({t:Date.now(),d:x.payload})); }catch(e){}
           paint(x.payload); return x.payload;
         }).catch(function(){ return window._swrJson(key,url,paint,fail,loading); });
@@ -3790,7 +3791,7 @@
       if(_data&&!(window._twSession&&window._twSession())){renderHeat();renderDetail();return;}
       var _tpaint=function(d){
         _data=d;
-        if(el('tmSub'))el('tmSub').textContent='固定題材分類（合夥人口徑）· '+(d.date||'')+' · 共 '+((d.listed||[]).length)+' 個上市族群';
+        if(el('tmSub'))el('tmSub').textContent='題材與概念分類 · '+(d.date||'')+' · 上市 '+((d.listed||[]).length)+' 類／上櫃 '+((d.otc||[]).length)+' 類';
         renderHeat();renderDetail();
       };
       window._swrRT('themes',window.__API+'/api/screen?stat=themes',_tpaint,function(){el('tmxHeat').innerHTML='<div class="fc-empty">讀取失敗</div>';});
