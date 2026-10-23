@@ -51,5 +51,9 @@ body .fs-info-dialog .fs-about-closing{border-top:1px solid var(--border);paddin
 @media(max-width:520px){.fs-info-dialog{padding:20px 16px;max-height:calc(100dvh - 32px)}.fs-info-dialog section{padding-inline:3px}.fs-info-dialog .fs-about-intro h3{font-size:20px}#foresightFooter .fs-footer-community{justify-content:center}#foresightFooter .fs-community-content>p{max-width:none}}
 
 /* Full bleed while the information stays on the site reading grid. */
-#foresightFooter{width:100vw;margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw);margin-bottom:calc(-1 * var(--fs-page-bottom,0px))}
+#foresightFooter{width:100vw;margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw);margin-bottom:0}
 body:has(#homeView:not([style*="display: none"])) {overflow-x:clip}
+
+.member-page>#foresightFooter{width:100%;margin:24px 0 0;}
+
+body:has(>#foresightFooter){padding-bottom:0;}

@@ -1,5 +1,8 @@
 /* Public brand information, with existing member service destinations. */
-(()=>{'use strict';const footer=document.getElementById('foresightFooter');if(!footer)return;const fitFooter=()=>footer.style.setProperty('--fs-page-bottom',getComputedStyle(document.body).paddingBottom);fitFooter();addEventListener('resize',fitFooter,{passive:true});
+(()=>{'use strict';const footer=document.getElementById('foresightFooter');if(!footer)return;
+const placeFooter=()=>{const member=document.body.classList.contains('mc-open')&&document.querySelector('.member-page');const parent=member||document.body;if(footer.parentElement!==parent)parent.append(footer);};
+placeFooter();new MutationObserver(placeFooter).observe(document.body,{attributes:true,attributeFilter:['class']});
+
 const dialog=document.createElement('dialog');dialog.className='fs-info-dialog';dialog.setAttribute('aria-labelledby','fs-info-title');dialog.innerHTML='<div><h2 id="fs-info-title"></h2><button type="button" aria-label="關閉網站資訊">×</button></div><section></section>';document.body.append(dialog);let opener=null;
 const info={about:{title:'關於先見',html:`<div class="fs-about-intro"><span>OUR STORY</span><h3>陪認真生活的你，<br>把研究這條路走得更踏實。</h3></div>
 <p>每個人走進市場，都有自己的理由。也許是想讓生活多一點餘裕，為孩子的未來做些準備，或替退休後的日子多留一份從容。每一分累積的背後，都是認真生活的心意。</p>
