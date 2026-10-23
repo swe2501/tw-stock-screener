@@ -11199,7 +11199,8 @@
         .map(m => { const t = _snapMarkerDate(m.date); if (!t) return null;
           const lb = m.label || '', sell = /賣|出清/.test(lb), buy = !sell && /買/.test(lb);
           if (sell || buy) return { time: t, position: sell ? 'aboveBar' : 'belowBar', color: sell ? '#16a34a' : '#ef4444',
-            shape: sell ? 'arrowDown' : 'arrowUp', text: '', size: 1, _side: sell ? 's' : 'b' };   // 2026-10-23 主力買賣改紅綠箭頭、不寫字
+            shape: sell ? 'arrowDown' : 'arrowUp', size: 1, _side: sell ? 's' : 'b',
+            text: lb.replace(/主力買點|大單買|連買起|連買迄|出清|買|賣/g, '').trim() };   // 2026-10-23 紅綠箭頭＋分點名稱，不寫買賣字樣
           return { time: t, position: 'aboveBar', color: '#ff1744', shape: 'arrowDown', text: lb, size: 1 }; })
         .filter(Boolean);
       const catalyst = _catalystEvents
@@ -11225,13 +11226,12 @@
       _brokerColors(); const bcol = window._brokerColor || {};
       // 2026-10-23 用戶指定：不寫「買／賣」字樣，紅色向上箭頭＝買、綠色向下箭頭＝賣；同日多家只寫家數，分點名稱看滑過小卡
       window._brokerSellByTime = Object.fromEntries(Object.entries(smap).map(([t, s]) => [t, [...s.n]]));
-      // 2026-10-23 箭頭外側再放各分點顏色小圓點（與主力分點清單同色），一眼看出是哪家；超過 4 家只在箭頭寫家數
+      // 2026-10-23 用戶指定：箭頭旁寫分點名稱（不寫買賣字樣）；同日多家用「、」隔開，超過 3 家寫前 2 家＋等 N 家，完整名單看滑過小卡
       const _bkMarks = (date, names, sell) => {
         const ns = [...new Set(names)];
+        const text = ns.length > 3 ? ns.slice(0, 2).join('、') + ' 等' + ns.length + '家' : ns.join('、');
         return [{ time: date, position: sell ? 'aboveBar' : 'belowBar', color: sell ? '#16a34a' : '#ef4444',
-                  shape: sell ? 'arrowDown' : 'arrowUp', text: ns.length > 4 ? String(ns.length) : '', size: 1 }]
-          .concat(ns.length > 4 ? [] : ns.map(n => ({ time: date, position: sell ? 'aboveBar' : 'belowBar',
-                  color: bcol[n] || '#9a7bc4', shape: 'circle', text: '', size: 0.6 })));
+                  shape: sell ? 'arrowDown' : 'arrowUp', text, size: 1 }];
       };
       const broker = Object.entries(bmap).flatMap(([date, arr]) => _bkMarks(date, arr, false))
         .concat(Object.entries(smap).flatMap(([date, s]) => _bkMarks(date, [...s.n], true)));
