@@ -69,10 +69,12 @@
   modal.classList.toggle('chart-fit',active);modal.classList.toggle('chart-fit-chip',active&&!tech);chooser.hidden=!tech;ratios.hidden=!active;
   hidden(byId('volPanel'),active&&!tech);hidden(byId('macdPanel'),active&&(!tech||select.value!=='macd'));hidden(byId('rsiPanel'),active&&(!tech||select.value!=='rsi'));
   if(active){
-   const offset=wrap.getBoundingClientRect().top-content.getBoundingClientRect().top+content.scrollTop;
-   // Very short screens keep a readable minimum and scroll inside the chart pane.
-   const available=matchMedia('(max-width:1100px)').matches?modal.querySelector('.modal-body').clientHeight:content.clientHeight;
-   const height=Math.max(tools.open?500:360,Math.floor(available-offset-12));
+   const body=modal.querySelector('.modal-body');
+   const viewportBottom=window.visualViewport?window.visualViewport.offsetTop+window.visualViewport.height:innerHeight;
+   const bottom=Math.min(body.getBoundingClientRect().bottom,viewportBottom);
+   // Measure the unscrolled position, so scrolling cannot grow the plots again.
+   const top=wrap.getBoundingClientRect().top+content.scrollTop+body.scrollTop;
+   const height=Math.max(120,Math.floor(bottom-top-12));
    if(wrap.style.getPropertyValue('--chart-fit-height')!==height+'px')wrap.style.setProperty('--chart-fit-height',height+'px');
   }
   const resized=[fitChart(typeof chartInstance==='undefined'?null:chartInstance,'chartContainer'),
@@ -87,6 +89,7 @@
  select.addEventListener('change',schedule);tools.addEventListener('toggle',()=>{if(!tools.open){mainRatio=defaultMainRatio;renderRatios();}schedule();});
  new ResizeObserver(schedule).observe(content);
  new MutationObserver(schedule).observe(modal,{subtree:true,childList:true,attributes:true,attributeFilter:['style','class']});
+ window.visualViewport?.addEventListener('resize',schedule);
  addEventListener('resize',schedule);document.addEventListener('fullscreenchange',schedule);
  window.AcademyChartViewport={refresh:schedule,placeTooltip};renderRatios();
 })();

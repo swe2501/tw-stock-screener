@@ -204,3 +204,7 @@
 .ohlc-broker b{display:inline-flex;align-items:center;gap:4px;font-weight:700;color:var(--text)}
 .ohlc-broker i{width:7px;height:7px;border-radius:50%;display:inline-block}
 #chartModal .broker-panel-head a:first-of-type{color:#9556aa;border-color:color-mix(in srgb,#a45fba 30%,var(--border));background:color-mix(in srgb,#a45fba 7%,var(--surface))}
+
+/* Keep sentiment with the research sidebar, leaving the chart column uninterrupted. */
+#chartNotePanel>#greedGauge{flex:none;padding:8px 10px!important;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:2px}
+#chartNotePanel>#greedGauge .pro-greed-layout{justify-content:center}
