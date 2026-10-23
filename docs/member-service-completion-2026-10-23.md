@@ -1,6 +1,6 @@
 # 會員中心補強驗收（2026-10-23）
 
-目前狀態：已完成本機實作與下列隔離測試；使用者已在 2026-10-23 明確批准，`member-service-completion.sql` 已成功套用至共用 Taiwan stock2 並通過唯讀檢查。前端 UI 尚未發布，不能用現有 UAT 畫面驗收這批內容。套用細節見 [資料庫部署紀錄](member-service-deployment-2026-10-23.md)。已發布的任務／通知與 ETF 圖層更新仍為 `88a16df`，234 不重做。
+目前狀態：已完成本機實作與下列隔離測試；使用者已在 2026-10-23 明確批准，`member-service-completion.sql` 已成功套用至共用 Taiwan stock2 並通過唯讀檢查。後續使用者已指示「推上去」，前端 UI 納入本次 234 發布批次；須等該批 Vercel 成功後驗收，詳 [網站發布紀錄](member-service-release-2026-10-23.md)。套用細節見 [資料庫部署紀錄](member-service-deployment-2026-10-23.md)。已發布的任務／通知與 ETF 圖層更新仍為 `88a16df`，已發布的舊版本不重做；新的會員服務依本次指示另走 234。
 
 ## 九項缺口進度
 
@@ -44,7 +44,7 @@
 1. 已批准並套用新的 `member-service-completion.sql`，部署前後帳本維持 6 筆／150 點、AI／儲值均關閉。
 2. 已執行 `member-service-verify.sql`：RPC、RLS、私人存取與 trigger 檢查均為 true，`rewards_missing_terms` 為 0。啟用任務維持 31、商品維持 8，無新增管理員。
 3. 新增管理角色需要網站帳號 UUID、權限範圍及另行明確同意，不自動使用儀表板管理者／第一個會員。
-4. 依使用者之後的發布指示整合網站；本次最新指令排除 234，因此沒有重新提交／推送／部署這批內容。
+4. 後續使用者已明確指示「推上去」，這批前端依 234 流程提交、更新 justy-layout、整合 UAT，最後核對三者版本與部署結果。
 5. 部署後才能完成真人登入、實際保存與角色驗收，不能把本機測試說成已線上驗證。
 
 相容與回復細節：`docs/collaboration/changes/2026-10-23-member-service-completion.md`。

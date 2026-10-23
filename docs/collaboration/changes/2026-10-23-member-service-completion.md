@@ -1,6 +1,6 @@
 # 會員服務補強：帳本、客服、資料攜出、復原與稽核
 
-狀態：本機已實作，隔離資料庫及瀏覽器測試通過；2026-10-23 使用者明確批准後，共用 SQL 已成功套用並通過唯讀驗證（詳 `docs/member-service-deployment-2026-10-23.md`）。前端尚未發布。基準為 UAT `88a16df`。分支 `shared/justy/member-service-completion`。
+狀態：本機已實作，隔離資料庫及瀏覽器測試通過；2026-10-23 使用者明確批准後，共用 SQL 已成功套用並通過唯讀驗證（詳 `docs/member-service-deployment-2026-10-23.md`）。後續使用者已指示發布，前端納入本次 234 批次，見 `docs/member-service-release-2026-10-23.md`；實際上線須另核對 Vercel 成功狀態。基準為 UAT `88a16df`。分支 `shared/justy/member-service-completion`。
 
 ## 目的與平台相容
 
