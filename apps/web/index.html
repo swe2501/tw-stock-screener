@@ -2821,7 +2821,7 @@
       .gs-otc-hist span.up i{background:var(--red);opacity:.6;} .gs-otc-hist span.dn i{background:var(--green);opacity:.6;}
       .gs-otc-hist span{height:78px;justify-content:flex-end;} .gs-otc-hist b{font-size:11px;color:var(--text);}
       @media (max-width:600px){ .gs-shgrid{grid-template-columns:1fr;} .gs-otc-hist{grid-template-columns:repeat(4,1fr);} .gs-otc-hist span:nth-child(-n+4){display:none;} }
-      /* 各卡片底部給學員的叮嚀/筆記(照合夥人) */
+      /* 各卡片底部學院導讀/筆記(照合夥人) */
       .gs-tip{background:var(--surface2);border-left:3px solid var(--accent);border-radius:8px;padding:11px 14px;margin-top:14px;font-size:12px;line-height:1.85;color:var(--text-muted);display:flex;gap:9px;align-items:flex-start;}
       .gs-tip .ic{flex:0 0 auto;font-size:14px;line-height:1.4;}
       .gs-tip b{color:var(--brand-green);font-weight:800;margin-right:4px;}
@@ -3489,7 +3489,7 @@
       el('ovSectorWeak').innerHTML=sectorRows(j.sectorsWeak);
       el('ovTurnover').innerHTML=turnoverRows(j.turnover);
       var src=j.sectorSource==='official'?'臺灣證券交易所 產業類指數（官方，rwd MI_INDEX）':'產業別彙整（備援）';
-      el('ovNote').innerHTML='<b>給學員的叮嚀</b> 先看大盤走勢與主要族群是否同向，再點開個股確認量能和價格位置。排名只是當日快照，持續觀察比只看單日強弱更有意義。';
+      el('ovNote').innerHTML='<b>學院導讀</b> 先看大盤走勢與主要族群是否同向，再點開個股確認量能和價格位置。排名只是當日快照，持續觀察比只看單日強弱更有意義。';
     }
     window._ovShow=function(){
       if(loaded) return;
@@ -3593,7 +3593,7 @@
       }).catch(function(){el('fcSig').innerHTML='<div class="fc-empty">讀取失敗</div>';});
     }
     function note(){
-      el('fcNote').innerHTML='<b>給學員的叮嚀</b> 先比較個股與大盤的趨勢，再確認量能是否配合。單日強弱容易受事件影響，持續觀察同一組股票，比只看今天排名更有意義。';
+      el('fcNote').innerHTML='<b>學院導讀</b> 先比較個股與大盤的趨勢，再確認量能是否配合。單日強弱容易受事件影響，持續觀察同一組股票，比只看今天排名更有意義。';
     }
     function loadMarketCards(){
       var SB=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'', AK=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';
@@ -3794,7 +3794,7 @@
       };
       window._swrRT('themes',window.__API+'/api/screen?stat=themes',_tpaint,function(){el('tmxHeat').innerHTML='<div class="fc-empty">讀取失敗</div>';});
       window._rtStart(function(){ window._swrRT('themes',window.__API+'/api/screen?stat=themes',_tpaint,function(){}); });
-      if(el('tmNote'))el('tmNote').innerHTML='<b>給學員的叮嚀</b> 先找多數成分股一起走強的題材，再確認成交是否集中於少數股票。題材熱度不代表行情一定延續，請搭配族群持續性和個股趨勢。';
+      if(el('tmNote'))el('tmNote').innerHTML='<b>學院導讀</b> 先找多數成分股一起走強的題材，再確認成交是否集中於少數股票。題材熱度不代表行情一定延續，請搭配族群持續性和個股趨勢。';
     };
     document.addEventListener('click',function(e){
       var m=e.target.closest('#tmxMarket button'); if(m){_market=m.dataset.m;_sel=null;[].forEach.call(el('tmxMarket').children,function(b){b.classList.toggle('on',b===m);});renderHeat();renderDetail();return;}
@@ -4094,7 +4094,7 @@
           });
         });
       }).catch(function(){el('bxList').innerHTML='<div class="fc-empty">讀取失敗</div>';});
-      if(el('bxNote'))el('bxNote').innerHTML='<b>給學員的叮嚀</b> 先看價格在整理區內還是已離開區間，再觀察突破後能否站穩、成交量是否配合。市場廣度與騰落用來確認有多少股票參與，極端數值不保證立即反轉。';
+      if(el('bxNote'))el('bxNote').innerHTML='<b>學院導讀</b> 先看價格在整理區內還是已離開區間，再觀察突破後能否站穩、成交量是否配合。市場廣度與騰落用來確認有多少股票參與，極端數值不保證立即反轉。';
     };
     window._VIEWS=window._VIEWS||{}; window._VIEWS.box={el:'boxView',show:'_boxShow'};
   })();
@@ -4145,7 +4145,7 @@
         el('luUp').innerHTML=rows(j.up,true);
         el('luDn').innerHTML=rows(j.down,false);
       }).catch(function(){el('luUp').innerHTML=el('luDn').innerHTML='<div class="fc-empty">讀取失敗</div>';});
-      if(el('luNote'))el('luNote').innerHTML='<b>給學員的叮嚀</b> 連續漲跌停反映情緒集中，但不代表趨勢一定延續。先看成交是否順暢、量能是否改變，再對照族群與大盤，避免只被漲跌幅吸引。';
+      if(el('luNote'))el('luNote').innerHTML='<b>學院導讀</b> 連續漲跌停反映情緒集中，但不代表趨勢一定延續。先看成交是否順暢、量能是否改變，再對照族群與大盤，避免只被漲跌幅吸引。';
     };
     window._VIEWS=window._VIEWS||{}; window._VIEWS.limitup={el:'limitupView',show:'_limitupShow'};
   })();
@@ -4231,7 +4231,7 @@
         fetchAll(SB,H).then(function(rows){
           DATA=rows.map(function(x){x.name=names[x.code]||'';return x;});
           loaded=true;
-          if(DATA[0]&&el('gdNote'))el('gdNote').innerHTML='<b>給學員的叮嚀</b> 先用情緒指標辨識市場偏熱或偏冷，再看價格、量能與籌碼是否同步。高檔不代表立即轉弱，低檔也不代表已經止穩。';
+          if(DATA[0]&&el('gdNote'))el('gdNote').innerHTML='<b>學院導讀</b> 先用情緒指標辨識市場偏熱或偏冷，再看價格、量能與籌碼是否同步。高檔不代表立即轉弱，低檔也不代表已經止穩。';
           render();
         });
       });
@@ -4324,7 +4324,7 @@
         D=j; el('dpSub').textContent='更新 '+j.today+(j.px_date?' · 股價 '+j.px_date:'')+((j.errors&&j.errors.length)?' ·  '+j.errors.join('；'):'');
         render();
       }).catch(function(){ el('dpBody').innerHTML='<tr><td colspan="8" class="fc-empty">讀取失敗</td></tr>'; });
-      el('dpNote').innerHTML='<b>給學員的叮嚀</b> 先確認處置期間與官方交易限制，再查看流動性和股價波動。處置是交易制度提醒，不代表公司價值或未來漲跌。';
+      el('dpNote').innerHTML='<b>學院導讀</b> 先確認處置期間與官方交易限制，再查看流動性和股價波動。處置是交易制度提醒，不代表公司價值或未來漲跌。';
     };
     window._VIEWS=window._VIEWS||{}; window._VIEWS.disposal={el:'disposalView',show:'_disposalShow'};
   })();
@@ -4659,7 +4659,7 @@
             <div class="pf-quads pf-quads4" id="fhFx3Dn"></div>
           </div>
         </div>
-        <div class="pf-fx3-note"><b>給學員的叮嚀</b> 先看今日現貨與期貨的方向，再用匯率確認是否同向。雷達用來比較各項數據的歷史位置，形狀大小不代表行情好壞；避險較高表示防禦需求較強。若匯率持平或訊號分歧，保留結論，回到K棒、趨勢與成交量確認。</div>
+        <div class="pf-fx3-note"><b>學院導讀</b> 先看今日現貨與期貨的方向，再用匯率確認是否同向。雷達用來比較各項數據的歷史位置，形狀大小不代表行情好壞；避險較高表示防禦需求較強。若匯率持平或訊號分歧，保留結論，回到K棒、趨勢與成交量確認。</div>
       </div>
 
       <!-- 第四層：衍生品結算與關鍵事件窗風險倒數 -->
@@ -4809,7 +4809,7 @@
       el('fhContracts').innerHTML='<div>大台指 (TX): <span class="'+(cur.fx_tx_net<0?'c-bear':'c-bull')+'" style="font-weight:600">'+n0(cur.fx_tx_net)+' 口</span></div>'
         +'<div>小台指 (MTX): <span class="'+(cur.fx_mtx_net<0?'c-bear':'c-bull')+'" style="font-weight:600">'+n0(cur.fx_mtx_net)+' 口 (約 '+n0(cur.fx_mtx_net/4)+' 大台)</span></div>'
         +'<div>微台指 (TMF): <span class="'+(cur.fx_tmf_net<0?'c-bear':'c-bull')+'" style="font-weight:600">'+n0(cur.fx_tmf_net)+' 口 (約 '+n0(cur.fx_tmf_net/20)+' 大台)</span></div>';
-      el('fhNote').innerHTML='<b>給學員的叮嚀</b> 先看避險程度是否升溫，再把現貨、期貨與匯率一起比較。同向時較容易理解市場態度；方向分歧時先保留結論。事件前的防禦部位不等於長期看空，仍須對照價格趨勢與事件後的變化。';
+      el('fhNote').innerHTML='<b>學院導讀</b> 先看避險程度是否升溫，再把現貨、期貨與匯率一起比較。同向時較容易理解市場態度；方向分歧時先保留結論。事件前的防禦部位不等於長期看空，仍須對照價格趨勢與事件後的變化。';
       initSim(cur, ser);
     }
     function kcard(k,icon,v,s,f,cls){ return '<div class="pf-glass pf-kc'+(cls?' '+cls:'')+'"><div class="k"><span>'+k+'</span>'+icon+'</div><div><div class="v">'+v+'</div><div class="s">'+s+'</div></div><div class="f">'+(f||'')+'</div></div>'; }
@@ -5349,7 +5349,7 @@
       <div class="bd-sec">
         <div class="bd-sec-h"><span></span>5 階週期決策層級（由大到小；上層不可被下層推翻）</div>
         <div class="bd-sec-sub">60日定總方向與曝險上限 → 20日波段防守 → 10 OR 5日動能延續 → 今日盤後家數結構。</div>
-        <div class="bd-stage" id="bdStage"></div><div class="gs-tip"><div><b>給學員的叮嚀</b>先用中期結構建立觀察背景，再看短期動能是否配合。不同週期方向分歧時，先辨識行情是在整理或轉弱，搭配K棒、價格趨勢與成交量確認；短期反彈不代表中期結構已改善。</div></div>
+        <div class="bd-stage" id="bdStage"></div><div class="gs-tip"><div><b>學院導讀</b>先用中期結構建立觀察背景，再看短期動能是否配合。不同週期方向分歧時，先辨識行情是在整理或轉弱，搭配K棒、價格趨勢與成交量確認；短期反彈不代表中期結構已改善。</div></div>
       </div>
 
       <div class="bd-sop" id="bdSop">
@@ -5358,7 +5358,7 @@
           <span class="tag" id="bdSopTag">—</span>
         </div>
         <h3 class="bd-sop-headline" id="bdSopHeadline">—</h3><div class="exp" id="bdSopExp">—</div><div id="bdSopData" class="bd-sop-data"></div><div class="bd-signal-key" aria-label="弧線顏色說明"><span style="--signal:#e86360">紅：確認支持</span><span style="--signal:#20a774">綠：確認壓力</span><span style="--signal:#c6a654">金：中性／觀察</span><span style="--signal:#929cab">灰：資料不足</span></div>
-        <p id="bdSopSummary" class="bd-sop-summary"></p><div id="bdCompass" class="bd-compass-panel"></div><div class="act" id="bdSopAct"></div><div id="bdSopInsights" class="bd-sop-insights"></div><div id="bdSopWarning" class="bd-sop-warning" role="status" hidden><span class="bd-warning-icon" aria-hidden="true">⚠</span><div><b>仍需搭配K棒與趨勢判斷</b><small>請交叉確認K棒型態、價格趨勢與成交量，避免只依單一評論定性。</small></div></div><details class="bd-sop-method"><summary>給學員的叮嚀</summary><div id="bdSopMethod"></div></details>
+        <p id="bdSopSummary" class="bd-sop-summary"></p><div id="bdCompass" class="bd-compass-panel"></div><div class="act" id="bdSopAct"></div><div id="bdSopInsights" class="bd-sop-insights"></div><div id="bdSopWarning" class="bd-sop-warning" role="status" hidden><span class="bd-warning-icon" aria-hidden="true">⚠</span><div><b>仍需搭配K棒與趨勢判斷</b><small>請交叉確認K棒型態、價格趨勢與成交量，避免只依單一評論定性。</small></div></div><details class="bd-sop-method"><summary>學院導讀</summary><div id="bdSopMethod"></div></details>
       </div>
 
       <div class="bd-sec">
@@ -5448,7 +5448,7 @@
       renderSop(ma60,ma20,dlPct,netAdv,arr,cur,(txCur!=null&&txPrevKey!=null)?txUp:null);
       renderChart(arr);
       renderQuad();
-      el('bdNote').innerHTML='<b>給學員的叮嚀</b> 先看上漲是否由多數股票參與，再看強勢範圍能否持續擴大。指數走高而參與股票減少，應留意行情是否集中在少數權值股；資金水位是研究參考，請搭配自己的承受能力、K棒與量能。';
+      el('bdNote').innerHTML='<b>學院導讀</b> 先看上漲是否由多數股票參與，再看強勢範圍能否持續擴大。指數走高而參與股票減少，應留意行情是否集中在少數權值股；資金水位是研究參考，請搭配自己的承受能力、K棒與量能。';
     }
     function card(k,v,s,pct,tone,type,parts){
       var meter='<i style="width:'+Math.max(0,Math.min(100,pct||0))+'%;background:'+(tone||'var(--accent)')+'"></i>';
@@ -5681,7 +5681,7 @@
         addIdx(ch,rows); var am={}; ser.forEach(function(x){am[x.time]=x;});
         finish(ch,rows,function(r){ var x=am[r.trade_date]; return '騰落指標 <b style="color:'+PURP+'">'+n0(x.value)+'</b>　淨上漲家數 <b style="color:'+(x.net>=0?UP:DN)+'">'+(x.net>0?'+':'')+x.net+'</b>　上漲佔比 <b>'+f1(ur(r))+'%</b>'; });
         legend([[PURP,'騰落指標（累計淨上漲家數，左軸）'],['#e03e2d','每日淨上漲家數（下方柱）','6px solid']]);
-        el('bxNote').innerHTML='<b>給學員的叮嚀</b> 先看價格在整理區內還是已離開區間，再觀察突破後能否站穩、成交量是否配合。市場廣度與騰落用來確認有多少股票參與，極端數值不保證立即反轉。';
+        el('bxNote').innerHTML='<b>學院導讀</b> 先看價格在整理區內還是已離開區間，再觀察突破後能否站穩、成交量是否配合。市場廣度與騰落用來確認有多少股票參與，極端數值不保證立即反轉。';
       } else if(TAB==='arr'){
         var bs=pct(cur.bull_s,cur.base_s), es=pct(cur.bear_s,cur.base_s), bl=pct(cur.bull_l,cur.base_l), el2=pct(cur.bear_l,cur.base_l);
         el('bxHead').innerHTML='<div class="bx-title"><b>多空頭排列</b><span>多頭排列股票家數佔'+MKN[MKT]+'比例</span><time>'+d+'</time></div>'
@@ -5695,7 +5695,7 @@
         addIdx(ch,rows);
         finish(ch,rows,function(r){ return '短多 <b style="color:'+UP+'">'+f1(pct(r.bull_s,r.base_s))+'%</b> 短空 <b style="color:'+DN+'">'+f1(pct(r.bear_s,r.base_s))+'%</b>　長多 <b style="color:#f59e0b">'+f1(pct(r.bull_l,r.base_l))+'%</b> 長空 <b style="color:#8b5cf6">'+f1(pct(r.bear_l,r.base_l))+'%</b>'; });
         legend([[UP,'短均線多頭排列 %'],[DN,'短均線空頭排列 %'],['#f59e0b','長均線多頭排列 %'],['#8b5cf6','長均線空頭排列 %']]);
-        el('bxNote').innerHTML='<b>給學員的叮嚀</b> 先看價格在整理區內還是已離開區間，再觀察突破後能否站穩、成交量是否配合。市場廣度與騰落用來確認有多少股票參與，極端數值不保證立即反轉。';
+        el('bxNote').innerHTML='<b>學院導讀</b> 先看價格在整理區內還是已離開區間，再觀察突破後能否站穩、成交量是否配合。市場廣度與騰落用來確認有多少股票參與，極端數值不保證立即反轉。';
       } else if(TAB==='width'){
         var w20=pct(cur.ma20_cnt,cur.ma20_base), w60=pct(cur.ma60_cnt,cur.ma60_base), w240=pct(cur.ma240_cnt,cur.ma240_base);
         el('bxHead').innerHTML='<div class="bx-title"><b>市場寬度</b><span>成分股大於均線比例</span><time>'+d+'</time></div>'
@@ -5711,7 +5711,7 @@
         addIdx(ch,rows);
         finish(ch,rows,function(r){ return '20日 <b style="color:'+GOLD+'">'+f1(pct(r.ma20_cnt,r.ma20_base))+'%</b>　60日 <b style="color:'+DN+'">'+f1(pct(r.ma60_cnt,r.ma60_base))+'%</b>　240日 <b style="color:'+PURP+'">'+f1(pct(r.ma240_cnt,r.ma240_base))+'%</b>'; });
         legend([[GOLD,'站上 20 日線 %'],[DN,'站上 60 日線 %'],[PURP,'站上 240 日線 %']]);
-        el('bxNote').innerHTML='<b>給學員的叮嚀</b> 先看價格在整理區內還是已離開區間，再觀察突破後能否站穩、成交量是否配合。市場廣度與騰落用來確認有多少股票參與，極端數值不保證立即反轉。';
+        el('bxNote').innerHTML='<b>學院導讀</b> 先看價格在整理區內還是已離開區間，再觀察突破後能否站穩、成交量是否配合。市場廣度與騰落用來確認有多少股票參與，極端數值不保證立即反轉。';
       } else if(TAB==='hl'){
         var diff=cur.new_high-cur.new_low;
         el('bxHead').innerHTML='<div class="bx-title"><b>新高-新低</b><span>新高-新低家數差指數（52 週）</span><time>'+d+'</time></div>'
@@ -5726,7 +5726,7 @@
         addIdx(ch,hr);
         finish(ch,hr,function(r){ var v=r.new_high-r.new_low; return '家數差 <b style="color:'+(v>=0?UP:DN)+'">'+(v>0?'+':'')+v+'</b>　新高 <b style="color:'+UP+'">'+r.new_high+'</b>　新低 <b style="color:'+DN+'">'+r.new_low+'</b>'; });
         legend([[UP,'新高 − 新低 家數差（柱，左軸）','6px solid']]);
-        el('bxNote').innerHTML='<b>給學員的叮嚀</b> 先看價格在整理區內還是已離開區間，再觀察突破後能否站穩、成交量是否配合。市場廣度與騰落用來確認有多少股票參與，極端數值不保證立即反轉。';
+        el('bxNote').innerHTML='<b>學院導讀</b> 先看價格在整理區內還是已離開區間，再觀察突破後能否站穩、成交量是否配合。市場廣度與騰落用來確認有多少股票參與，極端數值不保證立即反轉。';
       } else {
         Promise.all([load('tse',ETF),load('otc',ETF),load('all',ETF)]).then(function(res){
           var L=function(a){return a[a.length-1]||{};}, t=L(res[0]), o=L(res[1]), a=L(res[2]);
@@ -5742,7 +5742,7 @@
           addIdx(ch,rs);
           finish(ch,rs,function(r){ return '站上60日 <b style="color:'+DN+'">'+r.ma60_cnt+'</b>　站上20日 <b style="color:'+GOLD+'">'+r.ma20_cnt+'</b>　都站上 <b style="color:'+UP+'">'+r.both_cnt+'</b> 家'; });
           legend([[DN,MKN[MKT]+' 站上 60 日線家數'],[GOLD,'站上 20 日線家數'],[UP,'20 與 60 日線都站上家數']]);
-          el('bxNote').innerHTML='<b>給學員的叮嚀</b> 先看價格在整理區內還是已離開區間，再觀察突破後能否站穩、成交量是否配合。市場廣度與騰落用來確認有多少股票參與，極端數值不保證立即反轉。';
+          el('bxNote').innerHTML='<b>學院導讀</b> 先看價格在整理區內還是已離開區間，再觀察突破後能否站穩、成交量是否配合。市場廣度與騰落用來確認有多少股票參與，極端數值不保證立即反轉。';
         });
       }
     }
@@ -5824,7 +5824,7 @@
         DATA.spot.sort(function(x,y){return x.rank-y.rank;}); DATA.fut.sort(function(x,y){return x.rank-y.rank;});
         loaded=true;
         if(el('liqSub'))el('liqSub').textContent='資料日 '+latest+' · 現貨、個股期貨各前 100';
-        if(el('liqNote'))el('liqNote').innerHTML='<b>給學員的叮嚀</b> 先找交易活絡、進出較順暢的標的，再看趨勢與價格位置。成交熱絡不代表值得追價；比較期貨時也要留意契約大小、到期日與實際掛單深度。';
+        if(el('liqNote'))el('liqNote').innerHTML='<b>學院導讀</b> 先找交易活絡、進出較順暢的標的，再看趨勢與價格位置。成交熱絡不代表值得追價；比較期貨時也要留意契約大小、到期日與實際掛單深度。';
         render();
       }).catch(function(){ el('liqTbl').innerHTML='<div class="fc-empty">讀取失敗</div>'; });
     };
@@ -5846,7 +5846,7 @@
       <button data-m="sup">靠近支撐</button>
     </div>
     <div id="srTbl"><div class="fc-empty">載入中…</div></div>
-    <div class="fc-note" id="srNote"><b>給學員的叮嚀</b>先找離現價最近的支撐與壓力，再觀察價格接近時的量能和反應。這些位置是觀察區域，突破或跌破仍需要趨勢確認；不同週期要分開理解。</div>
+    <div class="fc-note" id="srNote"><b>學院導讀</b>先找離現價最近的支撐與壓力，再觀察價格接近時的量能和反應。這些位置是觀察區域，突破或跌破仍需要趨勢確認；不同週期要分開理解。</div>
   </div>
   <script>
   (function(){
@@ -5999,7 +5999,7 @@
       };
       window._swrRT('sectors',window.__API+'/api/screen?stat=sectors',_paint,function(j){el('smMap').innerHTML='<div class="fc-empty">讀取失敗'+((j&&j.error)?'：'+j.error:'')+'</div>';},function(){el('smMap').innerHTML='<div class="fc-empty">載入中…</div>';});
       window._rtStart(function(){ window._swrRT('sectors',window.__API+'/api/screen?stat=sectors',_paint,function(){}); });
-      if(el('smNote'))el('smNote').innerHTML='<b>給學員的叮嚀</b> 先看哪個產業有多數股票一起走強，再點開成分股確認。只有少數股票上漲，與整個族群同步擴散的意義不同；搭配成交活躍度與持續天數，比只看顏色更完整。';
+      if(el('smNote'))el('smNote').innerHTML='<b>學院導讀</b> 先看哪個產業有多數股票一起走強，再點開成分股確認。只有少數股票上漲，與整個族群同步擴散的意義不同；搭配成交活躍度與持續天數，比只看顏色更完整。';
     };
     window._VIEWS=window._VIEWS||{}; window._VIEWS.sectors={el:'sectorView',show:'_sectorShow'};
   })();
@@ -6184,7 +6184,7 @@
         var def=DATES.filter(function(d){return CNT[d]>10;})[0]||DATES[0];
         loadDate(OPEN_DATE||(DATE&&CNT[DATE]?DATE:def));OPEN_DATE='';
       });
-      el('nwNote').innerHTML='<b>給學員的叮嚀</b> 先確認消息時間、來源和事件進度，再對照價格是否已反映。新聞熱度是觀察線索，不是趨勢延續的保證。';
+      el('nwNote').innerHTML='<b>學院導讀</b> 先確認消息時間、來源和事件進度，再對照價格是否已反映。新聞熱度是觀察線索，不是趨勢延續的保證。';
     };
     window._VIEWS=window._VIEWS||{}; window._VIEWS.news={el:'newsView',show:'_newsShow'};
   })();
@@ -6963,7 +6963,7 @@
         loaded=true;
         kpi();cards();renderHeavy();renderRev();renderInst();
         var dd=(PROD[0]&&PROD[0].data_date)||'';
-        el('etxNote').innerHTML='<b>給學員的叮嚀</b> 先理解ETF追蹤什麼，再看成分股、費用、規模與配息來源。配息較多不代表總報酬較高，應把價格變化與收益一起觀察。';
+        el('etxNote').innerHTML='<b>學院導讀</b> 先理解ETF追蹤什麼，再看成分股、費用、規模與配息來源。配息較多不代表總報酬較高，應把價格變化與收益一起觀察。';
       }).catch(function(){el('etxCards').innerHTML='<div class="fc-empty">讀取失敗</div>';});
       // 綁定
       el('etxFilter').onclick=function(e){var b=e.target.closest('button[data-f]');if(!b)return;filterF=b.dataset.f;[].forEach.call(el('etxFilter').children,function(x){x.classList.toggle('on',x===b);});cards();};
@@ -7056,7 +7056,7 @@
       el('efSearch').oninput=render; el('efSort').onchange=render;
       el('efType').onclick=function(e){var b=e.target.closest('button[data-t]');if(!b)return;typeF=b.dataset.t;[...el('efType').children].forEach(function(x){x.classList.toggle('on',x===b);});render();};
       el('efCats').onclick=function(e){var c=e.target.closest('[data-c]');if(!c)return;catF=c.dataset.c;cats();render();};
-      if(el('efNote'))el('efNote').innerHTML='<b>給學員的叮嚀</b> 先選符合觀察目的的ETF類型，再比較規模、交易活絡度、費用與追蹤內容。名稱相似的ETF，持股與風險也可能不同。';
+      if(el('efNote'))el('efNote').innerHTML='<b>學院導讀</b> 先選符合觀察目的的ETF類型，再比較規模、交易活絡度、費用與追蹤內容。名稱相似的ETF，持股與風險也可能不同。';
     };
     window._VIEWS=window._VIEWS||{}; window._VIEWS.etf={el:'etfView',show:'_etfShow'};
   })();
@@ -7139,7 +7139,7 @@
       }).catch(function(){el('edBody').innerHTML='<tr><td class="l" colspan="6">讀取失敗</td></tr>';});
       el('edSearch').oninput=render;
       el('edFreq').onclick=function(e){var t=e.target.closest('[data-f]');if(!t)return;freqF=t.dataset.f;tabs();render();};
-      if(el('edNote'))el('edNote').innerHTML='<b>給學員的叮嚀</b> 先區分公告、除息與發放日期，再看配息來源與價格變化。單次配息只是現金分配，不等於全年收益或額外獲利。';
+      if(el('edNote'))el('edNote').innerHTML='<b>學院導讀</b> 先區分公告、除息與發放日期，再看配息來源與價格變化。單次配息只是現金分配，不等於全年收益或額外獲利。';
     };
     window._VIEWS=window._VIEWS||{}; window._VIEWS.etfdiv={el:'etfdivView',show:'_etfdivShow'};
   })();
@@ -7203,7 +7203,7 @@
       }).catch(function(){el('inBody').innerHTML='<tr><td class="l" colspan="6">讀取失敗</td></tr>';});
       function seg(id,setter){el(id).onclick=function(e){var b=e.target.closest('button');if(!b)return;setter(b);[...el(id).children].forEach(function(x){x.classList.toggle('on',x===b);});render();};}
       seg('inDir',function(b){dir=b.dataset.d;}); seg('inWho',function(b){who=b.dataset.w;}); seg('inScope',function(b){scope=b.dataset.s;});
-      if(el('inNote'))el('inNote').innerHTML='<b>給學員的叮嚀</b> 先看法人方向是否持續，再確認股價與成交量是否配合。單日買賣超不能代表長期態度，也不能直接推定未來走勢。';
+      if(el('inNote'))el('inNote').innerHTML='<b>學院導讀</b> 先看法人方向是否持續，再確認股價與成交量是否配合。單日買賣超不能代表長期態度，也不能直接推定未來走勢。';
     };
     window._VIEWS=window._VIEWS||{}; window._VIEWS.inst={el:'instView',show:'_instShow'};
   })();
@@ -7268,7 +7268,7 @@
         if(PRODS.length){el('ehSel').value=PRODS[0].code;load(PRODS[0].code);}
         window._searchSelect('ehSel','搜尋 ETF 代號/名稱');
       });
-      if(el('ehNote'))el('ehNote').innerHTML='<b>給學員的叮嚀</b> 先看持有人結構是否連續改變，再對照價格與量能。大戶占比上升可能有多種原因，不宜直接等同主力進場。';
+      if(el('ehNote'))el('ehNote').innerHTML='<b>學院導讀</b> 先看持有人結構是否連續改變，再對照價格與量能。大戶占比上升可能有多種原因，不宜直接等同主力進場。';
     };
     window._VIEWS=window._VIEWS||{}; window._VIEWS.etfhold={el:'etfholdView',show:'_etfholdShow'};
   })();
@@ -7339,7 +7339,7 @@
         if(PRODS.length){el('ecSel').value=PRODS[0].code;loadCons(PRODS[0].code);}
         window._searchSelect('ecSel','搜尋 ETF 代號/名稱');
       });
-      if(el('ecNote'))el('ecNote').innerHTML='<b>給學員的叮嚀</b> 先看主要成分股與產業集中度，再觀察持股調整。ETF增減持可能來自申贖或指數調整，不能直接當作對個股的看法。';
+      if(el('ecNote'))el('ecNote').innerHTML='<b>學院導讀</b> 先看主要成分股與產業集中度，再觀察持股調整。ETF增減持可能來自申贖或指數調整，不能直接當作對個股的看法。';
     };
     window._VIEWS=window._VIEWS||{}; window._VIEWS.etfcons={el:'etfconsView',show:'_etfconsShow'};
 
@@ -7374,7 +7374,7 @@
     window._etfrevShow=function(){
       el('erBtn').onclick=doReverse;
       el('erIn').onkeydown=function(e){if(e.key==='Enter')doReverse();};
-      if(el('erNote'))el('erNote').innerHTML='<b>給學員的叮嚀</b> 用持股交集找出符合關注標的的ETF，再比較費用和集中度。包含喜歡的股票，不代表整檔ETF的風險都符合需求。';
+      if(el('erNote'))el('erNote').innerHTML='<b>學院導讀</b> 用持股交集找出符合關注標的的ETF，再比較費用和集中度。包含喜歡的股票，不代表整檔ETF的風險都符合需求。';
     };
     window._VIEWS=window._VIEWS||{}; window._VIEWS.etfrev={el:'etfrevView',show:'_etfrevShow'};
   })();
@@ -7437,7 +7437,7 @@
         window._searchSelect('esA','ETF A'); window._searchSelect('esB','ETF B');
         compute();
       });
-      if(el('esNote'))el('esNote').innerHTML='<b>給學員的叮嚀</b> 先比較兩檔ETF是否持有相同股票。重疊越多，組合可能越集中；仍需一起看產業、地區與資產類型的差異。';
+      if(el('esNote'))el('esNote').innerHTML='<b>學院導讀</b> 先比較兩檔ETF是否持有相同股票。重疊越多，組合可能越集中；仍需一起看產業、地區與資產類型的差異。';
     };
     window._VIEWS=window._VIEWS||{}; window._VIEWS.etfsim={el:'etfsimView',show:'_etfsimShow'};
   })();
@@ -7500,7 +7500,7 @@
         el('ehvSub').textContent='彙整 '+rows.length+' 列成分股 · 前 100 檔';
         el('ehvBody').innerHTML=arr.map(function(x,i){return '<tr onclick="_openStock(\''+x.code+'\',\''+(x.name||'').replace(/\'/g,'')+'\')"><td>'+(i+1)+'</td><td class="l"><span class="c">'+x.code+'</span> '+(x.name||'')+'</td><td><b>'+x.cnt+'</b> 檔</td><td>'+lot(x.shares)+'</td><td class="'+cls(x.delta)+'">'+(x.delta?(x.delta>0?'+':'')+lot(x.delta):'0')+'</td></tr>';}).join('');
       }).catch(function(){el('ehvBody').innerHTML='<tr><td class="l" colspan="5">讀取失敗</td></tr>';});
-      if(el('ehvNote'))el('ehvNote').innerHTML='<b>給學員的叮嚀</b> 比較大戶與散戶結構的持續變化，再看價格是否同向。單週變化容易受申贖與持股移轉影響，避免直接推定交易動機。';
+      if(el('ehvNote'))el('ehvNote').innerHTML='<b>學院導讀</b> 比較大戶與散戶結構的持續變化，再看價格是否同向。單週變化容易受申贖與持股移轉影響，避免直接推定交易動機。';
     };
     window._VIEWS=window._VIEWS||{}; window._VIEWS.etfheavy={el:'etfheavyView',show:'_etfheavyShow'};
 
@@ -7518,7 +7518,7 @@
         premLoaded=true; renderPrem();
         el('epSeg').onclick=function(e){var b=e.target.closest('button');if(!b)return;premMode=b.dataset.m;[...el('epSeg').children].forEach(function(x){x.classList.toggle('on',x===b);});renderPrem();};
       }).catch(function(){el('epBody').innerHTML='<tr><td class="l" colspan="6">讀取失敗</td></tr>';});
-      if(el('epNote'))el('epNote').innerHTML='<b>給學員的叮嚀</b> 先看現價與淨值是否接近，再確認交易時間與流動性。折溢價是價格位置提醒，海外市場休市或淨值更新落差也可能造成差異。';
+      if(el('epNote'))el('epNote').innerHTML='<b>學院導讀</b> 先看現價與淨值是否接近，再確認交易時間與流動性。折溢價是價格位置提醒，海外市場休市或淨值更新落差也可能造成差異。';
     };
     window._VIEWS=window._VIEWS||{}; window._VIEWS.etfprem={el:'etfpremView',show:'_etfpremShow'};
   })();
@@ -7573,7 +7573,7 @@
       }).catch(function(){el('eflBody').innerHTML='<tr><td class="l" colspan="5">讀取失敗</td></tr>';});
       function seg(id,set){el(id).onclick=function(e){var b=e.target.closest('button');if(!b)return;set(b);[...el(id).children].forEach(function(x){x.classList.toggle('on',x===b);});render();};}
       seg('eflPeriod',function(b){period=+b.dataset.n;}); seg('eflDir',function(b){dir=b.dataset.d;});
-      if(el('eflNote'))el('eflNote').innerHTML='<b>給學員的叮嚀</b> 先觀察資金是否持續集中於相同類型，再查看價格與交易活絡度。流量變化可能涉及申贖，不等於未來報酬方向。';
+      if(el('eflNote'))el('eflNote').innerHTML='<b>學院導讀</b> 先觀察資金是否持續集中於相同類型，再查看價格與交易活絡度。流量變化可能涉及申贖，不等於未來報酬方向。';
     };
     window._VIEWS=window._VIEWS||{}; window._VIEWS.etfflow={el:'etfflowView',show:'_etfflowShow'};
   })();
@@ -7675,7 +7675,7 @@
           el('pfPeriod').onclick=function(e){var b=e.target.closest('button');if(!b)return;period=b.dataset.p;[...el('pfPeriod').children].forEach(function(x){x.classList.toggle('on',x===b);});draw();};
           refresh();
         });
-        if(el('pfNote'))el('pfNote').innerHTML='<b>給學員的叮嚀</b> 先看配置是否過度集中，再比較不同資產在相同期間的變化。歷史表現用於理解風險，不能保證未來結果。';
+        if(el('pfNote'))el('pfNote').innerHTML='<b>學院導讀</b> 先看配置是否過度集中，再比較不同資產在相同期間的變化。歷史表現用於理解風險，不能保證未來結果。';
       } else { setTimeout(function(){if(chart)chart.timeScale().fitContent();},50); }
     };
     window._VIEWS=window._VIEWS||{}; window._VIEWS.etfperf={el:'etfperfView',show:'_etfperfShow'};
@@ -7837,7 +7837,7 @@
     function fmt(x){return x!=null&&Number.isFinite(+x)?(+x).toFixed(2)+'%':'—';}
     function q(path){return fetch(SB()+'/rest/v1/'+path,{headers:{apikey:AK(),Authorization:'Bearer '+AK()}}).then(function(r){if(!r.ok)throw Error('資料暫無法取得');return r.json();});}
     var environmentPeriod='short',macroSeries={};
-    function environmentShell(){return '<section class="usty-card ust-environment"><div class="ust-global-heading"><div><div class="usty-eye">Global Lens · 全球商品環境</div><h3>先看環境，再看商品敏感度</h3></div><div class="ust-mode-tabs" aria-label="觀察期間"><button type="button" data-horizon="short" aria-pressed="true">短期 1～3個月</button><button type="button" data-horizon="medium" aria-pressed="false">中期 6～12個月</button></div></div><p id="ustHorizonNote" class="ust-caption"></p><div id="ustEnvironmentSignals" class="ust-global-signals"></div><div id="ustGlobalAssets" class="ust-global-assets"></div><div class="gs-tip"><div><b>給學員的叮嚀</b>先選短期或中期視角，再看利率、通膨與就業是否同向。債券、股票與商品對環境的反應不同；環境提供背景，還要搭配商品本身的價格、信用與幣別風險。</div></div></section>';}
+    function environmentShell(){return '<section class="usty-card ust-environment"><div class="ust-global-heading"><div><div class="usty-eye">Global Lens · 全球商品環境</div><h3>先看環境，再看商品敏感度</h3></div><div class="ust-mode-tabs" aria-label="觀察期間"><button type="button" data-horizon="short" aria-pressed="true">短期 1～3個月</button><button type="button" data-horizon="medium" aria-pressed="false">中期 6～12個月</button></div></div><p id="ustHorizonNote" class="ust-caption"></p><div id="ustEnvironmentSignals" class="ust-global-signals"></div><div id="ustGlobalAssets" class="ust-global-assets"></div><div class="gs-tip"><div><b>學院導讀</b>先選短期或中期視角，再看利率、通膨與就業是否同向。債券、股票與商品對環境的反應不同；環境提供背景，還要搭配商品本身的價格、信用與幣別風險。</div></div></section>';}
     function environmentUpdate(){
       if(!el('ustGlobalAssets'))return;var span=environmentPeriod==='short'?20:60,months=environmentPeriod==='short'?3:6,key=el('ustTenor').value;
       function trend(k){var a=rateHistory.filter(function(r){return r.rates&&Number.isFinite(r.rates[k])&&r.date<=rateDate;}).sort(function(a,b){return a.date.localeCompare(b.date);});if(a.length<span+1||a[a.length-1].date!==rateDate)return null;var end=a[a.length-1],start=a[a.length-1-span],d=end.rates[k]-start.rates[k];return {d:d,from:start.date,to:end.date,word:d>.1?'上升':d<-.1?'下降':'持平'};}
@@ -7854,7 +7854,7 @@
     function shell(){return '<div class="ust-research-head"><div class="usty-eye">Yield Research · 收益率比較</div><h2>美債殖利率對標</h2><p>自動觀察利率與經濟環境，平行比較全球商品的敏感度、壓力與有利條件。</p></div>'+
       environmentShell()+'<section class="usty-card ust-benchmark"><div><div class="usty-eye">US Treasury · 美債基準</div><strong id="ustLiveRate">—</strong><small id="ustLiveDate">載入官方資料…</small></div><label>美債期限<select id="ustTenor" class="usty-inp">'+tenors.map(function(t){return '<option value="'+t[0]+'"'+(t[0]==='10y'?' selected':'')+'>'+t[1]+'期</option>';}).join('')+'</select></label><div class="ust-curve"><small>10年 − 2年利差</small><b id="ustCurve">—</b><small>期限結構觀察，非買賣訊號</small></div></section>'+
       '<div class="ust-mode-tabs" role="tablist" aria-label="研究模式"><button id="ustActualTab" role="tab" aria-selected="true" aria-controls="ustActualPanel">實際殖利率比較</button><button id="ustResearchTab" role="tab" aria-selected="false" aria-controls="ustResearchPanel">進階情境試算</button></div><div id="ustActualPanel" role="tabpanel"><section class="usty-card ust-search"><form id="ustSearchForm"><label for="ustQuery">搜尋股票、ETF、國際指數或商品</label><div class="ust-search-row"><input id="ustQuery" class="usty-inp" placeholder="代號或名稱：2330、QQQ、黃金、原油、日經" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="ustMatches"><button type="submit">比較</button></div></form><div id="ustMatches" role="listbox" aria-label="搜尋候選標的"></div><small class="ust-search-help">輸入代號或名稱，選取標的即可比較；↑↓ 選擇，Enter 確認。</small><div id="ustExplore" class="ust-explore"></div></section>'+
-      '<section class="usty-card ust-result"><div class="usty-eye">Comparison · 比較結果</div><h3 id="ustAssetName">選擇你想比較的標的</h3><div class="ust-status-line"><div id="ustStatus" class="ust-verdict">搜尋後查看數據與給學員的叮嚀</div><div id="ustAutoResult" class="ust-auto-result" role="status" aria-live="polite" hidden><small>自動情境判讀</small><b id="ustAutoText"></b></div></div><p id="ustHint" class="ust-hint"></p><div id="ustInterpretation"></div><div id="ustJudgment"></div><div class="ust-metrics"><div><small>標的殖利率</small><strong id="ustAssetRate">—</strong><small id="ustAssetDate">—</small></div><div><small>美債殖利率</small><strong id="ustCompareRate">—</strong><small id="ustCompareDate">—</small></div><div><small>殖利率差</small><strong id="ustDifference">—</strong><small>標的 − 美債・百分點</small></div></div><div id="ustProfile" class="ust-profile" hidden></div><div class="ust-chart-head"><span>收益率雙軌比較</span><small>同一比例尺 · 歷史息收與美債基準</small></div><div id="ustBars"></div><p id="ustMethod" class="ust-caption">不以假設值補足缺漏資料。</p></section>'+
+      '<section class="usty-card ust-result"><div class="usty-eye">Comparison · 比較結果</div><h3 id="ustAssetName">選擇你想比較的標的</h3><div class="ust-status-line"><div id="ustStatus" class="ust-verdict">搜尋後查看數據與學院導讀</div><div id="ustAutoResult" class="ust-auto-result" role="status" aria-live="polite" hidden><small>自動情境判讀</small><b id="ustAutoText"></b></div></div><p id="ustHint" class="ust-hint"></p><div id="ustInterpretation"></div><div id="ustJudgment"></div><div class="ust-metrics"><div><small>標的殖利率</small><strong id="ustAssetRate">—</strong><small id="ustAssetDate">—</small></div><div><small>美債殖利率</small><strong id="ustCompareRate">—</strong><small id="ustCompareDate">—</small></div><div><small>殖利率差</small><strong id="ustDifference">—</strong><small>標的 − 美債・百分點</small></div></div><div id="ustProfile" class="ust-profile" hidden></div><div class="ust-chart-head"><span>收益率雙軌比較</span><small>同一比例尺 · 歷史息收與美債基準</small></div><div id="ustBars"></div><p id="ustMethod" class="ust-caption">不以假設值補足缺漏資料。</p></section>'+
       '</div><div id="ustResearchPanel" role="tabpanel" hidden>'+researchShell()+'</div><details class="usty-card ust-rules" open><summary>比較規則與資料口徑</summary><ul><li>美債採官方最新可取得的每日名目殖利率，預設10年期；休市或尚未公布時顯示最近資料日。</li><li>股票採本站收錄的官方殖利率，標示來源口徑；ETF 採近12個月已除息的每單位現金配息合計 ÷ 最新收盤價 ×100%。</li><li>指數須有該指數的股息殖利率資料，不以 ETF 或個股替代。資料不足不判定為零。</li><li>差距為正、負或零，分別顯示高於、低於或等於美債；不使用未驗證的便宜、昂貴或資金流向分級。</li></ul><p class="ust-caption">不同幣別、稅費、股利口徑及價格風險未調整。殖利率較高不代表總報酬較高，也不代表買賣建議。</p></details>'+
       '<details class="usty-card ust-simulation"><summary>情境試算 · 手動假設</summary><div class="ust-sim-grid"><label>假設標的殖利率 (%)<input id="ustSimAsset" class="usty-inp" type="number" min="0" step="0.01" placeholder="輸入假設值"></label><label>假設美債殖利率 (%)<input id="ustSimBond" class="usty-inp" type="number" min="0" step="0.01" placeholder="輸入假設值"></label><div><small>假設差距</small><strong id="ustSimDiff">—</strong></div></div><p class="ust-caption">試算只使用手動假設，不影響上方實際比較。</p></details>';}
     function researchShell(){return '<div class="ust-scenario-tabs" role="tablist" aria-label="情境類別">'+scenarios.map(function(x,i){return '<button role="tab" data-scenario="'+i+'" aria-selected="'+(i===0)+'"><b>'+x.title+'</b><small>'+x.sub+'</small></button>';}).join('')+'</div><section class="usty-card ust-terminal"><div class="usty-eye">Macro Lens · 客觀情境研究</div><h3 id="ustResearchCore"></h3><div id="ustProverb" class="ust-verdict"></div><p id="ustProverbNote" class="ust-hint"></p><div id="ustResearchInterpretation"></div><div id="ustResearchJudgment"></div><div class="ust-sidecards"><article><small>對標商品</small><h3 id="ustScenarioAssets"></h3><p id="ustScenarioRisk"></p><label>假設商品收益率 (%)<input id="ustResearchYield" type="number" min="0" step="0.01" class="usty-inp" placeholder="不預填商品收益率"></label></article><article><small>對應公債／教育參考</small><h3 id="ustScenarioBond"></h3><div class="ust-sim-grid"><label><span id="ustMatchedLabel">對應期限收益率假設 (%)</span><input id="ustResearchBondYield" class="usty-inp" type="number" min="0" step="0.01" placeholder="官方值未取得"></label><label>公債久期假設 (年)<input id="ustResearchDuration" class="usty-inp" type="number" min="0" step="0.1" value="0.25"></label></div><small>久期為教育假設，不代表所列 ETF 的實際久期。</small></article></div><details class="ust-anchor-settings"><summary>10年共同基準 · 進階設定</summary><div><label>10年基準假設 (%)<input id="ustResearch10" class="usty-inp" type="number" min="0" step="0.01" value="4.5"></label><small>作為跨情境共同參考；上方息差以「對應期限」計算，兩者分開呈現。</small></div></details><div class="ust-metrics"><div><small>假設收益率差</small><strong id="ustResearchSpread">—</strong></div><div><small>利率上升1百分點 · 線性價格變化</small><strong id="ustResearchDown">—</strong></div><div><small>利率下降1百分點 · 線性價格變化</small><strong id="ustResearchUp">—</strong></div></div><div id="ustResearchBars"></div><p id="ustResearchAnchor" class="ust-caption"></p><p class="ust-caption">收益率差不是完整 ERP 或信用利差；未進行現金流期限配對、OAS、違約或匯率調整。「替代收益比例」只表示公債收益率／商品收益率，不代表資金流量或投資機率。</p><div class="ust-sidecards"><article><h4>條件式機會環境</h4><ul id="ustResearchOpp"></ul></article><article><h4>結構性風險</h4><ul id="ustResearchRisk"></ul></article></div><details><summary>再投資 vs 長久期 · 延伸觀察</summary><p>定存安穩，再投受限：到期再投資的利率可能變化；存款保障仍視銀行、地區與限額。</p><p>久期具彈，兩極分化：長久期價格對利率變化較敏感，漲跌皆可能放大。</p></details><p class="ust-caption">本頁為教育研究；呈現歷史資料、明示假設與条件式推論，不构成投資招攬、個別投資建議或獲利保證。</p></section>';}
@@ -7885,7 +7885,7 @@
     function ruleIndex(diff,key){var t=rateTrend(key);return diff==null||!t?null:(diff>.25?0:diff<-.25?2:1)*3+t.index;}
     function judgment(diff,risk,scenario,key){
       var trend=rateTrend(key),active=ruleIndex(diff,key),label=diff==null?'資料不足':diff>.25?'高於美債':diff<-.25?'低於美債':'接近美債';
-      return '<div class="ust-judgment-tags"><span>息差：'+label+'</span><span>利率方向：'+(trend?['上升','持平','下降'][trend.index]:'資料不足')+'</span><span>風險：'+esc(risk)+'</span></div><div class="gs-tip"><div><b>給學員的叮嚀</b>先比較收益，再看利率變化。收益較高可能伴隨價格、信用或匯率風險；債券還需留意對利率的敏感度。歷史配息與美債收益率口徑不同，應一起看日期、幣別和費用；模擬數值只用於理解情境。</div></div>';
+      return '<div class="ust-judgment-tags"><span>息差：'+label+'</span><span>利率方向：'+(trend?['上升','持平','下降'][trend.index]:'資料不足')+'</span><span>風險：'+esc(risk)+'</span></div><div class="gs-tip"><div><b>學院導讀</b>先比較收益，再看利率變化。收益較高可能伴隨價格、信用或匯率風險；債券還需留意對利率的敏感度。歷史配息與美債收益率口徑不同，應一起看日期、幣別和費用；模擬數值只用於理解情境。</div></div>';
     }
     function researchUpdate(){var sc=scenarios[scenarioIndex],py=numberValue('ustResearchYield'),by=numberValue('ustResearchBondYield'),dur=numberValue('ustResearchDuration'),diff=py!=null&&by!=null?py-by:null;
       var anchor=numberValue('ustResearch10');el('ustResearchAnchor').textContent='10年基準假設：'+fmt(anchor)+'；商品對10年收益差：'+(py!=null&&anchor!=null?(py-anchor).toFixed(2)+' pp':'—')+'。此差距不是完整 ERP。';
@@ -7921,7 +7921,7 @@
       el('ustAssetName').textContent=selected?selected.name:'選擇你想比較的標的';el('ustAssetRate').textContent=fmt(py);el('ustAssetDate').textContent=selected?(selected.date?'資料日 '+selected.date:'資料日期未提供'):'—';
       var diff=py!=null&&by!=null?py-by:null;
       el('ustDifference').textContent=diff!=null?(diff>0?'+':'')+diff.toFixed(2)+' pp':'—';
-      el('ustStatus').textContent=diff!=null?(diff>0?'現金收益率高於美債':diff<0?'現金收益率低於美債':'現金收益率與美債相同'):(selected?(selected.type==='商品'?'商品無息，供需主導':'資料不足，暫不比較'):'搜尋後查看數據與給學員的叮嚀');
+      el('ustStatus').textContent=diff!=null?(diff>0?'現金收益率高於美債':diff<0?'現金收益率低於美債':'現金收益率與美債相同'):(selected?(selected.type==='商品'?'商品無息，供需主導':'資料不足，暫不比較'):'搜尋後查看數據與學院導讀');
       var tone=diff==null?'missing':diff>.25?'higher':diff<-.25?'lower':'neutral';el('ustStatus').dataset.state=tone;el('ustStatus').innerHTML='<small class="ust-status-label">歷史收益率比較</small><b>'+esc(diff==null?el('ustStatus').textContent:diff>.25?'現金收益率高於美債':diff<-.25?'現金收益率低於美債':'現金收益率接近美債')+'</b>';
       el('ustHint').textContent=selected&&selected.type==='商品'?'商品收益來自價格變化；期貨另有轉倉、槓桿與基差風險。':diff==null?'先確認資料完整性，再閱讀收益差距。':diff>0?'歷史配息提供額外息收，但仍需觀察價格波動與配息持續性。':diff<0?'美債名目收益率較高；股價成長與匯率變化仍會影響總報酬。':'收益率相近，需再比較價格風險、匯率與稅費。';
       el('ustJudgment').innerHTML=judgment(diff,selected?(selected.type==='商品'?'供需與價格':selected.type==='指數'?'市場波動':'價格與收益變化'):'尚未選定',false,key);var ri=ruleIndex(diff,key);el('ustAutoResult').hidden=!selected;el('ustAutoResult').dataset.ready=String(ri!=null);el('ustAutoResult').dataset.state=ri==null?'missing':tone;el('ustAutoText').textContent=ri!=null?nineRules[ri][0]:diff==null?'待判讀：收益率資料不足':'待判讀：同期限歷史利率不足';if(ri!=null)el('ustHint').textContent=nineRules[ri][1];el('ustInterpretation').innerHTML=selected?interpretation(ri,diff,selected.code,selected.type,null):'';
@@ -8219,7 +8219,7 @@
             +'<div class="osr-head"><span class="r">潛在壓力　參考價以上 Call（'+(mode==='volume'?'量大→量小':'近→遠')+'）</span><span></span><span class="s">潛在支撐　參考價以下 Put（'+(mode==='volume'?'量大→量小':'近→遠')+'）</span></div>'
             +rows+(short?'<div class="gs-osr-meta" style="color:var(--yellow)"> '+short+'側符合條件的峰值不足 5 層（候選不足，不降低門檻硬湊）</div>':'')
             +'<div class="gs-osr-meta" style="margin-top:8px">資料日 '+(mode==='volume'?(ndayRows[0]&&ndayRows[0].trade_date||''):(o.trade_date||''))+' · '+(mode==='volume'?'區間依成交量由大到小':'點數＝距參考價')+'</div>'
-            +'<div class="gs-tip"><div><b>給學員的叮嚀</b>先找離目前價格最近的籌碼集中區，觀察價格接近時是否停留、突破或退回。支撐與壓力是觀察區域，不是保證轉折；週選與月選分開看，並留意到期前部位調整。</div></div>';
+            +'<div class="gs-tip"><div><b>學院導讀</b>先找離目前價格最近的籌碼集中區，觀察價格接近時是否停留、突破或退回。支撐與壓力是觀察區域，不是保證轉折；週選與月選分開看，並留意到期前部位調整。</div></div>';
         }
         var pcData=null,pcPending=false,pcFailed=false;
         function paintPC(){var v=el('officialPCRatio'),d=el('officialPCDate');if(!v||!d)return;v.textContent=pcData?Number(pcData.ratio_pct).toFixed(2)+'%':(pcFailed?'暫無資料':'載入中…');d.textContent=pcData?'資料日 '+pcData.trade_date+(pcFailed?' · 更新失敗，保留前值':''):(pcFailed?'官方資料讀取失敗':'期交所每日未平倉量比率');}
@@ -8280,7 +8280,7 @@
         var mx=Math.max.apply(null,items.map(function(x){return Math.abs(yi(x[1]))||1;}));
         var bars='<div class="gs-instbars">'+items.map(function(x){var n=yi(x[1]),w=Math.min(48,Math.abs(n)/mx*48),c=n>0?'var(--red)':'var(--green)';
           return '<div class="gs-ibar"><span class="lb">'+x[0]+'</span><span class="track"><i style="'+(n>=0?'left:50%;':'right:50%;')+'width:'+w+'%;background:'+c+'"></i></span><span class="vv '+cls(n)+'">'+(n>0?'+':'')+n.toFixed(1)+'億</span></div>';}).join('')+'</div>';
-        box.innerHTML=tbl+bars+'<div class="gs-tip"><span class="ic"></span><div><b>給學員的叮嚀</b>外資、投信、自營同向偏多時，資金態度較明確；若上市與上櫃方向相反，建議搭配族群熱力圖判斷資金往哪一邊輪動。</div></div>';
+        box.innerHTML=tbl+bars+'<div class="gs-tip"><span class="ic"></span><div><b>學院導讀</b>外資、投信、自營同向偏多時，資金態度較明確；若上市與上櫃方向相反，建議搭配族群熱力圖判斷資金往哪一邊輪動。</div></div>';
       });
     }
 
@@ -8322,7 +8322,7 @@
         }
         box.innerHTML='<table class="gs-tbl"><thead><tr><th class="l">市場<br><span style="font-weight:600;font-size:10px;color:var(--text-muted)">維持率估算</span></th><th>融資增減(億)</th><th>融資餘額(億)</th><th>融券增減(張)</th><th>融券餘額(張)</th><th>券資比</th></tr></thead><tbody>'+rows+'</tbody></table>'
           +'<div class="hp-margin-summary"><h3>今日信用部位觀察</h3>'+summaryLine('上市',t,t&&t.date,t&&t.fin_bal_prev_k,t&&t.short_bal_lots,t&&t.short_bal_prev_lots)+summaryLine('上櫃',o,o&&o.trade_date,o&&o.fin_prev_k,o&&o.short_lots,null)+'</div>'
-          +'<div class="gs-tip"><span class="ic"></span><div><b>給學員的叮嚀</b>融資維持率越低，代表融資戶擔保品的安全邊際越薄、越接近追繳；判讀時建議一併看個股維持率與股價波動，不宜只看整體數字。</div></div>';
+          +'<div class="gs-tip"><span class="ic"></span><div><b>學院導讀</b>融資維持率越低，代表融資戶擔保品的安全邊際越薄、越接近追繳；判讀時建議一併看個股維持率與股價波動，不宜只看整體數字。</div></div>';
       });
     }
 
@@ -8401,7 +8401,7 @@
         var html='';
         if(tse&&!tse.error)html+=card('上市','TWSE 收盤',+tse.up||0,+tse.down||0,+tse.flat||0,+tse.up_limit||0,+tse.down_limit||0);
         if(otc)html+=card('上櫃','TPEx 收盤',+otc.up||0,+otc.down||0,+otc.flat||0,+otc.up_limit||0,+otc.down_limit||0);
-        box.innerHTML=(html||'<div class="fc-empty">讀取失敗</div>')+'<div class="gs-tip" style="grid-column:1/-1"><span class="ic"></span><div><b>給學員的叮嚀</b>上漲家數明顯多於下跌、又搭配指數走高，行情基礎較穩健；若指數上漲但下跌家數反而較多，多半是少數權值股在撐盤，須留意廣度背離。</div></div>';
+        box.innerHTML=(html||'<div class="fc-empty">讀取失敗</div>')+'<div class="gs-tip" style="grid-column:1/-1"><span class="ic"></span><div><b>學院導讀</b>上漲家數明顯多於下跌、又搭配指數走高，行情基礎較穩健；若指數上漲但下跌家數反而較多，多半是少數權值股在撐盤，須留意廣度背離。</div></div>';
       });
     }
 
@@ -8540,7 +8540,7 @@
               +'<div class="gs-div-date">比較日期 '+s.startDate+' → '+s.endDate+' · 兩項數據使用相同起訖交易日</div></div>';
           }else body='<div class="fc-empty">官方歷史資料尚未形成完整的 '+sel+' 個共同交易日。</div>';
           box.innerHTML='<div class="gs-mtbar"><div class="gs-cst '+st.t+'"><b>'+st.l+'</b><span class="gs-status-desc">'+st.d+'</span>'+(st.small?'<small class="gs-status-note">'+st.small+'</small>':'')+'</div><div class="gs-pdtabs">'+tabs+'</div></div>'+body
-            +'<div class="gs-tip"><span class="ic"></span><div><b>給學員的叮嚀</b>先看兩條長條方向，再比較幅度。背離值＝融資變動率－大盤變動率；正值代表融資變動率較高，負值代表較低。</div></div>';
+            +'<div class="gs-tip"><span class="ic"></span><div><b>學院導讀</b>先看兩條長條方向，再比較幅度。背離值＝融資變動率－大盤變動率；正值代表融資變動率較高，負值代表較低。</div></div>';
         }
         box.onchange=function(e){var t=e.target.closest('.gs-pd');if(t){box._selDays=+t.value;sel=box._selDays;render();}};
         render();
@@ -8586,7 +8586,7 @@
           +'<p id="hpMaintLabel">資料更新中</p><div class="gs-ruler">'
           +'<div class="gs-rlab">'+_maintTicksHtml()+'</div>'
           +'<div class="gs-rtrack">'+_maintScaleHtml()+'<i id="hpMaintMark" hidden></i></div><b id="hpMaintCur">--</b></div><p id="msNote" class="gs-msnote"></p>'
-        +'<div class="gs-tip"><span class="ic"></span><div><b>給學員的叮嚀</b>維持率走低時，融資戶承受價格下跌的空間變小。先看它是否持續下降，再搭配指數走勢、融資增減與市場廣度；整體數字不能代替每檔股票的風險觀察。</div></div>'
+        +'<div class="gs-tip"><span class="ic"></span><div><b>學院導讀</b>維持率走低時，融資戶承受價格下跌的空間變小。先看它是否持續下降，再搭配指數走勢、融資增減與市場廣度；整體數字不能代替每檔股票的風險觀察。</div></div>'
         +'</div><div class="gs-mmwrap"><div class="gs-mmtitle2" id="hpMmTitle">加權指數 × 全市場融資維持率 × 融資／融券餘額</div><div id="hpMmCur" class="gs-mmcur"></div><div id="hpMmTip" class="gs-mmtip">移動滑鼠或觸控圖上看每日數值</div><div id="hpMmPanels"></div></div>';
       if(window._loadHpMaintChart) window._loadHpMaintChart();
       if(window._loadMaintSplit) window._loadMaintSplit();
@@ -8618,7 +8618,7 @@
         html+=retail('小台 ',d.mtx_ls,d.mtx_long,d.mtx_short);
         html+=retail('微台 ',d.tmf_ls,d.tmf_long,d.tmf_short);
         box.innerHTML=(html||'<div class="fc-empty">期貨資料整備中</div>')
-          +'<div class="gs-tip" style="grid-column:1/-1"><span class="ic"></span><div><b>給學員的叮嚀</b>散戶多空比先用來觀察情緒是否集中，再與外資部位及價格趨勢比較。結算成本提供價格位置參考，站在上方或下方都需要趨勢與量能確認，不能單靠一項數字定性。</div></div>';
+          +'<div class="gs-tip" style="grid-column:1/-1"><span class="ic"></span><div><b>學院導讀</b>散戶多空比先用來觀察情緒是否集中，再與外資部位及價格趨勢比較。結算成本提供價格位置參考，站在上方或下方都需要趨勢與量能確認，不能單靠一項數字定性。</div></div>';
         if(window.AcademyFuturesSummary)window.AcademyFuturesSummary.paint(box,history);
       });
     }
@@ -8860,7 +8860,7 @@
         }
         box.innerHTML=card('外資',d.foreign_call_oi,d.foreign_put_oi,d.foreign_call_val,d.foreign_put_val,d.foreign_call_vol,d.foreign_put_vol)
           +card('自營商',d.dealer_call_oi,d.dealer_put_oi,d.dealer_call_val,d.dealer_put_val,d.dealer_call_vol,d.dealer_put_vol)
-          +'<div class="gs-tip" style="grid-column:1/-1"><span class="ic"></span><div><b>給學員的叮嚀</b>先比較口數與留倉金額是否指向同一方向。兩者分歧時保留結論；選擇權也可能用於避險，仍需搭配期貨、現貨與價格趨勢理解，不能從留倉組合直接推定完整策略。</div></div>';
+          +'<div class="gs-tip" style="grid-column:1/-1"><span class="ic"></span><div><b>學院導讀</b>先比較口數與留倉金額是否指向同一方向。兩者分歧時保留結論；選擇權也可能用於避險，仍需搭配期貨、現貨與價格趨勢理解，不能從留倉組合直接推定完整策略。</div></div>';
       });
     }
 
@@ -10219,7 +10219,7 @@
 
         <!-- ★ 右側分頁：觀察備註 / 基本面 / 相關新聞 -->
         <div class="chart-note-panel" id="chartNotePanel">
-<div id="greedGauge" onclick="showToast('給學員的叮嚀：情緒指標先用來辨識市場是否過熱或偏冷，再搭配價格趨勢、廣度與成交量；極端情緒不保證立即反轉。')" title="給學員的叮嚀：如何看市場情緒" style="display:none;cursor:pointer;padding:6px 20px;border-bottom:1px solid var(--border);overflow-x:auto"></div>
+<div id="greedGauge" onclick="showToast('學院導讀：情緒指標先用來辨識市場是否過熱或偏冷，再搭配價格趨勢、廣度與成交量；極端情緒不保證立即反轉。')" title="學院導讀：如何看市場情緒" style="display:none;cursor:pointer;padding:6px 20px;border-bottom:1px solid var(--border);overflow-x:auto"></div>
           <div class="cnp-tabs">
             <button class="cnp-tab" data-t="note" id="cnpTabNote" onclick="_cnpTab('note')" style="display:none"> 觀察備註</button>
             <button class="cnp-tab on" data-t="fund" id="cnpTabFund" onclick="_cnpTab('fund')"> 基本面</button>
@@ -17528,7 +17528,7 @@
  }
 
  window._openMarketTrain=async function(){if(document.getElementById('marketTrainDialog'))return;const d=document.createElement('dialog');d.id='marketTrainDialog';d.className='market-train-dialog';d.innerHTML='<header><div><h2>加權指數 · 市場列車</h2><small>盤後收盤觀察</small></div><div class="train-dialog-actions"><button class="train-fullscreen" aria-label="切換全螢幕">⛶ 全螢幕</button><button class="train-close" aria-label="關閉市場列車">✕</button></div></header><div class="train-loading" role="status">讀取加權指數歷史資料…</div><div class="train-content" hidden></div>';document.body.append(d);d.showModal();d.querySelector('.train-close').onclick=()=>d.close();d.querySelector('.train-fullscreen').onclick=function(){const panel=d.querySelector('.train-compass-panel'),compass=d.querySelector('.train-map-compass');if(panel)panel.hidden=true;if(compass)compass.setAttribute('aria-expanded','false');const full=d.classList.toggle('train-is-fullscreen');this.textContent=full?'⛶ 還原視窗':'⛶ 全螢幕';};let chart,ro,stopRail,stopSea;d.addEventListener('close',()=>{if(stopRail)stopRail();if(stopSea)stopSea();if(ro)ro.disconnect();if(chart)chart.remove();d.remove();},{once:true});
- try{const req=await fetch(SIG_SB_URL+'/rest/v1/taiex_daily?select=trade_date,open,high,low,close&order=trade_date.desc&limit=700',{headers:{apikey:SIG_SB_ANON,Authorization:'Bearer '+SIG_SB_ANON}});if(!req.ok)throw Error('資料暫時無法取得');const rows=await req.json();if(!d.isConnected)return;if(!Array.isArray(rows)||!rows.length)throw Error('尚無加權歷史資料');const r=analyze(rows),m=meanings[r.state],dir=r.short===1?'north':r.short===-1?'south':'pause';const content=d.querySelector('.train-content');content.classList.add(dir);content.innerHTML=`<section class="train-chart-section"><div class="train-chart-heading"><h3>加權指數走勢</h3><span>${r.data[r.data.length-1].trade_date}｜${Number(r.data[r.data.length-1].close).toLocaleString()} 點</span></div><div class="train-chart-modes"><button type="button" data-index-mode="line" aria-pressed="true">走勢</button><button type="button" data-index-mode="candles" aria-pressed="false">K棒</button><small class="train-candle-note"></small></div><div class="train-ma-toggles">${periods.map((p,i)=>`<button aria-pressed="true" data-period="${p}" style="--ma-color:${colors[i]}">${p}日均線</button>`).join('')}</div><div class="train-index-chart"></div><p class="train-crosshair">移動滑鼠查看收盤與均線</p></section><section class="train-stage"><div class="train-map-card">${map(r)}</div><div class="train-story"><small>目前站位</small><h3>${r.state==='missing'?'待確認':stations[r.station][0]+'站'}</h3><div class="train-state">${m[0]}</div><p>${m[1]}</p><div class="train-reason"><b>狀態解惑</b><p>${r.state==='missing'?'資料不足，先不推定趨勢。':'短線'+(r.short===1?'股價與短均線同向改善':r.short===-1?'股價與短均線同向轉弱':'尚未形成一致方向')+'；中期'+(r.mid===1?'20與60日結構向上':r.mid===-1?'20與60日結構向下':'仍在整理或確認')+'。長期提供背景，不由單日漲跌改寫。'}</p></div><div class="train-layer-lights">${[['短期',r.short,'5 / 10日'],['中期',r.mid,'20 / 60日'],['長期',r.long,'120 / 240日']].map(x=>`<details class="train-layer-detail"><summary><i class="${x[1]===1?'north':x[1]===-1?'south':'pause'}"></i><b>${x[0]}：${x[1]==null?'資訊不足':x[1]===1?'向北':x[1]===-1?'向南':'整理／分歧'}</b><small>${x[2]}</small><span aria-hidden="true">＋</span></summary><p>${x[0]==='短期'?'觀察最近幾天的價格節奏，主要決定羅盤方向。短線轉弱可能只是回站，還要看中期結構是否保持。':x[0]==='中期'?'觀察波段主方向。中期仍向上時，短線拉回與中期轉空需要分開理解；若價格與中期均線一起轉弱，再留意南下是否成立。':'觀察較長時間的市場背景。長期向上不代表短線不會下跌，長期轉弱也可能出現反彈；用來理解站位，不直接決定今天的行駛方向。'}</p><p>${x[1]==null?'目前歷史資料不足，暫不推定方向。':x[1]===1?'目前價格位置與這組均線方向較一致向上，接下來觀察能否持續站穩。':x[1]===-1?'目前價格位置與這組均線方向較一致向下，反彈時觀察結構是否真的改善。':'目前價格位置、均線排列或方向尚未一致，先保留結論，搭配K棒、量能與廣度確認。'}</p></details>`).join('')}</div><div class="train-next"><b>下一個確認點</b><p>${m[2]}</p></div><div class="train-forks"><div><b>改善觀察</b><p>短線重新站穩，中期維持或恢復向上，再看成交量與市場參與是否配合。</p></div><div><b>轉弱觀察</b><p>短線持續轉弱，價格失守中期均線且均線開始下彎，留意轉轍是否成立。</p></div></div><div class="train-guide"><b>給學員的叮嚀</b><p>先看中長期結構，再看短線方向。列車回站或反彈，不一定改變主趨勢；搭配K棒、成交量與市場廣度確認。站名不是指數目標，動畫不是未來路徑。</p></div></div></section>`;content.hidden=false;d.querySelector('.train-loading').hidden=true;stopRail=animateRail(content);stopSea=animateSea(content);bindTrainCompass(content);
+ try{const req=await fetch(SIG_SB_URL+'/rest/v1/taiex_daily?select=trade_date,open,high,low,close&order=trade_date.desc&limit=700',{headers:{apikey:SIG_SB_ANON,Authorization:'Bearer '+SIG_SB_ANON}});if(!req.ok)throw Error('資料暫時無法取得');const rows=await req.json();if(!d.isConnected)return;if(!Array.isArray(rows)||!rows.length)throw Error('尚無加權歷史資料');const r=analyze(rows),m=meanings[r.state],dir=r.short===1?'north':r.short===-1?'south':'pause';const content=d.querySelector('.train-content');content.classList.add(dir);content.innerHTML=`<section class="train-chart-section"><div class="train-chart-heading"><h3>加權指數走勢</h3><span>${r.data[r.data.length-1].trade_date}｜${Number(r.data[r.data.length-1].close).toLocaleString()} 點</span></div><div class="train-chart-modes"><button type="button" data-index-mode="line" aria-pressed="true">走勢</button><button type="button" data-index-mode="candles" aria-pressed="false">K棒</button><small class="train-candle-note"></small></div><div class="train-ma-toggles">${periods.map((p,i)=>`<button aria-pressed="true" data-period="${p}" style="--ma-color:${colors[i]}">${p}日均線</button>`).join('')}</div><div class="train-index-chart"></div><p class="train-crosshair">移動滑鼠查看收盤與均線</p></section><section class="train-stage"><div class="train-map-card">${map(r)}</div><div class="train-story"><small>目前站位</small><h3>${r.state==='missing'?'待確認':stations[r.station][0]+'站'}</h3><div class="train-state">${m[0]}</div><p>${m[1]}</p><div class="train-reason"><b>狀態解惑</b><p>${r.state==='missing'?'資料不足，先不推定趨勢。':'短線'+(r.short===1?'股價與短均線同向改善':r.short===-1?'股價與短均線同向轉弱':'尚未形成一致方向')+'；中期'+(r.mid===1?'20與60日結構向上':r.mid===-1?'20與60日結構向下':'仍在整理或確認')+'。長期提供背景，不由單日漲跌改寫。'}</p></div><div class="train-layer-lights">${[['短期',r.short,'5 / 10日'],['中期',r.mid,'20 / 60日'],['長期',r.long,'120 / 240日']].map(x=>`<details class="train-layer-detail"><summary><i class="${x[1]===1?'north':x[1]===-1?'south':'pause'}"></i><b>${x[0]}：${x[1]==null?'資訊不足':x[1]===1?'向北':x[1]===-1?'向南':'整理／分歧'}</b><small>${x[2]}</small><span aria-hidden="true">＋</span></summary><p>${x[0]==='短期'?'觀察最近幾天的價格節奏，主要決定羅盤方向。短線轉弱可能只是回站，還要看中期結構是否保持。':x[0]==='中期'?'觀察波段主方向。中期仍向上時，短線拉回與中期轉空需要分開理解；若價格與中期均線一起轉弱，再留意南下是否成立。':'觀察較長時間的市場背景。長期向上不代表短線不會下跌，長期轉弱也可能出現反彈；用來理解站位，不直接決定今天的行駛方向。'}</p><p>${x[1]==null?'目前歷史資料不足，暫不推定方向。':x[1]===1?'目前價格位置與這組均線方向較一致向上，接下來觀察能否持續站穩。':x[1]===-1?'目前價格位置與這組均線方向較一致向下，反彈時觀察結構是否真的改善。':'目前價格位置、均線排列或方向尚未一致，先保留結論，搭配K棒、量能與廣度確認。'}</p></details>`).join('')}</div><div class="train-next"><b>下一個確認點</b><p>${m[2]}</p></div><div class="train-forks"><div><b>改善觀察</b><p>短線重新站穩，中期維持或恢復向上，再看成交量與市場參與是否配合。</p></div><div><b>轉弱觀察</b><p>短線持續轉弱，價格失守中期均線且均線開始下彎，留意轉轍是否成立。</p></div></div><div class="train-guide"><b>學院導讀</b><p>先看中長期結構，再看短線方向。列車回站或反彈，不一定改變主趨勢；搭配K棒、成交量與市場廣度確認。站名不是指數目標，動畫不是未來路徑。</p></div></div></section>`;content.hidden=false;d.querySelector('.train-loading').hidden=true;stopRail=animateRail(content);stopSea=animateSea(content);bindTrainCompass(content);
  const host=content.querySelector('.train-index-chart');if(typeof LightweightCharts==='undefined'){host.textContent='圖表套件尚未載入';return;}
  const light=document.documentElement.dataset.theme==='light';chart=_createThemedChart(host,{width:host.clientWidth,height:310,layout:{background:{color:'transparent'},textColor:light?'#536b80':'#a8bfd2'},grid:{vertLines:{color:light?'#e4edf4':'#253a4b'},horzLines:{color:light?'#e4edf4':'#253a4b'}},timeScale:{borderColor:light?'#cfdde8':'#30495c'}});const price=chart.addLineSeries({color:light?'#233c56':'#e8f2fb',lineWidth:2,priceLineVisible:false,title:'加權收盤'});_bindThemedSeries(chart,price,{color:'#233c56'},{color:'#e8f2fb'});price.setData(r.data.map(x=>({time:x.trade_date,value:+x.close})));const candleRows=r.data.filter(x=>['open','high','low'].every(k=>x[k]!=null&&Number.isFinite(+x[k]))).map(x=>({time:x.trade_date,open:+x.open,high:+x.high,low:+x.low,close:+x.close}));const candles=chart.addCandlestickSeries({visible:false,upColor:'#dd685f',downColor:'#4caf83',wickUpColor:'#dd685f',wickDownColor:'#4caf83',borderVisible:false,priceLineVisible:false});candles.setData(candleRows);let chartMode='line';const candleBtn=content.querySelector('[data-index-mode=candles]');candleBtn.disabled=!candleRows.length;if(!candleRows.length)content.querySelector('.train-candle-note').textContent='開高低資料尚未齊備';content.querySelectorAll('[data-index-mode]').forEach(btn=>btn.onclick=()=>{if(btn.disabled)return;chartMode=btn.dataset.indexMode;price.applyOptions({visible:chartMode==='line'});candles.applyOptions({visible:chartMode==='candles'});content.querySelectorAll('[data-index-mode]').forEach(b=>b.setAttribute('aria-pressed',String(b===btn)));});const series={};periods.forEach((p,i)=>{const v=chart.addLineSeries({crosshairMarkerRadius:1.5,crosshairMarkerBorderWidth:0,color:colors[i],lineWidth:1,priceLineVisible:false,title:p+'日'});v.setData(r.data.map((x,j)=>({time:x.trade_date,value:r.ma[p][j]})).filter(x=>x.value!=null));series[p]=v;});chart.timeScale().setVisibleLogicalRange({from:Math.max(0,r.data.length-180),to:r.data.length-1});content.querySelectorAll('[data-period]').forEach(btn=>btn.onclick=()=>{const on=btn.getAttribute('aria-pressed')!=='true';btn.setAttribute('aria-pressed',String(on));series[btn.dataset.period].applyOptions({visible:on});});chart.subscribeCrosshairMove(pm=>{const v=pm.seriesData.get(chartMode==='candles'?candles:price);content.querySelector('.train-crosshair').textContent=v&&pm.time?pm.time+'｜加權收盤 '+Number(v.value??v.close).toLocaleString()+' 點':'移動滑鼠查看收盤與均線';});ro=new ResizeObserver(()=>chart.applyOptions({width:host.clientWidth}));ro.observe(host);
  }catch(e){if(d.isConnected)d.querySelector('.train-loading').textContent=e.message+'，請關閉後再試。';}
