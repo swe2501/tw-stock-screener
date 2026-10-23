@@ -15,6 +15,13 @@ html:has(.fr-expand[open]){overflow:hidden}.fr-expand{position:fixed;inset:0;mar
 @media(max-width:420px){.fr-row{padding:10px 5px}.fr-row-main{gap:7px}.fr-row-meta{padding-left:0;flex-wrap:wrap}.fr-meta-price{flex:1 1 130px}.fr-tags{max-width:48%}.fr-theme{max-width:88px}.fr-values{gap:5px;font-size:12px}.fr-values .fr-ratio{font-size:11px}.fr-name{font-size:12px}.fr-code{font-size:11px}}
 @media(prefers-reduced-motion:reduce){.fr-row,.fr-medal,.fr-expand-button{transition:none!important}.fr-row:hover,.fr-row:hover .fr-medal{transform:none!important}}
 /* 2026-10-20 題材標籤精緻化：沿用網站 --accent／--surface／--border，深淺色自動跟隨 */
+/* Keep rank and stock identity together; floats otherwise push long Latin names below the rank. */
+.fr-table-identity{display:flex;align-items:center;gap:10px;min-width:0}
+.fr-table-identity>.fr-rank{flex:0 0 26px}
+.fr-table-identity>.fr-stock{flex:1 1 0;width:0;min-width:0}
+.fr-table-identity .fr-code{flex-shrink:0;white-space:nowrap}
+.fr-table-identity .fr-name{min-width:0}
+@media(min-width:701px){.fr-table th:first-child{width:27%}.fr-table th:last-child{width:42%}}
 .fr-tags .fr-theme{display:inline-block;height:22px;max-width:112px;padding:0 9px 0 8px;border:1px solid color-mix(in srgb,var(--accent) 24%,var(--border));border-radius:999px;background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 10%,var(--surface)),color-mix(in srgb,var(--accent) 4%,var(--surface)));color:color-mix(in srgb,var(--accent) 60%,var(--text));font-size:10.5px;font-weight:600;letter-spacing:.02em;line-height:20px;vertical-align:middle;transition:border-color .15s,background .15s,color .15s,box-shadow .15s}
 .fr-tags .fr-theme::before{content:"";display:inline-block;width:5px;height:5px;margin:0 5px 1px 0;border-radius:50%;background:var(--accent);opacity:.65;vertical-align:middle}
 .fr-list .fr-tags .fr-theme:hover,.fr-expand .fr-tags .fr-theme:hover{border-color:color-mix(in srgb,var(--accent) 55%,var(--border));background:color-mix(in srgb,var(--accent) 15%,var(--surface));color:var(--accent);box-shadow:0 2px 10px color-mix(in srgb,var(--accent) 18%,transparent)!important}

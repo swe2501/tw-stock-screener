@@ -2890,7 +2890,7 @@
     <div class="fc-note" id="hpNote"></div>
     </div><!-- /cb-sheet 每日台股籌碼報告 -->
     <div style="max-width:1200px;margin:14px auto 0;padding:10px 14px;font-size:11.5px;line-height:1.7;color:var(--text-muted);border-top:1px dashed var(--border);">
-      <b>改動紀錄（供合夥人複查）</b>：2026-09-30 全站版面採用合夥人 redesign 版；同日輕更新（ETF 甜甜圈互動、市場廣度分頁與篩選分離、選擇權支撐壓力 OI 峰值前端、結算日遇休市順延、多空排列配色、行動版表格）。掏金篩選器含「真名三式（多頭回洗反包）」（演算法與歷史回測見該勾選框）。2026-10-04 個股K圖量能面板新增「籌碼」分頁：三大法人每日淨買賣超堆疊柱（外資/投信/自營，紅買綠賣以0為基準，單位張，含合計線；滑鼠移至柱上顯示當日數值），對齊日K日期（僅日K、近120交易日）；資料源＝本站 institutional_trades（TWSE／TPEx T86 三大法人日報）每日推送至 Supabase inst_daily（scripts/inst_daily_push.py）。同日籌碼頁改為最上層分頁（點「籌碼」隱藏技術指標 VOL/MACD/RSI），並拆出「大戶 vs 散戶（週）」：資料源＝TDCC 集保股權分散表（每週五）＋當週收盤換算市值；大戶＝持股≥300張 或 市值≥3000萬、散戶＝持股<20張 或 市值<100萬（跨 TDCC 級距用均勻分布內插，為近似值），畫週增減（大戶紅綠柱／散戶藍線，單位張）；覆蓋熱門前500檔、每週更新（scripts/holder_flow_push.py → Supabase holder_flow）。籌碼頁最終版：單一「籌碼」分頁內拆成外資(日)／投信(日)／自營(日)／大戶(週)／散戶(週) 五張獨立柱狀圖（紅買綠賣）。另：K圖新增標記分類顯示開關（法說會／除權息，比照均線顯示隱藏，動態偵測）；修正指數與外國大盤相關新聞殘留前一檔個股的 bug（指數改載市場新聞 macro_news）；外資空單避險歷史圖右上新增「事件避險／連假避險」標記開關；§4 融資動能背離加入「今日／3 日」週期；富台指期（SGX FTSE Taiwan）新增最後交易日倒數（每月倒數第二個營業日，依證交所休市表）。2026-10-06「市場觀察」新增「美債對標」：以 US10Y 為錨，切換公債天期與熱門對標資產（高股息/科技成長/投等債/定存），呈現收益率利差、存續期敏感度與合規機會／風險定性；US10Y／US2Y 預填自美國財政部官方 Daily Treasury Par Yield Curve Rates（scripts/ust_yields_push.py → Supabase ust_yields，每日更新，可手動調整為示意假設）。資料與演算法沿用本站真實資料源（TWSE／TPEx／TAIFEX／TDCC／US Treasury／Supabase），未更動後端。2026-10-11 K 圖右上角新增「⛶ 全視窗」按鈕（直播／簡報用）：K 圖彈窗撐滿整個視窗並嘗試進入瀏覽器全螢幕，主圖高度隨視窗加大；再按一次或按 Esc 還原（Esc 先還原、不關閉 K 圖），手機版不顯示（本來就是整頁）。純版面功能，未更動資料與演算法。同日 K 圖顯示設定改為「記住上一次」：均線（MA5～MA240、全部均線）、BBAND、量均線、MACD／RSI 線、大盤K、支撐壓力勾選的週期、價量分析、箱型的開關，換股票（含右上角搜尋）、切換日／週／月／小時、關掉再開、重新整理後都沿用上一次的設定，不再還原成預設（設定存在各自瀏覽器，不跨裝置；主力分點因每檔分點不同，仍是每檔各自勾選）。純顯示設定，未更動資料與演算法。同日修正：全螢幕時「畫線工具／圖形註解」下拉選單點不出來（選單原本掛在網頁最外層，瀏覽器全螢幕只顯示 K 圖彈窗內的內容），改為全螢幕時掛在 K 圖彈窗內。2026-10-12 ①外資空單溫度計新增「第三層之二：匯率 × 現貨 × 期貨 三維交叉矩陣」：原四象限保留，各象限再交叉台幣升／貶共 8 格（匯率門檻：USD/TWD 日變動 ±0.10%，其間視為持平、兩列都不命中），並附五邊形雷達（現貨買賣超、期貨部位增減、台幣升貶、指數漲跌四項取近 60 個交易日百分位，避險水位＝100−近 2 年 PR；外圈偏多、內圈偏空，不合成單一分數）；原象限 III 單獨提到匯率的文字移除，匯率一律在此層交叉。②掏金篩選器新增「跌停板」（收盤 ≤ 跌停價；跌停價＝前收×0.9 依升降單位無條件進位）。③K 圖畫線套件：最後一根 K 棒右側空白區也能落點（改記邏輯索引）；右鍵取消目前工具；輔助線與圖形改虛線；橡皮擦可按住左鍵拖曳連續清除（判定距離 10→14px）；線條只畫在繪圖區內不蓋到價格軸；縮放／平移／拖價格軸時線條跟著重畫。同日修正：選了畫線工具後換另一檔股票，按鈕仍反藍但實際不能畫——改為換股票／換週期後工具維持啟用可直接畫，關閉 K 圖時才取消。同日：K 圖畫的線與圖形改為「每檔股票各自記住」——換到別檔不會帶過去，切回來還在，重新整理後也保留（存在各自瀏覽器，最多留最近 150 檔）。題材列表／產業地圖載入加速：先顯示瀏覽器裡上一次的資料、背景再更新，進站閒置時預先抓好；後端這兩支改為可由 CDN 快取 5 分鐘（資料本身每日更新一次，內容與算法不變）。再改為「前一晚先算好」：每日排程尾端把兩頁的彙整結果存進 Supabase page_cache（scripts/page_cache_push.py，每頁 1 列每日覆寫），前端直接讀表；表內沒有或超過 4 天未更新才退回後端現算。同日新增「20 日 SMA 三階段買點」：掏金篩選器三個勾選框（買點 1／2／3，可複選）＋個股日 K「20MA買點」標記開關（預設關，顯示歷史上每一輪的買 1／買 2／買 3）。規則依合夥人規格（均線＝20 日簡單平均含當日；帶量 1.3 倍；長紅／長下影 3%；十字線＝開等於收；均線一下彎即重置），詳見篩選器該項說明；另加一條保守處理：資料窗內尚未出現過重置日之前不產生訊號（無法確定該輪起點）。參數為初版待調整。2026-10-13 上述功能改名為「葛蘭碧買點」，並在掏金篩選器獨立成一個分類（原放在「真名絕招」內）；規則未變。2026-10-17 葛蘭碧規則修正（前後端同步）：①重置由「均線下彎 1 天」改為「連續 3 天下彎」②買點 2 拿掉「均線上彎」要求，只要最低 ≤ 均線且收盤 ＞ 均線 ③買點 3 由「整根在均線下（最高 ＜ 均線）」改為「收盤 ＜ 均線」＋止跌 K；K 圖標記改為依「組」（每個買點 1 開一組）可分組顯示。同日依用戶指示再修：①買點 2 改為「回測月線不破」——最低介於月線 ×0.99～×1.005（碰到月線，差 0.5% 內也算；最多破 1%）且收盤 ＞ 月線，原本最低跌破多深都算 ②買點 3 十字線放寬為實體 ≤ 0.5% 且振幅 ≥ 2%（原為開盤＝收盤）。③買點 2 前股價需先離開月線（買點 1 後至少一天收盤 ≥ 月線 ×1.03），避免買點 1 隔天還貼著月線就被記成回測。④買點 1 須「從月線下突破」：前 3 根內至少一根收盤在月線下（早已站上月線再拉的紅 K 不算），紅 K 不設長紅門檻。⑤買點 2 之後若從沒賺過（之後每天收盤都沒高於買點 2 當天收盤），就不標買點 3。⑥買點 2「碰到月線」範圍由 0.5% 放寬為 1%，並排除回測當天為長黑（黑 K 實體 ≥ 3%）的情況。⑦買點 3 收盤跌破月線超過 5% 不算（暴跌後的止跌 K 不標）。同日「✨ AI 判定」接上真 AI 後端：後端讀該股本站日線，程式先算好均線、量比、漲跌、區間高低與葛蘭碧買點紀錄，再交給 AI 依固定格式輸出「偏多／觀望／偏空」、0～100 技術面分數、摘要與四點說明（型態／量能／葛蘭碧／風險）；AI 只能用提供的數據，不含基本面與消息面。同一檔同一資料日只算一次（共享快取），每日呼叫次數有上限；未設定 AI 金鑰時顯示假資料示意。非投資建議。同日加入「形態判定」：後端把該股最近 160 根日 K（含 20 日均線與成交量）畫成圖片交給 AI 看圖判斷，只從圓形底、頭肩頂、頭肩底、M頭、W底、箱型、上升／下降趨勢線、上升／下降軌道 10 種中列出圖上明顯的形態，標示形成中／已確認、信心高中低與關鍵價位，不給目標價；屬 AI 看圖判斷，可能誤判。AI 供應商可在後端切換（Anthropic 或 OpenAI；目前規劃用 OpenAI GPT-6.1 Sol）。2026-10-21 修正：閒置 1 小時自動登出後，從外層封測登入殼重新登入，「閒置超過 1 小時」提示框仍殘留在畫面上——改為登入成功即關閉；另加同一瀏覽器多分頁的登入／登出同步。同日 K 圖葛蘭碧買點分組標籤的起始日加上年份（原只顯示月/日）。同日修正站內搜尋紀錄：輸入代號片段（如「1」）按 Enter 開了台泥 K 圖，紀錄原本存成打的「1」，改為存「台泥(1101)」；點這類紀錄直接開該股 K 圖。同日：捲動後上方導覽列釘在頂端時，「首頁」前面顯示網站 logo（點了回首頁）。同日拿掉頁首下方的「個股搜尋＋指數快覽」橫條（個股搜尋統一用右上搜尋欄），六個指數改到右上搜尋下拉選單的「國際指數」（滑鼠移入展開）。導覽列 logo 改為浮在左側留白、淡入出現，不再把導覽選項往右擠（左側留白不足的窄螢幕縮小或不顯示）。補修：頁首搜尋列原本在首頁以外的頁面會被程式重新打開，改為所有頁面都不顯示。同日修正今日焦點漲跌幅榜：停牌後恢復交易（多為減資換發新股）的股票，原本拿停牌前的舊收盤比較，算出 +98% 等錯誤漲幅；改為前一筆不是市場前一交易日時，採證交所／櫃買中心官方漲跌（含減資後參考價），官方收盤需與本站當日收盤一致才用，否則當天不列入漲跌幅榜。同日修正「外資結算成本估算」抓不到資料：後端結算成本端點因同一支程式內另一功能在函式中重複匯入 datetime，導致整支端點當機（FUNCTION_INVOCATION_FAILED），已移除該重複匯入。同日今日排行的題材標籤：官方產業別為「其他」的個股（如裕慶-KY，全市場約 90 檔）原本顯示「未分類」，改為照官方歸類顯示「其他業」。今日焦點「漲停／跌停最多題材」改為掃全市場（上市＋上櫃）每一檔漲跌停股（漲跌幅 ≥ 9.5%），題材採今日排行同一套標籤（精選題材＋官方產業別），依家數、再依成交值排序；原本只看漲跌幅前 20 名且只限 39 個精選題材，跌停股多半不在其中而顯示「今日沒有跌停題材」。卡片右上角加「精選題材／一般題材」切換：精選題材＝合夥人 39 個題材，一般題材＝官方產業別（其他→其他業），兩者分開排名；漲停卡與跌停卡各自切換、各自記住選擇（不連動）。同日快照依環境分開：每晚排程以 prod 分支程式產正式站快照、以 uat 分支程式產 uat 快照（kind 加 @uat），盤中即時同理；uat 網站先讀 uat 快照，沒有才讀正式站版，uat 的新邏輯不再要等推 prod 才看得到，也不會影響正式站。同日前端呼叫後端改為依環境：本機開檔才打正式站，部署在任何網址（uat、正式站）都打自己的後端（原本寫死正式站 77 處），uat 從此能直接測到後端修改。2026-10-17 補正篩選器說明文字（原說明仍為舊規則）。2026-10-23 修正分點資料：玩股網查休市日會回傳鄰近交易日的分點，舊爬蟲照查詢日期寫入，造成 2025-10-10、2026-09-25（中秋）、09-28（教師節）、10-09（國慶補假）出現整檔複製的假資料（例：凱基文心 6901 在 9/28 與 9/30 各記 588 張，點 K 圖標到 9/24），已刪除（另存備份）並重建出手明細；爬蟲改依證交所官方休市日跳過休市日，並加「整檔分點與後一交易日完全相同就不寫」防呆。同日主力訊號新增「賣出訊號」：只算賣掉之前買的——榜上分點對某股出現買入訊號（大單門檻）後開始記持倉（之後逐日淨買賣累加），持倉中單日淨賣超 ≥300 張（張數榜）／≥3000 萬（金額榜），或賣出量 ≥ 該輪峰值持倉 20%，符合其一即記；賣後剩不到峰值 10% 標「出清」並結束該輪。主力訊號頁加「買入訊號／賣出訊號」切換，賣出表列賣出均價、這一輪買入訊號的加權買進均價與報酬（未含費稅）；分點出手明細一併列出賣出（綠色）；K 圖主力分點勾選後，賣出日以綠色方塊標在 K 棒上方。同日 K 圖拿掉「箱型」按鈕（箱型一律關閉），BBAND 與斐波那契移到葛蘭碧按鈕右邊。
+      <b>改動紀錄（供合夥人複查）</b>：2026-09-30 全站版面採用合夥人 redesign 版；同日輕更新（ETF 甜甜圈互動、市場廣度分頁與篩選分離、選擇權支撐壓力 OI 峰值前端、結算日遇休市順延、多空排列配色、行動版表格）。掏金篩選器含「真名三式（多頭回洗反包）」（演算法與歷史回測見該勾選框）。2026-10-04 個股K圖量能面板新增「籌碼」分頁：三大法人每日淨買賣超堆疊柱（外資/投信/自營，紅買綠賣以0為基準，單位張，含合計線；滑鼠移至柱上顯示當日數值），對齊日K日期（僅日K、近120交易日）；資料源＝本站 institutional_trades（TWSE／TPEx T86 三大法人日報）每日推送至 Supabase inst_daily（scripts/inst_daily_push.py）。同日籌碼頁改為最上層分頁（點「籌碼」隱藏技術指標 VOL/MACD/RSI），並拆出「大戶 vs 散戶（週）」：資料源＝TDCC 集保股權分散表（每週五）＋當週收盤換算市值；大戶＝持股≥300張 或 市值≥3000萬、散戶＝持股<20張 或 市值<100萬（跨 TDCC 級距用均勻分布內插，為近似值），畫週增減（大戶紅綠柱／散戶藍線，單位張）；覆蓋熱門前500檔、每週更新（scripts/holder_flow_push.py → Supabase holder_flow）。籌碼頁最終版：單一「籌碼」分頁內拆成外資(日)／投信(日)／自營(日)／大戶(週)／散戶(週) 五張獨立柱狀圖（紅買綠賣）。另：K圖新增標記分類顯示開關（法說會／除權息，比照均線顯示隱藏，動態偵測）；修正指數與外國大盤相關新聞殘留前一檔個股的 bug（指數改載市場新聞 macro_news）；外資空單避險歷史圖右上新增「事件避險／連假避險」標記開關；§4 融資動能背離加入「今日／3 日」週期；富台指期（SGX FTSE Taiwan）新增最後交易日倒數（每月倒數第二個營業日，依證交所休市表）。2026-10-06「市場觀察」新增「美債對標」：以 US10Y 為錨，切換公債天期與熱門對標資產（高股息/科技成長/投等債/定存），呈現收益率利差、存續期敏感度與合規機會／風險定性；US10Y／US2Y 預填自美國財政部官方 Daily Treasury Par Yield Curve Rates（scripts/ust_yields_push.py → Supabase ust_yields，每日更新，可手動調整為示意假設）。資料與演算法沿用本站真實資料源（TWSE／TPEx／TAIFEX／TDCC／US Treasury／Supabase），未更動後端。2026-10-11 K 圖右上角新增「⛶ 全視窗」按鈕（直播／簡報用）：K 圖彈窗撐滿整個視窗並嘗試進入瀏覽器全螢幕，主圖高度隨視窗加大；再按一次或按 Esc 還原（Esc 先還原、不關閉 K 圖），手機版不顯示（本來就是整頁）。純版面功能，未更動資料與演算法。同日 K 圖顯示設定改為「記住上一次」：均線（MA5～MA240、全部均線）、BBAND、量均線、MACD／RSI 線、大盤K、支撐壓力勾選的週期、價量分析、箱型的開關，換股票（含右上角搜尋）、切換日／週／月／小時、關掉再開、重新整理後都沿用上一次的設定，不再還原成預設（設定存在各自瀏覽器，不跨裝置；主力分點因每檔分點不同，仍是每檔各自勾選）。純顯示設定，未更動資料與演算法。同日修正：全螢幕時「畫線工具／圖形註解」下拉選單點不出來（選單原本掛在網頁最外層，瀏覽器全螢幕只顯示 K 圖彈窗內的內容），改為全螢幕時掛在 K 圖彈窗內。2026-10-12 ①外資空單溫度計新增「第三層之二：匯率 × 現貨 × 期貨 三維交叉矩陣」：原四象限保留，各象限再交叉台幣升／貶共 8 格（匯率門檻：USD/TWD 日變動 ±0.10%，其間視為持平、兩列都不命中），並附五邊形雷達（現貨買賣超、期貨部位增減、台幣升貶、指數漲跌四項取近 60 個交易日百分位，避險水位＝100−近 2 年 PR；外圈偏多、內圈偏空，不合成單一分數）；原象限 III 單獨提到匯率的文字移除，匯率一律在此層交叉。②掏金篩選器新增「跌停板」（收盤 ≤ 跌停價；跌停價＝前收×0.9 依升降單位無條件進位）。③K 圖畫線套件：最後一根 K 棒右側空白區也能落點（改記邏輯索引）；右鍵取消目前工具；輔助線與圖形改虛線；橡皮擦可按住左鍵拖曳連續清除（判定距離 10→14px）；線條只畫在繪圖區內不蓋到價格軸；縮放／平移／拖價格軸時線條跟著重畫。同日修正：選了畫線工具後換另一檔股票，按鈕仍反藍但實際不能畫——改為換股票／換週期後工具維持啟用可直接畫，關閉 K 圖時才取消。同日：K 圖畫的線與圖形改為「每檔股票各自記住」——換到別檔不會帶過去，切回來還在，重新整理後也保留（存在各自瀏覽器，最多留最近 150 檔）。題材列表／產業地圖載入加速：先顯示瀏覽器裡上一次的資料、背景再更新，進站閒置時預先抓好；後端這兩支改為可由 CDN 快取 5 分鐘（資料本身每日更新一次，內容與算法不變）。再改為「前一晚先算好」：每日排程尾端把兩頁的彙整結果存進 Supabase page_cache（scripts/page_cache_push.py，每頁 1 列每日覆寫），前端直接讀表；表內沒有或超過 4 天未更新才退回後端現算。同日新增「20 日 SMA 三階段買點」：掏金篩選器三個勾選框（買點 1／2／3，可複選）＋個股日 K「20MA買點」標記開關（預設關，顯示歷史上每一輪的買 1／買 2／買 3）。規則依合夥人規格（均線＝20 日簡單平均含當日；帶量 1.3 倍；長紅／長下影 3%；十字線＝開等於收；均線一下彎即重置），詳見篩選器該項說明；另加一條保守處理：資料窗內尚未出現過重置日之前不產生訊號（無法確定該輪起點）。參數為初版待調整。2026-10-13 上述功能改名為「葛蘭碧買點」，並在掏金篩選器獨立成一個分類（原放在「真名絕招」內）；規則未變。2026-10-17 葛蘭碧規則修正（前後端同步）：①重置由「均線下彎 1 天」改為「連續 3 天下彎」②買點 2 拿掉「均線上彎」要求，只要最低 ≤ 均線且收盤 ＞ 均線 ③買點 3 由「整根在均線下（最高 ＜ 均線）」改為「收盤 ＜ 均線」＋止跌 K；K 圖標記改為依「組」（每個買點 1 開一組）可分組顯示。同日依用戶指示再修：①買點 2 改為「回測月線不破」——最低介於月線 ×0.99～×1.005（碰到月線，差 0.5% 內也算；最多破 1%）且收盤 ＞ 月線，原本最低跌破多深都算 ②買點 3 十字線放寬為實體 ≤ 0.5% 且振幅 ≥ 2%（原為開盤＝收盤）。③買點 2 前股價需先離開月線（買點 1 後至少一天收盤 ≥ 月線 ×1.03），避免買點 1 隔天還貼著月線就被記成回測。④買點 1 須「從月線下突破」：前 3 根內至少一根收盤在月線下（早已站上月線再拉的紅 K 不算），紅 K 不設長紅門檻。⑤買點 2 之後若從沒賺過（之後每天收盤都沒高於買點 2 當天收盤），就不標買點 3。⑥買點 2「碰到月線」範圍由 0.5% 放寬為 1%，並排除回測當天為長黑（黑 K 實體 ≥ 3%）的情況。⑦買點 3 收盤跌破月線超過 5% 不算（暴跌後的止跌 K 不標）。同日「✨ AI 判定」接上真 AI 後端：後端讀該股本站日線，程式先算好均線、量比、漲跌、區間高低與葛蘭碧買點紀錄，再交給 AI 依固定格式輸出「偏多／觀望／偏空」、0～100 技術面分數、摘要與四點說明（型態／量能／葛蘭碧／風險）；AI 只能用提供的數據，不含基本面與消息面。同一檔同一資料日只算一次（共享快取），每日呼叫次數有上限；未設定 AI 金鑰時顯示假資料示意。非投資建議。同日加入「形態判定」：後端把該股最近 160 根日 K（含 20 日均線與成交量）畫成圖片交給 AI 看圖判斷，只從圓形底、頭肩頂、頭肩底、M頭、W底、箱型、上升／下降趨勢線、上升／下降軌道 10 種中列出圖上明顯的形態，標示形成中／已確認、信心高中低與關鍵價位，不給目標價；屬 AI 看圖判斷，可能誤判。AI 供應商可在後端切換（Anthropic 或 OpenAI；目前規劃用 OpenAI GPT-6.1 Sol）。2026-10-21 修正：閒置 1 小時自動登出後，從外層封測登入殼重新登入，「閒置超過 1 小時」提示框仍殘留在畫面上——改為登入成功即關閉；另加同一瀏覽器多分頁的登入／登出同步。同日 K 圖葛蘭碧買點分組標籤的起始日加上年份（原只顯示月/日）。同日修正站內搜尋紀錄：輸入代號片段（如「1」）按 Enter 開了台泥 K 圖，紀錄原本存成打的「1」，改為存「台泥(1101)」；點這類紀錄直接開該股 K 圖。同日：捲動後上方導覽列釘在頂端時，「首頁」前面顯示網站 logo（點了回首頁）。同日拿掉頁首下方的「個股搜尋＋指數快覽」橫條（個股搜尋統一用右上搜尋欄），六個指數改到右上搜尋下拉選單的「國際指數」（滑鼠移入展開）。導覽列 logo 改為浮在左側留白、淡入出現，不再把導覽選項往右擠（左側留白不足的窄螢幕縮小或不顯示）。補修：頁首搜尋列原本在首頁以外的頁面會被程式重新打開，改為所有頁面都不顯示。同日修正今日焦點漲跌幅榜：停牌後恢復交易（多為減資換發新股）的股票，原本拿停牌前的舊收盤比較，算出 +98% 等錯誤漲幅；改為前一筆不是市場前一交易日時，採證交所／櫃買中心官方漲跌（含減資後參考價），官方收盤需與本站當日收盤一致才用，否則當天不列入漲跌幅榜。同日修正「外資結算成本估算」抓不到資料：後端結算成本端點因同一支程式內另一功能在函式中重複匯入 datetime，導致整支端點當機（FUNCTION_INVOCATION_FAILED），已移除該重複匯入。同日今日排行的題材標籤：官方產業別為「其他」的個股（如裕慶-KY，全市場約 90 檔）原本顯示「未分類」，改為照官方歸類顯示「其他業」。今日焦點「漲停／跌停最多題材」改為掃全市場（上市＋上櫃）每一檔漲跌停股（漲跌幅 ≥ 9.5%），題材採今日排行同一套標籤（精選題材＋官方產業別），依家數、再依成交值排序；原本只看漲跌幅前 20 名且只限 39 個精選題材，跌停股多半不在其中而顯示「今日沒有跌停題材」。卡片右上角加「精選題材／一般題材」切換：精選題材＝合夥人 39 個題材，一般題材＝官方產業別（其他→其他業），兩者分開排名；漲停卡與跌停卡各自切換、各自記住選擇（不連動）。同日快照依環境分開：每晚排程以 prod 分支程式產正式站快照、以 uat 分支程式產 uat 快照（kind 加 @uat），盤中即時同理；uat 網站先讀 uat 快照，沒有才讀正式站版，uat 的新邏輯不再要等推 prod 才看得到，也不會影響正式站。同日前端呼叫後端改為依環境：本機開檔才打正式站，部署在任何網址（uat、正式站）都打自己的後端（原本寫死正式站 77 處），uat 從此能直接測到後端修改。2026-10-17 補正篩選器說明文字（原說明仍為舊規則）。2026-10-23 修正分點資料：玩股網查休市日會回傳鄰近交易日的分點，舊爬蟲照查詢日期寫入，造成 2025-10-10、2026-09-25（中秋）、09-28（教師節）、10-09（國慶補假）出現整檔複製的假資料（例：凱基文心 6901 在 9/28 與 9/30 各記 588 張，點 K 圖標到 9/24），已刪除（另存備份）並重建出手明細；爬蟲改依證交所官方休市日跳過休市日，並加「整檔分點與後一交易日完全相同就不寫」防呆。同日主力訊號新增「賣出訊號」：只算賣掉之前買的——榜上分點對某股出現買入訊號（大單門檻）後開始記持倉（之後逐日淨買賣累加），持倉中單日淨賣超 ≥300 張（張數榜）／≥3000 萬（金額榜），或賣出量 ≥ 該輪峰值持倉 20%，符合其一即記；賣後剩不到峰值 10% 標「出清」並結束該輪。主力訊號頁加「買入訊號／賣出訊號」切換，賣出表列賣出均價、這一輪買入訊號的加權買進均價與報酬（未含費稅）；分點出手明細一併列出賣出（綠色）；K 圖主力分點勾選後，賣出日以綠色方塊標在 K 棒上方。同日 K 圖拿掉「箱型」按鈕（箱型一律關閉），BBAND 與斐波那契移到葛蘭碧按鈕右邊。同日 K 圖主力標記改為不寫「買／賣」字樣：紅色向上箭頭（K 棒下方）＝主力買進、綠色向下箭頭（K 棒上方）＝主力賣出，同日多家只標家數，分點名稱看滑過 K 棒的小卡（主力進場／主力出場）；從主力訊號或分點出手明細點進 K 圖時，自動勾選該分點，該分點在這檔的買進與賣出紀錄一起標出。
     </div>
   </div>
 
@@ -10218,6 +10218,7 @@
             </div>
             <div class="chart-watch-status" id="chartWatchStatus">★ 已列入觀察清單</div>
             <button class="btn-save-chart-watch" id="chartSaveWatchBtn" onclick="saveWatchFromChart()"> 儲存收藏理由與到價設定</button>
+            <p class="chart-member-watch-link">與會員中心「我的自選」共用收藏理由與提醒設定。<button type="button" onclick="openMemberWatchFromChart()">查看這檔自選 ↗</button></p>
             <button class="btn-remove-chart-watch" id="chartRemoveWatchBtn" onclick="removeWatchFromChart()" style="display:none">✕ 移除觀察清單</button>
           </div>
           <!-- 基本面 -->
@@ -11163,14 +11164,11 @@
       if (!candleSeriesRef) return;
       const S = window._mkShow;
       const user = (_userMarkers[currentCode] || [])
-        .map(m => { const t = _snapMarkerDate(m.date); return t ? {
-          time: t,
-          position: 'aboveBar',
-          color: /賣|出清/.test(m.label || '') ? '#16a34a' : '#ff1744',   // 2026-10-23 主力賣出用綠
-          shape: 'arrowDown',
-          text: m.label,
-          size: 1,
-        } : null; })
+        .map(m => { const t = _snapMarkerDate(m.date); if (!t) return null;
+          const lb = m.label || '', sell = /賣|出清/.test(lb), buy = !sell && /買/.test(lb);
+          if (sell || buy) return { time: t, position: sell ? 'aboveBar' : 'belowBar', color: sell ? '#16a34a' : '#ef4444',
+            shape: sell ? 'arrowDown' : 'arrowUp', text: '', size: 1, _side: sell ? 's' : 'b' };   // 2026-10-23 主力買賣改紅綠箭頭、不寫字
+          return { time: t, position: 'aboveBar', color: '#ff1744', shape: 'arrowDown', text: lb, size: 1 }; })
         .filter(Boolean);
       const catalyst = _catalystEvents
         .filter(e => _lastCandleTimes && _lastCandleTimes.has(e.start_date))
@@ -11193,20 +11191,13 @@
       // 2026-10-22 圖上只放小圓點（每家分點固定一色），同一天多家合併成數字；名稱改在滑過 K 棒的小卡顯示，避免文字壓到 K 線
       window._brokerByTime = bmap;
       _brokerColors(); const bcol = window._brokerColor || {};
-      const broker = Object.entries(bmap).map(([date, arr]) => ({
-        time: date,
-        position: 'belowBar',
-        color: arr.length > 1 ? '#9a7bc4' : (bcol[arr[0]] || '#b07fd0'),
-        shape: 'circle',
-        text: arr.length > 1 ? String(arr.length) : '',
-        size: arr.length > 1 ? 1 : 0.8,
-      })).concat(Object.entries(smap).map(([date, s]) => ({
-        time: date,
-        position: 'aboveBar',
-        color: '#16a34a',
-        shape: 'square',
-        text: (s.exit ? '出清' : '賣') + (s.n.size > 1 ? '×' + s.n.size : ''),
-        size: 0.8,
+      // 2026-10-23 用戶指定：不寫「買／賣」字樣，紅色向上箭頭＝買、綠色向下箭頭＝賣；同日多家只寫家數，分點名稱看滑過小卡
+      window._brokerSellByTime = Object.fromEntries(Object.entries(smap).map(([t, s]) => [t, [...s.n]]));
+      const broker = Object.entries(bmap).map(([date, arr]) => {
+        const n = new Set(arr).size;
+        return { time: date, position: 'belowBar', color: '#ef4444', shape: 'arrowUp', text: n > 1 ? String(n) : '', size: 1 };
+      }).concat(Object.entries(smap).map(([date, s]) => ({
+        time: date, position: 'aboveBar', color: '#16a34a', shape: 'arrowDown', text: s.n.size > 1 ? String(s.n.size) : '', size: 1,
       })));
       const div = _lastDivMarkers || [];
       const present = { div: div.length > 0, catalyst: catalyst.length > 0, broker: broker.length > 0, user: user.length > 0, sma20: _sma20Markers.length > 0 };
@@ -11214,7 +11205,8 @@
       window._chartTimelineEvents=[...(S.div?div.map(m=>({time:m.time,label:'息',detail:m.text})):[]),...(S.catalyst?catalyst.map(m=>({time:m.time,label:'法',detail:m.text})):[])];
       window.AcademyChartViewport?.refresh();
       if (S.broker) sel.push(...broker);
-      if (S.user) sel.push(...user);
+      if (S.user) sel.push(...user.filter(m => !(S.broker && m._side && (m._side === 's' ? smap : bmap)[m.time]))
+        .map(({ _side, ...m }) => m));
       if (S.sma20) sel.push(..._sma20Markers.filter(m => !window._sma20GroupsOn || window._sma20GroupsOn.has(m.group)));
       sel.push(...(_boxMarkers || []));   // 箱型標記另有自己的開關，不納入此分類
       const all = sel.sort((a, b) => a.time < b.time ? -1 : 1);
@@ -11640,7 +11632,9 @@
 
     let _sigReturn = false;  // 從主力訊號開的 K 圖，關閉後要回到訊號視窗
 
-    function _sigOpenChart(code, label) {
+    function _sigOpenChart(code, label, brokerId) {
+      // 2026-10-23 開 K 圖時自動勾選該分點，買（紅箭頭）賣（綠箭頭）紀錄都標出來
+      window._chartFocusBroker = brokerId ? { code, id: String(brokerId) } : null;
       // 主力訊號已改為視圖（sigView），K 線圖為覆蓋層 chartModal，視圖仍在底下，
       // 不需（也不能）操作已移除的 brokerSigModal。舊程式在此丟 null 例外導致點擊無反應。
       _sigReturn = true;
@@ -12259,7 +12253,7 @@
           const sell = /_(sell|exit)$/.test(x.view || ''), sx = /_exit$/.test(x.view || '');
           if (sell) {
             return `
-          <tr onclick="openChart('${x.code}','${x.code} ${(x.name||'').replace(/'/g,'')}','',0,false,'${x.trade_date}','${bn} ${sx ? '出清' : '賣'}')"
+          <tr onclick="window._chartFocusBroker={code:'${x.code}',id:'${brokerId}'};openChart('${x.code}','${x.code} ${(x.name||'').replace(/'/g,'')}','',0,false,'${x.trade_date}','${bn} ${sx ? '出清' : '賣'}')"
               style="border-bottom:1px solid var(--border);cursor:pointer;color:#16a34a">
             <td style="padding:4px 6px;text-align:center;width:26px;font-size:11px">${sx ? '出清' : '賣'}</td>
             <td style="padding:4px 8px;white-space:nowrap">${x.trade_date}</td>
@@ -12276,7 +12270,7 @@
             cb = `<input type="checkbox" ${checked} onclick="event.stopPropagation()" onchange="_stToggle(this,'${brokerId}','${bn}','${x.code}','${nm}')" title="加入持股觀察站" style="cursor:pointer">`;
           }
           return `
-          <tr onclick="openChart('${x.code}','${x.code} ${(x.name||'').replace(/'/g,'')}','',0,false,'${x.trade_date}','${brokerName} 買')"
+          <tr onclick="window._chartFocusBroker={code:'${x.code}',id:'${brokerId}'};openChart('${x.code}','${x.code} ${(x.name||'').replace(/'/g,'')}','',0,false,'${x.trade_date}','${brokerName} 買')"
               style="border-bottom:1px solid var(--border);cursor:pointer">
             <td style="padding:4px 6px;text-align:center;width:26px">${cb}</td>
             <td style="padding:4px 8px;white-space:nowrap">${x.trade_date}</td>
@@ -12591,7 +12585,7 @@
         if (!rs.length) return `<div style="padding:16px 0">當日無${isSell ? '賣出' : '買超'}訊號</div>`;
         if (isSell) return _sigSellTable(rs);
         const tr = rs.map(x => { const _nm=(window._names&&window._names[x.code])||''; return `
-          <tr onclick="_sigOpenChart('${x.code}','${((x.name||_nm||'')).replace(/'/g,'')} 買')"
+          <tr onclick="_sigOpenChart('${x.code}','${((x.name||_nm||'')).replace(/'/g,'')} 買','${x.broker_id}')"
               style="cursor:pointer;border-bottom:1px solid var(--border)">
             <td style="padding:4px 8px;text-align:center">${x.rank_amt != null ? `${x.rank}／${x.rank_amt}` : x.rank}</td>
             <td style="padding:4px 8px">${x.broker_name}</td>
@@ -12650,7 +12644,7 @@
       const tr = rs.map(x => { const _nm = (window._names && window._names[x.code]) || ''; const nm = (x.name || _nm || '').replace(/'/g, '');
         const rc = x.ret == null ? 'var(--text-muted)' : x.ret > 0 ? '#ef4444' : x.ret < 0 ? '#16a34a' : 'var(--text-muted)';
         return `
-          <tr onclick="_sigOpenChart('${x.code}','${nm} ${x.exit ? '出清' : '賣'}')" style="cursor:pointer;border-bottom:1px solid var(--border)">
+          <tr onclick="_sigOpenChart('${x.code}','${nm} ${x.exit ? '出清' : '賣'}','${x.broker_id}')" style="cursor:pointer;border-bottom:1px solid var(--border)">
             <td style="padding:4px 8px;text-align:center">${x.rank_amt != null ? `${x.rank}／${x.rank_amt}` : (x.rank ?? '–')}</td>
             <td style="padding:4px 8px">${x.broker_name}</td>
             <td style="padding:4px 8px"><b style="color:var(--accent)">${x.code}</b> ${x.name || _nm || ''}</td>
@@ -12817,7 +12811,7 @@
         if (!r.ok || currentCode !== code) return;
         for (const t of await r.json()) {
           const m = meta[t.broker_id] || { name: t.broker_id, cat: '其他' };
-          _brokerEntriesRaw.push({ date: t.trade_date, broker: m.name, cat: m.cat });
+          _brokerEntriesRaw.push({ date: t.trade_date, broker: m.name, cat: m.cat, id: String(t.broker_id) });
         }
         // 2026-10-23 主力賣出（賣掉之前買的）：broker_trades 的 _sell／_exit 列
         try {
@@ -12826,12 +12820,19 @@
             { headers: { apikey: SIG_SB_ANON, Authorization: `Bearer ${_authToken}` } });
           if (rs.ok && currentCode === code) for (const t of await rs.json()) {
             const m = meta[t.broker_id] || { name: t.broker_id, cat: '其他' };
-            _brokerEntriesRaw.push({ date: t.trade_date, broker: m.name, cat: m.cat, sell: true, exit: /_exit$/.test(t.view) });
+            _brokerEntriesRaw.push({ date: t.trade_date, broker: m.name, cat: m.cat, id: String(t.broker_id), sell: true, exit: /_exit$/.test(t.view) });
           }
         } catch (_) {}
         const distinct = [...new Map(_brokerEntriesRaw.map(e => [e.broker, e.cat]))].map(([name, cat]) => ({ name, cat }));
         _brokerChecked = new Set();   // 預設全不勾，K 圖乾淨；展開「主力分點」自行勾選（2026-09-28）
+        // 2026-10-23 從主力訊號／出手明細點進來：自動勾選該分點，買賣紀錄一起標出
+        const fb = window._chartFocusBroker; window._chartFocusBroker = null;
+        if (fb && fb.code === code) {
+          _brokerEntriesRaw.filter(e => e.id === fb.id).forEach(e => _brokerChecked.add(e.broker));
+          if (_brokerChecked.size) window._mkShow.broker = true;
+        }
         _renderBrokerFilter(distinct);
+        if (_brokerChecked.size && window._chartLayerStatus) window._chartLayerStatus('broker', true, _brokerChecked.size);
         _refreshChartMarkers();
       } catch (_) { /* 主力標記非必要，失敗時靜默 */ }
     }
@@ -14462,6 +14463,8 @@
           `　收 <span style="color:${color}">${fmt(c.close)}</span>`;
         const bks = window._mkShow && window._mkShow.broker && window._brokerByTime && window._brokerByTime[param.time];
         if (bks && bks.length) _ohlcTip.innerHTML += `<div class="ohlc-broker"><span>主力進場</span>${[...new Set(bks)].map(n => `<b><i style="background:${(window._brokerColor||{})[n]||'#b07fd0'}"></i>${n}</b>`).join('')}</div>`;
+        const sks = window._mkShow && window._mkShow.broker && window._brokerSellByTime && window._brokerSellByTime[param.time];
+        if (sks && sks.length) _ohlcTip.innerHTML += `<div class="ohlc-broker"><span style="color:#16a34a">主力出場</span>${sks.map(n => `<b><i style="background:${(window._brokerColor||{})[n]||'#16a34a'}"></i>${n}</b>`).join('')}</div>`;
         _ohlcTip.style.display = 'block';
         window.AcademyChartViewport?.placeTooltip(param,c,candles,chartInstance,candleSeriesRef);
       });
@@ -16022,18 +16025,25 @@
       _toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
     }
 
+    function _publishWatchUpdate(){
+      if(!_authToken||_authToken!==localStorage.getItem('sb_token'))return;
+      let owner;try{owner=JSON.parse(localStorage.getItem('sb_user')||'{}').id;}catch{return;}
+      if(owner)dispatchEvent(new CustomEvent('academy-watch-updated',{detail:{owner,rows:JSON.parse(JSON.stringify(_watchData))}}));
+    }
+
     // ── 初始化：登入後靜默載入 codes ──────────────────────
     async function _loadWatchCodes() {
-      if (!_authToken) return;
+      if (!_authToken) return;const ownerToken=_authToken;
       try {
         const r = await _authFetch(window.__API+'/api/watchlist');
         if (!r.ok) return;
         const data = await r.json();
-        _watchData = Array.isArray(data) ? data : [];
+        if(ownerToken!==_authToken||ownerToken!==localStorage.getItem('sb_token')||!Array.isArray(data))return;
+        _watchData = data;
         _watchCodes = new Set(_watchData.map(w => w.code));
         _refreshWatchBtns();
         try { filterAndRender(); } catch(_) {}
-        _startVolAlertPoller();
+        _startVolAlertPoller();_publishWatchUpdate();
       } catch (_) {}
     }
 
@@ -16103,64 +16113,36 @@
 
     async function saveWatchFromChart() {
       if (!_authToken) { openAuthModal('login'); return; }
-      const note = (document.getElementById('chartNoteInput')?.value || '').trim();
-      const tpRaw  = parseFloat(document.getElementById('chartClosePriceInput')?.value);
-      const rtRaw  = parseFloat(document.getElementById('chartRtPriceInput')?.value);
-      const vtRaw  = parseFloat(document.getElementById('chartVolTargetInput')?.value);
-      const target_price    = (!isNaN(tpRaw) && tpRaw > 0) ? tpRaw : null;
-      const rt_target_price = (!isNaN(rtRaw) && rtRaw > 0) ? rtRaw : null;
-      const vol_target      = (!isNaN(vtRaw) && vtRaw > 0) ? Math.round(vtRaw) : null;
-      const code = currentCode; const name = currentName;
-      const industry = currentIndustry;
-
-      // 若已在清單，更新備註 + 目標價
-      if (_watchCodes.has(code)) {
-        const item = _watchData.find(w => w.code === code);
-        if (item) {
-          item.note = note; item.target_price = target_price; item.rt_target_price = rt_target_price; item.vol_target = vol_target;
-          try {
-            await _authFetch(window.__API+'/api/watchlist', {
-              method: 'PATCH',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ id: item.id, note, target_price, rt_target_price, vol_target })
-            });
-            showToast('備註與目標價已更新');
-            if (!document.getElementById('watchlistPanel').classList.contains('hidden'))
-              _renderWatchTable();
-          } catch(_) {}
-        }
-        return;
-      }
-
-      // 新增
-      let price_at_add = currentPrice;
+      const button=document.getElementById('chartSaveWatchBtn');if(button?.disabled)return;
+      const ownerToken=_authToken,code=currentCode,name=currentName,industry=currentIndustry;
+      const note=(document.getElementById('chartNoteInput')?.value||'').trim();
+      const positive=id=>{const v=Number(document.getElementById(id)?.value);return Number.isFinite(v)&&v>0?v:null;};
+      const values={note,target_price:positive('chartClosePriceInput'),rt_target_price:positive('chartRtPriceInput'),vol_target:positive('chartVolTargetInput')};if(values.vol_target)values.vol_target=Math.round(values.vol_target);
+      if(button)button.disabled=true;
       try {
-        const pr = await fetch(`${window.__API}/api/prices?codes=${encodeURIComponent(code)}`);
-        if (pr.ok) { const pm = await pr.json(); if (pm[code] != null) price_at_add = pm[code]; }
-      } catch(_) {}
-      try {
-        const r = await _authFetch(window.__API+'/api/watchlist', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code, name, industry, price_at_add, note, target_price, rt_target_price, vol_target })
-        });
-        if (r.ok) {
-          const arr = await r.json();
-          const item = Array.isArray(arr) ? arr[0] : arr;
-          _watchData.unshift(item);
-          _watchCodes.add(code);
-          _refreshWatchBtns();
-          if (!document.getElementById('watchlistPanel').classList.contains('hidden'))
-            _renderWatchTable();
-          showToast(`${code} ${name} 已加入會員中心 → 我的自選`);
-        } else {
-          showToast('儲存失敗，請稍後再試', true);
-        }
-      } catch(_) { showToast('網路錯誤', true); }
+        const item=_watchData.find(w=>w.code===code);let price_at_add=currentPrice;
+        if(!item){try{const pr=await fetch(`${window.__API}/api/prices?codes=${encodeURIComponent(code)}`);if(pr.ok){const prices=await pr.json();if(prices[code]!=null)price_at_add=prices[code];}}catch{}}
+        if(ownerToken!==_authToken||ownerToken!==localStorage.getItem('sb_token'))throw Error('帳號已切換，尚未送出儲存');
+        const response=await _authFetch(window.__API+'/api/watchlist',{method:item?'PATCH':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(item?{id:item.id,...values}:{code,name,industry,price_at_add,...values})});
+        if(!response.ok)throw Error(response.status===401?'登入已過期，請重新登入':'儲存失敗，原備註仍保留，請稍後再試');
+        const returned=await response.json(),saved=Array.isArray(returned)?returned[0]:returned;
+        if(!saved||saved.code!==code||!saved.id||saved.note!==note)throw Error('伺服器尚未確認保存結果，請保留內容並重新整理核對');
+        if(ownerToken!==_authToken||ownerToken!==localStorage.getItem('sb_token'))return;
+        if(item)Object.assign(item,saved);else _watchData.unshift(saved);
+        _watchCodes.add(code);_refreshWatchBtns();
+        if(!document.getElementById('watchlistPanel').classList.contains('hidden'))_renderWatchTable();
+        _publishWatchUpdate();showToast('已同步會員中心 → 我的自選（備註與到價設定）');
+      }catch(error){showToast(error.message||'網路錯誤，尚未確認保存',true);}finally{if(button)button.disabled=false;}
+    }
+
+    function openMemberWatchFromChart(){
+      if(!_authToken){openAuthModal('login');return;}
+      sessionStorage.setItem('academy.observation.seed',JSON.stringify({code:currentCode,name:currentName}));
+      closeChart();window.openMemberCenter?.('favorites');
     }
 
     async function removeWatchFromChart() {
-      await _removeWatch(currentCode);
+      if(!await _removeWatch(currentCode))return;
       document.getElementById('chartNoteInput').value = '';
       showToast('已移除觀察清單');
     }
@@ -16181,14 +16163,25 @@
     }
 
     async function _removeWatch(code) {
+      const ownerToken=_authToken;
       try {
-        await _authFetch(`${window.__API}/api/watchlist?code=${encodeURIComponent(code)}`, { method: 'DELETE' });
-        _watchData = _watchData.filter(w => w.code !== code);
-        _watchCodes.delete(code);
-        _refreshWatchBtns();
-        if (!document.getElementById('watchlistPanel').classList.contains('hidden'))
-          _renderWatchTable();
-      } catch (_) {}
+        const response=await _authFetch(`${window.__API}/api/watchlist?code=${encodeURIComponent(code)}`,{method:'DELETE'});
+        if(!response.ok)throw Error('移除失敗，原觀察資料仍保留');
+        if(ownerToken!==_authToken||ownerToken!==localStorage.getItem('sb_token'))return false;
+        _watchData=_watchData.filter(w=>w.code!==code);_watchCodes.delete(code);_refreshWatchBtns();_publishWatchUpdate();
+        if(!document.getElementById('watchlistPanel').classList.contains('hidden'))_renderWatchTable();
+        return true;
+      }catch(error){showToast(error.message||'網路錯誤，尚未確認移除',true);return false;}
+    }
+
+    async function _saveWatchPatch(id,values){
+      const ownerToken=_authToken;
+      const response=await _authFetch(window.__API+'/api/watchlist',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,...values})});
+      if(!response.ok)throw Error('儲存失敗，原資料仍保留');
+      const rows=await response.json(),saved=Array.isArray(rows)?rows[0]:null;
+      if(!saved||String(saved.id)!==String(id)||Object.keys(values).some(k=>saved[k]!==values[k]&&!(typeof values[k]==='number'&&Number(saved[k])===values[k])))throw Error('尚未確認儲存結果，請重新整理核對');
+      if(ownerToken!==_authToken||ownerToken!==localStorage.getItem('sb_token'))throw Error('帳號已切換，請重新開啟觀察清單');
+      const item=_watchData.find(w=>String(w.id)===String(id));if(item)Object.assign(item,saved);_publishWatchUpdate();return saved;
     }
 
     async function saveWatch() {
@@ -16286,8 +16279,8 @@
           <td>${mkCell(rtp, 'rt_target_price')}</td>
           <td>${mkCell(w.vol_target, 'vol_target', 'int')}</td>
           <td class="watch-note-cell">
-            <div class="watch-note-text" data-id="${w.id}"
-                 onclick="_editNote(this, ${w.id})">${w.note || ''}</div>
+            <div class="watch-note-editor"><div class="watch-note-text" data-id="${w.id}"
+                 onclick="_editNote(this, ${w.id})">${String(w.note||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}</div><button type="button" class="watch-note-edit" aria-label="編輯 ${w.code} 備註" onclick="event.stopPropagation();_editNote(this.parentElement.querySelector('.watch-note-text'),${w.id})">編輯</button></div>
           </td>
           <td class="watch-col-date" style="color:var(--text-muted);font-size:12px;white-space:nowrap">${dateStr}</td>
           <td><button class="watch-del-btn" onclick="_removeWatch('${w.code}')" title="移除">✕</button></td>
@@ -16307,7 +16300,7 @@
     // ── 備註行內編輯 ──────────────────────────────────────
     function _editNote(el, id) {
       if (el.querySelector('textarea')) return;
-      const cur = el.textContent.trim();
+      const cur = _watchData.find(w=>String(w.id)===String(id))?.note||'';
       el.innerHTML = `
         <div style="display:flex;align-items:flex-start;gap:6px">
           <textarea id="noteTA_${id}"
@@ -16333,19 +16326,10 @@
       ta.setSelectionRange(ta.value.length, ta.value.length);
     }
 
-    async function _saveNote(input, id) {
-      const note = input.value.trim();
-      const el = input.parentElement;
-      el.textContent = note;
-      const item = _watchData.find(w => w.id === id);
-      if (item) item.note = note;
-      try {
-        await _authFetch(window.__API+'/api/watchlist', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id, note })
-        });
-      } catch (_) {}
+    async function _saveNote(input,id){
+      if(input.disabled)return;input.disabled=true;
+      try{const saved=await _saveWatchPatch(id,{note:input.value.trim()});(input.closest?.('.watch-note-text')||input.parentElement).textContent=saved.note;}
+      catch(error){showToast(error.message,true);input.disabled=false;}
     }
 
     function _editTarget(el, id, field) {
@@ -16361,19 +16345,11 @@
       if (inp) { inp.focus(); inp.select(); }
     }
 
-    async function _saveTarget(input, id, field) {
-      const val    = parseFloat(input.value);
-      const target = (!isNaN(val) && val > 0) ? val : null;
-      const item   = _watchData.find(w => w.id === id);
-      if (item) item[field] = target;
-      try {
-        await _authFetch(window.__API+'/api/watchlist', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id, [field]: target }),
-        });
-      } catch (_) {}
-      _renderWatchTable();
+    async function _saveTarget(input,id,field){
+      if(!['target_price','rt_target_price','vol_target'].includes(field)||input.disabled)return;input.disabled=true;
+      const value=Number(input.value),target=Number.isFinite(value)&&value>0?value:null;
+      try{await _saveWatchPatch(id,{[field]:target});_renderWatchTable();}
+      catch(error){showToast(error.message,true);input.disabled=false;}
     }
   </script>
 
@@ -16381,7 +16357,7 @@
   <div id="watchlistPanel" class="watch-panel hidden">
     <div class="watch-panel-inner">
       <div class="watch-panel-hdr">
-        <h2> 我的觀察清單</h2>
+        <h2> 我的觀察清單</h2><button class="watch-member-detail" type="button" onclick="closeWatchlist();openMemberCenter('favorites')">前往我的自選 ↗</button>
         <button onclick="closeWatchlist()" style="background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer">✕</button>
       </div>
       <div class="watch-panel-body"></div>
@@ -17527,7 +17503,7 @@
 <script src="assets/sector-dashboard-model.js" defer></script>
 <script src="assets/sector-dashboard.js" defer></script>
 <script src="assets/member-invitation.js?v=1" defer></script>
-<script src="assets/member-identity.js?v=service1" defer></script>
+<script src="assets/member-identity.js?v=inbox1" defer></script>
 <script src="assets/member-task-guide.js?v=1" defer></script>
 <script src="assets/member-missions.js?v=taskbulk1" defer></script>
 <script src="assets/member-share.js?v=invite4" defer></script>
@@ -17540,12 +17516,12 @@
 <script src="assets/learning-figures.js?v=2" defer></script>
 <script src="assets/member-learning-verification.js?v=1" defer></script>
 <script src="assets/learning-center.js?v=8" defer></script>
-<script src="assets/member-features.js?v=taskbulk1" defer></script>
+<script src="assets/member-features.js?v=inbox1" defer></script>
 <script src="assets/member-strategy-engine.js?v=short1" defer></script>
 <script src="assets/strategy-dimensions.js?v=2" defer></script>
 <script src="assets/strategy-presets.js?v=1" defer></script>
 <script src="assets/member-strategy-ui.js?v=companion-suction6" defer></script>
-<script src="assets/member-research.js?v=taskbulk1" defer></script>
+<script src="assets/member-research.js?v=watchsync1" defer></script>
 <script src="assets/member-trade-engine.js?v=wording1" defer></script>
 <script src="assets/goal-models/manifest.js" defer></script>
 <script src="assets/member-companion-3d.js" defer></script>
@@ -17558,17 +17534,19 @@
 <script src="assets/member-trade-ui.js?v=service1" defer></script>
 <script src="assets/member-journey.js?v=taskbulk1" defer></script>
 <link rel="stylesheet" href="assets/member-service-center.css?v=1">
-<script src="assets/member-data-portability.js?v=1" defer></script>
+<script src="assets/member-data-portability.js?v=inbox1" defer></script>
 <script src="assets/member-service-center.js?v=1" defer></script>
-<script src="assets/member-center.js?v=service1" defer></script>
+<link rel="stylesheet" href="assets/member-notification-inbox.css?v=1">
+<script src="assets/member-notification-inbox.js?v=1" defer></script>
+<script src="assets/member-center.js?v=inbox1" defer></script>
 <script src="assets/member-signin.js?v=invite2" defer></script>
 <script src="assets/member-private-screen.js?v=asof4" defer></script>
 <link rel="stylesheet" href="assets/site-readability.css?v=futures-history3">
 <link rel="stylesheet" href="assets/foreign-cost-card.css?v=direction4">
 <script src="assets/foresight-brand.js?v=fqi28" defer></script>
 <link rel="stylesheet" href="assets/research-polish.css?v=13">
-<link rel="stylesheet" href="assets/focus-rankings.css?v=4">
-<script src="assets/focus-rankings.js?v=4" defer></script>
+<link rel="stylesheet" href="assets/focus-rankings.css?v=5">
+<script src="assets/focus-rankings.js?v=5" defer></script>
 <link rel="stylesheet" href="assets/screen-log.css?v=daypopup12-calendar-clean22">
 <link rel="stylesheet" href="assets/strategy-studio.css?v=3">
 <link rel="stylesheet" href="assets/learning-center.css?v=6">

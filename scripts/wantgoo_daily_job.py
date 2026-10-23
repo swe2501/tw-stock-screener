@@ -140,7 +140,16 @@ async def _open(p):
         "Object.defineProperty(navigator, 'webdriver', {get: () => undefined});"
     )
     page = context.pages[0] if context.pages else await context.new_page()
-    await page.goto("https://www.wantgoo.com/", wait_until="domcontentloaded", timeout=30000)
+    # 2026-10-23 首頁逾時重試：10/23 19:00 玩股網首頁一次 30 秒逾時就讓整支排程當掉、當日上市分點全沒抓
+    for attempt in range(4):
+        try:
+            await page.goto("https://www.wantgoo.com/", wait_until="domcontentloaded", timeout=45000)
+            break
+        except Exception as e:
+            _log(f"  [open] 玩股網首頁開啟失敗（第 {attempt + 1} 次）：{type(e).__name__}")
+            if attempt == 3:
+                raise
+            await asyncio.sleep(30 * (attempt + 1))
     if not await ws.is_logged_in(page):
         return context, None
     return context, page
