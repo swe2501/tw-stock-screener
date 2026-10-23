@@ -386,3 +386,5 @@ html:not([data-theme=light]) .scal-workspace [data-cat=zm] .sc-hd b{color:#ffda6
 .sl-ret .sl-ret-date{color:var(--text-muted);font-weight:400}
 .sl-log-tools .sl-muted:empty{display:none}
 .sl-log-tools:has(.sl-muted:empty){justify-content:flex-end}
+
+.sic-head button[data-sic-apply]{width:auto;min-width:0;padding:3px 6px;font-size:11px;white-space:nowrap;color:var(--accent)}
