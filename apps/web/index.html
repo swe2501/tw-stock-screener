@@ -9220,8 +9220,10 @@
 
   <!-- Auth modal -->
   <!-- 封閉測試全站門檻（僅 VIEWER_EMAILS 授權帳號進入；上線時把 window.SITE_GATE_ON 設 false 即開放）-->
-  <div id="siteGate" style="position:fixed;inset:0;z-index:11000;background:var(--surface,#0f1826);color:var(--text,#e7edf5);display:flex;align-items:center;justify-content:center;padding:24px;text-align:center">
-    <div style="max-width:440px">
+  <style>#siteGate>[hidden]{display:none!important}</style>
+  <div id="siteGate" aria-busy="true" style="position:fixed;inset:0;z-index:11000;background:var(--surface,#0f1826);color:var(--text,#e7edf5);display:flex;align-items:center;justify-content:center;padding:24px;text-align:center">
+    <span data-gate-loading role="status" style="font-size:14px;color:var(--text-muted)">正在載入…</span>
+    <div data-gate-login hidden style="max-width:440px">
       <div style="font-size:12px;letter-spacing:.3em;color:var(--text-muted,#8a97a8);margin-bottom:10px">MARKET ACADEMY · 封閉測試</div>
       <h1 style="font-size:24px;margin:0 0 14px;color:var(--text,#e7edf5)">跟誰學｜盤後研究院</h1>
       <p id="siteGateMsg" style="color:var(--text-muted,#8a97a8);line-height:1.9;margin:0 0 22px">本站目前為封閉測試，僅限授權帳號進入。<br>請以授權的 Email 登入。</p>
@@ -13130,6 +13132,10 @@
       try {
         const _gate = document.getElementById('siteGate');
         if (_gate) {
+          const loading=_gate.querySelector('[data-gate-loading]'),login=_gate.querySelector('[data-gate-login]');
+          if(loading)loading.hidden=true;
+          if(login)login.hidden=false;
+          _gate.removeAttribute('aria-busy');
           if (window.SITE_GATE_ON === false || _owner) { _gate.style.display = 'none'; }
           else {
             _gate.style.display = 'flex';
