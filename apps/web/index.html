@@ -12849,10 +12849,10 @@
           const m = meta[t.broker_id] || { name: t.broker_id, cat: '其他' };
           _brokerEntriesRaw.push({ date: t.trade_date, broker: m.name, cat: m.cat, id: String(t.broker_id) });
         }
-        // 2026-10-23 主力賣出（賣掉之前買的）：broker_trades 的 _sell／_exit 列
+        // 2026-10-23 主力賣出：K 圖只標「出清」（broker_trades 的 _exit 列；用戶指定減碼不標，減碼只在主力訊號表／出手明細列出）
         try {
           const rs = await fetch(`${SIG_SB_URL}/rest/v1/broker_trades?select=broker_id,trade_date,view`
-            + `&code=eq.${encodeURIComponent(code)}&view=in.(year_large_lots_sell,year_large_amount_sell,year_large_lots_exit,year_large_amount_exit)&order=trade_date`,
+            + `&code=eq.${encodeURIComponent(code)}&view=in.(year_large_lots_exit,year_large_amount_exit)&order=trade_date`,
             { headers: { apikey: SIG_SB_ANON, Authorization: `Bearer ${_authToken}` } });
           if (rs.ok && currentCode === code) for (const t of await rs.json()) {
             const m = meta[t.broker_id] || { name: t.broker_id, cat: '其他' };
