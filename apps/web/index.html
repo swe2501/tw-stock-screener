@@ -10114,6 +10114,7 @@
             </div>
             <div class="chart-watch-status" id="chartWatchStatus">★ 已列入觀察清單</div>
             <button class="btn-save-chart-watch" id="chartSaveWatchBtn" onclick="saveWatchFromChart()"> 儲存收藏理由與到價設定</button>
+            <p class="chart-member-watch-link">與會員中心「我的自選」共用收藏理由與提醒設定。<button type="button" onclick="openMemberWatchFromChart()">查看這檔自選 ↗</button></p>
             <button class="btn-remove-chart-watch" id="chartRemoveWatchBtn" onclick="removeWatchFromChart()" style="display:none">✕ 移除觀察清單</button>
           </div>
           <!-- 基本面 -->
@@ -15794,18 +15795,25 @@
       _toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
     }
 
+    function _publishWatchUpdate(){
+      if(!_authToken||_authToken!==localStorage.getItem('sb_token'))return;
+      let owner;try{owner=JSON.parse(localStorage.getItem('sb_user')||'{}').id;}catch{return;}
+      if(owner)dispatchEvent(new CustomEvent('academy-watch-updated',{detail:{owner,rows:JSON.parse(JSON.stringify(_watchData))}}));
+    }
+
     // ── 初始化：登入後靜默載入 codes ──────────────────────
     async function _loadWatchCodes() {
-      if (!_authToken) return;
+      if (!_authToken) return;const ownerToken=_authToken;
       try {
         const r = await _authFetch(window.__API+'/api/watchlist');
         if (!r.ok) return;
         const data = await r.json();
-        _watchData = Array.isArray(data) ? data : [];
+        if(ownerToken!==_authToken||ownerToken!==localStorage.getItem('sb_token')||!Array.isArray(data))return;
+        _watchData = data;
         _watchCodes = new Set(_watchData.map(w => w.code));
         _refreshWatchBtns();
         try { filterAndRender(); } catch(_) {}
-        _startVolAlertPoller();
+        _startVolAlertPoller();_publishWatchUpdate();
       } catch (_) {}
     }
 
@@ -15875,64 +15883,36 @@
 
     async function saveWatchFromChart() {
       if (!_authToken) { openAuthModal('login'); return; }
-      const note = (document.getElementById('chartNoteInput')?.value || '').trim();
-      const tpRaw  = parseFloat(document.getElementById('chartClosePriceInput')?.value);
-      const rtRaw  = parseFloat(document.getElementById('chartRtPriceInput')?.value);
-      const vtRaw  = parseFloat(document.getElementById('chartVolTargetInput')?.value);
-      const target_price    = (!isNaN(tpRaw) && tpRaw > 0) ? tpRaw : null;
-      const rt_target_price = (!isNaN(rtRaw) && rtRaw > 0) ? rtRaw : null;
-      const vol_target      = (!isNaN(vtRaw) && vtRaw > 0) ? Math.round(vtRaw) : null;
-      const code = currentCode; const name = currentName;
-      const industry = currentIndustry;
-
-      // 若已在清單，更新備註 + 目標價
-      if (_watchCodes.has(code)) {
-        const item = _watchData.find(w => w.code === code);
-        if (item) {
-          item.note = note; item.target_price = target_price; item.rt_target_price = rt_target_price; item.vol_target = vol_target;
-          try {
-            await _authFetch(window.__API+'/api/watchlist', {
-              method: 'PATCH',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ id: item.id, note, target_price, rt_target_price, vol_target })
-            });
-            showToast('備註與目標價已更新');
-            if (!document.getElementById('watchlistPanel').classList.contains('hidden'))
-              _renderWatchTable();
-          } catch(_) {}
-        }
-        return;
-      }
-
-      // 新增
-      let price_at_add = currentPrice;
+      const button=document.getElementById('chartSaveWatchBtn');if(button?.disabled)return;
+      const ownerToken=_authToken,code=currentCode,name=currentName,industry=currentIndustry;
+      const note=(document.getElementById('chartNoteInput')?.value||'').trim();
+      const positive=id=>{const v=Number(document.getElementById(id)?.value);return Number.isFinite(v)&&v>0?v:null;};
+      const values={note,target_price:positive('chartClosePriceInput'),rt_target_price:positive('chartRtPriceInput'),vol_target:positive('chartVolTargetInput')};if(values.vol_target)values.vol_target=Math.round(values.vol_target);
+      if(button)button.disabled=true;
       try {
-        const pr = await fetch(`${window.__API}/api/prices?codes=${encodeURIComponent(code)}`);
-        if (pr.ok) { const pm = await pr.json(); if (pm[code] != null) price_at_add = pm[code]; }
-      } catch(_) {}
-      try {
-        const r = await _authFetch(window.__API+'/api/watchlist', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code, name, industry, price_at_add, note, target_price, rt_target_price, vol_target })
-        });
-        if (r.ok) {
-          const arr = await r.json();
-          const item = Array.isArray(arr) ? arr[0] : arr;
-          _watchData.unshift(item);
-          _watchCodes.add(code);
-          _refreshWatchBtns();
-          if (!document.getElementById('watchlistPanel').classList.contains('hidden'))
-            _renderWatchTable();
-          showToast(`${code} ${name} 已加入會員中心 → 我的自選`);
-        } else {
-          showToast('儲存失敗，請稍後再試', true);
-        }
-      } catch(_) { showToast('網路錯誤', true); }
+        const item=_watchData.find(w=>w.code===code);let price_at_add=currentPrice;
+        if(!item){try{const pr=await fetch(`${window.__API}/api/prices?codes=${encodeURIComponent(code)}`);if(pr.ok){const prices=await pr.json();if(prices[code]!=null)price_at_add=prices[code];}}catch{}}
+        if(ownerToken!==_authToken||ownerToken!==localStorage.getItem('sb_token'))throw Error('帳號已切換，尚未送出儲存');
+        const response=await _authFetch(window.__API+'/api/watchlist',{method:item?'PATCH':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(item?{id:item.id,...values}:{code,name,industry,price_at_add,...values})});
+        if(!response.ok)throw Error(response.status===401?'登入已過期，請重新登入':'儲存失敗，原備註仍保留，請稍後再試');
+        const returned=await response.json(),saved=Array.isArray(returned)?returned[0]:returned;
+        if(!saved||saved.code!==code||!saved.id||saved.note!==note)throw Error('伺服器尚未確認保存結果，請保留內容並重新整理核對');
+        if(ownerToken!==_authToken||ownerToken!==localStorage.getItem('sb_token'))return;
+        if(item)Object.assign(item,saved);else _watchData.unshift(saved);
+        _watchCodes.add(code);_refreshWatchBtns();
+        if(!document.getElementById('watchlistPanel').classList.contains('hidden'))_renderWatchTable();
+        _publishWatchUpdate();showToast('已同步會員中心 → 我的自選（備註與到價設定）');
+      }catch(error){showToast(error.message||'網路錯誤，尚未確認保存',true);}finally{if(button)button.disabled=false;}
+    }
+
+    function openMemberWatchFromChart(){
+      if(!_authToken){openAuthModal('login');return;}
+      sessionStorage.setItem('academy.observation.seed',JSON.stringify({code:currentCode,name:currentName}));
+      closeChart();window.openMemberCenter?.('favorites');
     }
 
     async function removeWatchFromChart() {
-      await _removeWatch(currentCode);
+      if(!await _removeWatch(currentCode))return;
       document.getElementById('chartNoteInput').value = '';
       showToast('已移除觀察清單');
     }
@@ -15953,14 +15933,25 @@
     }
 
     async function _removeWatch(code) {
+      const ownerToken=_authToken;
       try {
-        await _authFetch(`${window.__API}/api/watchlist?code=${encodeURIComponent(code)}`, { method: 'DELETE' });
-        _watchData = _watchData.filter(w => w.code !== code);
-        _watchCodes.delete(code);
-        _refreshWatchBtns();
-        if (!document.getElementById('watchlistPanel').classList.contains('hidden'))
-          _renderWatchTable();
-      } catch (_) {}
+        const response=await _authFetch(`${window.__API}/api/watchlist?code=${encodeURIComponent(code)}`,{method:'DELETE'});
+        if(!response.ok)throw Error('移除失敗，原觀察資料仍保留');
+        if(ownerToken!==_authToken||ownerToken!==localStorage.getItem('sb_token'))return false;
+        _watchData=_watchData.filter(w=>w.code!==code);_watchCodes.delete(code);_refreshWatchBtns();_publishWatchUpdate();
+        if(!document.getElementById('watchlistPanel').classList.contains('hidden'))_renderWatchTable();
+        return true;
+      }catch(error){showToast(error.message||'網路錯誤，尚未確認移除',true);return false;}
+    }
+
+    async function _saveWatchPatch(id,values){
+      const ownerToken=_authToken;
+      const response=await _authFetch(window.__API+'/api/watchlist',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,...values})});
+      if(!response.ok)throw Error('儲存失敗，原資料仍保留');
+      const rows=await response.json(),saved=Array.isArray(rows)?rows[0]:null;
+      if(!saved||String(saved.id)!==String(id)||Object.keys(values).some(k=>saved[k]!==values[k]&&!(typeof values[k]==='number'&&Number(saved[k])===values[k])))throw Error('尚未確認儲存結果，請重新整理核對');
+      if(ownerToken!==_authToken||ownerToken!==localStorage.getItem('sb_token'))throw Error('帳號已切換，請重新開啟觀察清單');
+      const item=_watchData.find(w=>String(w.id)===String(id));if(item)Object.assign(item,saved);_publishWatchUpdate();return saved;
     }
 
     async function saveWatch() {
@@ -16058,8 +16049,8 @@
           <td>${mkCell(rtp, 'rt_target_price')}</td>
           <td>${mkCell(w.vol_target, 'vol_target', 'int')}</td>
           <td class="watch-note-cell">
-            <div class="watch-note-text" data-id="${w.id}"
-                 onclick="_editNote(this, ${w.id})">${w.note || ''}</div>
+            <div class="watch-note-editor"><div class="watch-note-text" data-id="${w.id}"
+                 onclick="_editNote(this, ${w.id})">${String(w.note||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}</div><button type="button" class="watch-note-edit" aria-label="編輯 ${w.code} 備註" onclick="event.stopPropagation();_editNote(this.parentElement.querySelector('.watch-note-text'),${w.id})">編輯</button></div>
           </td>
           <td class="watch-col-date" style="color:var(--text-muted);font-size:12px;white-space:nowrap">${dateStr}</td>
           <td><button class="watch-del-btn" onclick="_removeWatch('${w.code}')" title="移除">✕</button></td>
@@ -16079,7 +16070,7 @@
     // ── 備註行內編輯 ──────────────────────────────────────
     function _editNote(el, id) {
       if (el.querySelector('textarea')) return;
-      const cur = el.textContent.trim();
+      const cur = _watchData.find(w=>String(w.id)===String(id))?.note||'';
       el.innerHTML = `
         <div style="display:flex;align-items:flex-start;gap:6px">
           <textarea id="noteTA_${id}"
@@ -16105,19 +16096,10 @@
       ta.setSelectionRange(ta.value.length, ta.value.length);
     }
 
-    async function _saveNote(input, id) {
-      const note = input.value.trim();
-      const el = input.parentElement;
-      el.textContent = note;
-      const item = _watchData.find(w => w.id === id);
-      if (item) item.note = note;
-      try {
-        await _authFetch(window.__API+'/api/watchlist', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id, note })
-        });
-      } catch (_) {}
+    async function _saveNote(input,id){
+      if(input.disabled)return;input.disabled=true;
+      try{const saved=await _saveWatchPatch(id,{note:input.value.trim()});(input.closest?.('.watch-note-text')||input.parentElement).textContent=saved.note;}
+      catch(error){showToast(error.message,true);input.disabled=false;}
     }
 
     function _editTarget(el, id, field) {
@@ -16133,19 +16115,11 @@
       if (inp) { inp.focus(); inp.select(); }
     }
 
-    async function _saveTarget(input, id, field) {
-      const val    = parseFloat(input.value);
-      const target = (!isNaN(val) && val > 0) ? val : null;
-      const item   = _watchData.find(w => w.id === id);
-      if (item) item[field] = target;
-      try {
-        await _authFetch(window.__API+'/api/watchlist', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id, [field]: target }),
-        });
-      } catch (_) {}
-      _renderWatchTable();
+    async function _saveTarget(input,id,field){
+      if(!['target_price','rt_target_price','vol_target'].includes(field)||input.disabled)return;input.disabled=true;
+      const value=Number(input.value),target=Number.isFinite(value)&&value>0?value:null;
+      try{await _saveWatchPatch(id,{[field]:target});_renderWatchTable();}
+      catch(error){showToast(error.message,true);input.disabled=false;}
     }
   </script>
 
@@ -16153,7 +16127,7 @@
   <div id="watchlistPanel" class="watch-panel hidden">
     <div class="watch-panel-inner">
       <div class="watch-panel-hdr">
-        <h2> 我的觀察清單</h2>
+        <h2> 我的觀察清單</h2><button class="watch-member-detail" type="button" onclick="closeWatchlist();openMemberCenter('favorites')">前往我的自選 ↗</button>
         <button onclick="closeWatchlist()" style="background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer">✕</button>
       </div>
       <div class="watch-panel-body"></div>
@@ -17299,7 +17273,7 @@
 <script src="assets/sector-dashboard-model.js" defer></script>
 <script src="assets/sector-dashboard.js" defer></script>
 <script src="assets/member-invitation.js?v=1" defer></script>
-<script src="assets/member-identity.js?v=service1" defer></script>
+<script src="assets/member-identity.js?v=inbox1" defer></script>
 <script src="assets/member-task-guide.js?v=1" defer></script>
 <script src="assets/member-missions.js?v=taskbulk1" defer></script>
 <script src="assets/member-share.js?v=invite4" defer></script>
@@ -17312,12 +17286,12 @@
 <script src="assets/learning-figures.js?v=2" defer></script>
 <script src="assets/member-learning-verification.js?v=1" defer></script>
 <script src="assets/learning-center.js?v=8" defer></script>
-<script src="assets/member-features.js?v=taskbulk1" defer></script>
+<script src="assets/member-features.js?v=inbox1" defer></script>
 <script src="assets/member-strategy-engine.js?v=short1" defer></script>
 <script src="assets/strategy-dimensions.js?v=2" defer></script>
 <script src="assets/strategy-presets.js?v=1" defer></script>
 <script src="assets/member-strategy-ui.js?v=companion-suction6" defer></script>
-<script src="assets/member-research.js?v=taskbulk1" defer></script>
+<script src="assets/member-research.js?v=watchsync1" defer></script>
 <script src="assets/member-trade-engine.js?v=wording1" defer></script>
 <script src="assets/goal-models/manifest.js" defer></script>
 <script src="assets/member-companion-3d.js" defer></script>
@@ -17330,17 +17304,19 @@
 <script src="assets/member-trade-ui.js?v=service1" defer></script>
 <script src="assets/member-journey.js?v=taskbulk1" defer></script>
 <link rel="stylesheet" href="assets/member-service-center.css?v=1">
-<script src="assets/member-data-portability.js?v=1" defer></script>
+<script src="assets/member-data-portability.js?v=inbox1" defer></script>
 <script src="assets/member-service-center.js?v=1" defer></script>
-<script src="assets/member-center.js?v=service1" defer></script>
+<link rel="stylesheet" href="assets/member-notification-inbox.css?v=1">
+<script src="assets/member-notification-inbox.js?v=1" defer></script>
+<script src="assets/member-center.js?v=inbox1" defer></script>
 <script src="assets/member-signin.js?v=invite2" defer></script>
 <script src="assets/member-private-screen.js?v=multi3" defer></script>
 <link rel="stylesheet" href="assets/site-readability.css?v=futures-history3">
 <link rel="stylesheet" href="assets/foreign-cost-card.css?v=direction4">
 <script src="assets/foresight-brand.js?v=fqi28" defer></script>
 <link rel="stylesheet" href="assets/research-polish.css?v=13">
-<link rel="stylesheet" href="assets/focus-rankings.css?v=4">
-<script src="assets/focus-rankings.js?v=4" defer></script>
+<link rel="stylesheet" href="assets/focus-rankings.css?v=5">
+<script src="assets/focus-rankings.js?v=5" defer></script>
 <link rel="stylesheet" href="assets/screen-log.css?v=calendar-clean22">
 <link rel="stylesheet" href="assets/strategy-studio.css?v=3">
 <link rel="stylesheet" href="assets/learning-center.css?v=6">
