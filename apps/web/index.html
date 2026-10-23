@@ -9204,6 +9204,7 @@
   <!--  話題族群（頁面；入口 nav-owner 控管，僅授權帳號可見） -->
   <div id="hottopicsView" style="display:none;max-width:900px;margin:0 auto">
     <div class="tm-head"><h2> 話題族群</h2><span class="sub" id="hotTopicsTime"></span></div>
+    <section id="exhibitionCalendar" aria-label="未來展覽行事曆"></section>
     <div style="font-size:11px;color:var(--text-muted);line-height:1.6;background:var(--surface2,rgba(255,255,255,.03));border-left:2px solid #ff7a3c;padding:8px 10px;margin-bottom:12px;border-radius:0 4px 4px 0">
        AI（Codex）盤中每小時搜出的話題族群。<b style="color:#ff7a3c">數字＝話題熱度</b>（Codex 依新聞量／新鮮度／是否牽涉大廠評 0~100，非門檻，由高到低列出，跟個股強度是兩回事）。<br>
       個股依「<b style="color:var(--text)">強度</b>」由高到低排：<br>
@@ -11740,6 +11741,7 @@
     }
     window._VIEWS = window._VIEWS || {}; window._VIEWS.hottopics = { el: 'hottopicsView', show: 'openHotTopics' };
     async function openHotTopics() {
+      window.AcademyExhibitions?.show();
       const body = document.getElementById('hotTopicsBody');
       body.innerHTML = '<div style="padding:16px 0;color:var(--text-muted)">載入中…</div>';
       const hdr = { apikey: SIG_SB_ANON, Authorization: `Bearer ${SIG_SB_ANON}` };
@@ -17630,5 +17632,7 @@
         </div>
       </div>
     </footer>
+<link rel="stylesheet" href="assets/exhibition-calendar.css?v=1">
+<script src="assets/exhibition-calendar.js?v=1" defer></script>
 </body>
 </html>
