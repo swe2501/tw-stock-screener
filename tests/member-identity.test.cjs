@@ -79,7 +79,7 @@ test('phone login rejects unverified or mismatched server phone, ignoring metada
 
 test('replacement preflights linking and retains another verified identity before deleting',async()=>{
  const {api,saved,context,calls}=setup();saved.set('sb_token','original-token');let phase='before';const base=context.fetch;
- context.fetch=async(url,options)=>{if(url.endsWith('/user')){calls.push({url,...options});return{ok:true,status:200,json:async()=>({id:'original-user',email_confirmed_at:'2026-10-17',identities:[{identity_id:'google-old',provider:'google'},{identity_id:'email-id',provider:'email'}]})};}if(options?.method==='DELETE'){calls.push({url,...options});phase='deleted';return{ok:true,status:204};}return base(url,options);};
+ context.fetch=async(url,options)=>{if(url.endsWith('/rpc/member_identity_recovery_begin')){calls.push({url,...options});return{ok:true,status:200,json:async()=>({id:'recovery-1',request_id:'recovery-request'})};}if(url.endsWith('/user')){calls.push({url,...options});return{ok:true,status:200,json:async()=>({id:'original-user',email_confirmed_at:'2026-10-17',identities:[{identity_id:'google-old',provider:'google'},{identity_id:'email-id',provider:'email'}]})};}if(options?.method==='DELETE'){calls.push({url,...options});phase='deleted';return{ok:true,status:204};}return base(url,options);};
  await api.replaceOAuth('google');const pre=calls.findIndex(c=>c.url?.includes('/identities/authorize?')),del=calls.findIndex(c=>c.method==='DELETE');assert.ok(pre>=0&&del>pre);assert.equal(phase,'deleted');assert.ok(calls[del].url.endsWith('/identities/google-old'));assert.equal(JSON.parse(saved.get('academy.oauth')).userId,'original-user');assert.equal(JSON.parse(saved.get('academy.oauth')).replacement,'google');
 });
 test('replacement cannot remove the only login or unlink before manual linking is available',async()=>{
@@ -126,4 +126,22 @@ test('AI concurrent submissions send once and malformed receipt remains retryabl
  const {api,context,saved}=setup();saved.set('sb_token','a');let finish,posts=0;
  context.fetch=async(url)=>{if(url.endsWith('/user'))return {ok:true,status:200,json:async()=>({id:'a'})};posts++;return new Promise(resolve=>finish=resolve);};
  const first=api.aiConvert(100);await new Promise(resolve=>setImmediate(resolve));await assert.rejects(api.aiConvert(100),/處理中/);assert.equal(posts,1);finish({ok:true,status:200,json:async()=>({converted:200,ai_points:'200'})});await assert.rejects(first,/尚未確認/);assert.equal((await api.aiPending()).points,100);
+});
+
+
+test('replacement refuses unlink when server recent-auth receipt is denied or local recovery cannot persist',async()=>{
+ for(const mode of ['stale','storage']){const {api,saved,context,calls}=setup();saved.set('sb_token','original');const base=context.fetch;
+ context.fetch=async(url,options)=>{if(url.endsWith('/user'))return {ok:true,status:200,json:async()=>({id:'original-user',email_confirmed_at:'2026-10-17',identities:[{identity_id:'old',provider:'google'},{provider:'email'}]})};if(url.endsWith('/rpc/member_identity_recovery_begin'))return {ok:mode!=='stale',status:mode==='stale'?400:200,json:async()=>mode==='stale'?{message:'MEMBER_RECENT_LOGIN_REQUIRED'}:{id:'receipt',request_id:'request'}};return base(url,options);};
+ if(mode==='storage'){const save=context.localStorage.setItem;context.localStorage.setItem=(key,v)=>{if(key.startsWith('academy.identity.recovery.'))throw Error('storage blocked');save(key,v);};}
+ await assert.rejects(api.replaceOAuth('google'));assert.equal(calls.some(x=>x.method==='DELETE'),false,'old identity remains linked');}
+});
+test('changing existing phone requires server recent login before Auth update',async()=>{
+ const {api,saved,context,calls}=setup();saved.set('sb_token','original');const base=context.fetch;context.fetch=async(url,options)=>url.endsWith('/rpc/member_service_access')?{ok:true,status:200,json:async()=>({recent:false})}:base(url,options);
+ await assert.rejects(api.sendContactLink('phone','0998765432'),/重新登入/);assert.equal(calls.some(x=>x.method==='PUT'),false);
+});
+
+test('account switch while contact preflight loads prevents any update or verification request',async()=>{
+ for(const mode of ['send','verify']){const {api,saved,context,calls}=setup();saved.set('sb_token','original');const base=context.fetch;context.fetch=async(url,options)=>{const r=await base(url,options);if(url.endsWith('/user'))saved.set('sb_token','other-account');return r;};
+ await assert.rejects(mode==='send'?api.sendContactLink('phone','0998765432'):api.verifyContactLink({userId:'verified-user',kind:'phone',value:'+886912345678'},'123456'),/狀態已變更|帳號已切換/);
+ assert.equal(calls.some(x=>x.method==='PUT'||x.url.endsWith('/verify')),false);}
 });

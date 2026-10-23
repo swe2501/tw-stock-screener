@@ -23,6 +23,7 @@ function xlsx(){return window.XLSX?Promise.resolve(window.XLSX):(xlsxPromise||(x
 function download(name,body,type='application/json'){const url=URL.createObjectURL(new Blob([body],{type})),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 function attachmentDB(){return new Promise((resolve,reject)=>{const r=indexedDB.open('academy-journal-images',1);r.onupgradeneeded=()=>r.result.createObjectStore('images');r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(Error('此瀏覽器無法保存圖片，請允許網站儲存空間'));});}
 async function imageStore(id,blob){const db=await attachmentDB();await new Promise((resolve,reject)=>{const t=db.transaction('images','readwrite');t.objectStore('images').put(blob,id);t.oncomplete=()=>{db.close();resolve();};t.onerror=()=>{db.close();reject(Error('圖片儲存失敗，空間可能不足'));};});window.AcademyCloud?.queueImage(id);}
+async function restoreImages(images){const db=await attachmentDB();try{await new Promise((resolve,reject)=>{const tx=db.transaction('images','readwrite'),store=tx.objectStore('images');for(const x of images){const req=store.get(x.id);req.onsuccess=()=>{if(!req.result)store.put(x.blob,x.id);};}tx.oncomplete=resolve;tx.onerror=()=>reject(Error('截圖還原失敗，原研究資料未變更'));tx.onabort=()=>reject(Error('截圖還原已取消'));});}finally{db.close();}}
 async function imageReadLocal(id){const db=await attachmentDB();return new Promise((resolve,reject)=>{const t=db.transaction('images'),r=t.objectStore('images').get(id);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(Error('無法讀取圖片'));t.oncomplete=()=>db.close();});}
 window.AcademyCloud?.registerImageReader(imageReadLocal);
 async function imageRead(id){const blob=await imageReadLocal(id);return blob||await window.AcademyCloud?.readImage(id);}
@@ -168,5 +169,5 @@ function render(view,ctx){cleanup();cleanup=()=>{};if(!['trades','goals'].includ
  try{updateMilestones();view==='trades'?drawTrades():drawGoals();}catch(err){status(err.message);}
  return true;
 }
-window.AcademyTradeUI={render,load,cleanup:()=>cleanup()};
+window.AcademyTradeUI={render,load,validateState,readImage:imageRead,restoreImages,cleanup:()=>cleanup()};
 })();
