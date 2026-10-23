@@ -27,13 +27,14 @@ const root=path.resolve(__dirname,'..');
   if(route.includes('focus'))assert.equal(await p.locator('#focusView').isVisible(),true);
   await p.locator('.sic-card').waitFor();
   await p.locator('[data-sic-date="2026-10-14"]').click();
-  assert.equal(await p.locator('#date').inputValue(),'','browsing saved records must not silently change a scan');
+  assert.equal(await p.locator('#date').inputValue(),'2026-10-14','calendar click must set scan date without another apply step');
   await p.locator('[data-sic-apply]').click();assert.equal(await p.locator('#date').inputValue(),'2026-10-14');
   await p.evaluate(()=>doScreen());await p.waitForFunction(()=>window.sentDate==='20261014');
   await p.waitForFunction(()=>document.querySelector('#statusArea').textContent.includes('2026/10/14'));
+  await p.locator('[data-sic-date="2026-10-15"]').click();assert.equal(await p.locator('#date').inputValue(),'2026-10-15');assert.ok(!(await p.locator('#statusArea').textContent()).includes('行情日期 2026/10/14'),'old results removed');
   await p.locator('.scal-base > summary').click();await p.locator('#date').fill('');await p.evaluate(()=>doScreen());await p.waitForFunction(()=>window.sentDate==='');
   await p.waitForFunction(()=>document.querySelector('#statusArea').textContent.includes('2026/10/22'));
   await p.close();
  }
- console.log('PASS calendar browsing preserves records; explicit apply feeds real screener POST date and historical result date; blank uses latest');
+ console.log('PASS calendar click directly sets POST date; historical result matches; date change clears stale results; blank uses latest');
 }finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

@@ -10545,6 +10545,18 @@
 
     // 輪詢伺服器暫存的篩選結果（背景任務完成後領取）
     let _screenJob = null;
+    document.getElementById('date').addEventListener('change',()=>{
+      _screenJob=null;
+      lastResults=[];
+      _stopScreenerRealtime();
+      _scanStop();
+      const btn=document.getElementById('submitBtn');btn.disabled=false;btn.textContent='開始篩選';
+      document.getElementById('resultsArea').replaceChildren();
+      document.getElementById('dataDateDisplay').textContent='';
+      const date=document.getElementById('date').value;
+      showStatus('<div class="alert alert-info">篩選日期已改為 '+(date||'最新交易日')+'，請按「開始篩選」。</div>');
+    });
+
     async function _pollScreenResult(jobId, tries) {
       if (!_screenJob || _screenJob.id !== jobId) return;   // 已被新篩選取代
       if (document.visibilityState === 'hidden') {           // 背景時先不輪詢，回前景再繼續
@@ -17356,7 +17368,7 @@
 <link rel="stylesheet" href="assets/learning-center.css?v=6">
 <link rel="stylesheet" href="assets/research-layout.css?v=10">
 <script src="assets/chart-viewport-fit.js?v=6" defer></script>
-<script src="assets/screen-inline-calendar.js?v=filterdate10" defer></script>
+<script src="assets/screen-inline-calendar.js?v=autodate11" defer></script>
 <script src="assets/screen-log.js?v=calendar-direct30" defer></script>
 <script src="assets/pattern-focus.js?v=2" defer></script>
 <script src="assets/member-quick-menu.js?v=tier6" defer></script>
