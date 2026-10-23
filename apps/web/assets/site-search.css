@@ -66,3 +66,9 @@ html.ss-search-mobile-open{overflow:hidden!important}
 .ss-idx-menu button{border:0!important;background:transparent!important;background-image:none!important;box-shadow:none!important;text-align:left;padding:8px 10px;border-radius:7px;font:inherit;font-size:13px;color:var(--text);cursor:pointer}
 .ss-idx-menu button::before,.ss-idx-menu button::after{display:none!important}
 .ss-idx-menu button:hover,.ss-idx-menu button:focus-visible{background:color-mix(in srgb,var(--accent) 10%,var(--surface))!important;color:var(--accent)}
+/* Ranking links stay quiet; animate only the arrow on hover. */
+.ss-rank-card header button[data-ss-view]{border:0!important;background:transparent!important;box-shadow:none!important;transform:none!important;border-radius:0!important;padding:5px 0!important;color:var(--text-muted)}
+.ss-more-arrow{display:inline-block;transition:transform .2s;background:transparent!important;padding:0!important;color:inherit!important}
+.ss-rank-card header button[data-ss-view]:hover .ss-more-arrow{transform:translateX(4px)}
+.ss-rank-card header button[data-ss-view]:focus-visible{outline:0!important;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:5px}
+@media(prefers-reduced-motion:reduce){.ss-more-arrow{transition:none}.ss-rank-card header button[data-ss-view]:hover .ss-more-arrow{transform:none}}

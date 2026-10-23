@@ -30,7 +30,7 @@ body .hp-margin-summary-row p{font-size:13px!important;line-height:1.8!important
 .hp-leverage-grid #hpDiverge .gs-div{gap:12px;padding-bottom:12px;margin-bottom:14px;flex-wrap:wrap}
 .hp-leverage-grid #hpDiverge .gs-div strong{font-size:28px}
 .hp-leverage-grid #hpDiverge .gs-div strong small{display:inline-block;font-size:12px!important}
-.hp-leverage-grid #hpDiverge .gs-mtrack u::after,.hp-leverage-grid .gs-rtrack::after{animation:none!important;opacity:0}
+.hp-leverage-grid #hpDiverge .gs-mtrack u::after{animation:etx-chart-light 7s ease-in-out infinite!important;opacity:.7}.hp-leverage-grid .gs-rtrack::after{animation:gs-ruler-sheen 6s ease-in-out infinite!important}
 .hp-leverage-grid #hpDiverge .gs-cst b{animation:none!important}
 .hp-leverage-grid #hpDiverge{display:flex;flex-direction:column;padding:16px;border:1px solid var(--border);border-radius:14px;background:var(--surface)}
 .hp-leverage-grid>#hpMaint>.gs-maint{display:flex;flex-direction:column}
@@ -53,3 +53,35 @@ body .hp-margin-summary-row p{font-size:13px!important;line-height:1.8!important
  .hp-leverage-grid .gs-rlab small{display:none}
  .hp-leverage-grid .gs-ruler{margin-top:48px}
 }
+
+@media(prefers-reduced-motion:reduce){.hp-leverage-grid #hpDiverge .gs-mtrack u::after,.hp-leverage-grid .gs-rtrack::after{animation:none!important;opacity:0}}
+
+/* Stretch the nested broker card with the other overview cards. */
+#cbOverview{align-items:stretch}
+#cbOverview>div{min-width:0}
+#cbOverview>#cbGov{display:flex}
+#cbOverview>#cbGov>.cb-ovc{flex:1;min-width:0}
+#cbOverview .cb-ovc{box-sizing:border-box}
+#cbOverview .cb-ovc header{flex-wrap:wrap;align-items:flex-start}
+#cbOverview .cb-ovc header>span:first-child{min-width:0;overflow-wrap:anywhere}
+#cbOverview .cb-settle-details{font-size:12px;line-height:1.7;cursor:default}
+#cbOverview .cb-settle-details summary{display:flex;align-items:center;gap:6px;width:fit-content;max-width:100%;padding:4px 0;list-style:none;color:var(--text-muted);cursor:pointer;border-radius:4px}
+#cbOverview .cb-settle-details summary::-webkit-details-marker{display:none}
+#cbOverview .cb-settle-details summary:hover{color:var(--accent)}
+#cbOverview .cb-settle-details summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+#cbOverview .cb-settle-expand,#cbOverview .cb-settle-collapse{font-size:11px;color:var(--accent)}
+#cbOverview .cb-settle-collapse,#cbOverview .cb-settle-details[open] .cb-settle-expand{display:none}
+#cbOverview .cb-settle-details[open] .cb-settle-collapse{display:inline}
+#cbOverview .cb-settle-chevron{transition:transform .18s ease}
+#cbOverview .cb-settle-details[open] .cb-settle-chevron{transform:rotate(180deg)}
+#cbOverview .cb-settle-body{padding-top:6px;overflow-wrap:anywhere}
+#cbOverview .cb-settle-body small{font-size:11px}
+@media(prefers-reduced-motion:reduce){#cbOverview .cb-settle-chevron{transition:none}}
+
+/* Share spare height between the four quantitative rows, preserving bar lengths. */
+#hpInst .gs-instbars {display:grid;grid-template-rows:repeat(4,minmax(42px,1fr));gap:8px;flex:1;min-height:220px;padding:14px 0 18px;}
+#hpInst .gs-ibar {gap:12px;align-items:center;min-width:0;}
+#hpInst .gs-ibar .lb {width:54px;flex-shrink:0;font-size:13px;}
+#hpInst .gs-ibar .track {height:20px;border-radius:10px;min-width:0;}
+#hpInst .gs-ibar .vv {width:88px;flex-shrink:0;font-size:14px;}
+@media(max-width:600px){#hpInst .gs-instbars{min-height:210px;gap:5px}#hpInst .gs-ibar{gap:8px}#hpInst .gs-ibar .lb{width:44px}#hpInst .gs-ibar .vv{width:76px;font-size:12px}}

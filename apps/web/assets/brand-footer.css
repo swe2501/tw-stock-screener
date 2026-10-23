@@ -49,3 +49,7 @@ body .fs-info-dialog section>p{font-size:15px!important;line-height:1.95!importa
 body .fs-info-dialog .fs-about-closing{border-top:1px solid var(--border);padding-top:18px;margin-top:24px;color:var(--text)}
 .fs-about-closing>span{display:block;font-size:11px;letter-spacing:.05em;color:var(--text-muted);margin-top:9px}
 @media(max-width:520px){.fs-info-dialog{padding:20px 16px;max-height:calc(100dvh - 32px)}.fs-info-dialog section{padding-inline:3px}.fs-info-dialog .fs-about-intro h3{font-size:20px}#foresightFooter .fs-footer-community{justify-content:center}#foresightFooter .fs-community-content>p{max-width:none}}
+
+/* Full bleed while the information stays on the site reading grid. */
+#foresightFooter{width:100vw;margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw);margin-bottom:calc(-1 * var(--fs-page-bottom,0px))}
+body:has(#homeView:not([style*="display: none"])) {overflow-x:clip}
