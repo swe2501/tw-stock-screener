@@ -34,7 +34,9 @@ for _k in ("SUPABASE_URL", "SUPABASE_ANON_KEY", "SUPABASE_SERVICE_KEY"):
     if _ENV.get(_k):
         os.environ.setdefault(_k, _ENV[_k])
 sys.path.insert(0, str(ROOT / "api"))
-import screen                                     # noqa: E402
+import screen                                     # noqa: E402  （只用來取全市場代號清單）
+sys.path.insert(0, str(ROOT / "scripts"))
+import env_screen as es                           # noqa: E402  2026-10-21 prod／uat 各用各的程式算盤中快照
 
 if sys.stdout and hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(errors="replace")
@@ -184,25 +186,30 @@ def _one_pass(lcodes, ocodes, env):
         print(f"[intraday] 上市僅 {len(listed)} 檔(<{MIN_LISTED})，疑似來源異常，本輪不覆寫")
         return False
     today = _now().strftime("%Y%m%d")
-    screen._INTRADAY = {"listed": listed, "otc": otc, "date": today}
-    screen._themes_cache = {"ts": 0, "data": None}   # 清掉 5 分鐘快取，確保本輪現算盤中
-    try:
-        payloads = {
-            "overview": screen._fetch_overview(),
-            "themes": screen._fetch_themes(),
-            "sectors": screen._fetch_sectors(),
-            "themeall": screen._fetch_theme_all(),
-            "sectorall": screen._fetch_sector_all(),
-        }
-    finally:
-        screen._INTRADAY = {"listed": {}, "otc": {}, "date": None}
-        screen._themes_cache = {"ts": 0, "data": None}
+    results = []
+    for env_name in ("prod", "uat"):
+        try:
+            mod = es.load_screen(env_name, env)
+        except Exception as e:                        # noqa: BLE001
+            print(f"[intraday] 載入 {env_name} 程式失敗：{type(e).__name__}")
+            continue
+        mod._INTRADAY = {"listed": listed, "otc": otc, "date": today}
+        mod._themes_cache = {"ts": 0, "data": None}   # 清掉 5 分鐘快取，確保本輪現算盤中
+        try:
+            for base, fn in (("overview", mod._fetch_overview), ("themes", mod._fetch_themes), ("sectors", mod._fetch_sectors),
+                             ("themeall", mod._fetch_theme_all), ("sectorall", mod._fetch_sector_all)):
+                try:
+                    results.append((base, es.kind_for(_RT_KIND[base], env_name), fn()))
+                except Exception as e:                # noqa: BLE001
+                    print(f"[intraday] {env_name} {base} 計算失敗：{type(e).__name__}")
+        finally:
+            mod._INTRADAY = {"listed": {}, "otc": {}, "date": None}
+            mod._themes_cache = {"ts": 0, "data": None}
 
     hhmm = _now().strftime("%H:%M")
     td = f"{today[:4]}-{today[4:6]}-{today[6:]}"
     ok = 0
-    for base, d in payloads.items():
-        kind = _RT_KIND[base]
+    for base, kind, d in results:
         if not isinstance(d, dict) or d.get("error") or not _VALID[base](d):
             print(f"[intraday] {hhmm} {kind} 內容不完整，略過(保留原資料)")
             continue
@@ -217,7 +224,7 @@ def _one_pass(lcodes, ocodes, env):
         st, _ = bs._sb(env, "/page_cache", method="POST", body=[row])
         print(f"[intraday] {hhmm} {kind} 寫入 status={st} 大小={size}KB")
         ok += 1
-    print(f"[intraday] {hhmm} 上市{len(listed)}/上櫃{len(otc)} → 推送 {ok}/{len(payloads)}")
+    print(f"[intraday] {hhmm} 上市{len(listed)}/上櫃{len(otc)} → 推送 {ok}/{len(results)}")
     return ok > 0
 
 

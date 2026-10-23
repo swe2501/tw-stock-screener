@@ -597,6 +597,19 @@ def _load_groupbook_prices(codes):
         off += 1000
 
 
+def _site_env():
+    """2026-10-21 依環境讀快照：Vercel 的 VERCEL_ENV=preview（uat 等非正式部署）→ uat；其餘 → prod。"""
+    return "uat" if os.environ.get("VERCEL_ENV") == "preview" else "prod"
+
+
+def _snapshot_rows(kind):
+    if _site_env() == "uat":
+        st, rows = _cache_sb("/page_cache", params=_snapshot_params(kind + "@uat"))
+        if st == 200 and rows:
+            return st, rows
+    return _cache_sb("/page_cache", params=_snapshot_params(kind))
+
+
 def _snapshot_params(kind):
     # Legacy single rows remain readable; all new versions are append-only.
     return [("or", "(kind.eq." + kind + ",kind.like." + kind + "__*)"),
@@ -607,7 +620,7 @@ def _read_groupbook_research(quarter):
     import re
     if not re.fullmatch(r"20[0-9]{2}Q[1-4]", quarter):
         return {"error": "invalid research quarter"}
-    status, rows = _cache_sb("/page_cache", params=_snapshot_params("groupbook_research_" + quarter))
+    status, rows = _snapshot_rows("groupbook_research_" + quarter)
     if status != 200 or not isinstance(rows, list) or not rows:
         return {"error": "research snapshot unavailable"}
     data = rows[0].get("payload")
@@ -618,7 +631,7 @@ def _read_groupbook_research(quarter):
 
 def _read_groupbook_snapshot(window=10):
     window = 5 if window <= 5 else (20 if window >= 20 else 10)
-    status, rows = _cache_sb("/page_cache", params=_snapshot_params("groupbook_" + str(window)))
+    status, rows = _snapshot_rows("groupbook_" + str(window))
     if status != 200 or not isinstance(rows, list) or not rows:
         return {"error": "group snapshot unavailable"}
     data = rows[0].get("payload")
@@ -837,7 +850,7 @@ def _focus_details(data, by_code=None):
 
 
 def _read_focus_snapshot(top_n=30):
-    status, rows = _cache_sb("/page_cache", params=_snapshot_params("focus"))
+    status, rows = _snapshot_rows("focus")
     if status != 200 or not isinstance(rows, list) or not rows:
         return {"error": "focus snapshot unavailable"}
     data = rows[0].get("payload")
@@ -1331,6 +1344,58 @@ def _fetch_overview():
     winners  = [stk(cm) for cm in sorted(common, key=lambda x: -x[1]["pct"])[:20]]
     losers   = [stk(cm) for cm in sorted(common, key=lambda x:  x[1]["pct"])[:20]]
 
+    # 2026-10-21 漲停／跌停最多題材：改掃全市場（上市＋上櫃）每一檔漲跌停股，題材用今日排行同一套標籤
+    # （合夥人精選題材＋官方產業別，_load_stock_themes），不再只看漲跌幅前 20 名、也不再只限精選題材。
+    allq = {c: m for c, m in lmap.items() if len(c) == 4 and c.isdigit() and m["close"] and m["close"] > 0}
+    try:
+        for c, q in (_fetch_tpex_quotes() or {}).items():
+            if c not in allq and q.get("close"):
+                allq[c] = {"close": q["close"], "pct": q.get("pct") or 0, "value": q.get("value") or 0, "name": q.get("name") or c}
+            elif c in allq and allq[c]["name"] in ("", c) and q.get("name") and q["name"] != c:
+                allq[c] = dict(allq[c], name=q["name"])      # 行情改由 price_window 補時沒有股名 → 用櫃買股名
+    except Exception:
+        pass
+    otc_nm = None
+    for c, m in list(allq.items()):
+        if m["name"] not in ("", c):
+            continue
+        nm = _STOCK_NAMES.get(c)
+        if not nm:
+            if otc_nm is None:                           # 上櫃股名備援：本站 otc_names 表（每日更新）
+                try:
+                    otc_nm = {str(r.get("code")): r.get("name") for r in (_cache_sb("/otc_names", params=[("select", "code,name"), ("limit", "3000")])[1] or [])}
+                except Exception:
+                    otc_nm = {}
+            nm = otc_nm.get(c)
+        if nm:
+            allq[c] = dict(m, name=nm)
+    try:
+        tags = _load_stock_themes()
+    except Exception:
+        tags = {}
+
+    def limit_groups_of(pred, key, source):
+        """source='theme'＝合夥人精選題材（THEME_MEMBERS）；'industry'＝官方產業別（其他→其他業）。"""
+        g = {}
+        for c, m in sorted(allq.items(), key=lambda x: -(x[1]["value"] or 0)):
+            if not pred(m["pct"]):
+                continue
+            if source == "theme":
+                names = stheme.get(c, [])
+            else:
+                iname = ind.get(c) or next((t["name"] for t in tags.get(c, []) if str(t.get("id", "")).startswith("產業:")), "")
+                names = ["其他業" if iname in ("其他", "") else iname]
+            for nm in names:
+                x = g.setdefault(nm, {"name": nm, key: 0, "tradeValue": 0, "leaders": []})
+                x[key] += 1
+                x["tradeValue"] += m["value"] or 0
+                if len(x["leaders"]) < 3:
+                    x["leaders"].append(m["name"])
+        return sorted(g.values(), key=lambda x: (-x[key], -x["tradeValue"]))[:10]
+    is_up, is_down = (lambda p: p >= 9.5), (lambda p: p <= -9.5)
+    limit_up_theme, limit_down_theme = limit_groups_of(is_up, "limitUps", "theme"), limit_groups_of(is_down, "limitDowns", "theme")
+    limit_up_ind, limit_down_ind = limit_groups_of(is_up, "limitUps", "industry"), limit_groups_of(is_down, "limitDowns", "industry")
+
     sectors = _fetch_twse_index_categories()
     sectors_strong = sorted(sectors, key=lambda x: -x["pct"])[:10]
     sectors_weak   = sorted(sectors, key=lambda x:  x["pct"])[:10]
@@ -1338,6 +1403,8 @@ def _fetch_overview():
     return {"date": mdate,
             "themeStrong": theme_strong, "themeWeak": theme_weak,
             "capital": capital, "limitGroups": limit_groups,
+            "limitUpGroups": limit_up_theme, "limitDownGroups": limit_down_theme,          # 精選題材（預設）
+            "limitUpGroupsInd": limit_up_ind, "limitDownGroupsInd": limit_down_ind,    # 一般題材＝官方產業別
             "sectorsStrong": sectors_strong, "sectorsWeak": sectors_weak,
             "sectorSource": "official" if sectors else "none",
             "turnover": turnover, "winners": winners, "losers": losers}
