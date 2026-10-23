@@ -2,10 +2,12 @@
 themes_push.py — 建置「股票 → 所屬題材」完整對照 → Supabase stock_themes（今日排行題材顯示用）。
 
 需求（JUSTY 2026-10-20 交接 HANDOFF_FOCUS_THEMES_2026-10-20.md）：今日排行每檔都要顯示所屬題材，
-不能大多「未分類」。資料來源（皆真實、可追溯，不由 AI 自編）：
-  1) 合夥人精選題材 = api/screen.py 的 THEME_MEMBERS（39 題材／406 檔，AI 伺服器/CoWoS/HBM…）。
-  2) 官方產業別補齊 = TWSE t187ap03_L（上市）+ TPEx mopsfin_t187ap03_O（上櫃），涵蓋上市櫃約 1,800 檔。
-每檔：精選題材排前（資訊量高），其後接官方產業別當保底，故不再有「未分類」。
+不能大多「未分類」。資料來源（皆真實、可追溯，不由 AI 自編），三層由細到粗：
+  1) 合夥人精選題材 = api/screen.py 的 THEME_MEMBERS（39 題材／406 檔，AI 伺服器/CoWoS/HBM…，最細）。
+  2) Goodinfo 概念股 = scripts/goodinfo_concepts.json（約 95 題材：蘋果概念/電動車/低軌衛星/第三方支付…，
+     由 scripts/goodinfo_concepts.py 本機每週爬 Goodinfo）。
+  3) 官方產業別補齊 = TWSE t187ap03_L（上市）+ TPEx mopsfin_t187ap03_O（上櫃），涵蓋上市櫃約 1,800 檔。
+每檔：①精選題材 →②Goodinfo 概念 →③官方產業別保底，順序由細到粗、去重，故不再有「未分類」。
 
 格式（相容前端 row.themes = [{id, name}]，另帶 src 供日後分層顯示）：
   stock_themes(code text primary key, themes jsonb, updated_at timestamptz default now());
@@ -43,6 +45,19 @@ def _theme_memberships():
     return out
 
 
+def _goodinfo_concepts():
+    """code → [概念題材名]（Goodinfo 概念股，scripts/goodinfo_concepts.py 本機每週爬）。檔案不在就回空。"""
+    p = ROOT / "scripts" / "goodinfo_concepts.json"
+    if not p.exists():
+        return {}
+    try:
+        d = json.loads(p.read_text(encoding="utf-8"))
+        return {str(k): [str(x) for x in v] for k, v in d.items() if isinstance(v, list)}
+    except Exception as e:
+        print(f"[warn] goodinfo_concepts.json 讀取失敗：{e}")
+        return {}
+
+
 def _industry_map():
     """code → 產業別中文（上市 TWSE + 上櫃 TPEx，官方 openapi）。"""
     try:
@@ -52,8 +67,8 @@ def _industry_map():
         return {}
 
 
-def _all_codes(themes, industry):
-    codes = set(themes) | set(industry)
+def _all_codes(themes, industry, concepts=None):
+    codes = set(themes) | set(industry) | set(concepts or {})
     # tw_listed_codes.json 補齊（4 碼普通股）
     p = ROOT / "scripts" / "tw_listed_codes.json"
     if p.exists():
@@ -67,23 +82,30 @@ def _all_codes(themes, industry):
 
 
 def _build_rows():
-    themes = _theme_memberships()
-    industry = _industry_map()
+    themes = _theme_memberships()          # 合夥人精選（細、熱門半導體題材）
+    concepts = _goodinfo_concepts()        # Goodinfo 概念股（廣）
+    industry = _industry_map()             # 官方產業別（保底）
     rows = []
     stat = {"with_theme": 0, "industry_only": 0, "empty": 0}
-    for code in sorted(_all_codes(themes, industry)):
-        lst = []
-        for name in themes.get(code, []):
-            lst.append({"id": name, "name": name, "src": "題材"})
+    for code in sorted(_all_codes(themes, industry, concepts)):
+        lst, names = [], set()
+        def add(name, src):
+            if name and name not in names:
+                names.add(name)
+                lst.append({"id": name if src != "產業" else "產業:" + name, "name": name, "src": src})
+        for name in themes.get(code, []):          # ① 合夥人精選題材排前（資訊量高）
+            add(name, "題材")
+        for name in concepts.get(code, []):         # ② Goodinfo 概念題材
+            add(name, "概念")
         ind = industry.get(code)
         if ind == "其他":
             ind = "其他業"           # 2026-10-21 官方產業別「其他」照實標示（例：裕慶-KY），不再落成「未分類」
         if ind:
-            lst.append({"id": "產業:" + ind, "name": ind, "src": "產業"})
+            add(ind, "產業")                        # ③ 官方產業別保底
         if not lst:
             stat["empty"] += 1
             continue
-        if themes.get(code):
+        if themes.get(code) or concepts.get(code):
             stat["with_theme"] += 1
         else:
             stat["industry_only"] += 1

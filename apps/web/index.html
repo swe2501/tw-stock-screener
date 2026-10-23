@@ -2934,7 +2934,7 @@
   </style>
   <div id="todayindexView" style="display:none">
     <div class="ti-head">題材索引</div>
-    <div class="ti-sub">當日盤後彙整的觀察題材，點任一題材看其成分股（可再點開個股 K 線）。資料源：hot_topics（每日新聞／題材彙整）。</div>
+    <div class="ti-sub">點任一題材看其成分股（可再點開個股 K 線）。<b>今日熱門題材</b>＝當日新聞彙整（hot_topics）；<b>完整題材索引</b>＝合夥人精選題材＋Goodinfo 概念股（stock_themes，每週更新）。</div>
     <div class="ov-tabs" aria-label="今日焦點分類"><button type="button" onclick="_focusTab('overview')">市場總覽</button><button type="button" onclick="_focusTab('focus')">今日排行榜</button><button class="on" type="button">題材索引</button></div>
     <div id="tiBody"><div class="fc-empty">載入中…</div></div>
   </div>
@@ -8921,7 +8921,7 @@
   (function(){
     var el=function(id){return document.getElementById(id);};
     function sb(path){var U=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'',K=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';return fetch(U+'/rest/v1/'+path,{headers:{apikey:K,Authorization:'Bearer '+K}}).then(function(r){return r.json();}).catch(function(){return null;});}
-    var _themes=null,_sel=null;
+    var _themes=null,_sel=null,_catalog=null;
     function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
     function nm(code){return (window._names&&window._names[code])||'';}
     function codesOf(t){var c=t.codes;if(typeof c==='string'){try{c=JSON.parse(c);}catch(e){c=[];}}return Array.isArray(c)?c:[];}
@@ -8939,11 +8939,25 @@
     }
     function renderList(){
       var box=el('tiBody');if(!box)return;
-      if(!Array.isArray(_themes)||!_themes.length){box.innerHTML='<div class="fc-empty">今日無題材資料</div>';return;}
-      box.innerHTML='<div class="ti-grid">'+_themes.map(function(g,i){
-        var cs=g.stocks.slice(0,6).map(function(c){return c.name||c.code;}).filter(Boolean).join('、');
-        return '<div class="ti-card" data-i="'+i+'"><div class="no">'+('0'+(i+1)).slice(-2)+'</div><div class="t">'+esc(g.sector)+'</div><div class="m"><span>熱度 '+g.heat+'</span><span>'+g.stocks.length+' 檔</span><span>'+g.topics.length+' 則新聞</span></div>'+(cs?'<div class="cs">'+esc(cs)+'</div>':'')+'</div>';
-      }).join('')+'</div>';
+      var html='';
+      // ① 今日熱門題材（hot_topics，含熱度/新聞）
+      if(Array.isArray(_themes)&&_themes.length){
+        html+='<div class="ti-sech" style="margin:0 0 8px"> 今日熱門題材 <span style="font-weight:400;color:var(--text-muted);font-size:11px">每日新聞彙整 · 依熱度</span></div>';
+        html+='<div class="ti-grid">'+_themes.map(function(g,i){
+          var cs=g.stocks.slice(0,6).map(function(c){return c.name||c.code;}).filter(Boolean).join('、');
+          return '<div class="ti-card" data-i="'+i+'"><div class="no">'+('0'+(i+1)).slice(-2)+'</div><div class="t">'+esc(g.sector)+'</div><div class="m"><span>熱度 '+g.heat+'</span><span>'+g.stocks.length+' 檔</span><span>'+g.topics.length+' 則新聞</span></div>'+(cs?'<div class="cs">'+esc(cs)+'</div>':'')+'</div>';
+        }).join('')+'</div>';
+      }
+      // ② 完整題材索引（stock_themes：合夥人精選題材＋Goodinfo 概念股，依成分股數）
+      if(Array.isArray(_catalog)&&_catalog.length){
+        html+='<div class="ti-sech" style="margin:20px 0 8px"> 完整題材索引 <span style="font-weight:400;color:var(--text-muted);font-size:11px">'+_catalog.length+' 個題材 · 合夥人精選＋Goodinfo 概念股 · 依成分股數</span></div>';
+        html+='<div class="ti-grid">'+_catalog.map(function(t){
+          var cs=(t.codes||[]).slice(0,6).map(function(c){return nm(c)||c;}).filter(Boolean).join('、');
+          var tag=t.src==='題材'?'<span style="font-size:10px;color:var(--brand-green);font-weight:700;margin-left:5px">精選</span>':'<span style="font-size:10px;color:var(--accent);font-weight:700;margin-left:5px">概念</span>';
+          return '<div class="ti-card ti-cat" data-cat="'+esc(t.name)+'"><div class="t">'+esc(t.name)+tag+'</div><div class="m"><span>'+(t.count||(t.codes||[]).length)+' 檔成分股</span></div>'+(cs?'<div class="cs">'+esc(cs)+'</div>':'')+'</div>';
+        }).join('')+'</div>';
+      }
+      box.innerHTML=html||'<div class="fc-empty">今日無題材資料</div>';
     }
     /* 題材 → 產業別對照(只放能乾淨對到單一產業的;概念型如AI伺服器/散熱/機器人不放,不顯示展開鈕)*/
     var SEC2IND={'半導體':'半導體業','記憶體':'半導體業','矽晶圓':'半導體業','IC設計':'半導體業','晶圓代工':'半導體業','封測':'半導體業','半導體測試':'半導體業','先進封裝':'半導體業','CoWoS':'半導體業','矽光子':'半導體業',
@@ -8976,18 +8990,31 @@
         + expand
         +'<div class="ti-sech">新聞摘要 <span style="font-weight:400;color:var(--text-muted);font-size:11px">近 7 天 · 由新到舊</span></div>'+(news||'<div class="fc-empty">暫無新聞</div>');
     }
+    function renderCatalogDetail(t){
+      var box=el('tiBody');if(!box)return;
+      var stocks=(t.codes||[]).map(function(c){return chip(c,nm(c)||c);}).join('');
+      box.innerHTML='<div class="ti-back" onclick="window._tiList()"><span class="ti-back-arrow">←</span> 返回題材索引</div>'
+        +'<div class="ti-detail-h">'+esc(t.name)+' <span style="font-size:12px;color:var(--text-muted);font-weight:600">'+(t.src==='題材'?'合夥人精選題材':'Goodinfo 概念股')+'</span></div>'
+        +'<div class="ti-detail-m"><span>'+(t.count||(t.codes||[]).length)+' 檔成分股</span></div>'
+        +'<div class="ti-sech">成分股 <span style="font-weight:400;color:var(--text-muted);font-size:11px">點股票看 K 線</span></div>'
+        +'<div class="ti-stocks">'+(stocks||'<div class="fc-empty">暫無成分股</div>')+'</div>';
+    }
     function load(cb){
-      if(_themes){cb&&cb();return;}
-      sb('hot_topics?select=*&order=heat.desc&limit=60').then(function(a){var rows=Array.isArray(a)?a:[];
+      if(_themes&&_catalog){cb&&cb();return;}
+      var p1=sb('hot_topics?select=*&order=heat.desc&limit=60').then(function(a){var rows=Array.isArray(a)?a:[];
         rows.forEach(function(t){codesOf(t).forEach(function(c){if(c&&c.code&&c.name&&window._names)window._names[c.code]=c.name;});});
-        _themes=group(rows); cb&&cb();});
+        _themes=group(rows);}).catch(function(){_themes=_themes||[];});
+      var p2=fetch(window.__API+'/api/screen?stat=themecatalog').then(function(r){return r.json();}).then(function(j){_catalog=(j&&j.themes)||[];}).catch(function(){_catalog=[];});
+      Promise.all([p1,p2]).then(function(){cb&&cb();});
     }
     window._tiList=function(){_sel=null;renderList();};
     window._tiShow=function(){ el('todayindexView').style.display='block'; try{if(typeof window._loadNames==='function')window._loadNames();}catch(e){}
       load(function(){ if(_sel){var g=_themes.filter(function(x){return String(x.sector)===String(_sel);})[0]; if(g){renderDetail(g);return;} } renderList(); }); };
     window._openTheme=function(name){ _sel=name; try{window._showView('todayindex');}catch(e){} };
     window._VIEWS=window._VIEWS||{}; window._VIEWS.todayindex={el:'todayindexView',show:'_tiShow'};
-    document.addEventListener('click',function(e){var c=e.target.closest('#tiBody .ti-card');if(!c)return;var i=+c.dataset.i;if(_themes&&_themes[i]){_sel=_themes[i].sector;renderDetail(_themes[i]);}});
+    document.addEventListener('click',function(e){var c=e.target.closest('#tiBody .ti-card');if(!c)return;
+      if(c.dataset.cat){var t=(_catalog||[]).filter(function(x){return x.name===c.dataset.cat;})[0];if(t)renderCatalogDetail(t);return;}
+      var i=+c.dataset.i;if(_themes&&_themes[i]){_sel=_themes[i].sector;renderDetail(_themes[i]);}});
     document.addEventListener('click',function(e){var b=e.target.closest('.ti-expand');if(!b)return;var ind=b.dataset.ind;var box=el('tiIndStocks');
       if(b.dataset.open==='1'){ if(box)box.innerHTML=''; b.dataset.open='0'; b.textContent='＋ 展開「'+ind+'」全部上市股'; return; }
       b.textContent='載入中…';

@@ -740,6 +740,39 @@ _themes_cache: dict = {}
 _themes_cache_ts: float = 0.0
 
 
+def _fetch_theme_catalog():
+    """反轉 stock_themes → 完整題材目錄：每個題材(細)→成分股清單。
+    只取 題材/概念（排除產業別保底 src=產業），供今日焦點「題材索引」完整瀏覽（補 hot_topics 題材太少）。"""
+    if not (SUPABASE_URL and SUPABASE_KEY):
+        return {"themes": []}
+    rows, off = [], 0
+    while True:
+        page = _cache_sb("/stock_themes", params=[("select", "code,themes"), ("order", "code.asc"),
+                                                   ("offset", str(off)), ("limit", "1000")])[1] or []
+        rows.extend(page)
+        if len(page) < 1000:
+            break
+        off += 1000
+    cat = {}
+    for r in rows:
+        code = str(r.get("code", "")).strip()
+        if not code:
+            continue
+        for t in (r.get("themes") or []):
+            if not isinstance(t, dict) or t.get("src") == "產業":
+                continue
+            nm = t.get("name")
+            if not nm:
+                continue
+            d = cat.setdefault(nm, {"name": nm, "src": t.get("src", ""), "codes": []})
+            if code not in d["codes"]:
+                d["codes"].append(code)
+    out = sorted(cat.values(), key=lambda x: -len(x["codes"]))
+    for d in out:
+        d["count"] = len(d["codes"])
+    return {"themes": out, "total": len(out)}
+
+
 def _load_stock_themes() -> dict:
     """code → [{id, name}]（今日排行題材顯示用）。
     優先讀 Supabase stock_themes（scripts/themes_push.py 建：合夥人精選題材 THEME_MEMBERS + 官方產業別補齊）；
@@ -3564,6 +3597,12 @@ class handler(BaseHTTPRequestHandler):
             except Exception as e:
                 import traceback
                 return self._send_json(200, {"error": str(e), "traceback": traceback.format_exc()})
+        # 完整題材目錄（stock_themes 反轉；今日焦點題材索引用，補 hot_topics 題材太少）
+        if (qs.get("stat") or [""])[0] == "themecatalog":
+            try:
+                return self._send_json(200, _fetch_theme_catalog(), cache="public, s-maxage=1800, max-age=600")
+            except Exception as e:
+                return self._send_json(200, {"error": str(e)})
         # 所有官方產業類指數的成分股（複用產業地圖已算好的細產業成分，依對照表聚合）
         if (qs.get("stat") or [""])[0] == "sectorall":
             try:
