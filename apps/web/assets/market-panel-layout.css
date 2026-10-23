@@ -1,0 +1,55 @@
+/* Pair summaries when each table has room; retain full-width history charts. */
+.hp-market-pair{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;margin-top:16px}
+.hp-market-pair>.hp-sec{min-width:0;margin:0!important}
+.hp-market-pair .hp-sec-h{align-items:baseline;row-gap:7px}
+.hp-market-pair .hp-sec-src{white-space:normal;line-height:1.7}
+.hp-market-pair .gs-tbl{font-variant-numeric:tabular-nums}
+.hp-margin-summary{margin:18px 0;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:var(--surface2)}
+.hp-margin-summary h3{font-size:13px;margin:0 0 10px;color:var(--text);font-weight:650}
+.hp-margin-summary-row+.hp-margin-summary-row{border-top:1px solid var(--border);margin-top:10px;padding-top:10px}
+.hp-margin-summary-row>div{display:flex;justify-content:space-between;align-items:baseline;gap:10px;color:var(--text);font-size:13px}
+.hp-margin-summary-row time{font-size:11px;color:var(--text-muted);font-variant-numeric:tabular-nums}
+body .hp-margin-summary-row p{font-size:13px!important;line-height:1.8!important;margin:4px 0 0;color:var(--text-muted)}
+.hp-leverage-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:20px}
+.hp-leverage-grid>#hpDiverge{min-width:0}
+.hp-leverage-grid>#hpMaint{display:contents}
+.hp-leverage-grid>#hpMaint>.gs-maint{min-width:0;margin-top:0;padding:16px;border:1px solid var(--border);border-radius:14px;background:var(--surface)}
+.hp-leverage-grid .gs-maint>header{max-width:none;width:100%;margin:0 0 12px;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
+.hp-leverage-grid .gs-maint>header>span:first-child{background:transparent;padding:0;border-radius:0;color:var(--text);font-size:15px;letter-spacing:0}
+.hp-leverage-grid .gs-maint>header .gs-mmtabs{grid-column:1/-1;grid-row:2;justify-self:start;padding:0;background:transparent}
+.hp-leverage-grid .gs-maint>header>strong{grid-column:2;grid-row:1;font-variant-numeric:tabular-nums;font-size:28px;line-height:1.4;white-space:nowrap}
+.hp-leverage-grid .gs-mmwrap,.hp-leverage-grid>#hpMaint>.gs-tip{grid-column:1/-1;min-width:0}
+.hp-leverage-grid .gs-mmwrap{margin-top:0}
+.hp-leverage-grid .gs-maint>.gs-msnote{margin:12px 0 0;line-height:1.7}
+.hp-leverage-grid .gs-maint>.gs-msnote:empty{display:none}
+.hp-leverage-grid .gs-maint>#hpMaintLabel{margin:8px 0 12px}
+.hp-leverage-grid .gs-rlab small{font-size:12px!important;line-height:1.6}
+.hp-leverage-grid .gs-ruler{margin-top:70px}
+.hp-leverage-grid #hpDiverge .gs-mmt{padding:0 4px}
+.hp-leverage-grid #hpDiverge .gs-mtbar{margin-bottom:14px}
+.hp-leverage-grid #hpDiverge .gs-div{gap:12px;padding-bottom:12px;margin-bottom:14px;flex-wrap:wrap}
+.hp-leverage-grid #hpDiverge .gs-div strong{font-size:28px}
+.hp-leverage-grid #hpDiverge .gs-div strong small{display:inline-block;font-size:12px!important}
+.hp-leverage-grid #hpDiverge .gs-mtrack u::after,.hp-leverage-grid .gs-rtrack::after{animation:none!important;opacity:0}
+.hp-leverage-grid #hpDiverge .gs-cst b{animation:none!important}
+.hp-leverage-grid #hpDiverge{display:flex;flex-direction:column;padding:16px;border:1px solid var(--border);border-radius:14px;background:var(--surface)}
+.hp-leverage-grid>#hpMaint>.gs-maint{display:flex;flex-direction:column}
+.hp-leverage-grid #hpDiverge>.gs-tip,.hp-leverage-grid .gs-maint>.gs-tip{margin:18px 0 0}
+:root:not([data-theme=light]) .hp-leverage-grid :is(#hpMaintNum,#hpMaintLabel,#hpMaintCur){filter:brightness(1.45)}
+@media(min-width:1200px){
+ .hp-market-pair{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:auto 1fr;row-gap:0;align-items:stretch}
+ .hp-market-pair>.hp-sec{display:grid;grid-template-rows:subgrid;grid-row:span 2}
+ .hp-market-pair :is(#hpInst,#hpMargin){display:flex;flex-direction:column;min-width:0}
+ .hp-market-pair :is(#hpInst,#hpMargin)>.gs-tip{margin-top:auto}
+ .hp-market-pair .gs-tbl th{white-space:normal;padding:8px 5px;line-height:1.65}
+ .hp-market-pair .gs-tbl td{padding:10px 5px}
+ .hp-leverage-grid{grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch;column-gap:24px}
+ .hp-leverage-grid>#hpDiverge{grid-column:1;grid-row:1}
+ .hp-leverage-grid>#hpMaint>.gs-maint{grid-column:2;grid-row:1}
+ .hp-leverage-grid #hpDiverge>.gs-tip,.hp-leverage-grid .gs-maint>.gs-tip{margin-top:auto}
+}
+@media(max-width:600px){
+ .hp-leverage-grid .gs-maint>header>strong{font-size:25px}
+ .hp-leverage-grid .gs-rlab small{display:none}
+ .hp-leverage-grid .gs-ruler{margin-top:48px}
+}
