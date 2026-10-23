@@ -2869,17 +2869,17 @@
       .gs-optfoot{border-top:1px solid var(--border);margin-top:6px;padding-top:8px;font-size:11.5px;color:var(--text-muted);}
       @media(max-width:760px){.gs-bd2,.gs-fut,.gs-opt,.gs-shgrid{grid-template-columns:1fr;}.gs-opttracks{grid-template-columns:1fr 1fr;}}
     </style>
-    <section class="hp-sec"><div class="hp-sec-h"><span class="hp-sec-no">§1</span> 現貨三大法人買賣超 <span class="hp-sec-src" id="hpInstSrc">上市 TWSE · 上櫃 TPEx（金額）</span></div><div id="hpInst"><div class="fc-empty">載入中…</div></div></section>
+    <div class="hp-market-pair"><section class="hp-sec"><div class="hp-sec-h"><span class="hp-sec-no">§1</span> 現貨三大法人買賣超 <span class="hp-sec-src" id="hpInstSrc">上市 TWSE · 上櫃 TPEx（金額）</span></div><div id="hpInst"><div class="fc-empty">載入中…</div></div></section>
 
     <section class="hp-sec"><div class="hp-sec-h"><span class="hp-sec-no">§2</span> 融資融券餘額 <span class="hp-sec-src">上市採交易所彙總融資金額；上櫃採官方個股餘額彙整，券資比以張數計算</span></div><div id="hpMargin"><div class="fc-empty">載入中…</div></div></section>
 
-    <section class="hp-sec"><div class="hp-sec-h"><span class="hp-sec-no">§3</span> 市場廣度 <span class="hp-sec-src">同時看上市與上櫃的漲跌平及漲跌停家數</span></div><div id="hpBreadth" class="gs-bd2"><div class="fc-empty">載入中…</div></div>
+    </div><section class="hp-sec"><div class="hp-sec-h"><span class="hp-sec-no">§3</span> 市場廣度 <span class="hp-sec-src">同時看上市與上櫃的漲跌平及漲跌停家數</span></div><div id="hpBreadth" class="gs-bd2"><div class="fc-empty">載入中…</div></div>
       <div style="text-align:center;margin-top:12px"><button onclick="try{window._showView('breadth')}catch(e){}" style="background:var(--accent);color:var(--on-accent);font-weight:800;border:0;border-radius:9px;padding:10px 22px;font-size:14px;cursor:pointer"> 大盤多空廣度 →</button><div style="font-size:11.5px;color:var(--text-muted);margin-top:5px">滲透率極值、站上均線廣度（5階週期）＋部位 SOP（進階籌碼）</div></div>
     </section>
 
     <section class="hp-sec"><div id="hpStruct"><div class="fc-empty">載入中…</div></div></section>
 
-    <section class="hp-sec" id="hpMaintSec"><div class="hp-sec-h"><span class="hp-sec-no">§4</span> 融資動能背離與市場槓桿 <span class="hp-sec-src">加權指數 vs 上市融資餘額 · 全市場維持率</span></div><div id="hpDiverge" class="hp-verdict"><div class="fc-empty">載入中…</div></div><div id="hpMaint"></div></section>
+    <section class="hp-sec" id="hpMaintSec"><div class="hp-sec-h"><span class="hp-sec-no">§4</span> 融資動能背離與市場槓桿 <span class="hp-sec-src">加權指數 vs 上市融資餘額 · 全市場維持率</span></div><div class="hp-leverage-grid"><div id="hpDiverge" class="hp-verdict"><div class="fc-empty">載入中…</div></div><div id="hpMaint"></div></div></section>
 
     <section class="hp-sec"><div class="hp-sec-h"><span class="hp-sec-no">§5</span> 臺股期貨未平倉與散戶多空比 <span class="hp-sec-src">大台顯示法人留倉；小台與微台依主要月份全市場 OI 扣除三大法人計算散戶部位</span></div><div id="hpFut" class="gs-fut"><div class="fc-empty">載入中…</div></div><div class="fx-cost-host" id="hpForeignCost"></div>
       <div style="text-align:center;margin-top:12px"><a href="?view=fhedge#fhedge" onclick="window.location.assign(this.href);return false" class="pro-fhedge-cta" style="background:var(--accent);color:var(--on-accent);font-weight:800;border:0;border-radius:9px;padding:10px 22px;font-size:14px;cursor:pointer">外資空單溫度計 →</a><div style="font-size:11.5px;color:var(--text-muted);margin-top:5px">外資期貨淨空名目 ÷ 持股市值＝避險比率，看 2 年歷史位置（進階籌碼）</div></div>
@@ -8306,7 +8306,13 @@
         var rows='';
         if(t)rows+='<tr>'+mkt('上市',tseM)+chgc(t.fin_bal_k,t.fin_bal_prev_k)+balc(t.fin_bal_k)+lchg(t.short_bal_lots,t.short_bal_prev_lots)+lotc(t.short_bal_lots)+ratio(t.short_bal_lots,t.fin_bal_lots)+'</tr>';
         if(o)rows+='<tr>'+mkt('上櫃',o.fin_maint!=null?o.fin_maint+'%':'')+chgc(o.fin_bal_k,o.fin_prev_k)+balc(o.fin_bal_k)+'<td>—</td>'+lotc(o.short_lots)+ratio(o.short_lots,o.fin_bal_lots)+'</tr>';
+        function changeSummary(v,prev,scale,unit){
+          if(v==null||prev==null||v===''||prev===''||!Number.isFinite(Number(v))||!Number.isFinite(Number(prev)))return '增減資料待更新';
+          var d=(Number(v)-Number(prev))/scale;return (d>0?'增加 ':d<0?'減少 ':'持平 ')+(scale===1?Math.abs(d).toLocaleString():Math.abs(d).toFixed(2))+' '+unit;
+        }
+        function summaryLine(name,r,date,finPrev,shortNow,shortPrev){if(!r)return '';return '<div class="hp-margin-summary-row"><div><b>'+name+'</b><time>'+(/^\d{4}-\d{2}-\d{2}$/.test(date||'')?date:'日期待更新')+'</time></div><p>融資'+changeSummary(r.fin_bal_k,finPrev,1e5,'億')+'；融券'+changeSummary(shortNow,shortPrev,1,'張')+'。</p></div>';}
         box.innerHTML='<table class="gs-tbl"><thead><tr><th class="l">市場<br><span style="font-weight:600;font-size:10px;color:var(--text-muted)">維持率估算</span></th><th>融資增減(億)</th><th>融資餘額(億)</th><th>融券增減(張)</th><th>融券餘額(張)</th><th>券資比</th></tr></thead><tbody>'+rows+'</tbody></table>'
+          +'<div class="hp-margin-summary"><h3>今日變化摘要</h3>'+summaryLine('上市',t,t&&t.date,t&&t.fin_bal_prev_k,t&&t.short_bal_lots,t&&t.short_bal_prev_lots)+summaryLine('上櫃',o,o&&o.trade_date,o&&o.fin_prev_k,o&&o.short_lots,null)+'</div>'
           +'<div class="gs-tip"><span class="ic"></span><div><b>學院導讀</b>融資維持率越低，代表融資戶擔保品的安全邊際越薄、越接近追繳；判讀時建議一併看個股維持率與股價波動，不宜只看整體數字。</div></div>';
       });
     }
@@ -8525,7 +8531,7 @@
               +'<div class="gs-div-date">比較日期 '+s.startDate+' → '+s.endDate+' · 兩項數據使用相同起訖交易日</div></div>';
           }else body='<div class="fc-empty">官方歷史資料尚未形成完整的 '+sel+' 個共同交易日。</div>';
           box.innerHTML='<div class="gs-mtbar"><div class="gs-cst '+st.t+'"><b>'+st.l+'</b><span class="gs-status-desc">'+st.d+'</span>'+(st.small?'<small class="gs-status-note">'+st.small+'</small>':'')+'</div><div class="gs-pdtabs">'+tabs+'</div></div>'+body
-            +'<div class="gs-tip"><span class="ic"></span><div><b>學院導讀</b>指數上漲、但融資餘額增加得更快，代表散戶槓桿在追價升溫；若此時市場廣度又同步縮小，追高的風險就更需要留意。</div></div>';
+            +'<div class="gs-tip"><span class="ic"></span><div><b>學院導讀</b>先看兩條長條方向，再比較幅度。背離值＝融資變動率－大盤變動率；正值代表融資變動率較高，負值代表較低。</div></div>';
         }
         box.onchange=function(e){var t=e.target.closest('.gs-pd');if(t){box._selDays=+t.value;sel=box._selDays;render();}};
         render();
@@ -8570,10 +8576,9 @@
           +'<div id="msEtfRow" class="gs-msetf"><label><input type="radio" name="msEtf" value="inc" checked onchange="window._msSelEtf(false)">含 ETF</label><label><input type="radio" name="msEtf" value="exc" onchange="window._msSelEtf(true)">扣除 ETF</label></div>'
           +'<p id="hpMaintLabel">資料更新中</p><div class="gs-ruler">'
           +'<div class="gs-rlab">'+_maintTicksHtml()+'</div>'
-          +'<div class="gs-rtrack">'+_maintScaleHtml()+'<i id="hpMaintMark" hidden></i></div><b id="hpMaintCur">--</b></div><p id="msNote" class="gs-msnote"></p></div>'
-        +'<div class="gs-mmwrap"><div class="gs-mmtitle2" id="hpMmTitle">加權指數 × 全市場融資維持率 × 融資／融券餘額</div><div id="hpMmCur" class="gs-mmcur"></div><div id="hpMmTip" class="gs-mmtip">移動滑鼠或觸控圖上看每日數值</div><div id="hpMmPanels"></div></div>'
+          +'<div class="gs-rtrack">'+_maintScaleHtml()+'<i id="hpMaintMark" hidden></i></div><b id="hpMaintCur">--</b></div><p id="msNote" class="gs-msnote"></p>'
         +'<div class="gs-tip"><span class="ic"></span><div><b>學院導讀</b>維持率走低時，融資戶承受價格下跌的空間變小。先看它是否持續下降，再搭配指數走勢、融資增減與市場廣度；整體數字不能代替每檔股票的風險觀察。</div></div>'
-        +'</div>';
+        +'</div><div class="gs-mmwrap"><div class="gs-mmtitle2" id="hpMmTitle">加權指數 × 全市場融資維持率 × 融資／融券餘額</div><div id="hpMmCur" class="gs-mmcur"></div><div id="hpMmTip" class="gs-mmtip">移動滑鼠或觸控圖上看每日數值</div><div id="hpMmPanels"></div></div>';
       if(window._loadHpMaintChart) window._loadHpMaintChart();
       if(window._loadMaintSplit) window._loadMaintSplit();
     }
@@ -17536,9 +17541,10 @@
 <link rel="stylesheet" href="assets/member-service-center.css?v=1">
 <script src="assets/member-data-portability.js?v=inbox1" defer></script>
 <script src="assets/member-service-center.js?v=1" defer></script>
-<link rel="stylesheet" href="assets/member-notification-inbox.css?v=1">
-<script src="assets/member-notification-inbox.js?v=1" defer></script>
-<script src="assets/member-center.js?v=inbox1" defer></script>
+<link rel="stylesheet" href="assets/market-panel-layout.css?v=1">
+<link rel="stylesheet" href="assets/member-notification-inbox.css?v=compact2">
+<script src="assets/member-notification-inbox.js?v=compact2" defer></script>
+<script src="assets/member-center.js?v=compact2" defer></script>
 <script src="assets/member-signin.js?v=invite2" defer></script>
 <script src="assets/member-private-screen.js?v=asof4" defer></script>
 <link rel="stylesheet" href="assets/site-readability.css?v=futures-history3">
