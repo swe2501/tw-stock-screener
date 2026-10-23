@@ -56,4 +56,6 @@ body:has(#homeView:not([style*="display: none"])) {overflow-x:clip}
 
 .member-page>#foresightFooter{width:100%;margin:24px 0 0;}
 
-body:has(>#foresightFooter){padding-bottom:0;}
+/* No trailing page gutter after the shared footer, including member pages. */
+body:has(#foresightFooter),.member-page:has(>#foresightFooter){padding-bottom:0!important;margin-bottom:0!important;}
+#foresightFooter{flex-shrink:0;}
