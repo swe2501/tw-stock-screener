@@ -244,9 +244,48 @@ def _twse_holidays(year: int):
     return out
 
 
+_TRADING_CACHE: dict = {}
+
+
+def _twse_trading_days(y: int, m: int):
+    """證交所該月實際交易日（FMTQIK 每日市場成交資訊；YYYY-MM-DD 的 set）。取不到回 None。
+    用來抓官方休市表沒列的臨時休市（例：颱風假，2026-10-23）。"""
+    key = (y, m)
+    if key in _TRADING_CACHE:
+        return _TRADING_CACHE[key]
+    out = None
+    try:
+        import ssl
+        ctx = ssl.create_default_context()
+        if hasattr(ssl, "VERIFY_X509_STRICT"):
+            ctx.verify_flags &= ~ssl.VERIFY_X509_STRICT
+        url = f"https://www.twse.com.tw/rwd/zh/afterTrading/FMTQIK?date={y}{m:02d}01&response=json"
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=20, context=ctx) as r:
+            data = json.loads(r.read().decode("utf-8"))
+        rows = data.get("data") or []
+        if rows:
+            out = set()
+            for row in rows:                       # 民國日期 115/10/22
+                yy, mm, dd = str(row[0]).split("/")
+                out.add(f"{int(yy) + 1911}-{int(mm):02d}-{int(dd):02d}")
+    except Exception as e:
+        print(f"  [warn] 取證交所 {y}-{m:02d} 交易日失敗（本次不排除）：{type(e).__name__}")
+    _TRADING_CACHE[key] = out
+    return out
+
+
 def is_market_holiday(d) -> bool:
     hs = _twse_holidays(d.year)
-    return bool(hs) and d.strftime("%Y-%m-%d") in hs
+    if hs and d.strftime("%Y-%m-%d") in hs:
+        return True
+    # 臨時休市（颱風假等）：已收盤的日子（今天 17:00 後或更早）若不在當月實際交易日清單 → 休市
+    now = datetime.now()
+    if d < now.date() or (d == now.date() and now.hour >= 17):
+        td = _twse_trading_days(d.year, d.month)
+        if td and d.strftime("%Y-%m-%d") not in td:
+            return True
+    return False
 
 
 def _weekdays(date_from, date_to):
