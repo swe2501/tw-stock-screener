@@ -1175,6 +1175,9 @@
     .draw-dd-menu-right { left: auto; right: 0; }
     #maLabel #fibBtn { opacity: .6; }
     #maLabel #fibBtn.active { opacity: 1; text-decoration: underline; font-weight: 800; }
+    .chart-layer-toolbar .kbar-tog{font-weight:800}
+    .chart-layer-toolbar #fibBtn{opacity:.6}
+    .chart-layer-toolbar #fibBtn.active{opacity:1;text-decoration:underline}
     .tool-btn.dd-active { background: var(--ctl-hi); border-color: var(--accent); color: var(--accent); }
     .draw-text-input { font: 700 13px -apple-system,"Segoe UI",system-ui,sans-serif; padding: 2px 6px; border: 1px solid var(--accent); border-radius: 5px; background: var(--surface); color: var(--text); outline: none; min-width: 80px; }
 
@@ -2887,7 +2890,7 @@
     <div class="fc-note" id="hpNote"></div>
     </div><!-- /cb-sheet 每日台股籌碼報告 -->
     <div style="max-width:1200px;margin:14px auto 0;padding:10px 14px;font-size:11.5px;line-height:1.7;color:var(--text-muted);border-top:1px dashed var(--border);">
-      <b>改動紀錄（供合夥人複查）</b>：2026-09-30 全站版面採用合夥人 redesign 版；同日輕更新（ETF 甜甜圈互動、市場廣度分頁與篩選分離、選擇權支撐壓力 OI 峰值前端、結算日遇休市順延、多空排列配色、行動版表格）。掏金篩選器含「真名三式（多頭回洗反包）」（演算法與歷史回測見該勾選框）。2026-10-04 個股K圖量能面板新增「籌碼」分頁：三大法人每日淨買賣超堆疊柱（外資/投信/自營，紅買綠賣以0為基準，單位張，含合計線；滑鼠移至柱上顯示當日數值），對齊日K日期（僅日K、近120交易日）；資料源＝本站 institutional_trades（TWSE／TPEx T86 三大法人日報）每日推送至 Supabase inst_daily（scripts/inst_daily_push.py）。同日籌碼頁改為最上層分頁（點「籌碼」隱藏技術指標 VOL/MACD/RSI），並拆出「大戶 vs 散戶（週）」：資料源＝TDCC 集保股權分散表（每週五）＋當週收盤換算市值；大戶＝持股≥300張 或 市值≥3000萬、散戶＝持股<20張 或 市值<100萬（跨 TDCC 級距用均勻分布內插，為近似值），畫週增減（大戶紅綠柱／散戶藍線，單位張）；覆蓋熱門前500檔、每週更新（scripts/holder_flow_push.py → Supabase holder_flow）。籌碼頁最終版：單一「籌碼」分頁內拆成外資(日)／投信(日)／自營(日)／大戶(週)／散戶(週) 五張獨立柱狀圖（紅買綠賣）。另：K圖新增標記分類顯示開關（法說會／除權息，比照均線顯示隱藏，動態偵測）；修正指數與外國大盤相關新聞殘留前一檔個股的 bug（指數改載市場新聞 macro_news）；外資空單避險歷史圖右上新增「事件避險／連假避險」標記開關；§4 融資動能背離加入「今日／3 日」週期；富台指期（SGX FTSE Taiwan）新增最後交易日倒數（每月倒數第二個營業日，依證交所休市表）。2026-10-06「市場觀察」新增「美債對標」：以 US10Y 為錨，切換公債天期與熱門對標資產（高股息/科技成長/投等債/定存），呈現收益率利差、存續期敏感度與合規機會／風險定性；US10Y／US2Y 預填自美國財政部官方 Daily Treasury Par Yield Curve Rates（scripts/ust_yields_push.py → Supabase ust_yields，每日更新，可手動調整為示意假設）。資料與演算法沿用本站真實資料源（TWSE／TPEx／TAIFEX／TDCC／US Treasury／Supabase），未更動後端。2026-10-11 K 圖右上角新增「⛶ 全視窗」按鈕（直播／簡報用）：K 圖彈窗撐滿整個視窗並嘗試進入瀏覽器全螢幕，主圖高度隨視窗加大；再按一次或按 Esc 還原（Esc 先還原、不關閉 K 圖），手機版不顯示（本來就是整頁）。純版面功能，未更動資料與演算法。同日 K 圖顯示設定改為「記住上一次」：均線（MA5～MA240、全部均線）、BBAND、量均線、MACD／RSI 線、大盤K、支撐壓力勾選的週期、價量分析、箱型的開關，換股票（含右上角搜尋）、切換日／週／月／小時、關掉再開、重新整理後都沿用上一次的設定，不再還原成預設（設定存在各自瀏覽器，不跨裝置；主力分點因每檔分點不同，仍是每檔各自勾選）。純顯示設定，未更動資料與演算法。同日修正：全螢幕時「畫線工具／圖形註解」下拉選單點不出來（選單原本掛在網頁最外層，瀏覽器全螢幕只顯示 K 圖彈窗內的內容），改為全螢幕時掛在 K 圖彈窗內。2026-10-12 ①外資空單溫度計新增「第三層之二：匯率 × 現貨 × 期貨 三維交叉矩陣」：原四象限保留，各象限再交叉台幣升／貶共 8 格（匯率門檻：USD/TWD 日變動 ±0.10%，其間視為持平、兩列都不命中），並附五邊形雷達（現貨買賣超、期貨部位增減、台幣升貶、指數漲跌四項取近 60 個交易日百分位，避險水位＝100−近 2 年 PR；外圈偏多、內圈偏空，不合成單一分數）；原象限 III 單獨提到匯率的文字移除，匯率一律在此層交叉。②掏金篩選器新增「跌停板」（收盤 ≤ 跌停價；跌停價＝前收×0.9 依升降單位無條件進位）。③K 圖畫線套件：最後一根 K 棒右側空白區也能落點（改記邏輯索引）；右鍵取消目前工具；輔助線與圖形改虛線；橡皮擦可按住左鍵拖曳連續清除（判定距離 10→14px）；線條只畫在繪圖區內不蓋到價格軸；縮放／平移／拖價格軸時線條跟著重畫。同日修正：選了畫線工具後換另一檔股票，按鈕仍反藍但實際不能畫——改為換股票／換週期後工具維持啟用可直接畫，關閉 K 圖時才取消。同日：K 圖畫的線與圖形改為「每檔股票各自記住」——換到別檔不會帶過去，切回來還在，重新整理後也保留（存在各自瀏覽器，最多留最近 150 檔）。題材列表／產業地圖載入加速：先顯示瀏覽器裡上一次的資料、背景再更新，進站閒置時預先抓好；後端這兩支改為可由 CDN 快取 5 分鐘（資料本身每日更新一次，內容與算法不變）。再改為「前一晚先算好」：每日排程尾端把兩頁的彙整結果存進 Supabase page_cache（scripts/page_cache_push.py，每頁 1 列每日覆寫），前端直接讀表；表內沒有或超過 4 天未更新才退回後端現算。同日新增「20 日 SMA 三階段買點」：掏金篩選器三個勾選框（買點 1／2／3，可複選）＋個股日 K「20MA買點」標記開關（預設關，顯示歷史上每一輪的買 1／買 2／買 3）。規則依合夥人規格（均線＝20 日簡單平均含當日；帶量 1.3 倍；長紅／長下影 3%；十字線＝開等於收；均線一下彎即重置），詳見篩選器該項說明；另加一條保守處理：資料窗內尚未出現過重置日之前不產生訊號（無法確定該輪起點）。參數為初版待調整。2026-10-13 上述功能改名為「葛蘭碧買點」，並在掏金篩選器獨立成一個分類（原放在「真名絕招」內）；規則未變。2026-10-17 葛蘭碧規則修正（前後端同步）：①重置由「均線下彎 1 天」改為「連續 3 天下彎」②買點 2 拿掉「均線上彎」要求，只要最低 ≤ 均線且收盤 ＞ 均線 ③買點 3 由「整根在均線下（最高 ＜ 均線）」改為「收盤 ＜ 均線」＋止跌 K；K 圖標記改為依「組」（每個買點 1 開一組）可分組顯示。同日依用戶指示再修：①買點 2 改為「回測月線不破」——最低介於月線 ×0.99～×1.005（碰到月線，差 0.5% 內也算；最多破 1%）且收盤 ＞ 月線，原本最低跌破多深都算 ②買點 3 十字線放寬為實體 ≤ 0.5% 且振幅 ≥ 2%（原為開盤＝收盤）。③買點 2 前股價需先離開月線（買點 1 後至少一天收盤 ≥ 月線 ×1.03），避免買點 1 隔天還貼著月線就被記成回測。④買點 1 須「從月線下突破」：前 3 根內至少一根收盤在月線下（早已站上月線再拉的紅 K 不算），紅 K 不設長紅門檻。⑤買點 2 之後若從沒賺過（之後每天收盤都沒高於買點 2 當天收盤），就不標買點 3。⑥買點 2「碰到月線」範圍由 0.5% 放寬為 1%，並排除回測當天為長黑（黑 K 實體 ≥ 3%）的情況。⑦買點 3 收盤跌破月線超過 5% 不算（暴跌後的止跌 K 不標）。同日「✨ AI 判定」接上真 AI 後端：後端讀該股本站日線，程式先算好均線、量比、漲跌、區間高低與葛蘭碧買點紀錄，再交給 AI 依固定格式輸出「偏多／觀望／偏空」、0～100 技術面分數、摘要與四點說明（型態／量能／葛蘭碧／風險）；AI 只能用提供的數據，不含基本面與消息面。同一檔同一資料日只算一次（共享快取），每日呼叫次數有上限；未設定 AI 金鑰時顯示假資料示意。非投資建議。同日加入「形態判定」：後端把該股最近 160 根日 K（含 20 日均線與成交量）畫成圖片交給 AI 看圖判斷，只從圓形底、頭肩頂、頭肩底、M頭、W底、箱型、上升／下降趨勢線、上升／下降軌道 10 種中列出圖上明顯的形態，標示形成中／已確認、信心高中低與關鍵價位，不給目標價；屬 AI 看圖判斷，可能誤判。AI 供應商可在後端切換（Anthropic 或 OpenAI；目前規劃用 OpenAI GPT-6.1 Sol）。2026-10-21 修正：閒置 1 小時自動登出後，從外層封測登入殼重新登入，「閒置超過 1 小時」提示框仍殘留在畫面上——改為登入成功即關閉；另加同一瀏覽器多分頁的登入／登出同步。同日 K 圖葛蘭碧買點分組標籤的起始日加上年份（原只顯示月/日）。同日修正站內搜尋紀錄：輸入代號片段（如「1」）按 Enter 開了台泥 K 圖，紀錄原本存成打的「1」，改為存「台泥(1101)」；點這類紀錄直接開該股 K 圖。同日：捲動後上方導覽列釘在頂端時，「首頁」前面顯示網站 logo（點了回首頁）。同日拿掉頁首下方的「個股搜尋＋指數快覽」橫條（個股搜尋統一用右上搜尋欄），六個指數改到右上搜尋下拉選單的「國際指數」（滑鼠移入展開）。導覽列 logo 改為浮在左側留白、淡入出現，不再把導覽選項往右擠（左側留白不足的窄螢幕縮小或不顯示）。補修：頁首搜尋列原本在首頁以外的頁面會被程式重新打開，改為所有頁面都不顯示。同日修正今日焦點漲跌幅榜：停牌後恢復交易（多為減資換發新股）的股票，原本拿停牌前的舊收盤比較，算出 +98% 等錯誤漲幅；改為前一筆不是市場前一交易日時，採證交所／櫃買中心官方漲跌（含減資後參考價），官方收盤需與本站當日收盤一致才用，否則當天不列入漲跌幅榜。同日修正「外資結算成本估算」抓不到資料：後端結算成本端點因同一支程式內另一功能在函式中重複匯入 datetime，導致整支端點當機（FUNCTION_INVOCATION_FAILED），已移除該重複匯入。同日今日排行的題材標籤：官方產業別為「其他」的個股（如裕慶-KY，全市場約 90 檔）原本顯示「未分類」，改為照官方歸類顯示「其他業」。今日焦點「漲停／跌停最多題材」改為掃全市場（上市＋上櫃）每一檔漲跌停股（漲跌幅 ≥ 9.5%），題材採今日排行同一套標籤（精選題材＋官方產業別），依家數、再依成交值排序；原本只看漲跌幅前 20 名且只限 39 個精選題材，跌停股多半不在其中而顯示「今日沒有跌停題材」。卡片右上角加「精選題材／一般題材」切換：精選題材＝合夥人 39 個題材，一般題材＝官方產業別（其他→其他業），兩者分開排名；漲停卡與跌停卡各自切換、各自記住選擇（不連動）。同日快照依環境分開：每晚排程以 prod 分支程式產正式站快照、以 uat 分支程式產 uat 快照（kind 加 @uat），盤中即時同理；uat 網站先讀 uat 快照，沒有才讀正式站版，uat 的新邏輯不再要等推 prod 才看得到，也不會影響正式站。同日前端呼叫後端改為依環境：本機開檔才打正式站，部署在任何網址（uat、正式站）都打自己的後端（原本寫死正式站 77 處），uat 從此能直接測到後端修改。2026-10-17 補正篩選器說明文字（原說明仍為舊規則）。
+      <b>改動紀錄（供合夥人複查）</b>：2026-09-30 全站版面採用合夥人 redesign 版；同日輕更新（ETF 甜甜圈互動、市場廣度分頁與篩選分離、選擇權支撐壓力 OI 峰值前端、結算日遇休市順延、多空排列配色、行動版表格）。掏金篩選器含「真名三式（多頭回洗反包）」（演算法與歷史回測見該勾選框）。2026-10-04 個股K圖量能面板新增「籌碼」分頁：三大法人每日淨買賣超堆疊柱（外資/投信/自營，紅買綠賣以0為基準，單位張，含合計線；滑鼠移至柱上顯示當日數值），對齊日K日期（僅日K、近120交易日）；資料源＝本站 institutional_trades（TWSE／TPEx T86 三大法人日報）每日推送至 Supabase inst_daily（scripts/inst_daily_push.py）。同日籌碼頁改為最上層分頁（點「籌碼」隱藏技術指標 VOL/MACD/RSI），並拆出「大戶 vs 散戶（週）」：資料源＝TDCC 集保股權分散表（每週五）＋當週收盤換算市值；大戶＝持股≥300張 或 市值≥3000萬、散戶＝持股<20張 或 市值<100萬（跨 TDCC 級距用均勻分布內插，為近似值），畫週增減（大戶紅綠柱／散戶藍線，單位張）；覆蓋熱門前500檔、每週更新（scripts/holder_flow_push.py → Supabase holder_flow）。籌碼頁最終版：單一「籌碼」分頁內拆成外資(日)／投信(日)／自營(日)／大戶(週)／散戶(週) 五張獨立柱狀圖（紅買綠賣）。另：K圖新增標記分類顯示開關（法說會／除權息，比照均線顯示隱藏，動態偵測）；修正指數與外國大盤相關新聞殘留前一檔個股的 bug（指數改載市場新聞 macro_news）；外資空單避險歷史圖右上新增「事件避險／連假避險」標記開關；§4 融資動能背離加入「今日／3 日」週期；富台指期（SGX FTSE Taiwan）新增最後交易日倒數（每月倒數第二個營業日，依證交所休市表）。2026-10-06「市場觀察」新增「美債對標」：以 US10Y 為錨，切換公債天期與熱門對標資產（高股息/科技成長/投等債/定存），呈現收益率利差、存續期敏感度與合規機會／風險定性；US10Y／US2Y 預填自美國財政部官方 Daily Treasury Par Yield Curve Rates（scripts/ust_yields_push.py → Supabase ust_yields，每日更新，可手動調整為示意假設）。資料與演算法沿用本站真實資料源（TWSE／TPEx／TAIFEX／TDCC／US Treasury／Supabase），未更動後端。2026-10-11 K 圖右上角新增「⛶ 全視窗」按鈕（直播／簡報用）：K 圖彈窗撐滿整個視窗並嘗試進入瀏覽器全螢幕，主圖高度隨視窗加大；再按一次或按 Esc 還原（Esc 先還原、不關閉 K 圖），手機版不顯示（本來就是整頁）。純版面功能，未更動資料與演算法。同日 K 圖顯示設定改為「記住上一次」：均線（MA5～MA240、全部均線）、BBAND、量均線、MACD／RSI 線、大盤K、支撐壓力勾選的週期、價量分析、箱型的開關，換股票（含右上角搜尋）、切換日／週／月／小時、關掉再開、重新整理後都沿用上一次的設定，不再還原成預設（設定存在各自瀏覽器，不跨裝置；主力分點因每檔分點不同，仍是每檔各自勾選）。純顯示設定，未更動資料與演算法。同日修正：全螢幕時「畫線工具／圖形註解」下拉選單點不出來（選單原本掛在網頁最外層，瀏覽器全螢幕只顯示 K 圖彈窗內的內容），改為全螢幕時掛在 K 圖彈窗內。2026-10-12 ①外資空單溫度計新增「第三層之二：匯率 × 現貨 × 期貨 三維交叉矩陣」：原四象限保留，各象限再交叉台幣升／貶共 8 格（匯率門檻：USD/TWD 日變動 ±0.10%，其間視為持平、兩列都不命中），並附五邊形雷達（現貨買賣超、期貨部位增減、台幣升貶、指數漲跌四項取近 60 個交易日百分位，避險水位＝100−近 2 年 PR；外圈偏多、內圈偏空，不合成單一分數）；原象限 III 單獨提到匯率的文字移除，匯率一律在此層交叉。②掏金篩選器新增「跌停板」（收盤 ≤ 跌停價；跌停價＝前收×0.9 依升降單位無條件進位）。③K 圖畫線套件：最後一根 K 棒右側空白區也能落點（改記邏輯索引）；右鍵取消目前工具；輔助線與圖形改虛線；橡皮擦可按住左鍵拖曳連續清除（判定距離 10→14px）；線條只畫在繪圖區內不蓋到價格軸；縮放／平移／拖價格軸時線條跟著重畫。同日修正：選了畫線工具後換另一檔股票，按鈕仍反藍但實際不能畫——改為換股票／換週期後工具維持啟用可直接畫，關閉 K 圖時才取消。同日：K 圖畫的線與圖形改為「每檔股票各自記住」——換到別檔不會帶過去，切回來還在，重新整理後也保留（存在各自瀏覽器，最多留最近 150 檔）。題材列表／產業地圖載入加速：先顯示瀏覽器裡上一次的資料、背景再更新，進站閒置時預先抓好；後端這兩支改為可由 CDN 快取 5 分鐘（資料本身每日更新一次，內容與算法不變）。再改為「前一晚先算好」：每日排程尾端把兩頁的彙整結果存進 Supabase page_cache（scripts/page_cache_push.py，每頁 1 列每日覆寫），前端直接讀表；表內沒有或超過 4 天未更新才退回後端現算。同日新增「20 日 SMA 三階段買點」：掏金篩選器三個勾選框（買點 1／2／3，可複選）＋個股日 K「20MA買點」標記開關（預設關，顯示歷史上每一輪的買 1／買 2／買 3）。規則依合夥人規格（均線＝20 日簡單平均含當日；帶量 1.3 倍；長紅／長下影 3%；十字線＝開等於收；均線一下彎即重置），詳見篩選器該項說明；另加一條保守處理：資料窗內尚未出現過重置日之前不產生訊號（無法確定該輪起點）。參數為初版待調整。2026-10-13 上述功能改名為「葛蘭碧買點」，並在掏金篩選器獨立成一個分類（原放在「真名絕招」內）；規則未變。2026-10-17 葛蘭碧規則修正（前後端同步）：①重置由「均線下彎 1 天」改為「連續 3 天下彎」②買點 2 拿掉「均線上彎」要求，只要最低 ≤ 均線且收盤 ＞ 均線 ③買點 3 由「整根在均線下（最高 ＜ 均線）」改為「收盤 ＜ 均線」＋止跌 K；K 圖標記改為依「組」（每個買點 1 開一組）可分組顯示。同日依用戶指示再修：①買點 2 改為「回測月線不破」——最低介於月線 ×0.99～×1.005（碰到月線，差 0.5% 內也算；最多破 1%）且收盤 ＞ 月線，原本最低跌破多深都算 ②買點 3 十字線放寬為實體 ≤ 0.5% 且振幅 ≥ 2%（原為開盤＝收盤）。③買點 2 前股價需先離開月線（買點 1 後至少一天收盤 ≥ 月線 ×1.03），避免買點 1 隔天還貼著月線就被記成回測。④買點 1 須「從月線下突破」：前 3 根內至少一根收盤在月線下（早已站上月線再拉的紅 K 不算），紅 K 不設長紅門檻。⑤買點 2 之後若從沒賺過（之後每天收盤都沒高於買點 2 當天收盤），就不標買點 3。⑥買點 2「碰到月線」範圍由 0.5% 放寬為 1%，並排除回測當天為長黑（黑 K 實體 ≥ 3%）的情況。⑦買點 3 收盤跌破月線超過 5% 不算（暴跌後的止跌 K 不標）。同日「✨ AI 判定」接上真 AI 後端：後端讀該股本站日線，程式先算好均線、量比、漲跌、區間高低與葛蘭碧買點紀錄，再交給 AI 依固定格式輸出「偏多／觀望／偏空」、0～100 技術面分數、摘要與四點說明（型態／量能／葛蘭碧／風險）；AI 只能用提供的數據，不含基本面與消息面。同一檔同一資料日只算一次（共享快取），每日呼叫次數有上限；未設定 AI 金鑰時顯示假資料示意。非投資建議。同日加入「形態判定」：後端把該股最近 160 根日 K（含 20 日均線與成交量）畫成圖片交給 AI 看圖判斷，只從圓形底、頭肩頂、頭肩底、M頭、W底、箱型、上升／下降趨勢線、上升／下降軌道 10 種中列出圖上明顯的形態，標示形成中／已確認、信心高中低與關鍵價位，不給目標價；屬 AI 看圖判斷，可能誤判。AI 供應商可在後端切換（Anthropic 或 OpenAI；目前規劃用 OpenAI GPT-6.1 Sol）。2026-10-21 修正：閒置 1 小時自動登出後，從外層封測登入殼重新登入，「閒置超過 1 小時」提示框仍殘留在畫面上——改為登入成功即關閉；另加同一瀏覽器多分頁的登入／登出同步。同日 K 圖葛蘭碧買點分組標籤的起始日加上年份（原只顯示月/日）。同日修正站內搜尋紀錄：輸入代號片段（如「1」）按 Enter 開了台泥 K 圖，紀錄原本存成打的「1」，改為存「台泥(1101)」；點這類紀錄直接開該股 K 圖。同日：捲動後上方導覽列釘在頂端時，「首頁」前面顯示網站 logo（點了回首頁）。同日拿掉頁首下方的「個股搜尋＋指數快覽」橫條（個股搜尋統一用右上搜尋欄），六個指數改到右上搜尋下拉選單的「國際指數」（滑鼠移入展開）。導覽列 logo 改為浮在左側留白、淡入出現，不再把導覽選項往右擠（左側留白不足的窄螢幕縮小或不顯示）。補修：頁首搜尋列原本在首頁以外的頁面會被程式重新打開，改為所有頁面都不顯示。同日修正今日焦點漲跌幅榜：停牌後恢復交易（多為減資換發新股）的股票，原本拿停牌前的舊收盤比較，算出 +98% 等錯誤漲幅；改為前一筆不是市場前一交易日時，採證交所／櫃買中心官方漲跌（含減資後參考價），官方收盤需與本站當日收盤一致才用，否則當天不列入漲跌幅榜。同日修正「外資結算成本估算」抓不到資料：後端結算成本端點因同一支程式內另一功能在函式中重複匯入 datetime，導致整支端點當機（FUNCTION_INVOCATION_FAILED），已移除該重複匯入。同日今日排行的題材標籤：官方產業別為「其他」的個股（如裕慶-KY，全市場約 90 檔）原本顯示「未分類」，改為照官方歸類顯示「其他業」。今日焦點「漲停／跌停最多題材」改為掃全市場（上市＋上櫃）每一檔漲跌停股（漲跌幅 ≥ 9.5%），題材採今日排行同一套標籤（精選題材＋官方產業別），依家數、再依成交值排序；原本只看漲跌幅前 20 名且只限 39 個精選題材，跌停股多半不在其中而顯示「今日沒有跌停題材」。卡片右上角加「精選題材／一般題材」切換：精選題材＝合夥人 39 個題材，一般題材＝官方產業別（其他→其他業），兩者分開排名；漲停卡與跌停卡各自切換、各自記住選擇（不連動）。同日快照依環境分開：每晚排程以 prod 分支程式產正式站快照、以 uat 分支程式產 uat 快照（kind 加 @uat），盤中即時同理；uat 網站先讀 uat 快照，沒有才讀正式站版，uat 的新邏輯不再要等推 prod 才看得到，也不會影響正式站。同日前端呼叫後端改為依環境：本機開檔才打正式站，部署在任何網址（uat、正式站）都打自己的後端（原本寫死正式站 77 處），uat 從此能直接測到後端修改。2026-10-17 補正篩選器說明文字（原說明仍為舊規則）。2026-10-23 修正分點資料：玩股網查休市日會回傳鄰近交易日的分點，舊爬蟲照查詢日期寫入，造成 2025-10-10、2026-09-25（中秋）、09-28（教師節）、10-09（國慶補假）出現整檔複製的假資料（例：凱基文心 6901 在 9/28 與 9/30 各記 588 張，點 K 圖標到 9/24），已刪除（另存備份）並重建出手明細；爬蟲改依證交所官方休市日跳過休市日，並加「整檔分點與後一交易日完全相同就不寫」防呆。同日主力訊號新增「賣出訊號」：只算賣掉之前買的——榜上分點對某股出現買入訊號（大單門檻）後開始記持倉（之後逐日淨買賣累加），持倉中單日淨賣超 ≥300 張（張數榜）／≥3000 萬（金額榜），或賣出量 ≥ 該輪峰值持倉 20%，符合其一即記；賣後剩不到峰值 10% 標「出清」並結束該輪。主力訊號頁加「買入訊號／賣出訊號」切換，賣出表列賣出均價、這一輪買入訊號的加權買進均價與報酬（未含費稅）；分點出手明細一併列出賣出（綠色）；K 圖主力分點勾選後，賣出日以綠色方塊標在 K 棒上方。同日 K 圖拿掉「箱型」按鈕（箱型一律關閉），BBAND 與斐波那契移到葛蘭碧按鈕右邊。
     </div>
   </div>
 
@@ -9056,7 +9059,7 @@
   <!--  主力訊號 modal（僅擁有者可見） -->
   <!--  主力訊號（市場觀察大項 view，參照貪婪指標版型；僅擁有者可見資料）-->
   <div id="sigView" style="display:none">
-    <div class="tm-head"><h2> 主力訊號</h2><span class="sub">高勝率分點當日買超</span></div>
+    <div class="tm-head"><h2> 主力訊號</h2><span class="sub">高勝率分點當日買超・賣出</span></div>
     <div class="gd-bar2" style="align-items:center;gap:10px">
       <button class="mo-navbtn" onclick="_sigNav(-1)">←</button>
       <span id="sigDateLabel" style="font-size:13px;color:var(--text);font-weight:700">—</span>
@@ -9903,6 +9906,9 @@
           <button class="chart-layer-tab" data-layer="broker" type="button" onclick="_toggleBrokerPanel()"><span class="layer-dot"></span>主力分點<span class="layer-count"></span></button>
           <button class="chart-layer-tab" data-layer="ai" type="button" onclick="_aiBuyToggle()"><span class="layer-dot"></span>AI 判定<span class="layer-count"></span></button>
           <div class="label-row" id="markerToggles" style="display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;white-space:nowrap"></div>
+          <!-- 2026-10-23 BBAND、斐波那契由圖例移到葛蘭碧右邊（用戶指定）；箱型按鈕拿掉 -->
+          <span class="ma-toggle chart-layer-tab kbar-tog" role="button" tabindex="0" onclick="toggleBBand(this)" style="color:#00BCD4">BBAND(20,2)</span>
+          <span class="ma-toggle chart-layer-tab kbar-tog" role="button" tabindex="0" id="fibBtn" onclick="toggleFibMode()" style="color:#D99A2B">斐波那契</span>
         </div>
         <script>
         /* 現價虛線顯示開關（比照 K 圖其他設定「記住上一次」，存各自瀏覽器）*/
@@ -10011,13 +10017,6 @@
                 <span class="ma-toggle" onclick="toggleSeriesViz('ma60')"  style="color:#FF8C00">MA60</span>
                 <span class="ma-toggle" onclick="toggleSeriesViz('ma120')" style="color:#AB47BC">MA120</span>
                 <span class="ma-toggle" onclick="toggleSeriesViz('ma240')" style="color:#4CAF50">MA240</span>
-              </div>
-              <div class="label-row">
-                <span class="ma-toggle" onclick="toggleBBand(this)" style="color:#00BCD4">BBAND(20,2)</span>
-                <span class="ma-toggle" id="boxToggle" onclick="toggleBox(this)" style="color:var(--accent);opacity:0.65"> 箱型</span>
-              </div>
-              <div class="label-row">
-                <span class="ma-toggle" id="fibBtn" onclick="toggleFibMode()" style="color:#D99A2B"> 斐波那契</span>
               </div>
             </div>
           </div>
@@ -11038,7 +11037,7 @@
         .map(m => { const t = _snapMarkerDate(m.date); return t ? {
           time: t,
           position: 'aboveBar',
-          color: '#ff1744',
+          color: /賣|出清/.test(m.label || '') ? '#16a34a' : '#ff1744',   // 2026-10-23 主力賣出用綠
           shape: 'arrowDown',
           text: m.label,
           size: 1,
@@ -11055,9 +11054,11 @@
           size: 1,
         }));
       const bmap = {};
+      const smap = {};   // 2026-10-23 主力賣出
       (_brokerEntriesRaw || []).forEach(e => {
         if (_brokerChecked && !_brokerChecked.has(e.broker)) return;   // 未勾選不顯示
         const t = _snapMarkerDate(e.date); if (!t) return;             // 非交易日吸附到最近 K 棒
+        if (e.sell) { const s = smap[t] || (smap[t] = { n: new Set(), exit: false }); s.n.add(e.broker); s.exit = s.exit || e.exit; return; }
         (bmap[t] = bmap[t] || []).push(e.broker);
       });
       // 2026-10-22 圖上只放小圓點（每家分點固定一色），同一天多家合併成數字；名稱改在滑過 K 棒的小卡顯示，避免文字壓到 K 線
@@ -11070,7 +11071,14 @@
         shape: 'circle',
         text: arr.length > 1 ? String(arr.length) : '',
         size: arr.length > 1 ? 1 : 0.8,
-      }));
+      })).concat(Object.entries(smap).map(([date, s]) => ({
+        time: date,
+        position: 'aboveBar',
+        color: '#16a34a',
+        shape: 'square',
+        text: (s.exit ? '出清' : '賣') + (s.n.size > 1 ? '×' + s.n.size : ''),
+        size: 0.8,
+      })));
       const div = _lastDivMarkers || [];
       const present = { div: div.length > 0, catalyst: catalyst.length > 0, broker: broker.length > 0, user: user.length > 0, sma20: _sma20Markers.length > 0 };
       const sel = [];
@@ -11489,6 +11497,14 @@
     let _sigDates = [];       // 可用日期（新→舊）
     let _sigIdx = 0;          // 目前顯示第幾個日期
     let _sigTab = 'overlap';  // 目前分頁：overlap / lots / amount / stats
+    let _sigSide = 'buy';     // 2026-10-23 買入訊號 / 賣出訊號
+    function _sigSetSide(s) {
+      if (_sigSide === s) return;
+      _sigSide = s;
+      _sigDates = [...new Set((_sigRows || []).filter(x => x.side === s).map(x => x.signal_date))].sort().reverse();
+      _sigIdx = 0;
+      _renderSignals();
+    }
     let _sigStats = [];       // 實測勝率統計
 
     function _sigSetTab(tab) { _sigTab = tab; _renderSignals(); }
@@ -12097,9 +12113,10 @@
       body.innerHTML = '載入中...';
       modal.style.display = 'flex';
       try {
+        const hasSell = view === 'year_large_lots' || view === 'year_large_amount';   // 2026-10-23 大單榜一併列主力賣出
         const r = await fetch(`${SIG_SB_URL}/rest/v1/broker_trades`
-          + `?select=trade_date,code,name,net_lots,net_amount_wan`
-          + `&view=eq.${view}&broker_id=eq.${encodeURIComponent(brokerId)}`
+          + `?select=view,trade_date,code,name,net_lots,net_amount_wan`
+          + `&view=${hasSell ? `in.(${view},${view}_sell,${view}_exit)` : `eq.${view}`}&broker_id=eq.${encodeURIComponent(brokerId)}`
           + `&order=trade_date.desc&limit=200`, {
           headers: { apikey: SIG_SB_ANON, Authorization: `Bearer ${_authToken}` },
         });
@@ -12110,6 +12127,19 @@
         const seen = new Set();                       // 每檔只放一個 checkbox（明細逐日、同檔會重複）
         const tr = rows.map(x => {
           let cb = '';
+          const sell = /_(sell|exit)$/.test(x.view || ''), sx = /_exit$/.test(x.view || '');
+          if (sell) {
+            return `
+          <tr onclick="openChart('${x.code}','${x.code} ${(x.name||'').replace(/'/g,'')}','',0,false,'${x.trade_date}','${bn} ${sx ? '出清' : '賣'}')"
+              style="border-bottom:1px solid var(--border);cursor:pointer;color:#16a34a">
+            <td style="padding:4px 6px;text-align:center;width:26px;font-size:11px">${sx ? '出清' : '賣'}</td>
+            <td style="padding:4px 8px;white-space:nowrap">${x.trade_date}</td>
+            <td style="padding:4px 8px">${x.code} ${x.name || ''}</td>
+            <td style="padding:4px 8px;text-align:right">${isLots
+              ? '賣 ' + Math.abs(Number(x.net_lots)).toLocaleString() + ' 張'
+              : (x.net_amount_wan != null ? '賣 ' + Math.abs(Number(x.net_amount_wan)).toLocaleString() + ' 萬' : '–')}</td>
+          </tr>`;
+          }
           if (!seen.has(x.code)) {
             seen.add(x.code);
             const checked = _stWatchSet.has(brokerId + '|' + x.code) ? 'checked' : '';
@@ -12127,7 +12157,8 @@
               : (x.net_amount_wan != null ? Number(x.net_amount_wan).toLocaleString() + ' 萬' : '–')}</td>
           </tr>`;
         }).join('');
-        body.innerHTML = `<div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">共 ${rows.length} 筆・勾選  追蹤該檔出場（盯大戶何時賣），點列開 K 線圖</div>
+        const nSell = rows.filter(x => /_(sell|exit)$/.test(x.view || '')).length;
+        body.innerHTML = `<div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">共 ${rows.length} 筆${nSell ? `（含 <span style="color:#16a34a">主力賣出 ${nSell} 筆</span>）` : ''}・勾選  追蹤該檔出場（盯大戶何時賣），點列開 K 線圖</div>
           <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px">
             <thead><tr style="color:var(--text-muted);border-bottom:1px solid var(--border)">
               <th style="padding:4px 6px;text-align:center" title="勾選追蹤出場">追</th>
@@ -12322,7 +12353,7 @@
         const [rt, rk] = await Promise.all([
           fetch(`${SIG_SB_URL}/rest/v1/broker_trades`
             + `?select=view,broker_id,trade_date,code,name,net_lots,net_amount_wan,buy_avg_price`
-            + `&view=in.(year_large_lots,year_large_amount)&order=trade_date.desc&limit=6000`, { headers: H }),
+            + `&view=in.(year_large_lots,year_large_amount,year_large_lots_sell,year_large_amount_sell,year_large_lots_exit,year_large_amount_exit)&order=trade_date.desc&limit=9000`, { headers: H }),
           fetch(`${SIG_SB_URL}/rest/v1/broker_rankings`
             + `?select=view,rank,broker_id,broker_name,win20,events`
             + `&view=in.(year_large_lots,year_large_amount)&order=rank.asc`, { headers: H }),
@@ -12333,18 +12364,34 @@
         const rankMap = {};
         ranks.forEach(r => { rankMap[r.view + '|' + r.broker_id] = r; });
         _sigRows = trades.map(t => {
-          const method = t.view.endsWith('lots') ? 'lots' : 'amount';
-          const rm = rankMap[t.view + '|' + t.broker_id] || {};
+          // 2026-10-23 賣出列：view 後綴 _sell（減碼）／_exit（出清），張數金額為負、buy_avg_price 欄放賣出均價
+          const base = t.view.replace(/_(sell|exit)$/, '');
+          const side = base === t.view ? 'buy' : 'sell';
+          const method = base.endsWith('lots') ? 'lots' : 'amount';
+          const rm = rankMap[base + '|' + t.broker_id] || {};
           return {
-            signal_date: t.trade_date, method, rank: rm.rank,
+            signal_date: t.trade_date, method, rank: rm.rank, side, exit: /_exit$/.test(t.view),
             broker_id: t.broker_id, broker_name: rm.broker_name || t.broker_id,
-            code: t.code, net_lots: t.net_lots, net_amount_wan: t.net_amount_wan,
+            code: t.code, name: t.name, net_lots: Math.abs(t.net_lots), net_amount_wan: t.net_amount_wan != null ? Math.abs(t.net_amount_wan) : null,
             buy_avg_price: t.buy_avg_price, win20: rm.win20, year_events: rm.events,
           };
         });
+        // 賣出列對照「這一輪」買入訊號的加權買進均價（上一次出清之後、賣出日以前的買入訊號）
+        const _buys = {};
+        _sigRows.filter(x => x.side === 'buy').forEach(x => { const k = x.method + '|' + x.broker_id + '|' + x.code; (_buys[k] = _buys[k] || []).push(x); });
+        const _exits = {};
+        _sigRows.filter(x => x.side === 'sell' && x.exit).forEach(x => { const k = x.method + '|' + x.broker_id + '|' + x.code; (_exits[k] = _exits[k] || []).push(x.signal_date); });
+        _sigRows.filter(x => x.side === 'sell').forEach(x => {
+          const k = x.method + '|' + x.broker_id + '|' + x.code;
+          const prevExit = (_exits[k] || []).filter(d => d < x.signal_date).sort().pop() || '';
+          let q = 0, v = 0;
+          (_buys[k] || []).forEach(b => { if (b.signal_date > prevExit && b.signal_date <= x.signal_date && b.buy_avg_price) { q += b.net_lots; v += b.net_lots * b.buy_avg_price; } });
+          x.cost = q ? Math.round(v / q * 100) / 100 : null;
+          x.ret = (x.cost && x.buy_avg_price) ? Math.round((x.buy_avg_price / x.cost - 1) * 1000) / 10 : null;
+        });
         _sigRows.sort((a, b) => (b.signal_date < a.signal_date ? -1 : b.signal_date > a.signal_date ? 1 : 0)
           || (a.method < b.method ? -1 : 1) || ((a.rank || 99) - (b.rank || 99)));
-        _sigDates = [...new Set(_sigRows.map(x => x.signal_date))].sort().reverse();
+        _sigDates = [...new Set(_sigRows.filter(x => x.side === _sigSide).map(x => x.signal_date))].sort().reverse();
         _sigIdx = 0;
         // 實測勝率統計（另一張表，讀不到不影響主功能）
         try {
@@ -12400,7 +12447,8 @@
       const d = _sigDates[_sigIdx];
       document.getElementById('sigDateLabel').textContent =
         `${d}${_sigIdx === 0 ? '（最新）' : ''}`;
-      const rows = _sigRows.filter(x => x.signal_date === d);
+      const rows = _sigRows.filter(x => x.signal_date === d && x.side === _sigSide);
+      const isSell = _sigSide === 'sell';
 
       //  雙榜交集：同一分點+同一股票同時出現在張數表與金額表
       const _amtMap = new Map(rows.filter(x => x.method === 'amount')
@@ -12411,7 +12459,8 @@
 
       const section = (method, rsOverride) => {
         const rs = rsOverride || rows.filter(x => x.method === method);
-        if (!rs.length) return `<div style="padding:16px 0">當日無買超訊號</div>`;
+        if (!rs.length) return `<div style="padding:16px 0">當日無${isSell ? '賣出' : '買超'}訊號</div>`;
+        if (isSell) return _sigSellTable(rs);
         const tr = rs.map(x => { const _nm=(window._names&&window._names[x.code])||''; return `
           <tr onclick="_sigOpenChart('${x.code}','${((x.name||_nm||'')).replace(/'/g,'')} 買')"
               style="cursor:pointer;border-bottom:1px solid var(--border)">
@@ -12445,7 +12494,15 @@
       };
       const lotsRows = rows.filter(x => x.method === 'lots');
       const amtRows  = rows.filter(x => x.method === 'amount');
+      const sideBtn = (s, label) => `<button onclick="_sigSetSide('${s}')" style="padding:5px 16px;border-radius:999px;cursor:pointer;font-size:13px;font-weight:700;
+          border:1px solid ${_sigSide === s ? (s === 'sell' ? '#16a34a' : '#ef4444') : 'var(--border)'};
+          background:${_sigSide === s ? (s === 'sell' ? 'rgba(22,163,74,.12)' : 'rgba(239,68,68,.10)') : 'transparent'};
+          color:${_sigSide === s ? (s === 'sell' ? '#16a34a' : '#ef4444') : 'var(--text-muted)'}">${label}</button>`;
       el.innerHTML = `
+        <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
+          ${sideBtn('buy', '買入訊號')}${sideBtn('sell', '賣出訊號')}
+          ${isSell ? `<span style="font-size:11px;color:var(--text-muted)">只列「賣掉之前買的」：榜上分點出現買入訊號後，單日淨賣超 ≥300 張／≥3000 萬，或賣掉該輪峰值持倉 20% 以上；賣後剩不到峰值 10% 標「出清」。報酬＝賣出均價對比這一輪買入訊號的加權買進均價（未含手續費與交易稅）。</span>` : ''}
+        </div>
         <div style="display:flex;gap:4px;margin-bottom:0;flex-wrap:wrap">
           ${tabBtn('overlap', ' 雙榜交集', overlap.length)}
           ${tabBtn('lots', ' 張數制', lotsRows.length)}
@@ -12458,6 +12515,34 @@
             : _sigTab === 'amount' ? section('amount')
             : _statsSection()}
         </div>`;
+    }
+
+    function _sigSellTable(rs) {   // 2026-10-23 主力賣出訊號表
+      const tr = rs.map(x => { const _nm = (window._names && window._names[x.code]) || ''; const nm = (x.name || _nm || '').replace(/'/g, '');
+        const rc = x.ret == null ? 'var(--text-muted)' : x.ret > 0 ? '#ef4444' : x.ret < 0 ? '#16a34a' : 'var(--text-muted)';
+        return `
+          <tr onclick="_sigOpenChart('${x.code}','${nm} ${x.exit ? '出清' : '賣'}')" style="cursor:pointer;border-bottom:1px solid var(--border)">
+            <td style="padding:4px 8px;text-align:center">${x.rank_amt != null ? `${x.rank}／${x.rank_amt}` : (x.rank ?? '–')}</td>
+            <td style="padding:4px 8px">${x.broker_name}</td>
+            <td style="padding:4px 8px"><b style="color:var(--accent)">${x.code}</b> ${x.name || _nm || ''}</td>
+            <td style="padding:4px 8px;text-align:center"><span style="padding:1px 7px;border-radius:999px;font-size:11px;font-weight:700;color:#16a34a;background:rgba(22,163,74,${x.exit ? '.18' : '.08'})">${x.exit ? '出清' : '減碼'}</span></td>
+            <td style="padding:4px 8px;text-align:right;color:#16a34a">${Number(x.net_lots).toLocaleString()}</td>
+            <td style="padding:4px 8px;text-align:right">${x.net_amount_wan != null ? Number(x.net_amount_wan).toLocaleString() : '–'}</td>
+            <td style="padding:4px 8px;text-align:right">${x.buy_avg_price ?? '–'}</td>
+            <td style="padding:4px 8px;text-align:right">${x.cost ?? '–'}</td>
+            <td style="padding:4px 8px;text-align:right;color:${rc};font-weight:700">${x.ret == null ? '–' : (x.ret > 0 ? '+' : '') + x.ret + '%'}</td>
+            <td style="padding:4px 8px;text-align:right;color:#e6a23c">${x.win20 ?? '–'}%</td>
+          </tr>`; }).join('');
+      return `
+          <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px">
+            <thead><tr style="color:var(--text-muted);border-bottom:1px solid var(--border)">
+              <th style="padding:4px 8px">榜上排名</th><th style="padding:4px 8px;text-align:left">分點</th>
+              <th style="padding:4px 8px;text-align:left">股票</th><th style="padding:4px 8px">狀態</th>
+              <th style="padding:4px 8px;text-align:right">賣超(張)</th><th style="padding:4px 8px;text-align:right">金額(萬)</th>
+              <th style="padding:4px 8px;text-align:right">賣出均價</th><th style="padding:4px 8px;text-align:right" title="這一輪買入訊號的加權買進均價">買進均價</th>
+              <th style="padding:4px 8px;text-align:right">報酬</th><th style="padding:4px 8px;text-align:right">分點20日勝率</th>
+            </tr></thead><tbody>${tr}</tbody>
+          </table></div>`;
     }
 
     function _statsPoolTable(pool, title) {
@@ -12605,6 +12690,16 @@
           const m = meta[t.broker_id] || { name: t.broker_id, cat: '其他' };
           _brokerEntriesRaw.push({ date: t.trade_date, broker: m.name, cat: m.cat });
         }
+        // 2026-10-23 主力賣出（賣掉之前買的）：broker_trades 的 _sell／_exit 列
+        try {
+          const rs = await fetch(`${SIG_SB_URL}/rest/v1/broker_trades?select=broker_id,trade_date,view`
+            + `&code=eq.${encodeURIComponent(code)}&view=in.(year_large_lots_sell,year_large_amount_sell,year_large_lots_exit,year_large_amount_exit)&order=trade_date`,
+            { headers: { apikey: SIG_SB_ANON, Authorization: `Bearer ${_authToken}` } });
+          if (rs.ok && currentCode === code) for (const t of await rs.json()) {
+            const m = meta[t.broker_id] || { name: t.broker_id, cat: '其他' };
+            _brokerEntriesRaw.push({ date: t.trade_date, broker: m.name, cat: m.cat, sell: true, exit: /_exit$/.test(t.view) });
+          }
+        } catch (_) {}
         const distinct = [...new Map(_brokerEntriesRaw.map(e => [e.broker, e.cat]))].map(([name, cat]) => ({ name, cat }));
         _brokerChecked = new Set();   // 預設全不勾，K 圖乾淨；展開「主力分點」自行勾選（2026-09-28）
         _renderBrokerFilter(distinct);
@@ -14444,7 +14539,7 @@
     }
 
     // ──  箱型型態偵測(前端即時版,對應 scripts/box_pattern.py;參數可調)────────────
-    var _boxEnabled = !!(window._kPref && window._kPref.get('box', false));   // 2026-10-11 記住上次開關
+    var _boxEnabled = false;   // 2026-10-23 K 圖拿掉箱型按鈕（用戶指定），一律關閉；原記住上次開關
     var _boxLastCandles = [];
     var _boxSeriesRefs = [];
     var _boxMarkers = [];
