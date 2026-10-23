@@ -7990,7 +7990,11 @@
       var tt=e.target.closest('[data-hxt]'); if(tt){typ=tt.dataset.hxt;open=null;load();return;}
       if(open&&!e.target.closest('.hx-ddwrap')){open=null;renderCtl();}
     });
-    document.addEventListener('DOMContentLoaded',function(){ try{ window._showView('home'); }catch(e){} });
+    // Keep the screener hidden during parsing; initialize the requested route directly.
+    document.addEventListener('DOMContentLoaded',function(){
+      var requested=window.__initialView||location.hash.slice(1)||new URLSearchParams(location.search).get('view')||'home';
+      try{window._showView(requested==='screen'||window._VIEWS[requested]?requested:'home');}catch(e){}
+    });
   })();
   </script>
 
@@ -9264,7 +9268,7 @@
     </div>
   </div>
 
-  <div class="form-wrap">
+  <div class="form-wrap" style="display:none">
     <div class="card">
       <div class="form-grid">
         <!-- 日期 -->
@@ -9678,7 +9682,7 @@
 
   <div class="results-wrap">
     <div id="statusArea"></div>
-    <div id="resultsArea"></div>
+    <div id="resultsArea" style="display:none"></div>
   </div>
 
 
