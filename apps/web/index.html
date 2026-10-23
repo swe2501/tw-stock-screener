@@ -12686,7 +12686,7 @@
       el.innerHTML = `
         <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
           ${sideBtn('buy', '買入訊號')}${sideBtn('sell', '賣出訊號')}
-          ${isSell ? `<span style="font-size:11px;color:var(--text-muted)">只列「賣掉之前買的」：榜上分點出現買入訊號後，單日淨賣超 ≥300 張／≥3000 萬，或賣掉該輪峰值持倉 20% 以上；賣後剩不到峰值 10% 標「出清」。報酬＝賣出均價對比這一輪買入訊號的加權買進均價（未含手續費與交易稅）。</span>` : ''}
+          ${isSell ? `<span style="font-size:11px;color:var(--text-muted)">只列「賣掉之前買的」：榜上分點出現買入訊號後，單日淨賣超 ≥300 張／≥3000 萬，或賣掉該輪峰值持倉 20% 以上；賣後剩不到峰值 10% 一律標「出清」（不論當次賣量）。K 圖只標出清。報酬＝賣出均價對比這一輪買入訊號的加權買進均價（未含手續費與交易稅）。</span>` : ''}
         </div>
         <div style="display:flex;gap:4px;margin-bottom:0;flex-wrap:wrap">
           ${tabBtn('overlap', ' 雙榜交集', overlap.length)}

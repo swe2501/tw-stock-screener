@@ -81,7 +81,8 @@ def _stock_names():
 #   持倉＝自第一筆買入訊號當天起逐日累加淨買賣（含之後未達門檻的小買小賣）。
 # 賣出訊號：持倉 > 0 時，單日淨賣超達大單門檻（張數榜 ≥300 張／金額榜 ≥3000 萬）
 #   或 賣出張數 ≥ 該輪峰值持倉 × 20%，符合其一即記。
-# 賣後持倉 ≤ 峰值 × 10% 視為「出清」（view 後綴 _exit），該輪結束；之後再出現買入訊號才開新一輪。
+# 賣後持倉 ≤ 峰值 × 10% 視為「出清」（view 後綴 _exit），不論當次賣量是否達上述門檻（2026-10-24），
+#   該輪結束；之後再出現買入訊號才開新一輪。
 # 存法：沿用 broker_trades，view 加 _sell／_exit 後綴，net_lots／net_amount_wan 存「負數」（賣出量），
 #   buy_avg_price 欄放「賣出均價」。負數讓既有讀買超的查詢（net_lots≥300 等）自動排除賣出列。
 SELL_VIEWS = ("year_large_lots", "year_large_amount")
@@ -110,9 +111,11 @@ def _sell_rows(conn, prices, names, view, kind, bid, cut):
             px = savg or px_close
             amt = round(sold * 1000 * px / 10000, 1) if px else None
             big = (sold >= SELL_LOTS) if kind == "lots" else ((amt or 0) >= SELL_WAN)
-            if big or sold >= peak * SELL_PEAK_PCT:
-                left = pos - sold
-                is_exit = left <= peak * EXIT_LEFT_PCT
+            left = pos - sold
+            is_exit = left <= peak * EXIT_LEFT_PCT
+            # 2026-10-24 用戶定案：賣後剩不到峰值 10% 一律標出清，不論當次賣量是否達門檻
+            #（原本當次賣量沒達門檻時，持倉賣光也不會標出清）
+            if big or sold >= peak * SELL_PEAK_PCT or is_exit:
                 out.append({"view": view + ("_exit" if is_exit else "_sell"), "broker_id": bid, "trade_date": d,
                             "code": code, "name": names.get(code, ""),
                             "net_lots": -int(sold), "net_amount_wan": -amt if amt else None,
@@ -122,7 +125,7 @@ def _sell_rows(conn, prices, names, view, kind, bid, cut):
                     continue
         pos += net
         if pos <= 0:
-            state[code] = None                          # 沒達門檻但已賣光（零星賣），本輪結束
+            state[code] = None                          # 防呆（賣光必定已在上面記為出清）
         else:
             state[code] = [pos, max(peak, pos)]
     out.sort(key=lambda r: r["trade_date"], reverse=True)
