@@ -3,6 +3,8 @@ const root=path.resolve(__dirname,'..'),web=path.join(root,'apps/web'),out='C:/U
 const rows=Array.from({length:30},(_,i)=>({code:String(2000+i),name:i===0?'精緻研究測試股份':i===1?'很長的測試公司名稱-KY':'測試公司'+i,close:100+i*7.25,chg:9-i*.2,chg_5d:i===2?null:i===1?-3:8-i*.1,themes:i===1?[]:[{id:'AI 伺服器',name:'AI 伺服器'},{id:'散熱模組',name:'散熱模組'},{id:'資料中心',name:'資料中心'}]}));
 const data={date:'2026-10-19',five_day_base_date:'2026-10-12',fields_version:2,gainers:rows,losers:rows.map((r,i)=>({...r,chg:-9+i*.2})),volume_surge:rows.map((r,i)=>({...r,vol:1234500+i*1000,volume_lots:1234.5+i,ratio:9-i*.1}))};
 data.gainers[28].close=9.5;data.gainers[29].close=10000;
+rows[26].code='6902';rows[26].name='GOGOLOOK';
+rows[0].themes.push({id:'半導體',name:'半導體'});
 (async()=>{const browser=await chromium.launch({channel:'msedge',headless:true});try{
  for(const theme of ['light','dark']){
   const page=await browser.newPage({viewport:{width:1366,height:1000}}),errors=[];let focusCalls=0;
@@ -23,10 +25,16 @@ data.gainers[28].close=9.5;data.gainers[29].close=10000;
    for(const key of ['stock','chg','close','themes']){await dialog.locator('[data-sort-key='+key+']').click();assert.equal(await dialog.locator('[data-sort-key='+key+']').evaluate(e=>e===document.activeElement),true,'keyboard sorting keeps focus');}
    if(kind==='gainers'){await dialog.locator('[data-sort-key=close]').click();assert.equal(await dialog.locator('tbody tr').first().locator('.fr-code').innerText(),'2029','prices sort numerically');await dialog.locator('[data-sort-key=close]').click();assert.equal(await dialog.locator('tbody tr').first().locator('.fr-code').innerText(),'2028');}
    await dialog.locator('.fr-reset').click();assert.equal(await dialog.locator('tbody tr').first().locator('.fr-code').innerText(),'2000');
+   if(kind==='gainers'){
+    const identity=dialog.locator('tbody tr').nth(26).locator('.fr-table-identity');
+    assert.equal(await identity.locator('.fr-name').innerText(),'GOGOLOOK');
+    const layout=await identity.evaluate(e=>{const rank=e.querySelector('.fr-rank').getBoundingClientRect(),stock=e.querySelector('.fr-stock').getBoundingClientRect(),name=e.querySelector('.fr-name');return{aligned:Math.abs((rank.top+rank.height/2)-(stock.top+stock.height/2))<2,right:rank.right,left:stock.left,full:name.scrollWidth<=name.clientWidth+1};});
+    assert.ok(layout.aligned&&layout.right<layout.left&&layout.full,'rank/code/full GOGOLOOK stay on the same desktop row: '+JSON.stringify(layout));
+   }
    for(const width of [1366,768,375,320]){await page.setViewportSize({width,height:900});assert.ok(await dialog.evaluate(e=>e.scrollWidth<=e.clientWidth+1),'expanded overflow '+kind+' '+theme+' '+width);assert.ok(await dialog.evaluate(e=>e.getBoundingClientRect().right<=innerWidth+1&&e.getBoundingClientRect().left>=-1));if(kind==='gainers'&&[1366,375].includes(width))await dialog.screenshot({path:path.join(out,'expanded-'+theme+'-'+width+'.png')});}
    await page.keyboard.press('Escape');assert.equal(await dialog.isVisible(),false);assert.equal(await expand.evaluate(e=>e===document.activeElement),true);assert.ok(await page.locator('#focusView').evaluate(e=>e.scrollWidth<=e.clientWidth+1),'cards must fit 320px');await page.setViewportSize({width:1366,height:1000});
   }
-  await page.locator('[data-expand-ranking=gainers]').click();await page.locator('.fr-expand tbody tr').first().getByRole('button',{name:'AI 伺服器',exact:true}).click();assert.equal(await page.locator('.fr-expand').isVisible(),false);assert.equal(await page.evaluate(()=>window.themeOpened),'AI 伺服器');
+  await page.locator('[data-expand-ranking=gainers]').click();await page.locator('.fr-expand tbody tr').first().getByRole('button',{name:'AI 伺服器',exact:true}).click();assert.equal(await page.locator('.fr-expand').isVisible(),true,'theme drilldown preserves the ranking dialog');assert.equal(await page.evaluate(()=>window.themeOpened),'AI 伺服器');await page.locator('.fr-close').click();
   await page.evaluate(()=>{const data={date:'2026-10-19',gainers:[{code:'2330',name:'<img src=x onerror=alert(1)>',close:100,chg:1}],losers:[],volume_surge:[]};AcademyFocusRankings.render(data);});assert.equal(await page.locator('#fcGainers img').count(),0);assert.match(await page.locator('#fcGainers').innerText(),/題材待更新/);assert.match(await page.locator('#fcGainers .fr-five').innerText(),/—/);
   await page.emulateMedia({reducedMotion:'reduce'});assert.equal(await page.locator('#fcGainers .fr-row').evaluate(e=>getComputedStyle(e).transitionDuration),'0s');assert.deepEqual(errors,[]);await page.close();
  }
