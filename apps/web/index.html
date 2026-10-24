@@ -11209,14 +11209,22 @@
       if(events)events.innerHTML=_MK_DEFS.filter(d=>d[0]!=='sma20'&&(present[d[0]]||d[0]==='div'||d[0]==='catalyst')).map(([k,label])=>`<button type="button" class="tool-btn chart-marker-control" data-marker="${k}" aria-pressed="${!!S[k]}" ${present[k]?'':'disabled title="目前圖表區間無此類事件"'} onclick="_toggleMarker('${k}')">${label}</button>`).join('');
     }
 
+    function _chartBrokerAction(label) {
+      if(/減碼/.test(label||''))return 'reduce';
+      if(/主力分手|出清/.test(label||''))return 'exit';
+      if(/賣/.test(label||''))return 'reduce';
+      if(/加碼/.test(label||''))return 'add';
+      if(/主力交往|買/.test(label||''))return 'entry';
+      return null;
+    }
     function _refreshChartMarkers() {
       if (!candleSeriesRef) return;
       const S = window._mkShow;
       const user = (_userMarkers[currentCode] || [])
         .map(m => { const t = _snapMarkerDate(m.date); if (!t) return null;
-          const lb = m.label || '', sell = /賣|出清|主力分手/.test(lb), buy = !sell && /買|主力交往/.test(lb);
+          const lb = m.label || '', action=m.action||_chartBrokerAction(lb), sell=action==='exit'||action==='reduce', buy=action==='entry'||action==='add';
           if (sell || buy) return { time: t, position: sell ? 'aboveBar' : 'belowBar', color: sell ? '#16a34a' : '#ef4444',
-            shape: sell ? 'arrowDown' : 'arrowUp', size: 1, _side: sell ? 's' : 'b',
+            shape: sell ? 'arrowDown' : 'arrowUp', size: 1, _side: sell ? 's' : 'b', _action:action, _broker:m.broker||lb.replace(/主力交往|主力分手|主力買點|大單買|連買起|連買迄|出清|減碼|加碼|買|賣|↑|↓/g,'').trim()||'指定分點', _date:m.date,
             text: lb.replace(/主力交往|主力分手|主力買點|大單買|連買起|連買迄|出清|買|賣|↑|↓/g, '').trim() };   // 2026-10-23 紅綠箭頭＋分點名稱，不寫買賣字樣
           return { time: t, position: 'aboveBar', color: '#ff1744', shape: 'arrowDown', text: lb, size: 1 }; })
         .filter(Boolean);
@@ -11230,30 +11238,27 @@
           text: [e.event_type,e.title,e.note].filter(Boolean).join(' · '),
           size: 1,
         }));
-      const bmap = {};
-      const smap = {};   // 2026-10-23 主力賣出
-      (_brokerEntriesRaw || []).forEach(e => {
-        if (_brokerChecked && !_brokerChecked.has(e.broker)) return;   // 未勾選不顯示
-        const t = _snapMarkerDate(e.date); if (!t) return;             // 非交易日吸附到最近 K 棒
-        if (e.sell) { const s = smap[t] || (smap[t] = { n: new Set(), exit: false }); s.n.add(e.broker); s.exit = s.exit || e.exit; return; }
-        (bmap[t] = bmap[t] || []).push(e.broker);
-      });
-      // 2026-10-22 圖上只放小圓點（每家分點固定一色），同一天多家合併成數字；名稱改在滑過 K 棒的小卡顯示，避免文字壓到 K 線
-      window._brokerByTime = bmap;
-      _brokerColors(); const bcol = window._brokerColor || {};
-      // 2026-10-23 用戶指定：不寫「買／賣」字樣，紅色向上箭頭＝買、綠色向下箭頭＝賣；同日多家只寫家數，分點名稱看滑過小卡
-      window._brokerSellByTime = Object.fromEntries(Object.entries(smap).map(([t, s]) => [t, [...s.n]]));
-      // One small arrow per date and direction; names belong in the hover card.
-      const broker = Object.entries(bmap).map(([time])=>({time,position:'belowBar',color:'#ef4444',shape:'arrowUp',text:'',size:.7}))
-        .concat(Object.entries(smap).map(([time])=>({time,position:'aboveBar',color:'#16a34a',shape:'arrowDown',text:'',size:.7})));
+      // The visible arrow and hover text must come from exactly the same events.
+      const raw=(_brokerEntriesRaw||[]).map(e=>({...e,signal_date:e.date,side:e.sell?'sell':'buy',method:'chart',broker_id:e.id||e.broker,code:currentCode}));
+      _sigClassifyActions(raw);
+      const visible=[];
+      if(S.broker)raw.forEach(e=>{if(_brokerChecked&&!_brokerChecked.has(e.broker))return;const time=_snapMarkerDate(e.date);if(time)visible.push({time,date:e.date,broker:e.broker,action:e.sell?(e.exit?'exit':'reduce'):(e.addition?'add':'entry')});});
+      const automatic=visible.slice();
+      if(S.user)user.filter(m=>m._side).forEach(m=>{if(automatic.some(e=>e.time===m.time&&e.date===m._date&&e.broker===m._broker&&e.action===m._action))return;visible.push({time:m.time,date:m._date,broker:m._broker,action:m._action});});
+      const hover={},unique=new Set(),directions=new Map();
+      for(const e of visible){const key=[e.time,e.date,e.broker,e.action].join('|');if(unique.has(key))continue;unique.add(key);(hover[e.time]||(hover[e.time]=[])).push(e);const sell=e.action==='exit'||e.action==='reduce';directions.set(e.time+'|'+sell,{time:e.time,position:sell?'aboveBar':'belowBar',color:sell?'#16a34a':'#ef4444',shape:sell?'arrowDown':'arrowUp',text:'',size:.7});}
+      window._chartBrokerHover=hover;
+      window._brokerByTime=Object.fromEntries(Object.entries(hover).map(([time,es])=>[time,es.filter(e=>e.action==='entry'||e.action==='add').map(e=>e.broker)]));
+      window._brokerSellByTime=Object.fromEntries(Object.entries(hover).map(([time,es])=>[time,es.filter(e=>e.action==='exit'||e.action==='reduce').map(e=>e.broker)]));
+      _brokerColors();
+      const broker=[...directions.values()];
       const div = _lastDivMarkers || [];
-      const present = { div: div.length > 0, catalyst: catalyst.length > 0, broker: broker.length > 0, user: user.length > 0, sma20: _sma20Markers.length > 0 };
+      const present = { div: div.length > 0, catalyst: catalyst.length > 0, broker: raw.some(e=>_snapMarkerDate(e.date)), user: user.length > 0, sma20: _sma20Markers.length > 0 };
       const sel = [];
       window._chartTimelineEvents=[...(S.div?div.map(m=>({time:m.time,label:'息',detail:m.text})):[]),...(S.catalyst?catalyst.map(m=>({time:m.time,label:'法',detail:m.text})):[])];
       window.AcademyChartViewport?.refresh();
-      if (S.broker) sel.push(...broker);
-      if (S.user) sel.push(...user.filter(m => !(S.broker && m._side && (m._side === 's' ? smap : bmap)[m.time]))
-        .map(({ _side, ...m }) => _side?{...m,text:'',size:.7}:m));
+      sel.push(...broker);
+      if (S.user) sel.push(...user.filter(m=>!m._side));
       if (S.sma20) sel.push(..._sma20Markers.filter(m => !window._sma20GroupsOn || window._sma20GroupsOn.has(m.group)));
       sel.push(...(_boxMarkers || []));   // 箱型標記另有自己的開關，不納入此分類
       const all = sel.sort((a, b) => a.time < b.time ? -1 : a.time > b.time ? 1 : 0);
@@ -11355,11 +11360,12 @@
       if (!_isStock(code) || !date) return;
       date = String(date).replace(/\//g, '-');
       const arr = _userMarkers[code] || (_userMarkers[code] = []);
-      const existing = arr.find(m => m.date === date);
+      const action=_chartBrokerAction(label),focus=window._chartFocusBroker,broker=focus?.code===code?(focus.name||_brokerMeta?.[focus.id]?.name||(_sigRows||[]).find(x=>String(x.broker_id)===String(focus.id))?.broker_name||focus.id):null;
+      const existing = arr.find(m => m.date === date && (action?(m.action||_chartBrokerAction(m.label))===action&&m.broker===broker:!_chartBrokerAction(m.label)));
       if (existing) {
         if (label === '漲停') existing.label = '漲停';  // 升級標籤，不重複新增
       } else {
-        arr.push({ date, label });
+        arr.push({ date, label, action, broker });
       }
     }
 
@@ -11681,7 +11687,7 @@
 
     function _sigOpenChart(code, label, brokerId) {
       // 2026-10-23 開 K 圖時自動勾選該分點，買（紅箭頭）賣（綠箭頭）紀錄都標出來
-      window._chartFocusBroker = brokerId ? { code, id: String(brokerId) } : null;
+      window._chartFocusBroker = brokerId ? { code, id: String(brokerId), name:(_sigRows||[]).find(x=>String(x.broker_id)===String(brokerId))?.broker_name } : null;
       // 主力訊號已改為視圖（sigView），K 線圖為覆蓋層 chartModal，視圖仍在底下，
       // 不需（也不能）操作已移除的 brokerSigModal。舊程式在此丟 null 例外導致點擊無反應。
       _sigReturn = true;
@@ -12323,7 +12329,7 @@
         const tbody=create('tbody');items.forEach(x=>{
           const stockCode=String(x.code),stockName=x.name||(window._names||{})[stockCode]||'';
           const row=create('tr'),dateCell=create('td'),button=create('button','rk-record-open',mode==='time'?stockCode+' '+stockName:x.trade_date),status=create('td','rk-status-cell'),sell=x.side==='sell',action=sell?(x.exit?'主力分手 ↓':'減碼'):(x.addition?'加碼 ↑':'主力交往 ↑');
-          button.type='button';button.setAttribute('aria-label',x.trade_date+' '+stockCode+' '+action+'，查看 K 線');button.onclick=()=>{window._chartFocusBroker={code:stockCode,id:String(brokerId)};openChart(stockCode,stockCode+' '+stockName,'',0,false,x.trade_date,brokerName+' '+(sell?'主力分手 ↓':'主力交往 ↑'));};if(mode==='list')button.append(create('small','rk-record-stock',stockCode+' '+stockName));dateCell.append(button);row.onclick=e=>{if(!e.target.closest('button'))button.click();};
+          button.type='button';button.setAttribute('aria-label',x.trade_date+' '+stockCode+' '+action+'，查看 K 線');button.onclick=()=>{window._chartFocusBroker={code:stockCode,id:String(brokerId),name:brokerName};openChart(stockCode,stockCode+' '+stockName,'',0,false,x.trade_date,brokerName+' '+action);};if(mode==='list')button.append(create('small','rk-record-stock',stockCode+' '+stockName));dateCell.append(button);row.onclick=e=>{if(!e.target.closest('button'))button.click();};
           status.append(create('span','sig-status-badge '+(sell?'is-sell':'is-buy'),action));const amount=create('td','rk-signed-cell '+(sell?'is-sell':'is-buy')),rawValue=isLots?x.net_lots:x.net_amount_wan,value=rawValue==null?null:Number(rawValue);amount.textContent=value!=null&&Number.isFinite(value)?(value===0?'0':(sell?'−':'+')+Math.abs(value).toLocaleString('zh-TW',{maximumFractionDigits:isLots?0:1})):'—';row.append(dateCell,status,amount);tbody.append(row);
         });table.append(tbody);scroll.append(table);const content=create('div','rk-group-content');content.hidden=!opened;content.append(scroll,create('div','rk-stock-count',items.length+' 筆紀錄'));section.append(content);const control={open:opened,set(open){this.open=open;expanded.set(groupKey,open);content.hidden=!open;toggle.setAttribute('aria-expanded',String(open));}};groupControls.push(control);toggle.onclick=()=>{control.set(!control.open);syncAll();};groupList.append(section);
       });
@@ -12640,7 +12646,7 @@
         if (!rs.length) return `<div style="padding:16px 0">當日無${isSell ? '賣出' : '買超'}訊號</div>`;
         if (isSell) return _sigSellTable(rs);
         const tr = rs.map(x => { const _nm=(window._names&&window._names[x.code])||''; return `
-          <tr onclick="_sigOpenChart('${x.code}','${((x.name||_nm||'')).replace(/'/g,'')} 買','${x.broker_id}')"
+          <tr onclick="_sigOpenChart('${x.code}','${x.broker_name.replace(/'/g,'')} ${x.addition?'加碼':'主力交往'} ↑','${x.broker_id}')"
               style="cursor:pointer;border-bottom:1px solid var(--border)">
             <td style="padding:4px 8px;text-align:center">${x.rank_amt != null ? `${x.rank}／${x.rank_amt}` : x.rank}</td>
             <td style="padding:4px 8px">${x.broker_name}</td>
@@ -12700,7 +12706,7 @@
       const tr = rs.map(x => { const _nm = (window._names && window._names[x.code]) || ''; const nm = (x.name || _nm || '').replace(/'/g, '');
         const rc = x.ret == null ? 'var(--text-muted)' : x.ret > 0 ? '#ef4444' : x.ret < 0 ? '#16a34a' : 'var(--text-muted)';
         return `
-          <tr onclick="_sigOpenChart('${x.code}','${nm} ${x.exit ? '出清' : '賣'}','${x.broker_id}')" style="cursor:pointer;border-bottom:1px solid var(--border)">
+          <tr onclick="_sigOpenChart('${x.code}','${x.broker_name.replace(/'/g,'')} ${x.exit ? '主力分手 ↓' : '減碼'}','${x.broker_id}')" style="cursor:pointer;border-bottom:1px solid var(--border)">
             <td style="padding:4px 8px;text-align:center">${x.rank_amt != null ? `${x.rank}／${x.rank_amt}` : (x.rank ?? '–')}</td>
             <td style="padding:4px 8px">${x.broker_name}</td>
             <td style="padding:4px 8px"><b style="color:var(--accent)">${x.code}</b> ${x.name || _nm || ''}</td>
@@ -14507,10 +14513,12 @@
           `　低 <span style="color:${color}">${fmt(c.low)}</span>` +
           `　收 <span style="color:${color}">${fmt(c.close)}</span>`;
         const brokerName = n => String(n).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-        const bks = window._mkShow && window._mkShow.broker && window._brokerByTime && window._brokerByTime[param.time];
-        if (bks && bks.length) _ohlcTip.innerHTML += `<div class="ohlc-broker"><span class="broker-relationship-up">↑ 主力交往 · ${new Set(bks).size} 家</span>${[...new Set(bks)].map(n=>`<b>${brokerName(n)}</b>`).join('')}</div>`;
-        const sks = window._mkShow && window._mkShow.broker && window._brokerSellByTime && window._brokerSellByTime[param.time];
-        if (sks && sks.length) _ohlcTip.innerHTML += `<div class="ohlc-broker"><span class="broker-relationship-down">↓ 主力分手 · ${new Set(sks).size} 家</span>${[...new Set(sks)].map(n=>`<b>${brokerName(n)}</b>`).join('')}</div>`;
+        const events=window._chartBrokerHover?.[param.time]||[];
+        for(const [action,label,sell] of [['entry','主力交往',false],['add','加碼',false],['reduce','減碼',true],['exit','主力分手',true]]){
+          const rows=events.filter(e=>e.action===action);if(!rows.length)continue;
+          const names=[...new Set(rows.map(e=>e.broker))];
+          _ohlcTip.innerHTML+=`<div class="ohlc-broker"><span class="broker-relationship-${sell?'down':'up'}">${sell?'↓':'↑'} ${label} · ${names.length} 家</span>${names.map(n=>`<b>${brokerName(n)}</b>`).join('')}${typeof param.time==='string'&&rows.some(e=>e.date!==param.time)?`<small>${[...new Set(rows.map(e=>e.date))].map(brokerName).join('、')}</small>`:''}</div>`;
+        }
         _ohlcTip.style.display = 'block';
         window.AcademyChartViewport?.placeTooltip(param,c,candles,chartInstance,candleSeriesRef);
       });
