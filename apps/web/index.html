@@ -2357,7 +2357,7 @@
     <div class="mn-grp"><span class="mn-item">題材族群 <i>▾</i></span><div class="mn-menu">
       <a class="nav-owner" data-member-feature="hottopics" onclick="_showView('hottopics')"> 話題</a><a onclick="_showView('themes')">題材列表</a><a onclick="_showView('sectors')">產業地圖</a><a onclick="_showView('groupbook')">集團作帳</a></div></div>
     <div class="mn-grp"><span class="mn-item">市場觀察 <i>▾</i></span><div class="mn-menu">
-      <a class="nav-owner" onclick="_showView('sig')"> 主力訊號</a><a class="nav-owner" onclick="_showView('brank')"> 分點回測</a><a class="nav-owner" onclick="_showView('mingdeng')"> 神燈與冥燈</a><a onclick="_showView('greed')"> 貪婪指標</a><a onclick="_showView('inst')"> 三大法人個股買賣超</a><a onclick="_showView('fhedge')"> 外資空單溫度計</a><a onclick="_showView('breadth')"> 大盤多空廣度</a><a onclick="_showView('usty')"> 美債對標</a><a onclick="_showView('disposal')"> 處置股</a><a class="nav-admin" onclick="_showView('admin')" style="display:none;color:var(--accent);font-weight:800"> ⚙ 後台管理</a></div></div>
+      <a class="nav-broker" style="display:none" onclick="_showView('sig')"> 主力訊號</a><a class="nav-broker" style="display:none" onclick="_showView('brank')"> 分點回測</a><a class="nav-owner" onclick="_showView('mingdeng')"> 神燈與冥燈</a><a onclick="_showView('greed')"> 貪婪指標</a><a onclick="_showView('inst')"> 三大法人個股買賣超</a><a onclick="_showView('fhedge')"> 外資空單溫度計</a><a onclick="_showView('breadth')"> 大盤多空廣度</a><a onclick="_showView('usty')"> 美債對標</a><a onclick="_showView('disposal')"> 處置股</a><a class="nav-admin" onclick="_showView('admin')" style="display:none;color:var(--accent);font-weight:800"> ⚙ 後台管理</a></div></div>
     <div class="mn-grp"><span class="mn-item">ETF 分析 <i>▾</i></span><div class="mn-menu">
       <a onclick="_showView('etfx')" style="font-weight:800;color:var(--brand-green)"> ETF 探索</a><a onclick="_showView('etf')">總覽 · 規模排行</a><a onclick="_showView('etfcons')">成分股</a><a onclick="_showView('etfrev')">股票反查 ETF</a><a onclick="_showView('etfdiv')">配息行事曆</a><a onclick="_showView('etfhold')">持有人結構</a><a onclick="_showView('etfsim')">ETF 相似度</a><a onclick="_showView('etfheavy')">重倉股排行</a><a onclick="_showView('etfprem')">折溢價</a><a onclick="_showView('etfflow')">資金流</a><a onclick="_showView('etfperf')">績效比較</a></div></div>
     <a class="mn-item" onclick="_showView('news')">每日新聞</a>
@@ -4368,12 +4368,12 @@
       var ms=_members.members||[];
       var cnt={}; TORD.forEach(function(t){cnt[t]=0;}); ms.forEach(function(m){cnt[m.tier]=(cnt[m.tier]||0)+1;});
       var sum='<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">'
-        +['<b>'+ms.length+'</b> 會員','<span style="color:#148f77">VIP '+cnt.vip+'</span>','進階 '+cnt.advanced,'研究 '+cnt.research,'觀察 '+cnt.observation,'一般 '+cnt.free].map(function(x){return '<span style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:13px">'+x+'</span>';}).join('')+'</div>';
+        +['<b>'+ms.length+'</b> 會員','<span style="color:var(--accent)">管理者 '+(cnt.admin||0)+'</span>','<span style="color:#148f77">VIP '+cnt.vip+'</span>','進階 '+cnt.advanced,'研究 '+cnt.research,'觀察 '+cnt.observation,'一般 '+cnt.free].map(function(x){return '<span style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:13px">'+x+'</span>';}).join('')+'</div>';
       var rows=ms.map(function(m){
         var opts=TORD.map(function(t){return '<option value="'+t+'"'+(m.tier===t?' selected':'')+'>'+TIER[t]+'</option>';}).join('');
         return '<tr data-uid="'+esc(m.id)+'">'
           +'<td style="padding:6px 8px">'+esc(m.email||'—')+(m.is_admin?' <span style="font-size:10px;color:var(--accent);font-weight:800">管理員</span>':'')+'</td>'
-          +'<td style="padding:6px 8px"><select class="adm-tier" '+(m.is_admin?'disabled title="管理員固定最高權限"':'')+' style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--input-bg,var(--surface));color:var(--text)">'+opts+'</select></td>'
+          +'<td style="padding:6px 8px">'+(m.is_admin?'<b style="color:var(--accent)">⚙ 管理者</b><div style="font-size:10px;color:var(--text-muted)">全功能＋後台</div>':'<select class="adm-tier" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--input-bg,var(--surface));color:var(--text)">'+opts+'</select>')+'</td>'
           +'<td style="padding:6px 8px;white-space:nowrap">'+(m.expires_at?dt(m.expires_at):'<span style="color:var(--text-muted)">—</span>')+'</td>'
           +'<td style="padding:6px 8px;white-space:nowrap;font-size:12px;color:var(--text-muted)">'+dt(m.created_at)+'</td>'
           +'<td style="padding:6px 8px;white-space:nowrap;font-size:12px;color:var(--text-muted)">'+dt(m.last_sign_in_at)+'</td>'
@@ -8159,8 +8159,10 @@
         var on=!!label && t.indexOf(label.replace(/\s/g,''))===0; items[i].classList.toggle('mn-active',on); }
     }
     window._showView=function(v){
-      // 未開通會員不可開啟主力訊號/分點回測/神燈與冥燈/話題（籌碼功能）；導回首頁
-      if((v==='sig'||v==='brank'||v==='mingdeng'||(v==='hottopics'&&!window.AcademyShareUnlock?.hasAccess('hottopics'))) && !window._isOwner){
+      // 籌碼功能權限：主力訊號/分點回測＝管理者或 VIP(先見領航員)可看；神燈與冥燈/話題＝僅管理者；其餘導回首頁
+      var _canBrk = window._isOwner || window._memberTier==='vip';
+      if(((v==='sig'||v==='brank') && !_canBrk)
+         || ((v==='mingdeng'||(v==='hottopics'&&!window.AcademyShareUnlock?.hasAccess('hottopics'))) && !window._isOwner)){
         try{ showToast('此功能為開通會員專屬，請先登入'); }catch(_){}
         v='home';
       }
@@ -13607,9 +13609,12 @@
           }
         }
       } catch (e) {}
-      document.getElementById('brokerSigBtn').style.display = _owner ? '' : 'none';
-      document.getElementById('brokerRankBtn').style.display = _owner ? '' : 'none';
-      document.getElementById('sellTrackBtn').style.display = _owner ? '' : 'none';
+      // 主力資訊（主力訊號/分點回測/出場追蹤）：管理者或 VIP(先見領航員) 可看；話題仍限管理者
+      var _canBroker = _owner || window._memberTier==='vip';
+      window._canBroker = _canBroker;
+      document.getElementById('brokerSigBtn').style.display = _canBroker ? '' : 'none';
+      document.getElementById('brokerRankBtn').style.display = _canBroker ? '' : 'none';
+      document.getElementById('sellTrackBtn').style.display = _canBroker ? '' : 'none';
       document.getElementById('hotTopicsBtn').style.display = _owner ? '' : 'none';
       // 新版上方導覽:擁有者/登入限定項顯示控制
       window._isOwner = _owner;   // 供付費分頁(外資空單溫度計)判斷；已開通主力籌碼帳號=可看
@@ -13618,6 +13623,18 @@
       document.body.classList.toggle('is-owner', !!_owner);   // #7 會員分級：一般會員隱藏 .algo-gated 算法細節
       document.body.classList.toggle('is-admin', !!_owner);
       document.querySelectorAll('.nav-admin').forEach(function(el){ el.style.display = _owner ? '' : 'none'; });
+      document.querySelectorAll('.nav-broker').forEach(function(el){ el.style.display = _canBroker ? '' : 'none'; });
+      // 登入後抓本人等級（member_tiers，RLS 只讀自己）→ VIP 解鎖主力；只抓一次，拿到再套一次 gate
+      if (loggedIn && window._memberTier===undefined && !_owner) {
+        window._memberTier=null;
+        try {
+          var _sb=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'', _ak=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';
+          fetch(_sb+'/rest/v1/member_tiers?select=tier',{headers:{apikey:_ak,Authorization:'Bearer '+_authToken}}).then(function(r){return r.ok?r.json():[];}).then(function(a){
+            window._memberTier=(Array.isArray(a)&&a[0]&&a[0].tier)||'free';
+            if(window._memberTier==='vip') _applyAuthState();
+          }).catch(function(){ window._memberTier='free'; });
+        } catch(_) { window._memberTier='free'; }
+      }
       try{ if(window._fhedgeApplyGate) window._fhedgeApplyGate(); }catch(_){}
       try{ if(window._breadthApplyGate) window._breadthApplyGate(); }catch(_){}
       document.querySelectorAll('.nav-owner').forEach(function(el){ el.style.display = _owner ? '' : 'none'; });

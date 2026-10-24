@@ -46,6 +46,28 @@ def _admin_api(path, method="GET", body=None):
             return e.code, {"error": "admin api error"}
 
 
+def _rest(path, method="GET", body=None, prefer=None):
+    """用 service_role 打 Supabase PostgREST（member_tiers 等）。回 (status, data)。缺金鑰回 (None, err)。"""
+    if not SUPABASE_SERVICE_KEY:
+        return None, {"error": "SUPABASE_SERVICE_KEY 未設定", "code": "NO_SERVICE_KEY"}
+    url = f"{SUPABASE_URL}/rest/v1{path}"
+    headers = {"apikey": SUPABASE_SERVICE_KEY, "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+               "Content-Type": "application/json"}
+    if prefer:
+        headers["Prefer"] = prefer
+    data = json.dumps(body).encode() if body is not None else None
+    req = urllib.request.Request(url, data=data, method=method, headers=headers)
+    try:
+        with urllib.request.urlopen(req, timeout=15) as r:
+            raw = r.read()
+            return r.status, (json.loads(raw) if raw else {})
+    except urllib.error.HTTPError as e:
+        try:
+            return e.code, json.loads(e.read() or b"{}")
+        except Exception:
+            return e.code, {"error": "rest error"}
+
+
 def _audit(admin_email, action, target, detail):
     """寫一筆後台稽核日誌（admin_audit_log）。失敗靜默，不擋主流程。"""
     if not SUPABASE_SERVICE_KEY:
@@ -161,12 +183,19 @@ class handler(BaseHTTPRequestHandler):
                 if st is None:
                     return self._json(500, data)
                 users = data.get("users", []) if isinstance(data, dict) else []
+                # 等級以 member_tiers 表為準（RLS/功能 gate 讀同一張）；3 位白名單一律 admin
+                tmap = {}
+                tst, trows = _rest("/member_tiers?select=user_id,tier")
+                if tst == 200 and isinstance(trows, list):
+                    tmap = {r.get("user_id"): r.get("tier") for r in trows}
                 out = []
                 for u in users:
                     md = u.get("user_metadata") or {}
+                    em = (u.get("email") or "").strip().lower()
+                    tier = "admin" if em in ADMIN_EMAILS else tmap.get(u.get("id"), "free")
                     out.append({
                         "id": u.get("id"), "email": u.get("email"),
-                        "tier": md.get("tier", "free"), "expires_at": md.get("expires_at"),
+                        "tier": tier, "expires_at": md.get("expires_at"),
                         "banned": bool(md.get("banned")),
                         "created_at": u.get("created_at"), "last_sign_in_at": u.get("last_sign_in_at"),
                         "provider": (u.get("app_metadata") or {}).get("provider"),
@@ -176,7 +205,25 @@ class handler(BaseHTTPRequestHandler):
                 out.sort(key=lambda x: x.get("created_at") or "")
                 return self._json(200, {"members": out, "admins": sorted(ADMIN_EMAILS)})
 
-            if action in ("admin_set_tier", "admin_set_expiry", "admin_ban"):
+            if action == "admin_set_tier":
+                uid = str(body.get("user_id", "")).strip()
+                tier = str(body.get("tier", "")).strip()
+                if not uid:
+                    return self._json(400, {"error": "user_id required"})
+                if tier not in TIERS:
+                    return self._json(400, {"error": "invalid tier"})
+                # option(a)：寫持久化 member_tiers（RLS 與功能 gate 讀的單一來源）
+                st2, res = _rest("/member_tiers?on_conflict=user_id", method="POST",
+                                 body=[{"user_id": uid, "tier": tier, "set_by": admin_email}],
+                                 prefer="resolution=merge-duplicates,return=minimal")
+                if st2 is None:
+                    return self._json(500, res)
+                if st2 in (200, 201, 204):
+                    _audit(admin_email, "admin_set_tier", uid, {"tier": tier})
+                    return self._json(200, {"ok": True, "tier": tier})
+                return self._json(500, {"error": "update failed", "detail": res})
+
+            if action in ("admin_set_expiry", "admin_ban"):
                 uid = str(body.get("user_id", "")).strip()
                 if not uid:
                     return self._json(400, {"error": "user_id required"})
@@ -184,12 +231,7 @@ class handler(BaseHTTPRequestHandler):
                 if st is None:
                     return self._json(500, cur)
                 md = dict((cur.get("user_metadata") or {})) if st == 200 else {}
-                if action == "admin_set_tier":
-                    tier = str(body.get("tier", "")).strip()
-                    if tier not in TIERS:
-                        return self._json(400, {"error": "invalid tier"})
-                    md["tier"] = tier; detail = {"tier": tier}
-                elif action == "admin_set_expiry":
+                if action == "admin_set_expiry":
                     md["expires_at"] = body.get("expires_at") or None; detail = {"expires_at": md["expires_at"]}
                 else:  # admin_ban
                     md["banned"] = bool(body.get("banned")); detail = {"banned": md["banned"]}
