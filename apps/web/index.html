@@ -19,6 +19,7 @@
   <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
   <script src="assets/site-theme.js"></script>
   <script src="assets/w-pattern-export.js?v=20261024-1"></script>
+  <script src="assets/w-pattern-overlay.js?v=20261024-1"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -10141,6 +10142,9 @@
             <button class="tool-btn" onclick="resetZoom()" title="恢復全覽">↺ 還原</button>
             <button class="tool-btn" id="wPatternExportBtn" type="button" onclick="_exportWPatternSnapshot()" title="下載目前可見日K圖與行情資料，供型態辨識測試">匯出分析資料</button>
             <span id="wPatternExportStatus" role="status" aria-live="polite" style="font-size:12px;max-width:260px;white-space:normal"></span>
+            <button class="tool-btn" id="wPatternImportBtn" type="button" onclick="_importWPatternResult()">匯入分析結果</button>
+            <button class="tool-btn" id="wPatternClearBtn" type="button" onclick="WPatternOverlay.clear()" hidden>清除候選型態</button>
+            <span id="wPatternOverlayStatus" role="status" aria-live="polite" style="font-size:12px;max-width:300px;white-space:normal"></span>
           </div>
         </div>
         <div class="chart-layer-toolbar" role="tablist" aria-label="圖表圖層工具">
@@ -13927,7 +13931,7 @@
     document.addEventListener('fullscreenchange', function(){ ['ddLineMenu','ddShapeMenu'].forEach(function(id){ const d = document.getElementById(id); if (d) d.classList.remove('open'); });
       const m = document.getElementById('chartModal'); if (m && m.classList.contains('kfull') && !document.fullscreenElement) _setChartFull(false); });
 
-    function closeChart() {_stopBrokerPulse();window.AcademyChartTools?.resetSelection();
+    function closeChart() {window.WPatternOverlay?.clear();_stopBrokerPulse();window.AcademyChartTools?.resetSelection();
       const wasMemberChart=document.body.classList.contains('mc-chart-open');
       if(document.getElementById('chartModal').classList.contains('etx-embedded')){window._etxTab('overview');return;}
       _chartRequestId++;
@@ -14310,6 +14314,7 @@
     function _wkKey(d) { const dt = new Date(d + 'T00:00:00Z'); const day = dt.getUTCDay() || 7; dt.setUTCDate(dt.getUTCDate() + 4 - day); const ys = new Date(Date.UTC(dt.getUTCFullYear(), 0, 1)); const wk = Math.ceil((((dt - ys) / 86400000) + 1) / 7); return dt.getUTCFullYear() + '-W' + wk; }
 
     function _loadChartUrl(url, subtitle, agg) {
+      window.WPatternOverlay?.clear();
       window._academyChartSnapshot={code:currentCode,period:subtitle,url};
       const requestId=++_chartRequestId;
       _chartLoading();
@@ -14783,6 +14788,15 @@
     const _NO_HORZ = { crosshair: { horzLine: { visible: false } } };
 
     // 2026-10-24: export matched chart pixels + OHLC; no API call or credentials.
+    function _importWPatternResult() {
+      const status=document.getElementById('wPatternOverlayStatus');
+      try {
+        if(!chartInstance||!candleSeriesRef||window._chartMode==='trend')throw Error('請先開啟K圖。');
+        if(getComputedStyle(document.getElementById('chartLoading')).display!=='none')throw Error('行情載入中，請稍後匯入。');
+        WPatternOverlay.choose(()=>({chart:chartInstance,series:candleSeriesRef,context:AcademyResearchChartContext()}));
+      } catch(error) {status.textContent=error.message||'匯入失敗。';}
+    }
+
     function _exportWPatternSnapshot() {
       const status = document.getElementById('wPatternExportStatus');
       const button = document.getElementById('wPatternExportBtn');
@@ -14803,6 +14817,7 @@
     }
 
     function _renderMainChart(candles, events) {
+      window.WPatternOverlay?.clear();
       candles = _validCandles(candles);window.AcademyChartTools?.resetSelection();
       if (chartInstance) { try { chartInstance.remove(); } catch(_) {} chartInstance = null; }
       const el = document.getElementById('chartContainer');
@@ -17791,7 +17806,7 @@
 <link rel="stylesheet" href="assets/home-market-intraday.css?v=23">
 <script src="assets/home-market-intraday.js?v=11" defer></script>
 <footer id="foresightFooter" aria-label="先見網站頁尾">
-  <details style="padding:8px 16px;font-size:12px"><summary>改動紀錄</summary><p>2026-10-24：K圖新增「匯出分析資料」，下載可見價格圖、OHLC與座標；供型態測試使用，不會直接呼叫AI或產生API費用。</p></details>
+  <details style="padding:8px 16px;font-size:12px"><summary>改動紀錄</summary><p>2026-10-24：K圖新增「匯入分析結果」，核對股票、週期、OHLC後顯示候選W與頸線，可清除；切換圖表自動移除。另新增「匯出分析資料」，下載可見價格圖、OHLC與座標；供型態測試使用，不會直接呼叫AI或產生API費用。</p></details>
       <div class="fs-source"><div>本站依各功能使用臺灣證券交易所、證券櫃檯買賣中心、臺灣期貨交易所、集保結算所及其他公開資料整理市場資訊；來源、行情日期與更新頻率依各頁標示，部分內容為盤後或延遲資料。數據可能因公告更正、休市或來源異常而調整，請以原始公告核對。圖表、歷史統計與工具結果供學習及研究參考，歷史表現不代表未來結果；不同資料口徑與估算方式可能產生差異。</div></div>
       <div class="fs-footer-inner">
         <div class="fs-footer-info">
