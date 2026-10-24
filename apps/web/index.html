@@ -2356,7 +2356,7 @@
     <div class="mn-grp"><span class="mn-item">題材族群 <i>▾</i></span><div class="mn-menu">
       <a class="nav-owner" data-member-feature="hottopics" onclick="_showView('hottopics')"> 話題</a><a onclick="_showView('themes')">題材列表</a><a onclick="_showView('sectors')">產業地圖</a><a onclick="_showView('groupbook')">集團作帳</a></div></div>
     <div class="mn-grp"><span class="mn-item">市場觀察 <i>▾</i></span><div class="mn-menu">
-      <a class="nav-owner" onclick="_showView('sig')"> 主力訊號</a><a class="nav-owner" onclick="_showView('brank')"> 分點回測</a><a class="nav-owner" onclick="_showView('mingdeng')"> 神燈與冥燈</a><a onclick="_showView('greed')"> 貪婪指標</a><a onclick="_showView('inst')"> 三大法人個股買賣超</a><a onclick="_showView('fhedge')"> 外資空單溫度計</a><a onclick="_showView('breadth')"> 大盤多空廣度</a><a onclick="_showView('usty')"> 美債對標</a><a onclick="_showView('disposal')"> 處置股</a></div></div>
+      <a class="nav-owner" onclick="_showView('sig')"> 主力訊號</a><a class="nav-owner" onclick="_showView('brank')"> 分點回測</a><a class="nav-owner" onclick="_showView('mingdeng')"> 神燈與冥燈</a><a onclick="_showView('greed')"> 貪婪指標</a><a onclick="_showView('inst')"> 三大法人個股買賣超</a><a onclick="_showView('fhedge')"> 外資空單溫度計</a><a onclick="_showView('breadth')"> 大盤多空廣度</a><a onclick="_showView('usty')"> 美債對標</a><a onclick="_showView('disposal')"> 處置股</a><a class="nav-admin" onclick="_showView('admin')" style="display:none;color:var(--accent);font-weight:800"> ⚙ 後台管理</a></div></div>
     <div class="mn-grp"><span class="mn-item">ETF 分析 <i>▾</i></span><div class="mn-menu">
       <a onclick="_showView('etfx')" style="font-weight:800;color:var(--brand-green)"> ETF 探索</a><a onclick="_showView('etf')">總覽 · 規模排行</a><a onclick="_showView('etfcons')">成分股</a><a onclick="_showView('etfrev')">股票反查 ETF</a><a onclick="_showView('etfdiv')">配息行事曆</a><a onclick="_showView('etfhold')">持有人結構</a><a onclick="_showView('etfsim')">ETF 相似度</a><a onclick="_showView('etfheavy')">重倉股排行</a><a onclick="_showView('etfprem')">折溢價</a><a onclick="_showView('etfflow')">資金流</a><a onclick="_showView('etfperf')">績效比較</a></div></div>
     <a class="mn-item" onclick="_showView('news')">每日新聞</a>
@@ -4329,6 +4329,100 @@
       el('dpNote').innerHTML='<b>學院導讀</b> 先確認處置期間與官方交易限制，再查看流動性和股價波動。處置是交易制度提醒，不代表公司價值或未來漲跌。';
     };
     window._VIEWS=window._VIEWS||{}; window._VIEWS.disposal={el:'disposalView',show:'_disposalShow'};
+  })();
+  </script>
+
+  <!-- ══ 後台管理（僅管理員；詳 docs/admin-backend-spec.md）══ -->
+  <div id="adminView" style="display:none">
+    <div class="tm-head"><h2>⚙ 後台管理</h2><span class="sub" id="admSub">僅限管理員</span></div>
+    <div class="ov-tabs" id="admTabs" style="margin-bottom:14px">
+      <button class="on" type="button" data-t="members">會員管理</button>
+      <button type="button" data-t="audit">稽核日誌</button>
+      <button type="button" data-t="health" disabled title="Phase 2：排程/資料新鮮度">系統健康</button>
+      <button type="button" data-t="usage" disabled title="Phase 2：需先加 usage_events">使用分析</button>
+      <button type="button" data-t="revenue" disabled title="Phase 2：需先接金流">進帳</button>
+    </div>
+    <div id="admBody"><div class="fc-empty">載入中…</div></div>
+    <div class="fc-note" id="admNote"></div>
+  </div>
+  <script>
+  (function(){
+    var el=function(id){return document.getElementById(id);};
+    function esc(t){return String(t==null?'':t).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+    function tk(){ try{return localStorage.getItem('sb_token')||'';}catch(e){return '';} }
+    function post(action,extra){
+      return fetch((window.__API||'')+'/api/auth',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tk()},
+        body:JSON.stringify(Object.assign({action:action},extra||{}))}).then(function(r){return r.json();});
+    }
+    function dt(s){ if(!s)return '—'; try{return new Date(s).toLocaleString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});}catch(e){return s;} }
+    var TIER={free:'免費',pro:'付費',vip:'VIP'}, TORD=['free','pro','vip'];
+    var _members=null, _tab='members';
+
+    function renderMembers(){
+      var box=el('admBody'); if(!box)return;
+      if(!_members){box.innerHTML='<div class="fc-empty">載入中…</div>';return;}
+      if(_members.error){box.innerHTML='<div class="fc-empty">讀取失敗：'+esc(_members.error)+(_members.code==='NO_SERVICE_KEY'?'（請在 Vercel 專案環境變數新增 SUPABASE_SERVICE_KEY 後重新部署）':'')+'</div>';return;}
+      var ms=_members.members||[];
+      var cnt={free:0,pro:0,vip:0}; ms.forEach(function(m){cnt[m.tier]=(cnt[m.tier]||0)+1;});
+      var sum='<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">'
+        +['<b>'+ms.length+'</b> 會員','<span style="color:#148f77">VIP '+cnt.vip+'</span>','<span style="color:var(--accent)">付費 '+cnt.pro+'</span>','免費 '+cnt.free].map(function(x){return '<span style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:13px">'+x+'</span>';}).join('')+'</div>';
+      var rows=ms.map(function(m){
+        var opts=TORD.map(function(t){return '<option value="'+t+'"'+(m.tier===t?' selected':'')+'>'+TIER[t]+'</option>';}).join('');
+        return '<tr data-uid="'+esc(m.id)+'">'
+          +'<td style="padding:6px 8px">'+esc(m.email||'—')+(m.is_admin?' <span style="font-size:10px;color:var(--accent);font-weight:800">管理員</span>':'')+'</td>'
+          +'<td style="padding:6px 8px"><select class="adm-tier" '+(m.is_admin?'disabled title="管理員固定最高權限"':'')+' style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--input-bg,var(--surface));color:var(--text)">'+opts+'</select></td>'
+          +'<td style="padding:6px 8px;white-space:nowrap">'+(m.expires_at?dt(m.expires_at):'<span style="color:var(--text-muted)">—</span>')+'</td>'
+          +'<td style="padding:6px 8px;white-space:nowrap;font-size:12px;color:var(--text-muted)">'+dt(m.created_at)+'</td>'
+          +'<td style="padding:6px 8px;white-space:nowrap;font-size:12px;color:var(--text-muted)">'+dt(m.last_sign_in_at)+'</td>'
+          +'<td style="padding:6px 8px;font-size:12px">'+(m.banned?'<span style="color:var(--red)">停權</span>':(m.confirmed?'<span style="color:#148f77">正常</span>':'<span style="color:var(--text-muted)">未驗證</span>'))+' <span style="color:var(--text-muted)">'+esc(m.provider||'')+'</span></td>'
+          +'</tr>';
+      }).join('');
+      box.innerHTML=sum+'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">'
+        +'<thead><tr style="color:var(--text-muted);border-bottom:1px solid var(--border);text-align:left">'
+        +'<th style="padding:6px 8px">Email</th><th style="padding:6px 8px">等級</th><th style="padding:6px 8px">訂閱到期</th><th style="padding:6px 8px">註冊</th><th style="padding:6px 8px">最後登入</th><th style="padding:6px 8px">狀態</th></tr></thead>'
+        +'<tbody>'+rows+'</tbody></table></div>';
+      box.querySelectorAll('.adm-tier').forEach(function(sel){
+        sel.onchange=function(){
+          var tr=sel.closest('tr'), uid=tr.dataset.uid, tier=sel.value, prev=sel.getAttribute('data-prev')||'';
+          sel.disabled=true;
+          post('admin_set_tier',{user_id:uid,tier:tier}).then(function(j){
+            sel.disabled=false;
+            if(j&&j.ok){ var m=(_members.members||[]).filter(function(x){return x.id===uid;})[0]; if(m)m.tier=tier; sel.setAttribute('data-prev',tier); el('admNote').textContent='已將該會員改為「'+TIER[tier]+'」等級。'; }
+            else { el('admNote').textContent='改等級失敗：'+((j&&j.error)||'未知錯誤'); loadMembers(); }
+          }).catch(function(){ sel.disabled=false; el('admNote').textContent='改等級失敗（連線）'; });
+        };
+      });
+      el('admNote').innerHTML='<b>說明</b> 等級寫入該會員的帳號 metadata（tier）。<b>目前只是「設定與顯示」等級</b>；把各付費功能真正綁到等級是下一步（現在仍以 3 位管理員白名單＋RLS 控制）。詳見 docs/admin-backend-spec.md。';
+    }
+
+    function renderAudit(){
+      var box=el('admBody'); if(!box)return; box.innerHTML='<div class="fc-empty">載入中…</div>';
+      post('admin_audit').then(function(j){
+        var log=(j&&j.log)||[];
+        if(!log.length){box.innerHTML='<div class="fc-empty">'+((j&&j.note)||'尚無管理操作紀錄')+'</div>';return;}
+        box.innerHTML='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="color:var(--text-muted);border-bottom:1px solid var(--border);text-align:left"><th style="padding:6px 8px">時間</th><th style="padding:6px 8px">管理員</th><th style="padding:6px 8px">操作</th><th style="padding:6px 8px">對象</th><th style="padding:6px 8px">內容</th></tr></thead><tbody>'
+          +log.map(function(x){return '<tr><td style="padding:6px 8px;white-space:nowrap">'+dt(x.ts)+'</td><td style="padding:6px 8px">'+esc(x.admin_email)+'</td><td style="padding:6px 8px">'+esc(x.action)+'</td><td style="padding:6px 8px;font-size:11px">'+esc(x.target_user)+'</td><td style="padding:6px 8px;font-size:12px">'+esc(JSON.stringify(x.detail))+'</td></tr>';}).join('')
+          +'</tbody></table></div>';
+      }).catch(function(){box.innerHTML='<div class="fc-empty">讀取失敗</div>';});
+    }
+
+    function loadMembers(){ _members=null; renderMembers(); post('admin_members').then(function(j){ _members=j; renderMembers(); }).catch(function(){ _members={error:'連線失敗'}; renderMembers(); }); }
+
+    function switchTab(t){
+      _tab=t;
+      el('admTabs').querySelectorAll('button').forEach(function(b){b.classList.toggle('on',b.dataset.t===t);});
+      if(t==='members')loadMembers();
+      else if(t==='audit')renderAudit();
+      else el('admBody').innerHTML='<div class="fc-empty">此分頁規劃中（見 docs/admin-backend-spec.md，Phase 2）。</div>';
+    }
+
+    window._adminShow=function(){
+      if(!window._isAdmin){ try{window._showView&&window._showView('home');}catch(e){} return; }
+      el('admSub').textContent='管理員：'+(window._adminEmail||'')+'｜會員・使用・進帳・系統健康';
+      el('admTabs').querySelectorAll('button').forEach(function(b){ if(!b.disabled) b.onclick=function(){switchTab(b.dataset.t);}; });
+      switchTab('members');
+    };
+    window._VIEWS=window._VIEWS||{}; window._VIEWS.admin={el:'adminView',show:'_adminShow'};
   })();
   </script>
   <!-- ══ 外資空單溫度計（市場觀察 · 付費分頁）══ 2026-09-28 版面與配色 100% 比照合夥人「完美.html」 -->
@@ -13472,7 +13566,11 @@
       document.getElementById('hotTopicsBtn').style.display = _owner ? '' : 'none';
       // 新版上方導覽:擁有者/登入限定項顯示控制
       window._isOwner = _owner;   // 供付費分頁(外資空單溫度計)判斷；已開通主力籌碼帳號=可看
+      window._isAdmin = _owner;   // 後台管理：目前管理員＝VIEWER_EMAILS 這 3 人
+      window._adminEmail = _owner ? _authUser?.email : null;
       document.body.classList.toggle('is-owner', !!_owner);   // #7 會員分級：一般會員隱藏 .algo-gated 算法細節
+      document.body.classList.toggle('is-admin', !!_owner);
+      document.querySelectorAll('.nav-admin').forEach(function(el){ el.style.display = _owner ? '' : 'none'; });
       try{ if(window._fhedgeApplyGate) window._fhedgeApplyGate(); }catch(_){}
       try{ if(window._breadthApplyGate) window._breadthApplyGate(); }catch(_){}
       document.querySelectorAll('.nav-owner').forEach(function(el){ el.style.display = _owner ? '' : 'none'; });
