@@ -1,5 +1,4 @@
 @echo off
-echo ==== %DATE% %TIME% codex hot_topics run ==== >> "C:\Users\User\Desktop\AI_stock\scripts\codex_topics.log"
-call "C:\Users\User\AppData\Roaming\npm\codex.cmd" exec -C "C:\Users\User\Desktop\AI_stock" --skip-git-repo-check --dangerously-bypass-approvals-and-sandbox "Web-search recent (last 3-5 days) Taiwan stock market hot-topic sectors and follow scripts/codex_hot_topics.md exactly: produce scripts/hot_topics.json. The file scripts/tw_listed_codes.json already exists locally (refreshed by the daily job) so do NOT regenerate it. Only modify hot_topics.json. Do NOT upload, do NOT run any python/git command, do NOT touch other files (see AGENTS.md) -- the batch will upload." >> "C:\Users\User\Desktop\AI_stock\scripts\codex_topics.log" 2>&1
-rem Upload via real python (codex's bare 'python' hits the WindowsApps stub and fails)
-"C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe" "C:\Users\User\Desktop\AI_stock\scripts\upload_hot_topics.py" >> "C:\Users\User\Desktop\AI_stock\scripts\codex_topics.log" 2>&1
+setlocal
+"C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe" "%~dp0run_codex_topics.py" >> "%~dp0codex_topics.log" 2>&1
+exit /b %errorlevel%
