@@ -7,7 +7,8 @@ SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
 
 # 後台管理員白名單（與前端 VIEWER_EMAILS 一致；之後移到 admin_allowlist 表）
 ADMIN_EMAILS = {"swe250165@gmail.com", "qa5518556130@gmail.com", "wenpin0617@gmail.com"}
-TIERS = {"free", "pro", "vip"}
+# 會員等級＝合夥人 member-voucher-levels.sql 定義的 tier（＋free 一般會員）；choice 自選券屬券非常設等級
+TIERS = {"free", "observation", "research", "advanced", "vip"}
 
 
 def _verify_admin(token):

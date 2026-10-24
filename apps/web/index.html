@@ -4356,7 +4356,8 @@
         body:JSON.stringify(Object.assign({action:action},extra||{}))}).then(function(r){return r.json();});
     }
     function dt(s){ if(!s)return '—'; try{return new Date(s).toLocaleString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});}catch(e){return s;} }
-    var TIER={free:'免費',pro:'付費',vip:'VIP'}, TORD=['free','pro','vip'];
+    // 等級照合夥人 member-voucher-levels.sql：observation/research/advanced/vip（＋free 一般會員）
+    var TIER={free:'一般會員',observation:'觀察・市場觀察員',research:'研究・趨勢研究員',advanced:'進階・策略研究員',vip:'VIP・先見領航員'}, TORD=['free','observation','research','advanced','vip'];
     var _members=null, _tab='members';
 
     function renderMembers(){
@@ -4364,9 +4365,9 @@
       if(!_members){box.innerHTML='<div class="fc-empty">載入中…</div>';return;}
       if(_members.error){box.innerHTML='<div class="fc-empty">讀取失敗：'+esc(_members.error)+(_members.code==='NO_SERVICE_KEY'?'（請在 Vercel 專案環境變數新增 SUPABASE_SERVICE_KEY 後重新部署）':'')+'</div>';return;}
       var ms=_members.members||[];
-      var cnt={free:0,pro:0,vip:0}; ms.forEach(function(m){cnt[m.tier]=(cnt[m.tier]||0)+1;});
+      var cnt={}; TORD.forEach(function(t){cnt[t]=0;}); ms.forEach(function(m){cnt[m.tier]=(cnt[m.tier]||0)+1;});
       var sum='<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">'
-        +['<b>'+ms.length+'</b> 會員','<span style="color:#148f77">VIP '+cnt.vip+'</span>','<span style="color:var(--accent)">付費 '+cnt.pro+'</span>','免費 '+cnt.free].map(function(x){return '<span style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:13px">'+x+'</span>';}).join('')+'</div>';
+        +['<b>'+ms.length+'</b> 會員','<span style="color:#148f77">VIP '+cnt.vip+'</span>','進階 '+cnt.advanced,'研究 '+cnt.research,'觀察 '+cnt.observation,'一般 '+cnt.free].map(function(x){return '<span style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:13px">'+x+'</span>';}).join('')+'</div>';
       var rows=ms.map(function(m){
         var opts=TORD.map(function(t){return '<option value="'+t+'"'+(m.tier===t?' selected':'')+'>'+TIER[t]+'</option>';}).join('');
         return '<tr data-uid="'+esc(m.id)+'">'

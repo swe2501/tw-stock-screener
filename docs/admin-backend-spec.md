@@ -32,9 +32,11 @@
 ## 2. 頁面規劃（分頁）
 
 ### 2.1 會員管理（Phase 1，先做）
-- **列表**：email／等級（free/pro/vip）／註冊日／最後登入／登入方式／驗證狀態／裝置數。
+- **列表**：email／等級／註冊日／最後登入／登入方式／驗證狀態／裝置數。
+- **等級＝照合夥人 `docs/database/member-voucher-levels.sql` 定義**：`observation`(觀察・市場觀察員)／`research`(研究・趨勢研究員)／`advanced`(進階・策略研究員)／`vip`(VIP・先見領航員)，＋`free`(一般會員)。`choice`(自選券) 屬「券」非常設等級。
+- ⚠️ **兩套等級來源**：合夥人系統的等級是**券/權益(member_rewards→member_entitlements)算出來、會到期**（`member_feature_access()`）；後台這裡的「改等級」目前寫 `user_metadata.tier`（管理員手動、不到期）。兩者尚未合流 → Phase 1.5 要決定「後台改等級」是(a)直接發/撤一張長期權益走他的系統，或(b)用 `user_metadata.tier` 當管理員覆寫、各 gate 同時認這兩者。目前合夥人券系統本身仍 campaign off、VIP 目錄未就緒(`MEMBER_VIP_NOT_READY`)。
 - **操作**：
-  - 改等級（下拉：free / pro / vip；寫 `user_metadata.tier`）。
+  - 改等級（下拉：一般會員 / 觀察 / 研究 / 進階 / VIP；寫 `user_metadata.tier`）。
   - 設定／延長**訂閱到期日**（`user_metadata.expires_at`）。
   - 停權 / 復權（`user_metadata.banned`）、重寄驗證信、重設密碼。
   - 管理員白名單增刪（改 `admin_allowlist` 表，取代寫死的 `VIEWER_EMAILS`）。
@@ -73,7 +75,7 @@
 -- Phase 1
 create table admin_allowlist(email text primary key, added_by text, added_at timestamptz default now());
 create table admin_audit_log(id bigserial primary key, admin_email text, action text, target_user text, detail jsonb, ts timestamptz default now());
--- 等級／到期存 auth.users.user_metadata：{ tier:'free|pro|vip', expires_at, banned:false }
+-- 等級／到期存 auth.users.user_metadata：{ tier:'free|observation|research|advanced|vip', expires_at, banned:false }（等級代碼照合夥人 member-voucher-levels.sql）
 
 -- Phase 2
 create table usage_events(id bigserial primary key, user_id uuid, event text, meta jsonb, ts timestamptz default now());
