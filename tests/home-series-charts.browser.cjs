@@ -17,7 +17,7 @@ await p.evaluate(()=>{const orig=window._createThemedChart;window.testSeries=[];
 for(const key of ['櫃買指數','台指期（日盤）','台指VIX','台幣匯率','台積電','富台指']){
 await p.evaluate(k=>{testSeries=[];_openKpiChart(k);},key);const d=p.locator('#seriesChartDialog');await d.locator('[data-ma-period="240"]').waitFor();assert.equal(await d.locator('[data-ma-period]').count(),6);
 const means=await p.evaluate(()=>testSeries.filter(s=>/^\d+日$/.test(s.options.title)).map(s=>({n:Number(s.options.title.slice(0,-1)),rows:s.series.data()})));
-assert.equal(await p.evaluate(()=>testSeries[0].series.options().color),theme==='light'?'#233c56':'#e8f2fb','history line matches index style');assert.equal(means.length,6);for(const m of means){assert.equal(m.rows.length,320-m.n+1);assert.ok(Math.abs(m.rows[0].value-(100+(m.n-1)/2))<1e-9,'actual SMA '+m.n);}
+assert.equal(await p.evaluate(()=>testSeries[0].series.options().color),theme==='light'?'#566b80':'#e8f2fb','history line matches index style');assert.equal(means.length,6);for(const m of means){assert.equal(m.rows.length,320-m.n+1);assert.ok(Math.abs(m.rows[0].value-(100+(m.n-1)/2))<1e-9,'actual SMA '+m.n);}
 await d.locator('[data-ma-period="5"]').click();assert.equal(await p.evaluate(()=>testSeries.find(s=>s.options.title==='5日').series.options().visible),false);await d.locator('[data-ma-period="5"]').click();
 if(key==='台指VIX'){
  const flag=d.locator('.vix-high-flag:not([hidden])').first();await flag.waitFor();assert.equal(await flag.locator('svg .vix-flag-cloth').count(),1,'custom refined flag');

@@ -2,7 +2,7 @@ const fs=require('fs'),assert=require('assert');const {chromium}=require('playwr
 (async()=>{
  const browser=await chromium.launch({channel:'chrome',headless:true});
  const data=fs.readFileSync('apps/web/assets/exhibitions.json','utf8'),catalog=require('./fixtures/exhibition-classification.cjs');
- const dir='C:/Users/User/.codex/visualizations/2026/10/12/01a1308c-6895-7e12-a65a-9588d0dacff3/exhibition-calendar';fs.mkdirSync(dir,{recursive:true});
+ const dir=require('path').join(require('os').tmpdir(),'exhibition-calendar');fs.mkdirSync(dir,{recursive:true});
  try{for(const width of [1280,390])for(const theme of ['light','dark']){
  const page=await browser.newPage({viewport:{width,height:900},timezoneId:'Asia/Taipei'});
  await page.clock.install({time:new Date('2026-10-24T04:00:00Z')});
@@ -22,6 +22,8 @@ const fs=require('fs'),assert=require('assert');const {chromium}=require('playwr
  assert.equal(await page.locator('[data-ex-reminders] [data-ex-id]').count(),2);
  assert(await page.locator('.ex-reminder-note').isVisible());
  assert.equal(await page.locator('.ex-head').evaluate(e=>e.tagName),'DIV');
+ assert.match(await page.locator('.ex-head h2').innerText(),/未來題材行事曆/);assert.equal(await page.locator('[data-ex-reminders] [data-ex-id=itf-2026] [data-ex-icon=travel]').count(),1);assert.equal(await page.locator('[data-ex-reminders] [data-ex-id=healthcare-2026] [data-ex-icon=medical]').count(),1);
+ const travel=page.locator('[data-ex-reminders] [data-ex-id=itf-2026]');await travel.hover();assert.equal(await page.locator('.ex-day.is-range').count(),4,'hover highlights the whole exhibition span');assert.match(await page.locator('[data-ex-preview]').innerText(),/2026-11-06/);await travel.focus();assert.equal(await page.locator('.ex-day.is-range').count(),4,'keyboard focus has same linked preview');
  const note=await page.locator('.ex-reminder-note small').evaluate(e=>({color:getComputedStyle(e).color,background:getComputedStyle(e.closest('.ex-reminder-note')).backgroundColor}));assert.notEqual(note.color,note.background,'reminder text has visible contrast');
  assert.equal(await page.locator('[data-ex-month]').inputValue(),'2026-11');
  assert.equal(await page.locator('.ex-grid [data-ex-id="itf-2026"]').count(),4);

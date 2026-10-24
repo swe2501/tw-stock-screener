@@ -1225,6 +1225,45 @@ def fetch_all_stocks_latest():
 _themes_cache = {"ts": 0, "data": None}
 _THEMES_TTL = 300
 
+def _home_breadth_date(value):
+    raw = str(value or "").replace("-", "").replace("/", "").strip()
+    if len(raw) == 7 and raw.isdigit():
+        raw = str(int(raw[:3]) + 1911) + raw[3:]
+    try:
+        return datetime.strptime(raw, "%Y%m%d").strftime("%Y-%m-%d") if len(raw) == 8 else None
+    except ValueError:
+        return None
+
+
+def _home_breadth_metrics(values, date):
+    valid = sorted(float(v) for v in values if isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v))
+    if not valid or not date:
+        return None
+    n = len(valid)
+    middle = n // 2
+    median = valid[middle] if n % 2 else (valid[middle - 1] + valid[middle]) / 2
+    up, down = sum(v > 0 for v in valid), sum(v < 0 for v in valid)
+    return {"date": date, "median_pct": round(median, 4), "sample_count": n,
+            "up": up, "down": down, "flat": n - up - down,
+            "net_count": up - down, "up_limit": sum(v >= 9.5 for v in valid),
+            "down_limit": sum(v <= -9.5 for v in valid)}
+
+
+def _home_breadth_details(stocks, market_date):
+    listed = []
+    for quote in stocks.values():
+        close, prev = quote.get("close"), quote.get("prev_close")
+        if isinstance(close, (int, float)) and isinstance(prev, (int, float)) and math.isfinite(close) and math.isfinite(prev) and close > 0 and prev > 0:
+            listed.append((close / prev - 1) * 100)
+    otc = _fetch_tpex_quotes()
+    dates = [_home_breadth_date(q.get("trade_date")) for q in otc.values() if q.get("valid_change")]
+    dates = [d for d in dates if d]
+    date = max(dates) if dates else None
+    values = [q.get("pct") for q in otc.values() if q.get("valid_change") and q.get("trade_date") == date] if date else []
+    return {"listed": _home_breadth_metrics(listed, _home_breadth_date(market_date)),
+            "otc": _home_breadth_metrics(values, date)}
+
+
 def _fetch_tpex_quotes():
     """上櫃每日收盤 → {code:{close,pct,value,name}}(只取 4 碼上櫃股票)。"""
     if _INTRADAY.get("otc"):                          # 盤中：用 mis 即時快照
@@ -1234,7 +1273,8 @@ def _fetch_tpex_quotes():
             if px is None:
                 continue
             out[c] = {"close": px, "pct": ((px / pv - 1) * 100) if pv else 0,
-                      "value": px * vol, "name": q.get("name") or c}
+                      "value": px * vol, "name": q.get("name") or c,
+                      "trade_date": _home_breadth_date(_INTRADAY.get("date")), "valid_change": pv is not None and pv > 0}
         return out
     import http.client
     url = "https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes"
@@ -1264,7 +1304,8 @@ def _fetch_tpex_quotes():
         prev = (close - chg) if chg is not None else None
         pct = (chg / prev * 100) if prev else 0
         out[code] = {"close": close, "pct": pct, "value": _pf(r.get("TransactionAmount")) or 0,
-                     "name": str(r.get("CompanyName") or code).strip()}
+                     "name": str(r.get("CompanyName") or code).strip(),
+                     "trade_date": _home_breadth_date(r.get("Date")), "valid_change": chg is not None and prev is not None and prev > 0}
     return out
 
 _category_members_cache = {"ts": 0, "data": None}
@@ -3484,9 +3525,15 @@ class handler(BaseHTTPRequestHandler):
                     elif chg > -5: dist["dn2"] += 1
                     elif chg > -9.5: dist["dn5"] += 1
                     else: dist["limit_down"] += 1
-                return self._send_json(200, {"date": mdate, "up": up, "down": dn, "flat": fl,
-                                             "up_limit": up_lim, "down_limit": dn_lim,
-                                             "total": len(stocks), "dist": dist})
+                result = {"date": mdate, "up": up, "down": dn, "flat": fl,
+                          "up_limit": up_lim, "down_limit": dn_lim,
+                          "total": len(stocks), "dist": dist}
+                if (qs.get("breadth") or [""])[0] == "1":
+                    try:
+                        result["breadth"] = _home_breadth_details(stocks, mdate)
+                    except Exception:
+                        result["breadth"] = {"listed": None, "otc": None}
+                return self._send_json(200, result)
             except Exception as e:
                 return self._send_json(200, {"error": str(e)})
         # 股票代號→名稱對照（前端各視圖共用；純靜態，不查 DB）

@@ -439,3 +439,26 @@
 .rk-stock-group:has(.rk-group-toggle[aria-expanded=false]) .rk-stock-heading{border-bottom:0;}
 #rkTradesBody .rk-group-toggle:focus-visible{outline:1px solid var(--accent);outline-offset:3px;border-radius:3px;}
 @media(prefers-reduced-motion:reduce){.rk-group-chevron{transition:none;}}
+
+/* Reduce only the shared month overview; grouped dates and ETF cards keep their scale. */
+.ed-calendar{max-width:840px;padding:20px;margin-bottom:26px;}
+.ed-calendar-top{padding-bottom:15px;margin-bottom:12px;}
+.ed-calendar-top h3{font-size:28px;}
+.ed-calendar-grid{gap:6px;}
+.ed-calendar-grid button{min-height:58px;padding:8px 10px;}
+@media(max-width:600px){.ed-calendar{padding:14px 10px;}.ed-calendar-top{padding-bottom:12px;margin-bottom:10px;}.ed-calendar-top h3{font-size:25px;}.ed-calendar-grid{gap:4px;}.ed-calendar-grid button{min-height:54px;padding:6px 4px;}}
+
+/* The paper date leads; intermittent light stays inside the calendar. */
+.ed-group-heading h3{font-size:17px;}.ed-group-heading h3 small{font-size:12px!important;}
+.ed-date-group{--tear-cycle:17s;--tear-delay:0s;}
+.ed-date-group:nth-of-type(3n+2){--tear-cycle:23s;--tear-delay:-9s;}
+.ed-date-group:nth-of-type(3n){--tear-cycle:19s;--tear-delay:-5s;}
+.ed-tear-calendar{transition:box-shadow .3s ease,border-color .3s ease;}
+.ed-tear-sheen{position:absolute;inset:0;overflow:hidden;border-radius:inherit;pointer-events:none;z-index:2;}
+.ed-tear-sheen:after{content:"";position:absolute;inset:-8px -12px;pointer-events:none;background:linear-gradient(110deg,transparent 30%,color-mix(in srgb,var(--accent) 12%,transparent) 41%,rgba(255,255,255,.6) 50%,color-mix(in srgb,var(--accent) 12%,transparent) 59%,transparent 70%);transform:translateX(-140%);animation:edPaperSheen var(--tear-cycle) ease-in-out var(--tear-delay) infinite;}
+@keyframes edPaperSheen{0%,8%{transform:translateX(-140%);opacity:0;}9%{opacity:1;}16%{transform:translateX(140%);opacity:1;}17%,62%{transform:translateX(-140%);opacity:0;}63%{opacity:1;}69%{transform:translateX(140%);opacity:1;}70%,100%{transform:translateX(140%);opacity:0;}}
+@keyframes edPaperHover{from{transform:translateX(-140%);opacity:0;}20%{opacity:1;}to{transform:translateX(140%);opacity:0;}}
+.ed-group-heading:hover .ed-tear-calendar,.ed-date-group:focus-visible .ed-tear-calendar{border-color:color-mix(in srgb,var(--accent) 45%,var(--border));box-shadow:0 2px 0 -1px var(--surface),0 3px 0 -1px var(--border),0 0 12px color-mix(in srgb,var(--accent) 20%,transparent);}
+.ed-group-heading:hover .ed-tear-sheen:after,.ed-date-group:focus-visible .ed-tear-sheen:after{animation:edPaperHover 1.2s ease-out both;}
+@media(max-width:600px){.ed-group-heading h3{font-size:16px;}.ed-group-heading h3 small{font-size:11px!important;}}
+@media(prefers-reduced-motion:reduce){.ed-tear-sheen:after{animation:none!important;opacity:0;}.ed-tear-calendar{transition:none;}}
