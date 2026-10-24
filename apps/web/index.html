@@ -3299,9 +3299,10 @@
       return '<div class="ov-capital-hero">'+hero+'</div>'+(rest?'<div class="ov-capital-rest">'+rest+'</div>':'');
     }
     function limitThemeRows(arr,key,label){
-      var rows=(arr||[]).filter(function(t){return Number(t[key])>0;}).sort(function(a,b){return Number(b[key])-Number(a[key])||Number(b.tradeValue)-Number(a.tradeValue);}).slice(0,5);
+      var rows=(arr||[]).filter(function(t){return Number(t[key])>0;}).sort(function(a,b){return Number(b[key])-Number(a[key])||Number(b.tradeValue)-Number(a.tradeValue);});
       if(!rows.length)return '<div class="ov-empty">今日沒有'+label+'題材</div>';
-      return rows.map(function(t,i){var leaders=(t.leaders||[]).join('、')||((t.memberCount||0)+' 檔成分股');return '<button type="button" class="ov-limit-item" '+tclick(t.name)+'><span class="rank">'+String(i+1).padStart(2,'0')+'</span><span class="main"><b>'+esc(t.name)+'</b><small>'+esc(leaders)+'</small></span><span class="count">'+Number(t[key])+'<small>'+label+'</small></span></button>';}).join('');
+      var cards=rows.map(function(t,i){var leaders=(t.leaders||[]).join('、')||((t.memberCount||0)+' 檔成分股');return '<button type="button" class="ov-limit-item" '+tclick(t.name)+'><span class="rank">'+String(i+1).padStart(2,'0')+'</span><span class="main"><b>'+esc(t.name)+'</b><small>'+esc(leaders)+'</small></span><span class="count">'+Number(t[key])+'<small>'+label+'</small></span></button>';});
+      return cards.slice(0,5).join('')+(cards.length>5?'<details class="ov-limit-more"><summary><span>展開其餘 '+(cards.length-5)+' 筆</span><span>收合其餘題材</span></summary><div>'+cards.slice(5).join('')+'</div></details>':'');
     }
     function limitGroupsFromStocks(stocks,key){
       var groups={};(stocks||[]).forEach(function(s){(s.themes||[]).forEach(function(name){var g=groups[name]||(groups[name]={name:name,limitUps:0,limitDowns:0,leaders:[],tradeValue:0});g[key]++;g.tradeValue+=Number(s.value)||0;if(g.leaders.length<3)g.leaders.push(s.name||s.code);});});return Object.keys(groups).map(function(k){return groups[k];});
@@ -6616,7 +6617,7 @@
       var used=0,paths='';
       vis.forEach(function(it,i){var seg=Math.min(it.w,Math.max(0,100-used)),s=used*3.6,e=(used+seg)*3.6;used+=seg;if(e>s)paths+='<path d="'+arc(s,e)+'" fill="'+it.color+'" onmouseover="_etxDonutHover('+i+')" onmouseout="_etxDonutHover(-1)"></path>';});
       var legend=vis.map(function(it,i){return '<div class="r" onmouseover="_etxDonutHover('+i+')" onmouseout="_etxDonutHover(-1)"><i style="background:'+it.color+'"></i><span class="nm"><b>'+esc(it.nm)+'</b>'+(it.code?'<small>'+it.code+'</small>':'')+'</span><em><u style="width:'+Math.min(100,it.w*5)+'%;background:'+it.color+'"></u></em><span class="w">'+it.w.toFixed(2)+'%</span></div>';}).join('');
-      return '<div class="etx-donut'+(industry?' etx-industry-donut':'')+'"><div class="etx-donut-fig"><svg viewBox="0 0 180 180"><circle class="trk" cx="90" cy="90" r="60"></circle>'+paths+'</svg><div class="etx-donut-c" id="etxDonutC">'+(industry?'<small>產業配置</small><strong>'+_donutTotal+'</strong><small>個產業</small>':'<strong>'+_donutTotal+'</strong><small>檔成分股</small>')+'</div></div><div class="etx-donut-list">'+legend+'</div></div>';
+      return '<div class="etx-donut'+(industry?' etx-industry-donut':'')+'"><div class="etx-donut-fig"><svg viewBox="0 0 180 180"><circle class="trk" cx="90" cy="90" r="60"></circle>'+paths+'</svg><div class="etx-donut-c" id="etxDonutC">'+(industry?'<small>產業配置</small><strong>'+_donutTotal+'</strong><small>個產業</small>':'<strong>'+_donutTotal+'</strong><small>檔成分股</small>')+'</div></div><div class="etx-donut-list">'+legend+'</div></div>'+(used<99.95?'<p class="etx-donut-note">已列持股權重合計 '+used.toFixed(2)+'%；圓環留白為資料未涵蓋的 '+(100-used).toFixed(2)+'%，未將持股重新放大為 100%。</p>':'');
     }
     // ── ETF 詳情 P0 helpers（級距中文化／發行投信推導／配息摘要）──
     var _ETF_TIER=[null,'1張以下','1–5張','5–10張','10–15張','15–20張','20–30張','30–40張','40–50張','50–100張','100–200張','200–400張','400–600張','600–800張','800–1000張','1000張以上'];
@@ -7091,6 +7092,7 @@
     <div class="ed-tabs" id="edFreq"></div>
     <input id="edSearch" class="ed-search" type="text" placeholder="搜尋代號 / 名稱…" autocomplete="off">
     <div style="font-size:12px;color:var(--text-muted);margin:2px 0 8px"> 近期除息（前 14 天 ~ 未來 120 天）</div>
+    <div id="edCalendar" class="ed-calendar" aria-label="ETF 除息月曆"></div>
     <div class="ed-up" id="edUp"><div class="fc-empty">載入中…</div></div>
     <div style="font-size:12px;color:var(--text-muted);margin:2px 0 8px">全部配息紀錄（近 2 年，依除息日新到舊）</div>
     <div class="ed-wrap"><div class="ed-scroll"><table class="ed"><thead><tr>
@@ -7101,7 +7103,7 @@
   <script>
   (function(){
     var el=function(id){return document.getElementById(id);};
-    var ROWS=[], PRICE={}, NAME={}, freqF='全部', loaded=false;
+    var ROWS=[], PRICE={}, NAME={}, freqF='全部', loaded=false, calendarMonth='', selectedDate='', calendarDays=new Map();
     var FREQS=['全部','月配','雙月配','季配','半年配','年配','不定期'];
     function deriveFreq(n){return n>=11?'月配':n>=5?'雙月配':n===4?'季配':n===3?'三次配':n===2?'半年配':n===1?'年配':'不定期';}
     function money(v,d){return v==null?'—':Number(v).toLocaleString('zh-TW',{maximumFractionDigits:d==null?2:d});}
@@ -7115,12 +7117,25 @@
     }
     function yld(r){var p=PRICE[r.code];return (p&&r.cash_per_unit!=null)?(r.cash_per_unit/p*100):null;}
     function tabs(){el('edFreq').innerHTML=FREQS.map(function(f){return '<span class="ed-tab'+(freqF===f?' on':'')+'" data-f="'+f+'">'+f+'</span>';}).join('');}
+    function renderCalendar(){
+      if(!calendarMonth)calendarMonth=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit'}).format(new Date()).replace('/','-');
+      var parts=calendarMonth.split('-'),year=+parts[0],month=+parts[1],first=new Date(Date.UTC(year,month-1,1)).getUTCDay(),count=new Date(Date.UTC(year,month,0)).getUTCDate(),cells='';
+      for(var i=0;i<first;i++)cells+='<span class="ed-calendar-blank" aria-hidden="true"></span>';
+      for(var day=1;day<=count;day++){var date=year+'-'+String(month).padStart(2,'0')+'-'+String(day).padStart(2,'0'),n=(calendarDays.get(date)||[]).length;cells+='<button type="button" data-ed-date="'+date+'"'+(n?'':' disabled')+' aria-pressed="'+String(selectedDate===date)+'" aria-label="'+date+'，'+(n?n+' 檔除息':'無除息標的')+'"><b>'+day+'</b><small>'+(n?n+' 檔':'')+'</small></button>';}
+      el('edCalendar').innerHTML='<div class="ed-calendar-top"><div><span class="ed-calendar-eyebrow">ETF 配息月曆</span><h3><small>'+year+' 年</small> '+month+' 月</h3><p>點日期可移至下方標的，也可往下瀏覽全部日期</p></div><div class="ed-month-actions"><button type="button" data-ed-month="-1" aria-label="上一個月"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m12 5-5 5 5 5"/></svg></button><button type="button" data-ed-month="0">本月</button><button type="button" data-ed-month="1" aria-label="下一個月"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m8 5 5 5-5 5"/></svg></button></div></div><div class="ed-calendar-week">'+['日','一','二','三','四','五','六'].map(function(d){return '<span>'+d+'</span>';}).join('')+'</div><div class="ed-calendar-grid">'+cells+'</div>';
+    }
     function render(){
       var q=(el('edSearch').value||'').trim().toLowerCase();
       var match=function(r){if(freqF!=='全部'&&FREQMAP[r.code]!==freqF)return false;if(q&&(r.code+(NAME[r.code]||r.name||'')).toLowerCase().indexOf(q)<0)return false;return true;};
       var now=Date.now(), from=now-14*86400000, to=now+120*86400000;
       var up=ROWS.filter(function(r){var t=new Date(r.ex_date).getTime();return match(r)&&t>=from&&t<=to;}).sort(function(a,b){return a.ex_date.localeCompare(b.ex_date);});
-      el('edUp').innerHTML=up.length?up.map(function(r){var y=yld(r);return '<div class="ed-card" onclick="window._etxOpen(\''+r.code+'\')"><div class="d">除息 '+r.ex_date+' <span class="ed-freq">'+(FREQMAP[r.code]||'')+'</span></div><div class="t"><span class="c">'+r.code+'</span> '+(NAME[r.code]||r.name||'')+'</div><div class="row"><span>每單位</span><b>'+money(r.cash_per_unit,3)+'</b></div><div class="row"><span>單次殖利率</span><b class="fc-up">'+(y==null?'—':y.toFixed(2)+'%')+'</b></div><div class="row"><span>發放</span><b>'+(r.pay_date||'—')+'</b></div></div>';}).join(''):'<div class="fc-empty">近期無除息</div>';
+      var days=new Map();up.forEach(function(r){if(!days.has(r.ex_date))days.set(r.ex_date,[]);days.get(r.ex_date).push(r);});
+      calendarDays=days;renderCalendar();
+      var safe=function(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
+      el('edUp').innerHTML=up.length?Array.from(days).map(function(entry){var date=entry[0],items=entry[1],weekday=['日','一','二','三','四','五','六'][new Date(date+'T12:00:00+08:00').getUTCDay()];
+        return '<section class="ed-date-group" id="ed-day-'+date+'" tabindex="-1" aria-label="'+date+' 除息標的"><div class="ed-group-heading"><h3><span class="ed-tear-calendar" aria-hidden="true"><span>'+Number(date.slice(5,7))+' 月</span><strong>'+Number(date.slice(8,10))+'</strong></span><span class="ed-group-date"><time datetime="'+date+'">'+Number(date.slice(5,7))+' 月 '+Number(date.slice(8,10))+' 日</time><small>'+date.slice(0,4)+' · 星期'+weekday+'</small></span></h3><span>'+items.length+' 檔除息</span></div><div class="ed-date-items">'+items.map(function(r){var y=yld(r);return '<button type="button" class="ed-card" data-ed-code="'+safe(r.code)+'"><span class="ed-identity"><b class="c">'+safe(r.code)+'</b><span class="ed-name">'+safe(NAME[r.code]||r.name||'')+'<small class="ed-freq">'+safe(FREQMAP[r.code]||'')+'</small></span></span><span class="ed-metric"><small>每單位配息</small><b>'+money(r.cash_per_unit,3)+'</b></span><span class="ed-metric"><small>單次殖利率</small><b class="fc-up">'+(y==null?'—':y.toFixed(2)+'%')+'</b></span><span class="ed-metric ed-pay-date"><small>發放日</small><b>'+safe(r.pay_date||'—')+'</b></span></button>';}).join('')+'</div></section>';
+      }).join(''):'<div class="fc-empty">近期無除息</div>';
+
       var all=ROWS.filter(match).sort(function(a,b){return b.ex_date.localeCompare(a.ex_date);}).slice(0,500);
       el('edBody').innerHTML=all.length?all.map(function(r){var y=yld(r);return '<tr onclick="window._etxOpen(\''+r.code+'\')"><td class="l"><span class="c">'+r.code+'</span> '+(NAME[r.code]||r.name||'')+'</td><td><span class="ed-freq">'+(FREQMAP[r.code]||'')+'</span></td><td>'+r.ex_date+'</td><td>'+(r.pay_date||'—')+'</td><td><b>'+money(r.cash_per_unit,3)+'</b></td><td class="'+(y?'fc-up':'')+'">'+(y==null?'—':y.toFixed(2)+'%')+'</td></tr>';}).join(''):'<tr><td class="l" colspan="6">無資料</td></tr>';
       el('edSub').textContent='近期除息 '+up.length+' 檔 · 紀錄 '+all.length+' 筆';
@@ -7134,9 +7149,12 @@
       ]).then(function(res){
         ROWS=Array.isArray(res[0])?res[0]:[];
         (Array.isArray(res[1])?res[1]:[]).forEach(function(p){PRICE[p.code]=p.close;NAME[p.code]=p.name;});
-        if(!ROWS.length){el('edUp').innerHTML='<div class="fc-empty">目前無配息資料</div>';el('edBody').innerHTML='<tr><td class="l" colspan="6">目前無配息資料</td></tr>';return;}
+        if(!ROWS.length){calendarDays=new Map();renderCalendar();el('edUp').innerHTML='<div class="fc-empty">目前無配息資料</div>';el('edBody').innerHTML='<tr><td class="l" colspan="6">目前無配息資料</td></tr>';return;}
         computeFreq(); loaded=true; tabs(); render();
       }).catch(function(){el('edBody').innerHTML='<tr><td class="l" colspan="6">讀取失敗</td></tr>';});
+      el('edUp').onclick=function(e){var row=e.target.closest('[data-ed-code]');if(row)window._etxOpen(row.dataset.edCode);};
+      el('edCalendar').onclick=function(e){var nav=e.target.closest('[data-ed-month]');if(nav){var step=Number(nav.dataset.edMonth);if(!step)calendarMonth='';else{var parts=calendarMonth.split('-'),d=new Date(Date.UTC(+parts[0],+parts[1]-1+step,1));calendarMonth=d.toISOString().slice(0,7);}renderCalendar();return;}var date=e.target.closest('[data-ed-date]');if(!date||date.disabled)return;selectedDate=date.dataset.edDate;renderCalendar();var target=el('ed-day-'+selectedDate);if(target){target.focus({preventScroll:true});target.scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'instant':'smooth'});}};
+
       el('edSearch').oninput=render;
       el('edFreq').onclick=function(e){var t=e.target.closest('[data-f]');if(!t)return;freqF=t.dataset.f;tabs();render();};
       if(el('edNote'))el('edNote').innerHTML='<b>學院導讀</b> 先區分公告、除息與發放日期，再看配息來源與價格變化。單次配息只是現金分配，不等於全年收益或額外獲利。';
@@ -8640,7 +8658,7 @@
       var state=vixAnnualState(vixChartRows);dialog.querySelector('.vix-chart-alert').hidden=state.state!=='new';
       if(data.length&&typeof LightweightCharts!=='undefined'){
         var light=document.documentElement.dataset.theme==='light';chart=_createThemedChart(host,{width:host.clientWidth,height:360,layout:{background:{color:'transparent'},textColor:light?'#52677d':'#bacbdd'},grid:{vertLines:{color:light?'#e5ecf3':'#263a4d'},horzLines:{color:light?'#e5ecf3':'#263a4d'}},timeScale:{borderColor:light?'#d8e3ed':'#334a60'},rightPriceScale:{borderColor:light?'#d8e3ed':'#334a60'}});
-        series=chart.addAreaSeries({lineColor:'#d5a14b',topColor:'rgba(213,161,75,.22)',bottomColor:'rgba(213,161,75,.015)',lineWidth:2,priceLineVisible:false,priceFormat:{type:'price',precision:2,minMove:.01}});series.setData(data);series.setMarkers([]);if(window._addHomeMovingAverages)window._addHomeMovingAverages(dialog,chart,data,2);
+        series=chart.addLineSeries({color:document.documentElement.dataset.theme==='light'?'#233c56':'#e8f2fb',lineWidth:2,priceLineVisible:false,priceFormat:{type:'price',precision:2,minMove:.01}});_bindThemedSeries(chart,series,{color:'#233c56'},{color:'#e8f2fb'});series.setData(data);series.setMarkers([]);if(window._addHomeMovingAverages)window._addHomeMovingAverages(dialog,chart,data,2);
         if(candleData.length){candles=chart.addCandlestickSeries({visible:false,upColor:'#dd685f',downColor:'#4caf83',wickUpColor:'#dd685f',wickDownColor:'#4caf83',borderVisible:false,priceLineVisible:false});candles.setData(candleData);candles.setMarkers([]);}
         var vixFlags=window._createVixFlags?window._createVixFlags(dialog,chart,series,data,marks):null;chart.timeScale().fitContent();dialog.querySelectorAll('[data-vix-mode]').forEach(function(btn){btn.onclick=function(){if(btn.disabled)return;mode=btn.dataset.vixMode;series.applyOptions({visible:mode==='line'});if(candles)candles.applyOptions({visible:mode==='candles'});if(vixFlags)vixFlags.setSeries(mode==='candles'?candles:series,mode==='candles');dialog.querySelectorAll('[data-vix-mode]').forEach(function(b){b.setAttribute('aria-pressed',String(b===btn));});};});
         chart.subscribeCrosshairMove(function(pm){var value=pm.seriesData.get(mode==='candles'?candles:series);dialog.querySelector('.vix-history-tip').textContent=value&&pm.time?pm.time+'｜台指VIX '+Number(value.value??value.close).toFixed(2):'移動滑鼠查看日期與數值';});observer=new ResizeObserver(function(){chart.applyOptions({width:host.clientWidth});});observer.observe(host);
@@ -8696,7 +8714,8 @@
         if(typeof LightweightCharts==='undefined'){host.textContent='圖表套件尚未載入，請稍後再試。';return;}
         var light=document.documentElement.dataset.theme==='light',mm=Math.pow(10,-prec);
         chart=_createThemedChart(host,{width:host.clientWidth,height:360,layout:{background:{color:'transparent'},textColor:light?'#52677d':'#bacbdd'},grid:{vertLines:{color:light?'#e5ecf3':'#263a4d'},horzLines:{color:light?'#e5ecf3':'#263a4d'}},timeScale:{borderColor:light?'#d8e3ed':'#334a60'},rightPriceScale:{borderColor:light?'#d8e3ed':'#334a60'},leftPriceScale:{visible:false,borderColor:light?'#d8e3ed':'#334a60'}});
-        var series=chart.addAreaSeries({lineColor:'#d5a14b',topColor:'rgba(213,161,75,.22)',bottomColor:'rgba(213,161,75,.015)',lineWidth:2,priceLineVisible:false,priceFormat:{type:'price',precision:prec,minMove:mm}});
+        var series=chart.addLineSeries({color:document.documentElement.dataset.theme==='light'?'#233c56':'#e8f2fb',lineWidth:2,priceLineVisible:false,priceFormat:{type:'price',precision:prec,minMove:mm}});
+        _bindThemedSeries(chart,series,{color:'#233c56'},{color:'#e8f2fb'});
         series.setData(data.map(function(r){return {time:r.time,value:r.value};}));
         if(window._addHomeMovingAverages)window._addHomeMovingAverages(dialog,chart,data,prec);
         var candles=null,mode='line';
@@ -11172,7 +11191,7 @@
     const _MK_DEFS = [
       ['catalyst', '法說會', '#f5c84b'],
       ['div',      '除權息', '#f39c12'],
-      ['broker',   '主力進場', '#c678dd'],
+      ['broker',   '主力紀錄', '#c678dd'],
       ['user',     '標記',   '#ff1744'],
       ['sma20',    '葛蘭碧', '#1e88e5'],
     ];
@@ -11194,10 +11213,10 @@
       const S = window._mkShow;
       const user = (_userMarkers[currentCode] || [])
         .map(m => { const t = _snapMarkerDate(m.date); if (!t) return null;
-          const lb = m.label || '', sell = /賣|出清/.test(lb), buy = !sell && /買/.test(lb);
+          const lb = m.label || '', sell = /賣|出清|主力分手/.test(lb), buy = !sell && /買|主力交往/.test(lb);
           if (sell || buy) return { time: t, position: sell ? 'aboveBar' : 'belowBar', color: sell ? '#16a34a' : '#ef4444',
             shape: sell ? 'arrowDown' : 'arrowUp', size: 1, _side: sell ? 's' : 'b',
-            text: lb.replace(/主力買點|大單買|連買起|連買迄|出清|買|賣/g, '').trim() };   // 2026-10-23 紅綠箭頭＋分點名稱，不寫買賣字樣
+            text: lb.replace(/主力交往|主力分手|主力買點|大單買|連買起|連買迄|出清|買|賣|↑|↓/g, '').trim() };   // 2026-10-23 紅綠箭頭＋分點名稱，不寫買賣字樣
           return { time: t, position: 'aboveBar', color: '#ff1744', shape: 'arrowDown', text: lb, size: 1 }; })
         .filter(Boolean);
       const catalyst = _catalystEvents
@@ -11223,15 +11242,9 @@
       _brokerColors(); const bcol = window._brokerColor || {};
       // 2026-10-23 用戶指定：不寫「買／賣」字樣，紅色向上箭頭＝買、綠色向下箭頭＝賣；同日多家只寫家數，分點名稱看滑過小卡
       window._brokerSellByTime = Object.fromEntries(Object.entries(smap).map(([t, s]) => [t, [...s.n]]));
-      // 2026-10-23 用戶指定：箭頭旁寫分點名稱（不寫買賣字樣）；同日多家用「、」隔開，超過 3 家寫前 2 家＋等 N 家，完整名單看滑過小卡
-      const _bkMarks = (date, names, sell) => {
-        const ns = [...new Set(names)];
-        const text = ns.length > 3 ? ns.slice(0, 2).join('、') + ' 等' + ns.length + '家' : ns.join('、');
-        return [{ time: date, position: sell ? 'aboveBar' : 'belowBar', color: sell ? '#16a34a' : '#ef4444',
-                  shape: sell ? 'arrowDown' : 'arrowUp', text, size: 1 }];
-      };
-      const broker = Object.entries(bmap).flatMap(([date, arr]) => _bkMarks(date, arr, false))
-        .concat(Object.entries(smap).flatMap(([date, s]) => _bkMarks(date, [...s.n], true)));
+      // One small arrow per date and direction; names belong in the hover card.
+      const broker = Object.entries(bmap).map(([time])=>({time,position:'belowBar',color:'#ef4444',shape:'arrowUp',text:'',size:.7}))
+        .concat(Object.entries(smap).map(([time])=>({time,position:'aboveBar',color:'#16a34a',shape:'arrowDown',text:'',size:.7})));
       const div = _lastDivMarkers || [];
       const present = { div: div.length > 0, catalyst: catalyst.length > 0, broker: broker.length > 0, user: user.length > 0, sma20: _sma20Markers.length > 0 };
       const sel = [];
@@ -11239,7 +11252,7 @@
       window.AcademyChartViewport?.refresh();
       if (S.broker) sel.push(...broker);
       if (S.user) sel.push(...user.filter(m => !(S.broker && m._side && (m._side === 's' ? smap : bmap)[m.time]))
-        .map(({ _side, ...m }) => m));
+        .map(({ _side, ...m }) => _side?{...m,text:'',size:.7}:m));
       if (S.sma20) sel.push(..._sma20Markers.filter(m => !window._sma20GroupsOn || window._sma20GroupsOn.has(m.group)));
       sel.push(...(_boxMarkers || []));   // 箱型標記另有自己的開關，不納入此分類
       const all = sel.sort((a, b) => a.time < b.time ? -1 : a.time > b.time ? 1 : 0);
@@ -11672,7 +11685,7 @@
       // 不需（也不能）操作已移除的 brokerSigModal。舊程式在此丟 null 例外導致點擊無反應。
       _sigReturn = true;
       const d = _sigDates[_sigIdx] || null;   // 當前顯示日期＝該分點買超日，標在 K 線上
-      openChart(code, code, '', 0, false, d, label || '主力買點');
+      openChart(code, code, '', 0, false, d, label || '主力交往 ↑');
     }
 
     // ──  分點回測榜（讀 broker_rankings，RLS 限擁有者） ──
@@ -12279,49 +12292,40 @@
         const rows = r.ok ? await r.json() : [];
         if (!rows.length) { body.innerHTML = '<div style="padding:12px 0;color:var(--text-muted)">此期間查無符合門檻的出手</div>'; return; }
         await _ensureWatchSet();
-        const bn = brokerName.replace(/'/g, '');
-        const seen = new Set();                       // 每檔只放一個 checkbox（明細逐日、同檔會重複）
-        const tr = rows.map(x => {
-          let cb = '';
-          const sell = /_(sell|exit)$/.test(x.view || ''), sx = /_exit$/.test(x.view || '');
-          if (sell) {
-            return `
-          <tr onclick="window._chartFocusBroker={code:'${x.code}',id:'${brokerId}'};openChart('${x.code}','${x.code} ${(x.name||'').replace(/'/g,'')}','',0,false,'${x.trade_date}','${bn} ${sx ? '出清' : '賣'}')"
-              style="border-bottom:1px solid var(--border);cursor:pointer;color:#16a34a">
-            <td style="padding:4px 6px;text-align:center;width:26px;font-size:11px">${sx ? '出清' : '賣'}</td>
-            <td style="padding:4px 8px;white-space:nowrap">${x.trade_date}</td>
-            <td style="padding:4px 8px">${x.code} ${x.name || ''}</td>
-            <td style="padding:4px 8px;text-align:right">${isLots
-              ? '賣 ' + Math.abs(Number(x.net_lots)).toLocaleString() + ' 張'
-              : (x.net_amount_wan != null ? '賣 ' + Math.abs(Number(x.net_amount_wan)).toLocaleString() + ' 萬' : '–')}</td>
-          </tr>`;
-          }
-          if (!seen.has(x.code)) {
-            seen.add(x.code);
-            const checked = _stWatchSet.has(brokerId + '|' + x.code) ? 'checked' : '';
-            const nm = (x.name || '').replace(/'/g, '');
-            cb = `<input type="checkbox" ${checked} onclick="event.stopPropagation()" onchange="_stToggle(this,'${brokerId}','${bn}','${x.code}','${nm}')" title="加入持股觀察站" style="cursor:pointer">`;
-          }
-          return `
-          <tr onclick="window._chartFocusBroker={code:'${x.code}',id:'${brokerId}'};openChart('${x.code}','${x.code} ${(x.name||'').replace(/'/g,'')}','',0,false,'${x.trade_date}','${brokerName} 買')"
-              style="border-bottom:1px solid var(--border);cursor:pointer">
-            <td style="padding:4px 6px;text-align:center;width:26px">${cb}</td>
-            <td style="padding:4px 8px;white-space:nowrap">${x.trade_date}</td>
-            <td style="padding:4px 8px;color:var(--accent)">${x.code} ${x.name || ''}</td>
-            <td style="padding:4px 8px;text-align:right">${isLots
-              ? Number(x.net_lots).toLocaleString() + ' 張'
-              : (x.net_amount_wan != null ? Number(x.net_amount_wan).toLocaleString() + ' 萬' : '–')}</td>
-          </tr>`;
-        }).join('');
-        const nSell = rows.filter(x => /_(sell|exit)$/.test(x.view || '')).length;
-        body.innerHTML = `<div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">共 ${rows.length} 筆${nSell ? `（含 <span style="color:#16a34a">主力賣出 ${nSell} 筆</span>）` : ''}・勾選  追蹤該檔出場（盯大戶何時賣），點列開 K 線圖</div>
-          <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px">
-            <thead><tr style="color:var(--text-muted);border-bottom:1px solid var(--border)">
-              <th style="padding:4px 6px;text-align:center" title="勾選追蹤出場">追</th>
-              <th style="padding:4px 8px;text-align:left">日期</th><th style="padding:4px 8px;text-align:left">股票</th>
-              <th style="padding:4px 8px;text-align:right">${isLots ? '買超張數' : '買超金額'}</th>
-            </tr></thead><tbody>${tr}</tbody></table></div>`;
+        _rkRenderGroupedTrades(body, rows, brokerId, brokerName, isLots);
       } catch (e) { body.innerHTML = '載入失敗：' + e.message; }
+    }
+
+    function _rkRenderGroupedTrades(body, raw, brokerId, brokerName, isLots) {
+      const records=raw.map(x=>({...x,signal_date:x.trade_date,broker_id:brokerId,method:String(x.view||'').replace(/_(sell|exit)$/,'').endsWith('lots')?'lots':'amount',side:/_(sell|exit)$/.test(x.view||'')?'sell':'buy',exit:/_exit$/.test(x.view||'')}));
+      _sigClassifyActions(records);
+      const groups=new Map();records.forEach(x=>{const key=String(x.code);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(x);});
+      const create=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e;};
+      const mode=['stock','list','time'].includes(body.dataset.rkMode)?body.dataset.rkMode:'stock';
+      const expanded=body._rkExpanded||(body._rkExpanded=new Map());
+      body.replaceChildren();const toolbar=create('div','rk-trades-toolbar'),switcher=create('div','rk-view-switch');switcher.setAttribute('role','group');switcher.setAttribute('aria-label','出手明細排列');
+      [['stock','股票'],['list','清單'],['time','時間']].forEach(([key,label])=>{const b=create('button','',label);b.type='button';b.dataset.rkMode=key;b.setAttribute('aria-pressed',String(mode===key));b.onclick=()=>{body.dataset.rkMode=key;_rkRenderGroupedTrades(body,raw,brokerId,brokerName,isLots);body.querySelector('[data-rk-mode="'+key+'"]').focus({preventScroll:true});};switcher.append(b);});const toolbarActions=create('div','rk-toolbar-actions'),toggleAll=create('button','rk-toggle-all','全部收合');toggleAll.type='button';toolbarActions.append(switcher,toggleAll);toolbar.append(toolbarActions);body.append(toolbar);
+      const summary=create('div','rk-trades-summary');summary.append(create('strong','',groups.size+' 檔股票'),create('span','',records.length+' 筆紀錄 · 最新日期在前'));toolbar.prepend(summary);
+      const note=create('p','rk-trades-guide','交往／加碼依目前載入紀錄區分；減碼與分手分開列示。點選日期紀錄可查看 K 線。');body.append(note);
+      const watchControl=(code,name,compact)=>{const watch=create('label','rk-stock-watch'),checkbox=create('input');checkbox.type='checkbox';checkbox.checked=!!_stWatchSet?.has(brokerId+'|'+code);checkbox.setAttribute('aria-label','追蹤 '+code+' '+name);checkbox.onchange=()=>_stToggle(checkbox,brokerId,brokerName,code,name);watch.append(checkbox,document.createTextNode(compact?'追蹤':code+' '+name));return watch;};
+      if(mode!=='stock'){const watchBox=create('details','rk-watch-list');watchBox.append(create('summary','','追蹤股票 · '+groups.size+' 檔'));const controls=create('div');for(const [code,items] of groups)controls.append(watchControl(code,items.find(x=>x.name)?.name||'',false));watchBox.append(controls);body.append(watchBox);}
+      const displayGroups=new Map();if(mode==='stock')for(const entry of groups)displayGroups.set(...entry);else for(const record of records){const key=mode==='time'?record.trade_date:'全部紀錄';if(!displayGroups.has(key))displayGroups.set(key,[]);displayGroups.get(key).push(record);}
+      const groupList=create('div','rk-trades-groups');body.append(groupList);
+      const groupControls=[];const syncAll=()=>{const open=groupControls.some(x=>x.open);toggleAll.textContent=open?'全部收合':'全部展開';toggleAll.setAttribute('aria-label',toggleAll.textContent+'紀錄分組');};toggleAll.onclick=()=>{const open=!groupControls.some(x=>x.open);groupControls.forEach(x=>x.set(open));syncAll();};
+      [...displayGroups].sort((a,b)=>b[1].reduce((m,x)=>x.trade_date>m?x.trade_date:m,'').localeCompare(a[1].reduce((m,x)=>x.trade_date>m?x.trade_date:m,''))).forEach(([code,items])=>{
+        items.sort((a,b)=>b.trade_date.localeCompare(a.trade_date));const name=items.find(x=>x.name)?.name||(window._names||{})[code]||'';
+        const section=create('section','rk-stock-group'),heading=create('div','rk-stock-heading'),identity=create('h4');if(mode==='stock')identity.append(create('b','',code),document.createTextNode(' '+name));else identity.textContent=mode==='time'?code:'全部紀錄';heading.append(identity);
+        const groupKey=mode+'|'+code,opened=expanded.get(groupKey)!==false,toggle=create('button','rk-group-toggle');toggle.type='button';toggle.setAttribute('aria-expanded',String(opened));toggle.append(...identity.childNodes);toggle.append(create('span','rk-group-size',items.length+' 筆'),create('span','rk-group-chevron','⌄'));identity.append(toggle);
+        if(mode==='stock')heading.append(watchControl(code,name,true));section.append(heading);
+        const scroll=create('div','rk-stock-table-wrap'),table=create('table','rk-stock-table'),head=create('thead'),header=create('tr');[mode==='time'?'股票':mode==='list'?'日期／股票':'日期','狀態',isLots?'買賣超（張）':'買賣超（萬）'].forEach((title,i)=>{const th=create('th',i===1?'rk-status-cell':i===2?'rk-signed-cell':'',title);th.scope='col';header.append(th);});head.append(header);table.append(head);
+        const tbody=create('tbody');items.forEach(x=>{
+          const stockCode=String(x.code),stockName=x.name||(window._names||{})[stockCode]||'';
+          const row=create('tr'),dateCell=create('td'),button=create('button','rk-record-open',mode==='time'?stockCode+' '+stockName:x.trade_date),status=create('td','rk-status-cell'),sell=x.side==='sell',action=sell?(x.exit?'主力分手 ↓':'減碼'):(x.addition?'加碼 ↑':'主力交往 ↑');
+          button.type='button';button.setAttribute('aria-label',x.trade_date+' '+stockCode+' '+action+'，查看 K 線');button.onclick=()=>{window._chartFocusBroker={code:stockCode,id:String(brokerId)};openChart(stockCode,stockCode+' '+stockName,'',0,false,x.trade_date,brokerName+' '+(sell?'主力分手 ↓':'主力交往 ↑'));};if(mode==='list')button.append(create('small','rk-record-stock',stockCode+' '+stockName));dateCell.append(button);row.onclick=e=>{if(!e.target.closest('button'))button.click();};
+          status.append(create('span','sig-status-badge '+(sell?'is-sell':'is-buy'),action));const amount=create('td','rk-signed-cell '+(sell?'is-sell':'is-buy')),rawValue=isLots?x.net_lots:x.net_amount_wan,value=rawValue==null?null:Number(rawValue);amount.textContent=value!=null&&Number.isFinite(value)?(value===0?'0':(sell?'−':'+')+Math.abs(value).toLocaleString('zh-TW',{maximumFractionDigits:isLots?0:1})):'—';row.append(dateCell,status,amount);tbody.append(row);
+        });table.append(tbody);scroll.append(table);const content=create('div','rk-group-content');content.hidden=!opened;content.append(scroll,create('div','rk-stock-count',items.length+' 筆紀錄'));section.append(content);const control={open:opened,set(open){this.open=open;expanded.set(groupKey,open);content.hidden=!open;toggle.setAttribute('aria-expanded',String(open));}};groupControls.push(control);toggle.onclick=()=>{control.set(!control.open);syncAll();};groupList.append(section);
+      });
+      syncAll();
     }
 
     // ──  持股觀察站（原出場追蹤） ──
@@ -12532,6 +12536,7 @@
             buy_avg_price: t.buy_avg_price, win20: rm.win20, year_events: rm.events,
           };
         });
+        _sigClassifyActions(_sigRows);
         // 賣出列對照「這一輪」買入訊號的加權買進均價（上一次出清之後、賣出日以前的買入訊號）
         const _buys = {};
         _sigRows.filter(x => x.side === 'buy').forEach(x => { const k = x.method + '|' + x.broker_id + '|' + x.code; (_buys[k] = _buys[k] || []).push(x); });
@@ -12593,6 +12598,21 @@
       });
     };
 
+    // Classify only from the loaded dated records; never infer actual broker holdings.
+    function _sigClassifyActions(rows) {
+      const state=new Map();
+      [...rows].sort((a,b)=>String(a.signal_date).localeCompare(String(b.signal_date))||Number(a.side==='sell')-Number(b.side==='sell')).forEach(x=>{
+        if(x.side==='buy')x.addition=false;
+        if(!x.method||!x.broker_id||!x.code||!/^\d{4}-\d{2}-\d{2}$/.test(x.signal_date||''))return;
+        const key=x.method+'|'+x.broker_id+'|'+x.code,prior=state.get(key);
+        if(x.side==='sell'){if(x.exit)state.delete(key);return;}
+        if(x.side!=='buy')return;
+        x.addition=!!(prior&&prior<x.signal_date);
+        if(!prior)state.set(key,x.signal_date);
+      });
+    }
+    function _sigStatus(x) { return `<td class="sig-status-cell"><span class="sig-status-badge ${x.side==='sell'?'is-sell':'is-buy'}"${x.side==='buy'?' title="依目前載入紀錄區分首筆與後續紀錄；不代表已確認實際持倉"':''}>${x.side==='sell'?(x.exit?'主力分手 ↓':'減碼'):(x.addition?'加碼 ↑':'主力交往 ↑')}</span></td>`; }
+
     function _renderSignals() {
       const el = document.getElementById('sigContent');
       if (!_sigRows || !_sigRows.length) {
@@ -12623,6 +12643,7 @@
             <td style="padding:4px 8px;text-align:center">${x.rank_amt != null ? `${x.rank}／${x.rank_amt}` : x.rank}</td>
             <td style="padding:4px 8px">${x.broker_name}</td>
             <td style="padding:4px 8px"><b style="color:var(--accent)">${x.code}</b> ${x.name||_nm||''}</td>
+            ${_sigStatus(x)}
             <td style="padding:4px 8px;text-align:right">${Number(x.net_lots).toLocaleString()}</td>
             <td style="padding:4px 8px;text-align:right">${x.net_amount_wan != null ? Number(x.net_amount_wan).toLocaleString() : '–'}</td>
             <td style="padding:4px 8px;text-align:right">${x.buy_avg_price ?? '–'}</td>
@@ -12633,7 +12654,7 @@
           <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px">
             <thead><tr style="color:var(--text-muted);border-bottom:1px solid var(--border)">
               <th style="padding:4px 8px">榜上排名</th><th style="padding:4px 8px;text-align:left">分點</th>
-              <th style="padding:4px 8px;text-align:left">股票</th><th style="padding:4px 8px;text-align:right">買超(張)</th>
+              <th style="padding:4px 8px;text-align:left">股票</th><th class="sig-status-cell" scope="col">狀態</th><th style="padding:4px 8px;text-align:right">買超(張)</th>
               <th style="padding:4px 8px;text-align:right">金額(萬)</th><th style="padding:4px 8px;text-align:right">買進均價</th>
               <th style="padding:4px 8px;text-align:right">分點20日勝率</th>
               <th style="padding:4px 8px;text-align:right" title="該分點過去一年出重手總次數">往年事件</th>
@@ -12653,11 +12674,11 @@
       const sideBtn = (s, label) => `<button onclick="_sigSetSide('${s}')" style="padding:5px 16px;border-radius:999px;cursor:pointer;font-size:13px;font-weight:700;
           border:1px solid ${_sigSide === s ? (s === 'sell' ? '#16a34a' : '#ef4444') : 'var(--border)'};
           background:${_sigSide === s ? (s === 'sell' ? 'rgba(22,163,74,.12)' : 'rgba(239,68,68,.10)') : 'transparent'};
-          color:${_sigSide === s ? (s === 'sell' ? '#16a34a' : '#ef4444') : 'var(--text-muted)'}">${label}</button>`;
+          color:${s === 'sell' ? '#16a34a' : '#ef4444'}">${label}</button>`;
       el.innerHTML = `
         <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
-          ${sideBtn('buy', '買入訊號')}${sideBtn('sell', '賣出訊號')}
-          ${isSell ? `<span style="font-size:11px;color:var(--text-muted)">只列「賣掉之前買的」：榜上分點出現買入訊號後，單日淨賣超 ≥300 張／≥3000 萬，或賣掉該輪峰值持倉 20% 以上；賣後剩不到峰值 10% 一律標「出清」（不論當次賣量）。K 圖只標出清。報酬＝賣出均價對比這一輪買入訊號的加權買進均價（未含手續費與交易稅）。</span>` : ''}
+          ${sideBtn('buy', '主力交往 ↑')}${sideBtn('sell', '主力分手 ↓')}
+          ${isSell ? `<span style="font-size:11px;color:var(--text-muted)">只列「賣掉之前買的」：榜上分點出現「主力交往 ↑」紀錄後，單日淨賣超 ≥300 張／≥3000 萬，或賣掉該輪峰值持倉 20% 以上；依分點淨額估算，剩餘部位不高於該輪峰值的 10% 時標為「主力分手 ↓」，其餘符合門檻者標為「減碼」（不代表已確認實際持倉歸零）。K 圖以「主力分手 ↓」呈現出清紀錄；減碼另列。報酬＝賣出均價對比這一輪買入訊號的加權買進均價（未含手續費與交易稅）。</span>` : ''}
         </div>
         <div style="display:flex;gap:4px;margin-bottom:0;flex-wrap:wrap">
           ${tabBtn('overlap', ' 雙榜交集', overlap.length)}
@@ -12681,7 +12702,7 @@
             <td style="padding:4px 8px;text-align:center">${x.rank_amt != null ? `${x.rank}／${x.rank_amt}` : (x.rank ?? '–')}</td>
             <td style="padding:4px 8px">${x.broker_name}</td>
             <td style="padding:4px 8px"><b style="color:var(--accent)">${x.code}</b> ${x.name || _nm || ''}</td>
-            <td style="padding:4px 8px;text-align:center"><span style="padding:1px 7px;border-radius:999px;font-size:11px;font-weight:700;color:#16a34a;background:rgba(22,163,74,${x.exit ? '.18' : '.08'})">${x.exit ? '出清' : '減碼'}</span></td>
+            ${_sigStatus({...x,side:'sell'})}
             <td style="padding:4px 8px;text-align:right;color:#16a34a">${Number(x.net_lots).toLocaleString()}</td>
             <td style="padding:4px 8px;text-align:right">${x.net_amount_wan != null ? Number(x.net_amount_wan).toLocaleString() : '–'}</td>
             <td style="padding:4px 8px;text-align:right">${x.buy_avg_price ?? '–'}</td>
@@ -12693,7 +12714,7 @@
           <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px">
             <thead><tr style="color:var(--text-muted);border-bottom:1px solid var(--border)">
               <th style="padding:4px 8px">榜上排名</th><th style="padding:4px 8px;text-align:left">分點</th>
-              <th style="padding:4px 8px;text-align:left">股票</th><th style="padding:4px 8px">狀態</th>
+              <th style="padding:4px 8px;text-align:left">股票</th><th class="sig-status-cell" scope="col">狀態</th>
               <th style="padding:4px 8px;text-align:right">賣超(張)</th><th style="padding:4px 8px;text-align:right">金額(萬)</th>
               <th style="padding:4px 8px;text-align:right">賣出均價</th><th style="padding:4px 8px;text-align:right" title="這一輪買入訊號的加權買進均價">買進均價</th>
               <th style="padding:4px 8px;text-align:right">報酬</th><th style="padding:4px 8px;text-align:right">分點20日勝率</th>
@@ -14483,10 +14504,11 @@
           `　高 <span style="color:${color}">${fmt(c.high)}</span>` +
           `　低 <span style="color:${color}">${fmt(c.low)}</span>` +
           `　收 <span style="color:${color}">${fmt(c.close)}</span>`;
+        const brokerName = n => String(n).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
         const bks = window._mkShow && window._mkShow.broker && window._brokerByTime && window._brokerByTime[param.time];
-        if (bks && bks.length) _ohlcTip.innerHTML += `<div class="ohlc-broker"><span>主力進場</span>${[...new Set(bks)].map(n => `<b><i style="background:${(window._brokerColor||{})[n]||'#b07fd0'}"></i>${n}</b>`).join('')}</div>`;
+        if (bks && bks.length) _ohlcTip.innerHTML += `<div class="ohlc-broker"><span class="broker-relationship-up">↑ 主力交往 · ${new Set(bks).size} 家</span>${[...new Set(bks)].map(n=>`<b>${brokerName(n)}</b>`).join('')}</div>`;
         const sks = window._mkShow && window._mkShow.broker && window._brokerSellByTime && window._brokerSellByTime[param.time];
-        if (sks && sks.length) _ohlcTip.innerHTML += `<div class="ohlc-broker"><span style="color:#16a34a">主力出場</span>${sks.map(n => `<b><i style="background:${(window._brokerColor||{})[n]||'#16a34a'}"></i>${n}</b>`).join('')}</div>`;
+        if (sks && sks.length) _ohlcTip.innerHTML += `<div class="ohlc-broker"><span class="broker-relationship-down">↓ 主力分手 · ${new Set(sks).size} 家</span>${[...new Set(sks)].map(n=>`<b>${brokerName(n)}</b>`).join('')}</div>`;
         _ohlcTip.style.display = 'block';
         window.AcademyChartViewport?.placeTooltip(param,c,candles,chartInstance,candleSeriesRef);
       });
@@ -17530,7 +17552,7 @@
  window._openMarketTrain=async function(){if(document.getElementById('marketTrainDialog'))return;const d=document.createElement('dialog');d.id='marketTrainDialog';d.className='market-train-dialog';d.innerHTML='<header><div><h2>加權指數 · 市場列車</h2><small>盤後收盤觀察</small></div><div class="train-dialog-actions"><button class="train-fullscreen" aria-label="切換全螢幕">⛶ 全螢幕</button><button class="train-close" aria-label="關閉市場列車">✕</button></div></header><div class="train-loading" role="status">讀取加權指數歷史資料…</div><div class="train-content" hidden></div>';document.body.append(d);d.showModal();d.querySelector('.train-close').onclick=()=>d.close();d.querySelector('.train-fullscreen').onclick=function(){const panel=d.querySelector('.train-compass-panel'),compass=d.querySelector('.train-map-compass');if(panel)panel.hidden=true;if(compass)compass.setAttribute('aria-expanded','false');const full=d.classList.toggle('train-is-fullscreen');this.textContent=full?'⛶ 還原視窗':'⛶ 全螢幕';};let chart,ro,stopRail,stopSea;d.addEventListener('close',()=>{if(stopRail)stopRail();if(stopSea)stopSea();if(ro)ro.disconnect();if(chart)chart.remove();d.remove();},{once:true});
  try{const req=await fetch(SIG_SB_URL+'/rest/v1/taiex_daily?select=trade_date,open,high,low,close&order=trade_date.desc&limit=700',{headers:{apikey:SIG_SB_ANON,Authorization:'Bearer '+SIG_SB_ANON}});if(!req.ok)throw Error('資料暫時無法取得');const rows=await req.json();if(!d.isConnected)return;if(!Array.isArray(rows)||!rows.length)throw Error('尚無加權歷史資料');const r=analyze(rows),m=meanings[r.state],dir=r.short===1?'north':r.short===-1?'south':'pause';const content=d.querySelector('.train-content');content.classList.add(dir);content.innerHTML=`<section class="train-chart-section"><div class="train-chart-heading"><h3>加權指數走勢</h3><span>${r.data[r.data.length-1].trade_date}｜${Number(r.data[r.data.length-1].close).toLocaleString()} 點</span></div><div class="train-chart-modes"><button type="button" data-index-mode="line" aria-pressed="true">走勢</button><button type="button" data-index-mode="candles" aria-pressed="false">K棒</button><small class="train-candle-note"></small></div><div class="train-ma-toggles">${periods.map((p,i)=>`<button aria-pressed="true" data-period="${p}" style="--ma-color:${colors[i]}">${p}日均線</button>`).join('')}</div><div class="train-index-chart"></div><p class="train-crosshair">移動滑鼠查看收盤與均線</p></section><section class="train-stage"><div class="train-map-card">${map(r)}</div><div class="train-story"><small>目前站位</small><h3>${r.state==='missing'?'待確認':stations[r.station][0]+'站'}</h3><div class="train-state">${m[0]}</div><p>${m[1]}</p><div class="train-reason"><b>狀態解惑</b><p>${r.state==='missing'?'資料不足，先不推定趨勢。':'短線'+(r.short===1?'股價與短均線同向改善':r.short===-1?'股價與短均線同向轉弱':'尚未形成一致方向')+'；中期'+(r.mid===1?'20與60日結構向上':r.mid===-1?'20與60日結構向下':'仍在整理或確認')+'。長期提供背景，不由單日漲跌改寫。'}</p></div><div class="train-layer-lights">${[['短期',r.short,'5 / 10日'],['中期',r.mid,'20 / 60日'],['長期',r.long,'120 / 240日']].map(x=>`<details class="train-layer-detail"><summary><i class="${x[1]===1?'north':x[1]===-1?'south':'pause'}"></i><b>${x[0]}：${x[1]==null?'資訊不足':x[1]===1?'向北':x[1]===-1?'向南':'整理／分歧'}</b><small>${x[2]}</small><span aria-hidden="true">＋</span></summary><p>${x[0]==='短期'?'觀察最近幾天的價格節奏，主要決定羅盤方向。短線轉弱可能只是回站，還要看中期結構是否保持。':x[0]==='中期'?'觀察波段主方向。中期仍向上時，短線拉回與中期轉空需要分開理解；若價格與中期均線一起轉弱，再留意南下是否成立。':'觀察較長時間的市場背景。長期向上不代表短線不會下跌，長期轉弱也可能出現反彈；用來理解站位，不直接決定今天的行駛方向。'}</p><p>${x[1]==null?'目前歷史資料不足，暫不推定方向。':x[1]===1?'目前價格位置與這組均線方向較一致向上，接下來觀察能否持續站穩。':x[1]===-1?'目前價格位置與這組均線方向較一致向下，反彈時觀察結構是否真的改善。':'目前價格位置、均線排列或方向尚未一致，先保留結論，搭配K棒、量能與廣度確認。'}</p></details>`).join('')}</div><div class="train-next"><b>下一個確認點</b><p>${m[2]}</p></div><div class="train-forks"><div><b>改善觀察</b><p>短線重新站穩，中期維持或恢復向上，再看成交量與市場參與是否配合。</p></div><div><b>轉弱觀察</b><p>短線持續轉弱，價格失守中期均線且均線開始下彎，留意轉轍是否成立。</p></div></div><div class="train-guide"><b>學院導讀</b><p>先看中長期結構，再看短線方向。列車回站或反彈，不一定改變主趨勢；搭配K棒、成交量與市場廣度確認。站名不是指數目標，動畫不是未來路徑。</p></div></div></section>`;content.hidden=false;d.querySelector('.train-loading').hidden=true;stopRail=animateRail(content);stopSea=animateSea(content);bindTrainCompass(content);
  const host=content.querySelector('.train-index-chart');if(typeof LightweightCharts==='undefined'){host.textContent='圖表套件尚未載入';return;}
- const light=document.documentElement.dataset.theme==='light';chart=_createThemedChart(host,{width:host.clientWidth,height:310,layout:{background:{color:'transparent'},textColor:light?'#536b80':'#a8bfd2'},grid:{vertLines:{color:light?'#e4edf4':'#253a4b'},horzLines:{color:light?'#e4edf4':'#253a4b'}},timeScale:{borderColor:light?'#cfdde8':'#30495c'}});const price=chart.addLineSeries({color:light?'#233c56':'#e8f2fb',lineWidth:2,priceLineVisible:false,title:'加權收盤'});_bindThemedSeries(chart,price,{color:'#233c56'},{color:'#e8f2fb'});price.setData(r.data.map(x=>({time:x.trade_date,value:+x.close})));const candleRows=r.data.filter(x=>['open','high','low'].every(k=>x[k]!=null&&Number.isFinite(+x[k]))).map(x=>({time:x.trade_date,open:+x.open,high:+x.high,low:+x.low,close:+x.close}));const candles=chart.addCandlestickSeries({visible:false,upColor:'#dd685f',downColor:'#4caf83',wickUpColor:'#dd685f',wickDownColor:'#4caf83',borderVisible:false,priceLineVisible:false});candles.setData(candleRows);let chartMode='line';const candleBtn=content.querySelector('[data-index-mode=candles]');candleBtn.disabled=!candleRows.length;if(!candleRows.length)content.querySelector('.train-candle-note').textContent='開高低資料尚未齊備';content.querySelectorAll('[data-index-mode]').forEach(btn=>btn.onclick=()=>{if(btn.disabled)return;chartMode=btn.dataset.indexMode;price.applyOptions({visible:chartMode==='line'});candles.applyOptions({visible:chartMode==='candles'});content.querySelectorAll('[data-index-mode]').forEach(b=>b.setAttribute('aria-pressed',String(b===btn)));});const series={};periods.forEach((p,i)=>{const v=chart.addLineSeries({crosshairMarkerRadius:1.5,crosshairMarkerBorderWidth:0,color:colors[i],lineWidth:1,priceLineVisible:false,title:p+'日'});v.setData(r.data.map((x,j)=>({time:x.trade_date,value:r.ma[p][j]})).filter(x=>x.value!=null));series[p]=v;});chart.timeScale().setVisibleLogicalRange({from:Math.max(0,r.data.length-180),to:r.data.length-1});content.querySelectorAll('[data-period]').forEach(btn=>btn.onclick=()=>{const on=btn.getAttribute('aria-pressed')!=='true';btn.setAttribute('aria-pressed',String(on));series[btn.dataset.period].applyOptions({visible:on});});chart.subscribeCrosshairMove(pm=>{const v=pm.seriesData.get(chartMode==='candles'?candles:price);content.querySelector('.train-crosshair').textContent=v&&pm.time?pm.time+'｜加權收盤 '+Number(v.value??v.close).toLocaleString()+' 點':'移動滑鼠查看收盤與均線';});ro=new ResizeObserver(()=>chart.applyOptions({width:host.clientWidth}));ro.observe(host);
+ const light=document.documentElement.dataset.theme==='light';chart=_createThemedChart(host,{width:host.clientWidth,height:310,layout:{background:{color:'transparent'},textColor:light?'#536b80':'#a8bfd2'},grid:{vertLines:{color:light?'#e4edf4':'#253a4b'},horzLines:{color:light?'#e4edf4':'#253a4b'}},timeScale:{borderColor:light?'#cfdde8':'#30495c'}});const price=chart.addLineSeries({color:light?'#233c56':'#e8f2fb',lineWidth:2,priceLineVisible:false,title:'加權收盤'});_bindThemedSeries(chart,price,{color:'#233c56'},{color:'#e8f2fb'});price.setData(r.data.map(x=>({time:x.trade_date,value:+x.close})));const candleRows=r.data.filter(x=>['open','high','low'].every(k=>x[k]!=null&&Number.isFinite(+x[k]))).map(x=>({time:x.trade_date,open:+x.open,high:+x.high,low:+x.low,close:+x.close}));const candles=chart.addCandlestickSeries({visible:false,upColor:'#dd685f',downColor:'#4caf83',wickUpColor:'#dd685f',wickDownColor:'#4caf83',borderVisible:false,priceLineVisible:false});candles.setData(candleRows);let chartMode='line';const candleBtn=content.querySelector('[data-index-mode=candles]');candleBtn.disabled=!candleRows.length;if(!candleRows.length)content.querySelector('.train-candle-note').textContent='開高低資料尚未齊備';content.querySelectorAll('[data-index-mode]').forEach(btn=>btn.onclick=()=>{if(btn.disabled)return;chartMode=btn.dataset.indexMode;price.applyOptions({visible:chartMode==='line'});candles.applyOptions({visible:chartMode==='candles'});content.querySelectorAll('[data-index-mode]').forEach(b=>b.setAttribute('aria-pressed',String(b===btn)));});const series={};periods.forEach((p,i)=>{const v=chart.addLineSeries({crosshairMarkerRadius:1.5,crosshairMarkerBorderWidth:0,color:colors[i],lineWidth:1,priceLineVisible:false,title:p+'日'});v.setData(r.data.map((x,j)=>({time:x.trade_date,value:r.ma[p][j]})).filter(x=>x.value!=null));series[p]=v;});chart.timeScale().setVisibleLogicalRange({from:Math.max(0,r.data.length-180),to:r.data.length-1});if(window._bindHomeMaControls)window._bindHomeMaControls(content.querySelector('.train-ma-toggles'),series);chart.subscribeCrosshairMove(pm=>{const v=pm.seriesData.get(chartMode==='candles'?candles:price);content.querySelector('.train-crosshair').textContent=v&&pm.time?pm.time+'｜加權收盤 '+Number(v.value??v.close).toLocaleString()+' 點':'移動滑鼠查看收盤與均線';});ro=new ResizeObserver(()=>chart.applyOptions({width:host.clientWidth}));ro.observe(host);
  }catch(e){if(d.isConnected)d.querySelector('.train-loading').textContent=e.message+'，請關閉後再試。';}
  };
 })();
@@ -17547,8 +17569,8 @@
 <script src="assets/member-cloud.js?v=service1" defer></script>
 <script src="assets/member-ai-points.js?v=2" defer></script>
 <script src="assets/member-wallet.js?v=ai5" defer></script>
-<script src="assets/learning-curriculum.js?v=4" defer></script>
-<script src="assets/learning-more.js?v=1" defer></script>
+<script src="assets/learning-curriculum.js?v=5" defer></script>
+<script src="assets/learning-more.js?v=2" defer></script>
 <script src="assets/learning-figures.js?v=2" defer></script>
 <script src="assets/member-learning-verification.js?v=1" defer></script>
 <script src="assets/learning-center.js?v=8" defer></script>
@@ -17592,14 +17614,14 @@
 <link rel="stylesheet" href="assets/strategy-studio.css?v=3">
 <link rel="stylesheet" href="assets/learning-center.css?v=6">
 <link rel="stylesheet" href="assets/research-layout.css?v=10">
-<script src="assets/chart-viewport-fit.js?v=15" defer></script>
+<script src="assets/chart-viewport-fit.js?v=16" defer></script>
 <script src="assets/screen-inline-calendar.js?v=records-only13" defer></script>
 <script src="assets/screen-log.js?v=calendar-direct30" defer></script>
 <script src="assets/pattern-focus.js?v=2" defer></script>
 <script src="assets/member-quick-menu.js?v=tier6" defer></script>
-<script src="assets/navigation-layers.js?v=logo-home19" defer></script>
-<link rel="stylesheet" href="assets/home-market-intraday.css?v=14">
-<script src="assets/home-market-intraday.js?v=10" defer></script>
+<script src="assets/navigation-layers.js?v=logo-home20" defer></script>
+<link rel="stylesheet" href="assets/home-market-intraday.css?v=23">
+<script src="assets/home-market-intraday.js?v=11" defer></script>
 <footer id="foresightFooter" aria-label="先見網站頁尾">
       <div class="fs-source"><div>本站依各功能使用臺灣證券交易所、證券櫃檯買賣中心、臺灣期貨交易所、集保結算所及其他公開資料整理市場資訊；來源、行情日期與更新頻率依各頁標示，部分內容為盤後或延遲資料。數據可能因公告更正、休市或來源異常而調整，請以原始公告核對。圖表、歷史統計與工具結果供學習及研究參考，歷史表現不代表未來結果；不同資料口徑與估算方式可能產生差異。</div></div>
       <div class="fs-footer-inner">

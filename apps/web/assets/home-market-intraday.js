@@ -15,18 +15,30 @@
     d.addEventListener('click',e=>{if(e.target===d){const r=d.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)d.close();}});
     d.addEventListener('close',()=>d.remove(),{once:true});
   };
+  const maKey='home_chart_ma_v1';
+  window._homeMaPrefs={read(){try{const value=JSON.parse(localStorage.getItem(maKey)||'{}');return value&&typeof value==='object'&&!Array.isArray(value)?value:{};}catch(_){return {};}},write(value){try{localStorage.setItem(maKey,JSON.stringify(value));}catch(_){}}};
+  window._bindHomeMaControls=function(bar,series){
+    const prefs=window._homeMaPrefs.read(),buttons=[...bar.querySelectorAll('[data-ma-period],[data-period]')];
+    const all=document.createElement('button');all.type='button';all.className='home-ma-all';bar.append(all);
+    const sync=()=>{const on=buttons.some(b=>!b.disabled&&b.getAttribute('aria-pressed')==='true');all.textContent=on?'關閉全部均線':'顯示全部均線';all.disabled=!buttons.some(b=>!b.disabled);};
+    const set=(button,on)=>{const n=button.dataset.maPeriod||button.dataset.period;button.setAttribute('aria-pressed',String(on));series[n]?.applyOptions({visible:on});prefs[n]=on;};
+    for(const button of buttons){const n=button.dataset.maPeriod||button.dataset.period;if(!button.disabled)set(button,prefs[n]!==false);button.onclick=()=>{set(button,button.getAttribute('aria-pressed')!=='true');window._homeMaPrefs.write(prefs);sync();};}
+    all.onclick=()=>{const on=!buttons.some(b=>!b.disabled&&b.getAttribute('aria-pressed')==='true');buttons.filter(b=>!b.disabled).forEach(b=>set(b,on));window._homeMaPrefs.write(prefs);sync();};sync();
+  };
   window._addHomeMovingAverages = function(dialog, chart, rows, precision) {
     const colors=['#e8b654','#6fb6e6','#e889ab','#b696e0','#70bba0','#929bdf'];
     const bar=document.createElement('div');bar.className='home-chart-ma';bar.setAttribute('aria-label','均線顯示設定');
     dialog.querySelector('.vix-history-status').before(bar);
+    const averages={};
     [5,10,20,60,120,240].forEach((n,i)=>{
       const values=[];let sum=0;
       rows.forEach((r,j)=>{sum+=r.value;if(j>=n)sum-=rows[j-n].value;if(j>=n-1)values.push({time:r.time,value:sum/n});});
       const b=document.createElement('button');b.type='button';b.textContent=n+'日均線';b.dataset.maPeriod=n;b.style.setProperty('--ma-color',colors[i]);b.setAttribute('aria-pressed',String(values.length>0));b.disabled=!values.length;bar.append(b);
       if(!values.length){b.title='至少需要 '+n+' 筆收盤資料';return;}
       const series=chart.addLineSeries({color:colors[i],lineWidth:1,priceLineVisible:false,lastValueVisible:false,title:n+'日',crosshairMarkerRadius:2,priceFormat:{type:'price',precision,minMove:Math.pow(10,-precision)}});series.setData(values);
-      b.onclick=()=>{const visible=b.getAttribute('aria-pressed')!=='true';b.setAttribute('aria-pressed',String(visible));series.applyOptions({visible});};
+      averages[n]=series;
     });
+    window._bindHomeMaControls(bar,averages);
   };
   window._createVixFlags = function(dialog, chart, series, rows, marks) {
     const host=dialog.querySelector('.vix-history-chart'),layer=document.createElement('div');

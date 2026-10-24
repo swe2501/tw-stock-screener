@@ -18,6 +18,7 @@ const web=path.resolve(__dirname,'../apps/web');
   });
   await p.goto('https://etf-layer.fixture.test');await p.waitForFunction(()=>window._etxOpen&&window.AcademyNavigationLayers);
   await p.evaluate(()=>{_showView('etfx');_etxOpen('00400A');});await p.locator('#etxDrawer .etx-dtabs button').filter({hasText:'成分股'}).click();
+  assert.match(await p.locator('#etxDrawer .etx-donut-note').innerText(),/8.90%/);assert.match(await p.locator('#etxDrawer .etx-donut-note').innerText(),/91.10%/);
   const row=p.locator('#etxDrawer tr').filter({hasText:'台積電'});await row.locator('td').nth(1).click();await p.waitForFunction(()=>history.state?.academyLayers?.length===2);
   assert.equal(await p.locator('#chartModal').isVisible(),true);assert.match(await p.locator('#modalTitle').textContent(),/2330/);
   assert.equal(await p.evaluate(()=>{const d=document.getElementById('etxDrawer'),c=document.getElementById('chartModal');return Number(getComputedStyle(c).zIndex)>Number(getComputedStyle(d).zIndex);}),true,'standalone chart must be above the ETF source');
