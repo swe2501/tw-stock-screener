@@ -2,6 +2,8 @@
 (() => {
   'use strict';
   const mounted = new WeakSet(), requests = new Map();
+  // 首頁分時小圖自建資料（page_cache 公開可讀；與站內其他 page_cache 讀取同一組公開金鑰）
+  const MINI_SB = 'https://bruqrbvbjxntgoljxsne.supabase.co', MINI_AK = 'sb_publishable_KgYlaR-mqtx4uVre6kPD2A_qO6tdT1y';
   let serial = 0, fxState = null;
   window._openFxImpact = function () {
     if(document.getElementById('homeFxImpactDialog') || !fxState) return;
@@ -155,10 +157,24 @@
     if (code === 'SGX') return unavailable(el, '分時資料未提供');
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return unavailable(el, '分時資料待更新');
     try {
-      const requestKey=apiCode+'|'+date;
-      if (!requests.has(requestKey)) requests.set(requestKey, fetch((window.__API || '') + '/api/chart?code=' + encodeURIComponent(apiCode) + '&range=5d&interval=5m'+(code==='VIX'?'&date='+encodeURIComponent(date):''))
-        .then(r => {if (!r.ok) throw Error('unavailable'); return r.json();}));
-      const payload = await requests.get(requestKey);
+      // 2026-10-24 櫃買指數／台指期／台指VIX：後端 /api/chart 沒有分時（404 或只有大盤近似），
+      // 改先讀官方來源自建的 page_cache mini_OTC／mini_TXF／mini_VIX（scripts/home_intraday.py、intraday_push.py），
+      // 日期相符才用；沒有才走原本的 /api/chart。
+      const miniKind={'^TWOII':'mini_OTC','TX=F':'mini_TXF','VIX':'mini_VIX'}[code];
+      let payload=null;
+      if (miniKind) {
+        const mk='mini|'+miniKind;
+        if (!requests.has(mk)) requests.set(mk, fetch(MINI_SB+'/rest/v1/page_cache?kind=eq.'+miniKind+'&select=payload',{headers:{apikey:MINI_AK,Authorization:'Bearer '+MINI_AK}})
+          .then(r=>r.ok?r.json():[]).then(a=>(a&&a[0]&&a[0].payload)||null).catch(()=>null));
+        const mini=await requests.get(mk);
+        if (mini && mini.date===date && Array.isArray(mini.data) && mini.data.length>=2) payload={name:mini.source||'',data:mini.data};
+      }
+      if (!payload) {
+        const requestKey=apiCode+'|'+date;
+        if (!requests.has(requestKey)) requests.set(requestKey, fetch((window.__API || '') + '/api/chart?code=' + encodeURIComponent(apiCode) + '&range=5d&interval=5m'+(code==='VIX'?'&date='+encodeURIComponent(date):''))
+          .then(r => {if (!r.ok) throw Error('unavailable'); return r.json();}));
+        payload = await requests.get(requestKey);
+      }
       if (!el.isConnected) return;
       if (code === 'TX=F' && /近似|proxy|大盤/i.test(payload.name || '')) return unavailable(el, '分時待更新');
       const rows = sessionRows(payload.data, date, code === 'TX=F', code==='FX', code==='VIX');

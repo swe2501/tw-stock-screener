@@ -8754,6 +8754,8 @@
       ]).then(function(res){
         window._homeMarketFxRows=res[1]||[];
         var cb=(res[0]||[])[0]||{},mi=(res[1]||[])[0]||{},vixYear=vixAnnualState(res[1]),gov=res[2]||[],tx=(res[3]||[]).slice().reverse();
+        // 2026-10-24 市場指標表非交易日也寫一筆（沿用前一交易日 VIX），資料日會變成週六等休市日；比最近交易日新時改顯示最近交易日
+        var vixDate=(vixYear.date&&cb.trade_date&&vixYear.date>cb.trade_date)?cb.trade_date:vixYear.date;
         if(el('cbDate')&&cb.trade_date)el('cbDate').textContent=cb.trade_date;
         // 5 KPI
         function mini(code,date,prev){return '<figure class="home-intraday" data-code="'+code+'" data-date="'+(date||'')+'" data-prev="'+(prev==null?'':prev)+'" aria-label="當日分時走勢"><figcaption>讀取分時…</figcaption></figure>';}
@@ -8777,8 +8779,8 @@
           var kd=' onkeydown="if(event.key===String.fromCharCode(13)||event.key===String.fromCharCode(32)){event.preventDefault();this.click()}"';
           var clickAttr='';
           if(m.k==='加權指數') clickAttr=' role="button" tabindex="0" onclick="_openMarketTrain()"'+kd+' aria-label="查看加權走勢與市場列車"';
-          else if(window._scCfg&&window._scCfg[m.k]) clickAttr=' role="button" tabindex="0" onclick="_openKpiChart(\''+m.k+'\')"'+kd+' aria-label="查看'+m.k+'近兩年走勢圖"'+(isVix?' title="點看台指VIX走勢；資料日 '+vixYear.date+'"':'');
-          return '<div class="cb-pi'+(m.code||m.miniCode?' home-market-card':'')+(m.k==='台幣匯率'?' home-fx-card':'')+(alert?' vix-year-alert':'')+'"'+clickAttr+'><div class="k">'+m.k+'</div><div class="home-quote-row"><div class="home-quote"><div class="v '+cc+'">'+val+'</div><div class="n">'+(m.note||note(m.c,m.p,dec))+'</div></div>'+(m.code||m.miniCode?mini(m.code||m.miniCode,m.miniCode?mi.date:cb.trade_date,m.miniCode==='FX'?previousQuote('usdtwd',mi.date):m.miniCode==='VIX'?(mi.vix_prev!=null?Number(mi.vix_prev):previousQuote('vix',mi.date)):(m.v!=null&&m.c!=null?m.v-m.c:null)):'')+'</div>'+badge+(isVix?'<small class="vix-year-date">資料日 '+vixYear.date+'</small>':'')+'</div>';
+          else if(window._scCfg&&window._scCfg[m.k]) clickAttr=' role="button" tabindex="0" onclick="_openKpiChart(\''+m.k+'\')"'+kd+' aria-label="查看'+m.k+'近兩年走勢圖"'+(isVix?' title="點看台指VIX走勢；資料日 '+vixDate+'"':'');
+          return '<div class="cb-pi'+(m.code||m.miniCode?' home-market-card':'')+(m.k==='台幣匯率'?' home-fx-card':'')+(alert?' vix-year-alert':'')+'"'+clickAttr+'><div class="k">'+m.k+'</div><div class="home-quote-row"><div class="home-quote"><div class="v '+cc+'">'+val+'</div><div class="n">'+(m.note||note(m.c,m.p,dec))+'</div></div>'+(m.code||m.miniCode?mini(m.code||m.miniCode,m.miniCode==='VIX'?(vixDate||mi.date):m.miniCode?mi.date:cb.trade_date,m.miniCode==='FX'?previousQuote('usdtwd',mi.date):m.miniCode==='VIX'?(mi.vix_prev!=null?Number(mi.vix_prev):previousQuote('vix',mi.date)):(m.v!=null&&m.c!=null?m.v-m.c:null)):'')+'</div>'+badge+(isVix?'<small class="vix-year-date">資料日 '+vixDate+'</small>':'')+'</div>';
         }).join('');
         // 台積電權值影響
         var tsc=cb.tsmc_close,tchg=cb.tsmc_chg,tpct=cb.tsmc_pct,contrib=cb.tsmc_contrib;
