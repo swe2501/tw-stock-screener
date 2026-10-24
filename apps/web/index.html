@@ -11209,6 +11209,31 @@
       if(events)events.innerHTML=_MK_DEFS.filter(d=>d[0]!=='sma20'&&(present[d[0]]||d[0]==='div'||d[0]==='catalyst')).map(([k,label])=>`<button type="button" class="tool-btn chart-marker-control" data-marker="${k}" aria-pressed="${!!S[k]}" ${present[k]?'':'disabled title="目前圖表區間無此類事件"'} onclick="_toggleMarker('${k}')">${label}</button>`).join('');
     }
 
+    let _brokerPulseFrame=0;
+    function _stopBrokerPulse(){cancelAnimationFrame(_brokerPulseFrame);_brokerPulseFrame=0;document.getElementById('brokerArrowGlow')?.remove();}
+    function _startBrokerPulse(series,markers,brokerMarkers){
+      _stopBrokerPulse();
+      if(!brokerMarkers.length||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+      const active=new Set(brokerMarkers),start=performance.now();let last=0;
+      const host=document.getElementById('chartContainer'),glow=document.createElement('div');glow.id='brokerArrowGlow';glow.setAttribute('aria-hidden','true');glow.style.cssText='position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:2';host?.append(glow);
+      const candles=new Map((window._vpCandles||[]).map(c=>[c.time,c]));
+      const dots=brokerMarkers.map(m=>{const dot=document.createElement('i'),rgb=m.shape==='arrowUp'?'239,68,68':'22,163,74';dot.style.cssText=`position:absolute;width:24px;height:24px;border-radius:50%;pointer-events:none;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(${rgb},.32),rgba(${rgb},.14) 35%,rgba(${rgb},0) 72%)`;glow.append(dot);return dot;});
+      function tick(now){
+        _brokerPulseFrame=0;
+        const modal=document.getElementById('chartModal');
+        if(series!==candleSeriesRef||document.hidden||!modal||modal.style.display==='none'){_stopBrokerPulse();return;}
+        if(now-start>=200&&now-last>=50){
+          last=now;const alpha=.35+.65*(1+Math.cos((now-start)*Math.PI/1000))/2;
+          const scale=chartInstance.timeScale(),base=Math.round(Math.min(Math.max(scale.options().barSpacing,12),30)),size=(base%2?base-1:base)*.9,gap=Math.max(Math.round(base*.1),3);
+          dots.forEach((dot,i)=>{const m=brokerMarkers[i],c=candles.get(m.time),x=scale.timeToCoordinate(m.time),y=c?series.priceToCoordinate(m.shape==='arrowUp'?c.low:c.high):null;dot.hidden=x==null||y==null;if(!dot.hidden){dot.style.left=x+'px';dot.style.top=(y+(m.shape==='arrowUp'?1:-1)*(size/2+gap))+'px';dot.style.opacity=String(alpha);}});
+          try{series.setMarkers(markers.map(m=>active.has(m)?{...m,color:m.shape==='arrowUp'?`rgba(239,68,68,${alpha.toFixed(3)})`:`rgba(22,163,74,${alpha.toFixed(3)})`}:m));}catch(_){_stopBrokerPulse();return;}
+        }
+        _brokerPulseFrame=requestAnimationFrame(tick);
+      }
+      _brokerPulseFrame=requestAnimationFrame(tick);
+    }
+    document.addEventListener('visibilitychange',()=>{if(document.hidden)_stopBrokerPulse();else if(candleSeriesRef)_refreshChartMarkers();});
+    matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change',()=>{if(candleSeriesRef)_refreshChartMarkers();});
     function _chartBrokerAction(label) {
       if(/減碼/.test(label||''))return 'reduce';
       if(/主力分手|出清/.test(label||''))return 'exit';
@@ -11217,34 +11242,7 @@
       if(/主力交往|買/.test(label||''))return 'entry';
       return null;
     }
-    // 2026-10-24 用戶要求：主力箭頭在一堆 K 棒中不明顯 → 呼吸動畫（用戶嫌一格一格切換太生硬，要絲滑）。
-    // 圖表套件的標記不能做 CSS 動畫，改用 requestAnimationFrame 約每 33ms 重設一次標記：
-    // 大小與顏色深淺依餘弦曲線連續變化（1.6 秒一個循環、緩進緩出），淺時偏白、大時最深。
-    // 關閉 K 圖或換股票自動停止；分頁在背景時瀏覽器自動暫停；系統「減少動態效果」時不動。
-    const _PULSE_RGB = { '#ef4444': [239, 68, 68], '#16a34a': [22, 163, 74] };
-    function _pulseBrokerMarkers(all, brokerSet) {
-      if (window._mkPulseRaf) { cancelAnimationFrame(window._mkPulseRaf); window._mkPulseRaf = null; }
-      if (!brokerSet.size) return;
-      try { if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return; } catch (_) {}
-      const series = candleSeriesRef, PERIOD = 1600, FRAME_MS = 33, t0 = performance.now();
-      let last = 0;
-      const step = now => {
-        const cm = document.getElementById('chartModal');
-        if (!series || series !== candleSeriesRef || !cm || getComputedStyle(cm).display === 'none') { window._mkPulseRaf = null; return; }
-        window._mkPulseRaf = requestAnimationFrame(step);
-        if (now - last < FRAME_MS) return;
-        last = now;
-        const p = (1 - Math.cos((now - t0) / PERIOD * 2 * Math.PI)) / 2;   // 0→1→0 平滑
-        const size = 1 + 0.5 * p, fade = 0.5 * (1 - p);
-        const frame = all.map(m => {
-          if (!brokerSet.has(m)) return m;
-          const c = _PULSE_RGB[m.color];
-          return c ? { ...m, size, color: 'rgb(' + c.map(v => Math.round(v + (255 - v) * fade)).join(',') + ')' } : { ...m, size };
-        });
-        try { series.setMarkers(frame); } catch (_) {}
-      };
-      window._mkPulseRaf = requestAnimationFrame(step);
-    }
+    // Merge UAT's smooth, text-free arrows into one two-second opacity/glow animation.
     function _refreshChartMarkers() {
       if (!candleSeriesRef) return;
       const S = window._mkShow;
@@ -11272,19 +11270,17 @@
       const visible=[];
       if(S.broker)raw.forEach(e=>{if(_brokerChecked&&!_brokerChecked.has(e.broker))return;const time=_snapMarkerDate(e.date);if(time)visible.push({time,date:e.date,broker:e.broker,action:e.sell?(e.exit?'exit':'reduce'):(e.addition?'add':'entry')});});
       const automatic=visible.slice();
-      if(S.user)user.filter(m=>m._side).forEach(m=>{if(automatic.some(e=>e.time===m.time&&e.date===m._date&&e.broker===m._broker&&e.action===m._action))return;visible.push({time:m.time,date:m._date,broker:m._broker,action:m._action});});
-      const hover={},unique=new Set(),directions=new Map(),dirNames=new Map();
-      for(const e of visible){const key=[e.time,e.date,e.broker,e.action].join('|');if(unique.has(key))continue;unique.add(key);(hover[e.time]||(hover[e.time]=[])).push(e);const sell=e.action==='exit'||e.action==='reduce';const dk=e.time+'|'+sell;if(!directions.has(dk))directions.set(dk,{time:e.time,position:sell?'aboveBar':'belowBar',color:sell?'#16a34a':'#ef4444',shape:sell?'arrowDown':'arrowUp',text:'',size:1});if(!dirNames.has(dk))dirNames.set(dk,[]);dirNames.get(dk).push(e.broker);}
-      // 2026-10-24 用戶要求：箭頭下方寫分點名稱（只有箭頭太不醒目）；同日多家「、」隔開、超過 3 家寫前 2 家＋等 N 家；完整名單仍可滑過 K 棒看小卡
-      // 2026-10-24 晚 用戶改為拿掉箭頭旁的分點名稱（改以呼吸動畫突顯箭頭），名稱只在滑過 K 棒的小卡顯示
-      for(const mk of directions.values())mk.text='';
+      if(S.broker)user.filter(m=>m._side&&(!_brokerChecked||_brokerChecked.has(m._broker))).forEach(m=>{if(automatic.some(e=>e.time===m.time&&e.date===m._date&&e.broker===m._broker&&e.action===m._action))return;visible.push({time:m.time,date:m._date,broker:m._broker,action:m._action});});
+      const hover={},unique=new Set(),directions=new Map();
+      for(const e of visible){const key=[e.time,e.date,e.broker,e.action].join('|');if(unique.has(key))continue;unique.add(key);(hover[e.time]||(hover[e.time]=[])).push(e);const sell=e.action==='exit'||e.action==='reduce';directions.set(e.time+'|'+sell,{time:e.time,position:sell?'aboveBar':'belowBar',color:sell?'#16a34a':'#ef4444',shape:sell?'arrowDown':'arrowUp',text:'',size:.9});}
       window._chartBrokerHover=hover;
+      const tip=document.getElementById('ohlcTooltip');if(tip)tip.style.display='none';
       window._brokerByTime=Object.fromEntries(Object.entries(hover).map(([time,es])=>[time,es.filter(e=>e.action==='entry'||e.action==='add').map(e=>e.broker)]));
       window._brokerSellByTime=Object.fromEntries(Object.entries(hover).map(([time,es])=>[time,es.filter(e=>e.action==='exit'||e.action==='reduce').map(e=>e.broker)]));
       _brokerColors();
       const broker=[...directions.values()];
       const div = _lastDivMarkers || [];
-      const present = { div: div.length > 0, catalyst: catalyst.length > 0, broker: raw.some(e=>_snapMarkerDate(e.date)), user: user.length > 0, sma20: _sma20Markers.length > 0 };
+      const present = { div: div.length > 0, catalyst: catalyst.length > 0, broker: raw.some(e=>_snapMarkerDate(e.date))||user.some(m=>m._side), user: user.some(m=>!m._side), sma20: _sma20Markers.length > 0 };
       const sel = [];
       window._chartTimelineEvents=[...(S.div?div.map(m=>({time:m.time,label:'息',detail:m.text})):[]),...(S.catalyst?catalyst.map(m=>({time:m.time,label:'法',detail:m.text})):[])];
       window.AcademyChartViewport?.refresh();
@@ -11294,7 +11290,7 @@
       sel.push(...(_boxMarkers || []));   // 箱型標記另有自己的開關，不納入此分類
       const all = sel.sort((a, b) => a.time < b.time ? -1 : a.time > b.time ? 1 : 0);
       try { candleSeriesRef.setMarkers(all); } catch (_) {}
-      _pulseBrokerMarkers(all, new Set(broker));
+      _startBrokerPulse(candleSeriesRef,all,broker);
       _renderMarkerToggles(present);
       _renderSma20Groups();
     }
@@ -12718,7 +12714,7 @@
       el.innerHTML = `
         <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
           ${sideBtn('buy', '主力交往 ↑')}${sideBtn('sell', '主力分手 ↓')}
-          ${isSell ? `<span style="font-size:11px;color:var(--text-muted)">只列「賣掉之前買的」：榜上分點出現「主力交往 ↑」紀錄後，單日淨賣超 ≥300 張／≥3000 萬，或賣掉該輪峰值持倉 20% 以上；依分點淨額估算，剩餘部位不高於該輪峰值的 10% 時標為「主力分手 ↓」，其餘符合門檻者標為「減碼」（不代表已確認實際持倉歸零）。K 圖以「主力分手 ↓」呈現出清紀錄；減碼另列。報酬＝賣出均價對比這一輪買入訊號的加權買進均價（未含手續費與交易稅）。</span>` : ''}
+          ${isSell ? `<span style="font-size:11px;color:var(--text-muted)">只列「賣掉之前買的」：榜上分點出現「主力交往 ↑」紀錄後，單日淨賣超 ≥300 張／≥3000 萬，或賣掉該輪峰值持倉 20% 以上；依分點淨額估算，剩餘部位不高於該輪峰值的 10% 時標為「主力分手 ↓」，其餘符合門檻者標為「減碼」（不代表已確認實際持倉歸零）。K 圖依分點勾選呈現交往、加碼、減碼與分手紀錄。報酬＝賣出均價對比這一輪買入訊號的加權買進均價（未含手續費與交易稅）。</span>` : ''}
         </div>
         <div style="display:flex;gap:4px;margin-bottom:0;flex-wrap:wrap">
           ${tabBtn('overlap', ' 雙榜交集', overlap.length)}
@@ -12907,22 +12903,25 @@
           const m = meta[t.broker_id] || { name: t.broker_id, cat: '其他' };
           _brokerEntriesRaw.push({ date: t.trade_date, broker: m.name, cat: m.cat, id: String(t.broker_id) });
         }
-        // 2026-10-23 主力賣出：K 圖只標「出清」（broker_trades 的 _exit 列；用戶指定減碼不標，減碼只在主力訊號表／出手明細列出）
+        // All four broker actions share the same selection and hover pipeline.
         try {
           const rs = await fetch(`${SIG_SB_URL}/rest/v1/broker_trades?select=broker_id,trade_date,view`
-            + `&code=eq.${encodeURIComponent(code)}&view=in.(year_large_lots_exit,year_large_amount_exit)&order=trade_date`,
+            + `&code=eq.${encodeURIComponent(code)}&view=in.(year_large_lots_sell,year_large_amount_sell,year_large_lots_exit,year_large_amount_exit)&order=trade_date`,
             { headers: { apikey: SIG_SB_ANON, Authorization: `Bearer ${_authToken}` } });
           if (rs.ok && currentCode === code) for (const t of await rs.json()) {
             const m = meta[t.broker_id] || { name: t.broker_id, cat: '其他' };
             _brokerEntriesRaw.push({ date: t.trade_date, broker: m.name, cat: m.cat, id: String(t.broker_id), sell: true, exit: /_exit$/.test(t.view) });
           }
         } catch (_) {}
-        const distinct = [...new Map(_brokerEntriesRaw.map(e => [e.broker, e.cat]))].map(([name, cat]) => ({ name, cat }));
+        if(currentCode!==code)return;
+        const manual=(_userMarkers[code]||[]).filter(m=>m.action||_chartBrokerAction(m.label)).map(m=>[m.broker||m.label.replace(/主力交往|主力分手|減碼|加碼|↑|↓/g,'').trim(),'其他']);
+        const distinct = [...new Map([...manual,..._brokerEntriesRaw.map(e => [e.broker, e.cat])])].map(([name, cat]) => ({ name, cat }));
         _brokerChecked = new Set();   // 預設全不勾，K 圖乾淨；展開「主力分點」自行勾選（2026-09-28）
         // 2026-10-23 從主力訊號／出手明細點進來：自動勾選該分點，買賣紀錄一起標出
         const fb = window._chartFocusBroker; window._chartFocusBroker = null;
         if (fb && fb.code === code) {
           _brokerEntriesRaw.filter(e => e.id === fb.id).forEach(e => _brokerChecked.add(e.broker));
+          if(fb.name&&distinct.some(e=>e.name===fb.name))_brokerChecked.add(fb.name);
           if (_brokerChecked.size) window._mkShow.broker = true;
         }
         _renderBrokerFilter(distinct);
@@ -12971,13 +12970,15 @@
     function _toggleBroker(b, on) {
       if (!_brokerChecked) return;
       if (on) _brokerChecked.add(b); else _brokerChecked.delete(b);
+      window._mkShow.broker=_brokerChecked.size>0;
       if(window._chartLayerStatus)window._chartLayerStatus('broker',_brokerChecked.size>0,_brokerChecked.size);
       { const c=document.getElementById('brokerPickCount'); if(c) c.textContent=_brokerChecked.size?'已勾 '+_brokerChecked.size+' 家':''; }
       _refreshChartMarkers();
     }
     function _setAllBrokers(on) {
       if (!_brokerChecked) return;
-      _brokerChecked = on ? new Set(_brokerEntriesRaw.map(e => e.broker)) : new Set();
+      _brokerChecked = on ? new Set([..._brokerEntriesRaw.map(e => e.broker),...(_userMarkers[currentCode]||[]).filter(m=>m.action||_chartBrokerAction(m.label)).map(m=>m.broker||m.label.replace(/主力交往|主力分手|減碼|加碼|↑|↓/g,'').trim())]) : new Set();
+      window._mkShow.broker=_brokerChecked.size>0;
       document.querySelectorAll('#brokerFilterPanel input[type=checkbox]').forEach(cb => { cb.checked = on; });
       if(window._chartLayerStatus)window._chartLayerStatus('broker',_brokerChecked.size>0,_brokerChecked.size);
       { const c=document.getElementById('brokerPickCount'); if(c) c.textContent=_brokerChecked.size?'已勾 '+_brokerChecked.size+' 家':''; }
@@ -13821,7 +13822,7 @@
     document.addEventListener('fullscreenchange', function(){ ['ddLineMenu','ddShapeMenu'].forEach(function(id){ const d = document.getElementById(id); if (d) d.classList.remove('open'); });
       const m = document.getElementById('chartModal'); if (m && m.classList.contains('kfull') && !document.fullscreenElement) _setChartFull(false); });
 
-    function closeChart() {window.AcademyChartTools?.resetSelection();
+    function closeChart() {_stopBrokerPulse();window.AcademyChartTools?.resetSelection();
       const wasMemberChart=document.body.classList.contains('mc-chart-open');
       if(document.getElementById('chartModal').classList.contains('etx-embedded')){window._etxTab('overview');return;}
       _chartRequestId++;
