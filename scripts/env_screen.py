@@ -35,6 +35,11 @@ def relax_local_ssl():
     if hasattr(ssl, "VERIFY_X509_STRICT"):
         ctx.verify_flags &= ~ssl.VERIFY_X509_STRICT
     ssl._create_default_https_context = lambda: ctx
+    # 2026-10-24 同一支程式若之前已用 urllib 連過網（例：page_cache_push 先呼叫正式站 API），
+    # urllib 會沿用當時建好的全域 opener，上面的設定不生效 → uat 版抓證交所失敗、默默退回 price_window（成交值全 0）。
+    # 一併換掉全域 opener，確保之後所有 urlopen 都用放寬後的設定。
+    import urllib.request
+    urllib.request.install_opener(urllib.request.build_opener(urllib.request.HTTPSHandler(context=ctx)))
 
 
 def _fetch_refs():

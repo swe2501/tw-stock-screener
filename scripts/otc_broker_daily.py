@@ -32,6 +32,9 @@ async def _run(day_iso, limit):
     if limit:
         codes = codes[:limit]
     day_slash = day_iso.replace("-", "/")
+    # 2026-10-24 休市日（含颱風等臨時休市）不抓：10/23 臨時休市照抓，玩股網回傳鄰日分點被寫成 10/23
+    if ws.is_market_holiday(date.fromisoformat(day_iso)):
+        print(f"[skip] {day_iso} 證交所休市，不抓上櫃分點"); return
     ws.PROFILE_DIR.mkdir(exist_ok=True)
     async with async_playwright() as p:
         ctx = await p.chromium.launch_persistent_context(

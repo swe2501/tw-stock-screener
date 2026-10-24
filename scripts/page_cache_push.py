@@ -9,6 +9,7 @@ page_cache_push.py — 把「產業地圖／題材列表」整頁資料先算好
 """
 import datetime
 import json
+import re
 import sys
 import time
 import urllib.request
@@ -29,6 +30,17 @@ KINDS = {
     "themeall": lambda d: isinstance(d.get("themes"), dict) and len(d["themes"]) >= 10,           # 所有題材詳情（點題材秒開）
     "sectorall": lambda d: isinstance(d.get("sectors"), dict) and len(d["sectors"]) >= 10,        # 所有官方產業類指數成分股（點產業秒開）
 }
+
+
+_VALUE_RE = re.compile(r'"(tradeValue|value)": *[1-9]')
+_VALUE_KINDS = ("themes", "overview", "themeall")   # 有成交值欄位的快照（sectors 本來就沒有、sectorall 另有來源）
+
+
+def _has_values(kind, d):
+    """成交值不能全為 0：行情抓失敗退回 price_window 時成交值全是 0，不可寫入覆蓋好資料（2026-10-24）。"""
+    if kind not in _VALUE_KINDS:
+        return True
+    return bool(_VALUE_RE.search(json.dumps(d, ensure_ascii=False)))
 
 
 def _get(kind, tries=3):
@@ -54,8 +66,8 @@ def main():
         except Exception as e:                              # noqa: BLE001
             print(f"[page_cache] {kind} 抓取失敗：{e}")
             continue
-        if not isinstance(d, dict) or d.get("error") or not valid(d):
-            print(f"[page_cache] {kind} 內容不完整，保留原資料不覆寫")
+        if not isinstance(d, dict) or d.get("error") or not valid(d) or not _has_values(kind, d):
+            print(f"[page_cache] {kind} 內容不完整或成交值全為 0，保留原資料不覆寫")
             continue
         td = str(d.get("date") or "").replace("/", "-")[:10] or None
         if td and len(td) == 8 and td.isdigit():
@@ -75,16 +87,29 @@ def main():
         funcs = {"sectors": us._fetch_sectors, "themes": us._fetch_themes, "overview": us._fetch_overview,
                  "themeall": us._fetch_theme_all, "sectorall": us._fetch_sector_all}
         for kind, valid in KINDS.items():
-            fn = funcs.get(kind)
-            if not fn:
+            if kind not in funcs:
                 continue
-            try:
-                d = fn()
-            except Exception as e:                      # noqa: BLE001
-                print(f"[page_cache] {kind}@uat 計算失敗：{type(e).__name__}")
-                continue
-            if not isinstance(d, dict) or d.get("error") or not valid(d):
-                print(f"[page_cache] {kind}@uat 內容不完整，保留原資料不覆寫")
+            d = None
+            # 2026-10-24 本機算 uat 版時證交所一時沒回應，程式會默默退回 price_window（無成交值、無上櫃、股名變代號），
+            # 10/24 01:03 就寫進全是 0 的快照。改為檢查成交值，不合格就重新載入程式、隔 90 秒重算，最多 3 次。
+            for attempt in range(3):
+                try:
+                    d = funcs[kind]()
+                except Exception as e:                  # noqa: BLE001
+                    print(f"[page_cache] {kind}@uat 計算失敗：{type(e).__name__}")
+                    d = None
+                if isinstance(d, dict) and not d.get("error") and valid(d) and _has_values(kind, d):
+                    break
+                print(f"[page_cache] {kind}@uat 內容不完整或成交值全為 0（第 {attempt + 1} 次），稍後重算")
+                d = None
+                if attempt < 2:
+                    time.sleep(90)
+                    es._cache.pop("uat", None)
+                    us = es.load_screen("uat", env)
+                    funcs = {"sectors": us._fetch_sectors, "themes": us._fetch_themes, "overview": us._fetch_overview,
+                             "themeall": us._fetch_theme_all, "sectorall": us._fetch_sector_all}
+            if d is None:
+                print(f"[page_cache] {kind}@uat 重算 3 次仍不合格，保留原資料不覆寫")
                 continue
             td = str(d.get("date") or "").replace("/", "-")[:10] or None
             if td and len(td) == 8 and td.isdigit():
