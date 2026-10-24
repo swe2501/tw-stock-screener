@@ -7,7 +7,8 @@
  const tools=document.createElement('details');tools.className='chart-fit-tools';
  tools.innerHTML='<summary><span class="chart-fit-title">週期、圖層與畫線工具</span></summary>';
  const ratios=document.createElement('span');ratios.className='chart-fit-ratios';
- ratios.innerHTML='<label>K 圖比例<input type="range" min="50" max="80" step="2" value="60" aria-label="K 圖高度比例"><output>60%</output></label><button type="button" aria-label="還原圖表比例">還原</button>';
+ ratios.innerHTML='<label>K 圖比例<input type="range" min="50" max="80" step="2" value="60" aria-label="K 圖高度比例"><output>60%</output></label><button type="button" id="chartInfoToggle" aria-label="開關開高低收資訊框" title="開高低收資訊框">資訊框</button>';
+ const infoToggle=ratios.querySelector('#chartInfoToggle');
  tools.querySelector('summary').append(ratios);
  const defaultMainRatio=60;
  let mainRatio=defaultMainRatio;try{const saved=Number(localStorage.getItem('kv_main_ratio'));if(saved>=50&&saved<=80&&saved%2===0)mainRatio=saved;}catch{}
@@ -15,7 +16,10 @@
  ratios.addEventListener('click',e=>{e.stopPropagation();if(!e.target.closest('input,button'))e.preventDefault();});
  ratios.addEventListener('keydown',e=>e.stopPropagation());
  ratios.addEventListener('input',e=>{if(e.target.tagName!=='INPUT')return;mainRatio=Number(e.target.value);try{localStorage.setItem('kv_main_ratio',String(mainRatio));}catch{}renderRatios();});
- ratios.querySelector('button').addEventListener('click',()=>{mainRatio=defaultMainRatio;try{localStorage.setItem('kv_main_ratio',String(mainRatio));}catch{}renderRatios();});
+ function resetRatio(){mainRatio=defaultMainRatio;try{localStorage.setItem('kv_main_ratio',String(mainRatio));}catch{}renderRatios();}
+ let infoVisible=true;try{infoVisible=localStorage.getItem('kv_show_ohlc')!=='0';}catch{}
+ function renderInfoToggle(){modal.dataset.ohlcHidden=String(!infoVisible);infoToggle.setAttribute('aria-pressed',String(infoVisible));if(!infoVisible){const tip=byId('ohlcTooltip');if(tip)tip.style.display='none';}}
+ infoToggle.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();infoVisible=!infoVisible;try{localStorage.setItem('kv_show_ohlc',infoVisible?'1':'0');}catch{}lastTooltip=null;renderInfoToggle();});renderInfoToggle();
  const first=content.querySelector('.chart-toolbar');
  const periods=document.createElement('div');periods.className='chart-period-segments';periods.setAttribute('role','group');periods.setAttribute('aria-label','圖表週期');
  const periodButtons=['hourlyBtn','dailyBtn','weeklyBtn','monthlyBtn','yearlyBtn','trendBtn'].map(byId).filter(Boolean);
@@ -23,11 +27,11 @@
  if(first){first.before(tools);for(const selector of ['.chart-toolbar','.chart-layer-toolbar','.chart-draw-console']){const row=content.querySelector(selector);if(row)tools.append(row);}}
  const summary=tools.querySelector('summary');summary.querySelector('.chart-fit-title').textContent='圖表工具';
  const quick=document.createElement('div');quick.className='chart-quick-controls';quick.append(periods);const log=byId('chartLogBtn');if(log){log.previousElementSibling?.classList.contains('toolbar-sep')&&log.previousElementSibling.remove();quick.append(log);}
- const actions=document.createElement('div');actions.className='chart-summary-actions';actions.append(ratios,summary.querySelector('.chart-fit-title'));summary.append(quick,actions);
+ const actions=document.createElement('div');actions.className='chart-summary-actions';actions.append(ratios,infoToggle,summary.querySelector('.chart-fit-title'));summary.append(quick,actions);
  quick.addEventListener('click',e=>{e.stopPropagation();e.preventDefault();});quick.addEventListener('keydown',e=>e.stopPropagation());
  let toolsPinned=false;try{toolsPinned=localStorage.getItem('kv_tools_pinned')==='1';}catch{}
  const pinLabel=document.createElement('label');pinLabel.className='chart-tools-pin';pinLabel.innerHTML='<input type="checkbox" aria-label="固定工具列">固定';const pinInput=pinLabel.querySelector('input');pinInput.checked=toolsPinned;actions.insertBefore(pinLabel,summary.querySelector('.chart-fit-title'));
- function savePin(){toolsPinned=pinInput.checked;try{localStorage.setItem('kv_tools_pinned',toolsPinned?'1':'0');}catch{}tools.classList.toggle('is-pinned',toolsPinned);if(toolsPinned)tools.open=true;else collapseArmed=true;summary.setAttribute('aria-expanded',String(tools.open));schedule();}
+ function savePin(){keepDrawer();toolsPinned=pinInput.checked;try{localStorage.setItem('kv_tools_pinned',toolsPinned?'1':'0');}catch{}tools.classList.toggle('is-pinned',toolsPinned);if(toolsPinned)tools.open=true;else collapseArmed=true;summary.setAttribute('aria-expanded',String(tools.open));schedule();}
  pinInput.addEventListener('change',savePin);pinLabel.addEventListener('click',e=>{e.stopPropagation();if(e.target!==pinInput){e.preventDefault();pinInput.checked=!pinInput.checked;savePin();}});pinLabel.addEventListener('keydown',e=>e.stopPropagation());
  summary.addEventListener('click',e=>{if(toolsPinned&&!e.target.closest('button,input,label'))e.preventDefault();});
  queueMicrotask(()=>{tools.classList.toggle('is-pinned',toolsPinned);if(toolsPinned){tools.open=true;summary.setAttribute('aria-expanded','true');schedule();}});
@@ -41,11 +45,19 @@
  chooser.innerHTML='指標 <select aria-label="下方技術指標"><option value="macd">MACD</option><option value="rsi">RSI</option></select>';
  byId('subTabs')?.append(chooser);const select=chooser.querySelector('select');
  const mainPanel=byId('mainChartPanel'),eventRail=document.createElement('div'),levelRail=document.createElement('div');
- let collapseArmed=false;
- summary.addEventListener('pointerenter',e=>{if(e.pointerType!=='mouse'||tools.open)return;tools.open=true;collapseArmed=true;summary.setAttribute('aria-expanded','true');schedule();});
+ let collapseArmed=false,openTimer=0,closeTimer=0,closeAnimation=0;
+ function keepDrawer(){clearTimeout(openTimer);openTimer=0;clearTimeout(closeTimer);closeTimer=0;clearTimeout(closeAnimation);tools.classList.remove('is-closing');}
+ function openDrawer(){keepDrawer();tools.open=true;collapseArmed=true;summary.setAttribute('aria-expanded','true');}
+ function closeDrawer(){if(toolsPinned||tools.classList.contains('is-closing')||drawer.matches(':hover')||document.querySelector('.draw-dd-menu.open'))return;tools.classList.add('is-closing');closeAnimation=setTimeout(()=>{tools.open=false;tools.classList.remove('is-closing');collapseArmed=false;summary.setAttribute('aria-expanded','false');},100);}
+ summary.addEventListener('pointerenter',e=>{if(e.pointerType!=='mouse'||innerWidth<=600)return;keepDrawer();if(!tools.open)openTimer=setTimeout(openDrawer,140);});
+ summary.addEventListener('pointermove',e=>{if(innerWidth>600&&e.pointerType==='mouse'&&!tools.open&&!openTimer)openTimer=setTimeout(openDrawer,140);});
+ drawer.addEventListener('pointerenter',keepDrawer);
+ tools.addEventListener('pointerleave',e=>{if(e.pointerType!=='mouse'||toolsPinned||innerWidth<=600)return;clearTimeout(openTimer);clearTimeout(closeTimer);closeTimer=setTimeout(closeDrawer,0);});
+ summary.addEventListener('click',e=>{if(e.target.closest('button,input,label,.chart-quick-controls')||toolsPinned)return;e.preventDefault();if(tools.open){keepDrawer();closeDrawer();}else openDrawer();});
  document.addEventListener('click',e=>{if(e.target.closest('.chart-tools-drawer button,.chart-tools-drawer input,.chart-tools-drawer select,.draw-dd-menu button'))collapseArmed=true;});
- function collapseForChart(e){if(toolsPinned||e.pointerType!=='mouse'||e.buttons||!tools.open||document.querySelector('.draw-dd-menu.open'))return;if(!collapseArmed&&!window.AcademyChartBridge?.get()?.tool&&!window.AcademyChartTools?.isSelecting())return;tools.open=false;collapseArmed=false;summary.setAttribute('aria-expanded','false');schedule();}
- mainPanel.addEventListener('pointerenter',collapseForChart,{passive:true});mainPanel.addEventListener('pointermove',collapseForChart,{passive:true});
+ function collapseForChart(e){if(toolsPinned||innerWidth<=600||e.pointerType!=='mouse'||e.buttons||!tools.open||document.querySelector('.draw-dd-menu.open'))return;if(!closeTimer)closeTimer=setTimeout(()=>{closeTimer=0;closeDrawer();},0);}
+ mainPanel.addEventListener('pointerenter',collapseForChart,{passive:true});
+ mainPanel.addEventListener('pointermove',collapseForChart,{passive:true});
  eventRail.className='chart-event-rail';eventRail.setAttribute('aria-label','日期事件');levelRail.className='chart-level-rail';levelRail.setAttribute('aria-label','附近參考價位');mainPanel.append(eventRail,levelRail);
  const srSvg=document.createElementNS('http://www.w3.org/2000/svg','svg');srSvg.classList.add('chart-sr-shortlines');srSvg.setAttribute('aria-hidden','true');mainPanel.append(srSvg);
  let srKey='',srPinned='',srHover='';
@@ -64,7 +76,7 @@
  document.addEventListener('pointerdown',e=>{if(!levelRail.contains(e.target)){srPinned=srHover='';paintSr();}},true);
  const wired=new WeakSet();let eventKey='',lastTooltip=null;
  function placeTooltip(param,c,candles,chart,series){
-  const tip=byId('ohlcTooltip'),plot=byId('chartContainer');if(!tip||!param.point)return;
+  const tip=byId('ohlcTooltip'),plot=byId('chartContainer');if(!tip||!param.point||!infoVisible)return;
   const width=Math.max(0,plot.clientWidth-chart.priceScale('right').width()),height=Math.max(0,plot.clientHeight-32),tw=Math.min(tip.offsetWidth,width-12),th=tip.offsetHeight;
   if(width<40||height<th+12)return;
   const high=series.priceToCoordinate(c.high),low=series.priceToCoordinate(c.low),x=chart.timeScale().timeToCoordinate(c.time);
@@ -130,5 +142,5 @@
  new MutationObserver(schedule).observe(modal,{subtree:true,childList:true,attributes:true,attributeFilter:['style','class']});
  window.visualViewport?.addEventListener('resize',schedule);
  addEventListener('resize',schedule);document.addEventListener('fullscreenchange',schedule);
- window.AcademyChartViewport={refresh:schedule,placeTooltip};renderRatios();
+ window.AcademyChartViewport={resetRatio,isInfoVisible:()=>infoVisible,refresh:schedule,placeTooltip,collapseTools:()=>{keepDrawer();if(toolsPinned)return;tools.open=false;collapseArmed=false;summary.setAttribute('aria-expanded','false');}};document.addEventListener('click',e=>{if(e.target.closest('.draw-dd-menu button,#eraserBtn,#zoomRubberBtn,#intervalStatsBtn,#chartViewReset'))window.AcademyChartViewport.collapseTools();});renderRatios();
 })();

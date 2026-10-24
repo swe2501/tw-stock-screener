@@ -91,7 +91,7 @@
         <label class="lc-search">${icon.search}<input type="search" placeholder="搜尋文章，例如：零股、KD、停損" value="${esc(query)}" data-search aria-label="搜尋學習內容"></label>
         <div class="lc-seg" role="radiogroup" aria-label="篩選">${[['all', '全部'], ['unread', '未讀'], ['saved', '收藏']].map(([k, n]) => `<button type="button" role="radio" aria-checked="${filter === k}" data-filter="${k}">${n}</button>`).join('')}</div>
         <button type="button" class="lc-toc-home${view === '' ? ' is-active' : ''}" data-view="">${icon.home}學習首頁</button>
-        <nav class="lc-toc" aria-label="學習主題">${tracks.map(t => { const list = lessons.filter(l => l.track === t.id), shown = list.filter(pass), openT = view === t.id || (!!query && shown.length); return `<details class="lc-toc-group${view === t.id ? ' is-active' : ''}"${openT || view === t.id ? ' open' : ''}><summary><span>${esc(t.name)}</span><small>${count(list)}/${list.length}</small></summary><ol>${shown.map(l => `<li><button type="button" data-open="${esc(l.id)}" class="${done.has(l.id) ? 'is-done' : ''}${sget(K.open) === l.id ? ' is-current' : ''}"><i aria-hidden="true">${done.has(l.id) ? icon.check : ''}</i><span>${esc(l.title.replace(/[：:].*$/, ''))}</span></button></li>`).join('') || '<li class="lc-toc-empty">沒有符合的文章</li>'}</ol></details>`; }).join('')}</nav>
+        <nav class="lc-toc" aria-label="學習主題">${tracks.map(t => { const list = lessons.filter(l => l.track === t.id), shown = list.filter(pass); return `<details class="lc-toc-group${view === t.id ? ' is-active' : ''}"><summary><span>${esc(t.name)}</span><small>${count(list)}/${list.length}</small></summary><ol>${shown.map(l => `<li><button type="button" data-open="${esc(l.id)}" class="${done.has(l.id) ? 'is-done' : ''}${sget(K.open) === l.id ? ' is-current' : ''}"><i aria-hidden="true">${done.has(l.id) ? icon.check : ''}</i><span>${esc(l.title.replace(/[：:].*$/, ''))}</span></button></li>`).join('') || '<li class="lc-toc-empty">沒有符合的文章</li>'}</ol></details>`; }).join('')}</nav>
       </div>`;
 
     // ── 每週挑戰 ──
@@ -140,8 +140,6 @@
       </div></div>
       <div class="lc-sheet" hidden><div class="lc-sheet-back" data-sheet-close></div><div class="lc-sheet-panel" role="dialog" aria-modal="true" aria-label="學習目錄"><div class="lc-sheet-head"><b>學習目錄</b><button type="button" class="lc-icon-btn" data-sheet-close aria-label="關閉">${icon.close}</button></div>${tocHTML()}</div></div>`;
     main.querySelectorAll('.lc-calc').forEach(runCalc);
-    const open = sget(K.open);
-    if (open) { const d = main.querySelector(`.lc-content [data-lesson-id="${CSS.escape(open)}"]`); if (d) d.open = true; }
     clearInterval(timer); timer = setInterval(() => { const b = main.querySelector('[data-countdown]'); if (!b || !main.isConnected) { clearInterval(timer); return; } b.textContent = left(+b.dataset.countdown - Date.now()); }, 30000);
     const sheet = main.querySelector('.lc-sheet'), closeSheet = () => { if (sheet) sheet.hidden = true; document.documentElement.classList.remove('lc-sheet-open'); };
 

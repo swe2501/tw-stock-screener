@@ -45,7 +45,7 @@
    line.setMarkers(p.points.map((q,j)=>({time:q.time,position:'inBar',color,shape:'circle',size:.6,text:j===0?'候選 '+p.id:''})));
    const neck=chart.addLineSeries({...options,color:'#078776',lineWidth:1});layers.push(neck);neck.setData([{time:p.points[2].time,value:p.points[2].value},{time:p.points[4].time,value:p.points[2].value}]);
   }}catch(e){clear();throw e;}
-  if(status())status().textContent='已顯示 '+verified.length+' 個候選 W，待人工確認。橘／紫虛線：型態；綠虛線：頸線。';
+  if(status())status().textContent='';
   const b=document.getElementById('wPatternClearBtn');if(b)b.hidden=false;
   return verified.length;
  }

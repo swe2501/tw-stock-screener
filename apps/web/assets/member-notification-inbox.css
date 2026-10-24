@@ -49,3 +49,48 @@
 .member-page .mn-inbox-pagination button{font-size:12px!important;line-height:1.5;min-height:30px;padding:5px 11px;border-radius:9px;box-shadow:none!important;transform:none!important;background:var(--surface);border-color:var(--border)}
 .member-page .mn-inbox-pagination button:hover:not(:disabled){background:var(--surface2);border-color:color-mix(in srgb,var(--accent) 35%,var(--border));color:var(--accent)}
 .member-page .mn-inbox-pagination button:disabled{opacity:.4;cursor:default}.member-page .mn-inbox-pagination>span{font-size:12px;line-height:1.6}.member-page .mn-inbox-pagination{gap:10px;margin:16px 0}
+
+/* Observation list: stable columns, restrained actions and a permanently visible remove control. */
+#watchlistPanel .watch-panel-inner{width:min(1280px,96vw);max-width:100%;box-sizing:border-box}
+#watchlistPanel .watch-panel-hdr{flex:none;gap:12px;min-width:0;padding:16px 20px}
+#watchlistPanel .watch-panel-hdr h2{flex:1;min-width:0;line-height:1.5}
+#watchlistPanel .watch-member-detail{flex:none;margin:0;padding:8px 12px;border-radius:9px;box-shadow:none;font-size:12px}
+#watchlistPanel .watch-panel-close{display:grid;place-items:center;flex:0 0 34px;width:34px;height:34px;padding:0;border:1px solid var(--border);border-radius:9px;background:var(--surface);color:var(--text-muted);font-size:18px;cursor:pointer;box-shadow:none}
+#watchlistPanel .watch-panel-body{min-height:0;min-width:0;padding:12px;overflow:auto;scrollbar-width:thin}
+#watchlistPanel .watch-table{table-layout:fixed;min-width:1080px;font-variant-numeric:tabular-nums}
+#watchlistPanel .watch-table :is(th,td){padding:11px 8px;line-height:1.6}
+#watchlistPanel .watch-table td:not(.watch-note-cell){white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#watchlistPanel .watch-note-cell{min-width:0;max-width:none}
+#watchlistPanel .watch-note-editor{min-width:0;gap:8px;align-items:center}
+#watchlistPanel .watch-note-text{min-width:0;width:100%;font-size:12px;line-height:1.7;overflow-wrap:anywhere;word-break:normal;max-height:5.1em;overflow:hidden}
+#watchlistPanel .watch-note-text:has(textarea){max-height:none;cursor:default;white-space:normal}
+#watchlistPanel .watch-note-edit,#watchlistPanel .watch-note-save{flex:none;min-height:30px;padding:4px 10px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--accent);font:inherit;font-size:12px;font-weight:600;line-height:1.5;white-space:nowrap;box-shadow:none;cursor:pointer}
+#watchlistPanel .watch-note-form{display:grid;gap:8px;width:100%;min-width:0}
+#watchlistPanel .watch-note-form textarea{display:block;box-sizing:border-box;width:100%;min-width:0;min-height:64px;max-height:160px;resize:vertical;overflow:auto;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);padding:9px 10px;font:inherit;line-height:1.7;box-shadow:none}
+#watchlistPanel .watch-note-form textarea:focus{outline:2px solid color-mix(in srgb,var(--accent) 24%,transparent);outline-offset:1px;border-color:var(--accent)}
+#watchlistPanel .watch-note-actions{display:flex;align-items:center;justify-content:space-between;gap:8px}
+#watchlistPanel .watch-note-actions>span{font-size:10px;color:var(--text-muted);white-space:normal}
+#watchlistPanel .watch-note-save{background:color-mix(in srgb,var(--accent) 9%,var(--surface));border-color:color-mix(in srgb,var(--accent) 25%,var(--border))}
+#watchlistPanel .watch-remove-cell{position:sticky;right:0;width:42px;text-align:center;background:var(--surface);z-index:1;box-shadow:-1px 0 var(--border)}
+#watchlistPanel .watch-table thead .watch-remove-cell{background:var(--surface2);z-index:2}
+#watchlistPanel .watch-del-btn{display:grid;place-items:center;width:28px;height:28px;margin:auto;padding:0;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--text-muted);font-size:14px;box-shadow:none;opacity:1}
+#watchlistPanel :is(.watch-del-btn,.watch-panel-close):hover{color:var(--red);border-color:var(--red)}
+#watchlistPanel :is(.watch-note-edit,.watch-note-save):hover{border-color:var(--accent);text-decoration:none;transform:none}
+#watchlistPanel button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media(max-width:600px){#watchlistPanel .watch-panel-inner{width:100%;height:100dvh;max-height:100dvh;border-radius:0}#watchlistPanel .watch-panel-hdr{padding:12px;gap:8px}#watchlistPanel .watch-panel-hdr h2{font-size:15px}#watchlistPanel .watch-member-detail{padding:7px 9px;font-size:11px}#watchlistPanel .watch-table{min-width:860px}}
+
+@media(max-width:600px){#watchlistPanel .watch-table{min-width:1080px}#watchlistPanel .watch-table :is(th,td):is(.watch-col-industry,.watch-col-addprice,.watch-col-date){display:table-cell}#watchlistPanel .watch-table col:is(.watch-col-industry,.watch-col-addprice,.watch-col-date){display:table-column}}
+
+@media(max-width:600px){
+#watchlistPanel .watch-table{display:block;min-width:0;width:100%}
+#watchlistPanel .watch-table :is(thead,colgroup){display:none}
+#watchlistPanel .watch-table tbody{display:grid;gap:12px}
+#watchlistPanel .watch-table tr{position:relative;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px 14px;padding:14px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
+#watchlistPanel .watch-table td{display:block!important;min-width:0;padding:4px 0;border:0}
+#watchlistPanel .watch-table td::before{content:attr(data-label);display:block;font-size:10px;font-weight:500;color:var(--text-muted);margin-bottom:2px}
+#watchlistPanel .watch-table td:nth-child(2){padding-right:32px}
+#watchlistPanel .watch-table .watch-note-cell{grid-column:1/-1;margin-top:4px;padding-top:10px;border-top:1px solid var(--border)}
+#watchlistPanel .watch-table .watch-remove-cell{position:absolute;right:10px;top:10px;width:32px;box-shadow:none;padding:0}
+#watchlistPanel .watch-table .watch-remove-cell::before{display:none}
+#watchlistPanel .watch-table .watch-col-date{grid-column:1/-1}
+}
