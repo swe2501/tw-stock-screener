@@ -51,7 +51,9 @@
  }
  function choose(getContext){
   const ticket=++request,input=document.createElement('input');input.type='file';input.accept='.json,application/json';
-  input.onchange=async()=>{try{const file=input.files?.[0];if(!file)return;if(file.size>5*1024*1024)throw Error('檔案超過5MB。');const data=JSON.parse(await file.text());if(ticket!==request)throw Error('圖表已切換，請重新匯入。');apply(data,getContext());}catch(e){if(status())status().textContent=e.message||'匯入失敗。';}};
+  input.hidden=true;document.body.append(input);
+  input.oncancel=()=>input.remove();
+  input.onchange=async()=>{try{const file=input.files?.[0];if(!file)return;if(file.size>5*1024*1024)throw Error('檔案超過5MB。');const data=JSON.parse(await file.text());if(ticket!==request)throw Error('圖表已切換，請重新匯入。');apply(data,getContext());}catch(e){if(status())status().textContent=e.message||'匯入失敗。';}finally{input.remove();}};
   input.click();
  }
  window.WPatternOverlay={verify,apply,choose,clear};
