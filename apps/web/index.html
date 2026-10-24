@@ -13592,6 +13592,8 @@
       // 主力訊號／分點回測：僅授權帳號可見（資料端另有 RLS 保護；加人改此陣列＋DB allowed_viewers）
       const VIEWER_EMAILS = ['swe250165@gmail.com', 'qa5518556130@gmail.com', 'wenpin0617@gmail.com'];
       const _owner = loggedIn && VIEWER_EMAILS.includes(_authUser?.email);
+      // 封測存取與管理權「解耦」：管理者(白名單) 或 任何被設過等級的會員(member_tiers 非 free) 都能進封測
+      const _hasTier = loggedIn && typeof window._memberTier === 'string' && window._memberTier !== 'free';
       // 封閉測試全站門檻：非授權帳號看到封鎖罩（window.SITE_GATE_ON=false 時整個關閉開放全站）
       try {
         const _gate = document.getElementById('siteGate');
@@ -13600,7 +13602,7 @@
           if(loading)loading.hidden=true;
           if(login)login.hidden=false;
           _gate.removeAttribute('aria-busy');
-          if (window.SITE_GATE_ON === false || _owner) { _gate.style.display = 'none'; }
+          if (window.SITE_GATE_ON === false || _owner || _hasTier) { _gate.style.display = 'none'; }
           else {
             _gate.style.display = 'flex';
             const _gm = document.getElementById('siteGateMsg'), _gl = document.getElementById('siteGateLogout');
@@ -13631,7 +13633,7 @@
           var _sb=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'', _ak=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';
           fetch(_sb+'/rest/v1/member_tiers?select=tier',{headers:{apikey:_ak,Authorization:'Bearer '+_authToken}}).then(function(r){return r.ok?r.json():[];}).then(function(a){
             window._memberTier=(Array.isArray(a)&&a[0]&&a[0].tier)||'free';
-            if(window._memberTier==='vip') _applyAuthState();
+            if(window._memberTier && window._memberTier!=='free') _applyAuthState();   // 有等級→重套 gate：開封測、VIP 另解鎖主力
           }).catch(function(){ window._memberTier='free'; });
         } catch(_) { window._memberTier='free'; }
       }
