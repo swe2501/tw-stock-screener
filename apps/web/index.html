@@ -4401,25 +4401,42 @@
       el('admNote').innerHTML='<b>說明</b> 等級寫入該會員的帳號 metadata（tier）。<b>目前只是「設定與顯示」等級</b>；把各付費功能真正綁到等級是下一步（現在仍以 3 位管理員白名單＋RLS 控制）。詳見 docs/admin-backend-spec.md。';
     }
 
-    function renderAudit(){
-      var box=el('admBody'); if(!box)return; box.innerHTML='<div class="fc-empty">載入中…</div>';
-      post('admin_audit').then(function(j){
-        var log=(j&&j.log)||[];
-        if(!log.length){box.innerHTML='<div class="fc-empty">'+((j&&j.note)||'尚無管理操作紀錄')+'</div>';return;}
-        box.innerHTML='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="color:var(--text-muted);border-bottom:1px solid var(--border);text-align:left"><th style="padding:6px 8px">時間</th><th style="padding:6px 8px">管理員</th><th style="padding:6px 8px">操作</th><th style="padding:6px 8px">對象</th><th style="padding:6px 8px">內容</th></tr></thead><tbody>'
-          +log.map(function(x){return '<tr><td style="padding:6px 8px;white-space:nowrap">'+dt(x.ts)+'</td><td style="padding:6px 8px">'+esc(x.admin_email)+'</td><td style="padding:6px 8px">'+esc(x.action)+'</td><td style="padding:6px 8px;font-size:11px">'+esc(x.target_user)+'</td><td style="padding:6px 8px;font-size:12px">'+esc(JSON.stringify(x.detail))+'</td></tr>';}).join('')
-          +'</tbody></table></div>';
-      }).catch(function(){box.innerHTML='<div class="fc-empty">讀取失敗</div>';});
+    // 2026-10-24 用戶反映切分頁會頓：各分頁資料留在記憶體，切過去先立刻畫上次的資料，背景再悄悄更新（有資料時不再先清成「載入中」）
+    var _audit=null;
+    function paintAudit(){
+      var box=el('admBody'); if(!box||_tab!=='audit')return;
+      if(!_audit){box.innerHTML='<div class="fc-empty">載入中…</div>';return;}
+      if(_audit.error){box.innerHTML='<div class="fc-empty">讀取失敗</div>';return;}
+      var log=_audit.log||[];
+      if(!log.length){box.innerHTML='<div class="fc-empty">'+(_audit.note||'尚無管理操作紀錄')+'</div>';return;}
+      box.innerHTML='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="color:var(--text-muted);border-bottom:1px solid var(--border);text-align:left"><th style="padding:6px 8px">時間</th><th style="padding:6px 8px">管理員</th><th style="padding:6px 8px">操作</th><th style="padding:6px 8px">對象</th><th style="padding:6px 8px">內容</th></tr></thead><tbody>'
+        +log.map(function(x){return '<tr><td style="padding:6px 8px;white-space:nowrap">'+dt(x.ts)+'</td><td style="padding:6px 8px">'+esc(x.admin_email)+'</td><td style="padding:6px 8px">'+esc(x.action)+'</td><td style="padding:6px 8px;font-size:11px">'+esc(x.target_user)+'</td><td style="padding:6px 8px;font-size:12px">'+esc(JSON.stringify(x.detail))+'</td></tr>';}).join('')
+        +'</tbody></table></div>';
+    }
+    function loadAudit(){ return post('admin_audit').then(function(j){ _audit=j||{}; paintAudit(); }).catch(function(){ if(!_audit){ _audit={error:true}; paintAudit(); } }); }
+    function renderAudit(){ paintAudit(); loadAudit(); }
+
+    function loadMembers(){
+      if(_members&&!_members.error) renderMembers(); else { _members=null; renderMembers(); }
+      return post('admin_members').then(function(j){ _members=j; if(_tab==='members') renderMembers(); })
+        .catch(function(){ if(!_members||_members.error){ _members={error:'連線失敗'}; if(_tab==='members') renderMembers(); } });
     }
 
-    function loadMembers(){ _members=null; renderMembers(); post('admin_members').then(function(j){ _members=j; renderMembers(); }).catch(function(){ _members={error:'連線失敗'}; renderMembers(); }); }
-
     // 算法公式總開關：ON＝只有管理者看得到公式；OFF（預設）＝連管理者也看不到。公式文字存後端 DB，前端不內嵌。
-    var _algoState=null;
-    function renderAlgo(){
-      var box=el('admBody'); if(!box)return; box.innerHTML='<div class="fc-empty">載入中…</div>';
-      post('admin_algo_get').then(function(j){
-        _algoState=j||{}; var on=!!(j&&j.algo_visible);
+    // 2026-10-24 用戶反映開關要等 4 秒、回應後整頁重畫會先空白：改為點下立刻切換畫面（樂觀更新），後端在背景存，失敗才切回並提示
+    var _algoState=null, _algoSeq=0;
+    function algoToggleUI(on){
+      var b=el('algoToggle'), k=b&&b.firstChild, s=el('algoStateTxt'); if(!b)return;
+      b.style.background=on?'#148f77':'var(--border)'; b.setAttribute('aria-pressed',String(on));
+      if(k) k.style.marginLeft=on?'31px':'3px';
+      if(s){ s.style.color=on?'#148f77':'var(--text-muted)'; s.textContent=on?'顯示中（僅管理者）':'隱藏中（預設）'; }
+    }
+    function loadAlgo(){ return post('admin_algo_get').then(function(j){ var first=!_algoState; if(!_algoSeq){ _algoState=j||{}; if(first) paintAlgo(); else algoToggleUI(!!_algoState.algo_visible); } }).catch(function(){ if(!_algoState&&_tab==='algo') el('admBody').innerHTML='<div class="fc-empty">讀取失敗</div>'; }); }
+    function renderAlgo(){ if(_algoState) paintAlgo(); else el('admBody').innerHTML='<div class="fc-empty">載入中…</div>'; loadAlgo(); }
+    function paintAlgo(){
+      var box=el('admBody'); if(!box||_tab!=='algo'||!_algoState)return;
+      var j=_algoState, on=!!(j&&j.algo_visible);
+      {
         box.innerHTML='<div style="max-width:620px">'
           +'<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:14px">'
           +'<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">'
@@ -4432,14 +4449,17 @@
           +'<button id="algoSeed" type="button" style="margin-top:12px;padding:7px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);cursor:pointer;font-size:13px">重新寫入預設公式到資料庫</button>'
           +'</div>';
         el('algoToggle').onclick=function(){
-          var nv=!_algoState.algo_visible; el('algoToggle').disabled=true;
+          var prev=!!_algoState.algo_visible, nv=!prev, seq=++_algoSeq;
+          _algoState.algo_visible=nv; algoToggleUI(nv);                 // 立刻切換，不等後端
+          el('admNote').textContent='已'+(nv?'開啟（公式只有管理者看得到）':'關閉（連管理者也看不到）')+'，儲存中…';
           post('admin_set_algo_visible',{on:nv}).then(function(r){
-            el('algoToggle').disabled=false;
-            if(r&&r.ok){ _algoState.algo_visible=!!r.algo_visible; renderAlgo();
+            if(seq!==_algoSeq) return;                                  // 連點時只認最後一次
+            _algoSeq=0;
+            if(r&&r.ok){
               el('admNote').textContent='已'+(r.algo_visible?'開啟（公式只有管理者看得到）':'關閉（連管理者也看不到）')+'。';
               try{ window._algoFetched=false; window._loadAlgoFormulas&&window._loadAlgoFormulas(); }catch(_){}
-            } else el('admNote').textContent='切換失敗：'+((r&&r.error)||'未知錯誤');
-          }).catch(function(){ el('algoToggle').disabled=false; el('admNote').textContent='切換失敗（連線）'; });
+            } else { _algoState.algo_visible=prev; algoToggleUI(prev); el('admNote').textContent='切換失敗，已還原：'+((r&&r.error)||'未知錯誤'); }
+          }).catch(function(){ if(seq!==_algoSeq) return; _algoSeq=0; _algoState.algo_visible=prev; algoToggleUI(prev); el('admNote').textContent='切換失敗（連線），已還原'; });
         };
         el('algoSeed').onclick=function(){
           el('algoSeed').disabled=true; el('algoSeed').textContent='寫入中…';
@@ -4449,7 +4469,7 @@
           }).catch(function(){ el('algoSeed').disabled=false; el('algoSeed').textContent='重新寫入預設公式到資料庫'; el('admNote').textContent='寫入失敗（連線）'; });
         };
         el('admNote').innerHTML='<b>說明</b> 這個總開關只控制「公式文字是否顯示給管理者」，不影響任何分數計算。預設關閉。';
-      }).catch(function(){box.innerHTML='<div class="fc-empty">讀取失敗</div>';});
+      }
     }
 
     function switchTab(t){
@@ -4465,7 +4485,10 @@
       if(!window._isAdmin){ try{window._showView&&window._showView('home');}catch(e){} return; }
       el('admSub').textContent='管理員：'+(window._adminEmail||'')+'｜會員・使用・進帳・系統健康';
       el('admTabs').querySelectorAll('button').forEach(function(b){ if(!b.disabled) b.onclick=function(){switchTab(b.dataset.t);}; });
-      switchTab('members');
+      switchTab(_tab||'members');
+      // 背景預先載好其他分頁，切過去不用等
+      if(!_algoState) loadAlgo();
+      if(!_audit) loadAudit();
     };
     window._VIEWS=window._VIEWS||{}; window._VIEWS.admin={el:'adminView',show:'_adminShow'};
   })();
