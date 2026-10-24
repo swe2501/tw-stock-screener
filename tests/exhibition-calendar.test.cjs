@@ -1,5 +1,5 @@
 const assert=require('assert'),fs=require('fs');
-const {shiftMonths,phase,members}=require('../apps/web/assets/exhibition-calendar.js');
+const {shiftMonths,phase,members,eventKind}=require('../apps/web/assets/exhibition-calendar.js');
 const data=JSON.parse(fs.readFileSync('apps/web/assets/exhibitions.json','utf8'));
 const catalog=require('./fixtures/exhibition-classification.cjs');
 assert.equal(shiftMonths('2027-01-31',-2),'2026-11-30');
@@ -22,4 +22,6 @@ for(const e of data.events){
 }
 const itf=data.events.find(e=>e.id==='itf-2026');assert.equal(members(itf,catalog).filter(r=>r.evidence.length).length,4);
 const health=data.events.find(e=>e.id==='healthcare-2026');assert.equal(members(health,catalog).find(r=>r.code==='6645').evidence[0].kind,'technology');
+const expectedIcons={itf:'travel',healthcare:'medical',ces:'technology',tgs:'gaming',timtos:'machine',cycle:'bicycle',computex:'computer',bio:'biotech',automation:'automation',semicon:'chip',agri:'agriculture',fintech:'finance'};
+for(const e of data.events)assert.equal(eventKind(e).key,expectedIcons[e.id.split('-')[0]],'exhibition-specific icon '+e.id);assert.equal(eventKind({id:'new-event'}).key,'exhibition');
 console.log('PASS dates, leap/month-end reminder boundary, status lifecycle, sources and classification mappings');
