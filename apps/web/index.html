@@ -11217,27 +11217,33 @@
       if(/主力交往|買/.test(label||''))return 'entry';
       return null;
     }
-    // 2026-10-24 用戶要求：主力箭頭在一堆 K 棒中不明顯 → 脈動閃爍。
-    // 圖表套件的標記不能做 CSS 動畫，改為每 600ms 重設一次標記：主力箭頭在「放大＋深色」與「原大小＋淺色」間切換，
-    // 分點名稱一直顯示（不做顯示／隱藏，避免一半時間看不到名稱）。使用者系統設定「減少動態效果」時不閃。
-    const _PULSE_SOFT = { '#ef4444': '#fca5a5', '#16a34a': '#86efac' };
+    // 2026-10-24 用戶要求：主力箭頭在一堆 K 棒中不明顯 → 呼吸動畫（用戶嫌一格一格切換太生硬，要絲滑）。
+    // 圖表套件的標記不能做 CSS 動畫，改用 requestAnimationFrame 約每 33ms 重設一次標記：
+    // 大小與顏色深淺依餘弦曲線連續變化（1.6 秒一個循環、緩進緩出），淺時偏白、大時最深。
+    // 關閉 K 圖或換股票自動停止；分頁在背景時瀏覽器自動暫停；系統「減少動態效果」時不動。
+    const _PULSE_RGB = { '#ef4444': [239, 68, 68], '#16a34a': [22, 163, 74] };
     function _pulseBrokerMarkers(all, brokerSet) {
-      if (window._mkPulseTimer) { clearInterval(window._mkPulseTimer); window._mkPulseTimer = null; }
+      if (window._mkPulseRaf) { cancelAnimationFrame(window._mkPulseRaf); window._mkPulseRaf = null; }
       if (!brokerSet.size) return;
       try { if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return; } catch (_) {}
-      const series = candleSeriesRef;
-      let on = false;
-      window._mkPulseTimer = setInterval(() => {
+      const series = candleSeriesRef, PERIOD = 1600, FRAME_MS = 33, t0 = performance.now();
+      let last = 0;
+      const step = now => {
         const cm = document.getElementById('chartModal');
-        if (!series || series !== candleSeriesRef || !cm || getComputedStyle(cm).display === 'none') {
-          clearInterval(window._mkPulseTimer); window._mkPulseTimer = null; return;
-        }
-        on = !on;
-        const frame = all.map(m => brokerSet.has(m)
-          ? { ...m, size: on ? 2 : 1, color: on ? m.color : (_PULSE_SOFT[m.color] || m.color) }
-          : m);
+        if (!series || series !== candleSeriesRef || !cm || getComputedStyle(cm).display === 'none') { window._mkPulseRaf = null; return; }
+        window._mkPulseRaf = requestAnimationFrame(step);
+        if (now - last < FRAME_MS) return;
+        last = now;
+        const p = (1 - Math.cos((now - t0) / PERIOD * 2 * Math.PI)) / 2;   // 0→1→0 平滑
+        const size = 1 + 0.5 * p, fade = 0.5 * (1 - p);
+        const frame = all.map(m => {
+          if (!brokerSet.has(m)) return m;
+          const c = _PULSE_RGB[m.color];
+          return c ? { ...m, size, color: 'rgb(' + c.map(v => Math.round(v + (255 - v) * fade)).join(',') + ')' } : { ...m, size };
+        });
         try { series.setMarkers(frame); } catch (_) {}
-      }, 600);
+      };
+      window._mkPulseRaf = requestAnimationFrame(step);
     }
     function _refreshChartMarkers() {
       if (!candleSeriesRef) return;
@@ -11270,7 +11276,8 @@
       const hover={},unique=new Set(),directions=new Map(),dirNames=new Map();
       for(const e of visible){const key=[e.time,e.date,e.broker,e.action].join('|');if(unique.has(key))continue;unique.add(key);(hover[e.time]||(hover[e.time]=[])).push(e);const sell=e.action==='exit'||e.action==='reduce';const dk=e.time+'|'+sell;if(!directions.has(dk))directions.set(dk,{time:e.time,position:sell?'aboveBar':'belowBar',color:sell?'#16a34a':'#ef4444',shape:sell?'arrowDown':'arrowUp',text:'',size:1});if(!dirNames.has(dk))dirNames.set(dk,[]);dirNames.get(dk).push(e.broker);}
       // 2026-10-24 用戶要求：箭頭下方寫分點名稱（只有箭頭太不醒目）；同日多家「、」隔開、超過 3 家寫前 2 家＋等 N 家；完整名單仍可滑過 K 棒看小卡
-      for(const [dk,mk] of directions){const ns=[...new Set(dirNames.get(dk)||[])];mk.text=ns.length>3?ns.slice(0,2).join('、')+' 等'+ns.length+'家':ns.join('、');}
+      // 2026-10-24 晚 用戶改為拿掉箭頭旁的分點名稱（改以呼吸動畫突顯箭頭），名稱只在滑過 K 棒的小卡顯示
+      for(const mk of directions.values())mk.text='';
       window._chartBrokerHover=hover;
       window._brokerByTime=Object.fromEntries(Object.entries(hover).map(([time,es])=>[time,es.filter(e=>e.action==='entry'||e.action==='add').map(e=>e.broker)]));
       window._brokerSellByTime=Object.fromEntries(Object.entries(hover).map(([time,es])=>[time,es.filter(e=>e.action==='exit'||e.action==='reduce').map(e=>e.broker)]));
