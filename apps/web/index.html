@@ -19,7 +19,7 @@
   <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
   <script src="assets/site-theme.js"></script>
   <script src="assets/w-pattern-export.js?v=20261024-1"></script>
-  <script src="assets/w-pattern-overlay.js?v=20261024-1"></script>
+  <script src="assets/w-pattern-overlay.js?v=20261025-2"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -2225,7 +2225,7 @@
         <div id="funcMenu" onclick="_closeFuncMenu()">
           <button id="brokerSigBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="_showView('sig')"> <span class="btn-label">主力訊號</span></button>
           <button id="brokerRankBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="_showView('brank')"> <span class="btn-label">分點回測</span></button>
-          <button id="sellTrackBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="openSellTrack()"> <span class="btn-label">持股觀察站</span></button>
+          <button id="sellTrackBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="openSellTrack()"> <span class="btn-label">追蹤觀察站</span></button>
           <button id="watchlistBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="openWatchlist()"> <span class="btn-label">觀察清單</span></button>
           <button id="alertMgrBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="openAlertMgr()"> <span class="btn-label">我的警示</span></button>
           <button id="hotTopicsBtn" tabindex="-1" style="display:none" onmousedown="this.blur()" ontouchend="this.blur()" onclick="_showView('hottopics')"> <span class="btn-label">話題</span></button>
@@ -2357,12 +2357,13 @@
     <div class="mn-grp"><span class="mn-item">題材族群 <i>▾</i></span><div class="mn-menu">
       <a class="nav-owner" data-member-feature="hottopics" onclick="_showView('hottopics')"> 話題</a><a onclick="_showView('themes')">題材列表</a><a onclick="_showView('sectors')">產業地圖</a><a onclick="_showView('groupbook')">集團作帳</a></div></div>
     <div class="mn-grp"><span class="mn-item">市場觀察 <i>▾</i></span><div class="mn-menu">
-      <a class="nav-broker" style="display:none" onclick="_showView('sig')"> 主力訊號</a><a class="nav-broker" style="display:none" onclick="_showView('brank')"> 分點回測</a><a class="nav-owner" onclick="_showView('mingdeng')"> 神燈與冥燈</a><a onclick="_showView('greed')"> 貪婪指標</a><a onclick="_showView('inst')"> 三大法人個股買賣超</a><a onclick="_showView('fhedge')"> 外資空單溫度計</a><a onclick="_showView('breadth')"> 大盤多空廣度</a><a onclick="_showView('usty')"> 美債對標</a><a onclick="_showView('disposal')"> 處置股</a></div></div>
+      <a class="nav-broker" style="display:none" id="navBrokerGrp" onclick="_showView('sig')">不籌吃穿</a>
+      <a class="nav-owner" onclick="_showView('mingdeng')"> 神燈與冥燈</a><a onclick="_showView('greed')"> 貪婪指標</a><a onclick="_showView('inst')"> 三大法人個股買賣超</a><a onclick="_showView('fhedge')"> 外資空單溫度計</a><a onclick="_showView('breadth')"> 大盤多空廣度</a><a onclick="_showView('usty')"> 美債對標</a><a onclick="_showView('disposal')"> 處置股</a></div></div>
     <div class="mn-grp"><span class="mn-item">ETF 分析 <i>▾</i></span><div class="mn-menu">
       <a onclick="_showView('etfx')" style="font-weight:800;color:var(--brand-green)"> ETF 探索</a><a onclick="_showView('etf')">總覽 · 規模排行</a><a onclick="_showView('etfcons')">成分股</a><a onclick="_showView('etfrev')">股票反查 ETF</a><a onclick="_showView('etfdiv')">配息行事曆</a><a onclick="_showView('etfhold')">持有人結構</a><a onclick="_showView('etfsim')">ETF 相似度</a><a onclick="_showView('etfheavy')">重倉股排行</a><a onclick="_showView('etfprem')">折溢價</a><a onclick="_showView('etfflow')">資金流</a><a onclick="_showView('etfperf')">績效比較</a></div></div>
     <a class="mn-item" onclick="_showView('news')">每日新聞</a>
     <div class="mn-grp" id="navWatchGrp"><span class="mn-item">我的觀察 <i>▾</i></span><div class="mn-menu">
-      <a class="nav-auth" onclick="openWatchlist()"> 觀察清單</a><a class="nav-auth" onclick="openBacktest()"> 回測</a><a class="nav-owner" data-member-feature="selltrack" onclick="openSellTrack()"> 持股觀察站</a><a class="nav-auth" onclick="openAlertMgr()"> 我的警示</a></div></div>
+      <a class="nav-auth" onclick="openWatchlist()"> 觀察清單</a><a class="nav-auth" onclick="openBacktest()"> 回測</a><a class="nav-auth" onclick="openAlertMgr()"> 我的警示</a></div></div>
     <!-- 2026-10-24 用戶指示：後台管理拉出成獨立大項，放在「我的觀察」右邊，只有管理者看得到（.nav-admin 由 _applyAuthState 依 _owner 顯示） -->
     <a class="mn-item nav-admin" onclick="_showView('admin')" style="display:none">後台管理</a>
   </div></nav>
@@ -8193,7 +8194,7 @@
     // 通用視圖註冊：新增大項只要在此登記 {el:容器id, show:全域函式名}，並提供對應元素/函式即可
     window._VIEWS = window._VIEWS || {}; window._VIEWS.home={el:'homeView',show:'_hxShow'}; window._VIEWS.focus={el:'focusView',show:'_focusShow'}; window._VIEWS.overview={el:'overviewView',show:'_ovShow'};
     var NAVMAP={home:'首頁',overview:'今日焦點',focus:'今日焦點',todayindex:'今日焦點',screen:'選股',box:'選股',limitup:'選股',liq:'選股',sr:'選股',
-      themes:'題材族群',sectors:'題材族群',hottopics:'題材族群',groupbook:'題材族群',greed:'市場觀察',inst:'市場觀察',sig:'市場觀察',brank:'市場觀察',mingdeng:'市場觀察',fhedge:'市場觀察',disposal:'市場觀察',breadth:'市場觀察',usty:'市場觀察',news:'每日新聞',
+      themes:'題材族群',sectors:'題材族群',hottopics:'題材族群',groupbook:'題材族群',greed:'市場觀察',inst:'市場觀察',sig:'市場觀察',brank:'市場觀察',brokertrack:'市場觀察',mingdeng:'市場觀察',fhedge:'市場觀察',disposal:'市場觀察',breadth:'市場觀察',usty:'市場觀察',news:'每日新聞',
       etfx:'ETF',etf:'ETF',etfcons:'ETF',etfrev:'ETF',etfdiv:'ETF',etfhold:'ETF',etfsim:'ETF',etfheavy:'ETF',etfprem:'ETF',etfflow:'ETF',etfperf:'ETF',admin:'後台管理'};
     function _setNav(v){
       var label=NAVMAP[v]; var items=document.querySelectorAll('#mainNav .mn-item');
@@ -8208,6 +8209,7 @@
         try{ showToast('此功能為開通會員專屬，請先登入'); }catch(_){}
         v='home';
       }
+      if(v==='brokertrack'&&!window._isOwner&&!window.AcademyShareUnlock?.hasAccess('selltrack')){window.AcademyShareUnlock?.open();return;}
       var fw=document.querySelector('.form-wrap'), ra=el('resultsArea'), cfg=window._VIEWS[v];
       Object.keys(window._VIEWS).forEach(function(k){var e=el(window._VIEWS[k].el); if(e)e.style.display='none';});
       if(cfg){ var e=el(cfg.el); if(e)e.style.display='block'; if(fw)fw.style.display='none'; if(ra)ra.style.display='none'; if(typeof window[cfg.show]==='function')window[cfg.show](); }
@@ -9375,8 +9377,11 @@
   <!--  主力訊號 modal（僅擁有者可見） -->
   <!--  主力訊號（市場觀察大項 view，參照貪婪指標版型；僅擁有者可見資料）-->
   <div id="sigView" style="display:none">
-    <div class="tm-head"><h2> 主力訊號</h2><span class="sub">高勝率分點當日買超・賣出</span></div>
-    <div class="gd-bar2" style="align-items:center;gap:10px">
+    <div class="tm-head"><h2> 不籌吃穿</h2><span class="sub">高勝率分點當日買超・賣出</span></div><div class="broker-workspace-tabs" role="group" aria-label="不籌吃穿功能"><button type="button" aria-pressed="true" onclick="_showView('sig')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h3l3-7 4 14 3-7h3"/></svg><span>主力訊號</span></button><button type="button" aria-pressed="false" onclick="_showView('brank')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4m0 0h5M4 4a9 9 0 1 1-1 11"/></svg><span>分點回測</span></button><button type="button" aria-pressed="false" data-member-feature="selltrack" onclick="_showView('brokertrack')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18M6 4v6m12-6v6M5 14l4 3 5-5 5 2"/></svg><span>追蹤觀察站</span></button></div>
+    <div class="gd-bar2 sig-date-toolbar" style="align-items:center;gap:10px">
+      <details id="sigRangePicker" class="sig-range-picker"><summary aria-label="選擇訊號日期區間"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M8 3v4m8-4v4M4 10h16"/></svg><span>日期區間</span><span aria-hidden="true">⌄</span></summary>
+        <form class="sig-range-popover" onsubmit="event.preventDefault();_sigApplyRange()"><b>選擇日期區間</b><div class="sig-range-fields"><label>開始日期<input type="date" id="sigRangeFrom" required></label><span aria-hidden="true">→</span><label>結束日期<input type="date" id="sigRangeTo" required></label></div><small id="sigRangeAvailable"></small><p id="sigRangeError" role="status"></p><div class="sig-range-actions"><button type="button" onclick="_sigClearRange()">返回單日</button><button type="submit">套用區間</button></div></form>
+      </details>
       <button class="mo-navbtn" onclick="_sigNav(-1)">←</button>
       <span id="sigDateLabel" style="font-size:13px;color:var(--text);font-weight:700">—</span>
       <button class="mo-navbtn" onclick="_sigNav(1)">→</button>
@@ -9388,7 +9393,7 @@
 
   <!--  分點回測（市場觀察大項 view；僅擁有者可見資料）-->
   <div id="brankView" style="display:none">
-    <div class="tm-head"><h2> 分點回測</h2><span class="sub">分點勝率回測榜</span></div>
+    <div class="tm-head"><h2> 不籌吃穿</h2><span class="sub">分點勝率回測榜</span></div><div class="broker-workspace-tabs" role="group" aria-label="不籌吃穿功能"><button type="button" aria-pressed="false" onclick="_showView('sig')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h3l3-7 4 14 3-7h3"/></svg><span>主力訊號</span></button><button type="button" aria-pressed="true" onclick="_showView('brank')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4m0 0h5M4 4a9 9 0 1 1-1 11"/></svg><span>分點回測</span></button><button type="button" aria-pressed="false" data-member-feature="selltrack" onclick="_showView('brokertrack')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18M6 4v6m12-6v6M5 14l4 3 5-5 5 2"/></svg><span>追蹤觀察站</span></button></div>
     <div id="rankSuperBar" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"></div>
     <div id="rankGroupBar" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"></div>
     <div id="rankTabBar" style="display:flex;gap:4px;flex-wrap:wrap"></div>
@@ -9493,20 +9498,11 @@
     </div>
   </div>
 
-  <!--  持股觀察站 modal（原「出場追蹤」，僅授權帳號） -->
-  <div id="sellTrackModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9992;align-items:flex-start;justify-content:center;overflow-y:auto;padding:4vh 12px">
-    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px 22px;max-width:820px;width:100%">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px">
-        <div>
-          <h3 style="margin:0;font-size:1.05rem;color:var(--text-primary)"> 持股觀察站</h3>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">觀察你勾選的分點對該股的持倉變化（每日 19:00 更新）</div>
-        </div>
-        <button onclick="document.getElementById('sellTrackModal').style.display='none'"
-          style="background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer">&#10005;</button>
-      </div>
-      <div id="sellTrackBody" style="margin-top:10px;font-size:12.5px;color:var(--text)">載入中...</div>
-    </div>
+  <div id="brokertrackView" style="display:none">
+    <div class="tm-head"><h2> 不籌吃穿</h2><span class="sub">追蹤觀察站 · 分點持倉變化</span></div>
+<div class="broker-workspace-tabs" role="group" aria-label="不籌吃穿功能"><button type="button" aria-pressed="false" onclick="_showView('sig')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h3l3-7 4 14 3-7h3"/></svg><span>主力訊號</span></button><button type="button" aria-pressed="false" onclick="_showView('brank')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4m0 0h5M4 4a9 9 0 1 1-1 11"/></svg><span>分點回測</span></button><button type="button" aria-pressed="true" data-member-feature="selltrack" onclick="_showView('brokertrack')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18M6 4v6m12-6v6M5 14l4 3 5-5 5 2"/></svg><span>追蹤觀察站</span></button></div><div id="sellTrackBody" style="font-size:12.5px;color:var(--text)">載入中...</div>
   </div>
+  <div id="sellTrackModal" style="display:none"></div>
 
   <!-- 除權息臨近警示 modal -->
   <div id="divAlertModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;align-items:center;justify-content:center">
@@ -10214,11 +10210,13 @@
             <div class="toolbar-sep"></div>
             <button class="tool-btn" id="intervalStatsBtn" type="button" aria-pressed="false" onclick="AcademyChartTools.toggleInterval()">區間統計</button>
             <button class="tool-btn" id="zoomRubberBtn" onclick="toggleZoomMode()"> 框選放大</button>
-            <button class="tool-btn" onclick="resetZoom()" title="恢復全覽">↺ 還原</button>
-            <button class="tool-btn" id="wPatternExportBtn" type="button" onclick="_exportWPatternSnapshot()" title="下載目前可見日K圖與行情資料，供型態辨識測試">匯出分析資料</button>
+            <button class="tool-btn" id="chartViewReset" aria-label="還原圖表比例" onclick="resetZoom();AcademyChartViewport.resetRatio()" title="恢復全覽與圖表比例">↺ 還原</button>
+            <span class="chart-exchange-actions" role="group" aria-label="匯入與匯出">
+            <button class="tool-btn" id="wPatternExportBtn" type="button" onclick="_exportWPatternSnapshot()" title="下載目前可見日K圖與行情資料，供型態辨識測試">匯出</button>
+            <button class="tool-btn" id="wPatternImportBtn" type="button" onclick="_importWPatternResult()">匯入</button>
+            </span>
             <span id="wPatternExportStatus" role="status" aria-live="polite" style="font-size:12px;max-width:260px;white-space:normal"></span>
-            <button class="tool-btn" id="wPatternImportBtn" type="button" onclick="_importWPatternResult()">匯入分析結果</button>
-            <button class="tool-btn" id="wPatternClearBtn" type="button" onclick="WPatternOverlay.clear()" hidden>清除候選型態</button>
+            <button class="tool-btn" id="wPatternClearBtn" type="button" onclick="WPatternOverlay.clear()" title="候選 W 待人工確認；橘／紫虛線為型態，綠虛線為頸線。" hidden>清除候選型態</button>
             <span id="wPatternOverlayStatus" role="status" aria-live="polite" style="font-size:12px;max-width:300px;white-space:normal"></span>
           </div>
         </div>
@@ -10319,9 +10317,9 @@
           <span class="draw-dd" style="flex:0 0 auto">
             <button class="tool-btn" id="fibBtn" type="button" onclick="_toggleDrawDD('fib')" aria-haspopup="true" aria-expanded="false">波段分析 ▾</button>
             <div class="draw-dd-menu" id="ddFibMenu">
-              <button type="button" data-drawtool="wave" onclick="_pickDraw('wave')" title="連續點選波段高低點，按完成或 Enter 結束">波段折線</button>
-              <button type="button" data-drawtool="fibret" onclick="_pickDraw('fibret')" title="依序點選起點 A、終點 B，計算回撤比例">黃金分割線 · 兩點</button>
-              <button type="button" data-drawtool="fibext" onclick="_pickDraw('fibext')" title="依序點選 A、B、C，從 C 延伸 A 到 B 的價差">黃金擴展線 · 三點</button>
+              <button type="button" data-drawtool="amplitude" onclick="_pickDraw('amplitude')" title="依序點選 A、B、C，對照兩段漲跌幅與幅度比例"><svg class="wave-tool-icon" viewBox="0 0 20 18" aria-hidden="true"><path d="M2 15 7 5 12 13 18 3"/></svg>黃金幅度尺 · 三點</button>
+              <button type="button" data-drawtool="fibret" onclick="_pickDraw('fibret')" title="依序點選起點 A、終點 B，計算回撤比例"><svg class="wave-tool-icon" viewBox="0 0 20 18" aria-hidden="true"><path d="M2 4H18 M2 9H18 M2 14H18"/></svg>黃金分割線 · 兩點</button>
+              <button type="button" data-drawtool="fibext" onclick="_pickDraw('fibext')" title="依序點選 A、B、C，從 C 延伸 A 到 B 的價差"><svg class="wave-tool-icon" viewBox="0 0 24 18" aria-hidden="true"><path d="M2 4H15 M2 9H15 M2 14H15"/><text x="17" y="15">B</text></svg>黃金分割擴展線 · 三點</button>
             </div>
           </span>
           <button class="tool-btn chart-marker-control" data-layer="pl" type="button" onclick="_togglePriceLine()" aria-pressed="true" title="顯示或隱藏最新價位的水平參考線">現價線</button>
@@ -10339,7 +10337,7 @@
             <div id="ohlcTooltip"></div>
             <canvas id="fibCanvas"></canvas>
             <div id="chartOverlay"></div>
-            <div id="zoomHint">← 按住滑鼠左鍵拖曳選取範圍放大 →</div>
+            <div id="zoomHint">拖曳框選可連續放大 · 右鍵或 Esc 結束</div>
             <div id="maLabel">
               <div class="label-row">
                 <span class="ma-toggle" id="maAllToggle" onclick="toggleAllMA()" style="color:var(--text);border:1px solid var(--border);border-radius:3px;padding:0 4px;margin-right:4px;">均線</span>
@@ -11201,9 +11199,9 @@
     let _shapeDrag = null;    // 拖拉工具(矩形/圓形)：拖拉起點
     let _drawSetupDone = false;
     // 點擊放點工具所需點數（矩形/圓形改用拖拉、文字用內嵌輸入，不列此）
-    const _DRAW_NEED = { wave: Infinity, fibret: 2, fibext: 3, seg: 2, hline: 1, vline: 1, parallel: 3, arrowup: 1, arrowdown: 1 };
+    const _DRAW_NEED = { wave: Infinity, amplitude:3, fibret: 2, fibext: 3, seg: 2, hline: 1, vline: 1, parallel: 3, arrowup: 1, arrowdown: 1 };
     const _DRAG_TOOLS = ['rect', 'circle'];
-    const _CLICK_TOOLS = ['wave','fibret','fibext','seg', 'hline', 'vline', 'parallel', 'arrowup', 'arrowdown'];
+    const _CLICK_TOOLS = ['wave','amplitude','fibret','fibext','seg', 'hline', 'vline', 'parallel', 'arrowup', 'arrowdown'];
 
     // ── Open / close ──────────────────────────────────────
     function _isStock(code) {
@@ -11879,7 +11877,21 @@
     let _sigDates = [];       // 可用日期（新→舊）
     let _sigIdx = 0;          // 目前顯示第幾個日期
     let _sigTab = 'overlap';  // 目前分頁：overlap / lots / amount / stats
+    let _sigRange=null;
     let _sigSide = 'buy';     // 2026-10-23 買入訊號 / 賣出訊號
+    function _sigDateBounds(){const dates=(_sigRows||[]).map(x=>x.signal_date).filter(Boolean).sort();return {min:dates[0]||'',max:dates.at(-1)||''};}
+    function _sigSyncRange(){const bounds=_sigDateBounds(),from=document.getElementById('sigRangeFrom'),to=document.getElementById('sigRangeTo');for(const input of [from,to]){input.min=bounds.min;input.max=bounds.max;}
+      if(!document.getElementById('sigRangePicker').open){from.value=_sigRange?.from||bounds.min;to.value=_sigRange?.to||bounds.max;}
+      document.getElementById('sigRangeAvailable').textContent=bounds.min?'目前已載入：'+bounds.min+' ～ '+bounds.max:'目前沒有可查詢的訊號日期';
+      document.getElementById('sigRangePicker').classList.toggle('is-active',!!_sigRange);
+    }
+    function _sigApplyRange(){const from=document.getElementById('sigRangeFrom').value,to=document.getElementById('sigRangeTo').value,bounds=_sigDateBounds(),error=document.getElementById('sigRangeError');
+      if(!from||!to||from>to){error.textContent='請選擇起訖日期，開始日期不可晚於結束日期。';return;}
+      if(!bounds.min||from<bounds.min||to>bounds.max){error.textContent='請在目前已載入的日期範圍內選擇。';return;}
+      _sigRange={from,to};error.textContent='';document.getElementById('sigRangePicker').open=false;_renderSignals();
+    }
+    function _sigClearRange(){_sigRange=null;document.getElementById('sigRangePicker').open=false;document.getElementById('sigRangeError').textContent='';_renderSignals();}
+    document.addEventListener('pointerdown',e=>{const picker=document.getElementById('sigRangePicker');if(picker?.open&&!picker.contains(e.target))picker.open=false;});
     function _sigSetSide(s) {
       if (_sigSide === s) return;
       _sigSide = s;
@@ -11893,13 +11905,15 @@
 
     let _sigReturn = false;  // 從主力訊號開的 K 圖，關閉後要回到訊號視窗
 
-    function _sigOpenChart(code, label, brokerId) {
+    let _sigClickedDate=null;
+    function _sigOpenChart(code, label, brokerId, signalDate) {
+      _sigClickedDate=signalDate||null;
       // 2026-10-23 開 K 圖時自動勾選該分點，買（紅箭頭）賣（綠箭頭）紀錄都標出來
       window._chartFocusBroker = brokerId ? { code, id: String(brokerId), name:(_sigRows||[]).find(x=>String(x.broker_id)===String(brokerId))?.broker_name } : null;
       // 主力訊號已改為視圖（sigView），K 線圖為覆蓋層 chartModal，視圖仍在底下，
       // 不需（也不能）操作已移除的 brokerSigModal。舊程式在此丟 null 例外導致點擊無反應。
       _sigReturn = true;
-      const d = _sigDates[_sigIdx] || null;   // 當前顯示日期＝該分點買超日，標在 K 線上
+      const d = _sigClickedDate || _sigDates[_sigIdx] || null;   // 當前顯示日期＝該分點買超日，標在 K 線上
       openChart(code, code, '', 0, false, d, label || '主力交往 ↑');
     }
 
@@ -12121,29 +12135,25 @@
     }
 
     // 勝率＋分母：例「88.9%」下方小字「9筆」= 實際納入計算的已到期筆數
-    function _rkWinCell(pct, n) {
-      if (pct == null) return `<td style="padding:4px 8px;text-align:right">–</td>`;
-      const warn = (n != null && n < 10) ? '<span title="實際計算筆數不足10筆，勝率參考性低"></span> ' : '';
-      return `<td style="padding:4px 8px;text-align:right;color:#e6a23c">${warn}${pct}%`
-        + `<span style="color:var(--text-muted);font-size:10px"> /${n ?? '?'}筆</span></td>`;
-    }
+    function _brokerWinMetric(pct,n,total){const pending=total!=null&&n!=null?Math.max(0,total-n):0;return `<div class="broker-metric"><strong>${pct==null?'累積中':pct+'%'}</strong><small>${n==null?'樣本未提供':'已滿 '+n+' 筆'}</small>${pending?`<small class="broker-pending">${pending} 筆未滿</small>`:''}</div>`;}
+    function _rkWinCell(pct,n){return `<td class="broker-metric-cell">${_brokerWinMetric(pct,n)}</td>`;}
     function _rkTableSimple(rows, view) {
       if (!rows.length) return `<div style="padding:16px 0">此條件下沒有符合的分點</div>`;
       const isLots = (view || '').includes('lots');
       const tr = rows.map(x => {
         const unres = (x.events != null && x.n20 != null) ? x.events - x.n20 : 0;
         const unresTxt = unres > 0
-          ? `<span style="color:#e6a23c;font-size:10px" title="這些事件還沒滿20交易日，未納入20日勝率"> (${unres}未滿20日)</span>` : '';
+          ? `<span style="color:#e6a23c;font-size:11px" title="這些事件還沒滿20交易日，未納入20日勝率">${unres} 筆未滿20日</span>` : '';
         return `<tr onclick="_rkShowTrades('${view}','${x.broker_id}','${(x.broker_name||'').replace(/'/g,'')}',${isLots})"
             style="border-bottom:1px solid var(--border);cursor:pointer" title="點擊看該分點出手明細">
           <td style="padding:4px 8px;text-align:center">${x.rank}</td>
           <td style="padding:4px 8px;color:var(--accent)">${x.broker_name || x.broker_id} ›</td>
           ${_rkWinCell(x.win8, x.n8)}
           ${_rkWinCell(x.win20, x.n20)}
-          <td style="padding:4px 8px;text-align:right">${x.events ?? '–'}${unresTxt}</td>
+          <td class="broker-event-cell"><div class="broker-metric"><strong>${x.events ?? '–'}</strong>${unresTxt?`<small class="broker-pending">${unresTxt}</small>`:''}</div></td>
         </tr>`;
       }).join('');
-      return `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">
+      return `<div class="broker-table-scroll"><table class="broker-data-table broker-rank-table">
         <thead><tr style="color:var(--text-muted);border-bottom:1px solid var(--border)">
           <th style="padding:4px 8px">名次</th><th style="padding:4px 8px;text-align:left">分點</th>
           <th style="padding:4px 8px;text-align:right">8日勝率</th><th style="padding:4px 8px;text-align:right">20日勝率</th>
@@ -12159,8 +12169,8 @@
       const cell = (r, w, e, n20) => {
         const warn = (n20 != null && n20 < 10) ? ' ' : '';
         const unres = (e != null && n20 != null) ? e - n20 : 0;
-        const wtxt = w != null ? `${warn}${w}%<span style="color:var(--text-muted);font-size:10px"> /${n20 ?? '?'}筆</span>` : '–';
-        const etxt = `${e ?? '–'}` + (unres > 0 ? `<span style="color:#e6a23c;font-size:10px">(${unres}未滿)</span>` : '');
+        const wtxt=_brokerWinMetric(w,n20);
+        const etxt=`<div class="broker-metric"><strong>${e??'–'}</strong>${unres>0?`<small class="broker-pending">${unres} 筆未滿</small>`:''}</div>`;
         return `<td style="padding:5px 10px;text-align:left;color:#888">${r}</td>
           <td style="padding:5px 10px;text-align:left;color:#e6a23c;font-weight:600">${wtxt}</td>
           <td style="padding:5px 6px;text-align:left;color:var(--text-muted)">${etxt}</td>`;
@@ -12179,7 +12189,7 @@
           ${cell(x.rank_b, x.win20_b, x.events_b, x.n20_b)}
         </tr>`;
       }).join('');
-      return `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">
+      return `<div class="broker-table-scroll"><table class="broker-data-table broker-overlap-table">
         <thead>
           <tr style="color:var(--text-muted)">
             <th rowspan="2" style="padding:4px 10px;text-align:left;vertical-align:bottom;border-bottom:1px solid var(--border)">分點</th>
@@ -12477,7 +12487,7 @@
         large: '大單＝單日淨買超 ≥300 張 或 ≥3000 萬',
         small: '小單＝單日淨買超 50~300 張 或 500~3000 萬',
         year: '一整年資料，取該分點所有事件、以 20 日勝率排序前 20。'
-          + '勝率的「/N筆」＝實際已滿該天數、納入計算的筆數；該筆數 <10 時勝率標 （樣本少、僅參考，8日、20日各自判斷）；事件數旁「(x未滿)」＝還沒滿20交易日、尚未計入勝率的筆數',
+          + '勝率下方「已滿 N 筆」＝實際已滿該天數、納入計算的筆數；該筆數 <10 時樣本較少，僅供參考（8日、20日各自判斷）；事件數旁「(x未滿)」＝還沒滿20交易日、尚未計入勝率的筆數',
         d90:  '近 90 個交易日資料，全市場小單獨立依 20 日勝率取前 20（與年回測小單榜分開計算，成員可能不同）',
       };
       if (g === 'g1') return `【大單·年回測】${base.large}。${base.year}。`
@@ -12627,13 +12637,11 @@
       </details>`;
     }
 
-    async function openSellTrack() {
+    async function openSellTrack(){return window._showView('brokertrack');}
+    async function openBrokerTracking(){
       if(!window._isOwner&&!window.AcademyShareUnlock?.hasAccess('selltrack')){window.AcademyShareUnlock?.open();return;}
-      const modal = document.getElementById('sellTrackModal');
-      document.getElementById('sellTrackBody').innerHTML = '載入中...';
-      modal.style.display = 'flex';
-      await _ensureWatchSet(true);
-      _renderSellTrack();
+      document.getElementById('sellTrackBody').innerHTML='載入中...';
+      await _ensureWatchSet(true);_renderSellTrack();
     }
 
     function _renderSellTrack() {
@@ -12727,6 +12735,7 @@
     window._VIEWS = window._VIEWS || {};
     window._VIEWS.sig = { el: 'sigView', show: 'openBrokerSignals' };
     window._VIEWS.brank = { el: 'brankView', show: 'openBrokerRankings' };
+    window._VIEWS.brokertrack={el:'brokertrackView',show:'openBrokerTracking'};
     async function openBrokerSignals() {
       try { if (!window._namesFull && window._loadNames) window._loadNames(function(){ if (_sigRows) _renderSignals(); }); } catch (e) {}
       if (_sigRows) { _renderSignals(); return; }
@@ -12792,8 +12801,9 @@
     }
 
     function _sigNav(dir) {
+      if(_sigRange){const end=_sigRange.to;_sigRange=null;const index=_sigDates.findIndex(d=>d<=end);_sigIdx=Math.max(0,index);}
       const ni = _sigIdx + dir * -1;  // 日期陣列是新→舊，← 往舊、→ 往新
-      if (ni < 0 || ni >= _sigDates.length) return;
+      if (ni < 0 || ni >= _sigDates.length){_renderSignals();return;}
       _sigIdx = ni;
       _renderSignals();
     }
@@ -12839,6 +12849,7 @@
     function _sigStatus(x) { return `<td class="sig-status-cell"><span class="sig-status-badge ${x.side==='sell'?'is-sell':'is-buy'}"${x.side==='buy'?' title="依目前載入紀錄區分首筆與後續紀錄；不代表已確認實際持倉"':''}>${x.side==='sell'?(x.exit?'主力分手 ↓':'減碼'):(x.addition?'加碼 ↑':'主力交往 ↑')}</span></td>`; }
 
     function _renderSignals() {
+      _sigSyncRange();
       const el = document.getElementById('sigContent');
       if (!_sigRows || !_sigRows.length) {
         document.getElementById('sigDateLabel').textContent = '—';
@@ -12847,25 +12858,25 @@
       }
       const d = _sigDates[_sigIdx];
       document.getElementById('sigDateLabel').textContent =
-        `${d}${_sigIdx === 0 ? '（最新）' : ''}`;
-      const rows = _sigRows.filter(x => x.signal_date === d && x.side === _sigSide);
+        _sigRange?`${_sigRange.from} ～ ${_sigRange.to}`:`${d||'—'}${d&&_sigIdx === 0 ? '（最新）' : ''}`;
+      const rows = _sigRows.filter(x => (_sigRange?x.signal_date>=_sigRange.from&&x.signal_date<=_sigRange.to:x.signal_date===d) && x.side === _sigSide);
       const isSell = _sigSide === 'sell';
 
       //  雙榜交集：同一分點+同一股票同時出現在張數表與金額表
       const _amtMap = new Map(rows.filter(x => x.method === 'amount')
-        .map(x => [`${x.broker_id}|${x.code}`, x]));
+        .map(x => [`${x.signal_date}|${x.broker_id}|${x.code}`, x]));
       const overlap = rows.filter(x => x.method === 'lots'
-        && _amtMap.has(`${x.broker_id}|${x.code}`))
-        .map(x => ({ ...x, rank_amt: _amtMap.get(`${x.broker_id}|${x.code}`).rank }));
+        && _amtMap.has(`${x.signal_date}|${x.broker_id}|${x.code}`))
+        .map(x => ({ ...x, rank_amt: _amtMap.get(`${x.signal_date}|${x.broker_id}|${x.code}`).rank }));
 
       const section = (method, rsOverride) => {
         const rs = rsOverride || rows.filter(x => x.method === method);
-        if (!rs.length) return `<div style="padding:16px 0">當日無${isSell ? '賣出' : '買超'}訊號</div>`;
+        if (!rs.length) return `<div style="padding:16px 0">${_sigRange?'區間內':'當日'}無${isSell ? '賣出' : '買超'}訊號</div>`;
         if (isSell) return _sigSellTable(rs);
         const tr = rs.map(x => { const _nm=(window._names&&window._names[x.code])||''; return `
-          <tr onclick="_sigOpenChart('${x.code}','${x.broker_name.replace(/'/g,'')} ${x.addition?'加碼':'主力交往'} ↑','${x.broker_id}')"
+          <tr onclick="_sigOpenChart('${x.code}','${x.broker_name.replace(/'/g,'')} ${x.addition?'加碼':'主力交往'} ↑','${x.broker_id}','${x.signal_date}')"
               style="cursor:pointer;border-bottom:1px solid var(--border)">
-            <td style="padding:4px 8px;text-align:center">${x.rank_amt != null ? `${x.rank}／${x.rank_amt}` : x.rank}</td>
+            ${_sigRange?`<td class="sig-row-date">${x.signal_date}</td>`:''}<td style="padding:4px 8px;text-align:center">${x.rank_amt != null ? `${x.rank}／${x.rank_amt}` : x.rank}</td>
             <td style="padding:4px 8px">${x.broker_name}</td>
             <td style="padding:4px 8px"><b style="color:var(--accent)">${x.code}</b> ${x.name||_nm||''}</td>
             ${_sigStatus(x)}
@@ -12878,7 +12889,7 @@
         return `
           <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px">
             <thead><tr style="color:var(--text-muted);border-bottom:1px solid var(--border)">
-              <th style="padding:4px 8px">榜上排名</th><th style="padding:4px 8px;text-align:left">分點</th>
+              ${_sigRange?'<th class="sig-row-date">日期</th>':''}<th style="padding:4px 8px">榜上排名</th><th style="padding:4px 8px;text-align:left">分點</th>
               <th style="padding:4px 8px;text-align:left">股票</th><th class="sig-status-cell" scope="col">狀態</th><th style="padding:4px 8px;text-align:right">買超(張)</th>
               <th style="padding:4px 8px;text-align:right">金額(萬)</th><th style="padding:4px 8px;text-align:right">買進均價</th>
               <th style="padding:4px 8px;text-align:right">分點20日勝率</th>
@@ -12900,7 +12911,10 @@
           border:1px solid ${_sigSide === s ? (s === 'sell' ? '#16a34a' : '#ef4444') : 'var(--border)'};
           background:${_sigSide === s ? (s === 'sell' ? 'rgba(22,163,74,.12)' : 'rgba(239,68,68,.10)') : 'transparent'};
           color:${s === 'sell' ? '#16a34a' : '#ef4444'}">${label}</button>`;
+      const displayed=_sigTab==='overlap'?overlap:_sigTab==='lots'?lotsRows:amtRows;
+      const summary=_sigTab==='stats'?'':`<div class="broker-summary" aria-label="目前結果摘要"><div><span>訊號紀錄</span><strong>${displayed.length}<small> 筆</small></strong></div><div><span>涵蓋分點</span><strong>${new Set(displayed.map(x=>x.broker_id)).size}<small> 家</small></strong></div><div><span>觀察股票</span><strong>${new Set(displayed.map(x=>x.code)).size}<small> 檔</small></strong></div></div>`;
       el.innerHTML = `
+        ${_sigRange?'<p class="sig-range-caption">依各筆訊號日期列出，未合併不同日期的雙榜紀錄。'+(_sigTab==='stats'?'實測勝率為整體統計，不隨此區間變動。':'')+'</p>':''}
         <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
           ${sideBtn('buy', '主力交往 ↑')}${sideBtn('sell', '主力分手 ↓')}
           ${isSell ? `<span style="font-size:11px;color:var(--text-muted)">只列「賣掉之前買的」：榜上分點出現「主力交往 ↑」紀錄後，單日淨賣超 ≥300 張／≥3000 萬，或賣掉該輪峰值持倉 20% 以上；依分點淨額估算，剩餘部位不高於該輪峰值的 10% 時標為「主力分手 ↓」，其餘符合門檻者標為「減碼」（不代表已確認實際持倉歸零）。K 圖依分點勾選呈現交往、加碼、減碼與分手紀錄。報酬＝賣出均價對比這一輪買入訊號的加權買進均價（未含手續費與交易稅）。</span>` : ''}
@@ -12911,6 +12925,7 @@
           ${tabBtn('amount', ' 金額制', amtRows.length)}
           ${tabBtn('stats', ' 實測勝率', _sigStats.length)}
         </div>
+        ${summary}
         <div style="border:1px solid var(--border);border-top:none;padding:4px 8px 8px">
           ${_sigTab === 'overlap' ? section(null, overlap)
             : _sigTab === 'lots' ? section('lots')
@@ -12923,8 +12938,8 @@
       const tr = rs.map(x => { const _nm = (window._names && window._names[x.code]) || ''; const nm = (x.name || _nm || '').replace(/'/g, '');
         const rc = x.ret == null ? 'var(--text-muted)' : x.ret > 0 ? '#ef4444' : x.ret < 0 ? '#16a34a' : 'var(--text-muted)';
         return `
-          <tr onclick="_sigOpenChart('${x.code}','${x.broker_name.replace(/'/g,'')} ${x.exit ? '主力分手 ↓' : '減碼'}','${x.broker_id}')" style="cursor:pointer;border-bottom:1px solid var(--border)">
-            <td style="padding:4px 8px;text-align:center">${x.rank_amt != null ? `${x.rank}／${x.rank_amt}` : (x.rank ?? '–')}</td>
+          <tr onclick="_sigOpenChart('${x.code}','${x.broker_name.replace(/'/g,'')} ${x.exit ? '主力分手 ↓' : '減碼'}','${x.broker_id}','${x.signal_date}')" style="cursor:pointer;border-bottom:1px solid var(--border)">
+            ${_sigRange?`<td class="sig-row-date">${x.signal_date}</td>`:''}<td style="padding:4px 8px;text-align:center">${x.rank_amt != null ? `${x.rank}／${x.rank_amt}` : (x.rank ?? '–')}</td>
             <td style="padding:4px 8px">${x.broker_name}</td>
             <td style="padding:4px 8px"><b style="color:var(--accent)">${x.code}</b> ${x.name || _nm || ''}</td>
             ${_sigStatus({...x,side:'sell'})}
@@ -12938,7 +12953,7 @@
       return `
           <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px">
             <thead><tr style="color:var(--text-muted);border-bottom:1px solid var(--border)">
-              <th style="padding:4px 8px">榜上排名</th><th style="padding:4px 8px;text-align:left">分點</th>
+              ${_sigRange?'<th class="sig-row-date">日期</th>':''}<th style="padding:4px 8px">榜上排名</th><th style="padding:4px 8px;text-align:left">分點</th>
               <th style="padding:4px 8px;text-align:left">股票</th><th class="sig-status-cell" scope="col">狀態</th>
               <th style="padding:4px 8px;text-align:right">賣超(張)</th><th style="padding:4px 8px;text-align:right">金額(萬)</th>
               <th style="padding:4px 8px;text-align:right">賣出均價</th><th style="padding:4px 8px;text-align:right" title="這一輪買入訊號的加權買進均價">買進均價</th>
@@ -12952,11 +12967,7 @@
         .sort((a, b) => (b.win20_pct ?? -1) - (a.win20_pct ?? -1));
       if (!rows.length) return `<h4 style="margin:12px 0 4px;color:var(--text)">${title}</h4>
         <div style="padding:8px 0;color:var(--text-muted);font-size:12px">尚無資料（純實測從 7/17 起累積）</div>`;
-      const wcell = (pct, n, tot) => {
-        const unfilled = (tot != null && n != null) ? tot - n : 0;
-        if (pct == null) return `<td style="padding:4px 8px;text-align:right;color:var(--text-muted);font-size:11px">累積中${unfilled > 0 ? ` (${unfilled}未滿)` : ''}</td>`;
-        return `<td style="padding:4px 8px;text-align:right;color:#e6a23c">${pct}%<span style="color:var(--text-muted);font-size:10px"> /${n}筆</span>${unfilled > 0 ? `<span style="color:var(--text-muted);font-size:10px"> +${unfilled}未滿</span>` : ''}</td>`;
-      };
+      const wcell=(pct,n,tot)=>`<td class="broker-metric-cell">${_brokerWinMetric(pct,n,tot)}</td>`;
       const tr = rows.map(x => `
         <tr style="border-bottom:1px solid var(--border)">
           <td style="padding:4px 8px">${x.broker_name || x.broker_id}</td>
@@ -12966,7 +12977,7 @@
           ${wcell(x.win20_pct, x.n20, x.signals_total)}
         </tr>`).join('');
       return `<h4 style="margin:12px 0 4px;color:var(--text)">${title}</h4>
-        <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px">
+        <div class="broker-table-scroll"><table class="broker-data-table broker-stats-table">
           <thead><tr style="color:var(--text-muted);border-bottom:1px solid var(--border)">
             <th style="padding:4px 8px;text-align:left">分點</th><th style="padding:4px 8px">榜別</th>
             <th style="padding:4px 8px;text-align:right">總訊號</th>
@@ -12979,7 +12990,7 @@
       return `
         <div style="font-size:11px;color:var(--text-muted);padding:6px 0 4px">
            純實測：自 2026-07-17 起，每天記錄大單前20／小單前20分點的實際上榜買超，
-          追蹤買進均價 vs 8／20 交易日後收盤價。「/N筆」=已滿天數納入計算的筆數，「未滿」=還沒到期、尚未計勝率。
+          追蹤買進均價 vs 8／20 交易日後收盤價。「已滿 N 筆」=已滿天數納入計算的筆數，「未滿」=還沒到期、尚未計勝率。
           大單=≥300張／≥3000萬，小單=50~300張／500~3000萬。</div>
         ${_statsPoolTable('large', ' 大單前20分點')}
         ${_statsPoolTable('small', ' 小單前20分點')}`;
@@ -14241,6 +14252,7 @@
       if (_drawCode) { if (_drawShapes.length) st[_drawCode] = { t: Date.now(), s: _drawShapes }; else delete st[_drawCode]; }
       const ks = Object.keys(st); if (ks.length > 150) ks.sort((a, b) => (st[a].t || 0) - (st[b].t || 0)).slice(0, ks.length - 150).forEach(k => delete st[k]);
       try { localStorage.setItem('kchart_draw_v1', JSON.stringify(st)); } catch (_) {}
+      if(chartInstance&&candleSeriesRef){window.AcademyChartTools?.syncRulerScale();_redrawSoon();}
     }
     function _drawSwap(code) {
       if (!code || code === _drawCode) return;
@@ -14712,7 +14724,7 @@
       const _candleMap = {};
       candles.forEach(c => { _candleMap[c.time] = c; });
       chartInstance.subscribeCrosshairMove(param => {
-        if (!param || !param.time || !param.seriesData) {
+        if (window.AcademyChartViewport?.isInfoVisible()===false || !param || !param.time || !param.seriesData) {
           _ohlcTip.style.display = 'none';
           return;
         }
@@ -14764,7 +14776,6 @@
       // logical index 0 equals the main chart's bar 0 — plain logical-range sync works.
       const _maxBars  = candles.length;
       const _minBars  = 20;
-      const _rightMax = candles.length - 1 + 5;
       let _lockingZoom = false;
       const _allCharts = [chartInstance, volInstance, macdInstance, rsiInstance].filter(Boolean);
       window._chartSyncGroup = _allCharts;   // 籌碼面板建立後會 push 進來一起同步縮放
@@ -14775,7 +14786,6 @@
           let newFrom = range.from, newTo = range.to, clamp = false;
           if (span > _maxBars + 5) { newFrom = -2; newTo = _maxBars + 2; clamp = true; }
           else if (span < _minBars) { newTo = range.to; newFrom = range.to - _minBars; clamp = true; }
-          else if (range.to > _rightMax + 0.5) { newTo = _rightMax; newFrom = _rightMax - span; clamp = true; }
           _lockingZoom = true;
           _allCharts.forEach(cc => {
             if (clamp || cc !== c)
@@ -14805,7 +14815,7 @@
         } },
         rightPriceScale: { borderColor: t.grid, minimumWidth: 65, autoScale: true },
         timeScale: { borderColor: t.grid, timeVisible: true, visible: showTime,
-                     secondsVisible: false, rightOffset: 5 },
+                     secondsVisible: false, rightOffset: 5, fixRightEdge: true },
         handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true },
         handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: true },
       };
@@ -14880,9 +14890,9 @@
         const liveBars = candleSeriesRef.data();
         const source = new Map((window._vpCandles || []).map(c => [c.time, c]));
         const candles = liveBars.filter(c => c.open != null).map(c => ({...source.get(c.time), ...c}));
-        const result = window.WPatternExport.capture({chart:chartInstance, series:candleSeriesRef, candles,
+        status.textContent = "";
+        window.WPatternExport.capture({chart:chartInstance, series:candleSeriesRef, candles,
           context:window.AcademyResearchChartContext ? window.AcademyResearchChartContext() : {}});
-        status.textContent = `已下載 ${result.bars} 根K棒與圖表；尚未送出AI分析。`;
       } catch (error) {
         status.textContent = error.message || '匯出失敗，請重新載入圖表後再試。';
       } finally { button.disabled = false; }
@@ -15694,12 +15704,21 @@
       _drawShapesOnCtx(ctx);
     }
 
-    // 圖表範圍變動時重畫：變動事件當下價格軸還沒重算（要等圖表自己重繪），所以立刻畫一次、下一個畫格與稍後再各補畫一次 2026-10-12
-    let _rsT1 = 0, _rsT2 = 0;
-    function _redrawSoon() {
-      redrawCanvas();
-      try { requestAnimationFrame(redrawCanvas); } catch (_) {}
-      clearTimeout(_rsT1); clearTimeout(_rsT2); _rsT1 = setTimeout(redrawCanvas, 50); _rsT2 = setTimeout(redrawCanvas, 260);
+    // Follow the chart's settled time/price projection, including price-axis-only changes.
+    let _drawingFrame=0,_drawingProjection='',_drawingDirty=false;
+    function _watchDrawingProjection(){
+      _drawingFrame=0;
+      if(!chartInstance||!candleSeriesRef||!document.getElementById('chartModal')?.classList.contains('open'))return;
+      const active=_drawShapes.length||_drawPending.length||trendLines.length||fibLevels.length||_boxRectShow;
+      if(!active){if(_drawingDirty){_drawingDirty=false;resizeFibCanvas();redrawCanvas();}return;}
+      const ts=chartInstance.timeScale(),range=ts.getVisibleLogicalRange(),bars=window._vpCandles||[],probe=bars[Math.floor(bars.length/2)]||bars[0];
+      const host=document.getElementById('chartContainer');
+      const key=JSON.stringify([host.clientWidth,host.clientHeight,range,probe&&candleSeriesRef.priceToCoordinate(probe.low),probe&&candleSeriesRef.priceToCoordinate(probe.high),ts.logicalToCoordinate(0),ts.logicalToCoordinate(1)]);
+      if(_drawingDirty||key!==_drawingProjection){_drawingDirty=false;_drawingProjection=key;resizeFibCanvas();redrawCanvas();window.AcademyChartTools?.projectionChanged();}
+      _drawingFrame=requestAnimationFrame(_watchDrawingProjection);
+    }
+    function _redrawSoon(){
+      _drawingDirty=true;if(!_drawingFrame)_drawingFrame=requestAnimationFrame(_watchDrawingProjection);
     }
 
     function _drawBoxRectOnCtx(ctx) {
@@ -15849,7 +15868,7 @@
       }
 
       overlay.addEventListener('mousedown', e => {
-        if (!candleSeriesRef) return;
+        if (!candleSeriesRef || e.button!==0) return;
         if (zoomMode) {
           zoomDragStart = { x: getX(e.clientX) };
         } else if (fibMode) {
@@ -15888,18 +15907,12 @@
           const x1 = zoomDragStart.x;
           zoomDragStart = null;
           if (Math.abs(x2 - x1) > 5 && chartInstance) {
-            const range = chartInstance.timeScale().getVisibleLogicalRange();
-            if (range) {
-              const W = overlay.clientWidth;
-              const span = range.to - range.from;
-              const newFrom = range.from + span * Math.min(x1, x2) / W;
-              const newTo   = range.from + span * Math.max(x1, x2) / W;
-              chartInstance.timeScale().setVisibleLogicalRange({ from: newFrom, to: newTo });
-            }
+            const ts=chartInstance.timeScale(),width=ts.width(),clamp=x=>Math.max(0,Math.min(width,x));
+            const from=ts.coordinateToLogical(clamp(Math.min(x1,x2))),to=ts.coordinateToLogical(clamp(Math.max(x1,x2)));
+            if(from!=null&&to!=null&&to-from>1)ts.setVisibleLogicalRange({from,to});
           }
           redrawCanvas();
-          // 成功框選後自動退出框選模式
-          _deactivateAllModes();
+          _redrawSoon();
         } else if (fibMode) {
           finishFib(getY(e.clientY));
         } else if (trendLineMode && trendStart) {
@@ -15955,17 +15968,11 @@
           const x1 = zoomDragStart.x;
           zoomDragStart = null;
           if (Math.abs(x2 - x1) > 5 && chartInstance) {
-            const range = chartInstance.timeScale().getVisibleLogicalRange();
-            if (range) {
-              const W = overlay.clientWidth;
-              const span = range.to - range.from;
-              const newFrom = range.from + span * Math.min(x1, x2) / W;
-              const newTo   = range.from + span * Math.max(x1, x2) / W;
-              chartInstance.timeScale().setVisibleLogicalRange({ from: newFrom, to: newTo });
-            }
+            const ts=chartInstance.timeScale(),width=ts.width(),clamp=x=>Math.max(0,Math.min(width,x));
+            const from=ts.coordinateToLogical(clamp(Math.min(x1,x2))),to=ts.coordinateToLogical(clamp(Math.max(x1,x2)));
+            if(from!=null&&to!=null&&to-from>1)ts.setVisibleLogicalRange({from,to});
           }
-          redrawCanvas();
-          _deactivateAllModes();
+          _redrawSoon();
         } else if (fibMode) {
           finishFib(getY(e.changedTouches[0].clientY));
         } else if (trendLineMode && trendStart) {
@@ -16142,6 +16149,7 @@
       const overlay = document.getElementById('chartOverlay'); if (!overlay) return;
       _drawSetupDone = true;
       const gx = cx => cx - overlay.getBoundingClientRect().left, gy = cy => cy - overlay.getBoundingClientRect().top;
+      let amplitudeDown=null;overlay.addEventListener('mousedown',e=>{amplitudeDown=e.button===0?{x:e.clientX,y:e.clientY}:null;},true);
       overlay.addEventListener('mousedown', e => {
         if (_drawTool === 'eraser' && e.button === 0 && chartInstance && candleSeriesRef) { _erasing = true; _eraseAt(gx(e.clientX), gy(e.clientY)); return; }   // 按住左鍵開始連續清除
         if (!_drawTool || !chartInstance || !candleSeriesRef || _DRAG_TOOLS.indexOf(_drawTool) < 0) return;
@@ -16169,6 +16177,7 @@
         redrawCanvas();
       });
       overlay.addEventListener('click', e => {
+        if(_drawTool==='amplitude'&&amplitudeDown&&Math.hypot(e.clientX-amplitudeDown.x,e.clientY-amplitudeDown.y)>4)return;
         if (!_drawTool || !chartInstance || !candleSeriesRef || _DRAG_TOOLS.indexOf(_drawTool) >= 0) return;
         const px = gx(e.clientX), py = gy(e.clientY);
         if (_drawTool === 'eraser') return;   // 已在 mousedown／拖曳時清除
@@ -16176,12 +16185,12 @@
         if (_drawTool === 'text') { if (_noT(c)) return; _showTextInput(px, py, c.time, c.price, c.li); return; }
         if (_drawTool !== 'hline' && _noT(c)) return;
         _drawPending.push({ time: c.time, price: c.price, li: c.li });
-        if (_drawPending.length >= (_DRAW_NEED[_drawTool] || 1)) { _drawShapes.push({ type: _drawTool, pts: _drawPending.map(q => ({ time: q.time, price: q.price, li: q.li })) }); _drawPending = []; }
+        if (_drawPending.length >= (_DRAW_NEED[_drawTool] || 1)) { _drawShapes.push({ type: _drawTool, pts: _drawPending.map(q => ({ time: q.time, price: q.price, li: q.li })) }); _drawPending = []; _drawStoreSave(); if(_drawTool==='amplitude')window._cancelChartTool(); }
         redrawCanvas();
       });
       window.addEventListener('mouseup', () => { _erasing = false; });
       // 右鍵＝取消目前選的畫線工具／圖形（進行中未完成的點一併清掉）2026-10-12
-      overlay.addEventListener('contextmenu', e => { if (!_drawTool) return; e.preventDefault(); window._setDrawTool(_drawTool); });
+      overlay.addEventListener('contextmenu', e => { if(zoomMode){e.preventDefault();_cancelChartTool();return;} if (!_drawTool) return; e.preventDefault(); window._setDrawTool(_drawTool); });
       // 圖表被縮放／拖曳（含拖價格軸改上下比例，這個沒有事件可訂閱）時讓畫好的線跟著重畫
       const _host = document.getElementById('chartContainer');
       if (_host) {
@@ -16230,7 +16239,7 @@
         if (_drawTool === 'text') { if (_noT(c)) return; _showTextInput(px, py, c.time, c.price, c.li); e.preventDefault(); return; }
         if (_drawTool !== 'hline' && _noT(c)) return;
         _drawPending.push({ time: c.time, price: c.price, li: c.li });
-        if (_drawPending.length >= (_DRAW_NEED[_drawTool] || 1)) { _drawShapes.push({ type: _drawTool, pts: _drawPending.map(q => ({ time: q.time, price: q.price, li: q.li })) }); _drawPending = []; }
+        if (_drawPending.length >= (_DRAW_NEED[_drawTool] || 1)) { _drawShapes.push({ type: _drawTool, pts: _drawPending.map(q => ({ time: q.time, price: q.price, li: q.li })) }); _drawPending = []; _drawStoreSave(); if(_drawTool==='amplitude')window._cancelChartTool(); }
         redrawCanvas(); e.preventDefault();
       }, { passive: false });
     }
@@ -16238,7 +16247,7 @@
       const lineTools = ['seg', 'hline', 'vline', 'parallel', 'arrowup', 'arrowdown'], shapeTools = ['rect', 'circle', 'text'];
       const lb = document.getElementById('ddLineBtn'), sb = document.getElementById('ddShapeBtn');
       if (lb) lb.classList.toggle('dd-active', lineTools.indexOf(_drawTool) >= 0);
-      if (sb) sb.classList.toggle('dd-active', shapeTools.indexOf(_drawTool) >= 0);document.getElementById('fibBtn')?.classList.toggle('dd-active',['wave','fibret','fibext'].includes(_drawTool));
+      if (sb) sb.classList.toggle('dd-active', shapeTools.indexOf(_drawTool) >= 0);document.getElementById('fibBtn')?.classList.toggle('dd-active',['wave','amplitude','fibret','fibext'].includes(_drawTool));
     }
     window._setDrawTool = function (tool) {
       const prev = _drawTool;
@@ -16254,7 +16263,7 @@
         const eraserCur = 'url("data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#425a6c" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(0 -1) rotate(-45 12 12)"><rect x="4.2" y="8.6" width="15.6" height="6.8" rx="1.8" fill="#f5f7f9"/><path d="M10.5 8.6h7.5a1.8 1.8 0 0 1 1.8 1.8v3.2a1.8 1.8 0 0 1-1.8 1.8h-7.5Z" fill="#b9c8d2" stroke="none"/><path d="M10.5 8.6v6.8"/></g><path d="M13 20h5" opacity=".4" stroke-width="1"/></svg>') + '") 6 16, cell';
         ov.style.cursor = _drawTool === 'eraser' ? eraserCur : (_drawTool ? 'crosshair' : '');
       }
-      const hint=document.getElementById('chartToolHint');hint.hidden=!['wave','fibret','fibext'].includes(_drawTool);hint.querySelector('[data-finish-wave]').hidden=_drawTool!=='wave';hint.querySelector('span').textContent=_drawTool==='wave'?'連續點選轉折點；按完成或 Enter 結束。':_drawTool==='fibret'?'依序點選 A、B 兩點，從 B 往 A 計算回撤。':'依序點選 A、B、C 三點，從 C 延伸 A→B 的價差。';
+      const hint=document.getElementById('chartToolHint');hint.hidden=!['wave','amplitude','fibret','fibext'].includes(_drawTool);hint.querySelector('[data-finish-wave]').hidden=_drawTool!=='wave';hint.querySelector('span').textContent=_drawTool==='amplitude'?'依序點選 A、B、C 三點，比較 AB／BC 漲跌幅及幅度比例。':_drawTool==='wave'?'連續點選轉折點；按完成或 Enter 結束。':_drawTool==='fibret'?'依序點選 A、B 兩點，從 B 往 A 計算回撤。':'依序點選 A、B、C 三點，從 C 延伸 A→B 的價差。';
       redrawCanvas();
     };
     window._toggleDrawDD = function (which) {
@@ -16281,17 +16290,19 @@
     window._pickDraw = function (tool) {
       ['ddLineMenu', 'ddShapeMenu','ddFibMenu'].forEach(id => { const m = document.getElementById(id); if (m) m.classList.remove('open'); });
       _setDrawTool(tool);
+      window.AcademyChartViewport?.collapseTools();
     };
     document.addEventListener('click', e => { if (!e.target.closest('.draw-dd')) ['ddLineMenu', 'ddShapeMenu','ddFibMenu'].forEach(id => { const m = document.getElementById(id); if (m) m.classList.remove('open'); }); });
 
-    window.AcademyChartBridge={get:()=>({chart:chartInstance,series:candleSeriesRef,candles:window._vpCandles||[],code:currentCode,tool:_drawTool}),deactivate:_deactivateAllModes,redraw:_redrawSoon};
+    window.AcademyChartBridge={get:()=>({chart:chartInstance,series:candleSeriesRef,candles:window._vpCandles||[],code:currentCode,tool:_drawTool,zoom:zoomMode,drawingColor:_trendColor(),drawings:_drawShapes}),deactivate:_deactivateAllModes,redraw:_redrawSoon};
     window._finishWave=function(){if(_drawTool!=='wave')return;if(_drawPending.length>=2){_drawShapes.push({type:'wave',pts:_drawPending.map(p=>({...p}))});_drawPending=[];_drawStoreSave();}_setDrawTool('wave');};
     window._cancelChartTool=function(){_deactivateAllModes();redrawCanvas();};
-    document.addEventListener('keydown',function(e){if(e.target.closest('input,textarea,select,[contenteditable=true]'))return;if(e.key==='Enter'&&_drawTool==='wave'){e.preventDefault();_finishWave();}if(e.key==='Escape'&&(_drawTool||window.AcademyChartTools?.isSelecting()||document.querySelector('.draw-dd-menu.open'))){e.preventDefault();e.stopImmediatePropagation();_cancelChartTool();}},true);
+    document.addEventListener('keydown',function(e){if(e.target.closest('input,textarea,select,[contenteditable=true]'))return;if(e.key==='Enter'&&_drawTool==='wave'){e.preventDefault();_finishWave();}if(e.key==='Escape'&&(_drawTool||zoomMode||window.AcademyChartTools?.isSelecting()||document.querySelector('.draw-dd-menu.open'))){e.preventDefault();e.stopImmediatePropagation();_cancelChartTool();}},true);
     function clearAllDrawings() {
       // 不清斐波那契（它是獨立開關，要用再按一次斐波那契來清）
       _drawShapes = []; _drawPending = [];
       trendLines = []; trendStart = null;
+      _drawStoreSave();
       _clearCanvas();
       redrawCanvas();   // 重畫，保留斐波那契線與標籤
     }
@@ -16596,18 +16607,20 @@
                  onclick="_editNote(this, ${w.id})">${String(w.note||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}</div><button type="button" class="watch-note-edit" aria-label="編輯 ${w.code} 備註" onclick="event.stopPropagation();_editNote(this.parentElement.querySelector('.watch-note-text'),${w.id})">編輯</button></div>
           </td>
           <td class="watch-col-date" style="color:var(--text-muted);font-size:12px;white-space:nowrap">${dateStr}</td>
-          <td><button class="watch-del-btn" onclick="_removeWatch('${w.code}')" title="移除">✕</button></td>
+          <td class="watch-remove-cell"><button type="button" class="watch-del-btn" aria-label="移除 ${w.code} 觀察" onclick="_removeWatch('${w.code}')" title="移除">✕</button></td>
         </tr>`;
       }).join('');
       body.innerHTML = `
-        <table class="watch-table">
+        <table class="watch-table"><colgroup><col style="width:5%"><col style="width:8%"><col class="watch-col-industry" style="width:6%"><col class="watch-col-addprice" style="width:8%"><col style="width:8%"><col style="width:6%"><col style="width:6%"><col style="width:6%"><col style="width:6%"><col style="width:25%"><col class="watch-col-date" style="width:12%"><col style="width:42px"></colgroup>
           <thead><tr>
             <th>代號</th><th>公司</th><th class="watch-col-industry">產業</th>
             <th class="watch-col-addprice">加入時股價</th><th>現在市價</th><th>損益</th>
-            <th> 收盤</th><th> 即時</th><th> 到量</th><th>備註</th><th class="watch-col-date">加入日期</th><th></th>
+            <th> 收盤</th><th> 即時</th><th> 到量</th><th>備註</th><th class="watch-col-date">加入日期</th><th class="watch-remove-cell"><span class="sr-only">移除</span></th>
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>`;
+      const labels=[...body.querySelectorAll('thead th')].map(th=>th.textContent.trim());
+      body.querySelectorAll('tbody tr').forEach(tr=>[...tr.children].forEach((td,i)=>td.dataset.label=labels[i]||''));
     }
 
     // ── 備註行內編輯 ──────────────────────────────────────
@@ -16615,26 +16628,17 @@
       if (el.querySelector('textarea')) return;
       const cur = _watchData.find(w=>String(w.id)===String(id))?.note||'';
       el.innerHTML = `
-        <div style="display:flex;align-items:flex-start;gap:6px">
-          <textarea id="noteTA_${id}"
-            style="flex:1;box-sizing:border-box;background:var(--bg);border:1px solid var(--accent);
-                   border-radius:4px;color:var(--text);padding:3px 6px;font-size:12px;outline:none;
-                   resize:none;overflow:hidden;min-height:32px;"
+        <div class="watch-note-form">
+          <textarea id="noteTA_${id}" aria-label="觀察備註"
             onblur="_saveNote(this,${id})"
-            oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"
-            >${cur.replace(/</g,'&lt;')}</textarea>
-          <button
-            onmousedown="event.preventDefault()"
-            onclick="document.getElementById('noteTA_${id}').blur()"
-            style="flex-shrink:0;width:44px;height:28px;border-radius:5px;border:none;
-                   background:var(--accent);color:#111;font-size:11px;font-weight:700;
-                   cursor:pointer;display:flex;align-items:center;justify-content:center">
-            儲存
-          </button>
+            oninput="this.style.height='auto';this.style.height=Math.min(160,this.scrollHeight)+'px'"
+            >${cur.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}</textarea>
+          <div class="watch-note-actions"><span>離開欄位亦會儲存</span><button type="button" class="watch-note-save"
+            onmousedown="event.preventDefault()" onclick="document.getElementById('noteTA_${id}').blur()">儲存</button></div>
         </div>`;
       const ta = el.querySelector('textarea');
       ta.style.height = 'auto';
-      ta.style.height = ta.scrollHeight + 'px';
+      ta.style.height = Math.min(160,ta.scrollHeight) + 'px';
       ta.focus();
       ta.setSelectionRange(ta.value.length, ta.value.length);
     }
@@ -16671,7 +16675,7 @@
     <div class="watch-panel-inner">
       <div class="watch-panel-hdr">
         <h2> 我的觀察清單</h2><button class="watch-member-detail" type="button" onclick="closeWatchlist();openMemberCenter('favorites')">前往我的自選 ↗</button>
-        <button onclick="closeWatchlist()" style="background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer">✕</button>
+        <button type="button" class="watch-panel-close" onclick="closeWatchlist()" aria-label="關閉觀察清單">✕</button>
       </div>
       <div class="watch-panel-body"></div>
     </div>
@@ -17020,7 +17024,7 @@
   function decorateIcons(){
     document.querySelectorAll('.mn-new').forEach(e=>e.remove());
     document.querySelectorAll('.mn-menu a').forEach(a=>{if(/ETF\s*探索/.test(a.textContent||''))a.childNodes.forEach(n=>{if(n.nodeType===3)n.textContent=n.textContent.replace(/ETF\s*探索\s*[（(]工作台[）)]/,'ETF 探索');});});
-    const navIcon=t=>/掏金篩選器/.test(t)?icons.filter:/箱型/.test(t)?icons.box:/上漲下跌亮燈區/.test(t)?icons.lights:/流動性排行/.test(t)?icons.droplet:/壓力支撐逼近/.test(t)?icons.levels:/集團作帳/.test(t)?icons.group:/題材列表/.test(t)?icons.list:/產業地圖/.test(t)?icons.map:/話題/.test(t)?icons.topic:/主力訊號/.test(t)?icons.signal:/分點回測|回測/.test(t)?icons.backtest:/貪婪指標/.test(t)?icons.gauge:/三大法人/.test(t)?icons.bank:/外資空單/.test(t)?icons.thermometer:/大盤多空廣度/.test(t)?icons.breadth:/處置股/.test(t)?icons.ban:/觀察清單/.test(t)?icons.watch:/持股觀察站|出場追蹤/.test(t)?icons.exit:/我的警示/.test(t)?icons.bell:/總覽|探索/.test(t)?icons.grid:/排行/.test(t)?icons.ranking:/今日索引/.test(t)?icons.calendar:/成分股/.test(t)&&!/反查/.test(t)?icons.pie:/反查/.test(t)?icons.reverse:/配息/.test(t)?icons.dividend:/持有人/.test(t)?icons.holders:/相似/.test(t)?icons.similarity:/重倉/.test(t)?icons.stack:/折溢價/.test(t)?icons.discount:/資金流/.test(t)?icons.flow:/績效|比較/.test(t)?icons.compare:icons.chart;
+    const navIcon=t=>/掏金篩選器/.test(t)?icons.filter:/箱型/.test(t)?icons.box:/上漲下跌亮燈區/.test(t)?icons.lights:/流動性排行/.test(t)?icons.droplet:/壓力支撐逼近/.test(t)?icons.levels:/集團作帳/.test(t)?icons.group:/題材列表/.test(t)?icons.list:/產業地圖/.test(t)?icons.map:/話題/.test(t)?icons.topic:/不籌吃穿|主力訊號/.test(t)?icons.signal:/分點回測|回測/.test(t)?icons.backtest:/貪婪指標/.test(t)?icons.gauge:/三大法人/.test(t)?icons.bank:/外資空單/.test(t)?icons.thermometer:/大盤多空廣度/.test(t)?icons.breadth:/處置股/.test(t)?icons.ban:/觀察清單/.test(t)?icons.watch:/追蹤觀察站|持股觀察站|出場追蹤/.test(t)?icons.exit:/我的警示/.test(t)?icons.bell:/總覽|探索/.test(t)?icons.grid:/排行/.test(t)?icons.ranking:/今日索引/.test(t)?icons.calendar:/成分股/.test(t)&&!/反查/.test(t)?icons.pie:/反查/.test(t)?icons.reverse:/配息/.test(t)?icons.dividend:/持有人/.test(t)?icons.holders:/相似/.test(t)?icons.similarity:/重倉/.test(t)?icons.stack:/折溢價/.test(t)?icons.discount:/資金流/.test(t)?icons.flow:/績效|比較/.test(t)?icons.compare:icons.chart;
     document.querySelectorAll('.mn-menu a,#funcMenu button').forEach((a,i)=>{
       if(a.querySelector('.pro-icon'))return;
       const s=document.createElement('span');s.className='pro-icon';
@@ -17828,7 +17832,7 @@
 <script src="assets/learning-more.js?v=2" defer></script>
 <script src="assets/learning-figures.js?v=2" defer></script>
 <script src="assets/member-learning-verification.js?v=1" defer></script>
-<script src="assets/learning-center.js?v=8" defer></script>
+<script src="assets/learning-center.js?v=9" defer></script>
 <script src="assets/member-features.js?v=inbox1" defer></script>
 <script src="assets/member-strategy-engine.js?v=short1" defer></script>
 <script src="assets/strategy-dimensions.js?v=2" defer></script>
@@ -17849,12 +17853,12 @@
 <link rel="stylesheet" href="assets/member-service-center.css?v=1">
 <script src="assets/member-data-portability.js?v=inbox1" defer></script>
 <script src="assets/member-service-center.js?v=1" defer></script>
-<link rel="stylesheet" href="assets/chart-research-tools.css?v=tools14">
-<script src="assets/chart-research-tools.js?v=tools13" defer></script>
+<link rel="stylesheet" href="assets/chart-research-tools.css?v=tools22">
+<script src="assets/chart-research-tools.js?v=tools19" defer></script>
 <link rel="stylesheet" href="assets/brand-footer.css?v=5">
 <script src="assets/brand-footer.js?v=5" defer></script>
 <link rel="stylesheet" href="assets/market-panel-layout.css?v=8">
-<link rel="stylesheet" href="assets/member-notification-inbox.css?v=paging3">
+<link rel="stylesheet" href="assets/member-notification-inbox.css?v=paging5">
 <script src="assets/member-notification-inbox.js?v=paging3" defer></script>
 <script src="assets/member-center.js?v=compact2" defer></script>
 <script src="assets/member-signin.js?v=invite2" defer></script>
@@ -17869,7 +17873,8 @@
 <link rel="stylesheet" href="assets/strategy-studio.css?v=3">
 <link rel="stylesheet" href="assets/learning-center.css?v=6">
 <link rel="stylesheet" href="assets/research-layout.css?v=10">
-<script src="assets/chart-viewport-fit.js?v=16" defer></script>
+<link rel="stylesheet" href="assets/broker-workspace.css?v=4">
+<script src="assets/chart-viewport-fit.js?v=22" defer></script>
 <script src="assets/screen-inline-calendar.js?v=records-only13" defer></script>
 <script src="assets/screen-log.js?v=calendar-direct30" defer></script>
 <script src="assets/pattern-focus.js?v=2" defer></script>

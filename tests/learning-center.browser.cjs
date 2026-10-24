@@ -25,11 +25,12 @@ async function page(b,width,theme,init){
  for(const theme of ['light','dark'])for(const w of [1440,375]){const p=await page(b,w,theme);await p.goto('https://studio.fixture.test/#member/learning');await p.evaluate(t=>document.documentElement.dataset.theme=t,theme);await p.waitForSelector('.lc-hero',{timeout:20000});await p.waitForTimeout(800);
   const C=await p.evaluate(()=>{const c=window.AcademyLearningChallenge.current();return {id:c.id,ids:c.ids,quiz:c.quiz.map(q=>q.answer),pass:c.pass};});
   p.challenge=C;
+  assert.equal(await p.locator('.lc-toc-group[open]').count(),0,'all categories are collapsed on entry');
   assert.equal(await p.locator('.lc-week').count(),8,'8 stages');assert.equal(await p.locator('.lc-topic').count(),6,'6 topics');assert.equal(await p.locator('.lc-challenge').count(),1,'challenge card');
   assert.ok(await p.locator('[data-ch-start]').isDisabled(),'quiz locked until reading');
   await p.screenshot({path:out+`/learn-${theme}-${w}-top.png`});
   // 開第一篇：圖解、實際算一次、多題、小算盤
-  await p.locator('.lc-next').click();await p.waitForTimeout(500);const d=p.locator('.lc-content .lc-lesson[open]');
+  await p.locator('.lc-next').click();await p.waitForTimeout(500);assert.equal(await p.locator('.lc-toc-group[open]').count(),0,'choosing a lesson does not automatically expand navigation');const d=p.locator('.lc-content .lc-lesson[open]');
   assert.equal(await d.getAttribute('data-lesson-id'),'tw-market');
   await d.locator('input[type=radio]').nth(2).check();await d.locator('[data-check]').first().click();assert.match(await d.locator('.lc-result').first().innerText(),/答對了/);
   assert.equal(await d.locator('.lc-fig svg').count(),1);assert.ok(await d.locator('.lc-ex li').count()>=3);assert.ok(await d.locator('.lc-quiz').count()>=2);

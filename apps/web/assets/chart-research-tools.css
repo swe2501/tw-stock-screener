@@ -115,3 +115,57 @@ body #chartIntervalReport p{font-size:11px!important;line-height:1.6!important;m
 #chartModal .chart-tools-pin input{appearance:auto;flex:none;width:13px;height:13px;min-height:0;margin:0;padding:0;accent-color:var(--accent);box-shadow:none;cursor:pointer}
 #chartModal .chart-tools-pin:has(input:checked){color:var(--accent)}
 @media(pointer:coarse){#chartModal .chart-tools-pin{min-height:32px}#chartModal .chart-tools-pin input{width:16px;height:16px}}
+
+/* Unpinned tools float: hover never changes the chart's price projection or height. */
+#chartModal .chart-fit-tools:not(.is-pinned)>.chart-tools-drawer{position:absolute;left:-1px;right:-1px;top:100%;padding:6px 8px;border:1px solid var(--border);box-shadow:0 12px 28px color-mix(in srgb,var(--text) 12%,transparent);max-height:55vh;overflow-y:auto;overflow-x:hidden}
+#chartModal .chart-fit-tools[open]>.chart-tools-drawer{animation:chart-drawer-in .22s cubic-bezier(.2,.7,.2,1) both}
+#chartModal .chart-fit-tools[open].is-closing>.chart-tools-drawer{animation:chart-drawer-out .18s ease both;pointer-events:none}
+@keyframes chart-drawer-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+@keyframes chart-drawer-out{to{opacity:0;transform:translateY(-4px)}}
+.wave-tool-icon{width:22px;height:18px;vertical-align:middle;margin-right:8px;fill:none;stroke:currentColor;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
+.wave-tool-icon text{fill:currentColor;stroke:none;font:10px 'Segoe UI',sans-serif}
+@media(prefers-reduced-motion:reduce){#chartModal .chart-fit-tools[open]>.chart-tools-drawer{animation:none!important}}
+
+@media(max-width:600px){#chartModal .chart-fit-tools:not(.is-pinned)>.chart-tools-drawer{position:static;padding:5px 0;border:0;max-height:none;overflow:visible;box-shadow:none}}
+
+/* Complete readout: the card itself never scrolls or clips its metrics. */
+#chartIntervalReport{max-height:none!important;overflow:visible;box-sizing:border-box}
+#chartIntervalReport .range-bar-count{font-weight:750;white-space:nowrap;color:var(--text)}
+#chartModal .chart-fit-tools[open].is-closing>.chart-tools-drawer{animation:chart-drawer-out .1s ease-out both}
+@keyframes chart-drawer-out{to{opacity:0}}
+
+#chartRulerViewControls{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap;padding:4px 2px 8px;color:var(--text-muted);font-size:11px}
+#chartRulerViewControls[hidden]{display:none!important}
+#chartRulerViewControls>span{margin-right:4px}
+#chartRulerViewControls button{min-height:28px;padding:4px 9px;font:inherit;font-size:11px;line-height:1.5;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--text-muted);cursor:pointer;box-shadow:none!important;transform:none!important}
+#chartRulerViewControls button[aria-pressed=true]{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 35%,var(--border));background:color-mix(in srgb,var(--accent) 7%,var(--surface))}
+#chartRulerViewControls button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+#chartModal[data-ohlc-hidden="true"] #ohlcTooltip{display:none!important}
+#chartModal #chartInfoToggle[aria-pressed="false"]{opacity:.55}
+#chartModal #wPatternExportBtn,#chartModal #wPatternImportBtn{min-width:0;padding-inline:16px;white-space:nowrap}
+
+/* Compact exchange actions share the height of one normal tool. */
+#chartModal .chart-fit-tools .chart-toolbar{justify-content:flex-end}
+#chartModal .chart-fit-tools .chart-toolbar-left:empty{display:none}
+#chartModal .chart-fit-tools .chart-tool-btns{margin-left:auto;margin-right:0;justify-content:flex-end}
+#chartModal .chart-exchange-actions{display:inline-flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:2px;padding:0 4px;margin-left:4px}
+#chartModal .chart-exchange-actions #wPatternExportBtn,#chartModal .chart-exchange-actions #wPatternImportBtn{border:0!important;border-radius:3px!important;background:transparent!important;box-shadow:none!important;transform:none!important;min-width:0;min-height:0;padding:2px 7px;font-size:12px!important;line-height:1.3;color:var(--text-muted)}
+#chartModal .chart-exchange-actions button:hover,#chartModal .chart-exchange-actions button:focus-visible{color:var(--accent)!important;text-decoration:underline;text-underline-offset:3px}
+#chartModal .chart-exchange-actions button:focus-visible{outline:1px solid var(--accent);outline-offset:1px}
+
+#chartModal .chart-summary-actions #chartInfoToggle{border:0;background:transparent;box-shadow:none;color:var(--text-muted);font:inherit;font-size:11px;white-space:nowrap;padding:6px 3px;cursor:pointer}
+
+/* Text-only information toggle; no rectangular focus/hover treatment. */
+#chartModal .chart-summary-actions #chartInfoToggle{outline:none!important;border:0!important;box-shadow:none!important;background:transparent!important;border-radius:0!important;transition:color .18s ease,text-shadow .18s ease}
+#chartModal .chart-summary-actions #chartInfoToggle:hover,#chartModal .chart-summary-actions #chartInfoToggle:focus-visible{color:#397fb9!important;text-shadow:0 0 8px #4d9de88c!important;opacity:1}
+html[data-theme="dark"] #chartModal .chart-summary-actions #chartInfoToggle:hover,html[data-theme="dark"] #chartModal .chart-summary-actions #chartInfoToggle:focus-visible{color:#dfbd76!important;text-shadow:0 0 8px #e9bd638c!important}
+
+/* Compact first action row: preserve horizontal breathing room. */
+#chartModal .chart-fit-tools .chart-toolbar{padding-block:2px;margin-bottom:0}
+#chartModal .chart-fit-tools .chart-toolbar .chart-tool-btns{align-items:center;gap:8px}
+#chartModal .chart-fit-tools .chart-toolbar .chart-tool-btns>.tool-btn{min-height:30px;padding:3px 11px;line-height:1.5;font-size:12px;border-radius:9px}
+#chartModal .chart-fit-tools .chart-toolbar .toolbar-sep{height:26px;align-self:center}
+#chartModal .chart-exchange-actions{gap:1px;padding-block:0}
+#chartModal .chart-exchange-actions #wPatternExportBtn,#chartModal .chart-exchange-actions #wPatternImportBtn{font-size:10px!important;line-height:14px;min-height:0;padding:0 7px;letter-spacing:.04em}
+@media(pointer:coarse){#chartModal .chart-fit-tools .chart-toolbar .chart-tool-btns>.tool-btn{min-height:38px}#chartModal .chart-exchange-actions #wPatternExportBtn,#chartModal .chart-exchange-actions #wPatternImportBtn{min-height:19px;line-height:17px}}
