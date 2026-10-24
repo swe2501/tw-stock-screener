@@ -18,6 +18,7 @@
   <link rel="apple-touch-icon" href="assets/brand/favicon.png?v=fqi16">
   <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
   <script src="assets/site-theme.js"></script>
+  <script src="assets/w-pattern-export.js?v=20261024-1"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -10044,6 +10045,8 @@
             <button class="tool-btn" id="intervalStatsBtn" type="button" aria-pressed="false" onclick="AcademyChartTools.toggleInterval()">區間統計</button>
             <button class="tool-btn" id="zoomRubberBtn" onclick="toggleZoomMode()"> 框選放大</button>
             <button class="tool-btn" onclick="resetZoom()" title="恢復全覽">↺ 還原</button>
+            <button class="tool-btn" id="wPatternExportBtn" type="button" onclick="_exportWPatternSnapshot()" title="下載目前可見日K圖與行情資料，供型態辨識測試">匯出分析資料</button>
+            <span id="wPatternExportStatus" role="status" aria-live="polite" style="font-size:12px;max-width:260px;white-space:normal"></span>
           </div>
         </div>
         <div class="chart-layer-toolbar" role="tablist" aria-label="圖表圖層工具">
@@ -14681,6 +14684,26 @@
     }
     const _NO_HORZ = { crosshair: { horzLine: { visible: false } } };
 
+    // 2026-10-24: export matched chart pixels + OHLC; no API call or credentials.
+    function _exportWPatternSnapshot() {
+      const status = document.getElementById('wPatternExportStatus');
+      const button = document.getElementById('wPatternExportBtn');
+      try {
+        if (!chartInstance || !candleSeriesRef || window._chartMode === 'trend') throw Error('請先開啟日K圖，再匯出分析資料。');
+        const loading = document.getElementById('chartLoading');
+        if (loading && getComputedStyle(loading).display !== 'none') throw Error('行情載入中，請稍後再匯出。');
+        button.disabled = true;
+        const liveBars = candleSeriesRef.data();
+        const source = new Map((window._vpCandles || []).map(c => [c.time, c]));
+        const candles = liveBars.filter(c => c.open != null).map(c => ({...source.get(c.time), ...c}));
+        const result = window.WPatternExport.capture({chart:chartInstance, series:candleSeriesRef, candles,
+          context:window.AcademyResearchChartContext ? window.AcademyResearchChartContext() : {}});
+        status.textContent = `已下載 ${result.bars} 根K棒與圖表；尚未送出AI分析。`;
+      } catch (error) {
+        status.textContent = error.message || '匯出失敗，請重新載入圖表後再試。';
+      } finally { button.disabled = false; }
+    }
+
     function _renderMainChart(candles, events) {
       candles = _validCandles(candles);window.AcademyChartTools?.resetSelection();
       if (chartInstance) { try { chartInstance.remove(); } catch(_) {} chartInstance = null; }
@@ -17670,6 +17693,7 @@
 <link rel="stylesheet" href="assets/home-market-intraday.css?v=23">
 <script src="assets/home-market-intraday.js?v=11" defer></script>
 <footer id="foresightFooter" aria-label="先見網站頁尾">
+  <details style="padding:8px 16px;font-size:12px"><summary>改動紀錄</summary><p>2026-10-24：K圖新增「匯出分析資料」，下載可見價格圖、OHLC與座標；供型態測試使用，不會直接呼叫AI或產生API費用。</p></details>
       <div class="fs-source"><div>本站依各功能使用臺灣證券交易所、證券櫃檯買賣中心、臺灣期貨交易所、集保結算所及其他公開資料整理市場資訊；來源、行情日期與更新頻率依各頁標示，部分內容為盤後或延遲資料。數據可能因公告更正、休市或來源異常而調整，請以原始公告核對。圖表、歷史統計與工具結果供學習及研究參考，歷史表現不代表未來結果；不同資料口徑與估算方式可能產生差異。</div></div>
       <div class="fs-footer-inner">
         <div class="fs-footer-info">
