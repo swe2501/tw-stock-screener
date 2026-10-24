@@ -163,6 +163,21 @@ def main():
 
     print(f"整理 {len(recs)} 檔 ETF（含行情 {sum(1 for r in recs if r['close'] is not None)} 檔），資料日 {data_date}")
 
+    # 2026-10-24 整張換掉前，先保留其他排程補進來的欄位（wantgoo_etf 的官方淨值／規模、upload_etf_holders 的受益人數等）。
+    # 原本一刪就清空，後面那支只要當晚失敗，ETF 折溢價頁所有淨值都是空的（10/24 盤點時 238 檔全無 NAV）。
+    PRESERVE = ("aum", "nav", "holdings_date", "mgmt_fee", "holders", "outstanding_units", "holder_date")
+    s, old = bs._sb(env, "/etf_products", params=[("select", "code," + ",".join(PRESERVE)), ("limit", "2000")])
+    old_by = {o["code"]: o for o in old} if s == 200 and isinstance(old, list) else {}
+    kept = 0
+    for rec in recs:
+        o = old_by.get(rec["code"])
+        if not o:
+            continue
+        for k in PRESERVE:
+            if rec.get(k) is None and o.get(k) is not None:
+                rec[k] = o[k]
+                kept += 1
+    print(f"保留既有欄位 {kept} 個（{len(old_by)} 檔舊資料）")
     # 整張換掉(名錄滾動更新)
     s, r = bs._sb(env, "/etf_products", method="DELETE", params=[("code", "neq.__none__")])
     if s not in (200, 204):
