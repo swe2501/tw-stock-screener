@@ -11217,6 +11217,28 @@
       if(/主力交往|買/.test(label||''))return 'entry';
       return null;
     }
+    // 2026-10-24 用戶要求：主力箭頭在一堆 K 棒中不明顯 → 脈動閃爍。
+    // 圖表套件的標記不能做 CSS 動畫，改為每 600ms 重設一次標記：主力箭頭在「放大＋深色」與「原大小＋淺色」間切換，
+    // 分點名稱一直顯示（不做顯示／隱藏，避免一半時間看不到名稱）。使用者系統設定「減少動態效果」時不閃。
+    const _PULSE_SOFT = { '#ef4444': '#fca5a5', '#16a34a': '#86efac' };
+    function _pulseBrokerMarkers(all, brokerSet) {
+      if (window._mkPulseTimer) { clearInterval(window._mkPulseTimer); window._mkPulseTimer = null; }
+      if (!brokerSet.size) return;
+      try { if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return; } catch (_) {}
+      const series = candleSeriesRef;
+      let on = false;
+      window._mkPulseTimer = setInterval(() => {
+        const cm = document.getElementById('chartModal');
+        if (!series || series !== candleSeriesRef || !cm || getComputedStyle(cm).display === 'none') {
+          clearInterval(window._mkPulseTimer); window._mkPulseTimer = null; return;
+        }
+        on = !on;
+        const frame = all.map(m => brokerSet.has(m)
+          ? { ...m, size: on ? 2 : 1, color: on ? m.color : (_PULSE_SOFT[m.color] || m.color) }
+          : m);
+        try { series.setMarkers(frame); } catch (_) {}
+      }, 600);
+    }
     function _refreshChartMarkers() {
       if (!candleSeriesRef) return;
       const S = window._mkShow;
@@ -11265,6 +11287,7 @@
       sel.push(...(_boxMarkers || []));   // 箱型標記另有自己的開關，不納入此分類
       const all = sel.sort((a, b) => a.time < b.time ? -1 : a.time > b.time ? 1 : 0);
       try { candleSeriesRef.setMarkers(all); } catch (_) {}
+      _pulseBrokerMarkers(all, new Set(broker));
       _renderMarkerToggles(present);
       _renderSma20Groups();
     }
