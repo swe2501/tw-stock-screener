@@ -478,3 +478,4 @@ page_cache 是 **uat 與 prod 共用**同一個 Supabase。若推盤中到原 ki
 - 2026-10-24 晚 K 圖主力箭頭：閃爍改為呼吸動畫（requestAnimationFrame 約 30fps，大小 1～1.5 倍、顏色淺→深依餘弦曲線連續變化，1.6 秒一個循環），取代 600ms 一格的切換；箭頭旁不再寫分點名稱，名稱只在滑過 K 棒的小卡顯示。
 - 2026-10-24 首頁「今日走勢」小圖：櫃買指數、台指期（日盤）、台指VIX 原本向 /api/chart 要分時，但 Yahoo 沒有（404）或只有大盤近似資料；改先讀 page_cache mini_OTC／mini_TXF／mini_VIX（scripts/home_intraday.py 每晚由期交所 VIX 每日檔與期貨逐筆成交產生；櫃買指數官方無歷史分鐘資料，由 intraday_push 盤中每輪記錄 MIS otc_o00），日期相符才用。VIX 卡資料日改為不晚於最近交易日（市場指標表非交易日也寫一筆，原本顯示成 10/24 週六）。
 - 2026-10-24 宏觀環境（美國 CPI／失業率／美元廣義指數）三條數列全空：後端即時連 FRED 下載端點會逾時。改為每晚 scripts/macro_env_push.py 向官方原始來源抓（BLS API：CUSR0000SA0、LNS14000000；聯準會 H.10 Nominal Broad Dollar Index），存 page_cache macro_env；後端 stat=macro_environment 先讀它，沒有才連 FRED。
+- 2026-10-24 首頁「今日信用部位觀察」上櫃融券增減：原本寫死「—」、摘要一直顯示「融券增減資料待更新」；otc_market_daily 沒有前日融券餘額欄位，前端改讀最近兩列、以前一列融券餘額相減。另補 otc_market_daily 缺的 10/20、10/21（夜間排程卡住那兩晚；以本機 margin_short tpex 與 stock_daily otc 彙總融券、融資張數與漲跌家數，法人與融資金額本機無資料留空）。

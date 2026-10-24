@@ -8306,10 +8306,12 @@
     function loadMargin(){
       Promise.all([
         sb('margin_market?select=date,fin_bal_k,fin_bal_prev_k,fin_bal_lots,short_bal_lots,short_bal_prev_lots&order=date.desc&limit=1'),
-        sb('otc_market_daily?select=trade_date,fin_bal_k,fin_prev_k,fin_bal_lots,short_lots,fin_maint&order=trade_date.desc&limit=1')
+        sb('otc_market_daily?select=trade_date,fin_bal_k,fin_prev_k,fin_bal_lots,short_lots,fin_maint&order=trade_date.desc&limit=2')
       ]).then(function(res){
         var box=el('hpMargin'); if(!box)return;
         var t=(res[0]||[])[0],o=(res[1]||[])[0];
+        // 2026-10-24 上櫃融券增減：表內沒有「前日融券餘額」欄位，改用前一個交易日那列的融券餘額相減（原本寫死「—」，摘要一直顯示融券資料待更新）
+        var oPrevShort=(res[1]&&res[1][1]&&res[1][1].short_lots!=null)?res[1][1].short_lots:null;
         if(!t&&!o){box.innerHTML='<div class="fc-empty">今日無資料</div>';return;}
         var tseM=''; try{var mb=el('marginRatioBox'); if(mb&&mb.textContent){var x=mb.textContent.replace(/[^0-9.%]/g,''); if(x)tseM=x;}}catch(e){}
         function f2y(k){return k/1e5;} // 仟元→億
@@ -8321,7 +8323,7 @@
         function mkt(name,m){return '<td class="l mkt"><div>'+name+'</div><div style="font-size:10.5px;color:var(--text-muted);font-weight:600">'+(m||'—')+'</div></td>';}
         var rows='';
         if(t)rows+='<tr>'+mkt('上市',tseM)+chgc(t.fin_bal_k,t.fin_bal_prev_k)+balc(t.fin_bal_k)+lchg(t.short_bal_lots,t.short_bal_prev_lots)+lotc(t.short_bal_lots)+ratio(t.short_bal_lots,t.fin_bal_lots)+'</tr>';
-        if(o)rows+='<tr>'+mkt('上櫃',o.fin_maint!=null?o.fin_maint+'%':'')+chgc(o.fin_bal_k,o.fin_prev_k)+balc(o.fin_bal_k)+'<td>—</td>'+lotc(o.short_lots)+ratio(o.short_lots,o.fin_bal_lots)+'</tr>';
+        if(o)rows+='<tr>'+mkt('上櫃',o.fin_maint!=null?o.fin_maint+'%':'')+chgc(o.fin_bal_k,o.fin_prev_k)+balc(o.fin_bal_k)+lchg(o.short_lots,oPrevShort)+lotc(o.short_lots)+ratio(o.short_lots,o.fin_bal_lots)+'</tr>';
         function creditChange(v,prev){return v==null||prev==null||v===''||prev===''||!Number.isFinite(Number(v))||!Number.isFinite(Number(prev))?null:Math.sign(Number(v)-Number(prev));}
         function summaryLine(name,r,date,finPrev,shortNow,shortPrev){
           if(!r)return '';
@@ -8339,7 +8341,7 @@
           return '<div class="hp-margin-summary-row"><div><b>'+name+'｜'+title+'</b><time>'+(/^\d{4}-\d{2}-\d{2}$/.test(date||'')?date:'日期待更新')+'</time></div><p>'+copy+'</p></div>';
         }
         box.innerHTML='<table class="gs-tbl"><thead><tr><th class="l">市場<br><span style="font-weight:600;font-size:10px;color:var(--text-muted)">維持率估算</span></th><th>融資增減(億)</th><th>融資餘額(億)</th><th>融券增減(張)</th><th>融券餘額(張)</th><th>券資比</th></tr></thead><tbody>'+rows+'</tbody></table>'
-          +'<div class="hp-margin-summary"><h3>今日信用部位觀察</h3>'+summaryLine('上市',t,t&&t.date,t&&t.fin_bal_prev_k,t&&t.short_bal_lots,t&&t.short_bal_prev_lots)+summaryLine('上櫃',o,o&&o.trade_date,o&&o.fin_prev_k,o&&o.short_lots,null)+'</div>'
+          +'<div class="hp-margin-summary"><h3>今日信用部位觀察</h3>'+summaryLine('上市',t,t&&t.date,t&&t.fin_bal_prev_k,t&&t.short_bal_lots,t&&t.short_bal_prev_lots)+summaryLine('上櫃',o,o&&o.trade_date,o&&o.fin_prev_k,o&&o.short_lots,oPrevShort)+'</div>'
           +'<div class="gs-tip"><span class="ic"></span><div><b>學院導讀</b>融資維持率越低，代表融資戶擔保品的安全邊際越薄、越接近追繳；判讀時建議一併看個股維持率與股價波動，不宜只看整體數字。</div></div>';
       });
     }
