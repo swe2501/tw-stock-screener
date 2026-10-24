@@ -179,7 +179,37 @@ _VALID = {
 _RT_KIND = {k: k + "_rt" for k in _VALID}
 
 
+def _record_otc_index(env):
+    """2026-10-24 首頁櫃買指數「今日走勢」：官方沒有歷史分鐘資料，盤中每輪記一筆 MIS 櫃買指數（otc_o00），
+    存本機 D:\\stock_data\\home_intraday\\otc_YYYYMMDD.json，並寫成 page_cache mini_OTC（5 分鐘最後一筆）。失敗不影響主流程。"""
+    try:
+        arr = _mis_batch(["otc_o00.tw"])
+        if not arr:
+            return
+        m = arr[0]
+        price = _pf(m.get("z")) or _pf((m.get("trade") or {}).get("z") if isinstance(m.get("trade"), dict) else None)
+        tlong = int(m.get("tlong") or 0) // 1000                    # 該筆報價時間（epoch 毫秒）
+        if price is None or not tlong:
+            return
+        import home_intraday as hi
+        d = datetime.datetime.fromtimestamp(tlong, TZ).date()
+        if d != _now().date():
+            return                                                  # 舊資料（休市日 MIS 停在前一日）不記
+        hi.OTC_LOG_DIR.mkdir(parents=True, exist_ok=True)
+        f = hi.OTC_LOG_DIR / f"otc_{d:%Y%m%d}.json"
+        pts = json.loads(f.read_text(encoding="utf-8")) if f.exists() else []
+        if not pts or pts[-1][0] != tlong:
+            pts.append([tlong, price])
+            f.write_text(json.dumps(pts), encoding="utf-8")
+        data = hi._bucket5([(int(t), float(p)) for t, p in pts])
+        if len(data) >= 2 and not DRY:
+            hi.push(env, "mini_OTC", d, data, "盤中排程記錄 MIS 櫃買指數")
+    except Exception as e:                                          # noqa: BLE001
+        print(f"[intraday] 櫃買指數走勢記錄失敗（不影響主流程）：{type(e).__name__}")
+
+
 def _one_pass(lcodes, ocodes, env):
+    _record_otc_index(env)
     listed = _scan(lcodes, "tse")
     otc = _scan(ocodes, "otc")
     if len(listed) < MIN_LISTED:
