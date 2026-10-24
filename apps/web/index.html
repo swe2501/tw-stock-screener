@@ -4339,6 +4339,7 @@
     <div class="tm-head"><h2>⚙ 後台管理</h2><span class="sub" id="admSub">僅限管理員</span></div>
     <div class="ov-tabs" id="admTabs" style="margin-bottom:14px">
       <button class="on" type="button" data-t="members">會員管理</button>
+      <button type="button" data-t="algo">算法公式</button>
       <button type="button" data-t="audit">稽核日誌</button>
       <button type="button" data-t="health" disabled title="Phase 2：排程/資料新鮮度">系統健康</button>
       <button type="button" data-t="usage" disabled title="Phase 2：需先加 usage_events">使用分析</button>
@@ -4411,10 +4412,49 @@
 
     function loadMembers(){ _members=null; renderMembers(); post('admin_members').then(function(j){ _members=j; renderMembers(); }).catch(function(){ _members={error:'連線失敗'}; renderMembers(); }); }
 
+    // 算法公式總開關：ON＝只有管理者看得到公式；OFF（預設）＝連管理者也看不到。公式文字存後端 DB，前端不內嵌。
+    var _algoState=null;
+    function renderAlgo(){
+      var box=el('admBody'); if(!box)return; box.innerHTML='<div class="fc-empty">載入中…</div>';
+      post('admin_algo_get').then(function(j){
+        _algoState=j||{}; var on=!!(j&&j.algo_visible);
+        box.innerHTML='<div style="max-width:620px">'
+          +'<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:14px">'
+          +'<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">'
+          +'<div><b style="font-size:14px">算法公式總開關</b><div style="font-size:12px;color:var(--text-muted);margin-top:3px">打開＝<b>只有管理者自己</b>看得到（話題族群「強度」公式／K圖「貪婪」計分規則）。關閉＝連管理者也看不到，避免直播或分享畫面時外洩。</div></div>'
+          +'<button id="algoToggle" type="button" aria-label="切換算法公式顯示" style="flex:0 0 auto;border:none;border-radius:999px;width:58px;height:30px;cursor:pointer;transition:.15s;background:'+(on?'#148f77':'var(--border)')+'"><span style="display:block;margin-top:3px;margin-left:'+(on?'31px':'3px')+';width:24px;height:24px;border-radius:50%;background:#fff;transition:.15s"></span></button>'
+          +'</div>'
+          +'<div style="margin-top:10px;font-size:12px">目前狀態：<b id="algoStateTxt" style="color:'+(on?'#148f77':'var(--text-muted)')+'">'+(on?'顯示中（僅管理者）':'隱藏中（預設）')+'</b></div>'
+          +'</div>'
+          +'<div style="font-size:12px;color:var(--text-muted);line-height:1.7">公式文字<b>存在後端資料庫</b>（admin_settings），前端完全不內嵌，無法用開發者模式窺探。<br>公式若有改動，可按下方按鈕把程式內建版本同步寫入資料庫（也可直接在 Supabase 編輯 admin_settings 的 formula_* 各列）。</div>'
+          +'<button id="algoSeed" type="button" style="margin-top:12px;padding:7px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);cursor:pointer;font-size:13px">重新寫入預設公式到資料庫</button>'
+          +'</div>';
+        el('algoToggle').onclick=function(){
+          var nv=!_algoState.algo_visible; el('algoToggle').disabled=true;
+          post('admin_set_algo_visible',{on:nv}).then(function(r){
+            el('algoToggle').disabled=false;
+            if(r&&r.ok){ _algoState.algo_visible=!!r.algo_visible; renderAlgo();
+              el('admNote').textContent='已'+(r.algo_visible?'開啟（公式只有管理者看得到）':'關閉（連管理者也看不到）')+'。';
+              try{ window._algoFetched=false; window._loadAlgoFormulas&&window._loadAlgoFormulas(); }catch(_){}
+            } else el('admNote').textContent='切換失敗：'+((r&&r.error)||'未知錯誤');
+          }).catch(function(){ el('algoToggle').disabled=false; el('admNote').textContent='切換失敗（連線）'; });
+        };
+        el('algoSeed').onclick=function(){
+          el('algoSeed').disabled=true; el('algoSeed').textContent='寫入中…';
+          post('admin_seed_algo').then(function(r){
+            el('algoSeed').disabled=false; el('algoSeed').textContent='重新寫入預設公式到資料庫';
+            el('admNote').textContent=(r&&r.ok)?('已將內建公式寫入資料庫（'+((r.seeded||[]).length)+' 列）。'):('寫入失敗：'+((r&&r.error)||'未知'));
+          }).catch(function(){ el('algoSeed').disabled=false; el('algoSeed').textContent='重新寫入預設公式到資料庫'; el('admNote').textContent='寫入失敗（連線）'; });
+        };
+        el('admNote').innerHTML='<b>說明</b> 這個總開關只控制「公式文字是否顯示給管理者」，不影響任何分數計算。預設關閉。';
+      }).catch(function(){box.innerHTML='<div class="fc-empty">讀取失敗</div>';});
+    }
+
     function switchTab(t){
       _tab=t;
       el('admTabs').querySelectorAll('button').forEach(function(b){b.classList.toggle('on',b.dataset.t===t);});
       if(t==='members')loadMembers();
+      else if(t==='algo')renderAlgo();
       else if(t==='audit')renderAudit();
       else el('admBody').innerHTML='<div class="fc-empty">此分頁規劃中（見 docs/admin-backend-spec.md，Phase 2）。</div>';
     }
@@ -9366,9 +9406,8 @@
     <div style="font-size:11px;color:var(--text-muted);line-height:1.6;background:var(--surface2,rgba(255,255,255,.03));border-left:2px solid #ff7a3c;padding:8px 10px;margin-bottom:12px;border-radius:0 4px 4px 0">
        AI（Codex）盤中每小時搜出的話題族群。<b style="color:#ff7a3c">數字＝話題熱度</b>（Codex 依新聞量／新鮮度／是否牽涉大廠評 0~100，非門檻，由高到低列出，跟個股強度是兩回事）。<br>
       個股依「<b style="color:var(--text)">強度</b>」由高到低排：<br>
-      　<b>強度</b> ＝ 0.6×相對強度(RS) ＋ 0.2×均線多頭(收＞MA20＞MA60 給100，否則0) ＋ 0.2×近波段高比×100<br>
-      　<b>RS</b>＝該股「0.6×20日＋0.4×60日報酬」在全市場的百分位(0~100)。<br>
-      　強度分數旁的小字（<b>RS·均線·近高</b>）＝該檔三項的實際值，看得出分數怎麼來的。<br>
+      <span id="htHeatFormula"></span>
+      　強度分數旁的小字（<b>RS·均線·近高</b>）＝該檔三項的實際值。<br>
       　<b>20日</b>＝近20個交易日的報酬率（區間漲跌幅，<b>不是</b>平均）。<br>
       　<b>主力</b>欄兩個訊號：<b style="color:#f85149">近5日N天</b>＝<b>全市場所有分點</b>近5交易日出現單日大單買超（≥300張 或 ≥3000萬）的天數（覆蓋廣）；
       <b style="color:#c678dd">前20：日期</b>＝<b>僅勝率排行榜前20名分點</b>的大單買超日，與 K 圖紫色箭頭同源可對照（前20沒買到就空）。點個股開 K 線。</div>
@@ -11979,22 +12018,17 @@
     // 點強度分數 → 彈出該檔的詳細計算
     let _htStrMap = {};
     function _showStrengthCalc(code) {
-      if (!window._isOwner) { try{ showToast('完整強度算法為開通會員功能'); }catch(_){} return; }   // #7 一般會員不看公式
+      // 公式文字存後端；未開通/總開關關 → 前端無公式可顯示
+      if (!window._algoFormulas || !window._algoFormulas.strength) { try{ showToast('完整強度算法為開通會員功能'); }catch(_){} return; }
       const s = _htStrMap[code];
       if (!s) return;
       const nh = s.near_high != null ? s.near_high : 0;
       const maScore = s.above_ma ? 100 : 0;
-      const c1 = (0.6 * (s.rs || 0)).toFixed(1), c2 = (0.2 * maScore).toFixed(0), c3 = (0.2 * nh * 100).toFixed(1);
+      const maTxt = s.above_ma ? '<span style="color:#67c23a">成立，得 100</span>' : '<span style="color:var(--text-muted)">不成立，得 0</span>';
       document.getElementById('strengthPopupTitle').textContent = `${code} 強度 ${s.strength}`;
-      document.getElementById('strengthPopupBody').innerHTML = `
-        <div style="background:rgba(255,255,255,.05);padding:9px 11px;border-radius:6px;font-family:monospace;font-size:12px;line-height:1.7">
-          強度 = 0.6×RS + 0.2×均線多頭 + 0.2×近高比×100<br>
-          　　 = 0.6×${s.rs} + 0.2×${maScore} + 0.2×${(nh * 100).toFixed(1)}<br>
-          　　 = ${c1} + ${c2} + ${c3} = <b style="color:#67c23a">${s.strength}</b></div>
-        <div style="margin-top:11px"><b style="color:var(--accent)">RS ${s.rs}</b>（相對強度）：該檔「0.6×20日＋0.4×60日報酬」在全市場約 1080 檔的百分位，即贏過約 <b>${s.rs}%</b> 的股票。<br>
-          <span style="color:var(--text-muted)">· 近20日報酬 ${s.ret20 >= 0 ? '+' : ''}${s.ret20}%</span></div>
-        <div style="margin-top:9px"><b style="color:var(--accent)">均線多頭</b>：收盤 &gt; MA20 &gt; MA60 → ${s.above_ma ? '<span style="color:#67c23a">成立，得 100</span>' : '<span style="color:var(--text-muted)">不成立，得 0</span>'}</div>
-        <div style="margin-top:9px"><b style="color:var(--accent)">近波段高比</b>：收盤 ÷ 近60日最高 ＝ <b>${nh}</b>（×100＝${(nh * 100).toFixed(1)}）。越接近 1 越貼近波段高。</div>`;
+      document.getElementById('strengthPopupBody').innerHTML = window._fillTpl(window._algoFormulas.strength, {
+        rs: s.rs, maScore: maScore, nh100: (nh * 100).toFixed(1), strength: s.strength,
+        ret20sign: (s.ret20 >= 0 ? '+' : ''), ret20: s.ret20, maTxt: maTxt, nh: nh });
       document.getElementById('strengthPopup').style.display = 'flex';
     }
 
@@ -13143,7 +13177,7 @@
       _refreshChartMarkers();
     }
 
-    // ── 貪婪指標＝ 0.70×基礎四維分(greed_base) + 0.30×催化(取最強:話題/法說/展覽) ──
+    // ── 貪婪指標＝基礎(greed_base 快照) 與 催化(取最強:話題/法說/展覽) 加權合成；完整權重與計分規則存後端 admin_settings ──
     let _greedData = null;
     function _greedZone(v) {
       return v < 25 ? '極度恐懼' : v < 45 ? '恐懼' : v <= 55 ? '中立' : v <= 75 ? '貪婪' : '極度貪婪';
@@ -13168,7 +13202,7 @@
         <svg viewBox="0 0 ${w} ${(cy + 4).toFixed(0)}" width="${w}" style="overflow:visible;flex-shrink:0">${s}</svg>
         <div style="line-height:1.15;white-space:nowrap"><span style="font-size:21px;font-weight:800;color:var(--text)">${val}</span>
           <span style="font-size:11px;color:var(--text-muted)"> 貪婪指標</span><br>
-          <span style="font-size:11px;color:var(--accent2)">${_greedZone(val)}<span class="algo-gated">・點看算法</span></span></div></div>`;
+          <span style="font-size:11px;color:var(--accent2)">${_greedZone(val)}${window._algoFormulas ? '<span style="opacity:.75">・點看算法</span>' : ''}</span></div></div>`;
     }
     async function _loadGreed(code) {
       const el = document.getElementById('greedGauge');
@@ -13212,7 +13246,7 @@
           else if (dEnd < 0 && dEnd >= -5) sc = 40;             // 展後衰減
           if (sc > exhScore) { exhScore = sc; exhInfo = `${sec}展 ${x.start_date}~${x.end_date || x.start_date}`; }
         });
-        // 催化取最強者;最終 = 0.70×基礎 + 0.30×催化
+        // 催化取最強者；最終＝基礎與催化加權合成（權重見後端 admin_settings）
         const catalyst = Math.max(topicHeat, lawScore, exhScore);
         const catSrc = catalyst === 0 ? '' : (catalyst === topicHeat ? '話題' : catalyst === lawScore ? '法說' : '展覽');
         const greed = Math.round(0.70 * base + 0.30 * catalyst);
@@ -13226,66 +13260,25 @@
           + (b.capitulation ? '<span title="利空出盡：極度悲觀且出現底部反轉K" style="margin-left:6px;font-size:11px;color:#0a9a56;font-weight:700">利空出盡</span>' : ''); el.style.display = 'block'; }
       } catch (_) { /* 貪婪指標非必要，失敗靜默 */ }
     }
-    // Current scoring methodology; development history lives in docs/.
-    function _greedMethodologyHTML() {
-      const row = (name, pairs) => `<tr><td style="padding:2px 8px 2px 0;white-space:nowrap;color:var(--text)">${name}</td><td style="padding:2px 0;color:var(--text-muted);font-family:monospace">${pairs}</td></tr>`;
-      return `<details style="margin-top:12px;border-top:1px solid var(--border);padding-top:9px">
-        <summary style="cursor:pointer;font-size:12px;color:#c678dd;font-weight:600">＋ 完整計分規則</summary>
-        <div style="margin-top:9px;font-size:11.5px;line-height:1.55">
-          <b style="color:var(--accent)">最終公式</b>：貪婪 = 0.70×基礎 + 0.30×催化(取話題/法說/展覽最強者)，四捨五入 0~100。<br>
-          <b style="color:var(--accent)">基礎(四維)</b> = 0.30×價格延伸 + 0.25×動能 + 0.25×量能 + 0.20×籌碼；每維 = 該維各指標「分段線性內插分」的<b>平均</b>（缺值維度自動重歸一化權重）。
-          <div style="margin-top:8px;color:var(--text)"><b>各指標錨點（x→分，中間線性內插）</b></div>
-          <table style="border-collapse:collapse;font-size:11px;margin-top:3px">
-            ${row('BIAS20 %', '-10→0, -5→30, -3→40, 8→60, 15→80, 25→100')}
-            ${row('布林 %b', '0→0, 0.2→30, 0.3→40, 0.8→60, 1.0→80, 1.2→100')}
-            ${row('RSI(5)', '10→0, 30→39, 45→40, 70→60, 85→80, 95→100')}
-            ${row('RS(超額報酬,近20日個股−大盤%)', '-10→0, -5→30, 0→50, 5→70, 10→85, 20→100')}
-            ${row('量比(量/20日均量)', '0.3→0, 0.5→30, 0.8→40, 1.7→59, 1.8→60, 3→80, 5→100')}
-            ${row('當沖率 %(只加貪婪;OTC缺則略)', '0→40, 35→55, 60→80, 80→100')}
-            ${row('主力集中度 %(前15大淨買/總量)', '-30→0, 0→40, 30→60, 50→80, 70→100')}
-            ${row('融資單週增幅 %', '-10→30, 0→45, 10→60, 20→80, 40→100')}
-          </table>
-          <div style="margin-top:8px;color:var(--text)"><b>催化(取最強者)</b></div>
-          <div style="color:var(--text-muted)">
-            ・話題：hot_topics 熱度分（所屬最熱話題）<br>
-            ・法說：≤3天100 / 4~7天80 / 8~14天50 / 剛開完0~3天前60<br>
-            ・展覽：展中100 / 展前1~7天90 / 展前8~30天60 / 展後5天內40（需族群對得上）
-          </div>
-          <div style="margin-top:8px;color:var(--text)"><b>利多出盡 / 利空出盡</b></div>
-          <div style="color:var(--text-muted)">利多出盡＝貪婪高分(≥80) 且 <b>法說會當天或開完1~2交易日內</b> 且 頂部反轉K（爆量長黑 或 爆量長上影跌破5日線）。利空出盡＝極度悲觀(≤20) 且 底部反轉K（爆量長紅 或 爆量長下影站回5日線）。上影比=(高−max(開,收))/收、下影比=(min(開,收)−低)/收。</div>
-          <div style="margin-top:8px;color:var(--text)"><b>資料源</b></div>
-          <div style="color:var(--text-muted)">stock_daily(價量,證交所/櫃買)、day_trade(當沖,上市)、wantgoo_daily(集中度,含上櫃分點)、margin_short(融資,含上櫃)、taiex_daily/otc_index_daily(大盤,算RS)、catalyst_events(法說會)。每日夜間排程重算(greed_base 快照)。上櫃已納入；上櫃當沖無官方個股源故量能以量比為主。</div>
-        </div>
-      </details>`;
-    }
     function _showGreedCalc() {
-      if (!window._isOwner) { try{ showToast('完整貪婪算法為開通會員功能'); }catch(_){} return; }   // #7 一般會員不看公式
+      // 完整計分規則/權重/錨點存後端(DB)，前端不內嵌；未開通或總開關關 → 無公式可顯示
+      if (!window._algoFormulas || !window._algoFormulas.greed) { try{ showToast('完整貪婪算法為開通會員功能'); }catch(_){} return; }
       const d = _greedData; if (!d) return;
-      const cB = (0.70 * d.base).toFixed(1), cC = (0.30 * d.catalyst).toFixed(1);
       const lawTxt = d.lawDate ? `${d.lawDate}（${d.lawDays >= 0 ? d.lawDays + '天後' : Math.abs(d.lawDays) + '天前'}）→ ${d.lawScore}分` : '近期無 → 0分';
       const exhTxt = d.exhInfo ? `${d.exhInfo} → ${d.exhScore}分` : '無對應展覽 → 0分';
       const dim = (v) => v == null ? '—' : v;
+      const exhaustBlock = d.exhaust ? '<div style="margin-top:11px;color:#E24B4A;font-size:11.5px"> <b>利多出盡</b>：貪婪高分(≥80) 且 法說會當天或開完1~2交易日內 且 出現頂部反轉K（爆量長黑 或 爆量長上影跌破5日線）——追高風險偏高。</div>' : '';
+      const capitulationBlock = d.capitulation ? '<div style="margin-top:11px;color:#0a9a56;font-size:11.5px"> <b>利空出盡</b>：極度悲觀(≤20) 且 出現底部反轉K（爆量長紅 或 爆量長下影站回5日線）——恐慌洗盤、醞釀反彈。</div>' : '';
       document.getElementById('greedPopupTitle').textContent = `${d.code} 貪婪指標 ${d.greed}（${_greedZone(d.greed)}）${d.exhaust ? ' 利多出盡' : ''}${d.capitulation ? ' 利空出盡' : ''}`;
-      document.getElementById('greedPopupBody').innerHTML = `
-        <div style="background:rgba(255,255,255,.05);padding:9px 11px;border-radius:6px;font-family:monospace;font-size:12px;line-height:1.7">
-          貪婪 = 0.70×基礎 + 0.30×催化(取最強)<br>
-          　　 = 0.70×${d.base} + 0.30×${d.catalyst}${d.catSrc ? '(' + d.catSrc + ')' : ''}<br>
-          　　 = ${cB} + ${cC} = <b style="color:#c678dd">${d.greed}</b></div>
-        <div style="margin-top:11px"><b style="color:var(--accent)">基礎分 ${d.base}</b>（70%，四維情緒/擁擠度${d.dataDate ? '・' + d.dataDate : ''}）：</div>
-        <div style="margin-top:5px;font-family:monospace;font-size:11.5px;color:var(--text);line-height:1.6">
-          價格延伸 30% = <b>${dim(d.priceS)}</b>（BIAS＋布林%b）<br>
-          動能強弱 25% = <b>${dim(d.momS)}</b>（RSI5＋RS vs大盤）<br>
-          量能投機 25% = <b>${dim(d.volS)}</b>（量比＋當沖率）<br>
-          籌碼擁擠 20% = <b>${dim(d.chipS)}</b>（前15大集中度＋融資增幅）</div>
-        <div style="margin-top:11px"><b style="color:#c678dd">催化 ${d.catalyst}</b>（30%，取三者最強${d.catSrc ? '：' + d.catSrc : ''}）：</div>
-        <div style="margin-top:5px;font-size:11.5px;line-height:1.6">
-          ・話題熱度 ${d.topicHeat}：${d.topicSector ? '所屬最熱話題「' + d.topicSector + '」' : '不在任何話題 → 0'}<br>
-          ・法說會 ${d.lawScore}：${lawTxt}<br>
-          ・展覽 ${d.exhScore || 0}：${exhTxt}</div>
-        ${d.exhaust ? '<div style="margin-top:11px;color:#E24B4A;font-size:11.5px"> <b>利多出盡</b>：貪婪高分(≥80) 且 法說會當天或開完1~2交易日內 且 出現頂部反轉K（爆量長黑 或 爆量長上影跌破5日線）——追高風險偏高。</div>' : ''}
-        ${d.capitulation ? '<div style="margin-top:11px;color:#0a9a56;font-size:11.5px"> <b>利空出盡</b>：極度悲觀(≤20) 且 出現底部反轉K（爆量長紅 或 爆量長下影站回5日線）——恐慌洗盤、醞釀反彈。</div>' : ''}
-        <div style="margin-top:11px;font-size:11px;color:var(--text-muted)">區間：極度恐懼0–25・恐懼25–45・中立45–55・貪婪55–75・極度貪婪75–100。</div>
-        ${_greedMethodologyHTML()}`;
+      document.getElementById('greedPopupBody').innerHTML = window._fillTpl(window._algoFormulas.greed, {
+        base: d.base, catalyst: d.catalyst, greed: d.greed,
+        catSrcParen: d.catSrc ? '(' + d.catSrc + ')' : '', catSrcColon: d.catSrc ? '：' + d.catSrc : '',
+        dataDateDot: d.dataDate ? '・' + d.dataDate : '',
+        priceS: dim(d.priceS), momS: dim(d.momS), volS: dim(d.volS), chipS: dim(d.chipS),
+        topicHeat: d.topicHeat, topicLine: d.topicSector ? '所屬最熱話題「' + d.topicSector + '」' : '不在任何話題 → 0',
+        lawScore: d.lawScore, lawTxt: lawTxt, exhScore: d.exhScore || 0, exhTxt: exhTxt,
+        exhaustBlock: exhaustBlock, capitulationBlock: capitulationBlock,
+        method: window._algoFormulas.greed_method || '' });
       document.getElementById('greedPopup').style.display = 'flex';
     }
 
@@ -13581,6 +13574,23 @@
       document.addEventListener(e, _resetIdleTimer, { passive: true })
     );
 
+    // ── 算法公式：文字存後端(DB)，前端不內嵌；僅管理者且後台總開關開時才取回並顯示 ──
+    window._algoFormulas = null;
+    function _fillTpl(tpl, map){ return String(tpl||'').replace(/\{(\w+)\}/g, function(m,k){ return map[k]!=null?map[k]:''; }); }
+    window._fillTpl = _fillTpl;
+    function _loadAlgoFormulas(){
+      if (!_authToken){ window._algoFormulas=null; document.body.classList.remove('algo-on'); return; }
+      fetch(_authEndpoint,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_authToken},body:JSON.stringify({action:'algo_info'})})
+        .then(function(r){return r.ok?r.json():null;})
+        .then(function(j){
+          var heat=document.getElementById('htHeatFormula');
+          if(j&&j.visible&&j.formulas){ window._algoFormulas=j.formulas; document.body.classList.add('algo-on'); if(heat) heat.innerHTML=j.formulas.topic_heat||''; }
+          else { window._algoFormulas=null; document.body.classList.remove('algo-on'); if(heat) heat.innerHTML=''; }
+          try{ var g=document.getElementById('greedGauge'); if(g&&typeof currentCode!=='undefined'&&currentCode) _loadGreed(currentCode); }catch(_){}
+        }).catch(function(){ window._algoFormulas=null; document.body.classList.remove('algo-on'); });
+    }
+    window._loadAlgoFormulas = _loadAlgoFormulas;
+
     function _applyAuthState() {
       const loggedIn = !!_authToken;
       document.getElementById('loginBtn').style.display      = loggedIn ? 'none' : '';
@@ -13626,6 +13636,9 @@
       document.body.classList.toggle('is-admin', !!_owner);
       document.querySelectorAll('.nav-admin').forEach(function(el){ el.style.display = _owner ? '' : 'none'; });
       document.querySelectorAll('.nav-broker').forEach(function(el){ el.style.display = _canBroker ? '' : 'none'; });
+      // 管理者登入 → 取算法公式（只抓一次；後台切換總開關後會再呼叫 _loadAlgoFormulas 刷新）
+      if (_owner) { if (!window._algoFetched){ window._algoFetched=true; _loadAlgoFormulas(); } }
+      else { window._algoFetched=false; window._algoFormulas=null; document.body.classList.remove('algo-on'); }
       // 登入後抓本人等級（member_tiers，RLS 只讀自己）→ VIP 解鎖主力；只抓一次，拿到再套一次 gate
       if (loggedIn && window._memberTier===undefined && !_owner) {
         window._memberTier=null;
