@@ -13,11 +13,16 @@ const fs=require('fs'),assert=require('assert');const {chromium}=require('playwr
  return r.fulfill({contentType:'text/html',body:'<!doctype html><html><head></head><body><main style="max-width:900px;margin:auto"><section id="exhibitionCalendar"></section></main></body></html>'});
  });
  await page.goto('http://exhibition.test/');
+ await page.addStyleTag({content:[...fs.readFileSync('apps/web/index.html','utf8').matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)].map(m=>m[1]).join('\n')});
+ await page.evaluate(t=>document.documentElement.dataset.theme=t,theme);
  await page.addStyleTag({content:':root{--surface:'+(theme==='light'?'#fff':'#131d2b')+';--surface2:'+(theme==='light'?'#f3f6fa':'#1c2a3c')+';--border:'+(theme==='light'?'#d5dfeb':'#344456')+';--text:'+(theme==='light'?'#172840':'#e8edf4')+';--text-muted:'+(theme==='light'?'#63758d':'#a5b4c7')+';--accent:#079de0;}body{margin:16px;background:var(--surface2);font-family:Arial,sans-serif}'});
  await page.addStyleTag({path:'apps/web/assets/exhibition-calendar.css'});
  await page.addScriptTag({path:'apps/web/assets/exhibition-calendar.js'});
  await page.evaluate(()=>{window._openStock=(c,n)=>window.opened={c,n};return AcademyExhibitions.show();});
  assert.equal(await page.locator('[data-ex-reminders] [data-ex-id]').count(),2);
+ assert(await page.locator('.ex-reminder-note').isVisible());
+ assert.equal(await page.locator('.ex-head').evaluate(e=>e.tagName),'DIV');
+ const note=await page.locator('.ex-reminder-note small').evaluate(e=>({color:getComputedStyle(e).color,background:getComputedStyle(e.closest('.ex-reminder-note')).backgroundColor}));assert.notEqual(note.color,note.background,'reminder text has visible contrast');
  assert.equal(await page.locator('[data-ex-month]').inputValue(),'2026-11');
  assert.equal(await page.locator('.ex-grid [data-ex-id="itf-2026"]').count(),4);
  assert.equal(await page.locator('.ex-grid [data-ex-id="fintech-2026"]').count(),0);
@@ -37,7 +42,7 @@ const fs=require('fs'),assert=require('assert');const {chromium}=require('playwr
  assert.equal(await page.locator('.ex-agenda-row').count(),1);
  await page.locator('[data-ex-month]').fill('2027-08');await page.locator('[data-ex-month]').dispatchEvent('change');
  assert.equal(await page.locator('.ex-grid [data-ex-id="semicon-2027"]').count(),3);
- await page.locator('[data-ex-query]').fill('no-match');assert.equal(await page.locator('.ex-agenda-row').count(),0);
+ await page.locator('[data-ex-query]').fill('no-match');assert.equal(await page.locator('.ex-agenda-row').count(),0);assert(await page.locator('[data-ex-month-empty]').isVisible());await page.locator('[data-ex-reset]').click();assert.equal(await page.locator('[data-ex-group]').inputValue(),'');assert.equal(await page.locator('[data-ex-query]').inputValue(),'');
  await page.locator('[data-ex-query]').fill('');await page.locator('[data-ex-group]').selectOption('');
  await page.locator('[data-ex-month]').fill('2026-11');await page.locator('[data-ex-month]').dispatchEvent('change');
  await page.screenshot({path:dir+'/calendar-'+theme+'-'+width+'.png',fullPage:true});
