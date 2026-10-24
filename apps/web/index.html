@@ -11245,8 +11245,10 @@
       if(S.broker)raw.forEach(e=>{if(_brokerChecked&&!_brokerChecked.has(e.broker))return;const time=_snapMarkerDate(e.date);if(time)visible.push({time,date:e.date,broker:e.broker,action:e.sell?(e.exit?'exit':'reduce'):(e.addition?'add':'entry')});});
       const automatic=visible.slice();
       if(S.user)user.filter(m=>m._side).forEach(m=>{if(automatic.some(e=>e.time===m.time&&e.date===m._date&&e.broker===m._broker&&e.action===m._action))return;visible.push({time:m.time,date:m._date,broker:m._broker,action:m._action});});
-      const hover={},unique=new Set(),directions=new Map();
-      for(const e of visible){const key=[e.time,e.date,e.broker,e.action].join('|');if(unique.has(key))continue;unique.add(key);(hover[e.time]||(hover[e.time]=[])).push(e);const sell=e.action==='exit'||e.action==='reduce';directions.set(e.time+'|'+sell,{time:e.time,position:sell?'aboveBar':'belowBar',color:sell?'#16a34a':'#ef4444',shape:sell?'arrowDown':'arrowUp',text:'',size:.7});}
+      const hover={},unique=new Set(),directions=new Map(),dirNames=new Map();
+      for(const e of visible){const key=[e.time,e.date,e.broker,e.action].join('|');if(unique.has(key))continue;unique.add(key);(hover[e.time]||(hover[e.time]=[])).push(e);const sell=e.action==='exit'||e.action==='reduce';const dk=e.time+'|'+sell;if(!directions.has(dk))directions.set(dk,{time:e.time,position:sell?'aboveBar':'belowBar',color:sell?'#16a34a':'#ef4444',shape:sell?'arrowDown':'arrowUp',text:'',size:1});if(!dirNames.has(dk))dirNames.set(dk,[]);dirNames.get(dk).push(e.broker);}
+      // 2026-10-24 用戶要求：箭頭下方寫分點名稱（只有箭頭太不醒目）；同日多家「、」隔開、超過 3 家寫前 2 家＋等 N 家；完整名單仍可滑過 K 棒看小卡
+      for(const [dk,mk] of directions){const ns=[...new Set(dirNames.get(dk)||[])];mk.text=ns.length>3?ns.slice(0,2).join('、')+' 等'+ns.length+'家':ns.join('、');}
       window._chartBrokerHover=hover;
       window._brokerByTime=Object.fromEntries(Object.entries(hover).map(([time,es])=>[time,es.filter(e=>e.action==='entry'||e.action==='add').map(e=>e.broker)]));
       window._brokerSellByTime=Object.fromEntries(Object.entries(hover).map(([time,es])=>[time,es.filter(e=>e.action==='exit'||e.action==='reduce').map(e=>e.broker)]));
