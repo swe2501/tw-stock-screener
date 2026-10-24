@@ -3378,6 +3378,16 @@ class handler(BaseHTTPRequestHandler):
                 return self._send_json(502, {"error": "Exact-date TAIFEX data unavailable", "date": day})
         if (qs.get("stat") or [""])[0] == "macro_environment":
             pass   # 2026-10-21 移除函式內的 from datetime import（會讓整個 do_GET 的 datetime 變區域變數，導致 foreign_settlement_cost 等分支 UnboundLocalError 當機）；模組頂端已匯入
+            # 2026-10-24 FRED 下載端點會逾時（三條數列全空）→ 先讀每晚本機抓好的 page_cache macro_env
+            #（scripts/macro_env_push.py：BLS CPI/失業率＋聯準會 H.10 美元廣義指數，與 FRED 同源），沒有才照舊連 FRED。
+            st_me, rows_me = _cache_sb("/page_cache", params=[("kind", "eq.macro_env"), ("select", "payload"), ("limit", "1")])
+            if st_me == 200 and isinstance(rows_me, list) and rows_me:
+                p_me = rows_me[0].get("payload") or {}
+                s_me = p_me.get("series") or {}
+                if all(len(s_me.get(k) or []) >= 6 for k in ("CPIAUCSL", "UNRATE", "DTWEXBGS")):
+                    return self._send_json(200, {"series": s_me, "source": p_me.get("source") or "BLS / Federal Reserve",
+                                                 "scope": p_me.get("scope") or "US macro and broad dollar; not complete global coverage"},
+                                           cache="public, s-maxage=1800, max-age=300")
             start = (datetime.now(timezone.utc) - timedelta(days=850)).date().isoformat()
             today = datetime.now(timezone.utc).date().isoformat()
             def load_series(series):
