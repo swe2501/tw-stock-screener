@@ -13834,6 +13834,8 @@
       if (loggedIn && _authUser) emailEl.textContent = _authUser.email;
       window._loggedIn = loggedIn;
       window.AcademyShareUnlock?.syncSession();
+      // 新手導覽：登入且會員等級/權限已判定後，檢查是否首次登入（跨裝置）→ 自動帶路
+      try { if (loggedIn && window._memberTier !== undefined) window.FqiTour?.maybeAutoStart(); } catch (_) {}
       // 右側面板永遠顯示（基本面/相關新聞不需登入）；「觀察備註」分頁僅登入顯示
       try {
         var _nt = document.getElementById('cnpTabNote');
@@ -18049,6 +18051,8 @@
 <link rel="stylesheet" href="assets/broker-workspace.css?v=5">
 <script src="assets/chart-viewport-fit.js?v=22" defer></script>
 <script src="assets/screen-inline-calendar.js?v=records-only13" defer></script>
+<link rel="stylesheet" href="assets/onboarding-tour.css?v=1">
+<script src="assets/onboarding-tour.js?v=1" defer></script>
 <link rel="stylesheet" href="assets/zhenming-hidden.css?v=6">
 <script src="assets/zhenming-hidden.js?v=5" defer></script>
 <script src="assets/screen-log.js?v=calendar-direct31" defer></script>
