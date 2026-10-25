@@ -137,11 +137,20 @@
     }
     pop.style.left = Math.round(x) + 'px'; pop.style.top = Math.round(y) + 'px'; pop.style.visibility = '';
   }
+  // 導覽目標若在導覽列下拉(.mn-menu)內，暫時強制展開該選單；換步/結束時還原
+  var _openedMenu = null;
+  function _restoreMenu() { if (_openedMenu) { try { _openedMenu.style.display = ''; } catch (_) {} _openedMenu = null; } }
+  function _forceMenuFor(target) {
+    _restoreMenu();
+    var menu = (target && target.closest) ? target.closest('.mn-menu') : null;
+    if (menu) { menu.classList.remove('mn-hide'); menu.style.display = 'block'; _openedMenu = menu; }
+  }
   function render() {
     var st = steps[idx]; if (!st) return finish(true);
     if (st.before) { try { st.before(); } catch (_) {} }
     setTimeout(function () {
       var target = null; try { target = st.locate ? st.locate() : null; } catch (_) {}
+      _forceMenuFor(target);        // 目標在下拉選單裡就先展開，聚光才打得到
       var rect = null;
       if (target && target.getBoundingClientRect) {
         try { target.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (_) {}
@@ -179,6 +188,7 @@
   function onResize() { if (!root || root.hidden) return; var st = steps[idx]; if (!st) return; var t = null; try { t = st.locate && st.locate(); } catch (_) {} var rect = t && t.getBoundingClientRect ? t.getBoundingClientRect() : null; if (rect && (rect.width < 2)) rect = null; spotlight(rect); var pop = root.querySelector('.ob-pop'); if (pop) placePop(pop, rect); }
   function onKey(e) { if (e.key === 'Escape') finish(false); else if (e.key === 'ArrowRight') { idx = Math.min(steps.length - 1, idx + 1); render(); } else if (e.key === 'ArrowLeft') { idx = Math.max(0, idx - 1); render(); } }
   function finish(completed) {
+    _restoreMenu();
     if (root) { root.hidden = true; }
     document.body.style.overflow = '';
     window.removeEventListener('resize', onResize); window.removeEventListener('keydown', onKey);
