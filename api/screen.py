@@ -1852,13 +1852,13 @@ def _fetch_exdiv_codes(date_str):
 # ── price_window（Supabase）取代 YF 逐股歷史（真名/MACD/放量用）──────────────
 # 資料由本機每日 upload_price_window.py 上傳(TWSE 官方、不落後),逐股讀 ≤60 列不撞 1000 上限。
 # 注意:adj_*(還原)此版暫等於原始價 → 只給「不用還原」的真名/MACD/放量用;跳空仍走 YF。
-def fetch_pw_one(code, date_str, s):
+def fetch_pw_one(code, date_str, s, latest_first=False):
     tgt = f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:]}"
     st, rows = _cache_sb("/price_window", "GET", params=[
         ("select", "trade_date,open,high,low,close,volume"),
         ("code", f"eq.{code}"), ("trade_date", f"lte.{tgt}"),
-        ("order", "trade_date.asc"), ("limit", "1000")])
-    rows = rows or []
+        ("order", "trade_date.desc" if latest_first else "trade_date.asc"), ("limit", "1000")])
+    rows = list(reversed(rows or [])) if latest_first else (rows or [])
     # 目標日不在窗內(今天尚未上傳)→ 用 s(STOCK_DAY_ALL/MI_INDEX 的當日)縫上
     if s and (not rows or rows[-1]["trade_date"] < tgt):
         rows = rows + [{"trade_date": tgt, "open": s.get("open"), "high": s.get("high"),
@@ -2787,7 +2787,100 @@ def _classify_357(d, price):
 # Main screener
 # ─────────────────────────────────────────────────────────────────────────────
 
+
+def hidden_options(value):
+    """Validate opt-in relative-strength inputs; no silent default for invalid requests."""
+    if not value or not value.get("enabled"):
+        return None
+    side = value.get("side")
+    metrics = value.get("metrics", [])
+    if side not in ("strong", "weak") or not isinstance(metrics, list) or not metrics or any(m not in ("ma", "return") for m in metrics):
+        raise ValueError("隱藏式請選擇強弱方向及至少一種比較方式。")
+    mode = value.get("mode", "days")
+    out = {"side": side, "metrics": set(metrics), "mode": mode}
+    if mode == "days":
+        raw = value.get("days", 20)
+        if isinstance(raw, bool) or not str(raw).isdigit() or not 1 <= int(raw) <= 760:
+            raise ValueError("自訂週期需為 1～760 個交易日。")
+        out["days"] = int(raw)
+    elif mode == "dates":
+        for key in ("start", "end"):
+            try:
+                raw = value.get(key, "")
+                if datetime.strptime(raw, "%Y-%m-%d").strftime("%Y-%m-%d") != raw:
+                    raise ValueError()
+                out[key] = raw
+            except (TypeError, ValueError):
+                raise ValueError("請設定有效的起訖日期。")
+        if out["start"] > out["end"] or out["end"] > datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m-%d"):
+            raise ValueError("日期區間不可倒置或包含未來日期。")
+    else:
+        raise ValueError("週期模式無效。")
+    return out
+
+
+def hidden_compare(stock, benchmark, options, end):
+    """Closed bars, exact benchmark dates, SMA warmup, no forward fill or lookahead."""
+    periods = (5, 10, 20, 60, 120, 240)
+    def clean(rows):
+        result = {}
+        for row in rows:
+            date, price = row.get("trade_date"), row.get("close")
+            if date and date <= end and isinstance(price, (int, float)) and not isinstance(price, bool) and math.isfinite(price) and price > 0:
+                result[date] = price
+        return sorted(result.items())
+    market, shares = clean(benchmark), clean(stock)
+    if not market or market[-1][0] != end:
+        return None
+    selected = [d for d, _ in market if options["mode"] == "days" or options["start"] <= d <= options["end"]]
+    if options["mode"] == "days":
+        if len(selected) < options["days"]:
+            return None
+        selected = selected[-options["days"]:]
+    if not selected:
+        return None
+    dates = [d for d, _ in market]
+    first = dates.index(selected[0])
+    if first == 0:
+        return None
+    base = dates[first-1]
+    smap = dict(shares)
+    if any(d not in smap for d in [base]+selected):
+        return None
+    mchange = (dict(market)[selected[-1]]/dict(market)[base]-1)*100
+    schange = (smap[selected[-1]]/smap[base]-1)*100
+    delta = schange-mchange
+    tiers = []
+    if "ma" in options["metrics"]:
+        for rows in (shares, market):
+            indexes = {d:i for i,(d,_) in enumerate(rows)}
+            # Need all six averages; partial SMA history is never treated as weak.
+            if any(indexes.get(d, -1) < 239 for d in selected):
+                return None
+            held = []
+            prices = [p for _,p in rows]
+            for rank, period in enumerate(periods):
+                if all(prices[indexes[d]] >= sum(prices[indexes[d]-period+1:indexes[d]+1])/period for d in selected):
+                    held.append(rank)
+            tiers.append(min(held) if held else 6)
+    stronger = options["side"] == "strong"
+    ma_ok = "ma" not in options["metrics"] or (tiers[0] < tiers[1] if stronger else tiers[0] > tiers[1])
+    ret_ok = "return" not in options["metrics"] or (delta > 1e-9 if stronger else delta < -1e-9)
+    return {"matched": ma_ok and ret_ok, "start":selected[0], "end":selected[-1], "base_date":base, "days":len(selected),
+            "stock_return":round(schange,4), "market_return":round(mchange,4), "relative_pp":round(delta,4),
+            "stock_ma":periods[tiers[0]] if tiers and tiers[0]<6 else None,
+            "market_ma":periods[tiers[1]] if tiers and tiers[1]<6 else None, "benchmark":"加權指數"}
+
 def screen(params):
+    try:
+        hidden = hidden_options(params.get("zhenming_hidden"))
+    except (ValueError, AttributeError) as error:
+        return {"error":str(error),"results":[]}
+    if hidden and hidden["mode"] == "dates":
+        status, days = _cache_sb("/taiex_daily", "GET", params=[("select","trade_date"),("trade_date",f"lte.{hidden['end']}"),("order","trade_date.desc"),("limit","1")])
+        if status != 200 or not isinstance(days,list) or not days or days[0].get("trade_date", "") < hidden["start"]:
+            return {"error":"所選區間尚無可用的加權指數交易日資料。","results":[]}
+        params = dict(params, date=days[0]["trade_date"])
     requested_date   = params.get("date", "").replace("-", "")  # YYYYMMDD or ""
     min_price        = float(params.get("min_price") or 0)
     red_pct          = float(params.get("red_candle_pct") or 0)
@@ -2816,6 +2909,8 @@ def screen(params):
     is_macd_range    = macd_mode in ("long3", "short3")
     # 區間模式：以「訖日」當快照基準日（撈當日全市場清單，再逐股數區間內交叉）
     if is_macd_range and len(macd_end) == 8:
+        if hidden and hidden["mode"] == "dates" and macd_end != requested_date:
+            return {"error":"MACD 與隱藏式的結束日期不同，請調整為同一交易日再比較。","results":[]}
         requested_date = macd_end
     check_earn_gap_down = bool(params.get("earn_gap_down", False))
     check_zhenming1  = bool(params.get("zhenming1", False))
@@ -2925,7 +3020,7 @@ def screen(params):
         candidates[code] = s
 
     if not candidates:
-        return {"date": display_date, "total": len(all_stocks), "count": 0, "results": []}
+        return {"date": display_date, "total": len(all_stocks), "count": 0, "results": [], "zhenming_hidden_applied": bool(hidden)}
 
     # ── Step 3a: 跳空篩選 → 只試「前一個非週末日曆日」MI_INDEX（天條：跳空只跟前一交易日比）
     prev_mi_gap: dict = {}
@@ -2972,12 +3067,27 @@ def screen(params):
 
     # ── price_window 逐股讀（真名/MACD/放量;涵蓋歷史日 → 修正「回搜近期日期漏股」如 3443/8-11）──
     need_pw = (vol_mult > 0 or shrink_mult > 0 or bool(macd_mode)
-               or check_zhenming1 or check_zhenming2 or check_zhenming3 or bool(sma20_stages)
+               or check_zhenming1 or check_zhenming2 or check_zhenming3 or bool(hidden) or bool(sma20_stages)
                or check_harami_bull or check_harami_bear)   # 母子線需 MA20 判趨勢 → 抓歷史
+    hidden_market = []
+    if hidden:
+        end_iso = f"{actual_date[:4]}-{actual_date[4:6]}-{actual_date[6:]}"
+        status, rows = _cache_sb("/taiex_daily", "GET", params=[("select","trade_date,close"),("trade_date",f"lte.{end_iso}"),("order","trade_date.desc"),("limit","1000")])
+        hidden_market = list(reversed(rows or [])) if status == 200 and isinstance(rows,list) else []
+        if not hidden_market or hidden_market[-1].get("trade_date") != end_iso:
+            return {"error":"隱藏式的加權指數資料尚未齊備，請選擇已有收盤資料的日期。","results":[]}
+        selected_dates = [r["trade_date"] for r in hidden_market if hidden["mode"] == "days" or hidden["start"] <= r["trade_date"] <= hidden["end"]]
+        if hidden["mode"] == "days":
+            selected_dates = selected_dates[-hidden["days"]:]
+        if not selected_dates or (hidden["mode"] == "days" and len(selected_dates) < hidden["days"]):
+            return {"error":"所選觀察週期超過目前可用的指數歷史資料。","results":[]}
+        first_index = next(i for i,r in enumerate(hidden_market) if r["trade_date"] == selected_dates[0])
+        if first_index < (239 if "ma" in hidden["metrics"] else 1):
+            return {"error":"所選期間之前的指數歷史不足，無法完整計算比較；請縮短期間或改選較近日期。","results":[]}
     pw_data = {}
     if need_pw:
         def fetch_pw_only(code):
-            return code, fetch_pw_one(code, actual_date, candidates.get(code))
+            return code, fetch_pw_one(code, actual_date, candidates.get(code), latest_first=bool(hidden))
 
         with ThreadPoolExecutor(max_workers=min(len(candidates), 50)) as ex:
             pfuts = [ex.submit(fetch_pw_only, c) for c in candidates]
@@ -3204,6 +3314,13 @@ def screen(params):
             if shrink_mult > 0 and v > max_ma * shrink_mult:
                 continue
 
+        hidden_result = None
+        if hidden:
+            source_bars = (pw_data.get(code) or {}).get("bars") or []
+            hidden_result = hidden_compare([{"trade_date":b[0],"close":b[4]} for b in source_bars], hidden_market, hidden, end_iso)
+            if not hidden_result or not hidden_result["matched"]:
+                continue
+
         # 真名一式 / 真名二式
         if check_zhenming1 or check_zhenming2:
             # 長紅棒 3%（兩者共用）
@@ -3284,6 +3401,8 @@ def screen(params):
         if vol_ratio is not None: item["vol_ratio"] = round(vol_ratio, 2)
         if code in _gap_unverified:
             item.setdefault("data_missing", []).append("gap_unverified")
+        if hidden_result:
+            item["zhenming_hidden"] = hidden_result
         if zm3:
             item["zm3"] = zm3
         if sma20_hit:
@@ -3311,6 +3430,7 @@ def screen(params):
         "total": len(all_stocks),
         "count": len(results),
         "results": results,
+        "zhenming_hidden_applied": bool(hidden),
     }
 
 
