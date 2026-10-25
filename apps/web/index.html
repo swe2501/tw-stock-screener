@@ -9377,7 +9377,7 @@
   <!--  主力訊號 modal（僅擁有者可見） -->
   <!--  主力訊號（市場觀察大項 view，參照貪婪指標版型；僅擁有者可見資料）-->
   <div id="sigView" style="display:none">
-    <div class="tm-head"><h2> 不籌吃穿</h2><span class="sub">高勝率分點當日買超・賣出</span></div><div class="broker-workspace-tabs" role="group" aria-label="不籌吃穿功能"><button type="button" aria-pressed="true" onclick="_showView('sig')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h3l3-7 4 14 3-7h3"/></svg><span>主力訊號</span></button><button type="button" aria-pressed="false" onclick="_showView('brank')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4m0 0h5M4 4a9 9 0 1 1-1 11"/></svg><span>分點回測</span></button><button type="button" aria-pressed="false" data-member-feature="selltrack" onclick="_showView('brokertrack')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18M6 4v6m12-6v6M5 14l4 3 5-5 5 2"/></svg><span>追蹤觀察站</span></button></div>
+    <section class="broker-intro" aria-label="不籌吃穿介紹"><div class="broker-intro-eyebrow">BROKER INSIGHTS</div><div class="broker-intro-heading"><h2>不籌吃穿</h2><span>主力訊號</span></div><h3>從分點動向，看見籌碼的變化。</h3><p>整理分點當日訊號，搭配歷史回測與後續追蹤，循著日期與個股脈絡，建立自己的觀察紀錄。</p><div class="broker-workspace-tabs" role="group" aria-label="不籌吃穿功能"><button type="button" aria-pressed="true" onclick="_showView('sig')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h3l3-7 4 14 3-7h3"/></svg><span>主力訊號</span></button><button type="button" aria-pressed="false" onclick="_showView('brank')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4m0 0h5M4 4a9 9 0 1 1-1 11"/></svg><span>分點回測</span></button><button type="button" aria-pressed="false" data-member-feature="selltrack" onclick="_showView('brokertrack')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18M6 4v6m12-6v6M5 14l4 3 5-5 5 2"/></svg><span>追蹤觀察站</span></button></div></section>
     <div class="gd-bar2 sig-date-toolbar" style="align-items:center;gap:10px">
       <details id="sigRangePicker" class="sig-range-picker"><summary aria-label="選擇訊號日期區間"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M8 3v4m8-4v4M4 10h16"/></svg><span>日期區間</span><span aria-hidden="true">⌄</span></summary>
         <form class="sig-range-popover" onsubmit="event.preventDefault();_sigApplyRange()"><b>選擇日期區間</b><div class="sig-range-fields"><label>開始日期<input type="date" id="sigRangeFrom" required></label><span aria-hidden="true">→</span><label>結束日期<input type="date" id="sigRangeTo" required></label></div><small id="sigRangeAvailable"></small><p id="sigRangeError" role="status"></p><div class="sig-range-actions"><button type="button" onclick="_sigClearRange()">返回單日</button><button type="submit">套用區間</button></div></form>
@@ -9393,7 +9393,7 @@
 
   <!--  分點回測（市場觀察大項 view；僅擁有者可見資料）-->
   <div id="brankView" style="display:none">
-    <div class="tm-head"><h2> 不籌吃穿</h2><span class="sub">分點勝率回測榜</span></div><div class="broker-workspace-tabs" role="group" aria-label="不籌吃穿功能"><button type="button" aria-pressed="false" onclick="_showView('sig')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h3l3-7 4 14 3-7h3"/></svg><span>主力訊號</span></button><button type="button" aria-pressed="true" onclick="_showView('brank')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4m0 0h5M4 4a9 9 0 1 1-1 11"/></svg><span>分點回測</span></button><button type="button" aria-pressed="false" data-member-feature="selltrack" onclick="_showView('brokertrack')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18M6 4v6m12-6v6M5 14l4 3 5-5 5 2"/></svg><span>追蹤觀察站</span></button></div>
+    <section class="broker-intro" aria-label="不籌吃穿介紹"><div class="broker-intro-eyebrow">BROKER INSIGHTS</div><div class="broker-intro-heading"><h2>不籌吃穿</h2><span>分點回測</span></div><h3>把分點動向，放回歷史裡觀察。</h3><p>比較不同分點與事件的歷史表現，同時留意樣本筆數與尚未走完的觀察期間，理解數字背後的條件。</p><div class="broker-workspace-tabs" role="group" aria-label="不籌吃穿功能"><button type="button" aria-pressed="false" onclick="_showView('sig')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h3l3-7 4 14 3-7h3"/></svg><span>主力訊號</span></button><button type="button" aria-pressed="true" onclick="_showView('brank')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4m0 0h5M4 4a9 9 0 1 1-1 11"/></svg><span>分點回測</span></button><button type="button" aria-pressed="false" data-member-feature="selltrack" onclick="_showView('brokertrack')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18M6 4v6m12-6v6M5 14l4 3 5-5 5 2"/></svg><span>追蹤觀察站</span></button></div></section>
     <div id="rankSuperBar" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"></div>
     <div id="rankGroupBar" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"></div>
     <div id="rankTabBar" style="display:flex;gap:4px;flex-wrap:wrap"></div>
@@ -9499,8 +9499,7 @@
   </div>
 
   <div id="brokertrackView" style="display:none">
-    <div class="tm-head"><h2> 不籌吃穿</h2><span class="sub">追蹤觀察站 · 分點持倉變化</span></div>
-<div class="broker-workspace-tabs" role="group" aria-label="不籌吃穿功能"><button type="button" aria-pressed="false" onclick="_showView('sig')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h3l3-7 4 14 3-7h3"/></svg><span>主力訊號</span></button><button type="button" aria-pressed="false" onclick="_showView('brank')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4m0 0h5M4 4a9 9 0 1 1-1 11"/></svg><span>分點回測</span></button><button type="button" aria-pressed="true" data-member-feature="selltrack" onclick="_showView('brokertrack')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18M6 4v6m12-6v6M5 14l4 3 5-5 5 2"/></svg><span>追蹤觀察站</span></button></div><div id="sellTrackBody" style="font-size:12.5px;color:var(--text)">載入中...</div>
+    <section class="broker-intro" aria-label="不籌吃穿介紹"><div class="broker-intro-eyebrow">BROKER INSIGHTS</div><div class="broker-intro-heading"><h2>不籌吃穿</h2><span>追蹤觀察站</span></div><h3>讓每一次觀察，都有後續。</h3><p>將關注的分點與股票留在同一個工作區，接續查看訊號與籌碼變化，整理屬於自己的追蹤脈絡。</p><div class="broker-workspace-tabs" role="group" aria-label="不籌吃穿功能"><button type="button" aria-pressed="false" onclick="_showView('sig')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h3l3-7 4 14 3-7h3"/></svg><span>主力訊號</span></button><button type="button" aria-pressed="false" onclick="_showView('brank')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4m0 0h5M4 4a9 9 0 1 1-1 11"/></svg><span>分點回測</span></button><button type="button" aria-pressed="true" data-member-feature="selltrack" onclick="_showView('brokertrack')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18M6 4v6m12-6v6M5 14l4 3 5-5 5 2"/></svg><span>追蹤觀察站</span></button></div></section><div id="sellTrackBody" style="font-size:12.5px;color:var(--text)">載入中...</div>
   </div>
   <div id="sellTrackModal" style="display:none"></div>
 
@@ -9883,6 +9882,20 @@
             <div class="cb-label">真名三式（多頭回洗反包）</div>
           </div>
         </label>
+        <article class="zm-hidden-card" id="zhenmingHiddenCard">
+          <label class="checkbox-row"><input type="checkbox" id="zhenming_hidden" /><div class="cb-label">真名隱藏式（比大小）</div></label>
+          <div class="zm-hidden-options" id="zhenmingHiddenOptions" hidden>
+            <p>選一段期間，找出比大盤更強或更弱的股票。</p>
+            <fieldset><legend><span>01</span> 選擇方向 <small>單選</small></legend><label><input type="radio" id="zhStrong" name="zhSide" value="strong" checked> 強於大盤</label><label><input type="radio" id="zhWeak" name="zhSide" value="weak"> 弱於大盤</label></fieldset>
+            <fieldset><legend><span>02</span> 選擇期間</legend><label class="zh-period">週期<select id="zhPeriod" aria-label="隱藏式觀察週期"><option value="5">5 個交易日</option><option value="10">10 個交易日</option><option value="20" selected>20 個交易日</option><option value="60">60 個交易日</option><option value="120">120 個交易日</option><option value="240">240 個交易日</option><option value="custom">自訂交易日數</option><option value="dates">自訂日期區間</option></select></label>
+            <label id="zhCustomWrap" hidden>交易日數<input type="number" id="zhDays" min="1" max="760" step="1" value="30" aria-label="隱藏式自訂交易日數"></label>
+            <div id="zhDateWrap" class="zh-date-range" hidden><label>開始日期<input type="date" id="zhStart"></label><span>至</span><label>結束日期<input type="date" id="zhEnd"></label></div>
+            </fieldset>
+            <fieldset><legend><span>03</span> 比較方式 <small>可複選</small></legend><label><input type="checkbox" id="zhMa" data-hidden-metric checked> 均線</label><label><input type="checkbox" id="zhReturn" data-hidden-metric> 漲跌幅</label></fieldset>
+            <small>兩種方式可擇一，也可一起勾選；一起勾選時，股票需同時符合。</small>
+          </div>
+        </article>
+
           </div>
           </div>
         </div>
@@ -9966,7 +9979,8 @@
       var t=l?l.textContent.trim():cb.id; if(cb.id==='gap_down'&&v('gap_down_min')) t+=' ≥'+v('gap_down_min')+'元'; return t; }
     function picked(p){ var a=[];
       if(p.dataset.cat==='shape'&&v('no_black_years')) a.push('碗型 '+v('no_black_years')+'月'+(v('no_black_mult')?' '+v('no_black_mult')+'倍':'')+' 容忍'+(v('no_black_tolerance')||0)+'根');
-      p.querySelectorAll('input[type=checkbox]').forEach(function(cb){ if(cb.checked) a.push(txt(cb)); });
+      p.querySelectorAll('input[type=checkbox]:not([data-hidden-metric])').forEach(function(cb){ if(cb.checked) a.push(txt(cb)); });
+      if(p.dataset.cat==='zm'&&window.AcademyZhenmingHidden?.summary())a.push(window.AcademyZhenmingHidden.summary());
       if(p.dataset.cat==='ind'&&document.querySelector('.macd-cb[data-mode$="3"]:checked')&&v('macd_start')) a.push('區間 '+v('macd_start')+'～'+(v('macd_end')||'今'));
       return a; }
     function base(){ var a=[], ind=$('industry_filter');
@@ -10750,7 +10764,8 @@
     function _closeFuncMenu() { const m = document.getElementById('funcMenu'); if (m) m.style.display = 'none'; }
     document.addEventListener('click', function (e) { const d = document.getElementById('funcDropdown'); if (d && d.style.display !== 'none' && !d.contains(e.target)) _closeFuncMenu(); });
 
-    function doScreen() {
+    async function doScreen() {
+      let hiddenOptions,screenApi=window.__API||'';try{hiddenOptions=window.AcademyZhenmingHidden?.collect();if(hiddenOptions)screenApi=await window.AcademyZhenmingHidden.endpoint();}catch(error){showStatus('<div class="alert alert-error">'+error.message+'</div>');return;}
       window.AcademyScreenLog?.beforeScan();
       const dateVal = document.getElementById('date').value;
       const minPrice  = parseFloat(document.getElementById('min_price').value) || 0;
@@ -10827,6 +10842,7 @@
         zhenming1: zhenming1,
         zhenming2: zhenming2,
         zhenming3: zhenming3,
+        zhenming_hidden: hiddenOptions,
         sma20_stages: sma20Stages,
         ev357_cheap:     ev357Cheap,
         ev357_fair:      ev357Fair,
@@ -10841,10 +10857,10 @@
       const jobId = (crypto.randomUUID ? crypto.randomUUID()
         : Date.now() + '-' + Math.random().toString(36).slice(2));
       body.job_id = jobId;
-      _screenJob = { id: jobId, active: true };
+      _screenJob = { id: jobId, active: true, hidden:!!hiddenOptions, api:screenApi };
 
       // uat 分支別名(含 git-uat)打自己的同源後端，以便測試尚未上 prod 的篩選規則；其餘(prod/preview/local)維持 prod
-      fetch(window.__API+'/api/screen', {
+      fetch(screenApi+'/api/screen', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -10862,7 +10878,7 @@
             return;
           }
           lastResults = data.results || [];
-          renderResults(data);
+          renderResults(data,!!hiddenOptions);
         })
         .catch(err => {
           // 連線被系統中斷（多半是手機切背景）→ 不報錯，改成輪詢領取伺服器算好的結果
@@ -10908,16 +10924,17 @@
         return;
       }
       try {
-        const r = await fetch(`${window.__API}/api/screen?job_id=${encodeURIComponent(jobId)}&_=${Date.now()}`, { cache: 'no-store' });
+        const r = await fetch(`${_screenJob.api??window.__API}/api/screen?job_id=${encodeURIComponent(jobId)}&_=${Date.now()}`, { cache: 'no-store' });
         const data = await r.json();
         if (!_screenJob || _screenJob.id !== jobId) return;
         if (!data.pending) {                                  // 結果到手
+          const hiddenExpected=!!_screenJob.hidden;
           _screenJob = null;
           const btn = document.getElementById('submitBtn');
           btn.disabled = false; btn.innerHTML = '開始篩選';
           if (data.error) { showStatus(`<div class="alert alert-error">&#9888; ${data.error}</div>`); return; }
           lastResults = data.results || [];
-          renderResults(data);
+          renderResults(data,hiddenExpected);
           return;
         }
       } catch (_) { /* 忽略，繼續輪詢 */ }
@@ -10965,7 +10982,9 @@
       renderTable(filtered);
     }
 
-    function renderResults(data) {
+    function renderResults(data,hiddenExpected=false) {
+      if(hiddenExpected&&data.zhenming_hidden_applied!==true){_scanStop();lastResults=[];document.getElementById('resultsArea').innerHTML='';showStatus('<div class="alert alert-error">目前連線的後端尚未支援真名隱藏式，這次結果不予顯示，請更新後端後再試。</div>');return;}
+
       // 完成：進度補到 100%，並記錄實際耗時供下次估計自適應
       try{ if(_scanT0){ var _dur = Date.now()-_scanT0; if(_dur > 1500 && _dur < 120000) localStorage.setItem('zm_scan_ms', String(_dur));
         var _f = document.querySelector('#scanProg .scan-fill'); if(_f) _f.style.width='100%';
@@ -17873,9 +17892,11 @@
 <link rel="stylesheet" href="assets/strategy-studio.css?v=3">
 <link rel="stylesheet" href="assets/learning-center.css?v=6">
 <link rel="stylesheet" href="assets/research-layout.css?v=10">
-<link rel="stylesheet" href="assets/broker-workspace.css?v=4">
+<link rel="stylesheet" href="assets/broker-workspace.css?v=5">
 <script src="assets/chart-viewport-fit.js?v=22" defer></script>
 <script src="assets/screen-inline-calendar.js?v=records-only13" defer></script>
+<link rel="stylesheet" href="assets/zhenming-hidden.css?v=6">
+<script src="assets/zhenming-hidden.js?v=3" defer></script>
 <script src="assets/screen-log.js?v=calendar-direct30" defer></script>
 <script src="assets/pattern-focus.js?v=2" defer></script>
 <script src="assets/member-quick-menu.js?v=tier6" defer></script>
@@ -17912,7 +17933,8 @@
         </div>
       </div>
     </footer>
-<link rel="stylesheet" href="assets/exhibition-calendar.css?v=4">
-<script src="assets/exhibition-calendar.js?v=3" defer></script>
+<link rel="stylesheet" href="assets/exhibition-calendar.css?v=compact-scroll-1">
+<script src="assets/exhibitions-data.js?v=20261024" defer></script>
+<script src="assets/exhibition-calendar.js?v=localfix-3" defer></script>
 </body>
 </html>

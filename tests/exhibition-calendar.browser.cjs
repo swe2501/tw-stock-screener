@@ -1,6 +1,6 @@
 const fs=require('fs'),assert=require('assert');const {chromium}=require('playwright');
 (async()=>{
- const browser=await chromium.launch({channel:'chrome',headless:true});
+ const browser=await chromium.launch({channel:'msedge',headless:true});
  const data=fs.readFileSync('apps/web/assets/exhibitions.json','utf8'),catalog=require('./fixtures/exhibition-classification.cjs');
  const dir=require('path').join(require('os').tmpdir(),'exhibition-calendar');fs.mkdirSync(dir,{recursive:true});
  try{for(const width of [1280,390])for(const theme of ['light','dark']){
@@ -47,10 +47,16 @@ const fs=require('fs'),assert=require('assert');const {chromium}=require('playwr
  await page.locator('[data-ex-query]').fill('no-match');assert.equal(await page.locator('.ex-agenda-row').count(),0);assert(await page.locator('[data-ex-month-empty]').isVisible());await page.locator('[data-ex-reset]').click();assert.equal(await page.locator('[data-ex-group]').inputValue(),'');assert.equal(await page.locator('[data-ex-query]').inputValue(),'');
  await page.locator('[data-ex-query]').fill('');await page.locator('[data-ex-group]').selectOption('');
  await page.locator('[data-ex-month]').fill('2026-11');await page.locator('[data-ex-month]').dispatchEvent('change');
+
+ const monthHeight=await page.locator('.ex-calendar').evaluate(e=>e.getBoundingClientRect().height);assert.ok(monthHeight<510,'calendar uses compact rows');assert.equal(await page.locator('.ex-agenda').evaluate(e=>getComputedStyle(e).maxHeight),'none','agenda has no nested scroll trap');
+ await page.locator('.ex-calendar-scroll').scrollIntoViewIfNeeded();await page.locator('.ex-calendar-scroll').hover();const scrollBefore=await page.evaluate(()=>scrollY);await page.mouse.wheel(0,400);await page.waitForTimeout(300);assert.ok(await page.evaluate(()=>scrollY)>scrollBefore,'wheel over calendar continues down page');await page.locator('.ex-agenda').hover();const agendaBefore=await page.evaluate(()=>scrollY);await page.mouse.wheel(0,350);await page.waitForTimeout(300);assert.ok(await page.evaluate(()=>scrollY)>agendaBefore,'wheel over agenda continues down page');
  await page.screenshot({path:dir+'/calendar-'+theme+'-'+width+'.png',fullPage:true});
  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'no page horizontal overflow');
  await page.close();
  }
+ // Local script snapshot still renders dates when JSON and API are unavailable.
+ assert.deepEqual(JSON.parse(fs.readFileSync('apps/web/assets/exhibitions-data.js','utf8').match(/Snapshot=(.*);/)[1]),JSON.parse(data));
+ const local=await browser.newPage();await local.clock.install({time:new Date('2026-10-24T04:00:00Z')});await local.route('**/*',r=>r.fulfill({json:{status:'ok'}}));await local.goto('http://local-calendar.test/');await local.setContent('<section id="exhibitionCalendar"></section>');await local.addScriptTag({path:'apps/web/assets/exhibitions-data.js'});await local.addScriptTag({path:'apps/web/assets/exhibition-calendar.js'});await local.evaluate(()=>AcademyExhibitions.show());assert(await local.locator('.ex-grid').isVisible());assert.match(await local.locator('#exhibitionCalendar').innerText(),/個股分類暫時無法讀取/);await local.locator('[data-ex-reminders] [data-ex-id]').first().click();assert.match(await local.locator('[data-ex-stocks]').innerText(),/個股分類暫時無法讀取/);await local.close();
  // Failure is visible and retryable.
  const p=await browser.newPage();await p.route('**/*',r=>r.abort());await p.setContent('<section id="exhibitionCalendar"></section>');await p.addScriptTag({path:'apps/web/assets/exhibition-calendar.js'});await p.evaluate(()=>AcademyExhibitions.show());assert.equal(await p.locator('[data-ex-retry]').count(),1);await p.close();
  console.log('PASS desktop/mobile light/dark calendar, 2-month reminders, drawer evidence, filters, K-chart handoff, Escape and network failure');

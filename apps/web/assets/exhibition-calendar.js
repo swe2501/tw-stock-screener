@@ -96,6 +96,7 @@ function selectPreview(id){
 function closeDrawer(){if(drawer?.open)drawer.close();}
 function stockHTML(row){return '<article class="ex-stock"><button type="button" data-ex-stock="'+esc(row.code)+'"><b>'+esc(row.code)+'</b> '+esc(row.name)+' <span>查看 K 線 →</span></button><p>'+row.reasons.map(esc).join(' · ')+'</p>'+row.evidence.map(item=>'<div class="ex-evidence"><b>'+esc(item.kind==='exhibitor'?'確認當屆參展':'公司技術消息')+'</b><p>'+esc(item.title)+'</p><small>'+esc(item.date)+' · '+link(item.sourceUrl,'查看原始公告')+'</small></div>').join('')+'</article>';}
 function renderStocks(){
+ if(catalog.unavailable){drawer.querySelector('[data-ex-stocks]').innerHTML='<p class="ex-muted" role="status">個股分類暫時無法讀取；展期與官方來源仍可查看，請稍後重新載入。</p>';return;}
  const event=drawerEvent,term=drawer.querySelector('[data-ex-stock-query]').value.trim().toLowerCase(),rows=members(event,catalog).filter(r=>[r.code,r.name,...r.reasons].join(' ').toLowerCase().includes(term));
  const evidence=rows.filter(r=>r.evidence.length),related=rows.filter(r=>!r.evidence.length);
  drawer.querySelector('[data-ex-stocks]').innerHTML=(evidence.length?'<h3>參展確認與公司消息 <span>'+evidence.length+' 檔</span></h3>'+evidence.map(stockHTML).join(''):'<p class="ex-muted">目前沒有已核實的當屆個股參展或新品消息。</p>')+'<h3>同族群相關個股 <span>'+related.length+' 檔</span></h3><p class="ex-muted">依本站題材／官方產業分類連結，尚未確認參展；分類關聯不代表展覽受惠或股價表現。</p>'+(related.map(stockHTML).join('')||'<p class="ex-muted">沒有符合條件的相關個股。</p>');
@@ -123,7 +124,7 @@ function mount(){
 }
 async function classification(){
  const base=window.__API||'';
- const read=async url=>{const r=await fetch(url);if(!r.ok)throw Error('分類讀取失敗');const d=await r.json();if(!d||d.error)throw Error('分類讀取失敗');return d;};
+ const read=async url=>{const r=await fetch(url,{signal:AbortSignal.timeout(12000)});if(!r.ok)throw Error('分類讀取失敗');const d=await r.json();if(!d||d.error)throw Error('分類讀取失敗');return d;};
  const [groups,industries,names]=await Promise.all([
   read(base+'/api/screen?stat=themecatalog'),read(base+'/api/screen?stat=industries'),
   typeof window._loadNames==='function'?new Promise(resolve=>window._loadNames(()=>resolve(window._names||{}))):read(base+'/api/screen?stat=names')
@@ -135,10 +136,13 @@ async function show(){
  root=document.getElementById('exhibitionCalendar');if(!root)return;
  if(data){render();return;}if(loading)return loading;
  root.innerHTML='<p class="ex-muted" role="status">正在讀取展覽行事曆…</p>';
- loading=Promise.all([fetch('assets/exhibitions.json?v=1').then(r=>{if(!r.ok)throw Error('讀取失敗');return r.json();}),classification()]).then(([events,classification])=>{
+ const snapshot=()=>window.AcademyExhibitionSnapshot?Promise.resolve(window.AcademyExhibitionSnapshot):Promise.reject(Error('展期資源未就緒'));
+ const dates=location.protocol==='file:'?snapshot():fetch('assets/exhibitions.json?v=1').then(r=>{if(!r.ok)throw Error('讀取失敗');return r.json();}).then(d=>{if(!Array.isArray(d?.events))throw Error('展期格式錯誤');return d;}).catch(snapshot);
+ loading=Promise.all([dates,Promise.race([classification(),new Promise((_,reject)=>setTimeout(()=>reject(Error('分類讀取逾時')),12000))]).catch(()=>({verifiedAt:'暫時無法讀取（僅顯示展期）',themes:{},industries:{},names:{},unavailable:true}))]).then(([events,classification])=>{
   if(!Array.isArray(events.events)||!classification.themes||!classification.industries)throw Error('資料格式錯誤');
   data=events;catalog=classification;
   month=(events.events.filter(e=>e.status==='confirmed'&&e.end>=day()).sort((a,b)=>a.start.localeCompare(b.start))[0]?.start||day()).slice(0,7);mount();
+  if(catalog.unavailable){const note=document.createElement('p');note.className='ex-muted';note.setAttribute('role','status');note.textContent='展覽日期已載入，個股分類暫時無法讀取。';const retry=document.createElement('button');retry.type='button';retry.textContent='重試分類';retry.onclick=()=>{data=null;show();};note.append(' ',retry);root.querySelector('.ex-head').after(note);}
  }).catch(()=>{data=null;root.innerHTML='<p role="alert">展覽資料暫時無法讀取。</p><button type="button" data-ex-retry>重新載入</button>';root.querySelector('[data-ex-retry]').onclick=show;}).finally(()=>{loading=null;});return loading;
 }
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&root&&root.getClientRects().length&&data)render();});

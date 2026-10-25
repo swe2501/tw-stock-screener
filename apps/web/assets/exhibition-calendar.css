@@ -92,3 +92,19 @@
 #hottopicsView .ht-view-tabs svg{width:17px;height:17px;stroke-width:1.25;}
 @media(max-width:600px){#hottopicsView .ht-view-tabs{width:100%;gap:6px;}#hottopicsView .ht-view-tabs button{padding:11px 10px;min-height:46px;font-size:13px;}}
 @media(prefers-reduced-motion:reduce){#hottopicsView .ht-view-tabs button:after{transition:none;}}
+
+/* Compact month sheet; vertical wheel always continues through the page. */
+#exhibitionCalendar .ex-calendar-scroll{max-width:1120px;margin-inline:auto;padding-inline:22px;overflow-x:auto;overscroll-behavior:auto}
+#exhibitionCalendar .ex-calendar{border-radius:12px;border-color:color-mix(in srgb,var(--border) 85%,var(--surface));box-shadow:0 4px 16px color-mix(in srgb,var(--text) 3%,transparent)}
+#exhibitionCalendar .ex-week{padding:9px 0;font-size:11px;letter-spacing:.08em;background:var(--surface2)}
+#exhibitionCalendar .ex-week>span:first-child,#exhibitionCalendar .ex-week>span:last-child{color:var(--accent)}
+#exhibitionCalendar .ex-day,#exhibitionCalendar .ex-blank{min-height:74px;padding:6px 7px;border-color:color-mix(in srgb,var(--border) 72%,var(--surface))}
+#exhibitionCalendar .ex-day:nth-child(7n+1),#exhibitionCalendar .ex-day:nth-child(7n){background:color-mix(in srgb,var(--surface2) 55%,var(--surface))}
+#exhibitionCalendar .ex-day time{width:23px;height:23px;font-size:11px;font-weight:550;line-height:23px}
+#exhibitionCalendar .ex-day.is-today time{background:var(--accent);color:var(--on-accent,var(--surface));border-radius:50%;box-shadow:0 2px 5px color-mix(in srgb,var(--accent) 20%,transparent)}
+#exhibitionCalendar .ex-day button{font-size:10px;line-height:1.5;padding:4px 5px;margin-top:4px;min-height:25px;border-radius:4px;box-shadow:none!important;transform:none!important;background:color-mix(in srgb,var(--accent) 7%,var(--surface));color:var(--text)}
+#exhibitionCalendar .ex-day.is-range{background:color-mix(in srgb,var(--accent) 8%,var(--surface))}
+#exhibitionCalendar .ex-day.is-range:before{top:29px;height:1px}
+#exhibitionCalendar .ex-day button.is-linked{background:color-mix(in srgb,var(--accent) 15%,var(--surface));color:var(--text)}
+#exhibitionCalendar .ex-agenda{max-height:none;overflow:visible;padding-right:0;overscroll-behavior:auto}
+@media(max-width:600px){#exhibitionCalendar .ex-calendar-scroll{padding-inline:0;margin-inline:12px}#exhibitionCalendar .ex-day,#exhibitionCalendar .ex-blank{min-height:68px;padding:4px 3px}#exhibitionCalendar .ex-day button{padding:4px 2px;font-size:9px;min-height:25px}}
