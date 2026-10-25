@@ -55,16 +55,16 @@
 /* 貓頭鷹小精靈 */
 .ob-owl{ width:var(--ob-owl-size,74px); height:var(--ob-owl-size,74px); flex:0 0 auto; overflow:visible; filter:drop-shadow(0 6px 10px rgba(8,16,26,.22)); }
 .ob-pop .ob-owl{ --ob-owl-size:40px; }
-.ob-owl .ob-head{ transform-origin:60px 58px; animation:obHeadTurn 5.2s ease-in-out infinite; }
-.ob-owl .ob-wing-l{ transform-origin:40px 62px; animation:obFlapL 2.6s ease-in-out infinite; }
-.ob-owl .ob-wing-r{ transform-origin:80px 62px; animation:obFlapR 2.6s ease-in-out infinite; }
-.ob-owl .ob-pupil{ animation:obLook 5.2s ease-in-out infinite; }
-.ob-owl .ob-lid{ transform-origin:center top; transform:scaleY(0); animation:obBlink 4.3s ease-in-out infinite; }
-.ob-owl .ob-node{ animation:obNodePulse 2.6s ease-in-out infinite; }
-@keyframes obHeadTurn{ 0%,42%,100%{transform:rotate(0)} 52%{transform:rotate(-9deg)} 70%{transform:rotate(7deg)} 82%{transform:rotate(0)} }
-@keyframes obFlapL{ 0%,100%{transform:rotate(0)} 50%{transform:rotate(-26deg)} }
-@keyframes obFlapR{ 0%,100%{transform:rotate(0)} 50%{transform:rotate(26deg)} }
-@keyframes obLook{ 0%,45%,100%{transform:translateX(0)} 55%{transform:translateX(-2px)} 72%{transform:translateX(1.5px)} }
+.ob-owl .ob-head{ transform-box:view-box; transform-origin:70px 90px; animation:obHeadTurn 5.6s ease-in-out infinite; }
+.ob-owl .ob-wing-l{ transform-box:view-box; transform-origin:55px 84px; animation:obFlapL 2.8s ease-in-out infinite; }
+.ob-owl .ob-wing-r{ transform-box:view-box; transform-origin:85px 84px; animation:obFlapR 2.8s ease-in-out infinite; }
+.ob-owl .ob-pupil{ transform-box:view-box; animation:obLook 5.6s ease-in-out infinite; }
+.ob-owl .ob-lid{ transform-box:fill-box; transform-origin:center top; transform:scaleY(0); animation:obBlink 4.6s ease-in-out infinite; }
+.ob-owl .ob-node{ animation:obNodePulse 2.8s ease-in-out infinite; }
+@keyframes obHeadTurn{ 0%,40%,100%{transform:rotate(0)} 50%{transform:rotate(-8deg)} 68%{transform:rotate(6deg)} 80%{transform:rotate(0)} }
+@keyframes obFlapL{ 0%,100%{transform:rotate(0)} 50%{transform:rotate(-17deg)} }
+@keyframes obFlapR{ 0%,100%{transform:rotate(0)} 50%{transform:rotate(17deg)} }
+@keyframes obLook{ 0%,44%,100%{transform:translateX(0)} 54%{transform:translateX(-2px)} 70%{transform:translateX(1.5px)} }
 @keyframes obBlink{ 0%,92%,100%{transform:scaleY(0)} 95%,97%{transform:scaleY(1)} }
 @keyframes obNodePulse{ 0%,100%{opacity:.55} 50%{opacity:1} }
 .ob-pop-in{ animation:obPopIn .3s cubic-bezier(.2,.9,.3,1.2) both; }
