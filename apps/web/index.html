@@ -10440,7 +10440,7 @@
 
         <!-- ★ 右側分頁：觀察備註 / 基本面 / 相關新聞 -->
         <div class="chart-note-panel" id="chartNotePanel">
-<div id="greedGauge" onclick="showToast('學院導讀：情緒指標先用來辨識市場是否過熱或偏冷，再搭配價格趨勢、廣度與成交量；極端情緒不保證立即反轉。')" title="學院導讀：如何看市場情緒" style="display:none;cursor:pointer;padding:6px 20px;border-bottom:1px solid var(--border);overflow-x:auto"></div>
+<div id="greedGauge" onclick="window._greedGaugeClick&&window._greedGaugeClick()" title="市場情緒；管理者開啟算法公式後可點看計分" style="display:none;cursor:pointer;padding:6px 20px;border-bottom:1px solid var(--border);overflow-x:auto"></div>
           <div class="cnp-tabs">
             <button class="cnp-tab" data-t="note" id="cnpTabNote" onclick="_cnpTab('note')" style="display:none"> 觀察備註</button>
             <button class="cnp-tab on" data-t="fund" id="cnpTabFund" onclick="_cnpTab('fund')"> 基本面</button>
@@ -13312,6 +13312,11 @@
         method: window._algoFormulas.greed_method || '' });
       document.getElementById('greedPopup').style.display = 'flex';
     }
+    // 貪婪儀表點擊：管理者且總開關開且有個股貪婪資料 → 開算法；否則維持學院導讀提示
+    window._greedGaugeClick = function () {
+      if (window._algoFormulas && window._algoFormulas.greed && _greedData) { _showGreedCalc(); return; }
+      try { showToast('學院導讀：情緒指標先用來辨識市場是否過熱或偏冷，再搭配價格趨勢、廣度與成交量；極端情緒不保證立即反轉。'); } catch (_) {}
+    };
 
     // ──  回測勝率 ──
     let _btPositions = [], _btPrices = {}, _btTab = 0, _btAddCtx = null, _btSellId = null;
