@@ -2909,6 +2909,8 @@ def screen(params):
     is_macd_range    = macd_mode in ("long3", "short3")
     # 區間模式：以「訖日」當快照基準日（撈當日全市場清單，再逐股數區間內交叉）
     if is_macd_range and len(macd_end) == 8:
+        if hidden and hidden["mode"] == "dates" and macd_end != requested_date:
+            return {"error":"MACD 與隱藏式的結束日期不同，請調整為同一交易日再比較。","results":[]}
         requested_date = macd_end
     check_earn_gap_down = bool(params.get("earn_gap_down", False))
     check_zhenming1  = bool(params.get("zhenming1", False))
@@ -3018,7 +3020,7 @@ def screen(params):
         candidates[code] = s
 
     if not candidates:
-        return {"date": display_date, "total": len(all_stocks), "count": 0, "results": []}
+        return {"date": display_date, "total": len(all_stocks), "count": 0, "results": [], "zhenming_hidden_applied": bool(hidden)}
 
     # ── Step 3a: 跳空篩選 → 只試「前一個非週末日曆日」MI_INDEX（天條：跳空只跟前一交易日比）
     prev_mi_gap: dict = {}
