@@ -20,6 +20,8 @@
   <script src="assets/site-theme.js"></script>
   <script src="assets/w-pattern-export.js?v=20261024-1"></script>
   <script src="assets/w-pattern-overlay.js?v=20261025-2"></script>
+  <script src="assets/chart-ai-patterns.js?v=20261025-1"></script>
+  <link rel="stylesheet" href="assets/chart-ai-patterns.css?v=20261025-1">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -10287,6 +10289,7 @@
         </script>
         <div id="sma20GroupPanel" class="chart-feature-panel" style="display:none;padding:7px 12px;border-top:1px solid var(--border);font-size:12px;color:var(--text);flex-wrap:wrap;gap:6px;align-items:center"></div>
         <div id="aiBuyPanel" class="chart-feature-panel" style="display:none;padding:12px 14px;border-top:1px solid var(--border);font-size:12.5px;color:var(--text)"></div>
+        <div id="aiPatternPeriodHint" hidden aria-live="polite"></div>
         <div id="brokerFilterPanel" class="chart-feature-panel" style="display:none;padding:12px 14px 10px;border-top:1px solid var(--border);font-size:12px;color:var(--text)"></div>
         <div id="mkPanel" class="chart-feature-panel" style="padding:6px 8px;border-top:1px solid var(--border);font-size:12px;color:var(--text)">
           <a onclick="_mkTogglePanel()" style="cursor:pointer;text-decoration:none;user-select:none"><span id="mkArrow" style="color:var(--text-muted);font-size:11px;margin-right:4px">▸</span><b style="color:#5a78aa">大盤K</b></a>
@@ -11591,9 +11594,7 @@
       panel.style.display = 'flex';
     }
 
-    // ── AI 判定買點（骨架，2026-10-17）──────────────────────────────────────
-    // 點按鈕開/關面板；開啟時：先讀 localStorage 當日快取 → 無則呼叫後端 /api/screen?stat=aibuy
-    // 後端有 AI 金鑰（Vercel 環境變數）就回真的判讀，沒有就回假資料（stub:true，面板會標「假資料示意」）。2026-10-17
+    // AI 判定：只讀已保存的視覺判讀；開圖不呼叫付費模型。
     window._aiBuyOpen = false;
     window._aiBuyToggle = function () {
       window._aiBuyOpen = !window._aiBuyOpen;
@@ -11602,24 +11603,17 @@
       if (btn) btn.classList.toggle('is-open', window._aiBuyOpen);
       const panel = document.getElementById('aiBuyPanel');
       if (!panel) return;
-      if (!window._aiBuyOpen) { panel.style.display = 'none'; return; }
+      if (!window._aiBuyOpen) { panel.style.display = 'none'; window.AcademyVisualPatterns?.setOpen(false,_visualPatternContext); return; }
       panel.style.display = 'block';
       _aiBuyLoad();
     };
-    function _aiBuyLoad(force) {
-      const panel = document.getElementById('aiBuyPanel'); if (!panel) return;
-      const code = currentCode; if (!code) { panel.innerHTML = '<div class="ov-empty">請先選一檔股票</div>'; return; }
-      const today = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
-      const key = 'aibuy_' + code + '_' + today;
-      if (!force) {
-        try { const c = JSON.parse(localStorage.getItem(key) || 'null'); if (c && c.verdict && !c.stub) { _aiBuyRender(c); return; } } catch (e) {}
-      }
-      panel.innerHTML = '<div class="ov-empty">AI 判讀中…</div>';
-      const hb = window.__API;
-      fetch(hb + '/api/screen?stat=aibuy&code=' + encodeURIComponent(code))
-        .then(r => r.json())
-        .then(d => { if (d && d.verdict && !d.stub && !d.error) { try { localStorage.setItem(key, JSON.stringify(d)); } catch (e) {} } _aiBuyRender(d); })   // 假資料／錯誤不快取，金鑰設好後立刻生效
-        .catch(() => { panel.innerHTML = '<div class="ov-empty">AI 判讀暫時無法取得，請稍後再試。</div>'; });
+    function _visualPatternContext() {
+      return {code:currentCode,period:window._chartPeriodKey||'day',adjusted:!!window._chartAdjusted,
+        chart:chartInstance,series:candleSeriesRef,
+        switchPeriod:tf=>{if(tf==='weekly')loadWeeklyChart();else loadDailyChart();}};
+    }
+    function _aiBuyLoad() {
+      window.AcademyVisualPatterns?.setOpen(true,_visualPatternContext);
     }
     function _aiBuyRender(d) {
       const panel = document.getElementById('aiBuyPanel'); if (!panel || !d) return;
@@ -14180,7 +14174,7 @@
     document.addEventListener('fullscreenchange', function(){ ['ddLineMenu','ddShapeMenu'].forEach(function(id){ const d = document.getElementById(id); if (d) d.classList.remove('open'); });
       const m = document.getElementById('chartModal'); if (m && m.classList.contains('kfull') && !document.fullscreenElement) _setChartFull(false); });
 
-    function closeChart() {window.WPatternOverlay?.clear();_stopBrokerPulse();window.AcademyChartTools?.resetSelection();
+    function closeChart() {window.AcademyVisualPatterns?.clear();window.WPatternOverlay?.clear();_stopBrokerPulse();window.AcademyChartTools?.resetSelection();
       const wasMemberChart=document.body.classList.contains('mc-chart-open');
       if(document.getElementById('chartModal').classList.contains('etx-embedded')){window._etxTab('overview');return;}
       _chartRequestId++;
@@ -14564,6 +14558,7 @@
     function _wkKey(d) { const dt = new Date(d + 'T00:00:00Z'); const day = dt.getUTCDay() || 7; dt.setUTCDate(dt.getUTCDate() + 4 - day); const ys = new Date(Date.UTC(dt.getUTCFullYear(), 0, 1)); const wk = Math.ceil((((dt - ys) / 86400000) + 1) / 7); return dt.getUTCFullYear() + '-W' + wk; }
 
     function _loadChartUrl(url, subtitle, agg) {
+      window.AcademyVisualPatterns?.clear();
       window.WPatternOverlay?.clear();
       window._academyChartSnapshot={code:currentCode,period:subtitle,url};
       const requestId=++_chartRequestId;
@@ -15085,6 +15080,7 @@
         title:'',   /* 2026-10-22 不在圖內寫「現價」，避免蓋住最新 K 棒；右軸價格標籤與虛線保留 */priceLineWidth:1,priceLineStyle:LightweightCharts.LineStyle.Dotted,
       });
       candleSeriesRef.setData(candles);
+      window.AcademyVisualPatterns?.refresh(_visualPatternContext);
       window._mainCandleSeries = candleSeriesRef;   // 供現價線開關 _togglePriceLine 使用
       try { var _plb = document.querySelector('[data-layer="pl"]'); if (_plb) _plb.setAttribute('aria-pressed',String(window._priceLineOn !== false)); } catch (e) {}
       chartInstance._xhairSeries = candleSeriesRef;

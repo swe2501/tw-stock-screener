@@ -2,6 +2,7 @@
 *.json
 !vercel.json
 !group-catalog.json
+!apps/web/assets/codex-visual-patterns.json
 .wantgoo_profile/
 .env.local
 scripts/__pycache__/
