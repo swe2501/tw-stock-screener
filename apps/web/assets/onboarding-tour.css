@@ -53,25 +53,19 @@
 .ob-card .ob-go{ margin-top:18px; display:flex; gap:10px; justify-content:center; }
 
 /* 貓頭鷹小精靈 */
-.ob-owl{ width:var(--ob-owl-size,74px); height:var(--ob-owl-size,74px); flex:0 0 auto; overflow:visible; filter:drop-shadow(0 6px 10px rgba(8,16,26,.22)); }
+/* 貓頭鷹＝品牌 logo 圖（寬版，以高度 var(--ob-owl-size) 決定大小）；靜態圖加輕微漂浮 */
+.ob-owl{ display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto; line-height:0; filter:drop-shadow(0 6px 11px rgba(8,16,26,.18)); animation:obFloat 3.8s ease-in-out infinite; }
+.ob-owl img{ height:var(--ob-owl-size,74px); width:auto; display:block; }
 .ob-pop .ob-owl{ --ob-owl-size:40px; }
-.ob-owl .ob-head{ transform-box:view-box; transform-origin:70px 90px; animation:obHeadTurn 5.6s ease-in-out infinite; }
-.ob-owl .ob-wing-l{ transform-box:view-box; transform-origin:55px 84px; animation:obFlapL 2.8s ease-in-out infinite; }
-.ob-owl .ob-wing-r{ transform-box:view-box; transform-origin:85px 84px; animation:obFlapR 2.8s ease-in-out infinite; }
-.ob-owl .ob-pupil{ transform-box:view-box; animation:obLook 5.6s ease-in-out infinite; }
-.ob-owl .ob-lid{ transform-box:fill-box; transform-origin:center top; transform:scaleY(0); animation:obBlink 4.6s ease-in-out infinite; }
-.ob-owl .ob-node{ animation:obNodePulse 2.8s ease-in-out infinite; }
-@keyframes obHeadTurn{ 0%,40%,100%{transform:rotate(0)} 50%{transform:rotate(-8deg)} 68%{transform:rotate(6deg)} 80%{transform:rotate(0)} }
-@keyframes obFlapL{ 0%,100%{transform:rotate(0)} 50%{transform:rotate(-17deg)} }
-@keyframes obFlapR{ 0%,100%{transform:rotate(0)} 50%{transform:rotate(17deg)} }
-@keyframes obLook{ 0%,44%,100%{transform:translateX(0)} 54%{transform:translateX(-2px)} 70%{transform:translateX(1.5px)} }
-@keyframes obBlink{ 0%,92%,100%{transform:scaleY(0)} 95%,97%{transform:scaleY(1)} }
-@keyframes obNodePulse{ 0%,100%{opacity:.55} 50%{opacity:1} }
+.ob-owl .owl-dark-v2{ display:none; }
+:root:not([data-theme="light"]) .ob-owl .owl-light-v2{ display:none; }
+:root:not([data-theme="light"]) .ob-owl .owl-dark-v2{ display:block; }
+@keyframes obFloat{ 0%,100%{ transform:translateY(0) } 50%{ transform:translateY(-5px) } }
 .ob-pop-in{ animation:obPopIn .3s cubic-bezier(.2,.9,.3,1.2) both; }
 @keyframes obPopIn{ from{opacity:0; transform:translateY(8px) scale(.97)} to{opacity:1; transform:none} }
-@media(prefers-reduced-motion:reduce){ .ob-owl *{ animation:none !important; } .ob-mask,.ob-ring,.ob-pop{ transition:none !important; } }
+@media(prefers-reduced-motion:reduce){ .ob-owl,.ob-owl *{ animation:none !important; } .ob-mask,.ob-ring,.ob-pop{ transition:none !important; } }
 
 /* 重跑導覽的小按鈕 */
 #obReplayBtn{ position:fixed; right:16px; bottom:16px; z-index:9500; display:none; align-items:center; gap:7px; background:var(--bg-card,#fff); border:1px solid var(--border,#e2e6ea); border-radius:999px; padding:6px 13px 6px 7px; box-shadow:0 6px 18px rgba(8,16,26,.22); cursor:pointer; color:var(--text,#1a2330); font-size:12.5px; font-weight:800; transition:.15s; }
 #obReplayBtn:hover{ border-color:var(--ob-owl-amber); transform:translateY(-1px); }
-#obReplayBtn .ob-owl{ --ob-owl-size:28px; filter:none; }
+#obReplayBtn .ob-owl{ --ob-owl-size:26px; filter:none; animation:none; }

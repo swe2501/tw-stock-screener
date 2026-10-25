@@ -7,55 +7,12 @@
   var FLAG = 'onboarded_tour_v1';            // 寫在 user_metadata 的旗標
   var LS = 'fqi_onboarded_v1';               // 本機快取（避免每次打 API）
 
-  /* ── 貓頭鷹小精靈（照 logo 風格：深藍主體、奶油肚/臉盤、琥珀「銳利」雙眼、耳羽、層疊翅膀、琥珀資料節點；
-     CSS 做揮翅/轉頭/眨眼/瞳孔游移）。viewBox 140x152。 ── */
+  /* ── 貓頭鷹小精靈：直接用品牌 logo 圖（明/暗兩版，與導覽列同一組）；靜態圖，CSS 加輕微漂浮讓它有生命感。 ── */
   var OWL =
-    '<svg class="ob-owl" viewBox="0 0 140 152" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
-    // 爪（棲木站姿）
-    '<g stroke="var(--ob-owl-amber2)" stroke-width="3.4" stroke-linecap="round" fill="none">' +
-      '<path d="M57 138v7 M57 145l-5 4 M57 145l5 4 M57 145v5"/>' +
-      '<path d="M83 138v7 M83 145l-5 4 M83 145l5 4 M83 145v5"/></g>' +
-    // 翅膀（主體後方，層疊羽）
-    '<g class="ob-wing-l" fill="var(--ob-owl-ink)">' +
-      '<path d="M55 78C40 78 29 90 26 110c-1 7 5 9 9 5 2 6 8 6 10 1 3 5 9 4 10-1 3-9 3-22 5-30Z"/>' +
-      '<path d="M40 96c-3 6-5 13-4 20" stroke="var(--ob-owl-ink2)" stroke-width="1.5" fill="none" opacity=".5"/></g>' +
-    '<g class="ob-wing-r" fill="var(--ob-owl-ink)">' +
-      '<path d="M85 78C100 78 111 90 114 110c1 7-5 9-9 5-2 6-8 6-10 1-3 5-9 4-10-1-3-9-3-22-5-30Z"/>' +
-      '<path d="M100 96c3 6 5 13 4 20" stroke="var(--ob-owl-ink2)" stroke-width="1.5" fill="none" opacity=".5"/></g>' +
-    // 身體
-    '<path d="M70 54C98 54 109 79 109 104 109 131 91 146 70 146 49 146 31 131 31 104 31 79 42 54 70 54Z" fill="var(--ob-owl-ink)"/>' +
-    // 奶油肚
-    '<path d="M70 80C86 80 93 95 93 110 93 130 82 139 70 139 58 139 47 130 47 110 47 95 54 80 70 80Z" fill="#fbf0d6"/>' +
-    // 胸羽鱗紋
-    '<g fill="none" stroke="var(--ob-owl-ink)" stroke-width="1.5" stroke-linecap="round" opacity=".32">' +
-      '<path d="M57 97q6 7 13 0 M70 97q6 7 13 0"/>' +
-      '<path d="M52 110q7 8 14 0 M66 110q7 8 14 0"/></g>' +
-    // 琥珀資料節點（品牌意象）
-    '<g class="ob-node"><path d="M59 124 70 117 81 125" fill="none" stroke="var(--ob-owl-amber)" stroke-width="1.6" stroke-linecap="round"/>' +
-      '<circle cx="59" cy="124" r="2.6" fill="var(--ob-owl-amber)"/><circle cx="70" cy="117" r="2.6" fill="var(--ob-owl-amber)"/><circle cx="81" cy="125" r="2.6" fill="var(--ob-owl-amber)"/></g>' +
-    // 頭（含耳羽/臉盤/眼/喙），可轉動
-    '<g class="ob-head">' +
-      '<path d="M40 34C30 15 35 3 50 2 49 16 54 28 61 37Z" fill="var(--ob-owl-ink)"/>' +
-      '<path d="M100 34C110 15 105 3 90 2 91 16 86 28 79 37Z" fill="var(--ob-owl-ink)"/>' +
-      '<path d="M70 11C102 11 118 34 118 57 118 82 97 97 70 97 43 97 22 82 22 57 22 34 38 11 70 11Z" fill="var(--ob-owl-ink)"/>' +
-      '<path d="M70 25C95 25 107 40 107 58 107 79 90 91 70 91 50 91 33 79 33 58 33 40 45 25 70 25Z" fill="#fbf0d6" opacity=".96"/>' +
-      // 眼白 + 大面積琥珀虹膜（品牌招牌亮眼）
-      '<circle cx="54" cy="56" r="15.5" fill="#fffdf6"/><circle cx="86" cy="56" r="15.5" fill="#fffdf6"/>' +
-      '<circle cx="54" cy="56" r="12.5" fill="var(--ob-owl-amber)"/><circle cx="86" cy="56" r="12.5" fill="var(--ob-owl-amber)"/>' +
-      '<circle cx="54" cy="56" r="12.5" fill="none" stroke="var(--ob-owl-amber2)" stroke-width="1.4" opacity=".55"/>' +
-      '<circle cx="86" cy="56" r="12.5" fill="none" stroke="var(--ob-owl-amber2)" stroke-width="1.4" opacity=".55"/>' +
-      '<g class="ob-pupil">' +
-        '<circle cx="54" cy="57" r="4.6" fill="#18242f"/><circle cx="86" cy="57" r="4.6" fill="#18242f"/>' +
-        '<circle cx="51.4" cy="53.6" r="1.9" fill="#fff"/><circle cx="83.4" cy="53.6" r="1.9" fill="#fff"/></g>' +
-      // 眉（細線、往中間下沉＝銳利專注，不蓋住琥珀）
-      '<g fill="none" stroke="var(--ob-owl-ink)" stroke-width="4.4" stroke-linecap="round">' +
-        '<path d="M39 42Q54 35 67 46"/><path d="M101 42Q86 35 73 46"/></g>' +
-      // 眨眼眼瞼（CSS scaleY）
-      '<circle class="ob-lid" cx="54" cy="56" r="15.5" fill="var(--ob-owl-ink)"/>' +
-      '<circle class="ob-lid" cx="86" cy="56" r="15.5" fill="var(--ob-owl-ink)"/>' +
-      // 喙
-      '<path d="M70 60 64 71C67 75 73 75 76 71Z" fill="var(--ob-owl-amber2)"/>' +
-    '</g></svg>';
+    '<span class="ob-owl">' +
+      '<img class="owl-light-v2" src="assets/brand/foresight-owl-light-book-light.png" alt="先見貓頭鷹" decoding="async">' +
+      '<img class="owl-dark-v2" src="assets/brand/foresight-owl-dark-book-light.png" alt="" aria-hidden="true" decoding="async">' +
+    '</span>';
 
   /* ── 權限 helpers ── */
   function owner() { return !!window._isOwner; }
