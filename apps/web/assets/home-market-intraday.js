@@ -136,14 +136,14 @@
     }).join('')+'</div><p class="calendar-selection" aria-live="polite">實心：月合約 · 圓點：週選</p>';
     grid.addEventListener('click',e=>{const b=e.target.closest('.calendar-day');if(b){grid.querySelectorAll('[aria-pressed]').forEach(n=>n.removeAttribute('aria-pressed'));b.setAttribute('aria-pressed','true');grid.querySelector('.calendar-selection').textContent=b.dataset.label;}});
   }
-  function sessionRows(data, date, futures, fx, vix) {
+  function sessionRows(data, date, futures, fx, vix, fxSess) {
     const byTime = new Map();
     for (const row of Array.isArray(data) ? data : []) {
       if (typeof row.time !== 'number' || !Number.isFinite(row.time) || !Number.isFinite(row.close) || row.close <= 0) continue;
       const local = new Date((row.time + 28800) * 1000);
       if (!Number.isFinite(local.getTime()) || local.toISOString().slice(0, 10) !== date) continue;
       const minute = local.getUTCHours() * 60 + local.getUTCMinutes();
-      if (minute < (fx?0:futures ? 525 : 540) || minute > (fx?1439:futures||vix ? 825 : 810)) continue;
+      if (minute < (fxSess?540:fx?0:futures ? 525 : 540) || minute > (fxSess?960:fx?1439:futures||vix ? 825 : 810)) continue;
       byTime.set(row.time, {time: row.time, close: row.close, minute});
     }
     return [...byTime.values()].sort((a, b) => a.time - b.time);
@@ -160,14 +160,14 @@
       // 2026-10-24 櫃買指數／台指期／台指VIX：後端 /api/chart 沒有分時（404 或只有大盤近似），
       // 改先讀官方來源自建的 page_cache mini_OTC／mini_TXF／mini_VIX（scripts/home_intraday.py、intraday_push.py），
       // 日期相符才用；沒有才走原本的 /api/chart。
-      const miniKind={'^TWOII':'mini_OTC','TX=F':'mini_TXF','VIX':'mini_VIX'}[code];
-      let payload=null;
+      const miniKind={'^TWOII':'mini_OTC','TX=F':'mini_TXF','VIX':'mini_VIX','FX':'mini_FX'}[code];
+      let payload=null, fromMini=false;
       if (miniKind) {
         const mk='mini|'+miniKind;
         if (!requests.has(mk)) requests.set(mk, fetch(MINI_SB+'/rest/v1/page_cache?kind=eq.'+miniKind+'&select=payload',{headers:{apikey:MINI_AK,Authorization:'Bearer '+MINI_AK}})
           .then(r=>r.ok?r.json():[]).then(a=>(a&&a[0]&&a[0].payload)||null).catch(()=>null));
         const mini=await requests.get(mk);
-        if (mini && mini.date===date && Array.isArray(mini.data) && mini.data.length>=2) payload={name:mini.source||'',data:mini.data};
+        if (mini && mini.date===date && Array.isArray(mini.data) && mini.data.length>=2) { payload={name:mini.source||'',data:mini.data}; fromMini=true; }
       }
       if (!payload) {
         const requestKey=apiCode+'|'+date;
@@ -177,13 +177,14 @@
       }
       if (!el.isConnected) return;
       if (code === 'TX=F' && /近似|proxy|大盤/i.test(payload.name || '')) return unavailable(el, '分時待更新');
-      const rows = sessionRows(payload.data, date, code === 'TX=F', code==='FX', code==='VIX');
+      const rows = sessionRows(payload.data, date, code === 'TX=F', code==='FX', code==='VIX', code==='FX' && fromMini);
       if (rows.length < 2) return unavailable(el, date.slice(5).replace('-', '/') + ' 分時待更新');
       const baseline = Number.isFinite(prev) && prev > 0 ? prev : null;
       const values = rows.map(r => r.close).concat(baseline == null ? [] : [baseline]);
       const lo = Math.min(...values), hi = Math.max(...values), pad = Math.max((hi - lo) * .12, hi * .0003);
       const y = v => 7 + (hi + pad - v) / (hi - lo + 2 * pad) * 94;
-      const start = code==='FX'?0:code === 'TX=F' ? 525 : 540, end = code==='FX'?1439:code === 'TX=F'||code==='VIX' ? 825 : 810;
+      const fxSess = code==='FX' && fromMini;   // mini_FX＝台北匯市盤 09:00–16:00
+      const start = fxSess?540:code==='FX'?0:code === 'TX=F' ? 525 : 540, end = fxSess?960:code==='FX'?1439:code === 'TX=F'||code==='VIX' ? 825 : 810;
       const points = rows.map(r => [3 + (r.minute - start) / (end - start) * 144, y(r.close)]);
       const line = points.map(p => p.map(n => n.toFixed(2)).join(',')).join(' ');
       const baseY = baseline == null ? 105 : y(baseline);

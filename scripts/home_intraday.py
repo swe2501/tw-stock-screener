@@ -102,6 +102,15 @@ def otc_series(d):
     return _bucket5(pts)
 
 
+def fx_series(d):
+    """台幣匯率：盤中排程 intraday_push 每輪記一筆 Yahoo TWD=X 即時報價到 fx_YYYYMMDD.json。"""
+    f = OTC_LOG_DIR / f"fx_{d:%Y%m%d}.json"
+    if not f.exists():
+        return []
+    pts = [(int(t), float(p)) for t, p in json.loads(f.read_text(encoding="utf-8"))]
+    return _bucket5(pts)
+
+
 def push(env, kind, d, data, source):
     row = {"kind": kind, "trade_date": d.isoformat(),
            "payload": {"date": d.isoformat(), "source": source, "data": data},
@@ -126,7 +135,8 @@ def main():
     env = bs._load_env()
     for kind, fn, src in (("mini_VIX", vix_series, "期交所 VIX 每日檔（每 15 秒）"),
                           ("mini_TXF", txf_series, "期交所期貨每日逐筆成交（日盤近月）"),
-                          ("mini_OTC", otc_series, "盤中排程記錄 MIS 櫃買指數")):
+                          ("mini_OTC", otc_series, "盤中排程記錄 MIS 櫃買指數"),
+                          ("mini_FX", fx_series, "盤中排程記錄 Yahoo TWD=X 即時匯率")):
         try:
             data = fn(d)
         except Exception as e:                         # noqa: BLE001
