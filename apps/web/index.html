@@ -1774,6 +1774,14 @@
   #chartModal.open .modal-box { transform:translateY(0) scale(1);opacity:1; }
   #chartModal .modal-header { position:sticky;top:0;z-index:9;background:color-mix(in srgb,var(--surface) 94%,transparent);backdrop-filter:blur(16px); }
   #chartModal .modal-close { border:1px solid var(--border) !important;border-radius:8px !important;width:34px;height:34px; }
+  /* 掏金篩選器 上一檔／下一檔 箭頭（只在從篩選結果點進 K 圖時出現） */
+  #chartModal .modal-box { position:relative; }
+  .chart-nav { position:absolute;top:50%;transform:translateY(-50%);z-index:20;width:38px;height:66px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:11px;background:color-mix(in srgb,var(--surface) 82%,transparent);backdrop-filter:blur(8px);color:var(--text);font-size:28px;line-height:1;cursor:pointer;box-shadow:0 5px 16px rgba(0,0,0,.2);transition:background .15s,color .15s,border-color .15s,opacity .15s; }
+  .chart-nav:hover:not(:disabled) { background:var(--accent);color:var(--on-accent);border-color:var(--accent); }
+  .chart-nav:disabled { opacity:.28;cursor:default; }
+  .chart-nav-prev { left:10px; }
+  .chart-nav-next { right:10px; }
+  @media(max-width:600px){ .chart-nav{width:32px;height:54px;font-size:23px;}.chart-nav-prev{left:4px;}.chart-nav-next{right:4px;} }
   /* K 圖全視窗（2026-10-11，直播用）：彈窗撐滿整個視窗、主圖高度隨視窗高度加大；Esc 或再按一次還原 */
   #chartModal.kfull.modal-overlay { padding:0 !important;background:var(--surface) !important;backdrop-filter:none; }
   #chartModal.kfull .modal-box { width:100vw !important;max-width:none !important;height:100vh !important;height:100dvh !important;max-height:none !important;margin:0 !important;border-radius:0 !important;border:0 !important;box-shadow:none !important;transform:none !important; }
@@ -10194,6 +10202,9 @@
   <!-- K線圖 Modal -->
   <div class="modal-overlay" id="chartModal" onclick="closeChartIfBg(event)">
     <div class="modal-box">
+      <!-- 掏金篩選器專用：上一檔／下一檔（只有從篩選結果點進來才顯示） -->
+      <button id="chartNavPrev" type="button" class="chart-nav chart-nav-prev" style="display:none" onclick="event.stopPropagation();window._chartNavGo(-1)" aria-label="上一檔篩選結果">&#8249;</button>
+      <button id="chartNavNext" type="button" class="chart-nav chart-nav-next" style="display:none" onclick="event.stopPropagation();window._chartNavGo(1)" aria-label="下一檔篩選結果">&#8250;</button>
       <div class="modal-header">
         <div>
           <div class="modal-title-row">
@@ -11100,6 +11111,8 @@
         const bv = b[sortKey] ?? -Infinity;
         return (av - bv) * sortDir;
       });
+      // 掏金篩選器「上一檔／下一檔」：記住目前顯示順序（過濾＋排序後）供 K 圖左右切換
+      try { window._scNavList = sorted.map(s => ({ code: String(s.code), name: s.name, industry: s.industry || '', close: s.close })); } catch (_) {}
 
       window.AcademyScreenChartNav?.setResults(sorted);
       const volCols = hasVolFilter ? `
@@ -11325,12 +11338,47 @@
       _kSyncLayerUI();   // 圖層開關沿用上一次的設定
       document.getElementById('backBtn').style.display = 'none';
       document.getElementById('chartModal').classList.add('open');
+      try { _scNavActive = !!fromScreen; _updateChartNav(code); } catch (_) {}
       if (!fibSetupDone) { setupFibOverlay(); fibSetupDone = true; }
       if(screenNavPeriod?.key==='trend')loadTrendChart();
       else if(screenNavPeriod?.key==='hour')loadHourlyChart();
       else if(screenNavPeriod)_loadPeriodChart(screenNavPeriod.key,screenNavPeriod.adjusted);
       else loadDailyChart();
     }
+
+    // ── 掏金篩選器：K 圖「上一檔／下一檔」（只有 fromScreen=true 才啟用箭頭） ──
+    let _scNavActive = false;
+    function _updateChartNav(code) {
+      const prev = document.getElementById('chartNavPrev'), next = document.getElementById('chartNavNext');
+      if (!prev || !next) return;
+      const list = Array.isArray(window._scNavList) ? window._scNavList : [];
+      const idx = _scNavActive ? list.findIndex(x => x.code === String(code)) : -1;
+      if (idx < 0) { prev.style.display = 'none'; next.style.display = 'none'; return; }
+      prev.style.display = ''; next.style.display = '';
+      prev.disabled = idx <= 0;
+      next.disabled = idx >= list.length - 1;
+      prev.title = idx > 0 ? ('上一檔　' + list[idx - 1].code + ' ' + (list[idx - 1].name || '') + '（' + idx + '/' + list.length + '）') : '已是第一檔';
+      next.title = idx < list.length - 1 ? ('下一檔　' + list[idx + 1].code + ' ' + (list[idx + 1].name || '') + '（' + (idx + 2) + '/' + list.length + '）') : '已是最後一檔';
+    }
+    window._chartNavGo = function (dir) {
+      if (!_scNavActive) return;
+      const list = Array.isArray(window._scNavList) ? window._scNavList : [];
+      const idx = list.findIndex(x => x.code === String(currentCode));
+      if (idx < 0) return;
+      const t = list[idx + dir];
+      if (!t) return;
+      openChart(t.code, t.name, t.industry || '', t.close || 0, true);
+    };
+    // 鍵盤 ← / → 切換（僅篩選來源、K 圖開著、焦點不在輸入框時）
+    document.addEventListener('keydown', function (e) {
+      if (!_scNavActive || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return;
+      const cm = document.getElementById('chartModal');
+      if (!cm || !cm.classList.contains('open')) return;
+      const t = e.target, tag = t && t.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (t && t.isContentEditable)) return;
+      e.preventDefault();
+      window._chartNavGo(e.key === 'ArrowRight' ? 1 : -1);
+    });
 
     // ── K 線日期標記（暫時性：關閉 K 圖即全部清除） ──────
     let _userMarkers = {};         // code -> [{date,label}]，僅存在記憶體
