@@ -11113,6 +11113,7 @@
       // 掏金篩選器「上一檔／下一檔」：記住目前顯示順序（過濾＋排序後）供 K 圖左右切換
       try { window._scNavList = sorted.map(s => ({ code: String(s.code), name: s.name, industry: s.industry || '', close: s.close })); } catch (_) {}
 
+      window.AcademyScreenChartNav?.setResults(sorted);
       const volCols = hasVolFilter ? `
         <th class="col-vol5 ${sortKey==='ma5_vol'?'sorted':''}" onclick="setSort('ma5_vol')">5日均量(張)<span class="sort-arrow">${sortKey==='ma5_vol'?(sortDir>0?'▲':'▼'):''}</span></th>
         <th class="col-vol10 ${sortKey==='ma10_vol'?'sorted':''}" onclick="setSort('ma10_vol')">10日均量(張)<span class="sort-arrow">${sortKey==='ma10_vol'?(sortDir>0?'▲':'▼'):''}</span></th>
@@ -11301,6 +11302,7 @@
     function drawerCodeForChart(){return window._etxChartCode||'';}
     function openChart(code, name, industry = '', price = 0, fromScreen = false, markDate = null, markLabel = '', markDate2 = null, markLabel2 = null) {
       if(document.getElementById('chartModal').classList.contains('etx-embedded')&&code!==drawerCodeForChart())window._etxReleaseChart();
+      const screenNavPeriod=window.AcademyScreenChartNav?.open(code,fromScreen);
       prevCode = ''; prevName = '';
       currentCode = code; currentName = name;
       currentIndustry = industry; currentPrice = price;
@@ -11337,7 +11339,10 @@
       document.getElementById('chartModal').classList.add('open');
       try { _scNavActive = !!fromScreen; _updateChartNav(code); } catch (_) {}
       if (!fibSetupDone) { setupFibOverlay(); fibSetupDone = true; }
-      loadDailyChart();
+      if(screenNavPeriod?.key==='trend')loadTrendChart();
+      else if(screenNavPeriod?.key==='hour')loadHourlyChart();
+      else if(screenNavPeriod)_loadPeriodChart(screenNavPeriod.key,screenNavPeriod.adjusted);
+      else loadDailyChart();
     }
 
     // ── 掏金篩選器：K 圖「上一檔／下一檔」（只有 fromScreen=true 才啟用箭頭） ──
@@ -14108,6 +14113,7 @@
     }
 
     function openIndexChart(sym, name) {
+      window.AcademyScreenChartNav?.clear();
       prevCode = ''; prevName = '';
       currentCode = sym; currentName = name;
       document.getElementById('modalTitle').textContent = name;
@@ -14180,7 +14186,7 @@
     document.addEventListener('fullscreenchange', function(){ ['ddLineMenu','ddShapeMenu'].forEach(function(id){ const d = document.getElementById(id); if (d) d.classList.remove('open'); });
       const m = document.getElementById('chartModal'); if (m && m.classList.contains('kfull') && !document.fullscreenElement) _setChartFull(false); });
 
-    function closeChart() {window.WPatternOverlay?.clear();_stopBrokerPulse();window.AcademyChartTools?.resetSelection();
+    function closeChart() {window.AcademyScreenChartNav?.clear();window.WPatternOverlay?.clear();_stopBrokerPulse();window.AcademyChartTools?.resetSelection();
       const wasMemberChart=document.body.classList.contains('mc-chart-open');
       if(document.getElementById('chartModal').classList.contains('etx-embedded')){window._etxTab('overview');return;}
       _chartRequestId++;
@@ -18041,9 +18047,11 @@
 <link rel="stylesheet" href="assets/research-layout.css?v=10">
 <link rel="stylesheet" href="assets/broker-workspace.css?v=5">
 <script src="assets/chart-viewport-fit.js?v=22" defer></script>
+<link rel="stylesheet" href="assets/screen-chart-nav.css?v=1">
+<script src="assets/screen-chart-nav.js?v=1" defer></script>
 <script src="assets/screen-inline-calendar.js?v=records-only13" defer></script>
 <link rel="stylesheet" href="assets/zhenming-hidden.css?v=6">
-<script src="assets/zhenming-hidden.js?v=4" defer></script>
+<script src="assets/zhenming-hidden.js?v=5" defer></script>
 <script src="assets/screen-log.js?v=calendar-direct31" defer></script>
 <script src="assets/pattern-focus.js?v=2" defer></script>
 <script src="assets/member-quick-menu.js?v=tier6" defer></script>
