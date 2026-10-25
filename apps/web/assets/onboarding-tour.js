@@ -239,7 +239,6 @@
   function maybeAutoStart() {
     if (autoChecked) return; autoChecked = true;
     showReplay();                                   // 登入後常駐重跑按鈕
-    if (owner()) return;                            // 管理者帳號不自動跳（可手動點右下角重看）
     try { if (localStorage.getItem(LS) === '1') return; } catch (_) {}
     var h = authHeaders(); if (!h) return;
     fetch(SB + '/auth/v1/user', { headers: h }).then(function (r) { return r.ok ? r.json() : null; }).then(function (u) {
