@@ -10342,7 +10342,7 @@
           <span class="draw-dd" style="flex:0 0 auto">
             <button class="tool-btn" id="ddLineBtn" onclick="_toggleDrawDD('line')"><span aria-hidden="true">╱</span> 畫線工具 ▾</button>
             <div class="draw-dd-menu" id="ddLineMenu">
-              <button type="button" onclick="_pickDraw('seg')">線段</button>
+              <button type="button" onclick="_pickDraw('seg')" title="按住起點拖曳到終點放開畫直線">線段</button>
               <button type="button" onclick="_pickDraw('hline')">水平線</button>
               <button type="button" onclick="_pickDraw('vline')">垂直線</button>
               <button type="button" onclick="_pickDraw('parallel')">通道</button>
@@ -11254,8 +11254,8 @@
     let _drawSetupDone = false;
     // 點擊放點工具所需點數（矩形/圓形改用拖拉、文字用內嵌輸入，不列此）
     const _DRAW_NEED = { wave: Infinity, amplitude:3, fibret: 2, fibext: 3, seg: 2, hline: 1, vline: 1, parallel: 3, arrowup: 1, arrowdown: 1 };
-    const _DRAG_TOOLS = ['rect', 'circle'];
-    const _CLICK_TOOLS = ['wave','amplitude','fibret','fibext','seg', 'hline', 'vline', 'parallel', 'arrowup', 'arrowdown'];
+    const _DRAG_TOOLS = ['rect', 'circle', 'seg'];   // seg(直線) 改拖曳：按住起點拖到終點放開（2026-10-25，合夥人要求）
+    const _CLICK_TOOLS = ['wave','amplitude','fibret','fibext','hline', 'vline', 'parallel', 'arrowup', 'arrowdown'];
 
     // ── Open / close ──────────────────────────────────────
     function _isStock(code) {
@@ -16297,6 +16297,7 @@
       ctx.save(); ctx.strokeStyle = _trendColor(); ctx.lineWidth = 1.5; ctx.setLineDash([5, 3]);
       if (type === 'rect') ctx.strokeRect(Math.min(s.px, e.px), Math.min(s.py, e.py), Math.abs(e.px - s.px), Math.abs(e.py - s.py));
       else if (type === 'circle') { const cx = (s.px + e.px) / 2, cy = (s.py + e.py) / 2; ctx.beginPath(); ctx.ellipse(cx, cy, Math.abs(e.px - s.px) / 2, Math.abs(e.py - s.py) / 2, 0, 0, Math.PI * 2); ctx.stroke(); }
+      else if (type === 'seg') { ctx.beginPath(); ctx.moveTo(s.px, s.py); ctx.lineTo(e.px, e.py); ctx.stroke(); }
       ctx.restore();
     }
     function _showTextInput(px, py, time, price, li) {   // 小畫家式：原地內嵌輸入框，不用瀏覽器 popup
@@ -16338,8 +16339,11 @@
         _erasing = false;
         if (!_shapeDrag) return;
         const px = gx(e.clientX), py = gy(e.clientY), c = _coordAt(px, py), s = _shapeDrag; _shapeDrag = null;
-        if (!_noT(c) && c.price != null && Math.abs(px - s.px) > 4 && Math.abs(py - s.py) > 4)
+        const moved = _drawTool === 'seg' ? (Math.hypot(px - s.px, py - s.py) > 6) : (Math.abs(px - s.px) > 4 && Math.abs(py - s.py) > 4);
+        if (!_noT(c) && c.price != null && moved) {
           _drawShapes.push({ type: _drawTool, pts: [{ time: s.time, price: s.price, li: s.li }, { time: c.time, price: c.price, li: c.li }] });
+          _drawStoreSave();
+        }
         redrawCanvas();
       });
       overlay.addEventListener('click', e => {
@@ -16392,10 +16396,13 @@
         if (!_drawTool || !chartInstance || !candleSeriesRef) return;
         const t = e.changedTouches[0]; if (!t) return;
         const px = gx(t.clientX), py = gy(t.clientY);
-        if (_shapeDrag) {   // 拖拉工具（矩形/圓形）結束
+        if (_shapeDrag) {   // 拖拉工具（直線/矩形/圓形）結束
           const c = _coordAt(px, py), s = _shapeDrag; _shapeDrag = null;
-          if (!_noT(c) && c.price != null && Math.abs(px - s.px) > 4 && Math.abs(py - s.py) > 4)
+          const moved = _drawTool === 'seg' ? (Math.hypot(px - s.px, py - s.py) > 6) : (Math.abs(px - s.px) > 4 && Math.abs(py - s.py) > 4);
+          if (!_noT(c) && c.price != null && moved) {
             _drawShapes.push({ type: _drawTool, pts: [{ time: s.time, price: s.price, li: s.li }, { time: c.time, price: c.price, li: c.li }] });
+            _drawStoreSave();
+          }
           redrawCanvas(); e.preventDefault(); return;
         }
         if (_DRAG_TOOLS.indexOf(_drawTool) >= 0) return;   // 拖拉工具但沒有效拖曳
