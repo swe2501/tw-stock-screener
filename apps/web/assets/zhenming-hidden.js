@@ -13,6 +13,6 @@ function summary(){if(!master.checked)return '';const side=by('zhWeak').checked?
 let localEndpoint=null;
 async function endpoint(){const local=location.protocol==='file:'||/^(localhost|127\.0\.0\.1|\[::1\]|::1)$/.test(location.hostname)||/\.localhost$/.test(location.hostname);if(!local)return window.__API||'';
  if(localEndpoint)return localEndpoint;
- const base='http://127.0.0.1:49675';try{const response=await fetch(base+'/api/screen?stat=hidden-capability',{signal:AbortSignal.timeout(5000)}),data=await response.json();if(!response.ok||data.zhenming_hidden!==true)throw Error();localEndpoint=base;return base;}catch{throw Error('本機新版篩選服務尚未啟動，請使用本機篩選預覽服務後再試。');}}
+ const base='http://127.0.0.1:49675';try{const response=await fetch(base+'/api/screen?stat=hidden-capability',{signal:AbortSignal.timeout(5000)}),data=await response.json();if(!response.ok||data.zhenming_hidden!==true)throw Error();localEndpoint=base;return base;}catch{throw Error('本機篩選服務未連線，請從專案的「啟動本機預覽.cmd」開啟網站後再試。');}}
 window.AcademyZhenmingHidden={collect,summary,endpoint};sync();
 })();
