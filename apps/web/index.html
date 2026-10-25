@@ -12053,19 +12053,91 @@
         if (codes.length) {
           const rs = await fetch(`${SIG_SB_URL}/rest/v1/stock_strength?select=*&code=in.(${codes.join(',')})`, { headers: hdr });
           if (rs.ok) (await rs.json()).forEach(s => strMap[s.code] = s);
-          // 主力進場日（top-20 broker_trades，與 K 圖標記同源，可對照）
-          // broker_trades 是 RLS 僅擁有者可讀 → 必須用 _authToken，不能用 anon
-          const bt = await fetch(`${SIG_SB_URL}/rest/v1/broker_trades?select=code,trade_date`
-            + `&code=in.(${codes.join(',')})&or=(net_lots.gte.300,net_amount_wan.gte.3000)&order=trade_date.desc&limit=1000`,
-            { headers: { apikey: SIG_SB_ANON, Authorization: `Bearer ${_authToken}` } });
+          // 主力進場明細（top-20 broker_trades ∩ broker_rankings：分點名稱＋8/20日勝率＋事件次數，與 K 圖紫箭頭同源）
+          // broker_trades / broker_rankings 皆 RLS 僅擁有者/VIP 可讀 → 必須用 _authToken，不能用 anon
+          const BKH = { apikey: SIG_SB_ANON, Authorization: `Bearer ${_authToken}` };
+          const [bt, br] = await Promise.all([
+            fetch(`${SIG_SB_URL}/rest/v1/broker_trades?select=code,trade_date,broker_id,net_lots,net_amount_wan`
+              + `&code=in.(${codes.join(',')})&or=(net_lots.gte.300,net_amount_wan.gte.3000)&order=trade_date.desc&limit=2000`, { headers: BKH }),
+            fetch(`${SIG_SB_URL}/rest/v1/broker_rankings?select=broker_id,broker_name,win8,win20,events`, { headers: BKH }),
+          ]);
+          const rankMap = {};
+          if (br.ok) (await br.json()).forEach(r => {
+            const cur = rankMap[r.broker_id];   // 同分點可能上多個榜，取 20 日勝率最高者代表
+            if (!cur || (r.win20 || 0) > (cur.win20 || 0)) rankMap[r.broker_id] = r;
+          });
           if (bt.ok) {
-            (await bt.json()).forEach(t => (entriesMap[t.code] = entriesMap[t.code] || []).push(t.trade_date));
-            Object.keys(entriesMap).forEach(k => { entriesMap[k] = [...new Set(entriesMap[k])].sort().reverse(); });
+            (await bt.json()).forEach(t => {
+              const r = rankMap[t.broker_id] || {};
+              (entriesMap[t.code] = entriesMap[t.code] || []).push({
+                date: t.trade_date, bid: t.broker_id, name: r.broker_name || t.broker_id,
+                win8: r.win8, win20: r.win20, events: r.events, lots: t.net_lots, wan: t.net_amount_wan });
+            });
+            Object.keys(entriesMap).forEach(k => {   // 同股同日同分點去重，日期新→舊
+              const seen = new Set();
+              entriesMap[k] = entriesMap[k].filter(e => { const key = e.date + '|' + e.bid; if (seen.has(key)) return false; seen.add(key); return true; })
+                .sort((a, b) => String(b.date).localeCompare(String(a.date)));
+            });
           }
         }
         _htStrMap = strMap;
         body.innerHTML = topics.map(t => _hotTopicCard(t, strMap, entriesMap)).join('');
+        _htForceInit();
       } catch (e) { body.innerHTML = '<div style="padding:16px 0;color:#f85149">載入失敗：' + e.message + '</div>'; }
+    }
+
+    // 主力「前20」明細：滑鼠移入/點擊顯示 popup 表格（日期・分點・8日/20日勝率・事件次數・淨買超）
+    function _htForceTableHTML(ents) {
+      const rows = ents.map(e => {
+        const w8 = e.win8 != null ? e.win8 + '%' : '–', w20 = e.win20 != null ? e.win20 + '%' : '–';
+        const ev = e.events != null ? e.events : '–';
+        const buy = e.lots != null ? (Number(e.lots).toLocaleString() + ' 張') : (e.wan != null ? (Math.round(e.wan).toLocaleString() + ' 萬') : '–');
+        return `<tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:3px 7px;white-space:nowrap">${String(e.date).slice(5).replace('-', '/')}</td>
+          <td style="padding:3px 7px;white-space:nowrap;color:var(--accent)">${_htEsc(e.name)}</td>
+          <td style="padding:3px 7px;text-align:right">${w8}</td>
+          <td style="padding:3px 7px;text-align:right">${w20}</td>
+          <td style="padding:3px 7px;text-align:right">${ev}</td>
+          <td style="padding:3px 7px;text-align:right;white-space:nowrap">${buy}</td></tr>`;
+      }).join('');
+      return `<div style="font-size:11px;color:var(--text-muted);margin-bottom:5px">前20 勝率分點大單買超明細（與 K 圖紫箭頭同源；勝率＝該分點進場後 8／20 日持有勝率，事件＝近一年出重手次數）</div>
+        <table style="border-collapse:collapse;font-size:11.5px;color:var(--text)">
+          <thead><tr style="color:var(--text-muted);border-bottom:1px solid var(--border);text-align:left">
+            <th style="padding:3px 7px">日期</th><th style="padding:3px 7px">分點</th>
+            <th style="padding:3px 7px;text-align:right">8日勝</th><th style="padding:3px 7px;text-align:right">20日勝</th>
+            <th style="padding:3px 7px;text-align:right">事件</th><th style="padding:3px 7px;text-align:right">淨買超</th></tr></thead>
+          <tbody>${rows}</tbody></table>`;
+    }
+    let _htForceReady = false;
+    function _htForceInit() {
+      if (_htForceReady) return; _htForceReady = true;
+      const pop = document.createElement('div');
+      pop.id = 'htForcePop';
+      pop.style.cssText = 'position:fixed;z-index:10050;display:none;max-width:min(94vw,460px);max-height:62vh;overflow:auto;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,.35);padding:9px 11px';
+      document.body.appendChild(pop);
+      const body = document.getElementById('hotTopicsBody');
+      let timer = null;
+      const place = (el) => {
+        const r = el.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
+        let px = r.left, py = r.bottom + 6;
+        if (px + w > innerWidth - 8) px = innerWidth - w - 8;
+        if (py + h > innerHeight - 8) py = Math.max(8, r.top - h - 6);
+        pop.style.left = Math.max(8, px) + 'px'; pop.style.top = py + 'px';
+      };
+      const show = (el) => {
+        let ents; try { ents = JSON.parse(el.dataset.ents); } catch (_) { return; }
+        if (!ents || !ents.length) return;
+        pop.innerHTML = _htForceTableHTML(ents); pop.style.display = 'block'; place(el);
+      };
+      const hideSoon = () => { timer = setTimeout(() => { pop.style.display = 'none'; }, 180); };
+      const cancelHide = () => { if (timer) { clearTimeout(timer); timer = null; } };
+      body.addEventListener('mouseover', e => { const el = e.target.closest('.ht-force'); if (el) { cancelHide(); show(el); } });
+      body.addEventListener('mouseout', e => { if (e.target.closest('.ht-force')) hideSoon(); });
+      body.addEventListener('click', e => { const el = e.target.closest('.ht-force'); if (el) { e.stopPropagation(); cancelHide(); show(el); } });
+      pop.addEventListener('mouseenter', cancelHide);
+      pop.addEventListener('mouseleave', hideSoon);
+      window.addEventListener('scroll', () => { pop.style.display = 'none'; }, true);
+      document.addEventListener('click', e => { if (pop.style.display === 'block' && !pop.contains(e.target) && !e.target.closest('.ht-force')) pop.style.display = 'none'; });
     }
 
     // 點強度分數 → 彈出該檔的詳細計算
@@ -12095,13 +12167,13 @@
         const col = s.strength >= 70 ? '#67c23a' : s.strength >= 40 ? '#e6a23c' : 'var(--text-muted)';
         const brk = s.strength != null ? `RS${s.rs}·${s.above_ma ? '均多' : '均空'}·高${s.near_high}` : '';
         const ents = entriesMap[c.code] || [];
-        const dates = ents.length
-          ? ents.slice(0, 3).map(d => d.slice(5).replace('-', '/')).join('、') + (ents.length > 3 ? '…' : '')
-          : '';
+        const uniqDates = [...new Set(ents.map(e => e.date))];
+        const dates = uniqDates.slice(0, 3).map(d => d.slice(5).replace('-', '/')).join('、') + (uniqDates.length > 3 ? '…' : '');
         const n = s.bigbuy_5d || 0;
+        const entAttr = ents.length ? _htEsc(JSON.stringify(ents)) : '';
         const force = [
           n ? `<span style="color:#f85149">近5日${n}天</span>` : '',
-          dates ? `<span style="color:#c678dd">前20：${dates}</span>` : '',
+          ents.length ? `<span class="ht-force" data-ents="${entAttr}" style="color:#c678dd;text-decoration:underline dotted;text-underline-offset:2px;cursor:help">前20：${dates}（${ents.length}筆）</span>` : '',
         ].filter(Boolean).join('　') || '–';
         const ret = s.ret20 != null ? (s.ret20 >= 0 ? '+' : '') + s.ret20 + '%' : '–';
         return `<tr onclick="openChart('${c.code}','${c.code} ${_htEsc(c.name).replace(/'/g,'')}','',0,false)" style="border-bottom:1px solid var(--border);cursor:pointer">
