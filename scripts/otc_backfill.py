@@ -128,6 +128,27 @@ def _profile_for(worker):
 
 
 async def _open(p, worker):
+    """開瀏覽器並確認已登入；判斷為未登入時等一下重試（2026-10-25：玩股網一時回應慢被誤判未登入，兩個 worker 整個中止）。"""
+    for attempt in range(4):
+        try:
+            ctx, page = await _open_once(p, worker)
+        except Exception as e:                       # noqa: BLE001
+            _log(worker, f"開瀏覽器失敗（第 {attempt + 1} 次）：{type(e).__name__}")
+            ctx, page = None, None
+        if page is not None:
+            return ctx, page
+        if ctx is not None:
+            try:
+                await asyncio.wait_for(ctx.close(), timeout=30)
+            except Exception:
+                pass
+        if attempt < 3:
+            _log(worker, f"判斷為未登入或開啟失敗，{60 * (attempt + 1)} 秒後重試")
+            await asyncio.sleep(60 * (attempt + 1))
+    return await _open_once(p, worker)
+
+
+async def _open_once(p, worker):
     ctx = await p.chromium.launch_persistent_context(
         str(_profile_for(worker)), headless=False, channel="chrome",
         viewport={"width": 1100, "height": 800},
