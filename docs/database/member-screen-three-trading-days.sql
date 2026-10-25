@@ -1,6 +1,9 @@
--- PREPARED ONLY: allow snapshots from the latest three actual trading dates.
+-- APPLIED 2026-10-25: JUSTY explicitly authorized database activation in this chat.
+-- Supabase Taiwan stock2 / bruqrbvbjxntgoljxsne, SQL Editor: transaction succeeded.
+-- Verified both RPCs use this helper; authenticated save=true, anon save=false.
+-- Actual accepted market dates at verification: 2026-10-20, 2026-10-21, 2026-10-22.
 -- Keeps server-owned record_date, owner checks, immutable records, idempotency and RLS.
--- No live database change has been applied.
+-- Live activation changes these functions only; existing member records and RLS are preserved.
 begin;
 create or replace function public.member_screen_recent_dates(p_today date) returns date[]
 language sql stable security definer set search_path='' as $$
