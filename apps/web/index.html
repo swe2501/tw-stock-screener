@@ -1774,8 +1774,7 @@
   #chartModal.open .modal-box { transform:translateY(0) scale(1);opacity:1; }
   #chartModal .modal-header { position:sticky;top:0;z-index:9;background:color-mix(in srgb,var(--surface) 94%,transparent);backdrop-filter:blur(16px); }
   #chartModal .modal-close { border:1px solid var(--border) !important;border-radius:8px !important;width:34px;height:34px; }
-  /* 掏金篩選器 上一檔／下一檔 箭頭（只在從篩選結果點進 K 圖時出現） */
-  #chartModal .modal-box { position:relative; }
+  /* 掏金篩選器 上一檔／下一檔 箭頭（貼在 K 線圖左右；只在從篩選結果點進 K 圖時出現） */
   .chart-nav { position:absolute;top:50%;transform:translateY(-50%);z-index:20;width:38px;height:66px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:11px;background:color-mix(in srgb,var(--surface) 82%,transparent);backdrop-filter:blur(8px);color:var(--text);font-size:28px;line-height:1;cursor:pointer;box-shadow:0 5px 16px rgba(0,0,0,.2);transition:background .15s,color .15s,border-color .15s,opacity .15s; }
   .chart-nav:hover:not(:disabled) { background:var(--accent);color:var(--on-accent);border-color:var(--accent); }
   .chart-nav:disabled { opacity:.28;cursor:default; }
@@ -10202,9 +10201,6 @@
   <!-- K線圖 Modal -->
   <div class="modal-overlay" id="chartModal" onclick="closeChartIfBg(event)">
     <div class="modal-box">
-      <!-- 掏金篩選器專用：上一檔／下一檔（只有從篩選結果點進來才顯示） -->
-      <button id="chartNavPrev" type="button" class="chart-nav chart-nav-prev" style="display:none" onclick="event.stopPropagation();window._chartNavGo(-1)" aria-label="上一檔篩選結果">&#8249;</button>
-      <button id="chartNavNext" type="button" class="chart-nav chart-nav-next" style="display:none" onclick="event.stopPropagation();window._chartNavGo(1)" aria-label="下一檔篩選結果">&#8250;</button>
       <div class="modal-header">
         <div>
           <div class="modal-title-row">
@@ -10381,6 +10377,9 @@
         <div id="chartWrapper" style="display:none">
           <div id="mainChartPanel">
             <div id="chartContainer"></div>
+            <!-- 掏金篩選器專用：上一檔／下一檔，貼在 K 線圖左右（只有從篩選結果點進來才顯示） -->
+            <button id="chartNavPrev" type="button" class="chart-nav chart-nav-prev" style="display:none" onclick="event.stopPropagation();window._chartNavGo(-1)" aria-label="上一檔篩選結果">&#8249;</button>
+            <button id="chartNavNext" type="button" class="chart-nav chart-nav-next" style="display:none" onclick="event.stopPropagation();window._chartNavGo(1)" aria-label="下一檔篩選結果">&#8250;</button>
             <canvas id="vpCanvas" style="position:absolute;top:0;left:0;pointer-events:none;z-index:5"></canvas>
             <div id="ohlcTooltip"></div>
             <canvas id="fibCanvas"></canvas>
