@@ -130,8 +130,8 @@
 #chartModal.chart-fit .modal-body{min-height:0}
 #chartModal.chart-fit .chart-content{min-height:0;padding:7px 12px 10px}
 @media(max-width:1100px){#chartModal.chart-fit .chart-content{flex:none;height:auto}}
-#chartModal.chart-fit #chartWrapper{display:grid!important;height:var(--chart-fit-height);grid-template-rows:minmax(0,var(--chart-main-ratio,70fr)) 30px minmax(0,var(--chart-vol-ratio,15fr)) minmax(0,var(--chart-tech-ratio,15fr));overflow:hidden}
-#chartModal.chart-fit-chip #chartWrapper{grid-template-rows:minmax(0,var(--chart-main-ratio,70fr)) 30px minmax(0,var(--chart-sub-ratio,30fr))}
+#chartModal.chart-fit #chartWrapper{display:grid!important;height:var(--chart-fit-height);grid-template-rows:minmax(0,var(--chart-main-ratio,60fr)) 30px minmax(0,var(--chart-vol-ratio,20fr)) minmax(0,var(--chart-tech-ratio,20fr));overflow:hidden}
+#chartModal.chart-fit-chip #chartWrapper{grid-template-rows:minmax(0,var(--chart-main-ratio,60fr)) 30px minmax(0,var(--chart-sub-ratio,40fr))}
 #chartModal.chart-fit-chip #chipPage{grid-row:3;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
 #chartModal.chart-fit-chip #chipPage .chip-c{height:108px}
 #chartModal.chart-fit #mainChartPanel{min-height:0;overflow:hidden;grid-row:1}
@@ -204,3 +204,7 @@
 .ohlc-broker b{display:inline-flex;align-items:center;gap:4px;font-weight:700;color:var(--text)}
 .ohlc-broker i{width:7px;height:7px;border-radius:50%;display:inline-block}
 #chartModal .broker-panel-head a:first-of-type{color:#9556aa;border-color:color-mix(in srgb,#a45fba 30%,var(--border));background:color-mix(in srgb,#a45fba 7%,var(--surface))}
+
+/* Keep sentiment with the research sidebar, leaving the chart column uninterrupted. */
+#chartNotePanel>#greedGauge{flex:none;padding:8px 10px!important;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:2px}
+#chartNotePanel>#greedGauge .pro-greed-layout{justify-content:center}

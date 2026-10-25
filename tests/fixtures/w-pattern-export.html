@@ -1,0 +1,11 @@
+<!doctype html><meta charset="utf-8"><title>W export integration fixture</title>
+<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+<script src="../../apps/web/assets/w-pattern-export.js"></script>
+<h1>匯出整合測試（合成資料）</h1><button id="export">匯出分析資料</button><p id="status" role="status"></p><div id="chart" style="width:900px;height:450px"></div>
+<script>
+const chart=LightweightCharts.createChart(document.getElementById('chart'),{width:900,height:450});
+const series=chart.addCandlestickSeries();
+const candles=Array.from({length:60},(_,i)=>({time:new Date(Date.UTC(2026,7,1+i)).toISOString().slice(0,10),open:100+i,high:103+i,low:99+i,close:102+i,volume:1000+i}));
+series.setData(candles);chart.timeScale().fitContent();
+document.getElementById('export').onclick=()=>{try{const r=WPatternExport.capture({chart,series,candles,context:{source:'synthetic-test-fixture'}});document.getElementById('status').textContent='已下載 '+r.bars+' 根K棒與圖表';}catch(e){document.getElementById('status').textContent=e.message;}};
+</script>

@@ -386,3 +386,10 @@ html:not([data-theme=light]) .scal-workspace [data-cat=zm] .sc-hd b{color:#ffda6
 .sl-ret .sl-ret-date{color:var(--text-muted);font-weight:400}
 .sl-log-tools .sl-muted:empty{display:none}
 .sl-log-tools:has(.sl-muted:empty){justify-content:flex-end}
+
+
+.sic-record-dialog{width:min(640px,calc(100vw - 24px));max-height:calc(100dvh - 32px);padding:0;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:14px}
+.sic-record-dialog[open]{display:flex;flex-direction:column}.sic-record-dialog .sl-body{overflow:auto;min-height:0}.sic-record-dialog footer{flex:none;padding:14px 18px;border-top:1px solid var(--border)}
+.sic-record-dialog footer button{padding:9px 12px;border:1px solid var(--accent);border-radius:8px;background:var(--accent);color:var(--on-accent);font:inherit;cursor:pointer}
+.sic-record{padding:14px 0;border-bottom:1px solid var(--border)}.sic-record:first-of-type{padding-top:0}.sic-record:last-child{border-bottom:0}.sic-record h3{font-size:15px;margin:0 0 8px}.sic-record p{margin:6px 0;line-height:1.6;overflow-wrap:anywhere}
+.sic-record ul{list-style:none;padding:0;margin:10px 0 0}.sic-record li{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:9px 0;border-top:1px solid var(--border);font-size:13px}.sic-record-conditions,.sic-record-empty{font-size:13px;color:var(--text-muted)}.sic-record-empty{padding:24px 0}

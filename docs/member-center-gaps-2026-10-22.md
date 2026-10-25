@@ -1,5 +1,7 @@
 # 會員中心補強清單（2026-10-22）
 
+> **2026-10-23 補充**：後續會員服務補強已在獨立分支準備，狀態與驗收見 [會員中心補強驗收](member-service-completion-2026-10-23.md)。下文保留 10 月 22 日盤點歷史，勿將其中當時狀態視為最新部署狀態。
+
 > 給合夥人。整理會員中心目前「已完成」「差一步」「還沒做」的項目，以及建議分工與順序。
 > 依據：`web/justy/strategy-studio` → `justy-layout` → `uat`（2026-10-22 最新 `58cef1e` 之後）。今天所有前端修改**只在 uat，尚未上 prod**。
 > 資料庫：UAT 與 prod 共用 Supabase `Taiwan stock2`（`bruqrbvbjxntgoljxsne`）。資料庫的開關一改，正式站會員立刻受影響。

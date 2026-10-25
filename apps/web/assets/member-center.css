@@ -147,3 +147,6 @@ body.academy-research-ready #chartWatchBtn,body.academy-research-ready #chartBac
 .mj-ticket-progress i{display:block;height:100%;width:0;border-radius:inherit;background:linear-gradient(90deg,color-mix(in srgb,var(--accent) 65%,transparent),var(--accent));transition:width .5s ease}
 .mj-ticket-progress small{margin:0!important;font-size:11.5px;color:var(--mj-muted,var(--text-muted))}.mj-ticket-progress.is-full small{color:var(--accent)}
 @media(prefers-reduced-motion:reduce){.mj-ticket-progress i{transition:none}}
+
+/* Routine sync success needs no permanent banner; pending work and errors remain visible. */
+.mc-cloud-host[data-cloud-compact=true]{display:none}

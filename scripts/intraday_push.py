@@ -208,8 +208,42 @@ def _record_otc_index(env):
         print(f"[intraday] 櫃買指數走勢記錄失敗（不影響主流程）：{type(e).__name__}")
 
 
+def _record_fx_index(env):
+    """2026-10-25 首頁台幣匯率「今日走勢」：Yahoo TWD=X 歷史分時在台北匯市時段很稀疏（主要在歐美盤有量），
+    故改由盤中排程每輪記一筆 Yahoo 即時報價（regularMarketPrice），存本機
+    D:\\stock_data\\home_intraday\\fx_YYYYMMDD.json，並寫成 page_cache mini_FX（5 分鐘最後一筆）。
+    只在台北匯市時段(09:00-16:00)記錄。失敗不影響主流程。"""
+    try:
+        import ssl as _ssl, urllib.request as _ur
+        now = _now()
+        if now.hour < 9 or now.hour >= 16:                          # 僅台北匯市盤時段
+            return
+        ctx = _ssl.create_default_context(); ctx.check_hostname = False; ctx.verify_mode = _ssl.CERT_NONE
+        raw = _ur.urlopen(_ur.Request(
+            "https://query1.finance.yahoo.com/v8/finance/chart/TWD=X?range=1d&interval=5m",
+            headers={"User-Agent": "Mozilla/5.0"}), timeout=20, context=ctx).read()
+        meta = ((json.loads(raw).get("chart") or {}).get("result") or [{}])[0].get("meta") or {}
+        price = meta.get("regularMarketPrice")
+        if price is None:
+            return
+        import home_intraday as hi
+        d = now.date()
+        t = int(now.timestamp())
+        hi.OTC_LOG_DIR.mkdir(parents=True, exist_ok=True)
+        f = hi.OTC_LOG_DIR / f"fx_{d:%Y%m%d}.json"
+        pts = json.loads(f.read_text(encoding="utf-8")) if f.exists() else []
+        pts.append([t, float(price)])
+        f.write_text(json.dumps(pts), encoding="utf-8")
+        data = hi._bucket5([(int(x), float(p)) for x, p in pts])
+        if len(data) >= 2 and not DRY:
+            hi.push(env, "mini_FX", d, data, "盤中排程記錄 Yahoo TWD=X 即時匯率")
+    except Exception as e:                                          # noqa: BLE001
+        print(f"[intraday] 匯率走勢記錄失敗（不影響主流程）：{type(e).__name__}")
+
+
 def _one_pass(lcodes, ocodes, env):
     _record_otc_index(env)
+    _record_fx_index(env)
     listed = _scan(lcodes, "tse")
     otc = _scan(ocodes, "otc")
     if len(listed) < MIN_LISTED:
