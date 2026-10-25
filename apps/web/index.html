@@ -9910,11 +9910,11 @@
           <div class="zm-hidden-options" id="zhenmingHiddenOptions" hidden>
             <p>選一段期間，找出比大盤更強或更弱的股票。</p>
             <fieldset><legend><span>01</span> 選擇方向 <small>單選</small></legend><label><input type="radio" id="zhStrong" name="zhSide" value="strong" checked> 強於大盤</label><label><input type="radio" id="zhWeak" name="zhSide" value="weak"> 弱於大盤</label></fieldset>
-            <fieldset><legend><span>02</span> 選擇期間</legend><label class="zh-period">週期<select id="zhPeriod" aria-label="隱藏式觀察週期"><option value="5">5 個交易日</option><option value="10">10 個交易日</option><option value="20" selected>20 個交易日</option><option value="60">60 個交易日</option><option value="120">120 個交易日</option><option value="240">240 個交易日</option><option value="custom">自訂交易日數</option><option value="dates">自訂日期區間</option></select></label>
+            <fieldset><legend><span>02</span> 比較方式 <small>可複選</small></legend><label><input type="checkbox" id="zhMa" data-hidden-metric checked> 均線</label><label><input type="checkbox" id="zhReturn" data-hidden-metric> 漲跌幅</label></fieldset>
+            <fieldset><legend><span>03</span> 選擇期間</legend><label class="zh-period">週期<select id="zhPeriod" aria-label="隱藏式觀察週期"><option value="1" selected>今天</option><option value="5">5 個交易日</option><option value="10">10 個交易日</option><option value="20">20 個交易日</option><option value="60">60 個交易日</option><option value="120">120 個交易日</option><option value="240">240 個交易日</option><option value="custom">自訂交易日數</option><option value="dates">自訂日期區間</option></select></label>
             <label id="zhCustomWrap" hidden>交易日數<input type="number" id="zhDays" min="1" max="760" step="1" value="30" aria-label="隱藏式自訂交易日數"></label>
             <div id="zhDateWrap" class="zh-date-range" hidden><label>開始日期<input type="date" id="zhStart"></label><span>至</span><label>結束日期<input type="date" id="zhEnd"></label></div>
             </fieldset>
-            <fieldset><legend><span>03</span> 比較方式 <small>可複選</small></legend><label><input type="checkbox" id="zhMa" data-hidden-metric checked> 均線</label><label><input type="checkbox" id="zhReturn" data-hidden-metric> 漲跌幅</label></fieldset>
             <small>兩種方式可擇一，也可一起勾選；一起勾選時，股票需同時符合。</small>
           </div>
         </article>
@@ -17996,8 +17996,8 @@
 <script src="assets/chart-viewport-fit.js?v=22" defer></script>
 <script src="assets/screen-inline-calendar.js?v=records-only13" defer></script>
 <link rel="stylesheet" href="assets/zhenming-hidden.css?v=6">
-<script src="assets/zhenming-hidden.js?v=3" defer></script>
-<script src="assets/screen-log.js?v=calendar-direct30" defer></script>
+<script src="assets/zhenming-hidden.js?v=4" defer></script>
+<script src="assets/screen-log.js?v=calendar-direct31" defer></script>
 <script src="assets/pattern-focus.js?v=2" defer></script>
 <script src="assets/member-quick-menu.js?v=tier6" defer></script>
 <script src="assets/navigation-layers.js?v=logo-home20" defer></script>
