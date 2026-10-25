@@ -143,17 +143,23 @@
   function _forceMenuFor(target) {
     _restoreMenu();
     var menu = (target && target.closest) ? target.closest('.mn-menu') : null;
-    if (menu) { menu.classList.remove('mn-hide'); menu.style.display = 'block'; _openedMenu = menu; }
+    if (menu) {
+      // 手機導覽列橫向捲動：先把這一組(.mn-grp)橫向捲進畫面，下拉(手機為整排全寬)才打得到
+      var grp = menu.closest('.mn-grp');
+      if (grp) { try { grp.scrollIntoView({ block: 'nearest', inline: 'center' }); } catch (_) {} }
+      menu.classList.remove('mn-hide'); menu.style.display = 'block'; _openedMenu = menu;
+    }
   }
   function render() {
     var st = steps[idx]; if (!st) return finish(true);
     if (st.before) { try { st.before(); } catch (_) {} }
     setTimeout(function () {
       var target = null; try { target = st.locate ? st.locate() : null; } catch (_) {}
-      _forceMenuFor(target);        // 目標在下拉選單裡就先展開，聚光才打得到
+      _forceMenuFor(target);        // 目標在下拉選單裡就先展開(並橫向捲進畫面)，聚光才打得到
       var rect = null;
       if (target && target.getBoundingClientRect) {
-        try { target.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (_) {}
+        var inMenu = target.closest && target.closest('.mn-menu');
+        if (!inMenu) { try { target.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (_) {} }  // 下拉項目已在頂部，不整頁捲動
         var r = target.getBoundingClientRect();
         if (r.width > 2 && r.height > 2 && r.bottom > 0 && r.top < innerHeight) rect = r;
       }
