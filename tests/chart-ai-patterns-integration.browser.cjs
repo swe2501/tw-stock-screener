@@ -1,10 +1,10 @@
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),{chromium}=require('playwright');
 const web=path.resolve(__dirname,'../apps/web'),scan=process.env.VISUAL_SCAN_PATH;
 if(!scan||!process.env.CHART_LIBRARY_PATH)throw Error('Set VISUAL_SCAN_PATH and CHART_LIBRARY_PATH for local saved-data integration QA');
-const source=JSON.parse(fs.readFileSync(path.join(scan,'stocks/1236/source.json'),'utf8'));
+const source=JSON.parse(fs.readFileSync(path.join(scan,'stocks/8081/source.json'),'utf8'));
 const data=JSON.parse(fs.readFileSync(path.join(scan,'results.json'),'utf8'));
 (async()=>{const browser=await chromium.launch({channel:'msedge',headless:true});try{const page=await browser.newPage({viewport:{width:1500,height:1000}}),errors=[],paid=[];
-page.on('pageerror',e=>errors.push(e.message));await page.addInitScript(()=>{localStorage.setItem('sb_token','fixture');localStorage.setItem('sb_user','{"id":"fx","email":"swe250165@gmail.com"}');});
+page.on('pageerror',e=>errors.push(e.message));await page.addInitScript(()=>{localStorage.setItem('fqi_onboarded_v1','1');localStorage.setItem('sb_token','fixture');localStorage.setItem('sb_user','{"id":"fx","email":"swe250165@gmail.com"}');});
 await page.route('**/*',r=>{const u=new URL(r.request().url());if(u.hostname==='api.openai.com'||u.searchParams.get('stat')==='aibuy')paid.push(u.toString());
  if(u.hostname==='unpkg.com'&&u.pathname.includes('lightweight-charts'))return r.fulfill({path:process.env.CHART_LIBRARY_PATH,contentType:'text/javascript'});
  if(u.pathname==='/api/chart')return r.fulfill({json:source});
@@ -13,7 +13,7 @@ await page.route('**/*',r=>{const u=new URL(r.request().url());if(u.hostname==='
  if(u.pathname==='/auth/v1/user')return r.fulfill({json:{id:'fx',email:'swe250165@gmail.com'}});
  if(u.origin==='https://visual-site.fixture.test'){const file=path.resolve(web,'.'+(u.pathname==='/'?'/index.html':u.pathname));if(file.startsWith(web+path.sep)&&fs.existsSync(file)&&fs.statSync(file).isFile())return r.fulfill({path:file});}
  return r.fulfill({json:[]});});
-await page.goto('https://visual-site.fixture.test/');await page.evaluate(()=>openChart('1236','宏亞',''));
+await page.goto('https://visual-site.fixture.test/');await page.evaluate(()=>openChart('8081','致新',''));
 await page.waitForFunction(()=>AcademyChartBridge.get().series&&AcademyChartBridge.get().candles.length>120);
 await page.locator('.chart-tools-pin input').check();
 await page.evaluate(()=>{const c=AcademyChartBridge.get().chart;window.patternLines=0;const add=c.addLineSeries.bind(c),remove=c.removeSeries.bind(c);c.addLineSeries=function(o){const s=add(o);s.__patternQA=true;patternLines++;return s};c.removeSeries=function(s){if(s.__patternQA)patternLines--;return remove(s)};_aiBuyToggle();});
@@ -22,8 +22,12 @@ assert.equal(await page.evaluate(()=>patternLines),2,'real LightweightCharts rec
 await page.locator('#aiBuyPanel input').uncheck();assert.equal(await page.evaluate(()=>patternLines),0);
 await page.locator('#aiBuyPanel input').check();assert.equal(await page.evaluate(()=>patternLines),2);
 assert.match(await page.locator('#aiPatternPeriodHint').innerText(),/週K/);
-await page.locator('#aiPatternPeriodHint button').click();await page.waitForFunction(()=>document.getElementById('aiBuyPanel').textContent.includes('週K · 判讀截至'));
+await page.locator('#aiBuyPanel .ai-pattern-cross-period button').click();await page.waitForFunction(()=>document.getElementById('aiBuyPanel').textContent.includes('週K · 判讀截至'));
 assert.equal(await page.locator('#aiBuyPanel input').count(),1,'weekly uses saved weekly anchors after real website aggregation');assert.match(await page.locator('#aiPatternPeriodHint').innerText(),/日K/);
+assert.equal(await page.locator('#aiBuyPanel .ai-pattern-cross-period').isVisible(),true);assert.match(await page.locator('#aiBuyPanel .ai-pattern-cross-period').innerText(),/日K也有 W 型態/);
+await page.locator('.chart-tools-pin input').uncheck();
+await page.locator('[data-layer="ai"]').hover();
+assert.equal(await page.locator('#aiBuyPanel .ai-pattern-cross-period').isVisible(),true,'cross-period reminder stays inside the visible unpinned AI panel');
 await page.screenshot({path:path.join(scan,'website-ai-weekly-qa.png')});
 await page.evaluate(()=>closeChart());assert.equal(await page.locator('#aiPatternPeriodHint').isVisible(),false);assert.deepEqual(paid,[]);assert.deepEqual(errors,[]);
 console.log('PASS: actual site K-chart integration, saved daily/weekly OHLC, real line series, checkbox removal, cross-period switch, close cleanup, no paid inference.');
