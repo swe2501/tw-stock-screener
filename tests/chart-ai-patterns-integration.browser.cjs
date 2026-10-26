@@ -22,8 +22,12 @@ assert.equal(await page.evaluate(()=>patternLines),2,'real LightweightCharts rec
 await page.locator('#aiBuyPanel input').uncheck();assert.equal(await page.evaluate(()=>patternLines),0);
 await page.locator('#aiBuyPanel input').check();assert.equal(await page.evaluate(()=>patternLines),2);
 assert.match(await page.locator('#aiPatternPeriodHint').innerText(),/週K/);
-await page.locator('#aiPatternPeriodHint button').click();await page.waitForFunction(()=>document.getElementById('aiBuyPanel').textContent.includes('週K · 判讀截至'));
+await page.locator('#aiBuyPanel .ai-pattern-cross-period button').click();await page.waitForFunction(()=>document.getElementById('aiBuyPanel').textContent.includes('週K · 判讀截至'));
 assert.equal(await page.locator('#aiBuyPanel input').count(),1,'weekly uses saved weekly anchors after real website aggregation');assert.match(await page.locator('#aiPatternPeriodHint').innerText(),/日K/);
+assert.equal(await page.locator('#aiBuyPanel .ai-pattern-cross-period').isVisible(),true);assert.match(await page.locator('#aiBuyPanel .ai-pattern-cross-period').innerText(),/日K也有 W 型態/);
+await page.locator('.chart-tools-pin input').uncheck();
+await page.locator('[data-layer="ai"]').hover();
+assert.equal(await page.locator('#aiBuyPanel .ai-pattern-cross-period').isVisible(),true,'cross-period reminder stays inside the visible unpinned AI panel');
 await page.screenshot({path:path.join(scan,'website-ai-weekly-qa.png')});
 await page.evaluate(()=>closeChart());assert.equal(await page.locator('#aiPatternPeriodHint').isVisible(),false);assert.deepEqual(paid,[]);assert.deepEqual(errors,[]);
 console.log('PASS: actual site K-chart integration, saved daily/weekly OHLC, real line series, checkbox removal, cross-period switch, close cleanup, no paid inference.');

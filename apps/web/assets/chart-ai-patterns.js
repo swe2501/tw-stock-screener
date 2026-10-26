@@ -43,13 +43,22 @@
   return promise;
  }
  function periodOf(ctx){return ctx.period==='day'?'daily':ctx.period==='week'?'weekly':null;}
+ function periodLinks(host,records,ctx){
+  const other=records.filter(r=>r.execution_status==='reviewed'&&r.patterns?.length&&r.timeframe!==periodOf(ctx)&&['daily','weekly'].includes(r.timeframe));
+  for(const r of other){const period=r.timeframe==='daily'?'日K':'週K',types=[...new Set(r.patterns.map(p=>p.type))];
+   const names=types.map(t=>t==='w_bottom'?'W':labels[t]||'其他').join('、');
+   const row=el('div',null,'ai-pattern-cross-period');row.setAttribute('role','status');
+   const text=el('strong',period+'也有 '+names+' 型態');
+   const button=el('button','切換'+period+'查看','ai-pattern-period-link');button.type='button';button.onclick=()=>ctx.switchPeriod(r.timeframe);
+   row.append(text,button);host.append(row);
+  }
+  return other.length;
+ }
  function notice(records,ctx){
   const host=document.getElementById('aiPatternPeriodHint');if(!host)return;
   host.replaceChildren();
   const periods=records.filter(r=>r.execution_status==='reviewed'&&r.patterns?.length).map(r=>r.timeframe);
-  const other=[...new Set(periods)].filter(p=>p!==periodOf(ctx));
-  for(const tf of other){const button=el('button',(tf==='daily'?'日K':'週K')+'有型態，切換查看','ai-pattern-period-link');button.type='button';button.onclick=()=>ctx.switchPeriod(tf);host.append(button);}
-  host.hidden=!other.length;
+  host.hidden=!periodLinks(host,records,ctx);
   const badge=document.querySelector('.chart-layer-tab[data-layer="ai"] .layer-count');if(badge){badge.textContent=periods.length?' '+[...new Set(periods)].map(p=>p==='daily'?'日':'週').join('／'):'';badge.classList.toggle('show',!!periods.length);}
  }
  function render(data,ctx){
@@ -57,6 +66,7 @@
   const records=data.records.filter(r=>String(r.code)===String(ctx.code));notice(records,ctx);
   if(!opened)return;panel.replaceChildren();
   panel.append(el('b','AI 型態判定','ai-pattern-heading'));
+  periodLinks(panel,records,ctx);
   const tf=periodOf(ctx);
   if(!tf){panel.append(el('p','請切換至日K或週K查看已保存的型態判讀。'));return;}
   const r=records.find(r=>r.timeframe===tf);
