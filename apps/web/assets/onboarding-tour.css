@@ -74,8 +74,10 @@
 :root:not([data-theme="light"]) .ob-owl .owl-dark-v2{ display:block; }
 @keyframes obWingLeft{ 0%,100%{transform:rotate(-1deg)} 50%{transform:rotate(6deg)} }
 @keyframes obWingRight{ 0%,100%{transform:rotate(1deg)} 50%{transform:rotate(-6deg)} }
-.ob-pop-in{ animation:obPopIn .3s cubic-bezier(.2,.9,.3,1.2) both; }
-@keyframes obPopIn{ from{opacity:0; transform:translateY(8px) scale(.97)} to{opacity:1; transform:none} }
+/* Preserve the UAT non-overshooting entrance alongside continuous wings. */
+.ob-pop-in{ animation:obPopIn .2s ease-out both; }
+@keyframes obPopIn{ from{opacity:0; transform:translateY(5px)} to{opacity:1; transform:none} }
+
 @media(prefers-reduced-motion:reduce){ .ob-owl,.ob-owl *{ animation:none !important; } .ob-mask,.ob-ring,.ob-pop{ transition:none !important; } }
 
 /* 重跑導覽的小按鈕 */
