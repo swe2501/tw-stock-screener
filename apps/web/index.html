@@ -4067,16 +4067,27 @@
     @media(max-width:820px){.bx-list{grid-template-columns:1fr;}}
   </style>
   <div id="boxView" style="display:none">
-    <div class="tm-head"><h2> AI型態判斷</h2><span class="sub" id="bxSub"></span></div>
-    <div class="bx-list" id="bxList"><div class="fc-empty">載入中…</div></div>
-    <div class="fc-note" id="bxNote"></div>
+    <header class="aps-hero"><div><div class="aps-eyebrow">PATTERN RESEARCH</div><h2>AI型態判斷</h2><p>從型態找到研究起點，切換週期查看對應的K線。</p><p id="aiPatternScope">讀取判讀範圍…</p></div><div class="aps-hero-symbol" aria-hidden="true">W</div></header>
+    <div id="aiPatternTabs" class="aps-tabs" role="tablist" aria-label="型態分類"></div>
+    <section id="aiPatternSavedPanel" role="tabpanel" aria-label="已保存的型態判讀">
+      <div class="aps-toolbar"><div><h3>判讀結果</h3><small id="aiPatternResultCount" aria-live="polite"></small></div>
+        <div id="aiPatternFilters" class="aps-filters"><input id="aiPatternSearch" type="search" placeholder="搜尋代號／股名" aria-label="搜尋型態股票"><select id="aiPatternPeriod" aria-label="篩選判讀週期"><option value="all">日K＋週K</option><option value="daily">僅日K</option><option value="weekly">僅週K</option></select><select id="aiPatternState" aria-label="篩選判讀狀態"><option value="confirmed">已確認W</option><option value="uncertain">待複核</option><option value="negative">未見W</option></select></div>
+      </div>
+      <div id="aiPatternResults"></div>
+      <p class="aps-note">日K判讀120根；週K取可取得的三年資料。每張小圖是已判讀區段的轉折輪廓示意，實際價格請開啟K圖。型態為保存的研究結果，並非即時買進訊號；待複核結果不畫輔助線。</p>
+    </section>
+    <section id="aiPatternLegacyBox" role="tabpanel" aria-label="既有箱型資料" hidden>
+      <div class="aps-toolbar"><div><h3>箱型觀察</h3><small id="bxSub"></small></div></div>
+      <div class="bx-list" id="bxList"><div class="fc-empty">載入中…</div></div>
+      <div class="fc-note" id="bxNote"></div>
+    </section>
   </div>
   <script>
   (function(){
     var el=function(id){return document.getElementById(id);};
     function fmt(v){return v==null?'—':Number(v).toLocaleString(undefined,{maximumFractionDigits:2});}
     var TAG={FORMING:['整理中','form'],CONFIRMED_UP:['向上突破','up'],CONFIRMED_DOWN:['向下突破','dn']};
-    window._boxShow=function(){
+    window._boxLegacyShow=function(){
       var SB=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'', AK=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';
       var H={apikey:AK,Authorization:'Bearer '+AK};
       fetch(SB+'/rest/v1/box_patterns?select=code,status,upper_center,lower_center,upper_outer,lower_outer,breakout_date,breakout_direction,breakout_reason,data_date,window_start,window_end&order=status.asc,code.asc&limit=300',{headers:H}).then(function(r){return r.json();}).then(function(rows){
@@ -11612,6 +11623,14 @@
         chart:chartInstance,series:candleSeriesRef,
         switchPeriod:tf=>{if(tf==='weekly')loadWeeklyChart();else loadDailyChart();}};
     }
+    window._openSavedPatternChart=function(code,name,timeframe){
+      openChart(String(code),name||'');
+      if(timeframe==='weekly')loadWeeklyChart();
+      window._aiBuyOpen=true;window._chartLayerPanel('ai',true);
+      const panel=document.getElementById('aiBuyPanel');if(panel)panel.style.display='block';
+      window.AcademyVisualPatterns?.setOpen(true,_visualPatternContext);
+      const tools=document.querySelector('.chart-fit-tools');if(tools)tools.open=true;
+    };
     function _aiBuyLoad() {
       window.AcademyVisualPatterns?.setOpen(true,_visualPatternContext);
     }
@@ -18091,5 +18110,7 @@
 <script src="assets/exhibitions-data.js?v=20261024" defer></script>
 <script src="assets/exhibition-calendar.js?v=localfix-3" defer></script>
 <link rel="stylesheet" href="assets/responsive-layout.css?v=1">
+<link rel="stylesheet" href="assets/ai-pattern-screen.css?v=20261026-1">
+<script src="assets/ai-pattern-screen.js?v=20261026-1" defer></script>
 </body>
 </html>
