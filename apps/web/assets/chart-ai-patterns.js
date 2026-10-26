@@ -25,7 +25,7 @@
    if(pattern.points.length!==5||pattern.points.some((p,i)=>p.role!==roles[i]||p.field!==['high','low','high','low','close'][i]))throw Error('W轉折欄位不完整');
    const neck=pattern.points[2].value,right=segment.filter(b=>b.time>pattern.points[3].time);
    if(pattern.points[0].value<neck)throw Error('左側第一個頂點未碰到頸線，不列為已確認W');
-   if(!right.length||Math.max(...right.map(b=>b.high))<neck)throw Error('右側回升尚未碰到頸線，不列為已確認W');
+   if(pattern.status!=='forming'&&(!right.length||Math.max(...right.map(b=>b.high))<neck))throw Error('右側回升尚未碰到頸線，不列為已確認W');
   }
   if(pattern.neckline){const n=pattern.neckline;if(!finite(n.value)||!map.has(n.start)||!map.has(n.end)||n.start>=n.end)throw Error('頸線座標無效');
    if(pattern.type==='w_bottom'&&(n.value!==pattern.points[2].value||n.start!==pattern.points[2].time||n.end!==pattern.points[4].time))throw Error('頸線與中峰不一致');}
@@ -37,13 +37,19 @@
   if(pattern.neckline){const n=pattern.neckline,neck=ctx.chart.addLineSeries({...opts,lineWidth:1});layers.push(neck);neck.setData([{time:n.start,value:n.value},{time:n.end,value:n.value}]);}
  }
  function validSnapshot(d){return d?.version==='codex-visual-v1'&&d.scope==='uat'&&Array.isArray(d.records);}
- async function snapshot(code){
+ async function snapshotBase(code){
   try{
    const response=await fetch((window.__API||'')+'/api/screen?stat=visual_patterns&code='+encodeURIComponent(code));
    if(response.ok){const data=await response.json();if(validSnapshot(data)&&data.records.length)return data;}
   }catch{}
   if(!promise)promise=fetch('assets/codex-visual-patterns.json?v=scan100-both-ends-20261026').then(r=>{if(!r.ok)throw Error('尚未取得判讀結果');return r.json();}).then(d=>{if(!validSnapshot(d))throw Error('判讀資料格式不完整');return d;}).catch(e=>{promise=null;throw e;});
   return promise;
+ }
+ async function snapshot(code){
+  const [base,response]=await Promise.all([snapshotBase(code),fetch('assets/codex-forming-patterns.json?v=20261027-1')]);
+  if(!response.ok)throw Error('形成中判讀資料暫時無法取得');
+  const extra=await response.json();if(!validSnapshot(extra))throw Error('形成中資料格式無效');
+  return {...base,records:[...base.records.filter(r=>!extra.records.some(f=>f.code===r.code&&f.timeframe===r.timeframe)),...extra.records]};
  }
  function periodOf(ctx){return ctx.period==='day'?'daily':ctx.period==='week'?'weekly':null;}
  function periodLinks(host,records,ctx){
@@ -76,6 +82,7 @@
   if(!r||r.execution_status!=='reviewed'){panel.append(el('p',r?.execution_status==='data_failed'?'此週期行情取得失敗，尚未完成判讀。':'此股票的'+(tf==='daily'?'日K':'週K')+'尚未完成判讀。'));return;}
   panel.append(el('p',(tf==='daily'?'日K':'週K')+' · 判讀截至 '+r.data_as_of+' · '+r.bar_count+' 根','ai-pattern-meta'));
   if(r.history_complete===false)panel.append(el('p','可取得的歷史短於設定範圍，判讀僅涵蓋圖中實際資料。','ai-pattern-note'));
+  if(r.classification==='forming')panel.append(el('strong','形成中：右側尚未觸及頸線，虛線僅表示候選輪廓。','ai-pattern-note'));
   panel.append(el('p',r.reason||'此筆待補判讀說明。'));
   if(!Array.isArray(r.patterns)||!r.patterns.length){panel.append(el('p',r.classification==='uncertain'?'待審：目前不顯示輔助線。':'此視窗未辨識到符合標準的W。'));return;}
   if(ctx.adjusted){const b=el('button','切回一般'+(tf==='daily'?'日K':'週K')+'查看輔助線','ai-pattern-period-link');b.type='button';b.onclick=()=>ctx.switchPeriod(tf);panel.append(el('p','這筆判讀使用一般K線，還原模式不共用輔助線。'),b);return;}
