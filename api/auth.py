@@ -293,6 +293,11 @@ class handler(BaseHTTPRequestHandler):
             if not admin_email:
                 return self._json(403, {"error": "forbidden: 僅限管理員"})
 
+            if action in ("admin_pattern_reviews", "admin_pattern_review_save"):
+                from lib.pattern_review import handle
+                status, result = handle(action, body, admin_email, _rest)
+                return self._json(status, result)
+
             if action == "admin_members":
                 st, data = _admin_api("/admin/users?per_page=200")
                 if st is None:
