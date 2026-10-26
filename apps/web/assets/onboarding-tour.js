@@ -7,11 +7,17 @@
   var FLAG = 'onboarded_tour_v1';            // 寫在 user_metadata 的旗標
   var LS = 'fqi_onboarded_v1';               // 本機快取（避免每次打 API）
 
-  /* ── 貓頭鷹小精靈：直接用品牌 logo 圖（明/暗兩版，與導覽列同一組）；靜態圖，CSS 加輕微漂浮讓它有生命感。 ── */
+  /* ── 貓頭鷹小精靈：沿用品牌 logo，將翅膀拆成圖層交給 CSS 拍動。 ── */
   var OWL =
     '<span class="ob-owl">' +
-      '<img class="owl-light-v2" src="assets/brand/foresight-owl-light-book-light.png" alt="先見貓頭鷹" decoding="async">' +
-      '<img class="owl-dark-v2" src="assets/brand/foresight-owl-dark-book-light.png" alt="" aria-hidden="true" decoding="async">' +
+      '<span class="owl-art" aria-hidden="true">' +
+        '<img class="owl-light-v2 owl-body" src="assets/brand/foresight-owl-light-book-light.png" alt="" decoding="async">' +
+        '<img class="owl-light-v2 owl-wing owl-wing-left" src="assets/brand/foresight-owl-light-book-light.png" alt="" decoding="async">' +
+        '<img class="owl-light-v2 owl-wing owl-wing-right" src="assets/brand/foresight-owl-light-book-light.png" alt="" decoding="async">' +
+        '<img class="owl-dark-v2 owl-body" src="assets/brand/foresight-owl-dark-book-light.png" alt="" decoding="async">' +
+        '<img class="owl-dark-v2 owl-wing owl-wing-left" src="assets/brand/foresight-owl-dark-book-light.png" alt="" decoding="async">' +
+        '<img class="owl-dark-v2 owl-wing owl-wing-right" src="assets/brand/foresight-owl-dark-book-light.png" alt="" decoding="async">' +
+      '</span>' +
     '</span>';
 
   /* ── 權限 helpers ── */
