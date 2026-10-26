@@ -80,3 +80,5 @@
 #obReplayBtn{ position:fixed; right:16px; bottom:16px; z-index:9500; display:none; align-items:center; gap:7px; background:var(--bg-card,#fff); border:1px solid var(--border,#e2e6ea); border-radius:999px; padding:6px 13px 6px 7px; box-shadow:0 6px 18px rgba(8,16,26,.22); cursor:pointer; color:var(--text,#1a2330); font-size:12.5px; font-weight:800; transition:.15s; }
 #obReplayBtn:hover{ border-color:var(--ob-owl-amber); transform:translateY(-1px); }
 #obReplayBtn .ob-owl{ --ob-owl-size:26px; filter:none; animation:none; }
+/* 會員中心開啟時隱藏重看導覽鈕：導覽是針對公開站功能，且會員中心/策略工作台右下角有「聊聊策略」聊天浮標(z 12500)，避免兩者在角落重疊 */
+body.mc-open #obReplayBtn{ display:none !important; }
