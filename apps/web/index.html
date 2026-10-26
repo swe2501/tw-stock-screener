@@ -20,7 +20,7 @@
   <script src="assets/site-theme.js"></script>
   <script src="assets/w-pattern-export.js?v=20261024-1"></script>
   <script src="assets/w-pattern-overlay.js?v=20261025-2"></script>
-  <script src="assets/chart-ai-patterns.js?v=20261026-4"></script>
+  <script src="assets/chart-ai-patterns.js?v=20261027-5"></script>
   <link rel="stylesheet" href="assets/chart-ai-patterns.css?v=20261026-3">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -4068,14 +4068,13 @@
     @media(max-width:820px){.bx-list{grid-template-columns:1fr;}}
   </style>
   <div id="boxView" style="display:none">
-    <header class="aps-hero"><div><div class="aps-eyebrow">PATTERN RESEARCH</div><h2>AI型態判斷</h2><p>找最新K棒附近、整理接近完成的型態，觀察準備突破或跌破的位置。</p><p id="aiPatternScope">讀取判讀範圍…</p></div><div class="aps-hero-symbol" aria-hidden="true">W</div></header>
+    <header class="aps-hero"><div><div class="aps-eyebrow">PATTERN RESEARCH</div><h2>AI型態判斷</h2><p>找最新K棒附近、整理接近完成的型態，觀察準備突破或跌破的位置。</p><p id="aiPatternScope">讀取判讀範圍…</p></div></header>
     <div id="aiPatternTabs" class="aps-tabs" role="tablist" aria-label="型態分類"></div>
     <section id="aiPatternSavedPanel" role="tabpanel" aria-label="已保存的型態判讀">
       <div class="aps-toolbar"><div><h3>判讀結果</h3><small id="aiPatternResultCount" aria-live="polite"></small></div>
-        <div id="aiPatternFilters" class="aps-filters"><input id="aiPatternSearch" type="search" placeholder="搜尋代號／股名" aria-label="搜尋型態股票"><select id="aiPatternPeriod" aria-label="篩選判讀週期"><option value="all">日K＋週K</option><option value="daily">僅日K</option><option value="weekly">僅週K</option></select><select id="aiPatternState" aria-label="篩選判讀狀態"><option value="ready">準備突破／跌破</option><option value="confirmed">歷史W案例</option><option value="uncertain">待複核</option><option value="negative">未見W</option></select></div>
+        <div id="aiPatternFilters" class="aps-filters"><input id="aiPatternSearch" type="search" placeholder="搜尋代號／股名" aria-label="搜尋型態股票"><select id="aiPatternPeriod" aria-label="篩選判讀週期"><option value="all">日K＋週K</option><option value="daily">僅日K</option><option value="weekly">僅週K</option></select><select id="aiPatternState" aria-label="篩選判讀狀態"><option value="ready">準備突破／跌破</option><option value="forming">形成中</option><option value="confirmed">歷史W案例</option><option value="negative">歷史樣本・未見W</option></select></div>
       </div>
       <div id="aiPatternResults"></div>
-      <p class="aps-note"><a href="research/w-current-400/report.html" target="_blank" rel="noopener">查看新增400檔的W型複核工作台 ↗</a> · 797張已初篩，形成中及待複核案例另列，尚無新增已確認W。</p>
       <p class="aps-note">日K判讀120根；週K取可取得的三年資料。每張小圖是已判讀區段的轉折輪廓示意，實際價格請開啟K圖。型態為保存的研究結果，並非即時買進訊號；待複核結果不畫輔助線。</p>
     </section>
     <section id="aiPatternLegacyBox" role="tabpanel" aria-label="既有箱型資料" hidden>
@@ -10763,13 +10762,17 @@
         + '<div class="scan-meta"><span>篩選運算中…可切換其他畫面，完成後回來即可看到結果</span><span id="scanPct">0%</span></div>';
       area.appendChild(bar);
       _scanT0 = Date.now();
-      // 進度％：後端一次算完才回、無中途進度 → 依「預期時長」時間估計推進，封頂 95% 等真結果，
-      // 完成時（renderResults）記錄實際耗時到 localStorage，下次自適應校準。
+      // 進度％：後端一次算完才回、沒有中途進度回報，無法顯示「真實百分比」。
+      // 舊版用線性＋封頂 95% → 一旦實際耗時超過預期就卡在 95% 不動（使用者反映的問題）。
+      // 改用「持續前進、逐漸趨緩」的指數趨近曲線：預期時間約到 90%，超過預期仍會緩步爬向 99%（永不卡死），
+      // 真結果回來時（renderResults）才補到 100%；每次完成記錄實際耗時，下次自適應校準 expect。
       var expect = 9000; try{ var v = parseInt(localStorage.getItem('zm_scan_ms')); if(v > 1500 && v < 120000) expect = v; }catch(e){}
       var fill = bar.querySelector('.scan-fill');
       _scanTimer = setInterval(function(){
-        var pct = Math.min(95, (Date.now()-_scanT0) / expect * 100);
-        if(fill) fill.style.width = pct.toFixed(0)+'%';
+        var frac = (Date.now()-_scanT0) / expect;
+        var pct = 99.4 * (1 - Math.exp(-frac * 2.4));   // 單調遞增、趨近但不到 100；frac=1≈90%、frac=2≈98.6%
+        if(pct > 99.4) pct = 99.4;
+        if(fill) fill.style.width = pct.toFixed(1)+'%';
         var s = document.getElementById('scanPct');
         if(s) s.textContent = Math.round(pct)+'%';
       }, 100);
@@ -18053,7 +18056,7 @@
 <link rel="stylesheet" href="assets/market-panel-layout.css?v=8">
 <link rel="stylesheet" href="assets/member-notification-inbox.css?v=glass6">
 <script src="assets/member-notification-inbox.js?v=paging3" defer></script>
-<script src="assets/member-center.js?v=guide-settings1" defer></script>
+<script src="assets/member-center.js?v=guide-settings-goals2" defer></script>
 <script src="assets/member-signin.js?v=invite-reset7" defer></script>
 <script src="assets/member-private-screen.js?v=asof4" defer></script>
 <link rel="stylesheet" href="assets/site-readability.css?v=futures-history3">
@@ -18071,9 +18074,8 @@
 <script src="assets/chart-viewport-fit.js?v=22" defer></script>
 <script src="assets/screen-inline-calendar.js?v=records-only13" defer></script>
 
-<link rel="stylesheet" href="assets/onboarding-tour.css?v=mist-edge-20261026">
+<link rel="stylesheet" href="assets/onboarding-tour.css?v=mist-edge-mcopen-20261027">
 <script src="assets/onboarding-tour.js?v=mist-edge-20261026" defer></script>
-
 <link rel="stylesheet" href="assets/zhenming-hidden.css?v=6">
 <script src="assets/zhenming-hidden.js?v=5" defer></script>
 <script src="assets/screen-log.js?v=calendar-direct31" defer></script>
@@ -18117,7 +18119,9 @@
 <script src="assets/exhibition-calendar.js?v=localfix-3" defer></script>
 <link rel="stylesheet" href="assets/responsive-layout.css?v=1">
 <link rel="stylesheet" href="assets/ai-pattern-screen.css?v=20261026-1">
-<script src="assets/ai-pattern-screen.js?v=20261026-2" defer></script>
+<script src="assets/ai-pattern-screen.js?v=20261027-5" defer></script>
+<link rel="stylesheet" href="assets/pattern-admin-review.css?v=20261027-1">
+<script src="assets/pattern-admin-review.js?v=20261027-5" defer></script>
 <link rel="stylesheet" href="assets/brand-arrival.css?v=5">
 <script src="assets/arrival/pearl-mosaic-v2.js?v=2" defer></script>
 <script src="assets/brand-arrival-scene.js?v=6" defer></script>
