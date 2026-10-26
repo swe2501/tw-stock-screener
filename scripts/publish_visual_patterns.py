@@ -30,6 +30,7 @@ def validate(data):
             if n!={'start':points[2]['time'],'end':points[4]['time'],'value':points[2]['value']}:raise ValueError('Neckline mismatch')
             right=[b for b in bars if points[3]['time']<b['time']<=points[4]['time']]
             if not right or max(b['high'] for b in right)<n['value']:raise ValueError('Right recovery must touch neckline')
+            if points[0]['value']<n['value']:raise ValueError('Left top must touch neckline')
     return data
 
 def main():
