@@ -64,7 +64,7 @@
       { title: '題材列表・產業地圖', body: '想從主題找股？<b>題材列表</b>列出每個題材的成分股；<b>產業地圖</b>看資金在各產業間流動。', locate: function () { return navItem('題材列表'); } }
     );
     if (prefs.tech) s.push(
-      { title: '掏金篩選器・技術型態', body: '勾選<b>型態／K棒／缺口／漲停跌停／指標</b>等條件篩出個股；點結果開 K 圖，還能用左右箭頭切換上一檔/下一檔。', before: function () { go('screen'); }, locate: function () { return byId('proScreenLayout') || document.querySelector('.sc-panel'); } },
+      { title: '掏金篩選器・技術型態', body: '勾選<b>型態／K棒／缺口／漲停跌停／指標</b>等條件篩出個股；點結果開 K 圖，還能用左右箭頭切換上一檔/下一檔。', before: function () { go('screen'); }, locate: function () { var L = byId('proScreenLayout'); return (L && L.querySelector('.form-wrap')) || document.querySelector('.sc-panel'); } },
       { title: 'K 圖畫線工具', body: '開任一檔 K 圖，右側研究工具可畫<b>直線（按住拖曳）</b>、水平/垂直線、通道、黃金分割等，輔助判斷。', locate: function () { return navItem('掏金篩選器'); } },
       { title: '壓力支撐・亮燈區', body: '<b>壓力支撐逼近</b>找接近關鍵價位的股；<b>上漲下跌亮燈區</b>快速掃出今日轉強/轉弱。', locate: function () { return navItem('壓力支撐逼近'); } }
     );
@@ -74,7 +74,7 @@
       { title: '神燈與冥燈', body: '主力<b>連續買超（神燈）／連續賣超（冥燈）</b>的個股清單，一眼看主力在養還是在倒。', feature: 'mingdeng', locate: function () { return navItem('神燈'); } }
     );
     if (prefs.value) s.push(
-      { title: '企業價值 357・存股', body: '掏金篩選器裡的<b>企業價值357</b>用現金殖利率把個股分「便宜／合理／昂貴」，適合存股/價值派長期布局。', before: function () { go('screen'); }, locate: function () { return byId('proScreenLayout') || document.querySelector('.sc-panel'); } }
+      { title: '企業價值 357・存股', body: '掏金篩選器裡的<b>企業價值357</b>用現金殖利率把個股分「便宜／合理／昂貴」，適合存股/價值派長期布局。', before: function () { go('screen'); }, locate: function () { var L = byId('proScreenLayout'); return (L && L.querySelector('.form-wrap')) || document.querySelector('.sc-panel'); } }
     );
     if (prefs.etf) s.push(
       { title: 'ETF 探索', body: '不想選個股就看 <b>ETF 探索</b>：規模排行、成分股、相似度、重倉股、折溢價、資金流一次看。', before: function () { go('etfx'); }, locate: function () { return navItem('ETF'); } },
@@ -129,10 +129,15 @@
         ring = root.querySelector('.ob-ring');
     if (!rect) { // 無目標 → 整頁反灰、不挖孔
       t.style.cssText = 'position:fixed;inset:0;'; b.style.cssText = l.style.cssText = r.style.cssText = 'position:fixed;';
-      ring.style.opacity = '0'; _ringShown = false; return;
+      ring.style.opacity = '0'; _ringShown = false; return null;
     }
-    var x = Math.max(0, rect.left - pad), y = Math.max(0, rect.top - pad),
+    // 不讓聚光孔蓋到固定導覽列；目標過高時只框「上半可視區」，避免環圈住整頁。
+    var headEl = document.querySelector('#mainNav, header, .site-nav, nav');
+    var headB = headEl ? Math.max(0, Math.min(H - 40, headEl.getBoundingClientRect().bottom)) : 0;
+    var x = Math.max(0, rect.left - pad), y = Math.max(headB + 4, rect.top - pad),
         w = Math.min(W, rect.right + pad) - x, h = Math.min(H, rect.bottom + pad) - y;
+    var maxH = Math.round((H - headB) * 0.66);
+    if (h > maxH) h = maxH;                 // 目標太高 → 只聚光上半部，框住重點而非整頁
     t.style.cssText = 'position:fixed;left:0;top:0;right:0;height:' + y + 'px;';
     b.style.cssText = 'position:fixed;left:0;top:' + (y + h) + 'px;right:0;bottom:0;';
     l.style.cssText = 'position:fixed;left:0;top:' + y + 'px;width:' + x + 'px;height:' + h + 'px;';
@@ -142,6 +147,7 @@
     ring.style.left = x + 'px'; ring.style.top = y + 'px'; ring.style.width = w + 'px'; ring.style.height = h + 'px';
     if (!_ringShown) { void ring.offsetWidth; ring.style.transition = ''; _ringShown = true; }
     ring.style.opacity = '1';
+    return { left: x, top: y, right: x + w, bottom: y + h, width: w, height: h }; // 實際高亮範圍，供氣泡定位
   }
   function placePop(pop, rect) {
     var W = innerWidth, H = innerHeight, m = 12;
@@ -152,9 +158,17 @@
     var pw = pop.offsetWidth, ph = pop.offsetHeight, x, y;
     if (!rect) { x = (W - pw) / 2; y = (H - ph) / 2; }
     else {
-      var below = rect.bottom + m + ph < H, above = rect.top - m - ph > 0;
-      y = below ? rect.bottom + m : (above ? rect.top - m - ph : Math.max(m, (H - ph) / 2));
-      x = Math.min(W - pw - m, Math.max(m, rect.left + rect.width / 2 - pw / 2));
+      var below = rect.bottom + m + ph <= H, above = rect.top - m - ph >= 0;
+      if (below || above) {                 // 上/下方塞得下 → 置於目標上或下，水平對齊中心
+        y = below ? rect.bottom + m : rect.top - m - ph;
+        x = Math.min(W - pw - m, Math.max(m, rect.left + rect.width / 2 - pw / 2));
+      } else {                              // 目標很高(上下都塞不下) → 擺到旁邊空白處，不蓋住重點
+        var rightRoom = W - rect.right, leftRoom = rect.left;
+        if (rightRoom >= pw + 2 * m) x = rect.right + m;
+        else if (leftRoom >= pw + 2 * m) x = rect.left - m - pw;
+        else x = Math.min(W - pw - m, Math.max(m, rect.left + rect.width / 2 - pw / 2));
+        y = Math.min(H - ph - m, Math.max(m, rect.top));
+      }
     }
     pop.style.left = Math.round(x) + 'px'; pop.style.top = Math.round(y) + 'px'; pop.style.visibility = '';
     void pop.offsetWidth; // 強制 reflow 定位生效後再恢復過渡
@@ -186,7 +200,7 @@
         var r = target.getBoundingClientRect();
         if (r.width > 2 && r.height > 2 && r.bottom > 0 && r.top < innerHeight) rect = r;
       }
-      spotlight(rect);
+      var hole = spotlight(rect);
       var old = root.querySelector('.ob-pop, .ob-center'); if (old) old.remove();
       var pop = el('div', 'ob-pop ob-pop-in');
       var dots = steps.map(function (_, i) { return '<i class="' + (i === idx ? 'on' : '') + '"></i>'; }).join('');
@@ -201,7 +215,7 @@
         '<button class="ob-btn pri" data-a="next" type="button">' + (idx === steps.length - 1 ? '完成' : '下一步') + '</button>' +
         '</div></div>';
       root.appendChild(pop);
-      placePop(pop, rect);
+      placePop(pop, hole);
       pop.querySelector('.ob-skip').onclick = function () { finish(false); };
       pop.querySelector('[data-a="next"]').onclick = function () { idx++; render(); };
       var pv = pop.querySelector('[data-a="prev"]'); if (pv) pv.onclick = function () { idx = Math.max(0, idx - 1); render(); };
@@ -214,7 +228,7 @@
     clearMasks(); render();
     window.addEventListener('resize', onResize); window.addEventListener('keydown', onKey);
   }
-  function onResize() { if (!root || root.hidden) return; var st = steps[idx]; if (!st) return; var t = null; try { t = st.locate && st.locate(); } catch (_) {} var rect = t && t.getBoundingClientRect ? t.getBoundingClientRect() : null; if (rect && (rect.width < 2)) rect = null; spotlight(rect); var pop = root.querySelector('.ob-pop'); if (pop) placePop(pop, rect); }
+  function onResize() { if (!root || root.hidden) return; var st = steps[idx]; if (!st) return; var t = null; try { t = st.locate && st.locate(); } catch (_) {} var rect = t && t.getBoundingClientRect ? t.getBoundingClientRect() : null; if (rect && (rect.width < 2)) rect = null; var hole = spotlight(rect); var pop = root.querySelector('.ob-pop'); if (pop) placePop(pop, hole); }
   function onKey(e) { if (e.key === 'Escape') finish(false); else if (e.key === 'ArrowRight') { idx = Math.min(steps.length - 1, idx + 1); render(); } else if (e.key === 'ArrowLeft') { idx = Math.max(0, idx - 1); render(); } }
   function finish(completed) {
     _restoreMenu();
