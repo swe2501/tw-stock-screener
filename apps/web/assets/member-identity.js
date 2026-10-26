@@ -37,7 +37,7 @@
     if(!['google','apple','facebook','line'].includes(provider))throw Error('不支援的登入方式');
     const s=await settings();if(!providerEnabled(s,provider))throw Error(({google:'Google',apple:'Apple',facebook:'Facebook',line:'LINE'})[provider]+' 登入尚未由網站管理員完成開通');
     const verifier=b64(crypto.getRandomValues(new Uint8Array(48))),challenge=b64(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(verifier))));
-    sessionStorage.setItem('academy.oauth',JSON.stringify({verifier,created:Date.now(),returnHash:location.hash}));
+    sessionStorage.setItem('academy.oauth',JSON.stringify({verifier,created:Date.now(),returnHash:'#home'}));
     const q=new URLSearchParams({provider:providerId(provider),redirect_to:callback(),code_challenge:challenge,code_challenge_method:'s256'});
     // Authorize is a browser navigation endpoint, not a JSON API. Fetching it
     // follows the provider redirect and fails the provider's CORS policy.
@@ -49,13 +49,13 @@
     const c=config(),r=await fetch(c.url+'/auth/v1/user',{headers:{apikey:c.key,Authorization:'Bearer '+session.access_token}});if(!r.ok)throw Error('登入驗證未完成，請重新操作');const user=await r.json();
     if(expectedPhone&&(!user.phone_confirmed_at||normalizePhone(serverPhone(user.phone)||'')!==expectedPhone))throw Error('手機驗證尚未完成，請重新操作');
     if(expectedUser&&user.id!==expectedUser)throw Error('授權帳號與原會員不一致，尚未切換帳號；請回會員中心重試');
-    window._acceptMemberSession({...session,user});window.dispatchEvent(new Event('academy-auth-changed'));
+    window._acceptMemberSession({...session,user});if(!expectedUser)window.AcademyLoginNavigation?.home();window.dispatchEvent(new Event('academy-auth-changed'));
   }
   async function consumeCallback(){const q=new URLSearchParams(location.search);if(!q.has('code')&&!q.has('error'))return;let saved;try{saved=JSON.parse(sessionStorage.getItem('academy.oauth')||'null');}catch{}if(!saved)return;
     sessionStorage.removeItem('academy.oauth');q.delete('code');const failure=q.has('error');['error','error_code','error_description'].forEach(k=>q.delete(k));const code=new URLSearchParams(location.search).get('code');history.replaceState(history.state,'',location.pathname+(q.size?'?'+q:'')+(saved.returnHash||''));
     if(!saved.verifier||!Number.isFinite(saved.created)||saved.created>Date.now())throw Error('登入驗證資料異常，請重試');if(failure)throw Error(saved.replacement?'新帳號尚未綁定，請使用其他已綁定方式登入，再重新操作':'你已取消登入，或登入服務未完成授權');if(Date.now()-saved.created>600000)throw Error('登入驗證已逾時，請重試');if(saved.intent==='link'){let owner;try{owner=JSON.parse(localStorage.getItem('sb_user')||'null')?.id;}catch{}if(!saved.userId||owner!==saved.userId||!localStorage.getItem('sb_token'))throw Error('會員登入狀態已變更，請重新登入原帳號後再綁定');}
     await accept(await request('/auth/v1/token?grant_type=pkce',{method:'POST',auth:false,body:{auth_code:code,code_verifier:saved.verifier}}),saved.intent==='link'?saved.userId:null);
-    if(saved.intent==='link')window.dispatchEvent(new Event('academy-identity-linked'));
+    if(saved.intent==='link'){const linked=new Event('academy-identity-linked');linked.returnHash=saved.returnHash||'#member/security';window.dispatchEvent(linked);}
   }
   async function linkOAuth(provider){
     if(!['google','apple','facebook','line'].includes(provider))throw Error('不支援的綁定方式');
@@ -64,7 +64,7 @@
     callback();
     const verifier=b64(crypto.getRandomValues(new Uint8Array(48))),challenge=b64(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(verifier))));
     const q=new URLSearchParams({provider:providerId(provider),redirect_to:callback(),code_challenge:challenge,code_challenge_method:'s256',skip_http_redirect:'true'});
-    sessionStorage.setItem('academy.oauth',JSON.stringify({intent:'link',userId:user.id,verifier,created:Date.now(),returnHash:'#member/security'}));
+    sessionStorage.setItem('academy.oauth',JSON.stringify({intent:'link',userId:user.id,verifier,created:Date.now(),returnHash:location.hash.startsWith('#member/')?location.hash:'#member/security'}));
     try{
       const result=await request('/auth/v1/user/identities/authorize?'+q),target=new URL(result?.url||'');
       if(target.protocol!=='https:'||target.username||target.password)throw Error('綁定網址異常，請稍後重試');
@@ -83,7 +83,7 @@
     const result=await request('/auth/v1/user/identities/authorize?'+q),url=new URL(result?.url||'');if(url.protocol!=='https:'||url.username||url.password)throw Error('綁定網址異常，請稍後重試');
     const fresh=await request('/auth/v1/user');if(fresh.id!==user.id||localStorage.getItem('sb_token')!==token||!(fresh.identities||[]).some(i=>(i.identity_id||i.id)===identityId)||!(fresh.identities||[]).some(i=>!same(i)&&((i.provider==='email'&&fresh.email_confirmed_at)||(i.provider==='phone'&&fresh.phone_confirmed_at)||['google','apple','facebook','line','custom:line','custom:line-web'].includes(i.provider))))throw Error('會員狀態已變更，請重新開啟設定');
     const recovery=await serviceRpc('member_identity_recovery_begin',{p_request:crypto.randomUUID(),p_provider:provider});if(!recovery?.id)throw Error('尚未建立登入復原紀錄，未解除綁定');
-    sessionStorage.setItem('academy.oauth',JSON.stringify({intent:'link',replacement:provider,userId:user.id,verifier,created:Date.now(),returnHash:'#member/security'}));
+    sessionStorage.setItem('academy.oauth',JSON.stringify({intent:'link',replacement:provider,userId:user.id,verifier,created:Date.now(),returnHash:location.hash.startsWith('#member/')?location.hash:'#member/security'}));
     localStorage.setItem('academy.identity.recovery.'+user.id,JSON.stringify({request:recovery.request_id,provider,created:Date.now()}));
     await request('/auth/v1/user/identities/'+encodeURIComponent(identityId),{method:'DELETE'});location.assign(url.href);
   }

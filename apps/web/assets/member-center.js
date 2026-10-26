@@ -159,7 +159,7 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
   });
   page.querySelector('[data-back]').addEventListener('click',()=>{if(history.state?.academyMember)history.back();else close();});
   addEventListener('resize',()=>{if(!page.hidden)positionUnderHeader();});
-  addEventListener('academy-identity-linked',()=>{if(localStorage.getItem('sb_token')){profile=null;open('security');}});
+  addEventListener('academy-identity-linked',e=>{if(localStorage.getItem('sb_token')){profile=null;const target=typeof e.returnHash==='string'&&e.returnHash.startsWith('#member/')?e.returnHash:location.hash;if(page.hidden||location.hash!==target)open(target.startsWith('#member/')?target.split('/')[1]:'security');else load();}});
   addEventListener('academy-public-navigation',()=>{if(!page.hidden)close();});
   addEventListener('popstate',()=>{if(window.AcademyNavigationLayers?.handlesPop())return;if(location.hash.startsWith('#member/')){if(page.hidden){oldOverflow=document.body.style.overflow;document.body.style.overflow='hidden';document.body.classList.add('mc-open');positionUnderHeader();page.hidden=false;}current=location.hash.split('/')[1]||'overview';render();}else if(!page.hidden)close();});
   page.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.tab||b.dataset.go)open(b.dataset.tab||b.dataset.go);if(b.hasAttribute('data-login')){if(history.state?.academyMember)history.back();else close();setTimeout(()=>window.openAuthModal?.('login'),0);}if(b.hasAttribute('data-clear')){removeLocal(draftKey());render();}});

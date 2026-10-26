@@ -1,0 +1,12 @@
+/* A consistent response for ordinary controls; no click delays or layout animation. */
+body :where(button,[role="button"],input[type="submit"],input[type="button"]){
+  transition-property:background-color,border-color,color,box-shadow,filter,opacity;
+  transition-duration:180ms;
+  transition-timing-function:cubic-bezier(.2,.65,.3,1);
+  -webkit-tap-highlight-color:transparent;
+}
+body :where(a[href]){transition:color 180ms ease,border-color 180ms ease,background-color 180ms ease}
+body :where(button,[role="button"],input[type="submit"],input[type="button"]):focus-visible{outline:2px solid color-mix(in srgb,var(--accent,#4b8bc1) 70%,transparent);outline-offset:3px}
+body :where(button,input[type="submit"],input[type="button"]):enabled:active:not(.member-avatar):not(.auth-close){filter:brightness(.97)}
+body :where(input,textarea,select){transition:border-color 180ms ease,box-shadow 180ms ease,background-color 180ms ease}
+@media(prefers-reduced-motion:reduce){body :is(button,[role="button"],a[href],input,textarea,select){transition:none!important}}

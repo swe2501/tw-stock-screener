@@ -145,3 +145,13 @@ test('account switch while contact preflight loads prevents any update or verifi
  await assert.rejects(mode==='send'?api.sendContactLink('phone','0998765432'):api.verifyContactLink({userId:'verified-user',kind:'phone',value:'+886912345678'},'123456'),/狀態已變更|帳號已切換/);
  assert.equal(calls.some(x=>x.method==='PUT'||x.url.endsWith('/verify')),false);}
 });
+
+
+test('new OAuth sign-in returns home; linking retains the current member page',async()=>{
+ const first=setup();first.context.location.hash='#member/overview';await first.api.startOAuth('google');assert.equal(JSON.parse(first.saved.get('academy.oauth')).returnHash,'#home');
+ const link=setup();link.context.location.hash='#member/profile';link.saved.set('sb_token','original-token');await link.api.linkOAuth('google');assert.equal(JSON.parse(link.saved.get('academy.oauth')).returnHash,'#member/profile');
+});
+test('verified new sign-in goes home but identity binding does not navigate away',async()=>{
+ const {api,saved,context}=setup();let homes=0;context.window.AcademyLoginNavigation={home:()=>homes++};await api.verifyPhone('0912345678','123456');assert.equal(homes,1);
+ saved.set('sb_token','original-token');saved.set('sb_user',JSON.stringify({id:'verified-user'}));saved.set('academy.oauth',JSON.stringify({intent:'link',userId:'verified-user',verifier:'secret',created:Date.now(),returnHash:'#member/profile'}));context.location.search='?code=valid';await api.consumeCallback();assert.equal(homes,1,'binding never routes to home');
+});
