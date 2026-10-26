@@ -6,6 +6,13 @@
   var SB = 'https://bruqrbvbjxntgoljxsne.supabase.co', AK = 'sb_publishable_KgYlaR-mqtx4uVre6kPD2A_qO6tdT1y';
   var FLAG = 'onboarded_tour_v1';            // 寫在 user_metadata 的旗標
   var LS = 'fqi_onboarded_v1';               // 本機快取（避免每次打 API）
+  // Lucide outline icons (ISC), selected to match each research category.
+  // License: onboarding-icons-LICENSE.txt
+  var ICONS = {"radar":"<path d=\"M19.07 4.93A10 10 0 0 0 6.99 3.34\"/><path d=\"M4 6h.01\"/><path d=\"M2.29 9.62A10 10 0 1 0 21.31 8.35\"/><path d=\"M16.24 7.76A6 6 0 1 0 8.23 16.67\"/><path d=\"M12 18h.01\"/><path d=\"M17.99 11.66A6 6 0 0 1 15.77 16.67\"/><circle cx=\"12\" cy=\"12\" r=\"2\"/><path d=\"m13.41 10.59 5.66-5.66\"/>","chart-no-axes-combined":"<path d=\"M12 16v5\"/><path d=\"M16 14v7\"/><path d=\"M20 10v11\"/><path d=\"m22 3-8.646 8.646a.5.5 0 0 1-.708 0L9.354 8.354a.5.5 0 0 0-.707 0L2 15\"/><path d=\"M4 18v3\"/><path d=\"M8 14v7\"/>","network":"<rect x=\"16\" y=\"16\" width=\"6\" height=\"6\" rx=\"1\"/><rect x=\"2\" y=\"16\" width=\"6\" height=\"6\" rx=\"1\"/><rect x=\"9\" y=\"2\" width=\"6\" height=\"6\" rx=\"1\"/><path d=\"M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3\"/><path d=\"M12 12V8\"/>","landmark":"<path d=\"M10 18v-7\"/><path d=\"M11.12 2.198a2 2 0 0 1 1.76.006l7.866 3.847c.476.233.31.949-.22.949H3.474c-.53 0-.695-.716-.22-.949z\"/><path d=\"M14 18v-7\"/><path d=\"M18 18v-7\"/><path d=\"M3 22h18\"/><path d=\"M6 18v-7\"/>","layers-2":"<path d=\"M13 13.74a2 2 0 0 1-2 0L2.5 8.87a1 1 0 0 1 0-1.74L11 2.26a2 2 0 0 1 2 0l8.5 4.87a1 1 0 0 1 0 1.74z\"/><path d=\"m20 14.285 1.5.845a1 1 0 0 1 0 1.74L13 21.74a2 2 0 0 1-2 0l-8.5-4.87a1 1 0 0 1 0-1.74l1.5-.845\"/>","globe-2":"<path d=\"M21.54 15H17a2 2 0 0 0-2 2v4.54\"/><path d=\"M7 3.34V5a3 3 0 0 0 3 3a2 2 0 0 1 2 2c0 1.1.9 2 2 2a2 2 0 0 0 2-2c0-1.1.9-2 2-2h3.17\"/><path d=\"M11 21.95V18a2 2 0 0 0-2-2a2 2 0 0 1-2-2v-1a2 2 0 0 0-2-2H2.05\"/><circle cx=\"12\" cy=\"12\" r=\"10\"/>","check":"<path d=\"M20 6 9 17l-5-5\"/>","compass":"<circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"m16.24 7.76-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z\"/>","arrow-up-right":"<path d=\"M7 7h10v10\"/><path d=\"M7 17 17 7\"/>","settings-2":"<path d=\"M14 17H5\"/><path d=\"M19 7h-9\"/><circle cx=\"17\" cy=\"17\" r=\"3\"/><circle cx=\"7\" cy=\"7\" r=\"3\"/>","grip-horizontal":"<circle cx=\"12\" cy=\"9\" r=\"1\"/><circle cx=\"19\" cy=\"9\" r=\"1\"/><circle cx=\"5\" cy=\"9\" r=\"1\"/><circle cx=\"12\" cy=\"15\" r=\"1\"/><circle cx=\"19\" cy=\"15\" r=\"1\"/><circle cx=\"5\" cy=\"15\" r=\"1\"/>","chevron-right":"<path d=\"m9 18 6-6-6-6\"/>"};
+  function icon(name) { return '<svg class="ob-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[name] || ICONS.compass) + '</svg>'; }
+  function uiKey() { var id='guest'; try { id=JSON.parse(localStorage.getItem('sb_user')||'null')?.id||id; } catch (_) {} return 'fqi.guide.ui.v1.'+id; }
+  function readUI() { try { var s=JSON.parse(localStorage.getItem(uiKey())||'{}');return {enabled:s.enabled!==false,position:Number.isFinite(s.position)?Math.max(0,Math.min(1,s.position)):.66}; } catch (_) { return {enabled:true,position:.66}; } }
+  function saveUI(patch) { var state=Object.assign(readUI(),patch);localStorage.setItem(uiKey(),JSON.stringify(state));return state; }
 
   /* 品牌原圖等比例顯示；翼片排除頭、軀幹與書本，靜止圖層使用互補遮罩。 */
   var owlId=0;
@@ -21,7 +28,7 @@
         '<g class="owl-wing owl-wing-right">'+img('clip-path="url(#'+id+'-right)"')+'</g></g>';
     }
     return '<span class="ob-owl" role="img" aria-label="先見貓頭鷹">'+
-      '<svg class="owl-art" viewBox="0 0 1789 879" aria-hidden="true" focusable="false">'+
+      '<svg class="owl-art" viewBox="350 0 1340 850" aria-hidden="true" focusable="false">'+
       '<defs><clipPath id="'+id+'-left"><path d="'+left+'"/></clipPath><clipPath id="'+id+'-right"><path d="'+right+'"/></clipPath>'+
       '<mask id="'+id+'-body" maskUnits="userSpaceOnUse" x="0" y="0" width="1789" height="879"><rect width="1789" height="879" fill="white"/><path d="'+left+'" fill="black"/><path d="'+right+'" fill="black"/></mask></defs>'+
       layers('light')+layers('dark')+'</svg></span>';
@@ -44,12 +51,12 @@
 
   /* ── 偏好 ── */
   var PREFS = [
-    { id: 'event', ic: '🎯', t: '事件交易派', d: '題材、展覽、法說、話題焦點' },
-    { id: 'tech', ic: '📈', t: '技術型態派', d: '篩選器、型態、壓力支撐、K 線' },
-    { id: 'chip', ic: '🧩', t: '籌碼主力派', d: '主力訊號、三大法人、神燈冥燈', vip: true },
-    { id: 'value', ic: '💰', t: '存股/價值派', d: '企業價值357、現金殖利率' },
-    { id: 'etf', ic: '📦', t: 'ETF 派', d: 'ETF 探索、配息、相似度、折溢價' },
-    { id: 'macro', ic: '🌏', t: '大盤總經派', d: '貪婪指標、外資空單、多空廣度' }
+    { id: 'event', ic: 'radar', t: '事件交易派', d: '題材、展覽、法說、話題焦點' },
+    { id: 'tech', ic: 'chart-no-axes-combined', t: '技術型態派', d: '篩選器、型態、壓力支撐、K 線' },
+    { id: 'chip', ic: 'network', t: '籌碼主力派', d: '主力訊號、三大法人、神燈冥燈', vip: true },
+    { id: 'value', ic: 'landmark', t: '存股／價值派', d: '企業價值357、現金殖利率' },
+    { id: 'etf', ic: 'layers-2', t: 'ETF 派', d: 'ETF 探索、配息、相似度、折溢價' },
+    { id: 'macro', ic: 'globe-2', t: '大盤總經派', d: '貪婪指標、外資空單、多空廣度' }
   ];
 
   /* ── 步驟定義（data-driven）── */
@@ -115,11 +122,13 @@
   }
 
   /* ── 導覽引擎 ── */
-  var root, steps = [], idx = 0, renderTimer = null, renderVersion = 0;
+  var root, steps = [], idx = 0, renderTimer = null, renderVersion = 0, previousOverflow='', returnFocus=null;
+  function beginOverlay() { ensureRoot();if(root.hidden){previousOverflow=document.body.style.overflow;returnFocus=dock&&dock.contains(document.activeElement)?dock.querySelector('.ob-edge-toggle'):document.activeElement;}root.hidden=false;document.body.style.overflow='hidden';updateDock();window.addEventListener('keydown',onKey); }
   function el(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
   function ensureRoot() {
     if (root) return root;
     root = el('div'); root.id = 'obRoot'; root.hidden = true;
+    root.setAttribute('role','dialog');root.setAttribute('aria-modal','true');root.setAttribute('aria-label','先見新手導覽');
     root.innerHTML =
       '<div class="ob-mask" data-m="t"></div><div class="ob-mask" data-m="b"></div>' +
       '<div class="ob-mask" data-m="l"></div><div class="ob-mask" data-m="r"></div>' +
@@ -235,62 +244,90 @@
       pop.querySelector('.ob-skip').onclick = function () { finish(false); };
       pop.querySelector('[data-a="next"]').onclick = function () { idx++; render(); };
       var pv = pop.querySelector('[data-a="prev"]'); if (pv) pv.onclick = function () { idx = Math.max(0, idx - 1); render(); };
+      pop.querySelector('[data-a="next"]').focus({preventScroll:true});
     }, st.before ? 420 : 60);
   }
   function startTour(prefs) {
     ensureRoot(); steps = buildSteps(prefs || {}); idx = 0;
     if (!steps.length) return;
-    root.hidden = false; document.body.style.overflow = 'hidden';
+    beginOverlay();
     clearMasks(); render();
     window.addEventListener('resize', onResize); window.addEventListener('keydown', onKey);
   }
   function onResize() { if (!root || root.hidden) return; var st = steps[idx]; if (!st) return; var t = null; try { t = st.locate && st.locate(); } catch (_) {} var rect = t && t.getBoundingClientRect ? t.getBoundingClientRect() : null; if (rect && (rect.width < 2)) rect = null; var hole = spotlight(rect); var pop = root.querySelector('.ob-guide'); if (pop) placePop(pop, hole); }
-  function onKey(e) { if (e.key === 'Escape') finish(false); else if (e.key === 'ArrowRight') { idx = Math.min(steps.length - 1, idx + 1); render(); } else if (e.key === 'ArrowLeft') { idx = Math.max(0, idx - 1); render(); } }
+  function onKey(e) { if(!root||root.hidden)return;if(e.key==='Tab'){var buttons=[].slice.call(root.querySelectorAll('button:not(:disabled)')).filter(function(b){return !!b.getClientRects().length;});var first=buttons[0],last=buttons[buttons.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}}else if (e.key === 'Escape') {e.preventDefault();finish(false);}else if(root.querySelector('.ob-guide')&&e.key === 'ArrowRight') {e.preventDefault();idx = Math.min(steps.length - 1, idx + 1); render(); } else if(root.querySelector('.ob-guide')&&e.key === 'ArrowLeft') {e.preventDefault();idx = Math.max(0, idx - 1); render(); } }
   function finish(completed) {
     clearTimeout(renderTimer); renderVersion++;
     _restoreMenu();
     if (root) { root.hidden = true; }
-    document.body.style.overflow = '';
+    document.body.style.overflow = previousOverflow;
     window.removeEventListener('resize', onResize); window.removeEventListener('keydown', onKey);
     try { localStorage.setItem(LS, '1'); } catch (_) {}
     markOnboarded();                       // 不論完成或略過，都記「看過了」
     showReplay();
+    if(returnFocus?.isConnected&&returnFocus.getClientRects().length)returnFocus.focus({preventScroll:true});
   }
 
   /* ── 歡迎 / 偏好選單 ── */
   function showMenu() {
-    ensureRoot(); root.hidden = false; document.body.style.overflow = 'hidden'; clearMasks();
+    beginOverlay(); spotlight(null);
     var old = root.querySelector('.ob-guide, .ob-center'); if (old) old.remove();
     var wrap = el('div', 'ob-center'); var card = el('div', 'ob-card ob-pop-in');
     var prefHtml = PREFS.map(function (p) {
       var locked = p.vip && !canBroker();
-      return '<div class="ob-pref' + (locked ? ' locked' : '') + '" data-p="' + p.id + '"' + (locked ? ' aria-disabled="true"' : '') + '>' +
-        '<span class="ob-ic">' + p.ic + '</span><div><div class="ob-pt">' + p.t + '</div><div class="ob-pd">' + p.d + '</div></div>' +
-        (locked ? '<span class="ob-lock">先見領航員</span>' : '<span class="ob-check">✓</span>') + '</div>';
+      return '<button type="button" class="ob-pref' + (locked ? ' locked' : '') + '" data-p="' + p.id + '" aria-pressed="false"' + (locked ? ' disabled' : '') + '>' +
+        '<span class="ob-ic">' + icon(p.ic) + '</span><span><span class="ob-pt">' + p.t + '</span><span class="ob-pd">' + p.d + '</span></span>' +
+        (locked ? '<span class="ob-lock">會員功能</span>' : '<span class="ob-check">'+icon('check')+'</span>') + '</button>';
     }).join('');
     card.innerHTML =
-      '<div style="--ob-owl-size:84px;display:flex;justify-content:center">' + owlMarkup() + '</div>' +
-      '<h2>歡迎來到先見 FORESIGHT 🦉</h2>' +
-      '<div class="ob-sub">我是帶路的貓頭鷹。先告訴我你是哪一種投資人（可複選），我帶你看最適合你的功能；不管怎麼選，共同的大盤觀察我都會介紹。</div>' +
+      '<div class="ob-welcome-brand">' + owlMarkup() + '<span>FORESIGHT · GUIDE</span></div>' +
+      '<h2>歡迎來到先見 FORESIGHT</h2>' +
+      '<div class="ob-sub">選擇你的研究方向（可複選），讓先見帶你認識網站功能。<br>大盤觀察會在每一條導覽路線中介紹。</div>' +
       '<div class="ob-prefs">' + prefHtml + '</div>' +
       '<div class="ob-go"><button class="ob-btn" data-a="skipall" type="button">先略過</button><button class="ob-btn pri" data-a="start" type="button">開始導覽</button></div>';
     wrap.appendChild(card); root.appendChild(wrap);
     var chosen = {};
     card.querySelectorAll('.ob-pref:not(.locked)').forEach(function (d) {
-      d.onclick = function () { var id = d.getAttribute('data-p'); chosen[id] = !chosen[id]; d.classList.toggle('on', chosen[id]); };
+      d.onclick = function () { var id = d.getAttribute('data-p'); chosen[id] = !chosen[id]; d.classList.toggle('on', chosen[id]);d.setAttribute('aria-pressed',String(chosen[id])); };
     });
     card.querySelector('[data-a="skipall"]').onclick = function () { finish(false); };
     card.querySelector('[data-a="start"]').onclick = function () {
       // 一個都沒選＝只跑共同＋會員；有選就加偏好
       wrap.remove(); startTour(chosen);
     };
+    card.querySelector('[data-a="start"]').focus({preventScroll:true});
   }
 
   /* ── 重跑按鈕 ── */
   function showReplay() {
-    var b = byId('obReplayBtn');
-    if (!b) { b = el('button', null, owlMarkup() + '<span>新手導覽</span>'); b.id = 'obReplayBtn'; b.type = 'button'; b.title = '重看新手導覽'; b.onclick = function () { showMenu(); }; document.body.appendChild(b); }
-    b.style.display = 'flex';
+    ensureDock();updateDock();
+  }
+
+  var dock, dockPosition=.66, suppressClick=false;
+  function positionDock() { if(!dock)return;var edge=dock.querySelector('.ob-edge'),height=edge.offsetHeight||124,margin=12,top=Math.round(margin+dockPosition*Math.max(0,innerHeight-height-margin*2));dock.style.top=top+'px';var panel=dock.querySelector('.ob-dock-panel'),ph=panel.offsetHeight;panel.style.top=Math.max(margin-top,Math.min(innerHeight-margin-ph-top,(height-ph)/2))+'px'; }
+  function updateDock() { if(!dock)return;var state=readUI();dockPosition=state.position;dock.hidden=!state.enabled||!!(root&&!root.hidden);if(!state.enabled)setExpanded(false);positionDock(); }
+  function setExpanded(open) { if(!dock)return;dock.dataset.open=String(open);dock.querySelector('.ob-edge-toggle').setAttribute('aria-expanded',String(open));dock.querySelector('.ob-edge-toggle').setAttribute('aria-label',(open?'收合':'展開')+'新手導覽');dock.querySelector('.ob-dock-panel').inert=!open;positionDock(); }
+  function ensureDock() {
+    if(dock)return;dock=el('aside','ob-dock');dock.id='obReplayBtn';dock.setAttribute('aria-label','新手導覽入口');dock.dataset.open='false';
+    dock.innerHTML='<div class="ob-dock-panel" id="obDockPanel"><div class="ob-dock-heading">'+owlMarkup()+'<div>新手導覽<small>熟悉網站功能</small></div></div><button type="button" class="ob-dock-start">開始探索'+icon('arrow-up-right')+'</button><button type="button" class="ob-dock-settings">'+icon('settings-2')+'導覽設定</button></div><div class="ob-edge"><button type="button" class="ob-drag" aria-label="上下拖曳新手導覽；方向鍵可微調位置">'+icon('grip-horizontal')+'</button><button type="button" class="ob-edge-toggle" aria-expanded="false" aria-controls="obDockPanel" aria-label="展開新手導覽">'+owlMarkup()+'<span>新手導覽</span>'+icon('chevron-right')+'</button></div>';
+    document.body.appendChild(dock);setExpanded(false);var edge=dock.querySelector('.ob-edge'),drag=dock.querySelector('.ob-drag'),startY=0,startTop=0,active=null,moved=false;
+    edge.addEventListener('pointerdown',function(e){if(e.button!==0)return;active=e.pointerId;startY=e.clientY;startTop=parseFloat(dock.style.top)||0;moved=false;suppressClick=false;(e.target.closest('button')||edge).setPointerCapture(e.pointerId);});
+    edge.addEventListener('pointermove',function(e){if(active!==e.pointerId)return;if(Math.abs(e.clientY-startY)>4)moved=true;if(!moved)return;e.preventDefault();var max=Math.max(1,innerHeight-edge.offsetHeight-24),top=Math.max(12,Math.min(innerHeight-edge.offsetHeight-12,startTop+e.clientY-startY));dockPosition=(top-12)/max;positionDock();});
+    function endDrag(e){if(active!==e.pointerId)return;active=null;if(moved){suppressClick=true;try{saveUI({position:dockPosition});}catch(_){}setTimeout(function(){suppressClick=false;},0);}}
+    edge.addEventListener('pointerup',endDrag);edge.addEventListener('pointercancel',endDrag);
+    dock.querySelector('.ob-edge-toggle').addEventListener('click',function(){if(!suppressClick)setExpanded(dock.dataset.open!=='true');});
+    drag.addEventListener('keydown',function(e){if(!['ArrowUp','ArrowDown','Home','End'].includes(e.key))return;e.preventDefault();dockPosition=e.key==='Home'?0:e.key==='End'?1:Math.max(0,Math.min(1,dockPosition+(e.key==='ArrowUp'?-.025:.025)));positionDock();try{saveUI({position:dockPosition});}catch(_){}});
+    dock.querySelector('.ob-dock-start').onclick=function(){setExpanded(false);showMenu();};
+    dock.querySelector('.ob-dock-settings').onclick=function(){setExpanded(false);window.openMemberCenter?.('settings');};
+    document.addEventListener('pointerdown',function(e){if(!dock.contains(e.target))setExpanded(false);},true);
+    dock.addEventListener('keydown',function(e){if(e.key==='Escape'){setExpanded(false);dock.querySelector('.ob-edge-toggle').focus();}});
+    window.addEventListener('resize',positionDock);
+  }
+  function setEnabled(enabled) { saveUI({enabled:!!enabled});if(!enabled&&root&&!root.hidden)finish(false);showReplay();window.dispatchEvent(new Event('fqi-tour-preference-changed')); }
+  function mountSettings(container) {
+    var state=readUI();container.innerHTML='<section class="mc-card ob-settings-card"><div class="ob-settings-heading">'+icon('compass')+'<div><h2>導覽與使用偏好</h2><p>讓先見以你習慣的方式陪伴研究。</p></div></div><label class="ob-setting-row"><span><strong>新手導覽</strong><small>顯示右側標籤與首次導覽提醒</small></span><input class="ob-setting-switch" type="checkbox" role="switch" aria-label="新手導覽" '+(state.enabled?'checked':'')+'></label><p class="ob-setting-note">此設定與標籤位置保存在這個瀏覽器，依登入帳號分開記憶。</p><div class="mc-status" role="status"></div></section>';
+    var input=container.querySelector('input'),status=container.querySelector('[role=status]');input.onchange=function(){try{setEnabled(input.checked);status.textContent=input.checked?'已開啟新手導覽':'已關閉新手導覽';}catch(_){input.checked=readUI().enabled;status.textContent='設定尚未儲存，請確認瀏覽器儲存空間後重試。';}};
+    window.FqiArrival?.mountSettings(container);
   }
 
   /* ── 首次登入偵測：寫在帳號 user_metadata（跨裝置）；本機 LS 快取避免每次打 API ── */
@@ -306,23 +343,32 @@
     }).catch(function () {});
   }
   var autoChecked = false;
+  var waitingArrival=false;
   function maybeAutoStart() {
+    if(window.FqiArrival?.active()){if(!waitingArrival){waitingArrival=true;window.addEventListener('fqi-arrival-closed',function(){waitingArrival=false;maybeAutoStart();},{once:true});}return;}
     if (autoChecked) return; autoChecked = true;
     showReplay();                                   // 登入後常駐重跑按鈕
+    if(!readUI().enabled)return;
     try { if (localStorage.getItem(LS) === '1') return; } catch (_) {}
     var h = authHeaders(); if (!h) return;
+    var ownerKey=uiKey();
     fetch(SB + '/auth/v1/user', { headers: h }).then(function (r) { return r.ok ? r.json() : null; }).then(function (u) {
+      if(ownerKey!==uiKey()||!readUI().enabled)return;
       var md = (u && u.user_metadata) || {};
       if (md[FLAG]) { try { localStorage.setItem(LS, '1'); } catch (_) {} return; }  // 這帳號已看過
-      setTimeout(showMenu, 900);                     // 真首次 → 跑導覽
+      setTimeout(function(){if(ownerKey===uiKey()&&readUI().enabled)showMenu();}, 900); // 真首次且仍啟用 → 跑導覽
     }).catch(function () {});
   }
 
   /* ── 對外 API ── */
   window.FqiTour = {
     open: showMenu,                 // 手動開（重跑按鈕/選單）
-    maybeAutoStart: maybeAutoStart  // 登入後由 _applyAuthState 呼叫
+    maybeAutoStart: maybeAutoStart, // 登入後由 _applyAuthState 呼叫
+    mountSettings: mountSettings,
+    enabled: function(){return readUI().enabled;},
+    setEnabled: setEnabled
   };
+  window.addEventListener('academy-auth-changed',function(){autoChecked=false;if(dock)setExpanded(false);if(window._loggedIn)maybeAutoStart();else updateDock();});
   // 保險：若登入狀態已就緒，延遲自動檢查一次
   document.addEventListener('DOMContentLoaded', function () { setTimeout(function () { if (window._loggedIn) maybeAutoStart(); }, 1500); });
 })();

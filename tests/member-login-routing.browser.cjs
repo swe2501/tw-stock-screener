@@ -3,7 +3,7 @@ const fs=require('node:fs'),path=require('node:path'),assert=require('node:asser
 const web=path.resolve(__dirname,'../apps/web');
 (async()=>{const browser=await chromium.launch({channel:'msedge',headless:true});try{
  const p=await browser.newPage({viewport:{width:1366,height:900},reducedMotion:'reduce'}),user={id:'route-member',email:'route@example.test',email_confirmed_at:'2026-01-01',user_metadata:{display_name:'路由驗證會員',onboarded_tour_v1:true},identities:[{provider:'email'},{provider:'google'}]},errors=[];
- p.on('pageerror',e=>errors.push(e.message));await p.addInitScript(()=>localStorage.setItem('fqi_onboarded_v1','1'));
+ p.on('pageerror',e=>errors.push(e.message));await p.addInitScript(()=>{localStorage.setItem('fqi.arrival.skip.v1','1');localStorage.setItem('fqi_onboarded_v1','1');});
  await p.route('**/*',r=>{const u=new URL(r.request().url());
   if(u.pathname==='/api/auth')return r.fulfill({json:{required:false}});
   if(u.origin==='https://routing.fixture.test'){const f=path.resolve(web,'.'+(u.pathname==='/'?'/index.html':u.pathname));if(f.startsWith(web+path.sep)&&fs.existsSync(f)&&fs.statSync(f).isFile())return r.fulfill(f.endsWith('index.html')?{contentType:'text/html',body:fs.readFileSync(f,'utf8').replace('window.SITE_GATE_ON = true','window.SITE_GATE_ON = false')}:{path:f});return r.fulfill({json:{}});}

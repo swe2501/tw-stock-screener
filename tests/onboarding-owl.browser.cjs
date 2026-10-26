@@ -1,11 +1,11 @@
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),{chromium}=require('playwright');
-const web=path.resolve(__dirname,'../apps/web'),scan=process.env.VISUAL_SCAN_PATH,out=process.env.OWL_QA_PATH;
+const web=path.resolve(__dirname,'../apps/web'),scan=process.env.VISUAL_SCAN_PATH,out=process.env.OWL_QA_PATH||path.join(require('node:os').tmpdir(),'foresight-guide-owl');fs.mkdirSync(out,{recursive:true});
 const data=JSON.parse(fs.readFileSync(path.join(web,'assets/codex-visual-patterns.json'),'utf8'));
-const source=JSON.parse(fs.readFileSync(path.join(scan,'stocks/8081/source.json'),'utf8'));
+const source=scan?JSON.parse(fs.readFileSync(path.join(scan,'stocks/8081/source.json'),'utf8')):{rows:[]};
 (async()=>{const browser=await chromium.launch({channel:'msedge',headless:true});try{
  const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[],paid=[];let boxReads=0;
  page.on('pageerror',e=>errors.push(e.message));
- await page.addInitScript(()=>{localStorage.setItem('fqi_onboarded_v1','1');localStorage.setItem('sb_token','fixture');localStorage.setItem('sb_user','{"id":"fx","email":"swe250165@gmail.com"}');});
+ await page.addInitScript(()=>{localStorage.setItem('fqi.arrival.skip.v1','1');localStorage.setItem('fqi_onboarded_v1','1');localStorage.setItem('sb_token','fixture');localStorage.setItem('sb_user','{"id":"fx","email":"swe250165@gmail.com"}');});
  await page.route('**/*',r=>{const u=new URL(r.request().url());if(u.hostname==='api.openai.com'||u.searchParams.get('stat')==='aibuy')paid.push(u.toString());
   if(u.hostname==='unpkg.com'&&u.pathname.includes('lightweight-charts'))return r.fulfill({path:process.env.CHART_LIBRARY_PATH,contentType:'text/javascript'});
   if(u.pathname==='/api/chart')return r.fulfill({json:source});
@@ -21,14 +21,14 @@ const source=JSON.parse(fs.readFileSync(path.join(scan,'stocks/8081/source.json'
  await page.goto('https://visual-site.fixture.test/');await page.evaluate(()=>FqiTour.open());
  const owl=page.locator('#obRoot .owl-art');await owl.waitFor();
  await page.waitForFunction(()=>Array.from(document.querySelectorAll('#obRoot .owl-art image')).length===6);
- const size=await owl.boundingBox();assert(Math.abs(size.width/size.height-1789/879)<.01,'original logo ratio');
+ const size=await owl.boundingBox();assert(Math.abs(size.width/size.height-1340/850)<.01,'centered crop preserves original artwork without distortion');
  const ids=await page.locator('.owl-art [id]').evaluateAll(es=>es.map(e=>e.id));assert.equal(ids.length,new Set(ids).size,'unique clip and mask IDs per logo');
  async function phase(t){await owl.evaluate((e,t)=>e.getAnimations({subtree:true}).forEach(a=>{a.pause();a.currentTime=t}),t);}
  const frames=await owl.locator('.owl-wing-left').first().evaluate(e=>{const a=e.getAnimations()[0];return {duration:a.effect.getTiming().duration,offsets:a.effect.getKeyframes().map(k=>k.computedOffset)};});
- assert.equal(frames.duration,1600);assert.deepEqual(frames.offsets,[0,.5,1],'continuous strokes without hold keyframes');
+ assert.equal(frames.duration,5400);assert.deepEqual(frames.offsets,[0,.14,.3,.46,.62,.78,1],'small wing beats followed by natural rest');
  await phase(0);await page.screenshot({path:path.join(out,'tour-rest.png'),animations:'allow'});
  await owl.screenshot({path:path.join(out,'owl-rest.png'),scale:'css'});
- await phase(800);await page.screenshot({path:path.join(out,'tour-flap.png'),animations:'allow'});
+ await phase(1620);await page.screenshot({path:path.join(out,'tour-flap.png'),animations:'allow'});
  await owl.screenshot({path:path.join(out,'owl-flap.png'),scale:'css'});
  assert.equal(await owl.locator('.owl-body').evaluateAll(es=>es.every(e=>getComputedStyle(e).transform==='none')),true,'head/body/book never transform');
  await page.setViewportSize({width:375,height:900});await page.screenshot({path:path.join(out,'tour-mobile.png'),animations:'allow'});assert.equal(await page.locator('#obRoot').evaluate(e=>e.scrollWidth<=innerWidth),true,'mobile overlay within viewport');

@@ -42,10 +42,11 @@
   document.addEventListener('keydown',e=>{if(!modal.classList.contains('open'))return;if(e.key==='Escape'){e.preventDefault();window.closeAuthModal();return;}if(e.key!=='Tab')return;const nodes=[...modal.querySelectorAll('button:not(:disabled),input:not(:disabled),a[href]')].filter(n=>n.getClientRects().length);const first=nodes[0],last=nodes.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}});
   window.AcademyInvitation.capture();
   const invitation=document.createElement('details');invitation.className='academy-invitation';invitation.innerHTML='<summary>有朋友的邀請碼？</summary><label for="academy-invitation-code">邀請碼（選填）</label><input id="academy-invitation-code" autocomplete="off" maxlength="20" spellcheck="false" placeholder="輸入朋友的邀請碼"><button type="button">保留邀請碼</button><small>不影響正常註冊；登入後再確認介紹人，完成驗證並符合資格才計入有效邀請。每個帳號只能綁定一位，重複登入或補填不會重複發獎。</small><div role="status"></div>';
-  const pendingInvite=window.AcademyInvitation.pending();if(pendingInvite){invitation.querySelector('input').value=pendingInvite.code;invitation.open=true;}
+  const pendingInvite=window.AcademyInvitation.pending();if(pendingInvite)invitation.querySelector('input').value=pendingInvite.code;
   invitation.querySelector('button').addEventListener('click',()=>{const code=window.AcademyInvitation.normalize(invitation.querySelector('input').value),status=invitation.querySelector('[role=status]');if(!code){status.textContent='請填寫 6～20 位英數字邀請碼';return;}status.textContent=window.AcademyInvitation.remember(code)?'邀請碼已保留，登入後請確認介紹人；保留代碼不會發點。':'瀏覽器無法保存，請先記下邀請碼。';});
   box.append(invitation);
   function invitationView(){const on=invitation.open;modal.classList.toggle('is-invite-view',on);invitation.querySelector('summary').textContent=on?'← 返回登入／註冊':'有朋友的邀請碼？';if(!modal.classList.contains('is-phone-view'))document.getElementById('authTitle').textContent=on?'朋友的邀請碼':(modal.dataset.authMode==='register'?'建立帳號':'歡迎回來');}
+  function resetInvitationView(){invitation.open=false;invitation.querySelector('[role=status]').textContent='';invitationView();}
   invitation.addEventListener('toggle',()=>{const before=shell.getBoundingClientRect().height;invitationView();settleSize(before);});invitationView();
   let wasOpen=modal.classList.contains('open');new MutationObserver(()=>{const isOpen=modal.classList.contains('open');if(isOpen&&!wasOpen&&!mandatory)requestAnimationFrame(()=>{if(modal.classList.contains('open'))document.getElementById('authEmail').focus();});wasOpen=isOpen;}).observe(modal,{attributes:true,attributeFilter:['class']});
   submit.parentElement.append(box);const status=box.querySelector('[role=status]');let cooldown=0,timer=0,sentPhone=null;
@@ -57,7 +58,9 @@
   // Exit follows the same easing as entry; reopening cancels a pending exit.
   let exitMotion=null,returnFocus=null;
   const openWithProviders=window.openAuthModal,closeWithGate=window.closeAuthModal;
-  window.openAuthModal=function(tab){exitMotion?.cancel();exitMotion=null;modal.inert=false;if(!modal.classList.contains('open'))returnFocus=document.activeElement;openWithProviders(tab);invitationView();};
+  window.openAuthModal=function(tab){exitMotion?.cancel();exitMotion=null;modal.inert=false;if(!modal.classList.contains('open'))returnFocus=document.activeElement;resetInvitationView();openWithProviders(tab);invitationView();};
+  const signOut=window.doLogout;
+  if(signOut)window.doLogout=async function(...args){const result=await signOut.apply(this,args);if(!localStorage.getItem('sb_token'))resetInvitationView();return result;};
   window.closeAuthModal=function(){
     if(mandatory||!modal.classList.contains('open'))return;
     if(reduceMotion()){closeWithGate();returnFocus?.isConnected&&returnFocus.focus();return;}
