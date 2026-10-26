@@ -71,8 +71,9 @@
 :root:not([data-theme="light"]) .ob-owl .owl-light-v2{ display:none; }
 :root:not([data-theme="light"]) .ob-owl .owl-dark-v2{ display:block; }
 @keyframes obFloat{ 0%,100%{ transform:translateY(0) } 50%{ transform:translateY(-5px) } }
-.ob-pop-in{ animation:obPopIn .3s cubic-bezier(.2,.9,.3,1.2) both; }
-@keyframes obPopIn{ from{opacity:0; transform:translateY(8px) scale(.97)} to{opacity:1; transform:none} }
+/* 進場：純淡入＋輕微上浮，ease-out 不回彈（舊版 bezier 尾端 1.2 會過衝＝「先上移再彈回」） */
+.ob-pop-in{ animation:obPopIn .2s ease-out both; }
+@keyframes obPopIn{ from{opacity:0; transform:translateY(5px)} to{opacity:1; transform:none} }
 @media(prefers-reduced-motion:reduce){ .ob-owl,.ob-owl *{ animation:none !important; } .ob-mask,.ob-ring,.ob-pop{ transition:none !important; } }
 
 /* 重跑導覽的小按鈕 */
