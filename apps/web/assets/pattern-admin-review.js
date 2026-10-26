@@ -14,8 +14,9 @@
   if(on)render();else originalShow?.();
  }
  function render(){const panel=$('patternAdminPanel');panel.replaceChildren();if(!payload)return;
-  panel.append(el('h3','W 型態・管理者複核'),el('p','4 個案例供管理者判定。選擇狀態後按「儲存判定」；這裡的判定不會自動發布至一般使用者的 W 清單。行情終點：2026-10-22。','par-intro'));
-  const controls=el('div',null,'par-controls');for(const [value,label] of [['all','全部'],...Object.entries(labels)]){const b=el('button',label,filter===value?'on':'');b.type='button';b.setAttribute('aria-pressed',String(filter===value));b.onclick=()=>{filter=value;render();};controls.append(b);}const reload=el('button','重新載入');reload.type='button';reload.onclick=()=>refresh(true);controls.append(reload);panel.append(controls);
+  const counts={};for(const c of payload.cases){const s=payload.decisions[c.id]?.status||c.initial_status;counts[s]=(counts[s]||0)+1;}
+  panel.append(el('h3','W 型態・管理者複核'),el('p','新增400檔複核佇列：'+payload.cases.length+' 個案例。形成中 '+(counts.forming||0)+' · 待複核 '+(counts.pending||0)+' · 已突破 '+(counts.breakout||0)+' · 不算W '+(counts.rejected||0)+'。不含舊100檔的歷史待複核樣本。選擇狀態後按「儲存判定」；這裡的判定不會自動發布至一般使用者的 W 清單。行情終點：2026-10-22。','par-intro'));
+  const controls=el('div',null,'par-controls');for(const [value,label] of [['all','全部'],...Object.entries(labels)]){const b=el('button',label+(value==='all'?' ('+payload.cases.length+')':' ('+(counts[value]||0)+')'),filter===value?'on':'');b.type='button';b.setAttribute('aria-pressed',String(filter===value));b.onclick=()=>{filter=value;render();};controls.append(b);}const reload=el('button','重新載入');reload.type='button';reload.onclick=()=>refresh(true);controls.append(reload);panel.append(controls);
   const rows=payload.cases.filter(c=>filter==='all'||(payload.decisions[c.id]?.status||c.initial_status)===filter);
   if(!rows.length)panel.append(el('p','此狀態目前沒有案例。','par-intro'));
   for(const c of rows){const d=payload.decisions[c.id],status=d?.status||c.initial_status,card=el('article',null,'par-card');card.dataset.case=c.id;

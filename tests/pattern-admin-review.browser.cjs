@@ -36,7 +36,7 @@ const source=JSON.parse(fs.readFileSync(path.join(scan,'stocks/8081/source.json'
  assert.equal(await page.locator('.par-card').count(),4);await page.screenshot({path:path.join(scan,'admin-review-desktop.png'),fullPage:true});assert.equal(await page.locator('#aiPatternTabs').isVisible(),false);
  const card=page.locator('[data-case="2002-daily"]');await card.locator('select').selectOption('breakout');await card.locator('.par-save').click();await page.waitForFunction(()=>document.querySelector('[data-case="2002-daily"] .par-status').textContent.includes('已突破'));
  await page.getByRole('button',{name:'重新載入',exact:true}).click();await page.waitForTimeout(100);assert.equal(await card.locator('select').inputValue(),'breakout','decision persists across reload');
- await page.getByRole('button',{name:'已突破',exact:true}).click();assert.equal(await page.locator('.par-card').count(),1);
+ await page.getByRole('button',{name:/^已突破 \(/}).click();assert.equal(await page.locator('.par-card').count(),1);
  failSave=true;await card.locator('select').selectOption('rejected');await card.locator('.par-save').click();await page.waitForFunction(()=>document.querySelector('.par-message').textContent.includes('儲存失敗'));assert.match(await card.locator('.par-status').innerText(),/已突破/,'failed write does not change saved label');
  await page.setViewportSize({width:375,height:950});assert.equal(await page.locator('#boxView').evaluate(e=>e.scrollWidth<=e.clientWidth+1),true);
  await page.screenshot({path:path.join(scan,'admin-review-mobile.png'),fullPage:true});await page.locator('#patternAdminToggle').click();assert.equal(await page.locator('#aiPatternTabs').isVisible(),true);

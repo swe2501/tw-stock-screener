@@ -25,6 +25,7 @@ const source=JSON.parse(fs.readFileSync(path.join(scan,'stocks/8081/source.json'
  await page.waitForFunction(()=>document.querySelectorAll('.aps-card').length>0);
  const expected=new Set(data.records.filter(r=>r.execution_status==='reviewed'&&r.patterns?.length).map(r=>r.code)).size;
  assert.equal(await page.locator('#aiPatternTabs [role=tab]').count(),5);
+ assert.equal(await page.locator('#aiPatternState option[value=uncertain]').count(),0,'old historical uncertainty is not the current admin review queue');
  assert.equal(await page.locator('.aps-card').count(),expected);
  assert.equal(boxReads,0,'W listing does not trigger box loading or inference');
  assert.equal(await page.locator('.aps-code').allTextContents().then(xs=>xs.includes('1316')||xs.includes('1326')),false);
