@@ -7,18 +7,25 @@
   var FLAG = 'onboarded_tour_v1';            // 寫在 user_metadata 的旗標
   var LS = 'fqi_onboarded_v1';               // 本機快取（避免每次打 API）
 
-  /* ── 貓頭鷹小精靈：沿用品牌 logo，將翅膀拆成圖層交給 CSS 拍動。 ── */
-  var OWL =
-    '<span class="ob-owl">' +
-      '<span class="owl-art" aria-hidden="true">' +
-        '<img class="owl-light-v2 owl-body" src="assets/brand/foresight-owl-light-book-light.png" alt="" decoding="async">' +
-        '<img class="owl-light-v2 owl-wing owl-wing-left" src="assets/brand/foresight-owl-light-book-light.png" alt="" decoding="async">' +
-        '<img class="owl-light-v2 owl-wing owl-wing-right" src="assets/brand/foresight-owl-light-book-light.png" alt="" decoding="async">' +
-        '<img class="owl-dark-v2 owl-body" src="assets/brand/foresight-owl-dark-book-light.png" alt="" decoding="async">' +
-        '<img class="owl-dark-v2 owl-wing owl-wing-left" src="assets/brand/foresight-owl-dark-book-light.png" alt="" decoding="async">' +
-        '<img class="owl-dark-v2 owl-wing owl-wing-right" src="assets/brand/foresight-owl-dark-book-light.png" alt="" decoding="async">' +
-      '</span>' +
-    '</span>';
+  /* 品牌原圖等比例顯示；翼片排除頭、軀幹與書本，靜止圖層使用互補遮罩。 */
+  var owlId=0;
+  function owlMarkup(){
+    var id='ob-owl-'+(++owlId);
+    var left='M390 190 713 285 760 340 820 400 930 490 985 610 820 580 660 575 520 530 420 380Z';
+    var right='M1108 513 1180 400 1260 340 1300 270 1540 250 1650 185 1660 440 1510 570 1330 640 1150 610Z';
+    function layers(theme){
+      var image='assets/brand/foresight-owl-'+theme+'-book-light.png';
+      function img(extra){return '<image href="'+image+'" width="1789" height="879" '+extra+'/>';}
+      return '<g class="owl-'+theme+'-v2">'+img('mask="url(#'+id+'-body)" class="owl-body"')+
+        '<g class="owl-wing owl-wing-left">'+img('clip-path="url(#'+id+'-left)"')+'</g>'+
+        '<g class="owl-wing owl-wing-right">'+img('clip-path="url(#'+id+'-right)"')+'</g></g>';
+    }
+    return '<span class="ob-owl" role="img" aria-label="先見貓頭鷹">'+
+      '<svg class="owl-art" viewBox="0 0 1789 879" aria-hidden="true" focusable="false">'+
+      '<defs><clipPath id="'+id+'-left"><path d="'+left+'"/></clipPath><clipPath id="'+id+'-right"><path d="'+right+'"/></clipPath>'+
+      '<mask id="'+id+'-body" maskUnits="userSpaceOnUse" x="0" y="0" width="1789" height="879"><rect width="1789" height="879" fill="white"/><path d="'+left+'" fill="black"/><path d="'+right+'" fill="black"/></mask></defs>'+
+      layers('light')+layers('dark')+'</svg></span>';
+  }
 
   /* ── 權限 helpers ── */
   function owner() { return !!window._isOwner; }
@@ -206,7 +213,7 @@
       var dots = steps.map(function (_, i) { return '<i class="' + (i === idx ? 'on' : '') + '"></i>'; }).join('');
       pop.innerHTML =
         '<button class="ob-skip" type="button">略過導覽</button>' +
-        '<div style="display:flex;gap:10px;align-items:flex-start">' + OWL +
+        '<div style="display:flex;gap:10px;align-items:flex-start">' + owlMarkup() +
         '<div style="flex:1;min-width:0"><div class="ob-step">第 ' + (idx + 1) + ' / ' + steps.length + ' 步</div>' +
         '<div class="ob-title">' + st.title + (st.locked ? ' <span class="ob-badge">會員功能</span>' : '') + '</div>' +
         '<div class="ob-body">' + st.body + (st.locked ? '<br><span style="color:var(--ob-owl-amber2)">（此為會員功能，升級/開通後即可使用）</span>' : '') + '</div></div></div>' +
@@ -252,7 +259,7 @@
         (locked ? '<span class="ob-lock">先見領航員</span>' : '<span class="ob-check">✓</span>') + '</div>';
     }).join('');
     card.innerHTML =
-      '<div style="--ob-owl-size:84px;display:flex;justify-content:center">' + OWL + '</div>' +
+      '<div style="--ob-owl-size:84px;display:flex;justify-content:center">' + owlMarkup() + '</div>' +
       '<h2>歡迎來到先見 FORESIGHT 🦉</h2>' +
       '<div class="ob-sub">我是帶路的貓頭鷹。先告訴我你是哪一種投資人（可複選），我帶你看最適合你的功能；不管怎麼選，共同的大盤觀察我都會介紹。</div>' +
       '<div class="ob-prefs">' + prefHtml + '</div>' +
@@ -272,7 +279,7 @@
   /* ── 重跑按鈕 ── */
   function showReplay() {
     var b = byId('obReplayBtn');
-    if (!b) { b = el('button', null, OWL + '<span>新手導覽</span>'); b.id = 'obReplayBtn'; b.type = 'button'; b.title = '重看新手導覽'; b.onclick = function () { showMenu(); }; document.body.appendChild(b); }
+    if (!b) { b = el('button', null, owlMarkup() + '<span>新手導覽</span>'); b.id = 'obReplayBtn'; b.type = 'button'; b.title = '重看新手導覽'; b.onclick = function () { showMenu(); }; document.body.appendChild(b); }
     b.style.display = 'flex';
   }
 

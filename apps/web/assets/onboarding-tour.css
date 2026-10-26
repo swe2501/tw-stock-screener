@@ -62,22 +62,18 @@
 .ob-pref.on .ob-check{ display:flex; }
 .ob-card .ob-go{ margin-top:18px; display:flex; gap:10px; justify-content:center; }
 
-/* 貓頭鷹小精靈：身體固定，左右翅膀以身體兩側為軸拍動。 */
-.ob-owl{ display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto; line-height:0; filter:drop-shadow(0 6px 11px rgba(8,16,26,.18)); animation:obFloat 3.8s ease-in-out infinite; }
-.owl-art{ position:relative; display:block; width:calc(var(--ob-owl-size,74px) * 1.72); height:var(--ob-owl-size,74px); }
-.owl-art img{ position:absolute; inset:0; width:100%; height:100%; object-fit:fill; display:block; }
-.owl-art .owl-body{ clip-path:polygon(28% 0,72% 0,74% 35%,72% 75%,86% 87%,100% 87%,100% 100%,0 100%,0 87%,14% 87%,28% 75%); }
-.owl-art .owl-wing{ clip-path:polygon(0 18%,52% 23%,58% 39%,56% 58%,52% 76%,34% 70%,14% 55%,0 45%); transform-origin:50% 76%; }
-.owl-art .owl-wing-right{ clip-path:polygon(48% 23%,100% 18%,100% 45%,86% 55%,66% 70%,48% 76%,44% 58%,42% 39%); transform-origin:50% 76%; }
-.owl-art .owl-wing-left{ animation:obWingLeft 2.6s ease-in-out infinite; }
-.owl-art .owl-wing-right{ animation:obWingRight 2.6s ease-in-out -.12s infinite; }
+/* 只拍翼片：原圖1789:879，互補遮罩保留頭部、書本與中軸。 */
+.ob-owl{ display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto; line-height:0; filter:drop-shadow(0 6px 11px rgba(8,16,26,.18)); }
+.owl-art{ display:block; width:calc(var(--ob-owl-size,74px) * 1789 / 879); height:var(--ob-owl-size,74px); overflow:visible; }
+.owl-art .owl-wing{ transform-box:view-box; will-change:transform; }
+.owl-art .owl-wing-left{ transform-origin:985px 610px; animation:obWingLeft 3.2s ease-in-out infinite; }
+.owl-art .owl-wing-right{ transform-origin:1108px 513px; animation:obWingRight 3.2s ease-in-out infinite; }
 .ob-pop .ob-owl{ --ob-owl-size:40px; }
 .ob-owl .owl-dark-v2{ display:none; }
 :root:not([data-theme="light"]) .ob-owl .owl-light-v2{ display:none; }
 :root:not([data-theme="light"]) .ob-owl .owl-dark-v2{ display:block; }
-@keyframes obFloat{ 0%,100%{ transform:translateY(0) } 50%{ transform:translateY(-5px) } }
-@keyframes obWingLeft{ 0%,100%{ transform:rotate(0deg) } 48%{ transform:rotate(-7deg) translateY(-2px) } }
-@keyframes obWingRight{ 0%,100%{ transform:rotate(0deg) } 48%{ transform:rotate(7deg) translateY(-2px) } }
+@keyframes obWingLeft{ 0%,12%,100%{transform:rotate(0deg)} 42%{transform:rotate(6deg)} 68%{transform:rotate(-1deg)} 82%{transform:rotate(.5deg)} }
+@keyframes obWingRight{ 0%,12%,100%{transform:rotate(0deg)} 42%{transform:rotate(-6deg)} 68%{transform:rotate(1deg)} 82%{transform:rotate(-.5deg)} }
 .ob-pop-in{ animation:obPopIn .3s cubic-bezier(.2,.9,.3,1.2) both; }
 @keyframes obPopIn{ from{opacity:0; transform:translateY(8px) scale(.97)} to{opacity:1; transform:none} }
 @media(prefers-reduced-motion:reduce){ .ob-owl,.ob-owl *{ animation:none !important; } .ob-mask,.ob-ring,.ob-pop{ transition:none !important; } }
@@ -86,3 +82,5 @@
 #obReplayBtn{ position:fixed; right:16px; bottom:16px; z-index:9500; display:none; align-items:center; gap:7px; background:var(--bg-card,#fff); border:1px solid var(--border,#e2e6ea); border-radius:999px; padding:6px 13px 6px 7px; box-shadow:0 6px 18px rgba(8,16,26,.22); cursor:pointer; color:var(--text,#1a2330); font-size:12.5px; font-weight:800; transition:.15s; }
 #obReplayBtn:hover{ border-color:var(--ob-owl-amber); transform:translateY(-1px); }
 #obReplayBtn .ob-owl{ --ob-owl-size:26px; filter:none; animation:none; }
+
+#obReplayBtn .owl-wing{animation:none;will-change:auto}
