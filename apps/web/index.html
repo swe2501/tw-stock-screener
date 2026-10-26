@@ -10762,13 +10762,17 @@
         + '<div class="scan-meta"><span>篩選運算中…可切換其他畫面，完成後回來即可看到結果</span><span id="scanPct">0%</span></div>';
       area.appendChild(bar);
       _scanT0 = Date.now();
-      // 進度％：後端一次算完才回、無中途進度 → 依「預期時長」時間估計推進，封頂 95% 等真結果，
-      // 完成時（renderResults）記錄實際耗時到 localStorage，下次自適應校準。
+      // 進度％：後端一次算完才回、沒有中途進度回報，無法顯示「真實百分比」。
+      // 舊版用線性＋封頂 95% → 一旦實際耗時超過預期就卡在 95% 不動（使用者反映的問題）。
+      // 改用「持續前進、逐漸趨緩」的指數趨近曲線：預期時間約到 90%，超過預期仍會緩步爬向 99%（永不卡死），
+      // 真結果回來時（renderResults）才補到 100%；每次完成記錄實際耗時，下次自適應校準 expect。
       var expect = 9000; try{ var v = parseInt(localStorage.getItem('zm_scan_ms')); if(v > 1500 && v < 120000) expect = v; }catch(e){}
       var fill = bar.querySelector('.scan-fill');
       _scanTimer = setInterval(function(){
-        var pct = Math.min(95, (Date.now()-_scanT0) / expect * 100);
-        if(fill) fill.style.width = pct.toFixed(0)+'%';
+        var frac = (Date.now()-_scanT0) / expect;
+        var pct = 99.4 * (1 - Math.exp(-frac * 2.4));   // 單調遞增、趨近但不到 100；frac=1≈90%、frac=2≈98.6%
+        if(pct > 99.4) pct = 99.4;
+        if(fill) fill.style.width = pct.toFixed(1)+'%';
         var s = document.getElementById('scanPct');
         if(s) s.textContent = Math.round(pct)+'%';
       }, 100);
