@@ -4,7 +4,7 @@ if(!scan||!process.env.CHART_LIBRARY_PATH)throw Error('Set VISUAL_SCAN_PATH and 
 const source=JSON.parse(fs.readFileSync(path.join(scan,'stocks/1236/source.json'),'utf8'));
 const data=JSON.parse(fs.readFileSync(path.join(scan,'results.json'),'utf8'));
 (async()=>{const browser=await chromium.launch({channel:'msedge',headless:true});try{const page=await browser.newPage({viewport:{width:1500,height:1000}}),errors=[],paid=[];
-page.on('pageerror',e=>errors.push(e.message));await page.addInitScript(()=>{localStorage.setItem('sb_token','fixture');localStorage.setItem('sb_user','{"id":"fx","email":"swe250165@gmail.com"}');});
+page.on('pageerror',e=>errors.push(e.message));await page.addInitScript(()=>{localStorage.setItem('fqi_onboarded_v1','1');localStorage.setItem('sb_token','fixture');localStorage.setItem('sb_user','{"id":"fx","email":"swe250165@gmail.com"}');});
 await page.route('**/*',r=>{const u=new URL(r.request().url());if(u.hostname==='api.openai.com'||u.searchParams.get('stat')==='aibuy')paid.push(u.toString());
  if(u.hostname==='unpkg.com'&&u.pathname.includes('lightweight-charts'))return r.fulfill({path:process.env.CHART_LIBRARY_PATH,contentType:'text/javascript'});
  if(u.pathname==='/api/chart')return r.fulfill({json:source});
