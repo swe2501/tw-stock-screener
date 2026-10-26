@@ -32,10 +32,11 @@
   /* ── 偏好 ── */
   var PREFS = [
     { id: 'event', ic: '🎯', t: '事件交易派', d: '題材、展覽、法說、話題焦點' },
-    { id: 'tech', ic: '📈', t: '技術型態派', d: '掏金篩選器、型態、K 線工具' },
-    { id: 'chip', ic: '🧩', t: '籌碼主力派', d: '主力訊號、三大法人', vip: true },
-    { id: 'value', ic: '💰', t: '存股/價值派', d: '企業價值357、配息、ETF' },
-    { id: 'macro', ic: '🌏', t: '大盤總經派', d: '多空廣度、美債對標、國際指標' }
+    { id: 'tech', ic: '📈', t: '技術型態派', d: '篩選器、型態、壓力支撐、K 線' },
+    { id: 'chip', ic: '🧩', t: '籌碼主力派', d: '主力訊號、三大法人、神燈冥燈', vip: true },
+    { id: 'value', ic: '💰', t: '存股/價值派', d: '企業價值357、現金殖利率' },
+    { id: 'etf', ic: '📦', t: 'ETF 派', d: 'ETF 探索、配息、相似度、折溢價' },
+    { id: 'macro', ic: '🌏', t: '大盤總經派', d: '貪婪指標、外資空單、多空廣度' }
   ];
 
   /* ── 步驟定義（data-driven）── */
@@ -53,22 +54,29 @@
   function prefSteps(prefs) {
     var s = [];
     if (prefs.event) s.push(
-      { title: '話題族群・事件交易', body: '事件派看這裡：<b>未來行事曆</b>可看「即將展覽」的相關個股；<b>話題熱度</b>看哪些族群正在發酵。', feature: 'hottopics', before: function () { go('hottopics'); }, locate: function () { return navItem('話題'); } }
+      { title: '話題族群・事件交易', body: '事件派看這裡：<b>未來行事曆</b>可看「即將展覽」的相關個股；<b>話題熱度</b>看哪些族群正在發酵。', feature: 'hottopics', before: function () { go('hottopics'); }, locate: function () { return navItem('話題'); } },
+      { title: '題材列表・產業地圖', body: '想從主題找股？<b>題材列表</b>列出每個題材的成分股；<b>產業地圖</b>看資金在各產業間流動。', locate: function () { return navItem('題材列表'); } }
     );
     if (prefs.tech) s.push(
       { title: '掏金篩選器・技術型態', body: '勾選<b>型態／K棒／缺口／漲停跌停／指標</b>等條件篩出個股；點結果開 K 圖，還能用左右箭頭切換上一檔/下一檔。', before: function () { go('screen'); }, locate: function () { return byId('proScreenLayout') || document.querySelector('.sc-panel'); } },
-      { title: 'K 圖畫線工具', body: '開任一檔 K 圖，右側研究工具可畫<b>直線（按住拖曳）</b>、水平/垂直線、通道、黃金分割等，輔助判斷。', locate: function () { return navItem('掏金篩選器'); } }
+      { title: 'K 圖畫線工具', body: '開任一檔 K 圖，右側研究工具可畫<b>直線（按住拖曳）</b>、水平/垂直線、通道、黃金分割等，輔助判斷。', locate: function () { return navItem('掏金篩選器'); } },
+      { title: '壓力支撐・亮燈區', body: '<b>壓力支撐逼近</b>找接近關鍵價位的股；<b>上漲下跌亮燈區</b>快速掃出今日轉強/轉弱。', locate: function () { return navItem('壓力支撐逼近'); } }
     );
     if (prefs.chip) s.push(   // vip:true → 非 VIP 會在 build 階段整步濾掉
       { title: '主力訊號・不籌吃穿', body: '<b>勝率前 20 名分點</b>的大單進場訊號，與 K 圖紫色箭頭同源可對照。', vip: true, locate: function () { return navItem('不籌吃穿') || navItem('主力'); } },
-      { title: '三大法人買賣超', body: '外資、投信、自營<b>個股買賣超</b>，追籌碼動向。', vip: true, locate: function () { return navItem('三大法人'); } }
+      { title: '三大法人買賣超', body: '外資、投信、自營<b>個股買賣超</b>，追籌碼動向。', vip: true, locate: function () { return navItem('三大法人'); } },
+      { title: '神燈與冥燈', body: '主力<b>連續買超（神燈）／連續賣超（冥燈）</b>的個股清單，一眼看主力在養還是在倒。', feature: 'mingdeng', locate: function () { return navItem('神燈'); } }
     );
     if (prefs.value) s.push(
-      { title: '企業價值 357・存股', body: '掏金篩選器裡的<b>企業價值357</b>用現金殖利率把個股分「便宜／合理／昂貴」，適合存股/價值派。', before: function () { go('screen'); }, locate: function () { return byId('proScreenLayout') || document.querySelector('.sc-panel'); } },
-      { title: 'ETF 探索・配息', body: '不想選個股就看 <b>ETF 探索</b>：規模排行、成分股、配息行事曆、折溢價、資金流。', before: function () { go('etfx'); }, locate: function () { return navItem('ETF'); } }
+      { title: '企業價值 357・存股', body: '掏金篩選器裡的<b>企業價值357</b>用現金殖利率把個股分「便宜／合理／昂貴」，適合存股/價值派長期布局。', before: function () { go('screen'); }, locate: function () { return byId('proScreenLayout') || document.querySelector('.sc-panel'); } }
+    );
+    if (prefs.etf) s.push(
+      { title: 'ETF 探索', body: '不想選個股就看 <b>ETF 探索</b>：規模排行、成分股、相似度、重倉股、折溢價、資金流一次看。', before: function () { go('etfx'); }, locate: function () { return navItem('ETF'); } },
+      { title: 'ETF 配息行事曆', body: '<b>配息行事曆</b>看各 ETF 的除息/配息日與金額，方便規劃月月配、季配組合。', locate: function () { return navItem('配息行事曆'); } }
     );
     if (prefs.macro) s.push(
-      { title: '三大法人動向', body: '總經派再補一塊：<b>三大法人個股買賣超</b>看外資投信主力的錢往哪流。', locate: function () { return navItem('三大法人'); } }
+      { title: '貪婪指標', body: '全市場<b>情緒溫度</b>（極度恐懼～極度貪婪），判斷現在是追高還是撿便宜的時機。', locate: function () { return navItem('貪婪指標'); } },
+      { title: '外資空單溫度計', body: '<b>外資期貨空單</b>的相對高低溫度，搭配現貨買賣超判斷外資真實方向。', feature: 'fhedge', locate: function () { return navItem('外資空單溫度計'); } }
     );
     return s;
   }
@@ -137,14 +145,29 @@
     }
     pop.style.left = Math.round(x) + 'px'; pop.style.top = Math.round(y) + 'px'; pop.style.visibility = '';
   }
+  // 導覽目標若在導覽列下拉(.mn-menu)內，暫時強制展開該選單；換步/結束時還原
+  var _openedMenu = null;
+  function _restoreMenu() { if (_openedMenu) { try { _openedMenu.style.display = ''; } catch (_) {} _openedMenu = null; } }
+  function _forceMenuFor(target) {
+    _restoreMenu();
+    var menu = (target && target.closest) ? target.closest('.mn-menu') : null;
+    if (menu) {
+      // 手機導覽列橫向捲動：先把這一組(.mn-grp)橫向捲進畫面，下拉(手機為整排全寬)才打得到
+      var grp = menu.closest('.mn-grp');
+      if (grp) { try { grp.scrollIntoView({ block: 'nearest', inline: 'center' }); } catch (_) {} }
+      menu.classList.remove('mn-hide'); menu.style.display = 'block'; _openedMenu = menu;
+    }
+  }
   function render() {
     var st = steps[idx]; if (!st) return finish(true);
     if (st.before) { try { st.before(); } catch (_) {} }
     setTimeout(function () {
       var target = null; try { target = st.locate ? st.locate() : null; } catch (_) {}
+      _forceMenuFor(target);        // 目標在下拉選單裡就先展開(並橫向捲進畫面)，聚光才打得到
       var rect = null;
       if (target && target.getBoundingClientRect) {
-        try { target.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (_) {}
+        var inMenu = target.closest && target.closest('.mn-menu');
+        if (!inMenu) { try { target.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (_) {} }  // 下拉項目已在頂部，不整頁捲動
         var r = target.getBoundingClientRect();
         if (r.width > 2 && r.height > 2 && r.bottom > 0 && r.top < innerHeight) rect = r;
       }
@@ -179,6 +202,7 @@
   function onResize() { if (!root || root.hidden) return; var st = steps[idx]; if (!st) return; var t = null; try { t = st.locate && st.locate(); } catch (_) {} var rect = t && t.getBoundingClientRect ? t.getBoundingClientRect() : null; if (rect && (rect.width < 2)) rect = null; spotlight(rect); var pop = root.querySelector('.ob-pop'); if (pop) placePop(pop, rect); }
   function onKey(e) { if (e.key === 'Escape') finish(false); else if (e.key === 'ArrowRight') { idx = Math.min(steps.length - 1, idx + 1); render(); } else if (e.key === 'ArrowLeft') { idx = Math.max(0, idx - 1); render(); } }
   function finish(completed) {
+    _restoreMenu();
     if (root) { root.hidden = true; }
     document.body.style.overflow = '';
     window.removeEventListener('resize', onResize); window.removeEventListener('keydown', onKey);
