@@ -114,7 +114,8 @@
     document.body.appendChild(root);
     return root;
   }
-  function clearMasks() { ['t', 'b', 'l', 'r'].forEach(function (m) { var e = root.querySelector('.ob-mask[data-m="' + m + '"]'); e.style.cssText = 'position:fixed;'; }); root.querySelector('.ob-ring').style.opacity = '0'; }
+  var _ringShown = false; // 聚光環目前是否顯示中：決定下一次要「瞬間定位」還是「平滑滑動」
+  function clearMasks() { ['t', 'b', 'l', 'r'].forEach(function (m) { var e = root.querySelector('.ob-mask[data-m="' + m + '"]'); e.style.cssText = 'position:fixed;'; }); root.querySelector('.ob-ring').style.opacity = '0'; _ringShown = false; }
   function spotlight(rect) {
     var W = innerWidth, H = innerHeight, pad = 8;
     var t = root.querySelector('.ob-mask[data-m="t"]'), b = root.querySelector('.ob-mask[data-m="b"]'),
@@ -122,7 +123,7 @@
         ring = root.querySelector('.ob-ring');
     if (!rect) { // 無目標 → 整頁反灰、不挖孔
       t.style.cssText = 'position:fixed;inset:0;'; b.style.cssText = l.style.cssText = r.style.cssText = 'position:fixed;';
-      ring.style.opacity = '0'; return;
+      ring.style.opacity = '0'; _ringShown = false; return;
     }
     var x = Math.max(0, rect.left - pad), y = Math.max(0, rect.top - pad),
         w = Math.min(W, rect.right + pad) - x, h = Math.min(H, rect.bottom + pad) - y;
@@ -130,12 +131,18 @@
     b.style.cssText = 'position:fixed;left:0;top:' + (y + h) + 'px;right:0;bottom:0;';
     l.style.cssText = 'position:fixed;left:0;top:' + y + 'px;width:' + x + 'px;height:' + h + 'px;';
     r.style.cssText = 'position:fixed;left:' + (x + w) + 'px;top:' + y + 'px;right:0;height:' + h + 'px;';
-    ring.style.cssText += '';
-    ring.style.left = x + 'px'; ring.style.top = y + 'px'; ring.style.width = w + 'px'; ring.style.height = h + 'px'; ring.style.opacity = '1';
+    // 首次出現(或剛從無目標步驟回來)：瞬間定位後淡入，避免從左上角滑入；步驟間則維持平滑滑動。
+    if (!_ringShown) ring.style.transition = 'none';
+    ring.style.left = x + 'px'; ring.style.top = y + 'px'; ring.style.width = w + 'px'; ring.style.height = h + 'px';
+    if (!_ringShown) { void ring.offsetWidth; ring.style.transition = ''; _ringShown = true; }
+    ring.style.opacity = '1';
   }
   function placePop(pop, rect) {
     var W = innerWidth, H = innerHeight, m = 12;
-    pop.style.visibility = 'hidden'; pop.style.left = '0px'; pop.style.top = '0px';
+    // 定位期間關掉過渡：氣泡每步重新建立，若保留 transition 會從預設 (0,0) 滑到定位＝左上角跳動。
+    // 先無過渡量測+定位，讓它直接出現在正確位置（進場靠 .ob-pop-in 淡入），下一步再恢復過渡。
+    pop.style.transition = 'none';
+    pop.style.visibility = 'hidden';
     var pw = pop.offsetWidth, ph = pop.offsetHeight, x, y;
     if (!rect) { x = (W - pw) / 2; y = (H - ph) / 2; }
     else {
@@ -144,6 +151,8 @@
       x = Math.min(W - pw - m, Math.max(m, rect.left + rect.width / 2 - pw / 2));
     }
     pop.style.left = Math.round(x) + 'px'; pop.style.top = Math.round(y) + 'px'; pop.style.visibility = '';
+    void pop.offsetWidth; // 強制 reflow 定位生效後再恢復過渡
+    pop.style.transition = '';
   }
   // 導覽目標若在導覽列下拉(.mn-menu)內，暫時強制展開該選單；換步/結束時還原
   var _openedMenu = null;
