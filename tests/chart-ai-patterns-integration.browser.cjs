@@ -1,7 +1,7 @@
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),{chromium}=require('playwright');
 const web=path.resolve(__dirname,'../apps/web'),scan=process.env.VISUAL_SCAN_PATH;
 if(!scan||!process.env.CHART_LIBRARY_PATH)throw Error('Set VISUAL_SCAN_PATH and CHART_LIBRARY_PATH for local saved-data integration QA');
-const source=JSON.parse(fs.readFileSync(path.join(scan,'stocks/1236/source.json'),'utf8'));
+const source=JSON.parse(fs.readFileSync(path.join(scan,'stocks/3031/source.json'),'utf8'));
 const data=JSON.parse(fs.readFileSync(path.join(scan,'results.json'),'utf8'));
 (async()=>{const browser=await chromium.launch({channel:'msedge',headless:true});try{const page=await browser.newPage({viewport:{width:1500,height:1000}}),errors=[],paid=[];
 page.on('pageerror',e=>errors.push(e.message));await page.addInitScript(()=>{localStorage.setItem('fqi_onboarded_v1','1');localStorage.setItem('sb_token','fixture');localStorage.setItem('sb_user','{"id":"fx","email":"swe250165@gmail.com"}');});
@@ -13,7 +13,7 @@ await page.route('**/*',r=>{const u=new URL(r.request().url());if(u.hostname==='
  if(u.pathname==='/auth/v1/user')return r.fulfill({json:{id:'fx',email:'swe250165@gmail.com'}});
  if(u.origin==='https://visual-site.fixture.test'){const file=path.resolve(web,'.'+(u.pathname==='/'?'/index.html':u.pathname));if(file.startsWith(web+path.sep)&&fs.existsSync(file)&&fs.statSync(file).isFile())return r.fulfill({path:file});}
  return r.fulfill({json:[]});});
-await page.goto('https://visual-site.fixture.test/');await page.evaluate(()=>openChart('1236','宏亞',''));
+await page.goto('https://visual-site.fixture.test/');await page.evaluate(()=>openChart('3031','佰鴻',''));
 await page.waitForFunction(()=>AcademyChartBridge.get().series&&AcademyChartBridge.get().candles.length>120);
 await page.locator('.chart-tools-pin input').check();
 await page.evaluate(()=>{const c=AcademyChartBridge.get().chart;window.patternLines=0;const add=c.addLineSeries.bind(c),remove=c.removeSeries.bind(c);c.addLineSeries=function(o){const s=add(o);s.__patternQA=true;patternLines++;return s};c.removeSeries=function(s){if(s.__patternQA)patternLines--;return remove(s)};_aiBuyToggle();});

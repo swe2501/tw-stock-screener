@@ -23,6 +23,8 @@
   if(pattern.type==='w_bottom'){
    const roles=['lead_in','first_low','middle_peak','second_low','recovery'];
    if(pattern.points.length!==5||pattern.points.some((p,i)=>p.role!==roles[i]||p.field!==['high','low','high','low','close'][i]))throw Error('W轉折欄位不完整');
+   const neck=pattern.points[2].value,right=segment.filter(b=>b.time>pattern.points[3].time);
+   if(!right.length||Math.max(...right.map(b=>b.high))<neck)throw Error('右側回升尚未碰到頸線，不列為已確認W');
   }
   if(pattern.neckline){const n=pattern.neckline;if(!finite(n.value)||!map.has(n.start)||!map.has(n.end)||n.start>=n.end)throw Error('頸線座標無效');
    if(pattern.type==='w_bottom'&&(n.value!==pattern.points[2].value||n.start!==pattern.points[2].time||n.end!==pattern.points[4].time))throw Error('頸線與中峰不一致');}
@@ -39,7 +41,7 @@
    const response=await fetch((window.__API||'')+'/api/screen?stat=visual_patterns&code='+encodeURIComponent(code));
    if(response.ok){const data=await response.json();if(validSnapshot(data)&&data.records.length)return data;}
   }catch{}
-  if(!promise)promise=fetch('assets/codex-visual-patterns.json?v=scan100-20261025').then(r=>{if(!r.ok)throw Error('尚未取得判讀結果');return r.json();}).then(d=>{if(!validSnapshot(d))throw Error('判讀資料格式不完整');return d;}).catch(e=>{promise=null;throw e;});
+  if(!promise)promise=fetch('assets/codex-visual-patterns.json?v=scan100-neckline-20261026').then(r=>{if(!r.ok)throw Error('尚未取得判讀結果');return r.json();}).then(d=>{if(!validSnapshot(d))throw Error('判讀資料格式不完整');return d;}).catch(e=>{promise=null;throw e;});
   return promise;
  }
  function periodOf(ctx){return ctx.period==='day'?'daily':ctx.period==='week'?'weekly':null;}
