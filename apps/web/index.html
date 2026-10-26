@@ -4067,11 +4067,11 @@
     @media(max-width:820px){.bx-list{grid-template-columns:1fr;}}
   </style>
   <div id="boxView" style="display:none">
-    <header class="aps-hero"><div><div class="aps-eyebrow">PATTERN RESEARCH</div><h2>AI型態判斷</h2><p>從型態找到研究起點，切換週期查看對應的K線。</p><p id="aiPatternScope">讀取判讀範圍…</p></div><div class="aps-hero-symbol" aria-hidden="true">W</div></header>
+    <header class="aps-hero"><div><div class="aps-eyebrow">PATTERN RESEARCH</div><h2>AI型態判斷</h2><p>找最新K棒附近、整理接近完成的型態，觀察準備突破或跌破的位置。</p><p id="aiPatternScope">讀取判讀範圍…</p></div><div class="aps-hero-symbol" aria-hidden="true">W</div></header>
     <div id="aiPatternTabs" class="aps-tabs" role="tablist" aria-label="型態分類"></div>
     <section id="aiPatternSavedPanel" role="tabpanel" aria-label="已保存的型態判讀">
       <div class="aps-toolbar"><div><h3>判讀結果</h3><small id="aiPatternResultCount" aria-live="polite"></small></div>
-        <div id="aiPatternFilters" class="aps-filters"><input id="aiPatternSearch" type="search" placeholder="搜尋代號／股名" aria-label="搜尋型態股票"><select id="aiPatternPeriod" aria-label="篩選判讀週期"><option value="all">日K＋週K</option><option value="daily">僅日K</option><option value="weekly">僅週K</option></select><select id="aiPatternState" aria-label="篩選判讀狀態"><option value="confirmed">已確認W</option><option value="uncertain">待複核</option><option value="negative">未見W</option></select></div>
+        <div id="aiPatternFilters" class="aps-filters"><input id="aiPatternSearch" type="search" placeholder="搜尋代號／股名" aria-label="搜尋型態股票"><select id="aiPatternPeriod" aria-label="篩選判讀週期"><option value="all">日K＋週K</option><option value="daily">僅日K</option><option value="weekly">僅週K</option></select><select id="aiPatternState" aria-label="篩選判讀狀態"><option value="ready">準備突破／跌破</option><option value="confirmed">歷史W案例</option><option value="uncertain">待複核</option><option value="negative">未見W</option></select></div>
       </div>
       <div id="aiPatternResults"></div>
       <p class="aps-note">日K判讀120根；週K取可取得的三年資料。每張小圖是已判讀區段的轉折輪廓示意，實際價格請開啟K圖。型態為保存的研究結果，並非即時買進訊號；待複核結果不畫輔助線。</p>
@@ -17248,7 +17248,8 @@
       finishHomeScroll();
       cancelAnimationFrame(scrollFrame);
       scrollFrame=requestAnimationFrame(()=>{
-        const smooth=animate&&scrollY>0&&!matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const tour=document.getElementById('obRoot');
+        const smooth=animate&&!(tour&&!tour.hidden)&&scrollY>0&&!matchMedia('(prefers-reduced-motion: reduce)').matches;
         if(smooth){
           const events=new AbortController(),deadline=performance.now()+5000;
           document.body.classList.add('pro-home-scrolling');
@@ -18066,8 +18067,8 @@
 <link rel="stylesheet" href="assets/broker-workspace.css?v=5">
 <script src="assets/chart-viewport-fit.js?v=22" defer></script>
 <script src="assets/screen-inline-calendar.js?v=records-only13" defer></script>
-<link rel="stylesheet" href="assets/onboarding-tour.css?v=wing-fix-20261026">
-<script src="assets/onboarding-tour.js?v=wing-fix-20261026" defer></script>
+<link rel="stylesheet" href="assets/onboarding-tour.css?v=guide-bubble-raised-20261026">
+<script src="assets/onboarding-tour.js?v=stable-position-20261026" defer></script>
 <link rel="stylesheet" href="assets/zhenming-hidden.css?v=6">
 <script src="assets/zhenming-hidden.js?v=5" defer></script>
 <script src="assets/screen-log.js?v=calendar-direct31" defer></script>
@@ -18111,6 +18112,6 @@
 <script src="assets/exhibition-calendar.js?v=localfix-3" defer></script>
 <link rel="stylesheet" href="assets/responsive-layout.css?v=1">
 <link rel="stylesheet" href="assets/ai-pattern-screen.css?v=20261026-1">
-<script src="assets/ai-pattern-screen.js?v=20261026-1" defer></script>
+<script src="assets/ai-pattern-screen.js?v=20261026-2" defer></script>
 </body>
 </html>

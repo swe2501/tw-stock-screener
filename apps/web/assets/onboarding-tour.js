@@ -40,7 +40,7 @@
     return null;
   }
   function byId(id) { return document.getElementById(id); }
-  function go(view) { try { if (window._showView) window._showView(view); } catch (_) {} }
+  function go(view) { try { var cfg=window._VIEWS&&window._VIEWS[view], current=cfg&&byId(cfg.el); if(current&&getComputedStyle(current).display!=='none')return; if (window._showView) window._showView(view); } catch (_) {} }
 
   /* ── 偏好 ── */
   var PREFS = [
@@ -115,7 +115,7 @@
   }
 
   /* ── 導覽引擎 ── */
-  var root, steps = [], idx = 0;
+  var root, steps = [], idx = 0, renderTimer = null, renderVersion = 0;
   function el(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
   function ensureRoot() {
     if (root) return root;
@@ -177,6 +177,7 @@
         y = Math.min(H - ph - m, Math.max(m, rect.top));
       }
     }
+    x = Math.max(m, Math.min(W - pw - m, x)); y = Math.max(m, Math.min(H - ph - m, y));
     pop.style.left = Math.round(x) + 'px'; pop.style.top = Math.round(y) + 'px'; pop.style.visibility = '';
     void pop.offsetWidth; // 強制 reflow 定位生效後再恢復過渡
     pop.style.transition = '';
@@ -196,24 +197,31 @@
   }
   function render() {
     var st = steps[idx]; if (!st) return finish(true);
+    clearTimeout(renderTimer);
+    var version = ++renderVersion;
+    var previous = root.querySelector('.ob-guide, .ob-center'); if (previous) previous.remove();
     if (st.before) { try { st.before(); } catch (_) {} }
-    setTimeout(function () {
+    renderTimer = setTimeout(function () {
+      if (version !== renderVersion || root.hidden) return;
       var target = null; try { target = st.locate ? st.locate() : null; } catch (_) {}
       _forceMenuFor(target);        // 目標在下拉選單裡就先展開(並橫向捲進畫面)，聚光才打得到
       var rect = null;
       if (target && target.getBoundingClientRect) {
         var inMenu = target.closest && target.closest('.mn-menu');
-        if (!inMenu) { try { target.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (_) {} }  // 下拉項目已在頂部，不整頁捲動
+        if (!inMenu) { try { target.scrollIntoView({ block: 'center', behavior: 'instant' }); } catch (_) {} }  // 下拉項目已在頂部，不整頁捲動
         var r = target.getBoundingClientRect();
         if (r.width > 2 && r.height > 2 && r.bottom > 0 && r.top < innerHeight) rect = r;
       }
       var hole = spotlight(rect);
-      var old = root.querySelector('.ob-pop, .ob-center'); if (old) old.remove();
-      var pop = el('div', 'ob-pop ob-pop-in');
+      var old = root.querySelector('.ob-guide, .ob-center'); if (old) old.remove();
+      var guide = el('div', 'ob-guide ob-pop-in');
+      var host = el('div', 'ob-guide-host', owlMarkup() + '<span>先見領航員</span>');
+      var pop = el('div', 'ob-pop');
+      guide.appendChild(host); guide.appendChild(pop);
       var dots = steps.map(function (_, i) { return '<i class="' + (i === idx ? 'on' : '') + '"></i>'; }).join('');
       pop.innerHTML =
         '<button class="ob-skip" type="button">略過導覽</button>' +
-        '<div style="display:flex;gap:10px;align-items:flex-start">' + owlMarkup() +
+        '<div class="ob-copy">' +
         '<div style="flex:1;min-width:0"><div class="ob-step">第 ' + (idx + 1) + ' / ' + steps.length + ' 步</div>' +
         '<div class="ob-title">' + st.title + (st.locked ? ' <span class="ob-badge">會員功能</span>' : '') + '</div>' +
         '<div class="ob-body">' + st.body + (st.locked ? '<br><span style="color:var(--ob-owl-amber2)">（此為會員功能，升級/開通後即可使用）</span>' : '') + '</div></div></div>' +
@@ -221,8 +229,9 @@
         (idx > 0 ? '<button class="ob-btn" data-a="prev" type="button">上一步</button>' : '') +
         '<button class="ob-btn pri" data-a="next" type="button">' + (idx === steps.length - 1 ? '完成' : '下一步') + '</button>' +
         '</div></div>';
-      root.appendChild(pop);
-      placePop(pop, hole);
+      guide.style.setProperty('--ob-progress', ((idx + 1) / steps.length * 100) + '%');
+      root.appendChild(guide);
+      placePop(guide, hole);
       pop.querySelector('.ob-skip').onclick = function () { finish(false); };
       pop.querySelector('[data-a="next"]').onclick = function () { idx++; render(); };
       var pv = pop.querySelector('[data-a="prev"]'); if (pv) pv.onclick = function () { idx = Math.max(0, idx - 1); render(); };
@@ -235,9 +244,10 @@
     clearMasks(); render();
     window.addEventListener('resize', onResize); window.addEventListener('keydown', onKey);
   }
-  function onResize() { if (!root || root.hidden) return; var st = steps[idx]; if (!st) return; var t = null; try { t = st.locate && st.locate(); } catch (_) {} var rect = t && t.getBoundingClientRect ? t.getBoundingClientRect() : null; if (rect && (rect.width < 2)) rect = null; var hole = spotlight(rect); var pop = root.querySelector('.ob-pop'); if (pop) placePop(pop, hole); }
+  function onResize() { if (!root || root.hidden) return; var st = steps[idx]; if (!st) return; var t = null; try { t = st.locate && st.locate(); } catch (_) {} var rect = t && t.getBoundingClientRect ? t.getBoundingClientRect() : null; if (rect && (rect.width < 2)) rect = null; var hole = spotlight(rect); var pop = root.querySelector('.ob-guide'); if (pop) placePop(pop, hole); }
   function onKey(e) { if (e.key === 'Escape') finish(false); else if (e.key === 'ArrowRight') { idx = Math.min(steps.length - 1, idx + 1); render(); } else if (e.key === 'ArrowLeft') { idx = Math.max(0, idx - 1); render(); } }
   function finish(completed) {
+    clearTimeout(renderTimer); renderVersion++;
     _restoreMenu();
     if (root) { root.hidden = true; }
     document.body.style.overflow = '';
@@ -250,7 +260,7 @@
   /* ── 歡迎 / 偏好選單 ── */
   function showMenu() {
     ensureRoot(); root.hidden = false; document.body.style.overflow = 'hidden'; clearMasks();
-    var old = root.querySelector('.ob-pop, .ob-center'); if (old) old.remove();
+    var old = root.querySelector('.ob-guide, .ob-center'); if (old) old.remove();
     var wrap = el('div', 'ob-center'); var card = el('div', 'ob-card ob-pop-in');
     var prefHtml = PREFS.map(function (p) {
       var locked = p.vip && !canBroker();

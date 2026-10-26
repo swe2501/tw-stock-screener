@@ -24,14 +24,30 @@ const source=JSON.parse(fs.readFileSync(path.join(scan,'stocks/8081/source.json'
  const size=await owl.boundingBox();assert(Math.abs(size.width/size.height-1789/879)<.01,'original logo ratio');
  const ids=await page.locator('.owl-art [id]').evaluateAll(es=>es.map(e=>e.id));assert.equal(ids.length,new Set(ids).size,'unique clip and mask IDs per logo');
  async function phase(t){await owl.evaluate((e,t)=>e.getAnimations({subtree:true}).forEach(a=>{a.pause();a.currentTime=t}),t);}
+ const frames=await owl.locator('.owl-wing-left').first().evaluate(e=>{const a=e.getAnimations()[0];return {duration:a.effect.getTiming().duration,offsets:a.effect.getKeyframes().map(k=>k.computedOffset)};});
+ assert.equal(frames.duration,1600);assert.deepEqual(frames.offsets,[0,.5,1],'continuous strokes without hold keyframes');
  await phase(0);await page.screenshot({path:path.join(out,'tour-rest.png'),animations:'allow'});
  await owl.screenshot({path:path.join(out,'owl-rest.png'),scale:'css'});
- await phase(1344);await page.screenshot({path:path.join(out,'tour-flap.png'),animations:'allow'});
+ await phase(800);await page.screenshot({path:path.join(out,'tour-flap.png'),animations:'allow'});
  await owl.screenshot({path:path.join(out,'owl-flap.png'),scale:'css'});
  assert.equal(await owl.locator('.owl-body').evaluateAll(es=>es.every(e=>getComputedStyle(e).transform==='none')),true,'head/body/book never transform');
  await page.setViewportSize({width:375,height:900});await page.screenshot({path:path.join(out,'tour-mobile.png'),animations:'allow'});assert.equal(await page.locator('#obRoot').evaluate(e=>e.scrollWidth<=innerWidth),true,'mobile overlay within viewport');
- await page.locator('#themeToggle').evaluate(e=>e.click());await phase(1344);await page.screenshot({path:path.join(out,'tour-dark.png'),animations:'disabled'});
+ await page.locator('#themeToggle').evaluate(e=>e.click());await phase(800);await page.screenshot({path:path.join(out,'tour-dark.png'),animations:'disabled'});
  assert.equal(await owl.locator('.owl-dark-v2').evaluate(e=>getComputedStyle(e).display!=='none'),true);
- await page.emulateMedia({reducedMotion:'reduce'});assert.equal(await owl.evaluate(e=>e.getAnimations({subtree:true}).length),0,'reduced motion stops wings');
+ await page.setViewportSize({width:1440,height:1000});
+ await page.evaluate(()=>{window.__tourScrolls=[];const original=Element.prototype.scrollIntoView;Element.prototype.scrollIntoView=function(options){window.__tourScrolls.push(options);return original.call(this,options);};});
+ await page.locator('#obRoot [data-a="start"]').click();
+ await page.locator('.ob-guide').waitFor();
+ await page.waitForTimeout(450);
+ const stable=await page.locator('.ob-guide').boundingBox();const scroll=await page.evaluate(()=>scrollY);await page.waitForTimeout(400);assert.equal(await page.evaluate(()=>scrollY),scroll,'no late scroll after first step appears');assert.equal((await page.locator('.ob-guide').boundingBox()).y,stable.y,'first bubble stays positioned');
+ assert.equal(await page.evaluate(()=>window.__tourScrolls.some(o=>o?.behavior==='smooth')),false,'tour never measures during smooth scrolling');
+ assert.equal(await page.locator('.ob-pop .ob-owl').count(),0,'owl stands outside speech bubble');
+ assert.equal(await page.locator('.ob-guide-host .ob-owl').count(),1);
+ for(const width of [1440,375]){
+  await page.setViewportSize({width,height:950});await page.waitForTimeout(350);
+  const bounds=await page.locator('.ob-guide').boundingBox();assert(bounds.x>=0&&bounds.y>=0&&bounds.x+bounds.width<=width+1&&bounds.y+bounds.height<=951,'guide within viewport '+width+' '+JSON.stringify(bounds));
+  await page.screenshot({path:path.join(out,'guide-bubble-'+width+'.png')});
+ }
+ await page.emulateMedia({reducedMotion:'reduce'});assert.equal(await page.locator('.ob-guide .owl-art').evaluate(e=>e.getAnimations({subtree:true}).length),0,'reduced motion stops wings');
  assert.deepEqual(errors,[]);assert.deepEqual(paid,[]);console.log('PASS: unique SVG layers, original aspect ratio, stationary body, wing motion, light/dark/mobile, reduced motion, no inference.');
  }finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1});
