@@ -86,6 +86,8 @@
 #obReplayBtn .ob-owl{ --ob-owl-size:26px; filter:none; animation:none; }
 
 #obReplayBtn .owl-wing{animation:none;will-change:auto}
+/* 會員中心開啟時隱藏重看導覽鈕：導覽是針對公開站功能，且會員中心/策略工作台右下角有「聊聊策略」聊天浮標(z 12500)，避免兩者在角落重疊 */
+body.mc-open #obReplayBtn{ display:none !important; }
 
 /* The guide stands beside its speech bubble, outside the card surface. */
 .ob-guide{position:fixed;z-index:3;display:flex;align-items:center;gap:22px;width:568px;max-width:calc(100vw - 28px)}
