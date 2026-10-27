@@ -22,7 +22,7 @@
   for(const p of pattern.points){const b=map.get(p.time);if(!/^\d{4}-\d{2}-\d{2}$/.test(p.time)||p.time<=previous||!b||!['high','low','close','open'].includes(p.field)||!finite(p.value)||Math.abs(b[p.field]-p.value)>1e-6)throw Error('轉折日期或價格核對失敗');previous=p.time;}
   if(pattern.type==='w_bottom'){
    const roles=['lead_in','first_low','middle_peak','second_low','recovery'];
-   if(pattern.points.length!==5||pattern.points.some((p,i)=>p.role!==roles[i]||p.field!==['high','low','high','low','close'][i]))throw Error('W轉折欄位不完整');
+   if(pattern.points.length!==5||pattern.points.some((p,i)=>p.role!==roles[i]||(i===4?!['close','high'].includes(p.field):p.field!==['high','low','high','low'][i])))throw Error('W轉折欄位不完整');
    const neck=pattern.points[2].value,right=segment.filter(b=>b.time>pattern.points[3].time);
    if(pattern.points[0].value<neck)throw Error('左側第一個頂點未碰到頸線，不列為已確認W');
    if(pattern.status!=='forming'&&(!right.length||Math.max(...right.map(b=>b.high))<neck))throw Error('右側回升尚未碰到頸線，不列為已確認W');
@@ -49,7 +49,8 @@
   const [base,response]=await Promise.all([snapshotBase(code),fetch('assets/codex-forming-patterns.json?v=20261027-1')]);
   if(!response.ok)throw Error('形成中判讀資料暫時無法取得');
   const extra=await response.json();if(!validSnapshot(extra))throw Error('形成中資料格式無效');
-  return {...base,records:[...base.records.filter(r=>!extra.records.some(f=>f.code===r.code&&f.timeframe===r.timeframe)),...extra.records]};
+  const market=await fetch('assets/codex-market-scan.json?v=20261027-1').then(r=>{if(!r.ok)throw Error('全市場判讀資料暫時無法取得');return r.json();});if(!validSnapshot(market))throw Error('全市場判讀資料格式無效');extra.records.push(...market.records);
+  const merged=new Map(base.records.map(r=>[r.code+'|'+r.timeframe,r]));for(const r of extra.records)merged.set(r.code+'|'+r.timeframe,r);return {...base,records:[...merged.values()]};
  }
  function periodOf(ctx){return ctx.period==='day'?'daily':ctx.period==='week'?'weekly':null;}
  function periodLinks(host,records,ctx){
@@ -81,9 +82,12 @@
   const r=records.find(r=>r.timeframe===tf);
   if(!r||r.execution_status!=='reviewed'){panel.append(el('p',r?.execution_status==='data_failed'?'此週期行情取得失敗，尚未完成判讀。':'此股票的'+(tf==='daily'?'日K':'週K')+'尚未完成判讀。'));return;}
   panel.append(el('p',(tf==='daily'?'日K':'週K')+' · 判讀截至 '+r.data_as_of+' · '+r.bar_count+' 根','ai-pattern-meta'));
+  if(r.omitted_dates?.length){const details=el('details'),summary=el('summary','本次判讀略過 '+r.omitted_dates.length+' 根矛盾來源K棒');details.append(summary,el('p',r.omitted_dates.join('、')));panel.append(details);}
   if(r.history_complete===false)panel.append(el('p','可取得的歷史短於設定範圍，判讀僅涵蓋圖中實際資料。','ai-pattern-note'));
   if(r.classification==='forming')panel.append(el('strong','形成中：右側尚未觸及頸線，虛線僅表示候選輪廓。','ai-pattern-note'));
   panel.append(el('p',r.reason||'此筆待補判讀說明。'));
+  const firstLive=ctx.series?.data?.().find(b=>typeof b.time==='string')?.time;
+  if(r.recommended_range==='5y'&&r.patterns?.some(p=>p.points[0].time<firstLive)&&ctx.loadHistory){const b=el('button','載入五年週K，查看完整大W','ai-pattern-period-link');b.type='button';b.onclick=()=>ctx.loadHistory('5y');panel.append(b);}
   if(!Array.isArray(r.patterns)||!r.patterns.length){panel.append(el('p',r.classification==='uncertain'?'待審：目前不顯示輔助線。':'此視窗未辨識到符合標準的W。'));return;}
   if(ctx.adjusted){const b=el('button','切回一般'+(tf==='daily'?'日K':'週K')+'查看輔助線','ai-pattern-period-link');b.type='button';b.onclick=()=>ctx.switchPeriod(tf);panel.append(el('p','這筆判讀使用一般K線，還原模式不共用輔助線。'),b);return;}
   if(!ctx.chart||!ctx.series){panel.append(el('p','圖表仍在載入，稍後再查看。'));return;}

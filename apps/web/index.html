@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
@@ -20,7 +20,7 @@
   <script src="assets/site-theme.js"></script>
   <script src="assets/w-pattern-export.js?v=20261024-1"></script>
   <script src="assets/w-pattern-overlay.js?v=20261025-2"></script>
-  <script src="assets/chart-ai-patterns.js?v=20261027-5"></script>
+  <script src="assets/chart-ai-patterns.js?v=20261027-7"></script>
   <link rel="stylesheet" href="assets/chart-ai-patterns.css?v=20261026-3">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -4072,7 +4072,7 @@
     <div id="aiPatternTabs" class="aps-tabs" role="tablist" aria-label="型態分類"></div>
     <section id="aiPatternSavedPanel" role="tabpanel" aria-label="已保存的型態判讀">
       <div class="aps-toolbar"><div><h3>判讀結果</h3><small id="aiPatternResultCount" aria-live="polite"></small></div>
-        <div id="aiPatternFilters" class="aps-filters"><input id="aiPatternSearch" type="search" placeholder="搜尋代號／股名" aria-label="搜尋型態股票"><select id="aiPatternPeriod" aria-label="篩選判讀週期"><option value="all">日K＋週K</option><option value="daily">僅日K</option><option value="weekly">僅週K</option></select><select id="aiPatternState" aria-label="篩選判讀狀態"><option value="ready">準備突破／跌破</option><option value="forming">形成中</option><option value="confirmed">歷史W案例</option><option value="negative">歷史樣本・未見W</option></select></div>
+        <div id="aiPatternFilters" class="aps-filters"><input id="aiPatternSearch" type="search" placeholder="搜尋代號／股名" aria-label="搜尋型態股票"><select id="aiPatternPeriod" aria-label="篩選判讀週期"><option value="all">日K＋週K</option><option value="daily">僅日K</option><option value="weekly">僅週K</option></select><select id="aiPatternState" aria-label="篩選判讀狀態"><option value="ready">準備突破／跌破</option><option value="forming" selected>形成中</option><option value="confirmed">歷史W案例</option><option value="negative">歷史樣本・未見W</option></select></div>
       </div>
       <div id="aiPatternResults"></div>
       <p class="aps-note">日K判讀120根；週K取可取得的三年資料。每張小圖是已判讀區段的轉折輪廓示意，實際價格請開啟K圖。型態為保存的研究結果，並非即時買進訊號；待複核結果不畫輔助線。</p>
@@ -4364,6 +4364,7 @@
     <div class="ov-tabs" id="admTabs" style="margin-bottom:14px">
       <button class="on" type="button" data-t="members">會員管理</button>
       <button type="button" data-t="algo">算法公式</button>
+      <button type="button" data-t="office">AI 研究室</button>
       <button type="button" data-t="audit">稽核日誌</button>
       <button type="button" data-t="health" disabled title="Phase 2：排程/資料新鮮度">系統健康</button>
       <button type="button" data-t="usage" disabled title="Phase 2：需先加 usage_events">使用分析</button>
@@ -4497,8 +4498,10 @@
     function switchTab(t){
       _tab=t;
       el('admTabs').querySelectorAll('button').forEach(function(b){b.classList.toggle('on',b.dataset.t===t);});
+      if(window.AdminOffice) window.AdminOffice.hide();                 // 離開 AI 研究室就停止動畫與輪詢
       if(t==='members')loadMembers();
       else if(t==='algo')renderAlgo();
+      else if(t==='office'){ if(window.AdminOffice){ window.AdminOffice.show(el('admBody'),post); el('admNote').innerHTML='<b>說明</b> 角色狀態來自本機排程打卡（scripts/office_step.py），每分鐘自動更新；工作超過時限或背景回報中斷會標「卡住」。'; } else el('admBody').innerHTML='<div class="fc-empty">AI 研究室載入中，請稍候再點一次</div>'; }
       else if(t==='audit')renderAudit();
       else el('admBody').innerHTML='<div class="fc-empty">此分頁規劃中（見 docs/admin-backend-spec.md，Phase 2）。</div>';
     }
@@ -11626,7 +11629,7 @@
     function _visualPatternContext() {
       return {code:currentCode,period:window._chartPeriodKey||'day',adjusted:!!window._chartAdjusted,
         chart:chartInstance,series:candleSeriesRef,
-        switchPeriod:tf=>{if(tf==='weekly')loadWeeklyChart();else loadDailyChart();}};
+        switchPeriod:tf=>{if(tf==='weekly')loadWeeklyChart();else loadDailyChart();},loadHistory:range=>_loadPeriodChart('week',false,range)};
     }
     window._openSavedPatternChart=function(code,name,timeframe){
       openChart(String(code),name||'');
@@ -14629,11 +14632,12 @@
     function _syncAdjustedPeriodButtons(){
       Object.entries(_periodButtons).forEach(([key,def])=>{const button=document.getElementById(def[0]);if(!button)return;const adjusted=window._chartPeriodKey===key&&!!window._chartAdjusted;button.textContent=(adjusted?'還原':'')+def[1];button.dataset.adjusted=String(adjusted);button.title='選取'+def[1]+'；同一週期再按一次，切換一般／還原K線';button.setAttribute('aria-label',button.textContent+'，再次點擊切換'+(adjusted?'一般':'還原')+'K線');});
     }
-    function _loadPeriodChart(key,adjusted){
+    function _loadPeriodChart(key,adjusted,range='3y'){
       if(!_periodButtons[key])return;window._chartMode='candle';window._chartPeriodKey=key;window._chartAdjusted=!!adjusted;_setKlineChromeVisible(true);_syncAdjustedPeriodButtons();
       const def=_periodButtons[key],aggregate=key==='week'?d=>_aggCandles(d,_wkKey):key==='month'?d=>_aggCandles(d,t=>String(t).slice(0,7)):key==='year'?d=>_aggCandles(d,t=>String(t).slice(0,4)):null;
       _setDailyBtnActive(document.getElementById(def[0]));
-      _loadChartUrl(`${window.__API}/api/chart?code=${encodeURIComponent(currentCode)}&range=3y&interval=1d&${adjusted?'adj=1':'raw=1'}`,(adjusted?'還原':'')+def[1],aggregate);
+      const historyRange=range==='5y'?'5y':'3y';
+      _loadChartUrl(`${window.__API}/api/chart?code=${encodeURIComponent(currentCode)}&range=${historyRange}&interval=1d&${adjusted?'adj=1':'raw=1'}`,(adjusted?'還原':'')+def[1],aggregate);
     }
     function _toggleAdjustedPeriod(key){const same=window._chartMode==='candle'&&window._chartPeriodKey===key;_loadPeriodChart(key,same?!window._chartAdjusted:false);}
     function loadDailyChart(){_loadPeriodChart('day',false);}
@@ -18084,6 +18088,7 @@
 <script src="assets/navigation-layers.js?v=logo-home20" defer></script>
 <link rel="stylesheet" href="assets/home-market-intraday.css?v=25">
 <script src="assets/home-market-intraday.js?v=12" defer></script>
+<script src="assets/admin-office.js?v=2" defer></script>
 <footer id="foresightFooter" aria-label="先見網站頁尾">
       <div class="fs-source"><div>本站依各功能使用臺灣證券交易所、證券櫃檯買賣中心、臺灣期貨交易所、集保結算所及其他公開資料整理市場資訊；來源、行情日期與更新頻率依各頁標示，部分內容為盤後或延遲資料。數據可能因公告更正、休市或來源異常而調整，請以原始公告核對。圖表、歷史統計與工具結果供學習及研究參考，歷史表現不代表未來結果；不同資料口徑與估算方式可能產生差異。</div></div>
       <div class="fs-footer-inner">
@@ -18119,9 +18124,9 @@
 <script src="assets/exhibition-calendar.js?v=localfix-3" defer></script>
 <link rel="stylesheet" href="assets/responsive-layout.css?v=1">
 <link rel="stylesheet" href="assets/ai-pattern-screen.css?v=20261026-1">
-<script src="assets/ai-pattern-screen.js?v=20261027-5" defer></script>
+<script src="assets/ai-pattern-screen.js?v=20261027-8" defer></script>
 <link rel="stylesheet" href="assets/pattern-admin-review.css?v=20261027-1">
-<script src="assets/pattern-admin-review.js?v=20261027-5" defer></script>
+<script src="assets/pattern-admin-review.js?v=20261027-6" defer></script>
 <link rel="stylesheet" href="assets/brand-arrival.css?v=23">
 <script src="assets/brand-arrival.js?v=23" defer></script>
 </body>

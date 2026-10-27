@@ -6,7 +6,7 @@ const source=JSON.parse(fs.readFileSync(path.join(scan,'stocks/8081/source.json'
 (async()=>{const browser=await chromium.launch({channel:'msedge',headless:true});try{
  const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[],paid=[];let boxReads=0;
  page.on('pageerror',e=>errors.push(e.message));
- await page.addInitScript(()=>{localStorage.setItem('fqi_onboarded_v1','1');localStorage.setItem('sb_token','fixture');localStorage.setItem('sb_user','{"id":"fx","email":"swe250165@gmail.com"}');});
+ await page.addInitScript(()=>{localStorage.setItem('fqi_onboarded_v1','1');localStorage.setItem('fqi.arrival.skip.v1','1');localStorage.setItem('sb_token','fixture');localStorage.setItem('sb_user','{"id":"fx","email":"swe250165@gmail.com"}');});
  await page.route('**/*',r=>{const u=new URL(r.request().url());if(u.hostname==='api.openai.com'||u.searchParams.get('stat')==='aibuy')paid.push(u.toString());
   if(u.hostname==='unpkg.com'&&u.pathname.includes('lightweight-charts'))return r.fulfill({path:process.env.CHART_LIBRARY_PATH,contentType:'text/javascript'});
   if(u.pathname==='/api/chart')return r.fulfill({json:source});
@@ -19,12 +19,17 @@ const source=JSON.parse(fs.readFileSync(path.join(scan,'stocks/8081/source.json'
   return r.fulfill({json:[]});
  });
  await page.goto('https://visual-site.fixture.test/');await page.evaluate(()=>_showView('box'));
- await page.waitForFunction(()=>document.getElementById('aiPatternResults').textContent.includes('最新K棒'));
+ await page.waitForFunction(()=>document.querySelectorAll('.aps-card').length===3);
+ assert.equal(await page.locator('#aiPatternState').inputValue(),'forming','initial view defaults to forming');
+ await page.locator('#aiPatternState').selectOption('ready');
  assert.equal(await page.locator('.aps-card').count(),0,'historical W must not appear as a current opportunity');
- await page.locator('#aiPatternState').selectOption('forming');assert.equal(await page.locator('.aps-card').count(),2);assert.match(await page.locator('#aiPatternResults').innerText(),/中鋼/);assert.match(await page.locator('#aiPatternResults').innerText(),/永固/);
+ await page.locator('#aiPatternState').selectOption('forming');assert.equal(await page.locator('.aps-card').count(),3);assert.match(await page.locator('#aiPatternResults').innerText(),/中鋼/);assert.match(await page.locator('#aiPatternResults').innerText(),/永固/);assert.match(await page.locator('#aiPatternResults').innerText(),/6620/);
+ assert.match(await page.locator('#aiPatternScope').innerText(),/1985.*3970/);
+ await page.locator('#aiPatternState').selectOption('breakout');assert.equal(await page.locator('.aps-card').count(),1);assert.match(await page.locator('#aiPatternResults').innerText(),/4188/);
  await page.locator('#aiPatternState').selectOption('confirmed');
  await page.waitForFunction(()=>document.querySelectorAll('.aps-card').length>0);
- const expected=new Set(data.records.filter(r=>r.execution_status==='reviewed'&&r.patterns?.length).map(r=>r.code)).size;
+ const market=JSON.parse(fs.readFileSync(path.join(web,'assets/codex-market-scan.json'),'utf8'));
+ const expected=new Set([...data.records,...market.records.filter(r=>r.classification==='historical_w')].filter(r=>r.execution_status==='reviewed'&&r.patterns?.length).map(r=>r.code)).size;
  assert.equal(await page.locator('#aiPatternTabs [role=tab]').count(),5);
  assert.equal(await page.locator('#aiPatternState option[value=uncertain]').count(),0,'old historical uncertainty is not the current admin review queue');
  assert.equal(await page.locator('.aps-card').count(),expected);

@@ -35,7 +35,8 @@ def backfill_running():
     out = subprocess.run(
         ["powershell", "-NoProfile", "-Command",
          "(Get-CimInstance Win32_Process -Filter \"name='python.exe'\" | "
-         "Where-Object { $_.CommandLine -like '*otc_backfill.py*' -and $_.CommandLine -notlike '*--status*' }).Count"],
+         "Where-Object { $_.CommandLine -like '*otc_backfill.py*' -and $_.CommandLine -notlike '*--status*' "
+         "-and $_.CommandLine -notlike '*after_otc_backfill*' }).Count"],   # 2026-10-27 排除自己（檔名也含 otc_backfill.py，原本會永遠等不到 0）
         capture_output=True, text=True, timeout=60).stdout.strip()
     try:
         return int(out or 0)
@@ -59,13 +60,23 @@ def in_nightly_window():
 
 def main():
     log("開始等待上櫃分點回補結束")
+    try:
+        import office_report as office            # AI 研究室：資料管理員回報回補進度（失敗不影響）
+    except Exception:                             # noqa: BLE001
+        office = None
     while True:
         n = backfill_running()
         if n == 0:
             break
+        if office:
+            office.set_activity("data", "work", "上櫃分點回補",
+                                [f"上櫃回補剩 {office.backfill_left():,} 筆", f"{n} 個回補程式執行中"])
         time.sleep(600)
     left = remaining()
     log(f"回補程式已全部結束；剩餘未補 {left}（檔×日）")
+    if office:
+        office.set_activity("data", "done" if left <= LEFT_OK else "stuck", None if left <= LEFT_OK else "上櫃分點回補",
+                            [f"上櫃回補剩 {left:,} 筆", "回補程式已結束"])
     if left > LEFT_OK:
         log(f"[warn] 剩餘 {left} > {LEFT_OK}，判定回補沒有跑完（可能中途當掉或登入失效），不重算排行。"
             "處理方式：重新啟動 otc_backfill.py --worker 0/1 --workers 2，補完後再跑本程式。")
