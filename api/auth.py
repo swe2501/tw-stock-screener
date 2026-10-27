@@ -373,6 +373,21 @@ class handler(BaseHTTPRequestHandler):
                 except Exception as e:
                     return self._json(200, {"log": [], "error": str(e)})
 
+            # 2026-10-27 AI 研究室：7 個角色（＝排程分組）的打卡狀態，存 admin_settings key=office:<角色>（本機 scripts/office_report.py 寫入）
+            if action == "admin_office":
+                agents = ("news", "chip", "tech", "macro", "risk", "etf", "data")
+                q = "in.(" + ",".join('"office:%s"' % a for a in agents) + ")"
+                st2, rows = _rest("/admin_settings?select=key,value,updated_at&key=" + urllib.parse.quote(q, safe='().,"'))
+                if st2 is None:
+                    return self._json(500, rows)
+                out = {}
+                for r in (rows if isinstance(rows, list) else []):
+                    try:
+                        out[r["key"].split(":", 1)[1]] = json.loads(r.get("value") or "{}")
+                    except Exception:
+                        pass
+                return self._json(200, {"agents": out})
+
             # 算法公式總開關狀態（給後台切換用）＋目前公式內容（供後台預覽/編輯）
             if action == "admin_algo_get":
                 vis = (_settings_get(["algo_visible"]).get("algo_visible") or "false").lower() == "true"
