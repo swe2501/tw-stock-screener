@@ -170,13 +170,13 @@ def main():
     old_by = {o["code"]: o for o in old} if s == 200 and isinstance(old, list) else {}
     kept = 0
     for rec in recs:
-        o = old_by.get(rec["code"])
-        if not o:
-            continue
+        o = old_by.get(rec["code"]) or {}
         for k in PRESERVE:
             if rec.get(k) is None and o.get(k) is not None:
                 rec[k] = o[k]
                 kept += 1
+            rec.setdefault(k, None)   # 2026-10-27 每列欄位要一致，否則 PostgREST 整批 400「All object keys must match」，表被清空
+
     print(f"保留既有欄位 {kept} 個（{len(old_by)} 檔舊資料）")
     # 整張換掉(名錄滾動更新)
     s, r = bs._sb(env, "/etf_products", method="DELETE", params=[("code", "neq.__none__")])
