@@ -9,6 +9,7 @@ gen_listed_codes.py — 產出「上市＋上櫃合法代號清單」給 codex �
 import json
 import ssl
 import sys
+import time
 import urllib.request
 from pathlib import Path
 
@@ -24,9 +25,20 @@ OUT = Path(__file__).resolve().parent / "tw_listed_codes.json"
 _CTX = ssl.create_default_context(); _CTX.check_hostname = False; _CTX.verify_mode = ssl.CERT_NONE
 
 
-def _get(url):
+def _get(url, retries=3):
+    # 官方開放資料偶爾會在下載途中被切斷（http.client.IncompleteRead）或短暫逾時 → 重試數次再放棄，
+    # 避免一次上游閃斷就讓整個每日雲端排程變紅（本清單變動慢，非即時關鍵資料）。
     req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"})
-    return json.loads(urllib.request.urlopen(req, timeout=30, context=_CTX).read().decode("utf-8-sig"))
+    last = None
+    for i in range(retries):
+        try:
+            return json.loads(urllib.request.urlopen(req, timeout=30, context=_CTX).read().decode("utf-8-sig"))
+        except Exception as e:  # noqa: BLE001 — IncompleteRead / URLError / timeout 等暫時性錯誤都重試
+            last = e
+            print(f"[warn] 下載失敗（第 {i + 1}/{retries} 次）：{type(e).__name__} {e}", file=sys.stderr)
+            if i < retries - 1:
+                time.sleep(2 * (i + 1))
+    raise last
 
 
 def main():
