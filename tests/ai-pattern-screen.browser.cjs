@@ -21,7 +21,9 @@ const source=JSON.parse(fs.readFileSync(path.join(scan,'stocks/8081/source.json'
  await page.goto('https://visual-site.fixture.test/');await page.evaluate(()=>_showView('box'));
  await page.waitForFunction(()=>document.getElementById('aiPatternResults').textContent.includes('最新K棒'));
  assert.equal(await page.locator('.aps-card').count(),0,'historical W must not appear as a current opportunity');
- await page.locator('#aiPatternState').selectOption('forming');assert.equal(await page.locator('.aps-card').count(),2);assert.match(await page.locator('#aiPatternResults').innerText(),/中鋼/);assert.match(await page.locator('#aiPatternResults').innerText(),/永固/);
+ await page.locator('#aiPatternState').selectOption('forming');assert.equal(await page.locator('.aps-card').count(),3);assert.match(await page.locator('#aiPatternResults').innerText(),/中鋼/);assert.match(await page.locator('#aiPatternResults').innerText(),/永固/);assert.match(await page.locator('#aiPatternResults').innerText(),/6620/);
+ assert.match(await page.locator('#aiPatternScope').innerText(),/1985.*3970/);
+ await page.locator('#aiPatternState').selectOption('breakout');assert.equal(await page.locator('.aps-card').count(),1);assert.match(await page.locator('#aiPatternResults').innerText(),/4188/);
  await page.locator('#aiPatternState').selectOption('confirmed');
  await page.waitForFunction(()=>document.querySelectorAll('.aps-card').length>0);
  const expected=new Set(data.records.filter(r=>r.execution_status==='reviewed'&&r.patterns?.length).map(r=>r.code)).size;
