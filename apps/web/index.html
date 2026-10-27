@@ -20,7 +20,7 @@
   <script src="assets/site-theme.js"></script>
   <script src="assets/w-pattern-export.js?v=20261024-1"></script>
   <script src="assets/w-pattern-overlay.js?v=20261025-2"></script>
-  <script src="assets/chart-ai-patterns.js?v=20261027-6"></script>
+  <script src="assets/chart-ai-patterns.js?v=20261027-7"></script>
   <link rel="stylesheet" href="assets/chart-ai-patterns.css?v=20261026-3">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -11626,7 +11626,7 @@
     function _visualPatternContext() {
       return {code:currentCode,period:window._chartPeriodKey||'day',adjusted:!!window._chartAdjusted,
         chart:chartInstance,series:candleSeriesRef,
-        switchPeriod:tf=>{if(tf==='weekly')loadWeeklyChart();else loadDailyChart();}};
+        switchPeriod:tf=>{if(tf==='weekly')loadWeeklyChart();else loadDailyChart();},loadHistory:range=>_loadPeriodChart('week',false,range)};
     }
     window._openSavedPatternChart=function(code,name,timeframe){
       openChart(String(code),name||'');
@@ -14629,11 +14629,12 @@
     function _syncAdjustedPeriodButtons(){
       Object.entries(_periodButtons).forEach(([key,def])=>{const button=document.getElementById(def[0]);if(!button)return;const adjusted=window._chartPeriodKey===key&&!!window._chartAdjusted;button.textContent=(adjusted?'還原':'')+def[1];button.dataset.adjusted=String(adjusted);button.title='選取'+def[1]+'；同一週期再按一次，切換一般／還原K線';button.setAttribute('aria-label',button.textContent+'，再次點擊切換'+(adjusted?'一般':'還原')+'K線');});
     }
-    function _loadPeriodChart(key,adjusted){
+    function _loadPeriodChart(key,adjusted,range='3y'){
       if(!_periodButtons[key])return;window._chartMode='candle';window._chartPeriodKey=key;window._chartAdjusted=!!adjusted;_setKlineChromeVisible(true);_syncAdjustedPeriodButtons();
       const def=_periodButtons[key],aggregate=key==='week'?d=>_aggCandles(d,_wkKey):key==='month'?d=>_aggCandles(d,t=>String(t).slice(0,7)):key==='year'?d=>_aggCandles(d,t=>String(t).slice(0,4)):null;
       _setDailyBtnActive(document.getElementById(def[0]));
-      _loadChartUrl(`${window.__API}/api/chart?code=${encodeURIComponent(currentCode)}&range=3y&interval=1d&${adjusted?'adj=1':'raw=1'}`,(adjusted?'還原':'')+def[1],aggregate);
+      const historyRange=range==='5y'?'5y':'3y';
+      _loadChartUrl(`${window.__API}/api/chart?code=${encodeURIComponent(currentCode)}&range=${historyRange}&interval=1d&${adjusted?'adj=1':'raw=1'}`,(adjusted?'還原':'')+def[1],aggregate);
     }
     function _toggleAdjustedPeriod(key){const same=window._chartMode==='candle'&&window._chartPeriodKey===key;_loadPeriodChart(key,same?!window._chartAdjusted:false);}
     function loadDailyChart(){_loadPeriodChart('day',false);}

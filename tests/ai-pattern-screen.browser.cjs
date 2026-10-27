@@ -26,7 +26,8 @@ const source=JSON.parse(fs.readFileSync(path.join(scan,'stocks/8081/source.json'
  await page.locator('#aiPatternState').selectOption('breakout');assert.equal(await page.locator('.aps-card').count(),1);assert.match(await page.locator('#aiPatternResults').innerText(),/4188/);
  await page.locator('#aiPatternState').selectOption('confirmed');
  await page.waitForFunction(()=>document.querySelectorAll('.aps-card').length>0);
- const expected=new Set(data.records.filter(r=>r.execution_status==='reviewed'&&r.patterns?.length).map(r=>r.code)).size;
+ const market=JSON.parse(fs.readFileSync(path.join(web,'assets/codex-market-scan.json'),'utf8'));
+ const expected=new Set([...data.records,...market.records.filter(r=>r.classification==='historical_w')].filter(r=>r.execution_status==='reviewed'&&r.patterns?.length).map(r=>r.code)).size;
  assert.equal(await page.locator('#aiPatternTabs [role=tab]').count(),5);
  assert.equal(await page.locator('#aiPatternState option[value=uncertain]').count(),0,'old historical uncertainty is not the current admin review queue');
  assert.equal(await page.locator('.aps-card').count(),expected);
