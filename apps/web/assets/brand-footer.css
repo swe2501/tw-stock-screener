@@ -1,0 +1,66 @@
+#foresightFooter{--fs-footer-bg:#243b4b;--fs-footer-text:#edf4f8;--fs-footer-muted:#b9c9d5;--fs-footer-accent:#a6cfe5;--fs-footer-line:#b9c9d540;--fs-footer-chip:#ffffff06;margin:24px 0 0;color:var(--fs-footer-text);background:var(--fs-footer-bg);border-top:1px solid var(--border);font-family:inherit}
+#foresightFooter *{box-sizing:border-box}
+#foresightFooter .fs-source{background:var(--surface2);color:var(--text-muted);border-bottom:1px solid var(--border)}
+#foresightFooter .fs-source>div{max-width:1200px;margin:auto;padding:12px 22px;font-size:12px;line-height:1.8}
+#foresightFooter .fs-footer-inner{max-width:1200px;margin:auto;display:flex;justify-content:center;align-items:center;gap:56px;padding:25px 22px}
+#foresightFooter nav{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px 0;margin-bottom:14px}
+#foresightFooter nav :is(a,button){font:inherit;font-size:12px;line-height:1.6;color:var(--fs-footer-text);background:transparent;border:0;border-radius:0;padding:0 11px;text-decoration:none;cursor:pointer;box-shadow:none!important;transform:none!important}
+#foresightFooter nav :is(a,button):first-child{padding-left:0}
+#foresightFooter nav :is(a,button)+:is(a,button){border-left:1px solid var(--fs-footer-line)}
+#foresightFooter nav :is(a,button):hover{color:var(--fs-footer-accent);text-decoration:underline;text-underline-offset:4px}
+#foresightFooter :is(a,button):focus-visible{outline:2px solid var(--fs-footer-accent);outline-offset:5px;border-radius:2px}
+#foresightFooter .fs-footer-brand{font-family:"Noto Serif TC",Georgia,serif;font-size:17px;line-height:1.6;font-weight:650;letter-spacing:.04em}
+#foresightFooter .fs-footer-brand>span{font-family:Georgia,serif;font-size:14px;letter-spacing:.06em;margin-left:4px}
+#foresightFooter .fs-footer-brand>small{display:inline-block;font-family:inherit;font-size:11px!important;line-height:1.7;color:var(--fs-footer-muted);font-weight:400;margin-left:12px;letter-spacing:.03em}
+body #foresightFooter .fs-copyright{font-size:11px!important;line-height:1.7!important;margin:5px 0 0;color:var(--fs-footer-muted)}
+#foresightFooter .fs-footer-community{display:flex;align-items:center;gap:22px;flex:0 0 auto}
+#foresightFooter .fs-qr-block{display:flex;align-items:center;gap:7px;color:var(--fs-footer-muted)}
+#foresightFooter .fs-qr-side{writing-mode:vertical-rl;font-size:10px;letter-spacing:.12em}
+#foresightFooter .fs-qr-placeholder{width:70px;height:70px;position:relative;display:grid;place-items:center;border:1px solid var(--fs-footer-line);border-radius:4px;background:var(--fs-footer-chip);color:var(--fs-footer-muted)}
+#foresightFooter .fs-qr-placeholder svg{width:56px;height:56px;opacity:.55}
+#foresightFooter .fs-qr-placeholder>span{position:absolute;bottom:5px;font-size:8px;letter-spacing:.06em;background:var(--fs-footer-bg);padding:0 3px}
+body #foresightFooter .fs-community-content>p{font-size:12px!important;line-height:1.8!important;color:var(--fs-footer-muted);margin:0 0 11px;letter-spacing:.02em}
+#foresightFooter .fs-community-content>p>span{color:var(--fs-footer-accent);padding:0 3px}
+#foresightFooter .fs-socials{display:flex;align-items:center;gap:8px}
+#foresightFooter .fs-socials>span{display:grid;place-items:center;width:27px;height:27px;border:1px solid var(--fs-footer-line);border-radius:50%;background:var(--fs-footer-chip);color:var(--fs-footer-muted)}
+#foresightFooter .fs-socials svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
+#foresightFooter .fs-coming{display:block;font-size:10px!important;line-height:1.6!important;color:var(--fs-footer-muted);margin-top:7px}
+.fs-info-dialog{position:fixed;inset:0;margin:auto;width:min(620px,calc(100vw - 32px));height:fit-content;max-height:calc(100dvh - 48px);overflow:hidden;padding:24px;border:1px solid var(--border);border-radius:18px;background:var(--surface);color:var(--text);box-shadow:0 20px 70px #07142640}
+.fs-info-dialog::backdrop{background:#07142680;backdrop-filter:blur(4px)}
+.fs-info-dialog>div{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:16px}.fs-info-dialog h2{font-size:20px;margin:0}.fs-info-dialog button{display:grid;place-items:center;width:32px;height:32px;border:1px solid var(--border);border-radius:50%;background:var(--surface2);color:var(--text);font:inherit;font-size:20px;cursor:pointer}
+body .fs-info-dialog p{font-size:14px!important;line-height:1.9!important;color:var(--text-muted);margin:12px 0}.fs-info-dialog h3{font-size:14px;margin:18px 0 4px}
+@media(max-width:1000px){#foresightFooter .fs-footer-inner{align-items:center;flex-direction:column;gap:22px}#foresightFooter .fs-footer-community{flex-wrap:wrap}}
+@media(max-width:520px){#foresightFooter .fs-footer-inner{padding:22px 18px}#foresightFooter .fs-source>div{padding:11px 18px}#foresightFooter .fs-footer-community{gap:16px}#foresightFooter .fs-footer-brand>small{display:block;margin:4px 0 0}#foresightFooter nav{row-gap:11px}#foresightFooter nav :is(a,button){padding-inline:8px}#foresightFooter .fs-community-content>p{max-width:225px}}
+
+:root:not([data-theme="light"]) #foresightFooter{--fs-footer-bg:#16232e;--fs-footer-text:#dce5ed;--fs-footer-muted:#a8b9c6;--fs-footer-accent:#d6be87;--fs-footer-line:#a8b9c62b;--fs-footer-chip:#ffffff06}
+#foresightFooter .fs-footer-info,#foresightFooter .fs-community-content{text-align:center}
+#foresightFooter .fs-source>div{text-align:center}
+#foresightFooter .fs-socials{justify-content:center}
+#foresightFooter .fs-socials [aria-label^="LINE"] svg{width:20px;height:20px;stroke:none}
+.fs-info-dialog[open]{display:flex;flex-direction:column}
+.fs-info-dialog>div{position:relative;flex:0 0 auto;min-height:32px;padding:0 40px}
+.fs-info-dialog h2{flex:1;text-align:center;font-size:19px}
+.fs-info-dialog>div>button{position:absolute;right:0;top:0}
+.fs-info-dialog>section{min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:0 8px;scrollbar-width:thin;text-align:left}
+.fs-info-dialog .fs-about-intro{text-align:center;margin:10px 0 24px}
+.fs-info-dialog .fs-about-intro>span{font-size:10px;font-weight:650;letter-spacing:.2em;color:var(--accent)}
+.fs-info-dialog .fs-about-intro h3{font:650 23px/1.7 "Noto Serif TC",Georgia,serif;margin:10px 0;color:var(--text)}
+body .fs-info-dialog section>p{font-size:15px!important;line-height:1.95!important;margin:0 0 18px}
+body .fs-info-dialog .fs-about-closing{border-top:1px solid var(--border);padding-top:18px;margin-top:24px;color:var(--text)}
+.fs-about-closing>span{display:block;font-size:11px;letter-spacing:.05em;color:var(--text-muted);margin-top:9px}
+@media(max-width:520px){.fs-info-dialog{padding:20px 16px;max-height:calc(100dvh - 32px)}.fs-info-dialog section{padding-inline:3px}.fs-info-dialog .fs-about-intro h3{font-size:20px}#foresightFooter .fs-footer-community{justify-content:center}#foresightFooter .fs-community-content>p{max-width:none}}
+
+/* Full bleed while the information stays on the site reading grid. */
+#foresightFooter{width:100vw;margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw);margin-bottom:0}
+body:has(#homeView:not([style*="display: none"])) {overflow-x:clip}
+
+.member-page>#foresightFooter{width:100%;margin:24px 0 0;}
+
+/* No trailing page gutter after the shared footer, including member pages. */
+body:has(#foresightFooter),.member-page:has(>#foresightFooter){padding-bottom:0!important;margin-bottom:0!important;}
+#foresightFooter{flex-shrink:0;}
+
+#foresightFooter .fs-footer-lockup{display:flex;align-items:center;justify-content:center;gap:12px}
+#foresightFooter .fs-footer-logo{width:80px;height:54px;display:block;object-fit:contain;flex:none}
+:root:not([data-theme=light]) #foresightFooter .fs-footer-brand{color:var(--fs-footer-accent)}
+@media(max-width:520px){#foresightFooter .fs-footer-lockup{gap:9px}#foresightFooter .fs-footer-logo{width:65px;height:48px}#foresightFooter .fs-footer-brand{text-align:left}}

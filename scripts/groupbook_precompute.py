@@ -14,12 +14,10 @@ ROOT = Path(__file__).resolve().parent.parent
 WINDOWS = (5, 10, 20)
 
 
-def build_snapshots(env):
-    spec = importlib.util.spec_from_file_location("groupbook_screen", ROOT / "api" / "screen.py")
-    screen = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(screen)
-    screen.SUPABASE_URL = env.get("SUPABASE_URL", "")
-    screen.SUPABASE_KEY = env.get("SUPABASE_ANON_KEY") or env.get("SUPABASE_SERVICE_KEY", "")
+def build_snapshots(env, env_name="prod"):
+    # 2026-10-21 依環境：prod 用 origin/prod 的程式寫 groupbook_N；uat 用 origin/uat 的程式寫 groupbook_N@uat
+    import env_screen as es
+    screen = es.load_screen(env_name, env)
     codes = sorted({c for members in screen._GROUP_BOOK_MEMBERS.values() for c in members})
     prices = screen._load_groupbook_prices(codes)
     if not prices:
@@ -30,7 +28,7 @@ def build_snapshots(env):
         data = screen._fetch_groupbook(window, price_rows=prices)
         if data.get("error") or len(data.get("groups", [])) != len(screen._GROUP_BOOK_MEMBERS) or not any(g.get("samples", 0) for g in data["groups"]):
             raise ValueError(f"Invalid {window}-day snapshot; previous snapshots retained")
-        rows.append(dict(kind=f"groupbook_{window}", trade_date=data["date"], payload=data, updated_at=stamp))
+        rows.append(dict(kind=es.kind_for(f"groupbook_{window}", env_name), trade_date=data["date"], payload=data, updated_at=stamp))
     return rows
 
 
@@ -55,10 +53,10 @@ def publish(env, rows):
             raise RuntimeError("Snapshot publication failed")
 
 
-def run(env, dry_run=False):
+def run(env, dry_run=False, env_name="prod"):
     if not dry_run and not env.get("SUPABASE_SERVICE_KEY"):
         raise ValueError("SUPABASE_SERVICE_KEY is required")
-    rows = build_snapshots(env)
+    rows = build_snapshots(env, env_name)
     if not dry_run:
         publish(env, rows)
     for row in rows:

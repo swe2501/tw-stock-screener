@@ -1,0 +1,167 @@
+/* 策略工作台改版（2026-10-21）：五步驟、研究面向、上架、聊天室版面、私房篩選器多選。沿用網站 --surface/--bg/--accent 等色票。 */
+
+/* ── 研究面向色票（深色為預設，淺色另設） ── */
+.ms-dim-tech{--dim:#6FA0FF}.ms-dim-fund{--dim:#3DDC84}.ms-dim-chip{--dim:#FF6B6F}.ms-dim-macro{--dim:#B39BFF}.ms-dim-news{--dim:#FF7AC0}.ms-dim-mind{--dim:#FFC24D}
+:root[data-theme="light"] .ms-dim-tech{--dim:#2F6BFF}:root[data-theme="light"] .ms-dim-fund{--dim:#12A150}:root[data-theme="light"] .ms-dim-chip{--dim:#E5484D}:root[data-theme="light"] .ms-dim-macro{--dim:#7C4DFF}:root[data-theme="light"] .ms-dim-news{--dim:#E0288C}:root[data-theme="light"] .ms-dim-mind{--dim:#D9820A}
+
+.ms-dim{display:inline-flex;align-items:center;gap:5px;font-size:11px;line-height:1.6;padding:1px 7px;border-radius:6px;border:1px solid var(--border);color:var(--text-muted);white-space:nowrap}
+.ms-dim::before{content:'';width:6px;height:6px;border-radius:2px;background:var(--dim);flex:none}
+.ms-dim.is-main{border-color:transparent;background:color-mix(in srgb,var(--dim) 15%,transparent);color:var(--text);font-weight:600}
+.ms-pub-badge{display:inline-flex;align-items:center;font-size:11px;line-height:1.6;padding:1px 7px;border-radius:6px;color:var(--text-muted);background:color-mix(in srgb,var(--text-muted) 12%,transparent);white-space:nowrap}
+.ms-pub-badge.is-on{color:var(--green,#2EA043);background:color-mix(in srgb,var(--green,#2EA043) 13%,transparent);font-weight:600}
+.ms-lib-tags{display:flex;flex-wrap:wrap;gap:5px;margin:5px 0 2px}
+.ms-library-item{box-shadow:inset 3px 0 0 var(--dim,transparent);padding-left:14px!important}
+
+/* ── 五步驟導覽（取代原本的功能分頁按鈕） ── */
+.ms-workflow-nav.ms-steps{display:flex;align-items:stretch;gap:0;padding:0;background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;flex-wrap:nowrap;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.ms-steps ol{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));flex:1;min-width:0}
+.ms-steps li{border-right:1px solid var(--border);min-width:0}
+.member-page .ms-steps li button{width:100%;height:100%;display:flex;align-items:center;gap:10px;margin:0;padding:11px 14px;border:0;border-radius:0;background:transparent;box-shadow:none;text-align:left;color:var(--text);font:inherit;font-size:12px;cursor:pointer}
+.member-page .ms-steps li button:hover{background:color-mix(in srgb,var(--accent) 5%,var(--surface))}
+.ms-step-mark{flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;border:1px solid var(--border);color:var(--text-muted);background:var(--surface)}
+.ms-step-text{min-width:0;display:block}
+.ms-step-text b{display:block;font-size:13px;line-height:1.4;color:var(--text)}
+.ms-step-text small{display:block;font-size:11px;line-height:1.5;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.member-page .ms-steps li.is-current button{background:color-mix(in srgb,var(--accent) 8%,var(--surface));box-shadow:inset 0 -2px 0 var(--accent)}
+.ms-steps li.is-current .ms-step-mark{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#fff)}
+.ms-steps li.is-done .ms-step-mark{background:color-mix(in srgb,var(--green,#2EA043) 15%,transparent);border-color:transparent;color:var(--green,#2EA043)}
+.ms-steps-links{display:flex;flex-direction:column;justify-content:center;gap:2px;padding:6px 8px;flex:none}
+.member-page .ms-steps-links button{margin:0;padding:5px 9px;border:0;background:transparent;box-shadow:none;color:var(--text-muted);font:inherit;font-size:11.5px;border-radius:7px;white-space:nowrap;cursor:pointer}
+.member-page .ms-steps-links button:hover{color:var(--accent);background:color-mix(in srgb,var(--accent) 7%,transparent)}
+
+/* ── 第 1 步研究面向、第 5 步上架 ── */
+.ms-dim-card,.ms-publish-card{border:1px solid var(--border);border-radius:14px;padding:16px 18px;margin:16px 0;background:color-mix(in srgb,var(--bg) 40%,var(--surface))}
+.ms-studio-head{display:flex;align-items:center;justify-content:space-between;gap:8px 14px;flex-wrap:wrap;margin-bottom:12px}
+.ms-studio-head h3{margin:0;font-size:15px;display:flex;align-items:center;gap:8px;color:var(--text)}
+.ms-studio-head small{font-size:12px;line-height:1.6;color:var(--text-muted)}
+.ms-step-tag{width:22px;height:22px;border-radius:50%;display:inline-grid;place-items:center;font-size:11px;font-weight:700;background:color-mix(in srgb,var(--accent) 15%,transparent);color:var(--accent)}
+.ms-dim-options{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.member-page .ms-dim-option{display:flex;flex-direction:column;align-items:stretch;gap:6px;margin:0;text-align:left;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:var(--surface);box-shadow:none;color:var(--text);font:inherit;cursor:pointer;transition:border-color .15s,background .15s}
+.member-page .ms-dim-option[aria-pressed="true"]{border-color:var(--dim);background:color-mix(in srgb,var(--dim) 9%,var(--surface));box-shadow:0 0 0 1px var(--dim)}
+.ms-dim-option-head{display:flex;align-items:center;gap:8px}
+.ms-dim-option-head b{font-size:14px;color:var(--text)}
+.ms-dim-option-head em{font-style:normal;margin-left:auto;font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;background:var(--dim);color:#fff}
+:root:not([data-theme="light"]) .ms-dim-option-head em{color:#0B1220}
+.ms-dim-swatch{width:10px;height:10px;border-radius:3px;background:var(--dim);flex:none}
+.ms-dim-option small{font-size:12px;line-height:1.6;color:var(--text)}
+.ms-dim-examples{font-size:11px;color:var(--text-muted)}
+.ms-dim-more{margin:10px 0 0;font-size:12px;color:var(--text-muted)}
+.ms-publish-state{font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;color:var(--text-muted);background:color-mix(in srgb,var(--text-muted) 12%,transparent)}
+.ms-publish-state.is-on{color:var(--green,#2EA043);background:color-mix(in srgb,var(--green,#2EA043) 14%,transparent)}
+.ms-publish-card>.mc-muted{margin:0 0 10px;font-size:12.5px;line-height:1.7}
+.ms-publish-checks{list-style:none;margin:0 0 12px;padding:0;display:grid;gap:6px}
+.ms-publish-checks li{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 8px;font-size:13px;color:var(--text-muted)}
+.ms-publish-checks li b{font-weight:600;color:var(--text-muted)}
+.ms-publish-checks li.ok b{color:var(--text)}
+.ms-publish-checks small{font-size:11.5px;color:var(--text-muted)}
+.ms-publish-dot{width:18px;height:18px;flex:none;align-self:center;border-radius:50%;display:inline-grid;place-items:center;font-size:11px;font-weight:700;border:1px solid var(--border)}
+.ms-publish-checks li.ok .ms-publish-dot{border-color:transparent;background:color-mix(in srgb,var(--green,#2EA043) 15%,transparent);color:var(--green,#2EA043)}
+.ms-publish-actions{display:flex;gap:8px;flex-wrap:wrap}
+.member-page .ms-publish-actions button{margin:0}
+.ms-publish-card [data-publish-status]{margin:8px 0 0;font-size:12.5px;color:var(--accent);min-height:0}
+.ms-publish-card [data-publish-status]:empty{display:none}
+
+/* ── 聊天室：像一般聊天室，對話區為主、輸入框固定在底部 ── */
+.ms-chat-dialog[open]{height:min(820px,calc(100dvh - 40px));max-height:calc(100dvh - 24px)}
+.ms-chat-dialog .ms-assistant{padding:0!important;display:flex!important;flex-direction:column;overflow:hidden!important}
+.ms-chat-dialog .ms-chat-toolbar{flex:none;display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:10px 16px;border-bottom:1px solid var(--border);background:color-mix(in srgb,var(--bg) 55%,var(--surface))}
+.ms-chat-dialog .ms-chat-toolbar .ms-assistant-mode{display:flex;align-items:center;gap:8px;margin:0!important;font-size:12px;color:var(--text-muted);flex:1 1 230px;min-width:0}
+.ms-chat-dialog .ms-chat-toolbar .ms-assistant-mode>span{white-space:nowrap}
+.ms-chat-dialog .ms-chat-toolbar .ms-assistant-mode select{flex:1;min-width:0;width:auto;margin:0!important;padding:7px 10px;border-radius:9px;font-size:12.5px;line-height:1.4}
+.ms-chat-dialog .ms-chat-toolbar>button,.ms-chat-dialog .ms-chat-toolbar .ms-strategy-explore>summary{margin:0!important;padding:7px 12px!important;font-size:12px!important;line-height:1.4;border-radius:9px!important;border:1px solid var(--border)!important;background:var(--surface)!important;color:var(--text)!important;cursor:pointer;white-space:nowrap}
+.ms-chat-dialog .ms-chat-toolbar .ms-strategy-explore{margin:0!important;padding:0;border:0;max-height:none;overflow:visible;font-size:12px}
+.ms-chat-dialog .ms-chat-toolbar .ms-strategy-explore>summary{list-style:none;font-weight:600}
+.ms-chat-dialog .ms-chat-toolbar .ms-strategy-explore>summary::-webkit-details-marker{display:none}
+.ms-chat-dialog .ms-chat-toolbar .ms-strategy-explore[open]{flex-basis:100%;order:5;max-height:min(44vh,360px);overflow:auto;border:1px solid var(--border);border-radius:12px;padding:10px 12px;background:var(--surface)}
+.ms-chat-dialog .ms-chat-toolbar .ms-strategy-explore[open]>summary{display:inline-block;margin-bottom:6px!important;border-color:var(--accent)!important;color:var(--accent)!important}
+.ms-chat-dialog [data-ai-status]{flex:none;margin:0!important;padding:6px 16px;font-size:11px;line-height:1.5;color:var(--text-muted);border-bottom:1px solid var(--border)}
+.ms-chat-dialog .ms-ai-conversation{flex:1 1 auto!important;min-height:140px!important;max-height:none!important;margin:0!important;padding:16px!important;display:flex;flex-direction:column;gap:12px;overflow:auto;overscroll-behavior:contain}
+.ms-chat-dialog .ms-ai-message.user{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#fff)}
+.ms-chat-dialog .ms-ai-message.user:before{background:var(--accent)}
+.ms-chat-dialog .ms-ai-message.user a{color:inherit}
+.ms-chat-dialog .ms-guide-choices{flex:none!important;margin:0!important;padding:8px 16px 2px;max-height:104px!important;overflow:auto;display:flex;flex-wrap:wrap;gap:6px}
+.ms-chat-dialog .ms-guide-choices:empty{display:none}
+.ms-chat-dialog .ms-guide-choices button{margin:0!important;border-radius:999px!important;padding:6px 12px!important;font-size:12px!important;min-height:32px}
+.ms-chat-dialog [data-ai-form]{flex:none;margin:0!important;padding:10px 14px 12px;border-top:1px solid var(--border);background:var(--surface)}
+.ms-composer{display:flex;align-items:flex-end;gap:8px;border:1px solid var(--border);border-radius:14px;background:var(--bg);padding:5px 5px 5px 12px;transition:border-color .15s,box-shadow .15s}
+.ms-composer:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent)}
+.ms-chat-dialog .ms-composer label{flex:1;min-width:0;margin:0!important;font-size:inherit!important}
+.ms-chat-dialog .ms-composer textarea{display:block;width:100%;border:0!important;background:transparent!important;padding:8px 0!important;margin:0!important;min-height:40px!important;max-height:140px!important;resize:none!important;box-shadow:none!important;outline:none;font-size:14px!important;line-height:1.6!important;color:var(--text)}
+.ms-chat-dialog .ms-composer button{flex:none;margin:0!important;height:40px;padding:0 18px!important;border-radius:10px!important;font-size:13px!important}
+.ms-chat-hints{display:flex;justify-content:space-between;gap:4px 12px;flex-wrap:wrap;margin-top:6px;padding:0 4px}
+.ms-chat-dialog .ms-chat-hints small{display:block;margin:0;font-size:10.5px!important;line-height:1.5!important;color:var(--text-muted)}
+.ms-sr{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0 0 0 0)!important;white-space:nowrap!important;border:0!important}
+.ms-chat-dialog [data-ai-proposal]{flex:0 1 auto!important;min-height:0!important;max-height:48%;overflow:auto;margin:0!important;padding:12px 16px!important;border-top:1px solid var(--border)}
+.ms-chat-dialog [data-ai-undo]{flex:none;align-self:flex-start;margin:6px 16px 10px!important}
+@media(max-height:650px){.ms-chat-dialog .ms-ai-conversation{min-height:90px!important}.ms-chat-dialog .ms-chat-hints small[data-ai-privacy]{display:none}}
+@media(max-width:600px){.ms-chat-dialog .ms-chat-toolbar{padding:8px 12px}.ms-chat-dialog .ms-ai-conversation{padding:12px!important}.ms-chat-dialog [data-ai-form]{padding:8px 10px 10px}.ms-chat-dialog .ms-guide-choices{padding:6px 12px 2px}}
+
+/* ── 手機：步驟可左右滑動 ── */
+@media(max-width:760px){
+  .ms-workflow-nav.ms-steps{flex-wrap:wrap}
+  .ms-steps ol{flex:1 1 100%;grid-template-columns:repeat(5,minmax(132px,1fr));overflow-x:auto;scrollbar-width:thin}
+  .ms-steps-links{flex-direction:row;width:100%;border-top:1px solid var(--border);padding:4px 8px}
+  .ms-dim-options{grid-template-columns:1fr}
+  .ms-dim-card,.ms-publish-card{padding:14px}
+}
+
+/* ── 私房篩選器：已上架策略多選 ── */
+.ms-private-pick{display:flex;flex-direction:column;gap:8px;margin:10px 0}
+.ms-private-pick-head{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px}
+.ms-private-pick-head b{font-size:13px;color:var(--text)}
+.ms-private-pick-head small{font-size:12px;color:var(--text-muted)}
+.ms-private-mode{margin-left:auto;display:inline-flex;padding:3px;border-radius:9px;background:var(--bg);border:1px solid var(--border)}
+.ms-private-mode button{margin:0!important;border:0!important;background:transparent!important;color:var(--text-muted)!important;font:inherit;font-size:12px!important;padding:5px 11px!important;border-radius:6px!important;box-shadow:none!important;cursor:pointer;min-height:0!important}
+.ms-private-mode button[aria-pressed="true"]{background:var(--surface)!important;color:var(--text)!important;font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.14)!important}
+.ms-private-list{display:flex;flex-direction:column;gap:6px;max-height:340px;overflow:auto;padding:1px}
+.ms-private-item{display:grid;grid-template-columns:18px 4px minmax(0,1fr);gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--surface);cursor:pointer;transition:border-color .15s,background .15s}
+.ms-private-item:hover{border-color:color-mix(in srgb,var(--accent) 45%,var(--border))}
+.ms-private-item:has(input:checked){border-color:color-mix(in srgb,var(--accent) 55%,var(--border));background:color-mix(in srgb,var(--accent) 6%,var(--surface))}
+.ms-private-item:has(input:disabled){opacity:.55;cursor:not-allowed}
+.ms-private-item input{width:17px;height:17px;margin:0;accent-color:var(--accent)}
+.ms-private-item>i{width:4px;height:28px;border-radius:2px;background:var(--dim)}
+.ms-private-item>span{min-width:0;display:flex;flex-direction:column;gap:3px}
+.ms-private-item>span>b{font-size:13.5px;color:var(--text);overflow-wrap:anywhere}
+.ms-private-item .ms-lib-tags{margin:0}
+.ms-private-empty{font-size:12.5px;line-height:1.7;color:var(--text-muted);margin:0}
+.ms-private-foot{font-size:12px;line-height:1.7;color:var(--text-muted);margin:0}
+.ms-private-foot button{margin:0 0 0 4px!important;padding:0!important;border:0!important;background:none!important;box-shadow:none!important;color:var(--accent)!important;font:inherit!important;font-weight:600!important;cursor:pointer;min-height:0!important}
+.ms-private-hint{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px;color:var(--text-muted)}
+.ms-private-hint button{margin:0!important}
+.ms-private-hits{display:flex;flex-wrap:wrap;gap:4px}
+
+/* 微調 */
+.ms-chat-dialog .ms-chat-head{margin:0!important}
+.ms-chat-dialog .ms-chat-toolbar .ms-assistant-mode,.ms-chat-dialog .ms-chat-toolbar .ms-assistant-mode>span{font-size:12px!important;font-weight:600;line-height:1.4}
+.ms-chat-dialog .ms-composer textarea{font-weight:400!important}
+.ms-chat-dialog .ms-composer textarea::placeholder{font-weight:400;color:var(--text-muted)}
+.ms-step-text small{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.ms-publish-checks li b{font-size:13px}
+.ms-chat-dialog .ms-assistant .mc-primary{background:var(--accent)!important;border-color:var(--accent)!important;color:var(--on-accent,#fff)!important}
+.ms-private-moved{font-size:12.5px;color:var(--accent);margin:6px 0 0}
+.private-screen-label{color:var(--accent);font-weight:600}
+
+/* ── 策略方向：做多／做空 ── */
+.ms-dir{display:inline-flex;align-items:center;font-size:11px;line-height:1.6;padding:1px 7px;border-radius:6px;font-weight:700;white-space:nowrap}
+.ms-dir-long{color:#D64545;background:rgba(214,69,69,.12)}
+.ms-dir-short{color:#1F8A55;background:rgba(31,138,85,.13)}
+:root:not([data-theme="light"]) .ms-dir-long{color:#FF7B7B;background:rgba(255,107,111,.15)}
+:root:not([data-theme="light"]) .ms-dir-short{color:#4FD69A;background:rgba(61,220,132,.14)}
+.ms-trade-dir{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0 0 12px}
+.member-page .ms-trade-dir button{display:flex;flex-direction:column;align-items:flex-start;gap:3px;margin:0;padding:11px 14px;border:1px solid var(--border);border-radius:12px;background:var(--surface);box-shadow:none;color:var(--text);font:inherit;text-align:left;cursor:pointer}
+.ms-trade-dir b{font-size:14px}
+.ms-trade-dir small{font-size:12px;color:var(--text-muted)}
+.member-page .ms-trade-dir button[data-trade="long"][aria-pressed="true"]{border-color:#D64545;box-shadow:0 0 0 1px #D64545;background:color-mix(in srgb,#D64545 7%,var(--surface))}
+.member-page .ms-trade-dir button[data-trade="short"][aria-pressed="true"]{border-color:#1F8A55;box-shadow:0 0 0 1px #1F8A55;background:color-mix(in srgb,#1F8A55 8%,var(--surface))}
+.ms-private-dir-note{font-size:11px;color:var(--text-muted)}
+@media(max-width:420px){.ms-trade-dir{grid-template-columns:1fr}}
+
+/* ── 策略垃圾桶 ── */
+.member-page .ms-library-item .ms-lib-trash{display:inline-grid;place-items:center;width:38px;padding:0;color:var(--text-muted)}
+.member-page .ms-library-item .ms-lib-trash:hover{color:#D64545;border-color:color-mix(in srgb,#D64545 45%,var(--border))}
+.ms-trash{margin:6px 0 12px}
+.ms-trash>summary{cursor:pointer;font-weight:600}
+.ms-trash>p{font-size:12px;margin:8px 0}
+.ms-trash-item{opacity:.92}
+.member-page .ms-trash-purge{color:#C23B3B}
+.member-page .ms-trash-purge[data-confirm="1"]{background:#C23B3B;border-color:#C23B3B;color:#fff}

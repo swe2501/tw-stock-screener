@@ -82,7 +82,7 @@
   const rows=list(currentKind).map((row,index)=>({row,index}));
   const value=r=>sortKey==='stock'?r.code:sortKey==='themes'?themes(r).map(t=>t.name).join('、'):number(r[sortKey])?r[sortKey]:null;
   if(sortKey)rows.sort((a,b)=>{const av=value(a.row),bv=value(b.row);if(av===null||bv===null)return av===bv?a.index-b.index:av===null?1:-1;return sortDirection*(typeof av==='number'?av-bv:String(av).localeCompare(String(bv),'zh-TW',{numeric:true}))||a.index-b.index;});
-  for(const {row,index} of rows){const tr=el('tr');const first=el('td','fr-table-stock');first.dataset.label='股票';first.append(medal(index+1),stock(row));if(currentKind==='volume_surge')first.append(el('span','fr-table-ratio',fmt(row.ratio)+'× · '+fmt(row.volume_lots)+' 張'));tr.append(first);
+  for(const {row,index} of rows){const tr=el('tr');const first=el('td','fr-table-stock');first.dataset.label='股票';const identity=el('div','fr-table-identity');identity.append(medal(index+1),stock(row));first.append(identity);if(currentKind==='volume_surge')first.append(el('span','fr-table-ratio',fmt(row.ratio)+'× · '+fmt(row.volume_lots)+' 張'));tr.append(first);
    for(const [key,label] of columns.slice(1)){const td=el('td',key==='themes'?'fr-table-themes':'fr-number '+(key==='close'?'':tone(row[key])));td.dataset.label=label;if(key==='themes')td.append(tags(row,4));else td.textContent=key==='close'?fmt(row.close):percent(row[key]);tr.append(td);}body.append(tr);
   }
   if(!rows.length){const tr=el('tr'),td=el('td','','今日無排行資料');td.colSpan=5;tr.append(td);body.append(tr);}

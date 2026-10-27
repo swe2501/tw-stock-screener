@@ -7,7 +7,7 @@ const {webcrypto}=require('node:crypto');
 function setup(settings={external:{google:true,apple:true,'custom:line-web':true,phone:true}}){
   const calls=[],saved=new Map(),accepted=[];
   const storage={getItem:k=>saved.get(k)||null,setItem:(k,v)=>saved.set(k,v),removeItem:k=>saved.delete(k)};
-  const context={SIG_SB_URL:'https://auth.example',SIG_SB_ANON:'public',URL,URLSearchParams,TextEncoder,crypto:webcrypto,btoa:s=>Buffer.from(s,'binary').toString('base64'),Date,Event,
+  const context={SIG_SB_URL:'https://auth.example',SIG_SB_ANON:'public',URL,URLSearchParams,TextEncoder,crypto:webcrypto,navigator:{locks:{request:async(name,options,run)=>run({name})}},btoa:s=>Buffer.from(s,'binary').toString('base64'),Date,Event,
     location:{protocol:'https:',origin:'https://site.example',pathname:'/',search:'',hash:'',assign:url=>calls.push({redirect:url})},
     history:{replaceState(){}},localStorage:storage,sessionStorage:storage,
     window:{_acceptMemberSession:s=>accepted.push(s),dispatchEvent(){}},
@@ -79,7 +79,7 @@ test('phone login rejects unverified or mismatched server phone, ignoring metada
 
 test('replacement preflights linking and retains another verified identity before deleting',async()=>{
  const {api,saved,context,calls}=setup();saved.set('sb_token','original-token');let phase='before';const base=context.fetch;
- context.fetch=async(url,options)=>{if(url.endsWith('/user')){calls.push({url,...options});return{ok:true,status:200,json:async()=>({id:'original-user',email_confirmed_at:'2026-10-17',identities:[{identity_id:'google-old',provider:'google'},{identity_id:'email-id',provider:'email'}]})};}if(options?.method==='DELETE'){calls.push({url,...options});phase='deleted';return{ok:true,status:204};}return base(url,options);};
+ context.fetch=async(url,options)=>{if(url.endsWith('/rpc/member_identity_recovery_begin')){calls.push({url,...options});return{ok:true,status:200,json:async()=>({id:'recovery-1',request_id:'recovery-request'})};}if(url.endsWith('/user')){calls.push({url,...options});return{ok:true,status:200,json:async()=>({id:'original-user',email_confirmed_at:'2026-10-17',identities:[{identity_id:'google-old',provider:'google'},{identity_id:'email-id',provider:'email'}]})};}if(options?.method==='DELETE'){calls.push({url,...options});phase='deleted';return{ok:true,status:204};}return base(url,options);};
  await api.replaceOAuth('google');const pre=calls.findIndex(c=>c.url?.includes('/identities/authorize?')),del=calls.findIndex(c=>c.method==='DELETE');assert.ok(pre>=0&&del>pre);assert.equal(phase,'deleted');assert.ok(calls[del].url.endsWith('/identities/google-old'));assert.equal(JSON.parse(saved.get('academy.oauth')).userId,'original-user');assert.equal(JSON.parse(saved.get('academy.oauth')).replacement,'google');
 });
 test('replacement cannot remove the only login or unlink before manual linking is available',async()=>{
@@ -89,4 +89,69 @@ test('personal invitation provisioning is deduplicated per login and retries aft
  const {api,context,saved}=setup();saved.set('sb_token','member-a');let count=0,fail=true;
  context.fetch=async(url,o)=>{count++;assert.equal(o.headers.Authorization,'Bearer '+saved.get('sb_token'));return {ok:!fail,status:fail?503:200,json:async()=>fail?{message:'unavailable'}:{code:'GS123456ABCDEF'}};};
  await assert.rejects(api.ensureReferralCode());fail=false;const a=api.ensureReferralCode(),b=api.ensureReferralCode();assert.equal(a,b);assert.equal((await a).code,'GS123456ABCDEF');assert.equal(count,2);saved.set('sb_token','member-b');await api.ensureReferralCode();assert.equal(count,3);
+});
+
+
+test('AI transfer survives lost response and script reload; retry keeps amount, direction and request ID',async()=>{
+ const {api,context,saved,calls}=setup();saved.set('sb_token','member-a');let stored=1000,ai=0,lose=true;const receipts=new Map(),sent=[];
+ context.fetch=async(url,options)=>{if(url.endsWith('/user'))return {ok:true,status:200,json:async()=>({id:'member-a'})};const b=JSON.parse(options.body);sent.push({url,...b});let r=receipts.get(b.p_request_id);if(!r){stored-=b.p_points;ai+=b.p_points;r={converted:b.p_points,ai_points:String(ai)};receipts.set(b.p_request_id,r);}if(lose){lose=false;throw Error('connection lost after commit');}return {ok:true,status:200,json:async()=>r};};
+ await assert.rejects(api.aiConvert(100),/網路/);assert.equal(stored,900);assert.equal((await api.aiPending()).points,100);
+ await assert.rejects(api.aiConvertBack(20),/上次/);assert.equal(sent.length,1);
+ vm.runInNewContext(fs.readFileSync('apps/web/assets/member-identity.js','utf8'),context);
+ const reloaded=context.window.AcademyIdentity;const r=await reloaded.aiRetry();assert.equal(r.direction,'in');assert.equal(sent[0].p_request_id,sent[1].p_request_id);assert.equal(sent[1].p_points,100);assert.equal(stored,900);assert.equal(ai,100);assert.equal(await reloaded.aiPending(),null);
+});
+
+test('AI convert back retries the original transaction without crediting twice',async()=>{
+ const {api,context,saved}=setup();saved.set('sb_token','a');let credits=0,lose=true;const ids=[];
+ context.fetch=async(url,options)=>{if(url.endsWith('/user'))return {ok:true,status:200,json:async()=>({id:'a'})};const b=JSON.parse(options.body);ids.push(b.p_request_id);if(ids.length===1)credits+=b.p_points;if(lose){lose=false;throw Error('lost');}return {ok:true,status:200,json:async()=>({returned:35,ai_points:'0.1234'})};};
+ await assert.rejects(api.aiConvertBack(35));assert.equal((await api.aiPending()).direction,'out');await api.aiRetry();assert.equal(credits,35);assert.equal(ids[0],ids[1]);
+});
+
+test('AI pending transaction is isolated by verified member; account changes during phone gate send no transfer',async()=>{
+ const {api,context,saved}=setup();saved.set('sb_token','a');let transfers=0;
+ context.fetch=async(url)=>{if(url.endsWith('/user'))return {ok:true,status:200,json:async()=>({id:saved.get('sb_token')})};transfers++;throw Error('lost');};
+ await assert.rejects(api.aiConvert(10));saved.set('sb_token','b');assert.equal(await api.aiPending(),null);await assert.rejects(api.aiRetry(),/沒有待確認/);assert.equal(transfers,1);
+ saved.set('sb_token','a');assert.equal((await api.aiPending()).points,10);
+ context.window.AcademyPhoneGate={ensure:async()=>{saved.set('sb_token','b');return true;}};await assert.rejects(api.aiRetry(),/帳號已切換/);assert.equal(transfers,1);
+});
+
+test('AI blocks submission if pending storage fails; definite server rejection permits correction',async()=>{
+ const {api,context,saved}=setup();saved.set('sb_token','a');let posts=0;
+ context.fetch=async(url)=>{if(url.endsWith('/user'))return {ok:true,status:200,json:async()=>({id:'a'})};posts++;return {ok:false,status:400,json:async()=>({message:'MEMBER_STORED_POINTS_INSUFFICIENT'})};};
+ const set=context.localStorage.setItem;context.localStorage.setItem=()=>{throw Error('storage blocked');};await assert.rejects(api.aiConvert(10),/storage/);assert.equal(posts,0);context.localStorage.setItem=set;
+ await assert.rejects(api.aiConvert(10),/儲值點數不足/);assert.equal(await api.aiPending(),null);assert.equal(posts,1);
+});
+
+test('AI concurrent submissions send once and malformed receipt remains retryable',async()=>{
+ const {api,context,saved}=setup();saved.set('sb_token','a');let finish,posts=0;
+ context.fetch=async(url)=>{if(url.endsWith('/user'))return {ok:true,status:200,json:async()=>({id:'a'})};posts++;return new Promise(resolve=>finish=resolve);};
+ const first=api.aiConvert(100);await new Promise(resolve=>setImmediate(resolve));await assert.rejects(api.aiConvert(100),/處理中/);assert.equal(posts,1);finish({ok:true,status:200,json:async()=>({converted:200,ai_points:'200'})});await assert.rejects(first,/尚未確認/);assert.equal((await api.aiPending()).points,100);
+});
+
+
+test('replacement refuses unlink when server recent-auth receipt is denied or local recovery cannot persist',async()=>{
+ for(const mode of ['stale','storage']){const {api,saved,context,calls}=setup();saved.set('sb_token','original');const base=context.fetch;
+ context.fetch=async(url,options)=>{if(url.endsWith('/user'))return {ok:true,status:200,json:async()=>({id:'original-user',email_confirmed_at:'2026-10-17',identities:[{identity_id:'old',provider:'google'},{provider:'email'}]})};if(url.endsWith('/rpc/member_identity_recovery_begin'))return {ok:mode!=='stale',status:mode==='stale'?400:200,json:async()=>mode==='stale'?{message:'MEMBER_RECENT_LOGIN_REQUIRED'}:{id:'receipt',request_id:'request'}};return base(url,options);};
+ if(mode==='storage'){const save=context.localStorage.setItem;context.localStorage.setItem=(key,v)=>{if(key.startsWith('academy.identity.recovery.'))throw Error('storage blocked');save(key,v);};}
+ await assert.rejects(api.replaceOAuth('google'));assert.equal(calls.some(x=>x.method==='DELETE'),false,'old identity remains linked');}
+});
+test('changing existing phone requires server recent login before Auth update',async()=>{
+ const {api,saved,context,calls}=setup();saved.set('sb_token','original');const base=context.fetch;context.fetch=async(url,options)=>url.endsWith('/rpc/member_service_access')?{ok:true,status:200,json:async()=>({recent:false})}:base(url,options);
+ await assert.rejects(api.sendContactLink('phone','0998765432'),/重新登入/);assert.equal(calls.some(x=>x.method==='PUT'),false);
+});
+
+test('account switch while contact preflight loads prevents any update or verification request',async()=>{
+ for(const mode of ['send','verify']){const {api,saved,context,calls}=setup();saved.set('sb_token','original');const base=context.fetch;context.fetch=async(url,options)=>{const r=await base(url,options);if(url.endsWith('/user'))saved.set('sb_token','other-account');return r;};
+ await assert.rejects(mode==='send'?api.sendContactLink('phone','0998765432'):api.verifyContactLink({userId:'verified-user',kind:'phone',value:'+886912345678'},'123456'),/狀態已變更|帳號已切換/);
+ assert.equal(calls.some(x=>x.method==='PUT'||x.url.endsWith('/verify')),false);}
+});
+
+
+test('new OAuth sign-in returns home; linking retains the current member page',async()=>{
+ const first=setup();first.context.location.hash='#member/overview';await first.api.startOAuth('google');assert.equal(JSON.parse(first.saved.get('academy.oauth')).returnHash,'#home');
+ const link=setup();link.context.location.hash='#member/profile';link.saved.set('sb_token','original-token');await link.api.linkOAuth('google');assert.equal(JSON.parse(link.saved.get('academy.oauth')).returnHash,'#member/profile');
+});
+test('verified new sign-in goes home but identity binding does not navigate away',async()=>{
+ const {api,saved,context}=setup();let homes=0;context.window.AcademyLoginNavigation={home:()=>homes++};await api.verifyPhone('0912345678','123456');assert.equal(homes,1);
+ saved.set('sb_token','original-token');saved.set('sb_user',JSON.stringify({id:'verified-user'}));saved.set('academy.oauth',JSON.stringify({intent:'link',userId:'verified-user',verifier:'secret',created:Date.now(),returnHash:'#member/profile'}));context.location.search='?code=valid';await api.consumeCallback();assert.equal(homes,1,'binding never routes to home');
 });

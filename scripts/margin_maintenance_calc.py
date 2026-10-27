@@ -201,6 +201,12 @@ def main():
         print("[error] 缺 SUPABASE_SERVICE_KEY"); sys.exit(1)
     conn = sqlite3.connect(str(DB_PATH)); conn.execute("pragma busy_timeout=60000")
 
+    # 2026-10-24 休市日（含週末、颱風等臨時休市）不寫：10/23、10/24 曾照抓寫入與 10/22 幾乎相同的假資料列
+    today_tw = datetime.now(timezone(timedelta(hours=8))).date()
+    import wantgoo_scraper as _ws
+    if today_tw.weekday() >= 5 or _ws.is_market_holiday(today_tw):
+        print(f"[skip] {today_tw} 非交易日，不計算融資維持率三組"); return
+
     lfin, lclose, _ = listed_fin_and_close()
     ofin, oclose = otc_fin_and_close()
     print(f"上市融資 {len(lfin)} 檔 / 收盤 {len(lclose)}；上櫃融資 {len(ofin)} 檔 / 收盤 {len(oclose)}")
@@ -224,7 +230,9 @@ def main():
     otc_loan_exc = otc_loan_inc * (o_lots_exc / o_lots_inc) if o_lots_inc else 0
     print(f"借款(億)：上市含 {listed_loan_inc/1e8:.1f} / 上市扣 {listed_loan_exc/1e8:.1f} / 上櫃含 {otc_loan_inc/1e8:.1f} / 上櫃扣~ {otc_loan_exc/1e8:.1f}")
 
-    date = datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m-%d")
+    # 2026-10-24 資料日改用本機股價最新交易日：夜間排程跑過午夜才輪到這支時，原本用「執行當下日期」會記成隔天
+    date = conn.execute("select max(trade_date) from stock_daily where market='twse'").fetchone()[0] \
+        or datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m-%d")
     rows = []
     for ex in (False, True):
         l_mv, l_miss = market_value(lfin, lclose, conn, ex)

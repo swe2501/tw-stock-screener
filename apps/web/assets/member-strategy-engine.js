@@ -86,20 +86,23 @@
     ];
     function searchCatalog(query=''){const q=String(query).trim().toLowerCase();return catalog.map((c,i)=>({c,i,score:c.keywords.reduce((n,k)=>n+((/^[a-z]+$/i.test(k)?new RegExp('(?:^|[^a-z])'+k.toLowerCase()+'(?:$|[^a-z])').test(q):q.includes(k.toLowerCase()))?1:0),0)})).filter(x=>!q||x.score).sort((a,b)=>b.score-a.score||a.i-b.i).map(x=>({...x.c,keywords:[...x.c.keywords]}));}
     function createGuide(){
-      let step='idea',side='entry',kind='',period=0,threshold=0,entry=null,exit=null,risk={stop:0,take:0,maxBars:0};
+      let step='idea',trade='long',side='entry',kind='',period=0,threshold=0,entry=null,exit=null,risk={stop:0,take:0,maxBars:0};
       let research={},candidates=[],selected=null,fast=0,slow=0,signal=0,smoothK=0,smoothD=0;
       const answer=(message,choices=[],proposal=null,references=[])=>({message,choices,proposal,references});
       const marketPrompt=()=>{step='market';return answer('先把目標整理成可驗證的研究問題。勝率不能承諾，也不能只靠挑最佳參數達成；需要看交易次數、成本、賺賠幅度、回撤與樣本外結果。你要研究哪一類資料？',['股票／ETF 日線','期貨／選擇權','還不確定']);};
       function compareDirections(supportedOnly=false){step='candidate';const ids=selected?[selected.id,...(research.horizon==='中長波段'?['ma','macd']:['rsi','kd'])]:research.horizon==='中長波段'?['ma','macd','breakout']:research.focus==='回撤'?['rsi','kd','ma']:['breakout','macd','ma'];candidates=[...new Set(ids)].map(id=>catalog.find(c=>c.id===id)).filter(c=>c&&(!supportedOnly||c.supported)).slice(0,3);if(!candidates.length)candidates=catalog.filter(c=>c.supported).slice(0,3);return answer('依你選的研究期間與關注重點，先比較以下方向；這是研究分類，沒有依未驗證的勝率或報酬排名：\n'+candidates.map(c=>c.title+'：'+c.summary+' '+c.warning+(c.supported?'':'（目前僅可討論）')).join('\n\n')+'\n選一個方向，才逐步確認它的參數；你剛才選的持有偏好不會自動填入交易規則。',candidates.map(c=>c.title),null,candidates);}
-      const intro=()=>answer('你想研究什麼買進時機？可以用一句話說，也可以回答「不知道」。我會逐步確認數值，不替你決定。這是本機規則引導，並非生成式 AI。',['不知道，先介紹','均線','RSI','突破區間','成交量']);
-      const exitPrompt=()=>{step='exit';return answer('買進條件已記下。什麼時候賣出？可說「收盤價低於 20 日均線」，也能選擇一步步設定，或明確選擇只用風控。',['一步步設定賣出條件','只用停損停利／持有期限']);};
-      const riskPrompt=()=>{step='stop';return answer('停損要設幾 %？以模擬買進價計算；輸入 0 表示關閉。下方數字只是範例，點選才採用。',['0','5','10']);};
+      const act=s=>trade==='short'?(s==='entry'?'放空':'回補'):(s==='entry'?'買進':'賣出');
+      const intro=()=>{step='idea';return answer('你想研究什麼'+act('entry')+'時機？可以用一句話說，也可以回答「不知道」。我會逐步確認數值，不替你決定。這是本機規則引導，並非生成式 AI。',['不知道，先介紹','均線','RSI','突破區間','成交量']);};
+      const tradePrompt=()=>{step='trade';return answer('先確認方向：這個策略要找「買點」做多，還是找「放空點」做空？做多是先買後賣，股價上漲才賺；做空是先賣後補，股價下跌才賺。也可以直接說你的想法，預設為做多。',['做多（找買點）','做空（找放空點）','不知道，先介紹']);};
+      const exitPrompt=()=>{step='exit';return answer(act('entry')+'條件已記下。什麼時候'+act('exit')+'？可說「收盤價'+(trade==='short'?'高於':'低於')+' 20 日均線」，也能選擇一步步設定，或明確選擇只用風控。',['一步步設定'+act('exit')+'條件','只用停損停利／持有期限']);};
+      const riskPrompt=()=>{step='stop';return answer('停損要設幾 %？以模擬'+(trade==='short'?'放空':'買進')+'價計算'+(trade==='short'?'（股價上漲到這個幅度就回補）':'')+'；輸入 0 表示關閉。下方數字只是範例，點選才採用。',['0','5','10']);};
       const kindPrompt=()=>{step='kind';return answer('先選一個觀察方式：均線看趨勢；RSI／KD 看區間動能；MACD 看 DIF 與訊號線；突破看前期高低價；成交量看交易活躍程度。不知道方向時可輸入「幫我找策略」，先比較研究方向。',['均線','RSI','MACD','KD','突破區間','成交量']);};
-      function chooseKind(text){const choices=[[/均線/,'ma'],[/RSI|強弱/i,'rsi'],[/MACD/i,'macd'],[/\bKD\b/i,'kd'],[/突破|區間/,'breakout'],[/成交量|均量|放量/,'volume']].filter(([pattern])=>pattern.test(text));if(choices.length!==1)return kindPrompt();kind=choices[0][1];if(kind==='macd'){step='macdFast';return answer('MACD 先確認快線 EMA 週期（2～119 根）；按鈕僅是範例，點選才採用。',['5','12','20']);}step='period';return answer((side==='entry'?'買進':'賣出')+'條件想看幾根日K？'+(['rsi','kd'].includes(kind)?'可用 2～120 根。':'可用 2～240 根。')+'按鈕是可修改的範例，請選擇或輸入數字。',['5','20','60']);}
+      function chooseKind(text){const choices=[[/均線/,'ma'],[/RSI|強弱/i,'rsi'],[/MACD/i,'macd'],[/\bKD\b/i,'kd'],[/突破|區間/,'breakout'],[/成交量|均量|放量/,'volume']].filter(([pattern])=>pattern.test(text));if(choices.length!==1)return kindPrompt();kind=choices[0][1];if(kind==='macd'){step='macdFast';return answer('MACD 先確認快線 EMA 週期（2～119 根）；按鈕僅是範例，點選才採用。',['5','12','20']);}step='period';return answer(act(side)+'條件想看幾根日K？'+(['rsi','kd'].includes(kind)?'可用 2～120 根。':'可用 2～240 根。')+'按鈕是可修改的範例，請選擇或輸入數字。',['5','20','60']);}
       function directionPrompt(){step='direction';return answer('要在數值「高於」或「低於」門檻時成立嗎？'+(['ma','rsi'].includes(kind)?'「向上穿越」只在前日未高於、當日變高於時成立；持續高於是另一種條件。':''),['ma','rsi'].includes(kind)?['高於','低於','向上穿越','向下穿越']:['高於','低於']);}
       function finishCondition(direction){const high=['高於','向上穿越'].includes(direction),left=kind==='volume'?'volume':kind==='rsi'?'RSI(close, period)':'close',right=kind==='ma'?'SMA(close, period)':kind==='rsi'?'threshold':kind==='volume'?'REF(SMA(volume, period), 1) * threshold':`REF(${high?'HHV(high':'LLV(low'}, period), 1)`,expression=direction==='向上穿越'?`CROSSUP(${left}, ${right})`:direction==='向下穿越'?`CROSSDOWN(${left}, ${right})`:`${left} ${high?'>':'<'} ${right}`,code=`param period = ${period}\n`+(['rsi','volume'].includes(kind)?`param threshold = ${threshold}\n`:'')+expression;
         let condition=code;if(['macd','kd'].includes(kind)){condition={type:kind,op:{高於:'above',低於:'below',向上穿越:'crossUp',向下穿越:'crossDown'}[direction],...(kind==='macd'?{fast,slow,signal}:{period,smoothK,smoothD})};}else compile(code);if(side==='entry'){entry=condition;return exitPrompt();}exit=condition;return riskPrompt();}
-      return {start:intro,send(text){text=String(text||'').trim();if(!text||text.length>1000)return answer('請用 1～1000 個字描述。');
+      return {start:tradePrompt,send(text){text=String(text||'').trim();if(!text||text.length>1000)return answer('請用 1～1000 個字描述。');
+        if(step==='trade'){if(/^做空|放空|找放空點/.test(text)){trade='short';return intro();}if(/^做多|找買點/.test(text)){trade='long';return intro();}step='idea';if(text==='不知道，先介紹')return kindPrompt();}
         if(text.startsWith('研究方向：')){const c=catalog.find(c=>c.id===text.slice(5));if(!c)return answer('找不到這個公開方向，請重新選擇。');selected=c;research={goal:c.title};return marketPrompt();}
         if(['idea','kind'].includes(step)&&searchCatalog(text).some(c=>!c.supported)){selected=searchCatalog(text).find(c=>!c.supported);research={goal:text};return marketPrompt();}
         if(['idea','kind'].includes(step)&&/勝率|七成|報酬率|回撤|幫我找|其他策略|推薦策略|適合.*策略/.test(text)){research={goal:text};selected=null;return marketPrompt();}
@@ -110,9 +113,9 @@
         if(step==='done')return answer('建議已整理好，請檢查後按「套用到新草稿」。若想重新整理，可按「重新開始引導」。');
         if(step==='idea'){try{entry=fromChinese(text);return exitPrompt();}catch{}if(/不知道|不懂|介紹|怎麼|如何/.test(text))return kindPrompt();return chooseKind(text);}
         if(step==='kind')return chooseKind(text);
-        if(step==='exit'){if(/一步步/.test(text)){side='exit';return kindPrompt();}if(text==='只用停損停利／持有期限'){exit=null;return riskPrompt();}try{exit=fromChinese(text);return riskPrompt();}catch{return answer('賣出條件還不夠明確。請說明比較方式與週期，例如「收盤價低於 20 日均線」。若不熟悉，可選一步步設定；不會自動替你套入條件。',['一步步設定賣出條件','只用停損停利／持有期限']);}}
+        if(step==='exit'){if(/一步步/.test(text)){side='exit';return kindPrompt();}if(text==='只用停損停利／持有期限'){exit=null;return riskPrompt();}try{exit=fromChinese(text);return riskPrompt();}catch{return answer(act('exit')+'條件還不夠明確。請說明比較方式與週期，例如「收盤價'+(trade==='short'?'高於':'低於')+' 20 日均線」。若不熟悉，可選一步步設定；不會自動替你套入條件。',['一步步設定'+act('exit')+'條件','只用停損停利／持有期限']);}}
         if(step==='direction'){if(!['高於','低於','向上穿越','向下穿越'].includes(text)||['breakout','volume'].includes(kind)&&text.includes('穿越'))return directionPrompt();return finishCondition(text);}
-        if(step==='name'){if(text.length>60)return answer('請將策略名稱縮短到 60 字以內。');const rule=code=>typeof code==='string'?{type:'formula',op:'above',code,params:{}}:{...code},proposal={name:text,entryMode:'all',exitMode:'any',entry:[rule(entry)],exit:exit?[rule(exit)]:[],risk:{...risk}};step='done';return answer('已依你確認的條件整理成待確認草稿。請檢查買賣規則和風控，再決定是否套用。收盤條件在下一交易日開盤模擬成交；目前沒有執行回測、儲存或下單。驗證時請一起看成本、交易次數、勝率、賺賠幅度、回撤與樣本外結果，不以單一勝率宣稱可達成目標。',[],proposal);}
+        if(step==='name'){if(text.length>60)return answer('請將策略名稱縮短到 60 字以內。');const rule=code=>typeof code==='string'?{type:'formula',op:'above',code,params:{}}:{...code},proposal={name:text,direction:trade,entryMode:'all',exitMode:'any',entry:[rule(entry)],exit:exit?[rule(exit)]:[],risk:{...risk}};step='done';return answer('已依你確認的條件整理成待確認草稿。請檢查買賣規則和風控，再決定是否套用。收盤條件在下一交易日開盤模擬成交；目前沒有執行回測、儲存或下單。驗證時請一起看成本、交易次數、勝率、賺賠幅度、回撤與樣本外結果，不以單一勝率宣稱可達成目標。',[],proposal);}
         const number=/^\s*(\d+(?:\.\d+)?)\s*(?:%|％|日|天|根|倍)?\s*$/.exec(text),value=number?Number(number[1]):NaN;
         if(step==='macdFast'){if(!Number.isInteger(value)||value<2||value>119)return answer('快線須為 2～119 的整數；例如 12 只是範例，需由你確認。',['12']);fast=value;step='macdSlow';return answer('慢線 EMA 週期是多少？須大於快線且不超過 240 根。',['26','60']);}
         if(step==='macdSlow'){if(!Number.isInteger(value)||value<=fast||value>240)return answer('慢線須大於快線 '+fast+'，且不超過 240。');slow=value;step='macdSignal';return answer('訊號 EMA 週期是多少？可用 2～120 根，9 只是常見範例值。',['9','20']);}
@@ -164,6 +167,7 @@
       if(!Array.isArray(s[side])||s[side].length>10||(side==='entry'&&!s[side].length)||!['all','any'].includes(s[side+'Mode']))throw Error('每組可設定 1～10 條條件；賣出條件可留空');
       for(const r of s[side]){const def=definitions[r.type];if(!def||!def.ops.includes(r.op)||(side==='exit'&&r.type==='always'))throw Error('條件類型或比較方式不支援');if(r.type==='formula'){try{formula.compile(r.code,r.params||{});}catch(e){throw Error((side==='entry'?'買進':'賣出')+'條件：'+e.message);}}for(const [k,f] of Object.entries(def.fields)){if(!Number.isFinite(r[k])||r[k]<f[2]||r[k]>f[3]||(!f[4]&&!Number.isInteger(r[k])))throw Error(def.name+'：'+f[0]+'設定無效');}if(['maPair','macd'].includes(r.type)&&r.fast>=r.slow)throw Error('短／快線週期必須小於長／慢線週期');}
     }
+    if(s.direction!==undefined&&!['long','short'].includes(s.direction))throw Error('策略方向只能是做多或做空');
     const risk=s.risk||{};if(!Number.isFinite(risk.stop)||risk.stop<0||risk.stop>=100||!Number.isFinite(risk.take)||risk.take<0||risk.take>1000||!Number.isInteger(risk.maxBars)||risk.maxBars<0||risk.maxBars>1000)throw Error('停損、停利或最長持有天數無效');
     return true;
   }
@@ -178,7 +182,7 @@
     if(r.type==='macd')return `MACD DIF（${r.fast}, ${r.slow}）${op}訊號線（${r.signal}）`;
     return `KD（${r.period}, ${r.smoothK}, ${r.smoothD}）K ${op} D`;
   }
-  function summary(s){return ['買進：'+s.entry.map(describeRule).join(s.entryMode==='all'?'，而且 ':'，或 '),'賣出：'+(s.exit.length?s.exit.map(describeRule).join(s.exitMode==='all'?'，而且 ':'，或 '):'不依指標賣出'),`停損 ${s.risk.stop||'關閉'}${s.risk.stop?'%':''}；停利 ${s.risk.take||'關閉'}${s.risk.take?'%':''}；最長持有 ${s.risk.maxBars||'不限'}${s.risk.maxBars?' 根日K':''}`].join('\n').replace(/NaN/g,'未填');}
+  function summary(s){const short=s.direction==='short';return [(short?'方向：做空（先放空，再回補）\n放空：':'買進：')+s.entry.map(describeRule).join(s.entryMode==='all'?'，而且 ':'，或 '),(short?'回補：':'賣出：')+(s.exit.length?s.exit.map(describeRule).join(s.exitMode==='all'?'，而且 ':'，或 '):(short?'不依指標回補':'不依指標賣出')),`停損 ${s.risk.stop||'關閉'}${s.risk.stop?'%':''}；停利 ${s.risk.take||'關閉'}${s.risk.take?'%':''}；最長持有 ${s.risk.maxBars||'不限'}${s.risk.maxBars?' 根日K':''}`].join('\n').replace(/NaN/g,'未填');}
   function sma(a,n){let sum=0,count=0;return a.map((v,i)=>{if(Number.isFinite(v)){sum+=v;count++;}if(i>=n&&Number.isFinite(a[i-n])){sum-=a[i-n];count--;}return i>=n-1&&count===n?sum/n:null;});}
   function ema(a,n){let prev=null,total=0,count=0;return a.map(v=>{if(!Number.isFinite(v))return null;if(prev===null){total+=v;count++;if(count<n)return null;prev=total/n;}else prev=v*2/(n+1)+prev*(1-2/(n+1));return prev;});}
   function indicators(data,r){
@@ -231,7 +235,29 @@
     let cash=p.capital,qty=0,buyPrice=0,buyCost=0,held=0,peak=p.capital,dd=0,wins=0,closed=0,fees=0;const trades=[],curve=[];
     const benchmarkFill=data[first].open*(1+p.slip),benchmarkQty=Math.floor(p.capital/(benchmarkFill*(1+p.fee))),benchmarkCash=p.capital-benchmarkQty*benchmarkFill*(1+p.fee);
     let buyDate=null;
-    const sell=(bar,raw,reason,signal=null)=>{const price=raw*(1-p.slip),cost=qty*price*(p.fee+p.tax),net=qty*price-cost,pnl=net-buyCost;cash+=net;fees+=cost;closed++;if(pnl>0)wins++;trades.push({date:bar.time,side:'賣出',price,rawPrice:raw,shares:qty,cost,reason,pnl,returnPct:buyCost?pnl/buyCost*100:null,entryDate:buyDate,entryPrice:buyPrice,signal});qty=0;held=0;};
+    if(s.direction==='short'){
+      // 做空：前日訊號→隔日開盤放空；以全額保證金模擬（不計融資融券成數與追繳），放空時付手續費＋證交稅＋借券費，回補時付手續費。
+      const borrow=Number.isFinite(p.borrow)?p.borrow:.0008;if(borrow<0||borrow>.05)throw Error('借券費率設定無效');
+      let entryCost=0;
+      const cover=(bar,raw,reason,signal=null)=>{const price=raw*(1+p.slip),cost=qty*price*p.fee,gross=qty*(buyPrice-price),pnl=gross-entryCost-cost;cash+=gross-cost;fees+=cost;closed++;if(pnl>0)wins++;trades.push({date:bar.time,side:'回補',exit:true,price,rawPrice:raw,shares:qty,cost,reason,pnl,returnPct:qty*buyPrice?pnl/(qty*buyPrice)*100:null,entryDate:buyDate,entryPrice:buyPrice,signal});qty=0;held=0;};
+      for(let i=first;i<=last;i++){
+        const bar=data[i];let done=false;
+        if(qty){const stop=buyPrice*(1+s.risk.stop/100),take=buyPrice*(1-s.risk.take/100);
+          if(evaluate('exit',i-1)){cover(bar,bar.open,'前日回補訊號',inspectAt(data,s,i-1,cache));done=true;}
+          else if(s.risk.maxBars&&held>=s.risk.maxBars){cover(bar,bar.open,'持有期限');done=true;}
+          else if(s.risk.stop&&bar.open>=stop){cover(bar,bar.open,'跳空停損');done=true;}
+          else if(s.risk.take&&bar.open<=take){cover(bar,bar.open,'跳空停利');done=true;}
+        }
+        if(!qty&&!done&&evaluate('entry',i-1)){
+          const price=bar.open*(1-p.slip),budget=p.sizing==='amount'?Math.min(cash,p.amount):cash*p.allocation,n=Math.floor(budget/(price*(1+p.fee+p.tax+borrow)));
+          if(n>0){qty=n;buyPrice=price;buyDate=bar.time;entryCost=n*price*(p.fee+p.tax+borrow);cash-=entryCost;held=0;fees+=entryCost;trades.push({date:bar.time,side:'放空',entry:true,price,rawPrice:bar.open,shares:n,cost:entryCost,reason:i===first&&s.entry.some(r=>r.type==='always')?'期間起始':'前日放空訊號',signal:inspectAt(data,s,i-1,cache)});}
+        }
+        if(qty){const stop=buyPrice*(1+s.risk.stop/100),take=buyPrice*(1-s.risk.take/100);if(s.risk.stop&&bar.high>=stop)cover(bar,Math.max(bar.open,stop),'盤中停損（同棒雙觸價以停損優先）');else if(s.risk.take&&bar.low<=take)cover(bar,Math.min(bar.open,take),'盤中停利');}
+        if(qty)held++;const equity=cash+qty*(buyPrice-bar.close);peak=Math.max(peak,equity);dd=Math.max(dd,peak>0?(peak-equity)/peak:0);curve.push({date:bar.time,equity,benchmark:benchmarkCash+benchmarkQty*bar.close});
+      }
+      return {engineVersion:VERSION,direction:'short',curve,trades,returnPct:(curve.at(-1).equity/p.capital-1)*100,benchmarkPct:(curve.at(-1).benchmark/p.capital-1)*100,drawdown:dd*100,closed,winRate:closed?wins/closed*100:null,openShares:qty,fees,first:curve[0].date,last:curve.at(-1).date,strategy:copy(s),parameters:copy(p)};
+    }
+    const sell=(bar,raw,reason,signal=null)=>{const price=raw*(1-p.slip),cost=qty*price*(p.fee+p.tax),net=qty*price-cost,pnl=net-buyCost;cash+=net;fees+=cost;closed++;if(pnl>0)wins++;trades.push({date:bar.time,side:'賣出',exit:true,price,rawPrice:raw,shares:qty,cost,reason,pnl,returnPct:buyCost?pnl/buyCost*100:null,entryDate:buyDate,entryPrice:buyPrice,signal});qty=0;held=0;};
     for(let i=first;i<=last;i++){
       const bar=data[i];let sold=false;
       if(qty){const stop=buyPrice*(1-s.risk.stop/100),take=buyPrice*(1+s.risk.take/100);
@@ -242,7 +268,7 @@
       }
       if(!qty&&!sold&&evaluate('entry',i-1)){
         const price=bar.open*(1+p.slip),budget=p.sizing==='amount'?Math.min(cash,p.amount):cash*p.allocation,n=Math.floor(budget/(price*(1+p.fee)));
-        if(n>0){qty=n;buyPrice=price;buyDate=bar.time;buyCost=n*price*(1+p.fee);cash-=buyCost;held=0;fees+=n*price*p.fee;trades.push({date:bar.time,side:'買進',price,rawPrice:bar.open,shares:n,cost:n*price*p.fee,reason:i===first&&s.entry.some(r=>r.type==='always')?'期間起始':'前日買進訊號',signal:inspectAt(data,s,i-1,cache)});}
+        if(n>0){qty=n;buyPrice=price;buyDate=bar.time;buyCost=n*price*(1+p.fee);cash-=buyCost;held=0;fees+=n*price*p.fee;trades.push({date:bar.time,side:'買進',entry:true,price,rawPrice:bar.open,shares:n,cost:n*price*p.fee,reason:i===first&&s.entry.some(r=>r.type==='always')?'期間起始':'前日買進訊號',signal:inspectAt(data,s,i-1,cache)});}
       }
       if(qty){const stop=buyPrice*(1-s.risk.stop/100),take=buyPrice*(1+s.risk.take/100);if(s.risk.stop&&bar.low<=stop)sell(bar,Math.min(bar.open,stop),'盤中停損（同棒雙觸價以停損優先）');else if(s.risk.take&&bar.high>=take)sell(bar,Math.max(bar.open,take),'盤中停利');}
       if(qty)held++;const equity=cash+qty*bar.close;peak=Math.max(peak,equity);dd=Math.max(dd,(peak-equity)/peak);curve.push({date:bar.time,equity,benchmark:benchmarkCash+benchmarkQty*bar.close});

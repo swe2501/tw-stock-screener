@@ -76,6 +76,62 @@ def _stock_names():
     return _NAME_CACHE
 
 
+# ── 2026-10-23 主力賣出訊號（依用戶定案）──
+# 只算「賣掉之前買的」：該分點對該股出現過買入訊號（同一榜的大單門檻）後才開始記持倉，
+#   持倉＝自第一筆買入訊號當天起逐日累加淨買賣（含之後未達門檻的小買小賣）。
+# 賣出訊號：持倉 > 0 時，單日淨賣超達大單門檻（張數榜 ≥300 張／金額榜 ≥3000 萬）
+#   或 賣出張數 ≥ 該輪峰值持倉 × 20%，符合其一即記。
+# 賣後持倉 ≤ 峰值 × 10% 視為「出清」（view 後綴 _exit），不論當次賣量是否達上述門檻（2026-10-24），
+#   該輪結束；之後再出現買入訊號才開新一輪。
+# 存法：沿用 broker_trades，view 加 _sell／_exit 後綴，net_lots／net_amount_wan 存「負數」（賣出量），
+#   buy_avg_price 欄放「賣出均價」。負數讓既有讀買超的查詢（net_lots≥300 等）自動排除賣出列。
+SELL_VIEWS = ("year_large_lots", "year_large_amount")
+SELL_LOTS, SELL_WAN, SELL_PEAK_PCT, EXIT_LEFT_PCT = 300, 3000, 0.20, 0.10
+
+
+def _sell_rows(conn, prices, names, view, kind, bid, cut):
+    recs = conn.execute("""select code, trade_date, buy_vol, sell_vol, buy_avg_price, sell_avg_price
+        from wantgoo_daily where broker_id=? and trade_date>=? order by code, trade_date""", (bid, cut)).fetchall()
+    out, state = [], {}          # state[code] = [pos, peak]（None＝目前沒有進行中的一輪）
+    for code, d, buy, sell, bavg, savg in recs:
+        net = (buy or 0) - (sell or 0)
+        px_close = prices.get(code) and prices[code][1].get(d)
+        st = state.get(code)
+        if st is None:
+            if net <= 0:
+                continue
+            px = bavg or px_close
+            amt = net * 1000 * px / 10000 if px else 0
+            if (net >= SELL_LOTS) if kind == "lots" else (amt >= SELL_WAN):   # 買入訊號 → 開新一輪
+                state[code] = [net, net]
+            continue
+        pos, peak = st
+        if net < 0 and pos > 0:
+            sold = min(-net, pos)                       # 只算賣掉手上這輪買的部分
+            px = savg or px_close
+            amt = round(sold * 1000 * px / 10000, 1) if px else None
+            big = (sold >= SELL_LOTS) if kind == "lots" else ((amt or 0) >= SELL_WAN)
+            left = pos - sold
+            is_exit = left <= peak * EXIT_LEFT_PCT
+            # 2026-10-24 用戶定案：賣後剩不到峰值 10% 一律標出清，不論當次賣量是否達門檻
+            #（原本當次賣量沒達門檻時，持倉賣光也不會標出清）
+            if big or sold >= peak * SELL_PEAK_PCT or is_exit:
+                out.append({"view": view + ("_exit" if is_exit else "_sell"), "broker_id": bid, "trade_date": d,
+                            "code": code, "name": names.get(code, ""),
+                            "net_lots": -int(sold), "net_amount_wan": -amt if amt else None,
+                            "buy_avg_price": round(px, 2) if px else None})
+                if is_exit:
+                    state[code] = None
+                    continue
+        pos += net
+        if pos <= 0:
+            state[code] = None                          # 防呆（賣光必定已在上面記為出清）
+        else:
+            state[code] = [pos, max(peak, pos)]
+    out.sort(key=lambda r: r["trade_date"], reverse=True)
+    return out[:TRADE_CAP]
+
+
 def upload_broker_trades(conn, env, views, d90):
     """把 6 個榜前 20 名分點的逐筆買超明細算好上傳 broker_trades（供網站點分點展開）。
     直接讀 Supabase 現有排名決定名單，不用重算排行榜。"""
@@ -122,6 +178,8 @@ def upload_broker_trades(conn, env, views, d90):
                 if len(picked) >= TRADE_CAP:
                     break
             all_rows.extend(picked)
+            if view in SELL_VIEWS:
+                all_rows.extend(_sell_rows(conn, prices, names, view, kind, bid, cut))
     bs._sb(env, "/broker_trades", method="DELETE", params=[("view", "neq.__none__")])
     status, resp = bs._sb(env, "/broker_trades", method="POST", body=all_rows)
     if status in (200, 201):

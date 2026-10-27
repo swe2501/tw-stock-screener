@@ -32,9 +32,17 @@
     {
       "src": "apps/web/treasury-research.html",
       "use": "@vercel/static"
+    },
+    {
+      "src": "apps/web/research/**",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
+    {
+      "src": "/research/(.*)",
+      "dest": "/apps/web/research/$1"
+    },
     {
       "src": "/api/site_search(?:\\.py)?$",
       "dest": "/api/prices.py?action=site_search"

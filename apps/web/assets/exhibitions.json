@@ -1,0 +1,280 @@
+{
+  "verifiedAt": "2026-10-24",
+  "rangeEnd": "2027-10-24",
+  "events": [
+    {
+      "id": "itf-2026",
+      "name": "ITF 台灣國際旅展 2026",
+      "start": "2026-11-06",
+      "end": "2026-11-09",
+      "venue": "台北南港展覽館一館",
+      "themes": [],
+      "industries": [
+        "觀光餐旅"
+      ],
+      "sourceUrl": "https://www.taiwanitf.org.tw/News",
+      "focus": "旅遊產品、航空航線與旅宿服務；依主辦單位當屆公告追蹤參展動態。",
+      "companies": [
+        {
+          "code": "2610",
+          "kind": "exhibitor",
+          "date": "2026-10-13",
+          "title": "主辦單位當屆新聞稿列入參展航空公司",
+          "sourceUrl": "https://www.taiwanitf.org.tw/News"
+        },
+        {
+          "code": "2618",
+          "kind": "exhibitor",
+          "date": "2026-10-13",
+          "title": "主辦單位當屆新聞稿列入參展航空公司",
+          "sourceUrl": "https://www.taiwanitf.org.tw/News"
+        },
+        {
+          "code": "2646",
+          "kind": "exhibitor",
+          "date": "2026-10-13",
+          "title": "主辦單位當屆新聞稿列入參展航空公司",
+          "sourceUrl": "https://www.taiwanitf.org.tw/News"
+        },
+        {
+          "code": "6757",
+          "kind": "exhibitor",
+          "date": "2026-10-13",
+          "title": "主辦單位當屆新聞稿列入參展航空公司",
+          "sourceUrl": "https://www.taiwanitf.org.tw/News"
+        }
+      ],
+      "status": "confirmed",
+      "verifiedAt": "2026-10-24"
+    },
+    {
+      "id": "healthcare-2026",
+      "name": "台灣醫療科技展 2026",
+      "start": "2026-12-03",
+      "end": "2026-12-06",
+      "venue": "台北南港展覽館一館",
+      "themes": [
+        "生技醫療",
+        "醫療器材",
+        "新藥研發"
+      ],
+      "industries": [
+        "生技醫療業"
+      ],
+      "sourceUrl": "https://expo.taiwan-healthcare.org/zh/",
+      "focus": "智慧醫療、精準檢測、醫材與再生醫療。",
+      "companies": [
+        {
+          "code": "6645",
+          "kind": "technology",
+          "date": "2026-07-07",
+          "title": "金萬林與台大醫院合作建置 CLL 臨床分子檢測平台；此為展會官網公司消息，未據此認定當屆參展。",
+          "sourceUrl": "https://expo.taiwan-healthcare.org/zh/news_detail.php?REFDOCID=0ths9h9r0opnnjww"
+        }
+      ],
+      "status": "confirmed",
+      "verifiedAt": "2026-10-24"
+    },
+    {
+      "id": "ces-2027",
+      "name": "CES 2027",
+      "start": "2027-01-06",
+      "end": "2027-01-09",
+      "venue": "美國拉斯維加斯",
+      "themes": [
+        "AI PC",
+        "車用電子",
+        "電動車",
+        "智慧型機器人",
+        "穿戴裝置",
+        "智慧家庭"
+      ],
+      "industries": [],
+      "sourceUrl": "https://exhibit.ces.tech/exhibit2027/",
+      "focus": "消費科技、智慧移動與創新產品；公司當屆新品與參展資訊以個別公告為準。",
+      "companies": [],
+      "status": "confirmed",
+      "verifiedAt": "2026-10-24"
+    },
+    {
+      "id": "tgs-2027",
+      "name": "台北國際電玩展 2027",
+      "start": "2027-01-21",
+      "end": "2027-01-24",
+      "venue": "台北南港展覽館一館",
+      "themes": [
+        "電競產業",
+        "遊戲機–PlayStation 5",
+        "遊戲機–任天堂Switch"
+      ],
+      "industries": [],
+      "sourceUrl": "https://tgs-application.tca.org.tw/2027/reg_print.php",
+      "focus": "遊戲內容、電競與互動娛樂；關注實際公布的遊戲與技術展示。",
+      "companies": [],
+      "status": "confirmed",
+      "verifiedAt": "2026-10-24"
+    },
+    {
+      "id": "timtos-2027",
+      "name": "TIMTOS 台北國際工具機展 2027",
+      "start": "2027-03-02",
+      "end": "2027-03-06",
+      "venue": "台北南港展覽館一、二館",
+      "themes": [
+        "工業4.0",
+        "智慧型機器人",
+        "3D列印"
+      ],
+      "industries": [
+        "電機機械"
+      ],
+      "sourceUrl": "https://www.timtos.com.tw/en/menu/24D4D472FDE8F915D0636733C6861689/info.html",
+      "focus": "主辦單位公布主軸包含 AI 整合、綠色轉型、智慧製造與數位分身。",
+      "companies": [],
+      "status": "confirmed",
+      "verifiedAt": "2026-10-24"
+    },
+    {
+      "id": "cycle-2027",
+      "name": "TAIPEI CYCLE 台北國際自行車展 2027",
+      "start": "2027-03-24",
+      "end": "2027-03-27",
+      "venue": "台北南港展覽館一、二館",
+      "themes": [
+        "自行車"
+      ],
+      "industries": [
+        "運動休閒"
+      ],
+      "sourceUrl": "https://www.taipeicycle.com.tw/zh-tw/news/53B8A54D941DEB85/list-info.html?cid=news&cr=3&lt=data",
+      "focus": "官方徵展內容涵蓋電動輔助自行車、智慧騎乘與永續材料。",
+      "companies": [],
+      "status": "confirmed",
+      "verifiedAt": "2026-10-24"
+    },
+    {
+      "id": "computex-2027",
+      "name": "COMPUTEX 台北國際電腦展 2027",
+      "start": "2027-06-01",
+      "end": "2027-06-04",
+      "venue": "台北南港展覽館、世貿與台北國際會議中心",
+      "themes": [
+        "AI 伺服器",
+        "AI PC",
+        "智慧型機器人",
+        "資料中心",
+        "散熱模組",
+        "光通訊"
+      ],
+      "industries": [],
+      "sourceUrl": "https://www.computextaipei.com.tw/en/news/035C3CADA83D9EAA/info.html",
+      "focus": "主辦單位強調 Physical AI、機器人與智慧移動，擴大實體 AI 應用展示。",
+      "companies": [],
+      "status": "confirmed",
+      "verifiedAt": "2026-10-24"
+    },
+    {
+      "id": "bio-2027",
+      "name": "BIO Asia–Taiwan 亞洲生技大展 2027",
+      "start": "2027-07-28",
+      "end": "2027-07-31",
+      "venue": "台北南港展覽館一館",
+      "themes": [
+        "生技醫療",
+        "新藥研發",
+        "醫療器材"
+      ],
+      "industries": [
+        "生技醫療業"
+      ],
+      "sourceUrl": "https://expo.bioasiataiwan.com/en/index.asp",
+      "focus": "大會 7/27 起舉行；本行事曆標記實體展覽 7/28–7/31，追蹤當屆生技研發與醫療技術公告。",
+      "companies": [],
+      "status": "confirmed",
+      "verifiedAt": "2026-10-24"
+    },
+    {
+      "id": "automation-2027",
+      "name": "台北國際自動化工業大展 2027",
+      "start": "2027-08-04",
+      "end": "2027-08-07",
+      "venue": "台北南港展覽館",
+      "themes": [
+        "工業4.0",
+        "智慧型機器人",
+        "3D列印"
+      ],
+      "industries": [
+        "電機機械"
+      ],
+      "sourceUrl": "https://automationtaipei.chanchao.com.tw/en/VisitorInfo",
+      "focus": "智慧製造、工廠設備、機器人與系統整合。",
+      "companies": [],
+      "status": "confirmed",
+      "verifiedAt": "2026-10-24"
+    },
+    {
+      "id": "semicon-2027",
+      "name": "SEMICON Taiwan 國際半導體展 2027",
+      "start": "2027-08-18",
+      "end": "2027-08-20",
+      "venue": "台北南港展覽館",
+      "themes": [
+        "CoWoS",
+        "HBM",
+        "CPO",
+        "半導體設備",
+        "封測",
+        "矽光子",
+        "FOPLP 封裝",
+        "IC 載板",
+        "ABF 載板"
+      ],
+      "industries": [
+        "半導體業"
+      ],
+      "sourceUrl": "https://semicontaiwan.org/zh/",
+      "focus": "主辦單位已公告 2027 年改於 8/18–8/20 舉行；當屆技術議程與參展新品仍需依後續公告核對。",
+      "companies": [],
+      "status": "confirmed",
+      "verifiedAt": "2026-10-24"
+    },
+    {
+      "id": "agri-2027",
+      "name": "臺灣智慧農漁週 2027",
+      "start": "2027-09-08",
+      "end": "2027-09-10",
+      "venue": "台北南港展覽館一館",
+      "themes": [],
+      "industries": [
+        "農業科技業"
+      ],
+      "sourceUrl": "https://www.taiwanagriweek.com/registration/participation-methods/",
+      "focus": "智慧農漁業、農業科技與相關設備，追蹤當屆展商技術資訊。",
+      "companies": [],
+      "status": "confirmed",
+      "verifiedAt": "2026-10-24"
+    },
+    {
+      "id": "fintech-2026",
+      "name": "FinTech Taipei 台北金融科技展 2026",
+      "start": null,
+      "end": null,
+      "venue": "新展期與場地待主辦單位公告",
+      "themes": [
+        "FinTech",
+        "資安",
+        "行動支付",
+        "第三方支付"
+      ],
+      "industries": [
+        "金融保險"
+      ],
+      "sourceUrl": "https://www.fintechtaipei.tw/",
+      "focus": "主辦單位 10/20 公告原訂 10/23–10/24 因颱風延期；新展期未確認，不啟動展前倒數。",
+      "companies": [],
+      "status": "postponed",
+      "verifiedAt": "2026-10-24"
+    }
+  ]
+}

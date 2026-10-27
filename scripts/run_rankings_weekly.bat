@@ -1,5 +1,7 @@
 @echo off
 "C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe" "C:\Users\User\Desktop\AI_stock\scripts\broker_rankings.py" >> "C:\Users\User\Desktop\AI_stock\scripts\rankings_weekly.log" 2>&1
 "C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe" "C:\Users\User\Desktop\AI_stock\scripts\free_float.py" >> "C:\Users\User\Desktop\AI_stock\scripts\rankings_weekly.log" 2>&1
-rem 企業價值投資法(357)：全市場歷年現金股利 → stock_dividends（玩股網擋雲端 IP，須本機跑；約 1~1.5 小時、開一個 Chrome 視窗）。股利一年才變，每週一次即可。
+rem Value investing (357) screener data: market-wide cash dividend history -> stock_dividends (wantgoo blocks cloud IPs, so run locally; about 1-1.5 hours).
 "C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe" "C:\Users\User\Desktop\AI_stock\scripts\dividends_push.py" >> "C:\Users\User\Desktop\AI_stock\scripts\dividends_weekly.log" 2>&1
+rem Today-ranking themes: Goodinfo concept-stock scrape -> goodinfo_concepts.json (Goodinfo blocks cloud IPs + has a JS challenge, so run locally; ~20 min). themes_push.py (in the daily job) then merges it into stock_themes.
+"C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe" "C:\Users\User\Desktop\AI_stock\scripts\goodinfo_concepts.py" >> "C:\Users\User\Desktop\AI_stock\scripts\goodinfo_weekly.log" 2>&1

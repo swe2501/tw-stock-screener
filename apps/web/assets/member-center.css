@@ -83,3 +83,70 @@ body.academy-research-ready #chartWatchBtn,body.academy-research-ready #chartBac
 .member-page .mc-top-actions button:hover{background:color-mix(in srgb,var(--accent) 6%,var(--surface))!important;border-color:color-mix(in srgb,var(--accent) 35%,var(--border))!important;box-shadow:0 3px 12px #183e5810!important}
 .member-page .mc-top-actions button::after{display:none!important}
 @media(prefers-reduced-motion:reduce){.member-page .mc-nav button::after{animation:none!important}}
+/* 網站頁首的 header span 徽章樣式會套到會員頁標題上方的小標，造成同色底蓋字；會員頁小標一律不加底 */
+.member-page header .mc-kicker{background:none!important;padding:0!important;border-radius:0!important;font-weight:700}
+/* 2026-10-22 回到頂端（會員中心）：霧面玻璃圓鈕，深淺色跟隨網站 */
+.member-page .mc-to-top{position:fixed;right:24px;bottom:24px;z-index:12400;width:46px;height:46px;margin:0;padding:0;display:grid;place-items:center;border-radius:50%;border:1px solid color-mix(in srgb,var(--border) 80%,var(--accent) 20%);background:color-mix(in srgb,var(--surface) 82%,transparent);color:var(--text);backdrop-filter:blur(10px) saturate(1.2);-webkit-backdrop-filter:blur(10px) saturate(1.2);box-shadow:0 10px 26px rgba(15,23,42,.16),inset 0 1px 0 rgba(255,255,255,.55);cursor:pointer;opacity:0;transform:translateY(10px) scale(.92);pointer-events:none;transition:opacity .22s ease,transform .22s ease,bottom .22s ease,border-color .15s,color .15s,background .15s}
+.member-page .mc-to-top.is-visible{opacity:1;transform:none;pointer-events:auto}
+.member-page .mc-to-top.is-raised{bottom:104px}
+.member-page .mc-to-top:hover{color:var(--accent);border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,var(--surface))}
+.member-page .mc-to-top:active{transform:scale(.95)}
+.member-page .mc-to-top:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+:root:not([data-theme=light]) .member-page .mc-to-top{box-shadow:0 10px 26px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.06)}
+@media(max-width:700px){.member-page .mc-to-top{right:16px;bottom:calc(18px + env(safe-area-inset-bottom));width:42px;height:42px}}
+@media(prefers-reduced-motion:reduce){.member-page .mc-to-top{transition:opacity .01s}}
+/* 交易與目標分頁 */
+.mt-tabs{display:inline-flex;gap:3px;padding:3px;border-radius:12px;background:color-mix(in srgb,var(--text-muted) 11%,transparent)}
+.member-page .mt-tabs button{margin:0;padding:7px 14px;min-height:34px;border:0;border-radius:9px;background:transparent;color:var(--text-muted);font:inherit;font-size:13px;font-weight:700;cursor:pointer;box-shadow:none}
+.member-page .mt-tabs button[aria-selected="true"]{background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(15,23,42,.14)}
+/* 本週回顧 */
+.mc-week-challenge{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:14px 0;padding:14px 16px;border-radius:14px;border:1px solid color-mix(in srgb,var(--accent) 30%,var(--border));background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 7%,var(--surface)),var(--surface))}
+.mc-week-challenge.is-done{border-color:color-mix(in srgb,var(--green,#2EA043) 35%,var(--border))}
+.mc-week-challenge>div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.mc-week-challenge small{font-size:12px;color:var(--accent);font-weight:700}
+.mc-week-challenge b{font-size:16px}
+.mc-week-challenge span{font-size:13px;color:var(--text-muted)}
+.mc-week-h{margin:18px 0 8px;font-size:15px}
+.mc-week-todo{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.mc-week-todo li{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border:1px solid var(--border);border-radius:12px;font-size:13.5px}
+.member-page .mc-week-todo button,.member-page .mc-week-challenge button{flex:none;margin:0;padding:6px 12px;min-height:34px;border-radius:999px;font-size:12.5px;font-weight:700}
+.mc-week-allset{color:var(--green,#2EA043);font-weight:600}
+/* 2026-10-22 頭像：隱藏原生檔案欄位，按鈕即可選圖；狀態訊息就在按鈕旁 */
+.mc-visually-hidden{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+.mc-avatar-pick{display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-width:0}
+.mc-card .mc-avatar-pick .mc-upload-label{display:inline-flex;align-items:center;gap:7px;margin:0;padding:9px 16px;border:1px solid var(--border);border-radius:999px;background:var(--surface);font-weight:700;transition:border-color .15s,color .15s}
+.mc-card .mc-avatar-pick .mc-upload-label:hover{border-color:var(--accent);color:var(--accent)}
+.mc-avatar-pick:focus-within .mc-upload-label{outline:2px solid var(--accent);outline-offset:2px}
+.mc-avatar-pick small{color:var(--text-muted);line-height:1.6}
+.mc-avatar-pick-status:empty,.mc-avatar-status:empty{display:none}
+.mc-avatar-pick-status,.mc-avatar-status{font-size:13px;font-weight:600;color:var(--accent)}
+.mc-avatar-crop canvas{width:200px;height:200px;border-radius:50%;box-shadow:0 0 0 1px var(--border)}
+.mc-card .mc-avatar-save{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#fff)}
+.mj-ticket[hidden]{display:none!important}.mj-ticket-filter{margin:6px 0 14px}
+/* 2026-10-22 頭像按鈕：精緻膠囊，細邊漸層＋緩慢流光，深淺色跟隨網站 */
+.mc-card .mc-avatar-pick .mc-upload-label,.mc-card .mc-avatar-actions button{position:relative;isolation:isolate;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;gap:9px;margin:0;min-height:44px;padding:0 24px 0 20px;border-radius:999px;font-size:14px;font-weight:700;letter-spacing:.08em;line-height:1;white-space:nowrap;cursor:pointer;
+ color:var(--text);border:1px solid transparent;
+ background:linear-gradient(var(--surface),var(--surface)) padding-box,linear-gradient(135deg,color-mix(in srgb,var(--accent) 70%,#fff) 0%,color-mix(in srgb,var(--border) 90%,transparent) 45%,color-mix(in srgb,var(--accent) 55%,#C9A227) 100%) border-box;
+ box-shadow:0 1px 0 rgba(255,255,255,.7) inset,0 6px 18px color-mix(in srgb,var(--accent) 14%,transparent);transition:transform .18s ease,box-shadow .2s ease,color .15s}
+.mc-card .mc-avatar-pick .mc-upload-label svg{width:17px;height:17px;color:var(--accent)}
+.mc-card .mc-avatar-pick .mc-upload-label::after,.mc-card .mc-avatar-actions .mc-avatar-save::after{content:'';position:absolute;inset:-2px auto -2px -40%;width:36%;z-index:-1;background:linear-gradient(100deg,transparent,color-mix(in srgb,#fff 65%,transparent),transparent);transform:skewX(-18deg);animation:mcSheen 4.2s ease-in-out infinite}
+.mc-card .mc-avatar-pick .mc-upload-label:hover,.mc-card .mc-avatar-actions button:hover{transform:translateY(-1px);box-shadow:0 1px 0 rgba(255,255,255,.7) inset,0 10px 26px color-mix(in srgb,var(--accent) 24%,transparent);color:var(--accent)}
+.mc-card .mc-avatar-pick .mc-upload-label:active,.mc-card .mc-avatar-actions button:active{transform:translateY(0) scale(.98)}
+.mc-card .mc-avatar-actions .mc-avatar-save{color:var(--on-accent,#fff);background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 88%,#fff),var(--accent) 55%,color-mix(in srgb,var(--accent) 80%,#0b1d33)) padding-box,linear-gradient(135deg,color-mix(in srgb,var(--accent) 50%,#fff),color-mix(in srgb,var(--accent) 60%,#C9A227)) border-box}
+.mc-card .mc-avatar-actions .mc-avatar-save:hover{color:var(--on-accent,#fff)}
+.mc-avatar-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+:root:not([data-theme=light]) .mc-card .mc-avatar-pick .mc-upload-label,:root:not([data-theme=light]) .mc-card .mc-avatar-actions button:not(.mc-avatar-save){box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 6px 20px rgba(0,0,0,.35),0 0 0 1px color-mix(in srgb,var(--accent) 12%,transparent)}
+:root:not([data-theme=light]) .mc-card .mc-avatar-pick .mc-upload-label::after{background:linear-gradient(100deg,transparent,color-mix(in srgb,var(--accent) 35%,transparent),transparent)}
+@keyframes mcSheen{0%,62%{left:-40%}100%{left:120%}}
+@media(prefers-reduced-motion:reduce){.mc-card .mc-avatar-pick .mc-upload-label::after,.mc-card .mc-avatar-actions .mc-avatar-save::after{animation:none;display:none}}
+/* 點數兌換：免費取得說明＋點數進度條（2026-10-22） */
+.mj-free-route{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;margin:2px 0 14px;padding:12px 16px;border:1px solid color-mix(in srgb,var(--accent) 35%,var(--border));border-radius:12px;background:color-mix(in srgb,var(--accent) 7%,transparent);font-size:13.5px;line-height:1.6}
+.mj-free-route b{color:var(--accent);font-weight:700}.mj-free-route span{color:var(--text)}
+.mj-ticket-progress{display:grid;gap:6px}.mj-ticket-progress[hidden]{display:none}
+.mj-ticket-progress>span{display:block;height:6px;border-radius:999px;background:var(--surface2);border:1px solid var(--border);overflow:hidden}
+.mj-ticket-progress i{display:block;height:100%;width:0;border-radius:inherit;background:linear-gradient(90deg,color-mix(in srgb,var(--accent) 65%,transparent),var(--accent));transition:width .5s ease}
+.mj-ticket-progress small{margin:0!important;font-size:11.5px;color:var(--mj-muted,var(--text-muted))}.mj-ticket-progress.is-full small{color:var(--accent)}
+@media(prefers-reduced-motion:reduce){.mj-ticket-progress i{transition:none}}
+
+/* Routine sync success needs no permanent banner; pending work and errors remain visible. */
+.mc-cloud-host[data-cloud-compact=true]{display:none}

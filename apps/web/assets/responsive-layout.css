@@ -1,0 +1,119 @@
+body :is(.form-wrap,.field,.results-wrap,.pro-results-stage,.chart-content,.chart-note-panel,.hp-mc,.hp-ic,.mc-card) {
+  min-width: 0;
+}
+
+body :is(.table-wrap,.gd-scroll,.etx-list-wrap,.etx-move-table,.ef-scroll) {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+
+body :is(.form-grid,.mc-grid) > * {
+  min-width: 0;
+}
+
+body :is(input,select,textarea) {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+#chartModal :is(.chart-content,.modal-body,#chartWrapper) {
+  min-width: 0;
+}
+
+@media (max-width: 1100px) {
+  #chartModal .chart-content { width: 100%; }
+  #chartModal .chart-note-panel { box-sizing: border-box; }
+  #chartModal :is(.chart-toolbar,.chart-range-btns,.chart-draw-console) { flex-wrap: wrap; }
+  #chartModal .modal-body { min-height: 0; }
+}
+
+@media (max-width: 900px) {
+  body > header:first-of-type {
+    position: relative !important;
+    height: auto !important;
+    min-height: 62px;
+    flex-wrap: wrap;
+    gap: 8px;
+    transform: none !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+
+  body #mainNav,body.pro-nav-compact #mainNav {
+    position: relative !important;
+    top: auto !important;
+    left: auto;
+    right: auto;
+    width: calc(100% + 24px) !important;
+    margin-inline: -12px !important;
+    overflow: visible !important;
+  }
+
+  #mainNav .mn-inner {
+    min-width: 0;
+    flex-wrap: wrap;
+    padding: 4px 12px !important;
+  }
+
+  #mainNav .mn-grp { position: static !important; }
+  #mainNav .mn-menu {
+    left: 8px !important;
+    right: 8px !important;
+    top: 100% !important;
+    width: auto !important;
+    min-width: 0;
+    max-height: 50vh;
+    max-height: 50dvh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  #mainNav .mn-menu a { white-space: normal; }
+  #mainNav .mn-grp:focus-within .mn-menu:not(.mn-hide) { display: block; }
+  #mainNav .site-search { min-width: 0; max-width: 100%; }
+
+  .form-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  body :is(.results-header,.ms-heading,.ms-studio-head,.ms-editor-actions) { flex-wrap: wrap; }
+  body :is(.hp-searchbar,.gs-search,.topsearch) input { min-width: 0; }
+  body :is(.modal-box,.watch-panel-inner,dialog) { max-width: 100%; }
+
+  #chartModal .modal-header {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+  #chartModal .modal-header > div { min-width: 0; max-width: 100%; flex-wrap: wrap; }
+  #chartModal .modal-close { flex-shrink: 0; min-width: 44px; min-height: 44px; }
+  #chartModal .modal-subtitle { overflow-wrap: anywhere; }
+  #chartModal .chart-note-panel { padding-bottom: max(24px,env(safe-area-inset-bottom)); }
+
+  body :is(.ov-tbl,.mc-t,.liq,.cnp-ftable) {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+}
+
+@media (max-width: 600px) {
+  .form-grid { grid-template-columns: minmax(0,1fr); gap: 14px; }
+  body :is(.field,.auth-box,.member-page) :is(input:not([type=checkbox]):not([type=radio]),select,textarea) { font-size: 16px; }
+  body :is(.form-wrap,.chart-toolbar,.chart-draw-console,.chart-range-btns,#authArea) button,
+  #mainNav :is(.mn-item,.mn-menu a) { min-height: 44px; }
+  #authArea { flex-wrap: wrap; max-width: 100%; }
+  #mainNav .mn-item { padding: 10px 8px !important; font-size: 14px !important; }
+  #mainNav .mn-menu a { align-items: center; }
+  body .hp-kpi { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  body .hp-inst { grid-template-columns: minmax(0,1fr); }
+  body :is(.gs-hero-grid,.hp-grid,.hp-struct) > * { min-width: 0; }
+  body .hp-searchbar { flex-wrap: wrap; }
+  body .hp-searchbar input { flex-basis: 100%; }
+  body .hp-searchbar button { min-height: 44px; width: 100%; }
+  body .member-page .ms-rule-heading { grid-template-columns: minmax(0,1fr); }
+  body .ms-dim-options { grid-template-columns: minmax(0,1fr); }
+  body .member-page .ms-heading > button { white-space: normal; }
+  #chartModal .modal-header::before { flex-basis: 100%; }
+  #chartModal .modal-title-row { overflow-wrap: anywhere; }
+  #chartModal .chart-fit-ratios { flex-wrap: wrap; }
+  #chartModal .cnp-pane { flex: auto; overflow-y: visible; }
+  body dialog { max-height: calc(100dvh - 24px); overflow-y: auto; }
+}

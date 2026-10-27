@@ -1,11 +1,15 @@
 # 網站與 App 共同開發入口
 
+> 2026-10-23 使用者對本對話 Andrew 網站工作流程的持續授權：網站修正完成並通過相關測試後，直接同步最新 UAT、保留雙方修改、以非 force 推送 UAT，並確認 Vercel 部署結果，不必逐次等待「推 UAT」。此授權不包含 prod、資料庫／Auth、排程或付費服務，也不改變合夥人 JUSTY 的數字流程。
+
 ## JUSTY 的網站更新固定流程（使用者最新指定）
 
 - **1**：在乾淨的本機 `justy-layout` 修改、預覽與測試，先不推送。
 - **2**：提交已完成修改，先 push `justy-layout`；未完成 2 不進 3。
 - **3**：fetch 最新 UAT，在隔離整合分支／worktree 合併已發布 JUSTY 與 UAT，保留雙方內容並檢查，再非 force push UAT；最後安全更新本機版本。
+- **4**（2026-10-21 新增）：推送後再 fetch 最新 UAT，把本機與 `justy-layout` 對齊最新 UAT（只用 merge／fast-forward，保留雙方修改，不 reset／force），最後確認本機、`justy-layout`、UAT 三者 commit 一致並回報。若需同步遠端 `justy-layout`，只用非 force 推送；不得因 4 自行再發布 UAT／prod，或以 stash／覆蓋來強行對齊。
 - **23／2、3**：依序完成 JUSTY push → 合併最新 UAT → UAT push → 本機版本確認。
+- **234／2、3、4**：再加上第 4 步的最終對齊與版本核對。
 
 這取代舊 `scripts/collab.py publish-justy` 一次同時推 JUSTY/UAT 的預設方式。該舊命令保留相容，但不再用於新的數字指令。沒有發布指令時先提供本機預覽。
 

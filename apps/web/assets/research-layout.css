@@ -1,0 +1,210 @@
+/* Keep the existing workflow and gauge artwork; compact only surrounding controls. */
+.member-page .ms-workbench>.mc-card{padding:22px 24px;margin-bottom:16px;border-radius:18px}
+.member-page .ms-workbench .ms-heading{gap:12px;margin-bottom:16px;align-items:center}
+.member-page .ms-workbench .ms-heading h2{margin:0 0 5px;font-size:22px;line-height:1.45}
+.member-page .ms-workbench .ms-heading p{font-size:13px;line-height:1.65}
+.member-page .ms-workbench .ms-heading>button{flex:none;font-size:13px;padding:8px 13px;min-height:36px;white-space:nowrap;box-shadow:none}
+.member-page .ms-strategy-pickers{gap:16px;margin-bottom:4px}
+.member-page .ms-strategy-card input,.member-page .ms-strategy-card select{padding:8px 10px;margin:5px 0 9px;font-size:14px;min-height:38px;line-height:1.5}
+.member-page .ms-strategy-card label{font-size:13px;line-height:1.6}
+.ms-dim-card,.ms-publish-card{padding:14px 16px;margin:12px 0}
+.ms-studio-head{align-items:flex-start;margin-bottom:10px}
+.ms-studio-head small{max-width:42ch;font-size:12px}
+.ms-dim-options{grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.member-page .ms-dim-option{display:flex;flex-direction:row;gap:7px;padding:11px 12px;align-items:center;min-height:46px;border-radius:9px}
+.ms-dim-option-head{min-width:0;width:100%;gap:7px}.ms-dim-option-head b{white-space:nowrap}.ms-dim-option-head em{font-size:10px;padding:1px 5px}
+.ms-dim-option-head em{margin-left:6px;white-space:nowrap}
+.ms-dim-option small,.ms-dim-examples{line-height:1.6;font-size:12px}
+.ms-dim-more{font-size:12px;line-height:1.6;margin-top:8px}
+.member-page .ms-trade-dir button{padding:10px 16px;border-radius:18px;gap:3px;min-height:64px;align-items:center;justify-content:center;text-align:center;animation:msDirectionBreathe 4.8s ease-in-out infinite}
+.ms-trade-dir button[data-trade=long]{--trade:#c63f43}
+.ms-trade-dir button[data-trade=short]{--trade:#18784f}
+:root:not([data-theme=light]) .ms-trade-dir button[data-trade=long]{--trade:#ff8b8b}
+:root:not([data-theme=light]) .ms-trade-dir button[data-trade=short]{--trade:#59d9a5}
+.member-page .ms-trade-dir button b{color:var(--trade);font-size:14px}
+.member-page .ms-trade-dir button small{text-align:center;line-height:1.6}
+.member-page .ms-trade-dir button[data-trade=short]{animation-delay:-2.4s}
+.member-page .ms-trade-dir button[data-trade][aria-pressed=true]{border-color:var(--trade);box-shadow:inset 3px 0 var(--trade);background:color-mix(in srgb,var(--trade) 8%,var(--surface))}
+.ms-rule-section{margin-top:16px;padding-top:14px}
+.ms-rule{padding:12px;margin:8px 0;border-radius:10px}
+.member-page .ms-rule-heading{display:grid;grid-template-columns:minmax(0,1fr) minmax(170px,210px);align-items:end;gap:12px}
+.member-page .ms-rule-heading h3{font-size:16px;line-height:1.5;margin:0 0 9px}
+.ms-rule-heading>label{max-width:210px}
+.ms-workbench :is([data-dim-card],.ms-rule-section,.ms-risk,.ms-market-card,[data-publish-card]){scroll-margin-top:120px}
+.member-page .ms-strategy-card .ms-heading>button{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 30%,var(--border))}
+.ms-rule-parameters{gap:12px}.ms-editor-actions{gap:8px}
+.ms-rule-summary{padding:12px 14px;margin:14px 0}
+.ms-template-help{font-size:12px!important;line-height:1.7!important;color:var(--text-muted);margin:3px 0 12px!important}
+.ms-rule-parameters .ms-pattern-editor{flex:1 1 100%;width:100%;min-width:0}
+.ms-pattern-intro{border-left:2px solid var(--accent);padding:2px 0 2px 11px;margin:2px 0 12px}
+.ms-pattern-intro>b{font-size:14px;color:var(--text)}
+.member-page .ms-pattern-intro>p{font-size:13px;line-height:1.7;margin:5px 0 0;color:var(--text-muted)}
+.ms-pattern-editor [data-formula-params]{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px 14px}
+.ms-param-input{position:relative;display:block}
+.ms-param-input>em{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:12px;font-style:normal;color:var(--text-muted);pointer-events:none}
+.member-page .ms-pattern-editor .ms-param-input>input{width:100%;max-width:none;padding-right:35px}
+.ms-pattern-editor [data-formula-status]{font-size:12px;line-height:1.7;color:var(--text-muted);margin:6px 0 9px}
+.member-page .ms-pattern-editor>button{font-size:12px;padding:7px 11px;margin:0;box-shadow:none}
+.ms-pattern-advanced{margin-top:12px;padding-top:10px;border-top:1px solid var(--border)}
+.ms-pattern-advanced>summary{font-size:12px;color:var(--text-muted);cursor:pointer}
+.ms-pattern-advanced>small{font-size:12px;color:var(--text-muted)}
+.member-page .ms-rule-heading .ms-step-tag{margin-right:4px}
+.member-page .ms-workbench .mc-grid{gap:10px 16px}
+.member-page .ms-workbench [data-run-strategy] :is(input,select){font-size:14px;padding:8px 10px;margin:5px 0 9px;min-height:38px}
+.ms-step-help{font-size:13px;line-height:1.7;color:var(--text-muted);margin:0 0 10px}
+.ms-step-footer{display:flex;align-items:center;justify-content:space-between;gap:8px 16px;flex-wrap:wrap;margin-top:12px;padding-top:10px;border-top:1px solid var(--border)}
+.ms-step-footer>small{font-size:12px;line-height:1.6;color:var(--text-muted)}
+.member-page .ms-step-footer>button{font-size:13px;line-height:1.5;padding:7px 11px;min-height:34px;margin:0;box-shadow:none;color:var(--accent);background:var(--surface);border:1px solid var(--border);border-radius:8px}
+.ms-chat-dialog::backdrop{transition:background .24s,backdrop-filter .24s}
+.ms-chat-dialog.is-closing::backdrop{background:transparent;backdrop-filter:blur(0)}
+
+/* Optional controls retain their DOM and handlers inside one compact disclosure. */
+#chartModal .chart-fit-tools{flex:none;margin:4px 0 7px;border:1px solid var(--border);border-radius:9px;background:var(--surface2)}
+#chartModal .chart-fit-tools>summary{cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 10px;font-size:13px;font-weight:600;color:var(--text);min-height:34px}
+#chartModal .chart-fit-tools>summary::-webkit-details-marker{display:none}
+#chartModal .chart-fit-tools>summary::after{content:'展開 ▾';font-size:12px;color:var(--text-muted);white-space:nowrap}
+#chartModal .chart-fit-tools[open]>summary::after{content:'收合 ▴'}
+#chartModal .chart-fit-title{margin-right:auto}
+#chartModal .chart-fit-ratios{display:flex;align-items:center;gap:8px;font-weight:400}
+#chartModal .chart-fit-ratios[hidden]{display:none}
+#chartModal .chart-fit-ratios label{display:flex;align-items:center;gap:7px;margin:0;font-size:11px;line-height:1.5;font-weight:400;color:var(--text-muted);white-space:nowrap}
+#chartModal .chart-fit-ratios output{text-align:right;min-width:30px;font-size:10px;font-variant-numeric:tabular-nums}
+#chartModal .chart-fit-ratios input{width:80px;max-width:100%;height:18px;min-height:0;margin:0;padding:0;appearance:none;-webkit-appearance:none;background:transparent;border:0;border-radius:0;box-shadow:none;cursor:pointer}
+#chartModal .chart-fit-ratios input::-webkit-slider-runnable-track{height:2px;border-radius:4px;background:var(--border)}
+#chartModal .chart-fit-ratios input::-webkit-slider-thumb{appearance:none;-webkit-appearance:none;width:9px;height:9px;margin-top:-3.5px;border-radius:50%;background:var(--text-muted);border:0}
+#chartModal .chart-fit-ratios input::-moz-range-track{height:2px;border-radius:4px;background:var(--border)}
+#chartModal .chart-fit-ratios input::-moz-range-thumb{width:9px;height:9px;border-radius:50%;background:var(--text-muted);border:0}
+#chartModal .chart-fit-ratios input:hover::-webkit-slider-thumb{background:var(--accent)}
+#chartModal .chart-fit-ratios input:hover::-moz-range-thumb{background:var(--accent)}
+#chartModal .chart-fit-ratios button{border:0;background:transparent;box-shadow:none;color:var(--text-muted);font:inherit;font-size:11px;white-space:nowrap;padding:6px 3px;cursor:pointer}
+@media(max-width:620px){#chartModal .chart-fit-tools>summary{flex-wrap:wrap}#chartModal .chart-fit-ratios{order:3;flex-basis:100%}}
+#chartModal .chart-fit-tools .tool-btn{font-size:12px;padding:5px 9px;min-height:30px;line-height:1.5;white-space:nowrap;border-radius:7px}
+#chartModal .chart-fit-tools .chart-toolbar{padding:5px 9px;gap:7px}
+#chartModal .chart-fit-tools .chart-draw-console{margin:5px 8px 8px;padding:5px 7px;gap:6px}
+/* Segmented periods, soft layer controls and rounded drawing actions share theme tokens. */
+#chartModal .chart-fit-tools{border-radius:16px;background:var(--surface)}
+#chartModal .chart-fit-tools .chart-toolbar{margin-bottom:0;padding:5px 10px 8px;gap:10px}
+#chartModal .chart-fit-tools .chart-period-segments{display:flex;align-items:center;flex-wrap:wrap;gap:3px;max-width:100%;padding:4px;border-radius:16px;background:var(--surface2)}
+#chartModal .chart-fit-tools :is(.tool-btn,.chart-layer-tab){min-height:32px;padding:5px 11px;font-size:12px;line-height:1.5;font-weight:500;border-radius:12px;white-space:nowrap;transition:background .18s ease,color .18s ease,border-color .18s ease,box-shadow .18s ease,transform .12s ease;animation:none}
+#chartModal .chart-fit-tools .chart-period-segments .tool-btn{border:0;background:transparent!important;color:var(--text-muted)!important;box-shadow:none}
+#chartModal .chart-fit-tools .chart-period-segments .tool-btn[aria-pressed=true]{background:var(--surface)!important;color:var(--accent)!important;box-shadow:0 2px 6px color-mix(in srgb,var(--text) 10%,transparent)}
+#chartModal .chart-fit-tools :is(.tool-btn,.chart-layer-tab):hover{background:color-mix(in srgb,var(--accent) 9%,var(--surface));color:var(--text);border-color:color-mix(in srgb,var(--accent) 40%,var(--border));box-shadow:0 2px 6px color-mix(in srgb,var(--text) 7%,transparent);transform:translateY(-1px)}
+#chartModal .chart-fit-tools .chart-period-segments .tool-btn:hover{background:color-mix(in srgb,var(--accent) 7%,var(--surface))!important;color:var(--accent)!important}
+#chartModal .chart-fit-tools :is(.tool-btn,.chart-layer-tab):active{transform:translateY(1px) scale(.98);box-shadow:inset 0 1px 3px color-mix(in srgb,var(--text) 14%,transparent)}
+#chartModal .chart-fit-tools :is(.tool-btn,.chart-layer-tab):focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+#chartModal .chart-fit-tools :is(.tool-btn,.chart-layer-tab):disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none}
+#chartModal .chart-fit-tools .chart-layer-toolbar{margin:3px 10px 0;padding:10px 0;border:0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);border-radius:0;background:transparent;box-shadow:none;flex-wrap:wrap;gap:6px;overflow:visible}
+#chartModal .chart-fit-tools .chart-layer-tab{--layer-accent:var(--accent);border:1px solid transparent;background:var(--surface2);font-weight:500;gap:6px}
+#chartModal .chart-fit-tools .chart-layer-tab.is-open{background:var(--accent);border-color:var(--accent);color:var(--on-accent);box-shadow:0 2px 6px color-mix(in srgb,var(--accent) 16%,transparent)}
+#chartModal .chart-fit-tools .chart-layer-tab.is-open .layer-dot{background:var(--on-accent);box-shadow:none}
+#chartModal .chart-fit-tools .chart-layer-tab.is-enabled .layer-dot{box-shadow:none;transform:none}
+#chartModal .chart-fit-tools .chart-draw-console{padding:7px 0 3px;margin:3px 10px 8px;border:0;border-radius:0;background:transparent;box-shadow:none;flex-wrap:wrap;overflow:visible}
+#chartModal .chart-fit-tools .chart-draw-console .tool-btn{border:1px solid var(--border);background:var(--surface);box-shadow:none}
+#chartModal .chart-fit-layer-panels .chart-feature-panel{margin:7px 10px 0;border:1px solid var(--border)!important;border-radius:12px;background:var(--surface2);box-shadow:none;transform:none}
+#chartModal .chart-fit-layer-panels .chart-feature-panel:not(.is-open){display:none!important}
+#chartModal .chart-fit-layer-panels .chart-feature-panel>span[id$="Opts"]{padding:10px 12px;line-height:1.8}
+#chartModal .chart-fit-layer-panels :is(#aiBuyPanel,#brokerFilterPanel,#sma20GroupPanel).is-open{padding:10px 12px!important}
+#chartModal .chart-fit-tools .chart-event-toggles{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0}
+#chartModal .chart-fit-tools .chart-marker-control[aria-pressed=true]{background:color-mix(in srgb,var(--accent) 8%,var(--surface));border-color:color-mix(in srgb,var(--accent) 32%,var(--border));color:var(--accent)}
+#chartModal .chart-fit-tools .chart-marker-control[aria-pressed=true]:hover{background:color-mix(in srgb,var(--accent) 13%,var(--surface))}
+#chartModal .chart-fit-tools #eraserBtn{min-height:28px;padding:3px 9px 3px 8px;font-size:11px;gap:4px;border-radius:9px}
+#chartModal .chart-fit-tools #eraserBtn .eraser-icon{width:13px;height:13px;stroke-width:1.7;flex:none}
+#chartModal .granville-heading{color:var(--accent)}
+#chartModal .granville-legend{color:var(--text-muted);font-size:11px;line-height:1.7;flex-basis:100%}
+#chartModal #sma20GroupPanel .sma20-grp{color:var(--text-muted);border-color:var(--border);font-weight:500;background:var(--surface)}
+#chartModal #sma20GroupPanel .sma20-grp.is-on{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 35%,var(--border));background:color-mix(in srgb,var(--accent) 7%,var(--surface))}
+#chartModal #sma20GroupPanel .sma20-grp input{accent-color:var(--accent)}
+@media(pointer:coarse){#chartModal .chart-fit-tools :is(.tool-btn,.chart-layer-tab),#chartModal .chart-fit-tools #eraserBtn{min-height:44px}}
+@media(prefers-reduced-motion:reduce){#chartModal .chart-fit-tools :is(.tool-btn,.chart-layer-tab){transition:none;transform:none!important}}
+#chartModal .chart-fit-indicator{margin-left:auto;display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-muted)}
+#chartModal .chart-fit-indicator[hidden]{display:none!important}
+#chartModal #ohlcTooltip{max-width:calc(100% - 80px);white-space:normal;font-variant-numeric:tabular-nums;line-height:1.7;pointer-events:none}
+#chartModal .chart-event-rail{position:absolute;bottom:32px;left:0;right:68px;height:19px;pointer-events:none;z-index:9}
+#chartModal .chart-event-rail button{position:absolute;transform:translateX(-50%);height:18px;min-height:0;padding:0 4px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text-muted);font-family:inherit;font-weight:500;font-size:10px;line-height:16px;pointer-events:auto;cursor:pointer;box-shadow:none;white-space:nowrap}
+#chartModal .chart-event-rail button:hover,#chartModal .chart-event-rail button[aria-expanded=true]{color:var(--accent);border-color:var(--accent)}
+#chartModal .chart-event-rail button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#chartModal .chart-event-detail{position:absolute;right:8px;bottom:25px;max-width:min(360px,95%);padding:9px 12px;border:1px solid var(--border);border-radius:9px;background:var(--surface);color:var(--text);font-size:12px;line-height:1.7;white-space:pre-line;box-shadow:var(--shadow-sm);pointer-events:auto}
+#chartModal .chart-level-rail{position:absolute;top:0;right:70px;bottom:32px;pointer-events:none;z-index:6}
+#chartModal .chart-level-rail span{position:absolute;right:0;white-space:nowrap;color:var(--text-muted);background:var(--surface);border-radius:4px;padding:1px 4px;font-size:10px;line-height:16px;font-variant-numeric:tabular-nums}
+#chartModal .chart-fit-indicator select{width:auto;padding:2px 7px;margin:0;min-height:26px;font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:6px}
+#chartModal.chart-fit .modal-body{min-height:0}
+#chartModal.chart-fit .chart-content{min-height:0;padding:7px 12px 10px}
+@media(max-width:1100px){#chartModal.chart-fit .chart-content{flex:none;height:auto}}
+#chartModal.chart-fit #chartWrapper{display:grid!important;height:var(--chart-fit-height);grid-template-rows:minmax(0,var(--chart-main-ratio,60fr)) 30px minmax(0,var(--chart-vol-ratio,20fr)) minmax(0,var(--chart-tech-ratio,20fr));overflow:hidden}
+#chartModal.chart-fit-chip #chartWrapper{grid-template-rows:minmax(0,var(--chart-main-ratio,60fr)) 30px minmax(0,var(--chart-sub-ratio,40fr))}
+#chartModal.chart-fit-chip #chipPage{grid-row:3;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+#chartModal.chart-fit-chip #chipPage .chip-c{height:108px}
+#chartModal.chart-fit #mainChartPanel{min-height:0;overflow:hidden;grid-row:1}
+#chartModal.chart-fit #subTabs{grid-row:2;display:flex;align-items:center;gap:6px;padding:2px 7px;margin:0;min-height:0}
+#chartModal.chart-fit #subTabs .chip-tab{font-size:12px;padding:3px 8px;line-height:1.5}
+#chartModal.chart-fit #volPanel{grid-row:3;min-height:0;overflow:hidden;display:flex;flex-direction:column}
+#chartModal.chart-fit :is(#macdPanel,#rsiPanel){grid-row:4;min-height:0;overflow:hidden;display:flex;flex-direction:column}
+#chartModal.chart-fit :is(#chartContainer,#volContainer,#macdContainer,#rsiContainer){height:100%!important;min-height:0;flex:1}
+#chartModal.chart-fit .sub-panel-header{flex:none;min-height:20px;height:20px;padding:1px 6px;line-height:18px;font-size:11px;overflow:hidden;white-space:nowrap}
+#chartModal.chart-fit .sub-panel-header :is(#volLabel,#macdLabel,#rsiLabel){font-size:11px;line-height:18px}
+#chartModal.chart-fit [data-fit-hidden]{display:none!important}
+@media(max-width:760px){
+ .member-page .ms-workbench>.mc-card{padding:16px;margin-bottom:12px}
+ .ms-dim-options{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .member-page .ms-dim-option{padding:10px 9px;gap:5px}
+ .ms-dim-option-head{grid-row:auto}.ms-studio-head small{max-width:none}
+ .member-page .ms-heading>button{max-width:100%}
+ .member-page .ms-rule-heading{grid-template-columns:minmax(0,1fr);gap:6px}
+ .member-page .ms-rule-heading h3{margin:0}
+ .member-page .ms-rule-heading>label{max-width:none}
+ .ms-workbench :is([data-dim-card],.ms-rule-section,.ms-risk,.ms-market-card,[data-publish-card]){scroll-margin-top:150px}
+}
+@keyframes msDirectionBreathe{0%,100%{filter:brightness(1)}50%{border-color:color-mix(in srgb,var(--trade) 52%,var(--border));background:color-mix(in srgb,var(--trade) 6%,var(--surface));filter:brightness(1.035)}}
+@media(prefers-reduced-motion:reduce){.ms-chat-dialog::backdrop{transition:none}.member-page .ms-trade-dir button{animation:none}}
+
+.ms-choice-label{display:flex;align-items:baseline;justify-content:space-between;gap:6px 12px;flex-wrap:wrap;margin:12px 0 8px}
+.ms-choice-label b{font-size:13px;font-weight:600;color:var(--text)}
+.ms-choice-label small{font-size:12px;color:var(--text-muted);line-height:1.6}
+.member-page .ms-dim-option[aria-pressed=true]{border-color:color-mix(in srgb,var(--dim) 65%,var(--border));box-shadow:none;background:color-mix(in srgb,var(--dim) 5%,var(--surface))}
+.ms-dim-explainer{display:flex;align-items:baseline;gap:4px 12px;flex-wrap:wrap;margin-top:9px;font-size:12px;line-height:1.7;color:var(--text-muted)}
+.ms-dim-explainer small{font-size:11px;color:var(--text-muted)}
+.ms-direction-label{padding-top:12px;margin-top:12px;border-top:1px solid var(--border)}
+@media(max-width:420px){.member-page .ms-dim-option{min-height:44px}.ms-dim-option-head{gap:5px;flex-wrap:wrap}.ms-dim-option-head em{margin-left:0}}
+/* 2026-10-22（JUSTY）：功能面板恢復原本的淡色漸層；主力分點按鈕依文字寬度排列，不再撐滿大格 */
+#chartModal .chart-fit-layer-panels .chart-feature-panel{background:linear-gradient(120deg,color-mix(in srgb,var(--feature-accent,#7085a3) 10%,var(--surface)) 0%,color-mix(in srgb,var(--surface2) 94%,var(--feature-accent,#7085a3) 6%) 100%);border-color:color-mix(in srgb,var(--border) 68%,var(--feature-accent,#7085a3) 32%)!important}
+#brokerFilterPanel{--feature-accent:#a45fba}#aiBuyPanel{--feature-accent:#3f8fd2}#sma20GroupPanel{--feature-accent:#c0862b}
+#chartModal .broker-panel-grid{display:flex;flex-wrap:wrap;gap:6px 6px}
+#chartModal .broker-panel-grid label{flex:0 0 auto;margin:0;padding:5px 11px 5px 8px;gap:6px;border-radius:999px;font-size:12px;line-height:1.4;white-space:nowrap}
+#chartModal .broker-panel-group+.broker-panel-group{margin-top:8px;padding-top:8px}
+#chartModal .broker-panel-title{margin-bottom:6px}
+
+/* 2026-10-22 參考價位標籤只顯示價格，用淡紅（下方）／淡綠（上方）區分，不寫文字判斷 */
+#chartModal .chart-level-rail span.lv-below{color:color-mix(in srgb,var(--red,#e5484d) 82%,var(--text));background:color-mix(in srgb,var(--red,#e5484d) 12%,var(--surface))}
+#chartModal .chart-level-rail span.lv-above{color:color-mix(in srgb,var(--green,#2ea043) 82%,var(--text));background:color-mix(in srgb,var(--green,#2ea043) 12%,var(--surface))}
+
+/* 2026-10-22 圖層面板：低彩度霧面金屬漸層（頂部一道細高光＋斜向冷灰，主題色只帶一點點） */
+#chartModal .chart-fit-layer-panels .chart-feature-panel{
+ background:
+  linear-gradient(180deg,rgba(255,255,255,.62) 0,rgba(255,255,255,0) 46%),
+  linear-gradient(112deg,color-mix(in srgb,var(--feature-accent,#7085a3) 6%,#fbfcfd) 0%,#f3f5f8 42%,#e9edf2 78%,color-mix(in srgb,var(--feature-accent,#7085a3) 5%,#e4e9ef) 100%);
+ border-color:color-mix(in srgb,#cfd6df 82%,var(--feature-accent,#7085a3) 18%)!important;
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.85),inset 0 -1px 0 rgba(120,134,156,.10),0 1px 2px rgba(15,23,42,.04)}
+:root[data-theme="dark"] #chartModal .chart-fit-layer-panels .chart-feature-panel{
+ background:
+  linear-gradient(180deg,rgba(255,255,255,.05) 0,rgba(255,255,255,0) 46%),
+  linear-gradient(112deg,color-mix(in srgb,var(--feature-accent,#7085a3) 9%,var(--surface)) 0%,var(--surface2) 48%,color-mix(in srgb,#8a97ab 7%,var(--surface2)) 100%);
+ border-color:color-mix(in srgb,var(--border) 80%,var(--feature-accent,#7085a3) 20%)!important;
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 1px 2px rgba(0,0,0,.25)}
+#chartModal .broker-panel-title .broker-panel-head{margin:0 0 0 auto;display:inline-flex;align-items:center;gap:6px}
+#chartModal .broker-panel-head em{font-style:normal;font-size:11px;font-weight:700;color:var(--text-muted);margin-right:2px}
+#chartModal .broker-panel-head a{min-width:0;padding:4px 10px;border-radius:999px}
+#chartModal .broker-panel-list{padding-top:8px}
+
+/* 2026-10-22 主力分點：每家固定色小圓點（只在勾選時出現），K 圖滑過顯示名稱 */
+#chartModal .broker-panel-grid label .bk-dot{display:none;width:7px;height:7px;border-radius:50%;background:var(--bc);flex:none}
+#chartModal .broker-panel-grid label:has(input:checked) .bk-dot{display:inline-block}
+#chartModal .broker-panel-grid label:has(input:checked){border-color:color-mix(in srgb,var(--bc) 45%,var(--border));background:color-mix(in srgb,var(--bc) 8%,var(--surface))}
+.ohlc-broker{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;margin-top:4px;padding-top:4px;border-top:1px solid var(--border);white-space:normal}
+.ohlc-broker span{color:var(--text-muted)}
+.ohlc-broker b{display:inline-flex;align-items:center;gap:4px;font-weight:700;color:var(--text)}
+.ohlc-broker i{width:7px;height:7px;border-radius:50%;display:inline-block}
+#chartModal .broker-panel-head a:first-of-type{color:#9556aa;border-color:color-mix(in srgb,#a45fba 30%,var(--border));background:color-mix(in srgb,#a45fba 7%,var(--surface))}
+
+/* Keep sentiment with the research sidebar, leaving the chart column uninterrupted. */
+#chartNotePanel>#greedGauge{flex:none;padding:8px 10px!important;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:2px}
+#chartNotePanel>#greedGauge .pro-greed-layout{justify-content:center}

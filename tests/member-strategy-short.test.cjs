@@ -1,0 +1,11 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');const ctx={window:{},console};vm.createContext(ctx);vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'../apps/web/assets/member-strategy-engine.js'),'utf8'),ctx);const E=ctx.window.AcademyStrategyEngine;
+const mk=f=>Array.from({length:120},(_,i)=>{const c=f(i);return {time:new Date(Date.UTC(2025,0,1+i)).toISOString().slice(0,10),open:c,high:c+.5,low:c-.5,close:c,volume:1000};});
+const base={start:'2025-03-01',end:'2025-04-30',capital:100000,fee:.001425,tax:.003,slip:0,sizing:'ratio',allocation:1,amount:0};
+const s={...E.template('hold'),direction:'short',risk:{stop:0,take:0,maxBars:0}};
+let r=E.run(mk(i=>200-i),s,base);assert.equal(r.trades[0].side,'放空');assert.ok(r.returnPct>10,'short profits in downtrend '+r.returnPct);
+r=E.run(mk(i=>100+i),s,base);assert.ok(r.returnPct<-10,'short loses in uptrend '+r.returnPct);
+const st={...s,risk:{stop:5,take:0,maxBars:0}};r=E.run(mk(i=>100+i),st,base);const c=r.trades.find(t=>t.side==='回補');assert.ok(c&&/停損/.test(c.reason),'stop covers');assert.ok(c.pnl<0);
+const tk={...s,risk:{stop:0,take:5,maxBars:0}};r=E.run(mk(i=>200-i),tk,base);assert.ok(/停利/.test(r.trades.find(t=>t.side==='回補').reason));
+const L=E.run(mk(i=>100+i),{...E.template('hold'),risk:{stop:0,take:0,maxBars:0}},base);assert.equal(L.trades[0].side,'買進');assert.ok(L.returnPct>10);
+assert.throws(()=>E.validate({...s,direction:'sideways'}));assert.match(E.summary(s),/做空/);
+console.log('PASS short engine');

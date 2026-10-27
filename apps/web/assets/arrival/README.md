@@ -1,0 +1,39 @@
+# Arrival artwork v2
+
+Created with the built-in `image_gen` tool. Existing Foresight logo files are unchanged. The rejected brown eagle owl and the rejected procedural geometry model are not used by the website. White plumage is presented with cool silver shading; the actual brand logo keeps its original colors.
+
+The WebP files are format conversions of the selected transparent PNG outputs, with alpha preserved. Five images total less than 1.5 MB. The mosaic script contains precomputed color samples for safe `file://` rendering; it does not require browser canvas readback of local images.
+
+| Website file | Selected generated original |
+| --- | --- |
+| snowy-owl-v2.webp | exec-47cb6117-bcb7-4b4e-8f9a-481008f80000.png |
+| pearl-owl-v2.webp | exec-3e90d78b-02fa-4a08-9ad6-963c37b35011.png |
+| fish-jewel-v2.webp | exec-bfe32362-62f4-4644-b7ef-65dbda52cfb3.png |
+| fish-jewel-extra-v2.webp | exec-64cf1243-0000-4c4b-b7c9-fa1b6ca2badc.png |
+| owl-banks-v2.webp | exec-7fe3a855-4519-4918-89b7-ed367c678d55.png |
+
+Original PNG folder: `C:/Users/JUSTY LIN/.codex/generated_images/01a11a66-b41a-79c2-ba30-dd3d00b3c827/`.
+
+## Selected prompt set
+
+### White owl
+
+Production website animation asset. A single beautiful SNOWY WHITE OWL inspired by Hedwig the snowy owl from Harry Potter, unmistakable white snowy owl face, no ear tufts, soft pristine white plumage with a few delicate pale charcoal speckles on outer wings, luminous warm amber gold eyes. NOT photographic wildlife, NOT brown eagle owl, NOT cartoon mascot: elegant stylized premium 3D cinematic sculpture, sophisticated smooth feather groupings, fine refined edges, pearlescent ivory white material with subtle cool silver shadows, beautiful gentle intelligent gaze. Full frontal hovering flight pose, wings spread broadly left and right in shallow V with visible individual layered feathers, complete body and every wing tip within frame, generous transparent margin, body centered vertically with face 40 percent from top. Soft studio lighting with delicate champagne edge highlights, white feathers clearly visible on a pale porcelain background as well as midnight blue. TRUE transparent alpha background, absolutely no black or other background, no glow cloud, no scenery, no text, no watermark. Wide landscape composition. This owl will be layered and animated in browser, then dissolve into an existing logo.
+
+### Pearl owl edit
+
+EDIT the white snowy owl in the reference. Keep frontal flying owl, spread wings, white color and amber gold eyes, but radically SIMPLIFY it into a sophisticated brand animation sculpture. This must NOT look like wildlife photography. Remove ALL fluffy feather filaments, realistic speckles, realistic claws and feather microtexture. Replace feathers with broad smooth overlapping pearl-white sculpted ribbons, only about 7 long primary feather blades per wing, clean art-directed flowing silhouettes. Small simplified rounded body with geometric flowing breast layers, calm stylized round snowy owl face, tiny dark beak, refined gold iris eyes not huge cute cartoon eyes. Smooth matte porcelain and satin glass material, subtle silver-blue shading for white background legibility, restrained champagne details. High end motion design, an editorial brand identity object, NOT a realistic animal, NOT a plush toy, NOT a gaming character. Wings spread horizontally, body and every wing tip fully inside image, ample empty margin. True transparent alpha background, no black background, no glow or colored cloud or backdrop, no text or logo. Asset to animate then transform to the actual Foresight owl logo.
+
+### Fish atlas
+
+Production transparent sprite atlas for an elegant financial research brand welcome animation, premium motion design. Exactly FOUR separate stylized aquatic sculptures, arranged in a precise 2 by 2 grid, one animal completely within each quarter with 12 percent blank transparent margin, no touching between quarters. TOP LEFT: elegant sleek shark, side view facing right, brushed silver-blue body with subtle champagne fin edges. TOP RIGHT: streamlined fish side view facing right, deep cobalt blue back, luminous turquoise sides and restrained warm gold tail. BOTTOM LEFT: graceful manta ray viewed from slightly above, flowing spread fins, pearlescent teal and silver body, fine long tail entirely in own quarter. BOTTOM RIGHT: small elegant koi-like fish side view facing right, satin coral copper and ivory fins. All four use the same sophisticated semi-abstract 3D art direction: smooth flowing geometric surfaces, colored translucent glass accents with subtle metallic shimmer, restrained rich colors, exquisitely sculpted fins, minimal tiny eyes. NOT wildlife photographs, no real fish scales or gills detail, NOT cute cartoons or toys, no aquarium scenery. Neutral studio light readable on both white and midnight backgrounds. TRUE transparent background, no background colors or glow clouds, no shadow plane, no text, no labels, no borders. Square canvas with equal quadrants. Refined magazine and luxury brand animation aesthetic.
+
+### Additional fish atlas
+
+Create an ADDITIONAL matching 2x2 transparent sprite atlas in the SAME sophisticated colored glass and polished metal art direction as the four fish reference. Exactly four NEW distinct aquatic designs, all face right, completely inside own quadrant, generous transparent separation, square canvas: TOP LEFT elegant angelfish with tall flowing fins, pearl ivory and champagne gold with restrained charcoal stripe; TOP RIGHT long sleek marlin swordfish, deep sapphire blue and silver with long narrow bill; BOTTOM LEFT butterflyfish, rounder compact silhouette, muted amber gold and pearl ivory with small blue accent; BOTTOM RIGHT small slender schooling fish, iridescent jade green silver with coral fin accent. Smooth sculpted semi-abstract forms, satin translucent glass fins and refined metallic surface, no realistic scales, not toy or cartoon. Keep striking silhouettes and rich but restrained jewel tones. Neutral studio lighting readable on both light and dark website. No scenery, bubbles, water backdrop, labels, typography, borders, watermark or shadows behind. TRUE transparent alpha background. Precisely centered in four equal square cells, no overlaps. Match reference's premium brand motion design.
+
+### Owl bank poses
+
+Production animation pose atlas. Exactly FOUR WHITE OWL cutouts in 2x2 equal square cells, complete wing tips fully inside each cell, wide transparent separation. ALL FOUR are the same elegant snowy owl with white plumage, warm amber eyes, NO ear tufts, no feet prominently shown. TOP LEFT and TOP RIGHT use a gently natural soft white feather style (white snowy owl reference), not wildlife documentary photography. BOTTOM LEFT and BOTTOM RIGHT use the smooth simplified pearl-white sculpted broad feather ribbon style from the stylized owl reference, satin porcelain, subtle champagne rims. TOP LEFT + BOTTOM LEFT: owl flying with body and face turned 25 degrees toward LEFT of viewer, wings spread, gentle bank. TOP RIGHT + BOTTOM RIGHT: mirror pose with body and face turned 25 degrees toward RIGHT of viewer, wings spread, gentle bank. Keep face at horizontal center and y40percent within every quadrant and same head size across all cells so they can transition smoothly with a frontal pose. High end editorial brand motion design, calm commanding gaze, silver-blue shading, not cute toy, no scenery or text. TRUE transparent alpha background. No glow clouds, backdrop, labels, borders, watermark. Neutral soft studio illumination consistent with reference. Every creature entirely contained in its own quarter.
+
+The animation uses these as illustrated assets with deforming meshes, pose transitions and particles. It is not advertised as a fully rigged 3D animal simulation.

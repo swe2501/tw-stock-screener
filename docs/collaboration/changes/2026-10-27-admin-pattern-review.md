@@ -1,0 +1,9 @@
+# UAT admin W pattern review
+
+User explicitly requests adding forming and uncertain cases to UAT, admin-only review toggle, and forming/broken-out decisions. Adds four fixed cases (2002 daily,5546 daily,3010 weekly,3515 daily) through server-protected admin actions in the existing api/auth.py endpoint. Existing _verify_admin JWT verification and allowlist remain unchanged. No new API entrypoint, migration, RLS/Auth configuration, inference, production or App change.
+
+Existing admin_settings stores per-case UAT-namespaced JSON decisions when an authorized administrator clicks Save. Read/write require both verified admin and preview/uat runtime. Supports pending/forming/breakout/rejected. Decisions bind the exact source SHA, record reviewer/time, and use compare-and-swap for existing rows plus unique insert for first review; concurrent changes return 409. A failed read/save never appears as success. Decisions are shared after reloading and never automatically enter public confirmed patterns or overlays.
+
+Former public static workbench HTML is replaced by a neutral pointer to the login-protected review panel. No candidate list or decisions are embedded in public JS/HTML. Original local report remains on disk. Existing chart images are public market data. Adds missing static research build/route mapping so earlier research paths and image URLs resolve under Vercel (previous publication checked deployment status but not these live paths).
+
+Validation: backend tests cover auth gate, non-UAT blocking, reads without writes, all state options, invalid cases/source, DB read failure, and compare-and-swap conflict. Actual-site browser fixture verifies ordinary users have no toggle, verified admins see four cases, saved state reload, status filtering, write failure handling, mobile layout, and return to normal listing. Existing W screener regression retained. Database writes are not exercised against live accounts during automated tests.

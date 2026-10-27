@@ -67,7 +67,7 @@ update public.member_exchange_definitions set active=true;
 
 ## 4. 規則
 
-- 網站改動走 `web/justy/<task>` 分支，完成後用 `python scripts/collab.py publish-justy`（JUSTY 的「2、3」）同步 UAT 與 justy-layout；**不推 prod、不推 Andrew**。
+- 網站改動走 `web/justy/<task>` 分支，依 JUSTY 數字流程發布（見 docs/collaboration/README.md）：2＝push `justy-layout`；3＝合併最新 UAT 後 push UAT；4＝再拉最新 UAT 對齊本機與 `justy-layout`，確認版本一致。舊的 `publish-justy` 不再使用；**不推 prod、不推 Andrew**。
 - 除第 2B 節三行開放語句外，**不得再改資料庫結構或權限**；需要再改先寫 SQL 草稿、跑隔離測試、問 JUSTY。
 - 不讀取、不把會員研究內文當發點依據（沿用 docs/member-rewards-db-status.md 原則）。
 - 主力訊號、分點回測、神燈與冥燈只限管理員，任何券都不能開通。

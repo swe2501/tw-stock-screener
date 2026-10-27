@@ -1186,6 +1186,49 @@ def _overlay_taiex(data):
     return data
 
 
+def parse_vix_intraday(text, date):
+    """Official TAIFEX HHMMSScc observations, aggregated to five-minute bars."""
+    target = datetime.strptime(date, "%Y-%m-%d").strftime("%Y%m%d")
+    tz = timezone(timedelta(hours=8))
+    observations = {}
+    for line in text.splitlines():
+        cells = line.split()
+        if len(cells) != 3 or cells[0] != target or not re.fullmatch(r"\d{7,8}", cells[1]):
+            continue
+        try:
+            clock = cells[1].zfill(8)
+            h, m, s, cs = (int(clock[:2]), int(clock[2:4]), int(clock[4:6]), int(clock[6:]))
+            value = float(cells[2])
+            when = datetime.strptime(date, "%Y-%m-%d").replace(hour=h, minute=m, second=s, microsecond=cs*10000, tzinfo=tz)
+        except (ValueError, TypeError):
+            continue
+        if not math.isfinite(value) or value <= 0 or not 9*60 <= h*60+m <= 13*60+45:
+            continue
+        observations[when.timestamp()] = value
+    buckets = {}
+    for stamp, value in sorted(observations.items()):
+        bucket = int(stamp)//300*300
+        if bucket not in buckets:
+            buckets[bucket] = {"time": bucket, "open": value, "high": value, "low": value, "close": value}
+        else:
+            row = buckets[bucket]
+            row.update(high=max(row["high"], value), low=min(row["low"], value), close=value)
+    return list(buckets.values())
+
+
+def fetch_vix_intraday(date):
+    compact = datetime.strptime(date, "%Y-%m-%d").strftime("%Y%m%d")
+    url = "https://www.taifex.com.tw/cht/7/getVixData?filesname=" + compact
+    req = urllib.request.Request(url, headers={"User-Agent": YF_HEADERS["User-Agent"]})
+    with urllib.request.urlopen(req, timeout=12) as response:
+        payload = response.read(2_000_001)
+    if len(payload) > 2_000_000:
+        raise ValueError("oversized VIX response")
+    rows = parse_vix_intraday(payload.decode("big5", errors="replace"), date)
+    return {"code": "TAIWANVIX", "name": "臺指選擇權波動率指數", "date": date,
+            "interval": "5m", "source": url, "data": rows}
+
+
 class handler(BaseHTTPRequestHandler):
     def log_message(self, format, *args): pass
 
@@ -1214,6 +1257,23 @@ class handler(BaseHTTPRequestHandler):
 
         if not code:
             self._json(400, {"error": "missing code parameter"})
+            return
+
+        if code == "TAIWANVIX":
+            date = (params.get("date") or [""])[0]
+            try:
+                parsed = datetime.strptime(date, "%Y-%m-%d")
+                if parsed.strftime("%Y-%m-%d") != date or interval != "5m" or "session" in params:
+                    raise ValueError("invalid intraday query")
+            except ValueError:
+                self._json(400, {"error": "TAIWANVIX requires date=YYYY-MM-DD and interval=5m"})
+                return
+            try:
+                result = fetch_vix_intraday(date)
+                self._json(200 if result["data"] else 404, result,
+                           cache="public, s-maxage=300, stale-while-revalidate=300")
+            except Exception:
+                self._json(502, {"error": "TAIFEX intraday VIX unavailable"})
             return
 
         if "session" in params:

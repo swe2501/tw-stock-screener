@@ -1,5 +1,5 @@
 /* 掏金篩選器「每日選股紀錄」：沿用網站 --accent／--surface／--border，深淺色自動跟隨 */
-.sl-up{color:var(--fr-up,#e05252)!important}.sl-down{color:var(--fr-down,#2ea043)!important}
+.sl-up{color:var(--red,#e05252)!important;font-weight:600}.sl-down{color:var(--green,#2ea043)!important;font-weight:600}
 .sl-muted{color:var(--text-muted);font-size:12px}
 .results-header:has(.sl-bar){flex-wrap:wrap}
 .sl-bar{display:flex;gap:8px;flex-wrap:wrap;flex-basis:100%;margin-top:8px}
@@ -323,3 +323,73 @@ html:not([data-theme=light]) .scal-workspace [data-cat=zm] .sc-hd b{color:#ffda6
 @keyframes slRecordGlint{0%,72%{transform:translateX(-140%)}91%,100%{transform:translateX(140%)}}
 @keyframes slRecordIconGlint{0%,72%,100%{opacity:1;filter:brightness(1)}79%{opacity:.75;filter:brightness(1.35)}86%{opacity:1;filter:brightness(1.15)}}
 @media(prefers-reduced-motion:reduce){#proScreenLayout.scal-workspace .sl-bar .sl-record:after,#proScreenLayout.scal-workspace .sl-record svg{animation:none}}
+
+/* Saved records need only strategy, count, disclosure and their saved timestamp. */
+.scal-day .sl-log>summary:not(:has(.sl-time)){grid-template-columns:minmax(0,1fr) auto 15px}
+
+/* ── 選股日曆改版（2026-10-21 v2）：無框格線的手帳風，明體數字、熱度底色，今天用細環，未來日期只淡化數字 ── */
+.scal-month{container-type:inline-size;padding:22px 22px 18px!important}
+.scal-controls{align-items:center;gap:6px;margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.scal-controls h3{display:flex;align-items:center;gap:12px;margin:0 auto 0 2px!important;font-size:inherit!important}
+.scal-m-num{font-family:'Noto Serif TC',Georgia,serif;font-size:44px;line-height:.9;font-weight:700;color:var(--accent);font-variant-numeric:lining-nums tabular-nums;letter-spacing:-.02em}
+.scal-m-meta{display:flex;flex-direction:column;gap:3px}
+.scal-m-meta b{font-size:15px;font-weight:700;color:var(--text)}
+.scal-m-meta small{font-size:10.5px;letter-spacing:.24em;color:var(--text-muted);font-weight:600}
+.scal-controls button{width:34px;height:34px;padding:0!important;display:grid;place-items:center;border-radius:50%!important;border:1px solid var(--border)!important;background:transparent!important;box-shadow:none!important;color:var(--text)!important}
+.scal-controls button:hover{border-color:var(--accent)!important;color:var(--accent)!important}
+.scal-controls [data-today]{width:auto;padding:0 14px!important;border-radius:999px!important;font-size:12px!important;font-weight:600}
+.scal-week{gap:0;margin-bottom:4px}
+.scal-week span{font-size:10.5px;font-weight:700;letter-spacing:.18em;color:var(--text-muted);padding:2px 0 8px;text-align:center}
+.scal-week span:nth-child(n+6){color:color-mix(in srgb,var(--text-muted) 65%,transparent)}
+.scal-grid{gap:0;border-top:1px solid color-mix(in srgb,var(--border) 70%,transparent)}
+.scal-grid .scal-pad{border-bottom:1px solid color-mix(in srgb,var(--border) 70%,transparent)}
+.scal-grid .scal-date{position:relative;min-height:74px;padding:9px 8px 8px;margin:0;border:0;border-bottom:1px solid color-mix(in srgb,var(--border) 70%,transparent);border-radius:0;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:6px;text-align:center;cursor:pointer;box-shadow:none;transition:background .18s;min-width:0;overflow:visible}
+.scal-grid .scal-date:nth-child(7n+6),.scal-grid .scal-date:nth-child(7n){background:color-mix(in srgb,var(--text-muted) 4%,transparent)}
+.scal-grid .scal-date::before{content:'';position:absolute;inset:4px;border-radius:12px;background:transparent;transition:background .18s,box-shadow .18s;z-index:0}
+.scal-grid .scal-date>*{position:relative;z-index:1}
+.scal-grid .scal-date:hover::before{background:color-mix(in srgb,var(--accent) 7%,transparent)}
+.scal-grid .scal-date:focus-visible{outline:none}
+.scal-grid .scal-date:focus-visible::before{box-shadow:0 0 0 2px var(--accent)}
+.scal-number{width:30px;height:30px;display:grid;place-items:center;border-radius:50%;font-family:'Noto Serif TC',Georgia,serif;font-size:15px;font-weight:600;font-variant-numeric:lining-nums tabular-nums;color:var(--text);transition:color .18s}
+.scal-grid .scal-date.is-weekend .scal-number{color:var(--text-muted)}
+.scal-grid .scal-date.is-future{cursor:default}
+.scal-grid .scal-date.is-future .scal-number{color:color-mix(in srgb,var(--text-muted) 55%,transparent)}
+.scal-grid .scal-date.is-future:hover::before{background:transparent}
+/* 熱度：一筆淡、兩筆中、三筆以上深 */
+.scal-grid .scal-date.lv1::before{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.scal-grid .scal-date.lv2::before{background:color-mix(in srgb,var(--accent) 18%,transparent)}
+.scal-grid .scal-date.lv3::before{background:color-mix(in srgb,var(--accent) 28%,transparent)}
+.scal-grid .scal-date.has-records .scal-number{color:var(--text);font-weight:700}
+.scal-grid .scal-date.is-selected::before{box-shadow:inset 0 0 0 1.5px var(--accent)}
+.scal-date.is-today .scal-number{color:var(--accent)!important;box-shadow:inset 0 0 0 1.5px var(--accent);background:var(--surface);font-weight:700}
+.scal-date.is-today::after{content:'今日';display:none;position:absolute;top:8px;right:10px;z-index:1;font-size:9.5px;font-weight:700;letter-spacing:.1em;color:var(--accent)}
+.scal-grid .scal-day-count{position:static;display:inline-flex;align-items:baseline;gap:1px;min-width:0;height:auto;padding:0;background:none;border-radius:0;font-family:'Noto Serif TC',Georgia,serif;font-size:13px!important;line-height:1!important;font-weight:700;color:var(--accent)!important;font-variant-numeric:tabular-nums}
+.scal-grid .scal-day-count small{font-family:inherit;font-size:10px!important;font-weight:600;color:var(--text-muted);margin-left:2px}
+.scal-grid .scal-labels{display:none!important;max-width:100%;font-size:10.5px!important;line-height:1.3;color:var(--text-muted)}
+.scal-grid .scal-labels>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.scal-grid .scal-labels small{font-size:10px!important;font-weight:700;color:var(--accent)}
+@container (min-width:720px){.scal-date.is-today::after{display:block}.scal-grid .scal-date{min-height:92px}.scal-grid .scal-labels{display:flex!important;gap:3px;justify-content:center;width:100%;padding:0 4px;box-sizing:border-box}}
+.scal-month>.sl-muted{margin:14px 0 0;font-size:11.5px;color:var(--text-muted);display:flex;align-items:center;gap:8px}
+.scal-month>.sl-muted::before{content:'';width:42px;height:8px;border-radius:4px;flex:none;background:linear-gradient(90deg,color-mix(in srgb,var(--accent) 10%,transparent),color-mix(in srgb,var(--accent) 28%,transparent))}
+.sl-market-date{padding:0 7px;border-radius:999px;font-size:10.5px;line-height:1.8;color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent)}
+@media(max-width:760px){
+ .scal-month{padding:16px 12px 14px!important}
+ .scal-m-num{font-size:36px}
+ .scal-grid .scal-date{min-height:56px;padding:6px 2px;gap:3px}
+ .scal-grid .scal-date::before{inset:2px;border-radius:9px}
+ .scal-number{width:26px;height:26px;font-size:13px}
+ .scal-date.is-today::after{display:none}
+ .scal-grid .scal-day-count small{display:none}
+ .scal-grid .scal-day-count{font-size:11px!important}
+}
+
+.sl-ret .sl-ret-date{color:var(--text-muted);font-weight:400}
+.sl-log-tools .sl-muted:empty{display:none}
+.sl-log-tools:has(.sl-muted:empty){justify-content:flex-end}
+
+
+.sic-record-dialog{width:min(640px,calc(100vw - 24px));max-height:calc(100dvh - 32px);padding:0;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:14px}
+.sic-record-dialog[open]{display:flex;flex-direction:column}.sic-record-dialog .sl-body{overflow:auto;min-height:0}.sic-record-dialog footer{flex:none;padding:14px 18px;border-top:1px solid var(--border)}
+.sic-record-dialog footer button{padding:9px 12px;border:1px solid var(--accent);border-radius:8px;background:var(--accent);color:var(--on-accent);font:inherit;cursor:pointer}
+.sic-record{padding:14px 0;border-bottom:1px solid var(--border)}.sic-record:first-of-type{padding-top:0}.sic-record:last-child{border-bottom:0}.sic-record h3{font-size:15px;margin:0 0 8px}.sic-record p{margin:6px 0;line-height:1.6;overflow-wrap:anywhere}
+.sic-record ul{list-style:none;padding:0;margin:10px 0 0}.sic-record li{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:9px 0;border-top:1px solid var(--border);font-size:13px}.sic-record-conditions,.sic-record-empty{font-size:13px;color:var(--text-muted)}.sic-record-empty{padding:24px 0}
