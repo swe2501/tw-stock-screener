@@ -10,10 +10,11 @@
  let last=0,lookX=0,lookY=0,lookTargetX=0,lookTargetY=0,yaw=0,wing=0,head=0,state={},lastPointer={x:-1,y:-1},ripples=[];
  const stars=Array.from({length:54},(_,i)=>({x:(i*.618034)%1,y:(i*.381966+.13)%1,phase:i*1.21}));
  const palette=['#397caa','#b39252','#2b9c9e','#a86b59'];
- // Continuous shoulder stroke; each wing is a single connected surface.
+ // Continuous shoulder stroke. Keep the range restrained: the source art is a
+ // frontal illustration, so a large rigid rotation reads as a broken shoulder.
  function wingStroke(time){const p=((time/2.65)%1+1)%1;
   // A smooth periodic stroke has no held keyframe or abrupt change of velocity.
-  return .235-.315*Math.cos(TAU*p)+.025*Math.sin(TAU*p*2);
+  return .14-.21*Math.cos(TAU*p)+.016*Math.sin(TAU*p*2);
  }
  // Calibrated eye/face landmarks for each selected image, not one crop reused for every pose.
  function landmarks(angle,style){
@@ -41,7 +42,14 @@
    const vertical=g.createLinearGradient(0,0,0,ch);vertical.addColorStop(0,'#fff');vertical.addColorStop(clamp(faceY+.22),'#fff');vertical.addColorStop(clamp(faceY+.34),'#fff0');vertical.addColorStop(1,'#fff0');g.globalCompositeOperation='destination-in';g.fillStyle=vertical;g.fillRect(0,0,cw,ch);return{canvas:c,root,joint};
   }
   const body=blank(),g=body.getContext('2d');g.drawImage(base,0,0);const sides=[];
-  for(const side of [-1,1]){const row={side};for(const part of ['inner','outer']){const m=mask(side,part),c=blank(),cg=c.getContext('2d');cg.drawImage(base,0,0);cg.globalCompositeOperation='destination-in';cg.drawImage(m.canvas,0,0);cutHead(cg);row[part]=c;row.root=m.root;row.joint=m.joint;}const total=mask(side,'total'),whole=blank(),wg=whole.getContext('2d');wg.drawImage(base,0,0);wg.globalCompositeOperation='destination-in';wg.drawImage(total.canvas,0,0);cutHead(wg);row.whole=whole;const bank=Math.abs(faceX-.5)>.15,far=bank&&side===Math.sign(faceX-.5);row.pivotY=bank?faceY+(far?-.20:-.03):faceY+.065;g.globalCompositeOperation='destination-out';g.drawImage(total.canvas,0,0);sides.push(row);}
+  for(const side of [-1,1]){const row={side};for(const part of ['inner','outer']){const m=mask(side,part),c=blank(),cg=c.getContext('2d');cg.drawImage(base,0,0);cg.globalCompositeOperation='destination-in';cg.drawImage(m.canvas,0,0);cutHead(cg);row[part]=c;row.root=m.root;row.joint=m.joint;}const total=mask(side,'total'),whole=blank(),wg=whole.getContext('2d');wg.drawImage(base,0,0);wg.globalCompositeOperation='destination-in';wg.drawImage(total.canvas,0,0);cutHead(wg);row.whole=whole;const bank=Math.abs(faceX-.5)>.15,far=bank&&side===Math.sign(faceX-.5);
+   // Bank artwork has a foreshortened far wing. Its old pivot sat above the
+   // shoulder, so rotation pulled a transparent wedge through the feathers.
+   row.pivotY=bank?faceY+(far?-.05:-.025):faceY+.055;row.strokeScale=bank?(far?.58:.88):1;
+   // Remove only the articulated outer wing from the fixed body. A broad,
+   // feathered shoulder remains underneath the moving layer and seals the
+   // joint throughout the stroke without exposing transparent source pixels.
+   const bodyCut=blank(),bcg=bodyCut.getContext('2d');bcg.drawImage(total.canvas,0,0);bcg.globalCompositeOperation='destination-in';horizontal(bcg,side<0?[[0,1],[row.root-.13,1],[row.root+.015,0],[1,0]]:[[0,0],[row.root-.015,0],[row.root+.13,1],[1,1]]);g.globalCompositeOperation='destination-out';g.drawImage(bodyCut,0,0);sides.push(row);}
   // Remove the original head before drawing its tracked layer, avoiding a doubled outline.
   cutHead(g);
   const result={body,sides};im._layers[key]=result;return result;
@@ -82,12 +90,12 @@
   // Every view is aligned by its face, so the camera turn has no positional snap.
   const dx=-anchorX*ow,dy=-anchorY*oh;
   if(!im._cool){const c=document.createElement('canvas');c.width=im.naturalWidth;c.height=im.naturalHeight;const g=c.getContext('2d');g.filter='saturate(.3) brightness(1.04)';g.drawImage(im,0,0);im._cool=c;}
-  ctx.save();ctx.globalAlpha=opacity;ctx.translate(cx,cy);ctx.rotate(yaw*.055);ctx.scale(1-Math.abs(yaw)*.035,1);
+  ctx.save();ctx.globalAlpha=opacity;ctx.translate(cx,cy);ctx.rotate(yaw*.055+(box.turnTilt||0));ctx.scale((1-Math.abs(yaw)*.035)*(box.turnScale||1),1);
   const layerKey=anglePose?'bank-'+anglePose+'-'+style:'front',layers=wingLayers(im,source,faceX,faceY,layerKey),stroke=box.static?0:wingStroke(t);
   // Never rotate a detached outer-feather crop: a full wing shares one shoulder pivot.
   // The feathered shoulder overlaps the fixed torso throughout the stroke.
-  for(const side of layers.sides){const rx=dx+side.root*ow,ry=dy+side.pivotY*oh;
-   ctx.save();ctx.translate(rx,ry);ctx.rotate(side.side*stroke);ctx.translate(-rx,-ry);ctx.drawImage(side.whole,dx,dy,ow,oh);ctx.restore();
+  for(const side of layers.sides){const rx=dx+side.root*ow,ry=dy+side.pivotY*oh,angle=side.side*stroke*side.strokeScale;
+   ctx.save();ctx.translate(rx,ry);ctx.rotate(angle);ctx.translate(-rx,-ry);ctx.drawImage(side.whole,dx,dy,ow,oh);ctx.restore();
   }
   ctx.drawImage(layers.body,dx,dy,ow,oh);
   // The head has independent, bounded gaze tracking. A feathered mask avoids a cutout edge.
@@ -110,7 +118,7 @@
   const faceY=cy-visualW*.025;
   ctx.clearRect(0,0,w,h);
   // Large, legible light on porcelain; restrained iridescent depth on midnight.
-  const halo=ctx.createRadialGradient(cx,cy,visualW*.08,cx,cy,visualW*.83);halo.addColorStop(0,dark?'#ddbc6835':'#5794b83b');halo.addColorStop(.52,dark?'#23627920':'#7e9cb22a');halo.addColorStop(1,'#0000');ctx.fillStyle=halo;ctx.fillRect(0,0,w,h);
+  const halo=ctx.createRadialGradient(cx,cy,visualW*.08,cx,cy,visualW*.83);halo.addColorStop(0,dark?'#ddbc6835':'#dfbd633d');halo.addColorStop(.52,dark?'#23627920':'#c9a85b24');halo.addColorStop(1,'#0000');ctx.fillStyle=halo;ctx.fillRect(0,0,w,h);
   if(!mobile){ctx.save();ctx.globalAlpha=dark?.035:.045;ctx.strokeStyle=colors.accent;ctx.lineWidth=.7;ctx.font='500 '+Math.min(w*.085,140)+'px Georgia,serif';ctx.textAlign='center';ctx.strokeText(cycle<12?'OBSERVE':cycle<18?'CONNECT':'FORESIGHT',cx,cy-visualW*.33);ctx.restore();}
   // Glass lanes sit behind the creatures and remain animated throughout the logo phase.
   ctx.save();ctx.translate(cx,cy+visualW*.1);ctx.rotate(-.2+Math.sin(t*.10)*.04);
@@ -142,29 +150,41 @@
   const morphology=ease(15,20,cycle)*(1-ease(29,34,cycle));
   let stage=cycle<6?0:cycle<12?1:cycle<18?2:cycle<28?3:4;
   if(reduce)stage=3;
-  // Camera view changes while the bird is fully dissolved, avoiding double heads or ghost wings.
-  // The next bank then grows out of the mosaic and stays coherent for the whole flight.
-  const poseIndex=reduce?0:Math.floor((t+7)/38)%3,side=[0,-1,1][poseIndex];
+  // Turn through a narrow, particle-covered silhouette instead of cross-fading
+  // two complete owls. Only one head is ever visible, so the change reads as a
+  // continuous bank rather than a double-exposed atlas swap.
+  const poses=[0,-1,1],poseCycle=reduce?0:Math.floor(t/38)%poses.length,fromSide=poses[poseCycle],toSide=reduce?0:poses[(poseCycle+1)%poses.length];
+  const turnBlend=reduce?0:ease(31,35,cycle),turnSwitch=32.25,turnOut=reduce?0:ease(31,turnSwitch,cycle),turnIn=reduce?1:ease(turnSwitch,35,cycle);
+  const turnArc=reduce?0:(cycle<turnSwitch?turnOut:1-turnIn),turnScale=reduce?1:(cycle<turnSwitch?mix(1,.80,turnOut):mix(.80,1,turnIn));
+  const turnDirection=Math.sign(toSide-fromSide),turnTilt=turnDirection*turnArc*.032;
+  const turnVeil=reduce?1:1-.72*Math.exp(-(((cycle-turnSwitch)/.42)**2)),side=reduce?0:(cycle<turnSwitch?fromSide:toSide);
   const natural=(1-pearl)*(1-dissolve),sculpted=pearl*(1-dissolve);
-  // Center the complete silhouette, rather than the face of an asymmetric bank pose.
-  const poseMark=landmarks(side,pearl>.5?1:0),owlBox={x:cx+(poseMark.x-.5)*visualW,y:faceY+(side?(poseMark.y-.5)*visualW:0),width:visualW,static:reduce};
-  if(side&&ready(loaded['owl-banks-v2'])){owlImage(ctx,loaded['owl-banks-v2'],owlBox,t,natural,side,0);owlImage(ctx,loaded['owl-banks-v2'],owlBox,t,sculpted,side,1);}
-  else{owlImage(ctx,loaded['snowy-owl-v2'],owlBox,t,natural,0,0);owlImage(ctx,loaded['pearl-owl-v2'],owlBox,t,sculpted,0,1);}
+  function drawPose(pose,style,alpha){if(alpha<.004)return;const poseMark=landmarks(pose,style),owlBox={x:cx+(poseMark.x-.5)*visualW,y:faceY+(pose?(poseMark.y-.5)*visualW:0),width:visualW,static:reduce,turnScale,turnTilt};const im=pose?loaded['owl-banks-v2']:loaded[style?'pearl-owl-v2':'snowy-owl-v2'];if(ready(im))owlImage(ctx,im,owlBox,t,alpha*turnVeil,pose,style);}
+  // Every source is centered by its tracked face, preserving one gaze anchor.
+  drawPose(side,0,natural);drawPose(side,1,sculpted);
   const mosaic=window.FqiArrivalMosaic||[],logoPoints=clouds[dark?'dark':'light'];
-  if(mosaicAlpha>.005){const scatter=Math.sin(clamp(morphology)*Math.PI)*visualW*.09;ctx.save();ctx.translate(cx,faceY+visualW*.045);
-   mosaic.forEach((p,i)=>{const target=logoPoints[i%logoPoints.length],sx=(p[0]-.5)*visualW,sy=(p[1]-.415)*visualW*2/3,tx=target.x*visualW*.76,ty=target.y*visualW*.76*.634;
-    const x=mix(sx,tx,morphology)+Math.sin(i*2.4+t*.7)*scatter,y=mix(sy,ty,morphology)+Math.cos(i*1.7+t*.6)*scatter;
-    const size=mix(visualW/80,visualW/135,morphology),c=target.gold?(dark?'#edca74':'#b18a39'):(dark?'#d9e5ed':'#3c586a');ctx.globalAlpha=clamp(mosaicAlpha)*(.65+.35*Math.sin(i+t*.6)**2);ctx.fillStyle=morphology>.55?c:(dark?`rgb(${p[2]},${p[3]},${p[4]})`:'#7896a8');ctx.fillRect(x-size/2,y-size/2,size,size);
+  if(mosaicAlpha>.005){const morph=clamp(morphology),flow=morph<.5?4*morph*morph*morph:1-Math.pow(-2*morph+2,3)/2,scatter=Math.sin(morph*Math.PI)*visualW*.034,colorFlow=ease(.28,.92,morph);ctx.save();ctx.translate(cx,faceY+visualW*.045);
+   mosaic.forEach((p,i)=>{const target=logoPoints[i%logoPoints.length],sx=(p[0]-.5)*visualW,sy=(p[1]-.415)*visualW*2/3,tx=target.x*visualW*.76,ty=target.y*visualW*.76*.634,vx=tx-sx,vy=ty-sy,len=Math.max(1,Math.hypot(vx,vy));
+    // A seeded curved route gives every tile one continuous path into the mark.
+    // The lateral arc and free drift both settle to zero before the logo locks.
+    const seed=Math.sin(i*2.399),arc=Math.sin(morph*Math.PI)*visualW*(.016+Math.abs(seed)*.034),drift=(1-flow)*scatter;
+    const x=mix(sx,tx,flow)-vy/len*arc*seed+Math.sin(i*2.4+t*.55)*drift,y=mix(sy,ty,flow)+vx/len*arc*seed+Math.cos(i*1.7+t*.48)*drift;
+    const settlePop=Math.exp(-(((morph-.91)/.075)**2)),size=mix(visualW/80,visualW/135,flow)*(1+settlePop*.16),source=dark?[p[2],p[3],p[4]]:[120,150,168],targetRgb=target.gold?(dark?[237,202,116]:[177,138,57]):(dark?[217,229,237]:[60,88,106]);
+    const rgb=source.map((v,j)=>Math.round(mix(v,targetRgb[j],colorFlow))),flicker=(1-flow)*.22;ctx.globalAlpha=clamp(mosaicAlpha)*(.78+flicker*Math.sin(i+t*.6)**2);ctx.fillStyle=`rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;ctx.fillRect(x-size/2,y-size/2,size,size);
    });ctx.restore();}
-  const logoPulse=reduce?0:(.5-.5*Math.cos((cycle-20)*TAU/2.8)),reveal=reduce?0:Math.exp(-(((cycle-20.2)/.7)**2));
+  const logoPulse=reduce?0:(.5-.5*Math.cos((cycle-20)*TAU/2.8)),reveal=reduce?0:Math.exp(-(((cycle-20.2)/.7)**2)),whiteFlash=reduce?0:Math.exp(-(((cycle-20.05)/.38)**2));
+  // A brief white focus establishes the exact lock frame. On porcelain the
+  // champagne edge keeps the white bloom legible; on midnight it stays white.
+  if(whiteFlash>.004){ctx.save();ctx.translate(cx,faceY+visualW*.045);ctx.globalCompositeOperation='screen';ctx.scale(1,.62);const flash=ctx.createRadialGradient(0,0,0,0,0,visualW*.62);flash.addColorStop(0,'rgba(255,255,255,.98)');flash.addColorStop(.18,dark?'rgba(255,255,255,.72)':'rgba(255,250,235,.86)');flash.addColorStop(.52,dark?'rgba(255,244,214,.22)':'rgba(221,180,88,.20)');flash.addColorStop(1,'rgba(255,255,255,0)');ctx.globalAlpha=whiteFlash*(dark?.92:.76);ctx.fillStyle=flash;ctx.beginPath();ctx.arc(0,0,visualW*.62,0,TAU);ctx.fill();ctx.restore();}
   if(logoAlpha>.005&&ready(logo)){const lw=visualW*.76,lh=lw*.634;ctx.save();ctx.translate(cx,faceY+visualW*.045);
-   if(!reduce){ctx.globalAlpha=logoAlpha*(.22+logoPulse*.26+reveal*.20);ctx.shadowColor=dark?'#f1cd67':'#559fc5';ctx.shadowBlur=16+logoPulse*22+reveal*14;ctx.drawImage(logo,350,0,1340,850,-lw/2,-lh/2,lw,lh);}
+   if(!reduce&&whiteFlash>.004){ctx.globalAlpha=logoAlpha*whiteFlash*.82;ctx.shadowColor='#fff';ctx.shadowBlur=32+whiteFlash*34;ctx.drawImage(logo,350,0,1340,850,-lw/2,-lh/2,lw,lh);}
+   if(!reduce){ctx.globalAlpha=logoAlpha*(.22+logoPulse*.26+reveal*.20);ctx.shadowColor=dark?'#f1cd67':'#d6ad4f';ctx.shadowBlur=16+logoPulse*22+reveal*14;ctx.drawImage(logo,350,0,1340,850,-lw/2,-lh/2,lw,lh);}
    ctx.globalAlpha=logoAlpha;ctx.shadowBlur=0;ctx.drawImage(logo,350,0,1340,850,-lw/2,-lh/2,lw,lh);ctx.restore();}
   if(!ready(loaded['snowy-owl-v2'])&&!ready(loaded['pearl-owl-v2'])&&ready(logo)){ctx.globalAlpha=.8;ctx.drawImage(logo,350,0,1340,850,cx-visualW*.32,cy-visualW*.2,visualW*.64,visualW*.405);}
   // Three conceptual orbit nodes: useful brand meaning, without dashboard clutter.
   if(!mobile){['行情','籌碼','題材'].forEach((word,i)=>{const p=t*.10+i*TAU/3,x=cx+Math.cos(p)*visualW*.55,y=cy+Math.sin(p)*visualW*.25;ctx.globalAlpha=.7;ctx.fillStyle=colors.ink;ctx.font='11px "Microsoft JhengHei",sans-serif';ctx.textAlign='center';ctx.fillText(word,x,y);ctx.globalAlpha=.25;ctx.strokeStyle=colors.accent;ctx.beginPath();ctx.moveTo(x,y+8);ctx.lineTo(mix(x,cx,.16),mix(y,cy,.16));ctx.stroke();});}
   ctx.globalAlpha=1;
-  state={cycle,stage,pose:side,fishCount:count,dispersing,yaw,headX:lookX,headY:lookY,wing,logoAlpha,logoPulse,mosaicAlpha:clamp(mosaicAlpha),natural,sculpted,ready:names.every(n=>ready(loaded[n])),reduced:reduce,fish:fish.slice(0,count).map(f=>({id:f.id,x:f.x,y:f.y,vx:f.vx,vy:f.vy}))};
+  state={cycle,stage,pose:side,poseFrom:fromSide,poseTo:toSide,turnBlend,turnVeil,fishCount:count,dispersing,yaw,headX:lookX,headY:lookY,wing,logoAlpha,logoPulse,whiteFlash,mosaicAlpha:clamp(mosaicAlpha),natural,sculpted,ready:names.every(n=>ready(loaded[n])),reduced:reduce,fish:fish.slice(0,count).map(f=>({id:f.id,x:f.x,y:f.y,vx:f.vx,vy:f.vy}))};
   return state;
  }
  window.FqiArrivalVisual={render,state:()=>({...state}),reset(){last=0;lookX=lookY=yaw=0;ripples=[];fish.forEach(f=>{f.vx=f.vy=f.ox=f.oy=0;});},assets:names.map(n=>'assets/arrival/'+n+'.webp')};
