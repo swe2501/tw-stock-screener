@@ -486,6 +486,8 @@ page_cache 是 **uat 與 prod 共用**同一個 Supabase。若推盤中到原 ki
 - 2026-10-24 後台「算法公式」總開關點了沒反應：Supabase 沒有 admin_settings、admin_audit_log 兩張表（交接文件寫已建，實際沒建成）。用戶 10/24 晚在 SQL Editor 手動執行 docs/database/admin-settings.sql 與 admin_audit_log 建表（RLS 開、無 policy，只有 service_role 能讀寫），已實測可寫入。
 - 2026-10-25 後台管理卡頓：開關改為點下立刻切換（樂觀更新），後端在背景存，失敗才切回並提示；連點只認最後一次。各分頁資料留在記憶體，切換先畫上次資料再背景更新；進後台時背景預載算法公式與稽核日誌。（後端每次約 4 秒是 Vercel 冷啟動＋驗管理者身分，未改後端。）
 - 2026-10-25 上櫃分點回補：otc_backfill.py 重開瀏覽器時一時被誤判「未登入」會整個中止，改為重試 3 次（commit 44c6228）。
+- 2026-10-27 後台管理新增「AI 研究室」分頁（僅管理者）：像素風辦公室，7 個角色＝既有排程分組（新聞、籌碼、技術、總經、風控、ETF、資料管理），顯示狀態燈、最新真實產出泡泡、夜間交棒動畫，點角色看今日步驟；下方有角色對照表（負責、影響頁面、對應排程程式）。狀態由本機排程每一步經 `scripts/office_step.py` 打卡寫入 Supabase `admin_settings`（key `office:<角色>`），後端 `/api/auth` action `admin_office` 讀取。對應表在 `scripts/office_wrap_bat.py` 與 `apps/web/assets/admin-office.js` 的 ROLE，兩邊要一致。
+- 2026-10-27 ETF 淨值又全空：10/24 加的「保留欄位」只補到有舊值的列，同一批列欄位不一致，PostgREST 整批 400（All object keys must match），表被清空、後面 wantgoo_etf 判定無資料。改為每列補齊欄位（`upload_etf.py`）；10/28 凌晨重跑補回 136 檔淨值。同晚家中網路兩度斷線（getaddrinfo failed／ERR_INTERNET_DISCONNECTED），當晚多支排程失敗。
 
 ---
 
@@ -529,3 +531,43 @@ page_cache 是 **uat 與 prod 共用**同一個 Supabase。若推盤中到原 ki
 3. 上櫃回補完成後確認 `after_otc_backfill.log` 出現「重算完成」，再請用戶看主力分點前 20 名（會納入上櫃）。
 4. 後台其他 `.algo-gated` 區塊（判讀依據／葛蘭碧參數／支撐壓力 SPEC）文字仍在前端；要防窺可比照 algo_info 搬後端。
 5. 環境：本機 Bash 工具常出現「unexpected EOF」，指令改用 PowerShell；內建瀏覽器沒登入 Supabase，跑 SQL 用 Claude in Chrome（用戶已登入）或請用戶手動。
+
+---
+
+## 十七、排程總表與換帳號接手（2026-10-28 建立；之後新增或修改任何排程都必須更新本節）
+
+> 用戶要求：用戶可能改用另一個 Claude 帳號開 Claude Code。凡是幫用戶設定的排程都要寫在這裡，讓任何帳號的 Claude Code 都能看懂並自行啟動、重建。
+
+### A. 先搞清楚：排程跟 Claude 帳號無關
+- 網站資料排程全部是 **Windows 工作排程器** 的任務，掛在 Windows 使用者 `User` 底下，登入類型 Interactive。
+- 執行條件：**電腦開著且 Windows 使用者 `User` 已登入**（鎖定畫面可以，登出或關機就不跑）。部分任務設了「喚醒電腦執行」。
+- **不需要開 Claude Code，也跟登入哪個 Claude 帳號無關**。換 Claude 帳號不影響排程。
+- Claude Code 自己的排程（scheduled tasks）：2026-10-28 查過是**空的**，沒有任何綁在 Claude 帳號上的排程。之後若有人用 Claude 的排程功能設定，必須寫進本節並註明是哪個 Claude 帳號（那種排程才會跟帳號綁在一起）。
+- 雲端：法說會／除權息因子兩支在 GitHub Actions（prod 分支 `.github/`，台灣週一～五 20:30），跟本機和 Claude 帳號都無關。
+
+### B. 本機 Windows 工作排程器任務（2026-10-28）
+| 任務名稱 | 時間 | 執行 | 內容 |
+|---|---|---|---|
+| `WantgooDailyScrape` | 週一～五 19:00（可喚醒） | `scripts\run_daily_job.bat` | 夜間主排程：分點、法人、收盤價、ETF、總經、廣度、快取等約 66 步 |
+| `AI_stock_Intraday` | 週一～五 08:55（可喚醒） | `scripts\run_intraday.bat` | 盤中掃盤 `intraday_push.py --loop` |
+| `CodexHotTopicsHourly` | 週一～五 09:00 起每小時，共 5 小時 | `scripts\run_codex_topics.bat` | 話題族群（桌面版 Codex CLI） |
+| `AI_stock_news_feed` | 每天 06:30 起每 4 小時 | `scripts\run_news_feed.bat` | 每日新聞 |
+| `AI_stock_margin_catchup` | 週二～六 09:00 | `scripts\run_margin_catchup.bat` | 融資維持率補當日值 |
+| `AI_stock_taifex_catchup` | 週二～六 08:30 | `scripts\run_taifex_catchup.bat` | 期交所資料補跑 |
+| `BrokerRankingsWeekly` | 週六 03:00（可喚醒） | `scripts\run_rankings_weekly.bat` | 主力分點週排行＋股利 |
+
+- 每個任務的完整設定已匯出到 `scripts/scheduled_tasks/<任務名稱>.xml`，可直接用來重建。
+- 批次檔只能寫英文、CRLF 換行（中文會讓排程卡死）；**正在執行的 .bat 不能改**（cmd 邊跑邊讀檔），要等它跑完再換。
+- 2026-10-27 起各 .bat 的每一步改經 `scripts\office_step.py <角色> <程式>` 執行（AI 研究室打卡，exit code 原樣傳回，打卡失敗不影響排程）。`run_daily_job.bat` 的新版由 `scripts\office_swap_watch.ps1` 在 10/27 夜間排程結束後自動換上（已於 10/27 23:14 換好，66 步全部打卡），舊版備份為 `*.bat.bak_office`，紀錄在 `scripts\office_swap.log`。
+
+### C. 任何帳號的 Claude Code 怎麼操作（PowerShell）
+- 查看全部：`Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\Microsoft\*' }`；看上次結果：`Get-ScheduledTaskInfo -TaskName WantgooDailyScrape`（LastTaskResult 0＝成功）。
+- 立刻執行一次：`Start-ScheduledTask -TaskName WantgooDailyScrape`（或 `schtasks /Run /TN WantgooDailyScrape`）。
+- 停用／啟用：`Disable-ScheduledTask` ／ `Enable-ScheduledTask -TaskName <名稱>`。
+- 重建（任務被刪或換電腦）：`schtasks /Create /TN <名稱> /XML scripts\scheduled_tasks\<名稱>.xml`。XML 內的 UserId 是這台電腦 `User` 的 SID；換 Windows 使用者或換電腦要加 `/RU <使用者>`，或先把 XML 的 `<UserId>` 改掉。
+- 修改後重新匯出：`Export-ScheduledTask -TaskName <名稱> | Out-File scripts\scheduled_tasks\<名稱>.xml -Encoding unicode`，並更新上表。
+- 長時間背景程式（例如回補）不要用 Claude 工具直接啟動：Claude Code 重開時會一起被關掉。改用 `Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{CommandLine='...'; CurrentDirectory='C:\Users\User\Desktop\AI_stock\scripts'}` 脫鉤啟動。
+
+### D. 一次性背景程式（不是排程，重開機就沒了）
+- 上櫃分點回補 `otc_backfill.py --worker 0/1`、回補後重算 `after_otc_backfill.py`：見第十六節 B。
+- `office_swap_watch.ps1`：等 10/27 夜間排程結束後換新版 `run_daily_job.bat`，已於 10/27 23:14 完成並結束。
