@@ -16,6 +16,23 @@
     risk: { n: '風控', shirt: '#c0567a', hair: '#2d2016' }, etf: { n: 'ETF 研究員', shirt: '#5c8a3a', hair: '#3a2a1a' },
     data: { n: '資料管理員', shirt: '#6b7a8f', hair: '#3a2a1a' }
   };
+  // 角色對照：負責什麼、餵哪些頁面、對應哪些排程程式（與 scripts/office_wrap_bat.py 的 AGENT 對應表一致）
+  var ROLE = {
+    news: { duty: '每日新聞、話題族群、公司公告、法說會、宏觀事件', pages: '每日新聞、題材族群、宏觀事件窗',
+      jobs: 'run_codex_topics、upload_hot_topics、news_feed、mops_announce、catalyst_lawshow、macro_events' },
+    chip: { duty: '主力分點、三大法人、集保大戶、當沖、官股八大、主力買賣訊號', pages: '主力訊號、分點排行、法人籌碼',
+      jobs: 'wantgoo_daily_job、otc_broker_daily、chip_etl_twse/tpex、broker_signals、broker_rankings、sell_tracker、gov_broker、inst_market…' },
+    tech: { duty: '收盤價、小時線、強度、箱型、個股分價量、流動性、明燈冥燈、盤中更新', pages: '選股、K 線、箱型、流動性前 30',
+      jobs: 'fetch_prices(_otc)、fetch_hourly、upload_price_window、compute_strength、compute_box、stock_sr、liquidity_top、mingdeng、intraday_push' },
+    macro: { duty: '美債、VIX、總經環境、大盤／櫃買指數、期貨選擇權、外資避險', pages: '首頁 KPI、市場觀察、選擇權支撐壓力',
+      jobs: 'ust_yields_push、macro_env_push、market_indicators、index_history、futures_market、options_market、txo_history、option_sr、foreign_hedge…' },
+    risk: { duty: '融資維持率、貪婪指標、市場廣度、類股成交比重', pages: '溫度計、市場廣度、融資維持率',
+      jobs: 'margin_ratio、margin_maintenance_calc、margin_market、compute_greed、breadth_daily、breadth_ext、sector_turnover、otc_market' },
+    etf: { duty: 'ETF 名錄、淨值／規模、成分股、資金流、配息、受益人、主動 ETF 持股', pages: 'ETF 分析各分頁',
+      jobs: 'upload_etf、wantgoo_etf、wantgoo_etf_flow、upload_etf_div、upload_etf_holders、etf_daily、active_etf_flow、upload_active_etf_holdings' },
+    data: { duty: '股票清單、除權息、財報、首頁快取、排程健康檢查、上櫃分點回補', pages: '全站快取、系統健康',
+      jobs: 'gen_listed_codes、upload_otc_names、upload_exdiv_factor、fundamentals、themes_push、page_cache_push、job_health、chip_brief、dividends_push…' }
+  };
   var LIMIT_MIN = { news: 90, chip: 150, tech: 60, macro: 60, risk: 60, etf: 90, data: 120 };
   var ST_COLOR = { done: '#5aa469', work: '#4a90e2', stuck: '#d9534f', idle: '#9aa5b1' };
   var ST_TEXT = { done: '完成', work: '工作中', stuck: '卡住', idle: '待命' };
@@ -61,9 +78,13 @@
       + '<div style="display:flex;align-items:center;gap:10px"><span id="aoUpd" style="font-size:12px;color:var(--text-muted)"></span>'
       + '<button type="button" id="aoRefresh" style="padding:4px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);cursor:pointer;font-size:12px">重新整理</button></div></div>'
       + '<div style="border:1px solid var(--border);border-radius:12px;overflow:hidden"><svg id="aoSvg" viewBox="0 0 900 470" width="100%" shape-rendering="crispEdges" style="display:block;background:#e8dcc6" role="img" aria-label="AI 研究室像素辦公室"></svg></div>'
-      + '<div id="aoDetail" style="margin-top:12px"></div>';
+      + '<div id="aoDetail" style="margin-top:12px"></div>'
+      + '<div style="margin-top:12px;border:1px solid var(--border);border-radius:12px;overflow-x:auto"><table class="ao-roles" style="width:100%;min-width:640px;table-layout:fixed;border-collapse:collapse;font-size:12px"><colgroup><col style="width:120px"><col style="width:30%"><col style="width:20%"><col></colgroup><thead><tr style="color:var(--text-muted);text-align:left;background:var(--surface)"><th style="padding:6px 8px">角色</th><th style="padding:6px 8px">負責</th><th style="padding:6px 8px">影響頁面</th><th style="padding:6px 8px">對應排程程式</th></tr></thead><tbody>'
+      + Object.keys(SEATS).map(function (a) { return '<tr data-ao="' + a + '" style="border-top:1px solid var(--border);cursor:pointer"><td style="padding:6px 8px;white-space:nowrap"><span style="display:inline-block;width:10px;height:10px;margin-right:6px;background:' + LOOK[a].shirt + '"></span><b>' + esc(LOOK[a].n) + '</b></td><td style="padding:6px 8px">' + esc(ROLE[a].duty) + '</td><td style="padding:6px 8px">' + esc(ROLE[a].pages) + '</td><td style="padding:6px 8px;color:var(--text-muted);font-family:monospace">' + esc(ROLE[a].jobs) + '</td></tr>'; }).join('')
+      + '</tbody></table></div><style>.ao-roles td,.ao-roles th{white-space:normal!important;word-break:break-word;vertical-align:top}</style>';
     svg = box.querySelector('#aoSvg');
     box.querySelector('#aoRefresh').onclick = load;
+    [].forEach.call(box.querySelectorAll('tr[data-ao]'), function (tr) { tr.onclick = function () { selected = tr.getAttribute('data-ao'); detail(); box.querySelector('#aoDetail').scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }; });
     var tl = G(svg);
     for (var y = 70; y < 470; y += 20) for (var x = 0; x < 900; x += 20) if (((x + y) / 20) % 2 === 0) R(tl, x, y, 20, 20, '#e0d2b8');
     R(svg, 0, 0, 900, 64, '#7d93ab'); R(svg, 0, 64, 900, 6, '#5c6f86');
@@ -196,6 +217,7 @@
     el.innerHTML = '<div style="border:1px solid var(--border);border-radius:12px;padding:12px 14px;background:var(--surface)">'
       + '<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center"><b style="font-size:14px">' + esc(LOOK[selected].n) + '</b>'
       + '<span style="font-size:12px;padding:2px 10px;border-radius:999px;color:#fff;background:' + ST_COLOR[st.k] + '">' + ST_TEXT[st.k] + (s.current ? '・' + esc(s.current) : '') + '</span></div>'
+      + '<div style="font-size:12px;margin-top:6px">負責：' + esc(ROLE[selected].duty) + '</div>'
       + '<div style="font-size:12px;color:var(--text-muted);margin-top:4px">' + esc((s.bubble || []).join('｜')) + (st.why ? '｜' + esc(st.why) : '') + '</div>'
       + (steps.length ? '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:8px"><thead><tr style="color:var(--text-muted);text-align:left"><th style="padding:4px 6px">開始</th><th style="padding:4px 6px">結束</th><th style="padding:4px 6px">步驟</th><th style="padding:4px 6px;text-align:right">耗時</th><th style="padding:4px 6px">結果</th></tr></thead><tbody>'
         + steps.map(function (x) { var r = x.end ? (x.ok ? '<span style="color:#3c8f4f">成功</span>' : '<span style="color:#c0392b">失敗' + (x.detail ? '（' + esc(x.detail) + '）' : '') + '</span>') : '<span style="color:#2f6fb3">執行中</span>'; return '<tr style="border-top:1px solid var(--border)"><td style="padding:4px 6px">' + hm(x.start) + '</td><td style="padding:4px 6px">' + hm(x.end) + '</td><td style="padding:4px 6px">' + esc(x.step) + '</td><td style="padding:4px 6px;text-align:right">' + (x.secs != null ? x.secs + ' 秒' : '—') + '</td><td style="padding:4px 6px">' + r + '</td></tr>'; }).join('')
