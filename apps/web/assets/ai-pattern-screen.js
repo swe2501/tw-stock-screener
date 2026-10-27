@@ -2,7 +2,7 @@
 (()=>{
  'use strict';
  const tabs=[['w_bottom','W型','雙底輪廓'],['box','箱型','區間整理'],['ascending_triangle','上升三角','高點持平・低點墊高'],['symmetrical_triangle','收斂三角','高低點逐步收斂'],['descending_triangle','下降三角','低點持平・高點降低']];
- let active='w_bottom',data=null,request=null,mounted=false,period='all',status='ready',query='',boxLoaded=false;
+ let active='w_bottom',data=null,request=null,mounted=false,period='all',status='forming',query='',boxLoaded=false;
  const $=id=>document.getElementById(id),node=(tag,text,cls)=>{const e=document.createElement(tag);if(text!=null)e.textContent=text;if(cls)e.className=cls;return e;};
  function button(text,action,cls){const b=node('button',text,cls);b.type='button';b.onclick=action;return b;}
  function icon(type){const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 48 32');svg.setAttribute('aria-hidden','true');
@@ -47,7 +47,7 @@
    let note=$('aiPatternScanNote');if(!note){note=node('p',null,'aps-reason');note.id='aiPatternScanNote';$('aiPatternScope').after(note);}note.textContent='依設定略過矛盾K棒後判讀，原始資料保留；略過日期可於個股 AI 判定查看。初篩完成不代表所有候選已確認；這是保存的行情快照。';
    const w=$('aiPatternTabs').querySelector('[data-type="w_bottom"] .aps-tab-count');if(w)w.textContent=d.records.some(r=>r.opportunity)?new Set(d.records.filter(ready).map(r=>r.code)).size:'待複核';
   }).catch(()=>{request=null;throw Error('判讀結果暫時無法取得');});return request;}
- function select(type){active=type;status='ready';if($('aiPatternState'))$('aiPatternState').value=status;
+ function select(type){active=type;status='forming';if($('aiPatternState'))$('aiPatternState').value=status;
   const isBox=type==='box';$('aiPatternLegacyBox').hidden=!isBox;$('aiPatternSavedPanel').hidden=isBox;
   for(const b of $('aiPatternTabs').querySelectorAll('[role=tab]')){const on=b.dataset.type===type;b.setAttribute('aria-selected',String(on));b.tabIndex=on?0:-1;}
   if(isBox){if(!boxLoaded){boxLoaded=true;window._boxLegacyShow();}return;}
@@ -57,7 +57,7 @@
  function mount(){if(mounted)return;mounted=true;const host=$('aiPatternTabs');
   tabs.forEach(([type,label,desc],i)=>{const b=button('',()=>select(type),'aps-tab');b.dataset.type=type;b.setAttribute('role','tab');b.setAttribute('id','aps-tab-'+type);b.setAttribute('aria-controls',type==='box'?'aiPatternLegacyBox':'aiPatternSavedPanel');b.title=desc;b.append(icon(type),node('span',label));if(!i)b.append(node('span','…','aps-tab-count'));b.onkeydown=e=>{let j=i;if(e.key==='ArrowRight')j=(i+1)%tabs.length;else if(e.key==='ArrowLeft')j=(i+tabs.length-1)%tabs.length;else if(e.key==='Home')j=0;else if(e.key==='End')j=tabs.length-1;else return;e.preventDefault();select(tabs[j][0]);host.querySelectorAll('button')[j].focus();};host.append(b);});
   const breakout=node('option','近期已突破');breakout.value='breakout';$('aiPatternState').append(breakout);
-  $('aiPatternSearch').oninput=e=>{query=e.target.value.trim();render();};$('aiPatternPeriod').onchange=e=>{period=e.target.value;render();};$('aiPatternState').onchange=e=>{status=['ready','forming','breakout','confirmed','negative'].includes(e.target.value)?e.target.value:'ready';e.target.value=status;render();};
+  $('aiPatternSearch').oninput=e=>{query=e.target.value.trim();render();};$('aiPatternPeriod').onchange=e=>{period=e.target.value;render();};$('aiPatternState').onchange=e=>{status=['ready','forming','breakout','confirmed','negative'].includes(e.target.value)?e.target.value:'forming';e.target.value=status;render();};
  }
  window._boxShow=function(){mount();select(active);};
 })();
