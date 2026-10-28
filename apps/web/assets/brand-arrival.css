@@ -191,3 +191,14 @@ html:not([data-theme="light"]) #fqiArrival .fa-poses{filter:brightness(.92) cont
 #fqiArrival.fa-stage-on .fa-depth-deep{animation:faBgBreath 11s ease-in-out infinite}
 #fqiArrival.fa-lights-off .fa-depth-deep{animation-play-state:paused}
 @media(prefers-reduced-motion:reduce){#fqiArrival .fa-stage-bg,#fqiArrival .fa-depth-deep{animation:none!important}}
+/* v37 不再疊圖（永遠只顯示一張完整畫格）；點三下起飛：臉朝螢幕、拍翅、掉兩根羽毛、降落回原位 */
+.fa-fly-canvas{position:absolute;display:none;pointer-events:none}
+#fqiArrival.fa-flying .fa-fly-canvas{display:block}
+#fqiArrival.fa-flying .fa-owl-canvas{visibility:hidden}
+.fa-feather{position:absolute;z-index:5;width:16px;height:42px;pointer-events:none;opacity:0;animation:faFeather var(--dur,4s) cubic-bezier(.35,.1,.45,1) forwards;filter:drop-shadow(0 2px 3px rgba(0,0,0,.18))}
+.fa-feather svg{display:block;width:100%;height:100%;animation:faFeatherSway 1.3s ease-in-out infinite alternate}
+@keyframes faFeather{0%{opacity:0;transform:translate3d(0,0,0) rotate(var(--rot))}8%{opacity:1}80%{opacity:1}100%{opacity:0;transform:translate3d(calc(var(--sway)*.4),var(--fall),0) rotate(calc(var(--rot) + 70deg))}}
+@keyframes faFeatherSway{0%{transform:translateX(calc(var(--sway)*-.5)) rotate(-18deg)}100%{transform:translateX(calc(var(--sway)*.5)) rotate(18deg)}}
+#fqiArrival.fa-lights-off .fa-feather{opacity:0!important}
+/* 飛行時標題、上方列與燈光開關淡出，降落後淡回 */
+#fqiArrival.fa-flying .fa-header,#fqiArrival.fa-flying .fa-copy,#fqiArrival.fa-flying .fa-light-switch{opacity:0!important;pointer-events:none;transition:opacity .45s ease}
