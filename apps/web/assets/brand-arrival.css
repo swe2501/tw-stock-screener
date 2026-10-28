@@ -205,3 +205,7 @@ html:not([data-theme="light"]) #fqiArrival .fa-poses{filter:brightness(.92) cont
 /* 羽毛改為落葉式擺盪（JS 動畫），停用舊的直線落下 */
 #fqiArrival .fa-feather{animation:none;opacity:1;width:22px;height:58px;transform-style:preserve-3d;will-change:transform,opacity;perspective:400px}
 #fqiArrival .fa-feather svg,#fqiArrival .fa-feather img{animation:none;width:100%;height:100%;display:block;object-fit:contain}
+/* v40 真實羽毛：每次飛行 2～3 根，於翅膀下拍瞬間從翼尖脫落，空氣阻力＋落葉擺盪＋立體翻轉，落地後躺平淡出 */
+#fqiArrival img.fa-feather{position:absolute;left:0;top:0;z-index:5;width:auto;max-width:none;opacity:0;pointer-events:none;animation:none;transform-origin:50% 60%;will-change:transform,opacity;filter:drop-shadow(0 3px 4px rgba(0,0,0,.16));backface-visibility:visible}
+html[data-theme="light"] #fqiArrival img.fa-feather{filter:drop-shadow(0 3px 5px rgba(40,70,100,.18))}
+#fqiArrival{perspective:1200px}
