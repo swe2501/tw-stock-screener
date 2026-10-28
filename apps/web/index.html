@@ -2208,7 +2208,7 @@
 <link rel="stylesheet" href="assets/member-signin.css?v=fqi21">
 <link rel="stylesheet" href="assets/member-signin-glass.css?v=5">
 <link rel="stylesheet" href="assets/member-strategy.css?v=owl2">
-<link rel="stylesheet" href="assets/member-trade.css">
+<link rel="stylesheet" href="assets/member-trade.css?v=owl-1">
 <link rel="stylesheet" href="assets/site-search.css?v=arrow1">
 </head>
 <body>
@@ -4173,7 +4173,7 @@
         el('luUp').innerHTML=rows(j.up,true);
         el('luDn').innerHTML=rows(j.down,false);
       }).catch(function(){el('luUp').innerHTML=el('luDn').innerHTML='<div class="fc-empty">讀取失敗</div>';});
-      if(el('luNote'))el('luNote').innerHTML='<b>學院導讀</b> 連續漲跌停反映情緒集中，但不代表趨勢一定延續。先看成交是否順暢、量能是否改變，再對照族群與大盤，避免只被漲跌幅吸引。';
+      if(el('luNote'))el('luNote').innerHTML='<b>學院導讀</b> 連續漲跌停反映情緒集中，但不代表趨勢一定延續。先看成交是否順暢、量能是否改變，再對照族群與大盤，避免只被漲跌幅吸引。'+'<br><b>算法</b> 漲停＝當日漲幅 ≥9.5%、跌停＝≤−9.5%（上市＋上櫃）；連續天數從最新交易日往回數。量比＝今日量 ÷ max(近5日均量, 近10日均量)。每晚收盤資料上傳後預先算好。'+'<br><b>2026-10-28 修正</b> 單日漲跌超過 ±10.5%（停牌後復牌、新上市不設漲跌幅那幾天）不算漲跌停，例：1516 川飛停牌後復牌原被誤列連 4 天漲停；上櫃股補上中文股名；股價已更新而預算資料還沒更新時改為即時計算，不再顯示前一天。';
     };
     window._VIEWS=window._VIEWS||{}; window._VIEWS.limitup={el:'limitupView',show:'_limitupShow'};
   })();
@@ -18046,7 +18046,7 @@
 <script src="assets/member-companion-3d.js" defer></script>
 <script src="assets/member-companion-rig.js" defer></script>
 <script src="assets/member-leek-3d.js" defer></script>
-<script src="assets/member-goal-art.js" defer></script>
+<script src="assets/member-goal-art.js?v=owl-1" defer></script>
 <script src="assets/search-discovery.js" defer></script>
 <script src="assets/site-search.js?v=arrow-nav2" defer></script>
 <script src="assets/member-derivatives-catalog.js" defer></script>
