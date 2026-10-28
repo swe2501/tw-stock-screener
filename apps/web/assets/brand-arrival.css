@@ -146,3 +146,11 @@ html #fqiArrival.fa-poses-on{--lamp-bottom:calc(98vh - var(--owl-h)*.933 - 6vh)}
 .fa-pose{transition:opacity .2s ease,filter .75s ease}
 .fa-pose{z-index:1}.fa-pose.is-prev{opacity:1;z-index:1;transition:none}.fa-pose.is-on{z-index:2}
 #fqiArrival.fa-fast .fa-pose{transition-duration:.05s}
+/* v29 關燈只亮眼睛：每個姿勢各有一張由原圖抠出的眼睛層（assets/arrival/owl/eyes/），位置與頭完全一致，隨姿勢同步切換 */
+.fa-eyeglow-layer{position:absolute;inset:0;z-index:3;display:none;pointer-events:none;opacity:0;transition:opacity .9s ease .08s;filter:drop-shadow(0 0 4px rgba(255,214,70,.9)) drop-shadow(0 0 14px rgba(255,190,40,.55)) drop-shadow(0 0 32px rgba(255,170,20,.28))}
+#fqiArrival.fa-poses-on .fa-eyeglow-layer{display:block}
+.fa-eyeglow{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0;transition:opacity .2s ease;z-index:1}
+.fa-eyeglow.is-prev{opacity:1;transition:none}.fa-eyeglow.is-on{opacity:1;z-index:2}
+#fqiArrival.fa-fast .fa-eyeglow{transition-duration:.05s}
+#fqiArrival.fa-lights-off .fa-eyeglow-layer{opacity:1}
+#fqiArrival.fa-lights-off .fa-pose{filter:brightness(.05) saturate(.3);transition:opacity .2s ease,filter .9s ease}
