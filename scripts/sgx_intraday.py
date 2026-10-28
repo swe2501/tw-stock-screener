@@ -42,6 +42,13 @@ async def _minute_points(d):
         try:
             page = ctx.pages[0] if ctx.pages else await ctx.new_page()
             await page.goto("https://www.wantgoo.com/global/stwn&", wait_until="domcontentloaded", timeout=60000)
+            # 前一交易日收盤＝小圖紅綠分界；all-quote-info 在 14:00 前的 tradeDate＝當日，previousClose 即昨收
+            prev = None
+            q = await page.evaluate(
+                "()=>fetch('/global/all-quote-info',{headers:{'X-Requested-With':'XMLHttpRequest'}}).then(r=>r.ok?r.json():null).catch(()=>null)")
+            for x in q or []:
+                if isinstance(x, dict) and str(x.get("id", "")).lower() == "stwn&" and x.get("tradeDate") == midnight:
+                    prev = x.get("previousClose")
             pts = {}
             # 14:00 前「目前交易日」＝當日；保險起見也試下一日（萬一已換日，日盤資料也可能還在）
             for ms in (midnight, midnight + 86400000):
@@ -55,7 +62,7 @@ async def _minute_points(d):
                         continue
                     if start <= t <= end and c > 0:
                         pts[t] = c
-            return sorted(pts.items())
+            return sorted(pts.items()), prev
         finally:
             await ctx.close()
 
@@ -63,16 +70,22 @@ async def _minute_points(d):
 def main():
     dry = "--dry" in sys.argv
     d = dt.datetime.now(hi.TZ).date()
-    pts = asyncio.run(_minute_points(d))
+    pts, prev = asyncio.run(_minute_points(d))
     data = hi._bucket5(pts)
     if len(data) < 2:
         print(f"[sgx_intraday] {d} 日盤分時不足（{len(pts)} 筆一分鐘線），不寫入")
         return 1
-    print(f"[sgx_intraday] {d} {len(pts)} 筆一分鐘線 → {len(data)} 點 "
+    print(f"[sgx_intraday] {d} {len(pts)} 筆一分鐘線 → {len(data)} 點 昨收 {prev} "
           f"{data[0]['close']}→{data[-1]['close']}（最後 {dt.datetime.fromtimestamp(data[-1]['time'], hi.TZ):%H:%M}）")
     if dry:
         return 0
-    st = hi.push(bs._load_env(), "mini_SGX", d, data, SOURCE)
+    # 同 home_intraday.push，多存 prev（卡片上的 futai_prev 是晚上抓的夜盤前收＝當日日盤收盤，不能當日盤小圖的分界）
+    env = bs._load_env()
+    row = {"kind": "mini_SGX", "trade_date": d.isoformat(),
+           "payload": {"date": d.isoformat(), "source": SOURCE, "prev": prev, "data": data},
+           "updated_at": dt.datetime.now(dt.timezone.utc).isoformat()}
+    bs._sb(env, "/page_cache", method="DELETE", params=[("kind", "eq.mini_SGX")])
+    st, _ = bs._sb(env, "/page_cache", method="POST", body=[row])
     print(f"[sgx_intraday] mini_SGX 寫入 status={st}")
     return 0
 
