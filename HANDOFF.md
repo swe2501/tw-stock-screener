@@ -557,7 +557,7 @@ page_cache 是 **uat 與 prod 共用**同一個 Supabase。若推盤中到原 ki
 | 任務名稱 | 時間 | 執行 | 內容 |
 |---|---|---|---|
 | `WantgooDailyScrape` | 週一～五 19:00（可喚醒） | `scripts\run_daily_job.bat` | 夜間主排程：分點、法人、收盤價、ETF、總經、廣度、快取等約 66 步 |
-| `AI_stock_Intraday` | 週一～五 08:55（可喚醒），常駐到 16:01 | `scripts\run_intraday.bat` | 盤中掃盤 `intraday_push.py --loop`（09:00–13:35 每 35 秒）；收盤後只記匯率每 5 分鐘到 16:00（10/28 起） |
+| `AI_stock_Intraday` | 週一～五 08:55（可喚醒），常駐到 16:01 | `scripts\run_intraday.bat` | 盤中掃盤 `intraday_push.py --loop`（09:00–13:35 每 35 秒）；收盤後只記匯率每 5 分鐘到 16:00（10/28 起）；卡住 5 分鐘會自動重啟（10/29 起，見下方） |
 | `CodexHotTopicsHourly` | 週一～五 09:00 起每小時，共 5 小時 | `scripts\run_codex_topics.bat` | 話題族群（桌面版 Codex CLI） |
 | `AI_stock_news_feed` | 每天 06:30 起每 4 小時 | `scripts\run_news_feed.bat` | 每日新聞 |
 | `AI_stock_margin_catchup` | 週二～六 09:00 | `scripts\run_margin_catchup.bat` | 融資維持率補當日值 |
@@ -567,6 +567,7 @@ page_cache 是 **uat 與 prod 共用**同一個 Supabase。若推盤中到原 ki
 - 每個任務的完整設定已匯出到 `scripts/scheduled_tasks/<任務名稱>.xml`，可直接用來重建。
 - 批次檔只能寫英文、CRLF 換行（中文會讓排程卡死）；**正在執行的 .bat 不能改**（cmd 邊跑邊讀檔），要等它跑完再換。
 - 2026-10-27 起各 .bat 的每一步改經 `scripts\office_step.py <角色> <程式>` 執行（AI 研究室打卡，exit code 原樣傳回，打卡失敗不影響排程）。`run_daily_job.bat` 的新版由 `scripts\office_swap_watch.ps1` 在 10/27 夜間排程結束後自動換上（已於 10/27 23:14 換好，66 步全部打卡），舊版備份為 `*.bat.bak_office`，紀錄在 `scripts\office_swap.log`。
+- **盤中排程自動重啟（2026-10-28 加，Andrew `2c7103e`＋`4da2bb9`）**：起因是 10/28 盤中程式 12:02 後卡住不動、沒有報錯。現在 `intraday_push.py` 有看門狗執行緒，主迴圈 5 分鐘（`STALL_SEC=300`）沒進展就強制結束、回傳 exit code 75；`run_intraday.bat` 收到 75 會等 10 秒重新啟動，一天最多 10 次（其他 exit code 照常結束）。每次重啟在 `D:\stock_data\intraday_push.log` 留一行 `[watchdog] ... restart N`，查問題先搜這個字。新版 .bat 由一次性監看程式 `intraday_swap_watch.ps1` 在 10/28 16:02 當天盤中跑完後換上，舊版備份 `scripts\run_intraday.bat.bak_watchdog`；工作排程器任務本身沒改，XML 不用重新匯出。
 
 ### C. 任何帳號的 Claude Code 怎麼操作（PowerShell）
 - 查看全部：`Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\Microsoft\*' }`；看上次結果：`Get-ScheduledTaskInfo -TaskName WantgooDailyScrape`（LastTaskResult 0＝成功）。
@@ -579,3 +580,4 @@ page_cache 是 **uat 與 prod 共用**同一個 Supabase。若推盤中到原 ki
 ### D. 一次性背景程式（不是排程，重開機就沒了）
 - 上櫃分點回補 `otc_backfill.py --worker 0/1`、回補後重算 `after_otc_backfill.py`：見第十六節 B。
 - `office_swap_watch.ps1`：等 10/27 夜間排程結束後換新版 `run_daily_job.bat`，已於 10/27 23:14 完成並結束。
+- `intraday_swap_watch.ps1`：等 10/28 盤中排程結束後換上有自動重啟的 `run_intraday.bat`，已於 10/28 16:02 完成並結束。
