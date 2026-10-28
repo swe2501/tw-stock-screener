@@ -79,3 +79,26 @@ html[data-theme="light"] .fa-enter{border-color:rgba(255,255,255,.6)!important;b
 }
 @media(max-width:520px){.fa-brand-name small{display:none}#fqiArrival .fa-brand-mark{flex-basis:72px;width:72px!important;height:36px!important}.fa-brand-name strong{font-size:16px}.fa-copy h1{font-size:30px}.fa-footer label{font-size:9px}.fa-footer>div{gap:10px}.fa-owl-wrap,.fa-stage-on .fa-owl-wrap{bottom:10%;width:100vw}html[data-theme="light"] .fa-owl-wrap,html[data-theme="light"] .fa-stage-on .fa-owl-wrap{bottom:7%;width:84vw}}
 @media(prefers-reduced-motion:reduce){#fqiArrival *,#fqiArrival *::before,#fqiArrival *::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}.fa-cursor-light,.fa-streak-field{display:none}}
+/* v24 Justy 迎賓頁微調：燈具在貓頭鷹正上方並拉開距離、玻璃進入按鈕＋箭頭擺動、略過開場不再重疊、右上按鈕縮小、Logo 放大 */
+#fqiArrival{--fa-img-h:max(100vh,56.27vw)}
+#fqiArrival .fa-enter{gap:16px!important;height:46px;padding:0 20px 0 22px!important;border:1px solid var(--line)!important;background:rgba(7,18,29,.28)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 12px 30px rgba(0,0,0,.12)!important;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);font-size:14px}
+#fqiArrival .fa-enter:hover,#fqiArrival .fa-enter:focus-visible{border-color:rgba(219,185,111,.48)!important;background:rgba(20,34,46,.44)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 10px 28px rgba(0,0,0,.16),0 0 18px rgba(215,181,109,.07)!important}
+html[data-theme="light"] #fqiArrival .fa-enter{border-color:var(--line)!important;background:rgba(255,255,255,.42)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.72),0 10px 30px rgba(49,83,105,.08)!important}
+html[data-theme="light"] #fqiArrival .fa-enter:hover,html[data-theme="light"] #fqiArrival .fa-enter:focus-visible{color:#176d9f;border-color:rgba(219,185,111,.48)!important;background:rgba(255,255,255,.58)!important}
+#fqiArrival .fa-enter b{display:inline-block;transition:none;animation:faArrowNudge 1.8s ease-in-out infinite}
+#fqiArrival .fa-enter:hover b,#fqiArrival .fa-enter:focus-visible b{animation:faArrowSway .55s ease-in-out infinite}
+@keyframes faArrowNudge{0%,100%{transform:translateX(0)}50%{transform:translateX(5px)}}
+@keyframes faArrowSway{0%,100%{transform:translateX(-4px)}50%{transform:translateX(7px)}}
+#fqiArrival .fa-skip[hidden]{display:none!important}
+#fqiArrival .fa-skip::before{content:none!important;display:none!important}
+@media(min-width:841px){
+  #fqiArrival .fa-depth-deep{transform-origin:50% 0}
+  :root:not([data-theme="light"]) #fqiArrival .fa-depth-deep{background:#0a0f15}
+  :root:not([data-theme="light"]) #fqiArrival .fa-stage-bg-dark{transform:translateY(5vh);-webkit-mask-image:linear-gradient(180deg,transparent 0,#000 4vh);mask-image:linear-gradient(180deg,transparent 0,#000 4vh)}
+  :root:not([data-theme="light"]) #fqiArrival .fa-depth-deep::before{content:"";position:absolute;left:50%;top:0;width:2px;height:5.6vh;transform:translateX(-50%);background:linear-gradient(180deg,#05080c,#24282d 75%,#34373b);box-shadow:0 0 1px rgba(255,255,255,.08)}
+  #fqiArrival .fa-owl-wrap,#fqiArrival.fa-stage-on .fa-owl-wrap{left:50%;bottom:0;transition:none;--head:calc(5vh + var(--fa-img-h)*.11 + 17vh);width:min(52vw,1000px,calc((100vh - var(--head))/.9745*1.7768))}
+  html[data-theme="light"] #fqiArrival .fa-owl-wrap,html[data-theme="light"] #fqiArrival.fa-stage-on .fa-owl-wrap{left:50%;bottom:-1%;--head:calc(var(--fa-img-h)*.33 + 9vh);width:clamp(260px,calc((101vh - var(--head))/.935*1.0349),46vw)}
+  #fqiArrival .fa-actions{gap:9px}#fqiArrival .fa-round{width:44px;height:44px}#fqiArrival .fa-member{height:44px;padding:0 18px;gap:8px;font-size:14px}#fqiArrival .fa-actions .fa-icon{width:18px;height:18px}
+  #fqiArrival .fa-brand{gap:14px}#fqiArrival .fa-brand-mark{flex:0 0 172px!important;width:172px!important;height:86px!important}#fqiArrival .fa-brand-name strong{font-size:29px}#fqiArrival .fa-brand-name small{margin-top:6px;font-size:12px}
+  #fqiArrival .fa-light-switch{top:100px}
+}
