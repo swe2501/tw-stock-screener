@@ -177,3 +177,10 @@ html:not([data-theme="light"]) .fa-turn{filter:brightness(.92) contrast(1.04)}
 #fqiArrival.fa-lights-off .fa-turn{filter:brightness(.02) saturate(0)}
 /* v33 轉頭改用 canvas 預先解碼畫格、相鄰兩格半透明混合、彈簧緩動 */
 .fa-turn-canvas{position:absolute;left:0;top:0;width:100%;height:auto;display:block}
+/* v34 貓頭鷹全部改為連續畫格 canvas：上中下三排連續轉頭、換排走抬頭／低頭補間、揮翅／歪頭／開心／驚訝／眨眼皆為連續動畫；關燈時發光眼睛同一套畫格同步 */
+.fa-owl-canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+#fqiArrival .fa-poses{transition:filter .9s ease}
+html:not([data-theme="light"]) #fqiArrival .fa-poses{filter:brightness(.92) contrast(1.04)}
+#fqiArrival.fa-lights-off .fa-poses{filter:brightness(.02) saturate(0)}
+#fqiArrival .fa-eyeglow-layer{transition:opacity .9s ease .05s}
+#fqiArrival.fa-lights-off .fa-poses{filter:brightness(.02) saturate(0)!important}

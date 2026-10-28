@@ -12,10 +12,6 @@
   document.body.append(root);
   const videos = {dark:root.querySelector('.fa-film-dark'),light:root.querySelector('.fa-film-light')};
   const owl = root.querySelector('.fa-owl-wrap'), poseBox = root.querySelector('.fa-poses'), eyeBox = root.querySelector('.fa-eyeglow-layer');
-  // 多姿勢貓頭鷹：把 assets/arrival/owl/ 內的姿勢圖備齊後，把 ready 改成 true 即啟用（規格見該資料夾 README.md）
-  const POSES = {ready:true, base:'assets/arrival/owl/', ext:'webp', v:'4', names:['up','up-left','up-right','down','blink','blink-left','blink-right','tilt','happy','surprised','wave'], turn:{n:57, front:31}};
-  // 左右轉頭：assets/arrival/owl/turn/ 為 AI 影片拆出的 39 格連續頭部畫面（身體固定 body.webp），滑鼠水平位置連續對應畫格
-  const pose = {on:false, imgs:{}, eyes:{}, loaded:{}, look:'turn', current:'', expr:'', exprTimer:0, idleTimer:0, prevTimer:0, lastMove:0, hoverEnter:false, head:{x:0,y:0,w:1}, turn:{cur:31, target:31, vel:0, shown:-1, bmp:[], ebmp:[], ctx:null, ectx:null, box:null, eyeBox:null}};
   const canvas = root.querySelector('.fa-particles'), ctx = canvas.getContext('2d'), streakField = root.querySelector('.fa-streak-field');
   const titleLine = root.querySelector('.fa-title-line'), enLine = root.querySelector('.fa-en'), soundBtn = root.querySelector('[data-sound]'), loginBtn = root.querySelector('[data-login]'), lightBtn = root.querySelector('[data-light]');
   let active=false,stage=false,closing=false,sound=false,lights=true,raf=0,last=0,blinkTimer=0,closeTimer=0,streakTimer=0,titleTimer=0,titleIndex=0,particles=[],pw=0,ph=0,dpr=1;
@@ -35,30 +31,57 @@
   function startAtmosphere(){clearInterval(streakTimer);clearInterval(titleTimer);setTimeout(spawnStreaks,900);streakTimer=setInterval(spawnStreaks,3000);titleTimer=setInterval(rotateTitle,6000)}
   function stopAtmosphere(){clearInterval(streakTimer);clearInterval(titleTimer);streakField.replaceChildren()}
   function enterStage(){if(stage)return;stage=true;if(pose.on)setTimeout(measureHead,1500);video().pause();root.querySelector('.fa-stage').setAttribute('aria-hidden','false');root.classList.add('fa-stage-on');root.querySelector('[data-skip]').hidden=true;scheduleBlink();idleLife();startAtmosphere()}
-  function showPose(name){if(!pose.on||pose.current===name)return;if(name!=='turn'&&!pose.loaded[name])return;const prevName=pose.current;pose.current=name;clearTimeout(pose.prevTimer);[...Object.values(pose.imgs),...Object.values(pose.eyes)].forEach(i=>i.classList.remove('is-prev','is-on'));if(prevName&&prevName!=='turn'){pose.imgs[prevName].classList.add('is-prev');pose.eyes[prevName]?.classList.add('is-prev')}if(name==='turn'){root.classList.add('fa-turn-mode');drawTurn(true)}else{pose.imgs[name].classList.add('is-on');pose.eyes[name]?.classList.add('is-on')}pose.prevTimer=setTimeout(()=>{[...Object.values(pose.imgs),...Object.values(pose.eyes)].forEach(i=>i.classList.remove('is-prev'));if(pose.current!=='turn')root.classList.remove('fa-turn-mode')},190)}
-  function paint(ctx,list,f){const n=list.length;let i=Math.floor(f),j=i+1,a=f-i;i=Math.max(0,Math.min(n-1,i));j=Math.max(0,Math.min(n-1,j));const A=list[i]||nearest(list,i),B=list[j]||nearest(list,j);ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);if(!A)return;ctx.globalAlpha=1;ctx.drawImage(A,0,0);if(B&&B!==A&&a>.01){ctx.globalAlpha=a;ctx.drawImage(B,0,0)}ctx.globalAlpha=1}
-  function nearest(list,i){for(let d=1;d<list.length;d++){if(list[i-d])return list[i-d];if(list[i+d])return list[i+d]}return null}
-  function drawTurn(force){const t=pose.turn;if(!t.ctx)return;const f=Math.max(0,Math.min(POSES.turn.n-1,t.cur));if(!force&&Math.abs(f-t.shown)<.004)return;t.shown=f;paint(t.ctx,t.bmp,f);paint(t.ectx,t.ebmp,f)}
-  function tickTurn(dt){const t=pose.turn;if(pose.current!=='turn')return;const k=dt/1000,stiff=58,damp=2*Math.sqrt(stiff)*1.02;t.vel+=((t.target-t.cur)*stiff-t.vel*damp)*k;t.cur+=t.vel*k;if(Math.abs(t.target-t.cur)<.003&&Math.abs(t.vel)<.01){t.cur=t.target;t.vel=0}drawTurn()}
+  // 先見貓頭鷹動畫引擎（v34）：所有動作都是 AI 影片／光流補間拆出的連續畫格，canvas 繪製並混合相鄰兩格。
+  // 上中下三排各自可連續轉頭；換排時先轉回正中，再走「抬頭 lift／低頭 drop」連續畫格，不會跳。
+  const OWL = {base:'assets/arrival/owl/clips/', v:'1', clips:{"turn":{"n":44,"mid":22,"rect":[100,0]},"up":{"n":50,"mid":21,"rect":[100,0]},"down":{"n":55,"mid":26,"rect":[100,0]},"lift":{"n":24,"rect":[100,0]},"tilt":{"n":48,"rect":[100,0],"fps":18},"happy":{"n":48,"rect":[100,0],"fps":18},"wave":{"n":56,"rect":[138,16],"fps":18,"base":"wave","noeyes":true},"surprise":{"n":14,"rect":[100,0],"dur":[0.22,0.6,0.5]},"blink":{"n":5,"rect":[100,0],"dur":[0.07,0.03,0.1]},"drop":{"n":10,"rect":[100,0]}}, connect:{up:'lift', down:'drop'}};
+  const pose = {on:false, lastMove:0, hoverEnter:false, expr:'', exprTimer:0, idleTimer:0, head:{x:0,y:0,w:1}, gaze:{row:'mid', dx:0}, cur:{clip:'turn', pos:0, vel:0}, act:null, pending:null, bm:{}, eb:{}, ghost:0, ctx:null, ectx:null, gc:null, gec:null, idleGaze:null};
+  function clipReady(n){const c=OWL.clips[n];return !!(c&&pose.bm[n]&&pose.bm[n].filter(Boolean).length===c.n)}
+  function rowClip(r){return r==='up'?'up':r==='down'?'down':'turn'}
   function measureHead(){const r=owl.getBoundingClientRect(),o=root.getBoundingClientRect();pose.head={x:r.left-o.left+r.width/2,y:r.top-o.top+r.height*.3,w:r.width||1}}
-  function turnIndex(dx){const T=POSES.turn,t=Math.max(-1,Math.min(1,dx/.95));return T.front+(t<0?t*T.front:t*(T.n-1-T.front))}
-  function lookFor(px,py){if(pose.hoverEnter)return'down';const dx=(px-pose.head.x)/pose.head.w,dy=(py-pose.head.y)/pose.head.w,ax=Math.abs(dx);if(dy<-.32&&ax<1.6)return ax<.3?'up':`up-${dx<0?'left':'right'}`;pose.turn.target=turnIndex(dx);return'turn'}
-  function setLook(w){if(w===pose.look)return;pose.look=w;if(!pose.expr)showPose(w)}
-  function updateLook(dt){tickTurn(dt||16);if(performance.now()-pose.lastMove>4200&&!pose.hoverEnter)return;setLook(lookFor(target.x*pw,target.y*ph))}
-  function scheduleBlink(){clearTimeout(blinkTimer);if(!pose.on)return;blinkTimer=setTimeout(()=>{if(!active||!stage)return;if(!pose.expr&&pose.current==='turn'){const T=POSES.turn,i=Math.round(pose.turn.cur),b=Math.abs(i-T.front)<=1?'blink':i<=1?'blink-left':i>=T.n-2?'blink-right':'';if(b&&pose.loaded[b]){root.classList.add('fa-fast');showPose(b);setTimeout(()=>{if(!pose.expr)showPose(pose.look);setTimeout(()=>root.classList.remove('fa-fast'),120)},130)}}scheduleBlink()},2400+Math.random()*3000)}
-  function playExpr(name,ms){if(!pose.on||!pose.loaded[name])return;clearTimeout(pose.exprTimer);pose.expr=name;showPose(name);pose.exprTimer=setTimeout(()=>{pose.expr='';showPose(pose.look)},ms)}
-  function idleLife(){clearTimeout(pose.idleTimer);if(!pose.on)return;pose.idleTimer=setTimeout(()=>{if(active&&stage&&!pose.expr&&!pose.hoverEnter&&performance.now()-pose.lastMove>4200){const r=Math.random();if(r<.18)playExpr('tilt',1800);else if(r<.32)setLook(['up','up-left','up-right'][Math.floor(Math.random()*3)]);else{pose.turn.target=Math.random()*(POSES.turn.n-1);setLook('turn');if(pose.current!=='turn'&&!pose.expr)showPose('turn')}}idleLife()},2600+Math.random()*2600)}
-  function initPoses(){if(!POSES.ready||pose.turn.box)return;const B=POSES.base,q=`?v=${POSES.v}`,mk=(cls,src)=>{const i=new Image();i.className=cls;i.alt='';i.decoding='async';i.src=src;return i};
-    POSES.names.forEach(n=>{const img=mk('fa-pose',`${B}${n}.${POSES.ext}${q}`);img.dataset.pose=n;img.onload=()=>{pose.loaded[n]=true};poseBox.append(img);pose.imgs[n]=img;const e=mk('fa-eyeglow',`${B}eyes/${n}.${POSES.ext}${q}`);eyeBox.append(e);pose.eyes[n]=e});
-    const box=document.createElement('div');box.className='fa-turn';const eb=document.createElement('div');eb.className='fa-turn-eyes';pose.turn.box=box;pose.turn.eyeBox=eb;
-    const body=mk('fa-turn-body',`${B}turn/body.webp${q}`);box.append(body);let need=2;const ready=()=>{if(--need)return;pose.on=true;root.classList.add('fa-poses-on');measureHead();pose.current='';pose.look='turn';showPose('turn');if(stage){scheduleBlink();idleLife()}};body.onload=ready;
-    const cv=document.createElement('canvas'),ecv=document.createElement('canvas');cv.width=ecv.width=800;cv.height=ecv.height=450;cv.className='fa-turn-canvas';ecv.className='fa-turn-canvas';box.append(cv);eb.append(ecv);pose.turn.ctx=cv.getContext('2d');pose.turn.ectx=ecv.getContext('2d');
-    const load=(src)=>fetch(src).then(r=>r.blob()).then(b=>createImageBitmap(b)).catch(()=>new Promise(res=>{const im=new Image();im.onload=()=>res(im);im.onerror=()=>res(null);im.src=src}));
-    const order=[POSES.turn.front,...Array.from({length:POSES.turn.n},(_,i)=>i).filter(i=>i!==POSES.turn.front)];
-    order.forEach(i=>{const n=String(i).padStart(2,'0');load(`${B}turn/${n}.webp${q}`).then(bm=>{pose.turn.bmp[i]=bm;if(i===POSES.turn.front)ready();else if(pose.current==='turn')drawTurn(true)});load(`${B}turn/e${n}.webp${q}`).then(bm=>{pose.turn.ebmp[i]=bm})});
-    poseBox.after(box);eyeBox.prepend(eb)}
-  function replay(){stage=false;lights=true;titleIndex=0;titleLine.innerHTML=titles[0].zh;enLine.textContent=titles[0].en;titleLine.classList.remove('fa-title-out','fa-title-in');enLine.classList.remove('fa-title-out','fa-title-in');root.querySelector('.fa-stage').setAttribute('aria-hidden','true');root.classList.remove('fa-stage-on','fa-lights-off','fa-hop');clearTimeout(pose.exprTimer);clearTimeout(pose.idleTimer);pose.expr='';pose.turn.cur=pose.turn.target=POSES.turn.front;pose.turn.vel=0;pose.look='turn';showPose('turn');root.querySelector('[data-skip]').hidden=false;Object.values(videos).forEach(v=>{v.pause();v.currentTime=0;v.muted=true});video().muted=!sound;video().play().catch(()=>{});clearTimeout(blinkTimer);stopAtmosphere()}
-  function react(e){if(!stage)return;if(pose.on){const r=owl.getBoundingClientRect(),eyeZone=e.clientY<r.top+r.height*.4;playExpr(eyeZone?'surprised':(Math.random()>.5?'happy':'wave'),1400)}root.classList.remove('fa-hop');void root.offsetWidth;root.classList.add('fa-hop');setTimeout(()=>root.classList.remove('fa-hop'),700)}
+  function gazeFrom(px,py){const dx=(px-pose.head.x)/pose.head.w,dy=(py-pose.head.y)/pose.head.w,g=pose.gaze;let row=g.row;
+    if(pose.hoverEnter)row='down';else if(dy<(row==='up'?-.24:-.36))row='up';else if(dy>(row==='down'?.42:.58))row='down';else if(dy>-.2&&dy<.36)row='mid';
+    if(row!=='mid'&&!clipReady(rowClip(row))||(row!=='mid'&&!clipReady(OWL.connect[row])))row='mid';g.row=row;g.dx=dx}
+  function idxFor(clip,dx){const c=OWL.clips[clip],t=Math.max(-1,Math.min(1,dx/.95));return c.mid+(t<0?t*c.mid:t*(c.n-1-c.mid))}
+  function swap(clip,pos){if(pose.cur.clip!==clip){snapshot();pose.cur.clip=clip}pose.cur.pos=pos;pose.cur.vel=0}
+  function snapshot(){if(!pose.gc)return;[[pose.gc,pose.ctx],[pose.gec,pose.ectx]].forEach(([g,c])=>{const x=g.getContext('2d');x.clearRect(0,0,800,800);x.drawImage(c.canvas,0,0)});pose.ghost=1}
+  function spring(c,target,dt,stiff){const k=Math.min(dt,40)/1000,d=2*Math.sqrt(stiff)*1.04;c.vel+=((target-c.pos)*stiff-c.vel*d)*k;c.pos+=c.vel*k;if(Math.abs(target-c.pos)<.004&&Math.abs(c.vel)<.02){c.pos=target;c.vel=0;return true}return false}
+  function stepNav(dt){const c=pose.cur,g=pose.gaze,want=rowClip(g.row);
+    if(c.clip==='lift'||c.clip==='drop'){const toRow=(c.clip==='lift'&&g.row==='up')||(c.clip==='drop'&&g.row==='down'),end=toRow?OWL.clips[c.clip].n-1:0;
+      if(spring(c,end,dt,150)||Math.abs(c.pos-end)<.35){const row=c.clip==='lift'?'up':'down';swap(toRow?row:'turn',toRow?OWL.clips[row].mid:OWL.clips.turn.mid)}return}
+    if(c.clip===want){spring(c,idxFor(want,g.dx),dt,62);return}
+    const mid=OWL.clips[c.clip].mid;spring(c,mid,dt,170);
+    if(Math.abs(c.pos-mid)<1.1){if(c.clip==='turn'){const cn=OWL.connect[g.row];swap(cn,0)}else swap(OWL.connect[c.clip],OWL.clips[OWL.connect[c.clip]].n-1)}}
+  function atFront(){const c=pose.cur;return c.clip==='turn'&&Math.abs(c.pos-OWL.clips.turn.mid)<.5}
+  function startAct(name){const c=OWL.clips[name];if(!clipReady(name))return false;pose.act={clip:name,t:0,c};swap(name,0);return true}
+  function actPos(a,dt){a.t+=dt/1000;const c=a.c,n=c.n-1;
+    if(c.dur){const [up,hold,down]=c.dur,t=a.t,ease=x=>1-Math.pow(1-x,3),easeIO=x=>x<.5?2*x*x:1-Math.pow(-2*x+2,2)/2;if(t<up)return n*ease(t/up);if(t<up+hold)return n;if(t<up+hold+down)return n*(1-easeIO((t-up-hold)/down));return -1}
+    const p=a.t*c.fps;return p>n?-1:p}
+  function tickOwl(dt){if(!pose.on)return;const c=pose.cur;
+    if(pose.act){const p=actPos(pose.act,dt);if(p<0){pose.act=null;pose.expr='';swap('turn',OWL.clips.turn.mid)}else c.pos=p}
+    else if(pose.pending){pose.gaze.row='mid';pose.gaze.dx=0;stepNav(dt);if(atFront()){const n=pose.pending;pose.pending=null;startAct(n)}}
+    else{if(performance.now()-pose.lastMove<4200||pose.hoverEnter)gazeFrom(target.x*pw,target.y*ph);else if(pose.idleGaze){pose.gaze.row=pose.idleGaze.row;pose.gaze.dx=pose.idleGaze.dx}stepNav(dt)}
+    draw(dt)}
+  function paintClip(ctx,name,pos,eyes){const c=OWL.clips[name],L=eyes?pose.eb[name]:pose.bm[name];if(!L)return;let i=Math.floor(pos),a=pos-i;i=Math.max(0,Math.min(c.n-1,i));const j=Math.min(c.n-1,i+1),[x,y]=c.rect;
+    if(!eyes)ctx.drawImage(pose.bm['__base_'+(c.base||'head')],0,0);
+    if(eyes&&c.noeyes){const t=OWL.clips.turn;ctx.drawImage(pose.eb.turn[t.mid],t.rect[0],t.rect[1]);return}
+    if(L[i])ctx.drawImage(L[i],x,y);if(a>.01&&L[j]&&j!==i){ctx.globalAlpha=a;ctx.drawImage(L[j],x,y);ctx.globalAlpha=1}}
+  function draw(dt){const c=pose.cur;[[pose.ctx,false,pose.gc],[pose.ectx,true,pose.gec]].forEach(([ctx,eyes,g])=>{ctx.clearRect(0,0,800,800);paintClip(ctx,c.clip,c.pos,eyes);if(pose.ghost>0){ctx.globalAlpha=pose.ghost;ctx.drawImage(g,0,0);ctx.globalAlpha=1}});if(pose.ghost>0)pose.ghost=Math.max(0,pose.ghost-dt/90)}
+  function setLook(w){if(w==='down')pose.gaze.row='down'}
+  function updateLook(dt){tickOwl(dt||16)}
+  function scheduleBlink(){clearTimeout(blinkTimer);if(!pose.on)return;blinkTimer=setTimeout(()=>{if(!active||!stage)return;if(!pose.act&&!pose.pending&&atFront()&&Math.abs(pose.cur.vel)<.6)startAct('blink');scheduleBlink()},2300+Math.random()*3200)}
+  function playExpr(name){if(!pose.on||!clipReady(name))return;if(pose.act){if(pose.act.clip==='blink')pose.pending=name;return}pose.expr=name;if(atFront())startAct(name);else pose.pending=name}
+  function idleLife(){clearTimeout(pose.idleTimer);if(!pose.on)return;pose.idleTimer=setTimeout(()=>{if(active&&stage&&!pose.act&&!pose.pending&&!pose.hoverEnter&&performance.now()-pose.lastMove>4200){const r=Math.random();if(r<.16)playExpr('tilt');else if(r<.3)pose.idleGaze={row:'up',dx:(Math.random()-.5)*1.6};else pose.idleGaze={row:'mid',dx:(Math.random()-.5)*2.2}}idleLife()},2600+Math.random()*2600)}
+  function initPoses(){if(pose.ctx)return;const B=OWL.base,q=`?v=${OWL.v}`;
+    const mkc=(cls)=>{const cv=document.createElement('canvas');cv.width=cv.height=800;cv.className=cls;return cv};
+    const cv=mkc('fa-owl-canvas'),ecv=mkc('fa-owl-canvas'),g=mkc(''),ge=mkc('');poseBox.append(cv);eyeBox.append(ecv);pose.ctx=cv.getContext('2d');pose.ectx=ecv.getContext('2d');pose.gc=g;pose.gec=ge;
+    const load=src=>fetch(src).then(r=>{if(!r.ok)throw 0;return r.blob()}).then(b=>createImageBitmap(b)).catch(()=>new Promise(res=>{const im=new Image();im.onload=()=>res(im);im.onerror=()=>res(null);im.src=src}));
+    const two=n=>String(n).padStart(2,'0');
+    const loadClip=name=>{const c=OWL.clips[name];pose.bm[name]=new Array(c.n);pose.eb[name]=new Array(c.n);const order=c.mid!=null?[c.mid,...[...Array(c.n).keys()].filter(i=>i!==c.mid)]:[...Array(c.n).keys()];
+      return Promise.all(order.map(i=>Promise.all([load(`${B}${name}/${two(i)}.webp${q}`),c.noeyes?null:load(`${B}${name}/e${two(i)}.webp${q}`)]).then(([a,e])=>{pose.bm[name][i]=a;pose.eb[name][i]=e})))};
+    Promise.all([load(`${B}base-head.webp${q}`),load(`${B}base-wave.webp${q}`)]).then(([h,w])=>{pose.bm.__base_head=h;pose.bm.__base_wave=w;return loadClip('turn')}).then(()=>{pose.cur={clip:'turn',pos:OWL.clips.turn.mid,vel:0};pose.on=true;root.classList.add('fa-poses-on');measureHead();draw(16);if(stage){scheduleBlink();idleLife()}
+      ['blink','lift','up','drop','down','happy','surprise','tilt','wave'].reduce((p,n)=>p.then(()=>loadClip(n)),Promise.resolve())})}
+  function replay(){stage=false;lights=true;titleIndex=0;titleLine.innerHTML=titles[0].zh;enLine.textContent=titles[0].en;titleLine.classList.remove('fa-title-out','fa-title-in');enLine.classList.remove('fa-title-out','fa-title-in');root.querySelector('.fa-stage').setAttribute('aria-hidden','true');root.classList.remove('fa-stage-on','fa-lights-off','fa-hop');clearTimeout(pose.idleTimer);pose.expr='';pose.act=null;pose.pending=null;pose.idleGaze=null;pose.gaze={row:'mid',dx:0};if(pose.on)pose.cur={clip:'turn',pos:OWL.clips.turn.mid,vel:0};root.querySelector('[data-skip]').hidden=false;Object.values(videos).forEach(v=>{v.pause();v.currentTime=0;v.muted=true});video().muted=!sound;video().play().catch(()=>{});clearTimeout(blinkTimer);stopAtmosphere()}
+  function react(e){if(!stage||!pose.on)return;const r=owl.getBoundingClientRect(),eyeZone=e.clientY<r.top+r.height*.4;playExpr(eyeZone?'surprise':(Math.random()>.5?'happy':'wave'))}
   function toggleLights(){lights=!lights;root.classList.toggle('fa-lights-off',!lights);lightBtn.setAttribute('aria-pressed',String(lights));lightBtn.setAttribute('aria-label',lights?'關閉聚光燈':'開啟聚光燈')}
   function toggleSound(){sound=!sound;Object.values(videos).forEach(v=>v.muted=true);video().muted=!sound;soundBtn.innerHTML=icon(sound?'sound':'mute');soundBtn.setAttribute('aria-label',sound?'關閉聲音':'開啟聲音')}
   function readSkip(){try{return localStorage.getItem(KEY)==='1'}catch(_){return false}}
