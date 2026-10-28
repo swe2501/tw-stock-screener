@@ -2,6 +2,7 @@
 (() => {
  'use strict';
  const labels={w_bottom:'W底',m_top:'M頭',head_shoulders:'頭肩頂',inverse_head_shoulders:'頭肩底',triangle:'三角形',box:'箱型'};
+ labels.ascending_triangle='ascending_triangle';
  const colors=['#da870b','#8b5cf6','#0b9488','#db2777'];
  const finite=n=>typeof n==='number'&&Number.isFinite(n);
  let context=null,owner=null,layers=[],ticket=0,promise=null,opened=false;
@@ -11,6 +12,11 @@
  function verify(pattern,record,live){
   if(!pattern||!labels[pattern.type]||pattern.precise_points_verified!==true||!Array.isArray(pattern.points)||pattern.points.length<3||pattern.points.length>12)throw Error('輔助線尚未完成定位核對');
   const map=new Map(live.filter(b=>typeof b.time==='string').map(b=>[b.time,b]));
+  if(pattern.type==='ascending_triangle'){
+   for(const p of pattern.points){const b=map.get(p.time);if(!/^\d{4}-\d{2}-\d{2}$/.test(p.time)||!b||!['high','low'].includes(p.field)||!finite(p.value)||Math.abs(b[p.field]-p.value)>1e-6)throw Error('ascending triangle point mismatch');}
+   const n=pattern.neckline,s=pattern.support_line;if(!n||!finite(n.value)||!map.has(n.start)||!map.has(n.end)||n.start>=n.end||!s||!finite(s.value)||!finite(s.end_value)||!map.has(s.start)||!map.has(s.end)||s.start>=s.end)throw Error('ascending triangle line data incomplete');
+   return pattern;
+  }
   if(!Array.isArray(record.source_bars)||!record.source_bars.length)throw Error('缺少判讀來源K棒');
   const start=pattern.points[0].time,end=pattern.points[pattern.points.length-1].time;
   const segment=record.source_bars.filter(b=>b.time>=start&&b.time<=end);
@@ -33,6 +39,12 @@
  }
  function plot(pattern,color,ctx){
   const opts={color,lineWidth:2,lineStyle:2,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false,autoscaleInfoProvider:()=>null};
+  if(pattern.type==='ascending_triangle'){
+   const n=pattern.neckline,s=pattern.support_line;
+   const upper=ctx.chart.addLineSeries(opts);layers.push(upper);upper.setData([{time:n.start,value:n.value},{time:n.end,value:n.value}]);
+   const support=ctx.chart.addLineSeries({...opts,lineWidth:2});layers.push(support);support.setData([{time:s.start,value:s.value},{time:s.end,value:s.end_value}]);
+   return;
+  }
   const line=ctx.chart.addLineSeries(opts);layers.push(line);line.setData(pattern.points.map(p=>({time:p.time,value:p.value})));
   if(pattern.neckline){const n=pattern.neckline,neck=ctx.chart.addLineSeries({...opts,lineWidth:1});layers.push(neck);neck.setData([{time:n.start,value:n.value},{time:n.end,value:n.value}]);}
  }
