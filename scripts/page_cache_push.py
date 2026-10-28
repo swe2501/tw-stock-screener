@@ -141,6 +141,16 @@ def main():
         run_focus(env, "uat")                           # uat 版失敗不影響正式站
     except Exception as e:
         print(f"[page_cache] focus@uat failed: {type(e).__name__}")
+    # 2026-10-28 上漲下跌亮燈區：原本網頁即時算約 28 秒，改每晚先算好（失敗不影響其他快照，網頁會退回即時算）
+    try:
+        from limitup_precompute import run as run_limitup
+        for env_name in ("prod", "uat"):
+            try:
+                run_limitup(env, env_name)
+            except Exception as e:                      # noqa: BLE001
+                print(f"[page_cache] limitup@{env_name} failed; previous snapshot retained: {type(e).__name__}")
+    except Exception as e:                              # noqa: BLE001
+        print(f"[page_cache] limitup import failed: {type(e).__name__}")
     groupbook_ok = False
     try:
         from groupbook_precompute import run
