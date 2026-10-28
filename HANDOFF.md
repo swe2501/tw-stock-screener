@@ -543,7 +543,8 @@ page_cache 是 **uat 與 prod 共用**同一個 Supabase。若推盤中到原 ki
 - 執行條件：**電腦開著且 Windows 使用者 `User` 已登入**（鎖定畫面可以，登出或關機就不跑）。部分任務設了「喚醒電腦執行」。
 - **不需要開 Claude Code，也跟登入哪個 Claude 帳號無關**。換 Claude 帳號不影響排程。
 - Claude Code 自己的排程（scheduled tasks）：2026-10-28 查過是**空的**，沒有任何綁在 Claude 帳號上的排程。之後若有人用 Claude 的排程功能設定，必須寫進本節並註明是哪個 Claude 帳號（那種排程才會跟帳號綁在一起）。
-- 雲端：法說會／除權息因子兩支在 GitHub Actions（prod 分支 `.github/`，台灣週一～五 20:30），跟本機和 Claude 帳號都無關。
+- 雲端：GitHub Actions `.github/workflows/daily-cloud-jobs.yml`（prod 分支，設定台灣週一～五 20:30，實際常延遲到半夜 1～3 點），約 30 支只抓公開資料的程式（ETF 名錄／配息／受益人、法人、廣度、新聞、法說會、除權息…），電腦沒開時當備援；跟本機和 Claude 帳號都無關。連玩股網（擋雲端 IP、要登入）或用本機 10GB 資料庫的程式不能上雲端。
+- ⚠️ **雲端跑的是 prod 分支的程式碼**，而 uat 與 prod 共用同一個 Supabase。排程程式只修到 Andrew／uat 時，雲端仍用 prod 舊版寫同一個資料庫。2026-10-26、10-28 凌晨兩次清空 `etf_products` 就是 prod 舊版 `upload_etf.py` 造成（10/28 以單檔 hotfix 上 prod `abb78cb` 修好）。**用戶定案（10/28）：修到雲端也會跑的排程程式，要提醒用戶把該檔單獨上 prod**（乾淨 worktree 從 detached `origin/prod` 只換該檔、commit、`push origin HEAD:prod`，網站畫面不動）。
 
 ### B. 本機 Windows 工作排程器任務（2026-10-28）
 | 任務名稱 | 時間 | 執行 | 內容 |
