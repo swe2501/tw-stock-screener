@@ -154,3 +154,11 @@ html #fqiArrival.fa-poses-on{--lamp-bottom:calc(98vh - var(--owl-h)*.933 - 6vh)}
 #fqiArrival.fa-fast .fa-eyeglow{transition-duration:.05s}
 #fqiArrival.fa-lights-off .fa-eyeglow-layer{opacity:1}
 #fqiArrival.fa-lights-off .fa-pose{filter:brightness(.05) saturate(.3);transition:opacity .2s ease,filter .9s ease}
+/* v30 淺色滑鼠追蹤光改銀白；姿勢切換更短更順；關燈時身體幾乎全暗、只留眼睛 */
+html[data-theme="light"] #fqiArrival .fa-cursor-light{width:30vmax;height:30vmax;background:radial-gradient(circle,rgba(255,255,255,.62),rgba(236,242,248,.30) 22%,rgba(214,226,238,.10) 45%,transparent 68%);mix-blend-mode:screen;filter:saturate(.6)}
+html[data-theme="light"] .fa-light-flow{background:linear-gradient(90deg,transparent 0,rgba(210,222,234,.03) 30%,rgba(232,240,248,.32) 71%,rgba(255,255,255,.9));filter:blur(.25px) drop-shadow(0 0 4px rgba(255,255,255,.55))}
+html[data-theme="light"] .fa-light-flow::before{background:#fff;box-shadow:0 0 6px rgba(255,255,255,.95),0 0 14px rgba(214,228,242,.6)}
+html[data-theme="light"] .fa-light-flow::after{background:radial-gradient(circle,rgba(255,255,255,.4),transparent 68%)}
+.fa-pose,.fa-eyeglow{transition-duration:.14s}
+#fqiArrival.fa-lights-off .fa-pose{filter:brightness(.02) saturate(0)}
+#fqiArrival.fa-lights-off .fa-cursor-light{opacity:0!important}
