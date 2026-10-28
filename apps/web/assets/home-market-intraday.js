@@ -184,7 +184,9 @@
       const lo = Math.min(...values), hi = Math.max(...values), pad = Math.max((hi - lo) * .12, hi * .0003);
       const y = v => 7 + (hi + pad - v) / (hi - lo + 2 * pad) * 94;
       const fxSess = code==='FX' && fromMini;   // mini_FX＝台北匯市盤 09:00–16:00
-      const start = fxSess?540:code==='FX'?0:code === 'TX=F' ? 525 : 540, end = fxSess?960:code==='FX'?1439:code === 'TX=F'||code==='VIX' ? 825 : 810;
+      // 2026-10-28 mini_FX 只在股市盤中（intraday_push）記到約 13:35，軸固定到 16:00 右側會空一截；改為至少到 13:30、有更晚資料才延伸（上限 16:00）
+      const fxEnd = Math.min(960, Math.max(810, rows.at(-1).minute));
+      const start = fxSess?540:code==='FX'?0:code === 'TX=F' ? 525 : 540, end = fxSess?fxEnd:code==='FX'?1439:code === 'TX=F'||code==='VIX' ? 825 : 810;
       const points = rows.map(r => [3 + (r.minute - start) / (end - start) * 144, y(r.close)]);
       const line = points.map(p => p.map(n => n.toFixed(2)).join(',')).join(' ');
       const baseY = baseline == null ? 105 : y(baseline);

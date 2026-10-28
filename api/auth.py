@@ -320,6 +320,7 @@ class handler(BaseHTTPRequestHandler):
                     tier = "admin" if u.get("id") in ADMIN_IDS else tmap.get(u.get("id"), "free")
                     out.append({
                         "id": u.get("id"), "email": u.get("email"),
+                        "name": md.get("name") or md.get("full_name") or md.get("display_name"),   # LINE 登入沒有 Email，列表改顯示名稱
                         "tier": tier, "expires_at": md.get("expires_at"),
                         "banned": bool(md.get("banned")),
                         "created_at": u.get("created_at"), "last_sign_in_at": u.get("last_sign_in_at"),
