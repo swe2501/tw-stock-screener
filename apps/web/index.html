@@ -4364,6 +4364,7 @@
     <div class="ov-tabs" id="admTabs" style="margin-bottom:14px">
       <button class="on" type="button" data-t="members">會員管理</button>
       <button type="button" data-t="algo">算法公式</button>
+      <button type="button" data-t="office">AI 研究室</button>
       <button type="button" data-t="audit">稽核日誌</button>
       <button type="button" data-t="health" disabled title="Phase 2：排程/資料新鮮度">系統健康</button>
       <button type="button" data-t="usage" disabled title="Phase 2：需先加 usage_events">使用分析</button>
@@ -4497,8 +4498,10 @@
     function switchTab(t){
       _tab=t;
       el('admTabs').querySelectorAll('button').forEach(function(b){b.classList.toggle('on',b.dataset.t===t);});
+      if(window.AdminOffice) window.AdminOffice.hide();                 // 離開 AI 研究室就停止動畫與輪詢
       if(t==='members')loadMembers();
       else if(t==='algo')renderAlgo();
+      else if(t==='office'){ if(window.AdminOffice){ window.AdminOffice.show(el('admBody'),post); el('admNote').innerHTML='<b>說明</b> 角色狀態來自本機排程打卡（scripts/office_step.py），每分鐘自動更新；工作超過時限或背景回報中斷會標「卡住」。'; } else el('admBody').innerHTML='<div class="fc-empty">AI 研究室載入中，請稍候再點一次</div>'; }
       else if(t==='audit')renderAudit();
       else el('admBody').innerHTML='<div class="fc-empty">此分頁規劃中（見 docs/admin-backend-spec.md，Phase 2）。</div>';
     }
@@ -18084,6 +18087,7 @@
 <script src="assets/navigation-layers.js?v=logo-home20" defer></script>
 <link rel="stylesheet" href="assets/home-market-intraday.css?v=25">
 <script src="assets/home-market-intraday.js?v=13" defer></script>
+<script src="assets/admin-office.js?v=3" defer></script>
 <footer id="foresightFooter" aria-label="先見網站頁尾">
       <div class="fs-source"><div>本站依各功能使用臺灣證券交易所、證券櫃檯買賣中心、臺灣期貨交易所、集保結算所及其他公開資料整理市場資訊；來源、行情日期與更新頻率依各頁標示，部分內容為盤後或延遲資料。數據可能因公告更正、休市或來源異常而調整，請以原始公告核對。圖表、歷史統計與工具結果供學習及研究參考，歷史表現不代表未來結果；不同資料口徑與估算方式可能產生差異。</div></div>
       <div class="fs-footer-inner">
