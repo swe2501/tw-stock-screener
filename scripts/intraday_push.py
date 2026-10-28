@@ -56,6 +56,29 @@ MIN_LISTED = 950                                   # 上市掃到檔數低於此
 _CTX = ssl.create_default_context()
 _CTX.verify_flags &= ~ssl.VERIFY_X509_STRICT
 DRY = False                                         # --dry：只現算不寫 page_cache（測試用）
+# 2026-10-28 看門狗：10/28 12:02 後主迴圈卡住、沒有錯誤訊息，盤中資料停更一個多小時。
+# 主迴圈每轉一圈打一次心跳；超過 STALL_SEC 沒心跳就強制結束並回 STALL_EXIT，由 run_intraday.bat 重新啟動。
+STALL_SEC = 300
+STALL_EXIT = 75
+_beat = time.time()
+
+
+def _heartbeat():
+    global _beat
+    _beat = time.time()
+
+
+def _start_watchdog():
+    import threading
+
+    def watch():
+        while True:
+            time.sleep(30)
+            idle = time.time() - _beat
+            if idle > STALL_SEC:
+                print(f"[intraday] 看門狗：主迴圈 {int(idle)} 秒沒有進展，強制結束等待重啟（exit {STALL_EXIT}）", flush=True)
+                os._exit(STALL_EXIT)                 # 主執行緒可能卡在網路呼叫裡，只能直接結束整個程序
+    threading.Thread(target=watch, name="intraday-watchdog", daemon=True).start()
 
 
 def _now():
@@ -313,7 +336,10 @@ def main():
     l = o = None
     uni_ts = 0.0
     fx_slot = None
+    _heartbeat()
+    _start_watchdog()
     while True:
+        _heartbeat()
         if not _in_session():
             now = _now()
             hm = now.hour * 60 + now.minute
