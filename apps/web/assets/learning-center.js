@@ -43,6 +43,7 @@
     margin: { title: '小算盤：融資維持率', fields: [['buy', '買進價（元）', 100], ['now', '現價（元）', 85], ['ratio', '融資成數（上市 0.6）', 0.6]],
       run: v => { const loan = v.buy * v.ratio, m = loan ? v.now / loan * 100 : NaN; return [['目前維持率', fmt(m, 1) + '%', true], ['碰到 130% 追繳的價格', fmt(loan * 1.3, 2) + ' 元'], ['狀態', m < 130 ? '已低於 130%，會被追繳' : m < 140 ? '接近追繳線' : '正常']]; } }
   };
+  Object.assign(CALC, (window.AcademyLearning && window.AcademyLearning.extraCalcs) || {});
   const calcHTML = id => { const c = CALC[id]; if (!c) return ''; return `<section class="lc-calc" data-calc="${id}"><h4>${icon.calc}${esc(c.title)}</h4><div class="lc-calc-grid">${c.fields.map(([k, l, d]) => `<label><span>${esc(l)}</span><input type="number" inputmode="decimal" step="any" data-k="${k}" value="${d}"></label>`).join('')}</div><dl class="lc-calc-out"></dl></section>`; };
   const runCalc = box => { const c = CALC[box.dataset.calc]; if (!c) return; const v = {}; box.querySelectorAll('input[data-k]').forEach(i => { v[i.dataset.k] = parseFloat(i.value) || 0; }); box.querySelector('.lc-calc-out').innerHTML = c.run(v).map(([a, b, hl]) => `<div${hl ? ' class="is-key"' : ''}><dt>${esc(a)}</dt><dd>${esc(b)}</dd></div>`).join(''); };
   const left = ms => { if (ms <= 0) return '已截止'; const d = Math.floor(ms / 864e5), h = Math.floor(ms % 864e5 / 36e5), m = Math.floor(ms % 36e5 / 6e4); return d ? `剩 ${d} 天 ${h} 小時` : h ? `剩 ${h} 小時 ${m} 分` : `剩 ${m} 分鐘`; };
