@@ -201,9 +201,8 @@ def _record_otc_index(env):
         if not pts or pts[-1][0] != tlong:
             pts.append([tlong, price])
             f.write_text(json.dumps(pts), encoding="utf-8")
-        data = hi._bucket5([(int(t), float(p)) for t, p in pts])
-        if len(data) >= 2 and not DRY:
-            hi.push(env, "mini_OTC", d, data, "盤中排程記錄 MIS 櫃買指數")
+        # 僅記本機檔；mini_OTC 由盤後 home_intraday.py 定版推送（與首頁卡片同一交易日）。
+        # 盤中不再即時覆蓋 page_cache：否則 mini_OTC 會被覆蓋成「今天(部分)」，與卡片(上一完成交易日)對不上 → 櫃買分時永遠空白。
     except Exception as e:                                          # noqa: BLE001
         print(f"[intraday] 櫃買指數走勢記錄失敗（不影響主流程）：{type(e).__name__}")
 
@@ -234,9 +233,7 @@ def _record_fx_index(env):
         pts = json.loads(f.read_text(encoding="utf-8")) if f.exists() else []
         pts.append([t, float(price)])
         f.write_text(json.dumps(pts), encoding="utf-8")
-        data = hi._bucket5([(int(x), float(p)) for x, p in pts])
-        if len(data) >= 2 and not DRY:
-            hi.push(env, "mini_FX", d, data, "盤中排程記錄 Yahoo TWD=X 即時匯率")
+        # 同 mini_OTC：僅記本機檔，mini_FX 由盤後 home_intraday.py 定版推送，盤中不覆蓋 page_cache。
     except Exception as e:                                          # noqa: BLE001
         print(f"[intraday] 匯率走勢記錄失敗（不影響主流程）：{type(e).__name__}")
 
