@@ -7,6 +7,11 @@ SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
 
 # 後台管理員白名單（與前端 VIEWER_EMAILS 一致；之後移到 admin_allowlist 表）
 ADMIN_EMAILS = {"swe250165@gmail.com", "qa5518556130@gmail.com", "wenpin0617@gmail.com"}
+# 2026-10-28 權限改以帳號 ID 判斷：註冊不驗證 Email，用 Email 判斷可被搶註冒充。
+# 新增管理員：對方先註冊 → 把帳號 ID 加到這裡＋Supabase allowed_viewers.user_id（兩邊一致）。ADMIN_EMAILS 只用於顯示。
+ADMIN_IDS = {"ef7193f4-15be-4ab0-b004-705d95b1a3dc",   # swe250165
+             "93f16c68-d103-4092-b938-93e34012d3c1",   # qa5518556130
+             "118f9b90-85d1-4195-ac50-20c16a8624e9"}   # wenpin0617
 # 會員等級＝合夥人 member-voucher-levels.sql 定義的 tier（＋free 一般會員）；choice 自選券屬券非常設等級
 TIERS = {"free", "observation", "research", "advanced", "vip"}
 
@@ -116,7 +121,7 @@ def _algo_formulas():
 
 
 def _verify_admin(token):
-    """用呼叫者 JWT 取 email，∈白名單才回 email，否則 None。後台每個操作的真正防線。"""
+    """用呼叫者 JWT 取帳號，ID ∈ ADMIN_IDS 才回 email（稽核日誌用），否則 None。後台每個操作的真正防線。"""
     if not token:
         return None
     try:
@@ -125,7 +130,7 @@ def _verify_admin(token):
         with urllib.request.urlopen(req, timeout=10) as r:
             u = json.loads(r.read())
         em = (u.get("email") or "").strip().lower()
-        return em if em in ADMIN_EMAILS else None
+        return em if u.get("id") in ADMIN_IDS else None
     except Exception:
         return None
 
@@ -293,6 +298,11 @@ class handler(BaseHTTPRequestHandler):
             if not admin_email:
                 return self._json(403, {"error": "forbidden: 僅限管理員"})
 
+            if action in ("admin_pattern_reviews", "admin_pattern_review_save"):
+                from lib.pattern_review import handle
+                status, result = handle(action, body, admin_email, _rest)
+                return self._json(status, result)
+
             if action == "admin_members":
                 st, data = _admin_api("/admin/users?per_page=200")
                 if st is None:
@@ -307,15 +317,16 @@ class handler(BaseHTTPRequestHandler):
                 for u in users:
                     md = u.get("user_metadata") or {}
                     em = (u.get("email") or "").strip().lower()
-                    tier = "admin" if em in ADMIN_EMAILS else tmap.get(u.get("id"), "free")
+                    tier = "admin" if u.get("id") in ADMIN_IDS else tmap.get(u.get("id"), "free")
                     out.append({
                         "id": u.get("id"), "email": u.get("email"),
+                        "name": md.get("name") or md.get("full_name") or md.get("display_name"),   # LINE 登入沒有 Email，列表改顯示名稱
                         "tier": tier, "expires_at": md.get("expires_at"),
                         "banned": bool(md.get("banned")),
                         "created_at": u.get("created_at"), "last_sign_in_at": u.get("last_sign_in_at"),
                         "provider": (u.get("app_metadata") or {}).get("provider"),
                         "confirmed": bool(u.get("email_confirmed_at") or u.get("phone_confirmed_at")),
-                        "is_admin": (u.get("email") or "").strip().lower() in ADMIN_EMAILS,
+                        "is_admin": u.get("id") in ADMIN_IDS,
                     })
                 out.sort(key=lambda x: x.get("created_at") or "")
                 return self._json(200, {"members": out, "admins": sorted(ADMIN_EMAILS)})
@@ -367,6 +378,21 @@ class handler(BaseHTTPRequestHandler):
                         return self._json(200, {"log": json.loads(r.read() or b"[]")})
                 except Exception as e:
                     return self._json(200, {"log": [], "error": str(e)})
+
+            # 2026-10-27 AI 研究室：7 個角色（＝排程分組）的打卡狀態，存 admin_settings key=office:<角色>（本機 scripts/office_report.py 寫入）
+            if action == "admin_office":
+                agents = ("news", "chip", "tech", "macro", "risk", "etf", "data")
+                q = "in.(" + ",".join('"office:%s"' % a for a in agents) + ")"
+                st2, rows = _rest("/admin_settings?select=key,value,updated_at&key=" + urllib.parse.quote(q, safe='().,"'))
+                if st2 is None:
+                    return self._json(500, rows)
+                out = {}
+                for r in (rows if isinstance(rows, list) else []):
+                    try:
+                        out[r["key"].split(":", 1)[1]] = json.loads(r.get("value") or "{}")
+                    except Exception:
+                        pass
+                return self._json(200, {"agents": out})
 
             # 算法公式總開關狀態（給後台切換用）＋目前公式內容（供後台預覽/編輯）
             if action == "admin_algo_get":

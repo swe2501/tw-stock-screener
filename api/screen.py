@@ -3472,6 +3472,24 @@ def _fetch_stock_news(code, name):
     return {"code": code, "name": name, "items": out[:20]}
 
 
+def _read_visual_patterns(code):
+    """Read saved conversation reviews; never call a paid inference provider."""
+    import re
+    if not re.fullmatch(r"[0-9]{4}", str(code)):
+        return {"error": "invalid stock code"}
+    empty = {"version": "codex-visual-v1", "scope": "uat", "code": code, "records": []}
+    if _site_env() != "uat":
+        return dict(empty, unavailable=True)
+    status, rows = _cache_sb("/page_cache", params=_snapshot_params("codex_visual_patterns@uat"))
+    if status != 200 or not isinstance(rows, list) or not rows:
+        return dict(empty, unavailable=True)
+    data = rows[0].get("payload")
+    if not isinstance(data, dict) or data.get("version") != "codex-visual-v1" or data.get("scope") != "uat" or not isinstance(data.get("records"), list):
+        return dict(empty, unavailable=True)
+    return dict(empty, scan_id=data.get("scan_id"), generated_at=data.get("generated_at"), coverage=data.get("coverage"),
+                records=[r for r in data["records"] if isinstance(r, dict) and str(r.get("code")) == code])
+
+
 class handler(BaseHTTPRequestHandler):
     def log_message(self, format, *args): pass
 
@@ -3493,6 +3511,9 @@ class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         # 領取非同步篩選結果：?job_id=xxx → 有結果回結果，沒好回 {pending:true}
         qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+        if (qs.get("stat") or [""])[0] == "visual_patterns":
+            return self._send_json(200, _read_visual_patterns((qs.get("code") or [""])[0]),
+                                   cache="public, max-age=60, s-maxage=60")
         if (qs.get("stat") or [""])[0] == "foreign_settlement_cost":
             import re
             import html as html_lib

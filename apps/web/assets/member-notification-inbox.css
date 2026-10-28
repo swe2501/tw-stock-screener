@@ -94,3 +94,10 @@
 #watchlistPanel .watch-table .watch-remove-cell::before{display:none}
 #watchlistPanel .watch-table .watch-col-date{grid-column:1/-1}
 }
+
+/* Match the avatar menu without changing notification read semantics. */
+#academy-notification-preview{backdrop-filter:blur(22px) saturate(120%);-webkit-backdrop-filter:blur(22px) saturate(120%)}
+:root[data-theme=light] #academy-notification-preview{background:rgba(250,253,255,.86);border-color:rgba(130,157,180,.38);box-shadow:0 16px 42px #0b213322,inset 0 1px 0 #ffffffe6}
+:root:not([data-theme=light]) #academy-notification-preview{background:rgba(17,28,39,.86);border-color:rgba(164,188,209,.22);box-shadow:0 16px 42px #0005,inset 0 1px 0 #ffffff13}
+#academy-notification-preview .mn-preview-item:hover{background:color-mix(in srgb,var(--accent) 7%,transparent)}
+@supports not (backdrop-filter:blur(1px)){:root[data-theme=light] #academy-notification-preview{background:#f7fafc}:root:not([data-theme=light]) #academy-notification-preview{background:#111c27}}

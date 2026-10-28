@@ -32,9 +32,27 @@
     {
       "src": "apps/web/treasury-research.html",
       "use": "@vercel/static"
+    },
+    {
+      "src": "apps/web/research/**",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
+    {
+      "src": "/(.*)",
+      "headers": {
+        "X-Frame-Options": "SAMEORIGIN",
+        "Content-Security-Policy": "frame-ancestors 'self'",
+        "X-Content-Type-Options": "nosniff",
+        "Referrer-Policy": "strict-origin-when-cross-origin"
+      },
+      "continue": true
+    },
+    {
+      "src": "/research/(.*)",
+      "dest": "/apps/web/research/$1"
+    },
     {
       "src": "/api/site_search(?:\\.py)?$",
       "dest": "/api/prices.py?action=site_search"

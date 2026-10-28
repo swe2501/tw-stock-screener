@@ -1,3 +1,5 @@
+> **2026-10-27 Andrew（Claude）最新交接**：見本文件「十六、2026-10-23～10-27 Andrew 工作交接」。重點：prod 仍停在 10/21 `f8c416f`，之後全部只在 uat；上櫃分點回補背景續跑中（補完自動重算主力分點排行）；**推任何分支到 GitHub（含功能分支、Andrew）Vercel 都會部署，且網站＋手機預覽兩個專案各算一次**，額度很容易用光。
+
 > **2026-10-20 21:06 會員任務點數 v2 資料庫已套用（全部仍關閉）→ 正式開放交給 Codex**：見 [HANDOFF_MEMBER_PERKS_2026-10-20.md](HANDOFF_MEMBER_PERKS_2026-10-20.md)。先改網站讓任務卡與兌換票券接上伺服器並推 UAT，JUSTY 確認後才執行開放 SQL。
 
 > **2026-10-20 會員禮遇完整方案＋掏金「每日選股紀錄」**：任務點數、配發、全年禮遇與正式開放所需資料庫變更見 [docs/member-perks-program-2026-10-20.md](docs/member-perks-program-2026-10-20.md)（發點／兌換仍關閉，資料庫變更待 JUSTY 批准）。掏金篩選器結果列新增「記錄今日選股／我的紀錄」（`apps/web/assets/screen-log.js`），存在會員研究資料 `screen_logs`，不新增資料表、不作發點依據。另修正會員登入後「目前組合」摘要因私房篩選面板中斷。
@@ -480,3 +482,102 @@ page_cache 是 **uat 與 prod 共用**同一個 Supabase。若推盤中到原 ki
 - 2026-10-24 宏觀環境（美國 CPI／失業率／美元廣義指數）三條數列全空：後端即時連 FRED 下載端點會逾時。改為每晚 scripts/macro_env_push.py 向官方原始來源抓（BLS API：CUSR0000SA0、LNS14000000；聯準會 H.10 Nominal Broad Dollar Index），存 page_cache macro_env；後端 stat=macro_environment 先讀它，沒有才連 FRED。
 - 2026-10-24 首頁「今日信用部位觀察」上櫃融券增減：原本寫死「—」、摘要一直顯示「融券增減資料待更新」；otc_market_daily 沒有前日融券餘額欄位，前端改讀最近兩列、以前一列融券餘額相減。另補 otc_market_daily 缺的 10/20、10/21（夜間排程卡住那兩晚；以本機 margin_short tpex 與 stock_daily otc 彙總融券、融資張數與漲跌家數，法人與融資金額本機無資料留空）。
 - 2026-10-24 話題族群自動排程（CodexHotTopicsHourly，週一～五 09:00～14:00 每小時）：「gpt-6.1-sol 不支援 ChatGPT 帳號」已於 10/20 改用桌面版 Codex 內建 CLI 解決（舊 npm CLI 不支援；10/20～10/23 共 24 次僅 1 次失敗）。剩下的失敗原因是模型滿載（at capacity）沒有重試：scripts/run_codex_topics.py 改為遇到滿載／不支援時等 180 秒重試，順序 gpt-6.1-sol → gpt-6.1-sol → gpt-5.6-sol（兩者皆已實測可用），其他錯誤直接失敗不上傳。10/20 那次未提交的修正（改用桌面版 CLI、上傳前檢查新鮮度與新聞日期、失敗回傳錯誤碼）一併提交，tests/test_hot_topics_safety.py 7 項通過。
+- 2026-10-24 ETF 折溢價全部「無資料」：etf_products 的 nav／aum 全空。upload_etf.py 每晚先刪光整張表再重寫，後面補淨值的 wantgoo_etf.py 只要當晚失敗就整晚沒淨值；改為重寫前保留 aum、nav、holdings_date、mgmt_fee、holders、outstanding_units、holder_date。手動跑 wantgoo_etf.py 補回 139 檔淨值（另 134 檔玩股網本身無淨值）。
+- 2026-10-24 後台「算法公式」總開關點了沒反應：Supabase 沒有 admin_settings、admin_audit_log 兩張表（交接文件寫已建，實際沒建成）。用戶 10/24 晚在 SQL Editor 手動執行 docs/database/admin-settings.sql 與 admin_audit_log 建表（RLS 開、無 policy，只有 service_role 能讀寫），已實測可寫入。
+- 2026-10-25 後台管理卡頓：開關改為點下立刻切換（樂觀更新），後端在背景存，失敗才切回並提示；連點只認最後一次。各分頁資料留在記憶體，切換先畫上次資料再背景更新；進後台時背景預載算法公式與稽核日誌。（後端每次約 4 秒是 Vercel 冷啟動＋驗管理者身分，未改後端。）
+- 2026-10-25 上櫃分點回補：otc_backfill.py 重開瀏覽器時一時被誤判「未登入」會整個中止，改為重試 3 次（commit 44c6228）。
+- 2026-10-27 後台管理新增「AI 研究室」分頁（僅管理者）：像素風辦公室，7 個角色＝既有排程分組（新聞、籌碼、技術、總經、風控、ETF、資料管理），顯示狀態燈、最新真實產出泡泡、夜間交棒動畫，點角色看今日步驟；下方有角色對照表（負責、影響頁面、對應排程程式）。狀態由本機排程每一步經 `scripts/office_step.py` 打卡寫入 Supabase `admin_settings`（key `office:<角色>`），後端 `/api/auth` action `admin_office` 讀取。對應表在 `scripts/office_wrap_bat.py` 與 `apps/web/assets/admin-office.js` 的 ROLE，兩邊要一致。
+- 2026-10-27 ETF 淨值又全空：10/24 加的「保留欄位」只補到有舊值的列，同一批列欄位不一致，PostgREST 整批 400（All object keys must match），表被清空、後面 wantgoo_etf 判定無資料。改為每列補齊欄位（`upload_etf.py`）；10/28 凌晨重跑補回 136 檔淨值。同晚家中網路兩度斷線（getaddrinfo failed／ERR_INTERNET_DISCONNECTED），當晚多支排程失敗。
+- 2026-10-28 ETF 名錄凌晨又被清空：雲端排程（prod 分支）跑 prod 舊版 upload_etf.py。用戶同意單檔 hotfix 上 prod（`abb78cb`），本機補回名錄、配息、受益人、淨值 139 檔。ETF「集中加碼前 10」今日無資料時顯示「待收盤後更新」（原 .fc-empty 是全站載入骨架、文字透明，看起來一片空白）。
+- 2026-10-28 上升三角：K 圖補畫輔助線（K 圖原本只讀 W 判讀檔）、上升三角分頁加「全部／形成中／已突破」篩選；三角型態改為併入同股同週期既有紀錄，不再覆蓋 W 判讀。
+- 2026-10-28 資安盤點與修正：
+  - 資料庫（uat、prod 同時生效）：`wantgoo_daily`、`broker_daily` 的 "public read"、`broker_sell_alerts` 的 "bsa_read"（皆 using true，任何人用公開金鑰可讀整張付費籌碼）已刪，改 `*_viewer_read`（authenticated＋is_viewer()）。還原：`create policy "public read" on public.<表> for select using (true);`。
+  - 權限改用帳號 ID：註冊不驗證 Email（沒有自己的網域無法寄驗證信），Email 白名單可被搶註冒充。`allowed_viewers` 加 `user_id`（3 位已填）；`is_viewer()` 改比 `auth.uid()`；macro_events_pin、mingdeng_calls_*、mingdeng_scores_read 五條寫死 Email 的政策改用 is_viewer()；`api/auth.py` 後台改比 `ADMIN_IDS`。**新增管理員：對方先註冊 → 把帳號 ID 加到 `ADMIN_IDS` 與 `allowed_viewers.user_id`；不要用 Email 自動帶 ID（等於又信任 Email）。**前端 `VIEWER_EMAILS` 只決定按鈕顯示，不是防線。
+  - 安全標頭（uat → prod `309734c`）：X-Frame-Options、frame-ancestors、nosniff、Referrer-Policy（vercel.json routes 第一條 continue 規則）。未加完整 CSP（大量 inline script）。
+  - 未處理、待決定：會員系統邀請／驗證任務以「Email 已驗證」為條件，但註冊即視為已驗證，可大量註冊假帳號刷邀請獎勵（合夥人模組）；AI 判定未登入可觸發（每日上限 300）；API 錯誤回傳完整 traceback（14 處）。
+
+---
+
+## 十六、2026-10-23～10-27 Andrew（Claude）工作交接
+
+> 改動細節逐條見第十五節；本節是「現在狀態、背景程式、怎麼接手」。
+
+### A. 部署狀態與工作方式
+- **prod 停在 10/21 `f8c416f`**；10/22 之後所有修改（含合夥人的）都只在 uat。推 prod 等用戶明確說「推 prod」，推法見第一節（整樹以 uat 為準、保留 prod 專屬 `.github/`），推完對齊 `justy-layout`。
+- 主工作區 `C:\Users\User\Desktop\AI_stock` 停在 Andrew，裡面有別人未提交的修改，不要動也不要一起提交。網站修改在獨立 worktree 從最新 `origin/uat` 開**本機**分支，commit 後在 detached `origin/uat` 上 `merge --no-ff` 再 `git push origin HEAD:uat`；**不要把功能分支推上 GitHub**（見 C）。本機排程程式（scripts/*.py、*.bat）提交在 Andrew。
+- ⚠️ 同一台電腦有多個工作階段共用 worktree：`scratchpad\uat_wt` 的本機分支 `docs/andrew/handoff-1025` 上有另一個工作階段 10/25 做的 3 筆**未推送**提交（`02c3655` 貪婪儀表點擊接回算法彈窗、`af6ff35` 話題熱度主力前20補名稱與勝率 popup、`1990ef1` 首頁匯率江波圖 mini_FX），工作區另有未提交的刪除（`.easignore`、`.env.local.example`）。不是本交接的作者所做，**未上 uat**，接手者請先確認是否要整合，不要直接覆蓋或刪除。
+- 改動紀錄：JUSTY 10/24 規定開發紀錄不放網站，記在 `docs/site-change-history-日期.md`、`docs/collaboration/changes/` 與 Git；本文件第十五節同步保留。
+
+### B. 背景程式（本機，被關掉或重開機就會停，要手動重啟）
+| 程式 | 做什麼 | 狀態（10/27 22:20） | 紀錄 |
+|---|---|---|---|
+| `scripts/otc_backfill.py --worker 0/1 --workers 2` | 上櫃分點回補到 2025-08-01（玩股網上櫃最早可抓日；上市從 2025-05-13 起） | 10/25 16:20 兩個程式無錯誤訊息地結束（疑似被關掉），10/27 22:20 重新啟動，剩約 2.4 萬（檔×日），23:30 起跑，預計 10/28 清晨完成 | `scripts/otc_backfill_w0.log`、`_w1.log`；進度檔 `D:\stock_data\otc_backfill_done.txt`（可續跑） |
+| `scripts/after_otc_backfill.py` | 等回補程式全部結束、剩餘 ≤2000 才全量重算 `broker_rankings.py`（排行＋出手明細＋買賣訊號） | 等待中 | `scripts/after_otc_backfill.log` |
+- 回補用複製的登入設定檔 `.wantgoo_profile_bf0/1`，每日 18:50～23:30 暫停避開夜間排程。重啟：PowerShell `Start-Process python -ArgumentList "-u","scripts\otc_backfill.py","--worker",0,"--workers",2 -WindowStyle Hidden`（worker 1 同理），再啟動 `after_otc_backfill.py`。`python scripts/otc_backfill.py --status` 看剩餘量。
+
+### C. Vercel 部署額度（10/22、10/23、10/24 三度用光）
+- Hobby 每日部署有上限。**推送任何分支到 GitHub 都會觸發部署**（uat、Andrew、web/*、shared/*…），網站 `tw-stock-screener` 與合夥人 `tw-stock-mobile-preview` 兩個專案各算一次。
+- 用光時 GitHub status 顯示「Deployment rate limited — retry in 24 hours」，網站停在最後成功的版本；之後要有新的推送才會部署。
+- 查部署要看 context=`Vercel – tw-stock-screener` 那一筆；被較新推送取代會是「Canceled」不是失敗。
+
+### D. 主力分點／主力訊號（現行規則）
+- 賣出訊號：只算賣掉之前買的。榜上分點出現買入訊號（張數榜 ≥300 張／金額榜 ≥3000 萬）後記這一輪持股；持股中單日淨賣超達大單門檻或 ≥ 該輪峰值 20% 記「減碼」；賣後剩不到峰值 10% 一律記「出清」並結束該輪（不論當次賣量）。賣出量最多算到這輪持股。存 `broker_trades`，view 加 `_sell`／`_exit`、張數金額為負數（既有讀買超的查詢自動排除）。程式 `scripts/broker_rankings.py` `_sell_rows`。
+- K 圖：紅色向上箭頭＝買、綠色向下箭頭＝出清（減碼不畫，只列在主力訊號表與出手明細），不寫買賣字樣也不寫名稱，名稱在滑過 K 棒的小卡；箭頭呼吸動畫。合夥人 10/24～25 有再調整這段，改前先看 uat 最新版。
+- 分點資料休市日防呆：`wantgoo_scraper.is_market_holiday` 用證交所官方休市表＋FMTQIK 每月實際交易日（抓颱風等臨時休市）；`_save_wantgoo_rows` 整檔分點與前一或後一交易日完全相同就不寫。已刪除的假資料備份在 `D:\stock_data\supabase_backup\holiday_fake_*`。
+
+### E. 新增／修改的每晚排程（`scripts/run_daily_job.bat`，只能寫英文、CRLF 換行）
+- `macro_env_push.py`：美國 CPI／失業率（BLS）、美元廣義指數（聯準會 H.10）→ page_cache `macro_env`（FRED 下載會逾時）。
+- `home_intraday.py`：首頁台指期日盤（期交所逐筆成交）、台指VIX（期交所每日檔）5 分鐘線 → page_cache `mini_TXF`／`mini_VIX`；櫃買指數由 `intraday_push.py` 盤中每輪記 MIS `otc_o00` → `mini_OTC`（官方無歷史分鐘資料）。
+- `page_cache_push.py`：themes／overview／themeall 成交值全為 0 不寫入；uat 版重算最多 3 次。`env_screen.relax_local_ssl` 一併換掉 urllib 全域 opener（否則先連過網後設定不生效，uat 快照成交值全 0）。
+- `wantgoo_daily_job.py`、`otc_broker_daily.py`：開玩股網首頁逾時重試；`otc_broker_daily`、`margin_maintenance_calc` 休市日不寫；融資三組資料日改用最新交易日。
+- 話題族群排程 `run_codex_topics.py`：見第十五節 10/24 那條。
+
+### F. 待辦／待決定
+1. **推 prod**（等用戶指示）。另注意本機有 `release/uat-to-prod-20261027` worktree（另一工作階段準備的 prod 發布），推前先確認狀態，避免兩邊重複推。
+2. 首頁 VIX 分時有兩套：page_cache `mini_VIX` 與合夥人 `/api/chart?code=TAIWANVIX&date=`；前端先讀 mini_VIX，之後可擇一保留。
+3. 上櫃回補完成後確認 `after_otc_backfill.log` 出現「重算完成」，再請用戶看主力分點前 20 名（會納入上櫃）。
+4. 後台其他 `.algo-gated` 區塊（判讀依據／葛蘭碧參數／支撐壓力 SPEC）文字仍在前端；要防窺可比照 algo_info 搬後端。
+5. 環境：本機 Bash 工具常出現「unexpected EOF」，指令改用 PowerShell；內建瀏覽器沒登入 Supabase，跑 SQL 用 Claude in Chrome（用戶已登入）或請用戶手動。
+
+---
+
+## 十七、排程總表與換帳號接手（2026-10-28 建立；之後新增或修改任何排程都必須更新本節）
+
+> 用戶要求：用戶可能改用另一個 Claude 帳號開 Claude Code。凡是幫用戶設定的排程都要寫在這裡，讓任何帳號的 Claude Code 都能看懂並自行啟動、重建。
+
+### A. 先搞清楚：排程跟 Claude 帳號無關
+- 網站資料排程全部是 **Windows 工作排程器** 的任務，掛在 Windows 使用者 `User` 底下，登入類型 Interactive。
+- 執行條件：**電腦開著且 Windows 使用者 `User` 已登入**（鎖定畫面可以，登出或關機就不跑）。部分任務設了「喚醒電腦執行」。
+- **不需要開 Claude Code，也跟登入哪個 Claude 帳號無關**。換 Claude 帳號不影響排程。
+- Claude Code 自己的排程（scheduled tasks）：2026-10-28 查過是**空的**，沒有任何綁在 Claude 帳號上的排程。之後若有人用 Claude 的排程功能設定，必須寫進本節並註明是哪個 Claude 帳號（那種排程才會跟帳號綁在一起）。
+- 雲端：GitHub Actions `.github/workflows/daily-cloud-jobs.yml`（prod 分支，設定台灣週一～五 20:30，實際常延遲到半夜 1～3 點），約 30 支只抓公開資料的程式（ETF 名錄／配息／受益人、法人、廣度、新聞、法說會、除權息…），電腦沒開時當備援；跟本機和 Claude 帳號都無關。連玩股網（擋雲端 IP、要登入）或用本機 10GB 資料庫的程式不能上雲端。
+- ⚠️ **雲端跑的是 prod 分支的程式碼**，而 uat 與 prod 共用同一個 Supabase。排程程式只修到 Andrew／uat 時，雲端仍用 prod 舊版寫同一個資料庫。2026-10-26、10-28 凌晨兩次清空 `etf_products` 就是 prod 舊版 `upload_etf.py` 造成（10/28 以單檔 hotfix 上 prod `abb78cb` 修好）。**用戶定案（10/28）：修到雲端也會跑的排程程式，要提醒用戶把該檔單獨上 prod**（乾淨 worktree 從 detached `origin/prod` 只換該檔、commit、`push origin HEAD:prod`，網站畫面不動）。
+
+### B. 本機 Windows 工作排程器任務（2026-10-28）
+| 任務名稱 | 時間 | 執行 | 內容 |
+|---|---|---|---|
+| `WantgooDailyScrape` | 週一～五 19:00（可喚醒） | `scripts\run_daily_job.bat` | 夜間主排程：分點、法人、收盤價、ETF、總經、廣度、快取等約 66 步 |
+| `AI_stock_Intraday` | 週一～五 08:55（可喚醒），常駐到 16:01 | `scripts\run_intraday.bat` | 盤中掃盤 `intraday_push.py --loop`（09:00–13:35 每 35 秒）；收盤後只記匯率每 5 分鐘到 16:00（10/28 起）；卡住 5 分鐘會自動重啟（10/29 起，見下方） |
+| `CodexHotTopicsHourly` | 週一～五 09:00 起每小時，共 5 小時 | `scripts\run_codex_topics.bat` | 話題族群（桌面版 Codex CLI） |
+| `AI_stock_news_feed` | 每天 06:30 起每 4 小時 | `scripts\run_news_feed.bat` | 每日新聞 |
+| `AI_stock_margin_catchup` | 週二～六 09:00 | `scripts\run_margin_catchup.bat` | 融資維持率補當日值 |
+| `AI_stock_taifex_catchup` | 週二～六 08:30 | `scripts\run_taifex_catchup.bat` | 期交所資料補跑 |
+| `BrokerRankingsWeekly` | 週六 03:00（可喚醒） | `scripts\run_rankings_weekly.bat` | 主力分點週排行＋股利 |
+
+- 每個任務的完整設定已匯出到 `scripts/scheduled_tasks/<任務名稱>.xml`，可直接用來重建。
+- 批次檔只能寫英文、CRLF 換行（中文會讓排程卡死）；**正在執行的 .bat 不能改**（cmd 邊跑邊讀檔），要等它跑完再換。
+- 2026-10-27 起各 .bat 的每一步改經 `scripts\office_step.py <角色> <程式>` 執行（AI 研究室打卡，exit code 原樣傳回，打卡失敗不影響排程）。`run_daily_job.bat` 的新版由 `scripts\office_swap_watch.ps1` 在 10/27 夜間排程結束後自動換上（已於 10/27 23:14 換好，66 步全部打卡），舊版備份為 `*.bat.bak_office`，紀錄在 `scripts\office_swap.log`。
+- **盤中排程自動重啟（2026-10-28 加，Andrew `2c7103e`＋`4da2bb9`）**：起因是 10/28 盤中程式 12:02 後卡住不動、沒有報錯。現在 `intraday_push.py` 有看門狗執行緒，主迴圈 5 分鐘（`STALL_SEC=300`）沒進展就強制結束、回傳 exit code 75；`run_intraday.bat` 收到 75 會等 10 秒重新啟動，一天最多 10 次（其他 exit code 照常結束）。每次重啟在 `D:\stock_data\intraday_push.log` 留一行 `[watchdog] ... restart N`，查問題先搜這個字。新版 .bat 由一次性監看程式 `intraday_swap_watch.ps1` 在 10/28 16:02 當天盤中跑完後換上，舊版備份 `scripts\run_intraday.bat.bak_watchdog`；工作排程器任務本身沒改，XML 不用重新匯出。
+
+### C. 任何帳號的 Claude Code 怎麼操作（PowerShell）
+- 查看全部：`Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\Microsoft\*' }`；看上次結果：`Get-ScheduledTaskInfo -TaskName WantgooDailyScrape`（LastTaskResult 0＝成功）。
+- 立刻執行一次：`Start-ScheduledTask -TaskName WantgooDailyScrape`（或 `schtasks /Run /TN WantgooDailyScrape`）。
+- 停用／啟用：`Disable-ScheduledTask` ／ `Enable-ScheduledTask -TaskName <名稱>`。
+- 重建（任務被刪或換電腦）：`schtasks /Create /TN <名稱> /XML scripts\scheduled_tasks\<名稱>.xml`。XML 內的 UserId 是這台電腦 `User` 的 SID；換 Windows 使用者或換電腦要加 `/RU <使用者>`，或先把 XML 的 `<UserId>` 改掉。
+- 修改後重新匯出：`Export-ScheduledTask -TaskName <名稱> | Out-File scripts\scheduled_tasks\<名稱>.xml -Encoding unicode`，並更新上表。
+- 長時間背景程式（例如回補）不要用 Claude 工具直接啟動：Claude Code 重開時會一起被關掉。改用 `Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{CommandLine='...'; CurrentDirectory='C:\Users\User\Desktop\AI_stock\scripts'}` 脫鉤啟動。
+
+### D. 一次性背景程式（不是排程，重開機就沒了）
+- 上櫃分點回補 `otc_backfill.py --worker 0/1`、回補後重算 `after_otc_backfill.py`：見第十六節 B。
+- `office_swap_watch.ps1`：等 10/27 夜間排程結束後換新版 `run_daily_job.bat`，已於 10/27 23:14 完成並結束。
+- `intraday_swap_watch.ps1`：等 10/28 盤中排程結束後換上有自動重啟的 `run_intraday.bat`，已於 10/28 16:02 完成並結束。

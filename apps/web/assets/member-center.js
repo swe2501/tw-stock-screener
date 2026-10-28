@@ -27,7 +27,7 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
   for(const selector of ['body>header .gs-brand','body>header .gs-edition']){const original=document.querySelector(selector);if(original){const clone=original.cloneNode(true);clone.removeAttribute('onclick');clone.removeAttribute('id');clone.querySelectorAll('[id],[onclick]').forEach(el=>{el.removeAttribute('id');el.removeAttribute('onclick');});if(clone.matches('a'))clone.addEventListener('click',e=>{e.preventDefault();goHome();});brandbar.append(clone);}}
   page.prepend(brandbar);
   const groups = [
-    ['帳號與服務', [['overview','會員總覽'],['profile','個人資料'],['security','登入與安全'],['notifications','通知'],['feedback','我的回饋'],['cases','案件紀錄'],['rules','規則與權益紀錄'],['privacy','資料與隱私'],['admin','管理核對台']]],
+    ['帳號與服務', [['overview','會員總覽'],['profile','個人資料'],['security','登入與安全'],['settings','會員設定'],['notifications','通知'],['feedback','我的回饋'],['cases','案件紀錄'],['rules','規則與權益紀錄'],['privacy','資料與隱私'],['admin','管理核對台']]],
     ['會員禮遇', [['benefits','會員權益'],['gifts','禮遇與優惠券'],['redeem','兌換優惠碼'],['referrals','邀請好友'],['tasks','任務與點數'],['wallet','點數帳戶'],['events','學院活動']]],
     ['研究與學習', [['learning','學習中心'],['favorites','我的自選'],['screen-calendar','選股日曆'],['strategy','策略工作台'],['workspace','研究筆記'],['trades','交易與目標'],['weekly','本週回顧']]]   // 2026-10-22 整理：交易紀錄＋我的目標合併成一個入口（頁內分頁切換）；研究週報改為本週回顧
   ];
@@ -107,6 +107,7 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
     else main.innerHTML='';
     if(profile&&window.AcademyCloud?.status().owner===profile.id&&window.AcademyCloud.status().state==='loading'){main.innerHTML='<section class="mc-card"><p>正在讀取帳號研究資料…</p></section>';return;}
     if(profile&&window.AcademyCloud?.status().state==='expired'){main.innerHTML='<section class="mc-card"><p>登入帳號已變更，請重新登入後繼續。本機資料已保留。</p><button data-login>重新登入</button></section>';return;}
+    if(current==='settings'&&window.FqiTour?.mountSettings){window.FqiTour.mountSettings(main);return;}
     if(window.AcademyMemberService?.render(current,{main,profile,go:open}))return;
     if(window.AcademyResearch?.render(current,{main,profile,onProfileChanged:p=>{profile=p;sync();},go:open}))return;
     if(window.AcademyTradeUI?.render(current,{main,profile,onProfileChanged:p=>{profile=p;sync();},go:open}))return;
@@ -160,7 +161,7 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
   });
   page.querySelector('[data-back]').addEventListener('click',()=>{if(history.state?.academyMember)history.back();else close();});
   addEventListener('resize',()=>{if(!page.hidden)positionUnderHeader();});
-  addEventListener('academy-identity-linked',()=>{if(localStorage.getItem('sb_token')){profile=null;open('security');}});
+  addEventListener('academy-identity-linked',e=>{if(localStorage.getItem('sb_token')){profile=null;const target=typeof e.returnHash==='string'&&e.returnHash.startsWith('#member/')?e.returnHash:location.hash;if(page.hidden||location.hash!==target)open(target.startsWith('#member/')?target.split('/')[1]:'security');else load();}});
   addEventListener('academy-public-navigation',()=>{if(!page.hidden)close();});
   addEventListener('popstate',()=>{if(window.AcademyNavigationLayers?.handlesPop())return;if(location.hash.startsWith('#member/')){if(page.hidden){oldOverflow=document.body.style.overflow;document.body.style.overflow='hidden';document.body.classList.add('mc-open');positionUnderHeader();page.hidden=false;}current=location.hash.split('/')[1]||'overview';render();}else if(!page.hidden)close();});
   page.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.tab||b.dataset.go)open(b.dataset.tab||b.dataset.go);if(b.hasAttribute('data-login')){if(history.state?.academyMember)history.back();else close();setTimeout(()=>window.openAuthModal?.('login'),0);}if(b.hasAttribute('data-clear')){removeLocal(draftKey());render();}});

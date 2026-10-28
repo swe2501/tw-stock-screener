@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
@@ -20,6 +20,8 @@
   <script src="assets/site-theme.js"></script>
   <script src="assets/w-pattern-export.js?v=20261024-1"></script>
   <script src="assets/w-pattern-overlay.js?v=20261025-2"></script>
+  <script src="assets/chart-ai-patterns.js?v=20261028-tri1"></script>
+  <link rel="stylesheet" href="assets/chart-ai-patterns.css?v=20261026-3">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -2204,6 +2206,7 @@
 <link rel="stylesheet" href="assets/sector-dashboard.css">
 <link rel="stylesheet" href="assets/member-share.css">
 <link rel="stylesheet" href="assets/member-signin.css?v=fqi21">
+<link rel="stylesheet" href="assets/member-signin-glass.css?v=5">
 <link rel="stylesheet" href="assets/member-strategy.css?v=owl2">
 <link rel="stylesheet" href="assets/member-trade.css">
 <link rel="stylesheet" href="assets/site-search.css?v=arrow1">
@@ -2360,7 +2363,7 @@
     <a class="mn-item" href="?view=home" onclick="if(window._showView){window._showView('home');return false;}">首頁</a>
     <a class="mn-item" onclick="_focusTab('overview')">今日焦點</a>
     <div class="mn-grp"><span class="mn-item">選股 <i>▾</i></span><div class="mn-menu">
-      <a onclick="_showView('screen')"> 掏金篩選器</a><a onclick="_showView('box')">箱型</a><a onclick="_showView('limitup')">上漲下跌亮燈區</a><a onclick="_showView('liq')"> 流動性排行</a><a onclick="_showView('sr')"> 壓力支撐逼近</a></div></div>
+      <a onclick="_showView('screen')"> 掏金篩選器</a><a onclick="_showView('box')">AI型態判斷</a><a onclick="_showView('limitup')">上漲下跌亮燈區</a><a onclick="_showView('liq')"> 流動性排行</a><a onclick="_showView('sr')"> 壓力支撐逼近</a></div></div>
     <div class="mn-grp"><span class="mn-item">題材族群 <i>▾</i></span><div class="mn-menu">
       <a class="nav-owner" data-member-feature="hottopics" onclick="_showView('hottopics')"> 話題</a><a onclick="_showView('themes')">題材列表</a><a onclick="_showView('sectors')">產業地圖</a><a onclick="_showView('groupbook')">集團作帳</a></div></div>
     <div class="mn-grp"><span class="mn-item">市場觀察 <i>▾</i></span><div class="mn-menu">
@@ -4065,16 +4068,27 @@
     @media(max-width:820px){.bx-list{grid-template-columns:1fr;}}
   </style>
   <div id="boxView" style="display:none">
-    <div class="tm-head"><h2> 箱型型態</h2><span class="sub" id="bxSub"></span></div>
-    <div class="bx-list" id="bxList"><div class="fc-empty">載入中…</div></div>
-    <div class="fc-note" id="bxNote"></div>
+    <header class="aps-hero"><div><div class="aps-eyebrow">PATTERN RESEARCH</div><h2>AI型態判斷</h2><p>找最新K棒附近、整理接近完成的型態，觀察準備突破或跌破的位置。</p><p id="aiPatternScope">讀取判讀範圍…</p></div></header>
+    <div id="aiPatternTabs" class="aps-tabs" role="tablist" aria-label="型態分類"></div>
+    <section id="aiPatternSavedPanel" role="tabpanel" aria-label="已保存的型態判讀">
+      <div class="aps-toolbar"><div><h3>判讀結果</h3><small id="aiPatternResultCount" aria-live="polite"></small></div>
+        <div id="aiPatternFilters" class="aps-filters"><input id="aiPatternSearch" type="search" placeholder="搜尋代號／股名" aria-label="搜尋型態股票"><select id="aiPatternPeriod" aria-label="篩選判讀週期"><option value="all">日K＋週K</option><option value="daily">僅日K</option><option value="weekly">僅週K</option></select><select id="aiPatternState" aria-label="篩選判讀狀態"><option value="ready">準備突破／跌破</option><option value="forming" selected>形成中</option><option value="confirmed">歷史W案例</option><option value="negative">歷史樣本・未見W</option></select></div>
+      </div>
+      <div id="aiPatternResults"></div>
+      <p class="aps-note">日K判讀120根；週K取可取得的三年資料。每張小圖是已判讀區段的轉折輪廓示意，實際價格請開啟K圖。型態為保存的研究結果，並非即時買進訊號；待複核結果不畫輔助線。</p>
+    </section>
+    <section id="aiPatternLegacyBox" role="tabpanel" aria-label="既有箱型資料" hidden>
+      <div class="aps-toolbar"><div><h3>箱型觀察</h3><small id="bxSub"></small></div></div>
+      <div class="bx-list" id="bxList"><div class="fc-empty">載入中…</div></div>
+      <div class="fc-note" id="bxNote"></div>
+    </section>
   </div>
   <script>
   (function(){
     var el=function(id){return document.getElementById(id);};
     function fmt(v){return v==null?'—':Number(v).toLocaleString(undefined,{maximumFractionDigits:2});}
     var TAG={FORMING:['整理中','form'],CONFIRMED_UP:['向上突破','up'],CONFIRMED_DOWN:['向下突破','dn']};
-    window._boxShow=function(){
+    window._boxLegacyShow=function(){
       var SB=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'', AK=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';
       var H={apikey:AK,Authorization:'Bearer '+AK};
       fetch(SB+'/rest/v1/box_patterns?select=code,status,upper_center,lower_center,upper_outer,lower_outer,breakout_date,breakout_direction,breakout_reason,data_date,window_start,window_end&order=status.asc,code.asc&limit=300',{headers:H}).then(function(r){return r.json();}).then(function(rows){
@@ -4350,6 +4364,7 @@
     <div class="ov-tabs" id="admTabs" style="margin-bottom:14px">
       <button class="on" type="button" data-t="members">會員管理</button>
       <button type="button" data-t="algo">算法公式</button>
+      <button type="button" data-t="office">AI 研究室</button>
       <button type="button" data-t="audit">稽核日誌</button>
       <button type="button" data-t="health" disabled title="Phase 2：排程/資料新鮮度">系統健康</button>
       <button type="button" data-t="usage" disabled title="Phase 2：需先加 usage_events">使用分析</button>
@@ -4383,7 +4398,7 @@
       var rows=ms.map(function(m){
         var opts=TORD.map(function(t){return '<option value="'+t+'"'+(m.tier===t?' selected':'')+'>'+TIER[t]+'</option>';}).join('');
         return '<tr data-uid="'+esc(m.id)+'">'
-          +'<td style="padding:6px 8px">'+esc(m.email||'—')+(m.is_admin?' <span style="font-size:10px;color:var(--accent);font-weight:800">管理員</span>':'')+'</td>'
+          +'<td style="padding:6px 8px">'+(m.email?esc(m.email):'<span style="color:var(--text-muted)">'+esc((/line/i.test(m.provider||'')?'LINE':(m.provider||'其他'))+' 登入'+(m.name?'：'+m.name:'')+'（無 Email）')+'</span>')+(m.is_admin?' <span style="font-size:10px;color:var(--accent);font-weight:800">管理員</span>':'')+'</td>'
           +'<td style="padding:6px 8px">'+(m.is_admin?'<b style="color:var(--accent)">⚙ 管理者</b><div style="font-size:10px;color:var(--text-muted)">全功能＋後台</div>':'<select class="adm-tier" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--input-bg,var(--surface));color:var(--text)">'+opts+'</select>')+'</td>'
           +'<td style="padding:6px 8px;white-space:nowrap">'+(m.expires_at?dt(m.expires_at):'<span style="color:var(--text-muted)">—</span>')+'</td>'
           +'<td style="padding:6px 8px;white-space:nowrap;font-size:12px;color:var(--text-muted)">'+dt(m.created_at)+'</td>'
@@ -4483,8 +4498,10 @@
     function switchTab(t){
       _tab=t;
       el('admTabs').querySelectorAll('button').forEach(function(b){b.classList.toggle('on',b.dataset.t===t);});
+      if(window.AdminOffice) window.AdminOffice.hide();                 // 離開 AI 研究室就停止動畫與輪詢
       if(t==='members')loadMembers();
       else if(t==='algo')renderAlgo();
+      else if(t==='office'){ if(window.AdminOffice){ window.AdminOffice.show(el('admBody'),post); el('admNote').innerHTML='<b>說明</b> 角色狀態來自本機排程打卡（scripts/office_step.py），每分鐘自動更新；工作超過時限或背景回報中斷會標「卡住」。'; } else el('admBody').innerHTML='<div class="fc-empty">AI 研究室載入中，請稍候再點一次</div>'; }
       else if(t==='audit')renderAudit();
       else el('admBody').innerHTML='<div class="fc-empty">此分頁規劃中（見 docs/admin-backend-spec.md，Phase 2）。</div>';
     }
@@ -6467,6 +6484,8 @@
     #etxConTable .etx-tbl tbody tr{transition:box-shadow .18s ease,transform .18s ease;}
     #etxConTable .etx-tbl tbody tr:hover{box-shadow:inset 3px 0 0 color-mix(in srgb,var(--accent) 62%,transparent);}
     #etxConTable td.hp-up,#etxConTable td.hp-dn{font-weight:800;}
+    /* 集中加碼區的提示文字（.fc-empty 是全站載入骨架、文字透明，只留給「載入中」用） */
+    .etx-con-msg{padding:18px 14px;border-radius:8px;background:var(--surface2);color:var(--text-muted);font-size:13px;text-align:center;}
     .etx-list-wrap{overflow:auto;border:1px solid var(--border);border-radius:10px;}
     .etx-list{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums;}
     .etx-list th{padding:9px 11px;background:var(--surface2);color:var(--text-muted);font-size:10.5px;text-align:right;white-space:nowrap;}
@@ -6587,7 +6606,7 @@
     }
     function conTable(rows, note){
       var buy=conDir==='buy', action=buy?'加碼':'減碼';
-      if(!rows.length) return '<div class="fc-empty">此期間無 ≥2 檔主動 ETF 同步'+action+'的個股。</div>';
+      if(!rows.length) return '<div class="etx-con-msg">'+(conWin==='today'?'待收盤後更新':'此期間無 ≥2 檔主動 ETF 同步'+action+'的個股。')+'</div>';
       return '<div style="overflow-x:auto"><table class="etx-tbl"><thead><tr><th class="l">#</th><th class="l">股票</th><th>'+action+'(張)</th><th>主動ETF</th><th class="l">同步'+action+'的 ETF</th></tr></thead><tbody>'+
         rows.map(function(r,i){return '<tr><td class="l">'+(i+1)+'</td><td class="l" style="cursor:pointer" onclick="_openStock(\''+r.code+'\',\''+esc(r.name||'')+'\')"><b>'+esc(r.name||'')+'</b> <span style="color:var(--text-muted)">'+r.code+'</span></td><td class="'+(buy?'hp-up':'hp-dn')+'">'+(buy?'+':'−')+m0(Math.abs(r.lots))+'</td><td><b>'+r.etfCount+'</b> 檔</td><td class="l"><div class="etx-code-list">'+r.etfs.map(function(code){return '<button type="button" class="etx-code-chip" onclick="window._etxOpen(\''+esc(code)+'\')" title="開啟 '+esc(code)+' ETF 詳細資料">'+esc(code)+'</button>';}).join('')+'</div></td></tr>';}).join('')+
         '</tbody></table></div><div style="font-size:11px;color:var(--text-muted);margin-top:8px">'+note+'</div>';
@@ -6607,7 +6626,7 @@
         if(CON.flow===null){box.innerHTML='<div class="fc-empty">載入中…</div>';return;}
         var dates=[];var seen={};(CON.flow||[]).forEach(function(r){if(!seen[r.data_date]){seen[r.data_date]=1;dates.push(r.data_date);}});
         dates.sort().reverse(); dates=dates.slice(0,n);
-        if(dates.length<n){box.innerHTML='<div class="fc-empty">近 '+n+' 日資料累積中（目前 '+dates.length+' 個交易日；系統每日快照，滿 '+n+' 日後即顯示）。</div>';return;}
+        if(dates.length<n){box.innerHTML='<div class="etx-con-msg">近 '+n+' 日資料累積中（目前 '+dates.length+' 個交易日；系統每日快照，滿 '+n+' 日後即顯示）。</div>';return;}
         var dset={}; dates.forEach(function(d){dset[d]=1;});
         var agg={};
         (CON.flow||[]).forEach(function(r){if(!dset[r.data_date])return;var k=r.stock_code;if(!agg[k])agg[k]={code:k,name:r.stock_name,lots:0,etfs:{}};agg[k].lots+=(r.shares_delta||0)/1000;(r.etf_codes||[]).forEach(function(e){agg[k].etfs[e]=1;});});
@@ -6618,7 +6637,7 @@
     window._etxConDir=function(d){conDir=d;[].forEach.call(document.querySelectorAll('#etxConDir button'),function(b){b.classList.toggle('on',b.getAttribute('data-d')===d);});renderConsensus();};
     window._etxConWin=function(w){conWin=w;[].forEach.call(document.querySelectorAll('#etxConWin button'),function(b){b.classList.toggle('on',b.getAttribute('data-w')===w);});renderConsensus();};
     function loadConsensus(){
-      fetch(ACTIVE_JSON).then(function(r){return r.json();}).then(function(j){CON.today=j||{};if(conWin==='today')renderConsensus();}).catch(function(){CON.today={};if(conWin==='today'&&el('etxConTable'))el('etxConTable').innerHTML='<div class="fc-empty">今日集中'+(conDir==='buy'?'加碼':'減碼')+'讀取失敗</div>';});
+      fetch(ACTIVE_JSON).then(function(r){return r.json();}).then(function(j){CON.today=j||{};if(conWin==='today')renderConsensus();}).catch(function(){CON.today={};if(conWin==='today'&&el('etxConTable'))el('etxConTable').innerHTML='<div class="etx-con-msg">今日集中'+(conDir==='buy'?'加碼':'減碼')+'讀取失敗</div>';});
       Q('active_etf_flow?select=data_date,stock_code,stock_name,shares_delta,etf_codes&order=data_date.desc&limit=3000').then(function(a){CON.flow=Array.isArray(a)?a:[];if(conWin!=='today')renderConsensus();}).catch(function(){CON.flow=[];});
     }
 
@@ -10287,6 +10306,7 @@
         </script>
         <div id="sma20GroupPanel" class="chart-feature-panel" style="display:none;padding:7px 12px;border-top:1px solid var(--border);font-size:12px;color:var(--text);flex-wrap:wrap;gap:6px;align-items:center"></div>
         <div id="aiBuyPanel" class="chart-feature-panel" style="display:none;padding:12px 14px;border-top:1px solid var(--border);font-size:12.5px;color:var(--text)"></div>
+        <div id="aiPatternPeriodHint" hidden aria-live="polite"></div>
         <div id="brokerFilterPanel" class="chart-feature-panel" style="display:none;padding:12px 14px 10px;border-top:1px solid var(--border);font-size:12px;color:var(--text)"></div>
         <div id="mkPanel" class="chart-feature-panel" style="padding:6px 8px;border-top:1px solid var(--border);font-size:12px;color:var(--text)">
           <a onclick="_mkTogglePanel()" style="cursor:pointer;text-decoration:none;user-select:none"><span id="mkArrow" style="color:var(--text-muted);font-size:11px;margin-right:4px">▸</span><b style="color:#5a78aa">大盤K</b></a>
@@ -11595,9 +11615,7 @@
       panel.style.display = 'flex';
     }
 
-    // ── AI 判定買點（骨架，2026-10-17）──────────────────────────────────────
-    // 點按鈕開/關面板；開啟時：先讀 localStorage 當日快取 → 無則呼叫後端 /api/screen?stat=aibuy
-    // 後端有 AI 金鑰（Vercel 環境變數）就回真的判讀，沒有就回假資料（stub:true，面板會標「假資料示意」）。2026-10-17
+    // AI 判定：只讀已保存的視覺判讀；開圖不呼叫付費模型。
     window._aiBuyOpen = false;
     window._aiBuyToggle = function () {
       window._aiBuyOpen = !window._aiBuyOpen;
@@ -11606,24 +11624,25 @@
       if (btn) btn.classList.toggle('is-open', window._aiBuyOpen);
       const panel = document.getElementById('aiBuyPanel');
       if (!panel) return;
-      if (!window._aiBuyOpen) { panel.style.display = 'none'; return; }
+      if (!window._aiBuyOpen) { panel.style.display = 'none'; window.AcademyVisualPatterns?.setOpen(false,_visualPatternContext); return; }
       panel.style.display = 'block';
       _aiBuyLoad();
     };
-    function _aiBuyLoad(force) {
-      const panel = document.getElementById('aiBuyPanel'); if (!panel) return;
-      const code = currentCode; if (!code) { panel.innerHTML = '<div class="ov-empty">請先選一檔股票</div>'; return; }
-      const today = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
-      const key = 'aibuy_' + code + '_' + today;
-      if (!force) {
-        try { const c = JSON.parse(localStorage.getItem(key) || 'null'); if (c && c.verdict && !c.stub) { _aiBuyRender(c); return; } } catch (e) {}
-      }
-      panel.innerHTML = '<div class="ov-empty">AI 判讀中…</div>';
-      const hb = window.__API;
-      fetch(hb + '/api/screen?stat=aibuy&code=' + encodeURIComponent(code))
-        .then(r => r.json())
-        .then(d => { if (d && d.verdict && !d.stub && !d.error) { try { localStorage.setItem(key, JSON.stringify(d)); } catch (e) {} } _aiBuyRender(d); })   // 假資料／錯誤不快取，金鑰設好後立刻生效
-        .catch(() => { panel.innerHTML = '<div class="ov-empty">AI 判讀暫時無法取得，請稍後再試。</div>'; });
+    function _visualPatternContext() {
+      return {code:currentCode,period:window._chartPeriodKey||'day',adjusted:!!window._chartAdjusted,
+        chart:chartInstance,series:candleSeriesRef,
+        switchPeriod:tf=>{if(tf==='weekly')loadWeeklyChart();else loadDailyChart();},loadHistory:range=>_loadPeriodChart('week',false,range)};
+    }
+    window._openSavedPatternChart=function(code,name,timeframe){
+      openChart(String(code),name||'');
+      if(timeframe==='weekly')loadWeeklyChart();
+      window._aiBuyOpen=true;window._chartLayerPanel('ai',true);
+      const panel=document.getElementById('aiBuyPanel');if(panel)panel.style.display='block';
+      window.AcademyVisualPatterns?.setOpen(true,_visualPatternContext);
+      const tools=document.querySelector('.chart-fit-tools');if(tools)tools.open=true;
+    };
+    function _aiBuyLoad() {
+      window.AcademyVisualPatterns?.setOpen(true,_visualPatternContext);
     }
     function _aiBuyRender(d) {
       const panel = document.getElementById('aiBuyPanel'); if (!panel || !d) return;
@@ -14186,7 +14205,7 @@
     document.addEventListener('fullscreenchange', function(){ ['ddLineMenu','ddShapeMenu'].forEach(function(id){ const d = document.getElementById(id); if (d) d.classList.remove('open'); });
       const m = document.getElementById('chartModal'); if (m && m.classList.contains('kfull') && !document.fullscreenElement) _setChartFull(false); });
 
-    function closeChart() {window.WPatternOverlay?.clear();_stopBrokerPulse();window.AcademyChartTools?.resetSelection();
+    function closeChart() {window.AcademyVisualPatterns?.clear();window.WPatternOverlay?.clear();_stopBrokerPulse();window.AcademyChartTools?.resetSelection();
       const wasMemberChart=document.body.classList.contains('mc-chart-open');
       if(document.getElementById('chartModal').classList.contains('etx-embedded')){window._etxTab('overview');return;}
       _chartRequestId++;
@@ -14570,6 +14589,7 @@
     function _wkKey(d) { const dt = new Date(d + 'T00:00:00Z'); const day = dt.getUTCDay() || 7; dt.setUTCDate(dt.getUTCDate() + 4 - day); const ys = new Date(Date.UTC(dt.getUTCFullYear(), 0, 1)); const wk = Math.ceil((((dt - ys) / 86400000) + 1) / 7); return dt.getUTCFullYear() + '-W' + wk; }
 
     function _loadChartUrl(url, subtitle, agg) {
+      window.AcademyVisualPatterns?.clear();
       window.WPatternOverlay?.clear();
       window._academyChartSnapshot={code:currentCode,period:subtitle,url};
       const requestId=++_chartRequestId;
@@ -14614,11 +14634,12 @@
     function _syncAdjustedPeriodButtons(){
       Object.entries(_periodButtons).forEach(([key,def])=>{const button=document.getElementById(def[0]);if(!button)return;const adjusted=window._chartPeriodKey===key&&!!window._chartAdjusted;button.textContent=(adjusted?'還原':'')+def[1];button.dataset.adjusted=String(adjusted);button.title='選取'+def[1]+'；同一週期再按一次，切換一般／還原K線';button.setAttribute('aria-label',button.textContent+'，再次點擊切換'+(adjusted?'一般':'還原')+'K線');});
     }
-    function _loadPeriodChart(key,adjusted){
+    function _loadPeriodChart(key,adjusted,range='3y'){
       if(!_periodButtons[key])return;window._chartMode='candle';window._chartPeriodKey=key;window._chartAdjusted=!!adjusted;_setKlineChromeVisible(true);_syncAdjustedPeriodButtons();
       const def=_periodButtons[key],aggregate=key==='week'?d=>_aggCandles(d,_wkKey):key==='month'?d=>_aggCandles(d,t=>String(t).slice(0,7)):key==='year'?d=>_aggCandles(d,t=>String(t).slice(0,4)):null;
       _setDailyBtnActive(document.getElementById(def[0]));
-      _loadChartUrl(`${window.__API}/api/chart?code=${encodeURIComponent(currentCode)}&range=3y&interval=1d&${adjusted?'adj=1':'raw=1'}`,(adjusted?'還原':'')+def[1],aggregate);
+      const historyRange=range==='5y'?'5y':'3y';
+      _loadChartUrl(`${window.__API}/api/chart?code=${encodeURIComponent(currentCode)}&range=${historyRange}&interval=1d&${adjusted?'adj=1':'raw=1'}`,(adjusted?'還原':'')+def[1],aggregate);
     }
     function _toggleAdjustedPeriod(key){const same=window._chartMode==='candle'&&window._chartPeriodKey===key;_loadPeriodChart(key,same?!window._chartAdjusted:false);}
     function loadDailyChart(){_loadPeriodChart('day',false);}
@@ -15091,6 +15112,7 @@
         title:'',   /* 2026-10-22 不在圖內寫「現價」，避免蓋住最新 K 棒；右軸價格標籤與虛線保留 */priceLineWidth:1,priceLineStyle:LightweightCharts.LineStyle.Dotted,
       });
       candleSeriesRef.setData(candles);
+      window.AcademyVisualPatterns?.refresh(_visualPatternContext);
       window._mainCandleSeries = candleSeriesRef;   // 供現價線開關 _togglePriceLine 使用
       try { var _plb = document.querySelector('[data-layer="pl"]'); if (_plb) _plb.setAttribute('aria-pressed',String(window._priceLineOn !== false)); } catch (e) {}
       chartInstance._xhairSeries = candleSeriesRef;
@@ -17237,7 +17259,8 @@
       finishHomeScroll();
       cancelAnimationFrame(scrollFrame);
       scrollFrame=requestAnimationFrame(()=>{
-        const smooth=animate&&scrollY>0&&!matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const tour=document.getElementById('obRoot');
+        const smooth=animate&&!(tour&&!tour.hidden)&&scrollY>0&&!matchMedia('(prefers-reduced-motion: reduce)').matches;
         if(smooth){
           const events=new AbortController(),deadline=performance.now()+5000;
           document.body.classList.add('pro-home-scrolling');
@@ -17999,7 +18022,7 @@
 <script src="assets/sector-dashboard-model.js" defer></script>
 <script src="assets/sector-dashboard.js" defer></script>
 <script src="assets/member-invitation.js?v=1" defer></script>
-<script src="assets/member-identity.js?v=inbox1" defer></script>
+<script src="assets/member-identity.js?v=home2" defer></script>
 <script src="assets/member-task-guide.js?v=1" defer></script>
 <script src="assets/member-missions.js?v=taskbulk1" defer></script>
 <script src="assets/member-share.js?v=invite4" defer></script>
@@ -18034,18 +18057,19 @@
 <script src="assets/member-service-center.js?v=1" defer></script>
 <link rel="stylesheet" href="assets/chart-research-tools.css?v=tools22">
 <script src="assets/chart-research-tools.js?v=tools19" defer></script>
-<link rel="stylesheet" href="assets/brand-footer.css?v=5">
+<link rel="stylesheet" href="assets/brand-footer.css?v=6">
 <script src="assets/brand-footer.js?v=5" defer></script>
 <link rel="stylesheet" href="assets/market-panel-layout.css?v=8">
-<link rel="stylesheet" href="assets/member-notification-inbox.css?v=paging5">
+<link rel="stylesheet" href="assets/member-notification-inbox.css?v=glass6">
 <script src="assets/member-notification-inbox.js?v=paging3" defer></script>
-<script src="assets/member-center.js?v=goals-route1" defer></script>
-<script src="assets/member-signin.js?v=invite2" defer></script>
+<script src="assets/member-center.js?v=guide-settings-goals2" defer></script>
+<script src="assets/member-signin.js?v=invite-reset7" defer></script>
 <script src="assets/member-private-screen.js?v=asof4" defer></script>
 <link rel="stylesheet" href="assets/site-readability.css?v=futures-history3">
 <link rel="stylesheet" href="assets/foreign-cost-card.css?v=direction4">
 <script src="assets/foresight-brand.js?v=fqi28" defer></script>
-<link rel="stylesheet" href="assets/research-polish.css?v=13">
+<link rel="stylesheet" href="assets/research-polish.css?v=14">
+<link rel="stylesheet" href="assets/site-interactions.css?v=1">
 <link rel="stylesheet" href="assets/focus-rankings.css?v=5">
 <script src="assets/focus-rankings.js?v=5" defer></script>
 <link rel="stylesheet" href="assets/screen-log.css?v=records-only13-calendar-clean22">
@@ -18055,8 +18079,9 @@
 <link rel="stylesheet" href="assets/broker-workspace.css?v=5">
 <script src="assets/chart-viewport-fit.js?v=22" defer></script>
 <script src="assets/screen-inline-calendar.js?v=records-only13" defer></script>
-<link rel="stylesheet" href="assets/onboarding-tour.css?v=7">
-<script src="assets/onboarding-tour.js?v=10" defer></script>
+
+<link rel="stylesheet" href="assets/onboarding-tour.css?v=mist-edge-mcopen-20261027">
+<script src="assets/onboarding-tour.js?v=mist-edge-20261026" defer></script>
 <link rel="stylesheet" href="assets/zhenming-hidden.css?v=6">
 <script src="assets/zhenming-hidden.js?v=5" defer></script>
 <script src="assets/screen-log.js?v=calendar-direct31" defer></script>
@@ -18064,7 +18089,8 @@
 <script src="assets/member-quick-menu.js?v=tier6" defer></script>
 <script src="assets/navigation-layers.js?v=logo-home20" defer></script>
 <link rel="stylesheet" href="assets/home-market-intraday.css?v=25">
-<script src="assets/home-market-intraday.js?v=12" defer></script>
+<script src="assets/home-market-intraday.js?v=13" defer></script>
+<script src="assets/admin-office.js?v=3" defer></script>
 <footer id="foresightFooter" aria-label="先見網站頁尾">
       <div class="fs-source"><div>本站依各功能使用臺灣證券交易所、證券櫃檯買賣中心、臺灣期貨交易所、集保結算所及其他公開資料整理市場資訊；來源、行情日期與更新頻率依各頁標示，部分內容為盤後或延遲資料。數據可能因公告更正、休市或來源異常而調整，請以原始公告核對。圖表、歷史統計與工具結果供學習及研究參考，歷史表現不代表未來結果；不同資料口徑與估算方式可能產生差異。</div></div>
       <div class="fs-footer-inner">
@@ -18076,7 +18102,7 @@
             <button type="button" data-footer-info="help">使用說明</button>
             <a href="#member/feedback" data-footer-member="feedback">聯絡我們</a>
           </nav>
-          <div class="fs-footer-brand">先見 <span>FORESIGHT</span><small>盤後研究院 · QUANT</small></div>
+          <div class="fs-footer-lockup"><img class="fs-footer-logo" src="assets/brand/foresight-owl-dark-book-light.png?v=fqi33" alt="先見貓頭鷹 Logo" width="80" height="54"><div class="fs-footer-brand">先見 <span>FORESIGHT</span><small>盤後研究院 · QUANT</small></div></div>
           <p class="fs-copyright">© 2026 先見 FORESIGHT</p>
         </div>
         <div class="fs-footer-community">
@@ -18098,5 +18124,12 @@
 <link rel="stylesheet" href="assets/exhibition-calendar.css?v=compact-scroll-1">
 <script src="assets/exhibitions-data.js?v=20261024" defer></script>
 <script src="assets/exhibition-calendar.js?v=localfix-3" defer></script>
+<link rel="stylesheet" href="assets/responsive-layout.css?v=1">
+<link rel="stylesheet" href="assets/ai-pattern-screen.css?v=20261026-1">
+<script src="assets/ai-pattern-screen.js?v=20261028-tri1" defer></script>
+<link rel="stylesheet" href="assets/pattern-admin-review.css?v=20261027-1">
+<script src="assets/pattern-admin-review.js?v=20261027-6" defer></script>
+<link rel="stylesheet" href="assets/brand-arrival.css?v=35">
+<script src="assets/brand-arrival.js?v=34" defer></script>
 </body>
 </html>
