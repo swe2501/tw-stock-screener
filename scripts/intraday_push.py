@@ -9,7 +9,7 @@ _INTRADAY，盤後行為與現狀 100% 相同。
 
 用法：
   python scripts/intraday_push.py            # 單次：盤中才動作，非盤中直接結束
-  python scripts/intraday_push.py --loop      # 常駐：盤中每 90 秒一輪，收盤自動結束
+  python scripts/intraday_push.py --loop      # 常駐：盤中每 35 秒一輪；13:35 收盤後只記匯率（每 5 分鐘、到 16:00），16:00 後結束
   python scripts/intraday_push.py --force      # 不檢查時段，強制跑一次（測試）
 """
 import sys
@@ -42,6 +42,7 @@ if sys.stdout and hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(errors="replace")
 
 INTERVAL = 35                                      # 每輪間隔（秒）；全市場一輪盤中 ~28-30 秒，故 ~35 秒為實際極限
+FX_AFTER_CLOSE_INTERVAL = 300                      # 股市收盤後（13:35–16:00）只記匯率，每 5 分鐘一筆
 TZ = datetime.timezone(datetime.timedelta(hours=8))
 MIS = "https://mis.twse.com.tw/stock/api/getStockInfo.jsp"
 MIS_HEADERS = {"User-Agent": "Mozilla/5.0",
@@ -215,7 +216,7 @@ def _record_fx_index(env):
     try:
         import ssl as _ssl, urllib.request as _ur
         now = _now()
-        if now.hour < 9 or now.hour >= 16:                          # 僅台北匯市盤時段
+        if not (9 * 60 <= now.hour * 60 + now.minute <= 16 * 60):  # 僅台北匯市盤時段（含 16:00 收盤那筆）
             return
         ctx = _ssl.create_default_context(); ctx.check_hostname = False; ctx.verify_mode = _ssl.CERT_NONE
         raw = _ur.urlopen(_ur.Request(
@@ -311,10 +312,21 @@ def main():
     print("[intraday] 常駐模式啟動（盤中每 %d 秒一輪）" % INTERVAL)
     l = o = None
     uni_ts = 0.0
+    fx_slot = None
     while True:
         if not _in_session():
-            if _now().hour >= 14:
-                print("[intraday] 已過 14:00，收盤結束常駐")
+            now = _now()
+            hm = now.hour * 60 + now.minute
+            # 2026-10-28 股市收盤後只記匯率（台北匯市到 16:00），對齊每 5 分鐘整點一筆（含 16:00 收盤），首頁匯率分時才看得到收盤
+            if now.weekday() < 5 and 13 * 60 + 35 < hm <= 16 * 60:
+                slot = hm // (FX_AFTER_CLOSE_INTERVAL // 60)
+                if slot != fx_slot:
+                    _record_fx_index(env)
+                    fx_slot = slot
+                time.sleep(30)
+                continue
+            if now.hour >= 16:
+                print("[intraday] 已過 16:00（匯市收盤），結束常駐")
                 break
             time.sleep(30)
             continue
