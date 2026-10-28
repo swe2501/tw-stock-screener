@@ -33,54 +33,62 @@
   function enterStage(){if(stage)return;stage=true;if(pose.on)setTimeout(measureHead,1500);video().pause();root.querySelector('.fa-stage').setAttribute('aria-hidden','false');root.classList.add('fa-stage-on');root.querySelector('[data-skip]').hidden=true;scheduleBlink();idleLife();startAtmosphere()}
   // 先見貓頭鷹動畫引擎（v34）：所有動作都是 AI 影片／光流補間拆出的連續畫格，canvas 繪製並混合相鄰兩格。
   // 上中下三排各自可連續轉頭；換排時先轉回正中，再走「抬頭 lift／低頭 drop」連續畫格，不會跳。
-  const OWL = {base:'assets/arrival/owl/clips/', v:'1', clips:{"turn":{"n":44,"mid":22,"rect":[100,0]},"up":{"n":50,"mid":21,"rect":[100,0]},"down":{"n":55,"mid":26,"rect":[100,0]},"lift":{"n":24,"rect":[100,0]},"tilt":{"n":48,"rect":[100,0],"fps":18},"happy":{"n":48,"rect":[100,0],"fps":18},"wave":{"n":56,"rect":[138,16],"fps":18,"base":"wave","noeyes":true},"surprise":{"n":14,"rect":[100,0],"dur":[0.22,0.6,0.5]},"blink":{"n":5,"rect":[100,0],"dur":[0.07,0.03,0.1]},"drop":{"n":10,"rect":[100,0]}}, connect:{up:'lift', down:'drop'}};
-  const pose = {on:false, lastMove:0, hoverEnter:false, expr:'', exprTimer:0, idleTimer:0, head:{x:0,y:0,w:1}, gaze:{row:'mid', dx:0}, cur:{clip:'turn', pos:0, vel:0}, act:null, pending:null, bm:{}, eb:{}, ghost:0, ctx:null, ectx:null, gc:null, gec:null, idleGaze:null};
+  const OWL = {base:'assets/arrival/owl/clips/', v:'2', clips:{"turn":{"n":44,"mid":22,"rect":[100,0]},"up":{"n":50,"mid":21,"rect":[100,0]},"down":{"n":55,"mid":26,"rect":[100,0]},"tilt":{"n":48,"rect":[100,0],"fps":18},"happy":{"n":48,"rect":[100,0],"fps":18},"wave":{"n":56,"rect":[138,16],"fps":18,"base":"wave","noeyes":true},"surprise":{"n":14,"rect":[100,0],"dur":[0.22,0.6,0.5]},"blink":{"n":5,"rect":[100,0],"dur":[0.07,0.03,0.1]}}, v2:1};
+  const pose = {on:false, lastMove:0, hoverEnter:false, expr:'', exprTimer:0, idleTimer:0, head:{x:0,y:0,w:1}, gaze:{row:'mid', dx:0}, nav:{u:0,v:4,vu:0,vv:0}, mode:'gaze', grid:null, geb:null, gridLoaded:false, offA:null, offB:null, act:null, pending:null, bm:{}, eb:{}, ghost:0, ctx:null, ectx:null, gc:null, gec:null, idleGaze:null};
+  // v35 視線導航：上中下三排之間預先補好「中間 2/3 角度」的過渡畫格（clips/grid），頭直接斜向移動，不必回正中間
+  const GRID={cols:13, band:.5};
   function clipReady(n){const c=OWL.clips[n];return !!(c&&pose.bm[n]&&pose.bm[n].filter(Boolean).length===c.n)}
-  function rowClip(r){return r==='up'?'up':r==='down'?'down':'turn'}
+  function gridReady(){return !!(pose.grid&&pose.gridLoaded)}
   function measureHead(){const r=owl.getBoundingClientRect(),o=root.getBoundingClientRect();pose.head={x:r.left-o.left+r.width/2,y:r.top-o.top+r.height*.3,w:r.width||1}}
   function gazeFrom(px,py){const dx=(px-pose.head.x)/pose.head.w,dy=(py-pose.head.y)/pose.head.w,g=pose.gaze;let row=g.row;
     if(pose.hoverEnter)row='down';else if(dy<(row==='up'?-.24:-.36))row='up';else if(dy>(row==='down'?.42:.58))row='down';else if(dy>-.2&&dy<.36)row='mid';
-    if(row!=='mid'&&!clipReady(rowClip(row))||(row!=='mid'&&!clipReady(OWL.connect[row])))row='mid';g.row=row;g.dx=dx}
-  function idxFor(clip,dx){const c=OWL.clips[clip],t=Math.max(-1,Math.min(1,dx/.95));return c.mid+(t<0?t*c.mid:t*(c.n-1-c.mid))}
-  function swap(clip,pos){if(pose.cur.clip!==clip){snapshot();pose.cur.clip=clip}pose.cur.pos=pos;pose.cur.vel=0}
+    if(row!=='mid'&&(!clipReady(row)||!gridReady()))row='mid';g.row=row;g.dx=dx}
+  const LV={up:0,mid:4,down:8};
+  function spr(o,k,vk,target,dt,stiff){const t=Math.min(dt,40)/1000,d=2*Math.sqrt(stiff)*1.02;o[vk]+=((target-o[k])*stiff-o[vk]*d)*t;o[k]+=o[vk]*t;if(Math.abs(target-o[k])<(k==='v'?.08:.004)){o[k]=target;o[vk]=0}}
+  function stepGaze(dt){const g=pose.gaze,n=pose.nav,tu=Math.max(-1,Math.min(1,g.dx/.95)),tv=LV[g.row],B=GRID.band,onRow=n.v===0||n.v===4||n.v===8,need=Math.abs(n.v-tv)>.001;
+    const uT=(need||!onRow)?Math.max(-B,Math.min(B,tu)):tu;spr(n,'u','vu',uT,dt,380);
+    if(!onRow||need){if(Math.abs(n.u)<=B+.16){spr(n,'v','vv',tv,dt,360);const lo=Math.floor(n.v),hi=Math.ceil(n.v);if(lo!==hi&&(lo%4===0&&Math.abs(n.v-lo)<.003))n.v=lo;if(hi%4===0&&Math.abs(n.v-hi)<.003)n.v=hi}else n.vv=0}
+    if(!(n.v===0||n.v===4||n.v===8))n.u=Math.max(-B,Math.min(B,n.u))}
+  function rowClipOf(l){return l===0?'up':l===8?'down':'turn'}
+  function paintRow(ctx,l,u,eyes){
+    if(l%4===0){const name=rowClipOf(l),c=OWL.clips[name],L=eyes?pose.eb[name]:pose.bm[name];if(!L)return;const f=c.mid+u*(u<0?c.mid:(c.n-1-c.mid));blend(ctx,L,f,c.n,c.rect)}
+    else{const G=eyes?pose.geb:pose.grid,f=(u+GRID.band)/(2*GRID.band)*(GRID.cols-1),i=Math.max(0,Math.min(GRID.cols-1,Math.floor(f))),j=Math.min(GRID.cols-1,i+1),a=f-i,[x,y]=OWL.clips.turn.rect;const A=G[i]&&G[i][l],Bq=G[j]&&G[j][l];if(A)ctx.drawImage(A,x,y);if(a>.01&&Bq&&j!==i){ctx.globalAlpha=a;ctx.drawImage(Bq,x,y);ctx.globalAlpha=1}}}
+  function blend(ctx,L,f,n,rect){let i=Math.floor(f),a=f-i;i=Math.max(0,Math.min(n-1,i));const j=Math.min(n-1,i+1),[x,y]=rect;if(L[i])ctx.drawImage(L[i],x,y);if(a>.01&&L[j]&&j!==i){ctx.globalAlpha=a;ctx.drawImage(L[j],x,y);ctx.globalAlpha=1}}
+  function paintGaze(ctx,eyes,off){const n=pose.nav,l0=Math.floor(n.v),l1=Math.ceil(n.v),fv=n.v-l0;
+    if(!eyes)ctx.drawImage(pose.bm.__base_head,0,0);
+    if(l0===l1||fv<.01){paintRow(ctx,l0,n.u,eyes);return}
+    const oc=off.getContext('2d');oc.clearRect(0,0,800,800);paintRow(oc,l0,n.u,eyes);ctx.drawImage(off,0,0);oc.clearRect(0,0,800,800);paintRow(oc,l1,n.u,eyes);ctx.globalAlpha=fv;ctx.drawImage(off,0,0);ctx.globalAlpha=1}
+  function swapTo(mode){if(pose.mode!==mode)snapshot();pose.mode=mode}
   function snapshot(){if(!pose.gc)return;[[pose.gc,pose.ctx],[pose.gec,pose.ectx]].forEach(([g,c])=>{const x=g.getContext('2d');x.clearRect(0,0,800,800);x.drawImage(c.canvas,0,0)});pose.ghost=1}
-  function spring(c,target,dt,stiff){const k=Math.min(dt,40)/1000,d=2*Math.sqrt(stiff)*1.04;c.vel+=((target-c.pos)*stiff-c.vel*d)*k;c.pos+=c.vel*k;if(Math.abs(target-c.pos)<.004&&Math.abs(c.vel)<.02){c.pos=target;c.vel=0;return true}return false}
-  function stepNav(dt){const c=pose.cur,g=pose.gaze,want=rowClip(g.row);
-    if(c.clip==='lift'||c.clip==='drop'){const toRow=(c.clip==='lift'&&g.row==='up')||(c.clip==='drop'&&g.row==='down'),end=toRow?OWL.clips[c.clip].n-1:0;
-      if(spring(c,end,dt,150)||Math.abs(c.pos-end)<.35){const row=c.clip==='lift'?'up':'down';swap(toRow?row:'turn',toRow?OWL.clips[row].mid:OWL.clips.turn.mid)}return}
-    if(c.clip===want){spring(c,idxFor(want,g.dx),dt,62);return}
-    const mid=OWL.clips[c.clip].mid;spring(c,mid,dt,170);
-    if(Math.abs(c.pos-mid)<1.1){if(c.clip==='turn'){const cn=OWL.connect[g.row];swap(cn,0)}else swap(OWL.connect[c.clip],OWL.clips[OWL.connect[c.clip]].n-1)}}
-  function atFront(){const c=pose.cur;return c.clip==='turn'&&Math.abs(c.pos-OWL.clips.turn.mid)<.5}
-  function startAct(name){const c=OWL.clips[name];if(!clipReady(name))return false;pose.act={clip:name,t:0,c};swap(name,0);return true}
+  function atFront(){const n=pose.nav;return pose.mode==='gaze'&&n.v===4&&Math.abs(n.u)<.04}
+  function startAct(name){const c=OWL.clips[name];if(!clipReady(name))return false;pose.act={clip:name,t:0,c,pos:0};swapTo('act');return true}
   function actPos(a,dt){a.t+=dt/1000;const c=a.c,n=c.n-1;
     if(c.dur){const [up,hold,down]=c.dur,t=a.t,ease=x=>1-Math.pow(1-x,3),easeIO=x=>x<.5?2*x*x:1-Math.pow(-2*x+2,2)/2;if(t<up)return n*ease(t/up);if(t<up+hold)return n;if(t<up+hold+down)return n*(1-easeIO((t-up-hold)/down));return -1}
     const p=a.t*c.fps;return p>n?-1:p}
-  function tickOwl(dt){if(!pose.on)return;const c=pose.cur;
-    if(pose.act){const p=actPos(pose.act,dt);if(p<0){pose.act=null;pose.expr='';swap('turn',OWL.clips.turn.mid)}else c.pos=p}
-    else if(pose.pending){pose.gaze.row='mid';pose.gaze.dx=0;stepNav(dt);if(atFront()){const n=pose.pending;pose.pending=null;startAct(n)}}
-    else{if(performance.now()-pose.lastMove<4200||pose.hoverEnter)gazeFrom(target.x*pw,target.y*ph);else if(pose.idleGaze){pose.gaze.row=pose.idleGaze.row;pose.gaze.dx=pose.idleGaze.dx}stepNav(dt)}
+  function tickOwl(dt){if(!pose.on)return;
+    if(pose.act){const p=actPos(pose.act,dt);if(p<0){pose.act=null;pose.expr='';pose.nav.u=0;pose.nav.v=4;pose.nav.vu=pose.nav.vv=0;swapTo('gaze')}else pose.act.pos=p}
+    else if(pose.pending){pose.gaze.row='mid';pose.gaze.dx=0;stepGaze(dt);if(atFront()){const n=pose.pending;pose.pending=null;startAct(n)}}
+    else{if(performance.now()-pose.lastMove<4200||pose.hoverEnter)gazeFrom(target.x*pw,target.y*ph);else if(pose.idleGaze){pose.gaze.row=pose.idleGaze.row;pose.gaze.dx=pose.idleGaze.dx}stepGaze(dt)}
     draw(dt)}
-  function paintClip(ctx,name,pos,eyes){const c=OWL.clips[name],L=eyes?pose.eb[name]:pose.bm[name];if(!L)return;let i=Math.floor(pos),a=pos-i;i=Math.max(0,Math.min(c.n-1,i));const j=Math.min(c.n-1,i+1),[x,y]=c.rect;
-    if(!eyes)ctx.drawImage(pose.bm['__base_'+(c.base||'head')],0,0);
-    if(eyes&&c.noeyes){const t=OWL.clips.turn;ctx.drawImage(pose.eb.turn[t.mid],t.rect[0],t.rect[1]);return}
-    if(L[i])ctx.drawImage(L[i],x,y);if(a>.01&&L[j]&&j!==i){ctx.globalAlpha=a;ctx.drawImage(L[j],x,y);ctx.globalAlpha=1}}
-  function draw(dt){const c=pose.cur;[[pose.ctx,false,pose.gc],[pose.ectx,true,pose.gec]].forEach(([ctx,eyes,g])=>{ctx.clearRect(0,0,800,800);paintClip(ctx,c.clip,c.pos,eyes);if(pose.ghost>0){ctx.globalAlpha=pose.ghost;ctx.drawImage(g,0,0);ctx.globalAlpha=1}});if(pose.ghost>0)pose.ghost=Math.max(0,pose.ghost-dt/90)}
+  function draw(dt){[[pose.ctx,false,pose.gc,pose.offA],[pose.ectx,true,pose.gec,pose.offB]].forEach(([ctx,eyes,g,off])=>{ctx.clearRect(0,0,800,800);
+      if(pose.act){const a=pose.act,c=a.c;if(eyes&&c.noeyes){const t=OWL.clips.turn;if(pose.eb.turn[t.mid])ctx.drawImage(pose.eb.turn[t.mid],t.rect[0],t.rect[1])}else{if(!eyes)ctx.drawImage(pose.bm['__base_'+(c.base||'head')],0,0);blend(ctx,eyes?pose.eb[a.clip]:pose.bm[a.clip],a.pos,c.n,c.rect)}}
+      else paintGaze(ctx,eyes,off);
+      if(pose.ghost>0){ctx.globalAlpha=pose.ghost;ctx.drawImage(g,0,0);ctx.globalAlpha=1}});if(pose.ghost>0)pose.ghost=Math.max(0,pose.ghost-dt/90)}
   function setLook(w){if(w==='down')pose.gaze.row='down'}
   function updateLook(dt){tickOwl(dt||16)}
-  function scheduleBlink(){clearTimeout(blinkTimer);if(!pose.on)return;blinkTimer=setTimeout(()=>{if(!active||!stage)return;if(!pose.act&&!pose.pending&&atFront()&&Math.abs(pose.cur.vel)<.6)startAct('blink');scheduleBlink()},2300+Math.random()*3200)}
+  function scheduleBlink(){clearTimeout(blinkTimer);if(!pose.on)return;blinkTimer=setTimeout(()=>{if(!active||!stage)return;if(!pose.act&&!pose.pending&&atFront()&&Math.abs(pose.nav.vu)<.05)startAct('blink');scheduleBlink()},2300+Math.random()*3200)}
   function playExpr(name){if(!pose.on||!clipReady(name))return;if(pose.act){if(pose.act.clip==='blink')pose.pending=name;return}pose.expr=name;if(atFront())startAct(name);else pose.pending=name}
   function idleLife(){clearTimeout(pose.idleTimer);if(!pose.on)return;pose.idleTimer=setTimeout(()=>{if(active&&stage&&!pose.act&&!pose.pending&&!pose.hoverEnter&&performance.now()-pose.lastMove>4200){const r=Math.random();if(r<.16)playExpr('tilt');else if(r<.3)pose.idleGaze={row:'up',dx:(Math.random()-.5)*1.6};else pose.idleGaze={row:'mid',dx:(Math.random()-.5)*2.2}}idleLife()},2600+Math.random()*2600)}
   function initPoses(){if(pose.ctx)return;const B=OWL.base,q=`?v=${OWL.v}`;
     const mkc=(cls)=>{const cv=document.createElement('canvas');cv.width=cv.height=800;cv.className=cls;return cv};
-    const cv=mkc('fa-owl-canvas'),ecv=mkc('fa-owl-canvas'),g=mkc(''),ge=mkc('');poseBox.append(cv);eyeBox.append(ecv);pose.ctx=cv.getContext('2d');pose.ectx=ecv.getContext('2d');pose.gc=g;pose.gec=ge;
+    const cv=mkc('fa-owl-canvas'),ecv=mkc('fa-owl-canvas'),g=mkc(''),ge=mkc('');pose.offA=mkc('');pose.offB=mkc('');poseBox.append(cv);eyeBox.append(ecv);pose.ctx=cv.getContext('2d');pose.ectx=ecv.getContext('2d');pose.gc=g;pose.gec=ge;
     const load=src=>fetch(src).then(r=>{if(!r.ok)throw 0;return r.blob()}).then(b=>createImageBitmap(b)).catch(()=>new Promise(res=>{const im=new Image();im.onload=()=>res(im);im.onerror=()=>res(null);im.src=src}));
     const two=n=>String(n).padStart(2,'0');
     const loadClip=name=>{const c=OWL.clips[name];pose.bm[name]=new Array(c.n);pose.eb[name]=new Array(c.n);const order=c.mid!=null?[c.mid,...[...Array(c.n).keys()].filter(i=>i!==c.mid)]:[...Array(c.n).keys()];
       return Promise.all(order.map(i=>Promise.all([load(`${B}${name}/${two(i)}.webp${q}`),c.noeyes?null:load(`${B}${name}/e${two(i)}.webp${q}`)]).then(([a,e])=>{pose.bm[name][i]=a;pose.eb[name][i]=e})))};
-    Promise.all([load(`${B}base-head.webp${q}`),load(`${B}base-wave.webp${q}`)]).then(([h,w])=>{pose.bm.__base_head=h;pose.bm.__base_wave=w;return loadClip('turn')}).then(()=>{pose.cur={clip:'turn',pos:OWL.clips.turn.mid,vel:0};pose.on=true;root.classList.add('fa-poses-on');measureHead();draw(16);if(stage){scheduleBlink();idleLife()}
-      ['blink','lift','up','drop','down','happy','surprise','tilt','wave'].reduce((p,n)=>p.then(()=>loadClip(n)),Promise.resolve())})}
-  function replay(){stage=false;lights=true;titleIndex=0;titleLine.innerHTML=titles[0].zh;enLine.textContent=titles[0].en;titleLine.classList.remove('fa-title-out','fa-title-in');enLine.classList.remove('fa-title-out','fa-title-in');root.querySelector('.fa-stage').setAttribute('aria-hidden','true');root.classList.remove('fa-stage-on','fa-lights-off','fa-hop');clearTimeout(pose.idleTimer);pose.expr='';pose.act=null;pose.pending=null;pose.idleGaze=null;pose.gaze={row:'mid',dx:0};if(pose.on)pose.cur={clip:'turn',pos:OWL.clips.turn.mid,vel:0};root.querySelector('[data-skip]').hidden=false;Object.values(videos).forEach(v=>{v.pause();v.currentTime=0;v.muted=true});video().muted=!sound;video().play().catch(()=>{});clearTimeout(blinkTimer);stopAtmosphere()}
+    Promise.all([load(`${B}base-head.webp${q}`),load(`${B}base-wave.webp${q}`)]).then(([h,w])=>{pose.bm.__base_head=h;pose.bm.__base_wave=w;return loadClip('turn')}).then(()=>{pose.nav={u:0,v:4,vu:0,vv:0};pose.mode='gaze';pose.on=true;root.classList.add('fa-poses-on');measureHead();draw(16);if(stage){scheduleBlink();idleLife()}
+      ['blink','up','down'].reduce((p,n)=>p.then(()=>loadClip(n)),Promise.resolve()).then(()=>{pose.grid=[];pose.geb=[];const jobs=[];for(let c=0;c<GRID.cols;c++){pose.grid[c]=[];pose.geb[c]=[];for(const l of [1,2,3,5,6,7]){const n=`${two(c)}_${l}`;jobs.push(Promise.all([load(`${B}grid/${n}.webp${q}`),load(`${B}grid/e${n}.webp${q}`)]).then(([a,e])=>{pose.grid[c][l]=a;pose.geb[c][l]=e}))}}return Promise.all(jobs).then(()=>{pose.gridLoaded=true})}).then(()=>['happy','surprise','tilt','wave'].reduce((p,n)=>p.then(()=>loadClip(n)),Promise.resolve()))})}
+  function replay(){stage=false;lights=true;titleIndex=0;titleLine.innerHTML=titles[0].zh;enLine.textContent=titles[0].en;titleLine.classList.remove('fa-title-out','fa-title-in');enLine.classList.remove('fa-title-out','fa-title-in');root.querySelector('.fa-stage').setAttribute('aria-hidden','true');root.classList.remove('fa-stage-on','fa-lights-off','fa-hop');clearTimeout(pose.idleTimer);pose.expr='';pose.act=null;pose.pending=null;pose.idleGaze=null;pose.gaze={row:'mid',dx:0};if(pose.on){pose.nav={u:0,v:4,vu:0,vv:0};pose.mode='gaze'}root.querySelector('[data-skip]').hidden=false;Object.values(videos).forEach(v=>{v.pause();v.currentTime=0;v.muted=true});video().muted=!sound;video().play().catch(()=>{});clearTimeout(blinkTimer);stopAtmosphere()}
   function react(e){if(!stage||!pose.on)return;const r=owl.getBoundingClientRect(),eyeZone=e.clientY<r.top+r.height*.4;playExpr(eyeZone?'surprise':(Math.random()>.5?'happy':'wave'))}
   function toggleLights(){lights=!lights;root.classList.toggle('fa-lights-off',!lights);lightBtn.setAttribute('aria-pressed',String(lights));lightBtn.setAttribute('aria-label',lights?'關閉聚光燈':'開啟聚光燈')}
   function toggleSound(){sound=!sound;Object.values(videos).forEach(v=>v.muted=true);video().muted=!sound;soundBtn.innerHTML=icon(sound?'sound':'mute');soundBtn.setAttribute('aria-label',sound?'關閉聲音':'開啟聲音')}
