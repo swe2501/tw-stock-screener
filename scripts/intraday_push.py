@@ -43,6 +43,8 @@ if sys.stdout and hasattr(sys.stdout, "reconfigure"):
 
 INTERVAL = 35                                      # 每輪間隔（秒）；全市場一輪盤中 ~28-30 秒，故 ~35 秒為實際極限
 FX_AFTER_CLOSE_INTERVAL = 300                      # 股市收盤後（13:35–16:00）只記匯率，每 5 分鐘一筆
+SGX_FETCH_AT = (13 * 60 + 48, 13 * 60 + 56)        # 富台指日盤分時（sgx_intraday.py）抓取時間：13:48、13:56
+SGX_TIMEOUT = 180                                  # 子程式上限秒數（< 看門狗 STALL_SEC，不會被誤判卡住）
 TZ = datetime.timezone(datetime.timedelta(hours=8))
 MIS = "https://mis.twse.com.tw/stock/api/getStockInfo.jsp"
 MIS_HEADERS = {"User-Agent": "Mozilla/5.0",
@@ -262,6 +264,20 @@ def _record_fx_index(env):
         print(f"[intraday] 匯率走勢記錄失敗（不影響主流程）：{type(e).__name__}")
 
 
+def _fetch_sgx_intraday():
+    """跑 sgx_intraday.py（Playwright 開玩股網），獨立子程式＋逾時，失敗不影響主流程。"""
+    import subprocess
+    try:
+        r = subprocess.run([sys.executable, str(Path(__file__).with_name("sgx_intraday.py"))],
+                           capture_output=True, text=True, encoding="utf-8", errors="replace",
+                           timeout=SGX_TIMEOUT)
+        print((r.stdout or "").strip() or f"[intraday] 富台指分時 exit {r.returncode}")
+        if r.returncode not in (0, 1) and r.stderr:
+            print(f"[intraday] 富台指分時錯誤：{r.stderr.strip()[-300:]}")
+    except Exception as e:                                          # noqa: BLE001
+        print(f"[intraday] 富台指分時抓取失敗（不影響主流程）：{type(e).__name__}")
+
+
 def _one_pass(lcodes, ocodes, env):
     _record_otc_index(env)
     _record_fx_index(env)
@@ -336,6 +352,7 @@ def main():
     l = o = None
     uni_ts = 0.0
     fx_slot = None
+    sgx_done = set()
     _heartbeat()
     _start_watchdog()
     while True:
@@ -349,6 +366,11 @@ def main():
                 if slot != fx_slot:
                     _record_fx_index(env)
                     fx_slot = slot
+                # 2026-10-28 富台指日盤分時：玩股網只留當前交易日，14:00 換夜盤後就抓不到，所以 13:48、13:56 各抓一次
+                for at in SGX_FETCH_AT:
+                    if hm >= at and at not in sgx_done and hm < 14 * 60:
+                        sgx_done.add(at)
+                        _fetch_sgx_intraday()
                 time.sleep(30)
                 continue
             if now.hour >= 16:
