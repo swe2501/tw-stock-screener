@@ -164,3 +164,14 @@ html[data-theme="light"] .fa-light-flow::after{background:radial-gradient(circle
 #fqiArrival.fa-lights-off .fa-cursor-light{opacity:0!important}
 /* v31 游標光直接跟著滑鼠，不再延遲 */
 #fqiArrival .fa-cursor-light{left:var(--cx,50%);top:var(--cy,50%);transition:opacity 1s ease;will-change:left,top}
+/* v32 左右轉頭改為連續畫格（AI 影片 39 格），滑鼠水平位置平滑對應；身體固定，只換頭部 */
+.fa-turn{position:absolute;inset:0;z-index:1;opacity:0;transition:opacity .14s ease,filter .9s ease}
+#fqiArrival.fa-turn-mode .fa-turn{opacity:1}
+.fa-turn-body{position:absolute;inset:0;width:100%;height:100%;display:block}
+.fa-turn-head,.fa-turn-eye{position:absolute;left:0;top:0;width:100%;height:auto;display:block;visibility:hidden}
+.fa-turn-head.is-on,.fa-turn-eye.is-on{visibility:visible}
+.fa-turn-eyes{position:absolute;inset:0;z-index:1;opacity:0;transition:opacity .14s ease}
+#fqiArrival.fa-turn-mode .fa-turn-eyes{opacity:1}
+.fa-pose.is-prev,.fa-eyeglow.is-prev{z-index:0}.fa-pose.is-on,.fa-eyeglow.is-on{z-index:2}
+html:not([data-theme="light"]) .fa-turn{filter:brightness(.92) contrast(1.04)}
+#fqiArrival.fa-lights-off .fa-turn{filter:brightness(.02) saturate(0)}
