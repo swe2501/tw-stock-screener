@@ -1036,6 +1036,22 @@ def _fetch_limitup():
             "up_count": len(ups), "down_count": len(downs)}
 
 
+def _read_limitup_snapshot():
+    """2026-10-28 亮燈區改讀每晚預算快照（scripts/limitup_precompute.py → page_cache limitup／limitup@uat）。
+    快照不存在或格式不對回 None，由呼叫端退回即時計算 _fetch_limitup（約 28 秒）。"""
+    try:
+        status, rows = _snapshot_rows("limitup")
+    except Exception:
+        return None
+    if status != 200 or not isinstance(rows, list) or not rows:
+        return None
+    data = rows[0].get("payload")
+    if (not isinstance(data, dict) or data.get("error") or not data.get("date")
+            or not isinstance(data.get("up"), list) or not isinstance(data.get("down"), list)):
+        return None
+    return dict(data, updatedAt=rows[0].get("updated_at"), precomputed=True)
+
+
 def _fetch_disposal():
     """處置股：上市 TWSE openapi announcement/punish ＋ 上櫃 TPEx tpex_disposal_information，
     只留處置期間尚未結束者（迄日 ≥ 今天，台灣時間），併 price_window 最新收盤/漲跌幅。2026-09-28
@@ -3703,6 +3719,9 @@ class handler(BaseHTTPRequestHandler):
         # 漲停分析：今日漲停/跌停 + 連續天數
         if (qs.get("stat") or [""])[0] == "limitup":
             try:
+                snap = _read_limitup_snapshot()
+                if snap:
+                    return self._send_json(200, snap, cache="public, s-maxage=300, max-age=60")
                 return self._send_json(200, _fetch_limitup())
             except Exception as e:
                 import traceback
