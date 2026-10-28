@@ -488,6 +488,13 @@ page_cache 是 **uat 與 prod 共用**同一個 Supabase。若推盤中到原 ki
 - 2026-10-25 上櫃分點回補：otc_backfill.py 重開瀏覽器時一時被誤判「未登入」會整個中止，改為重試 3 次（commit 44c6228）。
 - 2026-10-27 後台管理新增「AI 研究室」分頁（僅管理者）：像素風辦公室，7 個角色＝既有排程分組（新聞、籌碼、技術、總經、風控、ETF、資料管理），顯示狀態燈、最新真實產出泡泡、夜間交棒動畫，點角色看今日步驟；下方有角色對照表（負責、影響頁面、對應排程程式）。狀態由本機排程每一步經 `scripts/office_step.py` 打卡寫入 Supabase `admin_settings`（key `office:<角色>`），後端 `/api/auth` action `admin_office` 讀取。對應表在 `scripts/office_wrap_bat.py` 與 `apps/web/assets/admin-office.js` 的 ROLE，兩邊要一致。
 - 2026-10-27 ETF 淨值又全空：10/24 加的「保留欄位」只補到有舊值的列，同一批列欄位不一致，PostgREST 整批 400（All object keys must match），表被清空、後面 wantgoo_etf 判定無資料。改為每列補齊欄位（`upload_etf.py`）；10/28 凌晨重跑補回 136 檔淨值。同晚家中網路兩度斷線（getaddrinfo failed／ERR_INTERNET_DISCONNECTED），當晚多支排程失敗。
+- 2026-10-28 ETF 名錄凌晨又被清空：雲端排程（prod 分支）跑 prod 舊版 upload_etf.py。用戶同意單檔 hotfix 上 prod（`abb78cb`），本機補回名錄、配息、受益人、淨值 139 檔。ETF「集中加碼前 10」今日無資料時顯示「待收盤後更新」（原 .fc-empty 是全站載入骨架、文字透明，看起來一片空白）。
+- 2026-10-28 上升三角：K 圖補畫輔助線（K 圖原本只讀 W 判讀檔）、上升三角分頁加「全部／形成中／已突破」篩選；三角型態改為併入同股同週期既有紀錄，不再覆蓋 W 判讀。
+- 2026-10-28 資安盤點與修正：
+  - 資料庫（uat、prod 同時生效）：`wantgoo_daily`、`broker_daily` 的 "public read"、`broker_sell_alerts` 的 "bsa_read"（皆 using true，任何人用公開金鑰可讀整張付費籌碼）已刪，改 `*_viewer_read`（authenticated＋is_viewer()）。還原：`create policy "public read" on public.<表> for select using (true);`。
+  - 權限改用帳號 ID：註冊不驗證 Email（沒有自己的網域無法寄驗證信），Email 白名單可被搶註冒充。`allowed_viewers` 加 `user_id`（3 位已填）；`is_viewer()` 改比 `auth.uid()`；macro_events_pin、mingdeng_calls_*、mingdeng_scores_read 五條寫死 Email 的政策改用 is_viewer()；`api/auth.py` 後台改比 `ADMIN_IDS`。**新增管理員：對方先註冊 → 把帳號 ID 加到 `ADMIN_IDS` 與 `allowed_viewers.user_id`；不要用 Email 自動帶 ID（等於又信任 Email）。**前端 `VIEWER_EMAILS` 只決定按鈕顯示，不是防線。
+  - 安全標頭（uat → prod `309734c`）：X-Frame-Options、frame-ancestors、nosniff、Referrer-Policy（vercel.json routes 第一條 continue 規則）。未加完整 CSP（大量 inline script）。
+  - 未處理、待決定：會員系統邀請／驗證任務以「Email 已驗證」為條件，但註冊即視為已驗證，可大量註冊假帳號刷邀請獎勵（合夥人模組）；AI 判定未登入可觸發（每日上限 300）；API 錯誤回傳完整 traceback（14 處）。
 
 ---
 
