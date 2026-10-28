@@ -20,7 +20,7 @@
   <script src="assets/site-theme.js"></script>
   <script src="assets/w-pattern-export.js?v=20261024-1"></script>
   <script src="assets/w-pattern-overlay.js?v=20261025-2"></script>
-  <script src="assets/chart-ai-patterns.js?v=20261027-7"></script>
+  <script src="assets/chart-ai-patterns.js?v=20261028-tri1"></script>
   <link rel="stylesheet" href="assets/chart-ai-patterns.css?v=20261026-3">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -4398,7 +4398,7 @@
       var rows=ms.map(function(m){
         var opts=TORD.map(function(t){return '<option value="'+t+'"'+(m.tier===t?' selected':'')+'>'+TIER[t]+'</option>';}).join('');
         return '<tr data-uid="'+esc(m.id)+'">'
-          +'<td style="padding:6px 8px">'+esc(m.email||'—')+(m.is_admin?' <span style="font-size:10px;color:var(--accent);font-weight:800">管理員</span>':'')+'</td>'
+          +'<td style="padding:6px 8px">'+(m.email?esc(m.email):'<span style="color:var(--text-muted)">'+esc((/line/i.test(m.provider||'')?'LINE':(m.provider||'其他'))+' 登入'+(m.name?'：'+m.name:'')+'（無 Email）')+'</span>')+(m.is_admin?' <span style="font-size:10px;color:var(--accent);font-weight:800">管理員</span>':'')+'</td>'
           +'<td style="padding:6px 8px">'+(m.is_admin?'<b style="color:var(--accent)">⚙ 管理者</b><div style="font-size:10px;color:var(--text-muted)">全功能＋後台</div>':'<select class="adm-tier" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--input-bg,var(--surface));color:var(--text)">'+opts+'</select>')+'</td>'
           +'<td style="padding:6px 8px;white-space:nowrap">'+(m.expires_at?dt(m.expires_at):'<span style="color:var(--text-muted)">—</span>')+'</td>'
           +'<td style="padding:6px 8px;white-space:nowrap;font-size:12px;color:var(--text-muted)">'+dt(m.created_at)+'</td>'
@@ -6484,6 +6484,8 @@
     #etxConTable .etx-tbl tbody tr{transition:box-shadow .18s ease,transform .18s ease;}
     #etxConTable .etx-tbl tbody tr:hover{box-shadow:inset 3px 0 0 color-mix(in srgb,var(--accent) 62%,transparent);}
     #etxConTable td.hp-up,#etxConTable td.hp-dn{font-weight:800;}
+    /* 集中加碼區的提示文字（.fc-empty 是全站載入骨架、文字透明，只留給「載入中」用） */
+    .etx-con-msg{padding:18px 14px;border-radius:8px;background:var(--surface2);color:var(--text-muted);font-size:13px;text-align:center;}
     .etx-list-wrap{overflow:auto;border:1px solid var(--border);border-radius:10px;}
     .etx-list{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums;}
     .etx-list th{padding:9px 11px;background:var(--surface2);color:var(--text-muted);font-size:10.5px;text-align:right;white-space:nowrap;}
@@ -6604,7 +6606,7 @@
     }
     function conTable(rows, note){
       var buy=conDir==='buy', action=buy?'加碼':'減碼';
-      if(!rows.length) return '<div class="fc-empty">此期間無 ≥2 檔主動 ETF 同步'+action+'的個股。</div>';
+      if(!rows.length) return '<div class="etx-con-msg">'+(conWin==='today'?'待收盤後更新':'此期間無 ≥2 檔主動 ETF 同步'+action+'的個股。')+'</div>';
       return '<div style="overflow-x:auto"><table class="etx-tbl"><thead><tr><th class="l">#</th><th class="l">股票</th><th>'+action+'(張)</th><th>主動ETF</th><th class="l">同步'+action+'的 ETF</th></tr></thead><tbody>'+
         rows.map(function(r,i){return '<tr><td class="l">'+(i+1)+'</td><td class="l" style="cursor:pointer" onclick="_openStock(\''+r.code+'\',\''+esc(r.name||'')+'\')"><b>'+esc(r.name||'')+'</b> <span style="color:var(--text-muted)">'+r.code+'</span></td><td class="'+(buy?'hp-up':'hp-dn')+'">'+(buy?'+':'−')+m0(Math.abs(r.lots))+'</td><td><b>'+r.etfCount+'</b> 檔</td><td class="l"><div class="etx-code-list">'+r.etfs.map(function(code){return '<button type="button" class="etx-code-chip" onclick="window._etxOpen(\''+esc(code)+'\')" title="開啟 '+esc(code)+' ETF 詳細資料">'+esc(code)+'</button>';}).join('')+'</div></td></tr>';}).join('')+
         '</tbody></table></div><div style="font-size:11px;color:var(--text-muted);margin-top:8px">'+note+'</div>';
@@ -6624,7 +6626,7 @@
         if(CON.flow===null){box.innerHTML='<div class="fc-empty">載入中…</div>';return;}
         var dates=[];var seen={};(CON.flow||[]).forEach(function(r){if(!seen[r.data_date]){seen[r.data_date]=1;dates.push(r.data_date);}});
         dates.sort().reverse(); dates=dates.slice(0,n);
-        if(dates.length<n){box.innerHTML='<div class="fc-empty">近 '+n+' 日資料累積中（目前 '+dates.length+' 個交易日；系統每日快照，滿 '+n+' 日後即顯示）。</div>';return;}
+        if(dates.length<n){box.innerHTML='<div class="etx-con-msg">近 '+n+' 日資料累積中（目前 '+dates.length+' 個交易日；系統每日快照，滿 '+n+' 日後即顯示）。</div>';return;}
         var dset={}; dates.forEach(function(d){dset[d]=1;});
         var agg={};
         (CON.flow||[]).forEach(function(r){if(!dset[r.data_date])return;var k=r.stock_code;if(!agg[k])agg[k]={code:k,name:r.stock_name,lots:0,etfs:{}};agg[k].lots+=(r.shares_delta||0)/1000;(r.etf_codes||[]).forEach(function(e){agg[k].etfs[e]=1;});});
@@ -6635,7 +6637,7 @@
     window._etxConDir=function(d){conDir=d;[].forEach.call(document.querySelectorAll('#etxConDir button'),function(b){b.classList.toggle('on',b.getAttribute('data-d')===d);});renderConsensus();};
     window._etxConWin=function(w){conWin=w;[].forEach.call(document.querySelectorAll('#etxConWin button'),function(b){b.classList.toggle('on',b.getAttribute('data-w')===w);});renderConsensus();};
     function loadConsensus(){
-      fetch(ACTIVE_JSON).then(function(r){return r.json();}).then(function(j){CON.today=j||{};if(conWin==='today')renderConsensus();}).catch(function(){CON.today={};if(conWin==='today'&&el('etxConTable'))el('etxConTable').innerHTML='<div class="fc-empty">今日集中'+(conDir==='buy'?'加碼':'減碼')+'讀取失敗</div>';});
+      fetch(ACTIVE_JSON).then(function(r){return r.json();}).then(function(j){CON.today=j||{};if(conWin==='today')renderConsensus();}).catch(function(){CON.today={};if(conWin==='today'&&el('etxConTable'))el('etxConTable').innerHTML='<div class="etx-con-msg">今日集中'+(conDir==='buy'?'加碼':'減碼')+'讀取失敗</div>';});
       Q('active_etf_flow?select=data_date,stock_code,stock_name,shares_delta,etf_codes&order=data_date.desc&limit=3000').then(function(a){CON.flow=Array.isArray(a)?a:[];if(conWin!=='today')renderConsensus();}).catch(function(){CON.flow=[];});
     }
 
@@ -18087,8 +18089,8 @@
 <script src="assets/member-quick-menu.js?v=tier6" defer></script>
 <script src="assets/navigation-layers.js?v=logo-home20" defer></script>
 <link rel="stylesheet" href="assets/home-market-intraday.css?v=25">
-<script src="assets/home-market-intraday.js?v=12" defer></script>
-<script src="assets/admin-office.js?v=2" defer></script>
+<script src="assets/home-market-intraday.js?v=13" defer></script>
+<script src="assets/admin-office.js?v=3" defer></script>
 <footer id="foresightFooter" aria-label="先見網站頁尾">
       <div class="fs-source"><div>本站依各功能使用臺灣證券交易所、證券櫃檯買賣中心、臺灣期貨交易所、集保結算所及其他公開資料整理市場資訊；來源、行情日期與更新頻率依各頁標示，部分內容為盤後或延遲資料。數據可能因公告更正、休市或來源異常而調整，請以原始公告核對。圖表、歷史統計與工具結果供學習及研究參考，歷史表現不代表未來結果；不同資料口徑與估算方式可能產生差異。</div></div>
       <div class="fs-footer-inner">
@@ -18124,7 +18126,7 @@
 <script src="assets/exhibition-calendar.js?v=localfix-3" defer></script>
 <link rel="stylesheet" href="assets/responsive-layout.css?v=1">
 <link rel="stylesheet" href="assets/ai-pattern-screen.css?v=20261026-1">
-<script src="assets/ai-pattern-screen.js?v=20261027-8" defer></script>
+<script src="assets/ai-pattern-screen.js?v=20261028-tri1" defer></script>
 <link rel="stylesheet" href="assets/pattern-admin-review.css?v=20261027-1">
 <script src="assets/pattern-admin-review.js?v=20261027-6" defer></script>
 <link rel="stylesheet" href="assets/brand-arrival.css?v=26">

@@ -488,6 +488,13 @@ page_cache 是 **uat 與 prod 共用**同一個 Supabase。若推盤中到原 ki
 - 2026-10-25 上櫃分點回補：otc_backfill.py 重開瀏覽器時一時被誤判「未登入」會整個中止，改為重試 3 次（commit 44c6228）。
 - 2026-10-27 後台管理新增「AI 研究室」分頁（僅管理者）：像素風辦公室，7 個角色＝既有排程分組（新聞、籌碼、技術、總經、風控、ETF、資料管理），顯示狀態燈、最新真實產出泡泡、夜間交棒動畫，點角色看今日步驟；下方有角色對照表（負責、影響頁面、對應排程程式）。狀態由本機排程每一步經 `scripts/office_step.py` 打卡寫入 Supabase `admin_settings`（key `office:<角色>`），後端 `/api/auth` action `admin_office` 讀取。對應表在 `scripts/office_wrap_bat.py` 與 `apps/web/assets/admin-office.js` 的 ROLE，兩邊要一致。
 - 2026-10-27 ETF 淨值又全空：10/24 加的「保留欄位」只補到有舊值的列，同一批列欄位不一致，PostgREST 整批 400（All object keys must match），表被清空、後面 wantgoo_etf 判定無資料。改為每列補齊欄位（`upload_etf.py`）；10/28 凌晨重跑補回 136 檔淨值。同晚家中網路兩度斷線（getaddrinfo failed／ERR_INTERNET_DISCONNECTED），當晚多支排程失敗。
+- 2026-10-28 ETF 名錄凌晨又被清空：雲端排程（prod 分支）跑 prod 舊版 upload_etf.py。用戶同意單檔 hotfix 上 prod（`abb78cb`），本機補回名錄、配息、受益人、淨值 139 檔。ETF「集中加碼前 10」今日無資料時顯示「待收盤後更新」（原 .fc-empty 是全站載入骨架、文字透明，看起來一片空白）。
+- 2026-10-28 上升三角：K 圖補畫輔助線（K 圖原本只讀 W 判讀檔）、上升三角分頁加「全部／形成中／已突破」篩選；三角型態改為併入同股同週期既有紀錄，不再覆蓋 W 判讀。
+- 2026-10-28 資安盤點與修正：
+  - 資料庫（uat、prod 同時生效）：`wantgoo_daily`、`broker_daily` 的 "public read"、`broker_sell_alerts` 的 "bsa_read"（皆 using true，任何人用公開金鑰可讀整張付費籌碼）已刪，改 `*_viewer_read`（authenticated＋is_viewer()）。還原：`create policy "public read" on public.<表> for select using (true);`。
+  - 權限改用帳號 ID：註冊不驗證 Email（沒有自己的網域無法寄驗證信），Email 白名單可被搶註冒充。`allowed_viewers` 加 `user_id`（3 位已填）；`is_viewer()` 改比 `auth.uid()`；macro_events_pin、mingdeng_calls_*、mingdeng_scores_read 五條寫死 Email 的政策改用 is_viewer()；`api/auth.py` 後台改比 `ADMIN_IDS`。**新增管理員：對方先註冊 → 把帳號 ID 加到 `ADMIN_IDS` 與 `allowed_viewers.user_id`；不要用 Email 自動帶 ID（等於又信任 Email）。**前端 `VIEWER_EMAILS` 只決定按鈕顯示，不是防線。
+  - 安全標頭（uat → prod `309734c`）：X-Frame-Options、frame-ancestors、nosniff、Referrer-Policy（vercel.json routes 第一條 continue 規則）。未加完整 CSP（大量 inline script）。
+  - 未處理、待決定：會員系統邀請／驗證任務以「Email 已驗證」為條件，但註冊即視為已驗證，可大量註冊假帳號刷邀請獎勵（合夥人模組）；AI 判定未登入可觸發（每日上限 300）；API 錯誤回傳完整 traceback（14 處）。
 
 ---
 
@@ -543,13 +550,14 @@ page_cache 是 **uat 與 prod 共用**同一個 Supabase。若推盤中到原 ki
 - 執行條件：**電腦開著且 Windows 使用者 `User` 已登入**（鎖定畫面可以，登出或關機就不跑）。部分任務設了「喚醒電腦執行」。
 - **不需要開 Claude Code，也跟登入哪個 Claude 帳號無關**。換 Claude 帳號不影響排程。
 - Claude Code 自己的排程（scheduled tasks）：2026-10-28 查過是**空的**，沒有任何綁在 Claude 帳號上的排程。之後若有人用 Claude 的排程功能設定，必須寫進本節並註明是哪個 Claude 帳號（那種排程才會跟帳號綁在一起）。
-- 雲端：法說會／除權息因子兩支在 GitHub Actions（prod 分支 `.github/`，台灣週一～五 20:30），跟本機和 Claude 帳號都無關。
+- 雲端：GitHub Actions `.github/workflows/daily-cloud-jobs.yml`（prod 分支，設定台灣週一～五 20:30，實際常延遲到半夜 1～3 點），約 30 支只抓公開資料的程式（ETF 名錄／配息／受益人、法人、廣度、新聞、法說會、除權息…），電腦沒開時當備援；跟本機和 Claude 帳號都無關。連玩股網（擋雲端 IP、要登入）或用本機 10GB 資料庫的程式不能上雲端。
+- ⚠️ **雲端跑的是 prod 分支的程式碼**，而 uat 與 prod 共用同一個 Supabase。排程程式只修到 Andrew／uat 時，雲端仍用 prod 舊版寫同一個資料庫。2026-10-26、10-28 凌晨兩次清空 `etf_products` 就是 prod 舊版 `upload_etf.py` 造成（10/28 以單檔 hotfix 上 prod `abb78cb` 修好）。**用戶定案（10/28）：修到雲端也會跑的排程程式，要提醒用戶把該檔單獨上 prod**（乾淨 worktree 從 detached `origin/prod` 只換該檔、commit、`push origin HEAD:prod`，網站畫面不動）。
 
 ### B. 本機 Windows 工作排程器任務（2026-10-28）
 | 任務名稱 | 時間 | 執行 | 內容 |
 |---|---|---|---|
 | `WantgooDailyScrape` | 週一～五 19:00（可喚醒） | `scripts\run_daily_job.bat` | 夜間主排程：分點、法人、收盤價、ETF、總經、廣度、快取等約 66 步 |
-| `AI_stock_Intraday` | 週一～五 08:55（可喚醒） | `scripts\run_intraday.bat` | 盤中掃盤 `intraday_push.py --loop` |
+| `AI_stock_Intraday` | 週一～五 08:55（可喚醒），常駐到 16:01 | `scripts\run_intraday.bat` | 盤中掃盤 `intraday_push.py --loop`（09:00–13:35 每 35 秒）；收盤後只記匯率每 5 分鐘到 16:00（10/28 起） |
 | `CodexHotTopicsHourly` | 週一～五 09:00 起每小時，共 5 小時 | `scripts\run_codex_topics.bat` | 話題族群（桌面版 Codex CLI） |
 | `AI_stock_news_feed` | 每天 06:30 起每 4 小時 | `scripts\run_news_feed.bat` | 每日新聞 |
 | `AI_stock_margin_catchup` | 週二～六 09:00 | `scripts\run_margin_catchup.bat` | 融資維持率補當日值 |
