@@ -62,7 +62,7 @@
     var k = s.status;
     if (k === 'work') {
       var limit = LIMIT_MIN[a];
-      if (a === 'tech' && s.current === 'intraday_push') limit = 420;
+      if (a === 'tech' && s.current === 'intraday_push') limit = 450;   // 08:55 起常駐到 16:01（收盤後記匯率）≈ 426 分鐘
       var over = mins(s.since);
       if (s.heartbeat && mins(s.heartbeat) > 25) return { k: 'stuck', why: '超過 ' + Math.round(mins(s.heartbeat)) + ' 分鐘沒有回報' };
       if (over > limit) return { k: 'stuck', why: '已工作 ' + Math.round(over) + ' 分鐘（上限 ' + limit + '）' };

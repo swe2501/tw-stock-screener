@@ -557,7 +557,7 @@ page_cache 是 **uat 與 prod 共用**同一個 Supabase。若推盤中到原 ki
 | 任務名稱 | 時間 | 執行 | 內容 |
 |---|---|---|---|
 | `WantgooDailyScrape` | 週一～五 19:00（可喚醒） | `scripts\run_daily_job.bat` | 夜間主排程：分點、法人、收盤價、ETF、總經、廣度、快取等約 66 步 |
-| `AI_stock_Intraday` | 週一～五 08:55（可喚醒） | `scripts\run_intraday.bat` | 盤中掃盤 `intraday_push.py --loop` |
+| `AI_stock_Intraday` | 週一～五 08:55（可喚醒），常駐到 16:01 | `scripts\run_intraday.bat` | 盤中掃盤 `intraday_push.py --loop`（09:00–13:35 每 35 秒）；收盤後只記匯率每 5 分鐘到 16:00（10/28 起） |
 | `CodexHotTopicsHourly` | 週一～五 09:00 起每小時，共 5 小時 | `scripts\run_codex_topics.bat` | 話題族群（桌面版 Codex CLI） |
 | `AI_stock_news_feed` | 每天 06:30 起每 4 小時 | `scripts\run_news_feed.bat` | 每日新聞 |
 | `AI_stock_margin_catchup` | 週二～六 09:00 | `scripts\run_margin_catchup.bat` | 融資維持率補當日值 |
