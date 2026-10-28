@@ -124,3 +124,19 @@ html[data-theme="light"] #fqiArrival{--owl-h:min(70vh,calc(50vw/1.0349));--owl-w
 #fqiArrival .fa-copy .fa-en{transition-delay:.12s}
 #fqiArrival .fa-title-line.fa-title-out,#fqiArrival .fa-copy .fa-en.fa-title-out{opacity:0;filter:blur(6px);transform:translateY(-10px)}
 #fqiArrival .fa-title-line.fa-title-in,#fqiArrival .fa-copy .fa-en.fa-title-in{opacity:0;filter:blur(6px);transform:translateY(12px);transition:none}
+/* v27 貓頭鷹改自然：移除疊在圖上的假眼睛與切頭旋轉、身體不再跟滑鼠晃；改為輕微呼吸＋點擊輕跳。多姿勢圖備齊後（assets/arrival/owl/）自動切換看向、眨眼與表情 */
+#fqiArrival .fa-owl-wrap{transform:translate3d(-50%,0,0);transform-origin:50% 100%;will-change:auto}
+#fqiArrival .fa-owl-body{transform-origin:50% 100%;animation:faBreath 4.8s ease-in-out infinite}
+#fqiArrival.fa-hop .fa-owl-wrap{animation:faHop .7s cubic-bezier(.3,1.35,.6,1)}
+@keyframes faBreath{0%,100%{transform:scale(1,1)}50%{transform:scale(1.006,1.014)}}
+@keyframes faHop{0%,100%{transform:translate3d(-50%,0,0)}35%{transform:translate3d(-50%,-12px,0)}65%{transform:translate3d(-50%,2px,0) scale(1.01,.99)}}
+.fa-poses{position:absolute;inset:0;display:none}
+#fqiArrival.fa-poses-on .fa-poses{display:block}#fqiArrival.fa-poses-on .fa-owl{display:none}
+.fa-pose{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0;transition:opacity .22s ease,filter .75s ease}
+.fa-pose.is-on{opacity:1}.fa-pose[data-pose="blink"]{transition:opacity .05s linear}
+.fa-lights-off .fa-pose{filter:brightness(.055) saturate(.3)}
+html:not([data-theme="light"]) .fa-pose{filter:brightness(.92) contrast(1.04)}
+html #fqiArrival.fa-poses-on{--owl-h:min(66vh,46vw);--owl-w:var(--owl-h);--lamp-w:calc(var(--owl-w)*.12);--lamp-bottom:calc(98vh - var(--owl-h)*.92 - 6vh)}
+#fqiArrival.fa-poses-on .fa-owl-wrap{left:50%!important;bottom:2vh!important;width:var(--owl-w)!important;aspect-ratio:1/1!important}
+@media(max-width:840px){html #fqiArrival.fa-poses-on{--owl-w:min(82vw,52vh);--owl-h:var(--owl-w);--lamp-w:calc(var(--owl-w)*.16);--lamp-bottom:calc(92vh - var(--owl-h)*.92 - 4vh)}#fqiArrival.fa-poses-on .fa-owl-wrap{bottom:8vh!important}}
+@media(prefers-reduced-motion:reduce){#fqiArrival .fa-owl-body,#fqiArrival.fa-hop .fa-owl-wrap{animation:none}}
