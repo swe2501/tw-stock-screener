@@ -102,3 +102,20 @@ html[data-theme="light"] #fqiArrival .fa-enter:hover,html[data-theme="light"] #f
   #fqiArrival .fa-brand{gap:14px}#fqiArrival .fa-brand-mark{flex:0 0 172px!important;width:172px!important;height:86px!important}#fqiArrival .fa-brand-name strong{font-size:29px}#fqiArrival .fa-brand-name small{margin-top:6px;font-size:12px}
   #fqiArrival .fa-light-switch{top:100px}
 }
+/* v25 文字排版改為「市場資訊，每天都在變。」＋英文副標；淺色版燈具獨立成一層，放在放大後的貓頭鷹正上方 */
+@media(min-width:841px){#fqiArrival .fa-copy{width:min(680px,46vw)}#fqiArrival .fa-copy h1{min-height:0;margin:30px 0 24px;font-size:clamp(46px,4.4vw,80px);line-height:1.38}}
+#fqiArrival .fa-kicker{font-family:"Noto Sans TC","PingFang TC",sans-serif}@media(min-width:841px){#fqiArrival .fa-kicker{font-size:12px;letter-spacing:.24em}}
+html[data-theme="light"] #fqiArrival .fa-kicker{color:#3f86b8}
+#fqiArrival .fa-copy h1{font-family:"Noto Serif TC","Songti TC",Georgia,serif;font-weight:900;letter-spacing:.03em}
+html[data-theme="light"] #fqiArrival .fa-copy{text-shadow:0 2px 18px rgba(255,255,255,.45)}html[data-theme="light"] #fqiArrival .fa-copy h1{color:#213a51}
+#fqiArrival .fa-copy .fa-en{margin:0 0 20px;font-family:Georgia,"Times New Roman",serif;font-size:clamp(16px,1.25vw,21px);line-height:1.5;letter-spacing:.01em}
+#fqiArrival .fa-copy p{font-size:clamp(14px,1.05vw,18px);letter-spacing:.06em;margin-bottom:30px}
+#fqiArrival .fa-depth-deep{transform-origin:50% 0}
+.fa-lamp{display:none;position:absolute;z-index:1;left:50%;top:calc((var(--lamp-bottom) - var(--lamp-w)*1.8496)/1.035);width:calc(var(--lamp-w)/1.035);transform:translateX(-50%);pointer-events:none;transition:filter .8s ease}
+.fa-lamp img{display:block;width:100%;height:auto;filter:drop-shadow(0 6px 18px rgba(255,232,178,.55))}
+.fa-lamp::before{content:"";position:absolute;left:50%;bottom:calc(100% - 3px);width:max(2px,calc(var(--lamp-w)*.035));height:200vh;transform:translateX(-50%);background:#2b2622}
+html[data-theme="light"] .fa-lamp{display:block}.fa-lights-off .fa-lamp{filter:brightness(.12) saturate(.45)}
+html[data-theme="light"] #fqiArrival{--owl-h:min(70vh,calc(50vw/1.0349));--owl-w:calc(var(--owl-h)*1.0349);--lamp-w:calc(var(--owl-w)*.15);--lamp-bottom:calc(101vh - var(--owl-h)*.935 - 7vh)}
+@media(min-width:841px){html[data-theme="light"] #fqiArrival .fa-owl-wrap,html[data-theme="light"] #fqiArrival.fa-stage-on .fa-owl-wrap{left:50%;bottom:-1%;width:var(--owl-w)}}
+@media(max-width:840px){html[data-theme="light"] #fqiArrival{--owl-w:76vw;--owl-h:calc(76vw/1.0349);--lamp-w:calc(var(--owl-w)*.2);--lamp-bottom:calc(96vh - var(--owl-h)*.935 - 5vh)}}
+@media(max-width:520px){html[data-theme="light"] #fqiArrival{--owl-w:84vw;--owl-h:calc(84vw/1.0349);--lamp-bottom:calc(93vh - var(--owl-h)*.935 - 5vh)}}
