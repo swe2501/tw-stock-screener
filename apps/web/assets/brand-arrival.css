@@ -162,3 +162,5 @@ html[data-theme="light"] .fa-light-flow::after{background:radial-gradient(circle
 .fa-pose,.fa-eyeglow{transition-duration:.14s}
 #fqiArrival.fa-lights-off .fa-pose{filter:brightness(.02) saturate(0)}
 #fqiArrival.fa-lights-off .fa-cursor-light{opacity:0!important}
+/* v31 游標光直接跟著滑鼠，不再延遲 */
+#fqiArrival .fa-cursor-light{left:var(--cx,50%);top:var(--cy,50%);transition:opacity 1s ease;will-change:left,top}
