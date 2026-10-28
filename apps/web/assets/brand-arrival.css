@@ -202,3 +202,6 @@ html:not([data-theme="light"]) #fqiArrival .fa-poses{filter:brightness(.92) cont
 #fqiArrival.fa-lights-off .fa-feather{opacity:0!important}
 /* 飛行時標題、上方列與燈光開關淡出，降落後淡回 */
 #fqiArrival.fa-flying .fa-header,#fqiArrival.fa-flying .fa-copy,#fqiArrival.fa-flying .fa-light-switch{opacity:0!important;pointer-events:none;transition:opacity .45s ease}
+/* 羽毛改為落葉式擺盪（JS 動畫），停用舊的直線落下 */
+#fqiArrival .fa-feather{animation:none;opacity:1;width:22px;height:58px;transform-style:preserve-3d;will-change:transform,opacity;perspective:400px}
+#fqiArrival .fa-feather svg,#fqiArrival .fa-feather img{animation:none;width:100%;height:100%;display:block;object-fit:contain}
