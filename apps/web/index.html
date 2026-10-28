@@ -4398,7 +4398,7 @@
       var rows=ms.map(function(m){
         var opts=TORD.map(function(t){return '<option value="'+t+'"'+(m.tier===t?' selected':'')+'>'+TIER[t]+'</option>';}).join('');
         return '<tr data-uid="'+esc(m.id)+'">'
-          +'<td style="padding:6px 8px">'+esc(m.email||'—')+(m.is_admin?' <span style="font-size:10px;color:var(--accent);font-weight:800">管理員</span>':'')+'</td>'
+          +'<td style="padding:6px 8px">'+(m.email?esc(m.email):'<span style="color:var(--text-muted)">'+esc((/line/i.test(m.provider||'')?'LINE':(m.provider||'其他'))+' 登入'+(m.name?'：'+m.name:'')+'（無 Email）')+'</span>')+(m.is_admin?' <span style="font-size:10px;color:var(--accent);font-weight:800">管理員</span>':'')+'</td>'
           +'<td style="padding:6px 8px">'+(m.is_admin?'<b style="color:var(--accent)">⚙ 管理者</b><div style="font-size:10px;color:var(--text-muted)">全功能＋後台</div>':'<select class="adm-tier" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--input-bg,var(--surface));color:var(--text)">'+opts+'</select>')+'</td>'
           +'<td style="padding:6px 8px;white-space:nowrap">'+(m.expires_at?dt(m.expires_at):'<span style="color:var(--text-muted)">—</span>')+'</td>'
           +'<td style="padding:6px 8px;white-space:nowrap;font-size:12px;color:var(--text-muted)">'+dt(m.created_at)+'</td>'
@@ -18089,7 +18089,7 @@
 <script src="assets/member-quick-menu.js?v=tier6" defer></script>
 <script src="assets/navigation-layers.js?v=logo-home20" defer></script>
 <link rel="stylesheet" href="assets/home-market-intraday.css?v=25">
-<script src="assets/home-market-intraday.js?v=12" defer></script>
+<script src="assets/home-market-intraday.js?v=13" defer></script>
 <script src="assets/admin-office.js?v=2" defer></script>
 <footer id="foresightFooter" aria-label="先見網站頁尾">
       <div class="fs-source"><div>本站依各功能使用臺灣證券交易所、證券櫃檯買賣中心、臺灣期貨交易所、集保結算所及其他公開資料整理市場資訊；來源、行情日期與更新頻率依各頁標示，部分內容為盤後或延遲資料。數據可能因公告更正、休市或來源異常而調整，請以原始公告核對。圖表、歷史統計與工具結果供學習及研究參考，歷史表現不代表未來結果；不同資料口徑與估算方式可能產生差異。</div></div>
