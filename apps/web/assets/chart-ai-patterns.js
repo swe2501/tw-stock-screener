@@ -2,7 +2,8 @@
 (() => {
  'use strict';
  const labels={w_bottom:'W底',m_top:'M頭',head_shoulders:'頭肩頂',inverse_head_shoulders:'頭肩底',triangle:'三角形',box:'箱型'};
- labels.ascending_triangle='ascending_triangle';
+ labels.ascending_triangle='上升三角';
+ const triangleState={forming:'形成中・尚未突破上緣',breakout:'已突破上緣'};
  const colors=['#da870b','#8b5cf6','#0b9488','#db2777'];
  const finite=n=>typeof n==='number'&&Number.isFinite(n);
  let context=null,owner=null,layers=[],ticket=0,promise=null,opened=false;
@@ -43,6 +44,10 @@
    const n=pattern.neckline,s=pattern.support_line;
    const upper=ctx.chart.addLineSeries(opts);layers.push(upper);upper.setData([{time:n.start,value:n.value},{time:n.end,value:n.value}]);
    const support=ctx.chart.addLineSeries({...opts,lineWidth:2});layers.push(support);support.setData([{time:s.start,value:s.value},{time:s.end,value:s.end_value}]);
+   // 下緣支撐依同一斜率往右延伸到上緣線終點（碰到上緣＝三角頂點就停），延伸段用細點線，與實際觸點連線區分
+   const times=ctx.series.data().filter(b=>typeof b.time==='string').map(b=>b.time),i0=times.indexOf(s.start),i1=times.indexOf(s.end),iEnd=times.indexOf(n.end);
+   if(i0>=0&&i1>i0&&iEnd>i1){const slope=(s.end_value-s.value)/(i1-i0);let j=iEnd;if(slope>0)j=Math.min(iEnd,i1+Math.floor((n.value-s.end_value)/slope));
+    if(j>i1){const ext=ctx.chart.addLineSeries({...opts,lineWidth:1,lineStyle:1});layers.push(ext);ext.setData([{time:s.end,value:s.end_value},{time:times[j],value:+(s.end_value+slope*(j-i1)).toFixed(4)}]);}}
    return;
   }
   const line=ctx.chart.addLineSeries(opts);layers.push(line);line.setData(pattern.points.map(p=>({time:p.time,value:p.value})));
@@ -62,7 +67,15 @@
   if(!response.ok)throw Error('形成中判讀資料暫時無法取得');
   const extra=await response.json();if(!validSnapshot(extra))throw Error('形成中資料格式無效');
   const market=await fetch('assets/codex-market-scan.json?v=20261027-1').then(r=>{if(!r.ok)throw Error('全市場判讀資料暫時無法取得');return r.json();});if(!validSnapshot(market))throw Error('全市場判讀資料格式無效');extra.records.push(...market.records);
-  const merged=new Map(base.records.map(r=>[r.code+'|'+r.timeframe,r]));for(const r of extra.records)merged.set(r.code+'|'+r.timeframe,r);return {...base,records:[...merged.values()]};
+  const merged=new Map(base.records.map(r=>[r.code+'|'+r.timeframe,r]));for(const r of extra.records)merged.set(r.code+'|'+r.timeframe,r);
+  try{const tri=await fetch('assets/codex-ascending-triangle-patterns.json?v=20261028-1').then(r=>r.ok?r.json():null);if(tri?.version==='codex-ascending-triangle-v1'&&Array.isArray(tri.records))mergeExtraPatterns(merged,tri.records);}catch{}
+  return {...base,records:[...merged.values()]};
+ }
+ // 其他型態（上升三角…）併入同股同週期的既有紀錄，不覆蓋原本的 W 判讀；狀態記在各型態自己的 status
+ function mergeExtraPatterns(merged,records){
+  for(const r of records){const key=r.code+'|'+r.timeframe,old=merged.get(key),pats=(r.patterns||[]).map(p=>({...p,status:p.status||r.classification}));
+   if(!old||old.execution_status!=='reviewed'){merged.set(key,{...r,patterns:pats});continue;}
+   merged.set(key,{...old,patterns:[...(old.patterns||[]).filter(p=>!pats.some(q=>q.type===p.type)),...pats],extra_reason:r.reason});}
  }
  function periodOf(ctx){return ctx.period==='day'?'daily':ctx.period==='week'?'weekly':null;}
  function periodLinks(host,records,ctx){
@@ -96,8 +109,11 @@
   panel.append(el('p',(tf==='daily'?'日K':'週K')+' · 判讀截至 '+r.data_as_of+' · '+r.bar_count+' 根','ai-pattern-meta'));
   if(r.omitted_dates?.length){const details=el('details'),summary=el('summary','本次判讀略過 '+r.omitted_dates.length+' 根矛盾來源K棒');details.append(summary,el('p',r.omitted_dates.join('、')));panel.append(details);}
   if(r.history_complete===false)panel.append(el('p','可取得的歷史短於設定範圍，判讀僅涵蓋圖中實際資料。','ai-pattern-note'));
-  if(r.classification==='forming')panel.append(el('strong','形成中：右側尚未觸及頸線，虛線僅表示候選輪廓。','ai-pattern-note'));
+  if(r.classification==='forming'&&r.patterns?.some(p=>p.type==='w_bottom'))panel.append(el('strong','形成中：右側尚未觸及頸線，虛線僅表示候選輪廓。','ai-pattern-note'));
+  for(const p of r.patterns||[])if(p.type==='ascending_triangle'&&triangleState[p.status]){
+   const t=el('strong','上升三角'+triangleState[p.status]+'：上緣壓力 '+p.neckline.value.toFixed(2)+(p.status==='breakout'?'，收盤已站上'+(p.volume_ratio?'（量比 '+p.volume_ratio.toFixed(2)+'）':''):'，下緣支撐逐步墊高'),'ai-pattern-note');panel.append(t);}
   panel.append(el('p',r.reason||'此筆待補判讀說明。'));
+  if(r.extra_reason&&r.extra_reason!==r.reason)panel.append(el('p',r.extra_reason));
   const firstLive=ctx.series?.data?.().find(b=>typeof b.time==='string')?.time;
   if(r.recommended_range==='5y'&&r.patterns?.some(p=>p.points[0].time<firstLive)&&ctx.loadHistory){const b=el('button','載入五年週K，查看完整大W','ai-pattern-period-link');b.type='button';b.onclick=()=>ctx.loadHistory('5y');panel.append(b);}
   if(!Array.isArray(r.patterns)||!r.patterns.length){panel.append(el('p',r.classification==='uncertain'?'待審：目前不顯示輔助線。':'此視窗未辨識到符合標準的W。'));return;}
@@ -112,7 +128,7 @@
   for(const type of types){const label=el('label',null,'ai-pattern-option'),input=el('input');input.type='checkbox';input.checked=chosen.has(type);input.dataset.patternType=type;input.onchange=()=>{input.checked?chosen.add(type):chosen.delete(type);draw();};label.append(input,el('span',labels[type]+'（'+good.filter(p=>p.type===type).length+'組）'));boxes.append(label);}
   panel.append(boxes);draw();
   if(errors.length)panel.append(el('p',[...new Set(errors)].join('；'),'ai-pattern-note'));
-  if(good.length)panel.append(el('p','虛線為形狀輔助線；是否收盤突破另行核對，不代表買進訊號。','ai-pattern-meta'));
+  if(good.length)panel.append(el('p','虛線為形狀輔助線'+(good.some(p=>p.type==='ascending_triangle')?'（上升三角：水平線＝上緣壓力、斜線＝下緣支撐，細點線為支撐延伸）':'')+'；是否收盤突破另行核對，不代表買進訊號。','ai-pattern-meta'));
  }
  async function refresh(getContext){
   context=getContext;const ctx=getContext(),id=++ticket;clear();
