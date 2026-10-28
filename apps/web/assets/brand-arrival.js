@@ -52,8 +52,8 @@
   function rowClipOf(l){return l===0?'up':l===8?'down':'turn'}
   function paintRow(ctx,l,u,eyes){
     if(l%4===0){const name=rowClipOf(l),c=OWL.clips[name],L=eyes?pose.eb[name]:pose.bm[name];if(!L)return;const f=c.mid+u*(u<0?c.mid:(c.n-1-c.mid));blend(ctx,L,f,c.n,c.rect)}
-    else{const G=eyes?pose.geb:pose.grid,f=(u+GRID.band)/(2*GRID.band)*(GRID.cols-1),i=Math.max(0,Math.min(GRID.cols-1,Math.floor(f))),j=Math.min(GRID.cols-1,i+1),a=f-i,[x,y]=OWL.clips.turn.rect;const A=G[i]&&G[i][l],Bq=G[j]&&G[j][l];if(A)ctx.drawImage(A,x,y);if(a>.01&&Bq&&j!==i){ctx.globalAlpha=a;ctx.drawImage(Bq,x,y);ctx.globalAlpha=1}}}
-  function blend(ctx,L,f,n,rect){let i=Math.floor(f),a=f-i;i=Math.max(0,Math.min(n-1,i));const j=Math.min(n-1,i+1),[x,y]=rect;if(L[i])ctx.drawImage(L[i],x,y);if(a>.01&&L[j]&&j!==i){ctx.globalAlpha=a;ctx.drawImage(L[j],x,y);ctx.globalAlpha=1}}
+    else{const G=eyes?pose.geb:pose.grid,f=(u+GRID.band)/(2*GRID.band)*(GRID.cols-1),i=Math.max(0,Math.min(GRID.cols-1,Math.floor(f))),j=Math.min(GRID.cols-1,i+1),a=f-i,[x,y]=OWL.clips.turn.rect;const sa=Math.max(0,Math.min(1,(a-.25)/.5));const A=G[i]&&G[i][l],Bq=G[j]&&G[j][l];if(A)ctx.drawImage(A,x,y);if(sa>.01&&Bq&&j!==i){ctx.globalAlpha=sa;ctx.drawImage(Bq,x,y);ctx.globalAlpha=1}}}
+  function blend(ctx,L,f,n,rect){let i=Math.floor(f),a=f-i;a=Math.max(0,Math.min(1,(a-.3)/.4));i=Math.max(0,Math.min(n-1,i));const j=Math.min(n-1,i+1),[x,y]=rect;if(L[i])ctx.drawImage(L[i],x,y);if(a>.01&&L[j]&&j!==i){ctx.globalAlpha=a;ctx.drawImage(L[j],x,y);ctx.globalAlpha=1}}
   function paintGaze(ctx,eyes,off){const n=pose.nav,l0=Math.floor(n.v),l1=Math.ceil(n.v),fv=n.v-l0;
     if(!eyes)ctx.drawImage(pose.bm.__base_head,0,0);
     if(l0===l1||fv<.01){paintRow(ctx,l0,n.u,eyes);return}
@@ -81,7 +81,7 @@
   function idleLife(){clearTimeout(pose.idleTimer);if(!pose.on)return;pose.idleTimer=setTimeout(()=>{if(active&&stage&&!pose.act&&!pose.pending&&!pose.hoverEnter&&performance.now()-pose.lastMove>4200){const r=Math.random();if(r<.16)playExpr('tilt');else if(r<.3)pose.idleGaze={row:'up',dx:(Math.random()-.5)*1.6};else pose.idleGaze={row:'mid',dx:(Math.random()-.5)*2.2}}idleLife()},2600+Math.random()*2600)}
   function initPoses(){if(pose.ctx)return;const B=OWL.base,q=`?v=${OWL.v}`;
     const mkc=(cls)=>{const cv=document.createElement('canvas');cv.width=cv.height=800;cv.className=cls;return cv};
-    const cv=mkc('fa-owl-canvas'),ecv=mkc('fa-owl-canvas'),g=mkc(''),ge=mkc('');pose.offA=mkc('');pose.offB=mkc('');poseBox.append(cv);eyeBox.append(ecv);pose.ctx=cv.getContext('2d');pose.ectx=ecv.getContext('2d');pose.gc=g;pose.gec=ge;
+    const cv=mkc('fa-owl-canvas'),ecv=mkc('fa-owl-canvas'),g=mkc(''),ge=mkc('');pose.offA=mkc('');pose.offB=mkc('');poseBox.append(cv);eyeBox.append(ecv);pose.ctx=cv.getContext('2d');pose.ectx=ecv.getContext('2d');[pose.ctx,pose.ectx].forEach(c=>{c.imageSmoothingEnabled=true;c.imageSmoothingQuality='high'});pose.gc=g;pose.gec=ge;
     const load=src=>fetch(src).then(r=>{if(!r.ok)throw 0;return r.blob()}).then(b=>createImageBitmap(b)).catch(()=>new Promise(res=>{const im=new Image();im.onload=()=>res(im);im.onerror=()=>res(null);im.src=src}));
     const two=n=>String(n).padStart(2,'0');
     const loadClip=name=>{const c=OWL.clips[name];pose.bm[name]=new Array(c.n);pose.eb[name]=new Array(c.n);const order=c.mid!=null?[c.mid,...[...Array(c.n).keys()].filter(i=>i!==c.mid)]:[...Array(c.n).keys()];

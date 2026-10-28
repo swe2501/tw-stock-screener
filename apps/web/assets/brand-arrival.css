@@ -184,3 +184,10 @@ html:not([data-theme="light"]) #fqiArrival .fa-poses{filter:brightness(.92) cont
 #fqiArrival.fa-lights-off .fa-poses{filter:brightness(.02) saturate(0)}
 #fqiArrival .fa-eyeglow-layer{transition:opacity .9s ease .05s}
 #fqiArrival.fa-lights-off .fa-poses{filter:brightness(.02) saturate(0)!important}
+/* v36 背景極慢速漂移與光線呼吸（約 40 秒一輪，幾乎察覺不到） */
+@keyframes faBgDrift{0%{transform:scale(1) translate3d(0,0,0)}50%{transform:scale(1.045) translate3d(-.6%,.4%,0)}100%{transform:scale(1.02) translate3d(.5%,-.3%,0)}}
+@keyframes faBgBreath{0%,100%{filter:brightness(1) saturate(1)}50%{filter:brightness(1.05) saturate(1.04)}}
+#fqiArrival.fa-stage-on .fa-stage-bg{animation:faBgDrift 42s ease-in-out infinite alternate}
+#fqiArrival.fa-stage-on .fa-depth-deep{animation:faBgBreath 11s ease-in-out infinite}
+#fqiArrival.fa-lights-off .fa-depth-deep{animation-play-state:paused}
+@media(prefers-reduced-motion:reduce){#fqiArrival .fa-stage-bg,#fqiArrival .fa-depth-deep{animation:none!important}}
