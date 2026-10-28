@@ -14,6 +14,7 @@
   if(on)render();else originalShow?.();
  }
  function render(){const panel=$('patternAdminPanel');panel.replaceChildren();if(!payload)return;
+  const market=el('a','開啟全市場候選複核（與本批4張佇列分開）','par-toggle');market.href='research/w-all-market/report.html';market.target='_blank';market.rel='noopener';panel.append(market);
   const counts={};for(const c of payload.cases){const s=payload.decisions[c.id]?.status||c.initial_status;counts[s]=(counts[s]||0)+1;}
   panel.append(el('h3','W 型態・管理者複核'),el('p','新增400檔複核佇列：'+payload.cases.length+' 個案例。形成中 '+(counts.forming||0)+' · 待複核 '+(counts.pending||0)+' · 已突破 '+(counts.breakout||0)+' · 不算W '+(counts.rejected||0)+'。不含舊100檔的歷史待複核樣本。選擇狀態後按「儲存判定」；本批兩張形成中候選已提供會員查看輪廓與頸線；儲存判定不會自動變更會員候選或發布為已確認W。行情終點：2026-10-22。','par-intro'));
   const controls=el('div',null,'par-controls');for(const [value,label] of [['all','全部'],...Object.entries(labels)]){const b=el('button',label+(value==='all'?' ('+payload.cases.length+')':' ('+(counts[value]||0)+')'),filter===value?'on':'');b.type='button';b.setAttribute('aria-pressed',String(filter===value));b.onclick=()=>{filter=value;render();};controls.append(b);}const reload=el('button','重新載入');reload.type='button';reload.onclick=()=>refresh(true);controls.append(reload);panel.append(controls);

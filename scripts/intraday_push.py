@@ -9,7 +9,7 @@ _INTRADAY，盤後行為與現狀 100% 相同。
 
 用法：
   python scripts/intraday_push.py            # 單次：盤中才動作，非盤中直接結束
-  python scripts/intraday_push.py --loop      # 常駐：盤中每 90 秒一輪，收盤自動結束
+  python scripts/intraday_push.py --loop      # 常駐：盤中每 35 秒一輪；13:35 收盤後只記匯率（每 5 分鐘、到 16:00），16:00 後結束
   python scripts/intraday_push.py --force      # 不檢查時段，強制跑一次（測試）
 """
 import sys
@@ -42,6 +42,9 @@ if sys.stdout and hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(errors="replace")
 
 INTERVAL = 35                                      # 每輪間隔（秒）；全市場一輪盤中 ~28-30 秒，故 ~35 秒為實際極限
+FX_AFTER_CLOSE_INTERVAL = 300                      # 股市收盤後（13:35–16:00）只記匯率，每 5 分鐘一筆
+SGX_FETCH_AT = (13 * 60 + 48, 13 * 60 + 56)        # 富台指日盤分時（sgx_intraday.py）抓取時間：13:48、13:56
+SGX_TIMEOUT = 180                                  # 子程式上限秒數（< 看門狗 STALL_SEC，不會被誤判卡住）
 TZ = datetime.timezone(datetime.timedelta(hours=8))
 MIS = "https://mis.twse.com.tw/stock/api/getStockInfo.jsp"
 MIS_HEADERS = {"User-Agent": "Mozilla/5.0",
@@ -55,6 +58,29 @@ MIN_LISTED = 950                                   # 上市掃到檔數低於此
 _CTX = ssl.create_default_context()
 _CTX.verify_flags &= ~ssl.VERIFY_X509_STRICT
 DRY = False                                         # --dry：只現算不寫 page_cache（測試用）
+# 2026-10-28 看門狗：10/28 12:02 後主迴圈卡住、沒有錯誤訊息，盤中資料停更一個多小時。
+# 主迴圈每轉一圈打一次心跳；超過 STALL_SEC 沒心跳就強制結束並回 STALL_EXIT，由 run_intraday.bat 重新啟動。
+STALL_SEC = 300
+STALL_EXIT = 75
+_beat = time.time()
+
+
+def _heartbeat():
+    global _beat
+    _beat = time.time()
+
+
+def _start_watchdog():
+    import threading
+
+    def watch():
+        while True:
+            time.sleep(30)
+            idle = time.time() - _beat
+            if idle > STALL_SEC:
+                print(f"[intraday] 看門狗：主迴圈 {int(idle)} 秒沒有進展，強制結束等待重啟（exit {STALL_EXIT}）", flush=True)
+                os._exit(STALL_EXIT)                 # 主執行緒可能卡在網路呼叫裡，只能直接結束整個程序
+    threading.Thread(target=watch, name="intraday-watchdog", daemon=True).start()
 
 
 def _now():
@@ -201,9 +227,8 @@ def _record_otc_index(env):
         if not pts or pts[-1][0] != tlong:
             pts.append([tlong, price])
             f.write_text(json.dumps(pts), encoding="utf-8")
-        data = hi._bucket5([(int(t), float(p)) for t, p in pts])
-        if len(data) >= 2 and not DRY:
-            hi.push(env, "mini_OTC", d, data, "盤中排程記錄 MIS 櫃買指數")
+        # 僅記本機檔；mini_OTC 由盤後 home_intraday.py 定版推送（與首頁卡片同一交易日）。
+        # 盤中不再即時覆蓋 page_cache：否則 mini_OTC 會被覆蓋成「今天(部分)」，與卡片(上一完成交易日)對不上 → 櫃買分時永遠空白。
     except Exception as e:                                          # noqa: BLE001
         print(f"[intraday] 櫃買指數走勢記錄失敗（不影響主流程）：{type(e).__name__}")
 
@@ -216,7 +241,7 @@ def _record_fx_index(env):
     try:
         import ssl as _ssl, urllib.request as _ur
         now = _now()
-        if now.hour < 9 or now.hour >= 16:                          # 僅台北匯市盤時段
+        if not (9 * 60 <= now.hour * 60 + now.minute <= 16 * 60):  # 僅台北匯市盤時段（含 16:00 收盤那筆）
             return
         ctx = _ssl.create_default_context(); ctx.check_hostname = False; ctx.verify_mode = _ssl.CERT_NONE
         raw = _ur.urlopen(_ur.Request(
@@ -234,11 +259,23 @@ def _record_fx_index(env):
         pts = json.loads(f.read_text(encoding="utf-8")) if f.exists() else []
         pts.append([t, float(price)])
         f.write_text(json.dumps(pts), encoding="utf-8")
-        data = hi._bucket5([(int(x), float(p)) for x, p in pts])
-        if len(data) >= 2 and not DRY:
-            hi.push(env, "mini_FX", d, data, "盤中排程記錄 Yahoo TWD=X 即時匯率")
+        # 同 mini_OTC：僅記本機檔，mini_FX 由盤後 home_intraday.py 定版推送，盤中不覆蓋 page_cache。
     except Exception as e:                                          # noqa: BLE001
         print(f"[intraday] 匯率走勢記錄失敗（不影響主流程）：{type(e).__name__}")
+
+
+def _fetch_sgx_intraday():
+    """跑 sgx_intraday.py（Playwright 開玩股網），獨立子程式＋逾時，失敗不影響主流程。"""
+    import subprocess
+    try:
+        r = subprocess.run([sys.executable, str(Path(__file__).with_name("sgx_intraday.py"))],
+                           capture_output=True, text=True, encoding="utf-8", errors="replace",
+                           timeout=SGX_TIMEOUT)
+        print((r.stdout or "").strip() or f"[intraday] 富台指分時 exit {r.returncode}")
+        if r.returncode not in (0, 1) and r.stderr:
+            print(f"[intraday] 富台指分時錯誤：{r.stderr.strip()[-300:]}")
+    except Exception as e:                                          # noqa: BLE001
+        print(f"[intraday] 富台指分時抓取失敗（不影響主流程）：{type(e).__name__}")
 
 
 def _one_pass(lcodes, ocodes, env):
@@ -314,10 +351,30 @@ def main():
     print("[intraday] 常駐模式啟動（盤中每 %d 秒一輪）" % INTERVAL)
     l = o = None
     uni_ts = 0.0
+    fx_slot = None
+    sgx_done = set()
+    _heartbeat()
+    _start_watchdog()
     while True:
+        _heartbeat()
         if not _in_session():
-            if _now().hour >= 14:
-                print("[intraday] 已過 14:00，收盤結束常駐")
+            now = _now()
+            hm = now.hour * 60 + now.minute
+            # 2026-10-28 股市收盤後只記匯率（台北匯市到 16:00），對齊每 5 分鐘整點一筆（含 16:00 收盤），首頁匯率分時才看得到收盤
+            if now.weekday() < 5 and 13 * 60 + 35 < hm <= 16 * 60:
+                slot = hm // (FX_AFTER_CLOSE_INTERVAL // 60)
+                if slot != fx_slot:
+                    _record_fx_index(env)
+                    fx_slot = slot
+                # 2026-10-28 富台指日盤分時：玩股網只留當前交易日，14:00 換夜盤後就抓不到，所以 13:48、13:56 各抓一次
+                for at in SGX_FETCH_AT:
+                    if hm >= at and at not in sgx_done and hm < 14 * 60:
+                        sgx_done.add(at)
+                        _fetch_sgx_intraday()
+                time.sleep(30)
+                continue
+            if now.hour >= 16:
+                print("[intraday] 已過 16:00（匯市收盤），結束常駐")
                 break
             time.sleep(30)
             continue

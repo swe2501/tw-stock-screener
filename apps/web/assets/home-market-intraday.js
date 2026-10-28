@@ -154,21 +154,21 @@
     const {code, date} = el.dataset;
     const apiCode=code==='VIX'?'TAIWANVIX':code==='FX'?'TWD=X':code;
     const prev = el.dataset.prev === '' ? NaN : Number(el.dataset.prev);
-    if (code === 'SGX') return unavailable(el, '分時資料未提供');
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return unavailable(el, '分時資料待更新');
     try {
       // 2026-10-24 櫃買指數／台指期／台指VIX：後端 /api/chart 沒有分時（404 或只有大盤近似），
       // 改先讀官方來源自建的 page_cache mini_OTC／mini_TXF／mini_VIX（scripts/home_intraday.py、intraday_push.py），
       // 日期相符才用；沒有才走原本的 /api/chart。
-      const miniKind={'^TWOII':'mini_OTC','TX=F':'mini_TXF','VIX':'mini_VIX','FX':'mini_FX'}[code];
+      const miniKind={'^TWOII':'mini_OTC','TX=F':'mini_TXF','VIX':'mini_VIX','FX':'mini_FX','SGX':'mini_SGX'}[code];  // 2026-10-28 富台指：scripts/sgx_intraday.py 盤中 13:48/13:56 抓玩股網日盤一分鐘線
       let payload=null, fromMini=false;
       if (miniKind) {
         const mk='mini|'+miniKind;
         if (!requests.has(mk)) requests.set(mk, fetch(MINI_SB+'/rest/v1/page_cache?kind=eq.'+miniKind+'&select=payload',{headers:{apikey:MINI_AK,Authorization:'Bearer '+MINI_AK}})
           .then(r=>r.ok?r.json():[]).then(a=>(a&&a[0]&&a[0].payload)||null).catch(()=>null));
         const mini=await requests.get(mk);
-        if (mini && mini.date===date && Array.isArray(mini.data) && mini.data.length>=2) { payload={name:mini.source||'',data:mini.data}; fromMini=true; }
+        if (mini && mini.date===date && Array.isArray(mini.data) && mini.data.length>=2) { payload={name:mini.source||'',data:mini.data,prev:mini.prev}; fromMini=true; }
       }
+      if (!payload && code === 'SGX') return unavailable(el, date.slice(5).replace('-', '/') + ' 分時待更新');  // 後端 /api/chart 沒有富台指分時
       if (!payload) {
         const requestKey=apiCode+'|'+date;
         if (!requests.has(requestKey)) requests.set(requestKey, fetch((window.__API || '') + '/api/chart?code=' + encodeURIComponent(apiCode) + '&range=5d&interval=5m'+(code==='VIX'?'&date='+encodeURIComponent(date):''))
@@ -177,16 +177,18 @@
       }
       if (!el.isConnected) return;
       if (code === 'TX=F' && /近似|proxy|大盤/i.test(payload.name || '')) return unavailable(el, '分時待更新');
-      const rows = sessionRows(payload.data, date, code === 'TX=F', code==='FX', code==='VIX', code==='FX' && fromMini);
+      const rows = sessionRows(payload.data, date, code === 'TX=F' || code === 'SGX',code==='FX', code==='VIX', code==='FX' && fromMini);
       if (rows.length < 2) return unavailable(el, date.slice(5).replace('-', '/') + ' 分時待更新');
-      const baseline = Number.isFinite(prev) && prev > 0 ? prev : null;
+      // 富台指卡片的前收是晚上抓的（夜盤的前收＝當日日盤收盤），日盤小圖改用 mini_SGX 自帶的前一交易日收盤當紅綠分界
+      const ownPrev = code === 'SGX' ? Number(payload.prev) : NaN;
+      const baseline = Number.isFinite(ownPrev) && ownPrev > 0 ? ownPrev : code === 'SGX' ? null : Number.isFinite(prev) && prev > 0 ? prev : null;
       const values = rows.map(r => r.close).concat(baseline == null ? [] : [baseline]);
       const lo = Math.min(...values), hi = Math.max(...values), pad = Math.max((hi - lo) * .12, hi * .0003);
       const y = v => 7 + (hi + pad - v) / (hi - lo + 2 * pad) * 94;
       const fxSess = code==='FX' && fromMini;   // mini_FX＝台北匯市盤 09:00–16:00
       // 2026-10-28 mini_FX 只在股市盤中（intraday_push）記到約 13:35，軸固定到 16:00 右側會空一截；改為至少到 13:30、有更晚資料才延伸（上限 16:00）
       const fxEnd = Math.min(960, Math.max(810, rows.at(-1).minute));
-      const start = fxSess?540:code==='FX'?0:code === 'TX=F' ? 525 : 540, end = fxSess?fxEnd:code==='FX'?1439:code === 'TX=F'||code==='VIX' ? 825 : 810;
+      const start = fxSess?540:code==='FX'?0:code === 'TX=F'||code==='SGX' ? 525 : 540, end = fxSess?fxEnd:code==='FX'?1439:code === 'TX=F'||code==='SGX'||code==='VIX' ? 825 : 810;
       const points = rows.map(r => [3 + (r.minute - start) / (end - start) * 144, y(r.close)]);
       const line = points.map(p => p.map(n => n.toFixed(2)).join(',')).join(' ');
       const baseY = baseline == null ? 105 : y(baseline);
