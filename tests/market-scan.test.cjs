@@ -11,6 +11,5 @@ assert.equal(data.records.filter(r=>r.classification==='uncertain').every(r=>r.p
 assert.equal(data.records.find(r=>r.code==='6620'&&r.timeframe==='daily').classification,'forming');
 assert.equal(data.records.find(r=>r.code==='4188'&&r.timeframe==='daily').classification,'breakout');
 console.log('PASS all-market coverage, unique periods, omission provenance, pending excluded from lines, exact OHLC geometry guards');
-
 assert.equal(data.records.find(r=>r.code==='6133'&&r.timeframe==='weekly').patterns.length,2);
 
