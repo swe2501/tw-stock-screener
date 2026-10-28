@@ -175,3 +175,5 @@ html[data-theme="light"] .fa-light-flow::after{background:radial-gradient(circle
 .fa-pose.is-prev,.fa-eyeglow.is-prev{z-index:0}.fa-pose.is-on,.fa-eyeglow.is-on{z-index:2}
 html:not([data-theme="light"]) .fa-turn{filter:brightness(.92) contrast(1.04)}
 #fqiArrival.fa-lights-off .fa-turn{filter:brightness(.02) saturate(0)}
+/* v33 轉頭改用 canvas 預先解碼畫格、相鄰兩格半透明混合、彈簧緩動 */
+.fa-turn-canvas{position:absolute;left:0;top:0;width:100%;height:auto;display:block}
