@@ -991,6 +991,14 @@ def _fetch_limitup():
     latest, by_code = _load_pw_window(14)
     if not by_code:
         return {"error": "no data"}
+    # 2026-10-28 上櫃股名：_STOCK_NAMES 只有上市，上櫃改查本站 otc_names 表（原本只顯示代號）
+    try:
+        otc_nm = {str(r.get("code")): r.get("name") for r in (_cache_sb("/otc_names", params=[("select", "code,name"), ("limit", "3000")])[1] or [])}
+    except Exception:
+        otc_nm = {}
+    # 2026-10-28 台股漲跌幅上限 10%：單日超過 ±10.5% 代表當天不受漲跌幅限制（停牌後復牌、新上市前幾天），
+    # 不算漲停/跌停。例：1516 川飛 10/15~10/26 停牌，10/27 復牌 25 元比停牌前 18.55 高 34.77%，原本被誤列連 4 天漲停。
+    LIMIT_MAX = 10.5
     ups, downs = [], []
     for c, arr in by_code.items():
         if not arr or arr[0]["trade_date"] != latest or len(arr) < 2:
@@ -1007,7 +1015,7 @@ def _fetch_limitup():
         today = chgs[0]
         close = arr[0].get("close")
         vol = arr[0].get("volume") or 0
-        name = _STOCK_NAMES.get(c, c)
+        name = _STOCK_NAMES.get(c) or otc_nm.get(c) or c
         prev_vols = [x.get("volume") or 0 for x in arr[1:11]]
         ratio = None
         if len(prev_vols) >= 5 and vol > 0:
@@ -1018,12 +1026,14 @@ def _fetch_limitup():
         def streak(sign):
             n = 0
             for v in chgs:
-                if (sign > 0 and v >= 9.5) or (sign < 0 and v <= -9.5):
+                if (sign > 0 and 9.5 <= v <= LIMIT_MAX) or (sign < 0 and -LIMIT_MAX <= v <= -9.5):
                     n += 1
                 else:
                     break
             return n
 
+        if abs(today) > LIMIT_MAX:
+            continue
         if today >= 9.5:
             ups.append({"code": c, "name": name, "close": close,
                         "chg": round(today, 2), "days": streak(1), "ratio": ratio})
@@ -1049,6 +1059,14 @@ def _read_limitup_snapshot():
     if (not isinstance(data, dict) or data.get("error") or not data.get("date")
             or not isinstance(data.get("up"), list) or not isinstance(data.get("down"), list)):
         return None
+    # 2026-10-28 快照比股價舊（晚上股價已上傳、快照還沒重算）就不用，改即時算，避免顯示前一天
+    try:
+        st2, latest = _cache_sb("/price_window", params=[("select", "trade_date"), ("code", "eq.2330"),
+                                                          ("order", "trade_date.desc"), ("limit", "1")])
+        if st2 == 200 and latest and str(latest[0].get("trade_date")) > str(data["date"]):
+            return None
+    except Exception:
+        pass
     return dict(data, updatedAt=rows[0].get("updated_at"), precomputed=True)
 
 
