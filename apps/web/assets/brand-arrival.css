@@ -140,3 +140,9 @@ html #fqiArrival.fa-poses-on{--owl-h:min(66vh,46vw);--owl-w:var(--owl-h);--lamp-
 #fqiArrival.fa-poses-on .fa-owl-wrap{left:50%!important;bottom:2vh!important;width:var(--owl-w)!important;aspect-ratio:1/1!important}
 @media(max-width:840px){html #fqiArrival.fa-poses-on{--owl-w:min(82vw,52vh);--owl-h:var(--owl-w);--lamp-w:calc(var(--owl-w)*.16);--lamp-bottom:calc(92vh - var(--owl-h)*.92 - 4vh)}#fqiArrival.fa-poses-on .fa-owl-wrap{bottom:8vh!important}}
 @media(prefers-reduced-motion:reduce){#fqiArrival .fa-owl-body,#fqiArrival.fa-hop .fa-owl-wrap{animation:none}}
+/* v28 啟用 16 張姿勢圖：頭頂約在圖高 6.7%、腳底約 96% */
+html #fqiArrival.fa-poses-on{--lamp-bottom:calc(98vh - var(--owl-h)*.933 - 6vh)}
+@media(max-width:840px){html #fqiArrival.fa-poses-on{--lamp-bottom:calc(92vh - var(--owl-h)*.933 - 4vh)}}
+.fa-pose{transition:opacity .2s ease,filter .75s ease}
+.fa-pose{z-index:1}.fa-pose.is-prev{opacity:1;z-index:1;transition:none}.fa-pose.is-on{z-index:2}
+#fqiArrival.fa-fast .fa-pose{transition-duration:.05s}

@@ -1,7 +1,8 @@
 # 迎賓頁多姿勢貓頭鷹（v27 起）
 
-`brand-arrival.js` 內 `POSES.ready` 為 `false` 時，迎賓頁使用原本的單張貓頭鷹圖（只做呼吸與點擊輕跳）。
-把下列 9 張圖放進本資料夾、把 `POSES.ready` 改成 `true`（並把 `POSES.v` 加 1 清快取）即啟用：
+`POSES.ready` 已於 v28 啟用（16 張 WebP，已依 front 自動校正 1～5px 位移）。重出某張時：照下方規格出 PNG，轉成同名 `.webp` 覆蓋，並把 `brand-arrival.js` 的 `POSES.v` 加 1 清快取。
+
+目前檔案：front、left-20、left、right-20、right、up、up-left、up-right、down、blink、blink-left、blink-right、tilt、happy、surprised、wave。
 
 | 檔名 | 用途 | 姿勢 |
 |---|---|---|
