@@ -26,6 +26,7 @@ if sys.stdout and hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(errors="replace")
 
 RESTART_EVERY = 150
+MAX_CONSEC_FAILS = 15     # 連續逾時幾檔就放棄（2026-10-29：避免玩股網異常時硬撐一小時）
 FETCH_JS = ("(code)=>fetch('/stock/etf/'+code+'/all-constituent-combine-data',"
             "{headers:{'X-Requested-With':'XMLHttpRequest'}}).then(r=>r.ok?r.json():null).catch(()=>null)")
 
@@ -80,11 +81,23 @@ async def main():
         ctx, page = await _open(p)
         if not await ws.is_logged_in(page):
             print("[error] 玩股網未登入(profile 失效),中止"); await ctx.close(); return
-        done = warn = 0
+        done = warn = fails = 0
         for i, code in enumerate(codes, 1):
             if i % RESTART_EVERY == 0:
-                await ctx.close(); await asyncio.sleep(3); ctx, page = await _open(p)
+                try:
+                    await ctx.close(); await asyncio.sleep(3); ctx, page = await _open(p)
+                except Exception as e:                       # noqa: BLE001
+                    # 2026-10-29 玩股網連不上時原本整支當掉、已抓的全部不上傳（10/28 白耗 36 分鐘）→ 改為先上傳已抓到的
+                    print(f"[warn] 重開瀏覽器失敗（{type(e).__name__}），停在第 {i} 檔，先上傳已抓到的", flush=True)
+                    break
             d = await _fetch_combine(page, code)
+            if d is None:                                    # 逾時／連線失敗（空成分股不算，債券型本來就沒有）
+                fails += 1
+                if fails >= MAX_CONSEC_FAILS:
+                    print(f"[warn] 連續 {fails} 檔逾時，玩股網可能異常，停在第 {i} 檔，先上傳已抓到的", flush=True)
+                    break
+            else:
+                fails = 0
             if not d or not d.get("stockHoldings"):
                 warn += 1
                 await asyncio.sleep(0.5)
@@ -103,7 +116,10 @@ async def main():
             if i % 30 == 0:
                 print(f"  …{i}/{len(codes)}（成功{done} 空{warn} 持股累計{len(holdings)}）", flush=True)
             await asyncio.sleep(0.4)
-        await ctx.close()
+        try:
+            await ctx.close()
+        except Exception:                                    # noqa: BLE001
+            pass
 
     print(f"抓完：成功 {done} 檔、空 {warn} 檔、成分股 {len(holdings)} 列")
 

@@ -556,7 +556,7 @@ page_cache 是 **uat 與 prod 共用**同一個 Supabase。若推盤中到原 ki
 ### B. 本機 Windows 工作排程器任務（2026-10-28）
 | 任務名稱 | 時間 | 執行 | 內容 |
 |---|---|---|---|
-| `WantgooDailyScrape` | 週一～五 19:00（可喚醒） | `scripts\run_daily_job.bat` | 夜間主排程：分點、法人、收盤價、ETF、總經、廣度、快取等約 66 步 |
+| `WantgooDailyScrape` | 週一～五 19:00（可喚醒） | `scripts\run_daily_job.bat` | 夜間主排程：分點、法人、收盤價、ETF、總經、廣度、快取等約 66 步；執行上限 10 小時（2026-10-29 由 8 小時調高，需系統管理員權限設定） |
 | `AI_stock_Intraday` | 週一～五 08:55（可喚醒），常駐到 16:01 | `scripts\run_intraday.bat` | 盤中掃盤 `intraday_push.py --loop`（09:00–13:35 每 35 秒）；收盤後只記匯率每 5 分鐘到 16:00（10/28 起）；卡住 5 分鐘會自動重啟（10/29 起，見下方）；13:48、13:56 另呼叫 `sgx_intraday.py` 抓富台指日盤分時（10/29 起，見下方） |
 | `CodexHotTopicsHourly` | 週一～五 09:00 起每小時，共 5 小時 | `scripts\run_codex_topics.bat` | 話題族群（桌面版 Codex CLI） |
 | `AI_stock_news_feed` | 每天 06:30 起每 4 小時 | `scripts\run_news_feed.bat` | 每日新聞 |
@@ -572,6 +572,11 @@ page_cache 是 **uat 與 prod 共用**同一個 Supabase。若推盤中到原 ki
 - **上漲下跌亮燈區快照（2026-10-28 加）**：夜間排程的 `page_cache_push.py` 尾段呼叫 `scripts\limitup_precompute.py`，用 origin/prod、origin/uat 各自的程式算好寫 page_cache `limitup`／`limitup@uat`；`/api/screen?stat=limitup` 先讀快照（約 0.3 秒），沒有才即時算（約 28 秒）。手動補跑：`python scripts\limitup_precompute.py`。
 
 ### C. 任何帳號的 Claude Code 怎麼操作（PowerShell）
+- 2026-10-29 夜間排程被 8 小時上限砍掉（玩股網整晚逾時，停在第 57 步，網頁快照沒更新）。處理：
+  上限改 10 小時；`wantgoo_etf.py`／`wantgoo_etf_flow.py` 連續逾時 15 檔或重開瀏覽器失敗就先上傳已抓到的並結束（原本整支當掉、什麼都沒上傳）；
+  `page_cache_push.py` 今日焦點失敗隔 90 秒重試 3 次；`job_health.py` 改為今天沒紀錄就看昨天（原本跑過午夜每次都略過），並檢查網頁快照是否比股價舊、研究室有無未解決的失敗步驟；
+  `office_report.py` 研究室燈號：20 小時內有失敗且沒重跑成功就維持紅燈（原本只看最後一步），跨午夜不清掉步驟紀錄，超過 3 小時沒結束的步驟記為中斷。
+  被砍掉時補跑：把 `run_daily_job.bat` 剩下的步驟另存一個批次檔，用 WMI 脫鉤啟動（例：2026-10-29 補跑第 58～70 步）。
 - 查看全部：`Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\Microsoft\*' }`；看上次結果：`Get-ScheduledTaskInfo -TaskName WantgooDailyScrape`（LastTaskResult 0＝成功）。
 - 立刻執行一次：`Start-ScheduledTask -TaskName WantgooDailyScrape`（或 `schtasks /Run /TN WantgooDailyScrape`）。
 - 停用／啟用：`Disable-ScheduledTask` ／ `Enable-ScheduledTask -TaskName <名稱>`。

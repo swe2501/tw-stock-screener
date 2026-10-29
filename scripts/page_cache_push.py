@@ -130,17 +130,22 @@ def main():
         research_ok = True
     except Exception as e:
         print(f"[page_cache] research failed; previous snapshot retained: {type(e).__name__}")
+    # 2026-10-29 今日焦點偶發讀股價不完整就整份放棄，10/23~10/28 連續沒更新（手動重跑就成功）→ 失敗隔 90 秒重試，最多 3 次
     focus_ok = False
-    try:
-        from focus_precompute import run as run_focus
-        run_focus(env, "prod")
-        focus_ok = True
-    except Exception as e:
-        print(f"[page_cache] focus failed; previous snapshot retained: {type(e).__name__}")
-    try:
-        run_focus(env, "uat")                           # uat 版失敗不影響正式站
-    except Exception as e:
-        print(f"[page_cache] focus@uat failed: {type(e).__name__}")
+    from focus_precompute import run as run_focus
+    for env_name in ("prod", "uat"):                    # uat 版失敗不影響正式站
+        for attempt in range(3):
+            try:
+                run_focus(env, env_name)
+                if env_name == "prod":
+                    focus_ok = True
+                break
+            except Exception as e:                      # noqa: BLE001
+                print(f"[page_cache] focus@{env_name} failed (try {attempt + 1}/3): {type(e).__name__}")
+                if attempt < 2:
+                    time.sleep(90)
+    if not focus_ok:
+        print("[page_cache] focus 重試 3 次仍失敗，保留舊快照")
     # 2026-10-28 上漲下跌亮燈區：原本網頁即時算約 28 秒，改每晚先算好（失敗不影響其他快照，網頁會退回即時算）
     try:
         from limitup_precompute import run as run_limitup
