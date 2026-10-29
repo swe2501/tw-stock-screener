@@ -2323,7 +2323,7 @@
         var mkt=(window._isEtf&&window._isEtf(it.code)?'<span class="gs-sd-mkt etf">ETF</span>':'')+(mk==='上櫃'?'<span class="gs-sd-mkt otc">上櫃</span>':(mk==='上市'?'<span class="gs-sd-mkt twse">上市</span>':''));
         return '<div class="gs-sd-item'+(i===sel?' on':'')+'" role="option" data-code="'+it.code+'"><span class="gs-sd-code">'+it.code+'</span><span class="gs-sd-name">'+(it.name||'')+'</span>'+tag+mkt+'</div>';
       }).join(''); drop.hidden=false; if(inp)inp.setAttribute('aria-expanded','true'); }
-    function open(code){ if(drop)drop.hidden=true; if(inp){inp.value='';inp.blur();} list=[]; sel=-1; if(window._openStock)window._openStock(String(code), (window._names&&window._names[code])||''); }
+    function open(code){ if(drop)drop.hidden=true; if(inp){inp.value='';inp.blur();} list=[]; sel=-1; if(document.getElementById('chartModal')?.classList.contains('chart-analysis-only')){window.AcademyChartAnalysis?.open(String(code));return;} if(window._openStock)window._openStock(String(code), (window._names&&window._names[code])||''); }
     function oninput(){ if(!inp)return; var run=function(){ list=match(inp.value); sel=-1; render(); }; if(!window._names){ window._loadNames&&window._loadNames(run); } else run(); }
     function go(){ if(!inp)return; var q=(inp.value||'').trim(); if(!q)return;
       if(sel>=0&&list[sel]){open(list[sel].code);return;}
@@ -2368,7 +2368,7 @@
       <a class="nav-owner" data-member-feature="hottopics" onclick="_showView('hottopics')"> 話題</a><a onclick="_showView('themes')">題材列表</a><a onclick="_showView('sectors')">產業地圖</a><a onclick="_showView('groupbook')">集團作帳</a></div></div>
     <div class="mn-grp"><span class="mn-item">市場觀察 <i>▾</i></span><div class="mn-menu">
       <a class="nav-broker" style="display:none" id="navBrokerGrp" onclick="_showView('sig')">不籌吃穿</a>
-      <a class="nav-owner" onclick="_showView('mingdeng')"> 神燈與冥燈</a><a onclick="_showView('greed')"> 貪婪指標</a><a onclick="_showView('inst')"> 三大法人個股買賣超</a><a onclick="_showView('fhedge')"> 外資空單溫度計</a><a onclick="_showView('breadth')"> 大盤多空廣度</a><a onclick="_showView('usty')"> 美債對標</a><a onclick="_showView('disposal')"> 處置股</a></div></div>
+      <a class="nav-owner" onclick="_showView('mingdeng')"> 神燈與冥燈</a><a onclick="_showView('greed')"> 貪婪指標</a><a onclick="_showView('inst')"> 三大法人個股買賣超</a><a onclick="_showView('fhedge')"> 外資空單溫度計</a><a onclick="_showView('breadth')"> 大盤多空廣度</a><a onclick="_showView('usty')"> 美債對標</a><a id="navChartAnalysis" onclick="AcademyChartAnalysis.open()"> 線圖分析</a><a onclick="_showView('disposal')"> 處置股</a></div></div>
     <div class="mn-grp"><span class="mn-item">ETF 分析 <i>▾</i></span><div class="mn-menu">
       <a onclick="_showView('etfx')" style="font-weight:800;color:var(--brand-green)"> ETF 探索</a><a onclick="_showView('etf')">總覽 · 規模排行</a><a onclick="_showView('etfcons')">成分股</a><a onclick="_showView('etfrev')">股票反查 ETF</a><a onclick="_showView('etfdiv')">配息行事曆</a><a onclick="_showView('etfhold')">持有人結構</a><a onclick="_showView('etfsim')">ETF 相似度</a><a onclick="_showView('etfheavy')">重倉股排行</a><a onclick="_showView('etfprem')">折溢價</a><a onclick="_showView('etfflow')">資金流</a><a onclick="_showView('etfperf')">績效比較</a></div></div>
     <a class="mn-item" onclick="_showView('news')">每日新聞</a>
@@ -11323,7 +11323,10 @@
     }
 
     function drawerCodeForChart(){return window._etxChartCode||'';}
-    function openChart(code, name, industry = '', price = 0, fromScreen = false, markDate = null, markLabel = '', markDate2 = null, markLabel2 = null) {
+    function openChart(code, name, industry = '', price = 0, fromScreen = false, markDate = null, markLabel = '', markDate2 = null, markLabel2 = null, presentation = null) {
+      const chartModal=document.getElementById('chartModal'),wasAnalysis=chartModal.classList.contains('chart-analysis-only'),analysis=!!presentation?.analysisOnly;
+      chartModal.classList.toggle('chart-analysis-only',analysis);
+      if(analysis||wasAnalysis){chartModal.classList.toggle('kfull',analysis);window.AcademyChartViewport?.refresh();}
       if(document.getElementById('chartModal').classList.contains('etx-embedded')&&code!==drawerCodeForChart())window._etxReleaseChart();
       prevCode = ''; prevName = '';
       currentCode = code; currentName = name;
@@ -14212,7 +14215,7 @@
       _userMarkers = {};  // 關閉 K 圖時清掉所有日期標記（暫時性設計）
       _stopRealtimeUpdates();
       _setChartFull(false);
-      document.getElementById('chartModal').classList.remove('open');
+      document.getElementById('chartModal').classList.remove('open','chart-analysis-only');
       document.body.classList.remove('mc-chart-open');
       _destroyCharts();
       if (_drawTool) { try { window._setDrawTool(_drawTool); } catch (_) {} }   // 關閉 K 圖時取消畫線工具（按鈕一併還原）
@@ -15903,7 +15906,7 @@
     function _watchDrawingProjection(){
       _drawingFrame=0;
       if(!chartInstance||!candleSeriesRef||!document.getElementById('chartModal')?.classList.contains('open'))return;
-      const active=_drawShapes.length||_drawPending.length||trendLines.length||fibLevels.length||_boxRectShow;
+      const active=_drawShapes.length||_drawPending.length||_shapeDrag||trendStart||fibDragStart||zoomDragStart||trendLines.length||fibLevels.length||_boxRectShow;
       if(!active){if(_drawingDirty){_drawingDirty=false;resizeFibCanvas();redrawCanvas();}return;}
       const ts=chartInstance.timeScale(),range=ts.getVisibleLogicalRange(),bars=window._vpCandles||[],probe=bars[Math.floor(bars.length/2)]||bars[0];
       const host=document.getElementById('chartContainer');
@@ -16064,7 +16067,7 @@
       overlay.addEventListener('mousedown', e => {
         if (!candleSeriesRef || e.button!==0) return;
         if (zoomMode) {
-          zoomDragStart = { x: getX(e.clientX) };
+          zoomDragStart = { x: getX(e.clientX), li: chartInstance.timeScale().coordinateToLogical(getX(e.clientX)) };
         } else if (fibMode) {
           const y = getY(e.clientY);
           const price = candleSeriesRef.coordinateToPrice(y);
@@ -16077,9 +16080,9 @@
       });
       overlay.addEventListener('mousemove', e => {
         if (zoomMode && zoomDragStart) {
-          drawZoomRect(zoomDragStart.x, getX(e.clientX));
+          drawZoomRect((zoomDragStart.li!=null?chartInstance.timeScale().logicalToCoordinate(zoomDragStart.li):zoomDragStart.x), getX(e.clientX));
         } else if (fibMode && fibDragStart) {
-          drawBand(fibDragStart.y, getY(e.clientY));
+          drawBand(candleSeriesRef.priceToCoordinate(fibDragStart.price), getY(e.clientY));
         } else if (trendLineMode && trendStart) {
           const ctx = canvas.getContext('2d');
           ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -16098,7 +16101,7 @@
       overlay.addEventListener('mouseup', e => {
         if (zoomMode && zoomDragStart) {
           const x2 = getX(e.clientX);
-          const x1 = zoomDragStart.x;
+          const x1 = zoomDragStart.li!=null?chartInstance.timeScale().logicalToCoordinate(zoomDragStart.li):zoomDragStart.x;
           zoomDragStart = null;
           if (Math.abs(x2 - x1) > 5 && chartInstance) {
             const ts=chartInstance.timeScale(),width=ts.width(),clamp=x=>Math.max(0,Math.min(width,x));
@@ -16123,7 +16126,7 @@
       overlay.addEventListener('touchstart', e => {
         if (!candleSeriesRef) return; e.preventDefault();
         if (zoomMode) {
-          zoomDragStart = { x: getX(e.touches[0].clientX) };
+          zoomDragStart = { x: getX(e.touches[0].clientX), li: chartInstance.timeScale().coordinateToLogical(getX(e.touches[0].clientX)) };
         } else if (fibMode) {
           const y = getY(e.touches[0].clientY);
           const price = candleSeriesRef.coordinateToPrice(y);
@@ -16137,9 +16140,9 @@
       overlay.addEventListener('touchmove', e => {
         e.preventDefault();
         if (zoomMode && zoomDragStart) {
-          drawZoomRect(zoomDragStart.x, getX(e.touches[0].clientX));
+          drawZoomRect((zoomDragStart.li!=null?chartInstance.timeScale().logicalToCoordinate(zoomDragStart.li):zoomDragStart.x), getX(e.touches[0].clientX));
         } else if (fibMode && fibDragStart) {
-          drawBand(fibDragStart.y, getY(e.touches[0].clientY));
+          drawBand(candleSeriesRef.priceToCoordinate(fibDragStart.price), getY(e.touches[0].clientY));
         } else if (trendLineMode && trendStart) {
           const ctx = canvas.getContext('2d');
           ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -16159,7 +16162,7 @@
         e.preventDefault();
         if (zoomMode && zoomDragStart) {
           const x2 = getX(e.changedTouches[0].clientX);
-          const x1 = zoomDragStart.x;
+          const x1 = zoomDragStart.li!=null?chartInstance.timeScale().logicalToCoordinate(zoomDragStart.li):zoomDragStart.x;
           zoomDragStart = null;
           if (Math.abs(x2 - x1) > 5 && chartInstance) {
             const ts=chartInstance.timeScale(),width=ts.width(),clamp=x=>Math.max(0,Math.min(width,x));
@@ -16356,7 +16359,7 @@
         if (!_drawTool) return;
         const px = gx(e.clientX), py = gy(e.clientY);
         if (_drawTool === 'eraser') { if (_erasing && (e.buttons & 1)) _eraseAt(px, py); else _erasing = false; return; }
-        if (_shapeDrag) { redrawCanvas(); _previewShape(document.getElementById('fibCanvas').getContext('2d'), _drawTool, { px: _shapeDrag.px, py: _shapeDrag.py }, { px, py }); return; }
+        if (_shapeDrag) { redrawCanvas(); _previewShape(document.getElementById('fibCanvas').getContext('2d'), _drawTool, { px: _dX(_shapeDrag), py: candleSeriesRef.priceToCoordinate(_shapeDrag.price) }, { px, py }); return; }
         if (_CLICK_TOOLS.indexOf(_drawTool) >= 0 && _drawPending.length) {
           redrawCanvas(); const ctx = document.getElementById('fibCanvas').getContext('2d');
           const last = _drawPending[_drawPending.length - 1], lx = _dX(last), ly = candleSeriesRef.priceToCoordinate(last.price);
@@ -16413,7 +16416,7 @@
         const t = e.touches[0]; if (!t) return;
         const px = gx(t.clientX), py = gy(t.clientY);
         if (_drawTool === 'eraser') { e.preventDefault(); if (chartInstance && candleSeriesRef) _eraseAt(px, py); return; }   // 手指滑過即清除
-        if (_shapeDrag) { e.preventDefault(); redrawCanvas(); _previewShape(document.getElementById('fibCanvas').getContext('2d'), _drawTool, { px: _shapeDrag.px, py: _shapeDrag.py }, { px, py }); return; }
+        if (_shapeDrag) { e.preventDefault(); redrawCanvas(); _previewShape(document.getElementById('fibCanvas').getContext('2d'), _drawTool, { px: _dX(_shapeDrag), py: candleSeriesRef.priceToCoordinate(_shapeDrag.price) }, { px, py }); return; }
         if (_CLICK_TOOLS.indexOf(_drawTool) >= 0 && _drawPending.length) {
           e.preventDefault(); redrawCanvas(); const ctx = document.getElementById('fibCanvas').getContext('2d');
           const last = _drawPending[_drawPending.length - 1], lx = _dX(last), ly = candleSeriesRef.priceToCoordinate(last.price);
@@ -18057,7 +18060,7 @@
 <script src="assets/member-data-portability.js?v=inbox1" defer></script>
 <script src="assets/member-service-center.js?v=1" defer></script>
 <link rel="stylesheet" href="assets/chart-research-tools.css?v=tools22">
-<script src="assets/chart-research-tools.js?v=tools19" defer></script>
+<script src="assets/chart-research-tools.js?v=tools20" defer></script>
 <link rel="stylesheet" href="assets/brand-footer.css?v=6">
 <script src="assets/brand-footer.js?v=5" defer></script>
 <link rel="stylesheet" href="assets/market-panel-layout.css?v=8">
@@ -18132,5 +18135,7 @@
 <script src="assets/pattern-admin-review.js?v=20261027-6" defer></script>
 <link rel="stylesheet" href="assets/brand-arrival.css?v=40">
 <script src="assets/brand-arrival.js?v=41" defer></script>
+<link rel="stylesheet" href="assets/chart-analysis.css?v=1">
+<script src="assets/chart-analysis.js?v=1" defer></script>
 </body>
 </html>

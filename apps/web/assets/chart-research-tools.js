@@ -4,6 +4,20 @@ const ratios=[0,.191,.382,.5,.618,.809,1,1.191,1.382,1.5,1.618,1.809,2,2.382,2.6
 const amplitudeRatios=[...ratios,6.854];
 const finite=v=>typeof v==='number'&&Number.isFinite(v),fmt=(n,d=2)=>finite(n)?n.toLocaleString('zh-TW',{maximumFractionDigits:d}):'—';
 const bridge=()=>window.AcademyChartBridge?.get(),escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// Drawing gestures stay on the overlay; wheel zoom changes only the chart viewport.
+// Use chart coordinates directly so no synthetic pointer event can finish/cancel a tool.
+addEventListener('wheel',e=>{
+ if(!e.target.closest?.('#chartOverlay,#chartRangeCapture')||!document.getElementById('chartModal')?.classList.contains('open'))return;
+ const b=bridge(),host=document.getElementById('chartContainer'),ts=b?.chart?.timeScale(),range=ts?.getVisibleLogicalRange();
+ if(!host||!range||!e.deltaY)return;
+ e.preventDefault();e.stopPropagation();
+ const delta=e.deltaY*(e.deltaMode===1?16:e.deltaMode===2?host.clientHeight:1),span=range.to-range.from;
+ const x=Math.max(0,Math.min(ts.width(),e.clientX-host.getBoundingClientRect().left)),anchor=ts.coordinateToLogical(x);
+ if(!finite(anchor)||span<=0)return;
+ const next=Math.max(8,Math.min(Math.max(3000,b.candles.length*4),span*Math.exp(Math.max(-.35,Math.min(.35,delta*.0015))))),fraction=(anchor-range.from)/span;
+ ts.setVisibleLogicalRange({from:anchor-next*fraction,to:anchor+next*(1-fraction)});
+ requestAnimationFrame(()=>{window.AcademyChartBridge?.redraw();drawRange();queueReportPosition();});
+},{capture:true,passive:false});
 let logarithmic=false;try{logarithmic=localStorage.getItem('kv_price_log')==='1';}catch{}
 function levels(shape){const p=shape.pts||[];if(shape.type==='amplitude'&&p.length===3)return amplitudeRatios.map(r=>({ratio:r,price:p[2].price+(p[1].price-p[0].price)*r}));if(shape.type==='fibret'&&p.length===2)return ratios.map(r=>({ratio:r,price:p[1].price+(p[0].price-p[1].price)*r}));if(shape.type==='fibext'&&p.length===3)return ratios.map(r=>({ratio:r,price:p[2].price+(p[1].price-p[0].price)*r}));return [];}
 function measureAmplitude(shape){const p=shape.pts||[];if(p.length!==3)return null;const ab=p[1].price-p[0].price,bc=p[2].price-p[1].price;return {firstChange:p[0].price?ab/Math.abs(p[0].price)*100:null,secondChange:p[1].price?bc/Math.abs(p[1].price)*100:null,ratio:ab?Math.abs(bc/ab):null};}
@@ -57,7 +71,7 @@ let selecting=false,start=null,downX=0,downY=0,selection=null,shade=null,capture
 function setup(){if(shade)return;const panel=document.getElementById('mainChartPanel');if(!panel)return;shade=document.createElement('div');shade.id='chartRangeShade';shade.hidden=true;panel.append(shade);capture=document.createElement('div');capture.id='chartRangeCapture';capture.hidden=true;capture.setAttribute('aria-label','拖曳選取統計區間');panel.append(capture);
  report=document.createElement('section');report.id='chartIntervalReport';report.hidden=true;report.setAttribute('aria-label','區間統計結果');report.innerHTML='<div class="range-report-heading"><b>區間統計</b><button type="button" data-range-close aria-label="關閉區間統計">×</button></div><div data-range-content></div>';document.querySelector('#chartModal>.modal-box').append(report);report.querySelector('button').onclick=dismissReport;
  const logical=x=>{const b=bridge(),r=panel.getBoundingClientRect();const li=b?.chart.timeScale().coordinateToLogical(x-r.left);return finite(li)?Math.max(0,Math.min(b.candles.length-1,Math.round(li))):null;};
- capture.addEventListener('wheel',e=>{if(!selecting)return;const host=document.getElementById('chartContainer'),target=host?.querySelector('canvas')||host;if(!target)return;e.preventDefault();target.dispatchEvent(new WheelEvent('wheel',{bubbles:true,cancelable:true,clientX:e.clientX,clientY:e.clientY,deltaX:e.deltaX,deltaY:e.deltaY,deltaZ:e.deltaZ,deltaMode:e.deltaMode,ctrlKey:e.ctrlKey,shiftKey:e.shiftKey,altKey:e.altKey,metaKey:e.metaKey}));},{passive:false});
+
  function startRange(e){if(e.button!==0)return;start=logical(e.clientX);if(start==null)return;e.preventDefault();dismissReport();downX=e.clientX;downY=e.clientY;capture.setPointerCapture(e.pointerId);selection={from:start,to:start};}
  capture.addEventListener('pointerdown',startRange);
  // Starting another range through the readout should never be blocked by the previous result.
