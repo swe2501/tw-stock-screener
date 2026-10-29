@@ -70,14 +70,46 @@ def _now():
     return dt.datetime.now(TZ)
 
 
+def _unresolved_failures(steps):
+    """回傳 20 小時內失敗、且之後沒有再成功過的步驟名稱（依出現順序）。"""
+    last = {}
+    for s in steps:
+        try:
+            if (_now() - dt.datetime.fromisoformat(s.get("start") or "")).total_seconds() > 20 * 3600:
+                continue
+        except Exception:
+            continue
+        if "end" in s:
+            last[s.get("step")] = bool(s.get("ok"))
+    return [k for k, v in last.items() if not v]
+
+
 def record(agent, step, phase, ok=None, secs=None, detail=None):
     try:
         st = _get(agent)
         today = _now().date().isoformat()
         if st.get("date") != today:
-            st = {"agent": agent, "name": AGENTS.get(agent, agent), "date": today, "steps": [],
-                  "bubble": st.get("bubble") or []}
+            # 2026-10-29 夜間排程會跨午夜：最近 14 小時內還有步驟就沿用（不清掉），才看得到整晚各步耗時
+            last = max((s.get("start") or "" for s in st.get("steps") or []), default="")
+            recent = False
+            try:
+                recent = bool(last) and (_now() - dt.datetime.fromisoformat(last)).total_seconds() < 14 * 3600
+            except Exception:
+                pass
+            if recent:
+                st["date"] = today
+            else:
+                st = {"agent": agent, "name": AGENTS.get(agent, agent), "date": today, "steps": [],
+                      "bubble": st.get("bubble") or []}
         now = _now().isoformat(timespec="seconds")
+        # 2026-10-29 排程被系統強制停掉時，那一步不會有結束紀錄 → 超過 3 小時沒結束的視為中斷（失敗）
+        for s in st.get("steps") or []:
+            if "end" not in s and s.get("start"):
+                try:
+                    if (_now() - dt.datetime.fromisoformat(s["start"])).total_seconds() > 3 * 3600:
+                        s.update({"end": now, "ok": False, "detail": "中斷（排程被停掉，沒有結束紀錄）"})
+                except Exception:
+                    pass
         if phase == "start":
             st["status"] = "work"
             st["current"] = step
@@ -102,6 +134,14 @@ def record(agent, step, phase, ok=None, secs=None, detail=None):
                     st["bubble_err"] = type(e).__name__
             else:
                 st["bubble"] = [f"{step} 失敗", f"耗時 {round(secs or 0)} 秒"]
+            # 2026-10-29 燈號原本只看最後一步：前面失敗、後面成功就變綠燈（10/28 ETF 兩步失敗仍顯示完成）。
+            # 改為這一輪只要有步驟失敗、且之後沒有重跑成功，就維持「卡住」。
+            failed = _unresolved_failures(st["steps"])
+            if ok and failed:
+                st["status"] = "stuck"
+                st["current"] = failed[0]
+                st["bubble"] = [f"{'、'.join(failed[:2])}{' 等' if len(failed) > 2 else ''} 失敗",
+                                (st.get("bubble") or [""])[0]]
         st["steps"] = st["steps"][-80:]
         _put(agent, st)
     except Exception as e:                                  # noqa: BLE001
