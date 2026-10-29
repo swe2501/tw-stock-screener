@@ -8544,8 +8544,11 @@
     /* hero 資金軌:富台指/VIX/匯率(原 §2A 國際塊,照合夥人移到最上面)*/
     function loadFundRail(){
       var box=el('hpFundRail'); if(!box)return;
-      sb('market_indicators?select=futai_close,futai_prev,vix,vix_prev,usdtwd&order=date.desc&limit=1').then(function(a){
-        var mi=(a||[])[0]; if(!mi){box.innerHTML='';return;}
+      Promise.all([sb('market_indicators?select=date,futai_close,futai_prev,vix,vix_prev,usdtwd,updated_at&order=date.desc&limit=1'),sb('page_cache?kind=eq.quote_SGX&select=payload,updated_at')]).then(function(r2){
+        var a=r2[0], mi=(a||[])[0]; if(!mi){box.innerHTML='';return;}
+        // 2026-10-29 富台指盤中改用日盤最新價（同首頁富台指卡片）
+        var sq=((r2[1]||[])[0])||null,sp=sq&&sq.payload;
+        if(sp&&sp.close>0&&sp.prev>0&&sp.date>=(mi.date||'')&&Date.parse(sq.updated_at)>Date.parse(mi.updated_at||0)){mi=Object.assign({},mi,{futai_close:sp.close,futai_prev:sp.prev});}
         var fd=(mi.futai_close!=null&&mi.futai_prev)?((mi.futai_close/mi.futai_prev-1)*100):null;
         var vd=(mi.vix!=null&&mi.vix_prev)?(mi.vix-mi.vix_prev):null;
         function it(k,v,c,cc){return '<div class="gs-fr"><div class="k">'+k+'</div><div class="v">'+v+(c?'<span class="c '+cc+'">'+c+'</span>':'')+'</div></div>';}
@@ -8976,7 +8979,8 @@
         sb('chip_brief_daily?select=*&order=trade_date.desc&limit=1'),
         sb('market_indicators?select=*&order=date.desc&limit=300'),
         sb('gov_broker_daily?select=date,net_amt,buy_amt,sell_amt,net5,net20,net60&order=date.desc&limit=60'),
-        fetch(window.__API+'/api/chart?code=%5ETWII&range=6mo&interval=1d').then(function(r){return r.json();}).then(function(j){return (j&&j.data)||[];}).catch(function(){return [];})
+        fetch(window.__API+'/api/chart?code=%5ETWII&range=6mo&interval=1d').then(function(r){return r.json();}).then(function(j){return (j&&j.data)||[];}).catch(function(){return [];}),
+        sb('page_cache?kind=eq.quote_SGX&select=payload,updated_at')   // 2026-10-29 富台指日盤最新價
       ]).then(function(res){
         window._homeMarketFxRows=res[1]||[];
         var cb=(res[0]||[])[0]||{},mi=(res[1]||[])[0]||{},vixYear=vixAnnualState(res[1]),gov=res[2]||[],tx=(res[3]||[]).slice().reverse();
@@ -9016,7 +9020,11 @@
             +'<div class="sub"><span class="'+tcol+'">'+(tchg>0?'+':'')+Number(tchg).toFixed(2)+' 元</span><span class="home-change-percent '+tcol+'">'+(tpct>0?'+':'')+Number(tpct).toFixed(2)+'%</span></div>':'<div class="big">資料更新中</div>')+'</div>'+mini('2330',cb.trade_date,tsc!=null&&tchg!=null?tsc-tchg:null)+'</div>'
           +(contrib!=null?'<div class="home-quote-context"><b class="'+(contrib>=0?'hp-up':'hp-dn')+'">約'+(contrib>=0?'貢獻':'拖累')+'加權指數 '+Math.abs(contrib).toFixed(1)+' 點</b><small>依前一日上市市值權重估算</small></div>':'')+'</div>';
         // 富台指期換算
-        var fc=mi.futai_close,fp=mi.futai_prev,fchg=(fc!=null&&fp!=null)?(fc-fp):null,fpct=(fchg!=null&&fp)?(fchg/fp*100):null;
+        var fc=mi.futai_close,fp=mi.futai_prev,fDate=mi.date,fNote='';
+        // 2026-10-29 盤中改用日盤最新價：quote_SGX 由盤中排程 08:45–13:47 每分鐘寫入（玩股網報價、昨收＝前一交易日日盤收盤），比晚上 market_indicators 那筆新才採用
+        var sq=((res[4]||[])[0])||null,sp=sq&&sq.payload;
+        if(sp&&sp.close>0&&sp.prev>0&&sp.date>=(mi.date||'')&&Date.parse(sq.updated_at)>Date.parse(mi.updated_at||0)){fc=sp.close;fp=sp.prev;fDate=sp.date;fNote='日盤 '+new Date((sp.time+28800)*1000).toISOString().slice(11,16)+(sp.time*1000>Date.now()-6e5?' 即時':' 最新');}
+        var fchg=(fc!=null&&fp!=null)?(fc-fp):null,fpct=(fchg!=null&&fp)?(fchg/fp*100):null;
         var fcol=(fchg!=null&&fchg>=0)?'hp-up':'hp-dn',conv=(fc!=null)?fc*FTSE_TX_FACTOR:null;
         var fb=fpct==null?['n','海外盤—']:(fpct>=.5?['g','海外盤偏多']:(fpct<=-.5?['d','海外盤偏空']:['n','海外盤震盪']));
         // 富台指（SGX FTSE Taiwan）最後交易日＝每月「倒數第二個營業日」；休市依證交所休市表
@@ -9032,9 +9040,9 @@
         }
         var ftseCard='<div class="cb-ovc home-market-card" role="button" tabindex="0" style="cursor:pointer" onclick="_openKpiChart(\'富台指\')" onkeydown="if(event.key===String.fromCharCode(13)||event.key===String.fromCharCode(32)){event.preventDefault();this.click()}" aria-label="查看富台指近兩年走勢圖"><header><span>富台指期<small>SGX FTSE TAIWAN</small></span><span class="cb-tag '+fb[0]+'">'+fb[1]+'</span></header>'
           +'<div class="home-quote-row"><div class="home-quote">'+(fc!=null?'<div class="big '+fcol+'">'+Number(fc).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+'</div>'
-            +'<div class="sub"><span class="'+fcol+'">'+(fchg>0?'+':'')+fchg.toFixed(2)+' 點</span><span class="home-change-percent '+fcol+'">'+(fpct>0?'+':'')+fpct.toFixed(2)+'%</span></div>'
-            +'</div>'+mini('SGX',mi.date,fp)+'</div><div class="cb-conv">↓ 換算參考　<strong>台指期約 '+Math.round(conv).toLocaleString()+' 點</strong></div>'
-            +_futaiSettleHtml():'<div class="big">資料更新中</div></div>'+mini('SGX',mi.date,fp)+'</div>')+'</div>';
+            +'<div class="sub"><span class="'+fcol+'">'+(fchg>0?'+':'')+fchg.toFixed(2)+' 點</span><span class="home-change-percent '+fcol+'">'+(fpct>0?'+':'')+fpct.toFixed(2)+'%</span>'+(fNote?'<small style="display:block;font-size:12px;opacity:.65">'+fNote+'</small>':'')+'</div>'
+            +'</div>'+mini('SGX',fDate,fp)+'</div><div class="cb-conv">↓ 換算參考　<strong>台指期約 '+Math.round(conv).toLocaleString()+' 點</strong></div>'
+            +_futaiSettleHtml():'<div class="big">資料更新中</div></div>'+mini('SGX',fDate,fp)+'</div>')+'</div>';
         // 期貨結算日（月合約＝每月第三個週三；週選＝每週三、週五；遇休市順延至次一交易日，休市表＝證交所）2026-09-28
         function settleCardHtml(){
           var toIso=function(t){return new Date(t).toISOString().slice(0,10);}, fromIso=function(s){return Date.parse(s+'T00:00:00Z');};

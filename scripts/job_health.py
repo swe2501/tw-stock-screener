@@ -12,7 +12,7 @@ import json
 import re
 import sys
 import urllib.request
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -26,15 +26,58 @@ PROD_ALERT = "https://tw-stock-screener-neon.vercel.app/api/alert?kind=health"
 WARN_THRESHOLD = 30   # 今日逾時/失敗股票數超過此值就警示（正常應個位數）
 
 
+SNAP_KINDS = ("sectors", "themes", "overview", "themeall", "sectorall")   # 每個 kind 只有一列
+VERSIONED_KINDS = ("focus", "limitup")                                    # kind__<版本> 多列，取最新
+
+
+def _snapshot_problems(env):
+    """2026-10-29 快照比股價舊就警示（今日焦點 10/23~10/28 默默沒更新的教訓）。"""
+    out = []
+    try:
+        _, pw = bs._sb(env, "/price_window", params=[("select", "trade_date"), ("code", "eq.2330"),
+                                                     ("order", "trade_date.desc"), ("limit", "1")])
+        latest = str(pw[0]["trade_date"]) if pw else None
+        if not latest:
+            return ["讀不到 price_window 最新日期"]
+        for k in SNAP_KINDS + VERSIONED_KINDS:
+            flt = ("kind", f"eq.{k}") if k in SNAP_KINDS else ("kind", f"like.{k}__*")
+            _, rows = bs._sb(env, "/page_cache", params=[flt, ("select", "trade_date"),
+                                                         ("order", "updated_at.desc"), ("limit", "1")])
+            td = str(rows[0].get("trade_date") or "") if isinstance(rows, list) and rows else ""
+            if td < latest:
+                out.append(f"網頁快照 {k} 停在 {td or '無'}（股價已到 {latest}）")
+    except Exception as e:                                      # noqa: BLE001
+        out.append(f"快照檢查失敗：{type(e).__name__}")
+    return out
+
+
+def _office_problems():
+    """2026-10-29 研究室：20 小時內失敗且沒有重跑成功的步驟。"""
+    out = []
+    try:
+        import office_report as office
+        for a, name in office.AGENTS.items():
+            f = office._unresolved_failures((office._get(a) or {}).get("steps") or [])
+            if f:
+                out.append(f"{name}：{'、'.join(f)} 失敗")
+    except Exception as e:                                      # noqa: BLE001
+        out.append(f"研究室檢查失敗：{type(e).__name__}")
+    return out
+
+
 def main():
     env = bs._load_env()
+    # 2026-10-29 夜間排程通常跑過午夜才到這步，用「今天」會找不到昨晚紀錄而每次略過 → 今天沒有就看昨天
     today = date.today().isoformat()
-    if not LOG.exists():
+    if not LOG.exists():                                        # 雲端排程（GitHub Actions 20:30）沒有本機紀錄，照舊略過
         print("[health] 無 daily_job.log,略過"); return
-    lines = [l for l in LOG.read_text(encoding="utf-8", errors="replace").splitlines()
-             if l.startswith(f"[{today}]")]
-    if not lines:
-        print("[health] 今天沒有排程紀錄（非交易日或未觸發），略過"); return
+    all_lines = LOG.read_text(encoding="utf-8", errors="replace").splitlines()
+    lines = []
+    for d in (today, (date.today() - timedelta(days=1)).isoformat()):
+        lines = [l for l in all_lines if l.startswith(f"[{d}]")]
+        if lines:
+            today = d
+            break
 
     warns = [l for l in lines if "[warn]" in l]
     done = [l for l in lines if "本次完成" in l]
@@ -44,13 +87,15 @@ def main():
         processed = int(m.group(1)) if m else None
 
     problems = []
-    if not done:
+    if lines and not done:
         problems.append("爬蟲今天沒有「本次完成」紀錄 → 可能中途失敗/沒跑完（例：瀏覽器無法啟動）")
     if len(warns) > WARN_THRESHOLD:
         problems.append(f"爬蟲逾時/失敗 {len(warns)} 支（門檻 {WARN_THRESHOLD}）→ wantgoo 可能限流/異常")
+    problems += _snapshot_problems(env)
+    problems += _office_problems()
 
     if not problems:
-        print(f"[health] 今日排程正常（處理 {processed} 支、逾時/失敗 {len(warns)} 支）"); return
+        print(f"[health] {today} 排程正常（處理 {processed} 支、逾時/失敗 {len(warns)} 支、快照皆為最新）"); return
 
     msg = (f"日期：{today}\n\n偵測到問題：\n" + "\n".join("• " + p for p in problems)
            + f"\n\n本次處理：{processed} 支\n逾時/失敗：{len(warns)} 支\n完成紀錄：{'有' if done else '無'}"
