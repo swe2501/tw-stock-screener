@@ -46,7 +46,15 @@
  function schedulePlace(){if(!placeFrame)placeFrame=requestAnimationFrame(()=>{placeFrame=0;mount();});}
  panel.addEventListener('pointermove',e=>{const r=nav.getBoundingClientRect(),mid=Math.abs(e.clientY-r.top-r.height/2)<48;nav.classList.toggle('near-prev',mid&&e.clientX>=r.left-4&&e.clientX<r.left+44);nav.classList.toggle('near-next',mid&&e.clientX<=r.right+4&&e.clientX>r.right-44);},{passive:true});panel.addEventListener('pointerleave',()=>nav.classList.remove('near-prev','near-next'));
  new ResizeObserver(schedulePlace).observe(panel);if(plot)new ResizeObserver(schedulePlace).observe(plot);
- function paint(){mount();const i=index();nav.hidden=!active||i<0;prev.disabled=stepping||i<=0;next.disabled=stepping||i>=queue.length-1;count.textContent=(i+1)+' / '+queue.length;nav.setAttribute('aria-busy',String(stepping));prev.title=i>0?'上一檔 · '+queue[i-1].code+' '+queue[i-1].name:'已是第一檔';next.title=i<queue.length-1?'下一檔 · '+queue[i+1].code+' '+queue[i+1].name:'已是最後一檔';}
+ let pointerHeld=false,modeAfterStep=null;
+ function toolInUse(){return !!(pointerHeld||window.AcademyChartBridge?.get()?.drawing||window.AcademyChartTools?.isDragging());}
+ function syncTools(){if(toolInUse()!==lastTools)paint();}
+ panel.addEventListener('pointerdown',e=>{if(e.button===0&&e.target.closest('#chartOverlay,#chartRangeCapture')){pointerHeld=true;syncTools();}},true);
+ addEventListener('pointerup',()=>{pointerHeld=false;requestAnimationFrame(syncTools);},true);
+ addEventListener('pointercancel',()=>{pointerHeld=false;requestAnimationFrame(syncTools);},true);
+ panel.addEventListener('click',()=>queueMicrotask(syncTools));
+ let lastTools=false;
+ function paint(){mount();const i=index(),usingTool=toolInUse();lastTools=usingTool;nav.hidden=!active||i<0||usingTool;prev.disabled=usingTool||stepping||i<=0;next.disabled=usingTool||stepping||i>=queue.length-1;count.textContent=(i+1)+' / '+queue.length;nav.setAttribute('aria-busy',String(stepping));prev.title=i>0?'上一檔 · '+queue[i-1].code+' '+queue[i-1].name:'已是第一檔';next.title=i<queue.length-1?'下一檔 · '+queue[i+1].code+' '+queue[i+1].name:'已是最後一檔';}
  function restore(){for(const p of positions){if(p.el===window)window.scrollTo(p.x,p.y);else{p.el.scrollLeft=p.x;p.el.scrollTop=p.y;}}}
  function open(code,screen,presentation){
   if(stepping){paint();return window._chartPeriodKey?{key:window._chartPeriodKey,adjusted:!!window._chartAdjusted}:null;}
@@ -56,19 +64,30 @@
   active=queue.length>1&&queue.some(r=>r.code===String(code));positions=[];paint();return null;
  }
  function go(delta){
-  if(!active||stepping)return;const target=queue[index()+delta];if(!target)return;
+  if(!active||stepping||toolInUse())return;const target=queue[index()+delta];if(!target)return;
   positions=[{el:window,x:scrollX,y:scrollY},...[modal,...modal.querySelectorAll('.modal-box,#chartContent,#chartNotePanel')].map(el=>({el,x:el.scrollLeft,y:el.scrollTop}))];
   if(header){if(!headerSize)headerSize={min:header.style.minHeight,box:header.style.boxSizing};header.style.boxSizing='border-box';header.style.minHeight=Math.ceil(header.getBoundingClientRect().height)+'px';}
+  const mode=window.AcademyChartBridge?.get();modeAfterStep={tool:mode?.tool,zoom:mode?.zoom,fib:mode?.fib,trendLine:mode?.trendLine,interval:!!window.AcademyChartTools?.isSelecting()};
   stepping=true;paint();
   try{window.openChart(target.code,target.name,target.industry||'',target.close||0,fromScreen,null,'',null,'',modal.classList.contains('chart-analysis-only')?{analysisOnly:true}:null);requestAnimationFrame(restore);}catch(e){ready();throw e;}
  }
- function ready(){const wasStep=stepping;stepping=false;paint();if(wasStep){restore();requestAnimationFrame(restore);}}
+ function ready(){const wasStep=stepping,saved=modeAfterStep;modeAfterStep=null;stepping=false;pointerHeld=false;
+  if(wasStep&&saved&&window.AcademyChartBridge?.get()?.series){const b=window.AcademyChartBridge.get();
+   if(saved.tool&&b.tool!==saved.tool)window._setDrawTool(saved.tool);
+   else if(saved.interval&&!window.AcademyChartTools?.isSelecting())window.AcademyChartTools.toggleInterval();
+   else if(saved.fib&&!b.fib)window.toggleFibMode();
+   else if(saved.trendLine&&!b.trendLine)window.toggleTrendLine();
+   else if(saved.zoom&&(!b.zoom||document.getElementById('chartOverlay').style.display!=='block')){window._cancelChartTool();window.toggleZoomMode();}
+  }
+  paint();if(wasStep){restore();requestAnimationFrame(restore);}
+ }
  // Avoid browser focus scrolling and generic pressed-button translate effects.
  nav.addEventListener('pointerdown',e=>{if(e.target.closest('button'))e.preventDefault();});
  nav.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();const b=e.target.closest('button');if(b&&!b.disabled)go(b===prev?-1:1);});
  nav.addEventListener('keydown',e=>{if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){e.preventDefault();e.stopPropagation();go(e.key==='ArrowLeft'||e.key==='ArrowUp'?-1:1);}});
+ new MutationObserver(records=>{if(!records.some(r=>['chartOverlay','chartRangeCapture'].includes(r.target.id)||[...r.addedNodes].some(n=>n.id==='chartRangeCapture')))return;syncTools();}).observe(panel,{subtree:true,childList:true,attributes:true,attributeFilter:['style','hidden']});
  const loading=document.getElementById('chartLoading');if(loading)new MutationObserver(()=>{if(stepping&&(loading.style.display==='none'||!loading.querySelector('.spinner')))requestAnimationFrame(ready);}).observe(loading,{attributes:true,attributeFilter:['style'],childList:true});
  addEventListener('resize',()=>{unlockHeader();if(active)paint();},{passive:true});panel.addEventListener('scroll',schedulePlace,{passive:true});
- new MutationObserver(()=>{if(!modal.classList.contains('open')){unlockHeader();active=false;stepping=false;queue=[];paint();}}).observe(modal,{attributes:true,attributeFilter:['class']});
+ new MutationObserver(()=>{if(!modal.classList.contains('open')){unlockHeader();active=false;stepping=false;pointerHeld=false;modeAfterStep=null;queue=[];paint();}}).observe(modal,{attributes:true,attributeFilter:['class']});
  window.AcademyChartListNav={open,go,ready,paint,place:schedulePlace,rememberDrawer(code){drawerSource=clicked?.code===String(code)?{...clicked}:null;},get active(){return active;},get stepping(){return stepping;},setSource(rows){const seen=new Set();explicit=rows.filter(r=>valid(r.code)&&!seen.has(String(r.code))&&seen.add(String(r.code))).map(r=>({...r,code:String(r.code)}));},clear(){unlockHeader();active=false;stepping=false;queue=[];clicked=null;explicit=null;paint();}};
 })();

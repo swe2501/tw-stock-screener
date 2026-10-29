@@ -16514,7 +16514,7 @@
     };
     document.addEventListener('click', e => { if (!e.target.closest('.draw-dd')) ['ddLineMenu', 'ddShapeMenu','ddFibMenu'].forEach(id => { const m = document.getElementById(id); if (m) m.classList.remove('open'); }); });
 
-    window.AcademyChartBridge={get:()=>({chart:chartInstance,series:candleSeriesRef,candles:window._vpCandles||[],code:currentCode,tool:_drawTool,zoom:zoomMode,drawingColor:_trendColor(),drawings:_drawShapes}),plot:_chartPlotGeometry,deactivate:_deactivateAllModes,redraw:_redrawSoon};
+    window.AcademyChartBridge={get:()=>({chart:chartInstance,series:candleSeriesRef,candles:window._vpCandles||[],code:currentCode,tool:_drawTool,zoom:zoomMode,fib:fibMode,trendLine:trendLineMode,drawing:!!(_shapeDrag||_drawPending.length||fibDragStart||trendStart||zoomDragStart),drawingColor:_trendColor(),drawings:_drawShapes}),plot:_chartPlotGeometry,deactivate:_deactivateAllModes,redraw:_redrawSoon};
     window._finishWave=function(){if(_drawTool!=='wave')return;if(_drawPending.length>=2){_drawShapes.push({type:'wave',pts:_drawPending.map(p=>({...p}))});_drawPending=[];_drawStoreSave();}_setDrawTool('wave');};
     window._cancelChartTool=function(){_deactivateAllModes();redrawCanvas();};
     document.addEventListener('keydown',function(e){if(e.target.closest('input,textarea,select,[contenteditable=true]'))return;if(e.key==='Enter'&&_drawTool==='wave'){e.preventDefault();_finishWave();}if(e.key==='Escape'&&(_drawTool||zoomMode||window.AcademyChartTools?.isSelecting()||document.querySelector('.draw-dd-menu.open'))){e.preventDefault();e.stopImmediatePropagation();_cancelChartTool();}},true);
@@ -18076,7 +18076,7 @@
 <script src="assets/member-data-portability.js?v=inbox1" defer></script>
 <script src="assets/member-service-center.js?v=1" defer></script>
 <link rel="stylesheet" href="assets/chart-research-tools.css?v=tools23">
-<script src="assets/chart-research-tools.js?v=tools21" defer></script>
+<script src="assets/chart-research-tools.js?v=tools22" defer></script>
 <link rel="stylesheet" href="assets/brand-footer.css?v=6">
 <script src="assets/brand-footer.js?v=5" defer></script>
 <link rel="stylesheet" href="assets/market-panel-layout.css?v=8">
@@ -18099,7 +18099,7 @@
 <link rel="stylesheet" href="assets/broker-workspace.css?v=5">
 <script src="assets/chart-viewport-fit.js?v=22" defer></script>
 <link rel="stylesheet" href="assets/chart-list-navigation.css?v=3">
-<script src="assets/chart-list-navigation.js?v=3" defer></script>
+<script src="assets/chart-list-navigation.js?v=4" defer></script>
 <script src="assets/screen-inline-calendar.js?v=records-only13" defer></script>
 
 <link rel="stylesheet" href="assets/onboarding-tour.css?v=mist-edge-mcopen-20261027">
