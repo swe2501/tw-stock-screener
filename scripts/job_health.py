@@ -69,7 +69,9 @@ def main():
     env = bs._load_env()
     # 2026-10-29 夜間排程通常跑過午夜才到這步，用「今天」會找不到昨晚紀錄而每次略過 → 今天沒有就看昨天
     today = date.today().isoformat()
-    all_lines = LOG.read_text(encoding="utf-8", errors="replace").splitlines() if LOG.exists() else []
+    if not LOG.exists():                                        # 雲端排程（GitHub Actions 20:30）沒有本機紀錄，照舊略過
+        print("[health] 無 daily_job.log,略過"); return
+    all_lines = LOG.read_text(encoding="utf-8", errors="replace").splitlines()
     lines = []
     for d in (today, (date.today() - timedelta(days=1)).isoformat()):
         lines = [l for l in all_lines if l.startswith(f"[{d}]")]
