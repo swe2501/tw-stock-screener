@@ -24,6 +24,7 @@ if sys.stdout and hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(errors="replace")
 
 RESTART_EVERY = 150
+MAX_CONSEC_FAILS = 15     # 連續逾時幾檔就放棄（2026-10-29：避免玩股網異常時硬撐一小時）
 
 
 def _iso(ms):
@@ -94,11 +95,23 @@ async def main():
         ctx, page = await _open(p)
         if not await ws.is_logged_in(page):
             print("[error] 玩股網未登入,中止"); await ctx.close(); return
-        done = warn = 0
+        done = warn = fails = 0
         for i, code in enumerate(codes, 1):
             if i % RESTART_EVERY == 0:
-                await ctx.close(); await asyncio.sleep(3); ctx, page = await _open(p)
+                try:
+                    await ctx.close(); await asyncio.sleep(3); ctx, page = await _open(p)
+                except Exception as e:                       # noqa: BLE001
+                    # 2026-10-29 玩股網連不上時原本整支當掉、已抓的全部不上傳（10/28 白耗 53 分鐘）→ 改為先上傳已抓到的
+                    print(f"[warn] 重開瀏覽器失敗（{type(e).__name__}），停在第 {i} 檔，先上傳已抓到的", flush=True)
+                    break
             d = await _fetch_flow(page, code)
+            if d is None:                                    # 逾時／連線失敗（回空清單不算）
+                fails += 1
+                if fails >= MAX_CONSEC_FAILS:
+                    print(f"[warn] 連續 {fails} 檔逾時，玩股網可能異常，停在第 {i} 檔，先上傳已抓到的", flush=True)
+                    break
+            else:
+                fails = 0
             if not isinstance(d, list) or not d:
                 warn += 1; await asyncio.sleep(0.4); continue
             for r in d:
@@ -111,7 +124,10 @@ async def main():
             if i % 40 == 0:
                 print(f"  …{i}/{len(codes)}（成功{done} 空{warn} 累計{len(rows)}列）", flush=True)
             await asyncio.sleep(0.4)
-        await ctx.close()
+        try:
+            await ctx.close()
+        except Exception:                                    # noqa: BLE001
+            pass
 
     print(f"抓完：成功 {done} 檔、空 {warn} 檔、{len(rows)} 列")
     ok = _upsert(env, rows)

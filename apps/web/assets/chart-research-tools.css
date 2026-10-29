@@ -169,3 +169,6 @@ html[data-theme="dark"] #chartModal .chart-summary-actions #chartInfoToggle:hove
 #chartModal .chart-exchange-actions{gap:1px;padding-block:0}
 #chartModal .chart-exchange-actions #wPatternExportBtn,#chartModal .chart-exchange-actions #wPatternImportBtn{font-size:10px!important;line-height:14px;min-height:0;padding:0 7px;letter-spacing:.04em}
 @media(pointer:coarse){#chartModal .chart-fit-tools .chart-toolbar .chart-tool-btns>.tool-btn{min-height:38px}#chartModal .chart-exchange-actions #wPatternExportBtn,#chartModal .chart-exchange-actions #wPatternImportBtn{min-height:19px;line-height:17px}}
+
+/* Align input and shading to the actual plot, excluding both price axes. */
+#chartRangeCapture{inset:auto;left:var(--chart-plot-left,0px);top:var(--chart-plot-top,0px);width:var(--chart-plot-width,calc(100% - 65px));height:var(--chart-plot-height,calc(100% - 24px))}

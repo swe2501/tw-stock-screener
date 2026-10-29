@@ -209,3 +209,13 @@ html:not([data-theme="light"]) #fqiArrival .fa-poses{filter:brightness(.92) cont
 #fqiArrival img.fa-feather{position:absolute;left:0;top:0;z-index:5;width:auto;max-width:none;opacity:0;pointer-events:none;animation:none;transform-origin:50% 60%;will-change:transform,opacity;filter:drop-shadow(0 3px 4px rgba(0,0,0,.16));backface-visibility:visible}
 html[data-theme="light"] #fqiArrival img.fa-feather{filter:drop-shadow(0 3px 5px rgba(40,70,100,.18))}
 #fqiArrival{perspective:1200px}
+/* 開場影片播放時就顯示右上角聲音鈕（同一顆按鈕，位置不變）；其他頂部元素等主畫面再出現 */
+#fqiArrival:not(.fa-stage-on) .fa-header{opacity:1;transform:none;pointer-events:none}
+#fqiArrival .fa-brand,#fqiArrival .fa-actions>*{transition:opacity .75s ease}
+#fqiArrival:not(.fa-stage-on) .fa-brand,#fqiArrival:not(.fa-stage-on) .fa-actions>*:not([data-sound]){opacity:0;pointer-events:none}
+#fqiArrival:not(.fa-stage-on) .fa-actions [data-sound]{pointer-events:auto}
+#fqiArrival:not(.fa-stage-on) .fa-actions [data-sound][aria-label="開啟聲音"]{animation:faSoundHint 2.4s ease-in-out infinite}
+@keyframes faSoundHint{0%,100%{box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 0 0 0 rgba(219,185,111,0)}50%{box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 0 0 7px rgba(219,185,111,.16),0 0 22px rgba(219,185,111,.22)}}
+@media (prefers-reduced-motion:reduce){#fqiArrival .fa-actions [data-sound]{animation:none!important}}
+/* 開場影片 → 主畫面：較長、較柔的溶接（影片在淡出中持續播放，不凍結畫面） */
+#fqiArrival.fa-stage-on .fa-splash{transition:opacity 1.5s cubic-bezier(.45,0,.25,1),visibility 0s linear 1.5s}

@@ -264,6 +264,47 @@ def _record_fx_index(env):
         print(f"[intraday] 匯率走勢記錄失敗（不影響主流程）：{type(e).__name__}")
 
 
+_sgx_quote_ts = 0.0
+
+
+def _record_sgx_quote(env):
+    """2026-10-29 首頁富台指卡片大數字：原本只有晚上 market_indicators 抓的夜盤價，盤中跟日盤走勢對不上。
+    日盤 08:45–13:47 每 60 秒用 urllib 讀玩股網 /global/all-quote-info（不需登入、不開瀏覽器），
+    取 STWN& 的最新價與前一交易日收盤 → page_cache quote_SGX。前端比 market_indicators 新才採用。失敗不影響主流程。"""
+    global _sgx_quote_ts
+    try:
+        now = _now()
+        hm = now.hour * 60 + now.minute
+        if now.weekday() >= 5 or not (8 * 60 + 45 <= hm <= 13 * 60 + 47) or time.time() - _sgx_quote_ts < 60:
+            return
+        _sgx_quote_ts = time.time()
+        import urllib.request as _ur
+        raw = _ur.urlopen(_ur.Request("https://www.wantgoo.com/global/all-quote-info", headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/141 Safari/537.36",
+            "X-Requested-With": "XMLHttpRequest", "Referer": "https://www.wantgoo.com/global/stwn&"}), timeout=15).read()
+        q = next((x for x in json.loads(raw) if isinstance(x, dict) and str(x.get("id", "")).lower() == "stwn&"), None)
+        if not q:
+            return
+        midnight = datetime.datetime(now.year, now.month, now.day, tzinfo=TZ)
+        t = int(q.get("time") or 0) // 1000
+        # 只收當日日盤成交（夜盤也掛同一個 tradeDate，08:45 前的報價是夜盤價，不收）
+        if q.get("tradeDate") != int(midnight.timestamp()) * 1000 or t < int(midnight.timestamp()) + (8 * 60 + 45) * 60:
+            return
+        close, prev = q.get("close"), q.get("previousClose")
+        if not close or not prev:
+            return
+        row = {"kind": "quote_SGX", "trade_date": now.date().isoformat(),
+               "payload": {"date": now.date().isoformat(), "close": close, "prev": prev, "open": q.get("open"),
+                           "high": q.get("high"), "low": q.get("low"), "time": t, "session": "day"},
+               "updated_at": datetime.datetime.now(datetime.timezone.utc).isoformat()}
+        if DRY:
+            print(f"[intraday] 富台指日盤報價 {close}（昨收 {prev}）dry-run 不寫入"); return
+        bs._sb(env, "/page_cache", method="DELETE", params=[("kind", "eq.quote_SGX")])
+        bs._sb(env, "/page_cache", method="POST", body=[row])
+    except Exception as e:                                          # noqa: BLE001
+        print(f"[intraday] 富台指日盤報價失敗（不影響主流程）：{type(e).__name__}")
+
+
 def _fetch_sgx_intraday():
     """跑 sgx_intraday.py（Playwright 開玩股網），獨立子程式＋逾時，失敗不影響主流程。"""
     import subprocess
@@ -357,6 +398,7 @@ def main():
     _start_watchdog()
     while True:
         _heartbeat()
+        _record_sgx_quote(env)                         # 2026-10-29 富台指日盤最新價（自帶時段判斷與 60 秒節流）
         if not _in_session():
             now = _now()
             hm = now.hour * 60 + now.minute

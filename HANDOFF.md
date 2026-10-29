@@ -556,7 +556,7 @@ page_cache 是 **uat 與 prod 共用**同一個 Supabase。若推盤中到原 ki
 ### B. 本機 Windows 工作排程器任務（2026-10-28）
 | 任務名稱 | 時間 | 執行 | 內容 |
 |---|---|---|---|
-| `WantgooDailyScrape` | 週一～五 19:00（可喚醒） | `scripts\run_daily_job.bat` | 夜間主排程：分點、法人、收盤價、ETF、總經、廣度、快取等約 66 步 |
+| `WantgooDailyScrape` | 週一～五 19:00（可喚醒） | `scripts\run_daily_job.bat` | 夜間主排程：分點、法人、收盤價、ETF、總經、廣度、快取等約 66 步；執行上限 10 小時（2026-10-29 由 8 小時調高，需系統管理員權限設定） |
 | `AI_stock_Intraday` | 週一～五 08:55（可喚醒），常駐到 16:01 | `scripts\run_intraday.bat` | 盤中掃盤 `intraday_push.py --loop`（09:00–13:35 每 35 秒）；收盤後只記匯率每 5 分鐘到 16:00（10/28 起）；卡住 5 分鐘會自動重啟（10/29 起，見下方）；13:48、13:56 另呼叫 `sgx_intraday.py` 抓富台指日盤分時（10/29 起，見下方） |
 | `CodexHotTopicsHourly` | 週一～五 09:00 起每小時，共 5 小時 | `scripts\run_codex_topics.bat` | 話題族群（桌面版 Codex CLI） |
 | `AI_stock_news_feed` | 每天 06:30 起每 4 小時 | `scripts\run_news_feed.bat` | 每日新聞 |
@@ -569,9 +569,15 @@ page_cache 是 **uat 與 prod 共用**同一個 Supabase。若推盤中到原 ki
 - 2026-10-27 起各 .bat 的每一步改經 `scripts\office_step.py <角色> <程式>` 執行（AI 研究室打卡，exit code 原樣傳回，打卡失敗不影響排程）。`run_daily_job.bat` 的新版由 `scripts\office_swap_watch.ps1` 在 10/27 夜間排程結束後自動換上（已於 10/27 23:14 換好，66 步全部打卡），舊版備份為 `*.bat.bak_office`，紀錄在 `scripts\office_swap.log`。
 - **盤中排程自動重啟（2026-10-28 加，Andrew `2c7103e`＋`4da2bb9`）**：起因是 10/28 盤中程式 12:02 後卡住不動、沒有報錯。現在 `intraday_push.py` 有看門狗執行緒，主迴圈 5 分鐘（`STALL_SEC=300`）沒進展就強制結束、回傳 exit code 75；`run_intraday.bat` 收到 75 會等 10 秒重新啟動，一天最多 10 次（其他 exit code 照常結束）。每次重啟在 `D:\stock_data\intraday_push.log` 留一行 `[watchdog] ... restart N`，查問題先搜這個字。新版 .bat 由一次性監看程式 `intraday_swap_watch.ps1` 在 10/28 16:02 當天盤中跑完後換上，舊版備份 `scripts\run_intraday.bat.bak_watchdog`；工作排程器任務本身沒改，XML 不用重新匯出。
 - **富台指日盤分時（2026-10-28 加）**：首頁富台指卡片的小圖。富台指沒有免費官方分時，玩股網的一分鐘線只保留「目前交易日」，14:00 一換成夜盤就抓不回當天日盤，所以由盤中排程在 13:48、13:56 各呼叫一次 `scripts\sgx_intraday.py`（Playwright 沿用玩股網登入 profile，子程式上限 180 秒，失敗不影響盤中主流程），只取 08:45–13:45，5 分鐘一點寫 page_cache `mini_SGX`，另存 `prev`（前一交易日收盤，小圖紅綠分界）。電腦那天沒開，當天就沒有富台指小圖，事後補不回來。卡片大數字仍是晚上 `market_indicators.py` 抓的（那時已是夜盤價），所以大數字跟小圖最後一點不同是正常的。
+- **富台指盤中大數字（2026-10-29 加）**：`intraday_push.py` 主迴圈在 08:45–13:47 每 60 秒用 urllib 讀玩股網 `/global/all-quote-info`（不需登入、不開瀏覽器），取 STWN& 當日日盤最新價與前一交易日日盤收盤，寫 page_cache `quote_SGX`。首頁富台指卡片與頂部資金軌：`quote_SGX` 比 `market_indicators` 那筆新（updated_at）才採用，數字下方標「日盤 HH:MM 即時／最新」；晚上 `market_indicators.py` 寫入夜盤價後自動切回夜盤價。
 - **上漲下跌亮燈區快照（2026-10-28 加）**：夜間排程的 `page_cache_push.py` 尾段呼叫 `scripts\limitup_precompute.py`，用 origin/prod、origin/uat 各自的程式算好寫 page_cache `limitup`／`limitup@uat`；`/api/screen?stat=limitup` 先讀快照（約 0.3 秒），沒有才即時算（約 28 秒）。手動補跑：`python scripts\limitup_precompute.py`。
 
 ### C. 任何帳號的 Claude Code 怎麼操作（PowerShell）
+- 2026-10-29 夜間排程被 8 小時上限砍掉（玩股網整晚逾時，停在第 57 步，網頁快照沒更新）。處理：
+  上限改 10 小時；`wantgoo_etf.py`／`wantgoo_etf_flow.py` 連續逾時 15 檔或重開瀏覽器失敗就先上傳已抓到的並結束（原本整支當掉、什麼都沒上傳）；
+  `page_cache_push.py` 今日焦點失敗隔 90 秒重試 3 次；`job_health.py` 改為今天沒紀錄就看昨天（原本跑過午夜每次都略過），並檢查網頁快照是否比股價舊、研究室有無未解決的失敗步驟；
+  `office_report.py` 研究室燈號：20 小時內有失敗且沒重跑成功就維持紅燈（原本只看最後一步），跨午夜不清掉步驟紀錄，超過 3 小時沒結束的步驟記為中斷。
+  被砍掉時補跑：把 `run_daily_job.bat` 剩下的步驟另存一個批次檔，用 WMI 脫鉤啟動（例：2026-10-29 補跑第 58～70 步）。
 - 查看全部：`Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\Microsoft\*' }`；看上次結果：`Get-ScheduledTaskInfo -TaskName WantgooDailyScrape`（LastTaskResult 0＝成功）。
 - 立刻執行一次：`Start-ScheduledTask -TaskName WantgooDailyScrape`（或 `schtasks /Run /TN WantgooDailyScrape`）。
 - 停用／啟用：`Disable-ScheduledTask` ／ `Enable-ScheduledTask -TaskName <名稱>`。

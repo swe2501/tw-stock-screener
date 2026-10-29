@@ -2323,7 +2323,7 @@
         var mkt=(window._isEtf&&window._isEtf(it.code)?'<span class="gs-sd-mkt etf">ETF</span>':'')+(mk==='上櫃'?'<span class="gs-sd-mkt otc">上櫃</span>':(mk==='上市'?'<span class="gs-sd-mkt twse">上市</span>':''));
         return '<div class="gs-sd-item'+(i===sel?' on':'')+'" role="option" data-code="'+it.code+'"><span class="gs-sd-code">'+it.code+'</span><span class="gs-sd-name">'+(it.name||'')+'</span>'+tag+mkt+'</div>';
       }).join(''); drop.hidden=false; if(inp)inp.setAttribute('aria-expanded','true'); }
-    function open(code){ if(drop)drop.hidden=true; if(inp){inp.value='';inp.blur();} list=[]; sel=-1; if(window._openStock)window._openStock(String(code), (window._names&&window._names[code])||''); }
+    function open(code){ if(drop)drop.hidden=true; if(inp){inp.value='';inp.blur();} list=[]; sel=-1; if(document.getElementById('chartModal')?.classList.contains('chart-analysis-only')){window.AcademyChartAnalysis?.open(String(code));return;} if(window._openStock)window._openStock(String(code), (window._names&&window._names[code])||''); }
     function oninput(){ if(!inp)return; var run=function(){ list=match(inp.value); sel=-1; render(); }; if(!window._names){ window._loadNames&&window._loadNames(run); } else run(); }
     function go(){ if(!inp)return; var q=(inp.value||'').trim(); if(!q)return;
       if(sel>=0&&list[sel]){open(list[sel].code);return;}
@@ -2368,7 +2368,7 @@
       <a class="nav-owner" data-member-feature="hottopics" onclick="_showView('hottopics')"> 話題</a><a onclick="_showView('themes')">題材列表</a><a onclick="_showView('sectors')">產業地圖</a><a onclick="_showView('groupbook')">集團作帳</a></div></div>
     <div class="mn-grp"><span class="mn-item">市場觀察 <i>▾</i></span><div class="mn-menu">
       <a class="nav-broker" style="display:none" id="navBrokerGrp" onclick="_showView('sig')">不籌吃穿</a>
-      <a class="nav-owner" onclick="_showView('mingdeng')"> 神燈與冥燈</a><a onclick="_showView('greed')"> 貪婪指標</a><a onclick="_showView('inst')"> 三大法人個股買賣超</a><a onclick="_showView('fhedge')"> 外資空單溫度計</a><a onclick="_showView('breadth')"> 大盤多空廣度</a><a onclick="_showView('usty')"> 美債對標</a><a onclick="_showView('disposal')"> 處置股</a></div></div>
+      <a class="nav-owner" onclick="_showView('mingdeng')"> 神燈與冥燈</a><a onclick="_showView('greed')"> 貪婪指標</a><a onclick="_showView('inst')"> 三大法人個股買賣超</a><a onclick="_showView('fhedge')"> 外資空單溫度計</a><a onclick="_showView('breadth')"> 大盤多空廣度</a><a onclick="_showView('usty')"> 美債對標</a><a id="navChartAnalysis" onclick="AcademyChartAnalysis.open()"> 線圖分析</a><a onclick="_showView('disposal')"> 處置股</a></div></div>
     <div class="mn-grp"><span class="mn-item">ETF 分析 <i>▾</i></span><div class="mn-menu">
       <a onclick="_showView('etfx')" style="font-weight:800;color:var(--brand-green)"> ETF 探索</a><a onclick="_showView('etf')">總覽 · 規模排行</a><a onclick="_showView('etfcons')">成分股</a><a onclick="_showView('etfrev')">股票反查 ETF</a><a onclick="_showView('etfdiv')">配息行事曆</a><a onclick="_showView('etfhold')">持有人結構</a><a onclick="_showView('etfsim')">ETF 相似度</a><a onclick="_showView('etfheavy')">重倉股排行</a><a onclick="_showView('etfprem')">折溢價</a><a onclick="_showView('etfflow')">資金流</a><a onclick="_showView('etfperf')">績效比較</a></div></div>
     <a class="mn-item" onclick="_showView('news')">每日新聞</a>
@@ -6717,6 +6717,7 @@
     window._etxReleaseChart=releaseETFChart;
     window._etxCloseDrawer=function(){etxOpenToken++;releaseETFChart();el('etxDrawer').style.display='none';};
     window._etxOpen=function(code,initialTab){
+      window.AcademyChartListNav?.rememberDrawer(code);
       if(el('etxDrawer').parentNode!==document.body)document.body.appendChild(el('etxDrawer'));
       releaseETFChart();drawerCode=String(code);drawerTab=['overview','dividend','technical'].includes(initialTab)?initialTab:'overview';movesFilter='summary';holdingsMode='stocks';
       el('etxDrawer').style.display='flex';var token=++etxOpenToken;
@@ -8543,8 +8544,11 @@
     /* hero 資金軌:富台指/VIX/匯率(原 §2A 國際塊,照合夥人移到最上面)*/
     function loadFundRail(){
       var box=el('hpFundRail'); if(!box)return;
-      sb('market_indicators?select=futai_close,futai_prev,vix,vix_prev,usdtwd&order=date.desc&limit=1').then(function(a){
-        var mi=(a||[])[0]; if(!mi){box.innerHTML='';return;}
+      Promise.all([sb('market_indicators?select=date,futai_close,futai_prev,vix,vix_prev,usdtwd,updated_at&order=date.desc&limit=1'),sb('page_cache?kind=eq.quote_SGX&select=payload,updated_at')]).then(function(r2){
+        var a=r2[0], mi=(a||[])[0]; if(!mi){box.innerHTML='';return;}
+        // 2026-10-29 富台指盤中改用日盤最新價（同首頁富台指卡片）
+        var sq=((r2[1]||[])[0])||null,sp=sq&&sq.payload;
+        if(sp&&sp.close>0&&sp.prev>0&&sp.date>=(mi.date||'')&&Date.parse(sq.updated_at)>Date.parse(mi.updated_at||0)){mi=Object.assign({},mi,{futai_close:sp.close,futai_prev:sp.prev});}
         var fd=(mi.futai_close!=null&&mi.futai_prev)?((mi.futai_close/mi.futai_prev-1)*100):null;
         var vd=(mi.vix!=null&&mi.vix_prev)?(mi.vix-mi.vix_prev):null;
         function it(k,v,c,cc){return '<div class="gs-fr"><div class="k">'+k+'</div><div class="v">'+v+(c?'<span class="c '+cc+'">'+c+'</span>':'')+'</div></div>';}
@@ -8975,7 +8979,8 @@
         sb('chip_brief_daily?select=*&order=trade_date.desc&limit=1'),
         sb('market_indicators?select=*&order=date.desc&limit=300'),
         sb('gov_broker_daily?select=date,net_amt,buy_amt,sell_amt,net5,net20,net60&order=date.desc&limit=60'),
-        fetch(window.__API+'/api/chart?code=%5ETWII&range=6mo&interval=1d').then(function(r){return r.json();}).then(function(j){return (j&&j.data)||[];}).catch(function(){return [];})
+        fetch(window.__API+'/api/chart?code=%5ETWII&range=6mo&interval=1d').then(function(r){return r.json();}).then(function(j){return (j&&j.data)||[];}).catch(function(){return [];}),
+        sb('page_cache?kind=eq.quote_SGX&select=payload,updated_at')   // 2026-10-29 富台指日盤最新價
       ]).then(function(res){
         window._homeMarketFxRows=res[1]||[];
         var cb=(res[0]||[])[0]||{},mi=(res[1]||[])[0]||{},vixYear=vixAnnualState(res[1]),gov=res[2]||[],tx=(res[3]||[]).slice().reverse();
@@ -9015,7 +9020,11 @@
             +'<div class="sub"><span class="'+tcol+'">'+(tchg>0?'+':'')+Number(tchg).toFixed(2)+' 元</span><span class="home-change-percent '+tcol+'">'+(tpct>0?'+':'')+Number(tpct).toFixed(2)+'%</span></div>':'<div class="big">資料更新中</div>')+'</div>'+mini('2330',cb.trade_date,tsc!=null&&tchg!=null?tsc-tchg:null)+'</div>'
           +(contrib!=null?'<div class="home-quote-context"><b class="'+(contrib>=0?'hp-up':'hp-dn')+'">約'+(contrib>=0?'貢獻':'拖累')+'加權指數 '+Math.abs(contrib).toFixed(1)+' 點</b><small>依前一日上市市值權重估算</small></div>':'')+'</div>';
         // 富台指期換算
-        var fc=mi.futai_close,fp=mi.futai_prev,fchg=(fc!=null&&fp!=null)?(fc-fp):null,fpct=(fchg!=null&&fp)?(fchg/fp*100):null;
+        var fc=mi.futai_close,fp=mi.futai_prev,fDate=mi.date,fNote='';
+        // 2026-10-29 盤中改用日盤最新價：quote_SGX 由盤中排程 08:45–13:47 每分鐘寫入（玩股網報價、昨收＝前一交易日日盤收盤），比晚上 market_indicators 那筆新才採用
+        var sq=((res[4]||[])[0])||null,sp=sq&&sq.payload;
+        if(sp&&sp.close>0&&sp.prev>0&&sp.date>=(mi.date||'')&&Date.parse(sq.updated_at)>Date.parse(mi.updated_at||0)){fc=sp.close;fp=sp.prev;fDate=sp.date;fNote='日盤 '+new Date((sp.time+28800)*1000).toISOString().slice(11,16)+(sp.time*1000>Date.now()-6e5?' 即時':' 最新');}
+        var fchg=(fc!=null&&fp!=null)?(fc-fp):null,fpct=(fchg!=null&&fp)?(fchg/fp*100):null;
         var fcol=(fchg!=null&&fchg>=0)?'hp-up':'hp-dn',conv=(fc!=null)?fc*FTSE_TX_FACTOR:null;
         var fb=fpct==null?['n','海外盤—']:(fpct>=.5?['g','海外盤偏多']:(fpct<=-.5?['d','海外盤偏空']:['n','海外盤震盪']));
         // 富台指（SGX FTSE Taiwan）最後交易日＝每月「倒數第二個營業日」；休市依證交所休市表
@@ -9031,9 +9040,9 @@
         }
         var ftseCard='<div class="cb-ovc home-market-card" role="button" tabindex="0" style="cursor:pointer" onclick="_openKpiChart(\'富台指\')" onkeydown="if(event.key===String.fromCharCode(13)||event.key===String.fromCharCode(32)){event.preventDefault();this.click()}" aria-label="查看富台指近兩年走勢圖"><header><span>富台指期<small>SGX FTSE TAIWAN</small></span><span class="cb-tag '+fb[0]+'">'+fb[1]+'</span></header>'
           +'<div class="home-quote-row"><div class="home-quote">'+(fc!=null?'<div class="big '+fcol+'">'+Number(fc).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+'</div>'
-            +'<div class="sub"><span class="'+fcol+'">'+(fchg>0?'+':'')+fchg.toFixed(2)+' 點</span><span class="home-change-percent '+fcol+'">'+(fpct>0?'+':'')+fpct.toFixed(2)+'%</span></div>'
-            +'</div>'+mini('SGX',mi.date,fp)+'</div><div class="cb-conv">↓ 換算參考　<strong>台指期約 '+Math.round(conv).toLocaleString()+' 點</strong></div>'
-            +_futaiSettleHtml():'<div class="big">資料更新中</div></div>'+mini('SGX',mi.date,fp)+'</div>')+'</div>';
+            +'<div class="sub"><span class="'+fcol+'">'+(fchg>0?'+':'')+fchg.toFixed(2)+' 點</span><span class="home-change-percent '+fcol+'">'+(fpct>0?'+':'')+fpct.toFixed(2)+'%</span>'+(fNote?'<small style="display:block;font-size:12px;opacity:.65">'+fNote+'</small>':'')+'</div>'
+            +'</div>'+mini('SGX',fDate,fp)+'</div><div class="cb-conv">↓ 換算參考　<strong>台指期約 '+Math.round(conv).toLocaleString()+' 點</strong></div>'
+            +_futaiSettleHtml():'<div class="big">資料更新中</div></div>'+mini('SGX',fDate,fp)+'</div>')+'</div>';
         // 期貨結算日（月合約＝每月第三個週三；週選＝每週三、週五；遇休市順延至次一交易日，休市表＝證交所）2026-09-28
         function settleCardHtml(){
           var toIso=function(t){return new Date(t).toISOString().slice(0,10);}, fromIso=function(s){return Date.parse(s+'T00:00:00Z');};
@@ -11323,7 +11332,11 @@
     }
 
     function drawerCodeForChart(){return window._etxChartCode||'';}
-    function openChart(code, name, industry = '', price = 0, fromScreen = false, markDate = null, markLabel = '', markDate2 = null, markLabel2 = null) {
+    function openChart(code, name, industry = '', price = 0, fromScreen = false, markDate = null, markLabel = '', markDate2 = null, markLabel2 = null, presentation = null) {
+      const navPeriod=window.AcademyChartListNav?.open(String(code),fromScreen,presentation);
+      const chartModal=document.getElementById('chartModal'),wasAnalysis=chartModal.classList.contains('chart-analysis-only'),analysis=!!presentation?.analysisOnly;
+      chartModal.classList.toggle('chart-analysis-only',analysis);
+      if(analysis||wasAnalysis){chartModal.classList.toggle('kfull',analysis);window.AcademyChartViewport?.refresh();}
       if(document.getElementById('chartModal').classList.contains('etx-embedded')&&code!==drawerCodeForChart())window._etxReleaseChart();
       prevCode = ''; prevName = '';
       currentCode = code; currentName = name;
@@ -11359,14 +11372,15 @@
       _kSyncLayerUI();   // 圖層開關沿用上一次的設定
       document.getElementById('backBtn').style.display = 'none';
       document.getElementById('chartModal').classList.add('open');
-      try { _scNavActive = !!fromScreen; _updateChartNav(code); } catch (_) {}
+      try { _scNavActive = window.AcademyChartListNav?AcademyChartListNav.active:!!fromScreen; _updateChartNav(code); } catch (_) {}
       if (!fibSetupDone) { setupFibOverlay(); fibSetupDone = true; }
-      loadDailyChart();
+      if(navPeriod?.key==='hour')loadHourlyChart();else if(navPeriod?.key==='trend')loadTrendChart();else if(navPeriod)_loadPeriodChart(navPeriod.key,navPeriod.adjusted);else loadDailyChart();
     }
 
     // ── 掏金篩選器：K 圖「上一檔／下一檔」（只有 fromScreen=true 才啟用箭頭） ──
     let _scNavActive = false;
     function _updateChartNav(code) {
+      if(window.AcademyChartListNav){AcademyChartListNav.paint();return;}
       const prev = document.getElementById('chartNavPrev'), next = document.getElementById('chartNavNext');
       if (!prev || !next) return;
       const list = Array.isArray(window._scNavList) ? window._scNavList : [];
@@ -11379,6 +11393,7 @@
       next.title = idx < list.length - 1 ? ('下一檔　' + list[idx + 1].code + ' ' + (list[idx + 1].name || '') + '（' + (idx + 2) + '/' + list.length + '）') : '已是最後一檔';
     }
     window._chartNavGo = function (dir) {
+      if(window.AcademyChartListNav){AcademyChartListNav.go(dir);return;}
       if (!_scNavActive) return;
       const list = Array.isArray(window._scNavList) ? window._scNavList : [];
       const idx = list.findIndex(x => x.code === String(currentCode));
@@ -12729,7 +12744,7 @@
       const watchControl=(code,name,compact)=>{const watch=create('label','rk-stock-watch'),checkbox=create('input');checkbox.type='checkbox';checkbox.checked=!!_stWatchSet?.has(brokerId+'|'+code);checkbox.setAttribute('aria-label','追蹤 '+code+' '+name);checkbox.onchange=()=>_stToggle(checkbox,brokerId,brokerName,code,name);watch.append(checkbox,document.createTextNode(compact?'追蹤':code+' '+name));return watch;};
       if(mode!=='stock'){const watchBox=create('details','rk-watch-list');watchBox.append(create('summary','','追蹤股票 · '+groups.size+' 檔'));const controls=create('div');for(const [code,items] of groups)controls.append(watchControl(code,items.find(x=>x.name)?.name||'',false));watchBox.append(controls);body.append(watchBox);}
       const displayGroups=new Map();if(mode==='stock')for(const entry of groups)displayGroups.set(...entry);else for(const record of records){const key=mode==='time'?record.trade_date:'全部紀錄';if(!displayGroups.has(key))displayGroups.set(key,[]);displayGroups.get(key).push(record);}
-      const groupList=create('div','rk-trades-groups');body.append(groupList);
+      const groupList=create('div','rk-trades-groups');groupList.dataset.chartList='';body.append(groupList);
       const groupControls=[];const syncAll=()=>{const open=groupControls.some(x=>x.open);toggleAll.textContent=open?'全部收合':'全部展開';toggleAll.setAttribute('aria-label',toggleAll.textContent+'紀錄分組');};toggleAll.onclick=()=>{const open=!groupControls.some(x=>x.open);groupControls.forEach(x=>x.set(open));syncAll();};
       [...displayGroups].sort((a,b)=>b[1].reduce((m,x)=>x.trade_date>m?x.trade_date:m,'').localeCompare(a[1].reduce((m,x)=>x.trade_date>m?x.trade_date:m,''))).forEach(([code,items])=>{
         items.sort((a,b)=>b.trade_date.localeCompare(a.trade_date));const name=items.find(x=>x.name)?.name||(window._names||{})[code]||'';
@@ -12740,7 +12755,7 @@
         const tbody=create('tbody');items.forEach(x=>{
           const stockCode=String(x.code),stockName=x.name||(window._names||{})[stockCode]||'';
           const row=create('tr'),dateCell=create('td'),button=create('button','rk-record-open',mode==='time'?stockCode+' '+stockName:x.trade_date),status=create('td','rk-status-cell'),sell=x.side==='sell',action=sell?(x.exit?'主力分手 ↓':'減碼'):(x.addition?'加碼 ↑':'主力交往 ↑');
-          button.type='button';button.setAttribute('aria-label',x.trade_date+' '+stockCode+' '+action+'，查看 K 線');button.onclick=()=>{window._chartFocusBroker={code:stockCode,id:String(brokerId),name:brokerName};openChart(stockCode,stockCode+' '+stockName,'',0,false,x.trade_date,brokerName+' '+action);};if(mode==='list')button.append(create('small','rk-record-stock',stockCode+' '+stockName));dateCell.append(button);row.onclick=e=>{if(!e.target.closest('button'))button.click();};
+          button.dataset.stockCode=stockCode;button.type='button';button.setAttribute('aria-label',x.trade_date+' '+stockCode+' '+action+'，查看 K 線');button.onclick=()=>{window._chartFocusBroker={code:stockCode,id:String(brokerId),name:brokerName};openChart(stockCode,stockCode+' '+stockName,'',0,false,x.trade_date,brokerName+' '+action);};if(mode==='list')button.append(create('small','rk-record-stock',stockCode+' '+stockName));dateCell.append(button);row.onclick=e=>{if(!e.target.closest('button'))button.click();};
           status.append(create('span','sig-status-badge '+(sell?'is-sell':'is-buy'),action));const amount=create('td','rk-signed-cell '+(sell?'is-sell':'is-buy')),rawValue=isLots?x.net_lots:x.net_amount_wan,value=rawValue==null?null:Number(rawValue);amount.textContent=value!=null&&Number.isFinite(value)?(value===0?'0':(sell?'−':'+')+Math.abs(value).toLocaleString('zh-TW',{maximumFractionDigits:isLots?0:1})):'—';row.append(dateCell,status,amount);tbody.append(row);
         });table.append(tbody);scroll.append(table);const content=create('div','rk-group-content');content.hidden=!opened;content.append(scroll,create('div','rk-stock-count',items.length+' 筆紀錄'));section.append(content);const control={open:opened,set(open){this.open=open;expanded.set(groupKey,open);content.hidden=!open;toggle.setAttribute('aria-expanded',String(open));}};groupControls.push(control);toggle.onclick=()=>{control.set(!control.open);syncAll();};groupList.append(section);
       });
@@ -14212,7 +14227,7 @@
       _userMarkers = {};  // 關閉 K 圖時清掉所有日期標記（暫時性設計）
       _stopRealtimeUpdates();
       _setChartFull(false);
-      document.getElementById('chartModal').classList.remove('open');
+      document.getElementById('chartModal').classList.remove('open','chart-analysis-only');
       document.body.classList.remove('mc-chart-open');
       _destroyCharts();
       if (_drawTool) { try { window._setDrawTool(_drawTool); } catch (_) {} }   // 關閉 K 圖時取消畫線工具（按鈕一併還原）
@@ -15871,12 +15886,23 @@
     }
 
     // ── Drawing: canvas utilities ─────────────────────────
+    // Chart coordinates start AFTER the optional left price axis, not at the host edge.
+    function _chartPlotGeometry() {
+      const host=document.getElementById('chartContainer'),panel=document.getElementById('mainChartPanel');
+      if(!chartInstance||!host||!panel)return null;
+      const ts=chartInstance.timeScale(),r=host.getBoundingClientRect(),pr=panel.getBoundingClientRect();
+      let axis=0;try{axis=chartInstance.priceScale('left').width()||0;}catch(_){}
+      const width=ts.width(),height=Math.max(0,host.clientHeight-ts.height());
+      return {left:r.left-pr.left-panel.clientLeft+axis,top:r.top-pr.top-panel.clientTop,width,height,pageLeft:r.left+axis,pageTop:r.top};
+    }
     function resizeFibCanvas() {
-      const canvas = document.getElementById('fibCanvas');
-      const panel  = document.getElementById('mainChartPanel');
-      if (!canvas || !panel) return;
-      if(canvas.width!==panel.clientWidth)canvas.width=panel.clientWidth;
-      if(canvas.height!==panel.clientHeight)canvas.height=panel.clientHeight;
+      const canvas=document.getElementById('fibCanvas'),overlay=document.getElementById('chartOverlay'),panel=document.getElementById('mainChartPanel'),g=_chartPlotGeometry();
+      if(!canvas||!panel||!g)return;
+      const width=Math.round(g.width),height=Math.round(g.height);
+      if(canvas.width!==width)canvas.width=width;if(canvas.height!==height)canvas.height=height;
+      for(const el of [canvas,overlay])if(el){el.style.left=g.left+'px';el.style.top=g.top+'px';el.style.width=width+'px';el.style.height=height+'px';el.style.right='auto';el.style.bottom='auto';}
+      for(const [key,value] of Object.entries({left:g.left,top:g.top,width,height}))panel.style.setProperty('--chart-plot-'+key,value+'px');
+      window.AcademyChartListNav?.place();
     }
 
     function _clearCanvas() {
@@ -15889,6 +15915,7 @@
     function redrawCanvas() {
       const canvas = document.getElementById('fibCanvas');
       if (!canvas || !chartInstance || !candleSeriesRef) return;
+      resizeFibCanvas();
       const ctx = canvas.getContext('2d');
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       _drawBoxRectOnCtx(ctx);
@@ -15903,11 +15930,11 @@
     function _watchDrawingProjection(){
       _drawingFrame=0;
       if(!chartInstance||!candleSeriesRef||!document.getElementById('chartModal')?.classList.contains('open'))return;
-      const active=_drawShapes.length||_drawPending.length||trendLines.length||fibLevels.length||_boxRectShow;
+      const active=_drawTool||zoomMode||fibMode||trendLineMode||_drawShapes.length||_drawPending.length||_shapeDrag||trendStart||fibDragStart||zoomDragStart||trendLines.length||fibLevels.length||_boxRectShow;
       if(!active){if(_drawingDirty){_drawingDirty=false;resizeFibCanvas();redrawCanvas();}return;}
       const ts=chartInstance.timeScale(),range=ts.getVisibleLogicalRange(),bars=window._vpCandles||[],probe=bars[Math.floor(bars.length/2)]||bars[0];
       const host=document.getElementById('chartContainer');
-      const key=JSON.stringify([host.clientWidth,host.clientHeight,range,probe&&candleSeriesRef.priceToCoordinate(probe.low),probe&&candleSeriesRef.priceToCoordinate(probe.high),ts.logicalToCoordinate(0),ts.logicalToCoordinate(1)]);
+      const key=JSON.stringify([host.clientWidth,host.clientHeight,_chartPlotGeometry()?.left,ts.width(),range,probe&&candleSeriesRef.priceToCoordinate(probe.low),probe&&candleSeriesRef.priceToCoordinate(probe.high),ts.logicalToCoordinate(0),ts.logicalToCoordinate(1)]);
       if(_drawingDirty||key!==_drawingProjection){_drawingDirty=false;_drawingProjection=key;resizeFibCanvas();redrawCanvas();window.AcademyChartTools?.projectionChanged();}
       _drawingFrame=requestAnimationFrame(_watchDrawingProjection);
     }
@@ -16064,7 +16091,7 @@
       overlay.addEventListener('mousedown', e => {
         if (!candleSeriesRef || e.button!==0) return;
         if (zoomMode) {
-          zoomDragStart = { x: getX(e.clientX) };
+          zoomDragStart = { x: getX(e.clientX), li: chartInstance.timeScale().coordinateToLogical(getX(e.clientX)) };
         } else if (fibMode) {
           const y = getY(e.clientY);
           const price = candleSeriesRef.coordinateToPrice(y);
@@ -16077,9 +16104,9 @@
       });
       overlay.addEventListener('mousemove', e => {
         if (zoomMode && zoomDragStart) {
-          drawZoomRect(zoomDragStart.x, getX(e.clientX));
+          drawZoomRect((zoomDragStart.li!=null?chartInstance.timeScale().logicalToCoordinate(zoomDragStart.li):zoomDragStart.x), getX(e.clientX));
         } else if (fibMode && fibDragStart) {
-          drawBand(fibDragStart.y, getY(e.clientY));
+          drawBand(candleSeriesRef.priceToCoordinate(fibDragStart.price), getY(e.clientY));
         } else if (trendLineMode && trendStart) {
           const ctx = canvas.getContext('2d');
           ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -16098,7 +16125,7 @@
       overlay.addEventListener('mouseup', e => {
         if (zoomMode && zoomDragStart) {
           const x2 = getX(e.clientX);
-          const x1 = zoomDragStart.x;
+          const x1 = zoomDragStart.li!=null?chartInstance.timeScale().logicalToCoordinate(zoomDragStart.li):zoomDragStart.x;
           zoomDragStart = null;
           if (Math.abs(x2 - x1) > 5 && chartInstance) {
             const ts=chartInstance.timeScale(),width=ts.width(),clamp=x=>Math.max(0,Math.min(width,x));
@@ -16123,7 +16150,7 @@
       overlay.addEventListener('touchstart', e => {
         if (!candleSeriesRef) return; e.preventDefault();
         if (zoomMode) {
-          zoomDragStart = { x: getX(e.touches[0].clientX) };
+          zoomDragStart = { x: getX(e.touches[0].clientX), li: chartInstance.timeScale().coordinateToLogical(getX(e.touches[0].clientX)) };
         } else if (fibMode) {
           const y = getY(e.touches[0].clientY);
           const price = candleSeriesRef.coordinateToPrice(y);
@@ -16137,9 +16164,9 @@
       overlay.addEventListener('touchmove', e => {
         e.preventDefault();
         if (zoomMode && zoomDragStart) {
-          drawZoomRect(zoomDragStart.x, getX(e.touches[0].clientX));
+          drawZoomRect((zoomDragStart.li!=null?chartInstance.timeScale().logicalToCoordinate(zoomDragStart.li):zoomDragStart.x), getX(e.touches[0].clientX));
         } else if (fibMode && fibDragStart) {
-          drawBand(fibDragStart.y, getY(e.touches[0].clientY));
+          drawBand(candleSeriesRef.priceToCoordinate(fibDragStart.price), getY(e.touches[0].clientY));
         } else if (trendLineMode && trendStart) {
           const ctx = canvas.getContext('2d');
           ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -16159,7 +16186,7 @@
         e.preventDefault();
         if (zoomMode && zoomDragStart) {
           const x2 = getX(e.changedTouches[0].clientX);
-          const x1 = zoomDragStart.x;
+          const x1 = zoomDragStart.li!=null?chartInstance.timeScale().logicalToCoordinate(zoomDragStart.li):zoomDragStart.x;
           zoomDragStart = null;
           if (Math.abs(x2 - x1) > 5 && chartInstance) {
             const ts=chartInstance.timeScale(),width=ts.width(),clamp=x=>Math.max(0,Math.min(width,x));
@@ -16356,7 +16383,7 @@
         if (!_drawTool) return;
         const px = gx(e.clientX), py = gy(e.clientY);
         if (_drawTool === 'eraser') { if (_erasing && (e.buttons & 1)) _eraseAt(px, py); else _erasing = false; return; }
-        if (_shapeDrag) { redrawCanvas(); _previewShape(document.getElementById('fibCanvas').getContext('2d'), _drawTool, { px: _shapeDrag.px, py: _shapeDrag.py }, { px, py }); return; }
+        if (_shapeDrag) { redrawCanvas(); _previewShape(document.getElementById('fibCanvas').getContext('2d'), _drawTool, { px: _dX(_shapeDrag), py: candleSeriesRef.priceToCoordinate(_shapeDrag.price) }, { px, py }); return; }
         if (_CLICK_TOOLS.indexOf(_drawTool) >= 0 && _drawPending.length) {
           redrawCanvas(); const ctx = document.getElementById('fibCanvas').getContext('2d');
           const last = _drawPending[_drawPending.length - 1], lx = _dX(last), ly = candleSeriesRef.priceToCoordinate(last.price);
@@ -16413,7 +16440,7 @@
         const t = e.touches[0]; if (!t) return;
         const px = gx(t.clientX), py = gy(t.clientY);
         if (_drawTool === 'eraser') { e.preventDefault(); if (chartInstance && candleSeriesRef) _eraseAt(px, py); return; }   // 手指滑過即清除
-        if (_shapeDrag) { e.preventDefault(); redrawCanvas(); _previewShape(document.getElementById('fibCanvas').getContext('2d'), _drawTool, { px: _shapeDrag.px, py: _shapeDrag.py }, { px, py }); return; }
+        if (_shapeDrag) { e.preventDefault(); redrawCanvas(); _previewShape(document.getElementById('fibCanvas').getContext('2d'), _drawTool, { px: _dX(_shapeDrag), py: candleSeriesRef.priceToCoordinate(_shapeDrag.price) }, { px, py }); return; }
         if (_CLICK_TOOLS.indexOf(_drawTool) >= 0 && _drawPending.length) {
           e.preventDefault(); redrawCanvas(); const ctx = document.getElementById('fibCanvas').getContext('2d');
           const last = _drawPending[_drawPending.length - 1], lx = _dX(last), ly = candleSeriesRef.priceToCoordinate(last.price);
@@ -16495,7 +16522,7 @@
     };
     document.addEventListener('click', e => { if (!e.target.closest('.draw-dd')) ['ddLineMenu', 'ddShapeMenu','ddFibMenu'].forEach(id => { const m = document.getElementById(id); if (m) m.classList.remove('open'); }); });
 
-    window.AcademyChartBridge={get:()=>({chart:chartInstance,series:candleSeriesRef,candles:window._vpCandles||[],code:currentCode,tool:_drawTool,zoom:zoomMode,drawingColor:_trendColor(),drawings:_drawShapes}),deactivate:_deactivateAllModes,redraw:_redrawSoon};
+    window.AcademyChartBridge={get:()=>({chart:chartInstance,series:candleSeriesRef,candles:window._vpCandles||[],code:currentCode,tool:_drawTool,zoom:zoomMode,fib:fibMode,trendLine:trendLineMode,drawing:!!(_shapeDrag||_drawPending.length||fibDragStart||trendStart||zoomDragStart),drawingColor:_trendColor(),drawings:_drawShapes}),plot:_chartPlotGeometry,deactivate:_deactivateAllModes,redraw:_redrawSoon};
     window._finishWave=function(){if(_drawTool!=='wave')return;if(_drawPending.length>=2){_drawShapes.push({type:'wave',pts:_drawPending.map(p=>({...p}))});_drawPending=[];_drawStoreSave();}_setDrawTool('wave');};
     window._cancelChartTool=function(){_deactivateAllModes();redrawCanvas();};
     document.addEventListener('keydown',function(e){if(e.target.closest('input,textarea,select,[contenteditable=true]'))return;if(e.key==='Enter'&&_drawTool==='wave'){e.preventDefault();_finishWave();}if(e.key==='Escape'&&(_drawTool||zoomMode||window.AcademyChartTools?.isSelecting()||document.querySelector('.draw-dd-menu.open'))){e.preventDefault();e.stopImmediatePropagation();_cancelChartTool();}},true);
@@ -16980,7 +17007,7 @@
       legendOffset();
     }
     function legendOffset(){   // 2026-10-22 大盤左軸出現時，均線／指標標籤往右讓出左軸，避免和左軸數字、加權價格標籤重疊
-      var lab=el('maLabel'); if(!lab) return; var w=0;
+      if(typeof resizeFibCanvas==='function')resizeFibCanvas();if(typeof _redrawSoon==='function')_redrawSoon();var lab=el('maLabel'); if(!lab) return; var w=0;
       try{ if(MK.series&&chartInstance) w=chartInstance.priceScale('left').width()||0; }catch(e){}
       lab.style.left=(8+w)+'px';
     }
@@ -18033,14 +18060,15 @@
 <script src="assets/learning-curriculum.js?v=5" defer></script>
 <script src="assets/learning-more.js?v=2" defer></script>
 <script src="assets/learning-figures.js?v=2" defer></script>
+<script src="assets/learning-extra.js?v=1" defer></script>
 <script src="assets/member-learning-verification.js?v=1" defer></script>
-<script src="assets/learning-center.js?v=9" defer></script>
+<script src="assets/learning-center.js?v=10" defer></script>
 <script src="assets/member-features.js?v=inbox1" defer></script>
 <script src="assets/member-strategy-engine.js?v=short1" defer></script>
 <script src="assets/strategy-dimensions.js?v=2" defer></script>
 <script src="assets/strategy-presets.js?v=1" defer></script>
 <script src="assets/member-strategy-ui.js?v=companion-suction6" defer></script>
-<script src="assets/member-research.js?v=watchsync1" defer></script>
+<script src="assets/member-research.js?v=watchsync2" defer></script>
 <script src="assets/member-trade-engine.js?v=wording1" defer></script>
 <script src="assets/goal-models/manifest.js" defer></script>
 <script src="assets/member-companion-3d.js" defer></script>
@@ -18050,13 +18078,13 @@
 <script src="assets/search-discovery.js" defer></script>
 <script src="assets/site-search.js?v=arrow-nav2" defer></script>
 <script src="assets/member-derivatives-catalog.js" defer></script>
-<script src="assets/member-trade-ui.js?v=service1" defer></script>
+<script src="assets/member-trade-ui.js?v=listnav-service1" defer></script>
 <script src="assets/member-journey.js?v=taskbulk1" defer></script>
 <link rel="stylesheet" href="assets/member-service-center.css?v=1">
 <script src="assets/member-data-portability.js?v=inbox1" defer></script>
 <script src="assets/member-service-center.js?v=1" defer></script>
-<link rel="stylesheet" href="assets/chart-research-tools.css?v=tools22">
-<script src="assets/chart-research-tools.js?v=tools19" defer></script>
+<link rel="stylesheet" href="assets/chart-research-tools.css?v=tools23">
+<script src="assets/chart-research-tools.js?v=tools22" defer></script>
 <link rel="stylesheet" href="assets/brand-footer.css?v=6">
 <script src="assets/brand-footer.js?v=5" defer></script>
 <link rel="stylesheet" href="assets/market-panel-layout.css?v=8">
@@ -18078,6 +18106,8 @@
 <link rel="stylesheet" href="assets/research-layout.css?v=10">
 <link rel="stylesheet" href="assets/broker-workspace.css?v=5">
 <script src="assets/chart-viewport-fit.js?v=22" defer></script>
+<link rel="stylesheet" href="assets/chart-list-navigation.css?v=3">
+<script src="assets/chart-list-navigation.js?v=4" defer></script>
 <script src="assets/screen-inline-calendar.js?v=records-only13" defer></script>
 
 <link rel="stylesheet" href="assets/onboarding-tour.css?v=mist-edge-mcopen-20261027">
@@ -18129,7 +18159,9 @@
 <script src="assets/ai-pattern-screen.js?v=20261028-tri1" defer></script>
 <link rel="stylesheet" href="assets/pattern-admin-review.css?v=20261027-1">
 <script src="assets/pattern-admin-review.js?v=20261027-6" defer></script>
-<link rel="stylesheet" href="assets/brand-arrival.css?v=40">
-<script src="assets/brand-arrival.js?v=39" defer></script>
+<link rel="stylesheet" href="assets/brand-arrival.css?v=42">
+<script src="assets/brand-arrival.js?v=46" defer></script>
+<link rel="stylesheet" href="assets/chart-analysis.css?v=1">
+<script src="assets/chart-analysis.js?v=1" defer></script>
 </body>
 </html>
