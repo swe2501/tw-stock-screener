@@ -13122,7 +13122,7 @@
           ${tabBtn('overlap', ' 雙榜交集', overlap.length)}
           ${tabBtn('lots', ' 張數制', lotsRows.length)}
           ${tabBtn('amount', ' 金額制', amtRows.length)}
-          ${tabBtn('stats', ' 實測勝率', _sigStats.length)}
+          ${'' /* 2026-10-29 用戶要求「實測勝率」分頁先隱藏（所有人含管理者都不顯示）；資料照常每日累積，要恢復把這行改回 tabBtn('stats', ' 實測勝率', _sigStats.length) */}
         </div>
         ${summary}
         <div style="border:1px solid var(--border);border-top:none;padding:4px 8px 8px">
