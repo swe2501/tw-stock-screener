@@ -6717,6 +6717,7 @@
     window._etxReleaseChart=releaseETFChart;
     window._etxCloseDrawer=function(){etxOpenToken++;releaseETFChart();el('etxDrawer').style.display='none';};
     window._etxOpen=function(code,initialTab){
+      window.AcademyChartListNav?.rememberDrawer(code);
       if(el('etxDrawer').parentNode!==document.body)document.body.appendChild(el('etxDrawer'));
       releaseETFChart();drawerCode=String(code);drawerTab=['overview','dividend','technical'].includes(initialTab)?initialTab:'overview';movesFilter='summary';holdingsMode='stocks';
       el('etxDrawer').style.display='flex';var token=++etxOpenToken;
@@ -11324,6 +11325,7 @@
 
     function drawerCodeForChart(){return window._etxChartCode||'';}
     function openChart(code, name, industry = '', price = 0, fromScreen = false, markDate = null, markLabel = '', markDate2 = null, markLabel2 = null, presentation = null) {
+      const navPeriod=window.AcademyChartListNav?.open(String(code),fromScreen,presentation);
       const chartModal=document.getElementById('chartModal'),wasAnalysis=chartModal.classList.contains('chart-analysis-only'),analysis=!!presentation?.analysisOnly;
       chartModal.classList.toggle('chart-analysis-only',analysis);
       if(analysis||wasAnalysis){chartModal.classList.toggle('kfull',analysis);window.AcademyChartViewport?.refresh();}
@@ -11362,14 +11364,15 @@
       _kSyncLayerUI();   // 圖層開關沿用上一次的設定
       document.getElementById('backBtn').style.display = 'none';
       document.getElementById('chartModal').classList.add('open');
-      try { _scNavActive = !!fromScreen; _updateChartNav(code); } catch (_) {}
+      try { _scNavActive = window.AcademyChartListNav?AcademyChartListNav.active:!!fromScreen; _updateChartNav(code); } catch (_) {}
       if (!fibSetupDone) { setupFibOverlay(); fibSetupDone = true; }
-      loadDailyChart();
+      if(navPeriod?.key==='hour')loadHourlyChart();else if(navPeriod?.key==='trend')loadTrendChart();else if(navPeriod)_loadPeriodChart(navPeriod.key,navPeriod.adjusted);else loadDailyChart();
     }
 
     // ── 掏金篩選器：K 圖「上一檔／下一檔」（只有 fromScreen=true 才啟用箭頭） ──
     let _scNavActive = false;
     function _updateChartNav(code) {
+      if(window.AcademyChartListNav){AcademyChartListNav.paint();return;}
       const prev = document.getElementById('chartNavPrev'), next = document.getElementById('chartNavNext');
       if (!prev || !next) return;
       const list = Array.isArray(window._scNavList) ? window._scNavList : [];
@@ -11382,6 +11385,7 @@
       next.title = idx < list.length - 1 ? ('下一檔　' + list[idx + 1].code + ' ' + (list[idx + 1].name || '') + '（' + (idx + 2) + '/' + list.length + '）') : '已是最後一檔';
     }
     window._chartNavGo = function (dir) {
+      if(window.AcademyChartListNav){AcademyChartListNav.go(dir);return;}
       if (!_scNavActive) return;
       const list = Array.isArray(window._scNavList) ? window._scNavList : [];
       const idx = list.findIndex(x => x.code === String(currentCode));
@@ -12732,7 +12736,7 @@
       const watchControl=(code,name,compact)=>{const watch=create('label','rk-stock-watch'),checkbox=create('input');checkbox.type='checkbox';checkbox.checked=!!_stWatchSet?.has(brokerId+'|'+code);checkbox.setAttribute('aria-label','追蹤 '+code+' '+name);checkbox.onchange=()=>_stToggle(checkbox,brokerId,brokerName,code,name);watch.append(checkbox,document.createTextNode(compact?'追蹤':code+' '+name));return watch;};
       if(mode!=='stock'){const watchBox=create('details','rk-watch-list');watchBox.append(create('summary','','追蹤股票 · '+groups.size+' 檔'));const controls=create('div');for(const [code,items] of groups)controls.append(watchControl(code,items.find(x=>x.name)?.name||'',false));watchBox.append(controls);body.append(watchBox);}
       const displayGroups=new Map();if(mode==='stock')for(const entry of groups)displayGroups.set(...entry);else for(const record of records){const key=mode==='time'?record.trade_date:'全部紀錄';if(!displayGroups.has(key))displayGroups.set(key,[]);displayGroups.get(key).push(record);}
-      const groupList=create('div','rk-trades-groups');body.append(groupList);
+      const groupList=create('div','rk-trades-groups');groupList.dataset.chartList='';body.append(groupList);
       const groupControls=[];const syncAll=()=>{const open=groupControls.some(x=>x.open);toggleAll.textContent=open?'全部收合':'全部展開';toggleAll.setAttribute('aria-label',toggleAll.textContent+'紀錄分組');};toggleAll.onclick=()=>{const open=!groupControls.some(x=>x.open);groupControls.forEach(x=>x.set(open));syncAll();};
       [...displayGroups].sort((a,b)=>b[1].reduce((m,x)=>x.trade_date>m?x.trade_date:m,'').localeCompare(a[1].reduce((m,x)=>x.trade_date>m?x.trade_date:m,''))).forEach(([code,items])=>{
         items.sort((a,b)=>b.trade_date.localeCompare(a.trade_date));const name=items.find(x=>x.name)?.name||(window._names||{})[code]||'';
@@ -12743,7 +12747,7 @@
         const tbody=create('tbody');items.forEach(x=>{
           const stockCode=String(x.code),stockName=x.name||(window._names||{})[stockCode]||'';
           const row=create('tr'),dateCell=create('td'),button=create('button','rk-record-open',mode==='time'?stockCode+' '+stockName:x.trade_date),status=create('td','rk-status-cell'),sell=x.side==='sell',action=sell?(x.exit?'主力分手 ↓':'減碼'):(x.addition?'加碼 ↑':'主力交往 ↑');
-          button.type='button';button.setAttribute('aria-label',x.trade_date+' '+stockCode+' '+action+'，查看 K 線');button.onclick=()=>{window._chartFocusBroker={code:stockCode,id:String(brokerId),name:brokerName};openChart(stockCode,stockCode+' '+stockName,'',0,false,x.trade_date,brokerName+' '+action);};if(mode==='list')button.append(create('small','rk-record-stock',stockCode+' '+stockName));dateCell.append(button);row.onclick=e=>{if(!e.target.closest('button'))button.click();};
+          button.dataset.stockCode=stockCode;button.type='button';button.setAttribute('aria-label',x.trade_date+' '+stockCode+' '+action+'，查看 K 線');button.onclick=()=>{window._chartFocusBroker={code:stockCode,id:String(brokerId),name:brokerName};openChart(stockCode,stockCode+' '+stockName,'',0,false,x.trade_date,brokerName+' '+action);};if(mode==='list')button.append(create('small','rk-record-stock',stockCode+' '+stockName));dateCell.append(button);row.onclick=e=>{if(!e.target.closest('button'))button.click();};
           status.append(create('span','sig-status-badge '+(sell?'is-sell':'is-buy'),action));const amount=create('td','rk-signed-cell '+(sell?'is-sell':'is-buy')),rawValue=isLots?x.net_lots:x.net_amount_wan,value=rawValue==null?null:Number(rawValue);amount.textContent=value!=null&&Number.isFinite(value)?(value===0?'0':(sell?'−':'+')+Math.abs(value).toLocaleString('zh-TW',{maximumFractionDigits:isLots?0:1})):'—';row.append(dateCell,status,amount);tbody.append(row);
         });table.append(tbody);scroll.append(table);const content=create('div','rk-group-content');content.hidden=!opened;content.append(scroll,create('div','rk-stock-count',items.length+' 筆紀錄'));section.append(content);const control={open:opened,set(open){this.open=open;expanded.set(groupKey,open);content.hidden=!open;toggle.setAttribute('aria-expanded',String(open));}};groupControls.push(control);toggle.onclick=()=>{control.set(!control.open);syncAll();};groupList.append(section);
       });
@@ -15874,12 +15878,23 @@
     }
 
     // ── Drawing: canvas utilities ─────────────────────────
+    // Chart coordinates start AFTER the optional left price axis, not at the host edge.
+    function _chartPlotGeometry() {
+      const host=document.getElementById('chartContainer'),panel=document.getElementById('mainChartPanel');
+      if(!chartInstance||!host||!panel)return null;
+      const ts=chartInstance.timeScale(),r=host.getBoundingClientRect(),pr=panel.getBoundingClientRect();
+      let axis=0;try{axis=chartInstance.priceScale('left').width()||0;}catch(_){}
+      const width=ts.width(),height=Math.max(0,host.clientHeight-ts.height());
+      return {left:r.left-pr.left-panel.clientLeft+axis,top:r.top-pr.top-panel.clientTop,width,height,pageLeft:r.left+axis,pageTop:r.top};
+    }
     function resizeFibCanvas() {
-      const canvas = document.getElementById('fibCanvas');
-      const panel  = document.getElementById('mainChartPanel');
-      if (!canvas || !panel) return;
-      if(canvas.width!==panel.clientWidth)canvas.width=panel.clientWidth;
-      if(canvas.height!==panel.clientHeight)canvas.height=panel.clientHeight;
+      const canvas=document.getElementById('fibCanvas'),overlay=document.getElementById('chartOverlay'),panel=document.getElementById('mainChartPanel'),g=_chartPlotGeometry();
+      if(!canvas||!panel||!g)return;
+      const width=Math.round(g.width),height=Math.round(g.height);
+      if(canvas.width!==width)canvas.width=width;if(canvas.height!==height)canvas.height=height;
+      for(const el of [canvas,overlay])if(el){el.style.left=g.left+'px';el.style.top=g.top+'px';el.style.width=width+'px';el.style.height=height+'px';el.style.right='auto';el.style.bottom='auto';}
+      for(const [key,value] of Object.entries({left:g.left,top:g.top,width,height}))panel.style.setProperty('--chart-plot-'+key,value+'px');
+      window.AcademyChartListNav?.place();
     }
 
     function _clearCanvas() {
@@ -15892,6 +15907,7 @@
     function redrawCanvas() {
       const canvas = document.getElementById('fibCanvas');
       if (!canvas || !chartInstance || !candleSeriesRef) return;
+      resizeFibCanvas();
       const ctx = canvas.getContext('2d');
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       _drawBoxRectOnCtx(ctx);
@@ -15906,11 +15922,11 @@
     function _watchDrawingProjection(){
       _drawingFrame=0;
       if(!chartInstance||!candleSeriesRef||!document.getElementById('chartModal')?.classList.contains('open'))return;
-      const active=_drawShapes.length||_drawPending.length||_shapeDrag||trendStart||fibDragStart||zoomDragStart||trendLines.length||fibLevels.length||_boxRectShow;
+      const active=_drawTool||zoomMode||fibMode||trendLineMode||_drawShapes.length||_drawPending.length||_shapeDrag||trendStart||fibDragStart||zoomDragStart||trendLines.length||fibLevels.length||_boxRectShow;
       if(!active){if(_drawingDirty){_drawingDirty=false;resizeFibCanvas();redrawCanvas();}return;}
       const ts=chartInstance.timeScale(),range=ts.getVisibleLogicalRange(),bars=window._vpCandles||[],probe=bars[Math.floor(bars.length/2)]||bars[0];
       const host=document.getElementById('chartContainer');
-      const key=JSON.stringify([host.clientWidth,host.clientHeight,range,probe&&candleSeriesRef.priceToCoordinate(probe.low),probe&&candleSeriesRef.priceToCoordinate(probe.high),ts.logicalToCoordinate(0),ts.logicalToCoordinate(1)]);
+      const key=JSON.stringify([host.clientWidth,host.clientHeight,_chartPlotGeometry()?.left,ts.width(),range,probe&&candleSeriesRef.priceToCoordinate(probe.low),probe&&candleSeriesRef.priceToCoordinate(probe.high),ts.logicalToCoordinate(0),ts.logicalToCoordinate(1)]);
       if(_drawingDirty||key!==_drawingProjection){_drawingDirty=false;_drawingProjection=key;resizeFibCanvas();redrawCanvas();window.AcademyChartTools?.projectionChanged();}
       _drawingFrame=requestAnimationFrame(_watchDrawingProjection);
     }
@@ -16498,7 +16514,7 @@
     };
     document.addEventListener('click', e => { if (!e.target.closest('.draw-dd')) ['ddLineMenu', 'ddShapeMenu','ddFibMenu'].forEach(id => { const m = document.getElementById(id); if (m) m.classList.remove('open'); }); });
 
-    window.AcademyChartBridge={get:()=>({chart:chartInstance,series:candleSeriesRef,candles:window._vpCandles||[],code:currentCode,tool:_drawTool,zoom:zoomMode,drawingColor:_trendColor(),drawings:_drawShapes}),deactivate:_deactivateAllModes,redraw:_redrawSoon};
+    window.AcademyChartBridge={get:()=>({chart:chartInstance,series:candleSeriesRef,candles:window._vpCandles||[],code:currentCode,tool:_drawTool,zoom:zoomMode,drawingColor:_trendColor(),drawings:_drawShapes}),plot:_chartPlotGeometry,deactivate:_deactivateAllModes,redraw:_redrawSoon};
     window._finishWave=function(){if(_drawTool!=='wave')return;if(_drawPending.length>=2){_drawShapes.push({type:'wave',pts:_drawPending.map(p=>({...p}))});_drawPending=[];_drawStoreSave();}_setDrawTool('wave');};
     window._cancelChartTool=function(){_deactivateAllModes();redrawCanvas();};
     document.addEventListener('keydown',function(e){if(e.target.closest('input,textarea,select,[contenteditable=true]'))return;if(e.key==='Enter'&&_drawTool==='wave'){e.preventDefault();_finishWave();}if(e.key==='Escape'&&(_drawTool||zoomMode||window.AcademyChartTools?.isSelecting()||document.querySelector('.draw-dd-menu.open'))){e.preventDefault();e.stopImmediatePropagation();_cancelChartTool();}},true);
@@ -16983,7 +16999,7 @@
       legendOffset();
     }
     function legendOffset(){   // 2026-10-22 大盤左軸出現時，均線／指標標籤往右讓出左軸，避免和左軸數字、加權價格標籤重疊
-      var lab=el('maLabel'); if(!lab) return; var w=0;
+      if(typeof resizeFibCanvas==='function')resizeFibCanvas();if(typeof _redrawSoon==='function')_redrawSoon();var lab=el('maLabel'); if(!lab) return; var w=0;
       try{ if(MK.series&&chartInstance) w=chartInstance.priceScale('left').width()||0; }catch(e){}
       lab.style.left=(8+w)+'px';
     }
@@ -18044,7 +18060,7 @@
 <script src="assets/strategy-dimensions.js?v=2" defer></script>
 <script src="assets/strategy-presets.js?v=1" defer></script>
 <script src="assets/member-strategy-ui.js?v=companion-suction6" defer></script>
-<script src="assets/member-research.js?v=watchsync1" defer></script>
+<script src="assets/member-research.js?v=watchsync2" defer></script>
 <script src="assets/member-trade-engine.js?v=wording1" defer></script>
 <script src="assets/goal-models/manifest.js" defer></script>
 <script src="assets/member-companion-3d.js" defer></script>
@@ -18054,13 +18070,13 @@
 <script src="assets/search-discovery.js" defer></script>
 <script src="assets/site-search.js?v=arrow-nav2" defer></script>
 <script src="assets/member-derivatives-catalog.js" defer></script>
-<script src="assets/member-trade-ui.js?v=service1" defer></script>
+<script src="assets/member-trade-ui.js?v=listnav-service1" defer></script>
 <script src="assets/member-journey.js?v=taskbulk1" defer></script>
 <link rel="stylesheet" href="assets/member-service-center.css?v=1">
 <script src="assets/member-data-portability.js?v=inbox1" defer></script>
 <script src="assets/member-service-center.js?v=1" defer></script>
-<link rel="stylesheet" href="assets/chart-research-tools.css?v=tools22">
-<script src="assets/chart-research-tools.js?v=tools20" defer></script>
+<link rel="stylesheet" href="assets/chart-research-tools.css?v=tools23">
+<script src="assets/chart-research-tools.js?v=tools21" defer></script>
 <link rel="stylesheet" href="assets/brand-footer.css?v=6">
 <script src="assets/brand-footer.js?v=5" defer></script>
 <link rel="stylesheet" href="assets/market-panel-layout.css?v=8">
@@ -18082,6 +18098,8 @@
 <link rel="stylesheet" href="assets/research-layout.css?v=10">
 <link rel="stylesheet" href="assets/broker-workspace.css?v=5">
 <script src="assets/chart-viewport-fit.js?v=22" defer></script>
+<link rel="stylesheet" href="assets/chart-list-navigation.css?v=3">
+<script src="assets/chart-list-navigation.js?v=3" defer></script>
 <script src="assets/screen-inline-calendar.js?v=records-only13" defer></script>
 
 <link rel="stylesheet" href="assets/onboarding-tour.css?v=mist-edge-mcopen-20261027">
@@ -18134,7 +18152,7 @@
 <link rel="stylesheet" href="assets/pattern-admin-review.css?v=20261027-1">
 <script src="assets/pattern-admin-review.js?v=20261027-6" defer></script>
 <link rel="stylesheet" href="assets/brand-arrival.css?v=40">
-<script src="assets/brand-arrival.js?v=40" defer></script>
+<script src="assets/brand-arrival.js?v=41" defer></script>
 <link rel="stylesheet" href="assets/chart-analysis.css?v=1">
 <script src="assets/chart-analysis.js?v=1" defer></script>
 </body>

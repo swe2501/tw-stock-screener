@@ -1,0 +1,14 @@
+/* Real chart, isolated行情/auth; tools must survive native wheel zoom. */
+const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict'),{chromium}=require('playwright');
+const web=path.resolve(__dirname,'../apps/web'),out=path.join(os.tmpdir(),'foresight-chart-analysis');fs.mkdirSync(out,{recursive:true});
+const data=Array.from({length:300},(_,i)=>{const close=100+i*.04+Math.sin(i/10)*7;return{time:new Date(Date.UTC(2025,0,2+i)).toISOString().slice(0,10),open:close-.5,high:close+2,low:close-2,close,volume:10000+i*10};});
+(async()=>{const browser=await chromium.launch({channel:'msedge',headless:true});try{for(const theme of ['light','dark']){
+ const p=await browser.newPage({viewport:{width:1440,height:960}}),errors=[];p.on('pageerror',e=>errors.push(e.message));
+ await p.addInitScript(theme=>{localStorage.setItem('theme',theme);localStorage.setItem('fqi.arrival.skip.v2','1');localStorage.setItem('fqi_onboarded_v1','1');localStorage.setItem('sb_token','fixture');localStorage.setItem('sb_user','{"id":"fx","email":"swe250165@gmail.com"}');},theme);
+ await p.route('**/*',r=>{const u=new URL(r.request().url());if(u.hostname==='unpkg.com'&&u.pathname.includes('lightweight-charts'))return r.fulfill({path:process.env.CHART_LIBRARY_PATH,contentType:'text/javascript'});if(u.pathname.endsWith('/api/chart'))return r.fulfill({json:{name:'測試股票',data}});if(u.pathname==='/auth/v1/user')return r.fulfill({json:{id:'fx',email:'swe250165@gmail.com'}});if(u.origin==='https://analysis.fixture.test'){if(u.pathname==='/api/auth')return r.fulfill({json:{enabled:false}});const f=path.resolve(web,'.'+(u.pathname==='/'?'/index.html':u.pathname));if(f.startsWith(web+path.sep)&&fs.existsSync(f)&&fs.statSync(f).isFile())return r.fulfill({path:f});}return r.fulfill({json:[]});});
+
+ await p.addInitScript(()=>localStorage.removeItem('fqi.arrival.skip.v2'));
+ await p.goto('https://analysis.fixture.test/');await p.waitForFunction(()=>!!window.FqiArrival);assert.equal(await p.evaluate(()=>FqiArrival.active()),false,'member boot skips opening without permanent skip preference');await p.reload();await p.waitForFunction(()=>!!window.FqiArrival);assert.equal(await p.evaluate(()=>FqiArrival.active()),false,'member refresh stays inside website');
+ assert.equal(await p.evaluate(()=>localStorage.getItem('fqi.arrival.skip.v2')),null,'does not change guest preference');
+ await p.evaluate(()=>{FqiArrival.open();});assert.equal(await p.evaluate(()=>FqiArrival.active()),true,'explicit replay still available');await p.evaluate(()=>FqiArrival.close());await p.close();
+ }console.log('PASS signed-in startup and refresh skip arrival in both themes, without changing skip preference; explicit replay remains available.');}finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1;});
