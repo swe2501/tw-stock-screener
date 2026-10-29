@@ -8,13 +8,15 @@
   var ORDER = ['chip', 'tech', 'macro', 'risk', 'etf', 'data'];          // 夜間排程交棒順序
   var SEATS = {
     news: { cx: 120, y: 190 }, chip: { cx: 330, y: 190 }, tech: { cx: 540, y: 190 }, macro: { cx: 750, y: 190 },
-    risk: { cx: 225, y: 360 }, etf: { cx: 435, y: 360 }, data: { cx: 645, y: 360 }
+    risk: { cx: 225, y: 360 }, etf: { cx: 435, y: 360 }, data: { cx: 645, y: 360 },
+    boss: { cx: 815, y: 360 }                                            // 2026-10-30 總管（雲端 Claude Agent）
   };
   var LOOK = {
     news: { n: '新聞研究員', shirt: '#4a90e2', hair: '#2d2016' }, chip: { n: '籌碼分析師', shirt: '#8e6bbf', hair: '#5a3a1c' },
     tech: { n: '技術分析師', shirt: '#e08a3c', hair: '#1f1f1f' }, macro: { n: '總經研究員', shirt: '#3c9a8f', hair: '#7a4a24' },
     risk: { n: '風控', shirt: '#c0567a', hair: '#2d2016' }, etf: { n: 'ETF 研究員', shirt: '#5c8a3a', hair: '#3a2a1a' },
-    data: { n: '資料管理員', shirt: '#6b7a8f', hair: '#3a2a1a' }
+    data: { n: '資料管理員', shirt: '#6b7a8f', hair: '#3a2a1a' },
+    boss: { n: '總管', shirt: '#1f2a44', hair: '#9aa5b1' }
   };
   // 角色對照：負責什麼、餵哪些頁面、對應哪些排程程式（與 scripts/office_wrap_bat.py 的 AGENT 對應表一致）
   var ROLE = {
@@ -31,11 +33,14 @@
     etf: { duty: 'ETF 名錄、淨值／規模、成分股、資金流、配息、受益人、主動 ETF 持股', pages: 'ETF 分析各分頁',
       jobs: 'upload_etf、wantgoo_etf、wantgoo_etf_flow、upload_etf_div、upload_etf_holders、etf_daily、active_etf_flow、upload_active_etf_holdings' },
     data: { duty: '股票清單、除權息、財報、首頁快取、排程健康檢查、上櫃分點回補', pages: '全站快取、系統健康',
-      jobs: 'gen_listed_codes、upload_otc_names、upload_exdiv_factor、fundamentals、themes_push、page_cache_push、job_health、chip_brief、dividends_push…' }
+      jobs: 'gen_listed_codes、upload_otc_names、upload_exdiv_factor、fundamentals、themes_push、page_cache_push、job_health、chip_brief、dividends_push…' },
+    boss: { duty: '雲端 AI 總管：定時巡查所有排程、資料日期與網頁快照，判斷失敗原因、寫報告寄信，必要時申請重跑白名單內的排程', pages: 'AI 研究室（全站資料是否準時）',
+      jobs: '雲端：Claude 雲端排程（經 /api/alert boss_status／boss_report）；本機：BossRunner 每 5 分鐘回報狀態並執行重跑（boss_runner.py）' }
   };
   var LIMIT_MIN = { news: 90, chip: 150, tech: 60, macro: 60, risk: 60, etf: 90, data: 120 };
-  var ST_COLOR = { done: '#5aa469', work: '#4a90e2', stuck: '#d9534f', idle: '#9aa5b1' };
-  var ST_TEXT = { done: '完成', work: '工作中', stuck: '卡住', idle: '待命' };
+  var ST_COLOR = { done: '#5aa469', work: '#4a90e2', stuck: '#d9534f', idle: '#9aa5b1', warn: '#e6a23c' };
+  var ST_TEXT = { done: '完成', work: '工作中', stuck: '卡住', idle: '待命', warn: '注意' };
+  var WORKERS = ['news', 'chip', 'tech', 'macro', 'risk', 'etf', 'data'];   // 進度條只算 7 個部門，不含總管
   var AISLE = 272, COFFEE = { x: 846, y: 140 };
 
   var box, post, data = {}, svg, sprites = {}, walker, wTag, timers = [], selected = null, tick = 0, blink = 0;
@@ -58,6 +63,12 @@
   // 依打卡資料判定目前狀態（工作太久、背景心跳中斷都算卡住）
   function status(a) {
     var s = data[a];
+    if (a === 'boss') {                                     // 總管：依最新報告 ok／warn／bad；超過 26 小時沒巡查算卡住
+      var rp = s && s.report;
+      if (!rp) return { k: 'idle', why: '尚未開始巡查' };
+      if (mins(rp.at) > 26 * 60) return { k: 'stuck', why: '超過 ' + Math.round(mins(rp.at) / 60) + ' 小時沒巡查' };
+      return { k: rp.status === 'ok' ? 'done' : rp.status === 'bad' ? 'stuck' : 'warn' };
+    }
     if (!s || !s.status) return { k: 'idle' };
     var k = s.status;
     if (k === 'work') {
@@ -74,7 +85,7 @@
 
   function build() {
     box.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px">'
-      + '<div style="font-size:13px;color:var(--text-muted)">每個角色＝一組既有排程；泡泡是它最新的真實產出。點角色看今日工作紀錄。</div>'
+      + '<div style="font-size:13px;color:var(--text-muted)">每個角色＝一組既有排程；泡泡是它最新的真實產出。右下角「總管」是雲端 AI，定時巡查全部排程並寫報告。點角色看紀錄。</div>'
       + '<div style="display:flex;align-items:center;gap:10px"><span id="aoUpd" style="font-size:12px;color:var(--text-muted)"></span>'
       + '<button type="button" id="aoRefresh" style="padding:4px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);cursor:pointer;font-size:12px">重新整理</button></div></div>'
       + '<div style="border:1px solid var(--border);border-radius:12px;overflow:hidden"><svg id="aoSvg" viewBox="0 0 900 470" width="100%" shape-rendering="crispEdges" style="display:block;background:#e8dcc6" role="img" aria-label="AI 研究室像素辦公室"></svg></div>'
@@ -92,11 +103,11 @@
     R(svg, 160, 12, 220, 42, '#f7f7f2'); var bf = R(svg, 160, 12, 220, 42, 'none'); bf.setAttribute('stroke', '#3d4f63'); bf.setAttribute('stroke-width', '3');
     T(svg, 172, 30, '今日盤後任務', '#2b3a4a');
     svg._bar = G(svg); svg._barTxt = T(svg, 368, 30, '', '#2b3a4a', 'end');
-    R(svg, 410, 16, 290, 34, '#2b3442');
-    [['done', 420], ['work', 480], ['stuck', 552], ['idle', 612]].forEach(function (p) { R(svg, p[1], 29, 8, 8, ST_COLOR[p[0]]); T(svg, p[1] + 12, 37, ST_TEXT[p[0]], '#ffffff'); });
+    R(svg, 410, 16, 340, 34, '#2b3442');
+    [['done', 420], ['work', 480], ['stuck', 552], ['idle', 612], ['warn', 672]].forEach(function (p) { R(svg, p[1], 29, 8, 8, ST_COLOR[p[0]]); T(svg, p[1] + 12, 37, ST_TEXT[p[0]], '#ffffff'); });
     svg._clock = T(svg, 860, 40, '', '#ffffff', 'end');
     R(svg, COFFEE.x - 10, 96, 34, 40, '#5b4636'); R(svg, COFFEE.x - 6, 100, 26, 14, '#2b3442'); R(svg, COFFEE.x + 2, 116, 10, 8, '#ffffff'); T(svg, COFFEE.x + 7, 152, '咖啡', '#5b4636', 'middle');
-    R(svg, 868, 384, 20, 26, '#8b5e3c'); R(svg, 862, 366, 32, 20, '#4f9a5c'); R(svg, 868, 358, 20, 10, '#5fb06c');
+    R(svg, 18, 384, 20, 26, '#8b5e3c'); R(svg, 12, 366, 32, 20, '#4f9a5c'); R(svg, 18, 358, 20, 10, '#5fb06c');
     Object.keys(SEATS).forEach(function (a) {
       var s = SEATS[a], cx = s.cx, y = s.y, g = G(svg); g.style.cursor = 'pointer';
       g.addEventListener('click', function () { selected = a; detail(); });
@@ -132,7 +143,7 @@
   function place(sp) { sp.pg.setAttribute('transform', 'translate(' + sp.x + ',' + sp.y + ')'); }
 
   function paint() {
-    var done = 0, total = ORDER.length + 1;
+    var done = 0, total = WORKERS.length;
     Object.keys(SEATS).forEach(function (a) {
       var sp = sprites[a], st = status(a), s = data[a] || {}, b = s.bubble || [];
       sp.state = st.k;
@@ -142,11 +153,11 @@
       fit(sp.b1, b[0] || (st.k === 'idle' ? '待命中' : '—'));
       fit(sp.b2, st.k === 'stuck' && st.why ? st.why : (b[1] || ''));
       sp.b2.setAttribute('fill', st.k === 'stuck' ? '#c0392b' : '#52606d');
-      if (st.k === 'done') done++;
+      if (st.k === 'done' && a !== 'boss') done++;
     });
     while (svg._bar.firstChild) svg._bar.removeChild(svg._bar.firstChild);
     R(svg._bar, 172, 38, 150, 6, '#d5d5cf');
-    Object.keys(SEATS).forEach(function (a, i) { var k = sprites[a].state; R(svg._bar, 172 + i * 21.4, 38, 20, 6, ST_COLOR[k]); });
+    WORKERS.forEach(function (a, i) { var k = sprites[a].state; R(svg._bar, 172 + i * 21.4, 38, 20, 6, ST_COLOR[k]); });
     svg._barTxt.textContent = done + '/' + total + ' 完成';
     var t = new Date(); svg._clock.textContent = ('0' + t.getHours()).slice(-2) + ':' + ('0' + t.getMinutes()).slice(-2);
     var u = box.querySelector('#aoUpd'); if (u) u.textContent = '更新 ' + svg._clock.textContent;
@@ -207,12 +218,36 @@
     }
     if (tick % 15 === 0) {
       blink ^= 1;
-      Object.keys(sprites).forEach(function (a) { var sp = sprites[a]; if (sp.state === 'work' || sp.state === 'stuck') sp.dot.setAttribute('opacity', blink ? 0.35 : 1); else sp.dot.setAttribute('opacity', 1); if (sp.state === 'work') sp.sc.setAttribute('fill', blink ? '#b7e6ff' : '#7fd0ff'); });
+      Object.keys(sprites).forEach(function (a) { var sp = sprites[a]; if (sp.state === 'work' || sp.state === 'stuck' || sp.state === 'warn') sp.dot.setAttribute('opacity', blink ? 0.35 : 1); else sp.dot.setAttribute('opacity', 1); if (sp.state === 'work') sp.sc.setAttribute('fill', blink ? '#b7e6ff' : '#7fd0ff'); });
     }
+  }
+
+  function bossDetail(el) {
+    var s = data.boss || {}, st = status('boss'), rp = s.report || {}, q = ((data._queue || {}).items || []).slice(-10).reverse();
+    var loc = data._local || {}, hist = (s.history || []).slice(-8).reverse();
+    var QS = { pending: '排隊中', running: '執行中', done: '完成', failed: '失敗', rejected: '不執行', expired: '作廢' };
+    var li = function (a) { return a && a.length ? '<ul style="margin:4px 0 0 18px;padding:0">' + a.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' : ''; };
+    el.innerHTML = '<div style="border:1px solid var(--border);border-radius:12px;padding:12px 14px;background:var(--surface);font-size:12px">'
+      + '<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center"><b style="font-size:14px">總管</b>'
+      + '<span style="padding:2px 10px;border-radius:999px;color:#fff;background:' + ST_COLOR[st.k] + '">' + ST_TEXT[st.k] + (st.why ? '・' + esc(st.why) : '') + '</span></div>'
+      + '<div style="margin-top:6px">負責：' + esc(ROLE.boss.duty) + '</div>'
+      + '<div style="color:var(--text-muted);margin-top:4px">本機助手上次回報 ' + (loc.ts ? esc(loc.ts.replace('T', ' ').slice(5, 16)) + (mins(loc.ts) > 20 ? '（已 ' + Math.round(mins(loc.ts)) + ' 分鐘沒回報，電腦可能關機）' : '') : '—') + '</div>'
+      + (rp.at ? '<div style="margin-top:10px"><b>最新報告</b>（' + esc(rp.at.replace('T', ' ').slice(5, 16)) + '）：' + esc(rp.headline) + li(rp.items)
+        + (rp.diagnosis ? '<div style="margin-top:6px;white-space:pre-wrap"><b>判斷</b>：' + esc(rp.diagnosis) + '</div>' : '')
+        + (rp.actions && rp.actions.length ? '<div style="margin-top:6px"><b>處理</b>' + li(rp.actions) + '</div>' : '') + '</div>'
+        : '<div style="margin-top:10px;color:var(--text-muted)">總管還沒交過報告。</div>')
+      + (q.length ? '<div style="margin-top:10px"><b>重跑申請</b><table style="width:100%;border-collapse:collapse;margin-top:4px"><tbody>'
+        + q.map(function (x) { return '<tr style="border-top:1px solid var(--border)"><td style="padding:4px 6px;white-space:nowrap">' + esc((x.requested_at || '').slice(5, 16).replace('T', ' ')) + '</td><td style="padding:4px 6px">' + esc(x.job) + '</td><td style="padding:4px 6px">' + esc(x.reason) + '</td><td style="padding:4px 6px;white-space:nowrap">' + esc(QS[x.status] || x.status) + (x.result ? '：' + esc(x.result) : '') + '</td></tr>'; }).join('')
+        + '</tbody></table></div>' : '')
+      + (hist.length > 1 ? '<div style="margin-top:10px"><b>巡查紀錄</b><table style="width:100%;border-collapse:collapse;margin-top:4px"><tbody>'
+        + hist.map(function (h) { var c = h.status === 'ok' ? ST_COLOR.done : h.status === 'bad' ? ST_COLOR.stuck : ST_COLOR.warn; return '<tr style="border-top:1px solid var(--border)"><td style="padding:4px 6px;white-space:nowrap">' + esc((h.at || '').slice(5, 16).replace('T', ' ')) + '</td><td style="padding:4px 6px"><span style="display:inline-block;width:8px;height:8px;margin-right:6px;background:' + c + '"></span>' + esc(h.headline) + '</td></tr>'; }).join('')
+        + '</tbody></table></div>' : '')
+      + '</div>';
   }
 
   function detail() {
     var el = box && box.querySelector('#aoDetail'); if (!el || !selected) return;
+    if (selected === 'boss') return bossDetail(el);
     var s = data[selected] || {}, st = status(selected), steps = (s.steps || []).slice().reverse().slice(0, 30);
     el.innerHTML = '<div style="border:1px solid var(--border);border-radius:12px;padding:12px 14px;background:var(--surface)">'
       + '<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center"><b style="font-size:14px">' + esc(LOOK[selected].n) + '</b>'
