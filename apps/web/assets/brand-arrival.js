@@ -22,7 +22,7 @@
   function animate(now){
     if(!active)return;const dt=Math.min(32,now-last||16);last=now;smooth.x+=(target.x-smooth.x)*.065;smooth.y+=(target.y-smooth.y)*.065;
     const nx=(smooth.x-.5)*2,ny=(smooth.y-.5)*2;root.style.setProperty('--mx',nx.toFixed(4));root.style.setProperty('--my',ny.toFixed(4));
-    if(stage){if(pose.on)updateLook(dt);drawParticles(dt,now)}else{const v=video();root.style.setProperty('--progress',`${Math.min(100,v.currentTime/stop()*100)}%`);if(v.currentTime>=stop()-.04)enterStage()}
+    if(stage){if(pose.on)updateLook(dt);drawParticles(dt,now)}else{const v=video(),r=v.currentTime<(lightMode()?7.6:6.6)?.7:1;if(v.playbackRate!==r){v.playbackRate=r;v.preservesPitch=true}root.style.setProperty('--progress',`${Math.min(100,v.currentTime/stop()*100)}%`);if(v.currentTime>=stop()-.04)enterStage()}
     raf=requestAnimationFrame(animate);
   }
   function drawParticles(dt,now){ctx.clearRect(0,0,pw,ph);const px=smooth.x*pw,py=smooth.y*ph;particles.forEach(p=>{let dx=p.x-px,dy=p.y-py,d=Math.hypot(dx,dy)||1;if(d<115){const f=(1-d/115)*.18;p.vx+=dx/d*f;p.vy+=dy/d*f}p.vx*=.94;p.vy*=.94;p.x+=p.vx*dt*.12+.035*Math.sin(now*.0003+p.p);p.y+=p.vy*dt*.12-.018;if(p.y<-10)p.y=ph+10;if(p.x<-10)p.x=pw+10;if(p.x>pw+10)p.x=-10;ctx.globalAlpha=.12+p.r*.09;ctx.fillStyle=lightMode()?'#c9d4de':'#e8c576';ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill()});ctx.globalAlpha=1}
