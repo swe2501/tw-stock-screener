@@ -217,3 +217,5 @@ html[data-theme="light"] #fqiArrival img.fa-feather{filter:drop-shadow(0 3px 5px
 #fqiArrival:not(.fa-stage-on) .fa-actions [data-sound][aria-label="開啟聲音"]{animation:faSoundHint 2.4s ease-in-out infinite}
 @keyframes faSoundHint{0%,100%{box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 0 0 0 rgba(219,185,111,0)}50%{box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 0 0 7px rgba(219,185,111,.16),0 0 22px rgba(219,185,111,.22)}}
 @media (prefers-reduced-motion:reduce){#fqiArrival .fa-actions [data-sound]{animation:none!important}}
+/* 開場影片 → 主畫面：較長、較柔的溶接（影片在淡出中持續播放，不凍結畫面） */
+#fqiArrival.fa-stage-on .fa-splash{transition:opacity 1.5s cubic-bezier(.45,0,.25,1),visibility 0s linear 1.5s}
