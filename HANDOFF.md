@@ -558,7 +558,7 @@ page_cache 是 **uat 與 prod 共用**同一個 Supabase。若推盤中到原 ki
 |---|---|---|---|
 | `WantgooDailyScrape` | 週一～五 19:00（可喚醒） | `scripts\run_daily_job.bat` | 夜間主排程：分點、法人、收盤價、ETF、總經、廣度、快取等約 66 步；執行上限 10 小時（2026-10-29 由 8 小時調高，需系統管理員權限設定） |
 | `AI_stock_Intraday` | 週一～五 08:55（可喚醒），常駐到 16:01 | `scripts\run_intraday.bat` | 盤中掃盤 `intraday_push.py --loop`（09:00–13:35 每 35 秒）；收盤後只記匯率每 5 分鐘到 16:00（10/28 起）；卡住 5 分鐘會自動重啟（10/29 起，見下方）；13:48、13:56 另呼叫 `sgx_intraday.py` 抓富台指日盤分時（10/29 起，見下方） |
-| `CodexHotTopicsHourly` | 週一～五 09:00 起每小時，共 5 小時 | `scripts\run_codex_topics.bat` | 話題族群（桌面版 Codex CLI） |
+| `CodexHotTopicsHourly` | 週一～五 09:00 起每小時，共 5 小時 | `scripts\run_codex_topics.bat` | 話題族群（桌面版 Codex CLI）；10/29 起執行前先用 `trim_log.py` 把 codex_topics.log 修剪成只留最近 7 天 |
 | `AI_stock_news_feed` | 每天 06:30 起每 4 小時 | `scripts\run_news_feed.bat` | 每日新聞 |
 | `AI_stock_margin_catchup` | 週二～六 09:00 | `scripts\run_margin_catchup.bat` | 融資維持率補當日值 |
 | `AI_stock_taifex_catchup` | 週二～六 08:30 | `scripts\run_taifex_catchup.bat` | 期交所資料補跑 |

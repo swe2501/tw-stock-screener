@@ -29,10 +29,17 @@ LIMIT = 9.5   # 漲跌停判定門檻(%)
 
 
 def _sb_get(env, path, rng=None):
-    h = {"apikey": env["SUPABASE_SERVICE_KEY"], "Authorization": f"Bearer {env['SUPABASE_SERVICE_KEY']}"}
+    # 2026-10-29 要求 gzip：整張 price_window 分頁讀一次約 40MB，壓縮後約 5MB（Supabase 流量超過免費額度）
+    h = {"apikey": env["SUPABASE_SERVICE_KEY"], "Authorization": f"Bearer {env['SUPABASE_SERVICE_KEY']}",
+         "Accept-Encoding": "gzip"}
     if rng:
         h["Range-Unit"] = "items"; h["Range"] = rng
-    return urllib.request.urlopen(urllib.request.Request(env["SUPABASE_URL"] + "/rest/v1/" + path, headers=h), timeout=60).read()
+    with urllib.request.urlopen(urllib.request.Request(env["SUPABASE_URL"] + "/rest/v1/" + path, headers=h), timeout=60) as r:
+        raw = r.read()
+        if raw and (r.headers.get("Content-Encoding") or "").lower() == "gzip":
+            import gzip
+            raw = gzip.decompress(raw)
+        return raw
 
 
 def _otc_set(env):
