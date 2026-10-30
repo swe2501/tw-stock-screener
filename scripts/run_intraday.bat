@@ -15,3 +15,6 @@ if %RESTARTS% GEQ 10 goto end
 ping -n 11 127.0.0.1 >nul
 goto run
 :end
+REM 2026-10-30 after close (16:00+): write today's homepage KPI cards (chip_brief_daily) instead of waiting for the nightly job.
+REM --wait polls up to 90 min until TWSE/TAIFEX publish today's data; holidays are skipped.
+"C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe" scripts\office_step.py data scripts\chip_brief.py --wait >> D:\stock_data\intraday_push.log 2>&1
