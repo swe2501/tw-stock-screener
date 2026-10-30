@@ -3,7 +3,10 @@
   "builds": [
     {
       "src": "api/*.py",
-      "use": "@vercel/python"
+      "use": "@vercel/python",
+      "config": {
+        "excludeFiles": "{apps/**,data/**,tests/**,docs/**,scripts/**,sql/**,tools/**,services/**,packages/**,.claude/**,.github/**,*.md,index.html}"
+      }
     },
     {
       "src": "apps/web/index.html",
