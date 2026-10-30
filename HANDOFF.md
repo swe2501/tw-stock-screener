@@ -557,7 +557,7 @@ page_cache 是 **uat 與 prod 共用**同一個 Supabase。若推盤中到原 ki
 | 任務名稱 | 時間 | 執行 | 內容 |
 |---|---|---|---|
 | `WantgooDailyScrape` | 週一～五 19:00（可喚醒） | `scripts\run_daily_job.bat` | 夜間主排程：分點、法人、收盤價、ETF、總經、廣度、快取等約 66 步；執行上限 10 小時（2026-10-29 由 8 小時調高，需系統管理員權限設定） |
-| `AI_stock_Intraday` | 週一～五 08:55（可喚醒），常駐到 16:01 | `scripts\run_intraday.bat` | 盤中掃盤 `intraday_push.py --loop`（09:00–13:35 每 35 秒）；收盤後只記匯率每 5 分鐘到 16:00（10/28 起）；卡住 5 分鐘會自動重啟（10/29 起，見下方）；13:48、13:56 另呼叫 `sgx_intraday.py` 抓富台指日盤分時（10/29 起，見下方） |
+| `AI_stock_Intraday` | 週一～五 08:55（可喚醒），常駐到 16:01 | `scripts\run_intraday.bat` | 盤中掃盤 `intraday_push.py --loop`（09:00–13:35 每 35 秒）；收盤後只記匯率每 5 分鐘到 16:00（10/28 起）；卡住 5 分鐘會自動重啟（10/29 起，見下方）；13:48、13:56 另呼叫 `sgx_intraday.py` 抓富台指日盤分時（10/29 起，見下方）；16:00 結束後跑 `chip_brief.py --wait` 寫當日首頁 KPI 卡（10/30 起，見下方） |
 | `CodexHotTopicsHourly` | 週一～五 09:00 起每小時，共 5 小時 | `scripts\run_codex_topics.bat` | 話題族群（桌面版 Codex CLI）；10/29 起執行前先用 `trim_log.py` 把 codex_topics.log 修剪成只留最近 7 天 |
 | `AI_stock_news_feed` | 每天 06:30 起每 4 小時 | `scripts\run_news_feed.bat` | 每日新聞 |
 | `AI_stock_margin_catchup` | 週二～六 09:00 | `scripts\run_margin_catchup.bat` | 融資維持率補當日值 |
@@ -568,6 +568,7 @@ page_cache 是 **uat 與 prod 共用**同一個 Supabase。若推盤中到原 ki
 - 每個任務的完整設定已匯出到 `scripts/scheduled_tasks/<任務名稱>.xml`，可直接用來重建。
 - 批次檔只能寫英文、CRLF 換行（中文會讓排程卡死）；**正在執行的 .bat 不能改**（cmd 邊跑邊讀檔），要等它跑完再換。
 - 2026-10-27 起各 .bat 的每一步改經 `scripts\office_step.py <角色> <程式>` 執行（AI 研究室打卡，exit code 原樣傳回，打卡失敗不影響排程）。`run_daily_job.bat` 的新版由 `scripts\office_swap_watch.ps1` 在 10/27 夜間排程結束後自動換上（已於 10/27 23:14 換好，66 步全部打卡），舊版備份為 `*.bat.bak_office`，紀錄在 `scripts\office_swap.log`。
+- **首頁 KPI 卡盤後寫入（2026-10-30 加）**：起因是首頁加權／櫃買／台指期／台積電卡（`chip_brief_daily`）只在夜間排程寫，白天到半夜都顯示前一日；而且夜間跑時 OpenAPI（台積電 STOCK_DAY_ALL、台指期 DailyMarketReportFut）常慢一日、台指期又沒分一般／盤後，把前一日數字標成當日。現在 `chip_brief.py` 台積電改證交所主站 CSV、台指期改期交所 futDataDown（只取一般盤），每欄核對資料日＝報告日，對不上就留空不送；`run_intraday.bat` 在 `:end` 後執行 `office_step.py data chip_brief.py --wait`（最多等 90 分鐘，休市日跳過），log 一樣寫 `D:\stock_data\intraday_push.log`。夜間那一步保留。工作排程器任務沒改，XML 不用重新匯出。
 - **盤中排程自動重啟（2026-10-28 加，Andrew `2c7103e`＋`4da2bb9`）**：起因是 10/28 盤中程式 12:02 後卡住不動、沒有報錯。現在 `intraday_push.py` 有看門狗執行緒，主迴圈 5 分鐘（`STALL_SEC=300`）沒進展就強制結束、回傳 exit code 75；`run_intraday.bat` 收到 75 會等 10 秒重新啟動，一天最多 10 次（其他 exit code 照常結束）。每次重啟在 `D:\stock_data\intraday_push.log` 留一行 `[watchdog] ... restart N`，查問題先搜這個字。新版 .bat 由一次性監看程式 `intraday_swap_watch.ps1` 在 10/28 16:02 當天盤中跑完後換上，舊版備份 `scripts\run_intraday.bat.bak_watchdog`；工作排程器任務本身沒改，XML 不用重新匯出。
 - **富台指日盤分時（2026-10-28 加）**：首頁富台指卡片的小圖。富台指沒有免費官方分時，玩股網的一分鐘線只保留「目前交易日」，14:00 一換成夜盤就抓不回當天日盤，所以由盤中排程在 13:48、13:56 各呼叫一次 `scripts\sgx_intraday.py`（Playwright 沿用玩股網登入 profile，子程式上限 180 秒，失敗不影響盤中主流程），只取 08:45–13:45，5 分鐘一點寫 page_cache `mini_SGX`，另存 `prev`（前一交易日收盤，小圖紅綠分界）。電腦那天沒開，當天就沒有富台指小圖，事後補不回來。卡片大數字仍是晚上 `market_indicators.py` 抓的（那時已是夜盤價），所以大數字跟小圖最後一點不同是正常的。
 - **富台指盤中大數字（2026-10-29 加）**：`intraday_push.py` 主迴圈在 08:45–13:47 每 60 秒用 urllib 讀玩股網 `/global/all-quote-info`（不需登入、不開瀏覽器），取 STWN& 當日日盤最新價與前一交易日日盤收盤，寫 page_cache `quote_SGX`。首頁富台指卡片與頂部資金軌：`quote_SGX` 比 `market_indicators` 那筆新（updated_at）才採用，數字下方標「日盤 HH:MM 即時／最新」；晚上 `market_indicators.py` 寫入夜盤價後自動切回夜盤價。
