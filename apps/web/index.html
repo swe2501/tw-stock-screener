@@ -8499,7 +8499,7 @@
     function loadMargin(){
       Promise.all([
         sb('margin_market?select=date,fin_bal_k,fin_bal_prev_k,fin_bal_lots,short_bal_lots,short_bal_prev_lots&order=date.desc&limit=1'),
-        sb('otc_market_daily?select=trade_date,fin_bal_k,fin_prev_k,fin_bal_lots,short_lots,fin_maint&order=trade_date.desc&limit=2')
+        sb('otc_market_daily?select=trade_date,fin_bal_k,fin_prev_k,fin_bal_lots,short_lots,fin_maint&fin_bal_k=not.is.null&order=trade_date.desc&limit=2')   // 2026-10-30 盤後先寫法人、融資晚上才補 → 只取融資有值的列
       ]).then(function(res){
         var box=el('hpMargin'); if(!box)return;
         var t=(res[0]||[])[0],o=(res[1]||[])[0];
@@ -11741,7 +11741,7 @@
           q('margin_maintenance?select=*&exclude_etf=eq.true&order=trade_date.desc&limit=1000'),
           q('taiex_daily?select=*&order=trade_date.desc&limit=1000'),
           q('margin_market?select=date,fin_bal_k,short_bal_lots&order=date.desc&limit=1000'),           // 上市融券(張)
-          q('otc_market_daily?select=trade_date,fin_bal_k,short_lots&order=trade_date.desc&limit=1000'), // 上櫃融券(張)
+          q('otc_market_daily?select=trade_date,fin_bal_k,short_lots&fin_bal_k=not.is.null&order=trade_date.desc&limit=1000'), // 上櫃融券(張)
         ]);
         _mmData = {
           false: ri.ok ? (await ri.json()).reverse() : [],
