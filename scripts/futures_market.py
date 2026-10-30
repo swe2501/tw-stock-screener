@@ -91,6 +91,40 @@ def _daily_oi():
     return tot, date_iso
 
 
+def _daily_oi_download(iso):
+    """2026-10-30 全市場未平倉改用期交所每日行情下載 futDataDown(收盤後當日即有)；OpenAPI 常慢一日，
+    原本日期對不上就整筆跳過，要等隔天早上補跑才更新。回 ({MTX: oi, TMF: oi}, iso)，只取一般盤、各月加總。"""
+    import csv, http.cookiejar, urllib.parse
+    jar = http.cookiejar.CookieJar()
+    op = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
+    op.addheaders = [("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")]
+    op.open("https://www.taifex.com.tw/cht/3/dlFutDailyMarketView", timeout=20)
+    d = iso.replace("-", "/")
+    tot = {}
+    for cid in ("MTX", "TMF"):
+        body = urllib.parse.urlencode({"down_type": "1", "commodity_id": cid, "commodity_id2": "",
+                                       "queryStartDate": d, "queryEndDate": d}).encode()
+        raw = None
+        for k in range(3):   # 期交所下載偶爾很慢：逾時 60 秒、最多 3 次
+            try:
+                raw = op.open(urllib.request.Request(
+                    "https://www.taifex.com.tw/cht/3/futDataDown", data=body,
+                    headers={"Referer": "https://www.taifex.com.tw/cht/3/dlFutDailyMarketView",
+                             "Content-Type": "application/x-www-form-urlencoded"}), timeout=60).read()
+                break
+            except Exception:
+                if k == 2:
+                    raise
+        for r in csv.reader(raw.decode("ms950", "replace").splitlines()):
+            # 0日期 1契約 2月份 … 11未沖銷契約數 … 17交易時段
+            if len(r) < 18 or r[0].strip() != d or r[1].strip() != cid or r[17].strip() != "一般":
+                continue
+            oi = _num(r[11])
+            if oi:
+                tot[cid] = tot.get(cid, 0) + oi
+    return tot, (iso if tot else None)
+
+
 def _prod_key(inst, *names):
     for p in inst:
         if any(n in p for n in names):
@@ -103,9 +137,18 @@ def fetch_all():
     if not rows:
         return None
     inst = _parse_inst(rows)
-    oi, oi_date = _daily_oi()
-    # 交易日以 DailyMarketReportFut 的 Date 為準(HTML 頁面日期可能是表單預設今日、非資料日)
-    out = {"trade_date": oi_date or iso}
+    # 交易日＝三大法人頁面日期；全市場未平倉取同一天的期交所下載檔，取不到才退回 OpenAPI(且日期要相同)
+    try:
+        oi, oi_date = _daily_oi_download(iso)
+    except Exception as e:
+        print(f"[warn] 期交所下載失敗 {type(e).__name__}，改用 OpenAPI")
+        oi, oi_date = {}, None
+    if not oi:
+        oi, oi_date = _daily_oi()
+    if oi_date != iso:
+        print(f"[skip] 三大法人 {iso} 與全市場未平倉 {oi_date} 日期不同，等資料出齊再寫")
+        return None
+    out = {"trade_date": iso}
 
     # 臺股期貨(大台)三大法人未平倉淨額
     tx = inst.get(_prod_key(inst, "臺股期貨", "台股期貨") or "", {})

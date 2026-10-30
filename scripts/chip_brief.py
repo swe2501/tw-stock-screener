@@ -208,6 +208,20 @@ def fetch_tsmc_contrib(iso):
     return tsmc_close, tsmc_chg, tsmc_pct, contrib, iso
 
 
+def taiex_ohlc(iso):
+    """證交所 MI_5MINS_HIST(發行量加權股價指數歷史資料)當月表中 iso 那天的 (開, 高, 低, 收)；沒有回 None。"""
+    try:
+        j = json.loads(_get(f"https://www.twse.com.tw/rwd/zh/TAIEX/MI_5MINS_HIST?date={iso.replace('-', '')[:6]}01&response=json"))
+    except Exception:
+        return None
+    roc = f"{int(iso[:4]) - 1911}/{iso[5:7]}/{iso[8:10]}"
+    for r in j.get("data") or []:
+        if str(r[0]).strip() == roc:
+            v = [_num(x) for x in r[1:5]]
+            return v if None not in v else None
+    return None
+
+
 def fx_close_local(iso):
     """盤中排程記錄的當日 USD/TWD（D:/stock_data/home_intraday/fx_YYYYMMDD.json）最後一筆；沒有回 None。"""
     f = Path(r"D:\stock_data\home_intraday") / f"fx_{iso.replace('-', '')}.json"
@@ -283,6 +297,11 @@ def main():
         print(f"home_intraday --date {iso} exit {r.returncode}")
         # 2026-10-30 首頁台幣匯率卡改用「當日台北匯市時段最後一筆」(盤中排程每 5 分鐘記的 Yahoo USD/TWD，到 16:00)；
         # 期交所官方匯率晚 2 天才公布，原本把 10/28 的值標成 10/30
+        # 加權日K(taiex_daily)原本晚上 margin_ratio 才整表重建；盤面結構判讀等區塊靠它對齊日期 → 盤後先補當日一筆
+        k = taiex_ohlc(iso)
+        if k:
+            print(f"加權日K {iso} {k} → taiex_daily status "
+                  f"{_upsert_table(env, 'taiex_daily', 'trade_date', {'trade_date': iso, 'open': k[0], 'high': k[1], 'low': k[2], 'close': k[3], 'volume': 0})}")
         fx = fx_close_local(iso)
         if fx:
             print(f"台幣匯率 {iso} {fx}（盤中記錄最後一筆）→ market_indicators "
