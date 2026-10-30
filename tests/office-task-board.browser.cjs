@@ -2,7 +2,7 @@ const fs=require('fs'),assert=require('assert');const {chromium}=require('playwr
 const statuses={queued:'待執行',running:'執行中',review:'待驗收',approved:'已驗收'};
 (async()=>{
  const browser=await chromium.launch({channel:'chrome',headless:true});
- const dir='C:/Users/User/.codex/visualizations/2026/10/12/01a1308c-6895-7e12-a65a-9588d0dacff3/office-tasks';fs.mkdirSync(dir,{recursive:true});
+ const dir=require('path').join(require('os').tmpdir(),'foresight-office-tasks');fs.mkdirSync(dir,{recursive:true});
  try{for(const width of [1280,390])for(const theme of ['light','dark']){
   const page=await browser.newPage({viewport:{width,height:900}});
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
