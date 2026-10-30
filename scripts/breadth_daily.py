@@ -19,7 +19,7 @@ breadth_daily.py — 「大盤多空廣度」每日市場廣度指標（上市 /
   越早的日子前面歷史越少 → 60MA 空白、52 週新高低變成「表內新高低」，歷史被一路算壞；改成歷史算好就不再覆蓋。
   --full：用本機完整資料重算全部歷史，只寫「前面已有 ≥252 個交易日」的日子（52 週新高低才完整）。
 → Supabase breadth_daily((trade_date,market) 複合主鍵)。
-用法：python scripts/breadth_daily.py            # 每日：最近 5 日
+用法：python scripts/breadth_daily.py            # 每日：最近 5 日（雲端只補本機缺的日子；--force 雲端也全寫）
       python scripts/breadth_daily.py --full     # 用本機資料重算全部歷史（一次性修正）
 """
 import sys, json, time, urllib.request
@@ -122,6 +122,20 @@ def main():
     if full and not use_local:
         print("[error] --full 需要本機完整股價（D:\\stock_data\\wantgoo_full.db）"); sys.exit(1)
 
+    # 2026-10-30 以本機為主：雲端備援只補「本機沒寫到」的日子；最近 N 個交易日本機都寫過 → 不讀股價表直接結束
+    only = None
+    if not use_local and "--force" not in args:
+        recent = [r["trade_date"] for r in json.loads(_sb_get(
+            env, f"price_window?select=trade_date&code=eq.2330&order=trade_date.desc&limit={days}"))]
+        have = {r["trade_date"] for r in json.loads(_sb_get(
+            env, "breadth_daily?select=trade_date&market=eq.all&trade_date=in.(" + ",".join(recent) + ")"))} if recent else set()
+        only = set(recent) - have
+        if not only:
+            print(f"[skip] 最近 {len(recent)} 個交易日（{min(recent) if recent else '-'} ~ {max(recent) if recent else '-'}）"
+                  "本機都已寫入，雲端備援不覆蓋")
+            return
+        print(f"雲端備援：本機缺 {sorted(only)}，只補這幾天")
+
     otc = _otc_set(env)
     print(f"上櫃代號 {len(otc)} 檔")
     if use_local:
@@ -207,6 +221,8 @@ def main():
         print(f"--full：寫 {min(keep) if keep else '-'} 起（前面已有 {HIST_MIN} 個交易日）")
     else:
         keep = set(all_dates[-days:])
+        if only is not None:
+            keep &= only
         print(f"只寫最近 {days} 個交易日：{min(keep) if keep else '-'} ~ {max(keep) if keep else '-'}")
     rows = [r for r in rows if r["trade_date"] in keep]
     if not rows:
