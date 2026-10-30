@@ -8,6 +8,7 @@
   <link rel="icon" href="assets/brand/favicon.png">
   <link rel="stylesheet" href="assets/ai-office/office.css">
   <link rel="stylesheet" href="assets/ai-office/office-explore.css">
+  <link rel="stylesheet" href="assets/ai-office/office-district.css">
 </head>
 <body>
   <div class="office-sky" aria-hidden="true"><div class="sun-disc"></div><div class="moon-disc"></div><div id="officeStars"></div><div class="cloud cloud-one"></div><div class="cloud cloud-two"></div><div class="sky-horizon"></div><div id="officeCity" class="city-silhouette"></div></div>
@@ -21,13 +22,15 @@
     <section id="stage" aria-label="可旋轉及縮放的先見 3D 辦公室"><div id="scene"></div><div id="labels"></div><div id="loading">正在構築先見總部…</div><div id="fallback" hidden>這個瀏覽器尚無法顯示 3D 空間。你仍可使用右側部門清單查看組織配置。</div></section>
     <aside class="directory"><div class="directory-title"><div><span class="eyebrow">OUR ORGANIZATION</span><h2>部門總覽 <small>32</small></h2></div><button id="directoryToggle" class="icon-button" aria-label="展開或收起部門總覽" aria-expanded="true">−</button></div><div id="departmentList"></div><div class="directory-foot"><span class="status-dot"></span>組織空間已規劃 <span>物流預留</span></div></aside>
     <section id="detail" class="detail" aria-live="polite"><div class="detail-icon" id="detailIcon"></div><div class="detail-copy"><div class="detail-kicker"><span id="detailGroup">FORESIGHT · FINANCIAL TOWER</span><span class="detail-state" id="detailState">外觀預覽</span></div><h2 id="detailTitle">先見金融大廈</h2><p id="detailText">點選樓層，展開最多四個部門的專屬空間。既有排程可在部門名片查看；新部門尚未串接。</p></div><button id="overview" class="home-view" title="回到大廈全景">大廈全景 <span>↗</span></button></section>
-    <nav class="view-controls" aria-label="3D 視角工具"><button id="rotateLeft" class="icon-button" aria-label="向左旋轉">↶</button><button id="rotateRight" class="icon-button" aria-label="向右旋轉">↷</button><span></span><button id="zoomOut" class="icon-button" aria-label="縮小">−</button><button id="zoomIn" class="icon-button" aria-label="放大">＋</button><span></span><button id="autoRotate" class="icon-button" aria-label="自動環繞" aria-pressed="false">▷</button></nav>
-    <div class="canvas-caption"><span>拖曳旋轉</span><i>·</i><span>滾輪縮放</span><i>·</i><span>選擇樓層，走進部門</span></div>
+    <nav class="view-controls" aria-label="3D 視角工具"><div class="camera-mode" role="group" aria-label="拖曳方式"><button type="button" id="cameraOrbit" aria-pressed="true" title="左鍵拖曳旋轉">旋轉</button><button type="button" id="cameraPan" aria-pressed="false" title="左鍵拖曳平移，也可按住右鍵平移">平移</button></div><button id="rotateLeft" class="icon-button" aria-label="向左旋轉">↶</button><button id="rotateRight" class="icon-button" aria-label="向右旋轉">↷</button><span></span><button id="zoomOut" class="icon-button" aria-label="縮小">−</button><button id="zoomIn" class="icon-button" aria-label="放大">＋</button><span></span><button id="autoRotate" class="icon-button" aria-label="自動環繞" aria-pressed="false">▷</button></nav>
+    <div class="canvas-caption"><span>左鍵旋轉 · 右鍵平移</span><i>·</i><span>滾輪縮放</span><i>·</i><span>選擇樓層，走進部門</span></div>
   </main>
   <script src="assets/ai-office/three.min.js"></script>
   <script src="assets/ai-office/office-logo.js"></script>
   <script src="assets/ai-office/office.js"></script>
   <script src="assets/ai-office/office-architecture.js"></script>
+  <script src="assets/ai-office/office-camera.js"></script>
+  <script src="assets/ai-office/office-city.js"></script>
   <script src="assets/ai-office/office-tower.js"></script>
   <script src="assets/ai-office/office-explore.js"></script>
   <script src="assets/ai-office/office-live.js"></script>
