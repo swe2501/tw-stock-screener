@@ -255,6 +255,12 @@ def main():
     row = {k: v for k, v in row.items() if v is not None}
     print(json.dumps(row, ensure_ascii=False))
     print(f"已 upsert chip_brief_daily (status {_upsert(env, row)})")
+    if wait:
+        # 盤後模式：首頁卡片換成當日後，同日的分時小圖(櫃買/台指期/VIX/匯率)也一起推，否則卡片會顯示「分時暫無資料」
+        import subprocess
+        r = subprocess.run([sys.executable, str(Path(__file__).resolve().parent / "home_intraday.py"), "--date", iso],
+                           timeout=600)
+        print(f"home_intraday --date {iso} exit {r.returncode}")
 
 
 if __name__ == "__main__":
