@@ -3,7 +3,10 @@
   "builds": [
     {
       "src": "api/*.py",
-      "use": "@vercel/python"
+      "use": "@vercel/python",
+      "config": {
+        "excludeFiles": "{apps/**,data/**,tests/**,docs/**,scripts/**,sql/**,tools/**,services/**,packages/**,.claude/**,.github/**,*.md,index.html}"
+      }
     },
     {
       "src": "apps/web/index.html",
@@ -35,6 +38,10 @@
     },
     {
       "src": "apps/web/research/**",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "apps/web/ai-office.html",
       "use": "@vercel/static"
     }
   ],
@@ -70,7 +77,7 @@
       "dest": "/apps/web/assets/$1"
     },
     {
-      "src": "/(logo\\.png|group-catalog\\.js|group-logos\\.js|treasury-research\\.html)$",
+      "src": "/(logo\\.png|group-catalog\\.js|group-logos\\.js|ai-office\\.html|treasury-research\\.html)$",
       "dest": "/apps/web/$1"
     },
     {
