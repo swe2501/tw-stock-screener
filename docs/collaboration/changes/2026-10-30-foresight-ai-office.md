@@ -10,7 +10,7 @@
 - 部門職責說明、窄畫面折疊清單與標籤避讓。
 - Instagram 參考確認廣告團隊及預約團隊；其餘為組織規劃補充，未聲稱已完整辨識影片所有部門。
 - Three.js r160 MIT 引擎與授權隨頁面保存；Logo 以原圖資料 URI 用於 3D 貼圖，讓 file:// 預覽不觸發跨來源貼圖問題。頁面不依賴外部 CDN 或字型。
-- 物流部預留且停用；所有部門均未啟用工作服務。畫面標示外觀預覽，沒有模擬正在工作的 AI、任務數或成本數據。
+- 物流部預留且停用；新增部門尚未啟用工作服務。畫面標示外觀預覽，沒有模擬正在工作的 AI、任務數或成本數據。
 
 ## 部門內容與 AI 研究室整合
 
@@ -58,3 +58,7 @@
 - https://docs.cloud.google.com/run/docs/overview/what-is-cloud-run
 - https://docs.cloud.google.com/run/docs/triggering/using-scheduler
 - https://docs.cloud.google.com/tasks/docs/dual-overview
+
+## 既有角色歸屬
+
+沿用 admin_office 的既有請求與狀態判斷，將新聞研究員歸入商業情報、籌碼／技術／總經／ETF 歸入金融研究、風控歸入法遵風險、資料管理歸入工程、總管歸入領導辦公室。總管不是自動化執行長。名片呈現既有角色與真實狀態，可返回原工作紀錄。以同來源父子視窗傳送精簡狀態，不新增 API、不傳金鑰、不改原排程。未收到資料不假裝執行中。
