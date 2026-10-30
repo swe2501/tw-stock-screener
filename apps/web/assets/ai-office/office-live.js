@@ -25,7 +25,7 @@
       row.append(name,state,button);section.append(row);
     });
     const note=document.createElement('p');note.textContent=id===0?'總管為既有排程協調角色，不代表執行長或總經理已自動化。':'狀態沿用 AI 研究室現有資料；各組仍使用原本的排程與工作紀錄。';section.append(note);
-    const footer=content.querySelector('.profile-footer');if(footer)footer.textContent='既有角色狀態如下；其餘職務與交付內容為組織規劃。';content.append(section);
+    const footer=content.querySelector('.profile-footer');if(footer)footer.textContent='既有排程狀態如下；新任務另於任務中心指派與驗收。';content.append(section);
   }
   addEventListener('message',event=>{
     if(parent===window||event.source!==parent||(event.origin!==location.origin&&!(location.protocol==='file:'&&(event.origin==='null'||event.origin==='file://')))||event.data?.type!=='foresight-office-departments'||!Array.isArray(event.data.roles))return;

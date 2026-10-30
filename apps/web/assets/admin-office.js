@@ -83,7 +83,7 @@
     return { k: k };
   }
 
-  var officeMessageCleanup;
+  var officeMessageCleanup, taskBoard;
   var OFFICE_DEPARTMENTS = {news:17,chip:7,tech:7,macro:7,risk:14,etf:7,data:6,boss:0};
   function sendDepartmentState() {
     var f = box && box.querySelector('#aoTowerFrame'); if (!f || !f.contentWindow) return;
@@ -96,9 +96,9 @@
 
   function towerEntry() {
     var theme = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
-    return '<style>.ao-tower-entry{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:16px;color:var(--text)}.ao-tower-entry h3{font-size:22px;margin:0 0 7px}.ao-tower-entry p{font-size:12px;color:var(--text-muted);margin:0;line-height:1.8}.ao-office-tabs{display:flex;gap:5px;align-items:center;flex-wrap:wrap;padding:5px;border:1px solid var(--border);border-radius:25px;background:var(--surface)}.ao-office-tabs button,.ao-office-tabs a{font:inherit;font-size:12px;color:var(--text-muted);border:0;border-radius:20px;padding:9px 14px;background:transparent;text-decoration:none;cursor:pointer;transition:background .2s,color .2s}.ao-office-tabs [aria-pressed=true]{background:var(--bg);color:var(--text);box-shadow:inset 0 0 0 1px var(--border)}#aoTowerPanel{border:1px solid var(--border);border-radius:20px;overflow:hidden;margin-bottom:16px}#aoTowerFrame{display:block;width:100%;height:clamp(650px,82vh,960px);border:0;background:var(--surface)}#aoTowerPanel[hidden],#aoLegacyPanel[hidden]{display:none}</style>'
-      + '<section class="ao-tower-entry"><div><h3>先見金融大廈</h3><p>探索部門名片、協作路線與品牌大廳。現有排程已依部門歸屬整合；新部門仍為規劃預覽。</p></div><nav class="ao-office-tabs" aria-label="AI 研究室視圖"><button type="button" id="aoTowerTab" aria-pressed="true" aria-controls="aoTowerPanel">金融大廈</button><button type="button" id="aoJobsTab" aria-pressed="false" aria-controls="aoLegacyPanel">排程看板</button><a href="ai-office.html?from=admin&amp;theme=' + theme + '" target="_blank" rel="noopener">完整視窗 ↗</a></nav></section>'
-      + '<div id="aoTowerPanel"><iframe id="aoTowerFrame" title="先見金融大廈與部門探索" src="ai-office.html?embedded=1&amp;theme=' + theme + '"></iframe></div>';
+    return '<style>.ao-tower-entry{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:16px;color:var(--text)}.ao-tower-entry h3{font-size:22px;margin:0 0 7px}.ao-tower-entry p{font-size:12px;color:var(--text-muted);margin:0;line-height:1.8}.ao-office-tabs{display:flex;gap:5px;align-items:center;flex-wrap:wrap;padding:5px;border:1px solid var(--border);border-radius:25px;background:var(--surface)}.ao-office-tabs button,.ao-office-tabs a{font:inherit;font-size:12px;color:var(--text-muted);border:0;border-radius:20px;padding:9px 14px;background:transparent;text-decoration:none;cursor:pointer;transition:background .2s,color .2s}.ao-office-tabs [aria-pressed=true]{background:var(--bg);color:var(--text);box-shadow:inset 0 0 0 1px var(--border)}#aoTowerPanel{border:1px solid var(--border);border-radius:20px;overflow:hidden;margin-bottom:16px}#aoTowerFrame{display:block;width:100%;height:clamp(650px,82vh,960px);border:0;background:var(--surface)}#aoTowerPanel[hidden],#aoLegacyPanel[hidden],#aoTasksPanel[hidden]{display:none}</style>'
+      + '<section class="ao-tower-entry"><div><h3>先見金融大廈</h3><p>探索部門名片、協作路線與品牌大廳。探索部門並派工，於任務中心追蹤交付與驗收；原排程看板獨立保留。</p></div><nav class="ao-office-tabs" aria-label="AI 研究室視圖"><button type="button" id="aoTowerTab" aria-pressed="true" aria-controls="aoTowerPanel">金融大廈</button><button type="button" id="aoJobsTab" aria-pressed="false" aria-controls="aoLegacyPanel">排程看板</button><button type="button" id="aoTasksTab" aria-pressed="false" aria-controls="aoTasksPanel">任務中心</button><a href="ai-office.html?from=admin&amp;theme=' + theme + '" target="_blank" rel="noopener">完整視窗 ↗</a></nav></section>'
+      + '<div id="aoTowerPanel"><iframe id="aoTowerFrame" title="先見金融大廈與部門探索" src="ai-office.html?embedded=1&amp;theme=' + theme + '"></iframe></div><div id="aoTasksPanel" hidden></div>';
   }
 
   function build() {
@@ -111,15 +111,21 @@
       + '<div style="margin-top:12px;border:1px solid var(--border);border-radius:12px;overflow-x:auto"><table class="ao-roles" style="width:100%;min-width:640px;table-layout:fixed;border-collapse:collapse;font-size:12px"><colgroup><col style="width:120px"><col style="width:30%"><col style="width:20%"><col></colgroup><thead><tr style="color:var(--text-muted);text-align:left;background:var(--surface)"><th style="padding:6px 8px">角色</th><th style="padding:6px 8px">負責</th><th style="padding:6px 8px">影響頁面</th><th style="padding:6px 8px">對應排程程式</th></tr></thead><tbody>'
       + Object.keys(SEATS).map(function (a) { return '<tr data-ao="' + a + '" style="border-top:1px solid var(--border);cursor:pointer"><td style="padding:6px 8px;white-space:nowrap"><span style="display:inline-block;width:10px;height:10px;margin-right:6px;background:' + LOOK[a].shirt + '"></span><b>' + esc(LOOK[a].n) + '</b></td><td style="padding:6px 8px">' + esc(ROLE[a].duty) + '</td><td style="padding:6px 8px">' + esc(ROLE[a].pages) + '</td><td style="padding:6px 8px;color:var(--text-muted);font-family:monospace">' + esc(ROLE[a].jobs) + '</td></tr>'; }).join('')
       + '</tbody></table></div><style>.ao-roles td,.ao-roles th{white-space:normal!important;word-break:break-word;vertical-align:top}</style></div>';
-    var setView = function (tower) {
+    taskBoard = window.OfficeTaskBoard && window.OfficeTaskBoard.mount(box.querySelector('#aoTasksPanel'), post);
+    var setView = function (mode) {
+      var tower=mode===true, tasks=mode==='tasks';
+      box.querySelector('#aoTasksPanel').hidden=!tasks;
+      box.querySelector('#aoTasksTab').setAttribute('aria-pressed',String(tasks));
+      if(taskBoard){if(tasks)taskBoard.show();else taskBoard.hide();}
       box.querySelector('#aoTowerPanel').hidden = !tower;
-      box.querySelector('#aoLegacyPanel').hidden = tower;
+      box.querySelector('#aoLegacyPanel').hidden = tower || tasks;
       box.querySelector('#aoTowerTab').setAttribute('aria-pressed', String(tower));
-      box.querySelector('#aoJobsTab').setAttribute('aria-pressed', String(!tower));
+      box.querySelector('#aoJobsTab').setAttribute('aria-pressed', String(!tower && !tasks));
       var frame = box.querySelector('#aoTowerFrame');
       if(tower) sendDepartmentState();
       if (frame.contentWindow) frame.contentWindow.postMessage({type:'foresight-office-visibility',visible:tower}, location.protocol === 'file:' ? '*' : location.origin);
     };
+    box.querySelector('#aoTasksTab').onclick = function () { setView('tasks'); };
     box.querySelector('#aoTowerFrame').onload = sendDepartmentState;
     box.querySelector('#aoTowerTab').onclick = function () { setView(true); };
     box.querySelector('#aoJobsTab').onclick = function () { setView(false); };
@@ -127,6 +133,13 @@
       var f = box && box.querySelector('#aoTowerFrame');
       if(!f || event.source !== f.contentWindow || (event.origin !== location.origin && !(location.protocol==='file:' && (event.origin==='null'||event.origin==='file://'))) || !event.data) return;
       if(event.data.type==='foresight-office-ready'){sendDepartmentState();return;}
+      if(event.data.type==='foresight-office-create-task'||event.data.type==='foresight-office-open-tasks'){
+        var department=event.data.department;
+        if(!Number.isInteger(department)||department<0||department>31||department===16)return;
+        setView('tasks');
+        if(taskBoard){if(event.data.type==='foresight-office-create-task')taskBoard.create(department);else taskBoard.department(department);}
+        return;
+      }
       if(event.data.type!=='foresight-office-open-role')return;
       var key=event.data.key;if(!Object.prototype.hasOwnProperty.call(LOOK,key))return;
       setView(false);selected=key;detail();
@@ -311,8 +324,8 @@
       build(); if (Object.keys(data).length) paint();
       load();
       timers.push(setInterval(load, 60000));
-      timers.push(setInterval(step, 50));
+      timers.push(setInterval(function(){var p=box&&box.querySelector('#aoLegacyPanel');if(!document.hidden&&p&&!p.hidden)step();},100));
     },
-    hide: function () { if(officeMessageCleanup){officeMessageCleanup();officeMessageCleanup=null;} timers.forEach(clearInterval); timers = []; var f = box && box.querySelector('#aoTowerFrame'); if(f) f.remove(); }
+    hide: function () { if(taskBoard){taskBoard.destroy();taskBoard=null;} if(officeMessageCleanup){officeMessageCleanup();officeMessageCleanup=null;} timers.forEach(clearInterval); timers = []; var f = box && box.querySelector('#aoTowerFrame'); if(f) f.remove(); }
   };
 })();
