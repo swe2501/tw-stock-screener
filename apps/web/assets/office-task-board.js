@@ -7,6 +7,7 @@ const stamp=s=>s?new Date(s).toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour
 const day=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei'}).format(new Date());
 function report(text){return String(text||'').split('\n').map(line=>/^#{1,4}\s/.test(line)?'<h4>'+esc(line.replace(/^#+\s*/,''))+'</h4>':'<p>'+esc(line||' ').replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>')+'</p>').join('');}
 window.OfficeTaskBoard={mount(root,post){
+ let snapshotAt=0,snapshotFlight=null;const workroomDetails=new Map();
  let tasks=[],departments=[],worker={},dependencies={},filter='',query='',selected=null,timer=null,active=false,request=0,creatingId=null,busy=false;
  const form=document.createElement('dialog'),detail=document.createElement('dialog');form.className=detail.className='ot-dialog';document.body.append(form,detail);
  root.classList.add('ot-board');
@@ -31,9 +32,9 @@ window.OfficeTaskBoard={mount(root,post){
   const seq=++request;
   try{const j=await call('admin_office_tasks_list');if(seq!==request||!root.isConnected)return;tasks=j.tasks;departments=j.departments;worker=j.worker||{};dependencies=j.dependencies||{};
    const options=root.querySelector('[data-ot-department]');options.innerHTML='<option value="">所有部門</option>'+departments.filter(d=>d.enabled).map(d=>'<option value="'+d.id+'">'+esc(d.name)+'</option>').join('');options.value=filter;
-   render();msg('更新時間 '+stamp(new Date().toISOString()));
+   render();msg('更新時間 '+stamp(new Date().toISOString()));return true;
    
-  }catch(e){if(seq===request)msg(e.message,true);}
+  }catch(e){if(seq===request)msg(e.message,true);return false;}
  }
  function create(department,parent){
   if(!departments.length){msg('請等待部門資料載入後再建立任務',true);return;}
@@ -70,12 +71,20 @@ window.OfficeTaskBoard={mount(root,post){
   if(busy)return;
   const note=detail.querySelector('[data-ot-note]')?.value||'',result=detail.querySelector('[data-ot-result]')?.value||'';
   busy=true;detail.querySelectorAll('.ot-actions button').forEach(b=>b.disabled=true);
-  try{const j=await call('admin_office_tasks_update',{id:t.id,revision:t.revision,operation,note,result,checks:[...detail.querySelectorAll('[data-ot-checks] input')].map(e=>e.checked)});tasks=tasks.map(x=>x.id===j.task.id?j.task:x);render();renderDetail(j.task);}
+  try{const j=await call('admin_office_tasks_update',{id:t.id,revision:t.revision,operation,note,result,checks:[...detail.querySelectorAll('[data-ot-checks] input')].map(e=>e.checked)});tasks=tasks.map(x=>x.id===j.task.id?j.task:x);snapshotAt=0;window.dispatchEvent(new CustomEvent('foresight-office-task-updated',{detail:{department:j.task.department}}));render();renderDetail(j.task);}
   catch(e){detail.querySelector('[data-ot-detail-message]').textContent=e.message;detail.querySelectorAll('.ot-actions button').forEach(b=>b.disabled=false);}finally{busy=false;}
  }
  root.onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.hasAttribute('data-ot-new'))create();else if(b.hasAttribute('data-ot-refresh'))refresh();else if(b.dataset.otId){const t=tasks.find(t=>t.id===b.dataset.otId);if(t)loadDetail(t.id);}};
  root.querySelector('[data-ot-department]').onchange=e=>{filter=e.target.value;render();};root.querySelector('[data-ot-query]').oninput=e=>{query=e.target.value;render();};
  [form,detail].forEach(d=>d.onclick=e=>{if(e.target.closest('[data-ot-close]'))d.close();});
- return {async department(id){filter=String(id);if(!departments.length)await refresh();root.querySelector("[data-ot-department]").value=filter;render();},show(){active=true;refresh();if(!timer)timer=setInterval(()=>{if(active&&!document.hidden&&!form.open&&!detail.open)refresh();},15000);},hide(){active=false;clearInterval(timer);timer=null;},async create(department){if(!departments.length)await refresh();create(department);},destroy(){active=false;request++;clearInterval(timer);form.close();detail.close();form.remove();detail.remove();}};
+ return {open:loadDetail,async snapshot(department,force=false){
+   if(force||Date.now()-snapshotAt>30000){if(!snapshotFlight)snapshotFlight=refresh().finally(()=>snapshotFlight=null);if(!await snapshotFlight)return {tasks:[],error:'任務資料暫時無法讀取，請稍後更新。',at:''};snapshotAt=Date.now();}
+   const list=tasks.filter(t=>department==null||t.department===department);
+   const detailed=[];
+   for(let i=0;i<Math.min(list.length,24);i+=3){
+    const batch=await Promise.all(list.slice(i,i+3).map(async t=>{try{const cached=workroomDetails.get(t.id);if(cached&&cached.revision===t.revision)return cached;const detail=(await call('admin_office_tasks_get',{id:t.id})).task;const safe={...detail,result:String(detail.result||'').slice(0,8000),history:(detail.history||[]).slice(-100)};workroomDetails.set(t.id,safe);return safe;}catch(_){return {...t,detailsUnavailable:true};}}));detailed.push(...batch);
+   }
+   return {tasks:detailed,total:list.length,limited:list.length>24,worker:{at:worker.at||'',pause_reason:worker.pause_reason||''},at:new Date().toISOString()};
+  },async department(id){filter=String(id);if(!departments.length)await refresh();root.querySelector("[data-ot-department]").value=filter;render();},show(){active=true;refresh();if(!timer)timer=setInterval(()=>{if(active&&!document.hidden&&!form.open&&!detail.open)refresh();},15000);},hide(){active=false;clearInterval(timer);timer=null;},async create(department){if(!departments.length)await refresh();create(department);},destroy(){active=false;request++;workroomDetails.clear();clearInterval(timer);form.close();detail.close();form.remove();detail.remove();}};
 }};
 })();

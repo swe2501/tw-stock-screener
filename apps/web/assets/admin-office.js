@@ -89,15 +89,15 @@
     var f = box && box.querySelector('#aoTowerFrame'); if (!f || !f.contentWindow) return;
     var roles = Object.keys(LOOK).filter(function (key) { return OFFICE_DEPARTMENTS[key] !== undefined; }).map(function (key) {
       var a = data[key], st = a ? status(key) : {k:'unknown'};
-      return {key:key,department:OFFICE_DEPARTMENTS[key],name:LOOK[key].n,status:st.k,statusText:a ? (ST_TEXT[st.k] || '待確認') : '尚無狀態',updated:a ? (a.heartbeat || a.since || a.date || '') : ''};
+      return {key:key,department:OFFICE_DEPARTMENTS[key],name:LOOK[key].n,status:st.k,statusText:a ? (ST_TEXT[st.k] || '待確認') : '尚無狀態',updated:a ? (a.heartbeat || a.since || a.date || '') : '',duty:ROLE[key].duty,current:a ? String(a.current||'').slice(0,300) : '',since:a ? a.since : '',reason:st.why||'',dataDate:a ? String(a.data_date||'').slice(0,30) : '',retries:a && Number.isFinite(a.retries) ? a.retries : null,steps:a && Array.isArray(a.steps) ? a.steps.slice(-30).map(function(x){return {step:String(x.step||'').slice(0,200),start:x.start,end:x.end,secs:x.secs,ok:x.ok,detail:String(x.detail||'').slice(0,500)};}) : [],summary:a && Array.isArray(a.bubble) ? a.bubble.slice(0,5).join('｜').slice(0,1000) : '',report:key==='boss' && a && a.report ? String(a.report.headline||'').slice(0,500) : ''};
     });
     f.contentWindow.postMessage({type:'foresight-office-departments',roles:roles}, location.protocol === 'file:' ? '*' : location.origin);
   }
 
   function towerEntry() {
     var theme = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
-    return '<style>.ao-tower-entry{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:16px;color:var(--text)}.ao-tower-entry h3{font-size:22px;margin:0 0 7px}.ao-tower-entry p{font-size:12px;color:var(--text-muted);margin:0;line-height:1.8}.ao-office-tabs{display:flex;gap:5px;align-items:center;flex-wrap:wrap;padding:5px;border:1px solid var(--border);border-radius:25px;background:var(--surface)}.ao-office-tabs button,.ao-office-tabs a{font:inherit;font-size:12px;color:var(--text-muted);border:0;border-radius:20px;padding:9px 14px;background:transparent;text-decoration:none;cursor:pointer;transition:background .2s,color .2s}.ao-office-tabs [aria-pressed=true]{background:var(--bg);color:var(--text);box-shadow:inset 0 0 0 1px var(--border)}#aoTowerPanel{border:1px solid var(--border);border-radius:20px;overflow:hidden;margin-bottom:16px}#aoTowerFrame{display:block;width:100%;height:clamp(650px,82vh,960px);border:0;background:var(--surface)}#aoTowerPanel[hidden],#aoLegacyPanel[hidden],#aoTasksPanel[hidden]{display:none}</style>'
-      + '<section class="ao-tower-entry"><div><h3>先見金融大廈</h3><p>探索部門名片、協作路線與品牌大廳。探索部門並派工，於任務中心追蹤交付與驗收；原排程看板獨立保留。</p></div><nav class="ao-office-tabs" aria-label="AI 研究室視圖"><button type="button" id="aoTowerTab" aria-pressed="true" aria-controls="aoTowerPanel">金融大廈</button><button type="button" id="aoJobsTab" aria-pressed="false" aria-controls="aoLegacyPanel">排程看板</button><button type="button" id="aoTasksTab" aria-pressed="false" aria-controls="aoTasksPanel">任務中心</button><a href="ai-office.html?from=admin&amp;theme=' + theme + '" target="_blank" rel="noopener">完整視窗 ↗</a></nav></section>'
+    return '<style>.ao-tower-entry{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:16px;color:var(--text)}.ao-tower-entry h3{font-size:22px;margin:0 0 7px}.ao-tower-entry p{font-size:12px;color:var(--text-muted);margin:0;line-height:1.8}.ao-office-tabs{display:flex;gap:5px;align-items:center;flex-wrap:wrap;padding:5px;border:1px solid var(--border);border-radius:25px;background:var(--surface)}.ao-office-tabs button,.ao-office-tabs a{font:inherit;font-size:12px;color:var(--text-muted);border:0;border-radius:20px;padding:9px 14px;background:transparent;text-decoration:none;cursor:pointer;transition:background .2s,color .2s}.ao-office-tabs [hidden]{display:none!important}.ao-office-tabs [aria-pressed=true]{background:var(--bg);color:var(--text);box-shadow:inset 0 0 0 1px var(--border)}#aoTowerPanel{border:1px solid var(--border);border-radius:20px;overflow:hidden;margin-bottom:16px}#aoTowerFrame{display:block;width:100%;height:clamp(650px,82vh,960px);border:0;background:var(--surface)}#aoTowerPanel[hidden],#aoLegacyPanel[hidden],#aoTasksPanel[hidden]{display:none}</style>'
+      + '<section class="ao-tower-entry"><div><h3>先見金融大廈</h3><p>探索部門名片、協作路線與品牌大廳。探索部門並派工，於任務中心追蹤交付與驗收；進入部門工作室查看進度、成果與效率。</p></div><nav class="ao-office-tabs" aria-label="AI 研究室視圖"><button type="button" id="aoTowerTab" aria-pressed="true" aria-controls="aoTowerPanel">金融大廈</button><button type="button" id="aoJobsTab" hidden aria-pressed="false" aria-controls="aoLegacyPanel">排程看板</button><button type="button" id="aoTasksTab" aria-pressed="false" aria-controls="aoTasksPanel">任務中心</button><a href="ai-office.html?from=admin&amp;theme=' + theme + '" target="_blank" rel="noopener">完整視窗 ↗</a></nav></section>'
       + '<div id="aoTowerPanel"><iframe id="aoTowerFrame" title="先見金融大廈與部門探索" src="ai-office.html?embedded=1&amp;theme=' + theme + '"></iframe></div><div id="aoTasksPanel" hidden></div>';
   }
 
@@ -122,7 +122,12 @@
       box.querySelector('#aoTowerTab').setAttribute('aria-pressed', String(tower));
       box.querySelector('#aoJobsTab').setAttribute('aria-pressed', String(!tower && !tasks));
       var frame = box.querySelector('#aoTowerFrame');
-      if(tower) sendDepartmentState();
+      if(tower) {
+        try {
+          if (frame.contentWindow.location.pathname !== new URL(frame.src, location.href).pathname) frame.src = frame.getAttribute('src');
+        } catch (_) { if (location.protocol !== 'file:') frame.src = frame.getAttribute('src'); }
+        sendDepartmentState();
+      }
       if (frame.contentWindow) frame.contentWindow.postMessage({type:'foresight-office-visibility',visible:tower}, location.protocol === 'file:' ? '*' : location.origin);
     };
     box.querySelector('#aoTasksTab').onclick = function () { setView('tasks'); };
@@ -133,6 +138,18 @@
       var f = box && box.querySelector('#aoTowerFrame');
       if(!f || event.source !== f.contentWindow || (event.origin !== location.origin && !(location.protocol==='file:' && (event.origin==='null'||event.origin==='file://'))) || !event.data) return;
       if(event.data.type==='foresight-office-ready'){sendDepartmentState();return;}
+      if(event.data.type==='foresight-office-workroom-request'){
+        var dep=event.data.department, seq=event.data.request;
+        if(!Number.isInteger(dep)||dep<0||dep>31)return;
+        if(!taskBoard){f.contentWindow.postMessage({type:'foresight-office-workroom',department:dep,request:seq,snapshot:{tasks:[],error:'任務中心尚未載入。'}},location.protocol==='file:'?'*':location.origin);return;}
+        taskBoard.snapshot(dep===19?null:dep,event.data.force===true).then(function(snapshot){
+          if(box&&box.querySelector('#aoTowerFrame')===f)f.contentWindow.postMessage({type:'foresight-office-workroom',department:dep,request:seq,snapshot:snapshot},location.protocol==='file:'?'*':location.origin);
+        });return;
+      }
+      if(event.data.type==='foresight-office-open-task'){
+        if(typeof event.data.id!=='string'||!taskBoard)return;
+        setView('tasks');taskBoard.open(event.data.id);return;
+      }
       if(event.data.type==='foresight-office-create-task'||event.data.type==='foresight-office-open-tasks'){
         var department=event.data.department;
         if(!Number.isInteger(department)||department<0||department>31||department===16)return;
@@ -144,7 +161,9 @@
       var key=event.data.key;if(!Object.prototype.hasOwnProperty.call(LOOK,key))return;
       setView(false);selected=key;detail();
     };
-    addEventListener('message',onOfficeMessage); officeMessageCleanup=function(){removeEventListener('message',onOfficeMessage);};
+    var onTaskUpdated=function(event){var f=box&&box.querySelector('#aoTowerFrame');if(f&&f.contentWindow)f.contentWindow.postMessage({type:'foresight-office-workroom-invalidated',department:event.detail.department},location.protocol==='file:'?'*':location.origin);};
+    addEventListener('foresight-office-task-updated',onTaskUpdated);
+    addEventListener('message',onOfficeMessage); officeMessageCleanup=function(){removeEventListener('message',onOfficeMessage);removeEventListener('foresight-office-task-updated',onTaskUpdated);};
     svg = box.querySelector('#aoSvg');
     box.querySelector('#aoRefresh').onclick = load;
     [].forEach.call(box.querySelectorAll('tr[data-ao]'), function (tr) { tr.onclick = function () { selected = tr.getAttribute('data-ao'); detail(); box.querySelector('#aoDetail').scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }; });
@@ -323,7 +342,7 @@
       this.hide(); box = container; post = postFn; sprites = {}; selected = null;
       build(); if (Object.keys(data).length) paint();
       load();
-      timers.push(setInterval(load, 60000));
+      timers.push(setInterval(function(){if(!document.hidden)load();}, 60000));
       timers.push(setInterval(function(){var p=box&&box.querySelector('#aoLegacyPanel');if(!document.hidden&&p&&!p.hidden)step();},100));
     },
     hide: function () { if(taskBoard){taskBoard.destroy();taskBoard=null;} if(officeMessageCleanup){officeMessageCleanup();officeMessageCleanup=null;} timers.forEach(clearInterval); timers = []; var f = box && box.querySelector('#aoTowerFrame'); if(f) f.remove(); }

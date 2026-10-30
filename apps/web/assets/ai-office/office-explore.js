@@ -14,7 +14,7 @@
   const nav=document.createElement('nav');nav.className='explore-tabs';nav.setAttribute('aria-label','總部探索');
   nav.innerHTML='<button type="button" id="exploreTower" aria-pressed="true">'+icon('building')+'大廈探索</button><button type="button" id="exploreLobby" aria-pressed="false">'+icon('users')+'品牌大廳</button><button type="button" id="exploreRoute" aria-haspopup="dialog">'+icon('link')+'協作路線</button>';
   document.querySelector('main').prepend(nav);
-  const profile=document.createElement('button');profile.id='departmentProfile';profile.className='profile-link';profile.textContent='部門名片';profile.hidden=true;profile.setAttribute('aria-haspopup','dialog');$('overview').before(profile);
+  const profile=document.createElement('button');profile.id='departmentProfile';profile.className='profile-link';profile.textContent='部門工作室';profile.hidden=true;profile.setAttribute('aria-haspopup','dialog');$('overview').before(profile);
   const dialog=document.createElement('dialog');dialog.className='office-dialog';dialog.id='officeExploreDialog';dialog.setAttribute('aria-labelledby','exploreTitle');
   dialog.innerHTML='<header class="explore-header"><span class="eyebrow" id="exploreEyebrow"></span><button type="button" class="icon-button" aria-label="關閉內容">×</button></header><div id="exploreContent"></div>';
   document.body.append(dialog);dialog.querySelector('button').onclick=()=>dialog.close();dialog.addEventListener('click',e=>{if(e.target===dialog){const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)dialog.close();}});
@@ -25,11 +25,14 @@
     content.querySelector('[data-office-create]')?.addEventListener('click',()=>{parent.postMessage({type:'foresight-office-create-task',department:id},location.origin);dialog.close();});
     content.querySelector('[data-office-tasks]')?.addEventListener('click',()=>{parent.postMessage({type:'foresight-office-open-tasks',department:id},location.origin);dialog.close();});open();
   }
-  function showRoute(){dialog.classList.add('route-dialog');const route=scenarios[scenario],current=route.steps[step],d=departments[current[0]];$('exploreEyebrow').textContent='先見 · 工作流程';
+  function showRoute(){dialog.classList.remove('workroom-dialog');dialog.classList.add('route-dialog');const route=scenarios[scenario],current=route.steps[step],d=departments[current[0]];$('exploreEyebrow').textContent='先見 · 工作流程';
     content.innerHTML='<h2 id="exploreTitle">跨部門協作</h2><p class="explore-intro">查看每個環節的負責部門與交付內容。</p><label class="scenario-label">工作項目<select id="routeScenario">'+scenarios.map((r,i)=>'<option value="'+i+'"'+(i===scenario?' selected':'')+'>'+r.name+'</option>').join('')+'</select></label><p class="route-intro">'+route.intro+'</p><div class="route-layout"><nav class="route-steps" aria-label="協作環節">'+route.steps.map((s,i)=>'<button type="button" data-route-step="'+i+'" aria-current="'+(i===step?'step':'false')+'" style="--department-color:'+departments[s[0]].color+'"><b>'+String(i+1).padStart(2,'0')+'</b><span>'+s[1]+'</span></button>').join('')+'</nav><section class="route-detail" style="--department-color:'+d.color+'"><small>環節 '+(step+1)+' / '+route.steps.length+' · '+d.floor+'F</small><h3>'+d.name+'</h3><p>'+current[2]+'</p><button type="button" id="routeVisit">走進這個部門 <span>↗</span></button></section></div><div class="route-actions"><span>流程規劃 · 尚未執行</span><div><button type="button" id="routePrevious"'+(step===0?' disabled':'')+'>上一環節</button><button type="button" id="routeNext"'+(step===route.steps.length-1?' disabled':'')+'>下一環節 →</button></div></div>';
     $('routeScenario').onchange=e=>{scenario=+e.target.value;step=0;showRoute();};content.querySelectorAll('[data-route-step]').forEach(b=>b.onclick=()=>{step=+b.dataset.routeStep;showRoute();});$('routePrevious').onclick=()=>{step--;showRoute();};$('routeNext').onclick=()=>{step++;showRoute();};$('routeVisit').onclick=()=>{ForesightOffice.select(current[0],true);dialog.close();};open();
   }
   function sync(){profile.hidden=ForesightOffice.selectedDepartment<0;$('exploreTower').setAttribute('aria-pressed',String(ForesightOffice.viewMode!=='lobby'));$('exploreLobby').setAttribute('aria-pressed',String(ForesightOffice.viewMode==='lobby'));}
   profile.onclick=showProfile;$('exploreTower').onclick=()=>ForesightOffice.overview();$('exploreLobby').onclick=()=>ForesightOffice.lobby();$('exploreRoute').onclick=()=>{step=0;showRoute();};window.addEventListener('foresight-office-selection',sync);sync();
-  if(new URLSearchParams(location.search).get('embedded')==='1')document.body.classList.add('embedded-office');
+  if(new URLSearchParams(location.search).get('embedded')==='1'){
+    document.body.classList.add('embedded-office');
+    document.querySelectorAll('a[href="index.html"]').forEach(link=>link.target='_top');
+  }
 })();
