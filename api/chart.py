@@ -89,8 +89,18 @@ def _tx_sessions_from_taifex():
                  "Referer": "https://www.taifex.com.tw/cht/3/dlFutDailyMarketView",
                  "Origin": "https://www.taifex.com.tw",
                  "Content-Type": "application/x-www-form-urlencoded", "Cookie": cookie})
-    with urllib.request.urlopen(req, timeout=10) as r:
-        raw = r.read()
+    # 2026-10-30 期交所偶爾卡住不回（正常 <1 秒）：每次只等 5 秒、最多 3 次，避免一次卡住就退回 T+1 的 openapi
+    raw = None
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(req, timeout=5) as r:
+                raw = r.read()
+            break
+        except Exception:
+            if attempt == 2:
+                raise
+            _TAIFEX_SESSION["cookie"] = None
+            req.headers["Cookie"] = _taifex_cookie_str()
     content = None
     for enc in ("utf-8-sig", "utf-8", "ms950", "big5"):
         try:
@@ -1281,7 +1291,11 @@ class handler(BaseHTTPRequestHandler):
                 self._json(400, {"error": "session=split requires TX=F daily quotes"})
                 return
             try:
-                self._json(200, fetch_tx_sessions(), cache="public, s-maxage=300, stale-while-revalidate=300")
+                _txs = fetch_tx_sessions()
+                # 退回 openapi(T+1 舊資料)時只快取 30 秒，下一位訪客再試期交所當日資料
+                _fresh = "futDataDown" in (_txs.get("source_url") or "")
+                self._json(200, _txs, cache="public, s-maxage=300, stale-while-revalidate=300" if _fresh
+                           else "public, s-maxage=30")
             except Exception:
                 self._json(502, {"error": "TAIFEX session quotes unavailable"})
             return
