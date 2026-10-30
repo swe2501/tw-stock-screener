@@ -16,7 +16,7 @@ breadth_daily.py — 「大盤多空廣度」每日市場廣度指標（上市 /
 → Supabase breadth_daily((trade_date,market) 複合主鍵)。
 用法：python scripts/breadth_daily.py            # 全量重算(冪等,每日排程亦可直接跑)
 """
-import sys, json, urllib.request
+import sys, json, time, urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -34,12 +34,21 @@ def _sb_get(env, path, rng=None):
          "Accept-Encoding": "gzip"}
     if rng:
         h["Range-Unit"] = "items"; h["Range"] = rng
-    with urllib.request.urlopen(urllib.request.Request(env["SUPABASE_URL"] + "/rest/v1/" + path, headers=h), timeout=60) as r:
-        raw = r.read()
-        if raw and (r.headers.get("Content-Encoding") or "").lower() == "gzip":
-            import gzip
-            raw = gzip.decompress(raw)
-        return raw
+    # 2026-10-30 雲端 10/29 讀 price_window 深分頁回 500（資料庫忙／查詢逾時）整步失敗；5xx 與逾時改等一下重試，最多 4 次
+    for i in range(4):
+        try:
+            with urllib.request.urlopen(urllib.request.Request(env["SUPABASE_URL"] + "/rest/v1/" + path, headers=h), timeout=60) as r:
+                raw = r.read()
+                if raw and (r.headers.get("Content-Encoding") or "").lower() == "gzip":
+                    import gzip
+                    raw = gzip.decompress(raw)
+                return raw
+        except Exception as e:
+            code = getattr(e, "code", None)
+            if i == 3 or (code is not None and code < 500):
+                raise
+            print(f"  [retry] {path[:40]} {rng or ''} 失敗（{code or type(e).__name__}），{10 * (i + 1)} 秒後重試")
+            time.sleep(10 * (i + 1))
 
 
 def _otc_set(env):

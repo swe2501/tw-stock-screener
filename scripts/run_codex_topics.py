@@ -66,7 +66,9 @@ def main():
         return 1
     # Uploader independently checks file age, news dates and the valid code list.
     json.loads(output.read_text(encoding='utf-8-sig'))
-    return subprocess.run([sys.executable, str(HERE / 'upload_hot_topics.py')], timeout=180).returncode
+    # 2026-10-30 經 office_step 記到研究室「新聞研究員」：白天上傳成功／失敗都看得到（夜間那一步已移除）
+    return subprocess.run([sys.executable, str(HERE / 'office_step.py'), 'news', str(HERE / 'upload_hot_topics.py')],
+                          timeout=240).returncode
 
 
 if __name__ == '__main__':
