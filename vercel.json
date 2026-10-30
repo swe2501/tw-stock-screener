@@ -36,6 +36,10 @@
     {
       "src": "apps/web/research/**",
       "use": "@vercel/static"
+    },
+    {
+      "src": "apps/web/ai-office.html",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
@@ -70,7 +74,7 @@
       "dest": "/apps/web/assets/$1"
     },
     {
-      "src": "/(logo\\.png|group-catalog\\.js|group-logos\\.js|treasury-research\\.html)$",
+      "src": "/(logo\\.png|group-catalog\\.js|group-logos\\.js|ai-office\\.html|treasury-research\\.html)$",
       "dest": "/apps/web/$1"
     },
     {
