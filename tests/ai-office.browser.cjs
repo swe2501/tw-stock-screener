@@ -1,0 +1,105 @@
+const assert = require('node:assert/strict');
+const path = require('node:path');
+const fs = require('node:fs');
+const os = require('node:os');
+const { pathToFileURL } = require('node:url');
+const { chromium } = require('playwright');
+const url = pathToFileURL(path.resolve(__dirname, '../apps/web/ai-office.html')).href;
+const out = path.join(os.tmpdir(), 'foresight-ai-office');
+fs.mkdirSync(out, { recursive: true });
+(async () => {
+  const browser = await chromium.launch({channel: 'msedge', headless: true});
+  try {
+    for (const width of [1440, 390]) {
+      const p = await browser.newPage({viewport:{width,height:width===390?844:960}});
+      const errors=[];p.on('pageerror',e=>errors.push(e.message));
+      await p.goto(url);
+      await p.waitForFunction(()=>window.ForesightOffice && document.querySelector('#scene canvas'));
+      assert.equal(await p.locator('.department').count(),32);
+      assert.equal(await p.evaluate(()=>ForesightOffice.floors.length),8);
+      assert.equal(await p.evaluate(()=>ForesightOffice.floors.every(f=>f.departments.length<=4)),true);
+      assert.equal(await p.evaluate(()=>new Set(ForesightOffice.floors.flatMap(f=>f.departments)).size),32);
+      assert.equal(await p.evaluate(()=>new Set(ForesightOffice.departments.map(d=>d.color)).size),32);
+      assert.equal(await p.locator('#fallback').isVisible(),false);
+      assert.equal(await p.evaluate(()=>ForesightOffice.peopleCount),66);
+      assert.equal(await p.evaluate(()=>ForesightOffice.exteriorVisible),true);
+      assert.match(await p.evaluate(()=>ForesightOffice.departments[0].name),/執行長/);
+      assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+      for(const theme of ['light','dark']) {
+        if(await p.locator('body').getAttribute('data-theme')!==theme) await p.locator('#theme').click();
+        await p.waitForTimeout(750);
+        await p.screenshot({path:path.join(out,`${theme}-${width}.png`)});
+      }
+      if(width===390) await p.locator('#directoryToggle').click();
+      await p.locator('.floor-stop[data-floor="6"]').click();
+      await p.waitForTimeout(600);
+      assert.equal(await p.evaluate(()=>ForesightOffice.activeFloor),6);
+      assert.equal(await p.evaluate(()=>ForesightOffice.exteriorVisible),false);
+      assert.equal(await p.locator('.department:visible').count(),4);
+      await p.screenshot({path:path.join(out,`floor6-${width}.png`)});
+      for(let floor=1;floor<=8;floor++) {
+        await p.locator(`.floor-stop[data-floor="${floor}"]`).click();
+        assert.equal(await p.locator('.department:visible').count(),4);
+      }
+      await p.locator('#overview').click();
+      await p.locator('[data-department="28"]').click();
+      assert.match(await p.locator('#detailTitle').innerText(),/廣告/);
+      await p.locator('#overview').click();
+      await p.locator('[data-department="16"]').click();
+      await p.waitForTimeout(400);
+      assert.match(await p.locator('#detailState').innerText(),/未啟用/);
+      assert.equal(await p.evaluate(()=>ForesightOffice.departments.some(d=>d.enabled)),false);
+      await p.locator('#overview').click();
+      assert.equal(await p.locator('.department.active').count(),0);
+      await p.evaluate(()=>ForesightOffice.select(0,true));
+      await p.locator('#departmentProfile').click();
+      assert.match(await p.locator('.role-list').innerText(),/執行長/);
+      assert.match(await p.locator('.role-list').innerText(),/總經理/);
+      await p.screenshot({path:path.join(out,'profile-'+width+'.png')});
+      await p.keyboard.press('Escape');
+      assert.equal(await p.evaluate(()=>ForesightOffice.selectedDepartment),0);
+      await p.locator('#exploreLobby').click();await p.waitForTimeout(850);
+      assert.equal(await p.evaluate(()=>ForesightOffice.viewMode),'lobby');
+      assert.equal(await p.evaluate(()=>ForesightOffice.exteriorVisible),false);
+      await p.screenshot({path:path.join(out,'lobby-'+width+'.png')});
+      await p.locator('#exploreRoute').click();
+      assert.equal(await p.locator('[data-route-step]').count(),7);
+      await p.locator('#routeNext').click();
+      assert.match(await p.locator('.route-detail').innerText(),/創意/);
+      await p.locator('#routeScenario').selectOption('1');
+      assert.equal(await p.locator('[data-route-step]').count(),6);
+      await p.locator('#routeScenario').selectOption('2');
+      assert.equal(await p.locator('[data-route-step]').count(),7);
+      await p.screenshot({path:path.join(out,'route-'+width+'.png')});
+      await p.locator('#routeVisit').click();
+      assert.equal(await p.evaluate(()=>ForesightOffice.selectedDepartment),2);
+      assert.equal(await p.locator('#officeExploreDialog').isVisible(),false);
+      await p.locator('#overview').click();
+      const before=await p.locator('.floor-label').first().getAttribute('style');
+      await p.locator('#rotateLeft').click();await p.waitForTimeout(500);
+      assert.notEqual(await p.locator('.floor-label').first().getAttribute('style'),before);
+      await p.locator('#autoRotate').click();assert.equal(await p.locator('#autoRotate').getAttribute('aria-pressed'),'true');
+      await p.locator('#overview').click();assert.equal(await p.locator('#autoRotate').getAttribute('aria-pressed'),'false');
+      assert.deepEqual(errors,[]);
+      await p.close();
+    }
+    const admin=await browser.newPage();const fixture=path.join(out,'admin-fixture.html');
+    fs.writeFileSync(fixture,'<!doctype html><html data-theme="light"><base href="'+pathToFileURL(path.resolve(__dirname,'../apps/web/')).href+'/"><div id="adminFixture"></div></html>');
+    await admin.goto(pathToFileURL(fixture).href);
+    await admin.addScriptTag({path:path.resolve(__dirname,'../apps/web/assets/admin-office.js')});
+    await admin.evaluate(()=>{window.fixtureCalls=0;AdminOffice.show(document.querySelector('#adminFixture'),async()=>{fixtureCalls++;return {agents:{}};});});
+    assert.equal(await admin.locator('.ao-tower-entry a').count(),1);
+    assert.match(await admin.locator('.ao-tower-entry a').getAttribute('href'),/ai-office.html/);
+    assert.equal(await admin.locator('#aoSvg').count(),1);
+    assert.equal(await admin.locator('#aoLegacyPanel').isVisible(),false);
+    assert.equal(await admin.locator('#aoTowerPanel').isVisible(),true);
+    await admin.locator('#aoJobsTab').click();
+    assert.equal(await admin.locator('#aoSvg').isVisible(),true);
+    assert.equal(await admin.locator('#aoTowerPanel').isVisible(),false);
+    await admin.locator('#aoTowerTab').click();
+    assert.equal(await admin.locator('#aoTowerPanel').isVisible(),true);
+    assert.equal(await admin.evaluate(()=>fixtureCalls),1);
+    await admin.evaluate(()=>AdminOffice.hide());await admin.close();
+    console.log('PASS: offline 3D tower, 32 departments, 8 floors <=4 departments, unique colours, floor exploration, theme, mobile, camera, selection, inactive logistics. Screenshots: '+out);
+  } finally { await browser.close(); }
+})().catch(e=>{console.error(e);process.exitCode=1;});
