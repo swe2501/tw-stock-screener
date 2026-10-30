@@ -107,7 +107,7 @@ def execute(task,client,binary,worker,timeout=1200,heartbeat_interval=25):
     prompt=json.dumps({'部門':DEPARTMENTS[task['department']],'任務名稱':task['title'],'任務':task['brief'],'驗收條件':task['criteria'],'前置已驗收成果':task.get('dependency_outputs',[]),'前次回饋':task.get('feedback','')},ensure_ascii=False)
     proc=None;reader=None;final=None;deadline=time.monotonic()+timeout;next_beat=time.monotonic()+heartbeat_interval;lines=queue.Queue();note='Claude 正在處理任務'
     try:
-        with tempfile.TemporaryDirectory(prefix='foresight-office-') as workspace:
+        with tempfile.TemporaryDirectory(prefix='foresight-office-',ignore_cleanup_errors=True) as workspace:
             proc=subprocess.Popen(command(binary,task['reserved_usd']),cwd=workspace,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,text=True,encoding='utf-8',errors='replace',env=model_environment(),creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
             proc.stdin.write(prompt);proc.stdin.close()
             def consume():
@@ -137,7 +137,11 @@ def execute(task,client,binary,worker,timeout=1200,heartbeat_interval=25):
                     revision=response['task']['revision'];client.call('online',worker=worker,current_task=task_id)
                     next_beat=time.monotonic()+heartbeat_interval
             proc.wait(timeout=10)
-        if not final or final.get('is_error') or final.get('subtype')!='success':raise RuntimeError('Claude 未完成：可能額度不足、登入失效或模型執行失敗')
+        if not final:raise RuntimeError('Claude 未交付完成回報，請檢查登入或執行端')
+        if final.get('is_error') or final.get('subtype')!='success':
+            errors=final.get('errors') or [final.get('result') or final.get('subtype') or '模型執行失敗']
+            detail='；'.join(str(x) for x in errors)[:600]
+            raise RuntimeError('Claude 未完成：'+detail)
         output=final.get('structured_output')
         if not isinstance(output,dict):raise RuntimeError('Claude 未交付可驗證的成果格式')
         report=output.get('report','');blocker=output.get('blocker','')
