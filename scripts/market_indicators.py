@@ -96,16 +96,31 @@ def _last_vix(env):
     return None, None
 
 
-def _taifex_usdtwd():
-    """USD/NTD(TAIFEX 官方 DailyForeignExchangeRates 最新一筆)。"""
+def _taifex_usdtwd_by_date():
+    """USD/NTD(TAIFEX 官方 DailyForeignExchangeRates，約晚 2 個交易日)。回 {iso: 匯率}。"""
+    out = {}
     try:
         d = _get("https://openapi.taifex.com.tw/v1/DailyForeignExchangeRates")
-        if isinstance(d, list) and d:
-            v = d[-1].get("USD/NTD")
-            return float(str(v).replace(",", "")) if v else None
+        for r in d if isinstance(d, list) else []:
+            ds, v = str(r.get("Date") or ""), r.get("USD/NTD")
+            if len(ds) == 8 and v:
+                out[f"{ds[:4]}-{ds[4:6]}-{ds[6:]}"] = float(str(v).replace(",", ""))
     except Exception as e:
         print(f"[warn] TAIFEX 匯率 失敗: {str(e)[:80]}")
-    return None
+    return out
+
+
+def _usdtwd_for(iso):
+    """2026-10-30 首頁匯率改用當日台北匯市時段最後一筆(盤中排程記錄)；本機沒有記錄才用期交所同一天的官方值，
+    兩者都沒有就不寫(不再把晚 2 天的官方值標成當日)。"""
+    import chip_brief
+    fx = chip_brief.fx_close_local(iso)
+    if fx:
+        print(f"[匯率] {iso} 盤中記錄最後一筆 {fx}")
+        return fx
+    fx = _taifex_usdtwd_by_date().get(iso)
+    print(f"[匯率] {iso} 本機無盤中記錄，期交所官方 {fx}")
+    return fx
 
 
 def _iso(ms):
@@ -168,8 +183,6 @@ async def main():
     # 非交易時段台指VIX 為 --,沿用資料庫最後一筆,避免 KPI 空白
     if vc is None:
         vc, vp = _last_vix(env)
-    # 匯率：TAIFEX 官方
-    usdtwd = _taifex_usdtwd()
 
     # 2026-10-30 資料日改用期交所月檔裡的真實交易日：原本用「執行當下日曆日」，夜間排程過午夜才跑，
     # 每筆 VIX 都被標成隔天（10/29 收盤 28.25 顯示成 10/30）。讀不到月檔時才退回今天。
@@ -178,8 +191,10 @@ async def main():
         "date": vdate or today,
         "vix": vc, "vix_prev": vp,
         "futai_close": fc, "futai_prev": fp,
-        "usdtwd": usdtwd,
     }
+    usdtwd = _usdtwd_for(row["date"])
+    if usdtwd:
+        row["usdtwd"] = usdtwd
     print("row:", json.dumps(row, ensure_ascii=False))
 
     st = _upsert(env, row)
