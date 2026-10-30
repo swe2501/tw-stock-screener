@@ -208,6 +208,26 @@ def fetch_tsmc_contrib(iso):
     return tsmc_close, tsmc_chg, tsmc_pct, contrib, iso
 
 
+def fx_close_local(iso):
+    """盤中排程記錄的當日 USD/TWD（D:/stock_data/home_intraday/fx_YYYYMMDD.json）最後一筆；沒有回 None。"""
+    f = Path(r"D:\stock_data\home_intraday") / f"fx_{iso.replace('-', '')}.json"
+    try:
+        pts = json.loads(f.read_text(encoding="utf-8"))
+        return round(float(pts[-1][1]), 3) if pts else None
+    except Exception:
+        return None
+
+
+def _upsert_table(env, table, pk, row):
+    key = env["SUPABASE_SERVICE_KEY"]
+    req = urllib.request.Request(f"{env['SUPABASE_URL']}/rest/v1/{table}?on_conflict={pk}",
+                                 data=json.dumps([row]).encode(), method="POST", headers={
+        "Content-Type": "application/json", "apikey": key, "Authorization": f"Bearer {key}",
+        "Prefer": "resolution=merge-duplicates,return=minimal"})
+    with urllib.request.urlopen(req, timeout=30) as r:
+        return r.status
+
+
 def _upsert(env, row):
     key = env["SUPABASE_SERVICE_KEY"]
     url = f"{env['SUPABASE_URL']}/rest/v1/chip_brief_daily?on_conflict=trade_date"
@@ -261,6 +281,12 @@ def main():
         r = subprocess.run([sys.executable, str(Path(__file__).resolve().parent / "home_intraday.py"), "--date", iso],
                            timeout=600)
         print(f"home_intraday --date {iso} exit {r.returncode}")
+        # 2026-10-30 首頁台幣匯率卡改用「當日台北匯市時段最後一筆」(盤中排程每 5 分鐘記的 Yahoo USD/TWD，到 16:00)；
+        # 期交所官方匯率晚 2 天才公布，原本把 10/28 的值標成 10/30
+        fx = fx_close_local(iso)
+        if fx:
+            print(f"台幣匯率 {iso} {fx}（盤中記錄最後一筆）→ market_indicators "
+                  f"status {_upsert_table(env, 'market_indicators', 'date', {'date': iso, 'usdtwd': fx})}")
 
 
 if __name__ == "__main__":
