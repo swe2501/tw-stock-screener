@@ -541,7 +541,40 @@ class handler(BaseHTTPRequestHandler):
         self._cors()
         self.end_headers()
 
+    def _boss(self):
+        """2026-10-30 AI 研究室「總管」（雲端 Claude Agent）專用入口，只認 x-boss-token＝BOSS_TOKEN。
+        雲端拿不到資料庫萬能鑰匙，只能：讀狀態（boss_status）、存報告＋申請重跑白名單排程＋寄信給站長（boss_report）。"""
+        import hmac
+        from lib import boss
+        want = os.environ.get("BOSS_TOKEN", "")
+        got = self.headers.get("x-boss-token", "")
+        if len(want) < 24 or not hmac.compare_digest(want, got):
+            return self._json(403, {"error": "forbidden"})
+        base, key = SUPABASE_URL, SUPABASE_SERVICE_KEY
+        try:
+            if "kind=boss_status" in self.path:
+                return self._json(200, boss.collect(base, key))
+            length = int(self.headers.get("Content-Length", 0) or 0)
+            if length > 64000:
+                return self._json(413, {"error": "too large"})
+            body = json.loads(self.rfile.read(length) or b"{}") if length else {}
+            state = boss.save_report(base, key, body.get("report") or {})
+            queued = boss.enqueue(base, key, body.get("reruns") or []) if body.get("reruns") else []
+            mailed = None
+            em = body.get("email") or None
+            if em and em.get("message") and boss.take_mail_slot(base, key, state):
+                msg = str(em.get("message"))[:6000].replace("<", "&lt;").replace(">", "&gt;")
+                html = (f"<div style='font-family:Segoe UI,Arial;background:#111;color:#ddd;padding:20px'>"
+                        f"<h2 style='color:#e6a23c'>AI 研究室總管報告</h2>"
+                        f"<pre style='white-space:pre-wrap;font-size:14px;color:#ddd'>{msg}</pre></div>")
+                mailed, _ = _sa_send(html, "總管｜" + str(em.get("subject") or "排程巡查")[:80], ALERT_EMAIL)
+            return self._json(200, {"ok": True, "queued": queued, "mailed": mailed})
+        except Exception:
+            return self._json(500, {"error": traceback.format_exc()[-1500:]})
+
     def _handle(self):
+        if "kind=boss_" in self.path:
+            return self._boss()
         # Auth: accept user JWT or CRON_SECRET
         auth_header = self.headers.get("Authorization", "").strip()
         cron_header  = self.headers.get("x-vercel-cron", "")

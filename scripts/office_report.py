@@ -84,7 +84,7 @@ def _unresolved_failures(steps):
     return [k for k, v in last.items() if not v]
 
 
-def record(agent, step, phase, ok=None, secs=None, detail=None):
+def record(agent, step, phase, ok=None, secs=None, detail=None, tail=None):
     try:
         st = _get(agent)
         today = _now().date().isoformat()
@@ -121,6 +121,8 @@ def record(agent, step, phase, ok=None, secs=None, detail=None):
                     s.update({"end": now, "ok": bool(ok), "secs": round(secs or 0)})
                     if detail:
                         s["detail"] = str(detail)[:120]
+                    if tail:  # 2026-10-30 失敗時最後幾十行輸出，給總管判斷原因
+                        s["tail"] = str(tail)[-1500:]
                     break
             st["status"] = "done" if ok else "stuck"
             st["current"] = None if ok else step

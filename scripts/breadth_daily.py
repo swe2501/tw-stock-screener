@@ -11,12 +11,18 @@ breadth_daily.py — 「大盤多空廣度」每日市場廣度指標（上市 /
     amt_ratio               漲跌量比＝Σ上漲股成交額 ÷ Σ下跌股成交額（成交額≈收盤×量）
   分級(情緒/滲透率門檻)由前端以歷史百分位校準（手冊：門檻須用 2~3 年歷史滾動百分位重定）。
 
-資料源：Supabase price_window（全市場 code/trade_date/open/high/low/close/volume，約 1 年）。
+資料源（2026-10-30 起）：
+  本機有 D:/stock_data/wantgoo_full.db（stock_daily，2024-07 起約 2 年多）→ 用本機（夜間排程）；
+  沒有（GitHub 雲端備援）→ 讀 Supabase price_window（約 1 年）。兩者同源（price_window 由本機上傳）。
   市場別：code 在 otc_names → 上櫃，否則上市。
+寫入：預設只寫最近 5 個交易日（--days N 可改）。以前每天把整段歷史重算覆蓋，price_window 只有 1 年，
+  越早的日子前面歷史越少 → 60MA 空白、52 週新高低變成「表內新高低」，歷史被一路算壞；改成歷史算好就不再覆蓋。
+  --full：用本機完整資料重算全部歷史，只寫「前面已有 ≥252 個交易日」的日子（52 週新高低才完整）。
 → Supabase breadth_daily((trade_date,market) 複合主鍵)。
-用法：python scripts/breadth_daily.py            # 全量重算(冪等,每日排程亦可直接跑)
+用法：python scripts/breadth_daily.py            # 每日：最近 5 日（雲端只補本機缺的日子；--force 雲端也全寫）
+      python scripts/breadth_daily.py --full     # 用本機資料重算全部歷史（一次性修正）
 """
-import sys, json, urllib.request
+import sys, json, time, urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -26,13 +32,31 @@ if sys.stdout and hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(errors="replace")
 
 LIMIT = 9.5   # 漲跌停判定門檻(%)
+LOCAL_DB = Path(r"D:\stock_data\wantgoo_full.db")
+HIST_MIN = 252   # --full 只寫前面已有 252 個交易日（含當日）的日子
 
 
 def _sb_get(env, path, rng=None):
-    h = {"apikey": env["SUPABASE_SERVICE_KEY"], "Authorization": f"Bearer {env['SUPABASE_SERVICE_KEY']}"}
+    # 2026-10-29 要求 gzip：整張 price_window 分頁讀一次約 40MB，壓縮後約 5MB（Supabase 流量超過免費額度）
+    h = {"apikey": env["SUPABASE_SERVICE_KEY"], "Authorization": f"Bearer {env['SUPABASE_SERVICE_KEY']}",
+         "Accept-Encoding": "gzip"}
     if rng:
         h["Range-Unit"] = "items"; h["Range"] = rng
-    return urllib.request.urlopen(urllib.request.Request(env["SUPABASE_URL"] + "/rest/v1/" + path, headers=h), timeout=60).read()
+    # 2026-10-30 雲端 10/29 讀 price_window 深分頁回 500（資料庫忙／查詢逾時）整步失敗；5xx 與逾時改等一下重試，最多 4 次
+    for i in range(4):
+        try:
+            with urllib.request.urlopen(urllib.request.Request(env["SUPABASE_URL"] + "/rest/v1/" + path, headers=h), timeout=60) as r:
+                raw = r.read()
+                if raw and (r.headers.get("Content-Encoding") or "").lower() == "gzip":
+                    import gzip
+                    raw = gzip.decompress(raw)
+                return raw
+        except Exception as e:
+            code = getattr(e, "code", None)
+            if i == 3 or (code is not None and code < 500):
+                raise
+            print(f"  [retry] {path[:40]} {rng or ''} 失敗（{code or type(e).__name__}），{10 * (i + 1)} 秒後重試")
+            time.sleep(10 * (i + 1))
 
 
 def _otc_set(env):
@@ -68,6 +92,18 @@ def _load_prices(env):
     return px
 
 
+def _load_prices_local():
+    """本機 stock_daily → {code:[(date,close,vol)...排序]}；唯讀開啟，夜間爬蟲同時寫入也不互卡。"""
+    import sqlite3
+    c = sqlite3.connect(f"file:{LOCAL_DB}?mode=ro", uri=True, timeout=60)
+    px = {}
+    for code, d, cl, v in c.execute("select code,trade_date,close,volume from stock_daily "
+                                    "where close is not null order by code,trade_date"):
+        px.setdefault(str(code).strip(), []).append((d, float(cl), float(v or 0)))
+    c.close()
+    return px
+
+
 def _eligible(code):
     return code.isdigit() and len(code) == 4 and not code.startswith("00")
 
@@ -77,10 +113,37 @@ def main():
     if not env.get("SUPABASE_SERVICE_KEY"):
         print("[error] 缺 SUPABASE_SERVICE_KEY"); sys.exit(1)
 
+    args = sys.argv[1:]
+    full = "--full" in args
+    days = 5
+    if "--days" in args:
+        days = int(args[args.index("--days") + 1])
+    use_local = LOCAL_DB.exists() and "--cloud" not in args
+    if full and not use_local:
+        print("[error] --full 需要本機完整股價（D:\\stock_data\\wantgoo_full.db）"); sys.exit(1)
+
+    # 2026-10-30 以本機為主：雲端備援只補「本機沒寫到」的日子；最近 N 個交易日本機都寫過 → 不讀股價表直接結束
+    only = None
+    if not use_local and "--force" not in args:
+        recent = [r["trade_date"] for r in json.loads(_sb_get(
+            env, f"price_window?select=trade_date&code=eq.2330&order=trade_date.desc&limit={days}"))]
+        have = {r["trade_date"] for r in json.loads(_sb_get(
+            env, "breadth_daily?select=trade_date&market=eq.all&trade_date=in.(" + ",".join(recent) + ")"))} if recent else set()
+        only = set(recent) - have
+        if not only:
+            print(f"[skip] 最近 {len(recent)} 個交易日（{min(recent) if recent else '-'} ~ {max(recent) if recent else '-'}）"
+                  "本機都已寫入，雲端備援不覆蓋")
+            return
+        print(f"雲端備援：本機缺 {sorted(only)}，只補這幾天")
+
     otc = _otc_set(env)
     print(f"上櫃代號 {len(otc)} 檔")
-    px = _load_prices(env)
-    print(f"price_window 載入 {len(px)} 檔")
+    if use_local:
+        px = _load_prices_local()
+        print(f"本機 stock_daily 載入 {len(px)} 檔")
+    else:
+        px = _load_prices(env)
+        print(f"price_window 載入 {len(px)} 檔")
 
     # 每日每市場累加器：agg[(date,market)] = {...}
     agg = {}
@@ -152,6 +215,18 @@ def main():
             "amt_ratio": round(b["uamt"]/b["damt"], 3) if b["damt"] else None,
         })
     rows.sort(key=lambda r: (r["trade_date"], r["market"]))
+    all_dates = sorted({r["trade_date"] for r in rows})
+    if full:
+        keep = set(all_dates[HIST_MIN - 1:])
+        print(f"--full：寫 {min(keep) if keep else '-'} 起（前面已有 {HIST_MIN} 個交易日）")
+    else:
+        keep = set(all_dates[-days:])
+        if only is not None:
+            keep &= only
+        print(f"只寫最近 {days} 個交易日：{min(keep) if keep else '-'} ~ {max(keep) if keep else '-'}")
+    rows = [r for r in rows if r["trade_date"] in keep]
+    if not rows:
+        print("[error] 沒有可寫入的日子"); sys.exit(1)
     print(f"計算完成 {len(rows)} 列（{len(set(r['trade_date'] for r in rows))} 交易日 × 2 市場）")
 
     # upsert

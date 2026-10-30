@@ -85,16 +85,27 @@ def _sb(env, path, method="GET", body=None, params=None, retries=3):
         # 純 insert：RLS 只開 insert/delete 給匿名端，任何 on_conflict 模式都需要
         # select/update 權限（會被擋）。先 DELETE 當日資料再寫入即可保證不重複。
         "Prefer": "return=minimal",
+        "Accept-Encoding": "gzip",   # 2026-10-29 Supabase 流量超過免費額度：讀資料要求 gzip（約省 80%）
     }
     for attempt in range(retries):
         req = urllib.request.Request(url, data=data, headers=headers, method=method)
         try:
             with urllib.request.urlopen(req, timeout=30) as r:
                 raw = r.read()
+                if raw and (r.headers.get("Content-Encoding") or "").lower() == "gzip":
+                    import gzip
+                    raw = gzip.decompress(raw)
                 return r.status, json.loads(raw) if raw else []
         except urllib.error.HTTPError as e:
             raw = e.read()
-            return e.code, json.loads(raw) if raw else {}
+            # 2026-10-30 錯誤回應（404/409…）也會是 gzip，要先解壓；解不出來就回原文，不讓排程當掉
+            try:
+                if raw and (e.headers.get("Content-Encoding") or "").lower() == "gzip":
+                    import gzip
+                    raw = gzip.decompress(raw)
+                return e.code, json.loads(raw) if raw else {}
+            except Exception:                               # noqa: BLE001
+                return e.code, {"raw": raw[:300].decode("utf-8", "replace") if raw else ""}
         except (urllib.error.URLError, TimeoutError, OSError) as e:
             if attempt < retries - 1:
                 print(f"  [retry] Supabase 連線失敗（{e}），5 秒後重試")

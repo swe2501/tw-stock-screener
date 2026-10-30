@@ -381,15 +381,17 @@ class handler(BaseHTTPRequestHandler):
 
             # 2026-10-27 AI 研究室：7 個角色（＝排程分組）的打卡狀態，存 admin_settings key=office:<角色>（本機 scripts/office_report.py 寫入）
             if action == "admin_office":
-                agents = ("news", "chip", "tech", "macro", "risk", "etf", "data")
-                q = "in.(" + ",".join('"office:%s"' % a for a in agents) + ")"
+                # 2026-10-30 加 boss（雲端總管報告）；boss:queue 重跑申請、boss:local 本機心跳一併給研究室顯示
+                agents = ("news", "chip", "tech", "macro", "risk", "etf", "data", "boss")
+                q = "in.(" + ",".join(['"office:%s"' % a for a in agents] + ['"boss:queue"', '"boss:local"']) + ")"
                 st2, rows = _rest("/admin_settings?select=key,value,updated_at&key=" + urllib.parse.quote(q, safe='().,"'))
                 if st2 is None:
                     return self._json(500, rows)
                 out = {}
                 for r in (rows if isinstance(rows, list) else []):
                     try:
-                        out[r["key"].split(":", 1)[1]] = json.loads(r.get("value") or "{}")
+                        k = r["key"]
+                        out[("_" + k.split(":", 1)[1]) if k.startswith("boss:") else k.split(":", 1)[1]] = json.loads(r.get("value") or "{}")
                     except Exception:
                         pass
                 return self._json(200, {"agents": out})

@@ -558,11 +558,12 @@ page_cache 是 **uat 與 prod 共用**同一個 Supabase。若推盤中到原 ki
 |---|---|---|---|
 | `WantgooDailyScrape` | 週一～五 19:00（可喚醒） | `scripts\run_daily_job.bat` | 夜間主排程：分點、法人、收盤價、ETF、總經、廣度、快取等約 66 步；執行上限 10 小時（2026-10-29 由 8 小時調高，需系統管理員權限設定） |
 | `AI_stock_Intraday` | 週一～五 08:55（可喚醒），常駐到 16:01 | `scripts\run_intraday.bat` | 盤中掃盤 `intraday_push.py --loop`（09:00–13:35 每 35 秒）；收盤後只記匯率每 5 分鐘到 16:00（10/28 起）；卡住 5 分鐘會自動重啟（10/29 起，見下方）；13:48、13:56 另呼叫 `sgx_intraday.py` 抓富台指日盤分時（10/29 起，見下方） |
-| `CodexHotTopicsHourly` | 週一～五 09:00 起每小時，共 5 小時 | `scripts\run_codex_topics.bat` | 話題族群（桌面版 Codex CLI） |
+| `CodexHotTopicsHourly` | 週一～五 09:00 起每小時，共 5 小時 | `scripts\run_codex_topics.bat` | 話題族群（桌面版 Codex CLI）；10/29 起執行前先用 `trim_log.py` 把 codex_topics.log 修剪成只留最近 7 天 |
 | `AI_stock_news_feed` | 每天 06:30 起每 4 小時 | `scripts\run_news_feed.bat` | 每日新聞 |
 | `AI_stock_margin_catchup` | 週二～六 09:00 | `scripts\run_margin_catchup.bat` | 融資維持率補當日值 |
 | `AI_stock_taifex_catchup` | 週二～六 08:30 | `scripts\run_taifex_catchup.bat` | 期交所資料補跑 |
 | `BrokerRankingsWeekly` | 週六 03:00（可喚醒） | `scripts\run_rankings_weekly.bat` | 主力分點週排行＋股利 |
+| `BossRunner` | 每 5 分鐘（2026-10-30 起） | `pythonw.exe scripts\boss_runner.py --log`（不跳視窗；手動可跑 `run_boss_runner.bat`） | AI 研究室總管的本機助手：回報各排程狀態（admin_settings `boss:local`），並執行雲端總管申請的白名單重跑（`boss:queue`）；紀錄 `scripts\boss_runner.log` 只留 7 天 |
 
 - 每個任務的完整設定已匯出到 `scripts/scheduled_tasks/<任務名稱>.xml`，可直接用來重建。
 - 批次檔只能寫英文、CRLF 換行（中文會讓排程卡死）；**正在執行的 .bat 不能改**（cmd 邊跑邊讀檔），要等它跑完再換。
@@ -571,6 +572,14 @@ page_cache 是 **uat 與 prod 共用**同一個 Supabase。若推盤中到原 ki
 - **富台指日盤分時（2026-10-28 加）**：首頁富台指卡片的小圖。富台指沒有免費官方分時，玩股網的一分鐘線只保留「目前交易日」，14:00 一換成夜盤就抓不回當天日盤，所以由盤中排程在 13:48、13:56 各呼叫一次 `scripts\sgx_intraday.py`（Playwright 沿用玩股網登入 profile，子程式上限 180 秒，失敗不影響盤中主流程），只取 08:45–13:45，5 分鐘一點寫 page_cache `mini_SGX`，另存 `prev`（前一交易日收盤，小圖紅綠分界）。電腦那天沒開，當天就沒有富台指小圖，事後補不回來。卡片大數字仍是晚上 `market_indicators.py` 抓的（那時已是夜盤價），所以大數字跟小圖最後一點不同是正常的。
 - **富台指盤中大數字（2026-10-29 加）**：`intraday_push.py` 主迴圈在 08:45–13:47 每 60 秒用 urllib 讀玩股網 `/global/all-quote-info`（不需登入、不開瀏覽器），取 STWN& 當日日盤最新價與前一交易日日盤收盤，寫 page_cache `quote_SGX`。首頁富台指卡片與頂部資金軌：`quote_SGX` 比 `market_indicators` 那筆新（updated_at）才採用，數字下方標「日盤 HH:MM 即時／最新」；晚上 `market_indicators.py` 寫入夜盤價後自動切回夜盤價。
 - **上漲下跌亮燈區快照（2026-10-28 加）**：夜間排程的 `page_cache_push.py` 尾段呼叫 `scripts\limitup_precompute.py`，用 origin/prod、origin/uat 各自的程式算好寫 page_cache `limitup`／`limitup@uat`；`/api/screen?stat=limitup` 先讀快照（約 0.3 秒），沒有才即時算（約 28 秒）。手動補跑：`python scripts\limitup_precompute.py`。
+
+- **AI 研究室總管（2026-10-30 建立）**：用戶要的是「一堆 AI Agent 在辦公室工作」，第一個是總管：雲端 Claude Agent 定時巡查全部排程、判斷原因、寫報告寄信、必要時申請重跑。網站的 AI 研究室就是這個雲端辦公室的畫面。
+  - 分工：`lib/boss.py`（收集狀態＋規則判定、重跑白名單、存報告；後端與本機共用）→ 網站 `/api/alert?kind=boss_status`（讀）、`kind=boss_report`（存報告／申請重跑／寄信，每天最多 4 封）→ 本機 `BossRunner` 執行重跑。
+  - 安全：雲端只拿到專用通行碼 `BOSS_TOKEN`（header `x-boss-token`），拿不到資料庫金鑰，只能做上面三件事。通行碼在 `.env.local`，要設到 Vercel 環境變數與 Claude 雲端環境（用戶自己設定）。
+  - 重跑白名單在 `lib/boss.py` 的 `TASKS`／`STEPS`；每項每天最多 2 次；夜間主排程執行中時單一步驟先排隊、超過 6 小時作廢；玩股網爬蟲、週排行、需登入的程式不在白名單。
+  - `office_step.py` 失敗時把最後 40 行輸出（最多 1500 字）存進研究室步驟的 `tail`，總管靠它判斷原因；程式結束後最多再等 5 秒輸出（避免殘留的瀏覽器程序卡住排程）。
+  - 研究室頁面右下角「總管」角色顯示最新報告、重跑申請、巡查紀錄；橘燈＝注意、紅燈＝有問題或超過 26 小時沒巡查。
+  - 雲端排程（Claude 雲端排程，綁用戶的 Claude 帳號）：每天台灣 08:30、14:30、21:30 各巡查一次。管理頁：https://claude.ai/code/routines
 
 ### C. 任何帳號的 Claude Code 怎麼操作（PowerShell）
 - 2026-10-29 夜間排程被 8 小時上限砍掉（玩股網整晚逾時，停在第 57 步，網頁快照沒更新）。處理：
