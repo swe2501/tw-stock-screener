@@ -33,7 +33,7 @@ AGENT = {
     "upload_hot_topics": "news", "macro_events": "news", "mops_announce": "news", "catalyst_lawshow": "news",
     "run_codex_topics": "news", "news_feed": "news",
     # 資料管理員
-    "upload_otc_names": "data", "upload_exdiv_factor": "data", "gen_listed_codes": "data", "backfill_gaps": "data",
+    "upload_otc_names": "data", "sj_daily": "data", "upload_exdiv_factor": "data", "gen_listed_codes": "data", "backfill_gaps": "data",
     "fundamentals": "data", "themes_push": "data", "page_cache_push": "data", "job_health": "data",
     "chip_brief": "data", "daily_slogan_rotate": "data", "free_float": "data", "dividends_push": "data",
     "goodinfo_concepts": "data",
