@@ -1,4 +1,6 @@
--- PREPARED ONLY: shared UAT/production activation requires reviewed approval.
+-- APPLIED 2026-11-01 to bruqrbvbjxntgoljxsne after explicit user approval.
+-- Initial migration: do not rerun. Source trigger and no-op rewrite tests passed inside ROLLBACK.
+-- Anon catalog and UAT API verified complete: 2259 distinct securities, 5 public columns.
 -- Keep source tables for their non-master fields; do not delete history or rename client fields.
 begin;
 set local lock_timeout='3s';

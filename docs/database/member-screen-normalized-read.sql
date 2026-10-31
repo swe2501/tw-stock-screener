@@ -1,4 +1,6 @@
--- PREPARED ONLY. Existing RPC reads normalized details; old write/export payloads retained until separate contract migration.
+-- APPLIED 2026-11-01 to bruqrbvbjxntgoljxsne after explicit user approval.
+-- Live calendar compatibility and owner/anon isolation tests passed, with test transaction rolled back.
+-- Original records/items/names unchanged. Old write/export JSON retained until contract migration.
 begin;
 set local lock_timeout='3s';
 create or replace function public.member_screen_calendar(p_month date default null) returns jsonb

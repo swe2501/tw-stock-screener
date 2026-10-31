@@ -17,12 +17,12 @@ Supabase 組織 Usage 顯示：週期 2026-10-16 至 2026-11-16，Egress 6.091 /
 - 日曆相同帳號／月份短暫快取 20 秒，合併同時讀取，最多 8 個月，不進共用快取；帳號切換、保存、刪除失效，generation 防止寫入前請求晚到覆蓋。保存前強制重新讀伺服器日期，不能用快取決定日期或授權。
 - 僅觀察到既有 6.091 GB 組織總傳輸量，尚未取得各 URL 的線上 byte 歸因。單元測試證明四個同時請求合為一次 upstream，非宣稱實際月費或總流量已下降 75%。流量透過 Vercel 仍占其額度，不是無限免費。
 
-## 已備妥、尚未線上套用的 SQL
+## 已於 2026-11-01 明確批准並線上套用的 SQL
 
 1. member-screen-normalized-read.sql：既有 member_screen_calendar 簽章與日期政策不變，stocks 改由 member_screen_record_items JOIN security_observed_names 重建；會員只能讀本人的有效紀錄。舊寫入、任務驗證與匯出仍保留相容，暫不刪 JSON。
 2. security-master-read-bridge.sql：三個現有來源表以 statement trigger 更新 security_master，採既有名稱優先序、變更才更新，serial advisory lock 保護更新；不改 Windows 排程。security_catalog view 明確投影公開的 code/name/market/instrument_type/industry，不含任何會員欄位，僅開 select。來源刪除不刪主檔，避免歷史 FK 斷裂；下市／代號重用等生命週期仍須獨立規劃。
 
-兩份 SQL 影響共用正式資料庫，必須備份現有函數／索引／來源與核對後另行取得具體批准。程式有相容回退，可先推 UAT，不把 SQL 檔進版控等同自動執行。
+兩份 SQL 影響共用正式資料庫；本次已取得使用者具體批准，備份現有函數／資料／來源，確認同名物件不存在後才套用。程式原保留相容回退，現在可讀取已啟用的正規化目錄與日曆明細；SQL 檔進版控本身仍不會自動執行。
 
 ## 後續批次與刪除前提
 
@@ -41,3 +41,16 @@ Supabase 組織 Usage 顯示：週期 2026-10-16 至 2026-11-16，Egress 6.091 /
 - 隔離 PGlite：主檔變更同步、anon 目錄唯讀與禁止刷新；日曆 RPC 在舊 JSON 暫空的隔離情境仍由新明細完整重建；原 RLS／歷史快照／CAS／重試／墓碑維持。
 - 真實瀏覽器 mock 回歸：日曆明暗、320/375/768/1366、保存與刪除；測試直接移除伺服器 fixture 時同步清掉讀取快取，以符合新短暫快取行為。
 - 50 個 inline scripts 語法與 API 12/12 預算通過。
+
+
+## 線上啟用證據
+
+- 使用者明確允許本次兩份 SQL，非沿用先前不同 migration 的批准。
+- 七張相關表已分頁備份且可讀性／SHA-256 校驗通過，原日曆函數與 ACL、原來源觸發器狀態另存本機，無會員內容進 Git。
+- 套用前：15 筆日曆（11 有效）、297 明細、157 觀測名稱、2259 證券；重建差異 0，security_catalog／refresh function／來源觸發器原先皆不存在。
+- 兩份 migration 套用成功。線上以 authenticated 驗證歷史月份日曆的股票清單、日期政策、owner/request 欄位不外洩；換其他 claim 及 anon 驗證會員隔離。
+- 來源名稱更新能同步主檔，重複相同更新不重寫 master.updated_at；歷史選股名稱不變。所有測試更新位於 BEGIN/ROLLBACK，六張歷史及來源表事後與備份完全相同。
+- anon 實際分頁可讀取 2259 筆目錄，只含 code/name/market/instrument_type/industry，無會員欄位；匿名及一般會員不能寫目錄或呼叫 refresh。
+- 部署 UAT 26944f2e 的 /api/prices?action=security_catalog 實測回傳 source=security_catalog、version=1、2259 筆、2259 個不同代號；上市 market=tse，0050 類型 etf，沒有 1000 筆截斷。
+- 同一個共享 DB 的日曆 RPC 現在 UAT／正式站均讀新明細；本次沒有發布正式站程式。因此市場快照 gateway 與新前端目錄載入器目前只在 UAT 程式啟用。
+- 不新增資料表、不清空舊 JSON、不改會員 Auth、排程或收費方案。11/30 超額警告是否解除，須後續觀察實際用量，不能以遷移成功代替帳務狀態。
