@@ -366,7 +366,7 @@
     .chart-feature-panel>a{display:none!important;}
     .chart-feature-panel>span[id$="Opts"]{padding:10px 14px 12px;}
     .sc-fields{display:grid;grid-template-columns:1fr;gap:18px;}
-    .zm3-info{font-size:11px;color:var(--text-muted);line-height:1.5;margin-top:2px;white-space:nowrap;}
+    .zm4-rules{grid-column:1/-1;font-size:12px;color:var(--text-muted);line-height:1.8;padding:4px 12px 12px}.zm4-rules summary{cursor:pointer;color:var(--text);font-size:12px}.zm4-result{font-size:11px;color:var(--text-muted);line-height:1.8;white-space:normal}.zm3-info{font-size:11px;color:var(--text-muted);line-height:1.5;margin-top:2px;white-space:nowrap;}
     .zm3-info b{color:var(--red);}
     .sc-note{font-size:.78rem;color:var(--text-muted);margin-bottom:10px;}
     .checkbox-grid {
@@ -9940,6 +9940,11 @@
             <div class="cb-label">真名三式（多頭回洗反包）</div>
           </div>
         </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="zhenming4" />
+          <div><div class="cb-label">真名四式（滾量守低）</div></div>
+        </label>
+        <details class="zm4-rules"><summary>四式條件說明</summary><p>首根紅 K 實體至少 3%；成交量連續遞增 2～3 根，後續紅黑 K 都計入。量縮後 12 個交易日內，當日最低價同時守住最後出量 K 棒低點與當日五日線即可篩出。</p><p>跌破時剔除；期限內重新守住可再篩入，期限不重算。以量縮首日為第 1 天。本項比對量價條件，整理位置仍需看圖確認。</p></details>
         <article class="zm-hidden-card" id="zhenmingHiddenCard">
           <label class="checkbox-row"><input type="checkbox" id="zhenming_hidden" /><div class="cb-label">真名隱藏式（比大小）</div></label>
           <div class="zm-hidden-options" id="zhenmingHiddenOptions" hidden>
@@ -10832,6 +10837,8 @@
 
     async function doScreen() {
       let hiddenOptions,screenApi=window.__API||'';try{hiddenOptions=window.AcademyZhenmingHidden?.collect();if(hiddenOptions)screenApi=await window.AcademyZhenmingHidden.endpoint();}catch(error){showStatus('<div class="alert alert-error">'+error.message+'</div>');return;}
+      const fourExpected=document.getElementById('zhenming4').checked;
+      if(fourExpected){try{screenApi=await window.AcademyZhenmingFour.endpoint();}catch(error){showStatus('<div class="alert alert-error">'+error.message+'</div>');return;}}
       window.AcademyScreenLog?.beforeScan();
       const dateVal = document.getElementById('date').value;
       const minPrice  = parseFloat(document.getElementById('min_price').value) || 0;
@@ -10908,6 +10915,7 @@
         zhenming1: zhenming1,
         zhenming2: zhenming2,
         zhenming3: zhenming3,
+        zhenming4: fourExpected,
         zhenming_hidden: hiddenOptions,
         sma20_stages: sma20Stages,
         ev357_cheap:     ev357Cheap,
@@ -10923,7 +10931,7 @@
       const jobId = (crypto.randomUUID ? crypto.randomUUID()
         : Date.now() + '-' + Math.random().toString(36).slice(2));
       body.job_id = jobId;
-      _screenJob = { id: jobId, active: true, hidden:!!hiddenOptions, api:screenApi };
+      _screenJob = { id: jobId, active: true, hidden:!!hiddenOptions, four:fourExpected, api:screenApi };
 
       // uat 分支別名(含 git-uat)打自己的同源後端，以便測試尚未上 prod 的篩選規則；其餘(prod/preview/local)維持 prod
       fetch(screenApi+'/api/screen', {
@@ -10944,7 +10952,7 @@
             return;
           }
           lastResults = data.results || [];
-          renderResults(data,!!hiddenOptions);
+          renderResults(data,!!hiddenOptions,fourExpected);
         })
         .catch(err => {
           // 連線被系統中斷（多半是手機切背景）→ 不報錯，改成輪詢領取伺服器算好的結果
@@ -10995,12 +11003,13 @@
         if (!_screenJob || _screenJob.id !== jobId) return;
         if (!data.pending) {                                  // 結果到手
           const hiddenExpected=!!_screenJob.hidden;
+          const fourExpected=!!_screenJob.four;
           _screenJob = null;
           const btn = document.getElementById('submitBtn');
           btn.disabled = false; btn.innerHTML = '開始篩選';
           if (data.error) { showStatus(`<div class="alert alert-error">&#9888; ${data.error}</div>`); return; }
           lastResults = data.results || [];
-          renderResults(data,hiddenExpected);
+          renderResults(data,hiddenExpected,fourExpected);
           return;
         }
       } catch (_) { /* 忽略，繼續輪詢 */ }
@@ -11048,7 +11057,8 @@
       renderTable(filtered);
     }
 
-    function renderResults(data,hiddenExpected=false) {
+    function renderResults(data,hiddenExpected=false,fourExpected=false) {
+      if(fourExpected&&data.zhenming4_applied!==true){_scanStop();lastResults=[];document.getElementById('resultsArea').innerHTML='';showStatus('<div class="alert alert-error">目前連線的後端尚未支援真名四式，這次結果不予顯示。請更新篩選服務後再試。</div>');return;}
       if(hiddenExpected&&data.zhenming_hidden_applied!==true){_scanStop();lastResults=[];document.getElementById('resultsArea').innerHTML='';showStatus('<div class="alert alert-error">目前連線的後端尚未支援真名隱藏式，這次結果不予顯示，請更新後端後再試。</div>');return;}
 
       // 完成：進度補到 100%，並記錄實際耗時供下次估計自適應
@@ -11184,7 +11194,7 @@
                   ? `<span class="data-missing-badge" title="部分篩選條件無法確認（${s.data_missing.map(k=>({'no_black':'無放量黑棒篩選','gap_unverified':'跳空前日資料缺失，請手動排查'}[k]||k)).join('、')}），已放行"></span>`
                   : ''
               }</td>
-            <td class="name-cell">${s.name}${s.sma20_stage ? `<div class="zm3-info">葛蘭碧・階段 ${s.sma20_stage}</div>` : ''}${s.zm3 ? `<div class="zm3-info" title="真名三式：長黑 ${s.zm3.black_date}（−${s.zm3.black_pct}%）後第 ${s.zm3.day_n} 天反包；停損參考 ${s.zm3.stop}（長紅低與洗盤最低取低者）；第一目標 ${s.zm3.target}（長黑前 20 日最高）">三式・長黑 ${s.zm3.black_date.slice(5).replace('-','/')}・½ ${s.zm3.mid}・第${s.zm3.day_n}天${s.zm3.vol ? '・<b>帶量</b>' : ''}<br>停損 ${s.zm3.stop}・目標 ${s.zm3.target}</div>` : ''}${s.ev357 ? `<div class="zm3-info" style="color:${s.ev357.band==='cheap'?'#c0392b':(s.ev357.band==='expensive'?'#148f77':'var(--text-muted)')}" title="連續5年配息；D=近5年均現金股利 ${s.ev357.d}｜現金殖利率=D÷現價｜便宜價(7%)=${s.ev357.cheap_price} 合理價(5%)=${s.ev357.fair_price} 昂貴價(3%)=${s.ev357.exp_price}"><b>${s.ev357.band==='cheap'?'便宜·買':(s.ev357.band==='expensive'?'昂貴·賣光':'合理·賣')}</b> 殖利率 ${s.ev357.yield}%｜D ${s.ev357.d}（便宜 ${s.ev357.cheap_price}／合理 ${s.ev357.fair_price}／昂貴 ${s.ev357.exp_price}）</div>` : ''}</td>
+            <td class="name-cell">${s.name}${s.zm4 ? `<div class="zm4-result">四式・第 ${Number(s.zm4.day_n)}／12 天 · 守低 ${Number(s.zm4.support_low)} · 五日線 ${Number(s.zm4.ma5)}</div>` : ''}${s.sma20_stage ? `<div class="zm3-info">葛蘭碧・階段 ${s.sma20_stage}</div>` : ''}${s.zm3 ? `<div class="zm3-info" title="真名三式：長黑 ${s.zm3.black_date}（−${s.zm3.black_pct}%）後第 ${s.zm3.day_n} 天反包；停損參考 ${s.zm3.stop}（長紅低與洗盤最低取低者）；第一目標 ${s.zm3.target}（長黑前 20 日最高）">三式・長黑 ${s.zm3.black_date.slice(5).replace('-','/')}・½ ${s.zm3.mid}・第${s.zm3.day_n}天${s.zm3.vol ? '・<b>帶量</b>' : ''}<br>停損 ${s.zm3.stop}・目標 ${s.zm3.target}</div>` : ''}${s.ev357 ? `<div class="zm3-info" style="color:${s.ev357.band==='cheap'?'#c0392b':(s.ev357.band==='expensive'?'#148f77':'var(--text-muted)')}" title="連續5年配息；D=近5年均現金股利 ${s.ev357.d}｜現金殖利率=D÷現價｜便宜價(7%)=${s.ev357.cheap_price} 合理價(5%)=${s.ev357.fair_price} 昂貴價(3%)=${s.ev357.exp_price}"><b>${s.ev357.band==='cheap'?'便宜·買':(s.ev357.band==='expensive'?'昂貴·賣光':'合理·賣')}</b> 殖利率 ${s.ev357.yield}%｜D ${s.ev357.d}（便宜 ${s.ev357.cheap_price}／合理 ${s.ev357.fair_price}／昂貴 ${s.ev357.exp_price}）</div>` : ''}</td>
             <td class="neutral col-open">${s.open}</td>
             <td class="neutral col-high">${s.high}</td>
             <td class="neutral col-low">${s.low}</td>
@@ -18113,6 +18123,7 @@
 <link rel="stylesheet" href="assets/onboarding-tour.css?v=mist-edge-mcopen-20261027">
 <script src="assets/onboarding-tour.js?v=mist-edge-20261026" defer></script>
 <link rel="stylesheet" href="assets/zhenming-hidden.css?v=6">
+<script src="assets/zhenming-four.js"></script>
 <script src="assets/zhenming-hidden.js?v=5" defer></script>
 <script src="assets/screen-log.js?v=calendar-direct31" defer></script>
 <script src="assets/pattern-focus.js?v=2" defer></script>

@@ -2418,6 +2418,60 @@ def zhenming3_at(bars, t=None):
             "stop": round(stop, 2), "target": round(target, 2)}
 
 
+# 真名四式：依使用者定案的量價條件；不自行加入未定義的底部／多頭門檻。
+def zhenming4_at(bars, t=None):
+    """Daily OHLCV, oldest first. Re-entry is evaluated independently each day.
+    First expansion: red body >=3% of close. Maximal rising-volume run: 2-3 bars.
+    First shrink is day 1; keep through day 12. Today's low must hold both the
+    last expansion bar's low and today's SMA5. A prior breach does not reset age.
+    Equal support counts as held; missing/non-finite OHLCV fails closed.
+    """
+    if t is None:
+        t = len(bars) - 1
+    if not isinstance(t, int) or t < 6 or t >= len(bars):
+        return None
+    def valid(row):
+        if not isinstance(row, (list, tuple)) or len(row) < 6:
+            return False
+        nums = row[1:6]
+        return (all(isinstance(x, (int, float)) and not isinstance(x, bool)
+                    and math.isfinite(x) and x > 0 for x in nums)
+                and row[2] >= max(row[1], row[4])
+                and row[3] <= min(row[1], row[4]))
+    if not all(valid(x) for x in bars[max(0, t-18):t+1]):
+        return None
+    low = bars[t][3]
+    sma5 = sum(x[4] for x in bars[t-4:t+1]) / 5
+    if low < sma5:
+        return None
+    for end in range(t-1, max(0, t-13), -1):
+        age = t - end
+        # A later volume rise must not erase an older setup still within its window.
+        if bars[end+1][5] >= bars[end][5]:
+            continue
+        start = end
+        while start > 0 and valid(bars[start-1]) and bars[start][5] > bars[start-1][5]:
+            start -= 1
+            if end - start >= 4:
+                break
+        start += 1
+        count = end - start + 1
+        if count not in (2, 3) or start < 2:
+            continue
+        first = bars[start]
+        if first[4] <= first[1] or (first[4]-first[1])/first[4]*100 < 3 - 1e-9:
+            continue
+        if low < bars[end][3]:
+            continue
+        return {"start_date": first[0], "anchor_date": bars[end][0],
+                "shrink_date": bars[end+1][0], "rolling_bars": count,
+                "day_n": age, "window_days": 12,
+                "support_low": round(bars[end][3], 4), "ma5": round(sma5, 4),
+                "first_body_pct": round((first[4]-first[1])/first[4]*100, 2),
+                "basis": "low", "rules_version": 1}
+    return None
+
+
 def _parse_mi_index_rows(rows, code_name_map, col_o, col_h, col_l, col_c, col_v, col_sign, col_diff):
     """Parse stock rows from MI_INDEX into a dict. Supports old and new column layouts."""
     stocks = {}
@@ -2961,6 +3015,7 @@ def screen(params):
     check_zhenming1  = bool(params.get("zhenming1", False))
     check_zhenming2  = bool(params.get("zhenming2", False))
     check_zhenming3  = bool(params.get("zhenming3", False))
+    check_zhenming4  = params.get("zhenming4") is True
     # 企業價值投資法（存股 357）：3 個分級 checkbox（可複選）
     want_357_cheap     = bool(params.get("ev357_cheap", False))
     want_357_fair      = bool(params.get("ev357_fair", False))
@@ -3065,7 +3120,7 @@ def screen(params):
         candidates[code] = s
 
     if not candidates:
-        return {"date": display_date, "total": len(all_stocks), "count": 0, "results": [], "zhenming_hidden_applied": bool(hidden)}
+        return {"date": display_date, "total": len(all_stocks), "count": 0, "results": [], "zhenming_hidden_applied": bool(hidden), "zhenming4_applied": check_zhenming4}
 
     # ── Step 3a: 跳空篩選 → 只試「前一個非週末日曆日」MI_INDEX（天條：跳空只跟前一交易日比）
     prev_mi_gap: dict = {}
@@ -3112,7 +3167,7 @@ def screen(params):
 
     # ── price_window 逐股讀（真名/MACD/放量;涵蓋歷史日 → 修正「回搜近期日期漏股」如 3443/8-11）──
     need_pw = (vol_mult > 0 or shrink_mult > 0 or bool(macd_mode)
-               or check_zhenming1 or check_zhenming2 or check_zhenming3 or bool(hidden) or bool(sma20_stages)
+               or check_zhenming1 or check_zhenming2 or check_zhenming3 or check_zhenming4 or bool(hidden) or bool(sma20_stages)
                or check_harami_bull or check_harami_bear)   # 母子線需 MA20 判趨勢 → 抓歷史
     hidden_market = []
     if hidden:
@@ -3421,6 +3476,14 @@ def screen(params):
             if not zm3:
                 continue
 
+        zm4 = None
+        if check_zhenming4:
+            bars = (pw_data.get(code) or {}).get("bars") or []
+            target_day = f"{actual_date[:4]}-{actual_date[4:6]}-{actual_date[6:]}"
+            zm4 = zhenming4_at(bars) if bars and bars[-1][0] == target_day else None
+            if not zm4:
+                continue
+
         sma20_hit = 0
         if sma20_stages:
             bars = (pw_data.get(code) or {}).get("bars") or []
@@ -3450,6 +3513,8 @@ def screen(params):
             item["zhenming_hidden"] = hidden_result
         if zm3:
             item["zm3"] = zm3
+        if zm4:
+            item["zm4"] = zm4
         if sma20_hit:
             item["sma20_stage"] = sma20_hit
         if _ev357:
@@ -3475,7 +3540,7 @@ def screen(params):
         "total": len(all_stocks),
         "count": len(results),
         "results": results,
-        "zhenming_hidden_applied": bool(hidden),
+        "zhenming_hidden_applied": bool(hidden), "zhenming4_applied": check_zhenming4,
     }
 
 

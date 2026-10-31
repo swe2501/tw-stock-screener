@@ -5,7 +5,7 @@ const root=path.resolve(__dirname,'..'),output=process.env.QA_OUTPUT||require('n
 (async()=>{const browser=await chromium.launch({channel:'msedge',headless:true});try{
  const page=await browser.newPage({viewport:{width:1512,height:1050}}),errors=[];
  page.on('pageerror',e=>errors.push(e.stack||e.message));
- await page.addInitScript(()=>{localStorage.setItem('sb_token','fixture');localStorage.setItem('sb_user',JSON.stringify({id:'full-page-fixture',email:'fixture@example.test'}));});
+ await page.addInitScript(()=>{localStorage.setItem('fqi_onboarded_v1','1');localStorage.setItem('sb_token','fixture');localStorage.setItem('sb_user',JSON.stringify({id:'full-page-fixture',email:'fixture@example.test'}));});
  await page.route('**/*',r=>{const u=new URL(r.request().url());if(u.pathname==='/api/broker_watch')return r.fulfill({json:[]});if(u.origin==='https://full-page.fixture.test'){
   const file=path.resolve(root,'apps/web','.'+decodeURIComponent(u.pathname));
   if(file.startsWith(root+path.sep)&&fs.existsSync(file)&&fs.statSync(file).isFile())return file.endsWith('index.html')?r.fulfill({contentType:'text/html',body:fs.readFileSync(file,'utf8').replace('window.SITE_GATE_ON = true','window.SITE_GATE_ON = false')}):r.fulfill({path:file});
