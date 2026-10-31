@@ -2,7 +2,7 @@
 otc_market.py — 上櫃(櫃買)市場彙總,供首頁 §1/§2/§3 上市/上櫃分列(全即時)。
   三大法人金額: TPEx OpenAPI tpex_3insti_summary(外資/投信/自營/合計,元)
   漲跌家數:     TPEx OpenAPI tpex_mainboard_daily_close_quotes(過濾 4 碼上櫃股票,算漲/跌/平+漲跌停)
-  融資融券:     玩股網 two/twoA(需登入 .wantgoo_profile;twoA=融資金額仟元、two=融資張+融券張+維持率)
+  融資融券:     櫃買中心 margin/balance 指定日期表尾合計(官方、有日期；2026-10-31 起取代玩股網 two/twoA，官方取不到才退回)；維持率取本站 margin_maint_split
 → Supabase otc_market_daily(trade_date PK)。
 用法：python scripts/otc_market.py
 """
@@ -77,6 +77,45 @@ def fetch_breadth(iso=None):
     }
 
 
+def tpex_margin_summary(iso):
+    """2026-10-31 上櫃融資融券「官方」合計（櫃買中心 margin/balance 指定日期，表尾 summary）。
+    回 {fin_bal_k, fin_prev_k, fin_bal_lots, short_lots}；該日尚未公布或日期不符回 {}。
+    取代玩股網 two/twoA（回應沒有日期、要登入）；10/30 實測融資金 2,053.0 億與玩股網 twoA 相同。"""
+    url = "https://www.tpex.org.tw/www/zh-tw/margin/balance?date=" + iso.replace("-", "/")
+    try:
+        d = json.loads(urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"}),
+                                              timeout=40, context=_CTX).read())
+    except Exception as e:
+        print(f"[warn] 櫃買融資合計讀取失敗 {type(e).__name__}")
+        return {}
+    if str(d.get("date") or "").replace("/", "").replace("-", "") != iso.replace("-", ""):
+        return {}
+    tb = (d.get("tables") or [{}])[0]
+    if len(tb.get("data") or []) < 100:          # 當日尚未公布時表是空的
+        return {}
+    out = {}
+    for row in tb.get("summary") or []:
+        label = str(row[1] if len(row) > 1 else "")
+        if "融資金" in label:                    # 融資金(仟元)：2前日餘額 … 6今日餘額
+            out["fin_prev_k"] = _num(row[2]); out["fin_bal_k"] = _num(row[6])
+        elif "合計" in label:                    # 合計(張)：6資餘額 … 14券餘額
+            out["fin_bal_lots"] = _num(row[6]); out["short_lots"] = _num(row[14])
+    return {k: (int(v) if v is not None else None) for k, v in out.items()} if out.get("fin_bal_k") else {}
+
+
+def otc_maint_from_split(env, iso):
+    """上櫃融資維持率（含ETF）＝本站自算 margin_maint_split.otc_ratio（margin_maintenance_calc 寫入）。沒有回 None。"""
+    try:
+        url = (f"{env['SUPABASE_URL']}/rest/v1/margin_maint_split?select=otc_ratio"
+               f"&trade_date=eq.{iso}&exclude_etf=eq.false")
+        req = urllib.request.Request(url, headers={"apikey": env["SUPABASE_SERVICE_KEY"],
+                                                   "Authorization": f"Bearer {env['SUPABASE_SERVICE_KEY']}"})
+        rows = json.loads(urllib.request.urlopen(req, timeout=30).read())
+        return rows[0]["otc_ratio"] if rows else None
+    except Exception:
+        return None
+
+
 async def fetch_margin_otc():
     """玩股網 two/twoA 上櫃融資融券(需登入)。回 {fin_bal_k, fin_prev_k, short_lots, fin_maint}。"""
     out = {}
@@ -132,10 +171,15 @@ def main():
     # 2026-10-30 --no-margin：盤後 16:00 那一輪用。玩股網融資回應沒有日期、融資資料晚上才公布，
     # 下午抓會把前一日融資寫進當日 → 只寫法人＋家數，融資留給夜間排程
     if "--no-margin" not in sys.argv:
-        try:
-            row.update(asyncio.run(fetch_margin_otc()))
-        except Exception as e:
-            print(f"[warn] 上櫃融資失敗: {str(e)[:80]}")
+        # 2026-10-31 上櫃融資改櫃買官方合計（有日期）；維持率取本站自算表。官方當日還沒出來就不寫融資欄（不拿前一日充數）
+        m = tpex_margin_summary(row["trade_date"])
+        if m:
+            row.update(m)
+            mt = otc_maint_from_split(env, row["trade_date"])
+            if mt is not None:
+                row["fin_maint"] = mt
+        else:
+            print(f"[warn] 櫃買 {row['trade_date']} 融資合計尚未公布，本次不寫融資欄")
     print(f"{row['trade_date']} 法人:外資{row['foreign_net']/1e8:.1f}/投信{row['trust_net']/1e8:.1f}/自營{row['dealer_net']/1e8:.1f}/合計{row['total_net']/1e8:.1f}億 "
           f"| 家數 漲{row.get('up')}/跌{row.get('down')}/平{row.get('flat')} 漲停{row.get('up_limit')}/跌停{row.get('down_limit')} "
           f"| 融資{(row.get('fin_bal_k') or 0)/1e5:.1f}億 維持率{row.get('fin_maint')}")
