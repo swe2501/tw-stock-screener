@@ -80,6 +80,89 @@ def listed_fin_and_close():
     return fin, close, mdate
 
 
+def listed_fin_on(iso):
+    """2026-10-31 上市逐股融資今日餘額(張)，指定交易日（TWSE rwd MI_MARGN selectType=ALL）。
+    原用 openapi MI_MARGN（不帶日期、常慢一日）。當日尚未公布回 {}。"""
+    d = _gj(f"https://www.twse.com.tw/rwd/zh/marginTrading/MI_MARGN?date={iso.replace('-', '')}&selectType=ALL&response=json")
+    if d.get("stat") != "OK" or str(d.get("date")) != iso.replace("-", ""):
+        return {}
+    fin = {}
+    for t in d.get("tables") or []:
+        rows = t.get("data") or []
+        if len(rows) < 100:          # 第一張是信用交易統計(3 列)，逐股表上千列
+            continue
+        for r in rows:
+            c = str(r[0]).strip(); v = _pf(r[6])     # 0代號 1名稱 2買進 3賣出 4現金償還 5前日餘額 6今日餘額
+            if c and c[:1].isdigit() and v is not None:
+                fin[c] = v
+    return fin
+
+
+def close_on(conn, iso, market):
+    """指定交易日全部收盤（含 ETF，維持率分子要算 ETF 融資）。
+    上市：證交所 STOCK_DAY_ALL 當日 CSV（chip_brief._day_all，核對日期）；上櫃：TPEx 收盤行情（核對日期）。
+    官方取不到時退回本機 stock_daily（只有個股、沒有 ETF → 會記入 join 缺漏）。"""
+    out = {}
+    try:
+        if market == "otc":
+            rows = _gj("https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes")
+            for r in rows:
+                if _roc_iso(r.get("Date")) == iso:
+                    c, cl = str(r.get("SecuritiesCompanyCode") or "").strip(), _pf(r.get("Close"))
+                    if c and cl is not None:
+                        out[c] = cl
+        else:
+            import chip_brief
+            for r in chip_brief._day_all(iso):
+                cl = _pf(r.get("ClosingPrice"))
+                if cl is not None:
+                    out[str(r.get("Code")).strip()] = cl
+    except Exception as e:
+        print(f"[warn] {market} 官方收盤失敗 {type(e).__name__}")
+    if len(out) < 300:
+        print(f"[warn] {market} 官方 {iso} 收盤不足（{len(out)}），退回本機 stock_daily（不含 ETF）")
+        q = ("select code, close from stock_daily where trade_date=? and market='otc' and close is not null" if market == "otc"
+             else "select code, close from stock_daily where trade_date=? and (market='twse' or market is null) and close is not null")
+        out.update({c: v for c, v in conn.execute(q, (iso,))})
+    return out
+
+
+def twse_ms_loan_k_on(iso):
+    """上市含ETF融資金額今日餘額(仟元)，指定交易日（TWSE 信用交易統計 MS）。"""
+    d = _gj(f"https://www.twse.com.tw/rwd/zh/marginTrading/MI_MARGN?date={iso.replace('-', '')}&selectType=MS&response=json")
+    if d.get("stat") != "OK" or str(d.get("date")) != iso.replace("-", ""):
+        return None
+    for r in d["tables"][0]["data"]:
+        if "融資金額" in str(r[0]):
+            return _pf(r[5])
+    return None
+
+
+def _done_dates(env, iso):
+    url = f"{env['SUPABASE_URL']}/rest/v1/margin_maint_split?select=exclude_etf&trade_date=eq.{iso}"
+    req = urllib.request.Request(url, headers={"apikey": env["SUPABASE_SERVICE_KEY"],
+                                               "Authorization": f"Bearer {env['SUPABASE_SERVICE_KEY']}"})
+    try:
+        return len(json.loads(urllib.request.urlopen(req, timeout=30).read()))
+    except Exception:
+        return 0
+
+
+def otc_fin_on(iso):
+    """上櫃逐股融資餘額(張)，指定交易日（TPEx margin/balance）。"""
+    d = _gj("https://www.tpex.org.tw/www/zh-tw/margin/balance?date=" + iso.replace("-", "/"))
+    tb = (d.get("tables") or [{}])[0]
+    fld = tb.get("fields") or []
+    try: i_code, i_bal = fld.index("代號"), fld.index("資餘額")
+    except ValueError: i_code, i_bal = 0, 6
+    fin = {}
+    for row in tb.get("data") or []:
+        c = str(row[i_code]).strip(); v = _pf(row[i_bal])
+        if c and c[:1].isdigit() and v is not None:
+            fin[c] = v
+    return fin
+
+
 def otc_fin_and_close():
     """上櫃融資(張)＋收盤，皆用『收盤行情的實際交易日』對齊（避免假日帶今天回空）。"""
     close, otc_date_roc = {}, None
@@ -201,14 +284,18 @@ def main():
         print("[error] 缺 SUPABASE_SERVICE_KEY"); sys.exit(1)
     conn = sqlite3.connect(str(DB_PATH)); conn.execute("pragma busy_timeout=60000")
 
-    # 2026-10-24 休市日（含週末、颱風等臨時休市）不寫：10/23、10/24 曾照抓寫入與 10/22 幾乎相同的假資料列
-    today_tw = datetime.now(timezone(timedelta(hours=8))).date()
-    import wantgoo_scraper as _ws
-    if today_tw.weekday() >= 5 or _ws.is_market_holiday(today_tw):
-        print(f"[skip] {today_tw} 非交易日，不計算融資維持率三組"); return
-
-    lfin, lclose, _ = listed_fin_and_close()
-    ofin, oclose = otc_fin_and_close()
+    # 2026-10-31 改：目標日＝本機股價最新交易日；已算過(含/扣兩列)就跳過(--force 可重算)。
+    #   原本用「今天是否週末/休市」判斷：週六 09:00 補跑把週五資料也一起跳過，週五維持率一直沒算。
+    #   各來源都取目標日（原 openapi 不帶日期、常慢一日；休市日因目標日是上一交易日且已算過，不會寫假資料）。
+    date = conn.execute("select max(trade_date) from stock_daily where market='twse' or market is null").fetchone()[0]
+    if not date:
+        print("[abort] 本機無股價"); return
+    if _done_dates(env, date) >= 2 and "--force" not in sys.argv:
+        print(f"[skip] {date} 融資維持率三組已算過"); return
+    lfin = listed_fin_on(date)
+    lclose = close_on(conn, date, "twse")
+    ofin = otc_fin_on(date)
+    oclose = close_on(conn, date, "otc")
     print(f"上市融資 {len(lfin)} 檔 / 收盤 {len(lclose)}；上櫃融資 {len(ofin)} 檔 / 收盤 {len(oclose)}")
 
     # 防呆：任一市場的「融資張」或「收盤」整批抓空(來源暫時失敗)→ 不覆寫，保留既有，待補跑重算。
@@ -221,7 +308,7 @@ def main():
     # 扣ETF＝含ETF總額 × (扣ETF融資張/全部融資張)（官方無扣ETF金額，以張占比估，同源一致，標 otc_loan_est）。
     # 借款(融資金額,元)：含ETF＝官方(上市 TWSE MS)/玩股網(上櫃 twoA)；上市扣ETF＝玩股網 -ETFA(金額)；
     # 上櫃扣ETF＝上櫃含ETF × 扣ETF融資張占比(上櫃 ETF 極少，估算影響小；官方/玩股網皆無上櫃扣ETF金額)。
-    ms_k = twse_ms_loan_k()                        # 上市含ETF借款(仟元)
+    ms_k = twse_ms_loan_k_on(date)                 # 上市含ETF借款(仟元)，指定交易日
     wg = asyncio.run(wantgoo_loans_k())            # 上市扣ETF、上櫃含ETF 借款(仟元)
     listed_loan_inc = (ms_k or 0) * 1000
     listed_loan_exc = (wg.get("listed_ex") or 0) * 1000
@@ -230,11 +317,13 @@ def main():
     otc_loan_exc = otc_loan_inc * (o_lots_exc / o_lots_inc) if o_lots_inc else 0
     print(f"借款(億)：上市含 {listed_loan_inc/1e8:.1f} / 上市扣 {listed_loan_exc/1e8:.1f} / 上櫃含 {otc_loan_inc/1e8:.1f} / 上櫃扣~ {otc_loan_exc/1e8:.1f}")
 
-    # 2026-10-24 資料日改用本機股價最新交易日：夜間排程跑過午夜才輪到這支時，原本用「執行當下日期」會記成隔天
-    date = conn.execute("select max(trade_date) from stock_daily where market='twse'").fetchone()[0] \
-        or datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m-%d")
+    if not ms_k or not otc_loan_inc:
+        print(f"[abort] {date} 融資金額缺（證交所 {ms_k}／玩股網上櫃 {otc_loan_inc}）→ 不寫，待補跑"); sys.exit(0)
     rows = []
     for ex in (False, True):
+        # 2026-10-31 扣ETF 借款抓不到(玩股網失敗)時不寫扣ETF列：10/29 曾寫出上市 None%、全市場 719% 的錯值
+        if ex and (not listed_loan_exc or not otc_loan_inc):
+            print("[warn] 玩股網扣ETF／上櫃借款缺 → 本次不寫扣ETF列"); continue
         l_mv, l_miss = market_value(lfin, lclose, conn, ex)
         o_mv, o_miss = market_value(ofin, oclose, conn, ex)
         l_loan = listed_loan_exc if ex else listed_loan_inc
