@@ -62,7 +62,7 @@ class PublicSearchTest(unittest.TestCase):
                 self.assertEqual(error.exception.code, 501)
             config = json.loads((Path(__file__).parents[1]/'vercel.json').read_text(encoding='utf-8'))
             import re
-            route = config['routes'][0]
+            route = next(r for r in config['routes'] if r.get('dest') == '/api/prices.py?action=site_search')
             for path in ['/api/site_search', '/api/site_search.py']:
                 self.assertTrue(re.fullmatch(route['src'], path))
             self.assertFalse(re.fullmatch(route['src'], '/api/prices'))
