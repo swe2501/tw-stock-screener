@@ -326,7 +326,14 @@ def main():
     wg = asyncio.run(wantgoo_loans_k())            # 上市扣ETF、上櫃含ETF 借款(仟元)
     listed_loan_inc = (ms_k or 0) * 1000
     listed_loan_exc = (wg.get("listed_ex") or 0) * 1000
-    otc_loan_inc = (wg.get("otc_inc") or 0) * 1000
+    # 2026-10-31 上櫃含ETF借款改櫃買官方合計（指定交易日、有日期核對）；官方取不到才退回玩股網 twoA
+    import otc_market as _om
+    _tp = _om.tpex_margin_summary(date)
+    if _tp.get("fin_bal_k"):
+        otc_loan_inc = _tp["fin_bal_k"] * 1000
+    else:
+        print(f"[warn] 櫃買 {date} 融資金額官方尚無，退回玩股網 twoA")
+        otc_loan_inc = (wg.get("otc_inc") or 0) * 1000
     o_lots_inc, o_lots_exc = fin_lots_sum(ofin, False), fin_lots_sum(ofin, True)
     otc_loan_exc = otc_loan_inc * (o_lots_exc / o_lots_inc) if o_lots_inc else 0
     print(f"借款(億)：上市含 {listed_loan_inc/1e8:.1f} / 上市扣 {listed_loan_exc/1e8:.1f} / 上櫃含 {otc_loan_inc/1e8:.1f} / 上櫃扣~ {otc_loan_exc/1e8:.1f}")
