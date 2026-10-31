@@ -3787,12 +3787,22 @@
       if(!had&&loading) loading();
       var SB=(typeof SIG_SB_URL!=='undefined'&&SIG_SB_URL)?SIG_SB_URL:'https://bruqrbvbjxntgoljxsne.supabase.co',
           AK=(typeof SIG_SB_ANON!=='undefined'&&SIG_SB_ANON)?SIG_SB_ANON:'sb_publishable_KgYlaR-mqtx4uVre6kPD2A_qO6tdT1y';
-      return fetch(SB+'/rest/v1/page_cache?kind='+window.__pcQ(key+'_rt')+'&select=kind,payload,updated_at',{headers:{apikey:AK,Authorization:'Bearer '+AK}})
+      // 2026-11-01 省 Supabase 流量：盤中每 35 秒輪詢，但 _rt 每 90 秒才更新 → 先只查更新時間（幾十 bytes），
+      //   跟上次抓到的一樣就沿用畫面上的資料，有變才抓整包（題材約 110KB）
+      var H={headers:{apikey:AK,Authorization:'Bearer '+AK}}, cu=null;
+      try{ var cc=JSON.parse(localStorage.getItem(K)||'null'); if(cc&&cc.k&&cc.u&&cc.d) cu=cc; }catch(e){}
+      return fetch(SB+'/rest/v1/page_cache?kind='+window.__pcQ(key+'_rt')+'&select=kind,updated_at',H)
         .then(function(r){return r.json();}).then(function(a){
-          var x=window.__pcPick(a,key+'_rt');
-          if(!x||!x.payload||(/^(themes|sectors)$/.test(key)&&!(x.payload.category_version>=2))||x.payload.error||(Date.now()-new Date(x.updated_at).getTime())>360000) throw 0;
-          try{ localStorage.setItem(K,JSON.stringify({t:Date.now(),d:x.payload})); }catch(e){}
-          paint(x.payload); return x.payload;
+          var m=window.__pcPick(a,key+'_rt');
+          if(!m||(Date.now()-new Date(m.updated_at).getTime())>360000) throw 0;
+          if(had&&cu&&cu.k===m.kind&&cu.u===m.updated_at) return cu.d;
+          return fetch(SB+'/rest/v1/page_cache?kind=eq.'+encodeURIComponent(m.kind)+'&select=kind,payload,updated_at',H)
+            .then(function(r){return r.json();}).then(function(b){
+              var x=Array.isArray(b)&&b[0];
+              if(!x||!x.payload||(/^(themes|sectors)$/.test(key)&&!(x.payload.category_version>=2))||x.payload.error) throw 0;
+              try{ localStorage.setItem(K,JSON.stringify({t:Date.now(),d:x.payload,k:x.kind,u:x.updated_at})); }catch(e){}
+              paint(x.payload); return x.payload;
+            });
         }).catch(function(){ return window._swrJson(key,url,paint,fail,loading); });
     };
     window._rtStop=window._rtStop||function(){ if(window._rtTimer){clearInterval(window._rtTimer);window._rtTimer=null;} };
@@ -3910,7 +3920,7 @@
       return fetch(groupApi+path,{signal:AbortSignal.timeout(6000)}).then(function(r){if(!r.ok)throw Error('snapshot API');return r.json()}).then(checked).catch(function(){
         var base=typeof SIG_SB_URL!=='undefined'&&SIG_SB_URL?SIG_SB_URL:'https://bruqrbvbjxntgoljxsne.supabase.co';
         var key=typeof SIG_SB_ANON!=='undefined'&&SIG_SB_ANON?SIG_SB_ANON:'sb_publishable_KgYlaR-mqtx4uVre6kPD2A_qO6tdT1y';
-        var params=new URLSearchParams({or:window.__ENV==='uat'?'(kind.eq.'+kind+'@uat,kind.like.'+kind+'@uat__*,kind.eq.'+kind+',kind.like.'+kind+'__*)':'(kind.eq.'+kind+',kind.like.'+kind+'__*)',select:'kind,payload,updated_at',order:'updated_at.desc,kind.desc',limit:'20'});
+        var params=new URLSearchParams({or:window.__ENV==='uat'?'(kind.eq.'+kind+'@uat,kind.like.'+kind+'@uat__*,kind.eq.'+kind+',kind.like.'+kind+'__*)':'(kind.eq.'+kind+',kind.like.'+kind+'__*)',select:'kind,payload,updated_at',order:'updated_at.desc,kind.desc',limit:window.__ENV==='uat'?'4':'1'});/* 2026-11-01 省 Supabase 流量：研究快照一份約 3.5MB，原本一次抓 20 版；正式站只需最新 1 版，uat 要留空間挑 @uat 版 */
         return fetch(base+'/rest/v1/page_cache?'+params,{headers:{apikey:key},signal:AbortSignal.timeout(10000)}).then(function(r){if(!r.ok)throw Error('public snapshot');return r.json()}).then(function(rows){if(!Array.isArray(rows)||!rows.length)throw Error('no public snapshot');var row=window.__pcPick(rows,kind);return checked(Object.assign({},row.payload,{updatedAt:row.updated_at}));});
       });
     }

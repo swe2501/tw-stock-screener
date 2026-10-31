@@ -48,6 +48,8 @@
 - 每日排程：`scripts/run_daily_job.bat`（Windows 工作排程）。
 - Python：`C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe`，CJK 設 `PYTHONIOENCODING=utf-8`。
 
+- **Supabase 流量（egress）控管（免費 5GB／月；2026-10 起超量進入寬限期，11/30 前要壓回額度內）**：① 10/29 網站後端與本機排程讀取一律 gzip、K 線型態快照函式內暫存 10 分鐘；② 11/01 集團研究快照（每季約 3.5MB）發布後只留最新 2 版（`groupbook_precompute.prune_versions`，原本永不刪、2026Q4 累積 21 版 53MB；已刪 34 版，備份 `D:/stock_data/page_cache_research_old_versions_20261101.json.gz`），前端備援讀法 limit 20→正式站 1／uat 4；③ 11/01 盤中 `_swrRT` 每 35 秒輪詢改成先查 `updated_at`，沒變就不重抓整包（題材 _rt 約 110KB/次）。查流量：Supabase 後台 Usage（每日 egress 長條圖）＋ Logs Explorer（ClickHouse 語法，`FROM logs WHERE source='edge_logs'`，免費版只留 1 天）。新增會被網頁反覆讀的大資料前，先估「單次大小 × 讀取次數」。
+
 ## 三、本期新增功能
 
 ### A. 個股 K 圖「籌碼」分頁（單一 tab，5 張獨立柱）
