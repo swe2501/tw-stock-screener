@@ -138,6 +138,20 @@ def twse_ms_loan_k_on(iso):
     return None
 
 
+def wantgoo_ex_ratio(env, iso):
+    """玩股網公布的「上市扣ETF」融資維持率(%)，margin_ratio.py 每晚寫入 margin_maintenance(exclude_etf=true)。沒有回 None。"""
+    url = (f"{env['SUPABASE_URL']}/rest/v1/margin_maintenance?select=maintenance_ratio"
+           f"&trade_date=eq.{iso}&exclude_etf=eq.true")
+    req = urllib.request.Request(url, headers={"apikey": env["SUPABASE_SERVICE_KEY"],
+                                               "Authorization": f"Bearer {env['SUPABASE_SERVICE_KEY']}"})
+    try:
+        rows = json.loads(urllib.request.urlopen(req, timeout=30).read())
+        v = rows[0]["maintenance_ratio"] if rows else None
+        return float(v) if v else None
+    except Exception:
+        return None
+
+
 def _done_dates(env, iso):
     url = f"{env['SUPABASE_URL']}/rest/v1/margin_maint_split?select=exclude_etf&trade_date=eq.{iso}"
     req = urllib.request.Request(url, headers={"apikey": env["SUPABASE_SERVICE_KEY"],
@@ -327,6 +341,14 @@ def main():
         l_mv, l_miss = market_value(lfin, lclose, conn, ex)
         o_mv, o_miss = market_value(ofin, oclose, conn, ex)
         l_loan = listed_loan_exc if ex else listed_loan_inc
+        if ex:
+            # 2026-10-31 用戶定案：上市扣ETF 與玩股網對齊 → 直接採玩股網公布的上市扣ETF維持率，分子＝維持率×借款反推。
+            #   自算(只扣 00 開頭 ETF 的融資市值)約與含ETF相同，玩股網一向比含ETF低約 20 點，口徑不明、無法自行重現。
+            #   取不到玩股網當日值就不寫扣ETF列（不混用口徑）。上櫃扣ETF 仍自算（網站不開放），全市場扣ETF 用新的上市分子。
+            wr = wantgoo_ex_ratio(env, date)
+            if not wr:
+                print(f"[warn] 玩股網 {date} 上市扣ETF維持率尚無 → 本次不寫扣ETF列"); continue
+            l_mv = wr / 100 * l_loan
         o_loan = otc_loan_exc if ex else otc_loan_inc
         a_mv, a_loan = l_mv + o_mv, l_loan + o_loan
         def rr(mv, loan): return round(mv / loan * 100, 2) if loan else None
