@@ -962,16 +962,39 @@
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 4px 12px;
+      padding: 7px 12px 8px;
       font-size: 12px;
-      font-family: monospace;
       color: var(--text);
       pointer-events: none;
       z-index: 8;
       white-space: nowrap;
       display: none;
-      letter-spacing: 0.03em;
+      letter-spacing: 0.02em;
+      line-height: 1.55;
+      min-width: 190px;
       box-shadow: 0 6px 18px rgba(0,0,0,.14);
+      font-variant-numeric: tabular-nums;
+    }
+    /* 2026-11-01 提示框擴充：日期／狀態、開高低收、漲跌、量、DIF/MACD、三大法人 */
+    #ohlcTooltip .tt-head { display:flex; justify-content:space-between; gap:14px; align-items:baseline; }
+    #ohlcTooltip .tt-head b { font-size:13px; }
+    #ohlcTooltip .tt-state { font-size:11px; color:var(--text-muted); }
+    #ohlcTooltip .tt-ohlc { display:grid; grid-template-columns:auto 1fr auto 1fr; gap:0 8px; margin-top:2px; }
+    #ohlcTooltip .tt-ohlc span, #ohlcTooltip .tt-rows > span:nth-child(odd) { color:var(--text-muted); }
+    #ohlcTooltip .tt-ohlc b { text-align:right; font-weight:600; }
+    #ohlcTooltip .tt-chg { display:flex; justify-content:space-between; gap:12px; font-weight:600; margin-top:2px; padding-bottom:4px; border-bottom:1px solid var(--border); }
+    #ohlcTooltip .tt-rows { display:grid; grid-template-columns:auto 1fr; gap:0 12px; margin-top:4px; }
+    #ohlcTooltip .tt-rows > span:nth-child(even) { text-align:right; }
+    #ohlcTooltip .tt-rows b { font-weight:600; }
+    #ohlcTooltip .tt-up { color:#e74c3c; } #ohlcTooltip .tt-dn { color:#26c281; } #ohlcTooltip .tt-flat { color:var(--text-muted); }
+    #ohlcTooltip .tt-muted { color:var(--text-muted); }
+    #ohlcTooltip .tt-note { margin-top:4px; font-size:10.5px; color:var(--text-muted); }
+    @media (max-width: 600px) {   /* 手機：圖表區約 200px 高，提示框要精簡才放得下 */
+      #ohlcTooltip { font-size:10.5px; line-height:1.3; padding:4px 7px 5px; min-width:0; }
+      #ohlcTooltip .tt-head b { font-size:11px; }
+      #ohlcTooltip .tt-chg { padding-bottom:2px; }
+      #ohlcTooltip .tt-rows { margin-top:2px; }
+      #ohlcTooltip .tt-note { display:none; }
     }
     .btn-preset {
       cursor: pointer;
@@ -14785,6 +14808,52 @@
       return res;
     }
 
+    // ── K 線提示框擴充（2026-11-01）：法人買賣超依股票快取一次（inst_daily，單位張；只抓近 400 個交易日）──
+    window._tipInstCache = window._tipInstCache || {};
+    function _loadTipInst(code) {
+      if (!/^[0-9]{4,6}[A-Z]?$/.test(code || '') || window._tipInstCache[code]) return;
+      window._tipInstCache[code] = 'loading';
+      fetch(`${SIG_SB_URL}/rest/v1/inst_daily?select=trade_date,foreign_net,trust_net,dealer_net&code=eq.${encodeURIComponent(code)}&order=trade_date.desc&limit=400`,
+        { headers: { apikey: SIG_SB_ANON, Authorization: `Bearer ${SIG_SB_ANON}` } })
+        .then(r => r.ok ? r.json() : [])
+        .then(rows => { const m = {}; (rows || []).forEach(r => { m[r.trade_date] = r; }); window._tipInstCache[code] = m; })
+        .catch(() => { delete window._tipInstCache[code]; });
+    }
+    function _tipHtml(c, date, color, fmt, candles, idx, mac, daily, code) {
+      const i = idx[c.time], prev = i > 0 ? candles[i - 1] : null;
+      const sgn = v => (v > 0 ? '+' : '') ;
+      const cls = v => v > 0 ? 'tt-up' : v < 0 ? 'tt-dn' : 'tt-flat';
+      const lots = v => (v > 0 ? '+' : '') + Math.round(v).toLocaleString();
+      let state = '';
+      if (daily && i === candles.length - 1) {
+        const tw = new Date(Date.now() + (new Date().getTimezoneOffset() + 480) * 60000).toISOString().slice(0, 10);
+        state = (c.time === tw && typeof _isTradingHours === 'function' && _isTradingHours()) ? '盤中' : '已收盤';
+      } else if (daily) state = '已收盤';
+      let h = `<div class="tt-head"><b>${date}</b>${state ? `<span class="tt-state">${state}</span>` : ''}</div>`;
+      h += `<div class="tt-ohlc"><span>開</span><b style="color:${color}">${fmt(c.open)}</b><span>高</span><b style="color:${color}">${fmt(c.high)}</b>`
+         + `<span>低</span><b style="color:${color}">${fmt(c.low)}</b><span>收</span><b style="color:${color}">${fmt(c.close)}</b></div>`;
+      if (prev && prev.close > 0) {
+        const d = c.close - prev.close, p = d / prev.close * 100;
+        h += `<div class="tt-chg ${cls(d)}">${d > 0 ? '▲' : d < 0 ? '▼' : '－'} ${sgn(d)}${Number(d.toFixed(2))} 元<span>${sgn(p)}${p.toFixed(2)}%</span></div>`;
+      }
+      const rows = [];
+      if (c.volume != null && c.volume >= 0) rows.push(['成交張數', `<b>${Math.round(c.volume).toLocaleString()}</b> 張`]);
+      const dif = mac.macd[i], sig = mac.signal[i];
+      if (dif != null && sig != null) rows.push(['DIF / MACD', `<b class="${cls(dif)}">${dif.toFixed(3)}</b> / <b class="${cls(sig)}">${sig.toFixed(3)}</b>`]);
+      const cache = daily ? window._tipInstCache[code] : null;
+      if (cache && typeof cache === 'object') {
+        const r = cache[c.time];
+        if (r) {
+          for (const [lab, k] of [['外資', 'foreign_net'], ['投信', 'trust_net'], ['自營商', 'dealer_net']]) {
+            const v = +r[k] || 0; rows.push([lab, `<b class="${cls(v)}">${lots(v)}</b> 張`]);
+          }
+        } else if (Object.keys(cache).length) rows.push(['三大法人', '<span class="tt-muted">當日尚無資料</span>']);
+      } else if (cache === 'loading') rows.push(['三大法人', '<span class="tt-muted">讀取中…</span>']);
+      if (rows.length) h += `<div class="tt-rows">${rows.map(([a, b]) => `<span>${a}</span><span>${b}</span>`).join('')}</div>`;
+      if (cache && typeof cache === 'object' && cache[c.time]) h += `<div class="tt-note">法人買賣超・張・當日合計（證交所／櫃買）</div>`;
+      return h;
+    }
+
     function calcMACD(closes) {
       const ema12 = calcEMA(closes, 12);
       const ema26 = calcEMA(closes, 26);
@@ -14949,6 +15018,12 @@
       const _ohlcTip = document.getElementById('ohlcTooltip');
       const _candleMap = {};
       candles.forEach(c => { _candleMap[c.time] = c; });
+      // 2026-11-01 提示框加資訊（參考用戶朋友的 K 圖）：漲跌、成交張數、DIF/MACD、三大法人買賣超、已收盤/盤中
+      const _tipIdx = {}; candles.forEach((c, i) => { _tipIdx[c.time] = i; });
+      const _tipMacd = calcMACD(candles.map(c => c.close));
+      const _tipDaily = typeof candles[0]?.time === 'string';
+      const _tipCode = currentCode;
+      if (_tipDaily) _loadTipInst(_tipCode);
       chartInstance.subscribeCrosshairMove(param => {
         if (window.AcademyChartViewport?.isInfoVisible()===false || !param || !param.time || !param.seriesData) {
           _ohlcTip.style.display = 'none';
@@ -14959,12 +15034,7 @@
         const date = typeof c.time==='number'?new Date(c.time*1000).toISOString().slice(0,16).replace('T',' ').replace(/-/g,'/'):c.time.replace(/-/g, '/');
         const color = c.close >= c.open ? '#e74c3c' : '#26c281';
         const fmt = v => Number(v).toFixed(2);
-        _ohlcTip.innerHTML =
-          `<span style="color:var(--text-muted)">${date}</span>` +
-          `　開 <span style="color:${color}">${fmt(c.open)}</span>` +
-          `　高 <span style="color:${color}">${fmt(c.high)}</span>` +
-          `　低 <span style="color:${color}">${fmt(c.low)}</span>` +
-          `　收 <span style="color:${color}">${fmt(c.close)}</span>`;
+        _ohlcTip.innerHTML = _tipHtml(c, date, color, fmt, candles, _tipIdx, _tipMacd, _tipDaily, _tipCode);
         const brokerName = n => String(n).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
         const events=window._chartBrokerHover?.[param.time]||[];
         for(const [action,label,sell] of [['entry','主力交往',false],['add','加碼',false],['reduce','減碼',true],['exit','主力分手',true]]){
