@@ -3787,22 +3787,12 @@
       if(!had&&loading) loading();
       var SB=(typeof SIG_SB_URL!=='undefined'&&SIG_SB_URL)?SIG_SB_URL:'https://bruqrbvbjxntgoljxsne.supabase.co',
           AK=(typeof SIG_SB_ANON!=='undefined'&&SIG_SB_ANON)?SIG_SB_ANON:'sb_publishable_KgYlaR-mqtx4uVre6kPD2A_qO6tdT1y';
-      // 2026-11-01 省 Supabase 流量：盤中每 35 秒輪詢，但 _rt 每 90 秒才更新 → 先只查更新時間（幾十 bytes），
-      //   跟上次抓到的一樣就沿用畫面上的資料，有變才抓整包（題材約 110KB）
-      var H={headers:{apikey:AK,Authorization:'Bearer '+AK}}, cu=null;
-      try{ var cc=JSON.parse(localStorage.getItem(K)||'null'); if(cc&&cc.k&&cc.u&&cc.d) cu=cc; }catch(e){}
-      return fetch(SB+'/rest/v1/page_cache?kind='+window.__pcQ(key+'_rt')+'&select=kind,updated_at',H)
+      return fetch(SB+'/rest/v1/page_cache?kind='+window.__pcQ(key+'_rt')+'&select=kind,payload,updated_at',{headers:{apikey:AK,Authorization:'Bearer '+AK}})
         .then(function(r){return r.json();}).then(function(a){
-          var m=window.__pcPick(a,key+'_rt');
-          if(!m||(Date.now()-new Date(m.updated_at).getTime())>360000) throw 0;
-          if(had&&cu&&cu.k===m.kind&&cu.u===m.updated_at) return cu.d;
-          return fetch(SB+'/rest/v1/page_cache?kind=eq.'+encodeURIComponent(m.kind)+'&select=kind,payload,updated_at',H)
-            .then(function(r){return r.json();}).then(function(b){
-              var x=Array.isArray(b)&&b[0];
-              if(!x||!x.payload||(/^(themes|sectors)$/.test(key)&&!(x.payload.category_version>=2))||x.payload.error) throw 0;
-              try{ localStorage.setItem(K,JSON.stringify({t:Date.now(),d:x.payload,k:x.kind,u:x.updated_at})); }catch(e){}
-              paint(x.payload); return x.payload;
-            });
+          var x=window.__pcPick(a,key+'_rt');
+          if(!x||!x.payload||(/^(themes|sectors)$/.test(key)&&!(x.payload.category_version>=2))||x.payload.error||(Date.now()-new Date(x.updated_at).getTime())>360000) throw 0;
+          try{ localStorage.setItem(K,JSON.stringify({t:Date.now(),d:x.payload})); }catch(e){}
+          paint(x.payload); return x.payload;
         }).catch(function(){ return window._swrJson(key,url,paint,fail,loading); });
     };
     window._rtStop=window._rtStop||function(){ if(window._rtTimer){clearInterval(window._rtTimer);window._rtTimer=null;} };
