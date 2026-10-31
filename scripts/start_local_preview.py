@@ -18,7 +18,7 @@ def ready(port=49675):
     try:
         with urllib.request.urlopen(f'http://127.0.0.1:{port}/api/screen?stat=hidden-capability', timeout=1) as response:
             payload = json.load(response)
-        return isinstance(payload, dict) and payload.get('zhenming_hidden') is True and payload.get('local_preview') is True and payload.get('zhenming4') is True
+        return isinstance(payload, dict) and payload.get('zhenming_hidden') is True and payload.get('local_preview') is True and payload.get('zhenming4') is True and payload.get('zhenming4_rules_version') == 2
     except (OSError, ValueError):
         return False
 

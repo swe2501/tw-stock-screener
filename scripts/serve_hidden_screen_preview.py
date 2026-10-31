@@ -35,7 +35,7 @@ def handler_for(screen, root=ROOT):
             u=urlsplit(self.path);query=parse_qs(u.query)
             if u.path=='/api/screen':
                 if not self.permitted():return self.send_json(403,{'error':'Local preview only'})
-                if query.get('stat')==['hidden-capability']:return self.send_json(200,{'zhenming_hidden':True,'zhenming4':True,'local_preview':True})
+                if query.get('stat')==['hidden-capability']:return self.send_json(200,{'zhenming_hidden':True,'zhenming4':True,'zhenming4_rules_version':2,'local_preview':True})
                 job=query.get('job_id',[''])[0]
                 if job:
                     with lock:
