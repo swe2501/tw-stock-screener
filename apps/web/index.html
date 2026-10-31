@@ -3910,7 +3910,7 @@
       return fetch(groupApi+path,{signal:AbortSignal.timeout(6000)}).then(function(r){if(!r.ok)throw Error('snapshot API');return r.json()}).then(checked).catch(function(){
         var base=typeof SIG_SB_URL!=='undefined'&&SIG_SB_URL?SIG_SB_URL:'https://bruqrbvbjxntgoljxsne.supabase.co';
         var key=typeof SIG_SB_ANON!=='undefined'&&SIG_SB_ANON?SIG_SB_ANON:'sb_publishable_KgYlaR-mqtx4uVre6kPD2A_qO6tdT1y';
-        var params=new URLSearchParams({or:window.__ENV==='uat'?'(kind.eq.'+kind+'@uat,kind.like.'+kind+'@uat__*,kind.eq.'+kind+',kind.like.'+kind+'__*)':'(kind.eq.'+kind+',kind.like.'+kind+'__*)',select:'kind,payload,updated_at',order:'updated_at.desc,kind.desc',limit:'20'});
+        var params=new URLSearchParams({or:window.__ENV==='uat'?'(kind.eq.'+kind+'@uat,kind.like.'+kind+'@uat__*,kind.eq.'+kind+',kind.like.'+kind+'__*)':'(kind.eq.'+kind+',kind.like.'+kind+'__*)',select:'kind,payload,updated_at',order:'updated_at.desc,kind.desc',limit:window.__ENV==='uat'?'4':'1'});/* 2026-11-01 省 Supabase 流量：研究快照一份約 3.5MB，原本一次抓 20 版；正式站只需最新 1 版，uat 要留空間挑 @uat 版 */
         return fetch(base+'/rest/v1/page_cache?'+params,{headers:{apikey:key},signal:AbortSignal.timeout(10000)}).then(function(r){if(!r.ok)throw Error('public snapshot');return r.json()}).then(function(rows){if(!Array.isArray(rows)||!rows.length)throw Error('no public snapshot');var row=window.__pcPick(rows,kind);return checked(Object.assign({},row.payload,{updatedAt:row.updated_at}));});
       });
     }
