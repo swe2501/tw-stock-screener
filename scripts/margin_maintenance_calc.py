@@ -104,19 +104,25 @@ def close_on(conn, iso, market):
     官方取不到時退回本機 stock_daily（只有個股、沒有 ETF → 會記入 join 缺漏）。"""
     out = {}
     try:
+        # 2026-10-31 改用可指定日期的官方收盤表（含 ETF）：上市 MI_INDEX type=ALL（第 9 欄收盤）、上櫃 dailyQuotes（第 3 欄收盤）
         if market == "otc":
-            rows = _gj("https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes")
-            for r in rows:
-                if _roc_iso(r.get("Date")) == iso:
-                    c, cl = str(r.get("SecuritiesCompanyCode") or "").strip(), _pf(r.get("Close"))
-                    if c and cl is not None:
-                        out[c] = cl
+            d = _gj("https://www.tpex.org.tw/www/zh-tw/afterTrading/dailyQuotes?date=" + iso.replace("-", "/") + "&response=json")
+            if str(d.get("date") or "").replace("/", "").replace("-", "") in ("", iso.replace("-", "")):
+                for t in d.get("tables") or []:
+                    for r in t.get("data") or []:
+                        c, cl = str(r[0]).strip(), _pf(r[2])
+                        if c and cl is not None:
+                            out.setdefault(c, cl)
         else:
-            import chip_brief
-            for r in chip_brief._day_all(iso):
-                cl = _pf(r.get("ClosingPrice"))
-                if cl is not None:
-                    out[str(r.get("Code")).strip()] = cl
+            d = _gj(f"https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?date={iso.replace('-', '')}&type=ALL&response=json")
+            if str(d.get("date") or "") == iso.replace("-", ""):
+                for t in d.get("tables") or []:
+                    if len(t.get("data") or []) < 500:
+                        continue
+                    for r in t["data"]:
+                        c, cl = str(r[0]).strip(), _pf(r[8])
+                        if c and cl is not None:
+                            out[c] = cl
     except Exception as e:
         print(f"[warn] {market} 官方收盤失敗 {type(e).__name__}")
     if len(out) < 300:
@@ -148,6 +154,19 @@ def wantgoo_ex_ratio(env, iso):
         rows = json.loads(urllib.request.urlopen(req, timeout=30).read())
         v = rows[0]["maintenance_ratio"] if rows else None
         return float(v) if v else None
+    except Exception:
+        return None
+
+
+def _wantgoo_ex_balance(env, iso):
+    """margin_ratio.py 存的玩股網上市扣ETF 融資餘額（億）。沒有回 None。"""
+    url = (f"{env['SUPABASE_URL']}/rest/v1/margin_maintenance?select=margin_balance"
+           f"&trade_date=eq.{iso}&exclude_etf=eq.true")
+    req = urllib.request.Request(url, headers={"apikey": env["SUPABASE_SERVICE_KEY"],
+                                               "Authorization": f"Bearer {env['SUPABASE_SERVICE_KEY']}"})
+    try:
+        rows = json.loads(urllib.request.urlopen(req, timeout=30).read())
+        return float(rows[0]["margin_balance"]) if rows and rows[0].get("margin_balance") else None
     except Exception:
         return None
 
@@ -301,7 +320,8 @@ def main():
     # 2026-10-31 改：目標日＝本機股價最新交易日；已算過(含/扣兩列)就跳過(--force 可重算)。
     #   原本用「今天是否週末/休市」判斷：週六 09:00 補跑把週五資料也一起跳過，週五維持率一直沒算。
     #   各來源都取目標日（原 openapi 不帶日期、常慢一日；休市日因目標日是上一交易日且已算過，不會寫假資料）。
-    date = conn.execute("select max(trade_date) from stock_daily where market='twse' or market is null").fetchone()[0]
+    latest = conn.execute("select max(trade_date) from stock_daily where market='twse' or market is null").fetchone()[0]
+    date = sys.argv[sys.argv.index("--date") + 1] if "--date" in sys.argv else latest
     if not date:
         print("[abort] 本機無股價"); return
     if _done_dates(env, date) >= 2 and "--force" not in sys.argv:
@@ -323,7 +343,14 @@ def main():
     # 借款(融資金額,元)：含ETF＝官方(上市 TWSE MS)/玩股網(上櫃 twoA)；上市扣ETF＝玩股網 -ETFA(金額)；
     # 上櫃扣ETF＝上櫃含ETF × 扣ETF融資張占比(上櫃 ETF 極少，估算影響小；官方/玩股網皆無上櫃扣ETF金額)。
     ms_k = twse_ms_loan_k_on(date)                 # 上市含ETF借款(仟元)，指定交易日
-    wg = asyncio.run(wantgoo_loans_k())            # 上市扣ETF、上櫃含ETF 借款(仟元)
+    # 上市扣ETF 借款＝玩股網 -ETFA：先取 margin_ratio.py 當天存下的值（margin_maintenance.margin_balance，億），
+    # 沒有才開瀏覽器即時抓（只限最新交易日，歷史日不能用即時值）
+    wg = {}
+    _ex_bal = _wantgoo_ex_balance(env, date)
+    if _ex_bal:
+        wg["listed_ex"] = _ex_bal * 1e5           # 億 → 仟元
+    elif date == latest:
+        wg = asyncio.run(wantgoo_loans_k())
     listed_loan_inc = (ms_k or 0) * 1000
     listed_loan_exc = (wg.get("listed_ex") or 0) * 1000
     # 2026-10-31 上櫃含ETF借款改櫃買官方合計（指定交易日、有日期核對）；官方取不到才退回玩股網 twoA
@@ -348,14 +375,9 @@ def main():
         l_mv, l_miss = market_value(lfin, lclose, conn, ex)
         o_mv, o_miss = market_value(ofin, oclose, conn, ex)
         l_loan = listed_loan_exc if ex else listed_loan_inc
-        if ex:
-            # 2026-10-31 用戶定案：上市扣ETF 與玩股網對齊 → 直接採玩股網公布的上市扣ETF維持率，分子＝維持率×借款反推。
-            #   自算(只扣 00 開頭 ETF 的融資市值)約與含ETF相同，玩股網一向比含ETF低約 20 點，口徑不明、無法自行重現。
-            #   取不到玩股網當日值就不寫扣ETF列（不混用口徑）。上櫃扣ETF 仍自算（網站不開放），全市場扣ETF 用新的上市分子。
-            wr = wantgoo_ex_ratio(env, date)
-            if not wr:
-                print(f"[warn] 玩股網 {date} 上市扣ETF維持率尚無 → 本次不寫扣ETF列"); continue
-            l_mv = wr / 100 * l_loan
+        # 2026-10-31 用戶定案（方案 A）：扣ETF 一律自算＝排除代號 00 開頭 ETF 的融資市值 ÷ 扣ETF 融資金額。
+        #   曾短暫改採玩股網公布值（150.94%），但與其含ETF(171.75%，與自算一致)兜不起來（隱含 ETF 維持率約 520%），
+        #   且上市扣<含、上櫃扣>含方向矛盾，合夥人複查後改回。wantgoo_ex_ratio() 保留僅供比對，不參與計算。
         o_loan = otc_loan_exc if ex else otc_loan_inc
         a_mv, a_loan = l_mv + o_mv, l_loan + o_loan
         def rr(mv, loan): return round(mv / loan * 100, 2) if loan else None
