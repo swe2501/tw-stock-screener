@@ -3763,7 +3763,7 @@
       if(!had&&loading) loading();
       // 2026-10-12 先讀前一晚算好存進 Supabase page_cache 的整頁資料（快）；表裡沒有、或超過 4 天沒更新，才退回請後端現算
       var SB=(typeof SIG_SB_URL!=='undefined'&&SIG_SB_URL)?SIG_SB_URL:'https://bruqrbvbjxntgoljxsne.supabase.co', AK=(typeof SIG_SB_ANON!=='undefined'&&SIG_SB_ANON)?SIG_SB_ANON:'sb_publishable_KgYlaR-mqtx4uVre6kPD2A_qO6tdT1y';
-      var fresh=fetch(SB+'/rest/v1/page_cache?kind='+window.__pcQ(key)+'&select=kind,payload,updated_at',{headers:{apikey:AK,Authorization:'Bearer '+AK}}).then(function(r){return r.json();}).then(function(a){
+      var fresh=fetch(window.__API+'/api/prices?action=public_snapshot&kind='+encodeURIComponent(key)+'&scope='+window.__ENV).then(function(r){return r.json();}).then(function(a){
         var x=window.__pcPick(a,key); if(!x||!x.payload||!compatible(x.payload)||x.payload.error||(Date.now()-new Date(x.updated_at).getTime())>4*86400000) throw new Error('no table row'); return x.payload;
       }).catch(function(){ return fetch(url).then(function(r){return r.json();}); });
       return fresh.then(function(d){
@@ -3787,7 +3787,7 @@
       if(!had&&loading) loading();
       var SB=(typeof SIG_SB_URL!=='undefined'&&SIG_SB_URL)?SIG_SB_URL:'https://bruqrbvbjxntgoljxsne.supabase.co',
           AK=(typeof SIG_SB_ANON!=='undefined'&&SIG_SB_ANON)?SIG_SB_ANON:'sb_publishable_KgYlaR-mqtx4uVre6kPD2A_qO6tdT1y';
-      return fetch(SB+'/rest/v1/page_cache?kind='+window.__pcQ(key+'_rt')+'&select=kind,payload,updated_at',{headers:{apikey:AK,Authorization:'Bearer '+AK}})
+      return fetch(window.__API+'/api/prices?action=public_snapshot&kind='+encodeURIComponent(key+'_rt')+'&scope='+window.__ENV)
         .then(function(r){return r.json();}).then(function(a){
           var x=window.__pcPick(a,key+'_rt');
           if(!x||!x.payload||(/^(themes|sectors)$/.test(key)&&!(x.payload.category_version>=2))||x.payload.error||(Date.now()-new Date(x.updated_at).getTime())>360000) throw 0;
@@ -4015,6 +4015,24 @@
       window._names=m; window._namesFull=true; if(cb)cb(window._names);
     }).catch(function(){ if(cb)cb(window._names||{}); });   // 失敗不清空既有內嵌字典、不設 _namesFull(下次重試)
   };
+  // Normalized master is preferred; retain the existing loader during schema rollout.
+  (function(){
+    var legacy=window._loadNames,pending=null,ready=false;
+    window._loadNames=function(cb){
+      if(ready){if(cb)cb(window._names);return Promise.resolve(window._names);}
+      if(!pending)pending=Promise.all([
+        fetch(window.__API+'/api/prices?action=security_catalog').then(function(r){if(!r.ok)throw Error('catalog');return r.json();}),
+        fetch(window.__API+'/api/screen?stat=otcetf').then(function(r){return r.ok?r.json():{};}).catch(function(){return {};})
+      ]).then(function(data){
+        var catalog=data[0],oe=data[1];if(catalog.version!==1||catalog.source!=='security_catalog'||!Array.isArray(catalog.items)||!catalog.items.length)throw Error('catalog');
+        var names=Object.assign({},window._names||{}),markets=Object.assign({},window._mkt||{}),industries=Object.assign({},window._ind||{}),etfs=Object.assign({},window._etf||{});
+        catalog.items.forEach(function(r){if(!r||!r.code||typeof r.name!=='string')throw Error('catalog');names[r.code]=r.name;var market=String(r.market||'').toLowerCase();if(market==='otc')markets[r.code]='otc';else if(market==='tse'||market==='twse')markets[r.code]='twse';if(r.industry)industries[r.code]=r.industry;if(r.instrument_type==='etf')etfs[r.code]=1;});
+        if(oe&&!oe.error)Object.keys(oe).forEach(function(c){if(/^00[0-9A-Z]{2,5}$/.test(c)&&typeof oe[c]==='string'){names[c]=oe[c];markets[c]='otc';etfs[c]=1;}});
+        window._names=names;window._mkt=markets;window._ind=industries;window._etf=etfs;window._namesFull=true;ready=true;return names;
+      }).catch(function(){return new Promise(function(resolve){legacy(function(names){resolve(names);});});}).finally(function(){pending=null;});
+      return pending.then(function(names){if(cb)cb(names);return names;});
+    };
+  })();
   window._mktLabel = function(code){ var k=window._mkt&&window._mkt[String(code)]; return k==='otc'?'上櫃':(k==='twse'?'上市':''); };
   window._isEtf = function(code){ return !!(window._etf&&window._etf[String(code)]); };
   window._indLabel = function(code){ return (window._ind&&window._ind[String(code)])||''; };
@@ -18114,7 +18132,7 @@
 <script src="assets/onboarding-tour.js?v=mist-edge-20261026" defer></script>
 <link rel="stylesheet" href="assets/zhenming-hidden.css?v=6">
 <script src="assets/zhenming-hidden.js?v=5" defer></script>
-<script src="assets/screen-log.js?v=single-source1" defer></script>
+<script src="assets/screen-log.js?v=normalized-read1" defer></script>
 <script src="assets/pattern-focus.js?v=2" defer></script>
 <script src="assets/member-quick-menu.js?v=tier6" defer></script>
 <script src="assets/navigation-layers.js?v=logo-home20" defer></script>

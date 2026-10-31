@@ -9,7 +9,12 @@ const stocks=[{code:'2330',name:'當時名稱',close:100.125,chg:-1.2},{code:'00
 await as(A);const today=(await db.query('select public.member_screen_calendar() v')).rows[0].v.today;
 const save=async req=>(await db.query('select public.save_member_screen_record($1,$2,$3,$4,$5,$6) v',[req,today,'["策略"]','[]',JSON.stringify(stocks),''])).rows[0].v;
 const request='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',record=(await save(request)).row;
-await db.exec('reset role');await db.exec(sql('member-screen-normalization-expand.sql'));
+await db.exec('reset role');await db.exec(sql('member-screen-normalization-expand.sql'));await db.exec(`alter table stock_fundamentals add column industry text;alter table etf_products add column category text;create table price_window(trade_date date);create table taiex_daily(trade_date date);`);
+await db.exec(sql('member-screen-latest-market.sql'));await db.exec(sql('member-screen-three-trading-days.sql'));await db.exec(sql('member-screen-normalized-read.sql'));await db.exec(sql('security-master-read-bridge.sql'));
+await db.exec("update stock_fundamentals set name='每日同步新名',industry='半導體' where code='2330'");
+assert.equal((await db.query("select current_name from security_master where code='2330'")).rows[0].current_name,'每日同步新名');
+await db.exec('set role anon');assert.equal((await db.query("select industry from security_catalog where code='2330'")).rows[0].industry,'半導體');await assert.rejects(db.query('select public.refresh_security_master()'),/permission denied/);await db.exec('reset role');
+
 const read=async id=>(await db.query('select public.member_screen_normalized_stocks($1) v',[id])).rows[0].v;
 await as(A);
 const mirror={...record,version:2};
@@ -18,6 +23,10 @@ await db.query('select public.save_member_research_document($1,$2,$3)',['researc
 const doc=(await db.query('select payload from member_research_documents')).rows[0].payload;
 assert.deepEqual(doc.value.groups,['keep']);assert.equal(doc.value.screen_logs.length,3,'only exact own server mirror removed');
 await assert.rejects(db.query('select public.save_member_research_document($1,$2,$3)',['research',0,'{}']),/MEMBER_DOCUMENT_CONFLICT/);
+await as(A);assert.deepEqual((await db.query('select public.member_screen_calendar() v')).rows[0].v.rows[0].stocks,stocks,'calendar RPC reads normalized items');
+await db.exec('reset role;alter table member_screen_records disable trigger member_screen_items_sync');await db.query("update member_screen_records set stocks='[]' where id=$1",[record.id]);await as(A);
+assert.deepEqual((await db.query('select public.member_screen_calendar() v')).rows[0].v.rows[0].stocks,stocks,'calendar does not rely on legacy stocks JSON');
+await db.exec('reset role');await db.query('update member_screen_records set stocks=$1 where id=$2',[JSON.stringify(stocks),record.id]);await db.exec('alter table member_screen_records enable trigger member_screen_items_sync');
 await as(A);assert.deepEqual(await read(record.id),stocks,'backfill preserves ordering, unknown code, null/missing, price and extra keys');
 await save(request);assert.equal((await db.query('select count(*) n from member_screen_record_items')).rows[0].n,4);
 await assert.rejects(db.query("update security_master set current_name='污染'"),/permission denied/);
