@@ -1,4 +1,7 @@
--- PREPARED ONLY. Shared production database; explicit activation required.
+-- APPLIED 2026-11-01 to bruqrbvbjxntgoljxsne after explicit user approval.
+-- Verified 15 records (11 active), 297 items, 157 observed names, 2259 master codes.
+-- Exact roundtrip and live owner/anonymous/CAS/trigger/mirror/deletion tests passed; tests rolled back.
+-- Initial expand migration: DO NOT rerun. Original JSON and RPCs retained.
 -- Expand phase: keep original JSON/RPC and mirror normalized details atomically.
 -- No table removal, no existing research document cleanup, no retention changes.
 begin;

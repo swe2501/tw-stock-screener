@@ -1,4 +1,6 @@
--- PREPARED ONLY. No bulk cleanup; removes verified mirrors only on future CAS writes.
+-- APPLIED 2026-11-01 to bruqrbvbjxntgoljxsne after explicit user approval.
+-- Live mirror guard and CAS tests passed inside a rolled-back transaction.
+-- No bulk cleanup; removes verified mirrors only on future CAS writes.
 begin;
 create or replace function public.save_member_research_document(p_kind text,p_expected_revision bigint,p_payload jsonb)
 returns jsonb language plpgsql security definer set search_path='' as $$
