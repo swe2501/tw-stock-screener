@@ -2456,10 +2456,17 @@ def zhenming4_at(bars, t=None):
                 break
         start += 1
         count = end - start + 1
-        if count not in (2, 3) or start < 2:
+        if count not in (2, 3) or start < 10:
             continue
         first = bars[start]
         if first[4] <= first[1] or (first[4]-first[1])/first[4]*100 < 3 - 1e-9:
+            continue
+        previous = bars[start-10:start]
+        if not all(valid(row) for row in previous):
+            continue
+        baseline = max(sum(row[5] for row in previous[-5:])/5,
+                       sum(row[5] for row in previous)/10)
+        if first[5] < baseline * 1.5:
             continue
         if low < bars[end][3]:
             continue
@@ -2468,7 +2475,9 @@ def zhenming4_at(bars, t=None):
                 "day_n": age, "window_days": 12,
                 "support_low": round(bars[end][3], 4), "ma5": round(sma5, 4),
                 "first_body_pct": round((first[4]-first[1])/first[4]*100, 2),
-                "basis": "low", "rules_version": 1}
+                "first_volume_ratio": round(first[5]/baseline, 4),
+                "volume_baseline": round(baseline, 4),
+                "basis": "low", "rules_version": 2}
     return None
 
 

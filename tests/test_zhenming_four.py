@@ -12,6 +12,14 @@ def fixture(count=2):
  bars.append(['2026-01-%02d'%(11+count),105,107,104,106,150])
  return bars
 class Four(unittest.TestCase):
+ def test_first_volume_baseline_excludes_current_day(self):
+  b=fixture();b[10][5]=150;self.assertEqual(rule(b)['first_volume_ratio'],1.5)
+  b[10][5]=149.99;self.assertIsNone(rule(b))
+  b=fixture()
+  for row in b[:5]:row[5]=200
+  self.assertIsNone(rule(b)) # ten-day average 150; five-day average 100
+  b[10][5]=225;self.assertEqual(rule(b)['volume_baseline'],150)
+  self.assertIsNone(rule(fixture()[1:])) # need ten preceding trading days
  def test_black_later_bar_and_first_shrink(self):
   r=rule(fixture());self.assertEqual(r['rolling_bars'],2);self.assertEqual(r['day_n'],1);self.assertEqual(r['support_low'],103)
  def test_two_or_three_not_four(self):
