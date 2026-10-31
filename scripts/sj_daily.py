@@ -31,15 +31,26 @@ def login():
     key, sec = (env.get("SHIOAJI_API_KEY") or "").strip(), (env.get("SHIOAJI_SECRET_KEY") or "").strip()
     if not key or not sec:
         raise SystemExit("[error] .env.local 缺 SHIOAJI_API_KEY / SHIOAJI_SECRET_KEY")
-    api = sj.Shioaji()
-    api.login(api_key=key, secret_key=sec, subscribe_trade=False)
-    for _ in range(90):                      # 登入後合約會自動下載，等它好（不要再呼叫 fetch_contracts，會衝突）
-        try:
-            if len(list(api.Contracts.Stocks.TSE)) > 500 and len(list(api.Contracts.Stocks.OTC)) > 500:
-                break
-        except Exception:
-            pass
-        time.sleep(1)
+    # 永豐底層（C 程式）會把連線事件直接寫到 stdout/stderr，內容含身分證字號 →
+    # 登入與合約下載期間把檔案描述子 1、2 導到 NUL，Python 層的 print 過濾擋不住它
+    import os
+    sys.stdout.flush(); sys.stderr.flush()
+    saved = (os.dup(1), os.dup(2))
+    null = os.open(os.devnull, os.O_WRONLY)
+    os.dup2(null, 1); os.dup2(null, 2)
+    try:
+        api = sj.Shioaji()
+        api.login(api_key=key, secret_key=sec, subscribe_trade=False)
+        for _ in range(90):                  # 登入後合約會自動下載，等它好（不要再呼叫 fetch_contracts，會衝突）
+            try:
+                if len(list(api.Contracts.Stocks.TSE)) > 500 and len(list(api.Contracts.Stocks.OTC)) > 500:
+                    break
+            except Exception:
+                pass
+            time.sleep(1)
+    finally:
+        os.dup2(saved[0], 1); os.dup2(saved[1], 2)
+        os.close(null); os.close(saved[0]); os.close(saved[1])
     return api
 
 
