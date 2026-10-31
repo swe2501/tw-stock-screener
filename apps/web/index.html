@@ -14794,6 +14794,18 @@
         .then(rows => { const m = {}; (rows || []).forEach(r => { m[r.trade_date] = r; }); window._tipInstCache[code] = m; })
         .catch(() => { delete window._tipInstCache[code]; });
     }
+    // 2026-11-01 提示框跟著游標走（原本固定在圖上幾個角落）：預設在游標右側，放不下換左側；上下對齊游標並夾在圖內
+    function _tipFollow(param) {
+      const tip = document.getElementById('ohlcTooltip'), plot = document.getElementById('chartContainer');
+      if (!tip || !plot || !param || !param.point) return;
+      let ps = 0; try { ps = chartInstance.priceScale('right').width(); } catch (_) {}
+      const W = plot.clientWidth - ps, H = plot.clientHeight, tw = tip.offsetWidth, th = tip.offsetHeight, gap = 16;
+      let x = param.point.x + gap;
+      if (x + tw > W - 4) x = param.point.x - gap - tw;
+      x = Math.max(4, Math.min(x, W - tw - 4));
+      const y = Math.max(4, Math.min(param.point.y - th / 2, H - th - 4));
+      tip.style.transform = 'none'; tip.style.left = x + 'px'; tip.style.top = y + 'px';
+    }
     function _tipHtml(c, date, color, fmt, candles, idx, mac, daily, code) {
       const i = idx[c.time], prev = i > 0 ? candles[i - 1] : null;
       const sgn = v => (v > 0 ? '+' : '') ;
@@ -15018,7 +15030,7 @@
           _ohlcTip.innerHTML+=`<div class="ohlc-broker"><span class="broker-relationship-${sell?'down':'up'}">${sell?'↓':'↑'} ${label} · ${names.length} 家</span>${names.map(n=>`<b>${brokerName(n)}</b>`).join('')}${typeof param.time==='string'&&rows.some(e=>e.date!==param.time)?`<small>${[...new Set(rows.map(e=>e.date))].map(brokerName).join('、')}</small>`:''}</div>`;
         }
         _ohlcTip.style.display = 'block';
-        window.AcademyChartViewport?.placeTooltip(param,c,candles,chartInstance,candleSeriesRef);
+        _tipFollow(param);
       });
 
       resizeFibCanvas();
