@@ -103,8 +103,9 @@ def record(agent, step, phase, ok=None, secs=None, detail=None, tail=None):
                       "bubble": st.get("bubble") or []}
         now = _now().isoformat(timespec="seconds")
         # 2026-10-29 排程被系統強制停掉時，那一步不會有結束紀錄 → 超過 3 小時沒結束的視為中斷（失敗）
+        # 2026-10-31 正在打「結束」卡的那一步不算：盤中排程本來就跑 7 小時，原本結束時先被自己判成中斷、完成卡打不上去
         for s in st.get("steps") or []:
-            if "end" not in s and s.get("start"):
+            if "end" not in s and s.get("start") and not (phase != "start" and s.get("step") == step):
                 try:
                     if (_now() - dt.datetime.fromisoformat(s["start"])).total_seconds() > 3 * 3600:
                         s.update({"end": now, "ok": False, "detail": "中斷（排程被停掉，沒有結束紀錄）"})
