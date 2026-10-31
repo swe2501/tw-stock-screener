@@ -16536,7 +16536,7 @@
     };
     document.addEventListener('click', e => { if (!e.target.closest('.draw-dd')) ['ddLineMenu', 'ddShapeMenu','ddFibMenu'].forEach(id => { const m = document.getElementById(id); if (m) m.classList.remove('open'); }); });
 
-    window.AcademyChartBridge={get:()=>({chart:chartInstance,series:candleSeriesRef,candles:window._vpCandles||[],code:currentCode,tool:_drawTool,zoom:zoomMode,fib:fibMode,trendLine:trendLineMode,drawing:!!(_shapeDrag||_drawPending.length||fibDragStart||trendStart||zoomDragStart),drawingColor:_trendColor(),drawings:_drawShapes}),plot:_chartPlotGeometry,deactivate:_deactivateAllModes,redraw:_redrawSoon};
+    window.AcademyChartBridge={get:()=>({chart:chartInstance,series:candleSeriesRef,candles:window._vpCandles||[],code:currentCode,tool:_drawTool,zoom:zoomMode,fib:fibMode,trendLine:trendLineMode,drawing:!!(_shapeDrag||_drawPending.length||fibDragStart||trendStart||zoomDragStart),drawingColor:_trendColor(),drawings:_drawShapes}),plot:_chartPlotGeometry,deactivate:_deactivateAllModes,redraw:_redrawSoon,save:_drawStoreSave,coord:_coordAt,x:_dX,distance:_distToShape,legacy:()=>trendLines};
     window._finishWave=function(){if(_drawTool!=='wave')return;if(_drawPending.length>=2){_drawShapes.push({type:'wave',pts:_drawPending.map(p=>({...p}))});_drawPending=[];_drawStoreSave();}_setDrawTool('wave');};
     window._cancelChartTool=function(){_deactivateAllModes();redrawCanvas();};
     document.addEventListener('keydown',function(e){if(e.target.closest('input,textarea,select,[contenteditable=true]'))return;if(e.key==='Enter'&&_drawTool==='wave'){e.preventDefault();_finishWave();}if(e.key==='Escape'&&(_drawTool||zoomMode||window.AcademyChartTools?.isSelecting()||document.querySelector('.draw-dd-menu.open'))){e.preventDefault();e.stopImmediatePropagation();_cancelChartTool();}},true);
@@ -18129,6 +18129,8 @@
 <link rel="stylesheet" href="assets/zhenming-hidden.css?v=6">
 <link rel="stylesheet" href="assets/research-hover.css">
 <script src="assets/research-hover.js"></script>
+<link rel="stylesheet" href="assets/chart-drawing-edit.css">
+<script src="assets/chart-drawing-edit.js"></script>
 <script src="assets/zhenming-four.js"></script>
 <script src="assets/zhenming-hidden.js?v=5" defer></script>
 <script src="assets/screen-log.js?v=calendar-direct31" defer></script>

@@ -1,0 +1,3 @@
+.drawing-context{position:fixed;z-index:100105;padding:5px;min-width:136px;border:1px solid var(--border);border-radius:12px;background:color-mix(in srgb,var(--surface) 90%,transparent);backdrop-filter:blur(18px);box-shadow:0 10px 32px #0003;color:var(--text)}
+.drawing-context[hidden]{display:none}.drawing-context button{display:block;width:100%;text-align:left;padding:9px 13px;border:0;border-radius:8px;background:transparent;color:inherit;font:inherit;font-size:13px;box-shadow:none;cursor:pointer}.drawing-context button:hover,.drawing-context button:focus-visible{background:var(--surface2);color:var(--accent)}.drawing-context button:disabled{opacity:.4;cursor:default}
+#chartContainer.drawing-can-move{cursor:move}#chartContainer.drawing-moving{cursor:grabbing}
