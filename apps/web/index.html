@@ -366,7 +366,7 @@
     .chart-feature-panel>a{display:none!important;}
     .chart-feature-panel>span[id$="Opts"]{padding:10px 14px 12px;}
     .sc-fields{display:grid;grid-template-columns:1fr;gap:18px;}
-    .zm4-rules{grid-column:1/-1;font-size:12px;color:var(--text-muted);line-height:1.8;padding:4px 12px 12px}.zm4-rules summary{cursor:pointer;color:var(--text);font-size:12px}.zm4-result{font-size:11px;color:var(--text-muted);line-height:1.8;white-space:normal}.zm3-info{font-size:11px;color:var(--text-muted);line-height:1.5;margin-top:2px;white-space:nowrap;}
+    .zm3-info{font-size:11px;color:var(--text-muted);line-height:1.5;margin-top:2px;white-space:nowrap;}
     .zm3-info b{color:var(--red);}
     .sc-note{font-size:.78rem;color:var(--text-muted);margin-bottom:10px;}
     .checkbox-grid {
@@ -9944,7 +9944,7 @@
           <input type="checkbox" id="zhenming4" />
           <div><div class="cb-label">真名四式（滾量守低）</div></div>
         </label>
-        <details class="zm4-rules"><summary>四式條件說明</summary><p>首根紅 K 實體至少 3%；成交量連續遞增 2～3 根，後續紅黑 K 都計入。量縮後 12 個交易日內，當日最低價同時守住最後出量 K 棒低點與當日五日線即可篩出。</p><p>跌破時剔除；期限內重新守住可再篩入，期限不重算。以量縮首日為第 1 天。本項比對量價條件，整理位置仍需看圖確認。</p></details>
+
         <article class="zm-hidden-card" id="zhenmingHiddenCard">
           <label class="checkbox-row"><input type="checkbox" id="zhenming_hidden" /><div class="cb-label">真名隱藏式（比大小）</div></label>
           <div class="zm-hidden-options" id="zhenmingHiddenOptions" hidden>
@@ -11194,7 +11194,7 @@
                   ? `<span class="data-missing-badge" title="部分篩選條件無法確認（${s.data_missing.map(k=>({'no_black':'無放量黑棒篩選','gap_unverified':'跳空前日資料缺失，請手動排查'}[k]||k)).join('、')}），已放行"></span>`
                   : ''
               }</td>
-            <td class="name-cell">${s.name}${s.zm4 ? `<div class="zm4-result">四式・第 ${Number(s.zm4.day_n)}／12 天 · 守低 ${Number(s.zm4.support_low)} · 五日線 ${Number(s.zm4.ma5)}</div>` : ''}${s.sma20_stage ? `<div class="zm3-info">葛蘭碧・階段 ${s.sma20_stage}</div>` : ''}${s.zm3 ? `<div class="zm3-info" title="真名三式：長黑 ${s.zm3.black_date}（−${s.zm3.black_pct}%）後第 ${s.zm3.day_n} 天反包；停損參考 ${s.zm3.stop}（長紅低與洗盤最低取低者）；第一目標 ${s.zm3.target}（長黑前 20 日最高）">三式・長黑 ${s.zm3.black_date.slice(5).replace('-','/')}・½ ${s.zm3.mid}・第${s.zm3.day_n}天${s.zm3.vol ? '・<b>帶量</b>' : ''}<br>停損 ${s.zm3.stop}・目標 ${s.zm3.target}</div>` : ''}${s.ev357 ? `<div class="zm3-info" style="color:${s.ev357.band==='cheap'?'#c0392b':(s.ev357.band==='expensive'?'#148f77':'var(--text-muted)')}" title="連續5年配息；D=近5年均現金股利 ${s.ev357.d}｜現金殖利率=D÷現價｜便宜價(7%)=${s.ev357.cheap_price} 合理價(5%)=${s.ev357.fair_price} 昂貴價(3%)=${s.ev357.exp_price}"><b>${s.ev357.band==='cheap'?'便宜·買':(s.ev357.band==='expensive'?'昂貴·賣光':'合理·賣')}</b> 殖利率 ${s.ev357.yield}%｜D ${s.ev357.d}（便宜 ${s.ev357.cheap_price}／合理 ${s.ev357.fair_price}／昂貴 ${s.ev357.exp_price}）</div>` : ''}</td>
+            <td class="name-cell">${s.name}${s.zm4 ? AcademyZhenmingFour.badge(s.zm4) : ''}${s.sma20_stage ? `<div class="zm3-info">葛蘭碧・階段 ${s.sma20_stage}</div>` : ''}${s.zm3 ? `<div class="zm3-info" title="真名三式：長黑 ${s.zm3.black_date}（−${s.zm3.black_pct}%）後第 ${s.zm3.day_n} 天反包；停損參考 ${s.zm3.stop}（長紅低與洗盤最低取低者）；第一目標 ${s.zm3.target}（長黑前 20 日最高）">三式・長黑 ${s.zm3.black_date.slice(5).replace('-','/')}・½ ${s.zm3.mid}・第${s.zm3.day_n}天${s.zm3.vol ? '・<b>帶量</b>' : ''}<br>停損 ${s.zm3.stop}・目標 ${s.zm3.target}</div>` : ''}${s.ev357 ? `<div class="zm3-info" style="color:${s.ev357.band==='cheap'?'#c0392b':(s.ev357.band==='expensive'?'#148f77':'var(--text-muted)')}" title="連續5年配息；D=近5年均現金股利 ${s.ev357.d}｜現金殖利率=D÷現價｜便宜價(7%)=${s.ev357.cheap_price} 合理價(5%)=${s.ev357.fair_price} 昂貴價(3%)=${s.ev357.exp_price}"><b>${s.ev357.band==='cheap'?'便宜·買':(s.ev357.band==='expensive'?'昂貴·賣光':'合理·賣')}</b> 殖利率 ${s.ev357.yield}%｜D ${s.ev357.d}（便宜 ${s.ev357.cheap_price}／合理 ${s.ev357.fair_price}／昂貴 ${s.ev357.exp_price}）</div>` : ''}</td>
             <td class="neutral col-open">${s.open}</td>
             <td class="neutral col-high">${s.high}</td>
             <td class="neutral col-low">${s.low}</td>
@@ -14230,7 +14230,7 @@
     document.addEventListener('fullscreenchange', function(){ ['ddLineMenu','ddShapeMenu'].forEach(function(id){ const d = document.getElementById(id); if (d) d.classList.remove('open'); });
       const m = document.getElementById('chartModal'); if (m && m.classList.contains('kfull') && !document.fullscreenElement) _setChartFull(false); });
 
-    function closeChart() {window.AcademyVisualPatterns?.clear();window.WPatternOverlay?.clear();_stopBrokerPulse();window.AcademyChartTools?.resetSelection();
+    function closeChart() {window.AcademyVolumeFocus?.clear();window.AcademyVisualPatterns?.clear();window.WPatternOverlay?.clear();_stopBrokerPulse();window.AcademyChartTools?.resetSelection();
       const wasMemberChart=document.body.classList.contains('mc-chart-open');
       if(document.getElementById('chartModal').classList.contains('etx-embedded')){window._etxTab('overview');return;}
       _chartRequestId++;
@@ -14720,6 +14720,7 @@
       if (volInstance) { try { volInstance.remove(); } catch (_) {} volInstance = null; }
       if (typeof macdInstance !== 'undefined' && macdInstance) { try { macdInstance.remove(); } catch (_) {} macdInstance = null; }
       if (typeof rsiInstance !== 'undefined' && rsiInstance) { try { rsiInstance.remove(); } catch (_) {} rsiInstance = null; }
+      window.AcademyVolumeFocus?.clear();
       candleSeriesRef = null; volSeriesRef = null; _lastCandleTimes = null; _trendRef = null;
       // _chartLoading() 會把 #chartWrapper 設 none（顯示 spinner），這裡要先設回 block，容器才有尺寸可畫
       var _cw = document.getElementById('chartWrapper'); if (_cw) _cw.style.display = 'block';
@@ -15070,6 +15071,7 @@
       ch.subscribeCrosshairMove(param => {
         try { _chipTipAll(param && param.time ? param.time : null); } catch (_) {}
         if (_xhairBusy) return; _xhairBusy = true;
+        window.AcademyVolumeFocus?.hover(param?.time);
         const group = window._chartSyncGroup || [];
         try {
           if (param && param.time) {
@@ -15413,6 +15415,7 @@
 
     function _renderVOLChart(candles) {
       candles = _validCandles(candles);
+      window.AcademyVolumeFocus?.clear();
       if (volInstance) { try { volInstance.remove(); } catch(_) {} volInstance = null; }
       const el = document.getElementById('volContainer');
       el.innerHTML = '';
@@ -15450,6 +15453,7 @@
         color: c.close >= c.open ? 'rgba(231,76,60,0.4)' : 'rgba(38,194,129,0.4)',
       })));
       volSeriesRef = volSeries;
+      window.AcademyVolumeFocus?.attach(el, volInstance, volSeries, candles);
 
       const vma5s = volInstance.addLineSeries({crosshairMarkerRadius:1.5,crosshairMarkerBorderWidth:0,
         color: '#f39c12', lineWidth: 1,
@@ -18123,6 +18127,8 @@
 <link rel="stylesheet" href="assets/onboarding-tour.css?v=mist-edge-mcopen-20261027">
 <script src="assets/onboarding-tour.js?v=mist-edge-20261026" defer></script>
 <link rel="stylesheet" href="assets/zhenming-hidden.css?v=6">
+<link rel="stylesheet" href="assets/research-hover.css">
+<script src="assets/research-hover.js"></script>
 <script src="assets/zhenming-four.js"></script>
 <script src="assets/zhenming-hidden.js?v=5" defer></script>
 <script src="assets/screen-log.js?v=calendar-direct31" defer></script>

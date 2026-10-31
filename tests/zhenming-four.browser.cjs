@@ -24,12 +24,18 @@ const root=path.resolve(__dirname,'..'),output=process.env.QA_OUTPUT||require('n
  assert.equal(await page.locator('.sc-cbs #zhenmingHiddenCard').evaluate(e=>!e.nextElementSibling),true);
  let request,mode='new';
  await page.route('**/api/screen',r=>{request=r.request().postDataJSON();return r.fulfill({json:{date:'2026/01/13',total:1,count:1,zhenming4_applied:mode==='new',results:[{code:'2330',name:'測試個股',open:105,high:107,low:104,close:106,volume_lots:100,candle_pct:.94,zm4:{day_n:3,support_low:103,ma5:104}}]}});});
- await page.evaluate(()=>doScreen());await page.locator('.zm4-result').waitFor();assert.equal(request.zhenming4,true);assert.match(await page.locator('.zm4-result').innerText(),/3／12/);
+ await page.evaluate(()=>doScreen());await page.locator('.zm4-badge').waitFor();assert.equal(request.zhenming4,true);
+ await page.locator('.zm4-badge').hover();assert.match(await page.locator('.zm4-tip').innerText(),/3／12/);
+ await page.locator('.zm4-badge').click();assert.equal(await page.locator('#chartModal').isVisible(),false);
+ await page.keyboard.press('Escape');assert.equal(await page.locator('.zm4-tip').isVisible(),false);
+ await page.locator('.zm4-badge').evaluate(e=>e.blur());await page.locator('.zm4-badge').focus();assert.equal(await page.locator('.zm4-tip').isVisible(),true);
+ await page.evaluate(()=>{const w=document.querySelector('#resultsArea .table-wrap');w.style.width='360px';w.style.height='170px';w.style.overflow='auto';w.querySelector('table').style.minWidth='1400px';});
+ await page.locator('#resultsArea .table-wrap').hover();await page.locator('.result-hover-scroll').waitFor({state:'visible'});
+ await page.locator('.result-hover-scroll').evaluate(e=>{e.scrollLeft=220;});await page.waitForTimeout(100);
+ assert.ok(await page.locator('#resultsArea .table-wrap').evaluate(e=>e.scrollLeft>200));
+
  mode='old';await page.evaluate(()=>doScreen());await page.waitForFunction(()=>document.body.innerText.includes('尚未支援真名四式'));assert.equal(await page.locator('#resultsArea').innerText(),'');
- for(const [theme,width] of [['light',1440],['dark',1440],['light',390],['dark',390]]){
-  await page.setViewportSize({width,height:960});await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);await page.locator('.zm4-rules summary').click();
-  assert.ok(await page.locator('.zm4-rules').evaluate(e=>e.scrollWidth<=e.clientWidth+2));
-  await page.locator('.zm4-rules').screenshot({path:path.join(output,'four-'+theme+'-'+width+'.png')});await page.locator('.zm4-rules summary').click();
- }
+ assert.equal(await page.locator('.zm4-rules').count(),0);
+ assert.equal(await page.locator('#zhenming4').isChecked(),true);
  assert.deepEqual(errors,[]);console.log('PASS four-style request, results, old backend guard, hidden-last placement and responsive themes');
  }finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1;});
