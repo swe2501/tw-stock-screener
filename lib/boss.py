@@ -124,7 +124,7 @@ FRESH = [
     ("大盤廣度", "/breadth_daily?select=trade_date&order=trade_date.desc&limit=1", "trade_date"),
     ("主力分點明細", "/broker_trades?select=trade_date&order=trade_date.desc&limit=1", "trade_date"),
     ("主動ETF加碼", "/active_etf_flow?select=data_date&order=data_date.desc&limit=1", "data_date"),
-    ("箱型", "/box_patterns?select=data_date&order=data_date.desc&limit=1", "data_date"),
+    ("箱型(規則版)", "/page_cache?select=trade_date&kind=eq.ai_box_rules&limit=1", "trade_date"),
 ]
 SNAP_KINDS = ("sectors", "themes", "overview", "themeall", "sectorall")
 VERSIONED_KINDS = ("focus", "limitup")

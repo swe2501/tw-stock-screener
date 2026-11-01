@@ -11,6 +11,14 @@
  const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!=null)n.textContent=text;if(cls)n.className=cls;return n;};
  function clear(){for(const line of layers){try{owner?.removeSeries(line);}catch{}}layers=[];owner=null;}
  function verify(pattern,record,live){
+  // 2026-11-01 規則版箱型：箱體區間要完整在圖上，且區間最高 High／最低 Low 與判讀時相同才畫
+  if(pattern?.type==='box'){
+   const bars=live.filter(b=>typeof b.time==='string'&&b.time>=pattern.from&&b.time<=pattern.to);
+   if(!bars.length||bars[0].time!==pattern.from||bars[bars.length-1].time!==pattern.to)throw Error('箱型區間的K棒不在目前圖上');
+   const hi=Math.max(...bars.map(b=>b.high)),lo=Math.min(...bars.map(b=>b.low));
+   if(Math.abs(hi-pattern.high)>1e-6||Math.abs(lo-pattern.low)>1e-6)throw Error('目前行情與箱型判讀來源不同，暫不畫線');
+   return pattern;
+  }
   if(!pattern||!labels[pattern.type]||pattern.precise_points_verified!==true||!Array.isArray(pattern.points)||pattern.points.length<3||pattern.points.length>12)throw Error('輔助線尚未完成定位核對');
   const map=new Map(live.filter(b=>typeof b.time==='string').map(b=>[b.time,b]));
   if(pattern.type==='ascending_triangle'){
@@ -40,6 +48,17 @@
  }
  function plot(pattern,color,ctx){
   const opts={color,lineWidth:2,lineStyle:2,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false,autoscaleInfoProvider:()=>null};
+  if(pattern.type==='box'){
+   // 箱型固定青綠色，避免跟 MA120 紫色混淆
+   const seg=(v,o)=>{const s=ctx.chart.addLineSeries({...opts,color:'#0b9488',...o});layers.push(s);s.setData(v);};
+   seg([{time:pattern.from,value:pattern.high},{time:pattern.to,value:pattern.high}],{lineStyle:0});
+   seg([{time:pattern.from,value:pattern.low},{time:pattern.to,value:pattern.low}],{lineStyle:0});
+   seg([{time:pattern.from,value:pattern.upper_line},{time:pattern.to,value:pattern.upper_line}],{lineWidth:1,lineStyle:1});
+   // 箱頂往右延伸到最新K棒（細點線），方便看後續收盤是否站上箱頂
+   const times=ctx.series.data().filter(b=>typeof b.time==='string').map(b=>b.time),last=times[times.length-1];
+   if(last&&last>pattern.to)seg([{time:pattern.to,value:pattern.high},{time:last,value:pattern.high}],{lineWidth:1,lineStyle:1});
+   return;
+  }
   if(pattern.type==='ascending_triangle'){
    const n=pattern.neckline,s=pattern.support_line;
    const upper=ctx.chart.addLineSeries(opts);layers.push(upper);upper.setData([{time:n.start,value:n.value},{time:n.end,value:n.value}]);
@@ -69,7 +88,21 @@
   const market=await fetch('assets/codex-market-scan.json?v=20261027-1').then(r=>{if(!r.ok)throw Error('全市場判讀資料暫時無法取得');return r.json();});if(!validSnapshot(market))throw Error('全市場判讀資料格式無效');extra.records.push(...market.records);
   const merged=new Map(base.records.map(r=>[r.code+'|'+r.timeframe,r]));for(const r of extra.records)merged.set(r.code+'|'+r.timeframe,r);
   try{const tri=await fetch('assets/codex-ascending-triangle-patterns.json?v=20261028-1').then(r=>r.ok?r.json():null);if(tri?.version==='codex-ascending-triangle-v1'&&Array.isArray(tri.records))mergeExtraPatterns(merged,tri.records);}catch{}
+  try{const box=await boxRules();if(box.length)mergeExtraPatterns(merged,box);}catch{}
   return {...base,records:[...merged.values()]};
+ }
+ // 2026-11-01 規則版箱型（scripts/compute_box_rules.py → page_cache ai_box_rules），每次開頁只讀一次
+ let boxPromise=null;
+ function boxRules(){
+  if(boxPromise)return boxPromise;
+  const SB=typeof SIG_SB_URL!=='undefined'?SIG_SB_URL:'',AK=typeof SIG_SB_ANON!=='undefined'?SIG_SB_ANON:'',K='ai_box_rules';
+  boxPromise=fetch(SB+'/rest/v1/page_cache?select=kind,payload&kind='+(window.__pcQ?window.__pcQ(K):'eq.'+K)+'&limit=2',{headers:{apikey:AK,Authorization:'Bearer '+AK}})
+   .then(r=>r.ok?r.json():[]).then(rows=>{const p=(window.__pcPick?window.__pcPick(rows,K):rows?.[0])?.payload;if(!p||!Array.isArray(p.records))return [];
+    return p.records.map(x=>({code:x.code,timeframe:'daily',execution_status:'reviewed',classification:x.status,data_as_of:p.data_date,bar_count:x.bars,
+     reason:'規則版箱型：'+x.from+' ~ '+x.to+'，'+x.bars+' 根、振幅 '+x.amp+'%、最大量／第二大量 '+x.v1+'／'+x.v2+' 張。',
+     patterns:[{type:'box',status:x.status,from:x.from,to:x.to,high:x.high,low:x.low,upper_line:x.upper_line,bars:x.bars,amp:x.amp,breakout_date:x.breakout_date,breakout_close:x.breakout_close,box_close:x.box_close}]}));})
+   .catch(()=>{boxPromise=null;return [];});
+  return boxPromise;
  }
  // 其他型態（上升三角…）併入同股同週期的既有紀錄，不覆蓋原本的 W 判讀；狀態記在各型態自己的 status
  function mergeExtraPatterns(merged,records){
@@ -112,10 +145,12 @@
   if(r.classification==='forming'&&r.patterns?.some(p=>p.type==='w_bottom'))panel.append(el('strong','形成中：右側尚未觸及頸線，虛線僅表示候選輪廓。','ai-pattern-note'));
   for(const p of r.patterns||[])if(p.type==='ascending_triangle'&&triangleState[p.status]){
    const t=el('strong','上升三角'+triangleState[p.status]+'：上緣壓力 '+p.neckline.value.toFixed(2)+(p.status==='breakout'?'，收盤已站上'+(p.volume_ratio?'（量比 '+p.volume_ratio.toFixed(2)+'）':''):'，下緣支撐逐步墊高'),'ai-pattern-note');panel.append(t);}
+  for(const p of r.patterns||[])if(p.type==='box'){
+   panel.append(el('p','箱型'+(p.status==='breakout'?'・'+p.breakout_date+' 收盤 '+p.breakout_close+' 突破箱頂 '+p.high:'・箱體末日收盤 '+p.box_close+' 位於箱內上方25%')+'（箱底 '+p.low+'、箱頂 '+p.high+'）','ai-pattern-note'));}
   panel.append(el('p',r.reason||'此筆待補判讀說明。'));
   if(r.extra_reason&&r.extra_reason!==r.reason)panel.append(el('p',r.extra_reason));
   const firstLive=ctx.series?.data?.().find(b=>typeof b.time==='string')?.time;
-  if(r.recommended_range==='5y'&&r.patterns?.some(p=>p.points[0].time<firstLive)&&ctx.loadHistory){const b=el('button','載入五年週K，查看完整大W','ai-pattern-period-link');b.type='button';b.onclick=()=>ctx.loadHistory('5y');panel.append(b);}
+  if(r.recommended_range==='5y'&&r.patterns?.some(p=>p.points?.[0]?.time<firstLive)&&ctx.loadHistory){const b=el('button','載入五年週K，查看完整大W','ai-pattern-period-link');b.type='button';b.onclick=()=>ctx.loadHistory('5y');panel.append(b);}
   if(!Array.isArray(r.patterns)||!r.patterns.length){panel.append(el('p',r.classification==='uncertain'?'待審：目前不顯示輔助線。':'此視窗未辨識到符合標準的W。'));return;}
   if(ctx.adjusted){const b=el('button','切回一般'+(tf==='daily'?'日K':'週K')+'查看輔助線','ai-pattern-period-link');b.type='button';b.onclick=()=>ctx.switchPeriod(tf);panel.append(el('p','這筆判讀使用一般K線，還原模式不共用輔助線。'),b);return;}
   if(!ctx.chart||!ctx.series){panel.append(el('p','圖表仍在載入，稍後再查看。'));return;}
@@ -128,7 +163,7 @@
   for(const type of types){const label=el('label',null,'ai-pattern-option'),input=el('input');input.type='checkbox';input.checked=chosen.has(type);input.dataset.patternType=type;input.onchange=()=>{input.checked?chosen.add(type):chosen.delete(type);draw();};label.append(input,el('span',labels[type]+'（'+good.filter(p=>p.type===type).length+'組）'));boxes.append(label);}
   panel.append(boxes);draw();
   if(errors.length)panel.append(el('p',[...new Set(errors)].join('；'),'ai-pattern-note'));
-  if(good.length)panel.append(el('p','虛線為形狀輔助線'+(good.some(p=>p.type==='ascending_triangle')?'（上升三角：水平線＝上緣壓力、斜線＝下緣支撐，細點線為支撐延伸）':'')+'；是否收盤突破另行核對，不代表買進訊號。','ai-pattern-meta'));
+  if(good.length)panel.append(el('p','虛線為形狀輔助線'+(good.some(p=>p.type==='ascending_triangle')?'（上升三角：水平線＝上緣壓力、斜線＝下緣支撐，細點線為支撐延伸）':'')+(good.some(p=>p.type==='box')?'（箱型：實線＝箱頂／箱底，箱內細點線＝上方25%起點，右側細點線＝箱頂延伸）':'')+'；是否收盤突破另行核對，不代表買進訊號。','ai-pattern-meta'));
  }
  async function refresh(getContext){
   context=getContext;const ctx=getContext(),id=++ticket;clear();

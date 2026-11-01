@@ -51,6 +51,37 @@ def publish(env, rows):
     with urllib.request.urlopen(request, timeout=60) as response:
         if response.status not in (200, 201, 204):
             raise RuntimeError("Snapshot publication failed")
+    for row in rows:
+        if row["kind"].startswith(PRUNE_PREFIX):
+            prune_versions(env, row["kind"], keep=PRUNE_KEEP)
+
+
+# 2026-11-01 Supabase 流量／空間：集團研究每季快照約 3.5MB，原本每次發布都另存新版、舊版永不刪
+# （2026Q4 累積 21 版 53MB）。發布成功後只留最新 PRUNE_KEEP 版（讀取端一律只用最新 1 版）。
+PRUNE_PREFIX = "groupbook_research_"
+PRUNE_KEEP = 2
+
+
+def prune_versions(env, base_kind, keep=2):
+    """刪除 base_kind 的舊版本（kind = base_kind + '__' + 版號），保留最新 keep 版；回傳刪除筆數。
+    PostgREST 的 like 會把 '_' 當萬用字元，故抓回後在 Python 端再精確比對前綴（避免誤刪 @uat 版）。"""
+    import urllib.parse
+    key = env["SUPABASE_SERVICE_KEY"]
+    h = {"apikey": key, "Authorization": "Bearer " + key}
+    q = urllib.parse.urlencode([("select", "kind,updated_at"), ("kind", "like." + base_kind + "__*"),
+                                ("order", "updated_at.desc")])
+    with urllib.request.urlopen(urllib.request.Request(env["SUPABASE_URL"] + "/rest/v1/page_cache?" + q, headers=h),
+                                timeout=60) as r:
+        rows = json.loads(r.read() or b"[]")
+    mine = [x["kind"] for x in rows if x["kind"].startswith(base_kind + "__")]
+    old = mine[keep:]
+    for k in old:
+        req = urllib.request.Request(env["SUPABASE_URL"] + "/rest/v1/page_cache?" + urllib.parse.urlencode([("kind", "eq." + k)]),
+                                     method="DELETE", headers=dict(h, Prefer="return=minimal"))
+        with urllib.request.urlopen(req, timeout=60) as r:
+            if r.status not in (200, 204):
+                raise RuntimeError("prune failed: " + k)
+    return len(old)
 
 
 def run(env, dry_run=False, env_name="prod"):
