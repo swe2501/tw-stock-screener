@@ -3573,7 +3573,7 @@
           if(el('fcLosers'))el('fcLosers').innerHTML=rowsHTML(j.losers,function(x){return '<span class="val '+cls(x.chg)+'">'+pct(x.chg)+'</span>';});
           if(el('fcSurge'))el('fcSurge').innerHTML=rowsHTML(j.volume_surge,function(x){return '<span class="val">'+Number(x.ratio).toFixed(2)+'x</span>'+(x.chg!=null?'<span class="val2 '+cls(x.chg)+'">'+pct(x.chg)+'</span>':'');});
         };
-        // 先確保完整名稱表(含上櫃 otc_names / ETF)載入，上櫃股(如 5205)才有名字
+        // 先確保完整名稱表(含上櫃／ETF，security_catalog)載入，上櫃股(如 5205)才有名字
         if(window._namesFull||typeof window._loadNames!=='function'){paint();}else{window._loadNames(paint);}
       }).catch(function(){['fcGainers','fcLosers','fcSurge'].forEach(function(id){if(el(id))el(id).innerHTML='<div class="fc-empty">排行資料暫時無法讀取，請稍後再試</div>';});}).finally(function(){focusRequest=null});
     }
@@ -4022,7 +4022,7 @@
     if(window._namesFull){ if(cb)cb(window._names); return; }
     var SB='https://bruqrbvbjxntgoljxsne.supabase.co', AK='sb_publishable_KgYlaR-mqtx4uVre6kPD2A_qO6tdT1y';
     var pNames=fetch(window.__API+'/api/screen?stat=names').then(function(r){return r.json();}).catch(function(){return {};});
-    var pOtc=fetch(SB+'/rest/v1/otc_names?select=code,name',{headers:{apikey:AK,Authorization:'Bearer '+AK}}).then(function(r){return r.ok?r.json():[];}).catch(function(){return [];});
+    var pOtc=fetch(SB+'/rest/v1/security_catalog?select=code,name&market=eq.otc&order=code&limit=1000',{headers:{apikey:AK,Authorization:'Bearer '+AK}}).then(function(r){return r.ok?r.json():[];}).catch(function(){return [];});   // 2026-11-01 正規化：上櫃股名改讀主檔目錄（舊 otc_names 將停用）
     var pInd=fetch(window.__API+'/api/screen?stat=industries').then(function(r){return r.json();}).catch(function(){return {};});
     var pEtf=fetch(SB+'/rest/v1/etf_products?select=code,name,category',{headers:{apikey:AK,Authorization:'Bearer '+AK}}).then(function(r){return r.ok?r.json():[];}).catch(function(){return [];});   // 2026-09-28 ETF 也可搜尋
     var pOtcEtf=fetch(window.__API+'/api/screen?stat=otcetf').then(function(r){return r.json();}).catch(function(){return {};});   // 上櫃 ETF（債券型等，etf_products 沒有）

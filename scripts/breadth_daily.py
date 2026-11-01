@@ -60,13 +60,17 @@ def _sb_get(env, path, rng=None):
 
 
 def _otc_set(env):
+    """上櫃代號：讀正規化主檔目錄 security_catalog（2026-11-01 起；舊 otc_names 將停用）。"""
     out = set()
     try:
-        d = json.loads(_sb_get(env, "otc_names?select=code"))
-        for x in d:
-            out.add(str(x["code"]).strip())
+        for off in range(0, 5000, 1000):
+            d = json.loads(_sb_get(env, f"security_catalog?select=code&market=eq.otc&order=code&limit=1000&offset={off}"))
+            for x in d:
+                out.add(str(x["code"]).strip())
+            if len(d) < 1000:
+                break
     except Exception as e:
-        print(f"[warn] 讀 otc_names 失敗 {str(e)[:50]}")
+        print(f"[warn] 讀 security_catalog 上櫃代號失敗 {str(e)[:50]}")
     return out
 
 

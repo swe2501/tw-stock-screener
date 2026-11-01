@@ -940,19 +940,7 @@ def _current_security_names(codes):
                     _security_name_cache[code] = (now+300, name)
         except Exception:
             continue
-    # Migration/outage fallback is limited to unknown displayed codes, not all OTCs.
-    fallback = [c for c in codes if c not in found and c not in _STOCK_NAMES]
-    for offset in range(0, len(fallback), 200):
-        batch = fallback[offset:offset+200]
-        try:
-            status, rows = _cache_sb('/otc_names', params=[('select', 'code,name'),
-                ('code', 'in.('+','.join(batch)+')'), ('limit', str(len(batch)))])
-            if status == 200 and isinstance(rows, list):
-                for row in rows:
-                    if isinstance(row, dict) and str(row.get('code')) in batch and isinstance(row.get('name'), str) and row['name'].strip():
-                        found[str(row['code'])] = row['name']
-        except Exception:
-            pass
+    # 2026-11-01 正規化：舊 otc_names 備援移除（將停用）；目錄查不到的代號由呼叫端沿用快照原名。
     return found
 
 

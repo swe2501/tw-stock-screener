@@ -18,15 +18,17 @@ class MarketLookup(unittest.TestCase):
  def test_listed_and_expiry(self):
   with patch.object(c.time,'monotonic',side_effect=[0,301]),patch.object(c.urllib.request,'urlopen',side_effect=[io.BytesIO(b'[{"market":"tse"}]'),io.BytesIO(b'[{"market":"otc"}]')]) as read:
    self.assertFalse(c._is_otc('2330'));self.assertTrue(c._is_otc('2330'));self.assertEqual(read.call_count,2)
- def test_failure_fallback_is_targeted_and_recovers(self):
+ def test_failure_not_cached_and_recovers(self):
+  # 2026-11-01 正規化：目錄失效時不再查舊 otc_names（將停用）、不快取失敗，下一次即恢復
   calls=[]
   def read(req,timeout):
    calls.append(req.full_url)
    if len(calls)==1: raise OSError('temporary')
-   return io.BytesIO(b'[{"code":"6488"}]' if 'otc_names?' in req.full_url else b'[{"market":"otc"}]')
+   return io.BytesIO(b'[{"market":"otc"}]')
   with patch.object(c.urllib.request,'urlopen',read):
-   self.assertTrue(c._is_otc('6488'));self.assertTrue(c._is_otc('6488'))
-  self.assertEqual(len(calls),3)
+   self.assertFalse(c._is_otc('6488'));self.assertTrue(c._is_otc('6488'));self.assertTrue(c._is_otc('6488'))
+  self.assertEqual(len(calls),2)
+  self.assertTrue(all('security_catalog?' in u and 'otc_names' not in u for u in calls))
   self.assertEqual(parse_qs(urlsplit(calls[1]).query)['code'],['eq.6488'])
  def test_invalid_code_never_queries(self):
   with patch.object(c.urllib.request,'urlopen') as read:

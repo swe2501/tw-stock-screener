@@ -16,10 +16,11 @@ class SecurityNames(unittest.TestCase):
    names=s._current_security_names(codes);self.assertEqual(len(calls),3)
    names['1000']='mutated';self.assertEqual(s._current_security_names(['1000'])['1000'],'current 1000')
   self.assertEqual(len(names),451)
- def test_failure_not_cached_and_unknown_fallback_targeted(self):
-  with patch.object(s,'_cache_sb',side_effect=[(503,None),(200,[{'code':'9999','name':'legacy'}])]) as read:
-   self.assertEqual(s._current_security_names(['9999']),{'9999':'legacy'})
-   self.assertEqual(dict(read.call_args.kwargs['params'])['code'],'in.(9999)')
+ def test_failure_not_cached_and_no_legacy_table(self):
+  # 2026-11-01 正規化：目錄失效時不再查舊 otc_names（將停用），回空讓呼叫端沿用快照原名；失敗不快取
+  with patch.object(s,'_cache_sb',return_value=(503,None)) as read:
+   self.assertEqual(s._current_security_names(['9999']),{})
+   self.assertEqual(read.call_count,1);self.assertEqual(read.call_args.args[0],'/security_catalog')
   with patch.object(s,'_cache_sb',return_value=(200,[{'code':'9999','name':'current'}])):
    self.assertEqual(s._current_security_names(['9999'])['9999'],'current')
  def test_expiry(self):
