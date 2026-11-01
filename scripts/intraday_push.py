@@ -196,7 +196,7 @@ def _otc_codes(env):
     try:
         for off in range(0, 5000, 1000):
             st, rows = bs._sb(env, "/security_catalog", method="GET", params=[
-                ("select", "code"), ("market", "eq.otc"), ("order", "code"), ("limit", "1000"), ("offset", str(off))])
+                ("select", "code"), ("market", "eq.otc"), ("instrument_type", "eq.stock"), ("order", "code"), ("limit", "1000"), ("offset", str(off))])
             rows = rows if isinstance(rows, list) else []
             codes += [str(r.get("code") or "").strip() for r in rows]
             if len(rows) < 1000:

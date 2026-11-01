@@ -35,10 +35,10 @@ class CatalogReads(unittest.TestCase):
    self.assertEqual(s._get_industry_map(),{'2317':'fallback','2330':'industry'});self.assertEqual(s._security_names_directory()['0050'],'ETF')
  def test_names_fallback_is_copy(self):
   with patch.object(s,'_normalized_catalog',return_value=None):
-   result=s._security_names_directory();self.assertEqual(result,s._STOCK_NAMES);self.assertIsNot(result,s._STOCK_NAMES)
+   result=s._security_names_directory();self.assertEqual(result,{})   # 2026-11-01 內嵌股名表已移除，目錄失效不再退回寫死清單
  def test_overview_only_fills_placeholders_without_mutating_quotes(self):
   data={'2330':dict(name='official',close=123,pct=2),'9999':dict(name='9999',close=90,pct=-2),'2317':dict(name='',close=100,pct=1)}
   with patch.object(s,'_current_security_names',return_value={'9999':'normalized'}) as read:
    result=s._fill_overview_names(data)
-  self.assertEqual(set(read.call_args.args[0]),{'9999','2317'});self.assertEqual(result['2330'],data['2330']);self.assertEqual(result['9999'],dict(data['9999'],name='normalized'));self.assertEqual(data['9999']['name'],'9999');self.assertEqual(result['2317']['name'],s._STOCK_NAMES['2317'])
+  self.assertEqual(set(read.call_args.args[0]),{'9999','2317'});self.assertEqual(result['2330'],data['2330']);self.assertEqual(result['9999'],dict(data['9999'],name='normalized'));self.assertEqual(data['9999']['name'],'9999');self.assertEqual(result['2317']['name'],'2317')
 if __name__=='__main__':unittest.main()

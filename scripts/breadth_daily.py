@@ -64,7 +64,7 @@ def _otc_set(env):
     out = set()
     try:
         for off in range(0, 5000, 1000):
-            d = json.loads(_sb_get(env, f"security_catalog?select=code&market=eq.otc&order=code&limit=1000&offset={off}"))
+            d = json.loads(_sb_get(env, f"security_catalog?select=code&market=eq.otc&instrument_type=eq.stock&order=code&limit=1000&offset={off}"))
             for x in d:
                 out.add(str(x["code"]).strip())
             if len(d) < 1000:
