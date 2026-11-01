@@ -959,42 +959,42 @@
       position: absolute;
       top: 4px; left: 50%;
       transform: translateX(-50%);
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 7px 12px 8px;
-      font-size: 12px;
+      background: color-mix(in srgb, var(--surface) 78%, transparent);
+      border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+      border-radius: 7px;
+      padding: 5px 9px 6px;
+      font-size: 11px;
       color: var(--text);
       pointer-events: none;
       z-index: 8;
       white-space: nowrap;
       display: none;
-      letter-spacing: 0.02em;
-      line-height: 1.55;
-      min-width: 190px;
-      box-shadow: 0 6px 18px rgba(0,0,0,.14);
+      letter-spacing: 0.01em;
+      line-height: 1.42;
+      min-width: 168px;
+      backdrop-filter: blur(11px) saturate(112%);
+      -webkit-backdrop-filter: blur(11px) saturate(112%);
+      box-shadow: 0 5px 15px rgba(0,0,0,.11);
       font-variant-numeric: tabular-nums;
     }
     /* 2026-11-01 提示框擴充：日期／狀態、開高低收、漲跌、量、DIF/MACD、三大法人 */
-    #ohlcTooltip .tt-head { display:flex; justify-content:space-between; gap:14px; align-items:baseline; }
-    #ohlcTooltip .tt-head b { font-size:13px; }
-    #ohlcTooltip .tt-state { font-size:11px; color:var(--text-muted); }
-    #ohlcTooltip .tt-ohlc { display:grid; grid-template-columns:auto 1fr auto 1fr; gap:0 8px; margin-top:2px; }
+    #ohlcTooltip .tt-head { display:flex; justify-content:space-between; gap:10px; align-items:baseline; }
+    #ohlcTooltip .tt-head b { font-size:12px; }
+    #ohlcTooltip .tt-state { font-size:10px; color:var(--text-muted); }
+    #ohlcTooltip .tt-ohlc { display:grid; grid-template-columns:auto 1fr auto 1fr; gap:0 6px; margin-top:1px; }
     #ohlcTooltip .tt-ohlc span, #ohlcTooltip .tt-rows > span:nth-child(odd) { color:var(--text-muted); }
     #ohlcTooltip .tt-ohlc b { text-align:right; font-weight:600; }
-    #ohlcTooltip .tt-chg { display:flex; justify-content:space-between; gap:12px; font-weight:600; margin-top:2px; padding-bottom:4px; border-bottom:1px solid var(--border); }
-    #ohlcTooltip .tt-rows { display:grid; grid-template-columns:auto 1fr; gap:0 12px; margin-top:4px; }
+    #ohlcTooltip .tt-chg { display:flex; justify-content:space-between; gap:9px; font-weight:600; margin-top:1px; padding-bottom:3px; border-bottom:1px solid color-mix(in srgb,var(--border) 72%,transparent); }
+    #ohlcTooltip .tt-rows { display:grid; grid-template-columns:auto 1fr; gap:0 9px; margin-top:3px; }
     #ohlcTooltip .tt-rows > span:nth-child(even) { text-align:right; }
     #ohlcTooltip .tt-rows b { font-weight:600; }
     #ohlcTooltip .tt-up { color:#e74c3c; } #ohlcTooltip .tt-dn { color:#26c281; } #ohlcTooltip .tt-flat { color:var(--text-muted); }
     #ohlcTooltip .tt-muted { color:var(--text-muted); }
-    #ohlcTooltip .tt-note { margin-top:4px; font-size:10.5px; color:var(--text-muted); }
     @media (max-width: 600px) {   /* 手機：圖表區約 200px 高，提示框要精簡才放得下 */
       #ohlcTooltip { font-size:10.5px; line-height:1.3; padding:4px 7px 5px; min-width:0; }
       #ohlcTooltip .tt-head b { font-size:11px; }
       #ohlcTooltip .tt-chg { padding-bottom:2px; }
       #ohlcTooltip .tt-rows { margin-top:2px; }
-      #ohlcTooltip .tt-note { display:none; }
     }
     .btn-preset {
       cursor: pointer;
@@ -14776,14 +14776,22 @@
         .then(rows => { const m = {}; (rows || []).forEach(r => { m[r.trade_date] = r; }); window._tipInstCache[code] = m; })
         .catch(() => { delete window._tipInstCache[code]; });
     }
-    // 2026-11-01 提示框跟著游標走（原本固定在圖上幾個角落）：預設在游標右側，放不下換左側；上下對齊游標並夾在圖內
+    // 提示框位於游標移動方向的反側：往左移顯示右邊、往右移顯示左邊，並在邊界自動翻面。
+    let _tipLastX = null, _tipSide = 'right';
     function _tipFollow(param) {
       const tip = document.getElementById('ohlcTooltip'), plot = document.getElementById('chartContainer');
       if (!tip || !plot || !param || !param.point) return;
       let ps = 0; try { ps = chartInstance.priceScale('right').width(); } catch (_) {}
-      const W = plot.clientWidth - ps, H = plot.clientHeight, tw = tip.offsetWidth, th = tip.offsetHeight, gap = 16;
-      let x = param.point.x + gap;
-      if (x + tw > W - 4) x = param.point.x - gap - tw;
+      const W = plot.clientWidth - ps, H = plot.clientHeight, tw = tip.offsetWidth, th = tip.offsetHeight, gap = 12;
+      if (_tipLastX != null) {
+        const dx = param.point.x - _tipLastX;
+        if (dx > 1.5) _tipSide = 'left';
+        else if (dx < -1.5) _tipSide = 'right';
+      } else _tipSide = param.point.x > W / 2 ? 'left' : 'right';
+      _tipLastX = param.point.x;
+      let x = _tipSide === 'right' ? param.point.x + gap : param.point.x - gap - tw;
+      if (x + tw > W - 4) { x = param.point.x - gap - tw; _tipSide = 'left'; }
+      if (x < 4) { x = param.point.x + gap; _tipSide = 'right'; }
       x = Math.max(4, Math.min(x, W - tw - 4));
       const y = Math.max(4, Math.min(param.point.y - th / 2, H - th - 4));
       tip.style.transform = 'none'; tip.style.left = x + 'px'; tip.style.top = y + 'px';
@@ -14819,7 +14827,6 @@
         } else if (Object.keys(cache).length) rows.push(['三大法人', '<span class="tt-muted">當日尚無資料</span>']);
       } else if (cache === 'loading') rows.push(['三大法人', '<span class="tt-muted">讀取中…</span>']);
       if (rows.length) h += `<div class="tt-rows">${rows.map(([a, b]) => `<span>${a}</span><span>${b}</span>`).join('')}</div>`;
-      if (cache && typeof cache === 'object' && cache[c.time]) h += `<div class="tt-note">法人買賣超・張・當日合計（證交所／櫃買）</div>`;
       return h;
     }
 
@@ -14996,10 +15003,11 @@
       chartInstance.subscribeCrosshairMove(param => {
         if (window.AcademyChartViewport?.isInfoVisible()===false || !param || !param.time || !param.seriesData) {
           _ohlcTip.style.display = 'none';
+          _tipLastX = null;
           return;
         }
         const c = _candleMap[param.time];
-        if (!c) { _ohlcTip.style.display = 'none'; return; }
+        if (!c) { _ohlcTip.style.display = 'none'; _tipLastX = null; return; }
         const date = typeof c.time==='number'?new Date(c.time*1000).toISOString().slice(0,16).replace('T',' ').replace(/-/g,'/'):c.time.replace(/-/g, '/');
         const color = c.close >= c.open ? '#e74c3c' : '#26c281';
         const fmt = v => Number(v).toFixed(2);
@@ -18175,8 +18183,8 @@
 <link rel="stylesheet" href="assets/zhenming-hidden.css?v=6">
 <link rel="stylesheet" href="assets/research-hover.css">
 <script src="assets/research-hover.js"></script>
-<link rel="stylesheet" href="assets/chart-drawing-edit.css">
-<script src="assets/chart-drawing-edit.js"></script>
+<link rel="stylesheet" href="assets/chart-drawing-edit.css?v=2">
+<script src="assets/chart-drawing-edit.js?v=2"></script>
 <script src="assets/zhenming-four.js"></script>
 <script src="assets/zhenming-hidden.js?v=5" defer></script>
 <script src="assets/screen-log.js?v=normalized-read1" defer></script>
