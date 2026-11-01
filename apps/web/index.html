@@ -13414,7 +13414,8 @@
         const hdr = { apikey: SIG_SB_ANON, Authorization: `Bearer ${SIG_SB_ANON}` };
         const [rb, rt, rc, re] = await Promise.all([
           fetch(`${SIG_SB_URL}/rest/v1/greed_base?select=base,price_score,momentum_score,volume_score,chip_score,exhaust,capitulation,data_date&code=eq.${encodeURIComponent(code)}`, { headers: hdr }),
-          fetch(`${SIG_SB_URL}/rest/v1/hot_topics?select=heat,sector,codes`, { headers: hdr }),
+          // 2026-11-01 降傳輸量：只取含本股、熱度最高的一筆（原本每次開 K 線抓全部話題約 9KB 壓縮／66KB 原始）
+          fetch(`${SIG_SB_URL}/rest/v1/hot_topics?select=heat,sector&codes=cs.${encodeURIComponent(JSON.stringify([{ code: String(code) }]))}&order=heat.desc.nullslast&limit=1`, { headers: hdr }),
           fetch(`${SIG_SB_URL}/rest/v1/catalyst_events?select=start_date&event_type=eq.${encodeURIComponent('法說會')}&code=eq.${encodeURIComponent(code)}`, { headers: hdr }),
           fetch(`${SIG_SB_URL}/rest/v1/catalyst_events?select=sector,start_date,end_date,title&event_type=eq.${encodeURIComponent('展覽')}`, { headers: hdr }),
         ]);
@@ -13423,7 +13424,7 @@
         const base = b.base || 0;
         let topicHeat = 0, topicSector = '';
         if (rt.ok) (await rt.json()).forEach(t => {
-          if ((t.codes || []).some(c => c.code === code) && (t.heat || 0) > topicHeat) { topicHeat = t.heat || 0; topicSector = t.sector || ''; }
+          if ((t.heat || 0) > topicHeat) { topicHeat = t.heat || 0; topicSector = t.sector || ''; }   // 已由資料庫篩出含本股的話題
         });
         const today = new Date(); today.setHours(0, 0, 0, 0);
         let lawScore = 0, lawDate = null, lawDays = null;
