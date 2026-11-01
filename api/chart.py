@@ -173,24 +173,39 @@ def fetch_tx_sessions():
             "source_url": src, "quoteType": "published_daily",
             "dateBasis": "TAIFEX trading date", "currency": "TWD"}
 
-# ── 上櫃(OTC)代號集：讀 Supabase otc_names（快取）；上櫃個股 Yahoo 尾碼用 .TWO（上市為 .TW）──
+# ── 上櫃(OTC)判斷：讀正規化 security_catalog（單代號快取）；上櫃個股 Yahoo 尾碼用 .TWO（上市為 .TW）──
 _SB_URL = "https://bruqrbvbjxntgoljxsne.supabase.co"
 _SB_ANON = "sb_publishable_KgYlaR-mqtx4uVre6kPD2A_qO6tdT1y"
-_OTC_CODES = None
+_MARKET_CACHE = {}
 
 
 def _is_otc(code):
-    global _OTC_CODES
-    if _OTC_CODES is None:
-        try:
-            req = urllib.request.Request(
-                f"{_SB_URL}/rest/v1/otc_names?select=code",
-                headers={"apikey": _SB_ANON, "Authorization": f"Bearer {_SB_ANON}"})
-            rows = json.loads(urllib.request.urlopen(req, timeout=8).read())
-            _OTC_CODES = set(str(r.get("code")) for r in rows if r.get("code"))
-        except Exception:
-            _OTC_CODES = set()
-    return str(code) in _OTC_CODES
+    """Resolve one public security; never download the complete OTC directory."""
+    code = str(code).upper()
+    if not re.fullmatch(r"[0-9A-Z]{4,10}", code):
+        return False
+    now = time.monotonic()
+    cached = _MARKET_CACHE.get(code)
+    if cached and cached[0] > now:
+        return cached[1]
+    headers = {"apikey": _SB_ANON, "Authorization": f"Bearer {_SB_ANON}"}
+    try:
+        query = urllib.parse.urlencode({"select": "market", "code": "eq." + code, "limit": "1"})
+        req = urllib.request.Request(f"{_SB_URL}/rest/v1/security_catalog?{query}", headers=headers)
+        with urllib.request.urlopen(req, timeout=8) as response:
+            rows = json.loads(response.read(65537))
+        market = rows[0].get("market") if isinstance(rows, list) and rows else None
+        if market in ("otc", "tpex", "two", "tse", "twse"):
+            result = market in ("otc", "tpex", "two")
+            if len(_MARKET_CACHE) >= 4096:
+                _MARKET_CACHE.clear()
+            _MARKET_CACHE[code] = (now + 300, result)
+            return result
+    except Exception:
+        pass
+    # 2026-11-01 正規化：舊 otc_names 備援移除（將停用）。目錄讀不到或沒有此代號時不快取、回上市，
+    # 上市(.TW)抓不到時下方既有流程會改用上櫃(.TWO)重試。
+    return False
 
 def _parse_taifex_chunk(content):
     """Parse TAIFEX CSV (TX only) → 台指近全 daily candles.
