@@ -25,7 +25,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "api"))
 sys.path.insert(0, str(ROOT / "scripts"))
-import screen  # THEME_MEMBERS, _get_industry_map, _STOCK_NAMES
+import screen  # THEME_MEMBERS, _get_industry_map, _stock_name
 import broker_signals as bs
 
 if sys.stdout and hasattr(sys.stdout, "reconfigure"):
@@ -132,7 +132,7 @@ def main():
     # 抽查
     for c in ["2330", "2454", "2317", "1101", "2882", "1216", "9910", "6116"]:
         r = next((x for x in rows if x["code"] == c), None)
-        print("  ", c, screen._STOCK_NAMES.get(c, ""), [t["name"] for t in (r["themes"] if r else [])][:6])
+        print("  ", c, screen._stock_name(c, ""), [t["name"] for t in (r["themes"] if r else [])][:6])
     if args.dry:
         return 0
     env = bs._load_env()

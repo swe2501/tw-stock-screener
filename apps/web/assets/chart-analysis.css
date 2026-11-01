@@ -1,0 +1,27 @@
+/* Only this entry uses the edge-to-edge chart workspace. */
+#chartModal.chart-analysis-only.modal-overlay{padding:0!important;background:var(--surface)!important;backdrop-filter:none}
+#chartModal.chart-analysis-only .modal-box{width:100vw!important;max-width:none!important;height:100dvh!important;max-height:none!important;border:0!important;border-radius:0!important;margin:0!important;transform:none!important}
+#chartModal.chart-analysis-only .modal-body{display:flex!important;flex-direction:row!important;min-height:0;flex:1;overflow:hidden}
+#chartModal.chart-analysis-only .chart-content{width:100%!important;max-width:none!important;flex:1 1 100%!important;min-width:0;min-height:0;overflow:auto}
+#chartModal.chart-analysis-only #chartNotePanel,
+#chartModal.chart-analysis-only .screen-chart-nav,
+#chartModal.chart-analysis-only #chartFullBtn,
+#chartModal.chart-analysis-only #chartWatchBtn,
+#chartModal.chart-analysis-only #academyChartStar,
+#chartModal.chart-analysis-only #chartBacktestBtn,
+#chartModal.chart-analysis-only #industryTag,
+#chartModal.chart-analysis-only #mktTag,
+#chartModal.chart-analysis-only #capTag,
+#chartModal.chart-analysis-only #divTag,
+#chartModal.chart-analysis-only #catalystTag{display:none!important}
+#chartModal.chart-analysis-only .modal-header{gap:12px;padding:12px 18px}
+#chartModal.chart-analysis-only .modal-title{font-size:18px}
+#chartModal.chart-analysis-only .modal-subtitle{font-size:12px}
+#chartModal.chart-analysis-only #chartSearchBox{display:block!important}
+@media(max-width:600px){
+ #chartModal.chart-analysis-only .modal-header{padding:9px 10px;flex-wrap:wrap}
+ #chartModal.chart-analysis-only .modal-header::before{display:none}
+ #chartModal.chart-analysis-only .modal-title{font-size:15px}
+ #chartModal.chart-analysis-only .modal-header>div{min-width:0}
+ #chartModal.chart-analysis-only #chartSearchBox>input{width:128px;font-size:12px}
+}

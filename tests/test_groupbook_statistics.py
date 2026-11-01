@@ -14,7 +14,7 @@ class GroupBookTests(unittest.TestCase):
         scope = dict(datetime=datetime, timezone=timezone, timedelta=timedelta,
                      SUPABASE_URL='test', SUPABASE_KEY='test', _cache_sb=fetch,
                      _GROUP_BOOK_MEMBERS={'test': ['2330']}, _GROUP_BOOK_CATEGORIES={},
-                     _STOCK_NAMES={}, _median=lambda xs: median(xs) if xs else None)
+                     _stock_name=lambda c, d=None: str(c) if d is None else d, _median=lambda xs: median(xs) if xs else None)
         exec(compile(ast.Module(body=functions, type_ignores=[]), 'screen.py', 'exec'), scope)
         return scope['_fetch_groupbook'](5)
 

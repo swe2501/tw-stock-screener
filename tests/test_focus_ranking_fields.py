@@ -16,7 +16,14 @@ def snapshot():
 
 
 class RankingFieldsTests(unittest.TestCase):
-    def setUp(self):screen._focus_detail_cache.clear()
+    def setUp(self):
+        screen._focus_detail_cache.clear()
+        names=patch.object(screen,'_current_security_names',return_value={})
+        names.start();self.addCleanup(names.stop)
+        memberships=patch.object(screen,'_load_stock_themes',side_effect=lambda: {
+            c:[{'id':name,'name':name} for name, codes in screen.THEME_MEMBERS.items() if c in codes]
+            for c in ('2330','2317')})
+        memberships.start();self.addCleanup(memberships.stop)
 
     def test_five_market_sessions_not_five_stock_rows_and_theme_membership(self):
         data=snapshot();before=copy.deepcopy(data)
@@ -53,7 +60,7 @@ class RankingFieldsTests(unittest.TestCase):
                  '2317':[dict(trade_date=d,close=90+i*2,volume=100000) for i,d in enumerate(DATES)]}
         with patch.object(screen,'_load_pw_window',return_value=(DATES[0],history)),patch.object(screen,'_cache_sb',side_effect=AssertionError('no network enrichment for daily computation')):
             result=screen._fetch_focus()
-        self.assertEqual(result['fields_version'],2);self.assertEqual(result['gainers'][0]['code'],'2330');self.assertEqual(result['losers'][0]['code'],'2317')
+        self.assertEqual(result['fields_version'],3);self.assertEqual(result['gainers'][0]['code'],'2330');self.assertEqual(result['losers'][0]['code'],'2317')
         self.assertEqual(result['volume_surge'][0]['volume_lots'],2000)
         with patch.object(screen,'_cache_sb',return_value=(200,[dict(payload=result)])) as call:
             returned=screen._read_focus_snapshot()

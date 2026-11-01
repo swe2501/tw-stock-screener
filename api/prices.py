@@ -117,6 +117,7 @@ class _SiteSearchMixin:
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Cache-Control", "public, max-age=60, s-maxage=120" if status == 200 and not payload.get("partial") else "no-store")
+        self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("X-Content-Type-Options", "nosniff")
         self.end_headers()
         self.wfile.write(body)
@@ -149,6 +150,85 @@ def _fetch_price(code):
         return code, None
 
 
+
+# Public snapshots share this existing function; never proxy arbitrary tables or JWTs.
+import time
+import threading
+import gzip
+import io
+from collections import OrderedDict
+_SNAPSHOT_KINDS = frozenset(('themes','sectors','themeall','sectorall','overview'))
+_SNAPSHOT_CACHE = OrderedDict()
+_SNAPSHOT_LOCK = threading.Lock()
+_SNAPSHOT_KEY_LOCKS = {}
+
+def _public_snapshot(kind, scope, opener=None, clock=None):
+    opener = opener or urllib.request.urlopen
+    clock = clock or time.monotonic
+    base_kind = kind[:-3] if kind.endswith('_rt') else kind
+    if base_kind not in _SNAPSHOT_KINDS or scope not in ('prod','uat'):
+        raise ValueError('invalid_snapshot')
+    base, key = os.environ.get('SUPABASE_URL',''), os.environ.get('SUPABASE_ANON_KEY','')
+    if not base or not key:
+        raise RuntimeError('not_configured')
+    identity=(base,kind,scope)
+    # Single flight per warm instance. Only public anon reads enter this cache.
+    with _SNAPSHOT_LOCK:
+        key_lock=_SNAPSHOT_KEY_LOCKS.setdefault(identity,threading.Lock())
+    with key_lock:
+        with _SNAPSHOT_LOCK:
+            cached=_SNAPSHOT_CACHE.get(identity)
+            if cached and cached[0]>clock():
+                _SNAPSHOT_CACHE.move_to_end(identity)
+                return cached[1]
+        params={'select':'kind,payload,updated_at','kind':('in.('+kind+'@uat,'+kind+')') if scope=='uat' else 'eq.'+kind,'limit':'2'}
+        request=urllib.request.Request(base.rstrip('/')+'/rest/v1/page_cache?'+urllib.parse.urlencode(params),headers={'apikey':key,'Authorization':'Bearer '+key,'Accept-Encoding':'gzip'})
+        with opener(request,timeout=10) as response:
+            raw=response.read(8_000_001)
+            if len(raw)>8_000_000:raise RuntimeError('snapshot_too_large')
+            if response.headers.get('Content-Encoding','').lower()=='gzip':
+                with gzip.GzipFile(fileobj=io.BytesIO(raw)) as stream:raw=stream.read(16_000_001)
+            if len(raw)>16_000_000:raise RuntimeError('snapshot_too_large')
+        rows=json.loads(raw)
+        if not isinstance(rows,list):raise RuntimeError('invalid_snapshot_response')
+        allowed={kind,kind+'@uat'} if scope=='uat' else {kind}
+        if any(not isinstance(r,dict) or r.get('kind') not in allowed for r in rows):raise RuntimeError('invalid_snapshot_response')
+        preferred=next((r for r in rows if r['kind']==kind+'@uat'),None) if scope=='uat' else None
+        selected=preferred or next((r for r in rows if r['kind']==kind),None)
+        if selected and not isinstance(selected.get('payload'),dict):raise RuntimeError('invalid_snapshot_response')
+        result=[selected] if selected else []
+        # Missing rows/errors are retried instead of being cached as empty data.
+        if selected and not selected['payload'].get('error') and len(raw)<=2_000_000:
+            with _SNAPSHOT_LOCK:
+                _SNAPSHOT_CACHE[identity]=(clock()+(15 if kind.endswith('_rt') else 120),result)
+                while len(_SNAPSHOT_CACHE)>8:_SNAPSHOT_CACHE.popitem(last=False)
+        return result
+
+_SECURITY_CATALOG_CACHE = None
+_SECURITY_CATALOG_LOCK = threading.Lock()
+def _security_catalog(opener=None,clock=None):
+    global _SECURITY_CATALOG_CACHE
+    opener=opener or urllib.request.urlopen;clock=clock or time.monotonic
+    base,key=os.environ.get('SUPABASE_URL',''),os.environ.get('SUPABASE_ANON_KEY','')
+    if not base or not key:raise RuntimeError('not_configured')
+    with _SECURITY_CATALOG_LOCK:
+        if _SECURITY_CATALOG_CACHE and _SECURITY_CATALOG_CACHE[0]==base and _SECURITY_CATALOG_CACHE[1]>clock():return _SECURITY_CATALOG_CACHE[2]
+        items=[]
+        for offset in range(0,6000,500):
+            params={'select':'code,name,market,instrument_type,industry','order':'code.asc','limit':'500','offset':str(offset)}
+            request=urllib.request.Request(base.rstrip('/')+'/rest/v1/security_catalog?'+urllib.parse.urlencode(params),headers={'apikey':key,'Authorization':'Bearer '+key})
+            with opener(request,timeout=8) as response:raw=response.read(1_000_001)
+            if len(raw)>1_000_000:raise RuntimeError('catalog_too_large')
+            page=json.loads(raw)
+            if not isinstance(page,list) or any(not isinstance(r,dict) or not re.fullmatch(r'[0-9A-Z]{4,10}',str(r.get('code',''))) or not isinstance(r.get('name'),str) for r in page):raise RuntimeError('invalid_catalog')
+            items.extend(page)
+            if len(page)<500:break
+        else:raise RuntimeError('catalog_truncated')
+        if not items or len({r['code'] for r in items})!=len(items):raise RuntimeError('invalid_catalog')
+        result={'version':1,'source':'security_catalog','items':items}
+        _SECURITY_CATALOG_CACHE=(base,clock()+300,result);return result
+
+
 class handler(_SiteSearchMixin, BaseHTTPRequestHandler):
     def log_message(self, *a): pass
 
@@ -165,6 +245,19 @@ class handler(_SiteSearchMixin, BaseHTTPRequestHandler):
         # Search is dispatched before price validation; original price GET stays unchanged.
         if (qs.get("action") or [""])[0] == "site_search" or urllib.parse.urlsplit(self.path).path in ("/api/site_search", "/api/site_search.py"):
             return self._site_search_get()
+        if (qs.get('action') or [''])[0]=='security_catalog':
+            try: catalog=_security_catalog()
+            except Exception:return self._site_search_json(503,{'error':'catalog_unavailable'})
+            return self._site_search_json(200,catalog)
+        if (qs.get('action') or [''])[0]=='public_snapshot':
+            kind=(qs.get('kind') or [''])[0]; scope=(qs.get('scope') or ['prod'])[0]
+            try: rows=_public_snapshot(kind,scope)
+            except ValueError: return self._site_search_json(400,{'error':'invalid_snapshot'})
+            except Exception: return self._site_search_json(503,{'error':'snapshot_unavailable'})
+            body=json.dumps(rows,ensure_ascii=False,separators=(',',':')).encode()
+            self.send_response(200);self.send_header('Content-Type','application/json; charset=utf-8')
+            self.send_header('Cache-Control',('public, max-age=0, s-maxage=15' if kind.endswith('_rt') else 'public, max-age=30, s-maxage=120') if rows and not rows[0].get('payload',{}).get('error') else 'no-store')
+            self.send_header('Access-Control-Allow-Origin','*');self.send_header('X-Content-Type-Options','nosniff');self.end_headers();self.wfile.write(body);return
         codes_str = (qs.get("codes") or [""])[0]
         codes = [c.strip() for c in codes_str.split(",") if c.strip()][:50]
         if not codes:
