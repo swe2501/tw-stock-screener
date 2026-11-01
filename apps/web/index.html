@@ -20,7 +20,7 @@
   <script src="assets/site-theme.js"></script>
   <script src="assets/w-pattern-export.js?v=20261024-1"></script>
   <script src="assets/w-pattern-overlay.js?v=20261025-2"></script>
-  <script src="assets/chart-ai-patterns.js?v=20261028-tri1"></script>
+  <script src="assets/chart-ai-patterns.js?v=20261101-box1"></script>
   <link rel="stylesheet" href="assets/chart-ai-patterns.css?v=20261026-3">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -4164,6 +4164,43 @@
         });
       }).catch(function(){el('bxList').innerHTML='<div class="fc-empty">讀取失敗</div>';});
       if(el('bxNote'))el('bxNote').innerHTML='<b>學院導讀</b> 先看價格在整理區內還是已離開區間，再觀察突破後能否站穩、成交量是否配合。市場廣度與騰落用來確認有多少股票參與，極端數值不保證立即反轉。';
+    };
+    // 2026-11-01 規則版箱型（取自用戶朋友《股票型態.md》的箱型規則）：scripts/compute_box_rules.py 每晚收盤後算好存 page_cache ai_box_rules
+    function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+    window._boxRuleShow=function(){
+      var SB=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'', AK=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';
+      var H={apikey:AK,Authorization:'Bearer '+AK}, K='ai_box_rules';
+      el('bxList').innerHTML='<div class="fc-empty">載入中…</div>';
+      fetch(SB+'/rest/v1/page_cache?select=kind,payload,updated_at&kind='+(window.__pcQ?window.__pcQ(K):'eq.'+K)+'&limit=2',{headers:H}).then(function(r){return r.json();}).then(function(rows){
+        var row=window.__pcPick?window.__pcPick(rows,K):(Array.isArray(rows)?rows[0]:null), p=row&&row.payload;
+        if(!p||!Array.isArray(p.records)){el('bxList').innerHTML='<div class="fc-empty">規則版箱型資料尚未產生</div>';return;}
+        var cv=p.coverage||{}, recs=p.records;
+        if(el('bxSub'))el('bxSub').textContent='共 '+recs.length+' 檔 · 收盤突破 '+(cv.breakout||0)+' · 箱內上方25% '+(cv.upper||0)+' · 資料日 '+(p.data_date||'')+'（判讀 '+(cv.scanned||0)+' 檔）';
+        if(el('bxNote'))el('bxNote').innerHTML='<b>算法（2026-11-01 規則版，取自型態規則文件）</b> 日K、近六個月，從最近一次已知除權息之後起算，缺價量的K棒切斷不跨段。箱體至少 45 根；振幅 (H−L)÷L ≤ 16%（H／L 為區間最高 High／最低 Low，含影線）；區間最大量 ≤ 第二大量 × 1.05。'
+          +'列入條件二擇一：① 箱體最後一根收盤位於箱內上方 25%（收盤 ≥ L＋(H−L)×0.75）② 箱體後的下一根收盤 ＞ 箱頂 H（突破棒不算進箱體）。只列型態終點落在最近三個交易日（'+esc((p.close_dates||[]).join('、'))+'）的股票；同一檔有多個候選時，收盤突破優先，其次取最長的箱體。每晚收盤後重算。'
+          +'<br><b>資料限制</b> 除權息日期目前只有上市股、2026-08-12 起的紀錄；更早的除權息與上櫃股的除權息還不能切段，這些股票的箱體可能跨過除權息。'
+          +'<br>型態為整理區間的研究結果，不是買進訊號；收盤突破後能否站穩、量能是否配合請另外確認。';
+        if(!recs.length){el('bxList').innerHTML='<div class="fc-empty">最近三個交易日沒有符合條件的箱型</div>';return;}
+        window._loadNames(function(names){
+          names=names||{};
+          el('bxList').innerHTML=recs.map(function(x){
+            var lo=+x.low, hi=+x.high, span=hi-lo, bo=x.status==='breakout';
+            var tag=bo?['收盤突破箱頂','up']:['箱內上方25%','form'];
+            var cur=+x.last_close, pos=span>0?(cur-lo)/span*100:0;
+            var bar=span>0?'<div class="bx-bar"><div class="bx-inner" style="left:75%;width:25%"></div><div class="bx-mark" style="left:'+Math.max(0,Math.min(99.5,pos))+'%"></div></div>'
+              +'<div class="bx-scale"><span>箱底 '+fmt(lo)+'</span><span>上方25% 起 '+fmt(x.upper_line)+'</span><span>箱頂 '+fmt(hi)+'</span></div>':'';
+            var why=bo?(esc(x.breakout_date)+' 收盤 '+fmt(x.breakout_close)+' ＞ 箱頂 '+fmt(hi))
+              :('箱體末日 '+esc(x.to)+' 收盤 '+fmt(x.box_close)+'，位於箱內 '+Math.round((x.box_close-lo)/span*100)+'% 位置');
+            var now=(x.last_date&&x.last_date!==(bo?x.breakout_date:x.to))?' · 最新 '+esc(x.last_date)+' 收 '+fmt(cur):' · 最新收 '+fmt(cur)+(pos>100?'（在箱頂上方）':'');
+            return '<div class="bx-card clk" data-code="'+esc(x.code)+'"><div class="bx-top"><span class="bx-code"><b>'+esc(x.code)+'</b><span>'+esc(names[x.code]||'')+'</span></span><span class="bx-tag '+tag[1]+'">'+tag[0]+'</span></div>'
+              +bar+'<div class="bx-reason">'+why+now+'</div>'
+              +'<div class="bx-meta">箱體 '+esc(x.from)+' ~ '+esc(x.to)+' · '+x.bars+' 根 · 振幅 '+x.amp+'% · 最大量 '+Number(x.v1).toLocaleString()+' ／ 第二大量 '+Number(x.v2).toLocaleString()+' 張</div></div>';
+          }).join('');
+          el('bxList').querySelectorAll('.bx-card[data-code]').forEach(function(card){
+            card.addEventListener('click',function(){var c=card.dataset.code;if(window._openSavedPatternChart)window._openSavedPatternChart(c,names[c]||'','daily');else _openStock(c,names[c]||'');});
+          });
+        });
+      }).catch(function(){el('bxList').innerHTML='<div class="fc-empty">讀取失敗</div>';});
     };
     window._VIEWS=window._VIEWS||{}; window._VIEWS.box={el:'boxView',show:'_boxShow'};
   })();
@@ -18277,7 +18314,7 @@
 <script src="assets/exhibition-calendar.js?v=localfix-3" defer></script>
 <link rel="stylesheet" href="assets/responsive-layout.css?v=1">
 <link rel="stylesheet" href="assets/ai-pattern-screen.css?v=20261026-1">
-<script src="assets/ai-pattern-screen.js?v=20261028-tri1" defer></script>
+<script src="assets/ai-pattern-screen.js?v=20261101-box1" defer></script>
 <link rel="stylesheet" href="assets/pattern-admin-review.css?v=20261027-1">
 <script src="assets/pattern-admin-review.js?v=20261027-6" defer></script>
 <link rel="stylesheet" href="assets/brand-arrival.css?v=42">
