@@ -836,6 +836,61 @@ def _load_stock_themes() -> dict:
     return out
 
 
+_security_name_cache = {}
+
+
+def _current_security_names(codes):
+    """Read public master names in bounded batches; never cache failed reads."""
+    import re
+    codes = sorted({str(c) for c in codes if re.fullmatch(r"[0-9A-Z]{4,10}", str(c))})
+    now = time.time()
+    # Expire entries rather than retaining arbitrary historical queries forever.
+    for code, item in list(_security_name_cache.items()):
+        if item[0] <= now:
+            _security_name_cache.pop(code, None)
+    found = {c: _security_name_cache[c][1] for c in codes if c in _security_name_cache}
+    missing = [c for c in codes if c not in found]
+    for offset in range(0, len(missing), 200):
+        batch = missing[offset:offset+200]
+        try:
+            status, rows = _cache_sb('/security_catalog', params=[('select', 'code,name'),
+                ('code', 'in.('+','.join(batch)+')'), ('limit', str(len(batch)))])
+            if status != 200 or not isinstance(rows, list):
+                continue
+            allowed = set(batch)
+            for row in rows:
+                if not isinstance(row, dict):
+                    continue
+                code, name = str(row.get('code', '')), row.get('name')
+                if code in allowed and isinstance(name, str) and name.strip():
+                    found[code] = name
+                    if len(_security_name_cache) >= 4096:
+                        _security_name_cache.clear()
+                    _security_name_cache[code] = (now+300, name)
+        except Exception:
+            continue
+    # Migration/outage fallback is limited to unknown displayed codes, not all OTCs.
+    fallback = [c for c in codes if c not in found and c not in _STOCK_NAMES]
+    for offset in range(0, len(fallback), 200):
+        batch = fallback[offset:offset+200]
+        try:
+            status, rows = _cache_sb('/otc_names', params=[('select', 'code,name'),
+                ('code', 'in.('+','.join(batch)+')'), ('limit', str(len(batch)))])
+            if status == 200 and isinstance(rows, list):
+                for row in rows:
+                    if isinstance(row, dict) and str(row.get('code')) in batch and isinstance(row.get('name'), str) and row['name'].strip():
+                        found[str(row['code'])] = row['name']
+        except Exception:
+            pass
+    return found
+
+
+def _with_current_names(rows, names):
+    # Only presentation names change. Snapshot prices, order and dates stay intact.
+    return [dict(row, name=names.get(str(row.get('code')), row.get('name') or str(row.get('code', ''))))
+            for row in rows]
+
+
 def _focus_details(data, by_code=None):
     """Add display-only fields; never rerank or change the snapshot's price/date.
 
@@ -889,6 +944,9 @@ def _focus_details(data, by_code=None):
             r['volume_lots'] = round(volume/1000, 3) if finite(volume) and volume >= 0 else None
             enriched.append(r)
         result[key] = enriched
+    names = _current_security_names(codes)
+    for key in keys:
+        result[key] = _with_current_names(result[key], names)
     result.update(fields_version=3, five_day_base_date=base_date, volume_unit='shares', volume_lots_unit='lots', theme_source='stock_themes(精選題材+官方產業別)')
     return result
 
@@ -906,6 +964,9 @@ def _read_focus_snapshot(top_n=30):
         result[key] = data[key][:max(1, min(top_n, 50))]
     if result.get('fields_version') != 3:   # 版本升級→舊快照(含合夥人v2僅THEME_MEMBERS)在讀取時重算補全題材，部署後即時生效
         result = _focus_details(result)
+    names = _current_security_names([r.get('code') for key in keys for r in result[key]])
+    for key in keys:
+        result[key] = _with_current_names(result[key], names)
     return result
 
 
@@ -1001,11 +1062,6 @@ def _fetch_limitup():
     latest, by_code = _load_pw_window(14)
     if not by_code:
         return {"error": "no data"}
-    # 2026-10-28 上櫃股名：_STOCK_NAMES 只有上市，上櫃改查本站 otc_names 表（原本只顯示代號）
-    try:
-        otc_nm = {str(r.get("code")): r.get("name") for r in (_cache_sb("/otc_names", params=[("select", "code,name"), ("limit", "3000")])[1] or [])}
-    except Exception:
-        otc_nm = {}
     # 2026-10-28 台股漲跌幅上限 10%：單日超過 ±10.5% 代表當天不受漲跌幅限制（停牌後復牌、新上市前幾天），
     # 不算漲停/跌停。例：1516 川飛 10/15~10/26 停牌，10/27 復牌 25 元比停牌前 18.55 高 34.77%，原本被誤列連 4 天漲停。
     LIMIT_MAX = 10.5
@@ -1025,7 +1081,7 @@ def _fetch_limitup():
         today = chgs[0]
         close = arr[0].get("close")
         vol = arr[0].get("volume") or 0
-        name = _STOCK_NAMES.get(c) or otc_nm.get(c) or c
+        name = _STOCK_NAMES.get(c) or c
         prev_vols = [x.get("volume") or 0 for x in arr[1:11]]
         ratio = None
         if len(prev_vols) >= 5 and vol > 0:
@@ -1052,6 +1108,8 @@ def _fetch_limitup():
                           "chg": round(today, 2), "days": streak(-1), "ratio": ratio})
     ups.sort(key=lambda x: (x["days"], x["chg"]), reverse=True)
     downs.sort(key=lambda x: (x["days"], -x["chg"]), reverse=True)
+    names = _current_security_names([r['code'] for r in ups+downs])
+    ups, downs = _with_current_names(ups, names), _with_current_names(downs, names)
     return {"date": latest, "up": ups, "down": downs,
             "up_count": len(ups), "down_count": len(downs)}
 
