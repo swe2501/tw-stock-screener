@@ -169,3 +169,11 @@ html[data-theme="dark"] #chartModal .chart-summary-actions #chartInfoToggle:hove
 #chartModal .chart-exchange-actions{gap:1px;padding-block:0}
 #chartModal .chart-exchange-actions #wPatternExportBtn,#chartModal .chart-exchange-actions #wPatternImportBtn{font-size:10px!important;line-height:14px;min-height:0;padding:0 7px;letter-spacing:.04em}
 @media(pointer:coarse){#chartModal .chart-fit-tools .chart-toolbar .chart-tool-btns>.tool-btn{min-height:38px}#chartModal .chart-exchange-actions #wPatternExportBtn,#chartModal .chart-exchange-actions #wPatternImportBtn{min-height:19px;line-height:17px}}
+/* 2026-11-01 區間三大法人買賣超 */
+#chartIntervalReport .range-inst{margin:4px 0 6px;padding-top:6px;border-top:1px solid var(--border)}
+#chartIntervalReport .range-inst>b{display:block;font-size:12px;font-weight:600;margin-bottom:2px}
+#chartIntervalReport .range-inst dl{margin:4px 0}
+#chartIntervalReport .range-inst small{display:block;font-size:11px;color:var(--text-muted)}
+#chartIntervalReport .range-inst dl{grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 14px}
+#chartIntervalReport .range-inst dl>div{display:flex;justify-content:space-between;align-items:baseline;gap:6px;min-height:0;padding-bottom:0}
+#chartIntervalReport .range-inst dd{font-size:12px;text-align:right;white-space:nowrap}
