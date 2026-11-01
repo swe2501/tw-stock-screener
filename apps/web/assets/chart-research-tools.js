@@ -124,11 +124,28 @@ function positionReport(){
  const below=mr.bottom-pr.bottom-16;if(below>=100){report.style.width=Math.min(290,pw-12)+'px';report.style.maxHeight='none';w=report.offsetWidth;place(clamp(ax+gap,pr.left+6,pr.left+pw-w-6),pr.bottom+8,'below');return;}
  reportDocked=true;report.style.position='relative';report.style.left='auto';report.style.top='auto';report.style.width='min(290px,100%)';report.style.maxHeight='none';report.style.margin='6px 0 6px auto';document.getElementById('chartWrapper').before(report);report.dataset.placement='docked';
 }
+// 2026-11-01 區間三大法人買賣超（張）：共用 K 線提示框的 inst_daily 快取（window._tipInstCache，index.html 的 _loadTipInst 負責抓）
+let instRetry=0;
+function instHtml(s){
+ const code=typeof currentCode!=='undefined'?String(currentCode):'',daily=(window._chartPeriodKey||'day')==='day'&&/^\d{4}-\d{2}-\d{2}$/.test(String(s.first));
+ const box=body=>'<div class="range-inst"><b>三大法人買賣超</b>'+body+'</div>';
+ if(!/^[0-9]{4,6}[A-Z]?$/.test(code)||typeof s.first!=='string')return '';
+ if(!daily)return box('<small>請切換到日K查看區間法人買賣超</small>');
+ const cache=window._tipInstCache?.[code];
+ if(!cache||cache==='loading'){if(!cache)window._loadTipInst?.(code);if(instRetry++<20)setTimeout(()=>{if(selection&&report&&!report.hidden)showReport();},400);return box('<small>讀取中…</small>');}
+ instRetry=0;
+ const rows=Object.values(cache).filter(r=>r.trade_date>=s.first&&r.trade_date<=s.last);
+ if(!rows.length)return box('<small>此區間沒有法人資料（約保留近半年）</small>');
+ const sum=k=>rows.reduce((a,r)=>a+(+r[k]||0),0),f=+sum('foreign_net'),t=+sum('trust_net'),d=+sum('dealer_net'),all=f+t+d;
+ const cell=(k,v)=>'<div><dt>'+k+'</dt><dd class="range-'+(v>0?'up':v<0?'down':'flat')+'">'+(v>0?'+':'')+Math.round(v).toLocaleString()+' 張</dd></div>';
+ const first=Object.keys(cache).sort()[0];
+ return box('<dl>'+cell('外資',f)+cell('投信',t)+cell('自營商',d)+cell('合計',all)+'</dl><small>'+rows.length+' 個交易日加總'+(first>s.first?'；法人資料自 '+first+' 起':'')+'</small>');
+}
 function showReport(){const b=bridge();if(!selection||!b)return;const s=summarize(b.candles.slice(selection.from,selection.to+1));if(!s)return;
  const sign=s.change==null?'':s.change>0?'up':s.change<0?'down':'flat',percent=n=>finite(n)?fmt(n)+'%':'—';
  const counts='<span class="range-up" title="收盤高於開盤">'+s.up+'</span> / <span class="range-down" title="收盤低於開盤">'+s.down+'</span> / <span class="range-flat" title="收盤等於開盤">'+s.flat+'</span>';
  const metrics=[['high','最高',fmt(s.high),'up'],['low','最低',fmt(s.low),'down'],['change','漲跌幅',percent(s.change),sign],['amplitude','振幅',percent(s.amplitude),''],['average','平均收盤',fmt(s.average),''],['volume','總量',fmt(s.volume,0),''],['candles','陽線 / 陰線 / 平線',counts,''],['amount','成交額',s.amount==null?'來源未提供':fmt(s.amount,0),'']];
- report.querySelector('[data-range-content]').innerHTML='<p>'+escape(date(s.first))+' → '+escape(date(s.last))+' · <strong class="range-bar-count">'+s.bars+' 根 K 棒</strong></p><dl>'+metrics.map(([id,k,v,tone])=>'<div data-range-metric="'+id+'"><dt>'+escape(k)+'</dt><dd'+(tone?' class="range-'+tone+'"':'')+'>'+(id==='candles'?v:escape(v))+'</dd></div>').join('')+'</dl><details class="range-report-notes"><summary>統計說明</summary><small>漲跌幅與振幅以區間首根收盤為基準。陽線：收盤高於開盤；陰線：低於開盤；平線：開收相同，並非與前一天比較。統計使用目前週期的 K 棒，非日曆天數；總量單位與量能圖一致。</small></details>';report.hidden=false;reportDocked=false;document.querySelector('#chartModal>.modal-box').append(report);report.style.position='absolute';report.style.margin='0';positionReport();
+ report.querySelector('[data-range-content]').innerHTML='<p>'+escape(date(s.first))+' → '+escape(date(s.last))+' · <strong class="range-bar-count">'+s.bars+' 根 K 棒</strong></p><dl>'+metrics.map(([id,k,v,tone])=>'<div data-range-metric="'+id+'"><dt>'+escape(k)+'</dt><dd'+(tone?' class="range-'+tone+'"':'')+'>'+(id==='candles'?v:escape(v))+'</dd></div>').join('')+'</dl>'+instHtml(s)+'<details class="range-report-notes"><summary>統計說明</summary><small>漲跌幅與振幅以區間首根收盤為基準。陽線：收盤高於開盤；陰線：低於開盤；平線：開收相同，並非與前一天比較。統計使用目前週期的 K 棒，非日曆天數；總量單位與量能圖一致。三大法人買賣超為證交所／櫃買每日公布的買賣超張數，區間內逐日加總；只在日K提供，資料約保留近半年。</small></details>';report.hidden=false;reportDocked=false;document.querySelector('#chartModal>.modal-box').append(report);report.style.position='absolute';report.style.margin='0';positionReport();
 }
 
 function cancelInterval(){selecting=false;start=null;if(capture)capture.hidden=true;document.getElementById('intervalStatsBtn')?.setAttribute('aria-pressed','false');const h=document.getElementById('chartToolHint');if(h)h.hidden=true;}

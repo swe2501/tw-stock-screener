@@ -63,7 +63,7 @@
   status=type==='w_bottom'?'forming':'all';if(sel)sel.value=status;
   const isBox=type==='box';$('aiPatternLegacyBox').hidden=!isBox;$('aiPatternSavedPanel').hidden=isBox;
   for(const b of $('aiPatternTabs').querySelectorAll('[role=tab]')){const on=b.dataset.type===type;b.setAttribute('aria-selected',String(on));b.tabIndex=on?0:-1;}
-  if(isBox){if(!boxLoaded){boxLoaded=true;(window._boxRuleShow||window._boxLegacyShow)();}return;}
+  if(isBox){if(!boxLoaded){boxLoaded=true;window._boxRuleShow?.();}return;}
   $('aiPatternFilters').hidden=false;render();
   load().then(()=>{if(active!=='box')render();}).catch(e=>{if(active!=='box'){$('aiPatternResults').replaceChildren(node('div',e.message,'aps-empty'));}});
  }

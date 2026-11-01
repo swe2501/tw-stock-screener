@@ -3043,9 +3043,8 @@
       <div class="fc-card"><div class="fc-h">產業類股<span class="fc-seg" role="group" aria-label="領漲領跌"><button type="button" class="on" data-sec="strong">領漲</button><button type="button" data-sec="weak">領跌</button></span></div><div id="fcSectors"><div class="fc-empty">載入中…</div></div></div>
       <div class="fc-card"><div class="fc-h">個股漲跌分布 <span class="fc-sub">上市櫃 · 當日</span></div><div id="fcDist"><div class="fc-empty">載入中…</div></div></div>
     </div>
-    <div class="fc-grid3">
+    <div class="fc-grid2">
       <div class="fc-card"><div class="fc-h"> 今日題材焦點</div><div id="fcTopics"><div class="fc-empty">載入中…</div></div></div>
-      <div class="fc-card fc-pattern-card"><div class="fc-h">今日型態觀察 <span class="fc-sub">確認訊號</span></div><div class="fc-pattern-controls"><div class="fc-pattern-direction" role="group" aria-label="突破方向"><button type="button" data-pattern-direction="up" aria-pressed="true">向上突破 ↑</button><button type="button" data-pattern-direction="down" aria-pressed="false">向下跌破 ↓</button></div><label for="fcPatternType">型態<select id="fcPatternType" aria-describedby="fcPatternNote"></select></label></div><p id="fcPatternNote" class="fc-pattern-note" role="status"></p><div id="fcBox" aria-live="polite"><div class="fc-empty">載入中…</div></div></div>
       <div class="fc-card"><div class="fc-h"> 貪婪 / 恐懼榜</div><div id="fcGreed"><div class="fc-empty">載入中…</div></div></div>
     </div>
     <div class="fc-card" id="fcSigCard"><div class="fc-h"> 今日主力焦點 <span class="fc-sub">擁有者限定</span></div><div id="fcSig"><div class="fc-empty">—</div></div></div>
@@ -4128,43 +4127,6 @@
   (function(){
     var el=function(id){return document.getElementById(id);};
     function fmt(v){return v==null?'—':Number(v).toLocaleString(undefined,{maximumFractionDigits:2});}
-    var TAG={FORMING:['整理中','form'],CONFIRMED_UP:['向上突破','up'],CONFIRMED_DOWN:['向下突破','dn']};
-    window._boxLegacyShow=function(){
-      var SB=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'', AK=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';
-      var H={apikey:AK,Authorization:'Bearer '+AK};
-      fetch(SB+'/rest/v1/box_patterns?select=code,status,upper_center,lower_center,upper_outer,lower_outer,breakout_date,breakout_direction,breakout_reason,data_date,window_start,window_end&order=status.asc,code.asc&limit=300',{headers:H}).then(function(r){return r.json();}).then(function(rows){
-        if(!Array.isArray(rows)||!rows.length){el('bxList').innerHTML='<div class="fc-empty">目前無箱型資料</div>';return;}
-        var dd=rows[0].data_date||'';
-        var cnt={};rows.forEach(function(x){cnt[x.status]=(cnt[x.status]||0)+1;});
-        if(el('bxSub'))el('bxSub').textContent='共 '+rows.length+' 檔 · 整理中 '+(cnt.FORMING||0)+' · 向上 '+(cnt.CONFIRMED_UP||0)+' · 向下 '+(cnt.CONFIRMED_DOWN||0)+(dd?' · '+dd:'');
-        var codes=rows.map(function(x){return x.code;});
-        window._loadNames(function(names){
-          // 取現價（price_window 最新日，僅這些代號）
-          fetch(SB+'/rest/v1/price_window?select=code,close,trade_date&code=in.('+codes.join(',')+')&order=trade_date.desc',{headers:H}).then(function(r){return r.json();}).then(function(pw){
-            var px={};(pw||[]).forEach(function(r){ if(px[r.code]==null)px[r.code]=r.close; }); // 每碼第一筆=最新
-            el('bxList').innerHTML=rows.map(function(x){
-              var lo=x.lower_outer, hi=x.upper_outer, ic=x.upper_center, il=x.lower_center, cur=px[x.code];
-              var t=TAG[x.status]||['—','form'];
-              var bar='';
-              if(lo!=null&&hi!=null&&hi>lo){
-                var span=hi-lo;
-                var il2=Math.max(0,Math.min(100,(il-lo)/span*100)), iu2=Math.max(0,Math.min(100,(ic-lo)/span*100));
-                bar='<div class="bx-bar"><div class="bx-inner" style="left:'+il2+'%;width:'+(iu2-il2)+'%"></div>'+
-                  (cur!=null?'<div class="bx-mark" data-p="'+fmt(cur)+'" style="left:'+Math.max(0,Math.min(100,(cur-lo)/span*100))+'%"></div>':'')+'</div>'+
-                  '<div class="bx-scale"><span>'+fmt(lo)+'</span><span>箱底 '+fmt(il)+' ~ 箱頂 '+fmt(ic)+'</span><span>'+fmt(hi)+'</span></div>';
-              }
-              return '<div class="bx-card clk" onclick="_openStock(\''+x.code+'\',\''+(names[x.code]||'')+'\')"><div class="bx-top"><span class="bx-code"><b>'+x.code+'</b><span>'+(names[x.code]||'')+'</span></span><span class="bx-tag '+t[1]+'">'+t[0]+'</span></div>'+
-                bar+
-                (x.breakout_reason?'<div class="bx-reason"> '+x.breakout_reason+'</div>':'')+
-                '<div class="bx-meta">觀察區間：'+(x.window_start||'')+' ~ '+(x.window_end||'')+(x.breakout_date?' · 突破日 '+x.breakout_date:'')+'</div></div>';
-            }).join('');
-          }).catch(function(){
-            el('bxList').innerHTML=rows.map(function(x){var t=TAG[x.status]||['—','form'];return '<div class="bx-card"><div class="bx-top"><span class="bx-code"><b>'+x.code+'</b><span>'+(names[x.code]||'')+'</span></span><span class="bx-tag '+t[1]+'">'+t[0]+'</span></div><div class="bx-scale"><span>箱底 '+fmt(x.lower_center)+'</span><span>箱頂 '+fmt(x.upper_center)+'</span></div></div>';}).join('');
-          });
-        });
-      }).catch(function(){el('bxList').innerHTML='<div class="fc-empty">讀取失敗</div>';});
-      if(el('bxNote'))el('bxNote').innerHTML='<b>學院導讀</b> 先看價格在整理區內還是已離開區間，再觀察突破後能否站穩、成交量是否配合。市場廣度與騰落用來確認有多少股票參與，極端數值不保證立即反轉。';
-    };
     // 2026-11-01 規則版箱型（取自用戶朋友《股票型態.md》的箱型規則）：scripts/compute_box_rules.py 每晚收盤後算好存 page_cache ai_box_rules
     function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
     window._boxRuleShow=function(){
@@ -8303,7 +8265,6 @@
       box.innerHTML='<div class="hx-tile"><div class="k">大盤 台股加權</div><div class="v" id="tvTwii">—</div><div class="r" id="tvTwiiR"></div></div>'
         +'<div class="hx-tile"><div class="k">今日漲停 / 跌停</div><div class="v"><span class="hx-up" id="tvUpL">—</span> / <span class="hx-dn" id="tvDnL">—</span></div><div class="r" id="tvUD"></div></div>'
         +'<div class="hx-tile"><div class="k">融資維持率</div><div class="v" id="tvMm">—</div><div class="r">越低越接近斷頭</div></div>'
-        +'<div class="hx-tile"><div class="k">箱型突破 · 今日</div><div class="v" id="tvBox">—</div><div class="r">CONFIRMED_UP 檔數</div></div>'
         +'<div class="hx-tile"><div class="k"> 主力訊號 TOP</div><div id="tvSig" class="r">—</div></div>'
         +'<div class="hx-tile"><div class="k"> 話題族群 TOP</div><div id="tvTopics" class="r">載入中…</div></div>';
       fetch(window.__API+'/api/chart?code=%5ETWII&range=5d&interval=1d').then(function(r){return r.json();}).then(function(j){var d=(j&&j.data)||[];if(d.length<2)return;var a=d[d.length-1],b=d[d.length-2],chg=a.close-b.close,pct=chg/b.close*100,up=chg>=0;var v=el('tvTwii');if(v){v.textContent=Number(a.close).toLocaleString();v.className='v '+(up?'hx-up':'hx-dn');}var rr=el('tvTwiiR');if(rr){rr.textContent=(up?'▲ +':'▼ ')+pct.toFixed(2)+'%';rr.className='r '+(up?'hx-up':'hx-dn');}}).catch(function(){});
@@ -8314,7 +8275,6 @@
         else { window._fetchTopSignals(4).then(function(r){if(!r.rows.length){if(el('tvSig'))el('tvSig').textContent='—';return;}if(el('tvSig')){el('tvSig').innerHTML='<div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">'+r.date+'</div>'+r.rows.map(function(x){var lots=x.net_lots!=null?(x.net_lots>0?'+':'')+Number(x.net_lots).toLocaleString()+'張':'';return '<div class="hx-li"><span class="t">'+x.code+' <span style="color:var(--text-muted);font-weight:400">'+(x.broker_name||'')+'</span></span><span>'+lots+'</span></div>';}).join('');}}).catch(function(){if(el('tvSig'))el('tvSig').textContent='—';}); }
       }catch(e){}
       (function rm(n){try{var mb=document.getElementById('marginRatioBox');var m=mb&&mb.textContent?mb.textContent.replace(/[^0-9.%]/g,''):'';if(m){if(el('tvMm'))el('tvMm').textContent=m;return;}}catch(e){}if(n>0)setTimeout(function(){rm(n-1);},1000);})(5);
-      try{ fetch(SIG_SB_URL+'/rest/v1/box_patterns?select=code&status=eq.CONFIRMED_UP',{headers:{apikey:SIG_SB_ANON,Authorization:'Bearer '+SIG_SB_ANON}}).then(function(r){return r.json();}).then(function(a){if(el('tvBox'))el('tvBox').textContent=Array.isArray(a)?a.length:'—';}).catch(function(){}); }catch(e){}
       try{ fetch(SIG_SB_URL+'/rest/v1/hot_topics?select=topic,heat&order=heat.desc&limit=5',{headers:{apikey:SIG_SB_ANON,Authorization:'Bearer '+SIG_SB_ANON}}).then(function(r){return r.json();}).then(function(a){if(!el('tvTopics'))return;if(!Array.isArray(a)||!a.length){el('tvTopics').textContent='—';return;}el('tvTopics').innerHTML=a.map(function(t){return '<div class="hx-li"><span class="t">'+String(t.topic||'').slice(0,12)+'</span><span>'+(t.heat!=null?t.heat:'')+'</span></div>';}).join('');}).catch(function(){if(el('tvTopics'))el('tvTopics').textContent='—';}); }catch(e){}
     }
     window._hxShow=function(){ el('homeView').style.display='block'; load(); if(typeof window._hpReport==='function')window._hpReport(); };
@@ -9817,45 +9777,7 @@
       <!-- 進階篩選分類（2026-09-28）：型態／K棒／缺口／漲停跌停／指標／真名絕招；分頁只切換顯示，已勾選的條件不論在哪一頁都會生效 -->
       <div class="sc-cat">
         <div class="sc-combo"><b>目前組合：</b><span id="scCombo"></span><a onclick="_scClearAll()">全部清除</a></div>
-        <div class="sc-panel" data-cat="shape">
-          <div class="sc-hd"><a onclick="_scToggle('shape')"><span class="sc-ar">▸</span><b style="color:#b58a2d">型態</b></a><span class="sc-sum"></span></div>
-          <div class="sc-body" style="display:none">
-          <div class="sc-fields">
-        <div class="field" style="grid-column:1/-1;margin:0">
-          <label>碗型（無放量黑棒）</label>
-          <div class="label-hint">放量黑棒出現次數 ≤ 容忍根數才通過；容忍 0 根即一根都不容許（例：24 = 過去 2 年）</div>
-          <div style="display:flex;align-items:center;gap:8px;margin-top:2px;flex-wrap:wrap;">
-            <span style="font-size:0.85rem;color:var(--text-muted);white-space:nowrap;">過去</span>
-            <input type="number" id="no_black_years" min="1" max="120" step="1" placeholder="例：24"
-              style="width:80px;height:42px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:0.95rem;padding:10px 13px;outline:none;appearance:none;-webkit-appearance:none;flex-shrink:0;" />
-            <span style="font-size:0.85rem;color:var(--text-muted);white-space:nowrap;">月，</span>
-            <input type="number" id="no_black_mult" min="0.5" step="0.1" placeholder="例：1.5"
-              style="width:80px;height:42px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:0.95rem;padding:10px 13px;outline:none;appearance:none;-webkit-appearance:none;flex-shrink:0;" />
-            <span style="font-size:0.85rem;color:var(--text-muted);white-space:nowrap;">倍放量黑棒</span>
-            <span style="display:inline-flex;align-items:center;gap:8px;flex-shrink:0;">
-              <span style="font-size:0.85rem;color:var(--text-muted);white-space:nowrap;">容忍</span>
-              <input type="number" id="no_black_tolerance" min="0" max="20" step="1" placeholder="0"
-                style="width:70px;height:42px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:0.95rem;padding:10px 13px;outline:none;appearance:none;-webkit-appearance:none;" />
-              <span style="font-size:0.85rem;color:var(--text-muted);white-space:nowrap;">根</span>
-            </span>
-          </div>
-        </div>
-
-        <div class="field" style="grid-column:1/-1;margin:0">
-          <label>箱型狀態</label>
-          <div class="label-hint">勾選要保留的箱型型態（可複選；對結果即時過濾，每日盤後更新。細部參數請到個股 K 圖調整）</div>
-          <div id="box_filter" style="display:flex;flex-wrap:wrap;gap:6px 14px;padding-top:2px">
-            <label style="display:inline-flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="checkbox" class="box-cb" value="CONFIRMED_UP" onchange="onBoxFilterChange()">向上突破</label>
-            <label style="display:inline-flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="checkbox" class="box-cb" value="CONFIRMED_DOWN" onchange="onBoxFilterChange()">向下跌破</label>
-            <label style="display:inline-flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="checkbox" class="box-cb" value="FORMING" onchange="onBoxFilterChange()">形成中</label>
-            <label style="display:inline-flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="checkbox" class="box-cb" value="FALSE_UP_THEN_DOWN" onchange="onBoxFilterChange()">假突破→真跌破</label>
-            <label style="display:inline-flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="checkbox" class="box-cb" value="FALSE_DOWN_THEN_UP" onchange="onBoxFilterChange()">假跌破→真突破</label>
-          </div>
-        </div>
-
-          </div>
-          </div>
-        </div>
+        <!-- 2026-11-01 「型態」分類（碗型、箱型狀態）移除：型態判斷統一在 AI 型態判斷頁 -->
         <div class="sc-panel" data-cat="kbar">
           <div class="sc-hd"><a onclick="_scToggle('kbar')"><span class="sc-ar">▸</span><b style="color:#c0392b">K棒</b></a><span class="sc-sum"></span></div>
           <div class="sc-body" style="display:none">
@@ -10947,9 +10869,9 @@
       const ev357Cheap     = !!document.getElementById('ev357_cheap')?.checked;
       const ev357Fair      = !!document.getElementById('ev357_fair')?.checked;
       const ev357Expensive = !!document.getElementById('ev357_expensive')?.checked;
-      const noBlackMonths = parseInt(document.getElementById('no_black_years').value) || 0;
-      const noBlackMult  = parseFloat(document.getElementById('no_black_mult').value) || 0;
-      const noBlackTol   = parseInt(document.getElementById('no_black_tolerance').value) || 0;
+      const noBlackMonths = parseInt((document.getElementById('no_black_years')||{}).value) || 0;
+      const noBlackMult  = parseFloat((document.getElementById('no_black_mult')||{}).value) || 0;
+      const noBlackTol   = parseInt((document.getElementById('no_black_tolerance')||{}).value) || 0;
       hasVolFilter    = volMult > 0 || shrinkMult > 0;
       hasShrinkFilter = shrinkMult > 0 && volMult === 0;
 
@@ -11097,29 +11019,13 @@
       setTimeout(() => _pollScreenResult(jobId, tries + 1), 3000);
     }
 
-    // 箱型狀態(A):讀 box_patterns(anon)做結果後過濾;細部參數版在個股 K 圖(B)
-    let _boxStatusMap = null;
-    async function _ensureBoxMap() {
-      if (_boxStatusMap) return _boxStatusMap;
-      _boxStatusMap = {};
-      try {
-        const r = await fetch(`${SIG_SB_URL}/rest/v1/box_patterns?select=code,status`,
-          { headers: { apikey: SIG_SB_ANON, Authorization: 'Bearer ' + SIG_SB_ANON } });
-        if (r.ok) (await r.json()).forEach(x => { _boxStatusMap[x.code] = x.status; });
-      } catch (_) {}
-      return _boxStatusMap;
-    }
-    async function onBoxFilterChange() { await _ensureBoxMap(); filterAndRender(); }
-
     function filterAndRender() {
       if (!lastResults.length) return;
       const ind = document.getElementById('industry_filter').value;
-      const boxSel = Array.from(document.querySelectorAll('.box-cb:checked')).map(c => c.value);
       let filtered = ind ? lastResults.filter(s => (TW_STOCK_IND[s.code] || '') === ind) : lastResults;
-      if (boxSel.length) filtered = filtered.filter(s => boxSel.includes((_boxStatusMap || {})[s.code]));
       const countEl = document.querySelector('.results-meta strong');
       if (countEl) {
-        const note = [ind ? '產業' : '', boxSel.length ? '箱型' : ''].filter(Boolean).join('＋');
+        const note = ind ? '產業' : '';
         countEl.textContent = note ? `${filtered.length}（${note}過濾）` : String(lastResults.length);
       }
       if (filtered.length === 0) {
@@ -18234,8 +18140,8 @@
 <link rel="stylesheet" href="assets/member-service-center.css?v=1">
 <script src="assets/member-data-portability.js?v=inbox1" defer></script>
 <script src="assets/member-service-center.js?v=1" defer></script>
-<link rel="stylesheet" href="assets/chart-research-tools.css?v=tools23">
-<script src="assets/chart-research-tools.js?v=tools22" defer></script>
+<link rel="stylesheet" href="assets/chart-research-tools.css?v=tools24">
+<script src="assets/chart-research-tools.js?v=tools24" defer></script>
 <link rel="stylesheet" href="assets/brand-footer.css?v=6">
 <script src="assets/brand-footer.js?v=5" defer></script>
 <link rel="stylesheet" href="assets/market-panel-layout.css?v=8">
@@ -18271,7 +18177,6 @@
 <script src="assets/zhenming-four.js"></script>
 <script src="assets/zhenming-hidden.js?v=5" defer></script>
 <script src="assets/screen-log.js?v=normalized-read1" defer></script>
-<script src="assets/pattern-focus.js?v=2" defer></script>
 <script src="assets/member-quick-menu.js?v=tier6" defer></script>
 <script src="assets/navigation-layers.js?v=logo-home20" defer></script>
 <link rel="stylesheet" href="assets/home-market-intraday.css?v=25">
@@ -18314,7 +18219,7 @@
 <script src="assets/exhibition-calendar.js?v=localfix-3" defer></script>
 <link rel="stylesheet" href="assets/responsive-layout.css?v=1">
 <link rel="stylesheet" href="assets/ai-pattern-screen.css?v=20261026-1">
-<script src="assets/ai-pattern-screen.js?v=20261101-box1" defer></script>
+<script src="assets/ai-pattern-screen.js?v=20261101-box2" defer></script>
 <link rel="stylesheet" href="assets/pattern-admin-review.css?v=20261027-1">
 <script src="assets/pattern-admin-review.js?v=20261027-6" defer></script>
 <link rel="stylesheet" href="assets/brand-arrival.css?v=42">

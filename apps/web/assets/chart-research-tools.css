@@ -172,3 +172,11 @@ html[data-theme="dark"] #chartModal .chart-summary-actions #chartInfoToggle:hove
 
 /* Align input and shading to the actual plot, excluding both price axes. */
 #chartRangeCapture{inset:auto;left:var(--chart-plot-left,0px);top:var(--chart-plot-top,0px);width:var(--chart-plot-width,calc(100% - 65px));height:var(--chart-plot-height,calc(100% - 24px))}
+/* 2026-11-01 區間三大法人買賣超 */
+#chartIntervalReport .range-inst{margin:4px 0 6px;padding-top:6px;border-top:1px solid var(--border)}
+#chartIntervalReport .range-inst>b{display:block;font-size:12px;font-weight:600;margin-bottom:2px}
+#chartIntervalReport .range-inst dl{margin:4px 0}
+#chartIntervalReport .range-inst small{display:block;font-size:11px;color:var(--text-muted)}
+#chartIntervalReport .range-inst dl{grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 14px}
+#chartIntervalReport .range-inst dl>div{display:flex;justify-content:space-between;align-items:baseline;gap:6px;min-height:0;padding-bottom:0}
+#chartIntervalReport .range-inst dd{font-size:12px;text-align:right;white-space:nowrap}

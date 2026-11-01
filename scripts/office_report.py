@@ -189,9 +189,9 @@ def _sum_chip():
 
 
 def _sum_tech():
-    b = _one("/box_patterns?select=data_date&order=data_date.desc&limit=1")
-    d = (b or {}).get("data_date")
-    n = len(_req(f"/box_patterns?select=code&data_date=eq.{d}&limit=2000") or []) if d else 0
+    # 2026-11-01 箱型改看規則版（page_cache ai_box_rules）；舊 ATR 版 box_patterns 已停算
+    b = _one("/page_cache?select=trade_date,coverage:payload->coverage&kind=eq.ai_box_rules&limit=1")
+    n = ((b or {}).get("coverage") or {}).get("matched", 0)
     p = _one("/price_window?select=trade_date&code=eq.2330&order=trade_date.desc&limit=1")
     return [f"箱型 {n} 檔", f"收盤價到 {_md((p or {}).get('trade_date'))}"]
 
