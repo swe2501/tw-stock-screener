@@ -8,6 +8,7 @@ import urllib.parse
 import urllib.error
 import math
 import time
+import threading
 from datetime import datetime, timezone, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
 # 固定題材分類(照合夥人 theme-snapshot,39 族群成分股),內嵌避免 Vercel 多 entrypoint/bundle 問題
@@ -162,7 +163,77 @@ _STOCK_INDUSTRY = {"1101": "水泥工業", "1102": "水泥工業", "1103": "水�
 _industry_cache: dict = {}
 _industry_cache_ts: float = 0.0
 
+_normalized_catalog_cache = None
+_normalized_catalog_lock = threading.Lock()
+
+
+def _normalized_catalog():
+    with _normalized_catalog_lock:
+        return _load_normalized_catalog()
+
+
+def _load_normalized_catalog():
+    """Complete public projection, paginated below PostgREST's row limit.
+
+    A failed/incomplete read is never published as a complete catalog.
+    Return copies because downstream consumers may modify their dictionaries.
+    """
+    global _normalized_catalog_cache
+    now = time.time()
+    scope = SUPABASE_URL
+    cached = _normalized_catalog_cache
+    if cached and cached[0] == scope and cached[1] > now:
+        return {code: dict(row) for code, row in cached[2].items()}
+    catalog = {}
+    try:
+        for offset in range(0, 6500, 500):
+            status, rows = _cache_sb('/security_catalog', params=[
+                ('select', 'code,name,market,instrument_type,industry'),
+                ('order', 'code.asc'), ('offset', str(offset)), ('limit', '500')])
+            if status != 200 or not isinstance(rows, list) or len(rows) > 500:
+                return None
+            for row in rows:
+                if not isinstance(row, dict):
+                    return None
+                code, name = row.get('code'), row.get('name')
+                if not isinstance(code, str) or not code or code in catalog or not isinstance(name, str) or not name.strip():
+                    return None
+                catalog[code] = {key: row.get(key) for key in ('code','name','market','instrument_type','industry')}
+            if len(catalog) > 6000:
+                return None
+            if len(rows) < 500:
+                if not catalog:
+                    return None
+                _normalized_catalog_cache = (scope, now+300, catalog)
+                return {code: dict(row) for code, row in catalog.items()}
+    except Exception:
+        return None
+    return None
+
+
+def _catalog_industries(catalog):
+    # ETF categories are not stock industries; do not mix the two namespaces.
+    return {code: row['industry'] for code, row in (catalog or {}).items()
+            if row.get('instrument_type') == 'stock' and isinstance(row.get('industry'), str) and row['industry'].strip()}
+
+
+def _security_names_directory():
+    catalog = _normalized_catalog()
+    return {code: row['name'] for code, row in catalog.items()} if catalog else dict(_STOCK_NAMES)
+
+
+def _fill_overview_names(quotes):
+    # Official named quotes remain authoritative; enrich price-window placeholders only.
+    missing = {code for code, row in quotes.items() if row.get('name') in (None, '', code)}
+    names = _current_security_names(missing)
+    return {code: dict(row, name=names.get(code) or _STOCK_NAMES.get(code) or row.get('name') or code)
+            if code in missing else dict(row) for code, row in quotes.items()}
+
+
 def _get_industry_map() -> dict:
+    normalized = _catalog_industries(_normalized_catalog())
+    if normalized:
+        return dict(_STOCK_INDUSTRY, **normalized)
     global _industry_cache, _industry_cache_ts
     if _industry_cache and time.time() - _industry_cache_ts < 86400:
         return {k: v for k, v in _industry_cache.items() if k != "__otc_loaded"}
@@ -1557,20 +1628,7 @@ def _fetch_overview():
                 allq[c] = dict(allq[c], name=q["name"])      # 行情改由 price_window 補時沒有股名 → 用櫃買股名
     except Exception:
         pass
-    otc_nm = None
-    for c, m in list(allq.items()):
-        if m["name"] not in ("", c):
-            continue
-        nm = _STOCK_NAMES.get(c)
-        if not nm:
-            if otc_nm is None:                           # 上櫃股名備援：本站 otc_names 表（每日更新）
-                try:
-                    otc_nm = {str(r.get("code")): r.get("name") for r in (_cache_sb("/otc_names", params=[("select", "code,name"), ("limit", "3000")])[1] or [])}
-                except Exception:
-                    otc_nm = {}
-            nm = otc_nm.get(c)
-        if nm:
-            allq[c] = dict(m, name=nm)
+    allq = _fill_overview_names(allq)
     try:
         tags = _load_stock_themes()
     except Exception:
@@ -3864,18 +3922,18 @@ class handler(BaseHTTPRequestHandler):
                 return self._send_json(200, result)
             except Exception as e:
                 return self._send_json(200, {"error": str(e)})
-        # 股票代號→名稱對照（前端各視圖共用；純靜態，不查 DB）
+        # 股票代號→目前名稱（正規化公開目錄，舊靜態資料備援）
         if (qs.get("stat") or [""])[0] == "names":
-            return self._send_json(200, _STOCK_NAMES)
+            return self._send_json(200, _security_names_directory(), cache="public, s-maxage=300, max-age=60")
         if (qs.get("stat") or [""])[0] == "industries":
-            # code→產業別中文（供首頁搜尋下拉顯示，如 2330→半導體）；上市為主
+            # code→股票產業別，正規化目錄優先；官方／靜態備援
             try:
-                return self._send_json(200, _get_industry_map())
+                return self._send_json(200, _get_industry_map(), cache="public, s-maxage=300, max-age=60")
             except Exception:
                 return self._send_json(200, {})
-        # 股票代號→產業別對照（今日索引「展開該產業全部上市股」用；純靜態）
+        # 股票代號→產業別對照（不混入 ETF 分類）
         if (qs.get("stat") or [""])[0] == "industry":
-            return self._send_json(200, _STOCK_INDUSTRY)
+            return self._send_json(200, dict(_STOCK_INDUSTRY, **_catalog_industries(_normalized_catalog())), cache="public, s-maxage=300, max-age=60")
         # 今日焦點三榜（漲幅/跌幅/爆量）：頁面 _showView('focus') 用
         if (qs.get("stat") or [""])[0] == "focus":
             try:
