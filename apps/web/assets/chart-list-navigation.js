@@ -9,7 +9,8 @@
   const inline=e.getAttribute('onclick')||'',match=inline.match(/(?:openChart|_?openStock)\s*\(\s*['"]([^'"]+)['"](?:\s*,\s*['"]([^'"]*)['"])?/);
   const literal=inline.match(/['"](\d{4,6}[A-Z]?)['"]/);
   const code=match?.[1]||literal?.[1]||e.dataset.chart||e.dataset.privateChart||e.dataset.inspect||e.dataset.stockCode||e.dataset.openChart||e.dataset.c||e.dataset.code;
-  return valid(code)?{code:String(code),name:match?.[2]||e.dataset.n||e.dataset.name||window._names?.[code]||String(code),industry:'',close:0}:null;
+  const signal=inline.match(/_sigOpenChart\(\s*'([^']*)'\s*,\s*'([^']*)'\s*,\s*'([^']*)'\s*,\s*'([^']*)'\s*\)/);
+  return valid(code)?{signal:signal?{label:signal[2],brokerId:signal[3],date:signal[4]}:null,code:String(code),name:match?.[2]||e.dataset.n||e.dataset.name||window._names?.[code]||String(code),industry:'',close:0}:null;
  }
  function items(scope,origin){
   const seen=new Set(),cell=origin?.closest('td,th'),isTable=scope.tagName==='TABLE';
@@ -69,7 +70,7 @@
   if(header){if(!headerSize)headerSize={min:header.style.minHeight,box:header.style.boxSizing};header.style.boxSizing='border-box';header.style.minHeight=Math.ceil(header.getBoundingClientRect().height)+'px';}
   const mode=window.AcademyChartBridge?.get();modeAfterStep={tool:mode?.tool,zoom:mode?.zoom,fib:mode?.fib,trendLine:mode?.trendLine,interval:!!window.AcademyChartTools?.isSelecting()};
   stepping=true;paint();
-  try{window.openChart(target.code,target.name,target.industry||'',target.close||0,fromScreen,null,'',null,'',modal.classList.contains('chart-analysis-only')?{analysisOnly:true}:null);requestAnimationFrame(restore);}catch(e){ready();throw e;}
+  try{if(target.signal)window._sigOpenChart(target.code,target.signal.label,target.signal.brokerId,target.signal.date);else window.openChart(target.code,target.name,target.industry||'',target.close||0,fromScreen,null,'',null,'',modal.classList.contains('chart-analysis-only')?{analysisOnly:true}:null);requestAnimationFrame(restore);}catch(e){ready();throw e;}
  }
  function ready(){const wasStep=stepping,saved=modeAfterStep;modeAfterStep=null;stepping=false;pointerHeld=false;
   if(wasStep&&saved&&window.AcademyChartBridge?.get()?.series){const b=window.AcademyChartBridge.get();

@@ -13281,7 +13281,12 @@
       } catch (_) { /* 無妨 */ }
       return _brokerMeta;
     }
+    let _brokerLoadGeneration = 0;
     async function _loadBrokerEntries(code) {
+      const generation = ++_brokerLoadGeneration;
+      const fb = window._chartFocusBroker; window._chartFocusBroker = null;
+      const isCurrent = () => generation === _brokerLoadGeneration && currentCode === code;
+      const entries = [];
       _brokerEntriesRaw = []; _brokerChecked = null;
       const panel = document.getElementById('brokerFilterPanel');
       if (panel) { panel.style.display = 'none'; panel.innerHTML = ''; }
@@ -13289,31 +13294,32 @@
       if (!_isStock(code) || !_authToken) return;
       try {
         const meta = await _ensureBrokerMeta();
+        if (!isCurrent()) return;
         const r = await fetch(`${SIG_SB_URL}/rest/v1/broker_trades`
           + `?select=broker_id,trade_date&code=eq.${encodeURIComponent(code)}`
           + `&or=(net_lots.gte.300,net_amount_wan.gte.3000)&order=trade_date`,
           { headers: { apikey: SIG_SB_ANON, Authorization: `Bearer ${_authToken}` } });
-        if (!r.ok || currentCode !== code) return;
+        if (!r.ok || !isCurrent()) return;
         for (const t of await r.json()) {
           const m = meta[t.broker_id] || { name: t.broker_id, cat: '其他' };
-          _brokerEntriesRaw.push({ date: t.trade_date, broker: m.name, cat: m.cat, id: String(t.broker_id) });
+          entries.push({ date: t.trade_date, broker: m.name, cat: m.cat, id: String(t.broker_id) });
         }
         // All four broker actions share the same selection and hover pipeline.
         try {
           const rs = await fetch(`${SIG_SB_URL}/rest/v1/broker_trades?select=broker_id,trade_date,view`
             + `&code=eq.${encodeURIComponent(code)}&view=in.(year_large_lots_sell,year_large_amount_sell,year_large_lots_exit,year_large_amount_exit)&order=trade_date`,
             { headers: { apikey: SIG_SB_ANON, Authorization: `Bearer ${_authToken}` } });
-          if (rs.ok && currentCode === code) for (const t of await rs.json()) {
+          if (rs.ok && isCurrent()) for (const t of await rs.json()) {
             const m = meta[t.broker_id] || { name: t.broker_id, cat: '其他' };
-            _brokerEntriesRaw.push({ date: t.trade_date, broker: m.name, cat: m.cat, id: String(t.broker_id), sell: true, exit: /_exit$/.test(t.view) });
+            entries.push({ date: t.trade_date, broker: m.name, cat: m.cat, id: String(t.broker_id), sell: true, exit: /_exit$/.test(t.view) });
           }
         } catch (_) {}
-        if(currentCode!==code)return;
+        if(!isCurrent())return;
+        _brokerEntriesRaw = entries;
         const manual=(_userMarkers[code]||[]).filter(m=>m.action||_chartBrokerAction(m.label)).map(m=>[m.broker||m.label.replace(/主力交往|主力分手|減碼|加碼|↑|↓/g,'').trim(),'其他']);
         const distinct = [...new Map([...manual,..._brokerEntriesRaw.map(e => [e.broker, e.cat])])].map(([name, cat]) => ({ name, cat }));
         _brokerChecked = new Set();   // 預設全不勾，K 圖乾淨；展開「主力分點」自行勾選（2026-09-28）
         // 2026-10-23 從主力訊號／出手明細點進來：自動勾選該分點，買賣紀錄一起標出
-        const fb = window._chartFocusBroker; window._chartFocusBroker = null;
         if (fb && fb.code === code) {
           _brokerEntriesRaw.filter(e => e.id === fb.id).forEach(e => _brokerChecked.add(e.broker));
           if(fb.name&&distinct.some(e=>e.name===fb.name))_brokerChecked.add(fb.name);
@@ -18175,7 +18181,7 @@
 <link rel="stylesheet" href="assets/broker-workspace.css?v=5">
 <script src="assets/chart-viewport-fit.js?v=22" defer></script>
 <link rel="stylesheet" href="assets/chart-list-navigation.css?v=3">
-<script src="assets/chart-list-navigation.js?v=4" defer></script>
+<script src="assets/chart-list-navigation.js?v=20261102-broker-signals" defer></script>
 <script src="assets/screen-inline-calendar.js?v=records-only13" defer></script>
 
 <link rel="stylesheet" href="assets/onboarding-tour.css?v=mist-edge-mcopen-20261027">
