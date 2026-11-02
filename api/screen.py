@@ -1522,7 +1522,8 @@ def _theme_stats(smap, catalog=None):
         leaders = sorted(members, key=lambda m: -abs(m[1]["pct"]))[:3]
         mem_sorted = sorted(members, key=lambda m: -m[1]["value"])
         res.append({
-            "name": name, "memberCount": len(members), "today": round(today, 2),
+            "name": name, "featured": name in THEME_MEMBERS,   # 2026-11-02 精選＝合夥人固定題材（題材列表「精選」tab 用）
+            "memberCount": len(members), "today": round(today, 2),
             "weightedToday": round(weighted, 2), "tradeValue": tv,
             "limitUps": sum(1 for m in members if m[1]["pct"] >= 9.5),
             "limitDowns": sum(1 for m in members if m[1]["pct"] <= -9.5),

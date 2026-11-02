@@ -3737,10 +3737,11 @@
   <div id="themesView" style="display:none">
     <div class="tm-head"><h2> 互動族群熱力圖</h2><span class="sub" id="tmSub"></span></div>
     <div class="tmx-ctrl">
+      <div class="tmx-tabs" id="tmxScope" role="group" aria-label="題材範圍"><button data-s="all" class="on">全部</button><button data-s="featured">精選題材</button></div>
       <div class="tmx-tabs" id="tmxMarket"><button data-m="listed" class="on">上市</button><button data-m="otc">上櫃</button></div>
       <div class="tmx-tabs" id="tmxMode"><button data-o="weighted" class="on">成交額加權</button><button data-o="average">算術平均</button></div>
     </div>
-    <p class="tmx-help">方塊面積代表成交額；顏色代表族群漲跌（成交額加權／算術平均可切換）。點一下方塊看成分股。</p>
+    <p class="tmx-help">方塊面積代表成交額；顏色代表族群漲跌（成交額加權／算術平均可切換）。點一下方塊看成分股。<b>全部</b>＝合夥人精選題材＋Goodinfo 概念股；<b>精選題材</b>＝只看合夥人整理的固定題材（與首頁「漲停最多題材」的精選相同）。</p>
     <div class="tmx-heat" id="tmxHeat"><div class="fc-empty">載入中…</div></div>
     <div class="tmx-detail" id="tmxDetail"></div>
     <div class="fc-note" id="tmNote"></div>
@@ -3750,11 +3751,15 @@
     var el=function(id){return document.getElementById(id);};
     function esc(s){return String(s==null?'':s).replace(/[&<>]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});}
     function sg(v){return (v>0?'+':'')+Number(v).toFixed(2)+'%';}
-    var _data=null,_market='listed',_mode='weighted',_sel=null;
-    function rows(){return ((_data&&_data[_market])||[]).slice().sort(function(a,b){return b.tradeValue-a.tradeValue;});}
+    var _data=null,_market='listed',_mode='weighted',_sel=null,_scope='all';
+    // 2026-11-02 全部／精選題材切換（記住使用者上次的選擇）；精選＝後端標 featured 的合夥人固定題材
+    try{ if(localStorage.getItem('tmx_scope')==='featured') _scope='featured'; }catch(e){}
+    function hasFlag(){return ((_data&&_data[_market])||[]).some(function(r){return typeof r.featured==='boolean';});}
+    function rows(){return ((_data&&_data[_market])||[]).filter(function(r){return _scope!=='featured'||r.featured===true;}).slice().sort(function(a,b){return b.tradeValue-a.tradeValue;});}
+    function syncScope(){var s=el('tmxScope'); if(s)[].forEach.call(s.children,function(b){var on=b.dataset.s===_scope;b.classList.toggle('on',on);b.setAttribute('aria-pressed',String(on));});}
     function renderHeat(){
-      var box=el('tmxHeat'); if(!box)return; var rs=rows();
-      if(!rs.length){box.innerHTML='<div class="fc-empty">'+(_market==='otc'?'上櫃':'上市')+'資料整備中</div>';return;}
+      var box=el('tmxHeat'); if(!box)return; syncScope(); var rs=rows();
+      if(!rs.length){box.innerHTML='<div class="fc-empty">'+(_scope==='featured'&&_data&&!hasFlag()?'精選題材標記將於下次資料更新後提供，請先看「全部」':(_market==='otc'?'上櫃':'上市')+(_scope==='featured'?'精選題材今日無資料':'資料整備中'))+'</div>';return;}
       var maxT=Math.max.apply(null,rs.map(function(r){return r.tradeValue;}).concat([1]));
       box.innerHTML=rs.map(function(t,i){
         var chg=_mode==='weighted'?t.weightedToday:t.today;
@@ -3836,6 +3841,7 @@
       if(el('tmNote'))el('tmNote').innerHTML='<b>學院導讀</b> 先找多數成分股一起走強的題材，再確認成交是否集中於少數股票。題材熱度不代表行情一定延續，請搭配族群持續性和個股趨勢。';
     };
     document.addEventListener('click',function(e){
+      var sc=e.target.closest('#tmxScope button'); if(sc){_scope=sc.dataset.s==='featured'?'featured':'all';try{localStorage.setItem('tmx_scope',_scope);}catch(err){}_sel=null;renderHeat();renderDetail();return;}
       var m=e.target.closest('#tmxMarket button'); if(m){_market=m.dataset.m;_sel=null;[].forEach.call(el('tmxMarket').children,function(b){b.classList.toggle('on',b===m);});renderHeat();renderDetail();return;}
       var o=e.target.closest('#tmxMode button'); if(o){_mode=o.dataset.o;[].forEach.call(el('tmxMode').children,function(b){b.classList.toggle('on',b===o);});renderHeat();return;}
       var c=e.target.closest('#tmxHeat .tmx-cell'); if(c){var t=rows()[+c.dataset.i]; if(t){_sel=t.name;[].forEach.call(el('tmxHeat').querySelectorAll('.tmx-cell'),function(x){x.classList.toggle('on',x===c);});renderDetail();window._heatDetailStart(el('tmxDetail'));}return;}
