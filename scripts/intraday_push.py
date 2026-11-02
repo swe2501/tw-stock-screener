@@ -191,18 +191,24 @@ def _scan(codes, ex):
 
 
 def _otc_codes(env):
-    """上櫃代號清單：讀 Supabase otc_names（每日排程維護，868 檔），比 TPEx openapi 穩定。"""
+    """上櫃代號清單：讀正規化主檔目錄 security_catalog（2026-11-01 起；舊 otc_names 將停用），比 TPEx openapi 穩定。"""
+    codes = []
     try:
-        st, rows = bs._sb(env, "/otc_names", method="GET", params=[("select", "code")])
-        codes = [str(r.get("code") or "").strip() for r in (rows or [])]
+        for off in range(0, 5000, 1000):
+            st, rows = bs._sb(env, "/security_catalog", method="GET", params=[
+                ("select", "code"), ("market", "eq.otc"), ("instrument_type", "eq.stock"), ("order", "code"), ("limit", "1000"), ("offset", str(off))])
+            rows = rows if isinstance(rows, list) else []
+            codes += [str(r.get("code") or "").strip() for r in rows]
+            if len(rows) < 1000:
+                break
         return [c for c in codes if c]
     except Exception as e:                            # noqa: BLE001
-        print(f"[intraday] otc_names 讀取失敗：{e}")
+        print(f"[intraday] security_catalog 上櫃代號讀取失敗：{e}")
         return []
 
 
 def _universe(env):
-    """全市場代號清單（上市 / 上櫃）。上市取自 TWSE 全市場代號，上櫃取自 otc_names 表。"""
+    """全市場代號清單（上市 / 上櫃）。上市取自 TWSE 全市場代號，上櫃取自 security_catalog 主檔目錄。"""
     screen._INTRADAY = {"listed": {}, "otc": {}, "date": None}
     listed, _ = screen.fetch_all_stocks_latest()
     return list(listed.keys()), _otc_codes(env)
