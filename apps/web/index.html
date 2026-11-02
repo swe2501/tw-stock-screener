@@ -959,40 +959,47 @@
       position: absolute;
       top: 4px; left: 50%;
       transform: translateX(-50%);
-      background: color-mix(in srgb, var(--surface) 78%, transparent);
-      border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
-      border-radius: 7px;
-      padding: 5px 9px 6px;
-      font-size: 11px;
+      width: 148px;
+      box-sizing: border-box;
+      background: color-mix(in srgb, var(--surface) 47%, transparent);
+      border: 1px solid color-mix(in srgb, var(--border) 42%, transparent);
+      border-radius: 8px;
+      padding: 4px 5px 5px;
+      font-size: 9px;
       color: var(--text);
       pointer-events: none;
-      z-index: 8;
+      z-index: 14;
       white-space: nowrap;
       display: none;
       letter-spacing: 0.01em;
-      line-height: 1.42;
-      min-width: 168px;
-      backdrop-filter: blur(11px) saturate(112%);
-      -webkit-backdrop-filter: blur(11px) saturate(112%);
-      box-shadow: 0 5px 15px rgba(0,0,0,.11);
+      line-height: 1.31;
+      min-width: 0;
+      backdrop-filter: blur(15px) saturate(112%);
+      -webkit-backdrop-filter: blur(15px) saturate(112%);
+      box-shadow: 0 5px 16px rgba(0,0,0,.07), inset 0 1px 0 color-mix(in srgb,#fff 24%,transparent);
       font-variant-numeric: tabular-nums;
     }
     /* 2026-11-01 提示框擴充：日期／狀態、開高低收、漲跌、量、DIF/MACD、三大法人 */
     #ohlcTooltip .tt-head { display:flex; justify-content:space-between; gap:10px; align-items:baseline; }
-    #ohlcTooltip .tt-head b { font-size:12px; }
-    #ohlcTooltip .tt-state { font-size:10px; color:var(--text-muted); }
-    #ohlcTooltip .tt-ohlc { display:grid; grid-template-columns:auto 1fr auto 1fr; gap:0 6px; margin-top:1px; }
+    #ohlcTooltip .tt-head b { font-size:10px; }
+    #ohlcTooltip .tt-state { font-size:8px; color:var(--text-muted); }
+    #ohlcTooltip .tt-ohlc { display:grid; grid-template-columns:auto 1fr auto 1fr; gap:1px 3px; margin-top:2px; }
     #ohlcTooltip .tt-ohlc span, #ohlcTooltip .tt-rows > span:nth-child(odd) { color:var(--text-muted); }
     #ohlcTooltip .tt-ohlc b { text-align:right; font-weight:600; }
-    #ohlcTooltip .tt-chg { display:flex; justify-content:space-between; gap:9px; font-weight:600; margin-top:1px; padding-bottom:3px; border-bottom:1px solid color-mix(in srgb,var(--border) 72%,transparent); }
-    #ohlcTooltip .tt-rows { display:grid; grid-template-columns:auto 1fr; gap:0 9px; margin-top:3px; }
+    #ohlcTooltip .tt-chg { display:flex; justify-content:space-between; gap:7px; font-weight:600; margin-top:2px; padding-bottom:4px; border-bottom:1px solid color-mix(in srgb,var(--border) 38%,transparent); }
+    #ohlcTooltip .tt-rows { display:grid; grid-template-columns:auto 1fr; gap:2px 5px; margin-top:3px; }
     #ohlcTooltip .tt-rows > span:nth-child(even) { text-align:right; }
     #ohlcTooltip .tt-rows b { font-weight:600; }
     #ohlcTooltip .tt-up { color:#e74c3c; } #ohlcTooltip .tt-dn { color:#26c281; } #ohlcTooltip .tt-flat { color:var(--text-muted); }
     #ohlcTooltip .tt-muted { color:var(--text-muted); }
+    #ohlcTooltip .tt-value { display:inline-flex; align-items:baseline; justify-content:flex-end; }
+    #ohlcTooltip .tt-trend { display:inline-block; min-width:6px; margin-left:2px; font-size:6.5px; line-height:1; font-style:normal; text-align:center; transform:translateY(-.05em); }
+    #ohlcTooltip .tt-trend-up { color:#e74c3c; }
+    #ohlcTooltip .tt-trend-down { color:#26c281; }
+    #ohlcTooltip .tt-trend-flat { color:var(--text-muted); opacity:.72; }
     @media (max-width: 600px) {   /* 手機：圖表區約 200px 高，提示框要精簡才放得下 */
-      #ohlcTooltip { font-size:10.5px; line-height:1.3; padding:4px 7px 5px; min-width:0; }
-      #ohlcTooltip .tt-head b { font-size:11px; }
+      #ohlcTooltip { width:144px; font-size:8.7px; line-height:1.28; padding:4px; }
+      #ohlcTooltip .tt-head b { font-size:9.7px; }
       #ohlcTooltip .tt-chg { padding-bottom:2px; }
       #ohlcTooltip .tt-rows { margin-top:2px; }
     }
@@ -14776,7 +14783,7 @@
         .then(rows => { const m = {}; (rows || []).forEach(r => { m[r.trade_date] = r; }); window._tipInstCache[code] = m; })
         .catch(() => { delete window._tipInstCache[code]; });
     }
-    // 提示框位於游標移動方向的反側：往左移顯示右邊、往右移顯示左邊，並在邊界自動翻面。
+    // 提示框位於游標移動方向的反側，並掃描兩側空白帶，優先停在不遮住 K 棒的位置。
     let _tipLastX = null, _tipSide = 'right';
     function _tipFollow(param) {
       const tip = document.getElementById('ohlcTooltip'), plot = document.getElementById('chartContainer');
@@ -14789,11 +14796,36 @@
         else if (dx < -1.5) _tipSide = 'right';
       } else _tipSide = param.point.x > W / 2 ? 'left' : 'right';
       _tipLastX = param.point.x;
-      let x = _tipSide === 'right' ? param.point.x + gap : param.point.x - gap - tw;
-      if (x + tw > W - 4) { x = param.point.x - gap - tw; _tipSide = 'left'; }
-      if (x < 4) { x = param.point.x + gap; _tipSide = 'right'; }
-      x = Math.max(4, Math.min(x, W - tw - 4));
-      const y = Math.max(4, Math.min(param.point.y - th / 2, H - th - 4));
+      const clampX = x => Math.max(4, Math.min(x, W - tw - 4));
+      const clampY = y => Math.max(4, Math.min(y, H - th - 4));
+      const preferredX = _tipSide === 'right' ? param.point.x + gap : param.point.x - gap - tw;
+      const oppositeX = _tipSide === 'right' ? param.point.x - gap - tw : param.point.x + gap;
+      const xs = [...new Set([clampX(preferredX), clampX(oppositeX), 4, clampX(W - tw - 4)].map(Math.round))];
+      const ys = [4, clampY(param.point.y - th / 2), clampY(H - th - 4)];
+      const span = Math.max(0, H - th - 8), step = Math.max(18, span / 8);
+      for (let y = 4; y <= H - th - 4; y += step) ys.push(clampY(y));
+      const candles = Array.isArray(window._vpCandles) ? window._vpCandles : [];
+      const ts = chartInstance?.timeScale?.(), series = candleSeriesRef;
+      const visible = candles.map(c => {
+        let cx = null, hi = null, lo = null;
+        try { cx = ts.timeToCoordinate(c.time); hi = series.priceToCoordinate(c.high); lo = series.priceToCoordinate(c.low); } catch (_) {}
+        return Number.isFinite(cx) && Number.isFinite(hi) && Number.isFinite(lo) ? { x: cx, top: Math.min(hi, lo), bottom: Math.max(hi, lo) } : null;
+      }).filter(Boolean);
+      let best = null;
+      for (const x of xs) for (const y0 of ys) {
+        const y = Math.round(y0); let overlap = 0;
+        for (const bar of visible) {
+          const ix = Math.max(0, Math.min(x + tw, bar.x + 4) - Math.max(x, bar.x - 4));
+          const iy = Math.max(0, Math.min(y + th, bar.bottom) - Math.max(y, bar.top));
+          overlap += ix * iy;
+        }
+        const coversCursor = param.point.x >= x - 6 && param.point.x <= x + tw + 6 && param.point.y >= y - 6 && param.point.y <= y + th + 6;
+        const preferredPenalty = Math.abs(x - clampX(preferredX)) > 2 ? 12 : 0;
+        const score = overlap * 100 + (coversCursor ? 1e7 : 0) + preferredPenalty + Math.abs((y + th / 2) - param.point.y) * .02;
+        if (!best || score < best.score) best = { x, y, score };
+      }
+      const x = best ? best.x : clampX(preferredX), y = best ? best.y : clampY(param.point.y - th / 2);
+      _tipSide = x >= param.point.x ? 'right' : 'left';
       tip.style.transform = 'none'; tip.style.left = x + 'px'; tip.style.top = y + 'px';
     }
     function _tipHtml(c, date, color, fmt, candles, idx, mac, daily, code) {
@@ -14801,6 +14833,13 @@
       const sgn = v => (v > 0 ? '+' : '') ;
       const cls = v => v > 0 ? 'tt-up' : v < 0 ? 'tt-dn' : 'tt-flat';
       const lots = v => (v > 0 ? '+' : '') + Math.round(v).toLocaleString();
+      const trend = (v, old) => {
+        if (!Number.isFinite(v) || !Number.isFinite(old)) return '<i class="tt-trend tt-trend-flat" aria-label="無前日比較">—</i>';
+        if (v > old) return '<i class="tt-trend tt-trend-up" aria-label="較前一交易日增加">▲</i>';
+        if (v < old) return '<i class="tt-trend tt-trend-down" aria-label="較前一交易日減少">▼</i>';
+        return '<i class="tt-trend tt-trend-flat" aria-label="與前一交易日相同">—</i>';
+      };
+      const value = (html, v, old) => `<span class="tt-value">${html}${trend(v, old)}</span>`;
       let state = '';
       if (daily && i === candles.length - 1) {
         const tw = new Date(Date.now() + (new Date().getTimezoneOffset() + 480) * 60000).toISOString().slice(0, 10);
@@ -14814,15 +14853,19 @@
         h += `<div class="tt-chg ${cls(d)}">${d > 0 ? '▲' : d < 0 ? '▼' : '－'} ${sgn(d)}${Number(d.toFixed(2))} 元<span>${sgn(p)}${p.toFixed(2)}%</span></div>`;
       }
       const rows = [];
-      if (c.volume != null && c.volume >= 0) rows.push(['成交張數', `<b>${Math.round(c.volume).toLocaleString()}</b> 張`]);
-      const dif = mac.macd[i], sig = mac.signal[i];
-      if (dif != null && sig != null) rows.push(['DIF / MACD', `<b class="${cls(dif)}">${dif.toFixed(3)}</b> / <b class="${cls(sig)}">${sig.toFixed(3)}</b>`]);
+      if (c.volume != null && c.volume >= 0) rows.push(['成交張數', value(`<b>${Math.round(c.volume).toLocaleString()}</b> 張`, +c.volume, prev == null ? NaN : +prev.volume)]);
+      const dif = mac.macd[i], sig = mac.signal[i], osc = mac.hist[i];
+      if (dif != null) rows.push(['DIF', value(`<b class="${cls(dif)}">${dif.toFixed(3)}</b>`, dif, i > 0 ? mac.macd[i - 1] : NaN)]);
+      if (sig != null) rows.push(['MACD', value(`<b class="${cls(sig)}">${sig.toFixed(3)}</b>`, sig, i > 0 ? mac.signal[i - 1] : NaN)]);
+      if (osc != null) rows.push(['OSC', value(`<b class="${cls(osc)}">${osc.toFixed(3)}</b>`, osc, i > 0 ? mac.hist[i - 1] : NaN)]);
       const cache = daily ? window._tipInstCache[code] : null;
       if (cache && typeof cache === 'object') {
-        const r = cache[c.time];
+        const r = cache[c.time], old = prev ? cache[prev.time] : null;
         if (r) {
           for (const [lab, k] of [['外資', 'foreign_net'], ['投信', 'trust_net'], ['自營商', 'dealer_net']]) {
-            const v = +r[k] || 0; rows.push([lab, `<b class="${cls(v)}">${lots(v)}</b> 張`]);
+            const n = Number(r[k]), v = Number.isFinite(n) ? n : 0;
+            const before = old && Number.isFinite(Number(old[k])) ? Number(old[k]) : NaN;
+            rows.push([lab, value(`<b class="${cls(v)}">${lots(v)}</b> 張`, v, before)]);
           }
         } else if (Object.keys(cache).length) rows.push(['三大法人', '<span class="tt-muted">當日尚無資料</span>']);
       } else if (cache === 'loading') rows.push(['三大法人', '<span class="tt-muted">讀取中…</span>']);
@@ -16404,7 +16447,13 @@
       if (best) { if (best.a === 's') _drawShapes.splice(best.i, 1); else trendLines.splice(best.i, 1); _drawStoreSave();redrawCanvas(); }
     }
     // 2026-10-12：點除了 time 也記「邏輯索引 li」。最後一根 K 棒右邊的空白區 coordinateToTime 回 null（原本點不下去），改用 li 定位。
-    function _coordAt(px, py) { const ts = chartInstance.timeScale(); let li = null; try { li = ts.coordinateToLogical(px); } catch (_) {} return { time: ts.coordinateToTime(px), price: candleSeriesRef.coordinateToPrice(py), li: li }; }
+    function _coordAt(px, py) {
+      const ts = chartInstance.timeScale(), host = document.getElementById('chartContainer');
+      const w = Math.max(1, ts.width()), h = Math.max(1, (host ? host.clientHeight : 1) - ts.height());
+      px = Math.max(0, Math.min(w - 1, px)); py = Math.max(0, Math.min(h - 1, py));
+      let li = null; try { li = ts.coordinateToLogical(px); } catch (_) {}
+      return { time: ts.coordinateToTime(px), price: candleSeriesRef.coordinateToPrice(py), li: li };
+    }
     function _noT(c) { return (c.time === null || c.time === undefined) && (c.li === null || c.li === undefined); }
     // 點 → 畫面 x：有 time 用 time（切換週期仍對得上日期），沒有（未來空白區）才用 li；也接受直接傳 time（舊趨勢線）
     function _dX(q) {
@@ -16438,7 +16487,8 @@
       if (_drawSetupDone) return;
       const overlay = document.getElementById('chartOverlay'); if (!overlay) return;
       _drawSetupDone = true;
-      const gx = cx => cx - overlay.getBoundingClientRect().left, gy = cy => cy - overlay.getBoundingClientRect().top;
+      const gx = cx => Math.max(0, Math.min(overlay.clientWidth - 1, cx - overlay.getBoundingClientRect().left));
+      const gy = cy => Math.max(0, Math.min(overlay.clientHeight - 1, cy - overlay.getBoundingClientRect().top));
       let amplitudeDown=null;overlay.addEventListener('mousedown',e=>{amplitudeDown=e.button===0?{x:e.clientX,y:e.clientY}:null;},true);
       overlay.addEventListener('mousedown', e => {
         if (_drawTool === 'eraser' && e.button === 0 && chartInstance && candleSeriesRef) { _erasing = true; _eraseAt(gx(e.clientX), gy(e.clientY)); return; }   // 按住左鍵開始連續清除
@@ -16461,6 +16511,25 @@
       overlay.addEventListener('mouseup', e => {
         _erasing = false;
         if (!_shapeDrag) return;
+        const px = gx(e.clientX), py = gy(e.clientY), c = _coordAt(px, py), s = _shapeDrag; _shapeDrag = null;
+        const moved = _drawTool === 'seg' ? (Math.hypot(px - s.px, py - s.py) > 6) : (Math.abs(px - s.px) > 4 && Math.abs(py - s.py) > 4);
+        if (!_noT(c) && c.price != null && moved) {
+          _drawShapes.push({ type: _drawTool, pts: [{ time: s.time, price: s.price, li: s.li }, { time: c.time, price: c.price, li: c.li }] });
+          _drawStoreSave();
+        }
+        redrawCanvas();
+      });
+      // 拖曳端點越過最右側 K 棒／價格軸時仍要完成；座標由 gx/gy 夾回有效繪圖邊界。
+      window.addEventListener('mousemove', e => {
+        if (!_shapeDrag || !_drawTool || overlay.contains(e.target)) return;
+        const px = gx(e.clientX), py = gy(e.clientY);
+        redrawCanvas();
+        _previewShape(document.getElementById('fibCanvas').getContext('2d'), _drawTool,
+          { px: _dX(_shapeDrag), py: candleSeriesRef.priceToCoordinate(_shapeDrag.price) }, { px, py });
+      });
+      window.addEventListener('mouseup', e => {
+        _erasing = false;
+        if (!_shapeDrag || overlay.contains(e.target)) return;
         const px = gx(e.clientX), py = gy(e.clientY), c = _coordAt(px, py), s = _shapeDrag; _shapeDrag = null;
         const moved = _drawTool === 'seg' ? (Math.hypot(px - s.px, py - s.py) > 6) : (Math.abs(px - s.px) > 4 && Math.abs(py - s.py) > 4);
         if (!_noT(c) && c.price != null && moved) {
