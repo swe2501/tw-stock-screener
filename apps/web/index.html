@@ -370,7 +370,7 @@
     .zm3-info{font-size:11px;color:var(--text-muted);line-height:1.5;margin-top:2px;white-space:nowrap;}
     .zm3-info b{color:var(--red);}
     #resultsArea .name-cell:has(.ev-info,.zm4-badge){max-width:none;overflow:visible}
-    #resultsArea .name-cell:has(.ev-info){min-width:150px}
+    #resultsArea .name-cell:has(.ev-info){min-width:182px}
     .ev-info{display:flex;align-items:center;gap:6px;margin-top:3px;font-size:11px;line-height:1.4;white-space:nowrap;color:var(--text-muted);font-variant-numeric:tabular-nums;}
     .ev-info .ev-band{display:inline-block;padding:0 7px;border-radius:999px;font-size:10.5px;font-weight:700;line-height:17px;letter-spacing:.02em;color:var(--ev-c);background:color-mix(in srgb,var(--ev-c) 10%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ev-c) 28%,transparent);}
     .ev-info.ev-cheap{--ev-c:#d23f3f;}.ev-info.ev-fair{--ev-c:#5f7287;}.ev-info.ev-expensive{--ev-c:#148f77;}
@@ -10076,7 +10076,7 @@
                 <option value="sym_triangle">三角收斂跌破</option>
               </select></label>
             </fieldset>
-            <small>勾選型態時，需在長黑當天或前 5 個交易日內跌破所選型態的頸線／下緣，且之後未站回。停損參考＝長黑 K 最高價；遇 2～4 月、6～9 月融券強制回補季會另外提醒。</small>
+            <small>勾選型態時，需在長黑當天或前 5 個交易日內跌破所選型態的頸線／下緣，且之後未站回。收盤站上長黑 K 高點即不符合定義；遇 2～4 月、6～9 月融券強制回補季會另外提醒。</small>
           </div>
         </article>
         <article class="zm-hidden-card zm89-card" id="zhenming8Card" data-zm89="8">
@@ -10100,7 +10100,7 @@
               <label><input type="radio" name="zm8Within" value="21" checked> 21 天</label>
               <label><input type="radio" name="zm8Within" value="30"> 30 天</label>
             </fieldset>
-            <small>跌破箱型下緣後，在期限內今天以實體長紅（≥ 3%）、量大於 20 日均量收盤站回下緣才算。停損參考＝破底以來最低點；目標＝箱型上緣，第二目標＝等幅測量。</small>
+            <small>跌破箱型下緣後，在期限內今天以實體長紅（≥ 3%）、量大於 20 日均量收盤站回下緣才算。之後若收盤跌破破底以來最低點，即不符合定義；另標示箱型上緣與等幅測量位置。</small>
           </div>
         </article>
         <article class="zm-hidden-card zm89-card" id="zhenming9Card" data-zm89="9">
@@ -10124,7 +10124,7 @@
               <label><input type="radio" name="zm9Within" value="21" checked> 21 天</label>
               <label><input type="radio" name="zm9Within" value="30"> 30 天</label>
             </fieldset>
-            <small>突破時成交量低於 20 日均量 1.5 倍（量縮過頂），之後在期限內今天收盤跌回上緣之下才算。停損參考＝突破以來最高點；目標＝箱型下緣。</small>
+            <small>突破時成交量低於 20 日均量 1.5 倍（量縮過頂），之後在期限內今天收盤跌回上緣之下才算。之後若收盤站上突破以來最高點，即不符合定義；另標示箱型下緣位置。</small>
           </div>
         </article>
         <article class="zm-hidden-card" id="zhenmingHiddenCard">
@@ -10179,19 +10179,19 @@
         <label class="checkbox-row">
           <input type="checkbox" id="ev357_cheap" />
           <div>
-            <div class="cb-label" style="color:#c0392b">低估區 · 殖利率 ≥ 7%</div>
+            <div class="cb-label" style="color:#c0392b">高殖利率區 · 殖利率 ≥ 7%</div>
           </div>
         </label>
         <label class="checkbox-row">
           <input type="checkbox" id="ev357_fair" />
           <div>
-            <div class="cb-label">合理區 · 殖利率 3%～7%</div>
+            <div class="cb-label">中殖利率區 · 殖利率 3%～7%</div>
           </div>
         </label>
         <label class="checkbox-row">
           <input type="checkbox" id="ev357_expensive" />
           <div>
-            <div class="cb-label" style="color:#148f77">高估區 · 殖利率 ≤ 3%</div>
+            <div class="cb-label" style="color:#148f77">低殖利率區 · 殖利率 ≤ 3%</div>
           </div>
         </label>
           </div>
@@ -11325,9 +11325,9 @@
 
     // 企業價值：名稱下方只放「區間膠囊＋殖利率」，參考價細節放進 ⓘ 提示，欄寬再窄也不會被切掉
     function _ev357Info(e) {
-      const band = e.band === 'cheap' ? ['cheap', '低估區'] : e.band === 'expensive' ? ['expensive', '高估區'] : ['fair', '合理區'];
-      const tip = ['企業價值｜' + band[1], '現金殖利率：' + e.yield + '%', '平均股利 D：' + e.d + '（近 5 年，連續配息）', '低估參考價：' + e.cheap_price + '（殖利率 7%）', '合理參考價：' + e.fair_price + '（殖利率 5%）', '高估參考價：' + e.exp_price + '（殖利率 3%）', '!殖利率＝D ÷ 現價'].join('\n').replace(/"/g, '&quot;');
-      return `<button type="button" class="zm4-badge ev-badge" aria-label="查看企業價值參考價" aria-expanded="false" data-zm4-tip="${tip}"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7.7 7.4a2.4 2.4 0 1 1 3.5 2.1c-.8.4-1.2.9-1.2 1.8v.3M10 14.3v.1"/></svg></button><div class="ev-info ev-${band[0]}"><span class="ev-band">${band[1]}</span><span class="ev-yield">殖利率 ${e.yield}%</span></div>`;
+      const band = e.band === 'cheap' ? ['cheap', '高殖利率區'] : e.band === 'expensive' ? ['expensive', '低殖利率區'] : ['fair', '中殖利率區'];
+      const tip = ['企業價值｜' + band[1], '現金殖利率：' + e.yield + '%', '平均股利 D：' + e.d + '（近 5 年，連續配息）', '殖利率 7% 對應價：' + e.cheap_price, '殖利率 5% 對應價：' + e.fair_price, '殖利率 3% 對應價：' + e.exp_price, '!殖利率＝D ÷ 現價'].join('\n').replace(/"/g, '&quot;');
+      return `<button type="button" class="zm4-badge ev-badge" aria-label="查看企業價值殖利率對應價" aria-expanded="false" data-zm4-tip="${tip}"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7.7 7.4a2.4 2.4 0 1 1 3.5 2.1c-.8.4-1.2.9-1.2 1.8v.3M10 14.3v.1"/></svg></button><div class="ev-info ev-${band[0]}"><span class="ev-band">${band[1]}</span><span class="ev-yield">殖利率 ${e.yield}%</span></div>`;
     }
 
     function renderTable(results) {
@@ -11379,7 +11379,7 @@
                   ? `<span class="data-missing-badge" title="部分篩選條件無法確認（${s.data_missing.map(k=>({'no_black':'無放量黑棒篩選','gap_unverified':'跳空前日資料缺失，請手動排查'}[k]||k)).join('、')}），已放行"></span>`
                   : ''
               }</td>
-            <td class="name-cell">${s.name}${s.zm4 ? AcademyZhenmingFour.badge(s.zm4) : ''}${s.zm6 && window.AcademyZhenmingSix ? AcademyZhenmingSix.badge(s.zm6) : ''}${(s.zm8 || s.zm9) && window.AcademyZhenming89 ? AcademyZhenming89.badge(s) : ''}${s.sma20_stage ? `<div class="zm3-info">葛蘭碧・階段 ${s.sma20_stage}</div>` : ''}${s.zm3 ? `<div class="zm3-info" title="真名三式：長黑 ${s.zm3.black_date}（−${s.zm3.black_pct}%）後第 ${s.zm3.day_n} 天反包；停損參考 ${s.zm3.stop}（長紅低與洗盤最低取低者）；第一目標 ${s.zm3.target}（長黑前 20 日最高）">三式・長黑 ${s.zm3.black_date.slice(5).replace('-','/')}・½ ${s.zm3.mid}・第${s.zm3.day_n}天${s.zm3.vol ? '・<b>帶量</b>' : ''}<br>停損 ${s.zm3.stop}・目標 ${s.zm3.target}</div>` : ''}${s.ev357 ? _ev357Info(s.ev357) : ''}</td>
+            <td class="name-cell">${s.name}${s.zm4 ? AcademyZhenmingFour.badge(s.zm4) : ''}${s.zm6 && window.AcademyZhenmingSix ? AcademyZhenmingSix.badge(s.zm6) : ''}${(s.zm8 || s.zm9) && window.AcademyZhenming89 ? AcademyZhenming89.badge(s) : ''}${s.sma20_stage ? `<div class="zm3-info">葛蘭碧・階段 ${s.sma20_stage}</div>` : ''}${s.zm3 ? `<div class="zm3-info" title="真名三式：長黑 ${s.zm3.black_date}（−${s.zm3.black_pct}%）後第 ${s.zm3.day_n} 天反包；型態失效 ${s.zm3.stop}（長紅低與洗盤最低取低者）；前高位置 ${s.zm3.target}（長黑前 20 日最高）">三式・長黑 ${s.zm3.black_date.slice(5).replace('-','/')}・½ ${s.zm3.mid}・第${s.zm3.day_n}天${s.zm3.vol ? '・<b>帶量</b>' : ''}<br>型態失效 ${s.zm3.stop}・前高 ${s.zm3.target}</div>` : ''}${s.ev357 ? _ev357Info(s.ev357) : ''}</td>
             <td class="neutral col-open">${s.open}</td>
             <td class="neutral col-high">${s.high}</td>
             <td class="neutral col-low">${s.low}</td>
@@ -18446,7 +18446,7 @@
 <link rel="stylesheet" href="assets/site-interactions.css?v=1">
 <link rel="stylesheet" href="assets/focus-rankings.css?v=5">
 <script src="assets/focus-rankings.js?v=5" defer></script>
-<link rel="stylesheet" href="assets/screen-log.css?v=records-only13-calendar-pop27">
+<link rel="stylesheet" href="assets/screen-log.css?v=records-only13-calendar-pop28">
 <link rel="stylesheet" href="assets/strategy-studio.css?v=3">
 <link rel="stylesheet" href="assets/learning-center.css?v=6">
 <link rel="stylesheet" href="assets/research-layout.css?v=10">
@@ -18461,15 +18461,15 @@
 <link rel="stylesheet" href="assets/onboarding-tour.css?v=mist-edge-mcopen-20261027">
 <script src="assets/onboarding-tour.js?v=mist-edge-20261026" defer></script>
 <link rel="stylesheet" href="assets/zhenming-hidden.css?v=6">
-<link rel="stylesheet" href="assets/research-hover.css?v=qtip3">
+<link rel="stylesheet" href="assets/research-hover.css?v=qtip4">
 <script src="assets/research-hover.js?v=drag2"></script>
 <link rel="stylesheet" href="assets/chart-drawing-edit.css?v=2">
 <script src="assets/chart-drawing-edit.js?v=2"></script>
-<script src="assets/zhenming-four.js?v=candidate4"></script>
+<script src="assets/zhenming-four.js?v=candidate5"></script>
 <script src="assets/zhenming-hidden.js?v=5" defer></script>
 <link rel="stylesheet" href="assets/zhenming-six.css?v=3">
-<script src="assets/zhenming-six.js?v=3" defer></script>
-<script src="assets/zhenming-89.js?v=2" defer></script>
+<script src="assets/zhenming-six.js?v=4" defer></script>
+<script src="assets/zhenming-89.js?v=3" defer></script>
 <script src="assets/screen-log.js?v=20261104-save-state" defer></script>
 <script src="assets/member-quick-menu.js?v=tier6" defer></script>
 <script src="assets/navigation-layers.js?v=logo-home20" defer></script>

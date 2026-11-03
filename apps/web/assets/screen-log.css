@@ -492,3 +492,12 @@ body:has(.sic-trigger) .sl-bar .sl-open{display:none!important}
 html:not([data-theme=light]) .sl-dialog button.sl-primary.is-saved{color:#6ad6a0!important}
 .sic-card .sic-picker .sic-picker-today{border:0!important;background:transparent!important;box-shadow:none!important;min-height:0!important;height:auto!important;padding:4px 12px!important;font-size:11.5px!important;font-weight:600!important;color:var(--accent)!important;border-radius:999px!important}
 .sic-card .sic-picker .sic-picker-today:hover{background:color-mix(in srgb,var(--accent) 9%,transparent)!important}
+
+/* 2026-11-04 篩選條件面板留白：選項不再貼著標題分隔線，左右與上下間距一致 */
+#proScreenLayout.scal-workspace .sc-panel .sc-body{padding:16px 18px 18px 20px!important}
+#proScreenLayout.scal-workspace .sc-panel .sc-cbs{row-gap:14px!important;column-gap:28px!important}
+#proScreenLayout.scal-workspace .sc-panel .sc-note{margin:0 0 14px!important;line-height:1.7}
+#proScreenLayout.scal-workspace .sc-panel[data-cat=ind] .checkbox-row label,#proScreenLayout.scal-workspace .sc-panel[data-cat=ind] .checkbox-row>div>label{margin-bottom:4px}
+#proScreenLayout.scal-workspace .sc-panel[data-cat=zm] .sc-cbs{gap:10px!important}
+#proScreenLayout.scal-workspace .sc-panel .scal-value-note{margin-bottom:14px!important}
+@media(max-width:760px){#proScreenLayout.scal-workspace .sc-panel .sc-body{padding:14px 12px 14px 14px!important}#proScreenLayout.scal-workspace .sc-panel .sc-cbs{column-gap:18px!important;row-gap:12px!important}}
