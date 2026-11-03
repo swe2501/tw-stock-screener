@@ -22,6 +22,8 @@
   <script src="assets/w-pattern-export.js?v=20261024-1"></script>
   <script src="assets/w-pattern-overlay.js?v=20261025-2"></script>
   <script src="assets/chart-ai-patterns.js?v=20261101-box1"></script>
+  <script src="assets/candle-combos.js?v=1" defer></script>
+  <link rel="stylesheet" href="assets/candle-combos.css?v=1">
   <link rel="stylesheet" href="assets/chart-ai-patterns.css?v=20261026-3">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -9944,6 +9946,14 @@
           </div>
           </div>
         </div>
+        <!-- 2026-11-04 K棒組合 16 類（規則見 assets/candle-combos.js；資料 candle_combo_hits 每晚計算） -->
+        <div class="sc-panel" data-cat="combo">
+          <div class="sc-hd"><a onclick="_scToggle('combo')"><span class="sc-ar">▸</span><b style="color:#b7791f">K棒組合</b></a><span class="sc-sum"></span></div>
+          <div class="sc-body" style="display:none">
+          <p class="cc-panel-note">列出最近 3 個交易日（含篩選日）完成組合的股票；勾選多項＝任一成立。每晚盤後計算。<a href="javascript:void(0)" onclick="window.AcademyCandleCombos&&AcademyCandleCombos.openRules()">16 類規則說明</a></p>
+          <div class="checkbox-grid sc-cbs" id="ccComboGrid"></div>
+          </div>
+        </div>
         <div class="sc-panel" data-cat="gap">
           <div class="sc-hd"><a onclick="_scToggle('gap')"><span class="sc-ar">▸</span><b style="color:#5a78aa">缺口</b></a><span class="sc-sum"></span></div>
           <div class="sc-body" style="display:none">
@@ -11054,6 +11064,8 @@
         no_black_months:     noBlackMonths,
         no_black_mult:       noBlackMult,
         no_black_tolerance:  noBlackTol,
+        // 2026-11-04 K棒組合 16 類（近 3 個交易日完成、通過最低量；勾多項＝任一成立）
+        candle_combos: Array.from(document.querySelectorAll('.cc-cb:checked')).map(e => e.dataset.combo),
       };
 
       // 非同步任務：帶 job_id 送出，伺服器算完會存暫存；即使手機切背景斷線，
@@ -11310,7 +11322,7 @@
                   ? `<span class="data-missing-badge" title="部分篩選條件無法確認（${s.data_missing.map(k=>({'no_black':'無放量黑棒篩選','gap_unverified':'跳空前日資料缺失，請手動排查'}[k]||k)).join('、')}），已放行"></span>`
                   : ''
               }</td>
-            <td class="name-cell">${s.name}${s.zm4 ? AcademyZhenmingFour.badge(s.zm4) : ''}${s.zm6 && window.AcademyZhenmingSix ? AcademyZhenmingSix.info(s.zm6) : ''}${s.sma20_stage ? `<div class="zm3-info">葛蘭碧・階段 ${s.sma20_stage}</div>` : ''}${s.zm3 ? `<div class="zm3-info" title="真名三式：長黑 ${s.zm3.black_date}（−${s.zm3.black_pct}%）後第 ${s.zm3.day_n} 天反包；停損參考 ${s.zm3.stop}（長紅低與洗盤最低取低者）；第一目標 ${s.zm3.target}（長黑前 20 日最高）">三式・長黑 ${s.zm3.black_date.slice(5).replace('-','/')}・½ ${s.zm3.mid}・第${s.zm3.day_n}天${s.zm3.vol ? '・<b>帶量</b>' : ''}<br>停損 ${s.zm3.stop}・目標 ${s.zm3.target}</div>` : ''}${s.ev357 ? `<div class="zm3-info" style="color:${s.ev357.band==='cheap'?'#c0392b':(s.ev357.band==='expensive'?'#148f77':'var(--text-muted)')}" title="連續5年配息；D=近5年均現金股利 ${s.ev357.d}｜現金殖利率=D÷現價｜低估參考價(7%)=${s.ev357.cheap_price} 合理參考價(5%)=${s.ev357.fair_price} 高估參考價(3%)=${s.ev357.exp_price}"><b>${s.ev357.band==='cheap'?'低估區':(s.ev357.band==='expensive'?'高估區':'合理區')}</b> 殖利率 ${s.ev357.yield}%｜D ${s.ev357.d}（低估 ${s.ev357.cheap_price}／合理 ${s.ev357.fair_price}／高估 ${s.ev357.exp_price}）</div>` : ''}</td>
+            <td class="name-cell">${s.name}${s.zm4 ? AcademyZhenmingFour.badge(s.zm4) : ''}${s.zm6 && window.AcademyZhenmingSix ? AcademyZhenmingSix.info(s.zm6) : ''}${s.sma20_stage ? `<div class="zm3-info">葛蘭碧・階段 ${s.sma20_stage}</div>` : ''}${s.candle_combos && window.AcademyCandleCombos ? AcademyCandleCombos.resultTag(s.candle_combos) : ''}${s.zm3 ? `<div class="zm3-info" title="真名三式：長黑 ${s.zm3.black_date}（−${s.zm3.black_pct}%）後第 ${s.zm3.day_n} 天反包；停損參考 ${s.zm3.stop}（長紅低與洗盤最低取低者）；第一目標 ${s.zm3.target}（長黑前 20 日最高）">三式・長黑 ${s.zm3.black_date.slice(5).replace('-','/')}・½ ${s.zm3.mid}・第${s.zm3.day_n}天${s.zm3.vol ? '・<b>帶量</b>' : ''}<br>停損 ${s.zm3.stop}・目標 ${s.zm3.target}</div>` : ''}${s.ev357 ? `<div class="zm3-info" style="color:${s.ev357.band==='cheap'?'#c0392b':(s.ev357.band==='expensive'?'#148f77':'var(--text-muted)')}" title="連續5年配息；D=近5年均現金股利 ${s.ev357.d}｜現金殖利率=D÷現價｜低估參考價(7%)=${s.ev357.cheap_price} 合理參考價(5%)=${s.ev357.fair_price} 高估參考價(3%)=${s.ev357.exp_price}"><b>${s.ev357.band==='cheap'?'低估區':(s.ev357.band==='expensive'?'高估區':'合理區')}</b> 殖利率 ${s.ev357.yield}%｜D ${s.ev357.d}（低估 ${s.ev357.cheap_price}／合理 ${s.ev357.fair_price}／高估 ${s.ev357.exp_price}）</div>` : ''}</td>
             <td class="neutral col-open">${s.open}</td>
             <td class="neutral col-high">${s.high}</td>
             <td class="neutral col-low">${s.low}</td>
@@ -15373,6 +15385,8 @@
       });
       candleSeriesRef.setData(candles);
       window.AcademyVisualPatterns?.refresh(_visualPatternContext);
+      // 2026-11-04 K棒組合 16 類黃框（只畫日K；開關在「K棒訊息」旁）
+      try { window.AcademyCandleCombos?.attach({ chart: chartInstance, series: candleSeriesRef, host: el, code: currentCode, period: window._chartPeriodKey, candles }); } catch (_) {}
       window._mainCandleSeries = candleSeriesRef;   // 供現價線開關 _togglePriceLine 使用
       try { var _plb = document.querySelector('[data-layer="pl"]'); if (_plb) _plb.setAttribute('aria-pressed',String(window._priceLineOn !== false)); } catch (e) {}
       chartInstance._xhairSeries = candleSeriesRef;

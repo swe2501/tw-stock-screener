@@ -1,0 +1,50 @@
+/* K棒組合 16 類（2026-11-04）：K 線圖黃框、開關、規則說明視窗、選股面板 */
+:root{--cc-yellow:#f5c400;--cc-yellow-ink:#8a6d00;--cc-dialog-bg:#fff;--cc-dialog-text:#1f2937;--cc-dialog-muted:#6b7280;--cc-dialog-line:#e5e7eb;--cc-focus-bg:#fff7d6}
+html[data-theme="dark"]{--cc-yellow:#ffd43b;--cc-yellow-ink:#ffd43b;--cc-dialog-bg:#151c2c;--cc-dialog-text:#e5e7eb;--cc-dialog-muted:#9aa4b2;--cc-dialog-line:#2b3446;--cc-focus-bg:#3a3313}
+
+/* 圖上疊層：只蓋主圖繪圖區（不含右側價格軸與下方時間軸），框線不攔截滑鼠，只有名稱可點 */
+.cc-layer{position:absolute;left:0;top:0;pointer-events:none;overflow:hidden;z-index:3}
+.cc-box{position:absolute;box-sizing:border-box;border:2px solid var(--cc-yellow);border-radius:3px;box-shadow:0 0 0 1px rgba(0,0,0,.35);pointer-events:none}
+.cc-label{position:absolute;white-space:nowrap;font-size:11px;line-height:1.35;padding:1px 5px;border-radius:4px;background:rgba(20,20,20,.72);color:#ffe27a;pointer-events:none}
+.cc-label a{color:#ffe27a;text-decoration:none;font-weight:700;pointer-events:auto;cursor:pointer}
+.cc-label a:hover,.cc-label a:focus-visible{text-decoration:underline;outline:none}
+.cc-label small{font-size:10px;opacity:.8;margin-left:2px}
+
+/* 開關：與「K棒訊息」同款 */
+#chartModal .chart-summary-actions #chartComboToggle{border:0!important;background:transparent!important;box-shadow:none!important;outline:none!important;color:var(--text-muted);font:inherit;font-size:11px;white-space:nowrap;padding:6px 3px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:color .18s ease,text-shadow .18s ease}
+#chartModal #chartComboToggle{display:inline-flex;align-items:center;gap:5px}
+#chartModal .chart-summary-actions #chartComboToggle:hover,#chartModal .chart-summary-actions #chartComboToggle:focus-visible{color:#397fb9!important;text-shadow:0 0 8px #4d9de88c!important}
+html[data-theme="dark"] #chartModal .chart-summary-actions #chartComboToggle:hover,html[data-theme="dark"] #chartModal .chart-summary-actions #chartComboToggle:focus-visible{color:#dfbd76!important;text-shadow:0 0 8px #e9bd638c!important}
+#chartModal #chartComboToggle .kinfo-sw{position:relative;display:inline-block;width:24px;height:13px;border-radius:7px;background:#cbd5e1;transition:background .18s ease;flex:none}
+#chartModal #chartComboToggle .kinfo-sw::after{content:"";position:absolute;top:2px;left:2px;width:9px;height:9px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .18s ease}
+#chartModal #chartComboToggle[aria-pressed="true"] .kinfo-sw{background:#2f80ed}
+#chartModal #chartComboToggle[aria-pressed="true"] .kinfo-sw::after{transform:translateX(11px)}
+html[data-theme="dark"] #chartModal #chartComboToggle .kinfo-sw{background:#475569}
+html[data-theme="dark"] #chartModal #chartComboToggle[aria-pressed="true"] .kinfo-sw{background:#d4a64a}
+
+/* 規則說明視窗 */
+.cc-dialog{width:min(920px,calc(100vw - 32px));max-height:calc(100vh - 48px);padding:0;border:1px solid var(--cc-dialog-line);border-radius:12px;background:var(--cc-dialog-bg);color:var(--cc-dialog-text)}
+.cc-dialog::backdrop{background:rgba(0,0,0,.45)}
+.cc-dialog-hd{position:sticky;top:0;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:1px solid var(--cc-dialog-line);background:var(--cc-dialog-bg)}
+.cc-dialog-hd h3{margin:0;font-size:16px}
+.cc-dialog-x{border:0;background:transparent;color:var(--cc-dialog-muted);font-size:18px;cursor:pointer;padding:4px 8px}
+.cc-dialog-body{padding:12px 16px 18px;overflow:auto;max-height:calc(100vh - 120px)}
+.cc-common{margin:0 0 12px;padding-left:18px;font-size:13px;line-height:1.65;color:var(--cc-dialog-muted)}
+.cc-rules{width:100%;border-collapse:collapse;font-size:13px;line-height:1.55}
+.cc-rules th,.cc-rules td{border-bottom:1px solid var(--cc-dialog-line);padding:7px 8px;text-align:left;vertical-align:top}
+.cc-rules thead th{color:var(--cc-dialog-muted);font-weight:600;white-space:nowrap}
+.cc-rules tbody th{white-space:nowrap;color:var(--cc-yellow-ink)}
+.cc-rules td:nth-child(2),.cc-rules td:nth-child(3){white-space:nowrap}
+.cc-rules tr.is-focus{background:var(--cc-focus-bg)}
+@media (max-width:640px){
+  .cc-rules thead{display:none}
+  .cc-rules tr{display:block;padding:8px 0;border-bottom:1px solid var(--cc-dialog-line)}
+  .cc-rules th,.cc-rules td{display:block;border:0;padding:2px 0;white-space:normal!important}
+}
+
+/* 選股面板與結果 */
+.cc-panel-note{margin:0 0 8px;font-size:12px;color:var(--text-muted)}
+.cc-panel-note a{color:var(--cc-yellow-ink);font-weight:600;margin-left:6px}
+#ccComboGrid .cb-hint{font-size:11px;color:var(--text-muted)}
+.cc-result a{color:var(--cc-yellow-ink);text-decoration:none;font-weight:600}
+.cc-result a:hover{text-decoration:underline}

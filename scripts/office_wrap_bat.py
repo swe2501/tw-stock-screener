@@ -17,7 +17,7 @@ AGENT = {
     "gov_broker_moneylink": "chip", "upload_institutional": "chip", "inst_market": "chip",
     # 技術分析師
     "fetch_prices": "tech", "fetch_prices_otc": "tech", "fetch_hourly": "tech", "upload_price_window": "tech",
-    "compute_strength": "tech", "compute_box": "tech", "compute_box_rules": "tech", "stock_sr": "tech", "liquidity_top": "tech", "mingdeng": "tech",
+    "compute_strength": "tech", "compute_box": "tech", "compute_box_rules": "tech", "stock_sr": "tech", "liquidity_top": "tech", "mingdeng": "tech", "candle_combos": "tech",
     "intraday_push": "tech",
     # 總經研究員
     "ust_yields_push": "macro", "macro_env_push": "macro", "market_indicators": "macro", "index_history": "macro",
