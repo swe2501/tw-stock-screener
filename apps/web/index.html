@@ -2367,10 +2367,14 @@
     function syncClear(){ var b=document.getElementById('chartSearchClear'); if(b)b.hidden=!(inp&&inp.value); }
     function open(code){ if(drop)drop.hidden=true; if(inp){inp.value='';inp.blur();syncClear();} list=[]; sel=-1; if(document.getElementById('chartModal')?.classList.contains('chart-analysis-only')){window.AcademyChartAnalysis?.open(String(code));return;} if(window._openStock)window._openStock(String(code), (window._names&&window._names[code])||''); }
     function oninput(){ if(!inp)return; syncClear(); var run=function(){ list=match(inp.value); sel=-1; render(); }; if(!window._names){ window._loadNames&&window._loadNames(run); } else run(); }
+    /* 台股代號：4～6 碼數字，可帶 1 個英文字母（例 00631L、2881A） */
+    function validCode(q){ return /^\d{4,6}[A-Za-z]?$/.test(q); }
+    function notFound(q){ if(!drop)return; drop.innerHTML='<div class="gs-sd-item gs-sd-empty" role="option" aria-disabled="true"><span class="gs-sd-name">查無「'+String(q).replace(/[&<>"]/g,'')+'」，請確認代號或股名</span></div>'; drop.hidden=false; list=[]; sel=-1; }
     function go(){ if(!inp)return; var q=(inp.value||'').trim(); if(!q)return;
       if(sel>=0&&list[sel]){open(list[sel].code);return;}
-      var run=function(){ var l=match(q); if(l.length)open(l[0].code); else if(/^\d/.test(q))open(q.split(/\s+/)[0]); };
-      if(!window._names){window._loadNames&&window._loadNames(run);} else run(); }
+      var code=q.split(/\s+/)[0];
+      var run=function(){ var l=match(q); if(l.length)open(l[0].code); else if(validCode(code))open(code); else notFound(q); };
+      if(!window._names){ if(validCode(code)){open(code);return;} window._loadNames&&window._loadNames(run);} else run(); }
     document.addEventListener('DOMContentLoaded',function(){
       inp=document.getElementById('chartStockSearch'); drop=document.getElementById('chartSearchDrop'); if(!inp)return;
       try{ window._loadNames&&window._loadNames(); }catch(e){}
@@ -2392,7 +2396,10 @@
       if(e.defaultPrevented||e.ctrlKey||e.metaKey||e.altKey||!inp||!modal?.classList.contains('open')||inp.offsetParent===null||editable(e.target))return;
       if(e.isComposing||e.key==='Process'||e.keyCode===229){inp.focus();return;}
       if(!e.key||e.key.length!==1)return;
-      e.preventDefault();inp.focus();
+      e.preventDefault();
+      /* 搜尋框沒被點選時直接打字＝重新輸入：先清掉上一次留下的字，避免代號一路接下去 */
+      var fresh=document.activeElement!==inp;inp.focus();
+      if(fresh){inp.value='';}
       var a=inp.selectionStart==null?inp.value.length:inp.selectionStart,b=inp.selectionEnd==null?a:inp.selectionEnd;
       inp.setRangeText(e.key,a,b,'end');inp.dispatchEvent(new Event('input',{bubbles:true}));
     });
@@ -9310,7 +9317,10 @@
       if(e.defaultPrevented||e.ctrlKey||e.metaKey||e.altKey||!home||home.offsetParent===null||!inp||inp.offsetParent===null||chart?.classList.contains('open')||_hpEditable(e.target))return;
       if(e.isComposing||e.key==='Process'||e.keyCode===229){inp.focus();return;}
       if(!e.key||e.key.length!==1)return;
-      e.preventDefault();inp.focus();
+      e.preventDefault();
+      /* 搜尋框沒被點選時直接打字＝重新輸入：先清掉上一次留下的字，避免代號一路接下去 */
+      var fresh=document.activeElement!==inp;inp.focus();
+      if(fresh){inp.value='';}
       var a=inp.selectionStart==null?inp.value.length:inp.selectionStart,b=inp.selectionEnd==null?a:inp.selectionEnd;
       inp.setRangeText(e.key,a,b,'end');inp.dispatchEvent(new Event('input',{bubbles:true}));
     });
