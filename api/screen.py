@@ -3201,8 +3201,9 @@ def zhenming6_at(bars, t=None, pattern=None):
 #   箱型：突破／跌破日之前 ZM89_BOX 個交易日（約 3 個月）收盤價的整理區，振幅＝(最高收盤−最低收盤)/最低收盤 ≤ 使用者設定（5/10/20% 或自訂）。
 #   八式：收盤跌破箱型下緣後，ZM89_WITHIN（21）個交易日內「今天」第一次收盤站回下緣，且今天是實體長紅（≥ 3%）、量 > 20 日均量。
 #   九式：收盤突破箱型上緣但突破日量縮（< 20 日均量 1.5 倍），之後 21 個交易日內「今天」第一次收盤跌回上緣之下。
-ZM89_BOX = 60
-ZM89_WITHIN = 21
+ZM89_BOX = 60             # 預設整理期間（交易日）；使用者可選 40／60／120 或自訂 20～240
+ZM89_WITHIN = 21          # 預設站回／跌回期限（交易日）；可選 10／21／30
+ZM89_WITHIN_CHOICES = (10, 21, 30)
 ZM8_RED = 3.0
 ZM9_BREAK_VOL = 1.5
 
@@ -3216,11 +3217,22 @@ def zm89_amp(value):
     return round(v, 2) if math.isfinite(v) and 1 <= v <= 50 else None
 
 
-def _zm89_box(bars, d):
-    """跌破／突破日 d 之前的箱型：回 (lower, upper, amp%)；資料不足回 None。"""
-    if d - ZM89_BOX < 0:
+def zm89_box_days(value):
+    """整理期間（交易日）：20～240 的整數，其他回 None；未提供回預設 60。"""
+    if value is None:
+        return ZM89_BOX
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
         return None
-    seg = [x[4] for x in bars[d - ZM89_BOX:d]]
+    return int(v) if math.isfinite(v) and v == int(v) and 20 <= v <= 240 else None
+
+
+def _zm89_box(bars, d, n=ZM89_BOX):
+    """跌破／突破日 d 之前 n 個交易日的箱型：回 (lower, upper, amp%)；資料不足回 None。"""
+    if d - n < 0:
+        return None
+    seg = [x[4] for x in bars[d - n:d]]
     lo, hi = min(seg), max(seg)
     if lo <= 0:
         return None
@@ -3232,13 +3244,13 @@ def _zm89_vol_ma(bars, end, n=20):
     return sum(vs) / len(vs) if len(vs) >= n // 2 else None
 
 
-def zhenming8_at(bars, amp, t=None):
+def zhenming8_at(bars, amp, t=None, box_days=ZM89_BOX, within=ZM89_WITHIN):
     """真名八式（破底翻）。bars＝[(date, o, h, l, c, v), ...] 由舊到新；amp＝箱型振幅上限（%）。"""
     if t is None:
         t = len(bars) - 1
-    if not isinstance(t, int) or t < ZM89_BOX + 2 or t >= len(bars):
+    if not isinstance(t, int) or t < box_days + 2 or t >= len(bars):
         return None
-    if not all(_zm6_valid(x) for x in bars[max(0, t - ZM89_BOX - ZM89_WITHIN - 2):t + 1]):
+    if not all(_zm6_valid(x) for x in bars[max(0, t - box_days - within - 2):t + 1]):
         return None
     _, o, h, l, c, v = bars[t]
     if not (c > o and (c - o) / o * 100 >= ZM8_RED - 1e-9):
@@ -3246,9 +3258,9 @@ def zhenming8_at(bars, amp, t=None):
     vma = _zm89_vol_ma(bars, t)
     if not vma or not isinstance(v, (int, float)) or v <= vma:
         return None
-    d = max(ZM89_BOX, t - ZM89_WITHIN)
+    d = max(box_days, t - within)
     while d < t:
-        box = _zm89_box(bars, d)
+        box = _zm89_box(bars, d, box_days)
         if not box or not (bars[d][4] < box[0] <= bars[d - 1][4]):
             d += 1
             continue
@@ -3261,24 +3273,24 @@ def zhenming8_at(bars, amp, t=None):
         if a > amp + 1e-9 or c <= lower:
             return None
         low_since = min(x[3] for x in bars[d:t + 1])
-        return {"lower": round(lower, 2), "upper": round(upper, 2), "amp": round(a, 2), "break_date": bars[d][0],
+        return {"lower": round(lower, 2), "upper": round(upper, 2), "amp": round(a, 2), "box_days": box_days, "within": within, "break_date": bars[d][0],
                 "days": t - d, "red_pct": round((c - o) / o * 100, 2), "vol_ratio": round(v / vma, 2),
                 "stop": round(min(l, low_since), 2), "target1": round(upper, 2), "target2": round(upper + (upper - lower), 2)}
     return None
 
 
-def zhenming9_at(bars, amp, t=None):
+def zhenming9_at(bars, amp, t=None, box_days=ZM89_BOX, within=ZM89_WITHIN):
     """真名九式（假突破）。bars＝[(date, o, h, l, c, v), ...] 由舊到新；amp＝箱型振幅上限（%）。"""
     if t is None:
         t = len(bars) - 1
-    if not isinstance(t, int) or t < ZM89_BOX + 2 or t >= len(bars):
+    if not isinstance(t, int) or t < box_days + 2 or t >= len(bars):
         return None
-    if not all(_zm6_valid(x) for x in bars[max(0, t - ZM89_BOX - ZM89_WITHIN - 2):t + 1]):
+    if not all(_zm6_valid(x) for x in bars[max(0, t - box_days - within - 2):t + 1]):
         return None
     _, o, h, l, c, v = bars[t]
-    d = max(ZM89_BOX, t - ZM89_WITHIN)
+    d = max(box_days, t - within)
     while d < t:
-        box = _zm89_box(bars, d)
+        box = _zm89_box(bars, d, box_days)
         if not box or not (bars[d][4] > box[1] >= bars[d - 1][4]):
             d += 1
             continue
@@ -3295,7 +3307,7 @@ def zhenming9_at(bars, amp, t=None):
             return None
         high_since = max(x[2] for x in bars[d:t + 1])
         body = abs(c - o)
-        return {"upper": round(upper, 2), "lower": round(lower, 2), "amp": round(a, 2), "break_date": bars[d][0],
+        return {"upper": round(upper, 2), "lower": round(lower, 2), "amp": round(a, 2), "box_days": box_days, "within": within, "break_date": bars[d][0],
                 "days": t - d, "break_vol_ratio": round(bv / vma, 2), "stop": round(high_since, 2), "target": round(lower, 2),
                 "long_black": bool(o > c and (o - c) / c * 100 >= 3 - 1e-9),
                 "upper_shadow": bool(h - max(o, c) >= max(body * 2, c * 0.01))}
@@ -3446,7 +3458,13 @@ def screen(params):
         amp = zm89_amp(raw.get("amp"))
         if amp is None:
             return None, {"error": label + "的箱型振幅需介於 1%～50%。", "results": []}
-        return amp, None
+        days = zm89_box_days(raw.get("box_days"))
+        if days is None:
+            return None, {"error": label + "的整理期間需為 20～240 個交易日。", "results": []}
+        within = raw.get("within", ZM89_WITHIN)
+        if within not in ZM89_WITHIN_CHOICES or isinstance(within, bool):
+            return None, {"error": label + "的站回期限只能選 10、21 或 30 個交易日。", "results": []}
+        return (amp, days, within), None
     zm8_amp, _err = _zm89_param("zhenming8", "真名八式")
     if _err:
         return _err
@@ -3454,6 +3472,7 @@ def screen(params):
     if _err:
         return _err
     check_zhenming8, check_zhenming9 = zm8_amp is not None, zm9_amp is not None
+    (zm8_amp, zm8_days, zm8_within), (zm9_amp, zm9_days, zm9_within) = (zm8_amp or (None, None, None)), (zm9_amp or (None, None, None))
     # 企業價值投資法（存股 357）：3 個分級 checkbox（可複選）
     want_357_cheap     = bool(params.get("ev357_cheap", False))
     want_357_fair      = bool(params.get("ev357_fair", False))
@@ -3947,11 +3966,11 @@ def screen(params):
             target_day = f"{actual_date[:4]}-{actual_date[4:6]}-{actual_date[6:]}"
             ok_day = bool(bars) and bars[-1][0] == target_day
             if check_zhenming8:
-                zm8 = zhenming8_at(bars, zm8_amp) if ok_day else None
+                zm8 = zhenming8_at(bars, zm8_amp, box_days=zm8_days, within=zm8_within) if ok_day else None
                 if not zm8:
                     continue
             if check_zhenming9:
-                zm9 = zhenming9_at(bars, zm9_amp) if ok_day else None
+                zm9 = zhenming9_at(bars, zm9_amp, box_days=zm9_days, within=zm9_within) if ok_day else None
                 if not zm9:
                     continue
 

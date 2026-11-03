@@ -94,3 +94,38 @@ class Zhenming9Tests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class BoxDaysTests(unittest.TestCase):
+    def test_box_days_param(self):
+        self.assertEqual(screen.zm89_box_days(None), 60)
+        self.assertEqual(screen.zm89_box_days(240), 240)
+        self.assertIsNone(screen.zm89_box_days(241))
+        self.assertIsNone(screen.zm89_box_days(19))
+        self.assertIsNone(screen.zm89_box_days(30.5))
+        r = screen.screen({"zhenming9": {"enabled": True, "amp": 10, "box_days": 300}})
+        self.assertIn("整理期間", r.get("error", ""))
+
+    def test_short_box_finds_recent_box(self):
+        closes = [80 + i for i in range(40)] + box_closes(45) + [99.0, 98.5]
+        opens = [None] * len(closes)
+        closes.append(103.0); opens.append(99.0)
+        vols = [1000] * (len(closes) - 1) + [2500]
+        bars = build(closes, vols, opens)
+        self.assertIsNone(screen.zhenming8_at(bars, 10))                 # 60 日箱型含前段上漲，振幅過大
+        z = screen.zhenming8_at(bars, 10, box_days=40)
+        self.assertIsNotNone(z)
+        self.assertEqual(z["box_days"], 40)
+
+
+class WithinTests(unittest.TestCase):
+    def test_within_choices(self):
+        closes = box_closes() + [99.0] * 12
+        opens = [None] * len(closes)
+        closes.append(103.0); opens.append(99.0)
+        vols = [1000] * (len(closes) - 1) + [2500]
+        bars = build(closes, vols, opens)
+        self.assertIsNone(screen.zhenming8_at(bars, 10, within=10))
+        self.assertIsNotNone(screen.zhenming8_at(bars, 10, within=21))
+        r = screen.screen({"zhenming8": {"enabled": True, "amp": 10, "within": 15}})
+        self.assertIn("站回期限", r.get("error", ""))

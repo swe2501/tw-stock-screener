@@ -45,3 +45,5 @@ html[data-theme=dark] :is(#zhenming6Card,.zm89-card){--zm6-bear:#86c6a0}
 .zm89-card .zm89-num input[type=number]:is(:focus,:focus-visible,:hover){outline:none!important;box-shadow:none!important;border:0!important;background:transparent!important}
 .zm89-card .zm89-num input[type=number]{width:30px!important;min-width:0!important;flex:0 0 30px;margin:0!important}
 .zm89-card .zm89-num:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 12%,transparent)}
+.zm89-card .zm89-hint{flex-basis:100%;font-style:normal;font-size:11px;line-height:1.6;color:var(--text-muted);margin-top:-2px}
+.zm89-card .zm89-num input[type=number]#zm8BoxCustom,.zm89-card .zm89-num input[type=number]#zm9BoxCustom{width:36px!important;flex-basis:36px}

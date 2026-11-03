@@ -10080,27 +10080,51 @@
           </div>
         </article>
         <article class="zm-hidden-card zm89-card" id="zhenming8Card" data-zm89="8">
-          <label class="checkbox-row"><input type="checkbox" id="zhenming8" /><div class="cb-label" title="箱型整理後收盤跌破下緣，21 個交易日內以帶量長紅站回下緣（破底翻）">真名八式（假跌破）</div></label>
+          <label class="checkbox-row"><input type="checkbox" id="zhenming8" /><div class="cb-label" title="箱型整理後收盤跌破下緣，期限內以帶量長紅站回下緣（破底翻）">真名八式（假跌破）</div></label>
           <div class="zm-hidden-options zm89-options" id="zhenming8Options" hidden>
-            <fieldset><legend><span>01</span> 箱型振幅 <small>整理約 3 個月（60 個交易日）</small></legend>
-              <label><input type="radio" name="zm8Amp" value="5" data-hidden-metric> 5%</label>
-              <label><input type="radio" name="zm8Amp" value="10" data-hidden-metric checked> 10%</label>
-              <label><input type="radio" name="zm8Amp" value="20" data-hidden-metric> 20%</label>
-              <label class="zm89-custom"><input type="radio" name="zm8Amp" value="custom" data-hidden-metric> 自訂<span class="zm89-num"><input type="number" id="zm8AmpCustom" min="1" max="50" step="0.5" inputmode="decimal" placeholder="—" aria-label="真名八式（假跌破）自訂箱型振幅（%）"><i>%</i></span></label>
+            <fieldset><legend><span>01</span> 箱型振幅 <small>最高收盤與最低收盤的差距</small></legend>
+              <label><input type="radio" name="zm8Amp" value="5"> 5%</label>
+              <label><input type="radio" name="zm8Amp" value="10" checked> 10%</label>
+              <label><input type="radio" name="zm8Amp" value="20"> 20%</label>
+              <label class="zm89-custom"><input type="radio" name="zm8Amp" value="custom"> 自訂<span class="zm89-num"><input type="number" id="zm8AmpCustom" min="1" max="50" step="0.5" inputmode="decimal" placeholder="—" aria-label="真名八式自訂箱型振幅（%）"><i>%</i></span></label>
             </fieldset>
-            <small>跌破箱型下緣後 21 個交易日內，今天以實體長紅（≥ 3%）、量大於 20 日均量收盤站回下緣才算。停損參考＝破底以來最低點；目標＝箱型上緣，第二目標＝等幅測量。</small>
+            <fieldset><legend><span>02</span> 整理期間 <small>跌破／突破前的箱型天數（交易日）</small></legend>
+              <label><input type="radio" name="zm8Box" value="40"> 2 個月</label>
+              <label><input type="radio" name="zm8Box" value="60" checked> 3 個月</label>
+              <label><input type="radio" name="zm8Box" value="120"> 6 個月</label>
+              <label class="zm89-custom"><input type="radio" name="zm8Box" value="custom"> 自訂<span class="zm89-num"><input type="number" id="zm8BoxCustom" min="20" max="240" step="1" inputmode="decimal" placeholder="—" aria-label="真名八式自訂整理期間（交易日）"><i>天</i></span></label>
+              <em class="zm89-hint">期間拉長時箱型高低差通常變大，6 個月建議搭配 15～20% 振幅</em>
+            </fieldset>
+            <fieldset><legend><span>03</span> 站回期限 <small>跌破後幾個交易日內要站回</small></legend>
+              <label><input type="radio" name="zm8Within" value="10"> 10 天</label>
+              <label><input type="radio" name="zm8Within" value="21" checked> 21 天</label>
+              <label><input type="radio" name="zm8Within" value="30"> 30 天</label>
+            </fieldset>
+            <small>跌破箱型下緣後，在期限內今天以實體長紅（≥ 3%）、量大於 20 日均量收盤站回下緣才算。停損參考＝破底以來最低點；目標＝箱型上緣，第二目標＝等幅測量。</small>
           </div>
         </article>
         <article class="zm-hidden-card zm89-card" id="zhenming9Card" data-zm89="9">
-          <label class="checkbox-row"><input type="checkbox" id="zhenming9" /><div class="cb-label" title="箱型整理後量縮突破上緣，21 個交易日內收盤跌回上緣之下（誘多陷阱）">真名九式（假突破）</div></label>
+          <label class="checkbox-row"><input type="checkbox" id="zhenming9" /><div class="cb-label" title="箱型整理後量縮突破上緣，期限內收盤跌回上緣之下（誘多陷阱）">真名九式（假突破）</div></label>
           <div class="zm-hidden-options zm89-options" id="zhenming9Options" hidden>
-            <fieldset><legend><span>01</span> 箱型振幅 <small>整理約 3 個月（60 個交易日）</small></legend>
-              <label><input type="radio" name="zm9Amp" value="5" data-hidden-metric> 5%</label>
-              <label><input type="radio" name="zm9Amp" value="10" data-hidden-metric checked> 10%</label>
-              <label><input type="radio" name="zm9Amp" value="20" data-hidden-metric> 20%</label>
-              <label class="zm89-custom"><input type="radio" name="zm9Amp" value="custom" data-hidden-metric> 自訂<span class="zm89-num"><input type="number" id="zm9AmpCustom" min="1" max="50" step="0.5" inputmode="decimal" placeholder="—" aria-label="真名九式（假突破）自訂箱型振幅（%）"><i>%</i></span></label>
+            <fieldset><legend><span>01</span> 箱型振幅 <small>最高收盤與最低收盤的差距</small></legend>
+              <label><input type="radio" name="zm9Amp" value="5"> 5%</label>
+              <label><input type="radio" name="zm9Amp" value="10" checked> 10%</label>
+              <label><input type="radio" name="zm9Amp" value="20"> 20%</label>
+              <label class="zm89-custom"><input type="radio" name="zm9Amp" value="custom"> 自訂<span class="zm89-num"><input type="number" id="zm9AmpCustom" min="1" max="50" step="0.5" inputmode="decimal" placeholder="—" aria-label="真名九式自訂箱型振幅（%）"><i>%</i></span></label>
             </fieldset>
-            <small>突破時成交量低於 20 日均量 1.5 倍（量縮過頂），之後 21 個交易日內今天收盤跌回上緣之下才算。停損參考＝突破以來最高點；目標＝箱型下緣。</small>
+            <fieldset><legend><span>02</span> 整理期間 <small>跌破／突破前的箱型天數（交易日）</small></legend>
+              <label><input type="radio" name="zm9Box" value="40"> 2 個月</label>
+              <label><input type="radio" name="zm9Box" value="60" checked> 3 個月</label>
+              <label><input type="radio" name="zm9Box" value="120"> 6 個月</label>
+              <label class="zm89-custom"><input type="radio" name="zm9Box" value="custom"> 自訂<span class="zm89-num"><input type="number" id="zm9BoxCustom" min="20" max="240" step="1" inputmode="decimal" placeholder="—" aria-label="真名九式自訂整理期間（交易日）"><i>天</i></span></label>
+              <em class="zm89-hint">期間拉長時箱型高低差通常變大，6 個月建議搭配 15～20% 振幅</em>
+            </fieldset>
+            <fieldset><legend><span>03</span> 跌回期限 <small>突破後幾個交易日內要跌回</small></legend>
+              <label><input type="radio" name="zm9Within" value="10"> 10 天</label>
+              <label><input type="radio" name="zm9Within" value="21" checked> 21 天</label>
+              <label><input type="radio" name="zm9Within" value="30"> 30 天</label>
+            </fieldset>
+            <small>突破時成交量低於 20 日均量 1.5 倍（量縮過頂），之後在期限內今天收盤跌回上緣之下才算。停損參考＝突破以來最高點；目標＝箱型下緣。</small>
           </div>
         </article>
         <article class="zm-hidden-card" id="zhenmingHiddenCard">
@@ -18443,9 +18467,9 @@
 <script src="assets/chart-drawing-edit.js?v=2"></script>
 <script src="assets/zhenming-four.js?v=candidate4"></script>
 <script src="assets/zhenming-hidden.js?v=5" defer></script>
-<link rel="stylesheet" href="assets/zhenming-six.css?v=2">
+<link rel="stylesheet" href="assets/zhenming-six.css?v=3">
 <script src="assets/zhenming-six.js?v=3" defer></script>
-<script src="assets/zhenming-89.js?v=1" defer></script>
+<script src="assets/zhenming-89.js?v=2" defer></script>
 <script src="assets/screen-log.js?v=20261103-scroll-revert" defer></script>
 <script src="assets/member-quick-menu.js?v=tier6" defer></script>
 <script src="assets/navigation-layers.js?v=logo-home20" defer></script>
