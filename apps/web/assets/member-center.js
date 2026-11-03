@@ -17,11 +17,11 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
   // 2026-10-22 回到頂端：只在會員中心；往下捲超過一個畫面才出現，點了平滑捲回最上面；避開策略工作台右下角的聊天按鈕
   const toTop=document.createElement('button');toTop.type='button';toTop.className='mc-to-top';toTop.setAttribute('aria-label','回到頂端');toTop.title='回到頂端';
   toTop.innerHTML='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V6M6 11.5 12 5.5l6 6"/></svg>';
-  const syncTop=()=>{const show=content.scrollTop>Math.max(480,content.clientHeight*.8);toTop.classList.toggle('is-visible',show);toTop.tabIndex=show?0:-1;const chat=document.querySelector('.ms-chat-launcher');toTop.classList.toggle('is-raised',!!(chat&&!chat.hidden&&chat.offsetParent));};
-  page.addEventListener('scroll',()=>{if(!syncTop.r){syncTop.r=requestAnimationFrame(()=>{syncTop.r=0;syncTop();});}},{passive:true,capture:true});
-  toTop.addEventListener('click',()=>{content.scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth'});page.querySelector('main')?.focus?.({preventScroll:true});});
+  const syncTop=()=>{const show=page.scrollTop>Math.max(480,page.clientHeight*.8);toTop.classList.toggle('is-visible',show);toTop.tabIndex=show?0:-1;const chat=document.querySelector('.ms-chat-launcher');toTop.classList.toggle('is-raised',!!(chat&&!chat.hidden&&chat.offsetParent));};
+  page.addEventListener('scroll',()=>{if(!syncTop.r){syncTop.r=requestAnimationFrame(()=>{syncTop.r=0;syncTop();});}},{passive:true});
+  toTop.addEventListener('click',()=>{page.scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth'});page.querySelector('main')?.focus?.({preventScroll:true});});
   queueMicrotask(()=>page.append(toTop));
-  page.innerHTML = `<div class="mc-shell"><div class="mc-top"><div><span class="mc-kicker">FORESIGHT QUANT · MEMBER</span><h1>會員中心</h1><div class="mc-muted">你的研究工作區，從這裡開始。</div></div><div class="mc-top-actions"><button type="button" data-member-theme></button><button type="button" data-back>← 返回原頁</button><button type="button" data-member-logout>登出</button><span class="mc-action-status" role="status"></span></div></div><div class="mc-layout"><nav class="mc-nav" aria-label="會員功能"></nav><section class="mc-content-group" aria-label="會員功能內容" tabindex="0"><main class="mc-main" tabindex="-1"></main></section></div></div>`;
+  page.innerHTML = `<div class="mc-shell"><div class="mc-top"><div><span class="mc-kicker">FORESIGHT QUANT · MEMBER</span><h1>會員中心</h1><div class="mc-muted">你的研究工作區，從這裡開始。</div></div><div class="mc-top-actions"><button type="button" data-member-theme></button><button type="button" data-back>← 返回原頁</button><button type="button" data-member-logout>登出</button><span class="mc-action-status" role="status"></span></div></div><div class="mc-layout"><nav class="mc-nav" aria-label="會員功能"></nav><main class="mc-main" tabindex="-1"></main></div></div>`;
   document.body.append(page);
   const brandbar=document.createElement('div');brandbar.className='mc-brandbar';
   for(const selector of ['body>header .gs-brand','body>header .gs-edition']){const original=document.querySelector(selector);if(original){const clone=original.cloneNode(true);clone.removeAttribute('onclick');clone.removeAttribute('id');clone.querySelectorAll('[id],[onclick]').forEach(el=>{el.removeAttribute('id');el.removeAttribute('onclick');});if(clone.matches('a'))clone.addEventListener('click',e=>{e.preventDefault();goHome();});brandbar.append(clone);}}
@@ -32,7 +32,7 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
     ['研究與學習', [['learning','學習中心'],['favorites','我的自選'],['screen-calendar','選股日曆'],['strategy','策略工作台'],['workspace','研究筆記'],['trades','交易與目標'],['weekly','本週回顧']]]   // 2026-10-22 整理：交易紀錄＋我的目標合併成一個入口（頁內分頁切換）；研究週報改為本週回顧
   ];
   const items = groups.flatMap(([,rows])=>rows);
-  const nav = page.querySelector('nav'), main = page.querySelector('main'), content = page.querySelector('.mc-content-group');
+  const nav = page.querySelector('nav'), main = page.querySelector('main');
   const cloudHost=document.createElement('section');cloudHost.className='mc-cloud-host';cloudHost.hidden=true;page.querySelector('.mc-layout').before(cloudHost);let cloudCleanup=()=>{};
   window.addEventListener('academy-cloud-before-pull',e=>{if(e.detail?.owner===profile?.id&&e.detail.kind.startsWith('journal'))window.AcademyTradeUI?.cleanup();});
   window.addEventListener('academy-cloud-pulled',e=>{if(e.detail?.owner===profile?.id&&!page.hidden)render();});
@@ -138,7 +138,7 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
     current=(items.some(i=>i[0]===tab)||tab==='goals')?tab:'overview';
     if(page.hidden){returnFocus=document.activeElement;returnScroll={x:scrollX,y:scrollY};oldOverflow=document.body.style.overflow;document.body.style.overflow='hidden';document.body.classList.add('mc-open');positionUnderHeader();page.hidden=false;history[replaceHistory?'replaceState':'pushState']({...history.state,academyLayers:[],academyMember:true},'',location.pathname+location.search+'#member/'+current);}
     else if(location.hash!=='#member/'+current)history.pushState({...history.state,academyLayers:[],academyMember:true},'',location.pathname+location.search+'#member/'+current);
-    render();main.focus({preventScroll:true});content.scrollTop=0;syncTop();if(localStorage.getItem('sb_token')&&(!profile||reopened))load();
+    render();main.focus({preventScroll:true});page.scrollTop=0;if(localStorage.getItem('sb_token')&&(!profile||reopened))load();
   }
   function close(){if(document.body.classList.contains('mc-chart-open'))window.closeChart?.();document.body.classList.remove('mc-chart-open');dispatchEvent(new Event('academy-member-closed'));page.querySelectorAll('dialog[open]').forEach(d=>d.close());request++;page.hidden=true;document.body.classList.remove('mc-open');document.body.style.overflow=oldOverflow;returnFocus?.focus?.({preventScroll:true});requestAnimationFrame(()=>scrollTo(returnScroll.x,returnScroll.y));}
   function goHome(){
@@ -163,7 +163,7 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
   addEventListener('resize',()=>{if(!page.hidden)positionUnderHeader();});
   addEventListener('academy-identity-linked',e=>{if(localStorage.getItem('sb_token')){profile=null;const target=typeof e.returnHash==='string'&&e.returnHash.startsWith('#member/')?e.returnHash:location.hash;if(page.hidden||location.hash!==target)open(target.startsWith('#member/')?target.split('/')[1]:'security');else load();}});
   addEventListener('academy-public-navigation',()=>{if(!page.hidden)close();});
-  addEventListener('popstate',()=>{if(window.AcademyNavigationLayers?.handlesPop())return;if(location.hash.startsWith('#member/')){if(page.hidden){oldOverflow=document.body.style.overflow;document.body.style.overflow='hidden';document.body.classList.add('mc-open');positionUnderHeader();page.hidden=false;}current=location.hash.split('/')[1]||'overview';render();content.scrollTop=0;syncTop();}else if(!page.hidden)close();});
+  addEventListener('popstate',()=>{if(window.AcademyNavigationLayers?.handlesPop())return;if(location.hash.startsWith('#member/')){if(page.hidden){oldOverflow=document.body.style.overflow;document.body.style.overflow='hidden';document.body.classList.add('mc-open');positionUnderHeader();page.hidden=false;}current=location.hash.split('/')[1]||'overview';render();}else if(!page.hidden)close();});
   page.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.tab||b.dataset.go)open(b.dataset.tab||b.dataset.go);if(b.hasAttribute('data-login')){if(history.state?.academyMember)history.back();else close();setTimeout(()=>window.openAuthModal?.('login'),0);}if(b.hasAttribute('data-clear')){removeLocal(draftKey());render();}});
   page.addEventListener('submit',async e=>{e.preventDefault();if(e.target.id!=='mc-profile')return;const button=e.target.querySelector('button[type=submit]'),status=e.target.querySelector('.mc-status');button.disabled=true;try{const body=Object.fromEntries(new FormData(e.target));body.markets=new FormData(e.target).getAll('markets');delete body['mc-avatar-file'];profile=await api('POST',body);sync();status.textContent='個人資料已儲存至會員帳號';}catch(err){status.textContent=err.message;}finally{button.disabled=false;}});
   page.addEventListener('submit',async e=>{

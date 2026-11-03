@@ -150,21 +150,3 @@ body.academy-research-ready #chartWatchBtn,body.academy-research-ready #chartBac
 
 /* Routine sync success needs no permanent banner; pending work and errors remain visible. */
 .mc-cloud-host[data-cloud-compact=true]{display:none}
-
-/* Independent member navigation and content scroll groups. */
-.member-page:not([hidden]){display:flex;flex-direction:column;overflow:hidden}
-.member-page>.mc-brandbar{position:relative;top:auto;flex:0 0 auto}
-.member-page>.mc-shell{box-sizing:border-box;width:100%;max-width:1184px;margin:0 auto;flex:1 1 0;min-height:0;display:flex;flex-direction:column;padding-bottom:20px;overflow:hidden}
-.member-page .mc-top,.member-page .mc-cloud-host{flex:0 0 auto}
-.member-page .mc-layout{flex:1 1 0;min-height:0;align-items:stretch;overflow:hidden}
-.member-page .mc-nav{position:static;min-height:0;height:100%;max-height:none;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;overflow-anchor:none;scrollbar-width:thin}
-.member-page .mc-content-group{min-width:0;min-height:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;padding:2px 8px 28px 2px;scroll-padding-top:4px}
-.member-page .mc-content-group:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
-.member-page .mc-main{min-height:0}
-@media(max-width:700px){
- .member-page>.mc-shell{padding:16px 12px 12px}
- .member-page .mc-top{margin-bottom:16px;flex-wrap:wrap}
- .member-page .mc-layout{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);gap:12px}
- .member-page .mc-nav{height:auto;max-height:min(24dvh,160px);overflow-y:auto;overflow-x:hidden}
- .member-page .mc-content-group{padding:2px 2px 24px}
-}

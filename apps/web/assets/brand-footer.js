@@ -1,12 +1,12 @@
 /* Public brand information, with existing member service destinations. */
 (()=>{'use strict';const footer=document.getElementById('foresightFooter');if(!footer)return;
 let footerFrame=0;
-const fitFooter=()=>{footerFrame=0;const parent=footer.parentElement;if(!parent)return;const margin=parseFloat(getComputedStyle(footer).marginTop)||0;const bottom=footer.getBoundingClientRect().bottom;const member=parent.matches('.member-page,.mc-content-group');const end=member?parent.getBoundingClientRect().top+parent.clientHeight-(parseFloat(getComputedStyle(parent).paddingBottom)||0):innerHeight;const scroll=member?parent.scrollTop:scrollY;const next=Math.max(24,Math.round(margin+end-bottom-scroll));if(Math.abs(next-margin)>.5)footer.style.marginTop=next+'px';};
+const fitFooter=()=>{footerFrame=0;const parent=footer.parentElement;if(!parent)return;const margin=parseFloat(getComputedStyle(footer).marginTop)||0;const bottom=footer.getBoundingClientRect().bottom;const member=parent.matches('.member-page');const end=member?parent.getBoundingClientRect().top+parent.clientHeight:innerHeight;const scroll=member?parent.scrollTop:scrollY;const next=Math.max(24,Math.round(margin+end-bottom-scroll));if(Math.abs(next-margin)>.5)footer.style.marginTop=next+'px';};
 const scheduleFooter=()=>{if(!footerFrame)footerFrame=requestAnimationFrame(fitFooter);};
 const footerResize=new ResizeObserver(scheduleFooter),footerViews=new MutationObserver(scheduleFooter);
-for(const node of [document.body,...document.body.children,...document.querySelectorAll('.member-page .mc-shell,.member-page .mc-main')])if(node!==footer){footerResize.observe(node);footerViews.observe(node,{attributes:true,attributeFilter:['style','class','hidden']});}
+for(const node of [document.body,...document.body.children,...document.querySelectorAll('.member-page .mc-shell')])if(node!==footer){footerResize.observe(node);footerViews.observe(node,{attributes:true,attributeFilter:['style','class','hidden']});}
 addEventListener('resize',scheduleFooter,{passive:true});
-const placeFooter=()=>{const member=document.body.classList.contains('mc-open')&&document.querySelector('.member-page');const parent=(member&&member.querySelector('.mc-content-group'))||member||document.body;if(footer.parentElement!==parent){parent.append(footer);footer.style.marginTop='24px';}if(member){footerResize.observe(parent);const main=member.querySelector('.mc-main');if(main)footerResize.observe(main);}scheduleFooter();};
+const placeFooter=()=>{const member=document.body.classList.contains('mc-open')&&document.querySelector('.member-page');const parent=member||document.body;if(footer.parentElement!==parent){parent.append(footer);footer.style.marginTop='24px';}scheduleFooter();};
 placeFooter();new MutationObserver(placeFooter).observe(document.body,{attributes:true,attributeFilter:['class']});
 
 const dialog=document.createElement('dialog');dialog.className='fs-info-dialog';dialog.setAttribute('aria-labelledby','fs-info-title');dialog.innerHTML='<div><h2 id="fs-info-title"></h2><button type="button" aria-label="關閉網站資訊">×</button></div><section></section>';document.body.append(dialog);let opener=null;

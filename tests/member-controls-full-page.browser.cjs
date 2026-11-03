@@ -5,7 +5,7 @@ const root=path.resolve(__dirname,'..'),output=process.env.QA_OUTPUT||require('n
 (async()=>{const browser=await chromium.launch({channel:'msedge',headless:true});try{
  const page=await browser.newPage({viewport:{width:1512,height:1050}}),errors=[];
  page.on('pageerror',e=>errors.push(e.stack||e.message));
- await page.addInitScript(()=>{localStorage.setItem('fqi.arrival.skip.v2','1');localStorage.setItem('fqi_onboarded_v1','1');localStorage.setItem('sb_token','fixture');localStorage.setItem('sb_user',JSON.stringify({id:'full-page-fixture',email:'fixture@example.test'}));});
+ await page.addInitScript(()=>{localStorage.setItem('sb_token','fixture');localStorage.setItem('sb_user',JSON.stringify({id:'full-page-fixture',email:'fixture@example.test'}));});
  await page.route('**/*',r=>{const u=new URL(r.request().url());if(u.origin==='https://full-page.fixture.test'){
   const file=path.resolve(root,'apps/web','.'+decodeURIComponent(u.pathname));
   if(file.startsWith(root+path.sep)&&fs.existsSync(file)&&fs.statSync(file).isFile())return r.fulfill({path:file});
@@ -42,7 +42,7 @@ const root=path.resolve(__dirname,'..'),output=process.env.QA_OUTPUT||require('n
  await page.setViewportSize({width:390,height:844});await theme.click();await page.waitForTimeout(400);
  assert.equal(await member.evaluate(e=>e.scrollWidth<=innerWidth),true);
  await page.screenshot({path:path.join(output,'member-controls-mobile.png')});
- await member.locator('.mc-content-group').evaluate(e=>e.scrollTop=1200);await logout.click();await member.waitFor({state:'hidden'});
+ await member.evaluate(e=>e.scrollTop=1200);await logout.click();await member.waitFor({state:'hidden'});
  await page.waitForFunction(()=>scrollY===0&&location.hash==='');
  assert.equal(await page.locator('#homeView').isVisible(),true);
  for(const key of ['sb_token','sb_refresh','sb_user'])assert.equal(await page.evaluate(k=>localStorage.getItem(k),key),null);
