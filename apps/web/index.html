@@ -9,7 +9,7 @@
   <meta name="application-name" content="先見量化智能">
   <meta name="apple-mobile-web-app-title" content="先見量化智能">
   <meta name="description" content="先見量化智能 Foresight Quant Intelligence，整合市場資料、研究工具與策略驗證。">
-  <script>try{if(localStorage.getItem('theme')!=='dark')document.documentElement.setAttribute('data-theme','light');}catch(e){document.documentElement.setAttribute('data-theme','light');}</script>
+  <script>try{if(localStorage.getItem('theme')!=='dark')document.documentElement.setAttribute('data-theme','light');if(localStorage.getItem('fqi_glass_ui')==='1')document.documentElement.setAttribute('data-ui-skin','glass');}catch(e){document.documentElement.setAttribute('data-theme','light');}</script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700;800;900&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -13846,7 +13846,9 @@
         localStorage.removeItem('sb_refresh');
         localStorage.removeItem('sb_user');
         _applyAuthState();
-        document.getElementById('idleLogoutModal').style.display = 'flex';
+        // 封測登入殼已經是登出後的主要提示，避免再疊一層閒置 modal。
+        const _idleModal = document.getElementById('idleLogoutModal');
+        if (_idleModal) _idleModal.style.display = window.SITE_GATE_ON === false ? 'flex' : 'none';
       }, IDLE_MS);
     }
 
@@ -13895,6 +13897,9 @@
           if (window.SITE_GATE_ON === false || _owner || _hasTier) { _gate.style.display = 'none'; }
           else {
             _gate.style.display = 'flex';
+            // 登入殼與閒置提示只能顯示其中一個，否則文字與按鈕會互相重疊。
+            const _idleModal = document.getElementById('idleLogoutModal');
+            if (_idleModal) _idleModal.style.display = 'none';
             const _gm = document.getElementById('siteGateMsg'), _gl = document.getElementById('siteGateLogout');
             if (loggedIn) { if (_gm) _gm.innerHTML = '此帳號尚未獲授權觀看封測。<br>請改用授權的 Email 登入。'; if (_gl) _gl.style.display = ''; }
             else { if (_gm) _gm.innerHTML = '本站目前為封閉測試，僅限授權帳號進入。<br>請以授權的 Email 登入。'; if (_gl) _gl.style.display = 'none'; }
@@ -18291,6 +18296,7 @@
 <link rel="stylesheet" href="assets/market-panel-layout.css?v=8">
 <link rel="stylesheet" href="assets/member-notification-inbox.css?v=glass6">
 <script src="assets/member-notification-inbox.js?v=paging3" defer></script>
+<script src="assets/glass-skin.js?v=3" defer></script>
 <script src="assets/member-center.js?v=guide-settings-goals2" defer></script>
 <script src="assets/member-signin.js?v=invite-reset7" defer></script>
 <script src="assets/member-private-screen.js?v=asof5-norm" defer></script>
@@ -18370,5 +18376,6 @@
 <script src="assets/brand-arrival.js?v=46" defer></script>
 <link rel="stylesheet" href="assets/chart-analysis.css?v=1">
 <script src="assets/chart-analysis.js?v=1" defer></script>
+<link rel="stylesheet" href="assets/glass-skin.css?v=3">
 </body>
 </html>
