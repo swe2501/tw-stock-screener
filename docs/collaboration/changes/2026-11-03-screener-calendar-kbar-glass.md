@@ -31,3 +31,8 @@ JUSTY 要求，justy-layout → uat。只改視覺與互動，篩選邏輯、資
 - 捲進畫面才播放，每次進頁面每個圖只播一次（以 DOM 路徑辨識，資料刷新重繪不重播）；網站自行更新數字時立即交還控制。
 - K 線圖每次載入以 clip-path 由左往右刷出，不碰 Lightweight Charts 與互動。
 - 文字連結型按鈕（etx-stock-link、etx-info-link、mj-link）移除全站按鈕陰影造成的框（四種外觀皆適用）。
+
+## 追加：全站圖表動畫（玻璃模式，1.2 秒）
+- `glass-chart-motion.js`（緊接 Lightweight Charts 之後同步載入）：以 `Object.assign` 複製凍結的 LightweightCharts 物件並包裝 `createChart`，所有新建圖表的系列在「整批換資料」（首筆時間改變或筆數差 >3）時播放：K 棒／美國線由中間阻尼彈開（衝過頭約 14% 再回彈、由左至右錯開）、柱狀（量能、MACD）由 0 彈起、線型由左畫到右（未畫到的點用空白點保留時間軸）。動畫期間以 `autoscaleInfoProvider` 鎖住價格座標，結束後還原；`update()` 即時更新會立即結束動畫並交回原資料；`series.data()` 期間回傳原資料。
+- `glass-motion.js`：長條改阻尼彈簧、SVG 甜甜圈分段依序畫出、主題熱力圖方塊依序彈出。
+- 移除先前 K 線圖整張刷出的 clip-path 動畫。
