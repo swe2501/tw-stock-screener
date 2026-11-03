@@ -150,3 +150,9 @@ body.academy-research-ready #chartWatchBtn,body.academy-research-ready #chartBac
 
 /* Routine sync success needs no permanent banner; pending work and errors remain visible. */
 .mc-cloud-host[data-cloud-compact=true]{display:none}
+
+/* Local preview: natural page height; only the new content start is repositioned. */
+.member-page .mc-layout{overflow-anchor:none}
+.member-page .mc-content-flow{position:relative;min-width:0;overflow:visible;box-sizing:border-box}
+
+html:has(body.mc-open){overflow:hidden!important}
