@@ -10063,9 +10063,9 @@
         </label>
 
         <article class="zm-hidden-card zm6-card" id="zhenming6Card">
-          <label class="checkbox-row"><input type="checkbox" id="zhenming6" /><div class="cb-label">真名六式（空頭啟動）</div></label>
+          <label class="checkbox-row"><input type="checkbox" id="zhenming6" /><div class="cb-label" title="均線空頭排列（5 < 10 < 20）、20MA 生命線下彎，當天出現實體長黑 K（跌幅 ≥ 3%）">真名六式（空頭啟動）</div></label>
           <div class="zm-hidden-options" id="zhenming6Options" hidden>
-            <p>均線空頭排列（5 &lt; 10 &lt; 20）、20MA 生命線下彎，當天出現實體長黑 K（跌幅 ≥ 3%）。</p>
+            
             <fieldset><legend><span>01</span> 型態條件 <small>可不選</small></legend>
               <label><input type="checkbox" id="zm6UsePattern" data-hidden-metric> 加上型態跌破</label>
               <label class="zh-period zm6-pattern">型態<select id="zm6Pattern" aria-label="真名六式空頭型態" disabled>
@@ -15253,6 +15253,8 @@
           let newFrom = range.from, newTo = range.to, clamp = false;
           if (span > _maxBars + 5) { newFrom = -2; newTo = _maxBars + 2; clamp = true; }
           else if (span < _minBars) { newTo = range.to; newFrom = range.to - _minBars; clamp = true; }
+          const _blankMax = Math.max(5, Math.round((newTo - newFrom) * 0.45)), _lastIdx = _maxBars - 1;
+          if (newTo > _lastIdx + _blankMax) { const sp = newTo - newFrom; newTo = _lastIdx + _blankMax; newFrom = newTo - sp; clamp = true; }
           _lockingZoom = true;
           _allCharts.forEach(cc => {
             if (clamp || cc !== c)
@@ -15282,7 +15284,7 @@
         } },
         rightPriceScale: { borderColor: t.grid, minimumWidth: 65, autoScale: true },
         timeScale: { borderColor: t.grid, timeVisible: true, visible: showTime,
-                     secondsVisible: false, rightOffset: 5, fixRightEdge: true },
+                     secondsVisible: false, rightOffset: 5, fixRightEdge: false },   // 2026-11-04 可往左拖，在最新 K 棒右側留出空白（最多約可視寬度 45%）
         handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true },
         handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: true },
       };
@@ -18463,6 +18465,6 @@
 <script src="assets/brand-arrival.js?v=46" defer></script>
 <link rel="stylesheet" href="assets/chart-analysis.css?v=1">
 <script src="assets/chart-analysis.js?v=1" defer></script>
-<link rel="stylesheet" href="assets/glass-skin.css?v=11">
+<link rel="stylesheet" href="assets/glass-skin.css?v=12">
 </body>
 </html>
