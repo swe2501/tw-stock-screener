@@ -547,3 +547,10 @@
 :root[data-ui-skin="glass"] .etx-drawer .panel:not(.etx-wide){border-radius:28px 0 0 28px!important;border-left:1px solid var(--glass-line)!important;}
 /* 抽屜內的卡片保持清楚的白（黑）底，不再半透明 */
 :root[data-ui-skin="glass"] .etx-drawer .panel :is(.card,[class*="card"]){background-color:color-mix(in srgb,var(--glass-sheet) 70%,var(--surface2,transparent))!important;}
+/* 文字連結型按鈕（股票名稱等）：不要框、不要陰影，滑過只變色 */
+:is(.etx-stock-link,.etx-info-link,.mj-link){box-shadow:none!important;background:transparent!important;border:0!important;transition:color .18s ease!important;}
+:is(.etx-stock-link,.etx-info-link,.mj-link):hover{color:var(--accent)!important;filter:none!important;}
+/* K 線圖：載入後由左往右刷出（只裁切顯示範圍，不碰圖表元件與互動） */
+@keyframes glassChartReveal{from{clip-path:inset(0 100% 0 0 round 12px);opacity:.4}25%{opacity:1}to{clip-path:inset(0 0 0 0 round 0);opacity:1}}
+:root[data-ui-skin="glass"] #chartModal #chartWrapper{animation:glassChartReveal .8s cubic-bezier(.45,.05,.25,1) backwards .12s;}
+@media(prefers-reduced-motion:reduce){:root[data-ui-skin="glass"] #chartModal #chartWrapper{animation:none!important;}}

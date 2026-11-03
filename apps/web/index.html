@@ -1601,7 +1601,7 @@
   * { scrollbar-width:thin;scrollbar-color:var(--border) transparent; }
   button,a,input,select,summary { -webkit-tap-highlight-color:transparent; }
   button,a { transition:transform .16s ease,border-color .16s ease,background .16s ease,color .16s ease,box-shadow .16s ease !important; }
-  button:not([disabled]) { box-shadow:0 2px 8px color-mix(in srgb,var(--accent) 10%,transparent); }
+  button:not([disabled]):not([class*="link"]) { box-shadow:0 2px 8px color-mix(in srgb,var(--accent) 10%,transparent); }
   button:hover,.idx-btn:hover,.mn-menu a:hover { transform:translateY(-1.5px);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 11%,transparent),0 8px 20px color-mix(in srgb,var(--accent) 22%,transparent) !important; }
   button:active,.idx-btn:active { transform:translateY(1px) scale(.985) !important; }
   button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible {
@@ -18315,6 +18315,7 @@
 <link rel="stylesheet" href="assets/member-notification-inbox.css?v=glass6">
 <script src="assets/member-notification-inbox.js?v=paging3" defer></script>
 <script src="assets/glass-skin.js?v=5" defer></script>
+<script src="assets/glass-motion.js?v=1" defer></script>
 <script src="assets/member-center.js?v=guide-settings-goals2" defer></script>
 <script src="assets/member-signin.js?v=invite-reset7" defer></script>
 <script src="assets/member-private-screen.js?v=asof5-norm" defer></script>
@@ -18396,6 +18397,6 @@
 <script src="assets/brand-arrival.js?v=46" defer></script>
 <link rel="stylesheet" href="assets/chart-analysis.css?v=1">
 <script src="assets/chart-analysis.js?v=1" defer></script>
-<link rel="stylesheet" href="assets/glass-skin.css?v=6">
+<link rel="stylesheet" href="assets/glass-skin.css?v=7">
 </body>
 </html>
