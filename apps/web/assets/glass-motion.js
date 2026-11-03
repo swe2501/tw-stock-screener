@@ -2,7 +2,7 @@
    只在玻璃模式、只改視覺；卡片捲進畫面才播放，每次進頁面每個圖只播一次（資料刷新不重播）。 */
 (function(){
   'use strict';
-  var root=document.documentElement,DUR=1200,BASE=260;
+  var root=document.documentElement,DUR=1000,BASE=220;
   var CARD='.card,.hx-card,.fc-card,.ov-card,.td-panel,.gb-card,.bx-card,.lu-card,.gd-wrap,.pf-glass,.bd-card,.bd-plain-card,.ef-wrap,.ed-wrap,.in-wrap,.eh-wrap,.ec-wrap,.eg-wrap,.usty-card,.gs-bdcard,.gs-futcard,.cb-pi,.cb-ovc,.gs-optcard,.ti-card,.md-card,.mc-card,.home-market-card,.pro-gauge-card,.sd-card,.tm-card,.gs-hero,.gs-today,[class*="-card"]';
   var SKIP='#fqiArrival,#chartModal,#siteGate,.kh-tip,.sic-pop,[data-no-glass-motion]';
   function on(){return root.getAttribute('data-ui-skin')==='glass'&&!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);}
@@ -54,7 +54,10 @@
       el.animate([{strokeDasharray:'0 '+(first+parseFloat(rest||0)+1000)},{strokeDasharray:da}],{duration:DUR,delay:delay+i*90,easing:'cubic-bezier(.22,.8,.24,1)',fill:'backwards'});});
     if(bars.length>1){bars.sort(function(a,b){return a.getBoundingClientRect().left-b.getBoundingClientRect().left;});
       var horiz=bars.every(function(b){var r=b.getBoundingClientRect();return r.width>r.height*2.5;});
-      bars.forEach(function(el,i){el.style.transformBox='fill-box';el.style.transformOrigin=horiz?'left center':'center bottom';
+      var cnt={};bars.forEach(function(b){var r=b.getBoundingClientRect();(horiz?[r.left,r.right]:[r.top,r.bottom]).forEach(function(v){var k=Math.round(v);cnt[k]=(cnt[k]||0)+1;});});
+      var base=+Object.keys(cnt).sort(function(a,b){return cnt[b]-cnt[a];})[0];
+      bars.forEach(function(el,i){var r=el.getBoundingClientRect();el.style.transformBox='fill-box';
+        el.style.transformOrigin=horiz?(Math.abs(r.right-base)<2?'right center':'left center'):(Math.abs(r.top-base)<2&&Math.abs(r.bottom-base)>=2?'center top':'center bottom');
         el.animate(springFrames(horiz?'scaleX':'scaleY'),{duration:DUR,delay:delay+i*Math.min(80,DUR*.45/bars.length),easing:'linear',fill:'backwards'});});}
   }
   /* ── 大數字滾動 ── */
@@ -74,11 +77,15 @@
   /* ── HTML 進度條（寬度或高度用百分比的長條） ── */
   function htmlBar(el,delay){
     if(getComputedStyle(el).transform!=='none')return;
-    var st=el.getAttribute('style')||'',horiz=/width\s*:\s*[\d.]+%/.test(st),fromRight=/(^|;)\s*right\s*:/.test(st)&&!/(^|;)\s*left\s*:/.test(st);
-    el.style.transformOrigin=horiz?(fromRight?'right center':'left center'):'center bottom';
+    var r=el.getBoundingClientRect(),p=el.parentElement,pr=p?p.getBoundingClientRect():r,horiz=r.width>=r.height;
+    var origin;
+    if(horiz){var atRight=Math.abs(r.right-pr.right)<2&&r.left-pr.left>2,st=el.getAttribute('style')||'';
+      if(!atRight&&/(^|;)\s*right\s*:/.test(st)&&!/(^|;)\s*left\s*:/.test(st))atRight=true;
+      origin=atRight?'right center':'left center';}
+    else{var atTop=Math.abs(r.top-pr.top)<2&&pr.bottom-r.bottom>2;origin=atTop?'center top':'center bottom';}
+    el.style.transformOrigin=origin;
     el.animate(springFrames(horiz?'scaleX':'scaleY'),{duration:DUR,delay:delay,easing:'linear',fill:'backwards'});
   }
-
   function tiles(box,delay){
     var host=box,best=box;[].forEach.call(box.querySelectorAll('*'),function(e){if(e.children.length>best.children.length)best=e;});host=best;
     var kids=[].slice.call(host.children).filter(function(k){return k.getBoundingClientRect().width>0;});if(kids.length<4)return;
