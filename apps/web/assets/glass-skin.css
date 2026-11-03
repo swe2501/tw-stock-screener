@@ -35,7 +35,7 @@
   --glass-highlight:rgba(255,255,255,.72);
   --glass-sheen:rgba(255,255,255,.20);
   --text:#16243a;
-  --text-muted:#586a7e;
+  --text-muted:#4f6276;
   --text-primary:#0d1b2d;
   --glass-shadow:0 20px 54px rgba(60,91,116,.15),inset 0 1px 0 rgba(255,255,255,.92);
   --glass-shadow-soft:0 10px 28px rgba(60,91,116,.11),inset 0 1px 0 rgba(255,255,255,.82);
@@ -415,14 +415,14 @@
 
 /* 2. 玻璃面板：細緻的雙層高光邊＋柔和投影，霧面更通透 */
 :root[data-ui-skin="glass"]{
-  --glass-fill:rgba(16,24,38,.46);
+  --glass-fill:rgba(16,24,38,.64);
   --glass-line:rgba(255,255,255,.10);
   --glass-shadow-soft:0 1px 1px rgba(0,0,0,.18),0 14px 38px rgba(0,6,18,.30),inset 0 1px 0 rgba(255,255,255,.09),inset 0 0 0 1px rgba(255,255,255,.035);
   --glass-shadow:0 2px 2px rgba(0,0,0,.18),0 24px 60px rgba(0,6,18,.38),inset 0 1px 0 rgba(255,255,255,.10),inset 0 0 0 1px rgba(255,255,255,.04);
   --glass-ease:cubic-bezier(.22,.8,.24,1);
 }
 :root[data-theme="light"][data-ui-skin="glass"]{
-  --glass-fill:rgba(255,255,255,.50);
+  --glass-fill:rgba(255,255,255,.68);
   --glass-line:rgba(255,255,255,.78);
   --glass-shadow-soft:0 1px 1px rgba(20,50,80,.04),0 12px 34px rgba(46,84,124,.11),inset 0 1px 0 rgba(255,255,255,.96),inset 0 0 0 1px rgba(255,255,255,.30);
   --glass-shadow:0 2px 2px rgba(20,50,80,.05),0 22px 58px rgba(46,84,124,.16),inset 0 1px 0 rgba(255,255,255,.98),inset 0 0 0 1px rgba(255,255,255,.34);
@@ -442,7 +442,7 @@
 /* 3. 淘金篩選：條件分類改成一張張圓潤玻璃片，標題不再出現內框 */
 :root[data-ui-skin="glass"] .scal-workspace .sc-panel{
   border-radius:18px!important;border:1px solid var(--glass-line)!important;
-  background:color-mix(in srgb,var(--glass-fill-strong) 46%,transparent)!important;
+  background:color-mix(in srgb,var(--glass-fill-strong) 70%,transparent)!important;
   box-shadow:0 1px 1px rgba(20,50,80,.03),0 6px 18px rgba(30,60,90,.06),inset 0 1px 0 var(--glass-highlight)!important;
   transition:box-shadow .3s var(--glass-ease),transform .3s var(--glass-ease),background-color .3s ease!important;
 }
@@ -460,18 +460,18 @@
 :root[data-ui-skin="glass"] #resultsArea thead th{background:color-mix(in srgb,var(--glass-fill-strong) 92%,transparent)!important;}
 :root[data-ui-skin="glass"] #resultsArea tbody tr{transition:background-color .2s ease;}
 :root[data-ui-skin="glass"] #resultsArea tbody tr:hover{background:color-mix(in srgb,var(--accent) 6%,transparent)!important;}
-:root[data-ui-skin="glass"] .scal-workspace .sl-today-summary{background:color-mix(in srgb,var(--glass-fill-strong) 50%,transparent)!important;border-color:var(--glass-line)!important;box-shadow:inset 0 1px 0 var(--glass-highlight),0 6px 16px rgba(30,60,90,.06)!important;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);}
+:root[data-ui-skin="glass"] .scal-workspace .sl-today-summary{background:color-mix(in srgb,var(--glass-fill-strong) 75%,transparent)!important;border-color:var(--glass-line)!important;box-shadow:inset 0 1px 0 var(--glass-highlight),0 6px 16px rgba(30,60,90,.06)!important;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);}
 
 /* 4. 分頁、切換鈕、輸入框：一致的膠囊圓角 */
 :root[data-ui-skin="glass"] :is(.seg button,.tabs button,.tab-btn,[role="tab"],.chip,.pill){border-radius:999px!important;}
 :root[data-ui-skin="glass"] :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),select,textarea){border-radius:16px!important;}
 
 /* 5. 頁尾也是玻璃 */
-:root[data-ui-skin="glass"] #foresightFooter{
-  background-color:rgba(14,28,46,.80)!important;border-top:1px solid rgba(255,255,255,.10)!important;
-  border-radius:34px 34px 0 0!important;box-shadow:0 -14px 40px rgba(10,25,45,.10),inset 0 1px 0 rgba(255,255,255,.08)!important;
-  backdrop-filter:blur(24px) saturate(1.4);-webkit-backdrop-filter:blur(24px) saturate(1.4);
-}
+:root[data-ui-skin="glass"] #foresightFooter{border-radius:30px 30px 0 0!important;overflow:hidden;box-shadow:0 -10px 34px rgba(10,25,45,.08)!important;}
+/* 免責聲明列：不透明底，文字才清楚 */
+:root[data-theme="light"][data-ui-skin="glass"] #foresightFooter .fs-source{background:#f3f6f9!important;color:#4d5f72!important;border-bottom-color:#dde5ec!important;}
+:root:not([data-theme="light"])[data-ui-skin="glass"] #foresightFooter .fs-source{background:#0f1824!important;color:#a6b4c3!important;border-bottom-color:rgba(255,255,255,.08)!important;}
+
 /* 6. 進場動畫：換頁時內容由下往上柔順浮現，依序錯開 */
 @keyframes glassRise{from{opacity:0;transform:translate3d(0,16px,0) scale(.99)}to{opacity:1;transform:none}}
 :root[data-ui-skin="glass"] .glass-enter>*{animation:glassRise .62s var(--glass-ease,cubic-bezier(.22,.8,.24,1)) both;animation-delay:calc(var(--gi,0) * 55ms);}
@@ -489,3 +489,6 @@
   :root[data-ui-skin="glass"] body::before{animation:none;}
   :root[data-ui-skin="glass"] :is(.glass-enter>*,.glass-enter-self){animation:none!important;}
 }
+/* 玻璃底上的小字加深，避免看不清 */
+:root[data-ui-skin="glass"] :is(.gs-rail-r,.gs-rail-l) :is(.txt,span){opacity:.85!important;}
+:root[data-ui-skin="glass"] .scal-workspace-heading>span{opacity:1!important;}
