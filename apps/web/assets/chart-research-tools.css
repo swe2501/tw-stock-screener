@@ -161,6 +161,16 @@ body #chartIntervalReport p{font-size:11px!important;line-height:1.6!important;m
 #chartModal .chart-summary-actions #chartInfoToggle:hover,#chartModal .chart-summary-actions #chartInfoToggle:focus-visible{color:#397fb9!important;text-shadow:0 0 8px #4d9de88c!important;opacity:1}
 html[data-theme="dark"] #chartModal .chart-summary-actions #chartInfoToggle:hover,html[data-theme="dark"] #chartModal .chart-summary-actions #chartInfoToggle:focus-visible{color:#dfbd76!important;text-shadow:0 0 8px #e9bd638c!important}
 
+/* 2026-11-03「K棒訊息」開關：文字＋小型滑動開關，開＝藍、關＝灰 */
+#chartModal #chartInfoToggle{display:inline-flex;align-items:center;gap:5px}
+#chartModal #chartInfoToggle[aria-pressed="false"]{opacity:1}
+#chartModal #chartInfoToggle .kinfo-sw{position:relative;display:inline-block;width:24px;height:13px;border-radius:7px;background:#cbd5e1;transition:background .18s ease;flex:none}
+#chartModal #chartInfoToggle .kinfo-sw::after{content:"";position:absolute;top:2px;left:2px;width:9px;height:9px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .18s ease}
+#chartModal #chartInfoToggle[aria-pressed="true"] .kinfo-sw{background:#2f80ed}
+#chartModal #chartInfoToggle[aria-pressed="true"] .kinfo-sw::after{transform:translateX(11px)}
+html[data-theme="dark"] #chartModal #chartInfoToggle .kinfo-sw{background:#475569}
+html[data-theme="dark"] #chartModal #chartInfoToggle[aria-pressed="true"] .kinfo-sw{background:#d4a64a}
+
 /* Compact first action row: preserve horizontal breathing room. */
 #chartModal .chart-fit-tools .chart-toolbar{padding-block:2px;margin-bottom:0}
 #chartModal .chart-fit-tools .chart-toolbar .chart-tool-btns{align-items:center;gap:8px}
