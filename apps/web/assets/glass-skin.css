@@ -628,4 +628,3 @@
   }
   :root[data-ui-skin="glass"]:not([data-theme="light"]) body::after{opacity:.5}
 }
-@media(min-width:901px) and (prefers-reduced-transparency:reduce){:root[data-ui-skin="glass"] body::after{display:none}}
