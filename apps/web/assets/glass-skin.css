@@ -551,3 +551,13 @@
 :is(.etx-stock-link,.etx-info-link,.mj-link){box-shadow:none!important;background:transparent!important;border:0!important;transition:color .18s ease!important;}
 :is(.etx-stock-link,.etx-info-link,.mj-link):hover{color:var(--accent)!important;filter:none!important;}
 /* K 線圖動畫改由 glass-motion.js 的 K 棒彈簧動畫處理（不再整張刷出） */
+/* K 線圖上的浮層（區間統計等）：霧面厚玻璃──背後的 K 棒被重模糊成柔和色塊，文字清楚又保有玻璃感 */
+:root[data-ui-skin="glass"] #chartIntervalReport{
+  background-color:color-mix(in srgb,var(--glass-sheet) 86%,transparent)!important;
+  background-image:linear-gradient(160deg,rgba(255,255,255,.22),rgba(255,255,255,0) 38%)!important;
+  backdrop-filter:blur(26px) saturate(1.45) brightness(1.04)!important;-webkit-backdrop-filter:blur(26px) saturate(1.45) brightness(1.04)!important;
+  border:1px solid var(--glass-line)!important;border-radius:20px!important;
+  box-shadow:0 22px 54px rgba(5,18,34,.20),0 2px 6px rgba(5,18,34,.08),inset 0 1px 0 var(--glass-highlight),inset 0 0 0 1px rgba(255,255,255,.18)!important;
+}
+:root:not([data-theme="light"])[data-ui-skin="glass"] #chartIntervalReport{background-image:linear-gradient(160deg,rgba(255,255,255,.06),rgba(255,255,255,0) 38%)!important;box-shadow:0 24px 60px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.08)!important;}
+:root[data-ui-skin="glass"] #chartIntervalReport dl>div{border-bottom-color:color-mix(in srgb,var(--glass-line) 80%,transparent)!important;}

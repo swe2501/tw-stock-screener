@@ -12,7 +12,7 @@ const tour=fs.readFileSync(path.join(root,'apps/web/assets/onboarding-tour.js'),
 test('glass preference restores before first paint and assets are loaded',()=>{
   assert.match(html,/localStorage\.getItem\('fqi_glass_ui'\)==='1'/);
   assert.match(html,/assets\/glass-skin\.js\?v=5/);
-  assert.match(html,/assets\/glass-skin\.css\?v=10/);
+  assert.match(html,/assets\/glass-skin\.css\?v=11/);
 });
 
 test('glass controller is valid JavaScript and mounts in member settings',()=>{
