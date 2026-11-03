@@ -3022,6 +3022,181 @@ def _classify_357(d, price):
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+# ── 真名六式（空頭啟動）2026-11-03 依 JUSTY《真名六式交易戰法核心定義與放空實戰指南》──────────────
+#   核心（一定要成立）：t 日實體長黑 (開−收)/收 ≥ 3%；MA5 < MA10 < MA20；20MA 下彎（今日 < 5 個交易日前）。
+#   型態（可選）：跌破頭肩頂／M頭頸線、箱型下緣、上升楔形（下降趨勢中）下緣、下降三角支撐、三角收斂下緣。
+#   時機：長黑當天跌破，或跌破後 5 個交易日內反彈無力（收盤未站回關鍵價）再出長黑。
+#   停損參考＝該根長黑 K 最高價。回補季（2～4 月股東會、6～9 月除權息）另附提醒。
+ZM6_BLACK = 3.0          # 長黑實體跌幅門檻（%）
+ZM6_MA20_SLOPE_N = 5     # 20MA 下彎：與 N 個交易日前比較
+ZM6_BREAK_WITHIN = 5     # 跌破後幾天內出長黑仍算
+ZM6_LOOKBACK = 90        # 型態回看根數
+ZM6_PATTERNS = {"hs_top": "頭肩頂", "m_top": "M頭", "box": "箱型跌破", "rising_wedge": "上升楔形",
+                "desc_triangle": "下降三角", "sym_triangle": "三角收斂"}
+ZM6_COVER_MONTHS = (2, 3, 4, 6, 7, 8, 9)
+
+
+def _zm6_valid(row):
+    if not isinstance(row, (list, tuple)) or len(row) < 6:
+        return False
+    nums = row[1:5]
+    return all(isinstance(x, (int, float)) and not isinstance(x, bool) and math.isfinite(x) and x > 0 for x in nums)
+
+
+def _zm6_pivots(bars, s, e, k=3):
+    """s..e-1 內的轉折高／低點：該根高（低）是前後 k 根中最高（最低）。回 ([(i, high)], [(i, low)])。"""
+    highs, lows = [], []
+    for i in range(max(s, k), min(e, len(bars) - k)):
+        h, l = bars[i][2], bars[i][3]
+        win = bars[i - k:i + k + 1]
+        if h >= max(x[2] for x in win) and h > bars[i - 1][2]:
+            highs.append((i, h))
+        if l <= min(x[3] for x in win) and l < bars[i - 1][3]:
+            lows.append((i, l))
+    return highs, lows
+
+
+def _zm6_line(points):
+    """最小平方法直線 (slope, intercept)；點數 < 2 回 None。"""
+    if len(points) < 2:
+        return None
+    n = len(points)
+    mx = sum(p[0] for p in points) / n
+    my = sum(p[1] for p in points) / n
+    den = sum((p[0] - mx) ** 2 for p in points)
+    if den == 0:
+        return None
+    a = sum((p[0] - mx) * (p[1] - my) for p in points) / den
+    return a, my - a * mx
+
+
+def _zm6_level(bars, d, kind):
+    """在跌破日 d 之前找型態，回該型態在 d 日的關鍵價（頸線／下緣／支撐），找不到回 None。"""
+    s = max(0, d - ZM6_LOOKBACK)
+    highs, lows = _zm6_pivots(bars, s, d)
+    if kind == "m_top":
+        # 最近兩個轉折高點相差 ≤ 3%、間隔 ≥ 5 根；中間最低點為頸線，頭部比頸線高 ≥ 5%
+        for a in range(len(highs) - 1, 0, -1):
+            i2, h2 = highs[a]
+            for b in range(a - 1, -1, -1):
+                i1, h1 = highs[b]
+                if i2 - i1 < 5:
+                    continue
+                if abs(h1 - h2) / max(h1, h2) > .03:
+                    continue
+                neck = min(x[3] for x in bars[i1:i2 + 1])
+                if min(h1, h2) < neck * 1.05:
+                    continue
+                if max(x[2] for x in bars[i2 + 1:d] or [(0, 0, 0)]) > max(h1, h2):
+                    continue
+                return neck
+            break
+        return None
+    if kind == "hs_top":
+        # 左肩、頭、右肩三個轉折高點：頭最高（高出兩肩 ≥ 3%）、兩肩相差 ≤ 6%；兩個谷底連成頸線
+        for a in range(len(highs) - 1, 1, -1):
+            for b in range(a - 1, 0, -1):
+                for c_ in range(b - 1, -1, -1):
+                    (ir, hr), (ih, hh), (il, hl) = highs[a], highs[b], highs[c_]
+                    if not (hh >= hl * 1.03 and hh >= hr * 1.03 and abs(hl - hr) / max(hl, hr) <= .06):
+                        continue
+                    if ih - il < 3 or ir - ih < 3:
+                        continue
+                    t1 = min(range(il, ih + 1), key=lambda j: bars[j][3])
+                    t2 = min(range(ih, ir + 1), key=lambda j: bars[j][3])
+                    if t2 == t1:
+                        continue
+                    slope = (bars[t2][3] - bars[t1][3]) / (t2 - t1)
+                    neck = bars[t2][3] + slope * (d - t2)
+                    if hh < max(bars[t1][3], bars[t2][3]) * 1.05 or neck <= 0:
+                        continue
+                    return neck
+            break
+        return None
+    if kind == "box":
+        # 跌破前 20～60 根的整理區：振幅 ≤ 15%，下緣附近（2% 內）至少被測試 2 次
+        for w in (20, 30, 40, 60):
+            if d - w < 0:
+                break
+            seg = bars[d - w:d]
+            hi, lo = max(x[2] for x in seg), min(x[3] for x in seg)
+            if lo <= 0 or (hi - lo) / lo > .15:
+                continue
+            touches = sum(1 for x in seg if x[3] <= lo * 1.02)
+            if touches >= 2:
+                return lo
+        return None
+    recent_h = [p for p in highs if p[0] >= d - 60]
+    recent_l = [p for p in lows if p[0] >= d - 60]
+    if len(recent_h) < 2 or len(recent_l) < 2:
+        return None
+    lh, ll = _zm6_line(recent_h[-4:]), _zm6_line(recent_l[-4:])
+    if not lh or not ll:
+        return None
+    (ah, bh), (al, bl) = lh, ll
+    ref = recent_l[-1][1]
+    up_h, up_l = ah / ref * 100, al / ref * 100      # 每根 K 的斜率（%）
+    lower = al * d + bl
+    if lower <= 0 or ah * d + bh <= lower:
+        return None
+    if kind == "desc_triangle":
+        # 高點逐步下降、低點大致持平（斜率 ±0.05%/根內）
+        if up_h < -0.05 and abs(up_l) <= 0.05:
+            return sum(p[1] for p in recent_l[-3:]) / len(recent_l[-3:])
+        return None
+    if kind == "sym_triangle":
+        # 高點下降、低點上升，兩線收斂
+        if up_h < -0.03 and up_l > 0.03:
+            return lower
+        return None
+    if kind == "rising_wedge":
+        # 下降趨勢中的反彈楔形：高低點都上升、低點較陡（收斂向上）；楔形前 40 根有明顯下跌（≥ 10%）
+        start = recent_l[-min(4, len(recent_l))][0]
+        prior = bars[max(0, start - 40):start + 1]
+        if len(prior) < 10 or prior[0][4] < prior[-1][4] * 1.10:
+            return None
+        if up_h > 0.02 and up_l > up_h:
+            return lower
+        return None
+    return None
+
+
+def zhenming6_at(bars, t=None, pattern=None):
+    """bars＝[(date, o, h, l, c, v), ...] 由舊到新。pattern：None＝不看型態；'all'＝任一型態；或 ZM6_PATTERNS 的鍵。"""
+    if t is None:
+        t = len(bars) - 1
+    if not isinstance(t, int) or t < 30 or t >= len(bars):
+        return None
+    if not all(_zm6_valid(x) for x in bars[max(0, t - ZM6_LOOKBACK - 10):t + 1]):
+        return None
+    _, o, h, l, c, v = bars[t]
+    if not (o > c and (o - c) / c * 100 >= ZM6_BLACK - 1e-9):
+        return None
+    closes = [x[4] for x in bars[:t + 1]]
+    ma = lambda p, end=len(closes): sum(closes[end - p:end]) / p
+    m5, m10, m20 = ma(5), ma(10), ma(20)
+    m20_prev = ma(20, len(closes) - ZM6_MA20_SLOPE_N)
+    if not (m5 < m10 < m20 and m20 < m20_prev):
+        return None
+    month = int(str(bars[t][0])[5:7]) if len(str(bars[t][0])) >= 7 else 0
+    out = {"black_pct": round((o - c) / c * 100, 2), "stop": round(h, 2), "ma5": round(m5, 2), "ma10": round(m10, 2),
+           "ma20": round(m20, 2), "cover_season": month in ZM6_COVER_MONTHS}
+    if not pattern:
+        return out
+    kinds = list(ZM6_PATTERNS) if pattern == "all" else [pattern]
+    for kind in kinds:
+        # 找跌破日 d：t-5..t 中第一次收盤跌破關鍵價；之後到 t 都沒站回，且 t 收在關鍵價之下
+        for d in range(max(1, t - ZM6_BREAK_WITHIN), t + 1):
+            level = _zm6_level(bars, d, kind)
+            if level is None:
+                continue
+            if bars[d][4] < level <= bars[d - 1][4] and all(bars[j][4] < level for j in range(d, t + 1)):
+                out.update({"pattern": ZM6_PATTERNS[kind], "pattern_key": kind, "level": round(level, 2),
+                            "break_date": bars[d][0], "day_n": t - d})
+                return out
+    return None
+
+
 def hidden_options(value):
     """Validate opt-in relative-strength inputs; no silent default for invalid requests."""
     if not value or not value.get("enabled"):
@@ -3151,6 +3326,14 @@ def screen(params):
     check_zhenming2  = bool(params.get("zhenming2", False))
     check_zhenming3  = bool(params.get("zhenming3", False))
     check_zhenming4  = params.get("zhenming4") is True
+    _zm6 = params.get("zhenming6")
+    check_zhenming6 = isinstance(_zm6, dict) and _zm6.get("enabled") is True
+    zm6_pattern = None
+    if check_zhenming6:
+        _pat = str(_zm6.get("pattern") or "none")
+        if _pat not in ("none", "all") and _pat not in ZM6_PATTERNS:
+            return {"error": "真名六式的型態選項無效。", "results": []}
+        zm6_pattern = None if _pat == "none" else _pat
     # 企業價值投資法（存股 357）：3 個分級 checkbox（可複選）
     want_357_cheap     = bool(params.get("ev357_cheap", False))
     want_357_fair      = bool(params.get("ev357_fair", False))
@@ -3252,10 +3435,14 @@ def screen(params):
         if (check_engulf_bear or check_harami_bear) and not (check_engulf_bull or check_harami_bull) and c >= o:
             continue
 
+        # 真名六式快篩：當日必須是實體長黑 ≥ 3%，其餘條件需歷史 K 線，在後段判斷
+        if check_zhenming6 and not (o > c > 0 and (o - c) / c * 100 >= ZM6_BLACK - 1e-9):
+            continue
+
         candidates[code] = s
 
     if not candidates:
-        return {"date": display_date, "total": len(all_stocks), "count": 0, "results": [], "zhenming_hidden_applied": bool(hidden), "zhenming4_applied": check_zhenming4}
+        return {"date": display_date, "total": len(all_stocks), "count": 0, "results": [], "zhenming_hidden_applied": bool(hidden), "zhenming4_applied": check_zhenming4, "zhenming6_applied": check_zhenming6}
 
     # ── Step 3a: 跳空篩選 → 只試「前一個非週末日曆日」MI_INDEX（天條：跳空只跟前一交易日比）
     prev_mi_gap: dict = {}
@@ -3302,7 +3489,7 @@ def screen(params):
 
     # ── price_window 逐股讀（真名/MACD/放量;涵蓋歷史日 → 修正「回搜近期日期漏股」如 3443/8-11）──
     need_pw = (vol_mult > 0 or shrink_mult > 0 or bool(macd_mode)
-               or check_zhenming1 or check_zhenming2 or check_zhenming3 or check_zhenming4 or bool(hidden) or bool(sma20_stages)
+               or check_zhenming1 or check_zhenming2 or check_zhenming3 or check_zhenming4 or check_zhenming6 or bool(hidden) or bool(sma20_stages)
                or check_harami_bull or check_harami_bear)   # 母子線需 MA20 判趨勢 → 抓歷史
     hidden_market = []
     if hidden:
@@ -3619,6 +3806,14 @@ def screen(params):
             if not zm4:
                 continue
 
+        zm6 = None
+        if check_zhenming6:
+            bars = (pw_data.get(code) or {}).get("bars") or []
+            target_day = f"{actual_date[:4]}-{actual_date[4:6]}-{actual_date[6:]}"
+            zm6 = zhenming6_at(bars, pattern=zm6_pattern) if bars and bars[-1][0] == target_day else None
+            if not zm6:
+                continue
+
         sma20_hit = 0
         if sma20_stages:
             bars = (pw_data.get(code) or {}).get("bars") or []
@@ -3650,6 +3845,8 @@ def screen(params):
             item["zm3"] = zm3
         if zm4:
             item["zm4"] = zm4
+        if zm6:
+            item["zm6"] = zm6
         if sma20_hit:
             item["sma20_stage"] = sma20_hit
         if _ev357:
@@ -3676,6 +3873,7 @@ def screen(params):
         "count": len(results),
         "results": results,
         "zhenming_hidden_applied": bool(hidden), "zhenming4_applied": check_zhenming4,
+        "zhenming6_applied": check_zhenming6,
     }
 
 

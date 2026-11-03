@@ -369,6 +369,9 @@
     .sc-fields{display:grid;grid-template-columns:1fr;gap:18px;}
     .zm3-info{font-size:11px;color:var(--text-muted);line-height:1.5;margin-top:2px;white-space:nowrap;}
     .zm3-info b{color:var(--red);}
+    .zm6-info{color:var(--text-muted);}
+    .zm6-info .zm6-cover{color:#b7791f;font-weight:700;}
+
     .sc-note{font-size:.78rem;color:var(--text-muted);margin-bottom:10px;}
     .checkbox-grid {
       display: flex;
@@ -10051,6 +10054,25 @@
           <div><div class="cb-label">真名四式（滾量守低）</div></div>
         </label>
 
+        <article class="zm-hidden-card zm6-card" id="zhenming6Card">
+          <label class="checkbox-row"><input type="checkbox" id="zhenming6" /><div class="cb-label">真名六式（空頭啟動）</div></label>
+          <div class="zm-hidden-options" id="zhenming6Options" hidden>
+            <p>均線空頭排列（5 &lt; 10 &lt; 20）、20MA 生命線下彎，當天出現實體長黑 K（跌幅 ≥ 3%）。</p>
+            <fieldset><legend><span>01</span> 型態條件 <small>可不選</small></legend>
+              <label><input type="checkbox" id="zm6UsePattern" data-hidden-metric> 加上型態跌破</label>
+              <label class="zh-period zm6-pattern">型態<select id="zm6Pattern" aria-label="真名六式空頭型態" disabled>
+                <option value="all" selected>全部空頭型態</option>
+                <option value="hs_top">頭肩頂</option>
+                <option value="m_top">M 頭</option>
+                <option value="box">箱型跌破</option>
+                <option value="rising_wedge">上升楔形（下降趨勢中）</option>
+                <option value="desc_triangle">下降三角</option>
+                <option value="sym_triangle">三角收斂跌破</option>
+              </select></label>
+            </fieldset>
+            <small>勾選型態時，需在長黑當天或前 5 個交易日內跌破所選型態的頸線／下緣，且之後未站回。停損參考＝長黑 K 最高價；遇 2～4 月、6～9 月融券強制回補季會另外提醒。</small>
+          </div>
+        </article>
         <article class="zm-hidden-card" id="zhenmingHiddenCard">
           <label class="checkbox-row"><input type="checkbox" id="zhenming_hidden" /><div class="cb-label">真名隱藏式（比大小）</div></label>
           <div class="zm-hidden-options" id="zhenmingHiddenOptions" hidden>
@@ -10144,6 +10166,7 @@
     function picked(p){ var a=[];
       if(p.dataset.cat==='shape'&&v('no_black_years')) a.push('碗型 '+v('no_black_years')+'月'+(v('no_black_mult')?' '+v('no_black_mult')+'倍':'')+' 容忍'+(v('no_black_tolerance')||0)+'根');
       p.querySelectorAll('input[type=checkbox]:not([data-hidden-metric])').forEach(function(cb){ if(cb.checked) a.push(txt(cb)); });
+      if(p.dataset.cat==='zm'&&window.AcademyZhenmingSix?.summary())a.push(window.AcademyZhenmingSix.summary());
       if(p.dataset.cat==='zm'&&window.AcademyZhenmingHidden?.summary())a.push(window.AcademyZhenmingHidden.summary());
       if(p.dataset.cat==='ind'&&document.querySelector('.macd-cb[data-mode$="3"]:checked')&&v('macd_start')) a.push('區間 '+v('macd_start')+'～'+(v('macd_end')||'今'));
       return a; }
@@ -10940,6 +10963,8 @@
     async function doScreen() {
       let hiddenOptions,screenApi=window.__API||'';try{hiddenOptions=window.AcademyZhenmingHidden?.collect();if(hiddenOptions)screenApi=await window.AcademyZhenmingHidden.endpoint();}catch(error){showStatus('<div class="alert alert-error">'+error.message+'</div>');return;}
       const fourExpected=document.getElementById('zhenming4').checked;
+      const sixOptions=window.AcademyZhenmingSix?.collect()||null;
+      if(sixOptions&&!fourExpected&&!hiddenOptions){try{screenApi=await window.AcademyZhenmingSix.endpoint();}catch(error){showStatus('<div class="alert alert-error">'+error.message+'</div>');return;}}
       if(fourExpected){try{screenApi=await window.AcademyZhenmingFour.endpoint();}catch(error){showStatus('<div class="alert alert-error">'+error.message+'</div>');return;}}
       window.AcademyScreenLog?.beforeScan();
       const dateVal = document.getElementById('date').value;
@@ -11021,6 +11046,7 @@
         zhenming3: zhenming3,
         zhenming4: fourExpected,
         zhenming_hidden: hiddenOptions,
+        zhenming6: sixOptions,
         sma20_stages: sma20Stages,
         ev357_cheap:     ev357Cheap,
         ev357_fair:      ev357Fair,
@@ -11035,7 +11061,7 @@
       const jobId = (crypto.randomUUID ? crypto.randomUUID()
         : Date.now() + '-' + Math.random().toString(36).slice(2));
       body.job_id = jobId;
-      _screenJob = { id: jobId, active: true, hidden:!!hiddenOptions, four:fourExpected, api:screenApi };
+      _screenJob = { id: jobId, active: true, hidden:!!hiddenOptions, four:fourExpected, six:!!sixOptions, api:screenApi };
 
       // uat 分支別名(含 git-uat)打自己的同源後端，以便測試尚未上 prod 的篩選規則；其餘(prod/preview/local)維持 prod
       fetch(screenApi+'/api/screen', {
@@ -11056,7 +11082,7 @@
             return;
           }
           lastResults = data.results || [];
-          renderResults(data,!!hiddenOptions,fourExpected);
+          renderResults(data,!!hiddenOptions,fourExpected,!!sixOptions);
         })
         .catch(err => {
           // 連線被系統中斷（多半是手機切背景）→ 不報錯，改成輪詢領取伺服器算好的結果
@@ -11108,12 +11134,13 @@
         if (!data.pending) {                                  // 結果到手
           const hiddenExpected=!!_screenJob.hidden;
           const fourExpected=!!_screenJob.four;
+          const sixExpected=!!_screenJob.six;
           _screenJob = null;
           const btn = document.getElementById('submitBtn');
           btn.disabled = false; btn.innerHTML = '開始篩選';
           if (data.error) { showStatus(`<div class="alert alert-error">&#9888; ${data.error}</div>`); return; }
           lastResults = data.results || [];
-          renderResults(data,hiddenExpected,fourExpected);
+          renderResults(data,hiddenExpected,fourExpected,sixExpected);
           return;
         }
       } catch (_) { /* 忽略，繼續輪詢 */ }
@@ -11145,7 +11172,8 @@
       renderTable(filtered);
     }
 
-    function renderResults(data,hiddenExpected=false,fourExpected=false) {
+    function renderResults(data,hiddenExpected=false,fourExpected=false,sixExpected=false) {
+      if(sixExpected&&data.zhenming6_applied!==true){_scanStop();lastResults=[];document.getElementById('resultsArea').innerHTML='';showStatus('<div class="alert alert-error">目前連線的後端尚未支援真名六式，這次結果不予顯示。請稍後再試，或重新啟動本機預覽。</div>');return;}
       if(fourExpected&&data.zhenming4_applied!==true){_scanStop();lastResults=[];document.getElementById('resultsArea').innerHTML='';showStatus('<div class="alert alert-error">目前連線的後端尚未支援真名四式，這次結果不予顯示。請更新篩選服務後再試。</div>');return;}
       if(hiddenExpected&&data.zhenming_hidden_applied!==true){_scanStop();lastResults=[];document.getElementById('resultsArea').innerHTML='';showStatus('<div class="alert alert-error">目前連線的後端尚未支援真名隱藏式，這次結果不予顯示，請更新後端後再試。</div>');return;}
 
@@ -11282,7 +11310,7 @@
                   ? `<span class="data-missing-badge" title="部分篩選條件無法確認（${s.data_missing.map(k=>({'no_black':'無放量黑棒篩選','gap_unverified':'跳空前日資料缺失，請手動排查'}[k]||k)).join('、')}），已放行"></span>`
                   : ''
               }</td>
-            <td class="name-cell">${s.name}${s.zm4 ? AcademyZhenmingFour.badge(s.zm4) : ''}${s.sma20_stage ? `<div class="zm3-info">葛蘭碧・階段 ${s.sma20_stage}</div>` : ''}${s.zm3 ? `<div class="zm3-info" title="真名三式：長黑 ${s.zm3.black_date}（−${s.zm3.black_pct}%）後第 ${s.zm3.day_n} 天反包；停損參考 ${s.zm3.stop}（長紅低與洗盤最低取低者）；第一目標 ${s.zm3.target}（長黑前 20 日最高）">三式・長黑 ${s.zm3.black_date.slice(5).replace('-','/')}・½ ${s.zm3.mid}・第${s.zm3.day_n}天${s.zm3.vol ? '・<b>帶量</b>' : ''}<br>停損 ${s.zm3.stop}・目標 ${s.zm3.target}</div>` : ''}${s.ev357 ? `<div class="zm3-info" style="color:${s.ev357.band==='cheap'?'#c0392b':(s.ev357.band==='expensive'?'#148f77':'var(--text-muted)')}" title="連續5年配息；D=近5年均現金股利 ${s.ev357.d}｜現金殖利率=D÷現價｜低估參考價(7%)=${s.ev357.cheap_price} 合理參考價(5%)=${s.ev357.fair_price} 高估參考價(3%)=${s.ev357.exp_price}"><b>${s.ev357.band==='cheap'?'低估區':(s.ev357.band==='expensive'?'高估區':'合理區')}</b> 殖利率 ${s.ev357.yield}%｜D ${s.ev357.d}（低估 ${s.ev357.cheap_price}／合理 ${s.ev357.fair_price}／高估 ${s.ev357.exp_price}）</div>` : ''}</td>
+            <td class="name-cell">${s.name}${s.zm4 ? AcademyZhenmingFour.badge(s.zm4) : ''}${s.zm6 && window.AcademyZhenmingSix ? AcademyZhenmingSix.info(s.zm6) : ''}${s.sma20_stage ? `<div class="zm3-info">葛蘭碧・階段 ${s.sma20_stage}</div>` : ''}${s.zm3 ? `<div class="zm3-info" title="真名三式：長黑 ${s.zm3.black_date}（−${s.zm3.black_pct}%）後第 ${s.zm3.day_n} 天反包；停損參考 ${s.zm3.stop}（長紅低與洗盤最低取低者）；第一目標 ${s.zm3.target}（長黑前 20 日最高）">三式・長黑 ${s.zm3.black_date.slice(5).replace('-','/')}・½ ${s.zm3.mid}・第${s.zm3.day_n}天${s.zm3.vol ? '・<b>帶量</b>' : ''}<br>停損 ${s.zm3.stop}・目標 ${s.zm3.target}</div>` : ''}${s.ev357 ? `<div class="zm3-info" style="color:${s.ev357.band==='cheap'?'#c0392b':(s.ev357.band==='expensive'?'#148f77':'var(--text-muted)')}" title="連續5年配息；D=近5年均現金股利 ${s.ev357.d}｜現金殖利率=D÷現價｜低估參考價(7%)=${s.ev357.cheap_price} 合理參考價(5%)=${s.ev357.fair_price} 高估參考價(3%)=${s.ev357.exp_price}"><b>${s.ev357.band==='cheap'?'低估區':(s.ev357.band==='expensive'?'高估區':'合理區')}</b> 殖利率 ${s.ev357.yield}%｜D ${s.ev357.d}（低估 ${s.ev357.cheap_price}／合理 ${s.ev357.fair_price}／高估 ${s.ev357.exp_price}）</div>` : ''}</td>
             <td class="neutral col-open">${s.open}</td>
             <td class="neutral col-high">${s.high}</td>
             <td class="neutral col-low">${s.low}</td>
@@ -18333,7 +18361,7 @@
 <link rel="stylesheet" href="assets/brand-footer.css?v=20261103-scroll-revert">
 <script src="assets/brand-footer.js?v=20261103-scroll-revert" defer></script>
 <link rel="stylesheet" href="assets/market-panel-layout.css?v=8">
-<link rel="stylesheet" href="assets/member-notification-inbox.css?v=glass6">
+<link rel="stylesheet" href="assets/member-notification-inbox.css?v=glass7">
 <script src="assets/member-notification-inbox.js?v=paging3" defer></script>
 <script src="assets/glass-skin.js?v=5" defer></script>
 <script src="assets/glass-motion.js?v=4" defer></script>
@@ -18368,6 +18396,8 @@
 <script src="assets/chart-drawing-edit.js?v=2"></script>
 <script src="assets/zhenming-four.js?v=candidate2"></script>
 <script src="assets/zhenming-hidden.js?v=5" defer></script>
+<link rel="stylesheet" href="assets/zhenming-six.css?v=1">
+<script src="assets/zhenming-six.js?v=1" defer></script>
 <script src="assets/screen-log.js?v=20261103-scroll-revert" defer></script>
 <script src="assets/member-quick-menu.js?v=tier6" defer></script>
 <script src="assets/navigation-layers.js?v=logo-home20" defer></script>
