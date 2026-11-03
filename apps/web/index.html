@@ -405,6 +405,16 @@
       font-size: 0.75rem;
       color: var(--text-muted);
     }
+    .gap-choice{align-items:flex-start;min-width:min(100%,230px);padding:11px 12px;border:1px solid var(--border);border-radius:10px;background:color-mix(in srgb,var(--surface2) 52%,var(--surface));cursor:default;}
+    .gap-choice>input{margin-top:2px;}
+    .gap-choice-body{display:grid;gap:9px;min-width:0;flex:1;}
+    .gap-choice-body>.cb-label{display:flex;align-items:center;gap:7px;font-weight:700;cursor:pointer;}
+    .gap-step{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:color-mix(in srgb,var(--sc-accent) 13%,var(--surface));color:var(--sc-accent);font-size:10px;font-weight:800;}
+    .gap-threshold{display:flex;align-items:center;gap:6px;color:var(--text-muted);font-size:12px;white-space:nowrap;}
+    .gap-threshold input{width:68px;padding:5px 7px;border:1px solid var(--border);border-radius:7px;background:var(--input-bg);color:var(--text);font:inherit;font-variant-numeric:tabular-nums;outline:none;}
+    .gap-threshold input:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 13%,transparent);}
+    .gap-choice:has(>input:checked){border-color:color-mix(in srgb,var(--sc-accent) 55%,var(--border));background:color-mix(in srgb,var(--sc-accent) 6%,var(--surface));}
+    @media(max-width:620px){.sc-panel[data-cat="gap"] .checkbox-grid{display:grid;grid-template-columns:1fr;gap:9px}.gap-choice{width:100%;box-sizing:border-box}}
 
     .btn-submit {
       background: var(--accent);
@@ -2353,8 +2363,9 @@
         var mkt=(window._isEtf&&window._isEtf(it.code)?'<span class="gs-sd-mkt etf">ETF</span>':'')+(mk==='上櫃'?'<span class="gs-sd-mkt otc">上櫃</span>':(mk==='上市'?'<span class="gs-sd-mkt twse">上市</span>':''));
         return '<div class="gs-sd-item'+(i===sel?' on':'')+'" role="option" data-code="'+it.code+'"><span class="gs-sd-code">'+it.code+'</span><span class="gs-sd-name">'+(it.name||'')+'</span>'+tag+mkt+'</div>';
       }).join(''); drop.hidden=false; if(inp)inp.setAttribute('aria-expanded','true'); }
-    function open(code){ if(drop)drop.hidden=true; if(inp){inp.value='';inp.blur();} list=[]; sel=-1; if(document.getElementById('chartModal')?.classList.contains('chart-analysis-only')){window.AcademyChartAnalysis?.open(String(code));return;} if(window._openStock)window._openStock(String(code), (window._names&&window._names[code])||''); }
-    function oninput(){ if(!inp)return; var run=function(){ list=match(inp.value); sel=-1; render(); }; if(!window._names){ window._loadNames&&window._loadNames(run); } else run(); }
+    function syncClear(){ var b=document.getElementById('chartSearchClear'); if(b)b.hidden=!(inp&&inp.value); }
+    function open(code){ if(drop)drop.hidden=true; if(inp){inp.value='';inp.blur();syncClear();} list=[]; sel=-1; if(document.getElementById('chartModal')?.classList.contains('chart-analysis-only')){window.AcademyChartAnalysis?.open(String(code));return;} if(window._openStock)window._openStock(String(code), (window._names&&window._names[code])||''); }
+    function oninput(){ if(!inp)return; syncClear(); var run=function(){ list=match(inp.value); sel=-1; render(); }; if(!window._names){ window._loadNames&&window._loadNames(run); } else run(); }
     function go(){ if(!inp)return; var q=(inp.value||'').trim(); if(!q)return;
       if(sel>=0&&list[sel]){open(list[sel].code);return;}
       var run=function(){ var l=match(q); if(l.length)open(l[0].code); else if(/^\d/.test(q))open(q.split(/\s+/)[0]); };
@@ -2363,6 +2374,8 @@
       inp=document.getElementById('chartStockSearch'); drop=document.getElementById('chartSearchDrop'); if(!inp)return;
       try{ window._loadNames&&window._loadNames(); }catch(e){}
       inp.addEventListener('input',oninput);
+      var clear=document.getElementById('chartSearchClear');
+      if(clear)clear.addEventListener('click',function(){ inp.value='';list=[];sel=-1;render();syncClear();inp.focus(); });
       inp.addEventListener('keydown',function(e){ var o=drop&&!drop.hidden;
         if(e.key==='ArrowDown'&&o){e.preventDefault();sel=Math.min(list.length-1,sel+1);render();}
         else if(e.key==='ArrowUp'&&o){e.preventDefault();sel=Math.max(0,sel-1);render();}
@@ -2370,6 +2383,23 @@
         else if(e.key==='Escape'&&o){e.preventDefault();drop.hidden=true;sel=-1;} });
       document.addEventListener('click',function(e){ var it=e.target.closest('#chartSearchDrop .gs-sd-item'); if(it){open(it.dataset.code);return;}
         if(!e.target.closest('#chartSearchBox')){ if(drop)drop.hidden=true; } });
+    });
+    function editable(t){return !!(t&&(t.matches?.('input,textarea,select')||t.isContentEditable||t.closest?.('[contenteditable="true"]')));}
+    // K 圖開啟時可直接打代號／股名：不用先移動滑鼠點搜尋欄；右側備註等輸入區不攔截。
+    document.addEventListener('keydown',function(e){
+      var modal=document.getElementById('chartModal');
+      if(e.defaultPrevented||e.ctrlKey||e.metaKey||e.altKey||!inp||!modal?.classList.contains('open')||inp.offsetParent===null||editable(e.target))return;
+      if(e.isComposing||e.key==='Process'||e.keyCode===229){inp.focus();return;}
+      if(!e.key||e.key.length!==1)return;
+      e.preventDefault();inp.focus();
+      var a=inp.selectionStart==null?inp.value.length:inp.selectionStart,b=inp.selectionEnd==null?a:inp.selectionEnd;
+      inp.setRangeText(e.key,a,b,'end');inp.dispatchEvent(new Event('input',{bubbles:true}));
+    });
+    document.addEventListener('paste',function(e){
+      var modal=document.getElementById('chartModal');
+      if(e.defaultPrevented||!inp||!modal?.classList.contains('open')||inp.offsetParent===null||editable(e.target))return;
+      var text=(e.clipboardData?.getData('text')||'').trim();if(!text)return;
+      e.preventDefault();inp.focus();inp.value=text;inp.dispatchEvent(new Event('input',{bubbles:true}));
     });
   })();
   </script>
@@ -2506,10 +2536,30 @@
     @media(max-width:600px){ .topsearch{gap:6px;padding:6px 12px;} .topsearch .ts-box{flex-basis:100%;} }
     /* K 圖右上角個股搜尋（與首頁同資料/行為；2026-10-08）*/
     #chartSearchBox{position:relative;}
-    #chartSearchBox>input{width:168px;padding:5px 10px;font-size:13px;border:1.5px solid var(--accent);border-radius:8px;background:var(--surface);color:var(--text);outline:none;}
+    #chartSearchBox>input{box-sizing:border-box;width:122px!important;height:28px!important;padding:3px 27px 3px 8px;font-size:11.5px;border:1px solid color-mix(in srgb,var(--accent) 66%,var(--border));border-radius:8px;background:color-mix(in srgb,var(--surface) 95%,transparent);color:var(--text);outline:none;box-shadow:inset 0 1px rgba(255,255,255,.22);transition:border-color .16s ease,box-shadow .16s ease;}
+    #chartSearchBox>input:focus{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 13%,transparent),inset 0 1px rgba(255,255,255,.28);}
     #chartSearchBox>input::placeholder{color:var(--text-muted);}
-    #chartSearchBox .gs-search-drop{left:auto;right:0;width:340px;max-width:82vw;z-index:1200;box-shadow:0 22px 48px rgba(15,23,42,.28);}
-    @media(max-width:700px){ #chartSearchBox>input{width:118px;} #chartSearchBox .gs-search-drop{width:min(340px,86vw);} }
+    #chartSearchBox>input::-webkit-search-cancel-button{-webkit-appearance:none;appearance:none;display:none;}
+    #chartSearchClear{position:absolute;z-index:3;right:5px;top:50%;width:18px;height:18px;padding:0;transform:translateY(-50%);border:1px solid color-mix(in srgb,var(--border) 80%,var(--text-muted));border-radius:50%;background:linear-gradient(145deg,color-mix(in srgb,var(--surface) 93%,white),color-mix(in srgb,var(--surface2) 94%,transparent));box-shadow:0 2px 6px rgba(15,23,42,.12),inset 0 1px rgba(255,255,255,.62);cursor:pointer;transition:border-color .15s ease,background .15s ease,box-shadow .15s ease,transform .12s ease;}
+    #chartSearchClear[hidden]{display:none;}
+    #chartSearchClear::before,#chartSearchClear::after{content:"";position:absolute;left:4px;right:4px;top:8px;height:1.5px;border-radius:2px;background:var(--text-muted);transform:rotate(45deg);}
+    #chartSearchClear::after{transform:rotate(-45deg);}
+    #chartSearchClear:hover{border-color:color-mix(in srgb,var(--accent) 55%,var(--border));background:color-mix(in srgb,var(--accent) 8%,var(--surface));box-shadow:0 3px 8px rgba(15,23,42,.15),0 0 0 2px color-mix(in srgb,var(--accent) 8%,transparent);}
+    #chartSearchClear:hover::before,#chartSearchClear:hover::after{background:var(--accent);}
+    #chartSearchClear:active{transform:translateY(-50%) scale(.9);box-shadow:inset 0 1px 3px rgba(15,23,42,.18);}
+    #chartSearchBox .gs-search-drop{left:auto;right:0;width:260px;max-width:72vw;max-height:218px;padding:4px!important;border-radius:9px!important;z-index:1200;box-shadow:0 13px 32px rgba(15,23,42,.20)!important;}
+    #chartSearchBox .pro-search-head{padding:2px 6px 5px;margin-bottom:1px;font-size:7.5px;}
+    #chartSearchBox .pro-search-head b{padding:2px 5px;font-size:7.5px;}
+    #chartSearchBox .gs-sd-item{grid-template-columns:46px minmax(96px,1fr) 43px!important;column-gap:7px!important;min-height:34px;padding:4px 8px!important;border-radius:5px!important;}
+    #chartSearchBox .gs-sd-item::before{top:4px;bottom:4px;}
+    #chartSearchBox .gs-sd-item::after{display:none;}
+    #chartSearchBox .gs-sd-item:hover .gs-sd-mkt,#chartSearchBox .gs-sd-item.on .gs-sd-mkt{opacity:1;}
+    #chartSearchBox .gs-sd-code{min-width:0;font-size:10.5px!important;}
+    #chartSearchBox .gs-sd-name{font-size:11.5px!important;}
+    #chartSearchBox .gs-sd-ind,#chartSearchBox .gs-sd-mkt{font-size:8px!important;}
+    #chartSearchBox .pro-search-quote{font-size:8.5px;}
+    #chartSearchBox .pro-search-foot{padding:4px 6px 0;font-size:7.5px;}
+    @media(max-width:700px){ #chartSearchBox>input{width:106px!important;} #chartSearchBox .gs-search-drop{width:min(260px,78vw);} }
     @media(max-width:600px){ #chartSearchBox{display:none;} }   /* 手機：K圖搜尋收起，避免擠壞標題列直書 2026-10-09 */
     #chartModal .modal-title-row > span, #chartModal #modalSubtitle, #chartModal .modal-title { white-space:nowrap; }
     .gs-search svg{color:var(--text-muted);flex:0 0 auto;}
@@ -9235,6 +9285,23 @@
       else if(e.key==='Enter'){ e.preventDefault(); doSearch(); }
       else if(e.key==='Escape'&&open){ d.hidden=true; _hpSel=-1; }
     });
+    function _hpEditable(t){return !!(t&&(t.matches?.('input,textarea,select')||t.isContentEditable||t.closest?.('[contenteditable="true"]')));}
+    // 首頁可直接打代號／股名，自動把鍵盤輸入送進搜尋欄；其他表單與彈窗維持原操作。
+    document.addEventListener('keydown',function(e){
+      var home=el('homeView'),inp=el('hpSearch'),chart=el('chartModal');
+      if(e.defaultPrevented||e.ctrlKey||e.metaKey||e.altKey||!home||home.offsetParent===null||!inp||inp.offsetParent===null||chart?.classList.contains('open')||_hpEditable(e.target))return;
+      if(e.isComposing||e.key==='Process'||e.keyCode===229){inp.focus();return;}
+      if(!e.key||e.key.length!==1)return;
+      e.preventDefault();inp.focus();
+      var a=inp.selectionStart==null?inp.value.length:inp.selectionStart,b=inp.selectionEnd==null?a:inp.selectionEnd;
+      inp.setRangeText(e.key,a,b,'end');inp.dispatchEvent(new Event('input',{bubbles:true}));
+    });
+    document.addEventListener('paste',function(e){
+      var home=el('homeView'),inp=el('hpSearch'),chart=el('chartModal');
+      if(e.defaultPrevented||!home||home.offsetParent===null||!inp||inp.offsetParent===null||chart?.classList.contains('open')||_hpEditable(e.target))return;
+      var text=(e.clipboardData?.getData('text')||'').trim();if(!text)return;
+      e.preventDefault();inp.focus();inp.value=text;inp.dispatchEvent(new Event('input',{bubbles:true}));
+    });
     // 進首頁即預載股名（含上櫃），讓第一次輸入就有下拉
     try{ window._loadNames&&window._loadNames(); }catch(e){}
 
@@ -9801,42 +9868,36 @@
           <input type="checkbox" id="doji" />
           <div>
             <div class="cb-label">十字線</div>
-            <div class="cb-hint">開盤 = 收盤（零誤差），且當日振幅 ≥ 1%</div>
           </div>
         </label>
         <label class="checkbox-row">
           <input type="checkbox" id="hanging_man" />
           <div>
             <div class="cb-label">吊人線</div>
-            <div class="cb-hint">收盤 = 開盤 = 最高（無上影），最低 &lt; 收盤（有下影）</div>
           </div>
         </label>
         <label class="checkbox-row">
           <input type="checkbox" id="engulf_bull" onchange="_exclPattern(this)" />
           <div>
             <div class="cb-label">陽吞噬</div>
-            <div class="cb-hint">當日紅K實體吃掉前一日黑K整根（含影線）：收≥昨高且開≤昨低</div>
           </div>
         </label>
         <label class="checkbox-row">
           <input type="checkbox" id="engulf_bear" onchange="_exclPattern(this)" />
           <div>
             <div class="cb-label">陰吞噬</div>
-            <div class="cb-hint">當日黑K實體吃掉前一日紅K整根（含影線）：開≥昨高且收≤昨低</div>
           </div>
         </label>
         <label class="checkbox-row">
           <input type="checkbox" id="harami_bull" onchange="_exclPattern(this)" />
           <div>
             <div class="cb-label">多頭母子孕育線</div>
-            <div class="cb-hint">當日紅K實體藏在前一日黑K實體內（當日影線不計）；<b>且母線(前一日)收盤 &lt; MA20</b>（須在跌勢，排除高檔回檔假訊號；2026-10-08）</div>
           </div>
         </label>
         <label class="checkbox-row">
           <input type="checkbox" id="harami_bear" onchange="_exclPattern(this)" />
           <div>
             <div class="cb-label">空頭母子孕育線</div>
-            <div class="cb-hint">當日黑K實體藏在前一日紅K實體內（當日影線不計）；<b>且母線(前一日)收盤 &gt; MA20</b>（須在漲勢，排除低檔反彈假訊號；2026-10-08）</div>
           </div>
         </label>
           </div>
@@ -9846,30 +9907,24 @@
           <div class="sc-hd"><a onclick="_scToggle('gap')"><span class="sc-ar">▸</span><b style="color:#5a78aa">缺口</b></a><span class="sc-sum"></span></div>
           <div class="sc-body" style="display:none">
           <div class="checkbox-grid sc-cbs">
-        <label class="checkbox-row">
-          <input type="checkbox" id="gap_up" />
-          <div>
-            <div class="cb-label">跳空向上（開高）</div>
-            <div class="cb-hint">開盤高於昨日實體（昨紅K比昨收、昨黑K比昨開）</div>
+        <div class="checkbox-row gap-choice">
+          <input type="checkbox" id="gap_up" onchange="if(!this.checked) document.getElementById('gap_up_min').value=''" />
+          <div class="gap-choice-body">
+            <label class="cb-label" for="gap_up"><span class="gap-step">1</span>跳空向上</label>
+            <label class="gap-threshold" for="gap_up_min"><span class="gap-step">2</span>最小幅度<input type="number" id="gap_up_min" min="0" step="0.5" inputmode="decimal" placeholder="0" aria-label="跳空向上最小幅度（元）" oninput="if(this.value) document.getElementById('gap_up').checked=true;" /><span>元以上</span></label>
           </div>
-        </label>
-        <label class="checkbox-row">
+        </div>
+        <div class="checkbox-row gap-choice">
           <input type="checkbox" id="gap_down" onchange="if(!this.checked) document.getElementById('gap_down_min').value=''" />
-          <div>
-            <div class="cb-label">跳空向下</div>
-            <div class="cb-hint">當日最高 &lt; 前日最低</div>
-            <div style="margin-top:6px;display:flex;align-items:center;gap:6px;">
-              <span style="font-size:12px;color:var(--text-muted);">最小幅度</span>
-              <input type="number" id="gap_down_min" min="0" step="0.5" placeholder="元" style="width:70px;padding:3px 6px;font-size:13px;border:1px solid var(--border);border-radius:4px;background:var(--input-bg);color:var(--text);" oninput="if(this.value) document.getElementById('gap_down').checked=true;" />
-              <span style="font-size:12px;color:var(--text-muted);">元</span>
-            </div>
+          <div class="gap-choice-body">
+                <label class="cb-label" for="gap_down"><span class="gap-step">1</span>跳空向下（開低）</label>
+            <label class="gap-threshold" for="gap_down_min"><span class="gap-step">2</span>最小幅度<input type="number" id="gap_down_min" min="0" step="0.5" inputmode="decimal" placeholder="0" aria-label="跳空向下最小幅度（元）" oninput="if(this.value) document.getElementById('gap_down').checked=true;" /><span>元以上</span></label>
           </div>
-        </label>
+        </div>
         <label class="checkbox-row">
           <input type="checkbox" id="earn_gap_down" />
           <div>
-            <div class="cb-label">賺普通缺口價差</div>
-            <div class="cb-hint">前日跳空向下 + 今日突破 + 價差≥1元 + 前日縮量</div>
+            <div class="cb-label">向下缺口回補</div>
           </div>
         </label>
           </div>
@@ -9883,14 +9938,12 @@
           <input type="checkbox" id="limit_up" />
           <div>
             <div class="cb-label">漲停板</div>
-            <div class="cb-hint">當日收盤達漲停價（+10%）</div>
           </div>
         </label>
         <label class="checkbox-row">
           <input type="checkbox" id="limit_down" />
           <div>
             <div class="cb-label">跌停板</div>
-            <div class="cb-hint">當日收盤達跌停價（−10%）</div>
           </div>
         </label>
           </div>
@@ -9986,22 +10039,18 @@
           <input type="checkbox" class="sma20-cb" id="sma20_b1" value="1" />
           <div>
             <div class="cb-label">葛蘭碧 階段1（均線翻揚帶量站上）</div>
-            <div class="cb-hint">20 日均線（SMA）原本下彎（前 5 個交易日內至少一天低於前一天）、當日走平或上彎（≥ 前 1 日且 ≥ 前 3 日）；股價<b>從月線下突破</b>（前 3 根內至少一根收盤在月線下，早已站上月線的不算）；紅 K（不設長紅門檻）、收盤 ＞ 均線、成交量 ≥ max(昨日止 5 日均量, 10 日均量)×1.3。</div>
           </div>
         </label>
         <label class="checkbox-row">
           <input type="checkbox" class="sma20-cb" id="sma20_b2" value="2" />
           <div>
             <div class="cb-label">葛蘭碧 階段2（回測月線不破）</div>
-            <div class="cb-hint">已出現階段 1、且股價<b>先離開月線</b>（階段 1 之後至少一天收盤 ≥ 月線 ×1.03）之後，第一次回測月線不破：當日最低碰到月線（最低 ≤ 月線 ×1.01，接近月線、差 1% 內沒碰到也算）、但最多只能跌破一點點（最低 ≥ 月線 ×0.99，破超過 1% 不算），且收盤 ＞ 月線站回；當天不能是長黑（黑 K 實體 ≥ 3% 不算）。實體或下影線碰線皆可；不要求均線上彎、紅 K 與帶量。</div>
           </div>
         </label>
         <label class="checkbox-row">
           <input type="checkbox" class="sma20-cb" id="sma20_b3" value="3" />
           <div>
             <div class="cb-label">葛蘭碧 階段3（跌破月線止跌 K）</div>
-            <div class="cb-hint">已依序出現階段 1、2，且<b>階段 2 之後曾經賺過</b>（至少一天收盤高於階段 2 當天收盤；從沒賺過就不標階段 3）之後：收盤 ＜ 均線（收盤跌破月線），但不能跌太深（收盤 ≥ 月線 ×0.95，跌破超過 5% 不算），且長紅 3%／長下影線 3%／十字線任一成立；十字線＝實體 |收−開| ≤ 收盤 0.5%，且當日振幅 (高−低) ≥ 收盤 2%（排除幾乎不動的小 K）。收盤即觸發。<br>
-            <b>共同規則</b>：依序 1→2→3、同一天不跨階段、每階段只記首次；每天先檢查重置——均線<b>連續 3 個交易日</b>比前一天低才清除所有階段、當天不觸發（只壓 1～2 天視為健康回測，不重置）；階段 3 後該輪結束。三個可複選（符合任一即列出）。<span class="algo-gated">參數為初版（2026-10-12 訂、10-17 修正重置與階段 2／3），待以歷史 K 圖對照肉眼判斷後調整。全市場試算（上市櫃 1,964 檔、2024 年至今）：階段 1 共 8,002 次、階段 2 共 4,405 次、階段 3 共 1,275 次；階段 1→2 中位 10 個交易日、2→3 中位 12 個交易日（10-17 晚修正版）。個股 K 圖「葛蘭碧」標記可檢視歷史訊號（日 K）。</span></div>
           </div>
         </label>
           </div>
@@ -10016,26 +10065,22 @@
         <label class="checkbox-row">
           <input type="checkbox" id="ev357_cheap" />
           <div>
-            <div class="cb-label" style="color:#c0392b">便宜（買）· 殖利率 ≥ 7%</div>
-            <div class="cb-hint">現價 ≤ 便宜價（＝D ÷ 0.07）。現金殖利率達 7% 以上，進入買進區。</div>
+            <div class="cb-label" style="color:#c0392b">低估區 · 殖利率 ≥ 7%</div>
           </div>
         </label>
         <label class="checkbox-row">
           <input type="checkbox" id="ev357_fair" />
           <div>
-            <div class="cb-label">合理（賣）· 殖利率 3%～7%</div>
-            <div class="cb-hint">現價介於合理價（＝D ÷ 0.05）附近，殖利率落在 3%～7% 之間，進入減碼區。</div>
+            <div class="cb-label">合理區 · 殖利率 3%～7%</div>
           </div>
         </label>
         <label class="checkbox-row">
           <input type="checkbox" id="ev357_expensive" />
           <div>
-            <div class="cb-label" style="color:#148f77">昂貴（賣光）· 殖利率 ≤ 3%</div>
-            <div class="cb-hint">現價 ≥ 昂貴價（＝D ÷ 0.03）。現金殖利率低於 3%，進入出清區。</div>
+            <div class="cb-label" style="color:#148f77">高估區 · 殖利率 ≤ 3%</div>
           </div>
         </label>
           </div>
-          <div class="cb-hint" style="margin-top:6px">資料來源：玩股網歷年除息現金股利（本站 stock_dividends），每週更新。D＝近 5 個除息年現金股利平均。僅供研究參考，非投資建議。</div>
           </div>
         </div>
       </div>
@@ -10054,7 +10099,10 @@
     function txt(cb){ var r=cb.closest('.checkbox-row'), l=r&&r.querySelector('.cb-label');
       if(cb.classList.contains('box-cb')) return '箱型 '+cb.parentNode.textContent.trim();
       if(cb.classList.contains('macd-cb')) return 'MACD '+(/long/.test(cb.dataset.mode)?'多：':'空：')+cb.parentNode.textContent.trim().replace(/（.*$/,'');
-      var t=l?l.textContent.trim():cb.id; if(cb.id==='gap_down'&&v('gap_down_min')) t+=' ≥'+v('gap_down_min')+'元'; return t; }
+      var t=l?l.textContent.trim():cb.id;
+      if(cb.id==='gap_up'&&v('gap_up_min')) t+=' ≥'+v('gap_up_min')+'元';
+      if(cb.id==='gap_down'&&v('gap_down_min')) t+=' ≥'+v('gap_down_min')+'元';
+      return t; }
     function picked(p){ var a=[];
       if(p.dataset.cat==='shape'&&v('no_black_years')) a.push('碗型 '+v('no_black_years')+'月'+(v('no_black_mult')?' '+v('no_black_mult')+'倍':'')+' 容忍'+(v('no_black_tolerance')||0)+'根');
       p.querySelectorAll('input[type=checkbox]:not([data-hidden-metric])').forEach(function(cb){ if(cb.checked) a.push(txt(cb)); });
@@ -10076,7 +10124,7 @@
     window._scToggle=function(k){ var p=cat.querySelector('.sc-panel[data-cat="'+k+'"]'), b=p.querySelector('.sc-body'), open=b.style.display==='none';
       b.style.display=open?'':'none'; p.classList.toggle('is-open',open); p.querySelector('.sc-ar').textContent=open?'▾':'▸'; };
     window._scClearAll=function(){
-      ['date','min_price','red_candle_pct','volume_multiplier','black_candle_pct','shrink_multiplier','no_black_years','no_black_mult','no_black_tolerance','gap_down_min','macd_start','macd_end'].forEach(function(id){ var e=$(id); if(e) e.value=''; });
+      ['date','min_price','red_candle_pct','volume_multiplier','black_candle_pct','shrink_multiplier','no_black_years','no_black_mult','no_black_tolerance','gap_up_min','gap_down_min','macd_start','macd_end'].forEach(function(id){ var e=$(id); if(e) e.value=''; });
       cat.querySelectorAll('input[type=checkbox]').forEach(function(cb){ if(cb.checked){ cb.checked=false; cb.dispatchEvent(new Event('change',{bubbles:true})); } });
       var ind=$('industry_filter'); if(ind&&ind.value){ ind.value=''; ind.dispatchEvent(new Event('change',{bubbles:true})); }
       refresh(); };
@@ -10265,6 +10313,7 @@
         <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
           <div id="chartSearchBox">
             <input id="chartStockSearch" type="search" name="tw-stock-qc" placeholder="搜尋代號／股名" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="chartSearchDrop">
+            <button id="chartSearchClear" type="button" aria-label="清除股票搜尋" title="清除搜尋" hidden></button>
             <div id="chartSearchDrop" class="gs-search-drop" role="listbox" hidden></div>
           </div>
           <button id="chartFullBtn" type="button" onclick="_toggleChartFull()" title="全視窗（直播／簡報用；再按一次或按 Esc 還原）"
@@ -10870,6 +10919,7 @@
       const haramiBear = document.getElementById('harami_bear').checked;
       const gapUp   = document.getElementById('gap_up').checked;
       const gapDown = document.getElementById('gap_down').checked;
+      const gapUpMin = parseFloat(document.getElementById('gap_up_min').value) || 0;
       const gapDownMin = parseFloat(document.getElementById('gap_down_min').value) || 0;
       const earnGapDown = document.getElementById('earn_gap_down').checked;
       const hangingMan = document.getElementById('hanging_man').checked;
@@ -10921,6 +10971,7 @@
         harami_bear: haramiBear,
         gap_up:   gapUp,
         gap_down: gapDown,
+        gap_up_min: gapUpMin,
         gap_down_min: gapDownMin,
         earn_gap_down: earnGapDown,
         hanging_man: hangingMan,
@@ -11193,7 +11244,7 @@
                   ? `<span class="data-missing-badge" title="部分篩選條件無法確認（${s.data_missing.map(k=>({'no_black':'無放量黑棒篩選','gap_unverified':'跳空前日資料缺失，請手動排查'}[k]||k)).join('、')}），已放行"></span>`
                   : ''
               }</td>
-            <td class="name-cell">${s.name}${s.zm4 ? AcademyZhenmingFour.badge(s.zm4) : ''}${s.sma20_stage ? `<div class="zm3-info">葛蘭碧・階段 ${s.sma20_stage}</div>` : ''}${s.zm3 ? `<div class="zm3-info" title="真名三式：長黑 ${s.zm3.black_date}（−${s.zm3.black_pct}%）後第 ${s.zm3.day_n} 天反包；停損參考 ${s.zm3.stop}（長紅低與洗盤最低取低者）；第一目標 ${s.zm3.target}（長黑前 20 日最高）">三式・長黑 ${s.zm3.black_date.slice(5).replace('-','/')}・½ ${s.zm3.mid}・第${s.zm3.day_n}天${s.zm3.vol ? '・<b>帶量</b>' : ''}<br>停損 ${s.zm3.stop}・目標 ${s.zm3.target}</div>` : ''}${s.ev357 ? `<div class="zm3-info" style="color:${s.ev357.band==='cheap'?'#c0392b':(s.ev357.band==='expensive'?'#148f77':'var(--text-muted)')}" title="連續5年配息；D=近5年均現金股利 ${s.ev357.d}｜現金殖利率=D÷現價｜便宜價(7%)=${s.ev357.cheap_price} 合理價(5%)=${s.ev357.fair_price} 昂貴價(3%)=${s.ev357.exp_price}"><b>${s.ev357.band==='cheap'?'便宜·買':(s.ev357.band==='expensive'?'昂貴·賣光':'合理·賣')}</b> 殖利率 ${s.ev357.yield}%｜D ${s.ev357.d}（便宜 ${s.ev357.cheap_price}／合理 ${s.ev357.fair_price}／昂貴 ${s.ev357.exp_price}）</div>` : ''}</td>
+            <td class="name-cell">${s.name}${s.zm4 ? AcademyZhenmingFour.badge(s.zm4) : ''}${s.sma20_stage ? `<div class="zm3-info">葛蘭碧・階段 ${s.sma20_stage}</div>` : ''}${s.zm3 ? `<div class="zm3-info" title="真名三式：長黑 ${s.zm3.black_date}（−${s.zm3.black_pct}%）後第 ${s.zm3.day_n} 天反包；停損參考 ${s.zm3.stop}（長紅低與洗盤最低取低者）；第一目標 ${s.zm3.target}（長黑前 20 日最高）">三式・長黑 ${s.zm3.black_date.slice(5).replace('-','/')}・½ ${s.zm3.mid}・第${s.zm3.day_n}天${s.zm3.vol ? '・<b>帶量</b>' : ''}<br>停損 ${s.zm3.stop}・目標 ${s.zm3.target}</div>` : ''}${s.ev357 ? `<div class="zm3-info" style="color:${s.ev357.band==='cheap'?'#c0392b':(s.ev357.band==='expensive'?'#148f77':'var(--text-muted)')}" title="連續5年配息；D=近5年均現金股利 ${s.ev357.d}｜現金殖利率=D÷現價｜低估參考價(7%)=${s.ev357.cheap_price} 合理參考價(5%)=${s.ev357.fair_price} 高估參考價(3%)=${s.ev357.exp_price}"><b>${s.ev357.band==='cheap'?'低估區':(s.ev357.band==='expensive'?'高估區':'合理區')}</b> 殖利率 ${s.ev357.yield}%｜D ${s.ev357.d}（低估 ${s.ev357.cheap_price}／合理 ${s.ev357.fair_price}／高估 ${s.ev357.exp_price}）</div>` : ''}</td>
             <td class="neutral col-open">${s.open}</td>
             <td class="neutral col-high">${s.high}</td>
             <td class="neutral col-low">${s.low}</td>
@@ -11356,7 +11407,7 @@
         _addChartMarker(code, _lastMacdRange.start, '起');
         _addChartMarker(code, _lastMacdRange.end, '訖');
       } else if (fromScreen && _lastScreenDate) {
-        _addChartMarker(code, _lastScreenDate, _lastScreenLimitUp ? '漲停' : (_lastScreenLimitDown ? '跌停' : ''));
+        _addChartMarker(code, _lastScreenDate, _lastScreenLimitUp ? '漲停' : (_lastScreenLimitDown ? '跌停' : '篩選日'));
       }
       // 指定日期標記（例：從分點明細點某筆買超，標在那天）
       if (markDate) {
@@ -11567,6 +11618,7 @@
           if (sell || buy) return { time: t, position: sell ? 'aboveBar' : 'belowBar', color: sell ? '#16a34a' : '#ef4444',
             shape: sell ? 'arrowDown' : 'arrowUp', size: 1, _side: sell ? 's' : 'b', _action:action, _broker:m.broker||lb.replace(/主力交往|主力分手|主力買點|大單買|連買起|連買迄|出清|減碼|加碼|買|賣|↑|↓/g,'').trim()||'指定分點', _date:m.date,
             text: lb.replace(/主力交往|主力分手|主力買點|大單買|連買起|連買迄|出清|買|賣|↑|↓/g, '').trim() };   // 2026-10-23 紅綠箭頭＋分點名稱，不寫買賣字樣
+          if (lb === '篩選日') return { time: t, position: 'aboveBar', color: '#3b82c4', shape: 'circle', text: '篩選日', size: .8 };
           return { time: t, position: 'aboveBar', color: '#ff1744', shape: 'arrowDown', text: lb, size: 1 }; })
         .filter(Boolean);
       const catalyst = _catalystEvents
@@ -18057,7 +18109,7 @@
 .fx-session-note{font-size:10px;line-height:1.8;color:var(--text-muted);margin:7px 0 0;overflow-wrap:anywhere}
 #fhForeignCost .fx-session-switch{grid-column:1}#fhForeignCost .fx-cost-price{grid-column:1}#fhForeignCost .fx-session-note{grid-column:1/-1}#fhForeignCost .fx-ecg{grid-row:1/7}
 </style>
-<script src="assets/foreign-cost-card.js?v=rounded6"></script>
+<script src="assets/foreign-cost-card.js?v=labels7"></script>
 <script>
 (function(){
  var verifiedSettlement={"date":"2026-09-16","product":"TX","basis":{"long":{"lots":7805.0,"amount_thousand":71902338.0,"point":46061.715566944265},"short":{"lots":84156.0,"amount_thousand":775297770.0,"point":46063.13097105376},"net":{"lots":-76351.0,"amount_thousand":-703395432.0,"point":46063.27566109154}},"unit":"TWD thousand","source_url":"https://www.taifex.com.tw/cht/3/futContractsDate?queryType=1&doQuery=1&queryDate=2026%2F09%2F16","scope":"All listed TX delivery months; settlement-value proxy, not entry cost"};
@@ -18243,7 +18295,7 @@
 <script src="assets/member-signin.js?v=invite-reset7" defer></script>
 <script src="assets/member-private-screen.js?v=asof5-norm" defer></script>
 <link rel="stylesheet" href="assets/site-readability.css?v=futures-history3">
-<link rel="stylesheet" href="assets/foreign-cost-card.css?v=direction4">
+<link rel="stylesheet" href="assets/foreign-cost-card.css?v=labels5">
 <script src="assets/foresight-brand.js?v=fqi28" defer></script>
 <link rel="stylesheet" href="assets/research-polish.css?v=14">
 <link rel="stylesheet" href="assets/site-interactions.css?v=1">
@@ -18262,11 +18314,11 @@
 <link rel="stylesheet" href="assets/onboarding-tour.css?v=mist-edge-mcopen-20261027">
 <script src="assets/onboarding-tour.js?v=mist-edge-20261026" defer></script>
 <link rel="stylesheet" href="assets/zhenming-hidden.css?v=6">
-<link rel="stylesheet" href="assets/research-hover.css">
-<script src="assets/research-hover.js"></script>
+<link rel="stylesheet" href="assets/research-hover.css?v=drag2">
+<script src="assets/research-hover.js?v=drag2"></script>
 <link rel="stylesheet" href="assets/chart-drawing-edit.css?v=2">
 <script src="assets/chart-drawing-edit.js?v=2"></script>
-<script src="assets/zhenming-four.js"></script>
+<script src="assets/zhenming-four.js?v=candidate2"></script>
 <script src="assets/zhenming-hidden.js?v=5" defer></script>
 <script src="assets/screen-log.js?v=normalized-read1" defer></script>
 <script src="assets/member-quick-menu.js?v=tier6" defer></script>

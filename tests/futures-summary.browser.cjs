@@ -3,7 +3,7 @@ const web=path.resolve(__dirname,'../apps/web'),html=fs.readFileSync(path.join(w
 const start=html.indexOf('    function loadFut(){'),load=html.slice(start,html.indexOf('    /* 每日台股籌碼報告',start));
 const costStart=html.indexOf(' var verifiedSettlement='),cost=html.slice(costStart,html.indexOf('</script>',costStart));
 const css=[...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map(x=>x[1]).join('\n')+asset('site-readability.css')+asset('futures-summary.css')+asset('foreign-cost-card.css');
-const out='C:/Users/JUSTY LIN/Documents/Codex/2026-10-08/new-chat/futures-history-review';fs.mkdirSync(out,{recursive:true});
+const out=process.env.QA_OUTPUT||path.join(require('node:os').tmpdir(),'futures-history-review');fs.mkdirSync(out,{recursive:true});
 const rows=[['2026-10-19',-89748,20.87,30.34],['2026-10-16',-93675,25.71,54.57],['2026-10-15',-93675,24.87,51.98],['2026-10-14',-86814,22.34,35.05],['2026-10-13',-87239,28.5,43.48]].map(([trade_date,foreign_oi,mtx_ls,tmf_ls])=>({trade_date,foreign_oi,mtx_ls,tmf_ls,trust_oi:84389,dealer_oi:2700,mtx_long:38754,mtx_short:29612,tmf_long:118310,tmf_short:75862}));
 (async()=>{const browser=await chromium.launch({channel:'msedge',headless:true});try{
  const p=await browser.newPage({viewport:{width:1512,height:1000}}),errors=[];p.on('pageerror',e=>errors.push(e.message));

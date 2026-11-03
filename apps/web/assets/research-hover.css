@@ -5,5 +5,5 @@
 .zm4-tip strong{display:block;color:var(--accent);font-size:13px}.zm4-tip[hidden]{display:none}
 .volume-focus-bar{position:absolute;pointer-events:none;z-index:4;min-width:2px;border-radius:2px 2px 0 0;background:var(--volume-focus);box-shadow:0 0 7px color-mix(in srgb,var(--volume-focus) 65%,transparent)}
 .volume-focus-label{position:absolute;pointer-events:none;z-index:5;top:3px;left:8px;padding:3px 9px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--volume-focus);font-size:12px;font-weight:750;font-variant-numeric:tabular-nums;box-shadow:0 2px 8px #0001;line-height:1.5}
-.result-hover-scroll{position:fixed;z-index:1000;overflow-x:scroll;overflow-y:hidden;height:16px;border:1px solid var(--border);border-radius:9px;background:var(--surface);box-shadow:0 2px 10px #0002;scrollbar-color:var(--accent) var(--surface2);scrollbar-width:thin;opacity:.9}
+.result-hover-scroll{position:fixed;z-index:1000;overflow-x:scroll;overflow-y:hidden;height:20px;border:1px solid color-mix(in srgb,var(--accent) 24%,var(--border));border-radius:10px;background:color-mix(in srgb,var(--surface) 90%,transparent);box-shadow:0 3px 12px #0002;scrollbar-color:var(--accent) var(--surface2);scrollbar-width:auto;opacity:.96;touch-action:none}
 .result-hover-scroll[hidden]{display:none}.result-hover-scroll>div{height:1px}

@@ -19,18 +19,23 @@ const root=path.resolve(__dirname,'..'),output=process.env.QA_OUTPUT||require('n
 
 
  await page.evaluate(()=>{window._isOwner=true;_showView('screen');_scToggle('zm');});
+ assert.equal(await page.locator('[data-cat=kbar] .cb-hint,[data-cat=gap] .cb-hint,[data-cat=limit] .cb-hint,[data-cat=granville] .cb-hint,[data-cat=ev357] .cb-hint').count(),0,'highlighted rule paragraphs are removed');
+ assert.equal(await page.locator('[data-cat=gap] .gap-choice').count(),2,'both gap directions own a threshold card');
+ await page.locator('#gap_up_min').fill('1.5');await page.locator('#gap_down_min').fill('2');assert.equal(await page.locator('#gap_up').isChecked(),true);assert.equal(await page.locator('#gap_down').isChecked(),true);
+ assert.equal(await page.locator('[data-cat=ev357]').innerText().then(t=>/[買賣]|買進|減碼|出清/.test(t)),false,'valuation labels use neutral research language');
  await page.locator('#zhenming4').check();
  assert.equal(await page.locator('[data-cat=zm] .sc-hd').getAttribute('data-count'),'1');
  assert.equal(await page.locator('.sc-cbs #zhenmingHiddenCard').evaluate(e=>!e.nextElementSibling),true);
  let request,mode='new';
  await page.route('**/api/screen',r=>{request=r.request().postDataJSON();return r.fulfill({json:{date:'2026/01/13',total:1,count:1,zhenming4_applied:mode==='new',results:[{code:'2330',name:'測試個股',open:105,high:107,low:104,close:106,volume_lots:100,candle_pct:.94,zm4:{day_n:3,support_low:103,ma5:104}}]}});});
- await page.evaluate(()=>doScreen());await page.locator('.zm4-badge').waitFor();assert.equal(request.zhenming4,true);
+ await page.evaluate(()=>doScreen());await page.locator('.zm4-badge').waitFor();assert.equal(request.zhenming4,true);assert.equal(request.gap_up_min,1.5);assert.equal(request.gap_down_min,2);
  await page.locator('.zm4-badge').hover();assert.match(await page.locator('.zm4-tip').innerText(),/3／12/);
  await page.locator('.zm4-badge').click();assert.equal(await page.locator('#chartModal').isVisible(),false);
  await page.keyboard.press('Escape');assert.equal(await page.locator('.zm4-tip').isVisible(),false);
  await page.locator('.zm4-badge').evaluate(e=>e.blur());await page.locator('.zm4-badge').focus();assert.equal(await page.locator('.zm4-tip').isVisible(),true);
  await page.evaluate(()=>{const w=document.querySelector('#resultsArea .table-wrap');w.style.width='360px';w.style.height='170px';w.style.overflow='auto';w.querySelector('table').style.minWidth='1400px';});
  await page.locator('#resultsArea .table-wrap').hover();await page.locator('.result-hover-scroll').waitFor({state:'visible'});
+ await page.locator('.result-hover-scroll').dispatchEvent('pointerdown');await page.locator('.result-hover-scroll').dispatchEvent('pointerleave');await page.waitForTimeout(300);assert.equal(await page.locator('.result-hover-scroll').isVisible(),true,'floating scrollbar stays visible while its thumb is dragged');await page.evaluate(()=>window.dispatchEvent(new PointerEvent('pointerup')));
  await page.locator('.result-hover-scroll').evaluate(e=>{e.scrollLeft=220;});await page.waitForTimeout(100);
  assert.ok(await page.locator('#resultsArea .table-wrap').evaluate(e=>e.scrollLeft>200));
 
