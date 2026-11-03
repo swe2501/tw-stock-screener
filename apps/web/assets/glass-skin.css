@@ -91,11 +91,11 @@
 :root[data-ui-skin="glass"] :is(button,.btn,.tool-btn,.idx-btn,input[type="button"],input[type="submit"],a[role="button"]){
   transition:background-color .24s ease,border-color .24s ease,box-shadow .24s ease,color .18s ease,filter .18s ease!important;
 }
-:root[data-ui-skin="glass"] :is(.btn,.tool-btn,.idx-btn,input[type="button"],input[type="submit"],a[role="button"]):not(.mn-item):not([class*="close"]){
+:root[data-ui-skin="glass"] :is(.btn,.tool-btn,.idx-btn,input[type="button"],input[type="submit"],a[role="button"]):not(.mn-item):not([class*="close"]):not(.sc-hd a){
   border-color:var(--glass-line)!important;
   box-shadow:inset 0 1px 0 var(--glass-highlight),0 7px 20px rgba(2,12,27,.10);
 }
-:root[data-ui-skin="glass"] :is(.btn,.tool-btn,.idx-btn,input[type="button"],input[type="submit"],a[role="button"]):not(:disabled):hover{
+:root[data-ui-skin="glass"] :is(.btn,.tool-btn,.idx-btn,input[type="button"],input[type="submit"],a[role="button"]):not(:disabled):not(.sc-hd a):hover{
   border-color:var(--glass-line-hot)!important;
   box-shadow:inset 0 1px 0 var(--glass-highlight),0 9px 24px rgba(2,12,27,.14),0 0 0 3px color-mix(in srgb,var(--accent) 7%,transparent)!important;
   filter:brightness(1.035);
@@ -386,4 +386,106 @@
 @media(prefers-reduced-motion:reduce){
   :root[data-ui-skin="glass"] *, .glass-setting-control>i,.glass-setting-control>i::after{transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important;}
   :root[data-ui-skin="glass"] #chartModal:has(.chart-fit-tools:hover) #chartWrapper{opacity:1;filter:none;}
+}
+
+/* ───────── 2026-11-03 Liquid Glass 精緻化（只改視覺，不動版面與功能） ───────── */
+/* 1. 有層次的環境光背景：玻璃後面要有東西可以透，才看得出霧面與景深 */
+:root[data-ui-skin="glass"]{background:#0a111b;}
+:root[data-theme="light"][data-ui-skin="glass"]{background:#eef2f7;}
+:root[data-ui-skin="glass"] body{background:transparent!important;background-image:none!important;}
+:root[data-ui-skin="glass"] body::before{
+  content:""!important;display:block!important;position:fixed!important;inset:-12vmax!important;z-index:-1!important;pointer-events:none;opacity:1!important;
+  background:
+    radial-gradient(38vmax 34vmax at 14% 16%,rgba(48,118,214,.30),transparent 62%),
+    radial-gradient(34vmax 30vmax at 86% 10%,rgba(118,82,196,.22),transparent 62%),
+    radial-gradient(42vmax 36vmax at 74% 88%,rgba(22,150,150,.18),transparent 64%),
+    radial-gradient(30vmax 28vmax at 18% 92%,rgba(196,140,64,.10),transparent 62%),
+    linear-gradient(160deg,#070d16 0%,#0c1422 50%,#08101a 100%);
+  animation:glassAurora 48s ease-in-out infinite alternate;will-change:transform;
+}
+:root[data-theme="light"][data-ui-skin="glass"] body::before{
+  background:
+    radial-gradient(38vmax 34vmax at 12% 14%,rgba(120,182,255,.40),transparent 62%),
+    radial-gradient(34vmax 30vmax at 88% 10%,rgba(255,186,214,.32),transparent 62%),
+    radial-gradient(42vmax 36vmax at 72% 88%,rgba(140,226,208,.32),transparent 64%),
+    radial-gradient(30vmax 28vmax at 18% 92%,rgba(255,214,160,.26),transparent 62%),
+    linear-gradient(160deg,#edf3f9 0%,#f6f4fa 50%,#eef6f4 100%);
+}
+@keyframes glassAurora{0%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(-2.5vmax,1.5vmax,0) scale(1.05)}100%{transform:translate3d(2vmax,-1.5vmax,0) scale(1.02)}}
+
+/* 2. 玻璃面板：細緻的雙層高光邊＋柔和投影，霧面更通透 */
+:root[data-ui-skin="glass"]{
+  --glass-fill:rgba(16,24,38,.46);
+  --glass-line:rgba(255,255,255,.10);
+  --glass-shadow-soft:0 1px 1px rgba(0,0,0,.18),0 14px 38px rgba(0,6,18,.30),inset 0 1px 0 rgba(255,255,255,.09),inset 0 0 0 1px rgba(255,255,255,.035);
+  --glass-shadow:0 2px 2px rgba(0,0,0,.18),0 24px 60px rgba(0,6,18,.38),inset 0 1px 0 rgba(255,255,255,.10),inset 0 0 0 1px rgba(255,255,255,.04);
+  --glass-ease:cubic-bezier(.22,.8,.24,1);
+}
+:root[data-theme="light"][data-ui-skin="glass"]{
+  --glass-fill:rgba(255,255,255,.50);
+  --glass-line:rgba(255,255,255,.78);
+  --glass-shadow-soft:0 1px 1px rgba(20,50,80,.04),0 12px 34px rgba(46,84,124,.11),inset 0 1px 0 rgba(255,255,255,.96),inset 0 0 0 1px rgba(255,255,255,.30);
+  --glass-shadow:0 2px 2px rgba(20,50,80,.05),0 22px 58px rgba(46,84,124,.16),inset 0 1px 0 rgba(255,255,255,.98),inset 0 0 0 1px rgba(255,255,255,.34);
+}
+:root[data-ui-skin="glass"] :is(.hx-card,.fc-card,.ov-card,.td-panel,.gb-hero,.gb-card,.bx-card,.lu-card,.gd-wrap,.pf-glass,.bd-card,.bd-plain-card,.ef-wrap,.ed-wrap,.in-wrap,.eh-wrap,.ec-wrap,.eg-wrap,.usty-card,.gs-bdcard,.gs-futcard,.cb-pi,.cb-ovc,.gs-optcard,.ti-card,.md-card,.mc-card,.gs-hero,.gs-today,.card:not(.card .card),#proScreenLayout .form-wrap,#proScreenLayout .pro-results-stage,.scal-combo){
+  backdrop-filter:blur(22px) saturate(1.55)!important;-webkit-backdrop-filter:blur(22px) saturate(1.55)!important;
+}
+:root[data-theme="light"][data-ui-skin="glass"] :is(.card:not(.card .card),#proScreenLayout .form-wrap,#proScreenLayout .pro-results-stage,.scal-combo){
+  background-color:var(--glass-fill)!important;border-color:var(--glass-line)!important;box-shadow:var(--glass-shadow-soft)!important;
+}
+:root:not([data-theme="light"])[data-ui-skin="glass"] :is(.card:not(.card .card),#proScreenLayout .form-wrap,#proScreenLayout .pro-results-stage,.scal-combo){
+  background-color:var(--glass-fill)!important;border-color:var(--glass-line)!important;box-shadow:var(--glass-shadow-soft)!important;
+}
+:root[data-ui-skin="glass"] :is(#proScreenLayout .form-wrap,#proScreenLayout .pro-results-stage){border-radius:26px!important;}
+:root[data-ui-skin="glass"] .scal-combo{border-radius:20px!important;}
+
+/* 3. 淘金篩選：條件分類改成一張張圓潤玻璃片，標題不再出現內框 */
+:root[data-ui-skin="glass"] .scal-workspace .sc-panel{
+  border-radius:18px!important;border:1px solid var(--glass-line)!important;
+  background:color-mix(in srgb,var(--glass-fill-strong) 46%,transparent)!important;
+  box-shadow:0 1px 1px rgba(20,50,80,.03),0 6px 18px rgba(30,60,90,.06),inset 0 1px 0 var(--glass-highlight)!important;
+  transition:box-shadow .3s var(--glass-ease),transform .3s var(--glass-ease),background-color .3s ease!important;
+}
+:root[data-ui-skin="glass"] .scal-workspace .sc-panel:hover{transform:translateY(-1px);box-shadow:0 2px 2px rgba(20,50,80,.04),0 12px 28px rgba(30,60,90,.10),inset 0 1px 0 var(--glass-highlight)!important;}
+:root[data-ui-skin="glass"] .scal-workspace .sc-panel:before{border-radius:18px 0 0 18px;}
+:root[data-ui-skin="glass"] .scal-workspace .sc-hd{background:transparent!important;border:0!important;box-shadow:none!important;}
+:root[data-ui-skin="glass"] .scal-workspace .sc-hd a{border:0!important;background:transparent!important;box-shadow:none!important;filter:none!important;border-radius:12px!important;}
+:root[data-ui-skin="glass"] .scal-workspace .sc-panel.is-open .sc-hd,:root[data-ui-skin="glass"] .scal-workspace .sc-panel .sc-body{background:transparent!important;}
+:root[data-ui-skin="glass"] .scal-workspace .sc-panel.is-open .sc-hd{border-bottom:1px solid color-mix(in srgb,var(--glass-line) 70%,transparent)!important;}
+:root[data-ui-skin="glass"] .scal-workspace :is(.checkbox-row,.cb-label){border-radius:10px;}
+:root[data-ui-skin="glass"] .scal-workspace input[type="checkbox"]{border-radius:6px!important;}
+:root[data-ui-skin="glass"] #submitBtn{border-radius:999px!important;box-shadow:0 10px 26px color-mix(in srgb,var(--accent) 34%,transparent),inset 0 1px 0 rgba(255,255,255,.35)!important;}
+:root[data-ui-skin="glass"] .sl-bar button{border-radius:999px!important;}
+:root[data-ui-skin="glass"] #resultsArea table{background:transparent!important;}
+:root[data-ui-skin="glass"] #resultsArea thead th{background:color-mix(in srgb,var(--glass-fill-strong) 92%,transparent)!important;}
+:root[data-ui-skin="glass"] #resultsArea tbody tr{transition:background-color .2s ease;}
+:root[data-ui-skin="glass"] #resultsArea tbody tr:hover{background:color-mix(in srgb,var(--accent) 6%,transparent)!important;}
+:root[data-ui-skin="glass"] .scal-workspace .sl-today-summary{background:color-mix(in srgb,var(--glass-fill-strong) 50%,transparent)!important;border-color:var(--glass-line)!important;box-shadow:inset 0 1px 0 var(--glass-highlight),0 6px 16px rgba(30,60,90,.06)!important;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);}
+
+/* 4. 分頁、切換鈕、輸入框：一致的膠囊圓角 */
+:root[data-ui-skin="glass"] :is(.seg button,.tabs button,.tab-btn,[role="tab"],.chip,.pill){border-radius:999px!important;}
+:root[data-ui-skin="glass"] :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),select,textarea){border-radius:16px!important;}
+
+/* 5. 頁尾也是玻璃 */
+:root[data-ui-skin="glass"] #foresightFooter{
+  background-color:rgba(14,28,46,.80)!important;border-top:1px solid rgba(255,255,255,.10)!important;
+  border-radius:34px 34px 0 0!important;box-shadow:0 -14px 40px rgba(10,25,45,.10),inset 0 1px 0 rgba(255,255,255,.08)!important;
+  backdrop-filter:blur(24px) saturate(1.4);-webkit-backdrop-filter:blur(24px) saturate(1.4);
+}
+/* 6. 進場動畫：換頁時內容由下往上柔順浮現，依序錯開 */
+@keyframes glassRise{from{opacity:0;transform:translate3d(0,16px,0) scale(.99)}to{opacity:1;transform:none}}
+:root[data-ui-skin="glass"] .glass-enter>*{animation:glassRise .62s var(--glass-ease,cubic-bezier(.22,.8,.24,1)) both;animation-delay:calc(var(--gi,0) * 55ms);}
+:root[data-ui-skin="glass"] .glass-enter-self{animation:glassRise .62s var(--glass-ease,cubic-bezier(.22,.8,.24,1)) both;}
+/* 開關玻璃時整頁柔和轉場（瀏覽器支援時） */
+::view-transition-old(root),::view-transition-new(root){animation-duration:.55s;animation-timing-function:cubic-bezier(.22,.8,.24,1);}
+
+/* 7. 會員中心玻璃開關：更像 iOS 的液態開關 */
+.glass-setting-control>i::after{transition:transform .42s cubic-bezier(.3,1.5,.5,1),box-shadow .25s ease,width .2s ease!important;}
+.glass-setting-control:active>i::after{width:27px;}
+.glass-setting-control input:checked+i::after{transform:translateX(24px);}
+.glass-setting-control:active input:checked+i::after{transform:translateX(19px);}
+
+@media(prefers-reduced-motion:reduce){
+  :root[data-ui-skin="glass"] body::before{animation:none;}
+  :root[data-ui-skin="glass"] :is(.glass-enter>*,.glass-enter-self){animation:none!important;}
 }

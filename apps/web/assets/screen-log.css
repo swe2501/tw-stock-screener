@@ -393,3 +393,55 @@ html:not([data-theme=light]) .scal-workspace [data-cat=zm] .sc-hd b{color:#ffda6
 .sic-record-dialog footer button{padding:9px 12px;border:1px solid var(--accent);border-radius:8px;background:var(--accent);color:var(--on-accent);font:inherit;cursor:pointer}
 .sic-record{padding:14px 0;border-bottom:1px solid var(--border)}.sic-record:first-of-type{padding-top:0}.sic-record:last-child{border-bottom:0}.sic-record h3{font-size:15px;margin:0 0 8px}.sic-record p{margin:6px 0;line-height:1.6;overflow-wrap:anywhere}
 .sic-record ul{list-style:none;padding:0;margin:10px 0 0}.sic-record li{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:9px 0;border-top:1px solid var(--border);font-size:13px}.sic-record-conditions,.sic-record-empty{font-size:13px;color:var(--text-muted)}.sic-record-empty{padding:24px 0}
+
+/* 2026-11-03 選股日曆收進「今日選股紀錄」：圓潤日期按鈕＋浮出式日曆 */
+body:has(.sic-trigger) .sl-bar .sl-open{display:none!important}
+.sl-today-summary>summary .sic-trigger{all:unset;box-sizing:border-box;display:inline-flex!important;align-items:center;gap:7px;flex:none;height:30px;min-height:0!important;margin:0 2px 0 auto!important;padding:2px 12px 2px 3px!important;border-radius:999px!important;border:1px solid color-mix(in srgb,var(--accent) 26%,var(--border))!important;background:var(--surface)!important;color:var(--accent)!important;font-family:inherit;font-size:12px!important;font-weight:650;line-height:1;letter-spacing:.02em;cursor:pointer;box-shadow:inset 0 1px 0 rgba(255,255,255,.55),0 3px 10px color-mix(in srgb,var(--accent) 12%,transparent);transition:background-color .2s ease,border-color .2s ease,box-shadow .2s ease,transform .2s cubic-bezier(.2,.9,.3,1.2)}
+.sl-today-summary>summary .sic-trigger:hover{border-color:color-mix(in srgb,var(--accent) 48%,var(--border))!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.6),0 5px 16px color-mix(in srgb,var(--accent) 20%,transparent);transform:translateY(-1px)}
+.sl-today-summary>summary .sic-trigger:active{transform:translateY(0) scale(.97)}
+.sl-today-summary>summary .sic-trigger:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sl-today-summary>summary .sic-trigger.is-on{background:var(--accent)!important;border-color:var(--accent)!important;color:var(--on-accent,#fff)!important;box-shadow:0 6px 18px color-mix(in srgb,var(--accent) 32%,transparent)}
+.sl-today-summary>summary .sic-trigger>span{margin:0!important;display:inline-flex!important;color:inherit!important;font-size:12px!important}
+.sl-today-summary>summary .sic-trigger .sic-date-ico{flex-direction:column;align-items:stretch;width:22px;height:24px;border-radius:7px;overflow:hidden;background:var(--surface);border:1px solid color-mix(in srgb,var(--accent) 55%,var(--border));box-shadow:0 1px 2px rgba(15,40,70,.12)}
+.sl-today-summary>summary .sic-trigger .sic-date-ico small{display:block!important;background:var(--accent);color:var(--on-accent,#fff)!important;font-size:7px!important;line-height:8px;text-align:center;font-weight:700;letter-spacing:0}
+.sl-today-summary>summary .sic-trigger .sic-date-ico b{display:block!important;flex:1;color:var(--text)!important;font-size:12.5px!important;line-height:15px;text-align:center;font-weight:800;font-variant-numeric:tabular-nums}
+.sic-trigger.is-on .sic-date-ico{border-color:rgba(255,255,255,.75)}
+/* 今日選股紀錄：更窄、單行 */
+#proScreenLayout.scal-workspace .sl-today-summary{padding:5px 8px 5px 12px!important;border-radius:999px!important}
+#proScreenLayout.scal-workspace .sl-today-summary[open]{border-radius:16px!important;padding-bottom:10px!important}
+#proScreenLayout.scal-workspace .sl-today-summary>summary{min-height:30px;gap:8px}
+#proScreenLayout.scal-workspace .sl-today-summary>summary>div{gap:0}
+#proScreenLayout.scal-workspace .sl-today-summary>summary>div small{display:none!important}
+#proScreenLayout.scal-workspace .sl-today-summary>summary>svg:first-child{width:18px;height:18px;margin-right:0}
+#proScreenLayout.scal-workspace .sl-today-summary>summary>span{display:inline!important;margin-left:4px;font-size:11px}
+@media(max-width:520px){#proScreenLayout.scal-workspace .sl-today-summary>summary>span{display:none!important}.sic-trigger-label{display:none!important}.sl-today-summary>summary .sic-trigger{padding-right:3px!important}}
+/* 浮出式日曆 */
+.sic-card.sic-pop{position:fixed;z-index:1300;height:344px;flex:none;margin:0;border-radius:18px;border:1px solid color-mix(in srgb,var(--accent) 16%,var(--border));background:var(--surface);box-shadow:0 26px 60px rgba(12,32,54,.22),0 3px 10px rgba(12,32,54,.08);opacity:0;transform:translateY(8px) scale(.97);transform-origin:var(--sic-arrow,90%) 100%;transition:opacity .2s ease,transform .32s cubic-bezier(.2,.9,.25,1.12);overflow:visible}
+.sic-card.sic-pop[data-side=bottom]{transform-origin:var(--sic-arrow,90%) 0;transform:translateY(-8px) scale(.97)}
+.sic-card.sic-pop.is-in{opacity:1;transform:none}
+.sic-card.sic-pop[hidden]{display:none!important}
+.sic-card.sic-pop>*{position:relative;z-index:1}
+.sic-card.sic-pop::after{content:"";position:absolute;left:calc(var(--sic-arrow,90%) - 7px);bottom:-7px;width:13px;height:13px;background:var(--surface);border-right:1px solid color-mix(in srgb,var(--accent) 16%,var(--border));border-bottom:1px solid color-mix(in srgb,var(--accent) 16%,var(--border));transform:rotate(45deg);border-radius:0 0 3px 0}
+.sic-card.sic-pop[data-side=bottom]::after{bottom:auto;top:-7px;transform:rotate(225deg)}
+.sic-card.sic-pop .sic-resize,.sic-card.sic-pop .sic-size{display:none!important}
+.sic-card.sic-pop .sic-head{padding:12px 14px 4px}
+.sic-card.sic-pop .sic-body{flex:1;min-height:0;display:flex;flex-direction:column;padding:4px 12px 6px}
+.sic-card.sic-pop .sic-grid{flex:1;min-height:0}
+.sic-card.sic-pop .sic-head button{border-radius:999px!important}
+.sic-card.sic-pop .sic-selected{margin:0 10px 10px;border-radius:12px}
+@media(prefers-reduced-motion:reduce){.sic-card.sic-pop,.sl-today-summary>summary .sic-trigger{transition:none!important}}
+:root[data-ui-skin="glass"] .sic-card.sic-pop{background:color-mix(in srgb,var(--glass-fill-strong,var(--surface)) 92%,transparent);backdrop-filter:blur(26px) saturate(1.2);-webkit-backdrop-filter:blur(26px) saturate(1.2);border-color:var(--glass-line,var(--border));border-radius:22px;box-shadow:0 28px 64px rgba(5,19,34,.24),inset 0 1px 0 var(--glass-highlight,rgba(255,255,255,.6))}
+:root[data-ui-skin="glass"] .sic-card.sic-pop::after{background:color-mix(in srgb,var(--glass-fill-strong,var(--surface)) 92%,transparent)}
+:root[data-ui-skin="glass"] .sl-today-summary>summary .sic-trigger{background:color-mix(in srgb,var(--glass-fill-strong,var(--surface)) 70%,transparent)!important;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+:root[data-ui-skin="glass"] .sl-today-summary>summary .sic-trigger.is-on{background:var(--accent)!important}
+
+/* 結果表格：由外層同時負責上下與左右捲動，橫向卷軸固定在可見區底邊（今日選股紀錄正上方） */
+#proScreenLayout.scal-workspace #resultsArea{overflow:auto!important;overscroll-behavior:contain;scrollbar-color:color-mix(in srgb,var(--accent) 45%,transparent) transparent}
+#proScreenLayout.scal-workspace .results-wrap{overflow-x:hidden!important}
+#proScreenLayout.scal-workspace #resultsArea .table-wrap{overflow:visible!important;max-height:none!important}
+#proScreenLayout.scal-workspace #resultsArea::-webkit-scrollbar{width:8px;height:8px}
+#proScreenLayout.scal-workspace #resultsArea::-webkit-scrollbar-thumb{border-radius:999px;background:color-mix(in srgb,var(--accent) 45%,transparent);border:2px solid transparent;background-clip:padding-box}
+#proScreenLayout.scal-workspace #resultsArea::-webkit-scrollbar-thumb:hover{background-color:var(--accent)}
+#proScreenLayout.scal-workspace #resultsArea::-webkit-scrollbar-track{background:color-mix(in srgb,var(--text-muted) 8%,transparent);border-radius:999px}
+#proScreenLayout.scal-workspace #resultsArea::-webkit-scrollbar-corner{background:transparent}
+.sic-card.sic-pop [data-sic-collapse]{display:none!important}
