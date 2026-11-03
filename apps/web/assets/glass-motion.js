@@ -2,7 +2,7 @@
    只在玻璃模式、只改視覺；卡片捲進畫面才播放，每次進頁面每個圖只播一次（資料刷新不重播）。 */
 (function(){
   'use strict';
-  var root=document.documentElement,DUR=800,BASE=200;
+  var root=document.documentElement,DUR=1200,BASE=260;
   var CARD='.card,.hx-card,.fc-card,.ov-card,.td-panel,.gb-card,.bx-card,.lu-card,.gd-wrap,.pf-glass,.bd-card,.bd-plain-card,.ef-wrap,.ed-wrap,.in-wrap,.eh-wrap,.ec-wrap,.eg-wrap,.usty-card,.gs-bdcard,.gs-futcard,.cb-pi,.cb-ovc,.gs-optcard,.ti-card,.md-card,.mc-card,.home-market-card,.pro-gauge-card,.sd-card,.tm-card,.gs-hero,.gs-today,[class*="-card"]';
   var SKIP='#fqiArrival,#chartModal,#siteGate,.kh-tip,.sic-pop,[data-no-glass-motion]';
   function on(){return root.getAttribute('data-ui-skin')==='glass'&&!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);}
@@ -50,12 +50,12 @@
     if(bars.length>1){bars.sort(function(a,b){return a.getBoundingClientRect().left-b.getBoundingClientRect().left;});
       var horiz=bars.every(function(b){var r=b.getBoundingClientRect();return r.width>r.height*2.5;});
       bars.forEach(function(el,i){el.style.transformBox='fill-box';el.style.transformOrigin=horiz?'left center':'center bottom';
-        el.animate([{transform:horiz?'scaleX(0)':'scaleY(0)'},{transform:'none'}],{duration:DUR*.85,delay:delay+i*Math.min(60,DUR*.45/bars.length),easing:'cubic-bezier(.2,.9,.25,1.05)',fill:'backwards'});});}
+        el.animate([{transform:horiz?'scaleX(0)':'scaleY(0)'},{transform:'none'}],{duration:DUR,delay:delay+i*Math.min(80,DUR*.45/bars.length),easing:'cubic-bezier(.2,.9,.25,1.05)',fill:'backwards'});});}
   }
   /* ── 大數字滾動 ── */
   var NUM=/^([^\d+\-−]{0,4}?)([+\-−]?)(\d{1,3}(?:,\d{3})+|\d+)(\.\d+)?(.{0,12})$/;
   function countUp(el,delay,isSvg){
-    var raw=el.textContent,m=raw.trim().match(NUM);if(!m)return;
+    var raw=el.textContent,m=raw.trim().match(NUM);if(!m||/\d/.test(m[5])||/\d/.test(m[1]))return;
     var intPart=m[3],dec=m[4]||'',digits=dec?dec.length-1:0,comma=intPart.indexOf(',')>=0;
     var target=parseFloat(intPart.replace(/,/g,'')+dec);if(!isFinite(target)||target===0)return;
     var from=target<1000?0:target*.9,lead=raw.slice(0,raw.indexOf(raw.trim()));
@@ -69,8 +69,8 @@
   /* ── HTML 進度條（寬度或高度用百分比的長條） ── */
   function htmlBar(el,delay){
     if(getComputedStyle(el).transform!=='none')return;
-    var horiz=/width\s*:\s*[\d.]+%/.test(el.getAttribute('style')||'');
-    el.style.transformOrigin=horiz?'left center':'center bottom';
+    var st=el.getAttribute('style')||'',horiz=/width\s*:\s*[\d.]+%/.test(st),fromRight=/(^|;)\s*right\s*:/.test(st)&&!/(^|;)\s*left\s*:/.test(st);
+    el.style.transformOrigin=horiz?(fromRight?'right center':'left center'):'center bottom';
     el.animate([{transform:horiz?'scaleX(0)':'scaleY(0)'},{transform:'none'}],{duration:DUR,delay:delay,easing:'cubic-bezier(.22,.8,.24,1)',fill:'backwards'});
   }
 
@@ -95,11 +95,12 @@
         var t=el.textContent.trim();if(t.length<2||t.length>18||!NUM.test(t))return;
         if(parseFloat(getComputedStyle(el).fontSize)<20)return;mark(el,'num');
       });
-      [].forEach.call(card.querySelectorAll('[style*="%"]'),function(el){
-        var cls=(el.getAttribute('class')||'')+' '+(el.parentElement&&el.parentElement.getAttribute('class')||'');
-        if(!/bar|fill|meter|prog|track/i.test(cls))return;if(!/(width|height)\s*:\s*[\d.]+%/.test(el.getAttribute('style')||''))return;
-        var r=visibleBox(el);if(!r)return;mark(el,'bar');
-      });
+    });
+    [].forEach.call(rootEl.querySelectorAll('[style*="%"]'),function(el){
+      if(el.closest(SKIP))return;
+      var cls=(el.getAttribute('class')||'')+' '+(el.parentElement&&el.parentElement.getAttribute('class')||'')+' '+(el.parentElement&&el.parentElement.parentElement&&el.parentElement.parentElement.getAttribute('class')||'');
+      if(!/bar|fill|meter|prog|track/i.test(cls))return;if(!/(width|height)\s*:\s*[\d.]+%/.test(el.getAttribute('style')||''))return;
+      var r=visibleBox(el);if(!r||r.height>60&&r.width>60)return;mark(el,'bar');
     });
   }
   function scheduleScan(ms){clearTimeout(scanTimer);scanTimer=setTimeout(function(){requestAnimationFrame(scan);},ms||160);}

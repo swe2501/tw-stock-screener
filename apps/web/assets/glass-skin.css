@@ -478,10 +478,10 @@
 @keyframes glassPopIn{from{opacity:0;transform:translate3d(0,10px,0) scale(.96);filter:blur(10px)}to{opacity:1;transform:none;filter:none}}
 @keyframes glassDropIn{from{opacity:0;transform:translate3d(0,-6px,0) scale(.97);filter:blur(6px)}to{opacity:1;transform:none;filter:none}}
 /* 換頁：卡片逐張浮現（JS 標記 .glass-in 與順序 --gi，動畫結束即移除） */
-:root[data-ui-skin="glass"] .glass-in{animation:glassBlurIn .62s var(--glass-ease) backwards;animation-delay:calc(var(--gi,0) * 60ms);}
-:root[data-ui-skin="glass"] .glass-enter-self{animation:glassPopIn .5s var(--glass-ease) backwards;}
+:root[data-ui-skin="glass"] .glass-in{animation:glassBlurIn 1.2s var(--glass-ease) backwards;animation-delay:calc(var(--gi,0) * 80ms);}
+:root[data-ui-skin="glass"] .glass-enter-self{animation:glassPopIn 1.2s var(--glass-ease) backwards;}
 /* 篩選條件分類：跟著表單一起，一張張由模糊浮現 */
-:root[data-ui-skin="glass"] .form-wrap.glass-in .sc-cat>.sc-panel{animation:glassBlurIn .55s var(--glass-ease) backwards;animation-delay:calc(var(--sci,0) * 55ms + 120ms);}
+:root[data-ui-skin="glass"] .form-wrap.glass-in .sc-cat>.sc-panel{animation:glassBlurIn 1.2s var(--glass-ease) backwards;animation-delay:calc(var(--sci,0) * 70ms + 160ms);}
 :root[data-ui-skin="glass"] .form-wrap.glass-in .sc-cat>.sc-panel:nth-of-type(1){--sci:1}
 :root[data-ui-skin="glass"] .form-wrap.glass-in .sc-cat>.sc-panel:nth-of-type(2){--sci:2}
 :root[data-ui-skin="glass"] .form-wrap.glass-in .sc-cat>.sc-panel:nth-of-type(3){--sci:3}
@@ -494,21 +494,21 @@
 :root[data-ui-skin="glass"] .form-wrap.glass-in .sc-cat>.sc-panel:nth-of-type(10){--sci:10}
 
 /* 側邊面板：帶霧滑入，內容依序浮現；遮罩淡入 */
-:root[data-ui-skin="glass"] :is(.etx-drawer .bg,#themeDrawer .td-back){animation:glassFade .35s ease backwards;}
-:root[data-ui-skin="glass"] :is(.etx-drawer .panel,#themeDrawer.open .td-panel){animation:glassDrawerIn .52s var(--glass-spring) backwards;}
-:root[data-ui-skin="glass"] :is(.etx-drawer .panel,#themeDrawer.open .td-panel)>*{animation:glassBlurIn .55s var(--glass-ease) backwards;}
-:root[data-ui-skin="glass"] :is(.etx-drawer .panel,#themeDrawer.open .td-panel)>:nth-child(1){animation-delay:.08s}
-:root[data-ui-skin="glass"] :is(.etx-drawer .panel,#themeDrawer.open .td-panel)>:nth-child(2){animation-delay:.14s}
-:root[data-ui-skin="glass"] :is(.etx-drawer .panel,#themeDrawer.open .td-panel)>:nth-child(3){animation-delay:.20s}
-:root[data-ui-skin="glass"] :is(.etx-drawer .panel,#themeDrawer.open .td-panel)>:nth-child(4){animation-delay:.26s}
+:root[data-ui-skin="glass"] :is(.etx-drawer .bg,#themeDrawer .td-back){animation:glassFade .6s ease backwards;}
+:root[data-ui-skin="glass"] :is(.etx-drawer .panel,#themeDrawer.open .td-panel){animation:glassDrawerIn 1.2s var(--glass-ease) backwards;}
+:root[data-ui-skin="glass"] :is(.etx-drawer .panel,#themeDrawer.open .td-panel)>*{animation:glassBlurIn 1.2s var(--glass-ease) backwards;}
+:root[data-ui-skin="glass"] :is(.etx-drawer .panel,#themeDrawer.open .td-panel)>:nth-child(1){animation-delay:.12s}
+:root[data-ui-skin="glass"] :is(.etx-drawer .panel,#themeDrawer.open .td-panel)>:nth-child(2){animation-delay:.22s}
+:root[data-ui-skin="glass"] :is(.etx-drawer .panel,#themeDrawer.open .td-panel)>:nth-child(3){animation-delay:.52s}
+:root[data-ui-skin="glass"] :is(.etx-drawer .panel,#themeDrawer.open .td-panel)>:nth-child(4){animation-delay:.42s}
 :root[data-ui-skin="glass"] :is(.etx-drawer .panel,#themeDrawer.open .td-panel)>:nth-child(n+5){animation-delay:.32s}
 /* 彈窗：從 96% 帶霧浮上，背景模糊淡入 */
 :root[data-ui-skin="glass"] dialog[open],
-:root[data-ui-skin="glass"] :is(.modal-overlay .modal-content,.modal-overlay .modal-box,.modal-box,.vix-chart-dialog,.market-train-dialog,.ms-chat-dialog){animation:glassPopIn .46s var(--glass-spring) backwards;}
-:root[data-ui-skin="glass"] dialog[open]::backdrop{animation:glassFade .3s ease backwards;}
-:root[data-ui-skin="glass"] #chartModal .modal-content{animation-duration:.38s;}
+:root[data-ui-skin="glass"] :is(.modal-overlay .modal-content,.modal-overlay .modal-box,.modal-box,.vix-chart-dialog,.market-train-dialog,.ms-chat-dialog){animation:glassPopIn 1.2s var(--glass-ease) backwards;}
+:root[data-ui-skin="glass"] dialog[open]::backdrop{animation:glassFade .6s ease backwards;}
+:root[data-ui-skin="glass"] #chartModal .modal-content{animation-duration:1.2s;}
 /* 下拉、浮出：從按鈕位置展開 */
-:root[data-ui-skin="glass"] :is(.industry-popover,.ss-panel,.gs-search-drop,.mn-menu,.ms-category-popover,[role="menu"],.dropdown-menu,.mc-chart-research-options){transform-origin:top center;animation:glassDropIn .32s var(--glass-ease) backwards;}
+:root[data-ui-skin="glass"] :is(.industry-popover,.ss-panel,.gs-search-drop,.mn-menu,.ms-category-popover,[role="menu"],.dropdown-menu,.mc-chart-research-options){transform-origin:top center;animation:glassDropIn 1.2s var(--glass-ease) backwards;}
 /* 7. 會員中心玻璃開關：更像 iOS 的液態開關 */
 .glass-setting-control>i::after{transition:transform .42s cubic-bezier(.3,1.5,.5,1),box-shadow .25s ease,width .2s ease!important;}
 .glass-setting-control:active>i::after{width:27px;}
@@ -552,5 +552,5 @@
 :is(.etx-stock-link,.etx-info-link,.mj-link):hover{color:var(--accent)!important;filter:none!important;}
 /* K 線圖：載入後由左往右刷出（只裁切顯示範圍，不碰圖表元件與互動） */
 @keyframes glassChartReveal{from{clip-path:inset(0 100% 0 0 round 12px);opacity:.4}25%{opacity:1}to{clip-path:inset(0 0 0 0 round 0);opacity:1}}
-:root[data-ui-skin="glass"] #chartModal #chartWrapper{animation:glassChartReveal .8s cubic-bezier(.45,.05,.25,1) backwards .12s;}
+:root[data-ui-skin="glass"] #chartModal #chartWrapper{animation:glassChartReveal 1.2s cubic-bezier(.45,.05,.25,1) backwards .12s;}
 @media(prefers-reduced-motion:reduce){:root[data-ui-skin="glass"] #chartModal #chartWrapper{animation:none!important;}}

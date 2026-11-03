@@ -416,7 +416,7 @@ body:has(.sic-trigger) .sl-bar .sl-open{display:none!important}
 #proScreenLayout.scal-workspace .sl-today-summary>summary>span{display:inline!important;margin-left:4px;font-size:11px}
 @media(max-width:520px){#proScreenLayout.scal-workspace .sl-today-summary>summary>span{display:none!important}.sic-trigger-label{display:none!important}.sl-today-summary>summary .sic-trigger{padding-right:3px!important}}
 /* 浮出式日曆 */
-.sic-card.sic-pop{position:fixed;z-index:1300;height:344px;flex:none;margin:0;border-radius:18px;border:1px solid color-mix(in srgb,var(--accent) 16%,var(--border));background:var(--surface);box-shadow:0 26px 60px rgba(12,32,54,.22),0 3px 10px rgba(12,32,54,.08);opacity:0;transform:translateY(8px) scale(.97);transform-origin:var(--sic-arrow,90%) 100%;transition:opacity .2s ease,transform .32s cubic-bezier(.2,.9,.25,1.12);overflow:visible}
+.sic-card.sic-pop{position:fixed;z-index:1300;height:344px;flex:none;margin:0;border-radius:18px;border:1px solid color-mix(in srgb,var(--accent) 16%,var(--border));background:var(--surface);box-shadow:0 26px 60px rgba(12,32,54,.22),0 3px 10px rgba(12,32,54,.08);opacity:0;transform:translateY(8px) scale(.97);transform-origin:var(--sic-arrow,90%) 100%;transition:opacity .5s ease,transform 1.2s cubic-bezier(.2,.9,.25,1.05);overflow:visible}
 .sic-card.sic-pop[data-side=bottom]{transform-origin:var(--sic-arrow,90%) 0;transform:translateY(-8px) scale(.97)}
 .sic-card.sic-pop.is-in{opacity:1;transform:none}
 .sic-card.sic-pop[hidden]{display:none!important}
