@@ -11330,10 +11330,10 @@
       return `<button type="button" class="zm4-badge ev-badge" aria-label="查看企業價值殖利率對應價" aria-expanded="false" data-zm4-tip="${tip}"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7.7 7.4a2.4 2.4 0 1 1 3.5 2.1c-.8.4-1.2.9-1.2 1.8v.3M10 14.3v.1"/></svg></button><div class="ev-info ev-${band[0]}"><span class="ev-band">${band[1]}</span><span class="ev-yield">殖利率 ${e.yield}%</span></div>`;
     }
 
-    // 真名三式：名稱旁只放「?」，滑過顯示長黑、½ 位置、反包天數與型態失效／前高位置（中性用語）
+    // 真名三式：名稱旁只放「?」，滑過顯示長黑、長黑中點、反包天數與型態失效／前高位置（中性用語）
     function _zm3Badge(z) {
       const md = d => String(d || '').slice(5).replace('-', '/');
-      const tip = ['真名三式｜長黑後第 ' + z.day_n + ' 天反包', '長黑：' + md(z.black_date) + '（−' + z.black_pct + '%）', '長黑 ½ 位置：' + z.mid, '反包量能：' + (z.vol ? '帶量' : '未帶量'), '型態失效：' + z.stop + '（長紅低與洗盤最低取低者）', '前高位置：' + z.target + '（長黑前 20 日最高）', '!收盤跌破型態失效位置，即不符合定義'].join('\n').replace(/"/g, '&quot;');
+      const tip = ['真名三式｜長黑後第 ' + z.day_n + ' 天反包', '長黑：' + md(z.black_date) + '（−' + z.black_pct + '%）', '長黑中點：' + z.mid, '反包量能：' + (z.vol ? '帶量' : '未帶量'), '型態失效：' + z.stop + '（長紅低與洗盤最低取低者）', '前高位置：' + z.target + '（長黑前 20 日最高）', '!收盤跌破型態失效位置，即不符合定義'].join('\n').replace(/"/g, '&quot;');
       return `<button type="button" class="zm4-badge zm3-badge" aria-label="查看真名三式條件" aria-expanded="false" data-zm4-tip="${tip}"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7.7 7.4a2.4 2.4 0 1 1 3.5 2.1c-.8.4-1.2.9-1.2 1.8v.3M10 14.3v.1"/></svg></button>`;
     }
 
