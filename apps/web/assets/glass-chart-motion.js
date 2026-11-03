@@ -4,7 +4,7 @@
 (function(){
   'use strict';
   var LW=window.LightweightCharts;if(!LW||window.__lwGlassMotion)return;window.__lwGlassMotion=true;
-  var root=document.documentElement,TOTAL=1200,EACH=760;
+  var root=document.documentElement,TOTAL=1000,EACH=640;
   function on(){return root.getAttribute('data-ui-skin')==='glass'&&!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);}
   function spring(t){if(t<=0)return 0;if(t>=1)return 1;return 1-Math.exp(-6.2*t)*Math.cos(9.4*t);}
   function easeInOut(t){return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;}
