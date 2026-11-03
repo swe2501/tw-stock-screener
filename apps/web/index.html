@@ -5247,7 +5247,7 @@
       var ks=Object.keys(FLAGS).sort().reverse(), cur=DATA[DATA.length-1], cf=cur&&FLAGS[cur.trade_date];
       var n=DATA.length, nowV=cur&&n>3?(HX_MODE==='1'?DATA[n-2].eq_net_lots-cur.eq_net_lots:DATA[n-4].eq_net_lots-cur.eq_net_lots):null;
       var head=cf?'<div class="pf-hx-alert"> '+cur.trade_date+' '+hxName()+' <b>'+n0(cf.v)+' 口</b> → '+flagText(cur.trade_date,cf)+'</div>'
-        :'<div class="pf-hx-ok">目前未觸發：最新交易日 '+(cur?cur.trade_date:'—')+' '+hxName()+' '+(nowV!=null?n0(nowV):'—')+' 口（門檻 5,000 口，且需落在事件前 1～3 個交易日或連假前）。</div>';
+        :'<div class="pf-hx-ok">目前未觸發：最新交易日 '+(cur?cur.trade_date:'—')+' '+(HX_MODE==='1'?'當日':'近 3 日累計')+' '+(nowV==null?'—':(nowV>=0?'增空 '+n0(nowV):'回補 '+n0(-nowV)))+' 口（門檻：增空 5,000 口，且需落在事件前 1～3 個交易日或連假前）。</div>';
       var seg='<div class="pf-seg" id="hxModeSeg" style="margin:0 0 8px"><button data-m="3"'+(HX_MODE==='3'?' class="on"':'')+'>近 3 日累計</button><button data-m="1"'+(HX_MODE==='1'?' class="on"':'')+'>當日</button></div>';
       var note='<div style="font-size:12px;color:var(--pf-mut);margin:-2px 0 8px">'+(HX_MODE==='1'
         ?'當日＝只看觸發日當天外資空單增減（前一交易日等值淨口數 − 當日），≥ 5,000 口才算。'
