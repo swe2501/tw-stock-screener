@@ -438,7 +438,7 @@ body:has(.sic-trigger) .sl-bar .sl-open{display:none!important}
 /* 結果表格：由外層同時負責上下與左右捲動，橫向卷軸固定在可見區底邊（今日選股紀錄正上方） */
 #proScreenLayout.scal-workspace #resultsArea{overflow:auto!important;overscroll-behavior:contain;scrollbar-color:color-mix(in srgb,var(--accent) 45%,transparent) transparent}
 #proScreenLayout.scal-workspace .results-wrap{overflow-x:hidden!important}
-#proScreenLayout.scal-workspace #resultsArea .table-wrap{overflow:visible!important;max-height:none!important}
+#proScreenLayout.scal-workspace #resultsArea .table-wrap{overflow:visible!important;max-height:none!important;width:max-content!important;min-width:100%;max-width:none!important;box-sizing:border-box}
 #proScreenLayout.scal-workspace #resultsArea::-webkit-scrollbar{width:8px;height:8px}
 #proScreenLayout.scal-workspace #resultsArea::-webkit-scrollbar-thumb{border-radius:999px;background:color-mix(in srgb,var(--accent) 45%,transparent);border:2px solid transparent;background-clip:padding-box}
 #proScreenLayout.scal-workspace #resultsArea::-webkit-scrollbar-thumb:hover{background-color:var(--accent)}
