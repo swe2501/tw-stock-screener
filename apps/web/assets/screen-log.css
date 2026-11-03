@@ -438,7 +438,7 @@ body:has(.sic-trigger) .sl-bar .sl-open{display:none!important}
 /* 結果表格：由外層同時負責上下與左右捲動，橫向卷軸固定在可見區底邊（今日選股紀錄正上方） */
 #proScreenLayout.scal-workspace #resultsArea{overflow:auto!important;overscroll-behavior:contain;scrollbar-color:color-mix(in srgb,var(--accent) 45%,transparent) transparent}
 #proScreenLayout.scal-workspace .results-wrap{overflow-x:hidden!important}
-#proScreenLayout.scal-workspace #resultsArea .table-wrap{overflow:visible!important;max-height:none!important;width:max-content!important;min-width:100%;max-width:none!important;box-sizing:border-box}
+#proScreenLayout.scal-workspace #resultsArea .table-wrap{overflow:clip!important;max-height:none!important;width:auto!important;min-width:min-content!important;max-width:none!important;box-sizing:border-box}
 #proScreenLayout.scal-workspace #resultsArea::-webkit-scrollbar{width:8px;height:8px}
 #proScreenLayout.scal-workspace #resultsArea::-webkit-scrollbar-thumb{border-radius:999px;background:color-mix(in srgb,var(--accent) 45%,transparent);border:2px solid transparent;background-clip:padding-box}
 #proScreenLayout.scal-workspace #resultsArea::-webkit-scrollbar-thumb:hover{background-color:var(--accent)}
@@ -481,8 +481,15 @@ body:has(.sic-trigger) .sl-bar .sl-open{display:none!important}
 .sl-today-summary>summary .sic-trigger .sic-date-ico b{font-size:13.5px!important;line-height:17px!important}
 
 /* 收合篩選條件、結果變寬時：表格撐滿整個框，欄位平均分配 */
-#proScreenLayout.scal-workspace #resultsArea .table-wrap>table{width:auto!important;min-width:100%!important;max-width:none!important;table-layout:auto!important}
-#proScreenLayout.scal-workspace.scal-full-columns #resultsArea .table-wrap>table{min-width:max(100%,960px)!important}
+#proScreenLayout.scal-workspace #resultsArea .table-wrap>table{width:100%!important;min-width:0!important;max-width:none!important;table-layout:auto!important}
+/* 多出來的寬度平均分給數據欄：拿掉個別欄位的固定寬，只保留已看過／回測／代號的窄欄 */
+#proScreenLayout.scal-workspace.scal-full-columns #resultsArea .table-wrap>table{table-layout:fixed!important;min-width:1080px!important}
+#proScreenLayout.scal-workspace.scal-full-columns #resultsArea .table-wrap>table th{width:auto!important}
+#proScreenLayout.scal-workspace.scal-full-columns #resultsArea .table-wrap>table th:is([data-screen-kind=viewed],[data-screen-kind=backtest]){width:64px!important}
+#proScreenLayout.scal-workspace.scal-full-columns #resultsArea .table-wrap>table th[data-screen-kind=stock]{width:76px!important}
+#proScreenLayout.scal-workspace.scal-full-columns #resultsArea .table-wrap>table th[data-screen-kind=name]{width:184px!important}
+#proScreenLayout.scal-workspace.scal-full-columns #resultsArea .table-wrap>table td{overflow:hidden;text-overflow:ellipsis}
+#proScreenLayout.scal-workspace.scal-full-columns #resultsArea .table-wrap>table td.name-cell{overflow:visible}
 
 /* 記錄今日選股：只有真的在保存時才顯示等待游標；存好後按鈕變成「已存入」狀態，不再像卡住 */
 .sl-dialog form[aria-busy=true] button.is-saving{cursor:progress}
