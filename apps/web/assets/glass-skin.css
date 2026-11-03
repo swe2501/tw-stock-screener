@@ -597,3 +597,35 @@
   :root[data-ui-skin="glass"] #mainNav .mn-brand{left:-92px;}
 }
 @media(min-width:901px) and (max-width:1599px){:root[data-ui-skin="glass"] #mainNav .mn-brand{display:none;}}
+
+/*
+ * 2026-11-04 頂部玻璃卡 V1「通透極光」
+ * 卡片浮在乾淨背景上時沒有東西可透，看起來像白卡；後面補一層很淡的品牌色極光（藍／青／金），
+ * 頂欄改半透明＋強模糊，讓玻璃透出色彩。Logo 列與選單列用同一條漸層，接縫不分色。
+ */
+@media(min-width:901px){
+  :root[data-ui-skin="glass"]{--hdr-a:rgba(255,255,255,.62);--hdr-b:rgba(255,255,255,.42);--hdr-rim:rgba(255,255,255,.85);--hdr-line:rgba(57,78,98,.10)}
+  :root[data-ui-skin="glass"]:not([data-theme="light"]){--hdr-a:rgba(30,40,56,.60);--hdr-b:rgba(16,22,33,.48);--hdr-rim:rgba(255,255,255,.13);--hdr-line:rgba(224,234,243,.09)}
+  :root[data-ui-skin="glass"] body>header:not(.scal-workspace-heading):not(#_),:root[data-ui-skin="glass"] #mainNav{
+    background-color:transparent!important;backdrop-filter:blur(30px) saturate(1.6)!important;-webkit-backdrop-filter:blur(30px) saturate(1.6)!important;
+  }
+  :root[data-ui-skin="glass"] body>header:not(.scal-workspace-heading):not(#_){
+    background-image:linear-gradient(180deg,var(--hdr-a),color-mix(in srgb,var(--hdr-a) 55%,var(--hdr-b)))!important;
+    border-color:var(--hdr-rim)!important;box-shadow:inset 0 1px 0 var(--hdr-rim)!important;
+  }
+  :root[data-ui-skin="glass"] #mainNav{
+    background-image:linear-gradient(180deg,color-mix(in srgb,var(--hdr-a) 55%,var(--hdr-b)),var(--hdr-b))!important;
+    border-color:var(--hdr-rim)!important;border-top-color:var(--hdr-line)!important;
+    box-shadow:0 24px 60px rgba(20,60,110,.16),0 2px 8px rgba(20,60,110,.06),inset 0 -1px 0 rgba(255,255,255,.25)!important;
+  }
+  :root[data-ui-skin="glass"]:not([data-theme="light"]) #mainNav{box-shadow:0 24px 60px rgba(0,0,0,.42),0 2px 8px rgba(0,0,0,.2),inset 0 -1px 0 rgba(255,255,255,.04)!important}
+  :root[data-ui-skin="glass"] body.pro-nav-compact #mainNav{background-image:linear-gradient(180deg,var(--hdr-a),var(--hdr-b))!important;border-top-color:var(--hdr-rim)!important}
+  /* 極光：固定在頂部，只當玻璃背後的色彩來源；不攔截滑鼠、在所有內容之下 */
+  :root[data-ui-skin="glass"] body::after{
+    content:"";position:fixed;left:50%;top:-90px;width:min(1640px,112vw);height:360px;transform:translateX(-50%);pointer-events:none;z-index:-1;
+    filter:blur(42px);opacity:.72;
+    background:radial-gradient(40% 60% at 18% 50%,rgba(56,150,230,.55),transparent 70%),radial-gradient(35% 55% at 55% 42%,rgba(120,210,220,.40),transparent 70%),radial-gradient(30% 50% at 85% 52%,rgba(240,190,90,.38),transparent 70%);
+  }
+  :root[data-ui-skin="glass"]:not([data-theme="light"]) body::after{opacity:.5}
+}
+@media(min-width:901px) and (prefers-reduced-transparency:reduce){:root[data-ui-skin="glass"] body::after{display:none}}
