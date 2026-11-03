@@ -10079,6 +10079,30 @@
             <small>勾選型態時，需在長黑當天或前 5 個交易日內跌破所選型態的頸線／下緣，且之後未站回。停損參考＝長黑 K 最高價；遇 2～4 月、6～9 月融券強制回補季會另外提醒。</small>
           </div>
         </article>
+        <article class="zm-hidden-card zm89-card" id="zhenming8Card" data-zm89="8">
+          <label class="checkbox-row"><input type="checkbox" id="zhenming8" /><div class="cb-label" title="箱型整理後收盤跌破下緣，21 個交易日內以帶量長紅站回下緣（破底翻）">真名八式（假跌破）</div></label>
+          <div class="zm-hidden-options zm89-options" id="zhenming8Options" hidden>
+            <fieldset><legend><span>01</span> 箱型振幅 <small>整理約 3 個月（60 個交易日）</small></legend>
+              <label><input type="radio" name="zm8Amp" value="5" data-hidden-metric> 5%</label>
+              <label><input type="radio" name="zm8Amp" value="10" data-hidden-metric checked> 10%</label>
+              <label><input type="radio" name="zm8Amp" value="20" data-hidden-metric> 20%</label>
+              <label class="zm89-custom"><input type="radio" name="zm8Amp" value="custom" data-hidden-metric> 自訂<span class="zm89-num"><input type="number" id="zm8AmpCustom" min="1" max="50" step="0.5" inputmode="decimal" placeholder="—" aria-label="真名八式（假跌破）自訂箱型振幅（%）"><i>%</i></span></label>
+            </fieldset>
+            <small>跌破箱型下緣後 21 個交易日內，今天以實體長紅（≥ 3%）、量大於 20 日均量收盤站回下緣才算。停損參考＝破底以來最低點；目標＝箱型上緣，第二目標＝等幅測量。</small>
+          </div>
+        </article>
+        <article class="zm-hidden-card zm89-card" id="zhenming9Card" data-zm89="9">
+          <label class="checkbox-row"><input type="checkbox" id="zhenming9" /><div class="cb-label" title="箱型整理後量縮突破上緣，21 個交易日內收盤跌回上緣之下（誘多陷阱）">真名九式（假突破）</div></label>
+          <div class="zm-hidden-options zm89-options" id="zhenming9Options" hidden>
+            <fieldset><legend><span>01</span> 箱型振幅 <small>整理約 3 個月（60 個交易日）</small></legend>
+              <label><input type="radio" name="zm9Amp" value="5" data-hidden-metric> 5%</label>
+              <label><input type="radio" name="zm9Amp" value="10" data-hidden-metric checked> 10%</label>
+              <label><input type="radio" name="zm9Amp" value="20" data-hidden-metric> 20%</label>
+              <label class="zm89-custom"><input type="radio" name="zm9Amp" value="custom" data-hidden-metric> 自訂<span class="zm89-num"><input type="number" id="zm9AmpCustom" min="1" max="50" step="0.5" inputmode="decimal" placeholder="—" aria-label="真名九式（假突破）自訂箱型振幅（%）"><i>%</i></span></label>
+            </fieldset>
+            <small>突破時成交量低於 20 日均量 1.5 倍（量縮過頂），之後 21 個交易日內今天收盤跌回上緣之下才算。停損參考＝突破以來最高點；目標＝箱型下緣。</small>
+          </div>
+        </article>
         <article class="zm-hidden-card" id="zhenmingHiddenCard">
           <label class="checkbox-row"><input type="checkbox" id="zhenming_hidden" /><div class="cb-label">真名隱藏式（比大小）</div></label>
           <div class="zm-hidden-options" id="zhenmingHiddenOptions" hidden>
@@ -10173,6 +10197,7 @@
       if(p.dataset.cat==='shape'&&v('no_black_years')) a.push('碗型 '+v('no_black_years')+'月'+(v('no_black_mult')?' '+v('no_black_mult')+'倍':'')+' 容忍'+(v('no_black_tolerance')||0)+'根');
       p.querySelectorAll('input[type=checkbox]:not([data-hidden-metric])').forEach(function(cb){ if(cb.checked) a.push(txt(cb)); });
       if(p.dataset.cat==='zm'&&window.AcademyZhenmingSix?.summary())a.push(window.AcademyZhenmingSix.summary());
+      if(p.dataset.cat==='zm')(window.AcademyZhenming89?.summary()||[]).forEach(function(t){a.push(t);});
       if(p.dataset.cat==='zm'&&window.AcademyZhenmingHidden?.summary())a.push(window.AcademyZhenmingHidden.summary());
       if(p.dataset.cat==='ind'&&document.querySelector('.macd-cb[data-mode$="3"]:checked')&&v('macd_start')) a.push('區間 '+v('macd_start')+'～'+(v('macd_end')||'今'));
       return a; }
@@ -10971,6 +10996,9 @@
       const fourExpected=document.getElementById('zhenming4').checked;
       const sixOptions=window.AcademyZhenmingSix?.collect()||null;
       if(sixOptions&&!fourExpected&&!hiddenOptions){try{screenApi=await window.AcademyZhenmingSix.endpoint();}catch(error){showStatus('<div class="alert alert-error">'+error.message+'</div>');return;}}
+      let zm89Options={};try{zm89Options=window.AcademyZhenming89?.collect()||{};}catch(error){showStatus('<div class="alert alert-error">'+error.message+'</div>');return;}
+      const zm89Expected=Object.keys(zm89Options).filter(k=>zm89Options[k]).map(k=>k+'_applied');
+      if(zm89Expected.length&&!fourExpected&&!hiddenOptions&&!sixOptions){try{screenApi=await window.AcademyZhenming89.endpoint();}catch(error){showStatus('<div class="alert alert-error">'+error.message+'</div>');return;}}
       if(fourExpected){try{screenApi=await window.AcademyZhenmingFour.endpoint();}catch(error){showStatus('<div class="alert alert-error">'+error.message+'</div>');return;}}
       window.AcademyScreenLog?.beforeScan();
       const dateVal = document.getElementById('date').value;
@@ -11053,6 +11081,8 @@
         zhenming4: fourExpected,
         zhenming_hidden: hiddenOptions,
         zhenming6: sixOptions,
+        zhenming8: zm89Options.zhenming8||null,
+        zhenming9: zm89Options.zhenming9||null,
         sma20_stages: sma20Stages,
         ev357_cheap:     ev357Cheap,
         ev357_fair:      ev357Fair,
@@ -11067,7 +11097,7 @@
       const jobId = (crypto.randomUUID ? crypto.randomUUID()
         : Date.now() + '-' + Math.random().toString(36).slice(2));
       body.job_id = jobId;
-      _screenJob = { id: jobId, active: true, hidden:!!hiddenOptions, four:fourExpected, six:!!sixOptions, api:screenApi };
+      _screenJob = { id: jobId, active: true, hidden:!!hiddenOptions, four:fourExpected, six:!!sixOptions, zm89:zm89Expected, api:screenApi };
 
       // uat 分支別名(含 git-uat)打自己的同源後端，以便測試尚未上 prod 的篩選規則；其餘(prod/preview/local)維持 prod
       fetch(screenApi+'/api/screen', {
@@ -11088,7 +11118,7 @@
             return;
           }
           lastResults = data.results || [];
-          renderResults(data,!!hiddenOptions,fourExpected,!!sixOptions);
+          renderResults(data,!!hiddenOptions,fourExpected,!!sixOptions,zm89Expected);
         })
         .catch(err => {
           // 連線被系統中斷（多半是手機切背景）→ 不報錯，改成輪詢領取伺服器算好的結果
@@ -11141,12 +11171,13 @@
           const hiddenExpected=!!_screenJob.hidden;
           const fourExpected=!!_screenJob.four;
           const sixExpected=!!_screenJob.six;
+          const zm89Expected=_screenJob.zm89||[];
           _screenJob = null;
           const btn = document.getElementById('submitBtn');
           btn.disabled = false; btn.innerHTML = '開始篩選';
           if (data.error) { showStatus(`<div class="alert alert-error">&#9888; ${data.error}</div>`); return; }
           lastResults = data.results || [];
-          renderResults(data,hiddenExpected,fourExpected,sixExpected);
+          renderResults(data,hiddenExpected,fourExpected,sixExpected,zm89Expected);
           return;
         }
       } catch (_) { /* 忽略，繼續輪詢 */ }
@@ -11178,7 +11209,8 @@
       renderTable(filtered);
     }
 
-    function renderResults(data,hiddenExpected=false,fourExpected=false,sixExpected=false) {
+    function renderResults(data,hiddenExpected=false,fourExpected=false,sixExpected=false,zm89Expected=[]) {
+      if(zm89Expected.some(k=>data[k]!==true)){_scanStop();lastResults=[];document.getElementById('resultsArea').innerHTML='';showStatus('<div class="alert alert-error">目前連線的後端尚未支援真名八式／九式，這次結果不予顯示。請稍後再試，或重新啟動本機預覽。</div>');return;}
       if(sixExpected&&data.zhenming6_applied!==true){_scanStop();lastResults=[];document.getElementById('resultsArea').innerHTML='';showStatus('<div class="alert alert-error">目前連線的後端尚未支援真名六式，這次結果不予顯示。請稍後再試，或重新啟動本機預覽。</div>');return;}
       if(fourExpected&&data.zhenming4_applied!==true){_scanStop();lastResults=[];document.getElementById('resultsArea').innerHTML='';showStatus('<div class="alert alert-error">目前連線的後端尚未支援真名四式，這次結果不予顯示。請更新篩選服務後再試。</div>');return;}
       if(hiddenExpected&&data.zhenming_hidden_applied!==true){_scanStop();lastResults=[];document.getElementById('resultsArea').innerHTML='';showStatus('<div class="alert alert-error">目前連線的後端尚未支援真名隱藏式，這次結果不予顯示，請更新後端後再試。</div>');return;}
@@ -11323,7 +11355,7 @@
                   ? `<span class="data-missing-badge" title="部分篩選條件無法確認（${s.data_missing.map(k=>({'no_black':'無放量黑棒篩選','gap_unverified':'跳空前日資料缺失，請手動排查'}[k]||k)).join('、')}），已放行"></span>`
                   : ''
               }</td>
-            <td class="name-cell">${s.name}${s.zm4 ? AcademyZhenmingFour.badge(s.zm4) : ''}${s.zm6 && window.AcademyZhenmingSix ? AcademyZhenmingSix.badge(s.zm6) : ''}${s.sma20_stage ? `<div class="zm3-info">葛蘭碧・階段 ${s.sma20_stage}</div>` : ''}${s.zm3 ? `<div class="zm3-info" title="真名三式：長黑 ${s.zm3.black_date}（−${s.zm3.black_pct}%）後第 ${s.zm3.day_n} 天反包；停損參考 ${s.zm3.stop}（長紅低與洗盤最低取低者）；第一目標 ${s.zm3.target}（長黑前 20 日最高）">三式・長黑 ${s.zm3.black_date.slice(5).replace('-','/')}・½ ${s.zm3.mid}・第${s.zm3.day_n}天${s.zm3.vol ? '・<b>帶量</b>' : ''}<br>停損 ${s.zm3.stop}・目標 ${s.zm3.target}</div>` : ''}${s.ev357 ? _ev357Info(s.ev357) : ''}</td>
+            <td class="name-cell">${s.name}${s.zm4 ? AcademyZhenmingFour.badge(s.zm4) : ''}${s.zm6 && window.AcademyZhenmingSix ? AcademyZhenmingSix.badge(s.zm6) : ''}${(s.zm8 || s.zm9) && window.AcademyZhenming89 ? AcademyZhenming89.badge(s) : ''}${s.sma20_stage ? `<div class="zm3-info">葛蘭碧・階段 ${s.sma20_stage}</div>` : ''}${s.zm3 ? `<div class="zm3-info" title="真名三式：長黑 ${s.zm3.black_date}（−${s.zm3.black_pct}%）後第 ${s.zm3.day_n} 天反包；停損參考 ${s.zm3.stop}（長紅低與洗盤最低取低者）；第一目標 ${s.zm3.target}（長黑前 20 日最高）">三式・長黑 ${s.zm3.black_date.slice(5).replace('-','/')}・½ ${s.zm3.mid}・第${s.zm3.day_n}天${s.zm3.vol ? '・<b>帶量</b>' : ''}<br>停損 ${s.zm3.stop}・目標 ${s.zm3.target}</div>` : ''}${s.ev357 ? _ev357Info(s.ev357) : ''}</td>
             <td class="neutral col-open">${s.open}</td>
             <td class="neutral col-high">${s.high}</td>
             <td class="neutral col-low">${s.low}</td>
@@ -18411,8 +18443,9 @@
 <script src="assets/chart-drawing-edit.js?v=2"></script>
 <script src="assets/zhenming-four.js?v=candidate4"></script>
 <script src="assets/zhenming-hidden.js?v=5" defer></script>
-<link rel="stylesheet" href="assets/zhenming-six.css?v=1">
+<link rel="stylesheet" href="assets/zhenming-six.css?v=2">
 <script src="assets/zhenming-six.js?v=3" defer></script>
+<script src="assets/zhenming-89.js?v=1" defer></script>
 <script src="assets/screen-log.js?v=20261103-scroll-revert" defer></script>
 <script src="assets/member-quick-menu.js?v=tier6" defer></script>
 <script src="assets/navigation-layers.js?v=logo-home20" defer></script>

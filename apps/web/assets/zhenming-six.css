@@ -1,27 +1,47 @@
 /* 真名六式（空頭啟動）條件卡：沿用隱藏式的面板語言，排在隱藏式前面 */
-#zhenming6Card{display:contents;--zm6-bear:#2f6f4f}
-html[data-theme=dark] #zhenming6Card{--zm6-bear:#86c6a0}
-#zhenming6Card>.checkbox-row{order:9996;margin:0}
-#zhenming6Card #zhenming6Options{grid-column:1/-1;order:9997;min-width:0;margin:3px 0 0;padding:20px;border:1px solid var(--border);border-radius:10px;background:linear-gradient(135deg,color-mix(in srgb,var(--surface2) 45%,var(--surface)),var(--surface) 75%)}
-#zhenming6Card .zm-hidden-options>p{font-size:12px;line-height:1.8;margin-bottom:18px}
-#zhenming6Card fieldset{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:0 0 14px;margin:0 0 14px;border:0;border-bottom:1px solid var(--border)}
-#zhenming6Card legend{flex-basis:100%;margin-bottom:11px;font-weight:600;color:var(--text);font-size:12px}
-#zhenming6Card legend>span{font-size:9px;letter-spacing:.04em;color:var(--text-muted);font-variant-numeric:tabular-nums;margin-right:6px}
-#zhenming6Card legend>small{display:inline;margin-left:7px;font-size:10px;font-weight:400;color:var(--text-muted)}
-#zhenming6Card fieldset>label:has(input[type=checkbox]){min-height:28px;padding:3px 11px;border:1px solid var(--border);border-radius:999px;background:var(--surface)!important;font-size:12px!important;font-weight:550;gap:6px;cursor:pointer;transition:border-color .18s ease,background .18s ease,box-shadow .18s ease}
-#zhenming6Card fieldset>label:has(input[type=checkbox]:checked){border-color:color-mix(in srgb,var(--accent) 30%,var(--border));background:color-mix(in srgb,var(--accent) 6%,var(--surface))!important;color:var(--accent);box-shadow:0 0 7px color-mix(in srgb,var(--accent) 10%,transparent)}
-#zhenming6Card fieldset>label:has(input[type=checkbox]):hover{box-shadow:0 0 8px color-mix(in srgb,var(--accent) 13%,transparent)}
-#zhenming6Card fieldset>label:has(input:focus-visible){outline:1px solid currentColor;outline-offset:2px}
-#zhenming6Card .zm-hidden-options input[type=checkbox]{width:13px;height:13px;min-width:13px;min-height:13px}
-#zhenming6Card .zm6-pattern{gap:8px;font-size:12px!important;color:var(--text-muted);transition:opacity .18s ease}
-#zhenming6Card .zm6-pattern.is-disabled{opacity:.45}
-#zhenming6Card .zm6-pattern select{min-width:150px;height:30px;min-height:30px;padding:4px 30px 4px 11px;border:1px solid var(--border);border-radius:999px;background-color:var(--surface);color:var(--text);font-size:12px;cursor:pointer}
-#zhenming6Card .zm6-pattern select:disabled{cursor:not-allowed}
-#zhenming6Card .zm-hidden-options>small{background:transparent;border-left:2px solid color-mix(in srgb,var(--zm6-bear) 45%,var(--border));border-radius:0;padding:2px 0 2px 10px;color:var(--text-muted)}
-#zhenming6Card{border:0!important;padding:0!important;margin:0!important;box-shadow:none!important;background:transparent!important}
-:root[data-ui-skin="glass"] #zhenming6Card #zhenming6Options{background:color-mix(in srgb,var(--glass-fill-strong,var(--surface)) 72%,transparent);border-color:var(--glass-line,var(--border));border-radius:16px;backdrop-filter:blur(18px) saturate(1.2);-webkit-backdrop-filter:blur(18px) saturate(1.2)}
-:root[data-ui-skin="glass"] #zhenming6Card .zm6-pattern select{background-color:color-mix(in srgb,var(--surface) 80%,transparent)}
+:is(#zhenming6Card,.zm89-card){display:contents;--zm6-bear:#2f6f4f}
+html[data-theme=dark] :is(#zhenming6Card,.zm89-card){--zm6-bear:#86c6a0}
+#zhenming6Card>.checkbox-row{order:9990;margin:0}
+:is(#zhenming6Card,.zm89-card) #zhenming6Options{grid-column:1/-1;order:9991;min-width:0;margin:3px 0 0;padding:20px;border:1px solid var(--border);border-radius:10px;background:linear-gradient(135deg,color-mix(in srgb,var(--surface2) 45%,var(--surface)),var(--surface) 75%)}
+:is(#zhenming6Card,.zm89-card) .zm-hidden-options>p{font-size:12px;line-height:1.8;margin-bottom:18px}
+:is(#zhenming6Card,.zm89-card) fieldset{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:0 0 14px;margin:0 0 14px;border:0;border-bottom:1px solid var(--border)}
+:is(#zhenming6Card,.zm89-card) legend{flex-basis:100%;margin-bottom:11px;font-weight:600;color:var(--text);font-size:12px}
+:is(#zhenming6Card,.zm89-card) legend>span{font-size:9px;letter-spacing:.04em;color:var(--text-muted);font-variant-numeric:tabular-nums;margin-right:6px}
+:is(#zhenming6Card,.zm89-card) legend>small{display:inline;margin-left:7px;font-size:10px;font-weight:400;color:var(--text-muted)}
+:is(#zhenming6Card,.zm89-card) fieldset>label:has(input[type=checkbox]){min-height:28px;padding:3px 11px;border:1px solid var(--border);border-radius:999px;background:var(--surface)!important;font-size:12px!important;font-weight:550;gap:6px;cursor:pointer;transition:border-color .18s ease,background .18s ease,box-shadow .18s ease}
+:is(#zhenming6Card,.zm89-card) fieldset>label:has(input[type=checkbox]:checked){border-color:color-mix(in srgb,var(--accent) 30%,var(--border));background:color-mix(in srgb,var(--accent) 6%,var(--surface))!important;color:var(--accent);box-shadow:0 0 7px color-mix(in srgb,var(--accent) 10%,transparent)}
+:is(#zhenming6Card,.zm89-card) fieldset>label:has(input[type=checkbox]):hover{box-shadow:0 0 8px color-mix(in srgb,var(--accent) 13%,transparent)}
+:is(#zhenming6Card,.zm89-card) fieldset>label:has(input:focus-visible){outline:1px solid currentColor;outline-offset:2px}
+:is(#zhenming6Card,.zm89-card) .zm-hidden-options input[type=checkbox]{width:13px;height:13px;min-width:13px;min-height:13px}
+:is(#zhenming6Card,.zm89-card) .zm6-pattern{gap:8px;font-size:12px!important;color:var(--text-muted);transition:opacity .18s ease}
+:is(#zhenming6Card,.zm89-card) .zm6-pattern.is-disabled{opacity:.45}
+:is(#zhenming6Card,.zm89-card) .zm6-pattern select{min-width:150px;height:30px;min-height:30px;padding:4px 30px 4px 11px;border:1px solid var(--border);border-radius:999px;background-color:var(--surface);color:var(--text);font-size:12px;cursor:pointer}
+:is(#zhenming6Card,.zm89-card) .zm6-pattern select:disabled{cursor:not-allowed}
+:is(#zhenming6Card,.zm89-card) .zm-hidden-options>small{background:transparent;border-left:2px solid color-mix(in srgb,var(--zm6-bear) 45%,var(--border));border-radius:0;padding:2px 0 2px 10px;color:var(--text-muted)}
+:is(#zhenming6Card,.zm89-card){border:0!important;padding:0!important;margin:0!important;box-shadow:none!important;background:transparent!important}
+:root[data-ui-skin="glass"] :is(#zhenming6Card,.zm89-card) #zhenming6Options{background:color-mix(in srgb,var(--glass-fill-strong,var(--surface)) 72%,transparent);border-color:var(--glass-line,var(--border));border-radius:16px;backdrop-filter:blur(18px) saturate(1.2);-webkit-backdrop-filter:blur(18px) saturate(1.2)}
+:root[data-ui-skin="glass"] :is(#zhenming6Card,.zm89-card) .zm6-pattern select{background-color:color-mix(in srgb,var(--surface) 80%,transparent)}
 .zm6-info{color:var(--text-muted)}
 .zm6-info .zm6-cover{color:#b7791f;font-weight:700}
-@media(max-width:600px){#zhenming6Card #zhenming6Options{padding:16px 12px}#zhenming6Card .zm6-pattern{width:100%}#zhenming6Card .zm6-pattern select{flex:1;min-width:0}}
-@media(prefers-reduced-motion:reduce){#zhenming6Card fieldset>label,#zhenming6Card .zm6-pattern{transition:none!important}}
+@media(max-width:600px){:is(#zhenming6Card,.zm89-card) #zhenming6Options{padding:16px 12px}:is(#zhenming6Card,.zm89-card) .zm6-pattern{width:100%}:is(#zhenming6Card,.zm89-card) .zm6-pattern select{flex:1;min-width:0}}
+@media(prefers-reduced-motion:reduce){:is(#zhenming6Card,.zm89-card) fieldset>label,:is(#zhenming6Card,.zm89-card) .zm6-pattern{transition:none!important}}
+
+/* 真名八式／九式：沿用六式卡；排在六式之後、隱藏式之前 */
+.zm89-card>.checkbox-row{margin:0}
+#zhenming8Card>.checkbox-row{order:9992}#zhenming8Options{order:9993}
+#zhenming9Card>.checkbox-row{order:9994}#zhenming9Options{order:9995}
+.zm89-card .zm89-options{grid-column:1/-1;min-width:0;margin:3px 0 0;padding:20px;border:1px solid var(--border);border-radius:10px;background:linear-gradient(135deg,color-mix(in srgb,var(--surface2) 45%,var(--surface)),var(--surface) 75%)}
+.zm89-card fieldset>label:has(input[type=radio]){min-height:28px;padding:3px 12px;border:1px solid var(--border);border-radius:999px;background:var(--surface)!important;font-size:12px!important;font-weight:550;gap:6px;cursor:pointer;font-variant-numeric:tabular-nums;transition:border-color .18s ease,background .18s ease,box-shadow .18s ease,color .18s ease}
+.zm89-card fieldset>label:has(input[type=radio]:checked){border-color:color-mix(in srgb,var(--accent) 35%,var(--border));background:color-mix(in srgb,var(--accent) 7%,var(--surface))!important;color:var(--accent);box-shadow:0 0 7px color-mix(in srgb,var(--accent) 10%,transparent)}
+.zm89-card fieldset>label:has(input[type=radio]):hover{box-shadow:0 0 8px color-mix(in srgb,var(--accent) 13%,transparent)}
+.zm89-card .zm-hidden-options input[type=radio]{width:13px;height:13px;min-width:13px;min-height:13px;accent-color:var(--accent)}
+.zm89-card .zm89-num{display:inline-flex;align-items:center;gap:2px;margin-left:2px;padding:0 8px 0 2px;height:22px;border-radius:999px;border:1px solid color-mix(in srgb,var(--border) 90%,transparent);background:var(--surface2);transition:border-color .18s ease,opacity .18s ease;opacity:.6}
+.zm89-card .zm89-custom.is-on .zm89-num{opacity:1;border-color:color-mix(in srgb,var(--accent) 40%,var(--border));background:var(--surface)}
+.zm89-card .zm89-num input[type=number]{width:44px!important;height:20px!important;min-height:0!important;padding:0 2px!important;border:0!important;background:transparent!important;box-shadow:none!important;outline:none;text-align:right;font:inherit;font-size:12px!important;color:var(--text);-moz-appearance:textfield}
+.zm89-card .zm89-num input::-webkit-outer-spin-button,.zm89-card .zm89-num input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.zm89-card .zm89-num i{font-style:normal;font-size:11px;color:var(--text-muted)}
+:root[data-ui-skin="glass"] .zm89-card .zm89-options{background:color-mix(in srgb,var(--glass-fill-strong,var(--surface)) 72%,transparent);border-color:var(--glass-line,var(--border));border-radius:16px;backdrop-filter:blur(18px) saturate(1.2);-webkit-backdrop-filter:blur(18px) saturate(1.2)}
+@media(max-width:600px){.zm89-card .zm89-options{padding:16px 12px}}
+.zm89-card .zm89-num input[type=number]:is(:focus,:focus-visible,:hover){outline:none!important;box-shadow:none!important;border:0!important;background:transparent!important}
+.zm89-card .zm89-num input[type=number]{width:30px!important;min-width:0!important;flex:0 0 30px;margin:0!important}
+.zm89-card .zm89-num:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 12%,transparent)}
