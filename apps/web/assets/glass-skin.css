@@ -396,20 +396,18 @@
 :root[data-ui-skin="glass"] body::before{
   content:""!important;display:block!important;position:fixed!important;inset:-12vmax!important;z-index:-1!important;pointer-events:none;opacity:1!important;
   background:
-    radial-gradient(38vmax 34vmax at 14% 16%,rgba(48,118,214,.30),transparent 62%),
-    radial-gradient(34vmax 30vmax at 86% 10%,rgba(118,82,196,.22),transparent 62%),
-    radial-gradient(42vmax 36vmax at 74% 88%,rgba(22,150,150,.18),transparent 64%),
-    radial-gradient(30vmax 28vmax at 18% 92%,rgba(196,140,64,.10),transparent 62%),
-    linear-gradient(160deg,#070d16 0%,#0c1422 50%,#08101a 100%);
+    radial-gradient(40vmax 34vmax at 12% 10%,rgba(37,99,235,.24),transparent 62%),
+    radial-gradient(34vmax 30vmax at 88% 14%,rgba(246,201,69,.10),transparent 60%),
+    radial-gradient(44vmax 38vmax at 70% 92%,rgba(2,132,199,.16),transparent 64%),
+    linear-gradient(160deg,#070d16 0%,#0b1420 50%,#08101a 100%);
   animation:glassAurora 48s ease-in-out infinite alternate;will-change:transform;
 }
 :root[data-theme="light"][data-ui-skin="glass"] body::before{
   background:
-    radial-gradient(38vmax 34vmax at 12% 14%,rgba(120,182,255,.40),transparent 62%),
-    radial-gradient(34vmax 30vmax at 88% 10%,rgba(255,186,214,.32),transparent 62%),
-    radial-gradient(42vmax 36vmax at 72% 88%,rgba(140,226,208,.32),transparent 64%),
-    radial-gradient(30vmax 28vmax at 18% 92%,rgba(255,214,160,.26),transparent 62%),
-    linear-gradient(160deg,#edf3f9 0%,#f6f4fa 50%,#eef6f4 100%);
+    radial-gradient(40vmax 34vmax at 10% 10%,rgba(2,132,199,.20),transparent 62%),
+    radial-gradient(36vmax 30vmax at 90% 12%,rgba(37,99,235,.14),transparent 62%),
+    radial-gradient(44vmax 38vmax at 72% 92%,rgba(148,180,210,.26),transparent 64%),
+    linear-gradient(160deg,#eef3f8 0%,#f7f9fb 50%,#eef3f7 100%);
 }
 @keyframes glassAurora{0%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(-2.5vmax,1.5vmax,0) scale(1.05)}100%{transform:translate3d(2vmax,-1.5vmax,0) scale(1.02)}}
 
@@ -472,13 +470,45 @@
 :root[data-theme="light"][data-ui-skin="glass"] #foresightFooter .fs-source{background:#f3f6f9!important;color:#4d5f72!important;border-bottom-color:#dde5ec!important;}
 :root:not([data-theme="light"])[data-ui-skin="glass"] #foresightFooter .fs-source{background:#0f1824!important;color:#a6b4c3!important;border-bottom-color:rgba(255,255,255,.08)!important;}
 
-/* 6. 進場動畫：換頁時內容由下往上柔順浮現，依序錯開 */
-@keyframes glassRise{from{opacity:0;transform:translate3d(0,16px,0) scale(.99)}to{opacity:1;transform:none}}
-:root[data-ui-skin="glass"] .glass-enter>*{animation:glassRise .62s var(--glass-ease,cubic-bezier(.22,.8,.24,1)) both;animation-delay:calc(var(--gi,0) * 55ms);}
-:root[data-ui-skin="glass"] .glass-enter-self{animation:glassRise .62s var(--glass-ease,cubic-bezier(.22,.8,.24,1)) both;}
-/* 開關玻璃時整頁柔和轉場（瀏覽器支援時） */
-::view-transition-old(root),::view-transition-new(root){animation-duration:.55s;animation-timing-function:cubic-bezier(.22,.8,.24,1);}
+/* 6. 玻璃動態（參考 Glassy Dashboard）：由模糊到清晰、微微放大浮上、依序錯開 */
+:root[data-ui-skin="glass"]{--glass-spring:cubic-bezier(.2,.9,.25,1.08);--glass-ease:cubic-bezier(.22,.8,.24,1);}
+@keyframes glassBlurIn{from{opacity:0;transform:translate3d(0,14px,0) scale(.965);filter:blur(12px)}60%{filter:blur(0)}to{opacity:1;transform:none;filter:none}}
+@keyframes glassFade{from{opacity:0}to{opacity:1}}
+@keyframes glassDrawerIn{from{opacity:.2;transform:translate3d(56px,0,0);filter:blur(10px)}to{opacity:1;transform:none;filter:none}}
+@keyframes glassPopIn{from{opacity:0;transform:translate3d(0,10px,0) scale(.96);filter:blur(10px)}to{opacity:1;transform:none;filter:none}}
+@keyframes glassDropIn{from{opacity:0;transform:translate3d(0,-6px,0) scale(.97);filter:blur(6px)}to{opacity:1;transform:none;filter:none}}
+/* 換頁：卡片逐張浮現（JS 標記 .glass-in 與順序 --gi，動畫結束即移除） */
+:root[data-ui-skin="glass"] .glass-in{animation:glassBlurIn .62s var(--glass-ease) backwards;animation-delay:calc(var(--gi,0) * 60ms);}
+:root[data-ui-skin="glass"] .glass-enter-self{animation:glassPopIn .5s var(--glass-ease) backwards;}
+/* 篩選條件分類：跟著表單一起，一張張由模糊浮現 */
+:root[data-ui-skin="glass"] .form-wrap.glass-in .sc-cat>.sc-panel{animation:glassBlurIn .55s var(--glass-ease) backwards;animation-delay:calc(var(--sci,0) * 55ms + 120ms);}
+:root[data-ui-skin="glass"] .form-wrap.glass-in .sc-cat>.sc-panel:nth-of-type(1){--sci:1}
+:root[data-ui-skin="glass"] .form-wrap.glass-in .sc-cat>.sc-panel:nth-of-type(2){--sci:2}
+:root[data-ui-skin="glass"] .form-wrap.glass-in .sc-cat>.sc-panel:nth-of-type(3){--sci:3}
+:root[data-ui-skin="glass"] .form-wrap.glass-in .sc-cat>.sc-panel:nth-of-type(4){--sci:4}
+:root[data-ui-skin="glass"] .form-wrap.glass-in .sc-cat>.sc-panel:nth-of-type(5){--sci:5}
+:root[data-ui-skin="glass"] .form-wrap.glass-in .sc-cat>.sc-panel:nth-of-type(6){--sci:6}
+:root[data-ui-skin="glass"] .form-wrap.glass-in .sc-cat>.sc-panel:nth-of-type(7){--sci:7}
+:root[data-ui-skin="glass"] .form-wrap.glass-in .sc-cat>.sc-panel:nth-of-type(8){--sci:8}
+:root[data-ui-skin="glass"] .form-wrap.glass-in .sc-cat>.sc-panel:nth-of-type(9){--sci:9}
+:root[data-ui-skin="glass"] .form-wrap.glass-in .sc-cat>.sc-panel:nth-of-type(10){--sci:10}
 
+/* 側邊面板：帶霧滑入，內容依序浮現；遮罩淡入 */
+:root[data-ui-skin="glass"] :is(.etx-drawer .bg,#themeDrawer .td-back){animation:glassFade .35s ease backwards;}
+:root[data-ui-skin="glass"] :is(.etx-drawer .panel,#themeDrawer.open .td-panel){animation:glassDrawerIn .52s var(--glass-spring) backwards;}
+:root[data-ui-skin="glass"] :is(.etx-drawer .panel,#themeDrawer.open .td-panel)>*{animation:glassBlurIn .55s var(--glass-ease) backwards;}
+:root[data-ui-skin="glass"] :is(.etx-drawer .panel,#themeDrawer.open .td-panel)>:nth-child(1){animation-delay:.08s}
+:root[data-ui-skin="glass"] :is(.etx-drawer .panel,#themeDrawer.open .td-panel)>:nth-child(2){animation-delay:.14s}
+:root[data-ui-skin="glass"] :is(.etx-drawer .panel,#themeDrawer.open .td-panel)>:nth-child(3){animation-delay:.20s}
+:root[data-ui-skin="glass"] :is(.etx-drawer .panel,#themeDrawer.open .td-panel)>:nth-child(4){animation-delay:.26s}
+:root[data-ui-skin="glass"] :is(.etx-drawer .panel,#themeDrawer.open .td-panel)>:nth-child(n+5){animation-delay:.32s}
+/* 彈窗：從 96% 帶霧浮上，背景模糊淡入 */
+:root[data-ui-skin="glass"] dialog[open],
+:root[data-ui-skin="glass"] :is(.modal-overlay .modal-content,.modal-overlay .modal-box,.modal-box,.vix-chart-dialog,.market-train-dialog,.ms-chat-dialog){animation:glassPopIn .46s var(--glass-spring) backwards;}
+:root[data-ui-skin="glass"] dialog[open]::backdrop{animation:glassFade .3s ease backwards;}
+:root[data-ui-skin="glass"] #chartModal .modal-content{animation-duration:.38s;}
+/* 下拉、浮出：從按鈕位置展開 */
+:root[data-ui-skin="glass"] :is(.industry-popover,.ss-panel,.gs-search-drop,.mn-menu,.ms-category-popover,[role="menu"],.dropdown-menu,.mc-chart-research-options){transform-origin:top center;animation:glassDropIn .32s var(--glass-ease) backwards;}
 /* 7. 會員中心玻璃開關：更像 iOS 的液態開關 */
 .glass-setting-control>i::after{transition:transform .42s cubic-bezier(.3,1.5,.5,1),box-shadow .25s ease,width .2s ease!important;}
 .glass-setting-control:active>i::after{width:27px;}
@@ -487,8 +517,33 @@
 
 @media(prefers-reduced-motion:reduce){
   :root[data-ui-skin="glass"] body::before{animation:none;}
-  :root[data-ui-skin="glass"] :is(.glass-enter>*,.glass-enter-self){animation:none!important;}
+  :root[data-ui-skin="glass"] :is(.glass-in,.glass-enter-self,.etx-drawer .bg,.etx-drawer .panel,.etx-drawer .panel>*,#themeDrawer .td-back,#themeDrawer .td-panel,#themeDrawer .td-panel>*,dialog[open],dialog[open]::backdrop,.modal-content,.modal-box,.industry-popover,.ss-panel,.gs-search-drop,.mn-menu,.ms-category-popover,[role="menu"],.dropdown-menu,.vix-chart-dialog,.market-train-dialog,.ms-chat-dialog,.mc-chart-research-options){animation:none!important;}
 }
 /* 玻璃底上的小字加深，避免看不清 */
 :root[data-ui-skin="glass"] :is(.gs-rail-r,.gs-rail-l) :is(.txt,span){opacity:.85!important;}
 :root[data-ui-skin="glass"] .scal-workspace-heading>span{opacity:1!important;}
+
+/* ───────── 浮層（側邊抽屜、彈窗、浮出選單、提示卡）：厚玻璃，後方頁面模糊變暗，文字不再和背景疊在一起 ───────── */
+:root[data-ui-skin="glass"]{--glass-sheet:rgba(250,252,254,.95);--glass-veil:rgba(15,28,44,.22);}
+:root:not([data-theme="light"])[data-ui-skin="glass"]{--glass-sheet:rgba(11,17,27,.95);--glass-veil:rgba(0,0,0,.42);}
+:root[data-theme="light"][data-ui-skin="glass"]{--glass-sheet:rgba(250,252,254,.95);--glass-veil:rgba(15,28,44,.22);}
+:root[data-ui-skin="glass"] :is(
+  .etx-drawer .panel,.etx-div-panel,.modal-box,.watch-panel-inner,.alert-panel-inner,.industry-popover,.vix-chart-dialog,
+  .market-train-dialog,.train-compass-panel,.pro-heat-tooltip,.ms-chat-dialog,.ms-category-popover,.member-page dialog.ms-category-dialog,
+  .fs-info-dialog,.home-fx-impact-dialog,.ot-dialog,.mc-contact-dialog,.sl-dialog,.sic-record-dialog,.msvc-dialog,.lc-sheet-panel,
+  #academy-notification-preview,.member-quick-panel,.mj-task-dialog,.zm4-tip,.result-hover-scroll,.sd-detail,.chart-feature-panel
+){
+  background-color:var(--glass-sheet)!important;background-image:linear-gradient(160deg,rgba(255,255,255,.06),transparent 40%)!important;
+  border-color:var(--glass-line)!important;
+  backdrop-filter:blur(30px) saturate(1.3)!important;-webkit-backdrop-filter:blur(30px) saturate(1.3)!important;
+  box-shadow:0 30px 80px rgba(5,18,34,.28),0 2px 8px rgba(5,18,34,.10),inset 0 1px 0 var(--glass-highlight)!important;
+}
+/* 抽屜與彈窗的遮罩：模糊＋淡淡變暗 */
+:root[data-ui-skin="glass"] .etx-drawer .bg,
+:root[data-ui-skin="glass"] :is(dialog.sl-dialog,dialog.sic-record-dialog,dialog.msvc-dialog,dialog.mj-task-dialog,dialog.fs-info-dialog,dialog.mc-contact-dialog,dialog.ot-dialog,dialog.home-fx-impact-dialog,dialog.vix-chart-dialog,dialog.market-train-dialog)::backdrop{
+  background:var(--glass-veil)!important;backdrop-filter:blur(10px) saturate(.9);-webkit-backdrop-filter:blur(10px) saturate(.9);
+}
+/* 側邊抽屜：左側圓角，像一張玻璃板滑進來 */
+:root[data-ui-skin="glass"] .etx-drawer .panel:not(.etx-wide){border-radius:28px 0 0 28px!important;border-left:1px solid var(--glass-line)!important;}
+/* 抽屜內的卡片保持清楚的白（黑）底，不再半透明 */
+:root[data-ui-skin="glass"] .etx-drawer .panel :is(.card,[class*="card"]){background-color:color-mix(in srgb,var(--glass-sheet) 70%,var(--surface2,transparent))!important;}
