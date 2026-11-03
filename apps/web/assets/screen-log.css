@@ -481,7 +481,7 @@ body:has(.sic-trigger) .sl-bar .sl-open{display:none!important}
 .sl-today-summary>summary .sic-trigger .sic-date-ico b{font-size:13.5px!important;line-height:17px!important}
 
 /* 收合篩選條件、結果變寬時：表格撐滿整個框，欄位平均分配 */
-#proScreenLayout.scal-workspace #resultsArea .table-wrap>table{width:100%!important}
+#proScreenLayout.scal-workspace #resultsArea .table-wrap>table{width:100%!important;max-width:none!important}
 
 /* 記錄今日選股：只有真的在保存時才顯示等待游標；存好後按鈕變成「已存入」狀態，不再像卡住 */
 .sl-dialog form[aria-busy=true] button.is-saving{cursor:progress}
