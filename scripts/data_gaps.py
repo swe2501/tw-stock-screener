@@ -6,7 +6,8 @@ data_gaps.py — 每日表「漏日」檢查（2026-11-03）。
 做法：交易日＝taiex_daily ∪ price_window(2330) 的日期；逐表逐日問「這天有沒有至少一列」，
   - DAILY：每個交易日都該有的表 → 列出缺的日子
   - LATEST：只留最新一天的快照表 → 最新日期落後最新交易日就列出
-不列入：active_etf_flow（第三方只給最新一天、無共識日本來就不寫）、market_indicators（以日曆日記錄）、
+  - KPI：market_indicators 不逐日查列（以日曆日記錄），改查交易日的 vix／usdtwd 有沒有空白（2026-11-03 起）
+不列入：active_etf_flow（第三方只給最新一天、無共識日本來就不寫）、
   box_patterns（2026-11-01 停算，改 page_cache ai_box_rules）、週資料（holder_flow、broker_rankings_history）。
 job_health.py 每晚最後呼叫 problems()，有缺就寄警示信；也可手動盤點：
     python scripts/data_gaps.py            # 近 10 個交易日
@@ -56,6 +57,36 @@ LATEST = [
     ("institutional_flow", "trade_date", "法人流向", "upload_institutional.py"),
     ("etf_products", "data_date", "ETF 商品", "upload_etf.py"),
 ]
+
+
+# 2026-11-03 首頁 KPI 欄位檢查：market_indicators 以日曆日記錄、不適合逐日查列，改查「交易日的關鍵欄位有沒有值」。
+# 教訓：16:00 寫匯率先建了當日列、vix 空白 → 首頁台指VIX 顯示「—」沒人發現。
+# 10/30 之前資料日標錯（過午夜標成隔天），只從修正後開始查，避免舊資料一直誤報。
+KPI = ("market_indicators", "date", "首頁台指VIX／匯率", ("vix", "usdtwd"),
+       "chip_brief.py 盤後（vix_close_today）／market_indicators.py")
+KPI_SINCE = "2026-11-02"
+
+
+def kpi_blank(env, tds):
+    """回 [(日期, [空白欄位])]；當天 16:30 前不查（盤後才寫）。"""
+    from datetime import datetime, timedelta, timezone
+    now = datetime.now(timezone(timedelta(hours=8)))
+    today = now.strftime("%Y-%m-%d")
+    t, c, _, cols, _ = KPI
+    days = [d for d in tds if d >= KPI_SINCE and (d < today or now.strftime("%H%M") >= "1630")]
+    if not days:
+        return []
+    st, rows = bs._sb(env, "/" + t, params=[("select", ",".join((c,) + cols)), (c, f"gte.{days[0]}")])
+    if st != 200:
+        return [("查詢失敗", list(cols))]
+    by = {str(r[c])[:10]: r for r in rows or []}
+    out = []
+    for d in days:
+        r = by.get(d) or {}
+        miss = [x for x in cols if r.get(x) is None]
+        if miss:
+            out.append((d, miss))
+    return out
 
 
 def trading_days(env, n):
@@ -108,7 +139,8 @@ def scan(env, days=10):
 
 def problems(env, days=10):
     """給 job_health 用：回中文問題清單（空＝正常）。"""
-    return _describe(*scan(env, days))
+    tds, gaps, stale = scan(env, days)
+    return _describe(tds, gaps, stale) + _describe_kpi(kpi_blank(env, tds) if tds else [])
 
 
 def _describe(tds, gaps, stale):
@@ -120,6 +152,11 @@ def _describe(tds, gaps, stale):
     return out
 
 
+def _describe_kpi(blank):
+    t, _, name, _, fix = KPI
+    return [f"{name}（{t}）{d} 空白欄位：{'、'.join(m)} → 補救：{fix}" for d, m in blank]
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--days", type=int, default=10, help="檢查最近幾個交易日（預設 10）")
@@ -129,9 +166,10 @@ def main():
     if not tds:
         print("讀不到交易日曆"); return 1
     print(f"交易日 {tds[0]} ~ {tds[-1]}（{len(tds)} 天），每日表 {len(DAILY)} 張、快照表 {len(LATEST)} 張")
-    for p in _describe(tds, gaps, stale):
+    blank = kpi_blank(env, tds)
+    for p in _describe(tds, gaps, stale) + _describe_kpi(blank):
         print("  ✗ " + p)
-    if not gaps and not stale:
+    if not gaps and not stale and not blank:
         print("  ✓ 全部齊全")
     return 0
 
