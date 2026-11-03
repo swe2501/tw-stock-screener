@@ -130,6 +130,32 @@ def main():
         print("[warn] 無交易日資料"); return
     st = _upsert(env, rows)
     print(f"已 upsert {len(rows)} 天到 sector_turnover (status {st})")
+    fill_gaps(env, max(r["date"] for r in rows))
+
+
+def fill_gaps(env, latest, days=60):
+    """2026-11-03 自動補洞：大盤有交易、sector_turnover 沒有的日子逐日補算（09/17 漏一天沒人發現的教訓）。"""
+    since = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
+    st, tx = bs._sb(env, "/taiex_daily", params=[("select", "trade_date"), ("trade_date", f"gte.{since}")])
+    st2, have = bs._sb(env, "/sector_turnover", params=[("select", "date"), ("date", f"gte.{since}")])
+    if st != 200 or st2 != 200:
+        print("[warn] sector_turnover 補洞檢查失敗"); return
+    hs = {str(r["date"])[:10] for r in have}
+    miss = sorted(str(r["trade_date"])[:10] for r in tx if str(r["trade_date"])[:10] < latest and str(r["trade_date"])[:10] not in hs)
+    if not miss:
+        print("sector_turnover 無缺日"); return
+    print(f"sector_turnover 缺 {len(miss)} 天，補算：{miss}")
+    rows = []
+    for iso in miss:
+        try:
+            row = _compute(iso.replace("-", ""))
+        except Exception as e:                                  # noqa: BLE001
+            print(f"  {iso} err: {str(e)[:80]}"); continue
+        if row and row.get("date") == iso:
+            rows.append(row)
+            print(f"  {iso}: 電子 {row['elec_pct']}% 金融 {row['fin_pct']}% 傳產 {row['trad_pct']}%")
+    if rows:
+        print(f"補上 {len(rows)} 天 (status {_upsert(env, rows)})")
 
 
 if __name__ == "__main__":
