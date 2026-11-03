@@ -54,7 +54,7 @@ body .fs-info-dialog .fs-about-closing{border-top:1px solid var(--border);paddin
 #foresightFooter{width:100vw;margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw);margin-bottom:0}
 body:has(#homeView:not([style*="display: none"])) {overflow-x:clip}
 
-.member-page>#foresightFooter,.mc-content-group>#foresightFooter{width:100%;max-width:100%;margin:24px 0 0;}
+.member-page>#foresightFooter{width:100%;margin:24px 0 0;}
 
 /* No trailing page gutter after the shared footer, including member pages. */
 body:has(#foresightFooter),.member-page:has(>#foresightFooter){padding-bottom:0!important;margin-bottom:0!important;}
@@ -64,6 +64,3 @@ body:has(#foresightFooter),.member-page:has(>#foresightFooter){padding-bottom:0!
 #foresightFooter .fs-footer-logo{width:80px;height:54px;display:block;object-fit:contain;flex:none}
 :root:not([data-theme=light]) #foresightFooter .fs-footer-brand{color:var(--fs-footer-accent)}
 @media(max-width:520px){#foresightFooter .fs-footer-lockup{gap:9px}#foresightFooter .fs-footer-logo{width:65px;height:48px}#foresightFooter .fs-footer-brand{text-align:left}}
-
-.mc-content-group #foresightFooter .fs-footer-inner{flex-wrap:wrap;gap:20px;padding:24px 16px}
-.mc-content-group #foresightFooter .fs-footer-info{min-width:0;max-width:100%}

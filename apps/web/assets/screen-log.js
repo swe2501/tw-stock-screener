@@ -111,7 +111,7 @@ function mount(main,{profile}){
  }
  function openCalendarChart(button){
  if(!current()||!window.openChart)return;const modal=document.getElementById('chartModal');if(!modal)return;
- const scroller=main.closest('.mc-content-group')||main.closest('.member-page')||main,scroll=scroller.scrollTop;
+ const scroller=main.closest('.member-page')||main,scroll=scroller.scrollTop;
  if(modal.classList.contains('etx-embedded'))window._etxReleaseChart?.();document.body.classList.add('mc-chart-open','scal-calendar-chart');
  const observer=new MutationObserver(()=>{if(modal.classList.contains('open'))return;observer.disconnect();document.body.classList.remove('scal-calendar-chart');if(current()&&host.isConnected)requestAnimationFrame(()=>{scroller.scrollTop=scroll;button.isConnected&&button.focus({preventScroll:true});});});observer.observe(modal,{attributes:true,attributeFilter:['class']});
  try{window.openChart(button.dataset.calendarStock,button.dataset.name||button.dataset.calendarStock);}catch{observer.disconnect();document.body.classList.remove('mc-chart-open','scal-calendar-chart');host.querySelector('.scal-notice').textContent='K 線圖暫時無法開啟，請稍後再試。';}
