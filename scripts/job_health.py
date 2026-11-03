@@ -93,6 +93,12 @@ def main():
         problems.append(f"爬蟲逾時/失敗 {len(warns)} 支（門檻 {WARN_THRESHOLD}）→ wantgoo 可能限流/異常")
     problems += _snapshot_problems(env)
     problems += _office_problems()
+    # 2026-11-03 每日表漏日檢查（10/20 外資空單等表漏一天、沒人發現的教訓）
+    try:
+        import data_gaps
+        problems += ["資料缺日：" + p for p in data_gaps.problems(env, 10)]
+    except Exception as e:                                      # noqa: BLE001
+        problems.append(f"資料缺日檢查失敗：{type(e).__name__}")
 
     if not problems:
         print(f"[health] {today} 排程正常（處理 {processed} 支、逾時/失敗 {len(warns)} 支、快照皆為最新）"); return

@@ -17,6 +17,7 @@ foreign_hedge.py — 「外資空單溫度計」資料源：外資期貨淨空�
 用法：
   python scripts/foreign_hedge.py --daily         # 每日增量(排程用)
   python scripts/foreign_hedge.py --backfill 730  # 回補近 N 天(一次性)
+  python scripts/foreign_hedge.py --fill-gaps     # 只補近 60 天漏掉的交易日（--daily 也會自動做）
 """
 import ssl, sys, json, re, time, urllib.request, urllib.error
 from datetime import datetime, timezone, timedelta
@@ -250,7 +251,72 @@ def run_daily(env):
     print(json.dumps(row, ensure_ascii=False))
     _upsert(env, [row])
     print(f"已寫入 foreign_hedge_daily {iso}：R(扣ETF)={row['ratio_excl']}% 覆蓋{row['coverage']}%")
+    fill_gaps(env)
     fill_spot(env)
+
+
+def mi_index_closes(date_tw):
+    """指定日期全上市收盤（TWSE MI_INDEX，含 ETF）→ {code: close}。補缺口用（STOCK_DAY_ALL 只有當天）。"""
+    u = f"https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?date={date_tw}&type=ALLBUT0999&response=json"
+    try:
+        j = json.loads(_get(u, 60))
+    except Exception as e:
+        print(f"  [warn] MI_INDEX {date_tw} 失敗 {str(e)[:50]}"); return {}
+    for t in j.get("tables") or []:
+        f = t.get("fields") or []
+        if "證券代號" in f and "收盤價" in f:
+            ic, icl = f.index("證券代號"), f.index("收盤價")
+            out = {}
+            for r in t.get("data") or []:
+                code = str(r[ic]).strip(); c = _num(r[icl])
+                if c and re.match(r"^\d{4}[A-Z]?$", code):
+                    out[code] = c
+            return out
+    return {}
+
+
+def fill_gaps(env, days=60):
+    """2026-11-03 自動補洞：近 N 天「大盤有交易、本表卻沒有」的日子逐日補算。
+    背景：10/20 夜間排程中途中斷（批次檔中文註解），這張表就永久少一天，之後也沒有人發現。
+    每日流程跑完當天後自動檢查；只補「比本表最新一天更早」的日子（當天由上面的每日流程負責）。"""
+    tx = _taiex_map(env)
+    since = (datetime.now(timezone(timedelta(hours=8))) - timedelta(days=days)).strftime("%Y-%m-%d")
+    key = env["SUPABASE_SERVICE_KEY"]
+    req = urllib.request.Request(env["SUPABASE_URL"] + f"/rest/v1/foreign_hedge_daily?select=trade_date&trade_date=gte.{since}",
+                                 headers={"apikey": key, "Authorization": f"Bearer {key}"})
+    try:
+        have = {r["trade_date"] for r in json.loads(urllib.request.urlopen(req, timeout=30).read())}
+    except Exception as e:
+        print(f"[warn] 補洞檢查失敗：{e}"); return
+    if not have:
+        return
+    miss = sorted(d for d in tx if since <= d < max(have) and d not in have)
+    if not miss:
+        print("外資空單無缺日"); return
+    print(f"外資空單缺 {len(miss)} 個交易日，補算：{miss}")
+    rows = []
+    for iso in miss:
+        dt = _tw(iso)
+        shares = miqfiis_shares(dt); time.sleep(2)
+        closes = mi_index_closes(dt); time.sleep(2)
+        ntx, nmtx, ntmf, fiso = foreign_futures(dt)
+        if fiso != iso:
+            print(f"  {iso} 期交所回傳日期 {fiso} 不符，下次再補"); continue
+        sp = spot_net(dt)
+        usd = None
+        try:
+            r = urllib.request.Request(env["SUPABASE_URL"] + f"/rest/v1/market_indicators?select=usdtwd&date=eq.{iso}",
+                                       headers={"apikey": key, "Authorization": f"Bearer {key}"})
+            j = json.loads(urllib.request.urlopen(r, timeout=20).read())
+            usd = j[0]["usdtwd"] if j else None
+        except Exception:
+            pass
+        row = compute_row(iso, shares, lambda c: closes.get(c), tx.get(iso), ntx, nmtx, ntmf, sp, usd)
+        if not row:
+            print(f"  {iso} 資料不足（持股 {len(shares)} 檔、收盤 {len(closes)} 檔），下次再補"); continue
+        print(f"  {iso} 補上：等值淨口 {row['eq_net_lots']}、R(扣ETF)={row['ratio_excl']}% 覆蓋{row['coverage']}%")
+        rows.append(row)
+    _upsert(env, rows)
 
 
 def fill_spot(env, days=60):
@@ -368,6 +434,8 @@ def main():
         run_backfill(env, days)
     elif "--fill-spot" in args:
         fill_spot(env)
+    elif "--fill-gaps" in args:
+        fill_gaps(env)
     else:
         run_daily(env)
 

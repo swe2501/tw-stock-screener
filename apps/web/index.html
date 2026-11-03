@@ -5040,7 +5040,7 @@
       el('fhNarrative').innerHTML='<strong>系統客觀解讀：</strong>當前等值空單約 '+(Math.abs(lots)/1e4).toFixed(1)+' 萬口，空單名目合約市值占外資持股市值 <strong>'+r.toFixed(2)+'%</strong>。歷史百分位位於 <strong>PR '+rank.toFixed(1)+'</strong>（近 2 年 P80 '+p80.toFixed(2)+'%、P95 '+p95.toFixed(2)+'%），屬於「'+tg.t+'」'+(tg.c==='normal'?'的常態保護水位':'的結構性保護')+'，'+(r>1.2?'<strong style="color:#f43f5e">已突破 1.2% 系統性全面大逃殺警戒線</strong>。':'尚未進入 >1.2% 之系統性全面大逃殺警戒線。')
         +' 今日'+(cur.spot_net==null?'現貨資料缺':(cur.spot_net>=0?'現貨買超 '+n0(cur.spot_net/1e8)+' 億':'現貨賣超 '+n0(Math.abs(cur.spot_net)/1e8)+' 億'))+'、空單'+(dLots<0?'增加 ':'減少 ')+n0(Math.abs(dLots))+' 口 → '+Q.h.replace(' • ','・')+'。';
       computeFlags(); var cfl=FLAGS[cur.trade_date];
-      if(cfl) el('fhNarrative').innerHTML+=' <strong style="color:#f59e0b"> 近 3 日累計空單增加 '+n0(cfl.cum)+' 口，'+flagText(cur.trade_date,cfl)+'。</strong>';
+      if(cfl) el('fhNarrative').innerHTML+=' <strong style="color:#f59e0b"> '+hxName()+' '+n0(cfl.v)+' 口，'+flagText(cur.trade_date,cfl)+'。</strong>';
       renderChart(); renderFx(); renderQuad(q); renderTable(); renderHedgeFlags();
       try{ renderFx3(q, cur, rank); }catch(e){}
       el('fhContracts').innerHTML='<div>大台指 (TX): <span class="'+(cur.fx_tx_net<0?'c-bear':'c-bull')+'" style="font-weight:600">'+n0(cur.fx_tx_net)+' 口</span></div>'
@@ -5201,7 +5201,12 @@
     //   (2) 連假前：t 之後休市 ≥ 3 天（下個交易日距 t ≥ 4 個日曆天）→ 「疑似連假前避險」
     // 事件：台指期結算（每月第三個週三）、FOMC、台灣央行理監事會、台積電法說會（catalyst_events）、
     //       高重要度總經數據與會員列上的中重要度事件（macro_events；僅資料庫保存期間內）。
+    // 2026-11-03 合夥人要看當日：加「近 3 日累計／當日」切換。當日＝只看觸發日當天（前一日等值淨口數 − 當日）≥ 5,000 口，
+    //   其餘事件／連假條件相同；表格兩欄都列（例：10/16 近 3 日 +6,134、當日回補 5,107）。門檻沿用 5,000 口，待合夥人確認。
     var HX_TH=5000, EVTS=[], FLAGS={}, EVX=[];
+    var HX_MODE=(function(){ try{ return localStorage.getItem('hx_mode')==='1'?'1':'3'; }catch(e){ return '3'; } })();
+    function hxName(){ return HX_MODE==='1'?'當日空單增加':'近 3 日累計空單增加'; }
+    function hxLots(v){ return v>=0?'<span class="c-bear">增空 +'+n0(v)+' 口</span>':'<span class="c-bull">回補 '+n0(-v)+' 口</span>'; }
     var FOMC=['2024-01-31','2024-03-20','2024-05-01','2024-06-12','2024-07-31','2024-09-18','2024-11-07','2024-12-18',
       '2025-01-29','2025-03-19','2025-05-07','2025-06-18','2025-07-30','2025-09-17','2025-10-29','2025-12-10',
       '2026-01-28','2026-03-18','2026-04-29','2026-06-17','2026-07-29','2026-09-16','2026-10-28','2026-12-09'];
@@ -5226,12 +5231,13 @@
         var d=new Date(dates[dates.length-1]+'T00:00:00Z'); while(out.length<k){ d=new Date(d.getTime()+864e5); var w=d.getUTCDay(), s=iso(d); if(w>0&&w<6&&s>=today) out.push(s); if(d.getUTCFullYear()>2030) break; } return out; }
       for(var i=3;i<dates.length;i++){
         var cum=0; for(var j=i-2;j<=i;j++) cum+=(DATA[j-1].eq_net_lots-DATA[j].eq_net_lots);
-        if(cum<HX_TH) continue;
+        var d1=DATA[i-1].eq_net_lots-DATA[i].eq_net_lots;
+        if((HX_MODE==='1'?d1:cum)<HX_TH) continue;
         var nx=nextTradingDays(i,3), t=dates[i], hit=[];
         EVTS.forEach(function(e){ if(e.d>t && e.d<=nx[nx.length-1]){ var k=nx.filter(function(x){return x<e.d;}).length+1; if(k<=3) hit.push({n:e.n,d:e.d,k:k}); } });
         var nd=nx[0], gap=nd?Math.round((new Date(nd+'T00:00:00Z')-new Date(t+'T00:00:00Z'))/864e5):0;
         var hol=gap>=4;
-        if(hit.length||hol) FLAGS[t]={cum:Math.round(cum),ev:hit,hol:hol,gap:gap,next:nd};
+        if(hit.length||hol) FLAGS[t]={cum:Math.round(cum),d1:Math.round(d1),v:Math.round(HX_MODE==='1'?d1:cum),ev:hit,hol:hol,gap:gap,next:nd};
       }
     }
     function flagText(t,f){ var a=[]; if(f.ev.length) a.push('疑似事件前避險（'+f.ev.map(function(e){return e.n+' '+e.d.slice(5).replace('-','/');}).join('、')+'）');
@@ -5239,17 +5245,28 @@
     function renderHedgeFlags(){
       var box=el('fhHedgeFlags'); if(!box) return;
       var ks=Object.keys(FLAGS).sort().reverse(), cur=DATA[DATA.length-1], cf=cur&&FLAGS[cur.trade_date];
-      var head=cf?'<div class="pf-hx-alert"> '+cur.trade_date+' 近 3 日累計空單增加 <b>'+n0(cf.cum)+' 口</b> → '+flagText(cur.trade_date,cf)+'</div>'
-        :'<div class="pf-hx-ok">目前未觸發：最新交易日 '+(cur?cur.trade_date:'—')+' 近 3 日累計空單增加 '+(cur&&DATA.length>3?n0(DATA[DATA.length-4].eq_net_lots-cur.eq_net_lots):'—')+' 口（門檻 5,000 口，且需落在事件前 1～3 個交易日或連假前）。</div>';
-      box.innerHTML='<div class="pf-hx-h"> 事件前／連假前避險偵測 <span>近 2 年觸發 '+ks.length+' 次</span></div>'+head
-        +(ks.length?'<div style="overflow-x:auto"><table class="pf-tbl"><thead><tr><th>觸發日</th><th style="text-align:right">近 3 日累計增空</th><th>判定</th></tr></thead><tbody>'
-          +ks.map(function(t){ var f=FLAGS[t]; return '<tr><td style="font-weight:600;color:var(--pf-t2)">'+t+'</td><td style="text-align:right" class="c-bear">+'+n0(f.cum)+' 口</td><td style="white-space:normal">'+flagText(t,f)+'</td></tr>'; }).join('')+'</tbody></table></div>':'');
+      var n=DATA.length, nowV=cur&&n>3?(HX_MODE==='1'?DATA[n-2].eq_net_lots-cur.eq_net_lots:DATA[n-4].eq_net_lots-cur.eq_net_lots):null;
+      var head=cf?'<div class="pf-hx-alert"> '+cur.trade_date+' '+hxName()+' <b>'+n0(cf.v)+' 口</b> → '+flagText(cur.trade_date,cf)+'</div>'
+        :'<div class="pf-hx-ok">目前未觸發：最新交易日 '+(cur?cur.trade_date:'—')+' '+hxName()+' '+(nowV!=null?n0(nowV):'—')+' 口（門檻 5,000 口，且需落在事件前 1～3 個交易日或連假前）。</div>';
+      var seg='<div class="pf-seg" id="hxModeSeg" style="margin:0 0 8px"><button data-m="3"'+(HX_MODE==='3'?' class="on"':'')+'>近 3 日累計</button><button data-m="1"'+(HX_MODE==='1'?' class="on"':'')+'>當日</button></div>';
+      var note='<div style="font-size:12px;color:var(--pf-mut);margin:-2px 0 8px">'+(HX_MODE==='1'
+        ?'當日＝只看觸發日當天外資空單增減（前一交易日等值淨口數 − 當日），≥ 5,000 口才算。'
+        :'近 3 日累計＝觸發日與前 2 個交易日的空單增減加總（等於 3 個交易日前 − 觸發日），≥ 5,000 口才算；當天回補但前兩天大加空時仍可能觸發，可對照「當日增減」欄。')+'</div>';
+      box.innerHTML='<div class="pf-hx-h"> 事件前／連假前避險偵測 <span>近 2 年觸發 '+ks.length+' 次</span></div>'+seg+note+head
+        +(ks.length?'<div style="overflow-x:auto"><table class="pf-tbl"><thead><tr><th>觸發日</th><th style="text-align:right">當日增減</th><th style="text-align:right">近 3 日累計</th><th>判定</th></tr></thead><tbody>'
+          +ks.map(function(t){ var f=FLAGS[t]; var b=function(on){ return on?'font-weight:700':'opacity:.75'; };
+            return '<tr><td style="font-weight:600;color:var(--pf-t2)">'+t+'</td><td style="text-align:right;'+b(HX_MODE==='1')+'">'+hxLots(f.d1)+'</td><td style="text-align:right;'+b(HX_MODE==='3')+'">'+hxLots(f.cum)+'</td><td style="white-space:normal">'+flagText(t,f)+'</td></tr>'; }).join('')+'</tbody></table></div>':'');
       var tb=box.querySelector('tbody'); if(tb) fold(tb,5,'hx');
+      box.querySelectorAll('#hxModeSeg button').forEach(function(btn){ btn.onclick=function(){
+        var m=btn.getAttribute('data-m'); if(m===HX_MODE) return; HX_MODE=m;
+        try{ localStorage.setItem('hx_mode',m); }catch(e){}
+        computeFlags(); renderHedgeFlags(); renderTable(); try{ renderChart(); }catch(e){}
+      }; });
     }
     function renderTable(){
       el('fhTable').innerHTML=DATA.slice(-20).reverse().map(function(r){ var rt=ratioOf(r);
         var fg=FLAGS[r.trade_date];
-        return '<tr><td style="font-weight:600;color:var(--pf-t2)">'+r.trade_date+(fg?' <span title="'+flagText(r.trade_date,fg)+'（近 3 日累計增空 '+n0(fg.cum)+' 口）" style="color:#f59e0b;cursor:help">⚑</span>':'')+'</td><td>'+(r.taiex_close!=null?(+r.taiex_close).toLocaleString(undefined,{maximumFractionDigits:2}):'—')+'</td>'
+        return '<tr><td style="font-weight:600;color:var(--pf-t2)">'+r.trade_date+(fg?' <span title="'+flagText(r.trade_date,fg)+'（當日 '+(fg.d1>=0?'增空 ':'回補 ')+n0(Math.abs(fg.d1))+' 口、近 3 日累計 '+(fg.cum>=0?'增空 ':'回補 ')+n0(Math.abs(fg.cum))+' 口）" style="color:#f59e0b;cursor:help">⚑</span>':'')+'</td><td>'+(r.taiex_close!=null?(+r.taiex_close).toLocaleString(undefined,{maximumFractionDigits:2}):'—')+'</td>'
           +'<td class="c-bear">'+n0(r.fx_tx_net)+'</td><td class="c-bear">'+n0(r.fx_mtx_net)+'</td><td class="c-bear">'+n0(r.fx_tmf_net)+'</td>'
           +'<td class="c-bear" style="font-weight:700">'+n0(r.eq_net_lots)+'</td>'
           +'<td class="'+(r.spot_net>=0?'c-bull':'c-bear')+'" style="font-weight:700">'+(r.spot_net!=null?sgn(r.spot_net/1e8,1):'—')+'</td>'

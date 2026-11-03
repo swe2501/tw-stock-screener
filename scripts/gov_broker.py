@@ -11,6 +11,7 @@ gov_broker.py — 官股券商買賣超(用戶定案 2026-09-16：八大公股�
 """
 import sqlite3, sys, json, urllib.request
 from collections import defaultdict
+from datetime import date, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -45,6 +46,25 @@ def main():
         print("[error] 缺 SUPABASE_SERVICE_KEY"); sys.exit(1)
     c = sqlite3.connect(str(DB))
     (day,) = c.execute("select max(trade_date) from wantgoo_daily").fetchone()
+    run_day(env, c, day)
+    # 2026-11-03 自動補洞：本機分點有、gov_broker_stock 沒有的交易日（10/20、10/21 夜間排程中斷的教訓）
+    since = (date.today() - timedelta(days=60)).isoformat()
+    local = sorted(r[0] for r in c.execute("select distinct trade_date from wantgoo_daily where trade_date>=?", (since,)))
+    miss = []
+    for d in local:                     # 一天 40 列、PostgREST 單次上限 1000 列 → 逐日問有沒有，不一次撈全部
+        if d >= day:
+            continue
+        st, rows = bs._sb(env, "/gov_broker_stock", params=[("select", "date"), ("date", f"eq.{d}"), ("limit", "1")])
+        if st != 200:
+            print("[warn] gov_broker_stock 補洞檢查失敗"); return
+        if not rows:
+            miss.append(d)
+    print(f"gov_broker_stock 缺 {len(miss)} 天" + (f"，補算：{miss}" if miss else ""))
+    for d in miss:
+        run_day(env, c, d)
+
+
+def run_day(env, c, day):
     # 單次掃描當日全部分點,Python 端過濾八大官股(DB 無 broker_name 索引,逐前綴 LIKE 會各掃一次很慢)
     all_rows = c.execute(
         "select broker_name,code,buy_vol,sell_vol,buy_avg_price,sell_avg_price from wantgoo_daily "

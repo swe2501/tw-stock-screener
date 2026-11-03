@@ -165,7 +165,10 @@ def main():
         ).fetchall()
     by_code = {}
     for c, d, o, h, l, cl, v in rows:
-        by_code.setdefault(c, []).append((d, o, h, l, cl, v or 0))
+        if cl is None:
+            continue        # 2026-11-03 當日無成交（收盤空值）不算一根 K 棒；以前混進來會讓均線加總當掉（11/02 整晚貪婪指標沒更新）
+        by_code.setdefault(c, []).append((d, o if o is not None else cl, h if h is not None else cl,
+                                          l if l is not None else cl, cl, v or 0))
 
     # 當沖(最新日)
     dt_map = {r[0]: r[1] for r in conn.execute(
