@@ -7,18 +7,19 @@
  const tools=document.createElement('details');tools.className='chart-fit-tools';
  tools.innerHTML='<summary><span class="chart-fit-title">週期、圖層與畫線工具</span></summary>';
  const ratios=document.createElement('span');ratios.className='chart-fit-ratios';
- ratios.innerHTML='<label>K 圖比例<input type="range" min="50" max="80" step="2" value="60" aria-label="K 圖高度比例"><output>60%</output></label><button type="button" id="chartInfoToggle" aria-label="開關開高低收資訊框" title="開高低收資訊框">資訊框</button>';
+ ratios.innerHTML='<label>K 圖比例<input type="range" min="50" max="80" step="2" value="80" aria-label="K 圖高度比例"><output>80%</output></label><button type="button" id="chartInfoToggle" role="switch" aria-label="K棒訊息：滑鼠移到 K 棒時顯示開高低收、成交量、MACD 與法人買賣超" title="K棒訊息：滑鼠移到 K 棒時顯示詳細資訊">K棒訊息<span class="kinfo-sw" aria-hidden="true"></span></button>';
  const infoToggle=ratios.querySelector('#chartInfoToggle');
  tools.querySelector('summary').append(ratios);
- const defaultMainRatio=60;
- let mainRatio=defaultMainRatio;try{const saved=Number(localStorage.getItem('kv_main_ratio'));if(saved>=50&&saved<=80&&saved%2===0)mainRatio=saved;}catch{}
+ // 2026-11-03 預設 60%→80%（比照 TradingView 比例）；舊的 60% 預設值改用 kv_main_ratio2 重新記憶，使用者之後自己調的才保留
+ const defaultMainRatio=80;
+ let mainRatio=defaultMainRatio;try{const saved=Number(localStorage.getItem('kv_main_ratio2'));if(saved>=50&&saved<=80&&saved%2===0)mainRatio=saved;}catch{}
  function renderRatios(){const input=ratios.querySelector('input'),sub=(100-mainRatio)/2;input.value=mainRatio;ratios.querySelector('output').value=mainRatio+'%';input.setAttribute('aria-valuetext','K 圖 '+mainRatio+'%，下方資料區 '+(100-mainRatio)+'%');for(const [key,value] of [['main',mainRatio],['vol',sub],['tech',sub],['sub',100-mainRatio]])wrap.style.setProperty('--chart-'+key+'-ratio',value+'fr');schedule();}
  ratios.addEventListener('click',e=>{e.stopPropagation();if(!e.target.closest('input,button'))e.preventDefault();});
  ratios.addEventListener('keydown',e=>e.stopPropagation());
- ratios.addEventListener('input',e=>{if(e.target.tagName!=='INPUT')return;mainRatio=Number(e.target.value);try{localStorage.setItem('kv_main_ratio',String(mainRatio));}catch{}renderRatios();});
- function resetRatio(){mainRatio=defaultMainRatio;try{localStorage.setItem('kv_main_ratio',String(mainRatio));}catch{}renderRatios();}
+ ratios.addEventListener('input',e=>{if(e.target.tagName!=='INPUT')return;mainRatio=Number(e.target.value);try{localStorage.setItem('kv_main_ratio2',String(mainRatio));}catch{}renderRatios();});
+ function resetRatio(){mainRatio=defaultMainRatio;try{localStorage.setItem('kv_main_ratio2',String(mainRatio));}catch{}renderRatios();}
  let infoVisible=true;try{infoVisible=localStorage.getItem('kv_show_ohlc')!=='0';}catch{}
- function renderInfoToggle(){modal.dataset.ohlcHidden=String(!infoVisible);infoToggle.setAttribute('aria-pressed',String(infoVisible));if(!infoVisible){const tip=byId('ohlcTooltip');if(tip)tip.style.display='none';}}
+ function renderInfoToggle(){modal.dataset.ohlcHidden=String(!infoVisible);infoToggle.setAttribute('aria-pressed',String(infoVisible));infoToggle.setAttribute('aria-checked',String(infoVisible));if(!infoVisible){const tip=byId('ohlcTooltip');if(tip)tip.style.display='none';}}
  infoToggle.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();infoVisible=!infoVisible;try{localStorage.setItem('kv_show_ohlc',infoVisible?'1':'0');}catch{}lastTooltip=null;renderInfoToggle();});renderInfoToggle();
  const first=content.querySelector('.chart-toolbar');
  const periods=document.createElement('div');periods.className='chart-period-segments';periods.setAttribute('role','group');periods.setAttribute('aria-label','圖表週期');
