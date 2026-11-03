@@ -550,7 +550,4 @@
 /* 文字連結型按鈕（股票名稱等）：不要框、不要陰影，滑過只變色 */
 :is(.etx-stock-link,.etx-info-link,.mj-link){box-shadow:none!important;background:transparent!important;border:0!important;transition:color .18s ease!important;}
 :is(.etx-stock-link,.etx-info-link,.mj-link):hover{color:var(--accent)!important;filter:none!important;}
-/* K 線圖：載入後由左往右刷出（只裁切顯示範圍，不碰圖表元件與互動） */
-@keyframes glassChartReveal{from{clip-path:inset(0 100% 0 0 round 12px);opacity:.4}25%{opacity:1}to{clip-path:inset(0 0 0 0 round 0);opacity:1}}
-:root[data-ui-skin="glass"] #chartModal #chartWrapper{animation:glassChartReveal 1.2s cubic-bezier(.45,.05,.25,1) backwards .12s;}
-@media(prefers-reduced-motion:reduce){:root[data-ui-skin="glass"] #chartModal #chartWrapper{animation:none!important;}}
+/* K 線圖動畫改由 glass-motion.js 的 K 棒彈簧動畫處理（不再整張刷出） */
