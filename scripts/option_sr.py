@@ -22,7 +22,7 @@ option_sr.py — 台指選擇權(TXO)「支撐壓力 OI 三層峰值」，供首
 用法：python scripts/option_sr.py [--dry]
 """
 import ssl, sys, csv, json, re, calendar, urllib.request
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -334,12 +334,39 @@ def main():
     iso = _txo_latest_date()
     if not iso:
         print("[error] 本機 txo_daily 無資料（請先跑 txo_history.py）"); return
-    dt = date.fromisoformat(iso)
 
     _lat = bs.latest_trade_date(env, "option_sr")
     if _lat and iso <= _lat and "--force" not in sys.argv:
-        print(f"[skip] option_sr 已有 {_lat}，txo_daily 最新為 {iso}（尚未更新）→ 不覆寫"); return
+        print(f"[skip] option_sr 已有 {_lat}，txo_daily 最新為 {iso}（尚未更新）→ 不覆寫")
+    else:
+        _run_date(env, iso, dry)
+    if not dry:
+        _fill_gaps(env)
 
+
+def _fill_gaps(env, days=60):
+    """2026-11-03 自動補洞：本機 txo_daily 有、option_sr 沒有的交易日逐日補算
+    （10/20、10/21 夜間排程中斷，這兩天的支撐壓力一直空著）。"""
+    import sqlite3
+    import broker_analysis as ba
+    since = (date.today() - timedelta(days=days)).isoformat()
+    c = sqlite3.connect(str(ba.DB_PATH))
+    local = sorted(r[0] for r in c.execute("select distinct trade_date from txo_daily where trade_date>=?", (since,)))
+    c.close()
+    st, rows = bs._sb(env, "/option_sr", params=[("select", "trade_date"), ("trade_date", f"gte.{since}")])
+    have = {str(r["trade_date"])[:10] for r in rows} if st == 200 and isinstance(rows, list) else None
+    if have is None:
+        print("[warn] option_sr 補洞檢查失敗"); return
+    miss = [d for d in local if have and d < max(have) and d not in have]
+    if not miss:
+        print("option_sr 無缺日"); return
+    print(f"option_sr 缺 {len(miss)} 天，補算：{miss}")
+    for d in miss:
+        _run_date(env, d, False)
+
+
+def _run_date(env, iso, dry):
+    dt = date.fromisoformat(iso)
     body = _txo_body(iso)
     if not body:
         print(f"[error] txo_daily {iso} 無 TXO 資料"); return

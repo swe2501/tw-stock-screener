@@ -185,6 +185,69 @@ def main():
           f"| 融資{(row.get('fin_bal_k') or 0)/1e5:.1f}億 維持率{row.get('fin_maint')}")
     row = {k: v for k, v in row.items() if v is not None}
     print(f"已 upsert otc_market_daily (status {_upsert(env, row)})")
+    if "--no-margin" not in sys.argv:
+        fill_gaps(env, row["trade_date"])
+
+
+def _www(path, iso):
+    """櫃買中心新版網站指定日期 JSON（OpenAPI 只有最新一天，補洞用這個）。日期不符回 None。"""
+    url = f"https://www.tpex.org.tw/www/zh-tw/{path}{'&' if '?' in path else '?'}date={iso.replace('-', '/')}&response=json"
+    d = json.loads(urllib.request.urlopen(urllib.request.Request(url, headers=_OHDR), timeout=40, context=_CTX).read())
+    if str(d.get("date") or "") != iso.replace("-", ""):
+        return None
+    return (d.get("tables") or [{}])[0].get("data") or None
+
+
+def row_for_date(env, iso):
+    """指定日期組一列 otc_market_daily（法人金額＋漲跌家數＋融資），口徑同每日流程。"""
+    ins = _www("insti/summary?type=Daily", iso)
+    hl = _www("afterTrading/highlight", iso)
+    if not ins or not hl:
+        return None
+    row = {"trade_date": iso, "foreign_net": 0, "trust_net": 0, "dealer_net": 0, "total_net": 0}
+    for r in ins:
+        inv = str(r[0]).strip(); net = int(_num(r[3]) or 0)
+        if inv.startswith("外資及陸資合計"):
+            row["foreign_net"] = net
+        elif inv == "投信":
+            row["trust_net"] = net
+        elif inv.startswith("自營商合計"):
+            row["dealer_net"] = net
+        elif inv.startswith("三大法人合計"):
+            row["total_net"] = net
+    h = hl[0]           # 欄位：…7上漲 8漲停 9下跌 10跌停 11平盤 12未成交
+    gi = lambda i: int(_num(h[i]) or 0)
+    row.update({"up": gi(7), "up_limit": gi(8), "down": gi(9), "down_limit": gi(10), "flat": gi(11)})
+    m = tpex_margin_summary(iso)
+    if m:
+        row.update(m)
+        mt = otc_maint_from_split(env, iso)
+        if mt is not None:
+            row["fin_maint"] = mt
+    return {k: v for k, v in row.items() if v is not None}
+
+
+def fill_gaps(env, latest, days=60):
+    """2026-11-03 自動補洞：大盤有交易、otc_market_daily 沒有的日子（10/27 連假後 OpenAPI 還停在前一日而漏寫的教訓）。"""
+    since = (datetime.now(timezone(timedelta(hours=8))) - timedelta(days=days)).strftime("%Y-%m-%d")
+    st, tx = bs._sb(env, "/taiex_daily", params=[("select", "trade_date"), ("trade_date", f"gte.{since}")])
+    st2, have = bs._sb(env, "/otc_market_daily", params=[("select", "trade_date"), ("trade_date", f"gte.{since}")])
+    if st != 200 or st2 != 200:
+        print("[warn] otc_market_daily 補洞檢查失敗"); return
+    hs = {str(r["trade_date"])[:10] for r in have}
+    miss = sorted(str(r["trade_date"])[:10] for r in tx if str(r["trade_date"])[:10] < latest and str(r["trade_date"])[:10] not in hs)
+    if not miss:
+        print("otc_market_daily 無缺日"); return
+    print(f"otc_market_daily 缺 {len(miss)} 天，補算：{miss}")
+    for iso in miss:
+        try:
+            row = row_for_date(env, iso)
+        except Exception as e:                                  # noqa: BLE001
+            print(f"  {iso} 讀取失敗 {type(e).__name__}，下次再補"); continue
+        if not row:
+            print(f"  {iso} 櫃買中心無此日資料，下次再補"); continue
+        print(f"  {iso} 外資{row['foreign_net']/1e8:.1f}億 合計{row['total_net']/1e8:.1f}億 漲{row.get('up')}/跌{row.get('down')} 融資{(row.get('fin_bal_k') or 0)/1e5:.1f}億"
+              f" → status {_upsert(env, row)}")
 
 
 if __name__ == "__main__":
