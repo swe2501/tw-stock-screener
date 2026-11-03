@@ -306,6 +306,26 @@ def main():
         if fx:
             print(f"台幣匯率 {iso} {fx}（盤中記錄最後一筆）→ market_indicators "
                   f"status {_upsert_table(env, 'market_indicators', 'date', {'date': iso, 'usdtwd': fx})}")
+        # 2026-11-03 台指VIX 也在盤後寫當日收盤：原本只有晚上 market_indicators 讀官方月檔（慢一個交易日），
+        # 上面寫匯率先建了當日列、vix 空白 → 首頁 VIX 卡顯示「—」
+        vix_close_today(env, iso)
+
+
+def vix_close_today(env, iso):
+    """當日台指VIX收盤（期交所 getVixData 13:45:00）→ market_indicators.vix；vix_prev＝資料庫前一筆有值的 VIX。"""
+    import home_intraday
+    try:
+        vix = home_intraday.vix_close(datetime.strptime(iso, "%Y-%m-%d").date())
+    except Exception as e:
+        print(f"[warn] 台指VIX {iso} 讀取失敗：{str(e)[:80]}"); return None
+    if not vix:
+        print(f"[warn] 台指VIX {iso} 尚無 13:45 收盤值"); return None
+    st, prev = bs._sb(env, "/market_indicators", params=[("select", "vix"), ("vix", "not.is.null"),
+                                                          ("date", f"lt.{iso}"), ("order", "date.desc"), ("limit", "1")])
+    vp = prev[0]["vix"] if st == 200 and prev else None
+    print(f"台指VIX {iso} 收盤 {vix}（前一日 {vp}）→ market_indicators status "
+          f"{_upsert_table(env, 'market_indicators', 'date', {'date': iso, 'vix': vix, 'vix_prev': vp})}")
+    return vix
 
 
 if __name__ == "__main__":

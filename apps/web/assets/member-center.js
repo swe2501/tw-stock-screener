@@ -21,7 +21,7 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
   page.addEventListener('scroll',()=>{if(!syncTop.r){syncTop.r=requestAnimationFrame(()=>{syncTop.r=0;syncTop();});}},{passive:true});
   toTop.addEventListener('click',()=>{page.scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth'});page.querySelector('main')?.focus?.({preventScroll:true});});
   queueMicrotask(()=>page.append(toTop));
-  page.innerHTML = `<div class="mc-shell"><div class="mc-top"><div><span class="mc-kicker">FORESIGHT QUANT · MEMBER</span><h1>會員中心</h1><div class="mc-muted">你的研究工作區，從這裡開始。</div></div><div class="mc-top-actions"><button type="button" data-member-theme></button><button type="button" data-back>← 返回原頁</button><button type="button" data-member-logout>登出</button><span class="mc-action-status" role="status"></span></div></div><div class="mc-layout"><nav class="mc-nav" aria-label="會員功能"></nav><main class="mc-main" tabindex="-1"></main></div></div>`;
+  page.innerHTML = `<div class="mc-shell"><div class="mc-top"><div><span class="mc-kicker">FORESIGHT QUANT · MEMBER</span><h1>會員中心</h1><div class="mc-muted">你的研究工作區，從這裡開始。</div></div><div class="mc-top-actions"><button type="button" data-member-theme></button><button type="button" data-back>← 返回原頁</button><button type="button" data-member-logout>登出</button><span class="mc-action-status" role="status"></span></div></div><div class="mc-layout"><nav class="mc-nav" aria-label="會員功能"></nav><section class="mc-content-flow" aria-label="會員功能內容"><main class="mc-main" tabindex="-1"></main></section></div></div>`;
   document.body.append(page);
   const brandbar=document.createElement('div');brandbar.className='mc-brandbar';
   for(const selector of ['body>header .gs-brand','body>header .gs-edition']){const original=document.querySelector(selector);if(original){const clone=original.cloneNode(true);clone.removeAttribute('onclick');clone.removeAttribute('id');clone.querySelectorAll('[id],[onclick]').forEach(el=>{el.removeAttribute('id');el.removeAttribute('onclick');});if(clone.matches('a'))clone.addEventListener('click',e=>{e.preventDefault();goHome();});brandbar.append(clone);}}
@@ -33,7 +33,48 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
   ];
   const items = groups.flatMap(([,rows])=>rows);
   const nav = page.querySelector('nav'), main = page.querySelector('main');
-  const cloudHost=document.createElement('section');cloudHost.className='mc-cloud-host';cloudHost.hidden=true;page.querySelector('.mc-layout').before(cloudHost);let cloudCleanup=()=>{};
+  const contentFlow=main.parentElement,layout=page.querySelector('.mc-layout');
+  let contentAnchor=null;
+  function alignContentStart(){
+    const anchor=contentAnchor;if(!anchor||page.hidden)return;
+    const oldTop=parseFloat(contentFlow.style.top)||0;
+    const naturalTop=contentFlow.getBoundingClientRect().top-oldTop;
+    const nextTop=Math.max(0,brandbar.getBoundingClientRect().bottom+12-naturalTop);
+    if(Math.abs(page.scrollTop-anchor.scroll)<2)contentFlow.style.top=nextTop+'px';
+    const offset=parseFloat(contentFlow.style.top)||0;
+    const height=Math.max(anchor.minimum,nav.offsetHeight,offset+contentFlow.offsetHeight);
+    if(Math.abs((parseFloat(layout.style.minHeight)||0)-height)>1)layout.style.minHeight=height+'px';
+  }
+  function prepareContentStart(preserve){
+    const scroll=preserve?page.scrollTop:0;
+    const origin=layout.getBoundingClientRect().top-page.getBoundingClientRect().top+page.scrollTop;
+    contentAnchor=preserve?{scroll,minimum:Math.max(0,scroll+page.clientHeight-origin)}:null;
+    contentFlow.style.top='0px';contentFlow.style.paddingTop='';
+    layout.style.minHeight=contentAnchor?contentAnchor.minimum+'px':'';
+    return scroll;
+  }
+  // When scrolling upward past the new feature's start, reduce its offset.
+  // Never expose a blank region above the content or add a second scroll area.
+  let contentScrollFrame=0;
+  page.addEventListener('scroll',()=>{
+    if(contentScrollFrame)return;
+    contentScrollFrame=requestAnimationFrame(()=>{
+      contentScrollFrame=0;if(page.hidden)return;
+      const offset=parseFloat(contentFlow.style.top)||0;if(!offset)return;
+      const actual=contentFlow.getBoundingClientRect().top;
+      const target=Math.max(actual-offset,brandbar.getBoundingClientRect().bottom+12);
+      if(actual<=target+1)return;
+      const next=Math.max(0,offset-(actual-target));contentAnchor=null;
+      contentFlow.style.top=next+'px';
+      const origin=layout.getBoundingClientRect().top-page.getBoundingClientRect().top+page.scrollTop;
+      layout.style.minHeight=Math.max(0,page.scrollTop+page.clientHeight-origin,nav.offsetHeight,next+contentFlow.offsetHeight)+'px';
+    });
+  },{passive:true});
+  for(const event of ['wheel','touchstart','keydown','pointerdown'])page.addEventListener(event,()=>{contentAnchor=null;},{passive:true,capture:true});
+  const contentSizeObserver=new ResizeObserver(()=>{if(contentAnchor)requestAnimationFrame(alignContentStart);});
+  contentSizeObserver.observe(main);contentSizeObserver.observe(brandbar);
+
+  const cloudHost=document.createElement('section');cloudHost.className='mc-cloud-host';cloudHost.hidden=true;page.querySelector('.mc-layout').before(cloudHost);contentSizeObserver.observe(cloudHost);let cloudCleanup=()=>{};
   window.addEventListener('academy-cloud-before-pull',e=>{if(e.detail?.owner===profile?.id&&e.detail.kind.startsWith('journal'))window.AcademyTradeUI?.cleanup();});
   window.addEventListener('academy-cloud-pulled',e=>{if(e.detail?.owner===profile?.id&&!page.hidden)render();});
   nav.innerHTML = groups.map(([title,rows])=>`<span class="mc-nav-group">${title}</span>`+rows.map(([id,label])=>`<button type="button" data-tab="${id}"><span class="mc-nav-label">${label}</span><span class="mc-nav-chevron" aria-hidden="true">›</span></button>`).join('')).join('');
@@ -138,7 +179,8 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
     current=(items.some(i=>i[0]===tab)||tab==='goals')?tab:'overview';
     if(page.hidden){returnFocus=document.activeElement;returnScroll={x:scrollX,y:scrollY};oldOverflow=document.body.style.overflow;document.body.style.overflow='hidden';document.body.classList.add('mc-open');positionUnderHeader();page.hidden=false;history[replaceHistory?'replaceState':'pushState']({...history.state,academyLayers:[],academyMember:true},'',location.pathname+location.search+'#member/'+current);}
     else if(location.hash!=='#member/'+current)history.pushState({...history.state,academyLayers:[],academyMember:true},'',location.pathname+location.search+'#member/'+current);
-    render();main.focus({preventScroll:true});page.scrollTop=0;if(localStorage.getItem('sb_token')&&(!profile||reopened))load();
+    const contentScroll=prepareContentStart(!reopened);
+    render();main.focus({preventScroll:true});page.scrollTop=contentScroll;alignContentStart();requestAnimationFrame(alignContentStart);if(localStorage.getItem('sb_token')&&(!profile||reopened))load();
   }
   function close(){if(document.body.classList.contains('mc-chart-open'))window.closeChart?.();document.body.classList.remove('mc-chart-open');dispatchEvent(new Event('academy-member-closed'));page.querySelectorAll('dialog[open]').forEach(d=>d.close());request++;page.hidden=true;document.body.classList.remove('mc-open');document.body.style.overflow=oldOverflow;returnFocus?.focus?.({preventScroll:true});requestAnimationFrame(()=>scrollTo(returnScroll.x,returnScroll.y));}
   function goHome(){

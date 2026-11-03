@@ -2241,7 +2241,7 @@
     #greedGauge .pro-greed-copy span:first-child { font-size:24px !important; }
   }
 </style>
-<link rel="stylesheet" href="assets/member-center.css?v=20261103-scroll-revert">
+<link rel="stylesheet" href="assets/member-center.css?v=20261103-natural-start-v3">
 <link rel="stylesheet" href="assets/member-wallet.css?v=ai2">
 <link rel="stylesheet" href="assets/futures-summary.css?v=history1">
 <link rel="stylesheet" href="assets/sector-dashboard.css">
@@ -8677,13 +8677,15 @@
     /* hero 資金軌:富台指/VIX/匯率(原 §2A 國際塊,照合夥人移到最上面)*/
     function loadFundRail(){
       var box=el('hpFundRail'); if(!box)return;
-      Promise.all([sb('market_indicators?select=date,futai_close,futai_prev,vix,vix_prev,usdtwd,updated_at&order=date.desc&limit=1'),sb('page_cache?kind=eq.quote_SGX&select=payload,updated_at')]).then(function(r2){
+      Promise.all([sb('market_indicators?select=date,futai_close,futai_prev,vix,vix_prev,usdtwd,updated_at&order=date.desc&limit=5'),sb('page_cache?kind=eq.quote_SGX&select=payload,updated_at')]).then(function(r2){
         var a=r2[0], mi=(a||[])[0]; if(!mi){box.innerHTML='';return;}
+        var vm=(a||[]).filter(function(r){return r.vix!=null;})[0]||{};  // 2026-11-03 最新列可能只有匯率，VIX 取最近有值的列
+        if(mi.futai_close==null){var fm=(a||[]).filter(function(r){return r.futai_close!=null;})[0];if(fm)mi=Object.assign({},mi,{futai_close:fm.futai_close,futai_prev:fm.futai_prev});}
         // 2026-10-29 富台指盤中改用日盤最新價（同首頁富台指卡片）
         var sq=((r2[1]||[])[0])||null,sp=sq&&sq.payload;
         if(sp&&sp.close>0&&sp.prev>0&&sp.date>=(mi.date||'')&&Date.parse(sq.updated_at)>Date.parse(mi.updated_at||0)){mi=Object.assign({},mi,{futai_close:sp.close,futai_prev:sp.prev});}
         var fd=(mi.futai_close!=null&&mi.futai_prev)?((mi.futai_close/mi.futai_prev-1)*100):null;
-        var vd=(mi.vix!=null&&mi.vix_prev)?(mi.vix-mi.vix_prev):null;
+        var vd=(vm.vix!=null&&vm.vix_prev)?(vm.vix-vm.vix_prev):null;
         function it(k,v,c,cc){return '<div class="gs-fr"><div class="k">'+k+'</div><div class="v">'+v+(c?'<span class="c '+cc+'">'+c+'</span>':'')+'</div></div>';}
         function render(){
           var tx=_txSettle();
@@ -8691,7 +8693,7 @@
           if(tx){ var dt=new Date(tx.t), md=(dt.getUTCMonth()+1)+'/'+dt.getUTCDate(); txV=(tx.days===0?'今日結算':tx.days+' 天'); txC=md+'（三）'; txCc=tx.days<=3?'hp-dn':''; }
           else { txV='—'; txC=''; txCc=''; }
           box.innerHTML=it('富台指期',mi.futai_close!=null?Number(mi.futai_close).toLocaleString():'—',fd!=null?pctTxt(fd):'',fd>0?'hp-up':'hp-dn')
-            +it('台指VIX',mi.vix!=null?mi.vix.toFixed(2):'—',vd!=null?((vd>0?'+':'')+vd.toFixed(2)):'',vd>0?'hp-dn':'hp-up')
+            +it('台指VIX',vm.vix!=null?vm.vix.toFixed(2):'—',vd!=null?((vd>0?'+':'')+vd.toFixed(2)):'',vd>0?'hp-dn':'hp-up')
             +it('美元/台幣',mi.usdtwd!=null?mi.usdtwd.toFixed(3):'—','','')
             +it('台指期結算',txV,txC,txCc);
         }
@@ -9101,7 +9103,8 @@
       }).catch(function(){var s=dialog.querySelector('.vix-history-status');if(s)s.textContent='讀取失敗，請稍後再試。';});
     };
     function vixAnnualState(rows){
-      var seen={}, daily=(rows||[]).filter(function(r){if(!r.date||seen[r.date])return false;seen[r.date]=true;return true;}).sort(function(a,b){return b.date.localeCompare(a.date);}).slice(0,253);
+      // 2026-11-03 只看有 VIX 的列：盤後寫匯率會先建當日列（vix 空白），不該讓一年新高判斷變成「資料不足」
+      var seen={}, daily=(rows||[]).filter(function(r){if(!r.date||seen[r.date]||r.vix==null)return false;seen[r.date]=true;return true;}).sort(function(a,b){return b.date.localeCompare(a.date);}).slice(0,253);
       if(daily.length<253||daily.some(function(r){return r.vix==null||!isFinite(Number(r.vix))||Number(r.vix)<=0;}))return {state:'missing',date:daily[0]?daily[0].date:''};
       var now=Number(daily[0].vix), high=Math.max.apply(null,daily.slice(1).map(function(r){return Number(r.vix);}));
       return {state:now>high?'new':now===high?'touch':'normal',date:daily[0].date,high:high};
@@ -9123,13 +9126,15 @@
         // 5 KPI
         function mini(code,date,prev){return '<figure class="home-intraday" data-code="'+code+'" data-date="'+(date||'')+'" data-prev="'+(prev==null?'':prev)+'" aria-label="當日分時走勢"><figcaption>讀取分時…</figcaption></figure>';}
         function note(chg,pct,dec){if(chg==null)return '等待更新';return '<span class="home-change-points">'+(chg>0?'+':'')+Number(chg).toFixed(dec==null?2:dec)+' 點</span><span class="home-change-percent">'+(pct!=null?((pct>0?'+':'')+Number(pct).toFixed(2)+'%'):'—')+'</span>';}
-        var vc=(mi.vix!=null&&mi.vix_prev!=null)?(mi.vix-mi.vix_prev):null,vp=(vc!=null&&mi.vix_prev)?(vc/mi.vix_prev*100):null;
+        // 2026-11-03 最新一列可能只有匯率（vix 空白）→ VIX 卡改取最近一筆有值的列，資料日跟著標該列日期
+        var vm=(res[1]||[]).filter(function(r){return r.vix!=null;})[0]||{};
+        var vc=(vm.vix!=null&&vm.vix_prev!=null)?(vm.vix-vm.vix_prev):null,vp=(vc!=null&&vm.vix_prev)?(vc/vm.vix_prev*100):null;
         function previousQuote(field,date){var rows=(res[1]||[]).filter(function(r){return r.date<date&&r[field]!=null&&Number.isFinite(Number(r[field]))&&Number(r[field])>0;}).sort(function(a,b){return b.date.localeCompare(a.date);});return rows.length?Number(rows[0][field]):null;}
         var kpis=[
           {k:'加權指數',code:'^TWII',v:cb.taiex_close,c:cb.taiex_chg,p:cb.taiex_pct},
           {k:'櫃買指數',code:'^TWOII',v:cb.otc_close,c:cb.otc_chg,p:cb.otc_pct},
           {k:'台指期（日盤）',code:'TX=F',v:cb.txf_close,c:cb.txf_chg,p:cb.txf_pct},
-          {k:'台指VIX',miniCode:'VIX',v:mi.vix,c:vc,p:vp,note:'選擇權波動率指數'},
+          {k:'台指VIX',miniCode:'VIX',v:vm.vix,c:vc,p:vp,note:'選擇權波動率指數'},
           {k:'台幣匯率',miniCode:'FX',v:mi.usdtwd,c:null,p:null,note:'USD／TWD'+(mi.date?' · '+mi.date:'')}
         ];
         pulse.innerHTML=kpis.map(function(m){
@@ -9143,7 +9148,7 @@
           var clickAttr='';
           if(m.k==='加權指數') clickAttr=' role="button" tabindex="0" onclick="_openMarketTrain()"'+kd+' aria-label="查看加權走勢與市場列車"';
           else if(window._scCfg&&window._scCfg[m.k]) clickAttr=' role="button" tabindex="0" onclick="_openKpiChart(\''+m.k+'\')"'+kd+' aria-label="查看'+m.k+'近兩年走勢圖"'+(isVix?' title="點看台指VIX走勢；資料日 '+vixDate+'"':'');
-          return '<div class="cb-pi'+(m.code||m.miniCode?' home-market-card':'')+(m.k==='台幣匯率'?' home-fx-card':'')+(alert?' vix-year-alert':'')+'"'+clickAttr+'><div class="k">'+m.k+'</div><div class="home-quote-row"><div class="home-quote"><div class="v '+cc+'">'+val+'</div><div class="n">'+(m.note||note(m.c,m.p,dec))+'</div></div>'+(m.code||m.miniCode?mini(m.code||m.miniCode,m.miniCode==='VIX'?(vixDate||mi.date):m.miniCode?mi.date:cb.trade_date,m.miniCode==='FX'?previousQuote('usdtwd',mi.date):m.miniCode==='VIX'?(mi.vix_prev!=null?Number(mi.vix_prev):previousQuote('vix',mi.date)):(m.v!=null&&m.c!=null?m.v-m.c:null)):'')+'</div>'+badge+(isVix?'<small class="vix-year-date">資料日 '+vixDate+'</small>':'')+'</div>';
+          return '<div class="cb-pi'+(m.code||m.miniCode?' home-market-card':'')+(m.k==='台幣匯率'?' home-fx-card':'')+(alert?' vix-year-alert':'')+'"'+clickAttr+'><div class="k">'+m.k+'</div><div class="home-quote-row"><div class="home-quote"><div class="v '+cc+'">'+val+'</div><div class="n">'+(m.note||note(m.c,m.p,dec))+'</div></div>'+(m.code||m.miniCode?mini(m.code||m.miniCode,m.miniCode==='VIX'?(vixDate||mi.date):m.miniCode?mi.date:cb.trade_date,m.miniCode==='FX'?previousQuote('usdtwd',mi.date):m.miniCode==='VIX'?(vm.vix_prev!=null?Number(vm.vix_prev):previousQuote('vix',vm.date||mi.date)):(m.v!=null&&m.c!=null?m.v-m.c:null)):'')+'</div>'+badge+(isVix?'<small class="vix-year-date">資料日 '+vixDate+'</small>':'')+'</div>';
         }).join('');
         // 台積電權值影響
         var tsc=cb.tsmc_close,tchg=cb.tsmc_chg,tpct=cb.tsmc_pct,contrib=cb.tsmc_contrib;
@@ -18332,7 +18337,7 @@
 <script src="assets/member-notification-inbox.js?v=paging3" defer></script>
 <script src="assets/glass-skin.js?v=5" defer></script>
 <script src="assets/glass-motion.js?v=4" defer></script>
-<script src="assets/member-center.js?v=20261103-scroll-revert" defer></script>
+<script src="assets/member-center.js?v=20261103-natural-start-v3" defer></script>
 <script src="assets/member-signin.js?v=invite-reset7" defer></script>
 <script src="assets/member-private-screen.js?v=asof5-norm" defer></script>
 <link rel="stylesheet" href="assets/site-readability.css?v=futures-history3">

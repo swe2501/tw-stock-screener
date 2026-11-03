@@ -199,6 +199,10 @@ async def main():
 
     st = _upsert(env, row)
     print(f"已 upsert market_indicators (status {st})")
+    # 2026-11-03 月檔慢一個交易日：當日 13:45 收盤已出就補上當日 VIX（盤後 chip_brief 也會寫；這裡是漏跑時的備援）
+    if (vdate or "") < today:
+        import chip_brief
+        chip_brief.vix_close_today(env, today)
 
 
 if __name__ == "__main__":
