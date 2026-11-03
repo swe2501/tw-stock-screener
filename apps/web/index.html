@@ -375,8 +375,6 @@
     .ev-info .ev-band{display:inline-block;padding:0 7px;border-radius:999px;font-size:10.5px;font-weight:700;line-height:17px;letter-spacing:.02em;color:var(--ev-c);background:color-mix(in srgb,var(--ev-c) 10%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ev-c) 28%,transparent);}
     .ev-info.ev-cheap{--ev-c:#d23f3f;}.ev-info.ev-fair{--ev-c:#5f7287;}.ev-info.ev-expensive{--ev-c:#148f77;}
     html:not([data-theme=light]) .ev-info.ev-cheap{--ev-c:#ff7a7a;}html:not([data-theme=light]) .ev-info.ev-fair{--ev-c:#a9b8c8;}html:not([data-theme=light]) .ev-info.ev-expensive{--ev-c:#4fd1b0;}
-    .zm4-badge svg path{stroke-linecap:round;stroke-linejoin:round}
-    .zm6-badge.is-cover{color:#c2861d}html:not([data-theme=light]) .zm6-badge.is-cover{color:#f0b85a}
     .zm6-info{color:var(--text-muted);}
     .zm6-info .zm6-cover{color:#b7791f;font-weight:700;}
 
@@ -11272,8 +11270,8 @@
     // 企業價值：名稱下方只放「區間膠囊＋殖利率」，參考價細節放進 ⓘ 提示，欄寬再窄也不會被切掉
     function _ev357Info(e) {
       const band = e.band === 'cheap' ? ['cheap', '低估區'] : e.band === 'expensive' ? ['expensive', '高估區'] : ['fair', '合理區'];
-      const tip = ['企業價值・' + band[1], '現金殖利率 ' + e.yield + '%（D ÷ 現價）', '近 5 年平均現金股利 D ' + e.d + '（連續 5 年配息）', '低估參考價 ' + e.cheap_price + '（殖利率 7%）', '合理參考價 ' + e.fair_price + '（殖利率 5%）', '高估參考價 ' + e.exp_price + '（殖利率 3%）'].join('\n').replace(/"/g, '&quot;');
-      return `<button type="button" class="zm4-badge ev-badge" aria-label="查看企業價值參考價" aria-expanded="false" data-zm4-tip="${tip}"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.5"/><path d="M7.9 7.6a2.2 2.2 0 1 1 3.3 1.9c-.8.5-1.2.9-1.2 1.8v.4M10 14.2v.1"/></svg></button><div class="ev-info ev-${band[0]}"><span class="ev-band">${band[1]}</span><span class="ev-yield">殖利率 ${e.yield}%</span></div>`;
+      const tip = ['企業價值｜' + band[1], '現金殖利率：' + e.yield + '%', '平均股利 D：' + e.d + '（近 5 年，連續配息）', '低估參考價：' + e.cheap_price + '（殖利率 7%）', '合理參考價：' + e.fair_price + '（殖利率 5%）', '高估參考價：' + e.exp_price + '（殖利率 3%）', '!殖利率＝D ÷ 現價'].join('\n').replace(/"/g, '&quot;');
+      return `<button type="button" class="zm4-badge ev-badge" aria-label="查看企業價值參考價" aria-expanded="false" data-zm4-tip="${tip}"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7.7 7.4a2.4 2.4 0 1 1 3.5 2.1c-.8.4-1.2.9-1.2 1.8v.3M10 14.3v.1"/></svg></button><div class="ev-info ev-${band[0]}"><span class="ev-band">${band[1]}</span><span class="ev-yield">殖利率 ${e.yield}%</span></div>`;
     }
 
     function renderTable(results) {
@@ -18407,14 +18405,14 @@
 <link rel="stylesheet" href="assets/onboarding-tour.css?v=mist-edge-mcopen-20261027">
 <script src="assets/onboarding-tour.js?v=mist-edge-20261026" defer></script>
 <link rel="stylesheet" href="assets/zhenming-hidden.css?v=6">
-<link rel="stylesheet" href="assets/research-hover.css?v=drag2">
+<link rel="stylesheet" href="assets/research-hover.css?v=qtip3">
 <script src="assets/research-hover.js?v=drag2"></script>
 <link rel="stylesheet" href="assets/chart-drawing-edit.css?v=2">
 <script src="assets/chart-drawing-edit.js?v=2"></script>
-<script src="assets/zhenming-four.js?v=candidate3"></script>
+<script src="assets/zhenming-four.js?v=candidate4"></script>
 <script src="assets/zhenming-hidden.js?v=5" defer></script>
 <link rel="stylesheet" href="assets/zhenming-six.css?v=1">
-<script src="assets/zhenming-six.js?v=2" defer></script>
+<script src="assets/zhenming-six.js?v=3" defer></script>
 <script src="assets/screen-log.js?v=20261103-scroll-revert" defer></script>
 <script src="assets/member-quick-menu.js?v=tier6" defer></script>
 <script src="assets/navigation-layers.js?v=logo-home20" defer></script>
