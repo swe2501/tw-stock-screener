@@ -22,6 +22,8 @@
   <script src="assets/w-pattern-export.js?v=20261024-1"></script>
   <script src="assets/w-pattern-overlay.js?v=20261025-2"></script>
   <script src="assets/chart-ai-patterns.js?v=20261101-box1"></script>
+  <script src="assets/candle-combos.js?v=1" defer></script>
+  <link rel="stylesheet" href="assets/candle-combos.css?v=1">
   <link rel="stylesheet" href="assets/chart-ai-patterns.css?v=20261026-3">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -9951,6 +9953,14 @@
           </div>
           </div>
         </div>
+        <!-- 2026-11-04 K棒組合 16 類（規則見 assets/candle-combos.js；資料 candle_combo_hits 每晚計算） -->
+        <div class="sc-panel" data-cat="combo">
+          <div class="sc-hd"><a onclick="_scToggle('combo')"><span class="sc-ar">▸</span><b style="color:#b7791f">K棒組合</b></a><span class="sc-sum"></span></div>
+          <div class="sc-body" style="display:none">
+          <p class="cc-panel-note">列出最近 3 個交易日（含篩選日）完成組合的股票；勾選多項＝任一成立。每晚盤後計算。<a href="javascript:void(0)" onclick="window.AcademyCandleCombos&&AcademyCandleCombos.openRules()">16 類規則說明</a></p>
+          <div class="checkbox-grid sc-cbs" id="ccComboGrid"></div>
+          </div>
+        </div>
         <div class="sc-panel" data-cat="gap">
           <div class="sc-hd"><a onclick="_scToggle('gap')"><span class="sc-ar">▸</span><b style="color:#5a78aa">缺口</b></a><span class="sc-sum"></span></div>
           <div class="sc-body" style="display:none">
@@ -11115,6 +11125,8 @@
         no_black_months:     noBlackMonths,
         no_black_mult:       noBlackMult,
         no_black_tolerance:  noBlackTol,
+        // 2026-11-04 K棒組合 16 類（近 3 個交易日完成、通過最低量；勾多項＝任一成立）
+        candle_combos: Array.from(document.querySelectorAll('.cc-cb:checked')).map(e => e.dataset.combo),
       };
 
       // 非同步任務：帶 job_id 送出，伺服器算完會存暫存；即使手機切背景斷線，
@@ -11387,7 +11399,7 @@
                   ? `<span class="data-missing-badge" title="部分篩選條件無法確認（${s.data_missing.map(k=>({'no_black':'無放量黑棒篩選','gap_unverified':'跳空前日資料缺失，請手動排查'}[k]||k)).join('、')}），已放行"></span>`
                   : ''
               }</td>
-            <td class="name-cell">${s.name}${s.zm4 ? AcademyZhenmingFour.badge(s.zm4) : ''}${s.zm6 && window.AcademyZhenmingSix ? AcademyZhenmingSix.badge(s.zm6) : ''}${(s.zm8 || s.zm9) && window.AcademyZhenming89 ? AcademyZhenming89.badge(s) : ''}${s.sma20_stage ? `<div class="zm3-info">葛蘭碧・階段 ${s.sma20_stage}</div>` : ''}${s.zm3 ? _zm3Badge(s.zm3) : ''}${s.ev357 ? _ev357Info(s.ev357) : ''}</td>
+            <td class="name-cell">${s.name}${s.zm4 ? AcademyZhenmingFour.badge(s.zm4) : ''}${s.zm6 && window.AcademyZhenmingSix ? AcademyZhenmingSix.badge(s.zm6) : ''}${(s.zm8 || s.zm9) && window.AcademyZhenming89 ? AcademyZhenming89.badge(s) : ''}${s.sma20_stage ? `<div class="zm3-info">葛蘭碧・階段 ${s.sma20_stage}</div>` : ''}${s.candle_combos && window.AcademyCandleCombos ? AcademyCandleCombos.resultTag(s.candle_combos) : ''}${s.zm3 ? _zm3Badge(s.zm3) : ''}${s.ev357 ? _ev357Info(s.ev357) : ''}</td>
             <td class="neutral col-open">${s.open}</td>
             <td class="neutral col-high">${s.high}</td>
             <td class="neutral col-low">${s.low}</td>
@@ -15452,6 +15464,8 @@
       });
       candleSeriesRef.setData(candles);
       window.AcademyVisualPatterns?.refresh(_visualPatternContext);
+      // 2026-11-04 K棒組合 16 類黃框（只畫日K；開關在「K棒訊息」旁）
+      try { window.AcademyCandleCombos?.attach({ chart: chartInstance, series: candleSeriesRef, host: el, code: currentCode, period: window._chartPeriodKey, candles }); } catch (_) {}
       window._mainCandleSeries = candleSeriesRef;   // 供現價線開關 _togglePriceLine 使用
       try { var _plb = document.querySelector('[data-layer="pl"]'); if (_plb) _plb.setAttribute('aria-pressed',String(window._priceLineOn !== false)); } catch (e) {}
       chartInstance._xhairSeries = candleSeriesRef;

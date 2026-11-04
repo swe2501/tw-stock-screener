@@ -3027,6 +3027,11 @@ def _classify_357(d, price):
 #   型態（可選）：跌破頭肩頂／M頭頸線、箱型下緣、上升楔形（下降趨勢中）下緣、下降三角支撐、三角收斂下緣。
 #   時機：長黑當天跌破，或跌破後 5 個交易日內反彈無力（收盤未站回關鍵價）再出長黑。
 #   停損參考＝該根長黑 K 最高價。回補季（2～4 月股東會、6～9 月除權息）另附提醒。
+# 2026-11-04 K棒組合 16 類代碼（與 scripts/candle_combos.py COMBOS 相同；中文名在前端）
+CANDLE_COMBO_IDS = {"reversal-doji", "bullish-engulfing", "bearish-engulfing", "piercing", "dark-cloud",
+                    "bullish-harami", "bearish-harami", "three-inside-up", "three-inside-down", "two-gap-crows",
+                    "three-white-soldiers", "three-black-crows", "bullish-tank", "bearish-tank",
+                    "rising-three", "falling-three"}
 ZM6_BLACK = 3.0          # 長黑實體跌幅門檻（%）
 ZM6_MA20_SLOPE_N = 5     # 20MA 下彎：與 N 個交易日前比較
 ZM6_BREAK_WITHIN = 5     # 跌破後幾天內出長黑仍算
@@ -3484,6 +3489,8 @@ def screen(params):
         sma20_stages = {int(x) for x in (params.get("sma20_stages") or []) if int(x) in (1, 2, 3)}
     except (TypeError, ValueError):
         sma20_stages = set()
+    # 2026-11-04 K棒組合 16 類（scripts/candle_combos.py 每晚算好寫 candle_combo_hits）：勾選多項＝任一成立
+    candle_combos = sorted({str(x) for x in (params.get("candle_combos") or []) if str(x) in CANDLE_COMBO_IDS})
     no_black_months  = min(int(params.get("no_black_months") or 0), 120)
     no_black_years   = no_black_months / 12  # 轉換為年（可為小數）傳給 YF API
     no_black_mult    = float(params.get("no_black_mult") or 0)
@@ -3586,6 +3593,24 @@ def screen(params):
                 continue
 
         candidates[code] = s
+
+    # K棒組合：只留「最近 3 個交易日（含篩選日）完成組合、且通過最低量」的股票
+    _combo_hits, _combo_window = {}, None
+    if candle_combos and candidates:
+        _iso = f"{actual_date[:4]}-{actual_date[4:6]}-{actual_date[6:]}" if len(actual_date) == 8 else actual_date
+        st, days = _cache_sb("/taiex_daily", "GET", params=[("select", "trade_date"), ("trade_date", f"lte.{_iso}"),
+                                                            ("order", "trade_date.desc"), ("limit", "3")])
+        if st != 200 or not isinstance(days, list) or not days:
+            return {"error": "K棒組合：讀不到交易日曆，請稍後再試。", "results": []}
+        _combo_window = [days[-1]["trade_date"], _iso]
+        st, hits = _cache_sb("/candle_combo_hits", "GET", params=[
+            ("select", "code,combo,end_date"), ("combo", f"in.({','.join(candle_combos)})"), ("liquid", "eq.true"),
+            ("end_date", f"gte.{_combo_window[0]}"), ("end_date", f"lte.{_iso}"), ("limit", "5000")])
+        if st != 200 or not isinstance(hits, list):
+            return {"error": "K棒組合：讀取組合資料失敗，請稍後再試。", "results": []}
+        for h in hits:
+            _combo_hits.setdefault(h["code"], []).append({"combo": h["combo"], "date": h["end_date"]})
+        candidates = {k: v for k, v in candidates.items() if k in _combo_hits}
 
     if not candidates:
         return {"date": display_date, "total": len(all_stocks), "count": 0, "results": [], "zhenming_hidden_applied": bool(hidden), "zhenming4_applied": check_zhenming4, "zhenming6_applied": check_zhenming6, "zhenming8_applied": check_zhenming8, "zhenming9_applied": check_zhenming9}
@@ -4015,6 +4040,8 @@ def screen(params):
             item["sma20_stage"] = sma20_hit
         if _ev357:
             item["ev357"] = _ev357
+        if code in _combo_hits:
+            item["candle_combos"] = sorted(_combo_hits[code], key=lambda x: x["date"], reverse=True)
 
         results.append(item)
 
@@ -4040,6 +4067,7 @@ def screen(params):
         "zhenming6_applied": check_zhenming6,
         "zhenming8_applied": check_zhenming8,
         "zhenming9_applied": check_zhenming9,
+        "candle_combo_window": _combo_window,
     }
 
 
