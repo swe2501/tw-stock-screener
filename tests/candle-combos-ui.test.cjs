@@ -28,7 +28,10 @@ test('chart markers use compact theme-aware glass labels without repeated discla
 
 test('green-box strategy details are removed while the remaining hover guidance stays', () => {
   const hints = js.slice(js.indexOf('const HINTS'), js.indexOf('const byId'));
-  assert.doesNotMatch(hints, /一大段|約 30%|實體各 ≥3%|實體 ≥3%|量放大 1\.5 倍；三根實體相連沒有缺口|量縮；三根實體相連沒有缺口/);
+  assert.doesNotMatch(hints, /實體各 ≥3%|實體 ≥3%|量放大 1\.5 倍；三根實體相連沒有缺口|量縮；三根實體相連沒有缺口/);
+  // 2026-11-05 Andrew 要求示意卡保留 30% 波段前提（需要波段的 9 類＋雙鴉躍空）
+  assert.match(hints, /'bullish-engulfing'[\s\S]*?跌了一大段（約 30%）後/);
+  assert.match(hints, /'bearish-harami'[\s\S]*?漲了一大段（約 30%）後/);
   assert.match(hints, /'bullish-engulfing'[\s\S]*?紅K 實體把前一根黑K/);
   assert.match(hints, /'bullish-tank'[\s\S]*?第 3 根紅K 延續攻勢/);
   assert.match(hintJs, /k\.desc \? `<p>\$\{k\.desc\}<\/p>` : ''/);
