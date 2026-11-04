@@ -1,0 +1,43 @@
+/* Compact chart context palette and keyboard editing regression. */
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const {chromium}=require('playwright');
+const root=path.resolve(__dirname,'..');
+const data=Array.from({length:280},(_,i)=>{const c=100+Math.sin(i/9)*8+i*.03;return {time:new Date(Date.UTC(2025,0,2+i)).toISOString().slice(0,10),open:c-.5,high:c+1.5,low:c-1.5,close:c,volume:10000+i%7*900};});
+(async()=>{const browser=await chromium.launch({channel:'chrome',headless:true});try{for(const theme of ['light','dark']){
+ const p=await browser.newPage({viewport:{width:1440,height:900}});
+ await p.addInitScript(theme=>{localStorage.setItem('theme',theme);localStorage.setItem('sb_token','fixture');localStorage.setItem('sb_user',JSON.stringify({id:'fx',email:'swe250165@gmail.com'}));},theme);
+ await p.route('**/*',r=>{const u=new URL(r.request().url());
+  if(u.hostname==='unpkg.com'&&u.pathname.includes('lightweight-charts'))return r.fulfill({path:process.env.CHART_LIBRARY_PATH,contentType:'text/javascript'});
+  if(u.pathname.endsWith('/api/chart'))return r.fulfill({headers:{'Access-Control-Allow-Origin':'*'},json:{name:'Context fixture',data}});
+  if(u.origin==='https://context.fixture.test'){if(u.pathname==='/api/auth')return r.fulfill({json:{enabled:false}});if(u.pathname==='/')return r.fulfill({path:path.join(root,'apps/web/index.html'),contentType:'text/html; charset=utf-8'});const f=path.resolve(root,'apps/web','.'+u.pathname);if(fs.existsSync(f)&&fs.statSync(f).isFile())return r.fulfill({path:f});}
+  if(u.pathname==='/auth/v1/user')return r.fulfill({json:{id:'fx',email:'swe250165@gmail.com'}});return r.fulfill({json:[]});});
+ await p.goto('https://context.fixture.test/');await p.evaluate(()=>openChart('2330','Context fixture',''));
+ await p.waitForFunction(()=>document.querySelector('#chartContainer canvas')&&window.AcademyChartBridge?.get()?.series);
+ const tooltip=await p.evaluate(()=>{const tip=document.getElementById('ohlcTooltip'),b=AcademyChartBridge.get(),candles=b.candles,i=candles.length-1,c=candles[i],prev=candles[i-1],idx=Object.fromEntries(candles.map((q,j)=>[q.time,j])),mac=calcMACD(candles.map(q=>q.close));window._tipInstCache['2330']={[prev.time]:{foreign_net:10,trust_net:8,dealer_net:6},[c.time]:{foreign_net:12,trust_net:5,dealer_net:6}};tip.style.display='block';tip.innerHTML=_tipHtml(c,c.time,'#e74c3c',v=>Number(v).toFixed(2),candles,idx,mac,true,'2330');
+  _tipFollow({point:{x:360,y:180}});_tipFollow({point:{x:300,y:180}});const leftward={x:parseFloat(tip.style.left),y:parseFloat(tip.style.top)},w=tip.offsetWidth,h=tip.offsetHeight;
+  _tipFollow({point:{x:340,y:180}});const rightward={x:parseFloat(tip.style.left),y:parseFloat(tip.style.top)},cs=getComputedStyle(tip),labels=[...tip.querySelectorAll('.tt-rows>span:nth-child(odd)')].map(x=>x.textContent),trends=tip.querySelectorAll('.tt-trend').length,z=+cs.zIndex,fibZ=+getComputedStyle(document.getElementById('fibCanvas')).zIndex;tip.style.display='none';
+  return{leftward,rightward,w,h,bg:cs.backgroundColor,blur:cs.backdropFilter||cs.webkitBackdropFilter,labels,trends,z,fibZ};});
+ const covers=(r,x,y)=>x>=r.x-6&&x<=r.x+tooltip.w+6&&y>=r.y-6&&y<=r.y+tooltip.h+6;
+ assert.ok(!covers(tooltip.leftward,300,180),'tooltip should avoid the inspected candle/cursor');
+ assert.ok(!covers(tooltip.rightward,340,180),'tooltip should keep avoiding the inspected candle after direction changes');
+ assert.ok(tooltip.w<220,'tooltip should remain compact');
+ assert.match(tooltip.blur,/blur/,'tooltip should use translucent backdrop blur');
+ assert.deepEqual(tooltip.labels.slice(1,4),['DIF','MACD','OSC']);
+ assert.equal(tooltip.trends,7,'all seven comparison metrics should show a tiny trend marker');
+ assert.ok(tooltip.z>tooltip.fibZ,'tooltip must render above manual drawings');
+ await p.evaluate(()=>{_drawShapes.push({type:'seg',pts:[{time:'2025-08-01',price:102},{time:'2025-08-10',price:105}]});redrawCanvas();});
+ const shapePoint=await p.evaluate(()=>{const b=AcademyChartBridge.get(),g=AcademyChartBridge.plot(),s=b.drawings.at(-1);return{x:g.pageLeft+(AcademyChartBridge.x(s.pts[0])+AcademyChartBridge.x(s.pts[1]))/2,y:g.pageTop+(b.series.priceToCoordinate(s.pts[0].price)+b.series.priceToCoordinate(s.pts[1].price))/2};});
+ await p.mouse.click(shapePoint.x,shapePoint.y,{button:'right'});
+ assert.equal(await p.locator('.drawing-context:not([hidden])').count(),1);
+ assert.equal(await p.locator('.drawing-context-tools [data-tool]').count(),6);
+ assert.ok((await p.locator('.drawing-context').evaluate(el=>el.getBoundingClientRect().width))<=166,'context palette should stay compact');
+ await p.getByRole('menuitem',{name:'複製',exact:true}).click();
+ const blank=await p.evaluate(()=>{const g=AcademyChartBridge.plot();return{x:g.pageLeft+g.width*.72,y:g.pageTop+g.height*.7};});
+ await p.mouse.click(blank.x,blank.y,{button:'right'});await p.keyboard.press('Control+V');
+ assert.equal(await p.evaluate(()=>AcademyChartBridge.get().drawings.length),2);
+ const pastedPoint=await p.evaluate(()=>{const b=AcademyChartBridge.get(),g=AcademyChartBridge.plot(),s=b.drawings.at(-1);return{x:g.pageLeft+(AcademyChartBridge.x(s.pts[0])+AcademyChartBridge.x(s.pts[1]))/2,y:g.pageTop+(b.series.priceToCoordinate(s.pts[0].price)+b.series.priceToCoordinate(s.pts[1].price))/2};});
+ await p.mouse.click(pastedPoint.x,pastedPoint.y,{button:'right'});await p.keyboard.press('Delete');
+ assert.equal(await p.evaluate(()=>AcademyChartBridge.get().drawings.length),1);
+ await p.mouse.click(blank.x,blank.y,{button:'right'});await p.locator('.drawing-context [data-tool="rect"]').click();
+ assert.equal(await p.evaluate(()=>AcademyChartBridge.get().tool),'rect');await p.keyboard.press('Escape');await p.close();
+ }console.log('PASS compact translucent tooltip direction, right-click tools, Ctrl+C/Ctrl+V/Delete, light/dark');}finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

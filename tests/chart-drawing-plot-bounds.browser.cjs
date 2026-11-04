@@ -18,8 +18,12 @@ const data=Array.from({length:300},(_,i)=>{const close=100+i*.04+Math.sin(i/10)*
  const before=await p.evaluate(()=>_drawShapes.length);await p.mouse.move(a.x,a.y);await p.mouse.down();await p.mouse.move(z.x,z.y,{steps:12});await p.mouse.up();
  assert.equal(await p.evaluate(()=>_drawShapes.length),before+1,'last candles are drawable');
  let shape=await p.evaluate(()=>_drawShapes.at(-1));assert.equal(shape.pts[0].time,bars[294].time);assert.equal(shape.pts[1].time,bars[299].time);assert(Math.abs(shape.pts[1].price-(bars[299].close+1))<.1);
+ // Starting inside and releasing over the right price axis completes at the plot edge instead of losing the drag.
+ a=await point(296,bars[296].close);await p.mouse.move(a.x,a.y);await p.mouse.down();await p.mouse.move(g.o.x+g.o.width+24,a.y-20,{steps:8});await p.mouse.up();
+ assert.equal(await p.evaluate(()=>_drawShapes.length),before+2,'drag released beyond right plot edge is retained');
+ shape=await p.evaluate(()=>_drawShapes.at(-1));assert.ok(Number.isFinite(shape.pts[1].li),'right-edge endpoint remains in market coordinates');
  // Neither price axis may accept a drawing gesture.
- for(const x of [g.host+g.axis/2,g.o.x+g.o.width+20]){await p.mouse.move(x,a.y);await p.mouse.down();await p.mouse.move(x,z.y,{steps:4});await p.mouse.up();}assert.equal(await p.evaluate(()=>_drawShapes.length),before+1);
+ for(const x of [g.host+g.axis/2,g.o.x+g.o.width+20]){await p.mouse.move(x,a.y);await p.mouse.down();await p.mouse.move(x,z.y,{steps:4});await p.mouse.up();}assert.equal(await p.evaluate(()=>_drawShapes.length),before+2);
  await p.evaluate(()=>{AcademyChartBridge.redraw();});await p.waitForTimeout(120);
  assert(await p.evaluate(()=>{const c=document.getElementById('fibCanvas'),d=c.getContext('2d').getImageData(c.width-70,0,70,c.height).data;return d.some((v,i)=>i%4===3&&v>0);}), 'line renders at right plot edge');
  await p.screenshot({path:path.join(out,theme+'-left-axis.png')});
@@ -28,6 +32,6 @@ const data=Array.from({length:300},(_,i)=>{const close=100+i*.04+Math.sin(i/10)*
  const saved=await p.evaluate(()=>JSON.stringify(_drawShapes));await p.mouse.move(z.x-20,z.y);await p.mouse.wheel(0,-100);await p.waitForTimeout(150);assert.equal(await p.evaluate(()=>JSON.stringify(_drawShapes)),saved);
  await p.setViewportSize({width:1280,height:900});await p.waitForTimeout(250);g=await geometry();assert(Math.abs(g.o.x-g.host-g.axis)<1);assert(Math.abs(g.o.width-g.g.width)<1);
  await p.evaluate(()=>{const b=AcademyChartBridge.get();b.chart.removeSeries(testLeft);b.chart.applyOptions({leftPriceScale:{visible:false}});AcademyChartBridge.redraw();});await p.waitForTimeout(180);g=await geometry();assert.equal(g.axis,0);assert(Math.abs(g.o.x-g.host)<1);assert.equal(await p.evaluate(()=>JSON.stringify(_drawShapes)),saved);
- await p.evaluate(()=>{_cancelChartTool();_setDrawTool('eraser');});await p.evaluate(()=>AcademyChartBridge.get().chart.timeScale().setVisibleLogicalRange({from:240,to:300}));await p.waitForTimeout(200);a=await p.evaluate(()=>{const g=AcademyChartBridge.plot(),s=_drawShapes.at(-1),b=AcademyChartBridge.get();return{x:g.pageLeft+(_dX(s.pts[0])+_dX(s.pts[1]))/2,y:g.pageTop+(b.series.priceToCoordinate(s.pts[0].price)+b.series.priceToCoordinate(s.pts[1].price))/2};});await p.mouse.click(a.x,a.y);assert.equal(await p.evaluate(()=>_drawShapes.length),before,'eraser follows same plot origin');
+ await p.evaluate(()=>{_cancelChartTool();_setDrawTool('eraser');});await p.evaluate(()=>AcademyChartBridge.get().chart.timeScale().setVisibleLogicalRange({from:240,to:300}));await p.waitForTimeout(200);a=await p.evaluate(()=>{const g=AcademyChartBridge.plot(),s=_drawShapes.at(-1),b=AcademyChartBridge.get();return{x:g.pageLeft+(_dX(s.pts[0])+_dX(s.pts[1]))/2,y:g.pageTop+(b.series.priceToCoordinate(s.pts[0].price)+b.series.priceToCoordinate(s.pts[1].price))/2};});await p.mouse.click(a.x,a.y);assert.equal(await p.evaluate(()=>_drawShapes.length),before+1,'eraser follows same plot origin');
  assert.deepEqual(errors,[]);await p.close();
  }console.log('PASS left-axis plot origin: rightmost candle drawings, price-axis rejection, rendered edge, zoom/resize/axis toggle and eraser in both themes.');}finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

@@ -328,6 +328,7 @@
     var state=readUI();container.innerHTML='<section class="mc-card ob-settings-card"><div class="ob-settings-heading">'+icon('compass')+'<div><h2>導覽與使用偏好</h2><p>讓先見以你習慣的方式陪伴研究。</p></div></div><label class="ob-setting-row"><span><strong>新手導覽</strong><small>顯示右側標籤與首次導覽提醒</small></span><input class="ob-setting-switch" type="checkbox" role="switch" aria-label="新手導覽" '+(state.enabled?'checked':'')+'></label><p class="ob-setting-note">此設定與標籤位置保存在這個瀏覽器，依登入帳號分開記憶。</p><div class="mc-status" role="status"></div></section>';
     var input=container.querySelector('input'),status=container.querySelector('[role=status]');input.onchange=function(){try{setEnabled(input.checked);status.textContent=input.checked?'已開啟新手導覽':'已關閉新手導覽';}catch(_){input.checked=readUI().enabled;status.textContent='設定尚未儲存，請確認瀏覽器儲存空間後重試。';}};
     window.FqiArrival?.mountSettings(container);
+    window.FqiGlassUI?.mountSettings(container);
   }
 
   /* ── 首次登入偵測：寫在帳號 user_metadata（跨裝置）；本機 LS 快取避免每次打 API ── */

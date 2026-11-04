@@ -45,12 +45,13 @@ def load():
     return bars
 
 
-def simulate(b, t, sig):
+def simulate(b, t, sig, entry=None):
     """回 dict 或 None（資料不足以進場）。"""
     e = t + 1              # 出場規則自訊號日次一交易日起算
     if e >= len(b):
         return None
-    entry = b[t][4]        # 進場＝訊號日收盤（收盤確認訊號即以該收盤價買進）
+    if entry is None:
+        entry = b[t][4]    # 進場＝訊號日收盤（收盤確認訊號即以該收盤價買進）；分 K 回測可傳入其他進場價
     stop, target = sig["stop"], sig["target"]
     half_done, half_px, exit_px, exit_i, reason = False, None, None, None, None
     for i in range(e, min(len(b), e + MAX_HOLD)):

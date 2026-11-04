@@ -70,6 +70,21 @@ def vix_series(d):
     return _bucket5(pts)
 
 
+def vix_close(d):
+    """2026-11-03 當日台指VIX收盤：getVixData 13:45:00 那一筆（與官方月檔收盤值相同，11/02 31.30 核對一致）。
+    官方月檔慢一個交易日，首頁 KPI 改在盤後用這筆。尚未收盤或休市回 None。"""
+    raw = _get(f"https://www.taifex.com.tw/cht/7/getVixData?filesname={d:%Y%m%d}")
+    for line in raw.decode("big5", "replace").splitlines():
+        f = line.split()
+        if len(f) == 3 and f[0] == f"{d:%Y%m%d}" and f[1].rjust(8, "0")[:6] == "134500":
+            try:
+                v = float(f[2])
+                return round(v, 2) if v > 0 else None
+            except ValueError:
+                return None
+    return None
+
+
 def txf_series(d):
     raw = _get(f"https://www.taifex.com.tw/file/taifex/Dailydownload/DailydownloadCSV/Daily_{d:%Y_%m_%d}.zip", timeout=120)
     z = zipfile.ZipFile(io.BytesIO(raw))

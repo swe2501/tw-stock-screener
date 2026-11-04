@@ -9,9 +9,9 @@
  function ruler(v,price){
   if(!Number.isFinite(v))return '<div class="fcp-ruler fcp-ruler-pending"><span>成本基準待更新，暫無法標示價格位置</span><i></i></div>';
   const ready=Number.isFinite(price),diff=ready?price-v:0,lo=Math.min(-1000,Math.floor(diff/500)*500),hi=Math.max(1000,Math.ceil(diff/500)*500),pos=n=>10+(n-v-lo)/(hi-lo)*80,costPos=pos(v),pointPos=ready?pos(price):null;
-  const ticks=[{n:v+lo,label:''},{n:v-500,label:'−500'},{n:v,label:'成本',gold:true},{n:v+500,label:'+500'},{n:v+hi,label:''}];
+  const ticks=[{n:v+lo,label:'',edge:'start'},{n:v-500,label:'−500'},{n:v,label:'成本',gold:true},{n:v+500,label:'+500'},{n:v+hi,label:'',edge:'end'}];
   const sparse=500/(hi-lo)*80<12;
-  return '<div class="fcp-ruler" role="img" aria-label="'+esc('估算成本 '+fmt(v)+' 點；'+(ready?'目前價格 '+fmt(price)+' 點':'目前價格待更新'))+'"><div class="fcp-track" style="--cost:'+costPos+'%"></div>'+ticks.map(t=>'<span class="fcp-tick '+(t.gold?'fcp-gold':'')+(!t.gold&&(t.label?sparse:Math.abs(pos(t.n)-costPos)<12)?' fcp-tick-quiet':'')+'" style="left:'+pos(t.n)+'%" title="'+esc(fmt(t.n)+' 點 '+t.label)+'"><i></i><span>'+fmt(t.n,0)+'</span>'+(t.label?'<small>'+t.label+'</small>':'')+'</span>').join('')+(ready?'<span class="fcp-price-marker '+(diff>0?'positive':diff<0?'negative':'neutral')+'" style="left:'+pointPos+'%" title="'+esc(fmt(price)+' 點')+'"><b>'+fmt(price,0)+'</b><i></i></span>':'<span class="fcp-marker-pending">目前價格待更新</span>')+'</div>';
+  return '<div class="fcp-ruler" role="img" aria-label="'+esc('估算成本 '+fmt(v)+' 點；'+(ready?'目前價格 '+fmt(price)+' 點':'目前價格待更新'))+'"><div class="fcp-track" style="--cost:'+costPos+'%"></div>'+ticks.map(t=>'<span class="fcp-tick '+(t.gold?'fcp-gold':'')+(t.edge?' fcp-tick-edge fcp-tick-'+t.edge:'')+(!t.gold&&(t.label?sparse:Math.abs(pos(t.n)-costPos)<12)?' fcp-tick-quiet':'')+'" style="left:'+pos(t.n)+'%" title="'+esc(fmt(t.n)+' 點 '+t.label)+'"><i></i><span>'+fmt(t.n,0)+'</span>'+(t.label?'<small>'+t.label+'</small>':'')+'</span>').join('')+(ready?'<span class="fcp-price-marker '+(diff>0?'positive':diff<0?'negative':'neutral')+'" style="left:'+pointPos+'%" title="'+esc(fmt(price)+' 點')+'"><b>'+fmt(price,0)+'</b><i></i></span>':'<span class="fcp-marker-pending">目前價格待更新</span>')+'</div>';
  }
  function wave(diff){
   const state=diff==null?'pending':diff>500?'up':diff< -500?'down':'flat';

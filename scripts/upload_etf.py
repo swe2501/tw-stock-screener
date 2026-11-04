@@ -82,6 +82,30 @@ def etf_category(code, name, index_name, fund_type):
     return "多元策略"
 
 
+def _day_all_csv():
+    """證交所 STOCK_DAY_ALL 當日 CSV → 與 openapi 相同欄位名的 dict 清單（只取最新那一天）。"""
+    import csv, ssl, urllib.request
+    try:
+        ctx = ssl.create_default_context(); ctx.check_hostname = False; ctx.verify_mode = ssl.CERT_NONE
+        text = urllib.request.urlopen(urllib.request.Request(
+            "https://www.twse.com.tw/rwd/zh/afterTrading/STOCK_DAY_ALL?response=csv",
+            headers={"User-Agent": "Mozilla/5.0"}), timeout=40, context=ctx).read().decode("utf-8", "replace")
+    except Exception as e:
+        print(f"[warn] 證交所當日 CSV 失敗 {type(e).__name__}，改用 openapi")
+        return []
+    out = []
+    for r in csv.reader(text.splitlines()):
+        # 0日期(民國) 1代號 2名稱 3成交股數 4成交金額 5開 6高 7低 8收 9漲跌價差 10成交筆數
+        if len(r) >= 11 and len(r[0].strip()) == 7 and r[0].strip().isdigit():
+            out.append({"Date": r[0].strip(), "Code": r[1].strip(), "Name": r[2].strip(), "TradeVolume": r[3],
+                        "TradeValue": r[4], "OpeningPrice": r[5], "HighestPrice": r[6], "LowestPrice": r[7],
+                        "ClosingPrice": r[8], "Change": r[9], "Transaction": r[10]})
+    if out:
+        latest = max(x["Date"] for x in out)
+        out = [x for x in out if x["Date"] == latest]
+    return out
+
+
 def main():
     env = bs._load_env()
     if not env.get("SUPABASE_SERVICE_KEY"):
@@ -90,7 +114,8 @@ def main():
 
     print("抓 openapi ETF 基本資料 + 行情…")
     basic = _get_json("https://openapi.twse.com.tw/v1/opendata/t187ap47_L")
-    day = _get_json("https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL")
+    # 2026-10-31 行情優先用證交所主站當日 CSV（openapi 常慢一個交易日：10/30 晚上跑只拿到 10/29）；失敗才退回 openapi
+    day = _day_all_csv() or _get_json("https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL")
     quote = {str(d.get("Code", "")).strip(): d for d in day}
     data_date = _roc_to_iso(day[0].get("Date")) if day else ""
 

@@ -101,3 +101,11 @@
 :root:not([data-theme=light]) #academy-notification-preview{background:rgba(17,28,39,.86);border-color:rgba(164,188,209,.22);box-shadow:0 16px 42px #0005,inset 0 1px 0 #ffffff13}
 #academy-notification-preview .mn-preview-item:hover{background:color-mix(in srgb,var(--accent) 7%,transparent)}
 @supports not (backdrop-filter:blur(1px)){:root[data-theme=light] #academy-notification-preview{background:#f7fafc}:root:not([data-theme=light]) #academy-notification-preview{background:#111c27}}
+/* 2026-11-03 觀察備註底部：同步說明改成細分隔線＋文字連結（不再像按鈕框），移除鈕留底部空間不被裁切 */
+#cnpNote{padding-bottom:14px;box-sizing:border-box;scroll-padding-bottom:14px}
+#cnpNote>*{flex-shrink:0}
+#cnpNote .chart-member-watch-link{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:2px 0 0;padding:10px 2px 0;border-top:1px solid color-mix(in srgb,var(--border) 80%,transparent);font-size:11.5px;line-height:1.6;color:var(--text-muted)}
+#cnpNote .chart-member-watch-link button{all:unset;display:inline-flex;align-items:center;gap:3px;color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;border-radius:4px;box-shadow:none!important;background:none!important;transform:none!important}
+#cnpNote .chart-member-watch-link button:hover{text-decoration:underline;text-underline-offset:3px}
+#cnpNote .chart-member-watch-link button:focus-visible{outline:1px solid var(--accent);outline-offset:2px}
+#cnpNote .btn-remove-chart-watch{margin-bottom:2px}

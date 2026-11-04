@@ -2,7 +2,10 @@
 chip_brief.py — 首頁「每日台股籌碼報告」頂部區塊(照合夥人 100%,全官方即時)。
   加權指數 : TWSE FMTQIK(收盤指數 + 漲跌點數)
   櫃買指數 : TPEx OpenAPI tpex_mainborad_highlight(CloseIndex/IndexChange)
-  台指期日盤: TAIFEX OpenAPI DailyMarketReportFut(Contract=TX 近月最大量,Last/Change/%)
+  台指期日盤: TAIFEX 每日行情下載 futDataDown(TX、交易時段＝一般、近月)；備援 OpenAPI DailyMarketReportFut
+  2026-10-30 修正：OpenAPI(台積電 STOCK_DAY_ALL、台指期)常慢一個交易日，夜間跑時把前一日數字標成當日；
+     台指期又沒分一般／盤後。現改主站當日來源＋每個欄位都核對資料日＝報告日，對不上就留空不寫錯日。
+     另由 run_intraday.bat 在 16:00 盤後再跑一次(--wait)，首頁 KPI 當天下午就換成當日。
   台積電權值影響: 依前一日上市市值權重估算
      權重prev = 2330(股數×前收) / Σ上市(股數×前收)
      貢獻點數 = 加權前收 × 權重prev × 台積電漲跌% / 100
@@ -10,7 +13,7 @@ chip_brief.py — 首頁「每日台股籌碼報告」頂部區塊(照合夥人 
 → Supabase chip_brief_daily(trade_date PK)。
 用法：python scripts/chip_brief.py
 """
-import ssl, sys, json, urllib.request
+import csv, http.cookiejar, ssl, sys, json, time, urllib.parse, urllib.request
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
@@ -69,39 +72,101 @@ def fetch_taiex():
     return close, chg, pct, iso
 
 
-def fetch_otc():
-    """TPEx 櫃買指數,回 (close, chg, pct)。"""
+def fetch_otc(iso=None):
+    """TPEx 櫃買指數,回 (close, chg, pct)；給 iso 時資料日不符就留空。"""
     try:
         d = json.loads(_get("https://www.tpex.org.tw/openapi/v1/tpex_mainborad_highlight"))
     except Exception:
         return None, None, None
     r = d[0] if isinstance(d, list) and d else d
+    dd = str(r.get("Date") or "")
+    if iso and len(dd) == 7 and f"{int(dd[:3]) + 1911}-{dd[3:5]}-{dd[5:7]}" != iso:
+        print(f"[warn] 櫃買指數資料日 {dd} ≠ {iso}，留空")
+        return None, None, None
     close = _num(r.get("CloseIndex")); chg = _num(r.get("IndexChange"))
     prev = (close - chg) if (close is not None and chg is not None) else None
     pct = (chg / prev * 100) if prev else None
     return close, chg, pct
 
 
-def fetch_txf():
-    """TAIFEX 台指期(日盤)近月,回 (last, chg, pct)。"""
+def _txf_download(iso):
+    """期交所每日行情下載(當日收盤後即有)。回 [(month, last, chg, pct, vol)]，只取 TX 一般盤。"""
+    jar = http.cookiejar.CookieJar()
+    op = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
+    op.addheaders = [("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")]
+    op.open("https://www.taifex.com.tw/cht/3/dlFutDailyMarketView", timeout=20)
+    d = iso.replace("-", "/")
+    body = urllib.parse.urlencode({"down_type": "1", "commodity_id": "TX", "commodity_id2": "",
+                                   "queryStartDate": d, "queryEndDate": d}).encode()
+    raw = op.open(urllib.request.Request(
+        "https://www.taifex.com.tw/cht/3/futDataDown", data=body,
+        headers={"Referer": "https://www.taifex.com.tw/cht/3/dlFutDailyMarketView",
+                 "Content-Type": "application/x-www-form-urlencoded"}), timeout=30).read()
+    out = []
+    for r in csv.reader(raw.decode("ms950", "replace").splitlines()):
+        # 0日期 1契約 2月份 3開 4高 5低 6收 7漲跌 8漲跌% 9量 … 17交易時段
+        if len(r) < 18 or r[0].strip() != d or r[1].strip() != "TX" or r[17].strip() != "一般":
+            continue
+        m = r[2].strip()
+        if m.isdigit():
+            out.append((m, _num(r[6]), _num(r[7]), _num(r[8]), _num(r[9]) or 0))
+    return out
+
+
+def fetch_txf(iso):
+    """台指期(日盤)近月，限 iso 當日資料。回 (last, chg, pct)；拿不到當日就回 None。"""
+    rows = []
     try:
-        d = json.loads(_get("https://openapi.taifex.com.tw/v1/DailyMarketReportFut"))
+        rows = _txf_download(iso)
+    except Exception as e:
+        print(f"[warn] 期交所下載失敗 {type(e).__name__}，改用 OpenAPI")
+    if not rows:
+        try:
+            d = json.loads(_get("https://openapi.taifex.com.tw/v1/DailyMarketReportFut"))
+            ymd = iso.replace("-", "")
+            rows = [(r["ContractMonth(Week)"], _num(r.get("Last")), _num(r.get("Change")), _num(r.get("%")),
+                     _num(r.get("Volume")) or 0)
+                    for r in d if isinstance(r, dict) and r.get("Contract") == "TX"
+                    and r.get("TradingSession") == "一般" and str(r.get("Date")) == ymd
+                    and str(r.get("ContractMonth(Week)", "")).isdigit()]
+        except Exception:
+            rows = []
+    if not rows:
+        print(f"[warn] 台指期 {iso} 日盤資料尚未出來，留空")
+        return None, None, None
+    near = min(r[0] for r in rows)                 # 近月
+    m, last, chg, pct, _ = max((r for r in rows if r[0] == near), key=lambda r: r[4])
+    return last, chg, pct
+
+
+def _day_all(iso):
+    """上市全部收盤，限 iso 當日。主站 CSV(當日下午即有)→ OpenAPI 備援(常慢一日)。
+    回 [{"Code","ClosingPrice","Change","Date"}]（格式比照 OpenAPI）。"""
+    roc = f"{int(iso[:4]) - 1911}{iso[5:7]}{iso[8:10]}"
+    try:
+        text = _get("https://www.twse.com.tw/rwd/zh/afterTrading/STOCK_DAY_ALL?response=csv").decode("utf-8", "replace")
+        rows = []
+        for r in csv.reader(text.splitlines()):
+            # 0日期 1代號 2名稱 3股數 4金額 5開 6高 7低 8收 9漲跌價差 10筆數
+            if len(r) >= 10 and r[0].strip() == roc:
+                rows.append({"Code": r[1].strip(), "ClosingPrice": r[8], "Change": r[9], "Date": roc})
+        if rows:
+            return rows
+    except Exception as e:
+        print(f"[warn] 證交所 CSV 失敗 {type(e).__name__}，改用 OpenAPI")
+    try:
+        d = json.loads(_get("https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL"))
+        return [r for r in d if str(r.get("Date")) == roc]
     except Exception:
-        return None, None, None
-    tx = [r for r in d if isinstance(r, dict) and r.get("Contract") == "TX"
-          and r.get("ContractMonth(Week)", "").isdigit()]
-    if not tx:
-        return None, None, None
-    # 近月(ContractMonth 最小) + 同月取最大量(日盤主力)
-    months = sorted({r["ContractMonth(Week)"] for r in tx})
-    near = [r for r in tx if r["ContractMonth(Week)"] == months[0]]
-    row = max(near, key=lambda r: _num(r.get("Volume")) or 0)
-    return _num(row.get("Last")), _num(row.get("Change")), _num(row.get("%"))
+        return []
 
 
-def fetch_tsmc_contrib():
-    """台積電權值影響。回 (close, chg, pct, contrib_points, iso)。"""
-    day = json.loads(_get("https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL"))
+def fetch_tsmc_contrib(iso):
+    """台積電權值影響，限 iso 當日。回 (close, chg, pct, contrib_points, iso)。"""
+    day = _day_all(iso)
+    if not day:
+        print(f"[warn] 上市收盤 {iso} 尚未出來，台積電留空")
+        return None, None, None, None, None
     shares_raw = json.loads(_get("https://openapi.twse.com.tw/v1/opendata/t187ap03_L"))
     shares = {}
     for r in shares_raw:
@@ -143,6 +208,40 @@ def fetch_tsmc_contrib():
     return tsmc_close, tsmc_chg, tsmc_pct, contrib, iso
 
 
+def taiex_ohlc(iso):
+    """證交所 MI_5MINS_HIST(發行量加權股價指數歷史資料)當月表中 iso 那天的 (開, 高, 低, 收)；沒有回 None。"""
+    try:
+        j = json.loads(_get(f"https://www.twse.com.tw/rwd/zh/TAIEX/MI_5MINS_HIST?date={iso.replace('-', '')[:6]}01&response=json"))
+    except Exception:
+        return None
+    roc = f"{int(iso[:4]) - 1911}/{iso[5:7]}/{iso[8:10]}"
+    for r in j.get("data") or []:
+        if str(r[0]).strip() == roc:
+            v = [_num(x) for x in r[1:5]]
+            return v if None not in v else None
+    return None
+
+
+def fx_close_local(iso):
+    """盤中排程記錄的當日 USD/TWD（D:/stock_data/home_intraday/fx_YYYYMMDD.json）最後一筆；沒有回 None。"""
+    f = Path(r"D:\stock_data\home_intraday") / f"fx_{iso.replace('-', '')}.json"
+    try:
+        pts = json.loads(f.read_text(encoding="utf-8"))
+        return round(float(pts[-1][1]), 3) if pts else None
+    except Exception:
+        return None
+
+
+def _upsert_table(env, table, pk, row):
+    key = env["SUPABASE_SERVICE_KEY"]
+    req = urllib.request.Request(f"{env['SUPABASE_URL']}/rest/v1/{table}?on_conflict={pk}",
+                                 data=json.dumps([row]).encode(), method="POST", headers={
+        "Content-Type": "application/json", "apikey": key, "Authorization": f"Bearer {key}",
+        "Prefer": "resolution=merge-duplicates,return=minimal"})
+    with urllib.request.urlopen(req, timeout=30) as r:
+        return r.status
+
+
 def _upsert(env, row):
     key = env["SUPABASE_SERVICE_KEY"]
     url = f"{env['SUPABASE_URL']}/rest/v1/chip_brief_daily?on_conflict=trade_date"
@@ -157,20 +256,76 @@ def main():
     env = bs._load_env()
     if not env.get("SUPABASE_SERVICE_KEY"):
         print("[error] 缺 SUPABASE_SERVICE_KEY"); sys.exit(1)
-    tx_close, tx_chg, tx_pct, tx_iso = fetch_taiex()
-    otc_close, otc_chg, otc_pct = fetch_otc()
-    txf_close, txf_chg, txf_pct = fetch_txf()
-    ts_close, ts_chg, ts_pct, ts_contrib, ts_iso = fetch_tsmc_contrib()
-    # 報告日 = 加權指數(FMTQIK)最新交易日;個股檔(STOCK_DAY_ALL)在本環境可能晚一天,台積電卡為其自身日資料
-    iso = tx_iso or ts_iso or datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m-%d")
+    # --wait：盤後用(16:00 起)。等到 FMTQIK 出現今天且櫃買／台指期／台積電都拿得到，最多等 90 分鐘
+    wait = "--wait" in sys.argv
+    today = datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m-%d")
+    deadline = time.time() + 90 * 60
+    while True:
+        tx_close, tx_chg, tx_pct, tx_iso = fetch_taiex()
+        if not wait or tx_iso == today or time.time() > deadline:
+            break
+        print(f"[wait] 加權指數最新 {tx_iso}，等今天 {today} 出來…", flush=True)
+        time.sleep(300)
+    if wait and tx_iso != today:
+        print(f"[skip] 今天 {today} 加權指數沒有資料（休市或尚未公布），不寫")
+        return
+    # 報告日 = 加權指數(FMTQIK)最新交易日；其他欄位都要同一天，否則留空(不再把前一日標成當日)
+    iso = tx_iso or today
+    while True:
+        otc_close, otc_chg, otc_pct = fetch_otc(iso)
+        txf_close, txf_chg, txf_pct = fetch_txf(iso)
+        ts_close, ts_chg, ts_pct, ts_contrib, ts_iso = fetch_tsmc_contrib(iso)
+        if None not in (otc_close, txf_close, ts_close) or not wait or time.time() > deadline:
+            break
+        print("[wait] 櫃買／台指期／台積電尚有未出來的，5 分鐘後再試", flush=True)
+        time.sleep(300)
     row = {"trade_date": iso,
            "taiex_close": tx_close, "taiex_chg": tx_chg, "taiex_pct": round(tx_pct, 2) if tx_pct is not None else None,
            "otc_close": otc_close, "otc_chg": otc_chg, "otc_pct": round(otc_pct, 2) if otc_pct is not None else None,
            "txf_close": txf_close, "txf_chg": txf_chg, "txf_pct": txf_pct,
            "tsmc_close": ts_close, "tsmc_chg": ts_chg, "tsmc_pct": round(ts_pct, 2) if ts_pct is not None else None,
            "tsmc_contrib": round(ts_contrib, 2) if ts_contrib is not None else None}
+    # 留空的欄位不送，避免把資料庫裡已有的正確值蓋成空白
+    row = {k: v for k, v in row.items() if v is not None}
     print(json.dumps(row, ensure_ascii=False))
     print(f"已 upsert chip_brief_daily (status {_upsert(env, row)})")
+    if wait:
+        # 盤後模式：首頁卡片換成當日後，同日的分時小圖(櫃買/台指期/VIX/匯率)也一起推，否則卡片會顯示「分時暫無資料」
+        import subprocess
+        r = subprocess.run([sys.executable, str(Path(__file__).resolve().parent / "home_intraday.py"), "--date", iso],
+                           timeout=600)
+        print(f"home_intraday --date {iso} exit {r.returncode}")
+        # 2026-10-30 首頁台幣匯率卡改用「當日台北匯市時段最後一筆」(盤中排程每 5 分鐘記的 Yahoo USD/TWD，到 16:00)；
+        # 期交所官方匯率晚 2 天才公布，原本把 10/28 的值標成 10/30
+        # 加權日K(taiex_daily)原本晚上 margin_ratio 才整表重建；盤面結構判讀等區塊靠它對齊日期 → 盤後先補當日一筆
+        k = taiex_ohlc(iso)
+        if k:
+            print(f"加權日K {iso} {k} → taiex_daily status "
+                  f"{_upsert_table(env, 'taiex_daily', 'trade_date', {'trade_date': iso, 'open': k[0], 'high': k[1], 'low': k[2], 'close': k[3], 'volume': 0})}")
+        fx = fx_close_local(iso)
+        if fx:
+            print(f"台幣匯率 {iso} {fx}（盤中記錄最後一筆）→ market_indicators "
+                  f"status {_upsert_table(env, 'market_indicators', 'date', {'date': iso, 'usdtwd': fx})}")
+        # 2026-11-03 台指VIX 也在盤後寫當日收盤：原本只有晚上 market_indicators 讀官方月檔（慢一個交易日），
+        # 上面寫匯率先建了當日列、vix 空白 → 首頁 VIX 卡顯示「—」
+        vix_close_today(env, iso)
+
+
+def vix_close_today(env, iso):
+    """當日台指VIX收盤（期交所 getVixData 13:45:00）→ market_indicators.vix；vix_prev＝資料庫前一筆有值的 VIX。"""
+    import home_intraday
+    try:
+        vix = home_intraday.vix_close(datetime.strptime(iso, "%Y-%m-%d").date())
+    except Exception as e:
+        print(f"[warn] 台指VIX {iso} 讀取失敗：{str(e)[:80]}"); return None
+    if not vix:
+        print(f"[warn] 台指VIX {iso} 尚無 13:45 收盤值"); return None
+    st, prev = bs._sb(env, "/market_indicators", params=[("select", "vix"), ("vix", "not.is.null"),
+                                                          ("date", f"lt.{iso}"), ("order", "date.desc"), ("limit", "1")])
+    vp = prev[0]["vix"] if st == 200 and prev else None
+    print(f"台指VIX {iso} 收盤 {vix}（前一日 {vp}）→ market_indicators status "
+          f"{_upsert_table(env, 'market_indicators', 'date', {'date': iso, 'vix': vix, 'vix_prev': vp})}")
+    return vix
 
 
 if __name__ == "__main__":

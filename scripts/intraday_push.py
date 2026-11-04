@@ -146,9 +146,9 @@ def _scan(codes, ex):
     chs = [f"{ex}_{c}.tw" for c in codes]
     batches = [chs[i:i + BATCH] for i in range(0, len(chs), BATCH)]
 
-    def _one(batch):
-        # 批次失敗若整批丟掉會漏 ~150 檔（含大權值股），市值加權會劇烈失真 → 重試 4 次
-        for attempt in range(4):
+    def _one(batch, tries=2):
+        # 批次失敗若整批丟掉會漏 ~150 檔（含大權值股），市值加權會劇烈失真
+        for attempt in range(tries):
             try:
                 arr = _mis_batch(batch)
                 if arr:
@@ -156,22 +156,37 @@ def _scan(codes, ex):
             except Exception:                        # noqa: BLE001
                 pass
             time.sleep(0.5 * (attempt + 1))
-        print(f"[mis] {ex} 一批 {len(batch)} 檔重試 4 次仍失敗")
-        return []
+        return None
 
+    # 2026-10-30 並行 12 批時幾乎每輪有 1 批被 mis 節流（並行內重試 4 次也一樣，因為其他批還在打）。
+    # 改成並行內只試 2 次；失敗的批等全部跑完、間隔 1 秒「單獨」補查（單批查實測都正常）。
     with ThreadPoolExecutor(max_workers=CONC) as pool:
-        for arr in pool.map(_one, batches):
-            for m in arr:
-                c = str(m.get("c") or "").strip()
-                if not c:
-                    continue
-                y = _pf(m.get("y"))                   # 昨收
-                price = _cur_price(m)
-                if price is None or y is None:
-                    continue
-                v = _pf(m.get("v")) or 0              # 累積成交量(張)
-                out[c] = {"price": price, "prev": y, "vol": int(v * 1000),
-                          "name": (m.get("n") or c).strip()}
+        res = list(pool.map(_one, batches))
+    failed = [b for b, a in zip(batches, res) if a is None]
+    arrs = [a for a in res if a]
+    lost = 0
+    for b in failed:
+        time.sleep(1)
+        a = _one(b, tries=3)
+        if a:
+            arrs.append(a)
+        else:
+            lost += 1
+            print(f"[mis] {ex} 一批 {len(b)} 檔（{b[0]}~{b[-1]}）並行與單獨補查都失敗")
+    if failed:
+        print(f"[mis] {ex} 並行失敗 {len(failed)} 批 → 單獨補查成功 {len(failed) - lost} 批")
+    for arr in arrs:
+        for m in arr:
+            c = str(m.get("c") or "").strip()
+            if not c:
+                continue
+            y = _pf(m.get("y"))                   # 昨收
+            price = _cur_price(m)
+            if price is None or y is None:
+                continue
+            v = _pf(m.get("v")) or 0              # 累積成交量(張)
+            out[c] = {"price": price, "prev": y, "vol": int(v * 1000),
+                      "name": (m.get("n") or c).strip()}
     return out
 
 
