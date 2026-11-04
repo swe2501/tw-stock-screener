@@ -50,7 +50,7 @@ function show(key, anchor) {
   showT = setTimeout(() => {
     const k = P[key]; if (!k) return; ensure();
     if (cur !== key) {
-      tip.innerHTML = `<div class="kh-top"><b>${k.name}</b><span class="kh-tag kh-${k.tag[0]}">${k.tag[1]}</span></div><div class="kh-chart">${chart(k)}</div><p>${k.desc}</p><div class="kh-legend"><span class="kh-lu">紅K 上漲</span><span class="kh-ld">黑K 下跌</span><span class="kh-lf">虛線框＝訊號K</span></div>`;
+      tip.innerHTML = `<div class="kh-top"><b>${k.name}</b><span class="kh-tag kh-${k.tag[0]}">${k.tag[1]}</span></div><div class="kh-chart">${chart(k)}</div>${k.desc ? `<p>${k.desc}</p>` : ''}<div class="kh-legend"><span class="kh-lu">紅K 上漲</span><span class="kh-ld">黑K 下跌</span><span class="kh-lf">虛線框＝訊號K</span></div>`;
       cur = key;
     }
     tip.hidden = false; tip.classList.remove('is-in'); place(anchor);

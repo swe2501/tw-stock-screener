@@ -7,12 +7,46 @@
 
   const icons = {
     card: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="3"/><path d="M2.5 9.5h19M6.5 15h4"/></svg>',
-    line: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 10.4c0-4.2-3.8-7.4-8.5-7.4s-8.5 3.2-8.5 7.4c0 3.8 3.2 6.8 7.3 7.3.5.1.6.3.6.7l-.2 1.8c-.1.5.2.7.7.4 4.6-2.7 8.6-6.1 8.6-10.2Z"/><path d="M7 9v3h1.8M10 9v3M12 12V9l2.1 3V9M17 9h-1.5v3H17"/></svg>',
+    line: '<img class="mp-line-logo" src="assets/auth-brands/line.png" alt="" aria-hidden="true">',
     store: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v10h16V10M3 10l2-6h14l2 6"/><path d="M3 10c0 1.3 1 2.3 2.3 2.3S7.7 11.3 7.7 10c0 1.3 1 2.3 2.3 2.3s2.3-1 2.3-2.3c0 1.3 1 2.3 2.3 2.3S17 11.3 17 10c0 1.3 1 2.3 2.3 2.3S21 11.3 21 10M9 20v-5h6v5"/></svg>',
     shield: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8 20 6v5.6c0 4.8-3.2 8.1-8 9.6-4.8-1.5-8-4.8-8-9.6V6l8-3.2Z"/><path d="m8.7 12 2.1 2.1 4.6-4.7"/></svg>',
     check: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.2 4.2L19 7"/></svg>',
     arrow: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M14 7l5 5-5 5"/></svg>'
   };
+
+  const storeBrands = {
+    '7-ELEVEN': '<span class="mp-store-brand mp-store-brand-seven" aria-label="7-ELEVEN"><svg viewBox="0 0 132 38" role="img"><title>7-ELEVEN</title><path fill="#f58220" d="M8 3h27l-15 31H8l11-22H8z"/><path fill="#ed1c24" d="M27 3h11L23 34H12z"/><rect x="43" y="4" width="84" height="5" rx="2.5" fill="#f58220"/><rect x="43" y="29" width="84" height="5" rx="2.5" fill="#00a651"/><text x="46" y="25" fill="#e31b23" font-family="Arial,sans-serif" font-size="17" font-weight="800">ELEVEN</text></svg></span>',
+    '全家': '<span class="mp-store-brand mp-store-brand-family" aria-label="全家 FamilyMart"><svg viewBox="0 0 148 42" role="img"><title>全家 FamilyMart</title><rect x="4" y="5" width="140" height="5" rx="2.5" fill="#00a6c8"/><rect x="4" y="32" width="140" height="5" rx="2.5" fill="#68bd45"/><text x="16" y="29" fill="#009b73" font-family="Arial,sans-serif" font-size="19" font-weight="800">FamilyMart</text></svg></span>',
+    '萊爾富': '<span class="mp-store-brand mp-store-brand-hilife" aria-label="萊爾富 Hi-Life"><svg viewBox="0 0 132 38" role="img"><title>萊爾富 Hi-Life</title><rect x="2" y="4" width="128" height="30" rx="7" fill="#fff"/><path fill="#ef3340" d="M11 9h8v20h-8zm12 0h8v20h-8z"/><text x="39" y="25" fill="#183a67" font-family="Arial,sans-serif" font-size="18" font-weight="800">Hi-Life</text><circle cx="114" cy="12" r="4" fill="#ef3340"/></svg></span>',
+    'OK mart': '<span class="mp-store-brand mp-store-brand-ok" aria-label="OK mart"><svg viewBox="0 0 132 38" role="img"><title>OK mart</title><rect x="2" y="4" width="128" height="30" rx="7" fill="#fff"/><text x="10" y="27" fill="#0067b1" font-family="Arial,sans-serif" font-size="24" font-weight="900">OK</text><path d="M54 9h5v20h-5z" fill="#ed1c24"/><text x="66" y="25" fill="#253f66" font-family="Arial,sans-serif" font-size="17" font-weight="800">mart</text></svg></span>'
+  };
+  const storeBrand = store => storeBrands[store] || `<span class="mp-store-brand">${esc(store)}</span>`;
+
+  function detectCardNetwork(number) {
+    const digits = String(number || '').replace(/\D/g, '');
+    if (/^4/.test(digits)) return 'VISA';
+    if (/^(5[1-5]|2(?:2[2-9]|[3-6]\d|7[01]|720))/.test(digits)) return 'MASTERCARD';
+    if (/^3[47]/.test(digits)) return 'AMERICAN EXPRESS';
+    if (/^35(?:2[89]|[3-8]\d)/.test(digits)) return 'JCB';
+    if (/^62/.test(digits)) return 'UNIONPAY';
+    return 'PAYMENT CARD';
+  }
+
+  function cardNetworkMark(network) {
+    if (network === 'VISA') return '<span class="mp-network-logo is-visa"><b>VISA</b></span>';
+    if (network === 'MASTERCARD') return '<span class="mp-network-logo is-mastercard"><i></i><i></i><b>mastercard</b></span>';
+    if (network === 'AMERICAN EXPRESS') return '<span class="mp-network-logo is-amex"><b>AMERICAN</b><b>EXPRESS</b></span>';
+    if (network === 'JCB') return '<span class="mp-network-logo is-jcb"><i>J</i><i>C</i><i>B</i></span>';
+    if (network === 'UNIONPAY') return '<span class="mp-network-logo is-unionpay"><i>U</i><i>P</i><b>UnionPay</b></span>';
+    return '<span class="mp-network-logo is-generic"><b>PAYMENT</b><b>CARD</b></span>';
+  }
+
+  function renderCardNetwork(element, network) {
+    if (!element) return;
+    element.dataset.network = network.toLowerCase().replace(/\s+/g, '-');
+    element.setAttribute('aria-label', network);
+    element.innerHTML = cardNetworkMark(network);
+  }
 
   const methods = {
     card: {
@@ -41,20 +75,21 @@
         <div class="mp-card-visual" data-card-visual>
           <div class="mp-card-face mp-card-front">
             <div class="mp-card-glow"></div><span class="mp-chip" aria-hidden="true"></span>
-            <span class="mp-card-brand">FORESIGHT</span>
+            <span class="mp-card-issuer">FORESIGHT</span><span class="mp-card-brand" data-card-network>${cardNetworkMark('PAYMENT CARD')}</span>
             <strong class="mp-card-number" aria-label="卡號預覽">${Array.from({ length: 16 }, (_, index) => `<span data-card-digit="${index}">•</span>${index % 4 === 3 && index < 15 ? '<i></i>' : ''}`).join('')}</strong>
             <div class="mp-card-meta"><span><small>CARD HOLDER</small><b data-card-holder>YOUR NAME</b></span><span><small>EXPIRES</small><b data-card-expiry>MM/YY</b></span></div>
           </div>
           <div class="mp-card-face mp-card-back">
-            <span class="mp-card-strip" aria-hidden="true"></span><small>SECURITY CODE</small>
-            <strong data-card-cvc>•••</strong><p>安全碼只用於本次驗證，不會顯示在付款卡正面。</p>
+            <span class="mp-card-strip" aria-hidden="true"></span>
+            <div class="mp-card-signature"><span><small>AUTHORIZED SIGNATURE</small><i></i></span><strong data-card-cvc>•••</strong></div>
+            <div class="mp-card-back-foot"><small>SECURE PAYMENT CARD</small><b>FORESIGHT</b></div>
           </div>
         </div>
       </div>
       <form class="mp-card-form" data-card-form novalidate>
         <label class="mp-field mp-field-wide"><span>卡號</span><input type="text" data-card-number inputmode="numeric" autocomplete="cc-number" maxlength="19" placeholder="1234 5678 9012 3456" aria-label="信用卡卡號"><small>正式啟用時由金流商安全欄位加密處理</small></label>
         <label class="mp-field"><span>有效期限</span><input type="text" data-card-expiry-input inputmode="numeric" autocomplete="cc-exp" maxlength="5" placeholder="MM/YY" aria-label="信用卡有效期限"></label>
-        <label class="mp-field"><span>安全碼</span><input type="password" data-card-cvc-input inputmode="numeric" autocomplete="cc-csc" maxlength="4" placeholder="CVC" aria-label="信用卡安全碼"></label>
+        <label class="mp-field"><span>安全碼</span><input type="password" data-card-cvc-input inputmode="numeric" autocomplete="cc-csc" maxlength="4" placeholder="CVC" aria-label="信用卡安全碼"><small class="mp-field-help">僅用於本次安全驗證，不會顯示在卡片上。</small></label>
         <label class="mp-field mp-field-wide"><span>持卡人姓名</span><input type="text" data-card-holder-input autocomplete="cc-name" maxlength="32" placeholder="與卡片上的英文姓名一致" aria-label="持卡人姓名"></label>
       </form>
       <div class="mp-benefit-list">
@@ -68,18 +103,18 @@
           <span class="mp-phone-speaker" aria-hidden="true"></span>
           <div class="mp-phone-screen"><span class="mp-line-mini">LINE Pay</span><div class="mp-qr-wrap">${qrMarkup}<i aria-hidden="true"></i></div><small>使用 LINE 掃描</small></div>
         </div>
-        <div class="mp-line-copy"><span class="mp-line-mark">LINE</span><small>SCAN TO CONNECT</small><strong>用手機完成安全授權</strong><p>電腦版掃描 QR Code；手機版正式串接後會直接開啟 LINE App。授權與付款確認都在 LINE Pay 安全畫面完成。</p><span class="mp-qr-life"><i></i>QR Code 將於 04:59 後更新</span></div>
+        <div class="mp-line-copy"><span class="mp-line-mark">${icons.line}</span><small>SCAN TO CONNECT</small><strong>用手機完成安全授權</strong><p>電腦版掃描 QR Code；手機版正式串接後會直接開啟 LINE App。授權與付款確認都在 LINE Pay 安全畫面完成。</p><span class="mp-qr-life"><i></i>QR Code 將於 04:59 後更新</span></div>
         <span class="mp-wallet-orbit" aria-hidden="true"></span>
       </div>
       <ol class="mp-steps" aria-label="LINE Pay 連結流程"><li><b>1</b><span>掃描 QR Code</span></li><li><b>2</b><span>確認會員帳號</span></li><li><b>3</b><span>完成授權</span></li></ol>
       <p class="mp-demo-note">目前為 LINE Pay 介面預覽，尚未串接金流；示意 QR Code 無法付款。</p>`;
     return `
       <fieldset class="mp-store-choices"><legend>選擇繳費通路</legend>
-        ${['7-ELEVEN', '全家', '萊爾富', 'OK mart'].map((store, index) => `<label><input type="radio" name="mp-store" value="${esc(store)}" ${index === 0 ? 'checked' : ''}><span>${store}</span></label>`).join('')}
+        ${['7-ELEVEN', '全家', '萊爾富', 'OK mart'].map((store, index) => `<label><input type="radio" name="mp-store" value="${esc(store)}" ${index === 0 ? 'checked' : ''}><span>${storeBrand(store)}</span></label>`).join('')}
       </fieldset>
       <div class="mp-ticket" data-store-ticket aria-label="超商繳費票券預覽">
         <span class="mp-ticket-edge mp-ticket-edge-top" aria-hidden="true"></span><span class="mp-ticket-edge mp-ticket-edge-bottom" aria-hidden="true"></span>
-        <div class="mp-ticket-head"><span><small>FORESIGHT PAYMENT</small><b>會員方案繳費單</b></span><strong data-ticket-store>7-ELEVEN</strong></div>
+        <div class="mp-ticket-head"><span><small>FORESIGHT PAYMENT</small><b>會員方案繳費單</b></span><strong data-ticket-store>${storeBrand('7-ELEVEN')}</strong></div>
         <div class="mp-ticket-code"><small>PAYMENT CODE</small><strong>•••• •••• ••••</strong><span>產生後顯示</span></div>
         <div class="mp-barcode" aria-hidden="true"></div>
         <div class="mp-ticket-foot"><span>有效期限</span><b>產生後 3 日內</b><i>單次付款</i></div>
@@ -96,6 +131,7 @@
     const expiry = form.querySelector('[data-card-expiry-input]');
     const cvc = form.querySelector('[data-card-cvc-input]');
     const holder = form.querySelector('[data-card-holder-input]');
+    const network = host.querySelector('[data-card-network]');
     const digits = [...host.querySelectorAll('[data-card-digit]')];
     const fields = [number, expiry, cvc, holder];
     const bounce = element => {
@@ -105,10 +141,16 @@
     };
     number.addEventListener('input', () => {
       const raw = number.value.replace(/\D/g, '').slice(0, 16);
-      number.value = raw.replace(/(.{4})/g, '$1 ').trim();
+      const networkName = detectCardNetwork(raw);
+      number.value = networkName === 'AMERICAN EXPRESS'
+        ? [raw.slice(0, 4), raw.slice(4, 10), raw.slice(10, 15)].filter(Boolean).join(' ')
+        : raw.replace(/(.{4})/g, '$1 ').trim();
+      renderCardNetwork(network, networkName);
+      host.querySelectorAll('[data-flow-network]').forEach(label => renderCardNetwork(label, networkName));
       number.setSelectionRange(number.value.length, number.value.length);
+      const previewLength = networkName === 'AMERICAN EXPRESS' ? 15 : 16;
       digits.forEach((digit, index) => {
-        const next = raw[index] || '•';
+        const next = raw[index] || (index < previewLength ? '•' : '');
         if (digit.textContent !== next) { digit.textContent = next; bounce(digit); }
       });
     });
@@ -138,7 +180,8 @@
       input.closest('.mp-field')?.classList.remove('is-invalid');
       const rawNumber = number.value.replace(/\D/g, '');
       const rawExpiry = expiry.value.replace(/\D/g, '');
-      const complete = rawNumber.length === 16 && rawExpiry.length === 4 && cvc.value.length >= 3 && holder.value.trim().length >= 2;
+      const expectedLength = detectCardNetwork(rawNumber) === 'AMERICAN EXPRESS' ? 15 : 16;
+      const complete = rawNumber.length === expectedLength && rawExpiry.length === 4 && cvc.value.length >= 3 && holder.value.trim().length >= 2;
       form.classList.toggle('is-complete', complete);
       host.querySelector('[data-card-ready]')?.classList.toggle('is-ready', complete);
     }));
@@ -166,7 +209,10 @@
     const form = host.querySelector('[data-card-form]');
     if (!form) return true;
     const rules = [
-      ['[data-card-number]', input => input.value.replace(/\D/g, '').length === 16],
+      ['[data-card-number]', input => {
+        const raw = input.value.replace(/\D/g, '');
+        return raw.length === (detectCardNetwork(raw) === 'AMERICAN EXPRESS' ? 15 : 16);
+      }],
       ['[data-card-expiry-input]', input => input.value.replace(/\D/g, '').length === 4],
       ['[data-card-cvc-input]', input => input.value.replace(/\D/g, '').length >= 3],
       ['[data-card-holder-input]', input => input.value.trim().length >= 2]
@@ -186,6 +232,8 @@
   function showCardSuccess(host) {
     const page = host.querySelector('.mp-page');
     const success = host.querySelector('[data-payment-success]');
+    page?.classList.remove('is-payment-processing');
+    host.querySelector('[data-payment-processing]')?.setAttribute('aria-hidden', 'true');
     host.querySelector('.mp-workspace')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     page?.classList.add('is-payment-success');
     success?.setAttribute('aria-hidden', 'false');
@@ -193,8 +241,17 @@
     window.setTimeout(() => success?.querySelector('button')?.focus({ preventScroll: true }), 760);
   }
 
+  function showCardProcessing(host) {
+    const page = host.querySelector('.mp-page');
+    page?.classList.remove('is-payment-success');
+    page?.classList.add('is-payment-processing');
+    host.querySelector('[data-payment-processing]')?.setAttribute('aria-hidden', 'false');
+    host.querySelectorAll('.mp-progress span').forEach((step, index) => step.classList.toggle('is-current', index === 1));
+  }
+
   function hideCardSuccess(host) {
-    host.querySelector('.mp-page')?.classList.remove('is-payment-success');
+    host.querySelector('.mp-page')?.classList.remove('is-payment-success', 'is-payment-processing');
+    host.querySelector('[data-payment-processing]')?.setAttribute('aria-hidden', 'true');
     host.querySelector('[data-payment-success]')?.setAttribute('aria-hidden', 'true');
     host.querySelectorAll('.mp-progress span').forEach((step, index) => step.classList.toggle('is-current', index === 0));
     host.querySelector('[data-card-number]')?.focus({ preventScroll: true });
@@ -204,7 +261,7 @@
     const ticket = host.querySelector('[data-store-ticket]');
     if (!ticket) return;
     host.querySelectorAll('input[name="mp-store"]').forEach(input => input.addEventListener('change', () => {
-      host.querySelector('[data-ticket-store]').textContent = input.value;
+      host.querySelector('[data-ticket-store]').innerHTML = storeBrand(input.value);
       ticket.classList.remove('is-switching');
       void ticket.offsetWidth;
       ticket.classList.add('is-switching');
@@ -243,11 +300,20 @@
           <section class="mp-workspace" aria-live="polite">
             <div class="mp-workspace-title"><span><small>${data.kicker}</small><h3>${data.heading}</h3></span><span class="mp-method-tag">${data.icon}${data.short}</span></div>
             <div class="mp-method-body">${paymentBody(method)}</div>
-            <button type="button" class="mp-action" data-payment-action><span>${data.action}</span>${icons.arrow}</button>
+            <button type="button" class="mp-action" data-payment-action><i class="mp-action-lock" aria-hidden="true">${icons.shield}</i><span>${data.action}</span>${icons.arrow}</button>
             <div class="mp-action-status" role="status"></div>
             ${method === 'card' ? `<div class="mp-card-ready" data-card-ready><i>${icons.check}</i><span>卡片欄位已完整，可以進行安全確認</span></div>
+            <section class="mp-processing-screen" data-payment-processing aria-hidden="true" aria-label="卡片資料安全處理中">
+                <div class="mp-processing-card-orbit" aria-hidden="true">
+                  <i class="mp-card-orbit-ring mp-card-orbit-ring-outer"></i>
+                  <i class="mp-card-orbit-ring mp-card-orbit-ring-inner"></i>
+                  <div class="mp-flow-card"><span class="mp-flow-chip"></span><b><span>FORESIGHT</span><em data-flow-network>${cardNetworkMark('PAYMENT CARD')}</em></b><strong>•••• &nbsp;•••• &nbsp;•••• &nbsp;••••</strong><small>SECURE PAYMENT</small></div>
+                </div>
+              <small>SECURING YOUR CARD</small><h3>正在建立安全驗證</h3><p>準備交由金流商進行加密與 3D 驗證。</p><i class="mp-processing-bar" aria-hidden="true"></i>
+            </section>
             <section class="mp-success-screen" data-payment-success aria-hidden="true" aria-label="卡片資料完成動畫">
               <div class="mp-success-orbit" aria-hidden="true"><i></i><i></i><i></i></div>
+              <div class="mp-flow-card mp-flow-card-success"><span class="mp-flow-chip"></span><b><span>FORESIGHT</span><em data-flow-network>${cardNetworkMark('PAYMENT CARD')}</em></b><strong>•••• &nbsp;•••• &nbsp;•••• &nbsp;••••</strong><small>CARD VERIFIED</small></div>
               <div class="mp-success-mark">${icons.check}</div>
               <small>SECURE CARD · COMPLETE</small>
               <h3>卡片資料已完成</h3>
@@ -306,12 +372,13 @@
       status.textContent = method === 'store'
         ? '超商代碼服務尚未接通；正式啟用後會先確認方案與金額，再產生限時繳費代碼。'
         : `${methods[method].short}安全連線尚未啟用；正式串接後會前往金流商完成驗證，不會在先見保存完整付款資料。`;
+      if (method === 'card') showCardProcessing(host);
       window.setTimeout(() => {
         if (!actionButton.isConnected) return;
         actionButton.classList.remove('is-busy');
         label.textContent = originalLabel;
         if (method === 'card') showCardSuccess(host);
-      }, 920);
+      }, method === 'card' ? 1900 : 920);
     });
   }
 

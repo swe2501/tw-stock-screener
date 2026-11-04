@@ -36,6 +36,14 @@ test('card entry has animated preview, validation, flip, and a non-charging comp
   assert.match(css, /mp-digit-pop/);
   assert.match(css, /mp-success-mark/);
   assert.match(js, /目前沒有送出卡號，也不會產生扣款/);
+  assert.match(js, /detectCardNetwork/);
+  assert.match(js, /cardNetworkMark/);
+  for (const network of ['VISA', 'MASTERCARD', 'AMERICAN EXPRESS', 'JCB', 'UNIONPAY']) assert.match(js, new RegExp(network));
+  for (const mark of ['is-visa', 'is-mastercard', 'is-amex', 'is-jcb', 'is-unionpay']) assert.match(js, new RegExp(mark));
+  assert.match(js, /data-payment-processing/);
+  assert.match(css, /mp-secure-scan/);
+  assert.match(js, /mp-processing-card-orbit/);
+  assert.match(css, /mp-card-orbit/);
 });
 
 test('wallet and convenience-store modes provide purpose-built animated artifacts', () => {
@@ -43,6 +51,26 @@ test('wallet and convenience-store modes provide purpose-built animated artifact
   assert.match(css, /mp-qr-scan/);
   assert.match(js, /mp-ticket/);
   assert.match(css, /mp-ticket-print/);
+  assert.match(js, /assets\/auth-brands\/line\.png/);
+  for (const store of ['7-ELEVEN', 'FamilyMart', 'Hi-Life', 'OK mart']) assert.match(js, new RegExp(store));
+});
+
+test('card security guidance stays below the CVC field and payment actions use glass pills', () => {
+  assert.match(js, /mp-field-help/);
+  assert.doesNotMatch(js, /mp-card-back[\s\S]{0,360}<p>安全碼/);
+  assert.match(css, /\.mp-action\{[^}]*border-radius:999px/);
+  assert.match(css, /transition:transform 1\.08s/);
+  assert.match(css, /mp-card-signature/);
+  assert.match(css, /mp-chip::before/);
+  assert.match(css, /mp-button-light-orbit/);
+  assert.match(css, /data-theme=light\] \.mp-page \.mp-action/);
+  assert.match(css, /:root:not\(\[data-theme=light\]\) \.mp-page \.mp-action/);
+  assert.match(css, /#ffbd24/);
+  assert.match(css, /border-width:1px/);
+  assert.match(css, /\.mp-action::before\{display:none!important\}/);
+  assert.match(css, /width:min\(100%,320px\)/);
+  assert.match(css, /min-height:58px/);
+  assert.match(js, /mp-action-lock/);
 });
 
 test('all four theme combinations are explicitly styled', () => {

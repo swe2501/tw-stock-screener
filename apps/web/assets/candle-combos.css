@@ -1,14 +1,15 @@
 /* K棒組合 16 類（2026-11-04）：K 線圖黃框、開關、規則說明視窗、選股面板 */
-:root{--cc-yellow:#f5c400;--cc-yellow-ink:#8a6d00;--cc-dialog-bg:#fff;--cc-dialog-text:#1f2937;--cc-dialog-muted:#6b7280;--cc-dialog-line:#e5e7eb;--cc-focus-bg:#fff7d6}
-html[data-theme="dark"]{--cc-yellow:#ffd43b;--cc-yellow-ink:#ffd43b;--cc-dialog-bg:#151c2c;--cc-dialog-text:#e5e7eb;--cc-dialog-muted:#9aa4b2;--cc-dialog-line:#2b3446;--cc-focus-bg:#3a3313}
+:root{--cc-yellow:#dcae39;--cc-yellow-ink:#8a6d00;--cc-label-bg:rgba(255,255,255,.82);--cc-label-text:#384454;--cc-dialog-bg:#fff;--cc-dialog-text:#1f2937;--cc-dialog-muted:#6b7280;--cc-dialog-line:#e5e7eb;--cc-focus-bg:#fff7d6}
+html[data-theme="dark"]{--cc-yellow:#e4c16e;--cc-yellow-ink:#e8c871;--cc-label-bg:rgba(15,23,35,.78);--cc-label-text:#f4e3b3;--cc-dialog-bg:#151c2c;--cc-dialog-text:#e5e7eb;--cc-dialog-muted:#9aa4b2;--cc-dialog-line:#2b3446;--cc-focus-bg:#3a3313}
 
 /* 圖上疊層：只蓋主圖繪圖區（不含右側價格軸與下方時間軸），框線不攔截滑鼠，只有名稱可點 */
 .cc-layer{position:absolute;left:0;top:0;pointer-events:none;overflow:hidden;z-index:3}
-.cc-box{position:absolute;box-sizing:border-box;border:2px solid var(--cc-yellow);border-radius:3px;box-shadow:0 0 0 1px rgba(0,0,0,.35);pointer-events:none}
-.cc-label{position:absolute;white-space:nowrap;font-size:11px;line-height:1.35;padding:1px 5px;border-radius:4px;background:rgba(20,20,20,.72);color:#ffe27a;pointer-events:none}
-.cc-label a{color:#ffe27a;text-decoration:none;font-weight:700;pointer-events:auto;cursor:pointer}
-.cc-label a:hover,.cc-label a:focus-visible{text-decoration:underline;outline:none}
-.cc-label small{font-size:10px;opacity:.8;margin-left:2px}
+.cc-box{position:absolute;box-sizing:border-box;border:1px solid color-mix(in srgb,var(--cc-yellow) 86%,transparent);border-radius:5px;background:color-mix(in srgb,var(--cc-yellow) 4%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,var(--cc-yellow) 16%,transparent),0 4px 12px rgba(24,35,48,.06);pointer-events:none}
+.cc-label{position:absolute;display:flex;align-items:center;white-space:nowrap;font-size:10px;line-height:1;padding:5px 8px 5px 18px;border:1px solid color-mix(in srgb,var(--cc-yellow) 36%,var(--border));border-radius:999px;background:var(--cc-label-bg);color:var(--cc-label-text);box-shadow:0 5px 14px rgba(20,31,45,.1),inset 0 1px rgba(255,255,255,.28);backdrop-filter:blur(12px) saturate(115%);-webkit-backdrop-filter:blur(12px) saturate(115%);pointer-events:none}
+.cc-label::before{content:"";position:absolute;left:7px;width:5px;height:5px;border-radius:50%;background:var(--cc-yellow);box-shadow:0 0 7px color-mix(in srgb,var(--cc-yellow) 58%,transparent)}
+.cc-label a{color:inherit;text-decoration:none;font-weight:750;pointer-events:auto;cursor:pointer}
+.cc-label a:hover,.cc-label a:focus-visible{color:var(--cc-yellow-ink);outline:none}
+:root[data-ui-skin="glass"] .cc-label{background:color-mix(in srgb,var(--glass-fill-strong) 76%,transparent);border-color:color-mix(in srgb,var(--glass-line) 88%,var(--cc-yellow) 12%);box-shadow:0 7px 20px rgba(20,42,66,.1),inset 0 1px var(--glass-highlight);backdrop-filter:blur(18px) saturate(120%);-webkit-backdrop-filter:blur(18px) saturate(120%)}
 
 /* 開關：與「K棒訊息」同款 */
 #chartModal .chart-summary-actions #chartComboToggle{border:0!important;background:transparent!important;box-shadow:none!important;outline:none!important;color:var(--text-muted);font:inherit;font-size:11px;white-space:nowrap;padding:6px 3px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:color .18s ease,text-shadow .18s ease}
@@ -43,10 +44,22 @@ html[data-theme="dark"] #chartModal #chartComboToggle[aria-pressed="true"] .kinf
 }
 
 /* 選股面板與結果 */
-.cc-panel-note{margin:0 0 8px;font-size:12px;color:var(--text-muted)}
+.cc-panel-note{margin:0 0 10px;font-size:13px;line-height:1.75;color:var(--text-muted)}
 .cc-panel-note a{color:var(--cc-yellow-ink);font-weight:600;margin-left:6px}
-.cc-days{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;margin:0 0 10px;font-size:12px;color:var(--text-muted)}
+.cc-days{display:flex;flex-wrap:wrap;align-items:center;gap:7px 16px;margin:0 0 11px;font-size:13px;color:var(--text-muted)}
 .cc-days label{display:inline-flex;align-items:center;gap:4px;cursor:pointer;color:var(--text)}
 #ccComboGrid .cb-hint{font-size:11px;color:var(--text-muted)}
+#ccComboGrid{display:grid;grid-template-columns:repeat(4,minmax(132px,1fr));gap:8px 12px;margin-top:11px;padding-top:12px}
+#ccComboGrid .checkbox-row{min-width:0;min-height:46px;padding:9px 11px;border:1px solid color-mix(in srgb,var(--border) 80%,transparent);border-radius:10px;background:color-mix(in srgb,var(--surface2) 38%,transparent);transition:border-color .18s ease,background-color .18s ease,transform .18s ease}
+#ccComboGrid .checkbox-row:hover{border-color:color-mix(in srgb,var(--cc-yellow) 42%,var(--border));background:color-mix(in srgb,var(--cc-yellow) 5%,var(--surface));transform:translateY(-1px)}
+#ccComboGrid .checkbox-row:has(input:checked){border-color:color-mix(in srgb,var(--cc-yellow) 66%,var(--border));background:color-mix(in srgb,var(--cc-yellow) 9%,var(--surface))}
+#ccComboGrid .cb-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:16px;font-weight:650;line-height:1.35}
+#ccComboGrid input[type="checkbox"]{width:17px;height:17px;min-width:17px;min-height:17px}
+.sc-panel[data-cat="kbar"] .checkbox-row .cb-label{font-size:16px;font-weight:650;line-height:1.35}
+.sc-panel[data-cat="kbar"] .checkbox-row input[type="checkbox"]{width:17px;height:17px;min-width:17px;min-height:17px}
+:root[data-ui-skin="glass"] #ccComboGrid .checkbox-row{background:color-mix(in srgb,var(--glass-fill) 28%,transparent);border-color:color-mix(in srgb,var(--glass-line) 76%,transparent);box-shadow:inset 0 1px var(--glass-highlight)}
+@media(max-width:920px){#ccComboGrid{grid-template-columns:repeat(3,minmax(130px,1fr))}}
+@media(max-width:680px){#ccComboGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}}
+@media(max-width:420px){#ccComboGrid{grid-template-columns:1fr}}
 .cc-result a{color:var(--cc-yellow-ink);text-decoration:none;font-weight:600}
 .cc-result a:hover{text-decoration:underline}
