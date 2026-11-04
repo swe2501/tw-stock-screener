@@ -2701,6 +2701,45 @@ def fetch_all_stocks_mi_index(code_name_map, date_str):
         return {}
 
 
+def fetch_otc_stocks_for_date(code_name_map, date_str):
+    """2026-11-04 上櫃指定日期收盤（櫃買官方 afterTrading/otc，不含定價），格式同 MI_INDEX 解析結果。
+    只收 4 碼上櫃股票；回應日期與要求不同或失敗回 {}。"""
+    import ssl
+    d = f"{date_str[:4]}/{date_str[4:6]}/{date_str[6:]}"
+    ctx = ssl.create_default_context()                  # 照常驗證憑證；只關 Python 3.13+ 的嚴格模式（櫃買憑證過不了）
+    if hasattr(ssl, "VERIFY_X509_STRICT"):
+        ctx.verify_flags &= ~ssl.VERIFY_X509_STRICT
+    try:
+        req = urllib.request.Request(f"https://www.tpex.org.tw/www/zh-tw/afterTrading/otc?date={d}&type=EW&response=json",
+                                     headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"})
+        with urllib.request.urlopen(req, timeout=20, context=ctx) as resp:
+            data = json.loads(resp.read())
+    except Exception:
+        return {}
+    if not data or str(data.get("stat") or "").lower() != "ok" or str(data.get("date") or "") != date_str:
+        return {}
+    stocks = {}
+    for t in data.get("tables") or []:
+        for row in (t.get("data") or []) if isinstance(t, dict) else []:
+            try:
+                code = str(row[0]).strip()
+                if len(code) != 4 or not code.isdigit():
+                    continue
+                c, chg = _pf(row[2]), _pf(row[3])
+                o, h, l, v = _pf(row[4]), _pf(row[5]), _pf(row[6]), _pf(row[7])
+                if not all([o, h, l, c, v]) or c <= 0:
+                    continue
+                stocks[code] = {
+                    "code": code, "name": code_name_map.get(code, str(row[1]).strip()),
+                    "open": o, "high": h, "low": l, "close": c, "volume": int(v),
+                    "prev_close": round(c - chg, 4) if chg is not None else None,
+                    "prev_high": None, "prev_low": None, "prev_vols": [], "all_closes": [],
+                }
+            except Exception:
+                continue
+    return stocks
+
+
 def fetch_all_stocks_historical(code_name_map, date_str):
     """
     Fetch all stocks' OHLCV for a specific historical date via Yahoo Finance v8 chart.
@@ -3491,6 +3530,8 @@ def screen(params):
         sma20_stages = set()
     # 2026-11-04 K棒組合 16 類（scripts/candle_combos.py 每晚算好寫 candle_combo_hits）：勾選多項＝任一成立
     candle_combos = sorted({str(x) for x in (params.get("candle_combos") or []) if str(x) in CANDLE_COMBO_IDS})
+    # 完成日範圍：3＝篩選日往前 3 個交易日（文件預設）、1＝只看篩選日當天（2026-11-04 用戶要可指定日期）
+    candle_combo_days = 1 if str(params.get("candle_combo_days") or "3") == "1" else 3
     no_black_months  = min(int(params.get("no_black_months") or 0), 120)
     no_black_years   = no_black_months / 12  # 轉換為年（可為小數）傳給 YF API
     no_black_mult    = float(params.get("no_black_mult") or 0)
@@ -3521,6 +3562,11 @@ def screen(params):
 
         if not hist_stocks:
             return {"error": f"{requested_date[:4]}/{requested_date[4:6]}/{requested_date[6:]} 查無資料（可能為非交易日）", "results": []}
+        # 2026-11-04 K棒組合：歷史日原本只有上市（MI_INDEX），補上櫃當日收盤，讓上櫃的組合也列得出來。
+        # 只在勾 K棒組合時補：其他條件（跳空、量比…）需要前一日資料，上櫃補不齊會變成大量「未確認」放行。
+        if candle_combos:
+            for _c, _s in fetch_otc_stocks_for_date(code_name_map, requested_date).items():
+                hist_stocks.setdefault(_c, _s)
 
         actual_date   = requested_date
         display_date  = f"{actual_date[:4]}/{actual_date[4:6]}/{actual_date[6:]}"
@@ -3594,12 +3640,12 @@ def screen(params):
 
         candidates[code] = s
 
-    # K棒組合：只留「最近 3 個交易日（含篩選日）完成組合、且通過最低量」的股票
+    # K棒組合：只留「篩選日往前 candle_combo_days 個交易日（含篩選日）完成組合、且通過最低量」的股票
     _combo_hits, _combo_window = {}, None
     if candle_combos and candidates:
         _iso = f"{actual_date[:4]}-{actual_date[4:6]}-{actual_date[6:]}" if len(actual_date) == 8 else actual_date
         st, days = _cache_sb("/taiex_daily", "GET", params=[("select", "trade_date"), ("trade_date", f"lte.{_iso}"),
-                                                            ("order", "trade_date.desc"), ("limit", "3")])
+                                                            ("order", "trade_date.desc"), ("limit", str(candle_combo_days))])
         if st != 200 or not isinstance(days, list) or not days:
             return {"error": "K棒組合：讀不到交易日曆，請稍後再試。", "results": []}
         _combo_window = [days[-1]["trade_date"], _iso]

@@ -45,10 +45,46 @@
     '波段上漲：組合之前有低點 ≤ 組合最高價 ÷ 1.3；波段下跌：組合之前有高點 ≥ 組合最低價 ÷ 0.7（含等號、含影線）。',
     '反向回撤 10%：往前找波段時，遇到較早高點到其後低點回落超過 10%（上漲波段），或較早低點到其後高點反彈超過 10%（下跌波段），就停止往前找；恰好 10% 仍可跨越。先找到波段目標就成立。',
     '組合必須是連續交易日；遇停牌缺日、無效價或除權息日會切段，組合與往前找的波段都不跨段（戰車的創紀錄比較例外，比對全部保存資料）。',
-    '選股只列最近 3 個交易日（含篩選日）完成的組合，並套最低量：收盤 ≥ 100 元需 ≥ 10 萬股，＜ 100 元需 ≥ 50 萬股；十字線免量。K 線圖黃框不套最低量。',
+    '選股以篩選器的「日期」為準（不填＝最新交易日）：預設列出該日往前 3 個交易日（含該日）完成的組合，也可選「只看指定日期當天」；並套最低量：收盤 ≥ 100 元需 ≥ 10 萬股，＜ 100 元需 ≥ 50 萬股；十字線免量。K 線圖黃框不套最低量。',
     '資料範圍：本站保存的日K（2024-07 起），不下載補值，不代表每檔都有完整十年。價格比較一律精確比較、不先四捨五入。',
     '組合僅供參考，不構成買賣建議。',
   ];
+  // 滑鼠移到篩選器勾選框時的示意卡（沿用合夥人 kbar-hint.js 的卡片；K 棒格式 [開, 高, 低, 收]，ctx＝前面走勢、sig＝組合本身）
+  const HINTS = {
+    'reversal-doji': { tag: ['neu', '轉折觀察'], ctx: [[60,61,56,57],[57,58,53,54],[54,55,51,52]], sig: [[51,53.5,48.5,51]],
+      desc: '一路漲或跌一大段（約 30%）後，出現<em>開盤＝收盤、上下都有影線</em>的十字線，多空暫時拉平，留意是否反轉。不看成交量。' },
+    'bullish-engulfing': { tag: ['bull', '底部翻多'], ctx: [[60,61,56,57],[57,58,53,54],[54,55,51,52]], sig: [[52.8,53.2,50.9,51.2],[49.6,54.8,49.2,54.4]],
+      desc: '跌了一大段（約 30%）後，<em>紅K 實體把前一根黑K 整根（含影線）吃掉</em>，買盤一口氣收復跌幅。' },
+    'bearish-engulfing': { tag: ['bear', '頭部翻空'], ctx: [[48,51,47,50.5],[50.5,54,50,53.5],[53.5,57,53,56.5]], sig: [[56.6,58.3,56.2,58],[59.6,59.9,54.6,55]],
+      desc: '漲了一大段（約 30%）後，<em>黑K 實體把前一根紅K 整根（含影線）吃掉</em>，賣壓吃掉前一日漲幅。' },
+    'piercing': { tag: ['bull', '跌深反攻'], ctx: [[60,61,56,57],[57,58,53.5,54]], sig: [[54,54.5,50.5,51],[50,54.2,49.5,53.5]],
+      desc: '跌了一大段後，黑K 之後<em>開更低的紅K，收盤拉回到黑K 實體六成以上</em>（不超過黑K 最高價），且量比前一天大。' },
+    'dark-cloud': { tag: ['bear', '高檔遇壓'], ctx: [[48,51,47,50.5],[50.5,54,50,53.5]], sig: [[53.5,57.5,53,57],[58,58.5,54.5,54.8]],
+      desc: '漲了一大段後，紅K 之後<em>開更高的黑K，收盤壓回紅K 實體六成以上</em>，但沒跌破紅K 開盤。' },
+    'bullish-harami': { tag: ['bull', '跌勢趨緩'], ctx: [[61,62,58,59],[59,60,56.5,57]], sig: [[57,57.5,50.5,51],[53.2,55.3,52.9,54.8]],
+      desc: '跌了一大段後，<em>長黑K（實體 ≥3%）之後出現被包在實體內的小紅K</em>，賣壓減弱，待下一根確認。' },
+    'bearish-harami': { tag: ['bear', '漲勢趨緩'], ctx: [[48,51,47,50],[50,53.5,49.5,52.8]], sig: [[53,59.5,52.5,59],[56.8,57.1,54.9,55.2]],
+      desc: '漲了一大段後，<em>長紅K（實體 ≥3%）之後出現被包在實體內的小黑K</em>，追價力道轉弱，待下一根確認。' },
+    'three-inside-up': { tag: ['bull', '母子確認翻紅'], ctx: [[61,62,58,59],[59,60,56.5,57]], sig: [[57,57.5,50.5,51],[52.5,54.8,52,54.2],[54.5,59.5,54,59]],
+      desc: '多頭母子之後，<em>第 3 根紅K 收盤站上母棒（長黑）開盤</em>，確認轉強。' },
+    'three-inside-down': { tag: ['bear', '母子確認翻黑'], ctx: [[48,51,47,50],[50,53.5,49.5,52.8]], sig: [[53,59.5,52.5,59],[57.8,58.2,55.5,56.2],[56,56.5,51.5,52]],
+      desc: '空頭母子之後，<em>第 3 根黑K 收盤跌破母棒（長紅）開盤</em>，確認轉弱。' },
+    'two-gap-crows': { tag: ['bear', '漲勢結束'], ctx: [[48,51,47,50.5],[50.5,54,50,53.5]], sig: [[53.5,57.5,53,57],[59,60,57.8,58.2],[59.5,60,57.5,57.8]],
+      desc: '漲了一大段後，紅K 之後<em>連兩根跳空的黑K</em>，開盤、收盤都還在紅K 收盤之上，追價力道轉弱。' },
+    'three-white-soldiers': { tag: ['bull', '連續走強'], ctx: [[50,51,49,50.2],[50.2,51,49.5,50]], sig: [[50,52.2,49.8,52],[52.1,54.3,51.9,54],[54,56.6,53.8,56.4]],
+      desc: '<em>連續 3 天長紅K（實體各 ≥3%），收盤一天比一天高</em>。不看成交量、不要求前面先跌。' },
+    'three-black-crows': { tag: ['bear', '連續走弱'], ctx: [[57,58,56,57.2],[57.2,58,56.5,57]], sig: [[57,57.2,54.8,55],[54.9,55.1,52.8,53],[53,53.2,50.6,50.8]],
+      desc: '<em>連續 3 天長黑K（實體各 ≥3%），收盤一天比一天低</em>。不看成交量、不要求前面先漲。' },
+    'bullish-tank': { tag: ['bull', '創高續攻'], ctx: [[48,50,47.5,49.5],[49.5,51,49,50.5]], sig: [[50.5,53.5,50.2,53.2],[53,53.8,51.8,52.2],[52.5,56.5,52.3,56]],
+      desc: '紅K <em>收盤創本站資料新高</em>，隔天小黑休息，第 3 根紅K 收盤超過前一天最高價 3% 以上、量放大 1.5 倍；三根實體相連沒有缺口。' },
+    'bearish-tank': { tag: ['bear', '創低續跌'], ctx: [[56,56.5,54,54.5],[54.5,55,53,53.5]], sig: [[53.5,53.8,50.5,50.8],[50.8,52.2,50.5,51.6],[51.5,51.8,47.8,48.2]],
+      desc: '黑K <em>收盤創本站資料新低</em>，隔天小紅反彈，第 3 根黑K 收盤跌破前一天最低價 3% 以上、量縮；三根實體相連沒有缺口。' },
+    'rising-three': { tag: ['bull', '整理後續漲'], ctx: [[48,49,47.5,48.5]], sig: [[48.5,53.2,48.2,53],[52.8,53.4,51.6,51.9],[51.9,52.3,50.6,51],[51,51.8,50.2,51.5],[51.6,55,51.4,54.8]],
+      desc: '長紅之後<em>至少 3 根小K 都待在第一根紅K 實體內</em>（影線可超出），最後一根紅K 收盤突破第一根最高價、量放大 1.5 倍。' },
+    'falling-three': { tag: ['bear', '反彈後續跌'], ctx: [[57,57.5,56,56.5]], sig: [[56.5,56.8,51.6,52],[52.3,53.6,52,53.2],[53.2,54.2,52.8,54],[53.9,54.5,53,53.4],[53.3,53.5,49.6,49.8]],
+      desc: '長黑之後<em>至少 3 根小K 都待在第一根黑K 實體內</em>（影線可超出），最後一根黑K 收盤跌破第一根最低價、量縮。' },
+  };
+  window.AcademyKbarHintExtra = Object.fromEntries(COMBOS.map(c => ['cc_' + c.id, Object.assign({ name: c.name }, HINTS[c.id])]));
   const byId = new Map(COMBOS.map(c => [c.id, c]));
   const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const nameOf = id => (byId.get(id) || {}).name || id;
@@ -79,7 +115,7 @@
   function mountGrid() {
     const grid = document.getElementById('ccComboGrid');
     if (!grid || grid.childElementCount) return;
-    grid.innerHTML = COMBOS.map(c => '<label class="checkbox-row"><input type="checkbox" class="cc-cb" data-combo="' + c.id + '" /><div><div class="cb-label">' + esc(c.name) + '</div><div class="cb-hint">' + esc(c.bars) + '・' + esc(c.wave) + '</div></div></label>').join('');
+    grid.innerHTML = COMBOS.map(c => '<label class="checkbox-row"><input type="checkbox" class="cc-cb" id="cc_' + c.id + '" data-combo="' + c.id + '" /><div><div class="cb-label">' + esc(c.name) + '</div><div class="cb-hint">' + esc(c.bars) + '・' + esc(c.wave) + '</div></div></label>').join('');
   }
   function resultTag(list) {
     return '<div class="zm3-info cc-result">' + list.map(h => '<a href="javascript:void(0)" data-cc-rule="' + esc(h.combo) + '" title="' + esc(nameOf(h.combo)) + '（' + esc(h.date) + ' 完成，僅供參考）；點看規則">' + esc(nameOf(h.combo)) + ' ' + esc(String(h.date).slice(5).replace('-', '/')) + '</a>').join('・') + '</div>';
@@ -225,7 +261,7 @@
     }
   }
 
-  function boot() { mountGrid(); mountToggle(); }
+  function boot() { mountGrid(); mountToggle(); window.AcademyKbarHint?.register(window.AcademyKbarHintExtra); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 
   window.AcademyCandleCombos = { COMBOS, COMMON, nameOf, rulesHtml, openRules, resultTag, attach, detach, refresh: schedule, isVisible: () => visible };

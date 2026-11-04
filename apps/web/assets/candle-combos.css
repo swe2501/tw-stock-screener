@@ -45,6 +45,8 @@ html[data-theme="dark"] #chartModal #chartComboToggle[aria-pressed="true"] .kinf
 /* 選股面板與結果 */
 .cc-panel-note{margin:0 0 8px;font-size:12px;color:var(--text-muted)}
 .cc-panel-note a{color:var(--cc-yellow-ink);font-weight:600;margin-left:6px}
+.cc-days{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;margin:0 0 10px;font-size:12px;color:var(--text-muted)}
+.cc-days label{display:inline-flex;align-items:center;gap:4px;cursor:pointer;color:var(--text)}
 #ccComboGrid .cb-hint{font-size:11px;color:var(--text-muted)}
 .cc-result a{color:var(--cc-yellow-ink);text-decoration:none;font-weight:600}
 .cc-result a:hover{text-decoration:underline}
