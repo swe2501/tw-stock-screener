@@ -22,8 +22,8 @@
   <script src="assets/w-pattern-export.js?v=20261024-1"></script>
   <script src="assets/w-pattern-overlay.js?v=20261025-2"></script>
   <script src="assets/chart-ai-patterns.js?v=20261101-box1"></script>
-  <script src="assets/candle-combos.js?v=14" defer></script>
-  <link rel="stylesheet" href="assets/candle-combos.css?v=13">
+  <script src="assets/candle-combos.js?v=15" defer></script>
+  <link rel="stylesheet" href="assets/candle-combos.css?v=14">
   <link rel="stylesheet" href="assets/chart-ai-patterns.css?v=20261026-3">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -9827,13 +9827,7 @@
           <input type="number" id="min_price" min="0" step="1" placeholder="例：10" />
         </div>
 
-        <!-- 長紅棒 -->
-        <div class="field">
-          <label>長紅棒幅度 (%)</label>
-          <div class="label-hint">(收 - 開) / 收 × 100 ≥ 此值</div>
-          <input type="number" id="red_candle_pct" min="0" max="20" step="0.1" placeholder="例：3（代表 3%）"
-                 oninput="if(this.value){document.getElementById('black_candle_pct').value=''}" />
-        </div>
+        <!-- 2026-11-05 長紅棒／長黑棒幅度移到下方「K棒」分類（用戶要求） -->
 
         <!-- 放量倍數 -->
         <div class="field">
@@ -9841,14 +9835,6 @@
           <div class="label-hint">昨日 max(5日均量, 10日均量) × 倍數</div>
           <input type="number" id="volume_multiplier" min="0" step="0.1" placeholder="例：1.5（代表 1.5 倍）"
                  oninput="if(this.value){document.getElementById('shrink_multiplier').value=''}" />
-        </div>
-
-        <!-- 長黑棒 -->
-        <div class="field">
-          <label>長黑棒幅度 (%)</label>
-          <div class="label-hint">(開 - 收) / 收 × 100 ≥ 此值</div>
-          <input type="number" id="black_candle_pct" min="0" max="20" step="0.1" placeholder="例：3（代表 3%）"
-                 oninput="if(this.value){document.getElementById('red_candle_pct').value=''}" />
         </div>
 
         <!-- 縮量倍數 -->
@@ -9914,20 +9900,92 @@
         <div class="sc-panel" data-cat="kbar">
           <div class="sc-hd"><a onclick="_scToggle('kbar')"><span class="sc-ar">▸</span><b style="color:#c0392b">K棒</b></a><span class="sc-sum"></span></div>
           <div class="sc-body" style="display:none">
+          <!-- 2026-11-05 單根 K 棒訊號：長紅／長黑幅度從基本條件移入；其餘訊號每晚由 scripts/candle_combos.py 算好（candle_combo_hits），篩選日當天成立；勾多項＝全部成立 -->
+          <div class="ks-fields">
+            <div class="field">
+              <label>長紅棒幅度 (%)</label>
+              <div class="label-hint">(收 - 開) / 收 × 100 ≥ 此值</div>
+              <input type="number" id="red_candle_pct" min="0" max="20" step="0.1" placeholder="例：3（代表 3%）"
+                     oninput="if(this.value){document.getElementById('black_candle_pct').value=''}" />
+            </div>
+            <div class="field">
+              <label>長黑棒幅度 (%)</label>
+              <div class="label-hint">(開 - 收) / 收 × 100 ≥ 此值</div>
+              <input type="number" id="black_candle_pct" min="0" max="20" step="0.1" placeholder="例：3（代表 3%）"
+                     oninput="if(this.value){document.getElementById('red_candle_pct').value=''}" />
+            </div>
+          </div>
           <div class="checkbox-grid sc-cbs">
         <label class="checkbox-row">
-          <input type="checkbox" id="doji" />
+          <input type="checkbox" id="doji" class="ks-cb" data-signal="reversal-doji" />
           <div>
             <div class="cb-label">十字線</div>
+            <div class="cb-hint">波段漲或跌後才算（變盤訊號）</div>
           </div>
         </label>
         <label class="checkbox-row">
-          <input type="checkbox" id="hanging_man" />
+          <input type="checkbox" id="long_lower" class="ks-cb" data-signal="long-lower" />
           <div>
-            <div class="cb-label">吊人線</div>
+            <div class="cb-label">長下影線</div>
+            <div class="cb-hint">≥ <select id="long_lower_pct" class="ks-pct" aria-label="長下影線門檻" onclick="event.stopPropagation()" onchange="document.getElementById('long_lower').checked=true;window._scCount&&_scCount()"><option value="3">3%</option><option value="5">5%</option></select></div>
           </div>
         </label>
-        <!-- 2026-11-04 舊版陽吞噬／陰吞噬／多頭・空頭母子已移除，改用「K棒組合」分類的文件版（用戶決定） -->
+        <label class="checkbox-row">
+          <input type="checkbox" id="long_upper" class="ks-cb" data-signal="long-upper" />
+          <div>
+            <div class="cb-label">長上影線</div>
+            <div class="cb-hint">≥ <select id="long_upper_pct" class="ks-pct" aria-label="長上影線門檻" onclick="event.stopPropagation()" onchange="document.getElementById('long_upper').checked=true;window._scCount&&_scCount()"><option value="3">3%</option><option value="5">5%</option></select></div>
+          </div>
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="one_line" class="ks-cb" data-signal="one-line" />
+          <div>
+            <div class="cb-label">一字線</div>
+            <div class="cb-hint">強勢・續抱</div>
+          </div>
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="spinning_top" class="ks-cb" data-signal="spinning-top" />
+          <div>
+            <div class="cb-label">紡錘線</div>
+            <div class="cb-hint">弱勢・減碼</div>
+          </div>
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="candle_line" class="ks-cb" data-signal="candle-sell" />
+          <div>
+            <div class="cb-label">蠟燭線（漲逾 30%）</div>
+            <div class="cb-hint">上漲動能將盡・賣出</div>
+          </div>
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="gravestone" class="ks-cb" data-signal="gravestone" />
+          <div>
+            <div class="cb-label">墓碑線</div>
+            <div class="cb-hint">賣出訊號</div>
+          </div>
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="hanging_man" class="ks-cb" data-signal="hanging-man" />
+          <div>
+            <div class="cb-label">吊人線</div>
+            <div class="cb-hint">連續漲停後出現</div>
+          </div>
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="hanging_main" class="ks-cb" data-signal="hanging-man-main" />
+          <div>
+            <div class="cb-label">吊人線→主力確認</div>
+            <div class="cb-hint">9 天內帶量紅K 突破</div>
+          </div>
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="hanging_retail" class="ks-cb" data-signal="hanging-man-retail" />
+          <div>
+            <div class="cb-label">吊人線→散戶確認</div>
+            <div class="cb-hint">超過 9 天後跌破</div>
+          </div>
+        </label>
           </div>
           </div>
         </div>
@@ -10207,6 +10265,7 @@
       if(cb.classList.contains('box-cb')) return '箱型 '+cb.parentNode.textContent.trim();
       if(cb.classList.contains('macd-cb')) return 'MACD '+(/long/.test(cb.dataset.mode)?'多：':'空：')+cb.parentNode.textContent.trim().replace(/（.*$/,'');
       var t=l?l.textContent.trim():cb.id;
+      if(cb.id==='long_lower'||cb.id==='long_upper') t+=' ≥'+(v(cb.id+'_pct')||'3')+'%';
       if(cb.id==='gap_up'&&v('gap_up_min')) t+=' ≥'+v('gap_up_min')+'元';
       if(cb.id==='gap_down'&&v('gap_down_min')) t+=' ≥'+v('gap_down_min')+'元';
       return t; }
@@ -11068,13 +11127,13 @@
         shrink_multiplier: shrinkMult,
         limit_up: limitUp,
         limit_down: limitDown,
-        doji:     doji,
+        doji:     false,   // 2026-11-05 十字線改用 candle_signals（要先有波段），舊的當日判斷不再送
         gap_up:   gapUp,
         gap_down: gapDown,
         gap_up_min: gapUpMin,
         gap_down_min: gapDownMin,
         earn_gap_down: earnGapDown,
-        hanging_man: hangingMan,
+        hanging_man: false,   // 2026-11-05 吊人線改用 candle_signals（要先連 2 根漲停）
         macd_mode:  macdMode,
         macd_start: macdStart,
         macd_end:   macdEnd,
@@ -11096,6 +11155,11 @@
         // 2026-11-04 K棒組合 16 類（近 3 個交易日完成、通過最低量；勾多項＝任一成立）
         candle_combos: Array.from(document.querySelectorAll('.cc-cb:checked')).map(e => e.dataset.combo),
         candle_combo_days: document.querySelector('input[name="cc_days"]:checked')?.value === '1' ? 1 : 3,
+        // 2026-11-05 K棒分類的單根訊號（篩選日當天成立；勾多項＝全部成立）；長上下影線帶門檻 3／5
+        candle_signals: Array.from(document.querySelectorAll('.ks-cb:checked')).map(e => {
+          const s = e.dataset.signal;
+          return (s === 'long-lower' || s === 'long-upper') ? s + '-' + (document.getElementById(e.id + '_pct')?.value || '3') : s;
+        }),
       };
 
       // 非同步任務：帶 job_id 送出，伺服器算完會存暫存；即使手機切背景斷線，
@@ -11368,7 +11432,7 @@
                   ? `<span class="data-missing-badge" title="部分篩選條件無法確認（${s.data_missing.map(k=>({'no_black':'無放量黑棒篩選','gap_unverified':'跳空前日資料缺失，請手動排查'}[k]||k)).join('、')}），已放行"></span>`
                   : ''
               }</td>
-            <td class="name-cell">${s.name}${s.zm4 ? AcademyZhenmingFour.badge(s.zm4) : ''}${s.zm6 && window.AcademyZhenmingSix ? AcademyZhenmingSix.badge(s.zm6) : ''}${(s.zm8 || s.zm9) && window.AcademyZhenming89 ? AcademyZhenming89.badge(s) : ''}${s.sma20_stage ? `<div class="zm3-info">葛蘭碧・階段 ${s.sma20_stage}</div>` : ''}${s.candle_combos && window.AcademyCandleCombos ? AcademyCandleCombos.resultTag(s.candle_combos) : ''}${s.zm3 ? _zm3Badge(s.zm3) : ''}${s.ev357 ? _ev357Info(s.ev357) : ''}</td>
+            <td class="name-cell">${s.name}${s.zm4 ? AcademyZhenmingFour.badge(s.zm4) : ''}${s.zm6 && window.AcademyZhenmingSix ? AcademyZhenmingSix.badge(s.zm6) : ''}${(s.zm8 || s.zm9) && window.AcademyZhenming89 ? AcademyZhenming89.badge(s) : ''}${s.sma20_stage ? `<div class="zm3-info">葛蘭碧・階段 ${s.sma20_stage}</div>` : ''}${s.candle_combos && window.AcademyCandleCombos ? AcademyCandleCombos.resultTag(s.candle_combos) : ''}${s.candle_signals && window.AcademyCandleCombos?.signalTag ? AcademyCandleCombos.signalTag(s.candle_signals) : ''}${s.zm3 ? _zm3Badge(s.zm3) : ''}${s.ev357 ? _ev357Info(s.ev357) : ''}</td>
             <td class="neutral col-open">${s.open}</td>
             <td class="neutral col-high">${s.high}</td>
             <td class="neutral col-low">${s.low}</td>
@@ -15256,6 +15320,8 @@
           const names=[...new Set(rows.map(e=>e.broker))];
           _ohlcTip.innerHTML+=`<div class="ohlc-broker"><span class="broker-relationship-${sell?'down':'up'}">${sell?'↓':'↑'} ${label} · ${names.length} 家</span>${names.map(n=>`<b>${brokerName(n)}</b>`).join('')}${typeof param.time==='string'&&rows.some(e=>e.date!==param.time)?`<small>${[...new Set(rows.map(e=>e.date))].map(brokerName).join('、')}</small>`:''}</div>`;
         }
+        // 2026-11-05 單根 K 棒訊號（十字線、長上下影線、吊人線…）：圖上圈起、這裡多一行寫名稱
+        try { const sigHtml = window.AcademyCandleCombos?.signalTipHtml(param.time, c); if (sigHtml) _ohlcTip.innerHTML += sigHtml; } catch (_) {}
         _ohlcTip.style.display = 'block';
         _tipFollow(param);
       });

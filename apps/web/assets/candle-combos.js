@@ -85,6 +85,41 @@
       desc: '長黑之後<em>至少 3 根小K 都待在第一根黑K 實體內</em>，收盤跌破第一根最低價。' },
   };
   window.AcademyKbarHintExtra = Object.fromEntries(COMBOS.map(c => ['cc_' + c.id, Object.assign({ name: c.name }, HINTS[c.id])]));
+
+  // ── 單根 K 棒訊號（2026-11-05 用戶定義；scripts/candle_combos.py SIGNALS）──
+  // 圖上用圈圈標，開關跟「K棒訊息」連動；滑到 K 棒時提示框多一行寫訊號名稱
+  const SIG = {
+    'long-lower-3': '長下影線 ≥3%', 'long-lower-5': '長下影線 ≥5%',
+    'long-upper-3': '長上影線 ≥3%', 'long-upper-5': '長上影線 ≥5%',
+    'one-line': '一字線（強勢・續抱）', 'spinning-top': '紡錘線（弱勢・減碼）',
+    'candle-sell': '蠟燭線（漲逾 30%・賣出）', 'gravestone': '墓碑線（賣出）',
+    'hanging-man': '吊人線（待確認）', 'hanging-man-main': '吊人線→主力確認', 'hanging-man-retail': '吊人線→散戶確認',
+  };
+  const SIG_SHORT = { 'reversal-doji': '十字線（變盤）' };
+  // 篩選器「K棒」分類勾選框的滑鼠示意卡（key＝勾選框 id；十字線沿用反轉十字線的卡片）
+  const SIG_HINTS = {
+    doji: Object.assign({ name: '十字線' }, HINTS['reversal-doji'], {
+      desc: '一路漲或跌一大段（約 30%）後，出現<em>開盤＝收盤、上下都有影線</em>的十字線，才算變盤訊號；沒有波段的十字線不列入。' }),
+    long_lower: { name: '長下影線', tag: ['bull', '低檔承接'], ctx: [[56,57,54,54.5],[54.5,55,52,52.5]], sig: [[52,53,48,52.8]],
+      desc: '下影線＝<em>紅K (開盤−最低)÷收盤、黑K (收盤−最低)÷收盤</em>，≥ 所選 3% 或 5%。盤中殺低後有買盤承接。' },
+    long_upper: { name: '長上影線', tag: ['bear', '上檔賣壓'], ctx: [[48,50,47.5,49.5],[49.5,52,49,51.8]], sig: [[52,57,51.8,52.6]],
+      desc: '上影線＝<em>紅K (最高−收盤)÷收盤、黑K (最高−開盤)÷收盤</em>，≥ 所選 3% 或 5%。盤中衝高後被賣壓壓回。' },
+    one_line: { name: '一字線', tag: ['bull', '強勢・續抱'], ctx: [[50,52,49.5,51.5],[51.5,55,51.4,54.8]], sig: [[60.3,60.3,60.3,60.3]],
+      desc: '<em>開盤＝最高＝最低＝收盤</em>，且收盤高於前一天（漲停鎖死）。強勢，續抱。' },
+    spinning_top: { name: '紡錘線', tag: ['bear', '弱勢・減碼'], ctx: [[50,52,49.6,51.6],[51.6,53,51.2,52.2]], sig: [[52,55.5,51.6,52.6]],
+      desc: '<em>有實體，上影線 ≥3%</em>（上影線算法同長上影線）。上攻被壓回，弱勢，減碼。' },
+    candle_line: { name: '蠟燭線', tag: ['bear', '漲逾 30% 賣出'], ctx: [[40,44,39.5,43.5],[43.5,48,43,47.5],[47.5,52,47,51.5]], sig: [[51.8,54.5,50.6,53.4]],
+      desc: '<em>紅K 有實體、上下都有影線</em>。前面已漲超過約 30%（波段上漲）才出現 → 上漲動能將盡，賣出；30% 以內則續抱（K 線圖提示框標「續抱」）。' },
+    gravestone: { name: '墓碑線', tag: ['bear', '賣出訊號'], ctx: [[46,48.5,45.8,48.2],[48.2,50.3,48,50]], sig: [[50,54.5,50,50]],
+      desc: '<em>開盤＝收盤＝最低價</em>，留長上影線。賣出訊號，之後常弱勢約 5 天。' },
+    hanging_man: { name: '吊人線', tag: ['neu', '主力或散戶'], ctx: [[45,49.5,45,49.5],[49.5,54.4,49.5,54.4]], sig: [[59.8,59.8,55,59.8]],
+      desc: '前面<em>連續 2 根以上漲停</em>後，出現<em>開盤＝收盤＝最高價、留下影線</em>的 T 字。只確定有人吊在那，看後續確認是主力還是散戶。' },
+    hanging_main: { name: '吊人線→主力確認', tag: ['bull', '主力吊在那'], ctx: [[49.5,54.4,49.5,54.4],[59.8,59.8,55,59.8],[59,60,57,58],[58,59,56.5,57.5]], sig: [[58,63.5,57.8,63]],
+      desc: '吊人線後<em>第 1～9 個交易日內</em>，出現帶量紅K（量 ≥ max(前 5 日均量, 前 10 日均量) × 1.5）且收盤超過吊人線 → 主力吊在那。' },
+    hanging_retail: { name: '吊人線→散戶確認', tag: ['bear', '散戶吊在那'], ctx: [[59.8,59.8,55,59.8],[59,60,57,58],[58,58.5,56,56.5]], sig: [[56,56.2,53,53.5]],
+      desc: '吊人線後 9 天內沒有主力確認，<em>之後收盤跌破吊人線最低價</em>（60 個交易日內）→ 散戶吊在那。' },
+  };
+  Object.assign(window.AcademyKbarHintExtra, SIG_HINTS);
   const byId = new Map(COMBOS.map(c => [c.id, c]));
   const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const nameOf = id => (byId.get(id) || {}).name || id;
@@ -120,6 +155,12 @@
   function resultTag(list) {
     return '<div class="zm3-info cc-result">' + list.map(h => '<a href="javascript:void(0)" data-cc-rule="' + esc(h.combo) + '" title="' + esc(nameOf(h.combo)) + '（' + esc(h.date) + ' 完成，僅供參考）；點看規則">' + esc(nameOf(h.combo)) + ' ' + esc(String(h.date).slice(5).replace('-', '/')) + '</a>').join('・') + '</div>';
   }
+  function sigName(id) { return SIG[id] || SIG_SHORT[id] || nameOf(id); }
+  function signalTag(list) {
+    const ids = list.map(h => h.signal);
+    const shown = ids.filter(id => !(id.endsWith('-3') && ids.includes(id.slice(0, -2) + '-5')));   // 有 5% 就不重複列 3%
+    return '<div class="zm3-info cc-result cc-signal-tag">' + shown.map(id => '<span>' + esc(sigName(id)) + '</span>').join('・') + '</div>';
+  }
   document.addEventListener('click', e => {
     const a = e.target.closest && e.target.closest('[data-cc-rule]');
     if (!a) return;
@@ -128,7 +169,8 @@
 
   // ── K 線圖黃框 ──
   let visible = true; try { visible = localStorage.getItem(STORE) !== '0'; } catch (_) {}
-  let ctx = null, layer = null, groups = [], frame = 0, ro = null, unsub = null, ticket = 0;
+  let ctx = null, layer = null, groups = [], sigByDate = new Map(), frame = 0, ro = null, unsub = null, ticket = 0;
+  const infoOn = () => window.AcademyChartViewport?.isInfoVisible?.() !== false;   // 單根訊號圈圈跟「K棒訊息」開關連動
   const cache = new Map();
 
   function mountToggle() {
@@ -160,13 +202,31 @@
     if (ro) { ro.disconnect(); ro = null; }
     if (frame) { cancelAnimationFrame(frame); frame = 0; }
     if (layer) layer.remove();
-    layer = null; groups = []; ctx = null;
+    layer = null; groups = []; sigByDate = new Map(); ctx = null;
+  }
+
+  async function fetchTable(table, col, code) {
+    // PostgREST 一次最多 1000 筆 → 分頁讀；回傳統一成 {combo, start_date, end_date}
+    let all = [];
+    for (let off = 0; off < 10000; off += 1000) {
+      const r = await fetch(SB + '/rest/v1/' + table + '?select=' + col + ',start_date,end_date&code=eq.' + encodeURIComponent(code) + '&order=end_date,' + col + '&offset=' + off + '&limit=1000',
+        { headers: { apikey: AK, Authorization: 'Bearer ' + AK } });
+      if (!r.ok) break;
+      const page = await r.json();
+      all = all.concat(page.map(x => ({ combo: x[col], start_date: x.start_date, end_date: x.end_date })));
+      if (page.length < 1000) break;
+    }
+    return all;
+  }
+  async function fetchAll(code) {
+    // K棒組合 candle_combo_hits ＋ 單根訊號 candle_signal_hits（2026-11-05 分表）
+    const [a, b] = await Promise.all([fetchTable('candle_combo_hits', 'combo', code), fetchTable('candle_signal_hits', 'signal', code).catch(() => [])]);
+    return a.concat(b);
   }
 
   async function load(code) {
     if (cache.has(code)) return cache.get(code);
-    const p = fetch(SB + '/rest/v1/candle_combo_hits?select=combo,start_date,end_date&code=eq.' + encodeURIComponent(code) + '&order=end_date&limit=2000',
-      { headers: { apikey: AK, Authorization: 'Bearer ' + AK } }).then(r => r.ok ? r.json() : []).catch(() => []);
+    const p = fetchAll(code).catch(() => []);
     cache.set(code, p);
     const rows = await p;
     if (!Array.isArray(rows) || !rows.length) cache.delete(code);   // 失敗或無資料不長期快取
@@ -185,6 +245,13 @@
       if (my !== ticket || !Array.isArray(rows)) return;
       const merged = new Map();     // 同一起訖合成一框，名稱並列
       for (const r of rows) {
+        if (SIG[r.combo] || r.combo === 'reversal-doji') {          // 單根訊號（十字線兩邊都算）：依「標示日」收集
+          if (idx.has(r.end_date)) {
+            if (!sigByDate.has(r.end_date)) sigByDate.set(r.end_date, []);
+            sigByDate.get(r.end_date).push(r.combo);
+          }
+          if (!byId.has(r.combo)) continue;
+        }
         const i0 = idx.get(r.start_date), i1 = idx.get(r.end_date);
         if (i0 == null || i1 == null || i1 < i0) continue;
         const key = r.start_date + '|' + r.end_date;
@@ -216,7 +283,8 @@
     frame = 0;
     if (!ctx || !layer || !layer.isConnected) return;
     layer.replaceChildren();
-    if (!visible || !groups.length) return;
+    const showSig = infoOn() && sigByDate.size;
+    if (!(visible && groups.length) && !showSig) return;
     const ts = ctx.chart.timeScale(), s = ctx.series;
     let psw = 0, tsh = 0;
     try { psw = ctx.chart.priceScale('right').width() || 0; } catch (_) {}
@@ -225,6 +293,22 @@
     layer.style.width = W + 'px'; layer.style.height = H + 'px';
     const spacing = (ts.options().barSpacing || 6);
     const half = Math.max(2, spacing / 2);
+    if (showSig) {                                                   // 單根訊號：K 棒外圍畫圈（滑過去看提示框）
+      const byTime = new Map(ctx.candles.map(k => [k.time, k]));
+      for (const [d, ids] of sigByDate) {
+        const k = byTime.get(d); if (!k) continue;
+        const x = ts.timeToCoordinate(d), yt = s.priceToCoordinate(k.high), yb = s.priceToCoordinate(k.low);
+        if (x == null || yt == null || yb == null || x < -10 || x > W + 10) continue;
+        const ring = document.createElement('div'); ring.className = 'cc-ring';
+        const w = Math.max(10, spacing + 6), h = Math.max(10, yb - yt + 10);
+        ring.style.left = (x - w / 2) + 'px'; ring.style.top = (yt - 5) + 'px';
+        ring.style.width = w + 'px'; ring.style.height = h + 'px';
+        if (ids.some(id => /sell|gravestone|retail|spinning|upper/.test(id))) ring.dataset.tone = 'bear';
+        else if (ids.some(id => /one-line|main|lower/.test(id))) ring.dataset.tone = 'bull';
+        layer.append(ring);
+      }
+    }
+    if (!(visible && groups.length)) return;
     const placed = [];
     for (const g of groups) {
       const x0 = ts.timeToCoordinate(g.from), x1 = ts.timeToCoordinate(g.to);
@@ -262,8 +346,20 @@
     }
   }
 
+  // 提示框（「K棒訊息」）多一行：這根 K 棒的單根訊號；蠟燭線形狀但不是「漲逾 30%」就標續抱
+  function signalTipHtml(time, k) {
+    if (!ctx || !infoOn()) return '';
+    const ids = (sigByDate.get(time) || []).slice();
+    const names = ids.filter(id => !(id.endsWith('-3') && ids.includes(id.slice(0, -2) + '-5'))).map(sigName);
+    if (k && k.close > k.open && k.high > k.close && k.low < k.open && !ids.includes('candle-sell')) names.push('蠟燭線（30% 內・續抱）');
+    if (!names.length) return '';
+    return '<div class="ohlc-signal"><span>K棒訊號</span>' + names.map(n => '<b>' + esc(n) + '</b>').join('') + '</div>';
+  }
+  // 「K棒訊息」開關切換時，圈圈跟著顯示／隱藏
+  document.addEventListener('click', e => { if (e.target.closest && e.target.closest('#chartInfoToggle')) setTimeout(schedule, 0); }, true);
+
   function boot() { mountGrid(); mountToggle(); window.AcademyKbarHint?.register(window.AcademyKbarHintExtra); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 
-  window.AcademyCandleCombos = { COMBOS, COMMON, nameOf, rulesHtml, openRules, resultTag, attach, detach, refresh: schedule, isVisible: () => visible };
+  window.AcademyCandleCombos = { COMBOS, COMMON, SIG, nameOf, rulesHtml, openRules, resultTag, signalTag, signalTipHtml, attach, detach, refresh: schedule, isVisible: () => visible };
 })();
