@@ -3197,6 +3197,123 @@ def zhenming6_at(bars, t=None, pattern=None):
     return None
 
 
+# ── 真名八式（假跌破／破底翻）、真名九式（假突破）2026-11-04 依 JUSTY《破底翻》《假突破》兩份指南 ──────────
+#   箱型：突破／跌破日之前 ZM89_BOX 個交易日（約 3 個月）收盤價的整理區，振幅＝(最高收盤−最低收盤)/最低收盤 ≤ 使用者設定（5/10/20% 或自訂）。
+#   八式：收盤跌破箱型下緣後，ZM89_WITHIN（21）個交易日內「今天」第一次收盤站回下緣，且今天是實體長紅（≥ 3%）、量 > 20 日均量。
+#   九式：收盤突破箱型上緣但突破日量縮（< 20 日均量 1.5 倍），之後 21 個交易日內「今天」第一次收盤跌回上緣之下。
+ZM89_BOX = 60             # 預設整理期間（交易日）；使用者可選 40／60／120 或自訂 20～240
+ZM89_WITHIN = 21          # 預設站回／跌回期限（交易日）；可選 10／21／30
+ZM89_WITHIN_CHOICES = (10, 21, 30)
+ZM8_RED = 3.0
+ZM9_BREAK_VOL = 1.5
+
+
+def zm89_amp(value):
+    """箱型振幅上限（%）：1～50，其他回 None。"""
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        return None
+    return round(v, 2) if math.isfinite(v) and 1 <= v <= 50 else None
+
+
+def zm89_box_days(value):
+    """整理期間（交易日）：20～240 的整數，其他回 None；未提供回預設 60。"""
+    if value is None:
+        return ZM89_BOX
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        return None
+    return int(v) if math.isfinite(v) and v == int(v) and 20 <= v <= 240 else None
+
+
+def _zm89_box(bars, d, n=ZM89_BOX):
+    """跌破／突破日 d 之前 n 個交易日的箱型：回 (lower, upper, amp%)；資料不足回 None。"""
+    if d - n < 0:
+        return None
+    seg = [x[4] for x in bars[d - n:d]]
+    lo, hi = min(seg), max(seg)
+    if lo <= 0:
+        return None
+    return lo, hi, (hi - lo) / lo * 100
+
+
+def _zm89_vol_ma(bars, end, n=20):
+    vs = [x[5] for x in bars[max(0, end - n):end] if isinstance(x[5], (int, float)) and x[5] >= 0]
+    return sum(vs) / len(vs) if len(vs) >= n // 2 else None
+
+
+def zhenming8_at(bars, amp, t=None, box_days=ZM89_BOX, within=ZM89_WITHIN):
+    """真名八式（破底翻）。bars＝[(date, o, h, l, c, v), ...] 由舊到新；amp＝箱型振幅上限（%）。"""
+    if t is None:
+        t = len(bars) - 1
+    if not isinstance(t, int) or t < box_days + 2 or t >= len(bars):
+        return None
+    if not all(_zm6_valid(x) for x in bars[max(0, t - box_days - within - 2):t + 1]):
+        return None
+    _, o, h, l, c, v = bars[t]
+    if not (c > o and (c - o) / o * 100 >= ZM8_RED - 1e-9):
+        return None
+    vma = _zm89_vol_ma(bars, t)
+    if not vma or not isinstance(v, (int, float)) or v <= vma:
+        return None
+    d = max(box_days, t - within)
+    while d < t:
+        box = _zm89_box(bars, d, box_days)
+        if not box or not (bars[d][4] < box[0] <= bars[d - 1][4]):
+            d += 1
+            continue
+        lower, upper, a = box
+        # d＝跌破事件起點：之後若在今天前就站回，這次事件已結束，從站回那天往後再找
+        back = next((j for j in range(d + 1, t) if bars[j][4] >= lower), None)
+        if back is not None:
+            d = back + 1
+            continue
+        if a > amp + 1e-9 or c <= lower:
+            return None
+        low_since = min(x[3] for x in bars[d:t + 1])
+        return {"lower": round(lower, 2), "upper": round(upper, 2), "amp": round(a, 2), "box_days": box_days, "within": within, "break_date": bars[d][0],
+                "days": t - d, "red_pct": round((c - o) / o * 100, 2), "vol_ratio": round(v / vma, 2),
+                "stop": round(min(l, low_since), 2), "target1": round(upper, 2), "target2": round(upper + (upper - lower), 2)}
+    return None
+
+
+def zhenming9_at(bars, amp, t=None, box_days=ZM89_BOX, within=ZM89_WITHIN):
+    """真名九式（假突破）。bars＝[(date, o, h, l, c, v), ...] 由舊到新；amp＝箱型振幅上限（%）。"""
+    if t is None:
+        t = len(bars) - 1
+    if not isinstance(t, int) or t < box_days + 2 or t >= len(bars):
+        return None
+    if not all(_zm6_valid(x) for x in bars[max(0, t - box_days - within - 2):t + 1]):
+        return None
+    _, o, h, l, c, v = bars[t]
+    d = max(box_days, t - within)
+    while d < t:
+        box = _zm89_box(bars, d, box_days)
+        if not box or not (bars[d][4] > box[1] >= bars[d - 1][4]):
+            d += 1
+            continue
+        lower, upper, a = box
+        back = next((j for j in range(d + 1, t) if bars[j][4] <= upper), None)
+        if back is not None:
+            d = back + 1
+            continue
+        if a > amp + 1e-9 or c >= upper:
+            return None
+        vma = _zm89_vol_ma(bars, d)
+        bv = bars[d][5]
+        if not vma or not isinstance(bv, (int, float)) or bv >= vma * ZM9_BREAK_VOL:
+            return None
+        high_since = max(x[2] for x in bars[d:t + 1])
+        body = abs(c - o)
+        return {"upper": round(upper, 2), "lower": round(lower, 2), "amp": round(a, 2), "box_days": box_days, "within": within, "break_date": bars[d][0],
+                "days": t - d, "break_vol_ratio": round(bv / vma, 2), "stop": round(high_since, 2), "target": round(lower, 2),
+                "long_black": bool(o > c and (o - c) / c * 100 >= 3 - 1e-9),
+                "upper_shadow": bool(h - max(o, c) >= max(body * 2, c * 0.01))}
+    return None
+
+
 def hidden_options(value):
     """Validate opt-in relative-strength inputs; no silent default for invalid requests."""
     if not value or not value.get("enabled"):
@@ -3334,6 +3451,28 @@ def screen(params):
         if _pat not in ("none", "all") and _pat not in ZM6_PATTERNS:
             return {"error": "真名六式的型態選項無效。", "results": []}
         zm6_pattern = None if _pat == "none" else _pat
+    def _zm89_param(key, label):
+        raw = params.get(key)
+        if not (isinstance(raw, dict) and raw.get("enabled") is True):
+            return None, None
+        amp = zm89_amp(raw.get("amp"))
+        if amp is None:
+            return None, {"error": label + "的箱型振幅需介於 1%～50%。", "results": []}
+        days = zm89_box_days(raw.get("box_days"))
+        if days is None:
+            return None, {"error": label + "的整理期間需為 20～240 個交易日。", "results": []}
+        within = raw.get("within", ZM89_WITHIN)
+        if within not in ZM89_WITHIN_CHOICES or isinstance(within, bool):
+            return None, {"error": label + "的站回期限只能選 10、21 或 30 個交易日。", "results": []}
+        return (amp, days, within), None
+    zm8_amp, _err = _zm89_param("zhenming8", "真名八式")
+    if _err:
+        return _err
+    zm9_amp, _err = _zm89_param("zhenming9", "真名九式")
+    if _err:
+        return _err
+    check_zhenming8, check_zhenming9 = zm8_amp is not None, zm9_amp is not None
+    (zm8_amp, zm8_days, zm8_within), (zm9_amp, zm9_days, zm9_within) = (zm8_amp or (None, None, None)), (zm9_amp or (None, None, None))
     # 企業價值投資法（存股 357）：3 個分級 checkbox（可複選）
     want_357_cheap     = bool(params.get("ev357_cheap", False))
     want_357_fair      = bool(params.get("ev357_fair", False))
@@ -3438,11 +3577,18 @@ def screen(params):
         # 真名六式快篩：當日必須是實體長黑 ≥ 3%，其餘條件需歷史 K 線，在後段判斷
         if check_zhenming6 and not (o > c > 0 and (o - c) / c * 100 >= ZM6_BLACK - 1e-9):
             continue
+        # 真名八式快篩：今天站回下緣＝實體長紅 ≥ 3%；九式：今天跌回上緣＝收盤低於昨收
+        if check_zhenming8 and not (c > o > 0 and (c - o) / o * 100 >= ZM8_RED - 1e-9):
+            continue
+        if check_zhenming9:
+            _pc9 = s.get("prev_close")
+            if _pc9 and c >= _pc9:
+                continue
 
         candidates[code] = s
 
     if not candidates:
-        return {"date": display_date, "total": len(all_stocks), "count": 0, "results": [], "zhenming_hidden_applied": bool(hidden), "zhenming4_applied": check_zhenming4, "zhenming6_applied": check_zhenming6}
+        return {"date": display_date, "total": len(all_stocks), "count": 0, "results": [], "zhenming_hidden_applied": bool(hidden), "zhenming4_applied": check_zhenming4, "zhenming6_applied": check_zhenming6, "zhenming8_applied": check_zhenming8, "zhenming9_applied": check_zhenming9}
 
     # ── Step 3a: 跳空篩選 → 只試「前一個非週末日曆日」MI_INDEX（天條：跳空只跟前一交易日比）
     prev_mi_gap: dict = {}
@@ -3489,7 +3635,7 @@ def screen(params):
 
     # ── price_window 逐股讀（真名/MACD/放量;涵蓋歷史日 → 修正「回搜近期日期漏股」如 3443/8-11）──
     need_pw = (vol_mult > 0 or shrink_mult > 0 or bool(macd_mode)
-               or check_zhenming1 or check_zhenming2 or check_zhenming3 or check_zhenming4 or check_zhenming6 or bool(hidden) or bool(sma20_stages)
+               or check_zhenming1 or check_zhenming2 or check_zhenming3 or check_zhenming4 or check_zhenming6 or check_zhenming8 or check_zhenming9 or bool(hidden) or bool(sma20_stages)
                or check_harami_bull or check_harami_bear)   # 母子線需 MA20 判趨勢 → 抓歷史
     hidden_market = []
     if hidden:
@@ -3814,6 +3960,20 @@ def screen(params):
             if not zm6:
                 continue
 
+        zm8 = zm9 = None
+        if check_zhenming8 or check_zhenming9:
+            bars = (pw_data.get(code) or {}).get("bars") or []
+            target_day = f"{actual_date[:4]}-{actual_date[4:6]}-{actual_date[6:]}"
+            ok_day = bool(bars) and bars[-1][0] == target_day
+            if check_zhenming8:
+                zm8 = zhenming8_at(bars, zm8_amp, box_days=zm8_days, within=zm8_within) if ok_day else None
+                if not zm8:
+                    continue
+            if check_zhenming9:
+                zm9 = zhenming9_at(bars, zm9_amp, box_days=zm9_days, within=zm9_within) if ok_day else None
+                if not zm9:
+                    continue
+
         sma20_hit = 0
         if sma20_stages:
             bars = (pw_data.get(code) or {}).get("bars") or []
@@ -3847,6 +4007,10 @@ def screen(params):
             item["zm4"] = zm4
         if zm6:
             item["zm6"] = zm6
+        if zm8:
+            item["zm8"] = zm8
+        if zm9:
+            item["zm9"] = zm9
         if sma20_hit:
             item["sma20_stage"] = sma20_hit
         if _ev357:
@@ -3874,6 +4038,8 @@ def screen(params):
         "results": results,
         "zhenming_hidden_applied": bool(hidden), "zhenming4_applied": check_zhenming4,
         "zhenming6_applied": check_zhenming6,
+        "zhenming8_applied": check_zhenming8,
+        "zhenming9_applied": check_zhenming9,
     }
 
 

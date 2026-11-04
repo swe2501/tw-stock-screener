@@ -88,7 +88,7 @@ html:has(.sl-dialog[open]){overflow:hidden}
 
 .sl-record-prices{display:flex;flex-direction:column;gap:4px;align-items:flex-end;font-variant-numeric:tabular-nums}.sl-record-prices small{font-size:10px;white-space:normal;line-height:1.5;text-align:right}.scal-day .sl-stock-list button>span:first-child{min-width:75px}.scal-day .sl-stock-list button>span:last-child{white-space:normal}
 
-.sl-record-footer{display:flex;justify-content:flex-end;margin-top:18px;padding-top:12px;border-top:1px solid var(--border)}.scal-page .sl-delete-record{display:inline-flex;align-items:center;gap:7px;background:transparent;border-color:transparent;color:var(--text-muted);font-size:12px}.scal-page .sl-delete-record:hover{color:var(--danger,#c14d49);background:color-mix(in srgb,var(--danger,#c14d49) 8%,var(--surface));border-color:color-mix(in srgb,var(--danger,#c14d49) 30%,var(--border))}.sl-dialog .sl-confirm-delete{background:var(--surface2);color:var(--text);border-color:var(--danger,#c14d49)}.sl-delete-record svg{width:16px;height:16px}.sl-dialog button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}.sl-dialog button:disabled{cursor:wait;opacity:.6}
+.sl-record-footer{display:flex;justify-content:flex-end;margin-top:18px;padding-top:12px;border-top:1px solid var(--border)}.scal-page .sl-delete-record{display:inline-flex;align-items:center;gap:7px;background:transparent;border-color:transparent;color:var(--text-muted);font-size:12px}.scal-page .sl-delete-record:hover{color:var(--danger,#c14d49);background:color-mix(in srgb,var(--danger,#c14d49) 8%,var(--surface));border-color:color-mix(in srgb,var(--danger,#c14d49) 30%,var(--border))}.sl-dialog .sl-confirm-delete{background:var(--surface2);color:var(--text);border-color:var(--danger,#c14d49)}.sl-delete-record svg{width:16px;height:16px}.sl-dialog button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}.sl-dialog button:disabled{cursor:default;opacity:.6}
 
 /* Atelier layout: match the approved screener reference, without changing global brand colors. */
 .scal-workspace-heading{max-width:1420px;margin:24px auto 18px;padding:0 4px;color:var(--text)}.scal-workspace-heading>span{display:flex;align-items:center;gap:10px;color:#ad8644;letter-spacing:.13em;font:600 11px Georgia,serif}.scal-workspace-heading>span:before{content:'';width:38px;height:1px;background:currentColor}.scal-workspace-heading h1{font:700 32px/1.4 'Noto Serif TC',Georgia,serif;margin:7px 0 3px;letter-spacing:.06em}.scal-workspace-heading p{font-size:14px;color:var(--text-muted);margin:0;letter-spacing:.05em}
@@ -438,10 +438,78 @@ body:has(.sic-trigger) .sl-bar .sl-open{display:none!important}
 /* 結果表格：由外層同時負責上下與左右捲動，橫向卷軸固定在可見區底邊（今日選股紀錄正上方） */
 #proScreenLayout.scal-workspace #resultsArea{overflow:auto!important;overscroll-behavior:contain;scrollbar-color:color-mix(in srgb,var(--accent) 45%,transparent) transparent}
 #proScreenLayout.scal-workspace .results-wrap{overflow-x:hidden!important}
-#proScreenLayout.scal-workspace #resultsArea .table-wrap{overflow:visible!important;max-height:none!important;width:max-content!important;min-width:100%;max-width:none!important;box-sizing:border-box}
+#proScreenLayout.scal-workspace #resultsArea .table-wrap{overflow:clip!important;max-height:none!important;width:auto!important;min-width:min-content!important;max-width:none!important;box-sizing:border-box}
 #proScreenLayout.scal-workspace #resultsArea::-webkit-scrollbar{width:8px;height:8px}
 #proScreenLayout.scal-workspace #resultsArea::-webkit-scrollbar-thumb{border-radius:999px;background:color-mix(in srgb,var(--accent) 45%,transparent);border:2px solid transparent;background-clip:padding-box}
 #proScreenLayout.scal-workspace #resultsArea::-webkit-scrollbar-thumb:hover{background-color:var(--accent)}
 #proScreenLayout.scal-workspace #resultsArea::-webkit-scrollbar-track{background:color-mix(in srgb,var(--text-muted) 8%,transparent);border-radius:999px}
 #proScreenLayout.scal-workspace #resultsArea::-webkit-scrollbar-corner{background:transparent}
 .sic-card.sic-pop [data-sic-collapse]{display:none!important}
+
+/* 2026-11-04 選股日曆：標題「2026 年 08 月」可點開年月選擇 */
+.sic-head .sic-month-btn{all:unset;box-sizing:border-box;display:inline-flex!important;align-items:center;gap:4px;width:auto!important;height:26px!important;padding:0 8px 0 9px!important;margin-left:2px;border-radius:999px;font-size:12px!important;font-weight:700;color:var(--text);cursor:pointer;font-variant-numeric:tabular-nums;border:1px solid transparent;transition:background .18s ease,border-color .18s ease,color .18s ease}
+.sic-head .sic-month-btn span{font-size:12px!important;font-weight:700!important;color:inherit!important}
+.sic-head .sic-month-btn svg{width:10px!important;height:10px!important;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;opacity:.6;transition:transform .2s ease}
+.sic-head .sic-month-btn:hover,.sic-head .sic-month-btn[aria-expanded=true]{background:color-mix(in srgb,var(--accent) 9%,transparent);border-color:color-mix(in srgb,var(--accent) 28%,transparent);color:var(--accent)}
+.sic-head .sic-month-btn[aria-expanded=true] svg{transform:rotate(180deg);opacity:1}
+.sic-head .sic-month-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sic-body{position:relative}
+.sic-picker{position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;gap:10px;padding:10px 12px 12px;border-radius:12px;background:color-mix(in srgb,var(--surface) 97%,transparent);opacity:0;transform:translateY(-4px);transition:opacity .16s ease,transform .2s ease}
+.sic-picker.is-in{opacity:1;transform:none}.sic-picker[hidden]{display:none}
+.sic-picker-head{display:flex;align-items:center;justify-content:space-between}
+.sic-picker-head b{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.sic-picker-head button{width:30px!important;height:30px!important;display:grid;place-items:center;padding:0!important;border-radius:50%!important;font-size:17px!important}
+.sic-picker-head button:disabled{opacity:.3;cursor:not-allowed}
+.sic-picker-grid{flex:1;display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:1fr;gap:6px}
+.sic-picker-grid button{all:unset;box-sizing:border-box;display:grid;place-items:center;min-height:34px;border-radius:10px;font-size:13px;font-weight:600;color:var(--text);cursor:pointer;border:1px solid color-mix(in srgb,var(--border) 80%,transparent);background:var(--surface);transition:background .15s ease,border-color .15s ease,color .15s ease,box-shadow .15s ease}
+.sic-picker-grid button:hover{border-color:color-mix(in srgb,var(--accent) 45%,var(--border));color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 9%,transparent)}
+.sic-picker-grid button.is-this{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 40%,var(--border))}
+.sic-picker-grid button.is-current{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#fff)}
+.sic-picker-grid button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sic-picker-today{all:unset;align-self:center;padding:4px 12px;border-radius:999px;font-size:11.5px;font-weight:600;color:var(--accent);cursor:pointer}
+.sic-picker-today:hover{background:color-mix(in srgb,var(--accent) 9%,transparent)}
+.sic-card.is-picking .sic-selected{visibility:hidden}
+:root[data-ui-skin="glass"] .sic-picker{background:color-mix(in srgb,var(--glass-fill-strong,var(--surface)) 94%,transparent);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+:root[data-ui-skin="glass"] .sic-picker-grid button:not(.is-current){background:color-mix(in srgb,var(--surface) 70%,transparent)}
+@media(prefers-reduced-motion:reduce){.sic-picker,.sic-head .sic-month-btn svg{transition:none}}
+
+/* 選股日曆膠囊：稍微放大、留呼吸空間 */
+.sl-today-summary>summary .sic-trigger{height:34px!important;gap:9px!important;padding:3px 15px 3px 4px!important}
+.sl-today-summary>summary .sic-trigger>span{font-size:13px!important}
+.sl-today-summary>summary .sic-trigger .sic-date-ico{width:25px!important;height:27px!important;border-radius:8px!important}
+.sl-today-summary>summary .sic-trigger .sic-date-ico small{font-size:7.5px!important;line-height:9px!important}
+.sl-today-summary>summary .sic-trigger .sic-date-ico b{font-size:13.5px!important;line-height:17px!important}
+
+/* 收合篩選條件、結果變寬時：表格撐滿整個框，欄位平均分配 */
+#proScreenLayout.scal-workspace #resultsArea .table-wrap>table{width:100%!important;min-width:0!important;max-width:none!important;table-layout:auto!important}
+/* 多出來的寬度平均分給數據欄：拿掉個別欄位的固定寬，只保留已看過／回測／代號的窄欄 */
+#proScreenLayout.scal-workspace.scal-full-columns #resultsArea .table-wrap>table{table-layout:fixed!important;min-width:1080px!important}
+#proScreenLayout.scal-workspace.scal-full-columns #resultsArea .table-wrap>table th{width:auto!important}
+#proScreenLayout.scal-workspace.scal-full-columns #resultsArea .table-wrap>table th:is([data-screen-kind=viewed],[data-screen-kind=backtest]){width:64px!important}
+#proScreenLayout.scal-workspace.scal-full-columns #resultsArea .table-wrap>table th[data-screen-kind=stock]{width:76px!important}
+#proScreenLayout.scal-workspace.scal-full-columns #resultsArea .table-wrap>table th[data-screen-kind=name]{width:184px!important}
+#proScreenLayout.scal-workspace.scal-full-columns #resultsArea .table-wrap>table td{overflow:hidden;text-overflow:ellipsis}
+#proScreenLayout.scal-workspace.scal-full-columns #resultsArea .table-wrap>table td.name-cell{overflow:visible}
+
+/* 記錄今日選股：只有真的在保存時才顯示等待游標；存好後按鈕變成「已存入」狀態，不再像卡住 */
+.sl-dialog form[aria-busy=true] button.is-saving{cursor:progress}
+.sl-dialog button.is-saving{position:relative;color:transparent!important}
+.sl-dialog button.is-saving::after{content:"";position:absolute;left:50%;top:50%;width:16px;height:16px;margin:-8px 0 0 -8px;border-radius:50%;border:2px solid rgba(255,255,255,.45);border-top-color:#fff;animation:sl-spin .8s linear infinite}
+@keyframes sl-spin{to{transform:rotate(360deg)}}
+.sl-dialog button.sl-primary.is-saved{opacity:1!important;cursor:default;background:color-mix(in srgb,#1f9d63 12%,var(--surface))!important;color:#1f8a57!important;border:1px solid color-mix(in srgb,#1f9d63 40%,transparent)!important;box-shadow:none!important}
+html:not([data-theme=light]) .sl-dialog button.sl-primary.is-saved{color:#6ad6a0!important}
+.sic-card .sic-picker .sic-picker-today{border:0!important;background:transparent!important;box-shadow:none!important;min-height:0!important;height:auto!important;padding:4px 12px!important;font-size:11.5px!important;font-weight:600!important;color:var(--accent)!important;border-radius:999px!important}
+.sic-card .sic-picker .sic-picker-today:hover{background:color-mix(in srgb,var(--accent) 9%,transparent)!important}
+
+/* 2026-11-04 篩選條件面板留白：選項不再貼著標題分隔線，左右與上下間距一致 */
+#proScreenLayout.scal-workspace .sc-panel .sc-body{padding:16px 18px 18px 20px!important}
+#proScreenLayout.scal-workspace .sc-panel .sc-cbs{row-gap:14px!important;column-gap:28px!important}
+#proScreenLayout.scal-workspace .sc-panel .sc-note{margin:0 0 14px!important;line-height:1.7}
+#proScreenLayout.scal-workspace .sc-panel[data-cat=ind] .checkbox-row label,#proScreenLayout.scal-workspace .sc-panel[data-cat=ind] .checkbox-row>div>label{margin-bottom:4px}
+#proScreenLayout.scal-workspace .sc-panel[data-cat=zm] .sc-cbs{gap:10px!important}
+#proScreenLayout.scal-workspace .sc-panel .scal-value-note{margin-bottom:14px!important}
+@media(max-width:760px){#proScreenLayout.scal-workspace .sc-panel .sc-body{padding:14px 12px 14px 14px!important}#proScreenLayout.scal-workspace .sc-panel .sc-cbs{column-gap:18px!important;row-gap:12px!important}}
+/* 記錄今日選股：主要按鈕用網站 CTA 漸層＋清楚的文字色（原本文字用 --surface，玻璃模式會變半透明看起來像停用） */
+.sl-dialog .sl-actions .sl-primary:not(.is-saved){background:linear-gradient(135deg,var(--cta-start,var(--accent)),var(--cta-end,var(--accent)))!important;border-color:transparent!important;color:var(--nav-active-text,var(--on-accent,#fff))!important;opacity:1!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 6px 16px color-mix(in srgb,var(--accent) 28%,transparent)!important}
+.sl-dialog .sl-actions .sl-primary:not(.is-saved):not(:disabled):hover{filter:brightness(1.06);box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 8px 22px color-mix(in srgb,var(--accent) 36%,transparent)!important}
+.sl-dialog .sl-actions .sl-primary:disabled:not(.is-saving):not(.is-saved){opacity:.55!important}
