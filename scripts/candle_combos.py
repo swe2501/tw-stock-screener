@@ -404,8 +404,8 @@ def bear_tank(b, i, prior_min_low):
 
 def three_methods(b, rising):
     """上升三法／下降三法（逐棒處理，回 [(起點, 完成點)]）。
-    上升：首末紅；每根中間實體在首棒實體 [O1,C1] 內（含等號、影線不限）；末棒 O1≤On≤C1、Cn>H1、Vn≥前日量×1.5。
-    下降：首末黑；中間實體在 [C1,O1] 內；末棒 C1≤On≤O1、Cn<L1、Vn<前日量。
+    上升：首末紅；每根中間實體在首棒實體 [O1,C1] 內（含等號、影線不限）；末棒 O1≤On≤C1、Cn>H1、Vn≥前日量×1.5，且末棒實體須與前棒實體相交或碰到。
+    下降：首末黑；中間實體在 [C1,O1] 內；末棒 C1≤On≤O1、Cn<L1、Vn<前日量，且末棒實體須與前棒實體相交或碰到。
     中間至少 3 根、無上限；多個起點同時成立取最早；完成後從下一交易日重找首棒。"""
     out = []
     cands = []                                   # 仍有效的首棒（依時間排序）
@@ -422,10 +422,12 @@ def three_methods(b, rising):
             vp = b.v[j - 1]
             if rising:
                 ok = (red(b, j) and o1 <= b.o[j] <= c1 and b.c[j] > b.h[s]
-                      and vp > 0 and b.v[j] > 0 and 2 * b.v[j] >= 3 * vp)
+                      and vp > 0 and b.v[j] > 0 and 2 * b.v[j] >= 3 * vp
+                      and _bodies_touch(b, j - 1, j))
             else:
                 ok = (black(b, j) and c1 <= b.o[j] <= o1 and b.c[j] < b.l[s]
-                      and vp > 0 and b.v[j] > 0 and b.v[j] < vp)
+                      and vp > 0 and b.v[j] > 0 and b.v[j] < vp
+                      and _bodies_touch(b, j - 1, j))
             if ok:
                 done = s
                 break
