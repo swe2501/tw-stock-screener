@@ -66,7 +66,10 @@ html[data-theme="dark"] #chartModal #chartComboToggle[aria-pressed="true"] .kinf
 .cc-result-sep{color:var(--text-muted)}
 .cc-result a{color:var(--cc-yellow-ink);text-decoration:none;font-weight:600}
 .cc-result a:hover{text-decoration:underline}
-.cc-help{position:relative;display:inline-grid;place-items:center;width:13px;height:13px;min-width:13px;padding:0;border:1px solid color-mix(in srgb,var(--accent) 32%,var(--border));border-radius:50%;background:color-mix(in srgb,var(--accent) 6%,var(--surface));color:color-mix(in srgb,var(--accent) 80%,var(--text));font-family:inherit;font-size:8px;font-weight:800;line-height:1;cursor:help;box-shadow:inset 0 1px rgba(255,255,255,.4);transition:transform .16s ease,border-color .16s ease,background-color .16s ease,box-shadow .16s ease}
+.cc-result-help-wrap{display:inline-flex;vertical-align:middle;margin-left:8px}
+.cc-result-help.zm4-badge{width:17px;height:17px;min-width:17px;margin:0;padding:1px}
+.cc-result-help.zm4-badge svg{width:10px;height:10px}
+.cc-help{position:relative;display:inline-grid;place-items:center;width:17px;height:17px;min-width:17px;padding:0;border:1px solid color-mix(in srgb,var(--accent) 32%,var(--border));border-radius:50%;background:color-mix(in srgb,var(--accent) 6%,var(--surface));color:color-mix(in srgb,var(--accent) 80%,var(--text));font-family:inherit;font-size:10px;font-weight:800;line-height:1;cursor:help;box-shadow:inset 0 1px rgba(255,255,255,.4);transition:transform .16s ease,border-color .16s ease,background-color .16s ease,box-shadow .16s ease}
 .cc-help::before{content:"";position:absolute;inset:-4px;border-radius:50%}
 .cc-help:hover,.cc-help:focus-visible{outline:none;transform:translateY(-1px);border-color:color-mix(in srgb,var(--accent) 68%,var(--border));background:color-mix(in srgb,var(--accent) 13%,var(--surface));box-shadow:0 3px 9px color-mix(in srgb,var(--accent) 18%,transparent),inset 0 1px rgba(255,255,255,.55)}
 :root[data-ui-skin="glass"] .cc-help{background:color-mix(in srgb,var(--glass-fill-strong) 66%,transparent);border-color:color-mix(in srgb,var(--glass-line) 76%,var(--accent) 24%);box-shadow:inset 0 1px var(--glass-highlight)}

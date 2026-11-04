@@ -163,9 +163,7 @@
     if (!grid || grid.childElementCount) return;
     grid.innerHTML = COMBO_OPTIONS.map(c => '<label class="checkbox-row" title="' + esc(c.name) + '：點擊名稱可於規則說明查看完整條件"><input type="checkbox" class="cc-cb" id="cc_' + c.id + '" data-combo="' + c.id + '" /><span class="cb-label">' + esc(c.name) + '</span></label>').join('');
   }
-  function resultTag(list) {
-    return '<div class="zm3-info cc-result">' + list.map(h => '<span class="cc-result-item"><a href="javascript:void(0)" data-cc-rule="' + esc(h.combo) + '" title="' + esc(nameOf(h.combo)) + '（' + esc(h.date) + ' 完成）；點看規則">' + esc(nameOf(h.combo)) + ' ' + esc(String(h.date).slice(5).replace('-', '/')) + '</a><button type="button" class="cc-help" data-kh-key="cc_' + esc(h.combo) + '" aria-label="查看' + esc(nameOf(h.combo)) + '示意圖">?</button></span>').join('<span class="cc-result-sep">・</span>') + '</div>';
-  }
+  function resultTag(list) { return resultHelp(list, []); }
   function sigName(id) { return SIG[id] || SIG_SHORT[id] || nameOf(id); }
   function sigHintKey(id) {
     if (id === 'reversal-doji') return 'doji';
@@ -173,11 +171,28 @@
     if (id.startsWith('long-upper-')) return 'long_upper';
     return ({ 'one-line': 'one_line', 'spinning-top': 'spinning_top', 'candle-sell': 'candle_line', 'gravestone': 'gravestone', 'hanging-man': 'hanging_man', 'hanging-man-main': 'hanging_main', 'hanging-man-retail': 'hanging_retail' })[id] || '';
   }
-  function signalTag(list) {
+  function signalItems(list) {
     const ids = list.map(h => h.signal);
     const shown = ids.filter(id => !(id.endsWith('-3') && ids.includes(id.slice(0, -2) + '-5')));   // 有 5% 就不重複列 3%
-    return '<div class="zm3-info cc-result cc-signal-tag">' + shown.map(id => '<span class="cc-result-item"><span>' + esc(sigName(id)) + '</span><button type="button" class="cc-help" data-kh-key="' + esc(sigHintKey(id)) + '" aria-label="查看' + esc(sigName(id)) + '示意圖">?</button></span>').join('<span class="cc-result-sep">・</span>') + '</div>';
+    return shown.map(id => ({ name: sigName(id), date: '' }));
   }
+  function resultHelp(combos, signals) {
+    const items = (Array.isArray(combos) ? combos : []).map(h => ({
+      name: nameOf(h.combo),
+      date: h.date ? String(h.date).slice(5).replace('-', '/') : '',
+    })).concat(signalItems(Array.isArray(signals) ? signals : []));
+    const unique = items.filter((item, i, all) => all.findIndex(x => x.name === item.name && x.date === item.date) === i);
+    if (!unique.length) return '';
+    const lines = ['K棒型態｜篩選結果'];
+    unique.forEach(item => {
+      lines.push('符合型態：' + item.name);
+      if (item.date) lines.push('形成日：' + item.date);
+    });
+    lines.push('!僅顯示本次命中的型態名稱，不公開內部判斷規則');
+    const tip = esc(lines.join('\n'));
+    return '<span class="cc-result-help-wrap"><button type="button" class="zm4-badge cc-result-help" data-zm4-tip="' + tip + '" aria-label="查看 K 棒篩選結果" aria-expanded="false"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7.7 7.4a2.4 2.4 0 1 1 3.5 2.1c-.8.4-1.2.9-1.2 1.8v.3M10 14.3v.1"/></svg></button></span>';
+  }
+  function signalTag(list) { return resultHelp([], list); }
   document.addEventListener('click', e => {
     const a = e.target.closest && e.target.closest('[data-cc-rule]');
     if (!a) return;
@@ -379,5 +394,5 @@
   function boot() { mountGrid(); mountToggle(); window.AcademyKbarHint?.register(window.AcademyKbarHintExtra); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 
-  window.AcademyCandleCombos = { COMBOS, COMMON, SIG, nameOf, rulesHtml, openRules, resultTag, signalTag, signalTipHtml, attach, detach, refresh: schedule, isVisible: () => visible };
+  window.AcademyCandleCombos = { COMBOS, COMMON, SIG, nameOf, rulesHtml, openRules, resultHelp, resultTag, signalTag, signalTipHtml, attach, detach, refresh: schedule, isVisible: () => visible };
 })();

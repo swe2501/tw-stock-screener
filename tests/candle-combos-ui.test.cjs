@@ -42,6 +42,18 @@ test('the redundant completion-day note and rules link are removed', () => {
   const index = read('apps/web/index.html');
   assert.doesNotMatch(index, /完成日以上方「日期」為準/);
   assert.doesNotMatch(index, />16 類規則說明<\/a>/);
+  assert.doesNotMatch(index, /class="zm4-badge zm-filter-help"[^>]*aria-label="查看真名[一二]式條件"/);
+  assert.doesNotMatch(index, /<div class="zm-option-row">\s*<label class="checkbox-row">\s*<input type="checkbox" id="zhenming[12]"/);
+});
+
+test('zhenming one and two result help protects proprietary screening rules', () => {
+  const index = read('apps/web/index.html');
+  const start = index.indexOf('function _zm12Badge()');
+  const badge = index.slice(start, index.indexOf('function renderTable', start));
+  assert.match(badge, /真名一式｜多頭啟動/);
+  assert.match(badge, /真名二式｜動能再起/);
+  assert.match(badge, /核心條件為研究院專有模型，不公開計算細節/);
+  assert.doesNotMatch(badge, /紅K實體達 3%|1\.5 倍|MA5 ＞ MA10 ＞ MA20|均線當日上穿|MA5、10、20、60、120、240/);
 });
 
 test('combo screening uses the single existing screener date instead of adding another date input', () => {
@@ -104,14 +116,19 @@ test('single K-bar panel is compact, illustrated, and contains no trading advice
   assert.match(hintJs, /closest\('\.checkbox-row, \.ks-threshold-card'\)/);
 });
 
-test('screening results expose compact question-mark help for single bars and combos', () => {
+test('screening results hide K-bar names behind one compact text-only question-mark help', () => {
+  const index = read('apps/web/index.html');
   const resultSection = js.slice(js.indexOf('function resultTag'), js.indexOf('// ── K 線圖黃框'));
-  assert.match(resultSection, /class="cc-help" data-kh-key="cc_/);
-  assert.match(resultSection, /function sigHintKey/);
-  assert.match(resultSection, /data-kh-key="' \+ esc\(sigHintKey\(id\)\)/);
-  assert.doesNotMatch(resultSection, /十字線（變盤）|吊人線（待確認）/);
-  assert.match(hintJs, /show\(key, anchor\)/);
-  assert.match(css, /\.cc-help\{position:relative;display:inline-grid[^}]*width:13px[^}]*height:13px/);
+  assert.match(index, /AcademyCandleCombos\.resultHelp\(s\.candle_combos, s\.candle_signals\)/);
+  assert.match(resultSection, /class="zm4-badge cc-result-help" data-zm4-tip=/);
+  assert.match(resultSection, /符合型態：/);
+  assert.match(resultSection, /形成日：/);
+  assert.match(resultSection, /不公開內部判斷規則/);
+  assert.doesNotMatch(resultSection, /data-kh-key="cc_|查看.+示意圖/);
+  assert.doesNotMatch(resultSection, /kh-chart/);
+  assert.doesNotMatch(resultSection, /HINTS\[|\.desc/);
+  assert.match(css, /\.cc-result-help-wrap\{[^}]*margin-left:8px/);
+  assert.match(css, /\.cc-result-help\.zm4-badge\{width:17px;height:17px/);
 });
 
 test('single-bar signals no longer draw noisy colored rings over the chart', () => {

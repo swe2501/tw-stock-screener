@@ -22,8 +22,8 @@
   <script src="assets/w-pattern-export.js?v=20261024-1"></script>
   <script src="assets/w-pattern-overlay.js?v=20261025-2"></script>
   <script src="assets/chart-ai-patterns.js?v=20261101-box1"></script>
-  <script src="assets/candle-combos.js?v=22" defer></script>
-  <link rel="stylesheet" href="assets/candle-combos.css?v=20">
+  <script src="assets/candle-combos.js?v=23" defer></script>
+  <link rel="stylesheet" href="assets/candle-combos.css?v=23">
   <link rel="stylesheet" href="assets/chart-ai-patterns.css?v=20261026-3">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -10093,22 +10093,16 @@
           <div class="sc-hd"><a onclick="_scToggle('zm')"><span class="sc-ar">▸</span><b style="color:#0a9a56">真名絕招</b></a><span class="sc-sum"></span></div>
           <div class="sc-body" style="display:none">
           <div class="checkbox-grid sc-cbs">
-        <div class="zm-option-row">
           <label class="checkbox-row">
             <input type="checkbox" id="zhenming1"
                    onchange="if(this.checked)document.getElementById('zhenming2').checked=false" />
             <div><div class="cb-label">真名一式（多頭啟動）</div></div>
           </label>
-          <button type="button" class="zm4-badge zm-filter-help" aria-label="查看真名一式條件" aria-expanded="false" data-zm4-tip="真名一式｜多頭排列&#10;K 棒：紅K實體達 3%&#10;量能：達近 5 日或 10 日均量的 1.5 倍&#10;均線：收盤 ＞ MA5 ＞ MA10 ＞ MA20&#10;!僅說明篩選定義與排列狀態"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7.7 7.4a2.4 2.4 0 1 1 3.5 2.1c-.8.4-1.2.9-1.2 1.8v.3M10 14.3v.1"/></svg></button>
-        </div>
-        <div class="zm-option-row">
           <label class="checkbox-row">
             <input type="checkbox" id="zhenming2"
                    onchange="if(this.checked)document.getElementById('zhenming1').checked=false" />
             <div><div class="cb-label">真名二式（動能再起）</div></div>
           </label>
-          <button type="button" class="zm4-badge zm-filter-help" aria-label="查看真名二式條件" aria-expanded="false" data-zm4-tip="真名二式｜均線交叉&#10;K 棒：紅K實體達 3%&#10;量能：達近 5 日或 10 日均量的 1.5 倍&#10;均線：任一短期均線當日上穿較長期均線&#10;範圍：MA5、10、20、60、120、240&#10;!僅說明篩選定義與交叉狀態"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7.7 7.4a2.4 2.4 0 1 1 3.5 2.1c-.8.4-1.2.9-1.2 1.8v.3M10 14.3v.1"/></svg></button>
-        </div>
         <label class="checkbox-row">
           <input type="checkbox" id="zhenming3" />
           <div>
@@ -11399,12 +11393,15 @@
       const one = document.getElementById('zhenming1')?.checked;
       const two = document.getElementById('zhenming2')?.checked;
       if (!one && !two) return '';
-      const title = one ? '真名一式｜多頭排列' : '真名二式｜均線交叉';
-      const lines = one
-        ? ['K 棒：紅K實體達 3%', '量能：達近 5 日或 10 日均量的 1.5 倍', '均線：收盤 ＞ MA5 ＞ MA10 ＞ MA20']
-        : ['K 棒：紅K實體達 3%', '量能：達近 5 日或 10 日均量的 1.5 倍', '均線：任一短期均線當日上穿較長期均線', '範圍：MA5、10、20、60、120、240'];
-      const tip = [title, ...lines, '!僅說明篩選定義與型態狀態'].join('\n').replace(/"/g, '&quot;');
-      return `<button type="button" class="zm4-badge zm12-badge" aria-label="查看${one ? '真名一式' : '真名二式'}條件" aria-expanded="false" data-zm4-tip="${tip}"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7.7 7.4a2.4 2.4 0 1 1 3.5 2.1c-.8.4-1.2.9-1.2 1.8v.3M10 14.3v.1"/></svg></button>`;
+      const name = one ? '真名一式' : '真名二式';
+      const title = one ? '真名一式｜多頭啟動' : '真名二式｜動能再起';
+      const tip = [
+        title,
+        '策略狀態：本檔符合' + name + '篩選',
+        '資料基準：依本次選股日期',
+        '!核心條件為研究院專有模型，不公開計算細節',
+      ].join('\n').replace(/"/g, '&quot;');
+      return `<button type="button" class="zm4-badge zm12-badge" aria-label="查看${name}命中狀態" aria-expanded="false" data-zm4-tip="${tip}"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7.7 7.4a2.4 2.4 0 1 1 3.5 2.1c-.8.4-1.2.9-1.2 1.8v.3M10 14.3v.1"/></svg></button>`;
     }
 
     function renderTable(results) {
@@ -11456,7 +11453,7 @@
                   ? `<span class="data-missing-badge" title="部分篩選條件無法確認（${s.data_missing.map(k=>({'no_black':'無放量黑棒篩選','gap_unverified':'跳空前日資料缺失，請手動排查'}[k]||k)).join('、')}），已放行"></span>`
                   : ''
               }</td>
-            <td class="name-cell">${s.name}${_zm12Badge()}${s.zm4 ? AcademyZhenmingFour.badge(s.zm4) : ''}${s.zm6 && window.AcademyZhenmingSix ? AcademyZhenmingSix.badge(s.zm6) : ''}${(s.zm8 || s.zm9) && window.AcademyZhenming89 ? AcademyZhenming89.badge(s) : ''}${s.sma20_stage ? `<div class="zm3-info">葛蘭碧・階段 ${s.sma20_stage}</div>` : ''}${s.candle_combos && window.AcademyCandleCombos ? AcademyCandleCombos.resultTag(s.candle_combos) : ''}${s.candle_signals && window.AcademyCandleCombos?.signalTag ? AcademyCandleCombos.signalTag(s.candle_signals) : ''}${s.zm3 ? _zm3Badge(s.zm3) : ''}${s.ev357 ? _ev357Info(s.ev357) : ''}</td>
+            <td class="name-cell">${s.name}${_zm12Badge()}${s.zm4 ? AcademyZhenmingFour.badge(s.zm4) : ''}${s.zm6 && window.AcademyZhenmingSix ? AcademyZhenmingSix.badge(s.zm6) : ''}${(s.zm8 || s.zm9) && window.AcademyZhenming89 ? AcademyZhenming89.badge(s) : ''}${s.sma20_stage ? `<div class="zm3-info">葛蘭碧・階段 ${s.sma20_stage}</div>` : ''}${window.AcademyCandleCombos?.resultHelp ? AcademyCandleCombos.resultHelp(s.candle_combos, s.candle_signals) : ''}${s.zm3 ? _zm3Badge(s.zm3) : ''}${s.ev357 ? _ev357Info(s.ev357) : ''}</td>
             <td class="neutral col-open">${s.open}</td>
             <td class="neutral col-high">${s.high}</td>
             <td class="neutral col-low">${s.low}</td>
@@ -18543,7 +18540,7 @@
 <link rel="stylesheet" href="assets/onboarding-tour.css?v=mist-edge-mcopen-20261027">
 <script src="assets/onboarding-tour.js?v=mist-edge-20261026" defer></script>
 <link rel="stylesheet" href="assets/zhenming-hidden.css?v=6">
-<link rel="stylesheet" href="assets/research-hover.css?v=qtip5">
+<link rel="stylesheet" href="assets/research-hover.css?v=qtip7">
 <script src="assets/research-hover.js?v=drag2"></script>
 <link rel="stylesheet" href="assets/chart-drawing-edit.css?v=2">
 <script src="assets/chart-drawing-edit.js?v=2"></script>
