@@ -22,8 +22,8 @@
   <script src="assets/w-pattern-export.js?v=20261024-1"></script>
   <script src="assets/w-pattern-overlay.js?v=20261025-2"></script>
   <script src="assets/chart-ai-patterns.js?v=20261101-box1"></script>
-  <script src="assets/candle-combos.js?v=15" defer></script>
-  <link rel="stylesheet" href="assets/candle-combos.css?v=14">
+  <script src="assets/candle-combos.js?v=20" defer></script>
+  <link rel="stylesheet" href="assets/candle-combos.css?v=20">
   <link rel="stylesheet" href="assets/chart-ai-patterns.css?v=20261026-3">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -9902,90 +9902,97 @@
           <div class="sc-body" style="display:none">
           <!-- 2026-11-05 單根 K 棒訊號：長紅／長黑幅度從基本條件移入；其餘訊號每晚由 scripts/candle_combos.py 算好（candle_combo_hits），篩選日當天成立；勾多項＝全部成立 -->
           <div class="ks-fields">
-            <div class="field">
-              <label>長紅棒幅度 (%)</label>
-              <div class="label-hint">(收 - 開) / 收 × 100 ≥ 此值</div>
-              <input type="number" id="red_candle_pct" min="0" max="20" step="0.1" placeholder="例：3（代表 3%）"
-                     oninput="if(this.value){document.getElementById('black_candle_pct').value=''}" />
+            <div class="field ks-threshold-card ks-threshold-red">
+              <label for="red_candle_pct">長紅棒</label>
+              <span class="ks-threshold-input"><input type="number" id="red_candle_pct" min="0" max="20" step="0.1" placeholder="3"
+                     oninput="if(this.value){document.getElementById('black_candle_pct').value=''}" /><span aria-hidden="true">%</span></span>
             </div>
-            <div class="field">
-              <label>長黑棒幅度 (%)</label>
-              <div class="label-hint">(開 - 收) / 收 × 100 ≥ 此值</div>
-              <input type="number" id="black_candle_pct" min="0" max="20" step="0.1" placeholder="例：3（代表 3%）"
-                     oninput="if(this.value){document.getElementById('red_candle_pct').value=''}" />
+            <div class="field ks-threshold-card ks-threshold-black">
+              <label for="black_candle_pct">長黑棒</label>
+              <span class="ks-threshold-input"><input type="number" id="black_candle_pct" min="0" max="20" step="0.1" placeholder="3"
+                     oninput="if(this.value){document.getElementById('red_candle_pct').value=''}" /><span aria-hidden="true">%</span></span>
             </div>
           </div>
-          <div class="checkbox-grid sc-cbs">
+          <div class="ks-group">
+          <div class="ks-group-title">單根形態</div>
+          <div class="checkbox-grid sc-cbs ks-shape-grid">
         <label class="checkbox-row">
           <input type="checkbox" id="doji" class="ks-cb" data-signal="reversal-doji" />
           <div>
             <div class="cb-label">十字線</div>
-            <div class="cb-hint">波段漲或跌後才算（變盤訊號）</div>
           </div>
         </label>
         <label class="checkbox-row">
           <input type="checkbox" id="long_lower" class="ks-cb" data-signal="long-lower" />
-          <div>
-            <div class="cb-label">長下影線</div>
-            <div class="cb-hint">≥ <select id="long_lower_pct" class="ks-pct" aria-label="長下影線門檻" onclick="event.stopPropagation()" onchange="document.getElementById('long_lower').checked=true;window._scCount&&_scCount()"><option value="3">3%</option><option value="5">5%</option></select></div>
+          <div class="ks-inline-rule">
+            <div class="cb-label">長下影線</div><span aria-hidden="true">≥</span><select id="long_lower_pct" class="ks-pct" aria-label="長下影線門檻" onclick="event.stopPropagation()" onchange="document.getElementById('long_lower').checked=true;window._scCount&&_scCount()"><option value="3">3%</option><option value="5">5%</option></select>
           </div>
         </label>
         <label class="checkbox-row">
           <input type="checkbox" id="long_upper" class="ks-cb" data-signal="long-upper" />
-          <div>
-            <div class="cb-label">長上影線</div>
-            <div class="cb-hint">≥ <select id="long_upper_pct" class="ks-pct" aria-label="長上影線門檻" onclick="event.stopPropagation()" onchange="document.getElementById('long_upper').checked=true;window._scCount&&_scCount()"><option value="3">3%</option><option value="5">5%</option></select></div>
-          </div>
-        </label>
-        <label class="checkbox-row">
-          <input type="checkbox" id="one_line" class="ks-cb" data-signal="one-line" />
-          <div>
-            <div class="cb-label">一字線</div>
-            <div class="cb-hint">強勢・續抱</div>
+          <div class="ks-inline-rule">
+            <div class="cb-label">長上影線</div><span aria-hidden="true">≥</span><select id="long_upper_pct" class="ks-pct" aria-label="長上影線門檻" onclick="event.stopPropagation()" onchange="document.getElementById('long_upper').checked=true;window._scCount&&_scCount()"><option value="3">3%</option><option value="5">5%</option></select>
           </div>
         </label>
         <label class="checkbox-row">
           <input type="checkbox" id="spinning_top" class="ks-cb" data-signal="spinning-top" />
           <div>
             <div class="cb-label">紡錘線</div>
-            <div class="cb-hint">弱勢・減碼</div>
           </div>
         </label>
         <label class="checkbox-row">
           <input type="checkbox" id="candle_line" class="ks-cb" data-signal="candle-sell" />
           <div>
-            <div class="cb-label">蠟燭線（漲逾 30%）</div>
-            <div class="cb-hint">上漲動能將盡・賣出</div>
+            <div class="cb-label">蠟燭線</div>
           </div>
         </label>
         <label class="checkbox-row">
           <input type="checkbox" id="gravestone" class="ks-cb" data-signal="gravestone" />
           <div>
             <div class="cb-label">墓碑線</div>
-            <div class="cb-hint">賣出訊號</div>
           </div>
         </label>
+          </div>
+          </div>
+          <div class="ks-group">
+          <div class="ks-group-title">一字線方向</div>
+          <div class="checkbox-grid sc-cbs ks-direction-grid">
+        <label class="checkbox-row">
+          <input type="checkbox" id="one_line_strong" class="ks-cb" data-signal="one-line" data-direction="strong" />
+          <div>
+            <div class="cb-label">一字線・強勢</div>
+          </div>
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="one_line_weak" class="ks-cb" data-signal="one-line" data-direction="weak" />
+          <div>
+            <div class="cb-label">一字線・弱勢</div>
+          </div>
+        </label>
+          </div>
+          </div>
+          <div class="ks-group">
+          <div class="ks-group-title">吊人線確認</div>
+          <div class="checkbox-grid sc-cbs ks-confirm-grid">
         <label class="checkbox-row">
           <input type="checkbox" id="hanging_man" class="ks-cb" data-signal="hanging-man" />
           <div>
             <div class="cb-label">吊人線</div>
-            <div class="cb-hint">連續漲停後出現</div>
           </div>
         </label>
         <label class="checkbox-row">
           <input type="checkbox" id="hanging_main" class="ks-cb" data-signal="hanging-man-main" />
           <div>
             <div class="cb-label">吊人線→主力確認</div>
-            <div class="cb-hint">9 天內帶量紅K 突破</div>
           </div>
         </label>
         <label class="checkbox-row">
           <input type="checkbox" id="hanging_retail" class="ks-cb" data-signal="hanging-man-retail" />
           <div>
             <div class="cb-label">吊人線→散戶確認</div>
-            <div class="cb-hint">超過 9 天後跌破</div>
           </div>
         </label>
+          </div>
           </div>
           </div>
         </div>
@@ -10086,20 +10093,22 @@
           <div class="sc-hd"><a onclick="_scToggle('zm')"><span class="sc-ar">▸</span><b style="color:#0a9a56">真名絕招</b></a><span class="sc-sum"></span></div>
           <div class="sc-body" style="display:none">
           <div class="checkbox-grid sc-cbs">
-        <label class="checkbox-row">
-          <input type="checkbox" id="zhenming1"
-                 onchange="if(this.checked)document.getElementById('zhenming2').checked=false" />
-          <div>
-            <div class="cb-label">真名一式（多頭啟動）</div>
-          </div>
-        </label>
-        <label class="checkbox-row">
-          <input type="checkbox" id="zhenming2"
-                 onchange="if(this.checked)document.getElementById('zhenming1').checked=false" />
-          <div>
-            <div class="cb-label">真名二式（動能再起）</div>
-          </div>
-        </label>
+        <div class="zm-option-row">
+          <label class="checkbox-row">
+            <input type="checkbox" id="zhenming1"
+                   onchange="if(this.checked)document.getElementById('zhenming2').checked=false" />
+            <div><div class="cb-label">真名一式（多頭啟動）</div></div>
+          </label>
+          <button type="button" class="zm4-badge zm-filter-help" aria-label="查看真名一式條件" aria-expanded="false" data-zm4-tip="真名一式｜多頭排列&#10;K 棒：紅K實體達 3%&#10;量能：達近 5 日或 10 日均量的 1.5 倍&#10;均線：收盤 ＞ MA5 ＞ MA10 ＞ MA20&#10;!僅說明篩選定義與排列狀態"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7.7 7.4a2.4 2.4 0 1 1 3.5 2.1c-.8.4-1.2.9-1.2 1.8v.3M10 14.3v.1"/></svg></button>
+        </div>
+        <div class="zm-option-row">
+          <label class="checkbox-row">
+            <input type="checkbox" id="zhenming2"
+                   onchange="if(this.checked)document.getElementById('zhenming1').checked=false" />
+            <div><div class="cb-label">真名二式（動能再起）</div></div>
+          </label>
+          <button type="button" class="zm4-badge zm-filter-help" aria-label="查看真名二式條件" aria-expanded="false" data-zm4-tip="真名二式｜均線交叉&#10;K 棒：紅K實體達 3%&#10;量能：達近 5 日或 10 日均量的 1.5 倍&#10;均線：任一短期均線當日上穿較長期均線&#10;範圍：MA5、10、20、60、120、240&#10;!僅說明篩選定義與交叉狀態"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7.7 7.4a2.4 2.4 0 1 1 3.5 2.1c-.8.4-1.2.9-1.2 1.8v.3M10 14.3v.1"/></svg></button>
+        </div>
         <label class="checkbox-row">
           <input type="checkbox" id="zhenming3" />
           <div>
@@ -10265,6 +10274,8 @@
       if(cb.classList.contains('box-cb')) return '箱型 '+cb.parentNode.textContent.trim();
       if(cb.classList.contains('macd-cb')) return 'MACD '+(/long/.test(cb.dataset.mode)?'多：':'空：')+cb.parentNode.textContent.trim().replace(/（.*$/,'');
       var t=l?l.textContent.trim():cb.id;
+      if(cb.id==='one_line_strong') t='一字線・強勢';
+      if(cb.id==='one_line_weak') t='一字線・弱勢';
       if(cb.id==='long_lower'||cb.id==='long_upper') t+=' ≥'+(v(cb.id+'_pct')||'3')+'%';
       if(cb.id==='gap_up'&&v('gap_up_min')) t+=' ≥'+v('gap_up_min')+'元';
       if(cb.id==='gap_down'&&v('gap_down_min')) t+=' ≥'+v('gap_down_min')+'元';
@@ -11160,6 +11171,7 @@
           const s = e.dataset.signal;
           return (s === 'long-lower' || s === 'long-upper') ? s + '-' + (document.getElementById(e.id + '_pct')?.value || '3') : s;
         }),
+        one_line_directions: Array.from(document.querySelectorAll('.ks-cb[data-signal="one-line"]:checked')).map(e => e.dataset.direction).filter(Boolean),
       };
 
       // 非同步任務：帶 job_id 送出，伺服器算完會存暫存；即使手機切背景斷線，
@@ -11383,6 +11395,18 @@
       return `<button type="button" class="zm4-badge zm3-badge" aria-label="查看真名三式條件" aria-expanded="false" data-zm4-tip="${tip}"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7.7 7.4a2.4 2.4 0 1 1 3.5 2.1c-.8.4-1.2.9-1.2 1.8v.3M10 14.3v.1"/></svg></button>`;
     }
 
+    function _zm12Badge() {
+      const one = document.getElementById('zhenming1')?.checked;
+      const two = document.getElementById('zhenming2')?.checked;
+      if (!one && !two) return '';
+      const title = one ? '真名一式｜多頭排列' : '真名二式｜均線交叉';
+      const lines = one
+        ? ['K 棒：紅K實體達 3%', '量能：達近 5 日或 10 日均量的 1.5 倍', '均線：收盤 ＞ MA5 ＞ MA10 ＞ MA20']
+        : ['K 棒：紅K實體達 3%', '量能：達近 5 日或 10 日均量的 1.5 倍', '均線：任一短期均線當日上穿較長期均線', '範圍：MA5、10、20、60、120、240'];
+      const tip = [title, ...lines, '!僅說明篩選定義與型態狀態'].join('\n').replace(/"/g, '&quot;');
+      return `<button type="button" class="zm4-badge zm12-badge" aria-label="查看${one ? '真名一式' : '真名二式'}條件" aria-expanded="false" data-zm4-tip="${tip}"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7.7 7.4a2.4 2.4 0 1 1 3.5 2.1c-.8.4-1.2.9-1.2 1.8v.3M10 14.3v.1"/></svg></button>`;
+    }
+
     function renderTable(results) {
       const viewedSnapshot=_viewedMap(), viewedToday=_todayStr();
       const viewed=function(code){return viewedSnapshot[code]===viewedToday;};
@@ -11432,7 +11456,7 @@
                   ? `<span class="data-missing-badge" title="部分篩選條件無法確認（${s.data_missing.map(k=>({'no_black':'無放量黑棒篩選','gap_unverified':'跳空前日資料缺失，請手動排查'}[k]||k)).join('、')}），已放行"></span>`
                   : ''
               }</td>
-            <td class="name-cell">${s.name}${s.zm4 ? AcademyZhenmingFour.badge(s.zm4) : ''}${s.zm6 && window.AcademyZhenmingSix ? AcademyZhenmingSix.badge(s.zm6) : ''}${(s.zm8 || s.zm9) && window.AcademyZhenming89 ? AcademyZhenming89.badge(s) : ''}${s.sma20_stage ? `<div class="zm3-info">葛蘭碧・階段 ${s.sma20_stage}</div>` : ''}${s.candle_combos && window.AcademyCandleCombos ? AcademyCandleCombos.resultTag(s.candle_combos) : ''}${s.candle_signals && window.AcademyCandleCombos?.signalTag ? AcademyCandleCombos.signalTag(s.candle_signals) : ''}${s.zm3 ? _zm3Badge(s.zm3) : ''}${s.ev357 ? _ev357Info(s.ev357) : ''}</td>
+            <td class="name-cell">${s.name}${_zm12Badge()}${s.zm4 ? AcademyZhenmingFour.badge(s.zm4) : ''}${s.zm6 && window.AcademyZhenmingSix ? AcademyZhenmingSix.badge(s.zm6) : ''}${(s.zm8 || s.zm9) && window.AcademyZhenming89 ? AcademyZhenming89.badge(s) : ''}${s.sma20_stage ? `<div class="zm3-info">葛蘭碧・階段 ${s.sma20_stage}</div>` : ''}${s.candle_combos && window.AcademyCandleCombos ? AcademyCandleCombos.resultTag(s.candle_combos) : ''}${s.candle_signals && window.AcademyCandleCombos?.signalTag ? AcademyCandleCombos.signalTag(s.candle_signals) : ''}${s.zm3 ? _zm3Badge(s.zm3) : ''}${s.ev357 ? _ev357Info(s.ev357) : ''}</td>
             <td class="neutral col-open">${s.open}</td>
             <td class="neutral col-high">${s.high}</td>
             <td class="neutral col-low">${s.low}</td>
@@ -18514,16 +18538,16 @@
 <script src="assets/chart-list-navigation.js?v=20261102-broker-signals" defer></script>
 <script src="assets/screen-inline-calendar.js?v=calendar-pop2" defer></script>
 <link rel="stylesheet" href="assets/kbar-hint.css?v=2">
-<script src="assets/kbar-hint.js?v=4" defer></script>
+<script src="assets/kbar-hint.js?v=6" defer></script>
 
 <link rel="stylesheet" href="assets/onboarding-tour.css?v=mist-edge-mcopen-20261027">
 <script src="assets/onboarding-tour.js?v=mist-edge-20261026" defer></script>
 <link rel="stylesheet" href="assets/zhenming-hidden.css?v=6">
-<link rel="stylesheet" href="assets/research-hover.css?v=qtip4">
+<link rel="stylesheet" href="assets/research-hover.css?v=qtip5">
 <script src="assets/research-hover.js?v=drag2"></script>
 <link rel="stylesheet" href="assets/chart-drawing-edit.css?v=2">
 <script src="assets/chart-drawing-edit.js?v=2"></script>
-<script src="assets/zhenming-four.js?v=candidate5"></script>
+<script src="assets/zhenming-four.js?v=candidate6"></script>
 <script src="assets/zhenming-hidden.js?v=5" defer></script>
 <link rel="stylesheet" href="assets/zhenming-six.css?v=3">
 <script src="assets/zhenming-six.js?v=4" defer></script>

@@ -72,3 +72,51 @@ test('base K-bar labels match combo labels and all shared hint charts are slight
   assert.match(hintCss, /width:266px/);
   assert.match(hintCss, /\.kh-chart svg\{[^}]*height:100px/);
 });
+
+test('single K-bar panel is compact, illustrated, and contains no trading advice copy', () => {
+  const index = read('apps/web/index.html');
+  const api = read('api/screen.py');
+  const panel = index.slice(index.indexOf('<div class="sc-panel" data-cat="kbar">'), index.indexOf('<div class="sc-panel" data-cat="combo">'));
+  const hints = js.slice(js.indexOf('const SIG_HINTS'), js.indexOf('Object.assign(window.AcademyKbarHintExtra'));
+
+  assert.match(panel, /ks-threshold-card ks-threshold-red/);
+  assert.match(panel, /ks-threshold-card ks-threshold-black/);
+  assert.doesNotMatch(panel, /ks-threshold-mark|長紅棒幅度|長黑棒幅度/);
+  assert.match(css, /\.ks-threshold-card\{[^}]*display:flex!important;flex-direction:row!important;align-items:center!important/);
+  assert.match(panel, /id="one_line_strong"[^>]*data-direction="strong"/);
+  assert.match(panel, /id="one_line_weak"[^>]*data-direction="weak"/);
+  assert.match(index, /one_line_directions:[\s\S]*?data-signal="one-line"/);
+  assert.match(api, /one_line_directions = \{[\s\S]*?"strong", "weak"/);
+  assert.match(api, /if "one-line" in candle_signals and len\(one_line_directions\) == 1:/);
+  assert.doesNotMatch(panel, /\(收 - 開\)|\(開 - 收\)|續抱|減碼|賣出訊號|漲逾 30%/);
+  assert.match(css, /data-cat="kbar"\] \.ks-shape-grid\{grid-template-columns:repeat\(3/);
+  assert.match(panel, /ks-group-title">單根形態[\s\S]*?id="long_lower"[\s\S]*?id="long_upper"[\s\S]*?id="spinning_top"[\s\S]*?id="candle_line"/);
+  assert.match(panel, /ks-group-title">一字線方向[\s\S]*?id="one_line_strong"[\s\S]*?id="one_line_weak"/);
+  assert.match(panel, /ks-group-title">吊人線確認[\s\S]*?id="hanging_main"[\s\S]*?id="hanging_retail"/);
+  assert.match(hints, /red_candle_pct:[\s\S]*?黑K 長實體/);
+  assert.match(hints, /one_line:[\s\S]*?強勢一字漲停[\s\S]*?弱勢一字跌停/);
+  assert.match(hints, /one_line_strong:[\s\S]*?one_line_weak:/);
+  assert.doesNotMatch(hints, /一路漲或跌一大段（約 30%）後/);
+  assert.match(hints, /spinning_top:[\s\S]*?sig: \[\[52\.8,56,51\.6,52\]\]/);
+  assert.match(hints, /candle_line:[\s\S]*?高檔拉鋸/);
+  assert.doesNotMatch(hints, /續抱|減碼|賣出/);
+  assert.match(hintJs, /closest\('\.checkbox-row, \.ks-threshold-card'\)/);
+});
+
+test('screening results expose compact question-mark help for single bars and combos', () => {
+  const resultSection = js.slice(js.indexOf('function resultTag'), js.indexOf('// ── K 線圖黃框'));
+  assert.match(resultSection, /class="cc-help" data-kh-key="cc_/);
+  assert.match(resultSection, /function sigHintKey/);
+  assert.match(resultSection, /data-kh-key="' \+ esc\(sigHintKey\(id\)\)/);
+  assert.doesNotMatch(resultSection, /十字線（變盤）|吊人線（待確認）/);
+  assert.match(hintJs, /show\(key, anchor\)/);
+  assert.match(css, /\.cc-help\{position:relative;display:inline-grid[^}]*width:13px[^}]*height:13px/);
+});
+
+test('single-bar signals no longer draw noisy colored rings over the chart', () => {
+  const paint = js.slice(js.indexOf('function paint'), js.indexOf('function tipExtra'));
+  assert.doesNotMatch(paint, /cc-ring|showSig|ring\.style/);
+  assert.doesNotMatch(css, /\.cc-ring/);
+  assert.match(js, /function signalTipHtml[\s\S]*?sigByDate\.get/);
+  assert.doesNotMatch(js, /30% 內・續抱/);
+});

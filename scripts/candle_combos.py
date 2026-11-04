@@ -509,8 +509,8 @@ def scan_signals(b):
                 out.append((f"long-lower-{pct}", i, i))
             if _shadow_pct_ge(b, i, True, pct):
                 out.append((f"long-upper-{pct}", i, i))
-        # 一字線：開＝高＝低＝收，且收盤高於前一天（上漲鎖死；跌停一字不算強勢）
-        if o == h == l == c and i >= 1 and b.seg[i - 1] == b.seg[i] and c > b.c[i - 1]:
+        # 一字線：開＝高＝低＝收；高於前一天為強勢漲停，低於前一天為弱勢跌停。
+        if o == h == l == c and i >= 1 and b.seg[i - 1] == b.seg[i] and c != b.c[i - 1]:
             out.append(("one-line", i, i))
         # 紡錘線：有實體，上影線 ≥ 3%
         if o != c and _shadow_pct_ge(b, i, True, 3):

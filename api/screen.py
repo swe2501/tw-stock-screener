@@ -3537,6 +3537,7 @@ def screen(params):
     candle_combo_days = 1 if str(params.get("candle_combo_days") or "3") == "1" else 3
     # 2026-11-05 K棒分類的單根訊號（同表 candle_combo_hits）：篩選日當天成立、勾多項＝全部成立、不套最低量
     candle_signals = sorted({str(x) for x in (params.get("candle_signals") or []) if str(x) in CANDLE_SIGNAL_IDS})
+    one_line_directions = {str(x) for x in (params.get("one_line_directions") or []) if str(x) in {"strong", "weak"}}
     no_black_months  = min(int(params.get("no_black_months") or 0), 120)
     no_black_years   = no_black_months / 12  # 轉換為年（可為小數）傳給 YF API
     no_black_mult    = float(params.get("no_black_mult") or 0)
@@ -3593,6 +3594,16 @@ def screen(params):
         o, c = s["open"], s["close"]
         if o <= 0 or c <= 0:
             continue
+
+        # 一字線可獨立選強勢／弱勢；兩者都選時表示方向不限。
+        if "one-line" in candle_signals and len(one_line_directions) == 1:
+            pc = s.get("prev_close")
+            if not pc or pc <= 0:
+                continue
+            if "strong" in one_line_directions and c <= pc:
+                continue
+            if "weak" in one_line_directions and c >= pc:
+                continue
 
         # 最低股價
         if min_price > 0 and c < min_price:

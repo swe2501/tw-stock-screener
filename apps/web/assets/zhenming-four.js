@@ -25,7 +25,7 @@ document.addEventListener('pointerover',e=>{const b=e.target.closest?.('.zm4-bad
 document.addEventListener('pointerout',e=>{if(active?.contains(e.target)&&!active.contains(e.relatedTarget))hide();});
 document.addEventListener('focusin',e=>{const b=e.target.closest?.('.zm4-badge');if(b)show(b);});
 document.addEventListener('focusout',e=>{if(active?.contains(e.target))hide();});
-document.addEventListener('click',e=>{const b=e.target.closest?.('.zm4-badge');if(b){e.stopPropagation();show(b);}else hide();},true);
+document.addEventListener('click',e=>{const b=e.target.closest?.('.zm4-badge');if(b){if(b.classList.contains('zm-filter-help'))e.preventDefault();e.stopPropagation();show(b);}else hide();},true);
 document.addEventListener('keydown',e=>{if(e.key==='Escape')hide();});window.addEventListener('scroll',()=>{if(active?.matches(':focus'))show(active);else hide();},true);window.addEventListener('resize',hide);
 window.AcademyZhenmingFour={endpoint,badge};
 })();
