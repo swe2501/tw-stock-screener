@@ -456,6 +456,96 @@ TRIPLE = [("three-inside-up", three_inside_up, 3), ("three-inside-down", three_i
           ("three-black-crows", three_black, 3)]
 
 
+# ───────────────────────── 單根 K 棒訊號（2026-11-05 用戶定義） ─────────────────────────
+# 寫進同一張 candle_combo_hits（start_date=end_date；吊人線的主力/散戶確認列 start=吊人線日、end=確認日）。
+# 十字線沿用上面的「反轉十字線」（O=C、上下有影線、波段上漲或下跌），不另存。
+SIGNALS = {
+    "long-lower-3": "長下影線 ≥3%", "long-lower-5": "長下影線 ≥5%",
+    "long-upper-3": "長上影線 ≥3%", "long-upper-5": "長上影線 ≥5%",
+    "one-line": "一字線", "spinning-top": "紡錘線",
+    "candle-sell": "蠟燭線（漲逾30%）",
+    "gravestone": "墓碑線", "hanging-man": "吊人線",
+    "hanging-man-main": "吊人線→主力", "hanging-man-retail": "吊人線→散戶",
+}
+
+
+def lower_shadow_x1000(b, i):
+    """下影線 % ×1000（÷收盤）：紅/十字 (開−低)÷收，黑 (收−低)÷收 → 即 (min(開,收)−低)÷收。"""
+    return (min(b.o[i], b.c[i]) - b.l[i]) * 100_000 // b.c[i]
+
+
+def upper_shadow_x1000(b, i):
+    """上影線 % ×1000（÷收盤）：紅 (高−收)÷收，黑 (高−開)÷收 → 即 (高−max(開,收))÷收。"""
+    return (b.h[i] - max(b.o[i], b.c[i])) * 100_000 // b.c[i]
+
+
+def _shadow_pct_ge(b, i, upper, pct):
+    """精確比較：影線 ÷ 收盤 ≥ pct%（整數運算，不先四捨五入）。"""
+    sh = (b.h[i] - max(b.o[i], b.c[i])) if upper else (min(b.o[i], b.c[i]) - b.l[i])
+    return 100 * sh >= pct * b.c[i]
+
+
+def limit_up(b, i):
+    """漲停（近似）：與前一根同段且連續，收盤漲幅 ≥ 9.5%。本機無官方每日漲停價，用漲幅近似。"""
+    return i >= 1 and b.seg[i - 1] == b.seg[i] and 1000 * b.c[i] >= 1095 * b.c[i - 1]
+
+
+def _vol_heavy(b, j):
+    """帶量：量 ≥ max(前 5 日均量, 前 10 日均量) × 1.5（前 10 根需同段、有量）。"""
+    if j < 10 or b.segstart[j] > j - 10 or b.v[j] <= 0:
+        return False
+    s5, s10 = sum(b.v[j - 5:j]), sum(b.v[j - 10:j])
+    return 100 * b.v[j] >= 15 * max(2 * s5, s10)           # v ≥ 1.5×max(s5/5, s10/10)
+
+
+def scan_signals(b):
+    """回 [(signal, start_idx, end_idx)]。"""
+    out = []
+    n = len(b.d)
+    for i in range(n):
+        o, h, l, c = b.o[i], b.h[i], b.l[i], b.c[i]
+        for pct in (3, 5):
+            if _shadow_pct_ge(b, i, False, pct):
+                out.append((f"long-lower-{pct}", i, i))
+            if _shadow_pct_ge(b, i, True, pct):
+                out.append((f"long-upper-{pct}", i, i))
+        # 一字線：開＝高＝低＝收，且收盤高於前一天（上漲鎖死；跌停一字不算強勢）
+        if o == h == l == c and i >= 1 and b.seg[i - 1] == b.seg[i] and c > b.c[i - 1]:
+            out.append(("one-line", i, i))
+        # 紡錘線：有實體，上影線 ≥ 3%
+        if o != c and _shadow_pct_ge(b, i, True, 3):
+            out.append(("spinning-top", i, i))
+        # 蠟燭線：紅K 有實體、上下都有影線；前面已波段上漲（約 30%）→ 賣出。
+        # 「30% 內續抱」約佔三分之一紅K（全期 18 萬筆），不存；前端看到蠟燭線形狀但沒有 candle-sell 就標續抱
+        if c > o and h > c and l < o and wave_up(b, i, h):
+            out.append(("candle-sell", i, i))
+        # 墓碑線：開＝收＝最低，有上影線
+        if o == c == l and h > o:
+            out.append(("gravestone", i, i))
+        # 吊人線：開＝收＝最高，有下影線，且前面連 2 根漲停
+        if o == c == h and l < o and i >= 2 and limit_up(b, i - 1) and limit_up(b, i - 2):
+            out.append(("hanging-man", i, i))
+            main = None
+            for k in range(1, 10):                       # 第 1～9 個交易日內（不含當天）
+                j = i + k
+                if j >= n or b.seg[j] != b.seg[i]:
+                    break
+                if b.c[j] > b.o[j] and b.c[j] > h and _vol_heavy(b, j):
+                    main = j
+                    break
+            if main is not None:
+                out.append(("hanging-man-main", i, main))
+            else:
+                for k in range(10, 70):                  # 超過 9 天、60 個交易日內第一次收盤跌破吊人線最低價
+                    j = i + k
+                    if j >= n or b.seg[j] != b.seg[i]:
+                        break
+                    if b.c[j] < l:
+                        out.append(("hanging-man-retail", i, j))
+                        break
+    return out
+
+
 def scan_stock(b):
     """回 [(combo, start_idx, end_idx)]。"""
     hits = []
@@ -502,34 +592,43 @@ def run():
         b = build(calendar, by_date, ex.get(code, set()))
         if len(b.d) < 2:
             continue
-        for cid, s, e in scan_stock(b):
+        for cid, s, e in scan_stock(b) + scan_signals(b):
             out.append({"code": code, "combo": cid, "start_date": b.d[s], "end_date": b.d[e],
                         "liquid": liquid(b, e, cid)})
-    print(f"[計算] {len(out)} 筆組合 {time.time() - t0:.1f}s")
+    print(f"[計算] {len(out)} 筆組合＋單根訊號 {time.time() - t0:.1f}s")
     tot = Counter(r["combo"] for r in out)
     rec = Counter(r["combo"] for r in out if r["end_date"] in recent and r["liquid"])
+    last = calendar[-1]
+    day = Counter(r["combo"] for r in out if r["end_date"] == last)
     print(f"近 {SCREEN_DAYS} 日 {sorted(recent)}（已套最低量）：")
     for cid, name in COMBOS.items():
         print(f"  {name:<8} 全期 {tot[cid]:>6}   近{SCREEN_DAYS}日 {rec[cid]:>4}")
+    print(f"單根訊號（全期／{last} 當天，不套最低量）：")
+    for cid, name in SIGNALS.items():
+        print(f"  {name:<14} 全期 {tot[cid]:>7}   當天 {day[cid]:>4}")
     return out, calendar
 
 
 def upload(out, calendar, full=False, keep_days=10):
-    """寫 Supabase candle_combo_hits：預設只重寫最近 keep_days 個交易日完成的組合（先刪後寫）；--full 全部重寫。
+    """寫 Supabase candle_combo_hits（組合）＋ candle_signal_hits（單根訊號）：預設只重寫最近 keep_days 個交易日完成的組合（先刪後寫）；--full 全部重寫。
     組合只用完成日以前的資料判斷，舊的命中不會因新資料改變，所以每晚只需重算最近幾天。"""
     import broker_signals as bs
     env = bs._load_env()
     cutoff = calendar[0] if full else calendar[-keep_days]
-    rows = [r for r in out if r["end_date"] >= cutoff]
-    st, _ = bs._sb(env, "/candle_combo_hits", method="DELETE", params=[("end_date", f"gte.{cutoff}")])
-    if st not in (200, 204):
-        raise RuntimeError(f"刪除 {cutoff} 以後舊資料失敗 status={st}")
-    for k in range(0, len(rows), 1000):
-        st, resp = bs._sb(env, "/candle_combo_hits", method="POST", body=rows[k:k + 1000])
-        if st not in (200, 201, 204):
-            raise RuntimeError(f"寫入失敗 status={st} {str(resp)[:200]}")
-    print(f"[上傳] candle_combo_hits {cutoff} 以後 {len(rows)} 筆")
-    return len(rows)
+    combos = [r for r in out if r["end_date"] >= cutoff and r["combo"] in COMBOS]
+    # 2026-11-05 單根訊號分表 candle_signal_hits（舊版前端不認得這些代碼，混在 combo 表會被畫成黃框）
+    signals = [{"code": r["code"], "signal": r["combo"], "start_date": r["start_date"], "end_date": r["end_date"]}
+               for r in out if r["end_date"] >= cutoff and r["combo"] in SIGNALS]
+    for table, rows in (("candle_combo_hits", combos), ("candle_signal_hits", signals)):
+        st, _ = bs._sb(env, "/" + table, method="DELETE", params=[("end_date", f"gte.{cutoff}")])
+        if st not in (200, 204):
+            raise RuntimeError(f"{table} 刪除 {cutoff} 以後舊資料失敗 status={st}")
+        for k in range(0, len(rows), 1000):
+            st, resp = bs._sb(env, "/" + table, method="POST", body=rows[k:k + 1000])
+            if st not in (200, 201, 204):
+                raise RuntimeError(f"{table} 寫入失敗 status={st} {str(resp)[:200]}")
+        print(f"[上傳] {table} {cutoff} 以後 {len(rows)} 筆")
+    return len(combos) + len(signals)
 
 
 def main():

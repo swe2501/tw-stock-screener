@@ -63,3 +63,19 @@ html[data-theme="dark"] #chartModal #chartComboToggle[aria-pressed="true"] .kinf
 @media(max-width:420px){#ccComboGrid{grid-template-columns:1fr}}
 .cc-result a{color:var(--cc-yellow-ink);text-decoration:none;font-weight:600}
 .cc-result a:hover{text-decoration:underline}
+
+/* 2026-11-05 單根 K 棒訊號：圖上圈圈（跟「K棒訊息」連動）、提示框一行、篩選器 K棒分類 */
+.cc-ring{position:absolute;box-sizing:border-box;border:2px solid #8b5cf6;border-radius:999px;pointer-events:none;box-shadow:0 0 0 1px rgba(255,255,255,.55)}
+.cc-ring[data-tone="bear"]{border-color:#16a34a}
+.cc-ring[data-tone="bull"]{border-color:#e11d48}
+html[data-theme="dark"] .cc-ring{box-shadow:0 0 0 1px rgba(0,0,0,.5)}
+.ohlc-signal{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;margin-top:6px;padding-top:6px;border-top:1px dashed color-mix(in srgb,var(--border) 80%,transparent);font-size:12px}
+.ohlc-signal span{color:var(--text-muted)}
+.ohlc-signal b{font-weight:650;color:#7c3aed}
+html[data-theme="dark"] .ohlc-signal b{color:#c4b5fd}
+.cc-signal-tag span{color:#7c3aed;font-weight:600}
+html[data-theme="dark"] .cc-signal-tag span{color:#c4b5fd}
+.ks-fields{display:grid;grid-template-columns:repeat(2,minmax(160px,1fr));gap:10px 14px;margin:0 0 12px}
+.ks-fields .field{margin:0}
+.ks-pct{font:inherit;font-size:12px;padding:0 2px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)}
+@media(max-width:520px){.ks-fields{grid-template-columns:1fr}}
