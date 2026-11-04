@@ -39,6 +39,9 @@
     { id: 'falling-three', name: '下降三法', bars: '多棒（至少 5 根）', wave: '不加波段',
       rule: '首末皆黑K；中間至少 3 根，每根中間實體都在首棒實體 [收1, 開1] 內，影線可超出；末棒開盤在首棒實體內、且黏著倒數第 2 根（開盤 ≥ 前一根實體下緣，不能有缺口）、收盤 ＜ 首棒最低價、量 ＜ 前一日。完成後從下一交易日重找首棒。' },
   ];
+  // 「反轉十字線」與上方單一 K 棒的「十字線」使用同一套定義；
+  // 保留資料映射與圖表辨識，但不在 K 棒組合區重複提供選項。
+  const COMBO_OPTIONS = COMBOS.filter(c => c.id !== 'reversal-doji');
   const COMMON = [
     '紅K＝收盤＞開盤、黑K＝收盤＜開盤，開盤＝收盤不算紅黑。實體＝開盤到收盤，不含影線。',
     '長紅／長黑：實體 ≥ 3%（紅：收盤 ≥ 開盤 × 1.03；黑：收盤 ≤ 開盤 × 0.97）。',
@@ -52,25 +55,25 @@
   // 滑鼠移到篩選器勾選框時的示意卡（沿用合夥人 kbar-hint.js 的卡片；K 棒格式 [開, 高, 低, 收]，ctx＝前面走勢、sig＝組合本身）
   const HINTS = {
     'reversal-doji': { tag: ['neu', '轉折觀察'], ctx: [[60,61,56,57],[57,58,53,54],[54,55,51,52]], sig: [[51,53.5,48.5,51]],
-      desc: '一路漲或跌一大段（約 30%）後，出現<em>開盤＝收盤、上下都有影線</em>的十字線，多空暫時拉平，留意是否反轉。不看成交量。' },
+      desc: '出現<em>開盤＝收盤、上下都有影線</em>的十字線，多空暫時拉平，留意是否反轉。不看成交量。' },
     'bullish-engulfing': { tag: ['bull', '底部翻多'], ctx: [[60,61,56,57],[57,58,53,54],[54,55,51,52]], sig: [[52.8,53.2,50.9,51.2],[49.6,54.8,49.2,54.4]],
-      desc: '跌了一大段（約 30%）後，<em>紅K 實體把前一根黑K 整根（含影線）吃掉</em>，買盤一口氣收復跌幅。' },
+      desc: '<em>紅K 實體把前一根黑K 整根（含影線）吃掉</em>，買盤一口氣收復跌幅。' },
     'bearish-engulfing': { tag: ['bear', '頭部翻空'], ctx: [[48,51,47,50.5],[50.5,54,50,53.5],[53.5,57,53,56.5]], sig: [[56.6,58.3,56.2,58],[59.6,59.9,54.6,55]],
-      desc: '漲了一大段（約 30%）後，<em>黑K 實體把前一根紅K 整根（含影線）吃掉</em>，賣壓吃掉前一日漲幅。' },
+      desc: '<em>黑K 實體把前一根紅K 整根（含影線）吃掉</em>，賣壓吃掉前一日漲幅。' },
     'piercing': { tag: ['bull', '跌深反攻'], ctx: [[60,61,56,57],[57,58,53.5,54]], sig: [[54,54.5,50.5,51],[50,54.2,49.5,53.5]],
-      desc: '跌了一大段（約 30%）後，黑K 之後<em>開更低的紅K，收盤拉回到黑K 實體六成以上</em>（不超過黑K 最高價），且量比前一天大。' },
+      desc: '黑K 之後<em>開更低的紅K，收盤拉回到黑K 實體六成以上</em>（不超過黑K 最高價），且量比前一天大。' },
     'dark-cloud': { tag: ['bear', '高檔遇壓'], ctx: [[48,51,47,50.5],[50.5,54,50,53.5]], sig: [[53.5,57.5,53,57],[58,58.5,54.5,54.8]],
-      desc: '漲了一大段（約 30%）後，紅K 之後<em>開更高的黑K，收盤壓回紅K 實體六成以上</em>，但沒跌破紅K 開盤。' },
+      desc: '紅K 之後<em>開更高的黑K，收盤壓回紅K 實體六成以上</em>，但沒跌破紅K 開盤。' },
     'bullish-harami': { tag: ['bull', '跌勢趨緩'], ctx: [[61,62,58,59],[59,60,56.5,57]], sig: [[57,57.5,50.5,51],[53.2,55.3,52.9,54.8]],
-      desc: '跌了一大段（約 30%）後，<em>長黑K 之後出現被包在實體內的小紅K</em>，賣壓減弱，待下一根確認。' },
+      desc: '<em>長黑K 之後出現被包在實體內的小紅K</em>，賣壓減弱，待下一根確認。' },
     'bearish-harami': { tag: ['bear', '漲勢趨緩'], ctx: [[48,51,47,50],[50,53.5,49.5,52.8]], sig: [[53,59.5,52.5,59],[56.8,57.1,54.9,55.2]],
-      desc: '漲了一大段（約 30%）後，<em>長紅K 之後出現被包在實體內的小黑K</em>，追價力道轉弱，待下一根確認。' },
+      desc: '<em>長紅K 之後出現被包在實體內的小黑K</em>，追價力道轉弱，待下一根確認。' },
     'three-inside-up': { tag: ['bull', '母子確認翻紅'], ctx: [[61,62,58,59],[59,60,56.5,57]], sig: [[57,57.5,50.5,51],[52.5,54.8,52,54.2],[54.5,59.5,54,59]],
-      desc: '跌了一大段（約 30%）後出現多頭母子，<em>第 3 根紅K 收盤站上母棒（長黑）開盤</em>，確認轉強。' },
+      desc: '出現多頭母子後，<em>第 3 根紅K 收盤站上母棒（長黑）開盤</em>，確認轉強。' },
     'three-inside-down': { tag: ['bear', '母子確認翻黑'], ctx: [[48,51,47,50],[50,53.5,49.5,52.8]], sig: [[53,59.5,52.5,59],[57.8,58.2,55.5,56.2],[56,56.5,51.5,52]],
-      desc: '漲了一大段（約 30%）後出現空頭母子，<em>第 3 根黑K 收盤跌破母棒（長紅）開盤</em>，確認轉弱。' },
+      desc: '出現空頭母子後，<em>第 3 根黑K 收盤跌破母棒（長紅）開盤</em>，確認轉弱。' },
     'two-gap-crows': { tag: ['bear', '漲勢結束'], ctx: [[48,51,47,50.5],[50.5,54,50,53.5]], sig: [[53.5,57.5,53,57],[59,60,57.8,58.2],[59.5,60,57.5,57.8]],
-      desc: '漲了一大段（約 30%）後，紅K 之後<em>連兩根跳空的黑K</em>，開盤、收盤都還在紅K 收盤之上，追價力道轉弱。' },
+      desc: '紅K 之後<em>連兩根跳空的黑K</em>，開盤、收盤都還在紅K 收盤之上，追價力道轉弱。' },
     'three-white-soldiers': { tag: ['bull', '連續走強'], ctx: [[50,51,49,50.2],[50.2,51,49.5,50]], sig: [[50,52.2,49.8,52],[52.1,54.3,51.9,54],[54,56.6,53.8,56.4]],
       desc: '<em>連續 3 天長紅K，收盤一天比一天高</em>。不看成交量、不要求前面先跌。' },
     'three-black-crows': { tag: ['bear', '連續走弱'], ctx: [[57,58,56,57.2],[57.2,58,56.5,57]], sig: [[57,57.2,54.8,55],[54.9,55.1,52.8,53],[53,53.2,50.6,50.8]],
@@ -103,7 +106,7 @@
     black_candle_pct: { name: '長黑棒', tag: ['bear', '黑K 長實體'], ctx: [[56,56.5,55,55.8],[55.8,56,55.1,55.4]], sig: [[55,55.2,49.8,50]],
       desc: '<em>收盤低於開盤，且黑K實體達到設定幅度</em>。輸入數字可調整篩選門檻。' },
     doji: Object.assign({ name: '十字線' }, HINTS['reversal-doji'], {
-      desc: '一路漲或跌一大段後，出現<em>開盤＝收盤、上下都有影線</em>的十字線，才算變盤訊號；沒有波段的十字線不列入。' }),
+      desc: '出現<em>開盤＝收盤、上下都有影線</em>的十字線，代表多空暫時拉平，可搭配前後 K 棒觀察型態變化。' }),
     long_lower: { name: '長下影線', tag: ['bull', '低檔承接'], ctx: [[56,57,54,54.5],[54.5,55,52,52.5]], sig: [[52,53,48,52.8]],
       desc: '下影線＝<em>紅K (開盤−最低)÷收盤、黑K (收盤−最低)÷收盤</em>，≥ 所選 3% 或 5%。盤中殺低後有買盤承接。' },
     long_upper: { name: '長上影線', tag: ['bear', '上檔賣壓'], ctx: [[48,50,47.5,49.5],[49.5,52,49,51.8]], sig: [[52,57,51.8,52.6]],
@@ -136,7 +139,7 @@
   function rulesHtml(focus) {
     return '<ul class="cc-common">' + COMMON.map(t => '<li>' + esc(t) + '</li>').join('') + '</ul>'
       + '<table class="cc-rules"><thead><tr><th>組合</th><th>棒數</th><th>波段</th><th>條件</th></tr></thead><tbody>'
-      + COMBOS.map(c => '<tr id="cc-rule-' + c.id + '"' + (c.id === focus ? ' class="is-focus"' : '') + '><th scope="row">' + esc(c.name) + '</th><td>' + esc(c.bars) + '</td><td>' + esc(c.wave) + '</td><td>' + esc(c.rule) + '</td></tr>').join('')
+      + COMBO_OPTIONS.map(c => '<tr id="cc-rule-' + c.id + '"' + (c.id === focus ? ' class="is-focus"' : '') + '><th scope="row">' + esc(c.name) + '</th><td>' + esc(c.bars) + '</td><td>' + esc(c.wave) + '</td><td>' + esc(c.rule) + '</td></tr>').join('')
       + '</tbody></table>';
   }
   function openRules(focus) {
@@ -147,7 +150,7 @@
       document.body.append(d);
       d.addEventListener('click', e => { if (e.target === d) d.close(); });
     }
-    d.innerHTML = '<div class="cc-dialog-hd"><h3 id="ccRulesTitle">K棒組合 16 類規則</h3><button type="button" class="cc-dialog-x" aria-label="關閉規則說明">✕</button></div><div class="cc-dialog-body">' + rulesHtml(focus) + '</div>';
+    d.innerHTML = '<div class="cc-dialog-hd"><h3 id="ccRulesTitle">K棒組合 15 類規則</h3><button type="button" class="cc-dialog-x" aria-label="關閉規則說明">✕</button></div><div class="cc-dialog-body">' + rulesHtml(focus) + '</div>';
     d.querySelector('.cc-dialog-x').onclick = () => d.close();
     if (!d.open) d.showModal();
     const row = focus && d.querySelector('#cc-rule-' + focus);
@@ -158,7 +161,7 @@
   function mountGrid() {
     const grid = document.getElementById('ccComboGrid');
     if (!grid || grid.childElementCount) return;
-    grid.innerHTML = COMBOS.map(c => '<label class="checkbox-row" title="' + esc(c.name) + '：點擊名稱可於規則說明查看完整條件"><input type="checkbox" class="cc-cb" id="cc_' + c.id + '" data-combo="' + c.id + '" /><span class="cb-label">' + esc(c.name) + '</span></label>').join('');
+    grid.innerHTML = COMBO_OPTIONS.map(c => '<label class="checkbox-row" title="' + esc(c.name) + '：點擊名稱可於規則說明查看完整條件"><input type="checkbox" class="cc-cb" id="cc_' + c.id + '" data-combo="' + c.id + '" /><span class="cb-label">' + esc(c.name) + '</span></label>').join('');
   }
   function resultTag(list) {
     return '<div class="zm3-info cc-result">' + list.map(h => '<span class="cc-result-item"><a href="javascript:void(0)" data-cc-rule="' + esc(h.combo) + '" title="' + esc(nameOf(h.combo)) + '（' + esc(h.date) + ' 完成）；點看規則">' + esc(nameOf(h.combo)) + ' ' + esc(String(h.date).slice(5).replace('-', '/')) + '</a><button type="button" class="cc-help" data-kh-key="cc_' + esc(h.combo) + '" aria-label="查看' + esc(nameOf(h.combo)) + '示意圖">?</button></span>').join('<span class="cc-result-sep">・</span>') + '</div>';
@@ -214,7 +217,7 @@
     if (!info) return false;
     const b = document.createElement('button');
     b.type = 'button'; b.id = 'chartComboToggle'; b.setAttribute('role', 'switch');
-    b.title = 'K棒組合：在日K圖上用黃框標出 16 類 K 棒組合（僅供參考）';
+    b.title = 'K棒組合：在日K圖上標示 K 棒組合（僅供參考）';
     b.setAttribute('aria-label', 'K棒組合：在日K圖上用黃框標出 K 棒組合');
     b.innerHTML = 'K棒組合<span class="kinfo-sw" aria-hidden="true"></span>';
     info.after(b);
