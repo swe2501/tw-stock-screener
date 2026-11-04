@@ -50,8 +50,8 @@ test('combo screening uses the single existing screener date instead of adding a
 });
 
 test('rising and falling three methods require the last two bodies to touch in rules and illustrations', () => {
-  assert.match(js, /rising-three'[\s\S]*?末棒實體須與倒數第二棒實體相交或碰到（不可有實體缺口）/);
-  assert.match(js, /falling-three'[\s\S]*?末棒實體須與倒數第二棒實體相交或碰到（不可有實體缺口）/);
+  assert.match(js, /rising-three'[\s\S]*?黏著倒數第 2 根（開盤 ≤ 前一根實體上緣，不能有缺口）/);
+  assert.match(js, /falling-three'[\s\S]*?黏著倒數第 2 根（開盤 ≥ 前一根實體下緣，不能有缺口）/);
   assert.match(js, /'rising-three'[\s\S]*?\[51,51\.8,50\.2,51\.5\],\[51\.5,55,51\.4,54\.8\]/);
   assert.match(js, /'falling-three'[\s\S]*?\[53\.9,54\.5,53,53\.4\],\[53\.4,53\.5,49\.6,49\.8\]/);
 });
