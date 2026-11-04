@@ -22,8 +22,8 @@
   <script src="assets/w-pattern-export.js?v=20261024-1"></script>
   <script src="assets/w-pattern-overlay.js?v=20261025-2"></script>
   <script src="assets/chart-ai-patterns.js?v=20261101-box1"></script>
-  <script src="assets/candle-combos.js?v=1" defer></script>
-  <link rel="stylesheet" href="assets/candle-combos.css?v=1">
+  <script src="assets/candle-combos.js?v=3" defer></script>
+  <link rel="stylesheet" href="assets/candle-combos.css?v=3">
   <link rel="stylesheet" href="assets/chart-ai-patterns.css?v=20261026-3">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -9926,30 +9926,7 @@
             <div class="cb-label">吊人線</div>
           </div>
         </label>
-        <label class="checkbox-row">
-          <input type="checkbox" id="engulf_bull" onchange="_exclPattern(this)" />
-          <div>
-            <div class="cb-label">陽吞噬</div>
-          </div>
-        </label>
-        <label class="checkbox-row">
-          <input type="checkbox" id="engulf_bear" onchange="_exclPattern(this)" />
-          <div>
-            <div class="cb-label">陰吞噬</div>
-          </div>
-        </label>
-        <label class="checkbox-row">
-          <input type="checkbox" id="harami_bull" onchange="_exclPattern(this)" />
-          <div>
-            <div class="cb-label">多頭母子孕育線</div>
-          </div>
-        </label>
-        <label class="checkbox-row">
-          <input type="checkbox" id="harami_bear" onchange="_exclPattern(this)" />
-          <div>
-            <div class="cb-label">空頭母子孕育線</div>
-          </div>
-        </label>
+        <!-- 2026-11-04 舊版陽吞噬／陰吞噬／多頭・空頭母子已移除，改用「K棒組合」分類的文件版（用戶決定） -->
           </div>
           </div>
         </div>
@@ -9957,7 +9934,12 @@
         <div class="sc-panel" data-cat="combo">
           <div class="sc-hd"><a onclick="_scToggle('combo')"><span class="sc-ar">▸</span><b style="color:#b7791f">K棒組合</b></a><span class="sc-sum"></span></div>
           <div class="sc-body" style="display:none">
-          <p class="cc-panel-note">列出最近 3 個交易日（含篩選日）完成組合的股票；勾選多項＝任一成立。每晚盤後計算。<a href="javascript:void(0)" onclick="window.AcademyCandleCombos&&AcademyCandleCombos.openRules()">16 類規則說明</a></p>
+          <p class="cc-panel-note">完成日以上方「日期」為準（不填＝最新交易日，可選 2024-07-19 以後）；勾選多項＝任一成立。每晚盤後計算。<a href="javascript:void(0)" onclick="window.AcademyCandleCombos&&AcademyCandleCombos.openRules()">16 類規則說明</a></p>
+          <div class="cc-days" role="radiogroup" aria-label="K棒組合完成日範圍">
+            <span>完成日範圍：</span>
+            <label><input type="radio" name="cc_days" value="3" checked /> 近 3 個交易日（文件預設）</label>
+            <label><input type="radio" name="cc_days" value="1" /> 只看指定日期當天</label>
+          </div>
           <div class="checkbox-grid sc-cbs" id="ccComboGrid"></div>
           </div>
         </div>
@@ -10231,6 +10213,7 @@
     function picked(p){ var a=[];
       if(p.dataset.cat==='shape'&&v('no_black_years')) a.push('碗型 '+v('no_black_years')+'月'+(v('no_black_mult')?' '+v('no_black_mult')+'倍':'')+' 容忍'+(v('no_black_tolerance')||0)+'根');
       p.querySelectorAll('input[type=checkbox]:not([data-hidden-metric])').forEach(function(cb){ if(cb.checked) a.push(txt(cb)); });
+      if(p.dataset.cat==='combo'&&a.length){var dd=document.querySelector('input[name="cc_days"]:checked');a.push(dd&&dd.value==='1'?'只看當天':'近3日');}
       if(p.dataset.cat==='zm'&&window.AcademyZhenmingSix?.summary())a.push(window.AcademyZhenmingSix.summary());
       if(p.dataset.cat==='zm')(window.AcademyZhenming89?.summary()||[]).forEach(function(t){a.push(t);});
       if(p.dataset.cat==='zm'&&window.AcademyZhenmingHidden?.summary())a.push(window.AcademyZhenmingHidden.summary());
@@ -10254,6 +10237,7 @@
       ['date','min_price','red_candle_pct','volume_multiplier','black_candle_pct','shrink_multiplier','no_black_years','no_black_mult','no_black_tolerance','gap_up_min','gap_down_min','macd_start','macd_end'].forEach(function(id){ var e=$(id); if(e) e.value=''; });
       cat.querySelectorAll('input[type=checkbox]').forEach(function(cb){ if(cb.checked){ cb.checked=false; cb.dispatchEvent(new Event('change',{bubbles:true})); } });
       var ind=$('industry_filter'); if(ind&&ind.value){ ind.value=''; ind.dispatchEvent(new Event('change',{bubbles:true})); }
+      var cd=cat.querySelector('input[name="cc_days"][value="3"]'); if(cd) cd.checked=true;
       refresh(); };
     var form=cat.closest('.card')||document; form.addEventListener('change',refresh); form.addEventListener('input',refresh);
     window._scCount=refresh; refresh();
@@ -10992,14 +10976,6 @@
       var b = document.getElementById('scanProg'); if(b) b.remove();
     }
 
-    // 四個 K 棒形態互斥（吞噬/母子邏輯上不可能同時成立）
-    function _exclPattern(el) {
-      if (!el.checked) return;
-      ['engulf_bull', 'engulf_bear', 'harami_bull', 'harami_bear'].forEach(id => {
-        if (id !== el.id) document.getElementById(id).checked = false;
-      });
-    }
-
     function _macdExcl(el) {
       if (el.checked) {
         document.querySelectorAll('.macd-cb').forEach(cb => { if (cb !== el) cb.checked = false; });
@@ -11045,10 +11021,6 @@
       const limitUp = document.getElementById('limit_up').checked;
       const limitDown = !!document.getElementById('limit_down')?.checked;
       const doji    = document.getElementById('doji').checked;
-      const engulfBull = document.getElementById('engulf_bull').checked;
-      const engulfBear = document.getElementById('engulf_bear').checked;
-      const haramiBull = document.getElementById('harami_bull').checked;
-      const haramiBear = document.getElementById('harami_bear').checked;
       const gapUp   = document.getElementById('gap_up').checked;
       const gapDown = document.getElementById('gap_down').checked;
       const gapUpMin = parseFloat(document.getElementById('gap_up_min').value) || 0;
@@ -11097,10 +11069,6 @@
         limit_up: limitUp,
         limit_down: limitDown,
         doji:     doji,
-        engulf_bull: engulfBull,
-        engulf_bear: engulfBear,
-        harami_bull: haramiBull,
-        harami_bear: haramiBear,
         gap_up:   gapUp,
         gap_down: gapDown,
         gap_up_min: gapUpMin,
@@ -11127,6 +11095,7 @@
         no_black_tolerance:  noBlackTol,
         // 2026-11-04 K棒組合 16 類（近 3 個交易日完成、通過最低量；勾多項＝任一成立）
         candle_combos: Array.from(document.querySelectorAll('.cc-cb:checked')).map(e => e.dataset.combo),
+        candle_combo_days: document.querySelector('input[name="cc_days"]:checked')?.value === '1' ? 1 : 3,
       };
 
       // 非同步任務：帶 job_id 送出，伺服器算完會存暫存；即使手機切背景斷線，
@@ -18478,7 +18447,7 @@
 <script src="assets/chart-list-navigation.js?v=20261102-broker-signals" defer></script>
 <script src="assets/screen-inline-calendar.js?v=calendar-pop2" defer></script>
 <link rel="stylesheet" href="assets/kbar-hint.css?v=1">
-<script src="assets/kbar-hint.js?v=1" defer></script>
+<script src="assets/kbar-hint.js?v=2" defer></script>
 
 <link rel="stylesheet" href="assets/onboarding-tour.css?v=mist-edge-mcopen-20261027">
 <script src="assets/onboarding-tour.js?v=mist-edge-20261026" defer></script>

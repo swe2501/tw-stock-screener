@@ -5,4 +5,6 @@
 - 計算：`scripts/candle_combos.py`（本機夜間排程，`mingdeng.py` 之後），寫 Supabase `candle_combo_hits`（新表，`sql/candle_combo_hits.sql`，公開唯讀、service_role 寫）。
 - API：`/api/screen` 新增可選參數 `candle_combos`（代碼陣列）。沒帶時行為完全不變；帶了就只留最近 3 個交易日完成、通過最低量的股票，結果多一個 `candle_combos` 欄位、回應多 `candle_combo_window`。
 - 前端：篩選器新增「K棒組合」分類（舊「K棒」6 項不動）；K 圖「K棒訊息」旁新增「K棒組合」開關（localStorage `kv_show_combo`，預設開），只畫日K；規則說明視窗在 `apps/web/assets/candle-combos.js`。
+- 同日追加：篩選器「K棒」分類移除舊版陽吞噬／陰吞噬／多頭・空頭母子（用戶決定只留文件版，後端舊參數保留但前端不再送）；K棒組合加「完成日範圍」（近 3 個交易日／只看指定日期當天，參數 `candle_combo_days`=3/1），日期沿用篩選器「日期」；歷史日勾 K棒組合時補上櫃當日收盤（櫃買 afterTrading/otc，只在勾 K棒組合時補，其他條件不受影響）。
+- 同日追加：16 類勾選項加滑鼠提示卡，沿用合夥人 `kbar-hint.js`（新增 `window.AcademyKbarHintExtra` 讀入與 `AcademyKbarHint.register`，原十字線／吊人線卡片不變）。
 - 相容性：不改既有表與既有參數；App 車道未使用這些欄位，不受影響。
