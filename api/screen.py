@@ -2701,6 +2701,45 @@ def fetch_all_stocks_mi_index(code_name_map, date_str):
         return {}
 
 
+def fetch_otc_stocks_for_date(code_name_map, date_str):
+    """2026-11-04 上櫃指定日期收盤（櫃買官方 afterTrading/otc，不含定價），格式同 MI_INDEX 解析結果。
+    只收 4 碼上櫃股票；回應日期與要求不同或失敗回 {}。"""
+    import ssl
+    d = f"{date_str[:4]}/{date_str[4:6]}/{date_str[6:]}"
+    ctx = ssl.create_default_context()                  # 照常驗證憑證；只關 Python 3.13+ 的嚴格模式（櫃買憑證過不了）
+    if hasattr(ssl, "VERIFY_X509_STRICT"):
+        ctx.verify_flags &= ~ssl.VERIFY_X509_STRICT
+    try:
+        req = urllib.request.Request(f"https://www.tpex.org.tw/www/zh-tw/afterTrading/otc?date={d}&type=EW&response=json",
+                                     headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"})
+        with urllib.request.urlopen(req, timeout=20, context=ctx) as resp:
+            data = json.loads(resp.read())
+    except Exception:
+        return {}
+    if not data or str(data.get("stat") or "").lower() != "ok" or str(data.get("date") or "") != date_str:
+        return {}
+    stocks = {}
+    for t in data.get("tables") or []:
+        for row in (t.get("data") or []) if isinstance(t, dict) else []:
+            try:
+                code = str(row[0]).strip()
+                if len(code) != 4 or not code.isdigit():
+                    continue
+                c, chg = _pf(row[2]), _pf(row[3])
+                o, h, l, v = _pf(row[4]), _pf(row[5]), _pf(row[6]), _pf(row[7])
+                if not all([o, h, l, c, v]) or c <= 0:
+                    continue
+                stocks[code] = {
+                    "code": code, "name": code_name_map.get(code, str(row[1]).strip()),
+                    "open": o, "high": h, "low": l, "close": c, "volume": int(v),
+                    "prev_close": round(c - chg, 4) if chg is not None else None,
+                    "prev_high": None, "prev_low": None, "prev_vols": [], "all_closes": [],
+                }
+            except Exception:
+                continue
+    return stocks
+
+
 def fetch_all_stocks_historical(code_name_map, date_str):
     """
     Fetch all stocks' OHLCV for a specific historical date via Yahoo Finance v8 chart.
@@ -3027,6 +3066,11 @@ def _classify_357(d, price):
 #   型態（可選）：跌破頭肩頂／M頭頸線、箱型下緣、上升楔形（下降趨勢中）下緣、下降三角支撐、三角收斂下緣。
 #   時機：長黑當天跌破，或跌破後 5 個交易日內反彈無力（收盤未站回關鍵價）再出長黑。
 #   停損參考＝該根長黑 K 最高價。回補季（2～4 月股東會、6～9 月除權息）另附提醒。
+# 2026-11-04 K棒組合 16 類代碼（與 scripts/candle_combos.py COMBOS 相同；中文名在前端）
+CANDLE_COMBO_IDS = {"reversal-doji", "bullish-engulfing", "bearish-engulfing", "piercing", "dark-cloud",
+                    "bullish-harami", "bearish-harami", "three-inside-up", "three-inside-down", "two-gap-crows",
+                    "three-white-soldiers", "three-black-crows", "bullish-tank", "bearish-tank",
+                    "rising-three", "falling-three"}
 ZM6_BLACK = 3.0          # 長黑實體跌幅門檻（%）
 ZM6_MA20_SLOPE_N = 5     # 20MA 下彎：與 N 個交易日前比較
 ZM6_BREAK_WITHIN = 5     # 跌破後幾天內出長黑仍算
@@ -3484,6 +3528,10 @@ def screen(params):
         sma20_stages = {int(x) for x in (params.get("sma20_stages") or []) if int(x) in (1, 2, 3)}
     except (TypeError, ValueError):
         sma20_stages = set()
+    # 2026-11-04 K棒組合 16 類（scripts/candle_combos.py 每晚算好寫 candle_combo_hits）：勾選多項＝任一成立
+    candle_combos = sorted({str(x) for x in (params.get("candle_combos") or []) if str(x) in CANDLE_COMBO_IDS})
+    # 完成日範圍：3＝篩選日往前 3 個交易日（文件預設）、1＝只看篩選日當天（2026-11-04 用戶要可指定日期）
+    candle_combo_days = 1 if str(params.get("candle_combo_days") or "3") == "1" else 3
     no_black_months  = min(int(params.get("no_black_months") or 0), 120)
     no_black_years   = no_black_months / 12  # 轉換為年（可為小數）傳給 YF API
     no_black_mult    = float(params.get("no_black_mult") or 0)
@@ -3514,6 +3562,11 @@ def screen(params):
 
         if not hist_stocks:
             return {"error": f"{requested_date[:4]}/{requested_date[4:6]}/{requested_date[6:]} 查無資料（可能為非交易日）", "results": []}
+        # 2026-11-04 K棒組合：歷史日原本只有上市（MI_INDEX），補上櫃當日收盤，讓上櫃的組合也列得出來。
+        # 只在勾 K棒組合時補：其他條件（跳空、量比…）需要前一日資料，上櫃補不齊會變成大量「未確認」放行。
+        if candle_combos:
+            for _c, _s in fetch_otc_stocks_for_date(code_name_map, requested_date).items():
+                hist_stocks.setdefault(_c, _s)
 
         actual_date   = requested_date
         display_date  = f"{actual_date[:4]}/{actual_date[4:6]}/{actual_date[6:]}"
@@ -3586,6 +3639,24 @@ def screen(params):
                 continue
 
         candidates[code] = s
+
+    # K棒組合：只留「篩選日往前 candle_combo_days 個交易日（含篩選日）完成組合、且通過最低量」的股票
+    _combo_hits, _combo_window = {}, None
+    if candle_combos and candidates:
+        _iso = f"{actual_date[:4]}-{actual_date[4:6]}-{actual_date[6:]}" if len(actual_date) == 8 else actual_date
+        st, days = _cache_sb("/taiex_daily", "GET", params=[("select", "trade_date"), ("trade_date", f"lte.{_iso}"),
+                                                            ("order", "trade_date.desc"), ("limit", str(candle_combo_days))])
+        if st != 200 or not isinstance(days, list) or not days:
+            return {"error": "K棒組合：讀不到交易日曆，請稍後再試。", "results": []}
+        _combo_window = [days[-1]["trade_date"], _iso]
+        st, hits = _cache_sb("/candle_combo_hits", "GET", params=[
+            ("select", "code,combo,end_date"), ("combo", f"in.({','.join(candle_combos)})"), ("liquid", "eq.true"),
+            ("end_date", f"gte.{_combo_window[0]}"), ("end_date", f"lte.{_iso}"), ("limit", "5000")])
+        if st != 200 or not isinstance(hits, list):
+            return {"error": "K棒組合：讀取組合資料失敗，請稍後再試。", "results": []}
+        for h in hits:
+            _combo_hits.setdefault(h["code"], []).append({"combo": h["combo"], "date": h["end_date"]})
+        candidates = {k: v for k, v in candidates.items() if k in _combo_hits}
 
     if not candidates:
         return {"date": display_date, "total": len(all_stocks), "count": 0, "results": [], "zhenming_hidden_applied": bool(hidden), "zhenming4_applied": check_zhenming4, "zhenming6_applied": check_zhenming6, "zhenming8_applied": check_zhenming8, "zhenming9_applied": check_zhenming9}
@@ -4015,6 +4086,8 @@ def screen(params):
             item["sma20_stage"] = sma20_hit
         if _ev357:
             item["ev357"] = _ev357
+        if code in _combo_hits:
+            item["candle_combos"] = sorted(_combo_hits[code], key=lambda x: x["date"], reverse=True)
 
         results.append(item)
 
@@ -4040,6 +4113,7 @@ def screen(params):
         "zhenming6_applied": check_zhenming6,
         "zhenming8_applied": check_zhenming8,
         "zhenming9_applied": check_zhenming9,
+        "candle_combo_window": _combo_window,
     }
 
 
