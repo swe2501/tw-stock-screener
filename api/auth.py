@@ -1,5 +1,5 @@
 from http.server import BaseHTTPRequestHandler
-import json, os, urllib.request, urllib.parse, urllib.error
+import hmac, json, os, urllib.request, urllib.parse, urllib.error
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
 SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "")
@@ -155,6 +155,29 @@ def _admin_api(path, method="GET", body=None):
             return e.code, {"error": "admin api error"}
 
 
+OFFICE_WORKER_ROLES = ("ceo", "cto", "sec", "eng", "qa")
+OFFICE_WORKER_OPS = ("claim", "heartbeat", "submit", "fail", "block", "list")
+
+
+def _office_worker(body, supplied):
+    try:
+        expected = os.environ.get("OFFICE_WORKER_TOKEN_GROK") or ""
+        supplied = supplied if isinstance(supplied, str) else ""
+        if len(expected) < 32 or len(supplied) != len(expected) or not hmac.compare_digest(supplied.encode(), expected.encode()):
+            return 401, {"error": "unauthorized"}
+        role = body.get("role")
+        if role not in OFFICE_WORKER_ROLES:
+            return 400, {"error": "invalid role"}
+        if body.get("operation") not in OFFICE_WORKER_OPS:
+            return 400, {"error": "unsupported operation"}
+        actor = "grok-" + role
+        body = dict(body, worker=actor)
+        from lib.office_tasks import handle
+        return handle("worker", body, actor, _rest, worker=True)
+    except Exception:
+        return 500, {"error": "internal error"}
+
+
 def _rest(path, method="GET", body=None, prefer=None):
     """用 service_role 打 Supabase PostgREST（member_tiers 等）。回 (status, data)。缺金鑰回 (None, err)。"""
     if not SUPABASE_SERVICE_KEY:
@@ -290,6 +313,10 @@ class handler(BaseHTTPRequestHandler):
             if not vis:
                 return self._json(200, {"visible": False})
             return self._json(200, {"visible": True, "formulas": _algo_formulas()})
+
+        # ── Grok 執行端：x-office-worker-token 比對 env OFFICE_WORKER_TOKEN_GROK（HMAC 常數時間比對）──
+        if action == "office_worker":
+            return self._json(*_office_worker(body, self.headers.get("x-office-worker-token") or ""))
 
         # ── 後台管理（action: admin_*）：JWT→email∈白名單 才放行；service_role 只在後端 ──
         if action.startswith("admin_"):
