@@ -25,3 +25,5 @@
 切換時清空上一檔分點及催化訊號、停止個股即時輪詢、解除舊清單瀏覽，保留純 K 分析模式。既有畫線按商品儲存，切換不帶走原標記、已選畫線工具保持啟用。測試斷言沒有建立 seriesChartDialog/marketTrainDialog，驗證原圖線段、跨商品隔離、週線及按鈕資料範圍。前端資源更新至 market-chart-tools v3。
 
 驗證：tests/market-chart-tools.browser.cjs 使用真實 Lightweight Charts 4.1.3、固定行情與網站 HTML，在 Edge 深淺色驗證別名、滑鼠/Enter 搜尋、畫線、滾輪不修改日期價格錨點、拖動、重開保留、右鍵複製貼上、橡皮擦、三點尺及加權市場列車；手機與矮視窗檢查工具列換行。
+
+整合驗證（2026-11-06）：K 圖搜尋及繪圖 browser 測試深淺色與 3 種窄版配置通過；API 12/12、協作範圍通過。Python 全回歸 269 項中有 6 項失敗（groupbook snapshot 2、web layout route parser 3、visual-pattern fixture 1）；另以未修改 origin/uat 暫存副本重跑，完全重現相同 6 項，屬既有基線問題，本次未改相關後端或測試。
