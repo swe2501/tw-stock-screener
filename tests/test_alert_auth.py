@@ -158,5 +158,51 @@ class AlertAuthTests(unittest.TestCase):
         self.assertNotIn("RuntimeError", blob)
 
 
+    def test_health_recipient_locked_to_alert_email(self):
+        with (
+            patch.object(ALERT, "CRON_SECRET", "cron"),
+            patch.object(ALERT, "SUPABASE_SERVICE_KEY", "svc-key"),
+            patch.object(ALERT, "_sa_send", return_value=(True, "id")) as send,
+        ):
+            status, data = invoke(
+                {"kind": "health", "email": "attacker@evil.test", "subject": "s", "message": "m"},
+                {"Authorization": "Bearer svc-key"},
+                path="/api/alert?kind=health",
+            )
+        self.assertEqual(status, 200)
+        send.assert_called_once()
+        self.assertEqual(send.call_args.args[2], ALERT.ALERT_EMAIL)
+        self.assertNotEqual(send.call_args.args[2], "attacker@evil.test")
+
+    def test_health_cron_bearer_allowed_and_recipient_locked(self):
+        with (
+            patch.object(ALERT, "CRON_SECRET", "cron"),
+            patch.object(ALERT, "SUPABASE_SERVICE_KEY", "svc-key"),
+            patch.object(ALERT, "_sa_send", return_value=(True, "id")) as send,
+        ):
+            status, _ = invoke(
+                {"kind": "health", "email": "attacker@evil.test"},
+                {"Authorization": "Bearer cron"},
+                path="/api/alert?kind=health",
+            )
+        self.assertEqual(status, 200)
+        self.assertEqual(send.call_args.args[2], ALERT.ALERT_EMAIL)
+
+    def test_health_without_cron_or_service_key_forbidden(self):
+        with (
+            patch.object(ALERT, "CRON_SECRET", "cron"),
+            patch.object(ALERT, "SUPABASE_SERVICE_KEY", "svc-key"),
+            patch.object(ALERT, "_verify_admin_email", return_value=None),
+            patch.object(ALERT, "_sa_send") as send,
+            patch("lib.member_phone.check", return_value=None),
+        ):
+            status, data = invoke(
+                {"kind": "health", "email": "attacker@evil.test"},
+                {"Authorization": "Bearer wrong", "x-vercel-cron": "1"},
+                path="/api/alert?kind=health",
+            )
+        self.assertIn(status, (401, 403))
+        send.assert_not_called()
+
 if __name__ == "__main__":
     unittest.main()

@@ -41,3 +41,8 @@ git worktree remove C:\Users\User\.codex\worktrees\sec-alert-auth
 C:\Users\User\AppData\Local\Python\bin\python.exe -m unittest tests.test_alert_auth -v
 `
 （於 worktree root 執行；離線 mock，不打外網。）
+
+## FIX-002
+
+- `kind=health` 收件人固定為 `ALERT_EMAIL`，不再使用 body 的 `email`；權限不變（cron Bearer `CRON_SECRET` 或 service key）。
+- 新增 3 項單元測試（收件人鎖定、cron 允許、無權限拒絕）。

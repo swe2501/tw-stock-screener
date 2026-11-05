@@ -643,7 +643,8 @@ class handler(BaseHTTPRequestHandler):
                 html = (f"<div style='font-family:Segoe UI,Arial;background:#111;color:#ddd;padding:20px'>"
                         f"<h2 style='color:#e6a23c'>⚠️ 排程健康警示</h2>"
                         f"<pre style='white-space:pre-wrap;font-size:14px;color:#ddd'>{msg}</pre></div>")
-                sent, result = _sa_send(html, subject, to_email)
+                # FIX-002：收件人固定 ALERT_EMAIL，不接受 body.email
+                sent, result = _sa_send(html, subject, ALERT_EMAIL)
                 self._json(200, {"sent": sent, "result": result})
             except Exception:
                 self._json(500, {"error": "internal error"})
