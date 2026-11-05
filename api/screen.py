@@ -3219,6 +3219,12 @@ def zhenming6_at(bars, t=None, pattern=None):
     _, o, h, l, c, v = bars[t]
     if not (o > c and (o - c) / c * 100 >= ZM6_BLACK - 1e-9):
         return None
+    # Today is the unique largest real body in the five trading bars, both colours.
+    # Shadows do not count. Equal bodies are not a new signal; no future bars are used.
+    body = o - c
+    prior_max = max(abs(row[1] - row[4]) for row in bars[t - 4:t])
+    if body <= prior_max + 1e-9:
+        return None
     closes = [x[4] for x in bars[:t + 1]]
     ma = lambda p, end=len(closes): sum(closes[end - p:end]) / p
     m5, m10, m20 = ma(5), ma(10), ma(20)
@@ -3226,7 +3232,7 @@ def zhenming6_at(bars, t=None, pattern=None):
     if not (m5 < m10 < m20 and m20 < m20_prev):
         return None
     month = int(str(bars[t][0])[5:7]) if len(str(bars[t][0])) >= 7 else 0
-    out = {"black_pct": round((o - c) / c * 100, 2), "stop": round(h, 2), "ma5": round(m5, 2), "ma10": round(m10, 2),
+    out = {"rules_version": 2, "body_window": 5, "body": round(body, 6), "prior_max_body": round(prior_max, 6), "black_pct": round((o - c) / c * 100, 2), "stop": round(h, 2), "ma5": round(m5, 2), "ma10": round(m10, 2),
            "ma20": round(m20, 2), "cover_season": month in ZM6_COVER_MONTHS}
     if not pattern:
         return out
@@ -3586,9 +3592,19 @@ def screen(params):
         all_stocks    = latest_stocks
         is_historical = False
 
+    pristine_members = None
+    if params.get('pristine_only'):
+        from lib.pristine import members_for_date
+        try:
+            pristine_members = members_for_date(actual_date)
+        except ValueError as error:
+            return {'error': str(error), 'results': []}
+
     # ── Step 2: Fast price-based filters ─────────────────────────────────────
     candidates = {}
     for code, s in all_stocks.items():
+        if pristine_members is not None and code not in pristine_members:
+            continue
         if not all([s.get("open"), s.get("close"), s.get("high"), s.get("low")]):
             continue
         o, c = s["open"], s["close"]
@@ -3701,7 +3717,7 @@ def screen(params):
         candidates = {k: v for k, v in candidates.items() if k in _signal_hits}
 
     if not candidates:
-        return {"date": display_date, "total": len(all_stocks), "count": 0, "results": [], "zhenming_hidden_applied": bool(hidden), "zhenming4_applied": check_zhenming4, "zhenming6_applied": check_zhenming6, "zhenming8_applied": check_zhenming8, "zhenming9_applied": check_zhenming9}
+        return {"date": display_date, "total": len(all_stocks), "count": 0, "results": [], "pristine_applied": pristine_members is not None, "zhenming_hidden_applied": bool(hidden), "zhenming4_applied": check_zhenming4, "zhenming6_rules_version": 2, "zhenming6_applied": check_zhenming6, "zhenming8_applied": check_zhenming8, "zhenming9_applied": check_zhenming9}
 
     # ── Step 3a: 跳空篩選 → 只試「前一個非週末日曆日」MI_INDEX（天條：跳空只跟前一交易日比）
     prev_mi_gap: dict = {}
@@ -4153,8 +4169,9 @@ def screen(params):
         "total": len(all_stocks),
         "count": len(results),
         "results": results,
+        "pristine_applied": pristine_members is not None,
         "zhenming_hidden_applied": bool(hidden), "zhenming4_applied": check_zhenming4,
-        "zhenming6_applied": check_zhenming6,
+        "zhenming6_rules_version": 2, "zhenming6_applied": check_zhenming6,
         "zhenming8_applied": check_zhenming8,
         "zhenming9_applied": check_zhenming9,
         "candle_combo_window": _combo_window,

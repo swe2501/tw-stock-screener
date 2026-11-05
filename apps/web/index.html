@@ -2367,23 +2367,24 @@
         if(cl===ql){ce.push(it);seen[c]=1;} else if(cl.indexOf(ql)===0){cp.push(it);seen[c]=1;}
         else if(nl===ql){ne.push(it);seen[c]=1;} else if(nl.indexOf(ql)>=0||cl.indexOf(ql)>=0){nn.push(it);seen[c]=1;} }
       function s(a,b){return a.code<b.code?-1:1;} cp.sort(s); nn.sort(s);
-      return ce.concat(cp,ne,nn).slice(0,20); }
+      return ce.concat(window.AcademyMarketSearch?.match(q)||[],cp,ne,nn).slice(0,20); }
     function render(){ if(!drop)return; if(!list.length){drop.hidden=true; if(inp)inp.setAttribute('aria-expanded','false'); return;}
       drop.innerHTML=list.map(function(it,i){
-        var ind=(window._indLabel&&window._indLabel(it.code))||'';
+        var ind=it.key?'指數／市場':(window._indLabel&&window._indLabel(it.code))||'';
         var mk=(window._mktLabel&&window._mktLabel(it.code))||'';
         var tag=ind?'<span class="gs-sd-ind">'+ind+'</span>':'';
         var mkt=(window._isEtf&&window._isEtf(it.code)?'<span class="gs-sd-mkt etf">ETF</span>':'')+(mk==='上櫃'?'<span class="gs-sd-mkt otc">上櫃</span>':(mk==='上市'?'<span class="gs-sd-mkt twse">上市</span>':''));
-        return '<div class="gs-sd-item'+(i===sel?' on':'')+'" role="option" data-code="'+it.code+'"><span class="gs-sd-code">'+it.code+'</span><span class="gs-sd-name">'+(it.name||'')+'</span>'+tag+mkt+'</div>';
+        return '<div class="gs-sd-item'+(i===sel?' on':'')+'" role="option" data-code="'+it.code+'"><span class="gs-sd-code">'+(it.displayCode||it.code)+'</span><span class="gs-sd-name">'+(it.name||'')+'</span>'+tag+mkt+'</div>';
       }).join(''); drop.hidden=false; if(inp)inp.setAttribute('aria-expanded','true'); }
     function syncClear(){ var b=document.getElementById('chartSearchClear'); if(b)b.hidden=!(inp&&inp.value); }
-    function open(code){ if(drop)drop.hidden=true; if(inp){inp.value='';inp.blur();syncClear();} list=[]; sel=-1; if(document.getElementById('chartModal')?.classList.contains('chart-analysis-only')){window.AcademyChartAnalysis?.open(String(code));return;} if(window._openStock)window._openStock(String(code), (window._names&&window._names[code])||''); }
-    function oninput(){ if(!inp)return; syncClear(); var run=function(){ list=match(inp.value); sel=-1; render(); }; if(!window._names){ window._loadNames&&window._loadNames(run); } else run(); }
+    function open(code){ if(drop)drop.hidden=true; if(inp){inp.value='';inp.blur();syncClear();} list=[]; sel=-1; if(window.AcademyMarketSearch?.open(code))return; if(document.getElementById('chartModal')?.classList.contains('chart-analysis-only')){window.AcademyChartAnalysis?.open(String(code));return;} if(window._openStock)window._openStock(String(code), (window._names&&window._names[code])||''); }
+    function oninput(){ if(!inp)return; syncClear(); var run=function(){ list=match(inp.value); sel=-1; render(); }; run(); if(!window._names){ window._loadNames&&window._loadNames(run); } }
     /* 台股代號：4～6 碼數字，可帶 1 個英文字母（例 00631L、2881A） */
     function validCode(q){ return /^\d{4,6}[A-Za-z]?$/.test(q); }
-    function notFound(q){ if(!drop)return; drop.innerHTML='<div class="gs-sd-item gs-sd-empty" role="option" aria-disabled="true"><span class="gs-sd-name">查無「'+String(q).replace(/[&<>"]/g,'')+'」，請確認代號或股名</span></div>'; drop.hidden=false; list=[]; sel=-1; }
+    function notFound(q){ if(!drop)return; drop.innerHTML='<div class="gs-sd-item gs-sd-empty" role="option" aria-disabled="true"><span class="gs-sd-name">查無「'+String(q).replace(/[&<>"]/g,'')+'」，請確認代號、股名或指數名稱</span></div>'; drop.hidden=false; list=[]; sel=-1; }
     function go(){ if(!inp)return; var q=(inp.value||'').trim(); if(!q)return;
       if(sel>=0&&list[sel]){open(list[sel].code);return;}
+      var market=window.AcademyMarketSearch?.match(q);if(market?.length){open(market[0].code);return;}
       var code=q.split(/\s+/)[0];
       var run=function(){ var l=match(q); if(l.length)open(l[0].code); else if(validCode(code))open(code); else notFound(q); };
       if(!window._names){ if(validCode(code)){open(code);return;} window._loadNames&&window._loadNames(run);} else run(); }
@@ -2398,7 +2399,7 @@
         else if(e.key==='ArrowUp'&&o){e.preventDefault();sel=Math.max(0,sel-1);render();}
         else if(e.key==='Enter'){e.preventDefault();go();}
         else if(e.key==='Escape'&&o){e.preventDefault();drop.hidden=true;sel=-1;} });
-      document.addEventListener('click',function(e){ var it=e.target.closest('#chartSearchDrop .gs-sd-item'); if(it){open(it.dataset.code);return;}
+      document.addEventListener('click',function(e){ var it=e.target.closest('#chartSearchDrop .gs-sd-item'); if(it){if(it.dataset.code)open(it.dataset.code);return;}
         if(!e.target.closest('#chartSearchBox')){ if(drop)drop.hidden=true; } });
     });
     function editable(t){return !!(t&&(t.matches?.('input,textarea,select')||t.isContentEditable||t.closest?.('[contenteditable="true"]')));}
@@ -2993,6 +2994,8 @@
     </section>
 
     <section class="hp-sec"><div id="hpStruct"><div class="fc-empty">載入中…</div></div></section>
+
+    <section class="hp-sec pristine-section" id="hpPristineSec" aria-label="臺灣璞玉觀察"><div id="pristineOverview" aria-live="polite"></div></section>
 
     <section class="hp-sec" id="hpMaintSec"><div class="hp-sec-h"><span class="hp-sec-no">§4</span> 融資動能背離與市場槓桿 <span class="hp-sec-src">加權指數 vs 上市融資餘額 · 全市場維持率</span></div><div class="hp-leverage-grid"><div id="hpDiverge" class="hp-verdict"><div class="fc-empty">載入中…</div></div><div id="hpMaint"></div></div></section>
 
@@ -9115,6 +9118,7 @@
         chart.timeScale().fitContent();
         dialog.querySelectorAll('[data-sc-mode]').forEach(function(btn){btn.onclick=function(){if(btn.disabled)return;mode=btn.dataset.scMode;series.applyOptions({visible:mode==='line'});if(candles)candles.applyOptions({visible:mode==='candles'});if(highFlags)highFlags.setSeries(mode==='candles'?candles:series,mode==='candles');dialog.querySelectorAll('[data-sc-mode]').forEach(function(b){b.setAttribute('aria-pressed',String(b===btn));});};});
         chart.subscribeCrosshairMove(function(pm){var v=pm.seriesData.get(mode==='candles'&&candles?candles:series),b=bench?pm.seriesData.get(bench):null;dialog.querySelector('.vix-history-tip').textContent=(v&&pm.time)?(pm.time+'｜'+Number(v.value!=null?v.value:v.close).toLocaleString(undefined,{minimumFractionDigits:prec,maximumFractionDigits:prec})+(cfg.unit||'')+(b&&b.value!=null?'　加權 '+Math.round(b.value).toLocaleString():'')):'移動滑鼠查看日期與數值';});
+        window.AcademyMarketDrawing?.attach({dialog:dialog,host:host,chart:chart,getSeries:function(){return mode==='candles'&&candles?candles:series;},data:data,key:cfg.code||cfg.apiCode});
         observer=new ResizeObserver(function(){chart.applyOptions({width:host.clientWidth});});observer.observe(host);
       }).catch(function(){var s=dialog.querySelector('.vix-history-status');if(s)s.textContent='讀取失敗，請稍後再試。';});
     };
@@ -10232,6 +10236,7 @@
         <div class="sc-panel" data-cat="ev357">
           <div class="sc-hd"><a onclick="_scToggle('ev357')"><span class="sc-ar">▸</span><b>企業價值</b></a><span class="sc-sum"></span></div>
           <div class="sc-body" style="display:none">
+          <label class="checkbox-row pristine-filter"><input type="checkbox" id="pristine_only" /><div><div class="cb-label">限璞玉成分股</div><small>官方 2026 年 10 月定審名單 · 可搭配下方殖利率條件</small></div></label>
           <p class="scal-value-note"><strong>非技術面篩選</strong><span>中長線策略，著重企業價值與配息條件。</span></p>
           <div class="sc-note">以「連續 5 年配息 + 近 5 年平均現金股利 D」算現金殖利率分級：殖利率＝D ÷ 現價。只列出連續 5 年配息者（未連續配息＝方法不適用）。三個可複選。</div>
           <div class="checkbox-grid sc-cbs">
@@ -10492,7 +10497,7 @@
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
           <div id="chartSearchBox">
-            <input id="chartStockSearch" type="search" name="tw-stock-qc" placeholder="搜尋代號／股名" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="chartSearchDrop">
+            <input id="chartStockSearch" type="search" name="tw-stock-qc" placeholder="搜尋個股／指數" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="chartSearchDrop">
             <button id="chartSearchClear" type="button" aria-label="清除股票搜尋" title="清除搜尋" hidden></button>
             <div id="chartSearchDrop" class="gs-search-drop" role="listbox" hidden></div>
           </div>
@@ -11080,6 +11085,7 @@
       const zm89Expected=Object.keys(zm89Options).filter(k=>zm89Options[k]).map(k=>k+'_applied');
       if(zm89Expected.length&&!fourExpected&&!hiddenOptions&&!sixOptions){try{screenApi=await window.AcademyZhenming89.endpoint();}catch(error){showStatus('<div class="alert alert-error">'+error.message+'</div>');return;}}
       if(fourExpected){try{screenApi=await window.AcademyZhenmingFour.endpoint();}catch(error){showStatus('<div class="alert alert-error">'+error.message+'</div>');return;}}
+      if(document.getElementById('pristine_only')?.checked){try{screenApi=await window.ForesightPristine.endpoint();}catch(error){showStatus('<div class="alert alert-error">'+error.message+'</div>');return;}}
       window.AcademyScreenLog?.beforeScan();
       const dateVal = document.getElementById('date').value;
       const minPrice  = parseFloat(document.getElementById('min_price').value) || 0;
@@ -11156,6 +11162,7 @@
         zhenming8: zm89Options.zhenming8||null,
         zhenming9: zm89Options.zhenming9||null,
         sma20_stages: sma20Stages,
+        pristine_only: !!document.getElementById('pristine_only')?.checked,
         ev357_cheap:     ev357Cheap,
         ev357_fair:      ev357Fair,
         ev357_expensive: ev357Expensive,
@@ -11178,7 +11185,7 @@
       const jobId = (crypto.randomUUID ? crypto.randomUUID()
         : Date.now() + '-' + Math.random().toString(36).slice(2));
       body.job_id = jobId;
-      _screenJob = { id: jobId, active: true, hidden:!!hiddenOptions, four:fourExpected, six:!!sixOptions, zm89:zm89Expected, api:screenApi };
+      _screenJob = { id: jobId, active: true, hidden:!!hiddenOptions, four:fourExpected, six:!!sixOptions, zm89:zm89Expected, pristine:body.pristine_only, api:screenApi };
 
       // uat 分支別名(含 git-uat)打自己的同源後端，以便測試尚未上 prod 的篩選規則；其餘(prod/preview/local)維持 prod
       fetch(screenApi+'/api/screen', {
@@ -11198,6 +11205,7 @@
             document.getElementById('resultsArea').innerHTML = '';
             return;
           }
+          if(body.pristine_only && data.pristine_applied !== true){_scanStop();showStatus('<div class="alert alert-error">目前連線的篩選服務尚未支援璞玉成分篩選，未顯示未套用條件的結果。</div>');document.getElementById('resultsArea').innerHTML='';return;}
           lastResults = data.results || [];
           renderResults(data,!!hiddenOptions,fourExpected,!!sixOptions,zm89Expected);
         })
@@ -11253,10 +11261,12 @@
           const fourExpected=!!_screenJob.four;
           const sixExpected=!!_screenJob.six;
           const zm89Expected=_screenJob.zm89||[];
+          const pristineExpected=!!_screenJob.pristine;
           _screenJob = null;
           const btn = document.getElementById('submitBtn');
           btn.disabled = false; btn.innerHTML = '開始篩選';
           if (data.error) { showStatus(`<div class="alert alert-error">&#9888; ${data.error}</div>`); return; }
+          if(pristineExpected && data.pristine_applied !== true){_scanStop();showStatus('<div class="alert alert-error">目前連線的篩選服務尚未支援璞玉成分篩選，未顯示未套用條件的結果。</div>');document.getElementById('resultsArea').innerHTML='';return;}
           lastResults = data.results || [];
           renderResults(data,hiddenExpected,fourExpected,sixExpected,zm89Expected);
           return;
@@ -11292,7 +11302,7 @@
 
     function renderResults(data,hiddenExpected=false,fourExpected=false,sixExpected=false,zm89Expected=[]) {
       if(zm89Expected.some(k=>data[k]!==true)){_scanStop();lastResults=[];document.getElementById('resultsArea').innerHTML='';showStatus('<div class="alert alert-error">目前連線的後端尚未支援真名八式／九式，這次結果不予顯示。請稍後再試，或重新啟動本機預覽。</div>');return;}
-      if(sixExpected&&data.zhenming6_applied!==true){_scanStop();lastResults=[];document.getElementById('resultsArea').innerHTML='';showStatus('<div class="alert alert-error">目前連線的後端尚未支援真名六式，這次結果不予顯示。請稍後再試，或重新啟動本機預覽。</div>');return;}
+      if(sixExpected&&(data.zhenming6_applied!==true||data.zhenming6_rules_version!==2)){_scanStop();lastResults=[];document.getElementById('resultsArea').innerHTML='';showStatus('<div class="alert alert-error">目前連線的後端尚未支援真名六式，這次結果不予顯示。請稍後再試，或重新啟動本機預覽。</div>');return;}
       if(fourExpected&&data.zhenming4_applied!==true){_scanStop();lastResults=[];document.getElementById('resultsArea').innerHTML='';showStatus('<div class="alert alert-error">目前連線的後端尚未支援真名四式，這次結果不予顯示。請更新篩選服務後再試。</div>');return;}
       if(hiddenExpected&&data.zhenming_hidden_applied!==true){_scanStop();lastResults=[];document.getElementById('resultsArea').innerHTML='';showStatus('<div class="alert alert-error">目前連線的後端尚未支援真名隱藏式，這次結果不予顯示，請更新後端後再試。</div>');return;}
 
@@ -18467,7 +18477,7 @@
  window._openMarketTrain=async function(){if(document.getElementById('marketTrainDialog'))return;const d=document.createElement('dialog');d.id='marketTrainDialog';d.className='market-train-dialog';d.innerHTML='<header><div><h2>加權指數 · 市場列車</h2><small>盤後收盤觀察</small></div><div class="train-dialog-actions"><button class="train-fullscreen" aria-label="切換全螢幕">⛶ 全螢幕</button><button class="train-close" aria-label="關閉市場列車">✕</button></div></header><div class="train-loading" role="status">讀取加權指數歷史資料…</div><div class="train-content" hidden></div>';document.body.append(d);d.showModal();d.querySelector('.train-close').onclick=()=>d.close();d.querySelector('.train-fullscreen').onclick=function(){const panel=d.querySelector('.train-compass-panel'),compass=d.querySelector('.train-map-compass');if(panel)panel.hidden=true;if(compass)compass.setAttribute('aria-expanded','false');const full=d.classList.toggle('train-is-fullscreen');this.textContent=full?'⛶ 還原視窗':'⛶ 全螢幕';};let chart,ro,stopRail,stopSea;d.addEventListener('close',()=>{if(stopRail)stopRail();if(stopSea)stopSea();if(ro)ro.disconnect();if(chart)chart.remove();d.remove();},{once:true});
  try{const req=await fetch(SIG_SB_URL+'/rest/v1/taiex_daily?select=trade_date,open,high,low,close&order=trade_date.desc&limit=700',{headers:{apikey:SIG_SB_ANON,Authorization:'Bearer '+SIG_SB_ANON}});if(!req.ok)throw Error('資料暫時無法取得');const rows=await req.json();if(!d.isConnected)return;if(!Array.isArray(rows)||!rows.length)throw Error('尚無加權歷史資料');const r=analyze(rows),m=meanings[r.state],dir=r.short===1?'north':r.short===-1?'south':'pause';const content=d.querySelector('.train-content');content.classList.add(dir);content.innerHTML=`<section class="train-chart-section"><div class="train-chart-heading"><h3>加權指數走勢</h3><span>${r.data[r.data.length-1].trade_date}｜${Number(r.data[r.data.length-1].close).toLocaleString()} 點</span></div><div class="train-chart-modes"><button type="button" data-index-mode="line" aria-pressed="true">走勢</button><button type="button" data-index-mode="candles" aria-pressed="false">K棒</button><small class="train-candle-note"></small></div><div class="train-ma-toggles">${periods.map((p,i)=>`<button aria-pressed="true" data-period="${p}" style="--ma-color:${colors[i]}">${p}日均線</button>`).join('')}</div><div class="train-index-chart"></div><p class="train-crosshair">移動滑鼠查看收盤與均線</p></section><section class="train-stage"><div class="train-map-card">${map(r)}</div><div class="train-story"><small>目前站位</small><h3>${r.state==='missing'?'待確認':stations[r.station][0]+'站'}</h3><div class="train-state">${m[0]}</div><p>${m[1]}</p><div class="train-reason"><b>狀態解惑</b><p>${r.state==='missing'?'資料不足，先不推定趨勢。':'短線'+(r.short===1?'股價與短均線同向改善':r.short===-1?'股價與短均線同向轉弱':'尚未形成一致方向')+'；中期'+(r.mid===1?'20與60日結構向上':r.mid===-1?'20與60日結構向下':'仍在整理或確認')+'。長期提供背景，不由單日漲跌改寫。'}</p></div><div class="train-layer-lights">${[['短期',r.short,'5 / 10日'],['中期',r.mid,'20 / 60日'],['長期',r.long,'120 / 240日']].map(x=>`<details class="train-layer-detail"><summary><i class="${x[1]===1?'north':x[1]===-1?'south':'pause'}"></i><b>${x[0]}：${x[1]==null?'資訊不足':x[1]===1?'向北':x[1]===-1?'向南':'整理／分歧'}</b><small>${x[2]}</small><span aria-hidden="true">＋</span></summary><p>${x[0]==='短期'?'觀察最近幾天的價格節奏，主要決定羅盤方向。短線轉弱可能只是回站，還要看中期結構是否保持。':x[0]==='中期'?'觀察波段主方向。中期仍向上時，短線拉回與中期轉空需要分開理解；若價格與中期均線一起轉弱，再留意南下是否成立。':'觀察較長時間的市場背景。長期向上不代表短線不會下跌，長期轉弱也可能出現反彈；用來理解站位，不直接決定今天的行駛方向。'}</p><p>${x[1]==null?'目前歷史資料不足，暫不推定方向。':x[1]===1?'目前價格位置與這組均線方向較一致向上，接下來觀察能否持續站穩。':x[1]===-1?'目前價格位置與這組均線方向較一致向下，反彈時觀察結構是否真的改善。':'目前價格位置、均線排列或方向尚未一致，先保留結論，搭配K棒、量能與廣度確認。'}</p></details>`).join('')}</div><div class="train-next"><b>下一個確認點</b><p>${m[2]}</p></div><div class="train-forks"><div><b>改善觀察</b><p>短線重新站穩，中期維持或恢復向上，再看成交量與市場參與是否配合。</p></div><div><b>轉弱觀察</b><p>短線持續轉弱，價格失守中期均線且均線開始下彎，留意轉轍是否成立。</p></div></div><div class="train-guide"><b>學院導讀</b><p>先看中長期結構，再看短線方向。列車回站或反彈，不一定改變主趨勢；搭配K棒、成交量與市場廣度確認。站名不是指數目標，動畫不是未來路徑。</p></div></div></section>`;content.hidden=false;d.querySelector('.train-loading').hidden=true;stopRail=animateRail(content);stopSea=animateSea(content);bindTrainCompass(content);
  const host=content.querySelector('.train-index-chart');if(typeof LightweightCharts==='undefined'){host.textContent='圖表套件尚未載入';return;}
- const light=document.documentElement.dataset.theme==='light';chart=_createThemedChart(host,{width:host.clientWidth,height:310,layout:{background:{color:'transparent'},textColor:light?'#536b80':'#a8bfd2'},grid:{vertLines:{color:light?'#e4edf4':'#253a4b'},horzLines:{color:light?'#e4edf4':'#253a4b'}},timeScale:{borderColor:light?'#cfdde8':'#30495c'}});const price=chart.addLineSeries({color:light?'#566b80':'#e8f2fb',lineWidth:2,priceLineVisible:false,title:'加權收盤'});_bindThemedSeries(chart,price,{color:'#566b80'},{color:'#e8f2fb'});price.setData(r.data.map(x=>({time:x.trade_date,value:+x.close})));const candleRows=r.data.filter(x=>['open','high','low'].every(k=>x[k]!=null&&Number.isFinite(+x[k]))).map(x=>({time:x.trade_date,open:+x.open,high:+x.high,low:+x.low,close:+x.close}));const candles=chart.addCandlestickSeries({visible:false,upColor:'#dd685f',downColor:'#4caf83',wickUpColor:'#dd685f',wickDownColor:'#4caf83',borderVisible:false,priceLineVisible:false});candles.setData(candleRows);let chartMode='line';const candleBtn=content.querySelector('[data-index-mode=candles]');candleBtn.disabled=!candleRows.length;if(!candleRows.length)content.querySelector('.train-candle-note').textContent='開高低資料尚未齊備';content.querySelectorAll('[data-index-mode]').forEach(btn=>btn.onclick=()=>{if(btn.disabled)return;chartMode=btn.dataset.indexMode;price.applyOptions({visible:chartMode==='line'});candles.applyOptions({visible:chartMode==='candles'});content.querySelectorAll('[data-index-mode]').forEach(b=>b.setAttribute('aria-pressed',String(b===btn)));});const series={};periods.forEach((p,i)=>{const v=chart.addLineSeries({crosshairMarkerRadius:1.5,crosshairMarkerBorderWidth:0,color:colors[i],lineWidth:1,priceLineVisible:false,title:p+'日'});v.setData(r.data.map((x,j)=>({time:x.trade_date,value:r.ma[p][j]})).filter(x=>x.value!=null));series[p]=v;});chart.timeScale().setVisibleLogicalRange({from:Math.max(0,r.data.length-180),to:r.data.length-1});if(window._bindHomeMaControls)window._bindHomeMaControls(content.querySelector('.train-ma-toggles'),series);chart.subscribeCrosshairMove(pm=>{const v=pm.seriesData.get(chartMode==='candles'?candles:price);content.querySelector('.train-crosshair').textContent=v&&pm.time?pm.time+'｜加權收盤 '+Number(v.value??v.close).toLocaleString()+' 點':'移動滑鼠查看收盤與均線';});ro=new ResizeObserver(()=>chart.applyOptions({width:host.clientWidth}));ro.observe(host);
+ const light=document.documentElement.dataset.theme==='light';chart=_createThemedChart(host,{width:host.clientWidth,height:310,layout:{background:{color:'transparent'},textColor:light?'#536b80':'#a8bfd2'},grid:{vertLines:{color:light?'#e4edf4':'#253a4b'},horzLines:{color:light?'#e4edf4':'#253a4b'}},timeScale:{borderColor:light?'#cfdde8':'#30495c'}});const price=chart.addLineSeries({color:light?'#566b80':'#e8f2fb',lineWidth:2,priceLineVisible:false,title:'加權收盤'});_bindThemedSeries(chart,price,{color:'#566b80'},{color:'#e8f2fb'});price.setData(r.data.map(x=>({time:x.trade_date,value:+x.close})));const candleRows=r.data.filter(x=>['open','high','low'].every(k=>x[k]!=null&&Number.isFinite(+x[k]))).map(x=>({time:x.trade_date,open:+x.open,high:+x.high,low:+x.low,close:+x.close}));const candles=chart.addCandlestickSeries({visible:false,upColor:'#dd685f',downColor:'#4caf83',wickUpColor:'#dd685f',wickDownColor:'#4caf83',borderVisible:false,priceLineVisible:false});candles.setData(candleRows);let chartMode='line';const candleBtn=content.querySelector('[data-index-mode=candles]');candleBtn.disabled=!candleRows.length;if(!candleRows.length)content.querySelector('.train-candle-note').textContent='開高低資料尚未齊備';content.querySelectorAll('[data-index-mode]').forEach(btn=>btn.onclick=()=>{if(btn.disabled)return;chartMode=btn.dataset.indexMode;price.applyOptions({visible:chartMode==='line'});candles.applyOptions({visible:chartMode==='candles'});content.querySelectorAll('[data-index-mode]').forEach(b=>b.setAttribute('aria-pressed',String(b===btn)));});const series={};periods.forEach((p,i)=>{const v=chart.addLineSeries({crosshairMarkerRadius:1.5,crosshairMarkerBorderWidth:0,color:colors[i],lineWidth:1,priceLineVisible:false,title:p+'日'});v.setData(r.data.map((x,j)=>({time:x.trade_date,value:r.ma[p][j]})).filter(x=>x.value!=null));series[p]=v;});chart.timeScale().setVisibleLogicalRange({from:Math.max(0,r.data.length-180),to:r.data.length-1});if(window._bindHomeMaControls)window._bindHomeMaControls(content.querySelector('.train-ma-toggles'),series);chart.subscribeCrosshairMove(pm=>{const v=pm.seriesData.get(chartMode==='candles'?candles:price);content.querySelector('.train-crosshair').textContent=v&&pm.time?pm.time+'｜加權收盤 '+Number(v.value??v.close).toLocaleString()+' 點':'移動滑鼠查看收盤與均線';});window.AcademyMarketDrawing?.attach({dialog:d,host,chart,getSeries:()=>chartMode==='candles'?candles:price,data:r.data,key:'^TWII'});ro=new ResizeObserver(()=>chart.applyOptions({width:host.clientWidth}));ro.observe(host);
  }catch(e){if(d.isConnected)d.querySelector('.train-loading').textContent=e.message+'，請關閉後再試。';}
  };
 })();
@@ -18552,7 +18562,7 @@
 <script src="assets/zhenming-four.js?v=candidate6"></script>
 <script src="assets/zhenming-hidden.js?v=5" defer></script>
 <link rel="stylesheet" href="assets/zhenming-six.css?v=3">
-<script src="assets/zhenming-six.js?v=4" defer></script>
+<script src="assets/zhenming-six.js?v=six2-4" defer></script>
 <script src="assets/zhenming-89.js?v=3" defer></script>
 <script src="assets/screen-log.js?v=20261104-save-state" defer></script>
 <script src="assets/member-quick-menu.js?v=tier6" defer></script>
@@ -18605,5 +18615,10 @@
 <link rel="stylesheet" href="assets/chart-analysis.css?v=1">
 <script src="assets/chart-analysis.js?v=1" defer></script>
 <link rel="stylesheet" href="assets/glass-skin.css?v=14">
+<link rel="stylesheet" href="assets/pristine.css?v=4">
+<script src="assets/pristine-snapshot.js?v=20261105" defer></script>
+<script src="assets/pristine.js?v=4" defer></script>
+<link rel="stylesheet" href="assets/market-chart-tools.css?v=1">
+<script src="assets/market-chart-tools.js?v=1" defer></script>
 </body>
 </html>

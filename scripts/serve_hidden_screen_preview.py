@@ -33,9 +33,13 @@ def handler_for(screen, root=ROOT):
             self.send_response(204);self.send_header('Access-Control-Allow-Origin',self.headers.get('Origin') or '*');self.send_header('Access-Control-Allow-Methods','GET, POST, OPTIONS');self.send_header('Access-Control-Allow-Headers','Content-Type');self.end_headers()
         def do_GET(self):
             u=urlsplit(self.path);query=parse_qs(u.query)
+            if u.path=='/api/prices' and query.get('action')==['pristine']:
+                if not self.permitted():return self.send_json(403,{'error':'Local preview only'})
+                from lib.pristine import overview
+                return self.send_json(200,overview())
             if u.path=='/api/screen':
                 if not self.permitted():return self.send_json(403,{'error':'Local preview only'})
-                if query.get('stat')==['hidden-capability']:return self.send_json(200,{'zhenming_hidden':True,'zhenming4':True,'zhenming4_rules_version':2,'zhenming6':True,'zhenming89':True,'zhenming89_version':2,'local_preview':True})
+                if query.get('stat')==['hidden-capability']:return self.send_json(200,{'zhenming_hidden':True,'zhenming4':True,'zhenming4_rules_version':2,'zhenming6':True,'zhenming6_rules_version':2,'zhenming89':True,'zhenming89_version':2,'local_preview':True,'pristine':True})
                 job=query.get('job_id',[''])[0]
                 if job:
                     with lock:
