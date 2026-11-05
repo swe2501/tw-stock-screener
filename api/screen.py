@@ -3580,9 +3580,19 @@ def screen(params):
         all_stocks    = latest_stocks
         is_historical = False
 
+    pristine_members = None
+    if params.get('pristine_only'):
+        from lib.pristine import members_for_date
+        try:
+            pristine_members = members_for_date(actual_date)
+        except ValueError as error:
+            return {'error': str(error), 'results': []}
+
     # ── Step 2: Fast price-based filters ─────────────────────────────────────
     candidates = {}
     for code, s in all_stocks.items():
+        if pristine_members is not None and code not in pristine_members:
+            continue
         if not all([s.get("open"), s.get("close"), s.get("high"), s.get("low")]):
             continue
         o, c = s["open"], s["close"]
@@ -4109,6 +4119,7 @@ def screen(params):
         "total": len(all_stocks),
         "count": len(results),
         "results": results,
+        "pristine_applied": pristine_members is not None,
         "zhenming_hidden_applied": bool(hidden), "zhenming4_applied": check_zhenming4,
         "zhenming6_applied": check_zhenming6,
         "zhenming8_applied": check_zhenming8,
