@@ -14,6 +14,20 @@ from lib.office_departments import DEPARTMENTS
 
 PREFIX = 'office-task-uat-v1-'
 WORKER_KEY = 'office_task_worker_uat_v1'
+EXECUTORS = ('','claude-local','grok')
+
+
+def is_grok(actor):
+    return isinstance(actor,str) and actor.startswith('grok-')
+
+
+def worker_key(actor):
+    return WORKER_KEY+':grok' if is_grok(actor) else WORKER_KEY
+
+
+def executor_allowed(task, actor):
+    executor=task.get('executor') or ''
+    return executor=='grok' if is_grok(actor) else executor in ('','claude-local')
 STATES = ('queued','running','blocked','review','approved','cancelled','failed')
 LEASE_SECONDS = 180
 
@@ -85,7 +99,7 @@ def public(task):
 
 
 def summary(task):
-    keys=('id','title','department','execution','due_date','depends_on','created_at','updated_at','revision','status','current_step','lease_until','cost_usd','reserved_usd','budget_usd','attempts')
+    keys=('id','title','department','execution','due_date','depends_on','created_at','updated_at','revision','status','current_step','lease_until','cost_usd','reserved_usd','budget_usd','attempts','executor')
     result={k:task[k] for k in keys if k in task}
     result['brief']=task.get('brief','')[:200]
     result['criteria_count']=len(task.get('criteria',[]))
@@ -144,7 +158,10 @@ def create(body, actor, rest):
     if task_id in dependencies:raise Problem(400,'不能依賴自己')
     for dependency in dependencies:
         if read(rest,dependency)[0]['status']=='cancelled':raise Problem(400,'前置任務已取消')
+    executor=body.get('executor') or ''
+    if executor not in EXECUTORS:raise Problem(400,'執行器無效')
     payload=dict(title=title,brief=brief,criteria=criteria,department=dept,execution=execution,budget_usd=round(budget,2) if execution=='ai' else 0,due_date=due,depends_on=dependencies)
+    if executor:payload['executor']=executor
     digest=hashlib.sha256(json.dumps(payload,sort_keys=True,ensure_ascii=False).encode()).hexdigest()
     try:existing,_=read(rest,task_id)
     except Problem as e:
@@ -171,6 +188,9 @@ def mutate(body, actor, rest, worker=False):
         if worker != (task['execution']=='ai'):raise Problem(403,'執行方式不符')
         if task['attempts']>=3:raise Problem(409,'已達 3 次執行上限，請建立新任務')
         if worker:
+            if not executor_allowed(task,actor):raise Problem(403,'此任務指定給其他執行器')
+            worker_name=text(body.get('worker'),100,'執行端',True)
+            if any(t.get('status')=='running' and t.get('worker')==worker_name and t['id']!=task['id'] for t in all_tasks(rest)):raise Problem(409,'此執行端已有執行中的任務')
             remaining=round(task['budget_usd']-task['cost_usd'],6)
             if remaining<0.01:raise Problem(409,'任務預算已用完')
             run_budget=body.get('run_budget_usd',remaining)
@@ -214,6 +234,7 @@ def mutate(body, actor, rest, worker=False):
             event(task,actor,'重派：'+note)
         elif operation=='approve':
             if task['status']!='review':raise Problem(409,'只有待驗收成果可以結案')
+            if task.get('worker') and actor==task.get('worker'):raise Problem(403,'執行者不能驗收自己的任務')
             checks=body.get('checks')
             if not isinstance(checks,list) or len(checks)!=len(task['criteria']) or any(x is not True for x in checks):raise Problem(400,'請逐項確認所有驗收條件')
             task.update(status='approved',checks=checks,reviewed_by=actor,reviewed_at=iso(),current_step='驗收完成')
@@ -251,8 +272,8 @@ def handle(action, body, actor, rest, worker=False):
             if task['execution']!='ai':raise Problem(403,'執行端僅可讀取 AI 任務')
             return 200,{'task':public(task)}
         if worker and body.get('operation')=='online':
-            state={'at':iso(),'name':text(body.get('worker'),100,'執行端',True),'mode':'claude','current_task':body.get('current_task') or None,'pause_reason':'daily_budget' if body.get('pause_reason')=='daily_budget' else '','daily_budget_usd':body.get('daily_budget_usd')}
-            st,rows=rest('/admin_settings?on_conflict=key',method='POST',body=[{'key':WORKER_KEY,'value':json.dumps(state,ensure_ascii=False),'updated_at':iso()}],prefer='resolution=merge-duplicates,return=representation')
+            state={'at':iso(),'name':text(body.get('worker'),100,'執行端',True),'mode':'grok' if is_grok(actor) else 'claude','current_task':body.get('current_task') or None,'pause_reason':'daily_budget' if body.get('pause_reason')=='daily_budget' else '','daily_budget_usd':body.get('daily_budget_usd')}
+            st,rows=rest('/admin_settings?on_conflict=key',method='POST',body=[{'key':worker_key(actor),'value':json.dumps(state,ensure_ascii=False),'updated_at':iso()}],prefer='resolution=merge-duplicates,return=representation')
             if st not in (200,201):raise Problem(503,'執行端狀態無法回報')
             return 200,{'ok':True}
         if action=='admin_office_tasks_list' or worker and body.get('operation')=='list':
@@ -260,9 +281,9 @@ def handle(action, body, actor, rest, worker=False):
             today=(now()+dt.timedelta(hours=8)).date()
             committed=sum(t.get('cost_usd',0)+t.get('reserved_usd',0) for t in tasks if (dt.datetime.fromisoformat(t['updated_at'])+dt.timedelta(hours=8)).date()==today)
             all_by_id={t['id']:t for t in tasks}
-            if worker:tasks=[t for t in tasks if t['status']=='queued' and t['execution']=='ai']
+            if worker:tasks=[t for t in tasks if t['status']=='queued' and t['execution']=='ai' and executor_allowed(t,actor)]
             tasks.sort(key=lambda t:t['created_at'],reverse=not worker)
-            st,rows=rest('/admin_settings?select=value&key=eq.'+WORKER_KEY)
+            st,rows=rest('/admin_settings?select=value&key=eq.'+(worker_key(actor) if worker else WORKER_KEY))
             worker_state={}
             if st==200 and rows:
                 try:worker_state=json.loads(rows[0]['value'])
