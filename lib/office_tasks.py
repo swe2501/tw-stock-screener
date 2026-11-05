@@ -234,7 +234,7 @@ def mutate(body, actor, rest, worker=False):
             event(task,actor,'重派：'+note)
         elif operation=='approve':
             if task['status']!='review':raise Problem(409,'只有待驗收成果可以結案')
-            if task['execution']=='ai' and task.get('worker') and actor==task.get('worker'):raise Problem(403,'執行者不能驗收自己的任務')
+            if task.get('worker') and actor==task.get('worker'):raise Problem(403,'執行者不能驗收自己的任務')
             checks=body.get('checks')
             if not isinstance(checks,list) or len(checks)!=len(task['criteria']) or any(x is not True for x in checks):raise Problem(400,'請逐項確認所有驗收條件')
             task.update(status='approved',checks=checks,reviewed_by=actor,reviewed_at=iso(),current_step='驗收完成')
