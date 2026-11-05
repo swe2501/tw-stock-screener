@@ -1,0 +1,16 @@
+.market-draw-tools{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:12px 0;color:var(--text-muted);font-size:12px}
+.market-draw-tools button{font:inherit!important;font-size:12px!important;padding:6px 10px!important;min-height:30px;border:1px solid var(--border)!important;border-radius:8px!important;background:var(--surface2)!important;color:var(--text)!important;box-shadow:none!important;cursor:pointer;transition:background .16s,color .16s}
+.market-draw-tools button[aria-pressed=true]{background:rgba(205,174,103,.15)!important;color:#d6b96e!important;border-color:rgba(205,174,103,.5)!important}
+:root[data-theme=light] .market-draw-tools button[aria-pressed=true]{background:rgba(62,130,181,.09)!important;color:#367eaf!important;border-color:rgba(62,130,181,.4)!important}
+.market-draw-tools button:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+.market-draw-hint{margin-left:auto;font-size:11px;padding:4px 0}
+.market-draw-host{position:relative;--market-draw-ink:#d3bd87;--market-draw-selected:#f5d76b;--market-draw-halo:#13202c}
+:root[data-theme=light] .market-draw-host{--market-draw-ink:#526d84;--market-draw-selected:#337daf;--market-draw-halo:#fff}
+.market-draw-layer{position:absolute;left:0;top:0;z-index:4;pointer-events:none;overflow:hidden}
+.market-draw-menu{position:absolute;z-index:8;padding:5px;width:100px;background:var(--surface);border:1px solid var(--border);border-radius:9px;box-shadow:0 8px 24px #0002}
+.market-draw-menu[hidden]{display:none}
+.market-draw-menu button{display:block;width:100%;font-size:12px;padding:7px;border:0;border-radius:5px;background:transparent;color:var(--text);text-align:left}
+.market-draw-menu button:hover{background:var(--surface2)}
+.market-draw-menu button:disabled{opacity:.4}
+#chartSearchBox .gs-sd-item[data-code="stwn&"],#chartSearchBox .gs-sd-item[data-code="wtx&"]{grid-template-columns:84px minmax(100px,1fr) 43px!important}
+#chartSearchBox .gs-sd-item[data-code="stwn&"] .gs-sd-code{white-space:normal;line-height:1.45;font-size:9px!important;overflow-wrap:anywhere}
