@@ -2328,19 +2328,20 @@
         if(cl===ql){ce.push(it);seen[c]=1;} else if(cl.indexOf(ql)===0){cp.push(it);seen[c]=1;}
         else if(nl===ql){ne.push(it);seen[c]=1;} else if(nl.indexOf(ql)>=0||cl.indexOf(ql)>=0){nn.push(it);seen[c]=1;} }
       function s(a,b){return a.code<b.code?-1:1;} cp.sort(s); nn.sort(s);
-      return ce.concat(cp,ne,nn).slice(0,20); }
+      return ce.concat(window.AcademyMarketSearch?.match(q)||[],cp,ne,nn).slice(0,20); }
     function render(){ if(!drop)return; if(!list.length){drop.hidden=true; if(inp)inp.setAttribute('aria-expanded','false'); return;}
       drop.innerHTML=list.map(function(it,i){
-        var ind=(window._indLabel&&window._indLabel(it.code))||'';
+        var ind=it.key?'指數／市場':(window._indLabel&&window._indLabel(it.code))||'';
         var mk=(window._mktLabel&&window._mktLabel(it.code))||'';
         var tag=ind?'<span class="gs-sd-ind">'+ind+'</span>':'';
         var mkt=(window._isEtf&&window._isEtf(it.code)?'<span class="gs-sd-mkt etf">ETF</span>':'')+(mk==='上櫃'?'<span class="gs-sd-mkt otc">上櫃</span>':(mk==='上市'?'<span class="gs-sd-mkt twse">上市</span>':''));
-        return '<div class="gs-sd-item'+(i===sel?' on':'')+'" role="option" data-code="'+it.code+'"><span class="gs-sd-code">'+it.code+'</span><span class="gs-sd-name">'+(it.name||'')+'</span>'+tag+mkt+'</div>';
+        return '<div class="gs-sd-item'+(i===sel?' on':'')+'" role="option" data-code="'+it.code+'"><span class="gs-sd-code">'+(it.displayCode||it.code)+'</span><span class="gs-sd-name">'+(it.name||'')+'</span>'+tag+mkt+'</div>';
       }).join(''); drop.hidden=false; if(inp)inp.setAttribute('aria-expanded','true'); }
-    function open(code){ if(drop)drop.hidden=true; if(window._openStock)window._openStock(String(code), (window._names&&window._names[code])||''); }
-    function oninput(){ if(!inp)return; var run=function(){ list=match(inp.value); sel=-1; render(); }; if(!window._names){ window._loadNames&&window._loadNames(run); } else run(); }
+    function open(code){ if(drop)drop.hidden=true; if(window.AcademyMarketSearch?.open(code))return; if(window._openStock)window._openStock(String(code), (window._names&&window._names[code])||''); }
+    function oninput(){ if(!inp)return; var run=function(){ list=match(inp.value); sel=-1; render(); }; run(); if(!window._names){ window._loadNames&&window._loadNames(run); } }
     window._topSearchGo=function(){ if(!inp)return; var q=(inp.value||'').trim(); if(!q)return;
       if(sel>=0&&list[sel]){open(list[sel].code);return;}
+      var market=window.AcademyMarketSearch?.match(q);if(market?.length){open(market[0].code);return;}
       var run=function(){ var l=match(q); if(l.length)open(l[0].code); else if(/^\d/.test(q))open(q.split(/\s+/)[0]); };
       if(!window._names){window._loadNames&&window._loadNames(run);} else run(); };
     document.addEventListener('DOMContentLoaded',function(){
@@ -2719,7 +2720,7 @@
           <p class="gs-deck">正在整理今日盤後市場、法人與槓桿資料…</p>
           <form class="gs-search" onsubmit="return false;">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34"></path><circle cx="11" cy="11" r="8"></circle></svg>
-            <input id="hpSearch" type="search" name="tw-stock-q2" placeholder="輸入代號或股名（支援上市／上櫃、模糊搜尋）" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="hpSearchDrop">
+            <input id="hpSearch" type="search" name="tw-stock-q2" placeholder="輸入股票、指數名稱或代號" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="hpSearchDrop">
             <button id="hpSearchBtn" type="button">搜尋</button>
             <div id="hpSearchDrop" class="gs-search-drop" role="listbox" hidden></div>
           </form>
@@ -9300,7 +9301,7 @@
       }
       function sc(a,b){return a.code<b.code?-1:1;}
       byCodePfx.sort(sc);byName.sort(sc);
-      return byCodeExact.concat(byCodePfx,byNameExact,byName).slice(0,20);
+      return byCodeExact.concat(window.AcademyMarketSearch?.match(q)||[],byCodePfx,byNameExact,byName).slice(0,20);
     }
     window._academyStockMatches=_hpMatch;
     function _hpRenderDrop(){
@@ -9309,21 +9310,22 @@
       var h='';
       _hpList.forEach(function(it,i){
         var mk=(window._isEtf&&window._isEtf(it.code)?'<span class="gs-sd-mkt etf">ETF</span>':'')+(it.mkt==='otc'?'<span class="gs-sd-mkt otc">上櫃</span>':(it.mkt==='twse'?'<span class="gs-sd-mkt twse">上市</span>':''));
-        var ind=(window._indLabel&&window._indLabel(it.code))||'';
+        var ind=it.key?(it.international?'國際指數':'指數／市場'):(window._indLabel&&window._indLabel(it.code))||'';
         var indtag=ind?'<span class="gs-sd-ind">'+ind+'</span>':'';
-        h+='<div class="gs-sd-item'+(i===_hpSel?' on':'')+'" role="option" data-code="'+it.code+'" data-name="'+(it.name||'').replace(/"/g,'&quot;')+'"><span class="gs-sd-code">'+it.code+'</span><span class="gs-sd-name">'+(it.name||'')+'</span>'+indtag+mk+'</div>';
+        h+='<div class="gs-sd-item'+(i===_hpSel?' on':'')+'" role="option" data-code="'+it.code+'" data-name="'+(it.name||'').replace(/"/g,'&quot;')+'"><span class="gs-sd-code">'+(it.displayCode||it.code)+'</span><span class="gs-sd-name">'+(it.name||'')+'</span>'+indtag+mk+'</div>';
       });
       box.innerHTML=h; box.hidden=false; if(inp)inp.setAttribute('aria-expanded','true');
     }
-    function _hpOpen(code,name){ el('hpSearchDrop').hidden=true; if(typeof window._openStock==='function')window._openStock(String(code),name||((window._names&&window._names[code])||'')); }
+    function _hpOpen(code,name){ el('hpSearchDrop').hidden=true; if(window.AcademyMarketSearch?.open(code))return; if(typeof window._openStock==='function')window._openStock(String(code),name||((window._names&&window._names[code])||'')); }
     function _hpInput(){
       var inp=el('hpSearch'); if(!inp)return;
       var run=function(){ _hpList=_hpMatch(inp.value); _hpSel=-1; _hpRenderDrop(); };
-      if(!window._names){ window._loadNames(run); } else run();
+      run(); if(!window._names){ window._loadNames(run); }
     }
     function doSearch(){
       var inp=el('hpSearch'); var q=(inp&&inp.value||'').trim(); if(!q)return;
       if(_hpSel>=0&&_hpList[_hpSel]){ _hpOpen(_hpList[_hpSel].code,_hpList[_hpSel].name); return; }
+      var market=window.AcademyMarketSearch?.match(q);if(market?.length){_hpOpen(market[0].code,market[0].name);return;}
       var run=function(){ var list=_hpMatch(q); if(list.length){ _hpOpen(list[0].code,list[0].name); } else if(/^\d/.test(q)){ _hpOpen(q.split(/\s+/)[0],''); } };
       if(!window._names){ window._loadNames(run); } else run();
     }
@@ -11612,6 +11614,7 @@
       if (window._names) paint(); else if (window._loadNames) window._loadNames(paint);
     }
     function _setToolbarForCode(sym) {
+      for(const id of ['hourlyBtn','trendBtn']){const b=document.getElementById(id);if(b){b.disabled=!!window.AcademyMarketSearch?.historyOnly(sym);b.title=b.disabled?'此來源提供日線開高低收，暫無分時資料':'';}}
       const mk = document.getElementById('mkPanel'); if (mk) mk.style.display = (sym === '^TWII') ? 'none' : '';   // 大盤本身不疊大盤
     }
 
@@ -14445,6 +14448,11 @@
     }
 
     function openIndexChart(sym, name) {
+      const modal=document.getElementById('chartModal');
+      window.AcademyChartListNav?.open(String(sym),false,modal.classList.contains('chart-analysis-only')?{analysisOnly:true}:null);
+      _scNavActive=false;_updateChartNav(sym);_stopRealtimeUpdates();
+      _brokerEntriesRaw=[];_brokerChecked=null;_catalystEvents=[];currentIndustry='';currentPrice=0;
+      const priceTag=document.getElementById('chartPriceTag');if(priceTag)priceTag.innerHTML='';
       prevCode = ''; prevName = '';
       currentCode = sym; currentName = name;
       document.getElementById('modalTitle').textContent = name;
@@ -14906,8 +14914,7 @@
       window._academyChartSnapshot={code:currentCode,period:subtitle,url};
       const requestId=++_chartRequestId;
       _chartLoading();
-      fetch(url)
-        .then(r => r.json())
+      (window.AcademyMarketSearch?window.AcademyMarketSearch.fetchChart(currentCode,url):fetch(url).then(r=>r.json()))
         .then(data => {
           if(requestId!==_chartRequestId||!document.getElementById('chartModal').classList.contains('open'))return;
           if (data.error || !data.data || data.data.length === 0) {
@@ -14922,7 +14929,7 @@
           const first = _fmtT(data.data[0].time);
           const last  = _fmtT(data.data[data.data.length - 1].time);
           const subtitleEl = document.getElementById('modalSubtitle');
-          subtitleEl.textContent = `${subtitle} ・ ${first} ～ ${last}`;
+          subtitleEl.textContent = `${subtitle} ・ ${first} ～ ${last}`+(data.volume_unavailable?' ・ 未提供成交量':'')+(data.omitted?' ・ 部分日期缺少開高低資料':'');
           const industryTag = document.getElementById('industryTag');
           if (data.industry) {
             industryTag.textContent = data.industry;
@@ -14930,11 +14937,12 @@
           } else {
             industryTag.style.display = 'none';
           }
-          if (data.name && data.name !== currentCode && !String(currentCode).startsWith('^')) {
+          if (data.name && data.name !== currentCode && !String(currentCode).startsWith('^') && !window.AcademyMarketSearch?.find(currentCode)) {
             currentName = data.name;
             document.getElementById('modalTitle').textContent = `${currentCode}　${data.name}`;
           }
           // 指數(^開頭)保留 openIndexChart 設定的中文標題，不被 Yahoo 英文名覆蓋（2026-10-02）
+          document.getElementById('chartModal').classList.toggle('market-no-volume',!!data.volume_unavailable);
           renderTVChart(data.data, data.events || []);
         })
         .catch(() => {
@@ -18513,7 +18521,7 @@
 <script src="assets/member-leek-3d.js" defer></script>
 <script src="assets/member-goal-art.js" defer></script>
 <script src="assets/search-discovery.js" defer></script>
-<script src="assets/site-search.js?v=arrow-nav2" defer></script>
+<script src="assets/site-search.js?v=market2-arrow-nav2" defer></script>
 <script src="assets/member-derivatives-catalog.js" defer></script>
 <script src="assets/member-trade-ui.js?v=listnav-service1" defer></script>
 <script src="assets/member-journey.js?v=screen-receipt1" defer></script>
@@ -18618,7 +18626,7 @@
 <link rel="stylesheet" href="assets/pristine.css?v=4">
 <script src="assets/pristine-snapshot.js?v=20261105" defer></script>
 <script src="assets/pristine.js?v=4" defer></script>
-<link rel="stylesheet" href="assets/market-chart-tools.css?v=1">
-<script src="assets/market-chart-tools.js?v=1" defer></script>
+<link rel="stylesheet" href="assets/market-chart-tools.css?v=3">
+<script src="assets/market-chart-tools.js?v=3" defer></script>
 </body>
 </html>

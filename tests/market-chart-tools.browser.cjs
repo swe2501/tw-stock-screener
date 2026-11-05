@@ -11,11 +11,26 @@ const rows=Array.from({length:320},(_,i)=>{const date=new Date(Date.UTC(2025,0,1
    if(u.pathname.endsWith('/api/chart'))return route.fulfill({json:{data:rows}});
    if(u.pathname.endsWith('/index_history')||u.pathname.endsWith('/taiex_daily'))return route.fulfill({json:rows});return route.fulfill({json:[]});});
   await page.goto('https://market.fixture.test/');await page.waitForFunction(()=>window.AcademyMarketDrawing&&window._openSeriesChart);
-  await page.evaluate(()=>{document.querySelectorAll('.brand-arrival,#siteGate').forEach(e=>e.remove());document.getElementById('chartModal').classList.add('open');window._names={'2330':'台積電'};});
-  for(const [q,code] of [['TSE.TW','^TWII'],['OTC.TW','two'],['FITX*1.TF','wtx&'],['.10088','wtx&'],['VIX.TF','vixtwn'],['TWD.FX','TWD=X'],['SGX FTSE TAIWAN','stwn&']]){
+  await page.evaluate(()=>{document.querySelectorAll('.brand-arrival,#siteGate').forEach(e=>e.remove());document.getElementById('homeView').style.display='block';window._names={'2330':'台積電'};});
+  async function main(code){await page.waitForFunction(code=>{const b=window.AcademyChartBridge?.get();return b?.code===code&&b.chart&&b.series&&b.candles?.length;},code);assert.equal(await page.locator('#seriesChartDialog,#marketTrainDialog').count(),0,'search must reuse main K chart');}
+  const queries=[['TSE.TW','^TWII'],['OTC.TW','two'],['FITX*1.TF','wtx&'],['tex','wtx&'],['.10088','wtx&'],['VIX.TF','vixtwn'],['TWD.FX','TWD=X'],['SGX FTSE TAIWAN','stwn&'],['.DJI','^DJI'],['.SPX','^GSPC'],['.IXIC','^IXIC'],['.NDX','^NDX'],['.SOX','^SOX'],['.VIX','^VIX'],['.N225','^N225']];
+  for(const [q,code] of queries){await page.locator('#hpSearch').fill(q);assert.equal(await page.locator('#hpSearchDrop [data-code]').first().getAttribute('data-code'),code,'home '+q);}
+  for(const [q,code] of queries){await page.evaluate(q=>{const input=document.getElementById('topStockSearch');input.value=q;input.dispatchEvent(new Event('input',{bubbles:true}));},q);assert.equal(await page.locator('#topSearchDrop [data-code]').first().getAttribute('data-code'),code,'legacy header '+q);}
+  await page.locator('#hpSearch').fill('tex');await page.locator('#hpSearchBtn').click();await main('wtx&');assert.match(await page.locator('#modalTitle').innerText(),/台指期/);await page.evaluate(()=>closeChart());
+  await page.locator('#hpSearch').fill('.SPX');await page.locator('#hpSearch').press('Enter');await main('^GSPC');assert.match(await page.locator('#modalTitle').innerText(),/標普500/);await page.evaluate(()=>closeChart());
+  await page.locator('.site-search input').fill('.SOX');await page.waitForSelector('#ss-results [role=option]');assert.match(await page.locator('#ss-results').innerText(),/費城半導體/);await page.locator('#ss-results [role=option]').first().click();await main('^SOX');assert.match(await page.locator('#modalTitle').innerText(),/費城半導體/);await page.evaluate(()=>closeChart());
+  await page.evaluate(()=>document.getElementById('chartModal').classList.add('open'));
+  for(const [q,code] of queries){
    await page.locator('#chartStockSearch').fill(q);assert.equal(await page.locator('#chartSearchDrop [data-code]').first().getAttribute('data-code'),code,q);
   }
   await page.locator('#chartStockSearch').fill('OTC.TW');await page.locator('#chartStockSearch').press('Enter');
+  await main('two');assert.equal(await page.locator('#hourlyBtn').isDisabled(),true);await page.locator('#weeklyBtn').click();await main('two');
+  await page.locator('#chartStockSearch').fill('.VIX');await page.locator('#chartStockSearch').press('Enter');await main('^VIX');assert.equal(await page.locator('#hourlyBtn').isDisabled(),false);
+  await page.locator('#chartStockSearch').fill('VIX.TF');await page.locator('#chartStockSearch').press('Enter');await main('vixtwn');
+  await page.locator('#chartStockSearch').fill('SGX FTSE TAIWAN');await page.locator('#chartStockSearch').press('Enter');await main('stwn&');
+  await page.evaluate(()=>window._pickDraw('seg'));const mainHost=await page.locator('#chartContainer').boundingBox();await page.mouse.move(mainHost.x+180,mainHost.y+100);await page.mouse.down();await page.mouse.move(mainHost.x+300,mainHost.y+160,{steps:8});await page.mouse.up();assert.ok(await page.evaluate(()=>window.AcademyChartBridge.get().drawings.length>0),'same K chart drawing tools work on index');
+  await page.locator('#chartStockSearch').fill('.DJI');await page.locator('#chartStockSearch').press('Enter');await main('^DJI');assert.equal(await page.evaluate(()=>window.AcademyChartBridge.get().tool),'seg','drawing tool remains active across search');assert.equal(await page.evaluate(()=>window.AcademyChartBridge.get().drawings.length),0,'index drawings remain isolated by instrument');
+  await page.evaluate(()=>{closeChart();window._openKpiChart('櫃買指數');});
   await page.waitForSelector('#seriesChartDialog .market-draw-tools');const host=page.locator('#seriesChartDialog .vix-history-chart');await host.scrollIntoViewIfNeeded();
   const box=await host.boundingBox(),p1={x:box.x+220,y:box.y+140},p2={x:box.x+400,y:box.y+190};
   await page.locator('#seriesChartDialog [data-draw="seg"]').click();await page.mouse.click(p1.x,p1.y);await page.mouse.click(p2.x,p2.y);
