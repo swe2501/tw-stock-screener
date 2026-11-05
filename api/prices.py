@@ -258,6 +258,9 @@ class handler(_SiteSearchMixin, BaseHTTPRequestHandler):
             self.send_response(200);self.send_header('Content-Type','application/json; charset=utf-8')
             self.send_header('Cache-Control',('public, max-age=0, s-maxage=15' if kind.endswith('_rt') else 'public, max-age=30, s-maxage=120') if rows and not rows[0].get('payload',{}).get('error') else 'no-store')
             self.send_header('Access-Control-Allow-Origin','*');self.send_header('X-Content-Type-Options','nosniff');self.end_headers();self.wfile.write(body);return
+        if (qs.get('action') or [''])[0] == 'pristine':
+            from lib.pristine import overview
+            return self._site_search_json(200, overview())
         codes_str = (qs.get("codes") or [""])[0]
         codes = [c.strip() for c in codes_str.split(",") if c.strip()][:50]
         if not codes:

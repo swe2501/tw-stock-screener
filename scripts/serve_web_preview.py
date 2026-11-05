@@ -16,6 +16,8 @@ ROOT=Path(__file__).resolve().parents[1]
 
 
 def load_focus_reader(root=ROOT):
+    import sys
+    if str(root) not in sys.path: sys.path.insert(0, str(root))
     source=(root/'apps/web/index.html').read_text(encoding='utf-8-sig')
     base=re.search(r"const SIG_SB_URL\s*=\s*'([^']+)'",source).group(1)
     anon=re.search(r"const SIG_SB_ANON\s*=\s*'([^']+)'",source).group(1)
