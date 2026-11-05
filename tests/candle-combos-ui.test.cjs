@@ -32,7 +32,9 @@ test('chart markers use compact theme-aware glass labels without repeated discla
 });
 
 test('chart modal pauses hidden background animations while open', () => {
-  assert.match(css, /body:has\(> #chartModal\.open\) > :not\(#chartModal\)[^{]*\{animation-play-state:paused!important\}/);
+  assert.match(css, /body\.cc-chart-open > :not\(#chartModal\)[^{]*\{animation-play-state:paused!important\}/);
+  assert.doesNotMatch(css.replace(/\/\*[\s\S]*?\*\//g, ''), /body:has\(/);   // body:has 會讓每次畫面變動都整頁重算樣式
+  assert.match(js, /classList\.toggle\('cc-chart-open', on\)/);
 });
 
 test('green-box strategy details are removed while the remaining hover guidance stays', () => {

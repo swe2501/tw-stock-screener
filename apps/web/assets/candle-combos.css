@@ -11,11 +11,12 @@ html[data-theme="dark"]{--cc-yellow:#e4c16e;--cc-yellow-ink:#e8c871;--cc-label-b
 .cc-label a{color:inherit;text-decoration:none;font-weight:750;pointer-events:auto;cursor:pointer}
 .cc-label a:hover,.cc-label a:focus-visible{color:var(--cc-yellow-ink);outline:none}
 :root[data-ui-skin="glass"] .cc-label{background:color-mix(in srgb,var(--glass-fill-strong) 94%,transparent);border-color:color-mix(in srgb,var(--glass-line) 88%,var(--cc-yellow) 12%);box-shadow:0 7px 20px rgba(20,42,66,.1),inset 0 1px var(--glass-highlight)}
-/* 效能：K 線視窗開著時，背後頁面的呼吸燈／掃光動畫看不到卻每幀重畫（還要被整片模糊），先暫停，關窗自動恢復 */
-body:has(> #chartModal.open) > :not(#chartModal),
-body:has(> #chartModal.open) > :not(#chartModal) *,
-body:has(> #chartModal.open) > :not(#chartModal) ::before,
-body:has(> #chartModal.open) > :not(#chartModal) ::after{animation-play-state:paused!important}
+/* 效能：K 線視窗開著時，背後頁面的呼吸燈／掃光動畫看不到卻每幀重畫（還要被整片模糊），先暫停，關窗自動恢復。
+   用 candle-combos.js 切 body class，不用 body:has()（:has 會讓每次畫面變動都整頁重算樣式） */
+body.cc-chart-open > :not(#chartModal),
+body.cc-chart-open > :not(#chartModal) *,
+body.cc-chart-open > :not(#chartModal) ::before,
+body.cc-chart-open > :not(#chartModal) ::after{animation-play-state:paused!important}
 
 /* 開關：與「K棒訊息」同款 */
 #chartModal .chart-summary-actions #chartComboToggle{border:0!important;background:transparent!important;box-shadow:none!important;outline:none!important;color:var(--text-muted);font:inherit;font-size:11px;white-space:nowrap;padding:6px 3px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:color .18s ease,text-shadow .18s ease}
