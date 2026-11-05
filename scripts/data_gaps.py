@@ -62,8 +62,9 @@ LATEST = [
 # 2026-11-03 首頁 KPI 欄位檢查：market_indicators 以日曆日記錄、不適合逐日查列，改查「交易日的關鍵欄位有沒有值」。
 # 教訓：16:00 寫匯率先建了當日列、vix 空白 → 首頁台指VIX 顯示「—」沒人發現。
 # 10/30 之前資料日標錯（過午夜標成隔天），只從修正後開始查，避免舊資料一直誤報。
-KPI = ("market_indicators", "date", "首頁台指VIX／匯率", ("vix", "usdtwd"),
-       "chip_brief.py 盤後（vix_close_today）／market_indicators.py")
+# 2026-11-05 加富台指：同樣是 16:00 先建當日列、富台指空白 → 首頁富台指卡「資料更新中」（11/02～11/05 每晚）沒有警示
+KPI = ("market_indicators", "date", "首頁台指VIX／匯率／富台指", ("vix", "usdtwd", "futai_close"),
+       "chip_brief.py 盤後（vix_close_today／futai_close_today）／market_indicators.py")
 KPI_SINCE = "2026-11-02"
 
 

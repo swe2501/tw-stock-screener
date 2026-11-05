@@ -309,6 +309,29 @@ def main():
         # 2026-11-03 台指VIX 也在盤後寫當日收盤：原本只有晚上 market_indicators 讀官方月檔（慢一個交易日），
         # 上面寫匯率先建了當日列、vix 空白 → 首頁 VIX 卡顯示「—」
         vix_close_today(env, iso)
+        # 2026-11-05 富台指也在盤後寫當日日盤收盤：上面先建了當日列，富台指要等夜間 market_indicators 才補，
+        # 16:00～半夜首頁富台指卡顯示「資料更新中」（11/02 起每天）
+        futai_close_today(env, iso)
+
+
+def futai_close_today(env, iso):
+    """當日富台指日盤收盤（盤中排程寫的 page_cache quote_SGX，玩股網 13:45 收盤）→ market_indicators.futai_close／futai_prev。
+    只補空白：夜間 market_indicators 會再寫，不覆蓋既有值。"""
+    try:
+        st, cur = bs._sb(env, "/market_indicators", params=[("select", "futai_close"), ("date", f"eq.{iso}")])
+        if st == 200 and cur and cur[0].get("futai_close") is not None:
+            print(f"富台指 {iso} 已有 {cur[0]['futai_close']}，不覆蓋"); return None
+        st, rows = bs._sb(env, "/page_cache", params=[("select", "payload"), ("kind", "eq.quote_SGX")])
+        p = (rows or [{}])[0].get("payload") if st == 200 else None
+        if isinstance(p, str):
+            p = json.loads(p)
+    except Exception as e:                                      # noqa: BLE001
+        print(f"[warn] 富台指 {iso} 讀取失敗：{str(e)[:80]}"); return None
+    if not isinstance(p, dict) or p.get("date") != iso or p.get("session") != "day" or not p.get("close") or not p.get("prev"):
+        print(f"[warn] 富台指 {iso} 沒有當日日盤報價（quote_SGX={p and {k: p.get(k) for k in ('date', 'session', 'close')}}）"); return None
+    print(f"富台指 {iso} 日盤收盤 {p['close']}（前一日 {p['prev']}）→ market_indicators status "
+          f"{_upsert_table(env, 'market_indicators', 'date', {'date': iso, 'futai_close': p['close'], 'futai_prev': p['prev']})}")
+    return p["close"]
 
 
 def vix_close_today(env, iso):
