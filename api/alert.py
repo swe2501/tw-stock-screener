@@ -1,5 +1,5 @@
 from http.server import BaseHTTPRequestHandler
-import json, os, urllib.request, urllib.error, urllib.parse, traceback
+import json, os, urllib.request, urllib.error, urllib.parse
 from datetime import datetime, timezone, timedelta
 
 SUPABASE_URL        = os.environ.get("SUPABASE_URL", "")
@@ -518,6 +518,15 @@ def _run_sell_alert(to_email):
     return {"ok": sent, "sent": sent, "stocks": n_stock, "events": n_ev, "result": result}
 
 
+def _verify_admin_email(token):
+    """管理員判定：回傳 email 字串為管理員，否則 None。供 sell/test 閘門使用。"""
+    try:
+        from auth import _verify_admin
+    except ImportError:
+        from api.auth import _verify_admin
+    return _verify_admin(token)
+
+
 # ── HTTP handler ───────────────────────────────────────────────
 
 class handler(BaseHTTPRequestHandler):
@@ -525,7 +534,7 @@ class handler(BaseHTTPRequestHandler):
 
     def _cors(self):
         self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, x-cron-secret")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 
     def _json(self, code, data):
@@ -570,17 +579,21 @@ class handler(BaseHTTPRequestHandler):
                 mailed, _ = _sa_send(html, "總管｜" + str(em.get("subject") or "排程巡查")[:80], ALERT_EMAIL)
             return self._json(200, {"ok": True, "queued": queued, "mailed": mailed})
         except Exception:
-            return self._json(500, {"error": traceback.format_exc()[-1500:]})
+            return self._json(500, {"error": "internal error"})
 
     def _handle(self):
         if "kind=boss_" in self.path:
             return self._boss()
-        # Auth: accept user JWT or CRON_SECRET
+        import hmac
+        # Auth: user JWT, or cron via Authorization: Bearer <CRON_SECRET> only.
+        # Do not trust x-vercel-cron / x-cron-secret headers as cron proof.
         auth_header = self.headers.get("Authorization", "").strip()
-        cron_header  = self.headers.get("x-vercel-cron", "")
-        cron_secret_hdr = self.headers.get("x-cron-secret", "")
-
-        is_cron = bool(cron_header) or (CRON_SECRET and cron_secret_hdr == CRON_SECRET)
+        is_cron = False
+        secret = CRON_SECRET or ""
+        if secret and auth_header.startswith("Bearer "):
+            got = auth_header[7:]
+            if len(got) == len(secret) and hmac.compare_digest(got, secret):
+                is_cron = True
 
         if is_cron:
             # Cron uses service key to bypass RLS
@@ -609,11 +622,14 @@ class handler(BaseHTTPRequestHandler):
         streak_days = int(body.get("streak_days", os.environ.get("ALERT_STREAK_DAYS", "3")))
 
         # 🔻 出場追蹤 Email（cron 走 /api/alert?kind=sell，或 body {"kind":"sell"}）
+        # 僅 cron 或管理員；收件人固定 ALERT_EMAIL，不接受 body.email
         if body.get("kind") == "sell" or "kind=sell" in self.path:
+            if not (is_cron or _verify_admin_email(token)):
+                return self._json(403, {"error": "forbidden"})
             try:
-                self._json(200, _run_sell_alert(to_email))
+                self._json(200, _run_sell_alert(ALERT_EMAIL))
             except Exception:
-                self._json(500, {"error": traceback.format_exc()})
+                self._json(500, {"error": "internal error"})
             return
 
         # ⚠️ 排程健康警示：本機 job_health.py 偵測到問題時，用 service key 推訊息來寄信
@@ -630,24 +646,26 @@ class handler(BaseHTTPRequestHandler):
                 sent, result = _sa_send(html, subject, to_email)
                 self._json(200, {"sent": sent, "result": result})
             except Exception:
-                self._json(500, {"error": traceback.format_exc()})
+                self._json(500, {"error": "internal error"})
             return
 
-        # 測試寄信模式
+        # 測試寄信模式：僅管理員；收件人固定 ALERT_EMAIL
         if body.get("test"):
+            if not _verify_admin_email(token):
+                return self._json(403, {"error": "forbidden"})
             subject = body.get("subject", "台股警示系統 — 測試信件")
             try:
-                sent, result = _send_test_email(to_email, subject)
+                sent, result = _send_test_email(ALERT_EMAIL, subject)
                 self._json(200, {"sent": sent, "result": result})
             except Exception:
-                self._json(500, {"error": traceback.format_exc()})
+                self._json(500, {"error": "internal error"})
             return
 
         try:
             result = _run_alert(token, to_email, streak_days)
             self._json(200, result)
         except Exception:
-            self._json(500, {"error": traceback.format_exc()})
+            self._json(500, {"error": "internal error"})
 
     def do_GET(self):
         self._handle()
