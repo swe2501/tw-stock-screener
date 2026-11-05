@@ -410,7 +410,19 @@
     return '<div class="ohlc-signal"><span>K棒訊號</span>' + names.map(n => '<b>' + esc(n) + '</b>').join('') + '</div>';
   }
 
-  function boot() { mountGrid(); mountToggle(); window.AcademyKbarHint?.register(window.AcademyKbarHintExtra); }
+  // K 線視窗開著時在 body 加 class，CSS 用它暫停背後頁面的動畫（見 candle-combos.css）
+  function watchModal() {
+    const m = document.getElementById('chartModal');
+    if (!m) return;
+    const sync = () => {
+      const on = m.classList.contains('open');
+      if (document.body.classList.contains('cc-chart-open') !== on) document.body.classList.toggle('cc-chart-open', on);
+    };
+    sync();
+    new MutationObserver(sync).observe(m, { attributes: true, attributeFilter: ['class'] });
+  }
+
+  function boot() { mountGrid(); mountToggle(); watchModal(); window.AcademyKbarHint?.register(window.AcademyKbarHintExtra); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 
   window.AcademyCandleCombos = { COMBOS, COMMON, SIG, nameOf, rulesHtml, openRules, resultHelp, resultTag, signalTag, signalTipHtml, attach, detach, refresh: schedule, isVisible: () => visible };

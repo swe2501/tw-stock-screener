@@ -8,6 +8,10 @@ for(const node of [document.body,...document.body.children,...document.querySele
 addEventListener('resize',scheduleFooter,{passive:true});
 const placeFooter=()=>{const member=document.body.classList.contains('mc-open')&&document.querySelector('.member-page');const parent=member||document.body;if(footer.parentElement!==parent){parent.append(footer);footer.style.marginTop='24px';}scheduleFooter();};
 placeFooter();new MutationObserver(placeFooter).observe(document.body,{attributes:true,attributeFilter:['class']});
+// 首頁顯示中才鎖橫向捲動（取代 CSS body:has(#homeView…)，那種寫法會拖慢全站，見 brand-footer.css）
+const homeView=document.getElementById('homeView');
+const syncHome=()=>{const on=!!homeView&&!(homeView.getAttribute('style')||'').includes('display: none');if(document.body.classList.contains('fs-home-visible')!==on)document.body.classList.toggle('fs-home-visible',on);};
+syncHome();if(homeView)new MutationObserver(syncHome).observe(homeView,{attributes:true,attributeFilter:['style']});
 
 const dialog=document.createElement('dialog');dialog.className='fs-info-dialog';dialog.setAttribute('aria-labelledby','fs-info-title');dialog.innerHTML='<div><h2 id="fs-info-title"></h2><button type="button" aria-label="關閉網站資訊">×</button></div><section></section>';document.body.append(dialog);let opener=null;
 const info={about:{title:'關於先見',html:`<div class="fs-about-intro"><span>OUR STORY</span><h3>陪認真生活的你，<br>把研究這條路走得更踏實。</h3></div>
