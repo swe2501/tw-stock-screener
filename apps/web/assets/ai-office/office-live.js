@@ -12,7 +12,12 @@ const send=data=>{if(parent!==window)parent.postMessage(data,location.protocol==
 function emitActivity(){
  const current=roles.map(r=>({department:r.department,status:r.status}));const latest=new Map();
  snapshots.forEach(s=>(s.tasks||[]).forEach(t=>{if(!latest.has(t.id)||(t.revision||0)>=(latest.get(t.id).revision||0))latest.set(t.id,t);}));
- latest.forEach(t=>{if(t.status==='running'&&!(t.execution==='ai'&&Date.parse(t.lease_until)<Date.now()))current.push({department:t.department,status:'work'});});
+ latest.forEach(t=>{
+  const interrupted=t.status==='running'&&t.execution==='ai'&&Date.parse(t.lease_until)<Date.now();
+  if(t.status==='running'&&!interrupted)current.push({department:t.department,status:'work'});
+  else if(['queued','review'].includes(t.status))current.push({department:t.department,status:'wait'});
+  else if(['blocked','failed'].includes(t.status)||interrupted)current.push({department:t.department,status:'stuck'});
+ });
  dispatchEvent(new CustomEvent('foresight-office-activity',{detail:current}));
 }
 function decorate(){document.querySelectorAll('.department').forEach(b=>{
@@ -49,7 +54,7 @@ function render(){
  section.querySelector('[data-workroom-refresh]').disabled=pending;
  const footer=content.querySelector('.profile-footer');if(footer)footer.textContent=id===0?'總管是既有排程協調角色，不代表執行長或總經理已自動化。':'此處彙整排程與任務回報；人物動作不代表已領取或完成任務。';
 }
-function requestData(id,force=false){if(parent===window)return;if(!force&&snapshots.has(id)&&Date.now()-snapshots.get(id).received<30000)return;pending=true;send({type:'foresight-office-workroom-request',department:id,request:++request,force});render();}
+function requestData(id,force=false){if(parent===window)return;const snap=snapshots.get(id);const ttl=(!snap||(snap.tasks&&snap.tasks.length)||snap.error)?30000:2000;if(!force&&snap&&Date.now()-snap.received<ttl)return;pending=true;send({type:'foresight-office-workroom-request',department:id,request:++request,force});render();}
 addEventListener('message',event=>{
  if(parent===window||event.source!==parent||(event.origin!==location.origin&&!(location.protocol==='file:'&&['null','file://'].includes(event.origin))))return;
  const msg=event.data;if(!msg)return;

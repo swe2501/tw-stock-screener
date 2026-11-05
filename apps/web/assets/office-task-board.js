@@ -45,7 +45,7 @@ window.OfficeTaskBoard={mount(root,post){
   if(parent){f.elements.title.value=('交接：'+parent.title).slice(0,120);f.elements.brief.value=('前置任務：'+parent.title+'\n已驗收成果：\n'+parent.result).slice(0,10000);f.elements.dependency.value=parent.id;}
   f.elements.execution.onchange=()=>form.querySelector('[data-ot-budget]').hidden=f.elements.execution.value!=='ai';
   f.onsubmit=async e=>{e.preventDefault();if(busy)return;busy=true;const b=f.querySelector('[type=submit]');b.disabled=true;
-   try{const d=new FormData(f);const j=await call('admin_office_tasks_create',{id:creatingId,title:d.get('title'),department:Number(d.get('department')),brief:d.get('brief'),criteria:String(d.get('criteria')).split('\n').map(x=>x.trim()).filter(Boolean),due_date:d.get('due_date'),execution:d.get('execution'),budget_usd:Number(d.get('budget_usd')),depends_on:d.get('dependency')?[d.get('dependency')]:[]});form.close();await refresh();selected=j.task.id;openDetail(j.task);}
+   try{const d=new FormData(f);const j=await call('admin_office_tasks_create',{id:creatingId,title:d.get('title'),department:Number(d.get('department')),brief:d.get('brief'),criteria:String(d.get('criteria')).split('\n').map(x=>x.trim()).filter(Boolean),due_date:d.get('due_date'),execution:d.get('execution'),budget_usd:Number(d.get('budget_usd')),depends_on:d.get('dependency')?[d.get('dependency')]:[]});form.close();await refresh();selected=j.task.id;snapshotAt=0;window.dispatchEvent(new CustomEvent('foresight-office-task-updated',{detail:{department:j.task.department}}));openDetail(j.task);}
    catch(err){form.querySelector('[data-ot-form-message]').textContent=err.message;}finally{busy=false;b.disabled=false;}
   };
   form.showModal();
@@ -78,7 +78,7 @@ window.OfficeTaskBoard={mount(root,post){
  root.querySelector('[data-ot-department]').onchange=e=>{filter=e.target.value;render();};root.querySelector('[data-ot-query]').oninput=e=>{query=e.target.value;render();};
  [form,detail].forEach(d=>d.onclick=e=>{if(e.target.closest('[data-ot-close]'))d.close();});
  return {open:loadDetail,async snapshot(department,force=false){
-   if(force||Date.now()-snapshotAt>30000){if(!snapshotFlight)snapshotFlight=refresh().finally(()=>snapshotFlight=null);if(!await snapshotFlight)return {tasks:[],error:'任務資料暫時無法讀取，請稍後更新。',at:''};snapshotAt=Date.now();}
+   if(force||Date.now()-snapshotAt>30000){if(!snapshotFlight)snapshotFlight=refresh().finally(()=>snapshotFlight=null);if(!await snapshotFlight)return {tasks:[],error:'任務資料暫時無法讀取，請稍後更新。',at:''};const fresh=tasks.filter(t=>department==null||t.department===department);snapshotAt=fresh.length?Date.now():0;}
    const list=tasks.filter(t=>department==null||t.department===department);
    const detailed=[];
    for(let i=0;i<Math.min(list.length,24);i+=3){
