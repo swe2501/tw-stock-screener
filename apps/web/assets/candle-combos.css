@@ -61,5 +61,46 @@ html[data-theme="dark"] #chartModal #chartComboToggle[aria-pressed="true"] .kinf
 @media(max-width:920px){#ccComboGrid{grid-template-columns:repeat(3,minmax(130px,1fr))}}
 @media(max-width:680px){#ccComboGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}}
 @media(max-width:420px){#ccComboGrid{grid-template-columns:1fr}}
+.cc-result{display:flex;align-items:center;flex-wrap:wrap;gap:2px 4px}
+.cc-result-item{display:inline-flex;align-items:center;gap:4px;min-width:0}
+.cc-result-sep{color:var(--text-muted)}
 .cc-result a{color:var(--cc-yellow-ink);text-decoration:none;font-weight:600}
 .cc-result a:hover{text-decoration:underline}
+.cc-result-help-wrap{display:inline-flex;vertical-align:middle;margin-left:8px}
+.cc-result-help.zm4-badge{width:17px;height:17px;min-width:17px;margin:0;padding:1px}
+.cc-result-help.zm4-badge svg{width:10px;height:10px}
+.cc-help{position:relative;display:inline-grid;place-items:center;width:17px;height:17px;min-width:17px;padding:0;border:1px solid color-mix(in srgb,var(--accent) 32%,var(--border));border-radius:50%;background:color-mix(in srgb,var(--accent) 6%,var(--surface));color:color-mix(in srgb,var(--accent) 80%,var(--text));font-family:inherit;font-size:10px;font-weight:800;line-height:1;cursor:help;box-shadow:inset 0 1px rgba(255,255,255,.4);transition:transform .16s ease,border-color .16s ease,background-color .16s ease,box-shadow .16s ease}
+.cc-help::before{content:"";position:absolute;inset:-4px;border-radius:50%}
+.cc-help:hover,.cc-help:focus-visible{outline:none;transform:translateY(-1px);border-color:color-mix(in srgb,var(--accent) 68%,var(--border));background:color-mix(in srgb,var(--accent) 13%,var(--surface));box-shadow:0 3px 9px color-mix(in srgb,var(--accent) 18%,transparent),inset 0 1px rgba(255,255,255,.55)}
+:root[data-ui-skin="glass"] .cc-help{background:color-mix(in srgb,var(--glass-fill-strong) 66%,transparent);border-color:color-mix(in srgb,var(--glass-line) 76%,var(--accent) 24%);box-shadow:inset 0 1px var(--glass-highlight)}
+
+/* 2026-11-05 單根 K 棒訊號：保留滑鼠資訊列，不在圖面自動畫彩色外框。 */
+.ohlc-signal{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;margin-top:6px;padding-top:6px;border-top:1px dashed color-mix(in srgb,var(--border) 80%,transparent);font-size:12px}
+.ohlc-signal span{color:var(--text-muted)}
+.ohlc-signal b{font-weight:650;color:#7c3aed}
+html[data-theme="dark"] .ohlc-signal b{color:#c4b5fd}
+.cc-signal-tag span{color:#7c3aed;font-weight:600}
+html[data-theme="dark"] .cc-signal-tag span{color:#c4b5fd}
+.ks-fields{display:grid;grid-template-columns:repeat(2,190px);justify-content:space-between;gap:20px;width:100%;margin:0 0 18px}
+.ks-fields .field{margin:0}
+.ks-threshold-card{position:relative;display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:space-between;gap:8px;padding:7px 9px;border:1px solid color-mix(in srgb,var(--border) 84%,transparent);border-radius:10px;background:color-mix(in srgb,var(--surface2) 45%,transparent);transition:border-color .18s ease,background-color .18s ease,box-shadow .18s ease}
+.ks-threshold-card:hover,.ks-threshold-card:focus-within{border-color:color-mix(in srgb,var(--accent) 38%,var(--border));background:color-mix(in srgb,var(--accent) 4%,var(--surface));box-shadow:0 7px 18px rgba(29,53,77,.06)}
+.ks-threshold-card label{display:block!important;flex:0 0 auto;margin:0!important;font-size:12px;font-weight:750;line-height:28px;color:var(--text);white-space:nowrap}
+.ks-threshold-input{display:grid;grid-template-columns:minmax(0,1fr) 14px;align-items:center;flex:0 0 72px;width:72px;overflow:hidden;border:1px solid var(--border);border-radius:7px;background:var(--surface)}
+.ks-threshold-card input{box-sizing:border-box;width:100%;height:28px;padding:4px 2px 4px 8px!important;border:0!important;border-radius:0!important;background:transparent!important;font-size:12px!important;font-variant-numeric:tabular-nums;box-shadow:none!important}
+.ks-threshold-input>span{font-size:11px;font-weight:700;color:var(--text-muted)}
+.ks-group{margin-top:14px}.ks-group-title{display:flex;align-items:center;gap:10px;margin:0 0 7px;color:var(--text-muted);font-size:11px;font-weight:700;letter-spacing:.08em;white-space:nowrap}.ks-group-title::after{content:"";height:1px;flex:1;background:color-mix(in srgb,var(--border) 78%,transparent)}
+.sc-panel[data-cat="kbar"] .sc-cbs{display:grid;gap:8px 10px;margin:0;padding:0}
+.sc-panel[data-cat="kbar"] .ks-shape-grid{grid-template-columns:repeat(3,minmax(150px,1fr))}
+.sc-panel[data-cat="kbar"] .ks-direction-grid{grid-template-columns:repeat(2,minmax(160px,1fr));max-width:560px;padding:7px;border-radius:12px;background:color-mix(in srgb,var(--surface2) 48%,transparent)}
+.sc-panel[data-cat="kbar"] .ks-confirm-grid{grid-template-columns:repeat(3,minmax(170px,1fr))}
+.sc-panel[data-cat="kbar"] .sc-cbs .checkbox-row{display:grid;grid-template-columns:18px minmax(0,1fr);align-items:center;gap:7px;min-width:0;min-height:42px;box-sizing:border-box;padding:8px 10px;border:1px solid color-mix(in srgb,var(--border) 82%,transparent);border-radius:10px;background:color-mix(in srgb,var(--surface2) 38%,transparent);transition:border-color .18s ease,background-color .18s ease,transform .18s ease,box-shadow .18s ease}
+.sc-panel[data-cat="kbar"] .sc-cbs .checkbox-row:hover{border-color:color-mix(in srgb,var(--accent) 36%,var(--border));background:color-mix(in srgb,var(--accent) 4%,var(--surface));transform:translateY(-1px)}
+.sc-panel[data-cat="kbar"] .sc-cbs .checkbox-row:has(input:checked){border-color:color-mix(in srgb,var(--accent) 58%,var(--border));background:color-mix(in srgb,var(--accent) 8%,var(--surface));box-shadow:inset 0 1px rgba(255,255,255,.28)}
+.sc-panel[data-cat="kbar"] .sc-cbs .cb-label{white-space:normal}
+.ks-inline-rule{display:flex;align-items:center;gap:4px;min-width:0;white-space:nowrap}.ks-inline-rule>span{font-size:11px;color:var(--text-muted)}
+.ks-pct{width:48px;font:inherit;font-size:11px;padding:1px 2px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)}
+:root[data-ui-skin="glass"] .ks-threshold-card,:root[data-ui-skin="glass"] .sc-panel[data-cat="kbar"] .sc-cbs .checkbox-row{background:color-mix(in srgb,var(--glass-fill) 30%,transparent);border-color:color-mix(in srgb,var(--glass-line) 76%,transparent);box-shadow:inset 0 1px var(--glass-highlight)}
+:root[data-ui-skin="glass"] .sc-panel[data-cat="kbar"] .ks-direction-grid{background:color-mix(in srgb,var(--glass-fill) 20%,transparent)}
+@media(max-width:850px){.sc-panel[data-cat="kbar"] .ks-shape-grid,.sc-panel[data-cat="kbar"] .ks-confirm-grid{grid-template-columns:repeat(2,minmax(140px,1fr))}}
+@media(max-width:520px){.ks-fields{grid-template-columns:1fr;gap:8px}.ks-threshold-card{width:100%}.sc-panel[data-cat="kbar"] .ks-shape-grid,.sc-panel[data-cat="kbar"] .ks-direction-grid,.sc-panel[data-cat="kbar"] .ks-confirm-grid{grid-template-columns:1fr;max-width:none}}

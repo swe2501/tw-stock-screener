@@ -3071,6 +3071,9 @@ CANDLE_COMBO_IDS = {"reversal-doji", "bullish-engulfing", "bearish-engulfing", "
                     "bullish-harami", "bearish-harami", "three-inside-up", "three-inside-down", "two-gap-crows",
                     "three-white-soldiers", "three-black-crows", "bullish-tank", "bearish-tank",
                     "rising-three", "falling-three"}
+# 2026-11-05 單根 K 棒訊號代碼（scripts/candle_combos.py SIGNALS；十字線用 reversal-doji）
+CANDLE_SIGNAL_IDS = {"reversal-doji", "long-lower-3", "long-lower-5", "long-upper-3", "long-upper-5", "one-line",
+                     "spinning-top", "candle-sell", "gravestone", "hanging-man", "hanging-man-main", "hanging-man-retail"}
 ZM6_BLACK = 3.0          # 長黑實體跌幅門檻（%）
 ZM6_MA20_SLOPE_N = 5     # 20MA 下彎：與 N 個交易日前比較
 ZM6_BREAK_WITHIN = 5     # 跌破後幾天內出長黑仍算
@@ -3532,6 +3535,9 @@ def screen(params):
     candle_combos = sorted({str(x) for x in (params.get("candle_combos") or []) if str(x) in CANDLE_COMBO_IDS})
     # 完成日範圍：3＝篩選日往前 3 個交易日（文件預設）、1＝只看篩選日當天（2026-11-04 用戶要可指定日期）
     candle_combo_days = 1 if str(params.get("candle_combo_days") or "3") == "1" else 3
+    # 2026-11-05 K棒分類的單根訊號（同表 candle_combo_hits）：篩選日當天成立、勾多項＝全部成立、不套最低量
+    candle_signals = sorted({str(x) for x in (params.get("candle_signals") or []) if str(x) in CANDLE_SIGNAL_IDS})
+    one_line_directions = {str(x) for x in (params.get("one_line_directions") or []) if str(x) in {"strong", "weak"}}
     no_black_months  = min(int(params.get("no_black_months") or 0), 120)
     no_black_years   = no_black_months / 12  # 轉換為年（可為小數）傳給 YF API
     no_black_mult    = float(params.get("no_black_mult") or 0)
@@ -3564,7 +3570,7 @@ def screen(params):
             return {"error": f"{requested_date[:4]}/{requested_date[4:6]}/{requested_date[6:]} 查無資料（可能為非交易日）", "results": []}
         # 2026-11-04 K棒組合：歷史日原本只有上市（MI_INDEX），補上櫃當日收盤，讓上櫃的組合也列得出來。
         # 只在勾 K棒組合時補：其他條件（跳空、量比…）需要前一日資料，上櫃補不齊會變成大量「未確認」放行。
-        if candle_combos:
+        if candle_combos or candle_signals:
             for _c, _s in fetch_otc_stocks_for_date(code_name_map, requested_date).items():
                 hist_stocks.setdefault(_c, _s)
 
@@ -3588,6 +3594,16 @@ def screen(params):
         o, c = s["open"], s["close"]
         if o <= 0 or c <= 0:
             continue
+
+        # 一字線可獨立選強勢／弱勢；兩者都選時表示方向不限。
+        if "one-line" in candle_signals and len(one_line_directions) == 1:
+            pc = s.get("prev_close")
+            if not pc or pc <= 0:
+                continue
+            if "strong" in one_line_directions and c <= pc:
+                continue
+            if "weak" in one_line_directions and c >= pc:
+                continue
 
         # 最低股價
         if min_price > 0 and c < min_price:
@@ -3657,6 +3673,32 @@ def screen(params):
         for h in hits:
             _combo_hits.setdefault(h["code"], []).append({"combo": h["combo"], "date": h["end_date"]})
         candidates = {k: v for k, v in candidates.items() if k in _combo_hits}
+
+    # 單根 K 棒訊號：篩選日當天成立，勾多項＝全部成立（不套最低量）
+    _signal_hits = {}
+    if candle_signals and candidates:
+        _iso = f"{actual_date[:4]}-{actual_date[4:6]}-{actual_date[6:]}" if len(actual_date) == 8 else actual_date
+        # 十字線＝K棒組合表的反轉十字線；其餘在 candle_signal_hits（2026-11-05 分表）
+        _q = []
+        if "reversal-doji" in candle_signals:
+            _q.append(("/candle_combo_hits", "combo", ["reversal-doji"]))
+        _rest = [s for s in candle_signals if s != "reversal-doji"]
+        if _rest:
+            _q.append(("/candle_signal_hits", "signal", _rest))
+        for _table, _col, _ids in _q:
+            for _off in range(0, 20000, 1000):         # PostgREST 一次最多 1000 筆，大跌日長下影線會超過 → 分頁
+                st, page = _cache_sb(_table, "GET", params=[
+                    ("select", f"code,{_col},start_date"), (_col, f"in.({','.join(_ids)})"),
+                    ("end_date", f"eq.{_iso}"), ("order", f"code,{_col}"), ("offset", str(_off)), ("limit", "1000")])
+                if st != 200 or not isinstance(page, list):
+                    return {"error": "K棒訊號：讀取資料失敗，請稍後再試。", "results": []}
+                for h in page:
+                    _signal_hits.setdefault(h["code"], {})[h[_col]] = h["start_date"]
+                if len(page) < 1000:
+                    break
+        need = set(candle_signals)
+        _signal_hits = {k: v for k, v in _signal_hits.items() if need <= set(v)}
+        candidates = {k: v for k, v in candidates.items() if k in _signal_hits}
 
     if not candidates:
         return {"date": display_date, "total": len(all_stocks), "count": 0, "results": [], "zhenming_hidden_applied": bool(hidden), "zhenming4_applied": check_zhenming4, "zhenming6_applied": check_zhenming6, "zhenming8_applied": check_zhenming8, "zhenming9_applied": check_zhenming9}
@@ -4088,6 +4130,8 @@ def screen(params):
             item["ev357"] = _ev357
         if code in _combo_hits:
             item["candle_combos"] = sorted(_combo_hits[code], key=lambda x: x["date"], reverse=True)
+        if code in _signal_hits:
+            item["candle_signals"] = [{"signal": k, "from": v} for k, v in sorted(_signal_hits[code].items())]
 
         results.append(item)
 
