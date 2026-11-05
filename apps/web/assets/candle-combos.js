@@ -332,20 +332,42 @@
 
   function schedule() { if (!frame) frame = requestAnimationFrame(paint); }
 
+  function makeLabel(g) {
+    const lab = document.createElement('div'); lab.className = 'cc-label';
+    g.ids.forEach((id, k) => {
+      if (k) lab.append('、');
+      const a = document.createElement('a'); a.href = 'javascript:void(0)'; a.textContent = nameOf(id);
+      a.dataset.ccRule = id; a.title = nameOf(id) + '（' + g.from + (g.from === g.to ? '' : '～' + g.to) + '，僅供參考）；點看規則';
+      lab.append(a);
+    });
+    return lab;
+  }
+
+  // 效能：縮放／拖曳時每一幀都會重畫。名稱寬高只跟文字有關，第一次一次量完存起來；
+  // 之後每幀先讀完所有座標、再一次寫入 DOM，避免「寫一個量一個」逼瀏覽器反覆重排版。
+  function measureLabels() {
+    const todo = groups.filter(g => g.lw == null);
+    if (!todo.length) return;
+    const labs = todo.map(makeLabel);
+    labs.forEach(l => { l.style.visibility = 'hidden'; l.style.left = '0'; l.style.top = '0'; layer.append(l); });
+    todo.forEach((g, i) => { g.lw = labs[i].offsetWidth; g.lh = labs[i].offsetHeight; g.lab = labs[i]; });
+    labs.forEach(l => { l.remove(); l.style.visibility = ''; });
+  }
+
   function paint() {
     frame = 0;
     if (!ctx || !layer || !layer.isConnected) return;
-    layer.replaceChildren();
-    if (!(visible && groups.length)) return;
+    if (!(visible && groups.length)) { layer.replaceChildren(); return; }
     const ts = ctx.chart.timeScale(), s = ctx.series;
     let psw = 0, tsh = 0;
     try { psw = ctx.chart.priceScale('right').width() || 0; } catch (_) {}
     try { tsh = ts.height() || 0; } catch (_) {}
     const W = ctx.host.clientWidth - psw, H = ctx.host.clientHeight - tsh;
-    layer.style.width = W + 'px'; layer.style.height = H + 'px';
+    measureLabels();
     const spacing = (ts.options().barSpacing || 6);
     const half = Math.max(2, spacing / 2);
     const placed = [];
+    const frag = document.createDocumentFragment();
     for (const g of groups) {
       const x0 = ts.timeToCoordinate(g.from), x1 = ts.timeToCoordinate(g.to);
       const yt = s.priceToCoordinate(g.hi), yb = s.priceToCoordinate(g.lo);
@@ -355,17 +377,11 @@
       const box = document.createElement('div'); box.className = 'cc-box';
       box.style.left = left + 'px'; box.style.top = (yt - 4) + 'px';
       box.style.width = Math.max(6, right - left) + 'px'; box.style.height = Math.max(6, yb - yt + 8) + 'px';
-      layer.append(box);
+      frag.append(box);
       // 名稱放框上方，太靠上就放框下方；與已放的名稱重疊就再往外推
-      const lab = document.createElement('div'); lab.className = 'cc-label';
-      g.ids.forEach((id, k) => {
-        if (k) lab.append('、');
-        const a = document.createElement('a'); a.href = 'javascript:void(0)'; a.textContent = nameOf(id);
-        a.dataset.ccRule = id; a.title = nameOf(id) + '（' + g.from + (g.from === g.to ? '' : '～' + g.to) + '，僅供參考）；點看規則';
-        lab.append(a);
-      });
-      layer.append(lab);
-      const lw = lab.offsetWidth, lh = lab.offsetHeight;
+      const lab = g.lab || makeLabel(g);
+      g.lab = lab;
+      const lw = g.lw, lh = g.lh;
       const center = (left + right) / 2;
       let lx = Math.min(Math.max(2, center - lw / 2), Math.max(2, W - lw - 2));
       let ly = yt - 4 - lh - 3;
@@ -375,11 +391,14 @@
         if (!hit) break;
         ly = ly < yt ? hit.y - lh - 2 : hit.y + hit.h + 2;
       }
-      if (ly < 0 || ly + lh > H) { lab.remove(); continue; }
+      if (ly < 0 || ly + lh > H) continue;
       lab.dataset.placement = ly < yt ? 'above' : 'below';
       lab.style.left = lx + 'px'; lab.style.top = ly + 'px';
+      frag.append(lab);
       placed.push({ x: lx, y: ly, w: lw, h: lh });
     }
+    layer.style.width = W + 'px'; layer.style.height = H + 'px';
+    layer.replaceChildren(frag);
   }
 
   // 提示框（「K棒訊息」）多一行：這根 K 棒的單根訊號；不加入操作建議。
@@ -391,7 +410,19 @@
     return '<div class="ohlc-signal"><span>K棒訊號</span>' + names.map(n => '<b>' + esc(n) + '</b>').join('') + '</div>';
   }
 
-  function boot() { mountGrid(); mountToggle(); window.AcademyKbarHint?.register(window.AcademyKbarHintExtra); }
+  // K 線視窗開著時在 body 加 class，CSS 用它暫停背後頁面的動畫（見 candle-combos.css）
+  function watchModal() {
+    const m = document.getElementById('chartModal');
+    if (!m) return;
+    const sync = () => {
+      const on = m.classList.contains('open');
+      if (document.body.classList.contains('cc-chart-open') !== on) document.body.classList.toggle('cc-chart-open', on);
+    };
+    sync();
+    new MutationObserver(sync).observe(m, { attributes: true, attributeFilter: ['class'] });
+  }
+
+  function boot() { mountGrid(); mountToggle(); watchModal(); window.AcademyKbarHint?.register(window.AcademyKbarHintExtra); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 
   window.AcademyCandleCombos = { COMBOS, COMMON, SIG, nameOf, rulesHtml, openRules, resultHelp, resultTag, signalTag, signalTipHtml, attach, detach, refresh: schedule, isVisible: () => visible };
