@@ -64,7 +64,7 @@ function mount() {
   // 2026-11-04 K棒組合 16 類的提示由 candle-combos.js 提供（window.AcademyKbarHintExtra），沿用同一張示意卡
   Object.assign(P, window.AcademyKbarHintExtra || {});
   Object.keys(P).forEach(key => {
-    const input = document.getElementById(key), row = input?.closest('.checkbox-row');
+    const input = document.getElementById(key), row = input?.closest('.checkbox-row, .ks-threshold-card');
     if (!row || row.dataset.khBound) return; row.dataset.khBound = '1'; row.classList.add('kh-row');
     row.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse' || e.pointerType === 'pen') show(key, row); });
     row.addEventListener('pointerleave', hide);
@@ -76,5 +76,9 @@ function mount() {
   addEventListener('keydown', e => { if (e.key === 'Escape') hide(); });
 }
 document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', mount) : mount();
-window.AcademyKbarHint = { register(defs) { Object.assign(P, defs || {}); mount(); } };
+window.AcademyKbarHint = {
+  register(defs) { Object.assign(P, defs || {}); mount(); },
+  show(key, anchor) { if (P[key] && anchor) show(key, anchor); },
+  hide
+};
 })();

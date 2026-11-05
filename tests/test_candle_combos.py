@@ -58,5 +58,18 @@ class ThreeMethodsBodyContinuityTests(unittest.TestCase):
         self.assertEqual(MODULE.three_methods(gapped, False), [])
 
 
+class SingleBarSignalTests(unittest.TestCase):
+    def test_one_line_includes_limit_up_and_limit_down_variants(self):
+        data = bars([
+            (100, 101, 99, 100, 100),
+            (110, 110, 110, 110, 100),
+            (99, 99, 99, 99, 100),
+        ])
+
+        hits = [signal for signal, _, _ in MODULE.scan_signals(data)]
+
+        self.assertEqual(hits.count("one-line"), 2)
+
+
 if __name__ == "__main__":
     unittest.main()
