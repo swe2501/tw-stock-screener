@@ -33,8 +33,16 @@ class PhoneGuardTests(unittest.TestCase):
                 instance.headers = {"Authorization":"Bearer test-token"}
                 result = []
                 instance._json = lambda *args: result.append(args)
-                with patch("lib.member_phone.check", return_value=(403, {"code":"MEMBER_PHONE_REQUIRED"})):
-                    getattr(instance, "do_" + method)()
+                phone = patch("lib.member_phone.check", return_value=(403, {"code":"MEMBER_PHONE_REQUIRED"}))
+                if name == "vol_notify":
+                    # Keep production order: JWT first, then phone gate.
+                    # Mock JWT success so the phone 403 (and no email send) can be asserted.
+                    with phone, patch.object(module, "_verify_user_email", return_value=(200, "fixture@example.test")), patch.object(module, "_send_vol_email") as send:
+                        getattr(instance, "do_" + method)()
+                    send.assert_not_called()
+                else:
+                    with phone:
+                        getattr(instance, "do_" + method)()
                 self.assertEqual(result[0][0], 403, name + method)
 
     def test_phone_only_member_can_logout_without_email_or_password(self):
