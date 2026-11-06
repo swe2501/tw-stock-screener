@@ -1,5 +1,5 @@
 from http.server import BaseHTTPRequestHandler
-import hmac, json, os, urllib.request, urllib.parse, urllib.error
+import hashlib, hmac, json, os, time, urllib.request, urllib.parse, urllib.error
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
 SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "")
@@ -157,9 +157,90 @@ def _admin_api(path, method="GET", body=None):
 
 OFFICE_WORKER_ROLES = ("ceo", "cto", "sec", "eng", "qa")
 OFFICE_WORKER_OPS = ("claim", "heartbeat", "submit", "fail", "block", "list")
+OFFICE_AGENT_OPS = ("list", "claim", "heartbeat", "submit", "block", "fail", "get")
+OFFICE_AGENT_FORBIDDEN = ("approve", "cancel", "retry", "online")
+OFFICE_AGENT_HEADERS = (
+    "x-office-agent-key",
+    "x-office-agent-timestamp",
+    "x-office-agent-nonce",
+    "x-office-agent-signature",
+)
+OFFICE_CORS_HEADERS = (
+    "Content-Type, Authorization, x-office-worker-token, "
+    "x-office-agent-key, x-office-agent-timestamp, x-office-agent-nonce, x-office-agent-signature"
+)
+
+
+def _header(headers, name):
+    if headers is None:
+        return ""
+    getter = getattr(headers, "get", None)
+    value = getter(name) if getter else None
+    if value is None and hasattr(headers, "get"):
+        try:
+            value = headers.get(name)
+        except Exception:
+            value = None
+    return value if isinstance(value, str) else ""
+
+
+def _office_dispatch(body, headers, raw):
+    if any(_header(headers, name) for name in OFFICE_AGENT_HEADERS):
+        return _office_agent(body, headers, raw)
+    return _office_worker(body, _header(headers, "x-office-worker-token"))
+
+
+def _office_agent(body, headers, raw):
+    """HMAC identity for mapped agents. Body role/worker/agent_id are ignored."""
+    try:
+        from lib.office_agents import actor_for, consume_nonce, lookup, token_for
+        key = _header(headers, "x-office-agent-key").strip().lower()
+        agent = lookup(key)
+        if not agent:
+            return 401, {"error": "unauthorized"}
+        token = token_for(key)
+        if len(token) < 32:
+            return 401, {"error": "unauthorized"}
+        ts_raw = _header(headers, "x-office-agent-timestamp").strip()
+        nonce = _header(headers, "x-office-agent-nonce").strip()
+        supplied = _header(headers, "x-office-agent-signature").strip()
+        try:
+            timestamp = int(ts_raw)
+        except (TypeError, ValueError):
+            return 401, {"error": "unauthorized"}
+        if abs(int(time.time()) - timestamp) > 300:
+            return 401, {"error": "unauthorized"}
+        if len(nonce) < 16:
+            return 401, {"error": "unauthorized"}
+        operation = body.get("operation")
+        if operation in OFFICE_AGENT_FORBIDDEN:
+            return 403, {"error": "operation not allowed"}
+        if operation not in OFFICE_AGENT_OPS:
+            return 400, {"error": "unsupported operation"}
+        task_id = body.get("id")
+        task_id = "" if task_id is None else str(task_id)
+        raw_bytes = raw if isinstance(raw, (bytes, bytearray)) else b""
+        digest = hashlib.sha256(raw_bytes).hexdigest()
+        message = f"{ts_raw}\n{nonce}\n{operation}\n{task_id}\n{digest}"
+        expected = hmac.new(token.encode("utf-8"), message.encode("utf-8"), hashlib.sha256).hexdigest()
+        if len(supplied) != len(expected) or not hmac.compare_digest(supplied, expected):
+            return 401, {"error": "unauthorized"}
+        if not consume_nonce(nonce):
+            return 401, {"error": "unauthorized"}
+        actor = actor_for(key)
+        sanitized = dict(body)
+        sanitized.pop("role", None)
+        sanitized.pop("agent_id", None)
+        sanitized["worker"] = actor
+        from lib.office_tasks import handle
+        return handle("worker", sanitized, actor, _rest, worker=True)
+    except Exception:
+        return 500, {"error": "internal error"}
 
 
 def _office_worker(body, supplied):
+    # Deprecated shared-token path. It can only mint grok-* actors from an allowlisted
+    # role and cannot impersonate agent-* identities, even if the body claims otherwise.
     try:
         expected = os.environ.get("OFFICE_WORKER_TOKEN_GROK") or ""
         supplied = supplied if isinstance(supplied, str) else ""
@@ -172,6 +253,7 @@ def _office_worker(body, supplied):
             return 400, {"error": "unsupported operation"}
         actor = "grok-" + role
         body = dict(body, worker=actor)
+        body.pop("agent_id", None)
         from lib.office_tasks import handle
         return handle("worker", body, actor, _rest, worker=True)
     except Exception:
@@ -244,7 +326,7 @@ class handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Cache-Control", "no-store")
         self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+        self.send_header("Access-Control-Allow-Headers", OFFICE_CORS_HEADERS)
         self.end_headers()
         self.wfile.write(body)
 
@@ -252,7 +334,7 @@ class handler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+        self.send_header("Access-Control-Allow-Headers", OFFICE_CORS_HEADERS)
         self.end_headers()
 
     def do_POST(self):
@@ -260,7 +342,8 @@ class handler(BaseHTTPRequestHandler):
             length = int(self.headers.get("Content-Length", 0))
             if not 0 <= length <= 32768:
                 return self._json(413, {"error": "request too large"})
-            body = json.loads(self.rfile.read(length) or b"{}")
+            raw = self.rfile.read(length) or b"{}"
+            body = json.loads(raw)
             if not isinstance(body, dict): raise ValueError()
         except (ValueError, TypeError):
             return self._json(400, {"error": "invalid request"})
@@ -314,9 +397,9 @@ class handler(BaseHTTPRequestHandler):
                 return self._json(200, {"visible": False})
             return self._json(200, {"visible": True, "formulas": _algo_formulas()})
 
-        # ── Grok 執行端：x-office-worker-token 比對 env OFFICE_WORKER_TOKEN_GROK（HMAC 常數時間比對）──
+        # ── 研究室執行端：新路徑以每 agent HMAC 驗簽；舊 x-office-worker-token 僅能得到 grok-* 身分 ──
         if action == "office_worker":
-            return self._json(*_office_worker(body, self.headers.get("x-office-worker-token") or ""))
+            return self._json(*_office_dispatch(body, self.headers, raw))
 
         # ── 後台管理（action: admin_*）：JWT→email∈白名單 才放行；service_role 只在後端 ──
         if action.startswith("admin_"):
