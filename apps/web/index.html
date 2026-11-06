@@ -15346,8 +15346,7 @@
           const names=[...new Set(rows.map(e=>e.broker))];
           _ohlcTip.innerHTML+=`<div class="ohlc-broker"><span class="broker-relationship-${sell?'down':'up'}">${sell?'↓':'↑'} ${label} · ${names.length} 家</span>${names.map(n=>`<b>${brokerName(n)}</b>`).join('')}${typeof param.time==='string'&&rows.some(e=>e.date!==param.time)?`<small>${[...new Set(rows.map(e=>e.date))].map(brokerName).join('、')}</small>`:''}</div>`;
         }
-        // 2026-11-05 單根 K 棒訊號（十字線、長上下影線、吊人線…）：圖上圈起、這裡多一行寫名稱
-        try { const sigHtml = window.AcademyCandleCombos?.signalTipHtml(param.time, c); if (sigHtml) _ohlcTip.innerHTML += sigHtml; } catch (_) {}
+        // 2026-11-06 合夥人要求：「K棒訊息」提示框不再顯示 K棒訊號／K棒組合那一行（原 11/05 加的 signalTipHtml）；圖上黃框照舊由「K棒組合」開關控制
         _ohlcTip.style.display = 'block';
         _tipFollow(param);
       });
