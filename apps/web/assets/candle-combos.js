@@ -1,5 +1,5 @@
 /* K棒組合 16 類（2026-11-04）：規則說明、選股勾選框、選股結果標籤、K 線圖黃框。
-   判斷在本機 scripts/candle_combos.py（每晚盤後算全市場 → Supabase candle_combo_hits），這裡只讀結果、不重算。
+   判斷在本機 scripts/candle_combos.py（盤後 16:00 後與夜間各算一次全市場 → Supabase candle_combo_hits），這裡只讀結果、不重算。
    規則來源：《K棒組合.md》16 類原文；用戶補充：長紅/長黑一律實體 3%、內困三日與紅黑三兵的定義（見 COMMON 與各類 rule）。 */
 (() => {
   'use strict';
