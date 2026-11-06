@@ -162,7 +162,7 @@ def agent_may_see(task, actor):
 
 
 def summary(task):
-    keys=('id','title','department','execution','due_date','depends_on','created_at','updated_at','revision','status','current_step','lease_until','cost_usd','reserved_usd','budget_usd','attempts','executor','assignee','cost_uncertain','usage_week','evidence','worker')
+    keys=('id','title','department','execution','due_date','depends_on','created_at','updated_at','revision','status','current_step','lease_until','cost_usd','reserved_usd','budget_usd','attempts','executor','assignee','cost_uncertain','cost_self_reported','usage_week','evidence','worker')
     result={k:task[k] for k in keys if k in task}
     result['brief']=task.get('brief','')[:200]
     result['criteria_count']=len(task.get('criteria',[]))
@@ -291,8 +291,12 @@ def mutate(body, actor, rest, worker=False):
             cost=body.get('cost_usd')
             if type(cost) not in (int,float) or not math.isfinite(cost) or cost<0:
                 cost=task.get('reserved_usd') or 0;task['cost_uncertain']=True
-            elif task['execution']!='agent':
-                pass
+            elif task['execution']=='agent' or is_agent_actor(actor):
+                # Self-reported by the agent; not a billing meter. Cap to blunt abuse.
+                if cost > 100:
+                    raise Problem(400,'自報 cost_usd 上限為 100（非計費欄位）')
+                task['cost_self_reported']=True
+                task['cost_uncertain']=True if body.get('cost_usd') is None else task.get('cost_uncertain', False)
             task['cost_usd']=round(task.get('cost_usd',0)+cost,6)
             store_usage(task,body)
             store_evidence(task,body)
@@ -365,21 +369,34 @@ def handle(action, body, actor, rest, worker=False):
         if action=='admin_office_tasks_list' or worker and body.get('operation')=='list':
             tasks=all_tasks(rest)
             today=(now()+dt.timedelta(hours=8)).date()
-            committed=sum(t.get('cost_usd',0)+t.get('reserved_usd',0) for t in tasks if (dt.datetime.fromisoformat(t['updated_at'])+dt.timedelta(hours=8)).date()==today)
             all_by_id={t['id']:t for t in tasks}
+            agent_list=worker and is_agent_actor(actor)
             if worker:
-                if is_agent_actor(actor):
+                if agent_list:
                     tasks=[t for t in tasks if agent_may_see(t,actor)]
                 else:
                     tasks=[t for t in tasks if (t['status']=='queued' and t['execution']=='ai' and executor_allowed(t,actor)) or (t['status']=='running' and t.get('worker')==actor)]
+            # Site-wide spend and other workers' presence are admin/self only.
+            # Agent list totals are recomputed over the visible subset only.
+            committed=sum(t.get('cost_usd',0)+t.get('reserved_usd',0) for t in tasks if (dt.datetime.fromisoformat(t['updated_at'])+dt.timedelta(hours=8)).date()==today)
             tasks.sort(key=lambda t:t['created_at'],reverse=not worker)
-            st,rows=rest('/admin_settings?select=value&key=eq.'+(worker_key(actor) if worker else WORKER_KEY))
             worker_state={}
-            if st==200 and rows:
-                try:worker_state=json.loads(rows[0]['value'])
-                except (ValueError,KeyError,TypeError):pass
+            if not agent_list:
+                st,rows=rest('/admin_settings?select=value&key=eq.'+(worker_key(actor) if worker else WORKER_KEY))
+                if st==200 and rows:
+                    try:worker_state=json.loads(rows[0]['value'])
+                    except (ValueError,KeyError,TypeError):pass
+            elif worker:
+                # Own heartbeat only; never echo another worker's online blob.
+                st,rows=rest('/admin_settings?select=value&key=eq.'+worker_key(actor))
+                if st==200 and rows:
+                    try:worker_state=json.loads(rows[0]['value'])
+                    except (ValueError,KeyError,TypeError):pass
             dependencies={key:{'title':all_by_id[key]['title'],'status':all_by_id[key]['status']} for task in tasks[:200] for key in task.get('depends_on',[]) if key in all_by_id}
-            return 200,{'dependencies':dependencies,'tasks':[summary(t) for t in tasks[:200]],'departments':DEPARTMENTS,'office_agents':public_catalog(),'worker':worker_state,'scope':'uat','total':len(tasks),'committed_today_usd':committed}
+            payload={'dependencies':dependencies,'tasks':[summary(t) for t in tasks[:200]],'departments':DEPARTMENTS,'office_agents':public_catalog(),'worker':worker_state,'scope':'uat','total':len(tasks),'committed_today_usd':committed}
+            if agent_list:
+                payload['committed_scope']='visible_only'
+            return 200,payload
         if action=='admin_office_tasks_create' and not worker:return 200,{'task':create(body,actor,rest)}
         if action=='admin_office_tasks_update' or worker:return 200,{'task':mutate(body,actor,rest,worker)}
         raise Problem(400,'未知的任務動作')

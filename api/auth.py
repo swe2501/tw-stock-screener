@@ -191,42 +191,55 @@ def _office_dispatch(body, headers, raw):
 
 
 def _office_agent(body, headers, raw):
-    """HMAC identity for mapped agents. Body role/worker/agent_id are ignored."""
+    """HMAC identity for mapped agents. Body role/worker/agent_id are ignored.
+
+    Unauthenticated failures always return 401. A missing/short token still runs a
+    constant-time compare against a dummy secret so callers cannot probe which
+    agent tokens are configured. Operation allow/deny checks run only after the
+    signature (and nonce) succeed.
+    """
     try:
         from lib.office_agents import actor_for, consume_nonce, lookup, token_for
         key = _header(headers, "x-office-agent-key").strip().lower()
         agent = lookup(key)
-        if not agent:
-            return 401, {"error": "unauthorized"}
-        token = token_for(key)
-        if len(token) < 32:
-            return 401, {"error": "unauthorized"}
+        token = token_for(key) if agent else ""
+        dummy = "0" * 64
+        material = token if isinstance(token, str) and len(token) >= 32 else dummy
         ts_raw = _header(headers, "x-office-agent-timestamp").strip()
         nonce = _header(headers, "x-office-agent-nonce").strip()
         supplied = _header(headers, "x-office-agent-signature").strip()
         try:
             timestamp = int(ts_raw)
         except (TypeError, ValueError):
-            return 401, {"error": "unauthorized"}
-        if abs(int(time.time()) - timestamp) > 300:
-            return 401, {"error": "unauthorized"}
-        if len(nonce) < 16:
-            return 401, {"error": "unauthorized"}
+            timestamp = None
         operation = body.get("operation")
-        if operation in OFFICE_AGENT_FORBIDDEN:
-            return 403, {"error": "operation not allowed"}
-        if operation not in OFFICE_AGENT_OPS:
-            return 400, {"error": "unsupported operation"}
+        operation = "" if operation is None else str(operation)
         task_id = body.get("id")
         task_id = "" if task_id is None else str(task_id)
         raw_bytes = raw if isinstance(raw, (bytes, bytearray)) else b""
         digest = hashlib.sha256(raw_bytes).hexdigest()
         message = f"{ts_raw}\n{nonce}\n{operation}\n{task_id}\n{digest}"
-        expected = hmac.new(token.encode("utf-8"), message.encode("utf-8"), hashlib.sha256).hexdigest()
-        if len(supplied) != len(expected) or not hmac.compare_digest(supplied, expected):
+        expected = hmac.new(material.encode("utf-8"), message.encode("utf-8"), hashlib.sha256).hexdigest()
+        # Always compare even when inputs are malformed, to keep failure modes flat.
+        if not isinstance(supplied, str):
+            supplied = ""
+        compare_left = supplied if len(supplied) == len(expected) else expected
+        sig_ok = len(supplied) == len(expected) and hmac.compare_digest(compare_left, expected)
+        fresh = (
+            agent is not None
+            and isinstance(token, str) and len(token) >= 32
+            and timestamp is not None
+            and abs(int(time.time()) - timestamp) <= 300
+            and isinstance(nonce, str) and len(nonce) >= 16
+            and sig_ok
+            and consume_nonce(nonce)
+        )
+        if not fresh:
             return 401, {"error": "unauthorized"}
-        if not consume_nonce(nonce):
-            return 401, {"error": "unauthorized"}
+        if operation in OFFICE_AGENT_FORBIDDEN:
+            return 403, {"error": "operation not allowed"}
+        if operation not in OFFICE_AGENT_OPS:
+            return 400, {"error": "unsupported operation"}
         actor = actor_for(key)
         sanitized = dict(body)
         sanitized.pop("role", None)
@@ -236,6 +249,7 @@ def _office_agent(body, headers, raw):
         return handle("worker", sanitized, actor, _rest, worker=True)
     except Exception:
         return 500, {"error": "internal error"}
+
 
 
 def _office_worker(body, supplied):

@@ -204,5 +204,49 @@ class AgentAuth(unittest.TestCase):
         s,r=service.handle('admin_office_tasks_update',dict(operation='claim',id=manual['id'],revision=1),'admin',self.rest)
         self.assertEqual(s,200,r)
 
+    def test_unauth_does_not_leak_token_presence(self):
+        """Missing token, wrong sig, and unknown key all look like 401."""
+        body=self.payload('list')
+        with patch.dict(os.environ,{'OFFICE_AGENT_TOKEN_CEO':''},clear=False):
+            self.assertEqual(call(body,key='ceo')[0],401)
+        raw,hd=sign(body,'ceo');hd=dict(hd);hd['x-office-agent-signature']='ab'*32;self.assertEqual(call(body,key='ceo',headers=hd)[0],401)
+        self.assertEqual(call(body,key='nope',token='x')[0],401)
+        # Forbidden op before auth must not surface as 403.
+        bad=self.payload('approve',id='x',revision=1,checks=[True])
+        with patch.dict(os.environ,{'OFFICE_AGENT_TOKEN_CEO':''},clear=False):
+            self.assertEqual(call(bad,key='ceo')[0],401)
+
+    def test_forbidden_op_only_after_auth(self):
+        task=self.make(department=0,assignee='ceo')
+        s,r=call(self.payload('claim',id=task['id'],revision=1),key='ceo');self.assertEqual(s,200,r)
+        s,r=call(self.payload('approve',id=task['id'],revision=2,checks=[True]),key='ceo')
+        self.assertEqual(s,403)
+
+    def test_agent_list_totals_are_scoped(self):
+        mine=self.make(department=0,assignee='ceo')
+        other=self.make(department=8,assignee='qa')
+        s,r=call(self.payload('claim',id=other['id'],revision=1),key='qa');self.assertEqual(s,200,r)
+        lease=r['task']['lease_token']
+        s,r=call(self.payload('submit',id=other['id'],revision=2,lease_token=lease,result='x',cost_usd=9.5),key='qa')
+        self.assertEqual(s,200,r)
+        s,r=call(self.payload('list'),key='ceo');self.assertEqual(s,200,r)
+        ids={t['id'] for t in r['tasks']}
+        self.assertIn(mine['id'],ids);self.assertNotIn(other['id'],ids)
+        self.assertEqual(r['total'],len(r['tasks']))
+        self.assertEqual(r.get('committed_scope'),'visible_only')
+        # Other task cost must not inflate ceo committed total.
+        self.assertLess(r['committed_today_usd'],9.5)
+
+    def test_agent_submit_cost_cap_and_self_reported(self):
+        task=self.make(department=0,assignee='ceo')
+        s,r=call(self.payload('claim',id=task['id'],revision=1),key='ceo');self.assertEqual(s,200,r)
+        lease=r['task']['lease_token']
+        s,r=call(self.payload('submit',id=task['id'],revision=2,lease_token=lease,result='done',cost_usd=101),key='ceo')
+        self.assertEqual(s,400,r)
+        s,r=call(self.payload('submit',id=task['id'],revision=2,lease_token=lease,result='done',cost_usd=1.25,usage_week='3 calls'),key='ceo')
+        self.assertEqual(s,200,r)
+        self.assertTrue(r['task'].get('cost_self_reported'))
+        self.assertEqual(r['task'].get('cost_usd'),1.25)
+
 if __name__=='__main__':
     unittest.main()
