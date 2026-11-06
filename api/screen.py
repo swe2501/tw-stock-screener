@@ -3465,10 +3465,10 @@ def screen(params):
     check_doji       = bool(params.get("doji", False))
     doji_range_min   = float(params.get("doji_range_min") or 1.0)  # 十字線最小振幅 %
     check_hanging    = bool(params.get("hanging_man", False))  # 吊人線：收=開=高、低<收
-    check_engulf_bull = bool(params.get("engulf_bull", False))  # 陽吞噬
-    check_engulf_bear = bool(params.get("engulf_bear", False))  # 陰吞噬
-    check_harami_bull = bool(params.get("harami_bull", False))  # 多頭母子孕育線
-    check_harami_bear = bool(params.get("harami_bear", False))  # 空頭母子孕育線
+    # 2026-11-06 舊版陽吞噬／陰吞噬／多頭母子／空頭母子（即時判斷、不看波段）已刪除，改用 K棒組合（candle_combos）。
+    # 開著舊頁面的人還會送這些參數 → 直接回錯誤請他重新整理，不再默默用舊定義篩出不同結果。
+    if any(params.get(k) for k in ("engulf_bull", "engulf_bear", "harami_bull", "harami_bear")):
+        return {"error": "陽吞噬、陰吞噬、多頭／空頭母子已改版到「K棒組合」，請重新整理頁面後在 K棒組合勾選。", "results": []}
     check_gap_up     = bool(params.get("gap_up", False))
     check_gap_down   = bool(params.get("gap_down", False))
     gap_down_min     = float(params.get("gap_down_min") or 0)
@@ -3585,6 +3585,12 @@ def screen(params):
         display_date  = f"{actual_date[:4]}/{actual_date[4:6]}/{actual_date[6:]}" if len(actual_date) == 8 else actual_date
         all_stocks    = latest_stocks
         is_historical = False
+        # 2026-11-06 最新交易日也補上櫃（原本只有歷史日補）：選「今天」勾 K棒組合／單根訊號時，上櫃的漢達 6620 等都被漏掉。
+        # 複製一份再加，避免改到 fetch_all_stocks_latest 的快取；櫃買還沒公布當日收盤時回 {}，維持只有上市。
+        if (candle_combos or candle_signals) and len(actual_date) == 8:
+            all_stocks = dict(latest_stocks)
+            for _c, _s in fetch_otc_stocks_for_date({}, actual_date).items():
+                all_stocks.setdefault(_c, _s)
 
     # ── Step 2: Fast price-based filters ─────────────────────────────────────
     candidates = {}
@@ -3635,13 +3641,6 @@ def screen(params):
         if check_hanging:
             if abs(c - o) > 1e-9 or abs(s["high"] - c) > 1e-9: continue
             if s["low"] >= c: continue
-
-        # 吞噬/母子（快篩部分）：多頭形態當日必須紅K；空頭形態當日必須黑K
-        # （與前一日的包覆判斷需要前日 OHLC，在 Step 4 進行）
-        if (check_engulf_bull or check_harami_bull) and not (check_engulf_bear or check_harami_bear) and c <= o:
-            continue
-        if (check_engulf_bear or check_harami_bear) and not (check_engulf_bull or check_harami_bull) and c >= o:
-            continue
 
         # 真名六式快篩：當日必須是實體長黑 ≥ 3%，其餘條件需歷史 K 線，在後段判斷
         if check_zhenming6 and not (o > c > 0 and (o - c) / c * 100 >= ZM6_BLACK - 1e-9):
@@ -3709,9 +3708,7 @@ def screen(params):
     exdiv_codes: set = set()
     if (check_gap_up or check_gap_down):
         exdiv_codes = _fetch_exdiv_codes(actual_date)
-    need_engulf = (check_engulf_bull or check_engulf_bear
-                   or check_harami_bull or check_harami_bear)  # 需要前一日 OHLC 的形態
-    if (check_gap_up or check_gap_down or check_earn_gap_down or need_engulf) and not is_historical:
+    if (check_gap_up or check_gap_down or check_earn_gap_down) and not is_historical:
         # 只找「前一個非週末日曆日」——不因 MI_INDEX 失敗而往前多抓
         # 假日（非週末）由 YF per-stock fallback 處理，不在這裡跳過
         expected_prev_dt = None
@@ -3730,7 +3727,7 @@ def screen(params):
 
     # ── Step 3b: 量能/MACD/真名/跳空 → 用 YF 逐支抓
     # 跳空有啟用時一定要抓 YF（不管 prev_mi_gap 是否成功），確保 per-stock fallback 有資料
-    need_gap_monthly = (check_gap_up or check_gap_down or check_earn_gap_down or need_engulf)
+    need_gap_monthly = (check_gap_up or check_gap_down or check_earn_gap_down)
     # 只有「跳空族」(需高低價+還原)還走 YF;真名/MACD/放量改讀 price_window(下方 pw_data)
     need_monthly = need_gap_monthly and not is_historical
 
@@ -3748,8 +3745,7 @@ def screen(params):
 
     # ── price_window 逐股讀（真名/MACD/放量;涵蓋歷史日 → 修正「回搜近期日期漏股」如 3443/8-11）──
     need_pw = (vol_mult > 0 or shrink_mult > 0 or bool(macd_mode)
-               or check_zhenming1 or check_zhenming2 or check_zhenming3 or check_zhenming4 or check_zhenming6 or check_zhenming8 or check_zhenming9 or bool(hidden) or bool(sma20_stages)
-               or check_harami_bull or check_harami_bear)   # 母子線需 MA20 判趨勢 → 抓歷史
+               or check_zhenming1 or check_zhenming2 or check_zhenming3 or check_zhenming4 or check_zhenming6 or check_zhenming8 or check_zhenming9 or bool(hidden) or bool(sma20_stages))
     hidden_market = []
     if hidden:
         end_iso = f"{actual_date[:4]}-{actual_date[4:6]}-{actual_date[6:]}"
@@ -3778,7 +3774,7 @@ def screen(params):
                     pw_data[code] = pw
 
     # ── Step 3c: 補抓 prev_mi_gap 未涵蓋的個股 → TWSE STOCK_DAY（不依賴 YF）──
-    if (check_gap_up or check_gap_down or need_engulf) and prev_mi_gap and not is_historical:
+    if (check_gap_up or check_gap_down) and prev_mi_gap and not is_historical:
         missing = [c for c in candidates if c not in prev_mi_gap and c not in monthly_yf]
         if missing and prev_dt_for_gap:
             yyyymm = prev_dt_for_gap[:6]
@@ -3873,54 +3869,6 @@ def screen(params):
                 if round(_eff_h, 4) >= round(_eff_prev_low, 4):
                     continue
                 if gap_down_min > 0 and round(_eff_prev_low - _eff_h, 4) < round(gap_down_min, 4):
-                    continue
-
-        # 陽吞噬/陰吞噬：當日K棒「實體」完整吃掉前一日整根K棒（含影線）
-        # 陽吞：今紅K + 昨黑K + 今收≥昨高 + 今開≤昨低
-        # 陰吞：今黑K + 昨紅K + 今開≥昨高 + 今收≤昨低
-        if check_engulf_bull or check_engulf_bear:
-            if any(v is None for v in (prev_open_gap, prev_close_gap, prev_high, prev_low)):
-                _gap_unverified.add(code)  # 前一日資料缺失 → 放行並標記
-            else:
-                _bull_ok = (check_engulf_bull and c > o
-                            and prev_close_gap < prev_open_gap
-                            and round(c, 4) >= round(prev_high, 4)
-                            and round(o, 4) <= round(prev_low, 4))
-                _bear_ok = (check_engulf_bear and c < o
-                            and prev_close_gap > prev_open_gap
-                            and round(o, 4) >= round(prev_high, 4)
-                            and round(c, 4) <= round(prev_low, 4))
-                if not (_bull_ok or _bear_ok):
-                    continue
-
-        # 母子孕育線：當日K棒「實體」藏在前一日反向K棒「實體」內（當日影線不考慮）
-        # 多頭：昨黑K + 今紅K，今開≥昨收 且 今收≤昨開
-        # 空頭：昨紅K + 今黑K，今收≥昨開 且 今開≤昨收
-        if check_harami_bull or check_harami_bear:
-            if prev_open_gap is None or prev_close_gap is None:
-                _gap_unverified.add(code)  # 前一日資料缺失 → 放行並標記
-            else:
-                _hbull_ok = (check_harami_bull and c > o
-                             and prev_close_gap < prev_open_gap
-                             and round(o, 4) >= round(prev_close_gap, 4)
-                             and round(c, 4) <= round(prev_open_gap, 4))
-                _hbear_ok = (check_harami_bear and c < o
-                             and prev_close_gap > prev_open_gap
-                             and round(c, 4) >= round(prev_open_gap, 4)
-                             and round(o, 4) <= round(prev_close_gap, 4))
-                if not (_hbull_ok or _hbear_ok):
-                    continue
-                # 趨勢前提（A）：排除高檔回檔/低檔反彈的假母子
-                #   多頭母子須出現在跌勢（母線收盤 < MA20）；空頭母子須出現在漲勢（母線收盤 > MA20）
-                _h_cls = ((pw_data.get(code) or {}).get("all_closes")
-                          or (s.get("all_closes") if is_historical
-                              else (monthly_yf.get(code) or {}).get("all_closes")) or [])
-                _h_ma20 = _ma(_h_cls[:-1], 20)   # MA20 以「母線」當日為基準（排除今日子線）
-                if _h_ma20 is None:
-                    _gap_unverified.add(code)    # 歷史不足 20 根 → 放行並標記，不誤殺
-                elif _hbull_ok and not (prev_close_gap < _h_ma20):
-                    continue
-                elif _hbear_ok and not (prev_close_gap > _h_ma20):
                     continue
 
         # 賺向下跳空價差（選定日期D，篩選D_prev跳空向下 + D當天突破 + 跳空≥1 + D_prev縮量）
