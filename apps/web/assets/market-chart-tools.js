@@ -1,15 +1,31 @@
 /* Market charts use their own date/price anchors; annotations never alter autoscale. */
 (()=>{'use strict';
 const instruments=[
- {code:'^TWII',displayCode:'TSE.TW',name:'加權指數',aliases:['TSE.TW','TWII','TAIEX','TSE','0000','加權','大盤','臺灣加權指數'],key:'加權指數'},
+ {code:'^TWII',displayCode:'TSE.TW',name:'加權指數',aliases:['TSE.TW','.0000','TWII','TAIEX','TSE','0000','加權','大盤','臺灣加權指數'],key:'加權指數'},
  {code:'two',displayCode:'OTC.TW',name:'櫃買指數',aliases:['OTC.TW','^TWO','OTC','櫃買','上櫃指數'],key:'櫃買指數'},
- {code:'wtx&',displayCode:'FITX*1.TF',name:'台指期（日盤）',aliases:['FITX*1.TF','FITX*1','FITX','TX','WTX','.10088','台指期','臺指期','台指期貨'],key:'台指期（日盤）'},
+ {code:'wtx&',displayCode:'FITX*1.TF',name:'台指期（日盤）',aliases:['FITX*1.TF','FITX*1','FITX','TX','TEX','WTX','.10088','台指期','臺指期','台指期貨'],key:'台指期（日盤）'},
  {code:'vixtwn',displayCode:'VIX.TF',name:'台指VIX',aliases:['VIX.TF','VIX','台灣VIX','臺指VIX','恐慌指數'],key:'台指VIX'},
  {code:'TWD=X',displayCode:'TWD.FX',name:'台幣匯率',aliases:['TWD.FX','USDTWD','USD/TWD','台幣','臺幣匯率','美元台幣'],key:'台幣匯率'},
- {code:'stwn&',name:'富台指期 · SGX FTSE TAIWAN',displayCode:'SGX FTSE TAIWAN',aliases:['SGX FTSE TAIWAN','FTSE TAIWAN','STWN','SGX','富台指','富台指期','富台期'],key:'富台指'}
+ {code:'stwn&',name:'富台指期 · SGX FTSE TAIWAN',displayCode:'SGX FTSE TAIWAN',aliases:['SGX FTSE TAIWAN','FTSE TAIWAN','STWN','SGX','富台指','富台指期','富台期'],key:'富台指'},
+ {code:'^DJI',displayCode:'.DJI',name:'道瓊工業指數',aliases:['DJI', '道瓊', '道指', '道琼'],key:'.DJI',international:true},
+ {code:'^GSPC',displayCode:'.SPX',name:'標普500指數',aliases:['SPX', 'GSPC', 'S&P500', '標普500', '標普'],key:'.SPX',international:true},
+ {code:'^IXIC',displayCode:'.IXIC',name:'那斯達克綜合指數',aliases:['IXIC', 'NASDAQ', '那斯達克', '納斯達克', '納指', '那指'],key:'.IXIC',international:true},
+ {code:'^NDX',displayCode:'.NDX',name:'那斯達克100指數',aliases:['NDX', 'NASDAQ100', '納斯達克100', '那斯達克100'],key:'.NDX',international:true},
+ {code:'^SOX',displayCode:'.SOX',name:'費城半導體指數',aliases:['SOX', '費半', '費城半導體'],key:'.SOX',international:true},
+ {code:'^VIX',displayCode:'.VIX',name:'美國VIX波動率指數',aliases:['美國VIX', '美國恐慌指數', 'CBOE VIX'],key:'.VIX',international:true},
+ {code:'^N225',displayCode:'.N225',name:'日經225指數',aliases:['N225', '日經225', '日經'],key:'.N225',international:true},
 ];
 const normalize=s=>String(s||'').trim().toLowerCase().replace(/\s+/g,'');
-window.AcademyMarketSearch={match(q){q=normalize(q);if(!q)return[];return instruments.map(it=>({...it,rank:[it.code,it.displayCode,it.name,...it.aliases].some(x=>normalize(x)===q)?0:1})).filter(it=>[it.code,it.displayCode,it.name,...it.aliases].some(x=>normalize(x).includes(q))).sort((a,b)=>a.rank-b.rank);},find(code){return instruments.find(it=>normalize(it.code)===normalize(code));},open(code){const it=this.find(code);if(!it)return false;if(it.key==='加權指數')window._openMarketTrain?.();else window._openKpiChart?.(it.key);return true;}};
+window.AcademyMarketSearch={match(q){q=normalize(q);if(!q)return[];return instruments.map(it=>({...it,rank:[it.code,it.displayCode,it.name,...it.aliases].some(x=>normalize(x)===q)?0:1})).filter(it=>[it.code,it.displayCode,it.name,...it.aliases].some(x=>normalize(x).includes(q))).sort((a,b)=>a.rank-b.rank);},find(code){return instruments.find(it=>normalize(it.code)===normalize(code));},open(code){const it=this.find(code);if(!it||typeof window.openIndexChart!=='function')return false;window._etxReleaseChart?.();window.openIndexChart(it.code,it.name);return true;},
+ historyOnly(code){return ['two','wtx&','vixtwn','stwn&'].includes(code);},
+ async fetchChart(code,url){
+  if(!this.historyOnly(code))return fetch(url).then(r=>r.json());
+  const base=typeof SIG_SB_URL!=='undefined'?SIG_SB_URL:'https://bruqrbvbjxntgoljxsne.supabase.co',key=typeof SIG_SB_ANON!=='undefined'?SIG_SB_ANON:'sb_publishable_KgYlaR-mqtx4uVre6kPD2A_qO6tdT1y';
+  const r=await fetch(base+'/rest/v1/index_history?code=eq.'+encodeURIComponent(code)+'&select=trade_date,open,high,low,close&order=trade_date.desc&limit=1000',{headers:{apikey:key,Authorization:'Bearer '+key}});if(!r.ok)throw Error('market history unavailable');const raw=await r.json();if(!Array.isArray(raw))throw Error('invalid market history');
+  const data=Array.from(new Map(raw.filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d.trade_date)&&['open','high','low','close'].every(k=>d[k]!=null&&Number.isFinite(Number(d[k]))&&Number(d[k])>0)&&Number(d.high)>=Math.max(Number(d.open),Number(d.close))&&Number(d.low)<=Math.min(Number(d.open),Number(d.close))).map(d=>[d.trade_date,{time:d.trade_date,open:+d.open,high:+d.high,low:+d.low,close:+d.close,volume:0}])).values()).sort((a,b)=>a.time.localeCompare(b.time));
+  return {code,name:this.find(code)?.name,data,events:[],volume_unavailable:true,omitted:raw.length-data.length};
+ }};
+
 const NS='http://www.w3.org/2000/svg',finite=Number.isFinite;
 window.AcademyMarketDrawing={attach({dialog,host,chart,getSeries,data,key}){
  if(!host||!data.length)return;

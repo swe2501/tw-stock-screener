@@ -14,3 +14,6 @@
 .market-draw-menu button:disabled{opacity:.4}
 #chartSearchBox .gs-sd-item[data-code="stwn&"],#chartSearchBox .gs-sd-item[data-code="wtx&"]{grid-template-columns:84px minmax(100px,1fr) 43px!important}
 #chartSearchBox .gs-sd-item[data-code="stwn&"] .gs-sd-code{white-space:normal;line-height:1.45;font-size:9px!important;overflow-wrap:anywhere}
+.gs-sd-item[data-code="stwn&"] .gs-sd-code,.gs-sd-item[data-code="wtx&"] .gs-sd-code{white-space:normal;overflow-wrap:anywhere;line-height:1.45;font-size:10px!important}
+
+#chartModal.market-no-volume #volContainer{display:none!important}
