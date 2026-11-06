@@ -18,16 +18,16 @@ def ready(port=49675):
     try:
         with urllib.request.urlopen(f'http://127.0.0.1:{port}/api/screen?stat=hidden-capability', timeout=1) as response:
             payload = json.load(response)
-        return isinstance(payload, dict) and payload.get('zhenming_hidden') is True and payload.get('local_preview') is True and payload.get('zhenming4') is True and payload.get('zhenming4_rules_version') == 2
+        return isinstance(payload, dict) and payload.get('zhenming_hidden') is True and payload.get('local_preview') is True and payload.get('zhenming4') is True and payload.get('zhenming4_rules_version') == 2 and payload.get('pristine') is True and payload.get('zhenming6_rules_version') == 2
     except (OSError, ValueError):
         return False
 
 
 def start(open_browser=True):
-    port=next((p for p in (49675,49676) if ready(p)),None)
+    port=next((p for p in (49677,49675,49676) if ready(p)),None)
     if port is None:
         import socket
-        for candidate in (49675,49676):
+        for candidate in (49677,49675,49676):
             with socket.socket() as probe:
                 if probe.connect_ex(('127.0.0.1',candidate)) != 0:
                     port=candidate

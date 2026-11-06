@@ -12,8 +12,8 @@ async function endpoint(){
   const local=location.protocol==='file:'||/^(localhost|127\.0\.0\.1|\[::1\]|::1)$/.test(location.hostname)||/\.localhost$/.test(location.hostname);
   if(!local)return window.__API||'';
   if(localEndpoint)return localEndpoint;
-  for(const base of ['http://127.0.0.1:49675','http://127.0.0.1:49676']){
-    try{const r=await fetch(base+'/api/screen?stat=hidden-capability',{signal:AbortSignal.timeout(5000)}),d=await r.json();if(r.ok&&d.zhenming6===true){localEndpoint=base;return base;}}catch{}
+  for(const base of ['http://127.0.0.1:49677','http://127.0.0.1:49675','http://127.0.0.1:49676']){
+    try{const r=await fetch(base+'/api/screen?stat=hidden-capability',{signal:AbortSignal.timeout(5000)}),d=await r.json();if(r.ok&&d.zhenming6===true&&d.zhenming6_rules_version===2){localEndpoint=base;return base;}}catch{}
   }
   throw Error('本機六式篩選服務尚未更新或未啟動，請重新啟動專案的「啟動本機預覽.cmd」後再試。');
 }
@@ -38,7 +38,7 @@ const md=d=>String(d||'').slice(5).replace('-','/');
 const QMARK='<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7.7 7.4a2.4 2.4 0 1 1 3.5 2.1c-.8.4-1.2.9-1.2 1.8v.3M10 14.3v.1"/></svg>';
 function badge(z){
   const lines=['真名六式｜'+(z.pattern?z.pattern+'跌破 · '+(z.day_n?'第 '+z.day_n+' 天':'當天'):'空頭啟動'),
-    '長黑：−'+z.black_pct+'%','型態失效：'+z.stop+'（長黑 K 高點）'];
+    '長黑：−'+z.black_pct+'%','實體比較：近 5 根 K 棒最長（不含影線）','型態失效：'+z.stop+'（長黑 K 高點）'];
   if(z.pattern&&z.level!=null)lines.push('頸線／下緣：'+z.level+'（'+md(z.break_date)+' 跌破）');
   lines.push('MA5／10／20：'+z.ma5+' / '+z.ma10+' / '+z.ma20,'20MA：下彎中');
   lines.push(...coverLines(z));

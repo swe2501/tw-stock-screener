@@ -41,21 +41,23 @@ class MemoryRest:
 class Tasks(unittest.TestCase):
     def setUp(self):
         self.rest=MemoryRest();self.env=patch.dict(os.environ,{'VERCEL':'0'});self.env.start();self.addCleanup(self.env.stop)
-    def request(self,action,body,worker=False,expected=200):
-        status,result=service.handle(action,body,'worker' if worker else 'admin',self.rest,worker)
+    def request(self,action,body,worker=False,expected=200,actor=None):
+        who=actor if actor is not None else ('worker' if worker else 'admin')
+        status,result=service.handle(action,body,who,self.rest,worker)
         self.assertEqual(status,expected,result);return result
     def make(self,**kw):
         body=dict(id=str(uuid.uuid4()),title='研究測試',brief='整理公開來源並說明未知事項',criteria=['附來源','附日期'],department=7,execution='manual',budget_usd=.5)
         body.update(kw);return self.request('admin_office_tasks_create',body)['task']
-    def update(self,t,op,is_worker=False,expected=200,**kw):
+    def update(self,t,op,is_worker=False,expected=200,actor=None,**kw):
         body=dict(id=t['id'],revision=t['revision'],operation=op);body.update(kw)
-        return self.request('worker' if is_worker else 'admin_office_tasks_update',body,is_worker,expected)
+        return self.request('worker' if is_worker else 'admin_office_tasks_update',body,is_worker,expected,actor=actor)
     def test_manual_lifecycle_and_handoff(self):
         t=self.make();t=self.update(t,'claim')['task'];t=self.update(t,'progress',note='已核對一項來源')['task']
         self.update(t,'approve',checks=[True,True],expected=409)
         t=self.update(t,'submit',result='## 研究成果\n來源 https://example.org')['task']
-        self.update(t,'approve',checks=[True,False],expected=400)
-        t=self.update(t,'approve',checks=[True,True])['task']
+        self.update(t,'approve',checks=[True,True],expected=403)  # 領取者 admin 不可自行驗收
+        self.update(t,'approve',checks=[True,False],actor='reviewer',expected=400)
+        t=self.update(t,'approve',checks=[True,True],actor='reviewer')['task']
         child=self.make(depends_on=[t['id']],department=14)
         self.assertEqual(self.update(child,'claim')['task']['status'],'running')
         self.update(t,'cancel',expected=409)
@@ -118,8 +120,14 @@ class Tasks(unittest.TestCase):
         with patch.dict(os.environ,{'VERCEL':'1','VERCEL_GIT_COMMIT_REF':'prod'}):self.request('admin_office_tasks_list',{},expected=403)
     def test_large_results_use_short_timestamp_cas_url(self):
         t=self.make();t=self.update(t,'claim')['task'];t=self.update(t,'submit',result='研'*39999)['task']
-        t=self.update(t,'approve',checks=[True,True])['task']
+        t=self.update(t,'approve',checks=[True,True],actor='reviewer')['task']
         self.assertTrue(all(len(path)<250 for method,path in self.rest.paths if method=='PATCH'))
+    def test_manual_claimant_cannot_self_approve(self):
+        t=self.make();t=self.update(t,'claim')['task'];t=self.update(t,'submit',result='成果')['task']
+        self.assertEqual(t['worker'],'admin')
+        self.update(t,'approve',checks=[True,True],expected=403)
+        approved=self.update(t,'approve',checks=[True,True],actor='reviewer')['task']
+        self.assertEqual(approved['status'],'approved');self.assertEqual(approved['reviewed_by'],'reviewer')
     def test_worker_list_only_ai_and_no_self_acceptance(self):
         manual=self.make();ai=self.make(execution='ai')
         result=self.request('worker',{'operation':'list'},True);self.assertEqual([t['id'] for t in result['tasks']],[ai['id']])
@@ -137,7 +145,7 @@ class Tasks(unittest.TestCase):
         for th in threads:th.join(timeout=5)
         self.assertEqual(sorted(out),[200,409])
     def test_approved_dependency_content_is_handed_to_ai(self):
-        t=self.make();t=self.update(t,'claim')['task'];t=self.update(t,'submit',result='已查核的前置成果')['task'];t=self.update(t,'approve',checks=[True,True])['task']
+        t=self.make();t=self.update(t,'claim')['task'];t=self.update(t,'submit',result='已查核的前置成果')['task'];t=self.update(t,'approve',checks=[True,True],actor='reviewer')['task']
         child=self.make(execution='ai',depends_on=[t['id']]);claimed=self.update(child,'claim',is_worker=True,worker='test')['task']
         self.assertEqual(claimed['dependency_outputs'][0]['result'],'已查核的前置成果')
     def test_department_disabled_is_enforced_with_valid_payload(self):

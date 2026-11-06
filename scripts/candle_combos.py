@@ -251,8 +251,9 @@ def is_doji(b, i):
 
 
 def bull_engulf(b, i):
+    # 2026-11-06 用戶指定：被吞的前一根可以是黑K，或開盤＝收盤的一字線／十字線／吊人線／墓碑線（＝不是紅K）
     s = i - 1
-    if not same_seg(b, s, i) or not (black(b, s) and red(b, i)):
+    if not same_seg(b, s, i) or red(b, s) or not red(b, i):
         return False
     if not (b.o[i] <= b.l[s] and b.c[i] >= b.h[s]):           # 紅K實體包住前黑K最低~最高（連影線）
         return False
@@ -260,8 +261,9 @@ def bull_engulf(b, i):
 
 
 def bear_engulf(b, i):
+    # 2026-11-06 用戶指定：被吞的前一根可以是紅K，或開盤＝收盤的一字線／十字線／吊人線／墓碑線（＝不是黑K）
     s = i - 1
-    if not same_seg(b, s, i) or not (red(b, s) and black(b, i)):
+    if not same_seg(b, s, i) or black(b, s) or not black(b, i):
         return False
     if not (b.o[i] >= b.h[s] and b.c[i] <= b.l[s]):
         return False
@@ -631,11 +633,40 @@ def upload(out, calendar, full=False, keep_days=10):
     return len(combos) + len(signals)
 
 
+def today_ready(min_ratio=0.95):
+    """2026-11-06 盤後提前算（run_intraday.bat 16:00 後）：本機 stock_daily 今天的上市、上櫃筆數都要 ≥ 前一交易日的 95%。
+    沒到齊（休市、櫃買開放資料還停在昨天、永豐沒補到）就不算不上傳，夜間排程照舊重算最近 10 個交易日。"""
+    from datetime import datetime, timedelta, timezone
+    today = datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m-%d")
+    conn = sqlite3.connect(f"file:{ws.LOCAL_DB_PATH}?mode=ro", uri=True, timeout=120)
+    try:
+        cnt = {}
+        for m in ("twse", "otc"):
+            rows = conn.execute("select trade_date, count(*) from stock_daily where market=? and trade_date<=? "
+                                "group by trade_date order by trade_date desc limit 2", (m, today)).fetchall()
+            cnt[m] = rows
+    finally:
+        conn.close()
+    for m, rows in cnt.items():
+        if not rows or rows[0][0] != today:
+            print(f"[跳過] 本機 {m} 還沒有今天 {today} 的日K（最新 {rows[0][0] if rows else '無'}），留給夜間排程")
+            return False
+        if len(rows) > 1 and rows[0][1] < min_ratio * rows[1][1]:
+            print(f"[跳過] 本機 {m} 今天只有 {rows[0][1]} 檔（前一交易日 {rows[1][1]} 檔），不足 {min_ratio:.0%}，留給夜間排程")
+            return False
+    print(f"[檢查] 今天 {today} 日K 到齊：上市 {cnt['twse'][0][1]} 檔、上櫃 {cnt['otc'][0][1]} 檔")
+    return True
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dry-run", action="store_true", help="只計算與統計，不寫資料庫")
     ap.add_argument("--full", action="store_true", help="全部重寫（首次回補或規則修改後用）")
+    ap.add_argument("--require-today", action="store_true",
+                    help="16:00 盤後用：本機今天的上市、上櫃日K 都到齊才算，否則跳過（留給夜間排程）")
     a = ap.parse_args()
+    if a.require_today and not today_ready():
+        return
     out, calendar = run()
     if a.dry_run:
         p = Path(r"D:\stock_data\candle_combos_dryrun.json")
