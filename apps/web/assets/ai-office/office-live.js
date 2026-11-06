@@ -7,22 +7,36 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const stamp=s=>{const d=new Date(s);return s&&Number.isFinite(+d)?d.toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false}):'尚無紀錄';};
 const secs=n=>n==null?'尚無紀錄':n<60?Math.round(n)+' 秒':n<3600?(n/60).toFixed(1)+' 分鐘':(n/3600).toFixed(1)+' 小時';
 const percent=n=>n==null?'尚無紀錄':Math.round(n*100)+'%';
-let roles=[],snapshots=new Map(),request=0,pending=false,lastDepartment=-1;
+let roles=[],snapshots=new Map(),request=0,pending=false,lastDepartment=-1,inflight=new Map();
 const send=data=>{if(parent!==window)parent.postMessage(data,location.protocol==='file:'?'*':location.origin);};
+function todayTW(){return new Date(Date.now()+8*3600000).toISOString().slice(0,10);}
 function emitActivity(){
  const current=roles.map(r=>({department:r.department,status:r.status}));const latest=new Map();
  snapshots.forEach(s=>(s.tasks||[]).forEach(t=>{if(!latest.has(t.id)||(t.revision||0)>=(latest.get(t.id).revision||0))latest.set(t.id,t);}));
+ const loadError=[...snapshots.values()].some(s=>s&&s.error);
+ const loading=pending&&![...snapshots.values()].some(s=>s&&((s.tasks&&s.tasks.length)||s.error));
  latest.forEach(t=>{
   const interrupted=t.status==='running'&&t.execution==='ai'&&Date.parse(t.lease_until)<Date.now();
+  const overdue=!!(t.due_date&&t.due_date<todayTW()&&!['approved','cancelled'].includes(t.status));
   if(t.status==='running'&&!interrupted)current.push({department:t.department,status:'work'});
+  else if(overdue||['blocked','failed'].includes(t.status)||interrupted)current.push({department:t.department,status:'stuck'});
   else if(['queued','review'].includes(t.status))current.push({department:t.department,status:'wait'});
-  else if(['blocked','failed'].includes(t.status)||interrupted)current.push({department:t.department,status:'stuck'});
  });
- dispatchEvent(new CustomEvent('foresight-office-activity',{detail:current}));
+ const ev=new CustomEvent('foresight-office-activity',{detail:current});ev.meta={loading,loadError,snapshotCount:snapshots.size};dispatchEvent(ev);
 }
+function taskStats(id){const latest=new Map();snapshots.forEach(s=>(s.tasks||[]).forEach(t=>{if(t.department!==id)return;if(!latest.has(t.id)||(t.revision||0)>=(latest.get(t.id).revision||0))latest.set(t.id,t);}));let wait=0,work=0,stuck=0;latest.forEach(t=>{const interrupted=t.status==='running'&&t.execution==='ai'&&Date.parse(t.lease_until)<Date.now();const overdue=!!(t.due_date&&t.due_date<todayTW()&&!['approved','cancelled'].includes(t.status));if(t.status==='running'&&!interrupted)work++;else if(overdue||['blocked','failed'].includes(t.status)||interrupted)stuck++;else if(['queued','review'].includes(t.status))wait++;});return {wait,work,stuck,total:latest.size};}
 function decorate(){document.querySelectorAll('.department').forEach(b=>{
- b.querySelector('.existing-role-count')?.remove();const list=roles.filter(r=>r.department===+b.dataset.department);if(!list.length)return;
- const badge=document.createElement('small');badge.className='existing-role-count';const active=list.filter(r=>r.status==='work').length;badge.textContent=active?active+' 組工作中':list.length+' 組';badge.title='真實排程回報';b.append(badge);
+ b.querySelector('.existing-role-count')?.remove();const id=+b.dataset.department;const list=roles.filter(r=>r.department===id);const stats=taskStats(id);const snap=snapshots.get(id)||snapshots.get(19);
+ if(!list.length&&!stats.total&&!(snap&&(snap.error||snap.tasks)))return;
+ const badge=document.createElement('small');badge.className='existing-role-count';
+ if(pending&&!snap)badge.textContent='載入中';
+ else if(snap&&snap.error)badge.textContent='載入失敗';
+ else if(stats.work)badge.textContent='工作中 '+stats.work;
+ else if(stats.stuck)badge.textContent='需處理 '+stats.stuck;
+ else if(stats.wait)badge.textContent='待執行 '+stats.wait;
+ else if(list.length){const active=list.filter(r=>r.status==='work').length;badge.textContent=active?active+' 組工作中':list.length+' 組';}
+ else badge.textContent='無任務';
+ badge.title='真實任務／排程回報';b.append(badge);
 });}
 function roleCard(r){const current=r.current||r.report||r.summary||r.duty||'尚未回報工作內容';
  return '<article class="wr-person" data-status="'+esc(r.status)+'"><div class="wr-person-head"><span class="wr-avatar" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="7" r="3"/><path d="M5 21v-3c0-7 14-7 14 0v3M3 12h4m10 0h4"/></svg></span><div><b>'+esc(r.name)+'</b><span class="live-role-state" data-state="'+esc(r.status)+'">'+esc(r.statusText)+'</span></div></div><p class="wr-current">'+esc(current)+'</p><dl><div><dt>開始時間</dt><dd>'+esc(stamp(r.since))+'</dd></div><div><dt>已執行</dt><dd data-work-since="'+esc(r.status==='work'?r.since||'':'')+'">'+esc(r.status==='work'?secs(ForesightWorkroomModel.duration(r.since,new Date().toISOString())):'—')+'</dd></div><div><dt>最後回報</dt><dd>'+esc(stamp(r.updated))+'</dd></div></dl>'+(r.reason?'<p class="wr-alert">'+esc(r.reason)+'</p>':'')+'<details><summary>工作步驟與成果</summary><p>資料日期：'+esc(r.dataDate||'尚未回報')+' · 重試次數：'+esc(r.retries==null?'尚未回報':r.retries)+'</p><p>'+esc(r.duty||'')+'</p><ol class="wr-timeline">'+(r.steps||[]).slice().reverse().map(s=>'<li><div><b>'+esc(s.step)+'</b><span>'+(!s.end?'執行中':s.ok===true?'完成':s.ok===false?'失敗':'已結束')+'</span></div><small>'+esc(stamp(s.start))+' · '+esc(secs(s.secs??ForesightWorkroomModel.duration(s.start,s.end)))+'</small>'+(s.detail?'<p>'+esc(s.detail)+'</p>':'')+'</li>').join('')+'</ol>'+(!(r.steps||[]).length?'<p>尚未回報步驟。</p>':'')+(r.summary?'<p>'+esc(r.summary)+'</p>':'')+'</details></article>';
@@ -33,7 +47,7 @@ function render(){
  const id=ForesightOffice.selectedDepartment;if(id<0)return;
  const prev=content.querySelector('.live-department-roles');const opened=prev?[...prev.querySelectorAll('details')].map(e=>e.open):[];prev?.remove();
  document.querySelector('#officeExploreDialog').classList.add('workroom-dialog');
- const all=id===19,items=roles.filter(r=>all||r.department===id),snapshot=snapshots.get(id),tasks=snapshot?.tasks||[],m=ForesightWorkroomModel.metrics(items,tasks);
+ const all=id===19,items=roles.filter(r=>all||r.department===id),snapshot=snapshotFor(id),tasks=snapshot?.tasks||[],m=ForesightWorkroomModel.metrics(items,tasks);
  const section=document.createElement('section');section.className='live-department-roles workroom';
  const metric=(label,value,sub)=>'<div><dt>'+label+'</dt><dd>'+esc(value)+'</dd><small>'+esc(sub||'')+'</small></div>';
  const flow=tasks.filter(t=>!['approved','cancelled'].includes(t.status));
@@ -54,7 +68,9 @@ function render(){
  section.querySelector('[data-workroom-refresh]').disabled=pending;
  const footer=content.querySelector('.profile-footer');if(footer)footer.textContent=id===0?'總管是既有排程協調角色，不代表執行長或總經理已自動化。':'此處彙整排程與任務回報；人物動作不代表已領取或完成任務。';
 }
-function requestData(id,force=false){if(parent===window)return;const snap=snapshots.get(id);const ttl=(!snap||(snap.tasks&&snap.tasks.length)||snap.error)?30000:2000;if(!force&&snap&&Date.now()-snap.received<ttl)return;pending=true;send({type:'foresight-office-workroom-request',department:id,request:++request,force});render();}
+function requestData(id,force=false){if(parent===window)return;const snap=snapshots.get(id);const ttl=(!snap||(snap.tasks&&snap.tasks.length)||snap.error)?30000:2000;if(!force&&snap&&Date.now()-snap.received<ttl)return;const seq=++request;inflight.set(seq,id);pending=true;send({type:'foresight-office-workroom-request',department:id,request:seq,force});emitActivity();decorate();render();}
+function preloadOverview(force=false){if(parent===window)return;requestData(19,force);}
+function snapshotFor(id){const own=snapshots.get(id);if(own)return own;const all=snapshots.get(19);if(!all||id===19)return all;return {...all,tasks:(all.tasks||[]).filter(t=>t.department===id)};}
 addEventListener('message',event=>{
  if(parent===window||event.source!==parent||(event.origin!==location.origin&&!(location.protocol==='file:'&&['null','file://'].includes(event.origin))))return;
  const msg=event.data;if(!msg)return;
@@ -62,14 +78,16 @@ addEventListener('message',event=>{
  if(msg.type==='foresight-office-departments'&&Array.isArray(msg.roles)){
   roles=msg.roles.filter(r=>r&&permitted[r.key]===r.department);decorate();render();
   emitActivity();
+ preloadOverview();
  }
- if(msg.type==='foresight-office-workroom'&&msg.request===request&&msg.department===lastDepartment){pending=false;snapshots.set(msg.department,{...msg.snapshot,received:Date.now()});emitActivity();render();}
+ if(msg.type==='foresight-office-workroom'&&inflight.has(msg.request)){inflight.delete(msg.request);pending=inflight.size>0;snapshots.set(msg.department,{...msg.snapshot,received:Date.now()});emitActivity();decorate();render();}
 });
 new MutationObserver(()=>{const content=document.querySelector('#exploreContent');if(content.querySelector('.profile-heading')&&!content.querySelector('.live-department-roles')){lastDepartment=ForesightOffice.selectedDepartment;render();requestData(lastDepartment);}}).observe(document.querySelector('#exploreContent'),{childList:true});
 let visible=true;
-addEventListener('message',e=>{if(e.source===parent&&e.origin===location.origin&&e.data?.type==='foresight-office-visibility')visible=e.data.visible===true;});
+addEventListener('message',e=>{if(e.source===parent&&e.origin===location.origin&&e.data?.type==='foresight-office-visibility'){visible=e.data.visible===true;if(visible)preloadOverview();}});
+addEventListener('foresight-office-selection',()=>{if(!document.querySelector('#officeExploreDialog')?.open)preloadOverview();});
 const elapsedTimer=setInterval(()=>{if(document.hidden||!visible)return;document.querySelectorAll('[data-work-since]').forEach(e=>{if(e.dataset.workSince)e.textContent=secs(ForesightWorkroomModel.duration(e.dataset.workSince,new Date().toISOString()));});},2000);
-const refreshTimer=setInterval(()=>{if(!document.hidden&&visible&&document.querySelector('#officeExploreDialog').open&&document.querySelector('.workroom'))requestData(ForesightOffice.selectedDepartment);},60000);
+const refreshTimer=setInterval(()=>{if(document.hidden||!visible)return;if(document.querySelector('#officeExploreDialog').open&&document.querySelector('.workroom'))requestData(ForesightOffice.selectedDepartment);else preloadOverview();},60000);
 addEventListener('pagehide',()=>{clearInterval(elapsedTimer);clearInterval(refreshTimer);});
 if(parent!==window)send({type:'foresight-office-ready'});
 })();
