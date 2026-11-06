@@ -251,8 +251,9 @@ def is_doji(b, i):
 
 
 def bull_engulf(b, i):
+    # 2026-11-06 用戶指定：被吞的前一根可以是黑K，或開盤＝收盤的一字線／十字線／吊人線／墓碑線（＝不是紅K）
     s = i - 1
-    if not same_seg(b, s, i) or not (black(b, s) and red(b, i)):
+    if not same_seg(b, s, i) or red(b, s) or not red(b, i):
         return False
     if not (b.o[i] <= b.l[s] and b.c[i] >= b.h[s]):           # 紅K實體包住前黑K最低~最高（連影線）
         return False
@@ -260,8 +261,9 @@ def bull_engulf(b, i):
 
 
 def bear_engulf(b, i):
+    # 2026-11-06 用戶指定：被吞的前一根可以是紅K，或開盤＝收盤的一字線／十字線／吊人線／墓碑線（＝不是黑K）
     s = i - 1
-    if not same_seg(b, s, i) or not (red(b, s) and black(b, i)):
+    if not same_seg(b, s, i) or black(b, s) or not black(b, i):
         return False
     if not (b.o[i] >= b.h[s] and b.c[i] <= b.l[s]):
         return False
