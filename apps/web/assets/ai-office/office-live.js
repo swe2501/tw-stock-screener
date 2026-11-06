@@ -16,15 +16,17 @@ function emitActivity(){
  const loadError=[...snapshots.values()].some(s=>s&&s.error);
  const loading=pending&&![...snapshots.values()].some(s=>s&&((s.tasks&&s.tasks.length)||s.error));
  latest.forEach(t=>{
+  if(['approved','cancelled'].includes(t.status))return;
   const interrupted=t.status==='running'&&t.execution==='ai'&&Date.parse(t.lease_until)<Date.now();
-  const overdue=!!(t.due_date&&t.due_date<todayTW()&&!['approved','cancelled'].includes(t.status));
+  const overdue=!!(t.due_date&&t.due_date<todayTW());
+  const known=['queued','running','blocked','review','failed'];
   if(t.status==='running'&&!interrupted)current.push({department:t.department,status:'work'});
-  else if(overdue||['blocked','failed'].includes(t.status)||interrupted)current.push({department:t.department,status:'stuck'});
+  else if(overdue||['blocked','failed'].includes(t.status)||interrupted||!known.includes(t.status))current.push({department:t.department,status:'stuck'});
   else if(['queued','review'].includes(t.status))current.push({department:t.department,status:'wait'});
  });
  const ev=new CustomEvent('foresight-office-activity',{detail:current});ev.meta={loading,loadError,snapshotCount:snapshots.size};dispatchEvent(ev);
 }
-function taskStats(id){const latest=new Map();snapshots.forEach(s=>(s.tasks||[]).forEach(t=>{if(t.department!==id)return;if(!latest.has(t.id)||(t.revision||0)>=(latest.get(t.id).revision||0))latest.set(t.id,t);}));let wait=0,work=0,stuck=0;latest.forEach(t=>{const interrupted=t.status==='running'&&t.execution==='ai'&&Date.parse(t.lease_until)<Date.now();const overdue=!!(t.due_date&&t.due_date<todayTW()&&!['approved','cancelled'].includes(t.status));if(t.status==='running'&&!interrupted)work++;else if(overdue||['blocked','failed'].includes(t.status)||interrupted)stuck++;else if(['queued','review'].includes(t.status))wait++;});return {wait,work,stuck,total:latest.size};}
+function taskStats(id){const latest=new Map();snapshots.forEach(s=>(s.tasks||[]).forEach(t=>{if(t.department!==id)return;if(!latest.has(t.id)||(t.revision||0)>=(latest.get(t.id).revision||0))latest.set(t.id,t);}));let wait=0,work=0,stuck=0;latest.forEach(t=>{if(['approved','cancelled'].includes(t.status))return;const interrupted=t.status==='running'&&t.execution==='ai'&&Date.parse(t.lease_until)<Date.now();const overdue=!!(t.due_date&&t.due_date<todayTW());const known=['queued','running','blocked','review','failed'];if(t.status==='running'&&!interrupted)work++;else if(overdue||['blocked','failed'].includes(t.status)||interrupted||!known.includes(t.status))stuck++;else if(['queued','review'].includes(t.status))wait++;});return {wait,work,stuck,total:latest.size};}
 function decorate(){document.querySelectorAll('.department').forEach(b=>{
  b.querySelector('.existing-role-count')?.remove();const id=+b.dataset.department;const list=roles.filter(r=>r.department===id);const stats=taskStats(id);const snap=snapshots.get(id)||snapshots.get(19);
  if(!list.length&&!stats.total&&!(snap&&(snap.error||snap.tasks)))return;
@@ -34,6 +36,7 @@ function decorate(){document.querySelectorAll('.department').forEach(b=>{
  else if(stats.work)badge.textContent='工作中 '+stats.work;
  else if(stats.stuck)badge.textContent='需處理 '+stats.stuck;
  else if(stats.wait)badge.textContent='待執行 '+stats.wait;
+ else if(stats.total)badge.textContent='待確認 '+stats.total;
  else if(list.length){const active=list.filter(r=>r.status==='work').length;badge.textContent=active?active+' 組工作中':list.length+' 組';}
  else badge.textContent='無任務';
  badge.title='真實任務／排程回報';b.append(badge);
@@ -41,7 +44,7 @@ function decorate(){document.querySelectorAll('.department').forEach(b=>{
 function roleCard(r){const current=r.current||r.report||r.summary||r.duty||'尚未回報工作內容';
  return '<article class="wr-person" data-status="'+esc(r.status)+'"><div class="wr-person-head"><span class="wr-avatar" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="7" r="3"/><path d="M5 21v-3c0-7 14-7 14 0v3M3 12h4m10 0h4"/></svg></span><div><b>'+esc(r.name)+'</b><span class="live-role-state" data-state="'+esc(r.status)+'">'+esc(r.statusText)+'</span></div></div><p class="wr-current">'+esc(current)+'</p><dl><div><dt>開始時間</dt><dd>'+esc(stamp(r.since))+'</dd></div><div><dt>已執行</dt><dd data-work-since="'+esc(r.status==='work'?r.since||'':'')+'">'+esc(r.status==='work'?secs(ForesightWorkroomModel.duration(r.since,new Date().toISOString())):'—')+'</dd></div><div><dt>最後回報</dt><dd>'+esc(stamp(r.updated))+'</dd></div></dl>'+(r.reason?'<p class="wr-alert">'+esc(r.reason)+'</p>':'')+'<details><summary>工作步驟與成果</summary><p>資料日期：'+esc(r.dataDate||'尚未回報')+' · 重試次數：'+esc(r.retries==null?'尚未回報':r.retries)+'</p><p>'+esc(r.duty||'')+'</p><ol class="wr-timeline">'+(r.steps||[]).slice().reverse().map(s=>'<li><div><b>'+esc(s.step)+'</b><span>'+(!s.end?'執行中':s.ok===true?'完成':s.ok===false?'失敗':'已結束')+'</span></div><small>'+esc(stamp(s.start))+' · '+esc(secs(s.secs??ForesightWorkroomModel.duration(s.start,s.end)))+'</small>'+(s.detail?'<p>'+esc(s.detail)+'</p>':'')+'</li>').join('')+'</ol>'+(!(r.steps||[]).length?'<p>尚未回報步驟。</p>':'')+(r.summary?'<p>'+esc(r.summary)+'</p>':'')+'</details></article>';
 }
-function taskButton(t){const interrupted=t.status==='running'&&t.execution==='ai'&&Date.parse(t.lease_until)<Date.now();const label=interrupted?'回報中斷':names[t.status]||'待確認';return '<button type="button" class="wr-task" data-workroom-task="'+esc(t.id)+'"><span><b>'+esc(t.title)+'</b><small>'+esc(t.current_step||'尚未回報步驟')+(t.status==='queued'?' · 已等待 '+esc(secs(ForesightWorkroomModel.duration(t.created_at,new Date().toISOString()))):'')+'</small></span><span>'+esc(names[t.status]||'待確認')+' ↗</span></button>';}
+function taskButton(t){const interrupted=t.status==='running'&&t.execution==='ai'&&Date.parse(t.lease_until)<Date.now();const label=interrupted?'回報中斷':names[t.status]||'待確認';return '<button type="button" class="wr-task" data-workroom-task="'+esc(t.id)+'"><span><b>'+esc(t.title)+'</b><small>'+esc(t.current_step||'尚未回報步驟')+(t.status==='queued'?' · 已等待 '+esc(secs(ForesightWorkroomModel.duration(t.created_at,new Date().toISOString()))):'')+'</small></span><span>'+esc(label)+' ↗</span></button>';}
 function render(){
  const content=document.querySelector('#exploreContent');if(!content||!content.querySelector('.profile-heading'))return;
  const id=ForesightOffice.selectedDepartment;if(id<0)return;
