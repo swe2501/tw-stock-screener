@@ -155,7 +155,7 @@ class AgentAuth(unittest.TestCase):
         self.assertEqual(r['task']['result'],'完成盤點')
         self.assertEqual(r['task']['evidence'],['https://example.org/proof'])
         self.assertEqual(r['task']['usage_week'],12)
-        self.assertTrue(r['task'].get('cost_uncertain'))
+        self.assertFalse(r['task'].get('cost_self_reported')); self.assertEqual(r['task'].get('cost_usd'),0)
         listed=service.handle('admin_office_tasks_list',{},'admin',self.rest)[1]
         self.assertIn('office_agents',listed)
         row=next(t for t in listed['tasks'] if t['id']==task['id'])
@@ -243,10 +243,44 @@ class AgentAuth(unittest.TestCase):
         lease=r['task']['lease_token']
         s,r=call(self.payload('submit',id=task['id'],revision=2,lease_token=lease,result='done',cost_usd=101),key='ceo')
         self.assertEqual(s,400,r)
+        s2,r2=call(self.payload('list'),key='ceo'); self.assertEqual(s2,200,r2); self.assertTrue(any(x['id']==task['id'] and x['status']=='running' for x in r2.get('tasks',[])), r2)
         s,r=call(self.payload('submit',id=task['id'],revision=2,lease_token=lease,result='done',cost_usd=1.25,usage_week='3 calls'),key='ceo')
         self.assertEqual(s,200,r)
         self.assertTrue(r['task'].get('cost_self_reported'))
         self.assertEqual(r['task'].get('cost_usd'),1.25)
+
+    def test_agent_submit_rejects_illegal_cost_without_side_effects(self):
+        """Negative / NaN / Inf / string / bool / >100 => 400; task stays running."""
+        from lib.office_agents import actor_for
+        task=self.make(department=0,assignee='ceo')
+        s,r=call(self.payload('claim',id=task['id'],revision=1),key='ceo');self.assertEqual(s,200,r)
+        lease=r['task']['lease_token']; rev=2
+        for bad in (-1, '1.25', True, 101):
+            with self.subTest(via='http', bad=bad):
+                s,r=call(self.payload('submit',id=task['id'],revision=rev,lease_token=lease,result='should-not-stick',cost_usd=bad),key='ceo')
+                self.assertEqual(s,400,r)
+        for bad in (float('nan'), float('inf'), float('-inf')):
+            with self.subTest(via='handle', bad=str(bad)):
+                s,r=service.handle('worker',dict(operation='submit',id=task['id'],revision=rev,lease_token=lease,result='should-not-stick',cost_usd=bad),actor_for('ceo'),self.rest,worker=True)
+                self.assertEqual(s,400,r)
+        s,r=call(self.payload('submit',id=task['id'],revision=rev,lease_token=lease,result='ok-after-rejects',cost_usd=0),key='ceo')
+        self.assertEqual(s,200,r)
+        self.assertEqual(r['task']['status'],'review')
+        self.assertEqual(r['task']['result'],'ok-after-rejects')
+        self.assertTrue(r['task'].get('cost_self_reported'))
+        self.assertEqual(r['task'].get('cost_usd'),0)
+
+    def test_agent_submit_omitted_cost_is_accepted(self):
+        task=self.make(department=0,assignee='ceo')
+        s,r=call(self.payload('claim',id=task['id'],revision=1),key='ceo');self.assertEqual(s,200,r)
+        lease=r['task']['lease_token']
+        body=self.payload('submit',id=task['id'],revision=2,lease_token=lease,result='done-no-cost')
+        body.pop('cost_usd',None)
+        s,r=call(body,key='ceo')
+        self.assertEqual(s,200,r)
+        self.assertEqual(r['task']['status'],'review')
+        self.assertFalse(r['task'].get('cost_self_reported'))
+        self.assertEqual(r['task'].get('cost_usd'),0)
 
 if __name__=='__main__':
     unittest.main()

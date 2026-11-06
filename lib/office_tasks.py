@@ -289,14 +289,18 @@ def mutate(body, actor, rest, worker=False):
             result=text(body.get('result',''),40000,'交付內容',operation=='submit')
             note=text(body.get('note',''),2000,'執行說明',operation!='submit')
             cost=body.get('cost_usd')
-            if type(cost) not in (int,float) or not math.isfinite(cost) or cost<0:
+            agent_cost=task.get('execution')=='agent' or is_agent_actor(actor)
+            if agent_cost:
+                # Self-reported, non-billing. Missing/null = not reported (ok).
+                # Negative / NaN / Inf / non-number / >100 => 400, no side effects.
+                if cost is None:
+                    cost=0
+                else:
+                    if type(cost) not in (int,float) or not math.isfinite(cost) or cost<0 or cost>100:
+                        raise Problem(400,'自報 cost_usd 須為 0–100 的有限數字（非計費；非法值一律拒絕）')
+                    task['cost_self_reported']=True
+            elif type(cost) not in (int,float) or not math.isfinite(cost) or cost<0:
                 cost=task.get('reserved_usd') or 0;task['cost_uncertain']=True
-            elif task['execution']=='agent' or is_agent_actor(actor):
-                # Self-reported by the agent; not a billing meter. Cap to blunt abuse.
-                if cost > 100:
-                    raise Problem(400,'自報 cost_usd 上限為 100（非計費欄位）')
-                task['cost_self_reported']=True
-                task['cost_uncertain']=True if body.get('cost_usd') is None else task.get('cost_uncertain', False)
             task['cost_usd']=round(task.get('cost_usd',0)+cost,6)
             store_usage(task,body)
             store_evidence(task,body)
