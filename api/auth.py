@@ -1,5 +1,6 @@
+# rebuild-marker: load OFFICE_AGENT_TOKEN_QA on Preview(uat)
 from http.server import BaseHTTPRequestHandler
-import json, os, urllib.request, urllib.parse, urllib.error
+import hashlib, hmac, json, os, time, urllib.request, urllib.parse, urllib.error
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
 SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "")
@@ -155,6 +156,125 @@ def _admin_api(path, method="GET", body=None):
             return e.code, {"error": "admin api error"}
 
 
+OFFICE_WORKER_ROLES = ("ceo", "cto", "sec", "eng", "qa")
+OFFICE_WORKER_OPS = ("claim", "heartbeat", "submit", "fail", "block", "list")
+OFFICE_AGENT_OPS = ("list", "claim", "heartbeat", "submit", "block", "fail", "get")
+OFFICE_AGENT_FORBIDDEN = ("approve", "cancel", "retry", "online")
+OFFICE_AGENT_HEADERS = (
+    "x-office-agent-key",
+    "x-office-agent-timestamp",
+    "x-office-agent-nonce",
+    "x-office-agent-signature",
+)
+OFFICE_CORS_HEADERS = (
+    "Content-Type, Authorization, x-office-worker-token, "
+    "x-office-agent-key, x-office-agent-timestamp, x-office-agent-nonce, x-office-agent-signature"
+)
+
+
+def _header(headers, name):
+    if headers is None:
+        return ""
+    getter = getattr(headers, "get", None)
+    value = getter(name) if getter else None
+    if value is None and hasattr(headers, "get"):
+        try:
+            value = headers.get(name)
+        except Exception:
+            value = None
+    return value if isinstance(value, str) else ""
+
+
+def _office_dispatch(body, headers, raw):
+    if any(_header(headers, name) for name in OFFICE_AGENT_HEADERS):
+        return _office_agent(body, headers, raw)
+    return _office_worker(body, _header(headers, "x-office-worker-token"))
+
+
+def _office_agent(body, headers, raw):
+    """HMAC identity for mapped agents. Body role/worker/agent_id are ignored.
+
+    Unauthenticated failures always return 401. A missing/short token still runs a
+    constant-time compare against a dummy secret so callers cannot probe which
+    agent tokens are configured. Operation allow/deny checks run only after the
+    signature (and nonce) succeed.
+    """
+    try:
+        from lib.office_agents import actor_for, consume_nonce, lookup, token_for
+        key = _header(headers, "x-office-agent-key").strip().lower()
+        agent = lookup(key)
+        token = token_for(key) if agent else ""
+        dummy = "0" * 64
+        material = token if isinstance(token, str) and len(token) >= 32 else dummy
+        ts_raw = _header(headers, "x-office-agent-timestamp").strip()
+        nonce = _header(headers, "x-office-agent-nonce").strip()
+        supplied = _header(headers, "x-office-agent-signature").strip()
+        try:
+            timestamp = int(ts_raw)
+        except (TypeError, ValueError):
+            timestamp = None
+        operation = body.get("operation")
+        operation = "" if operation is None else str(operation)
+        task_id = body.get("id")
+        task_id = "" if task_id is None else str(task_id)
+        raw_bytes = raw if isinstance(raw, (bytes, bytearray)) else b""
+        digest = hashlib.sha256(raw_bytes).hexdigest()
+        message = f"{ts_raw}\n{nonce}\n{operation}\n{task_id}\n{digest}"
+        expected = hmac.new(material.encode("utf-8"), message.encode("utf-8"), hashlib.sha256).hexdigest()
+        # Always compare even when inputs are malformed, to keep failure modes flat.
+        if not isinstance(supplied, str):
+            supplied = ""
+        compare_left = supplied if len(supplied) == len(expected) else expected
+        sig_ok = len(supplied) == len(expected) and hmac.compare_digest(compare_left, expected)
+        fresh = (
+            agent is not None
+            and isinstance(token, str) and len(token) >= 32
+            and timestamp is not None
+            and abs(int(time.time()) - timestamp) <= 300
+            and isinstance(nonce, str) and len(nonce) >= 16
+            and sig_ok
+            and consume_nonce(nonce)
+        )
+        if not fresh:
+            return 401, {"error": "unauthorized"}
+        if operation in OFFICE_AGENT_FORBIDDEN:
+            return 403, {"error": "operation not allowed"}
+        if operation not in OFFICE_AGENT_OPS:
+            return 400, {"error": "unsupported operation"}
+        actor = actor_for(key)
+        sanitized = dict(body)
+        sanitized.pop("role", None)
+        sanitized.pop("agent_id", None)
+        sanitized["worker"] = actor
+        from lib.office_tasks import handle
+        return handle("worker", sanitized, actor, _rest, worker=True)
+    except Exception:
+        return 500, {"error": "internal error"}
+
+
+
+def _office_worker(body, supplied):
+    # Deprecated shared-token path. It can only mint grok-* actors from an allowlisted
+    # role and cannot impersonate agent-* identities, even if the body claims otherwise.
+    try:
+        expected = os.environ.get("OFFICE_WORKER_TOKEN_GROK") or ""
+        supplied = supplied if isinstance(supplied, str) else ""
+        if len(expected) < 32 or len(supplied) != len(expected) or not hmac.compare_digest(supplied.encode(), expected.encode()):
+            return 401, {"error": "unauthorized"}
+        role = body.get("role")
+        if role not in OFFICE_WORKER_ROLES:
+            return 400, {"error": "invalid role"}
+        if body.get("operation") not in OFFICE_WORKER_OPS:
+            return 400, {"error": "unsupported operation"}
+        actor = "grok-" + role
+        body = dict(body, worker=actor)
+        body.pop("agent_id", None)
+        from lib.office_tasks import handle
+        return handle("worker", body, actor, _rest, worker=True)
+    except Exception:
+        return 500, {"error": "internal error"}
+
+
 def _rest(path, method="GET", body=None, prefer=None):
     """用 service_role 打 Supabase PostgREST（member_tiers 等）。回 (status, data)。缺金鑰回 (None, err)。"""
     if not SUPABASE_SERVICE_KEY:
@@ -221,7 +341,7 @@ class handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Cache-Control", "no-store")
         self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+        self.send_header("Access-Control-Allow-Headers", OFFICE_CORS_HEADERS)
         self.end_headers()
         self.wfile.write(body)
 
@@ -229,7 +349,7 @@ class handler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+        self.send_header("Access-Control-Allow-Headers", OFFICE_CORS_HEADERS)
         self.end_headers()
 
     def do_POST(self):
@@ -237,7 +357,8 @@ class handler(BaseHTTPRequestHandler):
             length = int(self.headers.get("Content-Length", 0))
             if not 0 <= length <= 32768:
                 return self._json(413, {"error": "request too large"})
-            body = json.loads(self.rfile.read(length) or b"{}")
+            raw = self.rfile.read(length) or b"{}"
+            body = json.loads(raw)
             if not isinstance(body, dict): raise ValueError()
         except (ValueError, TypeError):
             return self._json(400, {"error": "invalid request"})
@@ -290,6 +411,10 @@ class handler(BaseHTTPRequestHandler):
             if not vis:
                 return self._json(200, {"visible": False})
             return self._json(200, {"visible": True, "formulas": _algo_formulas()})
+
+        # ── 研究室執行端：新路徑以每 agent HMAC 驗簽；舊 x-office-worker-token 僅能得到 grok-* 身分 ──
+        if action == "office_worker":
+            return self._json(*_office_dispatch(body, self.headers, raw))
 
         # ── 後台管理（action: admin_*）：JWT→email∈白名單 才放行；service_role 只在後端 ──
         if action.startswith("admin_"):

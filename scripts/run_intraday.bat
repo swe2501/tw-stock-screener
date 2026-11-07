@@ -29,3 +29,10 @@ REM instead of ~01:00 (nightly job keeps the same steps; margin data comes out ~
 "C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe" scripts\office_step.py chip scripts\gov_broker_moneylink.py >> D:\stock_data\intraday_push.log 2>&1
 "C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe" scripts\office_step.py macro scripts\txo_history.py >> D:\stock_data\intraday_push.log 2>&1
 "C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe" scripts\office_step.py macro scripts\option_sr.py >> D:\stock_data\intraday_push.log 2>&1
+REM 2026-11-06 candle combos / single-bar signals after close instead of ~01:00, so the screener can find today's patterns tonight.
+REM Write today's daily bars to the local DB first (TWSE same-day CSV, TPEx open data, then SinoPac fills any gaps),
+REM then candle_combos --require-today only runs when today's TWSE and OTC bars are complete (>=95% of yesterday); otherwise the nightly job does it.
+"C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe" scripts\office_step.py tech scripts\fetch_prices.py >> D:\stock_data\intraday_push.log 2>&1
+"C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe" scripts\office_step.py tech scripts\fetch_prices_otc.py >> D:\stock_data\intraday_push.log 2>&1
+"C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe" scripts\office_step.py data scripts\sj_daily.py >> D:\stock_data\intraday_push.log 2>&1
+"C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe" scripts\office_step.py tech scripts\candle_combos.py --require-today >> D:\stock_data\intraday_push.log 2>&1

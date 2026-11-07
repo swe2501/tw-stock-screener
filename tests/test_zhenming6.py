@@ -65,6 +65,33 @@ class Zhenming6(unittest.TestCase):
         bars = bars_from(path + [91.5], last_black=(92, 88))
         self.assertIsNone(screen.zhenming6_at(bars, pattern="hs_top"))
 
+    def test_five_bar_largest_body_includes_red_and_excludes_shadows(self):
+        bars=bars_from([60]+lin(60,100,40)+lin(100,92,15)+[91.5],last_black=(92,88))
+        previous=bars[-2]
+        # A prior red body's length blocks the new black body too.
+        bars[-2]=(previous[0],previous[4]-5,previous[2],previous[3],previous[4],1000)
+        self.assertIsNone(screen.zhenming6_at(bars))
+        bars[-2]=previous
+        bars[-2]=(previous[0],previous[1],150,10,previous[4],1000)
+        self.assertIsNotNone(screen.zhenming6_at(bars))
+
+    def test_equal_smaller_and_new_larger_signals(self):
+        bars=bars_from([60]+lin(60,100,40)+lin(100,92,15)+[91.5],last_black=(92,88))
+        first=screen.zhenming6_at(bars)
+        self.assertIsNotNone(first)
+        self.assertIsNone(screen.zhenming6_at(bars+[('2026-03-03',88,89,83,84,1000)])) # equal four-point body
+        self.assertIsNone(screen.zhenming6_at(bars+[('2026-03-03',88,89,84,85,1000)])) # smaller, still >3%
+        larger=screen.zhenming6_at(bars+[('2026-03-03',88,89,82,83,1000)])
+        self.assertIsNotNone(larger)
+        self.assertEqual(larger['rules_version'],2)
+        self.assertEqual(larger['prior_max_body'],4)
+
+    def test_window_has_four_preceding_bars_not_five(self):
+        bars=bars_from([60]+lin(60,100,40)+lin(100,92,15)+[91.5],last_black=(92,88))
+        old=bars[-6];bars[-6]=(old[0],old[4]+8,old[4]+9,old[4]-.3,old[4],1000)
+        self.assertIsNotNone(screen.zhenming6_at(bars))
+        self.assertIsNotNone(screen.zhenming6_at(bars+[('2026-03-03',99,100,70,71,1000)],t=len(bars)-1))
+
     def test_cover_season_flag(self):
         path = [60] + lin(60, 100, 40) + lin(100, 92, 15)
         bars = bars_from(path + [91.5], last_black=(92, 88))

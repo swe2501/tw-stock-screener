@@ -26,7 +26,15 @@ test('chart markers use compact theme-aware glass labels without repeated discla
   assert.doesNotMatch(paint, /textContent: '（僅供參考）'/);
   assert.match(paint, /dataset\.placement/);
   assert.match(css, /data-ui-skin="glass"\] \.cc-label/);
-  assert.match(css, /backdrop-filter:blur\(12px\)/);
+  // 2026-11-05 效能：名稱疊在每幀重畫的 K 線上，不用 backdrop-filter（會逼顯示卡每幀重算模糊）
+  for (const rule of css.match(/[^}]*\.cc-label\{[^}]*\}/g) || []) assert.doesNotMatch(rule, /backdrop-filter/);
+  assert.match(paint, /measureLabels\(\)/);
+});
+
+test('chart modal pauses hidden background animations while open', () => {
+  assert.match(css, /body\.cc-chart-open > :not\(#chartModal\)[^{]*\{animation-play-state:paused!important\}/);
+  assert.doesNotMatch(css.replace(/\/\*[\s\S]*?\*\//g, ''), /body:has\(/);   // body:has 會讓每次畫面變動都整頁重算樣式
+  assert.match(js, /classList\.toggle\('cc-chart-open', on\)/);
 });
 
 test('green-box strategy details are removed while the remaining hover guidance stays', () => {

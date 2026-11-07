@@ -1,15 +1,22 @@
 /* K棒組合 16 類（2026-11-04）：K 線圖黃框、開關、規則說明視窗、選股面板 */
-:root{--cc-yellow:#dcae39;--cc-yellow-ink:#8a6d00;--cc-label-bg:rgba(255,255,255,.82);--cc-label-text:#384454;--cc-dialog-bg:#fff;--cc-dialog-text:#1f2937;--cc-dialog-muted:#6b7280;--cc-dialog-line:#e5e7eb;--cc-focus-bg:#fff7d6}
-html[data-theme="dark"]{--cc-yellow:#e4c16e;--cc-yellow-ink:#e8c871;--cc-label-bg:rgba(15,23,35,.78);--cc-label-text:#f4e3b3;--cc-dialog-bg:#151c2c;--cc-dialog-text:#e5e7eb;--cc-dialog-muted:#9aa4b2;--cc-dialog-line:#2b3446;--cc-focus-bg:#3a3313}
+:root{--cc-yellow:#dcae39;--cc-yellow-ink:#8a6d00;--cc-label-bg:rgba(255,255,255,.94);--cc-label-text:#384454;--cc-dialog-bg:#fff;--cc-dialog-text:#1f2937;--cc-dialog-muted:#6b7280;--cc-dialog-line:#e5e7eb;--cc-focus-bg:#fff7d6}
+html[data-theme="dark"]{--cc-yellow:#e4c16e;--cc-yellow-ink:#e8c871;--cc-label-bg:rgba(15,23,35,.92);--cc-label-text:#f4e3b3;--cc-dialog-bg:#151c2c;--cc-dialog-text:#e5e7eb;--cc-dialog-muted:#9aa4b2;--cc-dialog-line:#2b3446;--cc-focus-bg:#3a3313}
 
 /* 圖上疊層：只蓋主圖繪圖區（不含右側價格軸與下方時間軸），框線不攔截滑鼠，只有名稱可點 */
 .cc-layer{position:absolute;left:0;top:0;pointer-events:none;overflow:hidden;z-index:3}
 .cc-box{position:absolute;box-sizing:border-box;border:1px solid color-mix(in srgb,var(--cc-yellow) 86%,transparent);border-radius:5px;background:color-mix(in srgb,var(--cc-yellow) 4%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,var(--cc-yellow) 16%,transparent),0 4px 12px rgba(24,35,48,.06);pointer-events:none}
-.cc-label{position:absolute;display:flex;align-items:center;white-space:nowrap;font-size:10px;line-height:1;padding:5px 8px 5px 18px;border:1px solid color-mix(in srgb,var(--cc-yellow) 36%,var(--border));border-radius:999px;background:var(--cc-label-bg);color:var(--cc-label-text);box-shadow:0 5px 14px rgba(20,31,45,.1),inset 0 1px rgba(255,255,255,.28);backdrop-filter:blur(12px) saturate(115%);-webkit-backdrop-filter:blur(12px) saturate(115%);pointer-events:none}
+.cc-label{position:absolute;display:flex;align-items:center;white-space:nowrap;font-size:10px;line-height:1;padding:5px 8px 5px 18px;border:1px solid color-mix(in srgb,var(--cc-yellow) 36%,var(--border));border-radius:999px;background:var(--cc-label-bg);color:var(--cc-label-text);box-shadow:0 5px 14px rgba(20,31,45,.1),inset 0 1px rgba(255,255,255,.28);pointer-events:none}
+/* 效能：名稱疊在每幀重畫的 K 線上，毛玻璃模糊會逼顯示卡每幀重算，改用接近不透明的底色 */
 .cc-label::before{content:"";position:absolute;left:7px;width:5px;height:5px;border-radius:50%;background:var(--cc-yellow);box-shadow:0 0 7px color-mix(in srgb,var(--cc-yellow) 58%,transparent)}
 .cc-label a{color:inherit;text-decoration:none;font-weight:750;pointer-events:auto;cursor:pointer}
 .cc-label a:hover,.cc-label a:focus-visible{color:var(--cc-yellow-ink);outline:none}
-:root[data-ui-skin="glass"] .cc-label{background:color-mix(in srgb,var(--glass-fill-strong) 76%,transparent);border-color:color-mix(in srgb,var(--glass-line) 88%,var(--cc-yellow) 12%);box-shadow:0 7px 20px rgba(20,42,66,.1),inset 0 1px var(--glass-highlight);backdrop-filter:blur(18px) saturate(120%);-webkit-backdrop-filter:blur(18px) saturate(120%)}
+:root[data-ui-skin="glass"] .cc-label{background:color-mix(in srgb,var(--glass-fill-strong) 94%,transparent);border-color:color-mix(in srgb,var(--glass-line) 88%,var(--cc-yellow) 12%);box-shadow:0 7px 20px rgba(20,42,66,.1),inset 0 1px var(--glass-highlight)}
+/* 效能：K 線視窗開著時，背後頁面的呼吸燈／掃光動畫看不到卻每幀重畫（還要被整片模糊），先暫停，關窗自動恢復。
+   用 candle-combos.js 切 body class，不用 body:has()（:has 會讓每次畫面變動都整頁重算樣式） */
+body.cc-chart-open > :not(#chartModal),
+body.cc-chart-open > :not(#chartModal) *,
+body.cc-chart-open > :not(#chartModal) ::before,
+body.cc-chart-open > :not(#chartModal) ::after{animation-play-state:paused!important}
 
 /* 開關：與「K棒訊息」同款 */
 #chartModal .chart-summary-actions #chartComboToggle{border:0!important;background:transparent!important;box-shadow:none!important;outline:none!important;color:var(--text-muted);font:inherit;font-size:11px;white-space:nowrap;padding:6px 3px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:color .18s ease,text-shadow .18s ease}

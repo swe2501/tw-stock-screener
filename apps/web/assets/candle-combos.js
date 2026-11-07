@@ -1,5 +1,5 @@
 /* K棒組合 16 類（2026-11-04）：規則說明、選股勾選框、選股結果標籤、K 線圖黃框。
-   判斷在本機 scripts/candle_combos.py（每晚盤後算全市場 → Supabase candle_combo_hits），這裡只讀結果、不重算。
+   判斷在本機 scripts/candle_combos.py（盤後 16:00 後與夜間各算一次全市場 → Supabase candle_combo_hits），這裡只讀結果、不重算。
    規則來源：《K棒組合.md》16 類原文；用戶補充：長紅/長黑一律實體 3%、內困三日與紅黑三兵的定義（見 COMMON 與各類 rule）。 */
 (() => {
   'use strict';
@@ -9,9 +9,9 @@
     { id: 'reversal-doji', name: '反轉十字線', bars: '單棒', wave: '上漲或下跌任一',
       rule: '開盤＝收盤，且同時有上影線（最高＞開盤）與下影線（最低＜開盤）；影線不限長度。波段上漲或波段下跌任一成立即可（以當日最高／最低判斷），同棒雙方向只列一次。完全不看成交量，也不套最低量。' },
     { id: 'bullish-engulfing', name: '陽吞噬', bars: '雙棒', wave: '波段下跌',
-      rule: '前黑 → 後紅；後紅K實體包住前黑K整根（含影線）：後開盤 ≤ 前最低、後收盤 ≥ 前最高。' },
+      rule: '前黑（或開盤＝收盤的一字線／十字線／吊人線／墓碑線）→ 後紅；後紅K實體包住前一根整根（含影線）：後開盤 ≤ 前最低、後收盤 ≥ 前最高。（2026-11-06 前一根加入開盤＝收盤的 K 棒）' },
     { id: 'bearish-engulfing', name: '陰吞噬', bars: '雙棒', wave: '波段上漲',
-      rule: '前紅 → 後黑；後黑K實體包住前紅K整根（含影線）：後開盤 ≥ 前最高、後收盤 ≤ 前最低。' },
+      rule: '前紅（或開盤＝收盤的一字線／十字線／吊人線／墓碑線）→ 後黑；後黑K實體包住前一根整根（含影線）：後開盤 ≥ 前最高、後收盤 ≤ 前最低。（2026-11-06 前一根加入開盤＝收盤的 K 棒）' },
     { id: 'piercing', name: '貫穿線', bars: '雙棒', wave: '波段下跌',
       rule: '前黑 → 後紅；後紅實體低點（開盤）嚴格低於前黑實體低點（收盤）；兩實體交集 ≥ 前黑實體 60%；後紅收盤（不含上影線）≤ 前黑最高價（含影線）；後一日成交量 ＞ 前一日。' },
     { id: 'dark-cloud', name: '烏雲罩頂', bars: '雙棒', wave: '波段上漲',
@@ -57,9 +57,9 @@
     'reversal-doji': { tag: ['neu', '轉折觀察'], ctx: [[60,61,56,57],[57,58,53,54],[54,55,51,52]], sig: [[51,53.5,48.5,51]],
       desc: '出現<em>開盤＝收盤、上下都有影線</em>的十字線，多空暫時拉平，留意是否反轉。不看成交量。' },
     'bullish-engulfing': { tag: ['bull', '底部翻多'], ctx: [[60,61,56,57],[57,58,53,54],[54,55,51,52]], sig: [[52.8,53.2,50.9,51.2],[49.6,54.8,49.2,54.4]],
-      desc: '<em>紅K 實體把前一根黑K 整根（含影線）吃掉</em>，買盤一口氣收復跌幅。' },
+      desc: '<em>紅K 實體把前一根黑K 整根（含影線）吃掉</em>，買盤一口氣收復跌幅。前一根是一字線、十字線、吊人線、墓碑線（開盤＝收盤）也算。' },
     'bearish-engulfing': { tag: ['bear', '頭部翻空'], ctx: [[48,51,47,50.5],[50.5,54,50,53.5],[53.5,57,53,56.5]], sig: [[56.6,58.3,56.2,58],[59.6,59.9,54.6,55]],
-      desc: '<em>黑K 實體把前一根紅K 整根（含影線）吃掉</em>，賣壓吃掉前一日漲幅。' },
+      desc: '<em>黑K 實體把前一根紅K 整根（含影線）吃掉</em>，賣壓吃掉前一日漲幅。前一根是一字線、十字線、吊人線、墓碑線（開盤＝收盤）也算。' },
     'piercing': { tag: ['bull', '跌深反攻'], ctx: [[60,61,56,57],[57,58,53.5,54]], sig: [[54,54.5,50.5,51],[50,54.2,49.5,53.5]],
       desc: '黑K 之後<em>開更低的紅K，收盤拉回到黑K 實體六成以上</em>（不超過黑K 最高價），且量比前一天大。' },
     'dark-cloud': { tag: ['bear', '高檔遇壓'], ctx: [[48,51,47,50.5],[50.5,54,50,53.5]], sig: [[53.5,57.5,53,57],[58,58.5,54.5,54.8]],
@@ -332,20 +332,42 @@
 
   function schedule() { if (!frame) frame = requestAnimationFrame(paint); }
 
+  function makeLabel(g) {
+    const lab = document.createElement('div'); lab.className = 'cc-label';
+    g.ids.forEach((id, k) => {
+      if (k) lab.append('、');
+      const a = document.createElement('a'); a.href = 'javascript:void(0)'; a.textContent = nameOf(id);
+      a.dataset.ccRule = id; a.title = nameOf(id) + '（' + g.from + (g.from === g.to ? '' : '～' + g.to) + '，僅供參考）；點看規則';
+      lab.append(a);
+    });
+    return lab;
+  }
+
+  // 效能：縮放／拖曳時每一幀都會重畫。名稱寬高只跟文字有關，第一次一次量完存起來；
+  // 之後每幀先讀完所有座標、再一次寫入 DOM，避免「寫一個量一個」逼瀏覽器反覆重排版。
+  function measureLabels() {
+    const todo = groups.filter(g => g.lw == null);
+    if (!todo.length) return;
+    const labs = todo.map(makeLabel);
+    labs.forEach(l => { l.style.visibility = 'hidden'; l.style.left = '0'; l.style.top = '0'; layer.append(l); });
+    todo.forEach((g, i) => { g.lw = labs[i].offsetWidth; g.lh = labs[i].offsetHeight; g.lab = labs[i]; });
+    labs.forEach(l => { l.remove(); l.style.visibility = ''; });
+  }
+
   function paint() {
     frame = 0;
     if (!ctx || !layer || !layer.isConnected) return;
-    layer.replaceChildren();
-    if (!(visible && groups.length)) return;
+    if (!(visible && groups.length)) { layer.replaceChildren(); return; }
     const ts = ctx.chart.timeScale(), s = ctx.series;
     let psw = 0, tsh = 0;
     try { psw = ctx.chart.priceScale('right').width() || 0; } catch (_) {}
     try { tsh = ts.height() || 0; } catch (_) {}
     const W = ctx.host.clientWidth - psw, H = ctx.host.clientHeight - tsh;
-    layer.style.width = W + 'px'; layer.style.height = H + 'px';
+    measureLabels();
     const spacing = (ts.options().barSpacing || 6);
     const half = Math.max(2, spacing / 2);
     const placed = [];
+    const frag = document.createDocumentFragment();
     for (const g of groups) {
       const x0 = ts.timeToCoordinate(g.from), x1 = ts.timeToCoordinate(g.to);
       const yt = s.priceToCoordinate(g.hi), yb = s.priceToCoordinate(g.lo);
@@ -355,17 +377,11 @@
       const box = document.createElement('div'); box.className = 'cc-box';
       box.style.left = left + 'px'; box.style.top = (yt - 4) + 'px';
       box.style.width = Math.max(6, right - left) + 'px'; box.style.height = Math.max(6, yb - yt + 8) + 'px';
-      layer.append(box);
+      frag.append(box);
       // 名稱放框上方，太靠上就放框下方；與已放的名稱重疊就再往外推
-      const lab = document.createElement('div'); lab.className = 'cc-label';
-      g.ids.forEach((id, k) => {
-        if (k) lab.append('、');
-        const a = document.createElement('a'); a.href = 'javascript:void(0)'; a.textContent = nameOf(id);
-        a.dataset.ccRule = id; a.title = nameOf(id) + '（' + g.from + (g.from === g.to ? '' : '～' + g.to) + '，僅供參考）；點看規則';
-        lab.append(a);
-      });
-      layer.append(lab);
-      const lw = lab.offsetWidth, lh = lab.offsetHeight;
+      const lab = g.lab || makeLabel(g);
+      g.lab = lab;
+      const lw = g.lw, lh = g.lh;
       const center = (left + right) / 2;
       let lx = Math.min(Math.max(2, center - lw / 2), Math.max(2, W - lw - 2));
       let ly = yt - 4 - lh - 3;
@@ -375,11 +391,14 @@
         if (!hit) break;
         ly = ly < yt ? hit.y - lh - 2 : hit.y + hit.h + 2;
       }
-      if (ly < 0 || ly + lh > H) { lab.remove(); continue; }
+      if (ly < 0 || ly + lh > H) continue;
       lab.dataset.placement = ly < yt ? 'above' : 'below';
       lab.style.left = lx + 'px'; lab.style.top = ly + 'px';
+      frag.append(lab);
       placed.push({ x: lx, y: ly, w: lw, h: lh });
     }
+    layer.style.width = W + 'px'; layer.style.height = H + 'px';
+    layer.replaceChildren(frag);
   }
 
   // 提示框（「K棒訊息」）多一行：這根 K 棒的單根訊號；不加入操作建議。
@@ -391,7 +410,19 @@
     return '<div class="ohlc-signal"><span>K棒訊號</span>' + names.map(n => '<b>' + esc(n) + '</b>').join('') + '</div>';
   }
 
-  function boot() { mountGrid(); mountToggle(); window.AcademyKbarHint?.register(window.AcademyKbarHintExtra); }
+  // K 線視窗開著時在 body 加 class，CSS 用它暫停背後頁面的動畫（見 candle-combos.css）
+  function watchModal() {
+    const m = document.getElementById('chartModal');
+    if (!m) return;
+    const sync = () => {
+      const on = m.classList.contains('open');
+      if (document.body.classList.contains('cc-chart-open') !== on) document.body.classList.toggle('cc-chart-open', on);
+    };
+    sync();
+    new MutationObserver(sync).observe(m, { attributes: true, attributeFilter: ['class'] });
+  }
+
+  function boot() { mountGrid(); mountToggle(); watchModal(); window.AcademyKbarHint?.register(window.AcademyKbarHintExtra); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 
   window.AcademyCandleCombos = { COMBOS, COMMON, SIG, nameOf, rulesHtml, openRules, resultHelp, resultTag, signalTag, signalTipHtml, attach, detach, refresh: schedule, isVisible: () => visible };

@@ -17,3 +17,15 @@
 .mc-nav [data-tab=admin][hidden]{display:none!important}
 .msvc [data-admin-body]{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.msvc [data-admin-body]>*:not(form){grid-column:1/-1}.msvc [data-admin-body]>form{max-width:none;margin:0}.msvc [data-admin-body]>form:only-of-type{grid-column:1/-1}
 @media(max-width:800px){.msvc [data-admin-body]{grid-template-columns:1fr}}
+
+/* Bounded ledger pages, with details opened only when needed. */
+.msvc [data-ledger]{min-width:0}
+.msvc .msvc-ledger{padding:12px 0;gap:5px 14px}
+.msvc .msvc-ledger h3{margin:4px 0;font-size:14px;line-height:1.6}
+.msvc .msvc-ledger>strong{font-size:20px}
+.msvc .msvc-ledger summary{font-size:12px;padding:5px 0}
+.msvc .msvc-pagination{width:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:14px;margin:16px 0;font-size:12px;color:var(--text-muted);font-variant-numeric:tabular-nums}
+.msvc .msvc-pagination button{display:grid;place-items:center;flex:0 0 30px;width:30px;height:30px;min-height:0;padding:0;line-height:1;border-radius:50%;border:1px solid var(--border);background:var(--surface);color:var(--accent);box-shadow:inset 0 1px rgba(255,255,255,.1)}
+.msvc-pagination svg{display:block;width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.msvc-pagination button:disabled{opacity:.35;cursor:default}
+.msvc-pagination button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}

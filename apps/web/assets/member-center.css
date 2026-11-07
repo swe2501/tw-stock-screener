@@ -156,3 +156,6 @@ body.academy-research-ready #chartWatchBtn,body.academy-research-ready #chartBac
 .member-page .mc-content-flow{position:relative;min-width:0;overflow:visible;box-sizing:border-box}
 
 html:has(body.mc-open){overflow:hidden!important}
+
+/* The brand row masks content scrolling beneath it, including glass mode. */
+.member-page>.mc-brandbar{isolation:isolate;background:var(--surface);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}

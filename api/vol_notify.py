@@ -78,6 +78,29 @@ def _send_vol_email(code, name, vol, vol_target, to_email):
         return False, str(ex)
 
 
+def _verify_user_email(token):
+    """Verify a Supabase JWT via /auth/v1/user.
+    Returns (200, email) on success, (401, None) for invalid token / config,
+    (403, None) when the user has no confirmed email."""
+    base = os.environ.get("SUPABASE_URL", "")
+    key = os.environ.get("SUPABASE_ANON_KEY", "")
+    if not token or len(token) > 8192 or not base or not key:
+        return 401, None
+    try:
+        req = urllib.request.Request(base.rstrip("/") + "/auth/v1/user",
+                                     headers={"apikey": key, "Authorization": "Bearer " + token})
+        with urllib.request.urlopen(req, timeout=10) as r:
+            u = json.loads(r.read(65536))
+    except Exception:
+        return 401, None
+    if not isinstance(u, dict) or not u.get("id"):
+        return 401, None
+    email = str(u.get("email") or "").strip()
+    if not email or "@" not in email or not u.get("email_confirmed_at"):
+        return 403, None
+    return 200, email
+
+
 class handler(BaseHTTPRequestHandler):
     def log_message(self, *a): pass
 
@@ -100,25 +123,39 @@ class handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_POST(self):
-        token = self.headers.get("Authorization", "").replace("Bearer ", "").strip()
-        if not token:
-            return self._json(401, {"error": "unauthorized"})
-        from lib.member_phone import check
-        blocked = check(token)
-        if blocked:
-            return self._json(*blocked)
+        try:
+            auth = self.headers.get("Authorization", "") or ""
+            token = auth[7:].strip() if auth.startswith("Bearer ") else ""
+            if not token:
+                return self._json(401, {"error": "unauthorized"})
+            status, to_email = _verify_user_email(token)
+            if status != 200:
+                if status == 403:
+                    return self._json(403, {"error": "verified email required"})
+                return self._json(401, {"error": "unauthorized"})
+            from lib.member_phone import check
+            blocked = check(token)
+            if blocked:
+                return self._json(*blocked)
 
-        length = int(self.headers.get("Content-Length", 0))
-        body = json.loads(self.rfile.read(length) or b"{}")
+            length = int(self.headers.get("Content-Length", 0) or 0)
+            body = json.loads(self.rfile.read(length) or b"{}")
+            if not isinstance(body, dict):
+                return self._json(400, {"error": "invalid body"})
 
-        code       = str(body.get("code", "")).strip()
-        name       = str(body.get("name", code)).strip()
-        vol        = float(body.get("vol", 0))
-        vol_target = float(body.get("vol_target", 0))
-        to_email   = str(body.get("email", "")).strip()
+            code       = str(body.get("code", "")).strip()
+            name       = str(body.get("name", code)).strip()
+            vol        = float(body.get("vol", 0))
+            vol_target = float(body.get("vol_target", 0))
+            # recipient comes only from the verified Supabase user, never from body
 
-        if not (code and vol_target > 0 and to_email):
-            return self._json(400, {"error": "missing required fields"})
+            if not (code and vol_target > 0):
+                return self._json(400, {"error": "missing required fields"})
 
-        ok, detail = _send_vol_email(code, name, vol, vol_target, to_email)
-        self._json(200, {"ok": ok, "detail": detail})
+            ok, detail = _send_vol_email(code, name, vol, vol_target, to_email)
+            self._json(200, {"ok": ok, "detail": detail})
+        except Exception:
+            try:
+                self._json(500, {"error": "internal error"})
+            except Exception:
+                pass

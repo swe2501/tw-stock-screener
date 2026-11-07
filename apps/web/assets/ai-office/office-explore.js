@@ -31,6 +31,14 @@
   }
   function sync(){profile.hidden=ForesightOffice.selectedDepartment<0;$('exploreTower').setAttribute('aria-pressed',String(ForesightOffice.viewMode!=='lobby'));$('exploreLobby').setAttribute('aria-pressed',String(ForesightOffice.viewMode==='lobby'));}
   profile.onclick=showProfile;$('exploreTower').onclick=()=>ForesightOffice.overview();$('exploreLobby').onclick=()=>ForesightOffice.lobby();$('exploreRoute').onclick=()=>{step=0;showRoute();};window.addEventListener('foresight-office-selection',sync);sync();
+  addEventListener('message',e=>{
+    if(parent===window||e.source!==parent||(e.origin!==location.origin&&!(location.protocol==='file:'&&e.origin==='null'))||e.data?.type!=='foresight-office-return-departments')return;
+    document.querySelectorAll('dialog[open]').forEach(d=>d.close());
+    const directory=document.querySelector('.directory'),toggle=$('directoryToggle');
+    if(directory?.classList.contains('collapsed'))toggle?.click();
+    // Keep the existing selection and camera; only reopen the department directory.
+    toggle?.focus({preventScroll:true});
+  });
   if(new URLSearchParams(location.search).get('embedded')==='1'){
     document.body.classList.add('embedded-office');
     document.querySelectorAll('a[href="index.html"]').forEach(link=>link.target='_top');
