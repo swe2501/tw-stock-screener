@@ -130,7 +130,20 @@ html:has(.sl-dialog[open]){overflow:hidden}
 
 /* Calendar review cards: clear stock names, quiet metadata, visible actions. */
 .scal-day{container-type:inline-size}.scal-day .sl-log{border-radius:14px;box-shadow:0 4px 18px #18365005}.scal-day .sl-log>summary{grid-template-columns:minmax(0,1fr) auto auto 16px;gap:7px 12px;padding:15px 16px;background:linear-gradient(115deg,var(--surface),color-mix(in srgb,var(--accent) 3%,var(--surface)));border-bottom:1px solid transparent}.scal-day .sl-log[open]>summary{border-bottom-color:var(--border)}.scal-day .sl-strategy{font-size:16px;line-height:1.6;color:var(--text)}.scal-day .sl-count{font-size:12px;white-space:nowrap}.scal-day .sl-time{font-size:10px;background:var(--surface2);padding:3px 7px;border:1px solid var(--border);border-radius:5px;white-space:nowrap}.scal-day .sl-log>summary>svg{width:15px;height:15px;color:var(--text-muted)}.scal-day .sl-log[open]>summary>svg{transform:rotate(180deg)}.sl-saved-time{display:flex;gap:9px;flex-wrap:wrap;grid-column:1/-1;font-size:11px;line-height:1.6;color:var(--text-muted);font-weight:400;font-variant-numeric:tabular-nums}.sl-saved-time>span:first-child{font-size:10px;color:var(--text-muted)}.sl-saved-time time{color:var(--text-muted);letter-spacing:.02em}.scal-day .sl-log-body{padding:14px 16px 16px;gap:12px;border-top:0}.sl-log-tools{display:flex;align-items:center;justify-content:space-between;gap:10px}.sl-log-tools>.sl-muted{font-size:10px;line-height:1.7;max-width:65%}.scal-page .sl-log-tools .sl-delete-record{flex:none;display:inline-flex;align-items:center;gap:5px;color:var(--text-muted);background:transparent;border:1px solid var(--border);font-size:11px;padding:5px 8px;min-height:31px;white-space:nowrap;box-shadow:none!important}.scal-page .sl-log-tools .sl-delete-record:hover{color:var(--danger,#be5149);border-color:var(--danger,#be5149);background:color-mix(in srgb,var(--danger,#be5149) 5%,var(--surface))}.scal-day .sl-log-body .sl-chips{margin:0}.scal-day .sl-stock-list{gap:7px;margin:0}.scal-page .sl-stock-list>button{display:grid;grid-template-columns:minmax(120px,1fr) minmax(140px,auto);align-items:center;gap:12px;padding:12px;border:1px solid var(--border);border-radius:9px;background:var(--surface);min-height:66px;line-height:1.6;text-align:left;transition:border-color .15s,background .15s}.scal-page .sl-stock-list>button:hover{border-color:color-mix(in srgb,var(--accent) 50%,var(--border));background:color-mix(in srgb,var(--accent) 3%,var(--surface))}.sl-stock-identity{display:flex;align-items:baseline;gap:9px;min-width:0;white-space:normal!important}.sl-stock-identity>b{font-size:14px;font-variant-numeric:tabular-nums;flex:none;color:var(--text)}.sl-stock-name{min-width:0;font-size:14px;font-weight:550;color:var(--text);white-space:nowrap!important;overflow:hidden;text-overflow:ellipsis}.scal-day .sl-record-prices{gap:4px;min-width:0;white-space:normal!important}.sl-record-prices>span{display:flex;align-items:baseline;gap:8px;white-space:normal!important}.sl-record-prices>span>small{font-size:10px;color:var(--text-muted);font-weight:400}.sl-record-prices strong{font-size:14px;font-weight:650;color:var(--text)}.sl-record-prices>small{font-size:10px;line-height:1.6;white-space:normal!important;overflow-wrap:normal;word-break:normal}.sl-stock-list .sl-stock-identity{min-width:0!important}
-@container(max-width:390px){.scal-page .sl-stock-list>button{grid-template-columns:minmax(0,1fr);gap:8px;padding:12px}.sl-stock-identity{gap:10px}.sl-stock-name{font-size:14px}.scal-day .sl-record-prices{flex-direction:row;justify-content:space-between;align-items:center;gap:10px}.sl-record-prices>span{flex:none}.sl-record-prices>small{max-width:62%;text-align:right;font-size:10px}.sl-log-tools{align-items:flex-start}.sl-log-tools>.sl-muted{max-width:60%}.scal-day .sl-log>summary{gap:7px;font-size:13px;padding:13px 12px}.scal-day .sl-strategy{font-size:15px}.scal-day .sl-count{font-size:11px}.scal-day .sl-time{font-size:9px;padding:2px 5px}.scal-day .sl-log-body{padding:12px}}
+@container(max-width:390px){
+ .scal-page .sl-stock-list>button{grid-template-columns:minmax(0,1fr);gap:9px;padding:11px 12px 12px;min-height:0;border-radius:11px}
+ .sl-stock-identity{gap:9px;align-items:center;min-height:22px}
+ .sl-stock-identity>b,.sl-stock-name{font-size:13.5px;line-height:1.45}
+ .scal-day .sl-record-prices{display:grid;grid-template-columns:minmax(78px,.8fr) minmax(126px,1.2fr);align-items:start;gap:12px;width:100%;padding-top:8px;border-top:1px solid color-mix(in srgb,var(--border) 72%,transparent)}
+ .sl-record-prices>span{display:grid;grid-template-columns:auto auto;justify-content:start;align-items:baseline;gap:6px;min-width:0}
+ .sl-record-prices>span>small{font-size:10.5px;line-height:1.45;white-space:nowrap!important}
+ .sl-record-prices strong{font-size:13px;line-height:1.45;white-space:nowrap}
+ .sl-record-prices>small{max-width:none;text-align:right;font-size:10.5px;line-height:1.45}
+ .sl-ret{justify-items:end;gap:2px;min-width:0}
+ .sl-ret .sl-ret-date,.sl-ret>span:last-child{display:block;width:100%;white-space:nowrap;text-align:right;line-height:1.45}
+ .sl-log-tools{align-items:flex-start}.sl-log-tools>.sl-muted{max-width:60%}
+ .scal-day .sl-log>summary{gap:7px;font-size:13px;padding:13px 12px}.scal-day .sl-strategy{font-size:15px}.scal-day .sl-count{font-size:11px}.scal-day .sl-time{font-size:9px;padding:2px 5px}.scal-day .sl-log-body{padding:12px}
+}
 body.scal-calendar-chart #chartModal.open:not(.etx-embedded){display:flex!important;align-items:center!important;justify-content:center!important;padding:24px!important;z-index:14000!important;background:rgba(5,13,24,.7)!important;backdrop-filter:blur(5px)}body.scal-calendar-chart #chartModal:not(.kfull)>.modal-box{width:min(1120px,calc(100vw - 48px))!important;max-width:1120px!important;height:min(800px,calc(100dvh - 48px))!important;max-height:calc(100dvh - 48px)!important;margin:0!important;inset:auto!important;position:relative!important;transform:none!important;border:1px solid color-mix(in srgb,var(--accent) 22%,var(--border))!important;border-radius:16px!important;box-shadow:0 30px 100px #0006!important}body.scal-calendar-chart .member-page{pointer-events:none}
 @media(max-width:600px){body.scal-calendar-chart #chartModal.open:not(.etx-embedded){padding:12px!important}body.scal-calendar-chart #chartModal:not(.kfull)>.modal-box{width:calc(100vw - 24px)!important;height:calc(100dvh - 24px)!important;max-height:calc(100dvh - 24px)!important;border-radius:12px!important}}
 
@@ -383,9 +396,53 @@ html:not([data-theme=light]) .scal-workspace [data-cat=zm] .sc-hd b{color:#ffda6
  .scal-grid .scal-day-count{font-size:11px!important}
 }
 
-.sl-ret .sl-ret-date{color:var(--text-muted);font-weight:400}
+.sl-ret{display:grid;justify-items:end;gap:1px;color:var(--text);opacity:1!important}
+.sl-ret .sl-ret-date{color:var(--text-muted)!important;font-weight:500;opacity:1!important}
+.sl-ret .sl-flat{color:var(--text)!important;font-weight:650;opacity:1!important}
+.sl-ret-pending{color:var(--text-muted)!important;font-weight:500;opacity:1!important}
 .sl-log-tools .sl-muted:empty{display:none}
 .sl-log-tools:has(.sl-muted:empty){justify-content:flex-end}
+
+/* Long calendar records scroll inside their stock list, keeping record actions visible. */
+.scal-day .sl-stock-list{
+ max-height:clamp(280px,52vh,560px);overflow-y:auto;overflow-x:hidden;
+ padding-right:5px;overscroll-behavior:contain;scrollbar-gutter:stable;
+ scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--accent) 34%,transparent) transparent
+}
+.scal-day .sl-stock-list::-webkit-scrollbar{width:8px}
+.scal-day .sl-stock-list::-webkit-scrollbar-track{background:transparent}
+.scal-day .sl-stock-list::-webkit-scrollbar-thumb{
+ border:2px solid transparent;border-radius:999px;background:color-mix(in srgb,var(--accent) 30%,transparent);background-clip:padding-box
+}
+.scal-day .sl-stock-list:hover::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--accent) 52%,transparent);background-clip:padding-box}
+.scal-day .sl-stock-list::-webkit-scrollbar-corner{background:transparent}
+@media(max-width:600px){.scal-day .sl-stock-list{max-height:min(48vh,480px);padding-right:3px}}
+
+/* Saved calendar data is an information surface, so keep the original solid
+   contrast even when the optional glass skin is enabled. */
+:root[data-ui-skin="glass"] .scal-day{
+ background:var(--surface)!important;
+ border-color:var(--border)!important;
+ box-shadow:0 14px 36px rgba(5,20,35,.10)!important;
+ backdrop-filter:none!important;-webkit-backdrop-filter:none!important
+}
+:root[data-ui-skin="glass"] .scal-day .sl-log{
+ background:var(--surface)!important;
+ border-color:var(--border)!important;
+ box-shadow:0 6px 18px rgba(5,20,35,.08)!important;
+ backdrop-filter:none!important;-webkit-backdrop-filter:none!important
+}
+:root[data-ui-skin="glass"] .scal-page .sl-stock-list>button{
+ background:var(--surface)!important;
+ border-color:var(--border)!important;
+ box-shadow:none!important;
+ backdrop-filter:none!important;-webkit-backdrop-filter:none!important
+}
+:root[data-ui-skin="glass"] .scal-day :is(.sl-strategy,.sl-stock-identity>b,.sl-stock-name,.sl-record-prices strong){color:var(--text)!important;opacity:1}
+:root[data-ui-skin="glass"] .scal-day :is(.sl-saved-time,.sl-record-prices small,.sl-muted,.sl-ret-date){color:color-mix(in srgb,var(--text) 74%,transparent)!important;opacity:1!important}
+:root[data-ui-skin="glass"] .scal-day .sl-ret,
+:root[data-ui-skin="glass"] .scal-day .sl-ret>*{opacity:1!important}
+:root[data-ui-skin="glass"] .scal-day .sl-ret .sl-flat{color:var(--text)!important}
 
 
 .sic-record-dialog{width:min(640px,calc(100vw - 24px));max-height:calc(100dvh - 32px);padding:0;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:14px}
