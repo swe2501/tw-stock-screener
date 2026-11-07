@@ -13,7 +13,7 @@
   root.querySelector('.mj-live-missions')?.remove();
   const owner=localStorage.getItem('sb_token'),current=()=>root.isConnected&&!!owner&&owner===localStorage.getItem('sb_token');
   const section=document.createElement('section');section.className='mc-card mj-live-missions';
-  section.innerHTML='<div class="mj-section-head"><div><span class="mc-kicker">YOUR MEMBER REWARDS</span><h2>我的點數</h2></div><button type="button" data-rewards-refresh>更新狀態</button></div><div class="mj-reward-balance" data-reward-balance>確認餘額中…</div><div class="mj-reward-caps" data-reward-caps></div><div role="status" data-mission-status aria-live="polite">正在確認任務與兌換狀態…</div><details class="mj-account-check"><summary>帳號驗證任務</summary><div data-extra-tasks></div></details>';
+  section.innerHTML='<div class="mj-section-head"><div><span class="mc-kicker">YOUR MEMBER REWARDS</span><h2>我的點數</h2></div><button type="button" data-rewards-refresh>更新狀態</button></div><div class="mj-reward-balance" data-reward-balance>確認餘額中…</div><div class="mj-reward-caps" data-reward-caps></div><div role="status" data-mission-status aria-live="polite">正在確認任務與兌換狀態…</div><div class="mj-admin-tasks" data-admin-tasks hidden><h3>活動任務</h3><div data-admin-task-list></div></div><details class="mj-account-check"><summary>帳號驗證任務</summary><div data-extra-tasks></div></details>';
   (root.querySelector('.mj-rewards-nav')||root.querySelector('.mj-hero')).after(section);
   const status=section.querySelector('[data-mission-status]'),balance=section.querySelector('[data-reward-balance]'),caps=section.querySelector('[data-reward-caps]');
   let state=null,busy=false,sequence=0,dialog=null;
@@ -71,6 +71,13 @@
   function extras(){
    const host=section.querySelector('[data-extra-tasks]');host.replaceChildren();
    if(!root.querySelector('.mj-task-zone'))return;
+   // 後台新增的人工發放任務（adm-*）：只顯示說明，點數由管理端審核後發放
+   const adminBox=section.querySelector('[data-admin-tasks]'),adminList=section.querySelector('[data-admin-task-list]');adminList.replaceChildren();
+   const period={once:'每人一次',daily:'每天一次',weekly:'每週一次',monthly:'每月一次',yearly:'每年一次'};
+   (state?.tasks.rows||[]).filter(t=>/^adm-/.test(t.id)).forEach(t=>{
+    const article=document.createElement('article');article.className='mj-extra-task';const info=document.createElement('div');const title=document.createElement('h3');title.textContent=t.title+'　+'+t.points+' 點';info.append(title);const small=document.createElement('small');small.textContent=(period[t.period]||'')+'・由工作人員審核後發放，不需自行領取。';info.append(small);const b=document.createElement('button');b.type='button';b.disabled=true;b.textContent=t.claimed?'本期已發放':'審核發放';article.append(info,b);adminList.append(article);
+   });
+   adminBox.hidden=!adminList.children.length;
    (state?.tasks.rows||[]).filter(t=>t.id==='verify-contact-v1').forEach(t=>{
     const article=document.createElement('article');article.className='mj-extra-task';const info=document.createElement('div');const title=document.createElement('h3');title.textContent=t.title;info.append(title);const small=document.createElement('small');small.textContent='每個帳號一次，由帳號服務確認驗證狀態。';info.append(small);const b=document.createElement('button');b.type='button';b.dataset.taskClaim=t.id;const s=taskState(t,t.id);b.textContent=s.text;b.disabled=s.disabled||busy;article.append(info,b);host.append(article);
    });

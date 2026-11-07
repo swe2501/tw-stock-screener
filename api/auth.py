@@ -449,17 +449,17 @@ class handler(BaseHTTPRequestHandler):
                 status, result = handle(action, body, admin_email, _rest)
                 return self._json(status, result)
 
-            if action.startswith(("admin_forum_", "admin_ads_", "admin_points_", "admin_products_")):
+            if action.startswith(("admin_forum_", "admin_ads_", "admin_points_", "admin_products_", "admin_tasks_")):
                 from lib.forum_ads import handle_admin
                 def _users():
                     st_u, data_u = _admin_api("/admin/users?per_page=1000")
                     return data_u.get("users", []) if st_u == 200 and isinstance(data_u, dict) else []
                 status, result = handle_admin(action, body, admin_email, _rest, _users)
-                if status == 200 and action in ("admin_forum_save", "admin_forum_delete", "admin_forum_codes", "admin_ads_save", "admin_ads_delete", "admin_points_adjust", "admin_products_save"):
-                    det = {k: body.get(k) for k in ("id", "count", "points", "reason", "title", "active") if body.get(k) is not None}
+                if status == 200 and action in ("admin_forum_save", "admin_forum_delete", "admin_forum_codes", "admin_ads_save", "admin_ads_delete", "admin_points_adjust", "admin_products_save", "admin_tasks_save", "admin_tasks_delete", "admin_tasks_award", "admin_forum_voucher_save"):
+                    det = {k: body.get(k) for k in ("id", "count", "points", "reason", "title", "active", "task_id", "reference", "enabled", "definition", "days") if body.get(k) is not None}
                     if action == "admin_forum_save": det["event"] = (result.get("event") or {}).get("id")
                     if action == "admin_ads_save": det["ad"] = (result.get("ad") or {}).get("id")
-                    _audit(admin_email, action, body.get("user_id") if action == "admin_points_adjust" else None, det)
+                    _audit(admin_email, action, body.get("user_id") if action in ("admin_points_adjust", "admin_tasks_award") else None, det)
                 return self._json(status, result)
 
             if action in ("admin_pattern_reviews", "admin_pattern_review_save"):
