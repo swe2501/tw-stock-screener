@@ -55,3 +55,19 @@
 - 既有的 `redeem_member_promo_code` 與一般優惠碼不受影響（格式不同才會分流）。
 - App 端如要支援論壇簽到，呼叫相同的 action 即可，回應皆為 JSON。
 - uat 與 prod 共用同一個 Supabase：在 uat 用正式場次簽到會真的發點，測試請勾「測試場次」。
+
+## 追加（同日）：點數任務管理、論壇到場贈券開關
+- 管理端新增 action：
+  - `admin_tasks_list`、`admin_tasks_save`、`admin_tasks_delete`、`admin_tasks_award`
+  - `admin_forum_voucher_get`、`admin_forum_voucher_save`
+- 點數任務：
+  - 後台可新增「人工發放」任務：`member_task_definitions`，id 為 `adm-<隨機>-v1`，verifier=`admin_review`，每次 1～1,000 點，週期可選每人一次／每天／每週／每月／每年。
+  - 系統任務只能改名稱、點數、開關，不能刪除。
+  - 自訂任務沒有領取紀錄時才可刪除。
+  - 發放走既有的 `admin_award_member_task`（service_role）：同一會員、同一任務、同一場次只會入帳一次。
+  - 會員任務頁（`member-missions.js`）新增「活動任務」區，列出 `adm-*` 任務，只顯示說明，不能自行領取。
+- 論壇到場贈券：
+  - 設定存在 `admin_settings` 的 `forum:voucher`，**預設關閉**。
+  - 開啟後，到場簽到或兌換補發代碼時，透過既有的 `_member_issue_voucher`（service_role）加發一張使用券，`source_event_key` 為 `forum-voucher:<user>`，每人限一次。
+  - 券種可選全方位研究、研究進階、研究入門，天數 1～90 天，預設全方位研究 30 天。
+- 仍然沒有新增資料表或 schema 變更。

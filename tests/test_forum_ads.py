@@ -16,6 +16,9 @@ class FakeRest:
     def __init__(self):
         self.settings = {}
         self.ledger = {}
+        self.vouchers = {}
+        self.awards = {}
+        self.tasks = {'name-v1': {'id': 'name-v1', 'title': '設定研究暱稱', 'points': 20, 'period': 'once', 'verifier': 'profile_name', 'active': True, 'sort': 11}}
         self.products = {'vip-7d-v1': {'id': 'vip-7d-v1', 'title': '全方位研究 7 天', 'points': 2500, 'duration_days': 7, 'active': True}}
 
     def __call__(self, path, method='GET', body=None, prefer=None):
@@ -40,6 +43,30 @@ class FakeRest:
                 k = re.search(r'key=eq\.([^&]+)', path).group(1)
                 self.settings.pop(k, None)
                 return 204, {}
+        if path.startswith('/rpc/_member_issue_voucher'):
+            self.vouchers[body['p_event']] = body
+            return 200, 'v-id'
+        if path.startswith('/rpc/admin_award_member_task'):
+            key = (body['p_user'], body['p_task_id'], body['p_reference'])
+            if key in self.awards:
+                return 200, {'duplicate': True}
+            self.awards[key] = body
+            self.ledger['task:%s:%s:%s' % key] = {'user_id': body['p_user'], 'points': body['p_points']}
+            return 200, {'duplicate': False}
+        if path.startswith('/member_task_claims'):
+            return 200, []
+        if path.startswith('/member_task_definitions'):
+            if method == 'GET':
+                return 200, list(self.tasks.values())
+            if method == 'POST':
+                self.tasks[body['id']] = dict(body)
+                return 201, [self.tasks[body['id']]]
+            tid = re.search(r'id=eq\.([^&]+)', path).group(1)
+            if method == 'DELETE':
+                self.tasks.pop(tid)
+                return 204, {}
+            self.tasks[tid].update(body)
+            return 200, [self.tasks[tid]]
         if path.startswith('/member_exchange_definitions'):
             if method == 'GET':
                 return 200, list(self.products.values())
@@ -223,6 +250,37 @@ class PointsTests(unittest.TestCase):
         st, out = F.handle_admin('admin_products_save', {'id': 'vip-7d-v1', 'title': '全方位研究 7 天', 'points': 2200, 'active': False}, 'admin', self.r)
         self.assertEqual((st, out['product']['points'], out['product']['active']), (200, 2200, False))
         self.assertEqual(F.handle_admin('admin_products_save', {'id': 'vip-7d-v1', 'title': '進出場追蹤', 'points': 1}, 'admin', self.r)[0], 400)
+
+
+class VoucherAndTaskTests(unittest.TestCase):
+    def setUp(self):
+        self.r = FakeRest()
+        with at(EV_DAY):
+            self.eid = F.handle_admin('admin_forum_save', {'event': {'city': 'TXG', 'date': '2026-11-22', 'status': 'published'}}, 'admin', self.r)[1]['event']['id']
+
+    def test_voucher_off_by_default_then_on(self):
+        with at(EV_DAY):
+            self.assertFalse(F.handle_admin('admin_forum_voucher_get', {}, 'admin', self.r)[1]['voucher']['enabled'])
+            F.handle_public('forum_checkin', {'pass': F.make_pass(self.eid)}, USER, self.r)
+            self.assertEqual(self.r.vouchers, {})
+            F.handle_admin('admin_forum_voucher_save', {'enabled': True, 'definition': 'vip-v1', 'days': 30}, 'admin', self.r)
+            st, out = F.handle_public('forum_checkin', {'pass': F.make_pass(self.eid)}, USER2, self.r)
+        self.assertEqual(st, 200)
+        self.assertIn('全方位研究 30 天', out['voucher'])
+        self.assertEqual(self.r.vouchers['forum-voucher:u2']['p_days'], 30)
+
+    def test_custom_task_lifecycle_and_award(self):
+        st, out = F.handle_admin('admin_tasks_save', {'title': '直播互動抽獎', 'points': 200, 'period': 'daily', 'active': True}, 'admin', self.r)
+        tid = out['task']['id']
+        self.assertTrue(tid.startswith('adm-') and out['task']['verifier'] == 'admin_review')
+        self.assertEqual(F.handle_admin('admin_tasks_save', {'title': 'x', 'points': 5000}, 'admin', self.r)[0], 400)
+        self.assertEqual(F.handle_admin('admin_tasks_save', {'id': 'name-v1', 'title': '設定暱稱', 'points': 30, 'active': False}, 'admin', self.r)[1]['task']['points'], 30)
+        self.assertEqual(F.handle_admin('admin_tasks_delete', {'id': 'name-v1'}, 'admin', self.r)[0], 400)
+        a = dict(user_id=UID, task_id=tid, points=200, reference='11/10 晚場直播', reason='抽獎中獎')
+        st, out = F.handle_admin('admin_tasks_award', a, 'admin', self.r)
+        self.assertEqual((st, out['balance']), (200, 200))
+        self.assertTrue(F.handle_admin('admin_tasks_award', a, 'admin', self.r)[1]['duplicate'])
+        self.assertEqual(F.handle_admin('admin_tasks_delete', {'id': tid}, 'admin', self.r)[0], 200)
 
 
 if __name__ == '__main__':

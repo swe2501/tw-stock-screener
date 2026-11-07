@@ -298,10 +298,36 @@ def _grant(rest, user, ev, via, code=''):
         return 409, {'error': '你已領過論壇到場點數，每位會員限領一次。', 'code': 'FORUM_ALREADY'}
     if st not in (200, 201, 204):
         return 503, {'error': '點數暫時無法發放，請稍後再試或洽工作人員。'}
+    msg = '簽到完成，%s 點已存入你的會員帳號。' % format(FORUM_POINTS, ',')
+    voucher = ''
+    try:
+        vs = voucher_setting(rest)
+    except RuntimeError:
+        vs = VOUCHER_DEFAULT
+    if vs.get('enabled') and vs.get('definition') in VOUCHERS:
+        vst, _ = rest('/rpc/_member_issue_voucher', 'POST',
+                      {'p_user': uid, 'p_definition': vs['definition'], 'p_days': int(vs.get('days') or 30),
+                       'p_event': 'forum-voucher:' + uid})
+        if vst == 200:
+            voucher = '%s %d 天使用券' % (VOUCHERS[vs['definition']], int(vs.get('days') or 30))
+            msg += '另送「%s」，已存入券夾，按「開始使用」才起算。' % voucher
+        else:
+            voucher = 'pending'
     _insert_once(rest, 'forumcheckin:%s:%s' % (ev['id'], uid),
-                 {'at': now().isoformat(), 'via': via, 'email': user.get('email') or '', 'phone': user.get('phone') or '', 'code': code})
-    return 200, {'ok': True, 'points': FORUM_POINTS, 'event': label,
-                 'message': '簽到完成，%s 點已存入你的會員帳號。' % format(FORUM_POINTS, ',')}
+                 {'at': now().isoformat(), 'via': via, 'email': user.get('email') or '', 'phone': user.get('phone') or '', 'code': code, 'voucher': voucher})
+    return 200, {'ok': True, 'points': FORUM_POINTS, 'event': label, 'voucher': voucher if voucher != 'pending' else '',
+                 'message': msg}
+
+
+VOUCHERS = {'vip-v1': '全方位研究', 'research-v1': '研究進階', 'choice-v1': '研究入門'}
+VOUCHER_DEFAULT = {'enabled': False, 'definition': 'vip-v1', 'days': 30}
+
+
+def voucher_setting(rest):
+    v = _get_json(rest, 'forum:voucher', {})
+    out = dict(VOUCHER_DEFAULT)
+    out.update({k: v[k] for k in ('enabled', 'definition', 'days') if k in v})
+    return out
 
 
 def _verified(user):
@@ -405,6 +431,7 @@ def handle_public(action, body, user, rest):
 
 
 # ── 點數調整／兌換商品 ──
+PERIODS = {'once': '每人一次', 'daily': '每天一次', 'weekly': '每週一次', 'monthly': '每月一次', 'yearly': '每年一次'}
 _TRADE_WORDS = re.compile(r'買賣|進場|出場|停損|目標價|保證|穩賺|必漲')
 
 
@@ -456,6 +483,87 @@ def _points_admin(action, body, rest, users):
         for r in rows:
             r['member'] = emails.get(r['user_id'], r['user_id'])
         return 200, {'rows': rows}
+    if action == 'admin_forum_voucher_get':
+        return 200, {'voucher': voucher_setting(rest), 'options': VOUCHERS}
+    if action == 'admin_forum_voucher_save':
+        d = str(body.get('definition') or 'vip-v1')
+        if d not in VOUCHERS:
+            return 400, {'error': '請選擇券種'}
+        days = int(body.get('days') or 30)
+        if not 1 <= days <= 90:
+            return 400, {'error': '天數需介於 1～90'}
+        v = {'enabled': bool(body.get('enabled')), 'definition': d, 'days': days}
+        _put_json(rest, 'forum:voucher', v)
+        return 200, {'voucher': v}
+    if action == 'admin_tasks_list':
+        st, rows = rest('/member_task_definitions?select=id,title,points,period,verifier,cap_group,active,sort&order=sort.asc,id.asc')
+        if st != 200 or not isinstance(rows, list):
+            raise RuntimeError('READ_FAILED')
+        for r in rows:
+            r['custom'] = r['id'].startswith('adm-')
+            r['manual'] = r['verifier'] == 'admin_review'
+        return 200, {'tasks': rows, 'periods': PERIODS}
+    if action == 'admin_tasks_save':
+        tid = str(body.get('id') or '')
+        title = str(body.get('title') or '').strip()
+        if not 2 <= len(title) <= 40:
+            return 400, {'error': '任務名稱需 2～40 字'}
+        if _TRADE_WORDS.search(title):
+            return 400, {'error': '名稱不可含買賣、進出場、停損、保證獲利等用語'}
+        try:
+            pts = int(body.get('points'))
+        except (TypeError, ValueError):
+            return 400, {'error': '點數需為整數'}
+        if tid and not tid.startswith('adm-'):
+            if not 1 <= pts <= 10000:
+                return 400, {'error': '點數需介於 1～10,000'}
+            patch = {'title': title, 'points': pts, 'active': bool(body.get('active'))}
+            st, rows = rest('/member_task_definitions?id=eq.' + quote(tid, safe=''), 'PATCH', patch, 'return=representation')
+        else:
+            if not 1 <= pts <= 1000:
+                return 400, {'error': '人工發放任務每次需介於 1～1,000 點'}
+            period = body.get('period') if body.get('period') in PERIODS else 'once'
+            row = {'title': title, 'points': pts, 'active': bool(body.get('active')), 'period': period}
+            if tid:
+                st, rows = rest('/member_task_definitions?id=eq.' + quote(tid, safe=''), 'PATCH', row, 'return=representation')
+            else:
+                row.update({'id': 'adm-%s-v1' % secrets.token_hex(3), 'verifier': 'admin_review', 'sort': int(body.get('sort') or 200)})
+                st, rows = rest('/member_task_definitions', 'POST', row, 'return=representation')
+        if st not in (200, 201) or not rows:
+            return 503, {'error': '儲存失敗，請稍後再試'}
+        return 200, {'task': rows[0]}
+    if action == 'admin_tasks_delete':
+        tid = str(body.get('id') or '')
+        if not tid.startswith('adm-'):
+            return 400, {'error': '系統任務不能刪除，可改為關閉'}
+        st, rows = rest('/member_task_claims?select=id&limit=1&task_id=eq.' + quote(tid, safe=''))
+        if st == 200 and rows:
+            return 409, {'error': '已有會員領過，不能刪除，請改為關閉'}
+        st, _ = rest('/member_task_definitions?id=eq.' + quote(tid, safe=''), 'DELETE', None, 'return=minimal')
+        if st not in (200, 204):
+            return 503, {'error': '刪除失敗'}
+        return 200, {'ok': True}
+    if action == 'admin_tasks_award':
+        uid, tid = str(body.get('user_id') or ''), str(body.get('task_id') or '')
+        ref, reason = str(body.get('reference') or '').strip(), str(body.get('reason') or '').strip()
+        if not re.match(r'^[0-9a-f-]{36}$', uid):
+            return 400, {'error': '請先查詢會員'}
+        if len(ref) < 2 or len(reason) < 2:
+            return 400, {'error': '請填寫場次／批次與說明'}
+        try:
+            pts = int(body.get('points'))
+        except (TypeError, ValueError):
+            return 400, {'error': '點數需為整數'}
+        st, out = rest('/rpc/admin_award_member_task', 'POST',
+                       {'p_user': uid, 'p_task_id': tid, 'p_points': pts, 'p_reason': reason, 'p_reference': ref})
+        if st != 200:
+            msg = str(out)
+            if 'MEMBER_TASK_UNAVAILABLE' in msg:
+                return 400, {'error': '這個任務不是人工發放類型'}
+            if 'MEMBER_INPUT_INVALID' in msg:
+                return 400, {'error': '點數需 1～1,000，場次與說明至少 2 個字'}
+            return 503, {'error': '發放失敗，請稍後再試'}
+        return 200, {'ok': True, 'duplicate': bool((out or {}).get('duplicate')), 'balance': balance(rest, uid)}
     if action == 'admin_products_list':
         st, rows = rest('/member_exchange_definitions?select=id,title,points,duration_days,active,voucher_definition&order=active.desc,points.asc')
         if st == 404 or (isinstance(rows, dict) and rows.get('code') in ('PGRST205', '42P01')):
@@ -491,7 +599,7 @@ def handle_admin(action, body, admin_email, rest, users=None):
     if not admin_email:
         return 403, {'error': '僅限管理者'}
     try:
-        if action.startswith('admin_points_') or action.startswith('admin_products_'):
+        if action.startswith(('admin_points_', 'admin_products_', 'admin_tasks_', 'admin_forum_voucher_')):
             out = _points_admin(action, body, rest, users or (lambda: []))
             if out:
                 return out

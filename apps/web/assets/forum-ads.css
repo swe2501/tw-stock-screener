@@ -90,3 +90,11 @@
 .site-ad--corner .site-ad-x{position:absolute;top:6px;right:8px}
 .site-ad--preview{pointer-events:none}
 @media(max-width:640px){.site-ad--corner{left:12px;right:12px;bottom:12px;max-width:none}.site-ad-cta{margin-left:0}}
+.afa-voucher{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:14px 0 0;padding:10px 12px;border:1px dashed var(--border);border-radius:10px;font-size:13px}
+.afa-voucher select,.afa-voucher input[type=number]{padding:5px 8px;border:1px solid var(--border);border-radius:7px;background:var(--input-bg,var(--surface));color:var(--text)}
+.afa-switch{display:inline-flex;align-items:center;gap:6px;font-weight:700}
+.mj-admin-tasks{margin:14px 0 4px}.mj-admin-tasks h3{font-size:15px;margin:0 0 6px}
+/* 全站閱讀規則把 p/li/label 強制 16px；後台表單維持緊湊 */
+#adminView .afa-voucher label,#adminView .afa-table label.chk,#adminView .afa-form label.chk,#adminView .afa-inline label,.afa-sheet .afa-form label,.afa-sheet .afa-inline label,.afa-sheet label.chk{font-size:13px!important;font-weight:600}
+#adminView p.afa-sub,.afa-sheet p.afa-sub,.afa-slots li{font-size:12px!important}
+#adminView .afa-switch{font-size:13px!important;font-weight:800}
