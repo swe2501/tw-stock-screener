@@ -22,7 +22,7 @@
   <script src="assets/w-pattern-export.js?v=20261024-1"></script>
   <script src="assets/w-pattern-overlay.js?v=20261025-2"></script>
   <script src="assets/chart-ai-patterns.js?v=20261101-box1"></script>
-  <script src="assets/candle-combos.js?v=25" defer></script>
+  <script src="assets/candle-combos.js?v=26" defer></script>
   <link rel="stylesheet" href="assets/candle-combos.css?v=25">
   <link rel="stylesheet" href="assets/chart-ai-patterns.css?v=20261026-3">
   <style>
@@ -9914,7 +9914,7 @@
         <div class="sc-panel" data-cat="kbar">
           <div class="sc-hd"><a onclick="_scToggle('kbar')"><span class="sc-ar">▸</span><b style="color:#c0392b">K棒</b></a><span class="sc-sum"></span></div>
           <div class="sc-body" style="display:none">
-          <!-- 2026-11-05 單根 K 棒訊號：長紅／長黑幅度從基本條件移入；其餘訊號每晚由 scripts/candle_combos.py 算好（candle_combo_hits），篩選日當天成立；勾多項＝全部成立 -->
+          <!-- 2026-11-05 單根 K 棒訊號：長紅／長黑幅度從基本條件移入；其餘訊號由 scripts/candle_combos.py 盤後 16:00 後與夜間算好（candle_signal_hits），篩選日當天成立；勾多項＝全部成立 -->
           <div class="ks-fields">
             <div class="field ks-threshold-card ks-threshold-red">
               <label for="red_candle_pct">長紅棒</label>
@@ -15368,8 +15368,7 @@
           const names=[...new Set(rows.map(e=>e.broker))];
           _ohlcTip.innerHTML+=`<div class="ohlc-broker"><span class="broker-relationship-${sell?'down':'up'}">${sell?'↓':'↑'} ${label} · ${names.length} 家</span>${names.map(n=>`<b>${brokerName(n)}</b>`).join('')}${typeof param.time==='string'&&rows.some(e=>e.date!==param.time)?`<small>${[...new Set(rows.map(e=>e.date))].map(brokerName).join('、')}</small>`:''}</div>`;
         }
-        // 2026-11-05 單根 K 棒訊號（十字線、長上下影線、吊人線…）：圖上圈起、這裡多一行寫名稱
-        try { const sigHtml = window.AcademyCandleCombos?.signalTipHtml(param.time, c); if (sigHtml) _ohlcTip.innerHTML += sigHtml; } catch (_) {}
+        // 2026-11-06 合夥人要求：「K棒訊息」提示框不再顯示 K棒訊號／K棒組合那一行（原 11/05 加的 signalTipHtml）；圖上黃框照舊由「K棒組合」開關控制
         _ohlcTip.style.display = 'block';
         _tipFollow(param);
       });

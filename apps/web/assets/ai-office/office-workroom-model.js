@@ -8,7 +8,11 @@ function metrics(roles,tasks,now=Date.now()){
  const steps=roles.flatMap(r=>Array.isArray(r.steps)?r.steps:[]),finished=steps.filter(s=>millis(s.end)!=null&&typeof s.ok==='boolean');
  const terminal=tasks.filter(t=>['approved','failed'].includes(t.status));
  const interrupted=t=>t.status==='running'&&t.execution==='ai'&&millis(t.lease_until)!=null&&millis(t.lease_until)<now;
- const count={work:roles.filter(r=>r.status==='work').length+tasks.filter(t=>t.status==='running'&&!interrupted(t)).length,wait:roles.filter(r=>r.status==='idle').length+tasks.filter(t=>['queued','review'].includes(t.status)).length,done:roles.filter(r=>r.status==='done').length+tasks.filter(t=>t.status==='approved').length,attention:roles.filter(r=>['stuck','warn'].includes(r.status)).length+tasks.filter(t=>['blocked','failed'].includes(t.status)||interrupted(t)).length};
+ const known=['queued','running','blocked','review','failed','approved','cancelled'];
+ const today=new Date(now+8*3600000).toISOString().slice(0,10);
+ const overdue=t=>!!(t.due_date&&t.due_date<today&&!['approved','cancelled'].includes(t.status));
+ const needsAttention=t=>['blocked','failed'].includes(t.status)||interrupted(t)||overdue(t)||!known.includes(t.status);
+ const count={work:roles.filter(r=>r.status==='work').length+tasks.filter(t=>t.status==='running'&&!interrupted(t)&&!overdue(t)).length,wait:roles.filter(r=>r.status==='idle').length+tasks.filter(t=>['queued','review'].includes(t.status)&&!overdue(t)).length,done:roles.filter(r=>r.status==='done').length+tasks.filter(t=>t.status==='approved').length,attention:roles.filter(r=>['stuck','warn'].includes(r.status)).length+tasks.filter(needsAttention).length};
  const timed=finished.map(s=>typeof s.secs==='number'&&s.secs>=0?s.secs:duration(s.start,s.end)).filter(x=>x!=null);
  const waits=[],ontime=[];
  for(const t of tasks){const h=t.history||[],start=h.find(x=>x.status==='running'),end=h.filter(x=>x.status==='approved').at(-1);

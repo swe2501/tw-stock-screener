@@ -1,5 +1,9 @@
 """Persistent department tasks in existing admin_settings rows; compare-and-swap writes.
 No schema change, network call, model run, or seed data at import time.
+
+execution is one of: manual, ai, agent.
+agent is a first-class mode (not executor='agent') so Claude-local and Grok
+AI routing, plus USD budget gates on ai tasks, stay unchanged.
 """
 import copy
 import datetime as dt
@@ -11,6 +15,7 @@ import secrets
 import uuid
 from urllib.parse import quote
 from lib.office_departments import DEPARTMENTS
+from lib.office_agents import AGENTS, ENGINEERING_DEPARTMENT, ENGINEERING_KEYS, is_agent_actor, key_from_actor, lookup as lookup_agent, public_catalog
 
 PREFIX = 'office-task-uat-v1-'
 WORKER_KEY = 'office_task_worker_uat_v1'
@@ -98,11 +103,70 @@ def public(task):
     return result
 
 
+def taiwan_today():
+    return (now()+dt.timedelta(hours=8)).date()
+
+
+def is_overdue(task):
+    due=task.get('due_date')
+    if not due or task.get('status') in ('approved','cancelled'):
+        return False
+    try:
+        return dt.date.fromisoformat(due)<taiwan_today()
+    except (TypeError,ValueError):
+        return False
+
+
+def store_usage(task, body):
+    if 'usage_week' not in body:
+        return
+    usage=body.get('usage_week')
+    if type(usage) in (int,float) and math.isfinite(usage) and usage>=0:
+        task['usage_week']=usage
+    else:
+        task['usage_week']=text(str(usage or ''),80,'週用量')
+
+
+def store_evidence(task, body):
+    evidence=body.get('evidence')
+    if evidence is None:
+        return
+    if isinstance(evidence,str):
+        items=[text(evidence,500,'證據')] if evidence.strip() else []
+    elif isinstance(evidence,list):
+        items=[text(item,500,'證據') for item in evidence[:8] if item]
+    else:
+        raise Problem(400,'證據格式不正確')
+    if items:
+        task['evidence']=items
+
+
+def can_agent_claim(task, actor):
+    key=key_from_actor(actor)
+    agent=lookup_agent(key) if key else None
+    if not agent or not agent.get('can_claim'):
+        return False
+    assignee=task.get('assignee') or ''
+    department=task.get('department')
+    if department==ENGINEERING_DEPARTMENT:
+        return assignee in ENGINEERING_KEYS and assignee==key
+    if assignee:
+        return assignee==key
+    return agent['department']==department
+
+
+def agent_may_see(task, actor):
+    if task.get('status')=='running' and task.get('worker')==actor:
+        return True
+    return task.get('status')=='queued' and task.get('execution')=='agent' and can_agent_claim(task,actor)
+
+
 def summary(task):
-    keys=('id','title','department','execution','due_date','depends_on','created_at','updated_at','revision','status','current_step','lease_until','cost_usd','reserved_usd','budget_usd','attempts','executor')
+    keys=('id','title','department','execution','due_date','depends_on','created_at','updated_at','revision','status','current_step','lease_until','cost_usd','reserved_usd','budget_usd','attempts','executor','assignee','cost_uncertain','cost_self_reported','usage_week','evidence','worker')
     result={k:task[k] for k in keys if k in task}
     result['brief']=task.get('brief','')[:200]
     result['criteria_count']=len(task.get('criteria',[]))
+    result['overdue']=is_overdue(task)
     return result
 
 
@@ -145,9 +209,13 @@ def create(body, actor, rest):
     dept=body.get('department')
     if type(dept)!=int or not 0<=dept<len(DEPARTMENTS) or not DEPARTMENTS[dept]['enabled']:raise Problem(400,'部門無效或尚未啟用')
     execution=body.get('execution')
-    if execution not in ('manual','ai'):raise Problem(400,'請指定執行方式')
+    if execution not in ('manual','ai','agent'):raise Problem(400,'請指定執行方式')
     budget=body.get('budget_usd',0)
     if type(budget) not in (int,float) or not math.isfinite(budget) or execution=='ai' and not 0.05<=budget<=10:raise Problem(400,'AI 任務預算須介於 US$0.05 與 US$10')
+    assignee=body.get('assignee') or ''
+    if assignee:
+        assignee=text(assignee,20,'指定執行者')
+        if assignee not in AGENTS:raise Problem(400,'指定執行者無效')
     due=body.get('due_date','')
     if due:
         try:dt.date.fromisoformat(due)
@@ -162,6 +230,7 @@ def create(body, actor, rest):
     if executor not in EXECUTORS:raise Problem(400,'執行器無效')
     payload=dict(title=title,brief=brief,criteria=criteria,department=dept,execution=execution,budget_usd=round(budget,2) if execution=='ai' else 0,due_date=due,depends_on=dependencies)
     if executor:payload['executor']=executor
+    if assignee:payload['assignee']=assignee
     digest=hashlib.sha256(json.dumps(payload,sort_keys=True,ensure_ascii=False).encode()).hexdigest()
     try:existing,_=read(rest,task_id)
     except Problem as e:
@@ -185,35 +254,56 @@ def mutate(body, actor, rest, worker=False):
     operation=body.get('operation')
     if operation=='claim':
         if task['status']!='queued' or not ready(task,rest):raise Problem(409,'任務尚未可執行，或前置任務尚未驗收')
-        if worker != (task['execution']=='ai'):raise Problem(403,'執行方式不符')
+        if worker != (task['execution'] in ('ai','agent')):raise Problem(403,'執行方式不符')
         if task['attempts']>=3:raise Problem(409,'已達 3 次執行上限，請建立新任務')
         if worker:
-            if not executor_allowed(task,actor):raise Problem(403,'此任務指定給其他執行器')
-            worker_name=text(body.get('worker'),100,'執行端',True)
+            worker_name=actor if is_agent_actor(actor) else text(body.get('worker'),100,'執行端',True)
             if any(t.get('status')=='running' and t.get('worker')==worker_name and t['id']!=task['id'] for t in all_tasks(rest)):raise Problem(409,'此執行端已有執行中的任務')
-            remaining=round(task['budget_usd']-task['cost_usd'],6)
-            if remaining<0.01:raise Problem(409,'任務預算已用完')
-            run_budget=body.get('run_budget_usd',remaining)
-            if type(run_budget) not in (int,float) or not math.isfinite(run_budget) or not .01<=run_budget<=remaining:raise Problem(400,'執行預算無效')
-            task['reserved_usd']=run_budget
-            task['lease_token']=secrets.token_urlsafe(32)
-            task['lease_until']=(now()+dt.timedelta(seconds=LEASE_SECONDS)).isoformat()
-            task['worker']=text(body.get('worker'),100,'執行端',True)
+            if task['execution']=='agent':
+                if not can_agent_claim(task,actor):raise Problem(403,'此任務不可由目前執行者領取')
+                task['reserved_usd']=0
+                task['lease_token']=secrets.token_urlsafe(32)
+                task['lease_until']=(now()+dt.timedelta(seconds=LEASE_SECONDS)).isoformat()
+                task['worker']=actor
+            else:
+                if is_agent_actor(actor) or not executor_allowed(task,actor):raise Problem(403,'此任務指定給其他執行器')
+                remaining=round(task['budget_usd']-task['cost_usd'],6)
+                if remaining<0.01:raise Problem(409,'任務預算已用完')
+                run_budget=body.get('run_budget_usd',remaining)
+                if type(run_budget) not in (int,float) or not math.isfinite(run_budget) or not .01<=run_budget<=remaining:raise Problem(400,'執行預算無效')
+                task['reserved_usd']=run_budget
+                task['lease_token']=secrets.token_urlsafe(32)
+                task['lease_until']=(now()+dt.timedelta(seconds=LEASE_SECONDS)).isoformat()
+                task['worker']=text(body.get('worker'),100,'執行端',True)
         else:task['worker']=actor
         task.update(status='running',current_step='已領取，開始執行',blocker='',attempts=task['attempts']+1)
         event(task,actor,'領取任務')
     elif worker:
-        if task['execution']!='ai' or task['status']!='running' or not lease_live(task) or not secrets.compare_digest(str(body.get('lease_token') or ''),task.get('lease_token','')):raise Problem(409,'任務已取消、租約失效或執行權已變更')
+        if task['execution'] not in ('ai','agent') or task['status']!='running' or not lease_live(task) or not secrets.compare_digest(str(body.get('lease_token') or ''),task.get('lease_token','')):raise Problem(409,'任務已取消、租約失效或執行權已變更')
+        if is_agent_actor(actor) and task.get('worker')!=actor:raise Problem(403,'不可操作他人任務')
         if operation=='heartbeat':
             task['lease_until']=(now()+dt.timedelta(seconds=LEASE_SECONDS)).isoformat()
             task['current_step']=text(body.get('note'),300,'執行進度',True)
+            store_usage(task,body)
         elif operation in ('submit','fail','block'):
             result=text(body.get('result',''),40000,'交付內容',operation=='submit')
             note=text(body.get('note',''),2000,'執行說明',operation!='submit')
             cost=body.get('cost_usd')
-            if type(cost) not in (int,float) or not math.isfinite(cost) or cost<0:
-                cost=task['reserved_usd'];task['cost_uncertain']=True
-            task['cost_usd']=round(task['cost_usd']+cost,6)
+            agent_cost=task.get('execution')=='agent' or is_agent_actor(actor)
+            if agent_cost:
+                # Self-reported, non-billing. Missing/null = not reported (ok).
+                # Negative / NaN / Inf / non-number / >100 => 400, no side effects.
+                if cost is None:
+                    cost=0
+                else:
+                    if type(cost) not in (int,float) or not math.isfinite(cost) or cost<0 or cost>100:
+                        raise Problem(400,'自報 cost_usd 須為 0–100 的有限數字（非計費；非法值一律拒絕）')
+                    task['cost_self_reported']=True
+            elif type(cost) not in (int,float) or not math.isfinite(cost) or cost<0:
+                cost=task.get('reserved_usd') or 0;task['cost_uncertain']=True
+            task['cost_usd']=round(task.get('cost_usd',0)+cost,6)
+            store_usage(task,body)
+            store_evidence(task,body)
             task.update(status={'submit':'review','fail':'failed','block':'blocked'}[operation],result=result or task['result'],blocker=note,current_step='待管理者驗收' if operation=='submit' else note,reserved_usd=0)
             task.pop('lease_token',None)
             event(task,actor,'提交成果，等待驗收' if operation=='submit' else note)
@@ -269,6 +359,10 @@ def handle(action, body, actor, rest, worker=False):
             return 200,{'task':public(read(rest,identifier(body.get('id')))[0])}
         if worker and body.get('operation')=='get':
             task,_=read(rest,identifier(body.get('id')))
+            if is_agent_actor(actor):
+                if task.get('worker')==actor or agent_may_see(task,actor):
+                    return 200,{'task':public(task)}
+                raise Problem(403,'執行端僅可讀取本人任務')
             if task['execution']!='ai':raise Problem(403,'執行端僅可讀取 AI 任務')
             return 200,{'task':public(task)}
         if worker and body.get('operation')=='online':
@@ -279,17 +373,34 @@ def handle(action, body, actor, rest, worker=False):
         if action=='admin_office_tasks_list' or worker and body.get('operation')=='list':
             tasks=all_tasks(rest)
             today=(now()+dt.timedelta(hours=8)).date()
-            committed=sum(t.get('cost_usd',0)+t.get('reserved_usd',0) for t in tasks if (dt.datetime.fromisoformat(t['updated_at'])+dt.timedelta(hours=8)).date()==today)
             all_by_id={t['id']:t for t in tasks}
-            if worker:tasks=[t for t in tasks if t['status']=='queued' and t['execution']=='ai' and executor_allowed(t,actor)]
+            agent_list=worker and is_agent_actor(actor)
+            if worker:
+                if agent_list:
+                    tasks=[t for t in tasks if agent_may_see(t,actor)]
+                else:
+                    tasks=[t for t in tasks if (t['status']=='queued' and t['execution']=='ai' and executor_allowed(t,actor)) or (t['status']=='running' and t.get('worker')==actor)]
+            # Site-wide spend and other workers' presence are admin/self only.
+            # Agent list totals are recomputed over the visible subset only.
+            committed=sum(t.get('cost_usd',0)+t.get('reserved_usd',0) for t in tasks if (dt.datetime.fromisoformat(t['updated_at'])+dt.timedelta(hours=8)).date()==today)
             tasks.sort(key=lambda t:t['created_at'],reverse=not worker)
-            st,rows=rest('/admin_settings?select=value&key=eq.'+(worker_key(actor) if worker else WORKER_KEY))
             worker_state={}
-            if st==200 and rows:
-                try:worker_state=json.loads(rows[0]['value'])
-                except (ValueError,KeyError,TypeError):pass
+            if not agent_list:
+                st,rows=rest('/admin_settings?select=value&key=eq.'+(worker_key(actor) if worker else WORKER_KEY))
+                if st==200 and rows:
+                    try:worker_state=json.loads(rows[0]['value'])
+                    except (ValueError,KeyError,TypeError):pass
+            elif worker:
+                # Own heartbeat only; never echo another worker's online blob.
+                st,rows=rest('/admin_settings?select=value&key=eq.'+worker_key(actor))
+                if st==200 and rows:
+                    try:worker_state=json.loads(rows[0]['value'])
+                    except (ValueError,KeyError,TypeError):pass
             dependencies={key:{'title':all_by_id[key]['title'],'status':all_by_id[key]['status']} for task in tasks[:200] for key in task.get('depends_on',[]) if key in all_by_id}
-            return 200,{'dependencies':dependencies,'tasks':[summary(t) for t in tasks[:200]],'departments':DEPARTMENTS,'worker':worker_state,'scope':'uat','total':len(tasks),'committed_today_usd':committed}
+            payload={'dependencies':dependencies,'tasks':[summary(t) for t in tasks[:200]],'departments':DEPARTMENTS,'office_agents':public_catalog(),'worker':worker_state,'scope':'uat','total':len(tasks),'committed_today_usd':committed}
+            if agent_list:
+                payload['committed_scope']='visible_only'
+            return 200,payload
         if action=='admin_office_tasks_create' and not worker:return 200,{'task':create(body,actor,rest)}
         if action=='admin_office_tasks_update' or worker:return 200,{'task':mutate(body,actor,rest,worker)}
         raise Problem(400,'未知的任務動作')
