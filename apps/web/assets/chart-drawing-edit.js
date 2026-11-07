@@ -18,7 +18,7 @@ menu.innerHTML=`<div class="drawing-context-title">標記工具</div>
   <button type="button" role="menuitem" aria-label="刪除" data-action="delete" class="is-danger"><span>刪除</span><kbd>Delete</kbd></button>`;
 const clone=x=>JSON.parse(JSON.stringify(x));
 function state(){const b=bridge()?.get();return b?.chart&&b.series?b:null;}
-function ready(){const b=state();return b&&!b.tool&&!b.zoom&&!b.fib&&!b.trendLine&&!b.drawing&&!window.AcademyChartTools?.isSelecting()?b:null;}
+function ready(){if(window.AcademyGuestAccess&&!AcademyGuestAccess.signed())return null;const b=state();return b&&!b.tool&&!b.zoom&&!b.fib&&!b.trendLine&&!b.drawing&&!window.AcademyChartTools?.isSelecting()?b:null;}
 function pos(e){const g=bridge().plot();return{x:e.clientX-g.pageLeft,y:e.clientY-g.pageTop};}
 function inside(p){const g=bridge()?.plot();return g&&p.x>=0&&p.x<=g.width&&p.y>=0&&p.y<=g.height;}
 function points(item){return item.kind==='shape'?item.value.pts:[{time:item.value.time1,price:item.value.price1},{time:item.value.time2,price:item.value.price2}];}

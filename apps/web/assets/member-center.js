@@ -37,22 +37,21 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
   let contentAnchor=null;
   function alignContentStart(){
     const anchor=contentAnchor;if(!anchor||page.hidden)return;
-    const oldTop=parseFloat(contentFlow.style.top)||0;
-    const naturalTop=contentFlow.getBoundingClientRect().top-oldTop;
+    const naturalTop=contentFlow.getBoundingClientRect().top;
     const nextTop=Math.max(0,brandbar.getBoundingClientRect().bottom+12-naturalTop);
-    if(Math.abs(page.scrollTop-anchor.scroll)<2)contentFlow.style.top=nextTop+'px';
-    const offset=parseFloat(contentFlow.style.top)||0;
-    const height=Math.max(anchor.minimum,nav.offsetHeight,offset+contentFlow.offsetHeight);
+    if(Math.abs(page.scrollTop-anchor.scroll)<2)contentFlow.style.paddingTop=nextTop+'px';
+    const height=Math.max(anchor.minimum,nav.offsetHeight,contentFlow.offsetHeight);
     if(Math.abs((parseFloat(layout.style.minHeight)||0)-height)>1)layout.style.minHeight=height+'px';
   }
   function prepareContentStart(preserve){
     const scroll=preserve?page.scrollTop:0;
     const origin=layout.getBoundingClientRect().top-page.getBoundingClientRect().top+page.scrollTop;
     contentAnchor=preserve?{scroll,minimum:Math.max(0,scroll+page.clientHeight-origin)}:null;
-    contentFlow.style.top='0px';contentFlow.style.paddingTop='';
+    contentFlow.style.top='';contentFlow.style.paddingTop='';
     layout.style.minHeight=contentAnchor?contentAnchor.minimum+'px':'';
     return scroll;
   }
+  // Padding participates in layout so expanded cards always push the footer down.
   // When scrolling upward past the new feature's start, reduce its offset.
   // Never expose a blank region above the content or add a second scroll area.
   let contentScrollFrame=0;
@@ -60,14 +59,14 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
     if(contentScrollFrame)return;
     contentScrollFrame=requestAnimationFrame(()=>{
       contentScrollFrame=0;if(page.hidden)return;
-      const offset=parseFloat(contentFlow.style.top)||0;if(!offset)return;
-      const actual=contentFlow.getBoundingClientRect().top;
+      const offset=parseFloat(contentFlow.style.paddingTop)||0;if(!offset)return;
+      const actual=main.getBoundingClientRect().top;
       const target=Math.max(actual-offset,brandbar.getBoundingClientRect().bottom+12);
       if(actual<=target+1)return;
       const next=Math.max(0,offset-(actual-target));contentAnchor=null;
-      contentFlow.style.top=next+'px';
+      contentFlow.style.paddingTop=next+'px';
       const origin=layout.getBoundingClientRect().top-page.getBoundingClientRect().top+page.scrollTop;
-      layout.style.minHeight=Math.max(0,page.scrollTop+page.clientHeight-origin,nav.offsetHeight,next+contentFlow.offsetHeight)+'px';
+      layout.style.minHeight=Math.max(0,page.scrollTop+page.clientHeight-origin,nav.offsetHeight,contentFlow.offsetHeight)+'px';
     });
   },{passive:true});
   for(const event of ['wheel','touchstart','keydown','pointerdown'])page.addEventListener(event,()=>{contentAnchor=null;},{passive:true,capture:true});
@@ -158,7 +157,7 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
     if(window.AcademyMemberFeatures?.render(current,{main,profile,onProfileChanged:p=>{profile=p;sync();},go:open}))return;
     if(current==='overview')main.innerHTML=`<div class="mc-card"><div class="mc-identity">${portrait('mc-portrait')}<div><h2>${esc(name())}</h2><span class="mc-muted">分享工具、邀請朋友；使用權與到期日由會員帳號確認。</span></div></div></div><div class="mc-grid"><div class="mc-card"><h2>你的帳號</h2><p class="mc-muted">管理暱稱、通知信箱與登入方式。</p><button data-go="profile">查看個人資料 →</button></div><div class="mc-card"><h2>你的聲音</h2><p class="mc-muted">提出使用問題、資料疑問與功能建議。</p><button data-go="feedback">前往回饋 →</button></div></div><div class="mc-note">網站與未來 App 將共用會員識別。收藏與觀察紀錄沿用原帳號，不另外建立新身分。</div>`;
     if(current==='profile')main.innerHTML=profileForm();
-    if(current==='benefits')main.innerHTML=`<div class="mc-card"><span class="mc-kicker">MEMBERSHIP</span><h2>會員權益</h2><div class="mc-plan"><div><span class="mc-muted">目前方案</span><h3>${profile?(window.AcademyResearchTitle?.()||(profile.membership?.plan&&profile.membership.plan!=='general'?'已授權方案':'見習研究生')):'正在確認會員身分'}</h3></div><span class="mc-pill">由系統授權 · 無法自行修改</span></div><div class="mc-row"><span>會員個人檔案</span><span>一般會員功能</span></div><div class="mc-row"><span>自選股與觀察筆記</span><span>沿用既有功能</span></div><div class="mc-row"><span>我的回饋與回覆通知</span><span>服務串接中</span></div>${profile?.membership?.expires_at?`<div class="mc-row"><span>授權到期日</span><span>${esc(profile.membership.expires_at)}</span></div>`:''}<div class="mc-note">工具使用權與有效期限由系統核發，分享獎勵不會改變你的個人資料或原有專項權限。</div></div><div class="mc-card"><h2>分享解鎖，立即使用</h2><p class="mc-muted">分享給 3 位 IG 好友領 3 天體驗；邀請碼每滿 3 位有效新會員，再獲得 7 天使用券；核發後一個月內啟用，啟用才起算。點開查看活動狀態與進度。</p><button type="button" class="share-entry" data-share-unlock>分享解鎖，立即使用 →</button></div>`;
+    if(current==='benefits')main.innerHTML='<section class="mc-card"><h2>會員等級與權益</h2><p class="mc-muted">正在確認會員權益。若無法載入，請重新整理後再試；原有資料與使用券不受影響。</p></section>';
     if(current==='security')renderSecurity();
     if(current==='security'){
       const device=document.createElement('section');device.className='mc-card';device.innerHTML='<h2>登入裝置</h2><p class="mc-muted">目前使用的瀏覽器登入。完整裝置清單尚未接通，不會顯示推測的裝置或位置。</p><details class="mc-lesson"><summary><b>登出其他裝置</b></summary><p>保留目前裝置，撤銷其他登入的續期資格。其他裝置目前尚未到期的登入可能短暫有效。</p><button type="button" data-revoke-sessions>確認登出其他裝置</button><div class="mc-status" role="status"></div></details>';main.append(device);
@@ -174,7 +173,7 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
     try{const result=await AcademyIdentity.memberResource('feedback');if(!target.isConnected)return;if(!result.ready){target.textContent='案件服務尚未啟用，填寫內容會保留為草稿。';return;}target.innerHTML=result.rows.length?result.rows.map(r=>'<div class="mc-row"><div><b>'+esc(r.subject)+'</b><small>'+esc(r.ticket_number)+'</small></div><span class="mc-pill">'+esc(({received:'已收到',in_progress:'處理中',waiting:'等待補充',completed:'已完成'})[r.status]||r.status)+'</span></div>').join(''):'目前還沒有已送出的回饋';}catch(e){if(target.isConnected)target.textContent=e.message;}
   }
   async function load(){const id=++request;try{const data=await api();if(id!==request)return;if(window.AcademyPhoneGate&&!await AcademyPhoneGate.ensure()){window.AcademyCloud?.cancel();return;}profile=data;sync();notificationPreview?.refresh();if(window.AcademyIdentity.serviceRpc){const accessOwner=data.id;AcademyIdentity.serviceRpc('member_service_access',{}).then(a=>{if(profile?.id===accessOwner)nav.querySelector('[data-tab=admin]').hidden=!a.scopes?.length;}).catch(()=>{nav.querySelector('[data-tab=admin]').hidden=true;});}if(window.AcademyCloud){window.AcademyTradeUI?.cleanup();if(!page.hidden)main.innerHTML='<section class="mc-card"><p>正在讀取帳號研究資料…</p></section>';await AcademyCloud.prepare(data.id,true);if(id!==request)return;cloudCleanup();cloudHost.hidden=false;cloudCleanup=AcademyCloud.mountStatus(cloudHost,data.id);}if(!page.hidden)render();}catch(e){if(id!==request||page.hidden)return;const notice=document.createElement('div');notice.className='mc-note';notice.setAttribute('role','status');notice.textContent=e.message==='Failed to fetch'?'無法連上會員服務，請確認網路後重試':e.message;const retry=document.createElement('button');retry.type='button';retry.textContent='重新載入';retry.addEventListener('click',()=>{notice.remove();load();});notice.append(' ',retry);main.prepend(notice);}}
-  async function open(tab='overview',replaceHistory=false){if(window.AcademyPhoneGate&&!await AcademyPhoneGate.ensure())return;const reopened=page.hidden;
+  async function open(tab='overview',replaceHistory=false){if(tab==='learning'&&window.AcademyGuestAccess&&!AcademyGuestAccess.requireMember('登入會員後即可進入學習中心。'))return;if(window.AcademyPhoneGate&&!await AcademyPhoneGate.ensure())return;const reopened=page.hidden;
     if(location.hash!=='#member/'+tab)dispatchEvent(new Event('academy-member-navigation'));
     // 'goals'＝「交易與目標」的頁內分頁「我的目標」，2026-10-22 合併後不在導覽項(items)裡，但仍是合法路由(render 會映射到 trades 並以 AcademyTradeUI 渲染)；否則點「我的目標」會被誤判退回 overview。
     current=(items.some(i=>i[0]===tab)||tab==='goals')?tab:'overview';

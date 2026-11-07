@@ -1,0 +1,16 @@
+.mpw-notice{position:fixed;right:24px;bottom:24px;z-index:1001;box-sizing:border-box;width:min(355px,calc(100vw - 32px));padding:20px 22px;border:1px solid rgba(104,151,189,.28);border-radius:22px;background:rgba(248,252,255,.94);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);color:#293849;box-shadow:0 10px 36px rgba(35,69,98,.13),inset 0 1px rgba(255,255,255,.85);animation:mpw-appear .3s ease-out}
+.mpw-notice .mpw-eyebrow{display:block;font:600 10px/1.4 system-ui;letter-spacing:.16em;color:#4383af;margin-bottom:7px}
+.mpw-notice strong{display:block;font-size:17px;line-height:1.55;padding-right:14px}
+.mpw-notice p{font-size:13px;line-height:1.85;color:#607285;margin:8px 0 14px}
+.mpw-notice button{cursor:pointer;font:inherit;transition:background .18s,color .18s,box-shadow .18s}
+.mpw-notice .mpw-close{position:absolute;top:10px;right:12px;border:0;background:transparent;color:#6b7e90;font-size:20px;line-height:1;padding:7px;border-radius:50%}
+.mpw-notice .mpw-action{border:1px solid rgba(73,133,178,.26);border-radius:999px;background:rgba(255,255,255,.6);color:#366d96;font-size:13px;font-weight:600;padding:9px 16px;box-shadow:inset 0 1px rgba(255,255,255,.8)}
+.mpw-notice .mpw-action:hover{background:rgba(227,241,251,.85);box-shadow:0 0 15px rgba(83,155,207,.15)}
+.mpw-notice button:focus-visible{outline:2px solid #4383af;outline-offset:3px}
+body.dark .mpw-notice,html[data-theme="dark"] .mpw-notice,body[data-theme="dark"] .mpw-notice{background:rgba(20,32,43,.94);border-color:rgba(215,185,113,.3);color:#e6edf2;box-shadow:0 12px 38px rgba(0,0,0,.27),inset 0 1px rgba(255,255,255,.08)}
+body.dark .mpw-notice p,html[data-theme="dark"] .mpw-notice p,body[data-theme="dark"] .mpw-notice p{color:#b0bdc9}
+body.dark .mpw-notice .mpw-eyebrow,body.dark .mpw-notice .mpw-action,html[data-theme="dark"] .mpw-notice .mpw-eyebrow,html[data-theme="dark"] .mpw-notice .mpw-action,body[data-theme="dark"] .mpw-notice .mpw-eyebrow,body[data-theme="dark"] .mpw-notice .mpw-action{color:#e6c975}
+body.dark .mpw-notice .mpw-action,html[data-theme="dark"] .mpw-notice .mpw-action,body[data-theme="dark"] .mpw-notice .mpw-action{background:rgba(227,200,131,.07);border-color:rgba(227,200,131,.3);box-shadow:inset 0 1px rgba(255,255,255,.08)}
+@keyframes mpw-appear{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:600px){.mpw-notice{right:16px;bottom:16px;padding:17px 19px}}
+@media(prefers-reduced-motion:reduce){.mpw-notice{animation:none}.mpw-notice button{transition:none}}

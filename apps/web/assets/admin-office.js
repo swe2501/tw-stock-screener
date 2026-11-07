@@ -112,7 +112,19 @@
       + Object.keys(SEATS).map(function (a) { return '<tr data-ao="' + a + '" style="border-top:1px solid var(--border);cursor:pointer"><td style="padding:6px 8px;white-space:nowrap"><span style="display:inline-block;width:10px;height:10px;margin-right:6px;background:' + LOOK[a].shirt + '"></span><b>' + esc(LOOK[a].n) + '</b></td><td style="padding:6px 8px">' + esc(ROLE[a].duty) + '</td><td style="padding:6px 8px">' + esc(ROLE[a].pages) + '</td><td style="padding:6px 8px;color:var(--text-muted);font-family:monospace">' + esc(ROLE[a].jobs) + '</td></tr>'; }).join('')
       + '</tbody></table></div><style>.ao-roles td,.ao-roles th{white-space:normal!important;word-break:break-word;vertical-align:top}</style></div>';
     taskBoard = window.OfficeTaskBoard && window.OfficeTaskBoard.mount(box.querySelector('#aoTasksPanel'), post);
-    var setView = function (mode) {
+    var officeURL=location.href, officeMode='tower';
+    var returnButton=document.createElement('button');
+    returnButton.type='button';returnButton.className='ao-return-previous';
+    returnButton.textContent='← 上一頁';returnButton.setAttribute('aria-label','上一頁，返回部門選擇');
+    box.querySelector('#aoTasksPanel').prepend(returnButton);
+    var legacyBack=returnButton.cloneNode(true);box.querySelector('#aoLegacyPanel').prepend(legacyBack);
+    var setView = function (mode, restoring) {
+      var nextMode=mode===true?'tower':mode==='tasks'?'tasks':'legacy';
+      if(!restoring&&nextMode!==officeMode){
+        history.replaceState(Object.assign({},history.state,{academyOffice:{view:officeMode,url:officeURL,top:scrollY}}),'',location.href);
+        history.pushState(Object.assign({},history.state,{academyOffice:{view:nextMode,url:officeURL,top:scrollY}}),'',location.href);
+      }
+      officeMode=nextMode;
       var tower=mode===true, tasks=mode==='tasks';
       box.querySelector('#aoTasksPanel').hidden=!tasks;
       box.querySelector('#aoTasksTab').setAttribute('aria-pressed',String(tasks));
@@ -130,6 +142,25 @@
       }
       if (frame.contentWindow) frame.contentWindow.postMessage({type:'foresight-office-visibility',visible:tower}, location.protocol === 'file:' ? '*' : location.origin);
     };
+    var returnPrevious=function(){
+      if(history.state&&history.state.academyOffice&&officeMode!=='tower')history.back();
+      else setView(true,true);
+    };
+    returnButton.onclick=returnPrevious;legacyBack.onclick=returnPrevious;
+    var onOfficePop=function(event){
+      var state=event.state&&event.state.academyOffice;
+      if(location.href!==officeURL||!state||state.url!==officeURL)return;
+      // Dialog history is owned by navigation-layers and runs before this listener.
+      if(state.view===officeMode)return;
+      setView(state.view==='tower'?true:state.view==='tasks'?'tasks':false,true);
+      var frame=box.querySelector('#aoTowerFrame');
+      if(state.view==='tower'&&frame.contentWindow)frame.contentWindow.postMessage({type:'foresight-office-return-departments'},location.protocol==='file:'?'*':location.origin);
+      requestAnimationFrame(function(){scrollTo(0,state.top||0);});
+      event.stopImmediatePropagation();
+    };
+    addEventListener('popstate',onOfficePop,true);
+    var savedOffice=history.state&&history.state.academyOffice;
+    if(savedOffice&&savedOffice.url===officeURL)setView(savedOffice.view==='tower'?true:savedOffice.view==='tasks'?'tasks':false,true);
     box.querySelector('#aoTasksTab').onclick = function () { setView('tasks'); };
     box.querySelector('#aoTowerFrame').onload = sendDepartmentState;
     box.querySelector('#aoTowerTab').onclick = function () { setView(true); };
@@ -163,7 +194,7 @@
     };
     var onTaskUpdated=function(event){var f=box&&box.querySelector('#aoTowerFrame');if(f&&f.contentWindow)f.contentWindow.postMessage({type:'foresight-office-workroom-invalidated',department:event.detail.department},location.protocol==='file:'?'*':location.origin);};
     addEventListener('foresight-office-task-updated',onTaskUpdated);
-    addEventListener('message',onOfficeMessage); officeMessageCleanup=function(){removeEventListener('message',onOfficeMessage);removeEventListener('foresight-office-task-updated',onTaskUpdated);};
+    addEventListener('message',onOfficeMessage); officeMessageCleanup=function(){removeEventListener('popstate',onOfficePop,true);removeEventListener('message',onOfficeMessage);removeEventListener('foresight-office-task-updated',onTaskUpdated);};
     svg = box.querySelector('#aoSvg');
     box.querySelector('#aoRefresh').onclick = load;
     [].forEach.call(box.querySelectorAll('tr[data-ao]'), function (tr) { tr.onclick = function () { selected = tr.getAttribute('data-ao'); detail(); box.querySelector('#aoDetail').scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }; });

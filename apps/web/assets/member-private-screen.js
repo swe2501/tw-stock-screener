@@ -44,6 +44,7 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
  cancelButton.onclick=()=>{controller?.abort();};
  results.onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.privateChart)window.openChart?.(b.dataset.privateChart,window._names?.[b.dataset.privateChart]||b.dataset.privateChart);if(b.dataset.privateTest){sessionStorage.setItem('academy.backtest.seed',b.dataset.privateTest);edit(b.dataset.privateStrategy||chosen()[0]?.id);}if(b.hasAttribute('data-private-any')){mode='any';savePrefs();paint();runButton.click();}};
  runButton.onclick=async()=>{
+  if(window.AcademyGuestAccess&&!AcademyGuestAccess.requireMember("登入會員後即可開始篩選股票。"))return;
   if(!memberId()){window.openAuthModal?.('login');return;}const selected=chosen();if(!selected.length){status.textContent=strategies().length?'請先勾選至少一個策略。':'請先到策略工作台建立並上架策略。';return;}
   const picks=JSON.parse(JSON.stringify(selected)),runMode=mode,asOf=requestedDate();if(new Set(picks.map(D.direction)).size>1){status.textContent='做多和做空的策略方向相反，請分開篩選。';return;}try{for(const s of picks){E.validate(s);if(s.entry.some(r=>r.type==='always'))throw Error('「'+s.name+'」使用買進持有，不能當選股條件，請編輯策略改用價格、均線或指標條件。');}}catch(e){status.textContent=e.message;return;}
   controller?.abort();controller=new AbortController();const signal=controller.signal,run=++job,owner=memberId();activeSignature=signature();runButton.disabled=true;cancelButton.hidden=false;results.replaceChildren();
