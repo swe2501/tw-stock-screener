@@ -30,13 +30,17 @@
     if(err.code==='LOGIN_REQUIRED'){store.set(Object.assign({},p));render();}}};
  }
  function success(r){const c=sheet(`<div class="fm-ok" aria-hidden="true">✓</div><h2>${r.test?'測試簽到完成':'簽到完成'}</h2><p>${esc(r.message||'')}</p><p class="fm-venue">${esc(r.event||'')}</p><div class="fm-acts"><button type="button" class="fm-primary" data-close>好</button></div>`);c.querySelector('[data-close]').onclick=done;}
+ async function openPass(raw){
+  const [e,t]=raw.split('.');
+  sheet('<h2>確認場次中…</h2>');
+  try{const r=await call('forum_pass',{e,t});store.set({pass:r.pass,label:r.event,venue:r.venue,exp:Date.now()+(r.minutes||40)*60000-30000});render();}
+  catch(err){const c=sheet(`<h2>無法簽到</h2><p>${esc(err.message)}</p><div class="fm-acts"><button type="button" class="fm-primary" data-close>知道了</button></div>`);c.querySelector('[data-close]').onclick=done;}
+ }
  async function fromUrl(){
   const q=new URLSearchParams(location.search),raw=q.get('checkin'),forum=q.get('forum');
   if(raw||forum){let n=0;const skip=setInterval(()=>{try{if(window.FqiArrival?.active())window.FqiArrival.close();}catch{}if(++n>20)clearInterval(skip);},300);q.delete('checkin');q.delete('forum');history.replaceState(null,'',location.pathname+(q.toString()?'?'+q:'')+location.hash);}
-  if(raw){const [e,t]=raw.split('.');sheet('<h2>確認場次中…</h2>');
-   try{const r=await call('forum_pass',{e,t});store.set({pass:r.pass,label:r.event,venue:r.venue,exp:Date.now()+(r.minutes||40)*60000-30000});render();}
-   catch(err){const c=sheet(`<h2>無法簽到</h2><p>${esc(err.message)}</p><div class="fm-acts"><button type="button" class="fm-primary" data-close>知道了</button></div>`);c.querySelector('[data-close]').onclick=done;}
-  }else if(store.get())render();
+  if(raw)await openPass(raw);
+  else if(store.get())render();
   if(forum)openForum();
  }
 
@@ -48,7 +52,7 @@
    const c2=sheet(`<h2>線下論壇場次</h2><ul class="fm-events">${list}</ul><p class="fm-sub">${r.attended?'你已參加過論壇並領取到場點數。':'限會員參加，每人限參加一次；到場掃描簽到 QR，可獲得 1,000 活動點數（每人限領一次）。'}</p><div class="fm-acts"><button type="button" data-close>關閉</button></div>`);c2.querySelector('[data-close]').onclick=done;}
   catch(err){const c3=sheet(`<h2>線下論壇場次</h2><p>${esc(err.message)}</p><div class="fm-acts"><button type="button" data-close>關閉</button></div>`);c3.querySelector('[data-close]').onclick=done;}
  }
- window.ForumMember={openForum};
+ window.ForumMember={openForum,openPass};
 
  /* ── 會員中心「活動兌換」：論壇補發代碼走這裡 ── */
  function patchRedeem(){const id=window.AcademyIdentity;if(!id||id.__forum)return !!id;const orig=id.redeemCode;

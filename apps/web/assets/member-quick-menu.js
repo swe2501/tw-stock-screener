@@ -8,6 +8,15 @@
  const icon=path=>{const span=document.createElement('span');span.className='mq-icon';span.setAttribute('aria-hidden','true');span.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round">'+path+'</svg>';return span;};
  panel.querySelectorAll('nav [data-mq-go],.mq-wallet [data-mq-go]').forEach(button=>button.prepend(icon(glyphs[button.dataset.mqGo]||glyphs.wallet)));panel.querySelector('[data-mq-ai]').prepend(icon(glyphs.ai));
  panel.querySelector('.mq-gift').replaceChildren(icon(glyphs.gifts));
+ const profile=panel.querySelector('.mq-profile');
+ const profileRow=document.createElement('div');
+ profileRow.className='mq-profile-row';
+ const scan=document.createElement('button');
+ scan.type='button';scan.className='mq-scan';scan.title='掃描論壇簽到 QR';
+ scan.setAttribute('aria-label',scan.title);scan.setAttribute('aria-haspopup','dialog');
+ scan.append(icon('<path d="M9 3H5a2 2 0 0 0-2 2v4m12-6h4a2 2 0 0 1 2 2v4M3 15v4a2 2 0 0 0 2 2h4m12-6v4a2 2 0 0 1-2 2h-4M7 12h10"/><path d="M8 7h3v2m5 5v3h-3M8 16v1h2"/>'));
+ profile.before(profileRow);profileRow.append(profile,scan);
+ scan.addEventListener('click',()=>{if(signed()){close(true);window.ForumScanner?.open();}});
  document.body.append(panel);avatar.title='會員快捷選單';avatar.setAttribute('aria-label','開啟會員快捷選單');avatar.setAttribute('aria-haspopup','dialog');avatar.setAttribute('aria-controls',panel.id);avatar.setAttribute('aria-expanded','false');
  let aiSheet=null,timer,request=0,loadedFor='',hideAnimation,profileLevel='見習研究生';
  // 研究身分：取伺服器回報的最高使用中券（全方位研究 > 研究進階 > 研究入門／觀察）；沒有使用中的券＝見習研究生
