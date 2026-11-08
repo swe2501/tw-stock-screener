@@ -4,24 +4,19 @@ Git is run first. Python starts only after that process exit is 0 and the
 bytes are the pinned writer. A Python exit of 0 without this receipt is not
 delivery. Windows has not been run.
 """
-import ctypes, ctypes.util, errno, hashlib, hmac, json, os, stat, subprocess, sys
+import array, hashlib, json, os, socket, stat, subprocess, sys
 
 RUNTIME_COMMIT = '5f5be6c35bed7a674a91f19ee5c59fdbc8b281c3'
-OLD_WRITER_COMMIT = '9dbbe3ae108ab50db1a0bf147b9abf1808372fba'
-WRITER_COMMIT = '05994e1fddd754c9bf20e91aa5423858283fc367'
-OLD_WRITER_BLOB = '59fd64b9e5d5d4c7978219bc06f84aeb36cae5c1'
-WRITER_BLOB = '494ff457f61d79d18e90be73b41c55735bcf477f'
-WRITER_SHA256 = '4091c12ebe48288e666d4d4500776c582b7bb106161c205dd1eeb9f5e5822605'
-WRITER_SIZE = 7074
+OLD_WRITER_COMMIT = '05994e1fddd754c9bf20e91aa5423858283fc367'
+WRITER_COMMIT = '4cc6358efbd14f79dc3b21db89b14e8aabd05b02'
+OLD_WRITER_BLOB = '494ff457f61d79d18e90be73b41c55735bcf477f'
+WRITER_BLOB = '7b42097dc3bff8196e686721e255bf4e26c5a741'
+WRITER_SHA256 = '18a3fc758128439f0b210903e8ac1f8ee0dec097960e2fbb96cfb46ba3c8357f'
+WRITER_SIZE = 8818
 WRITER_PATH = 'tools/windows-local-runner/deliver_external_index.py'
 INDEX_SHA256 = '0e5f07d4cfe5f554ecf92f83ce0e02941ba0ad625338ed4c9606daa80abaff19'
 INDEX_SIZE = 945
-HANDOFF = 'WIN.RUNNER.INDEX_HANDOFF.v4'
-_XATTR = b'user.wlr_handoff'
-_TOKEN_LEN = 32
-_LIBC = ctypes.CDLL(ctypes.util.find_library('c'), use_errno=True)
-_LIBC.fgetxattr.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_void_p, ctypes.c_size_t]
-_LIBC.fgetxattr.restype = ctypes.c_ssize_t
+HANDOFF = 'WIN.RUNNER.INDEX_HANDOFF.v5'
 WINDOWS_DEST = 'C:\\Users\\User\\Desktop\\AI_RD_IMP\\WIN_RUNNER_RELEASE_5f5be6c35bed.json'
 # MLOps Shell on O211102, exit 0, Get-Command unique non-reparse. Metadata only.
 # Parent has not read that raw record. Not a signature check. Not a Git runtime test.
@@ -86,24 +81,26 @@ def classify_source(exit_code, data):
         raise ValueError('E_WRITER_BLOB')
     return data
 
-def read_token(fd):
-    buf = ctypes.create_string_buffer(_TOKEN_LEN)
-    n = _LIBC.fgetxattr(fd, _XATTR, buf, _TOKEN_LEN)
-    if n < 0:
-        if ctypes.get_errno() == errno.ENODATA:
-            return None
-        raise ValueError('E_INDEX_IDENTITY')
-    if n != _TOKEN_LEN:
-        return None
-    return buf.raw[:n]
+def recv_fd(sock_fd):
+    held = socket.fromfd(int(sock_fd), socket.AF_UNIX, socket.SOCK_STREAM)
+    try:
+        _msg, ancdata, _flags, _addr = held.recvmsg(8, socket.CMSG_SPACE(array.array('i').itemsize))
+        for level, typ, data in ancdata:
+            if level == socket.SOL_SOCKET and typ == socket.SCM_RIGHTS:
+                fds = array.array('i')
+                fds.frombytes(data[:fds.itemsize])
+                return int(fds[0])
+    finally:
+        held.close()
+    raise ValueError('E_HANDOFF')
 
-def judge_delivery(receipt, consumed, consumed_id, dest):
-    """Token on the consumed fd is the handoff. A reused dev/ino/ctime is not identity."""
+def judge_delivery(receipt, consumed, dest):
+    """Bytes were read from the held create handle. The path is not bound after that handle closes."""
     if not isinstance(receipt, dict) or not isinstance(consumed, (bytes, bytearray)):
         raise ValueError('E_RECEIPT')
     if receipt.get('readback') != 'SAME_HANDLE' or receipt.get('executed_payload') is not False:
         raise ValueError('E_RECEIPT')
-    if receipt.get('handoff') != HANDOFF or receipt.get('identity_from') != 'CREATE_FD_XATTR':
+    if receipt.get('handoff') != HANDOFF or receipt.get('identity_from') != 'CREATE_FD_SENT':
         raise ValueError('E_RECEIPT')
     if receipt.get('path_bound_after_close') is not False or receipt.get('stat_tuple_is_identity') is not False:
         raise ValueError('E_RECEIPT')
@@ -112,42 +109,33 @@ def judge_delivery(receipt, consumed, consumed_id, dest):
     wrote = receipt.get('wrote')
     if type(wrote) is not str or os.path.normcase(os.path.abspath(wrote)) != os.path.normcase(os.path.abspath(dest)):
         raise ValueError('E_RECEIPT')
-    claimed = receipt.get('object_id')
-    if not isinstance(claimed, dict) or not isinstance(consumed_id, dict):
-        raise ValueError('E_RECEIPT')
-    claimed_token = claimed.get('token')
-    got_token = consumed_id.get('token')
-    if type(claimed_token) is not str or type(got_token) is not str or not hmac.compare_digest(claimed_token, got_token):
-        raise ValueError('E_INDEX_IDENTITY')
     if len(consumed) != INDEX_SIZE or hashlib.sha256(consumed).hexdigest() != INDEX_SHA256:
         raise ValueError('E_INDEX_BYTES')
     return True
 
-def consume_index(dest):
-    """One open. Bytes and the handoff token come from this descriptor, then it is closed."""
+def consume_held(fd, dest):
+    """Read the held descriptor. Compare its inode to the path only while that descriptor is open."""
+    os.lseek(fd, 0, os.SEEK_SET)
+    data = os.read(fd, INDEX_SIZE + 1)
+    held = os.fstat(fd)
+    if not stat.S_ISREG(held.st_mode):
+        raise ValueError('E_INDEX_IDENTITY')
     flags = os.O_RDONLY
     if hasattr(os, 'O_NOFOLLOW'):
         flags |= os.O_NOFOLLOW
     if hasattr(os, 'O_BINARY'):
         flags |= os.O_BINARY
     try:
-        fd = os.open(dest, flags)
+        path_fd = os.open(dest, flags)
     except OSError as exc:
         raise ValueError('E_INDEX_IDENTITY') from exc
     try:
-        info = os.fstat(fd)
-        if not stat.S_ISREG(info.st_mode):
-            raise ValueError('E_INDEX_IDENTITY')
-        data = os.read(fd, INDEX_SIZE + 1)
-        token = read_token(fd)
+        current = os.fstat(path_fd)
     finally:
-        os.close(fd)
-    ident = {
-        'st_dev': int(info.st_dev),
-        'st_ino': int(info.st_ino),
-        'token': None if token is None else token.hex(),
-    }
-    return data, ident
+        os.close(path_fd)
+    if (int(held.st_dev), int(held.st_ino)) != (int(current.st_dev), int(current.st_ino)):
+        raise ValueError('E_INDEX_IDENTITY')
+    return data
 
 def _occupied(path):
     try:
@@ -202,17 +190,43 @@ def run(repo, dest, *, fixture_linux=False, state=None):
     source = classify_source(code, data)
     state['python_starts'] += 1
     argv = [sys.executable, '-B', '-I', '-']
+    pass_fds = ()
+    parent_sock = None
+    child_sock = None
+    if os.name == 'nt':
+        argv.extend(['--parent-pid', str(os.getpid())])
+    else:
+        parent_sock, child_sock = socket.socketpair()
+        argv.extend(['--handoff-fd', str(child_sock.fileno())])
+        pass_fds = (child_sock.fileno(),)
     if fixture_linux:
         argv.extend(['--fixture-linux', '--dest', dest])
-    proc = subprocess.run(argv, input=source, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False, check=False)
+    try:
+        proc = subprocess.run(argv, input=source, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False, check=False, pass_fds=pass_fds)
+    finally:
+        if child_sock is not None:
+            child_sock.close()
     if proc.returncode != 0 or not proc.stdout:
+        if parent_sock is not None:
+            parent_sock.close()
         raise ValueError('E_WRITER_EXIT')
     try:
         receipt = json.loads(proc.stdout.decode('utf-8'))
     except (UnicodeError, json.JSONDecodeError) as exc:
+        if parent_sock is not None:
+            parent_sock.close()
         raise ValueError('E_RECEIPT') from exc
-    file_bytes, consumed_id = consume_index(dest)
-    judge_delivery(receipt, file_bytes, consumed_id, dest)
+    if parent_sock is None:
+        raise ValueError('E_HANDOFF')
+    try:
+        held = recv_fd(parent_sock.fileno())
+    finally:
+        parent_sock.close()
+    try:
+        file_bytes = consume_held(held, dest)
+    finally:
+        os.close(held)
+    judge_delivery(receipt, file_bytes, dest)
     return {
         'transfer_ok': True,
         'next_stage': True,
@@ -224,10 +238,9 @@ def run(repo, dest, *, fixture_linux=False, state=None):
         'writer_blob': WRITER_BLOB,
         'old_writer_blob_rejected': OLD_WRITER_BLOB,
         'handoff': HANDOFF,
-        'object_id': consumed_id,
         'stat_tuple_is_identity': False,
-        'identity_scope': 'CONSUMED_FD_XATTR',
-        'acceptance_covers': 'CONSUMED_FD_XATTR',
+        'identity_scope': 'HELD_CREATE_FD',
+        'acceptance_covers': 'HELD_CREATE_FD',
         'path_bound_after_close': False,
         'index_bytes_from': 'CONSUMED_FD',
         'index_size': len(file_bytes),

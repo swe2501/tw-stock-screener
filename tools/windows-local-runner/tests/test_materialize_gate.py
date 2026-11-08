@@ -164,9 +164,9 @@ def main():
     except ValueError as exc:
         assert str(exc) == 'E_GIT_UPSTREAM', str(exc)
     assert not stale_gate.exists()
-    fetched, fetched_repo = fetch_only('writer', '05994e1fddd754c9bf20e91aa5423858283fc367')
+    fetched, fetched_repo = fetch_only('writer', '4cc6358efbd14f79dc3b21db89b14e8aabd05b02')
     assert git(fetched_repo, 'cat-file', '-t', mod.GATE_BLOB).returncode != 0
-    assert git(fetched_repo, 'rev-parse', '05994e1fddd754c9bf20e91aa5423858283fc367:tools/windows-local-runner/deliver_external_index.py').stdout.decode().strip() == '494ff457f61d79d18e90be73b41c55735bcf477f'
+    assert git(fetched_repo, 'rev-parse', '4cc6358efbd14f79dc3b21db89b14e8aabd05b02:tools/windows-local-runner/deliver_external_index.py').stdout.decode().strip() == '7b42097dc3bff8196e686721e255bf4e26c5a741'
     assert git(fetched_repo, 'hash-object', '-w', str(GATE)).stdout.decode().strip() == mod.GATE_BLOB
     assert git(fetched_repo, 'checkout', '--detach', RUNTIME).returncode == 0
     assert git(fetched_repo, 'show-ref').stdout.strip() == b''
@@ -181,8 +181,8 @@ def main():
     receipt = json.loads(gated.stdout)
     assert receipt['transfer_ok'] is True and receipt['python_starts'] == 1 and receipt['index_size'] == 945
     assert receipt['index_sha256'] == '0e5f07d4cfe5f554ecf92f83ce0e02941ba0ad625338ed4c9606daa80abaff19'
-    assert receipt['writer_commit'] == '05994e1fddd754c9bf20e91aa5423858283fc367'
-    assert receipt['path_bound_after_close'] is False and receipt['acceptance_covers'] == 'CONSUMED_FD_XATTR'
+    assert receipt['writer_commit'] == '4cc6358efbd14f79dc3b21db89b14e8aabd05b02'
+    assert receipt['path_bound_after_close'] is False and receipt['acceptance_covers'] == 'HELD_CREATE_FD'
     assert receipt['stat_tuple_is_identity'] is False
     assert git(fetched_repo, 'show-ref').stdout.strip() == b''
     inline_root = Path(tempfile.mkdtemp(prefix='wlr-inline-'))
