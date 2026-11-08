@@ -445,6 +445,12 @@ class handler(BaseHTTPRequestHandler):
             user = _token_user(token) if action in ("forum_events", "forum_checkin", "forum_redeem", "site_ads") else None
             return self._json(*handle_public(action, body, user, _rest))
 
+        # ── 會員方案付款（lib/payments.py＋lib/linepay.py）：會員 JWT 驗證；沒設 LINE Pay 金鑰的環境一律回「尚未開放」 ──
+        if action in ("pay_plans", "pay_linepay_request", "pay_linepay_confirm", "pay_linepay_cancel", "pay_history"):
+            from lib.payments import handle as pay_handle
+            token = (self.headers.get("Authorization") or "").replace("Bearer ", "").strip()
+            return self._json(*pay_handle(action, body, _token_user(token), _rest))
+
         # ── 後台管理（action: admin_*）：JWT→email∈白名單 才放行；service_role 只在後端 ──
         if action.startswith("admin_"):
             token = (self.headers.get("Authorization") or "").replace("Bearer ", "").strip()
