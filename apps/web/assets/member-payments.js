@@ -509,21 +509,26 @@
     const transactionId = query.get('transactionId') || '';          // 19 位數，維持字串
     ['lp', 'orderId', 'transactionId'].forEach(key => query.delete(key));
     try { history.replaceState(null, '', location.pathname + (query.toString() ? '?' + query : '') + location.hash); } catch (_) {}
-    const dialog = document.createElement('dialog');
-    dialog.className = 'mp-return-dialog';
-    dialog.innerHTML = '<span class="mc-kicker">FORESIGHT · LINE PAY</span><h3>確認付款中…</h3><p>請稍候，正在向 LINE Pay 確認這筆交易。</p><button type="button" disabled>請稍候</button>';
+    // 2026-11-09 不用原生 <dialog>：全站 * { margin:0 } 讓它跑到左上角，且 navigation-layers.js 在首次頁面切換時
+    // 會關掉所有 dialog[open]（結果視窗一閃就不見）。改用自己的置中遮罩，只有按「確定」才關閉。
+    const overlay = document.createElement('div');
+    overlay.className = 'mp-return-overlay';
+    overlay.innerHTML = '<div class="mp-return-dialog" role="dialog" aria-modal="true" aria-labelledby="mpReturnTitle" aria-describedby="mpReturnText">'
+      + '<span class="mc-kicker">FORESIGHT · LINE PAY</span><h3 id="mpReturnTitle">確認付款中…</h3><p id="mpReturnText">請稍候，正在向 LINE Pay 確認這筆交易。</p>'
+      + '<button type="button" disabled>請稍候</button></div>';
+    const dialog = overlay.firstElementChild;
     const show = (title, text, ok) => {
       dialog.querySelector('h3').textContent = title;
       dialog.querySelector('p').textContent = text;
       dialog.classList.toggle('is-ok', !!ok);
       const button = dialog.querySelector('button');
       button.disabled = false;
-      button.textContent = '查看方案與帳務';
-      button.onclick = () => { dialog.close(); dialog.remove(); window.openMemberCenter?.('billing'); };
+      button.textContent = '確定';
+      button.onclick = () => { overlay.remove(); window.openMemberCenter?.('billing'); };
+      try { button.focus({ preventScroll: true }); } catch (_) {}
     };
     const run = async () => {
-      document.body.append(dialog);
-      try { dialog.showModal(); } catch (_) { dialog.setAttribute('open', ''); }
+      document.body.append(overlay);
       for (let i = 0; i < 30 && !payToken(); i++) await new Promise(resolve => setTimeout(resolve, 500));
       if (!payToken()) { show('請先登入', '請登入原本付款的會員帳號，再到「方案與帳務」查看付款紀錄。', false); return; }
       try {
