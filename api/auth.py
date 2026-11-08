@@ -1,4 +1,4 @@
-# rebuild-marker: load OFFICE_AGENT_TOKEN_QA on Preview(uat)
+# rebuild-marker: load OFFICE_AGENT_TOKEN_QA on Preview(uat); 2026-11-09 load LINEPAY_* on Preview(uat)
 from http.server import BaseHTTPRequestHandler
 import hashlib, hmac, json, os, time, urllib.request, urllib.parse, urllib.error
 
