@@ -158,12 +158,16 @@ def main():
     assert git(fetched_repo, 'rev-parse', 'd33b0a41e126cd17c24edd0dd0df10cd302eabbd:tools/windows-local-runner/deliver_external_index.py').stdout.decode().strip() == '9fa534201e61678698cdc29c8a30edbc00a0f0da'
     assert git(fetched_repo, 'checkout', '--detach', RUNTIME).returncode == 0
     assert git(fetched_repo, 'show-ref').stdout.strip() == b''
+    ps1 = (ROOT / 'FIRST_ENTRY.ps1').read_text(encoding='ascii')
+    payload = ps1.split("@'\n", 1)[1].rsplit("\n'@\n", 1)[0] + '\n'
+    assert payload.encode('ascii') == ENTRY.read_bytes()
+    assert len(payload.encode('ascii')) == 3119
+    assert hashlib.sha256(payload.encode('ascii')).hexdigest() == '85b98822af10dc35d4dac582dd10a2771101205cf9172dcdada0154e13e3d039'
     landed = fetched / 'WIN_RUNNER_ACCEPT_INDEX.py'
-    produced = mod.materialize(fetched_repo, landed)
-    assert produced['executed'] is False and landed.read_bytes() == gate_bytes
     index = fetched / 'WIN_RUNNER_RELEASE_5f5be6c35bed.json'
-    gated = subprocess.run([PY, '-B', str(landed), '--fixture-linux', '--source', str(fetched_repo), '--dest', str(index)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    gated = subprocess.run([PY, '-B', '-c', payload, '--fixture-linux', '--repo', str(fetched_repo), '--dest', str(landed), '--index', str(index)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     assert gated.returncode == 0, gated.stderr.decode()
+    assert landed.read_bytes() == gate_bytes
     receipt = json.loads(gated.stdout)
     assert receipt['transfer_ok'] is True and receipt['python_starts'] == 1 and receipt['index_size'] == 945
     assert receipt['index_sha256'] == '0e5f07d4cfe5f554ecf92f83ce0e02941ba0ad625338ed4c9606daa80abaff19'

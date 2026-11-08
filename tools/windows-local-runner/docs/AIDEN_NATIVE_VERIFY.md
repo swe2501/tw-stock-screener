@@ -75,7 +75,79 @@ git -C C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_SOURCE_5f5be6c35bed rev-parse 
 
 `git fetch` of that commit writes `FETCH_HEAD` only. `git log --all` does not read `FETCH_HEAD`, so an empty log does not mean the blob is missing. The gate now checks `git rev-parse d33b0a41e126cd17c24edd0dd0df10cd302eabbd:tools/windows-local-runner/deliver_external_index.py`. Do not pipe `cat-file` into Python and do not use shell `>` to create the gate. PowerShell `>` is `Out-File` and can overwrite; that behavior was read from documentation, not from a Windows run.
 
-The first entry is the already installed Python, not shell `>`. Its source is `materialize_pinned_blob.py`. Tests run `python -B -c` of that exact text, so the Git blob is read by Python in binary and checked for blob `b1e55bfd7d5d46fc0591cc69c55e8904cfb60f6e`, 7665 bytes, and SHA-256 `0ad70dad694bca145338ac99c3a071966690462bf8cd2435b3f2ee3e3c401232` before any candidate file is created. An existing file, directory, link, or dangling link is refused and left unchanged. A failed read-back leaves the partial file and does not start it. On Windows the defaults are the fixed source and `WIN_RUNNER_ACCEPT_INDEX.py`; this was not executed there. Do not use `git cat-file blob ... > WIN_RUNNER_ACCEPT_INDEX.py`.
+The complete first command is below. cwd is `C:\Users\User\Desktop\AI_RD_IMP`. Python is `C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe`. Quoting is one PowerShell 5.1 single-quoted here-string; it does not expand `$`. That quoting was not executed on Windows and is not PowerShell proof. The `-c` payload is 3119 bytes, SHA-256 `85b98822af10dc35d4dac582dd10a2771101205cf9172dcdada0154e13e3d039`. The script is 3260 bytes, SHA-256 `0027e48a4013f789ca7c0c3d31a4d5383bf4fcfdc84ee36afe4b83468d4aab7c`. Fetch `897362e7dd42ff477cb59ace5b04e81b001ea2da`, confirm gate blob `b1e55bfd7d5d46fc0591cc69c55e8904cfb60f6e`, then detach `5f5be6c`. This process `os.execv`s the gate once. Do not start the gate again. A 4778-byte copy of an older materializer is not this command. This length is the whole check. No installed Git or PowerShell command is shorter and still does an exclusive raw create plus a SHA check before `os.execv`.
+
+```powershell
+Set-Location -LiteralPath 'C:\Users\User\Desktop\AI_RD_IMP'
+& 'C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe' -B -c @'
+import hashlib,json,os,stat,subprocess,sys
+R=r'C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_SOURCE_5f5be6c35bed'
+D=r'C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_ACCEPT_INDEX.py'
+B=GATE_BLOB='b1e55bfd7d5d46fc0591cc69c55e8904cfb60f6e'
+S=GATE_SIZE=7665
+H=GATE_SHA256='0ad70dad694bca145338ac99c3a071966690462bf8cd2435b3f2ee3e3c401232'
+def classify_gate(code,data):
+ if code!=0:raise ValueError('E_GIT_UPSTREAM')
+ if not data:raise ValueError('E_GIT_EMPTY')
+ if len(data)!=S or hashlib.sha256(data).hexdigest()!=H:raise ValueError('E_GATE_BYTES')
+ if hashlib.sha1(('blob %d\0'%len(data)).encode()+data).hexdigest()!=B:raise ValueError('E_GATE_BLOB')
+ return data
+def assert_absent(path):
+ try:os.lstat(path)
+ except FileNotFoundError:return
+ except OSError as e:raise ValueError('E_UNKNOWN') from e
+ raise ValueError('E_EXISTS')
+def write_exclusive(dest,payload):
+ fl=os.O_CREAT|os.O_EXCL|os.O_RDWR
+ if hasattr(os,'O_NOFOLLOW'):fl|=os.O_NOFOLLOW
+ if hasattr(os,'O_BINARY'):fl|=os.O_BINARY
+ fd=os.open(dest,fl,0o600)
+ try:
+  if os.write(fd,payload)!=len(payload):raise OSError('E_SHORT_WRITE')
+  os.fsync(fd);os.lseek(fd,0,0)
+  if os.read(fd,len(payload)+1)!=payload:raise ValueError('E_READBACK')
+ finally:os.close(fd)
+def fetch_gate(repo):
+ p=subprocess.run(['git','--no-pager','-C',repo,'cat-file','blob',B],stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=False)
+ return classify_gate(p.returncode,p.stdout),p.returncode
+def materialize(repo,dest):
+ repo,dest=os.path.abspath(repo),os.path.abspath(dest)
+ try:info=os.lstat(os.path.dirname(dest))
+ except FileNotFoundError as e:raise ValueError('E_PARENT_MISSING') from e
+ except OSError as e:raise ValueError('E_UNKNOWN') from e
+ if stat.S_ISLNK(info.st_mode) or not stat.S_ISDIR(info.st_mode):raise ValueError('E_PARENT')
+ assert_absent(dest)
+ data,upstream=fetch_gate(repo)
+ try:write_exclusive(dest,data)
+ except FileExistsError as e:raise ValueError('E_EXISTS') from e
+ return {'upstream_exit':upstream,'bytes':data,'executed':False}
+def main(argv=None):
+ try:
+  a=list(sys.argv[1:] if argv is None else argv);fx=False;repo=dest=index=None;i=0
+  while i<len(a):
+   if a[i]=='--fixture-linux':fx=True
+   elif a[i] in ('--repo','--dest','--index') and i+1<len(a):
+    i+=1
+    if a[i-1]=='--repo':repo=a[i]
+    elif a[i-1]=='--dest':dest=a[i]
+    else:index=a[i]
+   else:raise ValueError('E_ARGUMENTS')
+   i+=1
+  if os.name=='nt':
+   if fx:raise RuntimeError('E_FIXTURE_FLAG_ON_WINDOWS')
+   repo=R if repo is None else repo;dest=D if dest is None else dest
+   if os.path.normcase(os.path.abspath(dest))!=os.path.normcase(D):raise ValueError('E_DEST')
+  elif not fx or repo is None or dest is None or index is None:raise ValueError('E_ARGUMENTS')
+  materialize(repo,dest)
+  cmd=[sys.executable,'-B',os.path.abspath(dest),'--source',os.path.abspath(repo)]
+  if fx:cmd+=['--fixture-linux','--dest',os.path.abspath(index)]
+  os.execv(sys.executable,cmd)
+ except SystemExit:raise
+ except Exception as e:
+  print(json.dumps({'error':str(e),'type':type(e).__name__,'no_retry':True,'candidate_started':False}),file=sys.stderr);return 3
+if __name__=='__main__':sys.exit(main())
+'@
+```
 
 Stdout must show `transfer_ok` true, `python_starts` 1, `upstream_exit` 0, `index_size` 945, and `index_sha256` `0e5f07d4cfe5f554ecf92f83ce0e02941ba0ad625338ed4c9606daa80abaff19`. Exit 3 stops the sequence. Do not install. An existing index, a dangling link, or an older correct file is `E_EXISTS`: it is left in place and is not this attempt. A missing blob does not start the writer.
 
