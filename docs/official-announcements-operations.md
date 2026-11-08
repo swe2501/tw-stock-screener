@@ -51,3 +51,16 @@
 涵蓋台北日期精度、時段邊界、官方 URL allowlist／轉址、拒絕 DTD／HTML偽RSS、無公告零列、部分來源失敗保留資料、重跑冪等、分類避免 Taiwan 誤中 AI。
 
 SQL 尚未線上執行或驗證；雲端 publisher 只做 dry-run。來源真實網路實測紀錄見 runtime logs/health.json。
+
+
+## 2026-11-08 啟用驗證補充（取代上方 local-only 狀態）
+
+使用者已明確批准備份後套用官方公告四表與同步。已在共用 Supabase 建立四表與 ingest_official_announcements；所有新表 RLS=true，anon/authenticated 無表讀取及 RPC 執行權限，service_role 可執行。沒有修改既有表／Auth／RLS。
+
+備份：`C:/Users/User/.codex/visualizations/2026/10/12/01a1308c-6895-7e12-a65a-9588d0dacff3/official-announcements-db-backup-20261108`，含 API schema、2379筆公開證券主檔與 hash manifest。
+
+同步驗證：來源18、公告1517、標籤關聯424、證券關聯15；全部公告content_hash與本機一致。原security_master完整hash未變；匿名REST讀取回401/403。第二次同步changed_documents=0，未重複新增。runtime已建立不含金鑰的cloud-sync-approved.json，僅記錄原.env.local路徑。
+
+網站讀取沿用api/auth，action=official_announcements，先驗證會員JWT，再由後端JOIN取得來源、標籤；日期上限31天／筆數上限50，回應no-store。每日新聞加入官方公告區、來源篩選、手動更新與可見頁面5分鐘自動更新。最近7天最新30則研究候選，來源失敗明示。未實作個股K線事件標記，不能把關鍵字匹配視為確定產業影響。
+
+測試：7項Python測試通過；實際雲端JOIN讀取200／30則／18來源；明暗色、1440／390寬度、摘要安全顯示、來源異常、手動更新與登出清除的瀏覽器測試通過；API入口維持12支。

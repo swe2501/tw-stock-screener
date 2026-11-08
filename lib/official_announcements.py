@@ -1,0 +1,29 @@
+"""Bounded, authenticated caller's official announcement read service. No cloud writes."""
+import datetime as dt
+import re
+import urllib.parse
+
+
+def read(body,rest):
+    today=dt.datetime.now(dt.timezone(dt.timedelta(hours=8))).date()
+    try:
+        start=dt.date.fromisoformat(body.get('from') or (today-dt.timedelta(days=7)).isoformat())
+        end=dt.date.fromisoformat(body.get('to') or today.isoformat())
+        if not 0 <= (end-start).days <= 31:raise ValueError()
+        limit=body.get('limit',30)
+        if type(limit) is not int or not 1<=limit<=50:raise ValueError()
+        source=body.get('source','')
+        if not isinstance(source,str) or source and not re.fullmatch(r'[a-z_]{2,32}',source):raise ValueError()
+    except (ValueError,TypeError):
+        return 400,{'error':'日期範圍須在 31 天內，最多讀取 50 則公告'}
+    fields='id,title,url,published_date,published_at,time_precision,summary,effective_date,source:official_sources(id,name,category),tags:official_announcement_tags(tag)'
+    params=[('select',fields),('published_date','gte.'+start.isoformat()),('published_date','lte.'+end.isoformat()),('important','eq.true'),('order','published_date.desc,published_at.desc.nullslast,id'),('limit',str(limit))]
+    if source:params.append(('source_id','eq.'+source))
+    try:
+        status,rows=rest('/official_announcements?'+urllib.parse.urlencode(params))
+        if status!=200 or not isinstance(rows,list):return 503,{'error':'官方公告暫時無法讀取，請稍後再試'}
+        status,sources=rest('/official_sources?select=id,name,state,last_success&order=id')
+        if status!=200 or not isinstance(sources,list):sources=[]
+        return 200,{'items':rows,'sources':sources,'from':start.isoformat(),'to':end.isoformat(),'limit':limit,'limited':len(rows)==limit}
+    except Exception:
+        return 503,{'error':'官方公告暫時無法讀取，請稍後再試'}

@@ -378,6 +378,14 @@ class handler(BaseHTTPRequestHandler):
             return self._json(400, {"error": "invalid request"})
         action = body.get("action", "")
 
+        if action == "official_announcements":
+            auth = self.headers.get("Authorization", "")
+            token = auth[7:].strip() if auth.startswith("Bearer ") else ""
+            if not _token_user(token):
+                return self._json(401, {"error": "請先登入後查看官方公告"})
+            from lib.official_announcements import read
+            return self._json(*read(body, _rest))
+
         if action == "phone_policy":
             from lib.member_phone import required
             return self._json(200, {"required": required(), "version": 1})

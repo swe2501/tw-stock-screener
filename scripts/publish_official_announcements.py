@@ -54,6 +54,13 @@ def main():
             response.read(1024)
     cursor.update({d['id']:d['content_hash'] for d in changed})
     tmp=cursor_file.with_suffix('.tmp');tmp.write_text(json.dumps(cursor),encoding='utf-8');tmp.replace(cursor_file)
+    import datetime as dt
+    synced = dt.datetime.now(dt.timezone.utc).isoformat()
+    health_path = args.state_dir/'health.json'
+    if health_path.exists():
+        health=json.loads(health_path.read_text(encoding='utf-8'))
+        health.update(storage='local_and_cloud',cloud_sync=True,last_cloud_sync_at=synced)
+        temporary=health_path.with_suffix('.tmp');temporary.write_text(json.dumps(health,ensure_ascii=False,indent=2),encoding='utf-8');temporary.replace(health_path)
     print('Cloud sync confirmed')
 
 
