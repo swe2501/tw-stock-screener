@@ -37,3 +37,7 @@ scripts/.taifex_profile/
 *.lnk
 # 根目錄除錯暫存腳本
 /debug_*.py
+
+# Isolated runner configs are source-controlled release files, not local scratch JSON.
+!tools/windows-local-runner/*.json
+!tools/windows-local-runner/**/*.json

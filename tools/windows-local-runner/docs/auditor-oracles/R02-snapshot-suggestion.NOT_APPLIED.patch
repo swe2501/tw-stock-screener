@@ -1,0 +1,29 @@
+--- frozen-v1/runner.py
++++ cloud-suggestion/runner.py
+@@ -25,21 +25,22 @@
+ 
+ def verify(*,synthetic=False):
+     _guard(synthetic)
+-    p=_safe(BASE/'source_pin.json');pin=json.loads(p.read_text(encoding='ascii'))
++    p=_safe(BASE/'source_pin.json');pin_raw=p.read_bytes();pin=json.loads(pin_raw.decode('ascii'))
+     if set(pin)!={'schema','version','encoding','files'} or pin['schema']!='WIN.RUNNER.PIN.v1' or pin['version']!=VERSION or pin['encoding']!='UTF-8-no-BOM-LF':raise ValueError('E_PIN_FORMAT')
+     if set(pin['files'])!={'runner.py','worker.py','run_config.json'}:raise ValueError('E_SOURCE_ALLOWLIST')
++    verified_bytes={}
+     for n,row in pin['files'].items():
+         if set(row)!={'size','sha256'} or type(row['size']) is not int or not 0<row['size']<65536 or not re.fullmatch('[0-9a-f]{64}',row['sha256']):raise ValueError('E_PIN_ROW')
+         raw=_safe(BASE/n).read_bytes()
+         if len(raw)!=row['size'] or hashlib.sha256(raw).hexdigest()!=row['sha256']:raise ValueError('E_INTEGRITY:'+n)
+         if raw.startswith(b'\xef\xbb\xbf') or b'\r' in raw:raise ValueError('E_ENCODING')
+-        raw.decode('utf-8',errors='strict')
+-    cfg=json.loads((BASE/'run_config.json').read_text(encoding='utf-8'))
++        raw.decode('utf-8',errors='strict');verified_bytes[n]=raw
++    cfg=json.loads(verified_bytes['run_config.json'].decode('utf-8'))
+     if set(cfg)!={'version','synthetic','tasks','cleanup_seconds'} or cfg['version']!=VERSION or cfg['synthetic'] is not True or cfg['cleanup_seconds']!=0.5 or type(cfg['cleanup_seconds']) is not float:raise ValueError('E_CONFIG')
+     if set(cfg['tasks'])!=set(TASKS):raise ValueError('E_TASK_ALLOWLIST')
+     for name,row in cfg['tasks'].items():
+         if set(row)!={'mode','deadline_seconds'} or row['mode']!=TASKS[name] or type(row['deadline_seconds']) is not float or not 0.1<=row['deadline_seconds']<=2.0:raise ValueError('E_TASK_CONFIG')
+-    return cfg,hashlib.sha256(p.read_bytes()).hexdigest()
++    return cfg,hashlib.sha256(pin_raw).hexdigest()
+ 
+ def _db(store):
+     for n in ['ledger.sqlite3','ledger.sqlite3-journal','ledger.sqlite3-wal','ledger.sqlite3-shm']:_safe(store/n)

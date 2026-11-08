@@ -1,0 +1,40 @@
+{
+  "version": "WIN-RUNNER-OPS.v2",
+  "synthetic": true,
+  "cleanup_seconds": 0.5,
+  "tasks": {
+    "normal": {
+      "mode": "normal",
+      "deadline_seconds": 1.0
+    },
+    "failure": {
+      "mode": "failure",
+      "deadline_seconds": 1.0
+    },
+    "deadline": {
+      "mode": "wait",
+      "deadline_seconds": 0.2
+    },
+    "stoppable": {
+      "mode": "wait",
+      "deadline_seconds": 1.5
+    }
+  },
+  "platform_binding": {
+    "cwd_policy": "ABSOLUTE_INSTALL_ROOT",
+    "expected_install_root": null,
+    "windows": {
+      "python_executable": "C:\\Users\\User\\AppData\\Local\\Python\\pythoncore-3.14-64\\python.exe",
+      "python_version": "3.14.5",
+      "powershell_version": "5.1.19041.6456",
+      "git_version": "2.46.1",
+      "machine_node": "O211102"
+    },
+    "linux_fixture": {
+      "python_executable_policy": "RESOLVED_SYS_EXECUTABLE",
+      "python_version_policy": "RECORD_ACTUAL",
+      "windows_claim": false,
+      "resolved_python_must_equal": null
+    }
+  }
+}

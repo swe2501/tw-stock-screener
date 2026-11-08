@@ -1,0 +1,9 @@
+{
+  "at_asia_taipei": "2026-11-08T15:01:00.676672+08:00",
+  "script": "independent_known_gaps_v2.py",
+  "change": "Auditor oracle only: immutable launch PID uniqueness instead of mutable ledger PID; fresh execution name; no product source change",
+  "AST": "PASS",
+  "full_script_execution": "NOT_RUN",
+  "product_execution_calls_added": 0,
+  "source_policy": "still frozen v1 reviewed SHA; zero indicates reproductions confirmed, not functional acceptance"
+}
