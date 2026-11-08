@@ -5,6 +5,24 @@ from lib.official_announcements import read
 
 
 class ReadTests(unittest.TestCase):
+    def test_chart_scope_uses_exact_security_link_and_policy_allowlist(self):
+        calls=[]
+        def rest(path):
+            calls.append(path)
+            if 'securities.observed_code' in path:return 200,[{'id':'stock','title':'董事會','source':{'category':'company_disclosure'}}]
+            if path.startswith('/official_announcements?'):return 200,[{'id':'policy','title':'政策','source':{'category':'market_policy'}}]
+            return 200,[]
+        status,data=read({'context':'chart','code':'2330'},rest)
+        self.assertEqual(status,200)
+        self.assertEqual([x['scope'] for x in data['items']],['security','market'])
+        direct=urllib.parse.parse_qs(urllib.parse.urlsplit(calls[0]).query)
+        self.assertEqual(direct['securities.observed_code'],['eq.2330'])
+        self.assertIn('!inner',direct['select'][0])
+        policy=urllib.parse.parse_qs(urllib.parse.urlsplit(calls[1]).query)
+        self.assertNotIn('company_disclosure',policy['source.category'][0])
+        self.assertIn('official_sources!inner',policy['select'][0])
+        self.assertEqual(read({'context':'chart','code':'2330&select=*'},lambda *_:self.fail())[0],400)
+
     def test_invalid_never_queries(self):
         def forbidden(*args):raise AssertionError('invalid request reached backend')
         for body in [{'from':'2020-01-01','to':'2026-11-01'},{'limit':500},{'limit':True},{'source':'fsc&select=*'},{'from':'not-a-date'}]:
