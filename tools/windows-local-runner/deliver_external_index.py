@@ -4,12 +4,19 @@ The payload below is data. This program writes those bytes and does not
 execute them. A directory listing before the call is not an atomic guarantee;
 the create itself is exclusive. Windows has not been run.
 """
-import hashlib, json, os, stat, sys
+import ctypes, ctypes.util, errno, hashlib, json, os, stat, sys
 
 EXPECTED_SHA256 = '0e5f07d4cfe5f554ecf92f83ce0e02941ba0ad625338ed4c9606daa80abaff19'
 EXPECTED_SIZE = 945
 EXECUTION_COMMIT = '5f5be6c35bed7a674a91f19ee5c59fdbc8b281c3'
-HANDOFF = 'WIN.RUNNER.INDEX_HANDOFF.v3'
+HANDOFF = 'WIN.RUNNER.INDEX_HANDOFF.v4'
+_XATTR = b'user.wlr_handoff'
+_TOKEN_LEN = 32
+_LIBC = ctypes.CDLL(ctypes.util.find_library('c'), use_errno=True)
+_LIBC.fsetxattr.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_void_p, ctypes.c_size_t, ctypes.c_int]
+_LIBC.fsetxattr.restype = ctypes.c_int
+_LIBC.fgetxattr.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_void_p, ctypes.c_size_t]
+_LIBC.fgetxattr.restype = ctypes.c_ssize_t
 WINDOWS_DEST = 'C:\\Users\\User\\Desktop\\AI_RD_IMP\\WIN_RUNNER_RELEASE_5f5be6c35bed.json'
 INDEX_BYTES = b"""{
   "schema": "WIN.RUNNER.RELEASE_INDEX.v2",
@@ -57,12 +64,34 @@ def require_payload(payload):
         raise ValueError('E_PAYLOAD')
     return payload
 
-def object_id(fd):
-    """Identity of this open file, not of a later path lookup."""
+def observed_stat(fd):
+    """Recorded for logs. A later recreate can reuse these three values."""
     info = os.fstat(fd)
     if not stat.S_ISREG(info.st_mode):
         raise ValueError('E_INDEX_IDENTITY')
     return {'st_dev': int(info.st_dev), 'st_ino': int(info.st_ino), 'st_ctime_ns': int(info.st_ctime_ns)}
+
+def read_token(fd):
+    buf = ctypes.create_string_buffer(_TOKEN_LEN)
+    n = _LIBC.fgetxattr(fd, _XATTR, buf, _TOKEN_LEN)
+    if n < 0:
+        if ctypes.get_errno() == errno.ENODATA:
+            return None
+        raise ValueError('E_HANDOFF')
+    if n != _TOKEN_LEN:
+        raise ValueError('E_HANDOFF')
+    return buf.raw[:n]
+
+def tag_fd(fd):
+    """Bind a random token to this open file. A recreated inode does not keep it."""
+    if os.name == 'nt':
+        raise ValueError('E_HANDOFF')
+    token = os.urandom(_TOKEN_LEN)
+    if _LIBC.fsetxattr(fd, _XATTR, token, len(token), 0) != 0:
+        raise ValueError('E_HANDOFF')
+    if read_token(fd) != token:
+        raise ValueError('E_HANDOFF')
+    return token
 
 def write_exclusive(dest, payload):
     """Create dest once. A later failure leaves the partial file in place."""
@@ -82,10 +111,11 @@ def write_exclusive(dest, payload):
         got = os.read(fd, len(payload) + 1)
         if got != payload:
             raise ValueError('E_READBACK')
-        ident = object_id(fd)
+        token = tag_fd(fd)
+        observed = observed_stat(fd)
     finally:
         os.close(fd)
-    return got, ident
+    return got, token, observed
 
 def deliver(dest, *, fixture_linux=False):
     payload = require_payload(INDEX_BYTES)
@@ -111,7 +141,7 @@ def deliver(dest, *, fixture_linux=False):
     else:
         raise ValueError('E_EXISTS')
     try:
-        got, ident = write_exclusive(path, payload)
+        got, token, observed = write_exclusive(path, payload)
     except FileExistsError as exc:
         raise ValueError('E_EXISTS') from exc
     return {
@@ -119,9 +149,11 @@ def deliver(dest, *, fixture_linux=False):
         'size': len(got),
         'sha256': hashlib.sha256(got).hexdigest(),
         'readback': 'SAME_HANDLE',
-        'object_id': ident,
+        'object_token': token.hex(),
+        'observed_stat': observed,
+        'stat_tuple_is_identity': False,
         'handoff': HANDOFF,
-        'identity_from': 'CREATE_FD',
+        'identity_from': 'CREATE_FD_XATTR',
         'path_bound_after_close': False,
         'executed_payload': False,
         'preflight_is_atomic_guarantee': False,

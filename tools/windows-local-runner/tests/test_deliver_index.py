@@ -8,7 +8,7 @@ if sys.platform != 'linux':
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / 'deliver_external_index.py'
-BLOB = 'dee84c9eba4770d81b7962fae9c5c599e8d13ff7'
+BLOB = '59fd64b9e5d5d4c7978219bc06f84aeb36cae5c1'
 OLD_BLOB = '9fa534201e61678698cdc29c8a30edbc00a0f0da'
 EARLIER_BLOB = '7894bc5b84c769994a324d98a1faaf464b4b31a9'
 INDEX_SHA = '0e5f07d4cfe5f554ecf92f83ce0e02941ba0ad625338ed4c9606daa80abaff19'
@@ -114,22 +114,25 @@ def main():
         receipt = json.loads(child.stdout)
         assert receipt['sha256'] == INDEX_SHA and receipt['size'] == 945 and receipt['readback'] == 'SAME_HANDLE'
         assert receipt['executed_payload'] is False and receipt['pipeline_go'] is False
-        assert receipt['handoff'] == 'WIN.RUNNER.INDEX_HANDOFF.v3'
-        assert receipt['identity_from'] == 'CREATE_FD' and receipt['path_bound_after_close'] is False
-        assert type(receipt['object_id']['st_dev']) is int and type(receipt['object_id']['st_ino']) is int
+        assert receipt['handoff'] == 'WIN.RUNNER.INDEX_HANDOFF.v4'
+        assert receipt['identity_from'] == 'CREATE_FD_XATTR' and receipt['path_bound_after_close'] is False
+        assert receipt['stat_tuple_is_identity'] is False
+        assert len(receipt['object_token']) == 64
         again_fd = os.open(piped, os.O_RDONLY)
         try:
             st = os.fstat(again_fd)
+            tagged = module.read_token(again_fd)
         finally:
             os.close(again_fd)
-        assert receipt['object_id'] == {'st_dev': int(st.st_dev), 'st_ino': int(st.st_ino), 'st_ctime_ns': int(st.st_ctime_ns)}
+        assert tagged.hex() == receipt['object_token']
+        assert receipt['observed_stat'] == {'st_dev': int(st.st_dev), 'st_ino': int(st.st_ino), 'st_ctime_ns': int(st.st_ctime_ns)}
         assert piped.read_bytes() == module.INDEX_BYTES
     print(json.dumps({'PASS': 1, 'FAIL': 0, 'windows': 'NOT_RUN', 'blob': BLOB, 'index_sha256': INDEX_SHA, 'executed_payload': False}))
     evidence = os.environ.get('WLR_EVIDENCE_DIR')
     if evidence:
         Path(evidence, 'deliver-index-linux.json').write_text(json.dumps({
             'PASS': 1, 'windows': 'NOT_RUN', 'blob': BLOB, 'index_sha256': INDEX_SHA,
-            'size': 945, 'readback': 'SAME_HANDLE', 'handoff': 'WIN.RUNNER.INDEX_HANDOFF.v3',
+            'size': 945, 'readback': 'SAME_HANDLE', 'handoff': 'WIN.RUNNER.INDEX_HANDOFF.v4',
             'path_bound_after_close': False, 'single_byte': 'E_PAYLOAD',
             'dangling': 'E_EXISTS', 'existing': 'E_EXISTS', 'readback_failure_preserves_partial': True,
         }, indent=2) + '\n')
