@@ -11,10 +11,10 @@ REPO = Path(__file__).resolve().parents[3]
 PS1 = ROOT / 'ACQUIRE_FIRST.ps1'
 PY = sys.executable
 GIT = shutil.which('git')
-FETCH = 'ef96dc38099f5f82643afc3831f82df8119b9421'
-GATE_BLOB = '07374a1d2052908a366126eba0599f552a9896c0'
-GATE_SHA = 'f91138a4067a82a47faf8cf3a584ecbc711d5970af75452999672132293842e5'
-GATE_SIZE = 11774
+FETCH = 'bdceacf1e610cd3c7bda31de5f110907753a0a61'
+GATE_BLOB = 'c8471b4cab94c2d2c3827c5aeeb75b06332af760'
+GATE_SHA = 'f206e353e725033cc09dd4c7788c588efe0830bcfdbfe44897a6c8cc1e2debff'
+GATE_SIZE = 12028
 RUNTIME = '5f5be6c35bed7a674a91f19ee5c59fdbc8b281c3'
 INDEX_SHA = '0e5f07d4cfe5f554ecf92f83ce0e02941ba0ad625338ed4c9606daa80abaff19'
 
@@ -51,7 +51,7 @@ def main():
     header = text.split("@'\n", 1)[0]
     assert b'\r' not in raw and '>' not in header and '|' not in header
     assert len(raw) == 4867
-    assert hashlib.sha256(raw).hexdigest() == '4342b50a4121d0d71825070b3c6b9553266c45510b1fc3dc5aadd06b91eba05f'
+    assert hashlib.sha256(raw).hexdigest() == 'e4a60fe52226a929eb1b03e26b5f9d2a10f0798bfebc101f7077f3d9fef03a4a'
     assert 'materialize_pinned_blob' not in text and 'FromBase64' not in text and 'CopyFromBox' not in text
     assert "Set-Location -LiteralPath 'C:\\Users\\User\\Desktop\\AI_RD_IMP'" in text
     assert "C:\\Users\\User\\AppData\\Local\\Python\\pythoncore-3.14-64\\python.exe" in text
@@ -61,7 +61,15 @@ def main():
     assert '$LASTEXITCODE' in text
     payload = payload_of(text)
     assert len(payload.encode('ascii')) == 4259
-    assert hashlib.sha256(payload.encode('ascii')).hexdigest() == 'd90f9c5b54e7d425bf5c6de78f2a3f5b4f05daca21e32a1097e27309fcb73dc4'
+    assert hashlib.sha256(payload.encode('ascii')).hexdigest() == '977b671839aabc1f9596531c2dc320b13fc4d4dcb233449dfb800416ddbfb471'
+    launcher = (ROOT / 'FIRST_ENTRY.ps1').read_text(encoding='ascii')
+    assert 'materialize_pinned_blob.py' in launcher.splitlines()[1]
+    assert 'materialize_pinned_blob.py' not in text
+    missing_dir = Path(tempfile.mkdtemp(prefix='wlr-clean-'))
+    missing = missing_dir / 'materialize_pinned_blob.py'
+    clean_argv = [PY, '-B', '-I', str(missing)]
+    clean = subprocess.run(clean_argv, cwd=str(missing_dir), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    assert clean.returncode != 0 and not missing.exists()
     assert 'ACQUIRE_FIRST' not in payload
     gate = subprocess.check_output(['git', '-C', str(REPO), 'cat-file', 'blob', GATE_BLOB])
     assert len(gate) == GATE_SIZE and hashlib.sha256(gate).hexdigest() == GATE_SHA
@@ -129,8 +137,8 @@ def main():
         assert receipt['transfer_ok'] is True and receipt['python_starts'] == 1
         assert receipt['index_size'] == 945 and receipt['index_sha256'] == INDEX_SHA
         assert receipt['path_bound_after_close'] is False and receipt['installer_started'] is False
-        assert receipt['writer_commit'] == '05994e1fddd754c9bf20e91aa5423858283fc367'
-        assert receipt['acceptance_covers'] == 'CONSUMED_FD_XATTR' and receipt['stat_tuple_is_identity'] is False
+        assert receipt['writer_commit'] == '4cc6358efbd14f79dc3b21db89b14e8aabd05b02'
+        assert receipt['acceptance_covers'] == 'HELD_CREATE_FD'
         assert index.read_bytes() and hashlib.sha256(index.read_bytes()).hexdigest() == INDEX_SHA
     summary = {
         'PASS': 1, 'FAIL': 0, 'windows': 'NOT_RUN', 'powershell': 'NOT_RUN',
@@ -142,6 +150,11 @@ def main():
         'cwd': r'C:\Users\User\Desktop\AI_RD_IMP',
         'python': r'C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe',
         'git': r'C:\Program Files\Git\cmd\git.exe',
+        'clean_start_launcher_argv': clean_argv,
+        'clean_start_launcher_cwd': str(missing_dir),
+        'clean_start_launcher_exit': clean.returncode,
+        'trust_root': 'ACQUIRE_FIRST.ps1',
+        'later_launcher': 'FIRST_ENTRY.ps1',
     }
     print(json.dumps(summary))
     evidence = os.environ.get('WLR_EVIDENCE_DIR')

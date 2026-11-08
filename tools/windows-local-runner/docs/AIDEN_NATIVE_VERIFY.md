@@ -31,7 +31,7 @@ Telling Aiden to place an already downloaded file is not a create. CopyFromBox d
 
 The pipe in the withdrawn sequence is not an entry. On Linux Bash, a missing blob was `PIPE:128 0` and `BASH_LAST:0`, with stderr `bad file`, and no index. That measurement is not Windows PowerShell. Python exit 0 is not delivery.
 
-The current writer blob is `494ff457f61d79d18e90be73b41c55735bcf477f` (7074 bytes, SHA-256 `4091c12ebe48288e666d4d4500776c582b7bb106161c205dd1eeb9f5e5822605`) in commit `05994e1fddd754c9bf20e91aa5423858283fc367`. It tags the create fd with `user.wlr_handoff`. Blob `dee84c9eba4770d81b7962fae9c5c599e8d13ff7` is the previous writer, whose dev/ino/ctime check accepted a recreated file. Without `--dest` on Linux, the writer exits 3 and prints JSON `E_DEST`, not a traceback.
+The current writer blob is `7b42097dc3bff8196e686721e255bf4e26c5a741` (8818 bytes, SHA-256 `18a3fc758128439f0b210903e8ac1f8ee0dec097960e2fbb96cfb46ba3c8357f`) in commit `4cc6358efbd14f79dc3b21db89b14e8aabd05b02`. It sends the create handle. Blob `494ff457f61d79d18e90be73b41c55735bcf477f` is the previous writer, which used a copyable xattr token. Without `--dest` on Linux, the writer exits 3 and prints JSON `E_DEST`, not a traceback. Missing handle support fails before the file is created.
 
 ## 1. Stop check, then clone
 
@@ -47,13 +47,13 @@ One stock Python check, using the interpreter already installed. It does not wri
 
 Git may create a missing parent. The check above must run first. Do not pass `--depth`. A shallow tip will not be this commit once the branch moves. If clone or checkout fails, stop. Do not delete a partial source and do not choose another directory.
 
-Fetch commit `ef96dc38099f5f82643afc3831f82df8119b9421` before detaching runtime. That commit contains the gate blob. Writer commit `05994e1fddd754c9bf20e91aa5423858283fc367` alone does not. The earlier gate commit `345a3cf160501a8938c8fc81d910172e4be7f294` accepted a recreated file when dev, ino, and ctime matched. A clone of only `5f5be6c` does not contain the writer. Do not use `--depth`.
+Fetch commit `bdceacf1e610cd3c7bda31de5f110907753a0a61` before detaching runtime. That commit contains the gate that reads the held create handle. Writer commit `4cc6358efbd14f79dc3b21db89b14e8aabd05b02` alone does not. Gate commit `ef96dc38099f5f82643afc3831f82df8119b9421` compared a copyable xattr token. A clone of only `5f5be6c` does not contain the writer. Do not use `--depth`.
 
 ```text
 git clone --no-checkout --no-hardlinks https://github.com/swe2501/tw-stock-screener.git C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_SOURCE_5f5be6c35bed
-git -C C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_SOURCE_5f5be6c35bed fetch --no-tags origin ef96dc38099f5f82643afc3831f82df8119b9421
-git -C C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_SOURCE_5f5be6c35bed cat-file -t 494ff457f61d79d18e90be73b41c55735bcf477f
-git -C C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_SOURCE_5f5be6c35bed cat-file -t 07374a1d2052908a366126eba0599f552a9896c0
+git -C C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_SOURCE_5f5be6c35bed fetch --no-tags origin bdceacf1e610cd3c7bda31de5f110907753a0a61
+git -C C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_SOURCE_5f5be6c35bed cat-file -t 7b42097dc3bff8196e686721e255bf4e26c5a741
+git -C C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_SOURCE_5f5be6c35bed cat-file -t c8471b4cab94c2d2c3827c5aeeb75b06332af760
 git -C C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_SOURCE_5f5be6c35bed cat-file -e 5f5be6c35bed7a674a91f19ee5c59fdbc8b281c3^{commit}
 git -C C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_SOURCE_5f5be6c35bed checkout --detach 5f5be6c35bed7a674a91f19ee5c59fdbc8b281c3
 git -C C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_SOURCE_5f5be6c35bed rev-parse HEAD
@@ -74,9 +74,9 @@ git -C C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_SOURCE_5f5be6c35bed rev-parse 
 7d640de56b002fecee6a465e8a694a481bd0a917
 ```
 
-`git fetch` of that commit writes `FETCH_HEAD` only. `git log --all` does not read `FETCH_HEAD`, so an empty log does not mean the blob is missing. The gate checks `git rev-parse 05994e1fddd754c9bf20e91aa5423858283fc367:tools/windows-local-runner/deliver_external_index.py`. On Windows it hashes `C:\Program Files\Git\cmd\git.exe` before use. That path, 46968 bytes, and SHA-256 `d90e36cafd656d52984f7546bfcb5b065d73e2e66957c952b7a4a1cd260e8f36` are MLOps-reported metadata, not a parent-run Git test. FileVersion `2.46.1.windows.1` is reported only. Do not pipe `cat-file` into Python and do not use shell `>` to create the gate. PowerShell `>` is `Out-File` and can overwrite; that behavior was read from documentation, not from a Windows run.
+`git fetch` of that commit writes `FETCH_HEAD` only. `git log --all` does not read `FETCH_HEAD`, so an empty log does not mean the blob is missing. The gate checks `git rev-parse 4cc6358efbd14f79dc3b21db89b14e8aabd05b02:tools/windows-local-runner/deliver_external_index.py`. On Windows it hashes `C:\Program Files\Git\cmd\git.exe` before use. That path, 46968 bytes, and SHA-256 `d90e36cafd656d52984f7546bfcb5b065d73e2e66957c952b7a4a1cd260e8f36` are MLOps-reported metadata, not a parent-run Git test. FileVersion `2.46.1.windows.1` is reported only. Do not pipe `cat-file` into Python and do not use shell `>` to create the gate. PowerShell `>` is `Out-File` and can overwrite; that behavior was read from documentation, not from a Windows run.
 
-The current writer is commit `05994e1fddd754c9bf20e91aa5423858283fc367`, blob `494ff457f61d79d18e90be73b41c55735bcf477f`, 7074 bytes, SHA-256 `4091c12ebe48288e666d4d4500776c582b7bb106161c205dd1eeb9f5e5822605`. Handoff is `WIN.RUNNER.INDEX_HANDOFF.v4`. The object id is dev, ino, and the xattr token. `st_ctime_ns` is observed and is not identity. `path_bound_after_close` is false. The current gate blob is `07374a1d2052908a366126eba0599f552a9896c0`, 11774 bytes, SHA-256 `f91138a4067a82a47faf8cf3a584ecbc711d5970af75452999672132293842e5`. Acceptance covers the consumed descriptor's token and bytes. A reused stat tuple is not that proof. The fixed script is `materialize_pinned_blob.py`. The short launch below is 257 bytes, SHA-256 `d5bb66361fad904fed28792aa4a9e56f1da691052740770ba4a7e1dd77482b51`. It does not contain that script. CopyFromBox is not used to place the script. Windows has not run this launch.
+The current writer is commit `4cc6358efbd14f79dc3b21db89b14e8aabd05b02`, blob `7b42097dc3bff8196e686721e255bf4e26c5a741`, 8818 bytes, SHA-256 `18a3fc758128439f0b210903e8ac1f8ee0dec097960e2fbb96cfb46ba3c8357f`. Handoff is `WIN.RUNNER.INDEX_HANDOFF.v5`. The gate blob is `c8471b4cab94c2d2c3827c5aeeb75b06332af760`, 12028 bytes, SHA-256 `f206e353e725033cc09dd4c7788c588efe0830bcfdbfe44897a6c8cc1e2debff`. Acceptance reads the held create handle. `path_bound_after_close` is false. A copied xattr is not identity. The 257-byte `FIRST_ENTRY.ps1` runs `materialize_pinned_blob.py` by path and is not the clean-start command. The clean-start trust root is the full text of `ACQUIRE_FIRST.ps1`. The fixed script is `materialize_pinned_blob.py`. The short launch below is 257 bytes, SHA-256 `d5bb66361fad904fed28792aa4a9e56f1da691052740770ba4a7e1dd77482b51`. It does not contain that script. CopyFromBox is not used to place the script. Windows has not run this launch.
 
 ```powershell
 Set-Location -LiteralPath 'C:\Users\User\Desktop\AI_RD_IMP'
