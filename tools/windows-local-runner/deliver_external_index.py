@@ -62,7 +62,7 @@ def object_id(fd):
     info = os.fstat(fd)
     if not stat.S_ISREG(info.st_mode):
         raise ValueError('E_INDEX_IDENTITY')
-    return {'st_dev': int(info.st_dev), 'st_ino': int(info.st_ino)}
+    return {'st_dev': int(info.st_dev), 'st_ino': int(info.st_ino), 'st_ctime_ns': int(info.st_ctime_ns)}
 
 def write_exclusive(dest, payload):
     """Create dest once. A later failure leaves the partial file in place."""

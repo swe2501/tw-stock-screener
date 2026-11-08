@@ -8,7 +8,7 @@ if sys.platform != 'linux':
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / 'deliver_external_index.py'
-BLOB = 'f54452f4d3eaef070230624286415d57dbd29f54'
+BLOB = 'dee84c9eba4770d81b7962fae9c5c599e8d13ff7'
 OLD_BLOB = '9fa534201e61678698cdc29c8a30edbc00a0f0da'
 EARLIER_BLOB = '7894bc5b84c769994a324d98a1faaf464b4b31a9'
 INDEX_SHA = '0e5f07d4cfe5f554ecf92f83ce0e02941ba0ad625338ed4c9606daa80abaff19'
@@ -122,7 +122,7 @@ def main():
             st = os.fstat(again_fd)
         finally:
             os.close(again_fd)
-        assert receipt['object_id'] == {'st_dev': int(st.st_dev), 'st_ino': int(st.st_ino)}
+        assert receipt['object_id'] == {'st_dev': int(st.st_dev), 'st_ino': int(st.st_ino), 'st_ctime_ns': int(st.st_ctime_ns)}
         assert piped.read_bytes() == module.INDEX_BYTES
     print(json.dumps({'PASS': 1, 'FAIL': 0, 'windows': 'NOT_RUN', 'blob': BLOB, 'index_sha256': INDEX_SHA, 'executed_payload': False}))
     evidence = os.environ.get('WLR_EVIDENCE_DIR')
