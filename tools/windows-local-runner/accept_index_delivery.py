@@ -8,6 +8,7 @@ import hashlib, json, os, stat, subprocess, sys
 
 RUNTIME_COMMIT = '5f5be6c35bed7a674a91f19ee5c59fdbc8b281c3'
 OLD_WRITER_COMMIT = '08dffd8bb87a4329e0f2608b87d4a6a2c9ca9d2a'
+WRITER_COMMIT = 'd33b0a41e126cd17c24edd0dd0df10cd302eabbd'
 OLD_WRITER_BLOB = '7894bc5b84c769994a324d98a1faaf464b4b31a9'
 WRITER_BLOB = '9fa534201e61678698cdc29c8a30edbc00a0f0da'
 WRITER_SHA256 = '9323c406040352938f58dad45e6299dfaa19337eca1e422b1fd4e69394d8e293'
@@ -18,7 +19,7 @@ INDEX_SIZE = 945
 WINDOWS_DEST = 'C:\\Users\\User\\Desktop\\AI_RD_IMP\\WIN_RUNNER_RELEASE_5f5be6c35bed.json'
 
 def _git(repo, args):
-    if args[0] not in {'cat-file', 'rev-parse', 'log'}:
+    if args[0] not in {'cat-file', 'rev-parse'}:
         raise ValueError('E_GIT_ARGV')
     proc = subprocess.run(
         ['git', '--no-pager', '-C', repo, *args],
@@ -63,20 +64,20 @@ def _occupied(path):
     return True
 
 def _writer_commit(repo):
-    code, out, _err = _git(repo, ['log', '--all', '--format=%H', '--find-object=' + WRITER_BLOB])
+    """The writer commit object must exist. A branch ref is not required.
+
+    git fetch of a raw commit updates FETCH_HEAD only. git log --all does not
+    walk FETCH_HEAD, so it can be empty while the commit and blob exist.
+    """
+    code, _out, _err = _git(repo, ['cat-file', '-e', WRITER_COMMIT + '^{commit}'])
     if code != 0:
         raise ValueError('E_WRITER_UNREACHABLE')
-    found = []
-    for line in out.decode('ascii', 'replace').splitlines():
-        commit = line.strip()
-        if len(commit) != 40 or commit == OLD_WRITER_COMMIT:
-            continue
-        rev_code, rev_out, _rev_err = _git(repo, ['rev-parse', commit + ':' + WRITER_PATH])
-        if rev_code == 0 and rev_out.decode().strip() == WRITER_BLOB:
-            found.append(commit)
-    if not found:
+    rev_code, rev_out, _rev_err = _git(repo, ['rev-parse', '--verify', WRITER_COMMIT + ':' + WRITER_PATH])
+    if rev_code != 0 or rev_out.decode().strip() != WRITER_BLOB:
         raise ValueError('E_WRITER_UNREACHABLE')
-    return found[0]
+    if WRITER_COMMIT == OLD_WRITER_COMMIT or WRITER_BLOB == OLD_WRITER_BLOB:
+        raise ValueError('E_WRITER_UNREACHABLE')
+    return WRITER_COMMIT
 
 def run(repo, dest, *, fixture_linux=False, state=None):
     state = state if state is not None else {'python_starts': 0}

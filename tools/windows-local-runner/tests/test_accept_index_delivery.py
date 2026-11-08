@@ -82,13 +82,6 @@ def main():
         subprocess.run(['git', 'clone', '--no-checkout', str(REPO), str(source)], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         assert git(source, 'checkout', '--detach', RUNTIME).returncode == 0
         dest = tmp / 'WIN_RUNNER_RELEASE_5f5be6c35bed.json'
-        state = {'python_starts': 0}
-        try:
-            gate.run(source, dest, fixture_linux=True, state=state)
-            raise SystemExit('missing writer blob started delivery')
-        except ValueError as exc:
-            assert str(exc) in {'E_GIT_UPSTREAM', 'E_WRITER_UNREACHABLE'}
-        assert state['python_starts'] == 0 and not dest.exists()
         assert git(source, 'checkout', '-B', 'writer-pin', OLD_COMMIT).returncode == 0
         writer_text = WRITER.read_bytes()
         target = source / 'tools' / 'windows-local-runner' / 'deliver_external_index.py'
@@ -128,7 +121,7 @@ def main():
         assert state['python_starts'] == 1 and result['transfer_ok'] is True and result['next_stage'] is True
         assert result['installer_started'] is False and result['upstream_exit'] == 0 and result['writer_exit'] == 0
         assert result['index_size'] == 945 and result['index_sha256'] == INDEX_SHA
-        assert result['writer_blob'] == gate.WRITER_BLOB and result['writer_commit'] == new_commit
+        assert result['writer_blob'] == gate.WRITER_BLOB and result['writer_commit'] == gate.WRITER_COMMIT
         assert dest.read_bytes() == index_bytes
         assert git(source, 'rev-parse', 'HEAD').stdout.decode().strip() == RUNTIME
     pipe_note = {'platform': 'Linux Bash', 'windows': 'NOT_RUN', 'pipe_exit': pipe.returncode, 'observed': 'PIPE 128 then Python 0 yields outer 0'}

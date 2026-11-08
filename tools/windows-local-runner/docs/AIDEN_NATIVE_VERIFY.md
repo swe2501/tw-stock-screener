@@ -14,12 +14,13 @@ Parent, must already exist, must be a directory, must not be a reparse point:
 C:\Users\User\Desktop\AI_RD_IMP
 ```
 
-These three must have no directory entry yet. If any entry exists, or the listing fails, stop. Do not delete, rename, or retry on another path.
+These four must have no directory entry yet, including a dangling link. If any entry exists, or the check fails, stop. Do not delete, rename, or retry on another path.
 
 ```text
 C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_SOURCE_5f5be6c35bed
 C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_RELEASE_5f5be6c35bed.json
 C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_OPS02_v2
+C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_ACCEPT_INDEX.py
 ```
 
 Do not use `C:\Users\User\Desktop\AI型態判斷` or `D:\StockAI`.
@@ -37,7 +38,7 @@ The repaired writer blob is `9fa534201e61678698cdc29c8a30edbc00a0f0da` (5089 byt
 One stock Python check, using the interpreter already installed. It does not write the index. If the parent is missing, or any of the three names already has a directory entry, including a dangling link, it exits 3.
 
 ```text
-& 'C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe' -B -c "import os,stat,sys; p=r'C:\Users\User\Desktop\AI_RD_IMP'; s=os.lstat(p); assert not stat.S_ISLNK(s.st_mode) and stat.S_ISDIR(s.st_mode); names=['WIN_RUNNER_SOURCE_5f5be6c35bed','WIN_RUNNER_RELEASE_5f5be6c35bed.json','WIN_RUNNER_OPS02_v2']; assert not any(os.path.lexists(os.path.join(p,n)) for n in names); print('ABSENT')"
+& 'C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe' -B -c "import os,stat,sys; p=r'C:\Users\User\Desktop\AI_RD_IMP'; s=os.lstat(p); assert not stat.S_ISLNK(s.st_mode) and stat.S_ISDIR(s.st_mode); names=['WIN_RUNNER_SOURCE_5f5be6c35bed','WIN_RUNNER_RELEASE_5f5be6c35bed.json','WIN_RUNNER_OPS02_v2','WIN_RUNNER_ACCEPT_INDEX.py']; assert not any(os.path.lexists(os.path.join(p,n)) for n in names); print('ABSENT')"
 ```
 
 `os.path.lexists` is true for a dangling link. Any exception or a missing parent is a stop. This check is not the create.
@@ -72,20 +73,9 @@ git -C C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_SOURCE_5f5be6c35bed rev-parse 
 7d640de56b002fecee6a465e8a694a481bd0a917
 ```
 
-The worktree at `5f5be6c` does not contain the repaired writer. Do not pipe `cat-file` into Python. The withdrawn sequence is not an entry. Save the gate by redirection so Git's exit remains visible. If that exit is not 0, or the file is empty, stop and do not run Python. If the redirect path already exists, stop. Do not delete a partial file.
+`git fetch` of that commit writes `FETCH_HEAD` only. `git log --all` does not read `FETCH_HEAD`, so an empty log does not mean the blob is missing. The gate now checks `git rev-parse d33b0a41e126cd17c24edd0dd0df10cd302eabbd:tools/windows-local-runner/deliver_external_index.py`. Do not pipe `cat-file` into Python and do not use shell `>` to create the gate. PowerShell `>` is `Out-File` and can overwrite; that behavior was read from documentation, not from a Windows run.
 
-```text
-git -C C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_SOURCE_5f5be6c35bed cat-file -t 9fa534201e61678698cdc29c8a30edbc00a0f0da
-9fa534201e61678698cdc29c8a30edbc00a0f0da must already be a blob before the next line. The old blob 7894bc5b84c769994a324d98a1faaf464b4b31a9 is not accepted.
-git -C C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_SOURCE_5f5be6c35bed cat-file -t 101217474ceb24744010ccb90fb1aae459a6f6a5
-git -C C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_SOURCE_5f5be6c35bed cat-file blob 101217474ceb24744010ccb90fb1aae459a6f6a5 > C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_ACCEPT_INDEX.py
-```
-
-Check Git's exit before Python. The gate file must be 7492 bytes and SHA-256 `8f8ea1f3244c13376b3b67a7c51e3a531bad7c3f09983af5fa16c8b14592fdcf`. Then:
-
-```text
-& 'C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe' -B C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_ACCEPT_INDEX.py --source C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_SOURCE_5f5be6c35bed
-```
+The first entry is the already installed Python, not shell `>`. Its source is `materialize_pinned_blob.py`. Tests run `python -B -c` of that exact text, so the Git blob is read by Python in binary and checked for blob `b1e55bfd7d5d46fc0591cc69c55e8904cfb60f6e`, 7665 bytes, and SHA-256 `0ad70dad694bca145338ac99c3a071966690462bf8cd2435b3f2ee3e3c401232` before any candidate file is created. An existing file, directory, link, or dangling link is refused and left unchanged. A failed read-back leaves the partial file and does not start it. On Windows the defaults are the fixed source and `WIN_RUNNER_ACCEPT_INDEX.py`; this was not executed there. Do not use `git cat-file blob ... > WIN_RUNNER_ACCEPT_INDEX.py`.
 
 Stdout must show `transfer_ok` true, `python_starts` 1, `upstream_exit` 0, `index_size` 945, and `index_sha256` `0e5f07d4cfe5f554ecf92f83ce0e02941ba0ad625338ed4c9606daa80abaff19`. Exit 3 stops the sequence. Do not install. An existing index, a dangling link, or an older correct file is `E_EXISTS`: it is left in place and is not this attempt. A missing blob does not start the writer.
 

@@ -14,7 +14,7 @@ External index digest, SHA-256 of the index file itself, not of `source_pin.json
 0e5f07d4cfe5f554ecf92f83ce0e02941ba0ad625338ed4c9606daa80abaff19
 ```
 
-Size of that index file: 945 bytes. Matching `source_pin.json` to itself is not this digest. The old writer blob `7894bc5b84c769994a324d98a1faaf464b4b31a9` at commit `08dffd8bb87a4329e0f2608b87d4a6a2c9ca9d2a` is not this repair. The repaired writer blob is `9fa534201e61678698cdc29c8a30edbc00a0f0da`. `accept_index_delivery.py` runs that blob only after Git's own exit, the byte pin, and a fresh receipt all pass.
+Size of that index file: 945 bytes. Matching `source_pin.json` to itself is not this digest. The old writer blob `7894bc5b84c769994a324d98a1faaf464b4b31a9` is not this repair. The writer blob remains `9fa534201e61678698cdc29c8a30edbc00a0f0da`. Fetch of that commit updates `FETCH_HEAD` only. The gate resolves the writer with `git rev-parse` of commit `d33b0a41e126cd17c24edd0dd0df10cd302eabbd`, not `git log --all`. The first entry is installed Python in `materialize_pinned_blob.py`, not shell `>`.
 
 Paths. The parent must already be a real directory. These three names must not exist yet:
 
