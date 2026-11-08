@@ -11,8 +11,8 @@ REPO = Path(__file__).resolve().parents[3]
 GATE = ROOT / 'accept_index_delivery.py'
 WRITER = ROOT / 'deliver_external_index.py'
 RUNTIME = '5f5be6c35bed7a674a91f19ee5c59fdbc8b281c3'
-OLD_COMMIT = 'd33b0a41e126cd17c24edd0dd0df10cd302eabbd'
-OLD_BLOB = '9fa534201e61678698cdc29c8a30edbc00a0f0da'
+OLD_COMMIT = '9dbbe3ae108ab50db1a0bf147b9abf1808372fba'
+OLD_BLOB = '59fd64b9e5d5d4c7978219bc06f84aeb36cae5c1'
 EARLIER_BLOB = '7894bc5b84c769994a324d98a1faaf464b4b31a9'
 INDEX_SHA = '0e5f07d4cfe5f554ecf92f83ce0e02941ba0ad625338ed4c9606daa80abaff19'
 PY = sys.executable
@@ -34,7 +34,7 @@ def main():
     text = GATE.read_text(encoding='utf-8')
     assert 'shell=True' not in text and 'eval(' not in text and 'exec(' not in text
     assert gate.WRITER_BLOB != OLD_BLOB and gate.OLD_WRITER_BLOB == OLD_BLOB
-    assert gate.WRITER_COMMIT == 'a9a55afdfc0b4383d997592ca19f8ab6265be9c3'
+    assert gate.WRITER_COMMIT == '05994e1fddd754c9bf20e91aa5423858283fc367'
     assert gate.GIT_TOOL_PATH == r'C:\Program Files\Git\cmd\git.exe'
     assert gate.GIT_TOOL_SIZE == 46968
     assert gate.GIT_TOOL_SHA256 == 'd90e36cafd656d52984f7546bfcb5b065d73e2e66957c952b7a4a1cd260e8f36'
@@ -67,15 +67,17 @@ def main():
     except ValueError as exc:
         assert str(exc) == 'E_WRITER_BYTES'
     try:
-        gate.judge_delivery(None, b'', {'st_dev': 1, 'st_ino': 2, 'st_ctime_ns': 3}, '/tmp/index.json')
+        gate.judge_delivery(None, b'', {'st_dev': 1, 'st_ino': 2, 'token': 'ab' * 32}, '/tmp/index.json')
         raise SystemExit('missing receipt accepted a matching file')
     except ValueError as exc:
         assert str(exc) == 'E_RECEIPT'
-    ident = {'st_dev': 1, 'st_ino': 2, 'st_ctime_ns': 3}
+    token = 'ab' * 32
+    ident = {'st_dev': 1, 'st_ino': 2, 'token': token}
     receipt = {
         'wrote': '/tmp/index.json', 'size': 945, 'sha256': INDEX_SHA,
         'readback': 'SAME_HANDLE', 'executed_payload': False,
-        'handoff': gate.HANDOFF, 'identity_from': 'CREATE_FD',
+        'handoff': gate.HANDOFF, 'identity_from': 'CREATE_FD_XATTR',
+        'stat_tuple_is_identity': False,
         'path_bound_after_close': False, 'object_id': ident,
     }
     try:
@@ -83,6 +85,12 @@ def main():
         raise SystemExit('wrong index sha accepted')
     except ValueError as exc:
         assert str(exc) == 'E_INDEX_BYTES'
+    reused = {'st_dev': 1, 'st_ino': 2, 'token': 'cd' * 32}
+    try:
+        gate.judge_delivery(receipt, b'x' * 945, reused, receipt['wrote'])
+        raise SystemExit('reused stat tuple without token was accepted')
+    except ValueError as exc:
+        assert str(exc) == 'E_INDEX_IDENTITY'
     try:
         gate.judge_delivery(receipt, b'x' * 944, ident, receipt['wrote'])
         raise SystemExit('wrong length was accepted')
@@ -126,26 +134,42 @@ def main():
         fresh = tmp / 'fresh.json'
         fresh_receipt = writer.deliver(fresh, fixture_linux=True)
         fresh_bytes, fresh_id = gate.consume_index(fresh)
+        assert fresh_id == fresh_receipt['object_id']
         assert gate.judge_delivery(fresh_receipt, fresh_bytes, fresh_id, fresh) is True
+        collided = False
+        replaced = b''
+        replaced_id = None
+        for _ in range(40):
+            fresh.unlink()
+            fresh.write_bytes(index_bytes)
+            replaced, replaced_id = gate.consume_index(fresh)
+            st = os.stat(fresh)
+            same_tuple = (
+                st.st_dev == fresh_receipt['object_id']['st_dev']
+                and st.st_ino == fresh_receipt['object_id']['st_ino']
+                and st.st_ctime_ns == fresh_receipt['observed_ctime_ns']
+            )
+            try:
+                gate.judge_delivery(fresh_receipt, replaced, replaced_id, fresh)
+                raise SystemExit('same-content replacement accepted')
+            except ValueError as exc:
+                assert str(exc) == 'E_INDEX_IDENTITY'
+            assert replaced_id != fresh_receipt['object_id']
+            assert replaced == index_bytes and fresh.read_bytes() == index_bytes
+            if same_tuple:
+                collided = True
+                break
+        assert collided, 'unlink/recreate did not reuse dev, ino, and ctime'
         fresh.unlink()
-        fresh.write_bytes(index_bytes)
-        replaced, replaced_id = gate.consume_index(fresh)
-        assert hashlib.sha256(replaced).hexdigest() == INDEX_SHA and replaced_id != fresh_receipt['object_id']
-        try:
-            gate.judge_delivery(fresh_receipt, replaced, replaced_id, fresh)
-            raise SystemExit('same-content replacement accepted')
-        except ValueError as exc:
-            assert str(exc) == 'E_INDEX_IDENTITY'
-        assert fresh.read_bytes() == index_bytes
-        fresh.unlink()
-        fresh.write_bytes(b'different')
+        fresh.write_bytes(b'D' * 20)
         other, other_id = gate.consume_index(fresh)
         try:
             gate.judge_delivery(fresh_receipt, other, other_id, fresh)
             raise SystemExit('different-content replacement accepted')
         except ValueError as exc:
             assert str(exc) == 'E_INDEX_IDENTITY'
-        assert fresh.read_bytes() == b'different' and other != index_bytes
+        assert other_id != fresh_receipt['object_id']
+        assert fresh.read_bytes() == b'D' * 20 and other == b'D' * 20
         mutated = tmp / 'mutated.json'
         mutated_receipt = writer.deliver(mutated, fixture_linux=True)
         mutable = os.open(mutated, os.O_WRONLY)
@@ -155,15 +179,13 @@ def main():
         finally:
             os.close(mutable)
         changed, changed_id = gate.consume_index(mutated)
-        assert changed != mutated_receipt.get('sha256')
         try:
             gate.judge_delivery(mutated_receipt, changed, changed_id, mutated)
             raise SystemExit('same inode with different bytes accepted')
         except ValueError as exc:
-            if changed_id == mutated_receipt['object_id']:
-                assert str(exc) == 'E_INDEX_BYTES'
-            else:
-                assert str(exc) == 'E_INDEX_IDENTITY'
+            same = changed_id == mutated_receipt['object_id']
+            assert str(exc) == ('E_INDEX_BYTES' if same else 'E_INDEX_IDENTITY')
+        assert changed == b'x' * 945 and mutated.read_bytes() == b'x' * 945
         linked = tmp / 'linked.json'
         writer.deliver(linked, fixture_linux=True)
         linked.unlink()
@@ -203,9 +225,9 @@ def main():
         assert result['index_size'] == 945 and result['index_sha256'] == INDEX_SHA
         assert result['writer_blob'] == gate.WRITER_BLOB and result['writer_commit'] == gate.WRITER_COMMIT
         assert result['handoff'] == gate.HANDOFF and result['path_bound_after_close'] is False
-        assert result['acceptance_covers'] == 'CONSUMED_FD_ONLY' and result['identity_scope'] == 'ACCEPTANCE_FD'
+        assert result['acceptance_covers'] == 'CONSUMED_FD_XATTR' and result['stat_tuple_is_identity'] is False
         assert result['git_tool_checked'] is False and result['git_tool_parent_verified'] is False
-        assert type(result['object_id']['st_dev']) is int and type(result['object_id']['st_ino']) is int
+        assert result['object_id']['token'] and 'st_ctime_ns' not in result['object_id']
         assert dest.read_bytes() == index_bytes
         assert git(source, 'rev-parse', 'HEAD').stdout.decode().strip() == RUNTIME
     pipe_note = {'platform': 'Linux Bash', 'windows': 'NOT_RUN', 'pipe_exit': pipe.returncode, 'observed': 'PIPE 128 then Python 0 yields outer 0'}
