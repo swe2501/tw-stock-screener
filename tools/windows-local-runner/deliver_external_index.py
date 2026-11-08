@@ -9,6 +9,7 @@ import hashlib, json, os, stat, sys
 EXPECTED_SHA256 = '0e5f07d4cfe5f554ecf92f83ce0e02941ba0ad625338ed4c9606daa80abaff19'
 EXPECTED_SIZE = 945
 EXECUTION_COMMIT = '5f5be6c35bed7a674a91f19ee5c59fdbc8b281c3'
+HANDOFF = 'WIN.RUNNER.INDEX_HANDOFF.v3'
 WINDOWS_DEST = 'C:\\Users\\User\\Desktop\\AI_RD_IMP\\WIN_RUNNER_RELEASE_5f5be6c35bed.json'
 INDEX_BYTES = b"""{
   "schema": "WIN.RUNNER.RELEASE_INDEX.v2",
@@ -56,12 +57,22 @@ def require_payload(payload):
         raise ValueError('E_PAYLOAD')
     return payload
 
+def object_id(fd):
+    """Identity of this open file, not of a later path lookup."""
+    info = os.fstat(fd)
+    if not stat.S_ISREG(info.st_mode):
+        raise ValueError('E_INDEX_IDENTITY')
+    return {'st_dev': int(info.st_dev), 'st_ino': int(info.st_ino)}
+
 def write_exclusive(dest, payload):
     """Create dest once. A later failure leaves the partial file in place."""
     flags = os.O_CREAT | os.O_EXCL | os.O_RDWR
     if hasattr(os, 'O_NOFOLLOW'):
         flags |= os.O_NOFOLLOW
+    if hasattr(os, 'O_BINARY'):
+        flags |= os.O_BINARY
     fd = os.open(dest, flags, 0o600)
+    ident = None
     try:
         written = os.write(fd, payload)
         if written != len(payload):
@@ -71,9 +82,10 @@ def write_exclusive(dest, payload):
         got = os.read(fd, len(payload) + 1)
         if got != payload:
             raise ValueError('E_READBACK')
+        ident = object_id(fd)
     finally:
         os.close(fd)
-    return got
+    return got, ident
 
 def deliver(dest, *, fixture_linux=False):
     payload = require_payload(INDEX_BYTES)
@@ -99,7 +111,7 @@ def deliver(dest, *, fixture_linux=False):
     else:
         raise ValueError('E_EXISTS')
     try:
-        got = write_exclusive(path, payload)
+        got, ident = write_exclusive(path, payload)
     except FileExistsError as exc:
         raise ValueError('E_EXISTS') from exc
     return {
@@ -107,6 +119,10 @@ def deliver(dest, *, fixture_linux=False):
         'size': len(got),
         'sha256': hashlib.sha256(got).hexdigest(),
         'readback': 'SAME_HANDLE',
+        'object_id': ident,
+        'handoff': HANDOFF,
+        'identity_from': 'CREATE_FD',
+        'path_bound_after_close': False,
         'executed_payload': False,
         'preflight_is_atomic_guarantee': False,
         'windows': 'NOT_RUN' if os.name != 'nt' else 'LOCAL_WRITE_NOT_AUDITOR_ACCEPTANCE',

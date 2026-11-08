@@ -8,8 +8,9 @@ if sys.platform != 'linux':
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / 'deliver_external_index.py'
-BLOB = '9fa534201e61678698cdc29c8a30edbc00a0f0da'
-OLD_BLOB = '7894bc5b84c769994a324d98a1faaf464b4b31a9'
+BLOB = 'f54452f4d3eaef070230624286415d57dbd29f54'
+OLD_BLOB = '9fa534201e61678698cdc29c8a30edbc00a0f0da'
+EARLIER_BLOB = '7894bc5b84c769994a324d98a1faaf464b4b31a9'
 INDEX_SHA = '0e5f07d4cfe5f554ecf92f83ce0e02941ba0ad625338ed4c9606daa80abaff19'
 PY = sys.executable
 
@@ -29,7 +30,9 @@ def main():
     text = SCRIPT.read_text(encoding='utf-8')
     assert 'eval(' not in text and 'exec(' not in text and 'subprocess' not in text and 'os.system' not in text
     assert subprocess.check_output(['git', 'hash-object', str(SCRIPT)], text=True).strip() == BLOB
-    assert BLOB != OLD_BLOB
+    assert BLOB != OLD_BLOB and BLOB != EARLIER_BLOB
+    raw = SCRIPT.read_bytes()
+    assert b'\r' not in raw and raw.decode('utf-8')
     assert hashlib.sha256(module.INDEX_BYTES).hexdigest() == INDEX_SHA
     assert len(module.INDEX_BYTES) == 945
     bad = bytearray(module.INDEX_BYTES)
@@ -111,13 +114,23 @@ def main():
         receipt = json.loads(child.stdout)
         assert receipt['sha256'] == INDEX_SHA and receipt['size'] == 945 and receipt['readback'] == 'SAME_HANDLE'
         assert receipt['executed_payload'] is False and receipt['pipeline_go'] is False
+        assert receipt['handoff'] == 'WIN.RUNNER.INDEX_HANDOFF.v3'
+        assert receipt['identity_from'] == 'CREATE_FD' and receipt['path_bound_after_close'] is False
+        assert type(receipt['object_id']['st_dev']) is int and type(receipt['object_id']['st_ino']) is int
+        again_fd = os.open(piped, os.O_RDONLY)
+        try:
+            st = os.fstat(again_fd)
+        finally:
+            os.close(again_fd)
+        assert receipt['object_id'] == {'st_dev': int(st.st_dev), 'st_ino': int(st.st_ino)}
         assert piped.read_bytes() == module.INDEX_BYTES
     print(json.dumps({'PASS': 1, 'FAIL': 0, 'windows': 'NOT_RUN', 'blob': BLOB, 'index_sha256': INDEX_SHA, 'executed_payload': False}))
     evidence = os.environ.get('WLR_EVIDENCE_DIR')
     if evidence:
         Path(evidence, 'deliver-index-linux.json').write_text(json.dumps({
             'PASS': 1, 'windows': 'NOT_RUN', 'blob': BLOB, 'index_sha256': INDEX_SHA,
-            'size': 945, 'readback': 'SAME_HANDLE', 'single_byte': 'E_PAYLOAD',
+            'size': 945, 'readback': 'SAME_HANDLE', 'handoff': 'WIN.RUNNER.INDEX_HANDOFF.v3',
+            'path_bound_after_close': False, 'single_byte': 'E_PAYLOAD',
             'dangling': 'E_EXISTS', 'existing': 'E_EXISTS', 'readback_failure_preserves_partial': True,
         }, indent=2) + '\n')
     return 0
