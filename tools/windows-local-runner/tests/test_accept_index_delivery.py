@@ -11,8 +11,9 @@ REPO = Path(__file__).resolve().parents[3]
 GATE = ROOT / 'accept_index_delivery.py'
 WRITER = ROOT / 'deliver_external_index.py'
 RUNTIME = '5f5be6c35bed7a674a91f19ee5c59fdbc8b281c3'
-OLD_COMMIT = '08dffd8bb87a4329e0f2608b87d4a6a2c9ca9d2a'
-OLD_BLOB = '7894bc5b84c769994a324d98a1faaf464b4b31a9'
+OLD_COMMIT = 'd33b0a41e126cd17c24edd0dd0df10cd302eabbd'
+OLD_BLOB = '9fa534201e61678698cdc29c8a30edbc00a0f0da'
+EARLIER_BLOB = '7894bc5b84c769994a324d98a1faaf464b4b31a9'
 INDEX_SHA = '0e5f07d4cfe5f554ecf92f83ce0e02941ba0ad625338ed4c9606daa80abaff19'
 PY = sys.executable
 
@@ -33,13 +34,23 @@ def main():
     text = GATE.read_text(encoding='utf-8')
     assert 'shell=True' not in text and 'eval(' not in text and 'exec(' not in text
     assert gate.WRITER_BLOB != OLD_BLOB and gate.OLD_WRITER_BLOB == OLD_BLOB
+    assert gate.WRITER_COMMIT == 'a9a55afdfc0b4383d997592ca19f8ab6265be9c3'
+    assert gate.GIT_TOOL_PATH == r'C:\Program Files\Git\cmd\git.exe'
+    assert gate.GIT_TOOL_SIZE == 46968
+    assert gate.GIT_TOOL_SHA256 == 'd90e36cafd656d52984f7546bfcb5b065d73e2e66957c952b7a4a1cd260e8f36'
+    assert gate.GIT_TOOL_FILE_VERSION == '2.46.1.windows.1'
+    assert gate.GIT_TOOL_EVIDENCE == 'MLOPS_SHELL_O211102_METADATA_ONLY'
+    assert gate.GIT_TOOL_PARENT_VERIFIED is False
+    assert gate.git_binary() == 'git'
     assert subprocess.check_output(['git', 'hash-object', str(WRITER)], text=True).strip() == gate.WRITER_BLOB
     old = subprocess.check_output(['git', '-C', str(REPO), 'cat-file', 'blob', OLD_BLOB])
-    try:
-        gate.classify_source(0, old)
-        raise SystemExit('old writer bytes were accepted')
-    except ValueError as exc:
-        assert str(exc) == 'E_WRITER_BYTES'
+    earlier = subprocess.check_output(['git', '-C', str(REPO), 'cat-file', 'blob', EARLIER_BLOB])
+    for rejected in (old, earlier):
+        try:
+            gate.classify_source(0, rejected)
+            raise SystemExit('old writer bytes were accepted')
+        except ValueError as exc:
+            assert str(exc) == 'E_WRITER_BYTES'
     try:
         gate.classify_source(128, b'')
         raise SystemExit('upstream 128 reached Python')
@@ -56,21 +67,37 @@ def main():
     except ValueError as exc:
         assert str(exc) == 'E_WRITER_BYTES'
     try:
-        gate.judge_delivery(None, 945, INDEX_SHA, '/tmp/index.json')
+        gate.judge_delivery(None, b'', {'st_dev': 1, 'st_ino': 2, 'st_ctime_ns': 3}, '/tmp/index.json')
         raise SystemExit('missing receipt accepted a matching file')
     except ValueError as exc:
         assert str(exc) == 'E_RECEIPT'
-    receipt = {'wrote': '/tmp/index.json', 'size': 945, 'sha256': INDEX_SHA, 'readback': 'SAME_HANDLE', 'executed_payload': False}
+    ident = {'st_dev': 1, 'st_ino': 2, 'st_ctime_ns': 3}
+    receipt = {
+        'wrote': '/tmp/index.json', 'size': 945, 'sha256': INDEX_SHA,
+        'readback': 'SAME_HANDLE', 'executed_payload': False,
+        'handoff': gate.HANDOFF, 'identity_from': 'CREATE_FD',
+        'path_bound_after_close': False, 'object_id': ident,
+    }
     try:
-        gate.judge_delivery(receipt, 945, '0' * 64, receipt['wrote'])
+        gate.judge_delivery(receipt, b'x' * 945, ident, receipt['wrote'])
         raise SystemExit('wrong index sha accepted')
     except ValueError as exc:
         assert str(exc) == 'E_INDEX_BYTES'
     try:
-        gate.judge_delivery(receipt, 944, INDEX_SHA, receipt['wrote'])
-        raise SystemExit('wrong length with the pinned digest string was accepted')
+        gate.judge_delivery(receipt, b'x' * 944, ident, receipt['wrote'])
+        raise SystemExit('wrong length was accepted')
     except ValueError as exc:
         assert str(exc) == 'E_INDEX_BYTES'
+    tool = Path(tempfile.mkdtemp(prefix='wlr-git-tool-')) / 'git.exe'
+    tool.write_bytes(b'not-the-reported-tool')
+    try:
+        gate.verify_git_tool(tool, gate.GIT_TOOL_SIZE, gate.GIT_TOOL_SHA256)
+        raise SystemExit('wrong git tool bytes were accepted')
+    except ValueError as exc:
+        assert str(exc) == 'E_GIT_TOOL'
+    exact = b'g' * 32
+    tool.write_bytes(exact)
+    assert gate.verify_git_tool(str(tool), len(exact), hashlib.sha256(exact).hexdigest()) == str(tool)
     pipe = subprocess.run(
         'git cat-file blob 0000000000000000000000000000000000000000 | python3 -B -',
         shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -96,6 +123,59 @@ def main():
         writer = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(writer)
         index_bytes = writer.INDEX_BYTES
+        fresh = tmp / 'fresh.json'
+        fresh_receipt = writer.deliver(fresh, fixture_linux=True)
+        fresh_bytes, fresh_id = gate.consume_index(fresh)
+        assert gate.judge_delivery(fresh_receipt, fresh_bytes, fresh_id, fresh) is True
+        fresh.unlink()
+        fresh.write_bytes(index_bytes)
+        replaced, replaced_id = gate.consume_index(fresh)
+        assert hashlib.sha256(replaced).hexdigest() == INDEX_SHA and replaced_id != fresh_receipt['object_id']
+        try:
+            gate.judge_delivery(fresh_receipt, replaced, replaced_id, fresh)
+            raise SystemExit('same-content replacement accepted')
+        except ValueError as exc:
+            assert str(exc) == 'E_INDEX_IDENTITY'
+        assert fresh.read_bytes() == index_bytes
+        fresh.unlink()
+        fresh.write_bytes(b'different')
+        other, other_id = gate.consume_index(fresh)
+        try:
+            gate.judge_delivery(fresh_receipt, other, other_id, fresh)
+            raise SystemExit('different-content replacement accepted')
+        except ValueError as exc:
+            assert str(exc) == 'E_INDEX_IDENTITY'
+        assert fresh.read_bytes() == b'different' and other != index_bytes
+        mutated = tmp / 'mutated.json'
+        mutated_receipt = writer.deliver(mutated, fixture_linux=True)
+        mutable = os.open(mutated, os.O_WRONLY)
+        try:
+            os.write(mutable, b'x' * 945)
+            os.fsync(mutable)
+        finally:
+            os.close(mutable)
+        changed, changed_id = gate.consume_index(mutated)
+        assert changed != mutated_receipt.get('sha256')
+        try:
+            gate.judge_delivery(mutated_receipt, changed, changed_id, mutated)
+            raise SystemExit('same inode with different bytes accepted')
+        except ValueError as exc:
+            if changed_id == mutated_receipt['object_id']:
+                assert str(exc) == 'E_INDEX_BYTES'
+            else:
+                assert str(exc) == 'E_INDEX_IDENTITY'
+        linked = tmp / 'linked.json'
+        writer.deliver(linked, fixture_linux=True)
+        linked.unlink()
+        elsewhere = tmp / 'elsewhere.json'
+        elsewhere.write_bytes(index_bytes)
+        linked.symlink_to(elsewhere)
+        try:
+            gate.consume_index(linked)
+            raise SystemExit('replaced symlink was followed')
+        except ValueError as exc:
+            assert str(exc) == 'E_INDEX_IDENTITY'
+        assert linked.is_symlink() and elsewhere.read_bytes() == index_bytes
         stale = dest
         stale.write_bytes(index_bytes)
         before = stale.read_bytes()
@@ -122,6 +202,10 @@ def main():
         assert result['installer_started'] is False and result['upstream_exit'] == 0 and result['writer_exit'] == 0
         assert result['index_size'] == 945 and result['index_sha256'] == INDEX_SHA
         assert result['writer_blob'] == gate.WRITER_BLOB and result['writer_commit'] == gate.WRITER_COMMIT
+        assert result['handoff'] == gate.HANDOFF and result['path_bound_after_close'] is False
+        assert result['acceptance_covers'] == 'CONSUMED_FD_ONLY' and result['identity_scope'] == 'ACCEPTANCE_FD'
+        assert result['git_tool_checked'] is False and result['git_tool_parent_verified'] is False
+        assert type(result['object_id']['st_dev']) is int and type(result['object_id']['st_ino']) is int
         assert dest.read_bytes() == index_bytes
         assert git(source, 'rev-parse', 'HEAD').stdout.decode().strip() == RUNTIME
     pipe_note = {'platform': 'Linux Bash', 'windows': 'NOT_RUN', 'pipe_exit': pipe.returncode, 'observed': 'PIPE 128 then Python 0 yields outer 0'}
@@ -137,5 +221,7 @@ if __name__ == '__main__':
     try:
         raise SystemExit(main())
     except Exception as exc:
+        import traceback
+        traceback.print_exc()
         print('FAIL', type(exc).__name__, exc, file=sys.stderr)
         raise SystemExit(1)

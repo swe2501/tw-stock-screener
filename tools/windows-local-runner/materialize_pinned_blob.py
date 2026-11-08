@@ -1,9 +1,9 @@
 import hashlib,json,os,stat,subprocess,sys
 R=r'C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_SOURCE_5f5be6c35bed'
 D=r'C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_ACCEPT_INDEX.py'
-B=GATE_BLOB='b1e55bfd7d5d46fc0591cc69c55e8904cfb60f6e'
-S=GATE_SIZE=7665
-H=GATE_SHA256='0ad70dad694bca145338ac99c3a071966690462bf8cd2435b3f2ee3e3c401232'
+B=GATE_BLOB='e471770f12220320453de621f629713c6ff3a5cd'
+S=GATE_SIZE=11034
+H=GATE_SHA256='27599100b8f138da1d3152bfff805891d29d0f576f2485c7e061e1d1e639c8e0'
 def classify_gate(code,data):
  if code!=0:raise ValueError('E_GIT_UPSTREAM')
  if not data:raise ValueError('E_GIT_EMPTY')
@@ -57,7 +57,7 @@ def main(argv=None):
    if os.path.normcase(os.path.abspath(dest))!=os.path.normcase(D):raise ValueError('E_DEST')
   elif not fx or repo is None or dest is None or index is None:raise ValueError('E_ARGUMENTS')
   materialize(repo,dest)
-  cmd=[sys.executable,'-B',os.path.abspath(dest),'--source',os.path.abspath(repo)]
+  cmd=[sys.executable,'-B','-I',os.path.abspath(dest),'--source',os.path.abspath(repo)]
   if fx:cmd+=['--fixture-linux','--dest',os.path.abspath(index)]
   os.execv(sys.executable,cmd)
  except SystemExit:raise

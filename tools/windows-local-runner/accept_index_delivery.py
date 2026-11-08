@@ -7,22 +7,62 @@ delivery. Windows has not been run.
 import hashlib, json, os, stat, subprocess, sys
 
 RUNTIME_COMMIT = '5f5be6c35bed7a674a91f19ee5c59fdbc8b281c3'
-OLD_WRITER_COMMIT = '08dffd8bb87a4329e0f2608b87d4a6a2c9ca9d2a'
-WRITER_COMMIT = 'd33b0a41e126cd17c24edd0dd0df10cd302eabbd'
-OLD_WRITER_BLOB = '7894bc5b84c769994a324d98a1faaf464b4b31a9'
-WRITER_BLOB = '9fa534201e61678698cdc29c8a30edbc00a0f0da'
-WRITER_SHA256 = '9323c406040352938f58dad45e6299dfaa19337eca1e422b1fd4e69394d8e293'
-WRITER_SIZE = 5089
+OLD_WRITER_COMMIT = 'd33b0a41e126cd17c24edd0dd0df10cd302eabbd'
+WRITER_COMMIT = 'a9a55afdfc0b4383d997592ca19f8ab6265be9c3'
+OLD_WRITER_BLOB = '9fa534201e61678698cdc29c8a30edbc00a0f0da'
+WRITER_BLOB = 'dee84c9eba4770d81b7962fae9c5c599e8d13ff7'
+WRITER_SHA256 = 'e807cd25e3fd0d3c868d776405bafab9fe87c36fe322d281b492a31b635a836a'
+WRITER_SIZE = 5686
 WRITER_PATH = 'tools/windows-local-runner/deliver_external_index.py'
 INDEX_SHA256 = '0e5f07d4cfe5f554ecf92f83ce0e02941ba0ad625338ed4c9606daa80abaff19'
 INDEX_SIZE = 945
+HANDOFF = 'WIN.RUNNER.INDEX_HANDOFF.v3'
 WINDOWS_DEST = 'C:\\Users\\User\\Desktop\\AI_RD_IMP\\WIN_RUNNER_RELEASE_5f5be6c35bed.json'
+# MLOps Shell on O211102, exit 0, Get-Command unique non-reparse. Metadata only.
+# Parent has not read that raw record. Not a signature check. Not a Git runtime test.
+GIT_TOOL_EVIDENCE = 'MLOPS_SHELL_O211102_METADATA_ONLY'
+GIT_TOOL_PARENT_VERIFIED = False
+GIT_TOOL_PATH = 'C:\\Program Files\\Git\\cmd\\git.exe'
+GIT_TOOL_SIZE = 46968
+GIT_TOOL_SHA256 = 'd90e36cafd656d52984f7546bfcb5b065d73e2e66957c952b7a4a1cd260e8f36'
+GIT_TOOL_FILE_VERSION = '2.46.1.windows.1'
+
+def verify_git_tool(path, size, digest):
+    """Hash the opened file. A reported path is not evidence that these bytes match."""
+    try:
+        info = os.lstat(path)
+    except OSError as exc:
+        raise ValueError('E_GIT_TOOL') from exc
+    if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode):
+        raise ValueError('E_GIT_TOOL')
+    flags = os.O_RDONLY
+    if hasattr(os, 'O_NOFOLLOW'):
+        flags |= os.O_NOFOLLOW
+    if hasattr(os, 'O_BINARY'):
+        flags |= os.O_BINARY
+    try:
+        fd = os.open(path, flags)
+    except OSError as exc:
+        raise ValueError('E_GIT_TOOL') from exc
+    try:
+        data = os.read(fd, size + 1)
+    finally:
+        os.close(fd)
+    if len(data) != size or hashlib.sha256(data).hexdigest() != digest:
+        raise ValueError('E_GIT_TOOL')
+    return path
+
+def git_binary():
+    """Windows uses the reported absolute file after a local byte check. Linux does not."""
+    if os.name == 'nt':
+        return verify_git_tool(GIT_TOOL_PATH, GIT_TOOL_SIZE, GIT_TOOL_SHA256)
+    return 'git'
 
 def _git(repo, args):
     if args[0] not in {'cat-file', 'rev-parse'}:
         raise ValueError('E_GIT_ARGV')
     proc = subprocess.run(
-        ['git', '--no-pager', '-C', repo, *args],
+        [git_binary(), '--no-pager', '-C', repo, *args],
         stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False, check=False,
     )
     return proc.returncode, proc.stdout, proc.stderr
@@ -41,20 +81,56 @@ def classify_source(exit_code, data):
         raise ValueError('E_WRITER_BLOB')
     return data
 
-def judge_delivery(receipt, file_size, file_sha, dest):
-    """Both the fresh receipt and the file must match. A stale file has no receipt."""
-    if not isinstance(receipt, dict):
+def _id_field(value):
+    if type(value) is not int:
+        raise ValueError('E_RECEIPT')
+    return value
+
+def judge_delivery(receipt, consumed, consumed_id, dest):
+    """Identity and bytes come from the fd that was read. The path is not bound after close."""
+    if not isinstance(receipt, dict) or not isinstance(consumed, (bytes, bytearray)):
         raise ValueError('E_RECEIPT')
     if receipt.get('readback') != 'SAME_HANDLE' or receipt.get('executed_payload') is not False:
+        raise ValueError('E_RECEIPT')
+    if receipt.get('handoff') != HANDOFF or receipt.get('identity_from') != 'CREATE_FD':
+        raise ValueError('E_RECEIPT')
+    if receipt.get('path_bound_after_close') is not False:
         raise ValueError('E_RECEIPT')
     if receipt.get('size') != INDEX_SIZE or receipt.get('sha256') != INDEX_SHA256:
         raise ValueError('E_RECEIPT')
     wrote = receipt.get('wrote')
     if type(wrote) is not str or os.path.normcase(os.path.abspath(wrote)) != os.path.normcase(os.path.abspath(dest)):
         raise ValueError('E_RECEIPT')
-    if type(file_size) is not int or file_size != INDEX_SIZE or file_sha != INDEX_SHA256:
+    claimed = receipt.get('object_id')
+    if not isinstance(claimed, dict) or not isinstance(consumed_id, dict):
+        raise ValueError('E_RECEIPT')
+    for key in ('st_dev', 'st_ino', 'st_ctime_ns'):
+        if _id_field(claimed.get(key)) != _id_field(consumed_id.get(key)):
+            raise ValueError('E_INDEX_IDENTITY')
+    if len(consumed) != INDEX_SIZE or hashlib.sha256(consumed).hexdigest() != INDEX_SHA256:
         raise ValueError('E_INDEX_BYTES')
     return True
+
+def consume_index(dest):
+    """One open. The bytes and the file identity are this descriptor, then it is closed."""
+    flags = os.O_RDONLY
+    if hasattr(os, 'O_NOFOLLOW'):
+        flags |= os.O_NOFOLLOW
+    if hasattr(os, 'O_BINARY'):
+        flags |= os.O_BINARY
+    try:
+        fd = os.open(dest, flags)
+    except OSError as exc:
+        raise ValueError('E_INDEX_IDENTITY') from exc
+    try:
+        info = os.fstat(fd)
+        if not stat.S_ISREG(info.st_mode):
+            raise ValueError('E_INDEX_IDENTITY')
+        data = os.read(fd, INDEX_SIZE + 1)
+        ident = {'st_dev': int(info.st_dev), 'st_ino': int(info.st_ino), 'st_ctime_ns': int(info.st_ctime_ns)}
+    finally:
+        os.close(fd)
+    return data, ident
 
 def _occupied(path):
     try:
@@ -108,7 +184,7 @@ def run(repo, dest, *, fixture_linux=False, state=None):
     code, data, _err = _git(repo, ['cat-file', 'blob', WRITER_BLOB])
     source = classify_source(code, data)
     state['python_starts'] += 1
-    argv = [sys.executable, '-B', '-']
+    argv = [sys.executable, '-B', '-I', '-']
     if fixture_linux:
         argv.extend(['--fixture-linux', '--dest', dest])
     proc = subprocess.run(argv, input=source, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False, check=False)
@@ -118,11 +194,8 @@ def run(repo, dest, *, fixture_linux=False, state=None):
         receipt = json.loads(proc.stdout.decode('utf-8'))
     except (UnicodeError, json.JSONDecodeError) as exc:
         raise ValueError('E_RECEIPT') from exc
-    try:
-        file_bytes = open(dest, 'rb').read()
-    except OSError as exc:
-        raise ValueError('E_INDEX_BYTES') from exc
-    judge_delivery(receipt, len(file_bytes), hashlib.sha256(file_bytes).hexdigest(), dest)
+    file_bytes, consumed_id = consume_index(dest)
+    judge_delivery(receipt, file_bytes, consumed_id, dest)
     return {
         'transfer_ok': True,
         'next_stage': True,
@@ -133,9 +206,19 @@ def run(repo, dest, *, fixture_linux=False, state=None):
         'writer_commit': writer_commit,
         'writer_blob': WRITER_BLOB,
         'old_writer_blob_rejected': OLD_WRITER_BLOB,
+        'handoff': HANDOFF,
+        'object_id': consumed_id,
+        'identity_scope': 'ACCEPTANCE_FD',
+        'acceptance_covers': 'CONSUMED_FD_ONLY',
+        'path_bound_after_close': False,
+        'index_bytes_from': 'CONSUMED_FD',
         'index_size': len(file_bytes),
         'index_sha256': hashlib.sha256(file_bytes).hexdigest(),
         'readback': receipt.get('readback'),
+        'git_tool_checked': os.name == 'nt',
+        'git_tool_evidence': GIT_TOOL_EVIDENCE,
+        'git_tool_parent_verified': GIT_TOOL_PARENT_VERIFIED,
+        'git_tool_file_version_reported': GIT_TOOL_FILE_VERSION,
         'pipeline_go': False,
         'windows': 'NOT_RUN' if os.name != 'nt' else 'LOCAL_GATE_NOT_AUDITOR_ACCEPTANCE',
     }

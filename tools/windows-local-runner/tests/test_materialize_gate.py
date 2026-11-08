@@ -75,7 +75,8 @@ def main():
         finally:
             os.execv = original_exec
         assert code == 3 and len(calls) == 1, (code, calls)
-        assert os.path.normcase(calls[0][2]) == os.path.normcase(os.path.abspath(dest)), (calls[0], dest)
+        assert calls[0][1:3] == ['-B', '-I']
+        assert os.path.normcase(calls[0][3]) == os.path.normcase(os.path.abspath(dest)), (calls[0], dest)
         assert dest.read_bytes() == gate_bytes, (len(dest.read_bytes()), len(gate_bytes))
         held = tmp / 'already.py'
         held.write_bytes(gate_bytes)
@@ -153,32 +154,42 @@ def main():
     except ValueError as exc:
         assert str(exc) == 'E_GIT_UPSTREAM', str(exc)
     assert not old_gate.exists() and git(old_repo, 'show-ref').stdout.strip() == b''
-    fetched, fetched_repo = fetch_only('new', '897362e7dd42ff477cb59ace5b04e81b001ea2da')
-    assert git(fetched_repo, 'cat-file', '-t', mod.GATE_BLOB).stdout.decode().strip() == 'blob'
-    assert git(fetched_repo, 'rev-parse', 'd33b0a41e126cd17c24edd0dd0df10cd302eabbd:tools/windows-local-runner/deliver_external_index.py').stdout.decode().strip() == '9fa534201e61678698cdc29c8a30edbc00a0f0da'
+    stale, stale_repo = fetch_only('stale', '897362e7dd42ff477cb59ace5b04e81b001ea2da')
+    assert git(stale_repo, 'cat-file', '-t', mod.GATE_BLOB).returncode != 0
+    assert git(stale_repo, 'rev-parse', 'd33b0a41e126cd17c24edd0dd0df10cd302eabbd:tools/windows-local-runner/deliver_external_index.py').stdout.decode().strip() == '9fa534201e61678698cdc29c8a30edbc00a0f0da'
+    stale_gate = stale / 'WIN_RUNNER_ACCEPT_INDEX.py'
+    try:
+        mod.materialize(stale_repo, stale_gate)
+        raise SystemExit('stale 897362 fetch materialized the new gate')
+    except ValueError as exc:
+        assert str(exc) == 'E_GIT_UPSTREAM', str(exc)
+    assert not stale_gate.exists()
+    fetched, fetched_repo = fetch_only('writer', 'a9a55afdfc0b4383d997592ca19f8ab6265be9c3')
+    assert git(fetched_repo, 'cat-file', '-t', mod.GATE_BLOB).returncode != 0
+    assert git(fetched_repo, 'rev-parse', 'a9a55afdfc0b4383d997592ca19f8ab6265be9c3:tools/windows-local-runner/deliver_external_index.py').stdout.decode().strip() == 'dee84c9eba4770d81b7962fae9c5c599e8d13ff7'
+    assert git(fetched_repo, 'hash-object', '-w', str(GATE)).stdout.decode().strip() == mod.GATE_BLOB
     assert git(fetched_repo, 'checkout', '--detach', RUNTIME).returncode == 0
     assert git(fetched_repo, 'show-ref').stdout.strip() == b''
-    ps1 = (ROOT / 'FIRST_ENTRY.ps1').read_text(encoding='ascii')
-    payload = ps1.split("@'\n", 1)[1].rsplit("\n'@\n", 1)[0] + '\n'
-    assert payload.encode('ascii') == ENTRY.read_bytes()
-    assert len(payload.encode('ascii')) == 3119
-    assert hashlib.sha256(payload.encode('ascii')).hexdigest() == '85b98822af10dc35d4dac582dd10a2771101205cf9172dcdada0154e13e3d039'
+    launch = (ROOT / 'FIRST_ENTRY.ps1').read_bytes()
+    assert b" -c " not in launch and b"@'" not in launch and len(launch) < 400
+    assert b'materialize_pinned_blob.py' in launch
     landed = fetched / 'WIN_RUNNER_ACCEPT_INDEX.py'
     index = fetched / 'WIN_RUNNER_RELEASE_5f5be6c35bed.json'
-    gated = subprocess.run([PY, '-B', '-c', payload, '--fixture-linux', '--repo', str(fetched_repo), '--dest', str(landed), '--index', str(index)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    gated = subprocess.run([PY, '-B', '-I', str(ENTRY), '--fixture-linux', '--repo', str(fetched_repo), '--dest', str(landed), '--index', str(index)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     assert gated.returncode == 0, gated.stderr.decode()
     assert landed.read_bytes() == gate_bytes
     receipt = json.loads(gated.stdout)
     assert receipt['transfer_ok'] is True and receipt['python_starts'] == 1 and receipt['index_size'] == 945
     assert receipt['index_sha256'] == '0e5f07d4cfe5f554ecf92f83ce0e02941ba0ad625338ed4c9606daa80abaff19'
-    assert receipt['writer_commit'] == 'd33b0a41e126cd17c24edd0dd0df10cd302eabbd'
+    assert receipt['writer_commit'] == 'a9a55afdfc0b4383d997592ca19f8ab6265be9c3'
+    assert receipt['path_bound_after_close'] is False and receipt['acceptance_covers'] == 'CONSUMED_FD_ONLY'
     assert git(fetched_repo, 'show-ref').stdout.strip() == b''
     inline_root = Path(tempfile.mkdtemp(prefix='wlr-inline-'))
     inline_repo = inline_root / 'repo'
     inline_repo.mkdir()
     subprocess.run(['git', 'init'], cwd=inline_repo, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     inline_dest = inline_root / 'absent.py'
-    inline = subprocess.run([PY, '-c', ENTRY.read_text(encoding='utf-8'), '--fixture-linux', '--repo', str(inline_repo), '--dest', str(inline_dest), '--index', str(inline_root / 'index.json')], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    inline = subprocess.run([PY, '-B', str(ENTRY), '--fixture-linux', '--repo', str(inline_repo), '--dest', str(inline_dest), '--index', str(inline_root / 'index.json')], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     assert inline.returncode == 3 and not inline_dest.exists() and b'E_GIT_UPSTREAM' in inline.stderr
     print(json.dumps({
         'PASS': 1, 'FAIL': 0, 'windows': 'NOT_RUN', 'powershell': 'NOT_RUN',
