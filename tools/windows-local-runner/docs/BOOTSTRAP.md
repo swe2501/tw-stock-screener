@@ -14,7 +14,7 @@ External index digest, SHA-256 of the index file itself, not of `source_pin.json
 0e5f07d4cfe5f554ecf92f83ce0e02941ba0ad625338ed4c9606daa80abaff19
 ```
 
-Size of that index file: 945 bytes. Matching `source_pin.json` to itself is not this digest. The file is created by git blob `7894bc5b84c769994a324d98a1faaf464b4b31a9`, which writes those bytes with an exclusive open and a same-handle read-back. It is not a copy instruction.
+Size of that index file: 945 bytes. Matching `source_pin.json` to itself is not this digest. The old writer blob `7894bc5b84c769994a324d98a1faaf464b4b31a9` at commit `08dffd8bb87a4329e0f2608b87d4a6a2c9ca9d2a` is not this repair. The repaired writer blob is `9fa534201e61678698cdc29c8a30edbc00a0f0da`. `accept_index_delivery.py` runs that blob only after Git's own exit, the byte pin, and a fresh receipt all pass.
 
 Paths. The parent must already be a real directory. These three names must not exist yet:
 

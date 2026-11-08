@@ -28,11 +28,9 @@ Do not use `C:\Users\User\Desktop\AI型態判斷` or `D:\StockAI`.
 
 Telling Aiden to place an already downloaded file is not a create. CopyFromBox does not guarantee no-clobber, and a preflight listing is not an atomic create. The index is created by `deliver_external_index.py`. Its payload is the 945 index bytes. The program writes those bytes with an exclusive open and reads them back on the same handle. It does not execute the JSON.
 
-Git blob of that program, which does not change when this document changes:
+The pipe in the withdrawn sequence is not an entry. On Linux Bash, a missing blob was `PIPE:128 0` and `BASH_LAST:0`, with stderr `bad file`, and no index. That measurement is not Windows PowerShell. Python exit 0 is not delivery.
 
-```text
-7894bc5b84c769994a324d98a1faaf464b4b31a9
-```
+The repaired writer blob is `9fa534201e61678698cdc29c8a30edbc00a0f0da` (5089 bytes, SHA-256 `9323c406040352938f58dad45e6299dfaa19337eca1e422b1fd4e69394d8e293`). Commit `08dffd8bb87a4329e0f2608b87d4a6a2c9ca9d2a` and blob `7894bc5b84c769994a324d98a1faaf464b4b31a9` are the previous writer, not this fix. Without `--dest` on Linux, the repaired writer exits 3 and prints JSON `E_DEST`, not a traceback.
 
 ## 1. Stop check, then clone
 
@@ -48,9 +46,13 @@ One stock Python check, using the interpreter already installed. It does not wri
 
 Git may create a missing parent. The check above must run first. Do not pass `--depth`. A shallow tip will not be this commit once the branch moves. If clone or checkout fails, stop. Do not delete a partial source and do not choose another directory.
 
+Fetch the writer commit named in the pull request before detaching runtime. A clone of only `5f5be6c` does not contain the repaired writer. Do not use `--depth`.
+
 ```text
-git clone --filter=blob:none --sparse --no-checkout https://github.com/swe2501/tw-stock-screener.git C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_SOURCE_5f5be6c35bed
-git -C C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_SOURCE_5f5be6c35bed sparse-checkout set --cone tools/windows-local-runner
+git clone --no-checkout --no-hardlinks https://github.com/swe2501/tw-stock-screener.git C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_SOURCE_5f5be6c35bed
+git -C C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_SOURCE_5f5be6c35bed fetch --no-tags origin cursor/windows-local-runner-7055
+git -C C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_SOURCE_5f5be6c35bed cat-file -t 9fa534201e61678698cdc29c8a30edbc00a0f0da
+git -C C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_SOURCE_5f5be6c35bed cat-file -e 5f5be6c35bed7a674a91f19ee5c59fdbc8b281c3^{commit}
 git -C C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_SOURCE_5f5be6c35bed checkout --detach 5f5be6c35bed7a674a91f19ee5c59fdbc8b281c3
 git -C C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_SOURCE_5f5be6c35bed rev-parse HEAD
 ```
@@ -70,18 +72,24 @@ git -C C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_SOURCE_5f5be6c35bed rev-parse 
 7d640de56b002fecee6a465e8a694a481bd0a917
 ```
 
-The worktree receives `tools/windows-local-runner` only. Do not copy the website tree out of Git and do not run it. Do not use `--depth`, or the deliver blob below will be absent.
-
-Confirm the deliver program blob, then create the index. HEAD stays on `5f5be6c`. The program is data-addressed by blob id, so it does not need to be checked out into the worktree.
+The worktree at `5f5be6c` does not contain the repaired writer. Do not pipe `cat-file` into Python. The withdrawn sequence is not an entry. Save the gate by redirection so Git's exit remains visible. If that exit is not 0, or the file is empty, stop and do not run Python. If the redirect path already exists, stop. Do not delete a partial file.
 
 ```text
-git -C C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_SOURCE_5f5be6c35bed cat-file -t 7894bc5b84c769994a324d98a1faaf464b4b31a9
-git -C C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_SOURCE_5f5be6c35bed cat-file blob 7894bc5b84c769994a324d98a1faaf464b4b31a9 | & 'C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe' -B -
+git -C C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_SOURCE_5f5be6c35bed cat-file -t 9fa534201e61678698cdc29c8a30edbc00a0f0da
+9fa534201e61678698cdc29c8a30edbc00a0f0da must already be a blob before the next line. The old blob 7894bc5b84c769994a324d98a1faaf464b4b31a9 is not accepted.
+git -C C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_SOURCE_5f5be6c35bed cat-file -t 101217474ceb24744010ccb90fb1aae459a6f6a5
+git -C C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_SOURCE_5f5be6c35bed cat-file blob 101217474ceb24744010ccb90fb1aae459a6f6a5 > C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_ACCEPT_INDEX.py
 ```
 
-`cat-file -t` must print `blob`. The Python process prints one JSON object. `size` must be 945, `sha256` must be `0e5f07d4cfe5f554ecf92f83ce0e02941ba0ad625338ed4c9606daa80abaff19`, and `readback` must be `SAME_HANDLE`. If the name already exists, including a dangling link, the exit is 3 and `E_EXISTS`; the existing entry is left as it was. If the write fails after the exclusive create, the partial file stays. Do not delete it and do not run the command again.
+Check Git's exit before Python. The gate file must be 7492 bytes and SHA-256 `8f8ea1f3244c13376b3b67a7c51e3a531bad7c3f09983af5fa16c8b14592fdcf`. Then:
 
-A Linux pipe of that blob created the 945-byte file and rejected an existing file, a dangling link, a one-byte payload change, and a failed read-back. Windows Python and this pipe were not run.
+```text
+& 'C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe' -B C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_ACCEPT_INDEX.py --source C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_SOURCE_5f5be6c35bed
+```
+
+Stdout must show `transfer_ok` true, `python_starts` 1, `upstream_exit` 0, `index_size` 945, and `index_sha256` `0e5f07d4cfe5f554ecf92f83ce0e02941ba0ad625338ed4c9606daa80abaff19`. Exit 3 stops the sequence. Do not install. An existing index, a dangling link, or an older correct file is `E_EXISTS`: it is left in place and is not this attempt. A missing blob does not start the writer.
+
+The archived pipe result `PIPE:128 0` and `BASH_LAST:0` is Linux Bash, not Windows PowerShell. The runtime outer-suite exit was not in the auditor export. R01 database bytes and the R02 snapshot were not exported. Those limits are not filled in here. Linux gate tests passed. Windows was not run.
 
 ## 3. Installer and one inert run
 

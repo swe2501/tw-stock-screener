@@ -8,7 +8,8 @@ if sys.platform != 'linux':
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / 'deliver_external_index.py'
-BLOB = '7894bc5b84c769994a324d98a1faaf464b4b31a9'
+BLOB = '9fa534201e61678698cdc29c8a30edbc00a0f0da'
+OLD_BLOB = '7894bc5b84c769994a324d98a1faaf464b4b31a9'
 INDEX_SHA = '0e5f07d4cfe5f554ecf92f83ce0e02941ba0ad625338ed4c9606daa80abaff19'
 PY = sys.executable
 
@@ -22,9 +23,13 @@ def load():
 
 def main():
     module = load()
+    bare = subprocess.run([PY, '-B', str(SCRIPT)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    assert bare.returncode == 3 and b'Traceback' not in bare.stderr
+    assert json.loads(bare.stderr)['error'] == 'E_DEST'
     text = SCRIPT.read_text(encoding='utf-8')
     assert 'eval(' not in text and 'exec(' not in text and 'subprocess' not in text and 'os.system' not in text
     assert subprocess.check_output(['git', 'hash-object', str(SCRIPT)], text=True).strip() == BLOB
+    assert BLOB != OLD_BLOB
     assert hashlib.sha256(module.INDEX_BYTES).hexdigest() == INDEX_SHA
     assert len(module.INDEX_BYTES) == 945
     bad = bytearray(module.INDEX_BYTES)

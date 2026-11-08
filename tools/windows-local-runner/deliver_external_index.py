@@ -114,25 +114,25 @@ def deliver(dest, *, fixture_linux=False):
     }
 
 def main(argv=None):
-    args = list(sys.argv[1:] if argv is None else argv)
-    fixture = False
-    dest = None
-    i = 0
-    while i < len(args):
-        item = args[i]
-        if item == '--fixture-linux':
-            fixture = True
-        elif item == '--dest' and i + 1 < len(args):
-            i += 1
-            dest = args[i]
-        else:
-            raise ValueError('E_ARGUMENTS')
-        i += 1
-    if os.name == 'nt':
-        dest = WINDOWS_DEST if dest is None else dest
-    elif dest is None:
-        raise ValueError('E_DEST')
     try:
+        args = list(sys.argv[1:] if argv is None else argv)
+        fixture = False
+        dest = None
+        i = 0
+        while i < len(args):
+            item = args[i]
+            if item == '--fixture-linux':
+                fixture = True
+            elif item == '--dest' and i + 1 < len(args):
+                i += 1
+                dest = args[i]
+            else:
+                raise ValueError('E_ARGUMENTS')
+            i += 1
+        if os.name == 'nt':
+            dest = WINDOWS_DEST if dest is None else dest
+        elif dest is None:
+            raise ValueError('E_DEST')
         print(json.dumps(deliver(dest, fixture_linux=fixture), ensure_ascii=True), flush=True)
         return 0
     except Exception as exc:
