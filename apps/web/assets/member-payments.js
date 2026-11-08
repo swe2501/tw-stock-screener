@@ -22,6 +22,39 @@
   };
   const storeBrand = store => storeBrands[store] || `<span class="mp-store-brand">${esc(store)}</span>`;
 
+  // ── 2026-11-08 LINE Pay 串接（後端 lib/payments.py）：後端有設 LINE Pay 金鑰才啟用，否則維持原本預覽 ──
+  // 金額、方案都由伺服器決定；網頁只送方案代碼。從 LINE Pay 導回後由後端「確認付款」才算付款完成。
+  const PAY_API = (window.__API || '') + '/api/auth';
+  const payToken = () => { try { return localStorage.getItem('sb_token') || ''; } catch (_) { return ''; } };
+  async function payCall(action, extra) {
+    const token = payToken();
+    const response = await fetch(PAY_API, {
+      method: 'POST',
+      headers: Object.assign({ 'Content-Type': 'application/json' }, token ? { Authorization: 'Bearer ' + token } : {}),
+      body: JSON.stringify(Object.assign({ action }, extra || {}))
+    });
+    let data = {};
+    try { data = await response.json(); } catch (_) {}
+    if (!response.ok) { const error = Error(data.error || '連線失敗，請稍後再試'); error.status = response.status; error.code = data.code; throw error; }
+    return data;
+  }
+  const payState = { token: null, plans: [], env: '', selected: '' };
+  async function loadPlans() {
+    const token = payToken();
+    if (payState.token === token) return payState;
+    payState.token = token; payState.plans = []; payState.env = '';
+    if (!token) return payState;
+    try {
+      const data = await payCall('pay_plans');
+      payState.plans = Array.isArray(data.plans) ? data.plans : [];
+      payState.env = data.env || '';
+      if (!payState.plans.some(plan => plan.plan_code === payState.selected)) payState.selected = payState.plans[0]?.plan_code || '';
+    } catch (_) { payState.plans = []; }
+    return payState;
+  }
+  const money = value => 'NT$ ' + Number(value || 0).toLocaleString('zh-TW');
+  const isMobile = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+
   function detectCardNetwork(number) {
     const digits = String(number || '').replace(/\D/g, '');
     if (/^4/.test(digits)) return 'VISA';
@@ -324,7 +357,7 @@
           <aside class="mp-summary">
             <div class="mp-column-label"><small>MEMBERSHIP SUMMARY</small><strong>帳務摘要</strong></div>
             <div class="mp-plan-emblem"><span>FQ</span><div><small>目前會員狀態</small><b>${esc(plan)}</b></div></div>
-            <dl><div><dt>付款方式</dt><dd data-summary-method>${data.short}</dd></div><div><dt>本次金額</dt><dd>付款前確認</dd></div><div><dt>扣款狀態</dt><dd>${data.summary}</dd></div></dl>
+            <dl><div><dt>付款方式</dt><dd data-summary-method>${data.short}</dd></div><div><dt>本次金額</dt><dd data-summary-amount>付款前確認</dd></div><div><dt>扣款狀態</dt><dd data-summary-status>${data.summary}</dd></div></dl>
             <div class="mp-summary-note"><b>清楚確認，再進行付款</b><p>尚未完成金流串接前不會建立訂單，也不會要求你輸入真實卡號。</p></div>
             <button type="button" class="mp-history" disabled>付款紀錄<span>尚無紀錄</span></button>
           </aside>
@@ -344,9 +377,17 @@
 
     host.querySelector('[data-success-back]')?.addEventListener('click', () => hideCardSuccess(host));
 
+    if (method === 'line') mountLinePay(host);
+    host.querySelector('.mp-history')?.addEventListener('click', () => showHistory(host));
+    if (payToken()) loadPlans().then(state => {
+      const history = host.querySelector('.mp-history');
+      if (history && state.plans.length) { history.disabled = false; history.querySelector('span').textContent = '查看'; }
+    });
+
     host.querySelector('[data-payment-action]').addEventListener('click', event => {
       const actionButton = event.currentTarget;
       const status = host.querySelector('.mp-action-status');
+      if (method === 'line' && host.dataset.lineLive === '1') { startLinePay(host, actionButton, status); return; }
       const label = actionButton.querySelector('span');
       const originalLabel = label.textContent;
       status.classList.remove('is-error');
@@ -381,6 +422,131 @@
       }, method === 'card' ? 1900 : 920);
     });
   }
+
+  const TIER_NAMES = { observation: '市場觀察員', research: '研究員', advanced: '進階', vip: 'VIP' };
+  const ORDER_STATUS = { pending: '待付款', paid: '已付款', failed: '未完成', refunded: '已退款' };
+
+  async function mountLinePay(host) {
+    const state = await loadPlans();
+    const page = host.querySelector('[data-payment-method="line"]');
+    if (!page || !page.isConnected || !state.plans.length) return;      // 後端未開放 → 保留原本預覽
+    host.dataset.lineLive = '1';
+    const sandbox = state.env === 'sandbox';
+    const body = page.querySelector('.mp-method-body');
+    const pick = document.createElement('fieldset');
+    pick.className = 'mp-plan-pick';
+    pick.innerHTML = `<legend>選擇方案${sandbox ? '<em>測試環境</em>' : ''}</legend>` + state.plans.map(plan => `<label>
+        <input type="radio" name="mp-plan" value="${esc(plan.plan_code)}" ${plan.plan_code === state.selected ? 'checked' : ''}>
+        <span><b>${esc(plan.label)}</b><small>${esc(TIER_NAMES[plan.tier] || plan.tier)} · ${Number(plan.days)} 天</small></span><strong>${money(plan.price_twd)}</strong>
+      </label>`).join('');
+    body.prepend(pick);
+    const copy = body.querySelector('.mp-line-copy p');
+    if (copy) copy.textContent = '電腦會在 LINE Pay 付款頁顯示 QR Code，用手機 LINE 掃描；手機會直接開啟 LINE App。付款確認都在 LINE Pay 安全畫面完成，先見不會取得你的付款資料。';
+    body.querySelector('.mp-qr-life')?.remove();
+    const steps = body.querySelector('.mp-steps');
+    if (steps) steps.innerHTML = '<li><b>1</b><span>選擇方案</span></li><li><b>2</b><span>前往 LINE Pay</span></li><li><b>3</b><span>確認付款後開通</span></li>';
+    const note = body.querySelector('.mp-demo-note');
+    if (note) note.textContent = sandbox ? '測試環境：使用 LINE Pay 測試帳號付款，不會真的扣款；開通紀錄僅供驗證流程。' : '按下按鈕前往 LINE Pay 付款頁，在 LINE Pay 確認後才會扣款。';
+    const label = page.querySelector('[data-payment-action] span');
+    if (label) label.textContent = '前往 LINE Pay 付款';
+    const sync = () => {
+      const plan = state.plans.find(item => item.plan_code === state.selected);
+      const amount = host.querySelector('[data-summary-amount]');
+      if (amount) amount.textContent = plan ? money(plan.price_twd) : '付款前確認';
+      const status = host.querySelector('[data-summary-status]');
+      if (status) status.textContent = 'LINE Pay 確認後扣款';
+    };
+    pick.addEventListener('change', event => { if (event.target.name === 'mp-plan') { state.selected = event.target.value; sync(); } });
+    sync();
+  }
+
+  async function startLinePay(host, button, status) {
+    const plan = payState.plans.find(item => item.plan_code === payState.selected);
+    status.classList.remove('is-error');
+    if (!plan) { status.textContent = '請先選擇方案。'; status.classList.add('is-error'); return; }
+    button.disabled = true;
+    button.classList.add('is-busy');
+    status.textContent = '建立訂單，準備前往 LINE Pay…';
+    try {
+      const data = await payCall('pay_linepay_request', { plan_code: plan.plan_code, return_origin: location.origin });
+      try { sessionStorage.setItem('foresight.payment.pending', data.order_key); } catch (_) {}
+      status.textContent = '正在前往 LINE Pay（' + money(data.amount) + '）…';
+      location.assign(isMobile() && data.app_url ? data.app_url : data.payment_url);
+    } catch (error) {
+      button.disabled = false;
+      button.classList.remove('is-busy');
+      status.textContent = error.status === 401 ? '請先登入會員再付款。' : error.message;
+      status.classList.add('is-error');
+      if (error.status === 401) window.openAuthModal?.('login');
+    }
+  }
+
+  async function showHistory(host) {
+    const status = host.querySelector('.mp-action-status');
+    let box = host.querySelector('.mp-history-list');
+    if (box) { box.remove(); return; }
+    box = document.createElement('div');
+    box.className = 'mp-history-list';
+    box.textContent = '讀取付款紀錄…';
+    host.querySelector('.mp-history')?.after(box);
+    try {
+      const data = await payCall('pay_history');
+      const periods = (data.periods || []).map(item => `<li><b>${esc(TIER_NAMES[item.tier] || item.tier)}</b><span>${esc(String(item.starts_at).slice(0, 10))} ～ ${esc(String(item.expires_at).slice(0, 10))}</span></li>`).join('');
+      const orders = (data.orders || []).map(item => `<li><b>${esc(ORDER_STATUS[item.status] || item.status)}</b><span>${money(item.paid_amount ?? item.expected_amount)} · ${esc(String(item.created_at).slice(0, 16).replace('T', ' '))}${item.provider_env === 'sandbox' ? ' · 測試' : ''}</span></li>`).join('');
+      box.innerHTML = `<h4>已付款期間</h4>${periods ? `<ul>${periods}</ul>` : '<p>目前沒有有效的付款期間。</p>'}<h4>訂單</h4>${orders ? `<ul>${orders}</ul>` : '<p>尚無付款紀錄。</p>'}`;
+    } catch (error) {
+      box.remove();
+      if (status) { status.textContent = error.message; status.classList.add('is-error'); }
+    }
+  }
+
+  // 從 LINE Pay 導回（?lp=confirm|cancel&transactionId=…&orderId=…）：先把網址參數拿掉，再請後端確認付款
+  function handleLinePayReturn() {
+    const query = new URLSearchParams(location.search);
+    const mode = query.get('lp');
+    if (mode !== 'confirm' && mode !== 'cancel') return;
+    const orderKey = query.get('orderId') || '';
+    const transactionId = query.get('transactionId') || '';          // 19 位數，維持字串
+    ['lp', 'orderId', 'transactionId'].forEach(key => query.delete(key));
+    try { history.replaceState(null, '', location.pathname + (query.toString() ? '?' + query : '') + location.hash); } catch (_) {}
+    // 2026-11-09 不用原生 <dialog>：全站 * { margin:0 } 讓它跑到左上角，且 navigation-layers.js 在首次頁面切換時
+    // 會關掉所有 dialog[open]（結果視窗一閃就不見）。改用自己的置中遮罩，只有按「確定」才關閉。
+    const overlay = document.createElement('div');
+    overlay.className = 'mp-return-overlay';
+    overlay.innerHTML = '<div class="mp-return-dialog" role="dialog" aria-modal="true" aria-labelledby="mpReturnTitle" aria-describedby="mpReturnText">'
+      + '<span class="mc-kicker">FORESIGHT · LINE PAY</span><h3 id="mpReturnTitle">確認付款中…</h3><p id="mpReturnText">請稍候，正在向 LINE Pay 確認這筆交易。</p>'
+      + '<button type="button" disabled>請稍候</button></div>';
+    const dialog = overlay.firstElementChild;
+    const show = (title, text, ok) => {
+      dialog.querySelector('h3').textContent = title;
+      dialog.querySelector('p').textContent = text;
+      dialog.classList.toggle('is-ok', !!ok);
+      const button = dialog.querySelector('button');
+      button.disabled = false;
+      button.textContent = '確定';
+      button.onclick = () => { overlay.remove(); window.openMemberCenter?.('billing'); };
+      try { button.focus({ preventScroll: true }); } catch (_) {}
+    };
+    const run = async () => {
+      document.body.append(overlay);
+      for (let i = 0; i < 30 && !payToken(); i++) await new Promise(resolve => setTimeout(resolve, 500));
+      if (!payToken()) { show('請先登入', '請登入原本付款的會員帳號，再到「方案與帳務」查看付款紀錄。', false); return; }
+      try {
+        if (mode === 'cancel') {
+          await payCall('pay_linepay_cancel', { order_key: orderKey });
+          show('已取消付款', '這筆訂單沒有扣款，可以重新選擇方案。', false);
+        } else {
+          const result = await payCall('pay_linepay_confirm', { order_key: orderKey, transaction_id: transactionId });
+          show('付款完成', `${result.label}（${money(result.amount)}）已開通 ${result.days} 天${result.env === 'sandbox' ? '。這是測試環境，沒有真的扣款。' : '。'}`, true);
+        }
+        try { sessionStorage.removeItem('foresight.payment.pending'); } catch (_) {}
+      } catch (error) {
+        show(mode === 'cancel' ? '取消處理失敗' : '付款尚未完成', error.message, false);
+      }
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run, { once: true }); else run();
+  }
+  handleLinePayReturn();
 
   function render(current, context) {
     if (current !== 'billing') return false;

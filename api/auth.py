@@ -1,4 +1,4 @@
-# rebuild-marker: load OFFICE_AGENT_TOKEN_QA on Preview(uat)
+# rebuild-marker: load OFFICE_AGENT_TOKEN_QA on Preview(uat); 2026-11-09 load LINEPAY_* on Preview(uat)
 from http.server import BaseHTTPRequestHandler
 import hashlib, hmac, json, os, time, urllib.request, urllib.parse, urllib.error
 
@@ -132,6 +132,20 @@ def _verify_admin(token):
             u = json.loads(r.read())
         em = (u.get("email") or "").strip().lower()
         return em if u.get("id") in ADMIN_IDS else None
+    except Exception:
+        return None
+
+
+def _token_user(token):
+    """會員 JWT → Supabase 使用者（id/email/phone/驗證時間）；無效回 None。"""
+    if not token:
+        return None
+    try:
+        req = urllib.request.Request(f"{SUPABASE_URL}/auth/v1/user",
+                                     headers={"apikey": SUPABASE_ANON_KEY, "Authorization": f"Bearer {token}"})
+        with urllib.request.urlopen(req, timeout=10) as r:
+            u = json.loads(r.read())
+        return u if isinstance(u, dict) and u.get("id") else None
     except Exception:
         return None
 
@@ -364,6 +378,14 @@ class handler(BaseHTTPRequestHandler):
             return self._json(400, {"error": "invalid request"})
         action = body.get("action", "")
 
+        if action == "official_announcements":
+            auth = self.headers.get("Authorization", "")
+            token = auth[7:].strip() if auth.startswith("Bearer ") else ""
+            if not _token_user(token):
+                return self._json(401, {"error": "請先登入後查看官方公告"})
+            from lib.official_announcements import read
+            return self._json(*read(body, _rest))
+
         if action == "phone_policy":
             from lib.member_phone import required
             return self._json(200, {"required": required(), "version": 1})
@@ -416,6 +438,19 @@ class handler(BaseHTTPRequestHandler):
         if action == "office_worker":
             return self._json(*_office_dispatch(body, self.headers, raw))
 
+        # ── 線下論壇簽到／補發代碼／站內廣告（lib/forum_ads.py；只用 admin_settings＋member_point_ledger）──
+        if action in ("forum_events", "forum_pass", "forum_checkin", "forum_redeem", "site_ads", "ad_click"):
+            from lib.forum_ads import handle_public
+            token = (self.headers.get("Authorization") or "").replace("Bearer ", "").strip()
+            user = _token_user(token) if action in ("forum_events", "forum_checkin", "forum_redeem", "site_ads") else None
+            return self._json(*handle_public(action, body, user, _rest))
+
+        # ── 會員方案付款（lib/payments.py＋lib/linepay.py）：會員 JWT 驗證；沒設 LINE Pay 金鑰的環境一律回「尚未開放」 ──
+        if action in ("pay_plans", "pay_linepay_request", "pay_linepay_confirm", "pay_linepay_cancel", "pay_history"):
+            from lib.payments import handle as pay_handle
+            token = (self.headers.get("Authorization") or "").replace("Bearer ", "").strip()
+            return self._json(*pay_handle(action, body, _token_user(token), _rest))
+
         # ── 後台管理（action: admin_*）：JWT→email∈白名單 才放行；service_role 只在後端 ──
         if action.startswith("admin_"):
             token = (self.headers.get("Authorization") or "").replace("Bearer ", "").strip()
@@ -426,6 +461,19 @@ class handler(BaseHTTPRequestHandler):
             if action in ("admin_office_tasks_list", "admin_office_tasks_get", "admin_office_tasks_create", "admin_office_tasks_update"):
                 from lib.office_tasks import handle
                 status, result = handle(action, body, admin_email, _rest)
+                return self._json(status, result)
+
+            if action.startswith(("admin_forum_", "admin_ads_", "admin_points_", "admin_products_", "admin_tasks_")):
+                from lib.forum_ads import handle_admin
+                def _users():
+                    st_u, data_u = _admin_api("/admin/users?per_page=1000")
+                    return data_u.get("users", []) if st_u == 200 and isinstance(data_u, dict) else []
+                status, result = handle_admin(action, body, admin_email, _rest, _users)
+                if status == 200 and action in ("admin_forum_save", "admin_forum_delete", "admin_forum_codes", "admin_ads_save", "admin_ads_delete", "admin_points_adjust", "admin_products_save", "admin_tasks_save", "admin_tasks_delete", "admin_tasks_award", "admin_forum_voucher_save"):
+                    det = {k: body.get(k) for k in ("id", "count", "points", "reason", "title", "active", "task_id", "reference", "enabled", "definition", "days") if body.get(k) is not None}
+                    if action == "admin_forum_save": det["event"] = (result.get("event") or {}).get("id")
+                    if action == "admin_ads_save": det["ad"] = (result.get("ad") or {}).get("id")
+                    _audit(admin_email, action, body.get("user_id") if action in ("admin_points_adjust", "admin_tasks_award") else None, det)
                 return self._json(status, result)
 
             if action in ("admin_pattern_reviews", "admin_pattern_review_save"):

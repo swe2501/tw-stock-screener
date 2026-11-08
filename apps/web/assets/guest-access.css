@@ -1,0 +1,5 @@
+.guest-access-note{display:none;margin:8px 0 0;color:var(--text-muted);font-size:12px;line-height:1.7;flex-wrap:wrap;align-items:center;gap:8px}
+.is-guest .guest-access-note{display:flex}
+.guest-access-note button{border:0;background:transparent;padding:3px 2px;color:var(--accent);font:inherit;cursor:pointer}
+.guest-access-note button:hover{filter:brightness(1.1);text-shadow:0 0 12px color-mix(in srgb,var(--accent) 25%,transparent)}
+.is-guest [data-guest-locked]{cursor:pointer!important}

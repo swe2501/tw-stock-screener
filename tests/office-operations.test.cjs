@@ -1,0 +1,11 @@
+const assert=require('assert/strict'),{rules,compare,render}=require('../apps/web/assets/ai-office/office-operations.js');
+assert.equal(rules.length,32);assert.equal(rules.filter(r=>r.enabled).length,31);assert.equal(rules[16].mode,'disabled');
+rules.forEach((r,id)=>{assert.equal(r.id,id);assert.ok(r.daily&&r.businessKpi&&r.deliverable);if(r.enabled){assert.ok(r.next>=0&&r.next<32);assert.notEqual(r.next,16);}});
+const now=Date.parse('2026-11-06T01:30:00Z'),at=days=>new Date(now-days*86400000).toISOString();
+const t=(days,department=7,extra={})=>({department,status:'approved',due_date:'2026-11-06',history:[{status:'approved',at:at(days)}],...extra});
+let m=compare([t(1),t(2),t(8),t(3,24),t(1,7,{status:'review'}),t(1,7,{history:[]}),{department:7,status:'blocked'}],7,now);
+assert.equal(m.current.approved,2);assert.equal(m.previous.approved,1);assert.equal(m.delta,1);assert.equal(m.blocked,1);assert.equal(m.current.ontimeSample,2);
+m=compare([t(1,7,{due_date:''})],7,now);assert.equal(m.current.ontime,null);assert.equal(m.ontimeDelta,null);
+assert.equal(compare([t(7),t(14)],7,now).previous.approved,1);assert.equal(compare([t(7),t(14)],7,now).current.approved,1);
+assert.match(render(7,[],{}),/尚未取得/);assert.match(render(7,[],{at:at(0),error:'讀取失敗'}),/尚未取得/);assert.match(render(16,[],{}),/維持預留停用/);assert.match(render(7,[],{at:at(0),limited:true}),/數據可能不完整/);assert.ok(!render(7,[],{departmentNames:{24:'<script>bad</script>'}}).includes('<script>'));
+console.log('PASS 32 departments, logistics disabled, period boundaries, evidence-only KPIs and no data handling');

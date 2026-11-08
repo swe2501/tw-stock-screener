@@ -1,0 +1,9 @@
+.member-page .mpoints-rules{font-size:13px;line-height:1.85;color:var(--text-muted);min-width:0}
+.member-page .mpoints-rules ol{padding-left:22px;margin:14px 0;display:grid;gap:10px}
+.member-page .mpoints-rules li{padding-left:3px;overflow-wrap:anywhere}
+.member-page .mpoints-rules strong{color:var(--text);font-weight:650}
+.member-page .mpoints-policy-state{border-top:1px solid var(--border);padding-top:12px;font-size:12px}
+.member-page .mpoints-expiry-notice{padding:10px 14px;border:1px solid color-mix(in srgb,var(--accent) 24%,var(--border));border-radius:12px;background:color-mix(in srgb,var(--accent) 6%,var(--surface));color:var(--text);font-variant-numeric:tabular-nums}
+.member-page .mpoints-expiry-notice[data-urgent=true]{border-color:#b8894555}
+.member-page .mpoints-rule-entry{margin:14px 0;font-size:14px;line-height:1.6}
+.member-page .mpoints-rule-entry summary{cursor:pointer;color:var(--accent);padding:6px 0;font-weight:600}

@@ -2252,8 +2252,8 @@
     #greedGauge .pro-greed-copy span:first-child { font-size:24px !important; }
   }
 </style>
-<link rel="stylesheet" href="assets/member-center.css?v=20261103-natural-start-v3">
-<link rel="stylesheet" href="assets/member-payments.css?v=26">
+<link rel="stylesheet" href="assets/member-center.css?v=20261107-flow-v4">
+<link rel="stylesheet" href="assets/member-payments.css?v=28-linepay">
 <link rel="stylesheet" href="assets/member-wallet.css?v=ai2">
 <link rel="stylesheet" href="assets/futures-summary.css?v=history1">
 <link rel="stylesheet" href="assets/sector-dashboard.css">
@@ -2263,6 +2263,8 @@
 <link rel="stylesheet" href="assets/member-strategy.css?v=owl2">
 <link rel="stylesheet" href="assets/member-trade.css">
 <link rel="stylesheet" href="assets/site-search.css?v=arrow1">
+<link rel="stylesheet" href="assets/guest-access.css?v=1">
+<script src="assets/guest-access.js?v=3"></script>
 </head>
 <body>
   <style>
@@ -4494,6 +4496,9 @@
     <div class="ov-tabs" id="admTabs" style="margin-bottom:14px">
       <button class="on" type="button" data-t="members">會員管理</button>
       <button type="button" data-t="algo">算法公式</button>
+      <button type="button" data-t="forum">論壇活動</button>
+      <button type="button" data-t="ads">站內廣告</button>
+      <button type="button" data-t="points">點數與商品</button>
       <button type="button" data-t="office">AI 研究室</button>
       <button type="button" data-t="audit">稽核日誌</button>
       <button type="button" data-t="health" disabled title="Phase 2：排程/資料新鮮度">系統健康</button>
@@ -4629,6 +4634,9 @@
       _tab=t;
       el('admTabs').querySelectorAll('button').forEach(function(b){b.classList.toggle('on',b.dataset.t===t);});
       if(window.AdminOffice) window.AdminOffice.hide();                 // 離開 AI 研究室就停止動畫與輪詢
+      if(window.AdminForumAds) window.AdminForumAds.hide();
+      el('admNote').innerHTML='';
+      if(t==='forum'||t==='ads'||t==='points'){ if(window.AdminForumAds) window.AdminForumAds.show(t,el('admBody'),el('admNote'),post); else el('admBody').innerHTML='<div class="fc-empty">載入中，請稍候再點一次</div>'; return; }
       if(t==='members')loadMembers();
       else if(t==='algo')renderAlgo();
       else if(t==='office'){ if(window.AdminOffice){ window.AdminOffice.show(el('admBody'),post); el('admNote').innerHTML='<b>說明</b> 任務中心可建立部門任務、追蹤交付與驗收；排程看板每分鐘更新既有工作狀態。AI 任務需本機執行端在線。'; } else el('admBody').innerHTML='<div class="fc-empty">AI 研究室載入中，請稍候再點一次</div>'; }
@@ -5087,7 +5095,7 @@
     window._fhPageBg=function(on){ if(!on){ document.body.classList.remove('pf-page-dark','pf-page-light'); } else applyTheme(); };
 
     function applyGate(){
-      var owner = !!window._isOwner || !!window.AcademyShareUnlock?.hasAccess('fhedge');
+      var owner = window.AcademyGuestAccess?AcademyGuestAccess.canReadResearch('fhedge'):(!!window._isOwner || !!window.AcademyShareUnlock?.hasAccess('fhedge'));
       if(el('fhLock')) el('fhLock').style.display = owner? 'none':'';
       if(el('fhBody')) el('fhBody').style.display = owner? '':'none';
       return owner;
@@ -5512,7 +5520,7 @@
     }
 
     window._fhedgeShow=function(){
-      applyGate(); applyTheme();
+      if(!applyGate())return; applyTheme();
       if(loaded){ if(applyGate()) render(); return; }
       var SB=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'', AK=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';
       var H={apikey:AK,Authorization:'Bearer '+AK}; SBx=SB; Hx=H;
@@ -5742,7 +5750,7 @@
     function _cssv(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
     function pct(a,p){ a=a.slice().sort(function(x,y){return x-y;}); var i=(a.length-1)*p/100,lo=Math.floor(i); return lo+1>=a.length?a[lo]:a[lo]+(a[lo+1]-a[lo])*(i-lo); }
 
-    function applyGate(){ var o=!!window._isOwner || !!window.AcademyShareUnlock?.hasAccess('breadth'); if(el('bdLock'))el('bdLock').style.display=o?'none':''; if(el('bdBody'))el('bdBody').style.display=o?'':'none'; return o; }
+    function applyGate(){ var o=window.AcademyGuestAccess?AcademyGuestAccess.canReadResearch('breadth'):(!!window._isOwner || !!window.AcademyShareUnlock?.hasAccess('breadth')); if(el('bdLock'))el('bdLock').style.display=o?'none':''; if(el('bdBody'))el('bdBody').style.display=o?'':'none'; return o; }
     window._breadthApplyGate=applyGate;
 
     // 手冊§6 情緒門檻（滲透率 %）
@@ -5909,7 +5917,7 @@
         +'<div class="bd-quad">'+_bdCard(2)+_bdCard(3)+'</div>';
     }
     window._breadthShow=function(){
-      applyGate();
+      if(!applyGate())return;
       if(applyGate()&&window._bxShow) setTimeout(window._bxShow,0);
       if(loaded){ if(applyGate()) render(); return; }
       var SB=(typeof SIG_SB_URL!=='undefined')?SIG_SB_URL:'', AK=(typeof SIG_SB_ANON!=='undefined')?SIG_SB_ANON:'';
@@ -8402,8 +8410,9 @@
         var on=!!label && t.indexOf(label.replace(/\s/g,''))===0; items[i].classList.toggle('mn-active',on); }
     }
     window._showView=function(v){
+      if(window.AcademyGuestAccess&&!AcademyGuestAccess.canNavigate(v))return;
       // 籌碼功能權限：主力訊號/分點回測＝管理者或 VIP(先見領航員)可看；神燈與冥燈/話題＝僅管理者；其餘導回首頁
-      var _canBrk = window._isOwner || window._memberTier==='vip';
+      var _canBrk = window._isOwner || window._isAdmin;
       if(((v==='sig'||v==='brank') && !_canBrk)
          || ((v==='mingdeng'||(v==='hottopics'&&!window.AcademyShareUnlock?.hasAccess('hottopics'))) && !window._isOwner)){
         try{ showToast('此功能為開通會員專屬，請先登入'); }catch(_){}
@@ -11079,6 +11088,7 @@
     document.addEventListener('click', function (e) { const d = document.getElementById('funcDropdown'); if (d && d.style.display !== 'none' && !d.contains(e.target)) _closeFuncMenu(); });
 
     async function doScreen() {
+      if(window.AcademyGuestAccess&&!AcademyGuestAccess.requireMember("登入會員後即可開始篩選股票。"))return;
       let hiddenOptions,screenApi=window.__API||'';try{hiddenOptions=window.AcademyZhenmingHidden?.collect();if(hiddenOptions)screenApi=await window.AcademyZhenmingHidden.endpoint();}catch(error){showStatus('<div class="alert alert-error">'+error.message+'</div>');return;}
       const fourExpected=document.getElementById('zhenming4').checked;
       const sixOptions=window.AcademyZhenmingSix?.collect()||null;
@@ -14134,7 +14144,7 @@
         }
       } catch (e) {}
       // 主力資訊（主力訊號/分點回測/出場追蹤）：管理者或 VIP(先見領航員) 可看；話題仍限管理者
-      var _canBroker = _owner || window._memberTier==='vip';
+      var _canBroker = _owner || !!window._isAdmin;
       window._canBroker = _canBroker;
       document.getElementById('brokerSigBtn').style.display = _canBroker ? '' : 'none';
       document.getElementById('brokerRankBtn').style.display = _canBroker ? '' : 'none';
@@ -15364,8 +15374,7 @@
           const names=[...new Set(rows.map(e=>e.broker))];
           _ohlcTip.innerHTML+=`<div class="ohlc-broker"><span class="broker-relationship-${sell?'down':'up'}">${sell?'↓':'↑'} ${label} · ${names.length} 家</span>${names.map(n=>`<b>${brokerName(n)}</b>`).join('')}${typeof param.time==='string'&&rows.some(e=>e.date!==param.time)?`<small>${[...new Set(rows.map(e=>e.date))].map(brokerName).join('、')}</small>`:''}</div>`;
         }
-        // 2026-11-05 單根 K 棒訊號（十字線、長上下影線、吊人線…）：圖上圈起、這裡多一行寫名稱
-        try { const sigHtml = window.AcademyCandleCombos?.signalTipHtml(param.time, c); if (sigHtml) _ohlcTip.innerHTML += sigHtml; } catch (_) {}
+        // 2026-11-06 合夥人要求：「K棒訊息」提示框不再顯示 K棒訊號／K棒組合那一行（原 11/05 加的 signalTipHtml）；圖上黃框照舊由「K棒組合」開關控制
         _ohlcTip.style.display = 'block';
         _tipFollow(param);
       });
@@ -16673,6 +16682,7 @@
     }
 
     function toggleZoomMode() {
+      if(window.AcademyGuestAccess&&!AcademyGuestAccess.requireMember("登入會員後即可使用畫線與分析工具。"))return;
       if (!chartInstance) return;
       const next = !zoomMode;
       _deactivateAllModes();
@@ -16923,6 +16933,7 @@
       if (sb) sb.classList.toggle('dd-active', shapeTools.indexOf(_drawTool) >= 0);document.getElementById('fibBtn')?.classList.toggle('dd-active',['wave','amplitude','fibret','fibext'].includes(_drawTool));
     }
     window._setDrawTool = function (tool) {
+      if(window.AcademyGuestAccess&&!AcademyGuestAccess.requireMember("登入會員後即可使用畫線與分析工具。"))return;
       const prev = _drawTool;
       if(prev==='wave'&&tool!==prev&&_drawPending.length>=2){_drawShapes.push({type:'wave',pts:_drawPending.map(p=>({...p}))});_drawPending=[];_drawStoreSave();}
       _deactivateAllModes();          // 關掉框選/斐波那契（也會清 _drawTool/dd-active）
@@ -16961,6 +16972,7 @@
       });
     };
     window._pickDraw = function (tool) {
+      if(window.AcademyGuestAccess&&!AcademyGuestAccess.requireMember("登入會員後即可使用畫線與分析工具。"))return;
       ['ddLineMenu', 'ddShapeMenu','ddFibMenu'].forEach(id => { const m = document.getElementById(id); if (m) m.classList.remove('open'); });
       _setDrawTool(tool);
       window.AcademyChartViewport?.collapseTools();
@@ -17615,6 +17627,7 @@
     var origShow=window._showView, origOpen=window.openChart, origClose=window.closeChart;
     function chartOpen(){ var m=document.getElementById('chartModal'); return !!(m&&m.classList.contains('open')); }
     window._showView=function(v){
+      if(!popping&&window.AcademyGuestAccess&&!AcademyGuestAccess.canNavigate(v))return;
       if(!popping&&!(cur===null&&initHash.startsWith('member/')))window.AcademyNavigationLayers?.clear();
       var r=origShow.apply(this,arguments);
       if(!popping&&!(cur===null&&initHash.startsWith('member/'))){
@@ -17989,6 +18002,7 @@
       const detail=view.querySelector(type==='theme'?'.tmx-detail':'.sm-list'),ws=document.createElement('div'),main=document.createElement('div');ws.className='pro-heat-workspace';main.className='pro-heat-main';root.parentNode.insertBefore(ws,root);ws.append(main,detail);main.append(root);
       const sync=()=>ws.classList.toggle('open',!!detail.textContent.trim()&&getComputedStyle(detail).display!=='none');new MutationObserver(()=>setTimeout(sync,0)).observe(detail,{childList:true,subtree:true,attributes:true,attributeFilter:['style']});sync();
     }
+    window.AcademyHeatNavigator?.attach(root,type);
     decorateHeatTiles(root,type);resizeHeat(root,root.dataset.metric||'amount');
   }
   function resizeHeat(root,metric){
@@ -18494,9 +18508,11 @@
 <script src="assets/sector-dashboard-model.js" defer></script>
 <script src="assets/sector-dashboard.js" defer></script>
 <script src="assets/member-invitation.js?v=1" defer></script>
-<script src="assets/member-identity.js?v=home2" defer></script>
+<script src="assets/member-identity.js?v=birthday6-phone-welcome1" defer></script>
 <script src="assets/member-task-guide.js?v=1" defer></script>
-<script src="assets/member-missions.js?v=taskbulk1" defer></script>
+<link rel="stylesheet" href="assets/member-point-policy.css?v=1">
+<script src="assets/member-point-policy.js?v=birthday-6" defer></script>
+<script src="assets/member-missions.js?v=expiry-rules-6" defer></script>
 <script src="assets/member-share.js?v=invite4" defer></script>
 <script src="assets/member-provider-icons.js" defer></script>
 <script src="assets/member-cloud.js?v=service1" defer></script>
@@ -18508,7 +18524,7 @@
 <script src="assets/learning-extra.js?v=1" defer></script>
 <script src="assets/member-learning-verification.js?v=1" defer></script>
 <script src="assets/learning-center.js?v=10" defer></script>
-<script src="assets/member-features.js?v=inbox1" defer></script>
+<script src="assets/member-features.js?v=expiry-rules-5-inbox1" defer></script>
 <script src="assets/member-strategy-engine.js?v=short1" defer></script>
 <script src="assets/strategy-dimensions.js?v=2" defer></script>
 <script src="assets/strategy-presets.js?v=1" defer></script>
@@ -18524,12 +18540,14 @@
 <script src="assets/site-search.js?v=market2-arrow-nav2" defer></script>
 <script src="assets/member-derivatives-catalog.js" defer></script>
 <script src="assets/member-trade-ui.js?v=listnav-service1" defer></script>
-<script src="assets/member-journey.js?v=screen-receipt1" defer></script>
-<link rel="stylesheet" href="assets/member-service-center.css?v=1">
+<link rel="stylesheet" href="assets/member-benefits.css?v=3">
+<script src="assets/member-benefits.js?v=4" defer></script>
+<script src="assets/member-journey.js?v=expiry-rules-5" defer></script>
+<link rel="stylesheet" href="assets/member-service-center.css?v=ledger-pages1">
 <script src="assets/member-data-portability.js?v=inbox1" defer></script>
-<script src="assets/member-service-center.js?v=1" defer></script>
+<script src="assets/member-service-center.js?v=expiry-rules-5" defer></script>
 <link rel="stylesheet" href="assets/chart-research-tools.css?v=tools25">
-<script src="assets/chart-research-tools.js?v=tools24" defer></script>
+<script src="assets/chart-research-tools.js?v=guest-tools24" defer></script>
 <link rel="stylesheet" href="assets/brand-footer.css?v=20261105-perf">
 <script src="assets/brand-footer.js?v=20261105-perf" defer></script>
 <link rel="stylesheet" href="assets/market-panel-layout.css?v=8">
@@ -18537,18 +18555,24 @@
 <script src="assets/member-notification-inbox.js?v=paging3" defer></script>
 <script src="assets/glass-skin.js?v=5" defer></script>
 <script src="assets/glass-motion.js?v=4" defer></script>
-<script src="assets/member-payments.js?v=26" defer></script>
-<script src="assets/member-center.js?v=20261103-natural-start-v3" defer></script>
+<script src="assets/member-payments.js?v=28-linepay" defer></script>
+<script src="assets/member-center.js?v=20261107-flow-v4-rights-20261106" defer></script>
 <script src="assets/member-signin.js?v=invite-reset7" defer></script>
-<script src="assets/member-private-screen.js?v=asof5-norm" defer></script>
+<link rel="stylesheet" href="assets/member-birthday.css?v=1"><script src="assets/member-birthday.js?v=1" defer></script><script src="assets/member-phone-welcome.js?v=1" defer></script>
+<link rel="stylesheet" href="assets/member-phone-welcome.css?v=1">
+<script src="assets/member-private-screen.js?v=guest-asof5-norm" defer></script>
 <link rel="stylesheet" href="assets/site-readability.css?v=futures-history3">
 <link rel="stylesheet" href="assets/foreign-cost-card.css?v=labels5">
 <script src="assets/foresight-brand.js?v=fqi28" defer></script>
-<link rel="stylesheet" href="assets/research-polish.css?v=14">
+<link rel="stylesheet" href="assets/research-polish.css?v=17">
 <link rel="stylesheet" href="assets/site-interactions.css?v=1">
 <link rel="stylesheet" href="assets/focus-rankings.css?v=5">
 <script src="assets/focus-rankings.js?v=5" defer></script>
-<link rel="stylesheet" href="assets/screen-log.css?v=natural-scroll-local2">
+<link rel="stylesheet" href="assets/official-announcements.css?v=20261108">
+<script src="assets/official-announcements.js?v=20261108b" defer></script>
+  <link rel="stylesheet" href="assets/chart-official-ticker.css?v=20261108">
+  <script src="assets/chart-official-ticker.js?v=20261108" defer></script>
+<link rel="stylesheet" href="assets/screen-log.css?v=records-only19-balanced-natural-scroll">
 <link rel="stylesheet" href="assets/strategy-studio.css?v=3">
 <link rel="stylesheet" href="assets/learning-center.css?v=6">
 <link rel="stylesheet" href="assets/research-layout.css?v=10">
@@ -18566,20 +18590,25 @@
 <link rel="stylesheet" href="assets/research-hover.css?v=qtip7">
 <script src="assets/research-hover.js?v=drag2"></script>
 <link rel="stylesheet" href="assets/chart-drawing-edit.css?v=2">
-<script src="assets/chart-drawing-edit.js?v=2"></script>
+<script src="assets/chart-drawing-edit.js?v=guest-2"></script>
 <script src="assets/zhenming-four.js?v=candidate6"></script>
 <script src="assets/zhenming-hidden.js?v=5" defer></script>
 <link rel="stylesheet" href="assets/zhenming-six.css?v=3">
 <script src="assets/zhenming-six.js?v=six2-4" defer></script>
 <script src="assets/zhenming-89.js?v=3" defer></script>
-<script src="assets/screen-log.js?v=20261105-natural-scroll-local2" defer></script>
-<script src="assets/member-quick-menu.js?v=tier6" defer></script>
+<script src="assets/screen-log.js?v=20261107-calendar-nav-natural-scroll" defer></script>
+<script src="assets/member-quick-menu.js?v=tier7" defer></script>
 <script src="assets/navigation-layers.js?v=logo-home20" defer></script>
 <link rel="stylesheet" href="assets/home-market-intraday.css?v=25">
 <script src="assets/home-market-intraday.js?v=14" defer></script>
-<link rel="stylesheet" href="assets/office-task-board.css?v=1">
-<script src="assets/office-task-board.js?v=1" defer></script>
-<script src="assets/admin-office.js?v=8" defer></script>
+<link rel="stylesheet" href="assets/office-task-board.css?v=3">
+<script src="assets/office-content-flow.js?v=1" defer></script>
+<script src="assets/office-task-board.js?v=2" defer></script>
+<script src="assets/admin-office.js?v=9" defer></script>
+<link rel="stylesheet" href="assets/forum-ads.css?v=3">
+<script src="assets/admin-forum-ads.js?v=3" defer></script>
+<script src="assets/forum-member.js?v=3" defer></script>
+<script src="assets/forum-scanner.js?v=1" defer></script>
 <footer id="foresightFooter" aria-label="先見網站頁尾">
       <div class="fs-source"><div>本站依各功能使用臺灣證券交易所、證券櫃檯買賣中心、臺灣期貨交易所、集保結算所及其他公開資料整理市場資訊；來源、行情日期與更新頻率依各頁標示，部分內容為盤後或延遲資料。數據可能因公告更正、休市或來源異常而調整，請以原始公告核對。圖表、歷史統計與工具結果供學習及研究參考，歷史表現不代表未來結果；不同資料口徑與估算方式可能產生差異。</div></div>
       <div class="fs-footer-inner">
@@ -18627,6 +18656,8 @@
 <script src="assets/pristine-snapshot.js?v=20261105" defer></script>
 <script src="assets/pristine.js?v=4" defer></script>
 <link rel="stylesheet" href="assets/market-chart-tools.css?v=3">
-<script src="assets/market-chart-tools.js?v=3" defer></script>
+<script src="assets/market-chart-tools.js?v=guest-3" defer></script>
+  <link rel="stylesheet" href="assets/heat-navigator.css?v=1">
+  <script src="assets/heat-navigator.js?v=1"></script>
 </body>
 </html>

@@ -144,6 +144,10 @@ body:not(.is-owner) .nav-owner[data-member-granted=true]{display:block!important
 .mj-art-dot{fill:currentColor}
 .mj-ticket-days{display:inline-block;margin-top:5px;padding:1px 9px;border-radius:999px;background:var(--surface2);border:1px solid var(--border);font-size:12px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums}
 .mj-ticket-flag{display:inline-block;margin:5px 0 0 6px;padding:1px 9px;border-radius:999px;background:var(--accent);color:var(--surface);font-size:11px;font-weight:700}
+.mj-ticket-best .mj-ticket-flag{color:#fff;background:#367eb5;text-shadow:0 0 5px #ffffffb3,0 0 10px #bce5ff80;box-shadow:inset 0 1px 0 #ffffff45,0 0 12px #5da5dc26;animation:mj-value-glow 3.6s ease-in-out infinite}
+[data-theme=dark] .mj-ticket-best .mj-ticket-flag{color:#fff3ce;background:#594a28;text-shadow:0 0 5px #ffdf8fc7,0 0 10px #f3cd6a80;box-shadow:inset 0 1px 0 #ffe8a845,0 0 12px #d4ac4d26}
+@keyframes mj-value-glow{0%,100%{filter:brightness(1)}50%{filter:brightness(1.18)}}
+@media(prefers-reduced-motion:reduce){.mj-ticket-best .mj-ticket-flag{animation:none!important}}
 .mj-ticket-items{margin:0;padding:12px 18px 0;list-style:none;display:grid;gap:6px;border-top:1px dashed var(--border)}
 .mj-ticket-items li{position:relative;padding-left:20px;font-size:13px;line-height:1.5;color:var(--text)}
 .mj-ticket-items li::before{content:"";position:absolute;left:2px;top:.45em;width:9px;height:5px;border-left:2px solid var(--accent);border-bottom:2px solid var(--accent);transform:rotate(-45deg)}
@@ -182,3 +186,71 @@ body:not(.is-owner) .nav-owner[data-member-granted=true]{display:block!important
 .member-quick-panel{backdrop-filter:blur(22px) saturate(120%);-webkit-backdrop-filter:blur(22px) saturate(120%)}
 .member-quick-panel .mq-mission{background:color-mix(in srgb,var(--accent) 7%,transparent);box-shadow:inset 0 1px 0 #ffffff0d}
 @supports not (backdrop-filter:blur(1px)){:root[data-theme=light] .member-quick-panel{background:#f7fafc}:root:not([data-theme=light]) .member-quick-panel{background:#111c27}}
+/* Compact rewards workspace: tabs switch panels without navigating or spending points. */
+.member-journey .mj-rewards-hero{padding:22px 26px}
+.mj-rewards-help{margin-top:12px;font-size:13px;color:var(--text-muted)}
+.mj-rewards-help summary{cursor:pointer;min-height:24px}
+.mj-rewards-help .mj-policy{margin-top:8px;padding:8px 0}
+.mj-rewards-nav{display:flex;align-items:center;justify-content:space-between;gap:10px;position:sticky;top:76px;z-index:8;padding:8px;border:1px solid var(--border);border-radius:16px;background:color-mix(in srgb,var(--surface) 90%,transparent);backdrop-filter:blur(18px);box-shadow:inset 0 1px 0 #ffffff30,0 5px 18px #00000005}
+.mj-rewards-nav [role=tablist]{display:flex;gap:5px;min-width:0}
+.member-journey .mj-rewards-nav button{min-height:40px;font:inherit;font-size:14px;font-weight:650;line-height:1.4;padding:10px 18px;border:1px solid transparent;border-radius:12px;background:transparent;color:var(--text-muted);cursor:pointer;transform:none!important;transition:background .2s,color .2s,border-color .2s,box-shadow .2s}
+.member-journey .mj-rewards-nav [aria-selected=true]{color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,var(--surface));border-color:color-mix(in srgb,var(--accent) 35%,var(--border));box-shadow:inset 0 1px 0 #ffffff30}
+.member-journey .mj-rewards-nav button:hover{color:var(--accent);background:color-mix(in srgb,var(--accent) 6%,var(--surface))}
+.member-journey .mj-rewards-nav button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.member-journey [data-rewards-panel][hidden]{display:none!important}
+.member-journey .mj-live-missions{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 16px;padding:18px 22px}
+.mj-live-missions .mj-section-head{grid-column:1/-1;margin:0}
+.mj-live-missions .mc-kicker{display:none}
+.mj-live-missions h2{font-size:17px!important;margin:0}
+.mj-live-missions .mj-reward-balance{font-size:22px;font-weight:700;margin:0}
+.mj-live-missions .mj-reward-caps{font-size:13px;align-self:center;color:var(--text-muted);text-align:right}
+.mj-live-missions [data-mission-status]{grid-column:1/-1;font-size:12px;color:var(--text-muted);line-height:1.6}
+.mj-account-check{grid-column:1/-1;font-size:13px;color:var(--text-muted);border-top:1px solid var(--border);padding-top:8px}
+.mj-account-check summary{cursor:pointer}
+.mj-ticket-kind{font-size:12px;color:var(--text-muted);padding:0 18px}
+.mj-exchange-scope{font-size:13px;color:var(--text-muted);margin:6px 0 18px;line-height:1.7}
+.mj-exchange-scope summary{cursor:pointer}
+.member-journey[data-rewards-mode=exchange] .mj-live-missions{padding:14px 20px}
+.member-journey[data-rewards-mode=exchange] .mj-live-missions .mj-account-check,.member-journey[data-rewards-mode=exchange] .mj-live-missions [data-mission-status]{display:none}
+.member-journey .mj-ticket-filter button,.member-journey .mj-ticket-foot button{transform:none!important}
+@media(max-width:600px){.mj-rewards-nav{top:68px;gap:3px;padding:5px}.member-journey .mj-rewards-nav button{font-size:13px;padding:9px 10px;white-space:nowrap}.member-journey .mj-rewards-nav .mj-voucher-shortcut{font-size:12px;padding:9px 7px}.member-journey .mj-rewards-hero{padding:18px}.member-journey .mj-live-missions{padding:16px;grid-template-columns:minmax(0,1fr)}.mj-live-missions .mj-reward-caps{text-align:left}.mj-live-missions .mj-reward-balance{font-size:21px}.mj-live-missions .mj-section-head{gap:8px}}
+
+.member-journey[data-rewards-mode=exchange] .mj-live-missions .mj-section-head{display:contents}
+.member-journey[data-rewards-mode=exchange] .mj-live-missions .mj-section-head>div{display:none}
+.member-journey[data-rewards-mode=exchange] .mj-live-missions [data-rewards-refresh]{grid-column:2;grid-row:1;justify-self:end;align-self:center;font-size:12px;padding:6px 10px;min-height:30px;border:1px solid var(--border);border-radius:999px;background:color-mix(in srgb,var(--surface) 75%,transparent);color:var(--text-muted);transform:none!important}
+.member-journey[data-rewards-mode=exchange] .mj-live-missions .mj-reward-balance{grid-column:1;grid-row:1;font-size:20px;align-self:center}
+.member-journey[data-rewards-mode=exchange] .mj-live-missions .mj-reward-caps{grid-column:1/-1;text-align:left}
+/* Compact mission cards: details are optional, categories have bounded pages. */
+.member-journey .mj-task-zone{container-type:inline-size}
+@container(max-width:600px){.member-journey .mj-tasks{grid-template-columns:minmax(0,1fr)}}
+.member-journey .mj-task-compact{padding:16px 18px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:9px 12px;align-content:start;min-height:0;box-shadow:none;transform:none!important;border-radius:17px}
+.mj-task-compact .mj-task-top{grid-column:1/-1;display:flex;align-items:center;gap:10px;margin:0}
+.mj-task-compact .mj-task-top h3{flex:1;min-width:0;margin:0;font-size:16px;line-height:1.6}
+.mj-task-compact .mj-task-top .mj-symbol{width:28px;height:28px;border-radius:9px;flex:none}
+.mj-task-compact .mj-task-top .mj-symbol svg{width:17px;height:17px}
+.mj-task-compact .mj-task-frequency{font-size:11px;white-space:nowrap}
+.mj-task-compact .mj-task-bottom{grid-column:1/-1;gap:8px;margin:0}
+.mj-task-compact .mj-task-bottom strong{font-size:17px}
+.member-journey .mj-task-compact .mj-link{font-size:12px;padding:4px 0;min-height:30px}
+.mj-task-compact>small[data-task-progress]{grid-column:1/-1;margin:0;font-size:12px;line-height:1.6;min-height:19px}
+.mj-task-compact .mj-task-detail{min-width:0;align-self:start;font-size:12px;line-height:1.75}
+.mj-task-compact .mj-task-detail summary{padding:7px 0;color:var(--accent);cursor:pointer;font-size:12px;white-space:nowrap}
+.mj-task-compact .mj-task-detail p{min-height:0;margin:8px 0;font-size:13px;line-height:1.8;color:var(--mj-muted);overflow-wrap:anywhere}
+.mj-task-compact .mj-task-detail small{display:block;margin-top:10px;font-size:12px;color:var(--mj-muted)}
+.mj-task-compact .mj-task-detail[open]{grid-column:1/-1;grid-row:5}
+.member-journey .mj-task-compact>button[data-task-claim]{margin:0;width:auto;min-height:32px;padding:6px 12px;border-radius:999px;font-size:12px;grid-column:2;grid-row:4;white-space:normal;max-width:170px}
+.member-journey .mj-task-zone .mj-task-claimbar{padding:12px 16px;gap:14px;margin-bottom:14px;border-radius:15px}
+.mj-task-zone .mj-task-claimbar b{font-size:14px}.mj-task-zone .mj-task-claimbar p{font-size:12px;line-height:1.7;margin:5px 0 0}
+.member-journey .mj-task-zone .mj-task-claimbar>button{font-size:13px;padding:10px 16px;min-height:38px;white-space:nowrap}
+.member-journey .mj-task-zone .mj-filters{gap:6px;padding-bottom:14px}
+.member-journey .mj-task-zone .mj-filters button{font-size:12px;padding:7px 11px;min-height:32px;border-radius:999px}
+.mj-task-pagination{display:flex;align-items:center;justify-content:center;gap:15px;margin-top:16px;color:var(--mj-muted);font-size:12px;font-variant-numeric:tabular-nums}
+.member-journey .mj-task-pagination button{display:grid;place-items:center;border:1px solid var(--border);background:var(--surface);color:var(--accent);border-radius:50%;width:30px;height:30px;padding:0;min-height:0;font-size:19px;box-shadow:inset 0 1px rgba(255,255,255,.12)}
+.mj-task-pagination button:disabled{opacity:.35;cursor:default}
+@media(max-width:600px){.member-journey .mj-task-zone .mj-task-claimbar{align-items:flex-start;flex-direction:column;gap:8px}.member-journey .mj-task-zone .mj-task-claimbar>button{align-self:flex-end}.member-journey .mj-task-compact{padding:13px 15px}.mj-task-compact .mj-task-top h3{font-size:15px}}
+
+/* Keep the entire pager and its SVG glyphs optically centered. */
+.member-journey .mj-task-pagination{display:flex;align-items:center;justify-content:center;width:100%;margin-inline:0;box-sizing:border-box;gap:14px}
+.member-journey .mj-task-pagination button{flex:0 0 30px;align-self:center;line-height:1;padding:0;display:grid;place-items:center}
+.mj-task-pagination svg{display:block;width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.mj-task-compact>small[data-task-progress]{color:var(--mj-muted)}
