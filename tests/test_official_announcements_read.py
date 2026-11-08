@@ -29,5 +29,15 @@ class ReadTests(unittest.TestCase):
         self.assertEqual(code,503)
         self.assertNotIn('secret',str(result))
 
+    def test_policy_duplicates_keep_sources_but_company_not_merged(self):
+        rows=[{'id':'1','title':'國安基金','published_date':'2026-11-06','url':'https://www.nta.gov.tw/a','source':{'name':'國庫署','category':'market_policy'}},
+              {'id':'2','title':'國安基金','published_date':'2026-11-06','url':'https://www.mof.gov.tw/a','source':{'name':'財政部','category':'fiscal_trade'}},
+              {'id':'3','title':'董事會決議','published_date':'2026-11-06','source':{'category':'company_disclosure'}},
+              {'id':'4','title':'董事會決議','published_date':'2026-11-06','source':{'category':'company_disclosure'}}]
+        def rest(path):return (200,rows if path.startswith('/official_announcements?') else [])
+        code,result=read({},rest)
+        self.assertEqual(code,200);self.assertEqual(len(result['items']),3)
+        self.assertEqual(result['items'][0]['other_sources'][0]['name'],'財政部')
+
 
 if __name__=='__main__':unittest.main()

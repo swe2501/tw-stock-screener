@@ -22,6 +22,7 @@ class OfficialTests(unittest.TestCase):
 
     def test_urls_and_markup(self):
         self.assertEqual(m.rss(SOURCE,FEED)[0]['url'],'https://www.cbc.gov.tw/a')
+        self.assertIsNone(m.rss(dict(SOURCE,date_only=True),FEED)[0]['published_at'])
         self.assertEqual(m.clean('<script>alert(1)</script><b>政策</b>'),'alert(1) 政策')
         for url in ['https://127.0.0.1/a','http://www.cbc.gov.tw/a','https://user:pass@www.cbc.gov.tw/a','https://www.cbc.gov.tw.evil.test/']:
             with self.assertRaises(ValueError):m.safe_url(url,SOURCE['url'])
@@ -51,6 +52,8 @@ class OfficialTests(unittest.TestCase):
         doc=dict(title='Taiwan daily news',summary='')
         self.assertNotIn('technology',m.labels(doc)[0])
         self.assertIn('technology',m.labels(dict(title='AI 產業政策',summary=''))[0])
+        self.assertFalse(m.labels(dict(title='世界棒球英雄獲就業金卡',summary='歡迎加入半導體 AI 產業'))[1])
+        self.assertTrue(m.labels(dict(title='處置公告｜2360',summary='',source_id='twse_disposition'))[1])
 
 
 if __name__=='__main__':unittest.main()

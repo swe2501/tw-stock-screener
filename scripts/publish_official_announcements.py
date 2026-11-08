@@ -60,6 +60,9 @@ def main():
     if health_path.exists():
         health=json.loads(health_path.read_text(encoding='utf-8'))
         health.update(storage='local_and_cloud',cloud_sync=True,last_cloud_sync_at=synced)
+        config_file=args.state_dir/'cloud-sync-approved.json'
+        config=json.loads(config_file.read_text(encoding='utf-8')) if config_file.exists() else {}
+        health['website_sync']=bool(config.get('website_read_url'))
         temporary=health_path.with_suffix('.tmp');temporary.write_text(json.dumps(health,ensure_ascii=False,indent=2),encoding='utf-8');temporary.replace(health_path)
     print('Cloud sync confirmed')
 

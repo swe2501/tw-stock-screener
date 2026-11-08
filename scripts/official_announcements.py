@@ -138,7 +138,10 @@ def rss(source, text):
             link = fields['link'].get('href', '')
         if not link:
             continue
-        out.append(document(source, value('title'), link, value('pubDate', 'published', 'date'), value('description', 'summary')))
+        doc=document(source, value('title'), link, value('pubDate', 'published', 'date'), value('description', 'summary'))
+        if source.get('date_only') and doc['published_date']:
+            doc.update(published_at=None,time_precision='date')
+        out.append(doc)
     if not out:
         raise ValueError('feed contains no valid items')
     return out
@@ -209,15 +212,45 @@ RULES = {
 
 
 def labels(doc):
-    text = (doc['title'] + ' ' + doc['summary']).casefold()
-    tags = [tag for tag, words in RULES.items() if any(
-        bool(re.search(r'(?<![a-z])'+re.escape(w.casefold())+r'(?![a-z])',text))
-        if w.isascii() else w.casefold() in text for w in words)]
-    important = bool(tags)
+    def matches(text):
+        text=text.casefold()
+        return [tag for tag, words in RULES.items() if any(
+            bool(re.search(r'(?<![a-z])'+re.escape(w.casefold())+r'(?![a-z])',text))
+            if w.isascii() else w.casefold() in text for w in words)]
+    tags=matches(doc['title']+' '+doc['summary'])
+    # Background boilerplate must not promote unrelated ceremonies/sports into market events.
+    important=bool(matches(doc['title'])) or doc.get('source_id','').startswith('mops_') or doc.get('source_id') in ('twse_attention','twse_disposition')
     # Recruitment and ceremonial items are retained as raw sources but not promoted to K-line candidates.
-    if any(w in doc['title'] for w in ('徵才', '職缺', '徵人', '頒獎', '小劇場', '聯誼')):
+    if any(w in doc['title'] for w in ('徵才', '職缺', '徵人', '頒獎', '小劇場', '聯誼', '講習會', '工作坊', '世界棒球', '每日新聞（')):
         important = False
     return tags, important
+
+
+DOC_FIELDS=('id','source_id','title','url','published_date','published_at','time_precision','summary','security_code','effective_date')
+
+
+def fingerprint(doc,tags,important):
+    value={'document':{k:doc.get(k) for k in DOC_FIELDS},'tags':tags,'important':bool(important)}
+    return hashlib.sha256(json.dumps(value,sort_keys=True).encode()).hexdigest()
+
+
+def reclassify(state_dir):
+    date_only={s['id'] for s in json.loads((HERE/'official_sources.json').read_text(encoding='utf-8')) if s.get('date_only')}
+    with single_instance(state_dir),contextlib.closing(connect(state_dir/'announcements.sqlite3')) as db:
+        db.row_factory=sqlite3.Row
+        rows=db.execute('SELECT * FROM announcements').fetchall()
+        count=0
+        for row in rows:
+            doc=dict(row)
+            if doc['source_id'] in date_only and doc['published_date']:
+                doc.update(published_at=None,time_precision='date')
+            tags,important=labels(doc);digest=fingerprint(doc,tags,important)
+            if digest==doc['content_hash']:continue
+            db.execute('UPDATE announcements SET important=?,content_hash=?,updated_at=?,published_at=?,time_precision=? WHERE id=?',(int(important),digest,now().isoformat(),doc['published_at'],doc['time_precision'],doc['id']))
+            db.execute('DELETE FROM announcement_tags WHERE announcement_id=?',(doc['id'],))
+            db.executemany('INSERT INTO announcement_tags VALUES(?,?)',[(doc['id'],t) for t in tags]);count+=1
+        db.commit()
+        print('Reclassified local announcements:',count)
 
 
 def connect(path):
@@ -297,7 +330,7 @@ def run(state_dir, force=False, sources=None):
                 checked = now().isoformat()
                 for d in docs:
                     tags, important = labels(d)
-                    content_hash = hashlib.sha256(json.dumps(d, sort_keys=True).encode()).hexdigest()
+                    content_hash = fingerprint(d,tags,important)
                     previous = db.execute('SELECT content_hash FROM announcements WHERE id=?', (d['id'],)).fetchone()
                     if previous and previous[0] == content_hash:
                         continue
@@ -328,9 +361,13 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--state-dir', type=Path, default=DEFAULT_STATE)
     parser.add_argument('--force', action='store_true')
+    parser.add_argument('--reclassify', action='store_true',help='Recompute local candidate classification without network calls')
     args = parser.parse_args()
     try:
-        sys.exit(run(args.state_dir, args.force))
+        if args.reclassify:
+            reclassify(args.state_dir)
+        else:
+            sys.exit(run(args.state_dir, args.force))
     except Exception as exc:
         print('Collector failed: '+type(exc).__name__, file=sys.stderr)
         sys.exit(2)

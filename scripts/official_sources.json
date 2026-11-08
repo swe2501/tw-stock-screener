@@ -13,7 +13,9 @@
     "url": "https://www.fsc.gov.tw/RSS/Messages?serno=201202290009&language=chinese",
     "kind": "rss",
     "category": "financial_policy",
-    "minutes": 5
+    "minutes": 5,
+    "date_only": true,
+    "time_note": "RSS 時刻含預設值；未逐篇核實前只標發布日期，避免誤用於盤中K線"
   },
   {
     "id": "cbc",
@@ -53,7 +55,9 @@
     "url": "https://www.dgbas.gov.tw/OpenData.aspx?SN=0DA0FD2F5416554E&isRssFeed=1",
     "kind": "rss",
     "category": "economic_release",
-    "minutes": 5
+    "minutes": 5,
+    "date_only": true,
+    "time_note": "RSS 時刻含預設值；未逐篇核實前只標發布日期，避免誤用於盤中K線"
   },
   {
     "id": "mof",

@@ -24,6 +24,17 @@ def read(body,rest):
         if status!=200 or not isinstance(rows,list):return 503,{'error':'官方公告暫時無法讀取，請稍後再試'}
         status,sources=rest('/official_sources?select=id,name,state,last_success&order=id')
         if status!=200 or not isinstance(sources,list):sources=[]
-        return 200,{'items':rows,'sources':sources,'from':start.isoformat(),'to':end.isoformat(),'limit':limit,'limited':len(rows)==limit}
+        items=[];seen={}
+        for row in rows:
+            source_info=row.get('source') or {}
+            # Company disclosures may share generic titles across different companies: never merge them.
+            policy=source_info.get('category') not in ('company_disclosure','trading_risk','trading_disposition')
+            key=(row.get('published_date'),re.sub(r'\s+','',row.get('title','')))
+            if policy and key in seen:
+                seen[key].setdefault('other_sources',[]).append({'name':source_info.get('name'),'url':row.get('url')})
+            else:
+                item=dict(row);items.append(item)
+                if policy:seen[key]=item
+        return 200,{'items':items,'sources':sources,'from':start.isoformat(),'to':end.isoformat(),'limit':limit,'limited':len(rows)==limit}
     except Exception:
         return 503,{'error':'官方公告暫時無法讀取，請稍後再試'}
