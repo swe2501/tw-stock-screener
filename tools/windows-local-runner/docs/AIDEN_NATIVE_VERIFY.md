@@ -24,30 +24,25 @@ C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_OPS02_v2
 
 Do not use `C:\Users\User\Desktop\AI型態判斷` or `D:\StockAI`.
 
-## 1. Stop check, then place the already delivered index
+## Why the previous index step was not a delivery
 
-`$DeliveredIndex` is the only operator path. It must be the already delivered `release-index.json` asset, 945 bytes, SHA-256 `0e5f07d4cfe5f554ecf92f83ce0e02941ba0ad625338ed4c9606daa80abaff19`. Do not build that file from `source_pin.json`, from the tar, or by typing JSON.
+Telling Aiden to place an already downloaded file is not a create. CopyFromBox does not guarantee no-clobber, and a preflight listing is not an atomic create. The index is created by `deliver_external_index.py`. Its payload is the 945 index bytes. The program writes those bytes with an exclusive open and reads them back on the same handle. It does not execute the JSON.
 
-```powershell
-$ErrorActionPreference = 'Stop'
-$parent = 'C:\Users\User\Desktop\AI_RD_IMP'
-$source = 'C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_SOURCE_5f5be6c35bed'
-$index = 'C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_RELEASE_5f5be6c35bed.json'
-$leaf = 'C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_OPS02_v2'
-$DeliveredIndex = '<the already delivered release-index.json>'
-$parentItem = Get-Item -LiteralPath $parent -Force
-if (-not $parentItem.PSIsContainer -or ($parentItem.Attributes -band [IO.FileAttributes]::ReparsePoint)) { Write-Error 'E_PARENT_STOP'; exit 3 }
-$names = @(Split-Path -Leaf $source), (Split-Path -Leaf $index), (Split-Path -Leaf $leaf)
-$present = @(Get-ChildItem -Force -LiteralPath $parent | Where-Object { $names -contains $_.Name })
-if ($present.Count -ne 0) { Write-Error 'E_EXISTS_STOP'; exit 3 }
-[System.IO.File]::Copy($DeliveredIndex, $index, $false)
-$hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $index).Hash.ToLowerInvariant()
-if ($hash -ne '0e5f07d4cfe5f554ecf92f83ce0e02941ba0ad625338ed4c9606daa80abaff19') { Write-Error 'E_INDEX_DIGEST_STOP'; exit 3 }
+Git blob of that program, which does not change when this document changes:
+
+```text
+7894bc5b84c769994a324d98a1faaf464b4b31a9
 ```
 
-`File.Copy` with `$false` does not overwrite. If the hash check fails, leave the file and stop. Do not delete it and do not copy again.
+## 1. Stop check, then clone
 
-This PowerShell block was not executed on Windows here.
+One stock Python check, using the interpreter already installed. It does not write the index. If the parent is missing, or any of the three names already has a directory entry, including a dangling link, it exits 3.
+
+```text
+& 'C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe' -B -c "import os,stat,sys; p=r'C:\Users\User\Desktop\AI_RD_IMP'; s=os.lstat(p); assert not stat.S_ISLNK(s.st_mode) and stat.S_ISDIR(s.st_mode); names=['WIN_RUNNER_SOURCE_5f5be6c35bed','WIN_RUNNER_RELEASE_5f5be6c35bed.json','WIN_RUNNER_OPS02_v2']; assert not any(os.path.lexists(os.path.join(p,n)) for n in names); print('ABSENT')"
+```
+
+`os.path.lexists` is true for a dangling link. Any exception or a missing parent is a stop. This check is not the create.
 
 ## 2. Create the Git source
 
@@ -75,9 +70,18 @@ git -C C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_SOURCE_5f5be6c35bed rev-parse 
 7d640de56b002fecee6a465e8a694a481bd0a917
 ```
 
-The worktree receives `tools/windows-local-runner` only. Do not copy the website tree out of Git and do not run it.
+The worktree receives `tools/windows-local-runner` only. Do not copy the website tree out of Git and do not run it. Do not use `--depth`, or the deliver blob below will be absent.
 
-A Linux sparse clone of the same objects reached this commit, `verify-index` exited 0, and a second clone into the occupied path exited 128 without replacing it. That was not Windows.
+Confirm the deliver program blob, then create the index. HEAD stays on `5f5be6c`. The program is data-addressed by blob id, so it does not need to be checked out into the worktree.
+
+```text
+git -C C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_SOURCE_5f5be6c35bed cat-file -t 7894bc5b84c769994a324d98a1faaf464b4b31a9
+git -C C:\Users\User\Desktop\AI_RD_IMP\WIN_RUNNER_SOURCE_5f5be6c35bed cat-file blob 7894bc5b84c769994a324d98a1faaf464b4b31a9 | & 'C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe' -B -
+```
+
+`cat-file -t` must print `blob`. The Python process prints one JSON object. `size` must be 945, `sha256` must be `0e5f07d4cfe5f554ecf92f83ce0e02941ba0ad625338ed4c9606daa80abaff19`, and `readback` must be `SAME_HANDLE`. If the name already exists, including a dangling link, the exit is 3 and `E_EXISTS`; the existing entry is left as it was. If the write fails after the exclusive create, the partial file stays. Do not delete it and do not run the command again.
+
+A Linux pipe of that blob created the 945-byte file and rejected an existing file, a dangling link, a one-byte payload change, and a failed read-back. Windows Python and this pipe were not run.
 
 ## 3. Installer and one inert run
 
