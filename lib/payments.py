@@ -115,23 +115,31 @@ def _order(rest, user, order_key):
     return rows[0]
 
 
+def period_provider(order):
+    """已付款期間的 provider：正式付款 'linepay'；測試環境 'linepay_sandbox'。
+    uat 與正式站共用資料庫，測試付款也會寫進 member_subscription_periods；之後全站改讀
+    member_membership_status() 前，要排除 linepay_sandbox，避免假付款變成真權限。"""
+    return PROVIDER if order.get("provider_env") == "production" else PROVIDER + "_sandbox"
+
+
 def _period(rest, order, plan):
-    """寫入已付款期間（可重複呼叫）。同等級還有有效期間時接在後面。"""
+    """寫入已付款期間（可重複呼叫）。同等級還有有效期間時接在後面（只接同環境的期間）。"""
     ext = "order:" + order["order_key"]
-    st, rows = rest("/member_subscription_periods?select=id&provider=eq." + PROVIDER + "&external_period_id=eq." + _q(ext))
+    provider = period_provider(order)
+    st, rows = rest("/member_subscription_periods?select=id&provider=eq." + provider + "&external_period_id=eq." + _q(ext))
     if st == 200 and rows:
         return rows[0]["id"]
     start = now()
     st, active = rest("/member_subscription_periods?select=expires_at&user_id=eq." + _q(order["user_id"]) + "&tier=eq." + _q(plan["tier"])
-                      + "&revoked_at=is.null&expires_at=gt." + _q(start.isoformat()) + "&order=expires_at.desc&limit=1")
+                      + "&provider=eq." + provider + "&revoked_at=is.null&expires_at=gt." + _q(start.isoformat()) + "&order=expires_at.desc&limit=1")
     if st == 200 and active:
         start = max(start, dt.datetime.fromisoformat(active[0]["expires_at"].replace("Z", "+00:00")))
-    row = {"user_id": order["user_id"], "tier": plan["tier"], "provider": PROVIDER, "external_period_id": ext,
+    row = {"user_id": order["user_id"], "tier": plan["tier"], "provider": provider, "external_period_id": ext,
            "starts_at": start.isoformat(), "expires_at": (start + dt.timedelta(days=int(plan["days"]))).isoformat()}
     st, rows = rest("/member_subscription_periods", "POST", [row], "return=representation")
     if st in (200, 201) and rows:
         return rows[0]["id"]
-    st, rows = rest("/member_subscription_periods?select=id&provider=eq." + PROVIDER + "&external_period_id=eq." + _q(ext))
+    st, rows = rest("/member_subscription_periods?select=id&provider=eq." + provider + "&external_period_id=eq." + _q(ext))
     if st == 200 and rows:                  # 併發時另一個請求先寫入
         return rows[0]["id"]
     raise PayError(503, "開通紀錄寫入失敗，請稍後重試（款項已確認，不會重複扣款）")
