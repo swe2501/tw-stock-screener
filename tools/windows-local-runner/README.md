@@ -22,14 +22,7 @@ python -B runner.py stop --synthetic --task stoppable --campaign demo001 --store
 
 Allowed tasks are only `normal`, `failure`, `deadline`, and `stoppable`.
 
-Delivery, after the external index has been compared to the published commit:
-
-```text
-python -B install.py verify-index --synthetic --release-index C:\path\outside\release-index.json
-python -B install.py install --synthetic --release-index C:\path\outside\release-index.json
-```
-
-On this Linux tree, install also requires `--fixture-linux` and `--target`. That flag is not Windows acceptance.
+The Windows landing sequence is `docs/BOOTSTRAP.md` and `docs/AIDEN_NATIVE_VERIFY.md`. It checks out commit `5f5be6c35bed7a674a91f19ee5c59fdbc8b281c3` and uses the external index file whose own SHA-256 is `0e5f07d4cfe5f554ecf92f83ce0e02941ba0ad625338ed4c9606daa80abaff19`. A directory without `.git` is not a source. That index digest is not `source_pin.json`.
 
 ## Boundaries
 
