@@ -131,27 +131,33 @@ def main():
             raise SystemExit('partial path was reused')
         except ValueError as exc:
             assert str(exc) == 'E_EXISTS'
-    fetched = Path(tempfile.mkdtemp(prefix='wlr-fetch-'))
-    fetched_repo = fetched / 'src'
-    fetched_repo.mkdir()
-    subprocess.run(['git', 'init'], cwd=fetched_repo, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    fetch = subprocess.run(['git', '-C', str(fetched_repo), 'fetch', '--no-tags', str(REPO), 'd33b0a41e126cd17c24edd0dd0df10cd302eabbd'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    assert fetch.returncode == 0, fetch.stderr.decode()
-    refs_before = git(fetched_repo, 'show-ref').stdout
-    log_before = git(fetched_repo, 'log', '--all', '--format=%H', '--find-object=9fa534201e61678698cdc29c8a30edbc00a0f0da')
-    assert log_before.returncode == 0 and log_before.stdout.strip() == b''
-    assert git(fetched_repo, 'rev-parse', 'd33b0a41e126cd17c24edd0dd0df10cd302eabbd:tools/windows-local-runner/deliver_external_index.py').stdout.decode().strip() == '9fa534201e61678698cdc29c8a30edbc00a0f0da'
-    assert git(fetched_repo, 'checkout', '--detach', RUNTIME).returncode == 0
-    absent_gate = fetched / 'no-gate.py'
+    def fetch_only(dest_name, commit):
+        root = Path(tempfile.mkdtemp(prefix='wlr-fetch-'))
+        repo = root / 'src'
+        repo.mkdir()
+        subprocess.run(['git', 'init'], cwd=repo, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        proc = subprocess.run(['git', '-C', str(repo), 'fetch', '--no-tags', str(REPO), commit], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        assert proc.returncode == 0, proc.stderr.decode()
+        assert git(repo, 'rev-parse', 'FETCH_HEAD').stdout.decode().strip() == commit
+        assert git(repo, 'show-ref').stdout.strip() == b''
+        listed = git(repo, 'log', '--all', '--format=%H', '--find-object=9fa534201e61678698cdc29c8a30edbc00a0f0da')
+        assert listed.returncode == 0 and listed.stdout.strip() == b''
+        return root, repo
+    old_root, old_repo = fetch_only('old', 'd33b0a41e126cd17c24edd0dd0df10cd302eabbd')
+    assert git(old_repo, 'rev-parse', 'd33b0a41e126cd17c24edd0dd0df10cd302eabbd:tools/windows-local-runner/deliver_external_index.py').stdout.decode().strip() == '9fa534201e61678698cdc29c8a30edbc00a0f0da'
+    assert git(old_repo, 'checkout', '--detach', RUNTIME).returncode == 0
+    old_gate = old_root / 'WIN_RUNNER_ACCEPT_INDEX.py'
     try:
-        mod.materialize(fetched_repo, absent_gate)
-        raise SystemExit('unfetched gate blob was materialized')
+        mod.materialize(old_repo, old_gate)
+        raise SystemExit('writer-only fetch materialized the later gate')
     except ValueError as exc:
         assert str(exc) == 'E_GIT_UPSTREAM', str(exc)
-    assert not absent_gate.exists()
-    assert git(fetched_repo, 'hash-object', '-w', str(GATE)).stdout.decode().strip() == mod.GATE_BLOB
-    refs_after = git(fetched_repo, 'show-ref').stdout
-    assert refs_before == refs_after
+    assert not old_gate.exists() and git(old_repo, 'show-ref').stdout.strip() == b''
+    fetched, fetched_repo = fetch_only('new', '897362e7dd42ff477cb59ace5b04e81b001ea2da')
+    assert git(fetched_repo, 'cat-file', '-t', mod.GATE_BLOB).stdout.decode().strip() == 'blob'
+    assert git(fetched_repo, 'rev-parse', 'd33b0a41e126cd17c24edd0dd0df10cd302eabbd:tools/windows-local-runner/deliver_external_index.py').stdout.decode().strip() == '9fa534201e61678698cdc29c8a30edbc00a0f0da'
+    assert git(fetched_repo, 'checkout', '--detach', RUNTIME).returncode == 0
+    assert git(fetched_repo, 'show-ref').stdout.strip() == b''
     landed = fetched / 'WIN_RUNNER_ACCEPT_INDEX.py'
     produced = mod.materialize(fetched_repo, landed)
     assert produced['executed'] is False and landed.read_bytes() == gate_bytes
@@ -162,7 +168,7 @@ def main():
     assert receipt['transfer_ok'] is True and receipt['python_starts'] == 1 and receipt['index_size'] == 945
     assert receipt['index_sha256'] == '0e5f07d4cfe5f554ecf92f83ce0e02941ba0ad625338ed4c9606daa80abaff19'
     assert receipt['writer_commit'] == 'd33b0a41e126cd17c24edd0dd0df10cd302eabbd'
-    assert git(fetched_repo, 'show-ref').stdout == refs_after
+    assert git(fetched_repo, 'show-ref').stdout.strip() == b''
     inline_root = Path(tempfile.mkdtemp(prefix='wlr-inline-'))
     inline_repo = inline_root / 'repo'
     inline_repo.mkdir()
