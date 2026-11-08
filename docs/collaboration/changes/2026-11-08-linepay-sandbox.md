@@ -15,6 +15,7 @@
 - 確認可重複呼叫：同一訂單只開通一次（`external_period_id='order:<訂單>'` 唯一＋訂單 `status=pending` 條件更新）。
 - 回跳網址只接受本站網域；測試環境另允許 localhost。
 - 測試環境只賣 `sandbox_only` 方案，正式環境絕不賣測試方案。
+- **測試付款寫入的期間 `provider='linepay_sandbox'`，正式付款才是 `'linepay'`。** uat 與正式站共用資料庫；全站改讀 `member_membership_status()` 之前，RPC 必須排除 `linepay_sandbox`（或先作廢這些期間），否則 uat 的假付款會變成正式站的真權限。
 - 金鑰只在 Vercel 環境變數：`LINEPAY_CHANNEL_ID`、`LINEPAY_CHANNEL_SECRET`、`LINEPAY_ENV`（sandbox｜production）。**目前只該設在 Preview（uat），不要勾 Production。** 沒設金鑰的環境，所有付款 action 回 503「付款功能尚未開放」。
 
 ## 測試

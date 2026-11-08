@@ -178,7 +178,8 @@ class ConfirmTests(Base):
         periods = self.rest.t["member_subscription_periods"]
         self.assertEqual(len(periods), 1)
         p = periods[0]
-        self.assertEqual((p["tier"], p["provider"], p["external_period_id"], row["period_id"]), ("research", "linepay", "order:" + o["order_key"], p["id"]))
+        # 測試環境的期間標成 linepay_sandbox，之後判斷會員等級時可排除（uat／正式站共用資料庫）
+        self.assertEqual((p["tier"], p["provider"], p["external_period_id"], row["period_id"]), ("research", "linepay_sandbox", "order:" + o["order_key"], p["id"]))
         days = (dt.datetime.fromisoformat(p["expires_at"]) - dt.datetime.fromisoformat(p["starts_at"])).days
         self.assertEqual(days, 30)
         self.assertEqual(("confirm", self.lp.txn, 20), self.lp.calls[1])   # 用訂單上的金額確認
