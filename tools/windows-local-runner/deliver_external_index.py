@@ -4,19 +4,13 @@ The payload below is data. This program writes those bytes and does not
 execute them. A directory listing before the call is not an atomic guarantee;
 the create itself is exclusive. Windows has not been run.
 """
-import ctypes, ctypes.util, errno, hashlib, json, os, stat, sys
+import array, ctypes, hashlib, json, os, socket, stat, sys
 
 EXPECTED_SHA256 = '0e5f07d4cfe5f554ecf92f83ce0e02941ba0ad625338ed4c9606daa80abaff19'
 EXPECTED_SIZE = 945
 EXECUTION_COMMIT = '5f5be6c35bed7a674a91f19ee5c59fdbc8b281c3'
-HANDOFF = 'WIN.RUNNER.INDEX_HANDOFF.v4'
-_XATTR = b'user.wlr_handoff'
-_TOKEN_LEN = 32
-_LIBC = ctypes.CDLL(ctypes.util.find_library('c'), use_errno=True)
-_LIBC.fsetxattr.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_void_p, ctypes.c_size_t, ctypes.c_int]
-_LIBC.fsetxattr.restype = ctypes.c_int
-_LIBC.fgetxattr.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_void_p, ctypes.c_size_t]
-_LIBC.fgetxattr.restype = ctypes.c_ssize_t
+HANDOFF = 'WIN.RUNNER.INDEX_HANDOFF.v5'
+_WIN_SYMBOLS = ('OpenProcess', 'DuplicateHandle', 'GetCurrentProcess', 'ReadFile', 'SetFilePointerEx', 'CloseHandle')
 WINDOWS_DEST = 'C:\\Users\\User\\Desktop\\AI_RD_IMP\\WIN_RUNNER_RELEASE_5f5be6c35bed.json'
 INDEX_BYTES = b"""{
   "schema": "WIN.RUNNER.RELEASE_INDEX.v2",
@@ -64,34 +58,67 @@ def require_payload(payload):
         raise ValueError('E_PAYLOAD')
     return payload
 
-def observed_stat(fd):
-    """Recorded for logs. A later recreate can reuse these three values."""
-    info = os.fstat(fd)
-    if not stat.S_ISREG(info.st_mode):
-        raise ValueError('E_INDEX_IDENTITY')
-    return {'st_dev': int(info.st_dev), 'st_ino': int(info.st_ino), 'st_ctime_ns': int(info.st_ctime_ns)}
+def require_named(obj, names):
+    for name in names:
+        if not hasattr(obj, name):
+            raise ValueError('E_HANDOFF')
 
-def read_token(fd):
-    buf = ctypes.create_string_buffer(_TOKEN_LEN)
-    n = _LIBC.fgetxattr(fd, _XATTR, buf, _TOKEN_LEN)
-    if n < 0:
-        if ctypes.get_errno() == errno.ENODATA:
-            return None
-        raise ValueError('E_HANDOFF')
-    if n != _TOKEN_LEN:
-        raise ValueError('E_HANDOFF')
-    return buf.raw[:n]
-
-def tag_fd(fd):
-    """Bind a random token to this open file. A recreated inode does not keep it."""
+def require_handoff_api():
+    """Refuse before creating a file when this process cannot pass the original handle."""
     if os.name == 'nt':
+        try:
+            kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+        except OSError as exc:
+            raise ValueError('E_HANDOFF') from exc
+        require_named(kernel, _WIN_SYMBOLS)
+        return
+    require_named(socket, ('SCM_RIGHTS',))
+    require_named(socket.socket, ('sendmsg',))
+
+def send_fd(sock_fd, file_fd):
+    held = socket.fromfd(int(sock_fd), socket.AF_UNIX, socket.SOCK_STREAM)
+    try:
+        held.sendmsg([b'1'], [(socket.SOL_SOCKET, socket.SCM_RIGHTS, array.array('i', [int(file_fd)]).tobytes())])
+    finally:
+        held.close()
+
+def recv_fd(sock_fd):
+    held = socket.fromfd(int(sock_fd), socket.AF_UNIX, socket.SOCK_STREAM)
+    try:
+        _msg, ancdata, _flags, _addr = held.recvmsg(8, socket.CMSG_SPACE(array.array('i').itemsize))
+        for level, typ, data in ancdata:
+            if level == socket.SOL_SOCKET and typ == socket.SCM_RIGHTS:
+                fds = array.array('i')
+                fds.frombytes(data[:fds.itemsize])
+                return int(fds[0])
+    finally:
+        held.close()
+    raise ValueError('E_HANDOFF')
+
+def send_handle_to_parent(file_fd, parent_pid):
+    """Windows path. Not executed on Linux. Duplicate the kernel handle into the parent."""
+    import msvcrt
+    kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+    kernel.OpenProcess.argtypes = [ctypes.c_uint32, ctypes.c_int, ctypes.c_uint32]
+    kernel.OpenProcess.restype = ctypes.c_void_p
+    kernel.GetCurrentProcess.restype = ctypes.c_void_p
+    kernel.DuplicateHandle.argtypes = [
+        ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p,
+        ctypes.POINTER(ctypes.c_void_p), ctypes.c_uint32, ctypes.c_int, ctypes.c_uint32,
+    ]
+    kernel.DuplicateHandle.restype = ctypes.c_int
+    kernel.CloseHandle.argtypes = [ctypes.c_void_p]
+    kernel.CloseHandle.restype = ctypes.c_int
+    parent = kernel.OpenProcess(0x0040, 0, int(parent_pid))
+    if not parent:
         raise ValueError('E_HANDOFF')
-    token = os.urandom(_TOKEN_LEN)
-    if _LIBC.fsetxattr(fd, _XATTR, token, len(token), 0) != 0:
+    target = ctypes.c_void_p()
+    source = msvcrt.get_osfhandle(file_fd)
+    ok = kernel.DuplicateHandle(kernel.GetCurrentProcess(), source, parent, ctypes.byref(target), 0, 0, 0x0002)
+    kernel.CloseHandle(parent)
+    if not ok or not target.value:
         raise ValueError('E_HANDOFF')
-    if read_token(fd) != token:
-        raise ValueError('E_HANDOFF')
-    return token
+    return int(target.value)
 
 def write_exclusive(dest, payload):
     """Create dest once. A later failure leaves the partial file in place."""
@@ -101,7 +128,6 @@ def write_exclusive(dest, payload):
     if hasattr(os, 'O_BINARY'):
         flags |= os.O_BINARY
     fd = os.open(dest, flags, 0o600)
-    ident = None
     try:
         written = os.write(fd, payload)
         if written != len(payload):
@@ -111,13 +137,12 @@ def write_exclusive(dest, payload):
         got = os.read(fd, len(payload) + 1)
         if got != payload:
             raise ValueError('E_READBACK')
-        token = tag_fd(fd)
-        observed = observed_stat(fd)
-    finally:
+        return got, fd
+    except Exception:
         os.close(fd)
-    return got, token, observed
+        raise
 
-def deliver(dest, *, fixture_linux=False):
+def deliver(dest, *, fixture_linux=False, handoff_fd=None, parent_pid=None):
     payload = require_payload(INDEX_BYTES)
     path = os.path.abspath(dest)
     if os.name == 'nt':
@@ -134,26 +159,37 @@ def deliver(dest, *, fixture_linux=False):
         raise ValueError('E_PARENT_MISSING') from exc
     if stat.S_ISLNK(info.st_mode) or not stat.S_ISDIR(info.st_mode):
         raise ValueError('E_PARENT')
+    require_handoff_api()
     try:
         os.lstat(path)
     except FileNotFoundError:
         pass
     else:
         raise ValueError('E_EXISTS')
+    if os.name == 'nt':
+        if parent_pid is None:
+            raise ValueError('E_HANDOFF')
+    elif handoff_fd is None:
+        raise ValueError('E_HANDOFF')
     try:
-        got, token, observed = write_exclusive(path, payload)
+        got, fd = write_exclusive(path, payload)
     except FileExistsError as exc:
         raise ValueError('E_EXISTS') from exc
+    try:
+        if os.name == 'nt':
+            send_handle_to_parent(fd, parent_pid)
+        else:
+            send_fd(handoff_fd, fd)
+    finally:
+        os.close(fd)
     return {
         'wrote': path,
         'size': len(got),
         'sha256': hashlib.sha256(got).hexdigest(),
         'readback': 'SAME_HANDLE',
-        'object_id': {'st_dev': observed['st_dev'], 'st_ino': observed['st_ino'], 'token': token.hex()},
-        'observed_ctime_ns': observed['st_ctime_ns'],
         'stat_tuple_is_identity': False,
         'handoff': HANDOFF,
-        'identity_from': 'CREATE_FD_XATTR',
+        'identity_from': 'CREATE_FD_SENT',
         'path_bound_after_close': False,
         'executed_payload': False,
         'preflight_is_atomic_guarantee': False,
@@ -166,6 +202,8 @@ def main(argv=None):
         args = list(sys.argv[1:] if argv is None else argv)
         fixture = False
         dest = None
+        handoff_fd = None
+        parent_pid = None
         i = 0
         while i < len(args):
             item = args[i]
@@ -174,6 +212,12 @@ def main(argv=None):
             elif item == '--dest' and i + 1 < len(args):
                 i += 1
                 dest = args[i]
+            elif item == '--handoff-fd' and i + 1 < len(args):
+                i += 1
+                handoff_fd = int(args[i])
+            elif item == '--parent-pid' and i + 1 < len(args):
+                i += 1
+                parent_pid = int(args[i])
             else:
                 raise ValueError('E_ARGUMENTS')
             i += 1
@@ -181,7 +225,7 @@ def main(argv=None):
             dest = WINDOWS_DEST if dest is None else dest
         elif dest is None:
             raise ValueError('E_DEST')
-        print(json.dumps(deliver(dest, fixture_linux=fixture), ensure_ascii=True), flush=True)
+        print(json.dumps(deliver(dest, fixture_linux=fixture, handoff_fd=handoff_fd, parent_pid=parent_pid), ensure_ascii=True), flush=True)
         return 0
     except Exception as exc:
         print(json.dumps({'error': str(exc), 'type': type(exc).__name__, 'no_retry': True, 'executed_payload': False}, ensure_ascii=True), file=sys.stderr, flush=True)
