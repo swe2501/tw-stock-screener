@@ -8,7 +8,7 @@ if sys.platform != 'linux':
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / 'deliver_external_index.py'
-BLOB = '59fd64b9e5d5d4c7978219bc06f84aeb36cae5c1'
+BLOB = '494ff457f61d79d18e90be73b41c55735bcf477f'
 OLD_BLOB = '9fa534201e61678698cdc29c8a30edbc00a0f0da'
 EARLIER_BLOB = '7894bc5b84c769994a324d98a1faaf464b4b31a9'
 INDEX_SHA = '0e5f07d4cfe5f554ecf92f83ce0e02941ba0ad625338ed4c9606daa80abaff19'
@@ -117,15 +117,17 @@ def main():
         assert receipt['handoff'] == 'WIN.RUNNER.INDEX_HANDOFF.v4'
         assert receipt['identity_from'] == 'CREATE_FD_XATTR' and receipt['path_bound_after_close'] is False
         assert receipt['stat_tuple_is_identity'] is False
-        assert len(receipt['object_token']) == 64
+        assert len(receipt['object_id']['token']) == 64
         again_fd = os.open(piped, os.O_RDONLY)
         try:
             st = os.fstat(again_fd)
             tagged = module.read_token(again_fd)
         finally:
             os.close(again_fd)
-        assert tagged.hex() == receipt['object_token']
-        assert receipt['observed_stat'] == {'st_dev': int(st.st_dev), 'st_ino': int(st.st_ino), 'st_ctime_ns': int(st.st_ctime_ns)}
+        assert tagged.hex() == receipt['object_id']['token']
+        assert receipt['object_id']['st_dev'] == int(st.st_dev) and receipt['object_id']['st_ino'] == int(st.st_ino)
+        assert 'st_ctime_ns' not in receipt['object_id']
+        assert receipt['observed_ctime_ns'] == int(st.st_ctime_ns)
         assert piped.read_bytes() == module.INDEX_BYTES
     print(json.dumps({'PASS': 1, 'FAIL': 0, 'windows': 'NOT_RUN', 'blob': BLOB, 'index_sha256': INDEX_SHA, 'executed_payload': False}))
     evidence = os.environ.get('WLR_EVIDENCE_DIR')
