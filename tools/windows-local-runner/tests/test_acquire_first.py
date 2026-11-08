@@ -11,10 +11,10 @@ REPO = Path(__file__).resolve().parents[3]
 PS1 = ROOT / 'ACQUIRE_FIRST.ps1'
 PY = sys.executable
 GIT = shutil.which('git')
-FETCH = '345a3cf160501a8938c8fc81d910172e4be7f294'
-GATE_BLOB = 'e471770f12220320453de621f629713c6ff3a5cd'
-GATE_SHA = '27599100b8f138da1d3152bfff805891d29d0f576f2485c7e061e1d1e639c8e0'
-GATE_SIZE = 11034
+FETCH = 'ef96dc38099f5f82643afc3831f82df8119b9421'
+GATE_BLOB = '07374a1d2052908a366126eba0599f552a9896c0'
+GATE_SHA = 'f91138a4067a82a47faf8cf3a584ecbc711d5970af75452999672132293842e5'
+GATE_SIZE = 11774
 RUNTIME = '5f5be6c35bed7a674a91f19ee5c59fdbc8b281c3'
 INDEX_SHA = '0e5f07d4cfe5f554ecf92f83ce0e02941ba0ad625338ed4c9606daa80abaff19'
 
@@ -51,7 +51,7 @@ def main():
     header = text.split("@'\n", 1)[0]
     assert b'\r' not in raw and '>' not in header and '|' not in header
     assert len(raw) == 4867
-    assert hashlib.sha256(raw).hexdigest() == '55374f9e0a5c9b8f3e89b8c32c173856fc07088c79f6c36d2a2bb866d87a6be5'
+    assert hashlib.sha256(raw).hexdigest() == '4342b50a4121d0d71825070b3c6b9553266c45510b1fc3dc5aadd06b91eba05f'
     assert 'materialize_pinned_blob' not in text and 'FromBase64' not in text and 'CopyFromBox' not in text
     assert "Set-Location -LiteralPath 'C:\\Users\\User\\Desktop\\AI_RD_IMP'" in text
     assert "C:\\Users\\User\\AppData\\Local\\Python\\pythoncore-3.14-64\\python.exe" in text
@@ -61,7 +61,7 @@ def main():
     assert '$LASTEXITCODE' in text
     payload = payload_of(text)
     assert len(payload.encode('ascii')) == 4259
-    assert hashlib.sha256(payload.encode('ascii')).hexdigest() == 'c42456d6078931c8ebe00594b887fee1b7387e3d5edfac31b09ffce5ed6203b3'
+    assert hashlib.sha256(payload.encode('ascii')).hexdigest() == 'd90f9c5b54e7d425bf5c6de78f2a3f5b4f05daca21e32a1097e27309fcb73dc4'
     assert 'ACQUIRE_FIRST' not in payload
     gate = subprocess.check_output(['git', '-C', str(REPO), 'cat-file', 'blob', GATE_BLOB])
     assert len(gate) == GATE_SIZE and hashlib.sha256(gate).hexdigest() == GATE_SHA
@@ -129,7 +129,8 @@ def main():
         assert receipt['transfer_ok'] is True and receipt['python_starts'] == 1
         assert receipt['index_size'] == 945 and receipt['index_sha256'] == INDEX_SHA
         assert receipt['path_bound_after_close'] is False and receipt['installer_started'] is False
-        assert receipt['writer_commit'] == 'a9a55afdfc0b4383d997592ca19f8ab6265be9c3'
+        assert receipt['writer_commit'] == '05994e1fddd754c9bf20e91aa5423858283fc367'
+        assert receipt['acceptance_covers'] == 'CONSUMED_FD_XATTR' and receipt['stat_tuple_is_identity'] is False
         assert index.read_bytes() and hashlib.sha256(index.read_bytes()).hexdigest() == INDEX_SHA
     summary = {
         'PASS': 1, 'FAIL': 0, 'windows': 'NOT_RUN', 'powershell': 'NOT_RUN',

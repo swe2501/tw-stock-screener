@@ -14,7 +14,7 @@ External index digest, SHA-256 of the index file itself, not of `source_pin.json
 0e5f07d4cfe5f554ecf92f83ce0e02941ba0ad625338ed4c9606daa80abaff19
 ```
 
-Size of that index file: 945 bytes. Matching `source_pin.json` to itself is not this digest. Writer blob `9fa534201e61678698cdc29c8a30edbc00a0f0da` is the previous writer. The current writer blob is `dee84c9eba4770d81b7962fae9c5c599e8d13ff7` in commit `a9a55afdfc0b4383d997592ca19f8ab6265be9c3`. The gate resolves that commit with `git rev-parse`, not `git log --all`. The short launch is `FIRST_ENTRY.ps1`. It names `materialize_pinned_blob.py` and does not inline it. CopyFromBox is not the placement method.
+Size of that index file: 945 bytes. Matching `source_pin.json` to itself is not this digest. Writer blob `9fa534201e61678698cdc29c8a30edbc00a0f0da` is the previous writer. The current writer blob is `494ff457f61d79d18e90be73b41c55735bcf477f` in commit `05994e1fddd754c9bf20e91aa5423858283fc367`. The stat tuple is not identity. The handoff token is `user.wlr_handoff` on the create fd. The gate resolves that commit with `git rev-parse`, not `git log --all`. The short launch is `FIRST_ENTRY.ps1`. It names `materialize_pinned_blob.py` and does not inline it. CopyFromBox is not the placement method.
 
 Paths. The parent must already be a real directory. These three names must not exist yet:
 
