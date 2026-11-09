@@ -12,8 +12,9 @@
     "git_path": "C:\\Program Files\\Git\\cmd\\git.exe",
     "git_version": "2.46.1",
     "git_size": 46968,
-    "git_sha256_enforced": false,
-    "git_pin_source": "WIN-RUNNER-MVP-GIT-01/tool_pins.json unavailable; Windows records the measured SHA-256 and does not block on it",
+    "git_sha256": "d90e36cafd656d52984f7546bfcb5b065d73e2e66957c952b7a4a1cd260e8f36",
+    "git_sha256_enforced": true,
+    "git_pin_source": "Windows run 3 measured git.exe; mismatch is E_GIT and does not launch",
     "checked_on_this_commit": false
   },
   "files": {
@@ -37,29 +38,29 @@
       "size": 513,
       "sha256": "c750112670b6bdfacf156a0ced6d182b79c9cbecb25872b5f99d3d1b62cee53e"
     },
-    "payloads/runner_ok.py": {
-      "size": 19,
-      "sha256": "336b410966113e177aa2f7a4cebf907c280375ae882671d8dbae6980a41a37ce"
-    },
-    "payloads/exit_3.py": {
-      "size": 23,
-      "sha256": "4a42a4f7f0b95fedd4262ca65723c21d47ae7e26a95220df9592ed25bded3278"
-    },
-    "payloads/stderr_only.py": {
-      "size": 79,
-      "sha256": "93fd6c5e5fd8bef211738ce1c383fda18785065cb30a92cc85a097a5e95f3964"
-    },
-    "payloads/exception.py": {
-      "size": 38,
-      "sha256": "1b84c446586317f4320700a2c0fe24fe418f538c4696a06d775e3ccef0f1bc39"
-    },
     "preflight.py": {
-      "size": 34444,
-      "sha256": "fb72a373b7dee762ef6cc4aed2831edee2fdca6b015072001b4967c9eaf57b02"
+      "size": 45874,
+      "sha256": "5d379acd7059ae0e5deb241a70f2fbc9102ac6cd3d00c28f539eaf722ef8d732"
     },
     "BOOTSTRAP.ps1": {
-      "size": 1407,
-      "sha256": "fe90346e978a1d1b954ef7adfb1b7294828d7209e19dc4dd1029d43f93b3d436"
+      "size": 1490,
+      "sha256": "59e58b277781c761e81e07df5691d255a81a2f82823cc5a68b59f87a336c9e28"
+    },
+    "payloads/runner_ok.py": {
+      "size": 307,
+      "sha256": "147cb382c075e1037b348fc0df6bf58e754c6260abe65c6cf489e03e484ad737"
+    },
+    "payloads/exit_3.py": {
+      "size": 305,
+      "sha256": "6d8279e5cc11bac6343b710e3fad6d8c77be00220ac53b8823def458c833e96a"
+    },
+    "payloads/stderr_only.py": {
+      "size": 361,
+      "sha256": "564c6dbf69b5970e5e4aed728129c1a2e55fb5cf76f4e9b4df630c863617cbce"
+    },
+    "payloads/exception.py": {
+      "size": 326,
+      "sha256": "384d82c83e5f79462b44bd880eed0b85922f6261acf4e083d4f5e469bd5ee911"
     }
   }
 }

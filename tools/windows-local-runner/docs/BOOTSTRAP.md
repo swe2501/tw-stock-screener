@@ -1,6 +1,6 @@
 # Source bootstrap
 
-Current entry is `tools/windows-local-runner/BOOTSTRAP.ps1 -Pin` with one required 40-hex argument. The script does not contain a commit SHA. Clone and checkout pass `-c core.autocrlf=false -c core.eol=lf` and do not change the user's Git config. The new directories are `WIN_RUNNER_MVP_STAGE_003` and `WIN_RUNNER_MVP_WORK_003`. Existing directories are left in place. The repository is public. No token is embedded. Windows execution is `NOT_RUN`. `FIRST_ENTRY.ps1` and `ACQUIRE_FIRST.ps1` are earlier attempts and are not this entry.
+Current entry is `tools/windows-local-runner/BOOTSTRAP.ps1 -Pin` with one required 40-hex argument. The script does not contain a commit SHA. Clone and checkout pass `-c core.autocrlf=false -c core.eol=lf` and do not change the user's Git config. The new directories are `WIN_RUNNER_MVP_STAGE_004` and `WIN_RUNNER_MVP_WORK_004`. Existing directories are left in place. A RunID is unique. `(campaign, task)` is one attempt ever. A different RunID for the same campaign and task is refused as a duplicate, by design. The repository is public. No token is embedded. Windows execution is `NOT_RUN`. `FIRST_ENTRY.ps1` and `ACQUIRE_FIRST.ps1` are earlier attempts and are not this entry.
 
 # Source bootstrap for commit 5f5be6c
 

@@ -3,7 +3,7 @@
 This file does not change the five frozen runtime files. Windows has not been run.
 Child stdout and stderr are the raw pipe bytes, written with os.write.
 """
-import datetime, hashlib, json, os, platform, re, sqlite3, subprocess, sys, tempfile
+import datetime, hashlib, json, os, platform, re, shutil, sqlite3, subprocess, sys, tempfile
 from pathlib import Path
 
 BASE = Path(__file__).resolve().parent
@@ -19,6 +19,9 @@ WIN_PYTHON = r'C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe'
 WIN_PYTHON_SIZE = 106208
 WIN_PYTHON_SHA256 = '3adbbf2af609e206e3ca18cd55fc7c4b52f5c8bb8218dd99fd5a9e50d7a193cd'
 WIN_GIT = r'C:\Program Files\Git\cmd\git.exe'
+WIN_GIT_SHA256 = 'd90e36cafd656d52984f7546bfcb5b065d73e2e66957c952b7a4a1cd260e8f36'
+REPO_PREFIX = 'tools/windows-local-runner/'
+RUN_ID_SEMANTICS = 'A RunID is unique. (campaign, task) is one attempt ever. A different RunID for the same campaign and task is refused as a duplicate, by design.'
 REPO_URL = 'https://github.com/swe2501/tw-stock-screener.git'
 LEDGER_SQL = (
     'CREATE TABLE attempts('
@@ -52,10 +55,7 @@ def taipei_now():
 
 
 def process_argv():
-    if os.name == 'posix':
-        raw = Path('/proc/self/cmdline').read_bytes().split(b'\0')
-        return [part.decode('utf-8', 'surrogateescape') for part in raw if part]
-    return [sys.executable, *sys.argv]
+    return list(sys.orig_argv)
 
 
 def git_bin():
@@ -178,16 +178,19 @@ def _ledger_rows(path):
     path = Path(path)
     raw = path.read_bytes()
     scratch = Path(tempfile.mkdtemp(prefix='wlr-ledger-'))
-    copy = scratch / 'ledger.sqlite3'
-    write_new(copy, raw)
-    db = sqlite3.connect(copy, timeout=5, isolation_level=None)
+    db = None
     try:
+        copy = scratch / 'ledger.sqlite3'
+        write_new(copy, raw)
+        db = sqlite3.connect(copy, timeout=5, isolation_level=None)
         rows = list(db.execute(
             'SELECT campaign, task, run_id, status, exit_code FROM attempts ORDER BY campaign, task, run_id'
         ))
+        return raw, rows
     finally:
-        db.close()
-    return raw, rows
+        if db is not None:
+            db.close()
+        shutil.rmtree(scratch, ignore_errors=True)
 
 
 def ledger_logical(path):
@@ -215,10 +218,11 @@ def validate_existing_ledger(path):
         return
     raw = path.read_bytes()
     scratch = Path(tempfile.mkdtemp(prefix='wlr-ledger-'))
-    copy = scratch / 'ledger.sqlite3'
-    write_new(copy, raw)
-    db = sqlite3.connect(copy, timeout=5, isolation_level=None)
+    db = None
     try:
+        copy = scratch / 'ledger.sqlite3'
+        write_new(copy, raw)
+        db = sqlite3.connect(copy, timeout=5, isolation_level=None)
         tables = [row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name")]
         if tables != ['attempts']:
             raise ValueError('E_LEDGER_SCHEMA')
@@ -253,15 +257,20 @@ def validate_existing_ledger(path):
         if _index_columns(db, origins['pk'][0]) != ['campaign', 'task'] or _index_columns(db, origins['u'][0]) != ['run_id']:
             raise ValueError('E_LEDGER_SCHEMA')
     finally:
-        db.close()
+        if db is not None:
+            db.close()
+        shutil.rmtree(scratch, ignore_errors=True)
 
 
-def ledger_has_run(path, run_id):
+def ledger_conflict(path, campaign, task, run_id):
     path = Path(path)
     if not occupied(path):
         return False
     _raw, rows = _ledger_rows(path)
-    return any(row[2] == run_id for row in rows)
+    for camp, tsk, rid, _status, _code in rows:
+        if rid == run_id or (camp == campaign and tsk == task):
+            return True
+    return False
 
 
 def create_ledger(path):
@@ -298,6 +307,68 @@ def checkout_root():
     return Path(proc.stdout.decode().strip())
 
 
+def require_git_sha(digest):
+    pin = load_manifest(BASE)['windows_tools']
+    if pin.get('git_sha256_enforced') is not True or digest != pin.get('git_sha256') or digest != WIN_GIT_SHA256:
+        raise ValueError('E_GIT')
+
+
+def require_resolved_python(expected_path):
+    exe = Path(sys.executable).resolve()
+    try:
+        want = Path(expected_path).resolve()
+    except OSError:
+        want = Path(expected_path)
+    if os.path.normcase(str(exe)) != os.path.normcase(str(want)):
+        raise ValueError('E_PYTHON')
+
+
+def git_blob_id(data):
+    return hashlib.sha1(b'blob %d\0' % len(data) + data).hexdigest()
+
+
+def ls_tree_blobs(checkout, rev):
+    proc = subprocess.run([git_bin(), '-C', str(checkout), 'ls-tree', '-r', rev], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if proc.returncode != 0:
+        raise ValueError('E_GIT')
+    found = {}
+    for line in proc.stdout.split(b'\n'):
+        if not line:
+            continue
+        meta, path = line.split(b'\t', 1)
+        found[path.decode('utf-8')] = meta.split()[-1].decode('ascii')
+    return found
+
+
+def bind_bytes(root, require_detached):
+    root = Path(root)
+    manifest_path = rel_under(root, MANIFEST_NAME)
+    if not manifest_path.is_file() or manifest_path.is_symlink():
+        raise ValueError('E_MANIFEST')
+    manifest_bytes = manifest_path.read_bytes()
+    head = head_state(checkout_root(), require_detached)
+    blobs = ls_tree_blobs(checkout_root(), head['head'])
+    if blobs.get(REPO_PREFIX + MANIFEST_NAME) != git_blob_id(manifest_bytes):
+        raise ValueError('E_BLOB')
+    manifest = json.loads(manifest_bytes.decode('utf-8'))
+    if manifest.get('schema') != 'WIN.RUNNER.MVP_MANIFEST.v1' or not isinstance(manifest.get('files'), dict):
+        raise ValueError('E_MANIFEST')
+    checked = {}
+    held = {}
+    for name, row in manifest['files'].items():
+        path = rel_under(root, name)
+        if not path.is_file() or path.is_symlink():
+            raise ValueError('E_MISSING:' + name)
+        data = path.read_bytes()
+        if len(data) != row['size'] or sha256(data) != row['sha256']:
+            raise ValueError('E_SHA:' + name)
+        if blobs.get(REPO_PREFIX + name) != git_blob_id(data):
+            raise ValueError('E_BLOB')
+        checked[name] = row['sha256']
+        held[name] = data
+    return manifest, checked, held, head
+
+
 def windows_tools():
     pin = load_manifest(BASE)['windows_tools']
     reported = {
@@ -311,7 +382,9 @@ def windows_tools():
         'git_pin_version': pin['git_version'],
         'git_pin_size': pin['git_size'],
         'git_sha256_enforced': pin['git_sha256_enforced'],
+        'git_pin_sha256': pin.get('git_sha256'),
         'git_pin_source': pin['git_pin_source'],
+        'python314_dll_recorded': False,
     }
     if os.name != 'nt':
         return reported
@@ -325,8 +398,15 @@ def windows_tools():
     git_digest = sha256(git_bytes)
     if len(git_bytes) != pin['git_size']:
         raise ValueError('E_GIT')
-    if pin['git_sha256_enforced'] is True and git_digest != pin['git_sha256']:
-        raise ValueError('E_GIT')
+    require_git_sha(git_digest)
+    dll = Path(pin['python_path']).with_name('python314.dll')
+    reported['python314_dll_recorded'] = False
+    if dll.is_file():
+        dll_bytes = dll.read_bytes()
+        reported['python314_dll_recorded'] = True
+        reported['python314_dll_path'] = str(dll)
+        reported['python314_dll_size'] = len(dll_bytes)
+        reported['python314_dll_sha256'] = sha256(dll_bytes)
     git = subprocess.run([pin['git_path'], '--version'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     git_text = git.stdout.decode('ascii', 'replace').strip()
     if git.returncode != 0 or not git_text.startswith('git version ' + pin['git_version']):
@@ -374,6 +454,8 @@ def log_is_inside(root, log_dir):
 
 
 def write_evidence(log_dir, payload, stdout, stderr):
+    if type(payload.get('run_id')) is not str or payload['run_id'] == '':
+        raise ValueError('E_RECORD')
     log_dir = Path(log_dir)
     if occupied(log_dir):
         raise ValueError('E_EXISTS')
@@ -390,7 +472,7 @@ def write_evidence(log_dir, payload, stdout, stderr):
     return payload
 
 
-def run_task(root, task, campaign, run_id, store, log_dir, *, require_detached=None):
+def run_task(root, task, campaign, run_id, store, log_dir, *, require_detached=None, marker_dir=None):
     root = Path(root)
     log_dir = Path(log_dir)
     started = taipei_now()
@@ -410,6 +492,7 @@ def run_task(root, task, campaign, run_id, store, log_dir, *, require_detached=N
     tools = None
     head = None
     vv = None
+    marker_name = None
     try:
         if log_is_inside(root, log_dir):
             raise ValueError('E_LOG_INSIDE')
@@ -418,17 +501,12 @@ def run_task(root, task, campaign, run_id, store, log_dir, *, require_detached=N
         ident(store)
         if task not in TASKS:
             raise ValueError('E_TASK')
+        _manifest, checked, held, head = bind_bytes(root, require_detached)
         tools = windows_tools()
         vv = python_vv()
-        head = head_state(checkout_root(), require_detached)
-        manifest = load_manifest(root)
-        checked = check_tree(root, manifest)
-        payload = rel_under(root, TASKS[task])
-        payload_bytes = payload.read_bytes()
-        if sha256(payload_bytes) != manifest['files'][TASKS[task]]['sha256']:
-            raise ValueError('E_SHA:' + TASKS[task])
+        payload_bytes = held[TASKS[task]]
         validate_existing_ledger(ledger_path)
-        if ledger_has_run(ledger_path, run_id):
+        if ledger_conflict(ledger_path, campaign, task, run_id):
             raise ValueError('E_DUPLICATE_STICKY_NO_RETRY')
         ledger_path.parent.mkdir(parents=True, exist_ok=True)
         if not occupied(ledger_path):
@@ -446,13 +524,21 @@ def run_task(root, task, campaign, run_id, store, log_dir, *, require_detached=N
                 db.execute('ROLLBACK')
             db.close()
             raise ValueError('E_DUPLICATE_STICKY_NO_RETRY')
-        child_argv = [sys.executable, '-B', str(payload)]
         child_cwd = str(root.resolve())
+        if marker_dir is None:
+            marker_dir = Path(tempfile.gettempdir()) / 'wlr-markers'
+        marker_dir = Path(marker_dir)
+        if log_is_inside(root, marker_dir):
+            raise ValueError('E_MARKER_INSIDE')
+        marker_dir.mkdir(parents=True, exist_ok=True)
+        marker_name = campaign + '-' + task + '-' + run_id
         launches = 1
         env = os.environ.copy()
         env['PYTHONDONTWRITEBYTECODE'] = '1'
-        proc = subprocess.Popen(child_argv, cwd=child_cwd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env, shell=False)
-        child_stdout, child_stderr = proc.communicate()
+        env['WLR_MARKER_DIR'] = str(marker_dir.resolve())
+        env['WLR_MARKER_NAME'] = marker_name
+        proc = subprocess.Popen([sys.executable, '-B', '-'], cwd=child_cwd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env, shell=False)
+        child_stdout, child_stderr = proc.communicate(payload_bytes)
         actual = proc.returncode
         status = 'SUCCEEDED' if actual == 0 else 'FAILED'
         runner_exit = 0 if actual == 0 else 2
@@ -475,7 +561,8 @@ def run_task(root, task, campaign, run_id, store, log_dir, *, require_detached=N
         launches = 0
         runner_exit = 3
         child_stdout = None
-        child_stderr = None
+        child_stderr = json.dumps({'error': error, 'no_retry': True, 'child_launches': 0, 'run_id': run_id}, ensure_ascii=True).encode('ascii')
+        marker_name = None
         actual = None
         status = None
         ended = taipei_now()
@@ -484,7 +571,8 @@ def run_task(root, task, campaign, run_id, store, log_dir, *, require_detached=N
     evidence = {
         'argv': process_argv(),
         'cwd': str(Path.cwd()),
-        'child_argv': None if launches == 0 else [sys.executable, '-B', str(rel_under(root, TASKS[task]))],
+        'child_argv': None if launches == 0 else [sys.executable, '-B', '-'],
+        'marker_name': marker_name,
         'child_cwd': None if launches == 0 else str(root.resolve()),
         'exit': runner_exit,
         'actual_process_exit': actual,
@@ -519,6 +607,7 @@ def run_task(root, task, campaign, run_id, store, log_dir, *, require_detached=N
         'task': task,
         'campaign': campaign,
         'run_id': run_id,
+        'run_id_semantics': RUN_ID_SEMANTICS,
         'store': store,
         'repository_url': REPO_URL,
         'credential': 'none',
@@ -529,18 +618,19 @@ def run_task(root, task, campaign, run_id, store, log_dir, *, require_detached=N
     return evidence
 
 
-def verify(root, log_dir):
+def verify(root, log_dir, run_id):
     root = Path(root)
     started = taipei_now()
     tree_before = tree_hash(root)
-    checked = check_tree(root, load_manifest(root))
-    head = head_state(checkout_root(), os.name == 'nt')
+    _manifest, checked, _held, head = bind_bytes(root, os.name == 'nt')
     evidence = {
         'argv': process_argv(),
         'cwd': str(Path.cwd()),
         'exit': 0,
         'child_launches': 0,
         'payload_started': False,
+        'run_id': run_id,
+        'run_id_semantics': RUN_ID_SEMANTICS,
         'result': 'MANIFEST_OK',
         'commit_sha': head['head'],
         'detached': head['detached'],
@@ -575,16 +665,50 @@ def run_tests(work, run_id):
     target = work / 'target'
     delivered = deliver(src, target)
     results = {}
-    verified = verify(target, work / 'logs' / 'TEST-01')
+    markers = work / 'markers'
+    markers.mkdir()
+    verified = verify(target, work / 'logs' / 'TEST-01', run_id)
+    git_negative = None
+    try:
+        require_git_sha('0' * 64)
+    except ValueError as exc:
+        git_negative = str(exc)
+    git_positive = True
+    try:
+        require_git_sha(WIN_GIT_SHA256)
+    except ValueError:
+        git_positive = False
+    python_negative = None
+    try:
+        require_resolved_python(r'C:\does-not-exist\python.exe')
+    except ValueError as exc:
+        python_negative = str(exc)
+    python_positive = True
+    try:
+        require_resolved_python(sys.executable)
+    except ValueError:
+        python_positive = False
+    write_evidence(work / 'logs' / 'TEST-01-git', {
+        'argv': process_argv(), 'cwd': str(Path.cwd()), 'exit': 3, 'child_launches': 0,
+        'run_id': run_id + 'git', 'error': git_negative,
+    }, None, json.dumps({'error': git_negative, 'child_launches': 0, 'run_id': run_id + 'git'}).encode('ascii'))
+    write_evidence(work / 'logs' / 'TEST-01-python', {
+        'argv': process_argv(), 'cwd': str(Path.cwd()), 'exit': 3, 'child_launches': 0,
+        'run_id': run_id + 'py', 'error': python_negative,
+    }, None, json.dumps({'error': python_negative, 'child_launches': 0, 'run_id': run_id + 'py'}).encode('ascii'))
     results['TEST-01'] = {
+        'run_id': run_id,
         'exit': verified['exit'],
         'child_launches': verified['child_launches'],
-        'pass': verified['exit'] == 0 and verified['child_launches'] == 0 and verified['result'] == 'MANIFEST_OK' and verified['tree_hash_equal'],
+        'wrong_python': python_negative,
+        'git_sha_negative': git_negative,
+        'pass': verified['exit'] == 0 and verified['child_launches'] == 0 and verified['result'] == 'MANIFEST_OK' and verified['tree_hash_equal'] and python_negative == 'E_PYTHON' and python_positive and git_negative == 'E_GIT' and git_positive and len(list(markers.iterdir())) == 0,
     }
-    normal = run_task(target, 'runner_ok', 'c02', run_id + 'ok', 's02', work / 'logs' / 'TEST-02')
+    normal = run_task(target, 'runner_ok', 'c02', run_id + 'ok', 's02', work / 'logs' / 'TEST-02', marker_dir=markers)
     expected = b'Runner OK\n' if os.name != 'nt' else b'Runner OK\r\n'
     raw = (work / 'logs' / 'TEST-02' / 'stdout.bin').read_bytes()
     results['TEST-02'] = {
+        'run_id': run_id + 'ok',
         'exit': normal['exit'],
         'child_launches': normal['child_launches'],
         'stdout_len': len(raw),
@@ -595,12 +719,13 @@ def run_tests(work, run_id):
         'windows_expected_hex': b'Runner OK\r\n'.hex(),
         'windows_observed': os.name == 'nt',
     }
-    exit3 = run_task(target, 'exit_3', 'c03', run_id + 'e3', 's03', work / 'logs' / 'TEST-03-exit3')
-    err_only = run_task(target, 'stderr_only', 'c03b', run_id + 'se', 's03b', work / 'logs' / 'TEST-03-stderr')
-    exploded = run_task(target, 'exception', 'c03c', run_id + 'ex', 's03c', work / 'logs' / 'TEST-03-exception')
+    exit3 = run_task(target, 'exit_3', 'c03', run_id + 'e3', 's03', work / 'logs' / 'TEST-03-exit3', marker_dir=markers)
+    err_only = run_task(target, 'stderr_only', 'c03b', run_id + 'se', 's03b', work / 'logs' / 'TEST-03-stderr', marker_dir=markers)
+    exploded = run_task(target, 'exception', 'c03c', run_id + 'ex', 's03c', work / 'logs' / 'TEST-03-exception', marker_dir=markers)
     raw_err = (work / 'logs' / 'TEST-03-stderr' / 'stderr.bin').read_bytes()
     raw_ex = (work / 'logs' / 'TEST-03-exception' / 'stderr.bin').read_bytes()
     results['TEST-03'] = {
+        'run_id': run_id + 'e3',
         'exit3_runner_exit': exit3['exit'],
         'exit3_child': exit3['actual_process_exit'],
         'exit3_stdout_len': exit3['stdout_len'],
@@ -619,28 +744,48 @@ def run_tests(work, run_id):
     for name, row in manifest['files'].items():
         if sha256((target / name).read_bytes()) != row['sha256'] or sha256((src / name).read_bytes()) != row['sha256']:
             mismatched = True
-    results['TEST-04'] = {'pass': not mismatched, 'files': sorted(manifest['files'])}
+    results['TEST-04'] = {'run_id': run_id + 't04', 'pass': not mismatched, 'files': sorted(manifest['files'])}
     missing = work / 'missing'
     missing.mkdir()
     copy_exclusive(src / MANIFEST_NAME, missing / MANIFEST_NAME)
     for name in manifest['files']:
         if name != 'payloads/runner_ok.py':
             copy_exclusive(src / name, missing / name)
-    missing_run = run_task(missing, 'runner_ok', 'c05', run_id + 'miss', 's05', work / 'logs' / 'TEST-05')
+    missing_run = run_task(missing, 'runner_ok', 'c05', run_id + 'miss', 's05', work / 'logs' / 'TEST-05', marker_dir=markers)
+    def missing_one(label, filename, campaign, rid):
+        root = work / label
+        root.mkdir()
+        copy_exclusive(src / MANIFEST_NAME, root / MANIFEST_NAME)
+        for name in manifest['files']:
+            if name != filename:
+                copy_exclusive(src / name, root / name)
+        before = sorted(p.name for p in markers.iterdir())
+        result = run_task(root, 'runner_ok', campaign, rid, 's05x', work / 'logs' / label, marker_dir=markers)
+        after = sorted(p.name for p in markers.iterdir())
+        err = (work / 'logs' / label / 'stderr.bin').read_bytes()
+        return result, before == after, err
+    config_run, config_marks, config_err = missing_one('TEST-05-config', 'run_config.json', 'c05c', run_id + 'cfg')
+    pin_run, pin_marks, pin_err = missing_one('TEST-05-pin', 'source_pin.json', 'c05n', run_id + 'pin')
     pos05 = work / 'pos05'
     deliver(src, pos05)
-    pos05_run = run_task(pos05, 'runner_ok', 'c05p', run_id + 'mpos', 's05p', work / 'logs' / 'TEST-05-positive')
+    pos05_run = run_task(pos05, 'runner_ok', 'c05p', run_id + 'mpos', 's05p', work / 'logs' / 'TEST-05-positive', marker_dir=markers)
+    payload_err = (work / 'logs' / 'TEST-05' / 'stderr.bin').read_bytes()
     results['TEST-05'] = {
+        'run_id': run_id + 'miss',
         'error': missing_run['error'],
         'child_launches': missing_run['child_launches'],
-        'tree_hash_before': missing_run['tree_hash_before'],
-        'tree_hash_after': missing_run['tree_hash_after'],
         'tree_hash_equal': missing_run['tree_hash_equal'],
-        'ledger_before': missing_run['ledger_before'],
-        'ledger_after': missing_run['ledger_after'],
         'ledger_equal': missing_run['ledger_equal'],
+        'missing_config': config_run['error'],
+        'missing_pin': pin_run['error'],
         'positive_control': {'child_launches': pos05_run['child_launches'], 'exit': pos05_run['exit'], 'stdout_len': pos05_run['stdout_len']},
-        'pass': missing_run['error'] == 'E_MISSING:payloads/runner_ok.py' and missing_run['child_launches'] == 0 and missing_run['tree_hash_equal'] and missing_run['ledger_equal'] and missing_run['ledger_before'] is None and pos05_run['child_launches'] == 1 and pos05_run['exit'] == 0,
+        'pass': (
+            missing_run['error'] == 'E_MISSING:payloads/runner_ok.py' and b'E_MISSING:payloads/runner_ok.py' in payload_err
+            and missing_run['child_launches'] == 0 and missing_run['tree_hash_equal'] and missing_run['ledger_equal']
+            and config_run['error'] == 'E_MISSING:run_config.json' and config_run['child_launches'] == 0 and config_marks and b'E_MISSING:run_config.json' in config_err
+            and pin_run['error'] == 'E_MISSING:source_pin.json' and pin_run['child_launches'] == 0 and pin_marks and b'E_MISSING:source_pin.json' in pin_err
+            and pos05_run['child_launches'] == 1 and pos05_run['exit'] == 0
+        ),
     }
     bad = work / 'bad'
     bad.mkdir()
@@ -652,27 +797,79 @@ def run_tests(work, run_id):
         dest = bad / name
         dest.parent.mkdir(parents=True, exist_ok=True)
         write_new(dest, data)
-    bad_run = run_task(bad, 'runner_ok', 'c06', run_id + 'bad', 's06', work / 'logs' / 'TEST-06')
+    bad_run = run_task(bad, 'runner_ok', 'c06', run_id + 'bad', 's06', work / 'logs' / 'TEST-06', marker_dir=markers)
+    def planted(label, campaign, rid, mutate):
+        root = work / label
+        deliver(src, root)
+        mutate(root)
+        before = sorted(p.name for p in markers.iterdir())
+        result = run_task(root, 'runner_ok', campaign, rid, 's06x', work / 'logs' / label, marker_dir=markers)
+        after = sorted(p.name for p in markers.iterdir())
+        err = (work / 'logs' / label / 'stderr.bin').read_bytes()
+        return result, before == after, err
+    def grow(root):
+        path = root / 'payloads' / 'runner_ok.py'
+        path.write_bytes(path.read_bytes() + b'\n')
+    def swap(root):
+        (root / 'payloads' / 'runner_ok.py').write_bytes((src / 'payloads' / 'exit_3.py').read_bytes())
+    def pin_mismatch(root):
+        path = root / 'source_pin.json'
+        data = bytearray(path.read_bytes())
+        data[0] ^= 1
+        path.write_bytes(bytes(data))
+    def combined(root):
+        path = root / 'preflight.py'
+        data = bytearray(path.read_bytes())
+        data[0] ^= 1
+        data = bytes(data)
+        path.write_bytes(data)
+        doc = json.loads((root / MANIFEST_NAME).read_text(encoding='utf-8'))
+        doc['files']['preflight.py']['size'] = len(data)
+        doc['files']['preflight.py']['sha256'] = sha256(data)
+        (root / MANIFEST_NAME).write_text(json.dumps(doc, indent=2) + '\n', encoding='utf-8')
+    size_run, size_marks, size_err = planted('TEST-06-size', 'c06s', run_id + 'sz', grow)
+    swap_run, swap_marks, swap_err = planted('TEST-06-swap', 'c06w', run_id + 'sw', swap)
+    pin_run6, pin_marks6, pin_err6 = planted('TEST-06-pin', 'c06n', run_id + 'pn', pin_mismatch)
+    blob_run, blob_marks, blob_err = planted('TEST-06-blob', 'c06b', run_id + 'bb', combined)
     pos06 = work / 'pos06'
     deliver(src, pos06)
-    pos06_run = run_task(pos06, 'runner_ok', 'c06p', run_id + 'bpos', 's06p', work / 'logs' / 'TEST-06-positive')
+    pos06_run = run_task(pos06, 'runner_ok', 'c06p', run_id + 'bpos', 's06p', work / 'logs' / 'TEST-06-positive', marker_dir=markers)
+    same_err = (work / 'logs' / 'TEST-06' / 'stderr.bin').read_bytes()
     results['TEST-06'] = {
+        'run_id': run_id + 'bad',
         'error': bad_run['error'],
         'child_launches': bad_run['child_launches'],
-        'tree_hash_before': bad_run['tree_hash_before'],
-        'tree_hash_after': bad_run['tree_hash_after'],
-        'tree_hash_equal': bad_run['tree_hash_equal'],
-        'ledger_before': bad_run['ledger_before'],
-        'ledger_after': bad_run['ledger_after'],
-        'ledger_equal': bad_run['ledger_equal'],
+        'tree_hash_equal': bad_run['tree_hash_equal'] and size_run['tree_hash_equal'] and swap_run['tree_hash_equal'] and pin_run6['tree_hash_equal'] and blob_run['tree_hash_equal'],
+        'ledger_equal': bad_run['ledger_equal'] and size_run['ledger_equal'] and blob_run['ledger_equal'],
+        'different_size': size_run['error'],
+        'swapped': swap_run['error'],
+        'pin_mismatch': pin_run6['error'],
+        'combined_tamper': blob_run['error'],
         'positive_control': {'child_launches': pos06_run['child_launches'], 'exit': pos06_run['exit'], 'stdout_len': pos06_run['stdout_len']},
-        'pass': bad_run['error'] == 'E_SHA:payloads/runner_ok.py' and bad_run['child_launches'] == 0 and bad_run['tree_hash_equal'] and bad_run['ledger_equal'] and bad_run['ledger_before'] is None and pos06_run['child_launches'] == 1 and pos06_run['exit'] == 0,
+        'pass': (
+            bad_run['error'] == 'E_SHA:payloads/runner_ok.py' and bad_run['child_launches'] == 0 and b'E_SHA:payloads/runner_ok.py' in same_err
+            and size_run['error'] == 'E_SHA:payloads/runner_ok.py' and size_run['child_launches'] == 0 and size_marks and b'E_SHA:payloads/runner_ok.py' in size_err
+            and swap_run['error'] == 'E_SHA:payloads/runner_ok.py' and swap_run['child_launches'] == 0 and swap_marks and b'E_SHA:payloads/runner_ok.py' in swap_err
+            and pin_run6['error'] == 'E_SHA:source_pin.json' and pin_run6['child_launches'] == 0 and pin_marks6 and b'E_SHA:source_pin.json' in pin_err6
+            and blob_run['error'] == 'E_BLOB' and blob_run['child_launches'] == 0 and blob_marks and b'E_BLOB' in blob_err
+            and pos06_run['child_launches'] == 1 and pos06_run['exit'] == 0
+        ),
     }
     dup_root = work / 'dup'
     deliver(src, dup_root)
-    first = run_task(dup_root, 'runner_ok', 'c07', run_id + 'dup', 's07', work / 'logs' / 'TEST-07-positive')
-    second = run_task(dup_root, 'runner_ok', 'c07', run_id + 'dup', 's07', work / 'logs' / 'TEST-07')
+    first = run_task(dup_root, 'runner_ok', 'c07', run_id + 'dup', 's07', work / 'logs' / 'TEST-07-positive', marker_dir=markers)
+    second = run_task(dup_root, 'runner_ok', 'c07', run_id + 'dup', 's07', work / 'logs' / 'TEST-07', marker_dir=markers)
+    ledger_file = dup_root / 's07' / 'ledger.sqlite3'
+    before_other = ledger_file.read_bytes()
+    before_marks = sorted(p.name for p in markers.iterdir())
+    other_id = run_task(dup_root, 'runner_ok', 'c07', run_id + 'oth', 's07', work / 'logs' / 'TEST-07-other-id', marker_dir=markers)
+    other_marks_equal = sorted(p.name for p in markers.iterdir()) == before_marks
+    content_root = work / 'content'
+    deliver(src, content_root)
+    content_first = run_task(content_root, 'runner_ok', 'c07b', run_id + 'same', 's07b', work / 'logs' / 'TEST-07-content-positive', marker_dir=markers)
+    content_second = run_task(content_root, 'exit_3', 'c07b', run_id + 'same', 's07b', work / 'logs' / 'TEST-07-content', marker_dir=markers)
     results['TEST-07'] = {
+        'run_id': run_id + 'dup',
         'exit': second['exit'],
         'error': second['error'],
         'child_launches': second['child_launches'],
@@ -683,7 +880,11 @@ def run_tests(work, run_id):
         'ledger_after': second['ledger_after'],
         'ledger_equal': second['ledger_equal'],
         'positive_control': {'child_launches': first['child_launches'], 'exit': first['exit'], 'stdout_len': first['stdout_len']},
-        'pass': first['child_launches'] == 1 and first['exit'] == 0 and second['child_launches'] == 0 and second['exit'] == 3 and second['error'] == 'E_DUPLICATE_STICKY_NO_RETRY' and second['tree_hash_equal'] and second['ledger_equal'],
+        'other_run_id': other_id['error'],
+        'other_bytes_equal': ledger_file.read_bytes() == before_other,
+        'same_run_id_other_task': content_second['error'],
+        'content_positive': {'child_launches': content_first['child_launches'], 'exit': content_first['exit']},
+        'pass': first['child_launches'] == 1 and first['exit'] == 0 and second['child_launches'] == 0 and second['exit'] == 3 and second['error'] == 'E_DUPLICATE_STICKY_NO_RETRY' and second['tree_hash_equal'] and second['ledger_equal'] and other_id['error'] == 'E_DUPLICATE_STICKY_NO_RETRY' and other_id['child_launches'] == 0 and ledger_file.read_bytes() == before_other and other_marks_equal and content_first['child_launches'] == 1 and content_second['error'] == 'E_DUPLICATE_STICKY_NO_RETRY' and content_second['child_launches'] == 0 and b'E_DUPLICATE_STICKY_NO_RETRY' in (work / 'logs' / 'TEST-07' / 'stderr.bin').read_bytes(),
     }
     schema_root = work / 'schema'
     deliver(src, schema_root)
@@ -695,20 +896,28 @@ def run_tests(work, run_id):
     bad_db.commit()
     bad_db.close()
     schema_before = schema_db.read_bytes()
-    schema_run = run_task(schema_root, 'runner_ok', 'c07r01', 'run07r01', 's07', work / 'logs' / 'TEST-07-schema')
+    schema_run = run_task(schema_root, 'runner_ok', 'c07r01', 'run07r01', 's07', work / 'logs' / 'TEST-07-schema', marker_dir=markers)
     schema_pos = work / 'schema-pos'
     deliver(src, schema_pos)
     (schema_pos / 's07p').mkdir()
     create_ledger(schema_pos / 's07p' / 'ledger.sqlite3')
-    schema_pos_run = run_task(schema_pos, 'runner_ok', 'c07p', run_id + 'schp', 's07p', work / 'logs' / 'TEST-07-schema-positive')
+    schema_pos_run = run_task(schema_pos, 'runner_ok', 'c07p', run_id + 'schp', 's07p', work / 'logs' / 'TEST-07-schema-positive', marker_dir=markers)
     results['TEST-07']['schema_error'] = schema_run['error']
     results['TEST-07']['schema_exit'] = schema_run['exit']
     results['TEST-07']['schema_child_launches'] = schema_run['child_launches']
     results['TEST-07']['schema_bytes_equal'] = schema_db.read_bytes() == schema_before
     results['TEST-07']['schema_positive'] = {'child_launches': schema_pos_run['child_launches'], 'exit': schema_pos_run['exit']}
     results['TEST-07']['pass'] = results['TEST-07']['pass'] and schema_run['error'] == 'E_LEDGER_SCHEMA' and schema_run['exit'] == 3 and schema_run['child_launches'] == 0 and schema_db.read_bytes() == schema_before and schema_pos_run['child_launches'] == 1 and schema_pos_run['exit'] == 0
-    results['TEST-08'] = {'windows': 'NOT_RUN', 'pass': None}
-    passed = all(item.get('pass') is True for key, item in results.items() if key != 'TEST-08')
+    results['TEST-08'] = {'run_id': run_id, 'windows': 'NOT_RUN', 'pass': None}
+    missing_ids = []
+    for name, item in results.items():
+        if type(item.get('run_id')) is not str or item['run_id'] == '':
+            missing_ids.append(name)
+    for path in (work / 'logs').rglob('evidence.json'):
+        doc = json.loads(path.read_text(encoding='utf-8'))
+        if type(doc.get('run_id')) is not str or doc['run_id'] == '':
+            missing_ids.append(str(path))
+    passed = all(item.get('pass') is True for key, item in results.items() if key != 'TEST-08') and not missing_ids
     summary = {
         'run_id': run_id,
         'argv': sys.argv,
@@ -721,12 +930,16 @@ def run_tests(work, run_id):
         'exit_table': EXIT_TABLE,
         'ledger_sql': LEDGER_SQL,
         'run_id_pattern': IDENT.pattern,
+        'run_id_semantics': RUN_ID_SEMANTICS,
         'terminal_states': TERMINAL_STATES,
+        'missing_run_id': missing_ids,
     }
     summary_dir = work / 'logs' / run_id
     write_evidence(summary_dir, {
         'argv': process_argv(),
         'cwd': str(Path.cwd()),
+        'run_id': run_id,
+        'run_id_semantics': RUN_ID_SEMANTICS,
         'exit': summary['exit'],
         'child_launches': 0,
         'commit_sha': summary['commit_sha'],
@@ -778,7 +991,7 @@ def main(argv=None):
             print(json.dumps(state, ensure_ascii=True), flush=True)
             return 0
         if args[0] == 'verify':
-            evidence = verify(BASE, None)
+            evidence = verify(BASE, None, 'verify')
             print(json.dumps({'result': evidence['result'], 'commit_sha': evidence['commit_sha'], 'windows': evidence['windows']}, ensure_ascii=True), flush=True)
             return 0
         if args[0] == 'deliver':

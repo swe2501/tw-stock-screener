@@ -130,11 +130,23 @@ def main():
     bootstrap = (ROOT / 'BOOTSTRAP.ps1').read_text(encoding='utf-8')
     assert 'checkout --detach' in bootstrap and 'https://github.com/swe2501/tw-stock-screener.git' in bootstrap
     assert '-c core.autocrlf=false -c core.eol=lf' in bootstrap
-    assert 'WIN_RUNNER_MVP_STAGE_003' in bootstrap and 'WIN_RUNNER_MVP_WORK_003' in bootstrap and 'mvp003' in bootstrap
+    assert 'WIN_RUNNER_MVP_STAGE_004' in bootstrap and 'WIN_RUNNER_MVP_WORK_004' in bootstrap and 'mvp004' in bootstrap
+    assert 'd90e36cafd656d52984f7546bfcb5b065d73e2e66957c952b7a4a1cd260e8f36' in bootstrap
     assert 'PIN_COMMIT_SHA' not in bootstrap and 'Remove-Item' not in bootstrap and '--no-hardlinks' not in bootstrap
     assert '>' not in bootstrap and 'Out-File' not in bootstrap and 'x-access-token' not in bootstrap
     assert evidence['windows_tools']['git_pin_size'] == 46968
-    assert evidence['windows_tools']['git_sha256_enforced'] is False
+    assert evidence['windows_tools']['git_sha256_enforced'] is True
+    assert evidence['windows_tools']['git_pin_sha256'] == 'd90e36cafd656d52984f7546bfcb5b065d73e2e66957c952b7a4a1cd260e8f36'
+    assert tests['TEST-01']['git_sha_negative'] == 'E_GIT'
+    assert tests['TEST-01']['wrong_python'] == 'E_PYTHON'
+    assert tests['TEST-06']['combined_tamper'] == 'E_BLOB'
+    assert '-B' in run_evidence['argv']
+    assert 'one attempt ever' in run_evidence['run_id_semantics']
+    for evidence_path in (work / 'logs').rglob('evidence.json'):
+        record = json.loads(evidence_path.read_text(encoding='utf-8'))
+        assert isinstance(record.get('run_id'), str) and record['run_id']
+    for name, item in tests.items():
+        assert isinstance(item.get('run_id'), str) and item['run_id'], name
     assert evidence['windows_tools']['git_checked'] is False
     crlf_log = crlf_rejects(parent)
     attr = attributes_keep_lf(parent)
