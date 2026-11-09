@@ -1,3 +1,7 @@
+# Source bootstrap
+
+Current entry is `tools/windows-local-runner/BOOTSTRAP.ps1`. It clones `https://github.com/swe2501/tw-stock-screener.git` into a directory that must not already exist, detaches `PIN_COMMIT_SHA`, checks `git rev-parse HEAD`, then runs `preflight.py` from that checkout with the absolute Python. The repository is public. No token is embedded. Windows execution of these lines is `NOT_RUN`. `FIRST_ENTRY.ps1` and `ACQUIRE_FIRST.ps1` are earlier attempts and are not this entry.
+
 # Source bootstrap for commit 5f5be6c
 
 The installer reads local Git objects. A tar archive has no `.git` and cannot be the installer source. This page is the fixed landing sequence for that existing commit. It does not change the five runtime files.
