@@ -246,40 +246,54 @@ def checkout_root():
 
 
 def windows_tools():
+    pin = load_manifest(BASE)['windows_tools']
+    reported = {
+        'python_checked': False,
+        'git_checked': False,
+        'powershell': 'NOT_RUN',
+        'python_pin_sha256': pin['python_sha256'],
+        'python_pin_size': pin['python_size'],
+        'python_pin_version': pin['python_version'],
+        'git_pin_path': pin['git_path'],
+        'git_pin_version': pin['git_version'],
+        'git_pin_size': pin['git_size'],
+        'git_sha256_enforced': pin['git_sha256_enforced'],
+        'git_pin_source': pin['git_pin_source'],
+    }
     if os.name != 'nt':
-        return {
-            'python_checked': False,
-            'git_checked': False,
-            'powershell': 'NOT_RUN',
-            'python_pin_sha256': WIN_PYTHON_SHA256,
-            'python_pin_size': WIN_PYTHON_SIZE,
-            'python_pin_version': '3.14.5',
-            'git_pin_path': WIN_GIT,
-            'git_pin_version': '2.46.1',
-        }
-    data = Path(WIN_PYTHON).read_bytes()
+        return reported
+    data = Path(pin['python_path']).read_bytes()
     digest = sha256(data)
-    if len(data) != WIN_PYTHON_SIZE or digest != WIN_PYTHON_SHA256 or platform.python_version() != '3.14.5':
+    if len(data) != pin['python_size'] or digest != pin['python_sha256'] or platform.python_version() != pin['python_version']:
         raise ValueError('E_PYTHON')
-    if os.path.normcase(str(Path(sys.executable).resolve())) != os.path.normcase(str(Path(WIN_PYTHON).resolve())):
+    if os.path.normcase(str(Path(sys.executable).resolve())) != os.path.normcase(str(Path(pin['python_path']).resolve())):
         raise ValueError('E_PYTHON')
-    git = subprocess.run([WIN_GIT, '--version'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    git_bytes = Path(pin['git_path']).read_bytes()
+    git_digest = sha256(git_bytes)
+    if len(git_bytes) != pin['git_size']:
+        raise ValueError('E_GIT')
+    if pin['git_sha256_enforced'] is True and git_digest != pin['git_sha256']:
+        raise ValueError('E_GIT')
+    git = subprocess.run([pin['git_path'], '--version'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     git_text = git.stdout.decode('ascii', 'replace').strip()
-    if git.returncode != 0 or not git_text.startswith('git version 2.46.1'):
+    if git.returncode != 0 or not git_text.startswith('git version ' + pin['git_version']):
         raise ValueError('E_GIT')
     ps = subprocess.run(['powershell.exe', '-NoProfile', '-Command', '[string]$PSVersionTable.PSVersion'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if ps.returncode != 0:
         raise ValueError('E_POWERSHELL')
-    return {
+    reported.update({
         'python_checked': True,
         'python_sha256': digest,
         'python_size': len(data),
         'git_checked': True,
         'git_version': git_text,
+        'git_size': len(git_bytes),
+        'git_sha256': git_digest,
         'powershell': 'RAW',
         'powershell_stdout_sha256': sha256(ps.stdout),
         'powershell_stderr_sha256': sha256(ps.stderr),
-    }
+    })
+    return reported
 
 
 def python_vv():

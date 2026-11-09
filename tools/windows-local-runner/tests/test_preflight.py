@@ -12,6 +12,76 @@ PRE = ROOT / 'preflight.py'
 PY = sys.executable
 
 
+def crlf_rejects(parent):
+    root = parent / 'crlf-root'
+    root.mkdir()
+    manifest = json.loads((ROOT / 'runner_manifest.json').read_text(encoding='utf-8'))
+    for name in manifest['files']:
+        data = (ROOT / name).read_bytes()
+        if name == 'install.py':
+            data = data.replace(b'\n', b'\r\n')
+        dest = root / name
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(data)
+    (root / 'runner_manifest.json').write_bytes((ROOT / 'runner_manifest.json').read_bytes())
+    log = parent / 'crlf-log'
+    proc = subprocess.run(
+        [PY, '-B', str(PRE), 'run', '--root', str(root), '--task', 'runner_ok', '--campaign', 'crlf', '--run-id', 'crlf001', '--store', 'runs', '--log', str(log)],
+        cwd=str(ROOT), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+    )
+    assert proc.returncode == 3, proc.stderr.decode()
+    body = json.loads(proc.stdout.decode())
+    assert body['error'] == 'E_SHA:install.py' and body['child_launches'] == 0
+    evidence = json.loads((log / 'evidence.json').read_text(encoding='utf-8'))
+    assert evidence['child_launches'] == 0 and evidence['error'] == 'E_SHA:install.py'
+    assert not (root / 'runs').exists()
+    return evidence
+
+
+def attributes_keep_lf(parent):
+    original = (ROOT / 'install.py').read_bytes()
+    assert b'\r' not in original
+    attr_line = (REPO / '.gitattributes').read_bytes()
+    assert attr_line == b'tools/windows-local-runner/** -text\n'
+
+    def make_repo(path, attributes):
+        path.mkdir()
+        subprocess.check_call(['git', '-C', str(path), 'init'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        subprocess.check_call(['git', '-C', str(path), 'config', 'user.email', 'wlr@example.com'])
+        subprocess.check_call(['git', '-C', str(path), 'config', 'user.name', 'wlr'])
+        dest = path / 'tools' / 'windows-local-runner' / 'install.py'
+        dest.parent.mkdir(parents=True)
+        dest.write_bytes(original)
+        if attributes:
+            (path / '.gitattributes').write_bytes(attr_line)
+        subprocess.check_call(['git', '-C', str(path), 'add', '--', '.'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        subprocess.check_call(['git', '-C', str(path), 'commit', '-m', 'pin'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    def clone(src, dest, config):
+        argv = ['git']
+        for item in config:
+            argv.extend(['-c', item])
+        argv.extend(['clone', Path(src).resolve().as_uri(), str(dest)])
+        subprocess.check_call(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    with_attr = parent / 'attr-src'
+    plain = parent / 'plain-src'
+    make_repo(with_attr, True)
+    make_repo(plain, False)
+    kept = parent / 'attr-co'
+    changed = parent / 'plain-co'
+    clone(with_attr, kept, ['core.autocrlf=true', 'core.eol=crlf'])
+    clone(plain, changed, ['core.autocrlf=true', 'core.eol=crlf'])
+    forced = parent / 'plain-lf'
+    clone(plain, forced, ['core.autocrlf=false', 'core.eol=lf'])
+    return {
+        'original': original,
+        'with_attributes': (kept / 'tools' / 'windows-local-runner' / 'install.py').read_bytes(),
+        'without_attributes': (changed / 'tools' / 'windows-local-runner' / 'install.py').read_bytes(),
+        'explicit_lf': (forced / 'tools' / 'windows-local-runner' / 'install.py').read_bytes(),
+    }
+
+
 def main():
     parent = Path(tempfile.mkdtemp(prefix='wlr-preflight-'))
     work = parent / 'work'
@@ -49,7 +119,19 @@ def main():
     assert evidence['windows_tools']['powershell'] == 'NOT_RUN'
     bootstrap = (ROOT / 'BOOTSTRAP.ps1').read_text(encoding='utf-8')
     assert 'checkout --detach' in bootstrap and 'https://github.com/swe2501/tw-stock-screener.git' in bootstrap
+    assert '-c core.autocrlf=false -c core.eol=lf' in bootstrap
+    assert 'WIN_RUNNER_MVP_STAGE_002' in bootstrap and 'WIN_RUNNER_MVP_WORK_002' in bootstrap and 'mvp002' in bootstrap
+    assert 'PIN_COMMIT_SHA' not in bootstrap and 'Remove-Item' not in bootstrap and '--no-hardlinks' not in bootstrap
     assert '>' not in bootstrap and 'Out-File' not in bootstrap and 'x-access-token' not in bootstrap
+    assert evidence['windows_tools']['git_pin_size'] == 46968
+    assert evidence['windows_tools']['git_sha256_enforced'] is False
+    assert evidence['windows_tools']['git_checked'] is False
+    crlf_log = crlf_rejects(parent)
+    attr = attributes_keep_lf(parent)
+    assert crlf_log['child_launches'] == 0 and crlf_log['error'] == 'E_SHA:install.py'
+    assert attr['with_attributes'] == attr['original'] and attr['without_attributes'] != attr['original']
+    assert attr['explicit_lf'] == attr['original']
+    assert b'\r\n' in attr['without_attributes'] and b'\r' not in attr['with_attributes']
     branch = subprocess.run([PY, '-B', str(PRE), 'pin-check', '--require-detached'], cwd=str(ROOT), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     assert branch.returncode == 3 and b'E_NOT_DETACHED' in branch.stderr
     occupied = work / 'occupied-stage'

@@ -1,6 +1,6 @@
 # Source bootstrap
 
-Current entry is `tools/windows-local-runner/BOOTSTRAP.ps1`. It clones `https://github.com/swe2501/tw-stock-screener.git` into a directory that must not already exist, detaches `bf63410bd013f9980ca8c4cbc274c233c428d078`, checks `git rev-parse HEAD`, then runs `preflight.py` from that checkout with the absolute Python. The pin is that full SHA. It is not a branch name, a short SHA, or `FETCH_HEAD`. The repository is public. No token is embedded. Child stdout and stderr are raw pipe bytes. Windows execution of these lines is `NOT_RUN`. `FIRST_ENTRY.ps1` and `ACQUIRE_FIRST.ps1` are earlier attempts and are not this entry.
+Current entry is `tools/windows-local-runner/BOOTSTRAP.ps1 -Pin` with one required 40-hex argument. The script does not contain a commit SHA. Clone and checkout pass `-c core.autocrlf=false -c core.eol=lf` and do not change the user's Git config. The new directories are `WIN_RUNNER_MVP_STAGE_002` and `WIN_RUNNER_MVP_WORK_002`. Existing directories are left in place. The repository is public. No token is embedded. Windows execution is `NOT_RUN`. `FIRST_ENTRY.ps1` and `ACQUIRE_FIRST.ps1` are earlier attempts and are not this entry.
 
 # Source bootstrap for commit 5f5be6c
 

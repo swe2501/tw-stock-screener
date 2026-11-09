@@ -11,6 +11,9 @@
     "python_version": "3.14.5",
     "git_path": "C:\\Program Files\\Git\\cmd\\git.exe",
     "git_version": "2.46.1",
+    "git_size": 46968,
+    "git_sha256_enforced": false,
+    "git_pin_source": "WIN-RUNNER-MVP-GIT-01/tool_pins.json unavailable; Windows records the measured SHA-256 and does not block on it",
     "checked_on_this_commit": false
   },
   "files": {
