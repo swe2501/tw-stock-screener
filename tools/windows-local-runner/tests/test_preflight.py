@@ -1,5 +1,5 @@
 """Linux run of preflight TEST-01..07. TEST-08 is Windows and is not run."""
-import json, os, subprocess, sys, tempfile
+import hashlib, json, os, subprocess, sys, tempfile
 from pathlib import Path
 
 if sys.platform != 'linux':
@@ -32,6 +32,7 @@ def crlf_rejects(parent):
     assert proc.returncode == 3, proc.stderr.decode()
     body = json.loads(proc.stdout.decode())
     assert body['error'] == 'E_SHA:install.py' and body['child_launches'] == 0
+    assert b'E_SHA:install.py' in proc.stderr and b'"child_launches": 0' in proc.stderr
     evidence = json.loads((log / 'evidence.json').read_text(encoding='utf-8'))
     assert evidence['child_launches'] == 0 and evidence['error'] == 'E_SHA:install.py'
     assert not (root / 'runs').exists()
@@ -93,6 +94,15 @@ def main():
     for name in ('TEST-01', 'TEST-02', 'TEST-03', 'TEST-04', 'TEST-05', 'TEST-06', 'TEST-07'):
         assert tests[name]['pass'] is True, (name, tests[name])
     assert tests['TEST-08']['windows'] == 'NOT_RUN' and tests['TEST-08']['pass'] is None
+    assert tests['TEST-07']['schema_error'] == 'E_LEDGER_SCHEMA'
+    assert tests['TEST-07']['schema_exit'] == 3 and tests['TEST-07']['schema_child_launches'] == 0
+    assert tests['TEST-07']['schema_bytes_equal'] is True
+    assert tests['TEST-07']['schema_positive']['child_launches'] == 1
+    manifest = json.loads((ROOT / 'runner_manifest.json').read_text(encoding='utf-8'))
+    for name in ('preflight.py', 'BOOTSTRAP.ps1'):
+        data = (ROOT / name).read_bytes()
+        assert manifest['files'][name]['size'] == len(data)
+        assert manifest['files'][name]['sha256'] == hashlib.sha256(data).hexdigest()
     raw = (work / 'logs' / 'TEST-02' / 'stdout.bin').read_bytes()
     assert raw == b'Runner OK\n' and len(raw) == 10
     run_evidence = json.loads((work / 'logs' / 'TEST-02' / 'evidence.json').read_text(encoding='utf-8'))
@@ -120,7 +130,7 @@ def main():
     bootstrap = (ROOT / 'BOOTSTRAP.ps1').read_text(encoding='utf-8')
     assert 'checkout --detach' in bootstrap and 'https://github.com/swe2501/tw-stock-screener.git' in bootstrap
     assert '-c core.autocrlf=false -c core.eol=lf' in bootstrap
-    assert 'WIN_RUNNER_MVP_STAGE_002' in bootstrap and 'WIN_RUNNER_MVP_WORK_002' in bootstrap and 'mvp002' in bootstrap
+    assert 'WIN_RUNNER_MVP_STAGE_003' in bootstrap and 'WIN_RUNNER_MVP_WORK_003' in bootstrap and 'mvp003' in bootstrap
     assert 'PIN_COMMIT_SHA' not in bootstrap and 'Remove-Item' not in bootstrap and '--no-hardlinks' not in bootstrap
     assert '>' not in bootstrap and 'Out-File' not in bootstrap and 'x-access-token' not in bootstrap
     assert evidence['windows_tools']['git_pin_size'] == 46968

@@ -203,6 +203,59 @@ def ledger_logical(path):
     }
 
 
+def _index_columns(db, index_name):
+    if re.fullmatch(r'[A-Za-z0-9_]+', index_name) is None:
+        raise ValueError('E_LEDGER_SCHEMA')
+    return [row[2] for row in db.execute('PRAGMA index_info(' + index_name + ')')]
+
+
+def validate_existing_ledger(path):
+    path = Path(path)
+    if not occupied(path):
+        return
+    raw = path.read_bytes()
+    scratch = Path(tempfile.mkdtemp(prefix='wlr-ledger-'))
+    copy = scratch / 'ledger.sqlite3'
+    write_new(copy, raw)
+    db = sqlite3.connect(copy, timeout=5, isolation_level=None)
+    try:
+        tables = [row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name")]
+        if tables != ['attempts']:
+            raise ValueError('E_LEDGER_SCHEMA')
+        version = db.execute('PRAGMA user_version').fetchone()
+        if version is None or version[0] != 2:
+            raise ValueError('E_LEDGER_SCHEMA')
+        info = list(db.execute('PRAGMA table_info(attempts)'))
+        expected = [
+            ('campaign', 'TEXT', 1, 1),
+            ('task', 'TEXT', 1, 2),
+            ('run_id', 'TEXT', 1, 0),
+            ('status', 'TEXT', 1, 0),
+            ('pid', 'INTEGER', 0, 0),
+            ('created', 'TEXT', 1, 0),
+            ('updated', 'TEXT', 1, 0),
+            ('pin', 'TEXT', 1, 0),
+            ('exit_code', 'INTEGER', 0, 0),
+        ]
+        got = [(row[1], str(row[2]).upper(), row[3], row[5]) for row in info]
+        if got != expected:
+            raise ValueError('E_LEDGER_SCHEMA')
+        indexes = list(db.execute('PRAGMA index_list(attempts)'))
+        if len(indexes) != 2:
+            raise ValueError('E_LEDGER_SCHEMA')
+        origins = {}
+        for item in indexes:
+            if len(item) < 5 or item[4]:
+                raise ValueError('E_LEDGER_SCHEMA')
+            origins.setdefault(item[3], []).append(item[1])
+        if sorted(origins) != ['pk', 'u'] or len(origins['pk']) != 1 or len(origins['u']) != 1:
+            raise ValueError('E_LEDGER_SCHEMA')
+        if _index_columns(db, origins['pk'][0]) != ['campaign', 'task'] or _index_columns(db, origins['u'][0]) != ['run_id']:
+            raise ValueError('E_LEDGER_SCHEMA')
+    finally:
+        db.close()
+
+
 def ledger_has_run(path, run_id):
     path = Path(path)
     if not occupied(path):
@@ -278,7 +331,7 @@ def windows_tools():
     git_text = git.stdout.decode('ascii', 'replace').strip()
     if git.returncode != 0 or not git_text.startswith('git version ' + pin['git_version']):
         raise ValueError('E_GIT')
-    ps = subprocess.run(['powershell.exe', '-NoProfile', '-Command', '[string]$PSVersionTable.PSVersion'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    ps = subprocess.run(['powershell.exe', '-NoProfile', '-Command', '$PSVersionTable.PSVersion.ToString()'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if ps.returncode != 0:
         raise ValueError('E_POWERSHELL')
     reported.update({
@@ -290,6 +343,10 @@ def windows_tools():
         'git_size': len(git_bytes),
         'git_sha256': git_digest,
         'powershell': 'RAW',
+        'powershell_argv': ['powershell.exe', '-NoProfile', '-Command', '$PSVersionTable.PSVersion.ToString()'],
+        'powershell_exit': ps.returncode,
+        'powershell_stdout': ps.stdout.decode('utf-8', 'replace'),
+        'powershell_stderr': ps.stderr.decode('utf-8', 'replace'),
         'powershell_stdout_sha256': sha256(ps.stdout),
         'powershell_stderr_sha256': sha256(ps.stderr),
     })
@@ -370,6 +427,7 @@ def run_task(root, task, campaign, run_id, store, log_dir, *, require_detached=N
         payload_bytes = payload.read_bytes()
         if sha256(payload_bytes) != manifest['files'][TASKS[task]]['sha256']:
             raise ValueError('E_SHA:' + TASKS[task])
+        validate_existing_ledger(ledger_path)
         if ledger_has_run(ledger_path, run_id):
             raise ValueError('E_DUPLICATE_STICKY_NO_RETRY')
         ledger_path.parent.mkdir(parents=True, exist_ok=True)
@@ -627,6 +685,28 @@ def run_tests(work, run_id):
         'positive_control': {'child_launches': first['child_launches'], 'exit': first['exit'], 'stdout_len': first['stdout_len']},
         'pass': first['child_launches'] == 1 and first['exit'] == 0 and second['child_launches'] == 0 and second['exit'] == 3 and second['error'] == 'E_DUPLICATE_STICKY_NO_RETRY' and second['tree_hash_equal'] and second['ledger_equal'],
     }
+    schema_root = work / 'schema'
+    deliver(src, schema_root)
+    schema_store = schema_root / 's07'
+    schema_store.mkdir()
+    schema_db = schema_store / 'ledger.sqlite3'
+    bad_db = sqlite3.connect(schema_db)
+    bad_db.execute('CREATE TABLE attempts(campaign TEXT, task TEXT, run_id TEXT, status TEXT, pid INTEGER, created TEXT, updated TEXT, pin TEXT, exit_code INTEGER)')
+    bad_db.commit()
+    bad_db.close()
+    schema_before = schema_db.read_bytes()
+    schema_run = run_task(schema_root, 'runner_ok', 'c07r01', 'run07r01', 's07', work / 'logs' / 'TEST-07-schema')
+    schema_pos = work / 'schema-pos'
+    deliver(src, schema_pos)
+    (schema_pos / 's07p').mkdir()
+    create_ledger(schema_pos / 's07p' / 'ledger.sqlite3')
+    schema_pos_run = run_task(schema_pos, 'runner_ok', 'c07p', run_id + 'schp', 's07p', work / 'logs' / 'TEST-07-schema-positive')
+    results['TEST-07']['schema_error'] = schema_run['error']
+    results['TEST-07']['schema_exit'] = schema_run['exit']
+    results['TEST-07']['schema_child_launches'] = schema_run['child_launches']
+    results['TEST-07']['schema_bytes_equal'] = schema_db.read_bytes() == schema_before
+    results['TEST-07']['schema_positive'] = {'child_launches': schema_pos_run['child_launches'], 'exit': schema_pos_run['exit']}
+    results['TEST-07']['pass'] = results['TEST-07']['pass'] and schema_run['error'] == 'E_LEDGER_SCHEMA' and schema_run['exit'] == 3 and schema_run['child_launches'] == 0 and schema_db.read_bytes() == schema_before and schema_pos_run['child_launches'] == 1 and schema_pos_run['exit'] == 0
     results['TEST-08'] = {'windows': 'NOT_RUN', 'pass': None}
     passed = all(item.get('pass') is True for key, item in results.items() if key != 'TEST-08')
     summary = {
@@ -712,7 +792,10 @@ def main(argv=None):
             if any(found[key] is None for key in found):
                 raise ValueError('E_ARGUMENTS')
             evidence = run_task(found['--root'], found['--task'], found['--campaign'], found['--run-id'], found['--store'], found['--log'])
-            print(json.dumps({'exit': evidence['exit'], 'error': evidence['error'], 'child_launches': evidence['child_launches'], 'actual_process_exit': evidence['actual_process_exit']}, ensure_ascii=True), flush=True)
+            message = json.dumps({'exit': evidence['exit'], 'error': evidence['error'], 'child_launches': evidence['child_launches'], 'actual_process_exit': evidence['actual_process_exit']}, ensure_ascii=True)
+            print(message, flush=True)
+            if evidence['exit'] == 3:
+                print(message, file=sys.stderr, flush=True)
             return evidence['exit']
         found = parse_pairs(args[1:], ('--run-id', '--work'))
         if not found['--run-id'] or not found['--work']:

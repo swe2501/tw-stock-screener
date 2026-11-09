@@ -52,6 +52,14 @@
     "payloads/exception.py": {
       "size": 38,
       "sha256": "1b84c446586317f4320700a2c0fe24fe418f538c4696a06d775e3ccef0f1bc39"
+    },
+    "preflight.py": {
+      "size": 34444,
+      "sha256": "fb72a373b7dee762ef6cc4aed2831edee2fdca6b015072001b4967c9eaf57b02"
+    },
+    "BOOTSTRAP.ps1": {
+      "size": 1407,
+      "sha256": "fe90346e978a1d1b954ef7adfb1b7294828d7209e19dc4dd1029d43f93b3d436"
     }
   }
 }
