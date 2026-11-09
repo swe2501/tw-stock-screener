@@ -1,6 +1,18 @@
 {
   "schema": "WIN.RUNNER.MVP_MANIFEST.v1",
   "runtime_commit": "5f5be6c35bed7a674a91f19ee5c59fdbc8b281c3",
+  "pin_source": "git rev-parse HEAD of the detached checkout; not a branch, short SHA, or FETCH_HEAD",
+  "repository_url": "https://github.com/swe2501/tw-stock-screener.git",
+  "credential": "none",
+  "windows_tools": {
+    "python_path": "C:\\Users\\User\\AppData\\Local\\Python\\pythoncore-3.14-64\\python.exe",
+    "python_size": 106208,
+    "python_sha256": "3adbbf2af609e206e3ca18cd55fc7c4b52f5c8bb8218dd99fd5a9e50d7a193cd",
+    "python_version": "3.14.5",
+    "git_path": "C:\\Program Files\\Git\\cmd\\git.exe",
+    "git_version": "2.46.1",
+    "checked_on_this_commit": false
+  },
   "files": {
     "install.py": {
       "size": 15601,
@@ -21,6 +33,22 @@
     "source_pin.json": {
       "size": 513,
       "sha256": "c750112670b6bdfacf156a0ced6d182b79c9cbecb25872b5f99d3d1b62cee53e"
+    },
+    "payloads/runner_ok.py": {
+      "size": 19,
+      "sha256": "336b410966113e177aa2f7a4cebf907c280375ae882671d8dbae6980a41a37ce"
+    },
+    "payloads/exit_3.py": {
+      "size": 23,
+      "sha256": "4a42a4f7f0b95fedd4262ca65723c21d47ae7e26a95220df9592ed25bded3278"
+    },
+    "payloads/stderr_only.py": {
+      "size": 79,
+      "sha256": "93fd6c5e5fd8bef211738ce1c383fda18785065cb30a92cc85a097a5e95f3964"
+    },
+    "payloads/exception.py": {
+      "size": 38,
+      "sha256": "1b84c446586317f4320700a2c0fe24fe418f538c4696a06d775e3ccef0f1bc39"
     }
   }
 }

@@ -1,0 +1,1 @@
+raise RuntimeError("fixed-exception")
