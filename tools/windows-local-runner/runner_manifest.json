@@ -39,8 +39,8 @@
       "sha256": "c750112670b6bdfacf156a0ced6d182b79c9cbecb25872b5f99d3d1b62cee53e"
     },
     "preflight.py": {
-      "size": 45874,
-      "sha256": "5d379acd7059ae0e5deb241a70f2fbc9102ac6cd3d00c28f539eaf722ef8d732"
+      "size": 45934,
+      "sha256": "28e00c964980d3e1be6c8a932f22a8eb28480cb683924703e13f379bebc84e3b"
     },
     "BOOTSTRAP.ps1": {
       "size": 1490,
@@ -61,6 +61,14 @@
     "payloads/exception.py": {
       "size": 326,
       "sha256": "384d82c83e5f79462b44bd880eed0b85922f6261acf4e083d4f5e469bd5ee911"
+    },
+    "payloads/resnet18_preflight.py": {
+      "size": 19212,
+      "sha256": "edfe30bc39f05ea011aede0456acb7b4e9e014bf670b01104fa7b10b2768e070"
+    },
+    "payloads/resnet18_preflight.config.json": {
+      "size": 1545,
+      "sha256": "ae1ac67e7fc06218947e6e9eed3b253ba4cc9729064bc40ed18405f03805633c"
     }
   }
 }

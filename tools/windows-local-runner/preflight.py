@@ -14,6 +14,7 @@ TASKS = {
     'exit_3': 'payloads/exit_3.py',
     'stderr_only': 'payloads/stderr_only.py',
     'exception': 'payloads/exception.py',
+    'resnet18_preflight': 'payloads/resnet18_preflight.py',
 }
 WIN_PYTHON = r'C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe'
 WIN_PYTHON_SIZE = 106208
