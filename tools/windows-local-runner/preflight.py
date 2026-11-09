@@ -363,7 +363,10 @@ def bind_bytes(root, require_detached):
         data = path.read_bytes()
         if len(data) != row['size'] or sha256(data) != row['sha256']:
             raise ValueError('E_SHA:' + name)
-        if blobs.get(REPO_PREFIX + name) != git_blob_id(data):
+        got_blob = git_blob_id(data)
+        if row.get('blob') not in (None, got_blob):
+            raise ValueError('E_BLOB')
+        if blobs.get(REPO_PREFIX + name) != got_blob:
             raise ValueError('E_BLOB')
         checked[name] = row['sha256']
         held[name] = data
@@ -527,7 +530,7 @@ def run_task(root, task, campaign, run_id, store, log_dir, *, require_detached=N
             raise ValueError('E_DUPLICATE_STICKY_NO_RETRY')
         child_cwd = str(root.resolve())
         if marker_dir is None:
-            marker_dir = Path(tempfile.gettempdir()) / 'wlr-markers'
+            marker_dir = Path(tempfile.mkdtemp(prefix='wlr-marker-'))
         marker_dir = Path(marker_dir)
         if log_is_inside(root, marker_dir):
             raise ValueError('E_MARKER_INSIDE')

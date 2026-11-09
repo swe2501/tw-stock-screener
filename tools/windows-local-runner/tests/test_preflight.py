@@ -83,6 +83,32 @@ def attributes_keep_lf(parent):
     }
 
 
+def bootstrap_byte_refused(parent):
+    root = parent / 'bootstrap-root'
+    root.mkdir()
+    manifest = json.loads((ROOT / 'runner_manifest.json').read_text(encoding='utf-8'))
+    (root / 'runner_manifest.json').write_bytes((ROOT / 'runner_manifest.json').read_bytes())
+    for name in manifest['files']:
+        dest = root / name
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes((ROOT / name).read_bytes())
+    target = root / 'BOOTSTRAP_R18_PREFLIGHT_001.ps1'
+    original = target.read_bytes()
+    target.write_bytes(bytes([original[0] ^ 1]) + original[1:])
+    log = parent / 'bootstrap-log'
+    proc = subprocess.run(
+        [PY, '-B', str(PRE), 'run', '--root', str(root), '--task', 'runner_ok', '--campaign', 'boot', '--run-id', 'boot001', '--store', 'sboot', '--log', str(log)],
+        cwd=str(ROOT), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+    )
+    body = json.loads(proc.stdout.decode())
+    assert proc.returncode == 3, proc.stderr.decode()
+    assert body['error'] == 'E_SHA:BOOTSTRAP_R18_PREFLIGHT_001.ps1'
+    assert body['child_launches'] == 0
+    assert b'E_SHA:BOOTSTRAP_R18_PREFLIGHT_001.ps1' in proc.stderr
+    assert not (root / 'sboot' / 'ledger.sqlite3').exists()
+    return body
+
+
 def main():
     parent = Path(tempfile.mkdtemp(prefix='wlr-preflight-'))
     work = parent / 'work'
@@ -148,6 +174,8 @@ def main():
     for name, item in tests.items():
         assert isinstance(item.get('run_id'), str) and item['run_id'], name
     assert evidence['windows_tools']['git_checked'] is False
+    boot = bootstrap_byte_refused(parent)
+    assert boot['error'] == 'E_SHA:BOOTSTRAP_R18_PREFLIGHT_001.ps1' and boot['child_launches'] == 0
     crlf_log = crlf_rejects(parent)
     attr = attributes_keep_lf(parent)
     assert crlf_log['child_launches'] == 0 and crlf_log['error'] == 'E_SHA:install.py'

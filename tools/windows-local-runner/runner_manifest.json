@@ -39,12 +39,13 @@
       "sha256": "c750112670b6bdfacf156a0ced6d182b79c9cbecb25872b5f99d3d1b62cee53e"
     },
     "preflight.py": {
-      "size": 45934,
-      "sha256": "28e00c964980d3e1be6c8a932f22a8eb28480cb683924703e13f379bebc84e3b"
+      "size": 46054,
+      "sha256": "bd212b9fb5e0ea9f7bbd109cff9395e226bdc9a125d94e3dc9be07d824c6f78c"
     },
     "BOOTSTRAP.ps1": {
       "size": 1490,
-      "sha256": "59e58b277781c761e81e07df5691d255a81a2f82823cc5a68b59f87a336c9e28"
+      "sha256": "59e58b277781c761e81e07df5691d255a81a2f82823cc5a68b59f87a336c9e28",
+      "blob": "578fafd7e752cdef8af6b7d4e9c4bfacc338c8b4"
     },
     "payloads/runner_ok.py": {
       "size": 307,
@@ -69,6 +70,11 @@
     "payloads/resnet18_preflight.config.json": {
       "size": 1545,
       "sha256": "ae1ac67e7fc06218947e6e9eed3b253ba4cc9729064bc40ed18405f03805633c"
+    },
+    "BOOTSTRAP_R18_PREFLIGHT_001.ps1": {
+      "size": 1784,
+      "sha256": "2d77bc2797e8093215bf1e614fa4d408509765378df1e067c1052d9e1fdb94f3",
+      "blob": "102e9b5a4381f7566a50317722ec62e252fc3f90"
     }
   }
 }
