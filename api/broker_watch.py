@@ -5,8 +5,8 @@
   DELETE ?broker_id=&code=                          取消追蹤
 授權：使用者 JWT（RLS 依 user_id 隔離）。累積統計由 scripts/sell_tracker.py 每日更新。
 """
-from http.server import BaseHTTPRequestHandler
 import json, os, urllib.request, urllib.error, urllib.parse
+from api.watchlist import _OwnerHandler, _safe_request
 
 SUPABASE_URL      = os.environ.get("SUPABASE_URL", "")
 SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "")
@@ -29,14 +29,12 @@ def _sb(path, method="GET", body=None, token=None, params=None, prefer="return=r
             raw = r.read()
             return r.status, json.loads(raw) if raw else []
     except urllib.error.HTTPError as e:
-        raw = e.read()
-        try:
-            return e.code, json.loads(raw) if raw else {}
-        except Exception:
-            return e.code, {}
+        # 不回傳上游例外 body；由共用回應層記錄固定狀態及通用錯誤。
+        return e.code, {}
 
 
-class handler(BaseHTTPRequestHandler):
+class handler(_OwnerHandler):
+    ENDPOINT = "broker_watchlist"
     def log_message(self, *a): pass
 
     def _json(self, code, data):
@@ -49,9 +47,7 @@ class handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def _token(self):
-        return self.headers.get("Authorization", "").replace("Bearer ", "").strip() or None
-
+    @_safe_request
     def do_OPTIONS(self):
         self.send_response(200)
         self.send_header("Access-Control-Allow-Origin", "*")
@@ -59,53 +55,51 @@ class handler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
         self.end_headers()
 
+    @_safe_request
     def do_GET(self):
-        token = self._token()
-        if not token:
-            return self._json(401, {"error": "unauthorized"})
-        from lib.member_phone import check
-        blocked = check(token)
-        if blocked:
-            return self._json(*blocked)
+        identity = self._identity()
+        if not identity:
+            return
+        token, user_id = identity
         status, data = _sb("/broker_watchlist", token=token, params={
             "select": ("id,broker_id,broker_name,code,stock_name,buy_from_date,"
                        "total_buy_lots,peak_lots,cur_lots,giveback_pct,tier,anchor_sell_ct,"
                        "last_anchor_sell,start_clipped,last_sell_date,updated_at,added_at"),
-            "order": "giveback_pct.desc.nullslast,added_at.desc"})
-        self._json(status, data)
+            "order": "giveback_pct.desc.nullslast,added_at.desc", "user_id": f"eq.{user_id}"})
+        self._backend_result(status, data)
 
+    @_safe_request
     def do_POST(self):
-        token = self._token()
-        if not token:
-            return self._json(401, {"error": "unauthorized"})
-        from lib.member_phone import check
-        blocked = check(token)
-        if blocked:
-            return self._json(*blocked)
-        length = int(self.headers.get("Content-Length", 0))
-        body = json.loads(self.rfile.read(length) or b"{}")
+        identity = self._identity()
+        if not identity:
+            return
+        token, user_id = identity
+        body = self._read_body()
+        if body is None:
+            return
         row = {k: body.get(k) for k in ("broker_id", "broker_name", "code", "stock_name")}
         if not row.get("broker_id") or not row.get("code"):
             return self._json(400, {"error": "broker_id and code required"})
-        # upsert：同一分點+股票只留一列（user_id 由 RLS/default auth.uid() 帶入）
+        # upsert 的衝突鍵包含本人；不信任客戶端的 user_id。
+        row["user_id"] = user_id
         status, data = _sb("/broker_watchlist", method="POST", body=row, token=token,
                            params={"on_conflict": "user_id,broker_id,code"},
                            prefer="return=representation,resolution=merge-duplicates")
-        self._json(status, data)
+        self._backend_result(status, data)
 
+    @_safe_request
     def do_DELETE(self):
-        token = self._token()
-        if not token:
-            return self._json(401, {"error": "unauthorized"})
-        from lib.member_phone import check
-        blocked = check(token)
-        if blocked:
-            return self._json(*blocked)
+        identity = self._identity()
+        if not identity:
+            return
+        token, user_id = identity
         qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
         broker_id = (qs.get("broker_id") or [None])[0]
         code = (qs.get("code") or [None])[0]
         if not broker_id or not code:
             return self._json(400, {"error": "broker_id and code required"})
-        _sb("/broker_watchlist", method="DELETE", token=token, prefer="return=minimal",
-            params={"broker_id": f"eq.{broker_id}", "code": f"eq.{code}"})
+        status, data = _sb("/broker_watchlist", method="DELETE", token=token, prefer="return=minimal",
+            params={"broker_id": f"eq.{broker_id}", "code": f"eq.{code}", "user_id": f"eq.{user_id}"})
+        if status >= 400:
+            return self._backend_result(status, data)
         self._json(200, {"ok": True})
