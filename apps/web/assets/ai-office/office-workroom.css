@@ -10,3 +10,6 @@
 .room-label .room-task-badge[data-kind=work]{color:var(--room-color);border-color:color-mix(in srgb,var(--room-color) 45%,var(--line))}
 .room-label .room-task-badge[data-kind=stuck],.room-label .room-task-badge[data-kind=warn]{color:#a34b4b;border-color:color-mix(in srgb,#a34b4b 40%,var(--line))}
 .room-label[data-activity=wait] i{box-shadow:0 0 8px #d6b981}
+
+/* Distinct task states and scheduled-role labels must remain readable at narrow widths. */
+.department{flex-wrap:wrap}.department .existing-role-count{flex:0 0 100%;padding-left:25px;line-height:1.5;white-space:normal;box-sizing:border-box}.room-label{flex-wrap:wrap;justify-content:center}.room-label .room-task-badge{flex:0 1 100%;white-space:normal;line-height:1.4;overflow-wrap:anywhere}
