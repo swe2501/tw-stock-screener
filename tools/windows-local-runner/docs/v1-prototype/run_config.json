@@ -1,0 +1,23 @@
+{
+  "version": "WIN-RUNNER-OPS.v1",
+  "synthetic": true,
+  "cleanup_seconds": 0.5,
+  "tasks": {
+    "normal": {
+      "mode": "normal",
+      "deadline_seconds": 1.0
+    },
+    "failure": {
+      "mode": "failure",
+      "deadline_seconds": 1.0
+    },
+    "deadline": {
+      "mode": "wait",
+      "deadline_seconds": 0.2
+    },
+    "stoppable": {
+      "mode": "wait",
+      "deadline_seconds": 1.5
+    }
+  }
+}

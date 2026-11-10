@@ -1,0 +1,19 @@
+{
+  "schema": "WIN.RUNNER.PIN.v2",
+  "version": "WIN-RUNNER-OPS.v2",
+  "encoding": "UTF-8-no-BOM-LF",
+  "files": {
+    "runner.py": {
+      "size": 22143,
+      "sha256": "9a31acf81b988aacc288981f99f9fb2054209ca64ac0665355abc24cf37948af"
+    },
+    "worker.py": {
+      "size": 1257,
+      "sha256": "febba05a0e3ece874e399c24d704c346e878e2e29e42a4acae023e4f2b5937df"
+    },
+    "run_config.json": {
+      "size": 997,
+      "sha256": "4fbe36c80e95af6a9e83058eb8019076854d00dd00b44b4633b351a5b5d3c11f"
+    }
+  }
+}

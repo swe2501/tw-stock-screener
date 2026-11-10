@@ -1,0 +1,80 @@
+{
+  "schema": "WIN.RUNNER.MVP_MANIFEST.v1",
+  "runtime_commit": "5f5be6c35bed7a674a91f19ee5c59fdbc8b281c3",
+  "pin_source": "git rev-parse HEAD of the detached checkout; not a branch, short SHA, or FETCH_HEAD",
+  "repository_url": "https://github.com/swe2501/tw-stock-screener.git",
+  "credential": "none",
+  "windows_tools": {
+    "python_path": "C:\\Users\\User\\AppData\\Local\\Python\\pythoncore-3.14-64\\python.exe",
+    "python_size": 106208,
+    "python_sha256": "3adbbf2af609e206e3ca18cd55fc7c4b52f5c8bb8218dd99fd5a9e50d7a193cd",
+    "python_version": "3.14.5",
+    "git_path": "C:\\Program Files\\Git\\cmd\\git.exe",
+    "git_version": "2.46.1",
+    "git_size": 46968,
+    "git_sha256": "d90e36cafd656d52984f7546bfcb5b065d73e2e66957c952b7a4a1cd260e8f36",
+    "git_sha256_enforced": true,
+    "git_pin_source": "Windows run 3 measured git.exe; mismatch is E_GIT and does not launch",
+    "checked_on_this_commit": false
+  },
+  "files": {
+    "install.py": {
+      "size": 15601,
+      "sha256": "e00c4ae49dca23d12f491b0e776b899fd720de4dcf1854b3ecfb6a0f6b946cc9"
+    },
+    "runner.py": {
+      "size": 22143,
+      "sha256": "9a31acf81b988aacc288981f99f9fb2054209ca64ac0665355abc24cf37948af"
+    },
+    "worker.py": {
+      "size": 1257,
+      "sha256": "febba05a0e3ece874e399c24d704c346e878e2e29e42a4acae023e4f2b5937df"
+    },
+    "run_config.json": {
+      "size": 997,
+      "sha256": "4fbe36c80e95af6a9e83058eb8019076854d00dd00b44b4633b351a5b5d3c11f"
+    },
+    "source_pin.json": {
+      "size": 513,
+      "sha256": "c750112670b6bdfacf156a0ced6d182b79c9cbecb25872b5f99d3d1b62cee53e"
+    },
+    "preflight.py": {
+      "size": 46054,
+      "sha256": "bd212b9fb5e0ea9f7bbd109cff9395e226bdc9a125d94e3dc9be07d824c6f78c"
+    },
+    "BOOTSTRAP.ps1": {
+      "size": 1490,
+      "sha256": "59e58b277781c761e81e07df5691d255a81a2f82823cc5a68b59f87a336c9e28",
+      "blob": "578fafd7e752cdef8af6b7d4e9c4bfacc338c8b4"
+    },
+    "payloads/runner_ok.py": {
+      "size": 307,
+      "sha256": "147cb382c075e1037b348fc0df6bf58e754c6260abe65c6cf489e03e484ad737"
+    },
+    "payloads/exit_3.py": {
+      "size": 305,
+      "sha256": "6d8279e5cc11bac6343b710e3fad6d8c77be00220ac53b8823def458c833e96a"
+    },
+    "payloads/stderr_only.py": {
+      "size": 361,
+      "sha256": "564c6dbf69b5970e5e4aed728129c1a2e55fb5cf76f4e9b4df630c863617cbce"
+    },
+    "payloads/exception.py": {
+      "size": 326,
+      "sha256": "384d82c83e5f79462b44bd880eed0b85922f6261acf4e083d4f5e469bd5ee911"
+    },
+    "payloads/resnet18_preflight.py": {
+      "size": 19212,
+      "sha256": "edfe30bc39f05ea011aede0456acb7b4e9e014bf670b01104fa7b10b2768e070"
+    },
+    "payloads/resnet18_preflight.config.json": {
+      "size": 1545,
+      "sha256": "ae1ac67e7fc06218947e6e9eed3b253ba4cc9729064bc40ed18405f03805633c"
+    },
+    "BOOTSTRAP_R18_PREFLIGHT_001.ps1": {
+      "size": 1784,
+      "sha256": "2d77bc2797e8093215bf1e614fa4d408509765378df1e067c1052d9e1fdb94f3",
+      "blob": "102e9b5a4381f7566a50317722ec62e252fc3f90"
+    }
+  }
+}
