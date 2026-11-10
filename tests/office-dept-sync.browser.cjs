@@ -19,7 +19,7 @@ const fixture=`<!doctype html><html><head><meta charset="utf-8"><style>body{marg
  AdminOffice.show(document.querySelector('#office'),post);
  const frame=document.querySelector('#aoTowerFrame');await wait(()=>frame.contentWindow.ForesightOffice&&frame.contentDocument.querySelector('.existing-role-count'),'iframe data');
  const f=frame.contentWindow,d=frame.contentDocument,dir=id=>d.querySelector('.department[data-department="'+id+'"] .existing-role-count')?.textContent,room=id=>d.querySelector('.room-label[data-room-department="'+id+'"] .room-task-badge')?.textContent;
- await wait(()=>dir(8)==='待執行 1 · 待驗收 1','QA status');check(dir(8)===room(8),'QA right/room differ');check(dir(14).includes('舊排程 1 組')&&dir(14)===room(14),'risk wording');
+ await wait(()=>dir(8)==='排隊中 1 · 待驗收 1','QA status');check(dir(8)===room(8),'QA right/room differ');check(dir(14).includes('舊排程 1 組')&&dir(14)===room(14),'risk wording');
  f.ForesightOffice.focusFloor(7);
  for(const id of [9,14,27,8]){
   d.querySelector('.room-label[data-room-department="'+id+'"] .room-task-badge').click();
@@ -33,19 +33,19 @@ const fixture=`<!doctype html><html><head><meta charset="utf-8"><style>body{marg
  f.ForesightOffice.select(8,true);d.querySelector('#departmentProfile').click();await wait(()=>d.querySelector('.workroom .wr-task'),'workroom');
  check(d.querySelector('.workroom').textContent.includes('待執行 1 ／待驗收 1'),'workroom status wording');check(!d.querySelector('.workroom .wr-section').textContent.includes('cancelled8'),'cancelled in active flow');d.querySelector('#officeExploreDialog').close();
  const refresh=()=>dispatchEvent(new CustomEvent('foresight-office-task-updated',{detail:{department:14}}));
- const before=dir(8);refresh();check(dir(8)===room(8)&&dir(8)===before,'invalidation sync');
+ const before=dir(8);refresh();check(dir(8)===room(8)&&[before,'資料過舊'].includes(dir(8)),'invalidation sync');await new Promise(r=>setTimeout(r,100));await wait(()=>dir(8)===before,'invalidation refreshed');
  // Even an apparent valid sender cannot inject an unrequested result.
  f.postMessage({type:'foresight-office-workroom',request:999999,department:8,snapshot:{tasks:[make('cancelled8','queued',1)]}},location.origin);
  await new Promise(r=>setTimeout(r,100));check(dir(8)===before&&room(8)===before,'stale response resurrected task');
  records=Array.from({length:24},(_,i)=>make('security-'+i,'queued',1,9)).concat([manual,trial,cancelled]);total=records.length;refresh();
- await wait(()=>dir(9)==='待執行 24','24 detail cap scenario');check(dir(8)==='待執行 1 · 待驗收 1'&&dir(8)===room(8),'QA omitted after 24 details');
+ await wait(()=>dir(9)==='排隊中 24','24 detail cap scenario');check(dir(8)==='排隊中 1 · 待驗收 1'&&dir(8)===room(8),'QA omitted after 24 details');
  // Check readable labels and page width with actual layout at this viewport/theme.
  check(d.documentElement.scrollWidth<=f.innerWidth+2,'iframe horizontal overflow');
  check(document.documentElement.scrollWidth<=innerWidth+2,'parent horizontal overflow');
  for(const id of [9,14,27,8]){const badge=d.querySelector('.room-label[data-room-department="'+id+'"] .room-task-badge');check(badge.scrollWidth<=badge.clientWidth+2,'badge overflow '+id);}
  records=[cancelled];total=1;refresh();await wait(()=>dir(8)==='已結束 1','terminal-only');check(room(8)===dir(8),'terminal labels differ');
  records=Array.from({length:200},(_,i)=>make('limit-'+i,'queued',1,9));total=201;refresh();await wait(()=>dir(8)?.includes('未完整'),'200 cap notice');check(!dir(8).includes('無任務')&&dir(8)===room(8),'false zero on incomplete list');
- records=[manual,trial,cancelled];total=3;refresh();await wait(()=>dir(8)==='待執行 1 · 待驗收 1','restore QA fixture');
+ records=[manual,trial,cancelled];total=3;refresh();await wait(()=>dir(8)==='排隊中 1 · 待驗收 1','restore QA fixture');
  if(d.querySelector('.directory').classList.contains('collapsed'))d.querySelector('#directoryToggle').click();check(d.documentElement.scrollWidth<=f.innerWidth+2,'expanded directory overflow');
  result.textContent=JSON.stringify({pass:true,theme,width:innerWidth,detailReads:reads,checks:['room/bottom/filter IDs 9,14,27,8','queued/review/schedule wording','search reset','synchronous invalidation','unrequested response rejection','24-detail-independent counts','cancelled exclusion','201 total incomplete notice','actual layout widths']});
  }catch(e){result.textContent=JSON.stringify({pass:false,error:e.stack});}})();

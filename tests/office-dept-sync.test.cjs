@@ -11,7 +11,7 @@ test('7F canonical department IDs and frontend/backend names remain unchanged',(
 test('own workroom uses max revision from overview, not stale queued',()=>{const h=harness();seed(h);assert.equal(h.ctx.probe.snapshotFor(8).tasks.find(t=>t.id===old.id).status,'cancelled');});
 test('right-side 2 / 3D 3 regression: invalidating other dept never revives queued',()=>{
  const h=harness();seed(h);h.receive({type:'foresight-office-workroom-invalidated',department:14});
- assert.equal(h.ctx.probe.snapshotFor(8).tasks.find(t=>t.id===old.id).revision,3);assert.equal(h.badge(8),h.room(8));assert.match(h.badge(8),/待執行 1/);assert.match(h.badge(8),/待驗收 1/);
+ assert.equal(h.ctx.probe.snapshotFor(8).tasks.find(t=>t.id===old.id).revision,3);assert.equal(h.badge(8),h.room(8));assert.match(h.badge(8),/資料過舊/);assert.equal(h.ctx.probe.taskStats(8).queued,1);assert.equal(h.ctx.probe.taskStats(8).review,1);
  assert.ok(h.sent.filter(m=>m.type==='foresight-office-workroom-request'&&m.department===19).length>=2,'invalidation reloads overview while dialog closed');
 });
 test('invalidation synchronously redraws directory as well as rooms',()=>{
@@ -48,7 +48,7 @@ test('department board entry clears residual search text and cancelled summary i
 test('25+ summary tasks count badges even when QA omitted from 24 details',async()=>{
  const fixtures=Array.from({length:24},(_,i)=>task('d9-'+i,'queued',1,9)).concat([manual]);let gets=0;
  const {board}=boardHarness(async(action,args)=>action==='admin_office_tasks_list'?{tasks:fixtures,total:25,departments}:{task:(gets++,fixtures.find(t=>t.id===args.id))});
- const snapshot=await board.snapshot(null,true);assert.equal(snapshot.tasks.length,24);assert.equal(gets,24);const h=harness();h.reply(h.request(19),snapshot.tasks,snapshot);assert.match(h.badge(8),/待執行 1/);assert.equal(h.badge(8),h.room(8));
+ const snapshot=await board.snapshot(null,true);assert.equal(snapshot.tasks.length,24);assert.equal(gets,24);const h=harness();h.reply(h.request(19),snapshot.tasks,snapshot);assert.match(h.badge(8),/排隊中 1/);assert.equal(h.badge(8),h.room(8));
 });
 test('200-list cap is disclosed; absent departments are not confidently zero',async()=>{
  const fixtures=Array.from({length:200},(_,i)=>task('d9-'+i,'queued',1,9));const {board}=boardHarness(async(action,args)=>action==='admin_office_tasks_list'?{tasks:fixtures,total:201,departments}:{task:fixtures.find(t=>t.id===args.id)});
@@ -87,12 +87,12 @@ test('0 / 24 / 25 / 200 complete lists keep summaries and bounded details',async
 test('shared wording separates mixed queued/review, terminal, and scheduled work',()=>{
  const model={window:{}};vm.createContext(model);vm.runInContext(source('apps/web/assets/ai-office/office-workroom-model.js'),model);
  const api=model.window.ForesightWorkroomModel;assert.equal(typeof api.taskBadge,'function');
- const now=Date.parse('2026-11-10T06:00:00Z'),records=[manual,trial,old,task('done','approved'),task('run','running'),task('blocked','blocked'),task('failed','failed')];
+ const now=Date.parse('2026-11-10T06:00:00Z'),records=[manual,trial,old,task('done','approved'),{...task('run','running'),worker:'agent-qa',lease_until:'2026-11-10T07:00:00Z'},task('blocked','blocked'),task('failed','failed')];
  const stats=api.taskStats(records,8,now);assert.equal(stats.queued,1);assert.equal(stats.review,1);assert.equal(stats.done,2);assert.equal(stats.work,1);assert.equal(stats.stuck,2);
- const text=api.taskBadge(stats,[{status:'work'}]);for(const word of ['待執行 1','待驗收 1','工作中 1','需處理 2','舊排程 1 組'])assert.ok(text.includes(word));
- assert.equal(api.taskState({...old,due_date:'2020-01-01'},now),'done');assert.equal(api.taskState({...task('run','running'),due_date:'2020-01-01'},now),'work');
+ const text=api.taskBadge(stats,[{status:'work'}]);for(const word of ['排隊中 1','待驗收 1','工作中 1','需處理 2','舊排程 1 組'])assert.ok(text.includes(word));
+ assert.equal(api.taskState({...old,due_date:'2020-01-01'},now),'done');assert.equal(api.taskState({...task('run','running'),worker:'agent-qa',lease_until:'2026-11-10T07:00:00Z',due_date:'2020-01-01'},now),'work');
  assert.equal(api.taskState({...task('ai','running'),execution:'ai',lease_until:'2020-01-01'},now),'stuck');
- assert.equal(api.taskState({...task('agent','running'),lease_until:'2020-01-01'},now),'work');
+ assert.equal(api.taskState({...task('agent','running'),lease_until:'2020-01-01'},now),'stuck');
 });
 
 test('stale detail below summary revision is not cached as complete and may retry',async()=>{

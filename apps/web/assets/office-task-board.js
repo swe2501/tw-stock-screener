@@ -24,7 +24,7 @@ window.OfficeTaskBoard={mount(root,post){
  function remember(t){const old=latestTasks.get(t.id);if(!old||(t.revision||0)>(old.revision||0))latestTasks.set(t.id,{...t});else if((t.revision||0)===(old.revision||0))latestTasks.set(t.id,{...old,...t});return latestTasks.get(t.id);}
  function invalidateSnapshot(){snapshotAt=0;request++;snapshotFlight=null;}
  function selectDepartment(id){filter=String(id);query='';root.querySelector('[data-ot-query]').value='';root.querySelector('[data-ot-department]').value=filter;}
- let tasks=[],departments=[],worker={},dependencies={},filter='',query='',selected=null,timer=null,active=false,request=0,creatingId=null,busy=false;
+ let dataAt='',tasks=[],departments=[],worker={},dependencies={},filter='',query='',selected=null,timer=null,active=false,request=0,creatingId=null,busy=false;
  const form=document.createElement('dialog'),detail=document.createElement('dialog');form.className=detail.className='ot-dialog';document.body.append(form,detail);
  root.classList.add('ot-board');
  root.innerHTML='<div class="ot-heading"><div><small>DEPARTMENT WORK ORDERS</small><h3>部門任務中心</h3><p>任務、執行回報、成果與驗收，集中追蹤。</p></div><button type="button" data-ot-new>建立任務 ＋</button></div><p class="ot-executor" data-ot-worker role="status">讀取執行端狀態…</p><div class="ot-toolbar"><label>部門<select data-ot-department aria-label="篩選負責部門"><option value="">所有部門</option></select></label><label>搜尋<input type="search" data-ot-query placeholder="任務名稱或內容"></label><button type="button" data-ot-refresh>重新整理</button></div><p data-ot-message role="status"></p><div class="ot-summary" data-ot-summary></div><div data-ot-list></div>';
@@ -47,7 +47,7 @@ window.OfficeTaskBoard={mount(root,post){
  }
  async function refresh(){
   const seq=++request;
-  try{const j=await call('admin_office_tasks_list');if(seq!==request||!root.isConnected)return;tasks=j.tasks.map(remember);listTotal=Math.max(Number(j.total)||tasks.length,tasks.length);departments=j.departments;worker=j.worker||{};dependencies=j.dependencies||{};
+  try{const j=await call('admin_office_tasks_list');if(seq!==request||!root.isConnected)return;tasks=j.tasks.map(remember);listTotal=Math.max(Number(j.total)||tasks.length,tasks.length);departments=j.departments;worker=j.worker||{};dependencies=j.dependencies||{};dataAt=new Date().toISOString();
    const options=root.querySelector('[data-ot-department]');options.innerHTML='<option value="">所有部門</option>'+departments.filter(d=>d.enabled).map(d=>'<option value="'+d.id+'">'+esc(d.name)+'</option>').join('');options.value=filter;
    render();msg('更新時間 '+stamp(new Date().toISOString())+(listTotal>tasks.length?' · 任務列表未完整（已載入 '+tasks.length+'／'+listTotal+' 筆）':''));return true;
    
@@ -115,9 +115,9 @@ window.OfficeTaskBoard={mount(root,post){
     }));detailed.push(...batch);
    }
    tasks=tasks.map(t=>latestTasks.get(t.id)||t);render();
-   const summaryKeys=['id','title','department','execution','due_date','created_at','updated_at','revision','status','current_step','lease_until','assignee'];
+   const summaryKeys=['id','title','department','execution','due_date','created_at','updated_at','revision','status','current_step','lease_until','assignee','worker','executor'];
    const summaryRows=summaries.map(t=>{const current=remember(t);return Object.fromEntries(summaryKeys.filter(k=>k in current).map(k=>[k,current[k]]));});
-   return {tasks:detailed,summaries:summaryRows,summaryScope:'all',countsLimited:total>summaries.length,listTotal:total,listLoaded:summaries.length,total:list.length,limited:list.length>24,worker:{at:worker.at||'',pause_reason:worker.pause_reason||''},at:new Date().toISOString()};
+   return {tasks:detailed,summaries:summaryRows,summaryScope:'all',countsLimited:total>summaries.length,listTotal:total,listLoaded:summaries.length,total:list.length,limited:list.length>24,worker:{at:worker.at||'',pause_reason:worker.pause_reason||''},at:dataAt};
   },async department(id){selectDepartment(id);if(!departments.length)await refresh();root.querySelector('[data-ot-department]').value=filter;render();},show(){active=true;refresh();if(!timer)timer=setInterval(()=>{if(active&&!document.hidden&&!form.open&&!detail.open)refresh();},15000);},hide(){active=false;clearInterval(timer);timer=null;},async create(department){if(!departments.length)await refresh();create(department);},destroy(){contentFlow?.destroy();active=false;request++;workroomDetails.clear();latestTasks.clear();clearInterval(timer);form.close();detail.close();form.remove();detail.remove();}};
 }};
 })();
