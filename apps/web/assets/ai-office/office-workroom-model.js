@@ -132,8 +132,11 @@ function roomPlan(tasks,seats=[],{snapshot,roles=[],previous={}}={},now=Date.now
 function personPose({base,seat,pose='walk',phase=0,time=0,reduced=false}){
  const seated=!!seat&&['work','review'].includes(pose),alert=pose==='alert',cycle=(time*.001+phase*3)%24,walking=!reduced&&!seated&&!alert&&cycle>3&&cycle<16;
  const progress=walking?(cycle-3)/13:0,excursion=Math.pow(Math.sin(progress*Math.PI),2)*.9,target=seated?seat:base;
- const wave=reduced?0:Math.sin(time*.007+phase),typing=seated&&pose==='work'&&!reduced;
- return {x:target.x+(walking?(base.x>0?-1:1)*excursion:0),y:target.y+(walking?Math.abs(wave)*.025:0),z:target.z+(walking?excursion*.12:0),rotation:seated?seat.rotation:alert?Math.PI:walking?(progress<.5?(base.x>0?-Math.PI/2:Math.PI/2):(base.x>0?Math.PI/2:-Math.PI/2)):(base.x>0?-.45:.35),seated,walking,typing,alert,leg:seated?-Math.PI/2:walking?wave*.35:0,knee:seated?Math.PI/2:0,recline:seated&&pose==='review'?-.22:0,arm:seated?(pose==='work'?-1.1:.18):alert?-.4:walking?-wave*.3:0,elbow:seated?(pose==='work'?-.47:-.8):-.15,handMotion:typing?Math.sin(time*.005+phase)*.035:0,lean:alert?.12:0};
+ const wave=reduced?0:Math.sin(time*.007+phase),typing=seated&&pose==='work'&&!reduced,resting=seated&&pose==='review';
+ // Keep the rest silhouette readable from the default overhead camera: 31-degree
+ // recline, nearly vertical upper arms in world space, hands drawn inward over thighs.
+ // Arm angles are relative to the reclined torso, not the floor.
+ return {x:target.x+(walking?(base.x>0?-1:1)*excursion:0),y:target.y+(walking?Math.abs(wave)*.025:0),z:target.z+(walking?excursion*.12:0),rotation:seated?seat.rotation:alert?Math.PI:walking?(progress<.5?(base.x>0?-Math.PI/2:Math.PI/2):(base.x>0?Math.PI/2:-Math.PI/2)):(base.x>0?-.45:.35),seated,walking,typing,alert,leg:seated?-Math.PI/2:walking?wave*.35:0,knee:seated?Math.PI/2:0,recline:resting?-.55:0,armInward:resting?.24:0,arm:seated?(pose==='work'?-1.1:.32):alert?-.4:walking?-wave*.3:0,elbow:seated?(pose==='work'?-.47:-1.25):-.15,handMotion:typing?Math.sin(time*.005+phase)*.035:0,lean:alert?.12:0};
 }
 
 root.ForesightWorkroomModel={metrics,duration,taskState,taskStats,taskBadge,freshness,updateLabel,runningConfirmed,actorKey,queueType,taskVisual,chairSeat,deskSeat,transformSeat,roomPlan,personPose,STALE_AFTER_MS};if(typeof module!=='undefined')module.exports=root.ForesightWorkroomModel;

@@ -56,7 +56,7 @@ test('mixed queues preserve total and each executor count in shared right/3D lab
 });
 for(const reduced of [false,true])test(`review is visibly reclined with hands lowered, never typing (reduced=${reduced})`,()=>{
  const poses=[100,300,900,1200].map(time=>m.personPose({base:{x:2,y:.12,z:1},seat:seat(),pose:'review',time,reduced}));
- for(const p of poses){assert.equal(p.typing,false);assert.equal(p.handMotion,0);assert.equal(p.seated,true);assert.ok(p.recline<=-.2,'review body must visibly recline');assert.ok(p.arm>=0,'review upper arms must hang down');assert.ok(p.elbow<=-.7,'review hands rest over lap');const y=.41-.23*Math.cos(p.arm)-.23*Math.cos(p.arm+p.elbow),z=-.23*Math.sin(p.arm)-.23*Math.sin(p.arm+p.elbow),handY=.60+y*Math.cos(p.recline)-z*Math.sin(p.recline);assert.ok(handY>=.60&&handY<.75,'review hands must be over lap, below keyboard height');}
+ for(const p of poses){assert.equal(p.typing,false);assert.equal(p.handMotion,0);assert.equal(p.seated,true);assert.ok(p.recline<=-.5,'review body must visibly recline');assert.ok(p.arm>=0,'review upper arms must hang down');assert.ok(p.elbow<=-1.2,'review hands rest over lap');assert.equal(p.armInward,.24);const y=.41-.23*Math.cos(p.arm)-.23*Math.cos(p.arm+p.elbow),z=-.23*Math.sin(p.arm)-.23*Math.sin(p.arm+p.elbow),handY=.60+y*Math.cos(p.recline)-z*Math.sin(p.recline);assert.ok(handY>=.60&&handY<.75,'review hands must be over lap, below keyboard height');}
  for(const p of poses.slice(1))assert.deepEqual(p,poses[0]);
  const work=m.personPose({base:{x:2,y:.12,z:1},seat:seat(),pose:'work',time:100,reduced});assert.equal(work.recline,0);assert.ok(Math.abs(work.arm-poses[0].arm)>1);assert.equal(work.typing,!reduced);
 });
