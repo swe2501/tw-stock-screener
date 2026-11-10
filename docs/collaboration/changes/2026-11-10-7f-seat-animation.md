@@ -84,3 +84,42 @@ node tests/office-dept-sync.browser.cjs /workspace/7f-seat-evidence/dept-browser
 - 本地提交由父代理另行處理 UAT；本分支未推送，UAT SHA 未變更。
 - 以交付時 `git merge-base --is-ancestor origin/uat <commit>` 及遠端唯讀 SHA 判斷是否可 FF；真正發布前必須重查遠端，若已分歧不得 force／reset／stash，交回整合處理。
 - 回滾提案：在最新 UAT 的隔離工作分支執行 `git revert <本次 commit>`，重新自測後，按授權以 fast-forward 非 force 更新 UAT。不是 reset 回舊 SHA，不丟棄他人後續變更。
+
+
+## QA 追修第 2 輪（本機候選，未 push）
+
+原上文「未推送」是首輪交付當時的狀態；交辦提供的 QA 報告確認首輪 `1a185f2a` 已上 UAT。本節是以該 commit 為基準的追加提交，不 amend、不再推送，不代表 UAT 已更新或 QA 通過。
+
+### 三題分析與邊界
+
+完整「確認／推論」及固定於 `1a185f2a` 的檔案行號：`/workspace/7f-seat-evidence/QA-FOLLOWUP.md`。
+
+1. 部門 8 畫面為 queued 1 + review 1，最符合 review 就座；原程式 review 的 typing 本來就是 false，靜態截圖不能證明真的打字。此次解決等待姿態與工作姿態在遠景不易辨識：review 的上半身以髖部 pivot 後靠 `-0.22 rad`、肩膀下垂 `0.18 rad`、前臂放向膝上 `-0.8 rad`；一般與 reduced-motion 都保留這個不動的等待姿勢，腳與椅子座標不變。work 保持直身、手朝鍵盤；typing 閘門不改，仍僅已領取 manual running／有 worker＋有效租約的 ai/agent running 可打字。
+2. 部門 9 兩張已知卡都是 ai/grok，不是人工或研究室 Agent。queued 全類型一律標「尚未領取／無人執行 N」，總數括號內依人工／Grok／Agent／Claude AI／未知類型分列「待領 N」；只描述路由，不表示執行端在線，也不表示前置依賴已可領。單筆文字與房間統計共用 queueType，右列與 3D 仍共用 roomPlan，不新增 API。
+3. forbidden 來源是 api/auth.py 的管理員驗證，過期／撤銷 token、非白名單或驗證例外都同一個 403。最可能約一小時 access JWT 到期且管理端原 post 不自動 refresh；TTL 由 Supabase 發行，本機沒看到設定，不能確認是 3600 秒。15:34 有效、16:16 已失效的歷史早於首輪；首輪 diff 只動前端＋測試＋文件。此輪不改任何 Auth／後端／請求，未登入、未呼叫 UAT/prod API。
+
+### 精確修改範圍
+
+- `office-workroom-model.js`：queued 類型分類與計數；review 明確的 recline／肩肘姿態。
+- `office-architecture.js`：髖部以上的獨立 upper-body pivot，頭髮、頭、衣服、手臂隨之後靠；工作與站立時中立角度仍與原模型同位。
+- `office-tower.js`：套用上半身姿態；既有唯讀 peopleActivity 增加實際 bodyLean／armAngles／elbowAngles，供跨時間驗證，不包含額外身份資訊。
+- `ai-office.html`、`index.html`：版本號升為 `7f-seat-2`，不改 Auth 腳本或請求。
+- `tests/office-seat-animation.test.cjs`：保留原 86 項，另增 8 項全類型／混合待領與一般／reduced review 坐姿測試。
+- `tests/office-seat-animation.browser.cjs`：全類型 queued／混合與部門 8 queued+review，驗證實際骨架且跨時間不動；桌機／手機、明暗、一般／reduced-motion。既有 7 種情境不移除。可用 SEAT_TEST_SCENARIOS 指定局部情境，預設跑全部。
+- `tests/office-dept-sync.browser.cjs`：僅按新文字調整精確斷言，不刪既有 24/200 筆、搜尋、入口、失效等案例。
+
+### 測試與證據
+
+- 先新增規格再改產品：94 項中原 86 PASS、新 8 FAIL；Chrome review 失敗於「review skeleton must recline with hands lowered」，Grok queue 失敗於「all queued need nobody-working wording」。這是新視覺／文字需求的重現，不把它說成原版 review 打字 bug。
+- 修後 seat **94/94**（含原 86）、dept-sync **23/23**、Python office **53/53**；workroom、operations、build-scope **2/2** 亦重跑。詳細 Chrome 最終數字及交付 SHA 記於 DELIVERY-2.md。
+- 外部證據：`/workspace/7f-seat-evidence/followup-before-*`、`followup-after-*`、`followup-browser/`、`followup-qa-review-browser/`、`followup-dept-browser/`。
+- 本輪 Chrome 僅既有 Chrome＋Node、本機 127.0.0.1 靜態檔與合成資料、全新臨時 profile、阻止外部 DNS，無任何 UAT/prod 或登入操作。不安裝工具。
+
+### 待 QA／CTO 驗收
+
+- UAT 必須先由交辦方發布本輪新 SHA 並確認 `7f-seat-2`；本輪不 push。
+- 部門 8 的 review 在一般／reduced 下均後靠、手放膝上且無動畫；與可合法 running 的工作姿態並排比較，不能只靠靜態截圖判 typing。
+- 部門 9 Grok 兩筆顯示待領類型及「尚未領取／無人執行 2」；混合資料各列數量、總數正確，右列／3D 一致且手機不溢出。queued 不會就座假裝工作，前置鏈規則未變。
+- 60 秒輪詢／30 秒快取／150 秒 stale 閘門與延遲時間提示不變；forbidden 只留分析，登入失敗停止。
+- 真實 running 兩個更新週期仍需 CTO 事先確認試驗任務寫入範圍；本機假資料測試不代替 UAT 驗收。不碰原六筆、prod、main、Andrew。
+- 回滾僅提案：在最新 UAT 的隔離分支 revert 本輪追加 commit，測試後按授權 FF；不 reset／force，不丟棄他人工作。本輪未執行回滾。

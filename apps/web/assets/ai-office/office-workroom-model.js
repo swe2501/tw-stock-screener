@@ -73,6 +73,13 @@ function actorKey(t){
  if(nonempty(worker))return 'worker:'+opaque(worker);
  return 'unassigned:'+opaque(t.id);
 }
+// Queue type describes routing, not executor liveness or dependency readiness.
+function queueType(t){
+ if(t.execution==='manual')return '人工';
+ if(t.execution==='agent')return 'Agent';
+ if(t.execution==='ai')return t.executor==='grok'?'Grok':!t.executor||t.executor==='claude-local'?'Claude AI':'未知類型';
+ return '未知類型';
+}
 function taskVisual(t,{stale=false}={},now=Date.now()){
  if(stale)return {kind:'stale',pose:'alert',label:'資料過舊',actor:actorKey(t)};
  const result=(kind,pose,label)=>({kind,pose,label,actor:actorKey(t)});
@@ -80,7 +87,7 @@ function taskVisual(t,{stale=false}={},now=Date.now()){
   if(!runningConfirmed(t,now))return result('interrupted','alert','回報中斷／待確認');
   return result(t.execution==='manual'?'manual':'work','work',t.execution==='manual'?'人工執行中':'工作中');
  }
- if(t.status==='queued')return result('queued','walk','排隊中'+(t.execution==='manual'?' · 尚未領取／無人執行':''));
+ if(t.status==='queued')return result('queued','walk','排隊中（'+queueType(t)+' 待領） · 尚未領取／無人執行');
  if(t.status==='review')return result('review','review','待驗收');
  if(t.status==='blocked')return result('blocked','alert','卡住待處理');
  if(t.status==='failed')return result('failed','alert','執行失敗');
@@ -98,9 +105,9 @@ function transformSeat(seat,origin={x:0,z:0,rotation:0}){
 // Stable slots survive task reordering and unrelated workers arriving; one actor, one avatar.
 // Task counts stay task counts even when one actor has many tasks, or no desk is available.
 function roomPlan(tasks,seats=[],{snapshot,roles=[],previous={}}={},now=Date.now()){
- const f=freshness(snapshot,now),groups=new Map(),counts={};let manualQueued=0;
+ const f=freshness(snapshot,now),groups=new Map(),counts={},queuedTypes={};
  for(const t of tasks){const v=taskVisual(t,f,now);counts[v.kind]=(counts[v.kind]||0)+1;
-  if(t.status==='queued'&&t.execution==='manual')manualQueued++;
+  if(t.status==='queued'){const type=queueType(t);queuedTypes[type]=(queuedTypes[type]||0)+1;}
   if(f.stale||v.pose==='walk')continue;
   if(!groups.has(v.actor))groups.set(v.actor,{key:v.actor,pose:v.pose,tasks:[],visual:v,execution:t.execution,assignee:t.assignee});
   const g=groups.get(v.actor);g.tasks.push(t.id);
@@ -112,8 +119,8 @@ function roomPlan(tasks,seats=[],{snapshot,roles=[],previous={}}={},now=Date.now
  for(const a of actors)if(a.slot==null){const i=seats.findIndex((_,i)=>fits(a,i));if(i>=0){a.slot=i;used.add(i);for(const key of Object.keys(bindings))if(key!==a.key&&bindings[key]===i)delete bindings[key];bindings[a.key]=i;}}
  const overflow=actors.filter(a=>a.slot==null).reduce((n,a)=>n+a.tasks.length,0),parts=[];
  if(f.stale)parts.push('資料過舊');else{
-  for(const [key,label] of [['manual','人工執行中'],['work','工作中'],['interrupted','回報中斷／待確認'],['queued','排隊中'],['review','待驗收'],['blocked','卡住待處理'],['failed','執行失敗']])if(counts[key])parts.push(label+' '+counts[key]);
-  if(manualQueued)parts.push('尚未領取／無人執行 '+manualQueued);
+  for(const [key,label] of [['manual','人工執行中'],['work','工作中'],['interrupted','回報中斷／待確認'],['queued','排隊中'],['review','待驗收'],['blocked','卡住待處理'],['failed','執行失敗']])if(counts[key])parts.push(label+' '+counts[key]+(key==='queued'?'（'+['人工','Grok','Agent','Claude AI','未知類型'].filter(type=>queuedTypes[type]).map(type=>type+' 待領 '+queuedTypes[type]).join('、')+'）':''));
+  if(counts.queued)parts.push('尚未領取／無人執行 '+counts.queued);
   if(!parts.length)parts.push(counts.done?'已結束 '+counts.done:snapshot?.countsLimited?'任務列表未完整':'無任務');
  }
  if(overflow)parts.push('工位不足／未展示 '+overflow);
@@ -126,8 +133,8 @@ function personPose({base,seat,pose='walk',phase=0,time=0,reduced=false}){
  const seated=!!seat&&['work','review'].includes(pose),alert=pose==='alert',cycle=(time*.001+phase*3)%24,walking=!reduced&&!seated&&!alert&&cycle>3&&cycle<16;
  const progress=walking?(cycle-3)/13:0,excursion=Math.pow(Math.sin(progress*Math.PI),2)*.9,target=seated?seat:base;
  const wave=reduced?0:Math.sin(time*.007+phase),typing=seated&&pose==='work'&&!reduced;
- return {x:target.x+(walking?(base.x>0?-1:1)*excursion:0),y:target.y+(walking?Math.abs(wave)*.025:0),z:target.z+(walking?excursion*.12:0),rotation:seated?seat.rotation:alert?Math.PI:walking?(progress<.5?(base.x>0?-Math.PI/2:Math.PI/2):(base.x>0?Math.PI/2:-Math.PI/2)):(base.x>0?-.45:.35),seated,walking,typing,alert,leg:seated?-Math.PI/2:walking?wave*.35:0,knee:seated?Math.PI/2:0,arm:seated?(pose==='work'?-1.1:-.25):alert?-.4:walking?-wave*.3:0,elbow:seated&&pose==='work'?-.47:-.15,handMotion:typing?Math.sin(time*.005+phase)*.035:0,lean:alert?.12:0};
+ return {x:target.x+(walking?(base.x>0?-1:1)*excursion:0),y:target.y+(walking?Math.abs(wave)*.025:0),z:target.z+(walking?excursion*.12:0),rotation:seated?seat.rotation:alert?Math.PI:walking?(progress<.5?(base.x>0?-Math.PI/2:Math.PI/2):(base.x>0?Math.PI/2:-Math.PI/2)):(base.x>0?-.45:.35),seated,walking,typing,alert,leg:seated?-Math.PI/2:walking?wave*.35:0,knee:seated?Math.PI/2:0,recline:seated&&pose==='review'?-.22:0,arm:seated?(pose==='work'?-1.1:.18):alert?-.4:walking?-wave*.3:0,elbow:seated?(pose==='work'?-.47:-.8):-.15,handMotion:typing?Math.sin(time*.005+phase)*.035:0,lean:alert?.12:0};
 }
 
-root.ForesightWorkroomModel={metrics,duration,taskState,taskStats,taskBadge,freshness,updateLabel,runningConfirmed,actorKey,taskVisual,chairSeat,deskSeat,transformSeat,roomPlan,personPose,STALE_AFTER_MS};if(typeof module!=='undefined')module.exports=root.ForesightWorkroomModel;
+root.ForesightWorkroomModel={metrics,duration,taskState,taskStats,taskBadge,freshness,updateLabel,runningConfirmed,actorKey,queueType,taskVisual,chairSeat,deskSeat,transformSeat,roomPlan,personPose,STALE_AFTER_MS};if(typeof module!=='undefined')module.exports=root.ForesightWorkroomModel;
 })(typeof window==='undefined'?globalThis:window);

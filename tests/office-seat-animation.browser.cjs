@@ -6,33 +6,37 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 const web=path.resolve(__dirname,'../apps/web'),out=process.argv[2]||path.join(os.tmpdir(),'office-seat-browser-evidence');fs.mkdirSync(out,{recursive:true});
 const fixture=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;font:14px sans-serif;background:#edf1ef}header{padding:8px}iframe{border:0;width:100%;height:1000px}body[data-theme=dark]{background:#172936;color:#eee}</style></head><body><header>7F 坐姿離線假資料 · <b id="scenario">running</b> · 不連接任何服務</header><iframe id="officeFrame"></iframe><script>
 const theme=new URLSearchParams(location.search).get('theme');document.body.dataset.theme=theme;
-const frame=document.querySelector('iframe');let status='running',execution='agent',revision=1,sourceAt='',fail=false,reads=0;
-const record=()=>({id:'synthetic-security-task',title:'離線假資料資安盤點',status,execution,department:9,worker:execution==='manual'?'synthetic-admin':'agent-sec',assignee:'sec',lease_until:new Date(Date.now()+(status==='expired'?-1000:300000)).toISOString(),revision,history:[],criteria:[],checks:[],created_at:new Date().toISOString()});
+const frame=document.querySelector('iframe');let status='running',execution='agent',executor='',revision=1,scenario='running',testDepartment=9,sourceAt='',fail=false,reads=0;
+const record=()=>({executor,id:'synthetic-security-task',title:'離線假資料資安盤點',status,execution,department:testDepartment,worker:execution==='manual'?'synthetic-admin':testDepartment===8?'agent-qa':'agent-sec',assignee:testDepartment===8?'qa':'sec',lease_until:new Date(Date.now()+(status==='expired'?-1000:300000)).toISOString(),revision,history:[],criteria:[],checks:[],created_at:new Date().toISOString()});
+const records=()=>scenario==='qa-review'?[record(),{...record(),id:'qa-queued',status:'queued',execution:'ai',executor:'grok',worker:'',assignee:''}]:scenario==='mixed'?['manual','agent','ai','ai','ai'].map((execution,i)=>({...record(),id:'mixed-'+i,execution,executor:i===2||i===3?'grok':''})):scenario==='grok'?['g1','g2'].map(id=>({...record(),id})): [record()];
 addEventListener('message',e=>{if(e.source!==frame.contentWindow||e.origin!==location.origin)return;
  if(e.data.type==='foresight-office-ready')frame.contentWindow.postMessage({type:'foresight-office-departments',roles:[]},location.origin);
- if(e.data.type==='foresight-office-workroom-request'){reads++;const t=record();if(status==='expired')t.status='running';frame.contentWindow.postMessage({type:'foresight-office-workroom',department:e.data.department,request:e.data.request,snapshot:fail?{tasks:[],error:'synthetic offline'}:{tasks:[t],summaries:[t],summaryScope:'all',at:sourceAt||new Date().toISOString()}},location.origin);}
+ if(e.data.type==='foresight-office-workroom-request'){reads++;const t=record();if(status==='expired')t.status='running';frame.contentWindow.postMessage({type:'foresight-office-workroom',department:e.data.department,request:e.data.request,snapshot:fail?{tasks:[],error:'synthetic offline'}:{tasks:status==='expired'?[t]:records(),summaries:status==='expired'?[t]:records(),summaryScope:'all',at:sourceAt||new Date().toISOString()}},location.origin);}
 });
 frame.src='ai-office.html?embedded=1&theme='+theme;
 const wait=async(fn,why)=>{const start=performance.now();while(!fn()){if(performance.now()-start>20000)throw Error('timeout '+why);await new Promise(r=>setTimeout(r,50));}};
 const check=(v,why)=>{if(!v)throw Error(why);};
 window.seatTest={async set(next){
  await wait(()=>frame.contentWindow.ForesightOffice&&frame.contentDocument.querySelector('.existing-role-count'),'frame');
- const f=frame.contentWindow,d=frame.contentDocument;status=next;execution=next==='manual'?'manual':'agent';if(next==='manual')status='running';if(next==='queued')execution='manual';revision++;sourceAt=next==='stale'?new Date(Date.now()-150001).toISOString():'';fail=next==='error';
+ const f=frame.contentWindow,d=frame.contentDocument;scenario=next;testDepartment=next==='qa-review'?8:9;status=next==='qa-review'?'review':next;executor=next==='grok'?'grok':'';execution=next==='manual'?'manual':'agent';if(next==='manual')status='running';if(next==='queued')execution='manual';if(['grok','agent-queue','claude-queue','mixed'].includes(next)){status='queued';execution=next==='agent-queue'?'agent':'ai';}revision++;sourceAt=next==='stale'?new Date(Date.now()-150001).toISOString():'';fail=next==='error';
  if(['stale','error'].includes(next))status='running';
- f.postMessage({type:'foresight-office-workroom-invalidated',department:9},location.origin);
- const label=()=>d.querySelector('.department[data-department="9"] .existing-role-count').textContent;
- const expected=next==='queued'?'排隊中 1':next==='review'?'待驗收 1':next==='expired'?'回報中斷／待確認 1':['stale','error'].includes(next)?'資料過舊':next==='manual'?'人工執行中 1':'工作中 1';
- await wait(()=>label().includes(expected),'label '+next);f.ForesightOffice.select(9,true);
+ f.postMessage({type:'foresight-office-workroom-invalidated',department:testDepartment},location.origin);
+ const label=()=>d.querySelector('.department[data-department="'+testDepartment+'"] .existing-role-count').textContent;
+ const expected=next==='mixed'?'排隊中 5':next==='grok'?'排隊中 2':['queued','agent-queue','claude-queue'].includes(next)?'排隊中 1':['review','qa-review'].includes(next)?'待驗收 1':next==='expired'?'回報中斷／待確認 1':['stale','error'].includes(next)?'資料過舊':next==='manual'?'人工執行中 1':'工作中 1';
+ await wait(()=>label().includes(expected),'label '+next);f.ForesightOffice.select(testDepartment,true);
  if(!this.zoomed){for(let i=0;i<3;i++)d.querySelector('#zoomIn').click();this.zoomed=true;}
- const active=()=>f.ForesightOffice.peopleActivity.filter(p=>p.department===9),workers=()=>active().filter(p=>p.pose==='work');
+ const active=()=>f.ForesightOffice.peopleActivity.filter(p=>p.department===testDepartment),workers=()=>active().filter(p=>p.pose==='work');
  await wait(()=>next==='running'||next==='manual'?workers().length===1:workers().length===0,'person state '+next);
  // Give the camera time to settle. This does not advance data/leases artificially.
  await new Promise(r=>setTimeout(r,1200));
- const people=active(),room=d.querySelector('.room-label[data-room-department="9"] .room-task-badge');check(label()===room.textContent,'right and 3D labels differ');
- const seats=f.ForesightOffice.seatsFor(9);check(seats.length===1&&seats[0].x===0&&seats[0].z===1.45&&seats[0].rotation===Math.PI,'actual security chair');
+ const people=active(),room=d.querySelector('.room-label[data-room-department="'+testDepartment+'"] .room-task-badge');check(label()===room.textContent,'right and 3D labels differ');
+ const seats=f.ForesightOffice.seatsFor(testDepartment);if(testDepartment===9)check(seats.length===1&&seats[0].x===0&&seats[0].z===1.45&&seats[0].rotation===Math.PI,'actual security chair');
  if(next==='running'||next==='manual'){const p=workers()[0];check(p.x===0&&p.z===1.45&&p.rotation===Math.PI,'not seated in actual chair');check(p.typing===!matchMedia('(prefers-reduced-motion: reduce)').matches,'typing/reduced motion');check(people.filter(p=>p.pose==='walk').length===1,'whole room pretending to work');if(next==='manual')check(p.actor.startsWith('manual:'),'manual identity');}
- if(next==='queued'){check(people.every(p=>p.pose==='walk'&&!p.typing),'queued should walk, not sit');check(label().includes('尚未領取／無人執行'),'manual queue wording');}
- if(next==='review'){const p=people.find(p=>p.pose==='review');check(p&&p.x===0&&p.z===1.45&&!p.typing,'review sit no typing');}
+ if(['queued','grok','agent-queue','claude-queue','mixed'].includes(next)){check(people.every(p=>p.pose==='walk'&&!p.typing),'queued should walk, not sit');check(label().includes('尚未領取／無人執行'),'all queued need nobody-working wording');const types=next==='mixed'?['人工 待領 1','Agent 待領 1','Grok 待領 2','Claude AI 待領 1']:[next==='grok'?'Grok 待領 2':next==='agent-queue'?'Agent 待領 1':next==='claude-queue'?'Claude AI 待領 1':'人工 待領 1'];for(const type of types)check(label().includes(type),'missing queue type '+type);check(room.scrollWidth<=room.clientWidth+2,'queue badge overflow');}
+ if(['review','qa-review'].includes(next)){const p=people.find(p=>p.pose==='review');check(p&&p.x===seats[p.slot].x&&p.z===seats[p.slot].z&&!p.typing,'review sit no typing');if(next==='qa-review')check(label().includes('排隊中 1（Grok 待領 1）')&&people.filter(p=>p.pose==='review').length===1&&people.filter(p=>p.pose==='walk').length===1,'QA queued/review 7F reproduction');
+  const waiting=q=>q.bodyLean<=-.2&&q.armAngles.every(a=>a>=0)&&q.elbowAngles.every(a=>a<=-.7)&&!q.typing;
+  check(waiting(p),'review skeleton must recline with hands lowered');await new Promise(r=>setTimeout(r,350));const later=active().find(p=>p.pose==='review');check(waiting(later)&&JSON.stringify([p.bodyLean,p.armAngles,p.elbowAngles])===JSON.stringify([later.bodyLean,later.armAngles,later.elbowAngles]),'review joints must remain stationary');
+ }
  if(next==='expired')check(people.some(p=>p.pose==='alert')&&people.every(p=>!p.typing),'expired lease typing');
  if(['stale','error'].includes(next))check(people.every(p=>p.pose!=='work'&&!p.typing),'stale pretending to work');
  check(d.querySelector('#officeDataFreshness').textContent.includes('可能延遲約 1 分鐘'),'3D latency notice');check(d.querySelector('#directoryDataFreshness').textContent.includes('資料最後更新時間'),'directory timestamp');
@@ -61,16 +65,16 @@ const server=http.createServer((req,res)=>{const url=new URL(req.url,'http://loc
    await call('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:reduced?'reduce':'no-preference'}]},sessionId);
    await call('Page.navigate',{url:'http://127.0.0.1:'+port+'/__7f_fixture?theme='+theme},sessionId);
    const started=Date.now();while(Date.now()-started<20000){const r=await call('Runtime.evaluate',{expression:'!!window.seatTest',returnByValue:true},sessionId);if(r.result?.value)break;await new Promise(r=>setTimeout(r,100));}
-   for(const scenario of ['running','queued','review','expired','stale','error','manual']){
+   for(const scenario of (process.env.SEAT_TEST_SCENARIOS||'running,queued,review,expired,stale,error,manual,grok,agent-queue,claude-queue,mixed,qa-review').split(',')){
     const r=await call('Runtime.evaluate',{expression:'window.seatTest.set('+JSON.stringify(scenario)+')',returnByValue:true,awaitPromise:true},sessionId);
     assert.ok(!r.exceptionDetails,JSON.stringify(r.exceptionDetails));const result=r.result?.value;assert.equal(result?.pass,true,JSON.stringify(r));results.push(result);console.log(JSON.stringify(result));
-    if(['running','queued'].includes(scenario)){
+    if(['running','queued','review','grok','mixed','qa-review'].includes(scenario)){
      const shot=await call('Page.captureScreenshot',{format:'png',captureBeyondViewport:false},sessionId);
      fs.writeFileSync(path.join(out,'seat-'+scenario+'-'+theme+'-'+width+(reduced?'-reduced':'')+'.png'),Buffer.from(shot.data,'base64'));
     }
    }
    assert.equal(exceptions.filter(e=>e.sessionId===sessionId).length,0,JSON.stringify(exceptions));await call('Target.closeTarget',{targetId});
   }
-  fs.writeFileSync(path.join(out,'browser-results.json'),JSON.stringify(results,null,2)+'\n');console.log('PASS real Chrome seat integration: 7 scenarios × desktop/mobile × light/dark × motion/reduced; synthetic only');
+  fs.writeFileSync(path.join(out,'browser-results.json'),JSON.stringify(results,null,2)+'\n');console.log('PASS real Chrome seat integration: '+results.length+' cases across desktop/mobile × light/dark × motion/reduced; synthetic only');
  }finally{ws?.close();chrome.kill();await new Promise(r=>chrome.once('exit',r));server.close();fs.writeFileSync(path.join(out,'chrome-stderr.txt'),log);fs.rmSync(profile,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);server.close();process.exitCode=1;});

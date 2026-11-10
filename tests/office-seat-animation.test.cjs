@@ -39,3 +39,24 @@ test('failed refresh keeps last successful timestamp without marking data fresh'
 test('a returning inactive worker cannot steal a reused seat from the current occupant',()=>{const first=m.roomPlan([make('sec')],desks(),{snapshot},NOW);const second=m.roomPlan([make('qa','running','agent',{worker:'agent-qa'})],desks(),{snapshot,previous:first.bindings},NOW);const both=m.roomPlan([make('sec'),make('qa','running','agent',{worker:'agent-qa'})],desks(),{snapshot,previous:second.bindings},NOW);assert.equal(both.bindings['agent:qa'],second.bindings['agent:qa']);assert.notEqual(both.bindings['agent:sec'],both.bindings['agent:qa']);});
 
 test('overview transport ID 19 does not turn department 19 into all-company workers',()=>{const h=harness();let plan;h.ctx.addEventListener('foresight-office-activity',e=>{plan=e.meta.plans[19];});h.reply(h.request(19),[make('security-only','running','manual')]);assert.equal(plan.actors.length,0);assert.equal(plan.badge,'無任務');});
+
+// QA follow-up: queue wording is execution-independent; waiting must look different.
+for(const [execution,executor,label] of [['manual','','人工'],['ai','grok','Grok'],['agent','','Agent'],['ai','claude-local','Claude AI'],['other','','未知類型']])test(`every queued task says nobody is working: ${label}`,()=>{
+ const t=make('queued-'+label,'queued',execution,{executor}),v=m.taskVisual(t,{},NOW),p=m.roomPlan([t],desks(),{snapshot},NOW);
+ assert.match(v.label,/尚未領取／無人執行/);assert.ok(v.label.includes(label+' 待領'));
+ assert.ok(p.badge.includes('排隊中 1（'+label+' 待領 1）'));assert.match(p.badge,/尚未領取／無人執行 1/);assert.equal(p.actors.length,0);
+});
+test('mixed queues preserve total and each executor count in shared right/3D labels',()=>{
+ const rows=[make('m','queued','manual'),...['g1','g2'].map(id=>make(id,'queued','ai',{executor:'grok'})),make('agent','queued','agent'),make('claude','queued','ai'),make('unknown','queued','unexpected')];
+ const p=m.roomPlan(rows,desks(),{snapshot},NOW);assert.match(p.badge,/排隊中 6/);
+ for(const text of ['人工 待領 1','Grok 待領 2','Agent 待領 1','Claude AI 待領 1','未知類型 待領 1','尚未領取／無人執行 6'])assert.ok(p.badge.includes(text),text);
+ const h=harness();h.reply(h.request(19),rows);assert.equal(h.badge(9),p.badge);assert.equal(h.room(9),p.badge);
+ assert.equal(m.roomPlan(rows,desks(),{snapshot:{at,error:'offline'}},NOW).badge,'資料過舊');assert.equal(m.queueType(make('unknown-executor','queued','ai',{executor:'unrecognized'})),'未知類型');
+ assert.doesNotMatch(m.roomPlan([make('review','review')],desks(),{snapshot},NOW).badge,/待領|無人執行/);
+});
+for(const reduced of [false,true])test(`review is visibly reclined with hands lowered, never typing (reduced=${reduced})`,()=>{
+ const poses=[100,300,900,1200].map(time=>m.personPose({base:{x:2,y:.12,z:1},seat:seat(),pose:'review',time,reduced}));
+ for(const p of poses){assert.equal(p.typing,false);assert.equal(p.handMotion,0);assert.equal(p.seated,true);assert.ok(p.recline<=-.2,'review body must visibly recline');assert.ok(p.arm>=0,'review upper arms must hang down');assert.ok(p.elbow<=-.7,'review hands rest over lap');const y=.41-.23*Math.cos(p.arm)-.23*Math.cos(p.arm+p.elbow),z=-.23*Math.sin(p.arm)-.23*Math.sin(p.arm+p.elbow),handY=.60+y*Math.cos(p.recline)-z*Math.sin(p.recline);assert.ok(handY>=.60&&handY<.75,'review hands must be over lap, below keyboard height');}
+ for(const p of poses.slice(1))assert.deepEqual(p,poses[0]);
+ const work=m.personPose({base:{x:2,y:.12,z:1},seat:seat(),pose:'work',time:100,reduced});assert.equal(work.recline,0);assert.ok(Math.abs(work.arm-poses[0].arm)>1);assert.equal(work.typing,!reduced);
+});
