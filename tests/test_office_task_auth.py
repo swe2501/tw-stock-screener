@@ -14,9 +14,9 @@ class Boundary(unittest.TestCase):
  def test_guest_cannot_list_or_create(self):
   for action in ['admin_office_tasks_list','admin_office_tasks_get','admin_office_tasks_create','admin_office_tasks_update']:
    h=request(AUTH,{'action':action})
-   with patch.object(AUTH,'_verify_admin',return_value=None),patch.object(AUTH,'_rest') as store:
-    self.assertEqual(h.do_POST()[0],403);store.assert_not_called()
+   with patch.object(AUTH,'_verify_admin',return_value=(401,None)),patch.object(AUTH,'_rest') as store:
+    self.assertEqual(h.do_POST()[0],401);store.assert_not_called()
  def test_verified_admin_dispatches_to_task_store(self):
   h=request(AUTH,{'action':'admin_office_tasks_list'},{'Authorization':'Bearer unit'})
-  with patch.dict(os.environ,{'VERCEL':'0'}),patch.object(AUTH,'_verify_admin',return_value='admin'),patch.object(AUTH,'_rest',side_effect=MemoryRest()):self.assertEqual(h.do_POST()[0],200)
+  with patch.dict(os.environ,{'VERCEL':'0'}),patch.object(AUTH,'_verify_admin',return_value=(200,'admin')),patch.object(AUTH,'_rest',side_effect=MemoryRest()):self.assertEqual(h.do_POST()[0],200)
 if __name__=='__main__':unittest.main()

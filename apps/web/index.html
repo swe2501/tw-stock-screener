@@ -4514,7 +4514,7 @@
     function esc(t){return String(t==null?'':t).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
     function tk(){ try{return localStorage.getItem('sb_token')||'';}catch(e){return '';} }
     function post(action,extra){
-      return fetch((window.__API||'')+'/api/auth',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tk()},
+      return (typeof _authFetch==='function'?_authFetch:fetch)((window.__API||'')+'/api/auth',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tk()},
         body:JSON.stringify(Object.assign({action:action},extra||{}))}).then(function(r){return r.json().then(function(j){return !r.ok && action.indexOf('admin_office_tasks_')===0 && j && typeof j==='object' ? Object.assign({},j,{httpStatus:r.status}) : j;});});
     }
     function dt(s){ if(!s)return '—'; try{return new Date(s).toLocaleString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});}catch(e){return s;} }
