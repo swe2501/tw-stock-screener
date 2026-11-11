@@ -8,7 +8,7 @@ const fixture=`<!doctype html><html><head><meta charset="utf-8"><meta name="view
 const theme=new URLSearchParams(location.search).get('theme');document.body.dataset.theme=theme;
 const frame=document.querySelector('iframe');let status='running',execution='agent',executor='',revision=1,scenario='running',testDepartment=9,sourceAt='',fail=false,reads=0;
 const record=()=>({executor,id:'synthetic-security-task',title:'離線假資料資安盤點',status,execution,department:testDepartment,worker:execution==='manual'?'synthetic-admin':testDepartment===8?'agent-qa':'agent-sec',assignee:testDepartment===8?'qa':'sec',lease_until:new Date(Date.now()+(status==='expired'?-1000:300000)).toISOString(),revision,history:[],criteria:[],checks:[],created_at:new Date().toISOString()});
-const records=()=>scenario.startsWith('qa-')?[record(),{...record(),id:'qa-queued',status:'queued',execution:'ai',executor:'grok',worker:'',assignee:''}]:scenario==='mixed'?['manual','agent','ai','ai','ai'].map((execution,i)=>({...record(),id:'mixed-'+i,execution,executor:i===2||i===3?'grok':''})):scenario==='grok'?['g1','g2'].map(id=>({...record(),id})): [record()];
+const records=()=>scenario==='badge-pair'?[{...record(),id:'badge-review',status:'review',worker:'agent-qa'},{...record(),id:'badge-work',status:'running',worker:'agent-eng'}]:scenario.startsWith('qa-')?[record(),{...record(),id:'qa-queued',status:'queued',execution:'ai',executor:'grok',worker:'',assignee:''}]:scenario==='mixed'?['manual','agent','ai','ai','ai'].map((execution,i)=>({...record(),id:'mixed-'+i,execution,executor:i===2||i===3?'grok':''})):scenario==='grok'?['g1','g2'].map(id=>({...record(),id})): [record()];
 addEventListener('message',e=>{if(e.source!==frame.contentWindow||e.origin!==location.origin)return;
  if(e.data.type==='foresight-office-ready')frame.contentWindow.postMessage({type:'foresight-office-departments',roles:[]},location.origin);
  if(e.data.type==='foresight-office-workroom-request'){reads++;const t=record();if(status==='expired')t.status='running';frame.contentWindow.postMessage({type:'foresight-office-workroom',department:e.data.department,request:e.data.request,snapshot:fail?{tasks:[],error:'synthetic offline'}:{tasks:status==='expired'?[t]:records(),summaries:status==='expired'?[t]:records(),summaryScope:'all',at:sourceAt||new Date().toISOString()}},location.origin);}
@@ -18,19 +18,33 @@ const wait=async(fn,why)=>{const start=performance.now();while(!fn()){if(perform
 const check=(v,why)=>{if(!v)throw Error(why);};
 window.seatTest={async set(next){
  await wait(()=>frame.contentWindow.ForesightOffice&&frame.contentDocument.querySelector('.existing-role-count'),'frame');
- const f=frame.contentWindow,d=frame.contentDocument;scenario=next;testDepartment=next.startsWith('qa-')?8:9;status=next==='qa-review'?'review':next==='qa-work'?'running':next;executor=next==='grok'?'grok':'';execution=next==='manual'?'manual':'agent';if(next==='manual')status='running';if(next==='queued')execution='manual';if(['grok','agent-queue','claude-queue','mixed'].includes(next)){status='queued';execution=next==='agent-queue'?'agent':'ai';}revision++;sourceAt=next==='stale'?new Date(Date.now()-150001).toISOString():'';fail=next==='error';
+ const f=frame.contentWindow,d=frame.contentDocument;scenario=next;testDepartment=next.startsWith('qa-')||next==='badge-pair'?8:9;status=next==='qa-review'||next==='badge-pair'?'review':next==='qa-work'?'running':next;executor=next==='grok'?'grok':'';execution=next==='manual'?'manual':'agent';if(next==='manual')status='running';if(next==='queued')execution='manual';if(['grok','agent-queue','claude-queue','mixed'].includes(next)){status='queued';execution=next==='agent-queue'?'agent':'ai';}revision++;sourceAt=next==='stale'?new Date(Date.now()-150001).toISOString():'';fail=next==='error';
  if(['stale','error'].includes(next))status='running';
  f.postMessage({type:'foresight-office-workroom-invalidated',department:testDepartment},location.origin);
  const label=()=>d.querySelector('.department[data-department="'+testDepartment+'"] .existing-role-count').textContent;
  const expected=next==='mixed'?'排隊中 5':next==='grok'?'排隊中 2':['queued','agent-queue','claude-queue'].includes(next)?'排隊中 1':['review','qa-review'].includes(next)?'待驗收 1':next==='expired'?'回報中斷／待確認 1':['stale','error'].includes(next)?'資料過舊':next==='manual'?'人工執行中 1':'工作中 1';
- await wait(()=>label().includes(expected),'label '+next);f.ForesightOffice.select(testDepartment,true);
- for(let i=0;i<3;i++)d.querySelector('#zoomIn').click();
+ await wait(()=>label().includes(expected),'label '+next);if(next==='badge-pair')f.ForesightOffice.focusFloor(7);else {f.ForesightOffice.select(testDepartment,true);for(let i=0;i<3;i++)d.querySelector('#zoomIn').click();}
  const active=()=>f.ForesightOffice.peopleActivity.filter(p=>p.department===testDepartment),workers=()=>active().filter(p=>p.pose==='work');
- await wait(()=>['running','manual','qa-work'].includes(next)?workers().length===1:workers().length===0,'person state '+next);
+ await wait(()=>['running','manual','qa-work','badge-pair'].includes(next)?workers().length===1:workers().length===0,'person state '+next);
  if(['review','qa-review'].includes(next))await wait(()=>{const p=active().find(p=>p.pose==='review'),s=p&&f.ForesightOffice.seatsFor(testDepartment)[p.slot];return p&&s&&p.x===s.x&&p.z===s.z&&p.bodyLean<=-.5&&!p.typing;},'rendered review rig '+next);
+ if(next==='badge-pair')await wait(()=>{const c=f.ForesightOffice.cameraView;return Math.abs(c.zoom-1.05)<.0001&&Math.abs(c.elevation-.85)<.0001&&Math.abs(c.target[0])<.001&&Math.abs(c.target[2])<.001;},'default floor camera convergence');
  // Give the camera time to settle. This does not advance data/leases artificially.
  await new Promise(r=>setTimeout(r,1200));
  const people=active(),room=d.querySelector('.room-label[data-room-department="'+testDepartment+'"] .room-task-badge');check(label()===room.textContent,'right and 3D labels differ');
+ const badgeFor=p=>d.querySelector('.person-review-badge[data-person-department="'+testDepartment+'"][data-person-slot="'+p.slot+'"]');
+ await wait(()=>active().every(p=>{const b=badgeFor(p);return b&&(!b.hidden)===(p.pose==='review');}),'review badge visibility '+next);
+ const badgeDetails=()=>active().map(p=>{const b=badgeFor(p),style=f.getComputedStyle(b),rect=b.getBoundingClientRect();return {slot:p.slot,pose:p.pose,visible:!b.hidden,text:b.textContent,fontSize:style.fontSize,width:rect.width,height:rect.height,left:b.style.left,top:b.style.top,opacity:style.opacity,transform:style.transform};});
+ for(const p of active()){const b=badgeFor(p);check((!b.hidden)===(p.pose==='review'),'only review has a head badge');check(f.getComputedStyle(b).pointerEvents==='none','badge must not intercept board/camera clicks');
+  for(const el of [b,...b.querySelectorAll('*')]){const style=f.getComputedStyle(el);check(style.animationName==='none'&&style.transitionDuration==='0s'&&el.getAnimations().length===0,'badge/icon must never animate');}
+  check(f.getComputedStyle(b,'::after').animationName==='none','badge pointer must not flash');
+  if(!b.hidden)check(b.textContent==='待驗收'&&parseFloat(f.getComputedStyle(b).fontSize)>=13&&b.getBoundingClientRect().width>=78,'fixed-size readable review text');
+ }
+ check([...d.querySelectorAll('.person-review-badge')].filter(b=>!b.hidden).length===active().filter(p=>p.pose==='review').length,'badges from hidden floors or non-review actors');
+ if(matchMedia('(prefers-reduced-motion: reduce)').matches){const before=JSON.stringify(badgeDetails());await new Promise(r=>setTimeout(r,350));check(JSON.stringify(badgeDetails())===before,'reduced-motion badge must not bob or blink');}
+ if(next==='badge-pair'){check(active().filter(p=>p.pose==='review').length===1&&workers().length===1,'review and work must share the same room');check(Math.abs(f.ForesightOffice.cameraView.zoom-1.05)<.01,'must use default floor camera without zoom');
+  f.ForesightOffice.focusFloor(6);check([...d.querySelectorAll('.person-review-badge')].every(b=>b.hidden),'hide badges immediately on other floors');f.ForesightOffice.focusFloor(7);await wait(()=>!badgeFor(active().find(p=>p.pose==='review')).hidden,'restore badge on its floor');await new Promise(r=>setTimeout(r,1200));
+ }
+
  check(people.filter(p=>p.pose!=='review').every(p=>p.armInwardAngles.every(a=>a===0)),'rest arm tilt leaked into other poses');
  const seats=f.ForesightOffice.seatsFor(testDepartment);if(testDepartment===9)check(seats.length===1&&seats[0].x===0&&seats[0].z===1.45&&seats[0].rotation===Math.PI,'actual security chair');
  if(['running','manual','qa-work'].includes(next)){const p=workers()[0];check(p.x===seats[p.slot].x&&p.z===seats[p.slot].z&&p.rotation===seats[p.slot].rotation,'not seated in actual chair');check(p.typing===!matchMedia('(prefers-reduced-motion: reduce)').matches,'typing/reduced motion');check(people.filter(p=>p.pose==='walk').length===1,'whole room pretending to work');if(next==='manual')check(p.actor.startsWith('manual:'),'manual identity');}
@@ -47,7 +61,7 @@ window.seatTest={async set(next){
  if(next==='running'){d.querySelector('#departmentProfile').click();await wait(()=>d.querySelector('.wr-person[data-status="work"]'),'agent card work status');check(d.querySelector('.workroom').textContent.includes('AI_stock 資安工程師'),'agent card binding');d.querySelector('#officeExploreDialog').close();}
  if(next==='manual'){d.querySelector('#departmentProfile').click();await wait(()=>d.querySelector('.workroom')?.textContent.includes('人工執行者（匿名）'),'anonymous human card');check(!d.querySelector('.workroom').textContent.includes('synthetic-admin'),'raw human identity');d.querySelector('#officeExploreDialog').close();}
  document.querySelector('#scenario').textContent=next;
- return {pass:true,width:innerWidth,theme,scenario:next,reduced:matchMedia('(prefers-reduced-motion: reduce)').matches,people,label:label(),latency:d.querySelector('#officeDataFreshness').textContent,reads};
+ return {pass:true,width:innerWidth,theme,scenario:next,reduced:matchMedia('(prefers-reduced-motion: reduce)').matches,people,badges:badgeDetails(),camera:f.ForesightOffice.cameraView,label:label(),latency:d.querySelector('#officeDataFreshness').textContent,reads};
 },async focusForScreenshot(){
  const d=frame.contentDocument,r=d.querySelector('.room-label[data-room-department="8"]').getBoundingClientRect(),stage=d.querySelector('#stage');
  for(let i=0;i<6;i++){stage.dispatchEvent(new frame.contentWindow.WheelEvent('wheel',{clientX:r.x+r.width/2,clientY:r.top-45,deltaY:-120,bubbles:true,cancelable:true}));await new Promise(r=>setTimeout(r,150));}
@@ -71,16 +85,17 @@ const server=http.createServer((req,res)=>{const url=new URL(req.url,'http://loc
    await call('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:reduced?'reduce':'no-preference'}]},sessionId);
    await call('Page.navigate',{url:'http://127.0.0.1:'+port+'/__7f_fixture?theme='+theme},sessionId);
    const started=Date.now();while(Date.now()-started<20000){const r=await call('Runtime.evaluate',{expression:'!!window.seatTest',returnByValue:true},sessionId);if(r.result?.value)break;await new Promise(r=>setTimeout(r,100));}
-   for(const scenario of (process.env.SEAT_TEST_SCENARIOS||'running,queued,review,expired,stale,error,manual,grok,agent-queue,claude-queue,mixed,qa-review,qa-work').split(',')){
+   for(const scenario of (process.env.SEAT_TEST_SCENARIOS||'running,queued,review,expired,stale,error,manual,grok,agent-queue,claude-queue,mixed,qa-review,qa-work,badge-pair').split(',')){
     const r=await call('Runtime.evaluate',{expression:'window.seatTest.set('+JSON.stringify(scenario)+')',returnByValue:true,awaitPromise:true},sessionId);
     assert.ok(!r.exceptionDetails,JSON.stringify(r.exceptionDetails));const result=r.result?.value;assert.equal(result?.pass,true,JSON.stringify(r));results.push(result);console.log(JSON.stringify(result));
     if(['running','queued','review','grok','mixed','qa-review','qa-work'].includes(scenario)){
      const shot=await call('Page.captureScreenshot',{format:'png',captureBeyondViewport:false},sessionId);
      fs.writeFileSync(path.join(out,'seat-'+scenario+'-'+theme+'-'+width+(reduced?'-reduced':'')+'.png'),Buffer.from(shot.data,'base64'));
     }
-    if(width===1440&&theme==='light'&&!reduced&&scenario.startsWith('qa-')){
+    if(scenario==='badge-pair'){const shot=await call('Page.captureScreenshot',{format:'png',captureBeyondViewport:false},sessionId);fs.writeFileSync(path.join(out,'default-review-work-'+theme+'-'+width+(reduced?'-reduced':'')+'.png'),Buffer.from(shot.data,'base64'));}
+    if(width===1440&&theme==='light'&&((!reduced&&scenario.startsWith('qa-'))||scenario==='badge-pair')){
      const focus=await call('Runtime.evaluate',{expression:'window.seatTest.focusForScreenshot()',awaitPromise:true},sessionId);assert.ok(!focus.exceptionDetails,JSON.stringify(focus.exceptionDetails));
-     const shot=await call('Page.captureScreenshot',{format:'png',captureBeyondViewport:false},sessionId);fs.writeFileSync(path.join(out,'focused-'+scenario+'.png'),Buffer.from(shot.data,'base64'));
+     const shot=await call('Page.captureScreenshot',{format:'png',captureBeyondViewport:false},sessionId);fs.writeFileSync(path.join(out,'focused-'+scenario+(reduced?'-reduced':'')+'.png'),Buffer.from(shot.data,'base64'));
     }
    }
    assert.equal(exceptions.filter(e=>e.sessionId===sessionId).length,0,JSON.stringify(exceptions));await call('Target.closeTarget',{targetId});

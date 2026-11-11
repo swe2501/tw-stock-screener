@@ -20,3 +20,10 @@
 body[data-theme="dark"] .office-data-freshness{background:#203440;color:#e3e9e8}
 .room-label .room-task-badge{max-width:240px;white-space:normal;overflow-wrap:anywhere;line-height:1.5}
 @media(max-width:600px){.room-label .room-task-badge{max-width:170px}.office-data-freshness{font-size:10px;top:auto;bottom:70px}}
+
+/* Head-anchored DOM billboard: fixed screen size; no bobbing, blinking or pointer capture. */
+.person-review-badge{position:absolute;z-index:3;display:inline-flex;align-items:center;gap:5px;min-width:78px;padding:5px 8px;border:1px solid #946318;border-radius:7px;background:#fff1bd;color:#603b0b;font:700 13px/1.2 'Noto Sans TC','Microsoft JhengHei',sans-serif;white-space:nowrap;box-shadow:0 1px 4px #17293630;transform:translate(-50%,-100%);pointer-events:none;animation:none;transition:none}
+.person-review-badge svg{width:14px;height:14px;flex:none;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.person-review-badge::after{content:'';position:absolute;left:calc(50% - 4px);bottom:-5px;width:8px;height:8px;background:#fff1bd;border-right:1px solid #946318;border-bottom:1px solid #946318;transform:rotate(45deg)}
+.person-review-badge,.person-review-badge *,.person-review-badge::after{animation:none;transition:none}
+.person-review-badge[hidden]{display:none!important}
