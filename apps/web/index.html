@@ -14025,15 +14025,20 @@
     async function _tryRefreshToken() {
       if (!_authRefresh) return false;
       if (_refreshing) return _refreshing;
+      const refreshToken = _authRefresh;
+      const owner = _authUser?.id;
+      const isCurrentSession = () => _authRefresh === refreshToken && _authUser?.id === owner;
       _refreshing = (async () => {
         try {
           const r = await fetch(_authEndpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'refresh', refresh_token: _authRefresh }),
+            body: JSON.stringify({ action: 'refresh', refresh_token: refreshToken }),
           });
+          if (!isCurrentSession()) return false;
           if (!r.ok) { if (r.status === 401) _forceLogout(); return false; }
           const d = await r.json();
+          if (!isCurrentSession() || (owner && d.user?.id !== owner)) return false;
           _authToken   = d.access_token;
           _authRefresh = d.refresh_token || _authRefresh;
           _authUser    = d.user;
@@ -18529,7 +18534,7 @@
 <script src="assets/strategy-dimensions.js?v=2" defer></script>
 <script src="assets/strategy-presets.js?v=1" defer></script>
 <script src="assets/member-strategy-ui.js?v=companion-suction6" defer></script>
-<script src="assets/member-research.js?v=watchsync2" defer></script>
+<script src="assets/member-research.js?v=watchsync3" defer></script>
 <script src="assets/member-trade-engine.js?v=wording1" defer></script>
 <script src="assets/goal-models/manifest.js" defer></script>
 <script src="assets/member-companion-3d.js" defer></script>
