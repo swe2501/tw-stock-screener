@@ -431,10 +431,10 @@ class handler(BaseHTTPRequestHandler):
             return self._json(*_office_dispatch(body, self.headers, raw))
 
         # ── 線下論壇簽到／補發代碼／站內廣告（lib/forum_ads.py；只用 admin_settings＋member_point_ledger）──
-        if action in ("forum_events", "forum_pass", "forum_checkin", "forum_redeem", "site_ads", "ad_click"):
+        if action in ("forum_events", "forum_pass", "forum_checkin", "forum_redeem", "site_ads", "ad_click", "forum_registration_status", "forum_register", "forum_cancel"):
             from lib.forum_ads import handle_public
             token = (self.headers.get("Authorization") or "").replace("Bearer ", "").strip()
-            user = _token_user(token) if action in ("forum_events", "forum_checkin", "forum_redeem", "site_ads") else None
+            user = _token_user(token) if action in ("forum_events", "forum_checkin", "forum_redeem", "site_ads", "forum_registration_status", "forum_register", "forum_cancel") else None
             return self._json(*handle_public(action, body, user, _rest))
 
         # ── 後台管理（action: admin_*）：JWT→email∈白名單 才放行；service_role 只在後端 ──
@@ -450,16 +450,21 @@ class handler(BaseHTTPRequestHandler):
                 return self._json(status, result)
 
             if action.startswith(("admin_forum_", "admin_ads_", "admin_points_", "admin_products_", "admin_tasks_")):
+                if action == "admin_ads_media_upload":
+                    from lib.admin_ad_media import signed_upload
+                    status, result = signed_upload(body)
+                    return self._json(status, result)
                 from lib.forum_ads import handle_admin
                 def _users():
                     st_u, data_u = _admin_api("/admin/users?per_page=1000")
                     return data_u.get("users", []) if st_u == 200 and isinstance(data_u, dict) else []
                 status, result = handle_admin(action, body, admin_email, _rest, _users)
-                if status == 200 and action in ("admin_forum_save", "admin_forum_delete", "admin_forum_codes", "admin_ads_save", "admin_ads_delete", "admin_points_adjust", "admin_products_save", "admin_tasks_save", "admin_tasks_delete", "admin_tasks_award", "admin_forum_voucher_save"):
+                if status == 200 and action in ("admin_forum_save", "admin_forum_delete", "admin_forum_codes", "admin_forum_code_revoke", "admin_forum_registration_reset", "admin_ads_save", "admin_ads_delete", "admin_points_adjust", "admin_products_save", "admin_products_create", "admin_tasks_save", "admin_tasks_delete", "admin_tasks_award", "admin_forum_voucher_save"):
                     det = {k: body.get(k) for k in ("id", "count", "points", "reason", "title", "active", "task_id", "reference", "enabled", "definition", "days") if body.get(k) is not None}
                     if action == "admin_forum_save": det["event"] = (result.get("event") or {}).get("id")
+                    if action == "admin_forum_code_revoke": det["revoked"] = result.get("revoked", 0)
                     if action == "admin_ads_save": det["ad"] = (result.get("ad") or {}).get("id")
-                    _audit(admin_email, action, body.get("user_id") if action in ("admin_points_adjust", "admin_tasks_award") else None, det)
+                    _audit(admin_email, action, body.get("user_id") if action in ("admin_points_adjust", "admin_tasks_award", "admin_forum_registration_reset") else None, det)
                 return self._json(status, result)
 
             if action in ("admin_pattern_reviews", "admin_pattern_review_save"):

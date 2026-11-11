@@ -32,8 +32,9 @@
 #academy-notification-preview [data-preview-retry]{border:1px solid var(--border);border-radius:999px;background:var(--surface2);padding:8px 12px;margin:12px;font-size:12px}
 .mn-empty{text-align:center;color:var(--text-muted);font-size:13px;line-height:1.9;padding:22px 14px}.mn-empty small{display:block;margin-top:7px;font-size:12px}
 .mn-message time{display:block;font-size:11px;font-variant-numeric:tabular-nums;color:var(--text-muted);line-height:1.7;margin-top:5px}
-/* Unread counts stay in the accessible bell label and preview, without a protruding dot. */
-#authArea .mc-notification-entry .mn-unread-dot{display:none!important}
+/* A small unread indicator accompanies the accessible bell count. */
+#authArea .mc-notification-entry{position:relative}
+#authArea .mc-notification-entry .mn-unread-dot:not([hidden]){display:block!important;position:absolute;top:4px;right:4px;width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px color-mix(in srgb,var(--accent) 45%,transparent)}
 #authArea button.mc-notification-entry{padding:7px!important;min-height:38px;color:var(--text-muted)!important}
 #authArea button.mc-notification-entry:is(:hover,[aria-expanded=true]){color:var(--accent)!important;background:transparent!important}
 #authArea button.mc-notification-entry:focus-visible{outline:2px solid var(--accent)!important;outline-offset:2px}

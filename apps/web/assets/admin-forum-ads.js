@@ -17,6 +17,11 @@
   usage:'M3 3v18h18M6 16l5-5 4 3 6-7',
   revenue:'M20 8V5H4a2 2 0 0 0 0 4h17v11H4a2 2 0 0 1-2-2V7m19 5h-5v5h5',
   tasks:'M4 4h16v16H4zm4 8 3 3 5-6',
+  top_bar:'M3 4h18v16H3zm0 4h18',
+  home_card:'m3 10 9-7 9 7v11H3zm5 11v-8h8v8',
+  results_top:'M3 5h18v15H3zm0 5h18M8 10v10',
+  member_center:'M20 21v-2a7 7 0 0 0-14 0v2M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0',
+  corner:'M3 4h18v16H3zm10 9h8v7h-8z',
   products:'M3 6h18v4a2 2 0 0 0 0 4v4H3v-4a2 2 0 0 0 0-4zm11 3v1m0 4v1'
  };
  const icon=name=>`<svg class="afa-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${iconPaths[name]}"/></svg>`;
@@ -45,7 +50,7 @@
   const j=await post('admin_forum_list').catch(()=>null);
   if(tab!=='forum')return;
   if(!j||j.error){box.innerHTML='<div class="fc-empty">'+esc(fail(j))+'</div>';return;}
-  const rows=(j.events||[]).map(e=>`<tr><td><b>${esc(e.label)}</b>${e.test?' <span class="afa-tag warn">測試</span>':''}<div class="afa-sub">${esc(e.id)}${e.title?'｜'+esc(e.title):''}</div></td><td>${esc(e.venue||'—')}<div class="afa-sub">${esc(e.date)} ${esc(e.start)}–${esc(e.end)}</div></td><td><span class="afa-tag ${e.status}">${esc(STATUS[e.status]||e.status)}</span></td><td class="num"><b>${e.checked_in||0}</b>${e.capacity?` / ${e.capacity}`:''}</td><td class="afa-acts">${btn('開啟現場簽到',`data-qr="${esc(e.id)}"`,'primary')}${btn('補發代碼',`data-codes="${esc(e.id)}"`)}${btn('到場名單',`data-people="${esc(e.id)}"`)}${btn('編輯',`data-edit="${esc(e.id)}"`)}${e.checked_in?'':btn('刪除',`data-del="${esc(e.id)}"`,'ghost')}</td></tr>`).join('');
+  const rows=(j.events||[]).map(e=>`<tr><td><b>${esc(e.label)}</b>${e.test?' <span class="afa-tag warn">測試</span>':''}<div class="afa-sub">${esc(e.id)}${e.title?'｜'+esc(e.title):''}</div></td><td>${esc(e.venue||'—')}<div class="afa-sub">${esc(e.date)} ${esc(e.start)}–${esc(e.end)}</div></td><td><span class="afa-tag ${e.status}">${esc(STATUS[e.status]||e.status)}</span></td><td class="num"><b>${e.checked_in||0}</b>${e.capacity?` / ${e.capacity}`:''}</td><td class="afa-acts">${btn('開啟現場簽到',`data-qr="${esc(e.id)}"`,'primary')}${btn('補發代碼',`data-codes="${esc(e.id)}"`)}${btn('報名名單',`data-registers="${esc(e.id)}"`)}${btn('到場名單',`data-people="${esc(e.id)}"`)}${btn('編輯',`data-edit="${esc(e.id)}"`)}${e.checked_in?'':btn('刪除',`data-del="${esc(e.id)}"`,'ghost')}</td></tr>`).join('');
   box.innerHTML=`<div class="afa-bar">${btn('＋ 新增場次','data-new','primary')}<form class="afa-check" data-check><input name="code" placeholder="查詢補發代碼是否已使用" maxlength="24" autocomplete="off"><button class="afa-btn" type="submit">查詢</button><span data-check-out></span></form></div>`+
    (rows?`<div class="afa-table-wrap"><table class="afa-table"><thead><tr><th>場次</th><th>地點／時間</th><th>狀態</th><th class="num">已簽到</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table></div>`:'<div class="fc-empty">還沒有場次，按「＋ 新增場次」開始。</div>');
   const evs=Object.fromEntries((j.events||[]).map(e=>[e.id,e]));
@@ -54,9 +59,10 @@
   box.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>editEvent(evs[b.dataset.edit]));
   box.querySelectorAll('[data-qr]').forEach(b=>b.onclick=()=>openQr(b.dataset.qr));
   box.querySelectorAll('[data-codes]').forEach(b=>b.onclick=()=>codes(evs[b.dataset.codes]));
+  box.querySelectorAll('[data-registers]').forEach(button=>button.onclick=()=>registrations(evs[button.dataset.registers]));
   box.querySelectorAll('[data-people]').forEach(b=>b.onclick=()=>people(evs[b.dataset.people]));
   box.querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{if(!confirm('刪除場次 '+b.dataset.del+'？'))return;const r=await post('admin_forum_delete',{id:b.dataset.del});if(r.error)alert(r.error);forum();});
-  box.querySelector('[data-check]').onsubmit=async e=>{e.preventDefault();const out=box.querySelector('[data-check-out]');out.textContent='查詢中…';const r=await post('admin_forum_code_check',{code:e.target.elements.code.value}).catch(()=>({}));out.textContent=!r.valid?'不是有效代碼':r.used?`已使用（${new Date(r.used_at).toLocaleString('zh-TW')}）`:`有效、尚未使用（${r.event}）`;};
+  box.querySelector('[data-check]').onsubmit=async e=>{e.preventDefault();const out=box.querySelector('[data-check-out]');out.textContent='查詢中…';const r=await post('admin_forum_code_check',{code:e.target.elements.code.value}).catch(()=>({}));out.textContent=!r.valid?'不是有效代碼':r.revoked?'已作廢':r.used?`已使用（${new Date(r.used_at).toLocaleString('zh-TW')}）`:`有效、尚未使用（${r.event}）`;};
  }
  async function voucherBar(){
   const el=box.querySelector('[data-voucher]');if(!el)return;const r=await post('admin_forum_voucher_get').catch(()=>({error:'連線失敗'}));
@@ -80,11 +86,12 @@
    <label>名額（0＝不限）<input type="number" name="capacity" min="0" max="5000" value="${e.capacity||0}"></label>
    <label>補發代碼有效天數<input type="number" name="code_days" min="1" max="60" value="${e.code_days||14}"></label>
    <label class="full">報名連結（選填，https）<input name="signup_url" maxlength="300" placeholder="https://…" value="${esc(e.signup_url||'')}"></label>
+   <label class="full">內部備註（選填）<textarea name="notes" rows="2" maxlength="1000" placeholder="例如：報到窗口、設備安排、補發原因；僅管理員可見">${esc(e.notes||'')}</textarea></label>
    <label>狀態<select name="status">${Object.entries(STATUS).map(([k,v])=>`<option value="${k}" ${e.status===k?'selected':''}>${v}</option>`).join('')}</select></label>
    <label class="chk"><input type="checkbox" name="test" ${e.test?'checked':''}> 測試場次（不發點數）</label>
    <p class="afa-sub full">現場簽到開放時間：開始前 60 分鐘到結束。代碼自動依城市＋日期命名（例 TPE1122）。</p>
    <div class="full afa-foot"><span data-err class="afa-err"></span>${btn('取消','data-close','ghost')}<button class="afa-btn primary" type="submit">儲存</button></div></form>`);
-  b.querySelector('[data-f]').onsubmit=async f=>{f.preventDefault();const el=f.target.elements,data={id:ev?ev.id:'',city:ev?ev.city:el.city.value,date:el.date.value,start:el.start.value,end:el.end.value,venue:el.venue.value,title:el.title.value,capacity:+el.capacity.value,code_days:+el.code_days.value,signup_url:el.signup_url.value,status:el.status.value,test:el.test.checked};
+  b.querySelector('[data-f]').onsubmit=async f=>{f.preventDefault();const el=f.target.elements,data={id:ev?ev.id:'',city:ev?ev.city:el.city.value,date:el.date.value,start:el.start.value,end:el.end.value,venue:el.venue.value,title:el.title.value,notes:el.notes.value,capacity:+el.capacity.value,code_days:+el.code_days.value,signup_url:el.signup_url.value,status:el.status.value,test:el.test.checked};
    const r=await post('admin_forum_save',{event:data}).catch(()=>({error:'連線失敗'}));if(r.error){b.querySelector('[data-err]').textContent=r.error;return;}close();forum();};
  }
  async function openQr(id){
@@ -102,21 +109,66 @@
    let left=r.refresh_in;const t=o.querySelector('[data-tick]');const step=()=>{t.textContent=r.open?`QR 每 60 秒自動更新・${left} 秒後換新`:'';if(left--<=0)return tick();qrTimer=setTimeout(step,1000);};clearTimeout(qrTimer);step();};
   tick();
  }
- function codes(ev){
-  const b=modal('補發代碼｜'+ev.label,`<p class="afa-sub">給「當天有到、但沒掃到 QR」的會員。每組只能用一次，每位會員一生限領一次論壇點數；可多產生備用，沒發出去的代碼不會有任何影響。</p><form class="afa-inline" data-f><label>產生幾組<input type="number" name="n" min="1" max="2000" value="50"></label><label>活動後幾天內要兌換完<input type="number" name="days" min="1" max="60" value="${ev.code_days||14}"></label><button class="afa-btn primary" type="submit">產生</button></form><p class="afa-sub">兌換天數是整個場次共用：改了之後，這一場所有已發出的代碼期限都會一起改。</p><div data-out></div>`,true);
-  b.querySelector('[data-f]').onsubmit=async f=>{f.preventDefault();const out=b.querySelector('[data-out]');out.textContent='產生中…';const days=+f.target.elements.days.value;
-   if(days!==(ev.code_days||14)){const s=await post('admin_forum_save',{event:Object.assign({},ev,{code_days:days})}).catch(()=>({error:'連線失敗'}));if(s.error){out.textContent=s.error;return;}ev.code_days=days;}
-   const r=await post('admin_forum_codes',{id:ev.id,count:+f.target.elements.n.value}).catch(()=>({error:'連線失敗'}));
-   if(r.error){out.textContent=r.error;return;}
-   out.innerHTML=`<p class="afa-sub">共 ${r.codes.length} 組｜兌換期限 ${esc(r.valid_from)} ～ ${esc(r.valid_to)}｜請立即下載或列印保存（系統不保留未使用的清單）。</p><div class="afa-bar">${btn('下載 CSV','data-csv','primary')}${btn('列印小卡','data-print')}${btn('複製全部','data-copy')}</div><textarea readonly class="afa-codes">${r.codes.join('\n')}</textarea>`;
-   out.querySelector('[data-csv]').onclick=()=>download(`論壇補發代碼_${ev.id}_${r.codes.length}組.csv`,'代碼,場次,兌換期限\n'+r.codes.map(c=>`${c},${r.label},${r.valid_to}`).join('\n'));
-   out.querySelector('[data-copy]').onclick=()=>navigator.clipboard?.writeText(r.codes.join('\n'));
-   out.querySelector('[data-print]').onclick=()=>printCards(r);};
+ async function codes(ev){
+  const b=modal('補發代碼｜'+ev.label,`<p class="afa-sub">給當天到場、未掃 QR 的會員。代碼每組限用一次，每位會員限領一次論壇點數。</p><form class="afa-inline" data-f><label>產生幾組<input type="number" name="n" min="1" max="2000" value="50" required></label><button class="afa-btn primary" type="submit">產生並保存</button></form><p class="afa-sub">新產生的批次會保留，重新開啟可繼續查詢。舊版未保存的清單，請從下載檔找回代碼。兌換期限依此場次的有效天數設定。</p><div data-history></div><details><summary>作廢舊版代碼</summary><form data-revoke-old><label>貼上此場次代碼，每行一組<textarea name="codes" rows="3" class="afa-codes" required></textarea></label><button class="afa-btn" type="submit">作廢未使用代碼</button></form></details><p role="status" class="afa-sub" data-msg></p>`,true);
+  let batches=[],page=0,selected='',busy=false;
+  const host=b.querySelector('[data-history]'),msg=b.querySelector('[data-msg]');
+  async function load(){
+   const r=await post('admin_forum_codes_list',{id:ev.id}).catch(()=>({error:'連線失敗'}));
+   if(!b.isConnected)return;
+   if(r.error){msg.textContent=r.error;return;}
+   batches=r.batches||[];if(!batches.some(x=>x.id===selected))selected=batches[0]?.id||'';paint();
+  }
+  function paint(){
+   const batch=batches.find(x=>x.id===selected);
+   if(!batch){host.innerHTML='<p class="afa-sub">目前沒有已保存的批次。</p>';return;}
+   page=Math.min(page,Math.max(0,Math.ceil(batch.rows.length/10)-1));
+   const rows=batch.rows.slice(page*10,page*10+10);
+   host.innerHTML=`<label class="afa-code-batch">批次<select data-batch>${batches.map(x=>`<option value="${x.id}" ${x.id===selected?'selected':''}>${esc(new Date(x.at).toLocaleString('zh-TW'))}・${x.rows.length} 組</option>`).join('')}</select></label><div class="afa-table-wrap"><table class="afa-table"><thead><tr><th>選取</th><th>代碼</th><th>狀態</th></tr></thead><tbody>${rows.map(x=>`<tr><td><input type="checkbox" data-code="${esc(x.code)}" ${x.status==='unused'?'':'disabled'} aria-label="選取 ${esc(x.code)}"></td><td><code>${esc(x.code)}</code></td><td>${({unused:'未使用',used:'已兌換',revoked:'已作廢'})[x.status]}</td></tr>`).join('')}</tbody></table></div><div class="afa-bar afa-code-pages">${btn('上一頁','data-prev')}<span>${page+1} / ${Math.ceil(batch.rows.length/10)} 頁・${batch.rows.length} 組</span>${btn('下一頁','data-next')}</div><div class="afa-bar">${btn('下載未使用 CSV','data-csv')}${btn('列印未使用','data-print')}${btn('複製未使用','data-copy')}${btn('作廢本頁勾選','data-revoke','ghost')}</div>`;
+   host.querySelector('[data-batch]').onchange=e=>{selected=e.target.value;page=0;paint();};
+   host.querySelector('[data-prev]').disabled=page===0;host.querySelector('[data-next]').disabled=(page+1)*10>=batch.rows.length;
+   host.querySelector('[data-prev]').onclick=()=>{page--;paint();};host.querySelector('[data-next]').onclick=()=>{page++;paint();};
+   const unused=()=>batch.rows.filter(x=>x.status==='unused').map(x=>x.code);
+   host.querySelector('[data-csv]').onclick=()=>download('論壇補發代碼_'+ev.id+'.csv','代碼,場次\n'+unused().map(c=>c+','+ev.label).join('\n'));
+   host.querySelector('[data-print]').onclick=()=>{const end=new Date(ev.date+'T00:00:00+08:00');end.setDate(end.getDate()+(ev.code_days||14));printCards({codes:unused(),label:ev.label,valid_to:end.toLocaleDateString('sv-SE',{timeZone:'Asia/Taipei'})+' 23:59'});};
+   host.querySelector('[data-copy]').onclick=async()=>{try{await navigator.clipboard.writeText(unused().join('\n'));msg.textContent='已複製此批次未使用代碼';}catch{msg.textContent='無法複製，請下載 CSV';}};
+   host.querySelector('[data-revoke]').onclick=()=>revoke([...host.querySelectorAll('[data-code]:checked')].map(x=>x.dataset.code));
+  }
+  async function revoke(codes){
+   if(busy||!codes.length)return;
+   if(!confirm('作廢 '+codes.length+' 組代碼？作廢後不能再兌換，已兌換的紀錄會保留。'))return;
+   busy=true;msg.textContent='處理中…';
+   const r=await post('admin_forum_code_revoke',{id:ev.id,codes}).catch(()=>({error:'連線失敗，請重新載入清單核對'}));
+   busy=false;msg.textContent=r.error||('已確認 '+r.revoked+' 組作廢，其餘為已兌換紀錄');await load();
+  }
+  b.querySelector('[data-revoke-old]').onsubmit=e=>{e.preventDefault();revoke(e.target.elements.codes.value.trim().split(/\s+/));};
+  b.querySelector('[data-f]').onsubmit=async e=>{e.preventDefault();if(busy)return;busy=true;const button=e.target.querySelector('button');button.disabled=true;msg.textContent='產生並保存中…';
+   const r=await post('admin_forum_codes',{id:ev.id,count:+e.target.elements.n.value}).catch(()=>({error:'連線失敗，請先重新開啟清單，核對是否已保存'}));
+   busy=false;button.disabled=false;msg.textContent=r.error||('已保存 '+r.codes.length+' 組，期限至 '+r.valid_to);if(!r.error){selected=r.batch_id;page=0;}await load();
+  };
+  await load();
  }
  function printCards(r){
   const w=open('','_blank');if(!w)return alert('請允許彈出視窗後再試');
   w.document.write(`<!doctype html><meta charset="utf-8"><title>論壇補發代碼</title><style>body{font-family:system-ui,"Noto Sans TC",sans-serif;margin:8mm}.g{display:grid;grid-template-columns:repeat(3,1fr);gap:4mm}.c{border:1px dashed #999;border-radius:3mm;padding:4mm;break-inside:avoid}.k{font-size:9pt;letter-spacing:.12em;color:#555}.e{font-size:10pt;margin:1mm 0 2mm}.code{font:700 15pt ui-monospace,Menlo,Consolas,monospace;letter-spacing:.06em}.s{font-size:8pt;color:#444;line-height:1.5;margin-top:2mm}@media print{body{margin:6mm}}</style><div class="g">${r.codes.map(c=>`<div class="c"><div class="k">先見 FORESIGHT・論壇到場</div><div class="e">${esc(r.label)}</div><div class="code">${esc(c)}</div><div class="s">登入會員 → 會員中心 → 活動兌換，輸入代碼即可獲得 1,000 活動點數。每位會員限領一次，兌換期限至 ${esc(r.valid_to.slice(0,10))}。</div></div>`).join('')}</div><script>onload=()=>print()<\/script>`);
   w.document.close();
+ }
+ async function registrations(ev){
+  const b=modal('報名名單｜'+ev.label,`<p class="afa-sub">每位會員一生限參加一次，現場掃描 1,000 點限領一次。三次報名未到場後暫停報名，管理員可填寫原因解除限制。</p><div class="afa-bar" data-filters role="group" aria-label="報名狀態"></div><div data-list></div><div class="afa-bar afa-code-pages" data-pages></div><p class="afa-sub" data-status role="status"></p>`,true);
+  const labels={all:'全部',registered:'已報名',attended:'已報到',cancelled:'已取消',missed:'未到場'};
+  let rows=[],filter='all',page=0;
+  const status=b.querySelector('[data-status]');
+  async function load(){const r=await post('admin_forum_registrations',{id:ev.id}).catch(()=>({error:'連線失敗'}));if(!b.isConnected)return;if(r.error){status.textContent=r.error;return;}rows=r.rows||[];paint();}
+  function paint(){
+   const list=rows.filter(r=>filter==='all'||r.status===filter);page=Math.min(page,Math.max(0,Math.ceil(list.length/8)-1));
+   b.querySelector('[data-filters]').innerHTML=Object.entries(labels).map(([id,text])=>btn(text+' '+(id==='all'?rows:rows.filter(x=>x.status===id)).length,`data-filter="${id}" aria-pressed="${id===filter}"`)).join('');
+   b.querySelectorAll('[data-filter]').forEach(x=>x.onclick=()=>{filter=x.dataset.filter;page=0;paint();});
+   b.querySelector('[data-list]').innerHTML=list.length?`<div class="afa-table-wrap"><table class="afa-table"><thead><tr><th>會員</th><th>報名時間</th><th>狀態</th><th>管理</th></tr></thead><tbody>${list.slice(page*8,page*8+8).map(r=>`<tr><td>${esc(r.member)}</td><td>${esc(new Date(r.at).toLocaleString('zh-TW'))}</td><td>${labels[r.status]}</td><td>${r.status==='missed'?btn('查核／解除限制',`data-reset="${r.user_id}"`):'—'}</td></tr>`).join('')}</tbody></table></div>`:'<p class="afa-sub">此分類目前沒有名單。</p>';
+   b.querySelectorAll('[data-reset]').forEach(button=>button.onclick=async()=>{const reason=prompt('請填寫解除未到場限制的原因（保留原紀錄，已參加過的會員仍無法再報名）');if(!reason)return;button.disabled=true;const r=await post('admin_forum_registration_reset',{user_id:button.dataset.reset,reason}).catch(()=>({error:'連線失敗'}));status.textContent=r.error||'已解除未到場限制，會員可重新選擇場次報名。';button.disabled=false;});
+   b.querySelector('[data-pages]').innerHTML=`${btn('上一頁','data-prev')}<span>${page+1} / ${Math.max(1,Math.ceil(list.length/8))} 頁</span>${btn('下一頁','data-next')}`;
+   b.querySelector('[data-prev]').disabled=page===0;b.querySelector('[data-next]').disabled=(page+1)*8>=list.length;b.querySelector('[data-prev]').onclick=()=>{page--;paint();};b.querySelector('[data-next]').onclick=()=>{page++;paint();};
+  }
+  await load();
  }
  async function people(ev){
   const b=modal('到場名單｜'+ev.label,'<div class="fc-empty">載入中…</div>',true);
@@ -140,8 +192,8 @@
   const slots=Object.entries(meta.slots);
   if(!slots.length)return;
   const b=modal('選擇廣告版位',`<div class="afa-slot-picker"><div role="group" aria-label="廣告版位">${slots.map(([id,label])=>
-   btn(esc(label),`data-slot="${esc(id)}" aria-pressed="false"`)).join('')}</div>
-   <div class="afa-slot-preview"><b data-slot-label></b><div class="afa-slot-layout" data-slot-layout aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div><p class="afa-sub" data-slot-help></p></div></div>
+   btn(icon(id)+esc(label),`data-slot="${esc(id)}" aria-pressed="false"`)).join('')}</div>
+   <div class="afa-slot-preview"><b data-slot-label></b><div class="afa-slot-layout" data-slot-layout aria-hidden="true"><i>先見 FORESIGHT・網站頁首</i><i>首頁市場摘要</i><i>選股結果表格</i><i>會員中心內容</i><i>浮動公告</i><span class="afa-slot-marker">廣告顯示位置</span></div><p class="afa-sub" data-slot-help></p></div></div>
    <div class="afa-foot">${btn('取消','data-close','ghost')}${btn('確認版位','data-confirm-slot','primary')}</div>`,true);
   let selected;
   function select(id){
@@ -173,57 +225,13 @@
   box.querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{if(!confirm('刪除這則廣告？'))return;await post('admin_ads_delete',{id:b.dataset.del});ads();});
  }
  function editAd(ad,slot){
-  const a=ad||{slot:slot||'top_bar',audience:'not_attended',cta:'查看場次',url:'?forum=1',priority:50,enabled:false};
-  const opt=(o,v)=>Object.entries(o).map(([k,t])=>`<option value="${k}" ${v===k?'selected':''}>${esc(t)}</option>`).join('');
-  const b=modal(ad?'編輯廣告':'新增站內廣告',`<form class="afa-form" data-f>
-   <label class="full">內部名稱<input name="name" maxlength="60" placeholder="例：11月台北論壇・頁首" value="${esc(a.name||'')}"></label>
-   <label>版位<select name="slot">${opt(meta.slots,a.slot)}</select></label>
-   <label>受眾<select name="audience">${opt(meta.audiences,a.audience)}</select></label>
-   <label class="full">標題（必填）<input name="title" required maxlength="60" placeholder="例：11/22 台北論壇，會員到場送 1,000 點" value="${esc(a.title||'')}"></label>
-   <label class="full">說明<textarea name="text" maxlength="200" rows="2" placeholder="例：週六下午 1:30，台北場，名額有限">${esc(a.text||'')}</textarea></label>
-   <label>按鈕文字<input name="cta" maxlength="20" value="${esc(a.cta||'')}"></label>
-   <label>連結<input name="url" maxlength="400" placeholder="?forum=1 或 https://…" value="${esc(a.url||'')}"></label>
-   <label>開始<input type="datetime-local" name="starts" value="${esc(a.starts&&a.starts.length===10?a.starts+'T00:00':a.starts||'')}"></label>
-   <label>結束<input type="datetime-local" name="ends" value="${esc(a.ends&&a.ends.length===10?a.ends+'T23:59':a.ends||'')}"></label>
-   <label>優先度（0–99）<input type="number" name="priority" min="0" max="99" value="${a.priority}"></label>
-   <label class="chk"><input type="checkbox" name="enabled" ${a.enabled?'checked':''}> 開啟</label>
-   <p class="afa-sub full">廣告文字請避免「保證獲利、必漲、穩賺」等用語，論壇宣傳以時間、地點、會員權益為主。</p>
-   <div class="full afa-foot">${btn('取消','data-close','ghost')}<button class="afa-btn primary" type="submit">預覽確認</button></div></form>
-   <section class="afa-ad-review" data-review hidden><div class="site-ad site-ad--preview" data-pv></div><dl data-summary></dl>
-   <div class="afa-foot"><span data-err class="afa-err" role="status"></span>${btn('返回編輯','data-back','ghost')}${!ad?btn('儲存草稿','data-draft'):''}${btn('確認儲存','data-save-ad','primary')}</div></section>`,true);
-  const f=b.querySelector('[data-f]'),pv=b.querySelector('[data-pv]');
-  const review=b.querySelector('[data-review]'),err=b.querySelector('[data-err]'),save=b.querySelector('[data-save-ad]');
-  let data;
-  f.onsubmit=ev=>{
-   ev.preventDefault();const e=f.elements;
-   data={id:ad?ad.id:'',name:e.name.value,slot:e.slot.value,audience:e.audience.value,title:e.title.value,text:e.text.value,cta:e.cta.value,url:e.url.value,starts:e.starts.value,ends:e.ends.value,priority:+e.priority.value,enabled:e.enabled.checked};
-   pv.innerHTML=`<b>${esc(data.title)}</b><span class="site-ad-t">${esc(data.text)}</span>${data.cta?`<span class="site-ad-cta">${esc(data.cta)} →</span>`:''}`;
-   b.querySelector('[data-summary]').innerHTML=[
-    ['版位',meta.slots[data.slot]],['受眾',meta.audiences[data.audience]],
-    ['刊登時間（台灣）',`${data.starts.replace('T',' ')||'立即'} ～ ${data.ends.replace('T',' ')||'不限'}`],
-    ['狀態',data.enabled?'開啟（依設定時間顯示）':'關閉']
-   ].map(([label,value])=>`<div><dt>${label}</dt><dd>${esc(value)}</dd></div>`).join('');
-   save.textContent=data.enabled?'確認開啟':'確認儲存';
-   err.textContent='';f.hidden=true;review.hidden=false;b.querySelector('[data-back]').focus();
-  };
-  b.querySelector('[data-back]').onclick=()=>{review.hidden=true;f.hidden=false;f.elements.title.focus();};
-  const controls=[...review.querySelectorAll('button')];
-  async function persist(asDraft){
-   controls.forEach(button=>button.disabled=true);err.textContent='儲存中…';
-   const r=await post('admin_ads_save',{ad:{...data,enabled:!asDraft&&data.enabled}}).catch(()=>({error:'連線失敗'}));
-   if(!b.isConnected)return;
-   if(!r||r.error){err.textContent=fail(r);controls.forEach(button=>button.disabled=false);return;}
-   close();ads();
-  }
-  save.onclick=()=>persist(false);
-  const draft=b.querySelector('[data-draft]');
-  if(draft)draft.onclick=()=>persist(true);
+  window.AdminAdEditor.open({ad,slot,meta,post,modal,close,onSaved:ads,icon,esc});
  }
  /* ═══ 點數與商品 ═══ */
  const rid=()=>crypto.randomUUID?crypto.randomUUID():Date.now().toString(16)+Math.random().toString(16).slice(2,18);
  async function points(){
   note.innerHTML='<b>說明</b> 手動加點／扣點會寫進會員的點數紀錄（會員看得到原因），並記在稽核日誌。扣點不能扣到負數。兌換商品的名稱、所需點數、上下架可在下方直接修改，會員端立即生效。';
-  box.innerHTML=`<section class="afa-sec"><h3>手動調整點數</h3><form class="afa-inline" data-find><input name="q" placeholder="輸入會員 Email 或手機（至少 3 字）" autocomplete="off" style="min-width:260px"><button class="afa-btn primary" type="submit">查詢</button></form><div data-members></div></section><section class="afa-sec"><h3>最近的手動調整</h3><div data-recent class="fc-empty">載入中…</div></section><section class="afa-sec"><h3>點數任務</h3><div class="afa-bar">${btn('＋ 新增點數任務','data-tnew','primary')}<span class="afa-sub">新增的任務屬「人工發放」：會員在任務頁看得到，點數由你在這裡按「發放」給指定會員。系統任務只能改名稱、點數、開關。</span></div><div data-tasks class="fc-empty">載入中…</div></section><section class="afa-sec"><h3>點數兌換商品</h3><div data-products class="fc-empty">載入中…</div></section>`;
+  box.innerHTML=`<section class="afa-sec"><h3>手動調整點數</h3><form class="afa-inline" data-find><input name="q" placeholder="輸入會員 Email 或手機（至少 3 字）" autocomplete="off" style="min-width:260px"><button class="afa-btn primary" type="submit">查詢</button>${btn('清除搜尋','data-clear-search','ghost')}</form><div data-members></div></section><section class="afa-sec"><h3>最近的手動調整</h3><div data-recent class="fc-empty">載入中…</div></section><section class="afa-sec"><h3>點數任務</h3><div class="afa-bar">${btn('＋ 新增點數任務','data-tnew','primary')}<span class="afa-sub">新增的任務屬「人工發放」：會員在任務頁看得到，點數由你在這裡按「發放」給指定會員。系統任務只能改名稱、點數、開關。</span></div><div data-tasks class="fc-empty">載入中…</div></section><section class="afa-sec"><div class="afa-bar"><h3>點數兌換商品</h3>${btn('＋ 新增兌換商品','data-pnew','primary')}</div><div data-products class="fc-empty">載入中…</div></section>`;
   const [adjustments,history,taskPanel,productPanel]=box.children;
   const adjustmentPanel=document.createElement('details');
   adjustmentPanel.className='afa-adjustments';
@@ -255,18 +263,26 @@
   for(const button of pointTabs)button.onclick=()=>selectPointTab(button.dataset.pointTab);
   selectPointTab('tasks');
   const mBox=taskPanel.querySelector('[data-members]');
-  box.querySelector('[data-find]').onsubmit=async e=>{e.preventDefault();mBox.textContent='查詢中…';const r=await post('admin_points_find',{q:e.target.elements.q.value}).catch(()=>({error:'連線失敗'}));
+  let searchSequence=0;
+  box.querySelector('[data-clear-search]').onclick=()=>{searchSequence++;box.querySelector('[data-find]').reset();mBox.replaceChildren();box.querySelector('[data-find] input').focus();};
+  box.querySelector('[data-find]').onsubmit=async e=>{e.preventDefault();const ticket=++searchSequence;mBox.textContent='查詢中…';const r=await post('admin_points_find',{q:e.target.elements.q.value}).catch(()=>({error:'連線失敗'}));
+   if(ticket!==searchSequence||!mBox.isConnected)return;
    if(r.error){mBox.textContent=r.error;return;}if(!r.members.length){mBox.textContent='找不到符合的會員';return;}
    mBox.innerHTML=r.members.map(m=>`<form class="afa-member" data-adj="${esc(m.id)}"><div><b>${esc(m.email||m.phone)}</b><div class="afa-sub">目前 <b data-bal>${m.balance.toLocaleString()}</b> 點${m.forum?'｜已參加過論壇':''}</div></div><select name="sign"><option value="1">加點</option><option value="-1">扣點</option></select><input type="number" name="pts" min="1" max="100000" placeholder="點數" required><input name="reason" maxlength="120" placeholder="原因（會員看得到）" required><button class="afa-btn primary" type="submit">送出</button><span class="afa-err" data-msg></span></form>`).join('');
    mBox.querySelectorAll('[data-adj]').forEach(f=>{let req=rid();f.onsubmit=async e=>{e.preventDefault();const el=f.elements,pts=+el.sign.value*+el.pts.value,msg=f.querySelector('[data-msg]');
     if(!confirm(`${pts>0?'加':'扣'} ${Math.abs(pts).toLocaleString()} 點？\n原因：${el.reason.value}`))return;msg.textContent='處理中…';
     const r=await post('admin_points_adjust',{user_id:f.dataset.adj,points:pts,reason:el.reason.value,request_id:req}).catch(()=>({error:'連線失敗'}));
-    if(r.error){msg.textContent=r.error;return;}req=rid();msg.textContent=r.duplicate?'已處理過':'完成';f.querySelector('[data-bal]').textContent=r.balance.toLocaleString();el.pts.value='';el.reason.value='';recent();};});};
+    if(r.error){msg.textContent=r.error;return;}req=rid();dispatchEvent(new Event('academy-notifications-changed'));msg.textContent=r.duplicate?'已處理過':'已完成，會員通知隨點數紀錄更新';f.querySelector('[data-bal]').textContent=r.balance.toLocaleString();el.pts.value='';el.reason.value='';recent();};});};
   async function recent(){const el=taskPanel.querySelector('[data-recent]');const r=await post('admin_points_recent').catch(()=>({error:'連線失敗'}));
    if(r.error){el.textContent=r.error;return;}el.className='';el.innerHTML=r.rows.length?`<div class="afa-table-wrap"><table class="afa-table"><thead><tr><th>時間</th><th>會員</th><th>內容</th><th class="num">點數</th></tr></thead><tbody>${r.rows.map(x=>`<tr><td>${esc(new Date(x.created_at).toLocaleString('zh-TW'))}</td><td>${esc(x.member)}</td><td>${esc(x.description)}</td><td class="num" style="color:${x.points>0?'var(--up,#d84545)':'var(--down,#208653)'}">${x.points>0?'+':''}${x.points.toLocaleString()}</td></tr>`).join('')}</tbody></table></div>`:'<div class="afa-sub">尚無手動調整紀錄</div>';}
   async function products(){const el=productPanel.querySelector('[data-products]');el.textContent='載入中…';const r=await post('admin_products_list').catch(()=>({error:'連線失敗'}));
    if(r.error){productsLoaded=false;el.textContent=r.error;return;}el.className='';if(r.missing){el.innerHTML='<div class="afa-sub">兌換商品資料表尚未建立。</div>';return;}
-   el.innerHTML=`<div class="afa-table-wrap"><table class="afa-table"><thead><tr><th>商品名稱</th><th class="num">天數</th><th class="num">所需點數</th><th>上架</th><th></th></tr></thead><tbody>${r.products.map(p=>`<tr data-p="${esc(p.id)}"><td><input name="title" maxlength="40" value="${esc(p.title)}" style="min-width:200px"><div class="afa-sub">${esc(p.id)}</div></td><td class="num">${p.duration_days}</td><td class="num"><input type="number" name="points" min="1" max="1000000" value="${p.points}" style="width:100px;text-align:right"></td><td><label class="chk"><input type="checkbox" name="active" ${p.active?'checked':''}> 上架</label></td><td>${btn('儲存','data-save')}<span class="afa-err" data-msg></span></td></tr>`).join('')}</tbody></table></div><p class="afa-sub">天數與券種綁定兌換規則，新增券種需另外建立兌換規則。</p>`;
+   productPanel.querySelector('[data-pnew]').onclick=()=>{
+    const b=modal('新增兌換商品',`<form class="afa-form" data-create-product><label class="full">商品角色<select name="definition">${Object.entries(r.types||{}).map(([id,title])=>`<option value="${esc(id)}">${esc(title)}</option>`).join('')}</select></label><label>使用天數<input name="days" type="number" min="1" max="366" value="7" required></label><label>所需點數<input name="points" type="number" min="1" max="1000000" value="1000" required></label><p class="afa-sub full" data-product-title></p><p class="afa-sub full">建立後先存為下架商品，確認內容後可在列表勾選上架並儲存。</p><div class="afa-foot full"><span class="afa-err" data-error role="status"></span>${btn('取消','data-close','ghost')}<button class="afa-btn primary" type="submit">建立商品</button></div></form>`);
+    const f=b.querySelector('form'),preview=()=>b.querySelector('[data-product-title]').textContent='商品名稱：'+f.elements.definition.selectedOptions[0].text+' · '+f.elements.days.value+' 天';f.oninput=preview;preview();
+    f.onsubmit=async event=>{event.preventDefault();const button=f.querySelector('[type=submit]');button.disabled=true;const out=await post('admin_products_create',{definition:f.elements.definition.value,days:+f.elements.days.value,points:+f.elements.points.value}).catch(()=>({error:'連線失敗'}));if(out.error){b.querySelector('[data-error]').textContent=out.error;button.disabled=false;return;}close();products();};
+   };
+   el.innerHTML=`<div class="afa-table-wrap"><table class="afa-table"><thead><tr><th>商品名稱</th><th class="num">天數</th><th class="num">所需點數</th><th>上架</th><th></th></tr></thead><tbody>${r.products.map(p=>`<tr data-p="${esc(p.id)}"><td><input name="title" maxlength="40" value="${esc(p.title)}" style="min-width:200px"><div class="afa-sub">${esc(p.id)}</div></td><td class="num">${p.duration_days}</td><td class="num"><input type="number" name="points" min="1" max="1000000" value="${p.points}" style="width:100px;text-align:right"></td><td><label class="chk"><input type="checkbox" name="active" ${p.active?'checked':''}> 上架</label></td><td>${btn('儲存','data-save')}<span class="afa-err" data-msg></span></td></tr>`).join('')}</tbody></table></div><p class="afa-sub">新增商品可選角色與天數。修改既有商品名稱時，請將天數放在名稱後方。</p>`;
    el.querySelectorAll('[data-p]').forEach(tr=>tr.querySelector('[data-save]').onclick=async()=>{const q=n=>tr.querySelector(`[name="${n}"]`),msg=tr.querySelector('[data-msg]');msg.textContent='儲存中…';
     const r2=await post('admin_products_save',{id:tr.dataset.p,title:q('title').value,points:+q('points').value,active:q('active').checked}).catch(()=>({error:'連線失敗'}));msg.textContent=r2.error||'已儲存';});}
   const PER={once:'每人一次',daily:'每天一次',weekly:'每週一次',monthly:'每月一次',yearly:'每年一次'};

@@ -1,0 +1,41 @@
+const fs=require('node:fs'),assert=require('node:assert/strict');
+const {PGlite}=require(process.env.PGLITE_MODULE||'@electric-sql/pglite');
+(async()=>{
+ const db=new PGlite();
+ await db.exec(`create role anon;create role authenticated;create role service_role;
+ create table admin_settings(key text primary key,value text,updated_at timestamptz default now());
+ create table member_point_ledger(id serial primary key,user_id uuid,source_event_key text unique,points integer);`);
+ await db.exec(fs.readFileSync('docs/database/forum-registration.sql','utf8'));
+ const user='00000000-0000-0000-0000-000000000001',other='00000000-0000-0000-0000-000000000002';
+ const date=async days=>(await db.query(`select ((now() at time zone 'Asia/Taipei')::date+$1::int)::text as d`,[days])).rows[0].d;
+ const future=await date(2),past=await date(-4);
+ const events=[{id:'TPE1101',date:future,start:'13:30',end:'17:30',status:'published',capacity:1},
+ {id:'TXG1102',date:future,start:'13:30',end:'17:30',status:'published',capacity:20},
+ ...['TPE1001','TPE1002','TPE1003'].map(id=>({id,date:past,start:'13:30',end:'17:30',status:'closed'}))];
+ const put=async(key,value)=>db.query(`insert into admin_settings(key,value) values($1,$2) on conflict(key) do update set value=excluded.value`,[key,JSON.stringify(value)]);
+ await put('forum:events',events);
+ const state=async u=>(await db.query('select public._forum_registration_state($1) as s',[u])).rows[0].s;
+ const register=async(u,id,cancel=false)=>(await db.query('select public._forum_registration_change($1,$2,$3) as s',[u,id,cancel])).rows[0].s;
+ const reject=async(fn,code)=>assert.rejects(fn,e=>e.message.includes(code));
+ assert.equal((await state(user)).no_shows,0);
+ assert.equal((await register(user,'TPE1101')).registrations[0].status,'registered');
+ assert.equal((await register(user,'TPE1101')).registrations.length,1);
+ await reject(()=>register(other,'TPE1101'),'FORUM_REGISTRATION_FULL');
+ await reject(()=>register(user,'TXG1102'),'FORUM_REGISTRATION_ACTIVE');
+ assert.equal((await register(user,'TPE1101',true)).registrations[0].status,'cancelled');
+ await register(other,'TPE1101');
+ for(const ev of events.slice(2))await put(`forumregistration:${ev.id}:${user}`,{event:ev.id,user_id:user,status:'registered',at:new Date(Date.now()-7*86400000).toISOString()});
+ assert.equal((await state(user)).no_shows,3);
+ assert.equal((await register(user,'TXG1102')).denied,'FORUM_NO_SHOW_LIMIT');
+ await register(user,'TXG1102');
+ assert.equal((await db.query(`select count(*)::int as n from admin_settings where key like 'forumnotice:%'`)).rows[0].n,1);
+ const reset=(await db.query(`select public._forum_registration_reset($1,'客服核准解除','admin@example.test') as s`,[user])).rows[0].s;
+ assert.equal(reset.no_shows,0);await register(user,'TXG1102');
+ await db.query(`insert into member_point_ledger(user_id,source_event_key,points) values($1,$2,1000)`,[user,'forum-attend:'+user]);
+ assert.equal((await state(user)).attended,true);
+ await db.query(`select public._forum_registration_reset($1,'再次確認紀錄','admin@example.test')`,[user]);
+ await reject(()=>register(user,'TXG1102'),'FORUM_ALREADY_ATTENDED');
+ assert.equal((await db.query(`select has_function_privilege('authenticated','public._forum_registration_change(uuid,text,boolean)','EXECUTE') as allowed`)).rows[0].allowed,false);
+ assert.equal((await db.query(`select has_function_privilege('service_role','public._forum_registration_change(uuid,text,boolean)','EXECUTE') as allowed`)).rows[0].allowed,true);
+ await db.close();console.log('Registration SQL: capacity, idempotency, cancellation, no-show notification, reset, lifetime exclusion and permissions passed.');
+})().catch(e=>{console.error(e.message);process.exitCode=1;});

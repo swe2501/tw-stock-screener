@@ -12,7 +12,7 @@
  function sheet(html){if(!ov){ov=document.createElement('div');ov.className='fm-overlay';ov.setAttribute('role','dialog');ov.setAttribute('aria-modal','true');ov.setAttribute('aria-label','論壇簽到');document.body.append(ov);}ov.hidden=false;ov.innerHTML=`<div class="fm-card"><span class="fm-k">FORESIGHT・論壇簽到</span>${html}</div>`;return ov.querySelector('.fm-card');}
  function hide(){if(ov)ov.hidden=true;}
  function done(){clearInterval(watch);watch=null;if(ov){ov.remove();ov=null;}}
- function waitLogin(){clearInterval(watch);const before=token();watch=setInterval(()=>{const now=token();const authOpen=document.getElementById('authModal')?.classList.contains('open');if(now&&now!==before){clearInterval(watch);watch=null;setTimeout(render,400);}else if(!authOpen&&!now){clearInterval(watch);watch=null;render();}},800);}
+ function waitLogin(resume=render){clearInterval(watch);const before=token();watch=setInterval(()=>{const now=token();const authOpen=document.getElementById('authModal')?.classList.contains('open');if(now&&now!==before){clearInterval(watch);watch=null;setTimeout(resume,400);}else if(!authOpen&&!now){clearInterval(watch);watch=null;resume();}},800);}
  function render(){
   const p=store.get();if(!p){done();return;}
   const head=`<h2>${esc(p.label)}</h2>${p.venue?`<p class="fm-venue">${esc(p.venue)}</p>`:''}`;
@@ -29,7 +29,7 @@
     if(err.code==='FORUM_ALREADY'||err.code==='FORUM_PASS_EXPIRED'||err.code==='FORUM_CLOSED'){store.set(null);b.remove();}
     if(err.code==='LOGIN_REQUIRED'){store.set(Object.assign({},p));render();}}};
  }
- function success(r){const c=sheet(`<div class="fm-ok" aria-hidden="true">✓</div><h2>${r.test?'測試簽到完成':'簽到完成'}</h2><p>${esc(r.message||'')}</p><p class="fm-venue">${esc(r.event||'')}</p><div class="fm-acts"><button type="button" class="fm-primary" data-close>好</button></div>`);c.querySelector('[data-close]').onclick=done;}
+ function success(r){dispatchEvent(new Event('academy-notifications-changed'));dispatchEvent(new Event('academy-wallet-changed'));const c=sheet(`<div class="fm-ok" aria-hidden="true">✓</div><h2>${r.test?'測試簽到完成':'簽到完成'}</h2><p>${esc(r.message||'')}</p><p class="fm-venue">${esc(r.event||'')}</p><div class="fm-acts"><button type="button" class="fm-primary" data-close>好</button></div>`);c.querySelector('[data-close]').onclick=done;}
  async function openPass(raw){
   const [e,t]=raw.split('.');
   sheet('<h2>確認場次中…</h2>');
@@ -47,10 +47,25 @@
  /* ── 論壇場次視窗 ── */
  async function openForum(){
   const c=sheet('<h2>線下論壇場次</h2><p>載入中…</p>');c.closest('.fm-overlay').setAttribute('aria-label','線下論壇場次');
-  try{const r=await call('forum_events');const evs=r.events||[];
-   const list=evs.length?evs.map(e=>`<li><div><b>${esc(e.city_name)}場</b>　${esc(e.date.slice(5).replace('-','/'))}（${'日一二三四五六'[new Date(e.date+'T12:00:00+08:00').getDay()]}）${esc(e.start)}–${esc(e.end)}${e.title?`<div class="fm-sub">${esc(e.title)}</div>`:''}${e.venue?`<div class="fm-sub">${esc(e.venue)}</div>`:''}</div>${e.signup_url?`<a class="fm-primary" href="${esc(e.signup_url)}" target="_blank" rel="noopener">報名</a>`:''}</li>`).join(''):'<li><span class="fm-sub">近期場次公布後會顯示在這裡。</span></li>';
-   const c2=sheet(`<h2>線下論壇場次</h2><ul class="fm-events">${list}</ul><p class="fm-sub">${r.attended?'你已參加過論壇並領取到場點數。':'限會員參加，每人限參加一次；到場掃描簽到 QR，可獲得 1,000 活動點數（每人限領一次）。'}</p><div class="fm-acts"><button type="button" data-close>關閉</button></div>`);c2.querySelector('[data-close]').onclick=done;}
-  catch(err){const c3=sheet(`<h2>線下論壇場次</h2><p>${esc(err.message)}</p><div class="fm-acts"><button type="button" data-close>關閉</button></div>`);c3.querySelector('[data-close]').onclick=done;}
+  try{
+   const r=await call('forum_events'),evs=r.events||[];let eligibility=null,warning='';
+   if(token()){try{eligibility=await call('forum_registration_status');}catch(error){warning=error.message;}}
+   const attended=r.attended||eligibility?.attended;
+   const list=evs.length?evs.map(e=>{
+    const registered=eligibility?.registrations?.find(x=>x.event===e.id&&x.status==='registered');
+    return `<li><div><b>${esc(e.city_name)}場</b>　${esc(e.date.slice(5).replace('-','/'))}（${'日一二三四五六'[new Date(e.date+'T12:00:00+08:00').getDay()]}）${esc(e.start)}–${esc(e.end)}${e.title?`<div class="fm-sub">${esc(e.title)}</div>`:''}${e.venue?`<div class="fm-sub">${esc(e.venue)}</div>`:''}</div><button type="button" class="fm-primary" ${attended?'disabled':''} data-register="${e.id}" data-cancel="${!!registered}">${attended?'已參加過':registered?'取消報名':'站內報名'}</button></li>`;
+   }).join(''):'<li><span class="fm-sub">近期場次公布後會顯示在這裡。</span></li>';
+   const c2=sheet(`<h2>線下論壇場次</h2><ul class="fm-events">${list}</ul><p class="fm-sub">${attended?'你已參加過論壇。每位會員一生限參加一次，現場掃描的 1,000 點也限領一次。':'每位會員一生限參加一次，報名不扣點。到場掃描 QR 簽到後，1,000 點存入帳號。活動開始前可取消報名；累計三次報名未到場後暫停報名，請聯絡工作人員協助。'}</p>${eligibility?`<p class="fm-sub">${eligibility.blocked?'目前已暫停報名。':''}累計未到場 ${eligibility.no_shows} 次</p>`:''}<p class="fm-msg" data-reg-msg role="status">${esc(warning)}</p><div class="fm-acts"><button type="button" data-close>關閉</button></div>`);
+   c2.querySelector('[data-close]').onclick=done;
+   c2.querySelectorAll('[data-register]').forEach(button=>button.onclick=async()=>{
+    if(!token()){hide();openAuthModal('login');waitLogin(openForum);return;}
+    const cancel=button.dataset.cancel==='true';
+    if(!confirm(cancel?'確認取消此場報名？':'確認報名此場論壇？每位會員一生限參加一次，報名後若無法到場，請在活動開始前取消。'))return;
+    button.disabled=true;const msg=c2.querySelector('[data-reg-msg]');msg.textContent=cancel?'取消中…':'確認報名資格與名額中…';
+    try{await call(cancel?'forum_cancel':'forum_register',{id:button.dataset.register});await openForum();}
+    catch(error){msg.textContent=error.message;button.disabled=false;dispatchEvent(new Event('academy-notifications-changed'));}
+   });
+  }catch(error){const c3=sheet(`<h2>線下論壇場次</h2><p>${esc(error.message)}</p><div class="fm-acts"><button type="button" data-close>關閉</button></div>`);c3.querySelector('[data-close]').onclick=done;}
  }
  window.ForumMember={openForum,openPass};
 
@@ -67,17 +82,20 @@
  const dismissed=()=>{try{return JSON.parse(localStorage.getItem(DISMISS)||'{}');}catch{return {};}};
  function dismiss(id){const d=dismissed();d[id]=new Date().toISOString().slice(0,10);try{localStorage.setItem(DISMISS,JSON.stringify(d));}catch{}}
  let lastTok=null,adsCache=[];
- function adHtml(a,closable){return `<span class="site-ad-k">論壇</span><b>${esc(a.title)}</b>${a.text?`<span class="site-ad-t">${esc(a.text)}</span>`:''}<span class="site-ad-cta">${esc(a.cta||'了解更多')} →</span>${closable?'<button type="button" class="site-ad-x" aria-label="關閉這則公告">×</button>':''}`;}
  function mount(a){
   const anchors={top_bar:()=>document.getElementById('mainNav'),home_card:()=>document.getElementById('homeView'),results_top:()=>document.getElementById('resultsArea'),member_center:()=>document.querySelector('.mc-shell .mc-top'),corner:()=>document.body};
-  const at=anchors[a.slot]&&anchors[a.slot]();if(!at)return;
-  const closable=a.slot==='top_bar'||a.slot==='corner';
-  const d=dismissed()[a.id];if(closable&&d&&(a.slot==='top_bar'||d===new Date().toISOString().slice(0,10)))return;
-  const el=document.createElement('a');el.className='site-ad site-ad--'+a.slot;el.dataset.siteAd=a.id;el.href=a.url||'#';if(/^https:/.test(a.url))el.target='_blank',el.rel='noopener';
-  el.innerHTML=adHtml(a,closable);
-  el.addEventListener('click',e=>{if(e.target.closest('.site-ad-x')){e.preventDefault();dismiss(a.id);el.remove();return;}
+  const at=anchors[a.slot]?.();if(!at)return;
+  const closable=a.slot==='top_bar'||a.slot==='corner',d=dismissed()[a.id];
+  if(closable&&d&&(a.slot==='top_bar'||d===new Date().toISOString().slice(0,10)))return;
+  const el=document.createElement('article');el.className='site-ad site-ad--'+a.slot;el.dataset.siteAd=a.id;
+  const media=window.SiteAdMedia?.html(a)||'';
+  el.innerHTML=media+`<a class="site-ad-copy" data-ad-link href="${esc(a.url||'?forum=1')}"><b>${esc(a.title)}</b>${a.text?`<span class="site-ad-t">${esc(a.text)}</span>`:''}<span class="site-ad-cta">${esc(a.cta||'了解更多')} ↗</span></a>`+(closable?'<button type="button" class="site-ad-x" aria-label="關閉這則公告">×</button>':'');
+  const link=el.querySelector('[data-ad-link]');if(/^https:/.test(a.url)){link.target='_blank';link.rel='noopener noreferrer';}
+  el.querySelector('.site-ad-x')?.addEventListener('click',()=>{dismiss(a.id);el.remove();});
+  link.addEventListener('click',e=>{
    navigator.sendBeacon?.(API,new Blob([JSON.stringify({action:'ad_click',id:a.id})],{type:'application/json'}));
-   if(/^\?forum=1/.test(a.url||'')||!a.url){e.preventDefault();openForum();}});
+   if(/^\?forum=1/.test(a.url||'')||!a.url){e.preventDefault();openForum();}
+  });
   if(a.slot==='top_bar')at.after(el);else if(a.slot==='home_card')at.prepend(el);else if(a.slot==='results_top')at.before(el);else if(a.slot==='member_center')at.after(el);else at.append(el);
  }
  function paint(){document.querySelectorAll('[data-site-ad]').forEach(x=>x.remove());adsCache.forEach(mount);}

@@ -182,3 +182,68 @@
 .fm-camera span{position:absolute;inset:50% auto auto 50%;width:min(52%,185px);aspect-ratio:1;transform:translate(-50%,-50%);border:2px solid #fff;border-radius:12px;pointer-events:none;box-shadow:0 0 0 100vmax rgba(0,0,0,.17)}
 .fm-scan-actions{margin:12px 0 0}
 .fm-scanner [role="status"]:empty{display:none}
+
+/* Admin dialogs contain their own scroll area and stay above page content. */
+.afa-sheet{min-height:0;overflow:hidden}
+.afa-sheet-hd{flex-shrink:0}
+.afa-sheet-bd{min-height:0;overscroll-behavior:contain}
+.afa-sheet [hidden],#adminView [hidden]{display:none!important}
+.afa-sheet :is(input,textarea,select){box-sizing:border-box;font:inherit;max-width:100%}
+.afa-sheet textarea{resize:vertical}
+.afa-sheet label{line-height:1.6}
+.afa-sheet .afa-err{overflow-wrap:anywhere}
+.afa-sheet .afa-btn{min-height:34px;display:inline-flex;align-items:center;justify-content:center;gap:7px}
+#adminView .afa-point-tabs{padding:14px 0 16px;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+#adminView [data-tasks] .afa-table :is(th,td):nth-child(4),
+#adminView [data-products] .afa-table :is(th,td):nth-child(3){text-align:center}
+#adminView [data-tasks] .afa-table :is(th,td):nth-child(5),
+#adminView [data-products] .afa-table :is(th,td):nth-child(4){text-align:center}
+#adminView [data-point-panel] .afa-table :is(th,td):first-child{padding-left:22px}
+#adminView [data-point-panel] .afa-table td:first-child input{padding-left:0;background:transparent;border-color:transparent;box-shadow:none}
+#adminView [data-point-panel] .afa-table input[name=points]{text-align:center!important;box-sizing:border-box}
+#adminView [data-point-panel] .afa-table .chk{display:inline-flex;align-items:center;justify-content:center;gap:7px}
+.afa-code-batch{display:grid;gap:6px;margin:16px 0 10px}
+.afa-code-batch select{padding:8px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:8px}
+.afa-code-pages{justify-content:center;margin-top:12px;font-size:12px}
+.afa-slot-layout{min-height:190px;align-content:start}
+.afa-slot-layout i{height:auto;min-height:25px;font-style:normal;font-size:10px;padding:5px;box-sizing:border-box}
+.afa-slot-layout i:nth-child(5){height:34px}
+.afa-slot-marker{position:absolute;top:33px;right:14px;color:var(--afa-active-text);background:var(--afa-active);border:1px solid var(--afa-active-edge);border-radius:4px;padding:2px 6px;font-size:10px}
+.afa-slot-layout[data-layout=home_card] .afa-slot-marker{top:65px}
+.afa-slot-layout[data-layout=results_top] .afa-slot-marker{top:96px}
+.afa-slot-layout[data-layout=member_center] .afa-slot-marker{top:127px}
+.afa-slot-layout[data-layout=corner] .afa-slot-marker{top:auto;bottom:44px}
+.afa-ad-sheet.wide{width:min(1120px,100%)}
+.afa-ad-steps{display:flex;gap:20px;padding:0 0 16px;margin-bottom:16px;border-bottom:1px solid var(--border);font-size:12px;color:var(--text-muted)}
+.afa-ad-steps strong{color:var(--accent)}
+.afa-ad-editor{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:24px;align-items:start}
+.afa-ad-editor .afa-form{gap:12px}
+.afa-ad-editor .afa-form input:not([type=checkbox]):not([type=radio]):not([type=range]),.afa-ad-editor .afa-form select,.afa-ad-editor .afa-form textarea{min-height:36px;padding:8px 10px;border-radius:9px}
+.afa-media-tabs{display:flex;gap:14px;flex-wrap:wrap;border:0;padding:0;margin:0}
+.afa-media-tabs legend{font-size:12px;margin-bottom:8px;color:var(--text-muted)}
+.afa-media-tabs label{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border:1px solid var(--border);border-radius:999px;cursor:pointer}
+.afa-media-tabs label:has(input:checked){background:var(--afa-active);border-color:var(--afa-active-edge);color:var(--afa-active-text)}
+.afa-media-upload{padding:14px;border:1px solid var(--border);border-radius:12px;background:var(--afa-glass);display:grid;gap:10px}
+.afa-media-upload label{display:grid;gap:4px;font-size:12px}
+.afa-crop{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.afa-ad-live{position:sticky;top:0;min-width:0}
+.afa-ad-live>.afa-bar{justify-content:space-between;font-size:13px}
+.afa-ad-browser{border:1px solid var(--border);border-radius:12px;padding:12px;background:var(--surface);transition:max-width .2s ease;box-sizing:border-box;max-width:100%;margin-inline:auto}
+.afa-ad-browser.mobile{max-width:280px}
+.afa-browser-head{padding:8px 0;font-family:Georgia,serif;font-size:14px;font-weight:700}
+.afa-browser-nav{border-block:1px solid var(--border);padding:8px 0;font-size:11px;color:var(--text-muted)}
+.afa-browser-content{height:90px;margin-top:14px;border-radius:5px;background:var(--afa-glass);color:var(--text-muted);display:grid;place-items:center;font-size:12px}
+.site-ad{box-sizing:border-box}
+.site-ad-copy{display:flex;flex:1;flex-wrap:wrap;gap:8px;align-items:center;min-width:0;color:inherit;text-decoration:none}
+.site-ad-copy b,.site-ad-copy .site-ad-t{overflow-wrap:anywhere}
+.site-ad:has(.site-ad-media){flex-direction:column;align-items:stretch;overflow:hidden}
+.site-ad-media{aspect-ratio:var(--ad-ratio,2);width:100%;border-radius:8px;overflow:hidden;background:var(--surface2,var(--surface))}
+.site-ad-media img{display:block;width:100%;height:100%;object-fit:cover}
+.site-ad-media:has(video){aspect-ratio:auto}
+.site-ad-media video{display:block;width:100%;max-height:320px;object-fit:contain}
+.site-ad--preview.site-ad--corner{position:relative;inset:auto;max-width:100%;box-shadow:none}
+.site-ad--preview{pointer-events:auto;margin:0}
+.site-ad--preview .site-ad-copy{font-size:13px}
+.site-ad--corner .site-ad-x{background:var(--surface);border-radius:50%;width:24px;height:24px}
+@media(max-width:760px){.afa-ad-editor{grid-template-columns:1fr}.afa-ad-live{position:static}.afa-ad-steps{gap:12px}.afa-modal{padding:10px}.afa-sheet-bd{padding:12px}.afa-form{gap:10px}}
+@media(prefers-reduced-motion:reduce){.afa-ad-browser{transition:none}}

@@ -30,7 +30,9 @@ class FakeRest:
                     k = m.group(1)
                     return 200, ([{'key': k, 'value': self.settings[k]}] if k in self.settings else [])
                 m = re.search(r'key=like\.([^&]+)\*', path)
-                return 200, [{'key': k, 'value': v} for k, v in self.settings.items() if k.startswith(m.group(1))]
+                rows = [{'key': k, 'value': v} for k, v in sorted(self.settings.items()) if k.startswith(m.group(1))]
+                offset = int(re.search(r'offset=(\d+)', path).group(1)) if 'offset=' in path else 0
+                return 200, rows[offset:offset + 1000]
             if method == 'POST':
                 if 'on_conflict' in path:
                     self.settings[body['key']] = body['value']
@@ -69,7 +71,13 @@ class FakeRest:
             return 200, [self.tasks[tid]]
         if path.startswith('/member_exchange_definitions'):
             if method == 'GET':
-                return 200, list(self.products.values())
+                m = re.search(r'id=eq\.([^&]+)', path)
+                return 200, ([self.products[m.group(1)]] if m and m.group(1) in self.products else [] if m else list(self.products.values()))
+            if method == 'POST':
+                if body['id'] in self.products:
+                    return 409, {}
+                self.products[body['id']] = dict(body)
+                return 201, [self.products[body['id']]]
             pid = re.search(r'id=eq\.([^&]+)', path).group(1)
             self.products[pid].update(body)
             return 200, [self.products[pid]]
@@ -105,6 +113,82 @@ class ForumTests(unittest.TestCase):
             st, out = F.handle_admin('admin_forum_save', {'event': {'city': 'TPE', 'date': '2026-11-22', 'venue': '台北會場', 'status': 'published'}}, 'admin', self.r)
         self.assertEqual(st, 200)
         self.eid = out['event']['id']
+
+    def test_code_batches_survive_and_revoke_preserves_redemptions(self):
+        st, batch = F.handle_admin('admin_forum_codes', {'id': self.eid, 'count': 3}, 'admin', self.r)
+        with at(EV_DAY):
+            F.handle_public('forum_redeem', {'code': batch['codes'][0]}, USER, self.r)
+            st, result = F.handle_admin('admin_forum_code_revoke', {'id': self.eid, 'codes': batch['codes']}, 'admin', self.r)
+            self.assertEqual(result['revoked'], 2)
+            self.assertEqual(result['rows'][0]['status'], 'used')
+            st, result = F.handle_public('forum_redeem', {'code': batch['codes'][1]}, USER2, self.r)
+            self.assertEqual(result['code'], 'FORUM_CODE_REVOKED')
+        st, saved = F.handle_admin('admin_forum_codes_list', {'id': self.eid}, 'admin', self.r)
+        self.assertEqual(saved['batches'][0]['id'], batch['batch_id'])
+        self.assertEqual([r['status'] for r in saved['batches'][0]['rows']], ['used', 'revoked', 'revoked'])
+        self.assertEqual(len(self.r.ledger), 1)
+
+    def test_event_notes_private_and_preserved_on_legacy_update(self):
+        ev = F._find_event(self.r, self.eid)
+        ev['notes'] = '內部報到安排'
+        F.handle_admin('admin_forum_save', {'event': ev}, 'admin', self.r)
+        del ev['notes']
+        F.handle_admin('admin_forum_save', {'event': ev}, 'admin', self.r)
+        self.assertEqual(F._find_event(self.r, self.eid)['notes'], '內部報到安排')
+        with at(EV_DAY):
+            st, data = F.handle_public('forum_events', {}, None, self.r)
+        self.assertNotIn('notes', data['events'][0])
+
+    def test_custom_product_creation_is_inactive_and_not_overwritten(self):
+        body = {'definition': 'research-v1', 'days': 12, 'points': 5000}
+        st, data = F.handle_admin('admin_products_create', body, 'admin', self.r)
+        self.assertEqual(st, 200)
+        self.assertEqual(data['product']['title'], '趨勢研究員 · 12 天')
+        self.assertFalse(data['product']['active'])
+        self.assertEqual(F.handle_admin('admin_products_create', body, 'admin', self.r)[0], 409)
+        self.assertEqual(F.handle_admin('admin_products_create', dict(body, days=0), 'admin', self.r)[0], 400)
+
+    def test_media_validation_and_public_projection(self):
+        raw = {'slot': 'home_card', 'title': '研究分享會', 'media_type': 'image',
+               'media_url': 'https://example.com/banner.webp', 'media_x': 85, 'enabled': True}
+        ad = F.clean_ad(raw)
+        public = F.ads_for([ad], {'guest': True})[0]
+        self.assertEqual(public['media_url'], raw['media_url'])
+        self.assertEqual(public['media_x'], 85)
+        self.assertNotIn('name', public)
+        for url in ['javascript:alert(1)', 'data:image/svg+xml,test', 'https://user:pw@example.com/x']:
+            with self.assertRaises(ValueError):
+                F.clean_ad(dict(raw, media_url=url))
+        with self.assertRaises(ValueError):
+            F.clean_ad(dict(raw, slot='top_bar'))
+
+    def test_registration_requires_verified_user_and_fails_closed(self):
+        self.assertEqual(F.handle_public('forum_register', {'id': self.eid}, None, self.r)[0], 403)
+        def unavailable(*args):
+            return 404, {'message': 'function not found'}
+        st, data = F.handle_public('forum_register', {'id': self.eid}, USER, unavailable)
+        self.assertEqual(st, 503)
+        self.assertEqual(data['code'], 'FORUM_REGISTRATION_UNAVAILABLE')
+
+    def test_lifetime_attendance_shared_across_events_and_codes(self):
+        with at(EV_DAY):
+            token = F.make_pass(self.eid)
+            self.assertEqual(F.handle_public('forum_checkin', {'pass': token}, USER, self.r)[0], 200)
+            status, event = F.handle_admin('admin_forum_save', {'event': {'city': 'TXG', 'date': '2026-11-22', 'status': 'published'}}, 'admin', self.r)
+            second = event['event']['id']
+            status, out = F.handle_public('forum_checkin', {'pass': F.make_pass(second)}, USER, self.r)
+            self.assertEqual((status, out['code']), (409, 'FORUM_ALREADY'))
+            status, out = F.handle_public('forum_redeem', {'code': F.make_code(second)}, USER, self.r)
+            self.assertEqual((status, out['code']), (409, 'FORUM_ALREADY'))
+            self.assertEqual(len(self.r.ledger), 1)
+
+    def test_read_failure_does_not_pretend_member_is_eligible(self):
+        def unavailable(*args): return 503, {}
+        with self.assertRaises(RuntimeError): F.has_attended(unavailable, USER['id'])
+
+    def test_code_history_pagination_keeps_all_rows(self):
+        for i in range(2001): self.r.settings['forumcodes:test:%04d' % i] = '{}'
+        self.assertEqual(len(F._list_prefix(self.r, 'forumcodes:test:')), 2001)
 
     def test_event_id_and_duplicate_day(self):
         self.assertEqual(self.eid, 'TPE1122')

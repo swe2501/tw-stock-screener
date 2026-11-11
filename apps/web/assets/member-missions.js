@@ -56,6 +56,14 @@
     if(t)card.querySelector('.mj-task-bottom strong').textContent='+'+t.points+' 點';
     if(t&&state.tasks.rewards_policy_version===4){const description=card.querySelector('.mj-task-description');if(description)description.textContent=/^streak(7|15|30)$/.test(id)?'連續完成每日任務，由伺服器核對紀錄。獎勵共用今日與本週點數額度，不另外贈送使用券。':description.textContent.replace(/\d+\s*點/g,t.points+' 點');}
    });
+   const tickets=root.querySelector('.mj-tickets');
+   for(const offer of state?.options.rows||[]){
+    if(!tickets||[...tickets.children].some(card=>card.dataset.exchangeId===offer.id))continue;
+    const card=document.createElement('article');card.className='mj-ticket';card.dataset.exchangeId=offer.id;
+    card.dataset.days=offer.duration_days<=1?'1':offer.duration_days<=7?'7':'30';
+    card.innerHTML='<div class="mj-ticket-top"><div><h3>'+esc(offer.title.replace(/\s*[·・]?\s*\d+\s*天(?:體驗)?\s*$/,''))+'</h3><span class="mj-ticket-days">'+offer.duration_days+' 天</span></div></div><span class="mj-ticket-kind">工具體驗券</span><p class="mj-ticket-note">開放範圍依券種確認，啟用時查看可用工具。</p><div class="mj-ticket-foot"><div><strong>'+offer.points.toLocaleString()+'</strong> 點</div><button type="button" disabled>確認中</button></div>';
+    tickets.append(card);
+   }
    root.querySelectorAll('[data-exchange-id]').forEach(card=>{
     const o=state?.options.rows.find(o=>o.id===card.dataset.exchangeId),button=card.querySelector('.mj-ticket-foot button');
     const retry=!!pending(card.dataset.exchangeId);const have=availablePoints(state?.wallet);button.dataset.pointsExchange=card.dataset.exchangeId;
