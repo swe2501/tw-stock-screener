@@ -14054,11 +14054,14 @@
 
     // 帶自動 refresh 的 fetch 包裝，401 JWT expired 時自動重試
     async function _authFetch(url, opts = {}) {
-      opts.headers = { ...(opts.headers || {}), Authorization: `Bearer ${_authToken}` };
+      const sentToken = _authToken, owner = _authUser?.id;
+      opts.headers = { ...(opts.headers || {}), Authorization: `Bearer ${sentToken}` };
       let r = await fetch(url, opts);
-      if (r.status === 401) {
-        const refreshed = await _tryRefreshToken();
-        if (refreshed) {
+      if (r.status === 401 && _authUser?.id === owner) {
+        // A late 401 may refer to a token another request already renewed.
+        const refreshed = _refreshing ? await _refreshing
+          : (_authToken && _authToken !== sentToken) || await _tryRefreshToken();
+        if (_authToken && _authUser?.id === owner && (refreshed || _authToken !== sentToken)) {
           opts.headers['Authorization'] = `Bearer ${_authToken}`;
           r = await fetch(url, opts);
         }

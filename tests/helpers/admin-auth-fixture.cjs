@@ -5,9 +5,9 @@ const html=fs.readFileSync(path.resolve(__dirname,'../../apps/web/index.html'),'
 function extract(start,end){const a=html.indexOf(start),b=html.indexOf(end,a);if(a<0||b<a)throw Error('Auth fixture extraction changed');return html.slice(a,b);}
 const auth=extract('    async function _tryRefreshToken()', '    // ── 閒置自動登出'),post=extract('    function post(action,extra){','    function dt(');
 const factory=`function createClient(fetcher,refresh='synthetic-refresh'){
- const values=new Map([['sb_token','old-token'],['sb_refresh',refresh],['sb_user','{}']]);
+ const values=new Map([['sb_token','old-token'],['sb_refresh',refresh],['sb_user',JSON.stringify({id:'synthetic-admin'})]]);
  const localStorage={getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,String(v)),removeItem:k=>values.delete(k)},window={__API:''};
- let _authToken='old-token',_authRefresh=refresh,_authUser={},_refreshing=null,logouts=0;const _authEndpoint='/api/auth',fetch=fetcher,tk=()=>localStorage.getItem('sb_token')||'';
+ let _authToken='old-token',_authRefresh=refresh,_authUser={id:'synthetic-admin'},_refreshing=null,logouts=0;const _authEndpoint='/api/auth',fetch=fetcher,tk=()=>localStorage.getItem('sb_token')||'';
  const _applyAuthState=()=>{logouts++;},showToast=()=>{};
  ${auth}
 ${post}

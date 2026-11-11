@@ -3,10 +3,12 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),os=require('node:os'),http=require('node:http'),{spawn}=require('node:child_process');
 const {factory,cases,scenario}=require('./helpers/admin-auth-fixture.cjs');
+const {factory:interopFactory,cases:interopCases,scenario:interopScenario}=require('./helpers/admin-auth-interleaving.cjs');
 const web=path.resolve(__dirname,'../apps/web'),out=process.argv[2]||path.join(os.tmpdir(),'admin-401-browser');fs.mkdirSync(out,{recursive:true});
 const fixture=`<!doctype html><html><head><meta charset="utf-8"><style>body{margin:24px;font:16px sans-serif}pre{white-space:pre-wrap}</style></head><body><h1>Admin 401 離線驗證</h1><p>實際 inline post／refresh 函式；mock fetch；不連線真實服務。</p><pre id="result">pending</pre><script>
 ${factory}
-(async()=>{const target=document.querySelector('#result');try{const results=[];const run=${scenario.toString()};for(const name of ${JSON.stringify(cases)})results.push(await run(name,createClient));target.textContent=JSON.stringify({pass:true,width:innerWidth,theme:new URLSearchParams(location.search).get('theme'),cases:results});}catch(e){target.textContent=JSON.stringify({pass:false,error:e.stack});}})();
+${interopFactory}
+(async()=>{const target=document.querySelector('#result');try{const results=[];const run=${scenario.toString()};for(const name of ${JSON.stringify(cases)})results.push(await run(name,createClient));const interop=${interopScenario.toString()};for(const name of ${JSON.stringify(interopCases)})results.push(await interop(name,createInteropClient));target.textContent=JSON.stringify({pass:true,width:innerWidth,theme:new URLSearchParams(location.search).get('theme'),cases:results});}catch(e){target.textContent=JSON.stringify({pass:false,error:e.stack});}})();
 </script></body></html>`;
 const server=http.createServer((req,res)=>{const url=new URL(req.url,'http://localhost');if(url.pathname==='/__7f_fixture'){res.setHeader('Content-Type','text/html; charset=utf-8');return res.end(fixture);}const file=path.resolve(web,'.'+decodeURIComponent(url.pathname));if(!file.startsWith(web+path.sep)){res.writeHead(403);return res.end();}fs.readFile(file,(error,data)=>{if(error){res.writeHead(404);return res.end();}res.setHeader('Content-Type',({'.html':'text/html','.js':'text/javascript','.css':'text/css','.png':'image/png','.svg':'image/svg+xml'})[path.extname(file)]||'application/octet-stream');res.end(data);});});
 (async()=>{await new Promise(r=>server.listen(0,'127.0.0.1',r));const port=server.address().port,profile=fs.mkdtempSync(path.join(os.tmpdir(),'office-7f-chrome-'));
@@ -28,6 +30,6 @@ const server=http.createServer((req,res)=>{const url=new URL(req.url,'http://loc
    const shot=await call('Page.captureScreenshot',{format:'png',captureBeyondViewport:false},sessionId);fs.writeFileSync(path.join(out,'admin-auth-'+theme+'-'+width+'.png'),Buffer.from(shot.data,'base64'));
    assert.equal(result.pass,true,result.error);assert.equal(exceptions.filter(e=>e.sessionId===sessionId).length,0,JSON.stringify(exceptions));await call('Target.closeTarget',{targetId});
   }
-  fs.writeFileSync(path.join(out,'browser-results.json'),JSON.stringify(results,null,2)+'\n');console.log('PASS real Chrome admin401 transport: 10 scenarios × desktop/mobile × light/dark; isolated mock fetch only');
+  fs.writeFileSync(path.join(out,'browser-results.json'),JSON.stringify(results,null,2)+'\n');console.log('PASS real Chrome admin401 transport: 21 scenarios × desktop/mobile × light/dark; isolated mock fetch only');
  }finally{ws?.close();chrome.kill();await new Promise(r=>chrome.once('exit',r));server.close();fs.writeFileSync(path.join(out,'chrome-stderr.txt'),log);fs.rmSync(profile,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);server.close();process.exitCode=1;});

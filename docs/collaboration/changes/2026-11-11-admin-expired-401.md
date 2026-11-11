@@ -1,5 +1,46 @@
 # admin_* 登入失效回401，權限不足保留403（本機修補，未發布）
 
+## 2026-11-12 補充：晚到401共用續期競態修補（r3）
+
+本段是最新補充；下方初版內容為歷史紀錄，當時「未改_authFetch」不代表本次r3仍未改。依本輪明示授權，在fix/admin-expired-401-r2／6b8a1f7710defc294384f46c282925785d1d368a上新增一個commit，不改寫139a8bf7或6b8a1f77。
+
+### 實作（只有一個產品函式變動）
+
+- index.html的共用_authFetch記住送出時sentToken與owner，用sentToken建立初始Authorization。
+- 401時只在owner仍相同才處理。若_refreshing已存在，直接await同一promise，不再發起第二次續期；若無inflight但目前已有不同token，直接用新token重試，不續期；其餘才呼叫原_tryRefreshToken。
+- await之後再驗owner與非空token；成功續期或token已更新才重試一次。第二次仍401直接返回，沒有遞迴／迴圈。既有promise失敗且token未更新就停止，不會補打一輪refresh。
+- owner保護避免舊401在帳號切換後，把舊請求以新帳號重送，延續139a8bf7的帳號隔離意圖。
+- **member-research.js完全不改**（含watchsync3引用）；139a8bf7的_tryRefreshToken owner／refreshToken guard也逐字不改。後端、DB、RLS、env全部不動。
+
+### 正式測試與反例
+
+- 新增tests/helpers/admin-auth-interleaving.cjs：擷取真實merged post／_authFetch／_tryRefreshToken與member watch，在同一個合成session測試；可用build(revision)讀git舊來源重播，無須切換或覆寫他人工作區。
+- 新增tests/admin-auth-interleaving.test.cjs共11案：同時401、晚到watch／admin／另一admin／member API的401、重試仍401、既有續期promise進行中／失敗、401前換帳號、續期中換帳號／登出。
+- 六個既有邊界在舊版通過；四個晚到401與「401回來前已換帳號」在舊版FAIL，共6 PASS／5 FAIL；新版11/11。原晚到admin反例從2次refresh降至1次，其他兩種順序維持1次。
+- tests/admin-expired-401.browser.cjs正式納入上述11案，加既有10案，共21情境×4個viewport/theme執行組，全部PASS；不是把probe留在證據目錄而已。
+- 原admin-auth-fixture把合成session補上固定user id，與真實已登入session及新增owner保護一致，未修改產品驗證規則或放寬測試預期。
+- 原r2探針保留FAIL原件；r3只改原探針輸出路徑、不改預期，重播3種順序均PASS。Git舊來源與新來源矩陣：formal-before-after.json。
+
+### r3重跑結果
+
+| Suite | 前一輪／舊來源 | r3 |
+|---|---:|---:|
+| Node相關，含member-watch-session | 179/179 | 190/190（新增11案） |
+| 正式交錯Node | 6 PASS／5 FAIL | 11/11 |
+| Python office／auth／watchlist／pattern／new admin | 53／43／23／7／16全PASS | 同數全PASS，組間有重疊不相加 |
+| 既有座姿Chromium | 112/112 | 112/112 |
+| 部門看板Chromium | 4/4 | 4/4 |
+| UAT-only Chromium | 20/20 | 20/20 |
+| Auth＋交錯Chromium | 舊來源late-admin FAIL | 21×4執行組全PASS |
+
+證據：/workspace/admin-401-evidence/r3/。修改前formal Node與Chromium原FAIL完整保存；protected-scope-check.txt證明只改_authFetch、保護139a8bf7與後端；source-manifest.json核對測試來源。
+
+可重跑新增測試：`node --test tests/admin-auth-interleaving.test.cjs tests/admin-expired-401.test.cjs tests/member-watch-session.test.cjs`；Chromium仍用下方既有admin-expired-401.browser.cjs命令，已自動包含正式交錯11案。其他套件命令同下文，結果以r3/及最新DELIVERY.md為準。
+
+本輪仍未push／部署、不安裝、不讀.env、不amend／force／reset／stash。真Supabase、真JWT／refresh rotation、真網路與跨tab／完整登入UI仍未測，僅本機mock＋真實函式／Chromium；待QA／CTO實環境驗收。回滾本輪新SHA見DELIVERY.md，不會要求revert139a8bf7。
+
+---
+
 ## 基準、授權與工作樹
 
 - 依本輪明示授權修改登入過期回應；未自行讀取Mochi或創辦人的私有對話。
