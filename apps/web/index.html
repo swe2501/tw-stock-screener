@@ -4515,7 +4515,7 @@
     function tk(){ try{return localStorage.getItem('sb_token')||'';}catch(e){return '';} }
     function post(action,extra){
       return fetch((window.__API||'')+'/api/auth',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tk()},
-        body:JSON.stringify(Object.assign({action:action},extra||{}))}).then(function(r){return r.json();});
+        body:JSON.stringify(Object.assign({action:action},extra||{}))}).then(function(r){return r.json().then(function(j){return !r.ok && action.indexOf('admin_office_tasks_')===0 && j && typeof j==='object' ? Object.assign({},j,{httpStatus:r.status}) : j;});});
     }
     function dt(s){ if(!s)return '—'; try{return new Date(s).toLocaleString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});}catch(e){return s;} }
     // 等級照合夥人 member-voucher-levels.sql：observation/research/advanced/vip（＋free 一般會員）
@@ -18603,8 +18603,8 @@
 <script src="assets/home-market-intraday.js?v=14" defer></script>
 <link rel="stylesheet" href="assets/office-task-board.css?v=3">
 <script src="assets/office-content-flow.js?v=1" defer></script>
-<script src="assets/office-task-board.js?v=7f-seat-2" defer></script>
-<script src="assets/admin-office.js?v=7f-seat-2" defer></script>
+<script src="assets/office-task-board.js?v=7f-uat-only-1" defer></script>
+<script src="assets/admin-office.js?v=7f-uat-only-1" defer></script>
 <link rel="stylesheet" href="assets/forum-ads.css?v=3">
 <script src="assets/admin-forum-ads.js?v=3" defer></script>
 <script src="assets/forum-member.js?v=3" defer></script>

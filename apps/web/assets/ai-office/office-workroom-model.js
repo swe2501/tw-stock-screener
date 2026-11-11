@@ -49,11 +49,13 @@ function metrics(roles,tasks,now=Date.now()){
 // A successful list read is fresh for at most two polls + 30s cache (150s).
 // received time is deliberately NOT a source timestamp: re-reading a cache is not an update.
 const STALE_AFTER_MS=150000;
+function isUatOnly(value){return Number(value?.httpStatus)===403&&[value?.error,value?.message].some(s=>typeof s==='string'&&s.includes('僅在 UAT 啟用'));}
 function freshness(snapshot,now=Date.now()){
  const at=millis(snapshot?.at);
  return {at,stale:!snapshot||!!snapshot.error||!!snapshot.stale||at==null||now<at||now-at>=STALE_AFTER_MS};
 }
 function updateLabel(snapshot,now=Date.now()){
+ if(isUatOnly(snapshot))return '任務中心僅 UAT 啟用 · 本頁已停止重試';
  const f=freshness(snapshot,now),clock=f.at==null?'尚未取得':new Date(f.at).toLocaleTimeString('zh-TW',{timeZone:'Asia/Taipei',hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
  return '資料最後更新時間 '+clock+'（台北）／可能延遲約 1 分鐘'+(f.stale?' · 資料過舊':'');
 }
@@ -105,6 +107,7 @@ function transformSeat(seat,origin={x:0,z:0,rotation:0}){
 // Stable slots survive task reordering and unrelated workers arriving; one actor, one avatar.
 // Task counts stay task counts even when one actor has many tasks, or no desk is available.
 function roomPlan(tasks,seats=[],{snapshot,roles=[],previous={}}={},now=Date.now()){
+ if(isUatOnly(snapshot))return {stale:false,unavailable:true,badge:'僅 UAT 啟用',actors:[],bindings:{},overflow:0,counts:{},updated:updateLabel(snapshot,now)};
  const f=freshness(snapshot,now),groups=new Map(),counts={},queuedTypes={};
  for(const t of tasks){const v=taskVisual(t,f,now);counts[v.kind]=(counts[v.kind]||0)+1;
   if(t.status==='queued'){const type=queueType(t);queuedTypes[type]=(queuedTypes[type]||0)+1;}
@@ -139,5 +142,5 @@ function personPose({base,seat,pose='walk',phase=0,time=0,reduced=false}){
  return {x:target.x+(walking?(base.x>0?-1:1)*excursion:0),y:target.y+(walking?Math.abs(wave)*.025:0),z:target.z+(walking?excursion*.12:0),rotation:seated?seat.rotation:alert?Math.PI:walking?(progress<.5?(base.x>0?-Math.PI/2:Math.PI/2):(base.x>0?Math.PI/2:-Math.PI/2)):(base.x>0?-.45:.35),seated,walking,typing,alert,reviewBadge:resting,leg:seated?-Math.PI/2:walking?wave*.35:0,knee:seated?Math.PI/2:0,recline:resting?-.55:0,armInward:resting?.24:0,arm:seated?(pose==='work'?-1.1:.32):alert?-.4:walking?-wave*.3:0,elbow:seated?(pose==='work'?-.47:-1.25):-.15,handMotion:typing?Math.sin(time*.005+phase)*.035:0,lean:alert?.12:0};
 }
 
-root.ForesightWorkroomModel={metrics,duration,taskState,taskStats,taskBadge,freshness,updateLabel,runningConfirmed,actorKey,queueType,taskVisual,chairSeat,deskSeat,transformSeat,roomPlan,personPose,STALE_AFTER_MS};if(typeof module!=='undefined')module.exports=root.ForesightWorkroomModel;
+root.ForesightWorkroomModel={metrics,duration,taskState,taskStats,taskBadge,isUatOnly,freshness,updateLabel,runningConfirmed,actorKey,queueType,taskVisual,chairSeat,deskSeat,transformSeat,roomPlan,personPose,STALE_AFTER_MS};if(typeof module!=='undefined')module.exports=root.ForesightWorkroomModel;
 })(typeof window==='undefined'?globalThis:window);

@@ -31,6 +31,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const stamp=s=>{const d=new Date(s);return s&&Number.isFinite(+d)?d.toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false}):'尚無紀錄';};
 const secs=n=>n==null?'尚無紀錄':n<60?Math.round(n)+' 秒':n<3600?(n/60).toFixed(1)+' 分鐘':(n/3600).toFixed(1)+' 小時';
 const percent=n=>n==null?'尚無紀錄':Math.round(n*100)+'%';
+let terminalSnapshot=null;
 let roles=[],snapshots=new Map(),request=0,pending=false,lastDepartment=-1,inflight=new Map();
 // Revision high-water survives invalidation; only the current catalogue supplies membership.
 const canonical=new Map(),latestRequest=new Map();let catalogue=null,catalogueRequest=0;
@@ -76,6 +77,7 @@ function render(){
  document.querySelector('#officeExploreDialog').classList.add('workroom-dialog');
  const all=id===19,snapshot=snapshotFor(id),stale=ForesightWorkroomModel.freshness(snapshot).stale,items=officeAgentsFor(id).concat(roles.filter(r=>all||r.department===id).map(r=>stale?{...r,status:'warn',statusText:'資料過舊'}:r)),tasks=snapshot?.tasks||[],m=ForesightWorkroomModel.metrics(items.filter(r=>!r.mapped),tasks);
  const section=document.createElement('section');section.className='live-department-roles workroom';
+ if(terminalSnapshot){section.innerHTML='<h3>僅 UAT 啟用</h3><p>目前環境不提供任務資料，已停止重試。請使用 UAT 任務中心。</p>';content.append(section);return;}
  const metric=(label,value,sub)=>'<div><dt>'+label+'</dt><dd>'+esc(value)+'</dd><small>'+esc(sub||'')+'</small></div>';
  const flow=tasks.filter(t=>!['approved','cancelled'].includes(t.status));
  const outputs=tasks.filter(t=>t.result),handoffs=tasks.filter(t=>(t.depends_on||[]).length);
@@ -97,7 +99,7 @@ function render(){
  const footer=content.querySelector('.profile-footer');if(footer)footer.textContent=id===0?'總管是既有排程協調角色，不代表執行長或總經理已自動化。':'此處彙整排程與任務回報；人物動作不代表已領取或完成任務。';
 }
 function requestData(id,force=false){
- if(parent===window)return;const snap=snapshots.get(id),ttl=snap?.tasks?.length?30000:2000;
+ if(parent===window||terminalSnapshot)return;const snap=snapshots.get(id),ttl=snap?.tasks?.length?30000:2000;
  if(!force&&snap&&!snap.error&&!snap.stale&&Date.now()-snap.received<ttl)return;
  // A newer request supersedes any previous request for this department.
  inflight.forEach((dep,seq)=>{if(dep===id)inflight.delete(seq);});
@@ -106,6 +108,7 @@ function requestData(id,force=false){
 }
 function preloadOverview(force=false){if(parent===window)return;requestData(19,force);}
 function snapshotFor(id){
+ if(terminalSnapshot)return {...terminalSnapshot,tasks:[]};
  const own=snapshots.get(id),all=snapshots.get(19),snapshot=own&&(!all||own.request>all.request)?own:all||own;
  if(!snapshot&&!canonical.size)return null;
  const tasks=currentTasks().filter(t=>id===19||t.department===id);
@@ -115,6 +118,7 @@ addEventListener('message',event=>{
  if(parent===window||event.source!==parent||(event.origin!==location.origin&&!(location.protocol==='file:'&&['null','file://'].includes(event.origin))))return;
  const msg=event.data;if(!msg)return;
  if(msg.type==='foresight-office-workroom-invalidated'){
+  if(terminalSnapshot){redraw();return;}
   // Invalidate freshness and pre-event requests, not revision high-water or the last good data.
   inflight.clear();latestRequest.clear();pending=false;
   snapshots.forEach(s=>{s.received=0;s.stale=true;});redraw();
@@ -125,11 +129,12 @@ addEventListener('message',event=>{
   roles=msg.roles.filter(r=>r&&permitted[r.key]===r.department);redraw();
  preloadOverview();
  }
- if(msg.type==='foresight-office-workroom'&&inflight.has(msg.request)){
+ if(msg.type==='foresight-office-workroom'&&!terminalSnapshot&&inflight.has(msg.request)){
   const expected=inflight.get(msg.request);
   if(expected!==msg.department||latestRequest.get(expected)!==msg.request)return;
   inflight.delete(msg.request);pending=inflight.size>0;
   const snapshot=msg.snapshot;
+  if(ForesightWorkroomModel.isUatOnly(snapshot)){terminalSnapshot={tasks:[],httpStatus:403,error:'任務中心目前僅在 UAT 啟用',at:''};inflight.clear();latestRequest.clear();pending=false;canonical.clear();catalogue=new Set();snapshots.clear();snapshots.set(19,terminalSnapshot);bindings.clear();clearInterval(refreshTimer);redraw();return;}
   const validTask=t=>t&&typeof t.id==='string'&&Number.isInteger(t.department)&&t.department>=0&&t.department<=31;
   if(!snapshot||!Array.isArray(snapshot.tasks)||!snapshot.tasks.every(t=>validTask(t)&&(expected===19||t.department===expected))||(snapshot.summaries&&!Array.isArray(snapshot.summaries))||(snapshot.summaries&&!snapshot.summaries.every(validTask))){snapshots.set(expected,{tasks:[],error:'任務回應格式不符，請重新更新。',at:snapshots.get(expected)?.at||'',request:msg.request,received:0});redraw();return;}
   if(!snapshot.error)acceptSnapshot(snapshot,msg.request);
