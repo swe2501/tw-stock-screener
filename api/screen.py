@@ -3,6 +3,7 @@ import json
 import csv
 import io
 import os
+import logging
 import urllib.request
 import urllib.parse
 import urllib.error
@@ -56,10 +57,13 @@ THEME_MEMBERS = {
 
 
 # ── 篩選結果暫存（非同步任務：伺服器算完存起來，前端切回來再領）──
-# 用 anon key：screen_cache 的 RLS 已開放 anon 全操作，且 anon key 必為當前專案（不受
-# service key 是否過期影響）
+# screen_cache 優先使用後端 service key；未設定才回退 anon（冷啟動記錄一次）。
+# 此 client 也讀取其他公開資料；那些路徑維持 anon，不擴大權限。
 SUPABASE_URL     = os.environ.get("SUPABASE_URL", "")
 SUPABASE_KEY     = os.environ.get("SUPABASE_ANON_KEY", "")
+SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
+if not SUPABASE_SERVICE_KEY:
+    logging.getLogger(__name__).warning("screen_cache: SUPABASE_SERVICE_KEY unset; using anon fallback")
 
 # ── 盤中即時注入點（第3層）──────────────────────────────────────────────
 # 本機盤中腳本(scripts/intraday_push.py)掃 mis.twse.com.tw 全市場後，直接把這個
@@ -116,15 +120,17 @@ def _read_sb(r):
 
 
 def _cache_sb(path, method="GET", body=None, params=None):
-    if not (SUPABASE_URL and SUPABASE_KEY):
+    # 僅精確的 screen_cache 路徑使用 service key；其餘共用呼叫維持原 anon 權限。
+    key = (SUPABASE_SERVICE_KEY or SUPABASE_KEY) if path == "/screen_cache" else SUPABASE_KEY
+    if not (SUPABASE_URL and key):
         return 0, None
     url = f"{SUPABASE_URL}/rest/v1{path}"
     if params:
         url += "?" + urllib.parse.urlencode(params)
     data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(url, data=data, method=method, headers={
-        "Content-Type": "application/json", "apikey": SUPABASE_KEY,
-        "Authorization": f"Bearer {SUPABASE_KEY}", "Prefer": "return=minimal",
+        "Content-Type": "application/json", "apikey": key,
+        "Authorization": f"Bearer {key}", "Prefer": "return=minimal",
         "Accept-Encoding": "gzip",
     })
     try:
