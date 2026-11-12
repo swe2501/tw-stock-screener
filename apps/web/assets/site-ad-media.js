@@ -13,9 +13,13 @@
   try{const u=new URL(a.media_url);if(u.protocol!=='https:'&&!(preview&&u.protocol==='blob:'))return '';}catch{return '';}
   const x=Number.isFinite(+a.media_x)?Math.max(0,Math.min(100,+a.media_x)):50;
   const y=Number.isFinite(+a.media_y)?Math.max(0,Math.min(100,+a.media_y)):50;
-  const style=`object-position:${x}% ${y}%`;
-  const media=a.media_type==='video'?`<video controls playsinline preload="none" src="${esc(a.media_url)}" aria-label="${esc(a.media_alt||a.title)}"></video>`:
+  const zoom=Number.isFinite(+a.media_zoom)?+a.media_zoom:100;
+  let style=`object-fit:${zoom<100?'contain':'cover'};object-position:${x}% ${y}%;transform:scale(${Math.max(10,Math.min(300,zoom))/100});transform-origin:${x}% ${y}%`;
+  const c=a.media_crop;
+  if(a.media_type==='image'&&c&&['x','y','w','h'].every(k=>Number.isFinite(+c[k]))&&c.w>=.01&&c.h>=.01){style=`position:absolute;left:${-c.x/c.w*100}%;top:${-c.y/c.h*100}%;width:${100/c.w}%;height:${100/c.h}%;object-fit:fill;transform:none;`;}
+  let media=a.media_type==='video'?`<video style="width:${Math.max(50,Math.min(100,zoom))}%;margin-inline:auto" controls playsinline preload="none" src="${esc(a.media_url)}" aria-label="${esc(a.media_alt||a.title)}"></video>`:
    `<img src="${esc(a.media_url)}" alt="${esc(a.media_alt||a.title)}" loading="lazy" style="${style}">`;
+  if(c&&a.media_type==='image')media=`<div class="site-ad-crop-viewport" style="aspect-ratio:${specs[a.slot]?.ratio||2}">${media}</div>`;
   return `<div class="site-ad-media" style="--ad-ratio:${specs[a.slot]?.ratio||2}">${media}</div>`;
  }
  window.SiteAdMedia={specs,html};

@@ -81,7 +81,7 @@
  const DISMISS='fs_ad_dismiss';
  const dismissed=()=>{try{return JSON.parse(localStorage.getItem(DISMISS)||'{}');}catch{return {};}};
  function dismiss(id){const d=dismissed();d[id]=new Date().toISOString().slice(0,10);try{localStorage.setItem(DISMISS,JSON.stringify(d));}catch{}}
- let lastTok=null,adsCache=[];
+ let lastTok=null,adsCache=[],loadedAt=0,adLoading=false;
  function mount(a){
   const anchors={top_bar:()=>document.getElementById('mainNav'),home_card:()=>document.getElementById('homeView'),results_top:()=>document.getElementById('resultsArea'),member_center:()=>document.querySelector('.mc-shell .mc-top'),corner:()=>document.body};
   const at=anchors[a.slot]?.();if(!at)return;
@@ -98,8 +98,11 @@
   });
   if(a.slot==='top_bar')at.after(el);else if(a.slot==='home_card')at.prepend(el);else if(a.slot==='results_top')at.before(el);else if(a.slot==='member_center')at.after(el);else at.append(el);
  }
- function paint(){document.querySelectorAll('[data-site-ad]').forEach(x=>x.remove());adsCache.forEach(mount);}
- async function loadAds(){const t=token();if(t===lastTok)return;lastTok=t;try{const r=await call('site_ads');adsCache=r.ads||[];}catch{adsCache=[];}paint();}
+ let carouselCleanup=()=>{},paintedAds=null;
+ function paint(){const signature=JSON.stringify(adsCache);if(signature===paintedAds)return;paintedAds=signature;carouselCleanup();document.querySelectorAll('[data-site-ad]').forEach(x=>x.remove());adsCache.filter(a=>a.slot!=='home_card').forEach(mount);const home=adsCache.filter(a=>a.slot==='home_card');home.slice().reverse().forEach(mount);if(window.SiteAdCarousel)carouselCleanup=SiteAdCarousel.mount(home);}
+ async function loadAds(force=false){const t=token();if(adLoading||(!force&&t===lastTok&&Date.now()-loadedAt<60000))return;adLoading=true;try{const r=await call('site_ads');if(t!==token())return;adsCache=r.ads||[];lastTok=t;loadedAt=Date.now();paint();}catch{loadedAt=0;}finally{adLoading=false;}}
+ addEventListener('site-ads-changed',()=>loadAds(true));
+ addEventListener('focus',()=>loadAds());
  // 會員中心是動態產生的；出現時補上版位
  new MutationObserver(()=>{const a=adsCache.find(x=>x.slot==='member_center');if(a&&document.querySelector('.mc-shell .mc-top')&&!document.querySelector('[data-site-ad="'+a.id+'"]'))mount(a);}).observe(document.body,{childList:true});
  const start=()=>{fromUrl();loadAds();setInterval(loadAds,5000);};

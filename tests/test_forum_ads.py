@@ -150,17 +150,59 @@ class ForumTests(unittest.TestCase):
 
     def test_media_validation_and_public_projection(self):
         raw = {'slot': 'home_card', 'title': '研究分享會', 'media_type': 'image',
-               'media_url': 'https://example.com/banner.webp', 'media_x': 85, 'enabled': True}
+               'media_url': 'https://example.com/banner.webp', 'media_x': 85, 'media_zoom':175, 'enabled': True}
         ad = F.clean_ad(raw)
         public = F.ads_for([ad], {'guest': True})[0]
         self.assertEqual(public['media_url'], raw['media_url'])
         self.assertEqual(public['media_x'], 85)
+        self.assertEqual(public['media_zoom'], 175)
+        self.assertEqual(F.clean_ad(dict(raw, media_zoom=50))['media_zoom'], 50)
+        crop = {'x':.1,'y':.2,'w':.5,'h':.4}
+        self.assertEqual(F.ads_for([F.clean_ad(dict(raw, media_crop=crop))], {'guest':True})[0]['media_crop'], crop)
+        for invalid in [{'x':.9,'y':0,'w':.5,'h':1}, {'x':0,'y':0,'w':0,'h':1}, {'x':0,'y':0,'w':float('nan'),'h':1}]:
+            with self.assertRaises(ValueError):
+                F.clean_ad(dict(raw, media_crop=invalid))
+        self.assertEqual(F.clean_ad(dict(raw, media_type='video', media_zoom=75))['media_zoom'], 75)
+        with self.assertRaises(ValueError):
+            F.clean_ad(dict(raw, media_zoom=float('nan')))
         self.assertNotIn('name', public)
         for url in ['javascript:alert(1)', 'data:image/svg+xml,test', 'https://user:pw@example.com/x']:
             with self.assertRaises(ValueError):
                 F.clean_ad(dict(raw, media_url=url))
         with self.assertRaises(ValueError):
             F.clean_ad(dict(raw, slot='top_bar'))
+
+    def test_home_carousel_keeps_eligible_ads_in_priority_order(self):
+        raw = {'slot': 'home_card', 'title': 'A', 'enabled': True, 'audience': 'all'}
+        a = F.clean_ad(dict(raw, id='ad001', priority=10, slide_seconds=3))
+        b = F.clean_ad(dict(raw, id='ad002', priority=90, slide_seconds=5, wheel_enabled=True))
+        draft = F.clean_ad(dict(raw, id='ad003', enabled=False))
+        private = F.clean_ad(dict(raw, id='ad004', audience='member'))
+        public = F.ads_for([a, b, draft, private], {'guest': True})
+        self.assertEqual([x['id'] for x in public], ['ad002', 'ad001'])
+        self.assertEqual(public[0]['slide_seconds'], 5)
+        self.assertTrue(public[0]['wheel_enabled'])
+
+    def test_product_archive_restore_preserves_definition(self):
+        pid = 'vip-7d-v1'
+        self.assertEqual(F.handle_admin('admin_products_archive', {'id': pid}, '', self.r)[0], 403)
+        self.assertEqual(F.handle_admin('admin_products_archive', {'id': pid}, 'admin', self.r)[0], 200)
+        self.assertIn(pid, self.r.products)
+        self.assertFalse(self.r.products[pid]['active'])
+        listing = F.handle_admin('admin_products_list', {}, 'admin', self.r)[1]['products']
+        self.assertTrue(listing[0]['archived'])
+        self.assertEqual(F.handle_admin('admin_products_save', {'id': pid, 'title':'還原測試', 'points':100, 'active':True}, 'admin', self.r)[0], 409)
+        self.assertEqual(F.handle_admin('admin_products_restore', {'id': pid}, 'admin', self.r)[0], 200)
+        self.assertFalse(self.r.products[pid]['active'])
+        self.assertFalse(F.handle_admin('admin_products_list', {}, 'admin', self.r)[1]['products'][0]['archived'])
+
+    def test_task_delete_fails_closed_on_claim_read_failure(self):
+        calls = []
+        def unavailable(path, method='GET', body=None, prefer=None):
+            calls.append(method)
+            return 503, {}
+        self.assertEqual(F.handle_admin('admin_tasks_delete', {'id':'adm-test-v1'}, 'admin', unavailable)[0], 503)
+        self.assertNotIn('DELETE', calls)
 
     def test_registration_requires_verified_user_and_fails_closed(self):
         self.assertEqual(F.handle_public('forum_register', {'id': self.eid}, None, self.r)[0], 403)

@@ -1,3 +1,4 @@
+import math
 """線下論壇簽到／補發代碼／站內廣告。
 
 只用既有表：admin_settings（鍵值，僅 service_role）與 member_point_ledger
@@ -214,8 +215,22 @@ def clean_ad(raw):
     try:
         media_x = max(0, min(100, float(raw.get('media_x', 50))))
         media_y = max(0, min(100, float(raw.get('media_y', 50))))
+        media_zoom = float(raw.get('media_zoom', 100))
+        if not math.isfinite(media_zoom):
+            raise ValueError('invalid zoom')
+        media_zoom = max(50 if media_type == 'video' else 10, min(100 if media_type == 'video' else 300, media_zoom))
     except (TypeError, ValueError):
         raise ValueError('裁切位置格式錯誤')
+    crop = raw.get('media_crop')
+    if crop is not None:
+        if not isinstance(crop, dict):
+            raise ValueError('裁切範圍格式錯誤')
+        try:
+            crop = {k: float(crop[k]) for k in ('x', 'y', 'w', 'h')}
+        except (KeyError, TypeError, ValueError):
+            raise ValueError('裁切範圍格式錯誤')
+        if not all(math.isfinite(v) for v in crop.values()) or not (0 <= crop['x'] < 1 and 0 <= crop['y'] < 1 and .01 <= crop['w'] <= 1 and .01 <= crop['h'] <= 1 and crop['x'] + crop['w'] <= 1.000001 and crop['y'] + crop['h'] <= 1.000001):
+            raise ValueError('裁切範圍超出圖片')
     aid = str(raw.get('id') or '') or 'ad' + secrets.token_hex(4)
     if not re.match(r'^[a-z0-9]{3,20}$', aid):
         raise ValueError('廣告代號錯誤')
@@ -223,8 +238,10 @@ def clean_ad(raw):
         'id': aid, 'name': str(raw.get('name') or title)[:60], 'slot': slot, 'audience': aud,
         'title': title, 'text': str(raw.get('text') or '')[:200], 'cta': str(raw.get('cta') or '了解更多')[:20],
         'media_type': media_type, 'media_url': media_url if media_type != 'text' else '',
-        'media_x': media_x, 'media_y': media_y,
+        'media_x': media_x, 'media_y': media_y, 'media_zoom': media_zoom, 'media_crop': crop,
         'media_alt': str(raw.get('media_alt') or title)[:120],
+        'slide_seconds': max(3, min(5, int(raw.get('slide_seconds') or 5))),
+        'wheel_enabled': raw.get('wheel_enabled') is True,
         'url': url, 'forum_event': str(raw.get('forum_event') or '')[:12],
         'starts': raw.get('starts') or '', 'ends': raw.get('ends') or '',
         'enabled': bool(raw.get('enabled')), 'priority': max(0, min(99, int(raw.get('priority') or 50))),
@@ -246,6 +263,7 @@ def ads_for(ads, audience_flags, at=None):
     """audience_flags: {'guest':bool,'member':bool,'attended':bool}。每個版位取優先度最高的一則。"""
     at = at or now()
     best = {}
+    home = []
     for ad in ads:
         if not _ad_live(ad, at):
             continue
@@ -255,12 +273,15 @@ def ads_for(ads, audience_flags, at=None):
               or (a == 'not_attended' and audience_flags.get('member') and not audience_flags.get('attended')))
         if not ok:
             continue
+        if ad['slot'] == 'home_card':
+            home.append(ad)
+            continue
         cur = best.get(ad['slot'])
         if cur is None or ad.get('priority', 50) > cur.get('priority', 50):
             best[ad['slot']] = ad
     pub = ('id', 'slot', 'title', 'text', 'cta', 'url', 'forum_event',
-           'media_type', 'media_url', 'media_x', 'media_y', 'media_alt')
-    return [{k: v.get(k, '') for k in pub} for v in best.values()]
+           'media_type', 'media_url', 'media_x', 'media_y', 'media_alt', 'media_zoom', 'media_crop', 'slide_seconds', 'wheel_enabled')
+    return [{k: v.get(k, 100 if k == 'media_zoom' else '') for k in pub} for v in [*best.values(), *sorted(home, key=lambda ad: -ad.get('priority', 50))]]
 
 
 # ── 存取 ──
@@ -605,7 +626,9 @@ def _points_admin(action, body, rest, users):
         if not tid.startswith('adm-'):
             return 400, {'error': '系統任務不能刪除，可改為關閉'}
         st, rows = rest('/member_task_claims?select=id&limit=1&task_id=eq.' + quote(tid, safe=''))
-        if st == 200 and rows:
+        if st != 200 or not isinstance(rows, list):
+            return 503, {'error': '無法確認領取紀錄，未執行刪除'}
+        if rows:
             return 409, {'error': '已有會員領過，不能刪除，請改為關閉'}
         st, _ = rest('/member_task_definitions?id=eq.' + quote(tid, safe=''), 'DELETE', None, 'return=minimal')
         if st not in (200, 204):
@@ -638,7 +661,20 @@ def _points_admin(action, body, rest, users):
             return 200, {'products': [], 'missing': True}
         if st != 200 or not isinstance(rows, list):
             raise RuntimeError('READ_FAILED')
+        for row in rows:
+            row['archived'] = bool(_get_json(rest, 'product:archived:' + row['id'], False))
         return 200, {'products': rows, 'types': PRODUCT_TYPES}
+    if action in ('admin_products_archive', 'admin_products_restore'):
+        pid = str(body.get('id') or '')
+        if not re.fullmatch(r'[a-z0-9-]{3,40}', pid):
+            return 400, {'error': '商品代號錯誤'}
+        st, rows = rest('/member_exchange_definitions?id=eq.' + quote(pid, safe=''), 'PATCH',
+                        {'active': False}, 'return=representation')
+        if st != 200 or not isinstance(rows, list) or not rows:
+            return 503, {'error': '無法確認商品已下架，未完成封存／還原'}
+        archived = action == 'admin_products_archive'
+        _put_json(rest, 'product:archived:' + pid, archived)
+        return 200, {'ok': True, 'archived': archived}
     if action == 'admin_products_create':
         definition = body.get('definition')
         try:
@@ -657,6 +693,8 @@ def _points_admin(action, body, rest, users):
             return 503, {'error': '建立失敗，請稍後再試'}
         return 200, {'product': rows[0]}
     if action == 'admin_products_save':
+        if _get_json(rest, 'product:archived:' + str(body.get('id') or ''), False):
+            return 409, {'error': '此商品已封存，請先還原後再編輯'}
         pid = str(body.get('id') or '')
         title = str(body.get('title') or '').strip()
         if not re.match(r'^[a-z0-9-]{3,40}$', pid):
