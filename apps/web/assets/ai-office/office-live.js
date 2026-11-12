@@ -99,7 +99,7 @@ function render(){
  const footer=content.querySelector('.profile-footer');if(footer)footer.textContent=id===0?'總管是既有排程協調角色，不代表執行長或總經理已自動化。':'此處彙整排程與任務回報；人物動作不代表已領取或完成任務。';
 }
 function requestData(id,force=false){
- if(parent===window||terminalSnapshot)return;const snap=snapshots.get(id),ttl=snap?.tasks?.length?30000:2000;
+ if(parent===window||terminalSnapshot)return;const snap=snapshots.get(id),ttl=30000; // successful snapshots, empty or not; errors/stale/force still refetch below
  if(!force&&snap&&!snap.error&&!snap.stale&&Date.now()-snap.received<ttl)return;
  // A newer request supersedes any previous request for this department.
  inflight.forEach((dep,seq)=>{if(dep===id)inflight.delete(seq);});

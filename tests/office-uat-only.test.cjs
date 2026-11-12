@@ -3,7 +3,7 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),{system}=require('./helpers/office-uat-only-fixture.cjs');
 for(const payload of [{error:'任務中心目前僅在 UAT 啟用'},{message:'任務中心目前僅在 UAT 啟用'},{error:'scope unavailable',message:'此任務僅在 UAT 啟用，請切換環境'}])test('403 UAT-only latches, explains both labels and never retries '+JSON.stringify(payload),async()=>{
  const s=system({payload});await s.start();assert.equal(s.listCalls().length,1);assert.equal(s.h.badge(8),'僅 UAT 啟用');assert.equal(s.h.room(8),'僅 UAT 啟用');
- for(let i=0;i<3;i++)await s.tick();await s.triggers();await s.board.snapshot(null,true);s.board.show();s.timers.filter(t=>t.ms===15000&&!t.cleared).forEach(t=>t.fn());await s.board.snapshot(8,true);
+ for(let i=0;i<3;i++)await s.tick();await s.triggers();await s.board.snapshot(null,true);s.board.show();s.timers.filter(t=>t.ms===60000&&!t.cleared).forEach(t=>t.fn());await s.board.snapshot(8,true);
  await s.board.department(8);
  assert.match(s.nodes.get('[data-ot-list]').innerHTML,/僅 UAT 啟用/);assert.equal(s.nodes.get('[data-ot-summary]').innerHTML,'');
  assert.equal(s.calls.length,1,'timers, visibility, focus, selection, force, invalidation and board show may not fetch again');

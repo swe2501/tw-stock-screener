@@ -20,8 +20,12 @@ const stamp=s=>s?new Date(s).toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour
 const day=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei'}).format(new Date());
 function report(text){return String(text||'').split('\n').map(line=>/^#{1,4}\s/.test(line)?'<h4>'+esc(line.replace(/^#+\s*/,''))+'</h4>':'<p>'+esc(line||' ').replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>')+'</p>').join('');}
 window.OfficeTaskBoard={mount(root,post){
- let snapshotAt=0,snapshotFlight=null,listTotal=0,unavailable=null;const workroomDetails=new Map(),latestTasks=new Map();
+ let snapshotAt=0,snapshotFlight=null,listTotal=0,unavailable=null,refreshedAt=0,refreshing=0,catchUp=null;
+ // Polling budget: list refresh every 60s while active; visibility/focus catch-up at most once per 10s.
+ const POLL_MS=60000,CATCH_UP_MS=10000;const workroomDetails=new Map(),latestTasks=new Map();
  function remember(t){const old=latestTasks.get(t.id);if(!old||(t.revision||0)>(old.revision||0))latestTasks.set(t.id,{...t});else if((t.revision||0)===(old.revision||0))latestTasks.set(t.id,{...old,...t});return latestTasks.get(t.id);}
+ function attachCatchUp(){if(catchUp)return;catchUp=()=>{if(active&&!unavailable&&!document.hidden&&!form.open&&!detail.open&&!refreshing&&Date.now()-refreshedAt>=CATCH_UP_MS)refresh();};if(typeof document.addEventListener==='function')document.addEventListener('visibilitychange',catchUp);if(typeof window.addEventListener==='function')window.addEventListener('focus',catchUp);}
+ function detachCatchUp(){if(!catchUp)return;if(typeof document.removeEventListener==='function')document.removeEventListener('visibilitychange',catchUp);if(typeof window.removeEventListener==='function')window.removeEventListener('focus',catchUp);catchUp=null;}
  function invalidateSnapshot(){snapshotAt=0;request++;snapshotFlight=null;}
  function selectDepartment(id){filter=String(id);query='';root.querySelector('[data-ot-query]').value='';root.querySelector('[data-ot-department]').value=filter;}
  let dataAt='',tasks=[],departments=[],worker={},dependencies={},filter='',query='',selected=null,timer=null,active=false,request=0,creatingId=null,busy=false;
@@ -57,12 +61,12 @@ window.OfficeTaskBoard={mount(root,post){
  }
  async function refresh(){
   if(unavailable){availabilityNotice();return false;}
-  const seq=++request;
+  const seq=++request;refreshing++;
   try{const j=await call('admin_office_tasks_list');if(seq!==request||!root.isConnected)return;tasks=j.tasks.map(remember);listTotal=Math.max(Number(j.total)||tasks.length,tasks.length);departments=j.departments;worker=j.worker||{};dependencies=j.dependencies||{};dataAt=new Date().toISOString();
    const options=root.querySelector('[data-ot-department]');options.innerHTML='<option value="">所有部門</option>'+departments.filter(d=>d.enabled).map(d=>'<option value="'+d.id+'">'+esc(d.name)+'</option>').join('');options.value=filter;
-   render();msg('更新時間 '+stamp(new Date().toISOString())+(listTotal>tasks.length?' · 任務列表未完整（已載入 '+tasks.length+'／'+listTotal+' 筆）':''));return true;
+   refreshedAt=Date.now();render();msg('更新時間 '+stamp(new Date().toISOString())+(listTotal>tasks.length?' · 任務列表未完整（已載入 '+tasks.length+'／'+listTotal+' 筆）':''));return true;
    
-  }catch(e){if(unavailable)availabilityNotice();else if(seq===request)msg(e.message,true);return false;}
+  }catch(e){if(unavailable)availabilityNotice();else if(seq===request)msg(e.message,true);return false;}finally{refreshing--;}
  }
  function create(department,parent){
   if(!departments.length){msg('請等待部門資料載入後再建立任務',true);return;}
@@ -110,7 +114,7 @@ window.OfficeTaskBoard={mount(root,post){
    if(force||Date.now()-snapshotAt>30000){
     if(!snapshotFlight){const flight=refresh().finally(()=>{if(snapshotFlight===flight)snapshotFlight=null;});snapshotFlight=flight;}
     if(!await snapshotFlight)return unavailable?restrictedSnapshot():{tasks:[],error:'任務資料暫時無法讀取，請稍後更新。',at:''};
-    const fresh=tasks.filter(t=>department==null||t.department===department);snapshotAt=fresh.length?Date.now():0;
+    snapshotAt=Date.now(); // successful empty lists are cached for 30s too; failures return above without caching
    }
    // The list API already returns all available summaries (up to 200). Only expensive
    // detail reads are capped at 24; badges must never be derived from that detail slice.
@@ -131,6 +135,6 @@ window.OfficeTaskBoard={mount(root,post){
    const summaryKeys=['id','title','department','execution','due_date','created_at','updated_at','revision','status','current_step','lease_until','assignee','worker','executor'];
    const summaryRows=summaries.map(t=>{const current=remember(t);return Object.fromEntries(summaryKeys.filter(k=>k in current).map(k=>[k,current[k]]));});
    return {tasks:detailed,summaries:summaryRows,summaryScope:'all',countsLimited:total>summaries.length,listTotal:total,listLoaded:summaries.length,total:list.length,limited:list.length>24,worker:{at:worker.at||'',pause_reason:worker.pause_reason||''},at:dataAt};
-  },async department(id){selectDepartment(id);if(!departments.length)await refresh();root.querySelector('[data-ot-department]').value=filter;render();},show(){if(unavailable){availabilityNotice();return;}active=true;refresh();if(!timer)timer=setInterval(()=>{if(active&&!document.hidden&&!form.open&&!detail.open)refresh();},15000);},hide(){active=false;clearInterval(timer);timer=null;},async create(department){if(!departments.length)await refresh();create(department);},destroy(){contentFlow?.destroy();active=false;request++;workroomDetails.clear();latestTasks.clear();clearInterval(timer);form.close();detail.close();form.remove();detail.remove();}};
+  },async department(id){selectDepartment(id);if(!departments.length)await refresh();root.querySelector('[data-ot-department]').value=filter;render();},show(){if(unavailable){availabilityNotice();return;}active=true;refresh();if(!timer)timer=setInterval(()=>{if(active&&!document.hidden&&!form.open&&!detail.open)refresh();},POLL_MS);attachCatchUp();},hide(){active=false;clearInterval(timer);timer=null;detachCatchUp();},async create(department){if(!departments.length)await refresh();create(department);},destroy(){contentFlow?.destroy();active=false;detachCatchUp();request++;workroomDetails.clear();latestTasks.clear();clearInterval(timer);form.close();detail.close();form.remove();detail.remove();}};
 }};
 })();
