@@ -127,7 +127,7 @@
       </form>
       <div class="mp-benefit-list">
         <div>${icons.shield}<span><b>卡號不存放在先見</b><small>正式啟用後由合規金流頁面完成驗證與代碼化。</small></span></div>
-        <div>${icons.check}<span><b>支援月繳與年繳</b><small>每次扣款前仍可在帳務摘要查看方案與下次扣款日。</small></span></div>
+        <div>${icons.check}<span><b>期間依所選商品為準</b><small>目前不會自動續訂；信用卡綁定功能須另行開通。</small></span></div>
       </div>
       <p class="mp-demo-note">目前為付款介面預覽，尚未串接金流；輸入內容不會送出或儲存。</p>`;
     if (method === 'line') return `
@@ -322,7 +322,7 @@
           <div><span class="mc-kicker">FORESIGHT QUANT · BILLING</span><h2>方案與帳務</h2><p>管理付款方式與方案繳費。所有扣款都會在最後一步再次確認。</p></div>
           <span class="mp-security">${icons.shield}<span><b>安全支付</b><small>不在本站保存完整卡號</small></span></span>
         </header>
-        <div class="mp-progress" aria-label="付款流程"><span class="is-current"><b>1</b>選擇方式</span><i></i><span><b>2</b>安全驗證</span><i></i><span><b>3</b>完成</span></div>
+        <section class="mp-product-section"><h3>選擇會員方案</h3><p>先選想了解的方案，再選付款方式。付款未開放時仍可比較，價格暫不顯示。</p><div data-payment-products role="group" aria-label="會員方案選擇"></div><p data-payment-product-detail aria-live="polite"></p></section><div class="mp-progress" aria-label="付款流程"><span class="is-current"><b>1</b>選擇方案</span><i></i><span><b>2</b>付款方式</span><i></i><span><b>3</b>確認開通</span></div>
         <div class="mp-checkout">
           <aside class="mp-methods" aria-label="付款方式">
             <div class="mp-column-label"><small>PAYMENT METHODS</small><strong>選擇付款方式</strong></div>
@@ -334,7 +334,7 @@
           <section class="mp-workspace" aria-live="polite">
             <div class="mp-workspace-title"><span><small>${data.kicker}</small><h3>${data.heading}</h3></span><span class="mp-method-tag">${data.icon}${data.short}</span></div>
             <div class="mp-method-body">${paymentBody(method)}</div>
-            <button type="button" class="mp-action" data-payment-action><i class="mp-action-lock" aria-hidden="true">${icons.shield}</i><span>${data.action}</span>${icons.arrow}</button>
+            <button type="button" class="mp-action" data-payment-action disabled><i class="mp-action-lock" aria-hidden="true">${icons.shield}</i><span>${data.action}</span>${icons.arrow}</button>
             <div class="mp-action-status" role="status"></div>
             ${method === 'card' ? `<div class="mp-card-ready" data-card-ready><i>${icons.check}</i><span>卡片欄位已完整，可以進行安全確認</span></div>
             <section class="mp-processing-screen" data-payment-processing aria-hidden="true" aria-label="卡片資料安全處理中">
@@ -360,12 +360,13 @@
             <div class="mp-plan-emblem"><span>FQ</span><div><small>目前會員狀態</small><b>${esc(plan)}</b></div></div>
             <dl><div><dt>付款方式</dt><dd data-summary-method>${data.short}</dd></div><div><dt>本次金額</dt><dd data-summary-amount>付款前確認</dd></div><div><dt>扣款狀態</dt><dd data-summary-status>${data.summary}</dd></div></dl>
             <div class="mp-summary-note"><b>清楚確認，再進行付款</b><p>尚未完成金流串接前不會建立訂單，也不會要求你輸入真實卡號。</p></div>
-            <button type="button" class="mp-history" disabled>付款紀錄<span>尚無紀錄</span></button>
+            <button type="button" class="mp-history">付款紀錄<span>查看</span></button>
           </aside>
         </div>
       </section>`;
 
     host.querySelector('[data-mb-back]')?.addEventListener('click',()=>window.openMemberCenter?.('benefits'));
+    mountProductChoices(host,method);
     wireCardInputs(host);
     wireStoreInputs(host);
     wireActionLight(host);
@@ -387,6 +388,7 @@
     });
 
     host.querySelector('[data-payment-action]').addEventListener('click', event => {
+      if(event.currentTarget.disabled)return;
       const actionButton = event.currentTarget;
       const status = host.querySelector('.mp-action-status');
       if (method === 'line' && host.dataset.lineLive === '1') { startLinePay(host, actionButton, status); return; }
@@ -425,6 +427,30 @@
     });
   }
 
+  async function mountProductChoices(host,method){
+    const box=host.querySelector('[data-payment-products]');if(!box)return;
+    box.textContent='正在載入會員方案…';
+    await window.AcademyMemberCatalog?.refresh();if(!box.isConnected)return;
+    const catalog=window.AcademyMemberCatalog?.get();const products=catalog?.products||[];
+    if(!products.length){box.textContent='目前沒有可比較的上架方案，請稍後再查看。';return;}
+    let preferred='';try{preferred=sessionStorage.getItem('foresight.membership.product')||'';}catch{}
+    let interest='';try{interest=sessionStorage.getItem('foresight.membership.interest')||'';}catch{}
+    let selected=products.find(p=>p.id===preferred)||products.find(p=>p.tier===interest)||products[0];
+    box.innerHTML=products.map(p=>'<label class="mp-product-choice"><input type="radio" name="billing-product" value="'+esc(p.id)+'" '+(p.id===selected.id?'checked':'')+'><span class="mp-product-symbol">'+window.AcademyMemberCatalog.icon(p.icon)+'</span><span><strong>'+esc(p.name)+'</strong><small>'+((p.tier==='free')?'免費基礎身分':p.purchasable?money(p.price_twd)+' ／ '+p.days+' 天':'查看會員權益')+'</small></span></label>').join('');
+    const sync=()=>{if(!box.isConnected)return;try{sessionStorage.setItem('foresight.membership.product',selected.id);sessionStorage.setItem('foresight.membership.interest',selected.tier);sessionStorage.setItem('foresight.membership.plan',selected.plan_code||'');}catch{}
+      host.querySelector('[data-payment-product-detail]').textContent=selected.description+' '+(selected.details||'');
+      const action=host.querySelector('[data-payment-action]'),status=host.querySelector('.mp-action-status'),real=method==='line'&&host.dataset.lineLive==='1'&&selected.purchasable;
+      action.disabled=!real;action.querySelector('span').textContent=real?'前往 LINE Pay 付款':selected.tier==='free'?'免費身分，無需付款':method==='card'?'信用卡綁定尚未開通':method==='store'?'超商付款尚未開通':'目前尚未開放付款';
+      status.textContent=method==='card'?'信用卡介面保留供你了解操作，目前尚未提供真正綁卡或扣款，請勿填寫真實卡號。':method==='store'?'目前不會產生繳費代碼，也不會建立超商訂單。':!real?'你可以先選方案與付款方式；正式開放前不會建立新訂單或扣款。':'請確認所選方案與期間，最後由 LINE Pay 確認付款。';
+      host.querySelectorAll('.mp-method-body input').forEach(input=>{if(input.name!=='mp-plan'&&input.type!=='radio')input.disabled=true;});
+      const note=host.querySelector('.mp-summary-note');note.innerHTML='<b>已選方案：'+esc(selected.name)+'</b><p>'+(real?'付款金額與期間請在送出前再次確認。':'目前只選擇方案，不會綁卡或扣款。')+'</p>';
+      if(real){payState.selected=selected.plan_code;const input=[...host.querySelectorAll('[name=mp-plan]')].find(x=>x.value===selected.plan_code);if(input){input.checked=true;input.dispatchEvent(new Event('change',{bubbles:true}));}}
+      else host.querySelector('[data-summary-amount]').textContent='尚未開放付款';
+    };
+    box.onchange=e=>{const p=products.find(p=>p.id===e.target.value);if(p){selected=p;sync();}};
+    host._syncProductChoice=sync;sync();
+  }
+
   const TIER_NAMES = { observation: '市場觀察員', research: '趨勢研究員', advanced: '趨勢研究員', vip: '先見領航員' };
   const ORDER_STATUS = { pending: '待付款', paid: '已付款', failed: '未完成', refunded: '已退款' };
 
@@ -461,6 +487,7 @@
       if (status) status.textContent = 'LINE Pay 確認後扣款';
     };
     pick.addEventListener('change', event => { if (event.target.name === 'mp-plan') { state.selected = event.target.value; sync(); } });
+    pick.hidden=true;
     sync();
   }
 
@@ -556,11 +583,7 @@
     if (current !== 'billing') return false;
     let selected = 'card';
     try { selected = methods[sessionStorage.getItem('foresight.payment.method')] ? sessionStorage.getItem('foresight.payment.method') : 'card'; } catch (_) {}
-    const host=context.main;host.innerHTML=(window.AcademyMembershipBenefits?.billingIntro?.()||'')+'<section class="mc-card"><h3>方案開放狀態</h3><p data-billing-status role="status">正在確認可購買方案…</p><button type="button" class="mc-secondary-text" data-billing-history>查看既有付款紀錄</button><div data-billing-order-history></div></section>';
-    host.querySelector('[data-mb-back]')?.addEventListener('click',()=>window.openMemberCenter?.('benefits'));
-    const ticket=host.querySelector('[data-billing-status]');
-    host.querySelector('[data-billing-history]').onclick=()=>showHistory(host);
-    loadPlans().then(state=>{if(!ticket.isConnected)return;if(state.plans.length)renderPanel(host,context.profile,'line');else ticket.textContent='目前尚未開放商品付款。你可以比較會員權益，既有授權與使用券不受影響。';});
+    renderPanel(context.main, context.profile, selected);
     return true;
   }
 

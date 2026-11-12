@@ -25,7 +25,7 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'artifacts/member-com
  for(const [category,count] of [[1,3],[2,2],[3,3],[0,4]]){await main.locator('[data-mb-category="'+category+'"]').click();assert.equal(await main.locator('.mb-row:visible').count(),count);}
  await main.locator('.mb-notes summary').click();assert.match(await main.innerText(),/每週篩選次數與分級儲存容量尚未啟用/);await main.locator('.mb-notes summary').click();
  assert.equal(await main.locator('[data-mb-points]').innerText(),'0 點');assert.equal(await main.locator('[data-mb-vouchers]').innerText(),'1 張待啟用 · 0 張使用中');
- await main.locator('[data-mb-tier=free]').click();await main.locator('[data-mb-row="2"] button').click();assert.equal(await main.locator('[data-mb-selected]').innerText(),'見習研究生');assert.equal(await page.evaluate(()=>location.hash),'#member/benefits');
+ await main.locator('[data-mb-tier=free]').click();await main.locator('[data-mb-row="2"] [data-mb-action]').click();assert.equal(await main.locator('[data-mb-selected]').innerText(),'見習研究生');assert.equal(await page.evaluate(()=>location.hash),'#member/benefits');
  assert.equal(await main.getByText('跨題材整合分析',{exact:true}).count(),0);
  // Reproduce switching from a long member route at a deep scroll position.
  await member.evaluate(e=>e.scrollTop=900);await page.evaluate(()=>window.openMemberCenter('benefits'));
