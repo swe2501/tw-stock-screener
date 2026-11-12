@@ -178,7 +178,7 @@ def _admin_api(path, method="GET", body=None):
 
 OFFICE_WORKER_ROLES = ("ceo", "cto", "sec", "eng", "qa")
 OFFICE_WORKER_OPS = ("claim", "heartbeat", "submit", "fail", "block", "list")
-OFFICE_AGENT_OPS = ("list", "claim", "heartbeat", "submit", "block", "fail", "get")
+OFFICE_AGENT_OPS = ("list", "claim", "heartbeat", "submit", "block", "fail", "get", "create")
 OFFICE_AGENT_FORBIDDEN = ("approve", "cancel", "retry", "online")
 OFFICE_AGENT_HEADERS = (
     "x-office-agent-key",

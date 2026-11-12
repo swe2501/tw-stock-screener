@@ -34,6 +34,10 @@ def executor_allowed(task, actor):
     executor=task.get('executor') or ''
     return executor=='grok' if is_grok(actor) else executor in ('','claude-local')
 STATES = ('queued','running','blocked','review','approved','cancelled','failed')
+# Worker create (2026-11-12 founder cards t194s703/t195s712): only the HMAC security-agent identity,
+# at most 6 cards per Asia/Taipei day. grok-* (shared token) and every other actor get 403.
+WORKER_CREATE_ACTOR = 'agent-sec'
+WORKER_CREATE_DAILY_LIMIT = 6
 LEASE_SECONDS = 180
 
 class Problem(Exception):
@@ -243,6 +247,26 @@ def create(body, actor, rest):
     return public(save(rest,task))
 
 
+def taipei_date(value):
+    try:return (dt.datetime.fromisoformat(str(value).replace('Z','+00:00'))+dt.timedelta(hours=8)).date()
+    except (ValueError,TypeError):return None
+
+
+def worker_create(body, actor, rest):
+    if actor!=WORKER_CREATE_ACTOR:raise Problem(403,'此執行端不可建立任務')
+    tasks=all_tasks(rest)
+    task_id=identifier(body.get('id'))
+    # Same-id retry stays idempotent via create(); it never counts as a new card.
+    if not any(t.get('id')==task_id for t in tasks):
+        today=(now()+dt.timedelta(hours=8)).date()
+        made=sum(1 for t in tasks if t.get('created_by')==actor and taipei_date(t.get('created_at'))==today)
+        if made>=WORKER_CREATE_DAILY_LIMIT:raise Problem(429,'今日建立任務已達上限 '+str(WORKER_CREATE_DAILY_LIMIT)+' 張')
+    # Server-owned fields: status/created_by come from create(); budget forced to 0.
+    clean={k:v for k,v in body.items() if k not in ('operation','worker','status','budget_usd','created_by','revision','lease_token')}
+    clean['budget_usd']=0
+    return create(clean,actor,rest)
+
+
 def lease_live(task):
     try:return dt.datetime.fromisoformat(task['lease_until'])>now()
     except (KeyError,ValueError,TypeError):return False
@@ -402,6 +426,7 @@ def handle(action, body, actor, rest, worker=False):
                 payload['committed_scope']='visible_only'
             return 200,payload
         if action=='admin_office_tasks_create' and not worker:return 200,{'task':create(body,actor,rest)}
+        if worker and body.get('operation')=='create':return 200,{'task':worker_create(body,actor,rest)}
         if action=='admin_office_tasks_update' or worker:return 200,{'task':mutate(body,actor,rest,worker)}
         raise Problem(400,'未知的任務動作')
     except Problem as e:return e.status,{'error':e.message}
