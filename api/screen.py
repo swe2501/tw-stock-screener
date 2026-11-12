@@ -218,33 +218,13 @@ def _cache_save(job_id, result):
             _cache_ok(method, params, st)
 
 
-_PROBE_ID_RE = re.compile(r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
-_PROBE_TS_RE = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})?")
-
-
-def _cache_probe_recent():
-    """暫時診斷（2026-11-12 創辦人卡片 t207s782 核准 1 次）：不帶 job_id 的唯讀 SELECT 最近 5 列，
-    只印筆數、job_id（須為 UUID 格式）、created_at；不讀 result、不寫入、不印金鑰。H1 定釘後連同診斷 log 一起 revert。"""
-    params = [("select", "job_id,created_at"), ("order", "created_at.desc"), ("limit", "5")]
-    st, rows = _cache_sb("/screen_cache", "GET", params=params)
-    if not (200 <= st < 300):
-        return                                              # 失敗已由 _cache_log 記錄
-    rows = rows if isinstance(rows, list) else []
-    ids = ",".join(str(r.get("job_id")) if _PROBE_ID_RE.fullmatch(str(r.get("job_id"))) else "non-uuid" for r in rows) or "-"
-    ts = ",".join(str(r.get("created_at")) if _PROBE_TS_RE.fullmatch(str(r.get("created_at"))) else "bad-ts" for r in rows) or "-"
-    _CACHE_DIAG.info("[screen_cache] probe recent status=%s rows=%s ids=%s created_at=%s key=%s",
-                     st, len(rows), ids, ts, "service" if SUPABASE_SERVICE_KEY else "anon")
-
-
-def _cache_get(job_id, probe=False):
+def _cache_get(job_id):
     params = [("job_id", f"eq.{job_id}"), ("select", "result")]
     st, rows = _cache_sb("/screen_cache", "GET", params=params)
     if 200 <= st < 300:
         _cache_ok("GET", params, st, rows=len(rows) if isinstance(rows, list) else "none")
     if st == 200 and rows:
         return rows[0]["result"]
-    if probe and st == 200:                                 # 只在明確帶 diag_probe=1 且 by-job_id 0 列時探測，一般流量不觸發
-        _cache_probe_recent()
     return None
 
 TWSE_HEADERS = {
@@ -4606,7 +4586,7 @@ class handler(BaseHTTPRequestHandler):
                 return self._send_json(502, {"error": "Treasury data unavailable"})
         job_id = (qs.get("job_id") or [""])[0].strip()
         if job_id:
-            cached = _cache_get(job_id, probe=(qs.get("diag_probe") or [""])[0] == "1")
+            cached = _cache_get(job_id)
             if cached is not None:
                 return self._send_json(200, cached)
             return self._send_json(200, {"pending": True})
