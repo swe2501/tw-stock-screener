@@ -7,7 +7,7 @@
   const b=modal(ad?'編輯站內廣告':'新增站內廣告',`<div class="afa-ad-steps"><span>1 選擇版位</span><strong>2 編輯內容</strong><span>3 預覽確認</span></div><div class="afa-ad-editor"><form class="afa-form" data-editor>
    <fieldset class="full afa-media-tabs"><legend>內容類型</legend>${[['text','純文字'],['image','圖片'],['video','影片']].map(([id,text])=>`<label><input type="radio" name="media_type" value="${id}" ${a.media_type===id?'checked':''}>${text}</label>`).join('')}</fieldset>
    <label>版位<select name="slot">${options(meta.slots,a.slot)}</select></label><label>受眾<select name="audience">${options(meta.audiences,a.audience)}</select></label>
-   <p class="afa-sub full" data-size></p>
+   <p class="afa-sub full afa-placement-info" data-size></p><p class="afa-sub full" data-format-note></p><button type="button" class="afa-btn full" data-media-slot>我要刊登圖片／影片 → 改用首頁卡片</button>
    <section class="afa-media-upload full" data-media><label>上傳素材<input type="file" name="file" accept="image/jpeg,image/png,image/webp"></label><p class="afa-sub" data-file-hint></p><span class="afa-sub" data-file-name></span>
    <label>或使用 HTTPS 素材網址<input type="url" name="media_url" maxlength="1500" placeholder="https://…" value="${esc(a.media_url||'')}"></label>
    <label>素材說明<input name="media_alt" maxlength="120" placeholder="供無法看見圖片的使用者閱讀" value="${esc(a.media_alt||'')}"></label>
@@ -17,7 +17,7 @@
    <label class="full">標題<input name="title" maxlength="60" required value="${esc(a.title||'')}"></label>
    <label class="full">說明<textarea name="text" rows="2" maxlength="200">${esc(a.text||'')}</textarea></label>
    <label>點擊後開啟<select name="destination">${options({forum:'論壇活動',home:'首頁',screen:'掏金篩選器',member:'會員中心',custom:'自訂網址'},({'?forum=1':'forum','#home':'home','#screen':'screen','#member':'member'})[a.url]||'custom')}</select></label>
-   <label>按鈕文字<input name="cta" maxlength="20" value="${esc(a.cta)}"></label>
+   <label>按鈕文字（可自訂，最多 20 字）<input name="cta" maxlength="20" value="${esc(a.cta)}"></label>
    <label class="full" data-link>連結<input name="url" maxlength="400" value="${esc(a.url)}" placeholder="https://… 或 #站內頁面"></label>
    <label>開始（台灣時間）<input type="datetime-local" name="starts" value="${esc(a.starts?.length===10?a.starts+'T00:00':a.starts||'')}"></label>
    <label>結束（台灣時間）<input type="datetime-local" name="ends" value="${esc(a.ends?.length===10?a.ends+'T23:59':a.ends||'')}"></label>
@@ -43,7 +43,11 @@
    host.innerHTML=SiteAdMedia.html(d,true)+`<div class="site-ad-copy"><b>${esc(d.title||'廣告標題')}</b><span class="site-ad-t">${esc(d.text)}</span><span class="site-ad-cta">${esc(d.cta||'了解更多')} ↗</span></div>`;
   }
   function update(){
-   if(f.elements.slot.value==='top_bar'&&type()!=='text'){f.querySelector('[name=media_type][value=text]').checked=true;msg.textContent='頁首公告條使用純文字；圖片、影片請選其他版位。';}
+   const textOnly=f.elements.slot.value==='top_bar';
+   if(textOnly&&type()!=='text')f.querySelector('[name=media_type][value=text]').checked=true;
+   f.querySelectorAll('[name=media_type]').forEach(input=>{input.disabled=textOnly&&input.value!=='text';});
+   b.querySelector('[data-format-note]').textContent=textOnly?'此版位是細公告條，僅支援純文字。圖片或影片請改選其他版位。':'此版位支援純文字、圖片與影片；選擇內容類型後即可上傳或填入 HTTPS 素材網址。';
+   b.querySelector('[data-media-slot]').hidden=!textOnly;
    const d=read(),spec=specs[d.slot];
    b.querySelector('[data-size]').textContent=spec.help+'　建議 '+spec.size;
    b.querySelector('[data-location]').textContent='顯示位置・'+spec.label;
@@ -54,6 +58,7 @@
   }
   function clearFile(resetPicker=true){if(objectUrl)URL.revokeObjectURL(objectUrl);objectUrl='';file=null;uploaded='';if(resetPicker)f.elements.file.value='';b.querySelector('[data-file-name]').textContent='';}
   b.closest('dialog').addEventListener('close',clearFile,{once:true});
+  b.querySelector('[data-media-slot]').onclick=()=>{f.elements.slot.value='home_card';update();f.querySelector('[name=media_type][value=image]').focus();};
   f.oninput=update;
   f.elements.media_type.forEach(input=>input.addEventListener('change',()=>{clearFile();f.elements.media_url.value='';msg.textContent='';update();}));
   f.elements.file.onchange=async()=>{
@@ -72,7 +77,7 @@
    if(data.starts&&data.ends&&data.starts>=data.ends){msg.textContent='結束時間需晚於開始時間。';return;}
    if(data.url&&!/^(https:\/\/|\/(?!\/)|#|\?)/i.test(data.url)){msg.textContent='請填寫 HTTPS 或站內連結。';return;}
    preview(b.querySelector('[data-final-preview]'),data);
-   b.querySelector('[data-summary]').innerHTML=[['版位',meta.slots[data.slot]],['受眾',meta.audiences[data.audience]],['時間（台灣）',(data.starts||'立即')+' ～ '+(data.ends||'不限')],['點擊後開啟',data.url||'論壇活動'],['狀態',data.enabled?'依設定時間刊登':'草稿・未開啟']].map(([key,value])=>`<div><dt>${key}</dt><dd>${esc(value)}</dd></div>`).join('');
+   b.querySelector('[data-summary]').innerHTML=[['版位',meta.slots[data.slot]],['按鈕文字',data.cta||'了解更多'],['受眾',meta.audiences[data.audience]],['時間（台灣）',(data.starts||'立即')+' ～ '+(data.ends||'不限')],['點擊後開啟',data.url||'論壇活動'],['狀態',data.enabled?'依設定時間刊登':'草稿・未開啟']].map(([key,value])=>`<div><dt>${key}</dt><dd>${esc(value)}</dd></div>`).join('');
    b.querySelector('.afa-ad-editor').hidden=true;review.hidden=false;b.scrollTop=0;b.querySelector('[data-back]').focus();
   };
   b.querySelector('[data-back]').onclick=()=>{review.hidden=true;b.querySelector('.afa-ad-editor').hidden=false;update();};

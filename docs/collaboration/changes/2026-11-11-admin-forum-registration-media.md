@@ -32,15 +32,19 @@
 管理 action 沿用管理員驗證；會員 action 以伺服器登入身分傳入 RPC，不接受客端指定會員 ID。新增媒體／備註欄位皆可選；舊純文字廣告和 QR／代碼流程相容。舊版網站無站內報名按鈕，App 沒有新增必要欄位；尚未串接 App 報名介面。
 資料讀取失敗時不當作未領過；代碼歷史分頁讀取避免1000筆上限造成誤判。
 
-## 雲端啟用：僅準備，尚未執行
+## 雲端啟用：2026-11-12 已套用
 
-本機測試不能代表共用 Supabase 已更新。依 AGENTS.md／協作規範，正式資料庫 migration 與活動啟用須另行明確批准。
+使用者明確核准三份 SQL 後，已透過已登入的 Supabase SQL Editor 套用至 `bruqrbvbjxntgoljxsne`。活動發布、廣告發布及網站部署不包含在此次授權範圍。
 
 1. `docs/database/forum-registration.sql`：私有報名／名額／未到場／管理解除 RPC，僅 service_role 可呼叫。依賴既有 admin_settings 與唯一 source_event_key 點數表，不新增公開寫入權。
 2. `docs/database/forum-registration-notifications.sql`：保留既有通知來源並加入本人論壇封鎖通知。依賴現有 member-notification-inbox.sql 及其相關會員表。
 3. `docs/database/site-ad-media.sql`：新增 public `site-ad-media` bucket與格式限制；不開匿名／一般會員上傳。後台使用既有 SUPABASE_URL／SUPABASE_SERVICE_KEY，沒有新增密鑰。
 
-未套用1時站內報名明確顯示未連線、不能假報名成功；未套用2無法驗證線上鈴鐺的論壇通知；未套用3直接檔案上傳不可用，仍可用 HTTPS 素材網址。沒有更動 OAuth／簡訊／付費服務。
+套用前核對：雲端原有通知函式僅含 ledger／case／reward／rule 四種來源，與準備版本相容；三個報名 RPC 尚不存在。前次查核素材 bucket 不存在。套用前以編輯器全選複製回讀，正規化換行後逐字比對一致，解決先前無法完整核對導致的自動審核阻擋。報名 SQL 及通知＋素材 SQL 各在交易內成功完成，UI 均回傳 `Success. No rows returned`。
+
+雲端唯讀驗證 7/7 為 true：三個報名函式存在；僅 service_role 可執行報名函式（anon／authenticated 不可）；四函式 SECURITY DEFINER 且空 search_path；通知包含本人論壇來源；原四種通知來源保留；公開素材 bucket 為 30MB 且限制 JPG／PNG／WebP／MP4；以不存在的全零 UUID 呼叫報名狀態函式，成功回傳五個必要欄位。最後一項不建立報名或會員資料。
+
+此次沒有發布新版網站／API、建立活動、上傳素材或發放點數；七項 metadata／唯讀檢查不等於線上完整流程已驗收。後續仍須發布相容的 API 後，以測試帳號驗證真實報名、通知與上傳。沒有更動 OAuth／簡訊／付費服務。管理頁另提示組織用量超額，若持續超額將自 2026-11-30 限制專案；未變更帳務方案。
 
 ## 驗證與回復
 
@@ -50,4 +54,4 @@
 - `node tests/admin-ad-editor.browser.cjs`（NODE_PATH 含 Playwright）：Chrome 實際操作選檔、預覽、模擬簽名上傳與儲存；1366×900／390×844 深淺色可讀與視窗邊界。不是實際雲端上傳驗證。
 - `node tests/forum-registration.browser.cjs`：模擬會員報名、取消、三次未到場拒絕與手機版邊界；不是正式 API 驗收。
 - 發布前仍需核准後在測試帳號實測線上註冊、掃碼、名單、通知及 Storage，不能把上述測試視為全站驗收。
-- 回復程式使用此功能提交的 Git revert，不刪會員 ledger／核銷紀錄。尚未套用 SQL 無需回復資料。若已啟用，先暫停入口並保留記錄，再依審核決定撤銷新 RPC執行權；不要刪公開 bucket中的現用素材。
+- 回復程式使用此功能提交的 Git revert，不刪會員 ledger／核銷紀錄。SQL 已套用；如需回復，先暫停入口並保留記錄，再依審核決定撤銷新 RPC執行權；不要刪公開 bucket中的現用素材。

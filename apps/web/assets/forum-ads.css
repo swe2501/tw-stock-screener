@@ -247,3 +247,21 @@
 .site-ad--corner .site-ad-x{background:var(--surface);border-radius:50%;width:24px;height:24px}
 @media(max-width:760px){.afa-ad-editor{grid-template-columns:1fr}.afa-ad-live{position:static}.afa-ad-steps{gap:12px}.afa-modal{padding:10px}.afa-sheet-bd{padding:12px}.afa-form{gap:10px}}
 @media(prefers-reduced-motion:reduce){.afa-ad-browser{transition:none}}
+
+/* Ad placement guidance and theme-aligned editing surfaces. */
+.afa-sheet:has(.afa-slot-picker),.afa-ad-sheet{background:#172638}
+:root[data-theme="light"] .afa-sheet:has(.afa-slot-picker),:root[data-theme="light"] .afa-ad-sheet{background:#e8eff6}
+.afa-placement-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin:14px 0 22px}
+.afa-placement-cards .afa-btn,.afa-slot-picker [data-slot]{justify-content:flex-start;align-items:flex-start;white-space:normal;text-align:left;padding:14px;gap:10px;line-height:1.6}
+.afa-placement-cards .afa-icon,.afa-slot-picker .afa-icon{margin-top:4px}
+.afa-placement-cards b,.afa-slot-picker b{display:block;font-size:14px}
+.afa-placement-cards small,.afa-slot-picker small{display:block;font-size:12px;font-weight:400;color:var(--text-muted)}
+.afa-ad-guide h3{font-size:17px;margin:20px 0 6px}
+.afa-placement-info{padding:10px 12px;border-left:3px solid var(--accent);background:var(--afa-glass);border-radius:6px}
+.afa-ad-sheet .afa-form input:not([type=radio]):not([type=checkbox]):not([type=range]),.afa-ad-sheet .afa-form select,.afa-ad-sheet .afa-form textarea{border:1px solid var(--afa-glass-edge)!important;background:var(--afa-glass)!important;box-shadow:none!important;border-radius:9px!important}
+.afa-ad-sheet .afa-media-tabs label{flex-direction:row;border-radius:9px;min-height:42px}
+.afa-ad-sheet input[type=radio],.afa-ad-sheet input[type=checkbox]{appearance:auto!important;width:16px!important;height:16px!important;min-height:0!important;padding:0!important;box-shadow:none!important;accent-color:var(--accent)}
+.afa-media-tabs label:has(input:disabled){opacity:.5;cursor:not-allowed}
+.afa-ad-sheet .afa-sheet-hd{background:var(--afa-glass)}
+.afa-ad-sheet .afa-ad-live{padding:12px;border:1px solid var(--afa-glass-edge);border-radius:12px}
+.afa-sheet :is(button,input,select,textarea):focus-visible{outline:2px solid var(--accent);outline-offset:3px}

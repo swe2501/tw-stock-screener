@@ -191,10 +191,10 @@
  function chooseSlot(){
   const slots=Object.entries(meta.slots);
   if(!slots.length)return;
-  const b=modal('選擇廣告版位',`<div class="afa-slot-picker"><div role="group" aria-label="廣告版位">${slots.map(([id,label])=>
-   btn(icon(id)+esc(label),`data-slot="${esc(id)}" aria-pressed="false"`)).join('')}</div>
+  const b=modal('選擇廣告版位',`<p class="afa-sub">先選廣告出現的位置，再編輯內容。這是站內版位示意，不會開啟新視窗或立即刊登。</p><div class="afa-slot-picker"><div role="group" aria-label="廣告版位">${slots.map(([id,label])=>
+   btn(icon(id)+`<span><b>${esc(label)}</b><small>${esc(SiteAdMedia.specs[id]?.help||slotHelp[id]||'')}<br>${id==='top_bar'?'純文字':'文字・圖片・影片'}</small></span>`,`data-slot="${esc(id)}" aria-pressed="false"`)).join('')}</div>
    <div class="afa-slot-preview"><b data-slot-label></b><div class="afa-slot-layout" data-slot-layout aria-hidden="true"><i>先見 FORESIGHT・網站頁首</i><i>首頁市場摘要</i><i>選股結果表格</i><i>會員中心內容</i><i>浮動公告</i><span class="afa-slot-marker">廣告顯示位置</span></div><p class="afa-sub" data-slot-help></p></div></div>
-   <div class="afa-foot">${btn('取消','data-close','ghost')}${btn('確認版位','data-confirm-slot','primary')}</div>`,true);
+   <div class="afa-foot">${btn('取消','data-close','ghost')}${btn('使用此版位 → 編輯內容','data-confirm-slot','primary')}</div>`,true);
   let selected;
   function select(id){
    selected=id;
@@ -215,9 +215,11 @@
   if(!j||j.error){box.innerHTML='<div class="fc-empty">'+esc(fail(j))+'</div>';return;}
   meta={slots:j.slots||{},audiences:j.audiences||{}};
   const st=a=>a.live?'<span class="afa-tag published">播放中</span>':a.enabled?'<span class="afa-tag draft">已排程／已過期</span>':'<span class="afa-tag closed">關閉</span>';
+  const guide=`<section class="afa-ad-guide"><h3>廣告要放在哪裡？</h3><p class="afa-sub">選擇版位開始製作，先預覽、儲存草稿，確認後再開啟刊登。</p><div class="afa-placement-cards">${Object.entries(meta.slots).map(([id,label])=>btn(icon(id)+`<span><b>${esc(label)}</b><small>${esc(SiteAdMedia.specs[id]?.help||'')}<br>${id==='top_bar'?'純文字':'文字・圖片・影片'} · ${esc(SiteAdMedia.specs[id]?.size||'')}</small></span>`,`data-create-slot="${esc(id)}"`)).join('')}</div></section>`;
   const rows=(j.ads||[]).map(a=>`<tr><td><b>${esc(a.name)}</b><div class="afa-sub">${esc(a.title)}</div></td><td>${esc(meta.slots[a.slot]||a.slot)}</td><td>${esc(meta.audiences[a.audience]||a.audience)}</td><td>${esc((a.starts||'即日').replace('T',' '))} ～ ${esc((a.ends||'不限').replace('T',' '))}</td><td>${st(a)}</td><td class="num">${a.priority}</td><td class="num">${a.clicks||0}</td><td class="afa-acts">${btn(a.enabled?'關閉':'開啟',`data-toggle="${a.id}"`)}${btn('編輯',`data-edit="${a.id}"`)}${btn('刪除',`data-del="${a.id}"`,'ghost')}</td></tr>`).join('');
-  box.innerHTML=`<div class="afa-bar">${btn('＋ 新增廣告','data-new','primary')}${btn('預覽版位位置','data-slots')}</div>`+(rows?`<div class="afa-table-wrap"><table class="afa-table"><thead><tr><th>廣告</th><th>版位</th><th>受眾</th><th>期間</th><th>狀態</th><th class="num">優先</th><th class="num">點擊</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table></div>`:'<div class="fc-empty">還沒有廣告。建議先建立一則「頁首公告條／尚未參加過論壇的會員／連結 ?forum=1」。</div>');
+  box.innerHTML=`<div class="afa-bar">${btn('＋ 新增廣告','data-new','primary')}${btn('預覽版位位置','data-slots')}</div>`+guide+(rows?`<div class="afa-table-wrap"><table class="afa-table"><thead><tr><th>廣告</th><th>版位</th><th>受眾</th><th>期間</th><th>狀態</th><th class="num">優先</th><th class="num">點擊</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table></div>`:'<div class="fc-empty">還沒有廣告。建議先建立一則「頁首公告條／尚未參加過論壇的會員／連結 ?forum=1」。</div>');
   const map=Object.fromEntries((j.ads||[]).map(a=>[a.id,a]));
+  box.querySelectorAll('[data-create-slot]').forEach(button=>button.onclick=()=>editAd(null,button.dataset.createSlot));
   box.querySelector('[data-new]').onclick=chooseSlot;
   box.querySelector('[data-slots]').onclick=chooseSlot;
   box.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>editAd(map[b.dataset.edit]));
