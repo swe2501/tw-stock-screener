@@ -274,6 +274,16 @@
     window.setTimeout(() => success?.querySelector('button')?.focus({ preventScroll: true }), 760);
   }
 
+  function showDemoResult(host,result){
+    const failure=result==='failure',screen=host.querySelector('[data-payment-success]');if(!screen)return;
+    screen.classList.toggle('mp-demo-failure',failure);screen.setAttribute('role','status');screen.setAttribute('aria-label',failure?'模擬付款失敗':'模擬付款成功');
+    screen.querySelector('h3').textContent=failure?'測試：付款未完成':'測試：付款確認成功';
+    screen.querySelector('p').textContent=failure?'這是模擬失敗動畫，沒有送出卡片資料，也沒有扣款。可返回檢查資料，再試一次成功流程。':'這是模擬成功動畫，沒有真正綁卡、扣款或開通會員。正式結果須由金流商確認。';
+    screen.querySelector('.mp-success-mark').innerHTML=failure?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg>':icons.check;
+    screen.querySelector('[data-success-back]').textContent=failure?'返回檢查並重試':'返回繼續測試';
+    showCardSuccess(host);
+  }
+
   function showCardProcessing(host) {
     const page = host.querySelector('.mp-page');
     page?.classList.remove('is-payment-success');
@@ -311,7 +321,7 @@
     });
   }
 
-  let demoMode=false;
+  let demoMode=false,demoResult="success";
   const canDemo=()=>location.protocol==='file:'||['localhost','127.0.0.1'].includes(location.hostname)||window._isOwner||window._isAdmin;
   function renderPanel(host, profile, method) {
     const data = methods[method];
@@ -324,7 +334,7 @@
           <div><span class="mc-kicker">FORESIGHT QUANT · BILLING</span><h2>方案與帳務</h2><p>管理付款方式與方案繳費。所有扣款都會在最後一步再次確認。</p></div>
           <span class="mp-security">${icons.shield}<span><b>安全支付</b><small>不在本站保存完整卡號</small></span></span>
         </header>
-        <section class="mp-product-section"><h3>選擇會員方案</h3><p>先選想了解的方案，再選付款方式。付款未開放時仍可比較，價格暫不顯示。</p><div data-payment-products role="group" aria-label="會員方案選擇"></div><p data-payment-product-detail aria-live="polite"></p></section>${canDemo()?`<div class="mp-demo-controls"><button type="button" class="mc-secondary-text" data-payment-demo aria-pressed="${demoMode}">${demoMode?'退出測試模式':'測試付款流程（不扣款）'}</button><span>${demoMode?'測試中：請使用測試卡號，不會送出、保存或綁定卡片。':'想試填卡片與完成動畫，可開啟測試模式。'}</span></div>`:''}<div class="mp-progress" aria-label="付款流程"><span class="is-current"><b>1</b>選擇方案</span><i></i><span><b>2</b>付款方式</span><i></i><span><b>3</b>確認開通</span></div>
+        <section class="mp-product-section"><h3>選擇會員方案</h3><p>先選想了解的方案，再選付款方式。付款未開放時仍可比較，價格暫不顯示。</p><div data-payment-products role="group" aria-label="會員方案選擇"></div><p data-payment-product-detail aria-live="polite"></p></section>${canDemo()?`<div class="mp-demo-controls"><button type="button" class="mc-secondary-text" data-payment-demo aria-pressed="${demoMode}">${demoMode?'退出測試模式':'測試付款流程（不扣款）'}</button>${demoMode?`<label class="mp-demo-result">測試結果<select data-demo-result aria-label="選擇模擬付款結果"><option value="success" ${demoResult==='success'?'selected':''}>模擬成功</option><option value="failure" ${demoResult==='failure'?'selected':''}>模擬失敗</option></select></label>`:''}<span>${demoMode?'測試中：請使用測試卡號，不會送出、保存或綁定卡片。':'想試填卡片與完成動畫，可開啟測試模式。'}</span></div>`:''}<div class="mp-progress" aria-label="付款流程"><span class="is-current"><b>1</b>選擇方案</span><i></i><span><b>2</b>付款方式</span><i></i><span><b>3</b>確認開通</span></div>
         <div class="mp-checkout">
           <aside class="mp-methods" aria-label="付款方式">
             <div class="mp-column-label"><small>PAYMENT METHODS</small><strong>選擇付款方式</strong></div>
@@ -369,6 +379,7 @@
 
     host.querySelector('[data-mb-back]')?.addEventListener('click',()=>window.openMemberCenter?.('benefits'));
     host.querySelector('[data-payment-demo]')?.addEventListener('click',()=>{demoMode=!demoMode;renderPanel(host,profile,method);});
+    host.querySelector('[data-demo-result]')?.addEventListener('change',e=>{demoResult=e.target.value;});
     mountProductChoices(host,method);
     wireCardInputs(host);
     wireStoreInputs(host);
@@ -392,7 +403,7 @@
 
     host.querySelector('[data-payment-action]').addEventListener('click', event => {
       if(event.currentTarget.disabled)return;
-      if(demoMode){const status=host.querySelector('.mp-action-status');if(method==='card'){if(!validateCard(host)){status.textContent='請填入測試卡號 4111 1111 1111 1111、未來有效期限、任意 3 碼安全碼與測試姓名。';return;}const cardPage=host.querySelector('[data-payment-method=card]');showCardProcessing(host);setTimeout(()=>{if(cardPage?.isConnected&&demoMode)showCardSuccess(host);},1900);}else status.textContent=method==='line'?'測試完成：正式流程會前往 LINE Pay；這次沒有建立訂單，也不會開啟付款網站。':'測試完成：正式流程會產生超商繳費代碼；這次沒有訂單或可繳費代碼。';return;}
+      if(demoMode){const status=host.querySelector('.mp-action-status');if(method==='card'){if(!validateCard(host)){status.textContent='請填入測試卡號 4111 1111 1111 1111、未來有效期限、任意 3 碼安全碼與測試姓名。';return;}const cardPage=host.querySelector('[data-payment-method=card]'),result=demoResult;showCardProcessing(host);setTimeout(()=>{if(cardPage?.isConnected&&demoMode)showDemoResult(host,result);},1900);}else status.textContent=method==='line'?'測試完成：正式流程會前往 LINE Pay；這次沒有建立訂單，也不會開啟付款網站。':'測試完成：正式流程會產生超商繳費代碼；這次沒有訂單或可繳費代碼。';return;}
       const actionButton = event.currentTarget;
       const status = host.querySelector('.mp-action-status');
       if (method === 'line' && host.dataset.lineLive === '1') { startLinePay(host, actionButton, status); return; }
