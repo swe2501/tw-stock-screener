@@ -1,6 +1,5 @@
 from http.server import BaseHTTPRequestHandler
 import json
-import base64
 import csv
 import io
 import os
@@ -142,35 +141,15 @@ if not _CACHE_DIAG.handlers:                                # 成功診斷另走
     _CACHE_DIAG.addHandler(_h)
 _CACHE_DIAG.setLevel(logging.INFO)
 _CACHE_DIAG.propagate = False
-_ROLE_RE = re.compile(r"[A-Za-z_]{1,32}")
-_RANGE_RE = re.compile(r"(?:\d{1,12}-\d{1,12}|\*)/(?:\d{1,12}|\*)")
 
 
-def _key_role(key):
-    """只在記憶體解出金鑰 JWT payload 的 role 字串；不是 JWT（如 sb_secret_…）回 opaque。不回傳其他任何內容。"""
-    if not key:
-        return "none"
-    parts = key.split(".")
-    if len(parts) != 3:
-        return "opaque"
-    try:
-        seg = parts[1] + "=" * (-len(parts[1]) % 4)
-        role = json.loads(base64.urlsafe_b64decode(seg.encode("ascii"))).get("role")
-    except Exception:                                       # noqa: BLE001
-        return "opaque"
-    return role if isinstance(role, str) and _ROLE_RE.fullmatch(role) else "unknown"
-
-
-def _cache_ok(method, params, status, rows=None, content_range=None):
-    """screen_cache 成功（2xx）診斷紀錄（2026-11-12 CTO）：格式與遮蔽原則同 _cache_log，
-    另記回傳列數、Content-Range（僅限數字格式）、金鑰標籤與 JWT role；不記金鑰、job_id、query 值、body。"""
-    key = SUPABASE_SERVICE_KEY or SUPABASE_KEY
+def _cache_ok(method, params, status, rows=None):
+    """screen_cache 成功（2xx）診斷紀錄（2026-11-12 創辦人核准範圍）：只記 HTTP 狀態、回傳列數、
+    金鑰標籤（程式選了哪個 env 變數：service/anon）。不讀、不解碼、不記金鑰內容，也不記 job_id、query 值、body。"""
     label = "service" if SUPABASE_SERVICE_KEY else "anon"
     names = ",".join(sorted({str(k) for k, _ in (params or [])})) or "-"
-    rng = str(content_range or "")
-    _CACHE_DIAG.info("[screen_cache] ok method=%s path=/screen_cache params=%s status=%s rows=%s range=%s key=%s role=%s",
-                     method, names, status, rows if rows is not None else "n/a",
-                     rng if _RANGE_RE.fullmatch(rng) else "none", label, _key_role(key))
+    _CACHE_DIAG.info("[screen_cache] ok method=%s path=/screen_cache params=%s status=%s rows=%s key=%s",
+                     method, names, status, rows if rows is not None else "n/a", label)
 
 
 def _sb_error_code(raw):
@@ -184,7 +163,7 @@ def _sb_error_code(raw):
         return "none"
 
 
-def _cache_sb(path, method="GET", body=None, params=None, meta=None):
+def _cache_sb(path, method="GET", body=None, params=None):
     # 僅精確的 screen_cache 路徑使用 service key；其餘共用呼叫維持原 anon 權限。
     key = (SUPABASE_SERVICE_KEY or SUPABASE_KEY) if path == "/screen_cache" else SUPABASE_KEY
     logged = path == "/screen_cache"                        # 只記暫存表，其他公開資料路徑行為不變
@@ -210,8 +189,6 @@ def _cache_sb(path, method="GET", body=None, params=None, meta=None):
     try:
         with urllib.request.urlopen(req, timeout=10) as r:
             raw = _read_sb(r)
-            if meta is not None:
-                meta["range"] = (getattr(r, "headers", None) or {}).get("Content-Range")
             return r.status, (json.loads(raw) if raw else None)
     except urllib.error.HTTPError as e:                     # 非 2xx：urlopen 會丟 HTTPError
         if logged:
@@ -243,11 +220,9 @@ def _cache_save(job_id, result):
 
 def _cache_get(job_id):
     params = [("job_id", f"eq.{job_id}"), ("select", "result")]
-    meta = {}
-    st, rows = _cache_sb("/screen_cache", "GET", params=params, meta=meta)
+    st, rows = _cache_sb("/screen_cache", "GET", params=params)
     if 200 <= st < 300:
-        _cache_ok("GET", params, st, rows=len(rows) if isinstance(rows, list) else "none",
-                  content_range=meta.get("range"))
+        _cache_ok("GET", params, st, rows=len(rows) if isinstance(rows, list) else "none")
     if st == 200 and rows:
         return rows[0]["result"]
     return None

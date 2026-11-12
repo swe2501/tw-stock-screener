@@ -99,23 +99,23 @@ class ScreenCacheDiagLog(unittest.TestCase):
         out, lines = self.run_flow(load(SERVICE_JWT), FakeRest())
         self.assertEqual(out, RESULT)
         self.assertEqual(len(lines), 4)
-        self.assertIn("ok method=DELETE path=/screen_cache params=created_at status=204 rows=n/a range=none key=service role=service_role", lines[0])
+        self.assertIn("ok method=DELETE path=/screen_cache params=created_at status=204 rows=n/a key=service", lines[0])
         self.assertIn("ok method=DELETE path=/screen_cache params=job_id status=204", lines[1])
-        self.assertIn("ok method=POST path=/screen_cache params=- status=201 rows=n/a range=none key=service role=service_role", lines[2])
-        self.assertIn("ok method=GET path=/screen_cache params=job_id,select status=200 rows=1 range=0-0/* key=service role=service_role", lines[3])
+        self.assertIn("ok method=POST path=/screen_cache params=- status=201 rows=n/a key=service", lines[2])
+        self.assertIn("ok method=GET path=/screen_cache params=job_id,select status=200 rows=1 key=service", lines[3])
 
     def test_service_slot_holds_anon_role_key_rls_hides_rows(self):
         # CTO 假設：SUPABASE_SERVICE_KEY 實際是 anon 角色 → 寫入 201、讀回 200 但 0 列 → pending
         m = load(ANON_JWT)
         (post, get), lines = self.run_flow(m, FakeRest(rls_hides_rows=True), via_handler=True)
         self.assertEqual(post, (200, RESULT)); self.assertEqual(get, (200, {"pending": True}))
-        self.assertIn("ok method=POST path=/screen_cache params=- status=201 rows=n/a range=none key=service role=anon", lines[2])
-        self.assertIn("ok method=GET path=/screen_cache params=job_id,select status=200 rows=0 range=*/* key=service role=anon", lines[3])
+        self.assertIn("ok method=POST path=/screen_cache params=- status=201 rows=n/a key=service", lines[2])
+        self.assertIn("ok method=GET path=/screen_cache params=job_id,select status=200 rows=0 key=service", lines[3])
 
     def test_no_service_key_falls_back_to_anon_label(self):
         out, lines = self.run_flow(load(""), FakeRest(rls_hides_rows=True))
         self.assertIsNone(out)
-        self.assertIn("status=200 rows=0 range=*/* key=anon role=anon", lines[-1])
+        self.assertIn("status=200 rows=0 key=anon", lines[-1])
 
     def test_invalid_key_401_only_error_lines(self):
         out, lines = self.run_flow(load(SERVICE_JWT), FakeRest(invalid=True))
@@ -125,20 +125,12 @@ class ScreenCacheDiagLog(unittest.TestCase):
             self.assertIn("status=401", line); self.assertIn("exc=HTTPError", line); self.assertIn("key=service", line)
             self.assertNotIn(" ok ", line)
 
-    def test_opaque_and_malformed_keys(self):
-        _, lines = self.run_flow(load(OPAQUE), FakeRest())
-        self.assertIn("key=service role=opaque", lines[-1])
-        _, lines = self.run_flow(load(fake_jwt("x; DROP " + JOB)), FakeRest())
-        self.assertIn("role=unknown", lines[-1])
-        bad = "aaa.%%%notbase64.bbb"
-        _, lines = self.run_flow(load(bad), FakeRest())
-        self.assertIn("role=opaque", lines[-1])
-
-    def test_content_range_only_numeric_format(self):
-        _, lines = self.run_flow(load(SERVICE_JWT), FakeRest(content_range="0-0/" + JOB))
-        self.assertIn("range=none", lines[-1])
-        _, lines = self.run_flow(load(SERVICE_JWT), FakeRest(content_range="0-0/1"))
-        self.assertIn("range=0-0/1", lines[-1])
+    def test_key_content_never_inspected(self):
+        # 不同金鑰內容（JWT／不透明／亂碼）只影響「用了哪個變數」的標籤，不會出現 role 或任何金鑰內容
+        for key in (SERVICE_JWT, OPAQUE, "aaa.%%%notbase64.bbb"):
+            _, lines = self.run_flow(load(key), FakeRest())
+            self.assertTrue(lines[-1].endswith("status=200 rows=1 key=service"), lines[-1])
+            self.assertNotIn("role", "\n".join(lines))
 
     def test_diag_channel_does_not_propagate_to_warning_logs(self):
         m = load(SERVICE_JWT)
