@@ -8,6 +8,7 @@ import urllib.request
 import urllib.parse
 import urllib.error
 import math
+import re
 import time
 import threading
 from datetime import datetime, timezone, timedelta
@@ -119,15 +120,48 @@ def _read_sb(r):
     return raw
 
 
+_CACHE_LOG = logging.getLogger(__name__)
+_SB_CODE_RE = re.compile(r"[A-Za-z0-9_]{1,16}")
+
+
+def _cache_log(method, path, params, *, status=None, code="none", exc=None, key="none"):
+    """screen_cache 錯誤紀錄（2026-11-12 創辦人：不含機密與會員資料）。
+    只記 method、path、參數「名稱」、HTTP 狀態、Supabase code、例外類別、金鑰標籤；不記值／標頭／body／job_id。"""
+    names = ",".join(sorted({str(k) for k, _ in (params or [])})) or "-"
+    _CACHE_LOG.warning("[screen_cache] method=%s path=%s params=%s status=%s code=%s exc=%s key=%s",
+                       method, path, names, status if status is not None else "none", code,
+                       exc or "none", key)
+
+
+def _sb_error_code(raw):
+    """只取回應 JSON 的 code 欄位，且必須是短英數代碼；其餘一律 none。"""
+    try:
+        data = json.loads(raw.decode("utf-8") if isinstance(raw, bytes) else raw)
+        code = data.get("code") if isinstance(data, dict) else None
+        code = str(code) if isinstance(code, (str, int)) else ""
+        return code if _SB_CODE_RE.fullmatch(code) else "none"
+    except Exception:                                       # noqa: BLE001
+        return "none"
+
+
 def _cache_sb(path, method="GET", body=None, params=None):
     # 僅精確的 screen_cache 路徑使用 service key；其餘共用呼叫維持原 anon 權限。
     key = (SUPABASE_SERVICE_KEY or SUPABASE_KEY) if path == "/screen_cache" else SUPABASE_KEY
+    logged = path == "/screen_cache"                        # 只記暫存表，其他公開資料路徑行為不變
+    label = "service" if (logged and SUPABASE_SERVICE_KEY and key == SUPABASE_SERVICE_KEY) else "anon"
     if not (SUPABASE_URL and key):
+        if logged:
+            _cache_log(method, path, params, exc="MissingConfig", key="none")
         return 0, None
     url = f"{SUPABASE_URL}/rest/v1{path}"
     if params:
         url += "?" + urllib.parse.urlencode(params)
-    data = json.dumps(body).encode() if body is not None else None
+    try:
+        data = json.dumps(body).encode() if body is not None else None
+    except Exception as e:                                  # noqa: BLE001  序列化失敗（原本會往外丟）
+        if logged:
+            _cache_log(method, path, params, exc=type(e).__name__, key=label)
+        raise
     req = urllib.request.Request(url, data=data, method=method, headers={
         "Content-Type": "application/json", "apikey": key,
         "Authorization": f"Bearer {key}", "Prefer": "return=minimal",
@@ -137,7 +171,20 @@ def _cache_sb(path, method="GET", body=None, params=None):
         with urllib.request.urlopen(req, timeout=10) as r:
             raw = _read_sb(r)
             return r.status, (json.loads(raw) if raw else None)
-    except Exception:
+    except urllib.error.HTTPError as e:                     # 非 2xx：urlopen 會丟 HTTPError
+        if logged:
+            try:
+                raw = e.read(4096)
+                if raw and ((e.headers or {}).get("Content-Encoding") or "").lower() == "gzip":
+                    import gzip
+                    raw = gzip.decompress(raw)
+            except Exception:                               # noqa: BLE001
+                raw = b""
+            _cache_log(method, path, params, status=e.code, code=_sb_error_code(raw), exc="HTTPError", key=label)
+        return 0, None
+    except Exception as e:                                  # noqa: BLE001
+        if logged:
+            _cache_log(method, path, params, exc=type(e).__name__, key=label)
         return 0, None
 
 
@@ -4580,7 +4627,8 @@ class handler(BaseHTTPRequestHandler):
             # 先存暫存（即使前端因切背景斷線，結果也已保留可供領取），再回傳
             if job_id:
                 try: _cache_save(job_id, result)
-                except Exception: pass
+                except Exception as e:              # 原本靜默吞掉；只記例外類別，不記 job_id／結果
+                    _cache_log("SAVE", "/screen_cache", None, exc=type(e).__name__, key="n/a")
             self._send_json(200, result)
         except Exception as e:
             self._send_json(500, {"error": str(e), "traceback": traceback.format_exc(), "results": []})
