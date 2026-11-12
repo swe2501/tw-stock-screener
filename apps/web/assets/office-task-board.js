@@ -64,7 +64,7 @@ window.OfficeTaskBoard={mount(root,post){
   const seq=++request;refreshing++;
   try{const j=await call('admin_office_tasks_list');if(seq!==request||!root.isConnected)return;tasks=j.tasks.map(remember);listTotal=Math.max(Number(j.total)||tasks.length,tasks.length);departments=j.departments;worker=j.worker||{};dependencies=j.dependencies||{};dataAt=new Date().toISOString();
    const options=root.querySelector('[data-ot-department]');options.innerHTML='<option value="">所有部門</option>'+departments.filter(d=>d.enabled).map(d=>'<option value="'+d.id+'">'+esc(d.name)+'</option>').join('');options.value=filter;
-   refreshedAt=Date.now();render();msg('更新時間 '+stamp(new Date().toISOString())+(listTotal>tasks.length?' · 任務列表未完整（已載入 '+tasks.length+'／'+listTotal+' 筆）':''));return true;
+   refreshedAt=snapshotAt=Date.now();/* 任何成功的 refresh（含空清單）都讓 snapshot() 30 秒內沿用同一份 tasks */render();msg('更新時間 '+stamp(new Date().toISOString())+(listTotal>tasks.length?' · 任務列表未完整（已載入 '+tasks.length+'／'+listTotal+' 筆）':''));return true;
    
   }catch(e){if(unavailable)availabilityNotice();else if(seq===request)msg(e.message,true);return false;}finally{refreshing--;}
  }

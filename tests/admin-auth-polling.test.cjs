@@ -54,3 +54,30 @@ test('catch-up listeners are removed on hide/destroy and inactive board ignores 
 test('UAT-only latch: catch-up never refetches',async()=>{
  const s=system();s.board.show();await settle();assert.equal(s.listCalls().length,1);s.advance(60000);s.fire('window','focus');s.fire('document','visibilitychange');await settle();assert.equal(s.listCalls().length,1);
 });
+test('board refresh success counts as a snapshot: no second list within 30s, same data',async()=>{
+ const data=[];const s=system({status:200,tasks:data});s.board.show();await settle();assert.equal(s.listCalls().length,1);
+ const live=()=>s.timers.filter(t=>!t.cleared);
+ for(const ms of [0,5000,10000,10000,4999]){s.advance(ms);assert.equal((await s.board.snapshot(null)).tasks.length,0);}
+ assert.equal(s.listCalls().length,1,'empty refresh result reused by snapshot() within 30s');
+ // 60s board timer refreshes with new data; snapshot right after returns exactly that data without another list
+ const {task}=require('./helpers/office-dept-fixture.cjs');data.push(task('fresh','queued',1,8));
+ s.advance(30000);live()[0].fn();await settle();assert.equal(s.listCalls().length,2);
+ s.advance(7000);const snap=await s.board.snapshot(8);assert.equal(s.listCalls().length,2,'snapshot after timer refresh must not refetch');
+ assert.deepEqual([...snap.tasks.map(t=>t.id)],["fresh"],'snapshot returns the data refresh() fetched');
+ s.advance(23001);await s.board.snapshot(null);assert.equal(s.listCalls().length,3,'cache still expires 30s after the last success');
+});
+test('failed board refresh does not mark snapshot fresh; force still refetches',async()=>{
+ const s=system({status:200,tasks:[]});s.board.show();await settle();assert.equal(s.listCalls().length,1);
+ const live=()=>s.timers.filter(t=>!t.cleared);
+ s.advance(31000);s.setResponse(500,{error:'synthetic outage'});live()[0].fn();await settle();assert.equal(s.listCalls().length,2);
+ s.setResponse(200,{});s.advance(1000);await s.board.snapshot(null);assert.equal(s.listCalls().length,3,'failed refresh must not suppress snapshot fetch');
+ s.advance(1000);await s.board.snapshot(null);assert.equal(s.listCalls().length,3,'successful snapshot then cached');
+ s.advance(1000);await s.board.snapshot(8,true);assert.equal(s.listCalls().length,4,'force=true still fetches');
+ s.advance(1000);live()[0].fn();await settle();s.advance(1000);await s.board.snapshot(8,true);assert.equal(s.listCalls().length,6,'force=true fetches even right after a refresh');
+});
+test('QA scenario: board 60s timer then 7F iframe 60s tick a few seconds later = one list per minute',async()=>{
+ const s=system({status:200,tasks:[]});s.board.show();await settle();await s.start();
+ const base=s.listCalls().length;const board=()=>s.timers.filter(t=>!t.cleared&&t.ms===60000)[0];
+ for(let minute=0;minute<3;minute++){s.advance(53000);board().fn();await settle();await s.tick(7000);}
+ assert.equal(s.listCalls().length-base,3,'3 minutes idle: exactly 3 list calls (was 6 before fix)');
+});
