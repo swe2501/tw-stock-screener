@@ -14127,7 +14127,7 @@
       document.getElementById('backtestBtn').style.display   = loggedIn ? ''     : 'none';
       document.getElementById('funcDropdown').style.display  = loggedIn ? ''     : 'none';
       // 主力訊號／分點回測：僅授權帳號可見（資料端另有 RLS 保護；加人改此陣列＋DB allowed_viewers）
-      const VIEWER_EMAILS = ['swe250165@gmail.com', 'qa5518556130@gmail.com', 'wenpin0617@gmail.com', 'aistock-qa-idor-a@example.com', 'aistock-qa-idor-b@example.com'];  // IDOR 實測用，測完 revert
+      const VIEWER_EMAILS = ['swe250165@gmail.com', 'qa5518556130@gmail.com', 'wenpin0617@gmail.com'];
       const _owner = loggedIn && VIEWER_EMAILS.includes(_authUser?.email);
       // 封測存取與管理權「解耦」：管理者(白名單) 或 任何被設過等級的會員(member_tiers 非 free) 都能進封測
       const _hasTier = loggedIn && typeof window._memberTier === 'string' && window._memberTier !== 'free';
