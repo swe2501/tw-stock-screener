@@ -57,8 +57,12 @@ def call(module, query, token=TOKEN, method="GET"):
 
 class Supabase:
     """假的 Supabase：/auth/v1/user 依 JWT 回會員；member_tiers／periods／page_cache 依 fixture 回。"""
-    def __init__(self, uid=PAID_ID, tiers=None, periods=None, period_status=200, auth_status=200, cache=None, count=None):
+    def __init__(self, uid=PAID_ID, tiers=None, periods=None, period_status=200, auth_status=200, cache=None, count=None,
+                 rewards=None, ents=None, catalog=None, errors=None):
         self.uid, self.auth_status, self.period_status = uid, auth_status, period_status
+        self.rewards, self.ents = rewards or {}, ents or {}
+        self.catalog = catalog if catalog is not None else ["fhedge", "breadth", "hottopics", "selltrack"]
+        self.errors = errors or {}                               # path → (HTTP 狀態, PostgREST code)
         self.tiers = tiers if tiers is not None else {PAID_ID: [{"tier": "vip", "expires_at": None}],
                                                        EXPIRED_ID: [{"tier": "vip", "expires_at": "2000-01-01T00:00:00+00:00"}],
                                                        FREE_ID: [{"tier": "free", "expires_at": None}]}
@@ -74,6 +78,19 @@ class Supabase:
                 raise HTTPError(request.full_url, self.auth_status, "x", None, None)
             return Response({"id": self.uid})
         uid = (q.get("user_id") or [""])[0][3:]
+        if u.path in self.errors:
+            st, code = self.errors[u.path]
+            raise HTTPError(request.full_url, st, "x", None, io.BytesIO(json.dumps({"code": code, "message": "fixture"}).encode()))
+        if u.path == "/rest/v1/member_rewards":
+            assert q["status"] == ["eq.claimed"]
+            return Response([r for r in self.rewards.get(uid, []) if r.get("status", "claimed") == "claimed"])
+        if u.path == "/rest/v1/member_entitlements":
+            now = q["starts_at"][0][4:]
+            assert q["expires_at"][0] == "gt." + now
+            return Response([e for e in self.ents.get(uid, []) if e["starts_at"] <= now < e["expires_at"]])
+        if u.path == "/rest/v1/member_feature_catalog":
+            assert q["member_research"] == ["is.true"] and q["voucher_enabled"] == ["is.true"]
+            return Response([{"feature": f} for f in self.catalog])
         if u.path == "/rest/v1/member_tiers":
             return Response(self.tiers.get(uid, []))
         if u.path == "/rest/v1/member_subscription_periods":
@@ -96,6 +113,19 @@ class Supabase:
 
 
 BARS = [[f"2026-{1 + i // 28:02d}-{1 + i % 28:02d}", 10, 11, 9, 10, 1000] for i in range(120)]
+
+
+V_ID = "00000000-0000-4000-8000-0000000000aa"
+R1 = "11111111-1111-4111-8111-111111111111"
+PAST, FUTURE = "2000-01-01T00:00:00+00:00", "2999-01-01T00:00:00+00:00"
+
+
+def voucher(tier="research", status="claimed", features=("hottopics",), ent_feature="voucher_bundle",
+            starts=PAST, expires=FUTURE, **kw):
+    rewards = {V_ID: [{"id": R1, "voucher_tier": tier, "selected_features": list(features) if features is not None else None,
+                       "status": status}]}
+    ents = {V_ID: [{"reward_id": R1, "feature": ent_feature, "starts_at": starts, "expires_at": expires}]}
+    return Supabase(uid=V_ID, rewards=rewards, ents=ents, **kw)
 
 
 class AibuyPaidGate(unittest.TestCase):
@@ -202,6 +232,70 @@ class AibuyPaidGate(unittest.TestCase):
         code, headers, _ = self.allowed(fake)
         self.assertEqual((code, headers["Cache-Control"]), (200, "private, no-store"))
         self.assertEqual(fake.key_of("/rest/v1/member_tiers"), [])
+
+    def voucher_paths(self, fake):
+        return [urlsplit(r.full_url).path for r in fake.requests if "/member_" in r.full_url]
+
+    def test_valid_voucher_allowed_with_service_key_only(self):
+        fake = voucher()
+        code, headers, _ = self.allowed(fake)
+        self.assertEqual((code, headers["Cache-Control"]), (200, "private, no-store"))
+        for path in ("/rest/v1/member_rewards", "/rest/v1/member_entitlements", "/rest/v1/member_feature_catalog"):
+            self.assertEqual({(k, m) for k, m in fake.key_of(path)}, {(SERVICE, "GET")})
+        self.llm.assert_called_once()
+
+    def test_choice_maps_to_observation_and_is_paid(self):
+        self.assertEqual(self.allowed(voucher(tier="choice"))[0], 200)
+
+    def test_non_paid_voucher_tier_blocked(self):
+        self.expect_blocked(403, fake=voucher(tier="free"))           # 非付費等級（或未知值）不算
+        self.expect_blocked(403, fake=voucher(tier="choice_x"))
+
+    def test_research_tools_entitlement_grants_via_fhedge(self):
+        self.assertEqual(self.allowed(voucher(features=("fhedge",), ent_feature="research_tools"))[0], 200)
+
+    def test_voucher_blocked_cases_never_call_ai(self):
+        cases = {"expired": voucher(expires="2001-01-01T00:00:00+00:00"),
+                 "not_started": voucher(starts=FUTURE, expires="3000-01-01T00:00:00+00:00"),
+                 "ready_not_claimed": voucher(status="ready"),
+                 "cancelled": voucher(status="cancelled"),
+                 "feature_disabled": voucher(features=("hottopics",), catalog=["fhedge"]),
+                 "no_selected_features": voucher(features=()),
+                 "null_selected_features": voucher(features=None),
+                 "tier_null": voucher(tier=None),
+                 "research_tools_but_selected_not_fhedge": voucher(features=("hottopics",), ent_feature="research_tools"),
+                 "entitlement_of_other_reward": Supabase(uid=V_ID, rewards={V_ID: [{"id": R1, "voucher_tier": "vip", "selected_features": ["hottopics"]}]},
+                                                         ents={V_ID: [{"reward_id": "other", "feature": "voucher_bundle", "starts_at": PAST, "expires_at": FUTURE}]})}
+        for name, fake in cases.items():
+            with self.subTest(case=name):
+                body, _ = self.expect_blocked(403, fake=fake)
+                self.assertIn("付費會員", body["error"])
+
+    def test_voucher_missing_tables_treated_as_no_voucher(self):
+        for path in ("/rest/v1/member_rewards", "/rest/v1/member_entitlements", "/rest/v1/member_feature_catalog"):
+            for st, code in ((404, "PGRST205"), (404, "42P01"), (400, "42P01"), (404, None)):
+                with self.subTest(path=path, st=st, code=code):
+                    self.expect_blocked(403, fake=voucher(errors={path: (st, code)}))
+        # periods 表不存在也只是「無期間」，仍會往下查兌換券
+        self.assertEqual(self.allowed(voucher(errors={"/rest/v1/member_subscription_periods": (404, "PGRST205")}))[0], 200)
+
+    def test_voucher_query_failure_fails_closed_503(self):
+        for path in ("/rest/v1/member_rewards", "/rest/v1/member_entitlements", "/rest/v1/member_feature_catalog"):
+            for st, code in ((500, "XX000"), (400, "42703"), (401, "PGRST301")):
+                with self.subTest(path=path, st=st):
+                    self.expect_blocked(503, fake=voucher(errors={path: (st, code)}))
+
+    def test_voucher_not_queried_when_already_paid(self):
+        for uid in (PAID_ID, SUB_ID, ADMIN_ID):
+            with self.subTest(uid=uid):
+                fake = Supabase(uid=uid)
+                self.assertEqual(self.allowed(fake)[0], 200)
+                self.assertFalse([p for p in self.voucher_paths(fake) if p.endswith(("rewards", "entitlements", "catalog"))])
+
+    def test_voucher_skips_later_queries_when_no_candidate(self):
+        fake = Supabase(uid=FREE_ID)
+        self.expect_blocked(403, fake=fake)
+        self.assertEqual(self.voucher_paths(fake)[-1], "/rest/v1/member_rewards")
 
     def test_admin_ids_match_auth_py(self):
         src = (ROOT / "api/auth.py").read_text(encoding="utf-8")

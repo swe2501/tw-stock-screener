@@ -2368,9 +2368,67 @@ def _aibuy_member_get(path, params, skey):
             raw = _read_sb(r)
             return r.status, (json.loads(raw) if raw else None)
     except urllib.error.HTTPError as e:
-        return e.code, None
+        try:                                                # 只取 PostgREST 錯誤代碼判斷表是否存在，不記錄內容
+            err = json.loads(e.read(4096) or b"null")
+        except Exception:                                   # noqa: BLE001
+            err = None
+        return e.code, ({"code": err.get("code")} if isinstance(err, dict) else None)
     except Exception:                                       # noqa: BLE001
         return 0, None
+
+
+def _aibuy_missing(st, data):
+    """表尚未建立：HTTP 404，或 PostgREST PGRST205（schema cache 無此表）／42P01（relation does not exist）。"""
+    return st == 404 or (isinstance(data, dict) and data.get("code") in ("PGRST205", "42P01"))
+
+
+def _aibuy_voucher(uid, now, skey):
+    """兌換券是否給付費等級；回 200/403/503。照 member_membership_status() 的 voucher 分支
+    （含 member_feature_access() 的「選的功能仍啟用」條件）用 service key 分三次唯讀查詢在程式內重現。"""
+    iso = now.isoformat()
+    st, rewards = _aibuy_member_get("/member_rewards", [("select", "id,voucher_tier,selected_features"),
+                                                        ("user_id", "eq." + uid), ("status", "eq.claimed")], skey)
+    if _aibuy_missing(st, rewards):
+        return 403
+    if st != 200 or not isinstance(rewards, list):
+        return 503
+    rewards = [r for r in rewards if isinstance(r, dict)]
+    # choice 視同 observation；結果須在付費等級內；selected_features 為空時 SQL 的 exists(unnest(...)) 為 false
+    cand = {r.get("id"): r for r in rewards
+            if ("observation" if r.get("voucher_tier") == "choice" else r.get("voucher_tier")) in AIBUY_PAID_TIERS
+            and isinstance(r.get("selected_features"), list) and r["selected_features"]}
+    if not cand:
+        return 403
+    st, ents = _aibuy_member_get("/member_entitlements", [("select", "reward_id,feature"), ("user_id", "eq." + uid),
+                                                          ("starts_at", "lte." + iso), ("expires_at", "gt." + iso)], skey)
+    if _aibuy_missing(st, ents):
+        return 403
+    if st != 200 or not isinstance(ents, list):
+        return 503
+    by_reward = {r.get("id"): r for r in rewards}
+    live = [e for e in ents if isinstance(e, dict) and e.get("reward_id") in by_reward]   # 對應已 claimed 的獎勵
+    if not any(e.get("reward_id") in cand for e in live):
+        return 403
+    st, cat = _aibuy_member_get("/member_feature_catalog", [("select", "feature"), ("member_research", "is.true"),
+                                                            ("voucher_enabled", "is.true")], skey)
+    if _aibuy_missing(st, cat):
+        return 403
+    if st != 200 or not isinstance(cat, list):
+        return 503
+    enabled = {c.get("feature") for c in cat if isinstance(c, dict)}
+    # member_feature_access().features：任一有效 entitlement 帶來的已啟用功能（research_tools→fhedge/breadth；
+    # voucher_bundle→該獎勵 selected_features）
+    features = set()
+    for e in live:
+        if e.get("feature") == "research_tools":
+            features |= enabled & {"fhedge", "breadth"}
+        elif e.get("feature") == "voucher_bundle":
+            features |= enabled & set(by_reward[e["reward_id"]].get("selected_features") or [])
+    for e in live:
+        r = cand.get(e.get("reward_id"))
+        if r and features & set(r["selected_features"]):
+            return 200
+    return 403
 
 
 def _aibuy_gate(token):
@@ -2408,8 +2466,12 @@ def _aibuy_gate(token):
                                  [("select", "tier"), ("user_id", "eq." + uid), ("revoked_at", "is.null"),
                                   ("starts_at", "lte." + iso), ("expires_at", "gt." + iso), ("limit", "5")], skey)
     if st == 200 and isinstance(rows, list):
-        return 200 if any(isinstance(r, dict) and r.get("tier") in AIBUY_PAID_TIERS for r in rows) else 403
-    return 403 if st == 404 else 503                        # 404＝表尚未建立（PREPARED ONLY）→ 視為無期間
+        if any(isinstance(r, dict) and r.get("tier") in AIBUY_PAID_TIERS for r in rows):
+            return 200
+    elif not _aibuy_missing(st, rows):                      # 表尚未建立（PREPARED ONLY）→ 視為無期間
+        return 503
+    # 兌換券（2026-11-12 創辦人決定算付費）：前兩項都沒給權限才查，已付費者不多打上游
+    return _aibuy_voucher(uid, now, skey)
 
 
 def _aibuy_bars(code):
