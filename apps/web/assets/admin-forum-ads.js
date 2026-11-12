@@ -243,8 +243,9 @@
   taskPanel.dataset.pointPanel='tasks';productPanel.dataset.pointPanel='products';
   box.insertAdjacentHTML('afterbegin',`<div class="ov-tabs afa-point-tabs" role="group" aria-label="點數與商品">
    <button class="on" type="button" data-point-tab="tasks" aria-pressed="true">${icon('tasks')}點數任務</button>
-   <button type="button" data-point-tab="products" aria-pressed="false">${icon('products')}兌換商品</button>
+   <button type="button" data-point-tab="products" aria-pressed="false">${icon('products')}兌換商品</button><button type="button" data-point-tab="commerce" aria-pressed="false">${icon('products')}商品與付款設定</button>
   </div>`);
+  const commercePanel=document.createElement('section');commercePanel.hidden=true;box.append(commercePanel);let commerceLoaded=false;
   const pointTabs=[...box.querySelectorAll('[data-point-tab]')];
   const pointNotes={
    tasks:'手動加點／扣點會寫入會員點數紀錄與稽核日誌。扣點後的餘額須大於或等於零。',
@@ -257,7 +258,7 @@
     const active=button.dataset.pointTab===selected;
     button.classList.toggle('on',active);button.setAttribute('aria-pressed',String(active));
    }
-   note.textContent=pointNotes[selected];
+   note.textContent=pointNotes[selected]||'管理商品上下架、方案圖標、付款總開關與會員權益。';commercePanel.hidden=selected!=='commerce';if(selected==='commerce'&&!commerceLoaded){commerceLoaded=true;window.AdminMemberCommerce.mount(commercePanel,{post});}
    if(selected==='products'&&!productsLoaded){
     productsLoaded=true;products();
    }

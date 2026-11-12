@@ -1,5 +1,5 @@
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),{chromium}=require('playwright');
-const root=path.resolve(__dirname,'..'),out='C:/Users/JUSTY LIN/Documents/Codex/2026-10-08/new-chat/member-journey-review';fs.mkdirSync(out,{recursive:true});
+const root=path.resolve(__dirname,'..'),out=path.join(root,'artifacts/member-commerce/legacy');fs.mkdirSync(out,{recursive:true});
 (async()=>{const browser=await chromium.launch({channel:'msedge',headless:true});try{
  for(const theme of ['light','dark'])for(const width of [1440,768,375,320]){
  const page=await browser.newPage({viewport:{width,height:1000}});let missing=false;
@@ -9,7 +9,7 @@ const root=path.resolve(__dirname,'..'),out='C:/Users/JUSTY LIN/Documents/Codex/
  if(u.pathname.endsWith('/member_wallet_summary'))return missing?r.fulfill({status:404,json:{code:'PGRST202'}}):r.fulfill({json:{task_points:0,stored_enabled:false}});
  if(u.pathname.endsWith('/member_usage_vouchers'))return r.fulfill({json:{mode:'voucher',server_time:new Date().toISOString(),rows:[{status:'ready',activation_deadline:new Date(Date.now()+86400000).toISOString()},{status:'ready',activation_deadline:'2000-01-01'}]}});
  if(u.pathname.endsWith('/ensure_member_referral_code'))return r.fulfill({json:{code:'GS123456ABCDEF'}});return r.fulfill({json:[]});});
- await page.goto('https://journey.fixture.test/#member/benefits');const member=page.locator('.member-page'),main=member.locator('.mc-main');await page.locator('.mj-tier-grid').waitFor();assert.equal(await main.locator('.mj-tier').count(),4);assert.match(await main.innerText(),/四級權益，一次看清楚/);assert.doesNotMatch(await main.locator('.mb-levels').innerText(),/基本會員|研究會員/);
+ await page.goto('https://journey.fixture.test/#member/benefits');const member=page.locator('.member-page'),main=member.locator('.mc-main');await page.locator('.mj-tier-grid').waitFor();assert.equal(await main.locator('.mj-tier').count(),4);assert.match(await main.innerText(),/會員方案，權益一次看清楚/);assert.doesNotMatch(await main.locator('.mb-levels').innerText(),/基本會員|研究會員/);
  const initialHistory=await page.evaluate(()=>history.length);
  for(const tier of ['free','observation','research','vip']){
   await main.locator('[data-mb-tier='+tier+']').click();
@@ -25,7 +25,7 @@ const root=path.resolve(__dirname,'..'),out='C:/Users/JUSTY LIN/Documents/Codex/
  for(const [category,count] of [[1,3],[2,2],[3,3],[0,4]]){await main.locator('[data-mb-category="'+category+'"]').click();assert.equal(await main.locator('.mb-row:visible').count(),count);}
  await main.locator('.mb-notes summary').click();assert.match(await main.innerText(),/每週篩選次數與分級儲存容量尚未啟用/);await main.locator('.mb-notes summary').click();
  assert.equal(await main.locator('[data-mb-points]').innerText(),'0 點');assert.equal(await main.locator('[data-mb-vouchers]').innerText(),'1 張待啟用 · 0 張使用中');
- await main.locator('[data-mb-tier=free]').click();await main.locator('[data-mb-row="2"] button').click();assert.equal(await main.locator('[data-mb-selected]').innerText(),'市場觀察員起開放');assert.equal(await page.evaluate(()=>location.hash),'#member/benefits');
+ await main.locator('[data-mb-tier=free]').click();await main.locator('[data-mb-row="2"] button').click();assert.equal(await main.locator('[data-mb-selected]').innerText(),'見習研究生');assert.equal(await page.evaluate(()=>location.hash),'#member/benefits');
  assert.equal(await main.getByText('跨題材整合分析',{exact:true}).count(),0);
  // Reproduce switching from a long member route at a deep scroll position.
  await member.evaluate(e=>e.scrollTop=900);await page.evaluate(()=>window.openMemberCenter('benefits'));

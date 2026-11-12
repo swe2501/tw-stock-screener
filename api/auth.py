@@ -451,6 +451,20 @@ class handler(BaseHTTPRequestHandler):
             user = _token_user(token) if action in ("forum_events", "forum_checkin", "forum_redeem", "site_ads", "forum_registration_status", "forum_register", "forum_cancel") else None
             return self._json(*handle_public(action, body, user, _rest))
 
+        if action in ('membership_catalog', 'membership_access'):
+            from lib import member_commerce as commerce
+            from lib.payments import enabled as payment_env
+            try:
+                if action == 'membership_catalog':
+                    return self._json(200, commerce.public_catalog(_rest, payment_env()))
+                token = (self.headers.get('Authorization') or '').replace('Bearer ', '').strip()
+                user = _token_user(token)
+                if not user:
+                    return self._json(401, {'error': '請先登入'})
+                return self._json(200, commerce.access(user, _rest))
+            except commerce.CatalogError as e:
+                return self._json(e.status, {'error': e.message})
+
         # ── 會員方案付款（lib/payments.py＋lib/linepay.py）：會員 JWT 驗證；沒設 LINE Pay 金鑰的環境一律回「尚未開放」 ──
         if action in ("pay_plans", "pay_linepay_request", "pay_linepay_confirm", "pay_linepay_cancel", "pay_history"):
             from lib.payments import handle as pay_handle
@@ -467,6 +481,16 @@ class handler(BaseHTTPRequestHandler):
                 return self._json(503, {"error": "authentication unavailable"})
             if not admin_email:
                 return self._json(403, {"error": "forbidden: 僅限管理員"})
+
+            if action in ('admin_commerce_get', 'admin_commerce_save'):
+                from lib.member_commerce import handle_admin
+                status, result = handle_admin(action, body, _rest)
+                if status == 200 and action == 'admin_commerce_save':
+                    _audit(admin_email, action, None, {
+                        'revision': result['config']['revision'],
+                        'payments_enabled': result['config']['payments_enabled'],
+                        'products': [p['id'] for p in result['config']['products']]})
+                return self._json(status, result)
 
             if action in ("admin_office_tasks_list", "admin_office_tasks_get", "admin_office_tasks_create", "admin_office_tasks_update"):
                 from lib.office_tasks import handle

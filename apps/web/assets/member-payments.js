@@ -41,8 +41,8 @@
   const payState = { token: null, plans: [], env: '', selected: '' };
   async function loadPlans() {
     const token = payToken();
-    if (payState.token === token) return payState;
-    payState.token = token; payState.plans = []; payState.env = '';
+    if (payState.token === token && Date.now()-(payState.loadedAt||0)<15000) return payState;
+    payState.loadedAt=Date.now();payState.token = token; payState.plans = []; payState.env = '';
     if (!token) return payState;
     try {
       const data = await payCall('pay_plans');
@@ -316,6 +316,7 @@
     const plan = profile?.membership?.plan && profile.membership.plan !== 'general'
       ? (window.AcademyResearchTitle?.() || '已授權方案') : '尚未選擇付費方案';
     host.innerHTML = `
+      ${window.AcademyMembershipBenefits?.billingIntro?.() || ""}
       <section class="mp-page" data-payment-method="${method}">
         <header class="mp-heading">
           <div><span class="mc-kicker">FORESIGHT QUANT · BILLING</span><h2>方案與帳務</h2><p>管理付款方式與方案繳費。所有扣款都會在最後一步再次確認。</p></div>
@@ -364,6 +365,7 @@
         </div>
       </section>`;
 
+    host.querySelector('[data-mb-back]')?.addEventListener('click',()=>window.openMemberCenter?.('benefits'));
     wireCardInputs(host);
     wireStoreInputs(host);
     wireActionLight(host);
@@ -423,13 +425,15 @@
     });
   }
 
-  const TIER_NAMES = { observation: '市場觀察員', research: '研究員', advanced: '進階', vip: 'VIP' };
+  const TIER_NAMES = { observation: '市場觀察員', research: '趨勢研究員', advanced: '趨勢研究員', vip: '先見領航員' };
   const ORDER_STATUS = { pending: '待付款', paid: '已付款', failed: '未完成', refunded: '已退款' };
 
   async function mountLinePay(host) {
     const state = await loadPlans();
     const page = host.querySelector('[data-payment-method="line"]');
     if (!page || !page.isConnected || !state.plans.length) return;      // 後端未開放 → 保留原本預覽
+    let interest='';try{interest=sessionStorage.getItem('foresight.membership.interest')||'';}catch{}
+    let desired='';try{desired=sessionStorage.getItem('foresight.membership.plan')||'';}catch{}const preferred=state.plans.find(p=>p.plan_code===desired)||state.plans.find(p=>p.tier===interest);if(preferred)state.selected=preferred.plan_code;
     host.dataset.lineLive = '1';
     const sandbox = state.env === 'sandbox';
     const body = page.querySelector('.mp-method-body');
@@ -488,7 +492,7 @@
     box = document.createElement('div');
     box.className = 'mp-history-list';
     box.textContent = '讀取付款紀錄…';
-    host.querySelector('.mp-history')?.after(box);
+    (host.querySelector('.mp-history')||host.querySelector('[data-billing-history]'))?.after(box);
     try {
       const data = await payCall('pay_history');
       const periods = (data.periods || []).map(item => `<li><b>${esc(TIER_NAMES[item.tier] || item.tier)}</b><span>${esc(String(item.starts_at).slice(0, 10))} ～ ${esc(String(item.expires_at).slice(0, 10))}</span></li>`).join('');
@@ -552,7 +556,11 @@
     if (current !== 'billing') return false;
     let selected = 'card';
     try { selected = methods[sessionStorage.getItem('foresight.payment.method')] ? sessionStorage.getItem('foresight.payment.method') : 'card'; } catch (_) {}
-    renderPanel(context.main, context.profile, selected);
+    const host=context.main;host.innerHTML=(window.AcademyMembershipBenefits?.billingIntro?.()||'')+'<section class="mc-card"><h3>方案開放狀態</h3><p data-billing-status role="status">正在確認可購買方案…</p><button type="button" class="mc-secondary-text" data-billing-history>查看既有付款紀錄</button><div data-billing-order-history></div></section>';
+    host.querySelector('[data-mb-back]')?.addEventListener('click',()=>window.openMemberCenter?.('benefits'));
+    const ticket=host.querySelector('[data-billing-status]');
+    host.querySelector('[data-billing-history]').onclick=()=>showHistory(host);
+    loadPlans().then(state=>{if(!ticket.isConnected)return;if(state.plans.length)renderPanel(host,context.profile,'line');else ticket.textContent='目前尚未開放商品付款。你可以比較會員權益，既有授權與使用券不受影響。';});
     return true;
   }
 

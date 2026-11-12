@@ -1,0 +1,38 @@
+(() => {
+ 'use strict';
+ const esc=v=>window.AcademyMemberCatalog.esc(v),icon=id=>window.AcademyMemberCatalog.icon(id);
+ const iconNames={"book":"研究手冊","compass":"市場羅盤","chart":"趨勢圖表","spark":"領航星芒","shield":"研究盾徽","diamond":"菱形徽章","layers":"資料層疊","star":"典藏之星"};
+ const tierNames={free:'見習研究生（免費）',observation:'市場觀察員',research:'趨勢研究員',advanced:'舊進階等級',vip:'先見領航員'};
+ async function mount(host,{post}){
+  host.innerHTML='<p class="afa-sub" role="status">正在讀取商品與付款設定…</p>';
+  let data;try{data=await post('admin_commerce_get');}catch{data={error:'連線失敗，請稍後重新進入'};}
+  if(!host.isConnected)return;
+  if(data.error||!data.config){host.textContent=data.error||'商品管理服務尚未就緒';return;}
+  let config=structuredClone(data.config),dirty=false,busy=false;
+  function render(){
+   host.innerHTML=`<section class="afa-sec ac-intro"><div><span class="mc-kicker">MEMBERSHIP COMMERCE</span><h3>商品與付款設定</h3><p>設定會員看見的方案、圖標與開放權益；上架數量會直接決定會員權益頁的卡片數。</p></div><span class="afa-tag ${config.payments_enabled?'':'warn'}">${config.payments_enabled?'付款開放中':'付款未開放'}</span></section>
+   <form data-commerce-form><section class="afa-sec"><label class="ac-switch"><input type="checkbox" name="payments_enabled" ${config.payments_enabled?'checked':''}><span><strong>開放新商品付款</strong><small>關閉時隱藏價格與購買入口，伺服器拒絕建立新訂單。已建立的待付款訂單仍可完成確認，既有已付款權益保留。開啟仍需金流服務設定完成。</small></span></label></section>
+   <section class="afa-sec"><div class="afa-bar"><h3>會員方案商品</h3><button type="button" class="afa-btn primary" data-commerce-new>＋ 新增商品</button><span class="afa-sub">新商品預設下架；免費方案也可自行上下架。</span></div>
+   <div class="ac-products">${config.products.map((p,i)=>`<details class="ac-product" data-product="${i}"><summary><span class="ac-symbol">${icon(p.icon)}</span><span><strong>${esc(p.name)}</strong><small>${p.active?'上架中':'已下架'} · ${p.features.length} 項權益 · 排序 ${p.position}</small></span><span class="afa-tag ${p.active?'':'warn'}">${p.active?'上架':'下架'}</span></summary><div class="afa-form ac-fields">
+    <label>商品名稱<input name="name" value="${esc(p.name)}" maxlength="60" required></label><label>商品代碼<input value="${esc(p.id)}" disabled><small>建立後固定，用於識別商品。</small></label>
+    <label>授權基礎等級<select name="tier">${Object.entries(tierNames).map(([k,v])=>`<option value="${k}" ${k===p.tier?'selected':''}>${v}</option>`).join('')}</select><small>商品可多於四個；基礎等級維持與既有會員系統相容。</small></label>
+    <label>顯示排序<input name="position" type="number" min="0" max="999" value="${p.position}" required></label>
+    <label>價格（新台幣）<input name="price_twd" type="number" min="0" max="100000" value="${p.price_twd}" required><small>付款關閉時僅管理員可見；免費等級須為 0。</small></label><label>有效天數<input name="days" type="number" min="1" max="400" value="${p.days}" required><small>單次期間，不啟用自動續訂。</small></label>
+    <label class="full">卡片簡介<textarea name="description" maxlength="180" required>${esc(p.description)}</textarea></label><label class="full">詳細權益說明<textarea name="details" maxlength="3000" rows="4" required>${esc(p.details)}</textarea></label>
+    <fieldset class="full ac-icon-picker"><legend>方案圖標</legend>${data.icons.map(id=>`<label title="${esc(id)}"><input type="radio" name="icon_${i}" value="${id}" ${p.icon===id?'checked':''}><span>${icon(id)}<small>${esc(iconNames[id]||id)}</small></span></label>`).join('')}</fieldset>
+    <fieldset class="full ac-rights"><legend>此商品開放的會員權益</legend>${Object.entries(data.features).map(([key,name])=>`<label class="chk"><input type="checkbox" data-feature="${key}" ${p.features.includes(key)?'checked':''}>${esc(name)}</label>`).join('')}<p class="afa-sub">這是實際功能範圍，不只是說明文字。付費購買會保存當時權益快照；變更權益適用新購買，原已付款期間保留。工具券僅依原券範圍開放，不增加容量。</p></fieldset>
+    <label class="chk"><input type="checkbox" name="active" ${p.active?'checked':''}> 上架至會員權益比較</label><label class="chk"><input type="checkbox" name="sandbox_only" ${p.sandbox_only?'checked':''}> 僅供測試付款</label>
+    <details class="full"><summary>詳細設定說明</summary><p class="afa-sub">上架後顯示卡片，下架只停止新購買，不刪除訂單或已取得權益。價格、天數、等級與功能變更會建立新的方案版本，保留舊訂單條件。會員 AI、管理員工具、尚未啟用的容量與週額度不在可販售範圍。</p></details>
+    <div class="full"><button type="button" class="afa-btn" data-preview="${i}">預覽此商品</button></div></div></details>`).join('')}</div></section>
+    <div class="ac-savebar"><span data-commerce-status role="status">${dirty?'有未儲存的設定':'目前設定已載入；修改後請儲存'}</span><button type="submit" class="afa-btn primary">儲存商品與權益設定</button></div></form><div data-commerce-preview></div>`;
+   const form=host.querySelector('form');
+   function collect(){config.payments_enabled=form.elements.payments_enabled.checked;host.querySelectorAll('[data-product]').forEach(el=>{const p=config.products[+el.dataset.product],q=n=>el.querySelector('[name="'+n+'"]');for(const key of ['name','description','details','tier'])p[key]=q(key).value;for(const key of ['position','price_twd','days'])p[key]=Number(q(key).value);for(const key of ['active','sandbox_only'])p[key]=q(key).checked;p.icon=el.querySelector('input[type=radio]:checked').value;p.features=[...el.querySelectorAll('[data-feature]:checked')].map(x=>x.dataset.feature);});}
+   form.oninput=()=>{dirty=true;host.querySelector('[data-commerce-status]').textContent='有未儲存的設定；前台尚未變更';};
+   host.querySelector('[data-commerce-new]').onclick=()=>{collect();config.products.push({id:'product_'+crypto.randomUUID().replaceAll('-','').slice(0,12),name:'新會員方案',tier:'observation',icon:'diamond',description:'請填寫這個方案適合的研究方式。',details:'請說明可用功能、有效期間與使用限制。',active:false,position:config.products.length,days:30,price_twd:380,sandbox_only:true,features:[]});dirty=true;render();host.querySelector('.ac-product:last-child').open=true;};
+   host.querySelectorAll('[data-preview]').forEach(b=>b.onclick=()=>{collect();const p=config.products[+b.dataset.preview],out=host.querySelector('[data-commerce-preview]');out.innerHTML=`<section class="afa-sec ac-preview"><h3>商品預覽 · 尚未儲存</h3><span class="ac-symbol">${icon(p.icon)}</span><h3>${esc(p.name)}</h3><p>${esc(p.description)}</p>${config.payments_enabled&&p.tier!=='free'?`<strong>NT$ ${p.price_twd.toLocaleString()} ／ ${p.days} 天${p.sandbox_only?'（測試）':''}</strong>`:'<p>付款未開放時不顯示價格</p>'}<p class="ac-detail-copy">${esc(p.details)}</p><ul>${p.features.map(f=>`<li>${esc(data.features[f])}</li>`).join('')}</ul><button type="button" class="afa-btn" data-close-preview>關閉預覽</button></section>`;out.querySelector('button').onclick=()=>out.replaceChildren();out.scrollIntoView({block:'nearest',behavior:'smooth'});});
+   form.onsubmit=async e=>{e.preventDefault();if(busy)return;collect();const status=host.querySelector('[data-commerce-status]');if(config.payments_enabled&&!data.config.payments_enabled&&!confirm('開放付款後，已上架且符合目前金流環境的商品將顯示價格並接受新訂單。確定開放？'))return;busy=true;form.querySelector('[type=submit]').disabled=true;status.textContent='儲存中…';let r;try{r=await post('admin_commerce_save',{config,revision:config.revision});}catch{r={error:'連線失敗，未確認儲存結果，請重新載入核對'};}busy=false;if(!host.isConnected)return;if(r.error){status.textContent=r.error;form.querySelector('[type=submit]').disabled=false;return;}config=structuredClone(r.config);data.config=structuredClone(r.config);dirty=false;render();host.querySelector('[data-commerce-status]').textContent='已儲存商品、上下架與會員權益';window.AcademyMemberCatalog.refresh();};
+  }
+  render();
+ }
+ window.AdminMemberCommerce={mount};
+})();

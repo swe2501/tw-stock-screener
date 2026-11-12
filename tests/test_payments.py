@@ -25,6 +25,11 @@ class FakeRest:
             {"plan_code": "research_30d", "tier": "research", "days": 30, "price_twd": 299, "label": "研究員 30 天", "active": True, "sandbox_only": False},
             {"plan_code": "old_plan", "tier": "vip", "days": 30, "price_twd": 1, "label": "停售", "active": False, "sandbox_only": True}],
             "member_payment_orders": [], "member_subscription_periods": []}
+        import json
+        products = [dict(id=p['plan_code'], name=p['label'], tier=p['tier'], days=p['days'],
+            price_twd=p['price_twd'], active=p['active'], sandbox_only=p['sandbox_only'],
+            position=i, plan_code=p['plan_code'], features=['breadth']) for i,p in enumerate(self.t['member_plans'])]
+        self.t['admin_settings'] = [{'key':'member_commerce_v1','value':json.dumps({'revision':1,'payments_enabled':True,'products':products})}]
         self.seq = 0
 
     def _match(self, row, filters):
@@ -42,6 +47,14 @@ class FakeRest:
         return True
 
     def __call__(self, path, method="GET", body=None, prefer=None):
+        if path == '/rpc/member_commerce_create_order':
+            import json
+            cfg=json.loads(self.t['admin_settings'][0]['value'])
+            if not cfg['payments_enabled']: return 400, {'message':'PAY_DISABLED'}
+            p=next((p for p in cfg['products'] if p['plan_code']==body['p_plan'] and p['active'] and p['sandbox_only']==(body['p_env']=='sandbox')),None)
+            if not p: return 400, {'message':'PLAN_UNAVAILABLE'}
+            self('/member_payment_orders','POST',[dict(user_id=body['p_user'],order_key=body['p_order'],provider_event_key='linepay:'+body['p_order'],status='pending',expected_amount=p['price_twd'],currency='TWD',kind='membership',plan_code=p['plan_code'],provider='linepay',provider_env=body['p_env'])])
+            return 200,p
         table, _, qs = path.lstrip("/").partition("?")
         filters = parse_qsl(qs, keep_blank_values=True)
         rows = self.t[table]
