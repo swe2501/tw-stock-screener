@@ -37,7 +37,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
  for(const [theme,width,height]of [['light',1366,900],['dark',1366,900],['light',390,844],['dark',390,844]]){
   await page.setViewportSize({width,height});await page.evaluate(t=>document.documentElement.dataset.theme=t,theme);
   const bounds=await page.locator('.afa-sheet').boundingBox();assert(bounds.x>=0&&bounds.y>=0&&bounds.x+bounds.width<=width+1&&bounds.y+bounds.height<=height+1);
-  const alpha=await page.locator('.afa-sheet').evaluate(e=>getComputedStyle(e).backgroundColor);assert(!alpha.includes('rgba'),alpha);
+  const alpha=await page.locator('.afa-sheet').evaluate(e=>getComputedStyle(e).backgroundColor);assert.match(alpha,/rgba?\(/);assert.notEqual(alpha,'rgba(0, 0, 0, 0)');
   await page.screenshot({path:path.join(process.env.TEMP,'admin-ad-'+theme+'-'+width+'.png')});
  }
  await page.locator('[data-open-crop]').click();await page.locator('[data-crop-frame]').waitFor({state:'visible'});await page.locator('[data-crop-frame]').press('Shift+ArrowLeft');await page.locator('[data-apply-crop]').click();assert.equal(await page.locator('[data-preview] .site-ad-crop-viewport').count(),1);

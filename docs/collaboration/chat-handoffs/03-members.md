@@ -6,6 +6,10 @@
 
 交接更新格式：日期｜問題與結果｜檔案｜驗證｜commit／部署｜待辦。
 
+2026-11-13｜會員權益深色 Logo 改用白金版本並提高透明度，涵蓋預設深色，裝飾不蓋文字｜見 ../changes/2026-11-13-member-dark-logo.md｜完整會員頁深淺色桌機／手機截圖通過｜本機未提交／未發布｜保留付款測試與其他聊天室本機修改。
+
+2026-11-13｜付款頁新增可操作測試模式，測試卡填寫與完成動畫、不發付款請求、退出後恢復停用；對齊常用本機 billing｜見 ../changes/2026-11-13-payment-demo.md｜完整網站 mock 與原付款8項通過｜本機未提交／未發布｜不開正式付款、不保存卡片、不宣稱真實綁卡完成。
+
 2026-11-13｜JUSTY 要求 5234，整合會員卡片／詳細說明／方案帳務及 04 最新已完成內容｜見 ../changes/2026-11-13-member-preview-publish.md｜62 項 Python、API12/12及 mock 瀏覽器｜功能先提交 f2b054a1，整合發布結果查 Git refs 與聊天最終回報｜付款與資料庫仍未啟用；來源草稿留存勿重複套入。
 
 2026-11-13｜JUSTY 更正：付款關閉仍顯示方案選擇及信用卡／LINE Pay／超商介面，只隱藏價格並停用實際送單／綁卡；恢復原介面且切換方式保留方案｜見 ../changes/2026-11-13-billing-plan-methods.md｜mock 會員往返、三種方式與原付款介面 8 項通過｜本機未提交／未發布｜信用卡真實綁定與超商金流尚未串接，資料庫未改。
@@ -17,3 +21,9 @@
 2026-11-13｜會員權益改為上架商品動態卡片，圖標／詳細說明／權益／付款開關／後台商品管理已在 shared/justy/member-commerce-settings 準備；根 AGENTS.md 加入新功能先問會員開放對象規則｜見 ../changes/2026-11-13-member-commerce-settings.md｜Python 33、Node 8、mock 深淺色桌機手機與完整網站串接通過｜未提交／未部署；SQL 未套用，付款未啟用｜需隔離資料庫驗證與正式資料庫另行授權，不把前端 gate 當完整資料 RLS。
 
 2026-11-13｜04於shared/justy/event-vouchers準備會員方案刪除鈕（需另儲存）與新增後平滑定位／focus名稱｜見 ../changes/2026-11-13-commerce-delete-scroll.md｜Chrome mock測試通過｜未提交未部署｜整合時保留03後續改動。
+
+2026-11-13｜04準備活動代號任務與單場核銷自動點數，member-missions新增evt任務說明、forum-member取消一般活動終身限制｜見 ../changes/2026-11-13-event-reward-tasks.md｜未發布，配套SQL未套用；不得單獨宣稱已啟用或重發舊點數。
+
+2026-11-13｜04依JUSTY準備指定已報到會員發券，同贈券視窗，member_rewards沿現有通知來源｜見 ../changes/2026-11-13-attendee-selected-vouchers.md｜只在04來源、獨立49725demo｜新SQL未套用、不影響03前輪整合，請整合前核對新舊RPC配套。
+
+2026-11-13｜04接續JUSTY明確SQL／UAT授權，forum-event-rewards.sql與forum-attendee-vouchers.sql已於Taiwan stock2成功套用；4支RPC service_role=true、anon/authenticated=false，trigger啟用，既有reward本人通知來源已核對。整合01掃描／玻璃與03付款demo／深色Logo，發布結果見2026-11-13-sql-uat-integration.md。未實發會員點數或券、不啟用付款。

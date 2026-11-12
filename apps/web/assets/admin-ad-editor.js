@@ -24,7 +24,7 @@
    <section class="full afa-media-upload" data-carousel-options><b>首頁廣告輪播</b><label>本則停留秒數（3–5 秒）<input type="number" name="slide_seconds" min="3" max="5" step="1" value="${a.slide_seconds}"></label><label class="chk"><input type="checkbox" name="wheel_enabled" ${a.wheel_enabled?'checked':''}>游標在本則廣告上時，可用滾輪切換</label><p class="afa-sub">市場判讀首頁保留為第一頁（停留 5 秒），符合受眾與刊登時間的首頁廣告依優先度接續輪播。沒有廣告時不輪播；影片播放、滑鼠停留或鍵盤操作時暫停。</p></section><label>優先度<input name="priority" type="number" min="0" max="99" value="${a.priority}"></label><label class="chk"><input type="checkbox" name="enabled" ${a.enabled?'checked':''}>開啟刊登</label>
    <p class="afa-sub full">圖片建議將文字放在中央安全範圍，避免靠邊。影片由使用者點選播放，保留原比例。請先確認素材與音樂的使用權。</p>
    <div class="afa-foot full"><button type="button" class="afa-btn ghost" data-close>取消</button><button type="submit" class="afa-btn primary">預覽確認</button></div>
-  </form><aside class="afa-ad-live"><div class="afa-bar"><b>刊登預覽</b><div role="group" aria-label="預覽裝置"><button type="button" class="afa-btn" data-device="desktop" aria-pressed="true">桌機</button><button type="button" class="afa-btn" data-device="mobile" aria-pressed="false">手機</button></div></div><div class="afa-ad-browser" data-browser><div class="afa-browser-head">先見 FORESIGHT</div><div class="afa-browser-nav">首頁　選股　題材族群</div><p class="afa-sub" data-location></p><div data-preview></div><div class="afa-browser-content">網站內容</div></div><p class="afa-sub">圖片可用左右、上下控制調整裁切。預覽比例與實際版位共用設定。</p></aside></div>
+  </form><aside class="afa-ad-live"><div class="afa-bar"><b>刊登預覽</b><div role="group" aria-label="預覽裝置"><button type="button" class="afa-btn" data-device="desktop" aria-pressed="true">桌機</button><button type="button" class="afa-btn" data-device="mobile" aria-pressed="false">手機</button></div></div><div class="afa-ad-browser" data-browser><div class="afa-browser-head">先見 FORESIGHT</div><div class="afa-browser-nav">首頁　選股　題材族群</div><p class="afa-sub" data-location></p><div class="afa-bar"><button type="button" class="afa-btn" data-replay-placement>▶ 播放位置示範</button><span class="afa-sub" data-motion-status role="status">可播放動畫查看廣告位置</span></div><div data-preview></div><div class="afa-page-context" data-page-context></div></div><p class="afa-sub">圖片可用左右、上下控制調整裁切。預覽比例與實際版位共用設定。</p></aside></div>
   <section class="afa-ad-review" data-review hidden><h3>確認刊登內容</h3><div data-final-preview></div><dl data-summary></dl><div class="afa-foot"><button type="button" class="afa-btn ghost" data-back>返回編輯</button><button type="button" class="afa-btn" data-draft>儲存草稿</button><button type="button" class="afa-btn primary" data-save>確認儲存</button></div></section><p class="afa-err" data-message role="status"></p>`,true);
   b.closest('.afa-sheet').classList.add('afa-ad-sheet');
   const f=b.querySelector('form'),msg=b.querySelector('[data-message]'),review=b.querySelector('[data-review]');
@@ -42,7 +42,23 @@
    host.className='site-ad site-ad--'+d.slot+' site-ad--preview';
    host.innerHTML=SiteAdMedia.html(d,true)+`<div class="site-ad-copy"><b>${esc(d.title||'廣告標題')}</b><span class="site-ad-t">${esc(d.text)}</span><span class="site-ad-cta">${esc(d.cta||'了解更多')} ↗</span></div>`;
   }
+  let placementAnimations=[],lastPlacement='';
+  function stopPlacement(){placementAnimations.forEach(animation=>animation.cancel());placementAnimations=[];}
+  function animatePlacement(){
+   stopPlacement();const context=b.querySelector('[data-page-context]'),target=context.querySelector('.afa-placement-target'),status=b.querySelector('[data-motion-status]');if(!target)return;
+   const slot=context.dataset.slot;
+   if(matchMedia('(prefers-reduced-motion: reduce)').matches){status.textContent='已依減少動畫設定顯示靜態位置。';return;}
+   status.textContent=slot==='home_card'?'示範：市場判讀 → 廣告 → 市場判讀，同一輪播區。':'示範：廣告從標示位置出現。';
+   if(slot==='home_card'){
+    const market=context.querySelector('.afa-mini-market');placementAnimations.push(market.animate([{opacity:1,offset:0},{opacity:1,offset:.25},{opacity:0,offset:.34},{opacity:0,offset:.75},{opacity:1,offset:.85},{opacity:1,transform:'translateX(0)',offset:1}],{duration:5600,easing:'ease-in-out'}));
+    placementAnimations.push(target.animate([{opacity:0,transform:'translateX(14px)',offset:0},{opacity:0,transform:'translateX(14px)',offset:.25},{opacity:1,transform:'translateX(0)',offset:.34},{opacity:1,transform:'translateX(0)',offset:.75},{opacity:0,transform:'translateX(-14px)',offset:.85},{opacity:0,offset:1}],{duration:5600,easing:'ease-in-out'}));
+   }else placementAnimations.push(target.animate([{opacity:.1,transform:slot==='corner'?'translate(18px,18px)':slot==='top_bar'?'translateY(-10px)':'translateY(10px)'},{opacity:1,transform:'translate(0,0)',offset:.45},{opacity:1,transform:'translate(0,0)'}],{duration:1600,easing:'cubic-bezier(.22,1,.36,1)'}));
+   const active=placementAnimations[placementAnimations.length-1];active.finished.then(()=>{if(b.isConnected)status.textContent='示範完成，可重播；這裡不會刊登或儲存廣告。';}).catch(()=>{});
+  }
+  b.querySelector('[data-replay-placement]').onclick=animatePlacement;
+  b.closest('dialog').addEventListener('close',stopPlacement,{once:true});
   function update(){
+   stopPlacement();
    b.querySelector('[data-carousel-options]').hidden=f.elements.slot.value!=='home_card';
    const textOnly=f.elements.slot.value==='top_bar';
    if(textOnly&&type()!=='text')f.querySelector('[name=media_type][value=text]').checked=true;
@@ -56,11 +72,23 @@
    b.querySelector('[data-image-tools]').hidden=type()!=='image';
    const d=read(),spec=specs[d.slot];
    b.querySelector('[data-size]').textContent=spec.help+'　建議 '+spec.size;
-   b.querySelector('[data-location]').textContent='顯示位置・'+spec.label;
+   const context=b.querySelector('[data-page-context]'),adPreview=b.querySelector('[data-preview]');
+   const market='<section class="afa-mini-market"><div><small>FIELD NOTE・盤後研究手札</small><h3>先看資金，<br>再看故事。</h3><p>市場結構・法人動向</p><div class="afa-mini-search">⌕ 輸入股票、指數名稱或代號</div></div><aside><b>今日判讀</b><p>大盤・市場廣度</p><div class="afa-mini-kpis"><span>大盤走勢</span><span>法人動向</span></div></aside></section>';
+   const table='<section class="afa-mini-results"><b>掏金篩選器</b><p>篩選條件　產業　研究策略</p><table><thead><tr><th>股票</th><th>股價</th><th>漲跌</th></tr></thead><tbody><tr><td>股票 A</td><td>—</td><td>—</td></tr><tr><td>股票 B</td><td>—</td><td>—</td></tr></tbody></table></section>';
+   const member='<section class="afa-mini-member"><b>會員中心</b><p>我的權益　點數與使用券　自選筆記</p><div class="afa-mini-kpis"><span>會員權益</span><span>我的點數</span></div></section>';
+   adPreview.remove();context.replaceChildren();context.dataset.slot=d.slot;
+   const holder=document.createElement('div');holder.className='afa-placement-target';holder.innerHTML='<span class="afa-target-label">廣告實際顯示區</span>';holder.append(adPreview);
+   if(d.slot==='top_bar'){context.append(holder);context.insertAdjacentHTML('beforeend',market+table);}
+   else if(d.slot==='home_card'){context.insertAdjacentHTML('beforeend',market);const caption=document.createElement('p');caption.className='afa-sub';caption.textContent='首頁首屏輪播：市場判讀 ⇄ 此則廣告（同一區塊）';const carousel=document.createElement('div');carousel.className='afa-mini-carousel';carousel.append(context.querySelector('.afa-mini-market'),holder);context.append(caption,carousel);context.insertAdjacentHTML('beforeend','<div class="afa-mini-below">行情圖表・每日籌碼報告（輪播下方）</div>');}
+   else if(d.slot==='results_top'){context.insertAdjacentHTML('beforeend','<div class="afa-mini-below">掏金篩選器・篩選條件</div>');context.append(holder);context.insertAdjacentHTML('beforeend',table);}
+   else if(d.slot==='member_center'){context.insertAdjacentHTML('beforeend','<div class="afa-mini-below"><b>會員中心</b>　我的帳號</div>');context.append(holder);context.insertAdjacentHTML('beforeend',member);}
+   else{context.insertAdjacentHTML('beforeend',market+table);context.append(holder);}
+   b.querySelector('[data-location]').textContent='位置：'+spec.help;
    b.querySelector('[data-media]').hidden=type()==='text';b.querySelector('[data-crop]').hidden=type()!=='image'||!!crop;
    f.elements.file.accept=type()==='video'?'video/mp4':'image/jpeg,image/png,image/webp';
    b.querySelector('[data-file-hint]').textContent=type()==='video'?'MP4・上限 30 MB，建議 H.264 影像／AAC 音訊；影片不自動播放。':'JPG、PNG、WebP・上限 5 MB。依版位比例裁切，原始檔保留完整。';
    b.querySelector('[data-link]').hidden=f.elements.destination.value!=='custom';preview(b.querySelector('[data-preview]'),d);
+   if(lastPlacement!==d.slot){lastPlacement=d.slot;animatePlacement();}
   }
   function clearFile(resetPicker=true){crop=null;b.querySelector('[data-crop-editor]').hidden=true;if(objectUrl)URL.revokeObjectURL(objectUrl);objectUrl='';file=null;uploaded='';if(resetPicker)f.elements.file.value='';b.querySelector('[data-file-name]').textContent='';}
   b.closest('dialog').addEventListener('close',clearFile,{once:true});

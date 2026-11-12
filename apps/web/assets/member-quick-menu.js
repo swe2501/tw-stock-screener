@@ -14,7 +14,7 @@
  const scan=document.createElement('button');
  scan.type='button';scan.className='mq-scan';scan.title='掃描論壇簽到 QR';
  scan.setAttribute('aria-label',scan.title);scan.setAttribute('aria-haspopup','dialog');
- scan.append(icon('<path d="M9 3H5a2 2 0 0 0-2 2v4m12-6h4a2 2 0 0 1 2 2v4M3 15v4a2 2 0 0 0 2 2h4m12-6v4a2 2 0 0 1-2 2h-4M7 12h10"/><path d="M8 7h3v2m5 5v3h-3M8 16v1h2"/>'));
+ scan.append(icon('<path d="M7.5 3H5a2 2 0 0 0-2 2v2.5M16.5 3H19a2 2 0 0 1 2 2v2.5M3 16.5V19a2 2 0 0 0 2 2h2.5M21 16.5V19a2 2 0 0 1-2 2h-2.5"/><path d="M10 6.5H8.5a2 2 0 0 0-2 2V10M14 6.5h1.5a2 2 0 0 1 2 2V10M6.5 14v1.5a2 2 0 0 0 2 2H10M17.5 14v1.5a2 2 0 0 1-2 2H14"/>'));
  profile.before(profileRow);profileRow.append(profile,scan);
  scan.addEventListener('click',()=>{if(signed()){close(true);window.ForumScanner?.open();}});
  document.body.append(panel);avatar.title='會員快捷選單';avatar.setAttribute('aria-label','開啟會員快捷選單');avatar.setAttribute('aria-haspopup','dialog');avatar.setAttribute('aria-controls',panel.id);avatar.setAttribute('aria-expanded','false');

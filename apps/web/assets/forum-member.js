@@ -21,7 +21,7 @@
    const open=tab=>{hide();try{openAuthModal(tab);}catch{}waitLogin();};
    c.querySelector('[data-login]').onclick=()=>open('login');c.querySelector('[data-reg]').onclick=()=>open('register');c.querySelector('[data-later]').onclick=hide;return;
   }
-  const c=sheet(head+`<p>確認是本人到場後按下簽到，<b>1,000 活動點數</b>會直接存入你的會員帳號。</p><div class="fm-acts"><button type="button" class="fm-primary" data-go>確認簽到</button></div><p class="fm-msg" role="status" data-msg></p><button type="button" class="fm-text" data-later>稍後再說</button>`);
+  const c=sheet(head+`<p>確認是本人到場後按下簽到，<b>本活動設定的獎勵點數</b>會直接存入你的會員帳號。</p><div class="fm-acts"><button type="button" class="fm-primary" data-go>確認簽到</button></div><p class="fm-msg" role="status" data-msg></p><button type="button" class="fm-text" data-later>稍後再說</button>`);
   c.querySelector('[data-later]').onclick=hide;
   c.querySelector('[data-go]').onclick=async e=>{const b=e.currentTarget,m=c.querySelector('[data-msg]');b.disabled=true;m.textContent='簽到中…';
    try{const r=await call('forum_checkin',{pass:p.pass});store.set(null);success(r);}
@@ -52,15 +52,16 @@
    if(token()){try{eligibility=await call('forum_registration_status');}catch(error){warning=error.message;}}
    const attended=r.attended||eligibility?.attended;
    const list=evs.length?evs.map(e=>{
+    const limited=attended&&e.event_kind!=='activity';
     const registered=eligibility?.registrations?.find(x=>x.event===e.id&&x.status==='registered');
-    return `<li><div><b>${esc(e.city_name)}場</b>　${esc(e.date.slice(5).replace('-','/'))}（${'日一二三四五六'[new Date(e.date+'T12:00:00+08:00').getDay()]}）${esc(e.start)}–${esc(e.end)}${e.title?`<div class="fm-sub">${esc(e.title)}</div>`:''}${e.venue?`<div class="fm-sub">${esc(e.venue)}</div>`:''}</div><button type="button" class="fm-primary" ${attended?'disabled':''} data-register="${e.id}" data-cancel="${!!registered}">${attended?'已參加過':registered?'取消報名':'站內報名'}</button></li>`;
+    return `<li><div><b>${esc(e.city_name)}場</b>　${esc(e.date.slice(5).replace('-','/'))}（${'日一二三四五六'[new Date(e.date+'T12:00:00+08:00').getDay()]}）${esc(e.start)}–${esc(e.end)}${e.title?`<div class="fm-sub">${esc(e.title)}</div>`:''}${e.venue?`<div class="fm-sub">${esc(e.venue)}</div>`:''}</div><button type="button" class="fm-primary" ${limited?'disabled':''} data-register="${e.id}" data-cancel="${!!registered}">${limited?'已參加過技術論壇':registered?'取消報名':'站內報名'}</button></li>`;
    }).join(''):'<li><span class="fm-sub">近期場次公布後會顯示在這裡。</span></li>';
-   const c2=sheet(`<h2>線下論壇場次</h2><ul class="fm-events">${list}</ul><p class="fm-sub">${attended?'你已參加過論壇。每位會員一生限參加一次，現場掃描的 1,000 點也限領一次。':'每位會員一生限參加一次，報名不扣點。到場掃描 QR 簽到後，1,000 點存入帳號。活動開始前可取消報名；累計三次報名未到場後暫停報名，請聯絡工作人員協助。'}</p>${eligibility?`<p class="fm-sub">${eligibility.blocked?'目前已暫停報名。':''}累計未到場 ${eligibility.no_shows} 次</p>`:''}<p class="fm-msg" data-reg-msg role="status">${esc(warning)}</p><div class="fm-acts"><button type="button" data-close>關閉</button></div>`);
+   const c2=sheet(`<h2>線下論壇場次</h2><ul class="fm-events">${list}</ul><p class="fm-sub">每活動的獎勵限領一次，QR與補發代碼不重複領取。技術分析論壇每帳號一生限參加一次；一般活動可參加其他場次。點數依各活動設定，報名不等於到場。三次未到場仍會暫停報名。</p>${eligibility?`<p class="fm-sub">${eligibility.blocked?'目前已暫停報名。':''}累計未到場 ${eligibility.no_shows} 次</p>`:''}<p class="fm-msg" data-reg-msg role="status">${esc(warning)}</p><div class="fm-acts"><button type="button" data-close>關閉</button></div>`);
    c2.querySelector('[data-close]').onclick=done;
    c2.querySelectorAll('[data-register]').forEach(button=>button.onclick=async()=>{
     if(!token()){hide();openAuthModal('login');waitLogin(openForum);return;}
     const cancel=button.dataset.cancel==='true';
-    if(!confirm(cancel?'確認取消此場報名？':'確認報名此場論壇？每位會員一生限參加一次，報名後若無法到場，請在活動開始前取消。'))return;
+    if(!confirm(cancel?'確認取消此場報名？':'確認報名此活動？報名不發點，到場核銷後依活動規則領取；無法到場請提前取消。'))return;
     button.disabled=true;const msg=c2.querySelector('[data-reg-msg]');msg.textContent=cancel?'取消中…':'確認報名資格與名額中…';
     try{await call(cancel?'forum_cancel':'forum_register',{id:button.dataset.register});await openForum();}
     catch(error){msg.textContent=error.message;button.disabled=false;dispatchEvent(new Event('academy-notifications-changed'));}
@@ -72,7 +73,7 @@
  /* ── 會員中心「活動兌換」：論壇補發代碼走這裡 ── */
  function patchRedeem(){const id=window.AcademyIdentity;if(!id||id.__forum)return !!id;const orig=id.redeemCode;
   id.redeemCode=async code=>{const c=String(code).trim().toUpperCase();if(!CODE_RE.test(c))return orig(code);
-   try{const r=await call('forum_redeem',{code:c});return {item_id:'forum-points',kind:'points',title:(r.event?r.event+'・':'')+'1,000 活動點數已存入',duplicate:false};}
+   try{const r=await call('forum_redeem',{code:c});return {item_id:'forum-points',kind:'points',title:(r.event?r.event+'・':'')+Number(r.points||0).toLocaleString()+' 活動點數已存入',duplicate:false};}
    catch(err){throw Error(err.message);}};
   id.__forum=true;return true;}
  if(!patchRedeem()){let n=0;const t=setInterval(()=>{if(patchRedeem()||++n>60)clearInterval(t);},500);}

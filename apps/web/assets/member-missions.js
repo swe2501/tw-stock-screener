@@ -82,8 +82,8 @@
    // 後台新增的人工發放任務（adm-*）：只顯示說明，點數由管理端審核後發放
    const adminBox=section.querySelector('[data-admin-tasks]'),adminList=section.querySelector('[data-admin-task-list]');adminList.replaceChildren();
    const period={once:'每人一次',daily:'每天一次',weekly:'每週一次',monthly:'每月一次',yearly:'每年一次'};
-   (state?.tasks.rows||[]).filter(t=>/^adm-/.test(t.id)).forEach(t=>{
-    const article=document.createElement('article');article.className='mj-extra-task';const info=document.createElement('div');const title=document.createElement('h3');title.textContent=t.title+'　+'+t.points+' 點';info.append(title);const small=document.createElement('small');small.textContent=(period[t.period]||'')+'・由工作人員審核後發放，不需自行領取。';info.append(small);const b=document.createElement('button');b.type='button';b.disabled=true;b.textContent=t.claimed?'本期已發放':'審核發放';article.append(info,b);adminList.append(article);
+   (state?.tasks.rows||[]).filter(t=>/^(adm-|evt-)/.test(t.id)).forEach(t=>{
+    const article=document.createElement('article');article.className='mj-extra-task';const info=document.createElement('div');const title=document.createElement('h3');title.textContent=t.title+'　+'+t.points+' 點';info.append(title);const small=document.createElement('small');small.textContent=t.id.startsWith('evt-')?'活動代號 '+t.id.slice(4,-3).toUpperCase()+'・現場QR簽到或補發代碼核銷後自動發放，同活動不重複領取。':(period[t.period]||'')+'・由工作人員審核後發放，不需自行領取。';info.append(small);const b=document.createElement('button');b.type='button';b.disabled=true;b.textContent=t.claimed?'本期已發放':'審核發放';article.append(info,b);adminList.append(article);
    });
    adminBox.hidden=!adminList.children.length;
    (state?.tasks.rows||[]).filter(t=>t.id==='verify-contact-v1').forEach(t=>{

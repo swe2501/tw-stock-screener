@@ -311,6 +311,8 @@
     });
   }
 
+  let demoMode=false;
+  const canDemo=()=>location.protocol==='file:'||['localhost','127.0.0.1'].includes(location.hostname)||window._isOwner||window._isAdmin;
   function renderPanel(host, profile, method) {
     const data = methods[method];
     const plan = profile?.membership?.plan && profile.membership.plan !== 'general'
@@ -322,7 +324,7 @@
           <div><span class="mc-kicker">FORESIGHT QUANT · BILLING</span><h2>方案與帳務</h2><p>管理付款方式與方案繳費。所有扣款都會在最後一步再次確認。</p></div>
           <span class="mp-security">${icons.shield}<span><b>安全支付</b><small>不在本站保存完整卡號</small></span></span>
         </header>
-        <section class="mp-product-section"><h3>選擇會員方案</h3><p>先選想了解的方案，再選付款方式。付款未開放時仍可比較，價格暫不顯示。</p><div data-payment-products role="group" aria-label="會員方案選擇"></div><p data-payment-product-detail aria-live="polite"></p></section><div class="mp-progress" aria-label="付款流程"><span class="is-current"><b>1</b>選擇方案</span><i></i><span><b>2</b>付款方式</span><i></i><span><b>3</b>確認開通</span></div>
+        <section class="mp-product-section"><h3>選擇會員方案</h3><p>先選想了解的方案，再選付款方式。付款未開放時仍可比較，價格暫不顯示。</p><div data-payment-products role="group" aria-label="會員方案選擇"></div><p data-payment-product-detail aria-live="polite"></p></section>${canDemo()?`<div class="mp-demo-controls"><button type="button" class="mc-secondary-text" data-payment-demo aria-pressed="${demoMode}">${demoMode?'退出測試模式':'測試付款流程（不扣款）'}</button><span>${demoMode?'測試中：請使用測試卡號，不會送出、保存或綁定卡片。':'想試填卡片與完成動畫，可開啟測試模式。'}</span></div>`:''}<div class="mp-progress" aria-label="付款流程"><span class="is-current"><b>1</b>選擇方案</span><i></i><span><b>2</b>付款方式</span><i></i><span><b>3</b>確認開通</span></div>
         <div class="mp-checkout">
           <aside class="mp-methods" aria-label="付款方式">
             <div class="mp-column-label"><small>PAYMENT METHODS</small><strong>選擇付款方式</strong></div>
@@ -366,6 +368,7 @@
       </section>`;
 
     host.querySelector('[data-mb-back]')?.addEventListener('click',()=>window.openMemberCenter?.('benefits'));
+    host.querySelector('[data-payment-demo]')?.addEventListener('click',()=>{demoMode=!demoMode;renderPanel(host,profile,method);});
     mountProductChoices(host,method);
     wireCardInputs(host);
     wireStoreInputs(host);
@@ -389,6 +392,7 @@
 
     host.querySelector('[data-payment-action]').addEventListener('click', event => {
       if(event.currentTarget.disabled)return;
+      if(demoMode){const status=host.querySelector('.mp-action-status');if(method==='card'){if(!validateCard(host)){status.textContent='請填入測試卡號 4111 1111 1111 1111、未來有效期限、任意 3 碼安全碼與測試姓名。';return;}const cardPage=host.querySelector('[data-payment-method=card]');showCardProcessing(host);setTimeout(()=>{if(cardPage?.isConnected&&demoMode)showCardSuccess(host);},1900);}else status.textContent=method==='line'?'測試完成：正式流程會前往 LINE Pay；這次沒有建立訂單，也不會開啟付款網站。':'測試完成：正式流程會產生超商繳費代碼；這次沒有訂單或可繳費代碼。';return;}
       const actionButton = event.currentTarget;
       const status = host.querySelector('.mp-action-status');
       if (method === 'line' && host.dataset.lineLive === '1') { startLinePay(host, actionButton, status); return; }
@@ -431,7 +435,7 @@
     const box=host.querySelector('[data-payment-products]');if(!box)return;
     box.textContent='正在載入會員方案…';
     await window.AcademyMemberCatalog?.refresh();if(!box.isConnected)return;
-    const catalog=window.AcademyMemberCatalog?.get();const products=catalog?.products||[];
+    const catalog=window.AcademyMemberCatalog?.get();let products=catalog?.products||[];if(!products.length&&demoMode)products=[{id:'demo_only',name:'付款流程測試',tier:'observation',icon:'shield',description:'僅供試填與動畫預覽，不代表上架商品或會員升級。',details:'不會建立訂單、綁卡或扣款。',purchasable:false}];
     if(!products.length){box.textContent='目前沒有可比較的上架方案，請稍後再查看。';return;}
     let preferred='';try{preferred=sessionStorage.getItem('foresight.membership.product')||'';}catch{}
     let interest='';try{interest=sessionStorage.getItem('foresight.membership.interest')||'';}catch{}
@@ -439,10 +443,10 @@
     box.innerHTML=products.map(p=>'<label class="mp-product-choice"><input type="radio" name="billing-product" value="'+esc(p.id)+'" '+(p.id===selected.id?'checked':'')+'><span class="mp-product-symbol">'+window.AcademyMemberCatalog.icon(p.icon)+'</span><span><strong>'+esc(p.name)+'</strong><small>'+((p.tier==='free')?'免費基礎身分':p.purchasable?money(p.price_twd)+' ／ '+p.days+' 天':'查看會員權益')+'</small></span></label>').join('');
     const sync=()=>{if(!box.isConnected)return;try{sessionStorage.setItem('foresight.membership.product',selected.id);sessionStorage.setItem('foresight.membership.interest',selected.tier);sessionStorage.setItem('foresight.membership.plan',selected.plan_code||'');}catch{}
       host.querySelector('[data-payment-product-detail]').textContent=selected.description+' '+(selected.details||'');
-      const action=host.querySelector('[data-payment-action]'),status=host.querySelector('.mp-action-status'),real=method==='line'&&host.dataset.lineLive==='1'&&selected.purchasable;
-      action.disabled=!real;action.querySelector('span').textContent=real?'前往 LINE Pay 付款':selected.tier==='free'?'免費身分，無需付款':method==='card'?'信用卡綁定尚未開通':method==='store'?'超商付款尚未開通':'目前尚未開放付款';
-      status.textContent=method==='card'?'信用卡介面保留供你了解操作，目前尚未提供真正綁卡或扣款，請勿填寫真實卡號。':method==='store'?'目前不會產生繳費代碼，也不會建立超商訂單。':!real?'你可以先選方案與付款方式；正式開放前不會建立新訂單或扣款。':'請確認所選方案與期間，最後由 LINE Pay 確認付款。';
-      host.querySelectorAll('.mp-method-body input').forEach(input=>{if(input.name!=='mp-plan'&&input.type!=='radio')input.disabled=true;});
+      const action=host.querySelector('[data-payment-action]'),status=host.querySelector('.mp-action-status'),real=!demoMode&&method==='line'&&host.dataset.lineLive==='1'&&selected.purchasable;
+      action.disabled=!real&&!demoMode;action.querySelector('span').textContent=demoMode?(method==='card'?'測試新增卡片（不綁卡、不扣款）':'測試'+methods[method].short+'流程（不扣款）'):real?'前往 LINE Pay 付款':selected.tier==='free'?'免費身分，無需付款':method==='card'?'信用卡綁定尚未開通':method==='store'?'超商付款尚未開通':'目前尚未開放付款';
+      status.textContent=demoMode?'測試模式：請用 4111 1111 1111 1111、未來期限、任意 3 碼安全碼及測試姓名；不會送出或保存資料。':method==='card'?'信用卡介面保留供你了解操作，目前尚未提供真正綁卡或扣款，請勿填寫真實卡號。':method==='store'?'目前不會產生繳費代碼，也不會建立超商訂單。':!real?'你可以先選方案與付款方式；正式開放前不會建立新訂單或扣款。':'請確認所選方案與期間，最後由 LINE Pay 確認付款。';
+      host.querySelectorAll('.mp-method-body input').forEach(input=>{if(input.name!=='mp-plan'&&input.type!=='radio')input.disabled=!demoMode;});
       const note=host.querySelector('.mp-summary-note');note.innerHTML='<b>已選方案：'+esc(selected.name)+'</b><p>'+(real?'付款金額與期間請在送出前再次確認。':'目前只選擇方案，不會綁卡或扣款。')+'</p>';
       if(real){payState.selected=selected.plan_code;const input=[...host.querySelectorAll('[name=mp-plan]')].find(x=>x.value===selected.plan_code);if(input){input.checked=true;input.dispatchEvent(new Event('change',{bubbles:true}));}}
       else host.querySelector('[data-summary-amount]').textContent='尚未開放付款';

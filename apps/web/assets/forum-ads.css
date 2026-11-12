@@ -175,8 +175,16 @@
 .member-quick-panel .mq-profile-row{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:6px;padding:0 14px 11px 0}
 .member-quick-panel .mq-profile-row .mq-profile{padding:0}
 .mq-profile-row .mq-profile>span:last-child{position:absolute;right:1px;pointer-events:none}
-.member-quick-panel .mq-scan{display:grid;place-items:center;width:34px;height:34px;padding:0;border-radius:10px;color:var(--accent)!important}
-.member-quick-panel .mq-scan .mq-icon{width:19px;height:19px;color:inherit}
+.member-quick-panel .mq-scan{display:grid;place-items:center;width:36px;height:36px;min-height:36px;padding:0;border-radius:11px;color:var(--accent)!important;background:linear-gradient(145deg,color-mix(in srgb,var(--accent) 6%,transparent),transparent);border:1px solid color-mix(in srgb,var(--accent) 10%,transparent)}
+.member-quick-panel .mq-scan:hover{transform:none;background:color-mix(in srgb,var(--accent) 9%,transparent)}
+.member-quick-panel .mq-scan .mq-icon{position:relative;display:block;width:25px;height:25px;color:inherit;isolation:isolate}
+.member-quick-panel .mq-scan:hover .mq-icon{transform:none}
+.member-quick-panel .mq-scan .mq-icon svg{display:block;width:100%;height:100%;stroke-width:1.7;opacity:.95}
+.member-quick-panel .mq-scan .mq-icon::before,.member-quick-panel .mq-scan .mq-icon::after{content:"";position:absolute;left:18%;right:18%;top:37%;pointer-events:none;animation:mq-scan-sweep 4.6s cubic-bezier(.45,0,.55,1) infinite}
+.member-quick-panel .mq-scan .mq-icon::before{height:4px;margin-top:-1.7px;background:radial-gradient(ellipse at center,currentColor,transparent 72%);opacity:.09;filter:blur(.7px)}
+.member-quick-panel .mq-scan .mq-icon::after{height:.65px;border-radius:1px;background:linear-gradient(90deg,transparent,currentColor 24%,currentColor 76%,transparent);opacity:.75}
+@keyframes mq-scan-sweep{0%,100%{transform:translateY(0)}50%{transform:translateY(6px)}}
+@media(prefers-reduced-motion:reduce){.member-quick-panel .mq-scan .mq-icon::before,.member-quick-panel .mq-scan .mq-icon::after{animation:none;top:50%}}
 .fm-camera{position:relative;margin:12px 0;background:#111b25;border-radius:10px;overflow:hidden}
 .fm-camera video{display:block;width:100%;max-height:min(40vh,300px);object-fit:contain}
 .fm-camera span{position:absolute;inset:50% auto auto 50%;width:min(52%,185px);aspect-ratio:1;transform:translate(-50%,-50%);border:2px solid #fff;border-radius:12px;pointer-events:none;box-shadow:0 0 0 100vmax rgba(0,0,0,.17)}
@@ -334,11 +342,13 @@
 .site-ad-crop-viewport{position:relative;width:100%;overflow:hidden;flex:none}
 .site-ad-media:has(.site-ad-crop-viewport){display:flex;align-items:center;justify-content:center}
 
-/* Admin modal surroundings stay blue-gray, never a white washed-out sheet. */
-.afa-modal::backdrop{background:rgba(15,35,55,.78)!important;backdrop-filter:blur(6px)}
-:root:not([data-theme=light]) .afa-modal::backdrop{background:rgba(3,12,23,.86)!important}
-body:has(#adminView:not([style*="display:none"]):not([style*="display: none"])){--admin-overlay-shade:rgba(15,35,55,.78)}
-body:has(#adminView:not([style*="display:none"]):not([style*="display: none"])) dialog::backdrop{background:var(--admin-overlay-shade)!important}
+/* Fullscreen dialog is transparent; only the native backdrop dims the live page. */
+html:root body dialog.afa-modal[open]{background:transparent!important;background-image:none!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+html body dialog.afa-modal::backdrop{background:rgba(27,48,69,.24)!important;backdrop-filter:blur(5px) saturate(.88);-webkit-backdrop-filter:blur(5px) saturate(.88)}
+html[data-theme=dark] body dialog.afa-modal::backdrop,html:not([data-theme=light]) body dialog.afa-modal::backdrop{background:rgba(3,12,23,.42)!important}
+html body dialog.afa-modal .afa-sheet{background:rgba(224,234,244,.88)!important;backdrop-filter:blur(20px) saturate(1.1);-webkit-backdrop-filter:blur(20px) saturate(1.1);border:1px solid rgba(138,165,188,.4)}
+html:not([data-theme=light]) body dialog.afa-modal .afa-sheet{background:rgba(23,38,56,.9)!important;border-color:rgba(131,158,184,.3)}
+html body dialog.afa-modal .afa-sheet-hd{background:transparent!important}
 .afa-back-top{position:fixed;right:20px;bottom:22px;width:34px;height:34px;border-radius:50%;border:1px solid var(--border);background:color-mix(in srgb,var(--surface2) 76%,transparent);backdrop-filter:blur(12px);color:var(--text-muted);display:grid;place-items:center;z-index:1000;cursor:pointer;box-shadow:0 3px 12px rgba(10,30,50,.12)}
 .afa-back-top[hidden]{display:none!important}.afa-back-top svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}.afa-back-top:hover{color:var(--accent);border-color:var(--accent)}
 
@@ -364,3 +374,53 @@ body:has(#adminView:not([style*="display:none"]):not([style*="display: none"])) 
 .ac-product-actions{margin-left:auto;display:flex;align-items:center;gap:10px;flex-shrink:0}.ac-product-actions .afa-btn{font-size:12px;min-height:30px;padding:4px 9px}
 
 #adminView .ac-product{scroll-margin-top:96px}
+
+.afa-page-context{position:relative;min-height:260px;overflow:hidden;padding-bottom:10px;font-size:11px}
+.afa-mini-market{display:grid;grid-template-columns:1.2fr 1fr;gap:12px;padding:18px 8px;background:linear-gradient(110deg,transparent,rgba(62,139,190,.1)),linear-gradient(var(--border) 1px,transparent 1px) 0 0/24px 24px}
+.afa-mini-market h3{font-size:21px;line-height:1.35;margin:7px 0;color:var(--text)}
+.afa-mini-market p,.afa-mini-member p,.afa-mini-results p{font-size:10px!important;color:var(--text-muted);margin:8px 0}
+.afa-mini-market aside{background:color-mix(in srgb,var(--surface2) 75%,transparent);padding:10px;border:1px solid var(--border);border-radius:8px}
+.afa-mini-search{padding:8px;border:1px solid var(--border);border-radius:6px;color:var(--text-muted);font-size:9px}
+.afa-mini-kpis{display:flex;gap:5px;flex-wrap:wrap}.afa-mini-kpis span{padding:8px;background:var(--surface2);border-radius:5px;font-size:9px}
+.afa-mini-results,.afa-mini-member{padding:12px 8px}.afa-mini-results table{width:100%;font-size:10px;border-collapse:collapse}.afa-mini-results :is(th,td){text-align:left;border-bottom:1px solid var(--border);padding:7px}
+.afa-mini-below{padding:14px 8px;border-block:1px solid var(--border);color:var(--text-muted);font-size:10px}
+.afa-placement-target{position:relative;margin:14px 0 10px;padding:12px 5px 5px;border:1px dashed var(--accent);border-radius:9px;background:color-mix(in srgb,var(--accent) 5%,transparent)}
+.afa-target-label{position:absolute;top:-8px;left:8px;background:var(--afa-panel,var(--surface2));color:var(--accent);font-size:9px;padding:0 5px}
+.afa-page-context[data-slot=corner] .afa-placement-target{position:absolute;bottom:5px;right:5px;width:48%;box-shadow:0 6px 20px #0002}
+.afa-page-context[data-slot=corner]{min-height:330px}.afa-ad-browser.mobile .afa-mini-market{grid-template-columns:1fr}.afa-ad-browser.mobile .afa-mini-market h3{font-size:18px}
+
+.afa-mini-carousel{display:grid;grid-template-columns:minmax(0,1fr);position:relative;min-height:180px;overflow:hidden;border:1px solid var(--border);border-radius:8px}
+.afa-mini-carousel>:is(.afa-mini-market,.afa-placement-target){grid-area:1/1;align-self:stretch;margin:0;min-width:0}
+.afa-mini-carousel>.afa-mini-market{position:relative;z-index:1}
+.afa-mini-carousel>.afa-placement-target{align-self:stretch;display:flex;flex-direction:column;justify-content:center;padding:18px 6px 6px;border-radius:8px;background:var(--afa-panel,var(--surface2))}
+.afa-mini-carousel>.afa-placement-target .afa-target-label{top:3px}
+.afa-mini-carousel>.afa-placement-target [data-preview]{width:100%}
+[data-motion-status]{flex:1 1 180px;font-size:10px!important}
+
+.afa-mini-carousel>.afa-mini-market{opacity:0;pointer-events:none}
+
+/* Redemption table: balanced columns, centered numbers and compact edit controls. */
+#adminView [data-products] .afa-table{table-layout:fixed;width:100%;min-width:760px}
+#adminView [data-products] .afa-table :is(th,td):nth-child(1){width:34%;text-align:left}
+#adminView [data-products] .afa-table :is(th,td):nth-child(2){width:12%;text-align:center!important}
+#adminView [data-products] .afa-table :is(th,td):nth-child(3){width:18%;text-align:center!important}
+#adminView [data-products] .afa-table :is(th,td):nth-child(4){width:12%;text-align:center!important}
+#adminView [data-products] .afa-table :is(th,td):nth-child(5){width:24%;text-align:center}
+#adminView [data-products] .afa-table input[name=points]{width:min(100%,110px)!important;margin-inline:auto;text-align:center!important}
+#adminView [data-products] .afa-table input[name=title]{width:min(100%,300px)!important}
+#adminView [data-products] .afa-table .afa-acts .afa-btn{margin:3px}
+#adminView [data-products] .afa-table :is(th,td){padding-inline:14px;vertical-align:middle}
+#adminView [data-products] .afa-table input[name=points]{box-sizing:border-box!important;max-width:110px!important}
+
+/* Shared compact fields for every admin tab and management sheet. */
+:is(#adminView,.afa-sheet) :is(input,select):not([type=checkbox]):not([type=radio]):not([type=range]):not([type=hidden]):not([type=file]):not([type=color]){width:min(100%,240px)!important;max-width:240px!important;box-sizing:border-box!important}
+:is(#adminView,.afa-sheet) input[type=number]{width:min(100%,110px)!important;max-width:110px!important}
+:is(#adminView,.afa-sheet) :is(input[type=date],input[type=time],input[type=datetime-local]){width:min(100%,220px)!important;max-width:220px!important}
+:is(#adminView,.afa-sheet) input:is([type=url],[name=url],[name=media_url],[name=signup_url],[name=venue],[name=reason]){width:min(100%,480px)!important;max-width:480px!important}
+#adminView table input:not([type=checkbox]):not([type=radio]):not([type=number]),#adminView [data-point-panel] .afa-table input[name=title],#adminView [data-products] .afa-table input[name=title]{width:min(100%,240px)!important;max-width:240px!important}
+
+:is(#adminView,.afa-sheet) :is(input,select):not([type=checkbox]):not([type=radio]):not([type=range]):not([type=hidden]):not([type=file]):not([type=color]):is([type=number]){width:min(100%,110px)!important;max-width:110px!important}
+:is(#adminView,.afa-sheet) :is(input,select):not([type=checkbox]):not([type=radio]):not([type=range]):not([type=hidden]):not([type=file]):not([type=color]):is([type=date],[type=time],[type=datetime-local]){width:min(100%,220px)!important;max-width:220px!important}
+:is(#adminView,.afa-sheet) :is(input,select):not([type=checkbox]):not([type=radio]):not([type=range]):not([type=hidden]):not([type=file]):not([type=color]):is([type=url],[name=url],[name=media_url],[name=signup_url],[name=venue],[name=reason]){width:min(100%,480px)!important;max-width:480px!important}
+
+.afa-voucher-manual{margin-top:22px;padding-top:18px;border-top:1px solid var(--border)}.afa-voucher-manual h3{font-size:15px;margin-bottom:8px}.afa-recipient-list{max-height:300px;overflow:auto;margin:10px 0}.afa-voucher-manual .afa-table{table-layout:auto;min-width:0}.afa-voucher-manual .afa-table td{overflow-wrap:anywhere}

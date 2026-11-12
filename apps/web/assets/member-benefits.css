@@ -1,7 +1,9 @@
 .mb-hero{position:relative;isolation:isolate;overflow:hidden}
 .mb-hero h2{font-size:clamp(25px,2.5vw,34px);letter-spacing:.02em}
 .mb-watermark{position:absolute;z-index:-1;right:22px;top:12px;width:175px;height:88px;background:url('brand/foresight-owl-light-book-light.png') center/contain no-repeat;opacity:.075;pointer-events:none}
-[data-theme=dark] .mb-watermark{background-image:url('brand/foresight-owl-dark-book-light.png');opacity:.10}
+:root:not([data-theme=light]) .mb-watermark{background-image:url('brand/foresight-owl-dark-book-light.png');opacity:.58;filter:brightness(1.12);mix-blend-mode:screen;z-index:0}
+:root:not([data-theme=light]) .mb-hero>:not(.mb-watermark){position:relative;z-index:1}
+@media(max-width:600px){:root:not([data-theme=light]) .mb-watermark{opacity:.44}}
 .mb-identity{display:flex;align-items:center;gap:10px 16px;flex-wrap:wrap;margin-top:20px;padding-top:16px;border-top:1px solid var(--border);font-size:14px}
 .mb-identity strong{font-size:20px;color:var(--text)}
 .mb-identity small{color:var(--text-muted)}
