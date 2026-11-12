@@ -11,9 +11,13 @@ class WatchlistDeleteTests(unittest.TestCase):
         handler.headers = {'Authorization': 'Bearer fixture'}
         responses = []
         handler._json = lambda status, data: responses.append((status, data))
-        with patch.object(watchlist, '_sb', return_value=(403, {'error': 'denied'})):
+        with (
+            patch.object(watchlist, '_verified_user_id', return_value=(200, '00000000-0000-0000-0000-000000000001')),
+            patch('lib.member_phone.check', return_value=None),
+            patch.object(watchlist, '_sb', return_value=(403, {'error': 'denied'})),
+        ):
             handler.do_DELETE()
-        self.assertEqual(responses, [(403, {'error': 'denied'})])
+        self.assertEqual(responses, [(403, {'error': 'forbidden'})])
 
 
 if __name__ == '__main__':

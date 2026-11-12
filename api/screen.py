@@ -3,6 +3,7 @@ import json
 import csv
 import io
 import os
+import logging
 import urllib.request
 import urllib.parse
 import urllib.error
@@ -10,6 +11,7 @@ import math
 import time
 import threading
 from datetime import datetime, timezone, timedelta
+from uuid import UUID
 from concurrent.futures import ThreadPoolExecutor, as_completed
 # 固定題材分類(照合夥人 theme-snapshot,39 族群成分股),內嵌避免 Vercel 多 entrypoint/bundle 問題
 THEME_MEMBERS = {
@@ -56,10 +58,13 @@ THEME_MEMBERS = {
 
 
 # ── 篩選結果暫存（非同步任務：伺服器算完存起來，前端切回來再領）──
-# 用 anon key：screen_cache 的 RLS 已開放 anon 全操作，且 anon key 必為當前專案（不受
-# service key 是否過期影響）
+# screen_cache 優先使用後端 service key；未設定才回退 anon（冷啟動記錄一次）。
+# 此 client 也讀取其他公開資料；那些路徑維持 anon，不擴大權限。
 SUPABASE_URL     = os.environ.get("SUPABASE_URL", "")
 SUPABASE_KEY     = os.environ.get("SUPABASE_ANON_KEY", "")
+SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
+if not SUPABASE_SERVICE_KEY:
+    logging.getLogger(__name__).warning("screen_cache: SUPABASE_SERVICE_KEY unset; using anon fallback")
 
 # ── 盤中即時注入點（第3層）──────────────────────────────────────────────
 # 本機盤中腳本(scripts/intraday_push.py)掃 mis.twse.com.tw 全市場後，直接把這個
@@ -116,15 +121,17 @@ def _read_sb(r):
 
 
 def _cache_sb(path, method="GET", body=None, params=None):
-    if not (SUPABASE_URL and SUPABASE_KEY):
+    # 僅精確的 screen_cache 路徑使用 service key；其餘共用呼叫維持原 anon 權限。
+    key = (SUPABASE_SERVICE_KEY or SUPABASE_KEY) if path == "/screen_cache" else SUPABASE_KEY
+    if not (SUPABASE_URL and key):
         return 0, None
     url = f"{SUPABASE_URL}/rest/v1{path}"
     if params:
         url += "?" + urllib.parse.urlencode(params)
     data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(url, data=data, method=method, headers={
-        "Content-Type": "application/json", "apikey": SUPABASE_KEY,
-        "Authorization": f"Bearer {SUPABASE_KEY}", "Prefer": "return=minimal",
+        "Content-Type": "application/json", "apikey": key,
+        "Authorization": f"Bearer {key}", "Prefer": "return=minimal",
         "Accept-Encoding": "gzip",
     })
     try:
@@ -2322,6 +2329,151 @@ def _sb_service(path, method="GET", body=None, params=None, prefer="return=minim
         return 0, None
 
 
+# ── AI 買點付費保護（2026-11-12 方案 phase 1a）─────────────────────────────
+# 只給已登入且有付費等級的會員；管理者白名單一律放行。所有回應 private, no-store（不給 CDN 公開快取）。
+# 驗證全部發生在任何 AI/LLM 呼叫、K 線讀取與畫圖之前。不記錄金鑰或會員身分。
+AIBUY_CACHE = "private, no-store"
+# 與 api/auth.py ADMIN_IDS 必須一致（Vercel 每支 api/*.py 獨立打包不互相 import；測試會比對兩邊）
+AIBUY_ADMIN_IDS = frozenset({"ef7193f4-15be-4ab0-b004-705d95b1a3dc",
+                             "93f16c68-d103-4092-b938-93e34012d3c1",
+                             "118f9b90-85d1-4195-ac50-20c16a8624e9"})
+AIBUY_PAID_TIERS = frozenset({"observation", "research", "advanced", "vip"})   # member_tiers 非 free 的合法等級
+AIBUY_GATE_MSG = {401: "請先登入會員", 403: "AI 判讀為付費會員功能，請升級方案後使用",
+                  503: "會員驗證暫時無法使用，請稍後再試"}
+
+
+def _aibuy_bearer(headers):
+    raw = (headers.get("Authorization") or "") if headers is not None else ""
+    if not raw.startswith("Bearer "):
+        return ""
+    tok = raw[7:].strip()
+    return tok if 0 < len(tok) <= 8192 else ""
+
+
+def _aibuy_future(ts, now):
+    if ts is None:
+        return True
+    try:
+        return datetime.fromisoformat(str(ts).replace("Z", "+00:00")) > now
+    except ValueError:
+        return False
+
+
+def _aibuy_member_get(path, params, skey):
+    """閘門專用 service key 唯讀查詢；回 (HTTP 狀態, rows)。與 _sb_service 不同：保留 HTTP 錯誤碼（區分表不存在）。"""
+    url = f"{SUPABASE_URL}/rest/v1{path}?" + urllib.parse.urlencode(params)
+    req = urllib.request.Request(url, headers={"apikey": skey, "Authorization": f"Bearer {skey}", "Accept-Encoding": "gzip"})
+    try:
+        with urllib.request.urlopen(req, timeout=8) as r:
+            raw = _read_sb(r)
+            return r.status, (json.loads(raw) if raw else None)
+    except urllib.error.HTTPError as e:
+        try:                                                # 只取 PostgREST 錯誤代碼判斷表是否存在，不記錄內容
+            err = json.loads(e.read(4096) or b"null")
+        except Exception:                                   # noqa: BLE001
+            err = None
+        return e.code, ({"code": err.get("code")} if isinstance(err, dict) else None)
+    except Exception:                                       # noqa: BLE001
+        return 0, None
+
+
+def _aibuy_missing(st, data):
+    """表尚未建立：HTTP 404，或 PostgREST PGRST205（schema cache 無此表）／42P01（relation does not exist）。"""
+    return st == 404 or (isinstance(data, dict) and data.get("code") in ("PGRST205", "42P01"))
+
+
+def _aibuy_voucher(uid, now, skey):
+    """兌換券是否給付費等級；回 200/403/503。照 member_membership_status() 的 voucher 分支
+    （含 member_feature_access() 的「選的功能仍啟用」條件）用 service key 分三次唯讀查詢在程式內重現。"""
+    iso = now.isoformat()
+    st, rewards = _aibuy_member_get("/member_rewards", [("select", "id,voucher_tier,selected_features"),
+                                                        ("user_id", "eq." + uid), ("status", "eq.claimed")], skey)
+    if _aibuy_missing(st, rewards):
+        return 403
+    if st != 200 or not isinstance(rewards, list):
+        return 503
+    rewards = [r for r in rewards if isinstance(r, dict)]
+    # choice 視同 observation；結果須在付費等級內；selected_features 為空時 SQL 的 exists(unnest(...)) 為 false
+    cand = {r.get("id"): r for r in rewards
+            if ("observation" if r.get("voucher_tier") == "choice" else r.get("voucher_tier")) in AIBUY_PAID_TIERS
+            and isinstance(r.get("selected_features"), list) and r["selected_features"]}
+    if not cand:
+        return 403
+    st, ents = _aibuy_member_get("/member_entitlements", [("select", "reward_id,feature"), ("user_id", "eq." + uid),
+                                                          ("starts_at", "lte." + iso), ("expires_at", "gt." + iso)], skey)
+    if _aibuy_missing(st, ents):
+        return 403
+    if st != 200 or not isinstance(ents, list):
+        return 503
+    by_reward = {r.get("id"): r for r in rewards}
+    live = [e for e in ents if isinstance(e, dict) and e.get("reward_id") in by_reward]   # 對應已 claimed 的獎勵
+    if not any(e.get("reward_id") in cand for e in live):
+        return 403
+    st, cat = _aibuy_member_get("/member_feature_catalog", [("select", "feature"), ("member_research", "is.true"),
+                                                            ("voucher_enabled", "is.true")], skey)
+    if _aibuy_missing(st, cat):
+        return 403
+    if st != 200 or not isinstance(cat, list):
+        return 503
+    enabled = {c.get("feature") for c in cat if isinstance(c, dict)}
+    # member_feature_access().features：任一有效 entitlement 帶來的已啟用功能（research_tools→fhedge/breadth；
+    # voucher_bundle→該獎勵 selected_features）
+    features = set()
+    for e in live:
+        if e.get("feature") == "research_tools":
+            features |= enabled & {"fhedge", "breadth"}
+        elif e.get("feature") == "voucher_bundle":
+            features |= enabled & set(by_reward[e["reward_id"]].get("selected_features") or [])
+    for e in live:
+        r = cand.get(e.get("reward_id"))
+        if r and features & set(r["selected_features"]):
+            return 200
+    return 403
+
+
+def _aibuy_gate(token):
+    """回 200（放行）/401/403/503。fail closed：service key 缺、Auth 或 DB 異常都不放行。"""
+    if not token:
+        return 401
+    skey = os.environ.get("SUPABASE_SERVICE_KEY", "")
+    if not (SUPABASE_URL and skey):
+        return 503
+    try:
+        req = urllib.request.Request(SUPABASE_URL.rstrip("/") + "/auth/v1/user",
+                                     headers={"apikey": SUPABASE_KEY or skey, "Authorization": "Bearer " + token})
+        with urllib.request.urlopen(req, timeout=10) as r:
+            user = json.loads(r.read(65536))
+        uid = str(UUID(user["id"])) if isinstance(user, dict) and isinstance(user.get("id"), str) else ""
+    except urllib.error.HTTPError as e:
+        return 401 if e.code in (401, 403) else 503
+    except (ValueError, KeyError, TypeError):
+        return 401
+    except Exception:                                       # noqa: BLE001
+        return 503
+    if not uid:
+        return 401
+    if uid in AIBUY_ADMIN_IDS:
+        return 200
+    now = datetime.now(timezone.utc)
+    st, rows = _aibuy_member_get("/member_tiers", [("select", "tier,expires_at"), ("user_id", "eq." + uid), ("limit", "1")], skey)
+    if st != 200 or not isinstance(rows, list):
+        return 503
+    if any(r.get("tier") in AIBUY_PAID_TIERS and _aibuy_future(r.get("expires_at"), now) for r in rows if isinstance(r, dict)):
+        return 200
+    # 付款開通寫在 member_subscription_periods（lib/payments.py），與 member_membership_status() 同語意
+    iso = now.isoformat()
+    st, rows = _aibuy_member_get("/member_subscription_periods",
+                                 [("select", "tier"), ("user_id", "eq." + uid), ("revoked_at", "is.null"),
+                                  ("starts_at", "lte." + iso), ("expires_at", "gt." + iso), ("limit", "5")], skey)
+    if st == 200 and isinstance(rows, list):
+        if any(isinstance(r, dict) and r.get("tier") in AIBUY_PAID_TIERS for r in rows):
+            return 200
+    elif not _aibuy_missing(st, rows):                      # 表尚未建立（PREPARED ONLY）→ 視為無期間
+        return 503
+    # 兌換券（2026-11-12 創辦人決定算付費）：前兩項都沒給權限才查，已付費者不多打上游
+    return _aibuy_voucher(uid, now, skey)
+
+
 def _aibuy_bars(code):
     st, rows = _cache_sb("/price_window", params=[
         ("select", "trade_date,open,high,low,close,volume"), ("code", f"eq.{code}"),
@@ -2446,7 +2598,7 @@ def _aibuy(code):
         return _aibuy_stub(code, "日線資料不足"), "public, s-maxage=600, max-age=60"
     data_date = bars[-1][0]
     kind = f"aibuy_{code}"
-    st, rows = _cache_sb("/page_cache", params=[("kind", f"eq.{kind}"), ("select", "payload"), ("limit", "1")])
+    st, rows = _sb_service("/page_cache", params=[("kind", f"eq.{kind}"), ("select", "payload"), ("limit", "1")])   # aibuy_* 只用 service key 讀（phase 1c）
     if st == 200 and rows:
         pl = rows[0].get("payload") or {}
         if pl.get("date") == data_date and pl.get("model") == model and pl.get("v") == AIBUY_VER and not pl.get("stub"):
@@ -2454,8 +2606,10 @@ def _aibuy(code):
     # 每日上限（有 service key 才計數；沒有就只靠 CDN 與共享快取擋重複呼叫）
     today = datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m-%d")
     limit = int(os.environ.get("AI_DAILY_LIMIT") or 300)
-    cst, crow = _cache_sb("/page_cache", params=[("kind", "eq.aibuy__count"), ("select", "payload"), ("limit", "1")])
-    cnt = (crow[0].get("payload") or {}) if (cst == 200 and crow) else {}
+    cst, crow = _sb_service("/page_cache", params=[("kind", "eq.aibuy__count"), ("select", "payload"), ("limit", "1")])
+    if cst != 200:                                          # 計數讀不到就不呼叫付費模型（fail closed）
+        return _aibuy_stub(code, "AI 判讀暫時無法使用，請稍後再試"), "private, no-store"
+    cnt = (crow[0].get("payload") or {}) if crow else {}
     used = int(cnt.get("n") or 0) if cnt.get("date") == today else 0
     if used >= limit:
         return _aibuy_stub(code, f"今日 AI 判讀已達上限 {limit} 次"), "public, s-maxage=600, max-age=60"
@@ -4207,12 +4361,38 @@ class handler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
         self.end_headers()
 
     def do_GET(self):
         # 領取非同步篩選結果：?job_id=xxx → 有結果回結果，沒好回 {pending:true}
         qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+        # AI 判定買點（付費會員限定）：先驗會員 JWT＋付費等級，通過才讀 K 線／呼叫 AI；所有回應 private, no-store
+        if (qs.get("stat") or [""])[0] == "aibuy":
+            gate = _aibuy_gate(_aibuy_bearer(self.headers))
+            if gate != 200:
+                return self._send_json(gate, {"error": AIBUY_GATE_MSG[gate], "auth": gate}, cache=AIBUY_CACHE)
+            import re as _re
+            code = (qs.get("code") or [""])[0].strip().upper()[:8]
+            if not _re.fullmatch(r"[0-9A-Z]{4,6}", code):
+                return self._send_json(200, {"error": "代號格式不正確"}, cache=AIBUY_CACHE)
+            if (qs.get("img") or [""])[0] == "1":       # 看 AI 實際看到的 K 線圖（除錯／核對用）
+                bars = _aibuy_bars(code)
+                if len(bars) < 80:
+                    return self._send_json(200, {"error": "日線資料不足"}, cache=AIBUY_CACHE)
+                png, _ = _aibuy_png(bars)
+                self.send_response(200)
+                self.send_header("Content-Type", "image/png")
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.send_header("Cache-Control", AIBUY_CACHE)
+                self.end_headers()
+                self.wfile.write(png)
+                return
+            try:
+                payload, _cc = _aibuy(code)             # _aibuy 內的 public 快取字串不再使用
+            except Exception as e:                      # noqa: BLE001
+                payload = _aibuy_stub(code, "伺服器錯誤：" + type(e).__name__)
+            return self._send_json(200, payload, cache=AIBUY_CACHE)
         if (qs.get("stat") or [""])[0] == "visual_patterns":
             return self._send_json(200, _read_visual_patterns((qs.get("code") or [""])[0]),
                                    cache="public, max-age=60, s-maxage=60")
@@ -4539,29 +4719,6 @@ class handler(BaseHTTPRequestHandler):
             except Exception as e:
                 import traceback
                 return self._send_json(200, {"error": str(e), "traceback": traceback.format_exc()})
-        # AI 判定買點：有 AI 金鑰（Vercel 環境變數）就走真的，沒有就回假資料；實作見 _aibuy()
-        if (qs.get("stat") or [""])[0] == "aibuy":
-            import re as _re
-            code = (qs.get("code") or [""])[0].strip().upper()[:8]
-            if not _re.fullmatch(r"[0-9A-Z]{4,6}", code):
-                return self._send_json(200, {"error": "代號格式不正確"})
-            if (qs.get("img") or [""])[0] == "1":       # 看 AI 實際看到的 K 線圖（除錯／核對用）
-                bars = _aibuy_bars(code)
-                if len(bars) < 80:
-                    return self._send_json(200, {"error": "日線資料不足"})
-                png, _ = _aibuy_png(bars)
-                self.send_response(200)
-                self.send_header("Content-Type", "image/png")
-                self.send_header("Access-Control-Allow-Origin", "*")
-                self.send_header("Cache-Control", "public, s-maxage=3600, max-age=600")
-                self.end_headers()
-                self.wfile.write(png)
-                return
-            try:
-                payload, cc = _aibuy(code)
-            except Exception as e:                      # noqa: BLE001
-                payload, cc = _aibuy_stub(code, "伺服器錯誤：" + type(e).__name__), "public, s-maxage=60, max-age=30"
-            return self._send_json(200, payload, cache=cc)
         self._send_json(200, {"status": "ok"})
 
     def do_POST(self):

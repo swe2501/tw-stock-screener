@@ -2253,7 +2253,7 @@
   }
 </style>
 <link rel="stylesheet" href="assets/member-center.css?v=20261107-flow-v4">
-<link rel="stylesheet" href="assets/member-payments.css?v=26">
+<link rel="stylesheet" href="assets/member-payments.css?v=28-linepay">
 <link rel="stylesheet" href="assets/member-wallet.css?v=ai2">
 <link rel="stylesheet" href="assets/futures-summary.css?v=history1">
 <link rel="stylesheet" href="assets/sector-dashboard.css">
@@ -4514,8 +4514,8 @@
     function esc(t){return String(t==null?'':t).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
     function tk(){ try{return localStorage.getItem('sb_token')||'';}catch(e){return '';} }
     function post(action,extra){
-      return fetch((window.__API||'')+'/api/auth',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tk()},
-        body:JSON.stringify(Object.assign({action:action},extra||{}))}).then(function(r){return r.json();});
+      return (typeof _authFetch==='function'?_authFetch:fetch)((window.__API||'')+'/api/auth',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tk()},
+        body:JSON.stringify(Object.assign({action:action},extra||{}))}).then(function(r){return r.json().then(function(j){return !r.ok && action.indexOf('admin_office_tasks_')===0 && j && typeof j==='object' ? Object.assign({},j,{httpStatus:r.status}) : j;});});
     }
     function dt(s){ if(!s)return '—'; try{return new Date(s).toLocaleString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});}catch(e){return s;} }
     // 等級照合夥人 member-voucher-levels.sql：observation/research/advanced/vip（＋free 一般會員）
@@ -14025,15 +14025,20 @@
     async function _tryRefreshToken() {
       if (!_authRefresh) return false;
       if (_refreshing) return _refreshing;
+      const refreshToken = _authRefresh;
+      const owner = _authUser?.id;
+      const isCurrentSession = () => _authRefresh === refreshToken && _authUser?.id === owner;
       _refreshing = (async () => {
         try {
           const r = await fetch(_authEndpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'refresh', refresh_token: _authRefresh }),
+            body: JSON.stringify({ action: 'refresh', refresh_token: refreshToken }),
           });
+          if (!isCurrentSession()) return false;
           if (!r.ok) { if (r.status === 401) _forceLogout(); return false; }
           const d = await r.json();
+          if (!isCurrentSession() || (owner && d.user?.id !== owner)) return false;
           _authToken   = d.access_token;
           _authRefresh = d.refresh_token || _authRefresh;
           _authUser    = d.user;
@@ -14049,11 +14054,14 @@
 
     // 帶自動 refresh 的 fetch 包裝，401 JWT expired 時自動重試
     async function _authFetch(url, opts = {}) {
-      opts.headers = { ...(opts.headers || {}), Authorization: `Bearer ${_authToken}` };
+      const sentToken = _authToken, owner = _authUser?.id;
+      opts.headers = { ...(opts.headers || {}), Authorization: `Bearer ${sentToken}` };
       let r = await fetch(url, opts);
-      if (r.status === 401) {
-        const refreshed = await _tryRefreshToken();
-        if (refreshed) {
+      if (r.status === 401 && _authUser?.id === owner) {
+        // A late 401 may refer to a token another request already renewed.
+        const refreshed = _refreshing ? await _refreshing
+          : (_authToken && _authToken !== sentToken) || await _tryRefreshToken();
+        if (_authToken && _authUser?.id === owner && (refreshed || _authToken !== sentToken)) {
           opts.headers['Authorization'] = `Bearer ${_authToken}`;
           r = await fetch(url, opts);
         }
@@ -14119,7 +14127,7 @@
       document.getElementById('backtestBtn').style.display   = loggedIn ? ''     : 'none';
       document.getElementById('funcDropdown').style.display  = loggedIn ? ''     : 'none';
       // 主力訊號／分點回測：僅授權帳號可見（資料端另有 RLS 保護；加人改此陣列＋DB allowed_viewers）
-      const VIEWER_EMAILS = ['swe250165@gmail.com', 'qa5518556130@gmail.com', 'wenpin0617@gmail.com'];
+      const VIEWER_EMAILS = ['swe250165@gmail.com', 'qa5518556130@gmail.com', 'wenpin0617@gmail.com', 'aistock-qa-idor-a@example.com', 'aistock-qa-idor-b@example.com'];  // IDOR 實測用，測完 revert
       const _owner = loggedIn && VIEWER_EMAILS.includes(_authUser?.email);
       // 封測存取與管理權「解耦」：管理者(白名單) 或 任何被設過等級的會員(member_tiers 非 free) 都能進封測
       const _hasTier = loggedIn && typeof window._memberTier === 'string' && window._memberTier !== 'free';
@@ -18529,7 +18537,7 @@
 <script src="assets/strategy-dimensions.js?v=2" defer></script>
 <script src="assets/strategy-presets.js?v=1" defer></script>
 <script src="assets/member-strategy-ui.js?v=companion-suction6" defer></script>
-<script src="assets/member-research.js?v=watchsync2" defer></script>
+<script src="assets/member-research.js?v=watchsync3" defer></script>
 <script src="assets/member-trade-engine.js?v=wording1" defer></script>
 <script src="assets/goal-models/manifest.js" defer></script>
 <script src="assets/member-companion-3d.js" defer></script>
@@ -18555,7 +18563,7 @@
 <script src="assets/member-notification-inbox.js?v=paging4" defer></script>
 <script src="assets/glass-skin.js?v=5" defer></script>
 <script src="assets/glass-motion.js?v=4" defer></script>
-<script src="assets/member-payments.js?v=26" defer></script>
+<script src="assets/member-payments.js?v=28-linepay" defer></script>
 <script src="assets/member-center.js?v=20261107-flow-v4-rights-20261106" defer></script>
 <script src="assets/member-signin.js?v=invite-reset7" defer></script>
 <link rel="stylesheet" href="assets/member-birthday.css?v=1"><script src="assets/member-birthday.js?v=1" defer></script><script src="assets/member-phone-welcome.js?v=1" defer></script>
@@ -18568,6 +18576,10 @@
 <link rel="stylesheet" href="assets/site-interactions.css?v=1">
 <link rel="stylesheet" href="assets/focus-rankings.css?v=5">
 <script src="assets/focus-rankings.js?v=5" defer></script>
+<link rel="stylesheet" href="assets/official-announcements.css?v=20261108">
+<script src="assets/official-announcements.js?v=20261108b" defer></script>
+  <link rel="stylesheet" href="assets/chart-official-ticker.css?v=20261108">
+  <script src="assets/chart-official-ticker.js?v=20261108" defer></script>
 <link rel="stylesheet" href="assets/screen-log.css?v=records-only19-balanced-natural-scroll">
 <link rel="stylesheet" href="assets/strategy-studio.css?v=3">
 <link rel="stylesheet" href="assets/learning-center.css?v=6">
@@ -18599,8 +18611,8 @@
 <script src="assets/home-market-intraday.js?v=14" defer></script>
 <link rel="stylesheet" href="assets/office-task-board.css?v=3">
 <script src="assets/office-content-flow.js?v=1" defer></script>
-<script src="assets/office-task-board.js?v=2" defer></script>
-<script src="assets/admin-office.js?v=9" defer></script>
+<script src="assets/office-task-board.js?v=admin-poll-3" defer></script>
+<script src="assets/admin-office.js?v=7f-uat-only-1" defer></script>
 <link rel="stylesheet" href="assets/forum-ads.css?v=5">
 <script src="assets/admin-ad-editor.js?v=2" defer></script>
 <script src="assets/admin-forum-ads.js?v=5" defer></script>

@@ -1,0 +1,9 @@
+.chart-official-ticker{display:flex;align-items:center;gap:10px;min-height:34px;box-sizing:border-box;padding:5px 14px;border-bottom:1px solid var(--border);background:var(--surface2,var(--surface));color:var(--text);flex:0 0 auto;font-size:12px;min-width:0}
+.chart-official-ticker strong{color:var(--accent);white-space:nowrap;font-size:11px}
+.chart-official-ticker>a{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);text-decoration:none}
+.chart-official-ticker>a[href]:hover{text-decoration:underline;color:var(--accent)}
+.chart-official-ticker small{color:var(--text-muted);white-space:nowrap;font-size:10px}
+.cot-controls{display:flex;gap:4px;flex-shrink:0}.cot-controls[hidden]{display:none}
+.cot-controls button{font:inherit;color:var(--text-muted);background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:1px 6px;cursor:pointer}
+.chart-official-ticker a:focus-visible,.cot-controls button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media(max-width:600px){.chart-official-ticker{gap:6px;padding:5px 8px;flex-wrap:wrap}.chart-official-ticker>a{flex-basis:calc(100% - 80px)}.chart-official-ticker small{flex:1}.cot-controls{margin-left:auto}}

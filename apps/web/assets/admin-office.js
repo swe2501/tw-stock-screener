@@ -179,13 +179,15 @@
       }
       if(event.data.type==='foresight-office-open-task'){
         if(typeof event.data.id!=='string'||!taskBoard)return;
+        if(Number.isInteger(event.data.department)&&event.data.department>=0&&event.data.department<=31&&event.data.department!==16)taskBoard.department(event.data.department);
         setView('tasks');taskBoard.open(event.data.id);return;
       }
       if(event.data.type==='foresight-office-create-task'||event.data.type==='foresight-office-open-tasks'){
         var department=event.data.department;
         if(!Number.isInteger(department)||department<0||department>31||department===16)return;
+        if(taskBoard&&event.data.type==='foresight-office-open-tasks')taskBoard.department(department);
         setView('tasks');
-        if(taskBoard){if(event.data.type==='foresight-office-create-task')taskBoard.create(department);else taskBoard.department(department);}
+        if(taskBoard&&event.data.type==='foresight-office-create-task')taskBoard.create(department);
         return;
       }
       if(event.data.type!=='foresight-office-open-role')return;

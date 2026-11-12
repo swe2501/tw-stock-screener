@@ -1,0 +1,150 @@
+[
+  {
+    "id": "nta",
+    "name": "財政部國庫署",
+    "url": "https://www.nta.gov.tw/Rss/238",
+    "kind": "rss",
+    "category": "market_policy",
+    "minutes": 5
+  },
+  {
+    "id": "fsc",
+    "name": "金融監督管理委員會",
+    "url": "https://www.fsc.gov.tw/RSS/Messages?serno=201202290009&language=chinese",
+    "kind": "rss",
+    "category": "financial_policy",
+    "minutes": 5,
+    "date_only": true,
+    "time_note": "RSS 時刻含預設值；未逐篇核實前只標發布日期，避免誤用於盤中K線"
+  },
+  {
+    "id": "cbc",
+    "name": "中央銀行理監事會",
+    "url": "https://www.cbc.gov.tw/tw/lp-357-1.html",
+    "kind": "cbc",
+    "category": "monetary_policy",
+    "minutes": 5
+  },
+  {
+    "id": "ndc",
+    "name": "國家發展委員會",
+    "url": "https://www.ndc.gov.tw/Rss_News.aspx?n=114AAE178CD95D4C",
+    "kind": "rss",
+    "category": "economic_release",
+    "minutes": 5
+  },
+  {
+    "id": "moea",
+    "name": "經濟部",
+    "url": "https://www.moea.gov.tw/Mns/populace/news/NewsRSSdetail.aspx?Kind=1",
+    "kind": "rss",
+    "category": "industry_policy",
+    "minutes": 5
+  },
+  {
+    "id": "moea_clarify",
+    "name": "經濟部即時澄清",
+    "url": "https://www.moea.gov.tw/Mns/populace/news/NewsRSSdetail.aspx?Kind=9",
+    "kind": "rss",
+    "category": "clarification",
+    "minutes": 5
+  },
+  {
+    "id": "dgbas",
+    "name": "行政院主計總處",
+    "url": "https://www.dgbas.gov.tw/OpenData.aspx?SN=0DA0FD2F5416554E&isRssFeed=1",
+    "kind": "rss",
+    "category": "economic_release",
+    "minutes": 5,
+    "date_only": true,
+    "time_note": "RSS 時刻含預設值；未逐篇核實前只標發布日期，避免誤用於盤中K線"
+  },
+  {
+    "id": "mof",
+    "name": "財政部",
+    "url": "https://www.mof.gov.tw/Rss/384fb3077bb349ea973e7fc6f13b6974",
+    "kind": "rss",
+    "category": "fiscal_trade",
+    "minutes": 5
+  },
+  {
+    "id": "energy",
+    "name": "經濟部能源署",
+    "url": "https://www.moeaea.gov.tw/ECW/populace/news/NewsRSS.aspx?menu_id=819",
+    "kind": "discover_rss",
+    "category": "energy_policy",
+    "minutes": 10
+  },
+  {
+    "id": "moenv",
+    "name": "環境部",
+    "url": "https://enews.moenv.gov.tw/",
+    "kind": "discover_rss",
+    "category": "environment_policy",
+    "minutes": 15
+  },
+  {
+    "id": "twse_news",
+    "name": "臺灣證券交易所",
+    "url": "https://openapi.twse.com.tw/v1/news/newsList",
+    "kind": "twse_news",
+    "category": "exchange_notice",
+    "minutes": 5
+  },
+  {
+    "id": "mops_listed",
+    "name": "公開資訊觀測站上市重大訊息",
+    "url": "https://openapi.twse.com.tw/v1/opendata/t187ap04_L",
+    "kind": "mops",
+    "category": "company_disclosure",
+    "minutes": 5
+  },
+  {
+    "id": "mops_otc",
+    "name": "公開資訊觀測站上櫃重大訊息",
+    "url": "https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap04_O",
+    "kind": "mops",
+    "category": "company_disclosure",
+    "minutes": 5
+  },
+  {
+    "id": "fed",
+    "name": "美國聯準會",
+    "url": "https://www.federalreserve.gov/feeds/press_monetary.xml",
+    "kind": "rss",
+    "category": "global_monetary",
+    "minutes": 5
+  },
+  {
+    "id": "bis",
+    "name": "美國商務部 BIS",
+    "url": "https://www.bis.gov/news-updates/all-press-releases",
+    "kind": "bis",
+    "category": "export_control",
+    "minutes": 15
+  },
+  {
+    "id": "fsc_law",
+    "name": "金管會法規公告",
+    "url": "https://www.fsc.gov.tw/RSS/Newlaw?serno=201202290008&language=chinese",
+    "kind": "rss",
+    "category": "financial_regulation",
+    "minutes": 5
+  },
+  {
+    "id": "twse_attention",
+    "name": "證交所注意及處置公告",
+    "url": "https://openapi.twse.com.tw/v1/announcement/notice",
+    "kind": "trading_notice",
+    "category": "trading_risk",
+    "minutes": 5
+  },
+  {
+    "id": "twse_disposition",
+    "name": "證交所處置公告",
+    "url": "https://openapi.twse.com.tw/v1/announcement/punish",
+    "kind": "trading_notice",
+    "category": "trading_disposition",
+    "minutes": 5
+  }
+]

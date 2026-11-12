@@ -1,4 +1,4 @@
-# rebuild-marker: load OFFICE_AGENT_TOKEN_QA on Preview(uat)
+# rebuild-marker: load OFFICE_AGENT_TOKEN_QA on Preview(uat); 2026-11-09 load LINEPAY_* on Preview(uat)
 from http.server import BaseHTTPRequestHandler
 import hashlib, hmac, json, os, time, urllib.request, urllib.parse, urllib.error
 
@@ -121,19 +121,25 @@ def _algo_formulas():
     return {k: (db.get("formula_" + k) or _ALGO_DEFAULTS[k]) for k in ALGO_KEYS}
 
 
-def _verify_admin(token):
-    """用呼叫者 JWT 取帳號，ID ∈ ADMIN_IDS 才回 email（稽核日誌用），否則 None。後台每個操作的真正防線。"""
-    if not token:
-        return None
-    try:
-        req = urllib.request.Request(f"{SUPABASE_URL}/auth/v1/user",
-                                     headers={"apikey": SUPABASE_ANON_KEY, "Authorization": f"Bearer {token}"})
-        with urllib.request.urlopen(req, timeout=10) as r:
-            u = json.loads(r.read())
-        em = (u.get("email") or "").strip().lower()
-        return em if u.get("id") in ADMIN_IDS else None
-    except Exception:
-        return None
+def _verify_admin(token, *, with_status=False):
+    """One Auth lookup. Legacy callers retain email/None; admin_* also gets status."""
+    status, email = 401, None
+    if token:
+        try:
+            req = urllib.request.Request(f"{SUPABASE_URL}/auth/v1/user",
+                                         headers={"apikey": SUPABASE_ANON_KEY, "Authorization": f"Bearer {token}"})
+            with urllib.request.urlopen(req, timeout=10) as r:
+                u = json.loads(r.read())
+            if isinstance(u, dict) and isinstance(u.get("id"), str) and u["id"]:
+                em = (u.get("email") or "").strip().lower()
+                status = 200 if u["id"] in ADMIN_IDS and em else 403
+                email = em if status == 200 else None
+        except urllib.error.HTTPError as e:
+            # Never expose/read the upstream body. Outages must not trigger refresh.
+            status = 401 if e.code in (401, 403) else 503
+        except Exception:
+            status = 503
+    return (status, email) if with_status else email
 
 
 def _token_user(token):
@@ -378,6 +384,14 @@ class handler(BaseHTTPRequestHandler):
             return self._json(400, {"error": "invalid request"})
         action = body.get("action", "")
 
+        if action == "official_announcements":
+            auth = self.headers.get("Authorization", "")
+            token = auth[7:].strip() if auth.startswith("Bearer ") else ""
+            if not _token_user(token):
+                return self._json(401, {"error": "請先登入後查看官方公告"})
+            from lib.official_announcements import read
+            return self._json(*read(body, _rest))
+
         if action == "phone_policy":
             from lib.member_phone import required
             return self._json(200, {"required": required(), "version": 1})
@@ -437,10 +451,20 @@ class handler(BaseHTTPRequestHandler):
             user = _token_user(token) if action in ("forum_events", "forum_checkin", "forum_redeem", "site_ads", "forum_registration_status", "forum_register", "forum_cancel") else None
             return self._json(*handle_public(action, body, user, _rest))
 
+        # ── 會員方案付款（lib/payments.py＋lib/linepay.py）：會員 JWT 驗證；沒設 LINE Pay 金鑰的環境一律回「尚未開放」 ──
+        if action in ("pay_plans", "pay_linepay_request", "pay_linepay_confirm", "pay_linepay_cancel", "pay_history"):
+            from lib.payments import handle as pay_handle
+            token = (self.headers.get("Authorization") or "").replace("Bearer ", "").strip()
+            return self._json(*pay_handle(action, body, _token_user(token), _rest))
+
         # ── 後台管理（action: admin_*）：JWT→email∈白名單 才放行；service_role 只在後端 ──
         if action.startswith("admin_"):
             token = (self.headers.get("Authorization") or "").replace("Bearer ", "").strip()
-            admin_email = _verify_admin(token)
+            admin_status, admin_email = _verify_admin(token, with_status=True)
+            if admin_status == 401:
+                return self._json(401, {"error": "unauthorized"})
+            if admin_status == 503:
+                return self._json(503, {"error": "authentication unavailable"})
             if not admin_email:
                 return self._json(403, {"error": "forbidden: 僅限管理員"})
 

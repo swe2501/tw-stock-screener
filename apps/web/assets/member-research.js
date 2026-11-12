@@ -30,10 +30,34 @@ const setLocal=(key,value)=>window.AcademyCloud?window.AcademyCloud.setItem(key,
   function write(uid,data){setLocal(key(uid),JSON.stringify(data));}
   function uid(){try{return JSON.parse(localStorage.getItem('sb_user')||'{}').id;}catch{return null;}}
   async function watch(method='GET',body,code){
-    const token=localStorage.getItem('sb_token');if(!token)throw Error('請先登入會員');
-    const r=await fetch(API+'/watchlist'+(code?'?code='+encodeURIComponent(code):''),{method,headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});
-    if(!r.ok)throw Error(r.status===401?'登入已過期，請重新登入':'收藏服務未完成操作，請稍後再試');
-    const data=await r.json();if(token!==localStorage.getItem('sb_token'))throw Error('帳號已切換，請重新開啟我的自選');if(method==='GET'&&!Array.isArray(data))throw Error('收藏資料格式異常');
+    let token=localStorage.getItem('sb_token');
+    const owner=uid();
+    if(!token||!owner)throw Error('請先登入會員');
+    const url=API+'/watchlist'+(code?'?code='+encodeURIComponent(code):'');
+    const send=accessToken=>fetch(url,{
+      method,
+      headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},
+      ...(body?{body:JSON.stringify(body)}:{})
+    });
+    let r=await send(token);
+    if(r.status===401&&uid()===owner){
+      const currentToken=localStorage.getItem('sb_token');
+      if(currentToken===token&&typeof _tryRefreshToken==='function')await _tryRefreshToken();
+      const refreshedToken=localStorage.getItem('sb_token');
+      if(uid()===owner&&refreshedToken&&refreshedToken!==token){
+        token=refreshedToken;
+        r=await send(token);
+      }
+    }
+    if(uid()!==owner)throw Error('帳號已切換或登出，請重新開啟我的自選');
+    if(!r.ok){
+      const error=await r.json().catch(()=>null);
+      if(error?.code==='MEMBER_PHONE_REQUIRED')throw Error('請先完成手機驗證，再使用我的自選');
+      throw Error(r.status===401?'登入已過期，請重新登入':'收藏服務未完成操作，請稍後再試');
+    }
+    const data=await r.json();
+    if(uid()!==owner)throw Error('帳號已切換或登出，請重新開啟我的自選');
+    if(method==='GET'&&!Array.isArray(data))throw Error('收藏資料格式異常');
     if(method==='PATCH'&&(!Array.isArray(data)||!data.length||data[0].id!==body?.id))throw Error('伺服器尚未確認這筆修改，請保留草稿並重新載入');
     if(typeof _loadWatchCodes==='function'&&method!=='GET')await _loadWatchCodes();
     dispatchEvent(new CustomEvent('academy-watch-changed'));return data;

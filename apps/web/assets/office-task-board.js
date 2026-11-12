@@ -20,21 +20,39 @@ const stamp=s=>s?new Date(s).toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour
 const day=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei'}).format(new Date());
 function report(text){return String(text||'').split('\n').map(line=>/^#{1,4}\s/.test(line)?'<h4>'+esc(line.replace(/^#+\s*/,''))+'</h4>':'<p>'+esc(line||' ').replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>')+'</p>').join('');}
 window.OfficeTaskBoard={mount(root,post){
- let snapshotAt=0,snapshotFlight=null;const workroomDetails=new Map();
- let tasks=[],departments=[],worker={},dependencies={},filter='',query='',selected=null,timer=null,active=false,request=0,creatingId=null,busy=false;
+ let snapshotAt=0,snapshotFlight=null,listTotal=0,unavailable=null,refreshedAt=0,refreshing=0,catchUp=null;
+ // Polling budget: list refresh every 60s while active; visibility/focus catch-up at most once per 10s.
+ // Timer skips when any refresh (incl. 3D iframe snapshot) succeeded <30s ago; failures leave refreshedAt untouched.
+ const POLL_MS=60000,CATCH_UP_MS=10000,TIMER_FRESH_MS=30000;const workroomDetails=new Map(),latestTasks=new Map();
+ function remember(t){const old=latestTasks.get(t.id);if(!old||(t.revision||0)>(old.revision||0))latestTasks.set(t.id,{...t});else if((t.revision||0)===(old.revision||0))latestTasks.set(t.id,{...old,...t});return latestTasks.get(t.id);}
+ function attachCatchUp(){if(catchUp)return;catchUp=()=>{if(active&&!unavailable&&!document.hidden&&!form.open&&!detail.open&&!refreshing&&Date.now()-refreshedAt>=CATCH_UP_MS)refresh();};if(typeof document.addEventListener==='function')document.addEventListener('visibilitychange',catchUp);if(typeof window.addEventListener==='function')window.addEventListener('focus',catchUp);}
+ function detachCatchUp(){if(!catchUp)return;if(typeof document.removeEventListener==='function')document.removeEventListener('visibilitychange',catchUp);if(typeof window.removeEventListener==='function')window.removeEventListener('focus',catchUp);catchUp=null;}
+ function invalidateSnapshot(){snapshotAt=0;request++;snapshotFlight=null;}
+ function selectDepartment(id){filter=String(id);query='';root.querySelector('[data-ot-query]').value='';root.querySelector('[data-ot-department]').value=filter;}
+ let dataAt='',tasks=[],departments=[],worker={},dependencies={},filter='',query='',selected=null,timer=null,active=false,request=0,creatingId=null,busy=false;
  const form=document.createElement('dialog'),detail=document.createElement('dialog');form.className=detail.className='ot-dialog';document.body.append(form,detail);
  root.classList.add('ot-board');
  root.innerHTML='<div class="ot-heading"><div><small>DEPARTMENT WORK ORDERS</small><h3>部門任務中心</h3><p>任務、執行回報、成果與驗收，集中追蹤。</p></div><button type="button" data-ot-new>建立任務 ＋</button></div><p class="ot-executor" data-ot-worker role="status">讀取執行端狀態…</p><div class="ot-toolbar"><label>部門<select data-ot-department aria-label="篩選負責部門"><option value="">所有部門</option></select></label><label>搜尋<input type="search" data-ot-query placeholder="任務名稱或內容"></label><button type="button" data-ot-refresh>重新整理</button></div><p data-ot-message role="status"></p><div class="ot-summary" data-ot-summary></div><div data-ot-list></div>';
- const contentFlow=window.OfficeContentFlow?.mount(root,post,async()=>{snapshotAt=0;await refresh();[7,24,14,0].forEach(department=>window.dispatchEvent(new CustomEvent('foresight-office-task-updated',{detail:{department}})));});
+ const contentFlow=window.OfficeContentFlow?.mount(root,post,async()=>{invalidateSnapshot();await refresh();[7,24,14,0].forEach(department=>window.dispatchEvent(new CustomEvent('foresight-office-task-updated',{detail:{department}})));});
  const msg=(s,error=false)=>{const e=root.querySelector('[data-ot-message]');e.textContent=s;e.classList.toggle('ot-error',error);};
- async function call(action,extra){const result=await post(action,extra);if(!result||result.error)throw Error(result?.error||'回應異常，請稍後重試');return result;}
+ // Latch only the explicit deployment-scope 403; other errors keep existing retries.
+ function isUatOnly(value){return Number(value?.httpStatus)===403&&[value?.error,value?.message].some(s=>typeof s==='string'&&s.includes('僅在 UAT 啟用'));}
+ function restrictedSnapshot(){return {...unavailable,tasks:[],at:''};}
+ function availabilityNotice(){msg('僅 UAT 啟用；目前環境不提供任務資料，已停止重試。');root.querySelector('[data-ot-worker]').textContent='任務中心僅 UAT 啟用';root.querySelector('[data-ot-summary]').innerHTML='';root.querySelector('[data-ot-list]').innerHTML='<p class="ot-empty">僅 UAT 啟用</p>';root.querySelector('[data-ot-new]').disabled=true;root.querySelector('[data-ot-refresh]').disabled=true;}
+ async function call(action,extra){
+  if(unavailable)throw Object.assign(Error(unavailable.error),unavailable);
+  const result=await post(action,extra);
+  if(isUatOnly(result)){unavailable={httpStatus:403,error:'任務中心目前僅在 UAT 啟用'};clearInterval(timer);timer=null;tasks=[];snapshotAt=0;workroomDetails.clear();latestTasks.clear();availabilityNotice();throw Object.assign(Error(unavailable.error),unavailable);}
+  if(!result||result.error)throw Error(result?.error||'回應異常，請稍後重試');return result;
+ }
  function title(t){return departments.find(d=>d.id===t.department)?.name||'部門資料讀取中';}
  function render(){
+  if(unavailable){availabilityNotice();return;}
   const list=tasks.filter(t=>(filter===''||String(t.department)===filter)&&(!query||[t.title,t.brief].join(' ').toLowerCase().includes(query.toLowerCase())));
   const online=worker.at&&Date.now()-Date.parse(worker.at)<150000;
   root.querySelector('[data-ot-worker]').textContent=online?'● Claude 執行端在線 · '+(worker.pause_reason==='daily_budget'?'今日執行額度已達上限，任務保留待執行':worker.current_task?'處理任務中':'等待 AI 任務')+' · 最後回報 '+stamp(worker.at):'○ Claude 執行端離線或尚未啟動；AI 任務保留在待執行，人工任務可由管理者領取。';
   root.querySelector('[data-ot-worker]').classList.toggle('is-online',!!online);
-  root.querySelector('[data-ot-summary]').innerHTML=['queued','running','blocked','review','approved','failed'].map(s=>'<span><b>'+list.filter(t=>t.status===s).length+'</b>'+state[s]+'</span>').join('');
+  root.querySelector('[data-ot-summary]').innerHTML=['queued','running','blocked','review','approved','cancelled','failed'].map(s=>'<span><b>'+list.filter(t=>t.status===s).length+'</b>'+state[s]+'</span>').join('');
   root.querySelector('[data-ot-list]').innerHTML=list.length?'<div class="ot-grid">'+list.map(t=>{
    const waiting=(t.depends_on||[]).some(id=>!(tasks.some(x=>x.id===id&&x.status==='approved')||dependencies[id]?.status==='approved'));
    const overdue=t.due_date&&t.due_date<day()&&!['approved','cancelled'].includes(t.status);
@@ -43,12 +61,13 @@ window.OfficeTaskBoard={mount(root,post){
   }).join('')+'</div>':'<div class="ot-empty">尚無符合條件的任務。先建立一項任務，指定部門與交付要求。</div>';
  }
  async function refresh(){
-  const seq=++request;
-  try{const j=await call('admin_office_tasks_list');if(seq!==request||!root.isConnected)return;tasks=j.tasks;departments=j.departments;worker=j.worker||{};dependencies=j.dependencies||{};
+  if(unavailable){availabilityNotice();return false;}
+  const seq=++request;refreshing++;
+  try{const j=await call('admin_office_tasks_list');if(seq!==request||!root.isConnected)return;tasks=j.tasks.map(remember);listTotal=Math.max(Number(j.total)||tasks.length,tasks.length);departments=j.departments;worker=j.worker||{};dependencies=j.dependencies||{};dataAt=new Date().toISOString();
    const options=root.querySelector('[data-ot-department]');options.innerHTML='<option value="">所有部門</option>'+departments.filter(d=>d.enabled).map(d=>'<option value="'+d.id+'">'+esc(d.name)+'</option>').join('');options.value=filter;
-   render();msg('更新時間 '+stamp(new Date().toISOString()));return true;
+   refreshedAt=snapshotAt=Date.now();/* 任何成功的 refresh（含空清單）都讓 snapshot() 30 秒內沿用同一份 tasks */render();msg('更新時間 '+stamp(new Date().toISOString())+(listTotal>tasks.length?' · 任務列表未完整（已載入 '+tasks.length+'／'+listTotal+' 筆）':''));return true;
    
-  }catch(e){if(seq===request)msg(e.message,true);return false;}
+  }catch(e){if(unavailable)availabilityNotice();else if(seq===request)msg(e.message,true);return false;}finally{refreshing--;}
  }
  function create(department,parent){
   if(!departments.length){msg('請等待部門資料載入後再建立任務',true);return;}
@@ -59,7 +78,7 @@ window.OfficeTaskBoard={mount(root,post){
   if(parent){f.elements.title.value=('交接：'+parent.title).slice(0,120);f.elements.brief.value=('前置任務：'+parent.title+'\n已驗收成果：\n'+parent.result).slice(0,10000);f.elements.dependency.value=parent.id;}
   f.elements.execution.onchange=()=>form.querySelector('[data-ot-budget]').hidden=f.elements.execution.value!=='ai';
   f.onsubmit=async e=>{e.preventDefault();if(busy)return;busy=true;const b=f.querySelector('[type=submit]');b.disabled=true;
-   try{const d=new FormData(f);const j=await call('admin_office_tasks_create',{id:creatingId,title:d.get('title'),department:Number(d.get('department')),brief:d.get('brief'),criteria:String(d.get('criteria')).split('\n').map(x=>x.trim()).filter(Boolean),due_date:d.get('due_date'),execution:d.get('execution'),budget_usd:Number(d.get('budget_usd')),assignee:d.get('assignee')||undefined,depends_on:d.get('dependency')?[d.get('dependency')]:[]});form.close();await refresh();selected=j.task.id;snapshotAt=0;window.dispatchEvent(new CustomEvent('foresight-office-task-updated',{detail:{department:j.task.department}}));openDetail(j.task);}
+   try{const d=new FormData(f);const j=await call('admin_office_tasks_create',{id:creatingId,title:d.get('title'),department:Number(d.get('department')),brief:d.get('brief'),criteria:String(d.get('criteria')).split('\n').map(x=>x.trim()).filter(Boolean),due_date:d.get('due_date'),execution:d.get('execution'),budget_usd:Number(d.get('budget_usd')),assignee:d.get('assignee')||undefined,depends_on:d.get('dependency')?[d.get('dependency')]:[]});form.close();await refresh();selected=j.task.id;invalidateSnapshot();window.dispatchEvent(new CustomEvent('foresight-office-task-updated',{detail:{department:j.task.department}}));openDetail(j.task);}
    catch(err){form.querySelector('[data-ot-form-message]').textContent=err.message;}finally{busy=false;b.disabled=false;}
   };
   form.showModal();
@@ -79,26 +98,44 @@ window.OfficeTaskBoard={mount(root,post){
   detail.querySelectorAll('[data-ot-operation]').forEach(b=>b.onclick=()=>update(t,b.dataset.otOperation));
   const handoff=detail.querySelector('[data-ot-handoff]');if(handoff)handoff.onclick=()=>{detail.close();create(undefined,t);};
  }
- async function loadDetail(id){try{const j=await call('admin_office_tasks_get',{id});openDetail(j.task);}catch(e){if(detail.open)detail.querySelector('[data-ot-detail-message]').textContent=e.message;else msg(e.message,true);}}
+ async function loadDetail(id){try{const j=await call('admin_office_tasks_get',{id});if(j.task?.id!==id)throw Error('任務回應不符');const t=remember(j.task);tasks=tasks.map(x=>latestTasks.get(x.id)||x);selectDepartment(t.department);render();openDetail(t);}catch(e){if(detail.open)detail.querySelector('[data-ot-detail-message]').textContent=e.message;else msg(e.message,true);}}
  function openDetail(t){renderDetail(t);if(!detail.open)detail.showModal();}
  async function update(t,operation){
   if(busy)return;
   const note=detail.querySelector('[data-ot-note]')?.value||'',result=detail.querySelector('[data-ot-result]')?.value||'';
   busy=true;detail.querySelectorAll('.ot-actions button').forEach(b=>b.disabled=true);
-  try{const j=await call('admin_office_tasks_update',{id:t.id,revision:t.revision,operation,note,result,checks:[...detail.querySelectorAll('[data-ot-checks] input')].map(e=>e.checked)});tasks=tasks.map(x=>x.id===j.task.id?j.task:x);snapshotAt=0;window.dispatchEvent(new CustomEvent('foresight-office-task-updated',{detail:{department:j.task.department}}));render();renderDetail(j.task);}
+  try{const j=await call('admin_office_tasks_update',{id:t.id,revision:t.revision,operation,note,result,checks:[...detail.querySelectorAll('[data-ot-checks] input')].map(e=>e.checked)});const current=remember(j.task);tasks=tasks.map(x=>x.id===current.id?current:x);invalidateSnapshot();window.dispatchEvent(new CustomEvent('foresight-office-task-updated',{detail:{department:j.task.department}}));render();renderDetail(current);}
   catch(e){detail.querySelector('[data-ot-detail-message]').textContent=e.message;detail.querySelectorAll('.ot-actions button').forEach(b=>b.disabled=false);}finally{busy=false;}
  }
  root.onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.hasAttribute('data-ot-new'))create();else if(b.hasAttribute('data-ot-refresh'))refresh();else if(b.dataset.otId){const t=tasks.find(t=>t.id===b.dataset.otId);if(t)loadDetail(t.id);}};
  root.querySelector('[data-ot-department]').onchange=e=>{filter=e.target.value;render();};root.querySelector('[data-ot-query]').oninput=e=>{query=e.target.value;render();};
  [form,detail].forEach(d=>d.onclick=e=>{if(e.target.closest('[data-ot-close]'))d.close();});
  return {open:loadDetail,async snapshot(department,force=false){
-   if(force||Date.now()-snapshotAt>30000){if(!snapshotFlight)snapshotFlight=refresh().finally(()=>snapshotFlight=null);if(!await snapshotFlight)return {tasks:[],error:'任務資料暫時無法讀取，請稍後更新。',at:''};const fresh=tasks.filter(t=>department==null||t.department===department);snapshotAt=fresh.length?Date.now():0;}
-   const list=tasks.filter(t=>department==null||t.department===department);
-   const detailed=[];
-   for(let i=0;i<Math.min(list.length,24);i+=3){
-    const batch=await Promise.all(list.slice(i,i+3).map(async t=>{try{const cached=workroomDetails.get(t.id);if(cached&&cached.revision===t.revision)return cached;const detail=(await call('admin_office_tasks_get',{id:t.id})).task;const safe={...detail,result:String(detail.result||'').slice(0,8000),history:(detail.history||[]).slice(-100)};workroomDetails.set(t.id,safe);return safe;}catch(_){return {...t,detailsUnavailable:true};}}));detailed.push(...batch);
+   if(unavailable)return restrictedSnapshot();
+   if(force||Date.now()-snapshotAt>30000){
+    if(!snapshotFlight){const flight=refresh().finally(()=>{if(snapshotFlight===flight)snapshotFlight=null;});snapshotFlight=flight;}
+    if(!await snapshotFlight)return unavailable?restrictedSnapshot():{tasks:[],error:'任務資料暫時無法讀取，請稍後更新。',at:''};
+    snapshotAt=Date.now(); // successful empty lists are cached for 30s too; failures return above without caching
    }
-   return {tasks:detailed,total:list.length,limited:list.length>24,worker:{at:worker.at||'',pause_reason:worker.pause_reason||''},at:new Date().toISOString()};
-  },async department(id){filter=String(id);if(!departments.length)await refresh();root.querySelector("[data-ot-department]").value=filter;render();},show(){active=true;refresh();if(!timer)timer=setInterval(()=>{if(active&&!document.hidden&&!form.open&&!detail.open)refresh();},15000);},hide(){active=false;clearInterval(timer);timer=null;},async create(department){if(!departments.length)await refresh();create(department);},destroy(){contentFlow?.destroy();active=false;request++;workroomDetails.clear();clearInterval(timer);form.close();detail.close();form.remove();detail.remove();}};
+   // The list API already returns all available summaries (up to 200). Only expensive
+   // detail reads are capped at 24; badges must never be derived from that detail slice.
+   const summaries=tasks.slice(),total=listTotal,list=summaries.filter(t=>department==null||t.department===department),detailed=[];
+   for(let i=0;i<Math.min(list.length,24);i+=3){
+    const batch=await Promise.all(list.slice(i,i+3).map(async t=>{
+     try{const current=remember(t),cached=workroomDetails.get(t.id);if(cached&&(cached.revision||0)>=(current.revision||0))return cached;
+      const detail=(await call('admin_office_tasks_get',{id:t.id})).task;
+      if(detail?.id!==t.id||detail.department!==t.department)throw Error('任務回應不符');
+      if((detail.revision||0)<(current.revision||0))return {...current,detailsUnavailable:true};
+      const newest=remember(detail),safe={...newest,detailsUnavailable:false,result:String(newest.result||'').slice(0,8000),history:(newest.history||[]).slice(-100)};
+      workroomDetails.set(t.id,safe);return safe;
+     }catch(_){return {...remember(t),detailsUnavailable:true};}
+    }));detailed.push(...batch);
+   }
+   if(unavailable)return restrictedSnapshot();
+   tasks=tasks.map(t=>latestTasks.get(t.id)||t);render();
+   const summaryKeys=['id','title','department','execution','due_date','created_at','updated_at','revision','status','current_step','lease_until','assignee','worker','executor'];
+   const summaryRows=summaries.map(t=>{const current=remember(t);return Object.fromEntries(summaryKeys.filter(k=>k in current).map(k=>[k,current[k]]));});
+   return {tasks:detailed,summaries:summaryRows,summaryScope:'all',countsLimited:total>summaries.length,listTotal:total,listLoaded:summaries.length,total:list.length,limited:list.length>24,worker:{at:worker.at||'',pause_reason:worker.pause_reason||''},at:dataAt};
+  },async department(id){selectDepartment(id);if(!departments.length)await refresh();root.querySelector('[data-ot-department]').value=filter;render();},show(){if(unavailable){availabilityNotice();return;}active=true;refresh();if(!timer)timer=setInterval(()=>{if(active&&!document.hidden&&!form.open&&!detail.open&&Date.now()-refreshedAt>=TIMER_FRESH_MS)refresh();},POLL_MS);attachCatchUp();},hide(){active=false;clearInterval(timer);timer=null;detachCatchUp();},async create(department){if(!departments.length)await refresh();create(department);},destroy(){contentFlow?.destroy();active=false;detachCatchUp();request++;workroomDetails.clear();latestTasks.clear();clearInterval(timer);form.close();detail.close();form.remove();detail.remove();}};
 }};
 })();
