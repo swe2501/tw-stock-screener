@@ -321,7 +321,7 @@
     });
   }
 
-  let demoMode=false,demoResult="success";
+  let demoMode=location.protocol==='file:',demoResult="success";
   const canDemo=()=>location.protocol==='file:'||['localhost','127.0.0.1'].includes(location.hostname)||window._isOwner||window._isAdmin;
   function renderPanel(host, profile, method) {
     const data = methods[method];
@@ -380,6 +380,7 @@
     host.querySelector('[data-mb-back]')?.addEventListener('click',()=>window.openMemberCenter?.('benefits'));
     host.querySelector('[data-payment-demo]')?.addEventListener('click',()=>{demoMode=!demoMode;renderPanel(host,profile,method);});
     host.querySelector('[data-demo-result]')?.addEventListener('change',e=>{demoResult=e.target.value;});
+    if(demoMode){const action=host.querySelector('[data-payment-action]');action.disabled=false;action.querySelector('span').textContent=method==='card'?'測試新增卡片（不綁卡、不扣款）':'測試'+methods[method].short+'流程（不扣款）';host.querySelectorAll('.mp-method-body input').forEach(input=>input.disabled=false);host.querySelector('.mp-action-status').textContent='本機測試模式：不會綁卡、扣款或保存卡號。';}
     mountProductChoices(host,method);
     wireCardInputs(host);
     wireStoreInputs(host);
@@ -445,13 +446,13 @@
   async function mountProductChoices(host,method){
     const box=host.querySelector('[data-payment-products]');if(!box)return;
     box.textContent='正在載入會員方案…';
-    await window.AcademyMemberCatalog?.refresh();if(!box.isConnected)return;
+    const refresh=window.AcademyMemberCatalog?.refresh();if(demoMode)Promise.resolve(refresh).catch(()=>{});else await refresh;if(!box.isConnected)return;
     const catalog=window.AcademyMemberCatalog?.get();let products=catalog?.products||[];if(!products.length&&demoMode)products=[{id:'demo_only',name:'付款流程測試',tier:'observation',icon:'shield',description:'僅供試填與動畫預覽，不代表上架商品或會員升級。',details:'不會建立訂單、綁卡或扣款。',purchasable:false}];
     if(!products.length){box.textContent='目前沒有可比較的上架方案，請稍後再查看。';return;}
     let preferred='';try{preferred=sessionStorage.getItem('foresight.membership.product')||'';}catch{}
     let interest='';try{interest=sessionStorage.getItem('foresight.membership.interest')||'';}catch{}
     let selected=products.find(p=>p.id===preferred)||products.find(p=>p.tier===interest)||products[0];
-    box.innerHTML=products.map(p=>'<label class="mp-product-choice"><input type="radio" name="billing-product" value="'+esc(p.id)+'" '+(p.id===selected.id?'checked':'')+'><span class="mp-product-symbol">'+window.AcademyMemberCatalog.icon(p.icon)+'</span><span><strong>'+esc(p.name)+'</strong><small>'+((p.tier==='free')?'免費基礎身分':p.purchasable?money(p.price_twd)+' ／ '+p.days+' 天':'查看會員權益')+'</small></span></label>').join('');
+    box.innerHTML=products.map(p=>'<label class="mp-product-choice"><input type="radio" name="billing-product" value="'+esc(p.id)+'" '+(p.id===selected.id?'checked':'')+'><span class="mp-product-symbol">'+(window.AcademyMemberCatalog?.icon?.(p.icon)||'')+'</span><span><strong>'+esc(p.name)+'</strong><small>'+((p.tier==='free')?'免費基礎身分':p.purchasable?money(p.price_twd)+' ／ '+p.days+' 天':'查看會員權益')+'</small></span></label>').join('');
     const sync=()=>{if(!box.isConnected)return;try{sessionStorage.setItem('foresight.membership.product',selected.id);sessionStorage.setItem('foresight.membership.interest',selected.tier);sessionStorage.setItem('foresight.membership.plan',selected.plan_code||'');}catch{}
       host.querySelector('[data-payment-product-detail]').textContent=selected.description+' '+(selected.details||'');
       const action=host.querySelector('[data-payment-action]'),status=host.querySelector('.mp-action-status'),real=!demoMode&&method==='line'&&host.dataset.lineLive==='1'&&selected.purchasable;

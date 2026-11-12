@@ -2,7 +2,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
 (async()=>{const b=await chromium.launch({channel:'msedge',headless:true});try{
  const p=await b.newPage();let requests=0;
  await p.route('https://demo.test/**',r=>{if(r.request().method()==='POST'){if(r.request().postDataJSON().action==='pay_linepay_request')requests++;return r.fulfill({status:503,json:{error:'未開放'}});}return r.fulfill({contentType:'text/html',body:'<main></main>'});});
- await p.goto('https://demo.test/');await p.evaluate(()=>{window._isOwner=true;window.AcademyMemberCatalog={refresh:async()=>{},get:()=>null,icon:()=>''};});
+ await p.goto('https://demo.test/');await p.evaluate(()=>{window._isOwner=true;window.AcademyMemberCatalog={refresh:()=>new Promise(()=>{}),get:()=>null,icon:()=>''};});
  await p.addScriptTag({path:path.resolve('apps/web/assets/member-payments.js')});
  await p.evaluate(()=>AcademyPayments.render('billing',{main:document.querySelector('main'),profile:{}}));
  await p.locator('[data-payment-demo]').click();await p.locator('[data-card-number]').fill('4111111111111111');await p.locator('[data-card-expiry-input]').fill('1230');await p.locator('[data-card-cvc-input]').fill('123');await p.locator('[data-card-holder-input]').fill('TEST MEMBER');
