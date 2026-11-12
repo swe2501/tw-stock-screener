@@ -17,6 +17,6 @@ function system({status=403,payload={error:'任務中心目前僅在 UAT 啟用'
  async function tick(ms=60000){now+=ms;h.timers.filter(t=>t.ms===60000).forEach(t=>t.fn());await pump();}
  async function triggers(){h.receive({type:'foresight-office-visibility',visible:false});h.receive({type:'foresight-office-visibility',visible:true});await pump();h.ctx.dispatchEvent({type:'focus'});await pump();h.ctx.dispatchEvent({type:'foresight-office-selection'});await pump();h.request(8);await pump();h.receive({type:'foresight-office-workroom-invalidated'});await pump();}
  const fire=(scope,type)=>[...(listeners[scope].get(type)||[])].forEach(fn=>fn({type}));const listenerCount=()=>[...listeners.document.values(),...listeners.window.values()].reduce((n,set)=>n+set.size,0);
- return {h,board,calls,timers,nodes,created,listeners,fire,listenerCount,advance:ms=>{now+=ms;},setHidden:v=>{ctx.document.hidden=v;},start,tick,triggers,pump,setResponse:(s,b)=>{responseStatus=s;responseBody=b;},listCalls:()=>calls.filter(c=>c.action==='admin_office_tasks_list')};
+ return {h,board,root,calls,timers,nodes,created,listeners,fire,listenerCount,advance:ms=>{now+=ms;},setHidden:v=>{ctx.document.hidden=v;},start,tick,triggers,pump,setResponse:(s,b)=>{responseStatus=s;responseBody=b;},listCalls:()=>calls.filter(c=>c.action==='admin_office_tasks_list')};
 }
 module.exports={system};

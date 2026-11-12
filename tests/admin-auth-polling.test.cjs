@@ -73,11 +73,42 @@ test('failed board refresh does not mark snapshot fresh; force still refetches',
  s.setResponse(200,{});s.advance(1000);await s.board.snapshot(null);assert.equal(s.listCalls().length,3,'failed refresh must not suppress snapshot fetch');
  s.advance(1000);await s.board.snapshot(null);assert.equal(s.listCalls().length,3,'successful snapshot then cached');
  s.advance(1000);await s.board.snapshot(8,true);assert.equal(s.listCalls().length,4,'force=true still fetches');
- s.advance(1000);live()[0].fn();await settle();s.advance(1000);await s.board.snapshot(8,true);assert.equal(s.listCalls().length,6,'force=true fetches even right after a refresh');
+ s.advance(1000);s.root.onclick({target:{closest:()=>({hasAttribute:a=>a==='data-ot-refresh',dataset:{}})}});await settle();assert.equal(s.listCalls().length,5,'manual refresh');
+ s.advance(1000);await s.board.snapshot(8,true);assert.equal(s.listCalls().length,6,'force=true fetches even right after a refresh');
 });
 test('QA scenario: board 60s timer then 7F iframe 60s tick a few seconds later = one list per minute',async()=>{
  const s=system({status:200,tasks:[]});s.board.show();await settle();await s.start();
  const base=s.listCalls().length;const board=()=>s.timers.filter(t=>!t.cleared&&t.ms===60000)[0];
  for(let minute=0;minute<3;minute++){s.advance(53000);board().fn();await settle();await s.tick(7000);}
  assert.equal(s.listCalls().length-base,3,'3 minutes idle: exactly 3 list calls (was 6 before fix)');
+});
+// Board 60s timer skips when the last success (any source) is <30s old. Simulated idle: both timers fire every 60s with a phase offset.
+async function idle(order,gap){
+ const s=system({status:200,tasks:[]});s.board.show();await settle();await s.start();
+ const board=()=>s.timers.filter(t=>!t.cleared&&t.ms===60000)[0];const base=s.listCalls().length;
+ for(let minute=0;minute<3;minute++){
+  if(order==='iframe-first'){await s.tick(60000-gap);s.advance(gap);board().fn();await settle();}
+  else{s.advance(60000-gap);board().fn();await settle();await s.tick(gap);}
+ }
+ return {s,board,n:s.listCalls().length-base};
+}
+for(const [order,gap] of [['iframe-first',7000],['iframe-first',25000],['board-first',7000]])
+ test(`idle 3 min, ${order} by ${gap/1000}s: one list per minute`,async()=>{const {n}=await idle(order,gap);assert.equal(n,3,order+' '+gap);});
+test('board timer gate: manual refresh, force, catch-up and failure retry still fetch',async()=>{
+ const {s,board}=await idle('iframe-first',7000);const n=()=>s.listCalls().length;let before=n();
+ s.advance(1000);
+ s.board.show();await settle();assert.equal(n(),before+1,'show() always refreshes');before=n();
+ await s.board.snapshot(8,true);assert.equal(n(),before+1,'force=true always fetches');before=n();
+ s.advance(1000);board().fn();await settle();assert.equal(n(),before,'timer skipped: last success 1s ago');
+ s.advance(10000);s.fire('window','focus');await settle();assert.equal(n(),before+1,'catch-up (>=10s) unchanged');before=n();
+ // failure does not count as success: next timer tick fetches even if <30s after the failure
+ s.setResponse(500,{error:'synthetic outage'});s.advance(30000);board().fn();await settle();assert.equal(n(),before+1);
+ s.setResponse(200,{});s.advance(5000);board().fn();await settle();assert.equal(n(),before+2,'after a failure the next timer tick retries');
+ s.advance(5000);board().fn();await settle();assert.equal(n(),before+2,'then the 30s gate applies again');
+});
+test('manual 重新整理 button bypasses the timer gate',async()=>{
+ const s=system({status:200,tasks:[]});s.board.show();await settle();assert.equal(s.listCalls().length,1);
+ const click=()=>s.root.onclick({target:{closest:()=>({hasAttribute:a=>a==='data-ot-refresh',dataset:{}})}});
+ s.advance(1000);click();await settle();assert.equal(s.listCalls().length,2,'manual refresh 1s after success still fetches');
+ click();await settle();assert.equal(s.listCalls().length,3);
 });
