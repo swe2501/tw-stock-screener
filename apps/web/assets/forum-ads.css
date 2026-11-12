@@ -333,3 +333,34 @@
 .afa-crop-frame [data-crop-handle]{position:absolute;right:-1px;bottom:-1px;width:24px;height:24px;border-right:5px solid var(--accent);border-bottom:5px solid var(--accent);cursor:nwse-resize;touch-action:none}
 .site-ad-crop-viewport{position:relative;width:100%;overflow:hidden;flex:none}
 .site-ad-media:has(.site-ad-crop-viewport){display:flex;align-items:center;justify-content:center}
+
+/* Admin modal surroundings stay blue-gray, never a white washed-out sheet. */
+.afa-modal::backdrop{background:rgba(15,35,55,.78)!important;backdrop-filter:blur(6px)}
+:root:not([data-theme=light]) .afa-modal::backdrop{background:rgba(3,12,23,.86)!important}
+body:has(#adminView:not([style*="display:none"]):not([style*="display: none"])){--admin-overlay-shade:rgba(15,35,55,.78)}
+body:has(#adminView:not([style*="display:none"]):not([style*="display: none"])) dialog::backdrop{background:var(--admin-overlay-shade)!important}
+.afa-back-top{position:fixed;right:20px;bottom:22px;width:34px;height:34px;border-radius:50%;border:1px solid var(--border);background:color-mix(in srgb,var(--surface2) 76%,transparent);backdrop-filter:blur(12px);color:var(--text-muted);display:grid;place-items:center;z-index:1000;cursor:pointer;box-shadow:0 3px 12px rgba(10,30,50,.12)}
+.afa-back-top[hidden]{display:none!important}.afa-back-top svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}.afa-back-top:hover{color:var(--accent);border-color:var(--accent)}
+
+/* Compact editable names without stretching across the entire table column. */
+#adminView [data-point-panel] .afa-table input[name=title]{width:min(100%,30ch)!important;max-width:300px!important;min-width:0!important;min-height:34px!important;padding:6px 10px!important;font-size:14px!important;line-height:1.45}
+#adminView [data-point-panel] .afa-table td{padding-top:10px;padding-bottom:10px}
+#adminView [data-point-panel] .afa-table td:first-child>.afa-sub{margin-top:5px;font-size:11px;opacity:.8}
+@media(max-width:760px){#adminView [data-point-panel] .afa-table input[name=title]{max-width:260px!important}}
+
+/* One compact field scale across every admin tab and management dialog. */
+:is(#adminView,.afa-sheet) :is(input,select):not([type=checkbox]):not([type=radio]):not([type=range]):not([type=hidden]):not([type=file]):not([type=color]){box-sizing:border-box;width:min(100%,300px)!important;min-width:0!important;min-height:34px!important;max-width:100%;padding:6px 10px!important;line-height:1.45;border-radius:8px!important}
+:is(#adminView,.afa-sheet) input[type=number]{width:min(100%,120px)!important}
+:is(#adminView,.afa-sheet) :is(input[type=date],input[type=time],input[type=datetime-local]){width:min(100%,230px)!important}
+:is(#adminView,.afa-sheet) input:is([type=url],[name=url],[name=media_url],[name=signup_url],[name=venue],[name=reason]){width:min(100%,520px)!important}
+:is(#adminView,.afa-sheet) input[type=file]{width:min(100%,520px)!important;min-width:0!important}
+:is(#adminView,.afa-sheet) textarea{width:min(100%,640px)!important;box-sizing:border-box;min-width:0!important}
+:is(#adminView,.afa-sheet) :is(.afa-form label,.afa-inline label){align-items:flex-start}
+:is(#adminView,.afa-sheet) .afa-form label.chk{align-items:center}
+#adminView table input:not([type=checkbox]):not([type=radio]){width:min(100%,280px)!important;min-width:0!important}
+#adminView table input[type=number]{width:min(100%,110px)!important}
+@media(max-width:560px){:is(#adminView,.afa-sheet) :is(input,select,textarea){max-width:100%!important}}
+
+.ac-product-actions{margin-left:auto;display:flex;align-items:center;gap:10px;flex-shrink:0}.ac-product-actions .afa-btn{font-size:12px;min-height:30px;padding:4px 9px}
+
+#adminView .ac-product{scroll-margin-top:96px}

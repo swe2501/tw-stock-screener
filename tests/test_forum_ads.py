@@ -386,14 +386,41 @@ class VoucherAndTaskTests(unittest.TestCase):
 
     def test_voucher_off_by_default_then_on(self):
         with at(EV_DAY):
-            self.assertFalse(F.handle_admin('admin_forum_voucher_get', {}, 'admin', self.r)[1]['voucher']['enabled'])
+            self.assertFalse(F.handle_admin('admin_forum_voucher_get', {'event_id':self.eid}, 'admin', self.r)[1]['voucher']['enabled'])
             F.handle_public('forum_checkin', {'pass': F.make_pass(self.eid)}, USER, self.r)
             self.assertEqual(self.r.vouchers, {})
-            F.handle_admin('admin_forum_voucher_save', {'enabled': True, 'definition': 'vip-v1', 'days': 30}, 'admin', self.r)
+            F.handle_admin('admin_forum_voucher_save', {'event_id':self.eid, 'enabled': True, 'definition': 'vip-v1', 'days': 30}, 'admin', self.r)
             st, out = F.handle_public('forum_checkin', {'pass': F.make_pass(self.eid)}, USER2, self.r)
         self.assertEqual(st, 200)
         self.assertIn('全方位研究 30 天', out['voucher'])
         self.assertEqual(self.r.vouchers['forum-voucher:u2']['p_days'], 30)
+
+    def test_per_event_vouchers_do_not_affect_other_or_new_events(self):
+        with at(EV_DAY):
+            second = F.handle_admin('admin_forum_save', {'event':{'city':'TXG','date':'2026-11-22','status':'published'}}, 'admin', self.r)[1]['event']['id']
+            F.handle_admin('admin_forum_voucher_save', {'event_id':self.eid,'enabled':True,'definition':'vip-v1','days':7}, 'admin', self.r)
+            self.assertFalse(F.voucher_setting(self.r, second)['enabled'])
+            self.assertEqual(F.voucher_setting(self.r, self.eid)['days'], 7)
+            F._grant(self.r, USER, {'id':second,'city':'TXG','date':'2026-11-22'}, 'code')
+            self.assertFalse(self.r.vouchers)
+            F._grant(self.r, USER2, {'id':self.eid,'city':'TPE','date':'2026-11-22'}, 'qr')
+            self.assertEqual(self.r.vouchers['forum-voucher:u2']['p_days'], 7)
+            F.handle_admin('admin_forum_voucher_save', {'event_id':self.eid,'enabled':False,'definition':'vip-v1','days':7}, 'admin', self.r)
+            self.assertIn('forum-voucher:u2', self.r.vouchers)
+            self.assertEqual(F.handle_admin('admin_forum_voucher_save', {'enabled':True}, 'admin', self.r)[0], 400)
+            self.assertEqual(F.handle_admin('admin_forum_voucher_save', {'event_id':'bad'}, 'admin', self.r)[0], 400)
+            self.assertEqual(F.handle_admin('admin_forum_voucher_save', {'event_id':self.eid}, '', self.r)[0], 403)
+
+    def test_archive_system_task_preserves_definition_and_restore_is_inactive(self):
+        body = {'id':'name-v1'}
+        self.assertEqual(F.handle_admin('admin_tasks_archive', body, '', self.r)[0], 403)
+        self.assertEqual(F.handle_admin('admin_tasks_archive', body, 'admin', self.r)[0], 200)
+        self.assertFalse(self.r.tasks['name-v1']['active'])
+        self.assertTrue(F.handle_admin('admin_tasks_list', {}, 'admin', self.r)[1]['tasks'][0]['archived'])
+        self.assertEqual(F.handle_admin('admin_tasks_save', dict(body,title='測試名稱',points=50,active=True), 'admin', self.r)[0], 409)
+        self.assertEqual(F.handle_admin('admin_tasks_restore', body, 'admin', self.r)[0], 200)
+        self.assertFalse(self.r.tasks['name-v1']['active'])
+        self.assertFalse(F.handle_admin('admin_tasks_list', {}, 'admin', self.r)[1]['tasks'][0]['archived'])
 
     def test_custom_task_lifecycle_and_award(self):
         st, out = F.handle_admin('admin_tasks_save', {'title': '直播互動抽獎', 'points': 200, 'period': 'daily', 'active': True}, 'admin', self.r)

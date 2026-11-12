@@ -356,7 +356,7 @@ def _grant(rest, user, ev, via, code=''):
     msg = '簽到完成，%s 點已存入你的會員帳號。' % format(FORUM_POINTS, ',')
     voucher = ''
     try:
-        vs = voucher_setting(rest)
+        vs = voucher_setting(rest, ev['id'])
     except RuntimeError:
         vs = VOUCHER_DEFAULT
     if vs.get('enabled') and vs.get('definition') in VOUCHERS:
@@ -379,8 +379,10 @@ PRODUCT_TYPES = {'choice-v1': '市場觀察員', 'research-v1': '趨勢研究員
 VOUCHER_DEFAULT = {'enabled': False, 'definition': 'vip-v1', 'days': 30}
 
 
-def voucher_setting(rest):
-    v = _get_json(rest, 'forum:voucher', {})
+def voucher_setting(rest, event_id=None):
+    v = _get_json(rest, 'forum:voucher:' + event_id, None) if event_id else None
+    if v is None:
+        v = _get_json(rest, 'forum:voucher', {})
     out = dict(VOUCHER_DEFAULT)
     out.update({k: v[k] for k in ('enabled', 'definition', 'days') if k in v})
     return out
@@ -572,8 +574,12 @@ def _points_admin(action, body, rest, users):
         for r in rows:
             r['member'] = emails.get(r['user_id'], r['user_id'])
         return 200, {'rows': rows}
+    if action in ('admin_forum_voucher_get', 'admin_forum_voucher_save'):
+        eid = str(body.get('event_id') or '')
+        if not eid or not _find_event(rest, eid):
+            return 400, {'error': '請指定有效場次；不再提供全域贈券修改'}
     if action == 'admin_forum_voucher_get':
-        return 200, {'voucher': voucher_setting(rest), 'options': VOUCHERS}
+        return 200, {'voucher': voucher_setting(rest, eid), 'options': VOUCHERS, 'event_id': eid}
     if action == 'admin_forum_voucher_save':
         d = str(body.get('definition') or 'vip-v1')
         if d not in VOUCHERS:
@@ -582,17 +588,29 @@ def _points_admin(action, body, rest, users):
         if not 1 <= days <= 90:
             return 400, {'error': '天數需介於 1～90'}
         v = {'enabled': bool(body.get('enabled')), 'definition': d, 'days': days}
-        _put_json(rest, 'forum:voucher', v)
+        _put_json(rest, 'forum:voucher:' + eid, v)
         return 200, {'voucher': v}
     if action == 'admin_tasks_list':
         st, rows = rest('/member_task_definitions?select=id,title,points,period,verifier,cap_group,active,sort&order=sort.asc,id.asc')
         if st != 200 or not isinstance(rows, list):
             raise RuntimeError('READ_FAILED')
         for r in rows:
+            r['archived'] = bool(_get_json(rest, 'task:archived:' + r['id'], False))
             r['custom'] = r['id'].startswith('adm-')
             r['manual'] = r['verifier'] == 'admin_review'
         return 200, {'tasks': rows, 'periods': PERIODS}
+    if action in ('admin_tasks_archive', 'admin_tasks_restore'):
+        tid = str(body.get('id') or '')
+        if not re.fullmatch(r'[a-z0-9-]{3,80}', tid):
+            return 400, {'error': '任務代號錯誤'}
+        st, rows = rest('/member_task_definitions?id=eq.' + quote(tid, safe=''), 'PATCH', {'active': False}, 'return=representation')
+        if st != 200 or not isinstance(rows, list) or not rows:
+            return 503, {'error': '無法確認任務已關閉，請重新整理'}
+        _put_json(rest, 'task:archived:' + tid, action == 'admin_tasks_archive')
+        return 200, {'ok': True}
     if action == 'admin_tasks_save':
+        if body.get('id') and _get_json(rest, 'task:archived:' + str(body['id']), False):
+            return 409, {'error': '任務已封存，請先還原'}
         tid = str(body.get('id') or '')
         title = str(body.get('title') or '').strip()
         if not 2 <= len(title) <= 40:
@@ -772,6 +790,8 @@ def handle_admin(action, body, admin_email, rest, users=None):
             ids = [e['id'] for e in evs if e['id'] != raw.get('id')]
             existing = next((e for e in evs if e['id'] == raw.get('id')), {})
             ev = clean_event(dict(existing, **raw), ids)
+            if not existing:
+                _put_json(rest, 'forum:voucher:' + ev['id'], dict(VOUCHER_DEFAULT))
             evs = [e for e in evs if e['id'] != ev['id']] + [ev]
             _put_json(rest, 'forum:events', evs)
             return 200, {'event': ev}
