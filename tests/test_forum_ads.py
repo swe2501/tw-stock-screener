@@ -183,6 +183,16 @@ class ForumTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             F.clean_ad(dict(raw, slot='top_bar'))
 
+    def test_video_end_mode_is_validated_and_public(self):
+        raw = {'id':'ad009','slot':'home_card','title':'Video','enabled':True,'audience':'all','media_type':'video','media_url':'https://example.test/ad.mp4','slide_mode':'video_end'}
+        for slot in ('home_card','results_top','member_center','corner'):
+            self.assertEqual(F.clean_ad(dict(raw,slot=slot))['media_type'], 'video')
+        ad = F.clean_ad(raw)
+        self.assertEqual(ad['slide_mode'], 'video_end')
+        self.assertEqual(F.ads_for([ad], {'guest':True})[0]['slide_mode'], 'video_end')
+        self.assertEqual(F.clean_ad(dict(raw, slide_mode='unknown'))['slide_mode'], 'seconds')
+        self.assertEqual(F.clean_ad(dict(raw, media_type='image'))['slide_mode'], 'seconds')
+
     def test_home_carousel_keeps_eligible_ads_in_priority_order(self):
         raw = {'slot': 'home_card', 'title': 'A', 'enabled': True, 'audience': 'all'}
         a = F.clean_ad(dict(raw, id='ad001', priority=10, slide_seconds=3))

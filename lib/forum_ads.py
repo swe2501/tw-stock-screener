@@ -252,6 +252,7 @@ def clean_ad(raw):
         'media_x': media_x, 'media_y': media_y, 'media_zoom': media_zoom, 'media_crop': crop,
         'media_alt': str(raw.get('media_alt') or title)[:120],
         'slide_seconds': max(3, min(5, int(raw.get('slide_seconds') or 5))),
+        'slide_mode': 'video_end' if media_type == 'video' and raw.get('slide_mode') == 'video_end' else 'seconds',
         'wheel_enabled': raw.get('wheel_enabled') is True,
         'url': url, 'forum_event': str(raw.get('forum_event') or '')[:12],
         'starts': raw.get('starts') or '', 'ends': raw.get('ends') or '',
@@ -291,7 +292,7 @@ def ads_for(ads, audience_flags, at=None):
         if cur is None or ad.get('priority', 50) > cur.get('priority', 50):
             best[ad['slot']] = ad
     pub = ('id', 'slot', 'title', 'text', 'cta', 'url', 'forum_event',
-           'media_type', 'media_url', 'media_x', 'media_y', 'media_alt', 'media_zoom', 'media_crop', 'slide_seconds', 'wheel_enabled')
+           'media_type', 'media_url', 'media_x', 'media_y', 'media_alt', 'media_zoom', 'media_crop', 'slide_seconds', 'slide_mode', 'wheel_enabled')
     return [{k: v.get(k, 100 if k == 'media_zoom' else '') for k in pub} for v in [*best.values(), *sorted(home, key=lambda ad: -ad.get('priority', 50))]]
 
 

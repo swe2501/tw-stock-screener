@@ -184,7 +184,7 @@
  /* ═══ 站內廣告 ═══ */
  const slotHelp={
   top_bar:'每頁頂端的細公告，可關閉',
-  home_card:'首頁上方的公告卡片',
+  home_card:'首頁市場判讀首屏內，與市場判讀共用同一輪播區',
   results_top:'選股結果表格上方',
   member_center:'會員中心頁面上方',
   corner:'右下角浮動卡，同一則每天最多出現一次'
@@ -194,17 +194,19 @@
   if(!slots.length)return;
   const b=modal('選擇廣告版位',`<p class="afa-sub">先選廣告出現的位置，再編輯內容。這是站內版位示意，不會開啟新視窗或立即刊登。</p><div class="afa-slot-picker"><div role="group" aria-label="廣告版位">${slots.map(([id,label])=>
    btn(icon(id)+`<span><b>${esc(label)}</b><small>${esc(SiteAdMedia.specs[id]?.help||slotHelp[id]||'')}<br>${id==='top_bar'?'純文字':'文字・圖片・影片'}</small></span>`,`data-slot="${esc(id)}" aria-pressed="false"`)).join('')}</div>
-   <div class="afa-slot-preview"><b data-slot-label></b><div class="afa-slot-layout" data-slot-layout aria-hidden="true"><i>先見 FORESIGHT・網站頁首</i><i>首頁市場摘要</i><i>選股結果表格</i><i>會員中心內容</i><i>浮動公告</i><span class="afa-slot-marker">廣告顯示位置</span></div><p class="afa-sub" data-slot-help></p></div></div>
+   <div class="afa-slot-preview"><b data-slot-label></b><div class="afa-page-context afa-picker-scene" data-slot-layout></div><button type="button" class="afa-btn" data-slot-replay>▶ 重播位置示範</button><p class="afa-sub" data-slot-motion role="status"></p><p class="afa-sub" data-slot-help></p></div></div>
    <div class="afa-foot">${btn('取消','data-close','ghost')}${btn('使用此版位 → 編輯內容','data-confirm-slot','primary')}</div>`,true);
-  let selected;
+  let selected,sceneCleanup=()=>{};
+  function replay(){sceneCleanup();if(window.AdminAdEditor?.animateScene)sceneCleanup=AdminAdEditor.animateScene(b.querySelector('[data-slot-layout]'),b.querySelector('[data-slot-motion]'));}
+  b.querySelector('[data-slot-replay]').onclick=replay;b.closest('dialog').addEventListener('close',()=>sceneCleanup(),{once:true});
   function select(id){
    selected=id;
-   b.querySelectorAll('[data-slot]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.slot===id)));
+   b.querySelectorAll('button[data-slot]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.slot===id)));
    b.querySelector('[data-slot-label]').textContent=meta.slots[id];
    b.querySelector('[data-slot-help]').textContent=slotHelp[id]||'';
-   b.querySelector('[data-slot-layout]').dataset.layout=id;
+   sceneCleanup();const context=b.querySelector('[data-slot-layout]');context.dataset.layout=id;const demo=document.createElement('article');demo.className='site-ad site-ad--'+id+' site-ad--preview';demo.innerHTML=(id==='top_bar'?'':'<div class="afa-demo-media">圖片／影片素材顯示區</div>')+'<div class="site-ad-copy"><b>你的廣告標題</b><span class="site-ad-cta">自訂按鈕 ↗</span></div>';if(window.AdminAdEditor?.renderPlacement){AdminAdEditor.renderPlacement(context,id,demo);replay();}else context.textContent=slotHelp[id]||'';
   }
-  b.querySelectorAll('[data-slot]').forEach(button=>button.onclick=()=>select(button.dataset.slot));
+  b.querySelectorAll('button[data-slot]').forEach(button=>button.onclick=()=>select(button.dataset.slot));
   b.querySelector('[data-confirm-slot]').onclick=()=>editAd(null,selected);
   select(slots[0][0]);
  }

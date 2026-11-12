@@ -3,7 +3,7 @@
  const esc=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const specs={
   top_bar:{label:'頁首公告條（全站）',size:'純文字',help:'主導覽下方的細公告列，所有頁面可見。',ratio:0},
-  home_card:{label:'首頁卡片',size:'1200 × 600 px・2:1',help:'首頁市場摘要上方，可放圖片或影片。',ratio:2},
+  home_card:{label:'首頁卡片',size:'1200 × 600 px・2:1',help:'首頁市場判讀首屏內，與市場判讀輪播，可放圖片或影片。',ratio:2},
   results_top:{label:'選股結果上方',size:'1200 × 400 px・3:1',help:'掏金篩選器的結果表格上方。',ratio:3},
   member_center:{label:'會員中心',size:'1200 × 600 px・2:1',help:'會員中心頁面標題下方。',ratio:2},
   corner:{label:'右下角浮動卡',size:'640 × 480 px・4:3',help:'視窗右下角的小卡，可關閉，每天最多出現一次。',ratio:4/3}
