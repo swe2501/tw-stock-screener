@@ -424,3 +424,5 @@ html body dialog.afa-modal .afa-sheet-hd{background:transparent!important}
 :is(#adminView,.afa-sheet) :is(input,select):not([type=checkbox]):not([type=radio]):not([type=range]):not([type=hidden]):not([type=file]):not([type=color]):is([type=url],[name=url],[name=media_url],[name=signup_url],[name=venue],[name=reason]){width:min(100%,480px)!important;max-width:480px!important}
 
 .afa-voucher-manual{margin-top:22px;padding-top:18px;border-top:1px solid var(--border)}.afa-voucher-manual h3{font-size:15px;margin-bottom:8px}.afa-recipient-list{max-height:300px;overflow:auto;margin:10px 0}.afa-voucher-manual .afa-table{table-layout:auto;min-width:0}.afa-voucher-manual .afa-table td{overflow-wrap:anywhere}
+
+.afa-voucher-disclosure>summary,.afa-recipient-tools>summary{cursor:pointer;font-weight:700;padding:10px 0;color:var(--text);list-style-position:inside}.afa-voucher-disclosure[open]>summary{margin-bottom:8px}.afa-recipient-tools{margin:8px 0}.afa-recipient-tools>summary{font-size:13px;color:var(--muted)}
