@@ -133,24 +133,6 @@ def _cache_log(method, path, params, *, status=None, code="none", exc=None, key=
                        exc or "none", key)
 
 
-_CACHE_DIAG = logging.getLogger(__name__ + ".diag")
-if not _CACHE_DIAG.handlers:                                # 成功診斷另走 stderr，不混進錯誤 warning 通道
-    _h = logging.StreamHandler()
-    _h.setFormatter(logging.Formatter("%(message)s"))
-    _CACHE_DIAG.addHandler(_h)
-_CACHE_DIAG.setLevel(logging.INFO)
-_CACHE_DIAG.propagate = False
-
-
-def _cache_ok(method, params, status, rows=None):
-    """screen_cache 成功（2xx）診斷紀錄（2026-11-12 創辦人核准範圍）：只記 HTTP 狀態、回傳列數、
-    金鑰標籤（程式選了哪個 env 變數：service/anon）。不讀、不解碼、不記金鑰內容，也不記 job_id、query 值、body。"""
-    label = "service" if SUPABASE_SERVICE_KEY else "anon"
-    names = ",".join(sorted({str(k) for k, _ in (params or [])})) or "-"
-    _CACHE_DIAG.info("[screen_cache] ok method=%s path=/screen_cache params=%s status=%s rows=%s key=%s",
-                     method, names, status, rows if rows is not None else "n/a", label)
-
-
 def _sb_error_code(raw):
     """只取回應 JSON 的 code 欄位，且必須是短英數代碼；其餘一律 none。"""
     try:
@@ -207,21 +189,16 @@ def _cache_sb(path, method="GET", body=None, params=None):
 
 
 def _cache_save(job_id, result):
-    """存篩選結果並順手清除 15 分鐘前的舊暫存。成功（2xx）的每一步也記一行診斷（_cache_ok）。"""
+    """存篩選結果並順手清除 15 分鐘前的舊暫存。"""
     cutoff = (datetime.now(timezone.utc) - timedelta(minutes=15)).isoformat()
-    for method, params, body in (("DELETE", [("created_at", f"lt.{cutoff}")], None),
-                                 ("DELETE", [("job_id", f"eq.{job_id}")], None),
-                                 ("POST", None, {"job_id": job_id, "result": result})):
-        st, _ = _cache_sb("/screen_cache", method, body=body, params=params)
-        if 200 <= st < 300:
-            _cache_ok(method, params, st)
+    _cache_sb("/screen_cache", "DELETE", params=[("created_at", f"lt.{cutoff}")])
+    _cache_sb("/screen_cache", "DELETE", params=[("job_id", f"eq.{job_id}")])
+    _cache_sb("/screen_cache", "POST", body={"job_id": job_id, "result": result})
 
 
 def _cache_get(job_id):
-    params = [("job_id", f"eq.{job_id}"), ("select", "result")]
-    st, rows = _cache_sb("/screen_cache", "GET", params=params)
-    if 200 <= st < 300:
-        _cache_ok("GET", params, st, rows=len(rows) if isinstance(rows, list) else "none")
+    st, rows = _cache_sb("/screen_cache", "GET",
+                         params=[("job_id", f"eq.{job_id}"), ("select", "result")])
     if st == 200 and rows:
         return rows[0]["result"]
     return None
