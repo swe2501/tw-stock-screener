@@ -16,7 +16,7 @@
   <link rel="stylesheet" href="assets/foresight-brand.css?v=fqi34">
   <link rel="icon" type="image/png" href="assets/brand/favicon.png?v=fqi16">
   <link rel="apple-touch-icon" href="assets/brand/favicon.png?v=fqi16">
-  <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+  <script id="chartLibrary" src="assets/vendor/lightweight-charts-4.1.3.standalone.production.js"></script>
   <script src="assets/glass-chart-motion.js?v=2"></script>
   <script src="assets/site-theme.js"></script>
   <script src="assets/w-pattern-export.js?v=20261024-1"></script>
@@ -14926,17 +14926,43 @@
     }
     function _wkKey(d) { const dt = new Date(d + 'T00:00:00Z'); const day = dt.getUTCDay() || 7; dt.setUTCDate(dt.getUTCDate() + 4 - day); const ys = new Date(Date.UTC(dt.getUTCFullYear(), 0, 1)); const wk = Math.ceil((((dt - ys) / 86400000) + 1) / 7); return dt.getUTCFullYear() + '-W' + wk; }
 
+    function _showChartFailure(requestId, message, retry) {
+      if (requestId !== _chartRequestId || !document.getElementById('chartModal').classList.contains('open')) return;
+      const loading = document.getElementById('chartLoading');
+      document.getElementById('chartWrapper').style.display = 'none';
+      loading.style.display = 'flex';
+      loading.textContent = message + ' ';
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = '重試';
+      button.onclick = () => {
+        if (window.LightweightCharts?.createChart) { retry(); return; }
+        button.disabled = true;
+        const script = document.createElement('script');
+        script.src = document.getElementById('chartLibrary').src;
+        script.onload = () => { if (requestId === _chartRequestId && document.getElementById('chartModal').classList.contains('open')) retry(); };
+        script.onerror = () => { button.disabled = false; };
+        document.head.appendChild(script);
+      };
+      loading.appendChild(button);
+    }
+
     function _loadChartUrl(url, subtitle, agg) {
       window.AcademyVisualPatterns?.clear();
       window.WPatternOverlay?.clear();
       window._academyChartSnapshot={code:currentCode,period:subtitle,url};
       const requestId=++_chartRequestId;
       _chartLoading();
+      const retry = () => _loadChartUrl(url, subtitle, agg);
+      if (!window.LightweightCharts?.createChart) {
+        _showChartFailure(requestId, '圖表套件載入失敗。', retry);
+        return;
+      }
       (window.AcademyMarketSearch?window.AcademyMarketSearch.fetchChart(currentCode,url):fetch(url).then(r=>r.json()))
         .then(data => {
           if(requestId!==_chartRequestId||!document.getElementById('chartModal').classList.contains('open'))return;
           if (data.error || !data.data || data.data.length === 0) {
-            document.getElementById('chartLoading').innerHTML = ' 無法取得圖表資料';
+            _showChartFailure(requestId, '無法取得圖表資料。', retry);
             return;
           }
           if(window._academyChartSnapshot?.code===currentCode)window._academyChartSnapshot.data_date=data.data.at(-1)?.time||null;
@@ -14964,7 +14990,7 @@
           renderTVChart(data.data, data.events || []);
         })
         .catch(() => {
-          if(requestId===_chartRequestId)document.getElementById('chartLoading').innerHTML = ' 載入失敗，請重試';
+          _showChartFailure(requestId, '圖表載入失敗。', retry);
         });
     }
 
@@ -18520,7 +18546,7 @@
 <script src="assets/member-task-guide.js?v=1" defer></script>
 <link rel="stylesheet" href="assets/member-point-policy.css?v=1">
 <script src="assets/member-point-policy.js?v=birthday-6" defer></script>
-<script src="assets/member-missions.js?v=expiry-rules-7" defer></script>
+<script src="assets/member-missions.js?v=custom-products-1" defer></script>
 <script src="assets/member-share.js?v=invite4" defer></script>
 <script src="assets/member-provider-icons.js" defer></script>
 <script src="assets/member-cloud.js?v=service1" defer></script>
@@ -18552,6 +18578,7 @@
 <link rel="stylesheet" href="assets/member-devices.css?v=1">
 <script src="assets/member-devices.js?v=1" defer></script>
 <script src="assets/member-catalog.js?v=1" defer></script>
+<script src="assets/admin-feature-picker.js?v=1" defer></script>
 <script src="assets/admin-member-commerce.js?v=device-policy-1" defer></script>
 <script src="assets/member-benefits.js?v=device-policy-1" defer></script>
 <script src="assets/member-journey.js?v=expiry-rules-5-custom-days" defer></script>
@@ -18609,7 +18636,7 @@
 <script src="assets/zhenming-six.js?v=six2-4" defer></script>
 <script src="assets/zhenming-89.js?v=3" defer></script>
 <script src="assets/screen-log.js?v=20261107-calendar-nav-natural-scroll" defer></script>
-<script src="assets/member-quick-menu.js?v=tier7" defer></script>
+<script src="assets/member-quick-menu.js?v=scan-double-frame-20261113" defer></script>
 <script src="assets/navigation-layers.js?v=logo-home20" defer></script>
 <link rel="stylesheet" href="assets/home-market-intraday.css?v=25">
 <script src="assets/home-market-intraday.js?v=14" defer></script>
@@ -18617,12 +18644,13 @@
 <script src="assets/office-content-flow.js?v=1" defer></script>
 <script src="assets/office-task-board.js?v=admin-poll-3" defer></script>
 <script src="assets/admin-office.js?v=7f-uat-only-1" defer></script>
-<link rel="stylesheet" href="assets/forum-ads.css?v=admin-controls-20261113-3">
-<script src="assets/admin-ad-editor.js?v=5" defer></script>
-<script src="assets/admin-forum-ads.js?v=admin-controls-20261113" defer></script>
-<script src="assets/site-ad-media.js?v=3"></script>
-<script src="assets/site-ad-carousel.js?v=2" defer></script>
-<script src="assets/forum-member.js?v=6" defer></script>
+<link rel="stylesheet" href="assets/forum-ads.css?v=classified-products-3">
+<script src="assets/admin-ad-editor.js?v=media-crop-2" defer></script>
+<script src="assets/admin-attendee-vouchers.js?v=20261113-selected-3" defer></script>
+<script src="assets/admin-forum-ads.js?v=custom-products-1" defer></script>
+<script src="assets/site-ad-media.js?v=5-video-crop"></script>
+<script src="assets/site-ad-carousel.js?v=video-end-1" defer></script>
+<script src="assets/forum-member.js?v=video-crop-2" defer></script>
 <script src="assets/forum-scanner.js?v=1" defer></script>
 <footer id="foresightFooter" aria-label="先見網站頁尾">
       <div class="fs-source"><div>本站依各功能使用臺灣證券交易所、證券櫃檯買賣中心、臺灣期貨交易所、集保結算所及其他公開資料整理市場資訊；來源、行情日期與更新頻率依各頁標示，部分內容為盤後或延遲資料。數據可能因公告更正、休市或來源異常而調整，請以原始公告核對。圖表、歷史統計與工具結果供學習及研究參考，歷史表現不代表未來結果；不同資料口徑與估算方式可能產生差異。</div></div>
@@ -18666,7 +18694,7 @@
 <script src="assets/brand-arrival.js?v=46" defer></script>
 <link rel="stylesheet" href="assets/chart-analysis.css?v=1">
 <script src="assets/chart-analysis.js?v=1" defer></script>
-<link rel="stylesheet" href="assets/glass-skin.css?v=14">
+<link rel="stylesheet" href="assets/glass-skin.css?v=15-admin-dialog">
 <link rel="stylesheet" href="assets/pristine.css?v=4">
 <script src="assets/pristine-snapshot.js?v=20261105" defer></script>
 <script src="assets/pristine.js?v=4" defer></script>

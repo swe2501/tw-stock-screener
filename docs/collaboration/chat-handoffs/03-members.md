@@ -28,6 +28,11 @@
 
 2026-11-13｜04於shared/justy/event-vouchers準備會員方案刪除鈕（需另儲存）與新增後平滑定位／focus名稱｜見 ../changes/2026-11-13-commerce-delete-scroll.md｜Chrome mock測試通過｜未提交未部署｜整合時保留03後續改動。
 
+2026-11-13｜04準備活動代號任務與單場核銷自動點數，member-missions新增evt任務說明、forum-member取消一般活動終身限制｜見 ../changes/2026-11-13-event-reward-tasks.md｜未發布，配套SQL未套用；不得單獨宣稱已啟用或重發舊點數。
+
+2026-11-13｜04依JUSTY準備指定已報到會員發券，同贈券視窗，member_rewards沿現有通知來源｜見 ../changes/2026-11-13-attendee-selected-vouchers.md｜只在04來源、獨立49725demo｜新SQL未套用、不影響03前輪整合，請整合前核對新舊RPC配套。
+
+2026-11-13｜04接續JUSTY明確SQL／UAT授權，forum-event-rewards.sql與forum-attendee-vouchers.sql已於Taiwan stock2成功套用；4支RPC service_role=true、anon/authenticated=false，trigger啟用，既有reward本人通知來源已核對。整合01掃描／玻璃與03付款demo／深色Logo，發布結果見2026-11-13-sql-uat-integration.md。未實發會員點數或券、不啟用付款。
 ## 2026-11-13 同時使用裝置（待雲端連線）
 使用者批准 1／1／2／3 台與完整啟用。已完成商品設定、權益卡片／說明、登入裝置管理、伺服器與 Data API 租約閘道、雙開關及隔離測試，精準同步 Documents 本機，保留最新功能選取器。詳細交接 docs/collaboration/changes/2026-11-13-member-device-policy.md。Supabase 尚未安裝／連接，未執行雲端 SQL、未啟用、未推送本批 UAT；不得稱已上線。需盤點現行 Auth hook／其他客戶端與 Storage／Realtime 邊界後再啟用驗證。
 

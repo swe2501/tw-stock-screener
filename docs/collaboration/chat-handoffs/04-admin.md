@@ -1,5 +1,7 @@
 # 04｜後台・論壇・站內廣告
 
+2026-11-13｜01依JUSTY截圖修正本機論壇彈窗背景被全站玻璃CSS蓋白：glass-skin.css五處一般dialog表面排除.afa-modal，fullscreen容器維持透明，使用原backdrop柔霧；index更新兩CSS快取版本｜glass-skin.css、forum-ads.css、index.html、tests/admin-glass.browser.cjs｜新增論壇真實彈窗，玻璃／一般模式×深淺四組瀏覽器檢查通過，目視玻璃淺色背景內容已透出且模糊｜未提交／未發布｜僅樣式，未儲存活動或操作線上資料。
+
 入口：先讀 `../justy-chat-guide.md`。範圍：後台、論壇報名與掃碼報到、補發代碼、廣告圖片影片、任務／兌換商品管理。
 
 優先接手文件：`../changes/2026-11-11-admin-forum-registration-media.md`，裡面有既有修改、三份 SQL 與驗證記錄。2026-11-12 三份 SQL 已套用雲端，metadata 檢查不等於實際報名、通知、上傳已完成端到端驗證；本機是否已推送需查證，勿重跑 migration。
@@ -29,3 +31,13 @@
 2026-11-13｜後台遮罩改藍灰、系統任務可移除封存還原、右下回頂、全後台欄位依用途縮短｜見 ../changes/2026-11-13-admin-controls.md｜29項單元、點數瀏覽器回歸通過｜shared/justy/event-vouchers 未提交未發布｜與本場贈券一併待整合。
 
 2026-11-13｜會員方案卡片補刪除鈕，新增商品展開並平滑定位至名稱欄｜見 ../changes/2026-11-13-commerce-delete-scroll.md，已交接03｜Chrome mock通過｜未提交未部署。
+
+2026-11-13｜柔霧背景鎖定透明dialog＋明確半透明backdrop，廣告預覽增加五版位頁面情境｜見 ../changes/2026-11-13-admin-glass-placement.md｜深淺背景與版位編輯瀏覽器通過｜web/justy/admin-glass-20261113未提交未部署｜不重套舊已發布來源草稿。
+
+2026-11-13｜活動獎勵按代號每活動一次，技術論壇跨場次終身一次；新增任務選活動必填有效代號、QR/code同一發點交易｜見 ../changes/2026-11-13-event-reward-tasks.md｜31項單元、活動任務browser、PGlite交易與並行互斥通過，API12/12｜未提交未發布｜配套forum-event-rewards.sql只準備未套用，上線須另批共享SQL。
+
+2026-11-13｜本場贈券同視窗新增勾選已報到者發30天券、手動自動共用去重、成功紀錄／本人通知來源｜見 ../changes/2026-11-13-attendee-selected-vouchers.md｜SQL隔離與browser通過，本機49725示範｜未提交未部署、SQL未套用｜不碰03整合主checkout，不實發券。
+
+2026-11-13｜04接續JUSTY明確SQL／UAT授權，forum-event-rewards.sql與forum-attendee-vouchers.sql已於Taiwan stock2成功套用；4支RPC service_role=true、anon/authenticated=false，trigger啟用，既有reward本人通知來源已核對。整合01掃描／玻璃與03付款demo／深色Logo，發布結果見2026-11-13-sql-uat-integration.md。未實發會員點數或券、不啟用付款。
+
+2026-11-13｜商品分類勾選、會員權益、廣告圖影裁切與手機預覽完成；已依JUSTY授權套用商品設定及自訂兌換SQL，雲端唯讀權限驗證通過｜見 ../changes/2026-11-13-classified-product-entitlements.md 與 ../changes/2026-11-13-media-crop-mobile.md｜39項Python、SQL及瀏覽器驗證；API 12/12｜本次準備234發布；03進行中的裝置限制留在其獨立工作區，不納入。

@@ -63,7 +63,7 @@
   .gb-hero,.gb-card,.gb-detail,.bx-card,.lu-card,.gd-wrap,.pf-glass,.bd-card,.bd-plain-card,
   .ef-wrap,.ed-wrap,.in-wrap,.eh-wrap,.ec-wrap,.eg-wrap,.usty-card,.gs-bdcard,.gs-futcard,
   .cb-pi,.cb-ovc,.gs-optcard,.ti-card,.md-card,.mc-card,.mc-cloud-host,.member-page .mc-shell,
-  .vix-history-dialog,.modal-content,.auth-modal-content,dialog,.gs-search-drop,.site-search-panel
+  .vix-history-dialog,.modal-content,.auth-modal-content,dialog:not(.afa-modal),.gs-search-drop,.site-search-panel
 ){
   border-color:var(--glass-line)!important;
   background-color:var(--glass-fill)!important;
@@ -72,7 +72,7 @@
   backdrop-filter:blur(18px) saturate(1.32);
   -webkit-backdrop-filter:blur(18px) saturate(1.32);
 }
-:root[data-ui-skin="glass"] :is(body>header,#mainNav,.member-page .mc-shell,.modal-content,.auth-modal-content,dialog){
+:root[data-ui-skin="glass"] :is(body>header,#mainNav,.member-page .mc-shell,.modal-content,.auth-modal-content,dialog:not(.afa-modal)){
   background-color:var(--glass-fill-strong)!important;
   box-shadow:var(--glass-shadow)!important;
   backdrop-filter:blur(24px) saturate(1.38);
@@ -142,14 +142,14 @@
 :root[data-ui-skin="glass"] :is(.gs-search-drop,.mc-chart-research-options,[role="menu"],.dropdown-menu){background-color:var(--glass-fill-strong)!important;}
 
 /* Readability guard: floating layers blur the page behind them instead of mixing two text layers. */
-:root[data-ui-skin="glass"] :is(.ss-panel,.gs-search-drop,.mn-menu,.mc-chart-research-options,[role="menu"],.dropdown-menu,.modal-content,.auth-modal-content,dialog){
+:root[data-ui-skin="glass"] :is(.ss-panel,.gs-search-drop,.mn-menu,.mc-chart-research-options,[role="menu"],.dropdown-menu,.modal-content,.auth-modal-content,dialog:not(.afa-modal)){
   background-color:var(--glass-fill-strong)!important;
   background-image:linear-gradient(145deg,var(--glass-sheen),transparent 42%)!important;
   backdrop-filter:blur(30px) saturate(1.08)!important;
   -webkit-backdrop-filter:blur(30px) saturate(1.08)!important;
 }
-:root[data-theme="light"][data-ui-skin="glass"] :is(.ss-panel,.gs-search-drop,.mn-menu,.mc-chart-research-options,[role="menu"],.dropdown-menu,.modal-content,.auth-modal-content,dialog){background-color:rgba(250,252,254,.975)!important;}
-:root:not([data-theme="light"])[data-ui-skin="glass"] :is(.ss-panel,.gs-search-drop,.mn-menu,.mc-chart-research-options,[role="menu"],.dropdown-menu,.modal-content,.auth-modal-content,dialog){background-color:rgba(10,16,25,.965)!important;}
+:root[data-theme="light"][data-ui-skin="glass"] :is(.ss-panel,.gs-search-drop,.mn-menu,.mc-chart-research-options,[role="menu"],.dropdown-menu,.modal-content,.auth-modal-content,dialog:not(.afa-modal)){background-color:rgba(250,252,254,.975)!important;}
+:root:not([data-theme="light"])[data-ui-skin="glass"] :is(.ss-panel,.gs-search-drop,.mn-menu,.mc-chart-research-options,[role="menu"],.dropdown-menu,.modal-content,.auth-modal-content,dialog:not(.afa-modal)){background-color:rgba(10,16,25,.965)!important;}
 :root[data-ui-skin="glass"] .ss-panel :is(h1,h2,h3,h4,b,strong,.ss-result){color:var(--text);opacity:1;}
 :root[data-ui-skin="glass"] .ss-panel :is(small,p,.ss-group,.ss-data-date,.ss-snippet){color:var(--text-muted);}
 :root[data-ui-skin="glass"] .ss-panel :is(.ss-tabs,.ss-panel footer){background:rgba(255,255,255,.025)!important;}
