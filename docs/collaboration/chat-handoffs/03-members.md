@@ -6,6 +6,16 @@
 
 交接更新格式：日期｜問題與結果｜檔案｜驗證｜commit／部署｜待辦。
 
+2026-11-13｜JUSTY更正不要額外視窗，已完全移除信用卡dialog，填寫與所有結果留在原方案帳務付款區，保留同卡繞光／音效｜見 ../changes/2026-11-13-payment-result-effects.md｜mock確認零dialog、原區域及同卡成功失敗通過｜本機未發布。
+
+2026-11-13｜付款頁精簡、信用卡測試單頁 dialog；同卡繞光變綠／紅，變色完成才同步成功音或失敗音／短震，背景動畫保留｜見 ../changes/2026-11-13-payment-result-effects.md｜真實CSS同卡／時序／邊界、完整網站與付款8項通過｜本機未發布｜音效依瀏覽器／系統音量，實體震動依裝置支援；正式活動DB連線仍待處理。
+
+2026-11-13｜付款測試模式新增成功／失敗選擇與結果動畫，可返回重試；兩種均不發送付款請求或保存卡號｜見 ../changes/2026-11-13-payment-demo.md｜mock與原付款8項通過｜本機未發布｜正式資料庫連線仍待建立。
+
+2026-11-13｜會員權益深色 Logo 改用白金版本並提高透明度，涵蓋預設深色，裝飾不蓋文字｜見 ../changes/2026-11-13-member-dark-logo.md｜完整會員頁深淺色桌機／手機截圖通過｜本機未提交／未發布｜保留付款測試與其他聊天室本機修改。
+
+2026-11-13｜付款頁新增可操作測試模式，測試卡填寫與完成動畫、不發付款請求、退出後恢復停用；對齊常用本機 billing｜見 ../changes/2026-11-13-payment-demo.md｜完整網站 mock 與原付款8項通過｜本機未提交／未發布｜不開正式付款、不保存卡片、不宣稱真實綁卡完成。
+
 2026-11-13｜JUSTY 要求 5234，整合會員卡片／詳細說明／方案帳務及 04 最新已完成內容｜見 ../changes/2026-11-13-member-preview-publish.md｜62 項 Python、API12/12及 mock 瀏覽器｜功能先提交 f2b054a1，整合發布結果查 Git refs 與聊天最終回報｜付款與資料庫仍未啟用；來源草稿留存勿重複套入。
 
 2026-11-13｜JUSTY 更正：付款關閉仍顯示方案選擇及信用卡／LINE Pay／超商介面，只隱藏價格並停用實際送單／綁卡；恢復原介面且切換方式保留方案｜見 ../changes/2026-11-13-billing-plan-methods.md｜mock 會員往返、三種方式與原付款介面 8 項通過｜本機未提交／未發布｜信用卡真實綁定與超商金流尚未串接，資料庫未改。
@@ -17,3 +27,9 @@
 2026-11-13｜會員權益改為上架商品動態卡片，圖標／詳細說明／權益／付款開關／後台商品管理已在 shared/justy/member-commerce-settings 準備；根 AGENTS.md 加入新功能先問會員開放對象規則｜見 ../changes/2026-11-13-member-commerce-settings.md｜Python 33、Node 8、mock 深淺色桌機手機與完整網站串接通過｜未提交／未部署；SQL 未套用，付款未啟用｜需隔離資料庫驗證與正式資料庫另行授權，不把前端 gate 當完整資料 RLS。
 
 2026-11-13｜04於shared/justy/event-vouchers準備會員方案刪除鈕（需另儲存）與新增後平滑定位／focus名稱｜見 ../changes/2026-11-13-commerce-delete-scroll.md｜Chrome mock測試通過｜未提交未部署｜整合時保留03後續改動。
+
+## 2026-11-13 同時使用裝置（待雲端連線）
+使用者批准 1／1／2／3 台與完整啟用。已完成商品設定、權益卡片／說明、登入裝置管理、伺服器與 Data API 租約閘道、雙開關及隔離測試，精準同步 Documents 本機，保留最新功能選取器。詳細交接 docs/collaboration/changes/2026-11-13-member-device-policy.md。Supabase 尚未安裝／連接，未執行雲端 SQL、未啟用、未推送本批 UAT；不得稱已上線。需盤點現行 Auth hook／其他客戶端與 Storage／Realtime 邊界後再啟用驗證。
+
+## 2026-11-13 裝置 SQL 已部署、全域仍關閉
+使用者明確核准後，Taiwan stock2 裝置 policy/gateway/storage 已在同一交易部署並真實驗證 PASS，ready/gate_ready=true、enabled=false；測試商品資料全部 rollback。公開 policy RPC200，匿名表存取401。未發布本批網站/API，未設定伺服器裝置旗標，未切換舊 Auth hook，未開全域限制；共用 DB 在正式站仍舊版時不可直接開啟。下一步須收到發布指令，處理網站/API部署與所有現有客戶端相容，再做多瀏覽器實測。詳見 member-device-policy 交接文件最新節。

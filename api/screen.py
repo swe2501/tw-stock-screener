@@ -2505,6 +2505,10 @@ def _aibuy_gate(token):
     """回 200（放行）/401/403/503。fail closed：service key 缺、Auth 或 DB 異常都不放行。"""
     if not token:
         return 401
+    from lib.member_devices import check as device_check
+    blocked = device_check(token)
+    if blocked:
+        return blocked[0]
     skey = os.environ.get("SUPABASE_SERVICE_KEY", "")
     if not (SUPABASE_URL and skey):
         return 503

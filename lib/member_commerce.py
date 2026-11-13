@@ -30,7 +30,7 @@ def defaults():
          'details': '各項工具的資料日期與使用方式，請見下方詳細解說。',
          'active': True, 'position': i, 'days': 30, 'price_twd': [0, 380, 680, 880][i],
          'sandbox_only': True, 'features': BASE + (['breadth', 'fhedge'] if i else []),
-         'plan_code': None}
+         'plan_code': None, 'device_limit': [1, 1, 2, 3][i]}
         for i, tier in enumerate(('free', 'observation', 'research', 'vip'))]}
 
 
@@ -64,6 +64,9 @@ def validate(body):
         if not isinstance(p['id'], str) or not re.fullmatch(r'[a-z][a-z0-9_-]{1,39}', p['id']) or p['id'] in ids:
             raise CatalogError(400, '商品代碼須唯一，限小寫英數、底線與連字號')
         ids.add(p['id'])
+        p['device_limit'] = item.get('device_limit', {'free':1,'observation':1,'research':2,'advanced':2,'vip':3}.get(p['tier'],1))
+        if type(p['device_limit']) is not int or not 1 <= p['device_limit'] <= 10:
+            raise CatalogError(400, '同時使用裝置須為 1 至 10 台')
         for key, limit in (('name', 60), ('description', 180), ('details', 3000)):
             if not isinstance(p[key], str) or not p[key].strip() or len(p[key]) > limit:
                 raise CatalogError(400, '請填寫商品名稱、簡介與詳細說明，並遵守字數限制')
@@ -97,12 +100,13 @@ def public_catalog(rest, env=None):
             continue
         p = {k: original[k] for k in ('id', 'name', 'description', 'details', 'tier', 'icon', 'position', 'features')}
         purchasable = opened and original['tier'] != 'free' and bool(original.get('sandbox_only')) == (env == 'sandbox') and bool(original.get('plan_code'))
+        p['device_limit'] = original.get('device_limit', {'free':1,'observation':1,'research':2,'advanced':2,'vip':3}.get(original['tier'],1))
         p['purchasable'] = purchasable
         if purchasable:
             p.update({k: original[k] for k in ('price_twd', 'days', 'plan_code')})
         products.append(p)
     return {'revision': config.get('revision', 0), 'payments_enabled': opened,
-            'env': env if opened else None, 'products': products}
+            'env': env if opened else None, 'products': products, 'device_policy': device_policy(rest)}
 
 
 def plans(rest, env):
@@ -142,3 +146,11 @@ def handle_admin(action, body, rest):
         raise CatalogError(400, '未知商品管理操作')
     except CatalogError as e:
         return e.status, {'error': e.message}
+
+
+def device_policy(rest):
+    st, value = rest('/rpc/member_device_policy', 'POST', {})
+    if st == 200 and isinstance(value, dict):
+        from lib.member_devices import enabled
+        return dict(value, enabled=bool(value.get('enabled') and enabled()))
+    return {'enabled': False, 'ready': False}

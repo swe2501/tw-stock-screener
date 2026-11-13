@@ -14,6 +14,10 @@ def verified(user):
 
 
 def check(token):
+    from lib.member_devices import check as device_check
+    blocked = device_check(token)
+    if blocked:
+        return blocked
     if not required():
         return None
     base, key = os.environ.get("SUPABASE_URL", ""), os.environ.get("SUPABASE_ANON_KEY", "")

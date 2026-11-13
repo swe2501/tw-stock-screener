@@ -348,7 +348,7 @@ def _sb(path, body, token=None):
     except urllib.error.HTTPError as e:
         result = json.loads(e.read())
         if "MEMBER_DEVICE_LIMIT" in str(result):
-            return 403, {"error": "此帳號已有 2 台裝置登入，請先登出其中一台後再試。", "code": "MEMBER_DEVICE_LIMIT"}
+            return 403, {"error": "此帳號已達同時使用裝置上限，請先管理登入裝置後再試。", "code": "MEMBER_DEVICE_LIMIT"}
         return e.code, result
 
 
@@ -383,6 +383,15 @@ class handler(BaseHTTPRequestHandler):
         except (ValueError, TypeError):
             return self._json(400, {"error": "invalid request"})
         action = body.get("action", "")
+        from lib import member_devices
+        device_token = (self.headers.get('Authorization') or '').removeprefix('Bearer ').strip()
+        if action == 'member_devices':
+            return self._json(*member_devices.manage(device_token, body))
+        if action not in ('refresh', 'logout', 'membership_catalog') and device_token:
+            blocked = member_devices.check(device_token)
+            if blocked:
+                return self._json(*blocked)
+
 
         if action == "official_announcements":
             auth = self.headers.get("Authorization", "")
@@ -481,6 +490,19 @@ class handler(BaseHTTPRequestHandler):
                 return self._json(503, {"error": "authentication unavailable"})
             if not admin_email:
                 return self._json(403, {"error": "forbidden: 僅限管理員"})
+
+            if action in ('admin_device_policy_get', 'admin_device_policy_save'):
+                desired = body.get('enabled') if action == 'admin_device_policy_save' else None
+                if action == 'admin_device_policy_save' and type(desired) is not bool:
+                    return self._json(400, {'error': '請設定裝置限制開關'})
+                if desired and not member_devices.enabled():
+                    return self._json(409, {'error': '網站伺服器尚未設定裝置驗證，無法啟用'})
+                status, result = _rest('/rpc/admin_member_device_policy', 'POST', {'p_enabled': desired})
+                if status != 200:
+                    return self._json(503, {'error': '裝置限制尚未準備完成，請先完成資料庫與存取閘道部署'})
+                if desired is not None:
+                    _audit(admin_email, action, None, {'enabled': desired})
+                return self._json(200, dict(result, server_ready=member_devices.enabled()))
 
             if action in ('admin_commerce_get', 'admin_commerce_save'):
                 from lib.member_commerce import handle_admin

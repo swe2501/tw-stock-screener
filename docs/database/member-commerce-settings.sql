@@ -3,6 +3,7 @@
 -- No payment activation, campaign changes, or existing entitlement removal.
 begin;
 alter table public.member_plans add column if not exists commerce_features jsonb;
+alter table public.member_plans add column if not exists device_limit integer check(device_limit between 1 and 10);
 
 create or replace function public.admin_member_commerce_save(p_config jsonb,p_revision bigint)
 returns jsonb language plpgsql security definer set search_path='' as $$
@@ -15,19 +16,26 @@ begin
     or jsonb_array_length(p_config->'products') < 1 then raise exception 'COMMERCE_INVALID'; end if;
  for item in select value from jsonb_array_elements(p_config->'products') loop
   if item->>'tier' not in ('free','observation','research','advanced','vip') then raise exception 'COMMERCE_INVALID'; end if;
+  select value into previous from jsonb_array_elements(coalesce(old->'products','[]')) where value->>'id'=item->>'id';
+  -- Older deployed API versions omit this new field: retain the existing value.
+  if not (item ? 'device_limit') then
+   item:=item||jsonb_build_object('device_limit',coalesce((previous->>'device_limit')::int,
+    case item->>'tier' when 'vip' then 3 when 'research' then 2 when 'advanced' then 2 else 1 end));
+  end if;
+  if coalesce((item->>'device_limit')::int,0) not between 1 and 10 then raise exception 'COMMERCE_DEVICE_INVALID'; end if;
   code:=null;
   if item->>'tier'<>'free' then
    select value into previous from jsonb_array_elements(coalesce(old->'products','[]')) where value->>'id'=item->>'id';
    -- Commercial terms and granted features are immutable per purchased plan version.
    if previous is not null and previous->>'plan_code' is not null
-      and (previous->>'tier',previous->>'days',previous->>'price_twd',previous->>'name',previous->>'sandbox_only',previous->'features')
-       is not distinct from (item->>'tier',item->>'days',item->>'price_twd',item->>'name',item->>'sandbox_only',item->'features') then
+      and (previous->>'tier',previous->>'days',previous->>'price_twd',previous->>'name',previous->>'sandbox_only',previous->'features',previous->>'device_limit')
+       is not distinct from (item->>'tier',item->>'days',item->>'price_twd',item->>'name',item->>'sandbox_only',item->'features',item->>'device_limit') then
     code:=previous->>'plan_code';
    else
     code:='mc_'||replace(gen_random_uuid()::text,'-','');
-    insert into public.member_plans(plan_code,tier,days,price_twd,label,active,sandbox_only,commerce_features)
+    insert into public.member_plans(plan_code,tier,days,price_twd,label,active,sandbox_only,commerce_features,device_limit)
      values(code,item->>'tier',(item->>'days')::int,(item->>'price_twd')::int,item->>'name',false,
-      (item->>'sandbox_only')::boolean,item->'features');
+      (item->>'sandbox_only')::boolean,item->'features',(item->>'device_limit')::int);
    end if;
   end if;
   items:=items||jsonb_build_array(item||jsonb_build_object('plan_code',code));
