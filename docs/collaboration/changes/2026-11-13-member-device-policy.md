@@ -70,3 +70,5 @@ Storage／Realtime 不會執行 Data API pre-request；目前這個閘道不能�
 新增公開、不含身分資料的 `member_device_protocol` readiness marker。管理端開啟全域限制前，伺服器會核對正式站已提供 version=1 且 guard_ready=true；正式站尚為舊版或暫不可達時拒絕開啟，關閉操作不受影響。這避免只更新 UAT 就誤擋共用資料庫的舊正式站會員。正式站程式仍依 repo 的 prod 車道規則由既有正式發布流程處理，本次不推 prod。
 
 已在 Supabase Auth Hooks 真實頁面確認 `member_device_limit_hook` 狀態為 DISABLED，未修改該設定；沒有舊固定兩台規則同時阻擋首席。額外修正：裝置續租遇到 JWT 到期時保留401，讓既有 Auth refresh 重試，不誤報裝置超限；瀏覽器回歸已通過。
+
+首次載入修正：裝置模組在 body 開頭先載入，避免原有 inline bootstrap 先送出私人請求；模擬伺服器延遲200ms核發名額後，整站深淺色桌手機驗證所有私人請求均在 admission 完成後送出。
