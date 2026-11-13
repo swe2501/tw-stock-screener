@@ -79,7 +79,8 @@
     "id": "moenv",
     "name": "環境部",
     "url": "https://enews.moenv.gov.tw/",
-    "kind": "discover_rss",
+    "kind": "pending",
+    "reason": "2026-11-13 暫停：環境部網站對程式抓取一律回 HTTP 403（瀏覽器 UA、curl 也擋），且憑證鏈不完整；開放資料平台 data.moenv.gov.tw 可連但需 API 金鑰",
     "category": "environment_policy",
     "minutes": 15
   },

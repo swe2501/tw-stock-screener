@@ -15,6 +15,7 @@ from pathlib import Path
 import re
 import sqlite3
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -267,11 +268,29 @@ def connect(path):
     return db
 
 
+def transient(exc):
+    """偶發錯誤（逾時、連線中斷、406/429/5xx）：聯準會 feed 每天約 15% 次數這樣，下一刻通常就好。"""
+    if isinstance(exc, urllib.error.HTTPError):
+        return exc.code in (406, 429) or exc.code >= 500
+    return isinstance(exc, (TimeoutError, ConnectionError, urllib.error.URLError)) and \
+        'CERTIFICATE_VERIFY_FAILED' not in str(exc)
+
+
+def download_retry(url, etag=None, modified=None, wait=3):
+    try:
+        return download(url, etag, modified)
+    except Exception as exc:
+        if not transient(exc):
+            raise
+        time.sleep(wait)
+        return download(url, etag, modified)
+
+
 def fetch_source(source, state):
     if source['kind'] == 'pending':
         return source, [], None, None, source['reason'], 'pending'
     try:
-        text, etag, modified = download(source['url'], state.get('etag'), state.get('modified'))
+        text, etag, modified = download_retry(source['url'], state.get('etag'), state.get('modified'))
         if text is None:
             return source, [], etag, modified, None, 'unchanged'
         if source['kind'] == 'discover_rss' and '<rss' not in text[:500].lower():
