@@ -486,7 +486,7 @@
     if(!box.isConnected||run!==host._productLoad)return;
     const catalog=window.AcademyMemberCatalog?.get();const products=(catalog?.products||[]).filter(p=>p.active!==false);
     if(!products.length){
-      host._deckAbort?.abort();box.classList.remove('mp-plan-deck');box.removeAttribute('tabindex');box.parentElement.querySelector('.mp-deck-controls')?.remove();
+      host._deckAbort?.abort();box.classList.remove('mp-plan-deck');box.removeAttribute('tabindex');box.parentElement.querySelector('.mp-deck-controls')?.remove();box.parentElement.querySelector('[data-deck-sound]')?.remove();
       host._billingProduct=null;host._syncProductChoice=null;host.querySelector('[data-payment-action]').disabled=true;
       host._resetBillingStep?.();
       box.innerHTML='<p role="status">'+(catalog?'目前沒有上架中的會員方案。':'會員方案暫時無法載入，請重新載入後再選擇。')+'</p><button type="button" class="mc-secondary-text" data-products-retry>重新載入方案</button>';
@@ -573,7 +573,7 @@
       controls.querySelectorAll('[name=billing-mode]').forEach(r=>r.checked=r.value===mode);
       const product=host._billingProduct;
       controls.querySelector('[data-billing-next]').disabled=!product||product.tier==='free';
-      controls.querySelector('[data-billing-next]').textContent=product?.tier==='free'?'免費身分無需付款':'下一步：付款資料 →';
+      controls.querySelector('[data-billing-next]').innerHTML=product?.tier==='free'?'免費身分無需付款':'<span>下一步：付款資料</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16m-6-6 6 6-6 6"/></svg>';
       checkout.inert=step!==2;
       host.querySelectorAll('[data-method]').forEach(b=>{b.disabled=mode==='monthly'&&b.dataset.method!=='card';b.title=b.disabled?'每月訂閱需要支援定期扣款的信用卡':'';});
       if(step===3){

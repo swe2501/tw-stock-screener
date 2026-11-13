@@ -350,3 +350,37 @@
 :root[data-theme='light'] .mp-benefits-dialog{background:#fbfdff;color:#1b3049}
 
 .mp-plan-deck .mp-product-choice{user-select:none;-webkit-user-select:none}
+
+/* Local preview: larger polished crystal cards; restrained pointer-following depth. */
+.mp-page .mp-product-section:has(.mp-plan-deck){position:relative}
+.mp-page .mp-product-section:has(.mp-plan-deck)>h3{padding-right:50px}
+.mp-page [data-payment-products].mp-plan-deck{height:386px;perspective:1500px}
+.mp-page .mp-plan-deck .mp-product-choice{width:224px;height:350px;top:22px;border-radius:0;clip-path:polygon(12px 0,calc(100% - 12px) 0,100% 12px,100% calc(100% - 12px),calc(100% - 12px) 100%,12px 100%,0 calc(100% - 12px),0 12px);border:0;transform-style:preserve-3d;backface-visibility:hidden;transform:translateX(calc(-50% + var(--deck-offset)*86%)) rotateY(calc(var(--deck-offset)*-10deg + var(--hover-y,0deg))) rotateX(var(--hover-x,0deg)) scale(.91);transition:transform .56s cubic-bezier(.16,1,.3,1),opacity .38s ease,box-shadow .4s ease}
+.mp-page .mp-plan-deck .mp-product-choice[data-deck-position='current']{transform:translateX(-50%) translateY(-7px) rotateY(var(--hover-y,0deg)) rotateX(var(--hover-x,0deg)) scale(1)}
+.mp-page .mp-plan-deck .mp-product-choice.is-tilting{transition:transform .16s ease-out,opacity .38s ease,box-shadow .4s ease;will-change:transform}
+.mp-page .mp-plan-deck .mp-product-choice::before{border-radius:0;background:radial-gradient(ellipse at var(--shine-x,50%) var(--shine-y,35%),#ffffff85,transparent 58%),linear-gradient(122deg,#ffffff4d 0%,transparent 34%,rgba(var(--deck-light),.06) 75%);pointer-events:none}
+:root:not([data-theme='light']) .mp-page .mp-plan-deck .mp-product-choice::before{background:radial-gradient(ellipse at var(--shine-x,50%) var(--shine-y,35%),#cde9ff1c,transparent 60%),linear-gradient(122deg,#ffffff0b,transparent 45%,rgba(var(--deck-light),.05))}
+.mp-page .mp-plan-deck .mp-product-choice::after{display:none!important}
+.mp-deck-frame{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;fill:none}
+.mp-deck-rim{stroke:rgba(var(--deck-light),.55);stroke-width:1.1}.mp-deck-trace{stroke:rgba(var(--deck-light),.95);stroke-width:1.7;stroke-dasharray:15 85;stroke-linecap:round;animation:mp-crystal-trace 7s linear infinite;filter:drop-shadow(0 0 2px rgba(var(--deck-light),.45))}
+@keyframes mp-crystal-trace{to{stroke-dashoffset:-100}}
+[data-deck-position='neighbor'] .mp-deck-trace{animation-duration:9s;opacity:.6}[data-deck-position='far'] .mp-deck-trace{animation-play-state:paused}
+.mp-page .mp-plan-deck .mp-product-symbol{width:90px;height:90px;left:calc(50% - 45px);top:22px}
+.mp-page .mp-plan-deck .mp-product-symbol svg{width:90px;height:90px}
+.mp-page .mp-plan-deck strong{top:125px;left:14px;right:14px;font-size:20px;letter-spacing:.05em}
+.mp-page .mp-plan-deck .mp-product-choice>small{top:169px;left:23px;right:23px;font-size:12px;line-height:1.65}
+.mp-page .mp-plan-deck .mp-product-choice>.mp-benefits-link{top:225px;left:16px;right:16px;font-size:12px}
+.mp-page .mp-plan-deck .mp-product-choice>.mp-product-once{top:258px;left:16px;right:16px;font-size:12px}
+.mp-page .mp-plan-deck .mp-product-choice>[data-product-subscribe]{bottom:21px;left:22px;right:22px;padding:10px 12px;font-size:12px;box-shadow:inset 0 1px 0 #ffffff35}
+.mp-page .mp-product-section>[data-deck-sound]{position:absolute;right:23px;top:17px;display:grid;place-items:center;width:38px;height:38px;padding:0;border-radius:50%;border:1px solid var(--border);background:color-mix(in srgb,var(--surface) 85%,transparent);color:var(--text-muted);box-shadow:inset 0 1px 0 #ffffff50,0 3px 10px #18364f09;cursor:pointer;transition:color .2s,background .2s}
+.mp-page [data-deck-sound] svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.35;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}.mp-page [data-deck-sound][aria-pressed='true']{color:var(--accent,#438fc9)}
+.mp-deck-controls{gap:15px}.mp-deck-controls>button{display:inline-grid;place-items:center;width:40px;height:40px;padding:0;border:1px solid color-mix(in srgb,var(--border) 80%,transparent);background:color-mix(in srgb,var(--surface) 75%,transparent);box-shadow:inset 0 1px 0 #ffffff55,0 4px 12px #1b39530a;transition:border-color .2s,background .2s,transform .2s}
+.mp-deck-controls>button svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.45;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}.mp-deck-controls>button:not(:disabled):hover{border-color:var(--accent);background:var(--surface);transform:translateY(-1px)}
+@media(min-width:900px) and (max-height:850px){.mp-page [data-payment-products].mp-plan-deck{height:354px}.mp-page .mp-plan-deck .mp-product-choice{width:204px;height:320px;top:20px}.mp-page .mp-plan-deck .mp-product-symbol{width:86px;height:86px;left:calc(50% - 43px);top:19px}.mp-page .mp-plan-deck strong{top:112px;font-size:18px}.mp-page .mp-plan-deck .mp-product-choice>small{top:152px;font-size:11px}.mp-page .mp-plan-deck .mp-product-choice>.mp-benefits-link{top:207px}.mp-page .mp-plan-deck .mp-product-choice>.mp-product-once{top:237px}.mp-page .mp-product-section:has(.mp-plan-deck){padding:10px 22px}.mp-page .mp-product-section:has(.mp-plan-deck)>p:not([data-payment-product-detail]){font-size:12px!important;line-height:1.5!important;margin:3px 0!important}.mp-page[data-billing-step='1'] .mp-billing-flow>[data-billing-next]{min-height:46px;padding:10px 23px!important}.mp-page .mp-product-section>[data-deck-sound]{top:10px}}
+@media(max-width:600px){.mp-page [data-payment-products].mp-plan-deck{height:366px}.mp-page .mp-plan-deck .mp-product-choice{width:210px;height:330px;top:22px}.mp-page .mp-plan-deck .mp-product-symbol{width:86px;height:86px;left:calc(50% - 43px);top:20px}.mp-page .mp-plan-deck strong{top:115px;font-size:18px}.mp-page .mp-plan-deck .mp-product-choice>small{top:156px;left:20px;right:20px}.mp-page .mp-plan-deck .mp-product-choice>.mp-benefits-link{top:212px}.mp-page .mp-plan-deck .mp-product-choice>.mp-product-once{top:244px}.mp-page .mp-product-section>[data-deck-sound]{right:12px;top:14px;width:36px;height:36px}}
+@media(prefers-reduced-motion:reduce){.mp-page .mp-plan-deck .mp-product-choice,.mp-page .mp-plan-deck .mp-product-choice.is-tilting{transition:none!important}.mp-deck-trace{animation:none!important}}
+
+@media(min-width:900px) and (max-height:850px){.mp-page [data-payment-products].mp-plan-deck{height:346px}}
+
+
+.mp-deck-controls>button svg{width:21px;height:21px;stroke-width:1.4}.mp-page [data-billing-next]{display:inline-flex;align-items:center;justify-content:center;gap:13px}.mp-page [data-billing-next]>svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
