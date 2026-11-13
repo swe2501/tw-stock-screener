@@ -377,6 +377,25 @@ class handler(BaseHTTPRequestHandler):
         except (ValueError, TypeError):
             return self._json(400, {"error": "invalid request"})
         action = body.get("action", "")
+        # Catalog compatibility: read the same admin-saved configuration; no payment adapter.
+        if action in ('membership_catalog', 'membership_access', 'billing_status'):
+            from lib import member_commerce_compat as commerce
+            if action == 'membership_catalog':
+                try:
+                    return self._json(200, commerce.public_catalog(_rest, None))
+                except commerce.CatalogError as error:
+                    return self._json(error.status, {'error': error.message})
+            token = (self.headers.get('Authorization') or '').removeprefix('Bearer ').strip()
+            user = _token_user(token)
+            if not user:
+                return self._json(401, {'error': '請先登入'})
+            if action == 'billing_status':
+                from lib.member_billing import handle
+                return self._json(*handle(action, body, user, _rest, ADMIN_IDS))
+            try:
+                return self._json(200, commerce.access(user, _rest))
+            except commerce.CatalogError as error:
+                return self._json(error.status, {'error': error.message})
 
         if action == "official_announcements":
             auth = self.headers.get("Authorization", "")
@@ -481,11 +500,20 @@ class handler(BaseHTTPRequestHandler):
                 status, result = handle(action, body, admin_email, _rest)
                 return self._json(status, result)
 
+            if action in ('admin_commerce_get', 'admin_commerce_save'):
+                from lib.member_commerce_compat import handle_admin
+                status, result = handle_admin(action, body, _rest)
+                if status == 200 and action == 'admin_commerce_save':
+                    _audit(admin_email, action, 'member_commerce_v1', {'revision': result['config']['revision']})
+                return self._json(status, result)
+
             if action == "admin_members":
                 st, data = _admin_api("/admin/users?per_page=200")
                 if st is None:
                     return self._json(500, data)
                 users = data.get("users", []) if isinstance(data, dict) else []
+                from lib.member_billing import legacy_summaries
+                billing = legacy_summaries(users, _rest, ADMIN_IDS)
                 # 等級以 member_tiers 表為準（RLS/功能 gate 讀同一張）；3 位白名單一律 admin
                 tmap = {}
                 tst, trows = _rest("/member_tiers?select=user_id,tier")
@@ -497,7 +525,7 @@ class handler(BaseHTTPRequestHandler):
                     em = (u.get("email") or "").strip().lower()
                     tier = "admin" if u.get("id") in ADMIN_IDS else tmap.get(u.get("id"), "free")
                     out.append({
-                        "id": u.get("id"), "email": u.get("email"),
+                        "id": u.get("id"), "email": u.get("email"), "billing": billing.get(u.get("id")),
                         "name": md.get("name") or md.get("full_name") or md.get("display_name"),   # LINE 登入沒有 Email，列表改顯示名稱
                         "tier": tier, "expires_at": md.get("expires_at"),
                         "banned": bool(md.get("banned")),
