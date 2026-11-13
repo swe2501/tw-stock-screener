@@ -80,17 +80,19 @@
 
  /* ── 站內廣告 ── */
  const DISMISS='fs_ad_dismiss';
+ const adDay=()=>{const parts=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());return ['year','month','day'].map(type=>parts.find(p=>p.type===type).value).join('-');};
  const dismissed=()=>{try{return JSON.parse(localStorage.getItem(DISMISS)||'{}');}catch{return {};}};
- function dismiss(id){const d=dismissed();d[id]=new Date().toISOString().slice(0,10);try{localStorage.setItem(DISMISS,JSON.stringify(d));}catch{}}
+ function dismiss(id){const d=dismissed();d[id]=adDay();try{localStorage.setItem(DISMISS,JSON.stringify(d));}catch{}}
  let lastTok=null,adsCache=[],loadedAt=0,adLoading=false;
  function mount(a){
   const anchors={top_bar:()=>document.getElementById('mainNav'),home_card:()=>document.getElementById('homeView'),results_top:()=>document.getElementById('resultsArea'),member_center:()=>document.querySelector('.mc-shell .mc-top'),corner:()=>document.body};
   const at=anchors[a.slot]?.();if(!at)return;
   const closable=a.slot==='top_bar'||a.slot==='corner',d=dismissed()[a.id];
-  if(closable&&d&&(a.slot==='top_bar'||d===new Date().toISOString().slice(0,10)))return;
+  if(closable&&d&&(a.slot==='top_bar'||d===adDay()))return;
   const el=document.createElement('article');el.className='site-ad site-ad--'+a.slot;el.dataset.siteAd=a.id;
   const media=window.SiteAdMedia?.html(a)||'';
   el.innerHTML=media+`<a class="site-ad-copy" data-ad-link href="${esc(a.url||'?forum=1')}"><b>${esc(a.title)}</b>${a.text?`<span class="site-ad-t">${esc(a.text)}</span>`:''}<span class="site-ad-cta">${esc(a.cta||'了解更多')} ↗</span></a>`+(closable?'<button type="button" class="site-ad-x" aria-label="關閉這則公告">×</button>':'');
+  window.SiteAdMedia?.bind(el);
   const link=el.querySelector('[data-ad-link]');if(/^https:/.test(a.url)){link.target='_blank';link.rel='noopener noreferrer';}
   el.querySelector('.site-ad-x')?.addEventListener('click',()=>{dismiss(a.id);el.remove();});
   link.addEventListener('click',e=>{

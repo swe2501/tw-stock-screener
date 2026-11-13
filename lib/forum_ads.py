@@ -229,7 +229,7 @@ def clean_ad(raw):
         media_zoom = float(raw.get('media_zoom', 100))
         if not math.isfinite(media_zoom):
             raise ValueError('invalid zoom')
-        media_zoom = max(50 if media_type == 'video' else 10, min(100 if media_type == 'video' else 300, media_zoom))
+        media_zoom = max(10, min(300, media_zoom))
     except (TypeError, ValueError):
         raise ValueError('裁切位置格式錯誤')
     crop = raw.get('media_crop')
@@ -241,7 +241,7 @@ def clean_ad(raw):
         except (KeyError, TypeError, ValueError):
             raise ValueError('裁切範圍格式錯誤')
         if not all(math.isfinite(v) for v in crop.values()) or not (0 <= crop['x'] < 1 and 0 <= crop['y'] < 1 and .01 <= crop['w'] <= 1 and .01 <= crop['h'] <= 1 and crop['x'] + crop['w'] <= 1.000001 and crop['y'] + crop['h'] <= 1.000001):
-            raise ValueError('裁切範圍超出圖片')
+            raise ValueError('裁切範圍超出素材')
     aid = str(raw.get('id') or '') or 'ad' + secrets.token_hex(4)
     if not re.match(r'^[a-z0-9]{3,20}$', aid):
         raise ValueError('廣告代號錯誤')
@@ -714,12 +714,14 @@ def _points_admin(action, body, rest, users):
     if action == 'admin_products_list':
         st, rows = rest('/member_exchange_definitions?select=id,title,points,duration_days,active,voucher_definition&order=active.desc,points.asc')
         if st == 404 or (isinstance(rows, dict) and rows.get('code') in ('PGRST205', '42P01')):
-            return 200, {'products': [], 'missing': True}
+            return 200, {'products': [], 'types': PRODUCT_TYPES, 'feature_catalog': [], 'missing': True}
         if st != 200 or not isinstance(rows, list):
             raise RuntimeError('READ_FAILED')
         for row in rows:
             row['archived'] = bool(_get_json(rest, 'product:archived:' + row['id'], False))
-        return 200, {'products': rows, 'types': PRODUCT_TYPES}
+        feature_status, feature_rows = rest('/member_feature_catalog?select=feature,title,member_research,voucher_enabled&order=title.asc')
+        features = [{'id': f['feature'], 'title': f['title'], 'enabled': f.get('member_research') is True and f.get('voucher_enabled') is True} for f in feature_rows] if feature_status == 200 and isinstance(feature_rows, list) else []
+        return 200, {'products': rows, 'types': PRODUCT_TYPES, 'feature_catalog': features, 'feature_catalog_ready': feature_status == 200}
     if action in ('admin_products_archive', 'admin_products_restore'):
         pid = str(body.get('id') or '')
         if not re.fullmatch(r'[a-z0-9-]{3,40}', pid):
@@ -732,6 +734,27 @@ def _points_admin(action, body, rest, users):
         _put_json(rest, 'product:archived:' + pid, archived)
         return 200, {'ok': True, 'archived': archived}
     if action == 'admin_products_create':
+        if 'features' in body:
+            title = str(body.get('title') or '').strip()
+            description = str(body.get('description') or '').strip()
+            features, days, pts = body.get('features'), body.get('days'), body.get('points')
+            request_id = str(body.get('request_id') or '')
+            if not 2 <= len(title) <= 40 or _TRADE_WORDS.search(title) or len(description) > 500:
+                return 400, {'error': '請填寫2～40字商品名稱與500字內內容；名稱不可含交易或保證獲利用語'}
+            if type(days) is not int or not 1 <= days <= 366 or type(pts) is not int or not 1 <= pts <= 1000000:
+                return 400, {'error': '請填寫有效的使用天數與所需點數'}
+            if not isinstance(features, list) or not features or any(not isinstance(f, str) for f in features) or len(set(features)) != len(features) or not re.fullmatch(r'[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}', request_id):
+                return 400, {'error': '請至少勾選一個可用權益，並重新確認建立請求'}
+            st, catalog = rest('/member_feature_catalog?select=feature,title,member_research,voucher_enabled&order=title.asc')
+            if st != 200 or not isinstance(catalog, list):
+                return 503, {'error': '無法核對權益清單，暫不建立商品'}
+            allowed = {f['feature'] for f in catalog if f.get('member_research') is True and f.get('voucher_enabled') is True}
+            if not set(features) <= allowed:
+                return 400, {'error': '包含尚未啟用或不可兌換的權益'}
+            st, product = rest('/rpc/admin_member_exchange_create', 'POST', {'p_request_id': request_id, 'p_title': title, 'p_description': description, 'p_features': features, 'p_days': days, 'p_points': pts})
+            if st != 200 or not isinstance(product, dict):
+                return 503, {'error': '自訂兌換商品服務尚未就緒，請先確認配套SQL已套用；未完成建立'}
+            return 200, {'product': product}
         definition = body.get('definition')
         try:
             days, pts = int(body.get('days')), int(body.get('points'))

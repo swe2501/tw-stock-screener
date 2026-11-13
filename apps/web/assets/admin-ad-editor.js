@@ -62,7 +62,7 @@
    <section class="full afa-media-upload" data-carousel-options><b>首頁廣告輪播</b><label data-video-timing>影片切換方式<select name="slide_mode"><option value="seconds" ${a.slide_mode!=='video_end'?'selected':''}>依停留秒數</option><option value="video_end" ${a.slide_mode==='video_end'?'selected':''}>影片播放完畢後切換</option></select></label><label data-slide-seconds>本則停留秒數（3–5 秒）<input type="number" name="slide_seconds" min="3" max="5" step="1" value="${a.slide_seconds||5}"></label><label class="chk"><input type="checkbox" name="wheel_enabled" ${a.wheel_enabled?'checked':''}>游標在本則廣告上時，可用滾輪切換</label><p class="afa-sub">市場判讀首頁保留為第一頁（停留 5 秒），符合受眾與刊登時間的首頁廣告依優先度接續輪播。影片選「播放完畢後切換」時會等使用者點擊播放，播完才換頁；圖片與文字依秒數輪播。手動暫停輪播仍優先生效。</p></section><label>優先度<input name="priority" type="number" min="0" max="99" value="${a.priority}"></label><label class="chk"><input type="checkbox" name="enabled" ${a.enabled?'checked':''}>開啟刊登</label>
    <p class="afa-sub full">圖片建議將文字放在中央安全範圍，避免靠邊。影片由使用者點選播放，保留原比例。請先確認素材與音樂的使用權。</p>
    <div class="afa-foot full"><button type="button" class="afa-btn ghost" data-close>取消</button><button type="submit" class="afa-btn primary">預覽確認</button></div>
-  </form><aside class="afa-ad-live"><div class="afa-bar"><b>網站位置與素材預覽</b><div role="group" aria-label="預覽裝置"><button type="button" class="afa-btn" data-device="desktop" aria-pressed="true">桌機</button><button type="button" class="afa-btn" data-device="mobile" aria-pressed="false">手機</button></div></div><div class="afa-ad-browser" data-browser><div class="afa-browser-head">先見 FORESIGHT</div><div class="afa-browser-nav">首頁　選股　題材族群</div><p class="afa-sub" data-location></p><div class="afa-bar"><button type="button" class="afa-btn" data-replay-placement>▶ 播放位置示範</button><span class="afa-sub" data-motion-status role="status">點播放位置示範，依步驟看廣告出現位置</span></div><div data-preview></div><div class="afa-page-context" data-page-context></div></div><p class="afa-sub">圖片可用左右、上下控制調整裁切。預覽比例與實際版位共用設定。</p></aside></div>
+  </form><aside class="afa-ad-live"><div class="afa-bar"><b>網站位置與素材預覽</b><button type="button" class="afa-btn" data-toggle-preview aria-expanded="true">收合預覽</button><div role="group" aria-label="預覽裝置"><button type="button" class="afa-btn" data-device="desktop" aria-pressed="true">桌機</button><button type="button" class="afa-btn" data-device="mobile" aria-pressed="false">手機</button></div></div><div class="afa-ad-browser" data-browser><div class="afa-browser-head">先見 FORESIGHT</div><div class="afa-browser-nav">首頁　選股　題材族群</div><p class="afa-sub" data-location></p><div class="afa-bar"><button type="button" class="afa-btn" data-replay-placement>▶ 播放位置示範</button><span class="afa-sub" data-motion-status role="status">點播放位置示範，依步驟看廣告出現位置</span></div><div data-preview></div><div class="afa-page-context" data-page-context></div></div><p class="afa-sub" data-preview-description>圖片與影片都可拖曳裁切框，或用縮放調整大小。預覽比例與實際版位共用設定。</p></aside></div>
   <section class="afa-ad-review" data-review hidden><h3>確認刊登內容</h3><div data-final-preview></div><dl data-summary></dl><div class="afa-foot"><button type="button" class="afa-btn ghost" data-back>返回編輯</button><button type="button" class="afa-btn" data-draft>儲存草稿</button><button type="button" class="afa-btn primary" data-save>確認儲存</button></div></section><p class="afa-err" data-message role="status"></p>`,true);
   b.closest('.afa-sheet').classList.add('afa-ad-sheet');
   const f=b.querySelector('form'),msg=b.querySelector('[data-message]'),review=b.querySelector('[data-review]');
@@ -74,13 +74,13 @@
    return {id:ad?.id||'',name:e.name.value,slot:e.slot.value,audience:e.audience.value,title:e.title.value,text:e.text.value,
     cta:e.cta.value,url:destination(),starts:e.starts.value,ends:e.ends.value,priority:+e.priority.value,enabled:e.enabled.checked,
     media_type:type(),media_url:file?(uploaded||objectUrl):e.media_url.value.trim(),media_alt:e.media_alt.value,
-    media_x:+e.media_x.value,media_y:+e.media_y.value,media_zoom:+e.media_zoom.value,media_crop:type()==='image'?crop:null,slide_mode:type()==='video'?e.slide_mode.value:'seconds',slide_seconds:+e.slide_seconds.value,wheel_enabled:e.wheel_enabled.checked};
+    media_x:+e.media_x.value,media_y:+e.media_y.value,media_zoom:+e.media_zoom.value,media_crop:type()==='text'?null:crop,slide_mode:type()==='video'?e.slide_mode.value:'seconds',slide_seconds:+e.slide_seconds.value,wheel_enabled:e.wheel_enabled.checked};
   }
   function preview(host,d){
    host.querySelectorAll('video').forEach(v=>v.pause());
    host.className='site-ad site-ad--'+d.slot+' site-ad--preview';
    host.innerHTML=SiteAdMedia.html(d,true)+`<div class="site-ad-copy"><b>${esc(d.title||'廣告標題')}</b><span class="site-ad-t">${esc(d.text)}</span><span class="site-ad-cta">${esc(d.cta||'了解更多')} ↗</span></div>`;
-   const video=host.querySelector('video');if(video){video.addEventListener('play',()=>b.querySelectorAll('video').forEach(other=>{if(other!==video)other.pause();}));video.addEventListener('error',()=>{if(!host.querySelector('[data-video-error]')){const notice=document.createElement('p');notice.dataset.videoError='';notice.className='afa-err';notice.setAttribute('role','status');notice.textContent='影片無法播放，請確認網址可讀取，並使用 H.264／AAC 編碼的 MP4。';host.append(notice);}});}
+   SiteAdMedia.bind(host);const video=host.querySelector('video');if(video){video.addEventListener('play',()=>b.querySelectorAll('video').forEach(other=>{if(other!==video)other.pause();}));video.addEventListener('error',()=>{if(!host.querySelector('[data-video-error]')){const notice=document.createElement('p');notice.dataset.videoError='';notice.className='afa-err';notice.setAttribute('role','status');notice.textContent='影片無法播放，請確認網址可讀取，並使用 H.264／AAC 編碼的 MP4。';host.append(notice);}});}
   }
   let placementCleanup=()=>{},lastPlacement='';
   function stopPlacement(){placementCleanup();}
@@ -95,17 +95,17 @@
    f.querySelectorAll('[name=media_type]').forEach(input=>{input.disabled=textOnly&&input.value!=='text';});
    b.querySelector('[data-format-note]').textContent=textOnly?'此版位是細公告條，僅支援純文字。圖片或影片請改選其他版位。':'此版位支援純文字、圖片與影片；選擇內容類型後即可上傳或填入 HTTPS 素材網址。';
    b.querySelector('[data-media-slot]').hidden=!textOnly;
-   const video=type()==='video';f.elements.media_zoom.min=video?'50':'10';f.elements.media_zoom.max=video?'100':'300';
-   b.querySelector('[data-zoom-label]').textContent=video?'影片顯示尺寸（保留完整畫面與控制列）':'圖片縮小／放大（10–300%）';
+   const video=type()==='video';f.elements.media_zoom.min='10';f.elements.media_zoom.max='300';
+   b.querySelector('[data-zoom-label]').textContent=video?'影片縮小／放大（10–300%，控制列獨立保留）':'圖片縮小／放大（10–300%）';
    b.querySelector('[data-zoom-value]').textContent=f.elements.media_zoom.value+'%';
    b.querySelector('[data-upload-state]').textContent=file?'已選取素材；完成「預覽確認 → 確認儲存」才會上傳並保存。':f.elements.media_url.value?'已保存或已填入素材網址；選檔欄顯示未選擇檔案不影響既有素材。':'尚未選擇素材。';
-   b.querySelector('[data-image-tools]').hidden=type()!=='image';
+   b.querySelector('[data-image-tools]').hidden=type()==='text';b.querySelector('[data-fit]').textContent=video?'顯示完整影片':'顯示完整圖片';
    const d=read(),spec=specs[d.slot];
    b.querySelector('[data-size]').textContent=spec.help+'　建議 '+spec.size;
    const context=b.querySelector('[data-page-context]'),adPreview=b.querySelector('[data-preview]');
    renderPlacement(context,d.slot,adPreview);
    b.querySelector('[data-location]').textContent='位置：'+spec.help;
-   b.querySelector('[data-media]').hidden=type()==='text';b.querySelector('[data-crop]').hidden=type()!=='image'||!!crop;
+   b.querySelector('[data-media]').hidden=type()==='text';b.querySelector('[data-crop]').hidden=type()==='text'||!!crop;
    f.elements.file.accept=type()==='video'?'video/mp4':'image/jpeg,image/png,image/webp';
    b.querySelector('[data-file-hint]').textContent=type()==='video'?'MP4・上限 30 MB，建議 H.264 影像／AAC 音訊；影片不自動播放。':'JPG、PNG、WebP・上限 5 MB。依版位比例裁切，原始檔保留完整。';
    b.querySelector('[data-link]').hidden=f.elements.destination.value!=='custom';preview(b.querySelector('[data-preview]'),d);
@@ -117,9 +117,9 @@
   b.querySelector('[data-fit]').onclick=()=>{crop=null;f.elements.media_zoom.value=95;f.elements.media_x.value=50;f.elements.media_y.value=50;b.querySelector('[data-crop-editor]').hidden=true;update();};
   b.querySelector('[data-reset-crop]').onclick=()=>{crop=null;f.elements.media_zoom.value=100;b.querySelector('[data-crop-editor]').hidden=true;update();};
   f.elements.media_zoom.addEventListener('input',()=>{crop=null;b.querySelector('[data-crop-editor]').hidden=true;});
-  const stage=b.querySelector('[data-crop-stage]'),frame=b.querySelector('[data-crop-frame]'),source=b.querySelector('[data-crop-source]');
+  const stage=b.querySelector('[data-crop-stage]'),frame=b.querySelector('[data-crop-frame]');let source=b.querySelector('[data-crop-source]');
   const drawRect=()=>{frame.style.cssText='left:'+rect.x*100+'%;top:'+rect.y*100+'%;width:'+rect.w*100+'%;height:'+rect.h*100+'%';};
-  b.querySelector('[data-open-crop]').onclick=()=>{const url=read().media_url;if(!url){msg.textContent='請先選取圖片或填入 HTTPS 素材網址。';return;}source.onload=()=>{const relativeRatio=(source.naturalWidth/source.naturalHeight)/(specs[f.elements.slot.value]?.ratio||2);const w=Math.min(1,1/relativeRatio),h=w*relativeRatio;rect=crop?{...crop}:{x:(1-w)/2,y:(1-h)/2,w,h};drawRect();b.querySelector('[data-crop-editor]').hidden=false;frame.focus();};source.onerror=()=>{msg.textContent='無法載入裁切原圖，請確認圖片網址或重新選檔。';};source.src=url;};
+  b.querySelector('[data-open-crop]').onclick=()=>{const url=read().media_url;if(!url){msg.textContent='請先選取圖片／影片或填入 HTTPS 素材網址。';return;}const video=type()==='video';if((source.tagName==='VIDEO')!==video){const next=document.createElement(video?'video':'img');next.dataset.cropSource='';source.replaceWith(next);source=next;}if(video){source.preload='metadata';source.muted=true;source.playsInline=true;}const ready=()=>{const relativeRatio=((video?source.videoWidth:source.naturalWidth)/(video?source.videoHeight:source.naturalHeight))/(specs[f.elements.slot.value]?.ratio||2);const w=Math.min(1,1/relativeRatio),h=w*relativeRatio;rect=crop?{...crop}:{x:(1-w)/2,y:(1-h)/2,w,h};drawRect();b.querySelector('[data-crop-editor]').hidden=false;frame.focus();};if(video)source.onloadedmetadata=ready;else source.onload=ready;source.onerror=()=>{msg.textContent='無法載入裁切素材，請確認網址或重新選檔。';};source.src=url;};
   let drag=null;
   frame.onpointerdown=e=>{if(!rect)return;e.preventDefault();drag={id:e.pointerId,x:e.clientX,y:e.clientY,rect:{...rect},resize:!!e.target.closest('[data-crop-handle]'),bounds:stage.getBoundingClientRect()};frame.setPointerCapture(e.pointerId);};
   frame.onpointermove=e=>{if(!drag||e.pointerId!==drag.id)return;const dx=(e.clientX-drag.x)/drag.bounds.width,dy=(e.clientY-drag.y)/drag.bounds.height,r=drag.rect;if(drag.resize){const ratio=r.h/r.w;const wanted=r.w+(Math.abs(dx)>Math.abs(dy/ratio)?dx:dy/ratio);const w=Math.max(Math.max(.01,.01/ratio),Math.min(wanted,1-r.x,(1-r.y)/ratio));rect={...r,w,h:w*ratio};}else rect={...r,x:Math.max(0,Math.min(1-r.w,r.x+dx)),y:Math.max(0,Math.min(1-r.h,r.y+dy))};drawRect();};
@@ -137,7 +137,8 @@
   f.elements.slot.addEventListener('change',()=>{crop=null;b.querySelector('[data-crop-editor]').hidden=true;update();});
   f.elements.media_url.addEventListener('change',()=>{clearFile();update();});
   b.querySelector('[data-remove-media]').onclick=()=>{clearFile();f.elements.media_url.value='';update();};
-  b.querySelectorAll('[data-device]').forEach(button=>button.onclick=()=>{b.querySelector('[data-browser]').classList.toggle('mobile',button.dataset.device==='mobile');b.querySelectorAll('[data-device]').forEach(x=>x.setAttribute('aria-pressed',String(x===button)));});
+  b.querySelector('[data-toggle-preview]').onclick=()=>{const button=b.querySelector('[data-toggle-preview]'),browser=b.querySelector('[data-browser]'),hide=!browser.hidden;browser.hidden=hide;b.querySelector('[data-preview-description]').hidden=hide;button.textContent=hide?'展開預覽':'收合預覽';button.setAttribute('aria-expanded',String(!hide));};
+  b.querySelectorAll('[data-device]').forEach(button=>button.onclick=()=>{b.querySelector('[data-browser]').classList.toggle('mobile',button.dataset.device==='mobile');b.querySelectorAll('[data-device]').forEach(x=>x.setAttribute('aria-pressed',String(x===button)));b.querySelector('[data-browser]').scrollTop=0;});
   f.onsubmit=event=>{
    event.preventDefault();data=read();msg.textContent='';
    if(data.media_type!=='text'&&!data.media_url){msg.textContent='請先上傳素材或填入素材網址。';return;}

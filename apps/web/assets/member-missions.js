@@ -69,7 +69,7 @@
     const retry=!!pending(card.dataset.exchangeId);const have=availablePoints(state?.wallet);button.dataset.pointsExchange=card.dataset.exchangeId;
     button.textContent=!current()?'請先登入':!o?'尚未開放兌換':retry?'確認上次兌換結果':have<o.points?'點數不足（還差 '+(o.points-have).toLocaleString()+' 點）':'兌換';
     button.disabled=busy||!current()||!o||(!retry&&have<o.points);
-    if(o){const strong=card.querySelector('.mj-ticket-foot strong');strong.textContent=o.points.toLocaleString();card.querySelector('.mj-ticket-days').textContent=o.duration_days+' 天';const bar=card.querySelector('.mj-ticket-progress');if(bar)bar.dataset.need=o.points;}
+    if(o){const note=card.querySelector('.mj-ticket-note');if(note&&(o.description||Array.isArray(o.feature_titles)&&o.feature_titles.length))note.textContent=[o.description,Array.isArray(o.feature_titles)&&o.feature_titles.length?'包含：'+o.feature_titles.join('、'):''].filter(Boolean).join('；');const strong=card.querySelector('.mj-ticket-foot strong');strong.textContent=o.points.toLocaleString();card.querySelector('.mj-ticket-days').textContent=o.duration_days+' 天';const bar=card.querySelector('.mj-ticket-progress');if(bar)bar.dataset.need=o.points;}
    });
    root.querySelectorAll('[data-exchange-state]').forEach(e=>e.textContent=!current()?'登入後查看':!state?'狀態待確認':state.options.rows.length?'依帳號開放項目兌換':'尚未開放');
    const all=root.querySelector('[data-task-bulk]'),summary=root.querySelector('[data-bulk-summary]');
@@ -123,7 +123,7 @@
    if(busy||!current())return;const id=button.dataset.pointsExchange,o=state?.options.rows.find(o=>o.id===id);if(!o)return;
    const retry=!!pending(id);if(!retry&&availablePoints(state.wallet)<o.points)return;
    dialog?.remove();dialog=document.createElement('dialog');dialog.className='mj-exchange-dialog';dialog.setAttribute('aria-labelledby','mj-confirm-title');
-   dialog.innerHTML='<h2 id="mj-confirm-title">'+(retry?'確認上次兌換結果':'確認兌換使用券')+'</h2><p>'+esc(button.closest('[data-exchange-id]')?.querySelector('h3')?.textContent||o.title)+' · '+o.duration_days+' 天</p><p>'+(retry?'將使用原單號確認結果，不重複扣點。':'扣除 <b>'+o.points.toLocaleString()+' 點</b>，取得使用券 '+o.duration_days+' 天。')+'</p><p>使用券存進本帳號券夾；核發後三個月內按「開始使用」，才開始計時，啟用後享完整 '+o.duration_days+' 天。</p><div class="mj-confirm-actions"><button type="button" data-cancel>取消</button><button type="button" data-confirm>確認'+(retry?'結果':'扣點兌換')+'</button></div><div role="status" data-exchange-message aria-live="polite"></div>';
+   dialog.innerHTML='<h2 id="mj-confirm-title">'+(retry?'確認上次兌換結果':'確認兌換使用券')+'</h2><p>'+esc(button.closest('[data-exchange-id]')?.querySelector('h3')?.textContent||o.title)+' · '+o.duration_days+' 天</p><p>'+esc([o.description,Array.isArray(o.feature_titles)&&o.feature_titles.length?'包含：'+o.feature_titles.join('、'):''].filter(Boolean).join('；'))+'</p><p>'+(retry?'將使用原單號確認結果，不重複扣點。':'扣除 <b>'+o.points.toLocaleString()+' 點</b>，取得使用券 '+o.duration_days+' 天。')+'</p><p>使用券存進本帳號券夾；核發後三個月內按「開始使用」，才開始計時，啟用後享完整 '+o.duration_days+' 天。</p><div class="mj-confirm-actions"><button type="button" data-cancel>取消</button><button type="button" data-confirm>確認'+(retry?'結果':'扣點兌換')+'</button></div><div role="status" data-exchange-message aria-live="polite"></div>';
    root.append(dialog);const thisDialog=dialog;
    thisDialog.querySelector('[data-cancel]').onclick=()=>thisDialog.close();
    thisDialog.addEventListener('close',()=>{if(current())button.focus();thisDialog.remove();});

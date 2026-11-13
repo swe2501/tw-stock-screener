@@ -80,6 +80,10 @@ class FakeRest:
                 return 204, {}
             self.tasks[tid].update(body)
             return 200, [self.tasks[tid]]
+        if path.startswith('/member_feature_catalog'):
+            return 200, [{'feature':'breadth','title':'大盤多空廣度','member_research':True,'voucher_enabled':True},{'feature':'admin','title':'管理員','member_research':False,'voucher_enabled':False}]
+        if path == '/rpc/admin_member_exchange_create':
+            return 200, {'id':'custom-test','title':body['p_title'],'active':False}
         if path.startswith('/member_exchange_definitions'):
             if method == 'GET':
                 m = re.search(r'id=eq\.([^&]+)', path)
@@ -183,10 +187,21 @@ class ForumTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             F.clean_ad(dict(raw, slot='top_bar'))
 
+    def test_custom_exchange_features_validate_and_do_not_escalate(self):
+        body={'title':'市場觀察組合','description':'自訂內容','features':['breadth'],'days':7,'points':1000,'request_id':'00000000-0000-0000-0000-000000000001'}
+        self.assertEqual(F.handle_admin('admin_products_create',body,'',self.r)[0],403)
+        self.assertEqual(F.handle_admin('admin_products_create',body,'admin',self.r)[0],200)
+        for features in ([],['admin'],['breadth','breadth'],['chart_tools']):
+            self.assertEqual(F.handle_admin('admin_products_create',dict(body,features=features),'admin',self.r)[0],400)
+
     def test_video_end_mode_is_validated_and_public(self):
         raw = {'id':'ad009','slot':'home_card','title':'Video','enabled':True,'audience':'all','media_type':'video','media_url':'https://example.test/ad.mp4','slide_mode':'video_end'}
         for slot in ('home_card','results_top','member_center','corner'):
             self.assertEqual(F.clean_ad(dict(raw,slot=slot))['media_type'], 'video')
+        video_crop = F.clean_ad(dict(raw, media_zoom=250, media_crop={'x':0,'y':0,'w':.5,'h':.5}))
+        self.assertEqual(video_crop['media_zoom'],250)
+        self.assertEqual(video_crop['media_crop']['w'],.5)
+        self.assertEqual(F.clean_ad(dict(raw, media_zoom=10))['media_zoom'],10)
         ad = F.clean_ad(raw)
         self.assertEqual(ad['slide_mode'], 'video_end')
         self.assertEqual(F.ads_for([ad], {'guest':True})[0]['slide_mode'], 'video_end')

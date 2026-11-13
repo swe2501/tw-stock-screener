@@ -39,3 +39,5 @@
 2026-11-13｜本場贈券同視窗新增勾選已報到者發30天券、手動自動共用去重、成功紀錄／本人通知來源｜見 ../changes/2026-11-13-attendee-selected-vouchers.md｜SQL隔離與browser通過，本機49725示範｜未提交未部署、SQL未套用｜不碰03整合主checkout，不實發券。
 
 2026-11-13｜04接續JUSTY明確SQL／UAT授權，forum-event-rewards.sql與forum-attendee-vouchers.sql已於Taiwan stock2成功套用；4支RPC service_role=true、anon/authenticated=false，trigger啟用，既有reward本人通知來源已核對。整合01掃描／玻璃與03付款demo／深色Logo，發布結果見2026-11-13-sql-uat-integration.md。未實發會員點數或券、不啟用付款。
+
+2026-11-13｜商品分類勾選、會員權益、廣告圖影裁切與手機預覽完成；已依JUSTY授權套用商品設定及自訂兌換SQL，雲端唯讀權限驗證通過｜見 ../changes/2026-11-13-classified-product-entitlements.md 與 ../changes/2026-11-13-media-crop-mobile.md｜39項Python、SQL及瀏覽器驗證；API 12/12｜本次準備234發布；03進行中的裝置限制留在其獨立工作區，不納入。

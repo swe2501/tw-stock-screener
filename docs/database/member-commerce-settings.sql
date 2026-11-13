@@ -1,4 +1,4 @@
--- PREPARED ONLY. UAT/prod share the database: do not apply without explicit approval.
+-- Applied 2026-11-13 with JUSTY authorization; shared UAT/prod database.
 -- Depends on admin-settings.sql, member-payment-linepay.sql, member-membership-lifecycle.sql.
 -- No payment activation, campaign changes, or existing entitlement removal.
 begin;
