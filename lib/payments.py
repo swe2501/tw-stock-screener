@@ -82,6 +82,8 @@ def _origin(value, env):
 
 def create(user, body, rest, lp_mod=lp):
     """建立訂單並向 LINE Pay 申請付款 → {order_key, payment_url, app_url, amount, label}。"""
+    if body.get('billing_mode', 'one_time') != 'one_time':
+        raise PayError(409, '每月訂閱金流尚未串接，不會改成單次付款', 'SUBSCRIPTION_PROVIDER_NOT_CONNECTED')
     _require_open(rest)
     env = enabled()
     if not env:

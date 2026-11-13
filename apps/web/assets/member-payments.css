@@ -217,3 +217,30 @@
 .mp-inline-card .mp-card-back-foot small{font-size:6px!important;letter-spacing:.06em}
 .mp-inline-card .mp-card-back-foot b{font-size:6px;letter-spacing:.08em}
 @media(max-width:600px){.mp-inline-card .mp-method-body{gap:24px}.mp-inline-card .mp-action{margin-top:28px}}
+
+.mp-page [hidden]{display:none!important}
+.mp-page::before{inset:0}
+.mp-page .mp-product-choice{display:flex;flex-direction:column;align-items:stretch;gap:12px;padding:20px;cursor:default;min-width:0}
+.mp-product-choice>label{display:flex;align-items:center;gap:10px;cursor:pointer}
+.mp-product-choice>p{font-size:12px;line-height:1.8;color:var(--text-muted);flex:1;margin:0}
+.mp-product-choice>button{padding:11px 16px;border:1px solid #334c66;border-radius:10px;background:#182c42;color:#fff;font:inherit;font-size:13px;cursor:pointer}
+.mp-product-choice>.mp-product-once{background:transparent;color:var(--text-muted);border-color:var(--border)}
+.mp-billing-overview{margin:18px 0;padding:22px;border:1px solid var(--border);border-radius:16px;background:var(--surface);line-height:1.8}
+.mp-billing-overview h3{font-size:16px;margin:0 0 10px}.mp-billing-overview p{font-size:13px;color:var(--text-muted);margin:10px 0}
+.mp-billing-overview small{color:var(--accent)}.mp-billing-overview>div{display:flex;gap:12px;flex-wrap:wrap}
+.mp-billing-overview button{padding:9px 15px;border:1px solid var(--border);border-radius:10px;background:var(--surface2);color:var(--text);cursor:pointer}
+.mp-billing-overview button:disabled,.mp-product-choice>button:disabled{opacity:.6;cursor:default}
+.mp-billing-flow{max-width:760px;margin:24px 0}
+.mp-billing-flow fieldset{border:1px solid var(--border);border-radius:16px;padding:18px;display:grid;gap:14px}
+.mp-billing-flow legend{padding:0 8px;font-weight:700}
+.mp-billing-flow label{display:flex;align-items:center;gap:10px;flex-wrap:wrap;cursor:pointer}
+.mp-billing-flow small{color:var(--text-muted)}
+.mp-billing-flow p,.mp-billing-review p{color:var(--text-muted);line-height:1.9;margin:20px 0}
+.mp-billing-flow button,.mp-billing-review button{border:1px solid var(--border);background:var(--surface);color:var(--text);padding:12px 22px;border-radius:12px;cursor:pointer}
+.mp-billing-flow button:not(:disabled),.mp-billing-review [data-billing-submit]:not(:disabled){background:#182c42;color:#fff;border-color:#334c66;box-shadow:0 5px 16px #142b421c}
+.mp-billing-flow button:disabled,.mp-billing-review button:disabled{opacity:.55;cursor:not-allowed}
+.mp-billing-review{max-width:700px;margin:28px auto;padding:28px;border:1px solid var(--border);border-radius:20px;background:var(--surface)}
+.mp-billing-review h3{margin:12px 0 24px}.mp-billing-review dl>div{display:flex;justify-content:space-between;gap:24px;padding:14px 0;border-bottom:1px solid var(--border)}
+.mp-billing-review dd{text-align:right}.mp-billing-review label{display:flex;gap:10px;align-items:center;line-height:1.8}
+.mp-billing-review>div{display:flex;gap:16px;flex-wrap:wrap;margin-top:28px}
+@media(max-width:600px){.mp-billing-review{padding:20px}.mp-billing-flow small{flex-basis:100%;margin-left:24px}}

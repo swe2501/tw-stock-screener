@@ -2253,7 +2253,7 @@
   }
 </style>
 <link rel="stylesheet" href="assets/member-center.css?v=20261107-flow-v4">
-<link rel="stylesheet" href="assets/member-payments.css?v=38-stacked-card">
+<link rel="stylesheet" href="assets/member-payments.css?v=40-subscribe-buttons">
 <link rel="stylesheet" href="assets/member-wallet.css?v=ai2">
 <link rel="stylesheet" href="assets/futures-summary.css?v=history1">
 <link rel="stylesheet" href="assets/sector-dashboard.css">
@@ -4533,11 +4533,13 @@
       var sum='<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">'
         +['<b>'+ms.length+'</b> 會員','<span style="color:var(--accent)">管理者 '+(cnt.admin||0)+'</span>','<span style="color:#148f77">VIP '+cnt.vip+'</span>','進階 '+cnt.advanced,'研究 '+cnt.research,'觀察 '+cnt.observation,'一般 '+cnt.free].map(function(x){return '<span style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:13px">'+x+'</span>';}).join('')+'</div>';
       var rows=ms.map(function(m){
+        var billing=m.billing||{source_label:'待確認',status:'待確認'};
         var opts=TORD.map(function(t){return '<option value="'+t+'"'+(m.tier===t?' selected':'')+'>'+TIER[t]+'</option>';}).join('');
         return '<tr data-uid="'+esc(m.id)+'">'
           +'<td style="padding:6px 8px">'+(m.email?esc(m.email):'<span style="color:var(--text-muted)">'+esc((/line/i.test(m.provider||'')?'LINE':(m.provider||'其他'))+' 登入'+(m.name?'：'+m.name:'')+'（無 Email）')+'</span>')+(m.is_admin?' <span style="font-size:10px;color:var(--accent);font-weight:800">管理員</span>':'')+'</td>'
           +'<td style="padding:6px 8px">'+(m.is_admin?'<b style="color:var(--accent)">⚙ 管理者</b><div style="font-size:10px;color:var(--text-muted)">全功能＋後台</div>':'<select class="adm-tier" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--input-bg,var(--surface));color:var(--text)">'+opts+'</select>')+'</td>'
-          +'<td style="padding:6px 8px;white-space:nowrap">'+(m.expires_at?dt(m.expires_at):'<span style="color:var(--text-muted)">—</span>')+'</td>'
+          +'<td style="padding:6px 8px;white-space:nowrap">'+esc(billing.source_label)+'<div style="font-size:12px;color:var(--text-muted)">'+esc(billing.status)+'</div></td>'
+          +'<td style="padding:6px 8px;white-space:nowrap">'+(billing.next_charge_at?'下次扣款 '+dt(billing.next_charge_at):billing.expires_at?'到期 '+dt(billing.expires_at):'—')+'</td>'
           +'<td style="padding:6px 8px;white-space:nowrap;font-size:12px;color:var(--text-muted)">'+dt(m.created_at)+'</td>'
           +'<td style="padding:6px 8px;white-space:nowrap;font-size:12px;color:var(--text-muted)">'+dt(m.last_sign_in_at)+'</td>'
           +'<td style="padding:6px 8px;font-size:12px">'+(m.banned?'<span style="color:var(--red)">停權</span>':(m.confirmed?'<span style="color:#148f77">正常</span>':'<span style="color:var(--text-muted)">未驗證</span>'))+' <span style="color:var(--text-muted)">'+esc(m.provider||'')+'</span></td>'
@@ -4545,7 +4547,7 @@
       }).join('');
       box.innerHTML=sum+'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">'
         +'<thead><tr style="color:var(--text-muted);border-bottom:1px solid var(--border);text-align:left">'
-        +'<th style="padding:6px 8px">Email</th><th style="padding:6px 8px">等級</th><th style="padding:6px 8px">訂閱到期</th><th style="padding:6px 8px">註冊</th><th style="padding:6px 8px">最後登入</th><th style="padding:6px 8px">狀態</th></tr></thead>'
+        +'<th style="padding:6px 8px">Email</th><th style="padding:6px 8px">等級</th><th style="padding:6px 8px">方案來源／帳務狀態</th><th style="padding:6px 8px">下次扣款／到期</th><th style="padding:6px 8px">註冊</th><th style="padding:6px 8px">最後登入</th><th style="padding:6px 8px">狀態</th></tr></thead>'
         +'<tbody>'+rows+'</tbody></table></div>';
       box.querySelectorAll('.adm-tier').forEach(function(sel){
         sel.onchange=function(){
@@ -4558,7 +4560,7 @@
           }).catch(function(){ sel.disabled=false; el('admNote').textContent='改等級失敗（連線）'; });
         };
       });
-      el('admNote').innerHTML='<b>說明</b> 等級寫入該會員的帳號 metadata（tier）。<b>目前只是「設定與顯示」等級</b>；把各付費功能真正綁到等級是下一步（現在仍以 3 位管理員白名單＋RLS 控制）。詳見 docs/admin-backend-spec.md。';
+      el('admNote').textContent='會員等級與付款來源分開顯示。每月訂閱會列出續訂狀態與下次扣款日；單次購買只列到期日。管理員授權與使用券不代表付費訂閱；待確認表示目前無法完整讀取帳務資料。';
     }
 
     // 2026-10-24 用戶反映切分頁會頓：各分頁資料留在記憶體，切過去先立刻畫上次的資料，背景再悄悄更新（有資料時不再先清成「載入中」）
@@ -18577,7 +18579,7 @@
 <script src="assets/member-derivatives-catalog.js" defer></script>
 <script src="assets/member-trade-ui.js?v=listnav-service1" defer></script>
 <link rel="stylesheet" href="assets/member-benefits.css?v=device-policy-1">
-<script src="assets/member-catalog.js?v=1" defer></script>
+<script src="assets/member-catalog.js?v=2-catalog-first" defer></script>
 <script src="assets/admin-feature-picker.js?v=1" defer></script>
 <script src="assets/admin-member-commerce.js?v=device-policy-1" defer></script>
 <script src="assets/member-benefits.js?v=device-policy-1" defer></script>
@@ -18594,7 +18596,8 @@
 <script src="assets/member-notification-inbox.js?v=paging4" defer></script>
 <script src="assets/glass-skin.js?v=5" defer></script>
 <script src="assets/glass-motion.js?v=4" defer></script>
-<script src="assets/member-payments.js?v=38-stacked-card" defer></script>
+<script src="assets/member-billing-model.js?v=2-management" defer></script>
+<script src="assets/member-payments.js?v=40-subscribe-buttons" defer></script>
 <script src="assets/member-center.js?v=20261113-commerce" defer></script>
 <script src="assets/member-signin.js?v=invite-reset7" defer></script>
 <link rel="stylesheet" href="assets/member-birthday.css?v=1"><script src="assets/member-birthday.js?v=1" defer></script><script src="assets/member-phone-welcome.js?v=1" defer></script>

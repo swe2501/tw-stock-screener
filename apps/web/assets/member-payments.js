@@ -323,7 +323,7 @@
     host.querySelector('.mp-page')?.classList.remove('is-payment-success', 'is-payment-processing');
     host.querySelector('[data-payment-processing]')?.setAttribute('aria-hidden', 'true');
     host.querySelector('[data-payment-success]')?.setAttribute('aria-hidden', 'true');
-    host.querySelectorAll('.mp-progress span').forEach((step, index) => step.classList.toggle('is-current', index === 0));
+    host._updateBillingStep?.();
     host.querySelector('[data-card-number]')?.focus({ preventScroll: true });
   }
 
@@ -350,8 +350,11 @@
 
   let demoMode=location.protocol==='file:',demoResult="success";
   const canDemo=()=>location.protocol==='file:'||['localhost','127.0.0.1'].includes(location.hostname)||window._isOwner||window._isAdmin;
-  function renderPanel(host, profile, method) {
+  function renderPanel(host, profile, method, initialStep=1) {
     host._demoRun=(host._demoRun||0)+1;
+    host._billingProduct=null;
+    const billingOwner=profile?.id||profile?.user?.id||'local-preview';
+    if(host._billingOwner!==billingOwner){host._billingOwner=billingOwner;host._billingDemo=null;}
     const data = methods[method];
     const plan = profile?.membership?.plan && profile.membership.plan !== 'general'
       ? (window.AcademyResearchTitle?.() || '已授權方案') : '尚未選擇付費方案';
@@ -410,6 +413,8 @@
     host.querySelector('[data-demo-sound]')?.addEventListener('change',e=>{soundEnabled=e.target.checked;});
     host.querySelector('[data-demo-result]')?.addEventListener('change',e=>{demoResult=e.target.value;});
     if(demoMode){const action=host.querySelector('[data-payment-action]');action.disabled=false;action.querySelector('span').textContent=method==='card'?'測試新增卡片（不綁卡、不扣款）':'測試'+methods[method].short+'流程（不扣款）';host.querySelectorAll('.mp-method-body input').forEach(input=>input.disabled=false);host.querySelector('.mp-action-status').textContent='本機測試模式：不會綁卡、扣款或保存卡號。';}
+    installBillingSteps(host, method, initialStep);
+    mountBillingOverview(host);
     mountProductChoices(host,method);
     wireCardInputs(host);
     wireStoreInputs(host);
@@ -419,7 +424,7 @@
       const next = button.dataset.method;
       if (next === method) return;
       try { sessionStorage.setItem('foresight.payment.method', next); } catch (_) {}
-      renderPanel(host, profile, next);
+      renderPanel(host, profile, next, 2);
     }));
 
     host.querySelector('[data-success-back]')?.addEventListener('click', () => hideCardSuccess(host));
@@ -473,17 +478,27 @@
     if(method==='card')host.querySelector('.mp-workspace').classList.add('mp-inline-card');
   }
 
-  async function mountProductChoices(host,method){
+  async function mountProductChoices(host,method,refreshCatalog=true){
     const box=host.querySelector('[data-payment-products]');if(!box)return;
+    const run=host._productLoad=(host._productLoad||0)+1;
     box.textContent='正在載入會員方案…';
-    const refresh=window.AcademyMemberCatalog?.refresh();if(demoMode)Promise.resolve(refresh).catch(()=>{});else await refresh;if(!box.isConnected)return;
-    const catalog=window.AcademyMemberCatalog?.get();let products=catalog?.products||[];if(!products.length&&demoMode)products=[{id:'demo_only',name:'付款流程測試',tier:'observation',icon:'shield',description:'僅供試填與動畫預覽，不代表上架商品或會員升級。',details:'不會建立訂單、綁卡或扣款。',purchasable:false}];
-    if(!products.length){box.textContent='目前沒有可比較的上架方案，請稍後再查看。';return;}
+    if(refreshCatalog){const refresh=window.AcademyMemberCatalog?.refresh();await Promise.race([Promise.resolve(refresh).catch(()=>{}),new Promise(resolve=>setTimeout(resolve,8000))]);}
+    if(!box.isConnected||run!==host._productLoad)return;
+    const catalog=window.AcademyMemberCatalog?.get();const products=(catalog?.products||[]).filter(p=>p.active!==false);
+    if(!products.length){
+      host._billingProduct=null;host._syncProductChoice=null;host.querySelector('[data-payment-action]').disabled=true;
+      host._resetBillingStep?.();
+      box.innerHTML='<p role="status">'+(catalog?'目前沒有上架中的會員方案。':'會員方案暫時無法載入，請重新載入後再選擇。')+'</p><button type="button" class="mc-secondary-text" data-products-retry>重新載入方案</button>';
+      box.querySelector('[data-products-retry]').onclick=()=>mountProductChoices(host,method);
+      host.querySelector('[data-payment-product-detail]').textContent='';return;
+    }
+    if(host._billingProduct&&!products.some(p=>p.id===host._billingProduct.id))host._resetBillingStep?.();
     let preferred='';try{preferred=sessionStorage.getItem('foresight.membership.product')||'';}catch{}
     let interest='';try{interest=sessionStorage.getItem('foresight.membership.interest')||'';}catch{}
     let selected=products.find(p=>p.id===preferred)||products.find(p=>p.tier===interest)||products[0];
-    box.innerHTML=products.map(p=>'<label class="mp-product-choice"><input type="radio" name="billing-product" value="'+esc(p.id)+'" '+(p.id===selected.id?'checked':'')+'><span class="mp-product-symbol">'+(window.AcademyMemberCatalog?.icon?.(p.icon)||'')+'</span><span><strong>'+esc(p.name)+'</strong><small>'+((p.tier==='free')?'免費基礎身分':p.purchasable?money(p.price_twd)+' ／ '+p.days+' 天':'查看會員權益')+'</small></span></label>').join('');
+    box.innerHTML=products.map(p=>'<article class="mp-product-choice"><label><input type="radio" name="billing-product" value="'+esc(p.id)+'" '+(p.id===selected.id?'checked':'')+'><span class="mp-product-symbol">'+(window.AcademyMemberCatalog?.icon?.(p.icon)||'')+'</span><strong>'+esc(p.name)+'</strong></label><p>'+esc(p.description||'')+'</p><small>'+((p.tier==='free')?'免費基礎身分':p.purchasable?money(p.price_twd)+' ／ 月':'付款尚未開放，暫不顯示價格')+'</small><button type="button" data-product-subscribe="'+esc(p.id)+'">'+(p.tier==='free'?'查看免費權益':'訂閱此方案 →')+'</button>'+(p.tier!=='free'?'<button type="button" class="mp-product-once" data-product-once="'+esc(p.id)+'">單次購買</button>':'')+'</article>').join('');
     const sync=()=>{if(!box.isConnected)return;try{sessionStorage.setItem('foresight.membership.product',selected.id);sessionStorage.setItem('foresight.membership.interest',selected.tier);sessionStorage.setItem('foresight.membership.plan',selected.plan_code||'');}catch{}
+      host._billingProduct=selected;
       host.querySelector('[data-payment-product-detail]').textContent=selected.description+' '+(selected.details||'');
       const action=host.querySelector('[data-payment-action]'),status=host.querySelector('.mp-action-status'),real=!demoMode&&method==='line'&&host.dataset.lineLive==='1'&&selected.purchasable;
       action.disabled=!real&&!demoMode;action.querySelector('span').textContent=demoMode?(method==='card'?'測試新增卡片（不綁卡、不扣款）':'測試'+methods[method].short+'流程（不扣款）'):real?'前往 LINE Pay 付款':selected.tier==='free'?'免費身分，無需付款':method==='card'?'信用卡綁定尚未開通':method==='store'?'超商付款尚未開通':'目前尚未開放付款';
@@ -493,8 +508,93 @@
       if(real){payState.selected=selected.plan_code;const input=[...host.querySelectorAll('[name=mp-plan]')].find(x=>x.value===selected.plan_code);if(input){input.checked=true;input.dispatchEvent(new Event('change',{bubbles:true}));}}
       else host.querySelector('[data-summary-amount]').textContent='尚未開放付款';
     };
-    box.onchange=e=>{const p=products.find(p=>p.id===e.target.value);if(p){selected=p;sync();}};
-    host._syncProductChoice=sync;sync();
+    box.onchange=e=>{const p=products.find(p=>p.id===e.target.value);if(p){selected=p;sync();host._updateBillingStep?.();}};
+    box.onclick=e=>{const button=e.target.closest('[data-product-subscribe],[data-product-once]');if(!button)return;const p=products.find(p=>p.id===(button.dataset.productSubscribe||button.dataset.productOnce));if(!p)return;selected=p;box.querySelectorAll('[name=billing-product]').forEach(input=>input.checked=input.value===p.id);sync();if(p.tier==='free'){window.openMemberCenter?.('benefits');return;}host._beginBilling?.(host._billingDemo?.mode||(button.hasAttribute('data-product-once')?'one_time':'monthly'));};
+    host._syncProductChoice=sync;sync();host._updateBillingStep?.();
+    host._labelBillingPlans?.();
+  }
+
+  function mountBillingOverview(host){
+    const box=document.createElement('section');box.className='mp-billing-overview';
+    host.querySelector('.mp-heading').after(box);
+    const rank={free:0,observation:1,research:2,advanced:2,vip:3};
+    const date=value=>value?new Date(value).toLocaleDateString('zh-TW'):'待確認';
+    const paint=()=>{
+      const s=demoMode?host._billingDemo:null,real=host._realBilling;
+      box.innerHTML='<h3>目前方案</h3>'+(s?'<b>'+esc(s.plan.name||s.plan.id)+' <small>模擬測試</small></b><p>'+(s.mode==='monthly'?'每月訂閱':'單次購買')+' · '+(s.status==='past_due'?'續扣失敗，未取得下期權益':s.status==='expired'?'已到期':s.cancel?'已取消續訂':'本期使用中')+'<br>本期可使用至 '+date(s.end)+(s.pending?'<br>下期將改為 '+esc(s.pending.name||s.pending.id)+'，生效日 '+date(s.end):'')+'</p>':real?'<b>'+esc(real.plan_name||real.source_label)+'</b><p>'+esc(real.source_label)+' · '+esc(real.status)+(real.next_charge_at?'<br>下次扣款日 '+date(real.next_charge_at):real.expires_at?'<br>可使用至 '+date(real.expires_at):'')+'</p>':'<p>'+ (payToken()?'正在載入目前方案…':'登入後可查看正式方案與續訂狀態。')+'</p>')+'<div><button type="button" data-overview-change>更改方案</button>'+(s&&s.status!=='expired'&&s.mode==='monthly'?'<button type="button" data-overview-renew>'+(s.cancel?'恢復自動續訂':'取消自動續訂')+'（測試）</button>':real?.source==='monthly'?'<button type="button" disabled title="訂閱金流尚未串接">'+(real.auto_renew?'取消自動續訂':'恢復自動續訂')+'（服務尚未接通）</button>':'')+(s?.pending?'<button type="button" data-overview-unqueue>取消這次變更（測試）</button>':'')+'</div><p data-overview-status role="status"></p>';
+      box.querySelector('[data-overview-change]').onclick=()=>{host._resetBillingStep?.();host.querySelector('.mp-product-section').scrollIntoView({block:'start',behavior:'smooth'});};
+      const run=action=>{try{host._billingDemo=window.AcademyBillingModel.event(s,action,{id:crypto.randomUUID()});paint();host._paintBillingDemo?.();}catch(e){box.querySelector('[data-overview-status]').textContent=e.message;}};
+      box.querySelector('[data-overview-renew]')?.addEventListener('click',()=>run(s.cancel?'resume':'cancel'));
+      box.querySelector('[data-overview-unqueue]')?.addEventListener('click',()=>run('unqueue'));
+      host._labelBillingPlans=()=>host.querySelectorAll('[data-product-subscribe]').forEach(button=>{
+        const p=window.AcademyMemberCatalog?.get()?.products?.find(p=>p.id===button.dataset.productSubscribe);if(!p||p.tier==='free')return;
+        const active=s&&s.status!=='expired'&&Date.parse(s.end)>Date.now();
+        button.disabled=!!active&&s.plan.id===p.id;
+        button.textContent=!active?'訂閱此方案 →':s.plan.id===p.id?'目前方案':rank[p.tier]>rank[s.plan.tier]?'升級此方案 →':'下期降級 →';
+      });host._labelBillingPlans();
+    };
+    host._paintBillingOverview=paint;paint();
+    if(payToken()){const run=host._demoRun;payCall('billing_status',{}).then(r=>{if(run!==host._demoRun||!box.isConnected)return;host._realBilling=r.billing;paint();}).catch(()=>{if(box.isConnected&&!host._billingDemo){host._realBilling={source_label:'待確認',status:'目前方案暫時無法載入，請稍後重新整理。'};paint();}});}
+  }
+
+  // The selected plan belongs to this checkout, never to a synthetic paid subscription.
+  function installBillingSteps(host, method, initialStep) {
+    let step=initialStep, confirmed=false;
+    let mode='monthly';try{mode=sessionStorage.getItem('foresight.billing.mode')||mode;}catch{}
+    if(!['monthly','one_time'].includes(mode))mode='monthly';
+    const section=host.querySelector('.mp-product-section'),checkout=host.querySelector('.mp-checkout');
+    section.before(host.querySelector('.mp-progress'));
+    const controls=document.createElement('div');controls.className='mp-billing-flow';
+    controls.innerHTML='<fieldset><legend>購買方式</legend><label><input type="radio" name="billing-mode" value="monthly">每月訂閱 <small>每月自動續扣，可取消下期續訂</small></label><label><input type="radio" name="billing-mode" value="one_time">單次購買 <small>只支付本次期間，到期不自動續扣</small></label></fieldset><p>升級：付款成功後立即生效，按本期剩餘時間補差額；到期日不變。降級：下期生效，本期權益保留。取消續訂：用到本期結束。超出新方案的筆記與自選資料會保留，新增前需整理至額度內。</p><button type="button" data-billing-next>下一步：選擇付款方式 →</button>';
+    section.append(controls);
+    const back=document.createElement('button');back.type='button';back.className='mc-secondary-text';back.textContent='← 返回選擇方案';checkout.before(back);
+    const review=document.createElement('section');review.className='mp-billing-review';review.hidden=true;checkout.after(review);
+    host._billingAbort?.abort();host._billingAbort=new AbortController();
+    const rehearsal=document.createElement('details');rehearsal.className='mp-billing-review';review.after(rehearsal);
+    const demoPaint=()=>{
+      host._paintBillingOverview?.();
+      rehearsal.hidden=!demoMode;if(!demoMode)return;
+      const s=host._billingDemo;
+      rehearsal.innerHTML='<summary>訂閱規則模擬測試</summary><p>僅在這個頁面暫存，不扣款、不建立正式訂閱，也不改變會員權益。離開或重新整理後清除。</p>'+(s?'<p>模擬方案：'+esc(s.plan.name||s.plan.id)+' ／ '+(s.mode==='monthly'?'每月訂閱':'單次購買')+'<br>狀態：'+({active:'本期使用中',past_due:'續扣失敗，尚未取得下期權益',expired:'已到期'}[s.status])+(s.cancel?'，已取消下期續訂':'')+'<br>本期到期：'+esc(new Date(s.end).toLocaleString('zh-TW'))+(s.pending?'<br>下期方案：'+esc(s.pending.name||s.pending.id):'')+'</p><div><button type="button" data-rehearsal="cancel">取消下期續訂</button><button type="button" data-rehearsal="resume">恢復續訂</button><button type="button" data-rehearsal="renew_success">模擬到期續扣成功</button><button type="button" data-rehearsal="renew_failed">模擬到期續扣失敗</button><button type="button" data-rehearsal="expire">模擬到期結束</button><button type="button" data-rehearsal="clear">清除模擬</button></div>':'<p>先選方案並完成一次模擬付款，即可測試續訂與取消。之後返回選擇其他方案，可測試升級或下期降級。</p>')+'<p data-rehearsal-status role="status"></p>';
+      rehearsal.querySelectorAll('[data-rehearsal]').forEach(b=>b.onclick=()=>{try{if(b.dataset.rehearsal==='clear')host._billingDemo=null;else host._billingDemo=window.AcademyBillingModel.event(host._billingDemo,b.dataset.rehearsal,{now:['renew_success','renew_failed','expire'].includes(b.dataset.rehearsal)?s.end:new Date().toISOString(),id:crypto.randomUUID()});demoPaint();}catch(e){rehearsal.querySelector('[data-rehearsal-status]').textContent=e.message;}});
+    };
+    host.addEventListener('academy-payment-demo-feedback',e=>{
+      if(e.detail.result!=='success'||!demoMode||!host._billingProduct||!window.AcademyBillingModel)return;
+      const p={...host._billingProduct,price_twd:host._billingProduct.price_twd||0};
+      try{host._billingDemo=window.AcademyBillingModel.event(host._billingDemo,host._billingDemo&&host._billingDemo.status!=='expired'&&Date.parse(host._billingDemo.end)>Date.now()?'change':'start',{plan:p,mode,id:crypto.randomUUID()});demoPaint();}catch(error){rehearsal.querySelector('[data-rehearsal-status]').textContent=error.message;}
+    },{signal:host._billingAbort.signal});
+    host._paintBillingDemo=demoPaint;demoPaint();
+    const paint=()=>{
+      section.hidden=step!==1;checkout.hidden=step!==2;back.hidden=step===1;review.hidden=step!==3;
+      host.querySelectorAll('.mp-progress span').forEach((s,i)=>{s.classList.toggle('is-current',i===step-1);if(i===step-1)s.setAttribute('aria-current','step');else s.removeAttribute('aria-current');});
+      controls.querySelectorAll('[name=billing-mode]').forEach(r=>r.checked=r.value===mode);
+      const product=host._billingProduct;
+      controls.querySelector('[data-billing-next]').disabled=!product;
+      host.querySelectorAll('[data-method]').forEach(b=>{b.disabled=mode==='monthly'&&b.dataset.method!=='card';b.title=b.disabled?'每月訂閱需要支援定期扣款的信用卡':'';});
+      if(step===3){
+        review.innerHTML='<span class="mc-kicker">確認方案與付款</span><h3>'+esc(product?.name||'')+'</h3><dl><div><dt>購買方式</dt><dd>'+ (mode==='monthly'?'每月訂閱':'單次購買')+'</dd></div><div><dt>付款方式</dt><dd>'+esc(methods[method].short)+'</dd></div><div><dt>金額</dt><dd>'+ (product?.purchasable?money(product.price_twd):'付款尚未開放，暫不顯示價格')+'</dd></div><div><dt>期間</dt><dd>'+(mode==='monthly'?'每個月續訂；取消後保留至本期結束':esc(product?.days||30)+' 天，到期不續扣')+'</dd></div></dl><p>'+(demoMode?'目前是模擬測試，不會扣款、開通會員或建立正式訂閱。':'正式信用卡訂閱尚未串接，現在不會扣款或開通會員。')+'</p><label><input type="checkbox" data-billing-consent>我已確認方案、期間與'+(mode==='monthly'?'每月續訂及取消規則':'單次付款規則')+'</label><div><button type="button" data-billing-edit>返回付款方式</button><button type="button" data-billing-submit disabled>'+(demoMode?'確認並測試結果':'付款服務尚未開放')+'</button></div>';
+        let change=null;
+        if(demoMode&&host._billingDemo){try{const s=host._billingDemo;change=window.AcademyBillingModel.quote(s,{...product,price_twd:product.price_twd||0},new Date().toISOString());const message=document.createElement('p');message.textContent=change.operation==='downgrade'?'下期降級：本次不扣款，將於 '+new Date(s.end).toLocaleDateString('zh-TW')+' 生效。本期權益保留，可在目前方案區取消這次變更。':change.operation==='upgrade'?'升級：模擬付款成功後立即生效，到期日維持 '+new Date(s.end).toLocaleDateString('zh-TW')+'。週額度不會因升級重新計算。':'';review.querySelector('dl').after(message);if(product.purchasable)review.querySelectorAll('dd')[2].textContent=money(change.amount)+(change.operation==='upgrade'?'（本期差額）':'');}catch{}}
+        review.querySelector('[data-billing-edit]').onclick=()=>{step=2;paint();};
+        review.querySelector('[data-billing-consent]').onchange=e=>{review.querySelector('[data-billing-submit]').disabled=!e.target.checked||(!demoMode&&!(mode==='one_time'&&method==='line'&&host.dataset.lineLive==='1'&&product?.purchasable));};
+        review.querySelector('[data-billing-submit]').onclick=()=>{if(demoMode&&change?.operation==='downgrade'){host._billingDemo=window.AcademyBillingModel.event(host._billingDemo,'change',{plan:{...product,price_twd:product.price_twd||0},id:crypto.randomUUID()});host._paintBillingDemo?.();step=1;paint();return;}confirmed=true;step=2;paint();host.querySelector('[data-payment-action]').click();confirmed=false;};
+      }
+    };
+    controls.onchange=e=>{if(e.target.name==='billing-mode'){mode=e.target.value;try{sessionStorage.setItem('foresight.billing.mode',mode);}catch{}paint();}};
+    controls.querySelector('fieldset').hidden=true;controls.querySelector('[data-billing-next]').hidden=true;
+    host._beginBilling=selectedMode=>{mode=selectedMode;try{sessionStorage.setItem('foresight.billing.mode',mode);}catch{}if(demoMode&&host._billingDemo){try{if(window.AcademyBillingModel.quote(host._billingDemo,{...host._billingProduct,price_twd:host._billingProduct.price_twd||0},new Date().toISOString()).operation==='downgrade'){step=3;paint();return;}}catch{}}controls.querySelector('[data-billing-next]').click();};
+    controls.querySelector('[data-billing-next]').onclick=()=>{if(!host._billingProduct)return;if(host._billingProduct.tier==='free'){host.querySelector('[data-payment-product-detail]').textContent='免費會員不需要付款，可直接使用免費權益。';return;}if(mode==='monthly'&&method!=='card'){try{sessionStorage.setItem('foresight.payment.method','card');}catch{}host.querySelector('[data-method=card]').click();return;}step=2;paint();};
+    back.onclick=()=>{step=1;paint();};
+    host.querySelector('[data-payment-action]').addEventListener('click',e=>{
+      if(confirmed)return;e.preventDefault();e.stopImmediatePropagation();
+      if(!host._billingProduct){host.querySelector('.mp-action-status').textContent='請稍候，正在確認所選方案。';return;}
+      if(host._billingDemo&&host._billingDemo.status!=='expired'&&Date.parse(host._billingDemo.end)>Date.now()&&host._billingDemo.mode!==mode){host.querySelector('.mp-action-status').textContent='本期購買方式維持不變；請選回原購買方式測試升降級，或清除模擬後重新開始。';return;}
+      if(method==='card'&&demoMode&&!validateCard(host)){host.querySelector('.mp-action-status').textContent='請先填寫完整的測試卡片資料。';return;}
+      step=3;paint();
+    },true);
+    host._resetBillingStep=()=>{step=1;paint();};
+    addEventListener('academy-catalog-changed',()=>{if(!host.isConnected){host._billingAbort.abort();return;}mountProductChoices(host,method,false);},{signal:host._billingAbort.signal});
+    host._updateBillingStep=paint;paint();
   }
 
   const TIER_NAMES = { observation: '市場觀察員', research: '趨勢研究員', advanced: '趨勢研究員', vip: '先見領航員' };
@@ -545,7 +645,7 @@
     button.classList.add('is-busy');
     status.textContent = '建立訂單，準備前往 LINE Pay…';
     try {
-      const data = await payCall('pay_linepay_request', { plan_code: plan.plan_code, return_origin: location.origin });
+      const data = await payCall('pay_linepay_request', { plan_code: plan.plan_code, billing_mode:'one_time', return_origin: location.origin });
       try { sessionStorage.setItem('foresight.payment.pending', data.order_key); } catch (_) {}
       status.textContent = '正在前往 LINE Pay（' + money(data.amount) + '）…';
       location.assign(isMobile() && data.app_url ? data.app_url : data.payment_url);

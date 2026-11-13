@@ -476,6 +476,11 @@ class handler(BaseHTTPRequestHandler):
             except commerce.CatalogError as e:
                 return self._json(e.status, {'error': e.message})
 
+        if action in ('billing_status', 'billing_quote', 'billing_prepare'):
+            from lib.member_billing import handle as billing_handle
+            token = (self.headers.get('Authorization') or '').replace('Bearer ', '').strip()
+            return self._json(*billing_handle(action, body, _token_user(token), _rest, ADMIN_IDS))
+
         # ── 會員方案付款（lib/payments.py＋lib/linepay.py）：會員 JWT 驗證；沒設 LINE Pay 金鑰的環境一律回「尚未開放」 ──
         if action in ("pay_plans", "pay_linepay_request", "pay_linepay_confirm", "pay_linepay_cancel", "pay_history"):
             from lib.payments import handle as pay_handle
@@ -555,13 +560,15 @@ class handler(BaseHTTPRequestHandler):
                 tst, trows = _rest("/member_tiers?select=user_id,tier")
                 if tst == 200 and isinstance(trows, list):
                     tmap = {r.get("user_id"): r.get("tier") for r in trows}
+                from lib.member_billing import legacy_summaries
+                billing = legacy_summaries(users, _rest, ADMIN_IDS)
                 out = []
                 for u in users:
                     md = u.get("user_metadata") or {}
                     em = (u.get("email") or "").strip().lower()
                     tier = "admin" if u.get("id") in ADMIN_IDS else tmap.get(u.get("id"), "free")
                     out.append({
-                        "id": u.get("id"), "email": u.get("email"),
+                        "id": u.get("id"), "email": u.get("email"), "billing": billing.get(u.get("id")),
                         "name": md.get("name") or md.get("full_name") or md.get("display_name"),   # LINE 登入沒有 Email，列表改顯示名稱
                         "tier": tier, "expires_at": md.get("expires_at"),
                         "banned": bool(md.get("banned")),

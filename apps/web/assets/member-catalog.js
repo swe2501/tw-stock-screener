@@ -12,7 +12,7 @@
  async function refresh(){
   if(inflight)return inflight;
   const t=token(),id=epoch;
-  inflight=(async()=>{try{const [c,a]=await Promise.all([call('membership_catalog'),t?call('membership_access').catch(()=>null):null]);if(id!==epoch||t!==token())return;if(!c||!Array.isArray(c.products)||!Number.isSafeInteger(c.revision))throw Error('invalid catalog');catalog=c;configuredBefore=configuredBefore||c.revision>0;permissions=a;owner=t;received=performance.now();expires=a?.next_change_at?Date.parse(a.next_change_at)-Date.parse(a.server_time)+received:Infinity;notify();}catch{if(id===epoch){catalog=null;permissions=null;owner=t;notify();}}finally{if(id===epoch)inflight=null;}})();
+  inflight=(async()=>{try{const access=t?call('membership_access').catch(()=>null):Promise.resolve(null);const c=await call('membership_catalog');if(id!==epoch||t!==token())return;if(!c||!Array.isArray(c.products)||!Number.isSafeInteger(c.revision))throw Error('invalid catalog');catalog=c;configuredBefore=configuredBefore||c.revision>0;permissions=null;owner=t;received=performance.now();notify();const a=await access;if(id!==epoch||t!==token())return;permissions=a;expires=a?.next_change_at?Date.parse(a.next_change_at)-Date.parse(a.server_time)+received:Infinity;notify();}catch{if(id===epoch){catalog=null;permissions=null;owner=t;notify();}}finally{if(id===epoch)inflight=null;}})();
   return inflight;
  }
  function allowed(feature){
