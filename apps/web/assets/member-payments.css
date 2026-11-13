@@ -521,3 +521,9 @@
 :root[data-theme='light'] .mp-page .mp-plan-deck .mp-product-choice[data-deck-position='current']{background:linear-gradient(132deg,rgba(217,234,251,.89) 0%,rgba(237,245,253,.86) 22%,rgba(255,255,255,.92) 43%,rgba(249,250,255,.88) 57%,color-mix(in srgb,rgb(var(--deck-light)) 16%,#f0f2fcd9) 83%,color-mix(in srgb,rgb(var(--deck-light)) 23%,#f4f3fbdb) 100%);backdrop-filter:blur(24px) saturate(1.18);-webkit-backdrop-filter:blur(24px) saturate(1.18);box-shadow:inset 0 2px 5px #ffffffd9,inset 4px 0 10px #d2e8f87a,inset -4px -4px 12px rgba(var(--deck-light),.2)}
 .mp-deck-inner{stroke:#fffffff5;stroke-width:1.1;filter:drop-shadow(0 1px 1px rgba(var(--deck-light),.55))}
 :root:not([data-theme='light']) .mp-page .mp-plan-deck .mp-product-choice[data-deck-position='current']{background:linear-gradient(138deg,#536a83db 0%,#354c66e8 27%,#20334ce8 58%,color-mix(in srgb,rgb(var(--deck-light)) 22%,#192d44e8) 84%,#303b56db 100%);backdrop-filter:blur(24px) saturate(1.18);-webkit-backdrop-filter:blur(24px) saturate(1.18)}
+
+/* Contactless mark aligns with the card-number row, as approved in the reference. */
+.mp-page .mp-card-front .mp-card-contactless{right:6.5%;top:49%;transform:translateY(-50%);width:20px;height:20px;opacity:.85;pointer-events:none}
+.mp-page .mp-card-front .mp-card-contactless svg{width:20px;height:20px}
+.mp-page .mp-card-front .mp-card-issuer{right:25px!important}
+@media(max-width:600px){.mp-page .mp-card-front .mp-card-contactless{width:18px;height:18px}.mp-page .mp-card-front .mp-card-contactless svg{width:18px;height:18px}}
