@@ -549,7 +549,7 @@
     const controls=document.createElement('div');controls.className='mp-billing-flow';
     controls.innerHTML='<fieldset><legend>購買方式</legend><label><input type="radio" name="billing-mode" value="monthly">每月訂閱 <small>每月自動續扣，可取消下期續訂</small></label><label><input type="radio" name="billing-mode" value="one_time">單次購買 <small>只支付本次期間，到期不自動續扣</small></label></fieldset><p>升級：付款成功後立即生效，按本期剩餘時間補差額；到期日不變。降級：下期生效，本期權益保留。取消續訂：用到本期結束。超出新方案的筆記與自選資料會保留，新增前需整理至額度內。</p><button type="button" data-billing-next>下一步：選擇付款方式 →</button>';
     section.append(controls);const selectionCopy=host.querySelector('[data-payment-product-detail]');if(selectionCopy)controls.prepend(selectionCopy);
-    const back=document.createElement('button');back.type='button';back.className='mc-secondary-text';back.textContent='← 返回選擇方案';checkout.before(back);
+    const back=document.createElement('button');back.type='button';back.className='mp-back-to-plans';back.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12H4m6-6-6 6 6 6"/></svg><span>返回選擇方案</span>';checkout.before(back);
     const review=document.createElement('section');review.className='mp-billing-review';review.hidden=true;checkout.after(review);
     host._billingAbort?.abort();host._billingAbort=new AbortController();
     const rehearsal=document.createElement('details');rehearsal.className='mp-billing-review';review.after(rehearsal);

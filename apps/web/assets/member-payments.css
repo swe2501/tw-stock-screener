@@ -384,3 +384,140 @@
 
 
 .mp-deck-controls>button svg{width:21px;height:21px;stroke-width:1.4}.mp-page [data-billing-next]{display:inline-flex;align-items:center;justify-content:center;gap:13px}.mp-page [data-billing-next]>svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
+
+
+/* A approved optical-glass reference: nested cut facets and cool refracted light. */
+.mp-page [data-payment-products].mp-plan-deck{perspective:1050px;height:420px}
+.mp-page .mp-plan-deck .mp-product-choice{width:218px;height:394px;top:18px;background:transparent;isolation:isolate;backdrop-filter:blur(14px) saturate(1.3);-webkit-backdrop-filter:blur(14px) saturate(1.3);box-shadow:inset 0 0 20px #ffffff90;transition:transform .65s cubic-bezier(.16,1,.3,1),opacity .38s ease,filter .5s ease}
+:root[data-theme='light'] .mp-page .mp-plan-deck .mp-product-choice{background:linear-gradient(120deg,#fff9,rgba(var(--deck-light),.09) 31%,#ffffffc4 49%,rgba(var(--deck-light),.18) 77%,#fff8);color:#192d48}
+.mp-page .mp-plan-deck .mp-product-choice::before{inset:7px;z-index:0;opacity:.85;clip-path:polygon(10px 0,calc(100% - 10px) 0,100% 10px,100% calc(100% - 10px),calc(100% - 10px) 100%,10px 100%,0 calc(100% - 10px),0 10px);background:radial-gradient(ellipse at var(--shine-x,65%) var(--shine-y,12%),#ffffffe0 0%,#ffffff50 26%,transparent 64%),linear-gradient(115deg,#ffffff65,transparent 52%,#dde8ff18)}
+.mp-deck-frame{z-index:3;overflow:visible}.mp-deck-bevel{stroke-width:4.6;stroke-linejoin:bevel;opacity:.74;filter:drop-shadow(0 0 2px rgba(var(--deck-light),.65))}.mp-deck-inner{stroke:#ffffffe8;stroke-width:.7;filter:drop-shadow(1px 1px 1px rgba(var(--deck-light),.8))}.mp-deck-rim{stroke:rgba(var(--deck-light),.65);stroke-width:.7}
+.mp-deck-trace{stroke:#fff;stroke-width:.7;stroke-dasharray:7 93;filter:drop-shadow(0 0 1px #fff) drop-shadow(0 0 3px rgba(var(--deck-light),1)) drop-shadow(0 0 8px rgba(var(--deck-light),1))}
+.mp-page .mp-plan-deck .mp-product-choice[data-deck-position='current']{filter:drop-shadow(0 13px 10px #31436126) drop-shadow(0 0 8px rgba(var(--deck-light),.32))}
+.mp-page .mp-plan-deck .mp-product-choice[data-deck-position='neighbor']{opacity:.9;transform:translateX(calc(-50% + var(--deck-offset)*71%)) rotateY(calc(var(--deck-offset)*-13deg)) scale(.84)}
+.mp-page .mp-plan-deck .mp-product-symbol{width:104px;height:104px;left:calc(50% - 52px);top:24px;filter:drop-shadow(0 3px 2px #5f83ac35)}
+.mp-page .mp-plan-deck strong{top:141px;font-size:20px;font-weight:800;letter-spacing:.02em}
+.mp-page .mp-plan-deck .mp-product-choice>small{top:183px;font-size:12px;line-height:1.6}
+.mp-page .mp-plan-deck .mp-product-choice>.mp-benefits-link{top:244px;font-size:12px;color:#4b8bbb}
+.mp-page .mp-plan-deck .mp-product-choice>.mp-product-once{top:284px;font-size:11px;color:#65758d}
+.mp-page .mp-plan-deck .mp-product-choice>[data-product-subscribe]{bottom:27px;left:24px;right:24px;background:linear-gradient(120deg,#ffffff99,rgba(var(--deck-light),.08));border:1px solid rgba(var(--deck-light),.35);box-shadow:inset 0 1px 1px #fff,0 2px 4px #6c7da710;color:#233953;font-weight:600}
+.mp-plan-deck [name=billing-product]{appearance:none;width:15px;height:15px;border:1px solid #9babc2;border-radius:50%;background:#fff7;top:24px;right:23px;display:grid;place-items:center}.mp-plan-deck [name=billing-product]:checked{border-color:rgb(var(--deck-light));background:#ffffff90}.mp-plan-deck [name=billing-product]:checked::after{content:'';width:6px;height:3px;border-left:1.5px solid rgb(var(--deck-light));border-bottom:1.5px solid rgb(var(--deck-light));transform:translateY(-1px) rotate(-45deg)}
+.mp-page[data-billing-step='1'] .mp-billing-flow{justify-content:center;position:relative;border:0;padding-top:8px}.mp-page[data-billing-step='1'] .mp-billing-flow>[data-payment-product-detail]{position:absolute;left:0;max-width:30%;font-size:11px!important}.mp-page [data-billing-next]{min-width:260px;background:linear-gradient(180deg,#34445e,#17273e)!important;box-shadow:inset 0 1px 1px #ffffff70,0 7px 15px #26385024!important}
+:root:not([data-theme='light']) .mp-page .mp-plan-deck .mp-product-choice{background:linear-gradient(122deg,#718ca765,#15273bbc 32%,#91aacb45 49%,#14243abf 70%,rgba(var(--deck-light),.25));color:#eff5ff;box-shadow:inset 0 0 18px #b8ddff20}
+:root:not([data-theme='light']) .mp-page .mp-plan-deck .mp-product-choice::before{background:radial-gradient(ellipse at var(--shine-x,65%) var(--shine-y,12%),#e7f5ff65 0%,#e7f5ff16 28%,transparent 66%),linear-gradient(115deg,#e3f4ff18,transparent 52%)}
+:root:not([data-theme='light']) .mp-page .mp-plan-deck .mp-product-choice>[data-product-subscribe]{background:linear-gradient(120deg,#819fbd45,#15283c90);color:#fff;border-color:#d9ebffae;box-shadow:inset 0 0 0 1px #ffffff20,0 0 7px #b8d7ff40}
+:root:not([data-theme='light']) .mp-page .mp-plan-deck .mp-product-choice>.mp-product-once{color:#c0cde0}
+.mp-page .mp-plan-deck .mp-product-choice[data-deck-position='current'].is-tilting{transform:translateX(-50%) translateY(-12px) translateZ(24px) rotateY(var(--hover-y,0deg)) rotateX(var(--hover-x,0deg)) scale(1.015);filter:drop-shadow(var(--shadow-x,0px) var(--shadow-y,18px) 13px #263f6040) drop-shadow(0 0 10px rgba(var(--deck-light),.35));transition:transform .18s ease-out,filter .22s ease-out}
+@media(min-width:900px) and (max-height:850px){.mp-page [data-payment-products].mp-plan-deck{height:366px}.mp-page .mp-plan-deck .mp-product-choice{width:204px;height:344px;top:16px}.mp-page .mp-plan-deck .mp-product-symbol{width:94px;height:94px;left:calc(50% - 47px);top:18px}.mp-page .mp-plan-deck strong{top:119px;font-size:19px}.mp-page .mp-plan-deck .mp-product-choice>small{top:159px}.mp-page .mp-plan-deck .mp-product-choice>.mp-benefits-link{top:215px}.mp-page .mp-plan-deck .mp-product-choice>.mp-product-once{top:252px}.mp-page .mp-plan-deck .mp-product-choice>[data-product-subscribe]{bottom:22px}.mp-page .mp-product-section:has(.mp-plan-deck){padding-top:8px;padding-bottom:8px}.mp-page[data-billing-step='1'] .mp-billing-flow{margin-top:3px;padding-top:3px}.mp-deck-controls{margin-bottom:3px}}
+@media(max-width:600px){.mp-page [data-payment-products].mp-plan-deck{height:396px}.mp-page .mp-plan-deck .mp-product-choice{width:204px;height:374px}.mp-page .mp-plan-deck strong{top:135px;font-size:19px}.mp-page .mp-plan-deck .mp-product-choice>small{top:177px}.mp-page .mp-plan-deck .mp-product-choice>.mp-benefits-link{top:235px}.mp-page .mp-plan-deck .mp-product-choice>.mp-product-once{top:274px}.mp-page[data-billing-step='1'] .mp-billing-flow>[data-payment-product-detail]{display:none}.mp-page [data-billing-next]{min-width:240px}}
+@media(prefers-reduced-motion:reduce){.mp-page .mp-plan-deck .mp-product-choice{transition:none!important}}
+
+/* The front face transmits light without exposing the cards' text behind it. */
+:root[data-theme='light'] .mp-page .mp-plan-deck .mp-product-choice[data-deck-position='current']{background:radial-gradient(ellipse at 80% 3%,#fff 0%,#f8fbff 36%,transparent 76%),linear-gradient(142deg,#f6fbff 0%,#f3f8ff 56%,color-mix(in srgb,rgb(var(--deck-light)) 9%,#f5f8ff) 100%)}
+:root:not([data-theme='light']) .mp-page .mp-plan-deck .mp-product-choice[data-deck-position='current']{background:radial-gradient(ellipse at 83% 4%,#53677d 0%,#2c3e54 34%,transparent 72%),linear-gradient(142deg,#24364b,#13253a 65%,color-mix(in srgb,rgb(var(--deck-light)) 13%,#182b40))}
+
+.mp-page .mp-plan-deck .mp-product-choice>small{display:block;width:calc(100% - 46px);max-width:calc(100% - 46px);min-width:0;white-space:normal;overflow-wrap:anywhere;text-align:center}
+
+/* Unify the face and edge illumination; preserve a fine optical seam. */
+.mp-page .mp-plan-deck .mp-product-choice{box-shadow:inset 0 1px 4px #ffffffb0,inset 0 -2px 7px rgba(var(--deck-light),.13)}
+.mp-deck-rim{stroke:rgba(var(--deck-light),.42);stroke-width:.55}
+.mp-page .mp-plan-deck .mp-product-choice>[data-product-subscribe]{background:linear-gradient(180deg,#ffffff7a,#eef3fd48);border-color:rgba(var(--deck-light),.28);box-shadow:inset 0 1px 1px #ffffffb0;font-weight:600}
+.mp-page .mp-plan-deck .mp-product-symbol{filter:drop-shadow(0 2px 1.5px #6f8ca424)}
+.mp-page .mp-plan-deck .mp-product-choice>small{line-height:1.65;letter-spacing:.015em}
+
+.mp-page .mp-plan-deck .mp-product-choice>small{text-wrap:balance;word-break:normal;overflow-wrap:normal}
+
+
+
+/* Match the approved close-up: slender crystal silhouette and restrained typography. */
+.mp-page .mp-plan-deck .mp-product-choice{width:218px;height:420px}
+.mp-page [data-payment-products].mp-plan-deck{height:446px}
+.mp-page .mp-plan-deck strong{top:148px;font-size:20px;letter-spacing:0;font-weight:800}
+.mp-page .mp-plan-deck .mp-product-choice>small{top:190px;left:28px;right:28px;width:calc(100% - 56px);max-width:calc(100% - 56px);font-size:12px;line-height:1.6;color:#64728a}
+.mp-page .mp-plan-deck .mp-product-choice>.mp-benefits-link{top:258px;font-size:12px;letter-spacing:.03em}
+.mp-page .mp-plan-deck .mp-product-choice>.mp-product-once{top:302px;font-size:11px}
+.mp-page .mp-plan-deck .mp-product-choice>[data-product-subscribe]{bottom:30px;padding:10px 8px;left:25px;right:25px}
+:root[data-theme='light'] .mp-page .mp-plan-deck .mp-product-choice[data-deck-position='current']{background:radial-gradient(ellipse at 75% 0%,#fff 0%,#f8fbff 46%,transparent 85%),linear-gradient(145deg,#f7fcff,#edf4fc 75%,#eeeefa)}
+.mp-deck-bevel{opacity:.68;stroke-width:4.2}.mp-deck-inner{stroke:#fffffff2;stroke-width:.8}
+:root:not([data-theme='light']) .mp-page .mp-plan-deck .mp-product-choice>small{color:#c0d0e3}
+@media(min-width:900px) and (max-height:850px){.mp-page .mp-plan-deck .mp-product-choice{width:190px;height:366px}.mp-page [data-payment-products].mp-plan-deck{height:388px}.mp-page .mp-plan-deck .mp-product-symbol{width:98px;height:98px;left:calc(50% - 49px);top:21px}.mp-page .mp-plan-deck strong{top:127px;font-size:18px}.mp-page .mp-plan-deck .mp-product-choice>small{top:165px;font-size:11px;left:24px;right:24px;width:calc(100% - 48px);max-width:calc(100% - 48px)}.mp-page .mp-plan-deck .mp-product-choice>.mp-benefits-link{top:223px;font-size:11px}.mp-page .mp-plan-deck .mp-product-choice>.mp-product-once{top:265px}.mp-page .mp-plan-deck .mp-product-choice>[data-product-subscribe]{bottom:24px;padding:9px 7px;left:23px;right:23px}}
+@media(max-width:600px){.mp-page .mp-plan-deck .mp-product-choice{width:200px;height:386px}.mp-page [data-payment-products].mp-plan-deck{height:410px}.mp-page .mp-plan-deck strong{top:136px;font-size:19px}.mp-page .mp-plan-deck .mp-product-choice>small{top:176px}.mp-page .mp-plan-deck .mp-product-choice>.mp-benefits-link{top:239px}.mp-page .mp-plan-deck .mp-product-choice>.mp-product-once{top:279px}.mp-page .mp-plan-deck .mp-product-choice>[data-product-subscribe]{bottom:26px}}
+
+/* Payment step navigation uses the same restrained glass controls as the deck. */
+.mp-page .mp-back-to-plans{appearance:none;display:inline-flex;align-items:center;gap:9px;min-height:40px;margin:0 0 18px;padding:9px 17px;border:1px solid color-mix(in srgb,var(--border,#d8e3ee) 85%,transparent);border-radius:999px;background:linear-gradient(130deg,color-mix(in srgb,var(--surface,#fff) 88%,transparent),color-mix(in srgb,var(--surface2,#f3f7fb) 75%,transparent));color:var(--text,#233953);font-family:inherit;font-size:13px;font-weight:500;line-height:1.4;cursor:pointer;box-shadow:inset 0 1px 0 #ffffff55,0 3px 10px #18364f08;backdrop-filter:blur(10px);transition:background .2s,border-color .2s,box-shadow .2s}
+.mp-page .mp-back-to-plans svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
+.mp-page .mp-back-to-plans:hover{border-color:var(--accent,#438fc9);color:var(--accent,#438fc9);box-shadow:inset 0 1px 0 #ffffff55,0 4px 12px #18364f12}
+.mp-page .mp-back-to-plans:focus-visible{outline:2px solid var(--accent,#438fc9);outline-offset:3px}
+.mp-page .mp-back-to-plans:active{box-shadow:inset 0 1px 4px #18364f13}
+/* Glass is lit by broad surface reflection and fine refracting seams, not star decorations. */
+.mp-deck-bevel{stroke-width:5.2;opacity:.82;filter:drop-shadow(0 1px 1px #688bb13b)}
+.mp-deck-inner{stroke:#fffffff5;stroke-width:1.15;filter:drop-shadow(0 1px 1px #6a8da64d)}
+.mp-deck-rim{stroke:rgba(var(--deck-light),.48);stroke-width:.6}
+.mp-deck-trace{stroke:#f7fcff;stroke-width:.55;stroke-dasharray:12 88;filter:drop-shadow(0 0 2px #fff) drop-shadow(0 0 5px rgba(var(--deck-light),.8))}
+:root[data-theme='light'] .mp-page .mp-plan-deck .mp-product-choice[data-deck-position='current']{background:linear-gradient(128deg,#f9fdff 0%,#f5faff 32%,#edf4fb 68%,#f3f2fc 100%);box-shadow:inset 0 0 2px #fff,inset 3px 0 8px #b7d4ec29,inset -3px -3px 10px rgba(var(--deck-light),.1)}
+.mp-page .mp-plan-deck .mp-product-choice::before{inset:8px;background:radial-gradient(ellipse at var(--shine-x,72%) var(--shine-y,6%),#fffffff0,transparent 61%),linear-gradient(136deg,#ffffff80 5%,#ffffff25 38%,transparent 57%);opacity:.9}
+:root:not([data-theme='light']) .mp-page .mp-plan-deck .mp-product-choice[data-deck-position='current']{background:linear-gradient(135deg,#53677c 0%,#26394e 34%,#15283c 70%,#29344e 100%);box-shadow:inset 0 0 3px #c7e7ff60,inset 3px 0 9px #bbd8f524}
+:root:not([data-theme='light']) .mp-page .mp-plan-deck .mp-product-choice::before{background:radial-gradient(ellipse at var(--shine-x,72%) var(--shine-y,6%),#f3fbff6b,transparent 64%),linear-gradient(136deg,#dceeff20,transparent 58%);opacity:.8}
+
+/* Cast the glass silhouette shadow outside the clipped card surfaces. */
+.mp-page [data-payment-products].mp-plan-deck{filter:drop-shadow(0 8px 7px #4a658b27)}
+.mp-deck-bevel{stroke-width:6;opacity:.8}
+.mp-page .mp-plan-deck strong{font-weight:900}
+:root:not([data-theme='light']) .mp-page [data-payment-products].mp-plan-deck{filter:drop-shadow(0 9px 8px #02091660)}
+
+/* Eight separate optical faces, each lit according to its surface direction. */
+.mp-glass-facets{filter:drop-shadow(0 1px .6px #4c6b8c45)}
+.mp-deck-bevel{stroke-width:.65;opacity:.8;filter:none}
+.mp-deck-inner{stroke-width:.75;stroke:#ffffffdf;filter:drop-shadow(0 1px .7px #5c7d9c70)}
+.mp-page .mp-plan-deck .mp-product-choice{clip-path:polygon(12px 0,calc(100% - 12px) 0,100% 12px,100% calc(100% - 12px),calc(100% - 12px) 100%,12px 100%,0 calc(100% - 12px),0 12px)}
+.mp-page .mp-plan-deck .mp-product-choice::before{background:radial-gradient(ellipse at var(--shine-x,75%) var(--shine-y,8%),#ffffffb3,transparent 59%),linear-gradient(130deg,#fff5,transparent 43%,#b3c9e211 70%);opacity:.75}
+:root[data-theme='light'] .mp-page .mp-plan-deck .mp-product-choice[data-deck-position='current']{background:linear-gradient(128deg,#f6fbff 0%,#eef5fc 38%,#f7fbff 61%,#e7edf9 100%)}
+.mp-page .mp-plan-deck .mp-product-choice>[data-product-subscribe]{background:linear-gradient(180deg,#ffffff6b,#e6eafa38);border-color:#b6c4df8c;box-shadow:inset 0 1px 1px #fff9,0 2px 3px #677b9c13;font-weight:700}
+@media(min-width:900px) and (max-height:850px){.mp-page .mp-plan-deck .mp-product-symbol{width:94px;height:94px;left:calc(50% - 47px);top:24px}.mp-page .mp-plan-deck strong{top:126px;font-size:19px;letter-spacing:-.02em}.mp-page .mp-plan-deck .mp-product-choice>small{top:166px;font-size:12px;line-height:1.5;left:22px;right:22px;width:calc(100% - 44px);max-width:calc(100% - 44px)}.mp-page .mp-plan-deck .mp-product-choice>.mp-benefits-link{top:224px;font-size:12px}.mp-page .mp-plan-deck .mp-product-choice>.mp-product-once{top:264px;font-size:12px}.mp-page .mp-plan-deck .mp-product-choice>[data-product-subscribe]{bottom:24px;font-size:13px;padding:9px 6px;left:19px;right:19px}}
+
+.mp-glass-facets polygon:nth-child(even){opacity:.52}
+.mp-glass-facets polygon:nth-child(odd){opacity:.85}
+.mp-page [data-payment-products].mp-plan-deck{filter:drop-shadow(0 8px 7px #4a658b36) drop-shadow(0 0 3px #d6e7ff8a)}
+
+/* Reference color: neutral milk-white face; ice-blue upper-left, lavender lower-right seam. */
+:root[data-theme='light'] .mp-page .mp-plan-deck .mp-product-choice[data-deck-position='current']{background:linear-gradient(136deg,#fcfdff 0%,#f5f7fb 45%,#f1f3f9 75%,#efeff7 100%);box-shadow:inset 0 1px 3px #fff,inset 2px 0 6px #d0e2ee35,inset -2px -2px 8px #c6bfe42b}
+:root[data-theme='light'] .mp-page .mp-plan-deck .mp-product-choice::before{background:radial-gradient(ellipse at var(--shine-x,76%) var(--shine-y,6%),#ffffffe0 0%,#ffffff66 28%,transparent 63%);opacity:.8}
+.mp-deck-rim{stroke:#b2bed58c;stroke-width:.6}
+.mp-deck-inner{stroke:#ffffffeb;stroke-width:.8;filter:drop-shadow(0 1px .7px #8294af66)}
+.mp-page .mp-plan-deck .mp-product-choice[data-deck-position='current']::after{display:block!important;content:'';position:absolute;z-index:4;left:auto;bottom:auto;right:3px;top:5px;width:48px;height:13px;padding:0;border:0;border-radius:50%;mask:none;background:radial-gradient(ellipse,#fff 0%,#ffffffed 12%,#ffffff70 35%,transparent 73%);filter:blur(1px) drop-shadow(0 0 5px #fff);transform:rotate(32deg);animation:none;pointer-events:none}
+
+
+
+:root[data-theme='light'] .mp-page .mp-plan-deck .mp-product-choice>[data-product-subscribe]{background:linear-gradient(180deg,#fafbffbb,#eceff75c);border-color:#c4c9df99}
+
+/* Match the reference's concentrated color ratio on the right and lower optical faces. */
+.mp-glass-facets polygon:nth-child(even),.mp-glass-facets polygon:nth-child(odd){opacity:1}
+
+
+
+.mp-deck-rim{stroke:rgba(var(--deck-light),.58);stroke-width:.7}
+.mp-deck-inner{filter:drop-shadow(0 1px .7px rgba(var(--deck-light),.6))}
+.mp-page .mp-plan-deck .mp-product-choice[data-deck-position='current']{box-shadow:inset 0 1px 3px #fff,inset 2px 0 6px #d0e2ee35,inset -3px -3px 10px rgba(var(--deck-light),.14)}
+.mp-page .mp-plan-deck .mp-product-choice[data-deck-position='neighbor'] .mp-glass-facets{opacity:.78}
+
+/* Refraction varies across each face; never render a flat solid-color frame. */
+.mp-glass-facets polygon:nth-child(n){opacity:.92}
+.mp-glass-facets{filter:drop-shadow(0 .5px .5px #54749138)}
+.mp-deck-inner{stroke:#ffffffe8;stroke-width:.65;filter:drop-shadow(0 1px 1px rgba(var(--deck-light),.4))}
+.mp-deck-rim{stroke:rgba(var(--deck-light),.36);stroke-width:.55}
+
+/* Visible interior gradient and a slightly thicker optical bevel, as in the approved card. */
+:root[data-theme='light'] .mp-page .mp-plan-deck .mp-product-choice[data-deck-position='current']{background:linear-gradient(138deg,#fbfdff 0%,#f3f8ff 25%,#e8eef9 56%,color-mix(in srgb,rgb(var(--deck-light)) 14%,#edf1fa) 82%,#f5f4fc 100%);box-shadow:inset 0 2px 5px #fff,inset 3px 0 9px #c3d8ee40,inset -4px -5px 13px rgba(var(--deck-light),.19)}
+:root[data-theme='light'] .mp-page .mp-plan-deck .mp-product-choice::before{inset:10px;background:radial-gradient(ellipse at var(--shine-x,72%) var(--shine-y,8%),#ffffffde 0%,#ffffff52 24%,transparent 61%),linear-gradient(128deg,#ffffff5c 0%,transparent 46%,rgba(var(--deck-light),.07) 100%);opacity:.76}
+.mp-glass-facets polygon:nth-child(n){opacity:1}
+.mp-deck-inner{stroke:#fffffff0;stroke-width:1;filter:drop-shadow(0 1px 1px rgba(var(--deck-light),.55))}
+:root:not([data-theme='light']) .mp-page .mp-plan-deck .mp-product-choice[data-deck-position='current']{background:linear-gradient(138deg,#536a83 0%,#354c66 27%,#20334c 58%,color-mix(in srgb,rgb(var(--deck-light)) 22%,#192d44) 84%,#303b56 100%)}
+
+/* Approved face color order: cool blue, luminous white, then the plan's violet/color. */
+:root[data-theme='light'] .mp-page .mp-plan-deck .mp-product-choice[data-deck-position='current']{background:linear-gradient(132deg,#d9eafb 0%,#edf5fd 22%,#fff 43%,#f9faff 57%,color-mix(in srgb,rgb(var(--deck-light)) 19%,#f0f2fc) 83%,color-mix(in srgb,rgb(var(--deck-light)) 27%,#f4f3fb) 100%)}
+:root[data-theme='light'] .mp-page .mp-plan-deck .mp-product-choice::before{background:radial-gradient(ellipse at var(--shine-x,72%) var(--shine-y,8%),#ffffffa8 0%,transparent 56%);opacity:.65}
+
+/* Slightly thicker bevel and translucent glass; blur keeps the rear cards' copy unreadable. */
+:root[data-theme='light'] .mp-page .mp-plan-deck .mp-product-choice[data-deck-position='current']{background:linear-gradient(132deg,rgba(217,234,251,.89) 0%,rgba(237,245,253,.86) 22%,rgba(255,255,255,.92) 43%,rgba(249,250,255,.88) 57%,color-mix(in srgb,rgb(var(--deck-light)) 16%,#f0f2fcd9) 83%,color-mix(in srgb,rgb(var(--deck-light)) 23%,#f4f3fbdb) 100%);backdrop-filter:blur(24px) saturate(1.18);-webkit-backdrop-filter:blur(24px) saturate(1.18);box-shadow:inset 0 2px 5px #ffffffd9,inset 4px 0 10px #d2e8f87a,inset -4px -4px 12px rgba(var(--deck-light),.2)}
+.mp-deck-inner{stroke:#fffffff5;stroke-width:1.1;filter:drop-shadow(0 1px 1px rgba(var(--deck-light),.55))}
+:root:not([data-theme='light']) .mp-page .mp-plan-deck .mp-product-choice[data-deck-position='current']{background:linear-gradient(138deg,#536a83db 0%,#354c66e8 27%,#20334ce8 58%,color-mix(in srgb,rgb(var(--deck-light)) 22%,#192d44e8) 84%,#303b56db 100%);backdrop-filter:blur(24px) saturate(1.18);-webkit-backdrop-filter:blur(24px) saturate(1.18)}
