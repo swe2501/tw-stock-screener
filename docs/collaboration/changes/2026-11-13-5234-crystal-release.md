@@ -9,3 +9,5 @@
 驗證：A 卡牌深淺色與指標傾斜／回正、右上喇叭、SVG 箭頭、減少動態偏好、同頁下一步通過；換牌音效無自動播放、與過場同時收尾、靜音保留、快速切換不重疊通過。前次本機完整網站桌機手機及互動預覽測試已通過，無新增 API，部署入口 12/12。部署後依 4 再 fetch 核對本機及兩遠端 ref。
 
 正式商品相容 PR #2 的分支保護與金流串接不在 5234 權限內，本次不改 prod／Auth／共享資料庫。
+
+UAT URL verification correction: the a5be1eaf Git/Vercel success status did not establish that the stable UAT alias served the release. Direct browser inspection of /assets/member-plan-deck.js?v=4-local-tilt still returned the prior text sound control and no crystal frame. Retrigger the UAT branch with a distinct commit, then verify the stable alias resource and rendered page before reporting completion. No application behavior or production settings changed.
