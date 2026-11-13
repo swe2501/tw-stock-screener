@@ -486,6 +486,7 @@
     if(!box.isConnected||run!==host._productLoad)return;
     const catalog=window.AcademyMemberCatalog?.get();const products=(catalog?.products||[]).filter(p=>p.active!==false);
     if(!products.length){
+      host._deckAbort?.abort();box.classList.remove('mp-plan-deck');box.removeAttribute('tabindex');box.parentElement.querySelector('.mp-deck-controls')?.remove();
       host._billingProduct=null;host._syncProductChoice=null;host.querySelector('[data-payment-action]').disabled=true;
       host._resetBillingStep?.();
       box.innerHTML='<p role="status">'+(catalog?'目前沒有上架中的會員方案。':'會員方案暫時無法載入，請重新載入後再選擇。')+'</p><button type="button" class="mc-secondary-text" data-products-retry>重新載入方案</button>';
@@ -511,7 +512,7 @@
     box.onchange=e=>{const p=products.find(p=>p.id===e.target.value);if(p){selected=p;sync();host._updateBillingStep?.();}};
     box.onclick=e=>{const detail=e.target.closest('[data-product-benefits]');if(detail){const product=products.find(p=>p.id===detail.dataset.productBenefits);if(product)window.AcademyBillingBenefits.open(product,detail);return;}const button=e.target.closest('[data-product-subscribe],[data-product-once]');if(!button)return;const p=products.find(p=>p.id===(button.dataset.productSubscribe||button.dataset.productOnce));if(!p)return;selected=p;box.querySelectorAll('[name=billing-product]').forEach(input=>input.checked=input.value===p.id);sync();host._selectBillingMode?.(host._billingDemo?.mode||(button.hasAttribute('data-product-once')?'one_time':'monthly'));host._updateBillingStep?.();};
     host._syncProductChoice=sync;sync();host._updateBillingStep?.();
-    host._labelBillingPlans?.();
+    host._labelBillingPlans?.();window.AcademyPlanDeck?.mount(host);
   }
 
   function mountBillingOverview(host){
@@ -544,9 +545,10 @@
     if(!['monthly','one_time'].includes(mode))mode='monthly';
     const section=host.querySelector('.mp-product-section'),checkout=host.querySelector('.mp-checkout');
     section.before(host.querySelector('.mp-progress'));
+    const benefitsBack=host.querySelector('.mb-billing-intro [data-mb-back]');if(benefitsBack)host.querySelector('.mp-heading').append(benefitsBack);
     const controls=document.createElement('div');controls.className='mp-billing-flow';
     controls.innerHTML='<fieldset><legend>購買方式</legend><label><input type="radio" name="billing-mode" value="monthly">每月訂閱 <small>每月自動續扣，可取消下期續訂</small></label><label><input type="radio" name="billing-mode" value="one_time">單次購買 <small>只支付本次期間，到期不自動續扣</small></label></fieldset><p>升級：付款成功後立即生效，按本期剩餘時間補差額；到期日不變。降級：下期生效，本期權益保留。取消續訂：用到本期結束。超出新方案的筆記與自選資料會保留，新增前需整理至額度內。</p><button type="button" data-billing-next>下一步：選擇付款方式 →</button>';
-    section.append(controls);
+    section.append(controls);const selectionCopy=host.querySelector('[data-payment-product-detail]');if(selectionCopy)controls.prepend(selectionCopy);
     const back=document.createElement('button');back.type='button';back.className='mc-secondary-text';back.textContent='← 返回選擇方案';checkout.before(back);
     const review=document.createElement('section');review.className='mp-billing-review';review.hidden=true;checkout.after(review);
     host._billingAbort?.abort();host._billingAbort=new AbortController();
@@ -565,6 +567,7 @@
     },{signal:host._billingAbort.signal});
     host._paintBillingDemo=demoPaint;demoPaint();
     const paint=()=>{
+      host.querySelector('.mp-page').dataset.billingStep=String(step);
       section.hidden=step!==1;checkout.hidden=step!==2;back.hidden=step===1;review.hidden=step!==3;
       host.querySelectorAll('.mp-progress span').forEach((s,i)=>{s.classList.toggle('is-current',i===step-1);if(i===step-1)s.setAttribute('aria-current','step');else s.removeAttribute('aria-current');});
       controls.querySelectorAll('[name=billing-mode]').forEach(r=>r.checked=r.value===mode);
