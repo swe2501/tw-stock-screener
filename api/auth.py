@@ -385,6 +385,8 @@ class handler(BaseHTTPRequestHandler):
         action = body.get("action", "")
         from lib import member_devices
         device_token = (self.headers.get('Authorization') or '').removeprefix('Bearer ').strip()
+        if action == 'member_device_protocol':
+            return self._json(200, {'device_protocol': 1, 'guard_ready': member_devices.enabled()})
         if action == 'member_devices':
             return self._json(*member_devices.manage(device_token, body))
         if action not in ('refresh', 'logout', 'membership_catalog') and device_token:
@@ -495,14 +497,15 @@ class handler(BaseHTTPRequestHandler):
                 desired = body.get('enabled') if action == 'admin_device_policy_save' else None
                 if action == 'admin_device_policy_save' and type(desired) is not bool:
                     return self._json(400, {'error': '請設定裝置限制開關'})
-                if desired and not member_devices.enabled():
-                    return self._json(409, {'error': '網站伺服器尚未設定裝置驗證，無法啟用'})
+                live_ready = member_devices.rollout_ready()
+                if desired and not live_ready:
+                    return self._json(409, {'error': '正式站尚未更新裝置驗證；共用資料庫限制保持關閉，避免影響既有會員'})
                 status, result = _rest('/rpc/admin_member_device_policy', 'POST', {'p_enabled': desired})
                 if status != 200:
                     return self._json(503, {'error': '裝置限制尚未準備完成，請先完成資料庫與存取閘道部署'})
                 if desired is not None:
                     _audit(admin_email, action, None, {'enabled': desired})
-                return self._json(200, dict(result, server_ready=member_devices.enabled()))
+                return self._json(200, dict(result, server_ready=live_ready))
 
             if action in ('admin_commerce_get', 'admin_commerce_save'):
                 from lib.member_commerce import handle_admin

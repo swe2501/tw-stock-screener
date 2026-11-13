@@ -30,6 +30,8 @@ create function public.member_device_cap(u uuid) returns integer
 language plpgsql stable security definer set search_path='' as $$
 declare cfg jsonb; cap integer:=1; n integer;
 begin
+ -- Chief navigator: server-owned account ID; never email, nickname or editable metadata.
+ if u='93f16c68-d103-4092-b938-93e34012d3c1'::uuid then return 0; end if;
  select value::jsonb into cfg from public.admin_settings where key='member_commerce_v1';
  select max(coalesce((p->>'device_limit')::int,1)) into n
  from jsonb_array_elements(coalesce(cfg->'products','[]')) p where p->>'tier'='free';
@@ -74,7 +76,7 @@ begin
   on conflict(session_id) do update set revoked=false,seen_at=now(),admitted_at=now(),label=excluded.label;
  elsif p_action='claim' and live then
   if not exists(select 1 from public.member_device_leases where session_id=s and revoked) then
-   if exists(select 1 from public.member_device_leases where session_id=s and user_id=u and not revoked and seen_at>now()-interval '5 minutes')
+   if lim=0 or exists(select 1 from public.member_device_leases where session_id=s and user_id=u and not revoked and seen_at>now()-interval '5 minutes')
     or (select count(*) from public.member_device_leases d join auth.sessions a on a.id=d.session_id and a.user_id=u
       where d.user_id=u and not d.revoked and d.seen_at>now()-interval '5 minutes' and (a.not_after is null or a.not_after>now()))<lim then
     insert into public.member_device_leases(session_id,user_id,label) values(s,u,left(p_label,80))
@@ -87,11 +89,11 @@ begin
   select d.session_id,row_number() over(order by d.admitted_at,d.session_id) n
   from public.member_device_leases d join auth.sessions a on a.id=d.session_id and a.user_id=u
   where d.user_id=u and not d.revoked and d.seen_at>now()-interval '5 minutes' and (a.not_after is null or a.not_after>now())
- ) admitted where session_id=s and n<=lim) into ok;
+ ) admitted where session_id=s and (lim=0 or n<=lim)) into ok;
  select coalesce(jsonb_agg(jsonb_build_object('id',d.session_id,'label',d.label,'last_seen_at',d.seen_at,'current',d.session_id=s) order by d.admitted_at),'[]') into records
  from public.member_device_leases d join auth.sessions a on a.id=d.session_id and a.user_id=u
  where d.user_id=u and not d.revoked and d.seen_at>now()-interval '5 minutes' and (a.not_after is null or a.not_after>now());
- return jsonb_build_object('enabled',live,'allowed',not live or ok,'limit',lim,'devices',records,'server_time',now(),'idle_seconds',300);
+ return jsonb_build_object('enabled',live,'allowed',not live or ok,'limit',lim,'unlimited',lim=0,'devices',records,'server_time',now(),'idle_seconds',300);
 end $$;
 
 create function public.admin_member_device_policy(p_enabled boolean default null) returns jsonb
@@ -122,7 +124,7 @@ begin
   select d.session_id,row_number() over(order by d.admitted_at,d.session_id) n
   from public.member_device_leases d join auth.sessions a on a.id=d.session_id and a.user_id=u
   where d.user_id=u and not d.revoked and d.seen_at>now()-interval '5 minutes' and (a.not_after is null or a.not_after>now())
- ) admitted where session_id=s and n<=public.member_device_cap(u)) into ok;
+ ) admitted where session_id=s and (public.member_device_cap(u)=0 or n<=public.member_device_cap(u))) into ok;
  if not ok then raise sqlstate 'PT409' using message='MEMBER_DEVICE_LIMIT',detail='請管理登入裝置，或選擇在這台繼續使用。'; end if;
 end $$;
 

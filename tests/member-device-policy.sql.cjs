@@ -94,6 +94,16 @@ const fs=require('node:fs'),assert=require('node:assert/strict'),{PGlite}=requir
  await db.exec('reset role');await db.query('select public.admin_member_device_policy(false)');
  await as(storageSession,other);assert.equal((await db.query('select * from storage.objects')).rows.length,1,'disabled still respects original ownership policy');
  await as(ids[0],user);assert.equal((await db.query('select * from storage.objects')).rows.length,0,'ownership boundary preserved');
- console.log('PASS device policy: 1/1/2/3, disabled rollout, slot reuse, denial, takeover, revoked JWT, idle expiry, Auth expiry, owner isolation, privileges, paid snapshot and expiry.');
+
+ // Chief account ID alone grants unlimited slots; revocation still works.
+ await db.exec('reset role');await db.query('select public.admin_member_device_policy(true)');
+ const chief='93f16c68-d103-4092-b938-93e34012d3c1';await db.query('insert into auth.users values($1)',[chief]);
+ const chiefSessions=Array.from({length:12},(_,i)=>`66666666-6666-4666-8666-${String(i+1).padStart(12,'0')}`);
+ for(const id of chiefSessions){await db.exec('reset role');await db.query('insert into auth.sessions values($1,$2,null)',[id,chief]);await as(id,chief);const d=(await db.query("select public.member_device_manage('claim') d")).rows[0].d;assert.equal(d.unlimited,true);assert.equal(d.allowed,true);assert.equal(d.limit,0);}
+ assert.equal((await db.query("select public.member_device_manage('list') d")).rows[0].d.devices.length,12);
+ await db.query("select public.member_device_manage('revoke',$1)",[chiefSessions[0]]);
+ await as(chiefSessions[0],chief);await assert.rejects(db.query('select public.member_device_require()'),/MEMBER_DEVICE_LIMIT/);
+ await as(storageSession,other);const regular=(await db.query("select public.member_device_manage('status') d")).rows[0].d;assert.equal(regular.limit,1);assert.equal(regular.unlimited,false);
+ console.log('PASS device policy: 1/1/2/3, disabled rollout, slot reuse, denial, takeover, revoked JWT, idle expiry, Auth expiry, owner isolation, privileges, paid snapshot and expiry; chief 12 unlimited sessions with revocation.');
  }finally{await db.close();}})().catch(e=>{console.error(e);process.exitCode=1;});
 

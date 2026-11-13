@@ -21,6 +21,17 @@ class DeviceTests(unittest.TestCase):
             with patch.object(D, 'rpc', return_value=(200, None)):
                 self.assertIsNone(D.check('token'))
 
+    def test_shared_db_activation_waits_for_live_site(self):
+        with patch.dict(os.environ, {'MEMBER_DEVICE_POLICY_ENABLED': 'true'}):
+            for result, expected in [({'device_protocol': 1, 'guard_ready': True}, True),
+                                     ({'device_protocol': 1, 'guard_ready': False}, False),
+                                     ({'error': 'old API'}, False)]:
+                response = io.BytesIO(json.dumps(result).encode())
+                with patch('urllib.request.urlopen', return_value=response):
+                    self.assertEqual(D.rollout_ready(), expected)
+            with patch('urllib.request.urlopen', side_effect=TimeoutError):
+                self.assertFalse(D.rollout_ready())
+
     def test_input_and_catalog(self):
         with patch.dict(os.environ, {'MEMBER_DEVICE_POLICY_ENABLED': 'true'}):
             self.assertEqual(D.manage('token', {'operation': 'revoke', 'target': 'bad'})[0], 400)

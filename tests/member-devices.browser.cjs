@@ -20,6 +20,10 @@ const fs=require('node:fs'),assert=require('node:assert/strict'),{chromium}=requ
   await page.locator('[data-device-revoke]').click();await page.locator('[data-device-notice]').waitFor();
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
   await page.screenshot({path:`artifacts/member-commerce/devices-${width}.png`,fullPage:true});
+  state={...state,allowed:true,unlimited:true,limit:0,devices:[]};await page.evaluate(()=>AcademyMemberDevices.refresh('status'));assert.match(await page.locator('[data-device-manager]').innerText(),/首席領航員.*不限裝置數/s);
+  await page.route('https://device.fixture/api/auth',r=>r.fulfill({status:401,json:{error:'登入已到期'}}));await page.evaluate(()=>AcademyMemberDevices.refresh('status').catch(()=>{}));
+  assert.equal(await page.evaluate(()=>fetch('/rest/v1/member_notes',{headers:{Authorization:'Bearer fixture-token'}}).then(r=>r.status)),401,'expired admission preserves 401 so existing Auth refresh can retry');
+  assert.equal(await page.locator('[data-device-notice]').count(),0,'outage/session expiry does not display a false limit');
   // Before rollout an unavailable/old endpoint must not disable the legacy site.
   await page.route('https://device.fixture/api/auth',r=>r.fulfill({status:503,json:{error:'尚未部署'}}));
   await page.evaluate(()=>{localStorage.setItem('sb_token','new-token');dispatchEvent(new Event('academy-auth-changed'));});

@@ -38,3 +38,6 @@
 
 ## 2026-11-13 裝置 SQL 已部署、全域仍關閉
 使用者明確核准後，Taiwan stock2 裝置 policy/gateway/storage 已在同一交易部署並真實驗證 PASS，ready/gate_ready=true、enabled=false；測試商品資料全部 rollback。公開 policy RPC200，匿名表存取401。未發布本批網站/API，未設定伺服器裝置旗標，未切換舊 Auth hook，未開全域限制；共用 DB 在正式站仍舊版時不可直接開啟。下一步須收到發布指令，處理網站/API部署與所有現有客戶端相容，再做多瀏覽器實測。詳見 member-device-policy 交接文件最新節。
+
+## 2026-11-13 首席不限額與程式整合
+首席領航員依固定伺服器帳號ID不限裝置（非一般vip）；DB已真實套用與確認，free=1不變，總開關仍false。12台首席與撤回測試通過。Supabase舊member_device_limit_hook真實狀態DISABLED。網站與新API已整合最新UAT功能樹，88項相關Python測試、SQL與整站深淺色桌手機回歸通過。正式站目前舊API400；新增正式站protocol握手，正式站未更新時後台不能開共用DB全域限制，避免影響現有會員。本批不推prod，待UAT部署驗證結果。

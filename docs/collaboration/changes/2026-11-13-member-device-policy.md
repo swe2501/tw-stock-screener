@@ -58,3 +58,15 @@ Storage／Realtime 不會執行 Data API pre-request；目前這個閘道不能�
 以網站既有公開 anon key 實際 HTTP 驗證：`/rpc/member_device_policy` 200 且 ready=true/enabled=false；匿名讀取 member_device_leases 為 401（拒絕）。沒有記錄金鑰或會員識別資料。
 
 **啟用剩餘條件**：網站/API 仍是尚未發布的本機變更；需要依專案發布指令整合並部署，設定網站端 MEMBER_DEVICE_POLICY_ENABLED，並確保所有使用共用資料庫的正式站／既有客戶端能取得 lease。只有 UAT 更新而正式站仍舊版時不能開共用 DB 全域開關。仍須確認舊 Auth hook 的掛載狀態、在正確切換時處理固定兩台規則，並完成真正多瀏覽器工作階段的端到端驗證。資料庫權限／快照測試通過不等於這些條件已完成。
+
+## 首席不限額與發布前保護
+
+使用者最新指定「首席領航員就不限制」。已核對現行 special title：首席是 qa5518556130 對應的既有伺服器帳號 ID；一般先見領航員仍為 vip 商品 3 台。SQL 以固定且伺服器擁有的帳號 ID 判斷（不信任 email、暱稱或 user_metadata），cap=0 為僅供首席使用的不限額 sentinel；一般後台商品仍只接受 1–10 台。首席仍需有效 Auth session、取得 lease、遵守明確移除／撤回，不略過登入驗證。
+
+已在 Taiwan stock2 套用 `member-device-chief-unlimited.sql` 的保守函式升級：不修改 grants、不改開關、不改其他帳號權益。真實驗證 chief_unlimited=true、ordinary_free_limit=1、enabled=false。隔離測試可同時取得 12 個首席名額，其他帳號仍受原上限限制，移除首席裝置仍立即失去存取權；舊版 SQL 升級與全新安裝皆通過。
+
+正式站目前實際呼叫 member_devices 回 400（email/password required），代表尚無新裝置 API。UAT deployment 受 Vercel Authentication 保護。網站配置將新 API 部署的 MEMBER_DEVICE_POLICY_ENABLED 設為 true，但全域 DB 開關仍不會自動開啟。
+
+新增公開、不含身分資料的 `member_device_protocol` readiness marker。管理端開啟全域限制前，伺服器會核對正式站已提供 version=1 且 guard_ready=true；正式站尚為舊版或暫不可達時拒絕開啟，關閉操作不受影響。這避免只更新 UAT 就誤擋共用資料庫的舊正式站會員。正式站程式仍依 repo 的 prod 車道規則由既有正式發布流程處理，本次不推 prod。
+
+已在 Supabase Auth Hooks 真實頁面確認 `member_device_limit_hook` 狀態為 DISABLED，未修改該設定；沒有舊固定兩台規則同時阻擋首席。額外修正：裝置續租遇到 JWT 到期時保留401，讓既有 Auth refresh 重試，不誤報裝置超限；瀏覽器回歸已通過。
