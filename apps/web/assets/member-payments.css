@@ -523,7 +523,7 @@
 :root:not([data-theme='light']) .mp-page .mp-plan-deck .mp-product-choice[data-deck-position='current']{background:linear-gradient(138deg,#536a83db 0%,#354c66e8 27%,#20334ce8 58%,color-mix(in srgb,rgb(var(--deck-light)) 22%,#192d44e8) 84%,#303b56db 100%);backdrop-filter:blur(24px) saturate(1.18);-webkit-backdrop-filter:blur(24px) saturate(1.18)}
 
 /* Contactless mark aligns with the card-number row, as approved in the reference. */
-.mp-page .mp-card-front .mp-card-contactless{right:6.5%;top:49%;transform:translateY(-50%);width:20px;height:20px;opacity:.85;pointer-events:none}
+.mp-page .mp-card-front .mp-card-contactless{right:4.8%;top:49%;transform:translateY(-50%);width:20px;height:20px;opacity:.85;pointer-events:none}
 .mp-page .mp-card-front .mp-card-contactless svg{width:20px;height:20px}
 .mp-page .mp-card-front .mp-card-issuer{right:25px!important}
 @media(max-width:600px){.mp-page .mp-card-front .mp-card-contactless{width:18px;height:18px}.mp-page .mp-card-front .mp-card-contactless svg{width:18px;height:18px}}
