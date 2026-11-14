@@ -168,7 +168,12 @@
         const mini=await requests.get(mk);
         if (mini && mini.date===date && Array.isArray(mini.data) && mini.data.length>=2) { payload={name:mini.source||'',data:mini.data,prev:mini.prev}; fromMini=true; }
       }
-      if (!payload && code === 'SGX') return unavailable(el, date.slice(5).replace('-', '/') + ' 分時待更新');  // 後端 /api/chart 沒有富台指分時
+      if (!payload && code === 'SGX') {  // 後端 /api/chart 沒有富台指分時
+        // 2026-11-15 玩股網一分鐘線只留「目前交易日」，14:00 換日後就抓不回來：過了當天 14:00 還沒有就是「未記錄」，不再顯示「待更新」
+        const tpe=new Date(Date.now()+8*3600e3), today=tpe.toISOString().slice(0,10);
+        const missed=date<today || (date===today && tpe.getUTCHours()>=14);
+        return unavailable(el, date.slice(5).replace('-', '/') + (missed ? ' 分時未記錄' : ' 分時待更新'));
+      }
       if (!payload) {
         const requestKey=apiCode+'|'+date;
         if (!requests.has(requestKey)) requests.set(requestKey, fetch((window.__API || '') + '/api/chart?code=' + encodeURIComponent(apiCode) + '&range=5d&interval=5m'+(code==='VIX'?'&date='+encodeURIComponent(date):''))
