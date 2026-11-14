@@ -12,10 +12,9 @@ from pathlib import Path
 
 OUT = Path(__file__).resolve().parent / "all_stocks.txt"
 
-# TWSE 部分端點在 Windows Python 有憑證問題，跳過驗證
+# TWSE 憑證缺 Subject Key Identifier：只關 X509 嚴格模式，仍驗證憑證鏈與主機名
 _SSL_CTX = ssl.create_default_context()
-_SSL_CTX.check_hostname = False
-_SSL_CTX.verify_mode = ssl.CERT_NONE
+_SSL_CTX.verify_flags &= ~ssl.VERIFY_X509_STRICT
 
 
 def _get(url: str) -> list | dict | None:

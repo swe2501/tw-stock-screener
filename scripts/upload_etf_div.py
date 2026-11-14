@@ -26,7 +26,7 @@ import broker_signals as bs  # noqa: E402
 if sys.stdout and hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(errors="replace")
 
-_CTX = ssl._create_unverified_context()
+_CTX = ssl.create_default_context(); _CTX.verify_flags &= ~ssl.VERIFY_X509_STRICT
 _ROC = re.compile(r"^(\d+)年(\d+)月(\d+)日$")
 
 

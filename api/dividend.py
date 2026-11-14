@@ -4,10 +4,9 @@ import json, ssl, time, urllib.parse, urllib.request
 # TWSE 除權除息預告表（TWT48U_ALL），約 84KB，全市場一次抓
 TWSE_URL = "https://openapi.twse.com.tw/v1/exchangeReport/TWT48U_ALL"
 
-# TWSE 憑證缺 Subject Key Identifier，部分環境驗證會失敗，跳過驗證
+# TWSE 憑證缺 Subject Key Identifier：只關 X509 嚴格模式，仍驗證憑證鏈與主機名
 _SSL_CTX = ssl.create_default_context()
-_SSL_CTX.check_hostname = False
-_SSL_CTX.verify_mode = ssl.CERT_NONE
+_SSL_CTX.verify_flags &= ~ssl.VERIFY_X509_STRICT
 
 # 模組層快取（warm instance 之間共用），除權息公告一天更新一次，快取 6 小時
 _cache = {"ts": 0.0, "by_code": {}}

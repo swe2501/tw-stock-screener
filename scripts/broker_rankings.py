@@ -65,7 +65,7 @@ def _stock_names():
     if _NAME_CACHE:
         return _NAME_CACHE
     import json as _json, ssl as _ssl, urllib.request as _u
-    ctx = _ssl.create_default_context(); ctx.check_hostname = False; ctx.verify_mode = _ssl.CERT_NONE
+    ctx = _ssl.create_default_context(); ctx.verify_flags &= ~_ssl.VERIFY_X509_STRICT
     try:
         req = _u.Request("https://openapi.twse.com.tw/v1/opendata/t187ap03_L",
                          headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"})

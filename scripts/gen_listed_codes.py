@@ -22,7 +22,7 @@ if sys.stdout and hasattr(sys.stdout, "reconfigure"):
 URL = "https://openapi.twse.com.tw/v1/opendata/t187ap03_L"
 URL_OTC = "https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap03_O"
 OUT = Path(__file__).resolve().parent / "tw_listed_codes.json"
-_CTX = ssl.create_default_context(); _CTX.check_hostname = False; _CTX.verify_mode = ssl.CERT_NONE
+_CTX = ssl.create_default_context(); _CTX.verify_flags &= ~ssl.VERIFY_X509_STRICT
 
 
 def _get(url, retries=3):

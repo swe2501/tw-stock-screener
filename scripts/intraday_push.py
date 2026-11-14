@@ -264,7 +264,7 @@ def _record_fx_index(env):
         now = _now()
         if not (9 * 60 <= now.hour * 60 + now.minute <= 16 * 60):  # 僅台北匯市盤時段（含 16:00 收盤那筆）
             return
-        ctx = _ssl.create_default_context(); ctx.check_hostname = False; ctx.verify_mode = _ssl.CERT_NONE
+        ctx = _ssl.create_default_context(); ctx.verify_flags &= ~_ssl.VERIFY_X509_STRICT
         raw = _ur.urlopen(_ur.Request(
             "https://query1.finance.yahoo.com/v8/finance/chart/TWD=X?range=1d&interval=5m",
             headers={"User-Agent": "Mozilla/5.0"}), timeout=20, context=ctx).read()

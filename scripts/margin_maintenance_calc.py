@@ -24,13 +24,15 @@ from datetime import datetime, timezone, timedelta
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "api"))
-ssl._create_default_https_context = ssl._create_unverified_context   # 本機連 TWSE 主站
+def _verified_ctx(*_a, **_k):
+    c = ssl.create_default_context(); c.verify_flags &= ~ssl.VERIFY_X509_STRICT; return c
+ssl._create_default_https_context = _verified_ctx  # TWSE/TPEx 憑證缺 SKI：只關 X509 嚴格模式，仍驗證憑證鏈與主機名
 import broker_signals as bs
 import screen as _screen        # 重用已驗證的全市場收盤解析（STOCK_DAY_ALL，含 ETF）
 if sys.stdout and hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(errors="replace")
 
-_CTX = ssl.create_default_context(); _CTX.check_hostname = False; _CTX.verify_mode = ssl.CERT_NONE
+_CTX = ssl.create_default_context(); _CTX.verify_flags &= ~ssl.VERIFY_X509_STRICT
 DB_PATH = Path(r"D:\stock_data\wantgoo_full.db")
 H = {"User-Agent": "Mozilla/5.0", "Accept": "application/json"}
 

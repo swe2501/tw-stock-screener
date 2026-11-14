@@ -14,7 +14,7 @@ import broker_signals as bs  # noqa: E402
 if sys.stdout and hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-_CTX = ssl.create_default_context(); _CTX.check_hostname = False; _CTX.verify_mode = ssl.CERT_NONE
+_CTX = ssl.create_default_context(); _CTX.verify_flags &= ~ssl.VERIFY_X509_STRICT
 _BASE = ("https://home.treasury.gov/resource-center/data-chart-center/interest-rates/"
          "pages/xml?data=daily_treasury_yield_curve&field_tdr_date_value=")
 _MAP = [("BC_1MONTH", "m1"), ("BC_3MONTH", "m3"), ("BC_6MONTH", "m6"),

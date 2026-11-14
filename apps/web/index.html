@@ -11299,11 +11299,9 @@
       if (!lastResults.length) return;
       const ind = document.getElementById('industry_filter').value;
       let filtered = ind ? lastResults.filter(s => (TW_STOCK_IND[s.code] || '') === ind) : lastResults;
-      const countEl = document.querySelector('.results-meta strong');
-      if (countEl) {
-        const note = ind ? '產業' : '';
-        countEl.textContent = note ? `${filtered.length}（${note}過濾）` : String(lastResults.length);
-      }
+      // 標題顯示前端產業過濾後的實際檔數（伺服器 count 是過濾前的總數）
+      const countEl = document.querySelector('.results-title strong');
+      if (countEl) countEl.textContent = ind ? `${filtered.length} 檔（${ind}）` : `${lastResults.length} 檔`;
       if (filtered.length === 0) {
         document.getElementById('resultsArea').innerHTML = `
           <div class="card">
