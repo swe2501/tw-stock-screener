@@ -1,0 +1,10 @@
+const fs=require('node:fs'),assert=require('node:assert/strict');
+const {chromium}=require('playwright');
+(async()=>{const browser=await chromium.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true});
+try{const page=await browser.newPage();let ads=[],calls=0;await page.route('https://ads.test/**',route=>{if(route.request().method()==='POST'){calls++;return route.fulfill({json:{ads}});}return route.fulfill({contentType:'text/html',body:'<main id="homeView"></main>'});});
+await page.goto('https://ads.test');await page.addScriptTag({path:'apps/web/assets/site-ad-media.js'});await page.addScriptTag({path:'apps/web/assets/forum-member.js'});await page.waitForFunction(()=>document.readyState==='complete');await page.waitForTimeout(100);
+assert.equal(calls,1);ads=[{id:'ad123',slot:'home_card',title:'New image',media_type:'image',media_url:'https://images.test/ad.png',media_zoom:175}];
+await page.evaluate(()=>dispatchEvent(new Event('site-ads-changed')));await page.locator('#homeView [data-site-ad=ad123] img').waitFor();assert.equal(calls,2);assert.match(await page.locator('#homeView img').getAttribute('style'),/scale\(1.75\)/);
+await page.evaluate(()=>dispatchEvent(new Event('focus')));await page.waitForTimeout(50);assert.equal(calls,2);
+await page.evaluate(()=>{const original=Date.now;Date.now=()=>original()+61000;dispatchEvent(new Event('focus'));});await page.waitForTimeout(100);assert.equal(calls,3);
+console.log('Ad refresh: same-session save mounts homepage image, focus throttles and refreshes after expiry.');}finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1});

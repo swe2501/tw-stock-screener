@@ -18,6 +18,7 @@ import uuid
 from urllib.parse import quote
 
 from lib import linepay as lp
+from lib import member_commerce as commerce
 
 PROVIDER = "linepay"
 ORIGIN_RE = re.compile(r"^https://(tw-stock-screener-neon\.vercel\.app"
@@ -49,14 +50,23 @@ def enabled():
 
 
 def _plans(rest, env):
-    st, rows = rest("/member_plans?select=plan_code,tier,days,price_twd,label,sandbox_only&active=eq.true&order=price_twd.asc")
-    if st != 200 or not isinstance(rows, list):
-        raise PayError(503, "方案暫時無法讀取")
-    # 測試環境只賣測試方案；正式環境絕不賣測試方案
-    return [r for r in rows if bool(r.get("sandbox_only")) == (env == "sandbox")]
+    try:
+        return commerce.plans(rest, env)
+    except commerce.CatalogError as e:
+        raise PayError(e.status, e.message)
+
+
+def _require_open(rest):
+    try:
+        opened = commerce.payment_open(rest)
+    except commerce.CatalogError:
+        opened = False
+    if not opened:
+        raise PayError(503, "付款功能尚未開放", "PAY_DISABLED")
 
 
 def list_plans(rest):
+    _require_open(rest)
     env = enabled()
     if not env:
         raise PayError(503, "付款功能尚未開放", "PAY_DISABLED")
@@ -72,6 +82,9 @@ def _origin(value, env):
 
 def create(user, body, rest, lp_mod=lp):
     """建立訂單並向 LINE Pay 申請付款 → {order_key, payment_url, app_url, amount, label}。"""
+    if body.get('billing_mode', 'one_time') != 'one_time':
+        raise PayError(409, '每月訂閱金流尚未串接，不會改成單次付款', 'SUBSCRIPTION_PROVIDER_NOT_CONNECTED')
+    _require_open(rest)
     env = enabled()
     if not env:
         raise PayError(503, "付款功能尚未開放", "PAY_DISABLED")
@@ -82,20 +95,22 @@ def create(user, body, rest, lp_mod=lp):
     origin = _origin(body.get("return_origin"), env)
     amount = int(plan["price_twd"])
     order_key = "fq" + uuid.uuid4().hex
-    row = {"user_id": user["id"], "order_key": order_key, "provider_event_key": f"{PROVIDER}:{order_key}",
-           "status": "pending", "expected_amount": amount, "currency": "TWD", "kind": "membership",
-           "plan_code": plan_code, "provider": PROVIDER, "provider_env": env}
-    st, _ = rest("/member_payment_orders", "POST", [row], "return=minimal")
-    if st not in (200, 201, 204):
+    # Shares a transaction lock with the switch/delisting operation; rechecks at order creation.
+    st, saved = rest('/rpc/member_commerce_create_order', 'POST',
+                    {'p_user': user['id'], 'p_plan': plan_code, 'p_env': env, 'p_order': order_key})
+    if st != 200:
+        if isinstance(saved, dict) and saved.get('message') in ('PAY_DISABLED', 'PLAN_UNAVAILABLE'):
+            raise PayError(409, '付款已關閉或商品已下架，請重新整理方案', 'PAY_DISABLED')
         raise PayError(503, "訂單建立失敗，請稍後再試")
+    amount, label = int(saved['price_twd']), saved['name']
     try:
-        txn, web, app = lp_mod.request_payment(order_key, amount, plan["label"],
+        txn, web, app = lp_mod.request_payment(order_key, amount, label,
                                                origin + "/?lp=confirm", origin + "/?lp=cancel")
     except lp_mod.LinePayError as e:
         _patch(rest, order_key, {"status": "failed", "failure_code": "request:" + e.code[:40]}, only_pending=True)
         raise PayError(502, "LINE Pay 申請付款失敗（" + e.code + "）", e.code)
     _patch(rest, order_key, {"provider_txn_id": txn}, only_pending=True)
-    return {"order_key": order_key, "payment_url": web, "app_url": app, "amount": amount, "label": plan["label"]}
+    return {"order_key": order_key, "payment_url": web, "app_url": app, "amount": amount, "label": label}
 
 
 def _patch(rest, order_key, fields, only_pending=False):

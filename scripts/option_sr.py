@@ -30,7 +30,7 @@ import broker_signals as bs
 
 if sys.stdout and hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(errors="replace")
-_CTX = ssl.create_default_context(); _CTX.check_hostname = False; _CTX.verify_mode = ssl.CERT_NONE
+_CTX = ssl.create_default_context(); _CTX.verify_flags &= ~ssl.VERIFY_X509_STRICT
 API = "https://openapi.taifex.com.tw/v1/DailyMarketReportOpt"
 
 API_FUT = "https://openapi.taifex.com.tw/v1/DailyMarketReportFut"

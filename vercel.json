@@ -1,5 +1,6 @@
 {
   "version": 2,
+  "env": { "MEMBER_DEVICE_POLICY_ENABLED": "true" },
   "builds": [
     {
       "src": "api/*.py",

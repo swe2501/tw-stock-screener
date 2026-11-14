@@ -1,0 +1,60 @@
+const fs=require('node:fs'),assert=require('node:assert/strict'),path=require('node:path');
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
+(async()=>{
+ const browser=await chromium.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true});
+ const page=await browser.newPage({viewport:{width:1366,height:900}});let uploads=0,saved=[];const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.route('https://admin.test/**',r=>r.fulfill({contentType:'text/html',body:'<div id="adminView"><div id="box"></div><div id="note"></div></div>'}));
+ await page.route('https://upload.test/**',r=>{if(r.request().method()==='PUT')uploads++;return r.fulfill({status:200,headers:{'access-control-allow-origin':'*','access-control-allow-methods':'PUT,OPTIONS','access-control-allow-headers':'content-type,x-upsert'},body:''});});
+ await page.goto('https://admin.test');
+ const inline=[...fs.readFileSync('apps/web/index.html','utf8').matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map(x=>x[1]).join('\n');
+ await page.addStyleTag({content:inline});await page.addStyleTag({path:'apps/web/assets/forum-ads.css'});
+ for(const file of ['site-ad-media.js','admin-ad-editor.js','admin-forum-ads.js'])await page.addScriptTag({path:'apps/web/assets/'+file});
+ await page.exposeFunction('mockPost',async(action,body)=>{
+  if(action==='admin_ads_list')return {ads:saved,slots:{top_bar:'頁首公告條（全站）',home_card:'首頁卡片',results_top:'選股結果上方',member_center:'會員中心',corner:'右下角浮動卡'},audiences:{all:'所有人',not_attended:'尚未參加論壇的會員'}};
+  if(action==='admin_ads_media_upload')return {upload_url:'https://upload.test/file',public_url:'https://upload.test/public.png'};
+  if(action==='admin_ads_save'){saved=[{...body.ad,id:'a1'}];return {ad:saved[0]};}
+  throw Error('unexpected '+action);
+ });
+ await page.evaluate(()=>{document.documentElement.dataset.theme='light';AdminForumAds.show('ads',document.querySelector('#box'),document.querySelector('#note'),window.mockPost);});
+ assert.equal(await page.locator('[data-create-slot]').count(),5);
+ await page.locator('[data-create-slot=top_bar]').click();
+ assert.equal(await page.locator('[name=media_type][value=image]').isDisabled(),true);
+ await page.locator('[data-media-slot]').click();
+ assert.equal(await page.locator('[name=slot]').inputValue(),'home_card');
+ assert.equal(await page.locator('[name=media_type][value=video]').isEnabled(),true);
+ await page.locator('[data-close]').last().click();
+ await page.locator('[data-new]').click();for(const slot of ['top_bar','home_card','results_top','member_center','corner']){await page.locator('button[data-slot='+slot+']').click();assert.equal(await page.locator('[data-slot-layout]').getAttribute('data-slot'),slot);assert.equal(await page.locator('[data-slot-layout] .afa-scene-nav').count(),1);assert.match(await page.locator('[data-slot-motion]').innerText(),/①/);await page.locator('[data-slot-replay]').click();}await page.locator('button[data-slot=home_card]').click();await page.screenshot({path:path.join(process.env.AD_PREVIEW_OUT||process.env.TEMP,'ad-picker-home-scene.png')});await page.locator('[data-confirm-slot]').click();
+ assert.deepEqual(errors,[]);
+ await page.locator('input[name=title]').fill('先見論壇・與你一起研究');await page.locator('[name=media_type][value=image]').check();
+ await page.locator('[name=file]').setInputFiles({name:'test.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jH9sAAAAASUVORK5CYII=','base64')});
+ await page.locator('[name=media_zoom]').fill('50');
+ assert.match(await page.locator('[data-preview] img').getAttribute('style'),/scale\(0.5\)/);
+ await page.locator('[name=media_zoom]').fill('175');
+ assert.match(await page.locator('[data-preview] img').getAttribute('style'),/scale\(1.75\)/);
+ await page.locator('[name=cta]').fill('立即報名');
+ assert.match(await page.locator('[data-preview]').innerText(),/立即報名/);
+ await page.locator('[data-device=mobile]').click();
+ for(const [theme,width,height]of [['light',1366,900],['dark',1366,900],['light',390,844],['dark',390,844]]){
+  await page.setViewportSize({width,height});await page.evaluate(t=>document.documentElement.dataset.theme=t,theme);
+  const bounds=await page.locator('.afa-sheet').boundingBox();assert(bounds.x>=0&&bounds.y>=0&&bounds.x+bounds.width<=width+1&&bounds.y+bounds.height<=height+1);
+  const alpha=await page.locator('.afa-sheet').evaluate(e=>getComputedStyle(e).backgroundColor);assert.match(alpha,/rgba?\(/);assert.notEqual(alpha,'rgba(0, 0, 0, 0)');
+  await page.screenshot({path:path.join(process.env.TEMP,'admin-ad-'+theme+'-'+width+'.png')});
+ }
+ await page.locator('[data-open-crop]').click();await page.locator('[data-crop-frame]').waitFor({state:'visible'});await page.locator('[data-crop-frame]').press('Shift+ArrowLeft');await page.locator('[data-apply-crop]').click();assert.equal(await page.locator('[data-preview] .site-ad-crop-viewport').count(),1);
+ await page.locator('button[type=submit]').click();await page.locator('[data-save]').click();await page.waitForFunction(()=>!document.querySelector('.afa-modal'));
+ assert.equal(uploads,1);assert.equal(saved[0].media_url,'https://upload.test/public.png');assert.equal(saved[0].media_type,'image');assert.equal(saved[0].media_zoom,100);assert(saved[0].media_crop.w<1);assert(saved[0].media_crop.h>0);assert.equal(saved[0].title,'先見論壇・與你一起研究');assert.deepEqual(errors,[]);
+ await page.setViewportSize({width:1366,height:900});
+ await page.locator('[data-create-slot=home_card]').click();
+ await page.locator('[name=media_type][value=video]').check();await page.locator('[name=slide_mode]').selectOption('video_end');assert.equal(await page.locator('[data-slide-seconds]').isVisible(),false);
+ assert.equal(await page.locator('[data-media]').isVisible(),true);
+ await page.locator('[name=media_zoom]').fill('75');
+ await page.locator('[name=file]').setInputFiles({name:'test.mp4',mimeType:'video/mp4',buffer:Buffer.from('video fixture')});
+ assert.equal(await page.locator('[data-preview] video').count(),1);assert.equal(await page.locator('[data-preview] [data-video-play]').count(),1);
+ await page.locator('[data-device=mobile]').click();const phoneBox=await page.locator('[data-browser]').boundingBox();assert(phoneBox.height<=540);await page.locator('[data-toggle-preview]').click();assert.equal(await page.locator('[data-browser]').isVisible(),false);await page.locator('[data-toggle-preview]').click();await page.locator('[data-open-crop]').click();await page.locator('video[data-crop-source]').evaluate(v=>{Object.defineProperty(v,'videoWidth',{value:1920});Object.defineProperty(v,'videoHeight',{value:1080});v.dispatchEvent(new Event('loadedmetadata'));});await page.locator('[data-crop-frame]').waitFor();await page.locator('[data-apply-crop]').click();assert.equal(await page.locator('[data-preview] .site-ad-crop-viewport video').count(),1);assert.equal(await page.locator('[data-preview] .site-ad-crop-viewport [data-video-play]').count(),0);await page.locator('[name=title]').fill('影片廣告');
+ await page.locator('button[type=submit]').click();
+ await page.locator('[data-save]').click();
+ await page.waitForFunction(()=>!document.querySelector('.afa-modal'));
+ assert.equal(uploads,2);assert.equal(saved[0].media_zoom,100);assert(saved[0].media_crop.h<1);assert.equal(saved[0].media_type,'video');assert.equal(saved[0].slide_mode,'video_end');
+ assert.deepEqual(errors,[]);
+ await browser.close();console.log('Ad editor: light/dark desktop/mobile bounds, opaque dialog, real file selection, signed upload mock and save passed.');
+})().catch(e=>{console.error(e);process.exitCode=1});

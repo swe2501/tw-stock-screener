@@ -30,7 +30,9 @@ class FakeRest:
                     k = m.group(1)
                     return 200, ([{'key': k, 'value': self.settings[k]}] if k in self.settings else [])
                 m = re.search(r'key=like\.([^&]+)\*', path)
-                return 200, [{'key': k, 'value': v} for k, v in self.settings.items() if k.startswith(m.group(1))]
+                rows = [{'key': k, 'value': v} for k, v in sorted(self.settings.items()) if k.startswith(m.group(1))]
+                offset = int(re.search(r'offset=(\d+)', path).group(1)) if 'offset=' in path else 0
+                return 200, rows[offset:offset + 1000]
             if method == 'POST':
                 if 'on_conflict' in path:
                     self.settings[body['key']] = body['value']
@@ -43,6 +45,17 @@ class FakeRest:
                 k = re.search(r'key=eq\.([^&]+)', path).group(1)
                 self.settings.pop(k, None)
                 return 204, {}
+        if path == '/rpc/_forum_event_attend':
+            ev = next(e for e in json.loads(self.settings['forum:events']) if e['id'] == body['p_event'])
+            key = 'forum-attend:' + body['p_user'] if ev.get('event_kind') == 'technical_analysis' else 'event-attend:' + ev['id'] + ':' + body['p_user']
+            if key in self.ledger:
+                return 409, {'message':'FORUM_ALREADY'}
+            self.ledger[key] = {'user_id':body['p_user'], 'points':ev.get('reward_points',1000)}
+            return 200, {'points':ev.get('reward_points',1000)}
+        if path == '/rpc/_forum_issue_attendee_voucher':
+            key = 'forum-voucher:' + body['p_event'] + ':' + body['p_user']
+            self.vouchers[key] = body
+            return 200, {'reward_id':'voucher-test', 'duplicate':False}
         if path.startswith('/rpc/_member_issue_voucher'):
             self.vouchers[body['p_event']] = body
             return 200, 'v-id'
@@ -67,9 +80,19 @@ class FakeRest:
                 return 204, {}
             self.tasks[tid].update(body)
             return 200, [self.tasks[tid]]
+        if path.startswith('/member_feature_catalog'):
+            return 200, [{'feature':'breadth','title':'大盤多空廣度','member_research':True,'voucher_enabled':True},{'feature':'admin','title':'管理員','member_research':False,'voucher_enabled':False}]
+        if path == '/rpc/admin_member_exchange_create':
+            return 200, {'id':'custom-test','title':body['p_title'],'active':False}
         if path.startswith('/member_exchange_definitions'):
             if method == 'GET':
-                return 200, list(self.products.values())
+                m = re.search(r'id=eq\.([^&]+)', path)
+                return 200, ([self.products[m.group(1)]] if m and m.group(1) in self.products else [] if m else list(self.products.values()))
+            if method == 'POST':
+                if body['id'] in self.products:
+                    return 409, {}
+                self.products[body['id']] = dict(body)
+                return 201, [self.products[body['id']]]
             pid = re.search(r'id=eq\.([^&]+)', path).group(1)
             self.products[pid].update(body)
             return 200, [self.products[pid]]
@@ -102,9 +125,148 @@ class ForumTests(unittest.TestCase):
     def setUp(self):
         self.r = FakeRest()
         with at(EV_DAY):
-            st, out = F.handle_admin('admin_forum_save', {'event': {'city': 'TPE', 'date': '2026-11-22', 'venue': '台北會場', 'status': 'published'}}, 'admin', self.r)
+            st, out = F.handle_admin('admin_forum_save', {'event': {'city': 'TPE', 'event_kind':'technical_analysis', 'date': '2026-11-22', 'venue': '台北會場', 'status': 'published'}}, 'admin', self.r)
         self.assertEqual(st, 200)
         self.eid = out['event']['id']
+
+    def test_code_batches_survive_and_revoke_preserves_redemptions(self):
+        st, batch = F.handle_admin('admin_forum_codes', {'id': self.eid, 'count': 3}, 'admin', self.r)
+        with at(EV_DAY):
+            F.handle_public('forum_redeem', {'code': batch['codes'][0]}, USER, self.r)
+            st, result = F.handle_admin('admin_forum_code_revoke', {'id': self.eid, 'codes': batch['codes']}, 'admin', self.r)
+            self.assertEqual(result['revoked'], 2)
+            self.assertEqual(result['rows'][0]['status'], 'used')
+            st, result = F.handle_public('forum_redeem', {'code': batch['codes'][1]}, USER2, self.r)
+            self.assertEqual(result['code'], 'FORUM_CODE_REVOKED')
+        st, saved = F.handle_admin('admin_forum_codes_list', {'id': self.eid}, 'admin', self.r)
+        self.assertEqual(saved['batches'][0]['id'], batch['batch_id'])
+        self.assertEqual([r['status'] for r in saved['batches'][0]['rows']], ['used', 'revoked', 'revoked'])
+        self.assertEqual(len(self.r.ledger), 1)
+
+    def test_event_notes_private_and_preserved_on_legacy_update(self):
+        ev = F._find_event(self.r, self.eid)
+        ev['notes'] = '內部報到安排'
+        F.handle_admin('admin_forum_save', {'event': ev}, 'admin', self.r)
+        del ev['notes']
+        F.handle_admin('admin_forum_save', {'event': ev}, 'admin', self.r)
+        self.assertEqual(F._find_event(self.r, self.eid)['notes'], '內部報到安排')
+        with at(EV_DAY):
+            st, data = F.handle_public('forum_events', {}, None, self.r)
+        self.assertNotIn('notes', data['events'][0])
+
+    def test_custom_product_creation_is_inactive_and_not_overwritten(self):
+        body = {'definition': 'research-v1', 'days': 12, 'points': 5000}
+        st, data = F.handle_admin('admin_products_create', body, 'admin', self.r)
+        self.assertEqual(st, 200)
+        self.assertEqual(data['product']['title'], '趨勢研究員 · 12 天')
+        self.assertFalse(data['product']['active'])
+        self.assertEqual(F.handle_admin('admin_products_create', body, 'admin', self.r)[0], 409)
+        self.assertEqual(F.handle_admin('admin_products_create', dict(body, days=0), 'admin', self.r)[0], 400)
+
+    def test_media_validation_and_public_projection(self):
+        raw = {'slot': 'home_card', 'title': '研究分享會', 'media_type': 'image',
+               'media_url': 'https://example.com/banner.webp', 'media_x': 85, 'media_zoom':175, 'enabled': True}
+        ad = F.clean_ad(raw)
+        public = F.ads_for([ad], {'guest': True})[0]
+        self.assertEqual(public['media_url'], raw['media_url'])
+        self.assertEqual(public['media_x'], 85)
+        self.assertEqual(public['media_zoom'], 175)
+        self.assertEqual(F.clean_ad(dict(raw, media_zoom=50))['media_zoom'], 50)
+        crop = {'x':.1,'y':.2,'w':.5,'h':.4}
+        self.assertEqual(F.ads_for([F.clean_ad(dict(raw, media_crop=crop))], {'guest':True})[0]['media_crop'], crop)
+        for invalid in [{'x':.9,'y':0,'w':.5,'h':1}, {'x':0,'y':0,'w':0,'h':1}, {'x':0,'y':0,'w':float('nan'),'h':1}]:
+            with self.assertRaises(ValueError):
+                F.clean_ad(dict(raw, media_crop=invalid))
+        self.assertEqual(F.clean_ad(dict(raw, media_type='video', media_zoom=75))['media_zoom'], 75)
+        with self.assertRaises(ValueError):
+            F.clean_ad(dict(raw, media_zoom=float('nan')))
+        self.assertNotIn('name', public)
+        for url in ['javascript:alert(1)', 'data:image/svg+xml,test', 'https://user:pw@example.com/x']:
+            with self.assertRaises(ValueError):
+                F.clean_ad(dict(raw, media_url=url))
+        with self.assertRaises(ValueError):
+            F.clean_ad(dict(raw, slot='top_bar'))
+
+    def test_custom_exchange_features_validate_and_do_not_escalate(self):
+        body={'title':'市場觀察組合','description':'自訂內容','features':['breadth'],'days':7,'points':1000,'request_id':'00000000-0000-0000-0000-000000000001'}
+        self.assertEqual(F.handle_admin('admin_products_create',body,'',self.r)[0],403)
+        self.assertEqual(F.handle_admin('admin_products_create',body,'admin',self.r)[0],200)
+        for features in ([],['admin'],['breadth','breadth'],['chart_tools']):
+            self.assertEqual(F.handle_admin('admin_products_create',dict(body,features=features),'admin',self.r)[0],400)
+
+    def test_video_end_mode_is_validated_and_public(self):
+        raw = {'id':'ad009','slot':'home_card','title':'Video','enabled':True,'audience':'all','media_type':'video','media_url':'https://example.test/ad.mp4','slide_mode':'video_end'}
+        for slot in ('home_card','results_top','member_center','corner'):
+            self.assertEqual(F.clean_ad(dict(raw,slot=slot))['media_type'], 'video')
+        video_crop = F.clean_ad(dict(raw, media_zoom=250, media_crop={'x':0,'y':0,'w':.5,'h':.5}))
+        self.assertEqual(video_crop['media_zoom'],250)
+        self.assertEqual(video_crop['media_crop']['w'],.5)
+        self.assertEqual(F.clean_ad(dict(raw, media_zoom=10))['media_zoom'],10)
+        ad = F.clean_ad(raw)
+        self.assertEqual(ad['slide_mode'], 'video_end')
+        self.assertEqual(F.ads_for([ad], {'guest':True})[0]['slide_mode'], 'video_end')
+        self.assertEqual(F.clean_ad(dict(raw, slide_mode='unknown'))['slide_mode'], 'seconds')
+        self.assertEqual(F.clean_ad(dict(raw, media_type='image'))['slide_mode'], 'seconds')
+
+    def test_home_carousel_keeps_eligible_ads_in_priority_order(self):
+        raw = {'slot': 'home_card', 'title': 'A', 'enabled': True, 'audience': 'all'}
+        a = F.clean_ad(dict(raw, id='ad001', priority=10, slide_seconds=3))
+        b = F.clean_ad(dict(raw, id='ad002', priority=90, slide_seconds=5, wheel_enabled=True))
+        draft = F.clean_ad(dict(raw, id='ad003', enabled=False))
+        private = F.clean_ad(dict(raw, id='ad004', audience='member'))
+        public = F.ads_for([a, b, draft, private], {'guest': True})
+        self.assertEqual([x['id'] for x in public], ['ad002', 'ad001'])
+        self.assertEqual(public[0]['slide_seconds'], 5)
+        self.assertTrue(public[0]['wheel_enabled'])
+
+    def test_product_archive_restore_preserves_definition(self):
+        pid = 'vip-7d-v1'
+        self.assertEqual(F.handle_admin('admin_products_archive', {'id': pid}, '', self.r)[0], 403)
+        self.assertEqual(F.handle_admin('admin_products_archive', {'id': pid}, 'admin', self.r)[0], 200)
+        self.assertIn(pid, self.r.products)
+        self.assertFalse(self.r.products[pid]['active'])
+        listing = F.handle_admin('admin_products_list', {}, 'admin', self.r)[1]['products']
+        self.assertTrue(listing[0]['archived'])
+        self.assertEqual(F.handle_admin('admin_products_save', {'id': pid, 'title':'還原測試', 'points':100, 'active':True}, 'admin', self.r)[0], 409)
+        self.assertEqual(F.handle_admin('admin_products_restore', {'id': pid}, 'admin', self.r)[0], 200)
+        self.assertFalse(self.r.products[pid]['active'])
+        self.assertFalse(F.handle_admin('admin_products_list', {}, 'admin', self.r)[1]['products'][0]['archived'])
+
+    def test_task_delete_fails_closed_on_claim_read_failure(self):
+        calls = []
+        def unavailable(path, method='GET', body=None, prefer=None):
+            calls.append(method)
+            return 503, {}
+        self.assertEqual(F.handle_admin('admin_tasks_delete', {'id':'adm-test-v1'}, 'admin', unavailable)[0], 503)
+        self.assertNotIn('DELETE', calls)
+
+    def test_registration_requires_verified_user_and_fails_closed(self):
+        self.assertEqual(F.handle_public('forum_register', {'id': self.eid}, None, self.r)[0], 403)
+        def unavailable(*args):
+            return 404, {'message': 'function not found'}
+        st, data = F.handle_public('forum_register', {'id': self.eid}, USER, unavailable)
+        self.assertEqual(st, 503)
+        self.assertEqual(data['code'], 'FORUM_REGISTRATION_UNAVAILABLE')
+
+    def test_lifetime_attendance_shared_across_events_and_codes(self):
+        with at(EV_DAY):
+            token = F.make_pass(self.eid)
+            self.assertEqual(F.handle_public('forum_checkin', {'pass': token}, USER, self.r)[0], 200)
+            status, event = F.handle_admin('admin_forum_save', {'event': {'city': 'TXG', 'event_kind':'technical_analysis', 'date': '2026-11-22', 'status': 'published'}}, 'admin', self.r)
+            second = event['event']['id']
+            status, out = F.handle_public('forum_checkin', {'pass': F.make_pass(second)}, USER, self.r)
+            self.assertEqual((status, out['code']), (409, 'FORUM_ALREADY'))
+            status, out = F.handle_public('forum_redeem', {'code': F.make_code(second)}, USER, self.r)
+            self.assertEqual((status, out['code']), (409, 'FORUM_ALREADY'))
+            self.assertEqual(len(self.r.ledger), 1)
+
+    def test_read_failure_does_not_pretend_member_is_eligible(self):
+        def unavailable(*args): return 503, {}
+        with self.assertRaises(RuntimeError): F.has_attended(unavailable, USER['id'])
+
+    def test_code_history_pagination_keeps_all_rows(self):
+        for i in range(2001): self.r.settings['forumcodes:test:%04d' % i] = '{}'
+        self.assertEqual(len(F._list_prefix(self.r, 'forumcodes:test:')), 2001)
 
     def test_event_id_and_duplicate_day(self):
         self.assertEqual(self.eid, 'TPE1122')
@@ -256,18 +418,73 @@ class VoucherAndTaskTests(unittest.TestCase):
     def setUp(self):
         self.r = FakeRest()
         with at(EV_DAY):
-            self.eid = F.handle_admin('admin_forum_save', {'event': {'city': 'TXG', 'date': '2026-11-22', 'status': 'published'}}, 'admin', self.r)[1]['event']['id']
+            self.eid = F.handle_admin('admin_forum_save', {'event': {'city': 'TXG', 'event_kind':'technical_analysis', 'date': '2026-11-22', 'status': 'published'}}, 'admin', self.r)[1]['event']['id']
 
     def test_voucher_off_by_default_then_on(self):
         with at(EV_DAY):
-            self.assertFalse(F.handle_admin('admin_forum_voucher_get', {}, 'admin', self.r)[1]['voucher']['enabled'])
+            self.assertFalse(F.handle_admin('admin_forum_voucher_get', {'event_id':self.eid}, 'admin', self.r)[1]['voucher']['enabled'])
             F.handle_public('forum_checkin', {'pass': F.make_pass(self.eid)}, USER, self.r)
             self.assertEqual(self.r.vouchers, {})
-            F.handle_admin('admin_forum_voucher_save', {'enabled': True, 'definition': 'vip-v1', 'days': 30}, 'admin', self.r)
+            F.handle_admin('admin_forum_voucher_save', {'event_id':self.eid, 'enabled': True, 'definition': 'vip-v1', 'days': 30}, 'admin', self.r)
             st, out = F.handle_public('forum_checkin', {'pass': F.make_pass(self.eid)}, USER2, self.r)
         self.assertEqual(st, 200)
         self.assertIn('全方位研究 30 天', out['voucher'])
-        self.assertEqual(self.r.vouchers['forum-voucher:u2']['p_days'], 30)
+        self.assertEqual(self.r.vouchers['forum-voucher:'+self.eid+':u2']['p_days'], 30)
+
+    def test_per_event_vouchers_do_not_affect_other_or_new_events(self):
+        with at(EV_DAY):
+            second = F.handle_admin('admin_forum_save', {'event':{'city':'TXG','date':'2026-11-22','status':'published'}}, 'admin', self.r)[1]['event']['id']
+            F.handle_admin('admin_forum_voucher_save', {'event_id':self.eid,'enabled':True,'definition':'vip-v1','days':7}, 'admin', self.r)
+            self.assertFalse(F.voucher_setting(self.r, second)['enabled'])
+            self.assertEqual(F.voucher_setting(self.r, self.eid)['days'], 7)
+            F._grant(self.r, USER, {'id':second,'city':'TXG','date':'2026-11-22'}, 'code')
+            self.assertFalse(self.r.vouchers)
+            F._grant(self.r, USER2, {'id':self.eid,'city':'TPE','date':'2026-11-22'}, 'qr')
+            self.assertEqual(self.r.vouchers['forum-voucher:'+self.eid+':u2']['p_days'], 7)
+            F.handle_admin('admin_forum_voucher_save', {'event_id':self.eid,'enabled':False,'definition':'vip-v1','days':7}, 'admin', self.r)
+            self.assertIn('forum-voucher:'+self.eid+':u2', self.r.vouchers)
+            self.assertEqual(F.handle_admin('admin_forum_voucher_save', {'enabled':True}, 'admin', self.r)[0], 400)
+            self.assertEqual(F.handle_admin('admin_forum_voucher_save', {'event_id':'bad'}, 'admin', self.r)[0], 400)
+            self.assertEqual(F.handle_admin('admin_forum_voucher_save', {'event_id':self.eid}, '', self.r)[0], 403)
+
+    def test_archive_system_task_preserves_definition_and_restore_is_inactive(self):
+        body = {'id':'name-v1'}
+        self.assertEqual(F.handle_admin('admin_tasks_archive', body, '', self.r)[0], 403)
+        self.assertEqual(F.handle_admin('admin_tasks_archive', body, 'admin', self.r)[0], 200)
+        self.assertFalse(self.r.tasks['name-v1']['active'])
+        self.assertTrue(F.handle_admin('admin_tasks_list', {}, 'admin', self.r)[1]['tasks'][0]['archived'])
+        self.assertEqual(F.handle_admin('admin_tasks_save', dict(body,title='測試名稱',points=50,active=True), 'admin', self.r)[0], 409)
+        self.assertEqual(F.handle_admin('admin_tasks_restore', body, 'admin', self.r)[0], 200)
+        self.assertFalse(self.r.tasks['name-v1']['active'])
+        self.assertFalse(F.handle_admin('admin_tasks_list', {}, 'admin', self.r)[1]['tasks'][0]['archived'])
+
+    def test_activity_task_needs_valid_event_and_cannot_be_awarded_manually(self):
+        self.assertEqual(F.handle_admin('admin_tasks_save', {'task_kind':'activity','title':'活動任務','event_id':''}, 'admin', self.r)[0], 400)
+        self.assertEqual(F.handle_admin('admin_tasks_save', {'task_kind':'activity','title':'活動任務','event_id':'BAD'}, 'admin', self.r)[0], 400)
+        self.r.settings['task:event:evt-txg1122-v1'] = json.dumps(self.eid)
+        self.assertEqual(F.handle_admin('admin_tasks_award', {'task_id':'evt-txg1122-v1','user_id':UID,'points':100,'reference':'現場','reason':'活動'}, 'admin', self.r)[0], 400)
+
+    def test_general_activity_uses_separate_event_rewards(self):
+        with at(EV_DAY):
+            ids=[]
+            for city,points in [('TPE',250),('KHH',700)]:
+                result=F.handle_admin('admin_forum_save', {'event':{'city':city,'date':'2026-11-22','event_kind':'activity','reward_points':points,'status':'published'}}, 'admin', self.r)
+                self.assertEqual(result[0],200)
+                ids.append(result[1]['event']['id'])
+            self.assertEqual(F.handle_public('forum_checkin',{'pass':F.make_pass(ids[0])},USER,self.r)[1]['points'],250)
+            self.assertEqual(F.handle_public('forum_checkin',{'pass':F.make_pass(ids[1])},USER,self.r)[1]['points'],700)
+            self.assertEqual(F.handle_public('forum_redeem',{'code':F.make_code(ids[0])},USER,self.r)[0],409)
+
+    def test_selected_voucher_request_validation_and_admin_only(self):
+        body={'event_id':self.eid,'definition':'vip-v1','days':30,'user_ids':[UID]}
+        self.assertEqual(F.handle_admin('admin_forum_voucher_issue',body,'',self.r)[0],403)
+        self.assertEqual(F.handle_admin('admin_forum_voucher_issue',dict(body,user_ids=[]),'admin',self.r)[0],400)
+        self.assertEqual(F.handle_admin('admin_forum_voucher_issue',dict(body,user_ids=[UID,UID]),'admin',self.r)[0],400)
+        self.assertEqual(F.handle_admin('admin_forum_voucher_issue',dict(body,event_id='BAD'),'admin',self.r)[0],400)
+        self.assertEqual(F.handle_admin('admin_forum_voucher_issue',dict(body,days=0),'admin',self.r)[0],400)
+        result=F.handle_admin('admin_forum_voucher_issue',body,'admin',self.r)
+        self.assertEqual(result[0],200)
+        self.assertEqual(result[1]['results'][0]['status'],'issued')
 
     def test_custom_task_lifecycle_and_award(self):
         st, out = F.handle_admin('admin_tasks_save', {'title': '直播互動抽獎', 'points': 200, 'period': 'daily', 'active': True}, 'admin', self.r)

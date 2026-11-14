@@ -63,13 +63,24 @@
       const suit=new THREE.MeshStandardMaterial({color:variant%3===0?0x263d54:variant%3===1?0x626975:0xddd5c5,roughness:.77});
       const hair=new THREE.MeshStandardMaterial({color:[0x28282c,0x4d382e,0x65564b,0x201c20][variant%4],roughness:.88});
       const shirt=new THREE.MeshStandardMaterial({color:0xe7eceb,roughness:.8});
-      const head=new THREE.Mesh(new THREE.SphereGeometry(.145,20,16),skin);head.position.set(0,1.23,0);head.scale.set(.87,1.1,.91);figure.add(head);
-      const cap=new THREE.Mesh(new THREE.SphereGeometry(.151,20,14,0,Math.PI*2,0,Math.PI*.6),hair);cap.position.set(0,1.26,-.01);figure.add(cap);
-      if(variant%2===1){const long=new THREE.Mesh(new THREE.SphereGeometry(.15,16,12),hair);long.position.set(0,1.11,-.09);long.scale.set(.9,1.8,.5);figure.add(long);}
-      const torso=cylinder(figure,0,.64,0,.17,.43,suit,16);torso.scale.set(1.05,1,.68);box(figure,0,.88,.115,.075,.17,.025,shirt);box(figure,0,.77,.14,.025,.19,.015,color);
-      figure.userData.legs=[];figure.userData.arms=[];figure.userData.head=head;
-      [-.1,.1].forEach(a=>{const leg=cylinder(figure,a,.13,0,.056,.5,suit,12);figure.userData.legs.push(leg);box(figure,a,.1,.035,.12,.07,.24,hair);});
-      [-1,1].forEach(s=>{const arm=cylinder(figure,s*.215,.72,.04,.045,.31,suit,12);arm.rotation.z=s*.22;figure.userData.arms.push(arm);const hand=new THREE.Mesh(new THREE.SphereGeometry(.055,12,10),skin);hand.position.set(s*.245,.74,.13);figure.add(hand);});
+      // Upper-body pivot keeps seated hips fixed while review visibly leans back.
+      const upper=new THREE.Group();upper.position.y=.64;figure.add(upper);figure.userData.upperBody=upper;
+      const head=new THREE.Mesh(new THREE.SphereGeometry(.145,20,16),skin);head.position.set(0,.59,0);head.scale.set(.87,1.1,.91);upper.add(head);
+      const cap=new THREE.Mesh(new THREE.SphereGeometry(.151,20,14,0,Math.PI*2,0,Math.PI*.6),hair);cap.position.set(0,.62,-.01);upper.add(cap);
+      if(variant%2===1){const long=new THREE.Mesh(new THREE.SphereGeometry(.15,16,12),hair);long.position.set(0,.47,-.09);long.scale.set(.9,1.8,.5);upper.add(long);}
+      const torso=cylinder(upper,0,0,0,.17,.43,suit,16);torso.scale.set(1.05,1,.68);box(upper,0,.24,.115,.075,.17,.025,shirt);box(upper,0,.13,.14,.025,.19,.015,color);
+      figure.userData.legs=[];figure.userData.knees=[];figure.userData.arms=[];figure.userData.elbows=[];figure.userData.head=head;
+      // Pivot at hips/knees rather than rotating a cylinder around its centre.
+      // Seated hips are .60 above the floor, just above the real chair seat (.58).
+      [-.1,.1].forEach(x=>{const hip=new THREE.Group();hip.position.set(x,.64,0);figure.add(hip);cylinder(hip,0,-.25,0,.056,.25,suit,12);
+        const knee=new THREE.Group();knee.position.y=-.25;hip.add(knee);cylinder(knee,0,-.25,0,.053,.25,suit,12);box(knee,0,-.29,.045,.12,.07,.24,hair);
+        figure.userData.legs.push(hip);figure.userData.knees.push(knee);
+      });
+      [-1,1].forEach(side=>{const arm=new THREE.Group();arm.position.set(side*.21,.41,0);upper.add(arm);cylinder(arm,0,-.23,0,.045,.23,suit,12);
+        const elbow=new THREE.Group();elbow.position.y=-.23;arm.add(elbow);cylinder(elbow,0,-.23,0,.043,.23,suit,12);
+        const hand=new THREE.Mesh(new THREE.SphereGeometry(.055,12,10),skin);hand.position.y=-.23;elbow.add(hand);
+        figure.userData.arms.push(arm);figure.userData.elbows.push(elbow);
+      });
       return figure;
     }
   };

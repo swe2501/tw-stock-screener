@@ -1,4 +1,4 @@
-# rebuild-marker: load OFFICE_AGENT_TOKEN_QA on Preview(uat); 2026-11-09 load LINEPAY_* on Preview(uat)
+# rebuild-marker: load OFFICE_AGENT_TOKEN_QA on Preview(uat); 2026-11-09 load LINEPAY_* on Preview(uat); 2026-11-12 load OFFICE_AGENT_TOKEN_SEC on Preview(uat)
 from http.server import BaseHTTPRequestHandler
 import hashlib, hmac, json, os, time, urllib.request, urllib.parse, urllib.error
 
@@ -121,19 +121,25 @@ def _algo_formulas():
     return {k: (db.get("formula_" + k) or _ALGO_DEFAULTS[k]) for k in ALGO_KEYS}
 
 
-def _verify_admin(token):
-    """用呼叫者 JWT 取帳號，ID ∈ ADMIN_IDS 才回 email（稽核日誌用），否則 None。後台每個操作的真正防線。"""
-    if not token:
-        return None
-    try:
-        req = urllib.request.Request(f"{SUPABASE_URL}/auth/v1/user",
-                                     headers={"apikey": SUPABASE_ANON_KEY, "Authorization": f"Bearer {token}"})
-        with urllib.request.urlopen(req, timeout=10) as r:
-            u = json.loads(r.read())
-        em = (u.get("email") or "").strip().lower()
-        return em if u.get("id") in ADMIN_IDS else None
-    except Exception:
-        return None
+def _verify_admin(token, *, with_status=False):
+    """One Auth lookup. Legacy callers retain email/None; admin_* also gets status."""
+    status, email = 401, None
+    if token:
+        try:
+            req = urllib.request.Request(f"{SUPABASE_URL}/auth/v1/user",
+                                         headers={"apikey": SUPABASE_ANON_KEY, "Authorization": f"Bearer {token}"})
+            with urllib.request.urlopen(req, timeout=10) as r:
+                u = json.loads(r.read())
+            if isinstance(u, dict) and isinstance(u.get("id"), str) and u["id"]:
+                em = (u.get("email") or "").strip().lower()
+                status = 200 if u["id"] in ADMIN_IDS and em else 403
+                email = em if status == 200 else None
+        except urllib.error.HTTPError as e:
+            # Never expose/read the upstream body. Outages must not trigger refresh.
+            status = 401 if e.code in (401, 403) else 503
+        except Exception:
+            status = 503
+    return (status, email) if with_status else email
 
 
 def _token_user(token):
@@ -172,7 +178,7 @@ def _admin_api(path, method="GET", body=None):
 
 OFFICE_WORKER_ROLES = ("ceo", "cto", "sec", "eng", "qa")
 OFFICE_WORKER_OPS = ("claim", "heartbeat", "submit", "fail", "block", "list")
-OFFICE_AGENT_OPS = ("list", "claim", "heartbeat", "submit", "block", "fail", "get")
+OFFICE_AGENT_OPS = ("list", "claim", "heartbeat", "submit", "block", "fail", "get", "create")
 OFFICE_AGENT_FORBIDDEN = ("approve", "cancel", "retry", "online")
 OFFICE_AGENT_HEADERS = (
     "x-office-agent-key",
@@ -342,7 +348,7 @@ def _sb(path, body, token=None):
     except urllib.error.HTTPError as e:
         result = json.loads(e.read())
         if "MEMBER_DEVICE_LIMIT" in str(result):
-            return 403, {"error": "此帳號已有 2 台裝置登入，請先登出其中一台後再試。", "code": "MEMBER_DEVICE_LIMIT"}
+            return 403, {"error": "此帳號已達同時使用裝置上限，請先管理登入裝置後再試。", "code": "MEMBER_DEVICE_LIMIT"}
         return e.code, result
 
 
@@ -377,6 +383,17 @@ class handler(BaseHTTPRequestHandler):
         except (ValueError, TypeError):
             return self._json(400, {"error": "invalid request"})
         action = body.get("action", "")
+        from lib import member_devices
+        device_token = (self.headers.get('Authorization') or '').removeprefix('Bearer ').strip()
+        if action == 'member_device_protocol':
+            return self._json(200, {'device_protocol': 1, 'guard_ready': member_devices.enabled()})
+        if action == 'member_devices':
+            return self._json(*member_devices.manage(device_token, body))
+        if action not in ('refresh', 'logout', 'membership_catalog') and device_token:
+            blocked = member_devices.check(device_token)
+            if blocked:
+                return self._json(*blocked)
+
 
         if action == "official_announcements":
             auth = self.headers.get("Authorization", "")
@@ -439,11 +456,30 @@ class handler(BaseHTTPRequestHandler):
             return self._json(*_office_dispatch(body, self.headers, raw))
 
         # ── 線下論壇簽到／補發代碼／站內廣告（lib/forum_ads.py；只用 admin_settings＋member_point_ledger）──
-        if action in ("forum_events", "forum_pass", "forum_checkin", "forum_redeem", "site_ads", "ad_click"):
+        if action in ("forum_events", "forum_pass", "forum_checkin", "forum_redeem", "site_ads", "ad_click", "forum_registration_status", "forum_register", "forum_cancel"):
             from lib.forum_ads import handle_public
             token = (self.headers.get("Authorization") or "").replace("Bearer ", "").strip()
-            user = _token_user(token) if action in ("forum_events", "forum_checkin", "forum_redeem", "site_ads") else None
+            user = _token_user(token) if action in ("forum_events", "forum_checkin", "forum_redeem", "site_ads", "forum_registration_status", "forum_register", "forum_cancel") else None
             return self._json(*handle_public(action, body, user, _rest))
+
+        if action in ('membership_catalog', 'membership_access'):
+            from lib import member_commerce as commerce
+            from lib.payments import enabled as payment_env
+            try:
+                if action == 'membership_catalog':
+                    return self._json(200, commerce.public_catalog(_rest, payment_env()))
+                token = (self.headers.get('Authorization') or '').replace('Bearer ', '').strip()
+                user = _token_user(token)
+                if not user:
+                    return self._json(401, {'error': '請先登入'})
+                return self._json(200, commerce.access(user, _rest))
+            except commerce.CatalogError as e:
+                return self._json(e.status, {'error': e.message})
+
+        if action in ('billing_status', 'billing_quote', 'billing_prepare'):
+            from lib.member_billing import handle as billing_handle
+            token = (self.headers.get('Authorization') or '').replace('Bearer ', '').strip()
+            return self._json(*billing_handle(action, body, _token_user(token), _rest, ADMIN_IDS))
 
         # ── 會員方案付款（lib/payments.py＋lib/linepay.py）：會員 JWT 驗證；沒設 LINE Pay 金鑰的環境一律回「尚未開放」 ──
         if action in ("pay_plans", "pay_linepay_request", "pay_linepay_confirm", "pay_linepay_cancel", "pay_history"):
@@ -454,9 +490,37 @@ class handler(BaseHTTPRequestHandler):
         # ── 後台管理（action: admin_*）：JWT→email∈白名單 才放行；service_role 只在後端 ──
         if action.startswith("admin_"):
             token = (self.headers.get("Authorization") or "").replace("Bearer ", "").strip()
-            admin_email = _verify_admin(token)
+            admin_status, admin_email = _verify_admin(token, with_status=True)
+            if admin_status == 401:
+                return self._json(401, {"error": "unauthorized"})
+            if admin_status == 503:
+                return self._json(503, {"error": "authentication unavailable"})
             if not admin_email:
                 return self._json(403, {"error": "forbidden: 僅限管理員"})
+
+            if action in ('admin_device_policy_get', 'admin_device_policy_save'):
+                desired = body.get('enabled') if action == 'admin_device_policy_save' else None
+                if action == 'admin_device_policy_save' and type(desired) is not bool:
+                    return self._json(400, {'error': '請設定裝置限制開關'})
+                live_ready = member_devices.rollout_ready()
+                if desired and not live_ready:
+                    return self._json(409, {'error': '正式站尚未更新裝置驗證；共用資料庫限制保持關閉，避免影響既有會員'})
+                status, result = _rest('/rpc/admin_member_device_policy', 'POST', {'p_enabled': desired})
+                if status != 200:
+                    return self._json(503, {'error': '裝置限制尚未準備完成，請先完成資料庫與存取閘道部署'})
+                if desired is not None:
+                    _audit(admin_email, action, None, {'enabled': desired})
+                return self._json(200, dict(result, server_ready=live_ready))
+
+            if action in ('admin_commerce_get', 'admin_commerce_save'):
+                from lib.member_commerce import handle_admin
+                status, result = handle_admin(action, body, _rest)
+                if status == 200 and action == 'admin_commerce_save':
+                    _audit(admin_email, action, None, {
+                        'revision': result['config']['revision'],
+                        'payments_enabled': result['config']['payments_enabled'],
+                        'products': [p['id'] for p in result['config']['products']]})
+                return self._json(status, result)
 
             if action in ("admin_office_tasks_list", "admin_office_tasks_get", "admin_office_tasks_create", "admin_office_tasks_update"):
                 from lib.office_tasks import handle
@@ -464,16 +528,21 @@ class handler(BaseHTTPRequestHandler):
                 return self._json(status, result)
 
             if action.startswith(("admin_forum_", "admin_ads_", "admin_points_", "admin_products_", "admin_tasks_")):
+                if action == "admin_ads_media_upload":
+                    from lib.admin_ad_media import signed_upload
+                    status, result = signed_upload(body)
+                    return self._json(status, result)
                 from lib.forum_ads import handle_admin
                 def _users():
                     st_u, data_u = _admin_api("/admin/users?per_page=1000")
                     return data_u.get("users", []) if st_u == 200 and isinstance(data_u, dict) else []
                 status, result = handle_admin(action, body, admin_email, _rest, _users)
-                if status == 200 and action in ("admin_forum_save", "admin_forum_delete", "admin_forum_codes", "admin_ads_save", "admin_ads_delete", "admin_points_adjust", "admin_products_save", "admin_tasks_save", "admin_tasks_delete", "admin_tasks_award", "admin_forum_voucher_save"):
+                if status == 200 and action in ("admin_forum_save", "admin_forum_delete", "admin_forum_codes", "admin_forum_code_revoke", "admin_forum_registration_reset", "admin_ads_save", "admin_ads_delete", "admin_points_adjust", "admin_products_save", "admin_products_create", "admin_products_archive", "admin_products_restore", "admin_tasks_save", "admin_tasks_delete", "admin_tasks_archive", "admin_tasks_restore", "admin_tasks_award", "admin_forum_voucher_save", "admin_forum_voucher_issue"):
                     det = {k: body.get(k) for k in ("id", "count", "points", "reason", "title", "active", "task_id", "reference", "enabled", "definition", "days") if body.get(k) is not None}
                     if action == "admin_forum_save": det["event"] = (result.get("event") or {}).get("id")
+                    if action == "admin_forum_code_revoke": det["revoked"] = result.get("revoked", 0)
                     if action == "admin_ads_save": det["ad"] = (result.get("ad") or {}).get("id")
-                    _audit(admin_email, action, body.get("user_id") if action in ("admin_points_adjust", "admin_tasks_award") else None, det)
+                    _audit(admin_email, action, body.get("user_id") if action in ("admin_points_adjust", "admin_tasks_award", "admin_forum_registration_reset") else None, det)
                 return self._json(status, result)
 
             if action in ("admin_pattern_reviews", "admin_pattern_review_save"):
@@ -491,13 +560,15 @@ class handler(BaseHTTPRequestHandler):
                 tst, trows = _rest("/member_tiers?select=user_id,tier")
                 if tst == 200 and isinstance(trows, list):
                     tmap = {r.get("user_id"): r.get("tier") for r in trows}
+                from lib.member_billing import legacy_summaries
+                billing = legacy_summaries(users, _rest, ADMIN_IDS)
                 out = []
                 for u in users:
                     md = u.get("user_metadata") or {}
                     em = (u.get("email") or "").strip().lower()
                     tier = "admin" if u.get("id") in ADMIN_IDS else tmap.get(u.get("id"), "free")
                     out.append({
-                        "id": u.get("id"), "email": u.get("email"),
+                        "id": u.get("id"), "email": u.get("email"), "billing": billing.get(u.get("id")),
                         "name": md.get("name") or md.get("full_name") or md.get("display_name"),   # LINE 登入沒有 Email，列表改顯示名稱
                         "tier": tier, "expires_at": md.get("expires_at"),
                         "banned": bool(md.get("banned")),

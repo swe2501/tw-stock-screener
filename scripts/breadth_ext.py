@@ -32,7 +32,7 @@ if sys.stdout and hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(errors="replace")
 
 LIMIT = 9.5
-_CTX = ssl.create_default_context(); _CTX.check_hostname = False; _CTX.verify_mode = ssl.CERT_NONE
+_CTX = ssl.create_default_context(); _CTX.verify_flags &= ~ssl.VERIFY_X509_STRICT
 FIELDS = ["universe", "up", "down", "flat", "up_limit", "down_limit", "red_k", "black_k",
           "ma20_cnt", "ma60_cnt", "ma240_cnt", "both_cnt", "ma20_base", "ma60_base", "ma240_base", "both_base",
           "bull_s", "bear_s", "base_s", "bull_l", "bear_l", "base_l", "new_high", "new_low", "base_hl"]

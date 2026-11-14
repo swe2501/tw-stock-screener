@@ -1,3 +1,4 @@
+import math
 """線下論壇簽到／補發代碼／站內廣告。
 
 只用既有表：admin_settings（鍵值，僅 service_role）與 member_point_ledger
@@ -20,7 +21,7 @@ import json
 import os
 import re
 import secrets
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 
 TW = datetime.timezone(datetime.timedelta(hours=8))
 CITIES = {'TPE': '台北', 'TXG': '台中', 'KHH': '高雄'}
@@ -162,9 +163,21 @@ def clean_event(raw, existing_ids=()):
     status = raw.get('status') or 'draft'
     if status not in ('draft', 'published', 'closed'):
         status = 'draft'
+    kind = raw.get('event_kind', 'technical_analysis' if raw.get('id') else 'activity')
+    if kind not in ('activity', 'technical_analysis'):
+        raise ValueError('請選擇活動或技術分析論壇')
+    limit_group = 'technical_analysis' if kind == 'technical_analysis' else str(raw.get('limit_group') or '').strip()
+    if kind == 'activity' and raw.get('once_per_member') and not re.fullmatch(r'[a-zA-Z0-9_-]{2,40}', limit_group):
+        raise ValueError('限參加一次的活動需填共用限制代號（2～40英數字）')
+    if kind == 'activity' and not raw.get('once_per_member'):
+        limit_group = ''
+    reward_points = int(raw.get('reward_points', FORUM_POINTS))
+    if not 1 <= reward_points <= 10000:
+        raise ValueError('活動點數需介於1～10,000')
     code_days = int(raw.get('code_days') or 14)
     return {
-        'id': eid, 'city': city, 'date': date, 'start': start, 'end': end,
+        'id': eid, 'event_kind': kind, 'reward_points': reward_points, 'once_per_member': kind == 'technical_analysis' or bool(raw.get('once_per_member')), 'limit_group': limit_group, 'city': city, 'date': date, 'start': start, 'end': end,
+        'notes': str(raw.get('notes') or '')[:1000],
         'venue': str(raw.get('venue') or '')[:120], 'title': str(raw.get('title') or '')[:80],
         'capacity': max(0, min(5000, int(raw.get('capacity') or 0))),
         'status': status, 'test': bool(raw.get('test')),
@@ -179,6 +192,14 @@ def event_label(ev):
 
 
 # ── 廣告 ──
+def safe_media_url(value):
+    try:
+        u = urlsplit(value)
+        return u.scheme == 'https' and bool(u.hostname) and not u.username and not u.password
+    except ValueError:
+        return False
+
+
 def clean_ad(raw):
     slot = raw.get('slot')
     if slot not in AD_SLOTS:
@@ -194,12 +215,45 @@ def clean_ad(raw):
         v = raw.get(k) or ''
         if v and not re.match(r'^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?$', v):
             raise ValueError('時間格式錯誤')
+    media_type = raw.get('media_type') or 'text'
+    if media_type not in ('text', 'image', 'video'):
+        raise ValueError('請選擇圖片、影片或純文字')
+    media_url = str(raw.get('media_url') or '').strip()
+    if media_type != 'text' and (len(media_url) > 1500 or not safe_media_url(media_url)):
+        raise ValueError('請先上傳素材，或輸入 HTTPS 素材網址')
+    if slot == 'top_bar' and media_type != 'text':
+        raise ValueError('頁首公告條採純文字，圖片或影片請選其他版位')
+    try:
+        media_x = max(0, min(100, float(raw.get('media_x', 50))))
+        media_y = max(0, min(100, float(raw.get('media_y', 50))))
+        media_zoom = float(raw.get('media_zoom', 100))
+        if not math.isfinite(media_zoom):
+            raise ValueError('invalid zoom')
+        media_zoom = max(10, min(300, media_zoom))
+    except (TypeError, ValueError):
+        raise ValueError('裁切位置格式錯誤')
+    crop = raw.get('media_crop')
+    if crop is not None:
+        if not isinstance(crop, dict):
+            raise ValueError('裁切範圍格式錯誤')
+        try:
+            crop = {k: float(crop[k]) for k in ('x', 'y', 'w', 'h')}
+        except (KeyError, TypeError, ValueError):
+            raise ValueError('裁切範圍格式錯誤')
+        if not all(math.isfinite(v) for v in crop.values()) or not (0 <= crop['x'] < 1 and 0 <= crop['y'] < 1 and .01 <= crop['w'] <= 1 and .01 <= crop['h'] <= 1 and crop['x'] + crop['w'] <= 1.000001 and crop['y'] + crop['h'] <= 1.000001):
+            raise ValueError('裁切範圍超出素材')
     aid = str(raw.get('id') or '') or 'ad' + secrets.token_hex(4)
     if not re.match(r'^[a-z0-9]{3,20}$', aid):
         raise ValueError('廣告代號錯誤')
     return {
         'id': aid, 'name': str(raw.get('name') or title)[:60], 'slot': slot, 'audience': aud,
         'title': title, 'text': str(raw.get('text') or '')[:200], 'cta': str(raw.get('cta') or '了解更多')[:20],
+        'media_type': media_type, 'media_url': media_url if media_type != 'text' else '',
+        'media_x': media_x, 'media_y': media_y, 'media_zoom': media_zoom, 'media_crop': crop,
+        'media_alt': str(raw.get('media_alt') or title)[:120],
+        'slide_seconds': max(3, min(5, int(raw.get('slide_seconds') or 5))),
+        'slide_mode': 'video_end' if media_type == 'video' and raw.get('slide_mode') == 'video_end' else 'seconds',
+        'wheel_enabled': raw.get('wheel_enabled') is True,
         'url': url, 'forum_event': str(raw.get('forum_event') or '')[:12],
         'starts': raw.get('starts') or '', 'ends': raw.get('ends') or '',
         'enabled': bool(raw.get('enabled')), 'priority': max(0, min(99, int(raw.get('priority') or 50))),
@@ -221,6 +275,7 @@ def ads_for(ads, audience_flags, at=None):
     """audience_flags: {'guest':bool,'member':bool,'attended':bool}。每個版位取優先度最高的一則。"""
     at = at or now()
     best = {}
+    home = []
     for ad in ads:
         if not _ad_live(ad, at):
             continue
@@ -230,11 +285,15 @@ def ads_for(ads, audience_flags, at=None):
               or (a == 'not_attended' and audience_flags.get('member') and not audience_flags.get('attended')))
         if not ok:
             continue
+        if ad['slot'] == 'home_card':
+            home.append(ad)
+            continue
         cur = best.get(ad['slot'])
         if cur is None or ad.get('priority', 50) > cur.get('priority', 50):
             best[ad['slot']] = ad
-    pub = ('id', 'slot', 'title', 'text', 'cta', 'url', 'forum_event')
-    return [{k: v.get(k, '') for k in pub} for v in best.values()]
+    pub = ('id', 'slot', 'title', 'text', 'cta', 'url', 'forum_event',
+           'media_type', 'media_url', 'media_x', 'media_y', 'media_alt', 'media_zoom', 'media_crop', 'slide_seconds', 'slide_mode', 'wheel_enabled')
+    return [{k: v.get(k, 100 if k == 'media_zoom' else '') for k in pub} for v in [*best.values(), *sorted(home, key=lambda ad: -ad.get('priority', 50))]]
 
 
 # ── 存取 ──
@@ -271,15 +330,23 @@ def _insert_once(rest, key, value):
 
 
 def _list_prefix(rest, prefix, select='key,value,updated_at'):
-    st, rows = rest('/admin_settings?select=%s&key=like.%s&order=updated_at.desc&limit=5000' % (select, quote(prefix + '*', safe='*')))
-    if st != 200 or not isinstance(rows, list):
-        raise RuntimeError('READ_FAILED')
-    return rows
+    result, offset = [], 0
+    while True:
+        st, rows = rest('/admin_settings?select=%s&key=like.%s&order=key.asc&limit=1000&offset=%d' %
+                        (select, quote(prefix + '*', safe='*'), offset))
+        if st != 200 or not isinstance(rows, list):
+            raise RuntimeError('READ_FAILED')
+        result.extend(rows)
+        if len(rows) < 1000:
+            return result
+        offset += len(rows)
 
 
 def has_attended(rest, uid):
     st, rows = rest('/member_point_ledger?select=id&limit=1&source_event_key=eq.' + quote('forum-attend:' + uid, safe=''))
-    return st == 200 and isinstance(rows, list) and len(rows) > 0
+    if st != 200 or not isinstance(rows, list):
+        raise RuntimeError('READ_FAILED')
+    return len(rows) > 0
 
 
 def _grant(rest, user, ev, via, code=''):
@@ -291,23 +358,33 @@ def _grant(rest, user, ev, via, code=''):
                           {'at': now().isoformat(), 'via': via, 'email': user.get('email') or '', 'phone': user.get('phone') or '', 'code': code, 'test': True})
         return 200, {'ok': True, 'test': True, 'duplicate': not ok, 'event': label,
                      'message': '測試場次：簽到流程正常（不發點數）'}
-    st, _ = rest('/member_point_ledger', 'POST',
-                 {'user_id': uid, 'description': '線下論壇到場活動點數（%s）' % label, 'points': FORUM_POINTS,
-                  'source_event_key': 'forum-attend:' + uid}, 'return=minimal')
-    if st == 409:
-        return 409, {'error': '你已領過論壇到場點數，每位會員限領一次。', 'code': 'FORUM_ALREADY'}
-    if st not in (200, 201, 204):
-        return 503, {'error': '點數暫時無法發放，請稍後再試或洽工作人員。'}
-    msg = '簽到完成，%s 點已存入你的會員帳號。' % format(FORUM_POINTS, ',')
+    points = int(ev.get('reward_points', FORUM_POINTS))
+    if 'event_kind' in ev:
+        st, result = rest('/rpc/_forum_event_attend', 'POST', {'p_user': uid, 'p_event': ev['id'], 'p_via': via})
+        if st != 200:
+            if 'FORUM_ALREADY' in str(result):
+                return 409, {'error': '本活動已領取，或此類活動限參加一次。', 'code': 'FORUM_ALREADY'}
+            return 503, {'error': '活動發點服務尚未就緒，未確認發點；請聯絡管理員。'}
+        points = int(result['points'])
+    else:
+        st, _ = rest('/member_point_ledger', 'POST',
+                     {'user_id': uid, 'description': '線下論壇到場活動點數（%s）' % label, 'points': FORUM_POINTS,
+                      'source_event_key': 'forum-attend:' + uid}, 'return=minimal')
+        if st == 409:
+            return 409, {'error': '你已領過論壇到場點數，每位會員限領一次。', 'code': 'FORUM_ALREADY'}
+        if st not in (200, 201, 204):
+            return 503, {'error': '點數暫時無法發放，請稍後再試或洽工作人員。'}
+    msg = '簽到完成，%s 點已存入你的會員帳號。' % format(points, ',')
+    _insert_once(rest, 'forumcheckin:%s:%s' % (ev['id'], uid), {'at': now().isoformat(), 'via':via,'email':user.get('email') or '', 'phone':user.get('phone') or '', 'code':code})
     voucher = ''
     try:
-        vs = voucher_setting(rest)
+        vs = voucher_setting(rest, ev['id'])
     except RuntimeError:
         vs = VOUCHER_DEFAULT
     if vs.get('enabled') and vs.get('definition') in VOUCHERS:
-        vst, _ = rest('/rpc/_member_issue_voucher', 'POST',
+        vst, _ = rest('/rpc/_forum_issue_attendee_voucher', 'POST',
                       {'p_user': uid, 'p_definition': vs['definition'], 'p_days': int(vs.get('days') or 30),
-                       'p_event': 'forum-voucher:' + uid})
+                       'p_event': ev['id'], 'p_actor':'system', 'p_manual':False})
         if vst == 200:
             voucher = '%s %d 天使用券' % (VOUCHERS[vs['definition']], int(vs.get('days') or 30))
             msg += '另送「%s」，已存入券夾，按「開始使用」才起算。' % voucher
@@ -315,16 +392,19 @@ def _grant(rest, user, ev, via, code=''):
             voucher = 'pending'
     _insert_once(rest, 'forumcheckin:%s:%s' % (ev['id'], uid),
                  {'at': now().isoformat(), 'via': via, 'email': user.get('email') or '', 'phone': user.get('phone') or '', 'code': code, 'voucher': voucher})
-    return 200, {'ok': True, 'points': FORUM_POINTS, 'event': label, 'voucher': voucher if voucher != 'pending' else '',
+    return 200, {'ok': True, 'points': points, 'event': label, 'voucher': voucher if voucher != 'pending' else '',
                  'message': msg}
 
 
 VOUCHERS = {'vip-v1': '全方位研究', 'research-v1': '研究進階', 'choice-v1': '研究入門'}
+PRODUCT_TYPES = {'choice-v1': '市場觀察員', 'research-v1': '趨勢研究員', 'vip-v1': '先見領航員'}
 VOUCHER_DEFAULT = {'enabled': False, 'definition': 'vip-v1', 'days': 30}
 
 
-def voucher_setting(rest):
-    v = _get_json(rest, 'forum:voucher', {})
+def voucher_setting(rest, event_id=None):
+    v = _get_json(rest, 'forum:voucher:' + event_id, None) if event_id else None
+    if v is None:
+        v = _get_json(rest, 'forum:voucher', {})
     out = dict(VOUCHER_DEFAULT)
     out.update({k: v[k] for k in ('enabled', 'definition', 'days') if k in v})
     return out
@@ -342,12 +422,42 @@ def _find_event(rest, eid):
 
 
 # ── 會員／公開端 ──
+def registration_rpc(rest, path, args):
+    st, result = rest(path, 'POST', args)
+    errors = {
+        'FORUM_ALREADY_ATTENDED': '你已參加過此限制類型的活動；技術分析論壇或指定限制群組每帳號限參加一次。',
+        'FORUM_NO_SHOW_LIMIT': '你已累計三次報名未到場，本次未能完成報名。請聯絡工作人員協助。',
+        'FORUM_REGISTRATION_CLOSED': '此場次已停止報名。',
+        'FORUM_REGISTRATION_FULL': '此場次名額已滿。',
+        'FORUM_REGISTRATION_ACTIVE': '你已有一場未結束的報名，請先取消原場次再選擇其他場次。',
+        'FORUM_CANCELLATION_CLOSED': '活動已開始，無法自行取消，請聯絡工作人員。',
+    }
+    if st == 200 and isinstance(result, dict):
+        if result.get('denied'):
+            code = result['denied']
+            return 403, {'error': errors.get(code, '本次未能報名'), 'code': code}
+        return 200, result
+    message = str(result)
+    for code, text in errors.items():
+        if code in message:
+            return 409, {'error': text, 'code': code}
+    return 503, {'error': '站內報名服務尚未完成連線，請稍後再試或聯絡工作人員。', 'code': 'FORUM_REGISTRATION_UNAVAILABLE'}
+
+
 def handle_public(action, body, user, rest):
     try:
+        if action in ('forum_registration_status', 'forum_register', 'forum_cancel'):
+            if not _verified(user):
+                return 403, {'error': '請先登入並完成 Email 或手機驗證。', 'code': 'MEMBER_VERIFY_REQUIRED'}
+            path = '/rpc/_forum_registration_state' if action == 'forum_registration_status' else '/rpc/_forum_registration_change'
+            args = {'p_user': user['id']}
+            if action != 'forum_registration_status':
+                args.update({'p_event': str(body.get('id') or ''), 'p_cancel': action == 'forum_cancel'})
+            return registration_rpc(rest, path, args)
         if action == 'forum_events':
             evs = [e for e in _get_json(rest, 'forum:events', []) if e.get('status') == 'published' and not e.get('test')]
             today = now().date().isoformat()
-            evs = [dict((k, e.get(k)) for k in ('id', 'city', 'date', 'start', 'end', 'venue', 'title', 'signup_url'))
+            evs = [dict((k, e.get(k)) for k in ('id', 'city', 'date', 'start', 'end', 'venue', 'title', 'signup_url', 'event_kind', 'reward_points', 'once_per_member'))
                    for e in sorted(evs, key=lambda e: e['date']) if e['date'] >= today]
             for e in evs:
                 e['city_name'] = CITIES[e['city']]
@@ -402,12 +512,15 @@ def handle_public(action, body, user, rest):
                 return 403, {'error': '這組代碼要在活動開始後才能兌換。', 'code': 'FORUM_CODE_EARLY'}
             if now() > e:
                 return 403, {'error': '這組代碼已過兌換期限。', 'code': 'FORUM_CODE_EXPIRED'}
-            if not ev.get('test') and has_attended(rest, user['id']):
+            if not ev.get('test') and ev.get('event_kind', 'technical_analysis') == 'technical_analysis' and has_attended(rest, user['id']):
                 return 409, {'error': '你已領過論壇到場點數，每位會員限領一次。', 'code': 'FORUM_ALREADY'}
             if not _insert_once(rest, 'forumcode:' + code, {'uid': user['id'], 'at': now().isoformat()}):
+                mark = _get_json(rest, 'forumcode:' + code, {})
+                if mark.get('revoked'):
+                    return 409, {'error': '這組代碼已作廢，請向活動人員確認。', 'code': 'FORUM_CODE_REVOKED'}
                 return 409, {'error': '這組代碼已被使用。', 'code': 'FORUM_CODE_USED'}
             st, out = _grant(rest, user, ev, 'code', code)
-            if st != 200:
+            if st != 200 and st < 500:
                 rest('/admin_settings?key=eq.' + quote('forumcode:' + code, safe=''), 'DELETE', None, 'return=minimal')
             return st, out
 
@@ -483,8 +596,12 @@ def _points_admin(action, body, rest, users):
         for r in rows:
             r['member'] = emails.get(r['user_id'], r['user_id'])
         return 200, {'rows': rows}
+    if action in ('admin_forum_voucher_get', 'admin_forum_voucher_save'):
+        eid = str(body.get('event_id') or '')
+        if not eid or not _find_event(rest, eid):
+            return 400, {'error': '請指定有效場次；不再提供全域贈券修改'}
     if action == 'admin_forum_voucher_get':
-        return 200, {'voucher': voucher_setting(rest), 'options': VOUCHERS}
+        return 200, {'voucher': voucher_setting(rest, eid), 'options': VOUCHERS, 'event_id': eid}
     if action == 'admin_forum_voucher_save':
         d = str(body.get('definition') or 'vip-v1')
         if d not in VOUCHERS:
@@ -493,17 +610,43 @@ def _points_admin(action, body, rest, users):
         if not 1 <= days <= 90:
             return 400, {'error': '天數需介於 1～90'}
         v = {'enabled': bool(body.get('enabled')), 'definition': d, 'days': days}
-        _put_json(rest, 'forum:voucher', v)
+        _put_json(rest, 'forum:voucher:' + eid, v)
         return 200, {'voucher': v}
     if action == 'admin_tasks_list':
         st, rows = rest('/member_task_definitions?select=id,title,points,period,verifier,cap_group,active,sort&order=sort.asc,id.asc')
         if st != 200 or not isinstance(rows, list):
             raise RuntimeError('READ_FAILED')
         for r in rows:
+            r['archived'] = bool(_get_json(rest, 'task:archived:' + r['id'], False))
             r['custom'] = r['id'].startswith('adm-')
-            r['manual'] = r['verifier'] == 'admin_review'
+            r['event_id'] = _get_json(rest, 'task:event:' + r['id'], '')
+            r['task_kind'] = 'activity' if r['event_id'] else 'manual'
+            r['manual'] = r['verifier'] == 'admin_review' and not r['event_id']
         return 200, {'tasks': rows, 'periods': PERIODS}
+    if action in ('admin_tasks_archive', 'admin_tasks_restore'):
+        tid = str(body.get('id') or '')
+        if not re.fullmatch(r'[a-z0-9-]{3,80}', tid):
+            return 400, {'error': '任務代號錯誤'}
+        st, rows = rest('/member_task_definitions?id=eq.' + quote(tid, safe=''), 'PATCH', {'active': False}, 'return=representation')
+        if st != 200 or not isinstance(rows, list) or not rows:
+            return 503, {'error': '無法確認任務已關閉，請重新整理'}
+        _put_json(rest, 'task:archived:' + tid, action == 'admin_tasks_archive')
+        return 200, {'ok': True}
+    if action == 'admin_tasks_save' and body.get('task_kind') == 'activity':
+        eid = str(body.get('event_id') or '').strip().upper()
+        ev = _find_event(rest, eid) if eid else None
+        if not ev or ev.get('test'):
+            return 400, {'error': '活動任務必須綁定有效的非測試活動代號'}
+        st, result = rest('/rpc/_forum_event_task_save', 'POST', {'p_event': eid, 'p_title': str(body.get('title') or '').strip(), 'p_active': bool(body.get('active'))})
+        if st != 200:
+            return 503, {'error': '活動任務尚未就緒；請確認活動發點配套已啟用'}
+        return 200, {'task': result}
     if action == 'admin_tasks_save':
+        if body.get('id') and _get_json(rest, 'task:event:' + str(body['id']), ''):
+            return 409, {'error': '活動任務請至對應活動修改獎勵點數；不可改為人工發放'}
+
+        if body.get('id') and _get_json(rest, 'task:archived:' + str(body['id']), False):
+            return 409, {'error': '任務已封存，請先還原'}
         tid = str(body.get('id') or '')
         title = str(body.get('title') or '').strip()
         if not 2 <= len(title) <= 40:
@@ -537,7 +680,9 @@ def _points_admin(action, body, rest, users):
         if not tid.startswith('adm-'):
             return 400, {'error': '系統任務不能刪除，可改為關閉'}
         st, rows = rest('/member_task_claims?select=id&limit=1&task_id=eq.' + quote(tid, safe=''))
-        if st == 200 and rows:
+        if st != 200 or not isinstance(rows, list):
+            return 503, {'error': '無法確認領取紀錄，未執行刪除'}
+        if rows:
             return 409, {'error': '已有會員領過，不能刪除，請改為關閉'}
         st, _ = rest('/member_task_definitions?id=eq.' + quote(tid, safe=''), 'DELETE', None, 'return=minimal')
         if st not in (200, 204):
@@ -545,6 +690,8 @@ def _points_admin(action, body, rest, users):
         return 200, {'ok': True}
     if action == 'admin_tasks_award':
         uid, tid = str(body.get('user_id') or ''), str(body.get('task_id') or '')
+        if _get_json(rest, 'task:event:' + tid, ''):
+            return 400, {'error': '活動任務只能由對應場次QR或補發代碼核銷自動發放'}
         ref, reason = str(body.get('reference') or '').strip(), str(body.get('reason') or '').strip()
         if not re.match(r'^[0-9a-f-]{36}$', uid):
             return 400, {'error': '請先查詢會員'}
@@ -567,11 +714,66 @@ def _points_admin(action, body, rest, users):
     if action == 'admin_products_list':
         st, rows = rest('/member_exchange_definitions?select=id,title,points,duration_days,active,voucher_definition&order=active.desc,points.asc')
         if st == 404 or (isinstance(rows, dict) and rows.get('code') in ('PGRST205', '42P01')):
-            return 200, {'products': [], 'missing': True}
+            return 200, {'products': [], 'types': PRODUCT_TYPES, 'feature_catalog': [], 'missing': True}
         if st != 200 or not isinstance(rows, list):
             raise RuntimeError('READ_FAILED')
-        return 200, {'products': rows}
+        for row in rows:
+            row['archived'] = bool(_get_json(rest, 'product:archived:' + row['id'], False))
+        feature_status, feature_rows = rest('/member_feature_catalog?select=feature,title,member_research,voucher_enabled&order=title.asc')
+        features = [{'id': f['feature'], 'title': f['title'], 'enabled': f.get('member_research') is True and f.get('voucher_enabled') is True} for f in feature_rows] if feature_status == 200 and isinstance(feature_rows, list) else []
+        return 200, {'products': rows, 'types': PRODUCT_TYPES, 'feature_catalog': features, 'feature_catalog_ready': feature_status == 200}
+    if action in ('admin_products_archive', 'admin_products_restore'):
+        pid = str(body.get('id') or '')
+        if not re.fullmatch(r'[a-z0-9-]{3,40}', pid):
+            return 400, {'error': '商品代號錯誤'}
+        st, rows = rest('/member_exchange_definitions?id=eq.' + quote(pid, safe=''), 'PATCH',
+                        {'active': False}, 'return=representation')
+        if st != 200 or not isinstance(rows, list) or not rows:
+            return 503, {'error': '無法確認商品已下架，未完成封存／還原'}
+        archived = action == 'admin_products_archive'
+        _put_json(rest, 'product:archived:' + pid, archived)
+        return 200, {'ok': True, 'archived': archived}
+    if action == 'admin_products_create':
+        if 'features' in body:
+            title = str(body.get('title') or '').strip()
+            description = str(body.get('description') or '').strip()
+            features, days, pts = body.get('features'), body.get('days'), body.get('points')
+            request_id = str(body.get('request_id') or '')
+            if not 2 <= len(title) <= 40 or _TRADE_WORDS.search(title) or len(description) > 500:
+                return 400, {'error': '請填寫2～40字商品名稱與500字內內容；名稱不可含交易或保證獲利用語'}
+            if type(days) is not int or not 1 <= days <= 366 or type(pts) is not int or not 1 <= pts <= 1000000:
+                return 400, {'error': '請填寫有效的使用天數與所需點數'}
+            if not isinstance(features, list) or not features or any(not isinstance(f, str) for f in features) or len(set(features)) != len(features) or not re.fullmatch(r'[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}', request_id):
+                return 400, {'error': '請至少勾選一個可用權益，並重新確認建立請求'}
+            st, catalog = rest('/member_feature_catalog?select=feature,title,member_research,voucher_enabled&order=title.asc')
+            if st != 200 or not isinstance(catalog, list):
+                return 503, {'error': '無法核對權益清單，暫不建立商品'}
+            allowed = {f['feature'] for f in catalog if f.get('member_research') is True and f.get('voucher_enabled') is True}
+            if not set(features) <= allowed:
+                return 400, {'error': '包含尚未啟用或不可兌換的權益'}
+            st, product = rest('/rpc/admin_member_exchange_create', 'POST', {'p_request_id': request_id, 'p_title': title, 'p_description': description, 'p_features': features, 'p_days': days, 'p_points': pts})
+            if st != 200 or not isinstance(product, dict):
+                return 503, {'error': '自訂兌換商品服務尚未就緒，請先確認配套SQL已套用；未完成建立'}
+            return 200, {'product': product}
+        definition = body.get('definition')
+        try:
+            days, pts = int(body.get('days')), int(body.get('points'))
+        except (TypeError, ValueError):
+            return 400, {'error': '天數與點數需為整數'}
+        if definition not in PRODUCT_TYPES or not 1 <= days <= 366 or not 1 <= pts <= 1000000:
+            return 400, {'error': '請選擇商品，天數 1～366、點數 1～1,000,000'}
+        pid = '%s-%dd-v1' % (definition[:-3], days)
+        row = {'id': pid, 'title': '%s · %d 天' % (PRODUCT_TYPES[definition], days), 'points': pts,
+               'duration_days': days, 'voucher_definition': definition, 'active': False}
+        st, rows = rest('/member_exchange_definitions', 'POST', row, 'return=representation')
+        if st == 409:
+            return 409, {'error': '這個券種與天數的商品已存在，請到列表修改'}
+        if st not in (200, 201) or not rows:
+            return 503, {'error': '建立失敗，請稍後再試'}
+        return 200, {'product': rows[0]}
     if action == 'admin_products_save':
+        if _get_json(rest, 'product:archived:' + str(body.get('id') or ''), False):
+            return 409, {'error': '此商品已封存，請先還原後再編輯'}
         pid = str(body.get('id') or '')
         title = str(body.get('title') or '').strip()
         if not re.match(r'^[a-z0-9-]{3,40}$', pid):
@@ -586,6 +788,12 @@ def _points_admin(action, body, rest, users):
             return 400, {'error': '點數需為整數'}
         if not 1 <= pts <= 1000000:
             return 400, {'error': '點數需介於 1～1,000,000'}
+        st, existing = rest('/member_exchange_definitions?select=duration_days&id=eq.' + quote(pid, safe=''))
+        if st != 200 or not existing:
+            return 503, {'error': '無法確認商品天數，請重新整理後再試'}
+        days = int(existing[0]['duration_days'])
+        title = re.sub(r'\s*[·・]?\s*\d+\s*天(?:體驗)?\s*$', '', title).strip()
+        title = '%s · %d 天' % (title, days)
         st, rows = rest('/member_exchange_definitions?id=eq.' + quote(pid, safe=''), 'PATCH',
                         {'title': title, 'points': pts, 'active': bool(body.get('active'))}, 'return=representation')
         if st != 200 or not rows:
@@ -599,6 +807,58 @@ def handle_admin(action, body, admin_email, rest, users=None):
     if not admin_email:
         return 403, {'error': '僅限管理者'}
     try:
+        if action in ('admin_forum_voucher_recipients', 'admin_forum_voucher_issue'):
+            eid = str(body.get('event_id') or '')
+            ev = _find_event(rest, eid)
+            if not ev or ev.get('test'):
+                return 400, {'error': '請選擇非測試的有效活動'}
+            if action == 'admin_forum_voucher_recipients':
+                st, result = rest('/rpc/_forum_attendee_voucher_list', 'POST', {'p_event': eid})
+                if st != 200 or not isinstance(result, dict):
+                    return 503, {'error': '指定發券服務尚未啟用，無法確認領券名單'}
+                missing = [r for r in result.get('attendees', []) if not r.get('email') and not r.get('phone')]
+                if missing and users:
+                    directory = {u['id']:u for u in users()}
+                    for recipient in missing:
+                        account = directory.get(recipient['user_id'], {})
+                        recipient['email'], recipient['phone'] = account.get('email',''), account.get('phone','')
+                return 200, result
+            recipients = body.get('user_ids')
+            if not isinstance(recipients, list) or not 1 <= len(recipients) <= 50 or len(set(str(x) for x in recipients)) != len(recipients) or any(not isinstance(x,str) or not re.fullmatch(r'[0-9a-f-]{36}', x) for x in recipients):
+                return 400, {'error': '每次請選擇1～50位不重複的已報到會員'}
+            definition, days = body.get('definition'), body.get('days')
+            if definition not in VOUCHERS or type(days) is not int or not 1 <= days <= 90:
+                return 400, {'error': '請選券種及1～90天'}
+            results = []
+            for uid in recipients:
+                st, out = rest('/rpc/_forum_issue_attendee_voucher', 'POST', {'p_user':uid,'p_event':eid,'p_definition':definition,'p_days':days,'p_actor':admin_email,'p_manual':True})
+                if st == 200 and isinstance(out,dict):
+                    results.append({'user_id':uid,'status':'duplicate' if out.get('duplicate') else 'issued','reward_id':out.get('reward_id')})
+                else:
+                    results.append({'user_id':uid,'status':'failed','error':'未報到或服務尚未完成，請重新讀取名單核對後重試'})
+            return 200, {'results':results}
+        if action == 'admin_forum_registration_reset':
+            uid, reason = str(body.get('user_id') or ''), str(body.get('reason') or '').strip()
+            if not re.fullmatch(r'[0-9a-f-]{36}', uid) or not 2 <= len(reason) <= 300:
+                return 400, {'error': '請選擇會員並填寫 2～300 字解除原因'}
+            return registration_rpc(rest, '/rpc/_forum_registration_reset',
+                                    {'p_user': uid, 'p_reason': reason, 'p_actor': admin_email})
+        if action == 'admin_forum_registrations':
+            eid = str(body.get('id') or '')
+            ev = _find_event(rest, eid)
+            if not ev:
+                return 404, {'error': '找不到場次'}
+            records = [json.loads(r['value']) for r in _list_prefix(rest, 'forumregistration:%s:' % eid)]
+            attended = {r['key'].split(':')[2]: json.loads(r['value']) for r in _list_prefix(rest, 'forumcheckin:%s:' % eid)}
+            members = {u['id']: u for u in (users() if users else [])}
+            by_user = {r['user_id']: r for r in records}
+            for uid, checkin in attended.items():
+                by_user.setdefault(uid, {'user_id': uid, 'at': checkin.get('at'), 'status': 'registered'})
+            for uid, row in by_user.items():
+                member = members.get(uid, {})
+                row['member'] = member.get('email') or member.get('phone') or attended.get(uid, {}).get('email') or uid
+                row['status'] = 'attended' if uid in attended else 'cancelled' if row['status'] == 'cancelled' else 'missed' if now() > checkin_window(ev)[1] else 'registered'
+            return 200, {'rows': list(by_user.values())}
         if action.startswith(('admin_points_', 'admin_products_', 'admin_tasks_', 'admin_forum_voucher_')):
             out = _points_admin(action, body, rest, users or (lambda: []))
             if out:
@@ -619,15 +879,21 @@ def handle_admin(action, body, admin_email, rest, users=None):
             evs = _get_json(rest, 'forum:events', [])
             raw = body.get('event') or {}
             ids = [e['id'] for e in evs if e['id'] != raw.get('id')]
-            ev = clean_event(raw, ids)
+            existing = next((e for e in evs if e['id'] == raw.get('id')), {})
+            ev = clean_event(dict(existing, **raw), ids)
+            if existing and (ev['event_kind'] != existing.get('event_kind', 'technical_analysis') or ev['limit_group'] != existing.get('limit_group', 'technical_analysis' if existing.get('event_kind','technical_analysis') == 'technical_analysis' else '')) and _list_prefix(rest, 'forumcheckin:' + ev['id'] + ':', 'key'):
+                return 409, {'error': '已有到場紀錄，不可更換活動類型或限制群組，請建立新活動'}
+            if not existing:
+                _put_json(rest, 'forum:voucher:' + ev['id'], dict(VOUCHER_DEFAULT))
             evs = [e for e in evs if e['id'] != ev['id']] + [ev]
             _put_json(rest, 'forum:events', evs)
             return 200, {'event': ev}
 
         if action == 'admin_forum_delete':
             eid = str(body.get('id') or '')
-            if _list_prefix(rest, 'forumcheckin:%s:' % eid, 'key'):
-                return 409, {'error': '已有人簽到的場次不能刪除，可改為「已結束」。'}
+            if (_list_prefix(rest, 'forumcheckin:%s:' % eid, 'key') or
+                    _list_prefix(rest, 'forumregistration:%s:' % eid, 'key')):
+                return 409, {'error': '已有報名或簽到紀錄的場次不能刪除，可改為「已結束」。'}
             evs = [e for e in _get_json(rest, 'forum:events', []) if e['id'] != eid]
             _put_json(rest, 'forum:events', evs)
             return 200, {'ok': True}
@@ -670,9 +936,38 @@ def handle_admin(action, body, admin_email, rest, users=None):
             codes = set()
             while len(codes) < n:
                 codes.add(make_code(eid))
+            batch = {'id': secrets.token_hex(8), 'at': now().isoformat(), 'codes': sorted(codes)}
+            _put_json(rest, 'forumcodes:%s:%s' % (eid, batch['id']), batch)
             s, e = code_window(ev)
-            return 200, {'codes': sorted(codes), 'label': event_label(ev), 'valid_from': s.strftime('%Y-%m-%d %H:%M'),
+            return 200, {'batch_id': batch['id'], 'codes': sorted(codes), 'label': event_label(ev), 'valid_from': s.strftime('%Y-%m-%d %H:%M'),
                          'valid_to': e.strftime('%Y-%m-%d %H:%M')}
+
+        if action == 'admin_forum_codes_list':
+            eid = str(body.get('id') or '')
+            if not _find_event(rest, eid):
+                return 404, {'error': '找不到場次'}
+            batches = [json.loads(r['value']) for r in _list_prefix(rest, 'forumcodes:%s:' % eid)]
+            marks = {r['key'][10:]: json.loads(r['value']) for r in _list_prefix(rest, 'forumcode:%s-' % eid)}
+            batches.sort(key=lambda b: b['at'], reverse=True)
+            for batch in batches:
+                batch['rows'] = [{'code': c, 'status': 'revoked' if marks.get(c, {}).get('revoked') else
+                                  'used' if c in marks else 'unused'} for c in batch.pop('codes')]
+            return 200, {'batches': batches}
+
+        if action == 'admin_forum_code_revoke':
+            codes = body.get('codes')
+            eid = str(body.get('id') or '')
+            if not isinstance(codes, list) or not 1 <= len(codes) <= CODE_MAX_BATCH:
+                return 400, {'error': '請提供 1～2,000 組代碼'}
+            codes = list(dict.fromkeys(str(c).strip().upper() for c in codes))
+            if not _find_event(rest, eid) or any(code_event(c) != eid for c in codes):
+                return 400, {'error': '代碼需全部屬於此場次，請檢查後再試'}
+            rows = []
+            for code in codes:
+                inserted = _insert_once(rest, 'forumcode:' + code, {'revoked': True, 'at': now().isoformat()})
+                mark = {} if inserted else _get_json(rest, 'forumcode:' + code, {})
+                rows.append({'code': code, 'status': 'revoked' if inserted or mark.get('revoked') else 'used'})
+            return 200, {'rows': rows, 'revoked': sum(r['status'] == 'revoked' for r in rows)}
 
         if action == 'admin_forum_code_check':
             code = str(body.get('code') or '').strip().upper()
@@ -680,7 +975,8 @@ def handle_admin(action, body, admin_email, rest, users=None):
             if not eid:
                 return 200, {'valid': False}
             used = _get_json(rest, 'forumcode:' + code, None)
-            return 200, {'valid': True, 'event': eid, 'used': bool(used), 'used_at': (used or {}).get('at')}
+            return 200, {'valid': True, 'event': eid, 'used': bool(used) and not used.get('revoked'),
+                         'revoked': bool(used and used.get('revoked')), 'used_at': (used or {}).get('at')}
 
         if action == 'admin_ads_list':
             ads = _get_json(rest, 'site_ads', [])

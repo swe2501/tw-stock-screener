@@ -16,6 +16,7 @@
   return false;
  }
  function canReadResearch(view){
+  const configured=window.AcademyMemberCatalog?.allowed(view);if(configured!==undefined)return configured;
   if(!['breadth','fhedge'].includes(view))return true;
   if(!signed())return false;
   if(window._isOwner||window._isAdmin)return true;
@@ -23,15 +24,16 @@
   return Math.max(levels[window._memberTier]||0,levels[window.AcademyShareUnlock?.membershipTier?.()]||0)>=1;
  }
  function canNavigate(view){
-  if(['home','screen'].includes(view))return true;
+  if(view==='home'||(view==='screen'&&!signed()))return true;
   if(!requireMember('登入會員後即可查看完整功能。'))return false;
   if(['sig','brank','brokertrack'].includes(view)&&!window._isOwner&&!window._isAdmin){window.showToast?.('不籌吃穿目前僅開放管理員使用。');return false;}
+  const configured=window.AcademyMemberCatalog?.allowed(view);if(configured===false){window.showToast?.('目前帳號未包含此功能，請查看會員權益。');return false;}
   if(!canReadResearch(view)){window.showToast?.('此完整研究頁面開放市場觀察員以上會員。首頁摘要仍可查看。');return false;}
   return true;
  }
  const controls='.chart-draw-console button,.chart-layer-toolbar button,.chart-feature-panel button,.chart-feature-panel input,.chart-feature-panel a,.chart-tool-btns button:not(.zoom-step-btn):not(#chartViewReset),.market-draw-tools button:not([data-draw=""]),#chartRulerViewControls button,#chartDrawingMenu button,.market-draw-menu button';
  function capture(event){
-  if(signed())return;
+  if(signed()){if(event.target.closest?.(controls)&&window.AcademyMemberCatalog?.allowed('chart_tools')===false){event.preventDefault();event.stopImmediatePropagation();if(event.type==='click')window.showToast?.('目前方案未包含 K 圖分析工具。');}return;}
   const homeAction=event.target.closest?.('#homeView button,#homeView a[href]');
   if(homeAction&&!/open(?:Index)?Chart\s*\(/.test(homeAction.getAttribute('onclick')||'')&&!homeAction.closest('.hx-card')){
    event.preventDefault();event.stopImmediatePropagation();

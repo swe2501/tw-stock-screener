@@ -65,7 +65,7 @@ COMBOS = {   # id: (中文名, 棒數說明)
     "falling-three": "下降三法",
 }
 
-_CTX = ssl.create_default_context(); _CTX.check_hostname = False; _CTX.verify_mode = ssl.CERT_NONE
+_CTX = ssl.create_default_context(); _CTX.verify_flags &= ~ssl.VERIFY_X509_STRICT
 
 
 # ───────────────────────── 除權息日（官方：上市 TWT49U、上櫃 exDailyQ） ─────────────────────────

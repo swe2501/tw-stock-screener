@@ -16,7 +16,7 @@
   <link rel="stylesheet" href="assets/foresight-brand.css?v=fqi34">
   <link rel="icon" type="image/png" href="assets/brand/favicon.png?v=fqi16">
   <link rel="apple-touch-icon" href="assets/brand/favicon.png?v=fqi16">
-  <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+  <script id="chartLibrary" src="assets/vendor/lightweight-charts-4.1.3.standalone.production.js"></script>
   <script src="assets/glass-chart-motion.js?v=2"></script>
   <script src="assets/site-theme.js"></script>
   <script src="assets/w-pattern-export.js?v=20261024-1"></script>
@@ -2253,7 +2253,8 @@
   }
 </style>
 <link rel="stylesheet" href="assets/member-center.css?v=20261107-flow-v4">
-<link rel="stylesheet" href="assets/member-payments.css?v=28-linepay">
+<link rel="stylesheet" href="assets/member-payments.css?v=62-contactless-right">
+<link rel="stylesheet" href="assets/member-plan-optical.css?v=10-visible-light-logo">
 <link rel="stylesheet" href="assets/member-wallet.css?v=ai2">
 <link rel="stylesheet" href="assets/futures-summary.css?v=history1">
 <link rel="stylesheet" href="assets/sector-dashboard.css">
@@ -2264,9 +2265,11 @@
 <link rel="stylesheet" href="assets/member-trade.css">
 <link rel="stylesheet" href="assets/site-search.css?v=arrow1">
 <link rel="stylesheet" href="assets/guest-access.css?v=1">
-<script src="assets/guest-access.js?v=3"></script>
+<script src="assets/guest-access.js?v=4-commerce"></script>
+<link rel="stylesheet" href="assets/member-devices.css?v=1">
 </head>
 <body>
+<script src="assets/member-devices.js?v=3-early-admission"></script>
   <style>
     .gs-brand{display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--brand-green,#1e4031);}
     .gs-name{display:flex;flex-direction:column;line-height:1.05;background:transparent!important;padding:0!important;border-radius:0!important;color:var(--brand-green)!important;}
@@ -4514,8 +4517,8 @@
     function esc(t){return String(t==null?'':t).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
     function tk(){ try{return localStorage.getItem('sb_token')||'';}catch(e){return '';} }
     function post(action,extra){
-      return fetch((window.__API||'')+'/api/auth',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tk()},
-        body:JSON.stringify(Object.assign({action:action},extra||{}))}).then(function(r){return r.json();});
+      return (typeof _authFetch==='function'?_authFetch:fetch)((window.__API||'')+'/api/auth',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tk()},
+        body:JSON.stringify(Object.assign({action:action},extra||{}))}).then(function(r){return r.json().then(function(j){return !r.ok && action.indexOf('admin_office_tasks_')===0 && j && typeof j==='object' ? Object.assign({},j,{httpStatus:r.status}) : j;});});
     }
     function dt(s){ if(!s)return '—'; try{return new Date(s).toLocaleString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});}catch(e){return s;} }
     // 等級照合夥人 member-voucher-levels.sql：observation/research/advanced/vip（＋free 一般會員）
@@ -4531,11 +4534,13 @@
       var sum='<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">'
         +['<b>'+ms.length+'</b> 會員','<span style="color:var(--accent)">管理者 '+(cnt.admin||0)+'</span>','<span style="color:#148f77">VIP '+cnt.vip+'</span>','進階 '+cnt.advanced,'研究 '+cnt.research,'觀察 '+cnt.observation,'一般 '+cnt.free].map(function(x){return '<span style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:13px">'+x+'</span>';}).join('')+'</div>';
       var rows=ms.map(function(m){
+        var billing=m.billing||{source_label:'待確認',status:'待確認'};
         var opts=TORD.map(function(t){return '<option value="'+t+'"'+(m.tier===t?' selected':'')+'>'+TIER[t]+'</option>';}).join('');
         return '<tr data-uid="'+esc(m.id)+'">'
           +'<td style="padding:6px 8px">'+(m.email?esc(m.email):'<span style="color:var(--text-muted)">'+esc((/line/i.test(m.provider||'')?'LINE':(m.provider||'其他'))+' 登入'+(m.name?'：'+m.name:'')+'（無 Email）')+'</span>')+(m.is_admin?' <span style="font-size:10px;color:var(--accent);font-weight:800">管理員</span>':'')+'</td>'
           +'<td style="padding:6px 8px">'+(m.is_admin?'<b style="color:var(--accent)">⚙ 管理者</b><div style="font-size:10px;color:var(--text-muted)">全功能＋後台</div>':'<select class="adm-tier" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--input-bg,var(--surface));color:var(--text)">'+opts+'</select>')+'</td>'
-          +'<td style="padding:6px 8px;white-space:nowrap">'+(m.expires_at?dt(m.expires_at):'<span style="color:var(--text-muted)">—</span>')+'</td>'
+          +'<td style="padding:6px 8px;white-space:nowrap">'+esc(billing.source_label)+'<div style="font-size:12px;color:var(--text-muted)">'+esc(billing.status)+'</div></td>'
+          +'<td style="padding:6px 8px;white-space:nowrap">'+(billing.next_charge_at?'下次扣款 '+dt(billing.next_charge_at):billing.expires_at?'到期 '+dt(billing.expires_at):'—')+'</td>'
           +'<td style="padding:6px 8px;white-space:nowrap;font-size:12px;color:var(--text-muted)">'+dt(m.created_at)+'</td>'
           +'<td style="padding:6px 8px;white-space:nowrap;font-size:12px;color:var(--text-muted)">'+dt(m.last_sign_in_at)+'</td>'
           +'<td style="padding:6px 8px;font-size:12px">'+(m.banned?'<span style="color:var(--red)">停權</span>':(m.confirmed?'<span style="color:#148f77">正常</span>':'<span style="color:var(--text-muted)">未驗證</span>'))+' <span style="color:var(--text-muted)">'+esc(m.provider||'')+'</span></td>'
@@ -4543,7 +4548,7 @@
       }).join('');
       box.innerHTML=sum+'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">'
         +'<thead><tr style="color:var(--text-muted);border-bottom:1px solid var(--border);text-align:left">'
-        +'<th style="padding:6px 8px">Email</th><th style="padding:6px 8px">等級</th><th style="padding:6px 8px">訂閱到期</th><th style="padding:6px 8px">註冊</th><th style="padding:6px 8px">最後登入</th><th style="padding:6px 8px">狀態</th></tr></thead>'
+        +'<th style="padding:6px 8px">Email</th><th style="padding:6px 8px">等級</th><th style="padding:6px 8px">方案來源／帳務狀態</th><th style="padding:6px 8px">下次扣款／到期</th><th style="padding:6px 8px">註冊</th><th style="padding:6px 8px">最後登入</th><th style="padding:6px 8px">狀態</th></tr></thead>'
         +'<tbody>'+rows+'</tbody></table></div>';
       box.querySelectorAll('.adm-tier').forEach(function(sel){
         sel.onchange=function(){
@@ -4556,7 +4561,7 @@
           }).catch(function(){ sel.disabled=false; el('admNote').textContent='改等級失敗（連線）'; });
         };
       });
-      el('admNote').innerHTML='<b>說明</b> 等級寫入該會員的帳號 metadata（tier）。<b>目前只是「設定與顯示」等級</b>；把各付費功能真正綁到等級是下一步（現在仍以 3 位管理員白名單＋RLS 控制）。詳見 docs/admin-backend-spec.md。';
+      el('admNote').textContent='會員等級與付款來源分開顯示。每月訂閱會列出續訂狀態與下次扣款日；單次購買只列到期日。管理員授權與使用券不代表付費訂閱；待確認表示目前無法完整讀取帳務資料。';
     }
 
     // 2026-10-24 用戶反映切分頁會頓：各分頁資料留在記憶體，切過去先立刻畫上次的資料，背景再悄悄更新（有資料時不再先清成「載入中」）
@@ -14025,15 +14030,20 @@
     async function _tryRefreshToken() {
       if (!_authRefresh) return false;
       if (_refreshing) return _refreshing;
+      const refreshToken = _authRefresh;
+      const owner = _authUser?.id;
+      const isCurrentSession = () => _authRefresh === refreshToken && _authUser?.id === owner;
       _refreshing = (async () => {
         try {
           const r = await fetch(_authEndpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'refresh', refresh_token: _authRefresh }),
+            body: JSON.stringify({ action: 'refresh', refresh_token: refreshToken }),
           });
+          if (!isCurrentSession()) return false;
           if (!r.ok) { if (r.status === 401) _forceLogout(); return false; }
           const d = await r.json();
+          if (!isCurrentSession() || (owner && d.user?.id !== owner)) return false;
           _authToken   = d.access_token;
           _authRefresh = d.refresh_token || _authRefresh;
           _authUser    = d.user;
@@ -14049,11 +14059,14 @@
 
     // 帶自動 refresh 的 fetch 包裝，401 JWT expired 時自動重試
     async function _authFetch(url, opts = {}) {
-      opts.headers = { ...(opts.headers || {}), Authorization: `Bearer ${_authToken}` };
+      const sentToken = _authToken, owner = _authUser?.id;
+      opts.headers = { ...(opts.headers || {}), Authorization: `Bearer ${sentToken}` };
       let r = await fetch(url, opts);
-      if (r.status === 401) {
-        const refreshed = await _tryRefreshToken();
-        if (refreshed) {
+      if (r.status === 401 && _authUser?.id === owner) {
+        // A late 401 may refer to a token another request already renewed.
+        const refreshed = _refreshing ? await _refreshing
+          : (_authToken && _authToken !== sentToken) || await _tryRefreshToken();
+        if (_authToken && _authUser?.id === owner && (refreshed || _authToken !== sentToken)) {
           opts.headers['Authorization'] = `Bearer ${_authToken}`;
           r = await fetch(url, opts);
         }
@@ -14918,17 +14931,43 @@
     }
     function _wkKey(d) { const dt = new Date(d + 'T00:00:00Z'); const day = dt.getUTCDay() || 7; dt.setUTCDate(dt.getUTCDate() + 4 - day); const ys = new Date(Date.UTC(dt.getUTCFullYear(), 0, 1)); const wk = Math.ceil((((dt - ys) / 86400000) + 1) / 7); return dt.getUTCFullYear() + '-W' + wk; }
 
+    function _showChartFailure(requestId, message, retry) {
+      if (requestId !== _chartRequestId || !document.getElementById('chartModal').classList.contains('open')) return;
+      const loading = document.getElementById('chartLoading');
+      document.getElementById('chartWrapper').style.display = 'none';
+      loading.style.display = 'flex';
+      loading.textContent = message + ' ';
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = '重試';
+      button.onclick = () => {
+        if (window.LightweightCharts?.createChart) { retry(); return; }
+        button.disabled = true;
+        const script = document.createElement('script');
+        script.src = document.getElementById('chartLibrary').src;
+        script.onload = () => { if (requestId === _chartRequestId && document.getElementById('chartModal').classList.contains('open')) retry(); };
+        script.onerror = () => { button.disabled = false; };
+        document.head.appendChild(script);
+      };
+      loading.appendChild(button);
+    }
+
     function _loadChartUrl(url, subtitle, agg) {
       window.AcademyVisualPatterns?.clear();
       window.WPatternOverlay?.clear();
       window._academyChartSnapshot={code:currentCode,period:subtitle,url};
       const requestId=++_chartRequestId;
       _chartLoading();
+      const retry = () => _loadChartUrl(url, subtitle, agg);
+      if (!window.LightweightCharts?.createChart) {
+        _showChartFailure(requestId, '圖表套件載入失敗。', retry);
+        return;
+      }
       (window.AcademyMarketSearch?window.AcademyMarketSearch.fetchChart(currentCode,url):fetch(url).then(r=>r.json()))
         .then(data => {
           if(requestId!==_chartRequestId||!document.getElementById('chartModal').classList.contains('open'))return;
           if (data.error || !data.data || data.data.length === 0) {
-            document.getElementById('chartLoading').innerHTML = ' 無法取得圖表資料';
+            _showChartFailure(requestId, '無法取得圖表資料。', retry);
             return;
           }
           if(window._academyChartSnapshot?.code===currentCode)window._academyChartSnapshot.data_date=data.data.at(-1)?.time||null;
@@ -14956,7 +14995,7 @@
           renderTVChart(data.data, data.events || []);
         })
         .catch(() => {
-          if(requestId===_chartRequestId)document.getElementById('chartLoading').innerHTML = ' 載入失敗，請重試';
+          _showChartFailure(requestId, '圖表載入失敗。', retry);
         });
     }
 
@@ -18508,11 +18547,11 @@
 <script src="assets/sector-dashboard-model.js" defer></script>
 <script src="assets/sector-dashboard.js" defer></script>
 <script src="assets/member-invitation.js?v=1" defer></script>
-<script src="assets/member-identity.js?v=birthday6-phone-welcome1" defer></script>
+<script src="assets/member-identity.js?v=device-policy-1" defer></script>
 <script src="assets/member-task-guide.js?v=1" defer></script>
 <link rel="stylesheet" href="assets/member-point-policy.css?v=1">
 <script src="assets/member-point-policy.js?v=birthday-6" defer></script>
-<script src="assets/member-missions.js?v=expiry-rules-6" defer></script>
+<script src="assets/member-missions.js?v=custom-products-1" defer></script>
 <script src="assets/member-share.js?v=invite4" defer></script>
 <script src="assets/member-provider-icons.js" defer></script>
 <script src="assets/member-cloud.js?v=service1" defer></script>
@@ -18529,7 +18568,7 @@
 <script src="assets/strategy-dimensions.js?v=2" defer></script>
 <script src="assets/strategy-presets.js?v=1" defer></script>
 <script src="assets/member-strategy-ui.js?v=companion-suction6" defer></script>
-<script src="assets/member-research.js?v=watchsync2" defer></script>
+<script src="assets/member-research.js?v=watchsync3" defer></script>
 <script src="assets/member-trade-engine.js?v=wording1" defer></script>
 <script src="assets/goal-models/manifest.js" defer></script>
 <script src="assets/member-companion-3d.js" defer></script>
@@ -18540,9 +18579,12 @@
 <script src="assets/site-search.js?v=market2-arrow-nav2" defer></script>
 <script src="assets/member-derivatives-catalog.js" defer></script>
 <script src="assets/member-trade-ui.js?v=listnav-service1" defer></script>
-<link rel="stylesheet" href="assets/member-benefits.css?v=3">
-<script src="assets/member-benefits.js?v=4" defer></script>
-<script src="assets/member-journey.js?v=expiry-rules-5" defer></script>
+<link rel="stylesheet" href="assets/member-benefits.css?v=device-policy-1">
+<script src="assets/member-catalog.js?v=2-catalog-first" defer></script>
+<script src="assets/admin-feature-picker.js?v=1" defer></script>
+<script src="assets/admin-member-commerce.js?v=device-policy-1" defer></script>
+<script src="assets/member-benefits.js?v=device-policy-1" defer></script>
+<script src="assets/member-journey.js?v=expiry-rules-5-custom-days" defer></script>
 <link rel="stylesheet" href="assets/member-service-center.css?v=ledger-pages1">
 <script src="assets/member-data-portability.js?v=inbox1" defer></script>
 <script src="assets/member-service-center.js?v=expiry-rules-5" defer></script>
@@ -18551,12 +18593,15 @@
 <link rel="stylesheet" href="assets/brand-footer.css?v=20261105-perf">
 <script src="assets/brand-footer.js?v=20261105-perf" defer></script>
 <link rel="stylesheet" href="assets/market-panel-layout.css?v=8">
-<link rel="stylesheet" href="assets/member-notification-inbox.css?v=glass7">
-<script src="assets/member-notification-inbox.js?v=paging3" defer></script>
+<link rel="stylesheet" href="assets/member-notification-inbox.css?v=glass8">
+<script src="assets/member-notification-inbox.js?v=paging4" defer></script>
 <script src="assets/glass-skin.js?v=5" defer></script>
 <script src="assets/glass-motion.js?v=4" defer></script>
-<script src="assets/member-payments.js?v=28-linepay" defer></script>
-<script src="assets/member-center.js?v=20261107-flow-v4-rights-20261106" defer></script>
+<script src="assets/member-billing-model.js?v=2-management" defer></script>
+<script src="assets/member-billing-benefits.js?v=1" defer></script>
+<script src="assets/member-plan-deck.js?v=21-all-side-facets" defer></script>
+<script src="assets/member-payments.js?v=62-contactless-right" defer></script>
+<script src="assets/member-center.js?v=20261113-commerce" defer></script>
 <script src="assets/member-signin.js?v=invite-reset7" defer></script>
 <link rel="stylesheet" href="assets/member-birthday.css?v=1"><script src="assets/member-birthday.js?v=1" defer></script><script src="assets/member-phone-welcome.js?v=1" defer></script>
 <link rel="stylesheet" href="assets/member-phone-welcome.css?v=1">
@@ -18597,17 +18642,21 @@
 <script src="assets/zhenming-six.js?v=six2-4" defer></script>
 <script src="assets/zhenming-89.js?v=3" defer></script>
 <script src="assets/screen-log.js?v=20261107-calendar-nav-natural-scroll" defer></script>
-<script src="assets/member-quick-menu.js?v=tier7" defer></script>
+<script src="assets/member-quick-menu.js?v=scan-double-frame-20261113" defer></script>
 <script src="assets/navigation-layers.js?v=logo-home20" defer></script>
 <link rel="stylesheet" href="assets/home-market-intraday.css?v=25">
 <script src="assets/home-market-intraday.js?v=14" defer></script>
 <link rel="stylesheet" href="assets/office-task-board.css?v=3">
 <script src="assets/office-content-flow.js?v=1" defer></script>
-<script src="assets/office-task-board.js?v=prod-poll-60" defer></script>
-<script src="assets/admin-office.js?v=7f-sync-1" defer></script>
-<link rel="stylesheet" href="assets/forum-ads.css?v=3">
-<script src="assets/admin-forum-ads.js?v=3" defer></script>
-<script src="assets/forum-member.js?v=3" defer></script>
+<script src="assets/office-task-board.js?v=admin-poll-3" defer></script>
+<script src="assets/admin-office.js?v=7f-uat-only-1" defer></script>
+<link rel="stylesheet" href="assets/forum-ads.css?v=home-audio-1">
+<script src="assets/admin-ad-editor.js?v=media-crop-2" defer></script>
+<script src="assets/admin-attendee-vouchers.js?v=20261113-selected-3" defer></script>
+<script src="assets/admin-forum-ads.js?v=custom-products-1" defer></script>
+<script src="assets/site-ad-media.js?v=6-home-audio"></script>
+<script src="assets/site-ad-carousel.js?v=video-end-1" defer></script>
+<script src="assets/forum-member.js?v=video-crop-2" defer></script>
 <script src="assets/forum-scanner.js?v=1" defer></script>
 <footer id="foresightFooter" aria-label="先見網站頁尾">
       <div class="fs-source"><div>本站依各功能使用臺灣證券交易所、證券櫃檯買賣中心、臺灣期貨交易所、集保結算所及其他公開資料整理市場資訊；來源、行情日期與更新頻率依各頁標示，部分內容為盤後或延遲資料。數據可能因公告更正、休市或來源異常而調整，請以原始公告核對。圖表、歷史統計與工具結果供學習及研究參考，歷史表現不代表未來結果；不同資料口徑與估算方式可能產生差異。</div></div>
@@ -18651,7 +18700,7 @@
 <script src="assets/brand-arrival.js?v=46" defer></script>
 <link rel="stylesheet" href="assets/chart-analysis.css?v=1">
 <script src="assets/chart-analysis.js?v=1" defer></script>
-<link rel="stylesheet" href="assets/glass-skin.css?v=14">
+<link rel="stylesheet" href="assets/glass-skin.css?v=15-admin-dialog">
 <link rel="stylesheet" href="assets/pristine.css?v=4">
 <script src="assets/pristine-snapshot.js?v=20261105" defer></script>
 <script src="assets/pristine.js?v=4" defer></script>

@@ -23,7 +23,7 @@ class PatternReviewTests(unittest.TestCase):
         raw = json.dumps({'action':'admin_pattern_reviews'}).encode()
         h.headers = {'Content-Length':str(len(raw)), 'Authorization':'Bearer ordinary'}
         h.rfile = io.BytesIO(raw);h._json = Mock()
-        with patch.object(auth,'_verify_admin',return_value=None),patch.object(auth,'_rest') as rest:
+        with patch.object(auth,'_verify_admin',return_value=(403,None)),patch.object(auth,'_rest') as rest:
             h.do_POST()
         self.assertEqual(h._json.call_args.args[0],403);rest.assert_not_called()
 

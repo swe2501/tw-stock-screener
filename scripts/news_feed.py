@@ -29,7 +29,7 @@ if sys.stdout and hasattr(sys.stdout, "reconfigure"):
 
 TW = timezone(timedelta(hours=8))
 KEEP_DAYS = 30
-_CTX = ssl.create_default_context(); _CTX.check_hostname = False; _CTX.verify_mode = ssl.CERT_NONE
+_CTX = ssl.create_default_context(); _CTX.verify_flags &= ~ssl.VERIFY_X509_STRICT
 HERE = Path(__file__).resolve().parent
 CODES = json.loads((HERE / "tw_listed_codes.json").read_text(encoding="utf-8")) \
     if (HERE / "tw_listed_codes.json").exists() else {}
