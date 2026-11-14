@@ -5,9 +5,10 @@
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   })[char]);
 
+  const assetURL=name=>new URL(name,document.currentScript?.src||new URL('assets/',document.baseURI)).href;
   const icons = {
     card: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="3"/><path d="M2.5 9.5h19M6.5 15h4"/></svg>',
-    line: '<img class="mp-line-logo" src="assets/auth-brands/line.png" alt="" aria-hidden="true">',
+    line: '<img class="mp-line-logo" src="'+assetURL('auth-brands/line.png')+'" alt="" aria-hidden="true">',
     store: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v10h16V10M3 10l2-6h14l2 6"/><path d="M3 10c0 1.3 1 2.3 2.3 2.3S7.7 11.3 7.7 10c0 1.3 1 2.3 2.3 2.3s2.3-1 2.3-2.3c0 1.3 1 2.3 2.3 2.3S17 11.3 17 10c0 1.3 1 2.3 2.3 2.3S21 11.3 21 10M9 20v-5h6v5"/></svg>',
     shield: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8 20 6v5.6c0 4.8-3.2 8.1-8 9.6-4.8-1.5-8-4.8-8-9.6V6l8-3.2Z"/><path d="m8.7 12 2.1 2.1 4.6-4.7"/></svg>',
     check: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.2 4.2L19 7"/></svg>',
@@ -114,8 +115,8 @@
           </div>
           <div class="mp-card-face mp-card-back">
             <span class="mp-card-strip" aria-hidden="true"></span>
-            <div class="mp-card-signature"><span><small>AUTHORIZED SIGNATURE</small><i></i></span><strong data-card-cvc>•••</strong></div>
-            <div class="mp-card-back-foot"><small>SECURE PAYMENT CARD</small><b>FORESIGHT</b></div>
+            <div class="mp-card-signature"><span><small>AUTHORIZED SIGNATURE</small><i></i><em>持卡人簽名</em></span><strong data-card-cvc aria-label="安全碼遮罩預覽">•••</strong></div>
+            <div class="mp-card-back-foot"><small>SECURE PAYMENT CARD<span>僅供介面預覽 · 卡片資料不儲存</span></small><b>FORESIGHT</b></div>
           </div>
         </div>
       </div>
@@ -286,13 +287,13 @@
     slot.style.width=from.width+'px';slot.style.height=from.height+'px';slot.append(card);card.classList.add('mp-shared-result-card');card.style.width='100%';card.style.height='100%';card.dataset.result='pending';
     card.insertAdjacentHTML('beforeend','<svg class="mp-card-edge" viewBox="0 0 270 167" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="mp-card-edge-glow"><stop stop-color="#ffe1a1"/><stop offset=".5" stop-color="#fff"/><stop offset="1" stop-color="#8edbd8"/></linearGradient></defs><rect x="1.5" y="1.5" width="267" height="164" rx="19" pathLength="1"/></svg>');
     showCardSuccess(host);screen.classList.add('mp-same-card-result');screen.querySelectorAll(':scope>.mp-success-mark,:scope>small,:scope>h3,:scope>p,:scope>[data-success-back]').forEach(e=>{e.style.visibility='hidden';});
-    const to=card.getBoundingClientRect();if(!reduced)card.animate([{transform:'translate('+(from.left-to.left)+'px,'+(from.top-to.top)+'px)'},{transform:'none'}],{duration:480,easing:'cubic-bezier(.2,.8,.2,1)'});
+    const to=card.getBoundingClientRect();if(!reduced)card.animate([{transform:'translate('+(from.left-to.left)+'px,'+(from.top-to.top)+'px)'},{transform:'none'}],{duration:650,easing:'cubic-bezier(.2,.8,.2,1)'});
     const valid=()=>card.isConnected&&host.contains(card)&&host._demoRun===run&&demoMode;
     try{
-      await card.querySelector('rect').animate([{strokeDashoffset:1},{strokeDashoffset:0}],{duration:reduced?0:900,easing:'linear',fill:'forwards'}).finished;if(!valid())return;
+      await card.querySelector('rect').animate([{strokeDashoffset:1},{strokeDashoffset:0}],{duration:reduced?0:1300,easing:'linear',fill:'forwards'}).finished;if(!valid())return;
       card.dataset.result=result;
       const tone=failure?'linear-gradient(135deg,#511a24,#a52b37 65%,#cb514a)':'linear-gradient(135deg,#082b26,#0a6849 64%,#28946a)';
-      const color=document.createElement('i');color.className='mp-card-color-layer';color.setAttribute('aria-hidden','true');color.style.background=tone;card.prepend(color);await color.animate([{opacity:0},{opacity:1}],{duration:reduced?0:460,easing:'ease-in-out',fill:'forwards'}).finished;if(!valid())return;
+      const color=document.createElement('i');color.className='mp-card-color-layer';color.setAttribute('aria-hidden','true');color.style.background=tone;card.prepend(color);await color.animate([{opacity:0},{opacity:1}],{duration:reduced?0:700,easing:'ease-in-out',fill:'forwards'}).finished;if(!valid())return;
       card.querySelector('small').textContent=failure?'PAYMENT DECLINED · DEMO':'PAYMENT CONFIRMED · DEMO';
       screen.querySelectorAll(':scope>.mp-success-mark,:scope>small,:scope>h3,:scope>p,:scope>[data-success-back]').forEach(e=>{e.style.visibility='';});
       screen.dataset.feedback=result;paymentFeedback(result);
@@ -351,6 +352,7 @@
   let demoMode=location.protocol==='file:',demoResult="success";
   const canDemo=()=>location.protocol==='file:'||['localhost','127.0.0.1'].includes(location.hostname)||window._isOwner||window._isAdmin;
   function renderPanel(host, profile, method, initialStep=1) {
+    host._modeMenu?.remove();host._modeMenu=null;
     host._demoRun=(host._demoRun||0)+1;
     host._billingProduct=null;
     const billingOwner=profile?.id||profile?.user?.id||'local-preview';
@@ -376,7 +378,7 @@
           </aside>
           <section class="mp-workspace" aria-live="polite">
             <div class="mp-workspace-title"><span><small>${data.kicker}</small><h3>${data.heading}</h3></span><span class="mp-method-tag">${data.icon}${data.short}</span></div>
-            <div class="mp-method-body">${paymentBody(method)}</div>
+            <div class="mp-method-body">${method!=='card'?'<p class="mp-method-mode-note">此付款方式採單次購買，到期不自動續扣。</p>':''}${paymentBody(method)}</div>
             <button type="button" class="mp-action" data-payment-action disabled><i class="mp-action-lock" aria-hidden="true">${icons.shield}</i><span>${data.action}</span>${icons.arrow}</button>
             <div class="mp-action-status" role="status"></div>
             ${method === 'card' ? `<div class="mp-card-ready" data-card-ready><i>${icons.check}</i><span>卡片欄位已完整，可以進行安全確認</span></div>
@@ -423,6 +425,7 @@
     host.querySelectorAll('[data-method]').forEach(button => button.addEventListener('click', () => {
       const next = button.dataset.method;
       if (next === method) return;
+      if(next!=='card'){try{sessionStorage.setItem('foresight.billing.mode','one_time');}catch{}}
       try { sessionStorage.setItem('foresight.payment.method', next); } catch (_) {}
       renderPanel(host, profile, next, 2);
     }));
@@ -497,7 +500,7 @@
     let preferred='';try{preferred=sessionStorage.getItem('foresight.membership.product')||'';}catch{}
     let interest='';try{interest=sessionStorage.getItem('foresight.membership.interest')||'';}catch{}
     let selected=products.find(p=>p.id===preferred)||products.find(p=>p.tier===interest)||products[0];
-    box.innerHTML=products.map(p=>'<article class="mp-product-choice"><label><input type="radio" name="billing-product" value="'+esc(p.id)+'" '+(p.id===selected.id?'checked':'')+'><span class="mp-product-symbol">'+(window.AcademyMemberCatalog?.icon?.(p.icon)||'')+'</span><strong>'+esc(p.name)+'</strong></label><small>'+((p.tier==='free')?'免費基礎身分':p.purchasable?money(p.price_twd)+' ／ 月':'付款尚未開放，暫不顯示價格')+'</small><button type="button" class="mp-benefits-link" data-product-benefits="'+esc(p.id)+'">查看會員權益 ↗</button><button type="button" data-product-subscribe="'+esc(p.id)+'">'+(p.tier==='free'?'選擇免費身分':'選擇此方案')+'</button>'+(p.tier!=='free'?'<button type="button" class="mp-product-once" data-product-once="'+esc(p.id)+'">單次購買</button>':'')+'</article>').join('');
+    box.innerHTML=products.map(p=>'<article class="mp-product-choice"><label><input type="radio" name="billing-product" value="'+esc(p.id)+'" '+(p.id===selected.id?'checked':'')+'><span class="mp-product-symbol">'+(window.AcademyMemberCatalog?.icon?.(p.icon)||'')+'</span><strong>'+esc(p.name)+'</strong></label><small>'+((p.tier==='free')?'無需訂閱，享基本研究權益':p.purchasable?money(p.price_twd)+' ／ 月':'付款尚未開放，暫不顯示價格')+'</small><button type="button" class="mp-benefits-link" data-product-benefits="'+esc(p.id)+'">查看會員權益 ↗</button><button type="button" data-product-subscribe="'+esc(p.id)+'">'+(p.tier==='free'?'選擇免費身分':'選擇此方案')+'</button>'+(p.tier!=='free'?'<div class="mp-product-once mp-mode-picker"><button type="button" class="mp-mode-trigger" aria-haspopup="menu" aria-expanded="false"><span data-mode-label>每月訂閱</span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg></button><select hidden data-product-mode="'+esc(p.id)+'" aria-label="'+esc(p.name)+'購買方式"><option value="monthly">每月訂閱</option><option value="one_time">單次購買</option></select><span data-mode-note>每月自動續訂，可取消下期續訂</span></div>':'')+'</article>').join('');
     const sync=()=>{if(!box.isConnected)return;try{sessionStorage.setItem('foresight.membership.product',selected.id);sessionStorage.setItem('foresight.membership.interest',selected.tier);sessionStorage.setItem('foresight.membership.plan',selected.plan_code||'');}catch{}
       host._billingProduct=selected;
       host.querySelector('[data-payment-product-detail]').textContent='已選擇：'+selected.name;
@@ -509,8 +512,17 @@
       if(real){payState.selected=selected.plan_code;const input=[...host.querySelectorAll('[name=mp-plan]')].find(x=>x.value===selected.plan_code);if(input){input.checked=true;input.dispatchEvent(new Event('change',{bubbles:true}));}}
       else host.querySelector('[data-summary-amount]').textContent='尚未開放付款';
     };
-    box.onchange=e=>{const p=products.find(p=>p.id===e.target.value);if(p){selected=p;sync();host._updateBillingStep?.();}};
-    box.onclick=e=>{const detail=e.target.closest('[data-product-benefits]');if(detail){const product=products.find(p=>p.id===detail.dataset.productBenefits);if(product)window.AcademyBillingBenefits.open(product,detail);return;}const button=e.target.closest('[data-product-subscribe],[data-product-once]');if(!button)return;const p=products.find(p=>p.id===(button.dataset.productSubscribe||button.dataset.productOnce));if(!p)return;selected=p;box.querySelectorAll('[name=billing-product]').forEach(input=>input.checked=input.value===p.id);sync();host._selectBillingMode?.(host._billingDemo?.mode||(button.hasAttribute('data-product-once')?'one_time':'monthly'));host._updateBillingStep?.();};
+    const openModeMenu=trigger=>{
+      host._modeMenu?.remove();const picker=trigger.closest('.mp-mode-picker'),select=picker.querySelector('[data-product-mode]'),menu=document.createElement('div');menu.className='mp-mode-menu';menu.setAttribute('popover','auto');menu.setAttribute('role','menu');menu.setAttribute('aria-label','購買方式');menu.style.setProperty('--deck-light',getComputedStyle(trigger.closest('.mp-product-choice')).getPropertyValue('--deck-light'));menu.innerHTML=['monthly','one_time'].map(value=>'<button type="button" role="menuitemradio" aria-checked="'+(select.value===value)+'" data-mode-value="'+value+'">'+(value==='monthly'?'每月訂閱':'單次購買')+'<span aria-hidden="true">'+(select.value===value?'✓':'')+'</span></button>').join('');document.body.append(menu);host._modeMenu=menu;trigger.setAttribute('aria-expanded','true');
+      menu.addEventListener('toggle',e=>{if(e.newState==='closed'){trigger.setAttribute('aria-expanded','false');menu.remove();if(host._modeMenu===menu)host._modeMenu=null;}});
+      const close=()=>{menu.hidePopover();trigger.setAttribute('aria-expanded','false');trigger.focus({preventScroll:true});};
+      menu.onclick=e=>{const option=e.target.closest('[data-mode-value]');if(!option)return;select.value=option.dataset.modeValue;select.dispatchEvent(new Event('change',{bubbles:true}));close();};
+      menu.onkeydown=e=>{const options=[...menu.querySelectorAll('button')],index=options.indexOf(document.activeElement);if(e.key==='Escape'){e.preventDefault();close();return;}const next={ArrowDown:(index+1)%2,ArrowUp:(index+1)%2,Home:0,End:1}[e.key];if(next!==undefined){e.preventDefault();options[next].focus();}if(e.key==='Tab')menu.hidePopover();};
+      menu.showPopover();const rect=trigger.getBoundingClientRect(),height=menu.offsetHeight;menu.style.left=Math.max(10,Math.min(innerWidth-menu.offsetWidth-10,rect.left))+'px';menu.style.top=(rect.bottom+height+10<innerHeight?rect.bottom+6:Math.max(10,rect.top-height-6))+'px';menu.querySelector('[aria-checked="true"]').focus({preventScroll:true});
+    };
+    box.addEventListener('keydown',e=>{const trigger=e.target.closest('.mp-mode-trigger');if(trigger&&['ArrowDown','ArrowUp'].includes(e.key)){e.preventDefault();e.stopPropagation();openModeMenu(trigger);}});
+    box.onchange=e=>{if(e.target.matches('[data-product-mode]')){const p=products.find(p=>p.id===e.target.dataset.productMode);if(p){selected=p;box.querySelectorAll('[name=billing-product]').forEach(input=>input.checked=input.value===p.id);sync();host._selectBillingMode?.(e.target.value);}return;}const p=products.find(p=>p.id===e.target.value);if(p){selected=p;sync();host._updateBillingStep?.();}};
+    box.onclick=e=>{const trigger=e.target.closest('.mp-mode-trigger');if(trigger){openModeMenu(trigger);return;}const detail=e.target.closest('[data-product-benefits]');if(detail){const product=products.find(p=>p.id===detail.dataset.productBenefits);if(product)window.AcademyBillingBenefits.open(product,detail);return;}const button=e.target.closest('[data-product-subscribe],[data-product-once]');if(!button)return;const p=products.find(p=>p.id===(button.dataset.productSubscribe||button.dataset.productOnce));if(!p)return;selected=p;box.querySelectorAll('[name=billing-product]').forEach(input=>input.checked=input.value===p.id);sync();host._selectBillingMode?.(host._billingDemo?.mode||box.querySelector('[data-product-mode="'+CSS.escape(p.id)+'"]')?.value||'monthly');host._updateBillingStep?.();};
     host._syncProductChoice=sync;sync();host._updateBillingStep?.();
     host._labelBillingPlans?.();window.AcademyPlanDeck?.mount(host);
   }
@@ -531,7 +543,7 @@
         const p=window.AcademyMemberCatalog?.get()?.products?.find(p=>p.id===button.dataset.productSubscribe);if(!p||p.tier==='free')return;
         const active=s&&s.status!=='expired'&&Date.parse(s.end)>Date.now();
         button.disabled=!!active&&s.plan.id===p.id;
-        button.textContent=!active?'選擇此方案':s.plan.id===p.id?'目前方案':rank[p.tier]>rank[s.plan.tier]?'升級此方案 →':'下期降級 →';
+        button.textContent=!active?'選擇方案':s.plan.id===p.id?'目前方案':rank[p.tier]>rank[s.plan.tier]?'升級此方案 →':'下期降級 →';
       });host._labelBillingPlans();
     };
     host._paintBillingOverview=paint;paint();
@@ -550,8 +562,8 @@
     controls.innerHTML='<fieldset><legend>購買方式</legend><label><input type="radio" name="billing-mode" value="monthly">每月訂閱 <small>每月自動續扣，可取消下期續訂</small></label><label><input type="radio" name="billing-mode" value="one_time">單次購買 <small>只支付本次期間，到期不自動續扣</small></label></fieldset><p>升級：付款成功後立即生效，按本期剩餘時間補差額；到期日不變。降級：下期生效，本期權益保留。取消續訂：用到本期結束。超出新方案的筆記與自選資料會保留，新增前需整理至額度內。</p><button type="button" data-billing-next>下一步：選擇付款方式 →</button>';
     section.append(controls);const selectionCopy=host.querySelector('[data-payment-product-detail]');if(selectionCopy)controls.prepend(selectionCopy);
     const back=document.createElement('button');back.type='button';back.className='mp-back-to-plans';back.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12H4m6-6-6 6 6 6"/></svg><span>返回選擇方案</span>';checkout.before(back);
-    const review=document.createElement('section');review.className='mp-billing-review';review.hidden=true;checkout.after(review);
-    host._billingAbort?.abort();host._billingAbort=new AbortController();
+    const review=document.createElement('dialog');review.className='mp-billing-review mp-confirm-dialog';review.setAttribute('aria-label','確認方案與付款');checkout.after(review);review.addEventListener('cancel',e=>{e.preventDefault();step=2;paint();host.querySelector('[data-payment-action]')?.focus({preventScroll:true});});
+    host._billingAbort?.abort();host._billingAbort=new AbortController();host._billingAbort.signal.addEventListener('abort',()=>{if(review.open)review.close();},{once:true});
     const rehearsal=document.createElement('details');rehearsal.className='mp-billing-review';review.after(rehearsal);
     const demoPaint=()=>{
       host._paintBillingOverview?.();
@@ -568,21 +580,23 @@
     host._paintBillingDemo=demoPaint;demoPaint();
     const paint=()=>{
       host.querySelector('.mp-page').dataset.billingStep=String(step);
-      section.hidden=step!==1;checkout.hidden=step!==2;back.hidden=step===1;review.hidden=step!==3;
+      section.hidden=step!==1;checkout.hidden=step===1;back.hidden=step===1;if(step!==3&&review.open)review.close();
       host.querySelectorAll('.mp-progress span').forEach((s,i)=>{s.classList.toggle('is-current',i===step-1);if(i===step-1)s.setAttribute('aria-current','step');else s.removeAttribute('aria-current');});
       controls.querySelectorAll('[name=billing-mode]').forEach(r=>r.checked=r.value===mode);
+      host.querySelectorAll('[data-product-mode]').forEach(select=>{select.value=mode;select.closest('.mp-mode-picker').querySelector('[data-mode-label]').textContent=mode==='monthly'?'每月訂閱':'單次購買';select.closest('.mp-mode-picker').querySelector('[data-mode-note]').textContent=mode==='monthly'?'每月自動續訂，可取消下期續訂':'只支付本次期間，到期不續扣';});
       const product=host._billingProduct;
       controls.querySelector('[data-billing-next]').disabled=!product||product.tier==='free';
       controls.querySelector('[data-billing-next]').innerHTML=product?.tier==='free'?'免費身分無需付款':'<span>下一步：付款資料</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16m-6-6 6 6-6 6"/></svg>';
       checkout.inert=step!==2;
-      host.querySelectorAll('[data-method]').forEach(b=>{b.disabled=mode==='monthly'&&b.dataset.method!=='card';b.title=b.disabled?'每月訂閱需要支援定期扣款的信用卡':'';});
+      host.querySelectorAll('[data-method]').forEach(b=>{b.disabled=false;b.title=b.dataset.method==='card'?'信用卡付款':'此付款方式採單次購買，不會自動續扣';});
       if(step===3){
         review.innerHTML='<span class="mc-kicker">確認方案與付款</span><h3>'+esc(product?.name||'')+'</h3><dl><div><dt>購買方式</dt><dd>'+ (mode==='monthly'?'每月訂閱':'單次購買')+'</dd></div><div><dt>付款方式</dt><dd>'+esc(methods[method].short)+'</dd></div><div><dt>金額</dt><dd>'+ (product?.purchasable?money(product.price_twd):'付款尚未開放，暫不顯示價格')+'</dd></div><div><dt>期間</dt><dd>'+(mode==='monthly'?'每個月續訂；取消後保留至本期結束':esc(product?.days||30)+' 天，到期不續扣')+'</dd></div></dl><p>'+(demoMode?'目前是模擬測試，不會扣款、開通會員或建立正式訂閱。':'正式信用卡訂閱尚未串接，現在不會扣款或開通會員。')+'</p><label><input type="checkbox" data-billing-consent>我已確認方案、期間與'+(mode==='monthly'?'每月續訂及取消規則':'單次付款規則')+'</label><div><button type="button" data-billing-edit>返回付款方式</button><button type="button" data-billing-submit disabled>'+(demoMode?'確認並測試結果':'付款服務尚未開放')+'</button></div>';
         let change=null;
         if(demoMode&&host._billingDemo){try{const s=host._billingDemo;change=window.AcademyBillingModel.quote(s,{...product,price_twd:product.price_twd||0},new Date().toISOString());const message=document.createElement('p');message.textContent=change.operation==='downgrade'?'下期降級：本次不扣款，將於 '+new Date(s.end).toLocaleDateString('zh-TW')+' 生效。本期權益保留，可在目前方案區取消這次變更。':change.operation==='upgrade'?'升級：模擬付款成功後立即生效，到期日維持 '+new Date(s.end).toLocaleDateString('zh-TW')+'。週額度不會因升級重新計算。':'';review.querySelector('dl').after(message);if(product.purchasable)review.querySelectorAll('dd')[2].textContent=money(change.amount)+(change.operation==='upgrade'?'（本期差額）':'');}catch{}}
-        review.querySelector('[data-billing-edit]').onclick=()=>{step=2;paint();};
+        review.querySelector('[data-billing-edit]').onclick=()=>{step=2;paint();host.querySelector('[data-payment-action]')?.focus({preventScroll:true});};
         review.querySelector('[data-billing-consent]').onchange=e=>{review.querySelector('[data-billing-submit]').disabled=!e.target.checked||(!demoMode&&!(mode==='one_time'&&method==='line'&&host.dataset.lineLive==='1'&&product?.purchasable));};
         review.querySelector('[data-billing-submit]').onclick=()=>{if(demoMode&&change?.operation==='downgrade'){host._billingDemo=window.AcademyBillingModel.event(host._billingDemo,'change',{plan:{...product,price_twd:product.price_twd||0},id:crypto.randomUUID()});host._paintBillingDemo?.();step=1;paint();return;}confirmed=true;step=2;paint();host.querySelector('[data-payment-action]').click();confirmed=false;};
+        if(!review.open)review.showModal();
       }
     };
     controls.onchange=e=>{if(e.target.name==='billing-mode'){mode=e.target.value;try{sessionStorage.setItem('foresight.billing.mode',mode);}catch{}paint();}};

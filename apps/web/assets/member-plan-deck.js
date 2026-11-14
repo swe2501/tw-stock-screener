@@ -32,7 +32,7 @@
   }
   function select(index){if(index<0||index>=cards.length)return;const direction=index>selected?1:-1,input=cards[index].querySelector('input'),changed=!input.checked;if(changed){input.checked=true;input.dispatchEvent(new Event('change',{bubbles:true}));}paint();if(changed)whoosh(direction);}
   controls.querySelector('[data-deck-prev]').onclick=()=>select(selected-1);controls.querySelector('[data-deck-next]').onclick=()=>select(selected+1);controls.querySelector('[data-deck-dots]').onclick=e=>{const dot=e.target.closest('[data-deck-index]');if(dot)select(+dot.dataset.deckIndex);};
-  box.addEventListener('change',e=>{const before=selected;paint();if(e.isTrusted&&before!==selected)whoosh(selected>before?1:-1);},options);box.addEventListener('click',e=>{if(e.target.closest('button,input,label,a')){const before=selected;paint();if(before!==selected)whoosh(selected>before?1:-1);return;}const card=e.target.closest('.mp-product-choice');if(card)select(cards.indexOf(card));},options);
+  box.addEventListener('change',e=>{const before=selected;paint();if(e.isTrusted&&before!==selected)whoosh(selected>before?1:-1);},options);box.addEventListener('click',e=>{if(e.target.closest('button,input,select,label,a')){const before=selected;paint();if(before!==selected)whoosh(selected>before?1:-1);return;}const card=e.target.closest('.mp-product-choice');if(card)select(cards.indexOf(card));},options);
   box.addEventListener('keydown',e=>{const target={ArrowLeft:selected-1,ArrowRight:selected+1,Home:0,End:cards.length-1}[e.key];if(target!==undefined){e.preventDefault();select(target);}},options);
   // Keep hover rotation separate from the carousel's layout and gesture selection.
   let tiltCard=null,tiltRect=null,tiltFrame=0,point=null;
@@ -48,7 +48,7 @@
   document.addEventListener('visibilitychange',restartReflection,options);reduced.addEventListener('change',restartReflection,options);abort.signal.addEventListener('abort',()=>cancelAnimationFrame(reflectionFrame),{once:true});restartReflection();
   reduced.addEventListener('change',resetTilt,options);abort.signal.addEventListener('abort',()=>{resetTilt();frameObserver.disconnect();},{once:true});
   let pointer=null,suppressUntil=0;
-  box.addEventListener('pointerdown',e=>{resetTilt();if(e.button!==0||!e.isPrimary||e.target.closest('button,input,a'))return;pointer={id:e.pointerId,x:e.clientX,y:e.clientY,index:cards.indexOf(e.target.closest('.mp-product-choice'))};box.setPointerCapture(e.pointerId);},options);
+  box.addEventListener('pointerdown',e=>{resetTilt();if(e.button!==0||!e.isPrimary||e.target.closest('button,input,select,a'))return;pointer={id:e.pointerId,x:e.clientX,y:e.clientY,index:cards.indexOf(e.target.closest('.mp-product-choice'))};box.setPointerCapture(e.pointerId);},options);
   box.addEventListener('pointerup',e=>{if(!pointer||e.pointerId!==pointer.id)return;const dx=e.clientX-pointer.x,dy=e.clientY-pointer.y,index=pointer.index;pointer=null;if(Math.abs(dx)>45&&Math.abs(dx)>Math.abs(dy)*1.4){suppressUntil=performance.now()+350;select(selected+(dx<0?1:-1));}else if(Math.abs(dx)<10&&Math.abs(dy)<10&&index>=0)select(index);},options);
   box.addEventListener('pointercancel',()=>{pointer=null;},options);box.addEventListener('click',e=>{if(performance.now()<suppressUntil){e.preventDefault();e.stopImmediatePropagation();}},{...options,capture:true});
   host._paintPlanDeck=paint;paint();

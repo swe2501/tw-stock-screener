@@ -46,7 +46,7 @@
  /* ═══ 論壇活動 ═══ */
  async function forum(){
   box.innerHTML='<div class="fc-empty">載入中…</div>';
-  note.innerHTML='<b>流程</b> ① 新增場次並設為「公開」 ② 活動當天按「開啟現場簽到」，把畫面投到報到桌螢幕 ③ 會員用手機相機掃 QR → 登入 → 按簽到，本活動設定的點數自動入帳 ④ 沒掃到的人，按「補發代碼」產生一次性代碼給他，到會員中心「活動兌換」輸入。<br>每活動限領一次，技術分析論壇跨場次一生一次；勾「測試場次」只跑流程、不發點數。';
+  note.innerHTML='<b>流程</b> ① 新增場次並設為「公開」 ② 活動當天按「開啟現場簽到」，把畫面投到報到桌螢幕 ③ 會員用手機相機掃 QR → 登入 → 按簽到，本活動設定的點數自動入帳 ④ 沒掃到的人，按「補發代碼」產生一次性代碼給他，到會員中心「兌換優惠碼」輸入。<br>每活動限領一次，技術分析論壇跨場次一生一次；勾「測試場次」只跑流程、不發點數。';
   const j=await post('admin_forum_list').catch(()=>null);
   if(tab!=='forum')return;
   if(!j||j.error){box.innerHTML='<div class="fc-empty">'+esc(fail(j))+'</div>';return;}
@@ -112,28 +112,32 @@
  }
  async function codes(ev){
   const b=modal('補發代碼｜'+ev.label,`<p class="afa-sub">給當天到場、未掃 QR 的會員。代碼每組限用一次，每位會員限領一次論壇點數。</p><form class="afa-inline" data-f><label>產生幾組<input type="number" name="n" min="1" max="2000" value="50" required></label><button class="afa-btn primary" type="submit">產生並保存</button></form><p class="afa-sub">新產生的批次會保留，重新開啟可繼續查詢。舊版未保存的清單，請從下載檔找回代碼。兌換期限依此場次的有效天數設定。</p><div data-history></div><details><summary>作廢舊版代碼</summary><form data-revoke-old><label>貼上此場次代碼，每行一組<textarea name="codes" rows="3" class="afa-codes" required></textarea></label><button class="afa-btn" type="submit">作廢未使用代碼</button></form></details><p role="status" class="afa-sub" data-msg></p>`,true);
-  let batches=[],page=0,selected='',busy=false;
+  let batches=[],page=0,selected='',busy=false;const checked=new Set();
   const host=b.querySelector('[data-history]'),msg=b.querySelector('[data-msg]');
   async function load(){
    const r=await post('admin_forum_codes_list',{id:ev.id}).catch(()=>({error:'連線失敗'}));
    if(!b.isConnected)return;
    if(r.error){msg.textContent=r.error;return;}
-   batches=r.batches||[];if(!batches.some(x=>x.id===selected))selected=batches[0]?.id||'';paint();
+   batches=r.batches||[];if(!batches.some(x=>x.id===selected)){selected=batches[0]?.id||'';checked.clear();}const valid=new Set((batches.find(x=>x.id===selected)?.rows||[]).filter(x=>x.status==='unused').map(x=>x.code));for(const code of checked)if(!valid.has(code))checked.delete(code);paint();
   }
   function paint(){
    const batch=batches.find(x=>x.id===selected);
    if(!batch){host.innerHTML='<p class="afa-sub">目前沒有已保存的批次。</p>';return;}
    page=Math.min(page,Math.max(0,Math.ceil(batch.rows.length/10)-1));
    const rows=batch.rows.slice(page*10,page*10+10);
-   host.innerHTML=`<label class="afa-code-batch">批次<select data-batch>${batches.map(x=>`<option value="${x.id}" ${x.id===selected?'selected':''}>${esc(new Date(x.at).toLocaleString('zh-TW'))}・${x.rows.length} 組</option>`).join('')}</select></label><div class="afa-table-wrap"><table class="afa-table"><thead><tr><th>選取</th><th>代碼</th><th>狀態</th></tr></thead><tbody>${rows.map(x=>`<tr><td><input type="checkbox" data-code="${esc(x.code)}" ${x.status==='unused'?'':'disabled'} aria-label="選取 ${esc(x.code)}"></td><td><code>${esc(x.code)}</code></td><td>${({unused:'未使用',used:'已兌換',revoked:'已作廢'})[x.status]}</td></tr>`).join('')}</tbody></table></div><div class="afa-bar afa-code-pages">${btn('上一頁','data-prev')}<span>${page+1} / ${Math.ceil(batch.rows.length/10)} 頁・${batch.rows.length} 組</span>${btn('下一頁','data-next')}</div><div class="afa-bar">${btn('下載未使用 CSV','data-csv')}${btn('列印未使用','data-print')}${btn('複製未使用','data-copy')}${btn('作廢本頁勾選','data-revoke','ghost')}</div>`;
-   host.querySelector('[data-batch]').onchange=e=>{selected=e.target.value;page=0;paint();};
+   host.innerHTML=`<label class="afa-code-batch">批次<select data-batch>${batches.map(x=>`<option value="${x.id}" ${x.id===selected?'selected':''}>${esc(new Date(x.at).toLocaleString('zh-TW'))}・${x.rows.length} 組</option>`).join('')}</select></label><div class="afa-table-wrap"><table class="afa-table"><thead><tr><th>選取</th><th>代碼</th><th>狀態</th></tr></thead><tbody>${rows.map(x=>`<tr><td><input type="checkbox" data-code="${esc(x.code)}" ${x.status==='unused'?'':'disabled'} ${checked.has(x.code)?'checked':''} aria-label="選取 ${esc(x.code)}"></td><td><code>${esc(x.code)}</code></td><td>${({unused:'未使用',used:'已兌換',revoked:'已作廢'})[x.status]}</td></tr>`).join('')}</tbody></table></div><div class="afa-bar afa-code-pages">${btn('上一頁','data-prev')}<span>${page+1} / ${Math.ceil(batch.rows.length/10)} 頁・${batch.rows.length} 組</span>${btn('下一頁','data-next')}</div><div class="afa-bar">${btn('全選未使用（本批次）','data-select-unused')}${btn('取消全選','data-clear-selection')}<span data-selected-count role="status"></span>${btn('下載未使用 CSV','data-csv')}${btn('列印未使用','data-print')}${btn('複製未使用','data-copy')}${btn('作廢勾選代碼','data-revoke','ghost')}</div>`;
+   host.querySelector('[data-batch]').onchange=e=>{selected=e.target.value;page=0;checked.clear();paint();};
    host.querySelector('[data-prev]').disabled=page===0;host.querySelector('[data-next]').disabled=(page+1)*10>=batch.rows.length;
    host.querySelector('[data-prev]').onclick=()=>{page--;paint();};host.querySelector('[data-next]').onclick=()=>{page++;paint();};
    const unused=()=>batch.rows.filter(x=>x.status==='unused').map(x=>x.code);
+   const syncSelection=()=>{host.querySelector('[data-selected-count]').textContent='已選 '+checked.size+' 組（本批次跨頁）';host.querySelector('[data-revoke]').disabled=busy||!checked.size;host.querySelector('[data-clear-selection]').disabled=!checked.size;host.querySelector('[data-select-unused]').disabled=!unused().length;};
+   host.querySelector('[data-select-unused]').onclick=()=>{unused().forEach(code=>checked.add(code));paint();};
+   host.querySelector('[data-clear-selection]').onclick=()=>{checked.clear();paint();};
+   host.querySelectorAll('[data-code]').forEach(input=>input.onchange=()=>{if(input.checked)checked.add(input.dataset.code);else checked.delete(input.dataset.code);syncSelection();});syncSelection();
    host.querySelector('[data-csv]').onclick=()=>download('論壇補發代碼_'+ev.id+'.csv','代碼,場次\n'+unused().map(c=>c+','+ev.label).join('\n'));
    host.querySelector('[data-print]').onclick=()=>{const end=new Date(ev.date+'T00:00:00+08:00');end.setDate(end.getDate()+(ev.code_days||14));printCards({codes:unused(),label:ev.label,valid_to:end.toLocaleDateString('sv-SE',{timeZone:'Asia/Taipei'})+' 23:59'});};
    host.querySelector('[data-copy]').onclick=async()=>{try{await navigator.clipboard.writeText(unused().join('\n'));msg.textContent='已複製此批次未使用代碼';}catch{msg.textContent='無法複製，請下載 CSV';}};
-   host.querySelector('[data-revoke]').onclick=()=>revoke([...host.querySelectorAll('[data-code]:checked')].map(x=>x.dataset.code));
+   host.querySelector('[data-revoke]').onclick=()=>revoke([...checked]);
   }
   async function revoke(codes){
    if(busy||!codes.length)return;
@@ -151,7 +155,7 @@
  }
  function printCards(r){
   const w=open('','_blank');if(!w)return alert('請允許彈出視窗後再試');
-  w.document.write(`<!doctype html><meta charset="utf-8"><title>論壇補發代碼</title><style>body{font-family:system-ui,"Noto Sans TC",sans-serif;margin:8mm}.g{display:grid;grid-template-columns:repeat(3,1fr);gap:4mm}.c{border:1px dashed #999;border-radius:3mm;padding:4mm;break-inside:avoid}.k{font-size:9pt;letter-spacing:.12em;color:#555}.e{font-size:10pt;margin:1mm 0 2mm}.code{font:700 15pt ui-monospace,Menlo,Consolas,monospace;letter-spacing:.06em}.s{font-size:8pt;color:#444;line-height:1.5;margin-top:2mm}@media print{body{margin:6mm}}</style><div class="g">${r.codes.map(c=>`<div class="c"><div class="k">先見 FORESIGHT・論壇到場</div><div class="e">${esc(r.label)}</div><div class="code">${esc(c)}</div><div class="s">登入會員 → 會員中心 → 活動兌換，輸入代碼即可獲得 1,000 活動點數。每位會員限領一次，兌換期限至 ${esc(r.valid_to.slice(0,10))}。</div></div>`).join('')}</div><script>onload=()=>print()<\/script>`);
+  w.document.write(`<!doctype html><meta charset="utf-8"><title>論壇補發代碼</title><style>body{font-family:system-ui,"Noto Sans TC",sans-serif;margin:8mm}.g{display:grid;grid-template-columns:repeat(3,1fr);gap:4mm}.c{border:1px dashed #999;border-radius:3mm;padding:4mm;break-inside:avoid}.k{font-size:9pt;letter-spacing:.12em;color:#555}.e{font-size:10pt;margin:1mm 0 2mm}.code{font:700 15pt ui-monospace,Menlo,Consolas,monospace;letter-spacing:.06em}.s{font-size:8pt;color:#444;line-height:1.5;margin-top:2mm}@media print{body{margin:6mm}}</style><div class="g">${r.codes.map(c=>`<div class="c"><div class="k">先見 FORESIGHT・論壇到場</div><div class="e">${esc(r.label)}</div><div class="code">${esc(c)}</div><div class="s">登入會員 → 會員中心 → 兌換優惠碼，輸入代碼即可獲得 1,000 活動點數。每位會員限領一次，兌換期限至 ${esc(r.valid_to.slice(0,10))}。</div></div>`).join('')}</div><script>onload=()=>print()<\/script>`);
   w.document.close();
  }
  async function registrations(ev){

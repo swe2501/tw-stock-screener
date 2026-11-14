@@ -51,7 +51,7 @@ test('wallet and convenience-store modes provide purpose-built animated artifact
   assert.match(css, /mp-qr-scan/);
   assert.match(js, /mp-ticket/);
   assert.match(css, /mp-ticket-print/);
-  assert.match(js, /assets\/auth-brands\/line\.png/);
+  assert.match(js, /auth-brands\/line\.png/);
   for (const store of ['7-ELEVEN', 'FamilyMart', 'Hi-Life', 'OK mart']) assert.match(js, new RegExp(store));
 });
 
