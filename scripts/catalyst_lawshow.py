@@ -24,7 +24,7 @@ if sys.stdout and hasattr(sys.stdout, "reconfigure"):
 
 URL = "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1"
 SRC = "https://mopsov.twse.com.tw/mops/web/t100sb02_1"
-_CTX = ssl.create_default_context(); _CTX.check_hostname = False; _CTX.verify_mode = ssl.CERT_NONE
+_CTX = ssl.create_default_context(); _CTX.verify_flags &= ~ssl.VERIFY_X509_STRICT
 
 
 def _roc_to_iso(s):

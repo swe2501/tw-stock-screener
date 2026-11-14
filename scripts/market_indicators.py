@@ -22,7 +22,7 @@ from playwright.async_api import async_playwright
 
 if sys.stdout and hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(errors="replace")
-_CTX = ssl.create_default_context(); _CTX.check_hostname = False; _CTX.verify_mode = ssl.CERT_NONE
+_CTX = ssl.create_default_context(); _CTX.verify_flags &= ~ssl.VERIFY_X509_STRICT
 _HDR = {"User-Agent": "Mozilla/5.0", "Accept": "application/json"}
 
 

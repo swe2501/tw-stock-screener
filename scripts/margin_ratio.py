@@ -25,7 +25,7 @@ import broker_signals as bs
 if sys.stdout and hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(errors="replace")
 
-_CTX = ssl.create_default_context(); _CTX.check_hostname = False; _CTX.verify_mode = ssl.CERT_NONE
+_CTX = ssl.create_default_context(); _CTX.verify_flags &= ~ssl.VERIFY_X509_STRICT
 _B = "https://www.wantgoo.com/stock"
 SRC = {
     False: {"fin": f"{_B}/0000A/margin-trading/historical-lending-balance-long-term",

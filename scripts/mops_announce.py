@@ -18,7 +18,7 @@ import broker_signals as bs
 
 if sys.stdout and hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(errors="replace")
-_CTX = ssl.create_default_context(); _CTX.check_hostname = False; _CTX.verify_mode = ssl.CERT_NONE
+_CTX = ssl.create_default_context(); _CTX.verify_flags &= ~ssl.VERIFY_X509_STRICT
 SRC = [("twse", "https://openapi.twse.com.tw/v1/opendata/t187ap04_L"),
        ("otc", "https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap04_O")]
 KEEP_DAYS = 90

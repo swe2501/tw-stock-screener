@@ -94,7 +94,7 @@
   const tick=async()=>{const r=await post('admin_forum_qr',{id}).catch(()=>null);if(!document.body.contains(o))return;
    if(!r||r.error){o.querySelector('[data-label]').textContent=fail(r);qrTimer=setTimeout(tick,5000);return;}
    o.querySelector('[data-label]').textContent=r.label+(r.test?'（測試場次・不發點）':'');o.querySelector('[data-venue]').textContent=r.venue||'';
-   o.querySelector('[data-count]').innerHTML='已簽到 <b>'+r.checked_in+'</b> 人';
+   o.querySelector('[data-count]').innerHTML='已簽到 <b>'+esc(r.checked_in)+'</b> 人';
    const url=location.origin+location.pathname+'?checkin='+encodeURIComponent(r.id+'.'+r.token);
    const c=o.querySelector('[data-code]');
    if(!r.open){c.innerHTML=`<div class="afa-qr-closed">簽到尚未開放<br><small>開放時間 ${esc(r.opens_at)}–${esc(r.closes_at)}</small></div>`;}
