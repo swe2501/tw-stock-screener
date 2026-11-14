@@ -18,7 +18,7 @@ if sys.stdout and hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(errors="replace")
 
 SRC = "https://nctuwanglin.github.io/active-etf/active.json"
-_CTX = ssl.create_default_context(); _CTX.check_hostname = False; _CTX.verify_mode = ssl.CERT_NONE
+_CTX = ssl.create_default_context(); _CTX.verify_flags &= ~ssl.VERIFY_X509_STRICT
 
 
 def _num(x):

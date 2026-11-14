@@ -30,7 +30,7 @@ import broker_signals as bs  # noqa: E402  # _sb / _load_env
 if sys.stdout and hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(errors="replace")
 
-_CTX = ssl._create_unverified_context()  # TWSE openapi 憑證在 Windows 驗不過，公開資料用免驗證取用
+_CTX = ssl.create_default_context(); _CTX.verify_flags &= ~ssl.VERIFY_X509_STRICT  # TWSE 憑證缺 SKI：只關嚴格模式，仍驗證鏈與主機名
 
 
 def _get_json(url):
@@ -86,7 +86,7 @@ def _day_all_csv():
     """證交所 STOCK_DAY_ALL 當日 CSV → 與 openapi 相同欄位名的 dict 清單（只取最新那一天）。"""
     import csv, ssl, urllib.request
     try:
-        ctx = ssl.create_default_context(); ctx.check_hostname = False; ctx.verify_mode = ssl.CERT_NONE
+        ctx = ssl.create_default_context(); ctx.verify_flags &= ~ssl.VERIFY_X509_STRICT
         text = urllib.request.urlopen(urllib.request.Request(
             "https://www.twse.com.tw/rwd/zh/afterTrading/STOCK_DAY_ALL?response=csv",
             headers={"User-Agent": "Mozilla/5.0"}), timeout=40, context=ctx).read().decode("utf-8", "replace")

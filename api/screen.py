@@ -360,7 +360,7 @@ def _get_industry_map() -> dict:
     if not _industry_cache.get("__otc_loaded"):
         try:
             import ssl as _ssl
-            ctx = _ssl.create_default_context(); ctx.check_hostname = False; ctx.verify_mode = _ssl.CERT_NONE
+            ctx = _ssl.create_default_context(); ctx.verify_flags &= ~_ssl.VERIFY_X509_STRICT
             req = urllib.request.Request("https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap03_O",
                                          headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"})
             with urllib.request.urlopen(req, timeout=6, context=ctx) as r:
@@ -1301,7 +1301,7 @@ def _fetch_disposal():
     次數：上市欄位直接給；上櫃依措施文字——「所有投資人…」＝第二次（全額預收），否則第一次。"""
     import re as _re, ssl as _ssl
     from datetime import datetime as _dt, timedelta as _td, timezone as _tz
-    ctx = _ssl.create_default_context(); ctx.check_hostname = False; ctx.verify_mode = _ssl.CERT_NONE
+    ctx = _ssl.create_default_context(); ctx.verify_flags &= ~_ssl.VERIFY_X509_STRICT
     today = (_dt.now(_tz(_td(hours=8)))).strftime("%Y-%m-%d")
 
     def roc(t):          # 1150924 / 115/09/24 → 2026-09-24
@@ -4710,7 +4710,7 @@ class handler(BaseHTTPRequestHandler):
                 req = urllib.request.Request("https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes",
                                              headers={"User-Agent": "Mozilla/5.0"})
                 import ssl as _ssl
-                ctx = _ssl.create_default_context(); ctx.check_hostname = False; ctx.verify_mode = _ssl.CERT_NONE
+                ctx = _ssl.create_default_context(); ctx.verify_flags &= ~_ssl.VERIFY_X509_STRICT
                 rows = json.loads(urllib.request.urlopen(req, timeout=20, context=ctx).read().decode("utf-8-sig"))
                 out = {str(r.get("SecuritiesCompanyCode", "")).strip(): str(r.get("CompanyName", "")).strip()
                        for r in rows if str(r.get("SecuritiesCompanyCode", "")).startswith("00")}
@@ -4720,7 +4720,7 @@ class handler(BaseHTTPRequestHandler):
         # 發行股數 code→股數（上市 t187ap03_L＋上櫃 mopsfin_t187ap03_O；K 圖市值＝股數×收盤用；CDN 快取 1 天）2026-09-28
         if (qs.get("stat") or [""])[0] == "shares":
             import ssl as _ssl
-            ctx = _ssl.create_default_context(); ctx.check_hostname = False; ctx.verify_mode = _ssl.CERT_NONE
+            ctx = _ssl.create_default_context(); ctx.verify_flags &= ~_ssl.VERIFY_X509_STRICT
             out = {}
             for url, kc, ks in (("https://openapi.twse.com.tw/v1/opendata/t187ap03_L", "公司代號", "已發行普通股數或TDR原股發行股數"),
                                 ("https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap03_O", "SecuritiesCompanyCode", "IssueShares")):
@@ -4745,7 +4745,7 @@ class handler(BaseHTTPRequestHandler):
         if (qs.get("stat") or [""])[0] == "holidays":
             try:
                 import ssl as _ssl, re as _re
-                ctx = _ssl.create_default_context(); ctx.check_hostname = False; ctx.verify_mode = _ssl.CERT_NONE
+                ctx = _ssl.create_default_context(); ctx.verify_flags &= ~_ssl.VERIFY_X509_STRICT
                 req = urllib.request.Request("https://openapi.twse.com.tw/v1/holidaySchedule/holidaySchedule", headers={"User-Agent": "Mozilla/5.0"})
                 out = []
                 for r in json.loads(urllib.request.urlopen(req, timeout=20, context=ctx).read().decode("utf-8-sig")):

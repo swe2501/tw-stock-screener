@@ -24,7 +24,7 @@ TPEX_QUOTES = "https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quo
 
 def _otc_etfs():
     """櫃買中心當日收盤行情中的 ETF（00 開頭）→ {code: name}；失敗回空（下次再補）。"""
-    ctx = ssl.create_default_context(); ctx.check_hostname = False; ctx.verify_mode = ssl.CERT_NONE
+    ctx = ssl.create_default_context(); ctx.verify_flags &= ~ssl.VERIFY_X509_STRICT
     try:
         req = urllib.request.Request(TPEX_QUOTES, headers={"User-Agent": "Mozilla/5.0"})
         rows = json.loads(urllib.request.urlopen(req, timeout=30, context=ctx).read().decode("utf-8-sig"))

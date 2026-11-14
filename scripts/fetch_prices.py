@@ -95,10 +95,9 @@ def fetch_twse_all(universe=None):
     只保留 universe（追蹤清單）內的股票；當日無成交（無收盤）者略過。
     回傳為 CSV，欄位：日期,證券代號,證券名稱,成交股數,成交金額,開盤價,最高價,最低價,收盤價,漲跌價差,成交筆數。"""
     # TWSE 憑證缺 Subject Key Identifier，過不了 Python 預設驗證；
-    # 公開資料端點、無需登入，比照 broker_highwin 以不驗證憑證的 context 存取。
+    # 只關 X509 嚴格模式，憑證鏈與主機名仍驗證。
     ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
+    ctx.verify_flags &= ~ssl.VERIFY_X509_STRICT
     req = urllib.request.Request(TWSE_ALL_URL, headers=YF_HEADERS)
     with urllib.request.urlopen(req, timeout=30, context=ctx) as r:
         text = r.read().decode("utf-8", "replace")
@@ -128,7 +127,7 @@ def fetch_twse_all(universe=None):
 def fetch_twse_openapi(universe=None):
     """備援：openapi.twse.com.tw STOCK_DAY_ALL(JSON，慢約一交易日但穩)。主站 CSV 失敗時用。
     回 [(code,date,o,h,l,c,v), ...]。"""
-    ctx = ssl.create_default_context(); ctx.check_hostname = False; ctx.verify_mode = ssl.CERT_NONE
+    ctx = ssl.create_default_context(); ctx.verify_flags &= ~ssl.VERIFY_X509_STRICT
     req = urllib.request.Request("https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL", headers=YF_HEADERS)
     with urllib.request.urlopen(req, timeout=30, context=ctx) as r:
         data = json.loads(r.read())

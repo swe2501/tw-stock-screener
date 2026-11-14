@@ -23,7 +23,7 @@ import screen as scr                  # 借用 _STOCK_INDUSTRY
 if sys.stdout and hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(errors="replace")
 
-_CTX = ssl._create_unverified_context()
+_CTX = ssl.create_default_context(); _CTX.verify_flags &= ~ssl.VERIFY_X509_STRICT
 IND = scr._STOCK_INDUSTRY
 ELEC = {"半導體業","電子零組件業","電腦及週邊設備業","光電業","通信網路業",
         "電子通路業","其他電子業","資訊服務業","數位雲端"}

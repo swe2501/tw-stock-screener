@@ -12,7 +12,7 @@ import broker_signals as bs
 if sys.stdout and hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(errors="replace")
 
-_CTX = ssl.create_default_context(); _CTX.check_hostname = False; _CTX.verify_mode = ssl.CERT_NONE
+_CTX = ssl.create_default_context(); _CTX.verify_flags &= ~ssl.VERIFY_X509_STRICT
 OUT = Path(r"D:\stock_data\supabase_backup") / date.today().isoformat()
 PAGE = 1000
 

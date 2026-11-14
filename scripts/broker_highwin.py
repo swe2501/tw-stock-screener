@@ -33,7 +33,7 @@ LIQUID_DAY_LOTS = 3000  # 個股流動性門檻：近一年須「曾有單日成
 
 def _names():
     import json, ssl, urllib.request
-    ctx = ssl.create_default_context(); ctx.check_hostname = False; ctx.verify_mode = ssl.CERT_NONE
+    ctx = ssl.create_default_context(); ctx.verify_flags &= ~ssl.VERIFY_X509_STRICT
     out = {}
     try:
         req = urllib.request.Request("https://openapi.twse.com.tw/v1/opendata/t187ap03_L",

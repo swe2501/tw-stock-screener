@@ -28,7 +28,7 @@ if sys.stdout and hasattr(sys.stdout, "reconfigure"):
 
 MI_INDEX = "https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?date={ymd}&type=ALLBUT0999&response=json"
 ALL_STOCKS = Path(__file__).resolve().parent / "all_stocks.txt"
-_CTX = ssl.create_default_context(); _CTX.check_hostname = False; _CTX.verify_mode = ssl.CERT_NONE
+_CTX = ssl.create_default_context(); _CTX.verify_flags &= ~ssl.VERIFY_X509_STRICT
 
 
 def _num(x):
